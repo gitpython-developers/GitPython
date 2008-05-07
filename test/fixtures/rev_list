@@ -1,0 +1,24 @@
+commit 4c8124ffcf4039d292442eeccabdeca5af5c5017
+tree 672eca9b7f9e09c22dcb128c283e8c3c8d7697a4
+parent 634396b2f541a9f2d58b00be1a07f0c358b999b3
+author Tom Preston-Werner <tom@mojombo.com> 1191999972 -0700
+committer Tom Preston-Werner <tom@mojombo.com> 1191999972 -0700
+
+    implement Grit#heads
+
+commit 634396b2f541a9f2d58b00be1a07f0c358b999b3
+tree b35b4bf642d667fdd613eebcfe4e17efd420fb8a
+author Tom Preston-Werner <tom@mojombo.com> 1191997100 -0700
+committer Tom Preston-Werner <tom@mojombo.com> 1191997100 -0700
+
+    initial grit setup
+
+commit ab25fd8483882c3bda8a458ad2965d2248654335
+tree c20b5ec543bde1e43a931449b196052c06ed8acc
+parent 6e64c55896aabb9a7d8e9f8f296f426d21a78c2c
+parent 7f874954efb9ba35210445be456c74e037ba6af2
+author Tom Preston-Werner <tom@mojombo.com> 1182645538 -0700
+committer Tom Preston-Werner <tom@mojombo.com> 1182645538 -0700
+
+    Merge branch 'site'
+    Some other stuff
