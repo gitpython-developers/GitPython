@@ -9,7 +9,7 @@ Tom Preston-Werner and Chris Wanstrath.
 
 .. _grit: http://grit.rubyforge.org
 
-The ``method_missing`` stuff was `taken from this blog post`_
+The ``method_missing`` stuff was `taken from this blog post`_.
 
 .. _taken from this blog post: http://blog.iffy.us/?p=43
 
@@ -48,13 +48,13 @@ trees, blobs, etc.
 Initialize a Repo object
 ************************
 
-The first step is to create a `Repo` object to represent your repository.
+The first step is to create a ``Repo`` object to represent your repository.
 
 	>>> from git_python import *
 	>>> repo = Repo.new("/Users/mtrier/Development/git-python")
   
-In the above example, the directory `/Users/mtrier/Development/git-python` is my working
-repo and contains the `.git` directory. You can also initialize GitPython with a 
+In the above example, the directory ``/Users/mtrier/Development/git-python`` is my working
+repo and contains the ``.git`` directory. You can also initialize GitPython with a 
 bare repo.
 
 	>>> repo = Repo.init_bare("/var/git/git-python.git")
@@ -62,7 +62,7 @@ bare repo.
 Getting a list of commits
 *************************
 
-From the `Repo` object, you can get a list of `Commit`
+From the ``Repo`` object, you can get a list of ``Commit``
 objects.
 
 	>>> repo.commits()
@@ -71,7 +71,7 @@ objects.
 	 <GitPython.Commit "e17c7e11aed9e94d2159e549a99b966912ce1091">, 
 	 <GitPython.Commit "bd795df2d0e07d10e0298670005c0e9d9a5ed867">]
 
-Called without arguments, `Repo.commits` returns a list of up to ten commits
+Called without arguments, ``Repo.commits`` returns a list of up to ten commits
 reachable by the master branch (starting at the latest commit). You can ask
 for commits beginning at a different branch, commit, tag, etc.
 
@@ -130,7 +130,7 @@ The above corresponds to ``master^^^`` or ``master~3`` in git parlance.
 The Tree object
 ***************
 
-A tree recorda pointers to the contents of a directory. Let's say you want
+A tree records pointers to the contents of a directory. Let's say you want
 the root tree of the latest commit on the master branch.
 
 	>>> tree = repo.commits()[0].tree
@@ -166,7 +166,7 @@ from a tree.
 	>>> tree/"lib"
 	<GitPython.Tree "c1c7214dde86f76bc3e18806ac1f47c38b2b7a30">
   
-You can also get a tree directly from the repo if you know its name.
+You can also get a tree directly from the repository if you know its name.
 
 	>>> repo.tree()
 	<GitPython.Tree "master">
