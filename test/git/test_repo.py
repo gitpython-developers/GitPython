@@ -1,9 +1,7 @@
 import os
 import time
-from mock import *
-from test.asserts import *
+from test.testlib import *
 from git_python import *
-from test.helper import *
 
 class TestRepo(object):
     def setup(self):

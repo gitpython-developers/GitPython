@@ -1,8 +1,6 @@
 import time
-from mock import *
-from test.asserts import *
+from test.testlib import *
 from git_python import *
-from test.helper import *
 
 class TestBlob(object):
     def setup(self):

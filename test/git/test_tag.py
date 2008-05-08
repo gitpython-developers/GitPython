@@ -1,7 +1,7 @@
 from mock import *
-from test.asserts import *
-from git_python import *
+from test.testlib import *
 from test.helper import *
+from git_python import *
 
 class TestTag(object):
     def setup(self):

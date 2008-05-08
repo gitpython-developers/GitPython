@@ -1,17 +1,17 @@
 import inspect
 
-from actor import Actor
-from blob import Blob
-from commit import Commit
-from diff import Diff
-from errors import InvalidGitRepositoryError, NoSuchPathError
-from git import Git
-from head import Head
-from repo import Repo
-from stats import Stats
-from tag import Tag
-from tree import Tree
-from utils import shell_escape, dashify, touch
+from git_python.actor import Actor
+from git_python.blob import Blob
+from git_python.commit import Commit
+from git_python.diff import Diff
+from git_python.errors import InvalidGitRepositoryError, NoSuchPathError
+from git_python.git import Git
+from git_python.head import Head
+from git_python.repo import Repo
+from git_python.stats import Stats
+from git_python.tag import Tag
+from git_python.tree import Tree
+from git_python.utils import shell_escape, dashify, touch
 
 __all__ = [ name for name, obj in locals().items()
             if not (name.startswith('_') or inspect.ismodule(obj)) ]

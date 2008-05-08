@@ -1,7 +1,5 @@
-from mock import *
-from test.asserts import *
+from test.testlib import *
 from git_python import *
-from test.helper import *
 
 class TestHead(object):
     def setup(self):

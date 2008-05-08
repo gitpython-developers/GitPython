@@ -1,7 +1,6 @@
 import os
-from test.asserts import *
+from test.testlib import *
 from git_python import *
-from test.helper import *
 
 class TestUtils(object):
     def setup(self):

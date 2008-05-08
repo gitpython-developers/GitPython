@@ -1,6 +1,5 @@
-from test.asserts import *
+from test.testlib import *
 from git_python import *
-from test.helper import *
 
 class TestStats(object):
     def setup(self):
