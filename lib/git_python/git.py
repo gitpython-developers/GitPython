@@ -28,8 +28,7 @@ class Git(MethodMissingMixin):
         """
         proc = subprocess.Popen(command, 
                                 shell=True,
-                                stdout=subprocess.PIPE,
-                                stderr=subprocess.STDOUT
+                                stdout=subprocess.PIPE                                
                                 )
         stdout_value = proc.communicate()[0]
         return stdout_value

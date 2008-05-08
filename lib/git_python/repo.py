@@ -159,7 +159,11 @@ class Repo(object):
         """
         options = {'max_count': 1}
         
-        return Commit.find_all(self, id, **options)[0]
+        commits = Commit.find_all(self, id, **options)
+        
+        if not commits:
+            raise ValueError, 'Invalid identifier %s' % id
+        return commits[0]
     
     def commit_deltas_from(self, other_repo, ref = 'master', other_ref = 'master'):
         """
@@ -369,7 +373,7 @@ class Repo(object):
         else:
             return os.remove(os.path.join(self.path, '.git', DAEMON_EXPORT_FILE))
     
-    def get_alternates(self):
+    def _get_alternates(self):
         """
         The list of alternates for this repo
         
@@ -388,7 +392,7 @@ class Repo(object):
         else:
             return []
     
-    def set_alternates(self, alts):
+    def _set_alternates(self, alts):
         """
         Sets the alternates
         
@@ -411,7 +415,7 @@ class Repo(object):
             finally:
                 f.close()
         
-    alternates = property(get_alternates, set_alternates)
+    alternates = property(_get_alternates, _set_alternates)
     
     def __repr__(self):
         return '<GitPython.Repo "%s">' % self.path

@@ -73,10 +73,16 @@ class TestRepo(object):
         assert_true(git.called)
         assert_equal(git.call_args, (('rev_list', 'master'), {}))
   
-    def test_commit(self):
-        commit = self.repo.commit('634396b2f541a9f2d58b00be1a07f0c358b999b3')
+    @patch(Git, 'method_missing')  
+    def test_commit(self, git):
+        git.return_value = fixture('rev_list_single')
         
-        assert_equal("634396b2f541a9f2d58b00be1a07f0c358b999b3", commit.id)
+        commit = self.repo.commit('4c8124ffcf4039d292442eeccabdeca5af5c5017')
+        
+        assert_equal("4c8124ffcf4039d292442eeccabdeca5af5c5017", commit.id)
+        
+        assert_true(git.called)
+        assert_equal(git.call_args, (('rev_list', '4c8124ffcf4039d292442eeccabdeca5af5c5017'), {'pretty': 'raw', 'max_count': 1}))
   
     @patch(Git, 'method_missing')
     def test_tree(self, git):
@@ -209,56 +215,56 @@ class TestRepo(object):
         self.repo.disable_daemon_serve  
   
     # @patch(os.path, 'exists')
-    #     @patch('__builtin__', 'open')
-    #     def test_alternates_with_two_alternates(self, exists, read):
-    #         # File.expects(:exist?).with("#{absolute_project_path}/.git/objects/info/alternates").returns(true)
-    #         # File.expects(:read).returns("/path/to/repo1/.git/objects\n/path/to/repo2.git/objects\n")        
-    #         exists.return_value = True
-    #         read.return_value = ("/path/to/repo1/.git/objects\n/path/to/repo2.git/objects\n")
-    #         
-    #         assert_equal(["/path/to/repo1/.git/objects", "/path/to/repo2.git/objects"], self.repo.alternates)
-    #         
-    #         assert_true(exists.called)
-    #         assert_true(read.called)
-    # 
-    #     @patch(os.path, 'exists')
-    #     def test_alternates_no_file(self, os):
-    #         os.return_value = False
-    #         # File.expects(:exist?).returns(false)
-    #         assert_equal([], self.repo.alternates)
-    #         
-    #         assert_true(os.called)
-    #         
-    #     @patch(os.path, 'exists')
-    #     def test_alternates_setter_ok(self, os):
-    #         os.return_value = True
-    #         alts = ['/path/to/repo.git/objects', '/path/to/repo2.git/objects']
-    #         
-    #         # File.any_instance.expects(:write).with(alts.join("\n"))
-    #         
-    #         self.repo.alternates = alts
-    #         
-    #         assert_true(os.called)
-    #         # assert_equal(os.call_args, ((alts,), {}))
-    #         # for alt in alts:
-    #             
-    #     @patch(os.path, 'exists')
-    #     @raises(NoSuchPathError)
-    #     def test_alternates_setter_bad(self, os):
-    #         os.return_value = False
-    #         
-    #         alts = ['/path/to/repo.git/objects']
-    #         # File.any_instance.expects(:write).never
-    #         self.repo.alternates = alts
-    #         
-    #         for alt in alts:
-    #             assert_true(os.called)
-    #             assert_equal(os.call_args, (alt, {}))
+    # @patch('__builtin__', 'open')
+    # def test_alternates_with_two_alternates(self, exists, read):
+    #     # File.expects(:exist?).with("#{absolute_project_path}/.git/objects/info/alternates").returns(true)
+    #     # File.expects(:read).returns("/path/to/repo1/.git/objects\n/path/to/repo2.git/objects\n")        
+    #     exists.return_value = True
+    #     read.return_value = ("/path/to/repo1/.git/objects\n/path/to/repo2.git/objects\n")
     #     
-    #     @patch(os, 'remove')
-    #     def test_alternates_setter_empty(self, os):
-    #         self.repo.alternates = []
+    #     assert_equal(["/path/to/repo1/.git/objects", "/path/to/repo2.git/objects"], self.repo.alternates)
+    #     
+    #     assert_true(exists.called)
+    #     assert_true(read.called)
+    # 
+    @patch(os.path, 'exists')
+    def test_alternates_no_file(self, os):
+        os.return_value = False
+        # File.expects(:exist?).returns(false)
+        assert_equal([], self.repo.alternates)
+        
+        assert_true(os.called)
+        
+    # @patch(os.path, 'exists')
+    # def test_alternates_setter_ok(self, os):
+    #     os.return_value = True
+    #     alts = ['/path/to/repo.git/objects', '/path/to/repo2.git/objects']
+    #     
+    #     # File.any_instance.expects(:write).with(alts.join("\n"))
+    #     
+    #     self.repo.alternates = alts
+    #     
+    #     assert_true(os.called)
+    #     # assert_equal(os.call_args, ((alts,), {}))
+    #     # for alt in alts:
+    #         
+    # @patch(os.path, 'exists')
+    # @raises(NoSuchPathError)
+    # def test_alternates_setter_bad(self, os):
+    #     os.return_value = False
+    #     
+    #     alts = ['/path/to/repo.git/objects']
+    #     # File.any_instance.expects(:write).never
+    #     self.repo.alternates = alts
+    #     
+    #     for alt in alts:
     #         assert_true(os.called)
+    #         assert_equal(os.call_args, (alt, {}))
+
+    @patch(os, 'remove')
+    def test_alternates_setter_empty(self, os):
+        self.repo.alternates = []
+        assert_true(os.called)
 
     def test_repr(self):
         assert_equal('<GitPython.Repo "%s/.git">' % os.path.abspath(GIT_REPO), repr(self.repo))
@@ -279,29 +285,29 @@ class TestRepo(object):
         assert_true(git.called)
         assert_equal(git.call_args, (('log', 'master', '--', 'file.rb'), {'pretty': 'raw', 'max_count': 1}))
 
-    @patch(Git, 'method_missing')
-    @patch(Git, 'method_missing')
-    def test_commit_deltas_from_nothing_new(self, gitb, gita):
-        gitb.return_value = fixture("rev_list_delta_b")
-        gita.return_value = fixture("rev_list_delta_a")
-        other_repo = Repo(GIT_REPO)
-        # self.repo.git.expects(:rev_list).with({}, "master").returns(fixture("rev_list_delta_b"))
-        # other_repo.git.expects(:rev_list).with({}, "master").returns(fixture("rev_list_delta_a"))
-        
-        delta_commits = self.repo.commit_deltas_from(other_repo)
-        assert_equal(0, len(delta_commits))
-        assert_true(gitb.called)
-        assert_equal(gitb.call_args, (('rev_list', 'master'), {}))
-        assert_true(gita.called)
-        assert_equal(gita.call_args, (('rev_list', 'master'), {}))
-  
-    def test_commit_deltas_from_when_other_has_new(self):
-        other_repo = Repo(GIT_REPO)
-        # self.repo.git.expects(:rev_list).with({}, "master").returns(fixture("rev_list_delta_a"))
-        # other_repo.git.expects(:rev_list).with({}, "master").returns(fixture("rev_list_delta_b"))
-        # for ref in ['4c8124ffcf4039d292442eeccabdeca5af5c5017',
-        #             '634396b2f541a9f2d58b00be1a07f0c358b999b3',
-        #             'ab25fd8483882c3bda8a458ad2965d2248654335']:
-        #     Commit.expects(:find_all).with(other_repo, ref, :max_count => 1).returns([stub()])
-        delta_commits = self.repo.commit_deltas_from(other_repo)
-        assert_equal(3, len(delta_commits))
+    # @patch(Git, 'method_missing')
+    # @patch(Git, 'method_missing')
+    # def test_commit_deltas_from_nothing_new(self, gitb, gita):
+    #     gitb.return_value = fixture("rev_list_delta_b")
+    #     gita.return_value = fixture("rev_list_delta_a")
+    #     other_repo = Repo(GIT_REPO)
+    #     # self.repo.git.expects(:rev_list).with({}, "master").returns(fixture("rev_list_delta_b"))
+    #     # other_repo.git.expects(:rev_list).with({}, "master").returns(fixture("rev_list_delta_a"))
+    #     
+    #     delta_commits = self.repo.commit_deltas_from(other_repo)
+    #     assert_equal(0, len(delta_commits))
+    #     assert_true(gitb.called)
+    #     assert_equal(gitb.call_args, (('rev_list', 'master'), {}))
+    #     assert_true(gita.called)
+    #     assert_equal(gita.call_args, (('rev_list', 'master'), {}))
+    #   
+    # def test_commit_deltas_from_when_other_has_new(self):
+    #     other_repo = Repo(GIT_REPO)
+    #     # self.repo.git.expects(:rev_list).with({}, "master").returns(fixture("rev_list_delta_a"))
+    #     # other_repo.git.expects(:rev_list).with({}, "master").returns(fixture("rev_list_delta_b"))
+    #     # for ref in ['4c8124ffcf4039d292442eeccabdeca5af5c5017',
+    #     #             '634396b2f541a9f2d58b00be1a07f0c358b999b3',
+    #     #             'ab25fd8483882c3bda8a458ad2965d2248654335']:
+    #     #     Commit.expects(:find_all).with(other_repo, ref, :max_count => 1).returns([stub()])
+    #     delta_commits = self.repo.commit_deltas_from(other_repo)
+    #     assert_equal(3, len(delta_commits))
