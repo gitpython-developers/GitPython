@@ -1,8 +1,8 @@
 import time
 from mock import *
-from gitalicious.test.asserts import *
-from gitalicious.lib import *
-from gitalicious.test.helper import *
+from test.asserts import *
+from git_python import *
+from test.helper import *
 
 class TestBlob(object):
     def setup(self):

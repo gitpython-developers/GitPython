@@ -1,7 +1,7 @@
 import os
-from gitalicious.test.asserts import *
-from gitalicious.lib import *
-from gitalicious.test.helper import *
+from test.asserts import *
+from git_python import *
+from test.helper import *
 
 class TestUtils(object):
     def setup(self):

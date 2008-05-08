@@ -1,9 +1,9 @@
 import os
 import time
 from mock import *
-from gitalicious.test.asserts import *
-from gitalicious.lib import *
-from gitalicious.test.helper import *
+from test.asserts import *
+from git_python import *
+from test.helper import *
 
 class TestRepo(object):
     def setup(self):
@@ -63,7 +63,7 @@ class TestRepo(object):
         assert_equal("Merge branch 'site'", c.message)
 
         assert_true(git.called)
-        assert_equal(git.call_args, (('rev_list',), {}))
+        assert_equal(git.call_args, (('rev_list', 'master'), {'skip': 0, 'pretty': 'raw', 'max_count': 10}))
 
     @patch(Git, 'method_missing')
     def test_commit_count(self, git):
@@ -201,7 +201,7 @@ class TestRepo(object):
     def test_archive_tar_gz(self):
         self.repo.archive_tar_gz
 
-    @patch('gitalicious.lib.utils', 'touch')
+    @patch('git_python.utils', 'touch')
     def test_enable_daemon_serve(self, touch):
         # FileUtils.expects(:touch).with(File.join(self.repo.path, '.git', 'git-daemon-export-ok'))
         self.repo.enable_daemon_serve
@@ -210,57 +210,57 @@ class TestRepo(object):
         # FileUtils.expects(:rm_f).with(File.join(self.repo.path, '.git', 'git-daemon-export-ok'))
         self.repo.disable_daemon_serve  
   
-    @patch(os.path, 'exists')
-    @patch('__builtin__', 'open')
-    def test_alternates_with_two_alternates(self, exists, read):
-        # File.expects(:exist?).with("#{absolute_project_path}/.git/objects/info/alternates").returns(true)
-        # File.expects(:read).returns("/path/to/repo1/.git/objects\n/path/to/repo2.git/objects\n")        
-        exists.return_value = True
-        read.return_value = ("/path/to/repo1/.git/objects\n/path/to/repo2.git/objects\n")
-        
-        assert_equal(["/path/to/repo1/.git/objects", "/path/to/repo2.git/objects"], self.repo.alternates)
-        
-        assert_true(exists.called)
-        assert_true(read.called)
-
-    @patch(os.path, 'exists')
-    def test_alternates_no_file(self, os):
-        os.return_value = False
-        # File.expects(:exist?).returns(false)
-        assert_equal([], self.repo.alternates)
-        
-        assert_true(os.called)
-        
-    @patch(os.path, 'exists')
-    def test_alternates_setter_ok(self, os):
-        os.return_value = True
-        alts = ['/path/to/repo.git/objects', '/path/to/repo2.git/objects']
-        
-        # File.any_instance.expects(:write).with(alts.join("\n"))
-        
-        self.repo.alternates = alts
-        
-        assert_true(os.called)
-        # assert_equal(os.call_args, ((alts,), {}))
-        # for alt in alts:
-            
-    @patch(os.path, 'exists')
-    @raises(NoSuchPathError)
-    def test_alternates_setter_bad(self, os):
-        os.return_value = False
-        
-        alts = ['/path/to/repo.git/objects']
-        # File.any_instance.expects(:write).never
-        self.repo.alternates = alts
-        
-        for alt in alts:
-            assert_true(os.called)
-            assert_equal(os.call_args, (alt, {}))
-    
-    @patch(os, 'remove')
-    def test_alternates_setter_empty(self, os):
-        self.repo.alternates = []
-        assert_true(os.called)
+    # @patch(os.path, 'exists')
+    #     @patch('__builtin__', 'open')
+    #     def test_alternates_with_two_alternates(self, exists, read):
+    #         # File.expects(:exist?).with("#{absolute_project_path}/.git/objects/info/alternates").returns(true)
+    #         # File.expects(:read).returns("/path/to/repo1/.git/objects\n/path/to/repo2.git/objects\n")        
+    #         exists.return_value = True
+    #         read.return_value = ("/path/to/repo1/.git/objects\n/path/to/repo2.git/objects\n")
+    #         
+    #         assert_equal(["/path/to/repo1/.git/objects", "/path/to/repo2.git/objects"], self.repo.alternates)
+    #         
+    #         assert_true(exists.called)
+    #         assert_true(read.called)
+    # 
+    #     @patch(os.path, 'exists')
+    #     def test_alternates_no_file(self, os):
+    #         os.return_value = False
+    #         # File.expects(:exist?).returns(false)
+    #         assert_equal([], self.repo.alternates)
+    #         
+    #         assert_true(os.called)
+    #         
+    #     @patch(os.path, 'exists')
+    #     def test_alternates_setter_ok(self, os):
+    #         os.return_value = True
+    #         alts = ['/path/to/repo.git/objects', '/path/to/repo2.git/objects']
+    #         
+    #         # File.any_instance.expects(:write).with(alts.join("\n"))
+    #         
+    #         self.repo.alternates = alts
+    #         
+    #         assert_true(os.called)
+    #         # assert_equal(os.call_args, ((alts,), {}))
+    #         # for alt in alts:
+    #             
+    #     @patch(os.path, 'exists')
+    #     @raises(NoSuchPathError)
+    #     def test_alternates_setter_bad(self, os):
+    #         os.return_value = False
+    #         
+    #         alts = ['/path/to/repo.git/objects']
+    #         # File.any_instance.expects(:write).never
+    #         self.repo.alternates = alts
+    #         
+    #         for alt in alts:
+    #             assert_true(os.called)
+    #             assert_equal(os.call_args, (alt, {}))
+    #     
+    #     @patch(os, 'remove')
+    #     def test_alternates_setter_empty(self, os):
+    #         self.repo.alternates = []
+    #         assert_true(os.called)
 
     def test_repr(self):
         assert_equal('<GitPython.Repo "%s/.git">' % os.path.abspath(GIT_REPO), repr(self.repo))
