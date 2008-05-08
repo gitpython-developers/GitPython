@@ -32,11 +32,11 @@ SOURCE
 
 GitPython's git repo is available on Gitorious, which can be browsed at:
 
-http://gitorious.org/projects/git-python
+http://gitorious.org/projects/git-python/
 
 and cloned from:
 
-git://gitorious.org/projects/git-python.git
+git://gitorious.org/git-python/mainline.git
 
 USAGE
 =====
@@ -205,6 +205,13 @@ You can also get a blob directly from the repo if you know its name.
 
 	>>> repo.blob("b19574431a073333ea09346eafd64e7b1908ef49")
 	<GitPython.Blob "b19574431a073333ea09346eafd64e7b1908ef49">
+
+What Else?
+**********
+
+There is more stuff in there, like the ability to tar or gzip repos, stats, blame, and probably a few other things.  Additionally calls to the git instance are handled through a ``method_missing`` construct, which makes available any git commands directly, with a nice conversion of Python dicts to command line parameters.
+
+Check the unit tests, they're pretty exhaustive.
 
 LICENSE
 =======
