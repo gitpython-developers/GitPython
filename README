@@ -18,9 +18,11 @@ REQUIREMENTS
 
 * Git_ tested with 1.5.3.7
 * `Python Nose`_ - used for running the tests  
+* `Mock by Michael Foord`_ used for tests
 
 .. _Git: http://git.or.cz/
 .. _Python Nose: http://code.google.com/p/python-nose/
+.. _Mock by Michael Foord: http://www.voidspace.org.uk/python/mock.html
 
 INSTALL
 =======
