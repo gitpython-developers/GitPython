@@ -24,7 +24,6 @@ class TestRepo(object):
 
     @patch(Git, 'method_missing')
     def test_heads_should_populate_head_data(self, git):
-        # Git.any_instance.expects(:for_each_ref).returns(fixture('for_each_ref'))
         git.return_value = fixture('for_each_ref')
         
         head = self.repo.heads[0]
@@ -36,7 +35,6 @@ class TestRepo(object):
 
     @patch(Git, 'method_missing')  
     def test_commits(self, git):
-        # Git.any_instance.expects(:rev_list).returns(fixture('rev_list'))
         git.return_value = fixture('rev_list')
         
         commits = self.repo.commits('master', 10)
@@ -65,7 +63,6 @@ class TestRepo(object):
 
     @patch(Git, 'method_missing')
     def test_commit_count(self, git):
-        # Git.any_instance.expects(:rev_list).with({}, 'master').returns(fixture('rev_list_count'))
         git.return_value = fixture('rev_list_count')
         
         assert_equal(655, self.repo.commit_count('master'))
@@ -86,7 +83,6 @@ class TestRepo(object):
   
     @patch(Git, 'method_missing')
     def test_tree(self, git):
-        # Git.any_instance.expects(:ls_tree).returns(fixture('ls_tree_a'))
         git.return_value = fixture('ls_tree_a')
         
         tree = self.repo.tree('master')
@@ -99,7 +95,6 @@ class TestRepo(object):
 
     @patch(Git, 'method_missing')
     def test_blob(self, git):
-        # Git.any_instance.expects(:cat_file).returns(fixture('cat_file_blob'))
         git.return_value = fixture('cat_file_blob')
         
         blob = self.repo.blob("abc")
@@ -111,8 +106,6 @@ class TestRepo(object):
     @patch(Repo, '__init__')
     @patch(Git, 'method_missing')
     def test_init_bare(self, repo, git):
-        # Git.any_instance.expects(:init).returns(true)
-        # Repo.expects(:new).with("/foo/bar.git")
         git.return_value = True
         
         Repo.init_bare("/foo/bar.git")
@@ -125,9 +118,6 @@ class TestRepo(object):
     @patch(Repo, '__init__')
     @patch(Git, 'method_missing')
     def test_init_bare_with_options(self, repo, git):
-        # Git.any_instance.expects(:init).with(
-        # :template => "/baz/sweet").returns(true)
-        # Repo.expects(:new).with("/foo/bar.git")
         git.return_value = True
         
         Repo.init_bare("/foo/bar.git", **{'template': "/baz/sweet"})
@@ -140,11 +130,6 @@ class TestRepo(object):
     @patch(Repo, '__init__')
     @patch(Git, 'method_missing')
     def test_fork_bare(self, repo, git):
-        # Git.any_instance.expects(:clone).with(
-        #           {:bare => true, :shared => false}, 
-        #           "#{absolute_project_path}/.git",
-        #           "/foo/bar.git").returns(nil)
-        # Repo.expects(:new)
         git.return_value = None
         
         self.repo.fork_bare("/foo/bar.git")
@@ -156,11 +141,6 @@ class TestRepo(object):
     @patch(Repo, '__init__')
     @patch(Git, 'method_missing')
     def test_fork_bare_with_options(self, repo, git):
-        # Git.any_instance.expects(:clone).with(
-        #       {:bare => true, :shared => false, :template => '/awesome'}, 
-        #       "#{absolute_project_path}/.git",
-        #       "/foo/bar.git").returns(nil)
-        #     Repo.expects(:new)
         git.return_value = None
         
         self.repo.fork_bare("/foo/bar.git", **{'template': '/awesome'})
@@ -172,19 +152,16 @@ class TestRepo(object):
 
     @patch(Git, 'method_missing')
     def test_diff(self, git):
-        # Git.any_instance.expects(:diff).with({}, 'master^', 'master', '--')
         self.repo.diff('master^', 'master')
         
         assert_true(git.called)
         assert_equal(git.call_args, (('diff', 'master^', 'master', '--'), {}))
 
-        # Git.any_instance.expects(:diff).with({}, 'master^', 'master', '--', 'foo/bar')
         self.repo.diff('master^', 'master', 'foo/bar')
 
         assert_true(git.called)
         assert_equal(git.call_args, (('diff', 'master^', 'master', '--', 'foo/bar'), {}))
         
-        # Git.any_instance.expects(:diff).with({}, 'master^', 'master', '--', 'foo/bar', 'foo/baz')
         self.repo.diff('master^', 'master', 'foo/bar', 'foo/baz')
         
         assert_true(git.called)
@@ -192,7 +169,6 @@ class TestRepo(object):
 
     @patch(Git, 'method_missing')
     def test_diff(self, git):
-        # Git.any_instance.expects(:diff).returns(fixture('diff_p'))
         git.return_value = fixture('diff_p')
         
         diffs = self.repo.commit_diff('master')
@@ -207,11 +183,9 @@ class TestRepo(object):
 
     @patch('git_python.utils', 'touch')
     def test_enable_daemon_serve(self, touch):
-        # FileUtils.expects(:touch).with(File.join(self.repo.path, '.git', 'git-daemon-export-ok'))
         self.repo.enable_daemon_serve
 
     def test_disable_daemon_serve(self):
-        # FileUtils.expects(:rm_f).with(File.join(self.repo.path, '.git', 'git-daemon-export-ok'))
         self.repo.disable_daemon_serve  
   
     # @patch(os.path, 'exists')
@@ -230,7 +204,6 @@ class TestRepo(object):
     @patch(os.path, 'exists')
     def test_alternates_no_file(self, os):
         os.return_value = False
-        # File.expects(:exist?).returns(false)
         assert_equal([], self.repo.alternates)
         
         assert_true(os.called)
