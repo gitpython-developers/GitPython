@@ -2,6 +2,10 @@ import re
 import commit
 
 class Diff(object):
+    """
+    A Diff contains diff information between two commits.
+    """
+    
     def __init__(self, repo, a_path, b_path, a_commit, b_commit, a_mode, b_mode, new_file, deleted_file, diff):
         self.repo = repo
         self.a_path = a_path

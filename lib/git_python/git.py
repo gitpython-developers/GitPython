@@ -5,6 +5,9 @@ from utils import *
 from method_missing import MethodMissingMixin
 
 class Git(MethodMissingMixin):
+    """
+    The Git class manages communication with the Git binary
+    """
     def __init__(self, git_dir):
         super(Git, self).__init__()
         self.git_dir = git_dir
@@ -16,7 +19,13 @@ class Git(MethodMissingMixin):
         return self.git_dir
         
     def execute(self, command):
-        print command
+        """
+        Handles executing the command on the shell and consumes and returns
+        the returned information (stdout)
+        
+        ``command``
+            The command to execute
+        """
         proc = subprocess.Popen(command, 
                                 shell=True,
                                 stdout=subprocess.PIPE,

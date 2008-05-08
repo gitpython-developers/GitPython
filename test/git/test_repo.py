@@ -262,7 +262,7 @@ class TestRepo(object):
         self.repo.alternates = []
         assert_true(os.called)
 
-    def test_inspect(self):
+    def test_repr(self):
         assert_equal('<GitPython.Repo "%s/.git">' % os.path.abspath(GIT_REPO), repr(self.repo))
 
     @patch(Git, 'method_missing')

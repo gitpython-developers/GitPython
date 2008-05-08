@@ -233,7 +233,7 @@ class Repo(object):
         ``paths``
             is an optional list of file paths on which to restrict the diff
         """
-        self.git.diff(a, b, '--', *paths)
+        return self.git.diff(a, b, '--', *paths)
 
     def commit_diff(self, commit):
         """
