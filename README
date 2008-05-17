@@ -195,7 +195,7 @@ A blob has certain attributes.
 	>>> blob.mime_type
 	'text/x-python'
 	
-	>>> len(blob)
+	>>> blob.size
 	415
   
 You can get the data of a blob as a string.

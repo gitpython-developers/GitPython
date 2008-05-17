@@ -28,8 +28,18 @@ class TestBlob(object):
     def test_should_return_file_size(self, git):
         git.return_value = fixture('cat_file_blob_size')
         blob = Blob(self.repo, **{'id': 'abc'})
-        assert_equal(11, len(blob))
+        assert_equal(11, blob.size)
         assert_true(git.called)
+        assert_equal(git.call_args, (('cat_file', 'abc'), {'s': True}))
+
+    @patch(Git, 'method_missing')
+    def test_should_cache_file_size(self, git):
+        git.return_value = fixture('cat_file_blob_size')
+        blob = Blob(self.repo, **{'id': 'abc'})
+        assert_equal(11, blob.size)
+        assert_equal(11, blob.size)        
+        assert_true(git.called)
+        assert_equal(git.call_count, 1)
         assert_equal(git.call_args, (('cat_file', 'abc'), {'s': True}))
   
     def test_mime_type_should_return_mime_type_for_known_types(self):

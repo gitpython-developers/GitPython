@@ -23,22 +23,24 @@ class Blob(object):
         self.id = None
         self.mode = None
         self.name = None
-        self.size = None
+        self._size = None
         self.data_stored  = None
         
         self.repo = repo
         for k, v in kwargs.items():
             setattr(self, k, v)
     
-    def __len__(self):
+    @property
+    def size(self):
         """
         The size of this blob in bytes
 
         Returns
             int
         """
-        self.size = self.size or int(self.repo.git.cat_file(self.id, **{'s': True}).rstrip())
-        return self.size
+        if self._size is None:
+            self._size = int(self.repo.git.cat_file(self.id, **{'s': True}).rstrip())
+        return self._size
     
     @property
     def data(self):

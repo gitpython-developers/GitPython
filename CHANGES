@@ -2,6 +2,12 @@
 CHANGES
 =======
 
+0.1.2
+=====
+Corrected problem with Tree.__div__ not working with zero length files.  
+Removed __len__ override and replaced with size instead. Also made size cache
+properly.
+
 0.1.1
 =====
 Fixed up some urls because I'm a moron
