@@ -135,7 +135,7 @@ class TestRepo(object):
         self.repo.fork_bare("/foo/bar.git")
         
         assert_true(git.called)
-        assert_equal(git.call_args, (('clone', '%s/.git' % absolute_project_path(), '/foo/bar.git'), {'bare': True, 'shared': False}))
+        assert_equal(git.call_args, (('clone', '%s/.git' % absolute_project_path(), '/foo/bar.git'), {'bare': True}))
         assert_true(repo.called)
 
     @patch(Repo, '__init__')
@@ -147,7 +147,7 @@ class TestRepo(object):
         
         assert_true(git.called)
         assert_equal(git.call_args, (('clone', '%s/.git' % absolute_project_path(), '/foo/bar.git'), 
-                                      {'bare': True, 'shared': False, 'template': '/awesome'}))
+                                      {'bare': True, 'template': '/awesome'}))
         assert_true(repo.called)
 
     @patch(Git, 'method_missing')

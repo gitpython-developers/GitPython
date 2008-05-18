@@ -120,8 +120,20 @@ Commit objects contain information about a specific commit.
 	(2008, 5, 7, 5, 0, 56, 2, 128, 0)
 	
 	>>> head.message
-	'cleaned up a lot of test information. Fixed escaping so it works with subprocess.'
+	'cleaned up a lot of test information. Fixed escaping so it works with 
+	subprocess.'
 
+Note: date time is represented in a `struct_time`_ format.  Conversion to
+human readable form can be accomplished with the various time module methods.
+
+	>>> import time
+	>>> time.asctime(head.committed_date)
+	'Wed May 7 05:56:02 2008'
+
+	>>> time.strftime("%a, %d %b %Y %H:%M", head.committed_date)
+	'Wed, 7 May 2008 05:56'
+
+.. _struct_time: http://docs.python.org/lib/module-time.html
 
 You can traverse a commit's ancestry by chaining calls to ``parents``.
 
@@ -149,9 +161,9 @@ Once you have a tree, you can get the contents.
 	 <GitPython.Tree "eaa0090ec96b054e425603480519e7cf587adfc3">, 
 	 <GitPython.Blob "980e72ae16b5378009ba5dfd6772b59fe7ccd2df">]
 
-This tree contains three ``Blob`` objects and one ``Tree`` object. The trees are
-subdirectories and the blobs are files. Trees below the root have additional
-attributes.
+This tree contains three ``Blob`` objects and one ``Tree`` object. The trees 
+are subdirectories and the blobs are files. Trees below the root have 
+additional attributes.
 
 	>>> contents = tree.contents[-2]
 	<GitPython.Tree "e5445b9db4a9f08d5b4de4e29e61dffda2f386ba">
@@ -211,7 +223,11 @@ You can also get a blob directly from the repo if you know its name.
 What Else?
 **********
 
-There is more stuff in there, like the ability to tar or gzip repos, stats, blame, and probably a few other things.  Additionally calls to the git instance are handled through a ``method_missing`` construct, which makes available any git commands directly, with a nice conversion of Python dicts to command line parameters.
+There is more stuff in there, like the ability to tar or gzip repos, stats, 
+log, blame, and probably a few other things.  Additionally calls to the git 
+instance are handled through a ``method_missing`` construct, which makes 
+available any git commands directly, with a nice conversion of Python dicts 
+to command line parameters.
 
 Check the unit tests, they're pretty exhaustive.
 
