@@ -59,7 +59,7 @@ In the above example, the directory ``/Users/mtrier/Development/git-python``
 is my working repository and contains the ``.git`` directory. You can also 
 initialize GitPython with a bare repository.
 
-	>>> repo = Repo.init_bare("/var/git/git-python.git")
+	>>> repo = Repo.create("/var/git/git-python.git")
 
 Getting a list of commits
 *************************

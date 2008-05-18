@@ -6,7 +6,7 @@ CHANGES
 =====
 Corrected problem with Tree.__div__ not working with zero length files.  
 Removed __len__ override and replaced with size instead. Also made size cache
-properly.
+properly. This is a breaking change.
 
 0.1.1
 =====

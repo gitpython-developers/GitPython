@@ -49,7 +49,7 @@ class TestTree(object):
     def test_content_from_string_invalid_type_should_raise(self):
         self.tree.content_from_string(None, "040000 bogus 650fa3f0c17f1edb4ae53d8dcca4ac59d86e6c44	test")
 
-    @patch(Blob, '__len__')
+    @patch(Blob, 'size')
     @patch(Git, 'method_missing')
     def test_slash(self, blob, git):
         git.return_value = fixture('ls_tree_a')
@@ -58,6 +58,20 @@ class TestTree(object):
         tree = self.repo.tree('master')
         
         assert_equal('aa06ba24b4e3f463b3c4a85469d0fb9e5b421cf8', (tree/'lib').id)
+        assert_equal('8b1e02c0fb554eed2ce2ef737a68bb369d7527df', (tree/'README.txt').id)
+        
+        assert_true(git.called)
+        assert_equal(git.call_args, (('ls_tree', 'master'), {}))
+  
+    @patch(Blob, 'size')
+    @patch(Git, 'method_missing')
+    def test_slash_with_zero_length_file(self, blob, git):
+        git.return_value = fixture('ls_tree_a')
+        blob.return_value = 0
+        
+        tree = self.repo.tree('master')
+        
+        assert_not_none(tree/'README.txt')
         assert_equal('8b1e02c0fb554eed2ce2ef737a68bb369d7527df', (tree/'README.txt').id)
         
         assert_true(git.called)

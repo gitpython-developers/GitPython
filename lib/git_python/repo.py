@@ -250,12 +250,16 @@ class Repo(object):
         return Commit.diff(self, commit)
         
     @classmethod
-    def init_bare(self, path, **kwargs):
+    def init_bare(self, path, mkdir=True, **kwargs):
         """
         Initialize a bare git repository at the given path
         
         ``path``
             is the full path to the repo (traditionally ends with /<name>.git)
+        
+        ``mkdir``
+            if specified will create the repository directory if it doesn't
+            already exists. Creates the directory with a mode=0755.
         
         ``kwargs``
             is any additional options to the git init command
@@ -267,9 +271,19 @@ class Repo(object):
         Returns
             ``GitPython.Repo`` (the newly created repo)
         """
-        git = Git(path)
-        git.init(**kwargs)
+        split = os.path.split(path)
+        if split[-1] == '.git' or os.path.split(split[0])[-1] == '.git':
+            gitpath = path
+        else:
+            gitpath = os.path.join(path, '.git')
+        
+        if mkdir and not os.path.exists(gitpath):
+            os.makedirs(gitpath, 0755)
+        
+        git = Git(gitpath)
+        output = git.init(**kwargs)        
         return Repo(path)
+    create = init_bare
     
     def fork_bare(self, path, **kwargs):
         """
@@ -284,7 +298,7 @@ class Repo(object):
         Returns
             ``GitPython.Repo`` (the newly forked repo)
         """
-        options = {'bare': True, 'shared': False}
+        options = {'bare': True}
         options.update(kwargs)
         self.git.clone(self.path, path, **options)
         return Repo(path)

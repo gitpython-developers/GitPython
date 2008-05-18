@@ -26,6 +26,7 @@ class Git(MethodMissingMixin):
         ``command``
             The command to execute
         """
+        print command
         proc = subprocess.Popen(command, 
                                 shell=True,
                                 stdout=subprocess.PIPE                                
