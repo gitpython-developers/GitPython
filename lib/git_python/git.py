@@ -74,10 +74,10 @@ class Git(MethodMissingMixin):
             str
         """
         opt_args = self.transform_kwargs(**kwargs)
-        ext_args = map(lambda a: (a == '--') and a or "%s" % a, args)
-        args = opt_args + ext_args
+        args = opt_args + list(args)
 
         call = ['git-'+dashify(method)]
         call.extend(args)
+
         stdout_value = self.execute(call)
         return stdout_value
