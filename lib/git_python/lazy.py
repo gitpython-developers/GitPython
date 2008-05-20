@@ -1,6 +1,6 @@
 class LazyMixin(object):
     lazy_properties = []
-    
+
     def __init__(self):
         self.__baked__ = False
 
@@ -21,6 +21,6 @@ class LazyMixin(object):
             return
         self.__bake__()
         self.__baked__ = True
-  
+
     def __bake_it__(self):
         self.__baked__ = True

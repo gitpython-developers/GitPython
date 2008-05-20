@@ -7,14 +7,14 @@ from commit import Commit
 
 class Blob(object):
     DEFAULT_MIME_TYPE = "text/plain"
-    
+
     def __init__(self, repo, **kwargs):
         """
         Create an unbaked Blob containing just the specified attributes
-        
-        ``repo`` 
+
+        ``repo``
             is the Repo
-        
+
         ``atts``
             is a dict of instance variable data
 
@@ -26,11 +26,11 @@ class Blob(object):
         self.name = None
         self._size = None
         self.data_stored  = None
-        
+
         self.repo = repo
         for k, v in kwargs.items():
             setattr(self, k, v)
-    
+
     @property
     def size(self):
         """
@@ -42,7 +42,7 @@ class Blob(object):
         if self._size is None:
             self._size = int(self.repo.git.cat_file(self.id, **{'s': True}).rstrip())
         return self._size
-    
+
     @property
     def data(self):
         """
@@ -66,7 +66,7 @@ class Blob(object):
         if self.name:
             guesses = mimetypes.guess_type(self.name)
         return guesses and guesses[0] or self.DEFAULT_MIME_TYPE
-    
+
     @property
     def basename(self):
       return os.path.basename(self.name)
@@ -83,7 +83,7 @@ class Blob(object):
         commits = {}
         blames = []
         info = None
-        
+
         for line in data.splitlines():
             parts = re.split(r'\s+', line, 1)
             if re.search(r'^[0-9A-Fa-f]{40}$', parts[0]):
@@ -121,14 +121,14 @@ class Blob(object):
                                             'committed_date': info['committer_date'],
                                             'message': info['summary']})
                         commits[info['id']] = c
-                
+
                     m = re.search(r'^\t(.*)$', line)
                     text,  = m.groups()
                     blames[-1][0] = c
                     blames[-1][1] += text
                     info = None
-      
+
         return blames
-    
+
     def __repr__(self):
         return '<GitPython.Blob "%s">' % self.id

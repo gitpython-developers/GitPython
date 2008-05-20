@@ -3,7 +3,7 @@ class Stats(object):
         self.repo = repo
         self.total = total
         self.files = files
-    
+
     @classmethod
     def list_from_string(cls, repo, text):
         hsh = {'total': {'insertions': 0, 'deletions': 0, 'lines': 0, 'files': 0}, 'files': {}}
