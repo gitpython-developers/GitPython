@@ -1,6 +1,5 @@
 from mock import *
 from test.testlib import *
-from test.helper import *
 from git_python import *
 
 class TestTag(object):
