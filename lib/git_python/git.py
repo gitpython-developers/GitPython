@@ -25,6 +25,7 @@ class Git(MethodMissingMixin):
             The command to execute
         """
         print ' '.join(command)
+        print self.git_dir
         proc = subprocess.Popen(command,
                                 cwd = self.git_dir,
                                 stdout=subprocess.PIPE
@@ -74,7 +75,8 @@ class Git(MethodMissingMixin):
             str
         """
         opt_args = self.transform_kwargs(**kwargs)
-        args = opt_args + list(args)
+        ext_args = map(lambda a: (a == '--') and a or "%s" % a, args)
+        args = opt_args + ext_args
 
         call = ['git-'+dashify(method)]
         call.extend(args)
