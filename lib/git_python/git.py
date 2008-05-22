@@ -25,7 +25,6 @@ class Git(MethodMissingMixin):
             The command to execute
         """
         print ' '.join(command)
-        print self.git_dir
         proc = subprocess.Popen(command,
                                 cwd = self.git_dir,
                                 stdout=subprocess.PIPE
