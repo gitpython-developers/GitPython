@@ -7,6 +7,8 @@ class Tree(LazyMixin):
         LazyMixin.__init__(self)
         self.repo = repo
         self.id = None
+        self.mode = None
+        self.name = None
         self.contents = None
 
         for k, v in kwargs.items():

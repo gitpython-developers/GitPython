@@ -185,7 +185,7 @@ class Repo(object):
         ``treeish``
             is the reference (default 'master')
         ``paths``
-            is an optional Array of directory paths to restrict the tree (deafult [])
+            is an optional Array of directory paths to restrict the tree (default [])
 
         Examples::
 
