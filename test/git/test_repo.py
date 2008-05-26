@@ -13,7 +13,7 @@ class TestRepo(object):
 
     @raises(NoSuchPathError)
     def test_new_should_raise_on_non_existant_path(self):
-        Repo("/foobar")
+        Repo("~/foobar")
 
     def test_description(self):
         assert_equal("Unnamed repository; edit this file to name it for gitweb.", self.repo.description)
@@ -108,34 +108,34 @@ class TestRepo(object):
     def test_init_bare(self, repo, git):
         git.return_value = True
         
-        Repo.init_bare("/foo/bar.git")
+        Repo.init_bare("~/foo/bar.git")
         
         assert_true(git.called)
         assert_equal(git.call_args, (('init',), {}))
         assert_true(repo.called)
-        assert_equal(repo.call_args, (('/foo/bar.git',), {}))
+        assert_equal(repo.call_args, (('~/foo/bar.git',), {}))
 
     @patch(Repo, '__init__')
     @patch(Git, 'method_missing')
     def test_init_bare_with_options(self, repo, git):
         git.return_value = True
         
-        Repo.init_bare("/foo/bar.git", **{'template': "/baz/sweet"})
+        Repo.init_bare("~/foo/bar.git", **{'template': "/baz/sweet"})
 
         assert_true(git.called)
         assert_equal(git.call_args, (('init',), {'template': '/baz/sweet'}))
         assert_true(repo.called)
-        assert_equal(repo.call_args, (('/foo/bar.git',), {}))
+        assert_equal(repo.call_args, (('~/foo/bar.git',), {}))
 
     @patch(Repo, '__init__')
     @patch(Git, 'method_missing')
     def test_fork_bare(self, repo, git):
         git.return_value = None
         
-        self.repo.fork_bare("/foo/bar.git")
+        self.repo.fork_bare("~/foo/bar.git")
         
         assert_true(git.called)
-        assert_equal(git.call_args, (('clone', '%s/.git' % absolute_project_path(), '/foo/bar.git'), {'bare': True}))
+        assert_equal(git.call_args, (('clone', '%s/.git' % absolute_project_path(), '~/foo/bar.git'), {'bare': True}))
         assert_true(repo.called)
 
     @patch(Repo, '__init__')
@@ -143,10 +143,10 @@ class TestRepo(object):
     def test_fork_bare_with_options(self, repo, git):
         git.return_value = None
         
-        self.repo.fork_bare("/foo/bar.git", **{'template': '/awesome'})
+        self.repo.fork_bare("~/foo/bar.git", **{'template': '/awesome'})
         
         assert_true(git.called)
-        assert_equal(git.call_args, (('clone', '%s/.git' % absolute_project_path(), '/foo/bar.git'), 
+        assert_equal(git.call_args, (('clone', '%s/.git' % absolute_project_path(), '~/foo/bar.git'), 
                                       {'bare': True, 'template': '/awesome'}))
         assert_true(repo.called)
 

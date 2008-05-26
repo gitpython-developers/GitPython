@@ -11,27 +11,27 @@ class Git(MethodMissingMixin):
     def __init__(self, git_dir):
         super(Git, self).__init__()
         self.git_dir = git_dir
-    
-    git_binary = "/usr/bin/env git"
-    
+
     @property
     def get_dir(self):
         return self.git_dir
-        
+
     def execute(self, command):
         """
         Handles executing the command on the shell and consumes and returns
         the returned information (stdout)
-        
+
         ``command``
             The command to execute
         """
-        print command
-        proc = subprocess.Popen(command, 
-                                shell=True,
-                                stdout=subprocess.PIPE                                
+        print ' '.join(command)
+        proc = subprocess.Popen(command,
+                                cwd = self.git_dir,
+                                stdout=subprocess.PIPE
                                 )
-        stdout_value = proc.communicate()[0]
+        proc.wait()
+        stdout_value = proc.stdout.read()
+        proc.stdout.close()
         return stdout_value
 
     def transform_kwargs(self, **kwargs):
@@ -44,38 +44,41 @@ class Git(MethodMissingMixin):
                 if v is True:
                     args.append("-%s" % k)
                 else:
-                    args.append("-%s %r" % (k, v))
+                    args.append("-%s" % k)
+                    args.append(v)
             else:
                 if v is True:
                     args.append("--%s" % dashify(k))
                 else:
-                    args.append("--%s=%r" % (dashify(k), v))
+                    args.append("--%s=%s" % (dashify(k), v))
         return args
-    
+
     def method_missing(self, method, *args, **kwargs):
         """
         Run the given git command with the specified arguments and return
         the result as a String
-        
+
         ``method``
             is the command
-        
+
         ``args``
             is the list of arguments
-        
+
         ``kwargs``
             is a dict of keyword arguments
 
         Examples
             git.rev_list('master', max_count=10, header=True)
-        
+
         Returns
             str
         """
         opt_args = self.transform_kwargs(**kwargs)
-        ext_args = map(lambda a: (a == '--') and a or "%s" % shell_escape(a), args)
+        ext_args = map(lambda a: (a == '--') and a or "%s" % a, args)
         args = opt_args + ext_args
-        
-        call = "%s --git-dir=%s %s %s" % (self.git_binary, self.git_dir, dashify(method), ' '.join(args))
+
+        call = ['git-'+dashify(method)]
+        call.extend(args)
+
         stdout_value = self.execute(call)
         return stdout_value
