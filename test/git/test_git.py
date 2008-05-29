@@ -44,3 +44,8 @@ class TestGit(object):
         except errors.GitCommandError, e:
             error_raised = True
         assert_equal( True, error_raised )
+
+    def test_it_returns_stderr_in_output(self):
+        # Note: no trailiing newline
+        assert_equal( "git: 'this-does-not-exist' is not a git-command. See 'git --help'.",
+                      self.git.this_does_not_exist(with_stderr=True) )
