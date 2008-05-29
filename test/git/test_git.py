@@ -25,3 +25,10 @@ class TestGit(object):
 
     def test_it_executes_git_to_shell_and_returns_result(self):
         assert_match('^git version [\d\.]*$', self.git.execute(["git","version"]))
+
+    def test_it_accepts_stdin(self):
+        filename = fixture_path("cat_file_blob")
+        fh = open(filename, 'r')
+        assert_equal( "70c379b63ffa0795fdbfbc128e5a2818397b7ef8",
+                      self.git.hash_object(istream=fh, stdin=True) )
+        fh.close()
