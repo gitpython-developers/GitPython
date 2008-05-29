@@ -49,3 +49,9 @@ class TestGit(object):
         # Note: no trailiing newline
         assert_equal( "git: 'this-does-not-exist' is not a git-command. See 'git --help'.",
                       self.git.this_does_not_exist(with_stderr=True) )
+
+    def test_it_does_not_strip_output_when_using_with_raw_output(self):
+        # Note: trailing newline
+        assert_equal( "git: 'this-does-not-exist' is not a git-command. See 'git --help'." + os.linesep,
+                      self.git.this_does_not_exist(with_stderr=True,
+                                                   with_raw_output=True) )
