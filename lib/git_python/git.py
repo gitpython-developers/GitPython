@@ -82,7 +82,7 @@ class Git(MethodMissingMixin):
         ext_args = map(lambda a: (a == '--') and a or "%s" % a, args)
         args = opt_args + ext_args
 
-        call = ['git-'+dashify(method)]
+        call = ["git", dashify(method)]
         call.extend(args)
 
         stdout_value = self.execute(call)
