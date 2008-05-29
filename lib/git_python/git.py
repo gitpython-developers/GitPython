@@ -3,6 +3,7 @@ import subprocess
 import re
 from utils import *
 from method_missing import MethodMissingMixin
+from errors import GitCommandError
 
 # Enables debugging of GitPython's git commands
 GIT_PYTHON_TRACE = os.environ.get("GIT_PYTHON_TRACE", False)
@@ -22,6 +23,7 @@ class Git(MethodMissingMixin):
     def execute(self, command,
                 istream = None,
                 with_status = False,
+                with_exceptions = False,
                 ):
         """
         Handles executing the command on the shell and consumes and returns
@@ -36,6 +38,8 @@ class Git(MethodMissingMixin):
         ``with_status``
             Whether to return a (status, str) tuple.
 
+        ``with_exceptions``
+            Whether to raise an exception when git returns a non-zero status.
         Returns
             str(output)                     # with_status = False (Default)
             tuple(int(status), str(output)) # with_status = True
@@ -56,6 +60,10 @@ class Git(MethodMissingMixin):
         proc.stdout.close()
         # Grab the exit status
         status = proc.poll()
+        if with_exceptions and status != 0:
+            raise GitCommandError("%s returned exit status %d"
+                                  % ( str(command), status ))
+
         # Allow access to the command's status code
         if with_status:
             return (status, stdout_value)
@@ -107,6 +115,7 @@ class Git(MethodMissingMixin):
         # otherwise these'll end up in args, which is bad.
         istream = pop_key(kwargs, "istream")
         with_status = pop_key(kwargs, "with_status")
+        with_exceptions = pop_key(kwargs, "with_exceptions")
         # Prepare the argument list
         opt_args = self.transform_kwargs(**kwargs)
         ext_args = map(str, args)
@@ -118,4 +127,5 @@ class Git(MethodMissingMixin):
         return self.execute(call,
                             istream = istream,
                             with_status = with_status,
+                            with_exceptions = with_exceptions,
                             )
