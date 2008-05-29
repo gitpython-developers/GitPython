@@ -25,6 +25,7 @@ class Git(MethodMissingMixin):
                 with_status = False,
                 with_stderr = False,
                 with_exceptions = False,
+                with_raw_output = False,
                 ):
         """
         Handles executing the command on the shell and consumes and returns
@@ -44,6 +45,10 @@ class Git(MethodMissingMixin):
 
         ``with_exceptions``
             Whether to raise an exception when git returns a non-zero status.
+
+        ``with_raw_output``
+            Whether to avoid stripping off trailing whitespace.
+
         Returns
             str(output)                     # with_status = False (Default)
             tuple(int(status), str(output)) # with_status = True
@@ -72,6 +77,11 @@ class Git(MethodMissingMixin):
         proc.stdout.close()
         if proc.stderr:
             proc.stderr.close()
+
+        # Strip off trailing whitespace by default
+        if not with_raw_output:
+            stdout_value = stdout_value.rstrip()
+
         # Grab the exit status
         status = proc.poll()
         if with_exceptions and status != 0:
@@ -131,6 +141,8 @@ class Git(MethodMissingMixin):
         with_status = pop_key(kwargs, "with_status")
         with_stderr = pop_key(kwargs, "with_stderr")
         with_exceptions = pop_key(kwargs, "with_exceptions")
+        with_raw_output = pop_key(kwargs, "with_raw_output")
+
         # Prepare the argument list
         opt_args = self.transform_kwargs(**kwargs)
         ext_args = map(str, args)
@@ -144,4 +156,5 @@ class Git(MethodMissingMixin):
                             with_status = with_status,
                             with_stderr = with_stderr,
                             with_exceptions = with_exceptions,
+                            with_raw_output = with_raw_output,
                             )
