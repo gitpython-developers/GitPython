@@ -1,6 +1,7 @@
 import os
 from test.testlib import *
-from git_python import *
+from git_python import Git
+from git_python import errors
 
 class TestGit(object):
     def setup(self):
@@ -35,3 +36,11 @@ class TestGit(object):
 
     def test_it_returns_status_and_ignores_stderr(self):
         assert_equal( (1, ""), self.git.this_does_not_exist(with_status=True) )
+
+    def test_it_raises_errors(self):
+        error_raised = False
+        try:
+            self.git.this_does_not_exist(with_exceptions=True)
+        except errors.GitCommandError, e:
+            error_raised = True
+        assert_equal( True, error_raised )
