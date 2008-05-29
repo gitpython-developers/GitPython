@@ -19,24 +19,32 @@ class Git(MethodMissingMixin):
     def get_dir(self):
         return self.git_dir
 
-    def execute(self, command):
+    def execute(self, command,
+                istream = None,
+                ):
         """
         Handles executing the command on the shell and consumes and returns
         the returned information (stdout)
 
         ``command``
-            The command to execute
+            The command argument list to execute
+
+        ``istream``
+            Standard input filehandle passed to subprocess.Popen.
         """
 
         if GIT_PYTHON_TRACE:
             print command
 
+        # Start the process
         proc = subprocess.Popen(command,
                                 cwd = self.git_dir,
-                                stdout=subprocess.PIPE
+                                stdin = istream,
+                                stdout = subprocess.PIPE
                                 )
-        proc.wait()
-        stdout_value = proc.stdout.read()
+
+        # Wait for the process to return
+        stdout_value, err = proc.communicate()
         proc.stdout.close()
         return stdout_value
 
@@ -70,7 +78,9 @@ class Git(MethodMissingMixin):
             is the list of arguments
 
         ``kwargs``
-            is a dict of keyword arguments
+            is a dict of keyword arguments.
+            This function accepts the same optional keyword arguments
+            as execute().
 
         Examples
             git.rev_list('master', max_count=10, header=True)
@@ -78,12 +88,18 @@ class Git(MethodMissingMixin):
         Returns
             str
         """
+
+        # Handle optional arguments prior to calling transform_kwargs
+        # otherwise these'll end up in args, which is bad.
+        istream = pop_key(kwargs, "istream")
+        # Prepare the argument list
         opt_args = self.transform_kwargs(**kwargs)
-        ext_args = map(lambda a: (a == '--') and a or "%s" % a, args)
+        ext_args = map(str, args)
         args = opt_args + ext_args
 
         call = ["git", dashify(method)]
         call.extend(args)
 
-        stdout_value = self.execute(call)
-        return stdout_value
+        return self.execute(call,
+                            istream = istream,
+                            )
