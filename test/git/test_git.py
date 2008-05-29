@@ -32,3 +32,6 @@ class TestGit(object):
         assert_equal( "70c379b63ffa0795fdbfbc128e5a2818397b7ef8",
                       self.git.hash_object(istream=fh, stdin=True) )
         fh.close()
+
+    def test_it_returns_status_and_ignores_stderr(self):
+        assert_equal( (1, ""), self.git.this_does_not_exist(with_status=True) )
