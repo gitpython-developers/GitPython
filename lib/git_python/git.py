@@ -4,6 +4,9 @@ import re
 from utils import *
 from method_missing import MethodMissingMixin
 
+# Enables debugging of GitPython's git commands
+GIT_PYTHON_TRACE = os.environ.get("GIT_PYTHON_TRACE", False)
+
 class Git(MethodMissingMixin):
     """
     The Git class manages communication with the Git binary
@@ -24,7 +27,10 @@ class Git(MethodMissingMixin):
         ``command``
             The command to execute
         """
-        print ' '.join(command)
+
+        if GIT_PYTHON_TRACE:
+            print command
+
         proc = subprocess.Popen(command,
                                 cwd = self.git_dir,
                                 stdout=subprocess.PIPE
