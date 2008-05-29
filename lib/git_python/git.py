@@ -21,6 +21,7 @@ class Git(MethodMissingMixin):
 
     def execute(self, command,
                 istream = None,
+                with_status = False,
                 ):
         """
         Handles executing the command on the shell and consumes and returns
@@ -31,6 +32,13 @@ class Git(MethodMissingMixin):
 
         ``istream``
             Standard input filehandle passed to subprocess.Popen.
+
+        ``with_status``
+            Whether to return a (status, str) tuple.
+
+        Returns
+            str(output)                     # with_status = False (Default)
+            tuple(int(status), str(output)) # with_status = True
         """
 
         if GIT_PYTHON_TRACE:
@@ -46,7 +54,13 @@ class Git(MethodMissingMixin):
         # Wait for the process to return
         stdout_value, err = proc.communicate()
         proc.stdout.close()
-        return stdout_value
+        # Grab the exit status
+        status = proc.poll()
+        # Allow access to the command's status code
+        if with_status:
+            return (status, stdout_value)
+        else:
+            return stdout_value
 
     def transform_kwargs(self, **kwargs):
         """
@@ -86,12 +100,13 @@ class Git(MethodMissingMixin):
             git.rev_list('master', max_count=10, header=True)
 
         Returns
-            str
+            Same as execute()
         """
 
         # Handle optional arguments prior to calling transform_kwargs
         # otherwise these'll end up in args, which is bad.
         istream = pop_key(kwargs, "istream")
+        with_status = pop_key(kwargs, "with_status")
         # Prepare the argument list
         opt_args = self.transform_kwargs(**kwargs)
         ext_args = map(str, args)
@@ -102,4 +117,5 @@ class Git(MethodMissingMixin):
 
         return self.execute(call,
                             istream = istream,
+                            with_status = with_status,
                             )
