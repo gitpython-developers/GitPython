@@ -3,3 +3,6 @@ class InvalidGitRepositoryError(Exception):
 
 class NoSuchPathError(Exception):
     pass
+
+class GitCommandError(Exception):
+    pass
