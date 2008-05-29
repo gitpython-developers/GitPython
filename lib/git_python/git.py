@@ -23,6 +23,7 @@ class Git(MethodMissingMixin):
     def execute(self, command,
                 istream = None,
                 with_status = False,
+                with_stderr = False,
                 with_exceptions = False,
                 ):
         """
@@ -38,6 +39,9 @@ class Git(MethodMissingMixin):
         ``with_status``
             Whether to return a (status, str) tuple.
 
+        ``with_stderr``
+            Whether to combine stderr into the output.
+
         ``with_exceptions``
             Whether to raise an exception when git returns a non-zero status.
         Returns
@@ -48,16 +52,26 @@ class Git(MethodMissingMixin):
         if GIT_PYTHON_TRACE:
             print command
 
+        # Allow stderr to be merged into stdout when with_stderr is True.
+        # Otherwise, throw stderr away.
+        if with_stderr:
+            stderr = subprocess.STDOUT
+        else:
+            stderr = subprocess.PIPE
+
         # Start the process
         proc = subprocess.Popen(command,
                                 cwd = self.git_dir,
                                 stdin = istream,
+                                stderr = stderr,
                                 stdout = subprocess.PIPE
                                 )
 
         # Wait for the process to return
         stdout_value, err = proc.communicate()
         proc.stdout.close()
+        if proc.stderr:
+            proc.stderr.close()
         # Grab the exit status
         status = proc.poll()
         if with_exceptions and status != 0:
@@ -115,6 +129,7 @@ class Git(MethodMissingMixin):
         # otherwise these'll end up in args, which is bad.
         istream = pop_key(kwargs, "istream")
         with_status = pop_key(kwargs, "with_status")
+        with_stderr = pop_key(kwargs, "with_stderr")
         with_exceptions = pop_key(kwargs, "with_exceptions")
         # Prepare the argument list
         opt_args = self.transform_kwargs(**kwargs)
@@ -127,5 +142,6 @@ class Git(MethodMissingMixin):
         return self.execute(call,
                             istream = istream,
                             with_status = with_status,
+                            with_stderr = with_stderr,
                             with_exceptions = with_exceptions,
                             )
