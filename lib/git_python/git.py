@@ -44,8 +44,7 @@ class Git(MethodMissingMixin):
                 if v is True:
                     args.append("-%s" % k)
                 else:
-                    args.append("-%s" % k)
-                    args.append(v)
+                    args.append("-%s%s" % (k, v))
             else:
                 if v is True:
                     args.append("--%s" % dashify(k))
