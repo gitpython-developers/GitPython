@@ -13,7 +13,7 @@ class TestRepo(object):
 
     @raises(NoSuchPathError)
     def test_new_should_raise_on_non_existant_path(self):
-        Repo("~/foobar")
+        Repo("repos/foobar")
 
     def test_description(self):
         assert_equal("Unnamed repository; edit this file to name it for gitweb.", self.repo.description)
@@ -25,20 +25,20 @@ class TestRepo(object):
     @patch(Git, 'method_missing')
     def test_heads_should_populate_head_data(self, git):
         git.return_value = fixture('for_each_ref')
-        
+
         head = self.repo.heads[0]
         assert_equal('master', head.name)
         assert_equal('634396b2f541a9f2d58b00be1a07f0c358b999b3', head.commit.id)
-        
+
         assert_true(git.called)
         assert_equal(git.call_args, (('for_each_ref', 'refs/heads'), {'sort': 'committerdate', 'format': '%(refname)%00%(objectname)'}))
 
-    @patch(Git, 'method_missing')  
+    @patch(Git, 'method_missing')
     def test_commits(self, git):
         git.return_value = fixture('rev_list')
-        
+
         commits = self.repo.commits('master', 10)
-    
+
         c = commits[0]
         assert_equal('4c8124ffcf4039d292442eeccabdeca5af5c5017', c.id)
         assert_equal(["634396b2f541a9f2d58b00be1a07f0c358b999b3"], [p.id for p in c.parents])
@@ -50,10 +50,10 @@ class TestRepo(object):
         assert_equal("tom@mojombo.com", c.committer.email)
         assert_equal(time.gmtime(1191999972), c.committed_date)
         assert_equal("implement Grit#heads", c.message)
-        
+
         c = commits[1]
         assert_equal([], c.parents)
-        
+
         c = commits[2]
         assert_equal(["6e64c55896aabb9a7d8e9f8f296f426d21a78c2c", "7f874954efb9ba35210445be456c74e037ba6af2"], map(lambda p: p.id, c.parents))
         assert_equal("Merge branch 'site'", c.message)
@@ -64,42 +64,42 @@ class TestRepo(object):
     @patch(Git, 'method_missing')
     def test_commit_count(self, git):
         git.return_value = fixture('rev_list_count')
-        
+
         assert_equal(655, self.repo.commit_count('master'))
-        
+
         assert_true(git.called)
         assert_equal(git.call_args, (('rev_list', 'master'), {}))
-  
-    @patch(Git, 'method_missing')  
+
+    @patch(Git, 'method_missing')
     def test_commit(self, git):
         git.return_value = fixture('rev_list_single')
-        
+
         commit = self.repo.commit('4c8124ffcf4039d292442eeccabdeca5af5c5017')
-        
+
         assert_equal("4c8124ffcf4039d292442eeccabdeca5af5c5017", commit.id)
-        
+
         assert_true(git.called)
         assert_equal(git.call_args, (('rev_list', '4c8124ffcf4039d292442eeccabdeca5af5c5017'), {'pretty': 'raw', 'max_count': 1}))
-  
+
     @patch(Git, 'method_missing')
     def test_tree(self, git):
         git.return_value = fixture('ls_tree_a')
-        
+
         tree = self.repo.tree('master')
-        
+
         assert_equal(4, len([c for c in tree.contents if isinstance(c, Blob)]))
         assert_equal(3, len([c for c in tree.contents if isinstance(c, Tree)]))
-        
+
         assert_true(git.called)
         assert_equal(git.call_args, (('ls_tree', 'master'), {}))
 
     @patch(Git, 'method_missing')
     def test_blob(self, git):
         git.return_value = fixture('cat_file_blob')
-        
+
         blob = self.repo.blob("abc")
         assert_equal("Hello world", blob.data)
-        
+
         assert_true(git.called)
         assert_equal(git.call_args, (('cat_file', 'abc'), {'p': True}))
 
@@ -107,53 +107,53 @@ class TestRepo(object):
     @patch(Git, 'method_missing')
     def test_init_bare(self, repo, git):
         git.return_value = True
-        
-        Repo.init_bare("~/foo/bar.git")
-        
+
+        Repo.init_bare("repos/foo/bar.git")
+
         assert_true(git.called)
         assert_equal(git.call_args, (('init',), {}))
         assert_true(repo.called)
-        assert_equal(repo.call_args, (('~/foo/bar.git',), {}))
+        assert_equal(repo.call_args, (('repos/foo/bar.git',), {}))
 
     @patch(Repo, '__init__')
     @patch(Git, 'method_missing')
     def test_init_bare_with_options(self, repo, git):
         git.return_value = True
-        
-        Repo.init_bare("~/foo/bar.git", **{'template': "/baz/sweet"})
+
+        Repo.init_bare("repos/foo/bar.git", **{'template': "/baz/sweet"})
 
         assert_true(git.called)
         assert_equal(git.call_args, (('init',), {'template': '/baz/sweet'}))
         assert_true(repo.called)
-        assert_equal(repo.call_args, (('~/foo/bar.git',), {}))
+        assert_equal(repo.call_args, (('repos/foo/bar.git',), {}))
 
     @patch(Repo, '__init__')
     @patch(Git, 'method_missing')
     def test_fork_bare(self, repo, git):
         git.return_value = None
-        
-        self.repo.fork_bare("~/foo/bar.git")
-        
+
+        self.repo.fork_bare("repos/foo/bar.git")
+
         assert_true(git.called)
-        assert_equal(git.call_args, (('clone', '%s/.git' % absolute_project_path(), '~/foo/bar.git'), {'bare': True}))
+        assert_equal(git.call_args, (('clone', '%s/.git' % absolute_project_path(), 'repos/foo/bar.git'), {'bare': True}))
         assert_true(repo.called)
 
     @patch(Repo, '__init__')
     @patch(Git, 'method_missing')
     def test_fork_bare_with_options(self, repo, git):
         git.return_value = None
-        
-        self.repo.fork_bare("~/foo/bar.git", **{'template': '/awesome'})
-        
+
+        self.repo.fork_bare("repos/foo/bar.git", **{'template': '/awesome'})
+
         assert_true(git.called)
-        assert_equal(git.call_args, (('clone', '%s/.git' % absolute_project_path(), '~/foo/bar.git'), 
+        assert_equal(git.call_args, (('clone', '%s/.git' % absolute_project_path(), 'repos/foo/bar.git'), 
                                       {'bare': True, 'template': '/awesome'}))
         assert_true(repo.called)
 
     @patch(Git, 'method_missing')
     def test_diff(self, git):
         self.repo.diff('master^', 'master')
-        
+
         assert_true(git.called)
         assert_equal(git.call_args, (('diff', 'master^', 'master', '--'), {}))
 
@@ -161,23 +161,23 @@ class TestRepo(object):
 
         assert_true(git.called)
         assert_equal(git.call_args, (('diff', 'master^', 'master', '--', 'foo/bar'), {}))
-        
+
         self.repo.diff('master^', 'master', 'foo/bar', 'foo/baz')
-        
+
         assert_true(git.called)
         assert_equal(git.call_args, (('diff', 'master^', 'master', '--', 'foo/bar', 'foo/baz'), {}))
 
     @patch(Git, 'method_missing')
     def test_diff(self, git):
         git.return_value = fixture('diff_p')
-        
+
         diffs = self.repo.commit_diff('master')
         assert_equal(15, len(diffs))
         assert_true(git.called)
 
     def test_archive_tar(self):
         self.repo.archive_tar
-  
+
     def test_archive_tar_gz(self):
         self.repo.archive_tar_gz
 
@@ -205,9 +205,9 @@ class TestRepo(object):
     def test_alternates_no_file(self, os):
         os.return_value = False
         assert_equal([], self.repo.alternates)
-        
+
         assert_true(os.called)
-        
+
     # @patch(os.path, 'exists')
     # def test_alternates_setter_ok(self, os):
     #     os.return_value = True
