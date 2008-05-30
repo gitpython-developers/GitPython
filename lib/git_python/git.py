@@ -12,9 +12,39 @@ class Git(MethodMissingMixin):
     """
     The Git class manages communication with the Git binary
     """
-    def __init__(self, git_dir):
+    def __init__(self, git_dir=None):
         super(Git, self).__init__()
-        self.git_dir = git_dir
+        if git_dir:
+            self.find_git_dir( git_dir )
+        else:
+            self.find_git_dir( os.getcwd() )
+
+    def find_git_dir(self, path):
+        """Find the best value for self.git_dir.
+        For bare repositories, this is the path to the bare repository.
+        For repositories with work trees, this is the work tree path.
+
+        When barerepo.git is passed in,  self.git_dir = barerepo.git
+        When worktree/.git is passed in, self.git_dir = worktree
+        When worktree is passed in,      self.git_dir = worktree
+        """
+
+        path = os.path.abspath(path)
+        self.git_dir = path
+
+        cdup = self.execute(["git", "rev-parse", "--show-cdup"])
+        if cdup:
+            path = os.path.abspath( os.path.join( self.git_dir, cdup ) )
+        else:
+            is_bare_repository =\
+                self.rev_parse( is_bare_repository=True ) == "true"
+            is_inside_git_dir =\
+                self.rev_parse( is_inside_git_dir=True ) == "true"
+
+            if not is_bare_repository and is_inside_git_dir:
+                path = os.path.dirname( self.git_dir )
+
+        self.git_dir = path
 
     @property
     def get_dir(self):
