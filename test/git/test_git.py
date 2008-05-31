@@ -54,4 +54,4 @@ class TestGit(object):
 
     def test_it_handles_large_input(self):
         output = self.git.execute(["cat", "/bin/bash"])
-        assert( len(output) > 4096 * 1024 ) # at least 4k
+        assert(len(output) > 4096) # at least 4k
