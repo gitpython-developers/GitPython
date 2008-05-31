@@ -47,6 +47,7 @@ class TestGit(object):
 
     def test_it_does_not_strip_output_when_using_with_raw_output(self):
         # Note: trailing newline
-        assert_match(r"^git: 'this-does-not-exist' is not a git-command" + os.linesep,
+        assert_match(r"^git: 'this-does-not-exist' is not a git-command\. See 'git --help'\."
+                     + os.linesep,
                       self.git.this_does_not_exist(with_stderr=True,
                                                    with_raw_output=True))
