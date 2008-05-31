@@ -52,7 +52,7 @@ Initialize a Repo object
 
 The first step is to create a ``Repo`` object to represent your repository.
 
-	>>> from git_python import *
+	>>> from git import *
 	>>> repo = Repo("/Users/mtrier/Development/git-python")
   
 In the above example, the directory ``/Users/mtrier/Development/git-python`` 

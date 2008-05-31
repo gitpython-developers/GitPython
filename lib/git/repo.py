@@ -2,7 +2,7 @@ import os
 import re
 from errors import InvalidGitRepositoryError, NoSuchPathError
 from utils import touch
-from git import Git
+from gitter import Git
 from head import Head
 from blob import Blob
 from tag import Tag

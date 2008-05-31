@@ -1,6 +1,6 @@
 from mock import *
 from test.testlib import *
-from git_python import *
+from git import *
 
 class TestTag(object):
     def setup(self):

@@ -1,7 +1,7 @@
 import os
 import time
 from test.testlib import *
-from git_python import *
+from git import *
 
 class TestRepo(object):
     def setup(self):

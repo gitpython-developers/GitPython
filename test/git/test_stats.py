@@ -1,5 +1,5 @@
 from test.testlib import *
-from git_python import *
+from git import *
 
 class TestStats(object):
     def setup(self):

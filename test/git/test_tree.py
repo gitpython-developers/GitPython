@@ -1,5 +1,5 @@
 from test.testlib import *
-from git_python import *
+from git import *
 
 class TestTree(object):
     def setup(self):

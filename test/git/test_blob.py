@@ -1,6 +1,6 @@
 import time
 from test.testlib import *
-from git_python import *
+from git import *
 
 class TestBlob(object):
     def setup(self):

@@ -1,6 +1,6 @@
 import os
 from test.testlib import *
-from git_python import *
+from git import *
 
 class TestActor(object):
     def test_from_string_should_separate_name_and_email(self):

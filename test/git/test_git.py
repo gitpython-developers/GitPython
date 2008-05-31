@@ -1,7 +1,6 @@
 import os
 from test.testlib import *
-from git_python import Git
-from git_python import errors
+from git import Git, GitCommandError
 
 class TestGit(object):
     def setup(self):
@@ -30,28 +29,24 @@ class TestGit(object):
     def test_it_accepts_stdin(self):
         filename = fixture_path("cat_file_blob")
         fh = open(filename, 'r')
-        assert_equal( "70c379b63ffa0795fdbfbc128e5a2818397b7ef8",
-                      self.git.hash_object(istream=fh, stdin=True) )
+        assert_equal("70c379b63ffa0795fdbfbc128e5a2818397b7ef8",
+                     self.git.hash_object(istream=fh, stdin=True))
         fh.close()
 
     def test_it_returns_status_and_ignores_stderr(self):
-        assert_equal( (1, ""), self.git.this_does_not_exist(with_status=True) )
+        assert_equal((1, ""), self.git.this_does_not_exist(with_status=True))
 
+    @raises(GitCommandError)
     def test_it_raises_errors(self):
-        error_raised = False
-        try:
-            self.git.this_does_not_exist(with_exceptions=True)
-        except errors.GitCommandError, e:
-            error_raised = True
-        assert_equal( True, error_raised )
+        self.git.this_does_not_exist(with_exceptions=True)
 
     def test_it_returns_stderr_in_output(self):
         # Note: no trailiing newline
-        assert_equal( "git: 'this-does-not-exist' is not a git-command. See 'git --help'.",
-                      self.git.this_does_not_exist(with_stderr=True) )
+        assert_match(r"^git: 'this-does-not-exist' is not a git-command",
+                      self.git.this_does_not_exist(with_stderr=True))
 
     def test_it_does_not_strip_output_when_using_with_raw_output(self):
         # Note: trailing newline
-        assert_equal( "git: 'this-does-not-exist' is not a git-command. See 'git --help'." + os.linesep,
+        assert_match(r"^git: 'this-does-not-exist' is not a git-command" + os.linesep,
                       self.git.this_does_not_exist(with_stderr=True,
-                                                   with_raw_output=True) )
+                                                   with_raw_output=True))

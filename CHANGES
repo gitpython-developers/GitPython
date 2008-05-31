@@ -2,6 +2,15 @@
 CHANGES
 =======
 
+0.1.3
+=====
+
+Git
+---
+* Removed shell escaping completely
+* Added support for stderr and stdin
+* Added new 
+
 0.1.2
 =====
 Corrected problem with Tree.__div__ not working with zero length files.  

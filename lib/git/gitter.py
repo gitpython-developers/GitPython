@@ -15,9 +15,9 @@ class Git(MethodMissingMixin):
     def __init__(self, git_dir=None):
         super(Git, self).__init__()
         if git_dir:
-            self.find_git_dir( git_dir )
+            self.find_git_dir(git_dir)
         else:
-            self.find_git_dir( os.getcwd() )
+            self.find_git_dir(os.getcwd())
 
     def find_git_dir(self, path):
         """Find the best value for self.git_dir.
@@ -34,15 +34,15 @@ class Git(MethodMissingMixin):
 
         cdup = self.execute(["git", "rev-parse", "--show-cdup"])
         if cdup:
-            path = os.path.abspath( os.path.join( self.git_dir, cdup ) )
+            path = os.path.abspath(os.path.join(self.git_dir, cdup))
         else:
             is_bare_repository =\
-                self.rev_parse( is_bare_repository=True ) == "true"
+                self.rev_parse(is_bare_repository=True) == "true"
             is_inside_git_dir =\
-                self.rev_parse( is_inside_git_dir=True ) == "true"
+                self.rev_parse(is_inside_git_dir=True) == "true"
 
             if not is_bare_repository and is_inside_git_dir:
-                path = os.path.dirname( self.git_dir )
+                path = os.path.dirname(self.git_dir)
 
         self.git_dir = path
 
@@ -116,7 +116,7 @@ class Git(MethodMissingMixin):
         status = proc.poll()
         if with_exceptions and status != 0:
             raise GitCommandError("%s returned exit status %d"
-                                  % ( str(command), status ))
+                                  % (str(command), status))
 
         # Allow access to the command's status code
         if with_status:
@@ -167,11 +167,11 @@ class Git(MethodMissingMixin):
 
         # Handle optional arguments prior to calling transform_kwargs
         # otherwise these'll end up in args, which is bad.
-        istream = pop_key(kwargs, "istream")
-        with_status = pop_key(kwargs, "with_status")
-        with_stderr = pop_key(kwargs, "with_stderr")
-        with_exceptions = pop_key(kwargs, "with_exceptions")
-        with_raw_output = pop_key(kwargs, "with_raw_output")
+        istream = kwargs.pop("istream", None)
+        with_status = kwargs.pop("with_status", None)
+        with_stderr = kwargs.pop("with_stderr", None)
+        with_exceptions = kwargs.pop("with_exceptions", None)
+        with_raw_output = kwargs.pop("with_raw_output", None)
 
         # Prepare the argument list
         opt_args = self.transform_kwargs(**kwargs)
