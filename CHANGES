@@ -5,17 +5,41 @@ CHANGES
 0.1.3
 =====
 
+* renamed ``git_python`` to ``git``. Be sure to delete all pyc files before
+  testing.
+
 Git
 ---
-* Removed shell escaping completely
-* Added support for stderr and stdin
-* Added new 
+* Removed shell escaping completely.
+
+* Added support for ``stderr``, ``stdin``, and ``with_status``.
+
+* ``git_dir`` is now optional in the constructor for ``git.Git``.  Git now 
+  falls back to ``os.getcwd()`` when git_dir is not specified.
+
+* add a ``with_exceptions`` keyword argument to git commands. ``GitCommandError`` 
+  is raised when the exit status is non-zero.
+
+* add support for a ``GIT_PYTHON_TRACE`` environment variable. 
+  ``GIT_PYTHON_TRACE`` allows us to debug GitPython's usage of git through 
+  the use of an environment variable.
+
+Tree
+----
+* Fixed up problem where ``name`` doesn't exist on root of tree.
+
+Repo
+----
+* Corrected problem with creating bare repo.  Added ``Repo.create`` alias.
 
 0.1.2
 =====
-Corrected problem with Tree.__div__ not working with zero length files.  
-Removed __len__ override and replaced with size instead. Also made size cache
-properly. This is a breaking change.
+
+Tree
+----
+* Corrected problem with ``Tree.__div__`` not working with zero length files.  
+  Removed ``__len__`` override and replaced with size instead. Also made size 
+  cach properly. This is a breaking change.
 
 0.1.1
 =====
