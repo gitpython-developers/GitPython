@@ -103,8 +103,8 @@ class Git(MethodMissingMixin):
                                 )
 
         # Wait for the process to return
-        status = proc.wait()
         stdout_value = proc.stdout.read()
+        status = proc.wait()
         proc.stdout.close()
 
         # Strip off trailing whitespace by default
