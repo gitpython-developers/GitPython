@@ -181,7 +181,7 @@ class TestRepo(object):
     def test_archive_tar_gz(self):
         self.repo.archive_tar_gz
 
-    @patch('git_python.utils', 'touch')
+    @patch('git.utils', 'touch')
     def test_enable_daemon_serve(self, touch):
         self.repo.enable_daemon_serve
 
