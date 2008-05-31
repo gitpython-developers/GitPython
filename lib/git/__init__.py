@@ -11,7 +11,7 @@ from git.blob import Blob
 from git.commit import Commit
 from git.diff import Diff
 from git.errors import InvalidGitRepositoryError, NoSuchPathError, GitCommandError
-from git.gitter import Git
+from git.cmd import Git
 from git.head import Head
 from git.repo import Repo
 from git.stats import Stats

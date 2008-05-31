@@ -10,6 +10,8 @@ CHANGES
 
 Git
 ---
+* Renamed module to cmd.
+
 * Removed shell escaping completely.
 
 * Added support for ``stderr``, ``stdin``, and ``with_status``.
