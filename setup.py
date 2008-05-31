@@ -12,7 +12,7 @@ v.close()
 
 class build_py(_build_py):
     def run(self):
-        init = path.join(self.build_lib, 'git_python', '__init__.py')
+        init = path.join(self.build_lib, 'git', '__init__.py')
         if path.exists(init):
             os.unlink(init)
         _build_py.run(self)
@@ -22,13 +22,13 @@ class build_py(_build_py):
 class sdist(_sdist):
     def make_release_tree (self, base_dir, files):
         _sdist.make_release_tree(self, base_dir, files)
-        orig = path.join('lib', 'git_python', '__init__.py')
+        orig = path.join('lib', 'git', '__init__.py')
         assert path.exists(orig)
         dest = path.join(base_dir, orig)
         if hasattr(os, 'link') and path.exists(dest):
             os.unlink(dest)
         self.copy_file(orig, dest)
-        _stamp_version(dest)
+        # _stamp_version(dest)
 
 def _stamp_version(filename):
     found, out = False, []
