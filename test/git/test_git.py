@@ -51,3 +51,7 @@ class TestGit(object):
                      r"(\. See 'git --help'\.)?" + os.linesep,
                       self.git.this_does_not_exist(with_stderr=True,
                                                    with_raw_output=True))
+
+    def test_it_handles_large_input(self):
+        output = self.git.execute(["cat", "/bin/bash"])
+        assert( len(output) > 4096 * 1024 ) # at least 4k
