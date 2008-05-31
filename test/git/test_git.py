@@ -13,14 +13,14 @@ class TestGit(object):
         self.git.version()
         assert_true(git.called)
         # assert_equal(git.call_args, ((("%s version " % self.git_bin_base),), {}))
-    
+
     def test_it_transforms_kwargs_into_git_command_arguments(self):
         assert_equal(["-s"], self.git.transform_kwargs(**{'s': True}))
         assert_equal(["-s5"], self.git.transform_kwargs(**{'s': 5}))
 
         assert_equal(["--max-count"], self.git.transform_kwargs(**{'max_count': True}))
         assert_equal(["--max-count=5"], self.git.transform_kwargs(**{'max_count': 5}))
-        
+
         assert_equal(["-s", "-t"], self.git.transform_kwargs(**{'s': True, 't': True}))
 
     def test_it_executes_git_to_shell_and_returns_result(self):
@@ -47,7 +47,7 @@ class TestGit(object):
 
     def test_it_does_not_strip_output_when_using_with_raw_output(self):
         # Note: trailing newline
-        assert_match(r"^git: 'this-does-not-exist' is not a git-command\. See 'git --help'\."
-                     + os.linesep,
+        assert_match(r"^git: 'this-does-not-exist' is not a git-command" \
+                     r"(\. See 'git --help'\.)?" + os.linesep,
                       self.git.this_does_not_exist(with_stderr=True,
                                                    with_raw_output=True))
