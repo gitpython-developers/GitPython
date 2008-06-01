@@ -55,3 +55,9 @@ class TestGit(object):
     def test_it_handles_large_input(self):
         output = self.git.execute(["cat", "/bin/bash"])
         assert_true(len(output) > 4096) # at least 4k
+
+    @patch(Git, 'execute')
+    def test_it_ignores_false_kwargs(self, git):
+        # this_should_not_be_ignored=False implies it *should* be ignored
+        output = self.git.version( pass_this_kwarg=False )
+        assert_true( "pass_this_kwarg" not in git.call_args[1] )
