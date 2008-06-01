@@ -132,12 +132,12 @@ class Git(MethodMissingMixin):
             if len(k) == 1:
                 if v is True:
                     args.append("-%s" % k)
-                else:
+                elif type(v) is not bool:
                     args.append("-%s%s" % (k, v))
             else:
                 if v is True:
                     args.append("--%s" % dashify(k))
-                else:
+                elif type(v) is not bool:
                     args.append("--%s=%s" % (dashify(k), v))
         return args
 
