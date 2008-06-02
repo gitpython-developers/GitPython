@@ -28,7 +28,7 @@ class sdist(_sdist):
         if hasattr(os, 'link') and path.exists(dest):
             os.unlink(dest)
         self.copy_file(orig, dest)
-        # _stamp_version(dest)
+        _stamp_version(dest)
 
 def _stamp_version(filename):
     found, out = False, []
