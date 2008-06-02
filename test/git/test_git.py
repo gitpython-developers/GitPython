@@ -58,6 +58,5 @@ class TestGit(object):
 
     @patch(Git, 'execute')
     def test_it_ignores_false_kwargs(self, git):
-        # this_should_not_be_ignored=False implies it *should* be ignored
         output = self.git.version(pass_this_kwarg=False)
         assert_true("pass_this_kwarg" not in git.call_args[1])
