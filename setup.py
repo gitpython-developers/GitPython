@@ -35,7 +35,7 @@ def _stamp_version(filename):
     f = open(filename, 'r')
     for line in f:
         if '__version__ =' in line:
-            line = line.replace("'svn'", "'%s'" % VERSION)
+            line = line.replace("'git'", "'%s'" % VERSION)
             found = True
         out.append(line)
     f.close()

@@ -1,7 +1,7 @@
 import os
 import inspect
 
-__version__ = 'svn'
+__version__ = 'git'
 
 from git.actor import Actor
 from git.blob import Blob
