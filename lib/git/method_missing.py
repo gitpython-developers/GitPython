@@ -4,7 +4,7 @@ class MethodMissingMixin(object):
 
     This was `taken from a blog post <http://blog.iffy.us/?p=43>`_
     """
-    def __getattribute__(self, attr):
+    def __getattr__(self, attr):
         try:
             return object.__getattribute__(self, attr)
         except:
