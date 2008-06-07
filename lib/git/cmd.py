@@ -15,40 +15,59 @@ class Git(MethodMissingMixin):
     def __init__(self, git_dir=None):
         super(Git, self).__init__()
         if git_dir:
-            self.find_git_dir(git_dir)
+            self._location = os.path.abspath(git_dir)
         else:
-            self.find_git_dir(os.getcwd())
+            self._location = os.getcwd()
+        self.refresh()
 
-    def find_git_dir(self, path):
-        """Find the best value for self.git_dir.
-        For bare repositories, this is the path to the bare repository.
-        For repositories with work trees, this is the work tree path.
+    def refresh(self):
+        self._git_dir = None
+        self._is_in_repo = not not self.get_git_dir()
+        self._work_tree = None
 
-        When barerepo.git is passed in,  self.git_dir = barerepo.git
-        When worktree/.git is passed in, self.git_dir = worktree
-        When worktree is passed in,      self.git_dir = worktree
-        """
+    def _is_git_dir(self, d):
+        """ This is taken from the git setup.c:is_git_directory
+            function."""
 
-        path = os.path.abspath(path)
-        self.git_dir = path
+        if os.path.isdir(d) and \
+                os.path.isdir(os.path.join(d, 'objects')) and \
+                os.path.isdir(os.path.join(d, 'refs')):
+            headref = os.path.join(d, 'HEAD')
+            return os.path.isfile(headref) or \
+                    (os.path.islink(headref) and
+                    os.readlink(headref).startswith('refs'))
+        return False
 
-        cdup = self.execute(["git", "rev-parse", "--show-cdup"])
-        if cdup:
-            path = os.path.abspath(os.path.join(self.git_dir, cdup))
-        else:
-            is_bare_repository =\
-                self.rev_parse(is_bare_repository=True) == "true"
-            is_inside_git_dir =\
-                self.rev_parse(is_inside_git_dir=True) == "true"
+    def get_git_dir(self):
+        if not self._git_dir:
+            self._git_dir = os.getenv('GIT_DIR')
+            if self._git_dir and self._is_git_dir(self._git_dir):
+                return self._git_dir
+            curpath = self._location
+            while curpath:
+                if self._is_git_dir(curpath):
+                    self._git_dir = curpath
+                    break
+                gitpath = os.path.join(curpath, '.git')
+                if self._is_git_dir(gitpath):
+                    self._git_dir = gitpath
+                    break
+                curpath, dummy = os.path.split(curpath)
+                if not dummy:
+                    break
+        return self._git_dir
 
-            if not is_bare_repository and is_inside_git_dir:
-                path = os.path.dirname(self.git_dir)
-
-        self.git_dir = path
+    def get_work_tree(self):
+        if not self._work_tree:
+            self._work_tree = os.getenv('GIT_WORK_TREE')
+            if not self._work_tree or not os.path.isdir(self._work_tree):
+                self._work_tree = os.path.abspath(
+                                    os.path.join(self._git_dir, '..'))
+        return self._work_tree
 
     @property
     def get_dir(self):
-        return self.git_dir
+        return self._git_dir
 
     def execute(self, command,
                 istream=None,
@@ -96,7 +115,7 @@ class Git(MethodMissingMixin):
 
         # Start the process
         proc = subprocess.Popen(command,
-                                cwd=self.git_dir,
+                                cwd=self._git_dir,
                                 stdin=istream,
                                 stderr=stderr,
                                 stdout=subprocess.PIPE
