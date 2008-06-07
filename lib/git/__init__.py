@@ -1,10 +1,7 @@
 import os
 import inspect
 
-# grab the version information
-v = open(os.path.join(os.path.dirname(__file__), '..', '..', 'VERSION'))
-__version__ = v.readline().strip()
-v.close()
+__version__ = 'git'
 
 from git.actor import Actor
 from git.blob import Blob

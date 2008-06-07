@@ -28,14 +28,14 @@ class sdist(_sdist):
         if hasattr(os, 'link') and path.exists(dest):
             os.unlink(dest)
         self.copy_file(orig, dest)
-        # _stamp_version(dest)
+        _stamp_version(dest)
 
 def _stamp_version(filename):
     found, out = False, []
     f = open(filename, 'r')
     for line in f:
         if '__version__ =' in line:
-            line = line.replace("'svn'", "'%s'" % VERSION)
+            line = line.replace("'git'", "'%s'" % VERSION)
             found = True
         out.append(line)
     f.close()

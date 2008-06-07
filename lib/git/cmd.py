@@ -51,11 +51,11 @@ class Git(MethodMissingMixin):
         return self.git_dir
 
     def execute(self, command,
-                istream = None,
-                with_status = False,
-                with_stderr = False,
-                with_exceptions = False,
-                with_raw_output = False,
+                istream=None,
+                with_status=False,
+                with_stderr=False,
+                with_exceptions=False,
+                with_raw_output=False,
                 ):
         """
         Handles executing the command on the shell and consumes and returns
@@ -96,10 +96,10 @@ class Git(MethodMissingMixin):
 
         # Start the process
         proc = subprocess.Popen(command,
-                                cwd = self.git_dir,
-                                stdin = istream,
-                                stderr = stderr,
-                                stdout = subprocess.PIPE
+                                cwd=self.git_dir,
+                                stdin=istream,
+                                stderr=stderr,
+                                stdout=subprocess.PIPE
                                 )
 
         # Wait for the process to return

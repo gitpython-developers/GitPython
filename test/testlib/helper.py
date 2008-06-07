@@ -3,7 +3,7 @@ import os
 GIT_REPO = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
 def fixture_path(name):
-    test_dir = os.path.dirname( os.path.dirname(__file__) )
+    test_dir = os.path.dirname(os.path.dirname(__file__))
     return os.path.join(test_dir, "fixtures", name)
 
 def fixture(name):
