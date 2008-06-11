@@ -272,8 +272,8 @@ class Repo(object):
             ``GitPython.Repo`` (the newly created repo)
         """
 
-        if mkdir and not os.path.exists(gitpath):
-            os.makedirs(gitpath, 0755)
+        if mkdir and not os.path.exists(path):
+            os.makedirs(path, 0755)
 
         git = Git(path)
         output = git.init(**kwargs)
