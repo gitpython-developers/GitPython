@@ -84,8 +84,8 @@ class Git(MethodMissingMixin):
             tuple(int(status), str(output)) # with_status = True
         """
 
-        if GIT_PYTHON_TRACE:
-            print command
+        if GIT_PYTHON_TRACE and not GIT_PYTHON_TRACE == 'full':
+            print ' '.join(command)
 
         # Allow stderr to be merged into stdout when with_stderr is True.
         # Otherwise, throw stderr away.
@@ -116,6 +116,9 @@ class Git(MethodMissingMixin):
         if with_exceptions and status != 0:
             raise GitCommandError("%s returned exit status %d"
                                   % (str(command), status))
+
+        if GIT_PYTHON_TRACE == 'full':
+            print "%s %d: '%s'" % (command, status, stdout_value)
 
         # Allow access to the command's status code
         if with_status:
