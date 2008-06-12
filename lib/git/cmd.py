@@ -24,6 +24,9 @@ class Git(MethodMissingMixin):
         self._git_dir = None
         self._is_in_repo = not not self.get_git_dir()
         self._work_tree = None
+        self._cwd = self._git_dir
+        if self._git_dir:
+            self._cwd = self.get_work_tree()
 
     def _is_git_dir(self, d):
         """ This is taken from the git setup.c:is_git_directory
@@ -115,7 +118,7 @@ class Git(MethodMissingMixin):
 
         # Start the process
         proc = subprocess.Popen(command,
-                                cwd=self._git_dir,
+                                cwd=self._cwd,
                                 stdin=istream,
                                 stderr=stderr,
                                 stdout=subprocess.PIPE
