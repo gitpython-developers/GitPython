@@ -27,9 +27,14 @@ class Repo(object):
         Returns
             ``GitPython.Repo``
         """
+        if not os.path.exists(path):
+            raise NoSuchPathError(path)
+
         self.git = Git(path)
-        epath = self.git.get_work_tree()
         self.path = self.git.get_git_dir()
+        if not self.path:
+            raise InvalidGitRepositoryError(path)
+        epath = self.git.get_work_tree()
 
         if os.path.exists(os.path.join(epath, '.git')):
             self.bare = False
