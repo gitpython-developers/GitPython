@@ -56,6 +56,7 @@ class Git(MethodMissingMixin):
                 with_stderr=False,
                 with_exceptions=False,
                 with_raw_output=False,
+                with_keep_cwd=False,
                 ):
         """
         Handles executing the command on the shell and consumes and returns
@@ -79,6 +80,9 @@ class Git(MethodMissingMixin):
         ``with_raw_output``
             Whether to avoid stripping off trailing whitespace.
 
+        ``with_keep_cwd``
+            Whether to use the current working directory from os.getcwd().
+
         Returns
             str(output)                     # with_status = False (Default)
             tuple(int(status), str(output)) # with_status = True
@@ -94,9 +98,15 @@ class Git(MethodMissingMixin):
         else:
             stderr = subprocess.PIPE
 
+        # Allow the user to have the command executed in their working dir.
+        if with_keep_cwd:
+          cwd = os.getcwd()
+        else:
+          cwd=self.git_dir
+
         # Start the process
         proc = subprocess.Popen(command,
-                                cwd=self.git_dir,
+                                cwd=cwd,
                                 stdin=istream,
                                 stderr=stderr,
                                 stdout=subprocess.PIPE
@@ -183,6 +193,7 @@ class Git(MethodMissingMixin):
         with_stderr = kwargs.pop("with_stderr", None)
         with_exceptions = kwargs.pop("with_exceptions", None)
         with_raw_output = kwargs.pop("with_raw_output", None)
+        with_keep_cwd = kwargs.pop("with_keep_cwd", None)
 
         # Prepare the argument list
         opt_args = self.transform_kwargs(**kwargs)
@@ -198,4 +209,5 @@ class Git(MethodMissingMixin):
                             with_stderr = with_stderr,
                             with_exceptions = with_exceptions,
                             with_raw_output = with_raw_output,
+                            with_keep_cwd = with_keep_cwd,
                             )
