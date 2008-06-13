@@ -107,6 +107,10 @@ class Git(MethodMissingMixin):
         status = proc.wait()
         proc.stdout.close()
 
+        if proc.stderr:
+          stderr_value = proc.stderr.read()
+          proc.stderr.close()
+
         # Strip off trailing whitespace by default
         if not with_raw_output:
             stdout_value = stdout_value.rstrip()
@@ -118,7 +122,12 @@ class Git(MethodMissingMixin):
                                   % (str(command), status))
 
         if GIT_PYTHON_TRACE == 'full':
-            print "%s %d: '%s'" % (command, status, stdout_value)
+            if stderr_value:
+              print "%s -> %d: '%s' !! '%s'" % (command, status, stdout_value, stderr_value)
+            elif stdout_value:
+              print "%s -> %d: '%s'" % (command, status, stdout_value)
+            else:
+              print "%s -> %d" % (command, status)
 
         # Allow access to the command's status code
         if with_status:
