@@ -12,12 +12,13 @@ class Git(MethodMissingMixin):
     """
     The Git class manages communication with the Git binary
     """
-    def __init__(self, git_dir=None):
+    def __init__(self, git_dir=None, bare_repo=False):
         super(Git, self).__init__()
         if git_dir:
             self._location = os.path.abspath(git_dir)
         else:
             self._location = os.getcwd()
+        self._is_bare_repo = bare_repo
         self.refresh()
 
     def refresh(self):
@@ -25,7 +26,7 @@ class Git(MethodMissingMixin):
         self._is_in_repo = not not self.get_git_dir()
         self._work_tree = None
         self._cwd = self._git_dir
-        if self._git_dir:
+        if self._git_dir and not self._is_bare_repo:
             self._cwd = self.get_work_tree()
 
     def _is_git_dir(self, d):
@@ -61,6 +62,8 @@ class Git(MethodMissingMixin):
         return self._git_dir
 
     def get_work_tree(self):
+        if self._is_bare_repo:
+            return None
         if not self._work_tree:
             self._work_tree = os.getenv('GIT_WORK_TREE')
             if not self._work_tree or not os.path.isdir(self._work_tree):

@@ -280,7 +280,7 @@ class Repo(object):
         if mkdir and not os.path.exists(path):
             os.makedirs(path, 0755)
 
-        git = Git(path)
+        git = Git(path, bare_repo=True)
         output = git.init(**kwargs)
         return Repo(path)
     create = init_bare
