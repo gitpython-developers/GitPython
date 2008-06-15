@@ -81,6 +81,7 @@ class Git(MethodMissingMixin):
                 with_stderr=False,
                 with_exceptions=False,
                 with_raw_output=False,
+                with_keep_cwd=False,
                 ):
         """
         Handles executing the command on the shell and consumes and returns
@@ -104,6 +105,9 @@ class Git(MethodMissingMixin):
         ``with_raw_output``
             Whether to avoid stripping off trailing whitespace.
 
+        ``with_keep_cwd``
+            Whether to use the current working directory from os.getcwd().
+
         Returns
             str(output)                     # with_status = False (Default)
             tuple(int(status), str(output)) # with_status = True
@@ -119,9 +123,15 @@ class Git(MethodMissingMixin):
         else:
             stderr = subprocess.PIPE
 
+        # Allow the user to have the command executed in their working dir.
+        if with_keep_cwd:
+          cwd = os.getcwd()
+        else:
+          cwd=self._cwd
+
         # Start the process
         proc = subprocess.Popen(command,
-                                cwd=self._cwd,
+                                cwd=cwd,
                                 stdin=istream,
                                 stderr=stderr,
                                 stdout=subprocess.PIPE
@@ -131,6 +141,10 @@ class Git(MethodMissingMixin):
         stdout_value = proc.stdout.read()
         status = proc.wait()
         proc.stdout.close()
+
+        if proc.stderr:
+          stderr_value = proc.stderr.read()
+          proc.stderr.close()
 
         # Strip off trailing whitespace by default
         if not with_raw_output:
@@ -143,7 +157,12 @@ class Git(MethodMissingMixin):
                                   % (str(command), status))
 
         if GIT_PYTHON_TRACE == 'full':
-            print "%s %d: '%s'" % (command, status, stdout_value)
+            if stderr_value:
+              print "%s -> %d: '%s' !! '%s'" % (command, status, stdout_value, stderr_value)
+            elif stdout_value:
+              print "%s -> %d: '%s'" % (command, status, stdout_value)
+            else:
+              print "%s -> %d" % (command, status)
 
         # Allow access to the command's status code
         if with_status:
@@ -199,6 +218,7 @@ class Git(MethodMissingMixin):
         with_stderr = kwargs.pop("with_stderr", None)
         with_exceptions = kwargs.pop("with_exceptions", None)
         with_raw_output = kwargs.pop("with_raw_output", None)
+        with_keep_cwd = kwargs.pop("with_keep_cwd", None)
 
         # Prepare the argument list
         opt_args = self.transform_kwargs(**kwargs)
@@ -214,4 +234,5 @@ class Git(MethodMissingMixin):
                             with_stderr = with_stderr,
                             with_exceptions = with_exceptions,
                             with_raw_output = with_raw_output,
+                            with_keep_cwd = with_keep_cwd,
                             )
