@@ -77,11 +77,11 @@ class Git(MethodMissingMixin):
 
     def execute(self, command,
                 istream=None,
+                keep_cwd=False,
                 with_status=False,
                 with_stderr=False,
                 with_exceptions=False,
                 with_raw_output=False,
-                with_keep_cwd=False,
                 ):
         """
         Handles executing the command on the shell and consumes and returns
@@ -92,6 +92,11 @@ class Git(MethodMissingMixin):
 
         ``istream``
             Standard input filehandle passed to subprocess.Popen.
+
+        ``keep_cwd``
+            Whether to use the current working directory from os.getcwd().
+            GitPython uses get_work_tree() as its working directory by
+            default and get_git_dir() for bare repositories.
 
         ``with_status``
             Whether to return a (status, str) tuple.
@@ -104,9 +109,6 @@ class Git(MethodMissingMixin):
 
         ``with_raw_output``
             Whether to avoid stripping off trailing whitespace.
-
-        ``with_keep_cwd``
-            Whether to use the current working directory from os.getcwd().
 
         Returns
             str(output)                     # with_status = False (Default)
@@ -124,7 +126,7 @@ class Git(MethodMissingMixin):
             stderr = subprocess.PIPE
 
         # Allow the user to have the command executed in their working dir.
-        if with_keep_cwd:
+        if keep_cwd:
           cwd = os.getcwd()
         else:
           cwd=self._cwd
@@ -214,11 +216,11 @@ class Git(MethodMissingMixin):
         # Handle optional arguments prior to calling transform_kwargs
         # otherwise these'll end up in args, which is bad.
         istream = kwargs.pop("istream", None)
+        keep_cwd = kwargs.pop("keep_cwd", None)
         with_status = kwargs.pop("with_status", None)
         with_stderr = kwargs.pop("with_stderr", None)
         with_exceptions = kwargs.pop("with_exceptions", None)
         with_raw_output = kwargs.pop("with_raw_output", None)
-        with_keep_cwd = kwargs.pop("with_keep_cwd", None)
 
         # Prepare the argument list
         opt_args = self.transform_kwargs(**kwargs)
@@ -230,9 +232,9 @@ class Git(MethodMissingMixin):
 
         return self.execute(call,
                             istream = istream,
+                            keep_cwd = keep_cwd,
                             with_status = with_status,
                             with_stderr = with_stderr,
                             with_exceptions = with_exceptions,
                             with_raw_output = with_raw_output,
-                            with_keep_cwd = with_keep_cwd,
                             )
