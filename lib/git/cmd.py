@@ -12,46 +12,72 @@ class Git(MethodMissingMixin):
     """
     The Git class manages communication with the Git binary
     """
-    def __init__(self, git_dir=None):
+    def __init__(self, git_dir=None, bare_repo=False):
         super(Git, self).__init__()
         if git_dir:
-            self.find_git_dir(git_dir)
+            self._location = os.path.abspath(git_dir)
         else:
-            self.find_git_dir(os.getcwd())
+            self._location = os.getcwd()
+        self._is_bare_repo = bare_repo
+        self.refresh()
 
-    def find_git_dir(self, path):
-        """Find the best value for self.git_dir.
-        For bare repositories, this is the path to the bare repository.
-        For repositories with work trees, this is the work tree path.
+    def refresh(self):
+        self._git_dir = None
+        self._is_in_repo = not not self.get_git_dir()
+        self._work_tree = None
+        self._cwd = self._git_dir
+        if self._git_dir and not self._is_bare_repo:
+            self._cwd = self.get_work_tree()
 
-        When barerepo.git is passed in,  self.git_dir = barerepo.git
-        When worktree/.git is passed in, self.git_dir = worktree
-        When worktree is passed in,      self.git_dir = worktree
-        """
+    def _is_git_dir(self, d):
+        """ This is taken from the git setup.c:is_git_directory
+            function."""
 
-        path = os.path.abspath(path)
-        self.git_dir = path
+        if os.path.isdir(d) and \
+                os.path.isdir(os.path.join(d, 'objects')) and \
+                os.path.isdir(os.path.join(d, 'refs')):
+            headref = os.path.join(d, 'HEAD')
+            return os.path.isfile(headref) or \
+                    (os.path.islink(headref) and
+                    os.readlink(headref).startswith('refs'))
+        return False
 
-        cdup = self.execute(["git", "rev-parse", "--show-cdup"])
-        if cdup:
-            path = os.path.abspath(os.path.join(self.git_dir, cdup))
-        else:
-            is_bare_repository =\
-                self.rev_parse(is_bare_repository=True) == "true"
-            is_inside_git_dir =\
-                self.rev_parse(is_inside_git_dir=True) == "true"
+    def get_git_dir(self):
+        if not self._git_dir:
+            self._git_dir = os.getenv('GIT_DIR')
+            if self._git_dir and self._is_git_dir(self._git_dir):
+                return self._git_dir
+            curpath = self._location
+            while curpath:
+                if self._is_git_dir(curpath):
+                    self._git_dir = curpath
+                    break
+                gitpath = os.path.join(curpath, '.git')
+                if self._is_git_dir(gitpath):
+                    self._git_dir = gitpath
+                    break
+                curpath, dummy = os.path.split(curpath)
+                if not dummy:
+                    break
+        return self._git_dir
 
-            if not is_bare_repository and is_inside_git_dir:
-                path = os.path.dirname(self.git_dir)
-
-        self.git_dir = path
+    def get_work_tree(self):
+        if self._is_bare_repo:
+            return None
+        if not self._work_tree:
+            self._work_tree = os.getenv('GIT_WORK_TREE')
+            if not self._work_tree or not os.path.isdir(self._work_tree):
+                self._work_tree = os.path.abspath(
+                                    os.path.join(self._git_dir, '..'))
+        return self._work_tree
 
     @property
     def get_dir(self):
-        return self.git_dir
+        return self._git_dir
 
     def execute(self, command,
                 istream=None,
+                keep_cwd=False,
                 with_status=False,
                 with_stderr=False,
                 with_exceptions=False,
@@ -66,6 +92,11 @@ class Git(MethodMissingMixin):
 
         ``istream``
             Standard input filehandle passed to subprocess.Popen.
+
+        ``keep_cwd``
+            Whether to use the current working directory from os.getcwd().
+            GitPython uses get_work_tree() as its working directory by
+            default and get_git_dir() for bare repositories.
 
         ``with_status``
             Whether to return a (status, str) tuple.
@@ -94,9 +125,15 @@ class Git(MethodMissingMixin):
         else:
             stderr = subprocess.PIPE
 
+        # Allow the user to have the command executed in their working dir.
+        if keep_cwd:
+          cwd = os.getcwd()
+        else:
+          cwd=self._cwd
+
         # Start the process
         proc = subprocess.Popen(command,
-                                cwd=self.git_dir,
+                                cwd=cwd,
                                 stdin=istream,
                                 stderr=stderr,
                                 stdout=subprocess.PIPE
@@ -106,6 +143,10 @@ class Git(MethodMissingMixin):
         stdout_value = proc.stdout.read()
         status = proc.wait()
         proc.stdout.close()
+
+        if proc.stderr:
+          stderr_value = proc.stderr.read()
+          proc.stderr.close()
 
         # Strip off trailing whitespace by default
         if not with_raw_output:
@@ -118,7 +159,12 @@ class Git(MethodMissingMixin):
                                   % (str(command), status))
 
         if GIT_PYTHON_TRACE == 'full':
-            print "%s %d: '%s'" % (command, status, stdout_value)
+            if stderr_value:
+              print "%s -> %d: '%s' !! '%s'" % (command, status, stdout_value, stderr_value)
+            elif stdout_value:
+              print "%s -> %d: '%s'" % (command, status, stdout_value)
+            else:
+              print "%s -> %d" % (command, status)
 
         # Allow access to the command's status code
         if with_status:
@@ -170,6 +216,7 @@ class Git(MethodMissingMixin):
         # Handle optional arguments prior to calling transform_kwargs
         # otherwise these'll end up in args, which is bad.
         istream = kwargs.pop("istream", None)
+        keep_cwd = kwargs.pop("keep_cwd", None)
         with_status = kwargs.pop("with_status", None)
         with_stderr = kwargs.pop("with_stderr", None)
         with_exceptions = kwargs.pop("with_exceptions", None)
@@ -185,6 +232,7 @@ class Git(MethodMissingMixin):
 
         return self.execute(call,
                             istream = istream,
+                            keep_cwd = keep_cwd,
                             with_status = with_status,
                             with_stderr = with_stderr,
                             with_exceptions = with_exceptions,
