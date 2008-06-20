@@ -78,9 +78,9 @@ class Git(MethodMissingMixin):
     def execute(self, command,
                 istream=None,
                 keep_cwd=False,
-                with_status=False,
+                extended_output=False,
                 with_stderr=False,
-                with_exceptions=False,
+                with_exceptions=True,
                 with_raw_output=False,
                 ):
         """
@@ -98,11 +98,8 @@ class Git(MethodMissingMixin):
             GitPython uses get_work_tree() as its working directory by
             default and get_git_dir() for bare repositories.
 
-        ``with_status``
-            Whether to return a (status, str) tuple.
-
-        ``with_stderr``
-            Whether to combine stderr into the output.
+        ``extended_output``
+            Whether to return a (status, stdout, stderr) tuple.
 
         ``with_exceptions``
             Whether to raise an exception when git returns a non-zero status.
@@ -111,19 +108,12 @@ class Git(MethodMissingMixin):
             Whether to avoid stripping off trailing whitespace.
 
         Returns
-            str(output)                     # with_status = False (Default)
-            tuple(int(status), str(output)) # with_status = True
+            str(output)                     # extended_output = False (Default)
+            tuple(int(status), str(output)) # extended_output = True
         """
 
         if GIT_PYTHON_TRACE and not GIT_PYTHON_TRACE == 'full':
             print ' '.join(command)
-
-        # Allow stderr to be merged into stdout when with_stderr is True.
-        # Otherwise, throw stderr away.
-        if with_stderr:
-            stderr = subprocess.STDOUT
-        else:
-            stderr = subprocess.PIPE
 
         # Allow the user to have the command executed in their working dir.
         if keep_cwd:
@@ -135,28 +125,29 @@ class Git(MethodMissingMixin):
         proc = subprocess.Popen(command,
                                 cwd=cwd,
                                 stdin=istream,
-                                stderr=stderr,
+                                stderr=subprocess.PIPE,
                                 stdout=subprocess.PIPE
                                 )
 
         # Wait for the process to return
-        stdout_value = proc.stdout.read()
-        status = proc.wait()
-        proc.stdout.close()
-
-        if proc.stderr:
-          stderr_value = proc.stderr.read()
-          proc.stderr.close()
+        try:
+            stdout_value = proc.stdout.read()
+            stderr_value = proc.stderr.read()
+            status = proc.wait()
+        finally:
+            proc.stdout.close()
+            proc.stderr.close()
 
         # Strip off trailing whitespace by default
         if not with_raw_output:
             stdout_value = stdout_value.rstrip()
+            stderr_value = stderr_value.rstrip()
 
-        # Grab the exit status
-        status = proc.poll()
+        print command, status
+
         if with_exceptions and status != 0:
-            raise GitCommandError("%s returned exit status %d"
-                                  % (str(command), status))
+            print 19
+            raise GitCommandError(command, status, stderr_value)
 
         if GIT_PYTHON_TRACE == 'full':
             if stderr_value:
@@ -167,8 +158,8 @@ class Git(MethodMissingMixin):
               print "%s -> %d" % (command, status)
 
         # Allow access to the command's status code
-        if with_status:
-            return (status, stdout_value)
+        if extended_output:
+            return (status, stdout_value, stderr_value)
         else:
             return stdout_value
 
@@ -217,9 +208,9 @@ class Git(MethodMissingMixin):
         # otherwise these'll end up in args, which is bad.
         istream = kwargs.pop("istream", None)
         keep_cwd = kwargs.pop("keep_cwd", None)
-        with_status = kwargs.pop("with_status", None)
+        extended_output = kwargs.pop("extended_output", None)
         with_stderr = kwargs.pop("with_stderr", None)
-        with_exceptions = kwargs.pop("with_exceptions", None)
+        with_exceptions = kwargs.pop("with_exceptions", True)
         with_raw_output = kwargs.pop("with_raw_output", None)
 
         # Prepare the argument list
@@ -233,7 +224,7 @@ class Git(MethodMissingMixin):
         return self.execute(call,
                             istream = istream,
                             keep_cwd = keep_cwd,
-                            with_status = with_status,
+                            extended_output = extended_output,
                             with_stderr = with_stderr,
                             with_exceptions = with_exceptions,
                             with_raw_output = with_raw_output,
