@@ -154,7 +154,7 @@ class Commit(LazyMixin):
         return commits
 
     @classmethod
-    def diff(cls, repo, a, b = None, paths = []):
+    def diff(cls, repo, a, b = None, paths = None):
         """
         Show diffs between two trees:
 
@@ -175,6 +175,8 @@ class Commit(LazyMixin):
         Returns
             GitPython.Diff[]
         """
+        paths = paths or []
+
         if isinstance(b, list):
             paths = b
             b = None
