@@ -12,7 +12,7 @@ from tree import Tree
 class Repo(object):
     DAEMON_EXPORT_FILE = 'git-daemon-export-ok'
 
-    def __init__(self, path):
+    def __init__(self, path=None):
         """
         Create a new Repo instance
 
@@ -27,19 +27,24 @@ class Repo(object):
         Returns
             ``GitPython.Repo``
         """
-        epath = os.path.abspath(path)
+        if not os.path.exists(path):
+            raise NoSuchPathError(path)
+
+        self.git = Git(path)
+        self.path = self.git.get_git_dir()
+        if not self.path:
+            raise InvalidGitRepositoryError(path)
+        epath = self.git.get_work_tree()
 
         if os.path.exists(os.path.join(epath, '.git')):
-            self.path = os.path.join(epath, '.git')
             self.bare = False
-        elif os.path.exists(epath) and re.search('\.git$', epath):
-            self.path = epath
+        elif os.path.exists(epath) and epath.endswith('.git'):
             self.bare = True
         elif os.path.exists(epath):
             raise InvalidGitRepositoryError(epath)
         else:
             raise NoSuchPathError(epath)
-        self.git = Git(self.path)
+
 
     @property
     def description(self):
@@ -275,7 +280,7 @@ class Repo(object):
         if mkdir and not os.path.exists(path):
             os.makedirs(path, 0755)
 
-        git = Git(path)
+        git = Git(path, bare_repo=True)
         output = git.init(**kwargs)
         return Repo(path)
     create = init_bare
