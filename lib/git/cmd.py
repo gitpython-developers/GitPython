@@ -8,6 +8,9 @@ from errors import GitCommandError
 # Enables debugging of GitPython's git commands
 GIT_PYTHON_TRACE = os.environ.get("GIT_PYTHON_TRACE", False)
 
+execute_kwargs = ('istream', 'with_keep_cwd', 'with_extended_output',
+                  'with_exceptions', 'with_raw_output')
+
 class Git(MethodMissingMixin):
     """
     The Git class manages communication with the Git binary
@@ -77,9 +80,8 @@ class Git(MethodMissingMixin):
 
     def execute(self, command,
                 istream=None,
-                keep_cwd=False,
-                extended_output=False,
-                with_stderr=False,
+                with_keep_cwd=False,
+                with_extended_output=False,
                 with_exceptions=True,
                 with_raw_output=False,
                 ):
@@ -93,12 +95,12 @@ class Git(MethodMissingMixin):
         ``istream``
             Standard input filehandle passed to subprocess.Popen.
 
-        ``keep_cwd``
+        ``with_keep_cwd``
             Whether to use the current working directory from os.getcwd().
             GitPython uses get_work_tree() as its working directory by
             default and get_git_dir() for bare repositories.
 
-        ``extended_output``
+        ``with_extended_output``
             Whether to return a (status, stdout, stderr) tuple.
 
         ``with_exceptions``
@@ -116,7 +118,7 @@ class Git(MethodMissingMixin):
             print ' '.join(command)
 
         # Allow the user to have the command executed in their working dir.
-        if keep_cwd:
+        if with_keep_cwd:
           cwd = os.getcwd()
         else:
           cwd=self._cwd
@@ -143,10 +145,7 @@ class Git(MethodMissingMixin):
             stdout_value = stdout_value.rstrip()
             stderr_value = stderr_value.rstrip()
 
-        print command, status
-
         if with_exceptions and status != 0:
-            print 19
             raise GitCommandError(command, status, stderr_value)
 
         if GIT_PYTHON_TRACE == 'full':
@@ -158,7 +157,7 @@ class Git(MethodMissingMixin):
               print "%s -> %d" % (command, status)
 
         # Allow access to the command's status code
-        if extended_output:
+        if with_extended_output:
             return (status, stdout_value, stderr_value)
         else:
             return stdout_value
@@ -206,12 +205,12 @@ class Git(MethodMissingMixin):
 
         # Handle optional arguments prior to calling transform_kwargs
         # otherwise these'll end up in args, which is bad.
-        istream = kwargs.pop("istream", None)
-        keep_cwd = kwargs.pop("keep_cwd", None)
-        extended_output = kwargs.pop("extended_output", None)
-        with_stderr = kwargs.pop("with_stderr", None)
-        with_exceptions = kwargs.pop("with_exceptions", True)
-        with_raw_output = kwargs.pop("with_raw_output", None)
+        _kwargs = {}
+        for kwarg in execute_kwargs:
+            try:
+                _kwargs[kwarg] = kwargs.pop(kwarg)
+            except KeyError:
+                pass
 
         # Prepare the argument list
         opt_args = self.transform_kwargs(**kwargs)
@@ -221,11 +220,4 @@ class Git(MethodMissingMixin):
         call = ["git", dashify(method)]
         call.extend(args)
 
-        return self.execute(call,
-                            istream = istream,
-                            keep_cwd = keep_cwd,
-                            extended_output = extended_output,
-                            with_stderr = with_stderr,
-                            with_exceptions = with_exceptions,
-                            with_raw_output = with_raw_output,
-                            )
+        return self.execute(call, **_kwargs)
