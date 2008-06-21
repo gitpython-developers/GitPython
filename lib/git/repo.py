@@ -27,6 +27,7 @@ class Repo(object):
         Returns
             ``GitPython.Repo``
         """
+        path = os.path.expanduser(path)
         if not os.path.exists(path):
             raise NoSuchPathError(path)
 
