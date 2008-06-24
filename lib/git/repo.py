@@ -1,7 +1,7 @@
 import os
 import re
 from errors import InvalidGitRepositoryError, NoSuchPathError
-from utils import touch
+from utils import touch, is_git_dir
 from cmd import Git
 from head import Head
 from blob import Blob
@@ -27,25 +27,33 @@ class Repo(object):
         Returns
             ``GitPython.Repo``
         """
-        path = os.path.expanduser(path)
-        if not os.path.exists(path):
-            raise NoSuchPathError(path)
 
-        self.git = Git(path)
-        self.path = self.git.get_git_dir()
-        if not self.path:
-            raise InvalidGitRepositoryError(path)
-        epath = self.git.get_work_tree()
+        epath = os.path.abspath(os.path.expanduser(path or os.getcwd()))
 
-        if os.path.exists(os.path.join(epath, '.git')):
-            self.bare = False
-        elif os.path.exists(epath) and epath.endswith('.git'):
-            self.bare = True
-        elif os.path.exists(epath):
-            raise InvalidGitRepositoryError(epath)
-        else:
+        if not os.path.exists(epath):
             raise NoSuchPathError(epath)
 
+        self.path = None
+        curpath = epath
+        while curpath:
+            if is_git_dir(curpath):
+                self.bare = True
+                self.path, self.wd = curpath
+                break
+            gitpath = os.path.join(curpath, '.git')
+            if is_git_dir(gitpath):
+                self.bare = False
+                self.path = gitpath
+                self.wd = curpath
+                break
+            curpath, dummy = os.path.split(curpath)
+            if not dummy:
+                break
+
+        if self.path is None:
+           raise InvalidGitRepositoryError(epath)
+
+        self.git = Git(self.wd)
 
     @property
     def description(self):
@@ -281,7 +289,7 @@ class Repo(object):
         if mkdir and not os.path.exists(path):
             os.makedirs(path, 0755)
 
-        git = Git(path, bare_repo=True)
+        git = Git(path)
         output = git.init(**kwargs)
         return Repo(path)
     create = init_bare
@@ -370,10 +378,7 @@ class Repo(object):
         Returns
             None
         """
-        if self.bare:
-            touch(os.path.join(self.path, DAEMON_EXPORT_FILE))
-        else:
-            touch(os.path.join(self.path, '.git', DAEMON_EXPORT_FILE))
+        touch(os.path.join(self.path, DAEMON_EXPORT_FILE))
 
     def disable_daemon_serve(self):
         """
@@ -383,10 +388,7 @@ class Repo(object):
         Returns
             None
         """
-        if self.bare:
-            return os.remove(os.path.join(self.path, DAEMON_EXPORT_FILE))
-        else:
-            return os.remove(os.path.join(self.path, '.git', DAEMON_EXPORT_FILE))
+        return os.remove(os.path.join(self.path, DAEMON_EXPORT_FILE))
 
     def _get_alternates(self):
         """

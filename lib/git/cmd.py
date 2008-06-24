@@ -15,68 +15,13 @@ class Git(MethodMissingMixin):
     """
     The Git class manages communication with the Git binary
     """
-    def __init__(self, git_dir=None, bare_repo=False):
+    def __init__(self, git_dir):
         super(Git, self).__init__()
-        if git_dir:
-            self._location = os.path.abspath(git_dir)
-        else:
-            self._location = os.getcwd()
-        self._is_bare_repo = bare_repo
-        self.refresh()
-
-    def refresh(self):
-        self._git_dir = None
-        self._is_in_repo = not not self.get_git_dir()
-        self._work_tree = None
-        self._cwd = self._git_dir
-        if self._git_dir and not self._is_bare_repo:
-            self._cwd = self.get_work_tree()
-
-    def _is_git_dir(self, d):
-        """ This is taken from the git setup.c:is_git_directory
-            function."""
-
-        if os.path.isdir(d) and \
-                os.path.isdir(os.path.join(d, 'objects')) and \
-                os.path.isdir(os.path.join(d, 'refs')):
-            headref = os.path.join(d, 'HEAD')
-            return os.path.isfile(headref) or \
-                    (os.path.islink(headref) and
-                    os.readlink(headref).startswith('refs'))
-        return False
-
-    def get_git_dir(self):
-        if not self._git_dir:
-            self._git_dir = os.getenv('GIT_DIR')
-            if self._git_dir and self._is_git_dir(self._git_dir):
-                return self._git_dir
-            curpath = self._location
-            while curpath:
-                if self._is_git_dir(curpath):
-                    self._git_dir = curpath
-                    break
-                gitpath = os.path.join(curpath, '.git')
-                if self._is_git_dir(gitpath):
-                    self._git_dir = gitpath
-                    break
-                curpath, dummy = os.path.split(curpath)
-                if not dummy:
-                    break
-        return self._git_dir
-
-    def get_work_tree(self):
-        if self._is_bare_repo:
-            return None
-        if not self._work_tree:
-            self._work_tree = os.getenv('GIT_WORK_TREE')
-            if not self._work_tree or not os.path.isdir(self._work_tree):
-                self._work_tree = os.path.abspath(
-                                    os.path.join(self._git_dir, '..'))
-        return self._work_tree
+        self.git_dir = git_dir
 
     @property
     def get_dir(self):
-        return self._git_dir
+        return self.git_dir
 
     def execute(self, command,
                 istream=None,
@@ -118,10 +63,10 @@ class Git(MethodMissingMixin):
             print ' '.join(command)
 
         # Allow the user to have the command executed in their working dir.
-        if with_keep_cwd:
+        if with_keep_cwd or self.git_dir is None:
           cwd = os.getcwd()
         else:
-          cwd=self._cwd
+          cwd=self.git_dir
 
         # Start the process
         proc = subprocess.Popen(command,

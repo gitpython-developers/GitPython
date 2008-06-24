@@ -9,8 +9,8 @@ class Stats(object):
         hsh = {'total': {'insertions': 0, 'deletions': 0, 'lines': 0, 'files': 0}, 'files': {}}
         for line in text.splitlines():
             (insertions, deletions, filename) = line.split("\t")
-            hsh['total']['insertions'] += int(insertions)
-            hsh['total']['deletions'] += int(deletions)
+            hsh['total']['insertions'] += insertions != '-' and int(insertions) or 0
+            hsh['total']['deletions'] += deleteions != '-' and int(deletions) or 0
             hsh['total']['lines'] = (hsh['total']['deletions'] + hsh['total']['insertions'])
             hsh['total']['files'] += 1
             hsh['files'][filename.strip()] = {'insertions': int(insertions), 'deletions': int(deletions)}
