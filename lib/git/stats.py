@@ -8,10 +8,14 @@ class Stats(object):
     def list_from_string(cls, repo, text):
         hsh = {'total': {'insertions': 0, 'deletions': 0, 'lines': 0, 'files': 0}, 'files': {}}
         for line in text.splitlines():
-            (insertions, deletions, filename) = line.split("\t")
-            hsh['total']['insertions'] += insertions != '-' and int(insertions) or 0
-            hsh['total']['deletions'] += deleteions != '-' and int(deletions) or 0
-            hsh['total']['lines'] = (hsh['total']['deletions'] + hsh['total']['insertions'])
+            (raw_insertions, raw_deletions, filename) = line.split("\t")
+            insertions = raw_insertions != '-' and int(raw_insertions) or 0
+            deletions = raw_deletions != '-' and int(raw_deletions) or 0
+            hsh['total']['insertions'] += insertions
+            hsh['total']['deletions'] += deletions
+            hsh['total']['lines'] = insertions + deletions
             hsh['total']['files'] += 1
-            hsh['files'][filename.strip()] = {'insertions': int(insertions), 'deletions': int(deletions)}
+            hsh['files'][filename.strip()] = {'insertions': insertions,
+                                              'deletions': deletions,
+                                              'lines': insertions + deletions}
         return Stats(repo, hsh['total'], hsh['files'])
