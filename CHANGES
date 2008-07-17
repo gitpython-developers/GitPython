@@ -8,6 +8,10 @@ CHANGES
 * renamed ``git_python`` to ``git``. Be sure to delete all pyc files before
   testing.
 
+Commit
+------
+* Fixed problem with commit stats not working under all conditions.
+
 Git
 ---
 * Renamed module to cmd.
@@ -19,8 +23,8 @@ Git
 * ``git_dir`` is now optional in the constructor for ``git.Git``.  Git now 
   falls back to ``os.getcwd()`` when git_dir is not specified.
 
-* add a ``with_exceptions`` keyword argument to git commands. ``GitCommandError`` 
-  is raised when the exit status is non-zero.
+* add a ``with_exceptions`` keyword argument to git commands. 
+  ``GitCommandError`` is raised when the exit status is non-zero.
 
 * add support for a ``GIT_PYTHON_TRACE`` environment variable. 
   ``GIT_PYTHON_TRACE`` allows us to debug GitPython's usage of git through 
