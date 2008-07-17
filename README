@@ -9,7 +9,7 @@ Tom Preston-Werner and Chris Wanstrath.
 
 .. _grit: http://grit.rubyforge.org
 
-The ``method_missing`` stuff was `taken from this blog post`_.
+The idea for the ``method_missing`` stuff was `taken from this blog post`_.
 
 .. _taken from this blog post: http://blog.iffy.us/?p=43
 
