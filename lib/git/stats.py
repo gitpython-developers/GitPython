@@ -19,7 +19,7 @@ class Stats(object):
             deletions = raw_deletions != '-' and int(raw_deletions) or 0
             hsh['total']['insertions'] += insertions
             hsh['total']['deletions'] += deletions
-            hsh['total']['lines'] = insertions + deletions
+            hsh['total']['lines'] += insertions + deletions
             hsh['total']['files'] += 1
             hsh['files'][filename.strip()] = {'insertions': insertions,
                                               'deletions': deletions,
