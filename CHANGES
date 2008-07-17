@@ -2,7 +2,7 @@
 CHANGES
 =======
 
-0.1.3
+0.1.4
 =====
 
 * renamed ``git_python`` to ``git``. Be sure to delete all pyc files before
