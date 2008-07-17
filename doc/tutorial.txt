@@ -184,7 +184,7 @@ What Else?
 
 There is more stuff in there, like the ability to tar or gzip repos, stats, 
 log, blame, and probably a few other things.  Additionally calls to the git 
-instance are handled through a ``method_missing`` construct, which makes 
+instance are handled through a ``__getattr__`` construct, which makes 
 available any git commands directly, with a nice conversion of Python dicts 
 to command line parameters.
 

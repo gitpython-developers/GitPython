@@ -14,11 +14,11 @@ class TestGit(object):
         self.git = Git(base)
 
     @patch(Git, 'execute')
-    def test_method_missing_calls_execute(self, git):
+    def test__call_process_calls_execute(self, git):
         git.return_value = ''
         self.git.version()
         assert_true(git.called)
-        # assert_equal(git.call_args, ((("%s version " % self.git_bin_base),), {}))
+        assert_equal(git.call_args, ((['git', 'version'],), {}))
 
     @raises(GitCommandError)
     def test_it_raises_errors(self):

@@ -12,7 +12,7 @@ class TestTag(object):
     def setup(self):
         self.repo = Repo(GIT_REPO)
 
-    @patch(Git, 'method_missing')
+    @patch(Git, '_call_process')
     def test_list_from_string(self, git):
         git.return_value = fixture('for_each_ref_tags')
         
@@ -25,7 +25,7 @@ class TestTag(object):
         assert_true(git.called)
         assert_equal(git.call_args, (('for_each_ref', 'refs/tags'), {'sort': 'committerdate', 'format': '%(refname)%00%(objectname)'}))
 
-    @patch(Git, 'method_missing')
+    @patch(Git, '_call_process')
     def test_repr(self, git):
         git.return_value = fixture('for_each_ref')
         

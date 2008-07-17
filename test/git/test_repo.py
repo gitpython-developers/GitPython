@@ -28,7 +28,7 @@ class TestRepo(object):
         for head in self.repo.heads:
             assert_equal(Head, head.__class__)
 
-    @patch(Git, 'method_missing')
+    @patch(Git, '_call_process')
     def test_heads_should_populate_head_data(self, git):
         git.return_value = fixture('for_each_ref')
 
@@ -39,7 +39,7 @@ class TestRepo(object):
         assert_true(git.called)
         assert_equal(git.call_args, (('for_each_ref', 'refs/heads'), {'sort': 'committerdate', 'format': '%(refname)%00%(objectname)'}))
 
-    @patch(Git, 'method_missing')
+    @patch(Git, '_call_process')
     def test_commits(self, git):
         git.return_value = fixture('rev_list')
 
@@ -67,7 +67,7 @@ class TestRepo(object):
         assert_true(git.called)
         assert_equal(git.call_args, (('rev_list', 'master'), {'skip': 0, 'pretty': 'raw', 'max_count': 10}))
 
-    @patch(Git, 'method_missing')
+    @patch(Git, '_call_process')
     def test_commit_count(self, git):
         git.return_value = fixture('rev_list_count')
 
@@ -76,7 +76,7 @@ class TestRepo(object):
         assert_true(git.called)
         assert_equal(git.call_args, (('rev_list', 'master'), {}))
 
-    @patch(Git, 'method_missing')
+    @patch(Git, '_call_process')
     def test_commit(self, git):
         git.return_value = fixture('rev_list_single')
 
@@ -87,7 +87,7 @@ class TestRepo(object):
         assert_true(git.called)
         assert_equal(git.call_args, (('rev_list', '4c8124ffcf4039d292442eeccabdeca5af5c5017'), {'pretty': 'raw', 'max_count': 1}))
 
-    @patch(Git, 'method_missing')
+    @patch(Git, '_call_process')
     def test_tree(self, git):
         git.return_value = fixture('ls_tree_a')
 
@@ -99,7 +99,7 @@ class TestRepo(object):
         assert_true(git.called)
         assert_equal(git.call_args, (('ls_tree', 'master'), {}))
 
-    @patch(Git, 'method_missing')
+    @patch(Git, '_call_process')
     def test_blob(self, git):
         git.return_value = fixture('cat_file_blob')
 
@@ -110,7 +110,7 @@ class TestRepo(object):
         assert_equal(git.call_args, (('cat_file', 'abc'), {'p': True}))
 
     @patch(Repo, '__init__')
-    @patch(Git, 'method_missing')
+    @patch(Git, '_call_process')
     def test_init_bare(self, repo, git):
         git.return_value = True
 
@@ -122,7 +122,7 @@ class TestRepo(object):
         assert_equal(repo.call_args, (('repos/foo/bar.git',), {}))
 
     @patch(Repo, '__init__')
-    @patch(Git, 'method_missing')
+    @patch(Git, '_call_process')
     def test_init_bare_with_options(self, repo, git):
         git.return_value = True
 
@@ -134,7 +134,7 @@ class TestRepo(object):
         assert_equal(repo.call_args, (('repos/foo/bar.git',), {}))
 
     @patch(Repo, '__init__')
-    @patch(Git, 'method_missing')
+    @patch(Git, '_call_process')
     def test_fork_bare(self, repo, git):
         git.return_value = None
 
@@ -145,7 +145,7 @@ class TestRepo(object):
         assert_true(repo.called)
 
     @patch(Repo, '__init__')
-    @patch(Git, 'method_missing')
+    @patch(Git, '_call_process')
     def test_fork_bare_with_options(self, repo, git):
         git.return_value = None
 
@@ -156,7 +156,7 @@ class TestRepo(object):
                                       {'bare': True, 'template': '/awesome'}))
         assert_true(repo.called)
 
-    @patch(Git, 'method_missing')
+    @patch(Git, '_call_process')
     def test_diff(self, git):
         self.repo.diff('master^', 'master')
 
@@ -173,7 +173,7 @@ class TestRepo(object):
         assert_true(git.called)
         assert_equal(git.call_args, (('diff', 'master^', 'master', '--', 'foo/bar', 'foo/baz'), {}))
 
-    @patch(Git, 'method_missing')
+    @patch(Git, '_call_process')
     def test_diff(self, git):
         git.return_value = fixture('diff_p')
 
@@ -248,7 +248,7 @@ class TestRepo(object):
     def test_repr(self):
         assert_equal('<GitPython.Repo "%s/.git">' % os.path.abspath(GIT_REPO), repr(self.repo))
 
-    @patch(Git, 'method_missing')
+    @patch(Git, '_call_process')
     def test_log(self, git):
         git.return_value = fixture('rev_list')
         assert_equal('4c8124ffcf4039d292442eeccabdeca5af5c5017', self.repo.log()[0].id)
@@ -257,15 +257,15 @@ class TestRepo(object):
         assert_equal(git.call_count, 2)
         assert_equal(git.call_args, (('log', 'master'), {'pretty': 'raw'}))
 
-    @patch(Git, 'method_missing')
+    @patch(Git, '_call_process')
     def test_log_with_path_and_options(self, git):
         git.return_value = fixture('rev_list')
         self.repo.log('master', 'file.rb', **{'max_count': 1})
         assert_true(git.called)
         assert_equal(git.call_args, (('log', 'master', '--', 'file.rb'), {'pretty': 'raw', 'max_count': 1}))
 
-    # @patch(Git, 'method_missing')
-    # @patch(Git, 'method_missing')
+    # @patch(Git, '_call_process')
+    # @patch(Git, '_call_process')
     # def test_commit_deltas_from_nothing_new(self, gitb, gita):
     #     gitb.return_value = fixture("rev_list_delta_b")
     #     gita.return_value = fixture("rev_list_delta_a")

@@ -8,7 +8,6 @@ import os
 import subprocess
 import re
 from utils import *
-from method_missing import MethodMissingMixin
 from errors import GitCommandError
 
 # Enables debugging of GitPython's git commands
@@ -17,13 +16,18 @@ GIT_PYTHON_TRACE = os.environ.get("GIT_PYTHON_TRACE", False)
 execute_kwargs = ('istream', 'with_keep_cwd', 'with_extended_output',
                   'with_exceptions', 'with_raw_output')
 
-class Git(MethodMissingMixin):
+class Git(object):
     """
     The Git class manages communication with the Git binary
     """
     def __init__(self, git_dir):
         super(Git, self).__init__()
         self.git_dir = git_dir
+
+    def __getattr__(self, name):
+        if name[:1] == '_':
+            raise AttributeError(name)
+        return lambda *args, **kwargs: self._call_process(name, *args, **kwargs)
 
     @property
     def get_dir(self):
@@ -131,7 +135,7 @@ class Git(MethodMissingMixin):
                     args.append("--%s=%s" % (dashify(k), v))
         return args
 
-    def method_missing(self, method, *args, **kwargs):
+    def _call_process(self, method, *args, **kwargs):
         """
         Run the given git command with the specified arguments and return
         the result as a String

@@ -11,7 +11,7 @@ class TestCommit(object):
     def setup(self):
         self.repo = Repo(GIT_REPO)
 
-    @patch(Git, 'method_missing')
+    @patch(Git, '_call_process')
     def test_bake(self, git):
         git.return_value = fixture('rev_list_single')
 
@@ -24,12 +24,12 @@ class TestCommit(object):
         assert_true(git.called)
         assert_equal(git.call_args, (('rev_list', '4c8124ffcf4039d292442eeccabdeca5af5c5017'), {'pretty': 'raw', 'max_count': 1}))
 
-    @patch(Git, 'method_missing')
+    @patch(Git, '_call_process')
     def test_id_abbrev(self, git):
         git.return_value = fixture('rev_list_commit_idabbrev')
         assert_equal('80f136f', self.repo.commit('80f136f500dfdb8c3e8abf4ae716f875f0a1b57f').id_abbrev)
 
-    @patch(Git, 'method_missing')
+    @patch(Git, '_call_process')
     def test_diff(self, git):
         git.return_value = fixture('diff_p')
 
@@ -54,7 +54,7 @@ class TestCommit(object):
         assert_true(git.called)
         assert_equal(git.call_args, (('diff', 'master'), {'full_index': True}))
 
-    @patch(Git, 'method_missing')
+    @patch(Git, '_call_process')
     def test_diff_with_two_commits(self, git):
         git.return_value = fixture('diff_2')
 
@@ -65,7 +65,7 @@ class TestCommit(object):
         assert_true(git.called)
         assert_equal(git.call_args, (('diff', '59ddc32', '13d27d5'), {'full_index': True}))
 
-    @patch(Git, 'method_missing')
+    @patch(Git, '_call_process')
     def test_diff_with_files(self, git):
         git.return_value = fixture('diff_f')
 
@@ -77,7 +77,7 @@ class TestCommit(object):
         assert_true(git.called)
         assert_equal(git.call_args, (('diff', '59ddc32', '--', 'lib'), {'full_index': True}))
 
-    @patch(Git, 'method_missing')
+    @patch(Git, '_call_process')
     def test_diff_with_two_commits_and_files(self, git):
         git.return_value = fixture('diff_2f')
 
@@ -89,7 +89,7 @@ class TestCommit(object):
         assert_true(git.called)
         assert_equal(git.call_args, (('diff', '59ddc32', '13d27d5', '--', 'lib'), {'full_index': True}))
 
-    @patch(Git, 'method_missing')
+    @patch(Git, '_call_process')
     def test_diffs(self, git):
         git.return_value = fixture('diff_p')
 
@@ -117,7 +117,7 @@ class TestCommit(object):
                                               '91169e1f5fa4de2eaea3f176461f5dc784796769',
                                       ), {'full_index': True}))
 
-    @patch(Git, 'method_missing')
+    @patch(Git, '_call_process')
     def test_diffs_on_initial_import(self, git):
         git.return_value = fixture('diff_i')
 
@@ -144,7 +144,7 @@ class TestCommit(object):
         assert_true(git.called)
         assert_equal(git.call_args, (('show', '634396b2f541a9f2d58b00be1a07f0c358b999b3'), {'full_index': True, 'pretty': 'raw'}))
 
-    @patch(Git, 'method_missing')
+    @patch(Git, '_call_process')
     def test_diffs_on_initial_import_with_empty_commit(self, git):
         git.return_value = fixture('show_empty_commit')
 
@@ -156,7 +156,7 @@ class TestCommit(object):
         assert_true(git.called)
         assert_equal(git.call_args, (('show', '634396b2f541a9f2d58b00be1a07f0c358b999b3'), {'full_index': True, 'pretty': 'raw'}))
 
-    @patch(Git, 'method_missing')
+    @patch(Git, '_call_process')
     def test_diffs_with_mode_only_change(self, git):
         git.return_value = fixture('diff_mode_only')
 
@@ -171,7 +171,7 @@ class TestCommit(object):
         assert_true(git.called)
         assert_equal(git.call_args, (('show', '91169e1f5fa4de2eaea3f176461f5dc784796769'), {'full_index': True, 'pretty': 'raw'}))
 
-    @patch(Git, 'method_missing')
+    @patch(Git, '_call_process')
     def test_stats(self, git):
         git.return_value = fixture('diff_numstat')
 
