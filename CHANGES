@@ -2,6 +2,12 @@
 CHANGES
 =======
 
+0.1.5
+=====
+
+* removed ``method_missing`` stuff and replaced with a ``__getattr__`` 
+  override in ``Git``.
+
 0.1.4
 =====
 
