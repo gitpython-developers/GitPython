@@ -1,0 +1,5 @@
+include doc/*.txt
+include VERSION
+include LICENSE
+include CHANGES
+include AUTHORS
