@@ -44,7 +44,8 @@ class Repo(object):
         while curpath:
             if is_git_dir(curpath):
                 self.bare = True
-                self.path, self.wd = curpath
+                self.path = curpath
+                self.wd = curpath
                 break
             gitpath = os.path.join(curpath, '.git')
             if is_git_dir(gitpath):
