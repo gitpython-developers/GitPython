@@ -18,7 +18,15 @@ class TestBlob(object):
         blob = Blob(self.repo, **{'id': 'abc'})
         assert_equal("Hello world", blob.data)
         assert_true(git.called)
-        assert_equal(git.call_args, (('cat_file', 'abc'), {'p': True}))
+        assert_equal(git.call_args, (('cat_file', 'abc'), {'p': True, 'with_raw_output': True}))
+
+    @patch(Git, '_call_process')
+    def test_should_return_blob_contents_with_newline(self, git):
+        git.return_value = fixture('cat_file_blob_nl')
+        blob = Blob(self.repo, **{'id': 'abc'})
+        assert_equal("Hello world\n", blob.data)
+        assert_true(git.called)
+        assert_equal(git.call_args, (('cat_file', 'abc'), {'p': True, 'with_raw_output': True}))
     
     @patch(Git, '_call_process')
     def test_should_cache_data(self, git):
@@ -28,7 +36,7 @@ class TestBlob(object):
         blob.data
         assert_true(git.called)
         assert_equal(git.call_count, 1)
-        assert_equal(git.call_args, (('cat_file', 'abc'), {'p': True}))
+        assert_equal(git.call_args, (('cat_file', 'abc'), {'p': True, 'with_raw_output': True}))
 
     @patch(Git, '_call_process')
     def test_should_return_file_size(self, git):

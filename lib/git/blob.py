@@ -57,7 +57,7 @@ class Blob(object):
         Returns
             str
         """
-        self.data_stored = self.data_stored or self.repo.git.cat_file(self.id, **{'p': True})
+        self.data_stored = self.data_stored or self.repo.git.cat_file(self.id, **{'p': True, 'with_raw_output': True})
         return self.data_stored
 
     @property

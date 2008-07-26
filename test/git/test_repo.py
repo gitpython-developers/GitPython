@@ -107,7 +107,7 @@ class TestRepo(object):
         assert_equal("Hello world", blob.data)
 
         assert_true(git.called)
-        assert_equal(git.call_args, (('cat_file', 'abc'), {'p': True}))
+        assert_equal(git.call_args, (('cat_file', 'abc'), {'p': True, 'with_raw_output': True}))
 
     @patch(Repo, '__init__')
     @patch(Git, '_call_process')
