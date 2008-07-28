@@ -14,7 +14,7 @@ class TestGit(object):
         self.git = Git(base)
 
     @patch(Git, 'execute')
-    def test__call_process_calls_execute(self, git):
+    def test_call_process_calls_execute(self, git):
         git.return_value = ''
         self.git.version()
         assert_true(git.called)
