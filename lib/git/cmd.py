@@ -1,10 +1,10 @@
-# cmd.py
+﻿# cmd.py
 # Copyright (C) 2008 Michael Trier (mtrier@gmail.com) and contributors
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
-import os
+import os, sys
 import subprocess
 import re
 from utils import *
@@ -15,6 +15,10 @@ GIT_PYTHON_TRACE = os.environ.get("GIT_PYTHON_TRACE", False)
 
 execute_kwargs = ('istream', 'with_keep_cwd', 'with_extended_output',
                   'with_exceptions', 'with_raw_output')
+
+extra = {}
+if sys.platform == 'win32':
+    extra = {'shell': True}
 
 class Git(object):
     """
@@ -83,7 +87,8 @@ class Git(object):
                                 cwd=cwd,
                                 stdin=istream,
                                 stderr=subprocess.PIPE,
-                                stdout=subprocess.PIPE
+                                stdout=subprocess.PIPE,
+                                **extra
                                 )
 
         # Wait for the process to return

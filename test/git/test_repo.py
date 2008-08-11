@@ -4,7 +4,7 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
-import os
+import os, sys
 import time
 from test.testlib import *
 from git import *
@@ -15,7 +15,10 @@ class TestRepo(object):
     
     @raises(InvalidGitRepositoryError)
     def test_new_should_raise_on_invalid_repo_location(self):
-        Repo("/tmp")
+        if sys.platform == "win32":
+            Repo("C:\\WINDOWS\\Temp")
+        else:
+            Repo("/tmp")
 
     @raises(NoSuchPathError)
     def test_new_should_raise_on_non_existant_path(self):
@@ -141,7 +144,8 @@ class TestRepo(object):
         self.repo.fork_bare("repos/foo/bar.git")
 
         assert_true(git.called)
-        assert_equal(git.call_args, (('clone', '%s/.git' % absolute_project_path(), 'repos/foo/bar.git'), {'bare': True}))
+        path = os.path.join(absolute_project_path(), '.git')
+        assert_equal(git.call_args, (('clone', path, 'repos/foo/bar.git'), {'bare': True}))
         assert_true(repo.called)
 
     @patch(Repo, '__init__')
@@ -152,7 +156,8 @@ class TestRepo(object):
         self.repo.fork_bare("repos/foo/bar.git", **{'template': '/awesome'})
 
         assert_true(git.called)
-        assert_equal(git.call_args, (('clone', '%s/.git' % absolute_project_path(), 'repos/foo/bar.git'), 
+        path = os.path.join(absolute_project_path(), '.git')
+        assert_equal(git.call_args, (('clone', path, 'repos/foo/bar.git'),
                                       {'bare': True, 'template': '/awesome'}))
         assert_true(repo.called)
 
@@ -246,7 +251,8 @@ class TestRepo(object):
         assert_true(os.called)
 
     def test_repr(self):
-        assert_equal('<GitPython.Repo "%s/.git">' % os.path.abspath(GIT_REPO), repr(self.repo))
+        path = os.path.join(os.path.abspath(GIT_REPO), '.git')
+        assert_equal('<GitPython.Repo "%s">' % path, repr(self.repo))
 
     @patch(Git, '_call_process')
     def test_log(self, git):

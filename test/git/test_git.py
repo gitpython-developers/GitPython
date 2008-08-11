@@ -4,7 +4,7 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
-import os
+import os, sys
 from test.testlib import *
 from git import Git, GitCommandError
 
@@ -45,7 +45,10 @@ class TestGit(object):
         fh.close()
 
     def test_it_handles_large_input(self):
-        output = self.git.execute(["cat", "/bin/bash"])
+        if sys.platform == 'win32':
+            output = self.git.execute(["type", "C:\WINDOWS\system32\cmd.exe"])
+        else:
+            output = self.git.execute(["cat", "/bin/bash"])
         assert_true(len(output) > 4096) # at least 4k
 
     @patch(Git, 'execute')
