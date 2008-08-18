@@ -120,7 +120,7 @@ class TestRepo(object):
         Repo.init_bare("repos/foo/bar.git")
 
         assert_true(git.called)
-        assert_equal(git.call_args, (('init',), {}))
+        assert_equal(git.call_args, (('init', '--bare'), {}))
         assert_true(repo.called)
         assert_equal(repo.call_args, (('repos/foo/bar.git',), {}))
 
@@ -132,7 +132,7 @@ class TestRepo(object):
         Repo.init_bare("repos/foo/bar.git", **{'template': "/baz/sweet"})
 
         assert_true(git.called)
-        assert_equal(git.call_args, (('init',), {'template': '/baz/sweet'}))
+        assert_equal(git.call_args, (('init', '--bare'), {'template': '/baz/sweet'}))
         assert_true(repo.called)
         assert_equal(repo.call_args, (('repos/foo/bar.git',), {}))
 
