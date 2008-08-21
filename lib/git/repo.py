@@ -297,7 +297,7 @@ class Repo(object):
             os.makedirs(path, 0755)
 
         git = Git(path)
-        output = git.init(**kwargs)
+        output = git.init('--bare', **kwargs)
         return Repo(path)
     create = init_bare
 
