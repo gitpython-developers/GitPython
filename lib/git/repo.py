@@ -404,7 +404,7 @@ class Repo(object):
         Returns
             list[str] (pathnames of alternates)
         """
-        alternates_path = os.path.join(self.path, *['objects', 'info', 'alternates'])
+        alternates_path = os.path.join(self.path, 'objects', 'info', 'alternates')
 
         if os.path.exists(alternates_path):
             try:
@@ -431,10 +431,10 @@ class Repo(object):
                 raise NoSuchPathError("Could not set alternates. Alternate path %s must exist" % alt)
 
         if not alts:
-            os.remove(os.path.join(self.path, *['objects', 'info', 'alternates']))
+            os.remove(os.path.join(self.path, 'objects', 'info', 'alternates'))
         else:
             try:
-                f = open(os.path.join(self.path, *['objects', 'info', 'alternates']), 'w')
+                f = open(os.path.join(self.path, 'objects', 'info', 'alternates'), 'w')
                 f.write("\n".join(alts))
             finally:
                 f.close()
