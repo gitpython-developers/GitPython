@@ -186,6 +186,32 @@ class TestCommit(object):
         assert_true(git.called)
         assert_equal(git.call_args, (('diff', '634396b2f541a9f2d58b00be1a07f0c358b999b3'), {'numstat': True}))
 
+    @patch(Git, '_call_process')
+    def test_rev_list_bisect_all(self, git):
+        """
+        'git rev-list --bisect-all' returns additional information
+        in the commit header.  This test ensures that we properly parse it.
+        """
+
+        git.return_value = fixture('rev_list_bisect_all')
+
+        revs = self.repo.git.rev_list('HEAD',
+                                      pretty='raw',
+                                      first_parent=True,
+                                      bisect_all=True)
+        assert_true(git.called)
+
+        commits = Commit.list_from_string(self.repo, revs)
+        expected_ids = (
+            'cf37099ea8d1d8c7fbf9b6d12d7ec0249d3acb8b',
+            '33ebe7acec14b25c5f84f35a664803fcab2f7781',
+            'a6604a00a652e754cb8b6b0b9f194f839fc38d7c',
+            '8df638c22c75ddc9a43ecdde90c0c9939f5009e7',
+            'c231551328faa864848bde6ff8127f59c9566e90',
+        )
+        for sha1, commit in zip(expected_ids, commits):
+            assert_equal(sha1, commit.id)
+
     def test_str(self):
         commit = Commit(self.repo, id='abc')
         assert_equal ("abc", str(commit))
