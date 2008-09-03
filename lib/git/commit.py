@@ -139,17 +139,17 @@ class Commit(LazyMixin):
         commits = []
 
         while lines:
-            id = lines.pop(0).split()[-1]
-            tree = lines.pop(0).split()[-1]
+            id = lines.pop(0).split()[1]
+            tree = lines.pop(0).split()[1]
 
             parents = []
-            while lines and re.search(r'^parent', lines[0]):
+            while lines and lines[0].startswith('parent'):
                 parents.append(lines.pop(0).split()[-1])
             author, authored_date = cls.actor(lines.pop(0))
             committer, committed_date = cls.actor(lines.pop(0))
 
             messages = []
-            while lines and re.search(r'^ {4}', lines[0]):
+            while lines and lines[0].startswith('    '):
                 messages.append(lines.pop(0).strip())
 
             message = messages and messages[0] or ''
