@@ -14,28 +14,32 @@ from commit import Commit
 class Blob(object):
     DEFAULT_MIME_TYPE = "text/plain"
 
-    def __init__(self, repo, **kwargs):
+    def __init__(self, repo, id, mode=None, name=None):
         """
         Create an unbaked Blob containing just the specified attributes
 
         ``repo``
             is the Repo
 
-        ``atts``
-            is a dict of instance variable data
+        ``id``
+            is the git object id
+
+        ``mode``
+            is the file mode
+
+        ``name``
+            is the file name
 
         Returns
             GitPython.Blob
         """
-        self.id = None
-        self.mode = None
-        self.name = None
+        self.repo = repo
+        self.id = id
+        self.mode = mode
+        self.name = name
+
         self._size = None
         self.data_stored  = None
-
-        self.repo = repo
-        for k, v in kwargs.items():
-            setattr(self, k, v)
 
     @property
     def size(self):

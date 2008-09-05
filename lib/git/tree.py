@@ -9,16 +9,13 @@ from lazy import LazyMixin
 import blob
 
 class Tree(LazyMixin):
-    def __init__(self, repo, **kwargs):
+    def __init__(self, repo, id, mode=None, name=None):
         LazyMixin.__init__(self)
         self.repo = repo
-        self.id = None
-        self.mode = None
-        self.name = None
+        self.id = id
+        self.mode = mode
+        self.name = name
         self._contents = None
-
-        for k, v in kwargs.items():
-            setattr(self, k, v)
 
     def __bake__(self):
         # Ensure the treeish references directly a tree
