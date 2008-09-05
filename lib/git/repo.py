@@ -197,7 +197,7 @@ class Repo(object):
         other_repo_refs = other_repo.git.rev_list(other_ref).strip().splitlines()
 
         diff_refs = list(set(other_repo_refs) - set(repo_refs))
-        return map(lambda ref: Commit.find_all(other_repo, ref, **{'max_count': 1}[0]), diff_refs)
+        return map(lambda ref: Commit.find_all(other_repo, ref, max_count=1)[0], diff_refs)
 
     def tree(self, treeish = 'master', paths = []):
         """
@@ -228,7 +228,7 @@ class Repo(object):
         Returns
             ``GitPython.Blob``
         """
-        return Blob(self, **{'id': id})
+        return Blob(self, id=id)
 
     def log(self, commit = 'master', path = None, **kwargs):
         """

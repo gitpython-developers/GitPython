@@ -84,7 +84,7 @@ class Tag(object):
         """
         full_name, ids = line.split("\x00")
         name = full_name.split("/")[-1]
-        commit = Commit(repo, **{'id': ids})
+        commit = Commit(repo, id=ids)
         return Tag(name, commit)
 
     def __repr__(self):

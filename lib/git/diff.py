@@ -20,11 +20,11 @@ class Diff(object):
         if not a_commit or re.search(r'^0{40}$', a_commit):
             self.a_commit = None
         else:
-            self.a_commit = commit.Commit(repo, **{'id': a_commit})
+            self.a_commit = commit.Commit(repo, id=a_commit)
         if not b_commit or re.search(r'^0{40}$', b_commit):
             self.b_commit = None
         else:
-            self.b_commit = commit.Commit(repo, **{'id': b_commit})
+            self.b_commit = commit.Commit(repo, id=b_commit)
 
         self.a_mode = a_mode
         self.b_mode = b_mode

@@ -105,7 +105,7 @@ class Head(object):
         """
         full_name, ids = line.split("\x00")
         name = full_name.split("/")[-1]
-        c = commit.Commit(repo, **{'id': ids})
+        c = commit.Commit(repo, id=ids)
         return Head(name, c)
 
     def __repr__(self):

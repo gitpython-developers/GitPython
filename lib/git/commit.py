@@ -62,12 +62,12 @@ class Commit(LazyMixin):
 
         if self.id:
             if 'parents' in kwargs:
-                self.parents = map(lambda p: Commit(repo, **{'id': p}), kwargs['parents'])
+                self.parents = map(lambda p: Commit(repo, id=p), kwargs['parents'])
             if 'tree' in kwargs:
-                self.tree = tree.Tree(repo, **{'id': kwargs['tree']})
+                self.tree = tree.Tree(repo, id=kwargs['tree'])
 
     def __bake__(self):
-        temp = Commit.find_all(self.repo, self.id, **{'max_count': 1})[0]
+        temp = Commit.find_all(self.repo, self.id, max_count=1)[0]
         self.parents = temp.parents
         self.tree = temp.tree
         self.author = temp.author
@@ -193,13 +193,13 @@ class Commit(LazyMixin):
         if b:
             paths.insert(0, b)
         paths.insert(0, a)
-        text = repo.git.diff(*paths, **{'full_index': True})
+        text = repo.git.diff(full_index=True, *paths)
         return diff.Diff.list_from_string(repo, text)
 
     @property
     def diffs(self):
         if not self.parents:
-            d = self.repo.git.show(self.id, **{'full_index': True, 'pretty': 'raw'})
+            d = self.repo.git.show(self.id, full_index=True, pretty='raw')
             if re.search(r'diff --git a', d):
                 if not re.search(r'^diff --git a', d):
                     p = re.compile(r'.+?(diff --git a)', re.MULTILINE | re.DOTALL)
@@ -213,14 +213,14 @@ class Commit(LazyMixin):
     @property
     def stats(self):
         if not self.parents:
-            text = self.repo.git.diff(self.id, **{'numstat': True})
+            text = self.repo.git.diff(self.id, numstat=True)
             text2 = ""
             for line in text.splitlines():
                 (insertions, deletions, filename) = line.split("\t")
                 text2 += "%s\t%s\t%s\n" % (deletions, insertions, filename)
             text = text2
         else:
-            text = self.repo.git.diff(self.parents[0].id, self.id, **{'numstat': True})
+            text = self.repo.git.diff(self.parents[0].id, self.id, numstat=True)
         return stats.Stats.list_from_string(self.repo, text)
 
     def __str__(self):

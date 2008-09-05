@@ -27,7 +27,7 @@ class Tree(LazyMixin):
     @classmethod
     def construct(cls, repo, treeish, paths = []):
         output = repo.git.ls_tree(treeish, *paths)
-        return Tree(repo, **{'id': treeish}).construct_initialize(repo, treeish, output)
+        return Tree(repo, id=treeish).construct_initialize(repo, treeish, output)
 
     def construct_initialize(self, repo, id, text):
         self.repo = repo
@@ -62,9 +62,9 @@ class Tree(LazyMixin):
             return None
 
         if typ == "tree":
-            return Tree(repo, **{'id': id, 'mode': mode, 'name': name})
+            return Tree(repo, id=id, mode=mode, name=name)
         elif typ == "blob":
-            return blob.Blob(repo, **{'id': id, 'mode': mode, 'name': name})
+            return blob.Blob(repo, id=id, mode=mode, name=name)
         elif typ == "commit":
             return None
         else:

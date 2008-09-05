@@ -46,7 +46,7 @@ class Blob(object):
             int
         """
         if self._size is None:
-            self._size = int(self.repo.git.cat_file(self.id, **{'s': True}).rstrip())
+            self._size = int(self.repo.git.cat_file(self.id, s=True).rstrip())
         return self._size
 
     @property
@@ -57,7 +57,7 @@ class Blob(object):
         Returns
             str
         """
-        self.data_stored = self.data_stored or self.repo.git.cat_file(self.id, **{'p': True, 'with_raw_output': True})
+        self.data_stored = self.data_stored or self.repo.git.cat_file(self.id, p=True, with_raw_output=True)
         return self.data_stored
 
     @property
@@ -85,7 +85,7 @@ class Blob(object):
         Returns
             list: [GitPython.Commit, list: [<line>]]
         """
-        data = repo.git.blame(commit, '--', file, **{'p': True})
+        data = repo.git.blame(commit, '--', file, p=True)
         commits = {}
         blames = []
         info = None
@@ -120,12 +120,12 @@ class Blob(object):
                 if info:
                     c = commits.has_key(info['id']) and commits[info['id']]
                     if not c:
-                        c = Commit(repo, **{'id': info['id'],
-                                            'author': Actor.from_string(info['author'] + ' ' + info['author_email']),
-                                            'authored_date': info['author_date'],
-                                            'committer': Actor.from_string(info['committer'] + ' ' + info['committer_email']),
-                                            'committed_date': info['committer_date'],
-                                            'message': info['summary']})
+                        c = Commit(repo, id=info['id'],
+                                         author=Actor.from_string(info['author'] + ' ' + info['author_email']),
+                                         authored_date=info['author_date'],
+                                         committer=Actor.from_string(info['committer'] + ' ' + info['committer_email']),
+                                         committed_date=info['committer_date'],
+                                         message=info['summary'])
                         commits[info['id']] = c
 
                     m = re.search(r'^\t(.*)$', line)
