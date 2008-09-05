@@ -18,9 +18,9 @@ class TestTree(object):
     
         tree = self.repo.tree('master')
 
-        child = tree.contents['grit']
-        child.contents
-        child.contents
+        child = tree['grit']
+        child.items()
+        child.items()
         
         assert_true(git.called)
         assert_equal(2, git.call_count)
@@ -95,6 +95,55 @@ class TestTree(object):
 
         assert_true(git.called)
         assert_equal(git.call_args, (('ls_tree', 'master'), {}))
+
+    @patch(Blob, 'size')
+    @patch(Git, '_call_process')
+    def test_dict(self, blob, git):
+        git.return_value = fixture('ls_tree_a')
+        blob.return_value = 1
+
+        tree = self.repo.tree('master')
+
+        assert_equal('aa06ba24b4e3f463b3c4a85469d0fb9e5b421cf8', tree['lib'].id)
+        assert_equal('8b1e02c0fb554eed2ce2ef737a68bb369d7527df', tree['README.txt'].id)
+
+        assert_true(git.called)
+        assert_equal(git.call_args, (('ls_tree', 'master'), {}))
+
+    @patch(Blob, 'size')
+    @patch(Git, '_call_process')
+    def test_dict_with_zero_length_file(self, blob, git):
+        git.return_value = fixture('ls_tree_a')
+        blob.return_value = 0
+
+        tree = self.repo.tree('master')
+
+        assert_not_none(tree['README.txt'])
+        assert_equal('8b1e02c0fb554eed2ce2ef737a68bb369d7527df', tree['README.txt'].id)
+
+        assert_true(git.called)
+        assert_equal(git.call_args, (('ls_tree', 'master'), {}))
+
+    @patch(Git, '_call_process')
+    def test_dict_with_commits(self, git):
+        git.return_value = fixture('ls_tree_commit')
+
+        tree = self.repo.tree('master')
+
+        assert_none(tree.get('bar'))
+        assert_equal('2afb47bcedf21663580d5e6d2f406f08f3f65f19', tree['foo'].id)
+        assert_equal('f623ee576a09ca491c4a27e48c0dfe04be5f4a2e', tree['baz'].id)
+
+        assert_true(git.called)
+        assert_equal(git.call_args, (('ls_tree', 'master'), {}))
+
+    @patch(Git, '_call_process')
+    @raises(KeyError)
+    def test_dict_with_non_existant_file(self, git):
+        git.return_value = fixture('ls_tree_commit')
+
+        tree = self.repo.tree('master')
+        tree['bar']
 
     def test_repr(self):
         self.tree = Tree(self.repo, **{'id': 'abc'})

@@ -15,7 +15,7 @@ class Tree(LazyMixin):
         self.id = None
         self.mode = None
         self.name = None
-        self.contents = None
+        self._contents = None
 
         for k, v in kwargs.items():
             setattr(self, k, v)
@@ -27,11 +27,11 @@ class Tree(LazyMixin):
             treeish = treeish + ':'
 
         # Read the tree contents.
-        self.contents = {}
+        self._contents = {}
         for line in self.repo.git.ls_tree(self.id).splitlines():
             obj = self.content_from_string(self.repo, line)
-            if obj:
-                self.contents[obj.name] = obj
+            if obj is not None:
+                self._contents[obj.name] = obj
 
     def content_from_string(self, repo, text):
         """
@@ -74,7 +74,7 @@ class Tree(LazyMixin):
         Returns
             ``GitPython.Blob`` or ``GitPython.Tree`` or ``None`` if not found
         """
-        return self.contents.get(file)
+        return self.get(file)
 
     @property
     def basename(self):
@@ -82,3 +82,29 @@ class Tree(LazyMixin):
 
     def __repr__(self):
         return '<GitPython.Tree "%s">' % self.id
+
+    # Implement the basics of the dict protocol:
+    # directories/trees can be seen as object dicts.
+    def __getitem__(self, key):
+        return self._contents[key]
+
+    def __iter__(self):
+        return iter(self._contents)
+
+    def __len__(self, keys):
+        return len(self._contents)
+
+    def __contains__(self, key):
+        return key in self._contents
+
+    def get(self, key):
+        return self._contents.get(key)
+
+    def items(self):
+        return self._contents.items()
+
+    def keys(self):
+        return self._contents.keys()
+
+    def values(self):
+        return self._contents.values()
