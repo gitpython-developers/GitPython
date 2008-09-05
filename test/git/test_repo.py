@@ -96,8 +96,8 @@ class TestRepo(object):
 
         tree = self.repo.tree('master')
 
-        assert_equal(4, len([c for c in tree.contents if isinstance(c, Blob)]))
-        assert_equal(3, len([c for c in tree.contents if isinstance(c, Tree)]))
+        assert_equal(4, len([c for c in tree.contents.values() if isinstance(c, Blob)]))
+        assert_equal(3, len([c for c in tree.contents.values() if isinstance(c, Tree)]))
 
         assert_true(git.called)
         assert_equal(git.call_args, (('ls_tree', 'master'), {}))

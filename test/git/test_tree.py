@@ -18,7 +18,7 @@ class TestTree(object):
     
         tree = self.repo.tree('master')
 
-        child = tree.contents[-1]
+        child = tree.contents['grit']
         child.contents
         child.contents
         

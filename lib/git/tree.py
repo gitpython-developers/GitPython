@@ -32,13 +32,13 @@ class Tree(LazyMixin):
     def construct_initialize(self, repo, id, text):
         self.repo = repo
         self.id = id
-        self.contents = []
+        self.contents = {}
         self.__baked__ = False
 
         for line in text.splitlines():
-            self.contents.append(self.content_from_string(self.repo, line))
-
-        self.contents = [c for c in self.contents if c is not None]
+            obj = self.content_from_string(self.repo, line)
+            if obj:
+                self.contents[obj.name] = obj
 
         self.__bake_it__()
         return self
@@ -84,8 +84,7 @@ class Tree(LazyMixin):
         Returns
             ``GitPython.Blob`` or ``GitPython.Tree`` or ``None`` if not found
         """
-        contents = [c for c in self.contents if c.name == file]
-        return contents and contents[0] or None
+        return self.contents.get(file)
 
     @property
     def basename(self):
