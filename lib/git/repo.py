@@ -199,24 +199,22 @@ class Repo(object):
         diff_refs = list(set(other_repo_refs) - set(repo_refs))
         return map(lambda ref: Commit.find_all(other_repo, ref, max_count=1)[0], diff_refs)
 
-    def tree(self, treeish = 'master', paths = []):
+    def tree(self, treeish = 'master'):
         """
         The Tree object for the given treeish reference
 
         ``treeish``
             is the reference (default 'master')
-        ``paths``
-            is an optional Array of directory paths to restrict the tree (default [])
 
         Examples::
 
-          repo.tree('master', ['lib/'])
+          repo.tree('master')
 
 
         Returns
             ``GitPython.Tree``
         """
-        return Tree.construct(self, treeish, paths)
+        return Tree(self, id=treeish)
 
     def blob(self, id):
         """

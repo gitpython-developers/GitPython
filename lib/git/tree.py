@@ -21,27 +21,17 @@ class Tree(LazyMixin):
             setattr(self, k, v)
 
     def __bake__(self):
-        temp = Tree.construct(self.repo, self.id)
-        self.contents = temp.contents
+        # Ensure the treeish references directly a tree
+        treeish = self.id
+        if not treeish.endswith(':'):
+            treeish = treeish + ':'
 
-    @classmethod
-    def construct(cls, repo, treeish, paths = []):
-        output = repo.git.ls_tree(treeish, *paths)
-        return Tree(repo, id=treeish).construct_initialize(repo, treeish, output)
-
-    def construct_initialize(self, repo, id, text):
-        self.repo = repo
-        self.id = id
+        # Read the tree contents.
         self.contents = {}
-        self.__baked__ = False
-
-        for line in text.splitlines():
+        for line in self.repo.git.ls_tree(self.id).splitlines():
             obj = self.content_from_string(self.repo, line)
             if obj:
                 self.contents[obj.name] = obj
-
-        self.__bake_it__()
-        return self
 
     def content_from_string(self, repo, text):
         """
