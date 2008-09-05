@@ -10,7 +10,6 @@ from git import *
 class TestTree(object):
     def setup(self):
         self.repo = Repo(GIT_REPO)
-        self.tree = Tree(self.repo)
 
     @patch(Git, '_call_process')
     def test_contents_should_cache(self, git):
@@ -28,7 +27,7 @@ class TestTree(object):
   
     def test_content_from_string_tree_should_return_tree(self):
         text = fixture('ls_tree_a').splitlines()[-1]
-        tree = self.tree.content_from_string(None, text)
+        tree = Tree.content_from_string(None, text)
 
         assert_equal(Tree, tree.__class__)
         assert_equal("650fa3f0c17f1edb4ae53d8dcca4ac59d86e6c44", tree.id)
@@ -38,7 +37,7 @@ class TestTree(object):
     def test_content_from_string_tree_should_return_blob(self):
         text = fixture('ls_tree_b').split("\n")[0]
         
-        tree = self.tree.content_from_string(None, text)
+        tree = Tree.content_from_string(None, text)
 
         assert_equal(Blob, tree.__class__)
         assert_equal("aa94e396335d2957ca92606f909e53e7beaf3fbb", tree.id)
@@ -48,12 +47,12 @@ class TestTree(object):
     def test_content_from_string_tree_should_return_commit(self):
         text = fixture('ls_tree_commit').split("\n")[1]
     
-        tree = self.tree.content_from_string(None, text)
+        tree = Tree.content_from_string(None, text)
         assert_none(tree)
     
     @raises(TypeError)
     def test_content_from_string_invalid_type_should_raise(self):
-        self.tree.content_from_string(None, "040000 bogus 650fa3f0c17f1edb4ae53d8dcca4ac59d86e6c44	test")
+        Tree.content_from_string(None, "040000 bogus 650fa3f0c17f1edb4ae53d8dcca4ac59d86e6c44	test")
 
     @patch(Blob, 'size')
     @patch(Git, '_call_process')
@@ -146,5 +145,5 @@ class TestTree(object):
         tree['bar']
 
     def test_repr(self):
-        self.tree = Tree(self.repo, **{'id': 'abc'})
-        assert_equal('<GitPython.Tree "abc">', repr(self.tree))
+        tree = Tree(self.repo, id='abc')
+        assert_equal('<GitPython.Tree "abc">', repr(tree))

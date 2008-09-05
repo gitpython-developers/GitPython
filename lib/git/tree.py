@@ -33,7 +33,8 @@ class Tree(LazyMixin):
             if obj is not None:
                 self._contents[obj.name] = obj
 
-    def content_from_string(self, repo, text):
+    @staticmethod
+    def content_from_string(repo, text):
         """
         Parse a content item and create the appropriate object
 
