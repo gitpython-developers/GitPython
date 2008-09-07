@@ -62,20 +62,19 @@ class Repo(object):
 
         self.git = Git(self.wd)
 
-    @property
-    def description(self):
-        """
-        The project's description. Taken verbatim from GIT_REPO/description
+    # Description property
+    def _get_description(self):
+        filename = os.path.join(self.path, 'description')
+        return file(filename).read().rstrip()
 
-        Returns
-            str
-        """
-        try:
-            f = open(os.path.join(self.path, 'description'))
-            result = f.read()
-            return result.rstrip()
-        finally:
-            f.close()
+    def _set_description(self, descr):
+        filename = os.path.join(self.path, 'description')
+        file(filename, 'w').write(descr+'\n')
+
+    description = property(_get_description, _set_description,
+                           doc="the project's description")
+    del _get_description
+    del _set_description
 
     @property
     def heads(self):

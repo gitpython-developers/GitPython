@@ -25,7 +25,9 @@ class TestRepo(object):
         Repo("repos/foobar")
 
     def test_description(self):
-        assert_equal("Unnamed repository; edit this file to name it for gitweb.", self.repo.description)
+        txt = "Test repository"
+        self.repo.description = txt
+        assert_equal(self.repo.description, txt)
 
     def test_heads_should_return_array_of_head_objects(self):
         for head in self.repo.heads:
