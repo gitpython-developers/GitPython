@@ -194,10 +194,12 @@ class TestRepo(object):
 
     @patch('git.utils', 'touch')
     def test_enable_daemon_serve(self, touch):
-        self.repo.enable_daemon_serve
+        self.repo.daemon_serve = False
+        assert_false(self.repo.daemon_serve)
 
     def test_disable_daemon_serve(self):
-        self.repo.disable_daemon_serve  
+        self.repo.daemon_serve = True
+        assert_true(self.repo.daemon_serve)
   
     # @patch(os.path, 'exists')
     # @patch('__builtin__', 'open')

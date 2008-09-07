@@ -375,25 +375,22 @@ class Repo(object):
             kwargs['prefix'] = prefix
         self.git.archive(treeish, "| gzip", **kwargs)
 
-    def enable_daemon_serve(self):
-        """
-        Enable git-daemon serving of this repository by writing the
-        git-daemon-export-ok file to its git directory
+    def _get_daemon_export(self):
+        filename = os.path.join(self.path, self.DAEMON_EXPORT_FILE)
+        return os.path.exists(filename)
 
-        Returns
-            None
-        """
-        touch(os.path.join(self.path, DAEMON_EXPORT_FILE))
+    def _set_daemon_export(self, value):
+        filename = os.path.join(self.path, self.DAEMON_EXPORT_FILE)
+        fileexists = os.path.exists(filename)
+        if value and not fileexists:
+            touch(filename)
+        elif not value and fileexists:
+            os.unlink(filename)
 
-    def disable_daemon_serve(self):
-        """
-        Disable git-daemon serving of this repository by ensuring there is no
-        git-daemon-export-ok file in its git directory
-
-        Returns
-            None
-        """
-        return os.remove(os.path.join(self.path, DAEMON_EXPORT_FILE))
+    daemon_export = property(_get_daemon_export, _set_daemon_export,
+                             doc="git-daemon export of this repository")
+    del _get_daemon_export
+    del _set_daemon_export
 
     def _get_alternates(self):
         """
