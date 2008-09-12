@@ -296,3 +296,21 @@ class TestRepo(object):
     #     #     Commit.expects(:find_all).with(other_repo, ref, :max_count => 1).returns([stub()])
     #     delta_commits = self.repo.commit_deltas_from(other_repo)
     #     assert_equal(3, len(delta_commits))
+
+    def test_is_dirty_with_bare_repository(self):
+        self.repo.bare = True
+        assert_false(self.repo.is_dirty)
+
+    @patch(Git, '_call_process')
+    def test_is_dirty_with_clean_working_dir(self, git):
+        self.repo.bare = False
+        git.return_value = ''
+        assert_false(self.repo.is_dirty)
+        assert_equal(git.call_args, (('diff', 'HEAD'), {}))
+    
+    @patch(Git, '_call_process')
+    def test_is_dirty_with_dirty_working_dir(self, git):
+        self.repo.bare = False
+        git.return_value = '''-aaa\n+bbb'''
+        assert_true(self.repo.is_dirty)
+        assert_equal(git.call_args, (('diff', 'HEAD'), {}))
