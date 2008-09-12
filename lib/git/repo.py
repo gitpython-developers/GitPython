@@ -443,18 +443,19 @@ class Repo(object):
 
     @property
     def is_dirty(self):
-        """Returns the status of the working directory.
-        
+        """
+        Return the status of the working directory.
+
         Returns
             ``True``, if the working directory has any uncommitted changes,
             otherwise ``False``
-        
+
         """
         if self.bare:
             # Bare repositories with no associated working directory are
             # always consired to be clean.
             return False
-        
+
         return len(self.git.diff('HEAD').strip()) > 0
 
     def __repr__(self):
