@@ -307,10 +307,16 @@ class TestRepo(object):
         git.return_value = ''
         assert_false(self.repo.is_dirty)
         assert_equal(git.call_args, (('diff', 'HEAD'), {}))
-    
+
     @patch(Git, '_call_process')
     def test_is_dirty_with_dirty_working_dir(self, git):
         self.repo.bare = False
         git.return_value = '''-aaa\n+bbb'''
         assert_true(self.repo.is_dirty)
         assert_equal(git.call_args, (('diff', 'HEAD'), {}))
+
+    @patch(Git, '_call_process')
+    def test_active_branch(self, git):
+        git.return_value = 'refs/heads/major-refactoring'
+        assert_equal(self.repo.active_branch, 'major-refactoring')
+        assert_equal(git.call_args, (('symbolic_ref', 'HEAD'), {}))

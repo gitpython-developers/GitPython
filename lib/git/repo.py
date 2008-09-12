@@ -458,5 +458,19 @@ class Repo(object):
 
         return len(self.git.diff('HEAD').strip()) > 0
 
+    @property
+    def active_branch(self):
+        """
+        The name of the currently active branch.
+        
+        Returns
+            str (the branch name)
+        """
+        branch = self.git.symbolic_ref('HEAD').strip()
+        if branch.startswith('refs/heads/'):
+            branch = branch[len('refs/heads/'):]
+
+        return branch
+
     def __repr__(self):
         return '<GitPython.Repo "%s">' % self.path
