@@ -124,8 +124,8 @@ This tree contains three ``Blob`` objects and one ``Tree`` object. The trees
 are subdirectories and the blobs are files. Trees below the root have 
 additional attributes.
 
-	>>> contents = tree.contents[-2]
-	<GitPython.Tree "e5445b9db4a9f08d5b4de4e29e61dffda2f386ba">
+	>>> contents = tree["lib"]
+	<GitPython.Tree "c1c7214dde86f76bc3e18806ac1f47c38b2b7a3">
 	
 	>>> contents.name
 	'test'
@@ -134,7 +134,8 @@ additional attributes.
 	'040000'
 	
 There is a convenience method that allows you to get a named sub-object
-from a tree.
+from a tree with a syntax similar to how paths are written in an unix
+system.
 
 	>>> tree/"lib"
 	<GitPython.Tree "c1c7214dde86f76bc3e18806ac1f47c38b2b7a30">

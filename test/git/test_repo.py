@@ -25,7 +25,9 @@ class TestRepo(object):
         Repo("repos/foobar")
 
     def test_description(self):
-        assert_equal("Unnamed repository; edit this file to name it for gitweb.", self.repo.description)
+        txt = "Test repository"
+        self.repo.description = txt
+        assert_equal(self.repo.description, txt)
 
     def test_heads_should_return_array_of_head_objects(self):
         for head in self.repo.heads:
@@ -96,8 +98,8 @@ class TestRepo(object):
 
         tree = self.repo.tree('master')
 
-        assert_equal(4, len([c for c in tree.contents if isinstance(c, Blob)]))
-        assert_equal(3, len([c for c in tree.contents if isinstance(c, Tree)]))
+        assert_equal(4, len([c for c in tree.values() if isinstance(c, Blob)]))
+        assert_equal(3, len([c for c in tree.values() if isinstance(c, Tree)]))
 
         assert_true(git.called)
         assert_equal(git.call_args, (('ls_tree', 'master'), {}))
@@ -194,10 +196,12 @@ class TestRepo(object):
 
     @patch('git.utils', 'touch')
     def test_enable_daemon_serve(self, touch):
-        self.repo.enable_daemon_serve
+        self.repo.daemon_serve = False
+        assert_false(self.repo.daemon_serve)
 
     def test_disable_daemon_serve(self):
-        self.repo.disable_daemon_serve  
+        self.repo.daemon_serve = True
+        assert_true(self.repo.daemon_serve)
   
     # @patch(os.path, 'exists')
     # @patch('__builtin__', 'open')

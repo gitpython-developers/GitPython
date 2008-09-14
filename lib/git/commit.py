@@ -9,12 +9,13 @@ import time
 
 from actor import Actor
 from lazy import LazyMixin
-import tree
+from tree import Tree
 import diff
 import stats
 
 class Commit(LazyMixin):
-    def __init__(self, repo, **kwargs):
+    def __init__(self, repo, id, tree=None, author=None, authored_date=None,
+                 committer=None, committed_date=None, message=None, parents=None):
         """
         Instantiate a new Commit
 
@@ -42,29 +43,29 @@ class Commit(LazyMixin):
         ``message``
             is the first line of the commit message
 
+        ``parents``
+            is the list of the parents of the commit
+
         Returns
             GitPython.Commit
         """
         LazyMixin.__init__(self)
 
         self.repo = repo
-        self.id = None
-        self.tree = None
-        self.author = None
-        self.authored_date = None
-        self.committer = None
-        self.committed_date = None
-        self.message = None
+        self.id = id
         self.parents = None
-
-        for k, v in kwargs.items():
-            setattr(self, k, v)
+        self.tree = None
+        self.author = author
+        self.authored_date = authored_date
+        self.committer = committer
+        self.committed_date = committed_date
+        self.message = message
 
         if self.id:
-            if 'parents' in kwargs:
-                self.parents = map(lambda p: Commit(repo, id=p), kwargs['parents'])
-            if 'tree' in kwargs:
-                self.tree = tree.Tree(repo, id=kwargs['tree'])
+            if parents is not None:
+                self.parents = [Commit(repo, p) for p in parents]
+            if tree is not None:
+                self.tree = Tree(repo, id=tree)
 
     def __bake__(self):
         temp = Commit.find_all(self.repo, self.id, max_count=1)[0]

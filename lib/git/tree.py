@@ -9,41 +9,29 @@ from lazy import LazyMixin
 import blob
 
 class Tree(LazyMixin):
-    def __init__(self, repo, **kwargs):
+    def __init__(self, repo, id, mode=None, name=None):
         LazyMixin.__init__(self)
         self.repo = repo
-        self.id = None
-        self.mode = None
-        self.name = None
-        self.contents = None
-
-        for k, v in kwargs.items():
-            setattr(self, k, v)
+        self.id = id
+        self.mode = mode
+        self.name = name
+        self._contents = None
 
     def __bake__(self):
-        temp = Tree.construct(self.repo, self.id)
-        self.contents = temp.contents
+        # Ensure the treeish references directly a tree
+        treeish = self.id
+        if not treeish.endswith(':'):
+            treeish = treeish + ':'
 
-    @classmethod
-    def construct(cls, repo, treeish, paths = []):
-        output = repo.git.ls_tree(treeish, *paths)
-        return Tree(repo, id=treeish).construct_initialize(repo, treeish, output)
+        # Read the tree contents.
+        self._contents = {}
+        for line in self.repo.git.ls_tree(self.id).splitlines():
+            obj = self.content_from_string(self.repo, line)
+            if obj is not None:
+                self._contents[obj.name] = obj
 
-    def construct_initialize(self, repo, id, text):
-        self.repo = repo
-        self.id = id
-        self.contents = []
-        self.__baked__ = False
-
-        for line in text.splitlines():
-            self.contents.append(self.content_from_string(self.repo, line))
-
-        self.contents = [c for c in self.contents if c is not None]
-
-        self.__bake_it__()
-        return self
-
-    def content_from_string(self, repo, text):
+    @staticmethod
+    def content_from_string(repo, text):
         """
         Parse a content item and create the appropriate object
 
@@ -84,8 +72,7 @@ class Tree(LazyMixin):
         Returns
             ``GitPython.Blob`` or ``GitPython.Tree`` or ``None`` if not found
         """
-        contents = [c for c in self.contents if c.name == file]
-        return contents and contents[0] or None
+        return self.get(file)
 
     @property
     def basename(self):
@@ -93,3 +80,29 @@ class Tree(LazyMixin):
 
     def __repr__(self):
         return '<GitPython.Tree "%s">' % self.id
+
+    # Implement the basics of the dict protocol:
+    # directories/trees can be seen as object dicts.
+    def __getitem__(self, key):
+        return self._contents[key]
+
+    def __iter__(self):
+        return iter(self._contents)
+
+    def __len__(self, keys):
+        return len(self._contents)
+
+    def __contains__(self, key):
+        return key in self._contents
+
+    def get(self, key):
+        return self._contents.get(key)
+
+    def items(self):
+        return self._contents.items()
+
+    def keys(self):
+        return self._contents.keys()
+
+    def values(self):
+        return self._contents.values()

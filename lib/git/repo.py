@@ -62,20 +62,19 @@ class Repo(object):
 
         self.git = Git(self.wd)
 
-    @property
-    def description(self):
-        """
-        The project's description. Taken verbatim from GIT_REPO/description
+    # Description property
+    def _get_description(self):
+        filename = os.path.join(self.path, 'description')
+        return file(filename).read().rstrip()
 
-        Returns
-            str
-        """
-        try:
-            f = open(os.path.join(self.path, 'description'))
-            result = f.read()
-            return result.rstrip()
-        finally:
-            f.close()
+    def _set_description(self, descr):
+        filename = os.path.join(self.path, 'description')
+        file(filename, 'w').write(descr+'\n')
+
+    description = property(_get_description, _set_description,
+                           doc="the project's description")
+    del _get_description
+    del _set_description
 
     @property
     def heads(self):
@@ -199,24 +198,22 @@ class Repo(object):
         diff_refs = list(set(other_repo_refs) - set(repo_refs))
         return map(lambda ref: Commit.find_all(other_repo, ref, max_count=1)[0], diff_refs)
 
-    def tree(self, treeish = 'master', paths = []):
+    def tree(self, treeish = 'master'):
         """
         The Tree object for the given treeish reference
 
         ``treeish``
             is the reference (default 'master')
-        ``paths``
-            is an optional Array of directory paths to restrict the tree (default [])
 
         Examples::
 
-          repo.tree('master', ['lib/'])
+          repo.tree('master')
 
 
         Returns
             ``GitPython.Tree``
         """
-        return Tree.construct(self, treeish, paths)
+        return Tree(self, id=treeish)
 
     def blob(self, id):
         """
@@ -377,25 +374,22 @@ class Repo(object):
             kwargs['prefix'] = prefix
         self.git.archive(treeish, "| gzip", **kwargs)
 
-    def enable_daemon_serve(self):
-        """
-        Enable git-daemon serving of this repository by writing the
-        git-daemon-export-ok file to its git directory
+    def _get_daemon_export(self):
+        filename = os.path.join(self.path, self.DAEMON_EXPORT_FILE)
+        return os.path.exists(filename)
 
-        Returns
-            None
-        """
-        touch(os.path.join(self.path, DAEMON_EXPORT_FILE))
+    def _set_daemon_export(self, value):
+        filename = os.path.join(self.path, self.DAEMON_EXPORT_FILE)
+        fileexists = os.path.exists(filename)
+        if value and not fileexists:
+            touch(filename)
+        elif not value and fileexists:
+            os.unlink(filename)
 
-    def disable_daemon_serve(self):
-        """
-        Disable git-daemon serving of this repository by ensuring there is no
-        git-daemon-export-ok file in its git directory
-
-        Returns
-            None
-        """
-        return os.remove(os.path.join(self.path, DAEMON_EXPORT_FILE))
+    daemon_export = property(_get_daemon_export, _set_daemon_export,
+                             doc="git-daemon export of this repository")
+    del _get_daemon_export
+    del _set_daemon_export
 
     def _get_alternates(self):
         """
