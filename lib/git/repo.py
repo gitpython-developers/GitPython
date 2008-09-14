@@ -435,5 +435,36 @@ class Repo(object):
 
     alternates = property(_get_alternates, _set_alternates)
 
+    @property
+    def is_dirty(self):
+        """
+        Return the status of the working directory.
+
+        Returns
+            ``True``, if the working directory has any uncommitted changes,
+            otherwise ``False``
+
+        """
+        if self.bare:
+            # Bare repositories with no associated working directory are
+            # always consired to be clean.
+            return False
+
+        return len(self.git.diff('HEAD').strip()) > 0
+
+    @property
+    def active_branch(self):
+        """
+        The name of the currently active branch.
+        
+        Returns
+            str (the branch name)
+        """
+        branch = self.git.symbolic_ref('HEAD').strip()
+        if branch.startswith('refs/heads/'):
+            branch = branch[len('refs/heads/'):]
+
+        return branch
+
     def __repr__(self):
         return '<GitPython.Repo "%s">' % self.path
