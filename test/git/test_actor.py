@@ -21,7 +21,7 @@ class TestActor(object):
 
     def test_should_display_representation(self):
         a = Actor.from_string("Michael Trier <mtrier@example.com>")
-        assert_equal('<GitPython.Actor "Michael Trier <mtrier@example.com>">', repr(a))
+        assert_equal('<git.Actor "Michael Trier <mtrier@example.com>">', repr(a))
 
     def test_str_should_alias_name(self):
         a = Actor.from_string("Michael Trier <mtrier@example.com>")

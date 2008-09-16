@@ -47,7 +47,7 @@ class Commit(LazyMixin):
             is the list of the parents of the commit
 
         Returns
-            GitPython.Commit
+            git.Commit
         """
         LazyMixin.__init__(self)
 
@@ -113,7 +113,7 @@ class Commit(LazyMixin):
             ``skip`` is the number of commits to skip
 
         Returns
-            GitPython.Commit[]
+            git.Commit[]
         """
         options = {'pretty': 'raw'}
         options.update(kwargs)
@@ -133,7 +133,7 @@ class Commit(LazyMixin):
             is the text output from the git command (raw format)
 
         Returns
-            GitPython.Commit[]
+            git.Commit[]
         """
         lines = [l for l in text.splitlines() if l.strip()]
 
@@ -180,7 +180,7 @@ class Commit(LazyMixin):
             is a list of paths to limit the diff.
 
         Returns
-            GitPython.Diff[]
+            git.Diff[]
         """
         paths = paths or []
 
@@ -229,7 +229,7 @@ class Commit(LazyMixin):
         return self.id
 
     def __repr__(self):
-        return '<GitPython.Commit "%s">' % self.id
+        return '<git.Commit "%s">' % self.id
 
     @classmethod
     def actor(cls, line):

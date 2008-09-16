@@ -218,4 +218,4 @@ class TestCommit(object):
 
     def test_repr(self):
         commit = Commit(self.repo, id='abc')
-        assert_equal('<GitPython.Commit "abc">', repr(commit))
+        assert_equal('<git.Commit "abc">', repr(commit))

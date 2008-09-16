@@ -86,4 +86,4 @@ class TestBlob(object):
   
     def test_should_return_appropriate_representation(self):
         blob = Blob(self.repo, **{'id': 'abc'})
-        assert_equal('<GitPython.Blob "abc">', repr(blob))
+        assert_equal('<git.Blob "abc">', repr(blob))

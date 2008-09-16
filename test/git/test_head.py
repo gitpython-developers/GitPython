@@ -17,7 +17,7 @@ class TestHead(object):
         
         head = self.repo.heads[0]
         
-        assert_equal('<GitPython.Head "%s">' % head.name, repr(head))
+        assert_equal('<git.Head "%s">' % head.name, repr(head))
         
         assert_true(git.called)
         assert_equal(git.call_args, (('for_each_ref', 'refs/heads'), {'sort': 'committerdate', 'format': '%(refname)%00%(objectname)'}))

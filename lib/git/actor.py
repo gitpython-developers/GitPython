@@ -15,7 +15,7 @@ class Actor(object):
         return self.name
 
     def __repr__(self):
-        return '<GitPython.Actor "%s <%s>">' % (self.name, self.email)
+        return '<git.Actor "%s <%s>">' % (self.name, self.email)
 
     @classmethod
     def from_string(cls, string):

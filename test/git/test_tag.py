@@ -30,7 +30,7 @@ class TestTag(object):
         git.return_value = fixture('for_each_ref')
         
         tag = self.repo.tags[0]
-        assert_equal('<GitPython.Tag "%s">' % tag.name, repr(tag))
+        assert_equal('<git.Tag "%s">' % tag.name, repr(tag))
         
         assert_true(git.called)
         assert_equal(git.call_args, (('for_each_ref', 'refs/tags'), {'sort': 'committerdate', 'format': '%(refname)%00%(objectname)'}))

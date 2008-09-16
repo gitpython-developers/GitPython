@@ -31,7 +31,7 @@ class Repo(object):
             repo = Repo("/Users/mtrier/Development/git-python.git")
 
         Returns
-            ``GitPython.Repo``
+            ``git.Repo``
         """
 
         epath = os.path.abspath(os.path.expanduser(path or os.getcwd()))
@@ -83,7 +83,7 @@ class Repo(object):
         this repo
 
         Returns
-            ``GitPython.Head[]``
+            ``git.Head[]``
         """
         return Head.find_all(self)
 
@@ -96,7 +96,7 @@ class Repo(object):
         A list of ``Tag`` objects that are available in this repo
 
         Returns
-            ``GitPython.Tag[]``
+            ``git.Tag[]``
         """
         return Tag.find_all(self)
 
@@ -114,7 +114,7 @@ class Repo(object):
             is the number of commits to skip (default 0)
 
         Returns
-            ``GitPython.Commit[]``
+            ``git.Commit[]``
         """
         options = {'max_count': max_count,
                    'skip': skip}
@@ -133,7 +133,7 @@ class Repo(object):
             is the branch/commit name of the older item
 
         Returns
-            ``GitPython.Commit[]``
+            ``git.Commit[]``
         """
         return Commit.find_all(self, "%s..%s" % (frm, to)).reverse()
 
@@ -149,7 +149,7 @@ class Repo(object):
             is a string represeting a date/time
 
         Returns
-            ``GitPython.Commit[]``
+            ``git.Commit[]``
         """
         options = {'since': since}
 
@@ -175,7 +175,7 @@ class Repo(object):
             is the SHA1 identifier of the commit
 
         Returns
-            GitPython.Commit
+            git.Commit
         """
         options = {'max_count': 1}
 
@@ -190,7 +190,7 @@ class Repo(object):
         Returns a list of commits that is in ``other_repo`` but not in self
 
         Returns 
-            ``GitPython.Commit[]``
+            ``git.Commit[]``
         """
         repo_refs = self.git.rev_list(ref).strip().splitlines()
         other_repo_refs = other_repo.git.rev_list(other_ref).strip().splitlines()
@@ -211,7 +211,7 @@ class Repo(object):
 
 
         Returns
-            ``GitPython.Tree``
+            ``git.Tree``
         """
         return Tree(self, id=treeish)
 
@@ -223,7 +223,7 @@ class Repo(object):
             is the SHA1 id of the blob
 
         Returns
-            ``GitPython.Blob``
+            ``git.Blob``
         """
         return Blob(self, id=id)
 
@@ -232,7 +232,7 @@ class Repo(object):
         The commit log for a treeish
 
         Returns
-            ``GitPython.Commit[]``
+            ``git.Commit[]``
         """
         options = {'pretty': 'raw'}
         options.update(kwargs)
@@ -263,7 +263,7 @@ class Repo(object):
           ``commit`` is the commit name/id
 
         Returns
-            ``GitPython.Diff[]``
+            ``git.Diff[]``
         """
         return Commit.diff(self, commit)
 
@@ -284,10 +284,10 @@ class Repo(object):
 
         Examples::
 
-            GitPython.Repo.init_bare('/var/git/myrepo.git')
+            git.Repo.init_bare('/var/git/myrepo.git')
 
         Returns
-            ``GitPython.Repo`` (the newly created repo)
+            ``git.Repo`` (the newly created repo)
         """
 
         if mkdir and not os.path.exists(path):
@@ -309,7 +309,7 @@ class Repo(object):
             is any additional options to the git clone command
 
         Returns
-            ``GitPython.Repo`` (the newly forked repo)
+            ``git.Repo`` (the newly forked repo)
         """
         options = {'bare': True}
         options.update(kwargs)
@@ -467,4 +467,4 @@ class Repo(object):
         return branch
 
     def __repr__(self):
-        return '<GitPython.Repo "%s">' % self.path
+        return '<git.Repo "%s">' % self.path

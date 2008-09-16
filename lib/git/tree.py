@@ -42,7 +42,7 @@ class Tree(LazyMixin):
             is the single line containing the items data in `git ls-tree` format
 
         Returns
-            ``GitPython.Blob`` or ``GitPython.Tree``
+            ``git.Blob`` or ``git.Tree``
         """
         try:
             mode, typ, id, name = text.expandtabs(1).split(" ", 4)
@@ -65,12 +65,12 @@ class Tree(LazyMixin):
         Examples::
 
             >>> Repo('/path/to/python-git').tree/'lib'
-            <GitPython.Tree "6cc23ee138be09ff8c28b07162720018b244e95e">
+            <git.Tree "6cc23ee138be09ff8c28b07162720018b244e95e">
             >>> Repo('/path/to/python-git').tree/'README.txt'
-            <GitPython.Blob "8b1e02c0fb554eed2ce2ef737a68bb369d7527df">
+            <git.Blob "8b1e02c0fb554eed2ce2ef737a68bb369d7527df">
 
         Returns
-            ``GitPython.Blob`` or ``GitPython.Tree`` or ``None`` if not found
+            ``git.Blob`` or ``git.Tree`` or ``None`` if not found
         """
         return self.get(file)
 
@@ -79,7 +79,7 @@ class Tree(LazyMixin):
         os.path.basename(self.name)
 
     def __repr__(self):
-        return '<GitPython.Tree "%s">' % self.id
+        return '<git.Tree "%s">' % self.id
 
     # Implement the basics of the dict protocol:
     # directories/trees can be seen as object dicts.

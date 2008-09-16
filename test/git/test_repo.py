@@ -256,7 +256,7 @@ class TestRepo(object):
 
     def test_repr(self):
         path = os.path.join(os.path.abspath(GIT_REPO), '.git')
-        assert_equal('<GitPython.Repo "%s">' % path, repr(self.repo))
+        assert_equal('<git.Repo "%s">' % path, repr(self.repo))
 
     @patch(Git, '_call_process')
     def test_log(self, git):

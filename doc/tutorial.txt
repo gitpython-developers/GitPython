@@ -27,10 +27,10 @@ From the ``Repo`` object, you can get a list of ``Commit``
 objects.
 
 	>>> repo.commits()
-	[<GitPython.Commit "207c0c4418115df0d30820ab1a9acd2ea4bf4431">, 
-	 <GitPython.Commit "a91c45eee0b41bf3cdaad3418ca3850664c4a4b4">, 
-	 <GitPython.Commit "e17c7e11aed9e94d2159e549a99b966912ce1091">, 
-	 <GitPython.Commit "bd795df2d0e07d10e0298670005c0e9d9a5ed867">]
+	[<git.Commit "207c0c4418115df0d30820ab1a9acd2ea4bf4431">,
+	 <git.Commit "a91c45eee0b41bf3cdaad3418ca3850664c4a4b4">,
+	 <git.Commit "e17c7e11aed9e94d2159e549a99b966912ce1091">,
+	 <git.Commit "bd795df2d0e07d10e0298670005c0e9d9a5ed867">]
 
 Called without arguments, ``Repo.commits`` returns a list of up to ten commits
 reachable by the master branch (starting at the latest commit). You can ask
@@ -61,19 +61,19 @@ Commit objects contain information about a specific commit.
 	'207c0c4418115df0d30820ab1a9acd2ea4bf4431'
 
 	>>> head.parents
-	[<GitPython.Commit "a91c45eee0b41bf3cdaad3418ca3850664c4a4b4">]
+	[<git.Commit "a91c45eee0b41bf3cdaad3418ca3850664c4a4b4">]
 	
 	>>> head.tree
-	<GitPython.Tree "563413aedbeda425d8d9dcbb744247d0c3e8a0ac">
+	<git.Tree "563413aedbeda425d8d9dcbb744247d0c3e8a0ac">
 	
 	>>> head.author
-	<GitPython.Actor "Michael Trier <mtrier@gmail.com>">
+	<git.Actor "Michael Trier <mtrier@gmail.com>">
 	
 	>>> head.authored_date
 	(2008, 5, 7, 5, 0, 56, 2, 128, 0)
 	
 	>>> head.committer
-	<GitPython.Actor "Michael Trier <mtrier@gmail.com>">
+	<git.Actor "Michael Trier <mtrier@gmail.com>">
 	
 	>>> head.committed_date
 	(2008, 5, 7, 5, 0, 56, 2, 128, 0)
@@ -107,7 +107,7 @@ A tree records pointers to the contents of a directory. Let's say you want
 the root tree of the latest commit on the master branch.
 
 	>>> tree = repo.commits()[0].tree
-	<GitPython.Tree "a006b5b1a8115185a228b7514cdcd46fed90dc92">
+	<git.Tree "a006b5b1a8115185a228b7514cdcd46fed90dc92">
 
 	>>> tree.id
 	'a006b5b1a8115185a228b7514cdcd46fed90dc92'
@@ -115,17 +115,17 @@ the root tree of the latest commit on the master branch.
 Once you have a tree, you can get the contents.
 
 	>>> contents = tree.contents
-	[<GitPython.Blob "6a91a439ea968bf2f5ce8bb1cd8ddf5bf2cad6c7">, 
-	 <GitPython.Blob "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391">, 
-	 <GitPython.Tree "eaa0090ec96b054e425603480519e7cf587adfc3">, 
-	 <GitPython.Blob "980e72ae16b5378009ba5dfd6772b59fe7ccd2df">]
+	[<git.Blob "6a91a439ea968bf2f5ce8bb1cd8ddf5bf2cad6c7">,
+	 <git.Blob "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391">,
+	 <git.Tree "eaa0090ec96b054e425603480519e7cf587adfc3">,
+	 <git.Blob "980e72ae16b5378009ba5dfd6772b59fe7ccd2df">]
 
 This tree contains three ``Blob`` objects and one ``Tree`` object. The trees 
 are subdirectories and the blobs are files. Trees below the root have 
 additional attributes.
 
 	>>> contents = tree["lib"]
-	<GitPython.Tree "c1c7214dde86f76bc3e18806ac1f47c38b2b7a3">
+	<git.Tree "c1c7214dde86f76bc3e18806ac1f47c38b2b7a3">
 	
 	>>> contents.name
 	'test'
@@ -138,15 +138,15 @@ from a tree with a syntax similar to how paths are written in an unix
 system.
 
 	>>> tree/"lib"
-	<GitPython.Tree "c1c7214dde86f76bc3e18806ac1f47c38b2b7a30">
+	<git.Tree "c1c7214dde86f76bc3e18806ac1f47c38b2b7a30">
   
 You can also get a tree directly from the repository if you know its name.
 
 	>>> repo.tree()
-	<GitPython.Tree "master">
+	<git.Tree "master">
 	
 	>>> repo.tree("c1c7214dde86f76bc3e18806ac1f47c38b2b7a30")
-	<GitPython.Tree "c1c7214dde86f76bc3e18806ac1f47c38b2b7a30">
+	<git.Tree "c1c7214dde86f76bc3e18806ac1f47c38b2b7a30">
 
 The Blob object
 ***************
@@ -154,7 +154,7 @@ The Blob object
 A blob represents a file. Trees often contain blobs.
 
 	>>> blob = tree.contents[-1]
-	<GitPython.Blob "b19574431a073333ea09346eafd64e7b1908ef49">
+	<git.Blob "b19574431a073333ea09346eafd64e7b1908ef49">
 
 A blob has certain attributes.
 
@@ -178,7 +178,7 @@ You can get the data of a blob as a string.
 You can also get a blob directly from the repo if you know its name.
 
 	>>> repo.blob("b19574431a073333ea09346eafd64e7b1908ef49")
-	<GitPython.Blob "b19574431a073333ea09346eafd64e7b1908ef49">
+	<git.Blob "b19574431a073333ea09346eafd64e7b1908ef49">
 
 What Else?
 **********

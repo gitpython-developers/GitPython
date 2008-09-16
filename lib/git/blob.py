@@ -31,7 +31,7 @@ class Blob(object):
             is the file name
 
         Returns
-            GitPython.Blob
+            git.Blob
         """
         self.repo = repo
         self.id = id
@@ -87,7 +87,7 @@ class Blob(object):
         The blame information for the given file at the given commit
 
         Returns
-            list: [GitPython.Commit, list: [<line>]]
+            list: [git.Commit, list: [<line>]]
         """
         data = repo.git.blame(commit, '--', file, p=True)
         commits = {}
@@ -141,4 +141,4 @@ class Blob(object):
         return blames
 
     def __repr__(self):
-        return '<GitPython.Blob "%s">' % self.id
+        return '<git.Blob "%s">' % self.id

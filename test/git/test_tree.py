@@ -146,4 +146,4 @@ class TestTree(object):
 
     def test_repr(self):
         tree = Tree(self.repo, id='abc')
-        assert_equal('<GitPython.Tree "abc">', repr(tree))
+        assert_equal('<git.Tree "abc">', repr(tree))

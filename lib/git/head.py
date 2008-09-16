@@ -20,7 +20,7 @@ class Head(object):
         'master'
 
         >>> head.commit     
-        <GitPython.Commit "1c09f116cbc2cb4100fb6935bb162daa4723f455">
+        <git.Commit "1c09f116cbc2cb4100fb6935bb162daa4723f455">
 
         >>> head.commit.id
         '1c09f116cbc2cb4100fb6935bb162daa4723f455'
@@ -37,7 +37,7 @@ class Head(object):
             is the Commit that the head points to
 
         Returns
-            GitPython.Head
+            git.Head
         """
         self.name = name
         self.commit = commit
@@ -54,7 +54,7 @@ class Head(object):
             is a dict of options
 
         Returns
-            GitPython.Head[]
+            git.Head[]
         """
 
         options = {'sort': "committerdate",
@@ -75,7 +75,7 @@ class Head(object):
             is the text output from the git command
 
         Returns
-            GitPython.Head[]
+            git.Head[]
         """
         heads = []
 
@@ -101,7 +101,7 @@ class Head(object):
             id: [0-9A-Fa-f]{40}
 
         Returns
-            GitPython.Head
+            git.Head
         """
         full_name, ids = line.split("\x00")
         name = full_name.split("/")[-1]
@@ -109,4 +109,4 @@ class Head(object):
         return Head(name, c)
 
     def __repr__(self):
-        return '<GitPython.Head "%s">' % self.name
+        return '<git.Head "%s">' % self.name

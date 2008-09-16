@@ -18,7 +18,7 @@ class Tag(object):
             is the Commit that the head points to
 
         Returns
-            ``GitPython.Tag``
+            ``git.Tag``
         """
         self.name = name
         self.commit = commit
@@ -35,7 +35,7 @@ class Tag(object):
             is a dict of options
 
         Returns
-            ``GitPython.Tag[]``
+            ``git.Tag[]``
         """
         options = {'sort': "committerdate",
                   'format': "%(refname)%00%(objectname)"}
@@ -56,7 +56,7 @@ class Tag(object):
             is the text output from the git command
 
         Returns
-            ``GitPython.Tag[]``
+            ``git.Tag[]``
         """
         tags = []
         for line in text.splitlines():
@@ -80,7 +80,7 @@ class Tag(object):
             id: [0-9A-Fa-f]{40}
 
         Returns
-            ``GitPython.Tag``
+            ``git.Tag``
         """
         full_name, ids = line.split("\x00")
         name = full_name.split("/")[-1]
@@ -88,4 +88,4 @@ class Tag(object):
         return Tag(name, commit)
 
     def __repr__(self):
-        return '<GitPython.Tag "%s">' % self.name
+        return '<git.Tag "%s">' % self.name
