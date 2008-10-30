@@ -89,7 +89,7 @@ class Tree(LazyMixin):
     def __iter__(self):
         return iter(self._contents)
 
-    def __len__(self, keys):
+    def __len__(self):
         return len(self._contents)
 
     def __contains__(self, key):
