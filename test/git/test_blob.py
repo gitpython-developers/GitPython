@@ -12,7 +12,7 @@ class TestBlob(object):
     def setup(self):
         self.repo = Repo(GIT_REPO)
     
-    @patch(Git, '_call_process')
+    @patch_object(Git, '_call_process')
     def test_should_return_blob_contents(self, git):
         git.return_value = fixture('cat_file_blob')
         blob = Blob(self.repo, **{'id': 'abc'})
@@ -20,7 +20,7 @@ class TestBlob(object):
         assert_true(git.called)
         assert_equal(git.call_args, (('cat_file', 'abc'), {'p': True, 'with_raw_output': True}))
 
-    @patch(Git, '_call_process')
+    @patch_object(Git, '_call_process')
     def test_should_return_blob_contents_with_newline(self, git):
         git.return_value = fixture('cat_file_blob_nl')
         blob = Blob(self.repo, **{'id': 'abc'})
@@ -28,7 +28,7 @@ class TestBlob(object):
         assert_true(git.called)
         assert_equal(git.call_args, (('cat_file', 'abc'), {'p': True, 'with_raw_output': True}))
     
-    @patch(Git, '_call_process')
+    @patch_object(Git, '_call_process')
     def test_should_cache_data(self, git):
         git.return_value = fixture('cat_file_blob')
         blob = Blob(self.repo, **{'id': 'abc'})
@@ -38,7 +38,7 @@ class TestBlob(object):
         assert_equal(git.call_count, 1)
         assert_equal(git.call_args, (('cat_file', 'abc'), {'p': True, 'with_raw_output': True}))
 
-    @patch(Git, '_call_process')
+    @patch_object(Git, '_call_process')
     def test_should_return_file_size(self, git):
         git.return_value = fixture('cat_file_blob_size')
         blob = Blob(self.repo, **{'id': 'abc'})
@@ -46,12 +46,12 @@ class TestBlob(object):
         assert_true(git.called)
         assert_equal(git.call_args, (('cat_file', 'abc'), {'s': True}))
 
-    @patch(Git, '_call_process')
+    @patch_object(Git, '_call_process')
     def test_should_cache_file_size(self, git):
         git.return_value = fixture('cat_file_blob_size')
         blob = Blob(self.repo, **{'id': 'abc'})
         assert_equal(11, blob.size)
-        assert_equal(11, blob.size)        
+        assert_equal(11, blob.size)
         assert_true(git.called)
         assert_equal(git.call_count, 1)
         assert_equal(git.call_args, (('cat_file', 'abc'), {'s': True}))
@@ -64,7 +64,7 @@ class TestBlob(object):
         blob = Blob(self.repo, **{'id': 'abc'})
         assert_equal("text/plain", blob.mime_type)
   
-    @patch(Git, '_call_process')
+    @patch_object(Git, '_call_process')
     def test_should_display_blame_information(self, git):
         git.return_value = fixture('blame')
         b = Blob.blame(self.repo, 'master', 'lib/git.py')

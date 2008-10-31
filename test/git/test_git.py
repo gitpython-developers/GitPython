@@ -13,7 +13,7 @@ class TestGit(object):
         base = os.path.join(os.path.dirname(__file__), "../..")
         self.git = Git(base)
 
-    @patch(Git, 'execute')
+    @patch_object(Git, 'execute')
     def test_call_process_calls_execute(self, git):
         git.return_value = ''
         self.git.version()
@@ -51,7 +51,7 @@ class TestGit(object):
             output = self.git.execute(["cat", "/bin/bash"])
         assert_true(len(output) > 4096) # at least 4k
 
-    @patch(Git, 'execute')
+    @patch_object(Git, 'execute')
     def test_it_ignores_false_kwargs(self, git):
         # this_should_not_be_ignored=False implies it *should* be ignored
         output = self.git.version(pass_this_kwarg=False)

@@ -11,7 +11,7 @@ class TestHead(object):
     def setup(self):
         self.repo = Repo(GIT_REPO)
 
-    @patch(Git, '_call_process')  
+    @patch_object(Git, '_call_process')
     def test_repr(self, git):
         git.return_value = fixture('for_each_ref')
         

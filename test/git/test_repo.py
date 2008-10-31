@@ -33,7 +33,7 @@ class TestRepo(object):
         for head in self.repo.heads:
             assert_equal(Head, head.__class__)
 
-    @patch(Git, '_call_process')
+    @patch_object(Git, '_call_process')
     def test_heads_should_populate_head_data(self, git):
         git.return_value = fixture('for_each_ref')
 
@@ -44,7 +44,7 @@ class TestRepo(object):
         assert_true(git.called)
         assert_equal(git.call_args, (('for_each_ref', 'refs/heads'), {'sort': 'committerdate', 'format': '%(refname)%00%(objectname)'}))
 
-    @patch(Git, '_call_process')
+    @patch_object(Git, '_call_process')
     def test_commits(self, git):
         git.return_value = fixture('rev_list')
 
@@ -72,7 +72,7 @@ class TestRepo(object):
         assert_true(git.called)
         assert_equal(git.call_args, (('rev_list', 'master'), {'skip': 0, 'pretty': 'raw', 'max_count': 10}))
 
-    @patch(Git, '_call_process')
+    @patch_object(Git, '_call_process')
     def test_commit_count(self, git):
         git.return_value = fixture('rev_list_count')
 
@@ -81,7 +81,7 @@ class TestRepo(object):
         assert_true(git.called)
         assert_equal(git.call_args, (('rev_list', 'master'), {}))
 
-    @patch(Git, '_call_process')
+    @patch_object(Git, '_call_process')
     def test_commit(self, git):
         git.return_value = fixture('rev_list_single')
 
@@ -92,7 +92,7 @@ class TestRepo(object):
         assert_true(git.called)
         assert_equal(git.call_args, (('rev_list', '4c8124ffcf4039d292442eeccabdeca5af5c5017'), {'pretty': 'raw', 'max_count': 1}))
 
-    @patch(Git, '_call_process')
+    @patch_object(Git, '_call_process')
     def test_tree(self, git):
         git.return_value = fixture('ls_tree_a')
 
@@ -104,7 +104,7 @@ class TestRepo(object):
         assert_true(git.called)
         assert_equal(git.call_args, (('ls_tree', 'master'), {}))
 
-    @patch(Git, '_call_process')
+    @patch_object(Git, '_call_process')
     def test_blob(self, git):
         git.return_value = fixture('cat_file_blob')
 
@@ -114,8 +114,8 @@ class TestRepo(object):
         assert_true(git.called)
         assert_equal(git.call_args, (('cat_file', 'abc'), {'p': True, 'with_raw_output': True}))
 
-    @patch(Repo, '__init__')
-    @patch(Git, '_call_process')
+    @patch_object(Repo, '__init__')
+    @patch_object(Git, '_call_process')
     def test_init_bare(self, repo, git):
         git.return_value = True
 
@@ -126,8 +126,8 @@ class TestRepo(object):
         assert_true(repo.called)
         assert_equal(repo.call_args, (('repos/foo/bar.git',), {}))
 
-    @patch(Repo, '__init__')
-    @patch(Git, '_call_process')
+    @patch_object(Repo, '__init__')
+    @patch_object(Git, '_call_process')
     def test_init_bare_with_options(self, repo, git):
         git.return_value = True
 
@@ -138,8 +138,8 @@ class TestRepo(object):
         assert_true(repo.called)
         assert_equal(repo.call_args, (('repos/foo/bar.git',), {}))
 
-    @patch(Repo, '__init__')
-    @patch(Git, '_call_process')
+    @patch_object(Repo, '__init__')
+    @patch_object(Git, '_call_process')
     def test_fork_bare(self, repo, git):
         git.return_value = None
 
@@ -150,8 +150,8 @@ class TestRepo(object):
         assert_equal(git.call_args, (('clone', path, 'repos/foo/bar.git'), {'bare': True}))
         assert_true(repo.called)
 
-    @patch(Repo, '__init__')
-    @patch(Git, '_call_process')
+    @patch_object(Repo, '__init__')
+    @patch_object(Git, '_call_process')
     def test_fork_bare_with_options(self, repo, git):
         git.return_value = None
 
@@ -163,7 +163,7 @@ class TestRepo(object):
                                       {'bare': True, 'template': '/awesome'}))
         assert_true(repo.called)
 
-    @patch(Git, '_call_process')
+    @patch_object(Git, '_call_process')
     def test_diff(self, git):
         self.repo.diff('master^', 'master')
 
@@ -180,7 +180,7 @@ class TestRepo(object):
         assert_true(git.called)
         assert_equal(git.call_args, (('diff', 'master^', 'master', '--', 'foo/bar', 'foo/baz'), {}))
 
-    @patch(Git, '_call_process')
+    @patch_object(Git, '_call_process')
     def test_diff(self, git):
         git.return_value = fixture('diff_p')
 
@@ -194,7 +194,7 @@ class TestRepo(object):
     def test_archive_tar_gz(self):
         self.repo.archive_tar_gz
 
-    @patch('git.utils', 'touch')
+    @patch('git.utils.touch')
     def test_enable_daemon_serve(self, touch):
         self.repo.daemon_serve = False
         assert_false(self.repo.daemon_serve)
@@ -203,8 +203,8 @@ class TestRepo(object):
         self.repo.daemon_serve = True
         assert_true(self.repo.daemon_serve)
   
-    # @patch(os.path, 'exists')
-    # @patch('__builtin__', 'open')
+    # @patch_object(os.path, 'exists')
+    # @patch_object('__builtin__', 'open')
     # def test_alternates_with_two_alternates(self, exists, read):
     #     # File.expects(:exist?).with("#{absolute_project_path}/.git/objects/info/alternates").returns(true)
     #     # File.expects(:read).returns("/path/to/repo1/.git/objects\n/path/to/repo2.git/objects\n")        
@@ -216,14 +216,14 @@ class TestRepo(object):
     #     assert_true(exists.called)
     #     assert_true(read.called)
     # 
-    @patch(os.path, 'exists')
+    @patch_object(os.path, 'exists')
     def test_alternates_no_file(self, os):
         os.return_value = False
         assert_equal([], self.repo.alternates)
 
         assert_true(os.called)
 
-    # @patch(os.path, 'exists')
+    # @patch_object(os.path, 'exists')
     # def test_alternates_setter_ok(self, os):
     #     os.return_value = True
     #     alts = ['/path/to/repo.git/objects', '/path/to/repo2.git/objects']
@@ -236,7 +236,7 @@ class TestRepo(object):
     #     # assert_equal(os.call_args, ((alts,), {}))
     #     # for alt in alts:
     #         
-    # @patch(os.path, 'exists')
+    # @patch_object(os.path, 'exists')
     # @raises(NoSuchPathError)
     # def test_alternates_setter_bad(self, os):
     #     os.return_value = False
@@ -249,7 +249,7 @@ class TestRepo(object):
     #         assert_true(os.called)
     #         assert_equal(os.call_args, (alt, {}))
 
-    @patch(os, 'remove')
+    @patch_object(os, 'remove')
     def test_alternates_setter_empty(self, os):
         self.repo.alternates = []
         assert_true(os.called)
@@ -258,7 +258,7 @@ class TestRepo(object):
         path = os.path.join(os.path.abspath(GIT_REPO), '.git')
         assert_equal('<git.Repo "%s">' % path, repr(self.repo))
 
-    @patch(Git, '_call_process')
+    @patch_object(Git, '_call_process')
     def test_log(self, git):
         git.return_value = fixture('rev_list')
         assert_equal('4c8124ffcf4039d292442eeccabdeca5af5c5017', self.repo.log()[0].id)
@@ -267,15 +267,15 @@ class TestRepo(object):
         assert_equal(git.call_count, 2)
         assert_equal(git.call_args, (('log', 'master'), {'pretty': 'raw'}))
 
-    @patch(Git, '_call_process')
+    @patch_object(Git, '_call_process')
     def test_log_with_path_and_options(self, git):
         git.return_value = fixture('rev_list')
         self.repo.log('master', 'file.rb', **{'max_count': 1})
         assert_true(git.called)
         assert_equal(git.call_args, (('log', 'master', '--', 'file.rb'), {'pretty': 'raw', 'max_count': 1}))
 
-    # @patch(Git, '_call_process')
-    # @patch(Git, '_call_process')
+    # @patch_object(Git, '_call_process')
+    # @patch_object(Git, '_call_process')
     # def test_commit_deltas_from_nothing_new(self, gitb, gita):
     #     gitb.return_value = fixture("rev_list_delta_b")
     #     gita.return_value = fixture("rev_list_delta_a")
@@ -305,21 +305,21 @@ class TestRepo(object):
         self.repo.bare = True
         assert_false(self.repo.is_dirty)
 
-    @patch(Git, '_call_process')
+    @patch_object(Git, '_call_process')
     def test_is_dirty_with_clean_working_dir(self, git):
         self.repo.bare = False
         git.return_value = ''
         assert_false(self.repo.is_dirty)
         assert_equal(git.call_args, (('diff', 'HEAD'), {}))
 
-    @patch(Git, '_call_process')
+    @patch_object(Git, '_call_process')
     def test_is_dirty_with_dirty_working_dir(self, git):
         self.repo.bare = False
         git.return_value = '''-aaa\n+bbb'''
         assert_true(self.repo.is_dirty)
         assert_equal(git.call_args, (('diff', 'HEAD'), {}))
 
-    @patch(Git, '_call_process')
+    @patch_object(Git, '_call_process')
     def test_active_branch(self, git):
         git.return_value = 'refs/heads/major-refactoring'
         assert_equal(self.repo.active_branch, 'major-refactoring')

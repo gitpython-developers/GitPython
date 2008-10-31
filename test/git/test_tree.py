@@ -11,7 +11,7 @@ class TestTree(object):
     def setup(self):
         self.repo = Repo(GIT_REPO)
 
-    @patch(Git, '_call_process')
+    @patch_object(Git, '_call_process')
     def test_contents_should_cache(self, git):
         git.return_value = fixture('ls_tree_a') + fixture('ls_tree_b')
     
@@ -54,8 +54,8 @@ class TestTree(object):
     def test_content_from_string_invalid_type_should_raise(self):
         Tree.content_from_string(None, "040000 bogus 650fa3f0c17f1edb4ae53d8dcca4ac59d86e6c44	test")
 
-    @patch(Blob, 'size')
-    @patch(Git, '_call_process')
+    @patch_object(Blob, 'size')
+    @patch_object(Git, '_call_process')
     def test_slash(self, blob, git):
         git.return_value = fixture('ls_tree_a')
         blob.return_value = 1
@@ -68,8 +68,8 @@ class TestTree(object):
         assert_true(git.called)
         assert_equal(git.call_args, (('ls_tree', 'master'), {}))
   
-    @patch(Blob, 'size')
-    @patch(Git, '_call_process')
+    @patch_object(Blob, 'size')
+    @patch_object(Git, '_call_process')
     def test_slash_with_zero_length_file(self, blob, git):
         git.return_value = fixture('ls_tree_a')
         blob.return_value = 0
@@ -82,7 +82,7 @@ class TestTree(object):
         assert_true(git.called)
         assert_equal(git.call_args, (('ls_tree', 'master'), {}))
   
-    @patch(Git, '_call_process')
+    @patch_object(Git, '_call_process')
     def test_slash_with_commits(self, git):
         git.return_value = fixture('ls_tree_commit')
 
@@ -95,8 +95,8 @@ class TestTree(object):
         assert_true(git.called)
         assert_equal(git.call_args, (('ls_tree', 'master'), {}))
 
-    @patch(Blob, 'size')
-    @patch(Git, '_call_process')
+    @patch_object(Blob, 'size')
+    @patch_object(Git, '_call_process')
     def test_dict(self, blob, git):
         git.return_value = fixture('ls_tree_a')
         blob.return_value = 1
@@ -109,8 +109,8 @@ class TestTree(object):
         assert_true(git.called)
         assert_equal(git.call_args, (('ls_tree', 'master'), {}))
 
-    @patch(Blob, 'size')
-    @patch(Git, '_call_process')
+    @patch_object(Blob, 'size')
+    @patch_object(Git, '_call_process')
     def test_dict_with_zero_length_file(self, blob, git):
         git.return_value = fixture('ls_tree_a')
         blob.return_value = 0
@@ -123,7 +123,7 @@ class TestTree(object):
         assert_true(git.called)
         assert_equal(git.call_args, (('ls_tree', 'master'), {}))
 
-    @patch(Git, '_call_process')
+    @patch_object(Git, '_call_process')
     def test_dict_with_commits(self, git):
         git.return_value = fixture('ls_tree_commit')
 
@@ -136,7 +136,7 @@ class TestTree(object):
         assert_true(git.called)
         assert_equal(git.call_args, (('ls_tree', 'master'), {}))
 
-    @patch(Git, '_call_process')
+    @patch_object(Git, '_call_process')
     @raises(KeyError)
     def test_dict_with_non_existant_file(self, git):
         git.return_value = fixture('ls_tree_commit')
