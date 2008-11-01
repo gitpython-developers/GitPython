@@ -1,6 +1,10 @@
-from ez_setup import use_setuptools
-use_setuptools()
-from setuptools import setup, find_packages
+try:
+    from setuptools import setup, find_packages
+except ImportError:
+    from ez_setup import use_setuptools
+    use_setuptools()
+    from setuptools import setup, find_packages
+
 from distutils.command.build_py import build_py as _build_py
 from setuptools.command.sdist import sdist as _sdist
 import os
