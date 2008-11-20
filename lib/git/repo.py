@@ -100,12 +100,15 @@ class Repo(object):
         """
         return Tag.find_all(self)
 
-    def commits(self, start = 'master', max_count = 10, skip = 0):
+    def commits(self, start = 'master', path = '', max_count = 10, skip = 0):
         """
         A list of Commit objects representing the history of a given ref/commit
 
         ``start``
             is the branch/commit name (default 'master')
+
+         ``path``
+            is an optional path
 
          ``max_count``
             is the maximum number of commits to return (default 10)
@@ -119,9 +122,9 @@ class Repo(object):
         options = {'max_count': max_count,
                    'skip': skip}
 
-        return Commit.find_all(self, start, **options)
+        return Commit.find_all(self, start, path, **options)
 
-    def commits_between(self, frm, to):
+    def commits_between(self, frm, to, path = ''):
         """
         The Commits objects that are reachable via ``to`` but not via ``frm``
         Commits are returned in chronological order.
@@ -132,18 +135,24 @@ class Repo(object):
         ``to``
             is the branch/commit name of the older item
 
+        ``path``
+            is an optinal path
+
         Returns
             ``git.Commit[]``
         """
-        return Commit.find_all(self, "%s..%s" % (frm, to)).reverse()
+        return Commit.find_all(self, "%s..%s" % (frm, to), path).reverse()
 
-    def commits_since(self, start = 'master', since = '1970-01-01'):
+    def commits_since(self, start = 'master', path = '', since = '1970-01-01'):
         """
         The Commits objects that are newer than the specified date.
         Commits are returned in chronological order.
 
         ``start``
             is the branch/commit name (default 'master')
+
+        ``path``
+            is an optinal path
 
         ``since``
             is a string represeting a date/time
@@ -153,33 +162,39 @@ class Repo(object):
         """
         options = {'since': since}
 
-        return Commit.find_all(self, start, **options)
+        return Commit.find_all(self, start, path, **options)
 
-    def commit_count(self, start = 'master'):
+    def commit_count(self, start = 'master', path = ''):
         """
         The number of commits reachable by the given branch/commit
 
         ``start``
             is the branch/commit name (default 'master')
 
+        ``path``
+            is an optinal path
+
         Returns
             int
         """
-        return Commit.count(self, start)
+        return Commit.count(self, start, path)
 
-    def commit(self, id):
+    def commit(self, id, path = ''):
         """
         The Commit object for the specified id
 
         ``id``
             is the SHA1 identifier of the commit
 
+        ``path``
+            is an optinal path
+
         Returns
             git.Commit
         """
         options = {'max_count': 1}
 
-        commits = Commit.find_all(self, id, **options)
+        commits = Commit.find_all(self, id, path, **options)
 
         if not commits:
             raise ValueError, 'Invalid identifier %s' % id

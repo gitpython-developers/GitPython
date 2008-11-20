@@ -48,7 +48,7 @@ class TestRepo(object):
     def test_commits(self, git):
         git.return_value = fixture('rev_list')
 
-        commits = self.repo.commits('master', 10)
+        commits = self.repo.commits('master', max_count=10)
 
         c = commits[0]
         assert_equal('4c8124ffcf4039d292442eeccabdeca5af5c5017', c.id)
@@ -70,7 +70,7 @@ class TestRepo(object):
         assert_equal("Merge branch 'site'", c.message)
 
         assert_true(git.called)
-        assert_equal(git.call_args, (('rev_list', 'master', '--'), {'skip': 0, 'pretty': 'raw', 'max_count': 10}))
+        assert_equal(git.call_args, (('rev_list', 'master', '--', ''), {'skip': 0, 'pretty': 'raw', 'max_count': 10}))
 
     @patch_object(Git, '_call_process')
     def test_commit_count(self, git):
@@ -79,7 +79,7 @@ class TestRepo(object):
         assert_equal(655, self.repo.commit_count('master'))
 
         assert_true(git.called)
-        assert_equal(git.call_args, (('rev_list', 'master', '--'), {}))
+        assert_equal(git.call_args, (('rev_list', 'master', '--', ''), {}))
 
     @patch_object(Git, '_call_process')
     def test_commit(self, git):
@@ -90,7 +90,7 @@ class TestRepo(object):
         assert_equal("4c8124ffcf4039d292442eeccabdeca5af5c5017", commit.id)
 
         assert_true(git.called)
-        assert_equal(git.call_args, (('rev_list', '4c8124ffcf4039d292442eeccabdeca5af5c5017', '--'), {'pretty': 'raw', 'max_count': 1}))
+        assert_equal(git.call_args, (('rev_list', '4c8124ffcf4039d292442eeccabdeca5af5c5017', '--', ''), {'pretty': 'raw', 'max_count': 1}))
 
     @patch_object(Git, '_call_process')
     def test_tree(self, git):

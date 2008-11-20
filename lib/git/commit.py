@@ -82,7 +82,7 @@ class Commit(LazyMixin):
         return self.id[0:7]
 
     @classmethod
-    def count(cls, repo, ref):
+    def count(cls, repo, ref, path=''):
         """
         Count the number of commits reachable from this ref
 
@@ -92,13 +92,16 @@ class Commit(LazyMixin):
         ``ref``
             is the ref from which to begin (SHA1 or name)
 
+        ``path``
+            is an optinal path
+
         Returns
             int
         """
-        return len(repo.git.rev_list(ref, '--').strip().splitlines())
+        return len(repo.git.rev_list(ref, '--', path).strip().splitlines())
 
     @classmethod
-    def find_all(cls, repo, ref, **kwargs):
+    def find_all(cls, repo, ref, path='', **kwargs):
         """
         Find all commits matching the given criteria.
         ``repo``
@@ -106,6 +109,9 @@ class Commit(LazyMixin):
 
         ``ref``
             is the ref from which to begin (SHA1 or name)
+
+        ``path``
+            is an optinal path
 
         ``options``
             is a Hash of optional arguments to git where
@@ -118,7 +124,7 @@ class Commit(LazyMixin):
         options = {'pretty': 'raw'}
         options.update(kwargs)
 
-        output = repo.git.rev_list(ref, '--', **options)
+        output = repo.git.rev_list(ref, '--', path, **options)
         return cls.list_from_string(repo, output)
 
     @classmethod

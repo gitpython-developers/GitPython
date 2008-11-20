@@ -22,7 +22,7 @@ class TestCommit(object):
         assert_equal("tom@mojombo.com", commit.author.email)
 
         assert_true(git.called)
-        assert_equal(git.call_args, (('rev_list', '4c8124ffcf4039d292442eeccabdeca5af5c5017', '--'), {'pretty': 'raw', 'max_count': 1}))
+        assert_equal(git.call_args, (('rev_list', '4c8124ffcf4039d292442eeccabdeca5af5c5017', '--', ''), {'pretty': 'raw', 'max_count': 1}))
 
     @patch_object(Git, '_call_process')
     def test_id_abbrev(self, git):
