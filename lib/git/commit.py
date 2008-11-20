@@ -95,7 +95,7 @@ class Commit(LazyMixin):
         Returns
             int
         """
-        return len(repo.git.rev_list(ref).strip().splitlines())
+        return len(repo.git.rev_list(ref, '--').strip().splitlines())
 
     @classmethod
     def find_all(cls, repo, ref, **kwargs):
@@ -118,7 +118,7 @@ class Commit(LazyMixin):
         options = {'pretty': 'raw'}
         options.update(kwargs)
 
-        output = repo.git.rev_list(ref, **options)
+        output = repo.git.rev_list(ref, '--', **options)
         return cls.list_from_string(repo, output)
 
     @classmethod
@@ -214,14 +214,14 @@ class Commit(LazyMixin):
     @property
     def stats(self):
         if not self.parents:
-            text = self.repo.git.diff(self.id, numstat=True)
+            text = self.repo.git.diff(self.id, '--', numstat=True)
             text2 = ""
             for line in text.splitlines():
                 (insertions, deletions, filename) = line.split("\t")
                 text2 += "%s\t%s\t%s\n" % (deletions, insertions, filename)
             text = text2
         else:
-            text = self.repo.git.diff(self.parents[0].id, self.id, numstat=True)
+            text = self.repo.git.diff(self.parents[0].id, self.id, '--', numstat=True)
         return stats.Stats.list_from_string(self.repo, text)
 
     def __str__(self):

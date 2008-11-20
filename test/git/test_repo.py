@@ -70,7 +70,7 @@ class TestRepo(object):
         assert_equal("Merge branch 'site'", c.message)
 
         assert_true(git.called)
-        assert_equal(git.call_args, (('rev_list', 'master'), {'skip': 0, 'pretty': 'raw', 'max_count': 10}))
+        assert_equal(git.call_args, (('rev_list', 'master', '--'), {'skip': 0, 'pretty': 'raw', 'max_count': 10}))
 
     @patch_object(Git, '_call_process')
     def test_commit_count(self, git):
@@ -79,7 +79,7 @@ class TestRepo(object):
         assert_equal(655, self.repo.commit_count('master'))
 
         assert_true(git.called)
-        assert_equal(git.call_args, (('rev_list', 'master'), {}))
+        assert_equal(git.call_args, (('rev_list', 'master', '--'), {}))
 
     @patch_object(Git, '_call_process')
     def test_commit(self, git):
@@ -90,7 +90,7 @@ class TestRepo(object):
         assert_equal("4c8124ffcf4039d292442eeccabdeca5af5c5017", commit.id)
 
         assert_true(git.called)
-        assert_equal(git.call_args, (('rev_list', '4c8124ffcf4039d292442eeccabdeca5af5c5017'), {'pretty': 'raw', 'max_count': 1}))
+        assert_equal(git.call_args, (('rev_list', '4c8124ffcf4039d292442eeccabdeca5af5c5017', '--'), {'pretty': 'raw', 'max_count': 1}))
 
     @patch_object(Git, '_call_process')
     def test_tree(self, git):
@@ -269,7 +269,7 @@ class TestRepo(object):
         assert_equal('ab25fd8483882c3bda8a458ad2965d2248654335', self.repo.log()[-1].id)
         assert_true(git.called)
         assert_equal(git.call_count, 2)
-        assert_equal(git.call_args, (('log', 'master'), {'pretty': 'raw'}))
+        assert_equal(git.call_args, (('log', 'master', '--'), {'pretty': 'raw'}))
 
     @patch_object(Git, '_call_process')
     def test_log_with_path_and_options(self, git):
@@ -314,14 +314,14 @@ class TestRepo(object):
         self.repo.bare = False
         git.return_value = ''
         assert_false(self.repo.is_dirty)
-        assert_equal(git.call_args, (('diff', 'HEAD'), {}))
+        assert_equal(git.call_args, (('diff', 'HEAD', '--'), {}))
 
     @patch_object(Git, '_call_process')
     def test_is_dirty_with_dirty_working_dir(self, git):
         self.repo.bare = False
         git.return_value = '''-aaa\n+bbb'''
         assert_true(self.repo.is_dirty)
-        assert_equal(git.call_args, (('diff', 'HEAD'), {}))
+        assert_equal(git.call_args, (('diff', 'HEAD', '--'), {}))
 
     @patch_object(Git, '_call_process')
     def test_active_branch(self, git):

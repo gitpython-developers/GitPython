@@ -192,8 +192,8 @@ class Repo(object):
         Returns 
             ``git.Commit[]``
         """
-        repo_refs = self.git.rev_list(ref).strip().splitlines()
-        other_repo_refs = other_repo.git.rev_list(other_ref).strip().splitlines()
+        repo_refs = self.git.rev_list(ref, '--').strip().splitlines()
+        other_repo_refs = other_repo.git.rev_list(other_ref, '--').strip().splitlines()
 
         diff_refs = list(set(other_repo_refs) - set(repo_refs))
         return map(lambda ref: Commit.find_all(other_repo, ref, max_count=1)[0], diff_refs)
@@ -236,10 +236,9 @@ class Repo(object):
         """
         options = {'pretty': 'raw'}
         options.update(kwargs)
+        arg = [commit, '--']
         if path:
-            arg = [commit, '--', path]
-        else:
-            arg = [commit]
+            arg.append(path)
         commits = self.git.log(*arg, **options)
         return Commit.list_from_string(self, commits)
 
@@ -450,7 +449,7 @@ class Repo(object):
             # always consired to be clean.
             return False
 
-        return len(self.git.diff('HEAD').strip()) > 0
+        return len(self.git.diff('HEAD', '--').strip()) > 0
 
     @property
     def active_branch(self):

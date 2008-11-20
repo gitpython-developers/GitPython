@@ -22,7 +22,7 @@ class TestCommit(object):
         assert_equal("tom@mojombo.com", commit.author.email)
 
         assert_true(git.called)
-        assert_equal(git.call_args, (('rev_list', '4c8124ffcf4039d292442eeccabdeca5af5c5017'), {'pretty': 'raw', 'max_count': 1}))
+        assert_equal(git.call_args, (('rev_list', '4c8124ffcf4039d292442eeccabdeca5af5c5017', '--'), {'pretty': 'raw', 'max_count': 1}))
 
     @patch_object(Git, '_call_process')
     def test_id_abbrev(self, git):
@@ -184,7 +184,7 @@ class TestCommit(object):
         assert_equal(["a.txt", "b.txt"], keys)
 
         assert_true(git.called)
-        assert_equal(git.call_args, (('diff', '634396b2f541a9f2d58b00be1a07f0c358b999b3'), {'numstat': True}))
+        assert_equal(git.call_args, (('diff', '634396b2f541a9f2d58b00be1a07f0c358b999b3', '--'), {'numstat': True}))
 
     @patch_object(Git, '_call_process')
     def test_rev_list_bisect_all(self, git):
