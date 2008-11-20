@@ -34,52 +34,29 @@ class Diff(object):
 
     @classmethod
     def list_from_string(cls, repo, text):
-        lines = text.splitlines()
-        a_mode = None
-        b_mode = None
         diffs = []
-        while lines:
-            m = re.search(r'^diff --git a/(\S+) b/(\S+)$', lines.pop(0))
-            if m:
-                a_path, b_path = m.groups()
-            if re.search(r'^old mode', lines[0]):
-                m = re.search(r'^old mode (\d+)', lines.pop(0))
-                if m:
-                    a_mode, = m.groups()
-                m = re.search(r'^new mode (\d+)', lines.pop(0))
-                if m:
-                    b_mode, = m.groups()
-                if re.search(r'^diff --git', lines[0]):
-                    diffs.append(Diff(repo, a_path, b_path, None, None, a_mode, b_mode, False, False, None))
-                    continue
 
-            new_file = False
-            deleted_file = False
+        diff_header = re.compile(r"""
+            #^diff[ ]--git
+                [ ]a/(?P<a_path>\S+)[ ]b/(?P<b_path>\S+)\n
+            (?:^old[ ]mode[ ](?P<old_mode>\d+)(?:\n|$))?
+            (?:^new[ ]mode[ ](?P<new_mode>\d+)(?:\n|$))?
+            (?:^new[ ]file[ ]mode[ ](?P<new_file_mode>.+)(?:\n|$))?
+            (?:^deleted[ ]file[ ]mode[ ](?P<deleted_file_mode>.+)(?:\n|$))?
+            (?:^index[ ](?P<a_commit>[0-9A-Fa-f]+)
+                \.\.(?P<b_commit>[0-9A-Fa-f]+)[ ]?(?P<b_mode>.+)?(?:\n|$))?
+        """, re.VERBOSE | re.MULTILINE).match
 
-            if re.search(r'^new file', lines[0]):
-                m = re.search(r'^new file mode (.+)', lines.pop(0))
-                if m:
-                    b_mode, = m.groups()
-                a_mode = None
-                new_file = True
-            elif re.search(r'^deleted file', lines[0]):
-                m = re.search(r'^deleted file mode (.+)$', lines.pop(0))
-                if m:
-                    a_mode, = m.groups()
-                b_mode = None
-                deleted_file = True
+        for diff in ('\n' + text).split('\ndiff --git')[1:]:
+            header = diff_header(diff)
 
-            m = re.search(r'^index ([0-9A-Fa-f]+)\.\.([0-9A-Fa-f]+) ?(.+)?$', lines.pop(0))
-            if m:
-                a_commit, b_commit, b_mode = m.groups()
-            if b_mode:
-                b_mode = b_mode.strip()
+            a_path, b_path, old_mode, new_mode, new_file_mode, deleted_file_mode, \
+                a_commit, b_commit, b_mode = header.groups()
+            new_file, deleted_file = bool(new_file_mode), bool(deleted_file_mode)
 
-            diff_lines = []
-            while lines and not re.search(r'^diff', lines[0]):
-                diff_lines.append(lines.pop(0))
-
-            diff = "\n".join(diff_lines)
-            diffs.append(Diff(repo, a_path, b_path, a_commit, b_commit, a_mode, b_mode, new_file, deleted_file, diff))
+            diffs.append(Diff(repo, a_path, b_path, a_commit, b_commit,
+                old_mode or deleted_file_mode, new_mode or new_file_mode or b_mode,
+                new_file, deleted_file, diff[header.end():]))
 
         return diffs
+

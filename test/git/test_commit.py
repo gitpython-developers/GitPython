@@ -130,7 +130,7 @@ class TestCommit(object):
         assert_equal('History.txt', diffs[0].a_path)
         assert_equal('History.txt', diffs[0].b_path)
         assert_equal(None, diffs[0].a_commit)
-        assert_equal(None, diffs[0].b_mode)
+        assert_equal('100644', diffs[0].b_mode)
         assert_equal('81d2c27608b352814cbe979a6acd678d30219678', diffs[0].b_commit.id)
         assert_equal(True, diffs[0].new_file)
         assert_equal(False, diffs[0].deleted_file)
