@@ -41,7 +41,7 @@ class Commit(LazyMixin):
             is the committed DateTime
 
         ``message``
-            is the first line of the commit message
+            is the commit message
 
         ``parents``
             is the list of the parents of the commit
@@ -80,6 +80,10 @@ class Commit(LazyMixin):
     @property
     def id_abbrev(self):
         return self.id[0:7]
+
+    @property
+    def summary(self):
+        return self.message.split('\n', 1)[0]
 
     @classmethod
     def count(cls, repo, ref, path=''):
@@ -159,7 +163,7 @@ class Commit(LazyMixin):
             while lines and lines[0].startswith('    '):
                 messages.append(lines.pop(0).strip())
 
-            message = messages and messages[0] or ''
+            message = '\n'.join(messages)
 
             commits.append(Commit(repo, id=id, parents=parents, tree=tree, author=author, authored_date=authored_date, 
                                   committer=committer, committed_date=committed_date, message=message))

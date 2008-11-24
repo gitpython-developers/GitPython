@@ -67,7 +67,7 @@ class TestRepo(object):
 
         c = commits[2]
         assert_equal(["6e64c55896aabb9a7d8e9f8f296f426d21a78c2c", "7f874954efb9ba35210445be456c74e037ba6af2"], map(lambda p: p.id, c.parents))
-        assert_equal("Merge branch 'site'", c.message)
+        assert_equal("Merge branch 'site'", c.summary)
 
         assert_true(git.called)
         assert_equal(git.call_args, (('rev_list', 'master', '--', ''), {'skip': 0, 'pretty': 'raw', 'max_count': 10}))
