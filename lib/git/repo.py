@@ -100,7 +100,7 @@ class Repo(object):
         """
         return Tag.find_all(self)
 
-    def commits(self, start = 'master', max_count = 10, skip = 0):
+    def commits(self, start='master', max_count=10, skip=0):
         """
         A list of Commit objects representing the history of a given ref/commit
 
@@ -137,7 +137,7 @@ class Repo(object):
         """
         return Commit.find_all(self, "%s..%s" % (frm, to)).reverse()
 
-    def commits_since(self, start = 'master', since = '1970-01-01'):
+    def commits_since(self, start='master', since='1970-01-01'):
         """
         The Commits objects that are newer than the specified date.
         Commits are returned in chronological order.
@@ -155,7 +155,7 @@ class Repo(object):
 
         return Commit.find_all(self, start, **options)
 
-    def commit_count(self, start = 'master'):
+    def commit_count(self, start='master'):
         """
         The number of commits reachable by the given branch/commit
 
@@ -185,7 +185,7 @@ class Repo(object):
             raise ValueError, 'Invalid identifier %s' % id
         return commits[0]
 
-    def commit_deltas_from(self, other_repo, ref = 'master', other_ref = 'master'):
+    def commit_deltas_from(self, other_repo, ref='master', other_ref='master'):
         """
         Returns a list of commits that is in ``other_repo`` but not in self
 
@@ -198,7 +198,7 @@ class Repo(object):
         diff_refs = list(set(other_repo_refs) - set(repo_refs))
         return map(lambda ref: Commit.find_all(other_repo, ref, max_count=1)[0], diff_refs)
 
-    def tree(self, treeish = 'master'):
+    def tree(self, treeish='master'):
         """
         The Tree object for the given treeish reference
 
@@ -227,7 +227,7 @@ class Repo(object):
         """
         return Blob(self, id=id)
 
-    def log(self, commit = 'master', path = None, **kwargs):
+    def log(self, commit='master', path=None, **kwargs):
         """
         The commit log for a treeish
 
@@ -316,7 +316,7 @@ class Repo(object):
         self.git.clone(self.path, path, **options)
         return Repo(path)
 
-    def archive_tar(self, treeish = 'master', prefix = None):
+    def archive_tar(self, treeish='master', prefix=None):
         """
         Archive the given treeish
 
@@ -345,7 +345,7 @@ class Repo(object):
             options['prefix'] = prefix
         return self.git.archive(treeish, **options)
 
-    def archive_tar_gz(self, treeish = 'master', prefix = None):
+    def archive_tar_gz(self, treeish='master', prefix=None):
         """
         Archive and gzip the given treeish
 

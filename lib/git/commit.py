@@ -161,7 +161,7 @@ class Commit(LazyMixin):
         return commits
 
     @classmethod
-    def diff(cls, repo, a, b = None, paths = None):
+    def diff(cls, repo, a, b=None, paths=None):
         """
         Show diffs between two trees:
 
