@@ -118,6 +118,7 @@ class TestRepo(object):
     @patch_object(Git, '_call_process')
     def test_init_bare(self, repo, git):
         git.return_value = True
+        repo.return_value = None
 
         Repo.init_bare("repos/foo/bar.git")
 
@@ -130,6 +131,7 @@ class TestRepo(object):
     @patch_object(Git, '_call_process')
     def test_init_bare_with_options(self, repo, git):
         git.return_value = True
+        repo.return_value = None
 
         Repo.init_bare("repos/foo/bar.git", **{'template': "/baz/sweet"})
 
@@ -142,6 +144,7 @@ class TestRepo(object):
     @patch_object(Git, '_call_process')
     def test_fork_bare(self, repo, git):
         git.return_value = None
+        repo.return_value = None
 
         self.repo.fork_bare("repos/foo/bar.git")
 
@@ -154,6 +157,7 @@ class TestRepo(object):
     @patch_object(Git, '_call_process')
     def test_fork_bare_with_options(self, repo, git):
         git.return_value = None
+        repo.return_value = None
 
         self.repo.fork_bare("repos/foo/bar.git", **{'template': '/awesome'})
 
