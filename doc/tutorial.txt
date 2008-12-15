@@ -13,9 +13,9 @@ The first step is to create a ``Repo`` object to represent your repository.
 
 	>>> from git import *
 	>>> repo = Repo("/Users/mtrier/Development/git-python")
-  
-In the above example, the directory ``/Users/mtrier/Development/git-python`` 
-is my working repository and contains the ``.git`` directory. You can also 
+
+In the above example, the directory ``/Users/mtrier/Development/git-python``
+is my working repository and contains the ``.git`` directory. You can also
 initialize GitPython with a bare repository.
 
 	>>> repo = Repo.create("/var/git/git-python.git")
@@ -42,14 +42,14 @@ for commits beginning at a different branch, commit, tag, etc.
 
 You can specify the maximum number of commits to return.
 
-	>>> repo.commits('master', 100)
-  
+    >>> repo.commits('master', max_count=100)
+
 If you need paging, you can specify a number of commits to skip.
 
-	>>> repo.commits('master', 10, 20)
+    >>> repo.commits('master', max_count=10, skip=20)
 
 The above will return commits 21-30 from the commit list.
-        
+
 The Commit object
 *****************
 
@@ -79,7 +79,7 @@ Commit objects contain information about a specific commit.
 	(2008, 5, 7, 5, 0, 56, 2, 128, 0)
 	
 	>>> head.message
-	'cleaned up a lot of test information. Fixed escaping so it works with 
+	'cleaned up a lot of test information. Fixed escaping so it works with
 	subprocess.'
 
 Note: date time is represented in a `struct_time`_ format.  Conversion to
@@ -183,10 +183,10 @@ You can also get a blob directly from the repo if you know its name.
 What Else?
 **********
 
-There is more stuff in there, like the ability to tar or gzip repos, stats, 
-log, blame, and probably a few other things.  Additionally calls to the git 
-instance are handled through a ``__getattr__`` construct, which makes 
-available any git commands directly, with a nice conversion of Python dicts 
+There is more stuff in there, like the ability to tar or gzip repos, stats,
+log, blame, and probably a few other things.  Additionally calls to the git
+instance are handled through a ``__getattr__`` construct, which makes
+available any git commands directly, with a nice conversion of Python dicts
 to command line parameters.
 
 Check the unit tests, they're pretty exhaustive.
