@@ -5,7 +5,68 @@ CHANGES
 0.1.5
 =====
 
-* removed ``method_missing`` stuff and replaced with a ``__getattr__`` 
+General
+-------
+* upgraded to Mock 0.4 dependency.
+
+* Replace GitPython with git in repr() outputs.
+
+* Fixed packaging issue caused by ez_setup.py.
+
+Blob
+----
+* No longer strip newlines from Blob data.
+
+Commit
+------
+* Corrected problem with git-rev-list --bisect-all. See
+  http://groups.google.com/group/git-python/browse_thread/thread/aed1d5c4b31d5027
+
+Repo
+----
+* Corrected problems with creating bare repositories.
+
+* Repo.tree no longer accepts a path argument. Use:
+
+    >>> dict(k, o for k, o in tree.items() if k in paths)
+
+* Made daemon export a property of Repo. Now you can do this:
+
+    >>> exported = repo.daemon_export
+    >>> repo.daemon_export = True
+
+* Allows modifying the project description. Do this:
+
+    >>> repo.description = "Foo Bar"
+    >>> repo.description
+    'Foo Bar'
+
+* Added a read-only property Repo.is_dirty which reflects the status of the
+  working directory.
+
+* Added a read-only Repo.active_branch property which returns the name of the
+  currently active branch.
+
+
+Tree
+----
+* Switched to using a dictionary for Tree contents since you will usually want
+  to access them by name and order is unimportant.
+
+* Implemented a dictionary protocol for Tree objects. The following:
+
+    child = tree.contents['grit']
+
+  becomes:
+
+    child = tree['grit']
+
+* Made Tree.content_from_string a static method.
+
+0.1.4.1
+=======
+
+* removed ``method_missing`` stuff and replaced with a ``__getattr__``
   override in ``Git``.
 
 0.1.4
