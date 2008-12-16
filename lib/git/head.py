@@ -104,7 +104,12 @@ class Head(object):
             git.Head
         """
         full_name, ids = line.split("\x00")
-        name = full_name.split("/")[-1]
+
+        if full_name.startswith('refs/heads/'):
+            name = full_name[len('refs/heads/'):]
+        else:
+            name = full_name
+
         c = commit.Commit(repo, id=ids)
         return Head(name, c)
 
