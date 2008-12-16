@@ -52,7 +52,23 @@ class TestCommit(object):
         assert_equal(True, diffs[5].new_file)
 
         assert_true(git.called)
-        assert_equal(git.call_args, (('diff', 'master'), {'full_index': True}))
+        assert_equal(git.call_args, (('diff', '-M', 'master'), {'full_index': True}))
+
+    @patch_object(Git, '_call_process')
+    def test_diff_with_rename(self, git):
+        git.return_value = fixture('diff_rename')
+
+        diffs = Commit.diff(self.repo, 'rename')
+
+        assert_equal(1, len(diffs))
+
+        diff = diffs[0]
+        assert_true(diff.renamed)
+        assert_equal(diff.rename_from, 'AUTHORS')
+        assert_equal(diff.rename_to, 'CONTRIBUTORS')
+
+        assert_true(git.called)
+        assert_equal(git.call_args, (('diff', '-M', 'rename'), {'full_index': True}))
 
     @patch_object(Git, '_call_process')
     def test_diff_with_two_commits(self, git):
@@ -63,7 +79,7 @@ class TestCommit(object):
         assert_equal(3, len(diffs))
 
         assert_true(git.called)
-        assert_equal(git.call_args, (('diff', '59ddc32', '13d27d5'), {'full_index': True}))
+        assert_equal(git.call_args, (('diff', '-M', '59ddc32', '13d27d5'), {'full_index': True}))
 
     @patch_object(Git, '_call_process')
     def test_diff_with_files(self, git):
@@ -75,7 +91,7 @@ class TestCommit(object):
         assert_equal('lib/grit/diff.rb', diffs[0].a_path)
 
         assert_true(git.called)
-        assert_equal(git.call_args, (('diff', '59ddc32', '--', 'lib'), {'full_index': True}))
+        assert_equal(git.call_args, (('diff', '-M', '59ddc32', '--', 'lib'), {'full_index': True}))
 
     @patch_object(Git, '_call_process')
     def test_diff_with_two_commits_and_files(self, git):
@@ -87,7 +103,7 @@ class TestCommit(object):
         assert_equal('lib/grit/commit.rb', diffs[0].a_path)
 
         assert_true(git.called)
-        assert_equal(git.call_args, (('diff', '59ddc32', '13d27d5', '--', 'lib'), {'full_index': True}))
+        assert_equal(git.call_args, (('diff', '-M', '59ddc32', '13d27d5', '--', 'lib'), {'full_index': True}))
 
     @patch_object(Git, '_call_process')
     def test_diffs(self, git):
@@ -113,7 +129,8 @@ class TestCommit(object):
         assert_equal(True, diffs[5].new_file)
 
         assert_true(git.called)
-        assert_equal(git.call_args, (('diff', '038af8c329ef7c1bae4568b98bd5c58510465493',
+        assert_equal(git.call_args, (('diff', '-M', 
+                                              '038af8c329ef7c1bae4568b98bd5c58510465493',
                                               '91169e1f5fa4de2eaea3f176461f5dc784796769',
                                       ), {'full_index': True}))
 
@@ -142,7 +159,7 @@ class TestCommit(object):
         assert_equal(True, diffs[5].new_file)
 
         assert_true(git.called)
-        assert_equal(git.call_args, (('show', '634396b2f541a9f2d58b00be1a07f0c358b999b3'), {'full_index': True, 'pretty': 'raw'}))
+        assert_equal(git.call_args, (('show', '634396b2f541a9f2d58b00be1a07f0c358b999b3', '-M'), {'full_index': True, 'pretty': 'raw'}))
 
     @patch_object(Git, '_call_process')
     def test_diffs_on_initial_import_with_empty_commit(self, git):
@@ -154,7 +171,7 @@ class TestCommit(object):
         assert_equal([], diffs)
 
         assert_true(git.called)
-        assert_equal(git.call_args, (('show', '634396b2f541a9f2d58b00be1a07f0c358b999b3'), {'full_index': True, 'pretty': 'raw'}))
+        assert_equal(git.call_args, (('show', '634396b2f541a9f2d58b00be1a07f0c358b999b3', '-M'), {'full_index': True, 'pretty': 'raw'}))
 
     @patch_object(Git, '_call_process')
     def test_diffs_with_mode_only_change(self, git):
@@ -169,7 +186,7 @@ class TestCommit(object):
         assert_equal('100755', diffs[0].b_mode)
 
         assert_true(git.called)
-        assert_equal(git.call_args, (('show', '91169e1f5fa4de2eaea3f176461f5dc784796769'), {'full_index': True, 'pretty': 'raw'}))
+        assert_equal(git.call_args, (('show', '91169e1f5fa4de2eaea3f176461f5dc784796769', '-M'), {'full_index': True, 'pretty': 'raw'}))
 
     @patch_object(Git, '_call_process')
     def test_stats(self, git):

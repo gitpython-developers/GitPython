@@ -12,7 +12,9 @@ class Diff(object):
     A Diff contains diff information between two commits.
     """
 
-    def __init__(self, repo, a_path, b_path, a_commit, b_commit, a_mode, b_mode, new_file, deleted_file, diff):
+    def __init__(self, repo, a_path, b_path, a_commit, b_commit, a_mode,
+                 b_mode, new_file, deleted_file, rename_from,
+                 rename_to, diff):
         self.repo = repo
         self.a_path = a_path
         self.b_path = b_path
@@ -30,6 +32,9 @@ class Diff(object):
         self.b_mode = b_mode
         self.new_file = new_file
         self.deleted_file = deleted_file
+        self.rename_from = rename_from
+        self.rename_to = rename_to
+        self.renamed = rename_from != rename_to
         self.diff = diff
 
     @classmethod
@@ -54,13 +59,13 @@ class Diff(object):
             header = diff_header(diff)
 
             a_path, b_path, similarity_index, rename_from, rename_to, \
-				old_mode, new_mode, new_file_mode, deleted_file_mode, \
+                old_mode, new_mode, new_file_mode, deleted_file_mode, \
                 a_commit, b_commit, b_mode = header.groups()
             new_file, deleted_file = bool(new_file_mode), bool(deleted_file_mode)
 
             diffs.append(Diff(repo, a_path, b_path, a_commit, b_commit,
                 old_mode or deleted_file_mode, new_mode or new_file_mode or b_mode,
-                new_file, deleted_file, diff[header.end():]))
+                new_file, deleted_file, rename_from, rename_to, diff[header.end():]))
 
         return diffs
 

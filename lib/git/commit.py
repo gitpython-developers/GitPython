@@ -204,13 +204,13 @@ class Commit(LazyMixin):
         if b:
             paths.insert(0, b)
         paths.insert(0, a)
-        text = repo.git.diff(full_index=True, *paths)
+        text = repo.git.diff('-M', full_index=True, *paths)
         return diff.Diff.list_from_string(repo, text)
 
     @property
     def diffs(self):
         if not self.parents:
-            d = self.repo.git.show(self.id, full_index=True, pretty='raw')
+            d = self.repo.git.show(self.id, '-M', full_index=True, pretty='raw')
             if re.search(r'diff --git a', d):
                 if not re.search(r'^diff --git a', d):
                     p = re.compile(r'.+?(diff --git a)', re.MULTILINE | re.DOTALL)
