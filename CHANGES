@@ -18,7 +18,6 @@ General
   constrains the lookup by path.  This changes the order of the positional
   arguments in ``Repo.commits`` and ``Repo.commits_since``.
 
-
 Commit
 ------
 * ``Commit.message`` now contains the full commit message (rather than just
@@ -32,6 +31,11 @@ Diff
 
 * Added support for parsing rename info to the diff parser. Addition of new
   properties ``Diff.renamed``, ``Diff.rename_from``, and ``Diff.rename_to``.
+
+Head
+----
+* Corrected problem where branches was only returning the last path component
+  instead of the entire path component following refs/heads/.
 
 
 0.1.5
