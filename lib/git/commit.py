@@ -165,7 +165,7 @@ class Commit(LazyMixin):
 
             message = '\n'.join(messages)
 
-            commits.append(Commit(repo, id=id, parents=parents, tree=tree, author=author, authored_date=authored_date, 
+            commits.append(Commit(repo, id=id, parents=parents, tree=tree, author=author, authored_date=authored_date,
                                   committer=committer, committed_date=committed_date, message=message))
 
         return commits
@@ -224,11 +224,11 @@ class Commit(LazyMixin):
     @property
     def stats(self):
         if not self.parents:
-            text = self.repo.git.diff(self.id, '--', numstat=True)
+            text = self.repo.git.diff_tree(self.id, '--', numstat=True, root=True)
             text2 = ""
-            for line in text.splitlines():
+            for line in text.splitlines()[1:]:
                 (insertions, deletions, filename) = line.split("\t")
-                text2 += "%s\t%s\t%s\n" % (deletions, insertions, filename)
+                text2 += "%s\t%s\t%s\n" % (insertions, deletions, filename)
             text = text2
         else:
             text = self.repo.git.diff(self.parents[0].id, self.id, '--', numstat=True)

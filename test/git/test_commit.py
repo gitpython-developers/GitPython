@@ -129,7 +129,7 @@ class TestCommit(object):
         assert_equal(True, diffs[5].new_file)
 
         assert_true(git.called)
-        assert_equal(git.call_args, (('diff', '-M', 
+        assert_equal(git.call_args, (('diff', '-M',
                                               '038af8c329ef7c1bae4568b98bd5c58510465493',
                                               '91169e1f5fa4de2eaea3f176461f5dc784796769',
                                       ), {'full_index': True}))
@@ -190,7 +190,7 @@ class TestCommit(object):
 
     @patch_object(Git, '_call_process')
     def test_stats(self, git):
-        git.return_value = fixture('diff_numstat')
+        git.return_value = fixture('diff_tree_numstat_root')
 
         commit = Commit(self.repo, id='634396b2f541a9f2d58b00be1a07f0c358b999b3')
         commit.__bake_it__()
@@ -201,7 +201,7 @@ class TestCommit(object):
         assert_equal(["a.txt", "b.txt"], keys)
 
         assert_true(git.called)
-        assert_equal(git.call_args, (('diff', '634396b2f541a9f2d58b00be1a07f0c358b999b3', '--'), {'numstat': True}))
+        assert_equal(git.call_args, (('diff_tree', '634396b2f541a9f2d58b00be1a07f0c358b999b3', '--'), {'numstat': True, 'root': True }))
 
     @patch_object(Git, '_call_process')
     def test_rev_list_bisect_all(self, git):

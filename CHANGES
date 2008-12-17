@@ -24,6 +24,9 @@ Commit
   the first line) and a new property ``Commit.summary`` contains the first
   line of the commit message.
 
+* Fixed a failure when trying to lookup the stats of a parentless commit from
+  a bare repo.
+
 Diff
 ----
 * The diff parser is now far faster and also addresses a bug where
