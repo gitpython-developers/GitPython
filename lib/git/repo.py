@@ -6,6 +6,8 @@
 
 import os
 import re
+import gzip
+import StringIO
 from errors import InvalidGitRepositoryError, NoSuchPathError
 from utils import touch, is_git_dir
 from cmd import Git
@@ -386,7 +388,12 @@ class Repo(object):
         kwargs = {}
         if prefix:
             kwargs['prefix'] = prefix
-        self.git.archive(treeish, "| gzip", **kwargs)
+        resultstr =  self.git.archive(treeish, **kwargs)
+        sio = StringIO.StringIO()
+        gf = gzip.GzipFile(fileobj=sio, mode ='wb')
+        gf.write(resultstr)
+        gf.close()
+        return sio.getvalue()
 
     def _get_daemon_export(self):
         filename = os.path.join(self.path, self.DAEMON_EXPORT_FILE)
