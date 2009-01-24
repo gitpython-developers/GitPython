@@ -138,12 +138,12 @@ class Repo(object):
             is the branch/commit name of the older item
 
         ``path``
-            is an optinal path
+            is an optional path
 
         Returns
             ``git.Commit[]``
         """
-        return Commit.find_all(self, "%s..%s" % (frm, to), path).reverse()
+        return reversed(Commit.find_all(self, "%s..%s" % (frm, to)))
 
     def commits_since(self, start='master', path='', since='1970-01-01'):
         """

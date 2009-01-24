@@ -40,6 +40,13 @@ Head
 * Corrected problem where branches was only returning the last path component
   instead of the entire path component following refs/heads/.
 
+Repo
+----
+* Modified the gzip archive creation to use the python gzip module.
+
+* Corrected ``commits_between`` always returning None instead of the reversed
+  list.
+
 
 0.1.5
 =====
