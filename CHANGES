@@ -7,6 +7,8 @@ CHANGES
 
 General
 -------
+* Added in Sphinx documentation.
+
 * Removed ambiguity between paths and treeishs. When calling commands that
   accept treeish and path arguments and there is a path with the same name as
   a treeish git cowardly refuses to pick one and asks for the command to use

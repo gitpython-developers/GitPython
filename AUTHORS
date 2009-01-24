@@ -1,8 +1,14 @@
-Michael Trier <mtrier _at_ gmail.com>
-Alan Briolat
-Florian Apolloner <florian _at_ apolloner.eu>
-David Aguilar <davvid _at_ gmail.com>
-Jelmer Vernooij <jelmer _at_ samba.org>
-Steve Frécinaux <code _at_ istique.net>
-Kai Lautaportti <kai _at_ lautaportti.fi>
-Paul Sowden <paul _at_ idontsmoke.co.uk>
+GitPython was originally written by Michael Trier.
+
+Contributors are:
+
+-Michael Trier <mtrier _at_ gmail.com>
+-Alan Briolat
+-Florian Apolloner <florian _at_ apolloner.eu>
+-David Aguilar <davvid _at_ gmail.com>
+-Jelmer Vernooij <jelmer _at_ samba.org>
+-Steve Frécinaux <code _at_ istique.net>
+-Kai Lautaportti <kai _at_ lautaportti.fi>
+-Paul Sowden <paul _at_ idontsmoke.co.uk>
+
+Portions derived from other open source works and are clearly marked.
