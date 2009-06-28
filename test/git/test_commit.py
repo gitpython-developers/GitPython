@@ -236,3 +236,10 @@ class TestCommit(object):
     def test_repr(self):
         commit = Commit(self.repo, id='abc')
         assert_equal('<git.Commit "abc">', repr(commit))
+
+    def test_equality(self):
+        commit1 = Commit(self.repo, id='abc')
+        commit2 = Commit(self.repo, id='abc')
+        commit3 = Commit(self.repo, id='zyx')
+        assert_equal(commit1, commit2)
+        assert_not_equal(commit2, commit3)
