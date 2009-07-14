@@ -116,7 +116,7 @@ class TestRepo(object):
 
     @patch_object(Repo, '__init__')
     @patch_object(Git, '_call_process')
-    def test_init_bare(self, repo, git):
+    def test_init_bare(self, git, repo):
         git.return_value = True
         repo.return_value = None
 
@@ -129,7 +129,7 @@ class TestRepo(object):
 
     @patch_object(Repo, '__init__')
     @patch_object(Git, '_call_process')
-    def test_init_bare_with_options(self, repo, git):
+    def test_init_bare_with_options(self, git, repo):
         git.return_value = True
         repo.return_value = None
 
@@ -142,7 +142,7 @@ class TestRepo(object):
 
     @patch_object(Repo, '__init__')
     @patch_object(Git, '_call_process')
-    def test_fork_bare(self, repo, git):
+    def test_fork_bare(self, git, repo):
         git.return_value = None
         repo.return_value = None
 
@@ -155,7 +155,7 @@ class TestRepo(object):
 
     @patch_object(Repo, '__init__')
     @patch_object(Git, '_call_process')
-    def test_fork_bare_with_options(self, repo, git):
+    def test_fork_bare_with_options(self, git, repo):
         git.return_value = None
         repo.return_value = None
 
