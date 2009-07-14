@@ -56,7 +56,7 @@ class TestTree(object):
 
     @patch_object(Blob, 'size')
     @patch_object(Git, '_call_process')
-    def test_slash(self, blob, git):
+    def test_slash(self, git, blob):
         git.return_value = fixture('ls_tree_a')
         blob.return_value = 1
         
@@ -70,7 +70,7 @@ class TestTree(object):
   
     @patch_object(Blob, 'size')
     @patch_object(Git, '_call_process')
-    def test_slash_with_zero_length_file(self, blob, git):
+    def test_slash_with_zero_length_file(self, git, blob):
         git.return_value = fixture('ls_tree_a')
         blob.return_value = 0
         
@@ -97,7 +97,7 @@ class TestTree(object):
 
     @patch_object(Blob, 'size')
     @patch_object(Git, '_call_process')
-    def test_dict(self, blob, git):
+    def test_dict(self, git, blob):
         git.return_value = fixture('ls_tree_a')
         blob.return_value = 1
 
@@ -111,7 +111,7 @@ class TestTree(object):
 
     @patch_object(Blob, 'size')
     @patch_object(Git, '_call_process')
-    def test_dict_with_zero_length_file(self, blob, git):
+    def test_dict_with_zero_length_file(self, git, blob):
         git.return_value = fixture('ls_tree_a')
         blob.return_value = 0
 
