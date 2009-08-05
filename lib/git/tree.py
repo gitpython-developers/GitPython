@@ -45,7 +45,7 @@ class Tree(LazyMixin):
             ``git.Blob`` or ``git.Tree``
         """
         try:
-            mode, typ, id, name = text.expandtabs(1).split(" ", 4)
+            mode, typ, id, name = text.expandtabs(1).split(" ", 3)
         except:
             return None
 
