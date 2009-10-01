@@ -108,6 +108,7 @@ class Commit(LazyMixin):
     def find_all(cls, repo, ref, path='', **kwargs):
         """
         Find all commits matching the given criteria.
+
         ``repo``
             is the Repo
 
