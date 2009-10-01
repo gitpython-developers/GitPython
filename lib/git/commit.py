@@ -145,7 +145,7 @@ class Commit(LazyMixin):
         Returns
             git.Commit[]
         """
-        lines = [l for l in text.splitlines() if l.strip()]
+        lines = [l for l in text.splitlines() if l.strip('\r\n')]
 
         commits = []
 
