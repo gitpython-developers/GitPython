@@ -67,6 +67,12 @@ class Commit(LazyMixin):
             if tree is not None:
                 self.tree = Tree(repo, id=tree)
 
+    def __eq__(self, other):
+        return self.id == other.id
+    
+    def __ne__(self, other):
+        return self.id != other.id
+    
     def __bake__(self):
         temp = Commit.find_all(self.repo, self.id, max_count=1)[0]
         self.parents = temp.parents
