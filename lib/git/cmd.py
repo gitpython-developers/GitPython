@@ -102,7 +102,10 @@ class Git(object):
         
          str(output)                                  # extended_output = False (Default)
          tuple(int(status), str(stdout), str(stderr)) # extended_output = True
-         
+        
+        Raise
+        	GitCommandError
+        
         NOTE
            If you add additional keyword arguments to the signature of this method, 
            you must update the execute_kwargs tuple housed in this module.
