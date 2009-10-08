@@ -28,16 +28,13 @@ class Head(object):
 
     def __init__(self, name, commit):
         """
-        Instantiate a new Head
+        Initialize a newly instanced Head
 
         `name`
             is the name of the head
 
         `commit`
-            is the Commit that the head points to
-
-        Returns
-            git.Head
+            is the Commit object that the head points to
         """
         self.name = name
         self.commit = commit
@@ -45,16 +42,19 @@ class Head(object):
     @classmethod
     def find_all(cls, repo, **kwargs):
         """
-        Find all Heads
+        Find all Heads in the repository
 
         `repo`
             is the Repo
 
         `kwargs`
-            is a dict of options
+            Additional options given as keyword arguments, will be passed
+            to git-for-each-ref
 
         Returns
             git.Head[]
+            
+            List is sorted by committerdate
         """
 
         options = {'sort': "committerdate",
@@ -67,12 +67,12 @@ class Head(object):
     @classmethod
     def list_from_string(cls, repo, text):
         """
-        Parse out head information into an array of baked head objects
+        Parse out head information into a list of head objects
 
         ``repo``
             is the Repo
         ``text``
-            is the text output from the git command
+            is the text output from the git-for-each-ref command
 
         Returns
             git.Head[]
@@ -95,7 +95,8 @@ class Head(object):
         ``line``
             is the formatted head information
 
-        Format
+        Format::
+        
             name: [a-zA-Z_/]+
             <null byte>
             id: [0-9A-Fa-f]{40}

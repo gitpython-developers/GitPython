@@ -9,16 +9,13 @@ from commit import Commit
 class Tag(object):
     def __init__(self, name, commit):
         """
-        Instantiate a new Tag
+        Initialize a newly instantiated Tag
 
         ``name``
             is the name of the head
 
         ``commit``
             is the Commit that the head points to
-
-        Returns
-            ``git.Tag``
         """
         self.name = name
         self.commit = commit
@@ -26,16 +23,19 @@ class Tag(object):
     @classmethod
     def find_all(cls, repo, **kwargs):
         """
-        Find all Tags
+        Find all Tags in the repository
 
         ``repo``
             is the Repo
 
         ``kwargs``
-            is a dict of options
+            Additional options given as keyword arguments, will be passed 
+            to git-for-each-ref
 
         Returns
             ``git.Tag[]``
+            
+            List is sorted by committerdate
         """
         options = {'sort': "committerdate",
                   'format': "%(refname)%00%(objectname)"}
@@ -47,16 +47,16 @@ class Tag(object):
     @classmethod
     def list_from_string(cls, repo, text):
         """
-        Parse out tag information into an array of baked Tag objects
+        Parse out tag information into an array of Tag objects
 
         ``repo``
             is the Repo
 
         ``text``
-            is the text output from the git command
+            is the text output from the git-for-each command
 
         Returns
-            ``git.Tag[]``
+            git.Tag[]
         """
         tags = []
         for line in text.splitlines():
@@ -74,13 +74,14 @@ class Tag(object):
         ``line``
             is the formatted tag information
 
-        Format
+        Format::
+            
             name: [a-zA-Z_/]+
             <null byte>
             id: [0-9A-Fa-f]{40}
-
+        
         Returns
-            ``git.Tag``
+            git.Tag
         """
         full_name, ids = line.split("\x00")
         name = full_name.split("/")[-1]

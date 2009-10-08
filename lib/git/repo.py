@@ -18,6 +18,11 @@ from commit import Commit
 from tree import Tree
 
 class Repo(object):
+    """
+    Represents a git repository and allows you to query references, 
+    gather commit information, generate diffs, create and clone repositories query
+    the log.
+    """
     DAEMON_EXPORT_FILE = 'git-daemon-export-ok'
 
     def __init__(self, path=None):
@@ -31,6 +36,9 @@ class Repo(object):
 
             repo = Repo("/Users/mtrier/Development/git-python")
             repo = Repo("/Users/mtrier/Development/git-python.git")
+
+        Raises
+            InvalidGitRepositoryError or NoSuchPathError
 
         Returns
             ``git.Repo``
@@ -110,13 +118,15 @@ class Repo(object):
             is the branch/commit name (default 'master')
 
          ``path``
-            is an optional path
+            is an optional path to limit the returned commits to
+            Commits that do not contain that path will not be returned.
 
          ``max_count``
             is the maximum number of commits to return (default 10)
 
           ``skip``
-            is the number of commits to skip (default 0)
+            is the number of commits to skip (default 0) which will effectively 
+            move your commit-window by the given number.
 
         Returns
             ``git.Commit[]``
@@ -126,7 +136,7 @@ class Repo(object):
 
         return Commit.find_all(self, start, path, **options)
 
-    def commits_between(self, frm, to, path = ''):
+    def commits_between(self, frm, to):
         """
         The Commits objects that are reachable via ``to`` but not via ``frm``
         Commits are returned in chronological order.
@@ -136,9 +146,6 @@ class Repo(object):
 
         ``to``
             is the branch/commit name of the older item
-
-        ``path``
-            is an optional path
 
         Returns
             ``git.Commit[]``
@@ -154,7 +161,8 @@ class Repo(object):
             is the branch/commit name (default 'master')
 
         ``path``
-            is an optinal path
+            is an optinal path to limit the returned commits to.
+            
 
         ``since``
             is a string represeting a date/time
@@ -174,10 +182,11 @@ class Repo(object):
             is the branch/commit name (default 'master')
 
         ``path``
-            is an optinal path
+            is an optional path
+            Commits that do not contain the path will not contribute to the count.
 
         Returns
-            int
+            ``int``
         """
         return Commit.count(self, start, path)
 
@@ -189,17 +198,17 @@ class Repo(object):
             is the SHA1 identifier of the commit
 
         ``path``
-            is an optinal path
+            is an optional path, if set the returned commit must contain the path.
 
         Returns
-            git.Commit
+            ``git.Commit``
         """
         options = {'max_count': 1}
 
         commits = Commit.find_all(self, id, path, **options)
 
         if not commits:
-            raise ValueError, 'Invalid identifier %s' % id
+            raise ValueError, "Invalid identifier %s, or given path '%s' too restrictive" % ( id, path )
         return commits[0]
 
     def commit_deltas_from(self, other_repo, ref='master', other_ref='master'):
@@ -207,7 +216,7 @@ class Repo(object):
         Returns a list of commits that is in ``other_repo`` but not in self
 
         Returns 
-            ``git.Commit[]``
+            git.Commit[]
         """
         repo_refs = self.git.rev_list(ref, '--').strip().splitlines()
         other_repo_refs = other_repo.git.rev_list(other_ref, '--').strip().splitlines()
@@ -246,7 +255,11 @@ class Repo(object):
 
     def log(self, commit='master', path=None, **kwargs):
         """
-        The commit log for a treeish
+        The Commit for a treeish, and all commits leading to it.
+        
+        ``kwargs``
+        	keyword arguments specifying flags to be used in git-log command,
+        	i.e.: max_count=1 to limit the amount of commits returned
 
         Returns
             ``git.Commit[]``
@@ -270,6 +283,9 @@ class Repo(object):
 
         ``paths``
             is an optional list of file paths on which to restrict the diff
+            
+        Returns
+        	``str``
         """
         return self.git.diff(a, b, '--', *paths)
 
@@ -296,7 +312,7 @@ class Repo(object):
             already exists. Creates the directory with a mode=0755.
 
         ``kwargs``
-            is any additional options to the git init command
+            keyword arguments serving as additional options to the git init command
 
         Examples::
 
@@ -321,8 +337,8 @@ class Repo(object):
         ``path``
             is the full path of the new repo (traditionally ends with /<name>.git)
 
-        ``options``
-            is any additional options to the git clone command
+        ``kwargs``
+            keyword arguments to be given to the git clone command
 
         Returns
             ``git.Repo`` (the newly forked repo)
@@ -340,7 +356,7 @@ class Repo(object):
             is the treeish name/id (default 'master')
 
         ``prefix``
-            is the optional prefix
+            is the optional prefix to prepend to each filename in the archive
 
         Examples::
 
@@ -351,10 +367,10 @@ class Repo(object):
             <String containing tar archive for commit a87ff14>
 
             >>> repo.archive_tar('master', 'myproject/')
-            <String containing tar archive and prefixed with 'myproject/'>
+            <String containing tar bytes archive, whose files are prefixed with 'myproject/'>
 
         Returns
-            str (containing tar archive)
+            str (containing bytes of tar archive)
         """
         options = {}
         if prefix:
@@ -369,7 +385,7 @@ class Repo(object):
             is the treeish name/id (default 'master')
 
         ``prefix``
-            is the optional prefix
+            is the optional prefix to prepend to each filename in the archive
 
         Examples::
 
@@ -383,7 +399,7 @@ class Repo(object):
             <String containing tar.gz archive and prefixed with 'myproject/'>
 
         Returns
-            str (containing tar.gz archive)
+            str (containing the bytes of tar.gz archive)
         """
         kwargs = {}
         if prefix:
@@ -408,16 +424,16 @@ class Repo(object):
             os.unlink(filename)
 
     daemon_export = property(_get_daemon_export, _set_daemon_export,
-                             doc="git-daemon export of this repository")
+                             doc="If True, git-daemon may export this repository")
     del _get_daemon_export
     del _set_daemon_export
 
     def _get_alternates(self):
         """
-        The list of alternates for this repo
+        The list of alternates for this repo from which objects can be retrieved
 
         Returns
-            list[str] (pathnames of alternates)
+            list of strings being pathnames of alternates
         """
         alternates_path = os.path.join(self.path, 'objects', 'info', 'alternates')
 
@@ -436,8 +452,12 @@ class Repo(object):
         Sets the alternates
 
         ``alts``
-            is the Array of String paths representing the alternates
+            is the array of string paths representing the alternates at which 
+            git should look for objects, i.e. /home/user/repo/.git/objects
 
+		Raises
+			NoSuchPathError
+			
         Returns
             None
         """
@@ -454,17 +474,19 @@ class Repo(object):
             finally:
                 f.close()
 
-    alternates = property(_get_alternates, _set_alternates)
+    alternates = property(_get_alternates, _set_alternates, doc="Retrieve a list of alternates paths or set a list paths to be used as alternates")
 
     @property
     def is_dirty(self):
         """
-        Return the status of the working directory.
+        Return the status of the index.
 
         Returns
-            ``True``, if the working directory has any uncommitted changes,
+            ``True``, if the index has any uncommitted changes,
             otherwise ``False``
 
+		NOTE
+			Working tree changes that have not been staged will not be detected ! 
         """
         if self.bare:
             # Bare repositories with no associated working directory are
