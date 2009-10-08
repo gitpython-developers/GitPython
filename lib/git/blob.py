@@ -12,6 +12,7 @@ from actor import Actor
 from commit import Commit
 
 class Blob(object):
+    """A Blob encapsulates a git blob object"""
     DEFAULT_MIME_TYPE = "text/plain"
 
     def __init__(self, repo, id, mode=None, name=None):
@@ -48,6 +49,9 @@ class Blob(object):
 
         Returns
             int
+           
+        NOTE
+            The size will be cached after the first access
         """
         if self._size is None:
             self._size = int(self.repo.git.cat_file(self.id, s=True).rstrip())
@@ -60,6 +64,9 @@ class Blob(object):
 
         Returns
             str
+            
+        NOTE
+            The data will be cached after the first access.
         """
         self.data_stored = self.data_stored or self.repo.git.cat_file(self.id, p=True, with_raw_output=True)
         return self.data_stored
@@ -71,6 +78,9 @@ class Blob(object):
 
         Returns
             str
+            
+        NOTE
+            Defaults to 'text/plain' in case the actual file type is unknown.
         """
         guesses = None
         if self.name:
@@ -79,6 +89,10 @@ class Blob(object):
 
     @property
     def basename(self):
+      """
+      Returns
+          The basename of the Blobs file name
+      """
       return os.path.basename(self.name)
 
     @classmethod
@@ -88,6 +102,9 @@ class Blob(object):
 
         Returns
             list: [git.Commit, list: [<line>]]
+            A list of tuples associating a Commit object with a list of lines that 
+            changed within the given commit. The Commit objects will be given in order
+            of appearance.
         """
         data = repo.git.blame(commit, '--', file, p=True)
         commits = {}
