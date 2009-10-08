@@ -35,7 +35,7 @@ class Git(object):
 	    of the command to stdout.
 	    Set its value to 'full' to see details about the returned values.
     """
-    def __init__(self, git_dir):
+    def __init__(self, git_dir=None):
         """
         Initialize this instance with:
         
