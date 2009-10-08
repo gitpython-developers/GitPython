@@ -5,7 +5,7 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
 import os
-from lazy import LazyMixin
+from base import LazyMixin
 import blob
 
 class Tree(LazyMixin):

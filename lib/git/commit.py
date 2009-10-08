@@ -8,7 +8,7 @@ import re
 import time
 
 from actor import Actor
-from lazy import LazyMixin
+from base import LazyMixin
 from tree import Tree
 import diff
 import stats
