@@ -193,10 +193,10 @@ class TestRepo(object):
         assert_true(git.called)
 
     def test_archive_tar(self):
-        self.repo.archive_tar
+        assert self.repo.archive_tar()
 
     def test_archive_tar_gz(self):
-        self.repo.archive_tar_gz
+        assert self.repo.archive_tar_gz()
 
     @patch('git.utils.touch')
     def test_enable_daemon_serve(self, touch):
