@@ -135,7 +135,7 @@ class Blob(object):
                     m = re.search(r'^\t(.*)$', line)
                     text,  = m.groups()
                     blames[-1][0] = c
-                    blames[-1][1] += text
+                    blames[-1][1].append( text )
                     info = None
 
         return blames
