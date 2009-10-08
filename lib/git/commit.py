@@ -136,8 +136,8 @@ class Commit(LazyMixin):
             is an optinal path, if set only Commits that include the path 
             will be considered
 
-        ``options``
-            is a Hash of optional arguments to git where
+        ``kwargs``
+            optional keyword arguments to git where
             ``max_count`` is the maximum number of commits to fetch
             ``skip`` is the number of commits to skip
 
