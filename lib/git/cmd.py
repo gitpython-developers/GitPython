@@ -24,7 +24,7 @@ class Git(object):
     """
     The Git class manages communication with the Git binary
     """
-    def __init__(self, git_dir):
+    def __init__(self, git_dir=None):
         super(Git, self).__init__()
         self.git_dir = git_dir
 
