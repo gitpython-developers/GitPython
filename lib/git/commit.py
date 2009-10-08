@@ -182,8 +182,8 @@ class Commit(LazyMixin):
             parents = []
             while lines and lines[0].startswith('parent'):
                 parents.append(lines.pop(0).split()[-1])
-            author, authored_date = cls.actor(lines.pop(0))
-            committer, committed_date = cls.actor(lines.pop(0))
+            author, authored_date = cls._actor(lines.pop(0))
+            committer, committed_date = cls._actor(lines.pop(0))
 
             messages = []
             while lines and lines[0].startswith('    '):
@@ -284,7 +284,7 @@ class Commit(LazyMixin):
         return '<git.Commit "%s">' % self.id
 
     @classmethod
-    def actor(cls, line):
+    def _actor(cls, line):
         """
         Parse out the actor (author or committer) info
 
@@ -293,4 +293,4 @@ class Commit(LazyMixin):
         """
         m = re.search(r'^.+? (.*) (\d+) .*$', line)
         actor, epoch = m.groups()
-        return [Actor.from_string(actor), time.gmtime(int(epoch))]
+        return (Actor.from_string(actor), time.gmtime(int(epoch)))
