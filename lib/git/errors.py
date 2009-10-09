@@ -12,7 +12,7 @@ class InvalidGitRepositoryError(Exception):
     Thrown if the given repository appears to have an invalid format. 
     """
 
-class NoSuchPathError(Exception):
+class NoSuchPathError(OSError):
     """
     Thrown if a path could not be access by the system.
     """
