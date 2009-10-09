@@ -57,7 +57,7 @@ class TestBlob(object):
         assert_equal(git.call_args, (('cat_file', 'abc'), {'s': True}))
   
     def test_mime_type_should_return_mime_type_for_known_types(self):
-        blob = Blob(self.repo, **{'id': 'abc', 'name': 'foo.png'})
+        blob = Blob(self.repo, **{'id': 'abc', 'path': 'foo.png'})
         assert_equal("image/png", blob.mime_type)
   
     def test_mime_type_should_return_text_plain_for_unknown_types(self):

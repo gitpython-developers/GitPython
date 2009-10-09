@@ -9,12 +9,12 @@ from lazy import LazyMixin
 import blob
 
 class Tree(LazyMixin):
-    def __init__(self, repo, id, mode=None, name=None):
+    def __init__(self, repo, id, mode=None, path=None):
         LazyMixin.__init__(self)
         self.repo = repo
         self.id = id
         self.mode = mode
-        self.name = name
+        self.path = path
         self._contents = None
 
     def __bake__(self):
@@ -28,7 +28,7 @@ class Tree(LazyMixin):
         for line in self.repo.git.ls_tree(self.id).splitlines():
             obj = self.content_from_string(self.repo, line)
             if obj is not None:
-                self._contents[obj.name] = obj
+                self._contents[obj.path] = obj
 
     @staticmethod
     def content_from_string(repo, text):
@@ -45,14 +45,14 @@ class Tree(LazyMixin):
             ``git.Blob`` or ``git.Tree``
         """
         try:
-            mode, typ, id, name = text.expandtabs(1).split(" ", 3)
+            mode, typ, id, path = text.expandtabs(1).split(" ", 3)
         except:
             return None
 
         if typ == "tree":
-            return Tree(repo, id=id, mode=mode, name=name)
+            return Tree(repo, id=id, mode=mode, path=path)
         elif typ == "blob":
-            return blob.Blob(repo, id=id, mode=mode, name=name)
+            return blob.Blob(repo, id=id, mode=mode, path=path)
         elif typ == "commit":
             return None
         else:
@@ -76,7 +76,7 @@ class Tree(LazyMixin):
 
     @property
     def basename(self):
-        os.path.basename(self.name)
+        os.path.basename(self.path)
 
     def __repr__(self):
         return '<git.Tree "%s">' % self.id

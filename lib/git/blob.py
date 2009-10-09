@@ -15,7 +15,7 @@ class Blob(object):
     """A Blob encapsulates a git blob object"""
     DEFAULT_MIME_TYPE = "text/plain"
 
-    def __init__(self, repo, id, mode=None, name=None):
+    def __init__(self, repo, id, mode=None, path=None):
         """
         Create an unbaked Blob containing just the specified attributes
 
@@ -28,8 +28,8 @@ class Blob(object):
         ``mode``
             is the file mode
 
-        ``name``
-            is the file name
+        ``path``
+            is the path to the file
 
         Returns
             git.Blob
@@ -37,7 +37,7 @@ class Blob(object):
         self.repo = repo
         self.id = id
         self.mode = mode
-        self.name = name
+        self.path = path
 
         self._size = None
         self.data_stored  = None
@@ -83,17 +83,17 @@ class Blob(object):
             Defaults to 'text/plain' in case the actual file type is unknown.
         """
         guesses = None
-        if self.name:
-            guesses = mimetypes.guess_type(self.name)
+        if self.path:
+            guesses = mimetypes.guess_type(self.path)
         return guesses and guesses[0] or self.DEFAULT_MIME_TYPE
 
     @property
     def basename(self):
       """
       Returns
-          The basename of the Blobs file name
+          The basename of the Blobs file path
       """
-      return os.path.basename(self.name)
+      return os.path.basename(self.path)
 
     @classmethod
     def blame(cls, repo, commit, file):
