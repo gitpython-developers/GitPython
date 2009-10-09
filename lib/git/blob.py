@@ -15,6 +15,12 @@ class Blob(object):
     """A Blob encapsulates a git blob object"""
     DEFAULT_MIME_TYPE = "text/plain"
 
+    # precompiled regex
+    re_whitespace = re.compile(r'\s+')
+    re_hexsha_only = re.compile('^[0-9A-Fa-f]{40}$')
+    re_author_committer_start = re.compile(r'^(author|committer)')
+    re_tab_full_line = re.compile(r'^\t(.*)$')
+    
     def __init__(self, repo, id, mode=None, path=None):
         """
         Create an unbaked Blob containing just the specified attributes
@@ -112,49 +118,68 @@ class Blob(object):
         info = None
 
         for line in data.splitlines():
-            parts = re.split(r'\s+', line, 1)
-            if re.search(r'^[0-9A-Fa-f]{40}$', parts[0]):
-                if re.search(r'^([0-9A-Fa-f]{40}) (\d+) (\d+) (\d+)$', line):
-                    m = re.search(r'^([0-9A-Fa-f]{40}) (\d+) (\d+) (\d+)$', line)
-                    id, origin_line, final_line, group_lines = m.groups()
-                    info = {'id': id}
-                    blames.append([None, []])
-                elif re.search(r'^([0-9A-Fa-f]{40}) (\d+) (\d+)$', line):
-                    m = re.search(r'^([0-9A-Fa-f]{40}) (\d+) (\d+)$', line)
-                    id, origin_line, final_line = m.groups()
-                    info = {'id': id}
-            elif re.search(r'^(author|committer)', parts[0]):
-                if re.search(r'^(.+)-mail$', parts[0]):
-                    m = re.search(r'^(.+)-mail$', parts[0])
-                    info["%s_email" % m.groups()[0]] = parts[-1]
-                elif re.search(r'^(.+)-time$', parts[0]):
-                    m = re.search(r'^(.+)-time$', parts[0])
-                    info["%s_date" % m.groups()[0]] = time.gmtime(int(parts[-1]))
-                elif re.search(r'^(author|committer)$', parts[0]):
-                    m = re.search(r'^(author|committer)$', parts[0])
-                    info[m.groups()[0]] = parts[-1]
-            elif re.search(r'^filename', parts[0]):
-                info['filename'] = parts[-1]
-            elif re.search(r'^summary', parts[0]):
-                info['summary'] = parts[-1]
-            elif parts[0] == '':
-                if info:
-                    c = commits.has_key(info['id']) and commits[info['id']]
-                    if not c:
-                        c = Commit(repo, id=info['id'],
-                                         author=Actor.from_string(info['author'] + ' ' + info['author_email']),
-                                         authored_date=info['author_date'],
-                                         committer=Actor.from_string(info['committer'] + ' ' + info['committer_email']),
-                                         committed_date=info['committer_date'],
-                                         message=info['summary'])
-                        commits[info['id']] = c
-
-                    m = re.search(r'^\t(.*)$', line)
-                    text,  = m.groups()
-                    blames[-1][0] = c
-                    blames[-1][1].append( text )
-                    info = None
-
+            parts = cls.re_whitespace.split(line, 1)
+            firstpart = parts[0]
+            if cls.re_hexsha_only.search(firstpart):
+                # handles 
+                # 634396b2f541a9f2d58b00be1a07f0c358b999b3 1 1 7		- indicates blame-data start
+                # 634396b2f541a9f2d58b00be1a07f0c358b999b3 2 2
+                digits = parts[-1].split(" ")
+                if len(digits) == 3:
+					info = {'id': firstpart}
+					blames.append([None, []])
+				# END blame data initialization
+            else:
+                m = cls.re_author_committer_start.search(firstpart)
+                if m:
+                    # handles: 
+                    # author Tom Preston-Werner
+                    # author-mail <tom@mojombo.com>
+                    # author-time 1192271832
+                    # author-tz -0700
+                    # committer Tom Preston-Werner
+                    # committer-mail <tom@mojombo.com>
+                    # committer-time 1192271832
+                    # committer-tz -0700  - IGNORED BY US
+                    role = m.group(0)
+                    if firstpart.endswith('-mail'):
+                        info["%s_email" % role] = parts[-1]
+                    elif firstpart.endswith('-time'):
+                        info["%s_date" % role] = time.gmtime(int(parts[-1]))
+                    elif role == firstpart:
+                        info[role] = parts[-1]
+                    # END distinguish mail,time,name
+                else:
+                    # handle
+                    # filename lib/grit.rb
+                    # summary add Blob
+                    # <and rest>
+                    if firstpart.startswith('filename'):
+                        info['filename'] = parts[-1]
+                    elif firstpart.startswith('summary'):
+                        info['summary'] = parts[-1]
+                    elif firstpart == '':
+                        if info:
+                            sha = info['id']
+                            c = commits.get(sha)
+                            if c is None:
+                                c = Commit(  repo, id=sha,
+                                             author=Actor.from_string(info['author'] + ' ' + info['author_email']),
+                                             authored_date=info['author_date'],
+                                             committer=Actor.from_string(info['committer'] + ' ' + info['committer_email']),
+                                             committed_date=info['committer_date'],
+                                             message=info['summary'])
+                                commits[sha] = c
+                            # END if commit objects needs initial creation
+                            m = cls.re_tab_full_line.search(line)
+                            text,  = m.groups()
+                            blames[-1][0] = c
+                            blames[-1][1].append( text )
+                            info = None
+                        # END if we collected commit info
+                    # END distinguish filename,summary,rest
+                # END distinguish author|committer vs filename,summary,rest
+            # END distinguish hexsha vs other information
         return blames
 
     def __repr__(self):

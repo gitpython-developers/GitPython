@@ -10,6 +10,10 @@ class Actor(object):
     """Actors hold information about a person acting on the repository. They 
     can be committers and authors or anything with a name and an email as 
     mentioned in the git log entries."""
+    # precompiled regex
+    name_only_regex = re.compile( r'<.+>' )
+    name_email_regex = re.compile( r'(.*) <(.+?)>' ) 
+    
     def __init__(self, name, email):
         self.name = name
         self.email = email
@@ -34,8 +38,8 @@ class Actor(object):
         Returns
             Actor
         """
-        if re.search(r'<.+>', string):
-            m = re.search(r'(.*) <(.+?)>', string)
+        if cls.name_only_regex.search(string):
+            m = cls.name_email_regex.search(string)
             name, email = m.groups()
             return Actor(name, email)
         else:
