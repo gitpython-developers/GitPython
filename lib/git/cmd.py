@@ -6,7 +6,6 @@
 
 import os, sys
 import subprocess
-import re
 from utils import *
 from errors import GitCommandError
 

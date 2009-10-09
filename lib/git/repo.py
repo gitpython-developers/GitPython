@@ -5,7 +5,6 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
 import os
-import re
 import gzip
 import StringIO
 from errors import InvalidGitRepositoryError, NoSuchPathError

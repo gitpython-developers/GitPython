@@ -20,6 +20,9 @@ class Commit(LazyMixin):
     This class will act lazily on some of its attributes and will query the 
     value on demand only if it involves calling the git binary.
     """
+    # precompiled regex
+    re_actor_epoch = re.compile(r'^.+? (.*) (\d+) .*$')
+    
     def __init__(self, repo, id, tree=None, author=None, authored_date=None,
                  committer=None, committed_date=None, message=None, parents=None):
         """
@@ -246,12 +249,6 @@ class Commit(LazyMixin):
         """
         if not self.parents:
             d = self.repo.git.show(self.id, '-M', full_index=True, pretty='raw')
-            if re.search(r'diff --git a', d):
-                if not re.search(r'^diff --git a', d):
-                    p = re.compile(r'.+?(diff --git a)', re.MULTILINE | re.DOTALL)
-                    d = p.sub(r'diff --git a', d, 1)
-            else:
-                d = ''
             return diff.Diff.list_from_string(self.repo, d)
         else:
             return self.diff(self.repo, self.parents[0].id, self.id)
@@ -291,6 +288,6 @@ class Commit(LazyMixin):
         Returns
             [Actor, gmtime(acted at time)]
         """
-        m = re.search(r'^.+? (.*) (\d+) .*$', line)
+        m = cls.re_actor_epoch.search(line)
         actor, epoch = m.groups()
         return (Actor.from_string(actor), time.gmtime(int(epoch)))
