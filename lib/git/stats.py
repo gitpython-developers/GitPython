@@ -31,8 +31,9 @@ class Stats(object):
 	 files = number of changed files as int
 	
 	"""
-	def __init__(self, repo, total, files):
-		self.repo = repo
+	__slots__ = ("total", "files")
+	
+	def __init__(self, total, files):
 		self.total = total
 		self.files = files
 
@@ -56,4 +57,4 @@ class Stats(object):
 			hsh['files'][filename.strip()] = {'insertions': insertions,
 											  'deletions': deletions,
 											  'lines': insertions + deletions}
-		return Stats(repo, hsh['total'], hsh['files'])
+		return Stats(hsh['total'], hsh['files'])

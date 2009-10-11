@@ -162,8 +162,7 @@ class Commit(base.Object):
 		Returns
 			git.Commit[]
 		"""
-		lines = [l for l in text.splitlines() if l.strip('\r\n')]
-
+		lines =text.splitlines(False)
 		commits = []
 
 		while lines:
@@ -173,18 +172,22 @@ class Commit(base.Object):
 			parents = []
 			while lines and lines[0].startswith('parent'):
 				parents.append(lines.pop(0).split()[-1])
+			# END while there are parent lines
 			author, authored_date = cls._actor(lines.pop(0))
 			committer, committed_date = cls._actor(lines.pop(0))
-
+			
+			# free line
+			lines.pop(0)
+			
 			messages = []
-			while lines and lines[0].startswith('	 '):
+			while lines and not lines[0].startswith('commit'):
 				messages.append(lines.pop(0).strip())
-
+			# END while there are message lines
 			message = '\n'.join(messages)
 
 			commits.append(Commit(repo, id=id, parents=parents, tree=tree, author=author, authored_date=authored_date,
 								  committer=committer, committed_date=committed_date, message=message))
-
+		# END while lines
 		return commits
 
 	@classmethod

@@ -33,16 +33,11 @@ class TestRepo(object):
 		for head in self.repo.heads:
 			assert_equal(Head, head.__class__)
 
-	@patch_object(Git, '_call_process')
-	def test_heads_should_populate_head_data(self, git):
-		git.return_value = fixture('for_each_ref')
-
-		head = self.repo.heads[0]
-		assert_equal('master', head.name)
-		assert_equal('634396b2f541a9f2d58b00be1a07f0c358b999b3', head.commit.id)
-
-		assert_true(git.called)
-		assert_equal(git.call_args, (('for_each_ref', 'refs/heads'), {'sort': 'committerdate', 'format': '%(refname)%00%(objectname)'}))
+	def test_heads_should_populate_head_data(self):
+		for head in self.repo.heads:
+			assert head.name
+			assert isinstance(head.commit,Commit)
+		# END for each head 
 
 	@patch_object(Git, '_call_process')
 	def test_commits(self, git):

@@ -57,7 +57,7 @@ class Blob(base.IndexObject):
 		blames = []
 		info = None
 
-		for line in data.splitlines():
+		for line in data.splitlines(False):
 			parts = cls.re_whitespace.split(line, 1)
 			firstpart = parts[0]
 			if cls.re_hexsha_only.search(firstpart):

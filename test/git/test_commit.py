@@ -135,30 +135,21 @@ class TestCommit(object):
 											  '91169e1f5fa4de2eaea3f176461f5dc784796769',
 									  ), {'full_index': True}))
 
-	@patch_object(Git, '_call_process')
-	def test_diffs_on_initial_import(self, git):
-		git.return_value = fixture('diff_i')
-
-		commit = Commit(self.repo, id='634396b2f541a9f2d58b00be1a07f0c358b999b3')
-		diffs = commit.diffs
-
-		assert_equal(10, len(diffs))
-
-		assert_equal('History.txt', diffs[0].b_blob.path)
-		assert_equal(None, diffs[0].a_blob)
-		assert_equal('100644', diffs[0].b_blob.mode)
-		assert_equal('81d2c27608b352814cbe979a6acd678d30219678', diffs[0].b_blob.id)
-		assert_equal(True, diffs[0].new_file)
-		assert_equal(False, diffs[0].deleted_file)
-		assert_equal("--- /dev/null\n+++ b/History.txt\n@@ -0,0 +1,5 @@\n+== 1.0.0 / 2007-10-09\n+\n+* 1 major enhancement\n+  * Birthday!\n+", diffs[0].diff)
-
-		assert_equal('lib/grit.rb', diffs[5].b_blob.path)
-		assert_equal(None, diffs[5].a_blob)
-		assert_equal('32cec87d1e78946a827ddf6a8776be4d81dcf1d1', diffs[5].b_blob.id)
-		assert_equal(True, diffs[5].new_file)
-
-		assert_true(git.called)
-		assert_equal(git.call_args, (('show', '634396b2f541a9f2d58b00be1a07f0c358b999b3', '-M'), {'full_index': True, 'pretty': 'raw'}))
+	def test_diffs_on_initial_import(self):
+		commit = Commit(self.repo, '33ebe7acec14b25c5f84f35a664803fcab2f7781')
+		
+		for diff in commit.diffs:
+			assert isinstance(diff, Diff)
+			assert isinstance(diff.a_blob, Blob) or isinstance(diff.b_blob, Blob)
+			assert isinstance(diff.a_mode, int) and isinstance(diff.b_mode, int)
+			assert diff.diff
+			if diff.renamed:
+				assert diff.rename_from and diff.rename_to and diff.rename_from != diff.rename_to
+			if diff.a_blob is None:
+				assert diff.new_file and isinstance(diff.new_file, bool)
+			if diff.b_blob is None:
+				assert diff.deleted_file and isinstance(diff.deleted_file, bool)
+		# END for each diff in initial import commit
 
 	@patch_object(Git, '_call_process')
 	def test_diffs_on_initial_import_with_empty_commit(self, git):
@@ -172,37 +163,36 @@ class TestCommit(object):
 		assert_true(git.called)
 		assert_equal(git.call_args, (('show', '634396b2f541a9f2d58b00be1a07f0c358b999b3', '-M'), {'full_index': True, 'pretty': 'raw'}))
 
-	@patch_object(Git, '_call_process')
-	def test_diffs_with_mode_only_change(self, git):
-		git.return_value = fixture('diff_mode_only')
-
-		commit = Commit(self.repo, id='91169e1f5fa4de2eaea3f176461f5dc784796769')
+	def test_diffs_with_mode_only_change(self):
+		commit = Commit(self.repo, id='ccde80b7a3037a004a7807a6b79916ce2a1e9729')
 		diffs = commit.diffs
 
 		# in case of mode-only changes, there is no blob
-		assert_equal(23, len(diffs))
+		assert_equal(1, len(diffs))
 		assert_equal(None, diffs[0].a_blob)
 		assert_equal(None, diffs[0].b_blob)
 		assert_equal('100644', diffs[0].a_mode)
 		assert_equal('100755', diffs[0].b_mode)
 
-		assert_true(git.called)
-		assert_equal(git.call_args, (('show', '91169e1f5fa4de2eaea3f176461f5dc784796769', '-M'), {'full_index': True, 'pretty': 'raw'}))
-
-	@patch_object(Git, '_call_process')
-	def test_stats(self, git):
-		git.return_value = fixture('diff_tree_numstat_root')
-
-		commit = Commit(self.repo, id='634396b2f541a9f2d58b00be1a07f0c358b999b3')
+	def test_stats(self):
+		commit = Commit(self.repo, id='33ebe7acec14b25c5f84f35a664803fcab2f7781')
 		stats = commit.stats
-
-		keys = stats.files.keys()
-		keys.sort()
-		assert_equal(["a.txt", "b.txt"], keys)
-
-		assert_true(git.called)
-		assert_equal(git.call_args, (('diff_tree', '634396b2f541a9f2d58b00be1a07f0c358b999b3', '--'), {'numstat': True, 'root': True }))
-
+		
+		def check_entries(d):
+			assert isinstance(d, dict)
+			for key in ("insertions", "deletions", "lines"):
+				assert key in d
+		# END assertion helper 
+		assert stats.files 
+		assert stats.total
+		
+		check_entries(stats.total) 
+		assert "files" in stats.total
+		
+		for filepath, d in stats.files.items():
+			check_entries(d)
+		# END for each stated file
+		
 	@patch_object(Git, '_call_process')
 	def test_rev_list_bisect_all(self, git):
 		"""

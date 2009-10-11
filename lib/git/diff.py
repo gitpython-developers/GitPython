@@ -45,12 +45,12 @@ class Diff(object):
 									\.\.(?P<b_blob_id>[0-9A-Fa-f]+)[ ]?(?P<b_mode>.+)?(?:\n|$))?
 							""", re.VERBOSE | re.MULTILINE)
 	re_is_null_hexsha = re.compile( r'^0{40}$' )
+	__slots__ = ("a_blob", "b_blob", "a_mode", "b_mode", "new_file", "deleted_file", 
+				 "rename_from", "rename_to", "renamed", "diff")
 
 	def __init__(self, repo, a_path, b_path, a_blob_id, b_blob_id, a_mode,
 				 b_mode, new_file, deleted_file, rename_from,
 				 rename_to, diff):
-		self.repo = repo
-
 		if not a_blob_id or self.re_is_null_hexsha.search(a_blob_id):
 			self.a_blob = None
 		else:
