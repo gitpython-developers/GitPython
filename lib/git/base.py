@@ -222,9 +222,15 @@ class Ref(object):
 	def name(self):
 		"""
 		Returns
-			Name of this reference
+			(shortest) Name of this reference - it may contain path components
 		"""
-		return os.path.basename(self.path)
+		# first two path tokens are can be removed as they are 
+		# refs/heads or refs/tags or refs/remotes
+		tokens = self.path.split('/')
+		if len(tokens) < 3:
+			return self.path	# could be refs/HEAD
+		
+		return '/'.join(tokens[2:])
 		
 	@classmethod
 	def find_all(cls, repo, common_path = "refs", **kwargs):

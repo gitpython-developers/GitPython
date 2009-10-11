@@ -23,11 +23,11 @@ def assert_not_instance_of(expected, actual, msg=None):
 	
 def assert_none(actual, msg=None):
 	"""verify that item is None"""
-	assert_equal(None, actual, msg)
+	assert actual is None, msg
 
 def assert_not_none(actual, msg=None):
 	"""verify that item is None"""
-	assert_not_equal(None, actual, msg)
+	assert actual is not None, msg
 
 def assert_match(pattern, string, msg=None):
 	"""verify that the pattern matches the string"""

@@ -47,11 +47,11 @@ class Tree(base.IndexObject):
 			return None
 
 		if typ == "tree":
-			return Tree(repo, id=id, mode=mode, path=path)
+			return Tree(repo, id, mode, path)
 		elif typ == "blob":
-			return blob.Blob(repo, id=id, mode=mode, path=path)
+			return blob.Blob(repo, id, mode, path)
 		elif typ == "commit":
-			return None
+			return None 
 		else:
 		  raise(TypeError, "Invalid type: %s" % typ)
 

@@ -18,7 +18,7 @@ class TestTag(object):
 		tag_object_refs = list()
 		for tag in self.repo.tags:
 			assert "refs/tags" in tag.path
-			assert "/" not in tag.name
+			assert tag.name
 			assert isinstance( tag.commit, Commit )
 			if tag.tag is not None:
 				tag_object_refs.append( tag )
