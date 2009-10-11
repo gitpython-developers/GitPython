@@ -43,10 +43,10 @@ class Blob(base.Object):
 		Returns
 			git.Blob
 		"""
-		super(Blob,self).__init__(repo, id, "blob")
+		super(Blob,self).__init__(repo, id)
 		self.mode = mode
 		self.path = path
-		self._data_stored  = None
+		self._data_stored  = type(None)	# serves as marker to prevent baking in this case
 
 	@property
 	def data(self):
@@ -59,7 +59,7 @@ class Blob(base.Object):
 		NOTE
 			The data will be cached after the first access.
 		"""
-		self._data_stored = self._data_stored or self.repo.git.cat_file(self.id, p=True, with_raw_output=True)
+		self._data_stored = ( self._data_stored is not type(None) and self._data_stored ) or self.repo.git.cat_file(self.id, p=True, with_raw_output=True)
 		return self._data_stored
 
 	@property

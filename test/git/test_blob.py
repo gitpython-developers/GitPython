@@ -31,12 +31,13 @@ class TestBlob(object):
 	@patch_object(Git, '_call_process')
 	def test_should_cache_data(self, git):
 		git.return_value = fixture('cat_file_blob')
-		blob = Blob(self.repo, **{'id': 'abc'})
+		bid = '787b92b63f629398f3d2ceb20f7f0c2578259e84'
+		blob = Blob(self.repo, bid)
 		blob.data
 		blob.data
 		assert_true(git.called)
 		assert_equal(git.call_count, 1)
-		assert_equal(git.call_args, (('cat_file', 'abc'), {'p': True, 'with_raw_output': True}))
+		assert_equal(git.call_args, (('cat_file', bid), {'p': True, 'with_raw_output': True}))
 
 	@patch_object(Git, '_call_process')
 	def test_should_return_file_size(self, git):
@@ -61,7 +62,7 @@ class TestBlob(object):
 		assert_equal("image/png", blob.mime_type)
   
 	def test_mime_type_should_return_text_plain_for_unknown_types(self):
-		blob = Blob(self.repo, **{'id': 'abc'})
+		blob = Blob(self.repo, **{'id': 'abc','path': 'something'})
 		assert_equal("text/plain", blob.mime_type)
   
 	@patch_object(Git, '_call_process')
