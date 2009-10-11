@@ -13,18 +13,19 @@ class Tree(base.IndexObject):
 	type = "tree"
 	__slots__ = "_contents"
 	
-	def __init__(self, repo, id, mode=None, path=None, size=None):
-		super(Tree, self).__init__(repo, id, mode, path, size)
-		self._contents = None
+	def __init__(self, repo, id, mode=None, path=None):
+		super(Tree, self).__init__(repo, id, mode, path)
 
-	def __bake__(self):
-		# Read the tree contents.
-		super(Tree, self).__bake__()
-		self._contents = {}
-		for line in self.repo.git.ls_tree(self.id).splitlines():
-			obj = self.content_from_string(self.repo, line)
-			if obj is not None:
-				self._contents[obj.path] = obj
+	def _set_cache_(self, attr):
+		if attr == "_contents":
+			# Read the tree contents.
+			self._contents = {}
+			for line in self.repo.git.ls_tree(self.id).splitlines():
+				obj = self.content_from_string(self.repo, line)
+				if obj is not None:
+					self._contents[obj.path] = obj
+		else:
+			super(Tree, self)._set_cache_(attr)
 
 	@staticmethod
 	def content_from_string(repo, text):

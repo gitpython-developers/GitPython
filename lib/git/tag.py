@@ -74,7 +74,7 @@ class TagObject(base.Object):
 	type = "tag"
 	__slots__ = ( "object", "tag", "tagger", "tagged_date", "message" )
 		
-	def __init__(self, repo, id, size=None, object=None, tag=None, 
+	def __init__(self, repo, id, object=None, tag=None, 
 				tagger=None, tagged_date=None, message=None):
 		"""
 		Initialize a tag object with additional data
@@ -84,9 +84,6 @@ class TagObject(base.Object):
 			
 		``id``
 			SHA1 or ref suitable for git-rev-parse
-			
-		``size``
-			Size of the object's data in bytes
 			
 		 ``object``
 			Object instance of object we are pointing to
@@ -100,29 +97,30 @@ class TagObject(base.Object):
 		  ``tagged_date`` : (tm_year, tm_mon, tm_mday, tm_hour, tm_min, tm_sec, tm_wday, tm_yday, tm_isdst)
 			is the DateTime of the tag creation
 		"""
-		super(TagObject, self).__init__(repo, id , size)
-		self.object = object
-		self.tag = tag
-		self.tagger = tagger
-		self.tagged_date = tagged_date
-		self.message = message
+		super(TagObject, self).__init__(repo, id )
+		self._set_self_from_args_(locals())
 		
-	def __bake__(self):
-		super(TagObject, self).__bake__()
-		
-		output = self.repo.git.cat_file(self.type,self.id)
-		lines = output.split("\n")
-		
-		obj, hexsha = lines[0].split(" ")		# object <hexsha>
-		type_token, type_name = lines[1].split(" ") # type <type_name>
-		self.object = base.Object.get_type_by_name(type_name)(self.repo, hexsha)
-		
-		self.tag = lines[2][4:]  # tag <tag name>
-		
-		tagger_info = lines[3][7:]# tagger <actor> <date>
-		self.tagger, self.tagged_date = commit.Commit._actor(tagger_info)
-		
-		# line 4 empty - check git source to figure out purpose
-		self.message = "\n".join(lines[5:])
+	def _set_cache_(self, attr):
+		"""
+		Cache all our attributes at once
+		"""
+		if attr in self.__slots__:
+			output = self.repo.git.cat_file(self.type,self.id)
+			lines = output.split("\n")
+			
+			obj, hexsha = lines[0].split(" ")		# object <hexsha>
+			type_token, type_name = lines[1].split(" ") # type <type_name>
+			self.object = base.Object.get_type_by_name(type_name)(self.repo, hexsha)
+			
+			self.tag = lines[2][4:]  # tag <tag name>
+			
+			tagger_info = lines[3][7:]# tagger <actor> <date>
+			self.tagger, self.tagged_date = commit.Commit._actor(tagger_info)
+			
+			# line 4 empty - check git source to figure out purpose
+			self.message = "\n".join(lines[5:])
+		# END check our attributes
+		else:
+			super(TagObject, self)._set_cache_(attr)
 		
 		

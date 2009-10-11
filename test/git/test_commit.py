@@ -140,7 +140,6 @@ class TestCommit(object):
 		git.return_value = fixture('diff_i')
 
 		commit = Commit(self.repo, id='634396b2f541a9f2d58b00be1a07f0c358b999b3')
-		commit.__bake_it__()
 		diffs = commit.diffs
 
 		assert_equal(10, len(diffs))
@@ -178,7 +177,6 @@ class TestCommit(object):
 		git.return_value = fixture('diff_mode_only')
 
 		commit = Commit(self.repo, id='91169e1f5fa4de2eaea3f176461f5dc784796769')
-		commit.__bake_it__()
 		diffs = commit.diffs
 
 		# in case of mode-only changes, there is no blob
@@ -196,7 +194,6 @@ class TestCommit(object):
 		git.return_value = fixture('diff_tree_numstat_root')
 
 		commit = Commit(self.repo, id='634396b2f541a9f2d58b00be1a07f0c358b999b3')
-		commit.__bake_it__()
 		stats = commit.stats
 
 		keys = stats.files.keys()

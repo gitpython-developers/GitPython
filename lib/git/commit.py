@@ -25,6 +25,8 @@ class Commit(base.Object):
 	
 	# object configuration 
 	type = "commit"
+	__slots__ = ("tree", "author", "authored_date", "committer", "committed_date",
+					"message", "parents")
 	
 	def __init__(self, repo, id, tree=None, author=None, authored_date=None,
 				 committer=None, committed_date=None, message=None, parents=None):
@@ -38,7 +40,7 @@ class Commit(base.Object):
 			is the sha id of the commit
 
 		``parents`` : list( Commit, ... )
-			is a list of commit ids
+			is a list of commit ids or actual Commits
 
 		``tree`` : Tree
 			is the corresponding tree id
@@ -61,49 +63,34 @@ class Commit(base.Object):
 		Returns
 			git.Commit
 		"""
-		super(Commit,self).__init__(repo, id, "commit")
-		self.parents = None
-		self.tree = None
-		self.author = author
-		self.authored_date = authored_date
-		self.committer = committer
-		self.committed_date = committed_date
-		self.message = message
+		super(Commit,self).__init__(repo, id)
+		self._set_self_from_args_(locals())
 
-		if self.id:
-			if parents is not None:
-				self.parents = [Commit(repo, p) for p in parents]
-			if tree is not None:
-				self.tree = Tree(repo, id=tree)
+		if parents is not None:
+			self.parents = tuple( self.__class__(repo, p) for p in parents )
+		# END for each parent to convert
+			
+		if self.id and tree is not None:
+			self.tree = Tree(repo, id=tree)
+		# END id to tree conversion
 
-	def __eq__(self, other):
-		return self.id == other.id
-	
-	def __ne__(self, other):
-		return self.id != other.id
-	
-	def __bake__(self):
+	def _set_cache_(self, attr):
 		"""
-		Called by LazyMixin superclass when the first uninitialized member needs 
-		to be set as it is queried.
+		Called by LazyMixin superclass when the given uninitialized member needs 
+		to be set.
+		We set all values at once.
 		"""
-		super(Commit, self).__bake__()
-		temp = Commit.find_all(self.repo, self.id, max_count=1)[0]
-		self.parents = temp.parents
-		self.tree = temp.tree
-		self.author = temp.author
-		self.authored_date = temp.authored_date
-		self.committer = temp.committer
-		self.committed_date = temp.committed_date
-		self.message = temp.message
-
-	@property
-	def id_abbrev(self):
-		"""
-		Returns
-			First 7 bytes of the commit's sha id as an abbreviation of the full string.
-		"""
-		return self.id[0:7]
+		if attr in self.__slots__:
+			temp = Commit.find_all(self.repo, self.id, max_count=1)[0]
+			self.parents = temp.parents
+			self.tree = temp.tree
+			self.author = temp.author
+			self.authored_date = temp.authored_date
+			self.committer = temp.committer
+			self.committed_date = temp.committed_date
+			self.message = temp.message
+		else:
+			super(Commit, self)._set_cache_(attr)
 
 	@property
 	def summary(self):

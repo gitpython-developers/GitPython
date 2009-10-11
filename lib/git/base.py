@@ -7,43 +7,38 @@ import os
 
 class LazyMixin(object):
 	lazy_properties = []
+	__slots__ = tuple()
 	
-	__slots__ = "__baked__"
-	
-	def __init__(self):
-		self.__baked__ = False
+	def __getattr__(self, attr):
+		"""
+		Whenever an attribute is requested that we do not know, we allow it 
+		to be created and set. Next time the same attribute is reqeusted, it is simply
+		returned from our dict/slots.
+		"""
+		self._set_cache_(attr)
+		# will raise in case the cache was not created
+		return object.__getattribute__(self, attr)
 
-	def __getattribute__(self, attr):
-		val = object.__getattribute__(self, attr)
-		if val is not None:
-			return val
-		else:
-			self.__prebake__()
-			return object.__getattribute__(self, attr)
-
-	def __bake__(self):
-		""" This method should be overridden in the derived class. """
-		raise NotImplementedError(" '__bake__' method has not been implemented.")
-
-	def __prebake__(self):
-		if self.__baked__:
-			return
-		self.__bake__()
-		self.__baked__ = True
-
-	def __bake_it__(self):
-		self.__baked__ = True
+	def _set_cache_(self, attr):
+		""" This method should be overridden in the derived class. 
+		It should check whether the attribute named by attr can be created
+		and cached. Do nothing if you do not know the attribute or call your subclass
 		
+		The derived class may create as many additional attributes as it deems 
+		necessary in case a git command returns more information than represented 
+		in the single attribute."""
+		pass
+	
 		
 class Object(LazyMixin):
 	"""
 	Implements an Object which may be Blobs, Trees, Commits and Tags
 	"""
 	TYPES = ("blob", "tree", "commit", "tag")
-	__slots__ = ("repo", "id", "size", "_data_cached" )
+	__slots__ = ("repo", "id", "size", "data" )
 	type = None			# to be set by subclass
 	
-	def __init__(self, repo, id, size=None):
+	def __init__(self, repo, id):
 		"""
 		Initialize an object by identifying it by its id. All keyword arguments
 		will be set on demand if None.
@@ -53,21 +48,32 @@ class Object(LazyMixin):
 			
 		``id``
 			SHA1 or ref suitable for git-rev-parse
-			
-		``size``
-			Size of the object's data in bytes
 		"""
 		super(Object,self).__init__()
 		self.repo = repo
 		self.id = id
-		self.size = size
-		self._data_cached = type(None)
 		
-	def __bake__(self):
+	def _set_self_from_args_(self, args_dict):
+		"""
+		Initialize attributes on self from the given dict that was retrieved
+		from locals() in the calling method.
+		
+		Will only set an attribute on self if the corresponding value in args_dict
+		is not None
+		"""
+		for attr, val in args_dict.items():
+			if attr != "self" and val is not None:
+				setattr( self, attr, val )
+		# END set all non-None attributes
+	
+	def _set_cache_(self, attr):
 		"""
 		Retrieve object information
 		"""
-		self.size = int(self.repo.git.cat_file(self.id, s=True).rstrip())
+		if attr  == "size":
+			self.size = int(self.repo.git.cat_file(self.id, s=True).rstrip())
+		elif attr == "data":
+			self.data = self.repo.git.cat_file(self.id, p=True, with_raw_output=True)
 		
 	def __eq__(self, other):
 		"""
@@ -105,18 +111,12 @@ class Object(LazyMixin):
 		return '<git.%s "%s">' % (self.__class__.__name__, self.id)
 	
 	@property
-	def data(self):
+	def id_abbrev(self):
 		"""
-		The binary contents of this object.
-
 		Returns
-			str
-			
-		NOTE
-			The data will be cached after the first access.
+			First 7 bytes of the commit's sha id as an abbreviation of the full string.
 		"""
-		self._data_cached = ( self._data_cached is not type(None) and self._data_cached ) or self.repo.git.cat_file(self.id, p=True, with_raw_output=True)
-		return self._data_cached
+		return self.id[0:7]
 	
 	@classmethod
 	def get_type_by_name(cls, object_type_name):
@@ -154,7 +154,7 @@ class IndexObject(Object):
 	"""
 	__slots__ = ("path", "mode") 
 	
-	def __init__(self, repo, id, mode=None, path=None, size = None):
+	def __init__(self, repo, id, mode=None, path=None):
 		"""
 		Initialize a newly instanced IndexObject
 		``repo``
@@ -169,14 +169,11 @@ class IndexObject(Object):
 		``path`` : str
 			is the path to the file in the file system, relative to the git repository root, i.e.
 			file.ext or folder/other.ext
-			
-		 ``size`` : int
-		 	size of the object data in bytes
 		"""
-		super(IndexObject, self).__init__(repo, id, size)
+		super(IndexObject, self).__init__(repo, id)
 		self.mode = mode
 		self.path = path
-		
+	
 	@property
 	def basename(self):
 	  """
@@ -304,5 +301,6 @@ class Ref(object):
 			git.Head
 		"""
 		full_path, hexsha, type_name, object_size = line.split("\x00")
-		obj = Object.get_type_by_name(type_name)(repo, hexsha, object_size)
+		obj = Object.get_type_by_name(type_name)(repo, hexsha)
+		obj.size = object_size
 		return cls(full_path, obj)

@@ -43,7 +43,7 @@ class TestTree(object):
 		assert_equal("aa94e396335d2957ca92606f909e53e7beaf3fbb", tree.id)
 		assert_equal("100644", tree.mode)
 		assert_equal("grit.rb", tree.path)
-  
+
 	def test_content_from_string_tree_should_return_commit(self):
 		text = fixture('ls_tree_commit').split("\n")[1]
 	

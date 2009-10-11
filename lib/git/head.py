@@ -27,20 +27,6 @@ class Head(base.Ref):
 		'1c09f116cbc2cb4100fb6935bb162daa4723f455'
 	"""
 
-	def __init__(self, path, commit):
-		"""
-		Initialize a newly instanced Head
-
-		``path``
-			is the path to the head ref, relative to the .git directory, i.e.
-			refs/heads/master
-
-		`commit`
-			is the Commit object that the head points to
-		"""
-		super(Head, self).__init__(name, commit)
-
-
 	@property
 	def commit(self):
 		"""
