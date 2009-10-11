@@ -12,11 +12,12 @@ from actor import Actor
 from commit import Commit
 import base
 
-class Blob(base.Object):
+class Blob(base.IndexObject):
 	"""A Blob encapsulates a git blob object"""
 	DEFAULT_MIME_TYPE = "text/plain"
 	type = "blob"
-	__slots__ = ("mode", "path", "_data_stored")
+
+	__slots__ = tuple()
 
 	# precompiled regex
 	re_whitespace = re.compile(r'\s+')
@@ -24,44 +25,6 @@ class Blob(base.Object):
 	re_author_committer_start = re.compile(r'^(author|committer)')
 	re_tab_full_line = re.compile(r'^\t(.*)$')
 	
-	def __init__(self, repo, id, mode=None, path=None):
-		"""
-		Create an unbaked Blob containing just the specified attributes
-
-		``repo``
-			is the Repo
-
-		``id``
-			is the git object id
-
-		``mode``
-			is the file mode
-
-		``path``
-			is the path to the file
-
-		Returns
-			git.Blob
-		"""
-		super(Blob,self).__init__(repo, id)
-		self.mode = mode
-		self.path = path
-		self._data_stored  = type(None)	# serves as marker to prevent baking in this case
-
-	@property
-	def data(self):
-		"""
-		The binary contents of this blob.
-
-		Returns
-			str
-			
-		NOTE
-			The data will be cached after the first access.
-		"""
-		self._data_stored = ( self._data_stored is not type(None) and self._data_stored ) or self.repo.git.cat_file(self.id, p=True, with_raw_output=True)
-		return self._data_stored
-
 	@property
 	def mime_type(self):
 		"""
@@ -77,14 +40,6 @@ class Blob(base.Object):
 		if self.path:
 			guesses = mimetypes.guess_type(self.path)
 		return guesses and guesses[0] or self.DEFAULT_MIME_TYPE
-
-	@property
-	def basename(self):
-	  """
-	  Returns
-		  The basename of the Blobs file path
-	  """
-	  return os.path.basename(self.path)
 
 	@classmethod
 	def blame(cls, repo, commit, file):

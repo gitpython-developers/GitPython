@@ -8,14 +8,13 @@ import os
 import blob
 import base
 
-class Tree(base.Object):
+class Tree(base.IndexObject):
 	
 	type = "tree"
+	__slots__ = "_contents"
 	
-	def __init__(self, repo, id, mode=None, path=None):
-		super(Tree, self).__init__(repo, id)
-		self.mode = mode
-		self.path = path
+	def __init__(self, repo, id, mode=None, path=None, size=None):
+		super(Tree, self).__init__(repo, id, mode, path, size)
 		self._contents = None
 
 	def __bake__(self):
@@ -71,9 +70,6 @@ class Tree(base.Object):
 		"""
 		return self.get(file)
 
-	@property
-	def basename(self):
-		os.path.basename(self.path)
 
 	def __repr__(self):
 		return '<git.Tree "%s">' % self.id

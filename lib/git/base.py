@@ -40,7 +40,7 @@ class Object(LazyMixin):
 	Implements an Object which may be Blobs, Trees, Commits and Tags
 	"""
 	TYPES = ("blob", "tree", "commit", "tag")
-	__slots__ = ("repo", "id", "size")
+	__slots__ = ("repo", "id", "size", "_data_cached" )
 	type = None			# to be set by subclass
 	
 	def __init__(self, repo, id, size=None):
@@ -61,6 +61,7 @@ class Object(LazyMixin):
 		self.repo = repo
 		self.id = id
 		self.size = size
+		self._data_cached = type(None)
 		
 	def __bake__(self):
 		"""
@@ -103,6 +104,20 @@ class Object(LazyMixin):
 		"""
 		return '<git.%s "%s">' % (self.__class__.__name__, self.id)
 	
+	@property
+	def data(self):
+		"""
+		The binary contents of this object.
+
+		Returns
+			str
+			
+		NOTE
+			The data will be cached after the first access.
+		"""
+		self._data_cached = ( self._data_cached is not type(None) and self._data_cached ) or self.repo.git.cat_file(self.id, p=True, with_raw_output=True)
+		return self._data_cached
+	
 	@classmethod
 	def get_type_by_name(cls, object_type_name):
 		"""
@@ -131,6 +146,45 @@ class Object(LazyMixin):
 		else:
 			raise ValueError("Cannot handle unknown object type: %s" % object_type_name)
 		
+		
+class IndexObject(Object):
+	"""
+	Base for all objects that can be part of the index file , namely Tree, Blob and
+	SubModule objects
+	"""
+	__slots__ = ("path", "mode") 
+	
+	def __init__(self, repo, id, mode=None, path=None, size = None):
+		"""
+		Initialize a newly instanced IndexObject
+		``repo``
+			is the Repo we are located in
+
+		``id`` : string
+			is the git object id as hex sha
+
+		``mode`` : int
+			is the file mode as int, use the stat module to evaluate the infomration
+
+		``path`` : str
+			is the path to the file in the file system, relative to the git repository root, i.e.
+			file.ext or folder/other.ext
+			
+		 ``size`` : int
+		 	size of the object data in bytes
+		"""
+		super(IndexObject, self).__init__(repo, id, size)
+		self.mode = mode
+		self.path = path
+		
+	@property
+	def basename(self):
+	  """
+	  Returns
+		  The basename of the IndexObject's file path
+	  """
+	  return os.path.basename(self.path)
+	  
 		
 class Ref(object):
 	"""
