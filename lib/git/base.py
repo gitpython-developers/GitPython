@@ -110,14 +110,6 @@ class Object(LazyMixin):
 		"""
 		return '<git.%s "%s">' % (self.__class__.__name__, self.id)
 	
-	@property
-	def id_abbrev(self):
-		"""
-		Returns
-			First 7 bytes of the commit's sha id as an abbreviation of the full string.
-		"""
-		return self.id[0:7]
-	
 	@classmethod
 	def get_type_by_name(cls, object_type_name):
 		"""
@@ -169,12 +161,15 @@ class IndexObject(Object):
 		``path`` : str
 			is the path to the file in the file system, relative to the git repository root, i.e.
 			file.ext or folder/other.ext
+				
+		NOTE
+			Path may not be set of the index object has been created directly as it cannot
+			be retrieved without knowing the parent tree.
 		"""
 		super(IndexObject, self).__init__(repo, id)
+		self._set_self_from_args_(locals())
 		if isinstance(mode, basestring):
-			mode = self._mode_str_to_int(mode)
-		self.mode = mode
-		self.path = path
+			self.mode = self._mode_str_to_int(mode)
 	
 	@classmethod
 	def _mode_str_to_int( cls, modestr ):
@@ -191,14 +186,6 @@ class IndexObject(Object):
 			mode += int(char) << iteration*3
 		# END for each char
 		return mode
-		
-	@property
-	def basename(self):
-	  """
-	  Returns
-		  The basename of the IndexObject's file path
-	  """
-	  return os.path.basename(self.path)
 	  
 		
 class Ref(object):
@@ -222,7 +209,7 @@ class Ref(object):
 		self.object = object
 		
 	def __str__(self):
-		return self.name()
+		return self.name
 		
 	def __repr__(self):
 		return '<git.%s "%s">' % (self.__class__.__name__, self.path)

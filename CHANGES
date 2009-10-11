@@ -13,6 +13,9 @@ General
 * Adjusted class hierarchy to generally allow comparison and hash for Objects and Refs
 * Improved Tag object which now is a Ref that may contain a tag object with additional 
   Information
+* id_abbrev method has been removed as it could not assure the returned short SHA's 
+  where unique
+* removed basename method from Objects with path's as it replicated features of os.path
 
 Diff
 ----

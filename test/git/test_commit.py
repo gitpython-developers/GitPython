@@ -24,10 +24,6 @@ class TestCommit(object):
 		assert_true(git.called)
 		assert_equal(git.call_args, (('rev_list', '4c8124ffcf4039d292442eeccabdeca5af5c5017', '--', ''), {'pretty': 'raw', 'max_count': 1}))
 
-	@patch_object(Git, '_call_process')
-	def test_id_abbrev(self, git):
-		git.return_value = fixture('rev_list_commit_idabbrev')
-		assert_equal('80f136f', self.repo.commit('80f136f500dfdb8c3e8abf4ae716f875f0a1b57f').id_abbrev)
 
 	@patch_object(Git, '_call_process')
 	def test_diff(self, git):

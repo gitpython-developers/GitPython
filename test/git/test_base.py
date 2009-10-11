@@ -8,32 +8,66 @@ import time
 from test.testlib import *
 from git import *
 import git.base as base
+from itertools import chain
 
 class TestBase(object):
 	
 	type_tuples = (  ("blob", "8741fc1d09d61f02ffd8cded15ff603eff1ec070"), 
 					 ("tree", "3a6a5e3eeed3723c09f1ef0399f81ed6b8d82e79"),
-					 ("commit", "4251bd59fb8e11e40c40548cba38180a9536118c") ) 
+					 ("commit", "4251bd59fb8e11e40c40548cba38180a9536118c"),
+					 ("tag", "e56a60e8e9cd333cfba0140a77cd12b0d9398f10") ) 
 	
 	def setup(self):
 		self.repo = Repo(GIT_REPO)
 		
-	def test_base(self):	
-		# test interface of base classes
-		fcreators = (self.repo.blob, self.repo.tree, self.repo.commit )
+	def test_base_object(self):	
+		# test interface of base object classes
+		fcreators = (self.repo.blob, self.repo.tree, self.repo.commit, lambda id: TagObject(self.repo,id) )
 		assert len(fcreators) == len(self.type_tuples)
-		for fcreator, (typename, hexsha) in zip(fcreators, self.type_tuples):  
+		
+		s = set()
+		num_objs = 0
+		num_index_objs = 0
+		for fcreator, (typename, hexsha) in zip(fcreators, self.type_tuples):
 			item = fcreator(hexsha)
+			num_objs += 1
 			assert item.id == hexsha
 			assert item.type == typename
 			assert item.size
+			assert item.data
+			assert item == item
+			assert not item != item
+			assert str(item) == item.id
+			assert repr(item)
+			s.add(item)
+			
+			if isinstance(item, base.IndexObject):
+				num_index_objs += 1
+				if hasattr(item,'path'):						# never runs here
+					assert not item.path.startswith("/")		# must be relative
+					assert isinstance(item.mode, int)
+			# END index object check
 		# END for each object type to create
 		
-		assert False,"TODO: Test for all types" 
+		# each has a unique sha
+		assert len(s) == num_objs
+		assert num_index_objs == 2
+		
 		
 	def test_tags(self):
 		# tag refs can point to tag objects or to commits
-		assert False, "TODO: Tag handling"
+		s = set()
+		ref_count = 0
+		for ref in chain(self.repo.tags, self.repo.heads):
+			ref_count += 1
+			assert isinstance(ref, base.Ref)
+			assert str(ref) == ref.name
+			assert repr(ref)
+			assert ref == ref
+			assert not ref != ref
+			s.add(ref)
+		# END for each ref
+		assert len(s) == ref_count
 		
 	def test_get_type_by_name(self):
 		for tname in base.Object.TYPES:
