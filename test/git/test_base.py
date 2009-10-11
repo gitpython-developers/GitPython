@@ -7,6 +7,7 @@
 import time
 from test.testlib import *
 from git import *
+import git.base as base
 
 class TestBase(object):
 	
@@ -33,4 +34,11 @@ class TestBase(object):
 	def test_tags(self):
 		# tag refs can point to tag objects or to commits
 		assert False, "TODO: Tag handling"
+		
+	def test_get_type_by_name(self):
+		for tname in base.Object.TYPES:
+			assert base.Object in base.Object.get_type_by_name(tname).mro()
+		# END for each known type 
+		
+		assert_raises( ValueError, base.Object.get_type_by_name, "doesntexist" )
 

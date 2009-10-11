@@ -5,8 +5,9 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
 import commit
+import base
 
-class Head(object):
+class Head(base.Ref):
     """
     A Head is a named reference to a Commit. Every Head instance contains a name
     and a Commit object.
@@ -26,93 +27,37 @@ class Head(object):
         '1c09f116cbc2cb4100fb6935bb162daa4723f455'
     """
 
-    def __init__(self, name, commit):
+    def __init__(self, path, commit):
         """
         Initialize a newly instanced Head
 
-        `name`
-            is the name of the head
+        ``path``
+            is the path to the head ref, relative to the .git directory, i.e.
+            refs/heads/master
 
         `commit`
             is the Commit object that the head points to
         """
-        self.name = name
-        self.commit = commit
+        super(Head, self).__init__(name, commit)
 
-    @classmethod
-    def find_all(cls, repo, **kwargs):
+
+    @property
+    def commit(self):
         """
-        Find all Heads in the repository
-
-        `repo`
-            is the Repo
-
-        `kwargs`
-            Additional options given as keyword arguments, will be passed
-            to git-for-each-ref
-
+        Returns
+            Commit object the head points to
+        """
+        return self.object
+        
+    @classmethod
+    def find_all(cls, repo, common_path = "refs/heads", **kwargs):
+        """
         Returns
             git.Head[]
             
-            List is sorted by committerdate
+        For more documentation, please refer to git.base.Ref.find_all
         """
-
-        options = {'sort': "committerdate",
-                   'format': "%(refname)%00%(objectname)"}
-        options.update(kwargs)
-
-        output = repo.git.for_each_ref("refs/heads", **options)
-        return cls.list_from_string(repo, output)
-
-    @classmethod
-    def list_from_string(cls, repo, text):
-        """
-        Parse out head information into a list of head objects
-
-        ``repo``
-            is the Repo
-        ``text``
-            is the text output from the git-for-each-ref command
-
-        Returns
-            git.Head[]
-        """
-        heads = []
-
-        for line in text.splitlines():
-            heads.append(cls.from_string(repo, line))
-
-        return heads
-
-    @classmethod
-    def from_string(cls, repo, line):
-        """
-        Create a new Head instance from the given string.
-
-        ``repo``
-            is the Repo
-
-        ``line``
-            is the formatted head information
-
-        Format::
-        
-            name: [a-zA-Z_/]+
-            <null byte>
-            id: [0-9A-Fa-f]{40}
-
-        Returns
-            git.Head
-        """
-        full_name, ids = line.split("\x00")
-
-        if full_name.startswith('refs/heads/'):
-            name = full_name[len('refs/heads/'):]
-        else:
-            name = full_name
-
-        c = commit.Commit(repo, id=ids)
-        return Head(name, c)
+        return super(Head,cls).find_all(repo, common_path, **kwargs)
 
     def __repr__(self):
         return '<git.Head "%s">' % self.name
