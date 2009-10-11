@@ -36,21 +36,25 @@ class TestCommit(object):
 		diffs = Commit.diff(self.repo, 'master')
 
 		assert_equal(15, len(diffs))
+		
+		diff = diffs[0]
+		assert_equal('.gitignore', diff.a_blob.path)
+		assert_equal('.gitignore', diff.b_blob.path)
+		assert_equal('4ebc8aea50e0a67e000ba29a30809d0a7b9b2666', diff.a_blob.id)
+		assert_equal('2dd02534615434d88c51307beb0f0092f21fd103', diff.b_blob.id)
+		
+		assert_mode_644(diff.b_blob.mode)
+		
+		assert_equal(False, diff.new_file)
+		assert_equal(False, diff.deleted_file)
+		assert_equal("--- a/.gitignore\n+++ b/.gitignore\n@@ -1 +1,2 @@\n coverage\n+pkg", diff.diff)
 
-		assert_equal('.gitignore', diffs[0].a_blob.path)
-		assert_equal('.gitignore', diffs[0].b_blob.path)
-		assert_equal('4ebc8aea50e0a67e000ba29a30809d0a7b9b2666', diffs[0].a_blob.id)
-		assert_equal('2dd02534615434d88c51307beb0f0092f21fd103', diffs[0].b_blob.id)
-		assert_equal('100644', diffs[0].b_blob.mode)
-		assert_equal(False, diffs[0].new_file)
-		assert_equal(False, diffs[0].deleted_file)
-		assert_equal("--- a/.gitignore\n+++ b/.gitignore\n@@ -1 +1,2 @@\n coverage\n+pkg", diffs[0].diff)
-
-		assert_equal('lib/grit/actor.rb', diffs[5].b_blob.path)
-		assert_equal(None, diffs[5].a_blob)
-		assert_equal('f733bce6b57c0e5e353206e692b0e3105c2527f4', diffs[5].b_blob.id)
-		assert_equal( None, diffs[5].a_mode )
-		assert_equal(True, diffs[5].new_file)
+		diff = diffs[5]
+		assert_equal('lib/grit/actor.rb', diff.b_blob.path)
+		assert_equal(None, diff.a_blob)
+		assert_equal('f733bce6b57c0e5e353206e692b0e3105c2527f4', diff.b_blob.id)
+		assert_equal( None, diff.a_mode )
+		assert_equal(True, diff.new_file)
 
 		assert_true(git.called)
 		assert_equal(git.call_args, (('diff', '-M', 'master'), {'full_index': True}))
@@ -115,19 +119,21 @@ class TestCommit(object):
 
 		assert_equal(15, len(diffs))
 
-		assert_equal('.gitignore', diffs[0].a_blob.path)
-		assert_equal('.gitignore', diffs[0].b_blob.path)
-		assert_equal('4ebc8aea50e0a67e000ba29a30809d0a7b9b2666', diffs[0].a_blob.id)
-		assert_equal('2dd02534615434d88c51307beb0f0092f21fd103', diffs[0].b_blob.id)
-		assert_equal('100644', diffs[0].b_blob.mode)
-		assert_equal(False, diffs[0].new_file)
-		assert_equal(False, diffs[0].deleted_file)
-		assert_equal("--- a/.gitignore\n+++ b/.gitignore\n@@ -1 +1,2 @@\n coverage\n+pkg", diffs[0].diff)
+		diff = diffs[0]
+		assert_equal('.gitignore', diff.a_blob.path)
+		assert_equal('.gitignore', diff.b_blob.path)
+		assert_equal('4ebc8aea50e0a67e000ba29a30809d0a7b9b2666', diff.a_blob.id)
+		assert_equal('2dd02534615434d88c51307beb0f0092f21fd103', diff.b_blob.id)
+		assert_mode_644(diff.b_blob.mode)
+		assert_equal(False, diff.new_file)
+		assert_equal(False, diff.deleted_file)
+		assert_equal("--- a/.gitignore\n+++ b/.gitignore\n@@ -1 +1,2 @@\n coverage\n+pkg", diff.diff)
 
-		assert_equal('lib/grit/actor.rb', diffs[5].b_blob.path)
-		assert_equal(None, diffs[5].a_blob)
-		assert_equal('f733bce6b57c0e5e353206e692b0e3105c2527f4', diffs[5].b_blob.id)
-		assert_equal(True, diffs[5].new_file)
+		diff = diffs[5]
+		assert_equal('lib/grit/actor.rb', diff.b_blob.path)
+		assert_equal(None, diff.a_blob)
+		assert_equal('f733bce6b57c0e5e353206e692b0e3105c2527f4', diff.b_blob.id)
+		assert_equal(True, diff.new_file)
 
 		assert_true(git.called)
 		assert_equal(git.call_args, (('diff', '-M',
@@ -141,8 +147,14 @@ class TestCommit(object):
 		for diff in commit.diffs:
 			assert isinstance(diff, Diff)
 			assert isinstance(diff.a_blob, Blob) or isinstance(diff.b_blob, Blob)
-			assert isinstance(diff.a_mode, int) and isinstance(diff.b_mode, int)
-			assert diff.diff
+			
+			if diff.a_mode is not None:
+				assert isinstance(diff.a_mode, int)
+			if diff.b_mode is not None:
+				isinstance(diff.b_mode, int)
+			
+			assert diff.diff is not None 	# can be empty
+			
 			if diff.renamed:
 				assert diff.rename_from and diff.rename_to and diff.rename_from != diff.rename_to
 			if diff.a_blob is None:
@@ -171,8 +183,8 @@ class TestCommit(object):
 		assert_equal(1, len(diffs))
 		assert_equal(None, diffs[0].a_blob)
 		assert_equal(None, diffs[0].b_blob)
-		assert_equal('100644', diffs[0].a_mode)
-		assert_equal('100755', diffs[0].b_mode)
+		assert_mode_644(diffs[0].a_mode)
+		assert_mode_755(diffs[0].b_mode)
 
 	def test_stats(self):
 		commit = Commit(self.repo, id='33ebe7acec14b25c5f84f35a664803fcab2f7781')

@@ -31,7 +31,7 @@ class TestTree(object):
 
 		assert_equal(Tree, tree.__class__)
 		assert_equal("650fa3f0c17f1edb4ae53d8dcca4ac59d86e6c44", tree.id)
-		assert_equal("040000", tree.mode)
+		assert_equal(0,tree.mode)		# git tree objects always use this mode
 		assert_equal("test", tree.path)
   
 	def test_content_from_string_tree_should_return_blob(self):
@@ -41,7 +41,7 @@ class TestTree(object):
 
 		assert_equal(Blob, tree.__class__)
 		assert_equal("aa94e396335d2957ca92606f909e53e7beaf3fbb", tree.id)
-		assert_equal("100644", tree.mode)
+		assert_mode_644(tree.mode)
 		assert_equal("grit.rb", tree.path)
 
 	def test_content_from_string_tree_should_return_commit(self):

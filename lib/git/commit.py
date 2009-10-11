@@ -39,11 +39,11 @@ class Commit(base.Object):
 		``id``
 			is the sha id of the commit
 
-		``parents`` : list( Commit, ... )
-			is a list of commit ids or actual Commits
+		``parents`` : tuple( Commit, ... )
+			is a tuple of commit ids or actual Commits
 
 		``tree`` : Tree
-			is the corresponding tree id
+			is the corresponding tree id or an actual Tree
 
 		``author`` : Actor
 			is the author string ( will be implicitly converted into an Actor object )
@@ -179,11 +179,11 @@ class Commit(base.Object):
 			# free line
 			lines.pop(0)
 			
-			messages = []
+			message_lines = []
 			while lines and not lines[0].startswith('commit'):
-				messages.append(lines.pop(0).strip())
+				message_lines.append(lines.pop(0).strip())
 			# END while there are message lines
-			message = '\n'.join(messages)
+			message = '\n'.join(message_lines[:-1])	# last line is empty
 
 			commits.append(Commit(repo, id=id, parents=parents, tree=tree, author=author, authored_date=authored_date,
 								  committer=committer, committed_date=committed_date, message=message))

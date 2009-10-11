@@ -8,10 +8,12 @@ import re
 import unittest
 from nose import tools
 from nose.tools import *
+import stat
 
 __all__ = ['assert_instance_of', 'assert_not_instance_of', 
 		   'assert_none', 'assert_not_none',
-		   'assert_match', 'assert_not_match'] + tools.__all__
+		   'assert_match', 'assert_not_match', 'assert_mode_644',
+		   'assert_mode_755'] + tools.__all__
 
 def assert_instance_of(expected, actual, msg=None):
 	"""Verify that object is an instance of expected """
@@ -36,3 +38,13 @@ def assert_match(pattern, string, msg=None):
 def assert_not_match(pattern, string, msg=None):
 	"""verify that the pattern does not match the string"""
 	assert_none(re.search(pattern, string), msg)
+	
+def assert_mode_644(mode):
+	"""Verify given mode is 644"""
+	assert (mode & stat.S_IROTH) and (mode & stat.S_IRGRP) 
+	assert (mode & stat.S_IWUSR) and (mode & stat.S_IRUSR) and not (mode & stat.S_IXUSR)
+
+def assert_mode_755(mode):
+	"""Verify given mode is 755"""
+	assert (mode & stat.S_IROTH) and (mode & stat.S_IRGRP) and (mode & stat.S_IXOTH) and (mode & stat.S_IXGRP)
+	assert (mode & stat.S_IWUSR) and (mode & stat.S_IRUSR) and (mode & stat.S_IXUSR)

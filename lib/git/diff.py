@@ -62,6 +62,10 @@ class Diff(object):
 
 		self.a_mode = a_mode
 		self.b_mode = b_mode
+		if self.a_mode:
+			self.a_mode = blob.Blob._mode_str_to_int( self.a_mode )
+		if self.b_mode:
+			self.b_mode = blob.Blob._mode_str_to_int( self.b_mode )
 		self.new_file = new_file
 		self.deleted_file = deleted_file
 		self.rename_from = rename_from

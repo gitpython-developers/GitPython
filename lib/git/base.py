@@ -171,9 +171,27 @@ class IndexObject(Object):
 			file.ext or folder/other.ext
 		"""
 		super(IndexObject, self).__init__(repo, id)
+		if isinstance(mode, basestring):
+			mode = self._mode_str_to_int(mode)
 		self.mode = mode
 		self.path = path
 	
+	@classmethod
+	def _mode_str_to_int( cls, modestr ):
+		"""
+		``modestr``
+			string like 755 or 644 or 100644 - only the last 3 chars will be used
+			
+		Returns
+			String identifying a mode compatible to the mode methods ids of the 
+			stat module regarding the rwx permissions for user, group and other
+		"""
+		mode = 0
+		for iteration,char in enumerate(reversed(modestr[-3:])):
+			mode += int(char) << iteration*3
+		# END for each char
+		return mode
+		
 	@property
 	def basename(self):
 	  """

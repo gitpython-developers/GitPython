@@ -7,7 +7,12 @@ CHANGES
 ( Future Release )
 General
 -------
-* See changes in Diff class as your client code needs adjustments to work with it
+* file mode in Tree, Blob and Diff objects now is an int compatible to definintiions 
+  in the stat module, allowing you to query whether individual user, group and other 
+  read, write and execute bits are set.
+* Adjusted class hierarchy to generally allow comparison and hash for Objects and Refs
+* Improved Tag object which now is a Ref that may contain a tag object with additional 
+  Information
 
 Diff
 ----
