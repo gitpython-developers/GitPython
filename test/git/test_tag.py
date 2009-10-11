@@ -7,30 +7,29 @@
 from mock import *
 from test.testlib import *
 from git import *
+from git.tag import TagObject
+import time
 
 class TestTag(object):
-    def setup(self):
-        self.repo = Repo(GIT_REPO)
+	def setup(self):
+		self.repo = Repo(GIT_REPO)
 
-    @patch_object(Git, '_call_process')
-    def test_list_from_string(self, git):
-        git.return_value = fixture('for_each_ref_tags')
-        
-        tags = self.repo.tags
-        
-        assert_equal(1, len(tags))
-        assert_equal('v0.7.1', tags[0].name)
-        assert_equal('634396b2f541a9f2d58b00be1a07f0c358b999b3', tags[0].commit.id)
-        
-        assert_true(git.called)
-        assert_equal(git.call_args, (('for_each_ref', 'refs/tags'), {'sort': 'committerdate', 'format': '%(refname)%00%(objectname)'}))
+	def test_tag_base(self):
+		tag_object_refs = list()
+		for tag in self.repo.tags:
+			assert "refs/tags" in tag.path
+			assert tag.name
+			assert isinstance( tag.commit, Commit )
+			if tag.tag is not None:
+				tag_object_refs.append( tag )
+				tagobj = tag.tag
+				assert isinstance( tagobj, TagObject ) 
+				assert tagobj.tag == tag.name
+				assert isinstance( tagobj.tagger, Actor )
+				assert isinstance( tagobj.tagged_date, time.struct_time )
+				assert tagobj.message
+			# END if we have a tag object
+		# END for tag in repo-tags
+		assert tag_object_refs
+		
 
-    @patch_object(Git, '_call_process')
-    def test_repr(self, git):
-        git.return_value = fixture('for_each_ref')
-        
-        tag = self.repo.tags[0]
-        assert_equal('<git.Tag "%s">' % tag.name, repr(tag))
-        
-        assert_true(git.called)
-        assert_equal(git.call_args, (('for_each_ref', 'refs/tags'), {'sort': 'committerdate', 'format': '%(refname)%00%(objectname)'}))

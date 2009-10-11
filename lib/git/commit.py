@@ -8,286 +8,277 @@ import re
 import time
 
 from actor import Actor
-from lazy import LazyMixin
 from tree import Tree
 import diff
 import stats
+import base
 
-class Commit(LazyMixin):
-    """
-    Wraps a git Commit object.
-    
-    This class will act lazily on some of its attributes and will query the 
-    value on demand only if it involves calling the git binary.
-    """
-    # precompiled regex
-    re_actor_epoch = re.compile(r'^.+? (.*) (\d+) .*$')
-    
-    def __init__(self, repo, id, tree=None, author=None, authored_date=None,
-                 committer=None, committed_date=None, message=None, parents=None):
-        """
-        Instantiate a new Commit. All keyword arguments taking None as default will 
-        be implicitly set if id names a valid sha. 
-        
-        The parameter documentation indicates the type of the argument after a colon ':'.
+class Commit(base.Object):
+	"""
+	Wraps a git Commit object.
+	
+	This class will act lazily on some of its attributes and will query the 
+	value on demand only if it involves calling the git binary.
+	"""
+	# precompiled regex
+	re_actor_epoch = re.compile(r'^.+? (.*) (\d+) .*$')
+	
+	# object configuration 
+	type = "commit"
+	__slots__ = ("tree", "author", "authored_date", "committer", "committed_date",
+					"message", "parents")
+	
+	def __init__(self, repo, id, tree=None, author=None, authored_date=None,
+				 committer=None, committed_date=None, message=None, parents=None):
+		"""
+		Instantiate a new Commit. All keyword arguments taking None as default will 
+		be implicitly set if id names a valid sha. 
+		
+		The parameter documentation indicates the type of the argument after a colon ':'.
 
-        ``id``
-            is the sha id of the commit
+		``id``
+			is the sha id of the commit
 
-        ``parents`` : list( Commit, ... )
-            is a list of commit ids
+		``parents`` : tuple( Commit, ... )
+			is a tuple of commit ids or actual Commits
 
-        ``tree`` : Tree
-            is the corresponding tree id
+		``tree`` : Tree
+			is the corresponding tree id or an actual Tree
 
-        ``author`` : Actor
-            is the author string ( will be implicitly converted into an Actor object )
+		``author`` : Actor
+			is the author string ( will be implicitly converted into an Actor object )
 
-        ``authored_date`` : (tm_year, tm_mon, tm_mday, tm_hour, tm_min, tm_sec, tm_wday, tm_yday, tm_isdst )
-            is the authored DateTime
+		``authored_date`` : (tm_year, tm_mon, tm_mday, tm_hour, tm_min, tm_sec, tm_wday, tm_yday, tm_isdst )
+			is the authored DateTime
 
-        ``committer`` : Actor
-            is the committer string
+		``committer`` : Actor
+			is the committer string
 
-        ``committed_date`` : (tm_year, tm_mon, tm_mday, tm_hour, tm_min, tm_sec, tm_wday, tm_yday, tm_isdst)
-            is the committed DateTime
+		``committed_date`` : (tm_year, tm_mon, tm_mday, tm_hour, tm_min, tm_sec, tm_wday, tm_yday, tm_isdst)
+			is the committed DateTime
 
-        ``message`` : string
-            is the commit message
+		``message`` : string
+			is the commit message
 
-        Returns
-            git.Commit
-        """
-        LazyMixin.__init__(self)
+		Returns
+			git.Commit
+		"""
+		super(Commit,self).__init__(repo, id)
+		self._set_self_from_args_(locals())
 
-        self.repo = repo
-        self.id = id
-        self.parents = None
-        self.tree = None
-        self.author = author
-        self.authored_date = authored_date
-        self.committer = committer
-        self.committed_date = committed_date
-        self.message = message
+		if parents is not None:
+			self.parents = tuple( self.__class__(repo, p) for p in parents )
+		# END for each parent to convert
+			
+		if self.id and tree is not None:
+			self.tree = Tree(repo, id=tree)
+		# END id to tree conversion
 
-        if self.id:
-            if parents is not None:
-                self.parents = [Commit(repo, p) for p in parents]
-            if tree is not None:
-                self.tree = Tree(repo, id=tree)
+	def _set_cache_(self, attr):
+		"""
+		Called by LazyMixin superclass when the given uninitialized member needs 
+		to be set.
+		We set all values at once.
+		"""
+		if attr in self.__slots__:
+			temp = Commit.find_all(self.repo, self.id, max_count=1)[0]
+			self.parents = temp.parents
+			self.tree = temp.tree
+			self.author = temp.author
+			self.authored_date = temp.authored_date
+			self.committer = temp.committer
+			self.committed_date = temp.committed_date
+			self.message = temp.message
+		else:
+			super(Commit, self)._set_cache_(attr)
 
-    def __eq__(self, other):
-        return self.id == other.id
-    
-    def __ne__(self, other):
-        return self.id != other.id
-    
-    def __bake__(self):
-        """
-        Called by LazyMixin superclass when the first uninitialized member needs 
-        to be set as it is queried.
-        """
-        temp = Commit.find_all(self.repo, self.id, max_count=1)[0]
-        self.parents = temp.parents
-        self.tree = temp.tree
-        self.author = temp.author
-        self.authored_date = temp.authored_date
-        self.committer = temp.committer
-        self.committed_date = temp.committed_date
-        self.message = temp.message
+	@property
+	def summary(self):
+		"""
+		Returns
+			First line of the commit message.
+		"""
+		return self.message.split('\n', 1)[0]
 
-    @property
-    def id_abbrev(self):
-        """
-        Returns
-            First 7 bytes of the commit's sha id as an abbreviation of the full string.
-        """
-        return self.id[0:7]
+	@classmethod
+	def count(cls, repo, ref, path=''):
+		"""
+		Count the number of commits reachable from this ref
 
-    @property
-    def summary(self):
-        """
-        Returns
-            First line of the commit message.
-        """
-        return self.message.split('\n', 1)[0]
+		``repo``
+			is the Repo
 
-    @classmethod
-    def count(cls, repo, ref, path=''):
-        """
-        Count the number of commits reachable from this ref
+		``ref``
+			is the ref from which to begin (SHA1 or name)
 
-        ``repo``
-            is the Repo
+		``path``
+			is an optinal path
 
-        ``ref``
-            is the ref from which to begin (SHA1 or name)
+		Returns
+			int
+		"""
+		return len(repo.git.rev_list(ref, '--', path).strip().splitlines())
 
-        ``path``
-            is an optinal path
+	@classmethod
+	def find_all(cls, repo, ref, path='', **kwargs):
+		"""
+		Find all commits matching the given criteria.
 
-        Returns
-            int
-        """
-        return len(repo.git.rev_list(ref, '--', path).strip().splitlines())
+		``repo``
+			is the Repo
 
-    @classmethod
-    def find_all(cls, repo, ref, path='', **kwargs):
-        """
-        Find all commits matching the given criteria.
+		``ref``
+			is the ref from which to begin (SHA1 or name)
 
-        ``repo``
-            is the Repo
+		``path``
+			is an optinal path, if set only Commits that include the path 
+			will be considered
 
-        ``ref``
-            is the ref from which to begin (SHA1 or name)
+		``kwargs``
+			optional keyword arguments to git where
+			``max_count`` is the maximum number of commits to fetch
+			``skip`` is the number of commits to skip
 
-        ``path``
-            is an optinal path, if set only Commits that include the path 
-            will be considered
+		Returns
+			git.Commit[]
+		"""
+		options = {'pretty': 'raw'}
+		options.update(kwargs)
 
-        ``kwargs``
-            optional keyword arguments to git where
-            ``max_count`` is the maximum number of commits to fetch
-            ``skip`` is the number of commits to skip
+		output = repo.git.rev_list(ref, '--', path, **options)
+		return cls.list_from_string(repo, output)
 
-        Returns
-            git.Commit[]
-        """
-        options = {'pretty': 'raw'}
-        options.update(kwargs)
+	@classmethod
+	def list_from_string(cls, repo, text):
+		"""
+		Parse out commit information into a list of Commit objects
 
-        output = repo.git.rev_list(ref, '--', path, **options)
-        return cls.list_from_string(repo, output)
+		``repo``
+			is the Repo
 
-    @classmethod
-    def list_from_string(cls, repo, text):
-        """
-        Parse out commit information into a list of Commit objects
+		``text``
+			is the text output from the git-rev-list command (raw format)
 
-        ``repo``
-            is the Repo
+		Returns
+			git.Commit[]
+		"""
+		lines =text.splitlines(False)
+		commits = []
 
-        ``text``
-            is the text output from the git-rev-list command (raw format)
+		while lines:
+			id = lines.pop(0).split()[1]
+			tree = lines.pop(0).split()[1]
 
-        Returns
-            git.Commit[]
-        """
-        lines = [l for l in text.splitlines() if l.strip('\r\n')]
+			parents = []
+			while lines and lines[0].startswith('parent'):
+				parents.append(lines.pop(0).split()[-1])
+			# END while there are parent lines
+			author, authored_date = cls._actor(lines.pop(0))
+			committer, committed_date = cls._actor(lines.pop(0))
+			
+			# free line
+			lines.pop(0)
+			
+			message_lines = []
+			while lines and not lines[0].startswith('commit'):
+				message_lines.append(lines.pop(0).strip())
+			# END while there are message lines
+			message = '\n'.join(message_lines[:-1])	# last line is empty
 
-        commits = []
+			commits.append(Commit(repo, id=id, parents=parents, tree=tree, author=author, authored_date=authored_date,
+								  committer=committer, committed_date=committed_date, message=message))
+		# END while lines
+		return commits
 
-        while lines:
-            id = lines.pop(0).split()[1]
-            tree = lines.pop(0).split()[1]
+	@classmethod
+	def diff(cls, repo, a, b=None, paths=None):
+		"""
+		Creates diffs between a tree and the index or between two trees:
 
-            parents = []
-            while lines and lines[0].startswith('parent'):
-                parents.append(lines.pop(0).split()[-1])
-            author, authored_date = cls._actor(lines.pop(0))
-            committer, committed_date = cls._actor(lines.pop(0))
+		``repo``
+			is the Repo
 
-            messages = []
-            while lines and lines[0].startswith('    '):
-                messages.append(lines.pop(0).strip())
+		``a``
+			is a named commit
 
-            message = '\n'.join(messages)
+		``b``
+			is an optional named commit.  Passing a list assumes you
+			wish to omit the second named commit and limit the diff to the
+			given paths.
 
-            commits.append(Commit(repo, id=id, parents=parents, tree=tree, author=author, authored_date=authored_date,
-                                  committer=committer, committed_date=committed_date, message=message))
+		``paths``
+			is a list of paths to limit the diff to.
 
-        return commits
+		Returns
+			git.Diff[]::
+			
+			 between tree and the index if only a is given
+			 between two trees if a and b  are given and are commits 
+		"""
+		paths = paths or []
 
-    @classmethod
-    def diff(cls, repo, a, b=None, paths=None):
-        """
-        Creates diffs between a tree and the index or between two trees:
+		if isinstance(b, list):
+			paths = b
+			b = None
 
-        ``repo``
-            is the Repo
+		if paths:
+			paths.insert(0, "--")
 
-        ``a``
-            is a named commit
+		if b:
+			paths.insert(0, b)
+		paths.insert(0, a)
+		text = repo.git.diff('-M', full_index=True, *paths)
+		return diff.Diff.list_from_string(repo, text)
 
-        ``b``
-            is an optional named commit.  Passing a list assumes you
-            wish to omit the second named commit and limit the diff to the
-            given paths.
+	@property
+	def diffs(self):
+		"""
+		Returns
+			git.Diff[]
+			Diffs between this commit and its first parent or all changes if this 
+			commit is the first commit and has no parent.
+		"""
+		if not self.parents:
+			d = self.repo.git.show(self.id, '-M', full_index=True, pretty='raw')
+			return diff.Diff.list_from_string(self.repo, d)
+		else:
+			return self.diff(self.repo, self.parents[0].id, self.id)
 
-        ``paths``
-            is a list of paths to limit the diff to.
+	@property
+	def stats(self):
+		"""
+		Create a git stat from changes between this commit and its first parent 
+		or from all changes done if this is the very first commit.
+		
+		Return
+			git.Stats
+		"""
+		if not self.parents:
+			text = self.repo.git.diff_tree(self.id, '--', numstat=True, root=True)
+			text2 = ""
+			for line in text.splitlines()[1:]:
+				(insertions, deletions, filename) = line.split("\t")
+				text2 += "%s\t%s\t%s\n" % (insertions, deletions, filename)
+			text = text2
+		else:
+			text = self.repo.git.diff(self.parents[0].id, self.id, '--', numstat=True)
+		return stats.Stats.list_from_string(self.repo, text)
 
-        Returns
-            git.Diff[]::
-            
-             between tree and the index if only a is given
-             between two trees if a and b  are given and are commits 
-        """
-        paths = paths or []
+	def __str__(self):
+		""" Convert commit to string which is SHA1 """
+		return self.id
 
-        if isinstance(b, list):
-            paths = b
-            b = None
+	def __repr__(self):
+		return '<git.Commit "%s">' % self.id
 
-        if paths:
-            paths.insert(0, "--")
+	@classmethod
+	def _actor(cls, line):
+		"""
+		Parse out the actor (author or committer) info
 
-        if b:
-            paths.insert(0, b)
-        paths.insert(0, a)
-        text = repo.git.diff('-M', full_index=True, *paths)
-        return diff.Diff.list_from_string(repo, text)
-
-    @property
-    def diffs(self):
-        """
-        Returns
-            git.Diff[]
-            Diffs between this commit and its first parent or all changes if this 
-            commit is the first commit and has no parent.
-        """
-        if not self.parents:
-            d = self.repo.git.show(self.id, '-M', full_index=True, pretty='raw')
-            return diff.Diff.list_from_string(self.repo, d)
-        else:
-            return self.diff(self.repo, self.parents[0].id, self.id)
-
-    @property
-    def stats(self):
-        """
-        Create a git stat from changes between this commit and its first parent 
-        or from all changes done if this is the very first commit.
-        
-        Return
-            git.Stats
-        """
-        if not self.parents:
-            text = self.repo.git.diff_tree(self.id, '--', numstat=True, root=True)
-            text2 = ""
-            for line in text.splitlines()[1:]:
-                (insertions, deletions, filename) = line.split("\t")
-                text2 += "%s\t%s\t%s\n" % (insertions, deletions, filename)
-            text = text2
-        else:
-            text = self.repo.git.diff(self.parents[0].id, self.id, '--', numstat=True)
-        return stats.Stats.list_from_string(self.repo, text)
-
-    def __str__(self):
-        """ Convert commit to string which is SHA1 """
-        return self.id
-
-    def __repr__(self):
-        return '<git.Commit "%s">' % self.id
-
-    @classmethod
-    def _actor(cls, line):
-        """
-        Parse out the actor (author or committer) info
-
-        Returns
-            [Actor, gmtime(acted at time)]
-        """
-        m = cls.re_actor_epoch.search(line)
-        actor, epoch = m.groups()
-        return (Actor.from_string(actor), time.gmtime(int(epoch)))
+		Returns
+			[Actor, gmtime(acted at time)]
+		"""
+		m = cls.re_actor_epoch.search(line)
+		actor, epoch = m.groups()
+		return (Actor.from_string(actor), time.gmtime(int(epoch)))
