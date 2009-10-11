@@ -10,10 +10,13 @@ import re
 import time
 from actor import Actor
 from commit import Commit
+import base
 
-class Blob(object):
+class Blob(base.Object):
     """A Blob encapsulates a git blob object"""
     DEFAULT_MIME_TYPE = "text/plain"
+    type = "blob"
+    __slots__ = ("mode", "path", "_data_stored")
 
     # precompiled regex
     re_whitespace = re.compile(r'\s+')
@@ -40,28 +43,10 @@ class Blob(object):
         Returns
             git.Blob
         """
-        self.repo = repo
-        self.id = id
+        super(Blob,self).__init__(repo, id, "blob")
         self.mode = mode
         self.path = path
-
-        self._size = None
-        self.data_stored  = None
-
-    @property
-    def size(self):
-        """
-        The size of this blob in bytes
-
-        Returns
-            int
-           
-        NOTE
-            The size will be cached after the first access
-        """
-        if self._size is None:
-            self._size = int(self.repo.git.cat_file(self.id, s=True).rstrip())
-        return self._size
+        self._data_stored  = None
 
     @property
     def data(self):
@@ -74,8 +59,8 @@ class Blob(object):
         NOTE
             The data will be cached after the first access.
         """
-        self.data_stored = self.data_stored or self.repo.git.cat_file(self.id, p=True, with_raw_output=True)
-        return self.data_stored
+        self._data_stored = self._data_stored or self.repo.git.cat_file(self.id, p=True, with_raw_output=True)
+        return self._data_stored
 
     @property
     def mime_type(self):

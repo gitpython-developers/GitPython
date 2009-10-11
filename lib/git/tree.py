@@ -5,25 +5,22 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
 import os
-from base import LazyMixin
 import blob
+import base
 
-class Tree(LazyMixin):
+class Tree(base.Object):
+    
+    type = "tree"
+    
     def __init__(self, repo, id, mode=None, path=None):
-        LazyMixin.__init__(self)
-        self.repo = repo
-        self.id = id
+        super(Tree, self).__init__(repo, id)
         self.mode = mode
         self.path = path
         self._contents = None
 
     def __bake__(self):
-        # Ensure the treeish references directly a tree
-        treeish = self.id
-        if not treeish.endswith(':'):
-            treeish = treeish + ':'
-
         # Read the tree contents.
+        super(Tree, self).__bake__()
         self._contents = {}
         for line in self.repo.git.ls_tree(self.id).splitlines():
             obj = self.content_from_string(self.repo, line)

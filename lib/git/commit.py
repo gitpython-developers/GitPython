@@ -8,12 +8,12 @@ import re
 import time
 
 from actor import Actor
-from base import LazyMixin
 from tree import Tree
 import diff
 import stats
+import base
 
-class Commit(LazyMixin):
+class Commit(base.Object):
     """
     Wraps a git Commit object.
     
@@ -22,6 +22,9 @@ class Commit(LazyMixin):
     """
     # precompiled regex
     re_actor_epoch = re.compile(r'^.+? (.*) (\d+) .*$')
+    
+    # object configuration 
+    type = "commit"
     
     def __init__(self, repo, id, tree=None, author=None, authored_date=None,
                  committer=None, committed_date=None, message=None, parents=None):
@@ -58,10 +61,7 @@ class Commit(LazyMixin):
         Returns
             git.Commit
         """
-        LazyMixin.__init__(self)
-
-        self.repo = repo
-        self.id = id
+        super(Commit,self).__init__(repo, id, "commit")
         self.parents = None
         self.tree = None
         self.author = author
@@ -87,6 +87,7 @@ class Commit(LazyMixin):
         Called by LazyMixin superclass when the first uninitialized member needs 
         to be set as it is queried.
         """
+        super(Commit, self).__bake__()
         temp = Commit.find_all(self.repo, self.id, max_count=1)[0]
         self.parents = temp.parents
         self.tree = temp.tree

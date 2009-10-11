@@ -7,6 +7,12 @@
 from commit import Commit
 
 class Tag(object):
+    """
+    Class representing a tag reference which either points to a commit 
+    or to a tag object. In the latter case additional information, like the signature
+    or the tag-creator, is available.
+    """
+    
     def __init__(self, name, commit):
         """
         Initialize a newly instantiated Tag
