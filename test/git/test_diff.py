@@ -13,13 +13,13 @@ class TestDiff(object):
 
 	def test_list_from_string_new_mode(self):
 		output = fixture('diff_new_mode')
-		diffs = Diff.list_from_string(self.repo, output)
+		diffs = Diff._list_from_string(self.repo, output)
 		assert_equal(1, len(diffs))
 		assert_equal(10, len(diffs[0].diff.splitlines()))
 
 	def test_diff_with_rename(self):
 		output = fixture('diff_rename')
-		diffs = Diff.list_from_string(self.repo, output)
+		diffs = Diff._list_from_string(self.repo, output)
 
 		assert_equal(1, len(diffs))
 

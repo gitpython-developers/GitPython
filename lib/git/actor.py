@@ -25,7 +25,7 @@ class Actor(object):
 		return '<git.Actor "%s <%s>">' % (self.name, self.email)
 
 	@classmethod
-	def from_string(cls, string):
+	def _from_string(cls, string):
 		"""
 		Create an Actor from a string.
 

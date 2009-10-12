@@ -74,7 +74,7 @@ class Diff(object):
 		self.diff = diff
 
 	@classmethod
-	def list_from_string(cls, repo, text):
+	def _list_from_string(cls, repo, text):
 		"""
 		Create a new diff object from the given text
 		``repo``

@@ -146,10 +146,10 @@ class Commit(base.Object):
 		options.update(kwargs)
 
 		output = repo.git.rev_list(ref, '--', path, **options)
-		return cls.list_from_string(repo, output)
+		return cls._list_from_string(repo, output)
 
 	@classmethod
-	def list_from_string(cls, repo, text):
+	def _list_from_string(cls, repo, text):
 		"""
 		Parse out commit information into a list of Commit objects
 
@@ -228,7 +228,7 @@ class Commit(base.Object):
 			paths.insert(0, b)
 		paths.insert(0, a)
 		text = repo.git.diff('-M', full_index=True, *paths)
-		return diff.Diff.list_from_string(repo, text)
+		return diff.Diff._list_from_string(repo, text)
 
 	@property
 	def diffs(self):
@@ -240,7 +240,7 @@ class Commit(base.Object):
 		"""
 		if not self.parents:
 			d = self.repo.git.show(self.id, '-M', full_index=True, pretty='raw')
-			return diff.Diff.list_from_string(self.repo, d)
+			return diff.Diff._list_from_string(self.repo, d)
 		else:
 			return self.diff(self.repo, self.parents[0].id, self.id)
 
@@ -262,7 +262,7 @@ class Commit(base.Object):
 			text = text2
 		else:
 			text = self.repo.git.diff(self.parents[0].id, self.id, '--', numstat=True)
-		return stats.Stats.list_from_string(self.repo, text)
+		return stats.Stats._list_from_string(self.repo, text)
 
 	def __str__(self):
 		""" Convert commit to string which is SHA1 """
@@ -281,4 +281,4 @@ class Commit(base.Object):
 		"""
 		m = cls.re_actor_epoch.search(line)
 		actor, epoch = m.groups()
-		return (Actor.from_string(actor), time.gmtime(int(epoch)))
+		return (Actor._from_string(actor), time.gmtime(int(epoch)))

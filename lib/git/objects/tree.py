@@ -21,14 +21,14 @@ class Tree(base.IndexObject):
 			# Read the tree contents.
 			self._contents = {}
 			for line in self.repo.git.ls_tree(self.id).splitlines():
-				obj = self.content_from_string(self.repo, line)
+				obj = self.content__from_string(self.repo, line)
 				if obj is not None:
 					self._contents[obj.path] = obj
 		else:
 			super(Tree, self)._set_cache_(attr)
 
 	@staticmethod
-	def content_from_string(repo, text):
+	def content__from_string(repo, text):
 		"""
 		Parse a content item and create the appropriate object
 

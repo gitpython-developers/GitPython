@@ -38,7 +38,7 @@ class Stats(object):
 		self.files = files
 
 	@classmethod
-	def list_from_string(cls, repo, text):
+	def _list_from_string(cls, repo, text):
 		"""
 		Create a Stat object from output retrieved by git-diff.
 		

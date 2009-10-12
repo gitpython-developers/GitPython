@@ -179,9 +179,9 @@ class Repo(object):
 							c = commits.get(sha)
 							if c is None:
 								c = Commit(  self, id=sha,
-											 author=Actor.from_string(info['author'] + ' ' + info['author_email']),
+											 author=Actor._from_string(info['author'] + ' ' + info['author_email']),
 											 authored_date=info['author_date'],
-											 committer=Actor.from_string(info['committer'] + ' ' + info['committer_email']),
+											 committer=Actor._from_string(info['committer'] + ' ' + info['committer_email']),
 											 committed_date=info['committer_date'],
 											 message=info['summary'])
 								commits[sha] = c
@@ -357,7 +357,7 @@ class Repo(object):
 		if path:
 			arg.append(path)
 		commits = self.git.log(*arg, **options)
-		return Commit.list_from_string(self, commits)
+		return Commit._list_from_string(self, commits)
 
 	def diff(self, a, b, *paths):
 		"""

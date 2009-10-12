@@ -16,6 +16,9 @@ General
 * id_abbrev method has been removed as it could not assure the returned short SHA's 
   where unique
 * removed basename method from Objects with path's as it replicated features of os.path
+* from_string and list_from_string methods are now private and were renamed to 
+  _from_string  and _list_from_string respectively. As part of the private API, they 
+  may change without prior notice.
 
 objects Package
 ----------------

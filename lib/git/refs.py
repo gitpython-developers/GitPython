@@ -88,10 +88,10 @@ class Ref(object):
 		options.update(kwargs)
 
 		output = repo.git.for_each_ref(common_path, **options)
-		return cls.list_from_string(repo, output)
+		return cls._list_from_string(repo, output)
 
 	@classmethod
-	def list_from_string(cls, repo, text):
+	def _list_from_string(cls, repo, text):
 		"""
 		Parse out ref information into a list of Ref compatible objects
 
@@ -108,12 +108,12 @@ class Ref(object):
 		heads = []
 
 		for line in text.splitlines():
-			heads.append(cls.from_string(repo, line))
+			heads.append(cls._from_string(repo, line))
 
 		return heads
 
 	@classmethod
-	def from_string(cls, repo, line):
+	def _from_string(cls, repo, line):
 		"""
 		Create a new Ref instance from the given string.
 

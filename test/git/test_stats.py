@@ -11,9 +11,9 @@ class TestStats(object):
 	def setup(self):
 		self.repo = Repo(GIT_REPO)
 	
-	def test_list_from_string(self):
+	def test__list_from_string(self):
 		output = fixture('diff_numstat')
-		stats = Stats.list_from_string(self.repo, output)
+		stats = Stats._list_from_string(self.repo, output)
 		
 		assert_equal(2, stats.total['files'])
 		assert_equal(52, stats.total['lines'])
