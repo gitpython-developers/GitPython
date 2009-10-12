@@ -120,8 +120,15 @@ class IndexObject(Object):
 		if isinstance(mode, basestring):
 			self.mode = self._mode_str_to_int(mode)
 	
+	def _set_cache_(self, attr):
+		if attr in self.__slots__:
+			# they cannot be retrieved lateron ( not without searching for them )
+			raise AttributeError( "path and mode attributes must have been set during %s object creation" % type(self).__name__ )
+		else:
+			super(IndexObject, self)._set_cache_(attr)
+	
 	@classmethod
-	def _mode_str_to_int( cls, modestr ):
+	def _mode_str_to_int(cls, modestr):
 		"""
 		``modestr``
 			string like 755 or 644 or 100644 - only the last 3 chars will be used
