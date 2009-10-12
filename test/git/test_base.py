@@ -24,14 +24,14 @@ class TestBase(object):
 		
 	def test_base_object(self):	
 		# test interface of base object classes
-		fcreators = (self.repo.blob, self.repo.tree, self.repo.commit, lambda id: TagObject(self.repo,id) )
-		assert len(fcreators) == len(self.type_tuples)
+		types = (Blob, Tree, Commit, TagObject)
+		assert len(types) == len(self.type_tuples)
 		
 		s = set()
 		num_objs = 0
 		num_index_objs = 0
-		for fcreator, (typename, hexsha) in zip(fcreators, self.type_tuples):
-			item = fcreator(hexsha)
+		for obj_type, (typename, hexsha) in zip(types, self.type_tuples):
+			item = obj_type(self.repo,hexsha)
 			num_objs += 1
 			assert item.id == hexsha
 			assert item.type == typename
@@ -53,6 +53,7 @@ class TestBase(object):
 		
 		# each has a unique sha
 		assert len(s) == num_objs
+		assert len(s|s) == num_objs
 		assert num_index_objs == 2
 		
 		
@@ -70,6 +71,7 @@ class TestBase(object):
 			s.add(ref)
 		# END for each ref
 		assert len(s) == ref_count
+		assert len(s|s) == ref_count
 		
 	def test_get_object_type_by_name(self):
 		for tname in base.Object.TYPES:
