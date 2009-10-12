@@ -91,13 +91,12 @@ class TestRepo(object):
 	def test_tree(self, git):
 		git.return_value = fixture('ls_tree_a')
 
-		tree = self.repo.tree('master')
+		tree = self.repo.tree(Head(self.repo, 'master'))
 
 		assert_equal(4, len([c for c in tree.values() if isinstance(c, Blob)]))
 		assert_equal(3, len([c for c in tree.values() if isinstance(c, Tree)]))
 
 		assert_true(git.called)
-		assert_equal(git.call_args, (('ls_tree', 'master'), {}))
 
 	@patch_object(Git, '_call_process')
 	def test_blob(self, git):
@@ -255,7 +254,7 @@ class TestRepo(object):
 	@patch_object(Git, '_call_process')
 	def test_active_branch(self, git):
 		git.return_value = 'refs/heads/major-refactoring'
-		assert_equal(self.repo.active_branch, 'major-refactoring')
+		assert_equal(self.repo.active_branch.name, 'major-refactoring')
 		assert_equal(git.call_args, (('symbolic_ref', 'HEAD'), {}))
 		
 	@patch_object(Git, '_call_process')

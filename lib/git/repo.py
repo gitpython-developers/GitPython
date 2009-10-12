@@ -277,12 +277,14 @@ class Repo(object):
 		"""
 		return Commit.count(self, start, path)
 
-	def commit(self, id, path = ''):
+	def commit(self, id=None, path = ''):
 		"""
 		The Commit object for the specified id
 
 		``id``
-			is the SHA1 identifier of the commit
+			is the SHA1 identifier of the commit or a ref or a ref name
+			if None, it defaults to the active branch
+		
 
 		``path``
 			is an optional path, if set the returned commit must contain the path.
@@ -290,6 +292,8 @@ class Repo(object):
 		Returns
 			``git.Commit``
 		"""
+		if id is None:
+			id = self.active_branch
 		options = {'max_count': 1}
 
 		commits = Commit.find_all(self, id, path, **options)
@@ -311,22 +315,34 @@ class Repo(object):
 		diff_refs = list(set(other_repo_refs) - set(repo_refs))
 		return map(lambda ref: Commit.find_all(other_repo, ref, max_count=1)[0], diff_refs)
 
-	def tree(self, treeish='master'):
+	def tree(self, treeish=None):
 		"""
 		The Tree object for the given treeish reference
 
 		``treeish``
-			is the reference (default 'master')
+			is a Ref instance defaulting to the active_branch if None.
 
 		Examples::
 
-		  repo.tree('master')
-
+		  repo.tree(repo.heads[0])
 
 		Returns
 			``git.Tree``
+			
+		NOTE
+			A ref is requried here to assure you point to a commit or tag. Otherwise
+			it is not garantueed that you point to the root-level tree.
+			
+			If you need a non-root level tree, find it by iterating the root tree.
 		"""
-		return Tree(self, id=treeish)
+		if treeish is None:
+			treeish = self.active_branch
+		if not isinstance(treeish, Ref):
+			raise ValueError( "Treeish reference required, got %r" % treeish )
+		
+		# we should also check whether the ref has a valid commit ... but lets n
+		# not be over-critical
+		return Tree(self, treeish)
 
 	def blob(self, id):
 		"""
@@ -588,13 +604,9 @@ class Repo(object):
 		The name of the currently active branch.
 
 		Returns
-			str (the branch name)
+			Head to the active branch
 		"""
-		branch = self.git.symbolic_ref('HEAD').strip()
-		if branch.startswith('refs/heads/'):
-			branch = branch[len('refs/heads/'):]
-
-		return branch
+		return Head( self, self.git.symbolic_ref('HEAD').strip() )
 
 	def __repr__(self):
 		return '<git.Repo "%s">' % self.path

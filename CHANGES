@@ -29,6 +29,10 @@ objects Package
 Repo
 ----
 * Moved blame method from Blob to repo as it appeared to belong there much more.
+* active_branch method now returns a Head object instead of a string with the name 
+  of the active branch.
+* tree method now requires a Ref instance as input and defaults to the active_branche
+  instead of master
 
 Diff
 ----
