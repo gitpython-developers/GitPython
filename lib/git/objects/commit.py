@@ -37,7 +37,7 @@ class Commit(base.Object):
 		The parameter documentation indicates the type of the argument after a colon ':'.
 
 		``id``
-			is the sha id of the commit
+			is the sha id of the commit or a ref
 
 		``parents`` : tuple( Commit, ... )
 			is a tuple of commit ids or actual Commits

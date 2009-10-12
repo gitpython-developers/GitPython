@@ -8,16 +8,19 @@ Module containing all ref based objects
 """
 from objects.base import Object
 from objects.util import get_object_type_by_name
+from utils import LazyMixin
 
-class Ref(object):
+class Ref(LazyMixin):
 	"""
 	Represents a named reference to any object
 	"""
-	__slots__ = ("path", "object")
+	__slots__ = ("repo", "path", "object")
 	
-	def __init__(self, path, object = None):
+	def __init__(self, repo, path, object = None):
 		"""
 		Initialize this instance
+		``repo``
+			Our parent repository
 		
 		``path``
 			Path relative to the .git/ directory pointing to the ref in question, i.e.
@@ -26,8 +29,19 @@ class Ref(object):
 		``object``
 			Object instance, will be retrieved on demand if None
 		"""
+		self.repo = repo
 		self.path = path
-		self.object = object
+		if object is not None:
+			self.object = object
+		
+	def _set_cache_(self, attr):
+		if attr == "object":
+			# have to be dynamic here as we may be a tag which can point to anything
+			# it uses our path to stay dynamic
+			type_string = self.repo.git.cat_file(self.path, t=True).rstrip() 
+			self.object = get_object_type_by_name(type_string)(self.repo, self.path)
+		else:
+			super(Ref, self)._set_cache_(attr)
 		
 	def __str__(self):
 		return self.name
@@ -92,19 +106,8 @@ class Ref(object):
 
 	@classmethod
 	def _list_from_string(cls, repo, text):
-		"""
-		Parse out ref information into a list of Ref compatible objects
-
-		``repo``
-			is the Repo
-		``text``
-			is the text output from the git-for-each-ref command
-
-		Returns
-			git.Ref[]
-			
-			list of Ref objects
-		"""
+		""" Parse out ref information into a list of Ref compatible objects
+		Returns git.Ref[] list of Ref objects """
 		heads = []
 
 		for line in text.splitlines():
@@ -114,28 +117,16 @@ class Ref(object):
 
 	@classmethod
 	def _from_string(cls, repo, line):
-		"""
-		Create a new Ref instance from the given string.
-
-		``repo``
-			is the Repo
-
-		``line``
-			is the formatted ref information
-
-		Format::
-		
+		""" Create a new Ref instance from the given string.
+		Format
 			name: [a-zA-Z_/]+
 			<null byte>
 			id: [0-9A-Fa-f]{40}
-
-		Returns
-			git.Head
-		"""
+		Returns git.Head """
 		full_path, hexsha, type_name, object_size = line.split("\x00")
 		obj = get_object_type_by_name(type_name)(repo, hexsha)
 		obj.size = object_size
-		return cls(full_path, obj)
+		return cls(repo, full_path, obj)
 		
 
 class Head(Ref):
@@ -196,24 +187,7 @@ class TagRef(Ref):
 		print tagref.tag.message
 	"""
 	
-	__slots__ = "tag"
-	
-	def __init__(self, path, commit_or_tag):
-		"""
-		Initialize a newly instantiated Tag
-
-		``path``
-			is the full path to the tag
-
-		``commit_or_tag``
-			is the Commit or TagObject that this tag ref points to
-		"""
-		super(TagRef, self).__init__(path, commit_or_tag)
-		self.tag = None
-		
-		if commit_or_tag.type == "tag":
-			self.tag = commit_or_tag
-		# END tag object handling 
+	__slots__ = tuple()
 	
 	@property
 	def commit(self):
@@ -223,8 +197,22 @@ class TagRef(Ref):
 		"""
 		if self.object.type == "commit":
 			return self.object
-		# it is a tag object
-		return self.object.object
+		elif self.object.type == "tag":
+			# it is a tag object which carries the commit as an object - we can point to anything
+			return self.object.object
+		else:
+			raise ValueError( "Tag %s points to a Blob or Tree - have never seen that before" % self )  
+
+	@property
+	def tag(self):
+		"""
+		Returns
+			Tag object this tag ref points to or None in case 
+			we are a light weight tag
+		"""
+		if self.object.type == "tag":
+			return self.object
+		return None
 
 	@classmethod
 	def find_all(cls, repo, common_path = "refs/tags", **kwargs):
