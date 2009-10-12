@@ -47,7 +47,11 @@ Blob
 Tree
 ----
 * former 'name' member renamed to path as it suits the actual data better
-
+* added traverse method allowing to recursively traverse tree items
+* deleted blob method
+* added blobs and trees properties allowing to query the respective items in the 
+  tree
+* now mimics behaviour of a read-only list instead of a dict to maintain order.
 
 0.1.6
 =====

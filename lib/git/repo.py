@@ -342,19 +342,10 @@ class Repo(object):
 		
 		# we should also check whether the ref has a valid commit ... but lets n
 		# not be over-critical
-		return Tree(self, treeish)
+		# the root has an empty relative path and the default mode
+		root = Tree(self, treeish, 0, '')
+		return root
 
-	def blob(self, id):
-		"""
-		The Blob object for the given id
-
-		``id``
-			is the SHA1 id of the blob
-
-		Returns
-			``git.Blob``
-		"""
-		return Blob(self, id=id)
 
 	def log(self, commit='master', path=None, **kwargs):
 		"""

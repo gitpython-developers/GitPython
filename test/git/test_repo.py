@@ -93,8 +93,8 @@ class TestRepo(object):
 
 		tree = self.repo.tree(Head(self.repo, 'master'))
 
-		assert_equal(4, len([c for c in tree.values() if isinstance(c, Blob)]))
-		assert_equal(3, len([c for c in tree.values() if isinstance(c, Tree)]))
+		assert_equal(4, len([c for c in tree if isinstance(c, Blob)]))
+		assert_equal(3, len([c for c in tree if isinstance(c, Tree)]))
 
 		assert_true(git.called)
 
@@ -102,7 +102,7 @@ class TestRepo(object):
 	def test_blob(self, git):
 		git.return_value = fixture('cat_file_blob')
 
-		blob = self.repo.blob("abc")
+		blob = Blob(self.repo,"abc")
 		assert_equal("Hello world", blob.data)
 
 		assert_true(git.called)
