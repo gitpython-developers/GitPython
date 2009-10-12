@@ -7,7 +7,7 @@
 from mock import *
 from test.testlib import *
 from git import *
-from git.tag import TagObject
+from git.objects.tag import TagObject
 import time
 
 class TestTag(object):

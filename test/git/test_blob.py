@@ -65,34 +65,6 @@ class TestBlob(object):
 		blob = Blob(self.repo, **{'id': 'abc','path': 'something'})
 		assert_equal("text/plain", blob.mime_type)
   
-	@patch_object(Git, '_call_process')
-	def test_should_display_blame_information(self, git):
-		git.return_value = fixture('blame')
-		b = Blob.blame(self.repo, 'master', 'lib/git.py')
-		assert_equal(13, len(b))
-		assert_equal( 2, len(b[0]) )
-		# assert_equal(25, reduce(lambda acc, x: acc + len(x[-1]), b))
-		assert_equal(hash(b[0][0]), hash(b[9][0]))
-		c = b[0][0]
-		assert_true(git.called)
-		assert_equal(git.call_args, (('blame', 'master', '--', 'lib/git.py'), {'p': True}))
-		
-		assert_equal('634396b2f541a9f2d58b00be1a07f0c358b999b3', c.id)
-		assert_equal('Tom Preston-Werner', c.author.name)
-		assert_equal('tom@mojombo.com', c.author.email)
-		assert_equal(time.gmtime(1191997100), c.authored_date)
-		assert_equal('Tom Preston-Werner', c.committer.name)
-		assert_equal('tom@mojombo.com', c.committer.email)
-		assert_equal(time.gmtime(1191997100), c.committed_date)
-		assert_equal('initial grit setup', c.message)
-		
-		# test the 'lines per commit' entries
-		tlist = b[0][1]
-		assert_true( tlist )
-		assert_true( isinstance( tlist[0], basestring ) )
-		assert_true( len( tlist ) < sum( len(t) for t in tlist ) )				 # test for single-char bug
-		
-  
 	def test_should_return_appropriate_representation(self):
 		blob = Blob(self.repo, **{'id': 'abc'})
 		assert_equal('<git.Blob "abc">', repr(blob))

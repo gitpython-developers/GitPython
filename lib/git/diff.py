@@ -5,7 +5,7 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
 import re
-import blob
+import objects.blob as blob
 
 class Diff(object):
 	"""

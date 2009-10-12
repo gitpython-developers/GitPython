@@ -7,10 +7,10 @@
 import re
 import time
 
-from actor import Actor
+from git.actor import Actor
 from tree import Tree
-import diff
-import stats
+import git.diff as diff
+import git.stats as stats
 import base
 
 class Commit(base.Object):

@@ -1,71 +1,15 @@
-# tag.py
+# objects.py
 # Copyright (C) 2008, 2009 Michael Trier (mtrier@gmail.com) and contributors
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
-
-import commit
+"""
+Module containing all object based types.
+"""
 import base
+import commit
+from util import get_object_type_by_name
 
-class TagRef(base.Ref):
-	"""
-	Class representing a lightweight tag reference which either points to a commit 
-	or to a tag object. In the latter case additional information, like the signature
-	or the tag-creator, is available.
-	
-	This tag object will always point to a commit object, but may carray additional
-	information in a tag object::
-	
-	 tagref = TagRef.find_all(repo)[0]
-	 print tagref.commit.message
-	 if tagref.tag is not None:
-		print tagref.tag.message
-	"""
-	
-	__slots__ = "tag"
-	
-	def __init__(self, path, commit_or_tag):
-		"""
-		Initialize a newly instantiated Tag
-
-		``path``
-			is the full path to the tag
-
-		``commit_or_tag``
-			is the Commit or TagObject that this tag ref points to
-		"""
-		super(TagRef, self).__init__(path, commit_or_tag)
-		self.tag = None
-		
-		if commit_or_tag.type == "tag":
-			self.tag = commit_or_tag
-		# END tag object handling 
-	
-	@property
-	def commit(self):
-		"""
-		Returns
-			Commit object the tag ref points to
-		"""
-		if self.object.type == "commit":
-			return self.object
-		# it is a tag object
-		return self.object.object
-
-	@classmethod
-	def find_all(cls, repo, common_path = "refs/tags", **kwargs):
-		"""
-		Returns
-			git.Tag[]
-			
-		For more documentation, please refer to git.base.Ref.find_all
-		"""
-		return super(TagRef,cls).find_all(repo, common_path, **kwargs)
-		
-		
-# provide an alias
-Tag = TagRef
-		
 class TagObject(base.Object):
 	"""
 	Non-Lightweight tag carrying additional information about an object we are pointing 
@@ -110,7 +54,7 @@ class TagObject(base.Object):
 			
 			obj, hexsha = lines[0].split(" ")		# object <hexsha>
 			type_token, type_name = lines[1].split(" ") # type <type_name>
-			self.object = base.Object.get_type_by_name(type_name)(self.repo, hexsha)
+			self.object = get_object_type_by_name(type_name)(self.repo, hexsha)
 			
 			self.tag = lines[2][4:]  # tag <tag name>
 			
@@ -124,3 +68,4 @@ class TagObject(base.Object):
 			super(TagObject, self)._set_cache_(attr)
 		
 		
+

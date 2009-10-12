@@ -17,6 +17,16 @@ General
   where unique
 * removed basename method from Objects with path's as it replicated features of os.path
 
+objects Package
+----------------
+* blob, tree, tag and commit module have been moved to new objects package. This should 
+  not affect you though unless you explicitly imported individual objects. If you just 
+  used the git package, names did not change.
+  
+Repo
+----
+* Moved blame method from Blob to repo as it appeared to belong there much more.
+
 Diff
 ----
 * Members a a_commit and b_commit renamed to a_blob and b_blob - they are populated

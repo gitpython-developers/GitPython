@@ -7,8 +7,10 @@
 import time
 from test.testlib import *
 from git import *
-import git.base as base
+import git.objects.base as base
+import git.refs as refs
 from itertools import chain
+from git.objects.util import get_object_type_by_name
 
 class TestBase(object):
 	
@@ -60,7 +62,7 @@ class TestBase(object):
 		ref_count = 0
 		for ref in chain(self.repo.tags, self.repo.heads):
 			ref_count += 1
-			assert isinstance(ref, base.Ref)
+			assert isinstance(ref, refs.Ref)
 			assert str(ref) == ref.name
 			assert repr(ref)
 			assert ref == ref
@@ -69,10 +71,10 @@ class TestBase(object):
 		# END for each ref
 		assert len(s) == ref_count
 		
-	def test_get_type_by_name(self):
+	def test_get_object_type_by_name(self):
 		for tname in base.Object.TYPES:
-			assert base.Object in base.Object.get_type_by_name(tname).mro()
+			assert base.Object in get_object_type_by_name(tname).mro()
 		# END for each known type 
 		
-		assert_raises( ValueError, base.Object.get_type_by_name, "doesntexist" )
+		assert_raises( ValueError, get_object_type_by_name, "doesntexist" )
 
