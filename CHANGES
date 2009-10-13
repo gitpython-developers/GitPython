@@ -52,6 +52,7 @@ Tree
 * added blobs and trees properties allowing to query the respective items in the 
   tree
 * now mimics behaviour of a read-only list instead of a dict to maintain order.
+* content_from_string method is now private and not part of the public API anymore
 
 0.1.6
 =====

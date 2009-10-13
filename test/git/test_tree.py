@@ -25,35 +25,10 @@ class TestTree(TestCase):
 		assert_true(git.called)
 		assert_equal(2, git.call_count)
 		assert_equal(git.call_args, (('ls_tree', '34868e6e7384cb5ee51c543a8187fdff2675b5a7'), {}))
-  
-	def test_content_from_string_tree_should_return_tree(self):
-		text = fixture('ls_tree_a').splitlines()[-1]
-		tree = Tree.content_from_string(None, text)
-
-		assert_equal(Tree, tree.__class__)
-		assert_equal("650fa3f0c17f1edb4ae53d8dcca4ac59d86e6c44", tree.id)
-		assert_equal(0,tree.mode)		# git tree objects always use this mode
-		assert_equal("test", tree.path)
-  
-	def test_content_from_string_tree_should_return_blob(self):
-		text = fixture('ls_tree_b').split("\n")[0]
-		
-		tree = Tree.content_from_string(None, text)
-
-		assert_equal(Blob, tree.__class__)
-		assert_equal("aa94e396335d2957ca92606f909e53e7beaf3fbb", tree.id)
-		assert_mode_644(tree.mode)
-		assert_equal("grit.rb", tree.path)
-
-	def test_content_from_string_tree_should_return_commit(self):
-		text = fixture('ls_tree_commit').split("\n")[1]
-	
-		tree = Tree.content_from_string(None, text)
-		assert_none(tree)
 	
 	@raises(TypeError)
-	def test_content_from_string_invalid_type_should_raise(self):
-		Tree.content_from_string(None, "040000 bogus 650fa3f0c17f1edb4ae53d8dcca4ac59d86e6c44	test")
+	def test__from_string_invalid_type_should_raise(self):
+		Tree._from_string(None, "040000 bogus 650fa3f0c17f1edb4ae53d8dcca4ac59d86e6c44	test")
 
 	@patch_object(Blob, 'size')
 	@patch_object(Git, '_call_process')

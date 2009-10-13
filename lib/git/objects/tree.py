@@ -50,7 +50,7 @@ class Tree(base.IndexObject):
 		"""
 		out = list()
 		for line in repo.git.ls_tree(treeish).splitlines():
-			obj = cls.content_from_string(repo, line)
+			obj = cls._from_string(repo, line)
 			if obj is not None:
 				out.append(obj)
 			# END if object was handled
@@ -59,7 +59,7 @@ class Tree(base.IndexObject):
 		
 
 	@classmethod
-	def content_from_string(cls, repo, text):
+	def _from_string(cls, repo, text):
 		"""
 		Parse a content item and create the appropriate object
 
