@@ -102,7 +102,7 @@ class Repo(object):
 		Returns
 			``git.Head[]``
 		"""
-		return Head.find_all(self)
+		return Head.list_items(self)
 
 	# alias heads
 	branches = heads
@@ -115,7 +115,7 @@ class Repo(object):
 		Returns
 			``git.Tag[]``
 		"""
-		return Tag.find_all(self)
+		return Tag.list_items(self)
 		
 	def blame(self, commit, file):
 		"""
@@ -221,7 +221,7 @@ class Repo(object):
 		options = {'max_count': max_count,
 				   'skip': skip}
 
-		return Commit.find_all(self, start, path, **options)
+		return Commit.list_items(self, start, path, **options)
 
 	def commits_between(self, frm, to):
 		"""
@@ -237,7 +237,7 @@ class Repo(object):
 		Returns
 			``git.Commit[]``
 		"""
-		return reversed(Commit.find_all(self, "%s..%s" % (frm, to)))
+		return reversed(Commit.list_items(self, "%s..%s" % (frm, to)))
 
 	def commits_since(self, start='master', path='', since='1970-01-01'):
 		"""
@@ -259,7 +259,7 @@ class Repo(object):
 		"""
 		options = {'since': since}
 
-		return Commit.find_all(self, start, path, **options)
+		return Commit.list_items(self, start, path, **options)
 
 	def commit_count(self, start='master', path=''):
 		"""
@@ -296,7 +296,7 @@ class Repo(object):
 			id = self.active_branch
 		options = {'max_count': 1}
 
-		commits = Commit.find_all(self, id, path, **options)
+		commits = Commit.list_items(self, id, path, **options)
 
 		if not commits:
 			raise ValueError, "Invalid identifier %s, or given path '%s' too restrictive" % ( id, path )
@@ -313,7 +313,7 @@ class Repo(object):
 		other_repo_refs = other_repo.git.rev_list(other_ref, '--').strip().splitlines()
 
 		diff_refs = list(set(other_repo_refs) - set(repo_refs))
-		return map(lambda ref: Commit.find_all(other_repo, ref, max_count=1)[0], diff_refs)
+		return map(lambda ref: Commit.list_items(other_repo, ref, max_count=1)[0], diff_refs)
 
 	def tree(self, treeish=None):
 		"""
@@ -364,7 +364,8 @@ class Repo(object):
 		if path:
 			arg.append(path)
 		commits = self.git.log(*arg, **options)
-		return Commit._list_from_string(self, commits)
+		print commits.splitlines(False)
+		return list(Commit._iter_from_stream(self, iter(commits.splitlines())))
 
 	def diff(self, a, b, *paths):
 		"""

@@ -73,7 +73,7 @@ class Ref(LazyMixin):
 		return '/'.join(tokens[2:])
 		
 	@classmethod
-	def find_all(cls, repo, common_path = "refs", **kwargs):
+	def list_items(cls, repo, common_path = "refs", **kwargs):
 		"""
 		Find all refs in the repository
 
@@ -158,14 +158,14 @@ class Head(Ref):
 		return self.object
 		
 	@classmethod
-	def find_all(cls, repo, common_path = "refs/heads", **kwargs):
+	def list_items(cls, repo, common_path = "refs/heads", **kwargs):
 		"""
 		Returns
 			git.Head[]
 			
-		For more documentation, please refer to git.base.Ref.find_all
+		For more documentation, please refer to git.base.Ref.list_items
 		"""
-		return super(Head,cls).find_all(repo, common_path, **kwargs)
+		return super(Head,cls).list_items(repo, common_path, **kwargs)
 
 	def __repr__(self):
 		return '<git.Head "%s">' % self.name
@@ -181,7 +181,7 @@ class TagRef(Ref):
 	This tag object will always point to a commit object, but may carray additional
 	information in a tag object::
 	
-	 tagref = TagRef.find_all(repo)[0]
+	 tagref = TagRef.list_items(repo)[0]
 	 print tagref.commit.message
 	 if tagref.tag is not None:
 		print tagref.tag.message
@@ -215,14 +215,14 @@ class TagRef(Ref):
 		return None
 
 	@classmethod
-	def find_all(cls, repo, common_path = "refs/tags", **kwargs):
+	def list_items(cls, repo, common_path = "refs/tags", **kwargs):
 		"""
 		Returns
 			git.Tag[]
 			
-		For more documentation, please refer to git.base.Ref.find_all
+		For more documentation, please refer to git.base.Ref.list_items
 		"""
-		return super(TagRef,cls).find_all(repo, common_path, **kwargs)
+		return super(TagRef,cls).list_items(repo, common_path, **kwargs)
 		
 		
 # provide an alias

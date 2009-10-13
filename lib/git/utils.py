@@ -75,13 +75,13 @@ class Iterable(object):
 		Returns:
 			list(Item,...) list of item instances 
 		"""
-		return list(cls.iter_items, repo, *args, **kwargs)
+		return list(cls.iter_items(repo, *args, **kwargs))
 		
 		
 	@classmethod
 	def iter_items(cls, repo, *args, **kwargs):
 		"""
-		For more information about the arguments, see find_all
+		For more information about the arguments, see list_items
 		Return: 
 			iterator yielding Items
 		"""

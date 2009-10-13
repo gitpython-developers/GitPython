@@ -6,14 +6,14 @@
 
 import re
 import time
-
+from git.utils import Iterable
 from git.actor import Actor
-from tree import Tree
 import git.diff as diff
 import git.stats as stats
+from tree import Tree
 import base
 
-class Commit(base.Object):
+class Commit(base.Object, Iterable):
 	"""
 	Wraps a git Commit object.
 	
@@ -81,7 +81,7 @@ class Commit(base.Object):
 		We set all values at once.
 		"""
 		if attr in self.__slots__:
-			temp = Commit.find_all(self.repo, self.id, max_count=1)[0]
+			temp = Commit.list_items(self.repo, self.id, max_count=1)[0]
 			self.parents = temp.parents
 			self.tree = temp.tree
 			self.author = temp.author
@@ -120,7 +120,7 @@ class Commit(base.Object):
 		return len(repo.git.rev_list(ref, '--', path).strip().splitlines())
 
 	@classmethod
-	def find_all(cls, repo, ref, path='', **kwargs):
+	def iter_items(cls, repo, ref, path='', **kwargs):
 		"""
 		Find all commits matching the given criteria.
 
@@ -128,7 +128,7 @@ class Commit(base.Object):
 			is the Repo
 
 		``ref``
-			is the ref from which to begin (SHA1 or name)
+			is the ref from which to begin (SHA1, Head or name)
 
 		``path``
 			is an optinal path, if set only Commits that include the path 
@@ -146,49 +146,56 @@ class Commit(base.Object):
 		options.update(kwargs)
 
 		output = repo.git.rev_list(ref, '--', path, **options)
-		return cls._list_from_string(repo, output)
+		return cls._iter_from_stream(repo, iter(output.splitlines(False)))
 
 	@classmethod
-	def _list_from_string(cls, repo, text):
+	def _iter_from_stream(cls, repo, stream):
 		"""
 		Parse out commit information into a list of Commit objects
 
 		``repo``
 			is the Repo
 
-		``text``
-			is the text output from the git-rev-list command (raw format)
+		``stream``
+			output stream from the git-rev-list command (raw format)
 
 		Returns
-			git.Commit[]
+			iterator returning Commit objects
 		"""
-		lines =text.splitlines(False)
-		commits = []
-
-		while lines:
-			id = lines.pop(0).split()[1]
-			tree = lines.pop(0).split()[1]
+		for line in stream:
+			id = line.split()[1]
+			assert line.split()[0] == "commit"
+			tree = stream.next().split()[1]
 
 			parents = []
-			while lines and lines[0].startswith('parent'):
-				parents.append(lines.pop(0).split()[-1])
-			# END while there are parent lines
-			author, authored_date = cls._actor(lines.pop(0))
-			committer, committed_date = cls._actor(lines.pop(0))
+			next_line = None
+			for parent_line in stream:
+				if not parent_line.startswith('parent'):
+					next_line = parent_line
+					break
+				# END abort reading parents
+				parents.append(parent_line.split()[-1])
+			# END for each parent line
 			
-			# free line
-			lines.pop(0)
+			author, authored_date = cls._actor(next_line)
+			committer, committed_date = cls._actor(stream.next())
+			
+			# empty line
+			stream.next()
 			
 			message_lines = []
-			while lines and not lines[0].startswith('commit'):
-				message_lines.append(lines.pop(0).strip())
+			next_line = None
+			for msg_line in stream:
+				if not msg_line.startswith('    '):
+					break
+				# END abort message reading 
+				message_lines.append(msg_line.strip())
 			# END while there are message lines
-			message = '\n'.join(message_lines[:-1])	# last line is empty
-
-			commits.append(Commit(repo, id=id, parents=parents, tree=tree, author=author, authored_date=authored_date,
-								  committer=committer, committed_date=committed_date, message=message))
-		# END while lines
-		return commits
+			message = '\n'.join(message_lines)
+			
+			yield Commit(repo, id=id, parents=parents, tree=tree, author=author, authored_date=authored_date,
+						  committer=committer, committed_date=committed_date, message=message)
+		# END for each line in stream
 
 	@classmethod
 	def diff(cls, repo, a, b=None, paths=None):
