@@ -10,7 +10,7 @@ from git import *
 import git.objects.base as base
 import git.refs as refs
 from itertools import chain
-from git.objects.util import get_object_type_by_name
+from git.objects.utils import get_object_type_by_name
 
 class TestBase(object):
 	

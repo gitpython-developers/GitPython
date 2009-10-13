@@ -8,7 +8,7 @@ Module containing all object based types.
 """
 import base
 import commit
-from util import get_object_type_by_name
+from utils import get_object_type_by_name
 
 class TagObject(base.Object):
 	"""

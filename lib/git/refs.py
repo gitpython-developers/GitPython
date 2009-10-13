@@ -7,7 +7,7 @@
 Module containing all ref based objects
 """
 from objects.base import Object
-from objects.util import get_object_type_by_name
+from objects.utils import get_object_type_by_name
 from utils import LazyMixin
 
 class Ref(LazyMixin):
