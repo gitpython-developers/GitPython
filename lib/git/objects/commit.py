@@ -140,7 +140,7 @@ class Commit(base.Object, Iterable):
 			``skip`` is the number of commits to skip
 
 		Returns
-			git.Commit[]
+			iterator yielding Commit items
 		"""
 		options = {'pretty': 'raw'}
 		options.update(kwargs)

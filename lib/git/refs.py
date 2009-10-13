@@ -8,9 +8,9 @@ Module containing all ref based objects
 """
 from objects.base import Object
 from objects.utils import get_object_type_by_name
-from utils import LazyMixin
+from utils import LazyMixin, Iterable
 
-class Ref(LazyMixin):
+class Ref(LazyMixin, Iterable):
 	"""
 	Represents a named reference to any object
 	"""
@@ -73,7 +73,7 @@ class Ref(LazyMixin):
 		return '/'.join(tokens[2:])
 		
 	@classmethod
-	def list_items(cls, repo, common_path = "refs", **kwargs):
+	def iter_items(cls, repo, common_path = "refs", **kwargs):
 		"""
 		Find all refs in the repository
 
@@ -102,15 +102,15 @@ class Ref(LazyMixin):
 		options.update(kwargs)
 
 		output = repo.git.for_each_ref(common_path, **options)
-		return cls._list_from_string(repo, output)
+		return cls._iter_from_stream(repo, iter(output.splitlines()))
 
 	@classmethod
-	def _list_from_string(cls, repo, text):
+	def _iter_from_stream(cls, repo, stream):
 		""" Parse out ref information into a list of Ref compatible objects
 		Returns git.Ref[] list of Ref objects """
 		heads = []
 
-		for line in text.splitlines():
+		for line in stream:
 			heads.append(cls._from_string(repo, line))
 
 		return heads
@@ -158,14 +158,14 @@ class Head(Ref):
 		return self.object
 		
 	@classmethod
-	def list_items(cls, repo, common_path = "refs/heads", **kwargs):
+	def iter_items(cls, repo, common_path = "refs/heads", **kwargs):
 		"""
 		Returns
-			git.Head[]
+			Iterator yielding Head items
 			
 		For more documentation, please refer to git.base.Ref.list_items
 		"""
-		return super(Head,cls).list_items(repo, common_path, **kwargs)
+		return super(Head,cls).iter_items(repo, common_path, **kwargs)
 
 	def __repr__(self):
 		return '<git.Head "%s">' % self.name
@@ -215,14 +215,14 @@ class TagRef(Ref):
 		return None
 
 	@classmethod
-	def list_items(cls, repo, common_path = "refs/tags", **kwargs):
+	def iter_items(cls, repo, common_path = "refs/tags", **kwargs):
 		"""
 		Returns
-			git.Tag[]
+			Iterator yielding commit items
 			
 		For more documentation, please refer to git.base.Ref.list_items
 		"""
-		return super(TagRef,cls).list_items(repo, common_path, **kwargs)
+		return super(TagRef,cls).iter_items(repo, common_path, **kwargs)
 		
 		
 # provide an alias
