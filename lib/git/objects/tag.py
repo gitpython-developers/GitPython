@@ -8,7 +8,7 @@ Module containing all object based types.
 """
 import base
 import commit
-from util import get_object_type_by_name
+from utils import get_object_type_by_name
 
 class TagObject(base.Object):
 	"""
@@ -48,9 +48,8 @@ class TagObject(base.Object):
 		"""
 		Cache all our attributes at once
 		"""
-		if attr in self.__slots__:
-			output = self.repo.git.cat_file(self.type,self.id)
-			lines = output.split("\n")
+		if attr in TagObject.__slots__:
+			lines = self.data.splitlines()
 			
 			obj, hexsha = lines[0].split(" ")		# object <hexsha>
 			type_token, type_name = lines[1].split(" ") # type <type_name>

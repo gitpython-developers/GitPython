@@ -102,7 +102,7 @@ class Repo(object):
 		Returns
 			``git.Head[]``
 		"""
-		return Head.find_all(self)
+		return Head.list_items(self)
 
 	# alias heads
 	branches = heads
@@ -115,7 +115,7 @@ class Repo(object):
 		Returns
 			``git.Tag[]``
 		"""
-		return Tag.find_all(self)
+		return Tag.list_items(self)
 		
 	def blame(self, commit, file):
 		"""
@@ -197,7 +197,7 @@ class Repo(object):
 			# END distinguish hexsha vs other information
 		return blames
 
-	def commits(self, start='master', path='', max_count=10, skip=0):
+	def commits(self, start='master', path='', max_count=None, skip=0):
 		"""
 		A list of Commit objects representing the history of a given ref/commit
 
@@ -209,7 +209,7 @@ class Repo(object):
 			Commits that do not contain that path will not be returned.
 
 		 ``max_count``
-			is the maximum number of commits to return (default 10)
+			is the maximum number of commits to return (default None)
 
 		  ``skip``
 			is the number of commits to skip (default 0) which will effectively 
@@ -220,8 +220,11 @@ class Repo(object):
 		"""
 		options = {'max_count': max_count,
 				   'skip': skip}
-
-		return Commit.find_all(self, start, path, **options)
+				   
+		if max_count is None:
+			options.pop('max_count')		   
+				  
+		return Commit.list_items(self, start, path, **options)
 
 	def commits_between(self, frm, to):
 		"""
@@ -237,7 +240,7 @@ class Repo(object):
 		Returns
 			``git.Commit[]``
 		"""
-		return reversed(Commit.find_all(self, "%s..%s" % (frm, to)))
+		return reversed(Commit.list_items(self, "%s..%s" % (frm, to)))
 
 	def commits_since(self, start='master', path='', since='1970-01-01'):
 		"""
@@ -259,7 +262,7 @@ class Repo(object):
 		"""
 		options = {'since': since}
 
-		return Commit.find_all(self, start, path, **options)
+		return Commit.list_items(self, start, path, **options)
 
 	def commit_count(self, start='master', path=''):
 		"""
@@ -277,12 +280,14 @@ class Repo(object):
 		"""
 		return Commit.count(self, start, path)
 
-	def commit(self, id, path = ''):
+	def commit(self, id=None, path = ''):
 		"""
 		The Commit object for the specified id
 
 		``id``
-			is the SHA1 identifier of the commit
+			is the SHA1 identifier of the commit or a ref or a ref name
+			if None, it defaults to the active branch
+		
 
 		``path``
 			is an optional path, if set the returned commit must contain the path.
@@ -290,9 +295,11 @@ class Repo(object):
 		Returns
 			``git.Commit``
 		"""
+		if id is None:
+			id = self.active_branch
 		options = {'max_count': 1}
 
-		commits = Commit.find_all(self, id, path, **options)
+		commits = Commit.list_items(self, id, path, **options)
 
 		if not commits:
 			raise ValueError, "Invalid identifier %s, or given path '%s' too restrictive" % ( id, path )
@@ -309,55 +316,47 @@ class Repo(object):
 		other_repo_refs = other_repo.git.rev_list(other_ref, '--').strip().splitlines()
 
 		diff_refs = list(set(other_repo_refs) - set(repo_refs))
-		return map(lambda ref: Commit.find_all(other_repo, ref, max_count=1)[0], diff_refs)
+		return map(lambda ref: Commit.list_items(other_repo, ref, max_count=1)[0], diff_refs)
 
-	def tree(self, treeish='master'):
+	def tree(self, treeish=None):
 		"""
 		The Tree object for the given treeish reference
 
 		``treeish``
-			is the reference (default 'master')
+			is a Ref instance defaulting to the active_branch if None.
 
 		Examples::
 
-		  repo.tree('master')
-
+		  repo.tree(repo.heads[0])
 
 		Returns
 			``git.Tree``
+			
+		NOTE
+			A ref is requried here to assure you point to a commit or tag. Otherwise
+			it is not garantueed that you point to the root-level tree.
+			
+			If you need a non-root level tree, find it by iterating the root tree.
 		"""
-		return Tree(self, id=treeish)
-
-	def blob(self, id):
-		"""
-		The Blob object for the given id
-
-		``id``
-			is the SHA1 id of the blob
-
-		Returns
-			``git.Blob``
-		"""
-		return Blob(self, id=id)
-
-	def log(self, commit='master', path=None, **kwargs):
-		"""
-		The Commit for a treeish, and all commits leading to it.
+		if treeish is None:
+			treeish = self.active_branch
+		if not isinstance(treeish, Ref):
+			raise ValueError( "Treeish reference required, got %r" % treeish )
 		
-		``kwargs``
-			keyword arguments specifying flags to be used in git-log command,
-			i.e.: max_count=1 to limit the amount of commits returned
+		
+		# As we are directly reading object information, we must make sure
+		# we truly point to a tree object. We resolve the ref to a sha in all cases
+		# to assure the returned tree can be compared properly. Except for
+		# heads, ids should always be hexshas
+		hexsha, typename, size = self.git.get_object_header( treeish )
+		if typename != "tree":
+			hexsha, typename, size = self.git.get_object_header( str(treeish)+'^{tree}' )
+		# END tree handling
+		treeish = hexsha
+		
+		# the root has an empty relative path and the default mode
+		return Tree(self, treeish, 0, '')
 
-		Returns
-			``git.Commit[]``
-		"""
-		options = {'pretty': 'raw'}
-		options.update(kwargs)
-		arg = [commit, '--']
-		if path:
-			arg.append(path)
-		commits = self.git.log(*arg, **options)
-		return Commit._list_from_string(self, commits)
 
 	def diff(self, a, b, *paths):
 		"""
@@ -588,13 +587,9 @@ class Repo(object):
 		The name of the currently active branch.
 
 		Returns
-			str (the branch name)
+			Head to the active branch
 		"""
-		branch = self.git.symbolic_ref('HEAD').strip()
-		if branch.startswith('refs/heads/'):
-			branch = branch[len('refs/heads/'):]
-
-		return branch
+		return Head( self, self.git.symbolic_ref('HEAD').strip() )
 
 	def __repr__(self):
 		return '<git.Repo "%s">' % self.path

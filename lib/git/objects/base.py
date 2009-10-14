@@ -4,32 +4,10 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 import os
-
-class LazyMixin(object):
-	lazy_properties = []
-	__slots__ = tuple()
+from git.utils import LazyMixin
 	
-	def __getattr__(self, attr):
-		"""
-		Whenever an attribute is requested that we do not know, we allow it 
-		to be created and set. Next time the same attribute is reqeusted, it is simply
-		returned from our dict/slots.
-		"""
-		self._set_cache_(attr)
-		# will raise in case the cache was not created
-		return object.__getattribute__(self, attr)
+_assertion_msg_format = "Created object %r whose python type %r disagrees with the acutal git object type %r"
 
-	def _set_cache_(self, attr):
-		""" This method should be overridden in the derived class. 
-		It should check whether the attribute named by attr can be created
-		and cached. Do nothing if you do not know the attribute or call your subclass
-		
-		The derived class may create as many additional attributes as it deems 
-		necessary in case a git command returns more information than represented 
-		in the single attribute."""
-		pass
-	
-		
 class Object(LazyMixin):
 	"""
 	Implements an Object which may be Blobs, Trees, Commits and Tags
@@ -71,9 +49,13 @@ class Object(LazyMixin):
 		Retrieve object information
 		"""
 		if attr  == "size":
-			self.size = int(self.repo.git.cat_file(self.id, s=True).rstrip())
+			hexsha, typename, self.size = self.repo.git.get_object_header(self.id)
+			assert typename == self.type, _assertion_msg_format % (self.id, typename, self.type)
 		elif attr == "data":
-			self.data = self.repo.git.cat_file(self.id, p=True, with_raw_output=True)
+			hexsha, typename, self.size, self.data = self.repo.git.get_object_data(self.id)
+			assert typename == self.type, _assertion_msg_format % (self.id, typename, self.type)
+		else:
+			super(Object,self)._set_cache_(attr)
 		
 	def __eq__(self, other):
 		"""
@@ -143,8 +125,15 @@ class IndexObject(Object):
 		if isinstance(mode, basestring):
 			self.mode = self._mode_str_to_int(mode)
 	
+	def _set_cache_(self, attr):
+		if attr in IndexObject.__slots__:
+			# they cannot be retrieved lateron ( not without searching for them )
+			raise AttributeError( "path and mode attributes must have been set during %s object creation" % type(self).__name__ )
+		else:
+			super(IndexObject, self)._set_cache_(attr)
+	
 	@classmethod
-	def _mode_str_to_int( cls, modestr ):
+	def _mode_str_to_int(cls, modestr):
 		"""
 		``modestr``
 			string like 755 or 644 or 100644 - only the last 3 chars will be used

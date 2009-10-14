@@ -7,17 +7,20 @@
 Module containing all ref based objects
 """
 from objects.base import Object
-from objects.util import get_object_type_by_name
+from objects.utils import get_object_type_by_name
+from utils import LazyMixin, Iterable
 
-class Ref(object):
+class Ref(LazyMixin, Iterable):
 	"""
 	Represents a named reference to any object
 	"""
-	__slots__ = ("path", "object")
+	__slots__ = ("repo", "path")
 	
-	def __init__(self, path, object = None):
+	def __init__(self, repo, path, object = None):
 		"""
 		Initialize this instance
+		``repo``
+			Our parent repository
 		
 		``path``
 			Path relative to the .git/ directory pointing to the ref in question, i.e.
@@ -26,8 +29,10 @@ class Ref(object):
 		``object``
 			Object instance, will be retrieved on demand if None
 		"""
+		self.repo = repo
 		self.path = path
-		self.object = object
+		if object is not None:
+			self.object = object
 		
 	def __str__(self):
 		return self.name
@@ -57,9 +62,20 @@ class Ref(object):
 			return self.path	# could be refs/HEAD
 		
 		return '/'.join(tokens[2:])
-		
+	
+	@property
+	def object(self):
+		"""
+		Returns
+			The object our ref currently refers to. Refs can be cached, they will 
+			always point to the actual object as it gets re-created on each query
+		"""
+		# have to be dynamic here as we may be a tag which can point to anything
+		hexsha, typename, size = self.repo.git.get_object_header(self.path)
+		return get_object_type_by_name(typename)(self.repo, hexsha)
+	
 	@classmethod
-	def find_all(cls, repo, common_path = "refs", **kwargs):
+	def iter_items(cls, repo, common_path = "refs", **kwargs):
 		"""
 		Find all refs in the repository
 
@@ -88,54 +104,38 @@ class Ref(object):
 		options.update(kwargs)
 
 		output = repo.git.for_each_ref(common_path, **options)
-		return cls._list_from_string(repo, output)
+		return cls._iter_from_stream(repo, iter(output.splitlines()))
 
 	@classmethod
-	def _list_from_string(cls, repo, text):
-		"""
-		Parse out ref information into a list of Ref compatible objects
-
-		``repo``
-			is the Repo
-		``text``
-			is the text output from the git-for-each-ref command
-
-		Returns
-			git.Ref[]
-			
-			list of Ref objects
-		"""
+	def _iter_from_stream(cls, repo, stream):
+		""" Parse out ref information into a list of Ref compatible objects
+		Returns git.Ref[] list of Ref objects """
 		heads = []
 
-		for line in text.splitlines():
+		for line in stream:
 			heads.append(cls._from_string(repo, line))
 
 		return heads
 
 	@classmethod
 	def _from_string(cls, repo, line):
-		"""
-		Create a new Ref instance from the given string.
-
-		``repo``
-			is the Repo
-
-		``line``
-			is the formatted ref information
-
-		Format::
-		
+		""" Create a new Ref instance from the given string.
+		Format
 			name: [a-zA-Z_/]+
 			<null byte>
 			id: [0-9A-Fa-f]{40}
-
-		Returns
-			git.Head
-		"""
+		Returns git.Head """
 		full_path, hexsha, type_name, object_size = line.split("\x00")
-		obj = get_object_type_by_name(type_name)(repo, hexsha)
-		obj.size = object_size
-		return cls(full_path, obj)
+		
+		# No, we keep the object dynamic by allowing it to be retrieved by
+		# our path on demand - due to perstent commands it is fast.
+		# This reduces the risk that the object does not match 
+		# the changed ref anymore in case it changes in the meanwhile
+		return cls(repo, full_path)
+		
+		# obj = get_object_type_by_name(type_name)(repo, hexsha)
+		# obj.size = object_size
+		# return cls(repo, full_path, obj)
 		
 
 class Head(Ref):
@@ -167,14 +167,14 @@ class Head(Ref):
 		return self.object
 		
 	@classmethod
-	def find_all(cls, repo, common_path = "refs/heads", **kwargs):
+	def iter_items(cls, repo, common_path = "refs/heads", **kwargs):
 		"""
 		Returns
-			git.Head[]
+			Iterator yielding Head items
 			
-		For more documentation, please refer to git.base.Ref.find_all
+		For more documentation, please refer to git.base.Ref.list_items
 		"""
-		return super(Head,cls).find_all(repo, common_path, **kwargs)
+		return super(Head,cls).iter_items(repo, common_path, **kwargs)
 
 	def __repr__(self):
 		return '<git.Head "%s">' % self.name
@@ -190,30 +190,13 @@ class TagRef(Ref):
 	This tag object will always point to a commit object, but may carray additional
 	information in a tag object::
 	
-	 tagref = TagRef.find_all(repo)[0]
+	 tagref = TagRef.list_items(repo)[0]
 	 print tagref.commit.message
 	 if tagref.tag is not None:
 		print tagref.tag.message
 	"""
 	
-	__slots__ = "tag"
-	
-	def __init__(self, path, commit_or_tag):
-		"""
-		Initialize a newly instantiated Tag
-
-		``path``
-			is the full path to the tag
-
-		``commit_or_tag``
-			is the Commit or TagObject that this tag ref points to
-		"""
-		super(TagRef, self).__init__(path, commit_or_tag)
-		self.tag = None
-		
-		if commit_or_tag.type == "tag":
-			self.tag = commit_or_tag
-		# END tag object handling 
+	__slots__ = tuple()
 	
 	@property
 	def commit(self):
@@ -223,18 +206,32 @@ class TagRef(Ref):
 		"""
 		if self.object.type == "commit":
 			return self.object
-		# it is a tag object
-		return self.object.object
+		elif self.object.type == "tag":
+			# it is a tag object which carries the commit as an object - we can point to anything
+			return self.object.object
+		else:
+			raise ValueError( "Tag %s points to a Blob or Tree - have never seen that before" % self )  
 
-	@classmethod
-	def find_all(cls, repo, common_path = "refs/tags", **kwargs):
+	@property
+	def tag(self):
 		"""
 		Returns
-			git.Tag[]
-			
-		For more documentation, please refer to git.base.Ref.find_all
+			Tag object this tag ref points to or None in case 
+			we are a light weight tag
 		"""
-		return super(TagRef,cls).find_all(repo, common_path, **kwargs)
+		if self.object.type == "tag":
+			return self.object
+		return None
+
+	@classmethod
+	def iter_items(cls, repo, common_path = "refs/tags", **kwargs):
+		"""
+		Returns
+			Iterator yielding commit items
+			
+		For more documentation, please refer to git.base.Ref.list_items
+		"""
+		return super(TagRef,cls).iter_items(repo, common_path, **kwargs)
 		
 		
 # provide an alias

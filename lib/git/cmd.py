@@ -13,7 +13,7 @@ from errors import GitCommandError
 GIT_PYTHON_TRACE = os.environ.get("GIT_PYTHON_TRACE", False)
 
 execute_kwargs = ('istream', 'with_keep_cwd', 'with_extended_output',
-				  'with_exceptions', 'with_raw_output')
+				  'with_exceptions', 'with_raw_output', 'as_process')
 
 extra = {}
 if sys.platform == 'win32':
@@ -34,6 +34,34 @@ class Git(object):
 		of the command to stdout.
 		Set its value to 'full' to see details about the returned values.
 	"""
+	class AutoInterrupt(object):
+		"""
+		Kill/Interrupt the stored process instance once this instance goes out of scope. It is 
+		used to prevent processes piling up in case iterators stop reading.
+		Besides all attributes are wired through to the contained process object
+		"""
+		__slots__= "proc"
+		
+		def __init__(self, proc ):
+			self.proc = proc
+			
+		def __del__(self):
+			# did the process finish already so we have a return code ?
+			if self.proc.poll() is not None:
+				return 
+			
+			# try to kill it
+			try:
+				os.kill(self.proc.pid, 2)	# interrupt signal
+			except AttributeError:
+				# try windows 
+				subprocess.call(("TASKKILL", "/T", "/PID", self.proc.pid))
+			# END exception handling 
+			
+		def __getattr__(self, attr):
+			return getattr(self.proc, attr)
+	
+	
 	def __init__(self, git_dir=None):
 		"""
 		Initialize this instance with:
@@ -44,6 +72,10 @@ class Git(object):
 		"""
 		super(Git, self).__init__()
 		self.git_dir = git_dir
+		
+		# cached command slots
+		self.cat_file_header = None
+		self.cat_file_all = None
 
 	def __getattr__(self, name):
 		"""
@@ -70,6 +102,7 @@ class Git(object):
 				with_extended_output=False,
 				with_exceptions=True,
 				with_raw_output=False,
+				as_process=False
 				):
 		"""
 		Handles executing the command on the shell and consumes and returns
@@ -96,6 +129,16 @@ class Git(object):
 
 		``with_raw_output``
 			Whether to avoid stripping off trailing whitespace.
+			
+		 ``as_process``
+		 	Whether to return the created process instance directly from which 
+		 	streams can be read on demand. This will render with_extended_output, 
+		 	with_exceptions and with_raw_output ineffective - the caller will have 
+		 	to deal with the details himself.
+		 	It is important to note that the process will be placed into an AutoInterrupt
+		 	wrapper that will interrupt the process once it goes out of scope. If you 
+		 	use the command in iterators, you should pass the whole process instance 
+		 	instead of a single stream.
 
 		Returns::
 		
@@ -127,7 +170,11 @@ class Git(object):
 								**extra
 								)
 
+		if as_process:
+			return self.AutoInterrupt(proc)
+		
 		# Wait for the process to return
+		status = 0
 		try:
 			stdout_value = proc.stdout.read()
 			stderr_value = proc.stderr.read()
@@ -218,3 +265,74 @@ class Git(object):
 		call.extend(args)
 
 		return self.execute(call, **_kwargs)
+		
+	def _parse_object_header(self, header_line):
+		"""
+		``header_line``
+			<hex_sha> type_string size_as_int
+			
+		Returns
+			(hex_sha, type_string, size_as_int)
+			
+		Raises
+			ValueError if the header contains indication for an error due to incorrect 
+			input sha
+		"""
+		tokens = header_line.split()
+		if len(tokens) != 3:
+			raise ValueError( "SHA named %s could not be resolved" % tokens[0] )
+			
+		return (tokens[0], tokens[1], int(tokens[2]))
+	
+	def __prepare_ref(self, ref):
+		# required for command to separate refs on stdin
+		refstr = str(ref)				# could be ref-object
+		if refstr.endswith("\n"):
+			return refstr
+		return refstr + "\n"
+	
+	def __get_persistent_cmd(self, attr_name, cmd_name, *args,**kwargs):
+		cur_val = getattr(self, attr_name)
+		if cur_val is not None:
+			return cur_val
+			
+		options = { "istream" : subprocess.PIPE, "as_process" : True }
+		options.update( kwargs )
+		
+		cmd = self._call_process( cmd_name, *args, **options )
+		setattr(self, attr_name, cmd )
+		return cmd
+	
+	def __get_object_header(self, cmd, ref):
+		cmd.stdin.write(self.__prepare_ref(ref))
+		cmd.stdin.flush()
+		return self._parse_object_header(cmd.stdout.readline())
+	
+	def get_object_header(self, ref):
+		"""
+		Use this method to quickly examine the type and size of the object behind 
+		the given ref. 
+		
+		NOTE
+			The method will only suffer from the costs of command invocation 
+			once and reuses the command in subsequent calls. 
+		
+		Return:
+			(hexsha, type_string, size_as_int)
+		"""
+		cmd = self.__get_persistent_cmd("cat_file_header", "cat_file", batch_check=True)
+		return self.__get_object_header(cmd, ref)
+		
+	def get_object_data(self, ref):
+		"""
+		As get_object_header, but returns object data as well
+		
+		Return:
+			(hexsha, type_string, size_as_int,data_string)
+		"""
+		cmd = self.__get_persistent_cmd("cat_file_all", "cat_file", batch=True)
+		hexsha, typename, size = self.__get_object_header(cmd, ref)
+		data = cmd.stdout.read(size)
+		cmd.stdout.read(1)		# finishing newlines
+		
+		return (hexsha, typename, size, data)

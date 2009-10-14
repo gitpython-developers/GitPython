@@ -17,3 +17,14 @@ def fixture(name):
 
 def absolute_project_path():
 	return os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+	
+	
+class ListProcessAdapter(object):
+	"""Allows to use lists as Process object as returned by SubProcess.Popen.
+	Its tailored to work with the test system only"""
+	
+	def __init__(self, input_list_or_string):
+		l = input_list_or_string
+		if isinstance(l,basestring):
+			l = l.splitlines()
+		self.stdout = iter(l)
