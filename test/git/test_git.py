@@ -84,6 +84,6 @@ class TestGit(object):
 		
 		
 		# same can be achived using the respective command functions
-		typename, size =  self.git.get_object_header(hexsha)
-		typename_two, size_two, data = self.git.get_object_data(hexsha)
+		hexsha, typename, size =  self.git.get_object_header(hexsha)
+		hexsha, typename_two, size_two, data = self.git.get_object_data(hexsha)
 		assert typename == typename_two and size == size_two

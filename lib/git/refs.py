@@ -38,10 +38,11 @@ class Ref(LazyMixin, Iterable):
 		if attr == "object":
 			# have to be dynamic here as we may be a tag which can point to anything
 			# it uses our path to stay dynamic
-			typename, size = self.repo.git.get_object_header(self.path)
-			# explicitly do not set the size as it may change if the our ref path points 
-			# at some other place when the head changes for instance ... 
-			self.object = get_object_type_by_name(typename)(self.repo, self.path)
+			hexsha, typename, size = self.repo.git.get_object_header(self.path)
+			# pin-point our object to a specific sha, even though it might not 
+			# reflect the our cached object anymore in case our rev now points 
+			# to a different commit
+			self.object = get_object_type_by_name(typename)(self.repo, hexsha)
 		else:
 			super(Ref, self)._set_cache_(attr)
 		
@@ -128,7 +129,9 @@ class Ref(LazyMixin, Iterable):
 		full_path, hexsha, type_name, object_size = line.split("\x00")
 		
 		# No, we keep the object dynamic by allowing it to be retrieved by
-		# our path on demand - due to perstent commands it is fast
+		# our path on demand - due to perstent commands it is fast.
+		# This reduces the risk that the object does not match 
+		# the changed ref anymore in case it changes in the meanwhile
 		return cls(repo, full_path)
 		
 		# obj = get_object_type_by_name(type_name)(repo, hexsha)

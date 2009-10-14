@@ -272,7 +272,7 @@ class Git(object):
 			<hex_sha> type_string size_as_int
 			
 		Returns
-			(type_string, size_as_int)
+			(hex_sha, type_string, size_as_int)
 			
 		Raises
 			ValueError if the header contains indication for an error due to incorrect 
@@ -282,7 +282,7 @@ class Git(object):
 		if len(tokens) != 3:
 			raise ValueError( "SHA named %s could not be resolved" % tokens[0] )
 			
-		return (tokens[1], int(tokens[2]))
+		return (tokens[0], tokens[1], int(tokens[2]))
 	
 	def __prepare_ref(self, ref):
 		# required for command to separate refs on stdin
@@ -318,7 +318,7 @@ class Git(object):
 			once and reuses the command in subsequent calls. 
 		
 		Return:
-			(type_string, size_as_int)
+			(hexsha, type_string, size_as_int)
 		"""
 		cmd = self.__get_persistent_cmd("cat_file_header", "cat_file", batch_check=True)
 		return self.__get_object_header(cmd, ref)
@@ -328,11 +328,11 @@ class Git(object):
 		As get_object_header, but returns object data as well
 		
 		Return:
-			(type_string, size_as_int,data_string)
+			(hexsha, type_string, size_as_int,data_string)
 		"""
 		cmd = self.__get_persistent_cmd("cat_file_all", "cat_file", batch=True)
-		typename, size = self.__get_object_header(cmd, ref)
+		hexsha, typename, size = self.__get_object_header(cmd, ref)
 		data = cmd.stdout.read(size)
 		cmd.stdout.read(1)		# finishing newlines
 		
-		return (typename, size, data)
+		return (hexsha, typename, size, data)
