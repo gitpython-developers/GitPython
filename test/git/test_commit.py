@@ -230,19 +230,3 @@ class TestCommit(object):
 		assert_equal(commit1, commit2)
 		assert_not_equal(commit2, commit3)
 		
-	def test_iteration(self):
-		root = self.repo.tree()
-		head = self.repo.active_branch
-		head_commit = self.repo.active_branch.object
-		num_objs = 0
-		
-		# find the first commit containing the given path - always do a full 
-		# iteration ( restricted to the path in question ), but in fact it should 
-		# return quite a lot of commits, we just take one and hence abort the operation
-		
-		for obj in root.traverse():
-			num_objs += 1
-			del( head_commit.tree )		# force it to clear the cache, just to make it harder
-			assert obj in head_commit.tree.traverse()
-		# END for each object
-		

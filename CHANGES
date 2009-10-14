@@ -42,6 +42,8 @@ Repo
 * tree method now requires a Ref instance as input and defaults to the active_branche
   instead of master
 * Removed 'log' method as it as effectively the same as the 'commits' method
+* 'commits' method has no max-count of returned commits anymore, it now behaves 
+ like git-rev-list
 
 Diff
 ----

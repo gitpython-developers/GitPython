@@ -1,0 +1,38 @@
+# test_performance.py
+# Copyright (C) 2008, 2009 Michael Trier (mtrier@gmail.com) and contributors
+#
+# This module is part of GitPython and is released under
+# the BSD License: http://www.opensource.org/licenses/bsd-license.php
+
+from test.testlib import *
+from git import *
+from time import time
+
+class TestPerformance(object):
+	def setup(self):
+		self.repo = Repo(GIT_REPO)
+
+	def test_iteration(self):
+		num_objs = 0
+		num_commits = 0
+		
+		# find the first commit containing the given path - always do a full 
+		# iteration ( restricted to the path in question ), but in fact it should 
+		# return quite a lot of commits, we just take one and hence abort the operation
+		
+		st = time()
+		for c in self.repo.commits():
+			num_commits += 1
+			c.author
+			c.authored_date
+			c.committer
+			c.committed_date
+			c.message
+			for obj in c.tree.traverse():
+				obj.size
+				num_objs += 1
+			# END for each object
+		# END for each commit
+		elapsed_time = time() - st
+		print "Traversed %i Trees and a total of %i unchached objects in %s [s] ( %f objs/s )" % (num_commits, num_objs, elapsed_time, num_objs/elapsed_time) 
+		

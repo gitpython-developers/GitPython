@@ -197,7 +197,7 @@ class Repo(object):
 			# END distinguish hexsha vs other information
 		return blames
 
-	def commits(self, start='master', path='', max_count=10, skip=0):
+	def commits(self, start='master', path='', max_count=None, skip=0):
 		"""
 		A list of Commit objects representing the history of a given ref/commit
 
@@ -209,7 +209,7 @@ class Repo(object):
 			Commits that do not contain that path will not be returned.
 
 		 ``max_count``
-			is the maximum number of commits to return (default 10)
+			is the maximum number of commits to return (default None)
 
 		  ``skip``
 			is the number of commits to skip (default 0) which will effectively 
@@ -220,7 +220,10 @@ class Repo(object):
 		"""
 		options = {'max_count': max_count,
 				   'skip': skip}
-
+				   
+		if max_count is None:
+			options.pop('max_count')		   
+				  
 		return Commit.list_items(self, start, path, **options)
 
 	def commits_between(self, frm, to):
