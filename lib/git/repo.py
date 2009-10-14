@@ -340,11 +340,19 @@ class Repo(object):
 		if not isinstance(treeish, Ref):
 			raise ValueError( "Treeish reference required, got %r" % treeish )
 		
-		# we should also check whether the ref has a valid commit ... but lets n
-		# not be over-critical
+		
+		# As we are directly reading object information, we must make sure
+		# we truly point to a tree object. We resolve the ref to a sha in all cases
+		# to assure the returned tree can be compared properly. Except for
+		# heads, ids should always be hexshas
+		hexsha, typename, size = self.git.get_object_header( treeish )
+		if typename != "tree":
+			hexsha, typename, size = self.git.get_object_header( str(treeish)+'^{tree}' )
+		# END tree handling
+		treeish = hexsha
+		
 		# the root has an empty relative path and the default mode
-		root = Tree(self, treeish, 0, '')
-		return root
+		return Tree(self, treeish, 0, '')
 
 
 	def diff(self, a, b, *paths):

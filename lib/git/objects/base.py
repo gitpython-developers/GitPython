@@ -6,7 +6,8 @@
 import os
 from git.utils import LazyMixin
 	
-		
+_assertion_msg_format = "Created object %r whose python type %r disagrees with the acutal git object type %r"
+
 class Object(LazyMixin):
 	"""
 	Implements an Object which may be Blobs, Trees, Commits and Tags
@@ -49,10 +50,10 @@ class Object(LazyMixin):
 		"""
 		if attr  == "size":
 			hexsha, typename, self.size = self.repo.git.get_object_header(self.id)
-			assert typename == self.type, "Created object whose python type %r disagrees with the acutal git object type %r" % (typename, self.type)
+			assert typename == self.type, _assertion_msg_format % (self.id, typename, self.type)
 		elif attr == "data":
 			hexsha, typename, self.size, self.data = self.repo.git.get_object_data(self.id)
-			assert typename == self.type, "Created object whose python type %r disagrees with the acutal git object type %r" % (typename, self.type)
+			assert typename == self.type, _assertion_msg_format % (self.id, typename, self.type)
 		else:
 			super(Object,self)._set_cache_(attr)
 		

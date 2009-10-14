@@ -84,18 +84,7 @@ class TestRepo(object):
 		assert_equal("4c8124ffcf4039d292442eeccabdeca5af5c5017", commit.id)
 
 		assert_true(git.called)
-
-	@patch_object(Git, '_call_process')
-	def test_tree(self, git):
-		git.return_value = fixture('ls_tree_a')
-
-		tree = self.repo.tree(Head(self.repo, 'master'))
-
-		assert_equal(4, len([c for c in tree if isinstance(c, Blob)]))
-		assert_equal(3, len([c for c in tree if isinstance(c, Tree)]))
-
-		assert_true(git.called)
-
+		
 	@patch_object(Repo, '__init__')
 	@patch_object(Git, '_call_process')
 	def test_init_bare(self, git, repo):

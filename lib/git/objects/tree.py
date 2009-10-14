@@ -7,6 +7,13 @@
 import os
 import blob
 import base
+import binascii
+
+def sha_to_hex(sha):
+    """Takes a string and returns the hex of the sha within"""
+    hexsha = binascii.hexlify(sha)
+    assert len(hexsha) == 40, "Incorrect length of sha1 string: %d" % hexsha
+    return hexsha
 
 class Tree(base.IndexObject):
 	"""
@@ -29,18 +36,23 @@ class Tree(base.IndexObject):
 	type = "tree"
 	__slots__ = "_cache"
 	
+	# using ascii codes for comparison 
+	ascii_commit_id = (0x31 << 4) + 0x36		
+	ascii_blob_id = (0x31 << 4) + 0x30
+	ascii_tree_id = (0x34 << 4) + 0x30
+	
+	
 	def __init__(self, repo, id, mode=0, path=None):
 		super(Tree, self).__init__(repo, id, mode, path)
 
 	def _set_cache_(self, attr):
 		if attr == "_cache":
 			# Set the data when we need it
-			self._cache = self._get_tree_cache(self.repo, self.id)
+			self._cache = self._get_tree_cache()
 		else:
 			super(Tree, self)._set_cache_(attr)
 
-	@classmethod
-	def _get_tree_cache(cls, repo, treeish):
+	def _get_tree_cache(self):
 		"""
 		Return
 			list(object_instance, ...)
@@ -49,45 +61,71 @@ class Tree(base.IndexObject):
 			sha or ref identifying a tree  
 		"""
 		out = list()
-		for line in repo.git.ls_tree(treeish).splitlines():
-			obj = cls._from_string(repo, line)
+		for obj in self._iter_from_data():
 			if obj is not None:
 				out.append(obj)
 			# END if object was handled
 		# END for each line from ls-tree
 		return out
 		
-
-	@classmethod
-	def _from_string(cls, repo, text):
+		
+	def _iter_from_data(self):
 		"""
-		Parse a content item and create the appropriate object
-
-		``repo``
-			is the Repo
-
-		 ``text``
-			is the single line containing the items data in `git ls-tree` format
-
+		Reads the binary non-pretty printed representation of a tree and converts
+		it into Blob, Tree or Commit objects.
+		
+		Note: This method was inspired by the parse_tree method in dulwich.
+		
 		Returns
-			``git.Blob`` or ``git.Tree``
-			
-		NOTE: Currently sub-modules are ignored !
+			list(IndexObject, ...)
 		"""
-		try:
-			mode, typ, id, path = text.expandtabs(1).split(" ", 3)
-		except:
-			return None
+		ord_zero = ord('0')
+		data = self.data
+		len_data = len(data)
+		i = 0
+		while i < len_data:
+			mode = 0
+			mode_boundary = i + 6
+			
+			# keep it ascii - we compare against the respective values
+			type_id = (ord(data[i])<<4) + ord(data[i+1])
+			i += 2
+			
+			while data[i] != ' ':
+				# move existing mode integer up one level being 3 bits
+				# and add the actual ordinal value of the character
+				mode = (mode << 3) + (ord(data[i]) - ord_zero)
+				i += 1
+			# END while reading mode
+			
+			# byte is space now, skip it
+			i += 1
+			
+			# parse name, it is NULL separated
+			
+			ns = i
+			while data[i] != '\0':
+				i += 1
+			# END while not reached NULL
+			name = data[ns:i]
+			
+			# byte is NULL, get next 20
+			i += 1
+			sha = data[i:i+20]
+			i = i + 20
+			
+			hexsha = sha_to_hex(sha)
+			if type_id == self.ascii_blob_id:
+				yield blob.Blob(self.repo, hexsha, mode, name)
+			elif type_id == self.ascii_tree_id:
+				yield Tree(self.repo, hexsha, mode, name)
+			elif type_id == self.ascii_commit_id:
+				# todo 
+				yield None
+			else:
+				raise TypeError( "Unknown type found in tree data: %i" % type_id )
+		# END for each byte in data stream
 
-		if typ == "tree":
-			return Tree(repo, id, mode, path)
-		elif typ == "blob":
-			return blob.Blob(repo, id, mode, path)
-		elif typ == "commit":
-			# TODO: Return a submodule
-			return None 
-		else:
-		  raise(TypeError, "Invalid type: %s" % typ)
 
 	def __div__(self, file):
 		"""
