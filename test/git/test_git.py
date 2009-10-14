@@ -10,8 +10,7 @@ from git import Git, GitCommandError
 
 class TestGit(object):
 	def setup(self):
-		base = os.path.join(os.path.dirname(__file__), "../..")
-		self.git = Git(base)
+		self.git = Git(GIT_REPO)
 
 	@patch_object(Git, 'execute')
 	def test_call_process_calls_execute(self, git):
@@ -56,3 +55,35 @@ class TestGit(object):
 		# this_should_not_be_ignored=False implies it *should* be ignored
 		output = self.git.version(pass_this_kwarg=False)
 		assert_true("pass_this_kwarg" not in git.call_args[1])
+		
+	def test_persistent_cat_file_command(self):
+		# read header only
+		import subprocess as sp
+		hexsha = "b2339455342180c7cc1e9bba3e9f181f7baa5167"
+		g = self.git.cat_file(batch_check=True, istream=sp.PIPE,as_process=True)
+		g.stdin.write("b2339455342180c7cc1e9bba3e9f181f7baa5167\n")
+		g.stdin.flush()
+		obj_info = g.stdout.readline()
+		
+		# read header + data
+		g = self.git.cat_file(batch=True, istream=sp.PIPE,as_process=True)
+		g.stdin.write("b2339455342180c7cc1e9bba3e9f181f7baa5167\n")
+		g.stdin.flush()
+		obj_info_two = g.stdout.readline()
+		assert obj_info == obj_info_two
+		
+		# read data - have to read it in one large chunk
+		size = int(obj_info.split()[2])
+		data = g.stdout.read(size)
+		terminating_newline = g.stdout.read(1)
+		
+		# now we should be able to read a new object
+		g.stdin.write("b2339455342180c7cc1e9bba3e9f181f7baa5167\n")
+		g.stdin.flush()
+		assert g.stdout.readline() == obj_info
+		
+		
+		# same can be achived using the respective command functions
+		typename, size =  self.git.get_object_header(hexsha)
+		typename_two, size_two, data = self.git.get_object_data(hexsha)
+		assert typename == typename_two and size == size_two

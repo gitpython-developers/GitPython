@@ -34,7 +34,6 @@ class Git(object):
 		of the command to stdout.
 		Set its value to 'full' to see details about the returned values.
 	"""
-	
 	class AutoInterrupt(object):
 		"""
 		Kill/Interrupt the stored process instance once this instance goes out of scope. It is 
@@ -50,7 +49,7 @@ class Git(object):
 			# did the process finish already so we have a return code ?
 			if self.proc.poll() is not None:
 				return 
-				
+			
 			# try to kill it
 			try:
 				os.kill(self.proc.pid, 2)	# interrupt signal
@@ -73,6 +72,10 @@ class Git(object):
 		"""
 		super(Git, self).__init__()
 		self.git_dir = git_dir
+		
+		# cached command slots
+		self.cat_file_header = None
+		self.cat_file_all = None
 
 	def __getattr__(self, name):
 		"""
@@ -262,3 +265,74 @@ class Git(object):
 		call.extend(args)
 
 		return self.execute(call, **_kwargs)
+		
+	def _parse_object_header(self, header_line):
+		"""
+		``header_line``
+			<hex_sha> type_string size_as_int
+			
+		Returns
+			(type_string, size_as_int)
+			
+		Raises
+			ValueError if the header contains indication for an error due to incorrect 
+			input sha
+		"""
+		tokens = header_line.split()
+		if len(tokens) != 3:
+			raise ValueError( "SHA named %s could not be resolved" % tokens[0] )
+			
+		return (tokens[1], int(tokens[2]))
+	
+	def __prepare_ref(self, ref):
+		# required for command to separate refs on stdin
+		refstr = str(ref)				# could be ref-object
+		if refstr.endswith("\n"):
+			return refstr
+		return refstr + "\n"
+	
+	def __get_persistent_cmd(self, attr_name, cmd_name, *args,**kwargs):
+		cur_val = getattr(self, attr_name)
+		if cur_val is not None:
+			return cur_val
+			
+		options = { "istream" : subprocess.PIPE, "as_process" : True }
+		options.update( kwargs )
+		
+		cmd = self._call_process( cmd_name, *args, **options )
+		setattr(self, attr_name, cmd )
+		return cmd
+	
+	def __get_object_header(self, cmd, ref):
+		cmd.stdin.write(self.__prepare_ref(ref))
+		cmd.stdin.flush()
+		return self._parse_object_header(cmd.stdout.readline())
+	
+	def get_object_header(self, ref):
+		"""
+		Use this method to quickly examine the type and size of the object behind 
+		the given ref. 
+		
+		NOTE
+			The method will only suffer from the costs of command invocation 
+			once and reuses the command in subsequent calls. 
+		
+		Return:
+			(type_string, size_as_int)
+		"""
+		cmd = self.__get_persistent_cmd("cat_file_header", "cat_file", batch_check=True)
+		return self.__get_object_header(cmd, ref)
+		
+	def get_object_data(self, ref):
+		"""
+		As get_object_header, but returns object data as well
+		
+		Return:
+			(type_string, size_as_int,data_string)
+		"""
+		cmd = self.__get_persistent_cmd("cat_file_all", "cat_file", batch=True)
+		typename, size = self.__get_object_header(cmd, ref)
+		data = cmd.stdout.read(size)
+		cmd.stdout.read(1)		# finishing newlines
+		
+		return (typename, size, data)
