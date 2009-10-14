@@ -73,6 +73,16 @@ class TestBase(object):
 		assert len(s) == ref_count
 		assert len(s|s) == ref_count
 		
+	def test_heads(self):
+		# see how it dynmically updates its object
+		for head in self.repo.heads:
+			head.name
+			head.path
+			cur_obj = head.object
+			del( head.object )
+			assert cur_obj == head.object
+		# END for each head
+		
 	def test_get_object_type_by_name(self):
 		for tname in base.Object.TYPES:
 			assert base.Object in get_object_type_by_name(tname).mro()

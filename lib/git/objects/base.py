@@ -48,9 +48,13 @@ class Object(LazyMixin):
 		Retrieve object information
 		"""
 		if attr  == "size":
-			self.size = int(self.repo.git.cat_file(self.id, s=True).rstrip())
+			typename, self.size = self.repo.git.get_object_header(self.id)
+			assert typename == self.type, "Created object whose python type %r disagrees with the acutal git object type %r" % (typename, self.type)
 		elif attr == "data":
-			self.data = self.repo.git.cat_file(self.id, p=True, with_raw_output=True)
+			typename, self.size, self.data = self.repo.git.get_object_data(self.id)
+			assert typename == self.type, "Created object whose python type %r disagrees with the acutal git object type %r" % (typename, self.type)
+		else:
+			super(Object,self)._set_cache_(attr)
 		
 	def __eq__(self, other):
 		"""

@@ -81,7 +81,10 @@ class Commit(base.Object, Iterable):
 		We set all values at once.
 		"""
 		if attr in Commit.__slots__:
-			temp = Commit.list_items(self.repo, self.id, max_count=1)[0]
+			# prepare our data lines to match rev-list
+			data_lines = self.data.splitlines()
+			data_lines.insert(0, "commit %s" % self.id)
+			temp = self._iter_from_process_or_stream(self.repo, iter(data_lines)).next()
 			self.parents = temp.parents
 			self.tree = temp.tree
 			self.author = temp.author
@@ -147,10 +150,10 @@ class Commit(base.Object, Iterable):
 
 		# the test system might confront us with string values - 
 		proc = repo.git.rev_list(ref, '--', path, **options)
-		return cls._iter_from_process(repo, proc)
+		return cls._iter_from_process_or_stream(repo, proc)
 
 	@classmethod
-	def _iter_from_process(cls, repo, proc):
+	def _iter_from_process_or_stream(cls, repo, proc_or_stream):
 		"""
 		Parse out commit information into a list of Commit objects
 
@@ -163,7 +166,10 @@ class Commit(base.Object, Iterable):
 		Returns
 			iterator returning Commit objects
 		"""
-		stream = proc.stdout
+		stream = proc_or_stream
+		if not hasattr(stream,'next'):
+			stream = proc_or_stream.stdout
+			
 		for line in stream:
 			id = line.split()[1]
 			assert line.split()[0] == "commit"

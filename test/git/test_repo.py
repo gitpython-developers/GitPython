@@ -96,16 +96,6 @@ class TestRepo(object):
 
 		assert_true(git.called)
 
-	@patch_object(Git, '_call_process')
-	def test_blob(self, git):
-		git.return_value = fixture('cat_file_blob')
-
-		blob = Blob(self.repo,"abc")
-		assert_equal("Hello world", blob.data)
-
-		assert_true(git.called)
-		assert_equal(git.call_args, (('cat_file', 'abc'), {'p': True, 'with_raw_output': True}))
-
 	@patch_object(Repo, '__init__')
 	@patch_object(Git, '_call_process')
 	def test_init_bare(self, git, repo):

@@ -38,8 +38,10 @@ class Ref(LazyMixin, Iterable):
 		if attr == "object":
 			# have to be dynamic here as we may be a tag which can point to anything
 			# it uses our path to stay dynamic
-			type_string = self.repo.git.cat_file(self.path, t=True).rstrip() 
-			self.object = get_object_type_by_name(type_string)(self.repo, self.path)
+			typename, size = self.repo.git.get_object_header(self.path)
+			# explicitly do not set the size as it may change if the our ref path points 
+			# at some other place when the head changes for instance ... 
+			self.object = get_object_type_by_name(typename)(self.repo, self.path)
 		else:
 			super(Ref, self)._set_cache_(attr)
 		
@@ -124,9 +126,14 @@ class Ref(LazyMixin, Iterable):
 			id: [0-9A-Fa-f]{40}
 		Returns git.Head """
 		full_path, hexsha, type_name, object_size = line.split("\x00")
-		obj = get_object_type_by_name(type_name)(repo, hexsha)
-		obj.size = object_size
-		return cls(repo, full_path, obj)
+		
+		# No, we keep the object dynamic by allowing it to be retrieved by
+		# our path on demand - due to perstent commands it is fast
+		return cls(repo, full_path)
+		
+		# obj = get_object_type_by_name(type_name)(repo, hexsha)
+		# obj.size = object_size
+		# return cls(repo, full_path, obj)
 		
 
 class Head(Ref):

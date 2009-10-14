@@ -12,51 +12,14 @@ class TestBlob(object):
 	def setup(self):
 		self.repo = Repo(GIT_REPO)
 	
-	@patch_object(Git, '_call_process')
-	def test_should_return_blob_contents(self, git):
-		git.return_value = fixture('cat_file_blob')
-		blob = Blob(self.repo, **{'id': 'abc'})
-		assert_equal("Hello world", blob.data)
-		assert_true(git.called)
-		assert_equal(git.call_args, (('cat_file', 'abc'), {'p': True, 'with_raw_output': True}))
-
-	@patch_object(Git, '_call_process')
-	def test_should_return_blob_contents_with_newline(self, git):
-		git.return_value = fixture('cat_file_blob_nl')
-		blob = Blob(self.repo, **{'id': 'abc'})
-		assert_equal("Hello world\n", blob.data)
-		assert_true(git.called)
-		assert_equal(git.call_args, (('cat_file', 'abc'), {'p': True, 'with_raw_output': True}))
-	
-	@patch_object(Git, '_call_process')
-	def test_should_cache_data(self, git):
-		git.return_value = fixture('cat_file_blob')
-		bid = '787b92b63f629398f3d2ceb20f7f0c2578259e84'
+	def test_should_cache_data(self):
+		bid = 'a802c139d4767c89dcad79d836d05f7004d39aac'
 		blob = Blob(self.repo, bid)
 		blob.data
-		blob.data
-		assert_true(git.called)
-		assert_equal(git.call_count, 1)
-		assert_equal(git.call_args, (('cat_file', bid), {'p': True, 'with_raw_output': True}))
-
-	@patch_object(Git, '_call_process')
-	def test_should_return_file_size(self, git):
-		git.return_value = fixture('cat_file_blob_size')
-		blob = Blob(self.repo, **{'id': 'abc'})
-		assert_equal(11, blob.size)
-		assert_true(git.called)
-		assert_equal(git.call_args, (('cat_file', 'abc'), {'s': True}))
-
-	@patch_object(Git, '_call_process')
-	def test_should_cache_file_size(self, git):
-		git.return_value = fixture('cat_file_blob_size')
-		blob = Blob(self.repo, **{'id': 'abc'})
-		assert_equal(11, blob.size)
-		assert_equal(11, blob.size)
-		assert_true(git.called)
-		assert_equal(git.call_count, 1)
-		assert_equal(git.call_args, (('cat_file', 'abc'), {'s': True}))
-  
+		assert blob.data
+		blob.size
+		blob.size
+		
 	def test_mime_type_should_return_mime_type_for_known_types(self):
 		blob = Blob(self.repo, **{'id': 'abc', 'path': 'foo.png'})
 		assert_equal("image/png", blob.mime_type)
