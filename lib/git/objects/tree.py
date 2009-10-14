@@ -29,7 +29,7 @@ class Tree(base.IndexObject):
 	type = "tree"
 	__slots__ = "_cache"
 	
-	def __init__(self, repo, id, mode=None, path=None):
+	def __init__(self, repo, id, mode=0, path=None):
 		super(Tree, self).__init__(repo, id, mode, path)
 
 	def _set_cache_(self, attr):

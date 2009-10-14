@@ -121,7 +121,7 @@ class IndexObject(Object):
 			self.mode = self._mode_str_to_int(mode)
 	
 	def _set_cache_(self, attr):
-		if attr in self.__slots__:
+		if attr in IndexObject.__slots__:
 			# they cannot be retrieved lateron ( not without searching for them )
 			raise AttributeError( "path and mode attributes must have been set during %s object creation" % type(self).__name__ )
 		else:

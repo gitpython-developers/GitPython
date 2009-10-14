@@ -48,7 +48,7 @@ class TagObject(base.Object):
 		"""
 		Cache all our attributes at once
 		"""
-		if attr in self.__slots__:
+		if attr in TagObject.__slots__:
 			output = self.repo.git.cat_file(self.type,self.id)
 			lines = output.split("\n")
 			

@@ -71,7 +71,7 @@ class Commit(base.Object, Iterable):
 		# END for each parent to convert
 			
 		if self.id and tree is not None:
-			self.tree = Tree(repo, id=tree)
+			self.tree = Tree(repo, id=tree, path='')
 		# END id to tree conversion
 
 	def _set_cache_(self, attr):
@@ -80,7 +80,7 @@ class Commit(base.Object, Iterable):
 		to be set.
 		We set all values at once.
 		"""
-		if attr in self.__slots__:
+		if attr in Commit.__slots__:
 			temp = Commit.list_items(self.repo, self.id, max_count=1)[0]
 			self.parents = temp.parents
 			self.tree = temp.tree
