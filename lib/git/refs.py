@@ -14,7 +14,7 @@ class Ref(LazyMixin, Iterable):
 	"""
 	Represents a named reference to any object
 	"""
-	__slots__ = ("repo", "path", "object")
+	__slots__ = ("repo", "path")
 	
 	def __init__(self, repo, path, object = None):
 		"""
@@ -33,18 +33,6 @@ class Ref(LazyMixin, Iterable):
 		self.path = path
 		if object is not None:
 			self.object = object
-		
-	def _set_cache_(self, attr):
-		if attr == "object":
-			# have to be dynamic here as we may be a tag which can point to anything
-			# it uses our path to stay dynamic
-			hexsha, typename, size = self.repo.git.get_object_header(self.path)
-			# pin-point our object to a specific sha, even though it might not 
-			# reflect the our cached object anymore in case our rev now points 
-			# to a different commit
-			self.object = get_object_type_by_name(typename)(self.repo, hexsha)
-		else:
-			super(Ref, self)._set_cache_(attr)
 		
 	def __str__(self):
 		return self.name
@@ -74,7 +62,18 @@ class Ref(LazyMixin, Iterable):
 			return self.path	# could be refs/HEAD
 		
 		return '/'.join(tokens[2:])
-		
+	
+	@property
+	def object(self):
+		"""
+		Returns
+			The object our ref currently refers to. Refs can be cached, they will 
+			always point to the actual object as it gets re-created on each query
+		"""
+		# have to be dynamic here as we may be a tag which can point to anything
+		hexsha, typename, size = self.repo.git.get_object_header(self.path)
+		return get_object_type_by_name(typename)(self.repo, hexsha)
+	
 	@classmethod
 	def iter_items(cls, repo, common_path = "refs", **kwargs):
 		"""

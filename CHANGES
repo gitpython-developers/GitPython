@@ -63,6 +63,12 @@ Tree
 * now mimics behaviour of a read-only list instead of a dict to maintain order.
 * content_from_string method is now private and not part of the public API anymore
 
+Refs
+----
+* Will dynmically retrieve their object at the time of query to assure the information 
+  is actual. Recently objects would be cached, hence ref object not be safely kept 
+  persistent.
+
 0.1.6
 =====
 

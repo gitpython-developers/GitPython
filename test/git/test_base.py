@@ -78,9 +78,10 @@ class TestBase(object):
 		for head in self.repo.heads:
 			head.name
 			head.path
-			cur_obj = head.object
-			del( head.object )
-			assert cur_obj == head.object
+			prev_object = head.object
+			cur_object = head.object
+			assert prev_object == cur_object		# represent the same git object
+			assert prev_object is not cur_object	# but are different instances
 		# END for each head
 		
 	def test_get_object_type_by_name(self):
