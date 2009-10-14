@@ -13,7 +13,7 @@ from errors import GitCommandError
 GIT_PYTHON_TRACE = os.environ.get("GIT_PYTHON_TRACE", False)
 
 execute_kwargs = ('istream', 'with_keep_cwd', 'with_extended_output',
-				  'with_exceptions', 'with_raw_output')
+				  'with_exceptions', 'with_raw_output', 'as_process')
 
 extra = {}
 if sys.platform == 'win32':
@@ -34,6 +34,35 @@ class Git(object):
 		of the command to stdout.
 		Set its value to 'full' to see details about the returned values.
 	"""
+	
+	class AutoInterrupt(object):
+		"""
+		Kill/Interrupt the stored process instance once this instance goes out of scope. It is 
+		used to prevent processes piling up in case iterators stop reading.
+		Besides all attributes are wired through to the contained process object
+		"""
+		__slots__= "proc"
+		
+		def __init__(self, proc ):
+			self.proc = proc
+			
+		def __del__(self):
+			# did the process finish already so we have a return code ?
+			if self.proc.poll() is not None:
+				return 
+				
+			# try to kill it
+			try:
+				os.kill(self.proc.pid, 2)	# interrupt signal
+			except AttributeError:
+				# try windows 
+				subprocess.call(("TASKKILL", "/T", "/PID", self.proc.pid))
+			# END exception handling 
+			
+		def __getattr__(self, attr):
+			return getattr(self.proc, attr)
+	
+	
 	def __init__(self, git_dir=None):
 		"""
 		Initialize this instance with:
@@ -70,6 +99,7 @@ class Git(object):
 				with_extended_output=False,
 				with_exceptions=True,
 				with_raw_output=False,
+				as_process=False
 				):
 		"""
 		Handles executing the command on the shell and consumes and returns
@@ -96,6 +126,16 @@ class Git(object):
 
 		``with_raw_output``
 			Whether to avoid stripping off trailing whitespace.
+			
+		 ``as_process``
+		 	Whether to return the created process instance directly from which 
+		 	streams can be read on demand. This will render with_extended_output, 
+		 	with_exceptions and with_raw_output ineffective - the caller will have 
+		 	to deal with the details himself.
+		 	It is important to note that the process will be placed into an AutoInterrupt
+		 	wrapper that will interrupt the process once it goes out of scope. If you 
+		 	use the command in iterators, you should pass the whole process instance 
+		 	instead of a single stream.
 
 		Returns::
 		
@@ -127,7 +167,11 @@ class Git(object):
 								**extra
 								)
 
+		if as_process:
+			return self.AutoInterrupt(proc)
+		
 		# Wait for the process to return
+		status = 0
 		try:
 			stdout_value = proc.stdout.read()
 			stderr_value = proc.stderr.read()

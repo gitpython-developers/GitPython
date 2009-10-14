@@ -142,26 +142,28 @@ class Commit(base.Object, Iterable):
 		Returns
 			iterator yielding Commit items
 		"""
-		options = {'pretty': 'raw'}
+		options = {'pretty': 'raw', 'as_process' : True }
 		options.update(kwargs)
 
-		output = repo.git.rev_list(ref, '--', path, **options)
-		return cls._iter_from_stream(repo, iter(output.splitlines(False)))
+		# the test system might confront us with string values - 
+		proc = repo.git.rev_list(ref, '--', path, **options)
+		return cls._iter_from_process(repo, proc)
 
 	@classmethod
-	def _iter_from_stream(cls, repo, stream):
+	def _iter_from_process(cls, repo, proc):
 		"""
 		Parse out commit information into a list of Commit objects
 
 		``repo``
 			is the Repo
 
-		``stream``
-			output stream from the git-rev-list command (raw format)
+		``proc``
+			git-rev-list process instance (raw format)
 
 		Returns
 			iterator returning Commit objects
 		"""
+		stream = proc.stdout
 		for line in stream:
 			id = line.split()[1]
 			assert line.split()[0] == "commit"

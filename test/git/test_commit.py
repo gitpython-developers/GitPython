@@ -11,18 +11,13 @@ class TestCommit(object):
 	def setup(self):
 		self.repo = Repo(GIT_REPO)
 
-	@patch_object(Git, '_call_process')
-	def test_bake(self, git):
-		git.return_value = fixture('rev_list_single')
+	def test_bake(self):
 
-		commit = Commit(self.repo, **{'id': '4c8124ffcf4039d292442eeccabdeca5af5c5017'})
+		commit = Commit(self.repo, **{'id': '2454ae89983a4496a445ce347d7a41c0bb0ea7ae'})
 		commit.author # bake
 
-		assert_equal("Tom Preston-Werner", commit.author.name)
-		assert_equal("tom@mojombo.com", commit.author.email)
-
-		assert_true(git.called)
-		assert_equal(git.call_args, (('rev_list', '4c8124ffcf4039d292442eeccabdeca5af5c5017', '--', ''), {'pretty': 'raw', 'max_count': 1}))
+		assert_equal("Sebastian Thiel", commit.author.name)
+		assert_equal("byronimo@gmail.com", commit.author.email)
 
 
 	@patch_object(Git, '_call_process')
@@ -159,17 +154,10 @@ class TestCommit(object):
 				assert diff.deleted_file and isinstance(diff.deleted_file, bool)
 		# END for each diff in initial import commit
 
-	@patch_object(Git, '_call_process')
-	def test_diffs_on_initial_import_with_empty_commit(self, git):
-		git.return_value = fixture('show_empty_commit')
-
-		commit = Commit(self.repo, id='634396b2f541a9f2d58b00be1a07f0c358b999b3')
+	def test_diffs_on_initial_import_without_parents(self):
+		commit = Commit(self.repo, id='33ebe7acec14b25c5f84f35a664803fcab2f7781')
 		diffs = commit.diffs
-
-		assert_equal([], diffs)
-
-		assert_true(git.called)
-		assert_equal(git.call_args, (('show', '634396b2f541a9f2d58b00be1a07f0c358b999b3', '-M'), {'full_index': True, 'pretty': 'raw'}))
+		assert diffs
 
 	def test_diffs_with_mode_only_change(self):
 		commit = Commit(self.repo, id='ccde80b7a3037a004a7807a6b79916ce2a1e9729')
@@ -216,7 +204,7 @@ class TestCommit(object):
 									  bisect_all=True)
 		assert_true(git.called)
 
-		commits = Commit._iter_from_stream(self.repo, iter(revs.splitlines(False)))
+		commits = Commit._iter_from_process(self.repo, ListProcessAdapter(revs))
 		expected_ids = (
 			'cf37099ea8d1d8c7fbf9b6d12d7ec0249d3acb8b',
 			'33ebe7acec14b25c5f84f35a664803fcab2f7781',

@@ -347,26 +347,6 @@ class Repo(object):
 		return root
 
 
-	def log(self, commit='master', path=None, **kwargs):
-		"""
-		The Commit for a treeish, and all commits leading to it.
-		
-		``kwargs``
-			keyword arguments specifying flags to be used in git-log command,
-			i.e.: max_count=1 to limit the amount of commits returned
-
-		Returns
-			``git.Commit[]``
-		"""
-		options = {'pretty': 'raw'}
-		options.update(kwargs)
-		arg = [commit, '--']
-		if path:
-			arg.append(path)
-		commits = self.git.log(*arg, **options)
-		print commits.splitlines(False)
-		return list(Commit._iter_from_stream(self, iter(commits.splitlines())))
-
 	def diff(self, a, b, *paths):
 		"""
 		The diff from commit ``a`` to commit ``b``, optionally restricted to the given file(s)

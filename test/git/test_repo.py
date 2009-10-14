@@ -41,7 +41,7 @@ class TestRepo(object):
 
 	@patch_object(Git, '_call_process')
 	def test_commits(self, git):
-		git.return_value = fixture('rev_list')
+		git.return_value = ListProcessAdapter(fixture('rev_list'))
 
 		commits = self.repo.commits('master', max_count=10)
 
@@ -65,7 +65,6 @@ class TestRepo(object):
 		assert_equal("Merge branch 'site'", c.summary)
 
 		assert_true(git.called)
-		assert_equal(git.call_args, (('rev_list', 'master', '--', ''), {'skip': 0, 'pretty': 'raw', 'max_count': 10}))
 
 	@patch_object(Git, '_call_process')
 	def test_commit_count(self, git):
@@ -78,14 +77,13 @@ class TestRepo(object):
 
 	@patch_object(Git, '_call_process')
 	def test_commit(self, git):
-		git.return_value = fixture('rev_list_single')
+		git.return_value = ListProcessAdapter(fixture('rev_list_single'))
 
 		commit = self.repo.commit('4c8124ffcf4039d292442eeccabdeca5af5c5017')
 
 		assert_equal("4c8124ffcf4039d292442eeccabdeca5af5c5017", commit.id)
 
 		assert_true(git.called)
-		assert_equal(git.call_args, (('rev_list', '4c8124ffcf4039d292442eeccabdeca5af5c5017', '--', ''), {'pretty': 'raw', 'max_count': 1}))
 
 	@patch_object(Git, '_call_process')
 	def test_tree(self, git):
@@ -216,22 +214,6 @@ class TestRepo(object):
 	def test_repr(self):
 		path = os.path.join(os.path.abspath(GIT_REPO), '.git')
 		assert_equal('<git.Repo "%s">' % path, repr(self.repo))
-
-	@patch_object(Git, '_call_process')
-	def test_log(self, git):
-		git.return_value = fixture('rev_list')
-		assert_equal('4c8124ffcf4039d292442eeccabdeca5af5c5017', self.repo.log()[0].id)
-		assert_equal('ab25fd8483882c3bda8a458ad2965d2248654335', self.repo.log()[-1].id)
-		assert_true(git.called)
-		assert_equal(git.call_count, 2)
-		assert_equal(git.call_args, (('log', 'master', '--'), {'pretty': 'raw'}))
-
-	@patch_object(Git, '_call_process')
-	def test_log_with_path_and_options(self, git):
-		git.return_value = fixture('rev_list')
-		self.repo.log('master', 'file.rb', **{'max_count': 1})
-		assert_true(git.called)
-		assert_equal(git.call_args, (('log', 'master', '--', 'file.rb'), {'pretty': 'raw', 'max_count': 1}))
 
 	def test_is_dirty_with_bare_repository(self):
 		self.repo.bare = True
