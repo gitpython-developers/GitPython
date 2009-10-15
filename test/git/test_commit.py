@@ -233,3 +233,13 @@ class TestCommit(object):
 		assert_equal(commit1, commit2)
 		assert_not_equal(commit2, commit3)
 		
+	def test_iter_parents(self):
+		# should return all but ourselves, even if skip is defined
+		c = self.repo.commit('0.1.5')
+		for skip in (0, 1):
+			piter = c.iter_parents(skip=skip)
+			first_parent = piter.next()
+			assert first_parent != c
+			assert first_parent == c.parents[0]
+		# END for each 
+		

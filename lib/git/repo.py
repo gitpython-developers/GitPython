@@ -116,12 +116,12 @@ class Repo(object):
 		"""
 		return Tag.list_items(self)
 		
-	def blame(self, ref, file):
+	def blame(self, rev, file):
 		"""
-		The blame information for the given file at the given ref.
+		The blame information for the given file at the given revision.
 
-		``ref``
-			Ref object or Commit
+		``rev``
+			revision specifier, see git-rev-parse for viable options.
 
 		Returns
 			list: [git.Commit, list: [<line>]]
@@ -199,37 +199,29 @@ class Repo(object):
 			# END distinguish hexsha vs other information
 		return blames
 
-	def commits(self, start=None, paths='', max_count=None, skip=0):
+	def iter_commits(self, rev=None, paths='', **kwargs):
 		"""
 		A list of Commit objects representing the history of a given ref/commit
 
-		``start``
-			is a Ref or Commit to start the commits from. If start is None, 
-			the active branch will be used
+		``rev``
+			revision specifier, see git-rev-parse for viable options.
+			If None, the active branch will be used.
 
 		 ``paths``
 			is an optional path or a list of paths to limit the returned commits to
 			Commits that do not contain that path or the paths will not be returned.
-
-		 ``max_count``
-			is the maximum number of commits to return (default None)
-
-		  ``skip``
-			is the number of commits to skip (default 0) which will effectively 
-			move your commit-window by the given number.
+		
+		 ``kwargs``
+		 	Arguments to be passed to git-rev-parse - common ones are 
+		 	max_count and skip
 
 		Returns
 			``git.Commit[]``
 		"""
-		options = {'max_count': max_count,
-				   'skip': skip}
-				   
-		if max_count is None:
-			options.pop('max_count')		   
-		if start is None:
-			start = self.active_branch	
+		if rev is None:
+			rev = self.active_branch
 		
-		return Commit.list_items(self, start, paths, **options)
+		return Commit.list_items(self, rev, paths, **kwargs)
 
 	def commits_between(self, frm, to, *args, **kwargs):
 		"""
@@ -248,50 +240,31 @@ class Repo(object):
 		return reversed(Commit.list_items(self, "%s..%s" % (frm, to)))
 
 
-	def commit(self, id=None, paths = ''):
+	def commit(self, rev=None):
 		"""
-		The Commit object for the specified id
+		The Commit object for the specified revision
 
-		``id``
-			is the SHA1 identifier of the commit or a ref or a ref name
-			if None, it defaults to the active branch
+		``rev``
+			revision specifier, see git-rev-parse for viable options.
 		
-
-		``paths``
-			is an optional path or a list of paths, 
-			if set the returned commit must contain the path or paths
-
 		Returns
 			``git.Commit``
 		"""
-		if id is None:
-			id = self.active_branch
-		options = {'max_count': 1}
+		if rev is None:
+			rev = self.active_branch
+		
+		# NOTE: currently we are not checking wheter rev really points to a commit
+		# If not, the system will barf on access of the object, but we don't do that
+		# here to safe cycles
+		c = Commit(self, rev)
+		return c
 
-		commits = Commit.list_items(self, id, paths, **options)
 
-		if not commits:
-			raise ValueError, "Invalid identifier %s, or given path '%s' too restrictive" % ( id, path )
-		return commits[0]
-
-	def commit_deltas_from(self, other_repo, ref='master', other_ref='master'):
-		"""
-		Returns a list of commits that is in ``other_repo`` but not in self
-
-		Returns 
-			git.Commit[]
-		"""
-		repo_refs = self.git.rev_list(ref, '--').strip().splitlines()
-		other_repo_refs = other_repo.git.rev_list(other_ref, '--').strip().splitlines()
-
-		diff_refs = list(set(other_repo_refs) - set(repo_refs))
-		return map(lambda ref: Commit(other_repo, ref ), diff_refs)
-
-	def tree(self, treeish=None):
+	def tree(self, ref=None):
 		"""
 		The Tree object for the given treeish reference
 
-		``treeish``
+		``ref``
 			is a Ref instance defaulting to the active_branch if None.
 
 		Examples::
@@ -305,27 +278,42 @@ class Repo(object):
 			A ref is requried here to assure you point to a commit or tag. Otherwise
 			it is not garantueed that you point to the root-level tree.
 			
-			If you need a non-root level tree, find it by iterating the root tree.
+			If you need a non-root level tree, find it by iterating the root tree. Otherwise
+			it cannot know about its path relative to the repository root and subsequent 
+			operations might have unexpected results.
 		"""
-		if treeish is None:
-			treeish = self.active_branch
-		if not isinstance(treeish, Ref):
-			raise ValueError( "Treeish reference required, got %r" % treeish )
+		if ref is None:
+			ref = self.active_branch
+		if not isinstance(ref, Reference):
+			raise ValueError( "Reference required, got %r" % ref )
 		
 		
 		# As we are directly reading object information, we must make sure
 		# we truly point to a tree object. We resolve the ref to a sha in all cases
 		# to assure the returned tree can be compared properly. Except for
 		# heads, ids should always be hexshas
-		hexsha, typename, size = self.git.get_object_header( treeish )
+		hexsha, typename, size = self.git.get_object_header( ref )
 		if typename != "tree":
-			hexsha, typename, size = self.git.get_object_header( str(treeish)+'^{tree}' )
+			# will raise if this is not a valid tree
+			hexsha, typename, size = self.git.get_object_header( str(ref)+'^{tree}' )
 		# END tree handling
-		treeish = hexsha
+		ref = hexsha
 		
 		# the root has an empty relative path and the default mode
-		return Tree(self, treeish, 0, '')
+		return Tree(self, ref, 0, '')
 
+	def commit_deltas_from(self, other_repo, ref='master', other_ref='master'):
+		"""
+		Returns a list of commits that is in ``other_repo`` but not in self
+
+		Returns 
+			git.Commit[]
+		"""
+		repo_refs = self.git.rev_list(ref, '--').strip().splitlines()
+		other_repo_refs = other_repo.git.rev_list(other_ref, '--').strip().splitlines()
+
+		diff_refs = list(set(other_repo_refs) - set(repo_refs))
+		return map(lambda ref: Commit(other_repo, ref ), diff_refs)
 
 	def diff(self, a, b, *paths):
 		"""

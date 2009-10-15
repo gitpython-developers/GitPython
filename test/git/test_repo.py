@@ -42,7 +42,7 @@ class TestRepo(object):
 	def test_commits(self, git):
 		git.return_value = ListProcessAdapter(fixture('rev_list'))
 
-		commits = self.repo.commits('master', max_count=10)
+		commits = list( self.repo.iter_commits('master', max_count=10) )
 
 		c = commits[0]
 		assert_equal('4c8124ffcf4039d292442eeccabdeca5af5c5017', c.id)
@@ -73,8 +73,6 @@ class TestRepo(object):
 
 		assert_equal("4c8124ffcf4039d292442eeccabdeca5af5c5017", commit.id)
 
-		assert_true(git.called)
-		
 	@patch_object(Repo, '__init__')
 	@patch_object(Git, '_call_process')
 	def test_init_bare(self, git, repo):

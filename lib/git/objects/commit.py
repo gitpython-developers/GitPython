@@ -100,17 +100,39 @@ class Commit(base.Object, Iterable):
 			First line of the commit message.
 		"""
 		return self.message.split('\n', 1)[0]
+		
+	def iter_parents(self, paths='', **kwargs):
+		"""
+		Iterate _all_ parents of this commit.
+		
+		``paths``
+			Optional path or list of paths limiting the Commits to those that 
+			contain at least one of the paths
+		
+		``kwargs``
+			All arguments allowed by git-rev-list
+			
+		Return:
+			Iterator yielding Commit objects which are parents of self
+		"""
+		# skip ourselves
+		skip = kwargs.get("skip", 1)
+		if skip == 0:	# skip ourselves 
+			skip = 1
+		kwargs['skip'] = skip
+		
+		return self.iter_items( self.repo, self, paths, **kwargs )
 
 	@classmethod
-	def count(cls, repo, ref, paths=''):
+	def count(cls, repo, rev, paths=''):
 		"""
-		Count the number of commits reachable from this ref
+		Count the number of commits reachable from this revision
 
 		``repo``
 			is the Repo
 
-		``ref``
-			is the ref from which to begin (SHA1 or name)
+		``rev``
+			revision specifier, see git-rev-parse for viable options
 
 		``paths``
 			is an optinal path or a list of paths restricting the return value 
@@ -119,18 +141,18 @@ class Commit(base.Object, Iterable):
 		Returns
 			int
 		"""
-		return len(repo.git.rev_list(ref, '--', paths).strip().splitlines())
+		return len(repo.git.rev_list(rev, '--', paths).strip().splitlines())
 
 	@classmethod
-	def iter_items(cls, repo, ref, paths='', **kwargs):
+	def iter_items(cls, repo, rev, paths='', **kwargs):
 		"""
 		Find all commits matching the given criteria.
 
 		``repo``
 			is the Repo
 
-		``ref``
-			is the ref from which to begin (SHA1, Head or name)
+		``rev``
+			revision specifier, see git-rev-parse for viable options
 
 		``paths``
 			is an optinal path or list of paths, if set only Commits that include the path 
@@ -149,7 +171,7 @@ class Commit(base.Object, Iterable):
 		options.update(kwargs)
 
 		# the test system might confront us with string values - 
-		proc = repo.git.rev_list(ref, '--', paths, **options)
+		proc = repo.git.rev_list(rev, '--', paths, **options)
 		return cls._iter_from_process_or_stream(repo, proc)
 
 	@classmethod
@@ -201,7 +223,7 @@ class Commit(base.Object, Iterable):
 			# END while there are message lines
 			message = '\n'.join(message_lines)
 			
-			yield Commit(repo, id=id, parents=parents, tree=tree, author=author, authored_date=authored_date,
+			yield Commit(repo, id=id, parents=tuple(parents), tree=tree, author=author, authored_date=authored_date,
 						  committer=committer, committed_date=committed_date, message=message)
 		# END for each line in stream
 

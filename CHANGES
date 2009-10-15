@@ -23,6 +23,11 @@ General
 * All dates, like authored_date and committer_date, are stored as seconds since epoc
   to consume less memory - they can be converted using time.gmtime in a more suitable 
   presentation format if needed.
+* Named method parameters changed on a wide scale to unify their use. Now git specific 
+  terms are used everywhere, such as "Reference" ( ref ) and "Revision" ( rev ).
+  Prevously multiple terms where used making it harder to know which type was allowed
+  or not.
+  
 
 Item Iteration
 --------------
@@ -48,6 +53,8 @@ Repo
   - 'log' method as it as effectively the same as the 'commits' method
   - 'commits_since' as it is just a flag given to rev-list in Commit.iter_items
   - 'commit_count' as it was just a redirection to the respective commit method
+* Renamed commits to iter_commits to improve the performance, adjusted signature
+  to be more versatile
 * 'commits' method has no max-count of returned commits anymore, it now behaves 
  like git-rev-list
  

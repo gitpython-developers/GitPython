@@ -10,7 +10,7 @@ from objects.base import Object
 from objects.utils import get_object_type_by_name
 from utils import LazyMixin, Iterable
 
-class Ref(LazyMixin, Iterable):
+class Reference(LazyMixin, Iterable):
 	"""
 	Represents a named reference to any object
 	"""
@@ -138,7 +138,7 @@ class Ref(LazyMixin, Iterable):
 		# return cls(repo, full_path, obj)
 		
 
-class Head(Ref):
+class Head(Reference):
 	"""
 	A Head is a named reference to a Commit. Every Head instance contains a name
 	and a Commit object.
@@ -181,7 +181,7 @@ class Head(Ref):
 		
 		
 
-class TagRef(Ref):
+class TagRef(Reference):
 	"""
 	Class representing a lightweight tag reference which either points to a commit 
 	or to a tag object. In the latter case additional information, like the signature
