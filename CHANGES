@@ -20,6 +20,9 @@ General
   may change without prior notice.
 * Renamed all find_all methods to list_items - this method is part of the Iterable interface
   that also provides a more efficients and more responsive iter_items method
+* All dates, like authored_date and committer_date, are stored as seconds since epoc
+  to consume less memory - they can be converted using time.gmtime in a more suitable 
+  presentation format if needed.
 
 Item Iteration
 --------------

@@ -8,7 +8,6 @@ import os
 import re
 import gzip
 import StringIO
-import time
 
 from errors import InvalidGitRepositoryError, NoSuchPathError
 from utils import touch, is_git_dir
@@ -160,7 +159,7 @@ class Repo(object):
 					if firstpart.endswith('-mail'):
 						info["%s_email" % role] = parts[-1]
 					elif firstpart.endswith('-time'):
-						info["%s_date" % role] = time.gmtime(int(parts[-1]))
+						info["%s_date" % role] = int(parts[-1])
 					elif role == firstpart:
 						info[role] = parts[-1]
 					# END distinguish mail,time,name
@@ -197,12 +196,13 @@ class Repo(object):
 			# END distinguish hexsha vs other information
 		return blames
 
-	def commits(self, start='master', path='', max_count=None, skip=0):
+	def commits(self, start=None, path='', max_count=None, skip=0):
 		"""
 		A list of Commit objects representing the history of a given ref/commit
 
 		``start``
-			is the branch/commit name (default 'master')
+			is a ref to start the commits from. If start is None, 
+			the active branch will be used
 
 		 ``path``
 			is an optional path to limit the returned commits to
@@ -223,7 +223,8 @@ class Repo(object):
 				   
 		if max_count is None:
 			options.pop('max_count')		   
-				  
+		if start is None:
+			start = self.active_branch	
 		return Commit.list_items(self, start, path, **options)
 
 	def commits_between(self, frm, to):

@@ -4,14 +4,12 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
-import re
-import time
 from git.utils import Iterable
-from git.actor import Actor
 import git.diff as diff
 import git.stats as stats
 from tree import Tree
 import base
+import utils
 
 class Commit(base.Object, Iterable):
 	"""
@@ -20,8 +18,6 @@ class Commit(base.Object, Iterable):
 	This class will act lazily on some of its attributes and will query the 
 	value on demand only if it involves calling the git binary.
 	"""
-	# precompiled regex
-	re_actor_epoch = re.compile(r'^.+? (.*) (\d+) .*$')
 	
 	# object configuration 
 	type = "commit"
@@ -48,14 +44,16 @@ class Commit(base.Object, Iterable):
 		``author`` : Actor
 			is the author string ( will be implicitly converted into an Actor object )
 
-		``authored_date`` : (tm_year, tm_mon, tm_mday, tm_hour, tm_min, tm_sec, tm_wday, tm_yday, tm_isdst )
-			is the authored DateTime
+		``authored_date`` : int_seconds_since_epoch
+			is the authored DateTime - use time.gmtime() to convert it into a 
+			different format
 
 		``committer`` : Actor
 			is the committer string
 
-		``committed_date`` : (tm_year, tm_mon, tm_mday, tm_hour, tm_min, tm_sec, tm_wday, tm_yday, tm_isdst)
-			is the committed DateTime
+		``committed_date`` : int_seconds_since_epoch
+			is the committed DateTime - use time.gmtime() to convert it into a 
+			different format
 
 		``message`` : string
 			is the commit message
@@ -185,8 +183,8 @@ class Commit(base.Object, Iterable):
 				parents.append(parent_line.split()[-1])
 			# END for each parent line
 			
-			author, authored_date = cls._actor(next_line)
-			committer, committed_date = cls._actor(stream.next())
+			author, authored_date = utils.parse_actor_and_date(next_line)
+			committer, committed_date = utils.parse_actor_and_date(stream.next())
 			
 			# empty line
 			stream.next()
@@ -286,14 +284,3 @@ class Commit(base.Object, Iterable):
 	def __repr__(self):
 		return '<git.Commit "%s">' % self.id
 
-	@classmethod
-	def _actor(cls, line):
-		"""
-		Parse out the actor (author or committer) info
-
-		Returns
-			[Actor, gmtime(acted at time)]
-		"""
-		m = cls.re_actor_epoch.search(line)
-		actor, epoch = m.groups()
-		return (Actor._from_string(actor), time.gmtime(int(epoch)))

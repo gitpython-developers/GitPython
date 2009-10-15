@@ -6,7 +6,9 @@
 """
 Module for general utility functions
 """
+import re
 import commit, tag, blob, tree
+from git.actor import Actor
 
 def get_object_type_by_name(object_type_name):
 	"""
@@ -34,3 +36,20 @@ def get_object_type_by_name(object_type_name):
 		return tree.Tree
 	else:
 		raise ValueError("Cannot handle unknown object type: %s" % object_type_name)
+		
+	
+# precompiled regex
+_re_actor_epoch = re.compile(r'^.+? (.*) (\d+) .*$')
+
+def parse_actor_and_date(line):
+	"""
+	Parse out the actor (author or committer) info from a line like::
+	
+	 author Tom Preston-Werner <tom@mojombo.com> 1191999972 -0700
+	
+	Returns
+		[Actor, int_seconds_since_epoch]
+	"""
+	m = _re_actor_epoch.search(line)
+	actor, epoch = m.groups()
+	return (Actor._from_string(actor), int(epoch))

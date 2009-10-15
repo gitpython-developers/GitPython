@@ -5,7 +5,6 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
 import os, sys
-import time
 from test.testlib import *
 from git import *
 
@@ -51,10 +50,10 @@ class TestRepo(object):
 		assert_equal("672eca9b7f9e09c22dcb128c283e8c3c8d7697a4", c.tree.id)
 		assert_equal("Tom Preston-Werner", c.author.name)
 		assert_equal("tom@mojombo.com", c.author.email)
-		assert_equal(time.gmtime(1191999972), c.authored_date)
+		assert_equal(1191999972, c.authored_date)
 		assert_equal("Tom Preston-Werner", c.committer.name)
 		assert_equal("tom@mojombo.com", c.committer.email)
-		assert_equal(time.gmtime(1191999972), c.committed_date)
+		assert_equal(1191999972, c.committed_date)
 		assert_equal("implement Grit#heads", c.message)
 
 		c = commits[1]
@@ -233,10 +232,10 @@ class TestRepo(object):
 		assert_equal('634396b2f541a9f2d58b00be1a07f0c358b999b3', c.id)
 		assert_equal('Tom Preston-Werner', c.author.name)
 		assert_equal('tom@mojombo.com', c.author.email)
-		assert_equal(time.gmtime(1191997100), c.authored_date)
+		assert_equal(1191997100, c.authored_date)
 		assert_equal('Tom Preston-Werner', c.committer.name)
 		assert_equal('tom@mojombo.com', c.committer.email)
-		assert_equal(time.gmtime(1191997100), c.committed_date)
+		assert_equal(1191997100, c.committed_date)
 		assert_equal('initial grit setup', c.message)
 		
 		# test the 'lines per commit' entries
