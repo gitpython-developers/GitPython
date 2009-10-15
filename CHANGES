@@ -23,6 +23,11 @@ General
 * All dates, like authored_date and committer_date, are stored as seconds since epoc
   to consume less memory - they can be converted using time.gmtime in a more suitable 
   presentation format if needed.
+* Named method parameters changed on a wide scale to unify their use. Now git specific 
+  terms are used everywhere, such as "Reference" ( ref ) and "Revision" ( rev ).
+  Prevously multiple terms where used making it harder to know which type was allowed
+  or not.
+  
 
 Item Iteration
 --------------
@@ -44,7 +49,23 @@ Repo
   of the active branch.
 * tree method now requires a Ref instance as input and defaults to the active_branche
   instead of master
-* Removed 'log' method as it as effectively the same as the 'commits' method
+* Removed the following methods:
+  - 'log' method as it as effectively the same as the 'commits' method
+  - 'commits_since' as it is just a flag given to rev-list in Commit.iter_items
+  - 'commit_count' as it was just a redirection to the respective commit method
+  - 'commits_between', replaced by a note on the iter_commits method as it can 
+     achieve the same thing
+  - 'commit_delta_from' as it was a very special case by comparing two different
+     repositories which are likely to have completly different commits. For
+     related repositories, i.e. clones, git-rev-list would be sufficient to find 
+     commits that would need to be transferred for example.
+  - 'create' method which equals the 'init' method's functionality
+* Renamed the following methods:
+  - commits to iter_commits to improve the performance, adjusted signature
+  - init_bare to init, implying less about the options to be used
+  - fork_bare to clone, as it was to represent general clone functionality, but implied
+    a bare clone to be more versatile
+  - archive_tar_gz and archive_tar and replaced by archive method with different signature
 * 'commits' method has no max-count of returned commits anymore, it now behaves 
  like git-rev-list
 

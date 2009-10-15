@@ -7,7 +7,6 @@
 Module for general utility functions
 """
 import re
-import commit, tag, blob, tree
 from git.actor import Actor
 
 def get_object_type_by_name(object_type_name):

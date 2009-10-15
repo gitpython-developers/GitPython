@@ -116,214 +116,28 @@ class Repo(object):
 		"""
 		return Tag.list_items(self)
 		
-	def blame(self, commit, file):
+	def commit(self, rev=None):
 		"""
-		The blame information for the given file at the given commit
+		The Commit object for the specified revision
 
-		Returns
-			list: [git.Commit, list: [<line>]]
-			A list of tuples associating a Commit object with a list of lines that 
-			changed within the given commit. The Commit objects will be given in order
-			of appearance.
-		"""
-		data = self.git.blame(commit, '--', file, p=True)
-		commits = {}
-		blames = []
-		info = None
-
-		for line in data.splitlines(False):
-			parts = self.re_whitespace.split(line, 1)
-			firstpart = parts[0]
-			if self.re_hexsha_only.search(firstpart):
-				# handles 
-				# 634396b2f541a9f2d58b00be1a07f0c358b999b3 1 1 7		- indicates blame-data start
-				# 634396b2f541a9f2d58b00be1a07f0c358b999b3 2 2
-				digits = parts[-1].split(" ")
-				if len(digits) == 3:
-					info = {'id': firstpart}
-					blames.append([None, []])
-				# END blame data initialization
-			else:
-				m = self.re_author_committer_start.search(firstpart)
-				if m:
-					# handles: 
-					# author Tom Preston-Werner
-					# author-mail <tom@mojombo.com>
-					# author-time 1192271832
-					# author-tz -0700
-					# committer Tom Preston-Werner
-					# committer-mail <tom@mojombo.com>
-					# committer-time 1192271832
-					# committer-tz -0700  - IGNORED BY US
-					role = m.group(0)
-					if firstpart.endswith('-mail'):
-						info["%s_email" % role] = parts[-1]
-					elif firstpart.endswith('-time'):
-						info["%s_date" % role] = int(parts[-1])
-					elif role == firstpart:
-						info[role] = parts[-1]
-					# END distinguish mail,time,name
-				else:
-					# handle
-					# filename lib/grit.rb
-					# summary add Blob
-					# <and rest>
-					if firstpart.startswith('filename'):
-						info['filename'] = parts[-1]
-					elif firstpart.startswith('summary'):
-						info['summary'] = parts[-1]
-					elif firstpart == '':
-						if info:
-							sha = info['id']
-							c = commits.get(sha)
-							if c is None:
-								c = Commit(  self, id=sha,
-											 author=Actor._from_string(info['author'] + ' ' + info['author_email']),
-											 authored_date=info['author_date'],
-											 committer=Actor._from_string(info['committer'] + ' ' + info['committer_email']),
-											 committed_date=info['committer_date'],
-											 message=info['summary'])
-								commits[sha] = c
-							# END if commit objects needs initial creation
-							m = self.re_tab_full_line.search(line)
-							text,  = m.groups()
-							blames[-1][0] = c
-							blames[-1][1].append( text )
-							info = None
-						# END if we collected commit info
-					# END distinguish filename,summary,rest
-				# END distinguish author|committer vs filename,summary,rest
-			# END distinguish hexsha vs other information
-		return blames
-
-	def commits(self, start=None, path='', max_count=None, skip=0):
-		"""
-		A list of Commit objects representing the history of a given ref/commit
-
-		``start``
-			is a ref to start the commits from. If start is None, 
-			the active branch will be used
-
-		 ``path``
-			is an optional path to limit the returned commits to
-			Commits that do not contain that path will not be returned.
-
-		 ``max_count``
-			is the maximum number of commits to return (default None)
-
-		  ``skip``
-			is the number of commits to skip (default 0) which will effectively 
-			move your commit-window by the given number.
-
-		Returns
-			``git.Commit[]``
-		"""
-		options = {'max_count': max_count,
-				   'skip': skip}
-				   
-		if max_count is None:
-			options.pop('max_count')		   
-		if start is None:
-			start = self.active_branch	
-		return Commit.list_items(self, start, path, **options)
-
-	def commits_between(self, frm, to):
-		"""
-		The Commits objects that are reachable via ``to`` but not via ``frm``
-		Commits are returned in chronological order.
-
-		``from``
-			is the branch/commit name of the younger item
-
-		``to``
-			is the branch/commit name of the older item
-
-		Returns
-			``git.Commit[]``
-		"""
-		return reversed(Commit.list_items(self, "%s..%s" % (frm, to)))
-
-	def commits_since(self, start='master', path='', since='1970-01-01'):
-		"""
-		The Commits objects that are newer than the specified date.
-		Commits are returned in chronological order.
-
-		``start``
-			is the branch/commit name (default 'master')
-
-		``path``
-			is an optinal path to limit the returned commits to.
-			
-
-		``since``
-			is a string represeting a date/time
-
-		Returns
-			``git.Commit[]``
-		"""
-		options = {'since': since}
-
-		return Commit.list_items(self, start, path, **options)
-
-	def commit_count(self, start='master', path=''):
-		"""
-		The number of commits reachable by the given branch/commit
-
-		``start``
-			is the branch/commit name (default 'master')
-
-		``path``
-			is an optional path
-			Commits that do not contain the path will not contribute to the count.
-
-		Returns
-			``int``
-		"""
-		return Commit.count(self, start, path)
-
-	def commit(self, id=None, path = ''):
-		"""
-		The Commit object for the specified id
-
-		``id``
-			is the SHA1 identifier of the commit or a ref or a ref name
-			if None, it defaults to the active branch
+		``rev``
+			revision specifier, see git-rev-parse for viable options.
 		
-
-		``path``
-			is an optional path, if set the returned commit must contain the path.
-
 		Returns
 			``git.Commit``
 		"""
-		if id is None:
-			id = self.active_branch
-		options = {'max_count': 1}
+		if rev is None:
+			rev = self.active_branch
+		
+		c = Object(self, rev)
+		assert c.type == "commit", "Revision %s did not point to a commit, but to %s" % (rev, c)
+		return c
 
-		commits = Commit.list_items(self, id, path, **options)
-
-		if not commits:
-			raise ValueError, "Invalid identifier %s, or given path '%s' too restrictive" % ( id, path )
-		return commits[0]
-
-	def commit_deltas_from(self, other_repo, ref='master', other_ref='master'):
-		"""
-		Returns a list of commits that is in ``other_repo`` but not in self
-
-		Returns 
-			git.Commit[]
-		"""
-		repo_refs = self.git.rev_list(ref, '--').strip().splitlines()
-		other_repo_refs = other_repo.git.rev_list(other_ref, '--').strip().splitlines()
-
-		diff_refs = list(set(other_repo_refs) - set(repo_refs))
-		return map(lambda ref: Commit.list_items(other_repo, ref, max_count=1)[0], diff_refs)
-
-	def tree(self, treeish=None):
+	def tree(self, ref=None):
 		"""
 		The Tree object for the given treeish reference
 
-		``treeish``
+		``ref``
 			is a Ref instance defaulting to the active_branch if None.
 
 		Examples::
@@ -337,166 +151,56 @@ class Repo(object):
 			A ref is requried here to assure you point to a commit or tag. Otherwise
 			it is not garantueed that you point to the root-level tree.
 			
-			If you need a non-root level tree, find it by iterating the root tree.
+			If you need a non-root level tree, find it by iterating the root tree. Otherwise
+			it cannot know about its path relative to the repository root and subsequent 
+			operations might have unexpected results.
 		"""
-		if treeish is None:
-			treeish = self.active_branch
-		if not isinstance(treeish, Ref):
-			raise ValueError( "Treeish reference required, got %r" % treeish )
+		if ref is None:
+			ref = self.active_branch
+		if not isinstance(ref, Reference):
+			raise ValueError( "Reference required, got %r" % ref )
 		
 		
 		# As we are directly reading object information, we must make sure
 		# we truly point to a tree object. We resolve the ref to a sha in all cases
 		# to assure the returned tree can be compared properly. Except for
 		# heads, ids should always be hexshas
-		hexsha, typename, size = self.git.get_object_header( treeish )
+		hexsha, typename, size = self.git.get_object_header( ref )
 		if typename != "tree":
-			hexsha, typename, size = self.git.get_object_header( str(treeish)+'^{tree}' )
+			# will raise if this is not a valid tree
+			hexsha, typename, size = self.git.get_object_header( str(ref)+'^{tree}' )
 		# END tree handling
-		treeish = hexsha
+		ref = hexsha
 		
 		# the root has an empty relative path and the default mode
-		return Tree(self, treeish, 0, '')
+		return Tree(self, ref, 0, '')
 
-
-	def diff(self, a, b, *paths):
+	def iter_commits(self, rev=None, paths='', **kwargs):
 		"""
-		The diff from commit ``a`` to commit ``b``, optionally restricted to the given file(s)
+		A list of Commit objects representing the history of a given ref/commit
 
-		``a``
-			is the base commit
-		``b``
-			is the other commit
+		``rev``
+			revision specifier, see git-rev-parse for viable options.
+			If None, the active branch will be used.
 
-		``paths``
-			is an optional list of file paths on which to restrict the diff
-			
-		Returns
-			``str``
-		"""
-		return self.git.diff(a, b, '--', *paths)
+		 ``paths``
+			is an optional path or a list of paths to limit the returned commits to
+			Commits that do not contain that path or the paths will not be returned.
+		
+		 ``kwargs``
+		 	Arguments to be passed to git-rev-parse - common ones are 
+		 	max_count and skip
 
-	def commit_diff(self, commit):
-		"""
-		The commit diff for the given commit
-		  ``commit`` is the commit name/id
+		Note: to receive only commits between two named revisions, use the 
+		"revA..revB" revision specifier
 
 		Returns
-			``git.Diff[]``
+			``git.Commit[]``
 		"""
-		return Commit.diff(self, commit)
-
-	@classmethod
-	def init_bare(self, path, mkdir=True, **kwargs):
-		"""
-		Initialize a bare git repository at the given path
-
-		``path``
-			is the full path to the repo (traditionally ends with /<name>.git)
-
-		``mkdir``
-			if specified will create the repository directory if it doesn't
-			already exists. Creates the directory with a mode=0755.
-
-		``kwargs``
-			keyword arguments serving as additional options to the git init command
-
-		Examples::
-
-			git.Repo.init_bare('/var/git/myrepo.git')
-
-		Returns
-			``git.Repo`` (the newly created repo)
-		"""
-
-		if mkdir and not os.path.exists(path):
-			os.makedirs(path, 0755)
-
-		git = Git(path)
-		output = git.init('--bare', **kwargs)
-		return Repo(path)
-	create = init_bare
-
-	def fork_bare(self, path, **kwargs):
-		"""
-		Fork a bare git repository from this repo
-
-		``path``
-			is the full path of the new repo (traditionally ends with /<name>.git)
-
-		``kwargs``
-			keyword arguments to be given to the git clone command
-
-		Returns
-			``git.Repo`` (the newly forked repo)
-		"""
-		options = {'bare': True}
-		options.update(kwargs)
-		self.git.clone(self.path, path, **options)
-		return Repo(path)
-
-	def archive_tar(self, treeish='master', prefix=None):
-		"""
-		Archive the given treeish
-
-		``treeish``
-			is the treeish name/id (default 'master')
-
-		``prefix``
-			is the optional prefix to prepend to each filename in the archive
-
-		Examples::
-
-			>>> repo.archive_tar
-			<String containing tar archive>
-
-			>>> repo.archive_tar('a87ff14')
-			<String containing tar archive for commit a87ff14>
-
-			>>> repo.archive_tar('master', 'myproject/')
-			<String containing tar bytes archive, whose files are prefixed with 'myproject/'>
-
-		Returns
-			str (containing bytes of tar archive)
-		"""
-		options = {}
-		if prefix:
-			options['prefix'] = prefix
-		return self.git.archive(treeish, **options)
-
-	def archive_tar_gz(self, treeish='master', prefix=None):
-		"""
-		Archive and gzip the given treeish
-
-		``treeish``
-			is the treeish name/id (default 'master')
-
-		``prefix``
-			is the optional prefix to prepend to each filename in the archive
-
-		Examples::
-
-			>>> repo.archive_tar_gz
-			<String containing tar.gz archive>
-
-			>>> repo.archive_tar_gz('a87ff14')
-			<String containing tar.gz archive for commit a87ff14>
-
-			>>> repo.archive_tar_gz('master', 'myproject/')
-			<String containing tar.gz archive and prefixed with 'myproject/'>
-
-		Returns
-			str (containing the bytes of tar.gz archive)
-		"""
-		kwargs = {}
-		if prefix:
-			kwargs['prefix'] = prefix
-		resultstr =  self.git.archive(treeish, **kwargs)
-		sio = StringIO.StringIO()
-		gf = gzip.GzipFile(fileobj=sio, mode ='wb')
-		gf.write(resultstr)
-		gf.close()
-		return sio.getvalue()
+		if rev is None:
+			rev = self.active_branch
+		
+		return Commit.iter_items(self, rev, paths, **kwargs)
 
 	def _get_daemon_export(self):
 		filename = os.path.join(self.path, self.DAEMON_EXPORT_FILE)
@@ -591,6 +295,213 @@ class Repo(object):
 			Head to the active branch
 		"""
 		return Head( self, self.git.symbolic_ref('HEAD').strip() )
+		
+		
+	def diff(self, a, b, *paths):
+		"""
+		The diff from commit ``a`` to commit ``b``, optionally restricted to the given file(s)
+
+		``a``
+			is the base commit
+		``b``
+			is the other commit
+
+		``paths``
+			is an optional list of file paths on which to restrict the diff
+			
+		Returns
+			``str``
+		"""
+		return self.git.diff(a, b, '--', *paths)
+
+	def commit_diff(self, commit):
+		"""
+		The commit diff for the given commit
+		  ``commit`` is the commit name/id
+
+		Returns
+			``git.Diff[]``
+		"""
+		return Commit.diff(self, commit)
+		
+	def blame(self, rev, file):
+		"""
+		The blame information for the given file at the given revision.
+
+		``rev``
+			revision specifier, see git-rev-parse for viable options.
+
+		Returns
+			list: [git.Commit, list: [<line>]]
+			A list of tuples associating a Commit object with a list of lines that 
+			changed within the given commit. The Commit objects will be given in order
+			of appearance.
+		"""
+		data = self.git.blame(rev, '--', file, p=True)
+		commits = {}
+		blames = []
+		info = None
+
+		for line in data.splitlines(False):
+			parts = self.re_whitespace.split(line, 1)
+			firstpart = parts[0]
+			if self.re_hexsha_only.search(firstpart):
+				# handles 
+				# 634396b2f541a9f2d58b00be1a07f0c358b999b3 1 1 7		- indicates blame-data start
+				# 634396b2f541a9f2d58b00be1a07f0c358b999b3 2 2
+				digits = parts[-1].split(" ")
+				if len(digits) == 3:
+					info = {'id': firstpart}
+					blames.append([None, []])
+				# END blame data initialization
+			else:
+				m = self.re_author_committer_start.search(firstpart)
+				if m:
+					# handles: 
+					# author Tom Preston-Werner
+					# author-mail <tom@mojombo.com>
+					# author-time 1192271832
+					# author-tz -0700
+					# committer Tom Preston-Werner
+					# committer-mail <tom@mojombo.com>
+					# committer-time 1192271832
+					# committer-tz -0700  - IGNORED BY US
+					role = m.group(0)
+					if firstpart.endswith('-mail'):
+						info["%s_email" % role] = parts[-1]
+					elif firstpart.endswith('-time'):
+						info["%s_date" % role] = int(parts[-1])
+					elif role == firstpart:
+						info[role] = parts[-1]
+					# END distinguish mail,time,name
+				else:
+					# handle
+					# filename lib/grit.rb
+					# summary add Blob
+					# <and rest>
+					if firstpart.startswith('filename'):
+						info['filename'] = parts[-1]
+					elif firstpart.startswith('summary'):
+						info['summary'] = parts[-1]
+					elif firstpart == '':
+						if info:
+							sha = info['id']
+							c = commits.get(sha)
+							if c is None:
+								c = Commit(  self, id=sha,
+											 author=Actor._from_string(info['author'] + ' ' + info['author_email']),
+											 authored_date=info['author_date'],
+											 committer=Actor._from_string(info['committer'] + ' ' + info['committer_email']),
+											 committed_date=info['committer_date'],
+											 message=info['summary'])
+								commits[sha] = c
+							# END if commit objects needs initial creation
+							m = self.re_tab_full_line.search(line)
+							text,  = m.groups()
+							blames[-1][0] = c
+							blames[-1][1].append( text )
+							info = None
+						# END if we collected commit info
+					# END distinguish filename,summary,rest
+				# END distinguish author|committer vs filename,summary,rest
+			# END distinguish hexsha vs other information
+		return blames
+
+	@classmethod
+	def init(cls, path=None, mkdir=True, **kwargs):
+		"""
+		Initialize a git repository at the given path if specified
+
+		``path``
+			is the full path to the repo (traditionally ends with /<name>.git)
+			or None in which case the repository will be created in the current 
+			working directory
+
+		``mkdir``
+			if specified will create the repository directory if it doesn't
+			already exists. Creates the directory with a mode=0755. 
+			Only effective if a path is explicitly given
+
+		``kwargs``
+			keyword arguments serving as additional options to the git-init command
+
+		Examples::
+
+			git.Repo.init('/var/git/myrepo.git',bare=True)
+
+		Returns
+			``git.Repo`` (the newly created repo)
+		"""
+
+		if mkdir and path and not os.path.exists(path):
+			os.makedirs(path, 0755)
+
+		git = Git(path)
+		output = git.init(path, **kwargs)
+		return Repo(path)
+
+	def clone(self, path, **kwargs):
+		"""
+		Create a clone from this repository.
+
+		``path``
+			is the full path of the new repo (traditionally ends with /<name>.git)
+
+		``kwargs``
+			keyword arguments to be given to the git-clone command
+
+		Returns
+			``git.Repo`` (the newly cloned repo)
+		"""
+		self.git.clone(self.path, path, **kwargs)
+		return Repo(path)
+
+
+	def archive(self, ostream, treeish=None, prefix=None,  **kwargs):
+		"""
+		Archive the tree at the given revision.
+		``ostream``
+			file compatible stream object to which the archive will be written
+
+		``treeish``
+			is the treeish name/id, defaults to active branch
+
+		``prefix``
+			is the optional prefix to prepend to each filename in the archive
+			
+		``kwargs``
+			Additional arguments passed to git-archive
+			NOTE: Use the 'format' argument to define the kind of format. Use 
+			specialized ostreams to write any format supported by python
+
+		Examples::
+
+			>>> repo.archive(open("archive"
+			<String containing tar.gz archive>
+
+			>>> repo.archive_tar_gz('a87ff14')
+			<String containing tar.gz archive for commit a87ff14>
+
+			>>> repo.archive_tar_gz('master', 'myproject/')
+			<String containing tar.gz archive and prefixed with 'myproject/'>
+
+		Raise
+			GitCommandError in case something went wrong
+			
+		"""
+		if treeish is None:
+			treeish = self.active_branch
+		if prefix and 'prefix' not in kwargs:
+			kwargs['prefix'] = prefix
+		kwargs['as_process'] = True
+		kwargs['output_stream'] = ostream
+		
+		proc =  self.git.archive(treeish, **kwargs)
+		status = proc.wait()
+		if status != 0:
+			raise GitCommandError( "git-archive", status, proc.stderr.read() )
+		
+
 
 	def __repr__(self):
 		return '<git.Repo "%s">' % self.path
