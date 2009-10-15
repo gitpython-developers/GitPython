@@ -101,30 +101,8 @@ class Commit(base.Object, Iterable):
 		"""
 		return self.message.split('\n', 1)[0]
 		
-	def iter_parents(self, paths='', **kwargs):
-		"""
-		Iterate _all_ parents of this commit.
-		
-		``paths``
-			Optional path or list of paths limiting the Commits to those that 
-			contain at least one of the paths
-		
-		``kwargs``
-			All arguments allowed by git-rev-list
-			
-		Return:
-			Iterator yielding Commit objects which are parents of self
-		"""
-		# skip ourselves
-		skip = kwargs.get("skip", 1)
-		if skip == 0:	# skip ourselves 
-			skip = 1
-		kwargs['skip'] = skip
-		
-		return self.iter_items( self.repo, self, paths, **kwargs )
-
 	@classmethod
-	def count(cls, repo, rev, paths=''):
+	def count(cls, repo, rev, paths='', **kwargs):
 		"""
 		Count the number of commits reachable from this revision
 
@@ -138,10 +116,12 @@ class Commit(base.Object, Iterable):
 			is an optinal path or a list of paths restricting the return value 
 			to commits actually containing the paths
 
+		``kwargs``
+			Additional options to be passed to git-rev-list
 		Returns
 			int
 		"""
-		return len(repo.git.rev_list(rev, '--', paths).strip().splitlines())
+		return len(repo.git.rev_list(rev, '--', paths, **kwargs).strip().splitlines())
 
 	@classmethod
 	def iter_items(cls, repo, rev, paths='', **kwargs):
@@ -173,59 +153,28 @@ class Commit(base.Object, Iterable):
 		# the test system might confront us with string values - 
 		proc = repo.git.rev_list(rev, '--', paths, **options)
 		return cls._iter_from_process_or_stream(repo, proc)
-
-	@classmethod
-	def _iter_from_process_or_stream(cls, repo, proc_or_stream):
+		
+	def iter_parents(self, paths='', **kwargs):
 		"""
-		Parse out commit information into a list of Commit objects
-
-		``repo``
-			is the Repo
-
-		``proc``
-			git-rev-list process instance (raw format)
-
-		Returns
-			iterator returning Commit objects
+		Iterate _all_ parents of this commit.
+		
+		``paths``
+			Optional path or list of paths limiting the Commits to those that 
+			contain at least one of the paths
+		
+		``kwargs``
+			All arguments allowed by git-rev-list
+			
+		Return:
+			Iterator yielding Commit objects which are parents of self
 		"""
-		stream = proc_or_stream
-		if not hasattr(stream,'next'):
-			stream = proc_or_stream.stdout
-			
-		for line in stream:
-			id = line.split()[1]
-			assert line.split()[0] == "commit"
-			tree = stream.next().split()[1]
-
-			parents = []
-			next_line = None
-			for parent_line in stream:
-				if not parent_line.startswith('parent'):
-					next_line = parent_line
-					break
-				# END abort reading parents
-				parents.append(parent_line.split()[-1])
-			# END for each parent line
-			
-			author, authored_date = utils.parse_actor_and_date(next_line)
-			committer, committed_date = utils.parse_actor_and_date(stream.next())
-			
-			# empty line
-			stream.next()
-			
-			message_lines = []
-			next_line = None
-			for msg_line in stream:
-				if not msg_line.startswith('    '):
-					break
-				# END abort message reading 
-				message_lines.append(msg_line.strip())
-			# END while there are message lines
-			message = '\n'.join(message_lines)
-			
-			yield Commit(repo, id=id, parents=tuple(parents), tree=tree, author=author, authored_date=authored_date,
-						  committer=committer, committed_date=committed_date, message=message)
-		# END for each line in stream
+		# skip ourselves
+		skip = kwargs.get("skip", 1)
+		if skip == 0:	# skip ourselves 
+			skip = 1
+		kwargs['skip'] = skip
+		
+		return self.iter_items( self.repo, self, paths, **kwargs )
 
 	@classmethod
 	def diff(cls, repo, a, b=None, paths=None):
@@ -301,6 +250,60 @@ class Commit(base.Object, Iterable):
 			text = self.repo.git.diff(self.parents[0].id, self.id, '--', numstat=True)
 		return stats.Stats._list_from_string(self.repo, text)
 
+	@classmethod
+	def _iter_from_process_or_stream(cls, repo, proc_or_stream):
+		"""
+		Parse out commit information into a list of Commit objects
+
+		``repo``
+			is the Repo
+
+		``proc``
+			git-rev-list process instance (raw format)
+
+		Returns
+			iterator returning Commit objects
+		"""
+		stream = proc_or_stream
+		if not hasattr(stream,'next'):
+			stream = proc_or_stream.stdout
+			
+		for line in stream:
+			id = line.split()[1]
+			assert line.split()[0] == "commit"
+			tree = stream.next().split()[1]
+
+			parents = []
+			next_line = None
+			for parent_line in stream:
+				if not parent_line.startswith('parent'):
+					next_line = parent_line
+					break
+				# END abort reading parents
+				parents.append(parent_line.split()[-1])
+			# END for each parent line
+			
+			author, authored_date = utils.parse_actor_and_date(next_line)
+			committer, committed_date = utils.parse_actor_and_date(stream.next())
+			
+			# empty line
+			stream.next()
+			
+			message_lines = []
+			next_line = None
+			for msg_line in stream:
+				if not msg_line.startswith('    '):
+					break
+				# END abort message reading 
+				message_lines.append(msg_line.strip())
+			# END while there are message lines
+			message = '\n'.join(message_lines)
+			
+			yield Commit(repo, id=id, parents=tuple(parents), tree=tree, author=author, authored_date=authored_date,
+						  committer=committer, committed_date=committed_date, message=message)
+		# END for each line in stream
+		
+		
 	def __str__(self):
 		""" Convert commit to string which is SHA1 """
 		return self.id

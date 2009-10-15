@@ -202,20 +202,6 @@ class Repo(object):
 		
 		return Commit.iter_items(self, rev, paths, **kwargs)
 
-	def commit_deltas_from(self, other_repo, ref='master', other_ref='master'):
-		"""
-		Returns a list of commits that is in ``other_repo`` but not in self
-
-		Returns 
-			git.Commit[]
-		"""
-		repo_refs = self.git.rev_list(ref, '--').strip().splitlines()
-		other_repo_refs = other_repo.git.rev_list(other_ref, '--').strip().splitlines()
-
-		diff_refs = list(set(other_repo_refs) - set(repo_refs))
-		return map(lambda ref: Commit(other_repo, ref ), diff_refs)
-
-
 	def _get_daemon_export(self):
 		filename = os.path.join(self.path, self.DAEMON_EXPORT_FILE)
 		return os.path.exists(filename)
