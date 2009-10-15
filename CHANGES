@@ -53,11 +53,12 @@ Repo
   - 'log' method as it as effectively the same as the 'commits' method
   - 'commits_since' as it is just a flag given to rev-list in Commit.iter_items
   - 'commit_count' as it was just a redirection to the respective commit method
+  - 'commits_between', replaced by a note on the iter_commits method as it can 
+     achieve the same thing
 * Renamed commits to iter_commits to improve the performance, adjusted signature
   to be more versatile
 * 'commits' method has no max-count of returned commits anymore, it now behaves 
  like git-rev-list
- 
 
 Diff
 ----

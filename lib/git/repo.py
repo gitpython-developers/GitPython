@@ -116,6 +116,230 @@ class Repo(object):
 		"""
 		return Tag.list_items(self)
 		
+	def commit(self, rev=None):
+		"""
+		The Commit object for the specified revision
+
+		``rev``
+			revision specifier, see git-rev-parse for viable options.
+		
+		Returns
+			``git.Commit``
+		"""
+		if rev is None:
+			rev = self.active_branch
+		
+		# NOTE: currently we are not checking wheter rev really points to a commit
+		# If not, the system will barf on access of the object, but we don't do that
+		# here to safe cycles
+		c = Commit(self, rev)
+		return c
+
+	def tree(self, ref=None):
+		"""
+		The Tree object for the given treeish reference
+
+		``ref``
+			is a Ref instance defaulting to the active_branch if None.
+
+		Examples::
+
+		  repo.tree(repo.heads[0])
+
+		Returns
+			``git.Tree``
+			
+		NOTE
+			A ref is requried here to assure you point to a commit or tag. Otherwise
+			it is not garantueed that you point to the root-level tree.
+			
+			If you need a non-root level tree, find it by iterating the root tree. Otherwise
+			it cannot know about its path relative to the repository root and subsequent 
+			operations might have unexpected results.
+		"""
+		if ref is None:
+			ref = self.active_branch
+		if not isinstance(ref, Reference):
+			raise ValueError( "Reference required, got %r" % ref )
+		
+		
+		# As we are directly reading object information, we must make sure
+		# we truly point to a tree object. We resolve the ref to a sha in all cases
+		# to assure the returned tree can be compared properly. Except for
+		# heads, ids should always be hexshas
+		hexsha, typename, size = self.git.get_object_header( ref )
+		if typename != "tree":
+			# will raise if this is not a valid tree
+			hexsha, typename, size = self.git.get_object_header( str(ref)+'^{tree}' )
+		# END tree handling
+		ref = hexsha
+		
+		# the root has an empty relative path and the default mode
+		return Tree(self, ref, 0, '')
+
+	def iter_commits(self, rev=None, paths='', **kwargs):
+		"""
+		A list of Commit objects representing the history of a given ref/commit
+
+		``rev``
+			revision specifier, see git-rev-parse for viable options.
+			If None, the active branch will be used.
+
+		 ``paths``
+			is an optional path or a list of paths to limit the returned commits to
+			Commits that do not contain that path or the paths will not be returned.
+		
+		 ``kwargs``
+		 	Arguments to be passed to git-rev-parse - common ones are 
+		 	max_count and skip
+
+		Note: to receive only commits between two named revisions, use the 
+		"revA..revB" revision specifier
+
+		Returns
+			``git.Commit[]``
+		"""
+		if rev is None:
+			rev = self.active_branch
+		
+		return Commit.iter_items(self, rev, paths, **kwargs)
+
+	def commit_deltas_from(self, other_repo, ref='master', other_ref='master'):
+		"""
+		Returns a list of commits that is in ``other_repo`` but not in self
+
+		Returns 
+			git.Commit[]
+		"""
+		repo_refs = self.git.rev_list(ref, '--').strip().splitlines()
+		other_repo_refs = other_repo.git.rev_list(other_ref, '--').strip().splitlines()
+
+		diff_refs = list(set(other_repo_refs) - set(repo_refs))
+		return map(lambda ref: Commit(other_repo, ref ), diff_refs)
+
+
+	def _get_daemon_export(self):
+		filename = os.path.join(self.path, self.DAEMON_EXPORT_FILE)
+		return os.path.exists(filename)
+
+	def _set_daemon_export(self, value):
+		filename = os.path.join(self.path, self.DAEMON_EXPORT_FILE)
+		fileexists = os.path.exists(filename)
+		if value and not fileexists:
+			touch(filename)
+		elif not value and fileexists:
+			os.unlink(filename)
+
+	daemon_export = property(_get_daemon_export, _set_daemon_export,
+							 doc="If True, git-daemon may export this repository")
+	del _get_daemon_export
+	del _set_daemon_export
+
+	def _get_alternates(self):
+		"""
+		The list of alternates for this repo from which objects can be retrieved
+
+		Returns
+			list of strings being pathnames of alternates
+		"""
+		alternates_path = os.path.join(self.path, 'objects', 'info', 'alternates')
+
+		if os.path.exists(alternates_path):
+			try:
+				f = open(alternates_path)
+				alts = f.read()
+			finally:
+				f.close()
+			return alts.strip().splitlines()
+		else:
+			return []
+
+	def _set_alternates(self, alts):
+		"""
+		Sets the alternates
+
+		``alts``
+			is the array of string paths representing the alternates at which 
+			git should look for objects, i.e. /home/user/repo/.git/objects
+
+		Raises
+			NoSuchPathError
+			
+		Returns
+			None
+		"""
+		for alt in alts:
+			if not os.path.exists(alt):
+				raise NoSuchPathError("Could not set alternates. Alternate path %s must exist" % alt)
+
+		if not alts:
+			os.remove(os.path.join(self.path, 'objects', 'info', 'alternates'))
+		else:
+			try:
+				f = open(os.path.join(self.path, 'objects', 'info', 'alternates'), 'w')
+				f.write("\n".join(alts))
+			finally:
+				f.close()
+
+	alternates = property(_get_alternates, _set_alternates, doc="Retrieve a list of alternates paths or set a list paths to be used as alternates")
+
+	@property
+	def is_dirty(self):
+		"""
+		Return the status of the index.
+
+		Returns
+			``True``, if the index has any uncommitted changes,
+			otherwise ``False``
+
+		NOTE
+			Working tree changes that have not been staged will not be detected ! 
+		"""
+		if self.bare:
+			# Bare repositories with no associated working directory are
+			# always consired to be clean.
+			return False
+
+		return len(self.git.diff('HEAD', '--').strip()) > 0
+
+	@property
+	def active_branch(self):
+		"""
+		The name of the currently active branch.
+
+		Returns
+			Head to the active branch
+		"""
+		return Head( self, self.git.symbolic_ref('HEAD').strip() )
+		
+		
+	def diff(self, a, b, *paths):
+		"""
+		The diff from commit ``a`` to commit ``b``, optionally restricted to the given file(s)
+
+		``a``
+			is the base commit
+		``b``
+			is the other commit
+
+		``paths``
+			is an optional list of file paths on which to restrict the diff
+			
+		Returns
+			``str``
+		"""
+		return self.git.diff(a, b, '--', *paths)
+
+	def commit_diff(self, commit):
+		"""
+		The commit diff for the given commit
+		  ``commit`` is the commit name/id
+
+		Returns
+			``git.Diff[]``
+		"""
+		return Commit.diff(self, commit)
+		
 	def blame(self, rev, file):
 		"""
 		The blame information for the given file at the given revision.
@@ -129,7 +353,7 @@ class Repo(object):
 			changed within the given commit. The Commit objects will be given in order
 			of appearance.
 		"""
-		data = self.git.blame(ref, '--', file, p=True)
+		data = self.git.blame(rev, '--', file, p=True)
 		commits = {}
 		blames = []
 		info = None
@@ -198,149 +422,6 @@ class Repo(object):
 				# END distinguish author|committer vs filename,summary,rest
 			# END distinguish hexsha vs other information
 		return blames
-
-	def iter_commits(self, rev=None, paths='', **kwargs):
-		"""
-		A list of Commit objects representing the history of a given ref/commit
-
-		``rev``
-			revision specifier, see git-rev-parse for viable options.
-			If None, the active branch will be used.
-
-		 ``paths``
-			is an optional path or a list of paths to limit the returned commits to
-			Commits that do not contain that path or the paths will not be returned.
-		
-		 ``kwargs``
-		 	Arguments to be passed to git-rev-parse - common ones are 
-		 	max_count and skip
-
-		Returns
-			``git.Commit[]``
-		"""
-		if rev is None:
-			rev = self.active_branch
-		
-		return Commit.list_items(self, rev, paths, **kwargs)
-
-	def commits_between(self, frm, to, *args, **kwargs):
-		"""
-		The Commits objects that are reachable via ``to`` but not via ``frm``
-		Commits are returned in chronological order.
-
-		``from``
-			is the Ref/Commit name of the younger item
-
-		``to``
-			is the Ref/Commit name of the older item
-
-		Returns
-			``git.Commit[]``
-		"""
-		return reversed(Commit.list_items(self, "%s..%s" % (frm, to)))
-
-
-	def commit(self, rev=None):
-		"""
-		The Commit object for the specified revision
-
-		``rev``
-			revision specifier, see git-rev-parse for viable options.
-		
-		Returns
-			``git.Commit``
-		"""
-		if rev is None:
-			rev = self.active_branch
-		
-		# NOTE: currently we are not checking wheter rev really points to a commit
-		# If not, the system will barf on access of the object, but we don't do that
-		# here to safe cycles
-		c = Commit(self, rev)
-		return c
-
-
-	def tree(self, ref=None):
-		"""
-		The Tree object for the given treeish reference
-
-		``ref``
-			is a Ref instance defaulting to the active_branch if None.
-
-		Examples::
-
-		  repo.tree(repo.heads[0])
-
-		Returns
-			``git.Tree``
-			
-		NOTE
-			A ref is requried here to assure you point to a commit or tag. Otherwise
-			it is not garantueed that you point to the root-level tree.
-			
-			If you need a non-root level tree, find it by iterating the root tree. Otherwise
-			it cannot know about its path relative to the repository root and subsequent 
-			operations might have unexpected results.
-		"""
-		if ref is None:
-			ref = self.active_branch
-		if not isinstance(ref, Reference):
-			raise ValueError( "Reference required, got %r" % ref )
-		
-		
-		# As we are directly reading object information, we must make sure
-		# we truly point to a tree object. We resolve the ref to a sha in all cases
-		# to assure the returned tree can be compared properly. Except for
-		# heads, ids should always be hexshas
-		hexsha, typename, size = self.git.get_object_header( ref )
-		if typename != "tree":
-			# will raise if this is not a valid tree
-			hexsha, typename, size = self.git.get_object_header( str(ref)+'^{tree}' )
-		# END tree handling
-		ref = hexsha
-		
-		# the root has an empty relative path and the default mode
-		return Tree(self, ref, 0, '')
-
-	def commit_deltas_from(self, other_repo, ref='master', other_ref='master'):
-		"""
-		Returns a list of commits that is in ``other_repo`` but not in self
-
-		Returns 
-			git.Commit[]
-		"""
-		repo_refs = self.git.rev_list(ref, '--').strip().splitlines()
-		other_repo_refs = other_repo.git.rev_list(other_ref, '--').strip().splitlines()
-
-		diff_refs = list(set(other_repo_refs) - set(repo_refs))
-		return map(lambda ref: Commit(other_repo, ref ), diff_refs)
-
-	def diff(self, a, b, *paths):
-		"""
-		The diff from commit ``a`` to commit ``b``, optionally restricted to the given file(s)
-
-		``a``
-			is the base commit
-		``b``
-			is the other commit
-
-		``paths``
-			is an optional list of file paths on which to restrict the diff
-			
-		Returns
-			``str``
-		"""
-		return self.git.diff(a, b, '--', *paths)
-
-	def commit_diff(self, commit):
-		"""
-		The commit diff for the given commit
-		  ``commit`` is the commit name/id
-
-		Returns
-			``git.Diff[]``
-		"""
-		return Commit.diff(self, commit)
 
 	@classmethod
 	def init_bare(self, path, mkdir=True, **kwargs):
@@ -454,99 +535,6 @@ class Repo(object):
 		gf.close()
 		return sio.getvalue()
 
-	def _get_daemon_export(self):
-		filename = os.path.join(self.path, self.DAEMON_EXPORT_FILE)
-		return os.path.exists(filename)
-
-	def _set_daemon_export(self, value):
-		filename = os.path.join(self.path, self.DAEMON_EXPORT_FILE)
-		fileexists = os.path.exists(filename)
-		if value and not fileexists:
-			touch(filename)
-		elif not value and fileexists:
-			os.unlink(filename)
-
-	daemon_export = property(_get_daemon_export, _set_daemon_export,
-							 doc="If True, git-daemon may export this repository")
-	del _get_daemon_export
-	del _set_daemon_export
-
-	def _get_alternates(self):
-		"""
-		The list of alternates for this repo from which objects can be retrieved
-
-		Returns
-			list of strings being pathnames of alternates
-		"""
-		alternates_path = os.path.join(self.path, 'objects', 'info', 'alternates')
-
-		if os.path.exists(alternates_path):
-			try:
-				f = open(alternates_path)
-				alts = f.read()
-			finally:
-				f.close()
-			return alts.strip().splitlines()
-		else:
-			return []
-
-	def _set_alternates(self, alts):
-		"""
-		Sets the alternates
-
-		``alts``
-			is the array of string paths representing the alternates at which 
-			git should look for objects, i.e. /home/user/repo/.git/objects
-
-		Raises
-			NoSuchPathError
-			
-		Returns
-			None
-		"""
-		for alt in alts:
-			if not os.path.exists(alt):
-				raise NoSuchPathError("Could not set alternates. Alternate path %s must exist" % alt)
-
-		if not alts:
-			os.remove(os.path.join(self.path, 'objects', 'info', 'alternates'))
-		else:
-			try:
-				f = open(os.path.join(self.path, 'objects', 'info', 'alternates'), 'w')
-				f.write("\n".join(alts))
-			finally:
-				f.close()
-
-	alternates = property(_get_alternates, _set_alternates, doc="Retrieve a list of alternates paths or set a list paths to be used as alternates")
-
-	@property
-	def is_dirty(self):
-		"""
-		Return the status of the index.
-
-		Returns
-			``True``, if the index has any uncommitted changes,
-			otherwise ``False``
-
-		NOTE
-			Working tree changes that have not been staged will not be detected ! 
-		"""
-		if self.bare:
-			# Bare repositories with no associated working directory are
-			# always consired to be clean.
-			return False
-
-		return len(self.git.diff('HEAD', '--').strip()) > 0
-
-	@property
-	def active_branch(self):
-		"""
-		The name of the currently active branch.
-
-		Returns
-			Head to the active branch
-		"""
-		return Head( self, self.git.symbolic_ref('HEAD').strip() )
 
 	def __repr__(self):
 		return '<git.Repo "%s">' % self.path
