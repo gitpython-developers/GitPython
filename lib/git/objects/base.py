@@ -5,16 +5,31 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 import os
 from git.utils import LazyMixin
+import utils
 	
 _assertion_msg_format = "Created object %r whose python type %r disagrees with the acutal git object type %r"
 
 class Object(LazyMixin):
 	"""
 	Implements an Object which may be Blobs, Trees, Commits and Tags
+	
+	This Object also serves as a constructor for instances of the correct type::
+	
+		inst = Object(repo,id)
 	"""
 	TYPES = ("blob", "tree", "commit", "tag")
 	__slots__ = ("repo", "id", "size", "data" )
 	type = None			# to be set by subclass
+	
+	def __new__(cls, repo, id, *args, **kwargs):
+		if cls is Object:
+			hexsha, typename, size = repo.git.get_object_header(id)
+			obj_type = utils.get_object_type_by_name(typename)
+			inst = super(Object,cls).__new__(obj_type, repo, hexsha, *args, **kwargs)
+			inst.size = size
+			return inst
+		else:
+			return super(Object,cls).__new__(cls, repo, id, *args, **kwargs)
 	
 	def __init__(self, repo, id):
 		"""

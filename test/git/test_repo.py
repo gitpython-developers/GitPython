@@ -65,14 +65,6 @@ class TestRepo(object):
 
 		assert_true(git.called)
 
-	@patch_object(Git, '_call_process')
-	def test_commit(self, git):
-		git.return_value = ListProcessAdapter(fixture('rev_list_single'))
-
-		commit = self.repo.commit('4c8124ffcf4039d292442eeccabdeca5af5c5017')
-
-		assert_equal("4c8124ffcf4039d292442eeccabdeca5af5c5017", commit.id)
-
 	@patch_object(Repo, '__init__')
 	@patch_object(Git, '_call_process')
 	def test_init_bare(self, git, repo):

@@ -71,8 +71,8 @@ class Reference(LazyMixin, Iterable):
 			always point to the actual object as it gets re-created on each query
 		"""
 		# have to be dynamic here as we may be a tag which can point to anything
-		hexsha, typename, size = self.repo.git.get_object_header(self.path)
-		return get_object_type_by_name(typename)(self.repo, hexsha)
+		# Our path will be resolved to the hexsha which will be used accordingly
+		return Object(self.repo, self.path)
 	
 	@classmethod
 	def iter_items(cls, repo, common_path = "refs", **kwargs):

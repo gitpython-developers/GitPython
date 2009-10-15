@@ -129,10 +129,8 @@ class Repo(object):
 		if rev is None:
 			rev = self.active_branch
 		
-		# NOTE: currently we are not checking wheter rev really points to a commit
-		# If not, the system will barf on access of the object, but we don't do that
-		# here to safe cycles
-		c = Commit(self, rev)
+		c = Object(self, rev)
+		assert c.type == "commit", "Revision %s did not point to a commit, but to %s" % (rev, c)
 		return c
 
 	def tree(self, ref=None):
