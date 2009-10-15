@@ -456,48 +456,27 @@ class Repo(object):
 		self.git.clone(self.path, path, **kwargs)
 		return Repo(path)
 
-	def archive_tar(self, treeish='master', prefix=None):
+
+	def archive(self, ostream, treeish=None, prefix=None,  **kwargs):
 		"""
-		Archive the given treeish
+		Archive the tree at the given revision.
+		``ostream``
+			file compatible stream object to which the archive will be written
 
 		``treeish``
-			is the treeish name/id (default 'master')
+			is the treeish name/id, defaults to active branch
 
 		``prefix``
 			is the optional prefix to prepend to each filename in the archive
+			
+		``kwargs``
+			Additional arguments passed to git-archive
+			NOTE: Use the 'format' argument to define the kind of format. Use 
+			specialized ostreams to write any format supported by python
 
 		Examples::
 
-			>>> repo.archive_tar
-			<String containing tar archive>
-
-			>>> repo.archive_tar('a87ff14')
-			<String containing tar archive for commit a87ff14>
-
-			>>> repo.archive_tar('master', 'myproject/')
-			<String containing tar bytes archive, whose files are prefixed with 'myproject/'>
-
-		Returns
-			str (containing bytes of tar archive)
-		"""
-		options = {}
-		if prefix:
-			options['prefix'] = prefix
-		return self.git.archive(treeish, **options)
-
-	def archive_tar_gz(self, treeish='master', prefix=None):
-		"""
-		Archive and gzip the given treeish
-
-		``treeish``
-			is the treeish name/id (default 'master')
-
-		``prefix``
-			is the optional prefix to prepend to each filename in the archive
-
-		Examples::
-
-			>>> repo.archive_tar_gz
+			>>> repo.archive(open("archive"
 			<String containing tar.gz archive>
 
 			>>> repo.archive_tar_gz('a87ff14')
@@ -506,18 +485,22 @@ class Repo(object):
 			>>> repo.archive_tar_gz('master', 'myproject/')
 			<String containing tar.gz archive and prefixed with 'myproject/'>
 
-		Returns
-			str (containing the bytes of tar.gz archive)
+		Raise
+			GitCommandError in case something went wrong
+			
 		"""
-		kwargs = {}
-		if prefix:
+		if treeish is None:
+			treeish = self.active_branch
+		if prefix and 'prefix' not in kwargs:
 			kwargs['prefix'] = prefix
-		resultstr =  self.git.archive(treeish, **kwargs)
-		sio = StringIO.StringIO()
-		gf = gzip.GzipFile(fileobj=sio, mode ='wb')
-		gf.write(resultstr)
-		gf.close()
-		return sio.getvalue()
+		kwargs['as_process'] = True
+		kwargs['output_stream'] = ostream
+		
+		proc =  self.git.archive(treeish, **kwargs)
+		status = proc.wait()
+		if status != 0:
+			raise GitCommandError( "git-archive", status, proc.stderr.read() )
+		
 
 
 	def __repr__(self):

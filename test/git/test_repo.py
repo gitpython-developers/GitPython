@@ -141,11 +141,14 @@ class TestRepo(object):
 		assert_equal(15, len(diffs))
 		assert_true(git.called)
 
-	def test_archive_tar(self):
-		assert self.repo.archive_tar()
-
-	def test_archive_tar_gz(self):
-		assert self.repo.archive_tar_gz()
+	def test_archive(self):
+		args = ( tuple(), (self.repo.heads[-1],),(None,"hello") )
+		for arg_list in args:
+			ftmp = os.tmpfile()
+			self.repo.archive(ftmp, *arg_list)
+			ftmp.seek(0,2)
+			assert ftmp.tell()
+		# END for each arg-list
 
 	@patch('git.utils.touch')
 	def test_enable_daemon_serve(self, touch):
