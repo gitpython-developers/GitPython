@@ -67,55 +67,53 @@ class TestRepo(object):
 
 	@patch_object(Repo, '__init__')
 	@patch_object(Git, '_call_process')
-	def test_init_bare(self, git, repo):
+	def test_init(self, git, repo):
 		git.return_value = True
 		repo.return_value = None
 
-		Repo.init_bare("repos/foo/bar.git")
+		r = Repo.init("repos/foo/bar.git", bare=True)
+		assert isinstance(r, Repo)
 
 		assert_true(git.called)
-		assert_equal(git.call_args, (('init', '--bare'), {}))
 		assert_true(repo.called)
-		assert_equal(repo.call_args, (('repos/foo/bar.git',), {}))
 
 	@patch_object(Repo, '__init__')
 	@patch_object(Git, '_call_process')
-	def test_init_bare_with_options(self, git, repo):
+	def test_init_with_options(self, git, repo):
 		git.return_value = True
 		repo.return_value = None
 
-		Repo.init_bare("repos/foo/bar.git", **{'template': "/baz/sweet"})
+		r = Repo.init("repos/foo/bar.git", **{'bare' : True,'template': "/baz/sweet"})
+		assert isinstance(r, Repo)
 
 		assert_true(git.called)
-		assert_equal(git.call_args, (('init', '--bare'), {'template': '/baz/sweet'}))
 		assert_true(repo.called)
-		assert_equal(repo.call_args, (('repos/foo/bar.git',), {}))
 
 	@patch_object(Repo, '__init__')
 	@patch_object(Git, '_call_process')
-	def test_fork_bare(self, git, repo):
+	def test_clone(self, git, repo):
 		git.return_value = None
 		repo.return_value = None
 
-		self.repo.fork_bare("repos/foo/bar.git")
+		self.repo.clone("repos/foo/bar.git")
 
 		assert_true(git.called)
 		path = os.path.join(absolute_project_path(), '.git')
-		assert_equal(git.call_args, (('clone', path, 'repos/foo/bar.git'), {'bare': True}))
+		assert_equal(git.call_args, (('clone', path, 'repos/foo/bar.git'), {}))
 		assert_true(repo.called)
 
 	@patch_object(Repo, '__init__')
 	@patch_object(Git, '_call_process')
-	def test_fork_bare_with_options(self, git, repo):
+	def test_clone_with_options(self, git, repo):
 		git.return_value = None
 		repo.return_value = None
 
-		self.repo.fork_bare("repos/foo/bar.git", **{'template': '/awesome'})
+		self.repo.clone("repos/foo/bar.git", **{'template': '/awesome'})
 
 		assert_true(git.called)
 		path = os.path.join(absolute_project_path(), '.git')
 		assert_equal(git.call_args, (('clone', path, 'repos/foo/bar.git'),
-									  {'bare': True, 'template': '/awesome'}))
+									  { 'template': '/awesome'}))
 		assert_true(repo.called)
 
 	@patch_object(Git, '_call_process')

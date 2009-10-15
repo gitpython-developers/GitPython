@@ -59,7 +59,12 @@ Repo
      repositories which are likely to have completly different commits. For
      related repositories, i.e. clones, git-rev-list would be sufficient to find 
      commits that would need to be transferred for example.
-* Renamed commits to iter_commits to improve the performance, adjusted signature
+  - 'create' method which equals the 'init' method's functionality
+* Renamed the following methods:
+  - commits to iter_commits to improve the performance, adjusted signature
+  - init_bare to init, implying less about the options to be used
+  - fork_bare to clone, as it was to represent general clone functionality, but implied
+    a bare clone
   to be more versatile
 * 'commits' method has no max-count of returned commits anymore, it now behaves 
  like git-rev-list

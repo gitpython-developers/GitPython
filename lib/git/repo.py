@@ -408,52 +408,52 @@ class Repo(object):
 		return blames
 
 	@classmethod
-	def init_bare(self, path, mkdir=True, **kwargs):
+	def init(cls, path=None, mkdir=True, **kwargs):
 		"""
-		Initialize a bare git repository at the given path
+		Initialize a git repository at the given path if specified
 
 		``path``
 			is the full path to the repo (traditionally ends with /<name>.git)
+			or None in which case the repository will be created in the current 
+			working directory
 
 		``mkdir``
 			if specified will create the repository directory if it doesn't
-			already exists. Creates the directory with a mode=0755.
+			already exists. Creates the directory with a mode=0755. 
+			Only effective if a path is explicitly given
 
 		``kwargs``
-			keyword arguments serving as additional options to the git init command
+			keyword arguments serving as additional options to the git-init command
 
 		Examples::
 
-			git.Repo.init_bare('/var/git/myrepo.git')
+			git.Repo.init('/var/git/myrepo.git',bare=True)
 
 		Returns
 			``git.Repo`` (the newly created repo)
 		"""
 
-		if mkdir and not os.path.exists(path):
+		if mkdir and path and not os.path.exists(path):
 			os.makedirs(path, 0755)
 
 		git = Git(path)
-		output = git.init('--bare', **kwargs)
+		output = git.init(path, **kwargs)
 		return Repo(path)
-	create = init_bare
 
-	def fork_bare(self, path, **kwargs):
+	def clone(self, path, **kwargs):
 		"""
-		Fork a bare git repository from this repo
+		Create a clone from this repository.
 
 		``path``
 			is the full path of the new repo (traditionally ends with /<name>.git)
 
 		``kwargs``
-			keyword arguments to be given to the git clone command
+			keyword arguments to be given to the git-clone command
 
 		Returns
-			``git.Repo`` (the newly forked repo)
+			``git.Repo`` (the newly cloned repo)
 		"""
-		options = {'bare': True}
-		options.update(kwargs)
-		self.git.clone(self.path, path, **options)
+		self.git.clone(self.path, path, **kwargs)
 		return Repo(path)
 
 	def archive_tar(self, treeish='master', prefix=None):
