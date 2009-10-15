@@ -215,6 +215,9 @@ class TestCommit(object):
 		for sha1, commit in zip(expected_ids, commits):
 			assert_equal(sha1, commit.id)
 
+	def test_count(self):
+		assert Commit.count( self.repo, '0.1.5' ) == 141
+
 	def test_str(self):
 		commit = Commit(self.repo, id='abc')
 		assert_equal ("abc", str(commit))

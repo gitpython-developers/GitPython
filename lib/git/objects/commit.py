@@ -102,7 +102,7 @@ class Commit(base.Object, Iterable):
 		return self.message.split('\n', 1)[0]
 
 	@classmethod
-	def count(cls, repo, ref, path=''):
+	def count(cls, repo, ref, paths=''):
 		"""
 		Count the number of commits reachable from this ref
 
@@ -112,16 +112,17 @@ class Commit(base.Object, Iterable):
 		``ref``
 			is the ref from which to begin (SHA1 or name)
 
-		``path``
-			is an optinal path
+		``paths``
+			is an optinal path or a list of paths restricting the return value 
+			to commits actually containing the paths
 
 		Returns
 			int
 		"""
-		return len(repo.git.rev_list(ref, '--', path).strip().splitlines())
+		return len(repo.git.rev_list(ref, '--', paths).strip().splitlines())
 
 	@classmethod
-	def iter_items(cls, repo, ref, path='', **kwargs):
+	def iter_items(cls, repo, ref, paths='', **kwargs):
 		"""
 		Find all commits matching the given criteria.
 
@@ -131,14 +132,15 @@ class Commit(base.Object, Iterable):
 		``ref``
 			is the ref from which to begin (SHA1, Head or name)
 
-		``path``
-			is an optinal path, if set only Commits that include the path 
-			will be considered
+		``paths``
+			is an optinal path or list of paths, if set only Commits that include the path 
+			or paths will be considered
 
 		``kwargs``
-			optional keyword arguments to git where
+			optional keyword arguments to git rev-list where
 			``max_count`` is the maximum number of commits to fetch
 			``skip`` is the number of commits to skip
+			``since`` all commits since i.e. '1970-01-01'
 
 		Returns
 			iterator yielding Commit items
@@ -147,7 +149,7 @@ class Commit(base.Object, Iterable):
 		options.update(kwargs)
 
 		# the test system might confront us with string values - 
-		proc = repo.git.rev_list(ref, '--', path, **options)
+		proc = repo.git.rev_list(ref, '--', paths, **options)
 		return cls._iter_from_process_or_stream(repo, proc)
 
 	@classmethod

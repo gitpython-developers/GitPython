@@ -223,6 +223,21 @@ class Git(object):
 					args.append("--%s=%s" % (dashify(k), v))
 		return args
 
+	@classmethod
+	def __unpack_args(cls, arg_list):
+		if not isinstance(arg_list, (list,tuple)):
+			return [ str(arg_list) ]
+			
+		outlist = list()
+		for arg in arg_list:
+			if isinstance(arg_list, (list, tuple)):
+				outlist.extend(cls.__unpack_args( arg ))
+			# END recursion 
+			else:
+				outlist.append(str(arg))
+		# END for each arg
+		return outlist
+
 	def _call_process(self, method, *args, **kwargs):
 		"""
 		Run the given git command with the specified arguments and return
@@ -258,7 +273,8 @@ class Git(object):
 
 		# Prepare the argument list
 		opt_args = self.transform_kwargs(**kwargs)
-		ext_args = map(str, args)
+		
+		ext_args = self.__unpack_args(args)
 		args = opt_args + ext_args
 
 		call = ["git", dashify(method)]

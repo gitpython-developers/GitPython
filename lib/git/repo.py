@@ -116,9 +116,12 @@ class Repo(object):
 		"""
 		return Tag.list_items(self)
 		
-	def blame(self, commit, file):
+	def blame(self, ref, file):
 		"""
-		The blame information for the given file at the given commit
+		The blame information for the given file at the given ref.
+
+		``ref``
+			Ref object or Commit
 
 		Returns
 			list: [git.Commit, list: [<line>]]
@@ -126,7 +129,7 @@ class Repo(object):
 			changed within the given commit. The Commit objects will be given in order
 			of appearance.
 		"""
-		data = self.git.blame(commit, '--', file, p=True)
+		data = self.git.blame(ref, '--', file, p=True)
 		commits = {}
 		blames = []
 		info = None
@@ -196,17 +199,17 @@ class Repo(object):
 			# END distinguish hexsha vs other information
 		return blames
 
-	def commits(self, start=None, path='', max_count=None, skip=0):
+	def commits(self, start=None, paths='', max_count=None, skip=0):
 		"""
 		A list of Commit objects representing the history of a given ref/commit
 
 		``start``
-			is a ref to start the commits from. If start is None, 
+			is a Ref or Commit to start the commits from. If start is None, 
 			the active branch will be used
 
-		 ``path``
-			is an optional path to limit the returned commits to
-			Commits that do not contain that path will not be returned.
+		 ``paths``
+			is an optional path or a list of paths to limit the returned commits to
+			Commits that do not contain that path or the paths will not be returned.
 
 		 ``max_count``
 			is the maximum number of commits to return (default None)
@@ -225,63 +228,27 @@ class Repo(object):
 			options.pop('max_count')		   
 		if start is None:
 			start = self.active_branch	
-		return Commit.list_items(self, start, path, **options)
+		
+		return Commit.list_items(self, start, paths, **options)
 
-	def commits_between(self, frm, to):
+	def commits_between(self, frm, to, *args, **kwargs):
 		"""
 		The Commits objects that are reachable via ``to`` but not via ``frm``
 		Commits are returned in chronological order.
 
 		``from``
-			is the branch/commit name of the younger item
+			is the Ref/Commit name of the younger item
 
 		``to``
-			is the branch/commit name of the older item
+			is the Ref/Commit name of the older item
 
 		Returns
 			``git.Commit[]``
 		"""
 		return reversed(Commit.list_items(self, "%s..%s" % (frm, to)))
 
-	def commits_since(self, start='master', path='', since='1970-01-01'):
-		"""
-		The Commits objects that are newer than the specified date.
-		Commits are returned in chronological order.
 
-		``start``
-			is the branch/commit name (default 'master')
-
-		``path``
-			is an optinal path to limit the returned commits to.
-			
-
-		``since``
-			is a string represeting a date/time
-
-		Returns
-			``git.Commit[]``
-		"""
-		options = {'since': since}
-
-		return Commit.list_items(self, start, path, **options)
-
-	def commit_count(self, start='master', path=''):
-		"""
-		The number of commits reachable by the given branch/commit
-
-		``start``
-			is the branch/commit name (default 'master')
-
-		``path``
-			is an optional path
-			Commits that do not contain the path will not contribute to the count.
-
-		Returns
-			``int``
-		"""
-		return Commit.count(self, start, path)
-
-	def commit(self, id=None, path = ''):
+	def commit(self, id=None, paths = ''):
 		"""
 		The Commit object for the specified id
 
@@ -290,8 +257,9 @@ class Repo(object):
 			if None, it defaults to the active branch
 		
 
-		``path``
-			is an optional path, if set the returned commit must contain the path.
+		``paths``
+			is an optional path or a list of paths, 
+			if set the returned commit must contain the path or paths
 
 		Returns
 			``git.Commit``
@@ -300,7 +268,7 @@ class Repo(object):
 			id = self.active_branch
 		options = {'max_count': 1}
 
-		commits = Commit.list_items(self, id, path, **options)
+		commits = Commit.list_items(self, id, paths, **options)
 
 		if not commits:
 			raise ValueError, "Invalid identifier %s, or given path '%s' too restrictive" % ( id, path )
@@ -317,7 +285,7 @@ class Repo(object):
 		other_repo_refs = other_repo.git.rev_list(other_ref, '--').strip().splitlines()
 
 		diff_refs = list(set(other_repo_refs) - set(repo_refs))
-		return map(lambda ref: Commit.list_items(other_repo, ref, max_count=1)[0], diff_refs)
+		return map(lambda ref: Commit(other_repo, ref ), diff_refs)
 
 	def tree(self, treeish=None):
 		"""

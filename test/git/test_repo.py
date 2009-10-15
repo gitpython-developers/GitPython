@@ -66,15 +66,6 @@ class TestRepo(object):
 		assert_true(git.called)
 
 	@patch_object(Git, '_call_process')
-	def test_commit_count(self, git):
-		git.return_value = fixture('rev_list_count')
-
-		assert_equal(655, self.repo.commit_count('master'))
-
-		assert_true(git.called)
-		assert_equal(git.call_args, (('rev_list', 'master', '--', ''), {}))
-
-	@patch_object(Git, '_call_process')
 	def test_commit(self, git):
 		git.return_value = ListProcessAdapter(fixture('rev_list_single'))
 
