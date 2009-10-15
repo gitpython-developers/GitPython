@@ -8,23 +8,23 @@ from test.testlib import *
 from git import *
 
 class TestDiff(object):
-    def setup(self):
-        self.repo = Repo(GIT_REPO)
+	def setup(self):
+		self.repo = Repo(GIT_REPO)
 
-    def test_list_from_string_new_mode(self):
-        output = fixture('diff_new_mode')
-        diffs = Diff.list_from_string(self.repo, output)
-        assert_equal(1, len(diffs))
-        assert_equal(10, len(diffs[0].diff.splitlines()))
+	def test_list_from_string_new_mode(self):
+		output = fixture('diff_new_mode')
+		diffs = Diff._list_from_string(self.repo, output)
+		assert_equal(1, len(diffs))
+		assert_equal(10, len(diffs[0].diff.splitlines()))
 
-    def test_diff_with_rename(self):
-        output = fixture('diff_rename')
-        diffs = Diff.list_from_string(self.repo, output)
+	def test_diff_with_rename(self):
+		output = fixture('diff_rename')
+		diffs = Diff._list_from_string(self.repo, output)
 
-        assert_equal(1, len(diffs))
+		assert_equal(1, len(diffs))
 
-        diff = diffs[0]
-        assert_true(diff.renamed)
-        assert_equal(diff.rename_from, 'AUTHORS')
-        assert_equal(diff.rename_to, 'CONTRIBUTORS')
+		diff = diffs[0]
+		assert_true(diff.renamed)
+		assert_equal(diff.rename_from, 'AUTHORS')
+		assert_equal(diff.rename_to, 'CONTRIBUTORS')
 

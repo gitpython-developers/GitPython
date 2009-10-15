@@ -1,6 +1,75 @@
 =======
 CHANGES
 =======
+  
+0.2
+=====
+General
+-------
+* file mode in Tree, Blob and Diff objects now is an int compatible to definintiions 
+  in the stat module, allowing you to query whether individual user, group and other 
+  read, write and execute bits are set.
+* Adjusted class hierarchy to generally allow comparison and hash for Objects and Refs
+* Improved Tag object which now is a Ref that may contain a tag object with additional 
+  Information
+* id_abbrev method has been removed as it could not assure the returned short SHA's 
+  where unique
+* removed basename method from Objects with path's as it replicated features of os.path
+* from_string and list_from_string methods are now private and were renamed to 
+  _from_string  and _list_from_string respectively. As part of the private API, they 
+  may change without prior notice.
+* Renamed all find_all methods to list_items - this method is part of the Iterable interface
+  that also provides a more efficients and more responsive iter_items method
+
+Item Iteration
+--------------
+* Previously one would return and process multiple items as list only which can 
+  hurt performance and memory consumption and reduce response times. 
+  iter_items method provide an iterator that will return items on demand as parsed 
+  from a stream. This way any amount of objects can be handled.
+  
+objects Package
+----------------
+* blob, tree, tag and commit module have been moved to new objects package. This should 
+  not affect you though unless you explicitly imported individual objects. If you just 
+  used the git package, names did not change.
+  
+Repo
+----
+* Moved blame method from Blob to repo as it appeared to belong there much more.
+* active_branch method now returns a Head object instead of a string with the name 
+  of the active branch.
+* tree method now requires a Ref instance as input and defaults to the active_branche
+  instead of master
+* Removed 'log' method as it as effectively the same as the 'commits' method
+* 'commits' method has no max-count of returned commits anymore, it now behaves 
+ like git-rev-list
+
+Diff
+----
+* Members a a_commit and b_commit renamed to a_blob and b_blob - they are populated
+  with Blob objects if possible
+* Members a_path and b_path removed as this information is kept in the blobs
+
+Blob
+----
+* former 'name' member renamed to path as it suits the actual data better
+
+Tree
+----
+* former 'name' member renamed to path as it suits the actual data better
+* added traverse method allowing to recursively traverse tree items
+* deleted blob method
+* added blobs and trees properties allowing to query the respective items in the 
+  tree
+* now mimics behaviour of a read-only list instead of a dict to maintain order.
+* content_from_string method is now private and not part of the public API anymore
+
+Refs
+----
+* Will dynmically retrieve their object at the time of query to assure the information 
+  is actual. Recently objects would be cached, hence ref object not be safely kept 
+  persistent.
 
 0.1.6
 =====
@@ -48,20 +117,6 @@ Repo
 
 * Corrected ``commits_between`` always returning None instead of the reversed
   list.
-
-  
-0.1.X
-=====
-( Future Release )
-General
--------
-* See changes in Diff class as your client code needs adjustments to work with it
-
-Diff
-----
-* Members a a_commit and b_commit renamed to a_blob and b_blob - they are populated
-  with Blob objects if possible
-* Members a_path and b_path removed as this information is kept in the blobs
 
 
 0.1.5
