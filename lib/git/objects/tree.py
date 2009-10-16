@@ -15,7 +15,7 @@ def sha_to_hex(sha):
     assert len(hexsha) == 40, "Incorrect length of sha1 string: %d" % hexsha
     return hexsha
 
-class Tree(base.IndexObject):
+class Tree(base.IndexObject, base.Diffable):
 	"""
 	Tress represent a ordered list of Blobs and other Trees. Hence it can be 
 	accessed like a list.
@@ -169,6 +169,7 @@ class Tree(base.IndexObject):
 	def traverse(self, max_depth=-1, predicate = lambda i: True):
 		"""
 		Returns
+		
 			Iterator to traverse the tree recursively up to the given level.
 			The iterator returns Blob and Tree objects
 		

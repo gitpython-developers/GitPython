@@ -27,6 +27,9 @@ General
   terms are used everywhere, such as "Reference" ( ref ) and "Revision" ( rev ).
   Prevously multiple terms where used making it harder to know which type was allowed
   or not.
+* Unified diff interface to allow easy diffing between trees, trees and index, trees
+  and working tree, index and working tree, trees and index. This closely follows
+  the git-diff capabilities.
   
 
 Item Iteration

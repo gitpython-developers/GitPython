@@ -9,7 +9,7 @@ import objects.blob as blob
 
 class Diff(object):
 	"""
-	A Diff contains diff information between two commits.
+	A Diff contains diff information between two Trees.
 	
 	It contains two sides a and b of the diff, members are prefixed with 
 	"a" and "b" respectively to inidcate that.
@@ -74,18 +74,20 @@ class Diff(object):
 		self.diff = diff
 
 	@classmethod
-	def _list_from_string(cls, repo, text):
+	def _index_from_patch_format(cls, repo, stream):
 		"""
-		Create a new diff object from the given text
+		Create a new DiffIndex from the given text which must be in patch format
 		``repo``
 			is the repository we are operating on - it is required 
 		
-		``text``
-			result of 'git diff' between two commits or one commit and the index
+		``stream``
+			result of 'git diff' as a stream (supporting file protocol)
 		
 		Returns
-			git.Diff[]
+			git.DiffIndex
 		"""
+		# for now, we have to bake the stream
+		text = stream.read()
 		diffs = []
 
 		diff_header = cls.re_header.match
@@ -102,4 +104,14 @@ class Diff(object):
 				new_file, deleted_file, rename_from, rename_to, diff[header.end():]))
 
 		return diffs
+		
+	@classmethod
+	def _index_from_raw_format(cls, repo, stream):
+		"""
+		Create a new DiffIndex from the given stream which must be in raw format.
+		
+		Returns
+			git.DiffIndex
+		"""
+		raise NotImplementedError("")
 
