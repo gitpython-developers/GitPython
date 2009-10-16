@@ -225,3 +225,28 @@ class TestRepo(object):
 		assert_true( tlist )
 		assert_true( isinstance( tlist[0], basestring ) )
 		assert_true( len( tlist ) < sum( len(t) for t in tlist ) )				 # test for single-char bug
+		
+	def test_untracked_files(self):
+		base = self.repo.git.git_dir
+		files = (base+"/__test_myfile", base+"/__test_other_file")
+		num_recently_untracked = 0
+		try:
+			for fpath in files:
+				fd = open(fpath,"wb")
+				fd.close()
+			# END for each filename
+			untracked_files = self.repo.untracked_files
+			num_recently_untracked = len(untracked_files)
+			
+			# assure we have all names - they are relative to the git-dir
+			num_test_untracked = 0
+			for utfile in untracked_files:
+				num_test_untracked += os.path.join(base, utfile) in files
+			assert len(files) == num_test_untracked
+		finally:
+			for fpath in files:
+				if os.path.isfile(fpath):
+					os.remove(fpath)
+		# END handle files 
+		
+		assert len(self.repo.untracked_files) == (num_recently_untracked - len(files))

@@ -285,6 +285,37 @@ class Repo(object):
 			return False
 
 		return len(self.git.diff('HEAD', '--').strip()) > 0
+		
+	@property
+	def untracked_files(self):
+		"""
+		Returns
+			list(str,...)
+			
+			Files currently untracked as they have not been staged yet. Paths 
+			are relative to the current working directory of the git command.
+			
+		Note
+			ignored files will not appear here, i.e. files mentioned in .gitignore
+		"""
+		# make sure we get all files, no only untracked directores
+		proc = self.git.commit(untracked_files=True, as_process=True)
+		stream = iter(proc.stdout)
+		untracked_files = list()
+		for line in stream:
+			if not line.startswith("# Untracked files:"):
+				continue
+			# skip two lines
+			stream.next()
+			stream.next()
+			
+			for untracked_info in stream:
+				if not untracked_info.startswith("#\t"):
+					break
+				untracked_files.append(untracked_info.replace("#\t", "").rstrip())
+			# END for each utracked info line
+		# END for each line
+		return untracked_files
 
 	@property
 	def active_branch(self):

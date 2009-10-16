@@ -68,6 +68,7 @@ Repo
   - archive_tar_gz and archive_tar and replaced by archive method with different signature
 * 'commits' method has no max-count of returned commits anymore, it now behaves 
  like git-rev-list
+* 'untracked_files' property added, returning all currently untracked files
 
 Diff
 ----
