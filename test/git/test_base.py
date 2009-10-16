@@ -4,7 +4,6 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
-import time
 from test.testlib import *
 from git import *
 import git.objects.base as base
@@ -63,7 +62,7 @@ class TestBase(object):
 		ref_count = 0
 		for ref in chain(self.repo.tags, self.repo.heads):
 			ref_count += 1
-			assert isinstance(ref, refs.Ref)
+			assert isinstance(ref, refs.Reference)
 			assert str(ref) == ref.name
 			assert repr(ref)
 			assert ref == ref

@@ -5,7 +5,6 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
 import os, sys
-import time
 from test.testlib import *
 from git import *
 
@@ -43,7 +42,7 @@ class TestRepo(object):
 	def test_commits(self, git):
 		git.return_value = ListProcessAdapter(fixture('rev_list'))
 
-		commits = self.repo.commits('master', max_count=10)
+		commits = list( self.repo.iter_commits('master', max_count=10) )
 
 		c = commits[0]
 		assert_equal('4c8124ffcf4039d292442eeccabdeca5af5c5017', c.id)
@@ -51,10 +50,10 @@ class TestRepo(object):
 		assert_equal("672eca9b7f9e09c22dcb128c283e8c3c8d7697a4", c.tree.id)
 		assert_equal("Tom Preston-Werner", c.author.name)
 		assert_equal("tom@mojombo.com", c.author.email)
-		assert_equal(time.gmtime(1191999972), c.authored_date)
+		assert_equal(1191999972, c.authored_date)
 		assert_equal("Tom Preston-Werner", c.committer.name)
 		assert_equal("tom@mojombo.com", c.committer.email)
-		assert_equal(time.gmtime(1191999972), c.committed_date)
+		assert_equal(1191999972, c.committed_date)
 		assert_equal("implement Grit#heads", c.message)
 
 		c = commits[1]
@@ -66,76 +65,55 @@ class TestRepo(object):
 
 		assert_true(git.called)
 
-	@patch_object(Git, '_call_process')
-	def test_commit_count(self, git):
-		git.return_value = fixture('rev_list_count')
-
-		assert_equal(655, self.repo.commit_count('master'))
-
-		assert_true(git.called)
-		assert_equal(git.call_args, (('rev_list', 'master', '--', ''), {}))
-
-	@patch_object(Git, '_call_process')
-	def test_commit(self, git):
-		git.return_value = ListProcessAdapter(fixture('rev_list_single'))
-
-		commit = self.repo.commit('4c8124ffcf4039d292442eeccabdeca5af5c5017')
-
-		assert_equal("4c8124ffcf4039d292442eeccabdeca5af5c5017", commit.id)
-
-		assert_true(git.called)
-		
 	@patch_object(Repo, '__init__')
 	@patch_object(Git, '_call_process')
-	def test_init_bare(self, git, repo):
+	def test_init(self, git, repo):
 		git.return_value = True
 		repo.return_value = None
 
-		Repo.init_bare("repos/foo/bar.git")
+		r = Repo.init("repos/foo/bar.git", bare=True)
+		assert isinstance(r, Repo)
 
 		assert_true(git.called)
-		assert_equal(git.call_args, (('init', '--bare'), {}))
 		assert_true(repo.called)
-		assert_equal(repo.call_args, (('repos/foo/bar.git',), {}))
 
 	@patch_object(Repo, '__init__')
 	@patch_object(Git, '_call_process')
-	def test_init_bare_with_options(self, git, repo):
+	def test_init_with_options(self, git, repo):
 		git.return_value = True
 		repo.return_value = None
 
-		Repo.init_bare("repos/foo/bar.git", **{'template': "/baz/sweet"})
+		r = Repo.init("repos/foo/bar.git", **{'bare' : True,'template': "/baz/sweet"})
+		assert isinstance(r, Repo)
 
 		assert_true(git.called)
-		assert_equal(git.call_args, (('init', '--bare'), {'template': '/baz/sweet'}))
 		assert_true(repo.called)
-		assert_equal(repo.call_args, (('repos/foo/bar.git',), {}))
 
 	@patch_object(Repo, '__init__')
 	@patch_object(Git, '_call_process')
-	def test_fork_bare(self, git, repo):
+	def test_clone(self, git, repo):
 		git.return_value = None
 		repo.return_value = None
 
-		self.repo.fork_bare("repos/foo/bar.git")
+		self.repo.clone("repos/foo/bar.git")
 
 		assert_true(git.called)
 		path = os.path.join(absolute_project_path(), '.git')
-		assert_equal(git.call_args, (('clone', path, 'repos/foo/bar.git'), {'bare': True}))
+		assert_equal(git.call_args, (('clone', path, 'repos/foo/bar.git'), {}))
 		assert_true(repo.called)
 
 	@patch_object(Repo, '__init__')
 	@patch_object(Git, '_call_process')
-	def test_fork_bare_with_options(self, git, repo):
+	def test_clone_with_options(self, git, repo):
 		git.return_value = None
 		repo.return_value = None
 
-		self.repo.fork_bare("repos/foo/bar.git", **{'template': '/awesome'})
+		self.repo.clone("repos/foo/bar.git", **{'template': '/awesome'})
 
 		assert_true(git.called)
 		path = os.path.join(absolute_project_path(), '.git')
 		assert_equal(git.call_args, (('clone', path, 'repos/foo/bar.git'),
-									  {'bare': True, 'template': '/awesome'}))
+									  { 'template': '/awesome'}))
 		assert_true(repo.called)
 
 	@patch_object(Git, '_call_process')
@@ -163,11 +141,14 @@ class TestRepo(object):
 		assert_equal(15, len(diffs))
 		assert_true(git.called)
 
-	def test_archive_tar(self):
-		assert self.repo.archive_tar()
-
-	def test_archive_tar_gz(self):
-		assert self.repo.archive_tar_gz()
+	def test_archive(self):
+		args = ( tuple(), (self.repo.heads[-1],),(None,"hello") )
+		for arg_list in args:
+			ftmp = os.tmpfile()
+			self.repo.archive(ftmp, *arg_list)
+			ftmp.seek(0,2)
+			assert ftmp.tell()
+		# END for each arg-list
 
 	@patch('git.utils.touch')
 	def test_enable_daemon_serve(self, touch):
@@ -233,10 +214,10 @@ class TestRepo(object):
 		assert_equal('634396b2f541a9f2d58b00be1a07f0c358b999b3', c.id)
 		assert_equal('Tom Preston-Werner', c.author.name)
 		assert_equal('tom@mojombo.com', c.author.email)
-		assert_equal(time.gmtime(1191997100), c.authored_date)
+		assert_equal(1191997100, c.authored_date)
 		assert_equal('Tom Preston-Werner', c.committer.name)
 		assert_equal('tom@mojombo.com', c.committer.email)
-		assert_equal(time.gmtime(1191997100), c.committed_date)
+		assert_equal(1191997100, c.committed_date)
 		assert_equal('initial grit setup', c.message)
 		
 		# test the 'lines per commit' entries

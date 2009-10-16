@@ -21,7 +21,7 @@ class TestPerformance(object):
 		# return quite a lot of commits, we just take one and hence abort the operation
 		
 		st = time()
-		for c in self.repo.commits():
+		for c in self.repo.iter_commits('0.1.6'):
 			num_commits += 1
 			c.author
 			c.authored_date

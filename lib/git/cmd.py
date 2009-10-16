@@ -13,7 +13,8 @@ from errors import GitCommandError
 GIT_PYTHON_TRACE = os.environ.get("GIT_PYTHON_TRACE", False)
 
 execute_kwargs = ('istream', 'with_keep_cwd', 'with_extended_output',
-				  'with_exceptions', 'with_raw_output', 'as_process')
+				  'with_exceptions', 'with_raw_output', 'as_process', 
+				  'output_stream' )
 
 extra = {}
 if sys.platform == 'win32':
@@ -102,7 +103,8 @@ class Git(object):
 				with_extended_output=False,
 				with_exceptions=True,
 				with_raw_output=False,
-				as_process=False
+				as_process=False, 
+				output_stream=None
 				):
 		"""
 		Handles executing the command on the shell and consumes and returns
@@ -130,16 +132,20 @@ class Git(object):
 		``with_raw_output``
 			Whether to avoid stripping off trailing whitespace.
 			
-		 ``as_process``
-		 	Whether to return the created process instance directly from which 
-		 	streams can be read on demand. This will render with_extended_output, 
-		 	with_exceptions and with_raw_output ineffective - the caller will have 
-		 	to deal with the details himself.
-		 	It is important to note that the process will be placed into an AutoInterrupt
-		 	wrapper that will interrupt the process once it goes out of scope. If you 
-		 	use the command in iterators, you should pass the whole process instance 
-		 	instead of a single stream.
-
+		``as_process``
+			Whether to return the created process instance directly from which 
+			streams can be read on demand. This will render with_extended_output, 
+			with_exceptions and with_raw_output ineffective - the caller will have 
+			to deal with the details himself.
+			It is important to note that the process will be placed into an AutoInterrupt
+			wrapper that will interrupt the process once it goes out of scope. If you 
+			use the command in iterators, you should pass the whole process instance 
+			instead of a single stream.
+		``output_stream``
+			If set to a file-like object, data produced by the git command will be 
+			output to the given stream directly. 
+			Otherwise a new file will be opened.
+		
 		Returns::
 		
 		 str(output)								  # extended_output = False (Default)
@@ -160,13 +166,17 @@ class Git(object):
 		  cwd = os.getcwd()
 		else:
 		  cwd=self.git_dir
+		  
+		ostream = subprocess.PIPE
+		if output_stream is not None:
+			ostream = output_stream
 
 		# Start the process
 		proc = subprocess.Popen(command,
 								cwd=cwd,
 								stdin=istream,
 								stderr=subprocess.PIPE,
-								stdout=subprocess.PIPE,
+								stdout=ostream,
 								**extra
 								)
 
@@ -223,6 +233,21 @@ class Git(object):
 					args.append("--%s=%s" % (dashify(k), v))
 		return args
 
+	@classmethod
+	def __unpack_args(cls, arg_list):
+		if not isinstance(arg_list, (list,tuple)):
+			return [ str(arg_list) ]
+			
+		outlist = list()
+		for arg in arg_list:
+			if isinstance(arg_list, (list, tuple)):
+				outlist.extend(cls.__unpack_args( arg ))
+			# END recursion 
+			else:
+				outlist.append(str(arg))
+		# END for each arg
+		return outlist
+
 	def _call_process(self, method, *args, **kwargs):
 		"""
 		Run the given git command with the specified arguments and return
@@ -258,7 +283,8 @@ class Git(object):
 
 		# Prepare the argument list
 		opt_args = self.transform_kwargs(**kwargs)
-		ext_args = map(str, args)
+		
+		ext_args = self.__unpack_args(args)
 		args = opt_args + ext_args
 
 		call = ["git", dashify(method)]

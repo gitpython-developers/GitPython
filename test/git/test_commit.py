@@ -215,6 +215,9 @@ class TestCommit(object):
 		for sha1, commit in zip(expected_ids, commits):
 			assert_equal(sha1, commit.id)
 
+	def test_count(self):
+		assert Commit.count( self.repo, '0.1.5' ) == 141
+
 	def test_str(self):
 		commit = Commit(self.repo, id='abc')
 		assert_equal ("abc", str(commit))
@@ -229,4 +232,14 @@ class TestCommit(object):
 		commit3 = Commit(self.repo, id='zyx')
 		assert_equal(commit1, commit2)
 		assert_not_equal(commit2, commit3)
+		
+	def test_iter_parents(self):
+		# should return all but ourselves, even if skip is defined
+		c = self.repo.commit('0.1.5')
+		for skip in (0, 1):
+			piter = c.iter_parents(skip=skip)
+			first_parent = piter.next()
+			assert first_parent != c
+			assert first_parent == c.parents[0]
+		# END for each 
 		

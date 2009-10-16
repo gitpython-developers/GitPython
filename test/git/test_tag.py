@@ -8,7 +8,6 @@ from mock import *
 from test.testlib import *
 from git import *
 from git.objects.tag import TagObject
-import time
 
 class TestTag(object):
 	def setup(self):
@@ -26,7 +25,7 @@ class TestTag(object):
 				assert isinstance( tagobj, TagObject ) 
 				assert tagobj.tag == tag.name
 				assert isinstance( tagobj.tagger, Actor )
-				assert isinstance( tagobj.tagged_date, time.struct_time )
+				assert isinstance( tagobj.tagged_date, int )
 				assert tagobj.message
 			# END if we have a tag object
 		# END for tag in repo-tags
