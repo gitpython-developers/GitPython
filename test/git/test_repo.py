@@ -199,6 +199,9 @@ class TestRepo(object):
 		assert_equal(self.repo.active_branch.name, 'major-refactoring')
 		assert_equal(git.call_args, (('symbolic_ref', 'HEAD'), {}))
 		
+	def test_head(self):
+		assert self.repo.head.object == self.repo.active_branch.object
+		
 	@patch_object(Git, '_call_process')
 	def test_should_display_blame_information(self, git):
 		git.return_value = fixture('blame')

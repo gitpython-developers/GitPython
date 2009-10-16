@@ -60,6 +60,8 @@ Repo
      related repositories, i.e. clones, git-rev-list would be sufficient to find 
      commits that would need to be transferred for example.
   - 'create' method which equals the 'init' method's functionality
+  - 'diff' - it returned a mere string which still had to be parsed
+  - 'commit_diff' - moved to Commit, Tree and Diff types respectively
 * Renamed the following methods:
   - commits to iter_commits to improve the performance, adjusted signature
   - init_bare to init, implying less about the options to be used

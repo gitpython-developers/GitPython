@@ -72,7 +72,7 @@ class Reference(LazyMixin, Iterable):
 		"""
 		# have to be dynamic here as we may be a tag which can point to anything
 		# Our path will be resolved to the hexsha which will be used accordingly
-		return Object(self.repo, self.path)
+		return Object.new(self.repo, self.path)
 	
 	@classmethod
 	def iter_items(cls, repo, common_path = "refs", **kwargs):

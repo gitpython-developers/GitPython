@@ -107,6 +107,15 @@ class Repo(object):
 	branches = heads
 
 	@property
+	def head(self):
+		"""
+		Return
+			Head Object, reference pointing to the current head of the repository
+		"""
+		return Head(self,'HEAD')
+			
+
+	@property
 	def tags(self):
 		"""
 		A list of ``Tag`` objects that are available in this repo
@@ -129,7 +138,7 @@ class Repo(object):
 		if rev is None:
 			rev = self.active_branch
 		
-		c = Object(self, rev)
+		c = Object.new(self, rev)
 		assert c.type == "commit", "Revision %s did not point to a commit, but to %s" % (rev, c)
 		return c
 
@@ -327,34 +336,7 @@ class Repo(object):
 		"""
 		return Head( self, self.git.symbolic_ref('HEAD').strip() )
 		
-		
-	def diff(self, a, b, *paths):
-		"""
-		The diff from commit ``a`` to commit ``b``, optionally restricted to the given file(s)
-
-		``a``
-			is the base commit
-		``b``
-			is the other commit
-
-		``paths``
-			is an optional list of file paths on which to restrict the diff
 			
-		Returns
-			``str``
-		"""
-		return self.git.diff(a, b, '--', *paths)
-
-	def commit_diff(self, commit):
-		"""
-		The commit diff for the given commit
-		  ``commit`` is the commit name/id
-
-		Returns
-			``git.Diff[]``
-		"""
-		return Commit.diff(self, commit)
-		
 	def blame(self, rev, file):
 		"""
 		The blame information for the given file at the given revision.

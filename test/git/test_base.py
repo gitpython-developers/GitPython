@@ -90,3 +90,6 @@ class TestBase(object):
 		
 		assert_raises( ValueError, get_object_type_by_name, "doesntexist" )
 
+	def test_object_resolution(self):
+		# objects must be resolved to shas so they compare equal
+		assert self.repo.head.object == self.repo.active_branch.object
