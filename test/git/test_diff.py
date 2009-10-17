@@ -7,19 +7,19 @@
 from test.testlib import *
 from git import *
 
-class TestDiff(object):
-	def setup(self):
+class TestDiff(TestCase):
+	def setUp(self):
 		self.repo = Repo(GIT_REPO)
 
 	def test_list_from_string_new_mode(self):
-		output = fixture('diff_new_mode')
-		diffs = Diff._list_from_string(self.repo, output)
+		output = ListProcessAdapter(fixture('diff_new_mode'))
+		diffs = Diff._index_from_patch_format(self.repo, output.stdout)
 		assert_equal(1, len(diffs))
 		assert_equal(10, len(diffs[0].diff.splitlines()))
 
 	def test_diff_with_rename(self):
-		output = fixture('diff_rename')
-		diffs = Diff._list_from_string(self.repo, output)
+		output = ListProcessAdapter(fixture('diff_rename'))
+		diffs = Diff._index_from_patch_format(self.repo, output.stdout)
 
 		assert_equal(1, len(diffs))
 
@@ -28,3 +28,5 @@ class TestDiff(object):
 		assert_equal(diff.rename_from, 'AUTHORS')
 		assert_equal(diff.rename_to, 'CONTRIBUTORS')
 
+	def test_diff_interface(self):
+		self.fail( "TODO: Test full diff interface on commits, trees, index, patch and non-patch" )

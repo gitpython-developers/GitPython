@@ -23,8 +23,32 @@ class ListProcessAdapter(object):
 	"""Allows to use lists as Process object as returned by SubProcess.Popen.
 	Its tailored to work with the test system only"""
 	
+	class Stream(object):
+		"""Simple stream emulater meant to work only with tests"""
+		def __init__(self, data):
+			self.data = data
+			self.cur_iter = None
+		
+		def __iter__(self):
+			dat = self.data
+			if isinstance(dat, basestring):
+				dat = dat.splitlines()
+			if self.cur_iter is None:
+				self.cur_iter = iter(dat)
+			return self.cur_iter
+			
+		def read(self):
+			dat = self.data
+			if isinstance(dat, (tuple,list)):
+				dat = "\n".join(dat)
+			return dat
+			
+		def next(self):
+			if self.cur_iter is None:
+				self.cur_iter = iter(self)
+			return self.cur_iter.next()
+			
+	# END stream 
+	
 	def __init__(self, input_list_or_string):
-		l = input_list_or_string
-		if isinstance(l,basestring):
-			l = l.splitlines()
-		self.stdout = iter(l)
+		self.stdout = self.Stream(input_list_or_string)

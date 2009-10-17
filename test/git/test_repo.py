@@ -43,7 +43,7 @@ class TestRepo(object):
 		git.return_value = ListProcessAdapter(fixture('rev_list'))
 
 		commits = list( self.repo.iter_commits('master', max_count=10) )
-
+		
 		c = commits[0]
 		assert_equal('4c8124ffcf4039d292442eeccabdeca5af5c5017', c.id)
 		assert_equal(["634396b2f541a9f2d58b00be1a07f0c358b999b3"], [p.id for p in c.parents])
@@ -115,40 +115,6 @@ class TestRepo(object):
 		assert_equal(git.call_args, (('clone', path, 'repos/foo/bar.git'),
 									  { 'template': '/awesome'}))
 		assert_true(repo.called)
-
-	@patch_object(Git, '_call_process')
-	def test_diff(self, git):
-		self.repo.diff('master^', 'master')
-
-		assert_true(git.called)
-		assert_equal(git.call_args, (('diff', 'master^', 'master', '--'), {}))
-
-		self.repo.diff('master^', 'master', 'foo/bar')
-
-		assert_true(git.called)
-		assert_equal(git.call_args, (('diff', 'master^', 'master', '--', 'foo/bar'), {}))
-
-		self.repo.diff('master^', 'master', 'foo/bar', 'foo/baz')
-
-		assert_true(git.called)
-		assert_equal(git.call_args, (('diff', 'master^', 'master', '--', 'foo/bar', 'foo/baz'), {}))
-
-	@patch_object(Git, '_call_process')
-	def test_diff_with_parents(self, git):
-		git.return_value = fixture('diff_p')
-
-		diffs = self.repo.commit_diff('master')
-		assert_equal(15, len(diffs))
-		assert_true(git.called)
-
-	def test_archive(self):
-		args = ( tuple(), (self.repo.heads[-1],),(None,"hello") )
-		for arg_list in args:
-			ftmp = os.tmpfile()
-			self.repo.archive(ftmp, *arg_list)
-			ftmp.seek(0,2)
-			assert ftmp.tell()
-		# END for each arg-list
 
 	@patch('git.utils.touch')
 	def test_enable_daemon_serve(self, touch):

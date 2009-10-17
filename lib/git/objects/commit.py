@@ -214,6 +214,7 @@ class Commit(base.Object, Iterable, base.Diffable):
 		if not hasattr(stream,'next'):
 			stream = proc_or_stream.stdout
 			
+		
 		for line in stream:
 			id = line.split()[1]
 			assert line.split()[0] == "commit"
