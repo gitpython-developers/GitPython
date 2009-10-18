@@ -8,9 +8,11 @@ import os, sys
 from test.testlib import *
 from git import *
 
-class TestRepo(object):
-	def setup(self):
-		self.repo = Repo(GIT_REPO)
+class TestRepo(TestCase):
+	
+	@classmethod
+	def setUpAll(cls):
+		cls.repo = Repo(GIT_REPO)
 	
 	@raises(InvalidGitRepositoryError)
 	def test_new_should_raise_on_invalid_repo_location(self):
@@ -219,3 +221,13 @@ class TestRepo(object):
 		# END handle files 
 		
 		assert len(self.repo.untracked_files) == (num_recently_untracked - len(files))
+		
+	def test_config_reader(self):
+		reader = self.repo.config_reader
+		assert reader.read_only
+		
+	def test_config_writer(self):
+		for config_level in self.repo.config_level:
+			writer = self.repo.config_writer(config_level)
+			assert not writer.read_only
+		# END for each config level 

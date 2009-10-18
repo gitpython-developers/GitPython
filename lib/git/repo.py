@@ -5,6 +5,7 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
 import os
+import sys
 import re
 import gzip
 import StringIO
@@ -15,7 +16,7 @@ from cmd import Git
 from actor import Actor
 from refs import *
 from objects import *
-
+from config import GitConfigParser
 
 class Repo(object):
 	"""
@@ -30,6 +31,10 @@ class Repo(object):
 	re_hexsha_only = re.compile('^[0-9A-Fa-f]{40}$')
 	re_author_committer_start = re.compile(r'^(author|committer)')
 	re_tab_full_line = re.compile(r'^\t(.*)$')
+	
+	# invariants
+	# represents the configuration level of a configuration file
+	config_level = ("system", "global", "repository")
 
 	def __init__(self, path=None):
 		"""
@@ -124,6 +129,52 @@ class Repo(object):
 			``git.Tag[]``
 		"""
 		return Tag.list_items(self)
+		
+	def _get_config_path(self, config_level ):
+		# we do not support an absolute path of the gitconfig on windows , 
+		# use the global config instead
+		if sys.platform == "win32" and config_level == "system":
+			config_level = "global"
+			
+		if config_level == "system":
+			return "/etc/gitconfig"
+		elif config_level == "global":
+			return os.path.expanduser("~/.gitconfig")
+		elif config_level == "repository":
+			return "%s/config" % self.git.git_dir
+		
+		raise ValueError( "Invalid configuration level: %r" % config_level )
+			
+	@property
+	def config_reader(self):
+		"""
+		Returns
+			GitConfigParser allowing to read the full git configuration, but not to write it
+			
+			The configuration will include values from the system, user and repository 
+			configuration files.
+			
+			NOTE: On windows, system configuration cannot currently be read as the path is 
+			unknown, instead the global path will be used.
+		"""
+		files = [ self._get_config_path(f) for f in self.config_level ]
+		return GitConfigParser(files, read_only=True)
+		
+	def config_writer(self, config_level="repository"):
+		"""
+		Returns
+			GitConfigParser allowing to write values of the specified configuration file level.
+			Config writers should be retrieved, used to change the configuration ,and written 
+			right away as they will lock the configuration file in question and prevent other's
+			to write it.
+			
+		``config_level``
+			One of the following values
+			system = sytem wide configuration file
+			global = user level configuration file
+			repository = configuration file for this repostory only
+		"""
+		return GitConfigParser(self._get_config_path(config_level), read_only = False)
 		
 	def commit(self, rev=None):
 		"""
