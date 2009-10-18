@@ -34,6 +34,11 @@ class TestRepo(TestCase):
 		for head in self.repo.heads:
 			assert_equal(Head, head.__class__)
 
+	def test_renites_should_return_array_of_remote_objects(self):
+		for remote in self.repo.remotes:
+			assert_equal(Remote, remote.__class__)
+			
+			
 	def test_heads_should_populate_head_data(self):
 		for head in self.repo.heads:
 			assert head.name

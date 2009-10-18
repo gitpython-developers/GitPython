@@ -15,6 +15,7 @@ class Reference(LazyMixin, Iterable):
 	Represents a named reference to any object
 	"""
 	__slots__ = ("repo", "path")
+	_common_path_default = "refs"
 	
 	def __init__(self, repo, path, object = None):
 		"""
@@ -75,7 +76,7 @@ class Reference(LazyMixin, Iterable):
 		return Object.new(self.repo, self.path)
 	
 	@classmethod
-	def iter_items(cls, repo, common_path = "refs", **kwargs):
+	def iter_items(cls, repo, common_path = None, **kwargs):
 		"""
 		Find all refs in the repository
 
@@ -84,7 +85,9 @@ class Reference(LazyMixin, Iterable):
 
 		``common_path``
 			Optional keyword argument to the path which is to be shared by all
-			returned Ref objects
+			returned Ref objects.
+			Defaults to class specific portion if None assuring that only 
+			refs suitable for the actual class are returned.
 
 		``kwargs``
 			Additional options given as keyword arguments, will be passed
@@ -100,7 +103,10 @@ class Reference(LazyMixin, Iterable):
 
 		options = {'sort': "committerdate",
 				   'format': "%(refname)%00%(objectname)%00%(objecttype)%00%(objectsize)"}
-				   
+		
+		if common_path is None:
+			common_path = cls._common_path_default
+		
 		options.update(kwargs)
 
 		output = repo.git.for_each_ref(common_path, **options)
@@ -157,7 +163,8 @@ class Head(Reference):
 		>>> head.commit.id
 		'1c09f116cbc2cb4100fb6935bb162daa4723f455'
 	"""
-
+	_common_path_default = "refs/heads"
+	
 	@property
 	def commit(self):
 		"""
@@ -165,20 +172,6 @@ class Head(Reference):
 			Commit object the head points to
 		"""
 		return self.object
-		
-	@classmethod
-	def iter_items(cls, repo, common_path = "refs/heads", **kwargs):
-		"""
-		Returns
-			Iterator yielding Head items
-			
-		For more documentation, please refer to git.base.Ref.list_items
-		"""
-		return super(Head,cls).iter_items(repo, common_path, **kwargs)
-
-	def __repr__(self):
-		return '<git.Head "%s">' % self.name
-		
 		
 
 class TagRef(Reference):
@@ -197,6 +190,7 @@ class TagRef(Reference):
 	"""
 	
 	__slots__ = tuple()
+	_common_path_default = "refs/tags"
 	
 	@property
 	def commit(self):
@@ -223,16 +217,12 @@ class TagRef(Reference):
 			return self.object
 		return None
 
-	@classmethod
-	def iter_items(cls, repo, common_path = "refs/tags", **kwargs):
-		"""
-		Returns
-			Iterator yielding commit items
-			
-		For more documentation, please refer to git.base.Ref.list_items
-		"""
-		return super(TagRef,cls).iter_items(repo, common_path, **kwargs)
-		
 		
 # provide an alias
 Tag = TagRef
+
+class RemoteRef(Head):
+	"""
+	Represents a reference pointing to a remote head.
+	"""
+	_common_path_default = "refs/remotes"
