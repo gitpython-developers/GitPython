@@ -80,6 +80,13 @@ Diff
 * Members a a_commit and b_commit renamed to a_blob and b_blob - they are populated
   with Blob objects if possible
 * Members a_path and b_path removed as this information is kept in the blobs
+* Diffs are now returned as DiffIndex allowing to more quickly find the kind of 
+  diffs you are interested in
+  
+Diffing
+-------
+* Commit and Tree objects now support diffing natively with a common interface to 
+  compare agains other Commits or Trees, against the working tree or against the index.
 
 Blob
 ----

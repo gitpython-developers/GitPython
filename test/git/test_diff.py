@@ -42,22 +42,35 @@ class TestDiff(TestCase):
 
 	def test_diff_interface(self):
 		# test a few variations of the main diff routine
+		assertion_map = dict()
 		for i, commit in enumerate(self.repo.iter_commits('0.1.6', max_count=10)):
 			diff_item = commit
 			if i%2 == 0:
 				diff_item = commit.tree
 			# END use tree every second item
 			
-			for other in (None, commit.parents[0]):
+			for other in (None, commit.Index, commit.parents[0]):
 				for paths in (None, "CHANGES", ("CHANGES", "lib")):
 					for create_patch in range(2):
 						diff_index = diff_item.diff(other, paths, create_patch)
 						assert isinstance(diff_index, DiffIndex)
 						
-						# TODO: test diff index
+						if diff_index:
+							for ct in DiffIndex.change_type:
+								key = 'ct_%s'%ct
+								assertion_map.setdefault(key, 0)
+								assertion_map[key] = assertion_map[key]+len(list(diff_index.iter_change_type(ct)))  
+							# END for each changetype
+						# END diff index checking 
 					# END for each patch option
 				# END for each path option
 			# END for each other side
 		# END for each commit
 		
-		self.fail( "TODO: Test full diff interface on commits, trees, index, patch and non-patch" )
+		# assert we could always find at least one instance of the members we 
+		# can iterate in the diff index - if not this indicates its not working correctly
+		# or our test does not span the whole range of possibilities
+		for key,value in assertion_map.items():
+			assert value, "Did not find diff for %s" % key
+		# END for each iteration type 
+		

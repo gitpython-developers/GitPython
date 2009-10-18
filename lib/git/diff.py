@@ -22,6 +22,10 @@ class Diffable(object):
 	# them in this tuple
 	_diff_args = tuple()
 	
+	# Temporary standin for Index type until we have a real index type
+	class Index(object):
+		pass 
+	
 	def diff(self, other=None, paths=None, create_patch=False, **kwargs):
 		"""
 		Creates diffs between two items being trees, trees and index or an 
@@ -30,6 +34,7 @@ class Diffable(object):
 		``other``
 			Is the item to compare us with. 
 			If None, we will be compared to the working tree.
+			If Index ( type ), it will be compared against the index
 
 		``paths``
 			is a list of paths or a single path to limit the diff to.
@@ -63,8 +68,10 @@ class Diffable(object):
 		if paths is not None and not isinstance(paths, (tuple,list)):
 			paths = [ paths ]
 
-		if other is not None:
+		if other is not None and other is not self.Index:
 			args.insert(0, other)
+		if other is self.Index:
+			args.insert(0, "--cached")
 		
 		args.insert(0,self)
 		
@@ -90,7 +97,33 @@ class DiffIndex(list):
 	
 	The class improves the diff handling convenience
 	"""
+	# change type invariant identifying possible ways a blob can have changed
+	# A = Added
+	# D = Deleted
+	# R = Renamed
+	# NOTE: 'Modified' mode is impllied as it wouldn't be listed as a diff otherwise
+	change_type = ("A", "D", "R")
 	
+	
+	def iter_change_type(self, change_type):
+		"""
+		Return
+			iterator yieling Diff instances that match the given change_type
+		
+		``change_type``
+			Member of DiffIndex.change_type
+		"""
+		if change_type not in self.change_type:
+			raise ValueError( "Invalid change type: %s" % change_type )
+			
+		for diff in self:
+			if change_type == "A" and diff.new_file:
+				yield diff
+			elif change_type == "D" and diff.deleted_file:
+				yield diff
+			elif change_type == "R" and diff.renamed:
+				yield diff
+		# END for each diff
 	
 
 class Diff(object):
@@ -132,7 +165,7 @@ class Diff(object):
 							""", re.VERBOSE | re.MULTILINE)
 	re_is_null_hexsha = re.compile( r'^0{40}$' )
 	__slots__ = ("a_blob", "b_blob", "a_mode", "b_mode", "new_file", "deleted_file", 
-				 "rename_from", "rename_to", "renamed", "diff")
+				 "rename_from", "rename_to", "diff")
 
 	def __init__(self, repo, a_path, b_path, a_blob_id, b_blob_id, a_mode,
 				 b_mode, new_file, deleted_file, rename_from,
@@ -148,16 +181,28 @@ class Diff(object):
 
 		self.a_mode = a_mode
 		self.b_mode = b_mode
+		
 		if self.a_mode:
 			self.a_mode = blob.Blob._mode_str_to_int( self.a_mode )
 		if self.b_mode:
 			self.b_mode = blob.Blob._mode_str_to_int( self.b_mode )
+			
 		self.new_file = new_file
 		self.deleted_file = deleted_file
-		self.rename_from = rename_from
-		self.rename_to = rename_to
-		self.renamed = rename_from != rename_to
+		
+		# be clear and use None instead of empty strings
+		self.rename_from = rename_from or None
+		self.rename_to = rename_to or None
+		
 		self.diff = diff
+
+	@property
+	def renamed(self):
+		"""
+		Returns:
+			True if the blob of our diff has been renamed
+		"""
+		return self.rename_from != self.rename_to
 
 	@classmethod
 	def _index_from_patch_format(cls, repo, stream):
@@ -210,19 +255,21 @@ class Diff(object):
 			if not line.startswith(":"):
 				continue
 			# END its not a valid diff line
-			old_mode, new_mode, a_blob_id, b_blob_id, modification_id, path = line[1:].split()
+			old_mode, new_mode, a_blob_id, b_blob_id, change_type, path = line[1:].split()
 			a_path = path
 			b_path = path
 			deleted_file = False
 			new_file = False
-			if modification_id == 'D':
+			
+			# NOTE: We cannot conclude from the existance of a blob to change type
+			# as diffs with the working do not have blobs yet
+			if change_type == 'D':
 				b_path = None
 				deleted_file = True
-			elif modification_id == 'A':
+			elif change_type == 'A':
 				a_path = None
 				new_file = True
 			# END add/remove handling
-			
 			
 			diff = Diff(repo, a_path, b_path, a_blob_id, b_blob_id, old_mode, new_mode,
 						new_file, deleted_file, None, None, '')
