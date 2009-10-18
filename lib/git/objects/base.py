@@ -214,6 +214,9 @@ class Diffable(object):
 		Note
 			Rename detection will only work if create_patch is True
 		"""
+		# import it in a retared fashion to avoid dependency cycle
+		from git.diff import Diff
+		
 		args = list(self._diff_args[:])
 		args.append( "--abbrev=40" )		# we need full shas
 		args.append( "--full-index" )		# get full index paths, not only filenames
@@ -237,9 +240,9 @@ class Diffable(object):
 		kwargs['as_process'] = True
 		proc = self.repo.git.diff(*args, **kwargs)
 		
-		diff_method = diff.Diff._index_from_raw_format
+		diff_method = Diff._index_from_raw_format
 		if create_patch:
-			diff_method = diff.Diff._index_from_patch_format(self.repo, proc.stdout)
+			diff_method = Diff._index_from_patch_format
 		return diff_method(self.repo, proc.stdout)
 		
 
