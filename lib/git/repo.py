@@ -308,7 +308,7 @@ class Repo(object):
 			ignored files will not appear here, i.e. files mentioned in .gitignore
 		"""
 		# make sure we get all files, no only untracked directores
-		proc = self.git.commit(untracked_files=True, as_process=True)
+		proc = self.git.status(untracked_files=True, as_process=True)
 		stream = iter(proc.stdout)
 		untracked_files = list()
 		for line in stream:
