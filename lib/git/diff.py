@@ -6,7 +6,7 @@
 
 import re
 import objects.blob as blob
-
+from errors import GitCommandError
 	
 class Diffable(object):
 	"""
@@ -26,7 +26,7 @@ class Diffable(object):
 	class Index(object):
 		pass 
 	
-	def diff(self, other=None, paths=None, create_patch=False, **kwargs):
+	def diff(self, other=Index, paths=None, create_patch=False, **kwargs):
 		"""
 		Creates diffs between two items being trees, trees and index or an 
 		index and the working tree.
@@ -34,7 +34,9 @@ class Diffable(object):
 		``other``
 			Is the item to compare us with. 
 			If None, we will be compared to the working tree.
-			If Index ( type ), it will be compared against the index
+			If Index ( type ), it will be compared against the index.
+			It defaults to Index to assure the method will not by-default fail
+			on bare repositories.
 
 		``paths``
 			is a list of paths or a single path to limit the diff to.
@@ -53,7 +55,10 @@ class Diffable(object):
 			git.DiffIndex
 			
 		Note
-			Rename detection will only work if create_patch is True
+			Rename detection will only work if create_patch is True.
+			
+			On a bare repository, 'other' needs to be provided as Index or as 
+			as Tree/Commit, or a git command error will occour
 		"""
 		args = list(self._diff_args[:])
 		args.append( "--abbrev=40" )		# we need full shas
@@ -87,7 +92,13 @@ class Diffable(object):
 		diff_method = Diff._index_from_raw_format
 		if create_patch:
 			diff_method = Diff._index_from_patch_format
-		return diff_method(self.repo, proc.stdout)
+		index = diff_method(self.repo, proc.stdout)
+		
+		status = proc.wait()
+		if status != 0:
+			raise GitCommandError("git-diff", status, proc.stderr )
+		
+		return index
 
 
 class DiffIndex(list):

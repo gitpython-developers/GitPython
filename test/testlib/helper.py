@@ -52,3 +52,9 @@ class ListProcessAdapter(object):
 	
 	def __init__(self, input_list_or_string):
 		self.stdout = self.Stream(input_list_or_string)
+		self.stderr = self.Stream('')
+		
+	def wait(self):
+		return 0
+		
+	poll = wait
