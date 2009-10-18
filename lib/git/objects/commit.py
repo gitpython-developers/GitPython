@@ -11,7 +11,7 @@ from tree import Tree
 import base
 import utils
 
-class Commit(base.Object, Iterable, base.Diffable):
+class Commit(base.Object, Iterable, diff.Diffable):
 	"""
 	Wraps a git Commit object.
 	

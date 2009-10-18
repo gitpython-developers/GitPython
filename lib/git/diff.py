@@ -7,6 +7,78 @@
 import re
 import objects.blob as blob
 
+	
+class Diffable(object):
+	"""
+	Common interface for all object that can be diffed against another object of compatible type.
+	
+	NOTE: 
+		Subclasses require a repo member as it is the case for Object instances, for practical 
+		reasons we do not derive from Object.
+	"""
+	__slots__ = tuple()
+	
+	# subclasses provide additional arguments to the git-diff comamnd by supplynig 
+	# them in this tuple
+	_diff_args = tuple()
+	
+	def diff(self, other=None, paths=None, create_patch=False, **kwargs):
+		"""
+		Creates diffs between two items being trees, trees and index or an 
+		index and the working tree.
+
+		``other``
+			Is the item to compare us with. 
+			If None, we will be compared to the working tree.
+
+		``paths``
+			is a list of paths or a single path to limit the diff to.
+			It will only include at least one of the givne path or paths.
+
+		``create_patch``
+			If True, the returned Diff contains a detailed patch that if applied
+			makes the self to other. Patches are somwhat costly as blobs have to be read
+			and diffed.
+
+		``kwargs``
+			Additional arguments passed to git-diff, such as 
+			R=True to swap both sides of the diff.
+
+		Returns
+			git.DiffIndex
+			
+		Note
+			Rename detection will only work if create_patch is True
+		"""
+		args = list(self._diff_args[:])
+		args.append( "--abbrev=40" )		# we need full shas
+		args.append( "--full-index" )		# get full index paths, not only filenames
+		
+		if create_patch:
+			args.append("-p")
+			args.append("-M") # check for renames
+		else:
+			args.append("--raw")
+		
+		paths = paths or []
+		if paths:
+			paths.insert(0, "--")
+
+		if other is not None:
+			args.insert(0, other)
+		
+		args.insert(0,self)
+		args.extend(paths)
+		
+		kwargs['as_process'] = True
+		proc = self.repo.git.diff(*args, **kwargs)
+		
+		diff_method = Diff._index_from_raw_format
+		if create_patch:
+			diff_method = Diff._index_from_patch_format
+		return diff_method(self.repo, proc.stdout)
+
+
 class Diff(object):
 	"""
 	A Diff contains diff information between two Trees.

@@ -8,6 +8,7 @@ import os
 import blob
 import base
 import binascii
+import git.diff as diff
 
 def sha_to_hex(sha):
     """Takes a string and returns the hex of the sha within"""
@@ -15,7 +16,7 @@ def sha_to_hex(sha):
     assert len(hexsha) == 40, "Incorrect length of sha1 string: %d" % hexsha
     return hexsha
 
-class Tree(base.IndexObject, base.Diffable):
+class Tree(base.IndexObject, diff.Diffable):
 	"""
 	Tress represent a ordered list of Blobs and other Trees. Hence it can be 
 	accessed like a list.
