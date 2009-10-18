@@ -15,21 +15,11 @@ class Object(LazyMixin):
 	
 	This Object also serves as a constructor for instances of the correct type::
 	
-		inst = Object(repo,id)
+		inst = Object.new(repo,id)
 	"""
 	TYPES = ("blob", "tree", "commit", "tag")
 	__slots__ = ("repo", "id", "size", "data" )
 	type = None			# to be set by subclass
-	
-	def __new__(cls, repo, id, *args, **kwargs):
-		if cls is Object:
-			hexsha, typename, size = repo.git.get_object_header(id)
-			obj_type = utils.get_object_type_by_name(typename)
-			inst = super(Object,cls).__new__(obj_type, repo, hexsha, *args, **kwargs)
-			inst.size = size
-			return inst
-		else:
-			return super(Object,cls).__new__(cls, repo, id, *args, **kwargs)
 	
 	def __init__(self, repo, id):
 		"""
@@ -45,7 +35,25 @@ class Object(LazyMixin):
 		super(Object,self).__init__()
 		self.repo = repo
 		self.id = id
-		
+
+	@classmethod
+	def new(cls, repo, id):
+		"""
+		Return
+			New Object instance of a type appropriate to the object type behind 
+			id. The id of the newly created object will be a hexsha even though 
+			the input id may have been a Reference or Rev-Spec
+			
+		Note
+			This cannot be a __new__ method as it would always call __init__
+			with the input id which is not necessarily a hexsha.
+		"""
+		hexsha, typename, size = repo.git.get_object_header(id)
+		obj_type = utils.get_object_type_by_name(typename)
+		inst = obj_type(repo, hexsha)
+		inst.size = size
+		return inst
+	
 	def _set_self_from_args_(self, args_dict):
 		"""
 		Initialize attributes on self from the given dict that was retrieved
@@ -162,5 +170,4 @@ class IndexObject(Object):
 			mode += int(char) << iteration*3
 		# END for each char
 		return mode
-	  
 		

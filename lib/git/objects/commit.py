@@ -11,7 +11,7 @@ from tree import Tree
 import base
 import utils
 
-class Commit(base.Object, Iterable):
+class Commit(base.Object, Iterable, diff.Diffable):
 	"""
 	Wraps a git Commit object.
 	
@@ -176,60 +176,6 @@ class Commit(base.Object, Iterable):
 		
 		return self.iter_items( self.repo, self, paths, **kwargs )
 
-	@classmethod
-	def diff(cls, repo, a, b=None, paths=None):
-		"""
-		Creates diffs between a tree and the index or between two trees:
-
-		``repo``
-			is the Repo
-
-		``a``
-			is a named commit
-
-		``b``
-			is an optional named commit.  Passing a list assumes you
-			wish to omit the second named commit and limit the diff to the
-			given paths.
-
-		``paths``
-			is a list of paths to limit the diff to.
-
-		Returns
-			git.Diff[]::
-			
-			 between tree and the index if only a is given
-			 between two trees if a and b  are given and are commits 
-		"""
-		paths = paths or []
-
-		if isinstance(b, list):
-			paths = b
-			b = None
-
-		if paths:
-			paths.insert(0, "--")
-
-		if b:
-			paths.insert(0, b)
-		paths.insert(0, a)
-		text = repo.git.diff('-M', full_index=True, *paths)
-		return diff.Diff._list_from_string(repo, text)
-
-	@property
-	def diffs(self):
-		"""
-		Returns
-			git.Diff[]
-			Diffs between this commit and its first parent or all changes if this 
-			commit is the first commit and has no parent.
-		"""
-		if not self.parents:
-			d = self.repo.git.show(self.id, '-M', full_index=True, pretty='raw')
-			return diff.Diff._list_from_string(self.repo, d)
-		else:
-			return self.diff(self.repo, self.parents[0].id, self.id)
-
 	@property
 	def stats(self):
 		"""
@@ -268,6 +214,7 @@ class Commit(base.Object, Iterable):
 		if not hasattr(stream,'next'):
 			stream = proc_or_stream.stdout
 			
+		
 		for line in stream:
 			id = line.split()[1]
 			assert line.split()[0] == "commit"

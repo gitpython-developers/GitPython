@@ -12,7 +12,7 @@ __version__ = 'git'
 from git.objects import *
 from git.refs import *
 from git.actor import Actor
-from git.diff import Diff
+from git.diff import *
 from git.errors import InvalidGitRepositoryError, NoSuchPathError, GitCommandError
 from git.cmd import Git
 from git.repo import Repo

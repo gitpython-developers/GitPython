@@ -7,9 +7,128 @@
 import re
 import objects.blob as blob
 
+	
+class Diffable(object):
+	"""
+	Common interface for all object that can be diffed against another object of compatible type.
+	
+	NOTE: 
+		Subclasses require a repo member as it is the case for Object instances, for practical 
+		reasons we do not derive from Object.
+	"""
+	__slots__ = tuple()
+	
+	# subclasses provide additional arguments to the git-diff comamnd by supplynig 
+	# them in this tuple
+	_diff_args = tuple()
+	
+	# Temporary standin for Index type until we have a real index type
+	class Index(object):
+		pass 
+	
+	def diff(self, other=None, paths=None, create_patch=False, **kwargs):
+		"""
+		Creates diffs between two items being trees, trees and index or an 
+		index and the working tree.
+
+		``other``
+			Is the item to compare us with. 
+			If None, we will be compared to the working tree.
+			If Index ( type ), it will be compared against the index
+
+		``paths``
+			is a list of paths or a single path to limit the diff to.
+			It will only include at least one of the givne path or paths.
+
+		``create_patch``
+			If True, the returned Diff contains a detailed patch that if applied
+			makes the self to other. Patches are somwhat costly as blobs have to be read
+			and diffed.
+
+		``kwargs``
+			Additional arguments passed to git-diff, such as 
+			R=True to swap both sides of the diff.
+
+		Returns
+			git.DiffIndex
+			
+		Note
+			Rename detection will only work if create_patch is True
+		"""
+		args = list(self._diff_args[:])
+		args.append( "--abbrev=40" )		# we need full shas
+		args.append( "--full-index" )		# get full index paths, not only filenames
+		
+		if create_patch:
+			args.append("-p")
+			args.append("-M") # check for renames
+		else:
+			args.append("--raw")
+		
+		if paths is not None and not isinstance(paths, (tuple,list)):
+			paths = [ paths ]
+
+		if other is not None and other is not self.Index:
+			args.insert(0, other)
+		if other is self.Index:
+			args.insert(0, "--cached")
+		
+		args.insert(0,self)
+		
+		# paths is list here or None
+		if paths:
+			args.append("--")
+			args.extend(paths)
+		# END paths handling
+		
+		kwargs['as_process'] = True
+		proc = self.repo.git.diff(*args, **kwargs)
+		
+		diff_method = Diff._index_from_raw_format
+		if create_patch:
+			diff_method = Diff._index_from_patch_format
+		return diff_method(self.repo, proc.stdout)
+
+
+class DiffIndex(list):
+	"""
+	Implements an Index for diffs, allowing a list of Diffs to be queried by 
+	the diff properties.
+	
+	The class improves the diff handling convenience
+	"""
+	# change type invariant identifying possible ways a blob can have changed
+	# A = Added
+	# D = Deleted
+	# R = Renamed
+	# NOTE: 'Modified' mode is impllied as it wouldn't be listed as a diff otherwise
+	change_type = ("A", "D", "R")
+	
+	
+	def iter_change_type(self, change_type):
+		"""
+		Return
+			iterator yieling Diff instances that match the given change_type
+		
+		``change_type``
+			Member of DiffIndex.change_type
+		"""
+		if change_type not in self.change_type:
+			raise ValueError( "Invalid change type: %s" % change_type )
+			
+		for diff in self:
+			if change_type == "A" and diff.new_file:
+				yield diff
+			elif change_type == "D" and diff.deleted_file:
+				yield diff
+			elif change_type == "R" and diff.renamed:
+				yield diff
+		# END for each diff
+	
+
 class Diff(object):
 	"""
-	A Diff contains diff information between two commits.
+	A Diff contains diff information between two Trees.
 	
 	It contains two sides a and b of the diff, members are prefixed with 
 	"a" and "b" respectively to inidcate that.
@@ -27,7 +146,7 @@ class Diff(object):
 	``Deleted File``::
 	
 		b_mode is None
-		b_blob is NOne
+		b_blob is None
 	"""
 	
 	# precompiled regex
@@ -46,7 +165,7 @@ class Diff(object):
 							""", re.VERBOSE | re.MULTILINE)
 	re_is_null_hexsha = re.compile( r'^0{40}$' )
 	__slots__ = ("a_blob", "b_blob", "a_mode", "b_mode", "new_file", "deleted_file", 
-				 "rename_from", "rename_to", "renamed", "diff")
+				 "rename_from", "rename_to", "diff")
 
 	def __init__(self, repo, a_path, b_path, a_blob_id, b_blob_id, a_mode,
 				 b_mode, new_file, deleted_file, rename_from,
@@ -62,31 +181,45 @@ class Diff(object):
 
 		self.a_mode = a_mode
 		self.b_mode = b_mode
+		
 		if self.a_mode:
 			self.a_mode = blob.Blob._mode_str_to_int( self.a_mode )
 		if self.b_mode:
 			self.b_mode = blob.Blob._mode_str_to_int( self.b_mode )
+			
 		self.new_file = new_file
 		self.deleted_file = deleted_file
-		self.rename_from = rename_from
-		self.rename_to = rename_to
-		self.renamed = rename_from != rename_to
+		
+		# be clear and use None instead of empty strings
+		self.rename_from = rename_from or None
+		self.rename_to = rename_to or None
+		
 		self.diff = diff
 
-	@classmethod
-	def _list_from_string(cls, repo, text):
+	@property
+	def renamed(self):
 		"""
-		Create a new diff object from the given text
+		Returns:
+			True if the blob of our diff has been renamed
+		"""
+		return self.rename_from != self.rename_to
+
+	@classmethod
+	def _index_from_patch_format(cls, repo, stream):
+		"""
+		Create a new DiffIndex from the given text which must be in patch format
 		``repo``
 			is the repository we are operating on - it is required 
 		
-		``text``
-			result of 'git diff' between two commits or one commit and the index
+		``stream``
+			result of 'git diff' as a stream (supporting file protocol)
 		
 		Returns
-			git.Diff[]
+			git.DiffIndex
 		"""
-		diffs = []
+		# for now, we have to bake the stream
+		text = stream.read()
+		index = DiffIndex()
 
 		diff_header = cls.re_header.match
 		for diff in ('\n' + text).split('\ndiff --git')[1:]:
@@ -97,9 +230,51 @@ class Diff(object):
 				a_blob_id, b_blob_id, b_mode = header.groups()
 			new_file, deleted_file = bool(new_file_mode), bool(deleted_file_mode)
 
-			diffs.append(Diff(repo, a_path, b_path, a_blob_id, b_blob_id,
+			index.append(Diff(repo, a_path, b_path, a_blob_id, b_blob_id,
 				old_mode or deleted_file_mode, new_mode or new_file_mode or b_mode,
 				new_file, deleted_file, rename_from, rename_to, diff[header.end():]))
 
-		return diffs
+		return index
+		
+	@classmethod
+	def _index_from_raw_format(cls, repo, stream):
+		"""
+		Create a new DiffIndex from the given stream which must be in raw format.
+		
+		NOTE: 
+			This format is inherently incapable of detecting renames, hence we only 
+			modify, delete and add files
+		
+		Returns
+			git.DiffIndex
+		"""
+		# handles 
+		# :100644 100644 6870991011cc8d9853a7a8a6f02061512c6a8190 37c5e30c879213e9ae83b21e9d11e55fc20c54b7 M	.gitignore
+		index = DiffIndex()
+		for line in stream:
+			if not line.startswith(":"):
+				continue
+			# END its not a valid diff line
+			old_mode, new_mode, a_blob_id, b_blob_id, change_type, path = line[1:].split()
+			a_path = path
+			b_path = path
+			deleted_file = False
+			new_file = False
+			
+			# NOTE: We cannot conclude from the existance of a blob to change type
+			# as diffs with the working do not have blobs yet
+			if change_type == 'D':
+				b_path = None
+				deleted_file = True
+			elif change_type == 'A':
+				a_path = None
+				new_file = True
+			# END add/remove handling
+			
+			diff = Diff(repo, a_path, b_path, a_blob_id, b_blob_id, old_mode, new_mode,
+						new_file, deleted_file, None, None, '')
+			index.append(diff)
+		# END for each line
+		
+		return index
 
