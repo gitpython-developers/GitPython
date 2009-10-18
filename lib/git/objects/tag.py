@@ -60,8 +60,13 @@ class TagObject(base.Object):
 			tagger_info = lines[3][7:]# tagger <actor> <date>
 			self.tagger, self.tagged_date = utils.parse_actor_and_date(tagger_info)
 			
-			# line 4 empty - check git source to figure out purpose
-			self.message = "\n".join(lines[5:])
+			# line 4 empty - it could mark the beginning of the next header
+			# in csse there really is no message, it would not exist. Otherwise 
+			# a newline separates header from message
+			if len(lines) > 5:
+				self.message = "\n".join(lines[5:])
+			else:
+				self.message = ''
 		# END check our attributes
 		else:
 			super(TagObject, self)._set_cache_(attr)
