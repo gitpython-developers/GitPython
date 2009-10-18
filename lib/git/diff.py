@@ -60,15 +60,19 @@ class Diffable(object):
 		else:
 			args.append("--raw")
 		
-		paths = paths or []
-		if paths:
-			paths.insert(0, "--")
+		if paths is not None and not isinstance(paths, (tuple,list)):
+			paths = [ paths ]
 
 		if other is not None:
 			args.insert(0, other)
 		
 		args.insert(0,self)
-		args.extend(paths)
+		
+		# paths is list here or None
+		if paths:
+			args.append("--")
+			args.extend(paths)
+		# END paths handling
 		
 		kwargs['as_process'] = True
 		proc = self.repo.git.diff(*args, **kwargs)
@@ -78,6 +82,16 @@ class Diffable(object):
 			diff_method = Diff._index_from_patch_format
 		return diff_method(self.repo, proc.stdout)
 
+
+class DiffIndex(list):
+	"""
+	Implements an Index for diffs, allowing a list of Diffs to be queried by 
+	the diff properties.
+	
+	The class improves the diff handling convenience
+	"""
+	
+	
 
 class Diff(object):
 	"""
@@ -99,7 +113,7 @@ class Diff(object):
 	``Deleted File``::
 	
 		b_mode is None
-		b_blob is NOne
+		b_blob is None
 	"""
 	
 	# precompiled regex
@@ -160,7 +174,7 @@ class Diff(object):
 		"""
 		# for now, we have to bake the stream
 		text = stream.read()
-		diffs = []
+		index = DiffIndex()
 
 		diff_header = cls.re_header.match
 		for diff in ('\n' + text).split('\ndiff --git')[1:]:
@@ -171,19 +185,49 @@ class Diff(object):
 				a_blob_id, b_blob_id, b_mode = header.groups()
 			new_file, deleted_file = bool(new_file_mode), bool(deleted_file_mode)
 
-			diffs.append(Diff(repo, a_path, b_path, a_blob_id, b_blob_id,
+			index.append(Diff(repo, a_path, b_path, a_blob_id, b_blob_id,
 				old_mode or deleted_file_mode, new_mode or new_file_mode or b_mode,
 				new_file, deleted_file, rename_from, rename_to, diff[header.end():]))
 
-		return diffs
+		return index
 		
 	@classmethod
 	def _index_from_raw_format(cls, repo, stream):
 		"""
 		Create a new DiffIndex from the given stream which must be in raw format.
 		
+		NOTE: 
+			This format is inherently incapable of detecting renames, hence we only 
+			modify, delete and add files
+		
 		Returns
 			git.DiffIndex
 		"""
-		raise NotImplementedError("")
+		# handles 
+		# :100644 100644 6870991011cc8d9853a7a8a6f02061512c6a8190 37c5e30c879213e9ae83b21e9d11e55fc20c54b7 M	.gitignore
+		index = DiffIndex()
+		for line in stream:
+			if not line.startswith(":"):
+				continue
+			# END its not a valid diff line
+			old_mode, new_mode, a_blob_id, b_blob_id, modification_id, path = line[1:].split()
+			a_path = path
+			b_path = path
+			deleted_file = False
+			new_file = False
+			if modification_id == 'D':
+				b_path = None
+				deleted_file = True
+			elif modification_id == 'A':
+				a_path = None
+				new_file = True
+			# END add/remove handling
+			
+			
+			diff = Diff(repo, a_path, b_path, a_blob_id, b_blob_id, old_mode, new_mode,
+						new_file, deleted_file, None, None, '')
+			index.append(diff)
+		# END for each line
+		
+		return index
 

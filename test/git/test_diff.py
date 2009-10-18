@@ -52,11 +52,12 @@ class TestDiff(TestCase):
 				for paths in (None, "CHANGES", ("CHANGES", "lib")):
 					for create_patch in range(2):
 						diff_index = diff_item.diff(other, paths, create_patch)
-						assert diff_index
+						assert isinstance(diff_index, DiffIndex)
+						
+						# TODO: test diff index
 					# END for each patch option
 				# END for each path option
 			# END for each other side
 		# END for each commit
-		
 		
 		self.fail( "TODO: Test full diff interface on commits, trees, index, patch and non-patch" )
