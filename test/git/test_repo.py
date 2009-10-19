@@ -160,19 +160,17 @@ class TestRepo(TestCase):
 		self.repo.bare = True
 		assert_false(self.repo.is_dirty)
 
-	@patch_object(Git, '_call_process')
-	def test_is_dirty_with_clean_working_dir(self, git):
+	def test_is_dirty(self):
 		self.repo.bare = False
-		git.return_value = ''
-		assert_false(self.repo.is_dirty)
-		assert_equal(git.call_args, (('diff', 'HEAD', '--'), {}))
-
-	@patch_object(Git, '_call_process')
-	def test_is_dirty_with_dirty_working_dir(self, git):
-		self.repo.bare = False
-		git.return_value = '''-aaa\n+bbb'''
-		assert_true(self.repo.is_dirty)
-		assert_equal(git.call_args, (('diff', 'HEAD', '--'), {}))
+		for index in (0,1):
+			for working_tree in (0,1):
+				for untracked_files in (0,1):
+					assert self.repo.is_dirty in (True, False)
+				# END untracked files
+			# END working tree
+		# END index
+		self.repo.bare = True
+		assert self.repo.is_dirty == False
 
 	@patch_object(Git, '_call_process')
 	def test_active_branch(self, git):

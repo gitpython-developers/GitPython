@@ -370,23 +370,33 @@ class Repo(object):
 	alternates = property(_get_alternates, _set_alternates, doc="Retrieve a list of alternates paths or set a list paths to be used as alternates")
 
 	@property
-	def is_dirty(self):
+	def is_dirty(self, index=True, working_tree=True, untracked_files=False):
 		"""
-		Return the status of the index.
-
 		Returns
-			``True``, if the index has any uncommitted changes,
-			otherwise ``False``
-
-		NOTE
-			Working tree changes that have not been staged will not be detected ! 
+			``True``, the repository is considered dirty. By default it will react
+			like a git-status without untracked files, hence it is dirty if the 
+			index or the working copy have changes.
 		"""
 		if self.bare:
 			# Bare repositories with no associated working directory are
 			# always consired to be clean.
 			return False
-
-		return len(self.git.diff('HEAD', '--').strip()) > 0
+		
+		# start from the one which is fastest to evaluate
+		default_args = ('--abbrev=40', '--full-index', '--raw')
+		if index: 
+			if len(self.git.diff('HEAD', '--cached', *default_args)):
+				return True
+		# END index handling
+		if working_tree:
+			if len(self.git.diff('HEAD', *default_args)):
+				return True
+		# END working tree handling
+		if untracked_files:
+			if len(self.untracked_files):
+				return True
+		# END untracked files
+		return False
 		
 	@property
 	def untracked_files(self):

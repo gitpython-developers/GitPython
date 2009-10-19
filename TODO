@@ -32,8 +32,6 @@ Index
 Repo
 ----
 * Nice fetch/pull handling, at least supported/wired throuhg to the git command
-* is_dirty should be improved to allow options what to diff with: 
-  working tree|index|head - also it should use raw mode to prevent patch generation
 * repo.bare is set according to the path it is initialized with, although it 
   should be read from the configuration in fact. Check uses of repo.bare.
 * Blame: Read the blame format making assumptions about its structure, 

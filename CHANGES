@@ -87,6 +87,8 @@ Repo
   of the active branch.
 * tree method now requires a Ref instance as input and defaults to the active_branche
   instead of master
+* is_dirty now takes additional arguments allowing fine-grained control about what is 
+  considered dirty
 * Removed the following methods:
   - 'log' method as it as effectively the same as the 'commits' method
   - 'commits_since' as it is just a flag given to rev-list in Commit.iter_items
