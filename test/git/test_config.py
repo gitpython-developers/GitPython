@@ -36,6 +36,29 @@ class TestBase(TestCase):
 			assert w_config._sections
 			w_config.write()				# enforce writing
 			assert file_obj.getvalue() == file_obj_orig.getvalue()
+			
+			# creating an additional config writer must fail due to exclusive access
+			self.failUnlessRaises(IOError, GitConfigParser, file_obj, read_only = False)
+			
+			# should still have a lock and be able to make changes
+			assert w_config._has_lock()
+			
+			# changes should be written right away
+			sname = "my_section"
+			oname = "mykey"
+			val = "myvalue"
+			w_config.add_section(sname)
+			assert w_config.has_section(sname)
+			w_config.set(sname, oname, val)
+			assert w_config.has_option(sname,oname)
+			assert w_config.get(sname, oname) == val
+			
+			file_obj.seek(0)
+			r_config = GitConfigParser(file_obj, read_only=True)
+			assert r_config.has_section(sname)
+			assert r_config.has_option(sname, oname)
+			assert r_config.get(sname, oname) == val
+			
 		# END for each filename
 		
 	def test_base(self):
@@ -64,5 +87,3 @@ class TestBase(TestCase):
 		assert num_sections and num_options
 		assert r_config._is_initialized == True
 		
-		
-		self.fail("TODO: Base config writer testing")

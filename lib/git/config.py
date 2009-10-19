@@ -23,8 +23,6 @@ class _MetaParserBuilder(type):
 		Equip all base-class methods with a _needs_values decorator, and all non-const methods
 		with a _set_dirty_and_flush_changes decorator in addition to that.
 		"""
-		new_type = super(_MetaParserBuilder, metacls).__new__(metacls, name, bases, clsdict)
-		
 		mutating_methods = clsdict['_mutating_methods_']
 		for base in bases:
 			methods = ( t for t in inspect.getmembers(base, inspect.ismethod) if not t[0].startswith("_") )
@@ -35,9 +33,11 @@ class _MetaParserBuilder(type):
 				if name in mutating_methods:
 					method_with_values = _set_dirty_and_flush_changes(method_with_values)
 				# END mutating methods handling
+				
 				clsdict[name] = method_with_values
 		# END for each base
 		
+		new_type = super(_MetaParserBuilder, metacls).__new__(metacls, name, bases, clsdict)
 		return new_type
 	
 	
@@ -98,7 +98,7 @@ class GitConfigParser(cp.RawConfigParser, object):
 		)
 	
 	# list of RawConfigParser methods able to change the instance
-	_mutating_methods_ = ("remove_section", "remove_option", "set")
+	_mutating_methods_ = ("add_section", "remove_section", "remove_option", "set")
 	
 	def __init__(self, file_or_files, read_only=True):
 		"""
@@ -141,8 +141,10 @@ class GitConfigParser(cp.RawConfigParser, object):
 		"""
 		Write pending changes if required and release locks
 		"""
-		if self.read_only:
-			return 
+		# checking for the lock here makes sure we do not raise during write()
+		# in case an invalid parser was created who could not get a lock
+		if self.read_only or not self._has_lock():
+			return
 		
 		try:
 			try:
@@ -242,7 +244,7 @@ class GitConfigParser(cp.RawConfigParser, object):
 			close_fp = False
 			# assume a path if it is not a file-object
 			if not hasattr(file_object, "seek"):
-				fp = open(file_object, "w")
+				fp = open(file_object)
 				close_fp = True
 			# END fp handling
 				
@@ -271,6 +273,7 @@ class GitConfigParser(cp.RawConfigParser, object):
 		map(lambda t: write_section(t[0],t[1]), self._sections.items())
 
 		
+	@_needs_values
 	def write(self):
 		"""
 		Write changes to our file, if there are changes at all
@@ -306,6 +309,15 @@ class GitConfigParser(cp.RawConfigParser, object):
 	def _assure_writable(self, method_name):
 		if self.read_only:
 			raise IOError("Cannot execute non-constant method %s.%s" % (self, method_name))
+		
+	@_needs_values
+	@_set_dirty_and_flush_changes
+	def add_section(self, section):
+		"""
+		Assures added options will stay in order
+		"""
+		super(GitConfigParser, self).add_section(section)
+		self._sections[section] = OrderedDict()
 		
 	@property
 	def read_only(self):
