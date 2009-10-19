@@ -17,6 +17,7 @@ from actor import Actor
 from refs import *
 from objects import *
 from config import GitConfigParser
+from remote import Remote
 
 class Repo(object):
 	"""
@@ -107,6 +108,13 @@ class Repo(object):
 			``git.Head[]``
 		"""
 		return Head.list_items(self)
+		
+	@property
+	def remotes(self):
+		"""
+		A list of Remote objects allowing to access and manipulate remotes
+		"""
+		return Remote.list_items(self)
 
 	# alias heads
 	branches = heads
@@ -141,7 +149,7 @@ class Repo(object):
 		elif config_level == "global":
 			return os.path.expanduser("~/.gitconfig")
 		elif config_level == "repository":
-			return "%s/config" % self.git.git_dir
+			return "%s/config" % self.path
 		
 		raise ValueError( "Invalid configuration level: %r" % config_level )
 			
