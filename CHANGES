@@ -107,6 +107,19 @@ Refs
 * Will dynmically retrieve their object at the time of query to assure the information 
   is actual. Recently objects would be cached, hence ref object not be safely kept 
   persistent.
+  
+Remote
+------
+* Added Remote object allowing easy access to remotes
+* Repo.remotes lists all remotes
+* Repo.remote returns a remote of the specified name if it exists
+
+Config
+------
+* The git configuration can now be read and manipulated directly from within python
+  using the GitConfigParser
+* Repo.config_reader returns a read-only parser
+* Repo.config_writer returns a read-write parser
 
 0.1.6
 =====

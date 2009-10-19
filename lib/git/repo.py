@@ -115,6 +115,20 @@ class Repo(object):
 		A list of Remote objects allowing to access and manipulate remotes
 		"""
 		return Remote.list_items(self)
+		
+	def remote(self, name='origin'):
+		"""
+		Return
+			Remote with the specified name
+		
+		Raise 
+			ValueError if no remote with such a name exists
+		"""
+		for remote in Remote.iter_items(self):
+			if remote.name == name:
+				return remote
+		# END for each existing remote
+		raise ValueError( "Remote named %s does not exist" % name )
 
 	# alias heads
 	branches = heads

@@ -67,6 +67,7 @@ class TestRemote(TestCase):
 		assert num_remotes
 		assert num_remotes == len(remote_set)
 		
+		origin = self.repo.remote('origin')
 		
 	def test_creation_and_removal(self):
 		new_name = "test_new_one"
