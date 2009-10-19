@@ -16,6 +16,7 @@ class Reference(LazyMixin, Iterable):
 	"""
 	__slots__ = ("repo", "path")
 	_common_path_default = "refs"
+	_id_attribute_ = "name"
 	
 	def __init__(self, repo, path, object = None):
 		"""

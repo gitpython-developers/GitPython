@@ -13,8 +13,6 @@ General
 * Overhaul command caching - currently its possible to create many instances of 
   the std-in command types, as it appears they are not killed when the repo gets 
   deleted.
-* ReferenceList being a list that can also be accessed by name, such as rlist.HEAD
-  or rlist.master, allowing repo.heads.master
 * References should be parsed 'manually' to get around command invocation, but 
   be sure to be able to read packed refs.
 

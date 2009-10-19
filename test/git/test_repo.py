@@ -39,6 +39,9 @@ class TestRepo(TestCase):
 			assert head.name
 			assert isinstance(head.commit,Commit)
 		# END for each head 
+		
+		assert isinstance(self.repo.heads.master, Head)
+		assert isinstance(self.repo.heads['master'], Head)
 
 	@patch_object(Git, '_call_process')
 	def test_commits(self, git):

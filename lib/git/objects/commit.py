@@ -23,6 +23,7 @@ class Commit(base.Object, Iterable, diff.Diffable):
 	type = "commit"
 	__slots__ = ("tree", "author", "authored_date", "committer", "committed_date",
 					"message", "parents")
+	_id_attribute_ = "id"
 	
 	def __init__(self, repo, id, tree=None, author=None, authored_date=None,
 				 committer=None, committed_date=None, message=None, parents=None):

@@ -105,7 +105,7 @@ class Repo(object):
 		this repo
 
 		Returns
-			``git.Head[]``
+			``git.IterableList(Head, ...)``
 		"""
 		return Head.list_items(self)
 
@@ -127,6 +127,9 @@ class Repo(object):
 	def remotes(self):
 		"""
 		A list of Remote objects allowing to access and manipulate remotes
+		
+		Returns
+			``git.IterableList(Remote, ...)``
 		"""
 		return Remote.list_items(self)
 		
@@ -138,11 +141,7 @@ class Repo(object):
 		Raise 
 			ValueError if no remote with such a name exists
 		"""
-		for remote in Remote.iter_items(self):
-			if remote.name == name:
-				return remote
-		# END for each existing remote
-		raise ValueError( "Remote named %s does not exist" % name )
+		return Remote(self, name)
 
 	@property
 	def tags(self):
@@ -150,7 +149,7 @@ class Repo(object):
 		A list of ``Tag`` objects that are available in this repo
 
 		Returns
-			``git.Tag[]``
+			``git.IterableList(TagReference, ...)``
 		"""
 		return TagReference.list_items(self)
 		

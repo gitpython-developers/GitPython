@@ -47,6 +47,7 @@ class Remote(LazyMixin, Iterable):
 	"""
 	
 	__slots__ = ( "repo", "name", "_config_reader" )
+	_id_attribute_ = "name"
 	
 	def __init__(self, repo, name):
 		"""

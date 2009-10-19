@@ -67,6 +67,9 @@ class TestCommit(object):
 
 	def test_count(self):
 		assert self.repo.tag('0.1.5').commit.count( ) == 141
+		
+	def test_list(self):
+		assert isinstance(Commit.list_items(self.repo, '0.1.5', max_count=5)['5117c9c8a4d3af19a9958677e45cda9269de1541'], Commit)
 
 	def test_str(self):
 		commit = Commit(self.repo, id='abc')

@@ -30,5 +30,6 @@ class TestTag(object):
 			# END if we have a tag object
 		# END for tag in repo-tags
 		assert tag_object_refs
+		assert isinstance(self.repo.tags['0.1.5'], TagReference)
 		
 

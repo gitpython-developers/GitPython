@@ -56,12 +56,46 @@ class LazyMixin(object):
 		pass
 
 
+class IterableList(list):
+	"""
+	List of iterable objects allowing to query an object by id or by named index::
+	 
+	 heads = repo.heads
+	 heads.master
+	 heads['master']
+	 heads[0]
+	"""
+	__slots__ = '_id_attr'
+	
+	def __new__(cls, id_attr):
+		return super(IterableList,cls).__new__(cls)
+		
+	def __init__(self, id_attr):
+		self._id_attr = id_attr
+		
+	def __getattr__(self, attr):
+		for item in self:
+			if getattr(item, self._id_attr) == attr:
+				return item
+		# END for each item
+		return list.__getattribute__(self, attr)
+		
+	def __getitem__(self, index):
+		if isinstance(index, int):
+			return list.__getitem__(self,index)
+		
+		try:
+			return getattr(self, index)
+		except AttributeError:
+			raise IndexError( "No item found with id %r" % index )
+
 class Iterable(object):
 	"""
 	Defines an interface for iterable items which is to assure a uniform 
 	way to retrieve and iterate items within the git repository
 	"""
 	__slots__ = tuple()
+	_id_attribute_ = "attribute that most suitably identifies your instance"
 	
 	@classmethod
 	def list_items(cls, repo, *args, **kwargs):
@@ -75,7 +109,10 @@ class Iterable(object):
 		Returns:
 			list(Item,...) list of item instances 
 		"""
-		return list(cls.iter_items(repo, *args, **kwargs))
+		#return list(cls.iter_items(repo, *args, **kwargs))
+		out_list = IterableList( cls._id_attribute_ )
+		out_list.extend(cls.iter_items(repo, *args, **kwargs))
+		return out_list
 		
 		
 	@classmethod

@@ -38,6 +38,7 @@ Item Iteration
   hurt performance and memory consumption and reduce response times. 
   iter_items method provide an iterator that will return items on demand as parsed 
   from a stream. This way any amount of objects can be handled.
+* list_items method returns IterableList allowing to access list members by name
   
 objects Package
 ----------------
