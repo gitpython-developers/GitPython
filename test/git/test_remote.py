@@ -19,7 +19,7 @@ class TestRemote(TestCase):
 			num_remotes += 1
 			assert str(remote) != repr(remote)
 			
-			
+			# REFS 
 			refs = remote.refs
 			assert refs
 			for ref in refs:
@@ -27,7 +27,28 @@ class TestRemote(TestCase):
 				assert ref.remote_branch
 			# END for each ref
 			
-			# test rename 
+			# OPTIONS
+			for opt in ("url", "fetch"):
+				val = getattr(remote, opt)
+				reader = remote.config_reader
+				assert reader.get(opt) == val
+				
+				# unable to write with a reader
+				self.failUnlessRaises(IOError, reader.set, opt, "test")
+				
+				# change value
+				writer = remote.config_writer
+				new_val = "myval"
+				writer.set(opt, new_val)
+				assert writer.get(opt) == new_val
+				writer.set(opt, val)
+				assert writer.get(opt) == val
+				del(writer)
+				assert getattr(remote, opt) == val
+			# END 
+			self.fail( "option testing, read/write" )
+			
+			# RENAME 
 			other_name = "totally_other_name"
 			prev_name = remote.name
 			assert remote.rename(other_name) == remote

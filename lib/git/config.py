@@ -223,13 +223,14 @@ class GitConfigParser(cp.RawConfigParser, object):
 	
 	def read(self):
 		"""
-		Reads the data stored in the files we have been initialized with
+		Reads the data stored in the files we have been initialized with. It will 
+		ignore files that cannot be read, possibly leaving an empty configuration
 		
 		Returns
 			Nothing
 		
 		Raises
-			IOError if not all files could be read
+			IOError if a file cannot be handled
 		"""
 		if self._is_initialized:
 			return
@@ -244,7 +245,10 @@ class GitConfigParser(cp.RawConfigParser, object):
 			close_fp = False
 			# assume a path if it is not a file-object
 			if not hasattr(file_object, "seek"):
-				fp = open(file_object)
+				try:
+					fp = open(file_object)
+				except IOError,e:
+					continue
 				close_fp = True
 			# END fp handling
 				

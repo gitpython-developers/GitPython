@@ -10,28 +10,30 @@ Module implementing a remote object allowing easy access to git remotes
 from git.utils import LazyMixin, Iterable
 from refs import RemoteRef
 
-class _SectionConstrain(object):
+class _SectionConstraint(object):
 	"""
 	Constrains a ConfigParser to only option commands which are constrained to 
-	always use the section we have been initialized with
+	always use the section we have been initialized with.
+	
+	It supports all ConfigParser methods that operate on an option
 	"""
-	__slots__ = ( "_config", "_section_name"
-	_valid_attrs_ = ("get", "set", "getint", "getfloat", "getboolean")
+	__slots__ = ("_config", "_section_name")
+	_valid_attrs_ = ("get", "set", "getint", "getfloat", "getboolean", "has_option")
 	
 	def __init__(self, config, section):
 		self._config = config
 		self._section_name = section
 		
 	def __getattr__(self, attr):
+		if attr in self._valid_attrs_:
+			return lambda *args: self._call_config(attr, *args)
+		return super(_SectionConstraint,self).__getattribute__(attr)
 		
+	def _call_config(self, method, *args):
+		"""Call the configuration at the given method which must take a section name 
+		as first argument"""
+		return getattr(self._config, method)(self._section_name, *args)
 		
-	def get(option):
-		return self._config.get(self._section_name, option)
-		
-	def set(option, value):
-		return self._config.set(self._section_name, option, value)
-		
-	
 
 class Remote(LazyMixin, Iterable):
 	"""
@@ -44,7 +46,7 @@ class Remote(LazyMixin, Iterable):
 	to speed up subsequent accesses.
 	"""
 	
-	__slots__ = ( "repo", "name", "_config" )
+	__slots__ = ( "repo", "name", "_config_reader" )
 	
 	def __init__(self, repo, name):
 		"""
@@ -64,11 +66,17 @@ class Remote(LazyMixin, Iterable):
 		Allows to call this instance like 
 		remote.special( *args, **kwargs) to call git-remote special self.name
 		"""
-		return self._call_cmd(attr)
+		if attr == "_config_reader":
+			return super(Remote, self).__getattr__(attr)
+		
+		return self._config_reader.get(attr)
+	
+	def _config_section_name(self):
+		return 'remote "%s"' % self.name
 	
 	def _set_cache_(self, attr):
-		if attr == "_config":
-			self._config = self.repo.config_reader
+		if attr == "_config_reader":
+			self._config_reader = _SectionConstraint(self.repo.config_reader, self._config_section_name())
 		else:
 			super(Remote, self)._set_cache_(attr)
 			
@@ -168,7 +176,7 @@ class Remote(LazyMixin, Iterable):
 		
 		self.repo.git.remote("rename", self.name, new_name)
 		self.name = new_name
-		del(self._config)		# it contains cached values, section names are different now
+		del(self._config_reader)		# it contains cached values, section names are different now
 		return self
 		
 	def update(self, **kwargs):
@@ -184,3 +192,31 @@ class Remote(LazyMixin, Iterable):
 		self.repo.git.remote("update", self.name)
 		return self
 	
+	@property
+	def config_reader(self):
+		"""
+		Returns
+			GitConfigParser compatible object able to read options for only our remote.
+			Hence you may simple type config.get("pushurl") to obtain the information
+		"""
+		return self._config_reader
+	
+	@property
+	def config_writer(self):
+		"""
+		Return
+			GitConfigParser compatible object able to write options for this remote.
+			
+		Note
+			You can only own one writer at a time - delete it to release the 
+			configuration file and make it useable by others.
+			
+			To assure consistent results, you should only query options through the 
+			writer. Once you are done writing, you are free to use the config reader 
+			once again.
+		"""
+		writer = self.repo.config_writer()
+		
+		# clear our cache to assure we re-read the possibly changed configuration
+		del(self._config_reader)
+		return _SectionConstraint(writer, self._config_section_name())

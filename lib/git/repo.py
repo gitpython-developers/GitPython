@@ -149,7 +149,7 @@ class Repo(object):
 		elif config_level == "global":
 			return os.path.expanduser("~/.gitconfig")
 		elif config_level == "repository":
-			return "%s/config" % self.git.git_dir
+			return "%s/config" % self.path
 		
 		raise ValueError( "Invalid configuration level: %r" % config_level )
 			
