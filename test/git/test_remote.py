@@ -15,9 +15,13 @@ class TestRemote(TestCase):
 		
 	def test_base(self):
 		num_remotes = 0
+		remote_set = set()
 		for remote in self.repo.remotes:
 			num_remotes += 1
+			assert remote == remote
 			assert str(remote) != repr(remote)
+			remote_set.add(remote)
+			remote_set.add(remote)	# should already exist
 			
 			# REFS 
 			refs = remote.refs
@@ -46,7 +50,6 @@ class TestRemote(TestCase):
 				del(writer)
 				assert getattr(remote, opt) == val
 			# END 
-			self.fail( "option testing, read/write" )
 			
 			# RENAME 
 			other_name = "totally_other_name"
@@ -62,6 +65,8 @@ class TestRemote(TestCase):
 			
 		# END for each remote
 		assert num_remotes
+		assert num_remotes == len(remote_set)
+		
 		
 	def test_creation_and_removal(self):
 		self.fail( "Test remote creation/removal" )
