@@ -9,6 +9,7 @@ import inspect
 
 __version__ = 'git'
 
+from git.config import GitConfigParser
 from git.objects import *
 from git.refs import *
 from git.actor import Actor
