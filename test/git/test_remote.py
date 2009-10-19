@@ -49,7 +49,7 @@ class TestRemote(TestCase):
 				assert writer.get(opt) == val
 				del(writer)
 				assert getattr(remote, opt) == val
-			# END 
+			# END for each default option key 
 			
 			# RENAME 
 			other_name = "totally_other_name"
@@ -69,6 +69,21 @@ class TestRemote(TestCase):
 		
 		
 	def test_creation_and_removal(self):
-		self.fail( "Test remote creation/removal" )
+		new_name = "test_new_one"
+		arg_list = (new_name, "git@server:hello.git")
+		remote = Remote.create(self.repo, *arg_list )
+		assert remote.name == "test_new_one"
+		
+		# create same one again
+		self.failUnlessRaises(GitCommandError, Remote.create, self.repo, *arg_list)
+		
+		Remote.remove(self.repo, new_name)
+		
+		for remote in self.repo.remotes:
+			if remote.name == new_name:
+				raise AssertionError("Remote removal failed")
+			# END if deleted remote matches existing remote's name
+		# END for each remote
+		
 		
 	

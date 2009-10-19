@@ -20,6 +20,7 @@ from git.repo import Repo
 from git.stats import Stats
 from git.utils import dashify
 from git.utils import touch
+from git.remote import Remote
 
 
 __all__ = [ name for name, obj in locals().items()

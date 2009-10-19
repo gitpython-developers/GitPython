@@ -151,7 +151,7 @@ class Remote(LazyMixin, Iterable):
 		Raise
 			GitCommandError in case an origin with that name already exists
 		"""
-		self.repo.git.remote( "add", name, url, **kwargs )
+		repo.git.remote( "add", name, url, **kwargs )
 		return cls(repo, name)
 	
 	# add is an alias
@@ -163,6 +163,9 @@ class Remote(LazyMixin, Iterable):
 		Remove the remote with the given name
 		"""
 		repo.git.remote("rm", name)
+		
+	# alias
+	rm = remove
 		
 	def rename(self, new_name):
 		"""
