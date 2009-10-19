@@ -174,7 +174,7 @@ class Head(Reference):
 		return self.object
 		
 
-class TagRef(Reference):
+class TagReference(Head):
 	"""
 	Class representing a lightweight tag reference which either points to a commit 
 	or to a tag object. In the latter case additional information, like the signature
@@ -219,9 +219,9 @@ class TagRef(Reference):
 
 		
 # provide an alias
-Tag = TagRef
+Tag = TagReference
 
-class RemoteRef(Head):
+class RemoteReference(Head):
 	"""
 	Represents a reference pointing to a remote head.
 	"""

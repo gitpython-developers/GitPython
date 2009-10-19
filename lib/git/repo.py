@@ -108,6 +108,20 @@ class Repo(object):
 			``git.Head[]``
 		"""
 		return Head.list_items(self)
+
+	# alias heads
+	branches = heads
+
+	@property
+	def head(self,path="HEAD"):
+		"""
+		Return
+			Head Object, reference pointing to commit
+			
+		``path``
+			path to the head or its name, i.e. master or heads/master
+		"""
+		return Head(self,path)
 		
 	@property
 	def remotes(self):
@@ -130,18 +144,6 @@ class Repo(object):
 		# END for each existing remote
 		raise ValueError( "Remote named %s does not exist" % name )
 
-	# alias heads
-	branches = heads
-
-	@property
-	def head(self):
-		"""
-		Return
-			Head Object, reference pointing to the current head of the repository
-		"""
-		return Head(self,'HEAD')
-			
-
 	@property
 	def tags(self):
 		"""
@@ -150,7 +152,17 @@ class Repo(object):
 		Returns
 			``git.Tag[]``
 		"""
-		return Tag.list_items(self)
+		return TagReference.list_items(self)
+		
+	def tag(self,path):
+		"""
+		Return
+			TagReference Object, reference pointing to a Commit or Tag
+		
+		``path``
+			path to the tag reference, i.e. 0.1.5 or tags/0.1.5
+		"""
+		return TagReference(self, path)
 		
 	def _get_config_path(self, config_level ):
 		# we do not support an absolute path of the gitconfig on windows , 
@@ -214,6 +226,15 @@ class Repo(object):
 		c = Object.new(self, rev)
 		assert c.type == "commit", "Revision %s did not point to a commit, but to %s" % (rev, c)
 		return c
+		
+	def iter_trees(self, *args, **kwargs):
+		"""
+		Returns
+			Iterator yielding Tree objects
+			
+		Note: Takes all arguments known to iter_commits method
+		"""
+		return ( c.tree for c in self.iter_commits(*args, **kwargs) )
 
 	def tree(self, ref=None):
 		"""

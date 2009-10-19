@@ -67,6 +67,16 @@ class TestRepo(TestCase):
 
 		assert_true(git.called)
 
+	def test_trees(self):
+		mc = 30
+		num_trees = 0
+		for tree in self.repo.iter_trees('0.1.5', max_count=mc):
+			num_trees += 1
+			assert isinstance(tree, Tree)
+		# END for each tree
+		assert num_trees == mc
+			
+
 	@patch_object(Repo, '__init__')
 	@patch_object(Git, '_call_process')
 	def test_init(self, git, repo):
@@ -169,6 +179,9 @@ class TestRepo(TestCase):
 		
 	def test_head(self):
 		assert self.repo.head.object == self.repo.active_branch.object
+		
+	def test_tag(self):
+		assert self.repo.tag('0.1.5').commit
 		
 	@patch_object(Git, '_call_process')
 	def test_should_display_blame_information(self, git):

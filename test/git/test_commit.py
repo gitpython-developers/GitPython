@@ -66,7 +66,7 @@ class TestCommit(object):
 			assert_equal(sha1, commit.id)
 
 	def test_count(self):
-		assert Commit.count( self.repo, '0.1.5' ) == 141
+		assert self.repo.tag('0.1.5').commit.count( ) == 141
 
 	def test_str(self):
 		commit = Commit(self.repo, id='abc')

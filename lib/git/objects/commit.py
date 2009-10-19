@@ -101,16 +101,9 @@ class Commit(base.Object, Iterable, diff.Diffable):
 		"""
 		return self.message.split('\n', 1)[0]
 		
-	@classmethod
-	def count(cls, repo, rev, paths='', **kwargs):
+	def count(self, paths='', **kwargs):
 		"""
-		Count the number of commits reachable from this revision
-
-		``repo``
-			is the Repo
-
-		``rev``
-			revision specifier, see git-rev-parse for viable options
+		Count the number of commits reachable from this commit
 
 		``paths``
 			is an optinal path or a list of paths restricting the return value 
@@ -121,7 +114,7 @@ class Commit(base.Object, Iterable, diff.Diffable):
 		Returns
 			int
 		"""
-		return len(repo.git.rev_list(rev, '--', paths, **kwargs).strip().splitlines())
+		return len(self.repo.git.rev_list(self.id, '--', paths, **kwargs).strip().splitlines())
 
 	@classmethod
 	def iter_items(cls, repo, rev, paths='', **kwargs):
