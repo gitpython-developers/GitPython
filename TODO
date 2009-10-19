@@ -1,0 +1,57 @@
+====
+TODO
+====
+
+
+General
+-------
+* Classes requiring repo actually only need the git command - this should be 
+  changed to limit their access level and make things a little safer.
+* Check for correct usage of id, ref and hexsha and define their meanings, 
+  currently its not so clear what id may be in cases or not - afaik its usually 
+  a sha or ref unless cat-file is used where it must be a sha
+* Overhaul command caching - currently its possible to create many instances of 
+  the std-in command types, as it appears they are not killed when the repo gets 
+  deleted.
+* ReferenceList being a list that can also be accessed by name, such as rlist.HEAD
+  or rlist.master, allowing repo.heads.master
+* References should be parsed 'manually' to get around command invocation, but 
+  be sure to be able to read packed refs.
+
+Docs
+----
+Overhaul docs - check examples, check looks, improve existing docs
+
+Index
+-----
+* Index class required for special handling ? Probably considering what I want 
+  to do ! Dulwich can already write the index, and read trees, although it 
+  could be improved as well and could possibly be made faster unless we want 
+  to use the c modules ( not for now )
+* Index Merge ( merge two trees into the index to quickly see conflicts ). 
+  Its possible to write it into a separate index file that can be read separately.
+
+Repo
+----
+* Nice fetch/pull handling, at least supported/wired throuhg to the git command
+* is_dirty should be improved to allow options what to diff with: 
+  working tree|index|head - also it should use raw mode to prevent patch generation
+* repo.bare is set according to the path it is initialized with, although it 
+  should be read from the configuration in fact. Check uses of repo.bare.
+* Blame: Read the blame format making assumptions about its structure, 
+  currently regex are used a lot although we can deduct what will be next.
+  - Read data from a stream directly from git command
+
+Submodules
+----------
+* add submodule support
+
+Tree
+----
+* Should return submodules during iteration ( identifies as commit )
+* Work through test and check for test-case cleanup and completeness ( what about
+  testing whether it raises on invalid input ? ). See 6dc7799d44e1e5b9b77fd19b47309df69ec01a99
+* Derive from Iterable, simple pipe it through to Commit objects and iterate using 
+  commit.tree.
+
+
