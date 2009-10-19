@@ -13,6 +13,7 @@ import os
 import ConfigParser as cp
 from git.odict import OrderedDict
 import inspect
+import cStringIO
 
 class _MetaParserBuilder(type):
 	"""
@@ -220,6 +221,78 @@ class GitConfigParser(cp.RawConfigParser, object):
 		Do not transform options in any way when writing
 		"""
 		return optionstr
+	
+	def _read(self, fp, fpname):
+		"""
+		A direct copy of the py2.4 version of the super class's _read method
+		to assure it uses ordered dicts. Had to change one line to make it work.
+		
+		Future versions have this fixed, but in fact its quite embarassing for the 
+		guys not to have done it right in the first place !
+		
+		Removed big comments to make it more compact.
+		
+		Made sure it ignores initial whitespace as git uses tabs
+		"""
+		cursect = None							  # None, or a dictionary
+		optname = None
+		lineno = 0
+		e = None								  # None, or an exception
+		while True:
+			line = fp.readline()
+			if not line:
+				break
+			lineno = lineno + 1
+			# comment or blank line?
+			if line.strip() == '' or line[0] in '#;':
+				continue
+			if line.split(None, 1)[0].lower() == 'rem' and line[0] in "rR":
+				# no leading whitespace
+				continue
+			else:
+				# is it a section header?
+				mo = self.SECTCRE.match(line)
+				if mo:
+					sectname = mo.group('header')
+					if sectname in self._sections:
+						cursect = self._sections[sectname]
+					elif sectname == cp.DEFAULTSECT:
+						cursect = self._defaults
+					else:
+						# THE ONLY LINE WE CHANGED !
+						cursect = OrderedDict((('__name__', sectname),))
+						self._sections[sectname] = cursect
+					# So sections can't start with a continuation line
+					optname = None
+				# no section header in the file?
+				elif cursect is None:
+					raise cp.MissingSectionHeaderError(fpname, lineno, line)
+				# an option line?
+				else:
+					mo = self.OPTCRE.match(line)
+					if mo:
+						optname, vi, optval = mo.group('option', 'vi', 'value')
+						if vi in ('=', ':') and ';' in optval:
+							pos = optval.find(';')
+							if pos != -1 and optval[pos-1].isspace():
+								optval = optval[:pos]
+						optval = optval.strip()
+						if optval == '""':
+							optval = ''
+						optname = self.optionxform(optname.rstrip())
+						cursect[optname] = optval
+					else:
+						if not e:
+							e = cp.ParsingError(fpname)
+						e.append(lineno, repr(line))
+					# END  
+				# END ? 
+			# END ?
+		# END while reading 
+		# if any parsing errors occurred, raise an exception
+		if e:
+			raise e
+	
 	
 	def read(self):
 		"""

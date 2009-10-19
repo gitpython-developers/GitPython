@@ -77,6 +77,8 @@ class TestBase(TestCase):
 				num_options += 1
 				val = r_config.get(section, option)
 				assert val
+				assert "\n" not in option
+				assert "\n" not in val
 				
 				# writing must fail
 				self.failUnlessRaises(IOError, r_config.set, section, option, None)
