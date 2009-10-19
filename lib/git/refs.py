@@ -226,3 +226,26 @@ class RemoteRef(Head):
 	Represents a reference pointing to a remote head.
 	"""
 	_common_path_default = "refs/remotes"
+	
+	@property
+	def remote_name(self):
+		"""
+		Returns
+			Name of the remote we are a reference of, such as 'origin' for a reference
+			named 'origin/master'
+		"""
+		tokens = self.path.split('/')
+		# /refs/remotes/<remote name>/<branch_name>
+		return tokens[2]
+		
+	@property
+	def remote_branch(self):
+		"""
+		Returns
+			Name of the remote branch itself, i.e. master.
+			
+		NOTE: The returned name is usually not qualified enough to uniquely identify
+		a branch
+		"""
+		tokens = self.path.split('/')
+		return '/'.join(tokens[3:])
