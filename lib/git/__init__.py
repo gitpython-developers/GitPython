@@ -18,8 +18,6 @@ from git.errors import InvalidGitRepositoryError, NoSuchPathError, GitCommandErr
 from git.cmd import Git
 from git.repo import Repo
 from git.stats import Stats
-from git.utils import dashify
-from git.utils import touch
 from git.remote import Remote
 
 

@@ -20,6 +20,9 @@ extra = {}
 if sys.platform == 'win32':
 	extra = {'shell': True}
 
+def dashify(string):
+	return string.replace('_', '-')
+
 class Git(object):
 	"""
 	The Git class manages communication with the Git binary.
