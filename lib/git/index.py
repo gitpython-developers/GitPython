@@ -62,7 +62,7 @@ class IndexEntry(tuple):
 		return self[7]
 
 	@property
-	def data_size(self):
+	def size(self):
 		return self[8]
 		
 	@property
@@ -70,7 +70,7 @@ class IndexEntry(tuple):
 		return self[9]
 		
 	@property
-	def path_size(self):
+	def stage(self):
 		return self[10]
 
 
@@ -108,7 +108,7 @@ class Index(object):
 		real_size = ((stream.tell() - beginoffset + 8) & ~7)
 		data = stream.read((beginoffset + real_size) - stream.tell())
 		return IndexEntry((path, ctime, mtime, dev, ino, mode, uid, gid, size, 
-				binascii.hexlify(sha), path_size))
+				binascii.hexlify(sha), flags >> 12))
 		
 	
 	def _read_header(self, stream):
@@ -129,7 +129,7 @@ class Index(object):
 		count = 0
 		while count < num_entries:
 			entry = self._read_entry(stream)
-			self.entries[entry[0]] = entry[1:]
+			self.entries[(entry.path,entry.stage)] = entry
 			count += 1
 		# END for each entry
 	

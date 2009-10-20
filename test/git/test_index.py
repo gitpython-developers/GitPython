@@ -23,11 +23,15 @@ class TestTree(TestCase):
 		# test entry
 		last_val = None
 		entry = index.entries.itervalues().next()
-		for name, method in inspect.getmembers(entry,inspect.ismethod):
-			val = method(entry)
-			assert val != last_val
-			last_val = val
+		for attr in ("path","ctime","mtime","dev","inode","mode","uid",
+								"gid","size","sha","stage"):
+			val = getattr(entry, attr)
 		# END for each method
 		
+		# test stage
+		index_merge = Index.from_file(fixture_path("index_merge"))
+		assert len(list(e for e in index_merge.entries.itervalues() if e.stage != 0 ))
+		
 		# write
-		self.fail("writing, object type and stage")
+		self.fail("writing, what is 'size' attribute for ?")
+	
