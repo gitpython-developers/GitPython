@@ -14,4 +14,6 @@ class TestTree(TestCase):
 		cls.repo = Repo(GIT_REPO)
 		
 	def test_base(self):
-		self.fail("TODO")
+		index = Index.from_file(fixture_path("index"))
+		assert index.entries
+		assert index.version > 0
