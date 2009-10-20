@@ -69,6 +69,7 @@ class TestBlob(object):
         git.return_value = fixture('blame')
         b = Blob.blame(self.repo, 'master', 'lib/git.py')
         assert_equal(13, len(b))
+        assert_equal( 2, len(b[0]) )
         # assert_equal(25, reduce(lambda acc, x: acc + len(x[-1]), b))
         assert_equal(hash(b[0][0]), hash(b[9][0]))
         c = b[0][0]
@@ -83,6 +84,13 @@ class TestBlob(object):
         assert_equal('tom@mojombo.com', c.committer.email)
         assert_equal(time.gmtime(1191997100), c.committed_date)
         assert_equal('initial grit setup', c.message)
+        
+        # test the 'lines per commit' entries
+        tlist = b[0][1]
+        assert_true( tlist )
+        assert_true( isinstance( tlist[0], basestring ) )
+        assert_true( len( tlist ) < sum( len(t) for t in tlist ) )				 # test for single-char bug
+        
   
     def test_should_return_appropriate_representation(self):
         blob = Blob(self.repo, **{'id': 'abc'})

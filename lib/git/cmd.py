@@ -22,19 +22,47 @@ if sys.platform == 'win32':
 
 class Git(object):
     """
-    The Git class manages communication with the Git binary
+    The Git class manages communication with the Git binary.
+    
+	It provides a convenient interface to calling the Git binary, such as in::
+	
+	 g = Git( git_dir )
+	 g.init()			        # calls 'git init' program
+	 rval = g.ls_files()		# calls 'git ls-files' program
+	
+	``Debugging``
+	    Set the GIT_PYTHON_TRACE environment variable print each invocation 
+	    of the command to stdout.
+	    Set its value to 'full' to see details about the returned values.
     """
-    def __init__(self, git_dir):
+    def __init__(self, git_dir=None):
+        """
+        Initialize this instance with:
+        
+        ``git_dir``
+           Git directory we should work in. If None, we always work in the current 
+           directory as returned by os.getcwd()
+        """
         super(Git, self).__init__()
         self.git_dir = git_dir
 
     def __getattr__(self, name):
+        """
+        A convenience method as it allows to call the command as if it was 
+        an object.
+        Returns
+            Callable object that will execute call _call_process with your arguments.
+        """
         if name[:1] == '_':
             raise AttributeError(name)
         return lambda *args, **kwargs: self._call_process(name, *args, **kwargs)
 
     @property
     def get_dir(self):
+        """
+        Returns
+            Git directory we are working on
+        """
         return self.git_dir
 
     def execute(self, command,
@@ -49,7 +77,9 @@ class Git(object):
         the returned information (stdout)
 
         ``command``
-            The command argument list to execute
+            The command argument list to execute.
+            It should be a string, or a sequence of program arguments. The
+            program to execute is the first item in the args sequence or string.
 
         ``istream``
             Standard input filehandle passed to subprocess.Popen.
@@ -68,11 +98,18 @@ class Git(object):
         ``with_raw_output``
             Whether to avoid stripping off trailing whitespace.
 
-        Returns
-            str(output)                     # extended_output = False (Default)
-            tuple(int(status), str(output)) # extended_output = True
+        Returns::
+        
+         str(output)                                  # extended_output = False (Default)
+         tuple(int(status), str(stdout), str(stderr)) # extended_output = True
+        
+        Raise
+        	GitCommandError
+        
+        NOTE
+           If you add additional keyword arguments to the signature of this method, 
+           you must update the execute_kwargs tuple housed in this module.
         """
-
         if GIT_PYTHON_TRACE and not GIT_PYTHON_TRACE == 'full':
             print ' '.join(command)
 
@@ -146,7 +183,8 @@ class Git(object):
         the result as a String
 
         ``method``
-            is the command
+            is the command. Contained "_" characters will be converted to dashes,
+            such as in 'ls_files' to call 'ls-files'.
 
         ``args``
             is the list of arguments
@@ -156,7 +194,7 @@ class Git(object):
             This function accepts the same optional keyword arguments
             as execute().
 
-        Examples
+        Examples::
             git.rev_list('master', max_count=10, header=True)
 
         Returns

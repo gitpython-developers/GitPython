@@ -7,6 +7,9 @@
 import re
 
 class Actor(object):
+    """Actors hold information about a person acting on the repository. They 
+    can be committers and authors or anything with a name and an email as 
+    mentioned in the git log entries."""
     def __init__(self, name, email):
         self.name = name
         self.email = email

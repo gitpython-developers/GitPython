@@ -1,6 +1,20 @@
 =======
 CHANGES
 =======
+  
+0.1.X
+=====
+( Future Release )
+General
+-------
+* See changes in Diff class as your client code needs adjustments to work with it
+
+Diff
+----
+* Members a a_commit and b_commit renamed to a_blob and b_blob - they are populated
+  with Blob objects if possible
+* Members a_path and b_path removed as this information is kept in the blobs
+
 
 0.1.6
 =====

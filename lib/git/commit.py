@@ -14,37 +14,43 @@ import diff
 import stats
 
 class Commit(LazyMixin):
+    """
+    Wraps a git Commit object.
+    
+    This class will act lazily on some of its attributes and will query the 
+    value on demand only if it involves calling the git binary.
+    """
     def __init__(self, repo, id, tree=None, author=None, authored_date=None,
                  committer=None, committed_date=None, message=None, parents=None):
         """
-        Instantiate a new Commit
+        Instantiate a new Commit. All keyword arguments taking None as default will 
+        be implicitly set if id names a valid sha. 
+        
+        The parameter documentation indicates the type of the argument after a colon ':'.
 
         ``id``
-            is the id of the commit
+            is the sha id of the commit
 
-        ``parents``
-            is a list of commit ids (will be converted into Commit instances)
+        ``parents`` : list( Commit, ... )
+            is a list of commit ids
 
-        ``tree``
-            is the correspdonding tree id (will be converted into a Tree object)
+        ``tree`` : Tree
+            is the corresponding tree id
 
-        ``author``
-            is the author string
+        ``author`` : Actor
+            is the author string ( will be implicitly converted into an Actor object )
 
-        ``authored_date``
+        ``authored_date`` : (tm_year, tm_mon, tm_mday, tm_hour, tm_min, tm_sec, tm_wday, tm_yday, tm_isdst )
             is the authored DateTime
 
-        ``committer``
+        ``committer`` : Actor
             is the committer string
 
-        ``committed_date``
+        ``committed_date`` : (tm_year, tm_mon, tm_mday, tm_hour, tm_min, tm_sec, tm_wday, tm_yday, tm_isdst)
             is the committed DateTime
 
-        ``message``
+        ``message`` : string
             is the commit message
-
-        ``parents``
-            is the list of the parents of the commit
 
         Returns
             git.Commit
@@ -68,6 +74,10 @@ class Commit(LazyMixin):
                 self.tree = Tree(repo, id=tree)
 
     def __bake__(self):
+        """
+        Called by LazyMixin superclass when the first uninitialized member needs 
+        to be set as it is queried.
+        """
         temp = Commit.find_all(self.repo, self.id, max_count=1)[0]
         self.parents = temp.parents
         self.tree = temp.tree
@@ -79,10 +89,18 @@ class Commit(LazyMixin):
 
     @property
     def id_abbrev(self):
+        """
+        Returns
+            First 7 bytes of the commit's sha id as an abbreviation of the full string.
+        """
         return self.id[0:7]
 
     @property
     def summary(self):
+        """
+        Returns
+            First line of the commit message.
+        """
         return self.message.split('\n', 1)[0]
 
     @classmethod
@@ -115,10 +133,11 @@ class Commit(LazyMixin):
             is the ref from which to begin (SHA1 or name)
 
         ``path``
-            is an optinal path
+            is an optinal path, if set only Commits that include the path 
+            will be considered
 
-        ``options``
-            is a Hash of optional arguments to git where
+        ``kwargs``
+            optional keyword arguments to git where
             ``max_count`` is the maximum number of commits to fetch
             ``skip`` is the number of commits to skip
 
@@ -140,7 +159,7 @@ class Commit(LazyMixin):
             is the Repo
 
         ``text``
-            is the text output from the git command (raw format)
+            is the text output from the git-rev-list command (raw format)
 
         Returns
             git.Commit[]
@@ -173,7 +192,7 @@ class Commit(LazyMixin):
     @classmethod
     def diff(cls, repo, a, b=None, paths=None):
         """
-        Show diffs between two trees:
+        Creates diffs between a tree and the index or between two trees:
 
         ``repo``
             is the Repo
@@ -187,10 +206,13 @@ class Commit(LazyMixin):
             given paths.
 
         ``paths``
-            is a list of paths to limit the diff.
+            is a list of paths to limit the diff to.
 
         Returns
-            git.Diff[]
+            git.Diff[]::
+            
+             between tree and the index if only a is given
+             between two trees if a and b  are given and are commits 
         """
         paths = paths or []
 
@@ -209,6 +231,12 @@ class Commit(LazyMixin):
 
     @property
     def diffs(self):
+        """
+        Returns
+            git.Diff[]
+            Diffs between this commit and its first parent or all changes if this 
+            commit is the first commit and has no parent.
+        """
         if not self.parents:
             d = self.repo.git.show(self.id, '-M', full_index=True, pretty='raw')
             if re.search(r'diff --git a', d):
@@ -223,6 +251,13 @@ class Commit(LazyMixin):
 
     @property
     def stats(self):
+        """
+        Create a git stat from changes between this commit and its first parent 
+        or from all changes done if this is the very first commit.
+        
+        Return
+            git.Stats
+        """
         if not self.parents:
             text = self.repo.git.diff_tree(self.id, '--', numstat=True, root=True)
             text2 = ""
@@ -247,7 +282,7 @@ class Commit(LazyMixin):
         Parse out the actor (author or committer) info
 
         Returns
-            [str (actor name and email), time (acted at time)]
+            [Actor, gmtime(acted at time)]
         """
         m = re.search(r'^.+? (.*) (\d+) .*$', line)
         actor, epoch = m.groups()
