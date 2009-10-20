@@ -79,22 +79,30 @@ class Repo(object):
 
 		self.path = None
 		curpath = epath
+		
+		# walk up the path to find the .git dir
 		while curpath:
 			if is_git_dir(curpath):
-				self.bare = True
 				self.path = curpath
 				self.wd = curpath
 				break
 			gitpath = os.path.join(curpath, '.git')
 			if is_git_dir(gitpath):
-				self.bare = False
 				self.path = gitpath
 				self.wd = curpath
 				break
 			curpath, dummy = os.path.split(curpath)
 			if not dummy:
 				break
+		# END while curpath
 
+		self._bare = False
+		try:
+			self._bare = self.config_reader("repository").getboolean('core','bare') 
+		except Exception:
+			# lets not assume the option exists, although it should
+			pass
+		
 		if self.path is None:
 		   raise InvalidGitRepositoryError(epath)
 
@@ -113,6 +121,15 @@ class Repo(object):
 						   doc="the project's description")
 	del _get_description
 	del _set_description
+	
+	
+	@property
+	def bare(self):
+		"""
+		Returns
+			True if the repository is bare
+		"""
+		return self._bare
 
 	@property
 	def heads(self):
@@ -194,8 +211,7 @@ class Repo(object):
 		
 		raise ValueError( "Invalid configuration level: %r" % config_level )
 			
-	@property
-	def config_reader(self):
+	def config_reader(self, config_level=None):
 		"""
 		Returns
 			GitConfigParser allowing to read the full git configuration, but not to write it
@@ -205,8 +221,18 @@ class Repo(object):
 			
 			NOTE: On windows, system configuration cannot currently be read as the path is 
 			unknown, instead the global path will be used.
+			
+		``config_level``
+			For possible values, see config_writer method
+			If None, all applicable levels will be used. Specify a level in case 
+			you know which exact file you whish to read to prevent reading multiple files for 
+			instance
 		"""
-		files = [ self._get_config_path(f) for f in self.config_level ]
+		files = None
+		if config_level is None:
+			files = [ self._get_config_path(f) for f in self.config_level ]
+		else:
+			files = [ self._get_config_path(config_level) ]
 		return GitConfigParser(files, read_only=True)
 		
 	def config_writer(self, config_level="repository"):
@@ -393,7 +419,7 @@ class Repo(object):
 			like a git-status without untracked files, hence it is dirty if the 
 			index or the working copy have changes.
 		"""
-		if self.bare:
+		if self._bare:
 			# Bare repositories with no associated working directory are
 			# always consired to be clean.
 			return False

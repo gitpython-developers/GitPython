@@ -58,8 +58,8 @@ Config
 ------
 * The git configuration can now be read and manipulated directly from within python
   using the GitConfigParser
-* Repo.config_reader returns a read-only parser
-* Repo.config_writer returns a read-write parser 
+* Repo.config_reader() returns a read-only parser
+* Repo.config_writer() returns a read-write parser 
  
 Diff
 ----
@@ -115,8 +115,9 @@ Repo
   - 'head', creates a head object
   - 'tag', creates a tag object
   - 'iter_trees' method
-  - 'config_reader' property
-  - 'config_writer' property
+  - 'config_reader' method
+  - 'config_writer' method
+  - 'bare' property, previously it was a simple attribute that could be written
   
 Remote
 ------

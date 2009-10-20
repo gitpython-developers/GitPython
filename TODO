@@ -31,8 +31,6 @@ Index
 Repo
 ----
 * Nice fetch/pull handling, at least supported/wired throuhg to the git command
-* repo.bare is set according to the path it is initialized with, although it 
-  should be read from the configuration in fact. Check uses of repo.bare.
 * Blame: Read the blame format making assumptions about its structure, 
   currently regex are used a lot although we can deduct what will be next.
   - Read data from a stream directly from git command

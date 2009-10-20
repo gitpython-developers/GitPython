@@ -77,7 +77,7 @@ class Remote(LazyMixin, Iterable):
 	
 	def _set_cache_(self, attr):
 		if attr == "_config_reader":
-			self._config_reader = _SectionConstraint(self.repo.config_reader, self._config_section_name())
+			self._config_reader = _SectionConstraint(self.repo.config_reader(), self._config_section_name())
 		else:
 			super(Remote, self)._set_cache_(attr)
 			

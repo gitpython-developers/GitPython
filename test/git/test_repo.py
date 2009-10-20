@@ -91,6 +91,9 @@ class TestRepo(TestCase):
 
 		assert_true(git.called)
 		assert_true(repo.called)
+		
+	def test_bare_property(self):
+		self.repo.bare
 
 	@patch_object(Repo, '__init__')
 	@patch_object(Git, '_call_process')
@@ -156,11 +159,11 @@ class TestRepo(TestCase):
 		assert_equal('<git.Repo "%s">' % path, repr(self.repo))
 
 	def test_is_dirty_with_bare_repository(self):
-		self.repo.bare = True
+		self.repo._bare = True
 		assert_false(self.repo.is_dirty)
 
 	def test_is_dirty(self):
-		self.repo.bare = False
+		self.repo._bare = False
 		for index in (0,1):
 			for working_tree in (0,1):
 				for untracked_files in (0,1):
@@ -168,7 +171,7 @@ class TestRepo(TestCase):
 				# END untracked files
 			# END working tree
 		# END index
-		self.repo.bare = True
+		self.repo._bare = True
 		assert self.repo.is_dirty == False
 
 	@patch_object(Git, '_call_process')
@@ -236,7 +239,9 @@ class TestRepo(TestCase):
 		assert len(self.repo.untracked_files) == (num_recently_untracked - len(files))
 		
 	def test_config_reader(self):
-		reader = self.repo.config_reader
+		reader = self.repo.config_reader()				# all config files 
+		assert reader.read_only
+		reader = self.repo.config_reader("repository")	# single config file
 		assert reader.read_only
 		
 	def test_config_writer(self):

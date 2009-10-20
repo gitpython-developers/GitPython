@@ -7,6 +7,7 @@
 import os
 from test.testlib import *
 from git import *
+from git.cmd import dashify
 
 class TestUtils(object):
 	def setup(self):
