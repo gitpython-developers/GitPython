@@ -21,6 +21,12 @@ Config
   it will be returned instead of raising. This way the class will be much more usable, 
   and ... I truly hate this config reader as it is so 'old' style. Its not even a new-style
   class yet showing that it must be ten years old.
+
+Diff
+----
+* Check docs on diff-core to be sure the raw-format presented there can be read
+  properly: 
+  - http://www.kernel.org/pub/software/scm/git-core/docs/gitdiffcore.html
   
 Docs
 ----
