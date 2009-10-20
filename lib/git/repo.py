@@ -42,6 +42,7 @@ class Repo(object):
 	the log.
 	"""
 	DAEMON_EXPORT_FILE = 'git-daemon-export-ok'
+	__slots__ = ( "wd", "path", "_bare", "git" )
 	
 	# precompiled regex
 	re_whitespace = re.compile(r'\s+')

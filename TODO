@@ -15,6 +15,13 @@ General
 * References should be parsed 'manually' to get around command invocation, but 
   be sure to be able to read packed refs.
 
+Config
+------
+* Expand .get* methods of GitConfigParser to support default value. If it is not None, 
+  it will be returned instead of raising. This way the class will be much more usable, 
+  and ... I truly hate this config reader as it is so 'old' style. Its not even a new-style
+  class yet showing that it must be ten years old.
+  
 Docs
 ----
 Overhaul docs - check examples, check looks, improve existing docs
