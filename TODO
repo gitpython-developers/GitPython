@@ -1,0 +1,45 @@
+====
+TODO
+====
+
+General
+-------
+* Classes requiring repo actually only need the git command - this should be 
+  changed to limit their access level and make things a little safer.
+* Check for correct usage of id, ref and hexsha and define their meanings, 
+  currently its not so clear what id may be in cases or not - afaik its usually 
+  a sha or ref unless cat-file is used where it must be a sha
+* Derive all Object like items like types such as Commit, Tag(Object), Tree, Blob
+  from a common base. This allows to easily add __eq__, __ne__, __hash__ method 
+  to make their use more comfortable and reduces code duplication.
+* References like Tag(Reference), Heads and Remotes should have an own Base class
+* Optimize type size by adding __slots__ ( at least )
+* Add more performance tests, see branch "performance_testing"
+
+Configuration
+-------------
+* Native configuration handling, ideally without using git-config for it to keep 
+  handling fast
+  
+Docs
+----
+Overhaul docs - check examples, check looks, improve existing docs
+
+Remotes
+-------
+* Remote handling should be rather easy to implement as it is 'just' another 
+  type of reference. It will be more work to do it right and allow convenient 
+  access to the most common operations on remotes though.
+
+Submodules
+----------
+* add submodule support
+
+Testing
+-------
+* Upgrade to newer mock version >0.4 as the newer versions break support with 0.4
+
+Tree
+----
+* Should return submodules during listing or deal with them in a way, see Submodules
+
