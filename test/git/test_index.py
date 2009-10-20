@@ -6,6 +6,7 @@
 
 from test.testlib import *
 from git import *
+import inspect
 
 class TestTree(TestCase):
 	
@@ -14,6 +15,19 @@ class TestTree(TestCase):
 		cls.repo = Repo(GIT_REPO)
 		
 	def test_base(self):
+		# read from file
 		index = Index.from_file(fixture_path("index"))
 		assert index.entries
 		assert index.version > 0
+		
+		# test entry
+		last_val = None
+		entry = index.entries.itervalues().next()
+		for name, method in inspect.getmembers(entry,inspect.ismethod):
+			val = method(entry)
+			assert val != last_val
+			last_val = val
+		# END for each method
+		
+		# write
+		self.fail("writing, object type and stage")

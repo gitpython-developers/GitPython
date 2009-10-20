@@ -58,8 +58,4 @@ Tree
 * Work through test and check for test-case cleanup and completeness ( what about
   testing whether it raises on invalid input ? ). See 6dc7799d44e1e5b9b77fd19b47309df69ec01a99
   - Also assure that the test-case setup is a bit more consistent ( Derive from TestCase, possibly
-    make repo a class member instead of an instance member 
-* Derive from Iterable, simple pipe it through to Commit objects and iterate using 
-  commit.tree.
-
-
+    make repo a class member instead of an instance member

@@ -10,6 +10,7 @@ manipulations such as querying and merging.
 import struct
 import binascii
 import mmap
+import objects
 
 class IndexEntry(tuple):
 	"""
@@ -17,7 +18,61 @@ class IndexEntry(tuple):
 	
 	Attributes usully accessed often are cached in the tuple whereas others are 
 	unpacked on demand.
+	
+	See the properties for a mapping between names and tuple indices.
 	"""
+	@property
+	def path(self):
+		return self[0]
+	
+	@property
+	def ctime(self):
+		"""
+		Returns
+			Tuple(int_time_seconds_since_epoch, int_nano_seconds) of the 
+			file's creation time
+		"""
+		return struct.unpack(">LL", self[1])
+		
+	@property
+	def mtime(self):
+		"""
+		See ctime property, but returns modification time
+		"""
+		return struct.unpack(">LL", self[2])
+	
+	@property
+	def dev(self):
+		return self[3] 
+	
+	@property
+	def inode(self):
+		return self[4]
+		
+	@property
+	def mode(self):
+		return self[5]
+		
+	@property
+	def uid(self):
+		return self[6]
+		
+	@property
+	def gid(self):
+		return self[7]
+
+	@property
+	def data_size(self):
+		return self[8]
+		
+	@property
+	def sha(self):
+		return self[9]
+		
+	@property
+	def path_size(self):
+		return self[10]
+
 
 class Index(object):
 	"""
