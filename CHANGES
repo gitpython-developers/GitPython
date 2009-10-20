@@ -2,9 +2,8 @@
 CHANGES
 =======
   
-0.1.X
-=====
-( Future Release )
+0.1.7
+=======
 General
 -------
 * See changes in Diff class as your client code needs adjustments to work with it
