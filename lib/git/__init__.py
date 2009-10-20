@@ -19,7 +19,7 @@ from git.cmd import Git
 from git.repo import Repo
 from git.stats import Stats
 from git.remote import Remote
-
+from git.index import *
 
 __all__ = [ name for name, obj in locals().items()
 			if not (name.startswith('_') or inspect.ismodule(obj)) ]
