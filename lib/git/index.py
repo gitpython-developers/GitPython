@@ -126,6 +126,16 @@ class IndexEntry(tuple):
 	@property
 	def path(self):
 		return self[10]
+		
+		
+	@classmethod
+	def from_blob(cls, blob):
+		"""
+		Returns
+			Minimal entry resembling the given blob objecft
+		"""
+		time = struct.pack(">LL", 0, 0)
+		return IndexEntry((time, time, 0, 0, blob.mode, 0, 0, blob.size, blob.id, 0, blob.path))
 
 
 class Index(object):
@@ -402,6 +412,61 @@ class Index(object):
 				yield output
 		# END for each entry 
 	
+	def unmerged_blobs(self):
+		"""
+		Returns
+			Iterator yielding dict(path : list( tuple( stage, Blob, ...))), being 
+			a dictionary associating a path in the index with a list containing 
+			stage/blob pairs
+			
+		Note:
+			Blobs that have been removed in one side simply do not exist in the 
+			given stage. I.e. a file removed on the 'other' branch whose entries
+			are at stage 3 will not have a stage 3 entry.
+		"""
+		is_unmerged_blob = lambda t: t[0] != 0
+		path_map = dict()
+		for stage, blob in self.iter_blobs(is_unmerged_blob):
+			path_map.setdefault(blob.path, list()).append((stage, blob))
+		# END for each unmerged blob
+		
+		return path_map
+	
+	def resolve_blobs(self, iter_blobs):
+		"""
+		Resolve the blobs given in blob iterator. This will effectively remove the 
+		index entries of the respective path at all non-null stages and add the given 
+		blob as new stage null blob.
+		
+		For each path there may only be one blob, otherwise a ValueError will be raised
+		claiming the path is already at stage 0.
+		
+		Raise
+			ValueError if one of the blobs already existed at stage 0
+		
+		Returns:
+			self
+		"""
+		for blob in iter_blobs:
+			stage_null_key = (blob.path, 0)
+			if stage_null_key in self.entries:
+				raise ValueError( "Blob %r already at stage 0" % blob )
+			# END assert blob is not stage 0 already 
+			
+			# delete all possible stages
+			for stage in (1, 2, 3):
+				try:
+					del( self.entries[(blob.path, stage)] )
+				except KeyError:
+					pass 
+				# END ignore key errors
+			# END for each possible stage
+			
+			self.entries[stage_null_key] = IndexEntry.from_blob(blob) 
+		# END for each blob
+		
+		return self
+	
 	def write_tree(self):
 		"""
 		Writes the Index in self to a corresponding Tree file into the repository
@@ -414,11 +479,16 @@ class Index(object):
 		tmp_index_mover = _TemporaryFileSwap(index_path)
 		
 		self.to_file(self, index_path)
-		tree_sha = self.repo.git.write_tree()
 		
-		# remove our index file so that the original index can move back into place
-		# On linux it will silently overwrite, on windows it won't
-		os.remove(index_path)
+		try:
+			tree_sha = self.repo.git.write_tree()
+		finally:
+			# remove our index file so that the original index can move back into place
+			# On linux it will silently overwrite, on windows it won't
+			if os.path.isfile(index_path):
+				os.remove(index_path)
+			# END remove our own index file beforehand
+		# END write tree handling 
 		return Tree(self.repo, tree_sha, 0, '')
 		
 	

@@ -75,23 +75,28 @@ class TestTree(TestCase):
 		self._cmp_tree_index(cur_sha, two_way_index)
 		
 		# merge three trees - here we have a merge conflict
-		tree_way_index = Index.from_tree(self.repo, common_ancestor_sha, cur_sha, other_sha)
-		assert len(list(e for e in tree_way_index.entries.values() if e.stage != 0))
+		three_way_index = Index.from_tree(self.repo, common_ancestor_sha, cur_sha, other_sha)
+		assert len(list(e for e in three_way_index.entries.values() if e.stage != 0))
 		
 		
 		# ITERATE BLOBS
 		merge_required = lambda t: t[0] != 0
-		merge_blobs = list(tree_way_index.iter_blobs(merge_required))
+		merge_blobs = list(three_way_index.iter_blobs(merge_required))
 		assert merge_blobs
 		assert merge_blobs[0][0] in (1,2,3)
 		assert isinstance(merge_blobs[0][1], Blob)
 		
 		
 		# writing a tree should fail with an unmerged index
-		self.failUnlessRaises(GitCommandError, tree_way_index.write_tree)
+		self.failUnlessRaises(GitCommandError, three_way_index.write_tree)
 		
 		# removed unmerged entries
-		self.fail("remove unmerged")
+		unmerged_blob_map = three_way_index.unmerged_blobs()
+		assert unmerged_blob_map
+		
+		# pick the first blob at the first stage we find and use it as resolved version
+		three_way_index.resolve_blobs( l[0][1] for l in unmerged_blob_map.itervalues() )
+		three_way_index.write_tree()
 		
 		
 	def test_custom_commit(self):
