@@ -41,6 +41,11 @@ Index
 * Index Merge ( merge two trees into the index to quickly see conflicts ). 
   Its possible to write it into a separate index file that can be read separately.
 
+Remote
+------
+* 'push' method needs a test, a true test repository is required though, a fork 
+  of a fork would do :)!
+  
 Repo
 ----
 * Nice fetch/pull handling, at least supported/wired throuhg to the git command
@@ -66,5 +71,6 @@ Testing
   read-only testing scheme that operates on the own repository. Doing this could be a simple
   as forking a shared repo in a tmp directory. In that moment, we probably want to 
   facility committing and checkouts as well.
+  - Use these tests for git-remote as we need to test push
 
 

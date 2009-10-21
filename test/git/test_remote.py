@@ -32,7 +32,8 @@ class TestRemote(TestCase):
 			# END for each ref
 			
 			# OPTIONS
-			for opt in ("url", "fetch"):
+			# cannot use 'fetch' key anymore as it is now a method
+			for opt in ("url", ):
 				val = getattr(remote, opt)
 				reader = remote.config_reader
 				assert reader.get(opt) == val
@@ -61,8 +62,10 @@ class TestRemote(TestCase):
 				assert remote.rename(prev_name).name == prev_name
 			# END for each rename ( back to prev_name )
 			
+			remote.fetch()
+			self.failUnlessRaises(GitCommandError, remote.pull)
 			remote.update()
-			
+			self.fail("test push once there is a test-repo")
 		# END for each remote
 		assert num_remotes
 		assert num_remotes == len(remote_set)

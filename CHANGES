@@ -50,6 +50,12 @@ Blob
 ----
 * former 'name' member renamed to path as it suits the actual data better
 
+GitCommand
+-----------
+* git.subcommand call scheme now prunes out None from the argument list, allowing 
+  to be called more confortably as None can never be a valid to the git command 
+  if converted to a string.
+
 Commit
 ------
 * 'count' method is not an instance method to increase its ease of use

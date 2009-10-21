@@ -185,7 +185,9 @@ class Remote(LazyMixin, Iterable):
 		
 	def update(self, **kwargs):
 		"""
-		Fetch all changes for this remote, including new branches
+		Fetch all changes for this remote, including new branches which will 
+		be forced in ( in case your local remote branch is not part the new remote branches
+		ancestry anymore ).
 		
 		``kwargs``
 			Additional arguments passed to git-remote update
@@ -196,6 +198,64 @@ class Remote(LazyMixin, Iterable):
 		self.repo.git.remote("update", self.name)
 		return self
 	
+	def fetch(self, refspec=None, **kwargs):
+		"""
+		Fetch the latest changes for this remote
+		
+		``refspec``
+			A "refspec" is used by fetch and push to describe the mapping 
+			between remote ref and local ref. They are combined with a colon in 
+			the format <src>:<dst>, preceded by an optional plus sign, +. 
+			For example: git fetch $URL refs/heads/master:refs/heads/origin means 
+			"grab the master branch head from the $URL and store it as my origin 
+			branch head". And git push $URL refs/heads/master:refs/heads/to-upstream 
+			means "publish my master branch head as to-upstream branch at $URL". 
+			See also git-push(1).
+			
+			Taken from the git manual
+		
+		``**kwargs``
+			Additional arguments to be passed to git-fetch
+			
+		Returns
+			self
+		"""
+		self.repo.git.fetch(self, refspec, **kwargs)
+		return self
+		
+	def pull(self, refspec=None, **kwargs):
+		"""
+		Pull changes from the given branch, being the same as a fetch followed 
+		by a merge of branch with your local branch.
+		
+		``refspec``
+			see 'fetch' method
+		
+		``**kwargs``
+			Additional arguments to be passed to git-pull
+			
+		Returns
+			self
+		"""
+		self.repo.git.pull(self, refspec, **kwargs)
+		return self
+		
+	def push(self, refspec=None, **kwargs):
+		"""
+		Push changes from source branch in refspec to target branch in refspec.
+		
+		``refspec``
+			see 'fetch' method
+		
+		``**kwargs``
+			Additional arguments to be passed to git-push
+			
+		Returns
+			self
+		"""	
+		self.repo.git.push(self, refspec, **kwargs)
+		return self
+		
 	@property
 	def config_reader(self):
 		"""

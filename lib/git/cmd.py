@@ -261,7 +261,9 @@ class Git(object):
 			such as in 'ls_files' to call 'ls-files'.
 
 		``args``
-			is the list of arguments
+			is the list of arguments. If None is included, it will be pruned.
+			This allows your commands to call git more conveniently as None
+			is realized as non-existent
 
 		``kwargs``
 			is a dict of keyword arguments.
@@ -287,7 +289,7 @@ class Git(object):
 		# Prepare the argument list
 		opt_args = self.transform_kwargs(**kwargs)
 		
-		ext_args = self.__unpack_args(args)
+		ext_args = self.__unpack_args([a for a in args if a is not None])
 		args = opt_args + ext_args
 
 		call = ["git", dashify(method)]
