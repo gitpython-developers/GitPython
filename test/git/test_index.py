@@ -87,5 +87,12 @@ class TestTree(TestCase):
 		assert isinstance(merge_blobs[0][1], Blob)
 		
 		
+		# writing a tree should fail with an unmerged index
+		self.failUnlessRaises(GitCommandError, tree_way_index.write_tree)
+		
+		# removed unmerged entries
+		self.fail("remove unmerged")
+		
+		
 	def test_custom_commit(self):
 		self.fail("Custom commit:write tree, make commit with custom parents")

@@ -14,7 +14,24 @@ import objects
 import tempfile
 import os
 import stat
-from git.objects import Blob
+from git.objects import Blob, Tree
+
+class _TemporaryFileSwap(object):
+	"""
+	Utility class moving a file to a temporary location within the same directory
+	and moving it back on to where on object deletion.
+	"""
+	__slots__ = ("file_path", "tmp_file_path")
+	
+	def __init__(self, file_path):
+		self.file_path = file_path
+		self.tmp_file_path = self.file_path + tempfile.mktemp('','','')
+		os.rename(self.file_path, self.tmp_file_path)
+		
+	def __del__(self):
+		if os.path.isfile(self.tmp_file_path):
+			os.rename(self.tmp_file_path, self.file_path)
+	
 
 class IndexEntry(tuple):
 	"""
@@ -335,17 +352,13 @@ class Index(object):
 		
 		# move current index out of the way - otherwise the merge may fail
 		# as it considers existing entries. moving it essentially clears the index.
-		# Unfortunately there is no 'soft' way to do it
-		cur_index = os.path.join(repo.path, 'index')
-		moved_index = os.path.join(repo.path, 'index_moved'+tempfile.mktemp('','',''))
+		# Unfortunately there is no 'soft' way to do it.
+		# The _TemporaryFileSwap assure the original file get put back
+		index_handler = _TemporaryFileSwap(os.path.join(repo.path, 'index'))
 		try:
-			os.rename(cur_index, moved_index)
 			repo.git.read_tree(*arg_list, **kwargs)
 			index = cls.from_file(repo, tmp_index)
 		finally:
-			# put back the original index first !
-			if os.path.exists(moved_index):
-				os.rename(moved_index, cur_index)
 			if os.path.exists(tmp_index):
 				os.remove(tmp_index)
 		# END index merge handling
@@ -354,8 +367,10 @@ class Index(object):
 	
 	@classmethod
 	def _index_mode_to_tree_index_mode(cls, index_mode):
-		"""Cleanup a index_mode value.
+		"""
+		Cleanup a index_mode value.
 		This will return a index_mode that can be stored in a tree object.
+		
 		``index_mode``
 			Index_mode to clean up.
 		"""
@@ -381,15 +396,29 @@ class Index(object):
 		for entry in self.entries.itervalues():
 			mode = self._index_mode_to_tree_index_mode(entry.mode)
 			blob = Blob(self.repo, entry.sha, mode, entry.path)
+			blob.size = entry.size
 			output = (entry.stage, blob)
 			if predicate(output):
 				yield output
 		# END for each entry 
 	
-	def write_tree(self, stream):
+	def write_tree(self):
 		"""
-		Writes the 
+		Writes the Index in self to a corresponding Tree file into the repository
+		object database and returns it as corresponding Tree object.
+		
+		Returns
+			Tree object representing this index
 		"""
-		raise NotImplementedError("TODO")
+		index_path = os.path.join(self.repo.path, "index")
+		tmp_index_mover = _TemporaryFileSwap(index_path)
+		
+		self.to_file(self, index_path)
+		tree_sha = self.repo.git.write_tree()
+		
+		# remove our index file so that the original index can move back into place
+		# On linux it will silently overwrite, on windows it won't
+		os.remove(index_path)
+		return Tree(self.repo, tree_sha, 0, '')
 		
 	

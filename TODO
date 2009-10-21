@@ -37,12 +37,13 @@ Overhaul docs - check examples, check looks, improve existing docs
 
 Index
 -----
-* Index class required for special handling ? Probably considering what I want 
-  to do ! Dulwich can already write the index, and read trees, although it 
-  could be improved as well and could possibly be made faster unless we want 
-  to use the c modules ( not for now )
-* Index Merge ( merge two trees into the index to quickly see conflicts ). 
-  Its possible to write it into a separate index file that can be read separately.
+* write_tree should write a tree directly, which would require ability to create
+  objects in the first place. Should be rather simple as it is 
+  "tree" bytes datablock | sha1sum and zipped.
+  Currently we use some file swapping and the git command to do it which probably 
+  is much slower. The thing is that properly writing a tree from an index involves
+  creating several tree objects, so in the end it might be slower. 
+  Hmm, probably its okay to use the command unless we go c(++)
 
 Repo
 ----
