@@ -74,3 +74,6 @@ class TestDiff(TestCase):
 			assert value, "Did not find diff for %s" % key
 		# END for each iteration type 
 		
+	def test_diff_index_working_tree(self):
+		self.fail("""Find a good way to diff an index against the working tree
+which is not possible with the current interface""")
