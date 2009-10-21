@@ -7,6 +7,7 @@
 from test.testlib import *
 from git import *
 import inspect
+import os
 
 class TestTree(TestCase):
 	
@@ -30,8 +31,13 @@ class TestTree(TestCase):
 		
 		# test stage
 		index_merge = Index.from_file(fixture_path("index_merge"))
+		assert len(index_merge.entries) == 106
 		assert len(list(e for e in index_merge.entries.itervalues() if e.stage != 0 ))
 		
-		# write
-		self.fail("writing, what is 'size' attribute for ?")
+		# write the data - it must match the original
+		index_output = os.tmpfile()
+		index_merge.write(index_output)
+		
+		index_output.seek(0)
+		assert index_output.read() == fixture("index_merge")
 	

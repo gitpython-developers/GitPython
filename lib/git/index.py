@@ -22,55 +22,88 @@ class IndexEntry(tuple):
 	See the properties for a mapping between names and tuple indices.
 	"""
 	@property
-	def path(self):
-		return self[0]
-	
-	@property
 	def ctime(self):
 		"""
 		Returns
 			Tuple(int_time_seconds_since_epoch, int_nano_seconds) of the 
 			file's creation time
 		"""
-		return struct.unpack(">LL", self[1])
+		return struct.unpack(">LL", self[0])
 		
 	@property
 	def mtime(self):
 		"""
 		See ctime property, but returns modification time
 		"""
-		return struct.unpack(">LL", self[2])
+		return struct.unpack(">LL", self[1])
 	
 	@property
 	def dev(self):
-		return self[3] 
+		"""
+		Device ID
+		"""
+		return self[2] 
 	
 	@property
 	def inode(self):
-		return self[4]
+		"""
+		Inode ID
+		"""
+		return self[3]
 		
 	@property
 	def mode(self):
-		return self[5]
+		"""
+		File Mode, compatible to stat module constants
+		"""
+		return self[4]
 		
 	@property
 	def uid(self):
-		return self[6]
+		"""
+		User ID
+		"""
+		return self[5]
 		
 	@property
 	def gid(self):
-		return self[7]
+		"""
+		Group ID
+		"""
+		return self[6]
 
 	@property
 	def size(self):
-		return self[8]
+		"""
+		Uncompressed size of the blob
+		
+		Note
+			Will be 0 if the stage is not 0 ( hence it is an unmerged entry )
+		"""
+		return self[7]
 		
 	@property
 	def sha(self):
-		return self[9]
+		"""
+		hex sha of the blob
+		"""
+		return self[8]
 		
 	@property
 	def stage(self):
+		"""
+		Stage of the entry, either:
+			0 = default stage
+			1 = stage before a merge or common ancestor entry in case of a 3 way merge
+			2 = stage of entries from the 'left' side of the merge
+			3 = stage of entries from the right side of the merge
+		Note:
+			For more information, see http://www.kernel.org/pub/software/scm/git/docs/git-read-tree.html
+		"""
+		return self[9]
+
+	@property
+	def path(self):
 		return self[10]
 
 
@@ -80,22 +113,25 @@ class Index(object):
 	order to save git command function calls wherever possible.
 	
 	It provides custom merging facilities and to create custom commits.
+	
+	``Entries``
+	 The index contains an entries dict whose keys are tuples of 
 	"""
-	__slots__ = ( "version", "entries" )
+	__slots__ = ( "version", "entries", "_extension_data" )
+	_VERSION = 2			# latest version we support
 	
 	def __init__(self, stream = None):
 		"""
 		Initialize this Index instance, optionally from the given ``stream``
-		
-		Note
-			Reading is based on the dulwich project.
 		"""
 		self.entries = dict()
-		self.version = -1
+		self.version = self._VERSION
+		self._extension_data = ''
 		if stream is not None:
 			self._read_from_stream(stream)
 	
-	def _read_entry(self, stream):
+	@classmethod
+	def _read_entry(cls, stream):
 		"""Return: One entry of the given stream"""
 		beginoffset = stream.tell()
 		ctime = struct.unpack(">8s", stream.read(8))[0]
@@ -107,11 +143,11 @@ class Index(object):
 		
 		real_size = ((stream.tell() - beginoffset + 8) & ~7)
 		data = stream.read((beginoffset + real_size) - stream.tell())
-		return IndexEntry((path, ctime, mtime, dev, ino, mode, uid, gid, size, 
-				binascii.hexlify(sha), flags >> 12))
+		return IndexEntry((ctime, mtime, dev, ino, mode, uid, gid, size, 
+				binascii.hexlify(sha), flags >> 12, path))
 		
-	
-	def _read_header(self, stream):
+	@classmethod
+	def _read_header(cls, stream):
 		"""Return tuple(version_long, num_entries) from the given stream"""
 		type_id = stream.read(4)
 		if type_id != "DIRC":
@@ -123,15 +159,20 @@ class Index(object):
 	def _read_from_stream(self, stream):
 		"""
 		Initialize this instance with index values read from the given stream
+		
+		Note
+			We explicitly do not clear the entries dict here to allow for reading 
+			multiple chunks from multiple streams into the same Index instance
 		"""
 		self.version, num_entries = self._read_header(stream)
-		self.entries = dict()
 		count = 0
 		while count < num_entries:
 			entry = self._read_entry(stream)
 			self.entries[(entry.path,entry.stage)] = entry
 			count += 1
 		# END for each entry
+		# this data chunk is the footer of the index, don't yet know what it is for
+		self._extension_data = stream.read(~0)
 	
 	@classmethod
 	def from_file(cls, file_path):
@@ -141,6 +182,9 @@ class Index(object):
 			
 		``file_pa ``
 			File path pointing to git index file
+			
+		Note
+			Reading is based on the dulwich project.
 		"""
 		fp = open(file_path, "r")
 		
@@ -157,6 +201,49 @@ class Index(object):
 		finally:
 			fp.close()
 		
+	
+	@classmethod
+	def to_file(cls, index, file_path):
+		"""
+		Write the index data to the given file path.
+		
+		``index``
+			Index you wish to write.
+			
+		``file_path``
+			Path at which to write the index data. Please note that missing directories
+			will lead to an exception to be thrown.
+			
+		Raise 
+			IOError if the file could not be written
+		"""
+		fp = open(file_path, "w")
+		try:
+			return index.write(fp)
+		finally:
+			fp.close()
+		# END exception handling
+		
+
+	@classmethod
+	def _write_cache_entry(cls, stream, entry):
+		"""
+		Write an IndexEntry to a stream
+		"""
+		beginoffset = stream.tell()
+		stream.write(entry[0])			# ctime
+		stream.write(entry[1])			# mtime
+		path = entry[10]
+		plen = len(path) & 0x0fff		# path length
+		assert plen == len(path), "Path %s too long to fit into index" % entry[10]
+		flags = plen | (entry[9] << 12)# stage and path length are 2 byte flags
+		stream.write(struct.pack(">LLLLLL20sH", entry[2], entry[3], entry[4], 
+									entry[5], entry[6], entry[7], binascii.unhexlify(entry[8]), flags))
+		stream.write(path)
+		real_size = ((stream.tell() - beginoffset + 8) & ~7)
+		stream.write("\0" * ((beginoffset + real_size) - stream.tell()))
+
+		
 	def write(self, stream):
 		"""
 		Write the current state to the given stream
@@ -166,5 +253,20 @@ class Index(object):
 		
 		Returns
 			self
+		
+		Note
+			Index writing based on the dulwich implementation
 		"""
-		raise NotImplementedError( "TODO" )
+		# header
+		stream.write("DIRC")
+		stream.write(struct.pack(">LL", self.version, len(self.entries)))
+		
+		# body
+		entries_sorted = self.entries.values()
+		entries_sorted.sort(key=lambda e: (e[10], e[9]))		# use path/stage as sort key
+		for entry in entries_sorted:
+			self._write_cache_entry(stream, entry)
+		# END for each entry
+		# write extension_data which we currently cannot interprete
+		stream.write(self._extension_data)
+
