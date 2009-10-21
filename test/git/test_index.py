@@ -8,6 +8,7 @@ from test.testlib import *
 from git import *
 import inspect
 import os
+import tempfile
 
 class TestTree(TestCase):
 	
@@ -17,7 +18,7 @@ class TestTree(TestCase):
 		
 	def test_base(self):
 		# read from file
-		index = Index.from_file(fixture_path("index"))
+		index = Index.from_file(self.repo, fixture_path("index"))
 		assert index.entries
 		assert index.version > 0
 		
@@ -30,7 +31,7 @@ class TestTree(TestCase):
 		# END for each method
 		
 		# test stage
-		index_merge = Index.from_file(fixture_path("index_merge"))
+		index_merge = Index.from_file(self.repo, fixture_path("index_merge"))
 		assert len(index_merge.entries) == 106
 		assert len(list(e for e in index_merge.entries.itervalues() if e.stage != 0 ))
 		
@@ -40,6 +41,11 @@ class TestTree(TestCase):
 		
 		index_output.seek(0)
 		assert index_output.read() == fixture("index_merge")
+		
+		tmpfile = tempfile.mktemp()
+		Index.to_file(index_merge, tmpfile)
+		assert os.path.isfile(tmpfile)
+		os.remove(tmpfile)
 	
 	def _cmp_tree_index(self, tree, index):
 		# fail unless both objects contain the same paths and blobs
@@ -53,7 +59,7 @@ class TestTree(TestCase):
 		# END for each blob in tree
 		assert num_blobs == len(index.entries)
 	
-	def test_merge(self):
+	def test_from_tree(self):
 		common_ancestor_sha = "5117c9c8a4d3af19a9958677e45cda9269de1541"
 		cur_sha = "4b43ca7ff72d5f535134241e7c797ddc9c7a3573"
 		other_sha = "39f85c4358b7346fee22169da9cad93901ea9eb9"
@@ -70,7 +76,16 @@ class TestTree(TestCase):
 		
 		# merge three trees - here we have a merge conflict
 		tree_way_index = Index.from_tree(self.repo, common_ancestor_sha, cur_sha, other_sha)
-		assert len(list(e for e in tree_way_index.entries.values() if e.stage != 0)) 
+		assert len(list(e for e in tree_way_index.entries.values() if e.stage != 0))
+		
+		
+		# ITERATE BLOBS
+		merge_required = lambda t: t[0] != 0
+		merge_blobs = list(tree_way_index.iter_blobs(merge_required))
+		assert merge_blobs
+		assert merge_blobs[0][0] in (1,2,3)
+		assert isinstance(merge_blobs[0][1], Blob)
+		
 		
 	def test_custom_commit(self):
 		self.fail("Custom commit:write tree, make commit with custom parents")

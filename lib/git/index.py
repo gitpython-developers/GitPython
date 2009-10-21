@@ -13,6 +13,8 @@ import mmap
 import objects
 import tempfile
 import os
+import stat
+from git.objects import Blob
 
 class IndexEntry(tuple):
 	"""
@@ -114,19 +116,24 @@ class Index(object):
 	Implements an Index that can be manipulated using a native implementation in 
 	order to save git command function calls wherever possible.
 	
-	It provides custom merging facilities and to create custom commits.
+	It provides custom merging facilities allowing to merge without actually changing
+	your index or your working tree. This way you can perform own test-merges based
+	on the index only without having to deal with the working copy. This is useful 
+	in case of partial working trees.
 	
 	``Entries``
 	The index contains an entries dict whose keys are tuples of type IndexEntry
 	to facilitate access.
 	"""
-	__slots__ = ( "version", "entries", "_extension_data" )
+	__slots__ = ( "repo", "version", "entries", "_extension_data" )
 	_VERSION = 2			# latest version we support
+	S_IFGITLINK	= 0160000
 	
-	def __init__(self, stream = None):
+	def __init__(self, repo, stream = None):
 		"""
 		Initialize this Index instance, optionally from the given ``stream``
 		"""
+		self.repo = repo
 		self.entries = dict()
 		self.version = self._VERSION
 		self._extension_data = ''
@@ -178,11 +185,14 @@ class Index(object):
 		self._extension_data = stream.read(~0)
 	
 	@classmethod
-	def from_file(cls, file_path):
+	def from_file(cls, repo, file_path):
 		"""
 		Returns
 			Index instance as recreated from the given stream.
-			
+		
+		``repo``
+			Repository the index is related to
+		
 		``file_pa ``
 			File path pointing to git index file
 			
@@ -200,7 +210,7 @@ class Index(object):
 		# END memory mapping
 		
 		try:
-			return cls(stream)
+			return cls(repo, stream)
 		finally:
 			fp.close()
 		
@@ -331,7 +341,7 @@ class Index(object):
 		try:
 			os.rename(cur_index, moved_index)
 			repo.git.read_tree(*arg_list, **kwargs)
-			index = cls.from_file(tmp_index)
+			index = cls.from_file(repo, tmp_index)
 		finally:
 			# put back the original index first !
 			if os.path.exists(moved_index):
@@ -341,7 +351,41 @@ class Index(object):
 		# END index merge handling
 		
 		return index
-		
+	
+	@classmethod
+	def _index_mode_to_tree_index_mode(cls, index_mode):
+		"""Cleanup a index_mode value.
+		This will return a index_mode that can be stored in a tree object.
+		``index_mode``
+			Index_mode to clean up.
+		"""
+		if stat.S_ISLNK(index_mode):
+			return stat.S_IFLNK
+		elif stat.S_ISDIR(index_mode):
+			return stat.S_IFDIR
+		elif stat.S_IFMT(index_mode) == cls.S_IFGITLINK:
+			return cls.S_IFGITLINK
+		ret = stat.S_IFREG | 0644
+		ret |= (index_mode & 0111)
+		return ret
+	
+	def iter_blobs(self, predicate = lambda t: True):
+		"""
+		Returns
+			Iterator yielding tuples of Blob objects and stages, tuple(stage, Blob)
+			
+		``predicate``
+			Function(t) returning True if tuple(stage, Blob) should be yielded by the 
+			iterator
+		"""
+		for entry in self.entries.itervalues():
+			mode = self._index_mode_to_tree_index_mode(entry.mode)
+			blob = Blob(self.repo, entry.sha, mode, entry.path)
+			output = (entry.stage, blob)
+			if predicate(output):
+				yield output
+		# END for each entry 
+	
 	def write_tree(self, stream):
 		"""
 		Writes the 
