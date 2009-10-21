@@ -13,7 +13,8 @@ General
   from a common base. This allows to easily add __eq__, __ne__, __hash__ method 
   to make their use more comfortable and reduces code duplication.
 * References like Tag(Reference), Heads and Remotes should have an own Base class
-* Optimize type size by adding __slots__ ( at least )
+* Optimize type size by adding __slots__ ( at least ), which would also make sure 
+  no one accidentally adds attributes to classes.
 * Add more performance tests, see branch "performance_testing"
 
 Configuration

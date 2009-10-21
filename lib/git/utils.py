@@ -10,7 +10,8 @@ def dashify(string):
     return string.replace('_', '-')
 
 def touch(filename):
-    os.utime(filename)
+    fp = open(filename, 'a')
+    fp.close()
 
 def is_git_dir(d):
     """ This is taken from the git setup.c:is_git_directory

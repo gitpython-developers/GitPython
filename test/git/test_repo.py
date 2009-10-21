@@ -198,14 +198,12 @@ class TestRepo(object):
     def test_archive_tar_gz(self):
         self.repo.archive_tar_gz()
 
-    @patch('git.utils.touch')
-    def test_enable_daemon_serve(self, touch):
-        self.repo.daemon_serve = False
-        assert_false(self.repo.daemon_serve)
-
-    def test_disable_daemon_serve(self):
-        self.repo.daemon_serve = True
-        assert_true(self.repo.daemon_serve)
+    def test_disable_daemon_export(self):
+    	prev_value = self.repo.daemon_export 
+        self.repo.daemon_export = not prev_value
+        assert_equal(self.repo.daemon_export, not prev_value)
+        self.repo.daemon_export = prev_value
+        assert_equal(self.repo.daemon_export, prev_value)
   
     def test_alternates(self):
         cur_alternates = self.repo.alternates
