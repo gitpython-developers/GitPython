@@ -37,19 +37,18 @@ class TestCommit(object):
 
         assert_equal(15, len(diffs))
 
-        assert_equal('.gitignore', diffs[0].a_blob.name)
-        assert_equal('.gitignore', diffs[0].b_blob.name)
-        assert_equal('4ebc8aea50e0a67e000ba29a30809d0a7b9b2666', diffs[0].a_blob.id)
-        assert_equal('2dd02534615434d88c51307beb0f0092f21fd103', diffs[0].b_blob.id)
-        assert_equal('100644', diffs[0].b_blob.mode)
+        assert_equal('.gitignore', diffs[0].a_path)
+        assert_equal('.gitignore', diffs[0].b_path)
+        assert_equal('4ebc8aea50e0a67e000ba29a30809d0a7b9b2666', diffs[0].a_commit.id)
+        assert_equal('2dd02534615434d88c51307beb0f0092f21fd103', diffs[0].b_commit.id)
+        assert_equal('100644', diffs[0].b_mode)
         assert_equal(False, diffs[0].new_file)
         assert_equal(False, diffs[0].deleted_file)
         assert_equal("--- a/.gitignore\n+++ b/.gitignore\n@@ -1 +1,2 @@\n coverage\n+pkg", diffs[0].diff)
 
-        assert_equal('lib/grit/actor.rb', diffs[5].b_blob.name)
-        assert_equal(None, diffs[5].a_blob)
-        assert_equal('f733bce6b57c0e5e353206e692b0e3105c2527f4', diffs[5].b_blob.id)
-        assert_equal( None, diffs[5].a_mode )
+        assert_equal('lib/grit/actor.rb', diffs[5].a_path)
+        assert_equal(None, diffs[5].a_commit)
+        assert_equal('f733bce6b57c0e5e353206e692b0e3105c2527f4', diffs[5].b_commit.id)
         assert_equal(True, diffs[5].new_file)
 
         assert_true(git.called)
@@ -89,7 +88,7 @@ class TestCommit(object):
         diffs = Commit.diff(self.repo, '59ddc32', ['lib'])
 
         assert_equal(1, len(diffs))
-        assert_equal('lib/grit/diff.rb', diffs[0].a_blob.name)
+        assert_equal('lib/grit/diff.rb', diffs[0].a_path)
 
         assert_true(git.called)
         assert_equal(git.call_args, (('diff', '-M', '59ddc32', '--', 'lib'), {'full_index': True}))
@@ -101,7 +100,7 @@ class TestCommit(object):
         diffs = Commit.diff(self.repo, '59ddc32', '13d27d5', ['lib'])
 
         assert_equal(1, len(diffs))
-        assert_equal('lib/grit/commit.rb', diffs[0].a_blob.name)
+        assert_equal('lib/grit/commit.rb', diffs[0].a_path)
 
         assert_true(git.called)
         assert_equal(git.call_args, (('diff', '-M', '59ddc32', '13d27d5', '--', 'lib'), {'full_index': True}))
@@ -115,18 +114,18 @@ class TestCommit(object):
 
         assert_equal(15, len(diffs))
 
-        assert_equal('.gitignore', diffs[0].a_blob.name)
-        assert_equal('.gitignore', diffs[0].b_blob.name)
-        assert_equal('4ebc8aea50e0a67e000ba29a30809d0a7b9b2666', diffs[0].a_blob.id)
-        assert_equal('2dd02534615434d88c51307beb0f0092f21fd103', diffs[0].b_blob.id)
-        assert_equal('100644', diffs[0].b_blob.mode)
+        assert_equal('.gitignore', diffs[0].a_path)
+        assert_equal('.gitignore', diffs[0].b_path)
+        assert_equal('4ebc8aea50e0a67e000ba29a30809d0a7b9b2666', diffs[0].a_commit.id)
+        assert_equal('2dd02534615434d88c51307beb0f0092f21fd103', diffs[0].b_commit.id)
+        assert_equal('100644', diffs[0].b_mode)
         assert_equal(False, diffs[0].new_file)
         assert_equal(False, diffs[0].deleted_file)
         assert_equal("--- a/.gitignore\n+++ b/.gitignore\n@@ -1 +1,2 @@\n coverage\n+pkg", diffs[0].diff)
 
-        assert_equal('lib/grit/actor.rb', diffs[5].b_blob.name)
-        assert_equal(None, diffs[5].a_blob)
-        assert_equal('f733bce6b57c0e5e353206e692b0e3105c2527f4', diffs[5].b_blob.id)
+        assert_equal('lib/grit/actor.rb', diffs[5].a_path)
+        assert_equal(None, diffs[5].a_commit)
+        assert_equal('f733bce6b57c0e5e353206e692b0e3105c2527f4', diffs[5].b_commit.id)
         assert_equal(True, diffs[5].new_file)
 
         assert_true(git.called)
@@ -145,17 +144,18 @@ class TestCommit(object):
 
         assert_equal(10, len(diffs))
 
-        assert_equal('History.txt', diffs[0].b_blob.name)
-        assert_equal(None, diffs[0].a_blob)
-        assert_equal('100644', diffs[0].b_blob.mode)
-        assert_equal('81d2c27608b352814cbe979a6acd678d30219678', diffs[0].b_blob.id)
+        assert_equal('History.txt', diffs[0].a_path)
+        assert_equal('History.txt', diffs[0].b_path)
+        assert_equal(None, diffs[0].a_commit)
+        assert_equal('100644', diffs[0].b_mode)
+        assert_equal('81d2c27608b352814cbe979a6acd678d30219678', diffs[0].b_commit.id)
         assert_equal(True, diffs[0].new_file)
         assert_equal(False, diffs[0].deleted_file)
         assert_equal("--- /dev/null\n+++ b/History.txt\n@@ -0,0 +1,5 @@\n+== 1.0.0 / 2007-10-09\n+\n+* 1 major enhancement\n+  * Birthday!\n+", diffs[0].diff)
 
-        assert_equal('lib/grit.rb', diffs[5].b_blob.name)
-        assert_equal(None, diffs[5].a_blob)
-        assert_equal('32cec87d1e78946a827ddf6a8776be4d81dcf1d1', diffs[5].b_blob.id)
+        assert_equal('lib/grit.rb', diffs[5].a_path)
+        assert_equal(None, diffs[5].a_commit)
+        assert_equal('32cec87d1e78946a827ddf6a8776be4d81dcf1d1', diffs[5].b_commit.id)
         assert_equal(True, diffs[5].new_file)
 
         assert_true(git.called)
@@ -181,10 +181,7 @@ class TestCommit(object):
         commit.__bake_it__()
         diffs = commit.diffs
 
-        # in case of mode-only changes, there is no blob
         assert_equal(23, len(diffs))
-        assert_equal(None, diffs[0].a_blob)
-        assert_equal(None, diffs[0].b_blob)
         assert_equal('100644', diffs[0].a_mode)
         assert_equal('100755', diffs[0].b_mode)
 

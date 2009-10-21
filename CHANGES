@@ -4,15 +4,19 @@ CHANGES
   
 0.1.7
 =======
+This is a bugfix release and the last of its kind in 0.1.X, as 0.2.X will receive
+a major redesign that will change the API.
+
+Bugfixes
+--------
+* Paths in Tree objects can now handle whitespace
+* Blob.blame was returning incorrect results which has been fixed.
+
 General
 -------
-* See changes in Diff class as your client code needs adjustments to work with it
-
-Diff
-----
-* Members a a_commit and b_commit renamed to a_blob and b_blob - they are populated
-  with Blob objects if possible
-* Members a_path and b_path removed as this information is kept in the blobs
+* The test suite now supports Mock 0.5 and above. The transition between Mock 0.4
+  0.5 changed the API which required adjustments.
+* Many small enhancements done to the method documentation 
 
 
 0.1.6
