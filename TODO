@@ -14,7 +14,10 @@ General
   deleted.
 * References should be parsed 'manually' to get around command invocation, but 
   be sure to be able to read packed refs.
-
+* Effectively Objects only store hexsha's in their id attributes, so in fact 
+  it should be renamed to 'sha'. There was a time when references where allowed as 
+  well, but now objects will be 'baked' to the actual sha to assure comparisons work.
+  
 Config
 ------
 * Expand .get* methods of GitConfigParser to support default value. If it is not None, 

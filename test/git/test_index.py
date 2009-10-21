@@ -41,6 +41,18 @@ class TestTree(TestCase):
 		index_output.seek(0)
 		assert index_output.read() == fixture("index_merge")
 	
+	def _cmp_tree_index(self, tree, index):
+		# fail unless both objects contain the same paths and blobs
+		if isinstance(tree, str):
+			tree = self.repo.commit(tree).tree
+		
+		num_blobs = 0
+		for blob in tree.traverse(predicate = lambda e: e.type == "blob"):
+			assert (blob.path,0) in index.entries
+			num_blobs += 1
+		# END for each blob in tree
+		assert num_blobs == len(index.entries)
+	
 	def test_merge(self):
 		common_ancestor_sha = "5117c9c8a4d3af19a9958677e45cda9269de1541"
 		cur_sha = "4b43ca7ff72d5f535134241e7c797ddc9c7a3573"
@@ -49,12 +61,12 @@ class TestTree(TestCase):
 		# simple index from tree 
 		base_index = Index.from_tree(self.repo, common_ancestor_sha)
 		assert base_index.entries
+		self._cmp_tree_index(common_ancestor_sha, base_index)
 		
-		# merge two trees
+		# merge two trees - its like a fast-forward
 		two_way_index = Index.from_tree(self.repo, common_ancestor_sha, cur_sha)
 		assert two_way_index.entries
-		for e in two_way_index.entries.values():
-			print "%i | %s" % ( e.stage, e.path )
+		self._cmp_tree_index(cur_sha, two_way_index)
 		
 		# merge three trees - here we have a merge conflict
 		tree_way_index = Index.from_tree(self.repo, common_ancestor_sha, cur_sha, other_sha)

@@ -288,7 +288,7 @@ class Index(object):
 			If 1 Tree is given, it will just be read into a new index
 			If 2 Trees are given, they will be merged into a new index using a 
 			 two way merge algorithm. Tree 1 is the 'current' tree, tree 2 is the 'other'
-			 one.
+			 one. It behaves like a fast-forward.
 			If 3 Trees are given, a 3-way merge will be performed with the first tree
 			 being the common ancestor of tree 2 and tree 3. Tree 2 is the 'current' tree, 
 			 tree 3 is the 'other' one
