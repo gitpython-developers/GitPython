@@ -19,7 +19,7 @@ from config import GitConfigParser
 from remote import Remote
 
 def touch(filename):
-	fp = open(filename, "w")
+	fp = open(filename, "a")
 	fp.close()
 
 def is_git_dir(d):
