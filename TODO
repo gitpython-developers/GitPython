@@ -59,5 +59,12 @@ Tree
   testing whether it raises on invalid input ? ). See 6dc7799d44e1e5b9b77fd19b47309df69ec01a99
 * Derive from Iterable, simple pipe it through to Commit objects and iterate using 
   commit.tree.
+  
+Testing
+-------
+* Create a test-repository that can be written to and changed in addition to the normal 
+  read-only testing scheme that operates on the own repository. Doing this could be a simple
+  as forking a shared repo in a tmp directory. In that moment, we probably want to 
+  facility committing and checkouts as well.
 
 

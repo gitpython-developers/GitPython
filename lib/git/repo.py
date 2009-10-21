@@ -432,11 +432,13 @@ class Repo(object):
 		# start from the one which is fastest to evaluate
 		default_args = ('--abbrev=40', '--full-index', '--raw')
 		if index: 
+			# diff index against HEAD
 			if len(self.git.diff('HEAD', '--cached', *default_args)):
 				return True
 		# END index handling
 		if working_tree:
-			if len(self.git.diff('HEAD', *default_args)):
+			# diff index against working tree
+			if len(self.git.diff(*default_args)):
 				return True
 		# END working tree handling
 		if untracked_files:
