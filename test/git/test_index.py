@@ -41,3 +41,24 @@ class TestTree(TestCase):
 		index_output.seek(0)
 		assert index_output.read() == fixture("index_merge")
 	
+	def test_merge(self):
+		common_ancestor_sha = "5117c9c8a4d3af19a9958677e45cda9269de1541"
+		cur_sha = "4b43ca7ff72d5f535134241e7c797ddc9c7a3573"
+		other_sha = "39f85c4358b7346fee22169da9cad93901ea9eb9"
+		
+		# simple index from tree 
+		base_index = Index.from_tree(self.repo, common_ancestor_sha)
+		assert base_index.entries
+		
+		# merge two trees
+		two_way_index = Index.from_tree(self.repo, common_ancestor_sha, cur_sha)
+		assert two_way_index.entries
+		for e in two_way_index.entries.values():
+			print "%i | %s" % ( e.stage, e.path )
+		
+		# merge three trees - here we have a merge conflict
+		tree_way_index = Index.from_tree(self.repo, common_ancestor_sha, cur_sha, other_sha)
+		assert len(list(e for e in tree_way_index.entries.values() if e.stage != 0)) 
+		
+	def test_custom_commit(self):
+		self.fail("Custom commit:write tree, make commit with custom parents")

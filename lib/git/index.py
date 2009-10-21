@@ -11,6 +11,8 @@ import struct
 import binascii
 import mmap
 import objects
+import tempfile
+import os
 
 class IndexEntry(tuple):
 	"""
@@ -115,7 +117,8 @@ class Index(object):
 	It provides custom merging facilities and to create custom commits.
 	
 	``Entries``
-	 The index contains an entries dict whose keys are tuples of 
+	The index contains an entries dict whose keys are tuples of type IndexEntry
+	to facilitate access.
 	"""
 	__slots__ = ( "version", "entries", "_extension_data" )
 	_VERSION = 2			# latest version we support
@@ -243,7 +246,6 @@ class Index(object):
 		real_size = ((stream.tell() - beginoffset + 8) & ~7)
 		stream.write("\0" * ((beginoffset + real_size) - stream.tell()))
 
-		
 	def write(self, stream):
 		"""
 		Write the current state to the given stream
@@ -269,4 +271,77 @@ class Index(object):
 		# END for each entry
 		# write extension_data which we currently cannot interprete
 		stream.write(self._extension_data)
-
+		
+	
+	@classmethod
+	def from_tree(cls, repo, *treeish, **kwargs):
+		"""
+		Merge the given treeish revisions into a new index which is returned.
+		The original index will remain unaltered
+		
+		``repo``
+			The repository treeish are located in.
+			
+		``*treeish``
+			One, two or three Tree Objects or Commits. The result changes according to the 
+			amoutn of trees.
+			If 1 Tree is given, it will just be read into a new index
+			If 2 Trees are given, they will be merged into a new index using a 
+			 two way merge algorithm. Tree 1 is the 'current' tree, tree 2 is the 'other'
+			 one.
+			If 3 Trees are given, a 3-way merge will be performed with the first tree
+			 being the common ancestor of tree 2 and tree 3. Tree 2 is the 'current' tree, 
+			 tree 3 is the 'other' one
+			 
+		``**kwargs``
+			Additional arguments passed to git-read-tree
+			
+		Note:
+			In the three-way merge case, --aggressive will be specified to automatically
+			resolve more cases in a commonly correct manner. Specify trivial=True as kwarg
+			to override that.
+		"""
+		if len(treeish) == 0 or len(treeish) > 3:
+			raise ValueError("Please specify between 1 and 3 treeish, got %i" % len(treeish))
+		
+		arg_list = list()
+		# ignore that working tree and index possibly are out of date
+		if len(treeish)>1:
+			# drop unmerged entries when reading our index and merging
+			arg_list.append("--reset")	
+			# handle non-trivial cases the way a real merge does
+			arg_list.append("--aggressive")	
+		# END merge handling
+		
+		# tmp file created in git home directory to be sure renaming 
+		# works - /tmp/ dirs could be on another device
+		tmp_index = tempfile.mktemp('','',repo.path)
+		arg_list.append("--index-output=%s" % tmp_index)
+		arg_list.extend(treeish)
+		
+		# move current index out of the way - otherwise the merge may fail
+		# as it considers existing entries. moving it essentially clears the index.
+		# Unfortunately there is no 'soft' way to do it
+		cur_index = os.path.join(repo.path, 'index')
+		moved_index = os.path.join(repo.path, 'index_moved'+tempfile.mktemp('','',''))
+		try:
+			os.rename(cur_index, moved_index)
+			repo.git.read_tree(*arg_list, **kwargs)
+			index = cls.from_file(tmp_index)
+		finally:
+			# put back the original index first !
+			if os.path.exists(moved_index):
+				os.rename(moved_index, cur_index)
+			if os.path.exists(tmp_index):
+				os.remove(tmp_index)
+		# END index merge handling
+		
+		return index
+		
+	def write_tree(self, stream):
+		"""
+		Writes the 
+		"""
+		raise NotImplementedError("TODO")
+		
+	

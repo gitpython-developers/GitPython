@@ -27,6 +27,6 @@ class GitCommandError(Exception):
 		self.command = command
 
 	def __str__(self):
-		return repr("%s returned exit status %d" %
-					(str(self.command), self.status))
+		return repr("'%s' returned exit status %d: %r" %
+					(' '.join(self.command), self.status, str(self.stderr)))
 
