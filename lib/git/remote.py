@@ -7,7 +7,7 @@
 Module implementing a remote object allowing easy access to git remotes
 """
 
-from git.utils import LazyMixin, Iterable
+from git.utils import LazyMixin, Iterable, IterableList
 from refs import RemoteReference
 
 class _SectionConstraint(object):
@@ -121,7 +121,7 @@ class Remote(LazyMixin, Iterable):
 		Returns
 			List of RemoteRef objects
 		"""
-		out_refs = list()
+		out_refs = IterableList(RemoteReference._id_attribute_)
 		for ref in RemoteReference.list_items(self.repo):
 			if ref.remote_name == self.name:
 				out_refs.append(ref)
