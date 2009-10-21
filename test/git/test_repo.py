@@ -207,17 +207,15 @@ class TestRepo(object):
         self.repo.daemon_serve = True
         assert_true(self.repo.daemon_serve)
   
-    @patch_object(os.path, 'exists')
-    def test_alternates_no_file(self, os):
-        os.return_value = False
-        assert_equal([], self.repo.alternates)
-
-        assert_true(os.called)
-
-    @patch_object(os, 'remove')
-    def test_alternates_setter_empty(self, os):
+    def test_alternates(self):
+        cur_alternates = self.repo.alternates
+        # empty alternates
         self.repo.alternates = []
-        assert_true(os.called)
+        assert self.repo.alternates == []
+        alts = [ "other/location", "this/location" ]
+        self.repo.alternates = alts
+        assert alts == self.repo.alternates
+        self.repo.alternates = cur_alternates
 
     def test_repr(self):
         path = os.path.join(os.path.abspath(GIT_REPO), '.git')

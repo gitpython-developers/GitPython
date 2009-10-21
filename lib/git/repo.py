@@ -455,24 +455,28 @@ class Repo(object):
             is the array of string paths representing the alternates at which 
             git should look for objects, i.e. /home/user/repo/.git/objects
 
-		Raises
-			NoSuchPathError
-			
+        Raises
+            NoSuchPathError
+            
+        Note
+            The method does not check for the existance of the paths in alts
+            as the caller is responsible.
+            
         Returns
             None
         """
-        for alt in alts:
-            if not os.path.exists(alt):
-                raise NoSuchPathError("Could not set alternates. Alternate path %s must exist" % alt)
-
+        alternates_path = os.path.join(self.path, 'objects', 'info', 'alternates') 
         if not alts:
-            os.remove(os.path.join(self.path, 'objects', 'info', 'alternates'))
+            if os.path.isfile(alternates_path):
+                os.remove(alternates_path)
         else:
             try:
-                f = open(os.path.join(self.path, 'objects', 'info', 'alternates'), 'w')
+                f = open(alternates_path, 'w')
                 f.write("\n".join(alts))
             finally:
                 f.close()
+            # END file handling 
+        # END alts handling
 
     alternates = property(_get_alternates, _set_alternates, doc="Retrieve a list of alternates paths or set a list paths to be used as alternates")
 
