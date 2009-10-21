@@ -152,22 +152,21 @@ class Tree(base.IndexObject, diff.Diffable):
 		return '<git.Tree "%s">' % self.id
 		
 	@classmethod
-	def _iter_recursive(cls, repo, tree, cur_depth, max_depth, predicate ):
+	def _iter_recursive(cls, repo, tree, cur_depth, max_depth, predicate, prune ):
 		
 		for obj in tree:
 			# adjust path to be complete
 			obj.path = os.path.join(tree.path, obj.path)
-			if not predicate(obj):
-				continue
-			yield obj
-			if obj.type == "tree" and ( max_depth < 0 or cur_depth+1 <= max_depth ):
-				for recursive_obj in cls._iter_recursive( repo, obj, cur_depth+1, max_depth, predicate ):
+			if predicate(obj):
+				yield obj
+			if obj.type == "tree" and ( max_depth < 0 or cur_depth+1 <= max_depth ) and not prune(obj):
+				for recursive_obj in cls._iter_recursive( repo, obj, cur_depth+1, max_depth, predicate, prune ):
 					yield recursive_obj
 				# END for each recursive object
 			# END if we may enter recursion
 		# END for each object
 		
-	def traverse(self, max_depth=-1, predicate = lambda i: True):
+	def traverse(self, max_depth=-1, predicate = lambda i: True, prune = lambda t: False):
 		"""
 		Returns
 		
@@ -183,8 +182,13 @@ class Tree(base.IndexObject, diff.Diffable):
 		``predicate``
 		
 			If predicate(item) returns True, item will be returned by iterator
+			
+		``prune``
+			
+			If prune(tree) returns True, the traversal will not continue into the 
+			given tree object.
 		"""
-		return self._iter_recursive( self.repo, self, 0, max_depth, predicate )
+		return self._iter_recursive( self.repo, self, 0, max_depth, predicate, prune )
 		
 	@property
 	def trees(self):

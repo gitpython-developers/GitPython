@@ -35,6 +35,11 @@ class TestTree(TestCase):
 		trees = list(root.traverse(predicate = trees_only))
 		assert len(trees) == len(list( i for i in root.traverse() if trees_only(i) ))
 		
+		# test prune
+		lib_folder = lambda t: t.path == "lib"
+		pruned_trees = list(root.traverse(predicate = trees_only,prune = lib_folder))
+		assert len(pruned_trees) < len(trees)
+		
 		# trees and blobs
 		assert len(set(trees)|set(root.trees)) == len(trees)
 		assert len(set(b for b in root if isinstance(b, Blob)) | set(root.blobs)) == len( root.blobs )

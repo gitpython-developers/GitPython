@@ -284,7 +284,7 @@ class Index(object):
 			
 		``*treeish``
 			One, two or three Tree Objects or Commits. The result changes according to the 
-			amoutn of trees.
+			amount of trees.
 			If 1 Tree is given, it will just be read into a new index
 			If 2 Trees are given, they will be merged into a new index using a 
 			 two way merge algorithm. Tree 1 is the 'current' tree, tree 2 is the 'other'
@@ -300,6 +300,10 @@ class Index(object):
 			In the three-way merge case, --aggressive will be specified to automatically
 			resolve more cases in a commonly correct manner. Specify trivial=True as kwarg
 			to override that.
+			
+			As the underlying git-read-tree command takes into account the current index, 
+			it will be temporarily moved out of the way to assure there are no unsuspected
+			interferences.
 		"""
 		if len(treeish) == 0 or len(treeish) > 3:
 			raise ValueError("Please specify between 1 and 3 treeish, got %i" % len(treeish))
