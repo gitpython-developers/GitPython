@@ -222,7 +222,7 @@ class SymbolicReference(object):
 		"""
 		fp = open(os.path.join(self.repo.path, self.name), 'r')
 		try:
-			tokens = fp.readline().split(' ')
+			tokens = fp.readline().rstrip().split(' ')
 			if tokens[0] != 'ref:':
 				raise TypeError("%s is a detached symbolic reference as it points to %r" % tokens[0])
 			return Reference.from_path(self.repo, tokens[1])
@@ -298,10 +298,9 @@ class HEAD(SymbolicReference):
 				raise ValueError( "Cannot reset the working tree if the index is not reset as well") 
 		# END working tree handling
 		
-		repo.git.reset(mode, commit, paths, **kwargs)
+		self.repo.git.reset(mode, commit, paths, **kwargs)
 		
-		# we always point to the active branch as it is the one changing
-		self
+		return self
 	
 
 class Head(Reference):

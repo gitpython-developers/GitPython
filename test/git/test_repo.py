@@ -168,17 +168,11 @@ class TestRepo(TestBase):
 		self.rorepo._bare = True
 		assert self.rorepo.is_dirty == False
 
-	@patch_object(Git, '_call_process')
-	def test_active_branch(self, git):
-		git.return_value = 'refs/heads/major-refactoring'
-		assert_equal(self.rorepo.active_branch.name, 'major-refactoring')
-		assert_equal(git.call_args, (('symbolic_ref', 'HEAD'), {}))
-		
 	def test_head(self):
-		assert self.rorepo.head.object == self.rorepo.active_branch.object
+		assert self.rorepo.head.reference.object == self.rorepo.active_branch.object
 		
 	def test_tag(self):
-		assert self.rorepo.tag('0.1.5').commit
+		assert self.rorepo.tag('refs/tags/0.1.5').commit
 		
 	def test_archive(self):
 		tmpfile = os.tmpfile()

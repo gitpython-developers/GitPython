@@ -72,13 +72,13 @@ class TestRefs(TestBase):
 	def test_head_reset(self, rw_repo):
 		cur_head = rw_repo.head
 		new_head_commit = cur_head.ref.commit.parents[0]
-		reset_head = Head.reset(rw_repo, new_head_commit, index=True)	# index only
-		assert reset_head.commit == new_head_commit
+		cur_head.reset(new_head_commit, index=True)	# index only
+		assert cur_head.reference.commit == new_head_commit
 		
-		self.failUnlessRaises(ValueError, Head.reset, rw_repo, new_head_commit, index=False, working_tree=True)
+		self.failUnlessRaises(ValueError, cur_head.reset, new_head_commit, index=False, working_tree=True)
 		new_head_commit = new_head_commit.parents[0]
-		reset_head = Head.reset(rw_repo, new_head_commit, index=True, working_tree=True)	# index + wt
-		assert reset_head.commit == new_head_commit
+		cur_head.reset(new_head_commit, index=True, working_tree=True)	# index + wt
+		assert cur_head.reference.commit == new_head_commit
 		
 		# paths
-		Head.reset(rw_repo, new_head_commit, paths = "lib")
+		cur_head.reset(new_head_commit, paths = "lib")
