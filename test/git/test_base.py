@@ -4,12 +4,15 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
-from test.testlib import *
-from git import *
 import git.objects.base as base
 import git.refs as refs
+import os
+
+from test.testlib import *
+from git import *
 from itertools import chain
 from git.objects.utils import get_object_type_by_name
+import tempfile
 
 class TestBase(object):
 	
@@ -53,6 +56,12 @@ class TestBase(object):
 			data_stream = item.data_stream
 			data = data_stream.read()
 			assert data
+			
+			tmpfile = os.tmpfile()
+			assert item == item.stream_data(tmpfile)
+			tmpfile.seek(0)
+			assert tmpfile.read() == data
+			# END stream to file directly
 		# END for each object type to create
 		
 		# each has a unique sha

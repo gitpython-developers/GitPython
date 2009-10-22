@@ -127,6 +127,18 @@ class Object(LazyMixin):
 		proc = self.repo.git.cat_file(self.type, self.id, as_process=True)
 		return utils.ProcessStreamAdapter(proc, "stdout") 
 
+	def stream_data(self, ostream):
+		"""
+		Writes our data directly to the given output stream
+		
+		``ostream``
+			File object compatible stream object.
+			
+		Returns
+			self
+		"""
+		self.repo.git.cat_file(self.type, self.id, output_stream=ostream)
+		return self
 
 class IndexObject(Object):
 	"""

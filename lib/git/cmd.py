@@ -183,7 +183,6 @@ class Git(object):
 								stdout=subprocess.PIPE,
 								**extra
 								)
-
 		if as_process:
 			return self.AutoInterrupt(proc)
 		
