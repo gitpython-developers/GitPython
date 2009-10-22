@@ -15,6 +15,7 @@ import tempfile
 import os
 import stat
 from git.objects import Blob, Tree
+from git.utils import SHA1Writer
 
 class _TemporaryFileSwap(object):
 	"""
@@ -205,11 +206,20 @@ class Index(object):
 		count = 0
 		while count < num_entries:
 			entry = self._read_entry(stream)
-			self.entries[(entry.path,entry.stage)] = entry
+			self.entries[(entry.path, entry.stage)] = entry
 			count += 1
 		# END for each entry
-		# this data chunk is the footer of the index, don't yet know what it is for
+		
+		# the footer contains extension data and a sha on the content so far
+		# Keep the extension footer,and verify we have a sha in the end
 		self._extension_data = stream.read(~0)
+		assert len(self._extension_data) > 19, "Index Footer was not at least a sha on content as it was only %i bytes in size" % len(self._extension_data)
+		
+		content_sha = self._extension_data[-20:]
+		
+		# truncate the sha in the end as we will dynamically create it anyway 
+		self._extension_data = self._extension_data[:-20]
+		
 	
 	@classmethod
 	def from_file(cls, repo, file_path):
@@ -296,6 +306,8 @@ class Index(object):
 		Note
 			Index writing based on the dulwich implementation
 		"""
+		stream = SHA1Writer(stream)
+		
 		# header
 		stream.write("DIRC")
 		stream.write(struct.pack(">LL", self.version, len(self.entries)))
@@ -306,8 +318,12 @@ class Index(object):
 		for entry in entries_sorted:
 			self._write_cache_entry(stream, entry)
 		# END for each entry
-		# write extension_data which we currently cannot interprete
+		
+		# write previously cached extensions data
 		stream.write(self._extension_data)
+		
+		# write the sha over the content
+		stream.write_sha()
 		
 	
 	@classmethod

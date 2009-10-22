@@ -96,7 +96,14 @@ class TestTree(TestCase):
 		
 		# pick the first blob at the first stage we find and use it as resolved version
 		three_way_index.resolve_blobs( l[0][1] for l in unmerged_blob_map.itervalues() )
-		three_way_index.write_tree()
+		tree = three_way_index.write_tree()
+		assert isinstance(tree, Tree)
+		num_blobs = 0
+		for blob in tree.traverse(predicate=lambda item: item.type == "blob"):
+			assert (blob.path,0) in three_way_index.entries
+			num_blobs += 1
+		# END for each blob
+		assert num_blobs == len(three_way_index.entries)
 		
 		
 	def test_custom_commit(self):
