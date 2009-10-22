@@ -15,7 +15,8 @@ import tempfile
 import os
 import stat
 from git.objects import Blob, Tree
-from git.utils import SHA1Writer
+from git.utils import SHA1Writer, LazyMixin
+from git.diff import Diffable
 
 class _TemporaryFileSwap(object):
 	"""
@@ -139,7 +140,7 @@ class IndexEntry(tuple):
 		return IndexEntry((time, time, 0, 0, blob.mode, 0, 0, blob.size, blob.id, 0, blob.path))
 
 
-class Index(object):
+class Index(LazyMixin):
 	"""
 	Implements an Index that can be manipulated using a native implementation in 
 	order to save git command function calls wherever possible.
@@ -160,13 +161,28 @@ class Index(object):
 	def __init__(self, repo, stream = None):
 		"""
 		Initialize this Index instance, optionally from the given ``stream``
+		
+		If a stream is not given, the stream will be initialized from the current 
+		repository's index on demand.
 		"""
 		self.repo = repo
-		self.entries = dict()
 		self.version = self._VERSION
 		self._extension_data = ''
 		if stream is not None:
 			self._read_from_stream(stream)
+		# END read from stream immediatly
+	
+	def _set_cache_(self, attr):
+		if attr == "entries":
+			# read the current index
+			fp = open(os.path.join(self.repo.path, "index"), "r")
+			try:
+				self._read_from_stream(fp)
+			finally:
+				fp.close()
+			# END read from default index on demand
+		else:
+			super(Index, self)._set_cache_(attr)
 	
 	@classmethod
 	def _read_entry(cls, stream):
@@ -197,13 +213,10 @@ class Index(object):
 	def _read_from_stream(self, stream):
 		"""
 		Initialize this instance with index values read from the given stream
-		
-		Note
-			We explicitly do not clear the entries dict here to allow for reading 
-			multiple chunks from multiple streams into the same Index instance
 		"""
 		self.version, num_entries = self._read_header(stream)
 		count = 0
+		self.entries = dict()
 		while count < num_entries:
 			entry = self._read_entry(stream)
 			self.entries[(entry.path, entry.stage)] = entry
@@ -298,7 +311,7 @@ class Index(object):
 		Write the current state to the given stream
 		
 		``stream``
-			File-like object
+			File-like object.
 		
 		Returns
 			self

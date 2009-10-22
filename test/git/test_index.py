@@ -101,4 +101,7 @@ class TestTree(TestBase):
 		# END for each blob
 		assert num_blobs == len(three_way_index.entries)
 	
-	
+	def test_from_index(self):
+		# default Index instance points to our index
+		index = Index(self.rorepo)
+		assert len(index.entries)
