@@ -7,7 +7,7 @@
 Module containing all ref based objects
 """
 import os
-from objects.base import Object
+from objects import Object, Commit
 from objects.utils import get_object_type_by_name
 from utils import LazyMixin, Iterable
 
@@ -214,13 +214,36 @@ class SymbolicReference(object):
 	def __hash__(self):
 		return hash(self.name)
 		
+	def _get_path(self):
+		return os.path.join(self.repo.path, self.name)
+		
 	@property
-	def reference(self):
+	def commit(self):
+		"""
+		Returns:
+			Commit object we point to, works for detached and non-detached 
+			SymbolicReferences
+		"""
+		# we partially reimplement it to prevent unnecessary file access
+		fp = open(self._get_path(), 'r')
+		value = fp.read().rstrip()
+		fp.close()
+		tokens = value.split(" ")
+		
+		# it is a detached reference
+		if len(tokens) == 1 and len(tokens[0]) == 40:
+			return Commit(self.repo, tokens[0])
+		
+		# must be a head ! Git does not allow symbol refs to other things than heads
+		# Otherwise it would have detached it
+		return Head(self.repo, tokens[1]).commit
+		
+	def _get_reference(self):
 		"""
 		Returns
 			Reference Object we point to
 		"""
-		fp = open(os.path.join(self.repo.path, self.name), 'r')
+		fp = open(self._get_path(), 'r')
 		try:
 			tokens = fp.readline().rstrip().split(' ')
 			if tokens[0] != 'ref:':
@@ -229,6 +252,41 @@ class SymbolicReference(object):
 		finally:
 			fp.close()
 		
+	def _set_reference(self, ref):
+		"""
+		Set ourselves to the given ref. It will stay a symbol if the ref is a Head.
+		Otherwise we try to get a commit from it using our interface.
+		
+		Strings are allowed but will be checked to be sure we have a commit
+		"""
+		write_value = None
+		if isinstance(ref, Head):
+			write_value = "ref: %s" % ref.path
+		elif isinstance(ref, Commit):
+			write_value = ref.id
+		else:
+			try:
+				write_value = ref.commit.id
+			except AttributeError:
+				sha = str(ref)
+				try:
+					obj = Object.new(self.repo, sha)
+					if obj.type != "commit":
+						raise TypeError("Invalid object type behind sha: %s" % sha)
+					write_value = obj.id
+				except Exception:
+					raise ValueError("Could not extract object from %s" % ref)
+			# END end try string  
+		# END try commit attribute
+		fp = open(self._get_path(), "w")
+		try:
+			fp.write(write_value)
+		finally:
+			fp.close()
+		# END writing
+		
+	reference = property(_get_reference, _set_reference, doc="Returns the Reference we point to")
+	
 	# alias
 	ref = reference
 		
@@ -251,11 +309,12 @@ class HEAD(SymbolicReference):
 	Special case of a Symbolic Reference as it represents the repository's 
 	HEAD reference.
 	"""
+	_HEAD_NAME = 'HEAD'
 	__slots__ = tuple()
 	
-	def __init__(self, repo, name):
-		if name != 'HEAD':
-			raise ValueError("HEAD instance must point to 'HEAD', got %s" % name)
+	def __init__(self, repo, name=_HEAD_NAME):
+		if name != self._HEAD_NAME:
+			raise ValueError("HEAD instance must point to %r, got %r" % (self._HEAD_NAME, name))
 		super(HEAD, self).__init__(repo, name)
 	
 	

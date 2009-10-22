@@ -64,8 +64,6 @@ Refs
   a symbolic reference anymore. Currently, we cannot handle this that well 
   as we do not check for this case. This should be added though as it is 
   valid to have a detached head in some cases.
-* Allow to set SymbolicReferences to a specific Head Reference. This is like 
-  a git-reset --soft
   
 Remote
 ------

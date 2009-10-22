@@ -82,3 +82,29 @@ class TestRefs(TestBase):
 		
 		# paths
 		cur_head.reset(new_head_commit, paths = "lib")
+		
+		
+		# now that we have a write write repo, change the HEAD reference - its 
+		# like git-reset --soft
+		heads = rw_repo.heads
+		assert heads
+		for head in heads:
+			cur_head.reference = head
+			assert cur_head.reference == head
+			assert cur_head.commit == head.commit
+			assert not cur_head.is_detached
+		# END for each head
+		
+		# detach
+		cur_head.reference = heads[0].commit
+		assert cur_head.commit == heads[0].commit
+		assert cur_head.is_detached
+		self.failUnlessRaises(TypeError, getattr, cur_head, "reference")
+		
+		some_tag = rw_repo.tags[0]
+		cur_head.reference = some_tag
+		assert cur_head.is_detached
+		assert cur_head.commit == some_tag.commit
+		
+		# type check
+		self.failUnlessRaises(ValueError, setattr, cur_head, "reference", "that")
