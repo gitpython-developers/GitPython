@@ -190,7 +190,7 @@ class Git(object):
 		status = 0
 		try:
 			if output_stream is None:
-				stdout_value = proc.stdout.read()
+				stdout_value = proc.stdout.read().rstrip()		# strip trailing "\n"
 			else:
 				max_chunk_size = 1024*64
 				while True:
@@ -201,7 +201,7 @@ class Git(object):
 				# END reading output stream
 				stdout_value = output_stream
 			# END stdout handling
-			stderr_value = proc.stderr.read()
+			stderr_value = proc.stderr.read().rstrip()			# strip trailing "\n"
 			# waiting here should do nothing as we have finished stream reading
 			status = proc.wait()
 		finally:
