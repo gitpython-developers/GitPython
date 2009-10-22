@@ -205,7 +205,10 @@ class ConcurrentWriteOperation(LockFile):
 		if successful:
 			# on windows, rename does not silently overwrite the existing one
 			if sys.platform == "win32":
-				os.remove(self._file_path)
+				if os.path.isfile(self._file_path):
+					os.remove(self._file_path)
+				# END remove if exists
+			# END win32 special handling
 			os.rename(self._temp_write_fp.name, self._file_path)
 		else:
 			# just delete the file so far, we failed

@@ -53,5 +53,54 @@ class TestUtils(TestCase):
 		lock_file._obtain_lock_or_raise()
 		lock_file._release_lock()
 		
+	def _cmp_contents(self, file_path, data):
+		# raise if data from file at file_path 
+		# does not match data string
+		fp = open(file_path, "r")
+		try:
+			assert fp.read() == data
+		finally:
+			fp.close()
+		
 	def test_safe_operation(self):
-		self.fail("todo")
+		my_file = tempfile.mktemp()
+		orig_data = "hello"
+		new_data = "world"
+		my_file_fp = open(my_file, "w")
+		my_file_fp.write(orig_data)
+		my_file_fp.close()
+		
+		try:
+			cwrite = ConcurrentWriteOperation(my_file)
+			
+			# didn't start writing, doesnt matter
+			cwrite._end_writing(False)
+			cwrite._end_writing(True)
+			assert not cwrite._is_writing()
+			
+			# write data and fail
+			stream = cwrite._begin_writing()
+			assert cwrite._is_writing()
+			stream.write(new_data)
+			cwrite._end_writing(successful=False)
+			self._cmp_contents(my_file, orig_data)
+			assert not os.path.exists(stream.name)
+			
+			# write data - concurrently
+			ocwrite = ConcurrentWriteOperation(my_file)
+			stream = cwrite._begin_writing()
+			self.failUnlessRaises(IOError, ocwrite._begin_writing)
+			
+			stream.write("world")
+			cwrite._end_writing(successful=True)
+			self._cmp_contents(my_file, new_data)
+			assert not os.path.exists(stream.name)
+				
+			# could test automatic _end_writing on destruction
+		finally:
+			os.remove(my_file)
+		# END final cleanup
+		
+		
+		
+		
