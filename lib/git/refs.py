@@ -174,6 +174,52 @@ class Head(Reference):
 		"""
 		return self.object
 		
+	@classmethod
+	def reset(cls, repo, commit='HEAD', index=True, working_tree = False, 
+				paths=None, **kwargs):
+		"""
+		Reset the current head to the given commit optionally synchronizing 
+		the index and working tree.
+		
+		``repo``
+			Repository containing commit
+			
+		``commit``
+			Commit object, Reference Object or string identifying a revision
+			
+		``index``
+			If True, the index will be set to match the given commit. Otherwise
+			it will not be touched.
+		
+		``working_tree``
+			If True, the working tree will be forcefully adjusted to match the given
+			commit, possibly overwriting uncommitted changes without warning.
+			If working_tree is True, index must be true as well
+		
+		``paths``
+			Single path or list of paths relative to the git root directory
+			that are to be reset. This allow to partially reset individual files.
+		
+		``kwargs``
+			Additional arguments passed to git-reset. 
+		
+		Returns
+			Head pointing to the specified commit
+		"""
+		mode = "--soft"
+		if index:
+			mode = "--mixed"
+			
+		if working_tree:
+			mode = "--hard"
+			if not index:
+				raise ValueError( "Cannot reset the working tree if the index is not reset as well") 
+		# END working tree handling
+		
+		repo.git.reset(mode, commit, paths, **kwargs)
+		
+		# we always point to the active branch as it is the one changing
+		return repo.active_branch
 
 class TagReference(Head):
 	"""

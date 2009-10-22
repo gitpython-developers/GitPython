@@ -11,7 +11,8 @@ General
   a sha or ref unless cat-file is used where it must be a sha
 * Overhaul command caching - currently its possible to create many instances of 
   the std-in command types, as it appears they are not killed when the repo gets 
-  deleted.
+  deleted. A clear() method could already help to allow long-running programs
+  to remove cached commands after an idle time.
 * References should be parsed 'manually' to get around command invocation, but 
   be sure to be able to read packed refs.
 
@@ -64,7 +65,6 @@ Remote
   
 Repo
 ----
-* Nice fetch/pull handling, at least supported/wired throuhg to the git command
 * Blame: Read the blame format making assumptions about its structure, 
   currently regex are used a lot although we can deduct what will be next.
   - Read data from a stream directly from git command
@@ -78,13 +78,4 @@ Tree
 * Should return submodules during iteration ( identifies as commit )
 * Work through test and check for test-case cleanup and completeness ( what about
   testing whether it raises on invalid input ? ). See 6dc7799d44e1e5b9b77fd19b47309df69ec01a99
-  
-Testing
--------
-* Create a test-repository that can be written to and changed in addition to the normal 
-  read-only testing scheme that operates on the own repository. Doing this could be a simple
-  as forking a shared repo in a tmp directory. In that moment, we probably want to 
-  facility committing and checkouts as well.
-  - Use these tests for git-remote as we need to test push
-  - Also assure that the test-case setup is a bit more consistent ( Derive from TestCase, possibly
-    make repo a class member instead of an instance member
+

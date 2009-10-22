@@ -100,7 +100,7 @@ def with_rw_repo(working_tree_ref):
 		def repo_creator(self):
 			repo_dir = tempfile.mktemp("non_bare_repo") 
 			rw_repo = self.rorepo.clone(repo_dir, shared=True, bare=False, n=True)
-			rw_repo.git.checkout(working_tree_ref)
+			rw_repo.git.checkout("-b", "master", working_tree_ref)
 			try:
 				return func(self, rw_repo)
 			finally:
@@ -134,7 +134,7 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
 			
 			rw_remote_repo = self.rorepo.clone(remote_repo_dir, shared=True, bare=True)
 			rw_repo = rw_remote_repo.clone(repo_dir, shared=True, bare=False, n=True)		# recursive alternates info ?
-			rw_repo.git.checkout(working_tree_ref)
+			rw_repo.git.checkout("-b", "master", working_tree_ref)
 			try:
 				return func(self, rw_repo, rw_remote_repo)
 			finally:
