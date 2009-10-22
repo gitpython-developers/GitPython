@@ -58,6 +58,15 @@ Index
   creating several tree objects, so in the end it might be slower. 
   Hmm, probably its okay to use the command unless we go c(++)
 
+
+Head.reset
+----------
+* Should better be an instance method. Problem was that there is no class specifying
+  the HEAD  - in a way reset would always effect the active branch.
+  Probably it would be okay to have a special type called SymbolicReference
+  which represents items like HEAD. These could naturally carry the reset 
+  instance method.
+  
 Remote
 ------
 * 'push' method needs a test, a true test repository is required though, a fork 

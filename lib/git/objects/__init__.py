@@ -2,6 +2,7 @@
 Import all submodules main classes into the package space
 """
 import inspect
+from base import *
 from tag import *
 from blob import *
 from tree import *

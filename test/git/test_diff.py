@@ -59,6 +59,14 @@ class TestDiff(TestBase):
 								assertion_map.setdefault(key, 0)
 								assertion_map[key] = assertion_map[key]+len(list(diff_index.iter_change_type(ct)))  
 							# END for each changetype
+							
+							# check entries
+							diff_set = set()
+							diff_set.add(diff_index[0])
+							diff_set.add(diff_index[0])
+							assert len(diff_set) == 1
+							assert diff_index[0] == diff_index[0]
+							assert not (diff_index[0] != diff_index[0])
 						# END diff index checking 
 					# END for each patch option
 				# END for each path option
@@ -71,7 +79,4 @@ class TestDiff(TestBase):
 		for key,value in assertion_map.items():
 			assert value, "Did not find diff for %s" % key
 		# END for each iteration type 
-		
-	def test_diff_index_working_tree(self):
-		self.fail("""Find a good way to diff an index against the working tree
-which is not possible with the current interface""")
+	

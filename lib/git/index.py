@@ -14,9 +14,11 @@ import objects
 import tempfile
 import os
 import stat
-from git.objects import Blob, Tree
+import git.diff as diff
+
+from git.objects import Blob, Tree, Object
 from git.utils import SHA1Writer, LazyMixin, ConcurrentWriteOperation
-from git.diff import Diffable
+
 
 class _TemporaryFileSwap(object):
 	"""
@@ -140,7 +142,7 @@ class IndexEntry(tuple):
 		return IndexEntry((time, time, 0, 0, blob.mode, 0, 0, blob.size, blob.id, 0, blob.path))
 
 
-class Index(LazyMixin):
+class Index(LazyMixin, diff.Diffable):
 	"""
 	Implements an Index that can be manipulated using a native implementation in 
 	order to save git command function calls wherever possible.
@@ -154,7 +156,7 @@ class Index(LazyMixin):
 	The index contains an entries dict whose keys are tuples of type IndexEntry
 	to facilitate access.
 	"""
-	__slots__ = ( "repo", "version", "entries", "_extension_data" )
+	__slots__ = ( "repo", "version", "entries", "_extension_data", "_is_default_index" )
 	_VERSION = 2			# latest version we support
 	S_IFGITLINK	= 0160000
 	
@@ -168,9 +170,12 @@ class Index(LazyMixin):
 		self.repo = repo
 		self.version = self._VERSION
 		self._extension_data = ''
+		self._is_default_index = True
 		if stream is not None:
+			self._is_default_index = False
 			self._read_from_stream(stream)
 		# END read from stream immediatly
+	
 	
 	def _set_cache_(self, attr):
 		if attr == "entries":
@@ -186,6 +191,18 @@ class Index(LazyMixin):
 	
 	def _index_path(self):
 		return os.path.join(self.repo.path, "index")
+	
+	
+	@property
+	def path(self):
+		"""
+		Returns 
+			Path to the index file we are representing or None if we are 
+			a loose index that was read from a stream.
+		"""
+		if self._is_default_index:
+			return self._index_path()
+		return None
 	
 	@classmethod
 	def _read_entry(cls, stream):
@@ -535,4 +552,51 @@ class Index(LazyMixin):
 		# END write tree handling 
 		return Tree(self.repo, tree_sha, 0, '')
 		
+		
+	def _process_diff_args(self, args):
+		try:
+			args.pop(args.index(self))
+		except IndexError:
+			pass
+		# END remove self
+		return args
+		
+	def diff(self, other=diff.Diffable.Index, paths=None, create_patch=False, **kwargs):
+		"""
+		Diff this index against the working copy or a Tree or Commit object
+		
+		For a documentation of the parameters and return values, see 
+		Diffable.diff
+		
+		Note
+			Will only work with indices that represent the default git index as 
+			they have not been initialized with a stream.
+		"""
+		if not self._is_default_index:
+			raise AssertionError( "Cannot diff custom indices as they do not represent the default git index" )
+		
+		# index against index is always empty
+		if other is self.Index:
+			return diff.DiffIndex()
+			
+		# index against anything but None is a reverse diff with the respective
+		# item. Handle existing -R flags properly. Transform strings to the object
+		# so that we can call diff on it
+		if isinstance(other, basestring):
+			other = Object.new(self.repo, other)
+		# END object conversion
+		
+		if isinstance(other, Object):
+			# invert the existing R flag
+			cur_val = kwargs.get('R', False)
+			kwargs['R'] = not cur_val
+			return other.diff(self.Index, paths, create_patch, **kwargs)
+		# END diff against other item handlin
+		
+		# if other is not None here, something is wrong 
+		if other is not None:
+			raise ValueError( "other must be None, Diffable.Index, a Tree or Commit, was %r" % other )
+		
+		# diff against working copy - can be handled by superclass natively
+		return super(Index, self).diff(other, paths, create_patch, **kwargs)
 	
