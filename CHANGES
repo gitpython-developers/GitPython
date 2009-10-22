@@ -87,9 +87,12 @@ Index
 * A new Index class allows to read and write index files directly, and to perform
   simple two and three way merges based on an arbitrary index.
   
-Refs
-----
-* Will dynmically retrieve their object at the time of query to assure the information 
+Referernces
+------------
+* References are object that point to a Commit
+* SymbolicReference are a pointer to a Reference Object, which itself points to a specific
+  Commit
+* They will dynmically retrieve their object at the time of query to assure the information 
   is actual. Recently objects would be cached, hence ref object not be safely kept 
   persistent.
   

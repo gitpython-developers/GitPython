@@ -116,8 +116,8 @@ class TestTree(TestBase):
 		# test diff
 		# resetting the head will leave the index in a different state, and the 
 		# diff will yield a few changes
-		cur_head_commit = rw_repo.head.commit
-		ref = rw_repo.head.reset(rw_repo, 'HEAD~6', index=True, working_tree=False)
+		cur_head_commit = rw_repo.head.reference.commit
+		ref = rw_repo.head.reset('HEAD~6', index=True, working_tree=False)
 		
 		# diff against same index is 0
 		diff = index.diff()
