@@ -66,50 +66,6 @@ class TestBase(TestBase):
 		assert len(s|s) == num_objs
 		assert num_index_objs == 2
 		
-		
-	def test_tags(self):
-		# tag refs can point to tag objects or to commits
-		s = set()
-		ref_count = 0
-		for ref in chain(self.rorepo.tags, self.rorepo.heads):
-			ref_count += 1
-			assert isinstance(ref, refs.Reference)
-			assert str(ref) == ref.name
-			assert repr(ref)
-			assert ref == ref
-			assert not ref != ref
-			s.add(ref)
-		# END for each ref
-		assert len(s) == ref_count
-		assert len(s|s) == ref_count
-		
-	def test_heads(self):
-		# see how it dynmically updates its object
-		for head in self.rorepo.heads:
-			head.name
-			head.path
-			prev_object = head.object
-			cur_object = head.object
-			assert prev_object == cur_object		# represent the same git object
-			assert prev_object is not cur_object	# but are different instances
-		# END for each head
-		
-	@with_rw_repo('0.1.6')
-	def test_head_reset(self, rw_repo):
-		cur_head = rw_repo.head
-		new_head_commit = cur_head.commit.parents[0]
-		reset_head = Head.reset(rw_repo, new_head_commit, index=True)	# index only
-		assert reset_head.commit == new_head_commit
-		
-		self.failUnlessRaises(ValueError, Head.reset, rw_repo, new_head_commit, index=False, working_tree=True)
-		new_head_commit = new_head_commit.parents[0]
-		reset_head = Head.reset(rw_repo, new_head_commit, index=True, working_tree=True)	# index + wt
-		assert reset_head.commit == new_head_commit
-		
-		# paths
-		Head.reset(rw_repo, new_head_commit, paths = "lib")
-		
-		
 	def test_get_object_type_by_name(self):
 		for tname in base.Object.TYPES:
 			assert base.Object in get_object_type_by_name(tname).mro()
@@ -119,7 +75,7 @@ class TestBase(TestBase):
 
 	def test_object_resolution(self):
 		# objects must be resolved to shas so they compare equal
-		assert self.rorepo.head.object == self.rorepo.active_branch.object
+		assert self.rorepo.head.reference.object == self.rorepo.active_branch.object
 		
 	@with_bare_rw_repo
 	def test_with_bare_rw_repo(self, bare_rw_repo):

@@ -147,15 +147,12 @@ class Repo(object):
 	branches = heads
 
 	@property
-	def head(self,path="HEAD"):
+	def head(self):
 		"""
 		Return
-			Head Object, reference pointing to commit
-			
-		``path``
-			path to the head or its name, i.e. master or heads/master
+			HEAD Object pointing to the current head reference
 		"""
-		return Head(self,path)
+		return HEAD(self,'HEAD')
 		
 	@property
 	def remotes(self):
@@ -486,8 +483,7 @@ class Repo(object):
 		Returns
 			Head to the active branch
 		"""
-		return Head( self, self.git.symbolic_ref('HEAD').strip() )
-		
+		return self.head.reference
 			
 	def blame(self, rev, file):
 		"""

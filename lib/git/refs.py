@@ -6,6 +6,7 @@
 """
 Module containing all ref based objects
 """
+import os
 from objects.base import Object
 from objects.utils import get_object_type_by_name
 from utils import LazyMixin, Iterable
@@ -31,6 +32,9 @@ class Reference(LazyMixin, Iterable):
 		``object``
 			Object instance, will be retrieved on demand if None
 		"""
+		if not path.startswith(self._common_path_default):
+			raise ValueError("Cannot instantiate %s Reference from path %s" % ( self.__class__.__name__, path ))
+			
 		self.repo = repo
 		self.path = path
 		if object is not None:
@@ -75,6 +79,17 @@ class Reference(LazyMixin, Iterable):
 		# have to be dynamic here as we may be a tag which can point to anything
 		# Our path will be resolved to the hexsha which will be used accordingly
 		return Object.new(self.repo, self.path)
+		
+	@property
+	def commit(self):
+		"""
+		Returns
+			Commit object the head points to
+		"""
+		commit = self.object
+		if commit.type != "commit":
+			raise TypeError("Object of reference %s did not point to a commit" % self)
+		return commit
 	
 	@classmethod
 	def iter_items(cls, repo, common_path = None, **kwargs):
@@ -112,6 +127,29 @@ class Reference(LazyMixin, Iterable):
 
 		output = repo.git.for_each_ref(common_path, **options)
 		return cls._iter_from_stream(repo, iter(output.splitlines()))
+		
+	@classmethod
+	def from_path(cls, repo, path):
+		"""
+		Return
+			Instance of type Reference, Head, Tag, SymbolicReference or HEAD
+			depending on the given path
+		"""
+		if path == 'HEAD':
+			return HEAD(repo, path)
+		
+		if '/' not in path:
+			return SymbolicReference(repo, path)
+			
+		for ref_type in (Head, RemoteReference, TagReference, Reference):
+			try:
+				return ref_type(repo, path)
+			except ValueError:
+				pass
+			# END exception handling
+		# END for each type to try
+		raise ValueError("Could not find reference type suitable to handle path %r" % path)
+		
 
 	@classmethod
 	def _iter_from_stream(cls, repo, stream):
@@ -145,6 +183,127 @@ class Reference(LazyMixin, Iterable):
 		# return cls(repo, full_path, obj)
 		
 
+class SymbolicReference(object):
+	"""
+	Represents a special case of a reference such that this reference is symbolic.
+	It does not point to a specific commit, but to another Head, which itself 
+	specifies a commit.
+	
+	A typical example for a symbolic reference is HEAD.
+	"""
+	__slots__ = ("repo", "name")
+	
+	def __init__(self, repo, name):
+		if '/' in name:
+			raise ValueError("SymbolicReferences are not located within a directory, got %s" % name)
+		self.repo = repo
+		self.name = name
+		
+	def __str__(self):
+		return self.name
+		
+	def __repr__(self):
+		return '<git.%s "%s">' % (self.__class__.__name__, self.name)
+		
+	def __eq__(self, other):
+		return self.name == other.name
+		
+	def __ne__(self, other):
+		return not ( self == other )
+		
+	def __hash__(self):
+		return hash(self.name)
+		
+	@property
+	def reference(self):
+		"""
+		Returns
+			Reference Object we point to
+		"""
+		fp = open(os.path.join(self.repo.path, self.name), 'r')
+		try:
+			tokens = fp.readline().split(' ')
+			if tokens[0] != 'ref:':
+				raise TypeError("%s is a detached symbolic reference as it points to %r" % tokens[0])
+			return Reference.from_path(self.repo, tokens[1])
+		finally:
+			fp.close()
+		
+	# alias
+	ref = reference
+		
+	@property
+	def is_detached(self):
+		"""
+		Returns
+			True if we are a detached reference, hence we point to a specific commit
+			instead to another reference
+		"""
+		try:
+			self.reference
+			return False
+		except TypeError:
+			return True
+	
+	
+class HEAD(SymbolicReference):
+	"""
+	Special case of a Symbolic Reference as it represents the repository's 
+	HEAD reference.
+	"""
+	__slots__ = tuple()
+	
+	def __init__(self, repo, name):
+		if name != 'HEAD':
+			raise ValueError("HEAD instance must point to 'HEAD', got %s" % name)
+		super(HEAD, self).__init__(repo, name)
+	
+	
+	def reset(self, commit='HEAD', index=True, working_tree = False, 
+				paths=None, **kwargs):
+		"""
+		Reset our HEAD to the given commit optionally synchronizing 
+		the index and working tree.
+		
+		``commit``
+			Commit object, Reference Object or string identifying a revision we 
+			should reset HEAD to.
+			
+		``index``
+			If True, the index will be set to match the given commit. Otherwise
+			it will not be touched.
+		
+		``working_tree``
+			If True, the working tree will be forcefully adjusted to match the given
+			commit, possibly overwriting uncommitted changes without warning.
+			If working_tree is True, index must be true as well
+		
+		``paths``
+			Single path or list of paths relative to the git root directory
+			that are to be reset. This allow to partially reset individual files.
+		
+		``kwargs``
+			Additional arguments passed to git-reset. 
+		
+		Returns
+			self
+		"""
+		mode = "--soft"
+		if index:
+			mode = "--mixed"
+			
+		if working_tree:
+			mode = "--hard"
+			if not index:
+				raise ValueError( "Cannot reset the working tree if the index is not reset as well") 
+		# END working tree handling
+		
+		repo.git.reset(mode, commit, paths, **kwargs)
+		
+		# we always point to the active branch as it is the one changing
+		self
+	
+
 class Head(Reference):
 	"""
 	A Head is a named reference to a Commit. Every Head instance contains a name
@@ -166,62 +325,8 @@ class Head(Reference):
 	"""
 	_common_path_default = "refs/heads"
 	
-	@property
-	def commit(self):
-		"""
-		Returns
-			Commit object the head points to
-		"""
-		return self.object
-		
-	@classmethod
-	def reset(cls, repo, commit='HEAD', index=True, working_tree = False, 
-				paths=None, **kwargs):
-		"""
-		Reset the current head to the given commit optionally synchronizing 
-		the index and working tree.
-		
-		``repo``
-			Repository containing commit
-			
-		``commit``
-			Commit object, Reference Object or string identifying a revision
-			
-		``index``
-			If True, the index will be set to match the given commit. Otherwise
-			it will not be touched.
-		
-		``working_tree``
-			If True, the working tree will be forcefully adjusted to match the given
-			commit, possibly overwriting uncommitted changes without warning.
-			If working_tree is True, index must be true as well
-		
-		``paths``
-			Single path or list of paths relative to the git root directory
-			that are to be reset. This allow to partially reset individual files.
-		
-		``kwargs``
-			Additional arguments passed to git-reset. 
-		
-		Returns
-			Head pointing to the specified commit
-		"""
-		mode = "--soft"
-		if index:
-			mode = "--mixed"
-			
-		if working_tree:
-			mode = "--hard"
-			if not index:
-				raise ValueError( "Cannot reset the working tree if the index is not reset as well") 
-		# END working tree handling
-		
-		repo.git.reset(mode, commit, paths, **kwargs)
-		
-		# we always point to the active branch as it is the one changing
-		return repo.active_branch
 
-class TagReference(Head):
+class TagReference(Reference):
 	"""
 	Class representing a lightweight tag reference which either points to a commit 
 	or to a tag object. In the latter case additional information, like the signature
@@ -230,7 +335,7 @@ class TagReference(Head):
 	This tag object will always point to a commit object, but may carray additional
 	information in a tag object::
 	
-	 tagref = TagRef.list_items(repo)[0]
+	 tagref = TagReference.list_items(repo)[0]
 	 print tagref.commit.message
 	 if tagref.tag is not None:
 		print tagref.tag.message
