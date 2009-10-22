@@ -88,13 +88,14 @@ def with_bare_rw_repo(func):
 	bare_repo_creator.__name__ = func.__name__
 	return bare_repo_creator
 	
-def with_rw_repo(working_tree_ref='0.1.6'):
+def with_rw_repo(working_tree_ref):
 	"""
 	Same as with_bare_repo, but clones the rorepo as non-bare repository, checking 
 	out the working tree at the given working_tree_ref.
 	
 	This repository type is more costly due to the working copy checkout.
 	"""
+	assert isinstance(working_tree_ref, basestring), "Decorator requires ref name for working tree checkout"
 	def argument_passer(func):
 		def repo_creator(self):
 			repo_dir = tempfile.mktemp("non_bare_repo") 
@@ -111,7 +112,7 @@ def with_rw_repo(working_tree_ref='0.1.6'):
 	# END argument passer
 	return argument_passer
 	
-def with_rw_and_rw_remote_repo(working_tree_ref='0.1.6'):
+def with_rw_and_rw_remote_repo(working_tree_ref):
 	"""
 	Same as with_rw_repo, but also provides a writable remote repository from which the
 	rw_repo has been forked. The remote repository was cloned as bare repository from 
@@ -125,6 +126,7 @@ def with_rw_and_rw_remote_repo(working_tree_ref='0.1.6'):
 		
 	This setup allows you to test push and pull scenarios and hooks nicely.
 	"""
+	assert isinstance(working_tree_ref, basestring), "Decorator requires ref name for working tree checkout"
 	def argument_passer(func):
 		def remote_repo_creator(self):
 			remote_repo_dir = tempfile.mktemp("remote_repo")

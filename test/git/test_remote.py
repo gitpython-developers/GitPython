@@ -7,16 +7,13 @@
 from test.testlib import *
 from git import *
 
-class TestRemote(TestCase):
+class TestRemote(TestBase):
 	
-	@classmethod
-	def setUpAll(cls):
-		cls.repo = Repo(GIT_REPO)
-		
-	def test_base(self):
+	@with_rw_and_rw_remote_repo('0.1.6')
+	def test_base(self, rw_repo, remote_repo):
 		num_remotes = 0
 		remote_set = set()
-		for remote in self.repo.remotes:
+		for remote in rw_repo.remotes:
 			num_remotes += 1
 			assert remote == remote
 			assert str(remote) != repr(remote)
@@ -64,27 +61,29 @@ class TestRemote(TestCase):
 			
 			remote.fetch()
 			self.failUnlessRaises(GitCommandError, remote.pull)
+			remote.pull('master')
 			remote.update()
 			self.fail("test push once there is a test-repo")
 		# END for each remote
 		assert num_remotes
 		assert num_remotes == len(remote_set)
 		
-		origin = self.repo.remote('origin')
-		assert origin == self.repo.remotes.origin
+		origin = rw_repo.remote('origin')
+		assert origin == rw_repo.remotes.origin
 		
-	def test_creation_and_removal(self):
+	@with_bare_rw_repo
+	def test_creation_and_removal(self, bare_rw_repo):
 		new_name = "test_new_one"
 		arg_list = (new_name, "git@server:hello.git")
-		remote = Remote.create(self.repo, *arg_list )
+		remote = Remote.create(bare_rw_repo, *arg_list )
 		assert remote.name == "test_new_one"
 		
 		# create same one again
-		self.failUnlessRaises(GitCommandError, Remote.create, self.repo, *arg_list)
+		self.failUnlessRaises(GitCommandError, Remote.create, bare_rw_repo, *arg_list)
 		
-		Remote.remove(self.repo, new_name)
+		Remote.remove(bare_rw_repo, new_name)
 		
-		for remote in self.repo.remotes:
+		for remote in bare_rw_repo.remotes:
 			if remote.name == new_name:
 				raise AssertionError("Remote removal failed")
 			# END if deleted remote matches existing remote's name
