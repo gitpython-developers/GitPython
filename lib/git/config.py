@@ -11,9 +11,11 @@ configuration files
 import re
 import os
 import ConfigParser as cp
-from git.odict import OrderedDict
 import inspect
 import cStringIO
+
+from git.odict import OrderedDict
+from git.utils import LockFile
 
 class _MetaParserBuilder(type):
 	"""
@@ -70,7 +72,7 @@ def _set_dirty_and_flush_changes(non_const_func):
 	
 	
 
-class GitConfigParser(cp.RawConfigParser, object):
+class GitConfigParser(cp.RawConfigParser, LockFile):
 	"""
 	Implements specifics required to read git style configuration files.
 	
@@ -100,6 +102,7 @@ class GitConfigParser(cp.RawConfigParser, object):
 	
 	# list of RawConfigParser methods able to change the instance
 	_mutating_methods_ = ("add_section", "remove_section", "remove_option", "set")
+	__slots__ = ("_sections", "_defaults", "_file_or_files", "_read_only","_is_initialized")
 	
 	def __init__(self, file_or_files, read_only=True):
 		"""
@@ -120,7 +123,6 @@ class GitConfigParser(cp.RawConfigParser, object):
 		
 		self._file_or_files = file_or_files
 		self._read_only = read_only
-		self._owns_lock = False
 		self._is_initialized = False
 		
 		
@@ -129,10 +131,11 @@ class GitConfigParser(cp.RawConfigParser, object):
 				raise ValueError("Write-ConfigParsers can operate on a single file only, multiple files have been passed")
 			# END single file check
 			
-			self._file_name = file_or_files
-			if not isinstance(self._file_name, basestring):
-				self._file_name = file_or_files.name
-			# END get filename
+			if not isinstance(file_or_files, basestring):
+				file_or_files = file_or_files.name
+			# END get filename from handle/stream
+			# initialize lock base - we want to write
+			LockFile.__init__(self, file_or_files)
 			
 			self._obtain_lock_or_raise()	
 		# END read-only check
@@ -155,67 +158,6 @@ class GitConfigParser(cp.RawConfigParser, object):
 		finally:
 			self._release_lock()
 	
-	def _lock_file_path(self):
-		"""
-		Return
-			Path to lockfile
-		"""
-		return "%s.lock" % (self._file_name)
-	
-	def _has_lock(self):
-		"""
-		Return
-			True if we have a lock and if the lockfile still exists
-			
-		Raise
-			AssertionError if our lock-file does not exist
-		"""
-		if not self._owns_lock:
-			return False
-		
-		lock_file = self._lock_file_path()
-		try:
-			fp = open(lock_file, "r")
-			pid = int(fp.read())
-			fp.close()
-		except IOError:
-			raise AssertionError("GitConfigParser has a lock but the lock file at %s could not be read" % lock_file)
-		
-		if pid != os.getpid():
-			raise AssertionError("We claim to own the lock at %s, but it was not owned by our process: %i" % (lock_file, os.getpid()))
-		
-		return True
-		
-	def _obtain_lock_or_raise(self):
-		"""
-		Create a lock file as flag for other instances, mark our instance as lock-holder
-		
-		Raise
-			IOError if a lock was already present or a lock file could not be written
-		"""
-		if self._has_lock():
-			return 
-			
-		lock_file = self._lock_file_path()
-		if os.path.exists(lock_file):
-			raise IOError("Lock for file %r did already exist, delete %r in case the lock is illegal" % (self._file_name, lock_file))
-		
-		fp = open(lock_file, "w")
-		fp.write(str(os.getpid()))
-		fp.close()
-		
-		self._owns_lock = True
-		
-	def _release_lock(self):
-		"""
-		Release our lock if we have one
-		"""
-		if not self._has_lock():
-			return 
-			
-		os.remove(self._lock_file_path())
-		self._owns_lock = False
-		
 	def optionxform(self, optionstr):
 		"""
 		Do not transform options in any way when writing
