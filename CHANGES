@@ -82,6 +82,11 @@ Diffing
 * Commit and Tree objects now support diffing natively with a common interface to 
   compare agains other Commits or Trees, against the working tree or against the index.
 
+Index
+-----
+* A new Index class allows to read and write index files directly, and to perform
+  simple two and three way merges based on an arbitrary index.
+  
 Refs
 ----
 * Will dynmically retrieve their object at the time of query to assure the information 
