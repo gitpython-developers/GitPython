@@ -101,7 +101,13 @@ class TestTree(TestBase):
 		# END for each blob
 		assert num_blobs == len(three_way_index.entries)
 	
-	def test_from_index(self):
+	@with_rw_repo('0.1.6')
+	def test_from_index(self, rw_repo):
 		# default Index instance points to our index
-		index = Index(self.rorepo)
+		index = Index(rw_repo)
 		assert len(index.entries)
+		
+		# write the file back
+		index.write()
+		
+		# could sha it, or check stats

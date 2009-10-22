@@ -15,7 +15,7 @@ import tempfile
 import os
 import stat
 from git.objects import Blob, Tree
-from git.utils import SHA1Writer, LazyMixin
+from git.utils import SHA1Writer, LazyMixin, ConcurrentWriteOperation
 from git.diff import Diffable
 
 class _TemporaryFileSwap(object):
@@ -175,7 +175,7 @@ class Index(LazyMixin):
 	def _set_cache_(self, attr):
 		if attr == "entries":
 			# read the current index
-			fp = open(os.path.join(self.repo.path, "index"), "r")
+			fp = open(self._index_path(), "r")
 			try:
 				self._read_from_stream(fp)
 			finally:
@@ -183,6 +183,9 @@ class Index(LazyMixin):
 			# END read from default index on demand
 		else:
 			super(Index, self)._set_cache_(attr)
+	
+	def _index_path(self):
+		return os.path.join(self.repo.path, "index")
 	
 	@classmethod
 	def _read_entry(cls, stream):
@@ -306,12 +309,14 @@ class Index(LazyMixin):
 		real_size = ((stream.tell() - beginoffset + 8) & ~7)
 		stream.write("\0" * ((beginoffset + real_size) - stream.tell()))
 
-	def write(self, stream):
+	def write(self, stream=None):
 		"""
-		Write the current state to the given stream
+		Write the current state to the given stream or to the default repository 
+		index.
 		
 		``stream``
-			File-like object.
+			File-like object or None.
+			If None, the default repository index will be overwritten.
 		
 		Returns
 			self
@@ -319,6 +324,13 @@ class Index(LazyMixin):
 		Note
 			Index writing based on the dulwich implementation
 		"""
+		write_op = None
+		if stream is None:
+			write_op = ConcurrentWriteOperation(self._index_path())
+			stream = write_op._begin_writing()
+			# stream = open(self._index_path()
+		# END stream handling 
+		
 		stream = SHA1Writer(stream)
 		
 		# header
@@ -338,6 +350,9 @@ class Index(LazyMixin):
 		# write the sha over the content
 		stream.write_sha()
 		
+		if write_op is not None:
+			write_op._end_writing()
+			
 	
 	@classmethod
 	def from_tree(cls, repo, *treeish, **kwargs):
@@ -504,7 +519,7 @@ class Index(LazyMixin):
 		Returns
 			Tree object representing this index
 		"""
-		index_path = os.path.join(self.repo.path, "index")
+		index_path = self._index_path()
 		tmp_index_mover = _TemporaryFileSwap(index_path)
 		
 		self.to_file(self, index_path)

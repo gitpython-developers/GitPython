@@ -201,7 +201,9 @@ class ConcurrentWriteOperation(LockFile):
 		if self._temp_write_fp is None:
 			return 
 			
-		self._temp_write_fp.close()
+		if not self._temp_write_fp.closed:
+			self._temp_write_fp.close()
+		
 		if successful:
 			# on windows, rename does not silently overwrite the existing one
 			if sys.platform == "win32":
