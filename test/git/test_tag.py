@@ -9,13 +9,11 @@ from test.testlib import *
 from git import *
 from git.objects.tag import TagObject
 
-class TestTag(object):
-	def setup(self):
-		self.repo = Repo(GIT_REPO)
+class TestTag(TestBase):
 
 	def test_tag_base(self):
 		tag_object_refs = list()
-		for tag in self.repo.tags:
+		for tag in self.rorepo.tags:
 			assert "refs/tags" in tag.path
 			assert tag.name
 			assert isinstance( tag.commit, Commit )
@@ -30,6 +28,6 @@ class TestTag(object):
 			# END if we have a tag object
 		# END for tag in repo-tags
 		assert tag_object_refs
-		assert isinstance(self.repo.tags['0.1.5'], TagReference)
+		assert isinstance(self.rorepo.tags['0.1.5'], TagReference)
 		
 

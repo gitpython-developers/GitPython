@@ -7,13 +7,11 @@
 from test.testlib import *
 from git import *
 
-class TestCommit(object):
-	def setup(self):
-		self.repo = Repo(GIT_REPO)
+class TestCommit(TestBase):
 
 	def test_bake(self):
 
-		commit = Commit(self.repo, **{'id': '2454ae89983a4496a445ce347d7a41c0bb0ea7ae'})
+		commit = Commit(self.rorepo, **{'id': '2454ae89983a4496a445ce347d7a41c0bb0ea7ae'})
 		commit.author # bake
 
 		assert_equal("Sebastian Thiel", commit.author.name)
@@ -21,7 +19,7 @@ class TestCommit(object):
 
 
 	def test_stats(self):
-		commit = Commit(self.repo, id='33ebe7acec14b25c5f84f35a664803fcab2f7781')
+		commit = Commit(self.rorepo, id='33ebe7acec14b25c5f84f35a664803fcab2f7781')
 		stats = commit.stats
 		
 		def check_entries(d):
@@ -48,13 +46,13 @@ class TestCommit(object):
 
 		git.return_value = fixture('rev_list_bisect_all')
 
-		revs = self.repo.git.rev_list('HEAD',
+		revs = self.rorepo.git.rev_list('HEAD',
 									  pretty='raw',
 									  first_parent=True,
 									  bisect_all=True)
 		assert_true(git.called)
 
-		commits = Commit._iter_from_process_or_stream(self.repo, ListProcessAdapter(revs))
+		commits = Commit._iter_from_process_or_stream(self.rorepo, ListProcessAdapter(revs))
 		expected_ids = (
 			'cf37099ea8d1d8c7fbf9b6d12d7ec0249d3acb8b',
 			'33ebe7acec14b25c5f84f35a664803fcab2f7781',
@@ -66,29 +64,29 @@ class TestCommit(object):
 			assert_equal(sha1, commit.id)
 
 	def test_count(self):
-		assert self.repo.tag('0.1.5').commit.count( ) == 141
+		assert self.rorepo.tag('0.1.5').commit.count( ) == 141
 		
 	def test_list(self):
-		assert isinstance(Commit.list_items(self.repo, '0.1.5', max_count=5)['5117c9c8a4d3af19a9958677e45cda9269de1541'], Commit)
+		assert isinstance(Commit.list_items(self.rorepo, '0.1.5', max_count=5)['5117c9c8a4d3af19a9958677e45cda9269de1541'], Commit)
 
 	def test_str(self):
-		commit = Commit(self.repo, id='abc')
+		commit = Commit(self.rorepo, id='abc')
 		assert_equal ("abc", str(commit))
 
 	def test_repr(self):
-		commit = Commit(self.repo, id='abc')
+		commit = Commit(self.rorepo, id='abc')
 		assert_equal('<git.Commit "abc">', repr(commit))
 
 	def test_equality(self):
-		commit1 = Commit(self.repo, id='abc')
-		commit2 = Commit(self.repo, id='abc')
-		commit3 = Commit(self.repo, id='zyx')
+		commit1 = Commit(self.rorepo, id='abc')
+		commit2 = Commit(self.rorepo, id='abc')
+		commit3 = Commit(self.rorepo, id='zyx')
 		assert_equal(commit1, commit2)
 		assert_not_equal(commit2, commit3)
 		
 	def test_iter_parents(self):
 		# should return all but ourselves, even if skip is defined
-		c = self.repo.commit('0.1.5')
+		c = self.rorepo.commit('0.1.5')
 		for skip in (0, 1):
 			piter = c.iter_parents(skip=skip)
 			first_parent = piter.next()

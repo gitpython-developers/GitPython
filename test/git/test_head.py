@@ -7,12 +7,10 @@
 from test.testlib import *
 from git import *
 
-class TestHead(object):
-	def setup(self):
-		self.repo = Repo(GIT_REPO)
+class TestHead(TestBase):
 
 	def test_base(self):
-		for head in self.repo.heads:
+		for head in self.rorepo.heads:
 			assert head.name
 			assert "refs/heads" in head.path
 		# END for each head
@@ -20,7 +18,7 @@ class TestHead(object):
 	@patch_object(Git, '_call_process')
 	def test_ref_with_path_component(self, git):
 		git.return_value = fixture('for_each_ref_with_path_component')
-		head = self.repo.heads[0]
+		head = self.rorepo.heads[0]
 
 		assert_equal('refactoring/feature1', head.name)
 		assert_true(git.called)

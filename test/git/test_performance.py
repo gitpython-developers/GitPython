@@ -8,9 +8,7 @@ from test.testlib import *
 from git import *
 from time import time
 
-class TestPerformance(object):
-	def setup(self):
-		self.repo = Repo(GIT_REPO)
+class TestPerformance(TestBase):
 
 	def test_iteration(self):
 		num_objs = 0
@@ -21,7 +19,7 @@ class TestPerformance(object):
 		# return quite a lot of commits, we just take one and hence abort the operation
 		
 		st = time()
-		for c in self.repo.iter_commits('0.1.6'):
+		for c in self.rorepo.iter_commits('0.1.6'):
 			num_commits += 1
 			c.author
 			c.authored_date

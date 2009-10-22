@@ -11,10 +11,6 @@ from copy import copy
 
 class TestBase(TestCase):
 	
-	@classmethod
-	def setUpAll(cls):
-		cls.repo = Repo(GIT_REPO)
-		
 	def _to_memcache(self, file_path):
 		fp = open(file_path, "r")
 		sio = StringIO.StringIO()

@@ -7,13 +7,11 @@
 from test.testlib import *
 from git import *
 
-class TestStats(object):
-	def setup(self):
-		self.repo = Repo(GIT_REPO)
+class TestStats(TestBase):
 	
 	def test__list_from_string(self):
 		output = fixture('diff_numstat')
-		stats = Stats._list_from_string(self.repo, output)
+		stats = Stats._list_from_string(self.rorepo, output)
 		
 		assert_equal(2, stats.total['files'])
 		assert_equal(52, stats.total['lines'])

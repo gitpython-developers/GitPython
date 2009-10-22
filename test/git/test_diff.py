@@ -7,19 +7,17 @@
 from test.testlib import *
 from git import *
 
-class TestDiff(TestCase):
-	def setUp(self):
-		self.repo = Repo(GIT_REPO)
-
+class TestDiff(TestBase):
+	
 	def test_list_from_string_new_mode(self):
 		output = ListProcessAdapter(fixture('diff_new_mode'))
-		diffs = Diff._index_from_patch_format(self.repo, output.stdout)
+		diffs = Diff._index_from_patch_format(self.rorepo, output.stdout)
 		assert_equal(1, len(diffs))
 		assert_equal(10, len(diffs[0].diff.splitlines()))
 
 	def test_diff_with_rename(self):
 		output = ListProcessAdapter(fixture('diff_rename'))
-		diffs = Diff._index_from_patch_format(self.repo, output.stdout)
+		diffs = Diff._index_from_patch_format(self.rorepo, output.stdout)
 
 		assert_equal(1, len(diffs))
 
@@ -37,13 +35,13 @@ class TestDiff(TestCase):
 		
 		for fixture_name in fixtures:
 			diff_proc = ListProcessAdapter(fixture(fixture_name))
-			diffs = Diff._index_from_patch_format(self.repo, diff_proc.stdout)
+			diffs = Diff._index_from_patch_format(self.rorepo, diff_proc.stdout)
 		# END for each fixture
 
 	def test_diff_interface(self):
 		# test a few variations of the main diff routine
 		assertion_map = dict()
-		for i, commit in enumerate(self.repo.iter_commits('0.1.6', max_count=10)):
+		for i, commit in enumerate(self.rorepo.iter_commits('0.1.6', max_count=10)):
 			diff_item = commit
 			if i%2 == 0:
 				diff_item = commit.tree

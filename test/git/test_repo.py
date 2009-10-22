@@ -8,11 +8,7 @@ import os, sys
 from test.testlib import *
 from git import *
 
-class TestRepo(TestCase):
-	
-	@classmethod
-	def setUpAll(cls):
-		cls.repo = Repo(GIT_REPO)
+class TestRepo(TestBase):
 	
 	@raises(InvalidGitRepositoryError)
 	def test_new_should_raise_on_invalid_repo_location(self):
@@ -27,27 +23,27 @@ class TestRepo(TestCase):
 
 	def test_description(self):
 		txt = "Test repository"
-		self.repo.description = txt
-		assert_equal(self.repo.description, txt)
+		self.rorepo.description = txt
+		assert_equal(self.rorepo.description, txt)
 
 	def test_heads_should_return_array_of_head_objects(self):
-		for head in self.repo.heads:
+		for head in self.rorepo.heads:
 			assert_equal(Head, head.__class__)
 
 	def test_heads_should_populate_head_data(self):
-		for head in self.repo.heads:
+		for head in self.rorepo.heads:
 			assert head.name
 			assert isinstance(head.commit,Commit)
 		# END for each head 
 		
-		assert isinstance(self.repo.heads.master, Head)
-		assert isinstance(self.repo.heads['master'], Head)
+		assert isinstance(self.rorepo.heads.master, Head)
+		assert isinstance(self.rorepo.heads['master'], Head)
 
 	@patch_object(Git, '_call_process')
 	def test_commits(self, git):
 		git.return_value = ListProcessAdapter(fixture('rev_list'))
 
-		commits = list( self.repo.iter_commits('master', max_count=10) )
+		commits = list( self.rorepo.iter_commits('master', max_count=10) )
 		
 		c = commits[0]
 		assert_equal('4c8124ffcf4039d292442eeccabdeca5af5c5017', c.id)
@@ -73,7 +69,7 @@ class TestRepo(TestCase):
 	def test_trees(self):
 		mc = 30
 		num_trees = 0
-		for tree in self.repo.iter_trees('0.1.5', max_count=mc):
+		for tree in self.rorepo.iter_trees('0.1.5', max_count=mc):
 			num_trees += 1
 			assert isinstance(tree, Tree)
 		# END for each tree
@@ -93,7 +89,7 @@ class TestRepo(TestCase):
 		assert_true(repo.called)
 		
 	def test_bare_property(self):
-		self.repo.bare
+		self.rorepo.bare
 
 	@patch_object(Repo, '__init__')
 	@patch_object(Git, '_call_process')
@@ -113,7 +109,7 @@ class TestRepo(TestCase):
 		git.return_value = None
 		repo.return_value = None
 
-		self.repo.clone("repos/foo/bar.git")
+		self.rorepo.clone("repos/foo/bar.git")
 
 		assert_true(git.called)
 		path = os.path.join(absolute_project_path(), '.git')
@@ -126,7 +122,7 @@ class TestRepo(TestCase):
 		git.return_value = None
 		repo.return_value = None
 
-		self.repo.clone("repos/foo/bar.git", **{'template': '/awesome'})
+		self.rorepo.clone("repos/foo/bar.git", **{'template': '/awesome'})
 
 		assert_true(git.called)
 		path = os.path.join(absolute_project_path(), '.git')
@@ -136,63 +132,63 @@ class TestRepo(TestCase):
 
 
 	def test_daemon_export(self):
-		orig_val = self.repo.daemon_export
-		self.repo.daemon_export = not orig_val
-		assert self.repo.daemon_export == ( not orig_val )
-		self.repo.daemon_export = orig_val
-		assert self.repo.daemon_export == orig_val
+		orig_val = self.rorepo.daemon_export
+		self.rorepo.daemon_export = not orig_val
+		assert self.rorepo.daemon_export == ( not orig_val )
+		self.rorepo.daemon_export = orig_val
+		assert self.rorepo.daemon_export == orig_val
   
 	def test_alternates(self):
-		cur_alternates = self.repo.alternates
+		cur_alternates = self.rorepo.alternates
 		# empty alternates
-		self.repo.alternates = []
-		assert self.repo.alternates == []
+		self.rorepo.alternates = []
+		assert self.rorepo.alternates == []
 		alts = [ "other/location", "this/location" ]
-		self.repo.alternates = alts
-		assert alts == self.repo.alternates
-		self.repo.alternates = cur_alternates
+		self.rorepo.alternates = alts
+		assert alts == self.rorepo.alternates
+		self.rorepo.alternates = cur_alternates
 
 	def test_repr(self):
 		path = os.path.join(os.path.abspath(GIT_REPO), '.git')
-		assert_equal('<git.Repo "%s">' % path, repr(self.repo))
+		assert_equal('<git.Repo "%s">' % path, repr(self.rorepo))
 
 	def test_is_dirty_with_bare_repository(self):
-		self.repo._bare = True
-		assert_false(self.repo.is_dirty)
+		self.rorepo._bare = True
+		assert_false(self.rorepo.is_dirty)
 
 	def test_is_dirty(self):
-		self.repo._bare = False
+		self.rorepo._bare = False
 		for index in (0,1):
 			for working_tree in (0,1):
 				for untracked_files in (0,1):
-					assert self.repo.is_dirty in (True, False)
+					assert self.rorepo.is_dirty in (True, False)
 				# END untracked files
 			# END working tree
 		# END index
-		self.repo._bare = True
-		assert self.repo.is_dirty == False
+		self.rorepo._bare = True
+		assert self.rorepo.is_dirty == False
 
 	@patch_object(Git, '_call_process')
 	def test_active_branch(self, git):
 		git.return_value = 'refs/heads/major-refactoring'
-		assert_equal(self.repo.active_branch.name, 'major-refactoring')
+		assert_equal(self.rorepo.active_branch.name, 'major-refactoring')
 		assert_equal(git.call_args, (('symbolic_ref', 'HEAD'), {}))
 		
 	def test_head(self):
-		assert self.repo.head.object == self.repo.active_branch.object
+		assert self.rorepo.head.object == self.rorepo.active_branch.object
 		
 	def test_tag(self):
-		assert self.repo.tag('0.1.5').commit
+		assert self.rorepo.tag('0.1.5').commit
 		
 	def test_archive(self):
 		tmpfile = os.tmpfile()
-		self.repo.archive(tmpfile, '0.1.5')
+		self.rorepo.archive(tmpfile, '0.1.5')
 		assert tmpfile.tell()
 		
 	@patch_object(Git, '_call_process')
 	def test_should_display_blame_information(self, git):
 		git.return_value = fixture('blame')
-		b = self.repo.blame( 'master', 'lib/git.py')
+		b = self.rorepo.blame( 'master', 'lib/git.py')
 		assert_equal(13, len(b))
 		assert_equal( 2, len(b[0]) )
 		# assert_equal(25, reduce(lambda acc, x: acc + len(x[-1]), b))
@@ -217,7 +213,7 @@ class TestRepo(TestCase):
 		assert_true( len( tlist ) < sum( len(t) for t in tlist ) )				 # test for single-char bug
 		
 	def test_untracked_files(self):
-		base = self.repo.git.git_dir
+		base = self.rorepo.git.git_dir
 		files = (base+"/__test_myfile", base+"/__test_other_file")
 		num_recently_untracked = 0
 		try:
@@ -225,7 +221,7 @@ class TestRepo(TestCase):
 				fd = open(fpath,"wb")
 				fd.close()
 			# END for each filename
-			untracked_files = self.repo.untracked_files
+			untracked_files = self.rorepo.untracked_files
 			num_recently_untracked = len(untracked_files)
 			
 			# assure we have all names - they are relative to the git-dir
@@ -239,18 +235,18 @@ class TestRepo(TestCase):
 					os.remove(fpath)
 		# END handle files 
 		
-		assert len(self.repo.untracked_files) == (num_recently_untracked - len(files))
+		assert len(self.rorepo.untracked_files) == (num_recently_untracked - len(files))
 		
 	def test_config_reader(self):
-		reader = self.repo.config_reader()				# all config files 
+		reader = self.rorepo.config_reader()				# all config files 
 		assert reader.read_only
-		reader = self.repo.config_reader("repository")	# single config file
+		reader = self.rorepo.config_reader("repository")	# single config file
 		assert reader.read_only
 		
 	def test_config_writer(self):
-		for config_level in self.repo.config_level:
+		for config_level in self.rorepo.config_level:
 			try:
-				writer = self.repo.config_writer(config_level)
+				writer = self.rorepo.config_writer(config_level)
 				assert not writer.read_only
 			except IOError:
 				# its okay not to get a writer for some configuration files if we 
