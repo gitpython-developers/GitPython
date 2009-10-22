@@ -18,13 +18,18 @@ class Diffable(object):
 	"""
 	__slots__ = tuple()
 	
-	# subclasses provide additional arguments to the git-diff comamnd by supplynig 
-	# them in this tuple
-	_diff_args = tuple()
-	
-	# Temporary standin for Index type until we have a real index type
+	# standin indicating you want to diff against the index
 	class Index(object):
 		pass 
+		
+	def _process_diff_args(self, args):
+		"""
+		Returns
+			possibly altered version of the given args list.
+			Method is called right before git command execution.
+			Subclasses can use it to alter the behaviour of the superclass
+		"""
+		return args
 	
 	def diff(self, other=Index, paths=None, create_patch=False, **kwargs):
 		"""
@@ -60,13 +65,13 @@ class Diffable(object):
 			On a bare repository, 'other' needs to be provided as Index or as 
 			as Tree/Commit, or a git command error will occour
 		"""
-		args = list(self._diff_args[:])
+		args = list()
 		args.append( "--abbrev=40" )		# we need full shas
 		args.append( "--full-index" )		# get full index paths, not only filenames
 		
 		if create_patch:
 			args.append("-p")
-			args.append("-M") # check for renames
+			args.append("-M") 				# check for renames
 		else:
 			args.append("--raw")
 		
@@ -87,7 +92,7 @@ class Diffable(object):
 		# END paths handling
 		
 		kwargs['as_process'] = True
-		proc = self.repo.git.diff(*args, **kwargs)
+		proc = self.repo.git.diff(*self._process_diff_args(args), **kwargs)
 		
 		diff_method = Diff._index_from_raw_format
 		if create_patch:
@@ -96,7 +101,7 @@ class Diffable(object):
 		
 		status = proc.wait()
 		if status != 0:
-			raise GitCommandError("git-diff", status, proc.stderr )
+			raise GitCommandError(("git diff",)+tuple(args), status, proc.stderr.read())
 		
 		return index
 
@@ -206,6 +211,20 @@ class Diff(object):
 		self.rename_to = rename_to or None
 		
 		self.diff = diff
+
+
+	def __eq__(self, other):
+		for name in self.__slots__:
+			if getattr(self, name) != getattr(other, name):
+				return False
+		# END for each name
+		return True
+		
+	def __ne__(self, other):
+		return not ( self == other )
+		
+	def __hash__(self):
+		return hash(tuple(getattr(self,n) for n in self.__slots__))
 
 	@property
 	def renamed(self):

@@ -101,4 +101,46 @@ class TestTree(TestBase):
 		# END for each blob
 		assert num_blobs == len(three_way_index.entries)
 	
-	
+	@with_rw_repo('0.1.6')
+	def test_from_index_and_diff(self, rw_repo):
+		# default Index instance points to our index
+		index = Index(rw_repo)
+		assert index.path is not None
+		assert len(index.entries)
+		
+		# write the file back
+		index.write()
+		
+		# could sha it, or check stats
+		
+		# test diff
+		# resetting the head will leave the index in a different state, and the 
+		# diff will yield a few changes
+		cur_head_commit = rw_repo.head.commit
+		ref = rw_repo.head.reset(rw_repo, 'HEAD~6', index=True, working_tree=False)
+		
+		# diff against same index is 0
+		diff = index.diff()
+		assert len(diff) == 0
+		
+		# against HEAD as string, must be the same as it matches index
+		diff = index.diff('HEAD')
+		assert len(diff) == 0
+		
+		# against previous head, there must be a difference
+		diff = index.diff(cur_head_commit)
+		assert len(diff)
+		
+		# we reverse the result
+		adiff = index.diff(str(cur_head_commit), R=True)
+		odiff = index.diff(cur_head_commit, R=False)	# now its not reversed anymore
+		assert adiff != odiff
+		assert odiff == diff					# both unreversed diffs against HEAD
+		
+		# against working copy - its still at cur_commit
+		wdiff = index.diff(None)
+		assert wdiff != adiff
+		assert wdiff != odiff
+		
+		# against something unusual
+		self.failUnlessRaises(ValueError, index.diff, int)

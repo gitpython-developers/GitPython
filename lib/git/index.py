@@ -14,8 +14,11 @@ import objects
 import tempfile
 import os
 import stat
-from git.objects import Blob, Tree
-from git.utils import SHA1Writer
+import git.diff as diff
+
+from git.objects import Blob, Tree, Object
+from git.utils import SHA1Writer, LazyMixin, ConcurrentWriteOperation
+
 
 class _TemporaryFileSwap(object):
 	"""
@@ -139,7 +142,7 @@ class IndexEntry(tuple):
 		return IndexEntry((time, time, 0, 0, blob.mode, 0, 0, blob.size, blob.id, 0, blob.path))
 
 
-class Index(object):
+class Index(LazyMixin, diff.Diffable):
 	"""
 	Implements an Index that can be manipulated using a native implementation in 
 	order to save git command function calls wherever possible.
@@ -153,20 +156,53 @@ class Index(object):
 	The index contains an entries dict whose keys are tuples of type IndexEntry
 	to facilitate access.
 	"""
-	__slots__ = ( "repo", "version", "entries", "_extension_data" )
+	__slots__ = ( "repo", "version", "entries", "_extension_data", "_is_default_index" )
 	_VERSION = 2			# latest version we support
 	S_IFGITLINK	= 0160000
 	
 	def __init__(self, repo, stream = None):
 		"""
 		Initialize this Index instance, optionally from the given ``stream``
+		
+		If a stream is not given, the stream will be initialized from the current 
+		repository's index on demand.
 		"""
 		self.repo = repo
-		self.entries = dict()
 		self.version = self._VERSION
 		self._extension_data = ''
+		self._is_default_index = True
 		if stream is not None:
+			self._is_default_index = False
 			self._read_from_stream(stream)
+		# END read from stream immediatly
+	
+	
+	def _set_cache_(self, attr):
+		if attr == "entries":
+			# read the current index
+			fp = open(self._index_path(), "r")
+			try:
+				self._read_from_stream(fp)
+			finally:
+				fp.close()
+			# END read from default index on demand
+		else:
+			super(Index, self)._set_cache_(attr)
+	
+	def _index_path(self):
+		return os.path.join(self.repo.path, "index")
+	
+	
+	@property
+	def path(self):
+		"""
+		Returns 
+			Path to the index file we are representing or None if we are 
+			a loose index that was read from a stream.
+		"""
+		if self._is_default_index:
+			return self._index_path()
+		return None
 	
 	@classmethod
 	def _read_entry(cls, stream):
@@ -197,13 +233,10 @@ class Index(object):
 	def _read_from_stream(self, stream):
 		"""
 		Initialize this instance with index values read from the given stream
-		
-		Note
-			We explicitly do not clear the entries dict here to allow for reading 
-			multiple chunks from multiple streams into the same Index instance
 		"""
 		self.version, num_entries = self._read_header(stream)
 		count = 0
+		self.entries = dict()
 		while count < num_entries:
 			entry = self._read_entry(stream)
 			self.entries[(entry.path, entry.stage)] = entry
@@ -293,12 +326,14 @@ class Index(object):
 		real_size = ((stream.tell() - beginoffset + 8) & ~7)
 		stream.write("\0" * ((beginoffset + real_size) - stream.tell()))
 
-	def write(self, stream):
+	def write(self, stream=None):
 		"""
-		Write the current state to the given stream
+		Write the current state to the given stream or to the default repository 
+		index.
 		
 		``stream``
-			File-like object
+			File-like object or None.
+			If None, the default repository index will be overwritten.
 		
 		Returns
 			self
@@ -306,6 +341,13 @@ class Index(object):
 		Note
 			Index writing based on the dulwich implementation
 		"""
+		write_op = None
+		if stream is None:
+			write_op = ConcurrentWriteOperation(self._index_path())
+			stream = write_op._begin_writing()
+			# stream = open(self._index_path()
+		# END stream handling 
+		
 		stream = SHA1Writer(stream)
 		
 		# header
@@ -325,6 +367,9 @@ class Index(object):
 		# write the sha over the content
 		stream.write_sha()
 		
+		if write_op is not None:
+			write_op._end_writing()
+			
 	
 	@classmethod
 	def from_tree(cls, repo, *treeish, **kwargs):
@@ -491,7 +536,7 @@ class Index(object):
 		Returns
 			Tree object representing this index
 		"""
-		index_path = os.path.join(self.repo.path, "index")
+		index_path = self._index_path()
 		tmp_index_mover = _TemporaryFileSwap(index_path)
 		
 		self.to_file(self, index_path)
@@ -507,4 +552,51 @@ class Index(object):
 		# END write tree handling 
 		return Tree(self.repo, tree_sha, 0, '')
 		
+		
+	def _process_diff_args(self, args):
+		try:
+			args.pop(args.index(self))
+		except IndexError:
+			pass
+		# END remove self
+		return args
+		
+	def diff(self, other=diff.Diffable.Index, paths=None, create_patch=False, **kwargs):
+		"""
+		Diff this index against the working copy or a Tree or Commit object
+		
+		For a documentation of the parameters and return values, see 
+		Diffable.diff
+		
+		Note
+			Will only work with indices that represent the default git index as 
+			they have not been initialized with a stream.
+		"""
+		if not self._is_default_index:
+			raise AssertionError( "Cannot diff custom indices as they do not represent the default git index" )
+		
+		# index against index is always empty
+		if other is self.Index:
+			return diff.DiffIndex()
+			
+		# index against anything but None is a reverse diff with the respective
+		# item. Handle existing -R flags properly. Transform strings to the object
+		# so that we can call diff on it
+		if isinstance(other, basestring):
+			other = Object.new(self.repo, other)
+		# END object conversion
+		
+		if isinstance(other, Object):
+			# invert the existing R flag
+			cur_val = kwargs.get('R', False)
+			kwargs['R'] = not cur_val
+			return other.diff(self.Index, paths, create_patch, **kwargs)
+		# END diff against other item handlin
+		
+		# if other is not None here, something is wrong 
+		if other is not None:
+			raise ValueError( "other must be None, Diffable.Index, a Tree or Commit, was %r" % other )
+		
+		# diff against working copy - can be handled by superclass natively
+		return super(Index, self).diff(other, paths, create_patch, **kwargs)
 	
