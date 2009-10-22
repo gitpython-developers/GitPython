@@ -14,16 +14,13 @@ from itertools import chain
 from git.objects.utils import get_object_type_by_name
 import tempfile
 
-class TestBase(object):
+class TestBase(TestBase):
 	
 	type_tuples = (  ("blob", "8741fc1d09d61f02ffd8cded15ff603eff1ec070"), 
 					 ("tree", "3a6a5e3eeed3723c09f1ef0399f81ed6b8d82e79"),
 					 ("commit", "4251bd59fb8e11e40c40548cba38180a9536118c"),
 					 ("tag", "e56a60e8e9cd333cfba0140a77cd12b0d9398f10") ) 
 	
-	def setup(self):
-		self.repo = Repo(GIT_REPO)
-		
 	def test_base_object(self):	
 		# test interface of base object classes
 		types = (Blob, Tree, Commit, TagObject)
@@ -33,7 +30,7 @@ class TestBase(object):
 		num_objs = 0
 		num_index_objs = 0
 		for obj_type, (typename, hexsha) in zip(types, self.type_tuples):
-			item = obj_type(self.repo,hexsha)
+			item = obj_type(self.rorepo,hexsha)
 			num_objs += 1
 			assert item.id == hexsha
 			assert item.type == typename
@@ -74,7 +71,7 @@ class TestBase(object):
 		# tag refs can point to tag objects or to commits
 		s = set()
 		ref_count = 0
-		for ref in chain(self.repo.tags, self.repo.heads):
+		for ref in chain(self.rorepo.tags, self.rorepo.heads):
 			ref_count += 1
 			assert isinstance(ref, refs.Reference)
 			assert str(ref) == ref.name
@@ -88,7 +85,7 @@ class TestBase(object):
 		
 	def test_heads(self):
 		# see how it dynmically updates its object
-		for head in self.repo.heads:
+		for head in self.rorepo.heads:
 			head.name
 			head.path
 			prev_object = head.object
@@ -106,4 +103,20 @@ class TestBase(object):
 
 	def test_object_resolution(self):
 		# objects must be resolved to shas so they compare equal
-		assert self.repo.head.object == self.repo.active_branch.object
+		assert self.rorepo.head.object == self.rorepo.active_branch.object
+		
+	@with_bare_rw_repo
+	def test_with_bare_rw_repo(self, bare_rw_repo):
+		assert bare_rw_repo.config_reader("repository").getboolean("core", "bare")
+		assert os.path.isfile(os.path.join(bare_rw_repo.path,'HEAD'))
+		
+	@with_rw_repo('0.1.6')
+	def test_with_rw_repo(self, rw_repo):
+		assert not rw_repo.config_reader("repository").getboolean("core", "bare")
+		assert os.path.isdir(os.path.join(rw_repo.git.git_dir,'lib'))
+		
+	@with_rw_and_rw_remote_repo('0.1.6')
+	def test_with_rw_remote_and_rw_repo(self, rw_repo, rw_remote_repo):
+		assert not rw_repo.config_reader("repository").getboolean("core", "bare")
+		assert rw_remote_repo.config_reader("repository").getboolean("core", "bare")
+		assert os.path.isdir(os.path.join(rw_repo.git.git_dir,'lib'))

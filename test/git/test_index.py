@@ -10,15 +10,11 @@ import inspect
 import os
 import tempfile
 
-class TestTree(TestCase):
+class TestTree(TestBase):
 	
-	@classmethod
-	def setUpAll(cls):
-		cls.repo = Repo(GIT_REPO)
-		
 	def test_base(self):
 		# read from file
-		index = Index.from_file(self.repo, fixture_path("index"))
+		index = Index.from_file(self.rorepo, fixture_path("index"))
 		assert index.entries
 		assert index.version > 0
 		
@@ -31,7 +27,7 @@ class TestTree(TestCase):
 		# END for each method
 		
 		# test stage
-		index_merge = Index.from_file(self.repo, fixture_path("index_merge"))
+		index_merge = Index.from_file(self.rorepo, fixture_path("index_merge"))
 		assert len(index_merge.entries) == 106
 		assert len(list(e for e in index_merge.entries.itervalues() if e.stage != 0 ))
 		
@@ -50,7 +46,7 @@ class TestTree(TestCase):
 	def _cmp_tree_index(self, tree, index):
 		# fail unless both objects contain the same paths and blobs
 		if isinstance(tree, str):
-			tree = self.repo.commit(tree).tree
+			tree = self.rorepo.commit(tree).tree
 		
 		num_blobs = 0
 		for blob in tree.traverse(predicate = lambda e: e.type == "blob"):
@@ -65,17 +61,17 @@ class TestTree(TestCase):
 		other_sha = "39f85c4358b7346fee22169da9cad93901ea9eb9"
 		
 		# simple index from tree 
-		base_index = Index.from_tree(self.repo, common_ancestor_sha)
+		base_index = Index.from_tree(self.rorepo, common_ancestor_sha)
 		assert base_index.entries
 		self._cmp_tree_index(common_ancestor_sha, base_index)
 		
 		# merge two trees - its like a fast-forward
-		two_way_index = Index.from_tree(self.repo, common_ancestor_sha, cur_sha)
+		two_way_index = Index.from_tree(self.rorepo, common_ancestor_sha, cur_sha)
 		assert two_way_index.entries
 		self._cmp_tree_index(cur_sha, two_way_index)
 		
 		# merge three trees - here we have a merge conflict
-		three_way_index = Index.from_tree(self.repo, common_ancestor_sha, cur_sha, other_sha)
+		three_way_index = Index.from_tree(self.rorepo, common_ancestor_sha, cur_sha, other_sha)
 		assert len(list(e for e in three_way_index.entries.values() if e.stage != 0))
 		
 		

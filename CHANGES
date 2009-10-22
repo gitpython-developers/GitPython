@@ -138,6 +138,12 @@ Remote
 * Repo.remotes lists all remotes
 * Repo.remote returns a remote of the specified name if it exists
 
+Test Framework
+--------------
+* Added support for common TestCase base class that provides additional functionality
+  to receive repositories tests can also write to. This way, more aspects can be 
+  tested under real-world ( un-mocked ) conditions.
+
 Tree
 ----
 * former 'name' member renamed to path as it suits the actual data better
