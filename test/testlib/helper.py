@@ -7,6 +7,8 @@
 import os
 from git import Repo
 from unittest import TestCase
+import tempfile
+import shutil
 
 GIT_REPO = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
@@ -75,35 +77,41 @@ def with_bare_rw_repo(func):
 	heads, generally operations that do not need a working tree.
 	"""
 	def bare_repo_creator(self):
-		rw_repo = None
+		repo_dir = tempfile.mktemp("bare_repo") 
+		rw_repo = self.rorepo.clone(repo_dir, shared=True, bare=True)
 		try:
 			return func(self, rw_repo)
 		finally:
-			pass
+			shutil.rmtree(repo_dir)
 		# END cleanup
 	# END bare repo creator
 	bare_repo_creator.__name__ = func.__name__
 	return bare_repo_creator
 	
-def with_rw_repo(func, working_tree_ref='0.1.6'):
+def with_rw_repo(working_tree_ref='0.1.6'):
 	"""
 	Same as with_bare_repo, but clones the rorepo as non-bare repository, checking 
 	out the working tree at the given working_tree_ref.
 	
 	This repository type is more costly due to the working copy checkout.
 	"""
-	def repo_creator(self):
-		rw_repo = None
-		try:
-			return func(self, rw_repo)
-		finally:
-			pass
-		# END cleanup
-	# END bare repo creator
-	repo_creator.__name__ = func.__name__
-	return repo_creator
+	def argument_passer(func):
+		def repo_creator(self):
+			repo_dir = tempfile.mktemp("non_bare_repo") 
+			rw_repo = self.rorepo.clone(repo_dir, shared=True, bare=False, n=True)
+			rw_repo.git.checkout(working_tree_ref)
+			try:
+				return func(self, rw_repo)
+			finally:
+				shutil.rmtree(repo_dir)
+			# END cleanup
+		# END rw repo creator
+		repo_creator.__name__ = func.__name__
+		return repo_creator
+	# END argument passer
+	return argument_passer
 	
-def with_rw_and_rw_remote_repo(func):
+def with_rw_and_rw_remote_repo(working_tree_ref='0.1.6'):
 	"""
 	Same as with_rw_repo, but also provides a writable remote repository from which the
 	rw_repo has been forked. The remote repository was cloned as bare repository from 
@@ -117,17 +125,27 @@ def with_rw_and_rw_remote_repo(func):
 		
 	This setup allows you to test push and pull scenarios and hooks nicely.
 	"""
-	def remote_repo_creator(self):
-		rw_repo = None
-		rw_remote_repo = None
-		try:
-			return func(self, rw_repo, rw_remote_repo)
-		finally:
-			pass
-		# END cleanup
-	# END bare repo creator
-	remote_repo_creator.__name__ = func.__name__
-	return remote_repo_creator
+	def argument_passer(func):
+		def remote_repo_creator(self):
+			remote_repo_dir = tempfile.mktemp("remote_repo")
+			repo_dir = tempfile.mktemp("remote_clone_non_bare_repo")
+			
+			rw_remote_repo = self.rorepo.clone(remote_repo_dir, shared=True, bare=True)
+			rw_repo = rw_remote_repo.clone(repo_dir, shared=True, bare=False, n=True)		# recursive alternates info ?
+			rw_repo.git.checkout(working_tree_ref)
+			try:
+				return func(self, rw_repo, rw_remote_repo)
+			finally:
+				shutil.rmtree(repo_dir)
+				shutil.rmtree(remote_repo_dir)
+			# END cleanup
+		# END bare repo creator
+		remote_repo_creator.__name__ = func.__name__
+		return remote_repo_creator
+		# END remote repo creator
+	# END argument parsser
+	
+	return argument_passer
 	
 	
 class TestBase(TestCase):

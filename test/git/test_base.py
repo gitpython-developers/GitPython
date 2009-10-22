@@ -109,7 +109,7 @@ class TestBase(TestBase):
 	def test_with_bare_rw_repo(self, bare_rw_repo):
 		assert bare_rw_repo.config_reader("repository").getboolean("core", "bare")
 		
-	@with_rw_repo
+	@with_rw_repo(working_tree_ref='0.1.6')
 	def test_with_rw_repo(self, rw_repo):
 		assert not rw_repo.config_reader("repository").getboolean("core", "bare")
 		
