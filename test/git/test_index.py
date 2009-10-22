@@ -104,7 +104,5 @@ class TestTree(TestCase):
 			num_blobs += 1
 		# END for each blob
 		assert num_blobs == len(three_way_index.entries)
-		
-		
-	def test_custom_commit(self):
-		self.fail("Custom commit:write tree, make commit with custom parents")
+	
+	
