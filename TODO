@@ -26,7 +26,10 @@ Object
   It would be good to improve things there as cat-file keeps all the data in a buffer
   before it writes it. Hence it does not write to a stream directly, which can be 
   bad if files are large, say 1GB :).
-
+* Effectively Objects only store hexsha's in their id attributes, so in fact 
+  it should be renamed to 'sha'. There was a time when references where allowed as 
+  well, but now objects will be 'baked' to the actual sha to assure comparisons work.
+  
 Config
 ------
 * Expand .get* methods of GitConfigParser to support default value. If it is not None, 
@@ -46,12 +49,13 @@ Overhaul docs - check examples, check looks, improve existing docs
 
 Index
 -----
-* Index class required for special handling ? Probably considering what I want 
-  to do ! Dulwich can already write the index, and read trees, although it 
-  could be improved as well and could possibly be made faster unless we want 
-  to use the c modules ( not for now )
-* Index Merge ( merge two trees into the index to quickly see conflicts ). 
-  Its possible to write it into a separate index file that can be read separately.
+* write_tree should write a tree directly, which would require ability to create
+  objects in the first place. Should be rather simple as it is 
+  "tree" bytes datablock | sha1sum and zipped.
+  Currently we use some file swapping and the git command to do it which probably 
+  is much slower. The thing is that properly writing a tree from an index involves
+  creating several tree objects, so in the end it might be slower. 
+  Hmm, probably its okay to use the command unless we go c(++)
 
 Remote
 ------
@@ -74,8 +78,6 @@ Tree
 * Should return submodules during iteration ( identifies as commit )
 * Work through test and check for test-case cleanup and completeness ( what about
   testing whether it raises on invalid input ? ). See 6dc7799d44e1e5b9b77fd19b47309df69ec01a99
-* Derive from Iterable, simple pipe it through to Commit objects and iterate using 
-  commit.tree.
   
 Testing
 -------
@@ -84,5 +86,5 @@ Testing
   as forking a shared repo in a tmp directory. In that moment, we probably want to 
   facility committing and checkouts as well.
   - Use these tests for git-remote as we need to test push
-
-
+  - Also assure that the test-case setup is a bit more consistent ( Derive from TestCase, possibly
+    make repo a class member instead of an instance member
