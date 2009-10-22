@@ -30,6 +30,8 @@ General
 * Unified diff interface to allow easy diffing between trees, trees and index, trees
   and working tree, index and working tree, trees and index. This closely follows
   the git-diff capabilities.
+* Git.execute does not take the with_raw_output option anymore. It was not used 
+  by anyone within the project and False by default.
   
 
 Item Iteration

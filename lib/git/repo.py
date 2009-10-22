@@ -641,32 +641,23 @@ class Repo(object):
 
 		Examples::
 
-			>>> repo.archive(open("archive"
+			>>> repo.archive(open("archive"))
 			<String containing tar.gz archive>
-
-			>>> repo.archive_tar_gz('a87ff14')
-			<String containing tar.gz archive for commit a87ff14>
-
-			>>> repo.archive_tar_gz('master', 'myproject/')
-			<String containing tar.gz archive and prefixed with 'myproject/'>
 
 		Raise
 			GitCommandError in case something went wrong
 			
+		Returns
+			self
 		"""
 		if treeish is None:
 			treeish = self.active_branch
 		if prefix and 'prefix' not in kwargs:
 			kwargs['prefix'] = prefix
-		kwargs['as_process'] = True
 		kwargs['output_stream'] = ostream
 		
-		proc =  self.git.archive(treeish, **kwargs)
-		status = proc.wait()
-		if status != 0:
-			raise GitCommandError( "git-archive", status, proc.stderr.read() )
-		
-
+		self.git.archive(treeish, **kwargs)
+		return self
 
 	def __repr__(self):
 		return '<git.Repo "%s">' % self.path

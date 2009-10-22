@@ -13,7 +13,7 @@ from errors import GitCommandError
 GIT_PYTHON_TRACE = os.environ.get("GIT_PYTHON_TRACE", False)
 
 execute_kwargs = ('istream', 'with_keep_cwd', 'with_extended_output',
-				  'with_exceptions', 'with_raw_output', 'as_process', 
+				  'with_exceptions', 'as_process', 
 				  'output_stream' )
 
 extra = {}
@@ -105,7 +105,6 @@ class Git(object):
 				with_keep_cwd=False,
 				with_extended_output=False,
 				with_exceptions=True,
-				with_raw_output=False,
 				as_process=False, 
 				output_stream=None
 				):
@@ -132,13 +131,10 @@ class Git(object):
 		``with_exceptions``
 			Whether to raise an exception when git returns a non-zero status.
 
-		``with_raw_output``
-			Whether to avoid stripping off trailing whitespace.
-			
 		``as_process``
 			Whether to return the created process instance directly from which 
-			streams can be read on demand. This will render with_extended_output, 
-			with_exceptions and with_raw_output ineffective - the caller will have 
+			streams can be read on demand. This will render with_extended_output and 
+			with_exceptions ineffective - the caller will have 
 			to deal with the details himself.
 			It is important to note that the process will be placed into an AutoInterrupt
 			wrapper that will interrupt the process once it goes out of scope. If you 
@@ -147,13 +143,21 @@ class Git(object):
 			
 		``output_stream``
 			If set to a file-like object, data produced by the git command will be 
-			output to the given stream directly. 
-			Otherwise a new file will be opened.
+			output to the given stream directly.
+			This feature only has any effect if as_process is False. Processes will
+			always be created with a pipe due to issues with subprocess.
+			This merely is a workaround as data will be copied from the 
+			output pipe to the given output stream directly.
+			
 		
 		Returns::
 		
-		 str(output)								  # extended_output = False (Default)
+		 str(output)								   # extended_output = False (Default)
 		 tuple(int(status), str(stdout), str(stderr)) # extended_output = True
+		 
+		 if ouput_stream is True, the stdout value will be your output stream:
+		 output_stream									# extended_output = False
+		 tuple(int(status), output_stream, str(stderr))# extended_output = True
 		
 		Raise
 			GitCommandError
@@ -171,16 +175,12 @@ class Git(object):
 		else:
 		  cwd=self.git_dir
 		  
-		ostream = subprocess.PIPE
-		if output_stream is not None:
-			ostream = output_stream
-
 		# Start the process
 		proc = subprocess.Popen(command,
 								cwd=cwd,
 								stdin=istream,
 								stderr=subprocess.PIPE,
-								stdout=ostream,
+								stdout=subprocess.PIPE,
 								**extra
 								)
 
@@ -190,17 +190,24 @@ class Git(object):
 		# Wait for the process to return
 		status = 0
 		try:
-			stdout_value = proc.stdout.read()
+			if output_stream is None:
+				stdout_value = proc.stdout.read()
+			else:
+				max_chunk_size = 1024*64
+				while True:
+					chunk = proc.stdout.read(max_chunk_size)
+					output_stream.write(chunk)
+					if len(chunk) < max_chunk_size:
+						break
+				# END reading output stream
+				stdout_value = output_stream
+			# END stdout handling
 			stderr_value = proc.stderr.read()
+			# waiting here should do nothing as we have finished stream reading
 			status = proc.wait()
 		finally:
 			proc.stdout.close()
 			proc.stderr.close()
-
-		# Strip off trailing whitespace by default
-		if not with_raw_output:
-			stdout_value = stdout_value.rstrip()
-			stderr_value = stderr_value.rstrip()
 
 		if with_exceptions and status != 0:
 			raise GitCommandError(command, status, stderr_value)

@@ -184,6 +184,11 @@ class TestRepo(TestCase):
 	def test_tag(self):
 		assert self.repo.tag('0.1.5').commit
 		
+	def test_archive(self):
+		tmpfile = os.tmpfile()
+		self.repo.archive(tmpfile, '0.1.5')
+		assert tmpfile.tell()
+		
 	@patch_object(Git, '_call_process')
 	def test_should_display_blame_information(self, git):
 		git.return_value = fixture('blame')
