@@ -15,6 +15,18 @@ General
 * References should be parsed 'manually' to get around command invocation, but 
   be sure to be able to read packed refs.
 
+Object
+------
+* DataStream method should read the data itself. This would be easy once you have 
+  the actul loose object, but will be hard if it is in a pack. In a distant future, 
+  we might be able to do that or at least implement direct object reading for loose
+  objects ( to safe a command call ). Currently object information comes from 
+  persistent commands anyway, so the penalty is not that high. The data_stream 
+  though is not based on persistent commands.
+  It would be good to improve things there as cat-file keeps all the data in a buffer
+  before it writes it. Hence it does not write to a stream directly, which can be 
+  bad if files are large, say 1GB :).
+
 Config
 ------
 * Expand .get* methods of GitConfigParser to support default value. If it is not None, 

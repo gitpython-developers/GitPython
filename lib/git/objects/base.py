@@ -16,6 +16,9 @@ class Object(LazyMixin):
 	This Object also serves as a constructor for instances of the correct type::
 	
 		inst = Object.new(repo,id)
+		inst.id		# objects sha in hex
+		inst.size	# objects uncompressed data size
+		inst.data	# byte string containing the whole data of the object
 	"""
 	TYPES = ("blob", "tree", "commit", "tag")
 	__slots__ = ("repo", "id", "size", "data" )
@@ -114,6 +117,15 @@ class Object(LazyMixin):
 			string with pythonic representation of our object
 		"""
 		return '<git.%s "%s">' % (self.__class__.__name__, self.id)
+
+	@property
+	def data_stream(self):
+		"""
+		Returns 
+			File Object compatible stream to the uncompressed raw data of the object
+		"""
+		proc = self.repo.git.cat_file(self.type, self.id, as_process=True)
+		return utils.ProcessStreamAdapter(proc, "stdout") 
 
 
 class IndexObject(Object):

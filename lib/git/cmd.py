@@ -144,6 +144,7 @@ class Git(object):
 			wrapper that will interrupt the process once it goes out of scope. If you 
 			use the command in iterators, you should pass the whole process instance 
 			instead of a single stream.
+			
 		``output_stream``
 			If set to a file-like object, data produced by the git command will be 
 			output to the given stream directly. 

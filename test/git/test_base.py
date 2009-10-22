@@ -48,6 +48,11 @@ class TestBase(object):
 					assert not item.path.startswith("/")		# must be relative
 					assert isinstance(item.mode, int)
 			# END index object check
+			
+			# read from stream
+			data_stream = item.data_stream
+			data = data_stream.read()
+			assert data
 		# END for each object type to create
 		
 		# each has a unique sha
