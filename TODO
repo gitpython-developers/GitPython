@@ -50,32 +50,44 @@ Overhaul docs - check examples, check looks, improve existing docs
 
 Index
 -----
-* write_tree should write a tree directly, which would require ability to create
+* [advanced]
+  write_tree should write a tree directly, which would require ability to create
   objects in the first place. Should be rather simple as it is 
   "tree" bytes datablock | sha1sum and zipped.
   Currently we use some file swapping and the git command to do it which probably 
   is much slower. The thing is that properly writing a tree from an index involves
   creating several tree objects, so in the end it might be slower. 
   Hmm, probably its okay to use the command unless we go c(++)
+* Proper merge handling with index and working copy
+* Checkout individual blobs using the index and git-checkout. Blobs can already 
+  be written using their stream_data method.
 
 Refs
 -----
-* If the HEAD is detached as it points to a specific commit, its not technically
-  a symbolic reference anymore. Currently, we cannot handle this that well 
-  as we do not check for this case. This should be added though as it is 
-  valid to have a detached head in some cases.
-  
+* When adjusting the reference of a symbolic reference, the ref log might need 
+  adjustments as well. This is not critical, but would make things totally 'right'
+* Reference Objects should be able to set the commit they are pointing to, making 
+  the commit property read-write. Tags are a special case of this and would need 
+  to be handled as well !
+* Ability to create new heads and tags in the Repository ( but using the respective
+  Reference Type ), i.e. Head.create(repo, name, commit = 'HEAD') or 
+  TagReference.create(repo, name
+* Ability to rename references and tags
+* Ability to remove references and tags
+
 Remote
 ------
 * 'push' method needs a test, a true test repository is required though, a fork 
   of a fork would do :)!
+* Fetch should return heads that where updated, pull as well.
   
 Repo
 ----
 * Blame: Read the blame format making assumptions about its structure, 
   currently regex are used a lot although we can deduct what will be next.
   - Read data from a stream directly from git command
-
+* Figure out how to implement a proper merge API
+  
 Submodules
 ----------
 * add submodule support

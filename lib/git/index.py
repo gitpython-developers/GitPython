@@ -289,7 +289,8 @@ class IndexFile(LazyMixin, diff.Diffable):
 		``file_path``
 			If None, we will write to our stored file path from which we have 
 			been initialized. Otherwise we write to the given file path.
-			Please note that this will not change the file_path of this index.
+			Please note that this will change the file_path of this index to 
+			the one you gave.
 		
 		Returns
 			self
@@ -319,7 +320,10 @@ class IndexFile(LazyMixin, diff.Diffable):
 		# write the sha over the content
 		stream.write_sha()
 		write_op._end_writing()
-			
+		
+		# make sure we represent what we have written
+		if file_path is not None:
+			self._file_path = file_path
 	
 	@classmethod
 	def from_tree(cls, repo, *treeish, **kwargs):

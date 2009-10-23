@@ -170,7 +170,11 @@ class TestRepo(TestBase):
 
 	def test_head(self):
 		assert self.rorepo.head.reference.object == self.rorepo.active_branch.object
-		
+
+	def test_index(self):
+		index = self.rorepo.index
+		assert isinstance(index, IndexFile)
+	
 	def test_tag(self):
 		assert self.rorepo.tag('refs/tags/0.1.5').commit
 		
