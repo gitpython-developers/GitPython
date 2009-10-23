@@ -94,3 +94,7 @@ class TestCommit(TestBase):
 			assert first_parent == c.parents[0]
 		# END for each 
 		
+	def test_base(self):
+		name_rev = self.rorepo.head.commit.name_rev
+		assert isinstance(name_rev, basestring)
+		

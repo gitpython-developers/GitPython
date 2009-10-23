@@ -61,6 +61,7 @@ GitCommand
 Commit
 ------
 * 'count' method is not an instance method to increase its ease of use
+* 'name_rev' property returns a nice name for the commit's sha
 
 Config
 ------

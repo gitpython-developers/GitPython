@@ -117,6 +117,15 @@ class Commit(base.Object, Iterable, diff.Diffable):
 		"""
 		return len(self.repo.git.rev_list(self.id, '--', paths, **kwargs).strip().splitlines())
 
+	@property
+	def name_rev(self):
+		"""
+		Returns
+			String describing the commits hex sha based on the closest Reference.
+			Mostly useful for UI purposes
+		"""
+		return self.repo.git.name_rev(self)
+
 	@classmethod
 	def iter_items(cls, repo, rev, paths='', **kwargs):
 		"""
