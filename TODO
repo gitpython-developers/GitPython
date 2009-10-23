@@ -68,7 +68,12 @@ Refs
 * When adjusting the reference of a symbolic reference, the ref log might need 
   adjustments as well. This is not critical, but would make things totally 'right'
   - same with adjusting references directly
-* Check whether we are the active reference HEAD.commit == self.commit
+ !! - Could simply rewrite it using git-update-ref which works nicely for symbolic 
+    and for normal refs !!
+* Check whether we are the active reference HEAD.reference == this_ref
+  - NO: The reference dosnt need to know - in fact it does not know about the 
+  main HEAD, so it may not use it. This is to be done in client code only. 
+  Remove me
 
 Remote
 ------
