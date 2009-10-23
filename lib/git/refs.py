@@ -182,6 +182,7 @@ class Reference(LazyMixin, Iterable):
 		# obj.size = object_size
 		# return cls(repo, full_path, obj)
 		
+		
 
 class SymbolicReference(object):
 	"""
@@ -384,12 +385,80 @@ class Head(Reference):
 	"""
 	_common_path_default = "refs/heads"
 	
+	@classmethod
+	def create(cls, repo, path,  commit=HEAD(), **kwargs ):
+		"""
+		Create a new head.
+		``repo``
+			Repository to create the head in 
+			
+		``path``
+			The name or path of the head, i.e. 'new_branch' or 
+			feature/feature1. The prefix refs/heads is implied.
+			
+		``commit``
+			Commit to which the new head should point, defaults to the 
+			current HEAD
+			
+		``**kwargs``
+			Additional keyword arguments to be passed to git-branch, i.e.
+			track, no-track, l, f to force creation even if branch with that 
+			name already exists.
+		
+		Returns
+			Newly created Head
+			
+		Note
+			This does not alter the current HEAD, index or Working Tree
+		"""
+		raise NotImplementedError("todo")
+			
+		
+	@classmethod
+	def delete(cls, repo, *heads, force=False):
+		"""
+		Delete the given heads
+		
+		``force``
+			If True, the heads will be deleted even if they are not yet merged into
+			the main development stream
+		"""
+		flag = "-d"
+		if force:
+			flag = "-D"
+		repo.git.branch(flag, *heads)
+		
+	
+	def rename(self, new_path, force=False):
+		"""
+		Rename self to a new path
+		
+		``new_path``
+			Either a simple name or a path, i.e. new_name or features/new_name.
+			The prefix refs/heads is implied
+			
+		``force``
+			If True, the rename will succeed even if a head with the target name
+			already exists.
+			
+		Returns
+			self
+		"""
+		flag = "-m"
+		if force:
+			flag = "-M"
+			
+		self.repo.git.branch(flag, new_path)
+		self.path  = "%s/%s" % (self._common_path_default, new_path)
+		return self
+		
+	
 
 class TagReference(Reference):
 	"""
 	Class representing a lightweight tag reference which either points to a commit 
-	or to a tag object. In the latter case additional information, like the signature
-	or the tag-creator, is available.
+	,a tag object or any other object. In the latter case additional information, 
+	like the signature or the tag-creator, is available.
 	
 	This tag object will always point to a commit object, but may carray additional
 	information in a tag object::
@@ -427,6 +496,43 @@ class TagReference(Reference):
 		if self.object.type == "tag":
 			return self.object
 		return None
+		
+	@classmethod
+	def create(cls, repo, path, ref, message=None, **kwargs):
+		"""
+		Create a new tag object.
+		
+		``path``
+			The name of the tag, i.e. 1.0 or releases/1.0. 
+			The prefix refs/tags is implied
+			
+		``ref``
+			A reference to the object you want to tag. It can be a commit, tree or 
+			blob.
+			
+		``message``
+			If not None, the message will be used in your tag object. This will also 
+			create an additional tag object that allows to obtain that information, i.e.::
+				tagref.tag.message
+			
+		``**kwargs``
+			Additional keyword arguments to be passed to git-tag, i.e. f to force creation
+			of a tag.
+			
+		Returns
+			A new TagReference
+		"""
+		raise NotImplementedError("todo")
+		
+	@classmethod
+	def delete(cls, repo, *tags):
+		"""
+		Delete the given existing tag or tags
+		"""
+		repo.git.tag("-d", *tags)
+		
+		
+		
 
 		
 # provide an alias
@@ -460,3 +566,10 @@ class RemoteReference(Head):
 		"""
 		tokens = self.path.split('/')
 		return '/'.join(tokens[3:])
+		
+	@classmethod
+	def delete(cls, repo, *remotes):
+		"""
+		Delete the given remote references.
+		"""
+		repo.git.branch("-d", "-r", *remotes)

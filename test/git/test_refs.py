@@ -108,3 +108,11 @@ class TestRefs(TestBase):
 		
 		# type check
 		self.failUnlessRaises(ValueError, setattr, cur_head, "reference", "that")
+		
+		
+		self.fail("head creation")
+		self.fail("head renaming")
+		self.fail("head removal")
+		self.fail("tag creation")
+		self.fail("tag deletion")
+		self.fail("remote deletion")
