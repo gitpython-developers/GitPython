@@ -41,7 +41,57 @@ class _TemporaryFileSwap(object):
 		# END temp file exists
 	
 
-class IndexEntry(tuple):
+class BaseIndexEntry(tuple):
+	"""
+	Small Brother of an index entry which can be created to describe changes 
+	done to the index in which case plenty of additional information is not requried.
+	
+	As the first 4 data members match exactly to the IndexEntry type, methods 
+	expecting a BaseIndexEntry can also handle full IndexEntries even if they 
+	use numeric indices for performance reasons.
+	"""
+	
+	@property
+	def mode(self):
+		"""
+		File Mode, compatible to stat module constants
+		"""
+		return self[0]
+		
+	@property
+	def sha(self):
+		"""
+		hex sha of the blob
+		"""
+		return self[1]
+		
+	@property
+	def stage(self):
+		"""
+		Stage of the entry, either:
+			0 = default stage
+			1 = stage before a merge or common ancestor entry in case of a 3 way merge
+			2 = stage of entries from the 'left' side of the merge
+			3 = stage of entries from the right side of the merge
+		Note:
+			For more information, see http://www.kernel.org/pub/software/scm/git/docs/git-read-tree.html
+		"""
+		return self[2]
+
+	@property
+	def path(self):
+		return self[3]
+		
+	@classmethod
+	def from_blob(cls, blob, stage = 0):
+		"""
+		Returns
+			Fully equipped BaseIndexEntry at the given stage
+		"""
+		return cls((blob.mode, blob.id, stage, blob.path))
+		
+
+class IndexEntry(BaseIndexEntry):
 	"""
 	Allows convenient access to IndexEntry data without completely unpacking it.
 	
@@ -57,49 +107,42 @@ class IndexEntry(tuple):
 			Tuple(int_time_seconds_since_epoch, int_nano_seconds) of the 
 			file's creation time
 		"""
-		return struct.unpack(">LL", self[0])
+		return struct.unpack(">LL", self[4])
 		
 	@property
 	def mtime(self):
 		"""
 		See ctime property, but returns modification time
 		"""
-		return struct.unpack(">LL", self[1])
+		return struct.unpack(">LL", self[5])
 	
 	@property
 	def dev(self):
 		"""
 		Device ID
 		"""
-		return self[2] 
+		return self[6] 
 	
 	@property
 	def inode(self):
 		"""
 		Inode ID
 		"""
-		return self[3]
-		
-	@property
-	def mode(self):
-		"""
-		File Mode, compatible to stat module constants
-		"""
-		return self[4]
-		
+		return self[7]
+	
 	@property
 	def uid(self):
 		"""
 		User ID
 		"""
-		return self[5]
+		return self[8]
 		
 	@property
 	def gid(self):
 		"""
 		Group ID
 		"""
-		return self[6]
+		return self[9]
 
 	@property
 	def size(self):
@@ -109,32 +152,7 @@ class IndexEntry(tuple):
 		Note
 			Will be 0 if the stage is not 0 ( hence it is an unmerged entry )
 		"""
-		return self[7]
-		
-	@property
-	def sha(self):
-		"""
-		hex sha of the blob
-		"""
-		return self[8]
-		
-	@property
-	def stage(self):
-		"""
-		Stage of the entry, either:
-			0 = default stage
-			1 = stage before a merge or common ancestor entry in case of a 3 way merge
-			2 = stage of entries from the 'left' side of the merge
-			3 = stage of entries from the right side of the merge
-		Note:
-			For more information, see http://www.kernel.org/pub/software/scm/git/docs/git-read-tree.html
-		"""
-		return self[9]
-
-	@property
-	def path(self):
 		return self[10]
-		
 		
 	@classmethod
 	def from_blob(cls, blob):
@@ -143,7 +161,7 @@ class IndexEntry(tuple):
 			Minimal entry resembling the given blob objecft
 		"""
 		time = struct.pack(">LL", 0, 0)
-		return IndexEntry((time, time, 0, 0, blob.mode, 0, 0, blob.size, blob.id, 0, blob.path))
+		return IndexEntry((blob.mode, blob.id, 0, blob.path, time, time, 0, 0, 0, 0, blob.size))
 
 
 def default_index(func):
@@ -243,8 +261,7 @@ class IndexFile(LazyMixin, diff.Diffable):
 		
 		real_size = ((stream.tell() - beginoffset + 8) & ~7)
 		data = stream.read((beginoffset + real_size) - stream.tell())
-		return IndexEntry((ctime, mtime, dev, ino, mode, uid, gid, size, 
-				binascii.hexlify(sha), flags >> 12, path))
+		return IndexEntry((mode, binascii.hexlify(sha), flags >> 12, path, ctime, mtime, dev, ino, uid, gid, size))
 		
 	@classmethod
 	def _read_header(cls, stream):
@@ -286,14 +303,14 @@ class IndexFile(LazyMixin, diff.Diffable):
 		Write an IndexEntry to a stream
 		"""
 		beginoffset = stream.tell()
-		stream.write(entry[0])			# ctime
-		stream.write(entry[1])			# mtime
-		path = entry[10]
+		stream.write(entry[4])			# ctime
+		stream.write(entry[5])			# mtime
+		path = entry[3]
 		plen = len(path) & 0x0fff		# path length
-		assert plen == len(path), "Path %s too long to fit into index" % entry[10]
-		flags = plen | (entry[9] << 12)# stage and path length are 2 byte flags
-		stream.write(struct.pack(">LLLLLL20sH", entry[2], entry[3], entry[4], 
-									entry[5], entry[6], entry[7], binascii.unhexlify(entry[8]), flags))
+		assert plen == len(path), "Path %s too long to fit into index" % entry[3]
+		flags = plen | (entry[2] << 12)# stage and path length are 2 byte flags
+		stream.write(struct.pack(">LLLLLL20sH", entry[6], entry[7], entry[0], 
+									entry[8], entry[9], entry[10], binascii.unhexlify(entry[1]), flags))
 		stream.write(path)
 		real_size = ((stream.tell() - beginoffset + 8) & ~7)
 		stream.write("\0" * ((beginoffset + real_size) - stream.tell()))
@@ -325,7 +342,7 @@ class IndexFile(LazyMixin, diff.Diffable):
 		
 		# body
 		entries_sorted = self.entries.values()
-		entries_sorted.sort(key=lambda e: (e[10], e[9]))		# use path/stage as sort key
+		entries_sorted.sort(key=lambda e: (e[3], e[2]))		# use path/stage as sort key
 		for entry in entries_sorted:
 			self._write_cache_entry(stream, entry)
 		# END for each entry
@@ -623,7 +640,7 @@ class IndexFile(LazyMixin, diff.Diffable):
 		``**kwargs``
 			Additional keyword arguments passed to git-reset
 		"""
-		raise NotImplementedError("todo")
+		raise NotImplementedError("todo: use git-read-tree if there is no working tree to update")
 		
 	@default_index
 	def diff(self, other=diff.Diffable.Index, paths=None, create_patch=False, **kwargs):
