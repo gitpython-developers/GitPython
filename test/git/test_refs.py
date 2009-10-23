@@ -109,10 +109,39 @@ class TestRefs(TestBase):
 		# type check
 		self.failUnlessRaises(ValueError, setattr, cur_head, "reference", "that")
 		
+		# head handling 
+		commit = 'HEAD'
+		prev_head_commit = cur_head.commit
+		for count, new_name in enumerate(("my_new_head", "feature/feature1")):
+			actual_commit = commit+"^"*count
+			new_head = Head.create(rw_repo, new_name, actual_commit)
+			assert cur_head.commit == prev_head_commit
+			assert isinstance(new_head, Head)
+			# already exists
+			self.failUnlessRaises(GitCommandError, Head.create, rw_repo, new_name)
+			
+			# force it
+			new_head = Head.create(rw_repo, new_name, actual_commit, force=True)
+			old_path = new_head.path
+			old_name = new_head.name
+			
+			assert new_head.rename("hello").name == "hello"
+			assert new_head.rename("hello/world").name == "hello/world"
+			assert new_head.rename(old_name).name == old_name and new_head.path == old_path
+			
+			# rename with force
+			tmp_head = Head.create(rw_repo, "tmphead")
+			self.failUnlessRaises(GitCommandError, tmp_head.rename, new_head)
+			tmp_head.rename(new_head, force=True)
+			assert tmp_head == new_head and tmp_head.object == new_head.object
+			
+			Head.delete(rw_repo, tmp_head)
+			heads = rw_repo.heads
+			assert tmp_head not in heads and new_head not in heads
+			# force on deletion testing would be missing here, code looks okay though ;)
+		# END for each new head name
+		self.failUnlessRaises(TypeError, RemoteReference.create, rw_repo, "some_name")  
 		
-		self.fail("head creation")
-		self.fail("head renaming")
-		self.fail("head removal")
 		self.fail("tag creation")
 		self.fail("tag deletion")
 		self.fail("remote deletion")

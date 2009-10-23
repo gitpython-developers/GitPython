@@ -19,7 +19,7 @@ class Reference(LazyMixin, Iterable):
 	_common_path_default = "refs"
 	_id_attribute_ = "name"
 	
-	def __init__(self, repo, path, object = None):
+	def __init__(self, repo, path):
 		"""
 		Initialize this instance
 		``repo``
@@ -29,16 +29,12 @@ class Reference(LazyMixin, Iterable):
 			Path relative to the .git/ directory pointing to the ref in question, i.e.
 			refs/heads/master
 			
-		``object``
-			Object instance, will be retrieved on demand if None
 		"""
 		if not path.startswith(self._common_path_default):
 			raise ValueError("Cannot instantiate %s Reference from path %s" % ( self.__class__.__name__, path ))
 			
 		self.repo = repo
 		self.path = path
-		if object is not None:
-			self.object = object
 		
 	def __str__(self):
 		return self.name
@@ -386,7 +382,7 @@ class Head(Reference):
 	_common_path_default = "refs/heads"
 	
 	@classmethod
-	def create(cls, repo, path,  commit=HEAD(), **kwargs ):
+	def create(cls, repo, path,  commit='HEAD', force=False, **kwargs ):
 		"""
 		Create a new head.
 		``repo``
@@ -399,11 +395,13 @@ class Head(Reference):
 		``commit``
 			Commit to which the new head should point, defaults to the 
 			current HEAD
+		
+		``force``
+			if True, force creation even if branch with that  name already exists.
 			
 		``**kwargs``
 			Additional keyword arguments to be passed to git-branch, i.e.
-			track, no-track, l, f to force creation even if branch with that 
-			name already exists.
+			track, no-track, l
 		
 		Returns
 			Newly created Head
@@ -411,18 +409,28 @@ class Head(Reference):
 		Note
 			This does not alter the current HEAD, index or Working Tree
 		"""
-		raise NotImplementedError("todo")
+		if cls is not Head:
+			raise TypeError("Only Heads can be created explicitly, not objects of type %s" % cls.__name__)
+		
+		args = ( path, commit )
+		if force:
+			kwargs['f'] = True
+		
+		repo.git.branch(*args, **kwargs)
+		return cls(repo, "%s/%s" % ( cls._common_path_default, path))
 			
 		
 	@classmethod
-	def delete(cls, repo, *heads, force=False):
+	def delete(cls, repo, *heads, **kwargs):
 		"""
 		Delete the given heads
 		
 		``force``
 			If True, the heads will be deleted even if they are not yet merged into
-			the main development stream
+			the main development stream.
+			Default False
 		"""
+		force = kwargs.get("force", False)
 		flag = "-d"
 		if force:
 			flag = "-D"
@@ -448,7 +456,7 @@ class Head(Reference):
 		if force:
 			flag = "-M"
 			
-		self.repo.git.branch(flag, new_path)
+		self.repo.git.branch(flag, self, new_path)
 		self.path  = "%s/%s" % (self._common_path_default, new_path)
 		return self
 		
@@ -568,7 +576,7 @@ class RemoteReference(Head):
 		return '/'.join(tokens[3:])
 		
 	@classmethod
-	def delete(cls, repo, *remotes):
+	def delete(cls, repo, *remotes, **kwargs):
 		"""
 		Delete the given remote references.
 		"""
