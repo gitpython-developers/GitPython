@@ -142,6 +142,43 @@ class TestRefs(TestBase):
 		# END for each new head name
 		self.failUnlessRaises(TypeError, RemoteReference.create, rw_repo, "some_name")  
 		
-		self.fail("tag creation")
-		self.fail("tag deletion")
-		self.fail("remote deletion")
+		# tag ref
+		tag_name = "1.0.2"
+		light_tag = TagReference.create(rw_repo, tag_name)
+		self.failUnlessRaises(GitCommandError, TagReference.create, rw_repo, tag_name)
+		light_tag = TagReference.create(rw_repo, tag_name, "HEAD~1", force = True)
+		assert isinstance(light_tag, TagReference)
+		assert light_tag.name == tag_name
+		assert light_tag.commit == cur_head.commit.parents[0]
+		assert light_tag.tag is None
+		
+		# tag with tag object
+		other_tag_name = "releases/1.0.2RC"
+		msg = "my mighty tag\nsecond line"
+		obj_tag = TagReference.create(rw_repo, other_tag_name, message=msg)
+		assert isinstance(obj_tag, TagReference)
+		assert obj_tag.name == other_tag_name
+		assert obj_tag.commit == cur_head.commit
+		assert obj_tag.tag is not None
+		
+		TagReference.delete(rw_repo, light_tag, obj_tag)
+		tags = rw_repo.tags
+		assert light_tag not in tags and obj_tag not in tags
+		
+		# remote deletion
+		remote_refs_so_far = 0
+		remotes = rw_repo.remotes 
+		assert remotes
+		for remote in remotes:
+			refs = remote.refs
+			RemoteReference.delete(rw_repo, *refs)
+			remote_refs_so_far += len(refs)
+		# END for each ref to delete
+		assert remote_refs_so_far
+		
+		for remote in remotes:
+			# remotes without references throw
+			self.failUnlessRaises(AssertionError, getattr, remote, 'refs')
+		# END for each remote
+		
+		self.fail("set commit using ref.commit = that")

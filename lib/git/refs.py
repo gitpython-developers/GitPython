@@ -506,7 +506,7 @@ class TagReference(Reference):
 		return None
 		
 	@classmethod
-	def create(cls, repo, path, ref, message=None, **kwargs):
+	def create(cls, repo, path, ref='HEAD', message=None, force=False, **kwargs):
 		"""
 		Create a new tag object.
 		
@@ -523,14 +523,23 @@ class TagReference(Reference):
 			create an additional tag object that allows to obtain that information, i.e.::
 				tagref.tag.message
 			
+		``force``
+			If True, to force creation of a tag even though that tag already exists.
+			
 		``**kwargs``
-			Additional keyword arguments to be passed to git-tag, i.e. f to force creation
-			of a tag.
+			Additional keyword arguments to be passed to git-tag
 			
 		Returns
 			A new TagReference
 		"""
-		raise NotImplementedError("todo")
+		args = ( path, ref )
+		if message:
+			kwargs['m'] =  message
+		if force:
+			kwargs['f'] = True
+		
+		repo.git.tag(*args, **kwargs)
+		return TagReference(repo, "%s/%s" % (cls._common_path_default, path))
 		
 	@classmethod
 	def delete(cls, repo, *tags):
@@ -579,5 +588,9 @@ class RemoteReference(Head):
 	def delete(cls, repo, *remotes, **kwargs):
 		"""
 		Delete the given remote references.
+		
+		Note
+			kwargs are given for compatability with the base class method as we 
+			should not narrow the signature.
 		"""
 		repo.git.branch("-d", "-r", *remotes)
