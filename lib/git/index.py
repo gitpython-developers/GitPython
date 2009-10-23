@@ -146,6 +146,22 @@ class IndexEntry(tuple):
 		return IndexEntry((time, time, 0, 0, blob.mode, 0, 0, blob.size, blob.id, 0, blob.path))
 
 
+def default_index(func):
+	"""
+	Decorator assuring the wrapped method may only run if we are the default 
+	repository index. This is as we rely on git commands that operate 
+	on that index only.
+	"""
+	def check_default_index(self, *args, **kwargs):
+		if self._file_path != self._index_path():
+			raise AssertionError( "Cannot call %r on indices that do not represent the default git index" % func.__name__ )
+		return func(self, *args, **kwargs)
+	# END wrpaper method
+	
+	check_default_index.__name__ = func.__name__
+	return check_default_index
+
+
 class IndexFile(LazyMixin, diff.Diffable):
 	"""
 	Implements an Index that can be manipulated using a native implementation in 
@@ -487,6 +503,22 @@ class IndexFile(LazyMixin, diff.Diffable):
 		# END for each blob
 		
 		return self
+		
+	def update(self):
+		"""
+		Reread the contents of our index file, discarding all cached information 
+		we might have.
+		
+		Note:
+			This is a possibly dangerious operations as it will discard your changes
+			to index.endtries
+			
+		Returns
+			self
+		"""
+		del(self.entries)
+		self.entries
+		return self
 	
 	def write_tree(self):
 		"""
@@ -512,6 +544,88 @@ class IndexFile(LazyMixin, diff.Diffable):
 		# END remove self
 		return args
 		
+	@default_index
+	def add(self, items, **kwargs):
+		"""
+		Add files from the working copy, specific blobs or IndexEntries 
+		to the index.
+		
+		TODO: Its important to specify a way to add symlinks directly, even 
+		on systems that do not support it, like ... erm ... windows.
+		
+		``**kwargs``
+			Additional keyword arguments to be passed to git-update-index
+			
+		Returns
+			List(IndexEntries) representing the entries just added
+		"""
+		raise NotImplementedError("todo")
+		
+	@default_index
+	def remove(self, items, affect_working_tree=False, **kwargs):
+		"""
+		Remove the given file_paths or blobs from the index and optionally from 
+		the working tree as well.
+		
+		``items``
+			TODO
+		
+		``affect_working_tree``
+			If True, the entry will also be removed from the working tree, physically
+			removing the respective file. This may fail if there are uncommited changes
+			in it.
+			
+		``**kwargs``
+			Additional keyword arguments to be passed to git-update-index
+			
+		Returns
+			self
+		"""
+		raise NotImplementedError("todo")
+		return self
+		
+	@default_index
+	def commit(self, message=None, parent_commits=None,  **kwargs):
+		"""
+		Commit the current index, creating a commit object.
+		
+		``message``
+			Commit message
+			
+		``parent_commits``
+			Optional Commit objects to use as parents for the new commit. 
+			If None or empty, the current head commit will be the parent of the 
+			new commit object
+			
+		``**kwargs``
+			Additional keyword arguments passed to git-commit
+		
+		Returns
+			Commit object representing the new commit
+		"""
+		raise NotImplementedError("todo")
+		
+	@default_index
+	def reset(self, commit='HEAD', working_tree=False, **kwargs):
+		"""
+		Reset the index to reflect the tree at the given commit. This will not
+		adjust our HEAD reference as opposed to HEAD.reset.
+		
+		``commit``
+			Revision, Reference or Commit specifying the commit we should represent.
+			If you want to specify a tree only, use IndexFile.from_tree and overwrite
+			the default index.
+			
+		``working_tree``
+			If True, the files in the working tree will reflect the changed index.
+			If False, the working tree will not be touched
+			
+		``**kwargs``
+			Additional keyword arguments passed to git-reset
+		"""
+		raise NotImplementedError("todo")
+		
+	@default_index
 	def diff(self, other=diff.Diffable.Index, paths=None, create_patch=False, **kwargs):
 		"""
 		Diff this index against the working copy or a Tree or Commit object
@@ -523,10 +637,6 @@ class IndexFile(LazyMixin, diff.Diffable):
 			Will only work with indices that represent the default git index as 
 			they have not been initialized with a stream.
 		"""
-		# perhaps we shouldn't diff these at all, or we swap them in place first
-		if self._file_path != self._index_path():
-			raise AssertionError( "Cannot diff custom indices as they do not represent the default git index" )
-		
 		# index against index is always empty
 		if other is self.Index:
 			return diff.DiffIndex()

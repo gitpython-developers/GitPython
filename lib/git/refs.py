@@ -322,7 +322,8 @@ class HEAD(SymbolicReference):
 				paths=None, **kwargs):
 		"""
 		Reset our HEAD to the given commit optionally synchronizing 
-		the index and working tree.
+		the index and working tree. The reference we refer to will be set to 
+		commit as well.
 		
 		``commit``
 			Commit object, Reference Object or string identifying a revision we 

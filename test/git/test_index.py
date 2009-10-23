@@ -26,6 +26,11 @@ class TestTree(TestBase):
 			val = getattr(entry, attr)
 		# END for each method
 		
+		# test update
+		entries = index.entries
+		assert isinstance(index.update(), IndexFile)
+		assert entries is not index.entries
+		
 		# test stage
 		index_merge = IndexFile(self.rorepo, fixture_path("index_merge"))
 		assert len(index_merge.entries) == 106
@@ -140,3 +145,11 @@ class TestTree(TestBase):
 		
 		# against something unusual
 		self.failUnlessRaises(ValueError, index.diff, int)
+		
+		self.fail( "Test IndexFile.reset" )
+		
+	@with_rw_repo('0.1.6')
+	def test_index_mutation(self, rw_repo):
+		# add / remove / commit / Working Tree Handling 
+		self.fail( "add, remove, commit, working tree handling" )
+		

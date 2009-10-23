@@ -58,6 +58,7 @@ Index
   is much slower. The thing is that properly writing a tree from an index involves
   creating several tree objects, so in the end it might be slower. 
   Hmm, probably its okay to use the command unless we go c(++)
+* Implement diff so that temporary indices can be used as well ( using file swapping )
 * Proper merge handling with index and working copy
 * Checkout individual blobs using the index and git-checkout. Blobs can already 
   be written using their stream_data method.
@@ -74,6 +75,8 @@ Refs
   TagReference.create(repo, name
 * Ability to rename references and tags
 * Ability to remove references and tags
+* Ability to checkout a reference - 
+* Check whether we are the active reference HEAD.commit == self.commit
 
 Remote
 ------
