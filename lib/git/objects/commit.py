@@ -83,7 +83,7 @@ class Commit(base.Object, Iterable, diff.Diffable):
 			# prepare our data lines to match rev-list
 			data_lines = self.data.splitlines()
 			data_lines.insert(0, "commit %s" % self.id)
-			temp = self._iter_from_process_or_stream(self.repo, iter(data_lines)).next()
+			temp = self._iter_from_process_or_stream(self.repo, iter(data_lines), False).next()
 			self.parents = temp.parents
 			self.tree = temp.tree
 			self.author = temp.author
@@ -111,7 +111,8 @@ class Commit(base.Object, Iterable, diff.Diffable):
 			to commits actually containing the paths
 
 		``kwargs``
-			Additional options to be passed to git-rev-list
+			Additional options to be passed to git-rev-list. They must not alter
+			the ouput style of the command, or parsing will yield incorrect results
 		Returns
 			int
 		"""
@@ -144,9 +145,8 @@ class Commit(base.Object, Iterable, diff.Diffable):
 		options = {'pretty': 'raw', 'as_process' : True }
 		options.update(kwargs)
 
-		# the test system might confront us with string values - 
 		proc = repo.git.rev_list(rev, '--', paths, **options)
-		return cls._iter_from_process_or_stream(repo, proc)
+		return cls._iter_from_process_or_stream(repo, proc, True)
 		
 	def iter_parents(self, paths='', **kwargs):
 		"""
@@ -191,7 +191,7 @@ class Commit(base.Object, Iterable, diff.Diffable):
 		return stats.Stats._list_from_string(self.repo, text)
 
 	@classmethod
-	def _iter_from_process_or_stream(cls, repo, proc_or_stream):
+	def _iter_from_process_or_stream(cls, repo, proc_or_stream, from_rev_list):
 		"""
 		Parse out commit information into a list of Commit objects
 
@@ -201,6 +201,9 @@ class Commit(base.Object, Iterable, diff.Diffable):
 		``proc``
 			git-rev-list process instance (raw format)
 
+		``from_rev_list``
+			If True, the stream was created by rev-list in which case we parse 
+			the message differently
 		Returns
 			iterator returning Commit objects
 		"""
@@ -208,10 +211,10 @@ class Commit(base.Object, Iterable, diff.Diffable):
 		if not hasattr(stream,'next'):
 			stream = proc_or_stream.stdout
 			
-		
 		for line in stream:
-			id = line.split()[1]
-			assert line.split()[0] == "commit"
+			commit_tokens = line.split() 
+			id = commit_tokens[1]
+			assert commit_tokens[0] == "commit"
 			tree = stream.next().split()[1]
 
 			parents = []
@@ -231,13 +234,20 @@ class Commit(base.Object, Iterable, diff.Diffable):
 			stream.next()
 			
 			message_lines = []
-			next_line = None
-			for msg_line in stream:
-				if not msg_line.startswith('    '):
-					break
-				# END abort message reading 
-				message_lines.append(msg_line.strip())
-			# END while there are message lines
+			if from_rev_list:
+				for msg_line in stream:
+					if not msg_line.startswith('    '):
+						# and forget about this empty marker
+						break
+					# END abort message reading 
+					# strip leading 4 spaces
+					message_lines.append(msg_line[4:])
+				# END while there are message lines
+			else:
+				# a stream from our data simply gives us the plain message
+				for msg_line in stream:
+					message_lines.append(msg_line)
+			# END message parsing
 			message = '\n'.join(message_lines)
 			
 			yield Commit(repo, id=id, parents=tuple(parents), tree=tree, author=author, authored_date=authored_date,

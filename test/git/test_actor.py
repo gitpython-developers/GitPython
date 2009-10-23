@@ -13,6 +13,14 @@ class TestActor(object):
 		a = Actor._from_string("Michael Trier <mtrier@example.com>")
 		assert_equal("Michael Trier", a.name)
 		assert_equal("mtrier@example.com", a.email)
+		
+		# base type capabilities
+		assert a == a
+		assert not ( a != a )
+		m = set()
+		m.add(a)
+		m.add(a)
+		assert len(m) == 1
 
 	def test_from_string_should_handle_just_name(self):
 		a = Actor._from_string("Michael Trier")

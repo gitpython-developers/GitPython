@@ -16,6 +16,9 @@ class TestCommit(TestBase):
 
 		assert_equal("Sebastian Thiel", commit.author.name)
 		assert_equal("byronimo@gmail.com", commit.author.email)
+		assert commit.author == commit.committer
+		assert isinstance(commit.authored_date, int) and isinstance(commit.committed_date, int)
+		assert commit.message == "Added missing information to docstrings of commit and stats module"
 
 
 	def test_stats(self):
@@ -37,6 +40,14 @@ class TestCommit(TestBase):
 			check_entries(d)
 		# END for each stated file
 		
+		# assure data is parsed properly
+		michael = Actor._from_string("Michael Trier <mtrier@gmail.com>")
+		assert commit.author == michael
+		assert commit.committer == michael
+		assert commit.authored_date == 1210193388
+		assert commit.committed_date == 1210193388
+		assert commit.message == "initial project"
+		
 	@patch_object(Git, '_call_process')
 	def test_rev_list_bisect_all(self, git):
 		"""
@@ -52,7 +63,7 @@ class TestCommit(TestBase):
 									  bisect_all=True)
 		assert_true(git.called)
 
-		commits = Commit._iter_from_process_or_stream(self.rorepo, ListProcessAdapter(revs))
+		commits = Commit._iter_from_process_or_stream(self.rorepo, ListProcessAdapter(revs), True)
 		expected_ids = (
 			'cf37099ea8d1d8c7fbf9b6d12d7ec0249d3acb8b',
 			'33ebe7acec14b25c5f84f35a664803fcab2f7781',
