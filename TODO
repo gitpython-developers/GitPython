@@ -62,6 +62,15 @@ Index
 * Proper merge handling with index and working copy
 * Checkout individual blobs using the index and git-checkout. Blobs can already 
   be written using their stream_data method.
+* index.add: could be implemented in python together with hash-object, allowing 
+  to keep the internal entry cache and write once everything is done. Problem 
+  would be that all other git commands are unaware of the changes unless the index
+  gets written. Its worth an evaluation at least.
+* index.remove: On windows, there can be a command line length overflow 
+  as we pass the paths directly as argv. This is as we use git-rm to be able 
+  to remove whole directories easily. This could be implemented using 
+  git-update-index if this becomes an issue, but then we had to do all the globbing
+  and directory removal ourselves
 
 Refs
 -----

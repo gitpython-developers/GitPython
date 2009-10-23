@@ -164,6 +164,26 @@ class IndexEntry(BaseIndexEntry):
 		return IndexEntry((blob.mode, blob.id, 0, blob.path, time, time, 0, 0, 0, 0, blob.size))
 
 
+def clear_cache(func):
+	"""
+	Decorator for functions that alter the index using the git command. This would 
+	invalidate our possibly existing entries dictionary which is why it must be 
+	deleted to allow it to be lazily reread later.
+	
+	Note
+		This decorator will not be required once all functions are implemented 
+		natively which in fact is possible, but probably not feasible performance wise.
+	"""
+	def clear_cache_if_not_raised(self, *args, **kwargs):
+		rval = func(self, *args, **kwargs)
+		del(self.entries)
+		return rval
+			
+	# END wrapper method 
+	clear_cache_if_not_raised.__name__ = func.__name__
+	return clear_cache_if_not_raised
+	
+
 def default_index(func):
 	"""
 	Decorator assuring the wrapped method may only run if we are the default 
@@ -194,10 +214,8 @@ class IndexFile(LazyMixin, diff.Diffable):
 	The index contains an entries dict whose keys are tuples of type IndexEntry
 	to facilitate access.
 	
-	As opposed to the Index type, the IndexFile represents the index on file level.
-	This can be considered an alternate, file-based implementation of the Index class
-	with less support for common functions. Use it for very special and custom index 
-	handling.
+	You may only read the entries dict or manipulate it through designated methods.
+	Otherwise changes to it will be lost when changing the index using its methods.
 	"""
 	__slots__ = ( "repo", "version", "entries", "_extension_data", "_file_path" )
 	_VERSION = 2			# latest version we support
@@ -500,6 +518,10 @@ class IndexFile(LazyMixin, diff.Diffable):
 		
 		Returns:
 			self
+			
+		Note
+			You will have to write the index manually once you are done, i.e.
+			index.resolve_blobs(blobs).write()
 		"""
 		for blob in iter_blobs:
 			stage_null_key = (blob.path, 0)
@@ -561,45 +583,132 @@ class IndexFile(LazyMixin, diff.Diffable):
 		# END remove self
 		return args
 		
+	
+	def _to_relative_path(self, path):
+		"""
+		Return	
+			Version of path relative to our git directory or raise ValueError
+			if it is not within our git direcotory
+		"""
+		if not os.path.isabs(path):
+			return path
+		relative_path = path.replace(self.repo.git.git_dir+"/", "")
+		if relative_path == path:
+			raise ValueError("Absolute path %r is not in git repository at %r" % (path,self.repo.git.git_dir))
+		return relative_path
+	
+	@clear_cache
 	@default_index
 	def add(self, items, **kwargs):
 		"""
-		Add files from the working copy, specific blobs or IndexEntries 
-		to the index.
+		Add files from the working tree, specific blobs or BaseIndexEntries 
+		to the index. The underlying index file will be written immediately, hence
+		you should provide as many items as possible to minimize the amounts of writes
 		
-		TODO: Its important to specify a way to add symlinks directly, even 
-		on systems that do not support it, like ... erm ... windows.
-		
+		``items``
+			Multiple types of items are supported, types can be mixed within one call.
+			Different types imply a different handling. File paths may generally be 
+			relative or absolute.
+			
+			- path string
+				strings denote a relative or absolute path into the repository pointing to 
+				an existing file, i.e. CHANGES, lib/myfile.ext, /home/gitrepo/lib/myfile.ext.
+				
+				Paths provided like this must exist. When added, they will be written 
+				into the object database.
+				
+				This equals a straight git-add.
+				
+				They are added at stage 0
+				
+			- Blob object
+				Blobs are added as they are assuming a valid mode is set.
+				The file they refer to may or may not exist in the file system
+				
+				If their sha is null ( 40*0 ), their path must exist in the file system 
+				as an object will be created from the data at the path.The handling 
+				now very much equals the way string paths are processed, except that
+				the mode you have set will be kept. This allows you to create symlinks
+				by settings the mode respectively and writing the target of the symlink 
+				directly into the file. This equals a default Linux-Symlink which 
+				is not dereferenced automatically, except that it can be created on 
+				filesystems not supporting it as well.
+				
+				They are added at stage 0
+				
+			- BaseIndexEntry or type
+				Handling equals the one of Blob objects, but the stage may be 
+				explicitly set.
+			
 		``**kwargs``
-			Additional keyword arguments to be passed to git-update-index
+			Additional keyword arguments to be passed to git-update-index, such 
+			as index_only.
 			
 		Returns
-			List(IndexEntries) representing the entries just added
+			List(BaseIndexEntries) representing the entries just actually added.
 		"""
 		raise NotImplementedError("todo")
 		
+	@clear_cache
 	@default_index
-	def remove(self, items, affect_working_tree=False, **kwargs):
+	def remove(self, items, working_tree=False, **kwargs):
 		"""
-		Remove the given file_paths or blobs from the index and optionally from 
+		Remove the given items from the index and optionally from 
 		the working tree as well.
 		
 		``items``
-			TODO
+			Multiple types of items are supported which may be be freely mixed.
+			
+			- path string
+				Remove the given path at all stages. If it is a directory, you must 
+				specify the r=True keyword argument to remove all file entries 
+				below it. If absolute paths are given, they will be converted 
+				to a path relative to the git repository directory containing 
+				the working tree
+				
+				The path string may include globs, such as *.c.
 		
-		``affect_working_tree``
+			- Blob object
+				Only the path portion is used in this case.
+				
+			- BaseIndexEntry or compatible type
+				The only relevant information here Yis the path. The stage is ignored.
+		
+		``working_tree``
 			If True, the entry will also be removed from the working tree, physically
 			removing the respective file. This may fail if there are uncommited changes
 			in it.
 			
 		``**kwargs``
-			Additional keyword arguments to be passed to git-update-index
+			Additional keyword arguments to be passed to git-rm, such 
+			as 'r' to allow recurive removal of 
 			
 		Returns
-			self
+			List(path_string, ...) list of paths that have been removed effectively.
+			This is interesting to know in case you have provided a directory or 
+			globs. Paths are relative to the 
 		"""
-		raise NotImplementedError("todo")
-		return self
+		args = list()
+		if not working_tree:
+			args.append("--cached")
+		args.append("--")
+		
+		# preprocess paths
+		paths = list()
+		for item in items:
+			if isinstance(item, (BaseIndexEntry,Blob)):
+				paths.append(self._to_relative_path(item.path))
+			elif isinstance(item, basestring):
+				paths.append(self._to_relative_path(item))
+			else:
+				raise TypeError("Invalid item type: %r" % item)
+		# END for each item
+		
+		removed_paths = self.repo.git.rm(args, paths, **kwargs).splitlines()
+		
+		# process output to gain proper paths
+		# rm 'path'
+		return [ p[4:-1] for p in removed_paths ]
 		
 	@default_index
 	def commit(self, message=None, parent_commits=None,  **kwargs):
@@ -621,7 +730,8 @@ class IndexFile(LazyMixin, diff.Diffable):
 			Commit object representing the new commit
 		"""
 		raise NotImplementedError("todo")
-		
+	
+	@clear_cache
 	@default_index
 	def reset(self, commit='HEAD', working_tree=False, paths=None, **kwargs):
 		"""

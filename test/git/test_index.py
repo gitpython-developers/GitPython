@@ -9,6 +9,7 @@ from git import *
 import inspect
 import os
 import tempfile
+import glob
 
 class TestTree(TestBase):
 	
@@ -174,8 +175,67 @@ class TestTree(TestBase):
 		finally:
 			fp.close()
 		
+	
+	def _count_existing(self, repo, files):
+		existing = 0
+		basedir = repo.git.git_dir
+		for f in files:
+			existing += os.path.isfile(os.path.join(basedir, f))
+		# END for each deleted file
+		return existing
+	# END num existing helper
+	
+		
+		
 	@with_rw_repo('0.1.6')
 	def test_index_mutation(self, rw_repo):
-		# add / remove / commit / Working Tree Handling 
-		self.fail( "add, remove, commit, working tree handling" )
+		index = rw_repo.index
+		num_entries = len(index.entries)
+		# remove all of the files, provide a wild mix of paths, BaseIndexEntries, 
+		# IndexEntries
+		def mixed_iterator():
+			count = 0
+			for entry in index.entries.itervalues():
+				type_id = count % 4 
+				if type_id == 0:	# path
+					yield entry.path
+				elif type_id == 1:	# blob
+					yield Blob(rw_repo, entry.sha, entry.mode, entry.path)
+				elif type_id == 2:	# BaseIndexEntry
+					yield BaseIndexEntry(entry[:4])
+				elif type_id == 3:	# IndexEntry
+					yield entry
+				else:
+					raise AssertionError("Invalid Type")
+				count += 1
+			# END for each entry 
+		# END mixed iterator
+		deleted_files = index.remove(mixed_iterator(), working_tree=False)
+		assert deleted_files
+		assert self._count_existing(rw_repo, deleted_files) == len(deleted_files)
+		assert len(index.entries) == 0
+		
+		# reset the index to undo our changes
+		index.reset()
+		assert len(index.entries) == num_entries
+		
+		# remove with working copy
+		deleted_files = index.remove(mixed_iterator(), working_tree=True)
+		assert deleted_files
+		assert self._count_existing(rw_repo, deleted_files) == 0
+		
+		# reset everything
+		index.reset(working_tree=True)
+		assert self._count_existing(rw_repo, deleted_files) == len(deleted_files)
+		
+		# invalid type
+		self.failUnlessRaises(TypeError, index.remove, [1])
+		
+		# absolute path
+		deleted_files = index.remove([os.path.join(rw_repo.git.git_dir,"lib")], r=True)
+		assert len(deleted_files) > 1
+		self.failUnlessRaises(ValueError, index.remove, ["/doesnt/exists"])
+		
+		# re-add all files in lib
+		self.fail( "add, commit, working tree handling" )
 		
