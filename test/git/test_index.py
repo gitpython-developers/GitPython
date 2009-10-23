@@ -236,6 +236,18 @@ class TestTree(TestBase):
 		assert len(deleted_files) > 1
 		self.failUnlessRaises(ValueError, index.remove, ["/doesnt/exists"])
 		
+		# test committing
+		# commit changed index
+		cur_commit = rw_repo.head.commit
+		commit_message = "commit default head"
+		new_commit = index.commit(commit_message)
+		assert new_commit.message == commit_message
+		assert new_commit.parents[0] == cur_commit
+		
+		self.fail("commit with no parents")
+		self.fail("commit multiple parents")
+		
+		
 		# re-add all files in lib
 		self.fail( "add, commit, working tree handling" )
 		

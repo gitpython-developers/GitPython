@@ -17,7 +17,7 @@ import sys
 import stat
 import git.diff as diff
 
-from git.objects import Blob, Tree, Object
+from git.objects import Blob, Tree, Object, Commit
 from git.utils import SHA1Writer, LazyMixin, ConcurrentWriteOperation
 
 
@@ -711,25 +711,51 @@ class IndexFile(LazyMixin, diff.Diffable):
 		return [ p[4:-1] for p in removed_paths ]
 		
 	@default_index
-	def commit(self, message=None, parent_commits=None,  **kwargs):
+	def commit(self, message, parent_commits=None):
 		"""
 		Commit the current index, creating a commit object.
 		
 		``message``
-			Commit message
+			Commit message. It may be an empty string if no message is provided.
+			It will be converted to a string in any case.
 			
 		``parent_commits``
-			Optional Commit objects to use as parents for the new commit. 
-			If None or empty, the current head commit will be the parent of the 
+			Optional Commit objects to use as parents for the new commit.
+			If empty list, the commit will have no parents at all and become 
+			a root commit.
+			If None , the current head commit will be the parent of the 
 			new commit object
 			
-		``**kwargs``
-			Additional keyword arguments passed to git-commit
-		
 		Returns
 			Commit object representing the new commit
+			
+		Note:
+			Additional information about hte committer and Author are taken from the
+			environment or from the git configuration, see git-commit-tree for 
+			more information
 		"""
-		raise NotImplementedError("todo")
+		parents = parent_commits
+		if parent_commits is None:
+			parent_commits = [ self.repo.head.commit ]
+		
+		parent_args = [ ("-p", str(commit)) for commit in parent_commits ]
+		
+		# create message stream
+		tmp_file_path = tempfile.mktemp()
+		fp = open(tmp_file_path,"w")
+		fp.write(str(message))
+		fp.close()
+		fp = open(tmp_file_path,"r")
+		fp.seek(0)
+		
+		try:
+			# write the current index as tree
+			tree_sha = self.repo.git.write_tree()
+			commit_sha = self.repo.git.commit_tree(tree_sha, parent_args, istream=fp)
+			return Commit(self.repo, commit_sha)
+		finally:
+			fp.close()
+			os.remove(tmp_file_path)
 	
 	@clear_cache
 	@default_index

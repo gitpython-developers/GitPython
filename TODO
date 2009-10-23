@@ -31,6 +31,12 @@ Object
   it should be renamed to 'sha'. There was a time when references where allowed as 
   well, but now objects will be 'baked' to the actual sha to assure comparisons work.
   
+Commit
+------
+* message is stipped during parsing, which is wrong unless we parse from 
+  rev-list output. In fact we don't know that, and can't really tell either.
+  Currently we strip away white space that might actually belong to the message
+  
 Config
 ------
 * Expand .get* methods of GitConfigParser to support default value. If it is not None, 
@@ -71,6 +77,11 @@ Index
   to remove whole directories easily. This could be implemented using 
   git-update-index if this becomes an issue, but then we had to do all the globbing
   and directory removal ourselves
+* commit: advance head = False - tree object should get the base commit wrapping
+  that index uses after writing itself as tree. Perhaps it would even be better
+  to have a Commit.create method from a tree or from an index. Allowing the 
+  latter would be quite flexible and would fit into the system as refs have 
+  create methods as well
 
 Refs
 -----
