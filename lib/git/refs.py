@@ -65,8 +65,7 @@ class Reference(LazyMixin, Iterable):
 		
 		return '/'.join(tokens[2:])
 	
-	@property
-	def object(self):
+	def _get_object(self):
 		"""
 		Returns
 			The object our ref currently refers to. Refs can be cached, they will 
@@ -76,16 +75,53 @@ class Reference(LazyMixin, Iterable):
 		# Our path will be resolved to the hexsha which will be used accordingly
 		return Object.new(self.repo, self.path)
 		
-	@property
-	def commit(self):
+	def _set_object(self, ref, type=None):
+		"""
+		Set our reference to point to the given ref. It will be converted
+		to a specific hexsha.
+		
+		``type``
+			If not None, string type of that the object must have, other we raise
+			a type error. Only used internally
+		
+		Returns
+			Object we have set. This is used internally only to reduce the amount 
+			of calls to the git command
+		"""
+		obj = Object.new(self.repo, ref)
+		if type is not None and obj.type != type:
+			raise TypeError("Reference %r cannot point to object of type %r" % (self,obj.type))
+			
+		full_ref_path = os.path.join(self.repo.path, self.path)
+		fp = open(full_ref_path, "w")
+		try:
+			fp.write(str(obj))
+		finally:
+			fp.close()
+		return obj
+		
+	object = property(_get_object, _set_object, doc="Return the object our ref currently refers to")
+		
+	def _set_commit(self, commit):
+		"""
+		Set ourselves to point to the given commit. 
+		
+		Raise
+			ValueError if commit does not actually point to a commit
+		"""
+		self._set_object(commit, type="commit")
+		
+	def _get_commit(self):
 		"""
 		Returns
-			Commit object the head points to
+			Commit object the reference points to
 		"""
 		commit = self.object
 		if commit.type != "commit":
 			raise TypeError("Object of reference %s did not point to a commit" % self)
 		return commit
+	
+	commit = property(_get_commit, _set_commit, doc="Return Commit object the reference points to")
 	
 	@classmethod
 	def iter_items(cls, repo, common_path = None, **kwargs):
@@ -244,7 +280,7 @@ class SymbolicReference(object):
 		try:
 			tokens = fp.readline().rstrip().split(' ')
 			if tokens[0] != 'ref:':
-				raise TypeError("%s is a detached symbolic reference as it points to %r" % tokens[0])
+				raise TypeError("%s is a detached symbolic reference as it points to %r" % (self, tokens[0]))
 			return Reference.from_path(self.repo, tokens[1])
 		finally:
 			fp.close()

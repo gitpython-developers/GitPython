@@ -181,4 +181,20 @@ class TestRefs(TestBase):
 			self.failUnlessRaises(AssertionError, getattr, remote, 'refs')
 		# END for each remote
 		
-		self.fail("set commit using ref.commit = that")
+		# change where the active head points to
+		if cur_head.is_detached:
+			cur_head.reference = rw_repo.heads[0]
+		
+		head = cur_head.reference
+		old_commit = head.commit
+		head.commit = old_commit.parents[0]
+		assert head.commit == old_commit.parents[0]
+		assert head.commit == cur_head.commit
+		head.commit = old_commit
+		
+		# setting a non-commit as commit fails, but succeeds as object
+		head_tree = head.commit.tree
+		self.failUnlessRaises(TypeError, setattr, head, 'commit', head_tree)
+		assert head.commit == old_commit		# and the ref did not change
+		head.object = head_tree
+		assert head.object == head_tree

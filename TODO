@@ -67,15 +67,7 @@ Refs
 -----
 * When adjusting the reference of a symbolic reference, the ref log might need 
   adjustments as well. This is not critical, but would make things totally 'right'
-* Reference Objects should be able to set the commit they are pointing to, making 
-  the commit property read-write. Tags are a special case of this and would need 
-  to be handled as well !
-* Ability to create new heads and tags in the Repository ( but using the respective
-  Reference Type ), i.e. Head.create(repo, name, commit = 'HEAD') or 
-  TagReference.create(repo, name
-* Ability to rename references and tagsre
-* Ability to remove references and tags
-* Ability to checkout a reference - 
+  - same with adjusting references directly
 * Check whether we are the active reference HEAD.commit == self.commit
 
 Remote
