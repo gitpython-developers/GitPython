@@ -12,9 +12,9 @@ import tempfile
 
 class TestTree(TestBase):
 	
-	def test_base(self):
+	def test_index_file_base(self):
 		# read from file
-		index = Index.from_file(self.rorepo, fixture_path("index"))
+		index = IndexFile(self.rorepo, fixture_path("index"))
 		assert index.entries
 		assert index.version > 0
 		
@@ -27,20 +27,16 @@ class TestTree(TestBase):
 		# END for each method
 		
 		# test stage
-		index_merge = Index.from_file(self.rorepo, fixture_path("index_merge"))
+		index_merge = IndexFile(self.rorepo, fixture_path("index_merge"))
 		assert len(index_merge.entries) == 106
 		assert len(list(e for e in index_merge.entries.itervalues() if e.stage != 0 ))
 		
 		# write the data - it must match the original
-		index_output = os.tmpfile()
-		index_merge.write(index_output)
-		
-		index_output.seek(0)
-		assert index_output.read() == fixture("index_merge")
-		
 		tmpfile = tempfile.mktemp()
-		Index.to_file(index_merge, tmpfile)
-		assert os.path.isfile(tmpfile)
+		index_merge.write(tmpfile)
+		fp = open(tmpfile, 'r')
+		assert fp.read() == fixture("index_merge")
+		fp.close()
 		os.remove(tmpfile)
 	
 	def _cmp_tree_index(self, tree, index):
@@ -55,23 +51,23 @@ class TestTree(TestBase):
 		# END for each blob in tree
 		assert num_blobs == len(index.entries)
 	
-	def test_from_tree(self):
+	def test_index_file_from_tree(self):
 		common_ancestor_sha = "5117c9c8a4d3af19a9958677e45cda9269de1541"
 		cur_sha = "4b43ca7ff72d5f535134241e7c797ddc9c7a3573"
 		other_sha = "39f85c4358b7346fee22169da9cad93901ea9eb9"
 		
 		# simple index from tree 
-		base_index = Index.from_tree(self.rorepo, common_ancestor_sha)
+		base_index = IndexFile.from_tree(self.rorepo, common_ancestor_sha)
 		assert base_index.entries
 		self._cmp_tree_index(common_ancestor_sha, base_index)
 		
 		# merge two trees - its like a fast-forward
-		two_way_index = Index.from_tree(self.rorepo, common_ancestor_sha, cur_sha)
+		two_way_index = IndexFile.from_tree(self.rorepo, common_ancestor_sha, cur_sha)
 		assert two_way_index.entries
 		self._cmp_tree_index(cur_sha, two_way_index)
 		
 		# merge three trees - here we have a merge conflict
-		three_way_index = Index.from_tree(self.rorepo, common_ancestor_sha, cur_sha, other_sha)
+		three_way_index = IndexFile.from_tree(self.rorepo, common_ancestor_sha, cur_sha, other_sha)
 		assert len(list(e for e in three_way_index.entries.values() if e.stage != 0))
 		
 		
@@ -102,9 +98,9 @@ class TestTree(TestBase):
 		assert num_blobs == len(three_way_index.entries)
 	
 	@with_rw_repo('0.1.6')
-	def test_from_index_and_diff(self, rw_repo):
+	def test_index_file_diffing(self, rw_repo):
 		# default Index instance points to our index
-		index = Index(rw_repo)
+		index = IndexFile(rw_repo)
 		assert index.path is not None
 		assert len(index.entries)
 		

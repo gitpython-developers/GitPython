@@ -13,6 +13,7 @@ import mmap
 import objects
 import tempfile
 import os
+import sys
 import stat
 import git.diff as diff
 
@@ -34,7 +35,10 @@ class _TemporaryFileSwap(object):
 		
 	def __del__(self):
 		if os.path.isfile(self.tmp_file_path):
+			if sys.platform == "win32" and os.path.exists(self.file_path):
+				os.remove(self.file_path)
 			os.rename(self.tmp_file_path, self.file_path)
+		# END temp file exists
 	
 
 class IndexEntry(tuple):
@@ -142,7 +146,7 @@ class IndexEntry(tuple):
 		return IndexEntry((time, time, 0, 0, blob.mode, 0, 0, blob.size, blob.id, 0, blob.path))
 
 
-class Index(LazyMixin, diff.Diffable):
+class IndexFile(LazyMixin, diff.Diffable):
 	"""
 	Implements an Index that can be manipulated using a native implementation in 
 	order to save git command function calls wherever possible.
@@ -155,14 +159,20 @@ class Index(LazyMixin, diff.Diffable):
 	``Entries``
 	The index contains an entries dict whose keys are tuples of type IndexEntry
 	to facilitate access.
+	
+	As opposed to the Index type, the IndexFile represents the index on file level.
+	This can be considered an alternate, file-based implementation of the Index class
+	with less support for common functions. Use it for very special and custom index 
+	handling.
 	"""
-	__slots__ = ( "repo", "version", "entries", "_extension_data", "_is_default_index" )
+	__slots__ = ( "repo", "version", "entries", "_extension_data", "_file_path" )
 	_VERSION = 2			# latest version we support
 	S_IFGITLINK	= 0160000
 	
-	def __init__(self, repo, stream = None):
+	def __init__(self, repo, file_path=None):
 		"""
-		Initialize this Index instance, optionally from the given ``stream``
+		Initialize this Index instance, optionally from the given ``file_path``.
+		If no file_path is given, we will be created from the current index file.
 		
 		If a stream is not given, the stream will be initialized from the current 
 		repository's index on demand.
@@ -170,24 +180,27 @@ class Index(LazyMixin, diff.Diffable):
 		self.repo = repo
 		self.version = self._VERSION
 		self._extension_data = ''
-		self._is_default_index = True
-		if stream is not None:
-			self._is_default_index = False
-			self._read_from_stream(stream)
-		# END read from stream immediatly
-	
+		self._file_path = file_path or self._index_path()
 	
 	def _set_cache_(self, attr):
 		if attr == "entries":
 			# read the current index
-			fp = open(self._index_path(), "r")
+			# try memory map for speed
+			fp = open(self._file_path, "r")
+			stream = fp
 			try:
-				self._read_from_stream(fp)
+				stream = mmap.mmap(fp.fileno(), 0, access=mmap.ACCESS_READ)
+			except Exception:
+				pass
+			# END memory mapping
+			
+			try:
+				self._read_from_stream(stream)
 			finally:
 				fp.close()
 			# END read from default index on demand
 		else:
-			super(Index, self)._set_cache_(attr)
+			super(IndexFile, self)._set_cache_(attr)
 	
 	def _index_path(self):
 		return os.path.join(self.repo.path, "index")
@@ -197,12 +210,9 @@ class Index(LazyMixin, diff.Diffable):
 	def path(self):
 		"""
 		Returns 
-			Path to the index file we are representing or None if we are 
-			a loose index that was read from a stream.
+			Path to the index file we are representing
 		"""
-		if self._is_default_index:
-			return self._index_path()
-		return None
+		return self._file_path
 	
 	@classmethod
 	def _read_entry(cls, stream):
@@ -252,62 +262,8 @@ class Index(LazyMixin, diff.Diffable):
 		
 		# truncate the sha in the end as we will dynamically create it anyway 
 		self._extension_data = self._extension_data[:-20]
-		
 	
-	@classmethod
-	def from_file(cls, repo, file_path):
-		"""
-		Returns
-			Index instance as recreated from the given stream.
-		
-		``repo``
-			Repository the index is related to
-		
-		``file_pa ``
-			File path pointing to git index file
-			
-		Note
-			Reading is based on the dulwich project.
-		"""
-		fp = open(file_path, "r")
-		
-		# try memory map for speed
-		stream = fp
-		try:
-			stream = mmap.mmap(fp.fileno(), 0, access=mmap.ACCESS_READ)
-		except Exception:
-			pass
-		# END memory mapping
-		
-		try:
-			return cls(repo, stream)
-		finally:
-			fp.close()
-		
 	
-	@classmethod
-	def to_file(cls, index, file_path):
-		"""
-		Write the index data to the given file path.
-		
-		``index``
-			Index you wish to write.
-			
-		``file_path``
-			Path at which to write the index data. Please note that missing directories
-			will lead to an exception to be thrown.
-			
-		Raise 
-			IOError if the file could not be written
-		"""
-		fp = open(file_path, "w")
-		try:
-			return index.write(fp)
-		finally:
-			fp.close()
-		# END exception handling
-		
-
 	@classmethod
 	def _write_cache_entry(cls, stream, entry):
 		"""
@@ -326,14 +282,14 @@ class Index(LazyMixin, diff.Diffable):
 		real_size = ((stream.tell() - beginoffset + 8) & ~7)
 		stream.write("\0" * ((beginoffset + real_size) - stream.tell()))
 
-	def write(self, stream=None):
+	def write(self, file_path = None):
 		"""
-		Write the current state to the given stream or to the default repository 
-		index.
+		Write the current state to our file path or to the given one
 		
-		``stream``
-			File-like object or None.
-			If None, the default repository index will be overwritten.
+		``file_path``
+			If None, we will write to our stored file path from which we have 
+			been initialized. Otherwise we write to the given file path.
+			Please note that this will not change the file_path of this index.
 		
 		Returns
 			self
@@ -341,12 +297,8 @@ class Index(LazyMixin, diff.Diffable):
 		Note
 			Index writing based on the dulwich implementation
 		"""
-		write_op = None
-		if stream is None:
-			write_op = ConcurrentWriteOperation(self._index_path())
-			stream = write_op._begin_writing()
-			# stream = open(self._index_path()
-		# END stream handling 
+		write_op = ConcurrentWriteOperation(file_path or self._file_path)
+		stream = write_op._begin_writing()
 		
 		stream = SHA1Writer(stream)
 		
@@ -366,9 +318,7 @@ class Index(LazyMixin, diff.Diffable):
 		
 		# write the sha over the content
 		stream.write_sha()
-		
-		if write_op is not None:
-			write_op._end_writing()
+		write_op._end_writing()
 			
 	
 	@classmethod
@@ -393,6 +343,11 @@ class Index(LazyMixin, diff.Diffable):
 			 
 		``**kwargs``
 			Additional arguments passed to git-read-tree
+			
+		Returns
+			New IndexFile instance. It will point to a temporary index location which 
+			does not exist anymore. If you intend to write such a merged Index, supply
+			an alternate file_path to its 'write' method.
 			
 		Note:
 			In the three-way merge case, --aggressive will be specified to automatically
@@ -428,7 +383,8 @@ class Index(LazyMixin, diff.Diffable):
 		index_handler = _TemporaryFileSwap(os.path.join(repo.path, 'index'))
 		try:
 			repo.git.read_tree(*arg_list, **kwargs)
-			index = cls.from_file(repo, tmp_index)
+			index = cls(repo, tmp_index)
+			index.entries		# force it to read the file
 		finally:
 			if os.path.exists(tmp_index):
 				os.remove(tmp_index)
@@ -539,19 +495,10 @@ class Index(LazyMixin, diff.Diffable):
 		index_path = self._index_path()
 		tmp_index_mover = _TemporaryFileSwap(index_path)
 		
-		self.to_file(self, index_path)
+		self.write(index_path)
+		tree_sha = self.repo.git.write_tree()
 		
-		try:
-			tree_sha = self.repo.git.write_tree()
-		finally:
-			# remove our index file so that the original index can move back into place
-			# On linux it will silently overwrite, on windows it won't
-			if os.path.isfile(index_path):
-				os.remove(index_path)
-			# END remove our own index file beforehand
-		# END write tree handling 
 		return Tree(self.repo, tree_sha, 0, '')
-		
 		
 	def _process_diff_args(self, args):
 		try:
@@ -572,7 +519,8 @@ class Index(LazyMixin, diff.Diffable):
 			Will only work with indices that represent the default git index as 
 			they have not been initialized with a stream.
 		"""
-		if not self._is_default_index:
+		# perhaps we shouldn't diff these at all, or we swap them in place first
+		if self._file_path != self._index_path():
 			raise AssertionError( "Cannot diff custom indices as they do not represent the default git index" )
 		
 		# index against index is always empty
@@ -598,5 +546,5 @@ class Index(LazyMixin, diff.Diffable):
 			raise ValueError( "other must be None, Diffable.Index, a Tree or Commit, was %r" % other )
 		
 		# diff against working copy - can be handled by superclass natively
-		return super(Index, self).diff(other, paths, create_patch, **kwargs)
+		return super(IndexFile, self).diff(other, paths, create_patch, **kwargs)
 	
