@@ -146,7 +146,33 @@ class TestTree(TestBase):
 		# against something unusual
 		self.failUnlessRaises(ValueError, index.diff, int)
 		
-		self.fail( "Test IndexFile.reset" )
+		# adjust the index to match an old revision
+		cur_branch = rw_repo.active_branch
+		cur_commit = cur_branch.commit
+		rev_head_parent = 'HEAD~1'
+		assert index.reset(rev_head_parent) is index
+		
+		assert cur_branch == rw_repo.active_branch
+		assert cur_commit == rw_repo.head.commit
+		
+		# there must be differences towards the working tree which is in the 'future'
+		assert index.diff(None)
+		
+		# reset the working copy as well to current head,to pull 'back' as well
+		new_data = "will be reverted"
+		file_path = os.path.join(rw_repo.git.git_dir, "CHANGES")
+		fp = open(file_path, "w")
+		fp.write(new_data)
+		fp.close()
+		index.reset(rev_head_parent, working_tree=True)
+		assert not index.diff(None)
+		assert cur_branch == rw_repo.active_branch
+		assert cur_commit == rw_repo.head.commit
+		fp = open(file_path)
+		try:
+			assert fp.read() != new_data
+		finally:
+			fp.close()
 		
 	@with_rw_repo('0.1.6')
 	def test_index_mutation(self, rw_repo):

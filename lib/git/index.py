@@ -528,13 +528,13 @@ class IndexFile(LazyMixin, diff.Diffable):
 		
 		Note:
 			This is a possibly dangerious operations as it will discard your changes
-			to index.endtries
+			to index.entries
 			
 		Returns
 			self
 		"""
 		del(self.entries)
-		self.entries
+		# allows to lazily reread on demand
 		return self
 	
 	def write_tree(self):
@@ -623,7 +623,7 @@ class IndexFile(LazyMixin, diff.Diffable):
 		raise NotImplementedError("todo")
 		
 	@default_index
-	def reset(self, commit='HEAD', working_tree=False, **kwargs):
+	def reset(self, commit='HEAD', working_tree=False, paths=None, **kwargs):
 		"""
 		Reset the index to reflect the tree at the given commit. This will not
 		adjust our HEAD reference as opposed to HEAD.reset.
@@ -636,11 +636,23 @@ class IndexFile(LazyMixin, diff.Diffable):
 		``working_tree``
 			If True, the files in the working tree will reflect the changed index.
 			If False, the working tree will not be touched
+			Please note that changes to the working copy will be discarded without 
+			warning !
 			
 		``**kwargs``
 			Additional keyword arguments passed to git-reset
+			
+		Returns
+			self
 		"""
-		raise NotImplementedError("todo: use git-read-tree if there is no working tree to update")
+		head = self.repo.head
+		prev_commit = head.commit
+		
+		# reset to get the tree/working copy
+		head.reset(commit, index=True, working_tree=working_tree, paths=paths, **kwargs)
+		# put the head back 
+		head.reset(prev_commit, index=False, working_tree=False)
+		return self
 		
 	@default_index
 	def diff(self, other=diff.Diffable.Index, paths=None, create_patch=False, **kwargs):
