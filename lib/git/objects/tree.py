@@ -38,9 +38,9 @@ class Tree(base.IndexObject, diff.Diffable):
 	__slots__ = "_cache"
 	
 	# using ascii codes for comparison 
-	ascii_commit_id = (0x31 << 4) + 0x36		
-	ascii_blob_id = (0x31 << 4) + 0x30
-	ascii_tree_id = (0x34 << 4) + 0x30
+	commit_id = 016		
+	blob_id = 010
+	tree_id = 040
 	
 	
 	def __init__(self, repo, id, mode=0, path=None):
@@ -88,8 +88,8 @@ class Tree(base.IndexObject, diff.Diffable):
 			mode = 0
 			mode_boundary = i + 6
 			
-			# keep it ascii - we compare against the respective values
-			type_id = (ord(data[i])<<4) + ord(data[i+1])
+			# read type
+			type_id = ((ord(data[i])-ord_zero)<<3) + (ord(data[i+1])-ord_zero)
 			i += 2
 			
 			while data[i] != ' ':
@@ -115,12 +115,13 @@ class Tree(base.IndexObject, diff.Diffable):
 			sha = data[i:i+20]
 			i = i + 20
 			
+			mode |= type_id<<12
 			hexsha = sha_to_hex(sha)
-			if type_id == self.ascii_blob_id:
+			if type_id == self.blob_id:
 				yield blob.Blob(self.repo, hexsha, mode, name)
-			elif type_id == self.ascii_tree_id:
+			elif type_id == self.tree_id:
 				yield Tree(self.repo, hexsha, mode, name)
-			elif type_id == self.ascii_commit_id:
+			elif type_id == self.commit_id:
 				# todo 
 				yield None
 			else:
