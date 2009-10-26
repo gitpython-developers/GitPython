@@ -87,22 +87,21 @@ Refs
 -----
 * When adjusting the reference of a symbolic reference, the ref log might need 
   adjustments as well. This is not critical, but would make things totally 'right'
-* Reference Objects should be able to set the commit they are pointing to, making 
-  the commit property read-write. Tags are a special case of this and would need 
-  to be handled as well !
-* Ability to create new heads and tags in the Repository ( but using the respective
-  Reference Type ), i.e. Head.create(repo, name, commit = 'HEAD') or 
-  TagReference.create(repo, name
-* Ability to rename references and tags
-* Ability to remove references and tags
-* Ability to checkout a reference - 
-* Check whether we are the active reference HEAD.commit == self.commit
+  - same with adjusting references directly
+ !! - Could simply rewrite it using git-update-ref which works nicely for symbolic 
+    and for normal refs !!
+* Check whether we are the active reference HEAD.reference == this_ref
+  - NO: The reference dosnt need to know - in fact it does not know about the 
+  main HEAD, so it may not use it. This is to be done in client code only. 
+  Remove me
 
 Remote
 ------
 * 'push' method needs a test, a true test repository is required though, a fork 
   of a fork would do :)!
 * Fetch should return heads that where updated, pull as well.
+* Creation and deletion methods for references should be part of the interface, allowing
+  repo.create_head(...) instaed of Head.create(repo, ...). Its a convenience thing, clearly
   
 Repo
 ----
