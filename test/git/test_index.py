@@ -191,6 +191,8 @@ class TestTree(TestBase):
 	def test_index_mutation(self, rw_repo):
 		index = rw_repo.index
 		num_entries = len(index.entries)
+		cur_head = rw_repo.head
+		
 		# remove all of the files, provide a wild mix of paths, BaseIndexEntries, 
 		# IndexEntries
 		def mixed_iterator():
@@ -236,18 +238,39 @@ class TestTree(TestBase):
 		assert len(deleted_files) > 1
 		self.failUnlessRaises(ValueError, index.remove, ["/doesnt/exists"])
 		
-		# test committing
+		# TEST COMMITTING
 		# commit changed index
-		cur_commit = rw_repo.head.commit
+		cur_commit = cur_head.commit
 		commit_message = "commit default head"
-		new_commit = index.commit(commit_message)
+		
+		new_commit = index.commit(commit_message, head=False)
 		assert new_commit.message == commit_message
 		assert new_commit.parents[0] == cur_commit
+		assert len(new_commit.parents) == 1
+		assert cur_head.commit == cur_commit
 		
-		self.fail("commit with no parents")
-		self.fail("commit multiple parents")
+		# same index, no parents
+		commit_message = "index without parents"
+		commit_no_parents = index.commit(commit_message, parent_commits=list(), head=True)
+		assert commit_no_parents.message == commit_message
+		assert len(commit_no_parents.parents) == 0
+		assert cur_head.commit == commit_no_parents
 		
+		# same index, multiple parents
+		commit_message = "Index with multiple parents\n    commit with another line"
+		commit_multi_parent = index.commit(commit_message,parent_commits=(commit_no_parents, new_commit))
+		assert commit_multi_parent.message == commit_message
+		assert len(commit_multi_parent.parents) == 2
+		assert commit_multi_parent.parents[0] == commit_no_parents
+		assert commit_multi_parent.parents[1] == new_commit
+		assert cur_head.commit == commit_multi_parent
 		
 		# re-add all files in lib
-		self.fail( "add, commit, working tree handling" )
+		# get the lib folder back on disk, but get an index without it
+		index.reset(new_commit.parents[0], working_tree=True).reset(new_commit, working_tree=False)
+		lib_file_path = "lib/git/__init__.py"
+		assert (lib_file_path, 0) not in index.entries
+		assert os.path.isfile(os.path.join(rw_repo.git.git_dir, lib_file_path))
+		
+		self.fail( "add file using simple path, blob, blob as symlink, entries with stages" )
 		

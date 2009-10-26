@@ -711,7 +711,7 @@ class IndexFile(LazyMixin, diff.Diffable):
 		return [ p[4:-1] for p in removed_paths ]
 		
 	@default_index
-	def commit(self, message, parent_commits=None):
+	def commit(self, message, parent_commits=None, head=True):
 		"""
 		Commit the current index, creating a commit object.
 		
@@ -725,6 +725,11 @@ class IndexFile(LazyMixin, diff.Diffable):
 			a root commit.
 			If None , the current head commit will be the parent of the 
 			new commit object
+			
+		``head``
+			If True, the HEAD will be advanced to the new commit automatically.
+			Else the HEAD will remain pointing on the previous commit. This could 
+			lead to undesired results when diffing files.
 			
 		Returns
 			Commit object representing the new commit
@@ -752,17 +757,23 @@ class IndexFile(LazyMixin, diff.Diffable):
 			# write the current index as tree
 			tree_sha = self.repo.git.write_tree()
 			commit_sha = self.repo.git.commit_tree(tree_sha, parent_args, istream=fp)
-			return Commit(self.repo, commit_sha)
+			new_commit = Commit(self.repo, commit_sha)
+			
+			if head:
+				self.repo.head.commit = new_commit 
+			# END advance head handling 
+			
+			return new_commit
 		finally:
 			fp.close()
 			os.remove(tmp_file_path)
-	
+			
 	@clear_cache
 	@default_index
-	def reset(self, commit='HEAD', working_tree=False, paths=None, **kwargs):
+	def reset(self, commit='HEAD', working_tree=False, paths=None, head=False, **kwargs):
 		"""
 		Reset the index to reflect the tree at the given commit. This will not
-		adjust our HEAD reference as opposed to HEAD.reset.
+		adjust our HEAD reference as opposed to HEAD.reset by default.
 		
 		``commit``
 			Revision, Reference or Commit specifying the commit we should represent.
@@ -775,19 +786,27 @@ class IndexFile(LazyMixin, diff.Diffable):
 			Please note that changes to the working copy will be discarded without 
 			warning !
 			
+		``head``
+			If True, the head will be set to the given commit. This is False by default, 
+			but if True, this method behaves like HEAD.reset.
+			
 		``**kwargs``
 			Additional keyword arguments passed to git-reset
 			
 		Returns
 			self
 		"""
-		head = self.repo.head
-		prev_commit = head.commit
+		cur_head = self.repo.head
+		prev_commit = cur_head.commit
 		
 		# reset to get the tree/working copy
-		head.reset(commit, index=True, working_tree=working_tree, paths=paths, **kwargs)
-		# put the head back 
-		head.reset(prev_commit, index=False, working_tree=False)
+		cur_head.reset(commit, index=True, working_tree=working_tree, paths=paths, **kwargs)
+		
+		# put the head back, possibly
+		if not head:
+			cur_head.reset(prev_commit, index=False, working_tree=False)
+		# END reset head
+		
 		return self
 		
 	@default_index
