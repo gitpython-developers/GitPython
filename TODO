@@ -72,6 +72,8 @@ Index
   to keep the internal entry cache and write once everything is done. Problem 
   would be that all other git commands are unaware of the changes unless the index
   gets written. Its worth an evaluation at least.
+  A problem going with it is that there might be shell-related limitations on non-unix
+  where the commandline grows too large.
 * index.remove: On windows, there can be a command line length overflow 
   as we pass the paths directly as argv. This is as we use git-rm to be able 
   to remove whole directories easily. This could be implemented using 

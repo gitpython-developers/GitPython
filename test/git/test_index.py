@@ -8,8 +8,10 @@ from test.testlib import *
 from git import *
 import inspect
 import os
+import sys
 import tempfile
 import glob
+from stat import *
 
 class TestTree(TestBase):
 	
@@ -174,6 +176,26 @@ class TestTree(TestBase):
 			assert fp.read() != new_data
 		finally:
 			fp.close()
+			
+		# test full checkout
+		test_file = os.path.join(rw_repo.git.git_dir, "CHANGES")
+		os.remove(test_file)
+		index.checkout(None, force=True)
+		assert os.path.isfile(test_file)
+		
+		os.remove(test_file)
+		index.checkout(None, force=False)
+		assert os.path.isfile(test_file)
+		
+		# individual file
+		os.remove(test_file)
+		index.checkout(test_file)
+		assert os.path.exists(test_file)
+		
+		
+		
+		# currently it ignore non-existing paths
+		index.checkout(paths=["doesnt/exist"])
 		
 	
 	def _count_existing(self, repo, files):
@@ -186,6 +208,17 @@ class TestTree(TestBase):
 	# END num existing helper
 	
 		
+	def _make_file(self, rela_path, data, repo=None):
+		"""
+		Create a file at the given path relative to our repository, filled
+		with the given data. Returns absolute path to created file.
+		"""
+		repo = repo or self.rorepo
+		abs_path = os.path.join(repo.git.git_dir, rela_path)
+		fp = open(abs_path, "w")
+		fp.write(data)
+		fp.close()
+		return abs_path
 		
 	@with_rw_repo('0.1.6')
 	def test_index_mutation(self, rw_repo):
@@ -272,5 +305,51 @@ class TestTree(TestBase):
 		assert (lib_file_path, 0) not in index.entries
 		assert os.path.isfile(os.path.join(rw_repo.git.git_dir, lib_file_path))
 		
-		self.fail( "add file using simple path, blob, blob as symlink, entries with stages" )
+		# directory
+		entries = index.add(['lib'])
+		assert len(entries)>1
+		
+		# glob 
+		entries = index.reset(new_commit).add(['lib/*.py'])
+		assert len(entries) == 14
+		
+		# missing path
+		self.failUnlessRaises(GitCommandError, index.reset(new_commit).add, ['doesnt/exist/must/raise'])
+		
+		# blob from older revision overrides current index revision
+		old_blob = new_commit.parents[0].tree.blobs[0]
+		entries = index.reset(new_commit).add([old_blob])
+		assert index.entries[(old_blob.path,0)].sha == old_blob.id and len(entries) == 1 
+		
+		# mode 0 not allowed
+		null_sha = "0"*40
+		self.failUnlessRaises(ValueError, index.reset(new_commit).add, [BaseIndexEntry((0, null_sha,0,"doesntmatter"))])
+		
+		# add new file
+		new_file_relapath = "my_new_file"
+		new_file_path = self._make_file(new_file_relapath, "hello world", rw_repo)
+		entries = index.reset(new_commit).add([BaseIndexEntry((010644, null_sha, 0, new_file_relapath))])
+		assert len(entries) == 1 and entries[0].sha != null_sha
+		
+		# add symlink
+		if sys.platform != "win32":
+			link_file = os.path.join(rw_repo.git.git_dir, "my_real_symlink")
+			os.symlink("/etc/that", link_file)
+			entries = index.reset(new_commit).add([link_file])
+			assert len(entries) == 1 and S_ISLNK(entries[0].mode)
+			print "%o" % entries[0].mode
+		# END real symlink test 
+		
+		# add fake symlink and assure it checks-our as symlink
+		fake_symlink_relapath = "my_fake_symlink"
+		fake_symlink_path = self._make_file(fake_symlink_relapath, "/etc/that", rw_repo)
+		fake_entry = BaseIndexEntry((0120000, null_sha, 0, fake_symlink_relapath))
+		entries = index.reset(new_commit).add([fake_entry])
+		assert len(entries) == 1 and S_ISLNK(entries[0].mode)
+		
+		# checkout the fakelink, should be a link then
+		assert not S_ISLNK(os.stat(fake_symlink_path)[ST_MODE])
+		os.remove(fake_symlink_path)
+		index.checkout(fake_symlink_path)
+		assert S_ISLNK(os.lstat(fake_symlink_path)[ST_MODE])
 		

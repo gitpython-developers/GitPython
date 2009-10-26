@@ -15,6 +15,7 @@ import tempfile
 import os
 import sys
 import stat
+import subprocess
 import git.diff as diff
 
 from git.objects import Blob, Tree, Object, Commit
@@ -50,6 +51,9 @@ class BaseIndexEntry(tuple):
 	expecting a BaseIndexEntry can also handle full IndexEntries even if they 
 	use numeric indices for performance reasons.
 	"""
+	
+	def __str__(self):
+		return "%o %s %i\t%s\n" % (self.mode, self.sha, self.stage, self.path)
 	
 	@property
 	def mode(self):
@@ -466,6 +470,12 @@ class IndexFile(LazyMixin, diff.Diffable):
 		ret |= (index_mode & 0111)
 		return ret
 	
+	@classmethod
+	def _tree_mode_to_index_mode(cls, tree_mode):
+		"""
+		Convert a tree mode to index mode as good as possible
+		"""
+	
 	def iter_blobs(self, predicate = lambda t: True):
 		"""
 		Returns
@@ -597,9 +607,29 @@ class IndexFile(LazyMixin, diff.Diffable):
 			raise ValueError("Absolute path %r is not in git repository at %r" % (path,self.repo.git.git_dir))
 		return relative_path
 	
+	def _preprocess_add_items(self, items):
+		"""
+		Split the items into two lists of path strings and BaseEntries.
+		"""
+		paths = list()
+		entries = list()
+		
+		for item in items:
+			if isinstance(item, basestring):
+				paths.append(self._to_relative_path(item))
+			elif isinstance(item, Blob):
+				entries.append(BaseIndexEntry.from_blob(item))
+			elif isinstance(item, BaseIndexEntry):
+				entries.append(item)
+			else:
+				raise TypeError("Invalid Type: %r" % item)
+		# END for each item
+		return (paths, entries)
+		
+	
 	@clear_cache
 	@default_index
-	def add(self, items, **kwargs):
+	def add(self, items, force=True, **kwargs):
 		"""
 		Add files from the working tree, specific blobs or BaseIndexEntries 
 		to the index. The underlying index file will be written immediately, hence
@@ -612,10 +642,14 @@ class IndexFile(LazyMixin, diff.Diffable):
 			
 			- path string
 				strings denote a relative or absolute path into the repository pointing to 
-				an existing file, i.e. CHANGES, lib/myfile.ext, /home/gitrepo/lib/myfile.ext.
+				an existing file, i.e. CHANGES, lib/myfile.ext, '/home/gitrepo/lib/myfile.ext'.
 				
 				Paths provided like this must exist. When added, they will be written 
 				into the object database.
+				
+				PathStrings may contain globs, such as 'lib/__init__*' or can be directories
+				like 'lib', the latter ones will add all the files within the dirctory and 
+				subdirectories.
 				
 				This equals a straight git-add.
 				
@@ -623,7 +657,8 @@ class IndexFile(LazyMixin, diff.Diffable):
 				
 			- Blob object
 				Blobs are added as they are assuming a valid mode is set.
-				The file they refer to may or may not exist in the file system
+				The file they refer to may or may not exist in the file system, but 
+				must be a path relative to our repository.
 				
 				If their sha is null ( 40*0 ), their path must exist in the file system 
 				as an object will be created from the data at the path.The handling 
@@ -634,12 +669,21 @@ class IndexFile(LazyMixin, diff.Diffable):
 				is not dereferenced automatically, except that it can be created on 
 				filesystems not supporting it as well.
 				
+				Please note that globs or directories are not allowed in Blob objects. 
+				
 				They are added at stage 0
 				
 			- BaseIndexEntry or type
 				Handling equals the one of Blob objects, but the stage may be 
 				explicitly set.
 			
+		``force``
+			If True, otherwise ignored or excluded files will be 
+			added anyway.
+			As opposed to the git-add command, we enable this flag by default 
+			as the API user usually wants the item to be added even though 
+			they might be excluded.
+		
 		``**kwargs``
 			Additional keyword arguments to be passed to git-update-index, such 
 			as index_only.
@@ -647,7 +691,54 @@ class IndexFile(LazyMixin, diff.Diffable):
 		Returns
 			List(BaseIndexEntries) representing the entries just actually added.
 		"""
-		raise NotImplementedError("todo")
+		# sort the entries into strings and Entries, Blobs are converted to entries
+		# automatically
+		# paths can be git-added, for everything else we use git-update-index
+		entries_added = list()
+		paths, entries = self._preprocess_add_items(items)
+		
+		if paths:
+			git_add_output = self.repo.git.add(paths, v=True)
+			# force rereading our entries
+			del(self.entries)
+			for line in git_add_output.splitlines():
+				# line contains:
+				# add '<path>'
+				added_file = line[5:-1]
+				entries_added.append(self.entries[(added_file,0)])
+			# END for each line
+		# END path handling
+		
+		if entries:
+			null_mode_entries = [ e for e in entries if e.mode == 0 ]
+			if null_mode_entries:
+				raise ValueError("At least one Entry has a null-mode - please use index.remove to remove files for clarity")
+			# END null mode should be remove
+			
+			# create objects if required, otherwise go with the existing shas
+			null_entries_indices = [ i for i,e in enumerate(entries) if e.sha == Object.NULL_HEX_SHA ]
+			if null_entries_indices:
+				hash_proc = self.repo.git.hash_object(w=True, stdin_paths=True, istream=subprocess.PIPE, as_process=True)
+				hash_proc.stdin.write('\n'.join(entries[i].path for i in null_entries_indices))
+				obj_ids = self._flush_stdin_and_wait(hash_proc).splitlines()
+				assert len(obj_ids) == len(null_entries_indices), "git-hash-object did not produce all requested objects: want %i, got %i" % ( len(null_entries_indices), len(obj_ids) )
+				
+				# update IndexEntries with new object id
+				for i,new_sha in zip(null_entries_indices, obj_ids):
+					e = entries[i]
+					new_entry = BaseIndexEntry((e.mode, new_sha, e.stage, e.path))
+					entries[i] = new_entry
+				# END for each index
+			# END null_entry handling
+				
+			# feed all the data to stdin
+			update_index_proc = self.repo.git.update_index(index_info=True, istream=subprocess.PIPE, as_process=True, **kwargs)
+			update_index_proc.stdin.write('\n'.join(str(e) for e in entries))
+			entries_added.extend(entries)
+			self._flush_stdin_and_wait(update_index_proc)
+		# END if there are base entries
+		
+		return entries_added
 		
 	@clear_cache
 	@default_index
@@ -767,6 +858,53 @@ class IndexFile(LazyMixin, diff.Diffable):
 		finally:
 			fp.close()
 			os.remove(tmp_file_path)
+			
+	@classmethod
+	def _flush_stdin_and_wait(cls, proc):
+		proc.stdin.flush()
+		proc.stdin.close()
+		stdout = proc.stdout.read()
+		proc.wait()
+		return stdout
+	
+	@default_index
+	def checkout(self, paths=None, force=False, **kwargs):
+		"""
+		Checkout the given paths or all files from the version in the index.
+		
+		``paths``
+			If None, all paths in the index will be checked out. Otherwise an iterable
+			or single path of relative or absolute paths pointing to files is expected.
+			The command will ignore paths that do not exist.
+			
+		``force``
+			If True, existing files will be overwritten. If False, these will 
+			be skipped.
+			
+		``**kwargs``
+			Additional arguments to be pasesd to git-checkout-index
+			
+		Returns
+			self
+		"""
+		args = ["--index"]
+		if force:
+			args.append("--force")
+		
+		if paths is None:
+			args.append("--all")
+			self.repo.git.checkout_index(*args, **kwargs)
+		else:
+			if not isinstance(paths, (tuple,list)):
+				paths = [paths]
+				
+			args.append("--stdin")
+			paths = [self._to_relative_path(p) for p in paths]
+			co_proc = self.repo.git.checkout_index(args, as_process=True, istream=subprocess.PIPE, **kwargs)
+			co_proc.stdin.write('\n'.join(paths))
+			self._flush_stdin_and_wait(co_proc)
+		# END paths handling 
+		return self
 			
 	@clear_cache
 	@default_index
