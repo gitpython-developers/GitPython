@@ -198,3 +198,21 @@ class TestRefs(TestBase):
 		assert head.commit == old_commit		# and the ref did not change
 		head.object = head_tree
 		assert head.object == head_tree
+		self.failUnlessRaises(TypeError, getattr, head, 'commit')	# object is a tree, not a commit
+		
+		# set the commit directly using the head. This would never detach the head
+		assert not cur_head.is_detached
+		head.object = old_commit
+		cur_head.reference = head.commit
+		assert cur_head.is_detached
+		parent_commit = head.commit.parents[0]
+		assert cur_head.is_detached
+		cur_head.commit = parent_commit
+		assert cur_head.is_detached and cur_head.commit == parent_commit
+		
+		cur_head.reference = head
+		assert not cur_head.is_detached
+		cur_head.commit = parent_commit
+		assert not cur_head.is_detached
+		assert head.commit == parent_commit
+		

@@ -118,7 +118,7 @@ class Reference(LazyMixin, Iterable):
 		"""
 		commit = self.object
 		if commit.type != "commit":
-			raise TypeError("Object of reference %s did not point to a commit" % self)
+			raise TypeError("Object of reference %s did not point to a commit, but to %r" % (self, commit))
 		return commit
 	
 	commit = property(_get_commit, _set_commit, doc="Return Commit object the reference points to")
@@ -250,8 +250,7 @@ class SymbolicReference(object):
 	def _get_path(self):
 		return os.path.join(self.repo.path, self.name)
 		
-	@property
-	def commit(self):
+	def _get_commit(self):
 		"""
 		Returns:
 			Commit object we point to, works for detached and non-detached 
@@ -270,6 +269,18 @@ class SymbolicReference(object):
 		# must be a head ! Git does not allow symbol refs to other things than heads
 		# Otherwise it would have detached it
 		return Head(self.repo, tokens[1]).commit
+		
+	def _set_commit(self, commit):
+		"""
+		Set our commit, possibly dereference our symbolic reference first.
+		"""
+		if self.is_detached:
+			return self._set_reference(commit)
+			
+		# set the commit on our reference
+		self._get_reference().commit = commit
+	
+	commit = property(_get_commit, _set_commit, doc="Query or set commits directly")
 		
 	def _get_reference(self):
 		"""
