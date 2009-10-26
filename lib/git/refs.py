@@ -19,7 +19,7 @@ class Reference(LazyMixin, Iterable):
 	_common_path_default = "refs"
 	_id_attribute_ = "name"
 	
-	def __init__(self, repo, path, object = None):
+	def __init__(self, repo, path):
 		"""
 		Initialize this instance
 		``repo``
@@ -29,16 +29,12 @@ class Reference(LazyMixin, Iterable):
 			Path relative to the .git/ directory pointing to the ref in question, i.e.
 			refs/heads/master
 			
-		``object``
-			Object instance, will be retrieved on demand if None
 		"""
 		if not path.startswith(self._common_path_default):
 			raise ValueError("Cannot instantiate %s Reference from path %s" % ( self.__class__.__name__, path ))
 			
 		self.repo = repo
 		self.path = path
-		if object is not None:
-			self.object = object
 		
 	def __str__(self):
 		return self.name
@@ -69,8 +65,7 @@ class Reference(LazyMixin, Iterable):
 		
 		return '/'.join(tokens[2:])
 	
-	@property
-	def object(self):
+	def _get_object(self):
 		"""
 		Returns
 			The object our ref currently refers to. Refs can be cached, they will 
@@ -80,16 +75,53 @@ class Reference(LazyMixin, Iterable):
 		# Our path will be resolved to the hexsha which will be used accordingly
 		return Object.new(self.repo, self.path)
 		
-	@property
-	def commit(self):
+	def _set_object(self, ref, type=None):
+		"""
+		Set our reference to point to the given ref. It will be converted
+		to a specific hexsha.
+		
+		``type``
+			If not None, string type of that the object must have, other we raise
+			a type error. Only used internally
+		
+		Returns
+			Object we have set. This is used internally only to reduce the amount 
+			of calls to the git command
+		"""
+		obj = Object.new(self.repo, ref)
+		if type is not None and obj.type != type:
+			raise TypeError("Reference %r cannot point to object of type %r" % (self,obj.type))
+			
+		full_ref_path = os.path.join(self.repo.path, self.path)
+		fp = open(full_ref_path, "w")
+		try:
+			fp.write(str(obj))
+		finally:
+			fp.close()
+		return obj
+		
+	object = property(_get_object, _set_object, doc="Return the object our ref currently refers to")
+		
+	def _set_commit(self, commit):
+		"""
+		Set ourselves to point to the given commit. 
+		
+		Raise
+			ValueError if commit does not actually point to a commit
+		"""
+		self._set_object(commit, type="commit")
+		
+	def _get_commit(self):
 		"""
 		Returns
-			Commit object the head points to
+			Commit object the reference points to
 		"""
 		commit = self.object
 		if commit.type != "commit":
-			raise TypeError("Object of reference %s did not point to a commit" % self)
+			raise TypeError("Object of reference %s did not point to a commit, but to %r" % (self, commit))
 		return commit
+	
+	commit = property(_get_commit, _set_commit, doc="Return Commit object the reference points to")
 	
 	@classmethod
 	def iter_items(cls, repo, common_path = None, **kwargs):
@@ -182,6 +214,7 @@ class Reference(LazyMixin, Iterable):
 		# obj.size = object_size
 		# return cls(repo, full_path, obj)
 		
+		
 
 class SymbolicReference(object):
 	"""
@@ -217,8 +250,7 @@ class SymbolicReference(object):
 	def _get_path(self):
 		return os.path.join(self.repo.path, self.name)
 		
-	@property
-	def commit(self):
+	def _get_commit(self):
 		"""
 		Returns:
 			Commit object we point to, works for detached and non-detached 
@@ -238,6 +270,18 @@ class SymbolicReference(object):
 		# Otherwise it would have detached it
 		return Head(self.repo, tokens[1]).commit
 		
+	def _set_commit(self, commit):
+		"""
+		Set our commit, possibly dereference our symbolic reference first.
+		"""
+		if self.is_detached:
+			return self._set_reference(commit)
+			
+		# set the commit on our reference
+		self._get_reference().commit = commit
+	
+	commit = property(_get_commit, _set_commit, doc="Query or set commits directly")
+		
 	def _get_reference(self):
 		"""
 		Returns
@@ -247,7 +291,7 @@ class SymbolicReference(object):
 		try:
 			tokens = fp.readline().rstrip().split(' ')
 			if tokens[0] != 'ref:':
-				raise TypeError("%s is a detached symbolic reference as it points to %r" % tokens[0])
+				raise TypeError("%s is a detached symbolic reference as it points to %r" % (self, tokens[0]))
 			return Reference.from_path(self.repo, tokens[1])
 		finally:
 			fp.close()
@@ -322,7 +366,8 @@ class HEAD(SymbolicReference):
 				paths=None, **kwargs):
 		"""
 		Reset our HEAD to the given commit optionally synchronizing 
-		the index and working tree.
+		the index and working tree. The reference we refer to will be set to 
+		commit as well.
 		
 		``commit``
 			Commit object, Reference Object or string identifying a revision we 
@@ -383,12 +428,92 @@ class Head(Reference):
 	"""
 	_common_path_default = "refs/heads"
 	
+	@classmethod
+	def create(cls, repo, path,  commit='HEAD', force=False, **kwargs ):
+		"""
+		Create a new head.
+		``repo``
+			Repository to create the head in 
+			
+		``path``
+			The name or path of the head, i.e. 'new_branch' or 
+			feature/feature1. The prefix refs/heads is implied.
+			
+		``commit``
+			Commit to which the new head should point, defaults to the 
+			current HEAD
+		
+		``force``
+			if True, force creation even if branch with that  name already exists.
+			
+		``**kwargs``
+			Additional keyword arguments to be passed to git-branch, i.e.
+			track, no-track, l
+		
+		Returns
+			Newly created Head
+			
+		Note
+			This does not alter the current HEAD, index or Working Tree
+		"""
+		if cls is not Head:
+			raise TypeError("Only Heads can be created explicitly, not objects of type %s" % cls.__name__)
+		
+		args = ( path, commit )
+		if force:
+			kwargs['f'] = True
+		
+		repo.git.branch(*args, **kwargs)
+		return cls(repo, "%s/%s" % ( cls._common_path_default, path))
+			
+		
+	@classmethod
+	def delete(cls, repo, *heads, **kwargs):
+		"""
+		Delete the given heads
+		
+		``force``
+			If True, the heads will be deleted even if they are not yet merged into
+			the main development stream.
+			Default False
+		"""
+		force = kwargs.get("force", False)
+		flag = "-d"
+		if force:
+			flag = "-D"
+		repo.git.branch(flag, *heads)
+		
+	
+	def rename(self, new_path, force=False):
+		"""
+		Rename self to a new path
+		
+		``new_path``
+			Either a simple name or a path, i.e. new_name or features/new_name.
+			The prefix refs/heads is implied
+			
+		``force``
+			If True, the rename will succeed even if a head with the target name
+			already exists.
+			
+		Returns
+			self
+		"""
+		flag = "-m"
+		if force:
+			flag = "-M"
+			
+		self.repo.git.branch(flag, self, new_path)
+		self.path  = "%s/%s" % (self._common_path_default, new_path)
+		return self
+		
+	
 
 class TagReference(Reference):
 	"""
 	Class representing a lightweight tag reference which either points to a commit 
-	or to a tag object. In the latter case additional information, like the signature
-	or the tag-creator, is available.
+	,a tag object or any other object. In the latter case additional information, 
+	like the signature or the tag-creator, is available.
 	
 	This tag object will always point to a commit object, but may carray additional
 	information in a tag object::
@@ -426,6 +551,52 @@ class TagReference(Reference):
 		if self.object.type == "tag":
 			return self.object
 		return None
+		
+	@classmethod
+	def create(cls, repo, path, ref='HEAD', message=None, force=False, **kwargs):
+		"""
+		Create a new tag object.
+		
+		``path``
+			The name of the tag, i.e. 1.0 or releases/1.0. 
+			The prefix refs/tags is implied
+			
+		``ref``
+			A reference to the object you want to tag. It can be a commit, tree or 
+			blob.
+			
+		``message``
+			If not None, the message will be used in your tag object. This will also 
+			create an additional tag object that allows to obtain that information, i.e.::
+				tagref.tag.message
+			
+		``force``
+			If True, to force creation of a tag even though that tag already exists.
+			
+		``**kwargs``
+			Additional keyword arguments to be passed to git-tag
+			
+		Returns
+			A new TagReference
+		"""
+		args = ( path, ref )
+		if message:
+			kwargs['m'] =  message
+		if force:
+			kwargs['f'] = True
+		
+		repo.git.tag(*args, **kwargs)
+		return TagReference(repo, "%s/%s" % (cls._common_path_default, path))
+		
+	@classmethod
+	def delete(cls, repo, *tags):
+		"""
+		Delete the given existing tag or tags
+		"""
+		repo.git.tag("-d", *tags)
+		
+		
+		
 
 		
 # provide an alias
@@ -459,3 +630,14 @@ class RemoteReference(Head):
 		"""
 		tokens = self.path.split('/')
 		return '/'.join(tokens[3:])
+		
+	@classmethod
+	def delete(cls, repo, *remotes, **kwargs):
+		"""
+		Delete the given remote references.
+		
+		Note
+			kwargs are given for compatability with the base class method as we 
+			should not narrow the signature.
+		"""
+		repo.git.branch("-d", "-r", *remotes)

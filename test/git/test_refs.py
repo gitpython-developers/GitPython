@@ -108,3 +108,111 @@ class TestRefs(TestBase):
 		
 		# type check
 		self.failUnlessRaises(ValueError, setattr, cur_head, "reference", "that")
+		
+		# head handling 
+		commit = 'HEAD'
+		prev_head_commit = cur_head.commit
+		for count, new_name in enumerate(("my_new_head", "feature/feature1")):
+			actual_commit = commit+"^"*count
+			new_head = Head.create(rw_repo, new_name, actual_commit)
+			assert cur_head.commit == prev_head_commit
+			assert isinstance(new_head, Head)
+			# already exists
+			self.failUnlessRaises(GitCommandError, Head.create, rw_repo, new_name)
+			
+			# force it
+			new_head = Head.create(rw_repo, new_name, actual_commit, force=True)
+			old_path = new_head.path
+			old_name = new_head.name
+			
+			assert new_head.rename("hello").name == "hello"
+			assert new_head.rename("hello/world").name == "hello/world"
+			assert new_head.rename(old_name).name == old_name and new_head.path == old_path
+			
+			# rename with force
+			tmp_head = Head.create(rw_repo, "tmphead")
+			self.failUnlessRaises(GitCommandError, tmp_head.rename, new_head)
+			tmp_head.rename(new_head, force=True)
+			assert tmp_head == new_head and tmp_head.object == new_head.object
+			
+			Head.delete(rw_repo, tmp_head)
+			heads = rw_repo.heads
+			assert tmp_head not in heads and new_head not in heads
+			# force on deletion testing would be missing here, code looks okay though ;)
+		# END for each new head name
+		self.failUnlessRaises(TypeError, RemoteReference.create, rw_repo, "some_name")  
+		
+		# tag ref
+		tag_name = "1.0.2"
+		light_tag = TagReference.create(rw_repo, tag_name)
+		self.failUnlessRaises(GitCommandError, TagReference.create, rw_repo, tag_name)
+		light_tag = TagReference.create(rw_repo, tag_name, "HEAD~1", force = True)
+		assert isinstance(light_tag, TagReference)
+		assert light_tag.name == tag_name
+		assert light_tag.commit == cur_head.commit.parents[0]
+		assert light_tag.tag is None
+		
+		# tag with tag object
+		other_tag_name = "releases/1.0.2RC"
+		msg = "my mighty tag\nsecond line"
+		obj_tag = TagReference.create(rw_repo, other_tag_name, message=msg)
+		assert isinstance(obj_tag, TagReference)
+		assert obj_tag.name == other_tag_name
+		assert obj_tag.commit == cur_head.commit
+		assert obj_tag.tag is not None
+		
+		TagReference.delete(rw_repo, light_tag, obj_tag)
+		tags = rw_repo.tags
+		assert light_tag not in tags and obj_tag not in tags
+		
+		# remote deletion
+		remote_refs_so_far = 0
+		remotes = rw_repo.remotes 
+		assert remotes
+		for remote in remotes:
+			refs = remote.refs
+			RemoteReference.delete(rw_repo, *refs)
+			remote_refs_so_far += len(refs)
+		# END for each ref to delete
+		assert remote_refs_so_far
+		
+		for remote in remotes:
+			# remotes without references throw
+			self.failUnlessRaises(AssertionError, getattr, remote, 'refs')
+		# END for each remote
+		
+		# change where the active head points to
+		if cur_head.is_detached:
+			cur_head.reference = rw_repo.heads[0]
+		
+		head = cur_head.reference
+		old_commit = head.commit
+		head.commit = old_commit.parents[0]
+		assert head.commit == old_commit.parents[0]
+		assert head.commit == cur_head.commit
+		head.commit = old_commit
+		
+		# setting a non-commit as commit fails, but succeeds as object
+		head_tree = head.commit.tree
+		self.failUnlessRaises(TypeError, setattr, head, 'commit', head_tree)
+		assert head.commit == old_commit		# and the ref did not change
+		head.object = head_tree
+		assert head.object == head_tree
+		self.failUnlessRaises(TypeError, getattr, head, 'commit')	# object is a tree, not a commit
+		
+		# set the commit directly using the head. This would never detach the head
+		assert not cur_head.is_detached
+		head.object = old_commit
+		cur_head.reference = head.commit
+		assert cur_head.is_detached
+		parent_commit = head.commit.parents[0]
+		assert cur_head.is_detached
+		cur_head.commit = parent_commit
+		assert cur_head.is_detached and cur_head.commit == parent_commit
+		
+		cur_head.reference = head
+		assert not cur_head.is_detached
+		cur_head.commit = parent_commit
+		assert not cur_head.is_detached
+		assert head.commit == parent_commit
+		

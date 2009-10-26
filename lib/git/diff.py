@@ -100,9 +100,6 @@ class Diffable(object):
 		index = diff_method(self.repo, proc.stdout)
 		
 		status = proc.wait()
-		if status != 0:
-			raise GitCommandError(("git diff",)+tuple(args), status, proc.stderr.read())
-		
 		return index
 
 

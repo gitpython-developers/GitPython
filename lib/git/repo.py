@@ -14,6 +14,7 @@ from errors import InvalidGitRepositoryError, NoSuchPathError
 from cmd import Git
 from actor import Actor
 from refs import *
+from index import IndexFile
 from objects import *
 from config import GitConfigParser
 from remote import Remote
@@ -145,6 +146,14 @@ class Repo(object):
 
 	# alias heads
 	branches = heads
+	
+	@property
+	def index(self):
+		"""
+		Returns
+			IndexFile representing this repository's index. 
+		"""
+		return IndexFile(self)
 
 	@property
 	def head(self):

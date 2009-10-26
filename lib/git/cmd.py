@@ -42,12 +42,16 @@ class Git(object):
 		"""
 		Kill/Interrupt the stored process instance once this instance goes out of scope. It is 
 		used to prevent processes piling up in case iterators stop reading.
-		Besides all attributes are wired through to the contained process object
-		"""
-		__slots__= "proc"
+		Besides all attributes are wired through to the contained process object.
 		
-		def __init__(self, proc ):
+		The wait method was overridden to perform automatic status code checking
+		and possibly raise.
+		"""
+		__slots__= ("proc", "args")
+		
+		def __init__(self, proc, args ):
 			self.proc = proc
+			self.args = args
 			
 		def __del__(self):
 			# did the process finish already so we have a return code ?
@@ -64,6 +68,20 @@ class Git(object):
 			
 		def __getattr__(self, attr):
 			return getattr(self.proc, attr)
+			
+		def wait(self):
+			"""
+			Wait for the process and return its status code. 
+			
+			Raise
+				GitCommandError if the return status is not 0
+			"""
+			status = self.proc.wait()
+			if status != 0:
+				raise GitCommandError(self.args, status, self.proc.stderr.read())
+			# END status handling 
+			return status
+			
 	
 	
 	def __init__(self, git_dir=None):
@@ -184,7 +202,7 @@ class Git(object):
 								**extra
 								)
 		if as_process:
-			return self.AutoInterrupt(proc)
+			return self.AutoInterrupt(proc, command)
 		
 		# Wait for the process to return
 		status = 0
