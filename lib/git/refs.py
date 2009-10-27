@@ -31,7 +31,7 @@ class Reference(LazyMixin, Iterable):
 			
 		"""
 		if not path.startswith(self._common_path_default):
-			raise ValueError("Cannot instantiate %s Reference from path %s" % ( self.__class__.__name__, path ))
+			raise ValueError("Cannot instantiate %s from path %s" % ( self.__class__.__name__, path ))
 			
 		self.repo = repo
 		self.path = path
@@ -622,10 +622,10 @@ class RemoteReference(Head):
 		return tokens[2]
 		
 	@property
-	def remote_branch(self):
+	def remote_head(self):
 		"""
 		Returns
-			Name of the remote branch itself, i.e. master.
+			Name of the remote head itself, i.e. master.
 			
 		NOTE: The returned name is usually not qualified enough to uniquely identify
 		a branch
