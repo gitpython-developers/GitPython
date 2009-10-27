@@ -38,11 +38,19 @@ class TestRemote(TestBase):
 		# specialized fetch testing to de-clutter the main test
 		self._test_fetch_info(rw_repo)
 		
+		def fetch_and_test(remote):
+			res = remote.fetch()
+			self._test_fetch_result(res, remote)
+			return res
+		# END fetch and check
+		
+		def get_info(res, remote, name):
+			return res["%s/%s"%(remote,name)]
+		
 		# put remote head to master as it is garantueed to exist
 		remote_repo.head.reference = remote_repo.heads.master
 		
-		res = remote.fetch()
-		self._test_fetch_result(res, remote)
+		res = fetch_and_test(remote)
 		# all uptodate
 		for info in res:
 			assert info.flags & info.BRANCH_UPTODATE
@@ -52,17 +60,39 @@ class TestRemote(TestBase):
 		rhead = remote_repo.head
 		remote_commit = rhead.commit
 		rhead.reset("HEAD~2", index=False)
-		res = remote.fetch()
-		self._test_fetch_result(res, remote)
-		mkey = "%s/master" % remote
+		res = fetch_and_test(remote)
+		mkey = "%s/%s"%(remote,'master')
 		master_info = res[mkey]
 		assert master_info.flags & Remote.FetchInfo.FORCED_UPDATE and master_info.note is not None
 		
 		# normal fast forward - set head back to previous one
 		rhead.commit = remote_commit
-		res = remote.fetch()
-		self._test_fetch_result(res, remote)
+		res = fetch_and_test(remote)
 		assert res[mkey].flags & Remote.FetchInfo.FAST_FORWARD
+		
+		# new remote branch
+		new_remote_branch = Head.create(remote_repo, "new_branch")
+		res = fetch_and_test(remote)
+		new_branch_info = get_info(res, remote, new_remote_branch)
+		assert new_branch_info.flags & Remote.FetchInfo.NEW_BRANCH
+		
+		# remote branch rename ( causes creation of a new one locally )
+		new_remote_branch.rename("other_branch_name")
+		res = fetch_and_test(remote)
+		other_branch_info = get_info(res, remote, new_remote_branch)
+		assert other_branch_info.remote_ref.commit == new_branch_info.remote_ref.commit
+		
+		# remove new branch
+		Head.delete(new_remote_branch.repo, new_remote_branch)
+		res = fetch_and_test(remote)
+		# deleted remote will not be fetched
+		self.failUnlessRaises(IndexError, get_info, res, remote, new_remote_branch)
+		
+		# prune stale tracking branches
+		stale_refs = remote.stale_refs
+		assert len(stale_refs) == 2 and isinstance(stale_refs[0], RemoteReference)
+		RemoteReference.delete(rw_repo, *stale_refs)
+		
 		
 		self.fail("tag handling, tag uptodate, new tag, new branch")
 		
@@ -89,7 +119,7 @@ class TestRemote(TestBase):
 			assert refs
 			for ref in refs:
 				assert ref.remote_name == remote.name
-				assert ref.remote_branch
+				assert ref.remote_head
 			# END for each ref
 			
 			# OPTIONS

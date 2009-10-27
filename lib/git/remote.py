@@ -213,7 +213,7 @@ class Remote(LazyMixin, Iterable):
 	def refs(self):
 		"""
 		Returns
-			List of RemoteRef objects
+			IterableList of RemoteReference objects
 		"""
 		out_refs = IterableList(RemoteReference._id_attribute_)
 		for ref in RemoteReference.list_items(self.repo):
@@ -222,6 +222,26 @@ class Remote(LazyMixin, Iterable):
 			# END if names match
 		# END for each ref
 		assert out_refs, "Remote %s did not have any references" % self.name
+		return out_refs
+		
+	@property
+	def stale_refs(self):
+		"""
+		Returns 
+			IterableList RemoteReference objects that do not have a corresponding 
+			head in the remote reference anymore as they have been deleted on the 
+			remote side, but are still available locally.
+		"""
+		out_refs = IterableList(RemoteReference._id_attribute_)
+		for line in self.repo.git.remote("prune", "--dry-run", self).splitlines()[2:]:
+			# expecting 
+			# * [would prune] origin/new_branch
+			token = " * [would prune] " 
+			if not line.startswith(token):
+				raise ValueError("Could not parse git-remote prune result: %r" % line)
+			fqhn = "%s/%s" % (RemoteReference._common_path_default,line.replace(token, ""))
+			out_refs.append(RemoteReference(self.repo, fqhn))
+		# END for each line 
 		return out_refs
 	
 	@classmethod
