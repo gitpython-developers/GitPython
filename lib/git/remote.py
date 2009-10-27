@@ -8,6 +8,7 @@ Module implementing a remote object allowing easy access to git remotes
 """
 
 from git.utils import LazyMixin, Iterable, IterableList
+from objects import Commit
 from refs import Reference, RemoteReference
 import re
 import os
@@ -58,24 +59,39 @@ class Remote(LazyMixin, Iterable):
 		 info = remote.fetch()[0]
 		 info.remote_ref	# Symbolic Reference or RemoteReference to the changed remote head or FETCH_HEAD
 		 info.flags 		# additional flags to be & with enumeration members, i.e. info.flags & info.REJECTED
-		 info.note			# additional notes given by git-fetch intended for the user 
+		 info.note			# additional notes given by git-fetch intended for the user
+		 info.commit_before_forced_update	# if info.flags & info.FORCED_UPDATE, field is set to the 
+		 					# previous location of remote_ref, otherwise None
 		"""
-		__slots__ = ('remote_ref', 'flags', 'note') 
+		__slots__ = ('remote_ref','commit_before_forced_update', 'flags', 'note')
+		
 		BRANCH_UPTODATE, REJECTED, FORCED_UPDATE, FAST_FORWARD, NEW_TAG, \
 		TAG_UPDATE, NEW_BRANCH, ERROR = [ 1 << x for x in range(1,9) ]
 		#                             %c    %-*s %-*s             -> %s       (%s)
-		re_fetch_result = re.compile("^(.) (\[?[\w\s]+\]?)\s+(.+) -> (.+/.+)(  \(.*\)?$)?")
+		re_fetch_result = re.compile("^(.) (\[?[\w\s\.]+\]?)\s+(.+) -> (.+/[\w_\.-]+)(  \(.*\)?$)?")
 		
 		_flag_map = { 	'!' : ERROR, '+' : FORCED_UPDATE, '-' : TAG_UPDATE, '*' : 0,
 						'=' : BRANCH_UPTODATE, ' ' : FAST_FORWARD } 
 		
-		def __init__(self, remote_ref, flags, note = ''):
+		def __init__(self, remote_ref, flags, note = '', old_commit = None):
 			"""
 			Initialize a new instance
 			"""
 			self.remote_ref = remote_ref
 			self.flags = flags
 			self.note = note
+			self.commit_before_forced_update = old_commit
+			
+		def __str__(self):
+			return self.name
+			
+		@property
+		def name(self):
+			"""
+			Returns
+				Name of our remote ref
+			"""
+			return self.remote_ref.name
 			
 		@classmethod
 		def _from_line(cls, repo, line):
@@ -112,14 +128,18 @@ class Remote(LazyMixin, Iterable):
 			# END control char exception hanlding 
 			
 			# parse operation string for more info
+			old_commit = None
 			if 'rejected' in operation:
 				flags |= cls.REJECTED
 			if 'new tag' in operation:
 				flags |= cls.NEW_TAG
 			if 'new branch' in operation:
 				flags |= cls.NEW_BRANCH
+			if '...' in operation:
+				old_commit = Commit(repo, operation.split('...')[0])
+			# END handle refspec
 			
-			return cls(remote_local_ref, flags, note)
+			return cls(remote_local_ref, flags, note, old_commit)
 		
 	# END FetchInfo definition 
   
@@ -275,7 +295,10 @@ class Remote(LazyMixin, Iterable):
 	
 	def _get_fetch_info_from_stderr(self, stderr):
 		# skip first line as it is some remote info we are not interested in
-		return [ self.FetchInfo._from_line(self.repo, line) for line in stderr.splitlines()[1:] ]
+		print stderr
+		output = IterableList('name')
+		output.extend(self.FetchInfo._from_line(self.repo, line) for line in stderr.splitlines()[1:])
+		return output
 	
 	def fetch(self, refspec=None, **kwargs):
 		"""
@@ -297,7 +320,7 @@ class Remote(LazyMixin, Iterable):
 			Additional arguments to be passed to git-fetch
 			
 		Returns
-			list(FetchInfo, ...) list of FetchInfo instances providing detailed 
+			IterableList(FetchInfo, ...) list of FetchInfo instances providing detailed 
 			information about the fetch results
 		"""
 		status, stdout, stderr = self.repo.git.fetch(self, refspec, with_extended_output=True, v=True, **kwargs)
@@ -315,7 +338,7 @@ class Remote(LazyMixin, Iterable):
 			Additional arguments to be passed to git-pull
 			
 		Returns
-			list(Fetch
+			Please see 'fetch' method
 		"""
 		status, stdout, stderr = self.repo.git.pull(self, refspec, v=True, with_extended_output=True, **kwargs)
 		return self._get_fetch_info_from_stderr(stderr)

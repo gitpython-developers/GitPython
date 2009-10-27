@@ -17,13 +17,18 @@ class TestRemote(TestBase):
 		fp.close()
 		
 		
-	def _check_fetch_results(self, results, remote):
-		self._print_fetchhead(remote.repo)
+	def _test_fetch_result(self, results, remote):
+		# self._print_fetchhead(remote.repo)
 		assert len(results) > 0 and isinstance(results[0], remote.FetchInfo)
-		for result in results:
-			assert result.flags != 0
-			assert isinstance(result.remote_ref, (SymbolicReference, Reference))
-		# END for each result
+		for info in results:
+			assert info.flags != 0
+			assert isinstance(info.remote_ref, (SymbolicReference, Reference))
+			if info.flags & info.FORCED_UPDATE:
+				assert isinstance(info.commit_before_forced_update, Commit)
+			else:
+				assert info.commit_before_forced_update is None
+			# END forced update checking  
+		# END for each info
 		
 	def _test_fetch_info(self, repo):
 		self.failUnlessRaises(ValueError, Remote.FetchInfo._from_line, repo, "nonsense")
@@ -33,10 +38,20 @@ class TestRemote(TestBase):
 		# specialized fetch testing to de-clutter the main test
 		self._test_fetch_info(rw_repo)
 		
-		fetch_result = remote.fetch()
-		self._check_fetch_results(fetch_result, remote)
+		# put remote head to master as it is garantueed to exist
+		remote_repo.head.reference = remote_repo.heads.master
 		
-		self.fail("rejected parsing")
+		res = remote.fetch()
+		self._test_fetch_result(res, remote)
+		
+		# rewind remote head to trigger rejection
+		# index must be false as remote is a bare repo
+		remote_repo.head.reset("HEAD~2", index=False)
+		res = remote.fetch()
+		self._test_fetch_result(res, remote)
+		master_info = res["%s/master" % remote]
+		assert master_info.flags & Remote.FetchInfo.FORCED_UPDATE and master_info.note is not None
+		
 		self.fail("test parsing of each individual flag")
 		self.fail("tag handling")
 		

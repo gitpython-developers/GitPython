@@ -107,10 +107,9 @@ Remote
 * Fetch should return heads that where updated, pull as well.
 * Creation and deletion methods for references should be part of the interface, allowing
   repo.create_head(...) instaed of Head.create(repo, ...). Its a convenience thing, clearly
-* When parsing fetch-info, the regex will have problems properly handling white-space in the
-  actual head or tag name as it does not know when the optional additional message will begin.
-  This can possibly improved by making stronger assumptions about the possible messages or 
-  by using the data from FETCH_HEAD instead or as additional source of information
+* When parsing fetch-info, the regex will not allow spaces in the target remote ref as 
+  I couldn't properly parse the optional space separated note in that case. Probably 
+  the regex should be improved to handle this gracefully.
   
 Repo
 ----
