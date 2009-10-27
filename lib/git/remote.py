@@ -68,7 +68,7 @@ class Remote(LazyMixin, Iterable):
 		BRANCH_UPTODATE, REJECTED, FORCED_UPDATE, FAST_FORWARD, NEW_TAG, \
 		TAG_UPDATE, NEW_BRANCH, ERROR = [ 1 << x for x in range(1,9) ]
 		#                             %c    %-*s %-*s             -> %s       (%s)
-		re_fetch_result = re.compile("^\s*(.) (\[?[\w\s\.]+\]?)\s+(.+) -> (.+/[\w_\.-]+)(  \(.*\)?$)?")
+		re_fetch_result = re.compile("^\s*(.) (\[?[\w\s\.]+\]?)\s+(.+) -> ([/\w_\.-]+)(  \(.*\)?$)?")
 		
 		_flag_map = { 	'!' : ERROR, '+' : FORCED_UPDATE, '-' : TAG_UPDATE, '*' : 0,
 						'=' : BRANCH_UPTODATE, ' ' : FAST_FORWARD } 

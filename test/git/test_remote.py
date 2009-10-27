@@ -18,7 +18,7 @@ class TestRemote(TestBase):
 		
 		
 	def _test_fetch_result(self, results, remote):
-		# self._print_fetchhead(remote.repo)
+		self._print_fetchhead(remote.repo)
 		assert len(results) > 0 and isinstance(results[0], remote.FetchInfo)
 		for info in results:
 			assert info.flags != 0
@@ -38,8 +38,8 @@ class TestRemote(TestBase):
 		# specialized fetch testing to de-clutter the main test
 		self._test_fetch_info(rw_repo)
 		
-		def fetch_and_test(remote):
-			res = remote.fetch()
+		def fetch_and_test(remote, **kwargs):
+			res = remote.fetch(**kwargs)
 			self._test_fetch_result(res, remote)
 			return res
 		# END fetch and check
@@ -93,6 +93,23 @@ class TestRemote(TestBase):
 		assert len(stale_refs) == 2 and isinstance(stale_refs[0], RemoteReference)
 		RemoteReference.delete(rw_repo, *stale_refs)
 		
+		# test single branch fetch with refspec
+		res = fetch_and_test(remote, refspec="master:refs/remotes/%s/master"%remote)
+		assert len(res) == 1 and get_info(res, remote, 'master')
+		
+		# without refspec
+		res = fetch_and_test(remote, refspec='master')
+		assert len(res) == 1
+		
+		# add new tag reference
+		rtag = TagReference.create(remote_repo, "1.0-RV_hello.there")
+		res = fetch_and_test(remote, tags=True)
+		ltag = res[str(rtag)]
+		assert isinstance(ltag, TagReference)
+		
+		# delete tag
+		
+		# adjust tag commit
 		
 		self.fail("tag handling, tag uptodate, new tag, new branch")
 		
