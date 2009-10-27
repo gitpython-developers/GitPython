@@ -208,7 +208,7 @@ class Reference(LazyMixin, Iterable):
 		# our path on demand - due to perstent commands it is fast.
 		# This reduces the risk that the object does not match 
 		# the changed ref anymore in case it changes in the meanwhile
-		return cls(repo, full_path)
+		return cls.from_path(repo, full_path)
 		
 		# obj = get_object_type_by_name(type_name)(repo, hexsha)
 		# obj.size = object_size
