@@ -59,11 +59,18 @@ class TestRemote(TestBase):
 				assert remote.rename(prev_name).name == prev_name
 			# END for each rename ( back to prev_name )
 			
-			remote.fetch()
+			# FETCH TESTING
+			assert len(remote.fetch()) == 1
+			
+			
+			self.fail("rejected parsing")
+			self.fail("test parsing of each individual flag")
+			# PULL TESTING
+			# fails as we did not specify a branch and there is no configuration for it
 			self.failUnlessRaises(GitCommandError, remote.pull)
 			remote.pull('master')
 			remote.update()
-			self.fail("test push once there is a test-repo")
+			
 		# END for each remote
 		assert num_remotes
 		assert num_remotes == len(remote_set)

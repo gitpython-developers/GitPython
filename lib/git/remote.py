@@ -49,6 +49,38 @@ class Remote(LazyMixin, Iterable):
 	__slots__ = ( "repo", "name", "_config_reader" )
 	_id_attribute_ = "name"
 	
+	class FetchInfo(object):
+		"""
+		Carries information about the results of a fetch operation::
+		
+		 info = remote.fetch()[0]
+		 info.local_ref		# None, or Reference object to the local head or tag which was moved
+		 info.remote_ref	# Symbolic Reference or RemoteReference to the changed remote head or FETCH_HEAD
+		 info.flags 		# additional flags to be & with enumeration members, i.e. info.flags & info.REJECTED
+		"""
+		__slots__ = tuple()
+		BRANCH_UPTODATE, REJECTED, FORCED_UPDATED, FAST_FORWARD, NEW_TAG, \
+		TAG_UPDATE, NEW_BRANCH = [ 1 << x for x in range(1,8) ]
+		
+		def __init__(self, local_ref, remote_ref, flags):
+			"""
+			Initialize a new instance
+			"""
+			self.local_ref = local_ref
+			self.remote_ref = remote_ref
+			self.flags = flags
+			
+		@classmethod
+		def _from_line(cls, line):
+			"""
+			Parse information from the given line as returned by git-fetch -v
+			and return a new FetchInfo object representing this information.
+			"""
+			raise NotImplementedError("todo")
+		
+	# END FetchInfo definition 
+  
+	
 	def __init__(self, repo, name):
 		"""
 		Initialize a remote instance
@@ -218,10 +250,11 @@ class Remote(LazyMixin, Iterable):
 			Additional arguments to be passed to git-fetch
 			
 		Returns
-			self
+			list(FetchInfo, ...) list of FetchInfo instances providing detailed 
+			information about the fetch results
 		"""
-		self.repo.git.fetch(self, refspec, **kwargs)
-		return self
+		lines = self.repo.git.fetch(self, refspec, v=True, **kwargs).splitlines()
+		return [ self.FetchInfo._from_line(line) for line in lines ]
 		
 	def pull(self, refspec=None, **kwargs):
 		"""
@@ -235,10 +268,10 @@ class Remote(LazyMixin, Iterable):
 			Additional arguments to be passed to git-pull
 			
 		Returns
-			self
+			list(Fetch
 		"""
-		self.repo.git.pull(self, refspec, **kwargs)
-		return self
+		lines = self.repo.git.pull(self, refspec, v=True, **kwargs).splitlines()
+		return [ self.FetchInfo._from_line(line) for line in lines ]
 		
 	def push(self, refspec=None, **kwargs):
 		"""

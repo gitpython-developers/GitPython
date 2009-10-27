@@ -175,4 +175,15 @@ class TestBase(TestCase):
 		each test type has its own repository
 		"""
 		cls.rorepo = Repo(GIT_REPO)
-		
+	
+	def _make_file(self, rela_path, data, repo=None):
+		"""
+		Create a file at the given path relative to our repository, filled
+		with the given data. Returns absolute path to created file.
+		"""
+		repo = repo or self.rorepo
+		abs_path = os.path.join(repo.git.git_dir, rela_path)
+		fp = open(abs_path, "w")
+		fp.write(data)
+		fp.close()
+		return abs_path

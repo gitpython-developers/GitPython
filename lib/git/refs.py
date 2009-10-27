@@ -263,11 +263,13 @@ class SymbolicReference(object):
 		tokens = value.split(" ")
 		
 		# it is a detached reference
-		if len(tokens) == 1 and len(tokens[0]) == 40:
+		if self.repo.re_hexsha_only.match(tokens[0]):
 			return Commit(self.repo, tokens[0])
 		
 		# must be a head ! Git does not allow symbol refs to other things than heads
 		# Otherwise it would have detached it
+		if tokens[0] != "ref:":
+			raise ValueError("Failed to parse symbolic refernce: wanted 'ref: <hexsha>', got %r" % value)
 		return Head(self.repo, tokens[1]).commit
 		
 	def _set_commit(self, commit):

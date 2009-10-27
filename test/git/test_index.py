@@ -199,6 +199,9 @@ class TestTree(TestBase):
 		
 	
 	def _count_existing(self, repo, files):
+		"""
+		Returns count of files that actually exist in the repository directory.
+		"""
 		existing = 0
 		basedir = repo.git.git_dir
 		for f in files:
@@ -207,19 +210,6 @@ class TestTree(TestBase):
 		return existing
 	# END num existing helper
 	
-		
-	def _make_file(self, rela_path, data, repo=None):
-		"""
-		Create a file at the given path relative to our repository, filled
-		with the given data. Returns absolute path to created file.
-		"""
-		repo = repo or self.rorepo
-		abs_path = os.path.join(repo.git.git_dir, rela_path)
-		fp = open(abs_path, "w")
-		fp.write(data)
-		fp.close()
-		return abs_path
-		
 	@with_rw_repo('0.1.6')
 	def test_index_mutation(self, rw_repo):
 		index = rw_repo.index
