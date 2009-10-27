@@ -43,17 +43,28 @@ class TestRemote(TestBase):
 		
 		res = remote.fetch()
 		self._test_fetch_result(res, remote)
+		# all uptodate
+		for info in res:
+			assert info.flags & info.BRANCH_UPTODATE
 		
 		# rewind remote head to trigger rejection
 		# index must be false as remote is a bare repo
-		remote_repo.head.reset("HEAD~2", index=False)
+		rhead = remote_repo.head
+		remote_commit = rhead.commit
+		rhead.reset("HEAD~2", index=False)
 		res = remote.fetch()
 		self._test_fetch_result(res, remote)
-		master_info = res["%s/master" % remote]
+		mkey = "%s/master" % remote
+		master_info = res[mkey]
 		assert master_info.flags & Remote.FetchInfo.FORCED_UPDATE and master_info.note is not None
 		
-		self.fail("test parsing of each individual flag")
-		self.fail("tag handling")
+		# normal fast forward - set head back to previous one
+		rhead.commit = remote_commit
+		res = remote.fetch()
+		self._test_fetch_result(res, remote)
+		assert res[mkey].flags & Remote.FetchInfo.FAST_FORWARD
+		
+		self.fail("tag handling, tag uptodate, new tag, new branch")
 		
 	def _test_pull(self,remote, rw_repo, remote_repo):
 		# pull is essentially a fetch + merge, hence we just do a light 
