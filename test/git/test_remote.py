@@ -18,11 +18,13 @@ class TestRemote(TestBase):
 		
 		
 	def _test_fetch_result(self, results, remote):
-		self._print_fetchhead(remote.repo)
+		# self._print_fetchhead(remote.repo)
 		assert len(results) > 0 and isinstance(results[0], remote.FetchInfo)
 		for info in results:
-			assert info.flags != 0
-			assert isinstance(info.remote_ref, (SymbolicReference, Reference))
+			if isinstance(info.ref, Reference):
+				assert info.flags != 0
+			# END referebce type flags handling 
+			assert isinstance(info.ref, (SymbolicReference, Reference))
 			if info.flags & info.FORCED_UPDATE:
 				assert isinstance(info.commit_before_forced_update, Commit)
 			else:
@@ -31,8 +33,8 @@ class TestRemote(TestBase):
 		# END for each info
 		
 	def _test_fetch_info(self, repo):
-		self.failUnlessRaises(ValueError, Remote.FetchInfo._from_line, repo, "nonsense")
-		self.failUnlessRaises(ValueError, Remote.FetchInfo._from_line, repo, "? [up to date]      0.1.7RC    -> origin/0.1.7RC")
+		self.failUnlessRaises(ValueError, Remote.FetchInfo._from_line, repo, "nonsense", '')
+		self.failUnlessRaises(ValueError, Remote.FetchInfo._from_line, repo, "? [up to date]      0.1.7RC    -> origin/0.1.7RC", '')
 		
 	def _test_fetch(self,remote, rw_repo, remote_repo):
 		# specialized fetch testing to de-clutter the main test
@@ -80,7 +82,7 @@ class TestRemote(TestBase):
 		new_remote_branch.rename("other_branch_name")
 		res = fetch_and_test(remote)
 		other_branch_info = get_info(res, remote, new_remote_branch)
-		assert other_branch_info.remote_ref.commit == new_branch_info.remote_ref.commit
+		assert other_branch_info.ref.commit == new_branch_info.ref.commit
 		
 		# remove new branch
 		Head.delete(new_remote_branch.repo, new_remote_branch)
@@ -93,11 +95,11 @@ class TestRemote(TestBase):
 		assert len(stale_refs) == 2 and isinstance(stale_refs[0], RemoteReference)
 		RemoteReference.delete(rw_repo, *stale_refs)
 		
-		# test single branch fetch with refspec
+		# test single branch fetch with refspec including target remote
 		res = fetch_and_test(remote, refspec="master:refs/remotes/%s/master"%remote)
 		assert len(res) == 1 and get_info(res, remote, 'master')
 		
-		# without refspec
+		# ... with respec and no target
 		res = fetch_and_test(remote, refspec='master')
 		assert len(res) == 1
 		
@@ -105,7 +107,7 @@ class TestRemote(TestBase):
 		rtag = TagReference.create(remote_repo, "1.0-RV_hello.there")
 		res = fetch_and_test(remote, tags=True)
 		ltag = res[str(rtag)]
-		assert isinstance(ltag, TagReference)
+		assert isinstance(ltag.ref, TagReference)
 		
 		# delete tag
 		

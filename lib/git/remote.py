@@ -9,7 +9,7 @@ Module implementing a remote object allowing easy access to git remotes
 
 from git.utils import LazyMixin, Iterable, IterableList
 from objects import Commit
-from refs import Reference, RemoteReference
+from refs import Reference, RemoteReference, SymbolicReference, TagReference
 import re
 import os
 
@@ -57,13 +57,16 @@ class Remote(LazyMixin, Iterable):
 		Carries information about the results of a fetch operation::
 		
 		 info = remote.fetch()[0]
-		 info.remote_ref	# Symbolic Reference or RemoteReference to the changed remote head or FETCH_HEAD
-		 info.flags 		# additional flags to be & with enumeration members, i.e. info.flags & info.REJECTED
+		 info.ref			# Symbolic Reference or RemoteReference to the changed 
+		 					# remote head or FETCH_HEAD
+		 info.flags 		# additional flags to be & with enumeration members, 
+		 					# i.e. info.flags & info.REJECTED 
+		 					# is 0 if ref is SymbolicReference
 		 info.note			# additional notes given by git-fetch intended for the user
-		 info.commit_before_forced_update	# if info.flags & info.FORCED_UPDATE, field is set to the 
-		 					# previous location of remote_ref, otherwise None
+		 info.commit_before_forced_update	# if info.flags & info.FORCED_UPDATE, 
+		 					# field is set to the previous location of ref, otherwise None
 		"""
-		__slots__ = ('remote_ref','commit_before_forced_update', 'flags', 'note')
+		__slots__ = ('ref','commit_before_forced_update', 'flags', 'note')
 		
 		BRANCH_UPTODATE, REJECTED, FORCED_UPDATE, FAST_FORWARD, NEW_TAG, \
 		TAG_UPDATE, NEW_BRANCH, ERROR = [ 1 << x for x in range(1,9) ]
@@ -73,11 +76,11 @@ class Remote(LazyMixin, Iterable):
 		_flag_map = { 	'!' : ERROR, '+' : FORCED_UPDATE, '-' : TAG_UPDATE, '*' : 0,
 						'=' : BRANCH_UPTODATE, ' ' : FAST_FORWARD } 
 		
-		def __init__(self, remote_ref, flags, note = '', old_commit = None):
+		def __init__(self, ref, flags, note = '', old_commit = None):
 			"""
 			Initialize a new instance
 			"""
-			self.remote_ref = remote_ref
+			self.ref = ref
 			self.flags = flags
 			self.note = note
 			self.commit_before_forced_update = old_commit
@@ -91,10 +94,10 @@ class Remote(LazyMixin, Iterable):
 			Returns
 				Name of our remote ref
 			"""
-			return self.remote_ref.name
+			return self.ref.name
 			
 		@classmethod
-		def _from_line(cls, repo, line):
+		def _from_line(cls, repo, line, fetch_line):
 			"""
 			Parse information from the given line as returned by git-fetch -v
 			and return a new FetchInfo object representing this information.
@@ -109,13 +112,43 @@ class Remote(LazyMixin, Iterable):
 			* means birth of new branch or tag
 			= means the head was up to date ( and not moved )
 			' ' means a fast-forward
+			
+			fetch line is the corresponding line from FETCH_HEAD, like
+			acb0fa8b94ef421ad60c8507b634759a472cd56c	not-for-merge	branch '0.1.7RC' of /tmp/tmpya0vairemote_repo
 			"""
 			match = cls.re_fetch_result.match(line)
 			if match is None:
 				raise ValueError("Failed to parse line: %r" % line)
+				
+			# parse lines
 			control_character, operation, local_remote_ref, remote_local_ref, note = match.groups()
+			try:
+				new_hex_sha, fetch_operation, fetch_note = fetch_line.split("\t")
+				ref_type_name, fetch_note = fetch_note.split(' ', 1)
+			except ValueError:	# unpack error
+				raise ValueError("Failed to parse FETCH__HEAD line: %r" % fetch_line)
 			
-			remote_local_ref = Reference.from_path(repo, os.path.join(RemoteReference._common_path_default, remote_local_ref.strip()))
+			# handle FETCH_HEAD and figure out ref type
+			# If we do not specify a target branch like master:refs/remotes/origin/master, 
+			# the fetch result is stored in FETCH_HEAD which destroys the rule we usually
+			# have. In that case we use a symbolic reference which is detached 
+			ref_type = None
+			if remote_local_ref == "FETCH_HEAD":
+				ref_type = SymbolicReference
+			elif ref_type_name  == "branch":
+				ref_type = RemoteReference
+			elif ref_type_name == "tag":
+				ref_type = TagReference
+			else:
+				raise TypeError("Cannot handle reference type: %r" % ref_type_name)
+				
+			# create ref instance
+			if ref_type is SymbolicReference:
+				remote_local_ref = ref_type(repo, "FETCH_HEAD") 
+			else:
+				remote_local_ref = Reference.from_path(repo, os.path.join(ref_type._common_path_default, remote_local_ref.strip()))
+			# END create ref instance 
+			
 			note = ( note and note.strip() ) or ''
 			
 			# parse flags from control_character
@@ -126,17 +159,19 @@ class Remote(LazyMixin, Iterable):
 				raise ValueError("Control character %r unknown as parsed from line %r" % (control_character, line))
 			# END control char exception hanlding 
 			
-			# parse operation string for more info
+			# parse operation string for more info - makes no sense for symbolic refs
 			old_commit = None
-			if 'rejected' in operation:
-				flags |= cls.REJECTED
-			if 'new tag' in operation:
-				flags |= cls.NEW_TAG
-			if 'new branch' in operation:
-				flags |= cls.NEW_BRANCH
-			if '...' in operation:
-				old_commit = Commit(repo, operation.split('...')[0])
-			# END handle refspec
+			if isinstance(remote_local_ref, Reference):
+				if 'rejected' in operation:
+					flags |= cls.REJECTED
+				if 'new tag' in operation:
+					flags |= cls.NEW_TAG
+				if 'new branch' in operation:
+					flags |= cls.NEW_BRANCH
+				if '...' in operation:
+					old_commit = Commit(repo, operation.split('...')[0])
+				# END handle refspec
+			# END reference flag handling
 			
 			return cls(remote_local_ref, flags, note, old_commit)
 		
@@ -316,7 +351,15 @@ class Remote(LazyMixin, Iterable):
 		# skip first line as it is some remote info we are not interested in
 		print stderr
 		output = IterableList('name')
-		output.extend(self.FetchInfo._from_line(self.repo, line) for line in stderr.splitlines()[1:])
+		err_info = stderr.splitlines()[1:]
+		
+		# read head information 
+		fp = open(os.path.join(self.repo.path, 'FETCH_HEAD'),'r')
+		fetch_head_info = fp.readlines()
+		fp.close()
+		
+		output.extend(self.FetchInfo._from_line(self.repo, err_line, fetch_line) 
+						for err_line,fetch_line in zip(err_info, fetch_head_info))
 		return output
 	
 	def fetch(self, refspec=None, **kwargs):
