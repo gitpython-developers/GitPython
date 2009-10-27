@@ -7,7 +7,45 @@
 from test.testlib import *
 from git import *
 
+import os
+
 class TestRemote(TestBase):
+	
+	def _print_fetchhead(self, repo):
+		fp = open(os.path.join(repo.path, "FETCH_HEAD"))
+		print fp.read()
+		fp.close()
+		
+		
+	def _check_fetch_results(self, results, remote):
+		self._print_fetchhead(remote.repo)
+		assert len(results) > 0 and isinstance(results[0], remote.FetchInfo)
+		for result in results:
+			assert result.flags != 0
+			assert isinstance(result.remote_ref, (SymbolicReference, Reference))
+		# END for each result
+		
+	def _test_fetch_info(self, repo):
+		self.failUnlessRaises(ValueError, Remote.FetchInfo._from_line, repo, "nonsense")
+		self.failUnlessRaises(ValueError, Remote.FetchInfo._from_line, repo, "? [up to date]      0.1.7RC    -> origin/0.1.7RC")
+		
+	def _test_fetch(self,remote, rw_repo, remote_repo):
+		# specialized fetch testing to de-clutter the main test
+		self._test_fetch_info(rw_repo)
+		
+		fetch_result = remote.fetch()
+		self._check_fetch_results(fetch_result, remote)
+		
+		self.fail("rejected parsing")
+		self.fail("test parsing of each individual flag")
+		self.fail("tag handling")
+		
+	def _test_pull(self,remote, rw_repo, remote_repo):
+		# pull is essentially a fetch + merge, hence we just do a light 
+		# test here, leave the reset to the actual merge testing
+		# fails as we did not specify a branch and there is no configuration for it
+		self.failUnlessRaises(GitCommandError, remote.pull)
+		remote.pull('master')
 	
 	@with_rw_and_rw_remote_repo('0.1.6')
 	def test_base(self, rw_repo, remote_repo):
@@ -60,18 +98,14 @@ class TestRemote(TestBase):
 			# END for each rename ( back to prev_name )
 			
 			# FETCH TESTING
-			assert len(remote.fetch()) == 1
+			self._test_fetch(remote, rw_repo, remote_repo)
 			
-			
-			self.fail("rejected parsing")
-			self.fail("test parsing of each individual flag")
 			# PULL TESTING
-			# fails as we did not specify a branch and there is no configuration for it
-			self.failUnlessRaises(GitCommandError, remote.pull)
-			remote.pull('master')
-			remote.update()
+			self._test_pull(remote, rw_repo, remote_repo)
 			
+			remote.update()
 		# END for each remote
+		
 		assert num_remotes
 		assert num_remotes == len(remote_set)
 		

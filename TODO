@@ -96,6 +96,9 @@ Refs
   - NO: The reference dosnt need to know - in fact it does not know about the 
   main HEAD, so it may not use it. This is to be done in client code only. 
   Remove me
+* Reference.from_path may return a symbolic reference although it is not related 
+  to the reference type. Split that up into two from_path on each of the types, 
+  and provide a general method outside of the type  that tries both.
 
 Remote
 ------
@@ -104,6 +107,10 @@ Remote
 * Fetch should return heads that where updated, pull as well.
 * Creation and deletion methods for references should be part of the interface, allowing
   repo.create_head(...) instaed of Head.create(repo, ...). Its a convenience thing, clearly
+* When parsing fetch-info, the regex will have problems properly handling white-space in the
+  actual head or tag name as it does not know when the optional additional message will begin.
+  This can possibly improved by making stronger assumptions about the possible messages or 
+  by using the data from FETCH_HEAD instead or as additional source of information
   
 Repo
 ----

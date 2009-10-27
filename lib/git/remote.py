@@ -8,7 +8,9 @@ Module implementing a remote object allowing easy access to git remotes
 """
 
 from git.utils import LazyMixin, Iterable, IterableList
-from refs import RemoteReference
+from refs import Reference, RemoteReference
+import re
+import os
 
 class _SectionConstraint(object):
 	"""
@@ -54,29 +56,70 @@ class Remote(LazyMixin, Iterable):
 		Carries information about the results of a fetch operation::
 		
 		 info = remote.fetch()[0]
-		 info.local_ref		# None, or Reference object to the local head or tag which was moved
 		 info.remote_ref	# Symbolic Reference or RemoteReference to the changed remote head or FETCH_HEAD
 		 info.flags 		# additional flags to be & with enumeration members, i.e. info.flags & info.REJECTED
+		 info.note			# additional notes given by git-fetch intended for the user 
 		"""
-		__slots__ = tuple()
-		BRANCH_UPTODATE, REJECTED, FORCED_UPDATED, FAST_FORWARD, NEW_TAG, \
-		TAG_UPDATE, NEW_BRANCH = [ 1 << x for x in range(1,8) ]
+		__slots__ = ('remote_ref', 'flags', 'note') 
+		BRANCH_UPTODATE, REJECTED, FORCED_UPDATE, FAST_FORWARD, NEW_TAG, \
+		TAG_UPDATE, NEW_BRANCH, ERROR = [ 1 << x for x in range(1,9) ]
+		#                             %c    %-*s %-*s             -> %s       (%s)
+		re_fetch_result = re.compile("^(.) (\[?[\w\s]+\]?)\s+(.+) -> (.+/.+)(  \(.*\)?$)?")
 		
-		def __init__(self, local_ref, remote_ref, flags):
+		_flag_map = { 	'!' : ERROR, '+' : FORCED_UPDATE, '-' : TAG_UPDATE, '*' : 0,
+						'=' : BRANCH_UPTODATE, ' ' : FAST_FORWARD } 
+		
+		def __init__(self, remote_ref, flags, note = ''):
 			"""
 			Initialize a new instance
 			"""
-			self.local_ref = local_ref
 			self.remote_ref = remote_ref
 			self.flags = flags
+			self.note = note
 			
 		@classmethod
-		def _from_line(cls, line):
+		def _from_line(cls, repo, line):
 			"""
 			Parse information from the given line as returned by git-fetch -v
 			and return a new FetchInfo object representing this information.
+			
+			We can handle a line as follows
+			"%c %-*s %-*s -> %s%s"
+			
+			Where c is either ' ', !, +, -, *, or =
+			! means error
+			+ means success forcing update
+			- means a tag was updated
+			* means birth of new branch or tag
+			= means the head was up to date ( and not moved )
+			' ' means a fast-forward
 			"""
-			raise NotImplementedError("todo")
+			line = line.strip()
+			match = cls.re_fetch_result.match(line)
+			if match is None:
+				raise ValueError("Failed to parse line: %r" % line)
+			control_character, operation, local_remote_ref, remote_local_ref, note = match.groups()
+			
+			remote_local_ref = Reference.from_path(repo, os.path.join(RemoteReference._common_path_default, remote_local_ref.strip()))
+			note = ( note and note.strip() ) or ''
+			
+			# parse flags from control_character
+			flags = 0
+			try:
+				flags |= cls._flag_map[control_character]
+			except KeyError:
+				raise ValueError("Control character %r unknown as parsed from line %r" % (control_character, line))
+			# END control char exception hanlding 
+			
+			# parse operation string for more info
+			if 'rejected' in operation:
+				flags |= cls.REJECTED
+			if 'new tag' in operation:
+				flags |= cls.NEW_TAG
+			if 'new branch' in operation:
+				flags |= cls.NEW_BRANCH
+			
+			return cls(remote_local_ref, flags, note)
 		
 	# END FetchInfo definition 
   
@@ -230,6 +273,10 @@ class Remote(LazyMixin, Iterable):
 		self.repo.git.remote("update", self.name)
 		return self
 	
+	def _get_fetch_info_from_stderr(self, stderr):
+		# skip first line as it is some remote info we are not interested in
+		return [ self.FetchInfo._from_line(self.repo, line) for line in stderr.splitlines()[1:] ]
+	
 	def fetch(self, refspec=None, **kwargs):
 		"""
 		Fetch the latest changes for this remote
@@ -253,8 +300,8 @@ class Remote(LazyMixin, Iterable):
 			list(FetchInfo, ...) list of FetchInfo instances providing detailed 
 			information about the fetch results
 		"""
-		lines = self.repo.git.fetch(self, refspec, v=True, **kwargs).splitlines()
-		return [ self.FetchInfo._from_line(line) for line in lines ]
+		status, stdout, stderr = self.repo.git.fetch(self, refspec, with_extended_output=True, v=True, **kwargs)
+		return self._get_fetch_info_from_stderr(stderr)
 		
 	def pull(self, refspec=None, **kwargs):
 		"""
@@ -270,8 +317,8 @@ class Remote(LazyMixin, Iterable):
 		Returns
 			list(Fetch
 		"""
-		lines = self.repo.git.pull(self, refspec, v=True, **kwargs).splitlines()
-		return [ self.FetchInfo._from_line(line) for line in lines ]
+		status, stdout, stderr = self.repo.git.pull(self, refspec, v=True, with_extended_output=True, **kwargs)
+		return self._get_fetch_info_from_stderr(stderr)
 		
 	def push(self, refspec=None, **kwargs):
 		"""
