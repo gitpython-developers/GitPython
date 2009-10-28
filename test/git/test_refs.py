@@ -68,6 +68,12 @@ class TestRefs(TestBase):
 			assert prev_object is not cur_object	# but are different instances
 		# END for each head
 		
+	def test_refs(self):
+		types_found = set()
+		for ref in self.rorepo.refs:
+			types_found.add(type(ref))
+		assert len(types_found) == 3 
+		
 	@with_rw_repo('0.1.6')
 	def test_head_reset(self, rw_repo):
 		cur_head = rw_repo.head
