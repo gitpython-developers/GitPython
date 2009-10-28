@@ -38,9 +38,87 @@ class _SectionConstraint(object):
 		return getattr(self._config, method)(self._section_name, *args)
 		
 		
+class PushProgress(object):
+	"""
+	Handler providing an interface to parse progress information emitted by git-push
+	and to dispatch callbacks allowing subclasses to react to the progress.
+	"""
+	BEGIN, END, COUNTING, COMPRESSING, WRITING =  [ 1 << x for x in range(1,6) ]
+	STAGE_MASK = BEGIN|END
+	OP_MASK = COUNTING|COMPRESSING|WRITING
+	
+	__slots__ = "_cur_line"
+	
+	def _parse_progress_line(self, line):
+		"""
+		Parse progress information from the given line as retrieved by git-push
+		"""
+		self._cur_line = line
+	
+	def line_dropped(self, line):
+		"""
+		Called whenever a line could not be understood and was therefore dropped.
+		"""
+	
+	def update(self, op_code, cur_count, max_count=None):
+		"""
+		Called whenever the progress changes
+		
+		``op_code``
+			Integer allowing to be compared against Operation IDs and stage IDs.
+			
+			Stage IDs are BEGIN and END. BEGIN will only be set once for each Operation 
+			ID as well as END. It may be that BEGIN and END are set at once in case only
+			one progress message was emitted due to the speed of the operation.
+			Between BEGIN and END, none of these flags will be set
+			
+			Operation IDs are all held within the OP_MASK. Only one Operation ID will 
+			be active per call.
+			
+		``cur_count``
+			Current absolute count of items
+			
+		``max_count``
+			The maximum count of items we expect. It may be None in case there is 
+			no maximum number of items or if it is (yet) unknown.
+			
+		You may read the contents of the current line in self._cur_line
+		"""
+		
+		
+class PushInfo(object):
+	"""
+	Carries information about the result of a push operation of a single head::
+	 todo
+	
+	"""
+	__slots__ = ('local_ref', 'remote_ref')
+	
+	NO_MATCH, REJECTED, REMOTE_REJECTED, REMOTE_FAILURE, DELETED, \
+	FORCED_UPDATE, FAST_FORWARD, ERROR = [ 1 << x for x in range(1,9) ]
+
+	_flag_map = { 	'X' : NO_MATCH, '-' : DELETED, '*' : 0,
+					'+' : FORCED_UPDATE, ' ' : FAST_FORWARD }
+	
+	def __init__(self, local_ref, remote_ref):
+		"""
+		Initialize a new instance
+		"""
+		self.local_ref = local_ref
+		self.remote_ref = remote_ref
+		
+	@classmethod
+	def _from_line(cls, repo, line):
+		"""
+		Create a new PushInfo instance as parsed from line which is expected to be like
+		c	refs/heads/master:refs/heads/master	05d2687..1d0568e
+		"""
+		raise NotImplementedError("todo")
+		
+
 class FetchInfo(object):
 	"""
-	Carries information about the results of a fetch operation::
+	Carries information about the results of a fetch operation of a single head::
 	
 	 info = remote.fetch()[0]
 	 info.ref			# Symbolic Reference or RemoteReference to the changed 
@@ -54,13 +132,13 @@ class FetchInfo(object):
 	"""
 	__slots__ = ('ref','commit_before_forced_update', 'flags', 'note')
 	
-	BRANCH_UPTODATE, REJECTED, FORCED_UPDATE, FAST_FORWARD, NEW_TAG, \
-	TAG_UPDATE, NEW_BRANCH, ERROR = [ 1 << x for x in range(1,9) ]
+	HEAD_UPTODATE, REJECTED, FORCED_UPDATE, FAST_FORWARD, NEW_TAG, \
+	TAG_UPDATE, NEW_HEAD, ERROR = [ 1 << x for x in range(1,9) ]
 	#                             %c    %-*s %-*s             -> %s       (%s)
 	re_fetch_result = re.compile("^\s*(.) (\[?[\w\s\.]+\]?)\s+(.+) -> ([/\w_\.-]+)(  \(.*\)?$)?")
 	
 	_flag_map = { 	'!' : ERROR, '+' : FORCED_UPDATE, '-' : TAG_UPDATE, '*' : 0,
-					'=' : BRANCH_UPTODATE, ' ' : FAST_FORWARD } 
+					'=' : HEAD_UPTODATE, ' ' : FAST_FORWARD } 
 	
 	def __init__(self, ref, flags, note = '', old_commit = None):
 		"""
@@ -161,7 +239,7 @@ class FetchInfo(object):
 			if 'new tag' in operation:
 				flags |= cls.NEW_TAG
 			if 'new branch' in operation:
-				flags |= cls.NEW_BRANCH
+				flags |= cls.NEW_HEAD
 			if '...' in operation:
 				old_commit = Commit(repo, operation.split('...')[0])
 			# END handle refspec
@@ -365,6 +443,19 @@ class Remote(LazyMixin, Iterable):
 						for err_line,fetch_line in zip(err_info, fetch_head_info))
 		return output
 	
+	def _get_push_info(self, proc, progress):
+		# read progress information from stderr
+		# we hope stdout can hold all the data, it should ... 
+		for line in proc.stderr.readline():
+			progress._parse_progress_line(line)
+		# END for each progress line
+		
+		output = IterableList('name')
+		output.extend(PushInfo._from_line(self.repo, line) for line in proc.stdout.readlines())
+		proc.wait()
+		return output
+		
+	
 	def fetch(self, refspec=None, **kwargs):
 		"""
 		Fetch the latest changes for this remote
@@ -405,15 +496,20 @@ class Remote(LazyMixin, Iterable):
 		Returns
 			Please see 'fetch' method
 		"""
-		status, stdout, stderr = self.repo.git.pull(self, refspec, v=True, with_extended_output=True, **kwargs)
+		status, stdout, stderr = self.repo.git.pull(self, refspec, with_extended_output=True, v=True, **kwargs)
 		return self._get_fetch_info_from_stderr(stderr)
 		
-	def push(self, refspec=None, **kwargs):
+	def push(self, refspec=None, progress=None, **kwargs):
 		"""
 		Push changes from source branch in refspec to target branch in refspec.
 		
 		``refspec``
 			see 'fetch' method
+		
+		``progress``
+			Instance of type PushProgress allowing the caller to receive 
+			progress information until the method returns.
+			If None, progress information will be discarded
 		
 		``**kwargs``
 			Additional arguments to be passed to git-push
@@ -424,12 +520,7 @@ class Remote(LazyMixin, Iterable):
 			side
 		"""
 		proc = self.repo.git.push(self, refspec, porcelain=True, as_process=True, **kwargs)
-		print "stdout"*10
-		print proc.stdout.read()
-		print "stderr"*10
-		print proc.stderr.read()
-		proc.wait()
-		return self
+		return self._get_push_info(proc, progress or PushProgress())
 		
 	@property
 	def config_reader(self):

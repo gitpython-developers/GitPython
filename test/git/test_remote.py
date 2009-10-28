@@ -14,6 +14,25 @@ import random
 # assure we have repeatable results 
 random.seed(0)
 
+class TestPushProgress(PushProgress):
+	def __init__(self):
+		self._seen_ops = 0
+		self._stages_per_op = dict()
+		
+	def line_dropped(self, line):
+		print line
+		
+	def update(self, op_code, cur_count, max_count=None):
+		# check each stage only comes once
+		pass
+		
+	def make_assertion(self):
+		assert self._seen_ops == 3
+		# must have seen all stages
+		for op, stages in self._stages_per_op.items():
+			assert stages & self.STAGE_MASK == self.STAGE_MASK
+		# END for each op/stage
+
 class TestRemote(TestBase):
 	
 	def _print_fetchhead(self, repo):
@@ -69,7 +88,7 @@ class TestRemote(TestBase):
 		res = fetch_and_test(remote)
 		# all uptodate
 		for info in res:
-			assert info.flags & info.BRANCH_UPTODATE
+			assert info.flags & info.HEAD_UPTODATE
 		
 		# rewind remote head to trigger rejection
 		# index must be false as remote is a bare repo
@@ -90,7 +109,7 @@ class TestRemote(TestBase):
 		new_remote_branch = Head.create(remote_repo, "new_branch")
 		res = fetch_and_test(remote)
 		new_branch_info = get_info(res, remote, new_remote_branch)
-		assert new_branch_info.flags & FetchInfo.NEW_BRANCH
+		assert new_branch_info.flags & FetchInfo.NEW_HEAD
 		
 		# remote branch rename ( causes creation of a new one locally )
 		new_remote_branch.rename("other_branch_name")
@@ -169,7 +188,6 @@ class TestRemote(TestBase):
 		# END test and cleanup
 		
 	def _test_push_and_pull(self,remote, rw_repo, remote_repo):
-		return
 		# push our changes
 		lhead = rw_repo.head
 		lindex = rw_repo.index
@@ -182,7 +200,10 @@ class TestRemote(TestBase):
 		# self.failUnlessRaises(GitCommandError, remote.push)
 		
 		self._commit_random_file(rw_repo)
-		remote.push(lhead.reference)
+		progress = TestPushProgress()
+		res = remote.push(lhead.reference, progress)
+		assert isinstance(res, IterableList)
+		progress.make_assertion()
 		
 		self.fail("test --all")
 		self.fail("test rewind and force -push")
@@ -246,6 +267,9 @@ class TestRemote(TestBase):
 				assert remote.rename(prev_name).name == prev_name
 			# END for each rename ( back to prev_name )
 			
+			# PUSH/PULL TESTING
+			self._test_push_and_pull(remote, rw_repo, remote_repo)
+			
 			# FETCH TESTING
 			# Only for remotes - local cases are the same or less complicated 
 			# as additional progress information will never be emitted
@@ -253,9 +277,6 @@ class TestRemote(TestBase):
 				self._test_fetch(remote, rw_repo, remote_repo)
 				ran_fetch_test = True
 			# END fetch test  
-			
-			# PULL TESTING
-			self._test_push_and_pull(remote, rw_repo, remote_repo)
 			
 			remote.update()
 		# END for each remote
