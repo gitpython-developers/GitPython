@@ -625,7 +625,7 @@ class Repo(object):
 		Create a clone from this repository.
 
 		``path``
-			is the full path of the new repo (traditionally ends with /<name>.git)
+			is the full path of the new repo (traditionally ends with ./<name>.git).
 
 		``kwargs``
 			keyword arguments to be given to the git-clone command
