@@ -106,14 +106,22 @@ class TestRemote(TestBase):
 		# add new tag reference
 		rtag = TagReference.create(remote_repo, "1.0-RV_hello.there")
 		res = fetch_and_test(remote, tags=True)
-		ltag = res[str(rtag)]
-		assert isinstance(ltag.ref, TagReference)
-		
-		# delete tag
+		tinfo = res[str(rtag)]
+		assert isinstance(tinfo.ref, TagReference) and tinfo.ref.commit == rtag.commit
+		assert tinfo.flags & tinfo.NEW_TAG
 		
 		# adjust tag commit
+		rtag.object = rhead.commit.parents[0].parents[0]
+		res = fetch_and_test(remote, tags=True)
+		tinfo = res[str(rtag)]
+		assert tinfo.commit == rtag.commit
+		assert tinfo.flags & tinfo.TAG_UPDATE
 		
-		self.fail("tag handling, tag uptodate, new tag, new branch")
+		# delete remote tag - local one will stay
+		TagReference.delete(remote_repo, rtag)
+		res = fetch_and_test(remote, tags=True)
+		self.failUnlessRaises(IndexError, get_info, res, remote, str(rtag))
+		
 		
 	def _test_pull(self,remote, rw_repo, remote_repo):
 		# pull is essentially a fetch + merge, hence we just do a light 

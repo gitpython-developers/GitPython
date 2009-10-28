@@ -96,6 +96,14 @@ class Remote(LazyMixin, Iterable):
 			"""
 			return self.ref.name
 			
+		@property
+		def commit(self):
+			"""
+			Returns
+				Commit of our remote ref
+			"""
+			return self.ref.commit
+			
 		@classmethod
 		def _from_line(cls, repo, line, fetch_line):
 			"""
