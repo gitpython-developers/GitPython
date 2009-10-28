@@ -23,7 +23,7 @@ class TestRemote(TestBase):
 		for info in results:
 			if isinstance(info.ref, Reference):
 				assert info.flags != 0
-			# END referebce type flags handling 
+			# END reference type flags handling 
 			assert isinstance(info.ref, (SymbolicReference, Reference))
 			if info.flags & info.FORCED_UPDATE:
 				assert isinstance(info.commit_before_forced_update, Commit)
@@ -122,8 +122,26 @@ class TestRemote(TestBase):
 		res = fetch_and_test(remote, tags=True)
 		self.failUnlessRaises(IndexError, get_info, res, remote, str(rtag))
 		
+	def _test_push_and_pull(self,remote, rw_repo, remote_repo):
+		# push our changes
+		lhead = rw_repo.head
+		lindex = rw_repo.index
+		# assure we are on master and it is checked out where the remote is
+		lhead.reference = rw_repo.heads.master
+		lhead.reset(remote.refs.master, working_tree=True)
 		
-	def _test_pull(self,remote, rw_repo, remote_repo):
+		# push without spec should fail ( without further configuration )
+		# self.failUnlessRaises(GitCommandError, remote.push)
+		
+		new_file = self._make_file("new_file", "hello world", rw_repo)
+		lindex.add([new_file])
+		lindex.commit("test commit")
+		remote.push(lhead.reference)
+		
+		self.fail("test --all")
+		self.fail("test rewind and force -push")
+		self.fail("test general fail due to invalid refspec")
+		
 		# pull is essentially a fetch + merge, hence we just do a light 
 		# test here, leave the reset to the actual merge testing
 		# fails as we did not specify a branch and there is no configuration for it
@@ -184,7 +202,7 @@ class TestRemote(TestBase):
 			self._test_fetch(remote, rw_repo, remote_repo)
 			
 			# PULL TESTING
-			self._test_pull(remote, rw_repo, remote_repo)
+			self._test_push_and_pull(remote, rw_repo, remote_repo)
 			
 			remote.update()
 		# END for each remote

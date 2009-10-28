@@ -260,16 +260,25 @@ class IterableList(list):
 	 heads.master
 	 heads['master']
 	 heads[0]
-	"""
-	__slots__ = '_id_attr'
+	 
+	It requires an id_attribute name to be set which will be queried from its 
+	contained items to have a means for comparison.
 	
-	def __new__(cls, id_attr):
+	A prefix can be specified which is to be used in case the id returned by the 
+	items always contains a prefix that does not matter to the user, so it 
+	can be left out.
+	"""
+	__slots__ = ('_id_attr', '_prefix')
+	
+	def __new__(cls, id_attr, prefix=''):
 		return super(IterableList,cls).__new__(cls)
 		
-	def __init__(self, id_attr):
+	def __init__(self, id_attr, prefix=''):
 		self._id_attr = id_attr
+		self._prefix = prefix
 		
 	def __getattr__(self, attr):
+		attr = self._prefix + attr
 		for item in self:
 			if getattr(item, self._id_attr) == attr:
 				return item
@@ -283,7 +292,7 @@ class IterableList(list):
 		try:
 			return getattr(self, index)
 		except AttributeError:
-			raise IndexError( "No item found with id %r" % index )
+			raise IndexError( "No item found with id %r" % self._prefix + index )
 
 class Iterable(object):
 	"""

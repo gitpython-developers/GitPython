@@ -256,9 +256,11 @@ class Remote(LazyMixin, Iterable):
 	def refs(self):
 		"""
 		Returns
-			IterableList of RemoteReference objects
+			IterableList of RemoteReference objects. It is prefixed, allowing 
+			you to omit the remote path portion, i.e.::
+			 remote.refs.master # yields RemoteReference('/refs/remotes/origin/master')
 		"""
-		out_refs = IterableList(RemoteReference._id_attribute_)
+		out_refs = IterableList(RemoteReference._id_attribute_, "%s/" % self.name)
 		for ref in RemoteReference.list_items(self.repo):
 			if ref.remote_name == self.name:
 				out_refs.append(ref)
@@ -274,8 +276,11 @@ class Remote(LazyMixin, Iterable):
 			IterableList RemoteReference objects that do not have a corresponding 
 			head in the remote reference anymore as they have been deleted on the 
 			remote side, but are still available locally.
+			
+			The IterableList is prefixed, hence the 'origin' must be omitted. See
+			'refs' property for an example.
 		"""
-		out_refs = IterableList(RemoteReference._id_attribute_)
+		out_refs = IterableList(RemoteReference._id_attribute_, "%s/" % self.name)
 		for line in self.repo.git.remote("prune", "--dry-run", self).splitlines()[2:]:
 			# expecting 
 			# * [would prune] origin/new_branch
@@ -357,7 +362,6 @@ class Remote(LazyMixin, Iterable):
 	
 	def _get_fetch_info_from_stderr(self, stderr):
 		# skip first line as it is some remote info we are not interested in
-		print stderr
 		output = IterableList('name')
 		err_info = stderr.splitlines()[1:]
 		
@@ -426,7 +430,12 @@ class Remote(LazyMixin, Iterable):
 		Returns
 			self
 		"""	
-		self.repo.git.push(self, refspec, **kwargs)
+		proc = self.repo.git.push(self, refspec, porcelain=True, as_process=True, **kwargs)
+		print "stdout"*10
+		print proc.stdout.read()
+		print "stderr"*10
+		print proc.stderr.read()
+		proc.wait()
 		return self
 		
 	@property
