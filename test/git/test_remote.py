@@ -19,7 +19,7 @@ class TestRemote(TestBase):
 		
 	def _test_fetch_result(self, results, remote):
 		# self._print_fetchhead(remote.repo)
-		assert len(results) > 0 and isinstance(results[0], remote.FetchInfo)
+		assert len(results) > 0 and isinstance(results[0], FetchInfo)
 		for info in results:
 			if isinstance(info.ref, Reference):
 				assert info.flags != 0
@@ -33,8 +33,8 @@ class TestRemote(TestBase):
 		# END for each info
 		
 	def _test_fetch_info(self, repo):
-		self.failUnlessRaises(ValueError, Remote.FetchInfo._from_line, repo, "nonsense", '')
-		self.failUnlessRaises(ValueError, Remote.FetchInfo._from_line, repo, "? [up to date]      0.1.7RC    -> origin/0.1.7RC", '')
+		self.failUnlessRaises(ValueError, FetchInfo._from_line, repo, "nonsense", '')
+		self.failUnlessRaises(ValueError, FetchInfo._from_line, repo, "? [up to date]      0.1.7RC    -> origin/0.1.7RC", '')
 		
 	def _test_fetch(self,remote, rw_repo, remote_repo):
 		# specialized fetch testing to de-clutter the main test
@@ -65,18 +65,18 @@ class TestRemote(TestBase):
 		res = fetch_and_test(remote)
 		mkey = "%s/%s"%(remote,'master')
 		master_info = res[mkey]
-		assert master_info.flags & Remote.FetchInfo.FORCED_UPDATE and master_info.note is not None
+		assert master_info.flags & FetchInfo.FORCED_UPDATE and master_info.note is not None
 		
 		# normal fast forward - set head back to previous one
 		rhead.commit = remote_commit
 		res = fetch_and_test(remote)
-		assert res[mkey].flags & Remote.FetchInfo.FAST_FORWARD
+		assert res[mkey].flags & FetchInfo.FAST_FORWARD
 		
 		# new remote branch
 		new_remote_branch = Head.create(remote_repo, "new_branch")
 		res = fetch_and_test(remote)
 		new_branch_info = get_info(res, remote, new_remote_branch)
-		assert new_branch_info.flags & Remote.FetchInfo.NEW_BRANCH
+		assert new_branch_info.flags & FetchInfo.NEW_BRANCH
 		
 		# remote branch rename ( causes creation of a new one locally )
 		new_remote_branch.rename("other_branch_name")
@@ -121,6 +121,8 @@ class TestRemote(TestBase):
 		TagReference.delete(remote_repo, rtag)
 		res = fetch_and_test(remote, tags=True)
 		self.failUnlessRaises(IndexError, get_info, res, remote, str(rtag))
+		
+		self.fail("Test fetch with true remote side - plenty of possible output is ommitted right now")
 		
 	def _test_push_and_pull(self,remote, rw_repo, remote_repo):
 		# push our changes
