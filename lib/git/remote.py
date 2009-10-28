@@ -238,16 +238,9 @@ class Remote(LazyMixin, Iterable):
 		Returns
 			Iterator yielding Remote objects of the given repository
 		"""
-		# parse them using refs, as their query can be faster as it is 
-		# purely based on the file system
 		seen_remotes = set()
-		for ref in RemoteReference.iter_items(repo):
-			remote_name = ref.remote_name
-			if remote_name in seen_remotes:
-				continue
-			# END if remote done already
-			seen_remotes.add(remote_name)
-			yield Remote(repo, remote_name)
+		for name in repo.git.remote().splitlines():
+			yield Remote(repo, name)
 		# END for each ref
 		
 	@property

@@ -122,8 +122,6 @@ class TestRemote(TestBase):
 		res = fetch_and_test(remote, tags=True)
 		self.failUnlessRaises(IndexError, get_info, res, remote, str(rtag))
 		
-		self.fail("Test fetch with true remote side - plenty of possible output is ommitted right now")
-		
 	def _test_push_and_pull(self,remote, rw_repo, remote_repo):
 		# push our changes
 		lhead = rw_repo.head
@@ -151,9 +149,10 @@ class TestRemote(TestBase):
 		remote.pull('master')
 	
 	@with_rw_and_rw_remote_repo('0.1.6')
-	def test_base(self, rw_repo, remote_repo):
+	def test_base(self, rw_repo, remote_repo, damon_handle):
 		num_remotes = 0
 		remote_set = set()
+		
 		for remote in rw_repo.remotes:
 			num_remotes += 1
 			assert remote == remote
@@ -221,6 +220,7 @@ class TestRemote(TestBase):
 		arg_list = (new_name, "git@server:hello.git")
 		remote = Remote.create(bare_rw_repo, *arg_list )
 		assert remote.name == "test_new_one"
+		assert remote in bare_rw_repo.remotes
 		
 		# create same one again
 		self.failUnlessRaises(GitCommandError, Remote.create, bare_rw_repo, *arg_list)
