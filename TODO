@@ -43,6 +43,8 @@ Config
   it will be returned instead of raising. This way the class will be much more usable, 
   and ... I truly hate this config reader as it is so 'old' style. Its not even a new-style
   class yet showing that it must be ten years old.
+  - If you are at it, why not start a new project that reimplements the ConfigWriter
+  properly, honestly. Tune it for usability ... .
 
 Diff
 ----

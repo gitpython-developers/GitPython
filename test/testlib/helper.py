@@ -5,7 +5,7 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
 import os
-from git import Repo
+from git import Repo, Remote
 from unittest import TestCase
 import tempfile
 import shutil
@@ -115,8 +115,15 @@ def with_rw_repo(working_tree_ref):
 def with_rw_and_rw_remote_repo(working_tree_ref):
 	"""
 	Same as with_rw_repo, but also provides a writable remote repository from which the
-	rw_repo has been forked. The remote repository was cloned as bare repository from 
-	the rorepo, wheras the rw repo has a working tree and was cloned from the remote repository.
+	rw_repo has been forked as well as a handle for a git-daemon that may be started to 
+	run the remote_repo.
+	The remote repository was cloned as bare repository from the rorepo, wheras 
+	the rw repo has a working tree and was cloned from the remote repository.
+	
+	remote_repo has two remotes: origin and daemon_origin. One uses a local url, 
+	the other uses a server url. The daemon setup must be done on system level 
+	and should be an inetd service that serves tempdir.gettempdir() and all 
+	directories in it.
 	
 	The following scetch demonstrates this::
 	 rorepo ---<bare clone>---> rw_remote_repo ---<clone>---> rw_repo
@@ -135,6 +142,28 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
 			rw_remote_repo = self.rorepo.clone(remote_repo_dir, shared=True, bare=True)
 			rw_repo = rw_remote_repo.clone(repo_dir, shared=True, bare=False, n=True)		# recursive alternates info ?
 			rw_repo.git.checkout("-b", "master", working_tree_ref)
+			
+			# prepare for git-daemon
+			rw_remote_repo.daemon_export = True
+			
+			# this thing is just annoying !
+			crw = rw_remote_repo.config_writer()
+			section = "daemon"
+			try:
+				crw.add_section(section)
+			except Exception:
+				pass
+			crw.set(section, "receivepack", True)
+			# release lock
+			del(crw)
+			
+			# initialize the remote - first do it as local remote and pull, then 
+			# we change the url to point to the daemon. The daemon should be started
+			# by the user, not by us
+			d_remote = Remote.create(rw_repo, "daemon_origin", remote_repo_dir)
+			d_remote.fetch()
+			d_remote.config_writer.set('url', "git://localhost%s" % remote_repo_dir)
+			
 			try:
 				return func(self, rw_repo, rw_remote_repo)
 			finally:

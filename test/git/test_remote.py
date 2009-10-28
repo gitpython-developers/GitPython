@@ -6,7 +6,8 @@
 
 from test.testlib import *
 from git import *
-
+import tempfile
+import shutil
 import os
 
 class TestRemote(TestBase):
@@ -122,6 +123,20 @@ class TestRemote(TestBase):
 		res = fetch_and_test(remote, tags=True)
 		self.failUnlessRaises(IndexError, get_info, res, remote, str(rtag))
 		
+		# provoke to receive actual objects to see what kind of output we have to 
+		# expect. Previously we did not really receive new objects
+		# This will only work for true remote repositories, not for local ones !
+		if not remote.config_reader.get('url').startswith("git://"):
+			return 
+			
+		shallow_repo_dir = tempfile.mktemp("shallow_repo")
+		shallow_repo = remote_repo.clone(shallow_repo_dir, depth=1, shared=False)
+		try:
+			res = shallow_repo.remotes.origin.fetch(depth=10)
+		finally:
+			shutil.rmtree(shallow_repo_dir)
+		# END test and cleanup
+		
 	def _test_push_and_pull(self,remote, rw_repo, remote_repo):
 		# push our changes
 		lhead = rw_repo.head
@@ -149,7 +164,7 @@ class TestRemote(TestBase):
 		remote.pull('master')
 	
 	@with_rw_and_rw_remote_repo('0.1.6')
-	def test_base(self, rw_repo, remote_repo, damon_handle):
+	def test_base(self, rw_repo, remote_repo):
 		num_remotes = 0
 		remote_set = set()
 		
