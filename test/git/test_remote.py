@@ -15,19 +15,39 @@ import random
 random.seed(0)
 
 class TestPushProgress(PushProgress):
+	__slots__ = ( "_seen_lines", "_stages_per_op" )
 	def __init__(self):
-		self._seen_ops = 0
+		super(TestPushProgress, self).__init__()
+		self._seen_lines = 0
 		self._stages_per_op = dict()
 		
-	def line_dropped(self, line):
-		print line
+	def _parse_progress_line(self, line):
+		super(TestPushProgress, self)._parse_progress_line(line)
+		assert len(line) > 1, "line %r too short" % line
+		self._seen_lines += 1
 		
-	def update(self, op_code, cur_count, max_count=None):
-		# check each stage only comes once
+	def line_dropped(self, line):
 		pass
 		
+	def update(self, op_code, cur_count, max_count=None, message=''):
+		# check each stage only comes once
+		op_id = op_code & self.OP_MASK
+		assert op_id in (self.COUNTING, self.COMPRESSING, self.WRITING)
+		
+		self._stages_per_op.setdefault(op_id, 0)
+		self._stages_per_op[ op_id ] = self._stages_per_op[ op_id ] | (op_code & self.STAGE_MASK)
+		
+		if op_code & (self.WRITING|self.END) == (self.WRITING|self.END):
+			assert message
+		# END check we get message 
+		
 	def make_assertion(self):
-		assert self._seen_ops == 3
+		if not self._seen_lines:
+			return 
+		
+		assert len(self._seen_ops) == 3
+		assert self._stages_per_op
+		
 		# must have seen all stages
 		for op, stages in self._stages_per_op.items():
 			assert stages & self.STAGE_MASK == self.STAGE_MASK
@@ -55,6 +75,26 @@ class TestRemote(TestBase):
 				assert info.commit_before_forced_update is None
 			# END forced update checking  
 		# END for each info
+		
+	def _test_push_result(self, results, remote):
+		assert len(results) > 0 and isinstance(results[0], PushInfo)
+		for info in results:
+			assert info.flags
+			if info.old_commit is not None:
+				assert isinstance(info.old_commit, Commit)
+			if info.flags & info.ERROR:
+				has_one = False
+				for bitflag in (info.REJECTED, info.REMOTE_REJECTED, info.REMOTE_FAILURE):
+					has_one |= bool(info.flags & bitflag)
+				# END for each bitflag
+				assert has_one
+			else:
+				# there must be a remote commit
+				assert isinstance(info.local_ref, Reference)
+				assert type(info.remote_ref) in (TagReference, RemoteReference)
+			# END error checking
+		# END for each info 
+		
 		
 	def _test_fetch_info(self, repo):
 		self.failUnlessRaises(ValueError, FetchInfo._from_line, repo, "nonsense", '')
@@ -196,14 +236,16 @@ class TestRemote(TestBase):
 		lhead.reset(remote.refs.master, working_tree=True)
 		
 		# push without spec should fail ( without further configuration )
-		# well, works
+		# well, works nicely
 		# self.failUnlessRaises(GitCommandError, remote.push)
 		
 		self._commit_random_file(rw_repo)
 		progress = TestPushProgress()
 		res = remote.push(lhead.reference, progress)
 		assert isinstance(res, IterableList)
+		self._test_push_result(res, remote)
 		progress.make_assertion()
+		
 		
 		self.fail("test --all")
 		self.fail("test rewind and force -push")

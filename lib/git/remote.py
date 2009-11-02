@@ -43,24 +43,74 @@ class PushProgress(object):
 	Handler providing an interface to parse progress information emitted by git-push
 	and to dispatch callbacks allowing subclasses to react to the progress.
 	"""
-	BEGIN, END, COUNTING, COMPRESSING, WRITING =  [ 1 << x for x in range(1,6) ]
+	BEGIN, END, COUNTING, COMPRESSING, WRITING =  [ 1 << x for x in range(5) ]
 	STAGE_MASK = BEGIN|END
 	OP_MASK = COUNTING|COMPRESSING|WRITING
 	
-	__slots__ = "_cur_line"
+	__slots__ = ("_cur_line", "_seen_ops")
+	re_op_absolute = re.compile("([\w\s]+):\s+()(\d+)()(, done\.)?\s*")
+	re_op_relative = re.compile("([\w\s]+):\s+(\d+)% \((\d+)/(\d+)\)(,.* done\.)?$")
+	
+	def __init__(self):
+		self._seen_ops = list()
 	
 	def _parse_progress_line(self, line):
 		"""
 		Parse progress information from the given line as retrieved by git-push
 		"""
+		# handle
+		# Counting objects: 4, done. 
+		# Compressing objects:  50% (1/2)   \rCompressing objects: 100% (2/2)   \rCompressing objects: 100% (2/2), done.
 		self._cur_line = line
+		sub_lines = line.split('\r')
+		for sline in sub_lines:
+			sline = sline.rstrip()
+			
+			cur_count, max_count = None, None
+			match = self.re_op_relative.match(sline)
+			if match is None:
+				match = self.re_op_absolute.match(sline)
+				
+			if not match:
+				self.line_dropped(sline)
+				continue
+			# END could not get match
+			
+			op_code = 0
+			op_name, percent, cur_count, max_count, done = match.groups()
+			# get operation id
+			if op_name == "Counting objects":
+				op_code |= self.COUNTING
+			elif op_name == "Compressing objects":
+				op_code |= self.COMPRESSING
+			elif op_name == "Writing objects":
+				op_code |= self.WRITING
+			else:
+				raise ValueError("Operation name %r unknown" % op_name)
+			
+			# figure out stage
+			if op_code not in self._seen_ops:
+				self._seen_ops.append(op_code)
+				op_code |= self.BEGIN
+			# END begin opcode
+			
+			message = ''
+			if done is not None and 'done.' in done:
+				op_code |= self.END
+				message = done.replace( ", done.", "")[2:]
+			# END end flag handling 
+			
+			self.update(op_code, cur_count, max_count, message)
+			
+		# END for each sub line
 	
 	def line_dropped(self, line):
 		"""
 		Called whenever a line could not be understood and was therefore dropped.
 		"""
+		pass
 	
-	def update(self, op_code, cur_count, max_count=None):
+	def update(self, op_code, cur_count, max_count=None, message=''):
 		"""
 		Called whenever the progress changes
 		
@@ -81,39 +131,106 @@ class PushProgress(object):
 		``max_count``
 			The maximum count of items we expect. It may be None in case there is 
 			no maximum number of items or if it is (yet) unknown.
-			
+		
+		``message``
+			In case of the 'WRITING' operation, it contains the amount of bytes
+			transferred. It may possibly be used for other purposes as well.
 		You may read the contents of the current line in self._cur_line
 		"""
+		pass
 		
 		
 class PushInfo(object):
 	"""
 	Carries information about the result of a push operation of a single head::
-	 todo
-	
+	 info = remote.push()[0]
+	 info.flags			# bitflags providing more information about the result
+	 info.local_ref		# Reference pointing to the local reference that was pushed
+	 info.remote_ref_string # path to the remote reference located on the remote side
+	 info.remote_ref	# Remote Reference on the local side corresponding to 
+	 					# the remote_ref_string. It can be a TagReference as well.
+	 info.old_commit	# commit at which the remote_ref was standing before we pushed
+	 					# it to local_ref.commit. Will be None if an error was indicated
 	"""
-	__slots__ = ('local_ref', 'remote_ref')
+	__slots__ = ('local_ref', 'remote_ref_string', 'flags', 'old_commit', '_remote')
 	
 	NO_MATCH, REJECTED, REMOTE_REJECTED, REMOTE_FAILURE, DELETED, \
-	FORCED_UPDATE, FAST_FORWARD, ERROR = [ 1 << x for x in range(1,9) ]
+	FORCED_UPDATE, FAST_FORWARD, UP_TO_DATE, ERROR = [ 1 << x for x in range(9) ]
 
 	_flag_map = { 	'X' : NO_MATCH, '-' : DELETED, '*' : 0,
-					'+' : FORCED_UPDATE, ' ' : FAST_FORWARD }
+					'+' : FORCED_UPDATE, ' ' : FAST_FORWARD, 
+					'=' : UP_TO_DATE, '!' : ERROR }
 	
-	def __init__(self, local_ref, remote_ref):
+	def __init__(self, flags, local_ref, remote_ref_string, remote, old_commit=None):
 		"""
 		Initialize a new instance
 		"""
+		self.flags = flags
 		self.local_ref = local_ref
-		self.remote_ref = remote_ref
+		self.remote_ref_string = remote_ref_string
+		self._remote = remote
+		self.old_commit = old_commit
+		
+	@property
+	def remote_ref(self):
+		"""
+		Returns
+			Remote Reference or TagReference in the local repository corresponding 
+			to the remote_ref_string kept in this instance.
+		"""
+		# translate heads to a local remote, tags stay as they are
+		if self.remote_ref_string.startswith("refs/tags"):
+			return TagReference(self._remote.repo, self.remote_ref_string)
+		elif self.remote_ref_string.startswith("refs/heads"):
+			remote_ref = Reference(self._remote.repo, self.remote_ref_string)
+			return RemoteReference(self._remote.repo, "refs/remotes/%s/%s" % (str(self._remote), remote_ref.name))
+		else:
+			raise ValueError("Could not handle remote ref: %r" % self.remote_ref_string)
+		# END 
 		
 	@classmethod
-	def _from_line(cls, repo, line):
+	def _from_line(cls, remote, line):
 		"""
 		Create a new PushInfo instance as parsed from line which is expected to be like
 		c	refs/heads/master:refs/heads/master	05d2687..1d0568e
 		"""
-		raise NotImplementedError("todo")
+		control_character, from_to, summary = line.split('\t', 3)
+		flags = 0
+		
+		# control character handling
+		try:
+			flags |= cls._flag_map[ control_character ]
+		except KeyError:
+			raise ValueError("Control Character %r unknown as parsed from line %r" % (control_character, line)) 
+		# END handle control character
+		
+		# from_to handling
+		from_ref_string, to_ref_string = from_to.split(':')
+		from_ref = Reference.from_path(remote.repo, from_ref_string)
+		
+		# commit handling, could be message or commit info
+		old_commit = None
+		if summary.startswith('['):
+			if "[rejected]" in summary:
+				flags |= cls.REJECTED
+			elif "[remote rejected]" in summary:
+				flags |= cls.REMOTE_REJECTED
+			elif "[remote failure]" in summary:
+				flags |= cls.REMOTE_FAILURE
+			elif "[no match]" in summary:
+				flags |= cls.ERROR
+			# uptodate encoded in control character
+		else:
+			# fast-forward or forced update - was encoded in control character, 
+			# but we parse the old and new commit
+			split_token = "..."
+			if control_character == " ":
+				split_token = ".."
+			old_sha, new_sha = summary.split(' ')[0].split(split_token)
+			old_commit = Commit(remote.repo, old_sha)
+		# END message handling
+		
+		return PushInfo(flags, from_ref, to_ref_string, remote, old_commit)
 		
 
 class FetchInfo(object):
@@ -133,7 +250,7 @@ class FetchInfo(object):
 	__slots__ = ('ref','commit_before_forced_update', 'flags', 'note')
 	
 	HEAD_UPTODATE, REJECTED, FORCED_UPDATE, FAST_FORWARD, NEW_TAG, \
-	TAG_UPDATE, NEW_HEAD, ERROR = [ 1 << x for x in range(1,9) ]
+	TAG_UPDATE, NEW_HEAD, ERROR = [ 1 << x for x in range(8) ]
 	#                             %c    %-*s %-*s             -> %s       (%s)
 	re_fetch_result = re.compile("^\s*(.) (\[?[\w\s\.]+\]?)\s+(.+) -> ([/\w_\.-]+)(  \(.*\)?$)?")
 	
@@ -446,12 +563,12 @@ class Remote(LazyMixin, Iterable):
 	def _get_push_info(self, proc, progress):
 		# read progress information from stderr
 		# we hope stdout can hold all the data, it should ... 
-		for line in proc.stderr.readline():
-			progress._parse_progress_line(line)
+		for line in proc.stderr.readlines():
+			progress._parse_progress_line(line.rstrip())
 		# END for each progress line
 		
 		output = IterableList('name')
-		output.extend(PushInfo._from_line(self.repo, line) for line in proc.stdout.readlines())
+		output.extend(PushInfo._from_line(self, line) for line in proc.stdout.readlines())
 		proc.wait()
 		return output
 		
