@@ -434,7 +434,7 @@ class Head(Reference):
 	_common_path_default = "refs/heads"
 	
 	@classmethod
-	def create(cls, repo, path,  commit='HEAD', force=False, **kwargs ):
+	def create(cls, repo, path, commit='HEAD', force=False, **kwargs ):
 		"""
 		Create a new head.
 		``repo``
@@ -560,7 +560,7 @@ class TagReference(Reference):
 	@classmethod
 	def create(cls, repo, path, ref='HEAD', message=None, force=False, **kwargs):
 		"""
-		Create a new tag object.
+		Create a new tag reference.
 		
 		``path``
 			The name of the tag, i.e. 1.0 or releases/1.0. 

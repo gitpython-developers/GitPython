@@ -106,8 +106,6 @@ Remote
 ------
 * iter_items should parse the configuration file manually - currently a command 
   is issued which is much slower than it has to be ( compared to manual parsing )
-* Creation and deletion methods for references should be part of the interface, allowing
-  repo.create_head(...) instaed of Head.create(repo, ...). Its a convenience thing, clearly
 * When parsing fetch-info, the regex will not allow spaces in the target remote ref as 
   I couldn't properly parse the optional space separated note in that case. Probably 
   the regex should be improved to handle this gracefully.
@@ -118,8 +116,6 @@ Repo
   currently regex are used a lot although we can deduct what will be next.
   - Read data from a stream directly from git command
 * Figure out how to implement a proper merge API
-* There should be a way to create refs and delete them, instead of having to use
-  the awkward Head.create( repo, ... ) way
 * repo.checkout should be added that does everything HEAD.reset does, but in addition
   it allows to checkout heads beforehand, hence its more like a repo.head.reference = other_head.
   

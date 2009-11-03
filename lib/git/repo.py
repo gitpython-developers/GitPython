@@ -213,6 +213,61 @@ class Repo(object):
 		"""
 		return TagReference(self, path)
 		
+	def create_head(self, path, commit='HEAD', force=False, **kwargs ):
+		"""
+		Create a new head within the repository.
+		
+		For more documentation, please see the Head.create method.
+		
+		Returns
+			newly created Head Reference
+		"""
+		return Head.create(self, path, commit, force, **kwargs)
+		
+	def delete_head(self, *heads, **kwargs):
+		"""
+		Delete the given heads
+		
+		``kwargs``
+			Additional keyword arguments to be passed to git-branch 
+		"""
+		return Head.delete(self, *heads, **kwargs)
+		
+	def create_tag(self, path, ref='HEAD', message=None, force=False, **kwargs):
+		"""
+		Create a new tag reference.
+		
+		For more documentation, please see the TagReference.create method.
+		
+		Returns
+			TagReference object
+		"""
+		return TagReference.create(self, path, ref, message, force, **kwargs)
+		
+	def delete_tag(self, *tags):
+		"""
+		Delete the given tag references
+		"""
+		return TagReference.delete(self, *tags)
+		
+	def create_remote(self, name, url, **kwargs):
+		"""
+		Create a new remote.
+		
+		For more information, please see the documentation of the Remote.create 
+		methods 
+		
+		Returns
+			Remote reference
+		"""
+		return Remote.create(self, name, url, **kwargs)
+		
+	def delete_remote(self, remote):
+		"""
+		Delete the given remote.
+		"""
+		return Remote.remove(self, remote)
+		
 	def _get_config_path(self, config_level ):
 		# we do not support an absolute path of the gitconfig on windows , 
 		# use the global config instead

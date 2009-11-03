@@ -251,3 +251,15 @@ class TestRepo(TestBase):
 				# have no permissions
 				pass 
 		# END for each config level 
+		
+	def test_creation_deletion(self):
+		# just a very quick test to assure it generally works. There are 
+		# specialized cases in the test_refs module
+		head = self.rorepo.create_head("new_head", "HEAD~1")
+		self.rorepo.delete_head(head)
+		
+		tag = self.rorepo.create_tag("new_tag", "HEAD~2")
+		self.rorepo.delete_tag(tag)
+		
+		remote = self.rorepo.create_remote("new_remote", "git@server:repo.git")
+		self.rorepo.delete_remote(remote)
