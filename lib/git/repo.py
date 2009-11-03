@@ -143,6 +143,16 @@ class Repo(object):
 			``git.IterableList(Head, ...)``
 		"""
 		return Head.list_items(self)
+		
+	@property
+	def refs(self):
+		"""
+		A list of Reference objects representing tags, heads and remote references.
+		
+		Returns
+			IterableList(Reference, ...)
+		"""
+		return Reference.list_items(self)
 
 	# alias heads
 	branches = heads
@@ -615,7 +625,7 @@ class Repo(object):
 		Create a clone from this repository.
 
 		``path``
-			is the full path of the new repo (traditionally ends with /<name>.git)
+			is the full path of the new repo (traditionally ends with ./<name>.git).
 
 		``kwargs``
 			keyword arguments to be given to the git-clone command

@@ -18,7 +18,7 @@ from git.errors import InvalidGitRepositoryError, NoSuchPathError, GitCommandErr
 from git.cmd import Git
 from git.repo import Repo
 from git.stats import Stats
-from git.remote import Remote
+from git.remote import *
 from git.index import *
 
 __all__ = [ name for name, obj in locals().items()

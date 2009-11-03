@@ -31,7 +31,7 @@ class Reference(LazyMixin, Iterable):
 			
 		"""
 		if not path.startswith(self._common_path_default):
-			raise ValueError("Cannot instantiate %s Reference from path %s" % ( self.__class__.__name__, path ))
+			raise ValueError("Cannot instantiate %s from path %s" % ( self.__class__.__name__, path ))
 			
 		self.repo = repo
 		self.path = path
@@ -167,6 +167,9 @@ class Reference(LazyMixin, Iterable):
 			Instance of type Reference, Head, Tag, SymbolicReference or HEAD
 			depending on the given path
 		"""
+		if not path:
+			raise ValueError("Cannot create Reference from %r" % path)
+		
 		if path == 'HEAD':
 			return HEAD(repo, path)
 		
@@ -208,7 +211,7 @@ class Reference(LazyMixin, Iterable):
 		# our path on demand - due to perstent commands it is fast.
 		# This reduces the risk that the object does not match 
 		# the changed ref anymore in case it changes in the meanwhile
-		return cls(repo, full_path)
+		return cls.from_path(repo, full_path)
 		
 		# obj = get_object_type_by_name(type_name)(repo, hexsha)
 		# obj.size = object_size
@@ -263,11 +266,13 @@ class SymbolicReference(object):
 		tokens = value.split(" ")
 		
 		# it is a detached reference
-		if len(tokens) == 1 and len(tokens[0]) == 40:
+		if self.repo.re_hexsha_only.match(tokens[0]):
 			return Commit(self.repo, tokens[0])
 		
 		# must be a head ! Git does not allow symbol refs to other things than heads
 		# Otherwise it would have detached it
+		if tokens[0] != "ref:":
+			raise ValueError("Failed to parse symbolic refernce: wanted 'ref: <hexsha>', got %r" % value)
 		return Head(self.repo, tokens[1]).commit
 		
 	def _set_commit(self, commit):
@@ -620,10 +625,10 @@ class RemoteReference(Head):
 		return tokens[2]
 		
 	@property
-	def remote_branch(self):
+	def remote_head(self):
 		"""
 		Returns
-			Name of the remote branch itself, i.e. master.
+			Name of the remote head itself, i.e. master.
 			
 		NOTE: The returned name is usually not qualified enough to uniquely identify
 		a branch

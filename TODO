@@ -43,6 +43,8 @@ Config
   it will be returned instead of raising. This way the class will be much more usable, 
   and ... I truly hate this config reader as it is so 'old' style. Its not even a new-style
   class yet showing that it must be ten years old.
+  - If you are at it, why not start a new project that reimplements the ConfigWriter
+  properly, honestly. Tune it for usability ... .
 
 Diff
 ----
@@ -96,14 +98,19 @@ Refs
   - NO: The reference dosnt need to know - in fact it does not know about the 
   main HEAD, so it may not use it. This is to be done in client code only. 
   Remove me
+* Reference.from_path may return a symbolic reference although it is not related 
+  to the reference type. Split that up into two from_path on each of the types, 
+  and provide a general method outside of the type  that tries both.
 
 Remote
 ------
-* 'push' method needs a test, a true test repository is required though, a fork 
-  of a fork would do :)!
-* Fetch should return heads that where updated, pull as well.
+* iter_items should parse the configuration file manually - currently a command 
+  is issued which is much slower than it has to be ( compared to manual parsing )
 * Creation and deletion methods for references should be part of the interface, allowing
   repo.create_head(...) instaed of Head.create(repo, ...). Its a convenience thing, clearly
+* When parsing fetch-info, the regex will not allow spaces in the target remote ref as 
+  I couldn't properly parse the optional space separated note in that case. Probably 
+  the regex should be improved to handle this gracefully.
   
 Repo
 ----
@@ -111,10 +118,25 @@ Repo
   currently regex are used a lot although we can deduct what will be next.
   - Read data from a stream directly from git command
 * Figure out how to implement a proper merge API
+* There should be a way to create refs and delete them, instead of having to use
+  the awkward Head.create( repo, ... ) way
+* repo.checkout should be added that does everything HEAD.reset does, but in addition
+  it allows to checkout heads beforehand, hence its more like a repo.head.reference = other_head.
+  
   
 Submodules
 ----------
 * add submodule support
+
+TestSystem
+----------
+* Figure out a good way to indicate the required presense of a git-daemon to host
+ a specific path. Ideally, the system would detect the missing daemon and inform 
+ the user about the required command-line to start the daemon where we need it.
+ Reason for us being unable to start a daemon is that it will always fork - we can 
+ only kill itself, but not its children. Even if we would a pgrep like match, we still 
+ would not know whether it truly is our daemons - in that case user permissions should
+ stop us though.
 
 Tree
 ----
