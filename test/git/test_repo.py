@@ -154,19 +154,19 @@ class TestRepo(TestBase):
 
 	def test_is_dirty_with_bare_repository(self):
 		self.rorepo._bare = True
-		assert_false(self.rorepo.is_dirty)
+		assert_false(self.rorepo.is_dirty())
 
 	def test_is_dirty(self):
 		self.rorepo._bare = False
 		for index in (0,1):
 			for working_tree in (0,1):
 				for untracked_files in (0,1):
-					assert self.rorepo.is_dirty in (True, False)
+					assert self.rorepo.is_dirty(index, working_tree, untracked_files) in (True, False)
 				# END untracked files
 			# END working tree
 		# END index
 		self.rorepo._bare = True
-		assert self.rorepo.is_dirty == False
+		assert self.rorepo.is_dirty() == False
 
 	def test_head(self):
 		assert self.rorepo.head.reference.object == self.rorepo.active_branch.object

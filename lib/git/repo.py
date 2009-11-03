@@ -432,7 +432,6 @@ class Repo(object):
 
 	alternates = property(_get_alternates, _set_alternates, doc="Retrieve a list of alternates paths or set a list paths to be used as alternates")
 
-	@property
 	def is_dirty(self, index=True, working_tree=True, untracked_files=False):
 		"""
 		Returns
