@@ -13,8 +13,6 @@ General
   the std-in command types, as it appears they are not killed when the repo gets 
   deleted. A clear() method could already help to allow long-running programs
   to remove cached commands after an idle time.
-* References should be parsed 'manually' to get around command invocation, but 
-  be sure to be able to read packed refs.
 
 Object
 ------
@@ -83,6 +81,7 @@ Refs
 * For performance reasons it would be good to reimplement git-update-ref to be 
   fully equivalent to what the command does. Currently it does some checking and 
   handles symbolic refs as well as normal refs, updating the reflog if required.
+  Its low-priority though as we don't set references directly that often.
 * I have read that refs can be symbolic refs as well which would imply the need
   to possibly dereference them. This makes sense as they originally where possibly 
   a symbolic link. This would mean References could be derived from SymbolicReference
@@ -90,11 +89,11 @@ Refs
 * Making the reflog available as command might be useful actually. This way historical 
   references/commits can be returned. Git internally manages this if refs are specified
   with HEAD@{0} for instance
-
+* References should be parsed 'manually' to get around command invocation, but 
+  be sure to be able to read packed refs.
+  
 Remote
 ------
-* iter_items should parse the configuration file manually - currently a command 
-  is issued which is much slower than it has to be ( compared to manual parsing )
 * When parsing fetch-info, the regex will not allow spaces in the target remote ref as 
   I couldn't properly parse the optional space separated note in that case. Probably 
   the regex should be improved to handle this gracefully.

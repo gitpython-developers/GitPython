@@ -444,10 +444,16 @@ class Remote(LazyMixin, Iterable):
 		Returns
 			Iterator yielding Remote objects of the given repository
 		"""
-		seen_remotes = set()
-		for name in repo.git.remote().splitlines():
-			yield Remote(repo, name)
-		# END for each ref
+		for section in repo.config_reader("repository").sections():
+			print section
+			if not section.startswith('remote'):
+				continue
+			lbound = section.find('"')
+			rbound = section.rfind('"')
+			if lbound == -1 or rbound == -1:
+				raise ValueError("Remote-Section has invalid format: %r" % section)
+			yield Remote(repo, section[lbound+1:rbound])
+		# END for each configuration section
 		
 	@property
 	def refs(self):
