@@ -46,9 +46,9 @@ class TestRepo(TestBase):
 		commits = list( self.rorepo.iter_commits('master', max_count=10) )
 		
 		c = commits[0]
-		assert_equal('4c8124ffcf4039d292442eeccabdeca5af5c5017', c.id)
-		assert_equal(["634396b2f541a9f2d58b00be1a07f0c358b999b3"], [p.id for p in c.parents])
-		assert_equal("672eca9b7f9e09c22dcb128c283e8c3c8d7697a4", c.tree.id)
+		assert_equal('4c8124ffcf4039d292442eeccabdeca5af5c5017', c.sha)
+		assert_equal(["634396b2f541a9f2d58b00be1a07f0c358b999b3"], [p.sha for p in c.parents])
+		assert_equal("672eca9b7f9e09c22dcb128c283e8c3c8d7697a4", c.tree.sha)
 		assert_equal("Tom Preston-Werner", c.author.name)
 		assert_equal("tom@mojombo.com", c.author.email)
 		assert_equal(1191999972, c.authored_date)
@@ -61,7 +61,7 @@ class TestRepo(TestBase):
 		assert_equal(tuple(), c.parents)
 
 		c = commits[2]
-		assert_equal(["6e64c55896aabb9a7d8e9f8f296f426d21a78c2c", "7f874954efb9ba35210445be456c74e037ba6af2"], map(lambda p: p.id, c.parents))
+		assert_equal(["6e64c55896aabb9a7d8e9f8f296f426d21a78c2c", "7f874954efb9ba35210445be456c74e037ba6af2"], map(lambda p: p.sha, c.parents))
 		assert_equal("Merge branch 'site'", c.summary)
 
 		assert_true(git.called)
@@ -195,7 +195,7 @@ class TestRepo(TestBase):
 		assert_true(git.called)
 		assert_equal(git.call_args, (('blame', 'master', '--', 'lib/git.py'), {'p': True}))
 		
-		assert_equal('634396b2f541a9f2d58b00be1a07f0c358b999b3', c.id)
+		assert_equal('634396b2f541a9f2d58b00be1a07f0c358b999b3', c.sha)
 		assert_equal('Tom Preston-Werner', c.author.name)
 		assert_equal('tom@mojombo.com', c.author.email)
 		assert_equal(1191997100, c.authored_date)

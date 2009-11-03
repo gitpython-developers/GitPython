@@ -43,8 +43,8 @@ class Tree(base.IndexObject, diff.Diffable):
 	tree_id = 040
 	
 	
-	def __init__(self, repo, id, mode=0, path=None):
-		super(Tree, self).__init__(repo, id, mode, path)
+	def __init__(self, repo, sha, mode=0, path=None):
+		super(Tree, self).__init__(repo, sha, mode, path)
 
 	def _set_cache_(self, attr):
 		if attr == "_cache":
@@ -150,7 +150,7 @@ class Tree(base.IndexObject, diff.Diffable):
 
 
 	def __repr__(self):
-		return '<git.Tree "%s">' % self.id
+		return '<git.Tree "%s">' % self.sha
 		
 	@classmethod
 	def _iter_recursive(cls, repo, tree, cur_depth, max_depth, predicate, prune ):

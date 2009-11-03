@@ -27,15 +27,6 @@ Object
   It would be good to improve things there as cat-file keeps all the data in a buffer
   before it writes it. Hence it does not write to a stream directly, which can be 
   bad if files are large, say 1GB :).
-* Effectively Objects only store hexsha's in their id attributes, so in fact 
-  it should be renamed to 'sha'. There was a time when references where allowed as 
-  well, but now objects will be 'baked' to the actual sha to assure comparisons work.
-  
-Commit
-------
-* message is stipped during parsing, which is wrong unless we parse from 
-  rev-list output. In fact we don't know that, and can't really tell either.
-  Currently we strip away white space that might actually belong to the message
   
 Config
 ------
@@ -115,7 +106,9 @@ Repo
 * Blame: Read the blame format making assumptions about its structure, 
   currently regex are used a lot although we can deduct what will be next.
   - Read data from a stream directly from git command
-* Figure out how to implement a proper merge API
+* Figure out how to implement a proper merge API. It should be index based, but provide 
+  all necessary information to the ones willing to ask for it. The index implementation 
+  actually provides this already, but some real use-cases would be great to have a least.
 * repo.checkout should be added that does everything HEAD.reset does, but in addition
   it allows to checkout heads beforehand, hence its more like a repo.head.reference = other_head.
   

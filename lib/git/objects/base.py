@@ -16,13 +16,13 @@ class Object(LazyMixin):
 	This Object also serves as a constructor for instances of the correct type::
 	
 		inst = Object.new(repo,id)
-		inst.id		# objects sha in hex
+		inst.sha		# objects sha in hex
 		inst.size	# objects uncompressed data size
 		inst.data	# byte string containing the whole data of the object
 	"""
 	NULL_HEX_SHA = '0'*40
 	TYPES = ("blob", "tree", "commit", "tag")
-	__slots__ = ("repo", "id", "size", "data" )
+	__slots__ = ("repo", "sha", "size", "data" )
 	type = None			# to be set by subclass
 	
 	def __init__(self, repo, id):
@@ -38,7 +38,7 @@ class Object(LazyMixin):
 		"""
 		super(Object,self).__init__()
 		self.repo = repo
-		self.id = id
+		self.sha = id
 
 	@classmethod
 	def new(cls, repo, id):
@@ -76,11 +76,11 @@ class Object(LazyMixin):
 		Retrieve object information
 		"""
 		if attr  == "size":
-			hexsha, typename, self.size = self.repo.git.get_object_header(self.id)
-			assert typename == self.type, _assertion_msg_format % (self.id, typename, self.type)
+			hexsha, typename, self.size = self.repo.git.get_object_header(self.sha)
+			assert typename == self.type, _assertion_msg_format % (self.sha, typename, self.type)
 		elif attr == "data":
-			hexsha, typename, self.size, self.data = self.repo.git.get_object_data(self.id)
-			assert typename == self.type, _assertion_msg_format % (self.id, typename, self.type)
+			hexsha, typename, self.size, self.data = self.repo.git.get_object_data(self.sha)
+			assert typename == self.type, _assertion_msg_format % (self.sha, typename, self.type)
 		else:
 			super(Object,self)._set_cache_(attr)
 		
@@ -89,35 +89,35 @@ class Object(LazyMixin):
 		Returns
 			True if the objects have the same SHA1
 		"""
-		return self.id == other.id
+		return self.sha == other.sha
 		
 	def __ne__(self, other):
 		"""
 		Returns
 			True if the objects do not have the same SHA1
 		"""
-		return self.id != other.id
+		return self.sha != other.sha
 		
 	def __hash__(self):
 		"""
 		Returns
 			Hash of our id allowing objects to be used in dicts and sets
 		"""
-		return hash(self.id)
+		return hash(self.sha)
 		
 	def __str__(self):
 		"""
 		Returns
 			string of our SHA1 as understood by all git commands
 		"""
-		return self.id
+		return self.sha
 		
 	def __repr__(self):
 		"""
 		Returns
 			string with pythonic representation of our object
 		"""
-		return '<git.%s "%s">' % (self.__class__.__name__, self.id)
+		return '<git.%s "%s">' % (self.__class__.__name__, self.sha)
 
 	@property
 	def data_stream(self):
@@ -125,7 +125,7 @@ class Object(LazyMixin):
 		Returns 
 			File Object compatible stream to the uncompressed raw data of the object
 		"""
-		proc = self.repo.git.cat_file(self.type, self.id, as_process=True)
+		proc = self.repo.git.cat_file(self.type, self.sha, as_process=True)
 		return utils.ProcessStreamAdapter(proc, "stdout") 
 
 	def stream_data(self, ostream):
@@ -138,7 +138,7 @@ class Object(LazyMixin):
 		Returns
 			self
 		"""
-		self.repo.git.cat_file(self.type, self.id, output_stream=ostream)
+		self.repo.git.cat_file(self.type, self.sha, output_stream=ostream)
 		return self
 
 class IndexObject(Object):
@@ -148,13 +148,13 @@ class IndexObject(Object):
 	"""
 	__slots__ = ("path", "mode") 
 	
-	def __init__(self, repo, id, mode=None, path=None):
+	def __init__(self, repo, sha, mode=None, path=None):
 		"""
 		Initialize a newly instanced IndexObject
 		``repo``
 			is the Repo we are located in
 
-		``id`` : string
+		``sha`` : string
 			is the git object id as hex sha
 
 		``mode`` : int
@@ -168,7 +168,7 @@ class IndexObject(Object):
 			Path may not be set of the index object has been created directly as it cannot
 			be retrieved without knowing the parent tree.
 		"""
-		super(IndexObject, self).__init__(repo, id)
+		super(IndexObject, self).__init__(repo, sha)
 		self._set_self_from_args_(locals())
 		if isinstance(mode, basestring):
 			self.mode = self._mode_str_to_int(mode)

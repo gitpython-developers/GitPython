@@ -11,7 +11,7 @@ class TestCommit(TestBase):
 
 	def test_bake(self):
 
-		commit = Commit(self.rorepo, **{'id': '2454ae89983a4496a445ce347d7a41c0bb0ea7ae'})
+		commit = Commit(self.rorepo, **{'sha': '2454ae89983a4496a445ce347d7a41c0bb0ea7ae'})
 		commit.author # bake
 
 		assert_equal("Sebastian Thiel", commit.author.name)
@@ -22,7 +22,7 @@ class TestCommit(TestBase):
 
 
 	def test_stats(self):
-		commit = Commit(self.rorepo, id='33ebe7acec14b25c5f84f35a664803fcab2f7781')
+		commit = Commit(self.rorepo, '33ebe7acec14b25c5f84f35a664803fcab2f7781')
 		stats = commit.stats
 		
 		def check_entries(d):
@@ -72,7 +72,7 @@ class TestCommit(TestBase):
 			'c231551328faa864848bde6ff8127f59c9566e90',
 		)
 		for sha1, commit in zip(expected_ids, commits):
-			assert_equal(sha1, commit.id)
+			assert_equal(sha1, commit.sha)
 
 	def test_count(self):
 		assert self.rorepo.tag('refs/tags/0.1.5').commit.count( ) == 141
@@ -81,17 +81,17 @@ class TestCommit(TestBase):
 		assert isinstance(Commit.list_items(self.rorepo, '0.1.5', max_count=5)['5117c9c8a4d3af19a9958677e45cda9269de1541'], Commit)
 
 	def test_str(self):
-		commit = Commit(self.rorepo, id='abc')
+		commit = Commit(self.rorepo, 'abc')
 		assert_equal ("abc", str(commit))
 
 	def test_repr(self):
-		commit = Commit(self.rorepo, id='abc')
+		commit = Commit(self.rorepo, 'abc')
 		assert_equal('<git.Commit "abc">', repr(commit))
 
 	def test_equality(self):
-		commit1 = Commit(self.rorepo, id='abc')
-		commit2 = Commit(self.rorepo, id='abc')
-		commit3 = Commit(self.rorepo, id='zyx')
+		commit1 = Commit(self.rorepo, 'abc')
+		commit2 = Commit(self.rorepo, 'abc')
+		commit3 = Commit(self.rorepo, 'zyx')
 		assert_equal(commit1, commit2)
 		assert_not_equal(commit2, commit3)
 		

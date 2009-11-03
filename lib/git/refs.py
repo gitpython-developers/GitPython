@@ -312,17 +312,17 @@ class SymbolicReference(object):
 		if isinstance(ref, Head):
 			write_value = "ref: %s" % ref.path
 		elif isinstance(ref, Commit):
-			write_value = ref.id
+			write_value = ref.sha
 		else:
 			try:
-				write_value = ref.commit.id
+				write_value = ref.commit.sha
 			except AttributeError:
 				sha = str(ref)
 				try:
 					obj = Object.new(self.repo, sha)
 					if obj.type != "commit":
 						raise TypeError("Invalid object type behind sha: %s" % sha)
-					write_value = obj.id
+					write_value = obj.sha
 				except Exception:
 					raise ValueError("Could not extract object from %s" % ref)
 			# END end try string  
@@ -428,7 +428,7 @@ class Head(Reference):
 		>>> head.commit		
 		<git.Commit "1c09f116cbc2cb4100fb6935bb162daa4723f455">
 
-		>>> head.commit.id
+		>>> head.commit.sha
 		'1c09f116cbc2cb4100fb6935bb162daa4723f455'
 	"""
 	_common_path_default = "refs/heads"

@@ -186,11 +186,11 @@ class Diff(object):
 		if not a_blob_id or self.re_is_null_hexsha.search(a_blob_id):
 			self.a_blob = None
 		else:
-			self.a_blob = blob.Blob(repo, id=a_blob_id, mode=a_mode, path=a_path)
+			self.a_blob = blob.Blob(repo, a_blob_id, mode=a_mode, path=a_path)
 		if not b_blob_id or self.re_is_null_hexsha.search(b_blob_id):
 			self.b_blob = None
 		else:
-			self.b_blob = blob.Blob(repo, id=b_blob_id, mode=b_mode, path=b_path)
+			self.b_blob = blob.Blob(repo, b_blob_id, mode=b_mode, path=b_path)
 
 		self.a_mode = a_mode
 		self.b_mode = b_mode

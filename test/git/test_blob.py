@@ -18,13 +18,13 @@ class TestBlob(TestBase):
 		blob.size
 		
 	def test_mime_type_should_return_mime_type_for_known_types(self):
-		blob = Blob(self.rorepo, **{'id': 'abc', 'path': 'foo.png'})
+		blob = Blob(self.rorepo, **{'sha': 'abc', 'path': 'foo.png'})
 		assert_equal("image/png", blob.mime_type)
   
 	def test_mime_type_should_return_text_plain_for_unknown_types(self):
-		blob = Blob(self.rorepo, **{'id': 'abc','path': 'something'})
+		blob = Blob(self.rorepo, **{'sha': 'abc','path': 'something'})
 		assert_equal("text/plain", blob.mime_type)
   
 	def test_should_return_appropriate_representation(self):
-		blob = Blob(self.rorepo, **{'id': 'abc'})
+		blob = Blob(self.rorepo, **{'sha': 'abc'})
 		assert_equal('<git.Blob "abc">', repr(blob))

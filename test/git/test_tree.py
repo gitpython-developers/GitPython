@@ -45,5 +45,5 @@ class TestTree(TestCase):
 		assert len(set(b for b in root if isinstance(b, Blob)) | set(root.blobs)) == len( root.blobs )
   
 	def test_repr(self):
-		tree = Tree(self.repo, id='abc')
+		tree = Tree(self.repo, 'abc')
 		assert_equal('<git.Tree "abc">', repr(tree))

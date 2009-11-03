@@ -33,4 +33,4 @@ class Blob(base.IndexObject):
 
 
 	def __repr__(self):
-		return '<git.Blob "%s">' % self.id
+		return '<git.Blob "%s">' % self.sha

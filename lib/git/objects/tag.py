@@ -17,7 +17,7 @@ class TagObject(base.Object):
 	type = "tag"
 	__slots__ = ( "object", "tag", "tagger", "tagged_date", "message" )
 		
-	def __init__(self, repo, id, object=None, tag=None, 
+	def __init__(self, repo, sha, object=None, tag=None, 
 				tagger=None, tagged_date=None, message=None):
 		"""
 		Initialize a tag object with additional data
@@ -25,7 +25,7 @@ class TagObject(base.Object):
 		``repo``
 			repository this object is located in
 			
-		``id``
+		``sha``
 			SHA1 or ref suitable for git-rev-parse
 			
 		 ``object``
@@ -41,7 +41,7 @@ class TagObject(base.Object):
 			is the DateTime of the tag creation - use time.gmtime to convert 
 			it into a different format
 		"""
-		super(TagObject, self).__init__(repo, id )
+		super(TagObject, self).__init__(repo, sha )
 		self._set_self_from_args_(locals())
 		
 	def _set_cache_(self, attr):

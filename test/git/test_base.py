@@ -32,13 +32,13 @@ class TestBase(TestBase):
 		for obj_type, (typename, hexsha) in zip(types, self.type_tuples):
 			item = obj_type(self.rorepo,hexsha)
 			num_objs += 1
-			assert item.id == hexsha
+			assert item.sha == hexsha
 			assert item.type == typename
 			assert item.size
 			assert item.data
 			assert item == item
 			assert not item != item
-			assert str(item) == item.id
+			assert str(item) == item.sha
 			assert repr(item)
 			s.add(item)
 			

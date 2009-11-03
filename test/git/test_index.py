@@ -309,7 +309,7 @@ class TestTree(TestBase):
 		# blob from older revision overrides current index revision
 		old_blob = new_commit.parents[0].tree.blobs[0]
 		entries = index.reset(new_commit).add([old_blob])
-		assert index.entries[(old_blob.path,0)].sha == old_blob.id and len(entries) == 1 
+		assert index.entries[(old_blob.path,0)].sha == old_blob.sha and len(entries) == 1 
 		
 		# mode 0 not allowed
 		null_sha = "0"*40

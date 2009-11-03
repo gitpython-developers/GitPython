@@ -92,7 +92,7 @@ class BaseIndexEntry(tuple):
 		Returns
 			Fully equipped BaseIndexEntry at the given stage
 		"""
-		return cls((blob.mode, blob.id, stage, blob.path))
+		return cls((blob.mode, blob.sha, stage, blob.path))
 		
 
 class IndexEntry(BaseIndexEntry):
@@ -165,7 +165,7 @@ class IndexEntry(BaseIndexEntry):
 			Minimal entry resembling the given blob objecft
 		"""
 		time = struct.pack(">LL", 0, 0)
-		return IndexEntry((blob.mode, blob.id, 0, blob.path, time, time, 0, 0, 0, 0, blob.size))
+		return IndexEntry((blob.mode, blob.sha, 0, blob.path, time, time, 0, 0, 0, 0, blob.size))
 
 
 def clear_cache(func):

@@ -23,9 +23,9 @@ class Commit(base.Object, Iterable, diff.Diffable):
 	type = "commit"
 	__slots__ = ("tree", "author", "authored_date", "committer", "committed_date",
 					"message", "parents")
-	_id_attribute_ = "id"
+	_id_attribute_ = "sha"
 	
-	def __init__(self, repo, id, tree=None, author=None, authored_date=None,
+	def __init__(self, repo, sha, tree=None, author=None, authored_date=None,
 				 committer=None, committed_date=None, message=None, parents=None):
 		"""
 		Instantiate a new Commit. All keyword arguments taking None as default will 
@@ -33,7 +33,7 @@ class Commit(base.Object, Iterable, diff.Diffable):
 		
 		The parameter documentation indicates the type of the argument after a colon ':'.
 
-		``id``
+		``sha``
 			is the sha id of the commit or a ref
 
 		``parents`` : tuple( Commit, ... )
@@ -62,15 +62,15 @@ class Commit(base.Object, Iterable, diff.Diffable):
 		Returns
 			git.Commit
 		"""
-		super(Commit,self).__init__(repo, id)
+		super(Commit,self).__init__(repo, sha)
 		self._set_self_from_args_(locals())
 
 		if parents is not None:
 			self.parents = tuple( self.__class__(repo, p) for p in parents )
 		# END for each parent to convert
 			
-		if self.id and tree is not None:
-			self.tree = Tree(repo, id=tree, path='')
+		if self.sha and tree is not None:
+			self.tree = Tree(repo, tree, path='')
 		# END id to tree conversion
 
 	def _set_cache_(self, attr):
@@ -82,7 +82,7 @@ class Commit(base.Object, Iterable, diff.Diffable):
 		if attr in Commit.__slots__:
 			# prepare our data lines to match rev-list
 			data_lines = self.data.splitlines()
-			data_lines.insert(0, "commit %s" % self.id)
+			data_lines.insert(0, "commit %s" % self.sha)
 			temp = self._iter_from_process_or_stream(self.repo, iter(data_lines), False).next()
 			self.parents = temp.parents
 			self.tree = temp.tree
@@ -116,7 +116,7 @@ class Commit(base.Object, Iterable, diff.Diffable):
 		Returns
 			int
 		"""
-		return len(self.repo.git.rev_list(self.id, '--', paths, **kwargs).strip().splitlines())
+		return len(self.repo.git.rev_list(self.sha, '--', paths, **kwargs).strip().splitlines())
 
 	@property
 	def name_rev(self):
@@ -189,14 +189,14 @@ class Commit(base.Object, Iterable, diff.Diffable):
 			git.Stats
 		"""
 		if not self.parents:
-			text = self.repo.git.diff_tree(self.id, '--', numstat=True, root=True)
+			text = self.repo.git.diff_tree(self.sha, '--', numstat=True, root=True)
 			text2 = ""
 			for line in text.splitlines()[1:]:
 				(insertions, deletions, filename) = line.split("\t")
 				text2 += "%s\t%s\t%s\n" % (insertions, deletions, filename)
 			text = text2
 		else:
-			text = self.repo.git.diff(self.parents[0].id, self.id, '--', numstat=True)
+			text = self.repo.git.diff(self.parents[0].sha, self.sha, '--', numstat=True)
 		return stats.Stats._list_from_string(self.repo, text)
 
 	@classmethod
@@ -259,15 +259,15 @@ class Commit(base.Object, Iterable, diff.Diffable):
 			# END message parsing
 			message = '\n'.join(message_lines)
 			
-			yield Commit(repo, id=id, parents=tuple(parents), tree=tree, author=author, authored_date=authored_date,
+			yield Commit(repo, id, parents=tuple(parents), tree=tree, author=author, authored_date=authored_date,
 						  committer=committer, committed_date=committed_date, message=message)
 		# END for each line in stream
 		
 		
 	def __str__(self):
 		""" Convert commit to string which is SHA1 """
-		return self.id
+		return self.sha
 
 	def __repr__(self):
-		return '<git.Commit "%s">' % self.id
+		return '<git.Commit "%s">' % self.sha
 
