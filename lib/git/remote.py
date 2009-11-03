@@ -445,7 +445,6 @@ class Remote(LazyMixin, Iterable):
 			Iterator yielding Remote objects of the given repository
 		"""
 		for section in repo.config_reader("repository").sections():
-			print section
 			if not section.startswith('remote'):
 				continue
 			lbound = section.find('"')

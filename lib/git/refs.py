@@ -124,28 +124,57 @@ class Reference(LazyMixin, Iterable):
 			Defaults to class specific portion if None assuring that only 
 			refs suitable for the actual class are returned.
 
-		``kwargs``
-			Additional options given as keyword arguments, will be passed
-			to git-for-each-ref
-
 		Returns
-			git.Ref[]
+			git.Reference[]
 			
-			List is sorted by committerdate
-			The returned objects are compatible to the Ref base, but represent the 
-			actual type, such as Head or Tag
+			List is lexigraphically sorted
+			The returned objects represent actual subclasses, such as Head or TagReference
 		"""
-
-		options = {'sort': "committerdate",
-				   'format': "%(refname)%00%(objectname)%00%(objecttype)%00%(objectsize)"}
-		
 		if common_path is None:
 			common_path = cls._common_path_default
 		
-		options.update(kwargs)
-
-		output = repo.git.for_each_ref(common_path, **options)
-		return cls._iter_from_stream(repo, iter(output.splitlines()))
+		rela_paths = set()
+		
+		# walk loose refs
+		# Currently we do not follow links 
+		for root, dirs, files in os.walk(os.path.join(repo.path, common_path)):
+			for f in files:
+				abs_path = os.path.join(root, f)
+				rela_paths.add(abs_path.replace(repo.path + '/', ""))
+			# END for each file in root directory
+		# END for each directory to walk
+		
+		# read packed refs
+		packed_refs_path = os.path.join(repo.path, 'packed-refs')
+		if os.path.isfile(packed_refs_path):
+			fp = open(packed_refs_path, 'r')
+			try:
+				for line in fp.readlines():
+					if line.startswith('#'):
+						continue
+					# 439689865b9c6e2a0dad61db22a0c9855bacf597 refs/heads/hello
+					line = line.rstrip()
+					first_space = line.find(' ')
+					if first_space == -1:
+						continue
+						
+					rela_path = line[first_space+1:]
+					if rela_path.startswith(common_path):
+						rela_paths.add(rela_path)
+					# END relative path matches common path
+				# END for each line in packed-refs
+			finally:
+				fp.close()
+		# END packed refs reading
+		
+		# return paths in sorted order
+		for path in sorted(rela_paths):
+			if path.endswith('/HEAD'):
+				continue
+			# END skip remote heads
+			yield cls.from_path(repo, path)
+		# END for each sorted relative refpath
+		
 		
 	@classmethod
 	def from_path(cls, repo, path):
@@ -165,39 +194,6 @@ class Reference(LazyMixin, Iterable):
 			# END exception handling
 		# END for each type to try
 		raise ValueError("Could not find reference type suitable to handle path %r" % path)
-		
-
-	@classmethod
-	def _iter_from_stream(cls, repo, stream):
-		""" Parse out ref information into a list of Ref compatible objects
-		Returns git.Ref[] list of Ref objects """
-		heads = []
-
-		for line in stream:
-			heads.append(cls._from_string(repo, line))
-
-		return heads
-
-	@classmethod
-	def _from_string(cls, repo, line):
-		""" Create a new Ref instance from the given string.
-		Format
-			name: [a-zA-Z_/]+
-			<null byte>
-			id: [0-9A-Fa-f]{40}
-		Returns git.Head """
-		full_path, hexsha, type_name, object_size = line.split("\x00")
-		
-		# No, we keep the object dynamic by allowing it to be retrieved by
-		# our path on demand - due to perstent commands it is fast.
-		# This reduces the risk that the object does not match 
-		# the changed ref anymore in case it changes in the meanwhile
-		return cls.from_path(repo, full_path)
-		
-		# obj = get_object_type_by_name(type_name)(repo, hexsha)
-		# obj.size = object_size
-		# return cls(repo, full_path, obj)
-		
 		
 
 class SymbolicReference(object):

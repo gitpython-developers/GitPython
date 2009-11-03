@@ -63,7 +63,6 @@ class TestRemote(TestBase):
 	
 	def _print_fetchhead(self, repo):
 		fp = open(os.path.join(repo.path, "FETCH_HEAD"))
-		print fp.read()
 		fp.close()
 		
 		

@@ -32,15 +32,6 @@ class TestRefs(TestBase):
 		assert tag_object_refs
 		assert isinstance(self.rorepo.tags['0.1.5'], TagReference)
 		
-	@patch_object(Git, '_call_process')
-	def test_ref_with_path_component(self, git):
-		git.return_value = fixture('for_each_ref_with_path_component')
-		head = self.rorepo.heads[0]
-
-		assert_equal('refactoring/feature1', head.name)
-		assert_true(git.called)
-		
-
 	def test_tags(self):
 		# tag refs can point to tag objects or to commits
 		s = set()
@@ -219,4 +210,9 @@ class TestRefs(TestBase):
 		cur_head.commit = parent_commit
 		assert not cur_head.is_detached
 		assert head.commit == parent_commit
+		
+		# test ref listing - assure we have packed refs
+		rw_repo.git.pack_refs(all=True)
+		assert rw_repo.heads
+		assert rw_repo.tags
 		

@@ -89,9 +89,9 @@ Refs
 * Making the reflog available as command might be useful actually. This way historical 
   references/commits can be returned. Git internally manages this if refs are specified
   with HEAD@{0} for instance
-* References should be parsed 'manually' to get around command invocation, but 
-  be sure to be able to read packed refs.
-  
+* Possibly follow symbolic links when manually parsing references by walking the 
+  directory tree. Currently the packed-refs file wouldn't be followed either.
+ 
 Remote
 ------
 * When parsing fetch-info, the regex will not allow spaces in the target remote ref as 
@@ -113,6 +113,7 @@ Repo
 Submodules
 ----------
 * add submodule support
+* see tree
 
 TestSystem
 ----------
