@@ -197,7 +197,6 @@ class PushInfo(object):
 		Create a new PushInfo instance as parsed from line which is expected to be like
 		c	refs/heads/master:refs/heads/master	05d2687..1d0568e
 		"""
-		print line
 		control_character, from_to, summary = line.split('\t', 3)
 		flags = 0
 		
@@ -619,6 +618,10 @@ class Remote(LazyMixin, Iterable):
 		Returns
 			IterableList(FetchInfo, ...) list of FetchInfo instances providing detailed 
 			information about the fetch results
+			
+		Note
+			As fetch does not provide progress information to non-ttys, we cannot make 
+			it available here unfortunately as in the 'push' method.
 		"""
 		status, stdout, stderr = self.repo.git.fetch(self, refspec, with_extended_output=True, v=True, **kwargs)
 		return self._get_fetch_info_from_stderr(stderr)

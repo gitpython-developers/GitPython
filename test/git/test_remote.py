@@ -299,17 +299,34 @@ class TestRemote(TestBase):
 		self._test_push_result(res, remote)
 		assert res[0].flags & PushInfo.DELETED
 		
-		self.fail("test --all")
-		
 		# push new branch
+		new_head = Head.create(rw_repo, "my_new_branch")
+		progress = TestPushProgress()
+		res = remote.push(new_head, progress)
+		assert res[0].flags & PushInfo.NEW_HEAD
+		progress.make_assertion()
+		self._test_push_result(res, remote)
 		
-		# delete new branch
+		# delete new branch on the remote end and locally
+		res = remote.push(":%s" % new_head.path)
+		self._test_push_result(res, remote)
+		Head.delete(rw_repo, new_head)
+		assert res[-1].flags & PushInfo.DELETED
+		
+		# --all
+		res = remote.push(all=True)
+		self._test_push_result(res, remote)
 		
 		# pull is essentially a fetch + merge, hence we just do a light 
 		# test here, leave the reset to the actual merge testing
 		# fails as we did not specify a branch and there is no configuration for it
 		self.failUnlessRaises(GitCommandError, remote.pull)
 		remote.pull('master')
+		
+		# cleanup - delete created tags and branches as we are in an innerloop on 
+		# the same repository
+		TagReference.delete(rw_repo, new_tag, other_tag)
+		remote.push(":%s" % other_tag.path)
 	
 	@with_rw_and_rw_remote_repo('0.1.6')
 	def test_base(self, rw_repo, remote_repo):

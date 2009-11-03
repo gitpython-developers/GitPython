@@ -106,9 +106,6 @@ Remote
 ------
 * iter_items should parse the configuration file manually - currently a command 
   is issued which is much slower than it has to be ( compared to manual parsing )
-* 'push' method needs a test, a true test repository is required though, a fork 
-  of a fork would do :)!
-* Fetch should return heads that where updated, pull as well.
 * Creation and deletion methods for references should be part of the interface, allowing
   repo.create_head(...) instaed of Head.create(repo, ...). Its a convenience thing, clearly
 * When parsing fetch-info, the regex will not allow spaces in the target remote ref as 
