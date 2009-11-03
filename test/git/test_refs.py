@@ -200,11 +200,9 @@ class TestRefs(TestBase):
 		
 		# setting a non-commit as commit fails, but succeeds as object
 		head_tree = head.commit.tree
-		self.failUnlessRaises(TypeError, setattr, head, 'commit', head_tree)
+		self.failUnlessRaises(GitCommandError, setattr, head, 'commit', head_tree)
 		assert head.commit == old_commit		# and the ref did not change
-		head.object = head_tree
-		assert head.object == head_tree
-		self.failUnlessRaises(TypeError, getattr, head, 'commit')	# object is a tree, not a commit
+		self.failUnlessRaises(GitCommandError, setattr, head, 'object', head_tree)
 		
 		# set the commit directly using the head. This would never detach the head
 		assert not cur_head.is_detached

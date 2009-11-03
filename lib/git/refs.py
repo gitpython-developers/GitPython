@@ -13,7 +13,8 @@ from utils import LazyMixin, Iterable
 
 class Reference(LazyMixin, Iterable):
 	"""
-	Represents a named reference to any object
+	Represents a named reference to any object. Subclasses may apply restrictions though, 
+	i.e. Heads can only point to commits.
 	"""
 	__slots__ = ("repo", "path")
 	_common_path_default = "refs"
@@ -75,30 +76,16 @@ class Reference(LazyMixin, Iterable):
 		# Our path will be resolved to the hexsha which will be used accordingly
 		return Object.new(self.repo, self.path)
 		
-	def _set_object(self, ref, type=None):
+	def _set_object(self, ref):
 		"""
 		Set our reference to point to the given ref. It will be converted
 		to a specific hexsha.
 		
-		``type``
-			If not None, string type of that the object must have, other we raise
-			a type error. Only used internally
-		
-		Returns
-			Object we have set. This is used internally only to reduce the amount 
-			of calls to the git command
+		Note: 
+			TypeChecking is done by the git command
 		"""
-		obj = Object.new(self.repo, ref)
-		if type is not None and obj.type != type:
-			raise TypeError("Reference %r cannot point to object of type %r" % (self,obj.type))
-			
-		full_ref_path = os.path.join(self.repo.path, self.path)
-		fp = open(full_ref_path, "w")
-		try:
-			fp.write(str(obj))
-		finally:
-			fp.close()
-		return obj
+		# do it safely by specifying the old value
+		self.repo.git.update_ref(self.path, ref, self._get_object().sha)
 		
 	object = property(_get_object, _set_object, doc="Return the object our ref currently refers to")
 		
@@ -109,7 +96,7 @@ class Reference(LazyMixin, Iterable):
 		Raise
 			ValueError if commit does not actually point to a commit
 		"""
-		self._set_object(commit, type="commit")
+		self._set_object(commit)
 		
 	def _get_commit(self):
 		"""
@@ -327,6 +314,15 @@ class SymbolicReference(object):
 					raise ValueError("Could not extract object from %s" % ref)
 			# END end try string  
 		# END try commit attribute
+		
+		# if we are writing a ref, use symbolic ref to get the reflog and more
+		# checking
+		# Otherwise we detach it and have to do it manually
+		if write_value.startswith('ref:'):
+			self.repo.git.symbolic_ref(self.name, write_value[5:])
+			return 
+		# END non-detached handling 
+		
 		fp = open(self._get_path(), "w")
 		try:
 			fp.write(write_value)
