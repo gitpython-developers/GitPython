@@ -151,18 +151,12 @@ class Reference(LazyMixin, Iterable):
 	def from_path(cls, repo, path):
 		"""
 		Return
-			Instance of type Reference, Head, Tag, SymbolicReference or HEAD
+			Instance of type Reference, Head, or Tag
 			depending on the given path
 		"""
 		if not path:
 			raise ValueError("Cannot create Reference from %r" % path)
 		
-		if path == 'HEAD':
-			return HEAD(repo, path)
-		
-		if '/' not in path:
-			return SymbolicReference(repo, path)
-			
 		for ref_type in (Head, RemoteReference, TagReference, Reference):
 			try:
 				return ref_type(repo, path)
@@ -218,7 +212,10 @@ class SymbolicReference(object):
 	
 	def __init__(self, repo, name):
 		if '/' in name:
+			# NOTE: Actually they can be looking like ordinary refs. Theoretically we handle this
+			# case incorrectly
 			raise ValueError("SymbolicReferences are not located within a directory, got %s" % name)
+		# END error handling 
 		self.repo = repo
 		self.name = name
 		
@@ -348,6 +345,23 @@ class SymbolicReference(object):
 		except TypeError:
 			return True
 	
+	@classmethod
+	def from_path(cls, repo, path):
+		"""
+		Return
+			Instance of SymbolicReference or HEAD
+			depending on the given path
+		"""
+		if not path:
+			raise ValueError("Cannot create Symbolic Reference from %r" % path)
+		
+		if path == 'HEAD':
+			return HEAD(repo, path)
+		
+		if '/' not in path:
+			return SymbolicReference(repo, path)
+			
+		raise ValueError("Could not find symbolic reference type suitable to handle path %r" % path)
 	
 class HEAD(SymbolicReference):
 	"""

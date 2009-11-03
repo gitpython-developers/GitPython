@@ -85,15 +85,11 @@ Refs
   handles symbolic refs as well as normal refs, updating the reflog if required.
 * I have read that refs can be symbolic refs as well which would imply the need
   to possibly dereference them. This makes sense as they originally where possibly 
-  a symbolic link
-* Check whether we are the active reference HEAD.reference == this_ref
-  - NO: The reference dosnt need to know - in fact it does not know about the 
-  main HEAD, so it may not use it. This is to be done in client code only. 
-  Remove me
-* Reference.from_path may return a symbolic reference although it is not related 
-  to the reference type. Split that up into two from_path on each of the types, 
-  and provide a general method outside of the type  that tries both.
-* Making the reflog available might be useful actually.
+  a symbolic link. This would mean References could be derived from SymbolicReference
+  officially, but it would still be bad as not all References are symbolic ones.
+* Making the reflog available as command might be useful actually. This way historical 
+  references/commits can be returned. Git internally manages this if refs are specified
+  with HEAD@{0} for instance
 
 Remote
 ------
