@@ -131,6 +131,16 @@ Submodules
 ----------
 * add submodule support
 
+TestSystem
+----------
+* Figure out a good way to indicate the required presense of a git-daemon to host
+ a specific path. Ideally, the system would detect the missing daemon and inform 
+ the user about the required command-line to start the daemon where we need it.
+ Reason for us being unable to start a daemon is that it will always fork - we can 
+ only kill itself, but not its children. Even if we would a pgrep like match, we still 
+ would not know whether it truly is our daemons - in that case user permissions should
+ stop us though.
+
 Tree
 ----
 * Should return submodules during iteration ( identifies as commit )

@@ -7,9 +7,11 @@
 Module implementing a remote object allowing easy access to git remotes
 """
 
+from errors import GitCommandError
 from git.utils import LazyMixin, Iterable, IterableList
 from objects import Commit
 from refs import Reference, RemoteReference, SymbolicReference, TagReference
+
 import re
 import os
 
@@ -146,6 +148,7 @@ class PushInfo(object):
 	 info = remote.push()[0]
 	 info.flags			# bitflags providing more information about the result
 	 info.local_ref		# Reference pointing to the local reference that was pushed
+	 					# It is None if the ref was deleted.
 	 info.remote_ref_string # path to the remote reference located on the remote side
 	 info.remote_ref	# Remote Reference on the local side corresponding to 
 	 					# the remote_ref_string. It can be a TagReference as well.
@@ -154,8 +157,8 @@ class PushInfo(object):
 	"""
 	__slots__ = ('local_ref', 'remote_ref_string', 'flags', 'old_commit', '_remote')
 	
-	NO_MATCH, REJECTED, REMOTE_REJECTED, REMOTE_FAILURE, DELETED, \
-	FORCED_UPDATE, FAST_FORWARD, UP_TO_DATE, ERROR = [ 1 << x for x in range(9) ]
+	NEW_TAG, NEW_HEAD, NO_MATCH, REJECTED, REMOTE_REJECTED, REMOTE_FAILURE, DELETED, \
+	FORCED_UPDATE, FAST_FORWARD, UP_TO_DATE, ERROR = [ 1 << x for x in range(11) ]
 
 	_flag_map = { 	'X' : NO_MATCH, '-' : DELETED, '*' : 0,
 					'+' : FORCED_UPDATE, ' ' : FAST_FORWARD, 
@@ -194,6 +197,7 @@ class PushInfo(object):
 		Create a new PushInfo instance as parsed from line which is expected to be like
 		c	refs/heads/master:refs/heads/master	05d2687..1d0568e
 		"""
+		print line
 		control_character, from_to, summary = line.split('\t', 3)
 		flags = 0
 		
@@ -206,7 +210,10 @@ class PushInfo(object):
 		
 		# from_to handling
 		from_ref_string, to_ref_string = from_to.split(':')
-		from_ref = Reference.from_path(remote.repo, from_ref_string)
+		if flags & cls.DELETED:
+			from_ref = None
+		else:
+			from_ref = Reference.from_path(remote.repo, from_ref_string)
 		
 		# commit handling, could be message or commit info
 		old_commit = None
@@ -219,6 +226,10 @@ class PushInfo(object):
 				flags |= cls.REMOTE_FAILURE
 			elif "[no match]" in summary:
 				flags |= cls.ERROR
+			elif "[new tag]" in summary:
+				flags |= cls.NEW_TAG
+			elif "[new branch]" in summary:
+				flags |= cls.NEW_HEAD
 			# uptodate encoded in control character
 		else:
 			# fast-forward or forced update - was encoded in control character, 
@@ -249,8 +260,9 @@ class FetchInfo(object):
 	"""
 	__slots__ = ('ref','commit_before_forced_update', 'flags', 'note')
 	
-	HEAD_UPTODATE, REJECTED, FORCED_UPDATE, FAST_FORWARD, NEW_TAG, \
-	TAG_UPDATE, NEW_HEAD, ERROR = [ 1 << x for x in range(8) ]
+	NEW_TAG, NEW_HEAD, HEAD_UPTODATE, TAG_UPDATE, REJECTED, FORCED_UPDATE, \
+	FAST_FORWARD, ERROR = [ 1 << x for x in range(8) ]
+	
 	#                             %c    %-*s %-*s             -> %s       (%s)
 	re_fetch_result = re.compile("^\s*(.) (\[?[\w\s\.]+\]?)\s+(.+) -> ([/\w_\.-]+)(  \(.*\)?$)?")
 	
@@ -568,8 +580,20 @@ class Remote(LazyMixin, Iterable):
 		# END for each progress line
 		
 		output = IterableList('name')
-		output.extend(PushInfo._from_line(self, line) for line in proc.stdout.readlines())
-		proc.wait()
+		for line in proc.stdout.readlines():
+			try:
+				output.append(PushInfo._from_line(self, line))
+			except ValueError:
+				# if an error happens, additional info is given which we cannot parse
+				pass
+			# END exception handling 
+		# END for each line
+		try:
+			proc.wait()
+		except GitCommandError:
+			# if a push has rejected items, the command has non-zero return status
+			pass
+		# END exception handling 
 		return output
 		
 	
@@ -634,7 +658,11 @@ class Remote(LazyMixin, Iterable):
 		Returns
 			IterableList(PushInfo, ...) iterable list of PushInfo instances, each 
 			one informing about an individual head which had been updated on the remote 
-			side
+			side.
+			If the push contains rejected heads, these will have the PushInfo.ERROR bit set
+			in their flags.
+			If the operation fails completely, the length of the returned IterableList will
+			be null.
 		"""
 		proc = self.repo.git.push(self, refspec, porcelain=True, as_process=True, **kwargs)
 		return self._get_push_info(proc, progress or PushProgress())

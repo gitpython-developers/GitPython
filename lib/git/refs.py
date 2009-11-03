@@ -167,6 +167,9 @@ class Reference(LazyMixin, Iterable):
 			Instance of type Reference, Head, Tag, SymbolicReference or HEAD
 			depending on the given path
 		"""
+		if not path:
+			raise ValueError("Cannot create Reference from %r" % path)
+		
 		if path == 'HEAD':
 			return HEAD(repo, path)
 		

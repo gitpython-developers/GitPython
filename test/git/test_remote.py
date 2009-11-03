@@ -18,16 +18,21 @@ class TestPushProgress(PushProgress):
 	__slots__ = ( "_seen_lines", "_stages_per_op" )
 	def __init__(self):
 		super(TestPushProgress, self).__init__()
-		self._seen_lines = 0
+		self._seen_lines = list()
 		self._stages_per_op = dict()
 		
 	def _parse_progress_line(self, line):
+		# we may remove the line later if it is dropped
+		# Keep it for debugging
+		self._seen_lines.append(line)
 		super(TestPushProgress, self)._parse_progress_line(line)
 		assert len(line) > 1, "line %r too short" % line
-		self._seen_lines += 1
 		
 	def line_dropped(self, line):
-		pass
+		try:
+			self._seen_lines.remove(line)
+		except ValueError:
+			pass
 		
 	def update(self, op_code, cur_count, max_count=None, message=''):
 		# check each stage only comes once
@@ -45,7 +50,8 @@ class TestPushProgress(PushProgress):
 		if not self._seen_lines:
 			return 
 		
-		assert len(self._seen_ops) == 3
+		# sometimes objects are not compressed which is okay
+		assert len(self._seen_ops) in (2,3)
 		assert self._stages_per_op
 		
 		# must have seen all stages
@@ -90,7 +96,10 @@ class TestRemote(TestBase):
 				assert has_one
 			else:
 				# there must be a remote commit
-				assert isinstance(info.local_ref, Reference)
+				if info.flags & info.DELETED == 0: 
+					assert isinstance(info.local_ref, Reference)
+				else:
+					assert info.local_ref is None
 				assert type(info.remote_ref) in (TagReference, RemoteReference)
 			# END error checking
 		# END for each info 
@@ -239,6 +248,7 @@ class TestRemote(TestBase):
 		# well, works nicely
 		# self.failUnlessRaises(GitCommandError, remote.push)
 		
+		# simple file push
 		self._commit_random_file(rw_repo)
 		progress = TestPushProgress()
 		res = remote.push(lhead.reference, progress)
@@ -246,10 +256,54 @@ class TestRemote(TestBase):
 		self._test_push_result(res, remote)
 		progress.make_assertion()
 		
+		# rejected - undo last commit
+		lhead.reset("HEAD~1")
+		res = remote.push(lhead.reference)
+		assert res[0].flags & PushInfo.ERROR 
+		assert res[0].flags & PushInfo.REJECTED
+		self._test_push_result(res, remote)
+		
+		# force rejected pull
+		res = remote.push('+%s' % lhead.reference)
+		assert res[0].flags & PushInfo.ERROR == 0 
+		assert res[0].flags & PushInfo.FORCED_UPDATE
+		self._test_push_result(res, remote)
+		
+		# invalid refspec
+		res = remote.push("hellothere")
+		assert len(res) == 0
+		
+		# push new tags 
+		progress = TestPushProgress()
+		to_be_updated = "my_tag.1.0RV"
+		new_tag = TagReference.create(rw_repo, to_be_updated)
+		other_tag = TagReference.create(rw_repo, "my_obj_tag.2.1aRV", message="my message")
+		res = remote.push(progress=progress, tags=True)
+		assert res[-1].flags & PushInfo.NEW_TAG
+		progress.make_assertion()
+		self._test_push_result(res, remote)
+		
+		# update push new tags
+		# Rejection is default
+		new_tag = TagReference.create(rw_repo, to_be_updated, ref='HEAD~1', force=True)
+		res = remote.push(tags=True)
+		self._test_push_result(res, remote)
+		assert res[-1].flags & PushInfo.REJECTED and res[-1].flags & PushInfo.ERROR
+		
+		# push force this tag
+		res = remote.push("+%s" % new_tag.path)
+		assert res[-1].flags & PushInfo.ERROR == 0 and res[-1].flags & PushInfo.FORCED_UPDATE
+		
+		# delete tag - have to do it using refspec
+		res = remote.push(":%s" % new_tag.path)
+		self._test_push_result(res, remote)
+		assert res[0].flags & PushInfo.DELETED
 		
 		self.fail("test --all")
-		self.fail("test rewind and force -push")
-		self.fail("test general fail due to invalid refspec")
+		
+		# push new branch
+		
+		# delete new branch
 		
 		# pull is essentially a fetch + merge, hence we just do a light 
 		# test here, leave the reset to the actual merge testing
