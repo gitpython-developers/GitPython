@@ -3,9 +3,8 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
-"""
-Module containing all ref based objects
-"""
+""" Module containing all ref based objects """
+
 import os
 from objects import Object, Commit
 from objects.utils import get_object_type_by_name

@@ -44,11 +44,12 @@ class _TemporaryFileSwap(object):
 
 class BaseIndexEntry(tuple):
 	"""
-	Small Brother of an index entry which can be created to describe changes 
+	
+	Small Brother of an index entry which can be created to describe changes
 	done to the index in which case plenty of additional information is not requried.
 	
-	As the first 4 data members match exactly to the IndexEntry type, methods 
-	expecting a BaseIndexEntry can also handle full IndexEntries even if they 
+	As the first 4 data members match exactly to the IndexEntry type, methods
+	expecting a BaseIndexEntry can also handle full IndexEntries even if they
 	use numeric indices for performance reasons.
 	"""
 	
@@ -396,7 +397,7 @@ class IndexFile(LazyMixin, diff.Diffable):
 			If 2 Trees are given, they will be merged into a new index using a 
 			 two way merge algorithm. Tree 1 is the 'current' tree, tree 2 is the 'other'
 			 one. It behaves like a fast-forward.
-			If 3 Trees are given, a 3-way merge will be performed with the first tree
+			 If 3 Trees are given, a 3-way merge will be performed with the first tree
 			 being the common ancestor of tree 2 and tree 3. Tree 2 is the 'current' tree, 
 			 tree 3 is the 'other' one
 			 
