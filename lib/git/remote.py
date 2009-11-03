@@ -573,9 +573,21 @@ class Remote(LazyMixin, Iterable):
 	
 	def _get_push_info(self, proc, progress):
 		# read progress information from stderr
-		# we hope stdout can hold all the data, it should ... 
-		for line in proc.stderr.readlines():
-			progress._parse_progress_line(line.rstrip())
+		# we hope stdout can hold all the data, it should ...
+		# read the lines manually as it will use carriage returns between the messages
+		# to override the previous one. This is why we read the bytes manually
+		line_so_far = ''
+		while True:
+			char = proc.stderr.read(1)
+			if not char:
+				break
+			
+			if char in ('\r', '\n'):
+				progress._parse_progress_line(line_so_far)
+				line_so_far = ''
+			else:
+				line_so_far += char
+			# END process parsed line
 		# END for each progress line
 		
 		output = IterableList('name')
