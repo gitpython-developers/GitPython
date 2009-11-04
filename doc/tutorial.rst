@@ -24,27 +24,27 @@ initialize GitPython with a bare repository.
 A repo object provides high-level access to your data, it allows you to create
 and delete heads, tags and remotes and access the configuration of the 
 repository.
-	
-	>>> repo.config_reader()		# get a config reader for read-only access
-	>>> repo.config_writer()		# get a config writer to change configuration 
+    
+    >>> repo.config_reader()        # get a config reader for read-only access
+    >>> repo.config_writer()        # get a config writer to change configuration 
 
 Query the active branch, query untracked files or whether the repository data 
 has been modified.
-	
-	>>> repo.is_dirty()
-	False
-	>>> repo.untracked_files()
-	['my_untracked_file']
-	
+    
+    >>> repo.is_dirty()
+    False
+    >>> repo.untracked_files()
+    ['my_untracked_file']
+    
 Clone from existing repositories or initialize new empty ones.
 
-	>>> cloned_repo = repo.clone("to/this/path")
-	>>> new_repo = repo.init("path/for/new/repo")
-	
+    >>> cloned_repo = repo.clone("to/this/path")
+    >>> new_repo = repo.init("path/for/new/repo")
+    
 Archive the repository contents to a tar file.
 
-	>>> repo.archive(open("repo.tar",'w'))
-	
+    >>> repo.archive(open("repo.tar",'w'))
+    
 Examining References
 ********************
 
@@ -52,19 +52,19 @@ References are the tips of your commit graph from which you can easily examine
 the history of your project.
 
     >>> heads = repo.heads
-    >>> master = heads.master		# lists can be accessed by name for convenience
-    >>> master.commit				# the commit pointed to by head called master
-    >>> master.rename("new_name")	# rename individual heads or
+    >>> master = heads.master       # lists can be accessed by name for convenience
+    >>> master.commit               # the commit pointed to by head called master
+    >>> master.rename("new_name")   # rename individual heads or
     
 Tags are (usually immutable) references to a commit and/or a tag object.
 
-	>>> tags = repo.tags
-	>>> tagref = tags[0]
-	>>>	tagref.tag			# tags may have tag objects carrying additional information
-	>>> tagref.commit		# but they always point to commits
-	>>> repo.delete_tag(tagref)		# delete or
-	>>> repo.create_tag("my_tag")	# create tags using the repo
-	
+    >>> tags = repo.tags
+    >>> tagref = tags[0]
+    >>> tagref.tag                  # tags may have tag objects carrying additional information
+    >>> tagref.commit               # but they always point to commits
+    >>> repo.delete_tag(tagref)     # delete or
+    >>> repo.create_tag("my_tag")   # create tags using the repo
+    
 A symbolic reference is a special case of a reference as it points to another
 reference instead of a commit
 
@@ -72,20 +72,20 @@ Modifying References
 ********************
 You can easily create and delete reference types or modify where they point to.
 
-	>>> repo.delete_head('master')	
-	>>> master = repo.create_head('master')
-	>>> master.commit = 'HEAD~10'		# set another commit without changing index or working tree	
+    >>> repo.delete_head('master')  
+    >>> master = repo.create_head('master')
+    >>> master.commit = 'HEAD~10'       # set another commit without changing index or working tree 
 
 Create or delete tags the same way except you may not change them afterwards
 
-	>>> new_tag = repo.create_tag('my_tag', 'my message')
-	>>> repo.delete_tag(new_tag)
-	
+    >>> new_tag = repo.create_tag('my_tag', 'my message')
+    >>> repo.delete_tag(new_tag)
+    
 Change the symbolic reference to switch branches cheaply ( without adjusting the index
 or the working copy )
 
-	>>> new_branch = repo.create_head('new_branch')
-	>>> repo.head.reference = new_branch
+    >>> new_branch = repo.create_head('new_branch')
+    >>> repo.head.reference = new_branch
 
 Understanding Objects
 *********************
@@ -98,43 +98,43 @@ Git only knows 4 distinct object types being Blobs, Trees, Commits and Tags.
 In Git-Pyhton, all objects can be accessed through their common base, compared 
 and hashed, as shown in the following example.
 
-	>>> hc = repo.head.commit
-	>>> hct = hc.tree
-	>>> hc != hct
-	>>> hc != repo.tags[0]
-	>>> hc == repo.head.reference.commit
-	
+    >>> hc = repo.head.commit
+    >>> hct = hc.tree
+    >>> hc != hct
+    >>> hc != repo.tags[0]
+    >>> hc == repo.head.reference.commit
+    
 Basic fields are
 
-	>>> hct.type
-	'tree'
-	>>> hct.size
-	166
-	>>> hct.sha
-	'a95eeb2a7082212c197cabbf2539185ec74ed0e8'
-	>>> hct.data		# returns string with pure uncompressed data
-	'...' 
-	>>> len(hct.data) == hct.size
-	
+    >>> hct.type
+    'tree'
+    >>> hct.size
+    166
+    >>> hct.sha
+    'a95eeb2a7082212c197cabbf2539185ec74ed0e8'
+    >>> hct.data        # returns string with pure uncompressed data
+    '...' 
+    >>> len(hct.data) == hct.size
+    
 Index Objects are objects that can be put into gits index. These objects are trees
 and blobs which additionally know about their path in the filesystem as well as their
 mode.
 
-	>>> hct.path			# root tree has no path
-	''
-	>>> hct.trees[0].path	# the first subdirectory has one though
-	'dir'
-	>>> htc.mode			# trees have mode 0
-	0
-	>>> '%o' % htc.blobs[0].mode	# blobs have a specific mode though comparable to a standard linux fs
-	100644
-	
+    >>> hct.path            # root tree has no path
+    ''
+    >>> hct.trees[0].path   # the first subdirectory has one though
+    'dir'
+    >>> htc.mode            # trees have mode 0
+    0
+    >>> '%o' % htc.blobs[0].mode    # blobs have a specific mode though comparable to a standard linux fs
+    100644
+    
 Access blob data (or any object data) directly or using streams.
-	>>> htc.data			# binary tree data
-	>>> htc.blobs[0].data_stream				# stream object to read data from
-	>>> htc.blobs[0].stream_data(my_stream)	# write data to given stream
-	
-	
+    >>> htc.data            # binary tree data
+    >>> htc.blobs[0].data_stream                # stream object to read data from
+    >>> htc.blobs[0].stream_data(my_stream) # write data to given stream
+    
+    
 The Commit object
 *****************
 
@@ -171,7 +171,7 @@ The above will return commits 21-30 from the commit list.
     >>> headcommit.author
     <git.Actor "Michael Trier <mtrier@gmail.com>">
 
-    >>> headcommit.authored_date		# seconds since epoch
+    >>> headcommit.authored_date        # seconds since epoch
     1256291446
 
     >>> headcommit.committer
@@ -184,7 +184,7 @@ The above will return commits 21-30 from the commit list.
     'cleaned up a lot of test information. Fixed escaping so it works with
     subprocess.'
 
-Note: date time is represented in a `seconds since epock`_ format.  Conversion to
+Note: date time is represented in a ``seconds since epock`` format.  Conversion to
 human readable form can be accomplished with the various time module methods.
 
     >>> import time
@@ -216,14 +216,14 @@ the root tree of the latest commit on the master branch.
 
 Once you have a tree, you can get the contents.
 
-    >>> tree.trees			# trees are subdirectories
+    >>> tree.trees          # trees are subdirectories
     [<git.Tree "f7eb5df2e465ab621b1db3f5714850d6732cfed2">]
     
-    >>> tree.blobs			# blobs are files
+    >>> tree.blobs          # blobs are files
     [<git.Blob "a871e79d59cf8488cac4af0c8f990b7a989e2b53">,
-	<git.Blob "3594e94c04db171e2767224db355f514b13715c5">,
-	<git.Blob "e79b05161e4836e5fbf197aeb52515753e8d6ab6">,
-	<git.Blob "94954abda49de8615a048f8d2e64b5de848e27a1">]
+    <git.Blob "3594e94c04db171e2767224db355f514b13715c5">,
+    <git.Blob "e79b05161e4836e5fbf197aeb52515753e8d6ab6">,
+    <git.Blob "94954abda49de8615a048f8d2e64b5de848e27a1">]
 
 Its useful to know that a tree behaves like a list with the ability to 
 query entries by name.
@@ -260,60 +260,60 @@ You can also get a tree directly from the repository if you know its name.
 As trees only allow direct access to their direct entries, use the traverse 
 method to obtain an iterator to access entries recursively.
 
-	>>> tree.traverse()
-	<generator object at 0x7f6598bd65a8>
-	>>> for entry in traverse(): do_something(entry)
+    >>> tree.traverse()
+    <generator object at 0x7f6598bd65a8>
+    >>> for entry in traverse(): do_something(entry)
 
-	
+    
 The Index Object
 ****************
 The git index is the stage containing changes to be written to the next commit
 or where merges finally have to take place. You may freely access and manipulate 
 this information using the Index Object.
 
-	>>> index = repo.index
-	
+    >>> index = repo.index
+    
 Access objects and add/remove entries. Commit the changes.
 
-	>>> for stage,blob in index.iter_blobs(): do_something(...)
-	Access blob objects
-	>>> for (path,stage),entry in index.entries.iteritems: pass
-	Access the entries directly
-	>>> index.add(['my_new_file'])		# add a new file to the index
-	>>> index.remove(['dir/existing_file'])
-	>>> new_commit = index.commit("my commit message")
-	
+    >>> for stage,blob in index.iter_blobs(): do_something(...)
+    Access blob objects
+    >>> for (path,stage),entry in index.entries.iteritems: pass
+    Access the entries directly
+    >>> index.add(['my_new_file'])      # add a new file to the index
+    >>> index.remove(['dir/existing_file'])
+    >>> new_commit = index.commit("my commit message")
+    
 Create new indices from other trees or as result of a merge. Write that result to 
 a new index.
 
-	>>> tmp_index = Index.from_tree(repo, 'HEAD~1')	# load a tree into a temporary index
-	>>> merge_index = Index.from_tree(repo, 'HEAD', 'some_branch') # merge two trees
-	>>> merge_index.write("merged_index")
-	
+    >>> tmp_index = Index.from_tree(repo, 'HEAD~1') # load a tree into a temporary index
+    >>> merge_index = Index.from_tree(repo, 'HEAD', 'some_branch') # merge two trees
+    >>> merge_index.write("merged_index")
+    
 Handling Remotes
 ****************
 
 Remotes are used as alias for a foreign repository to ease pushing to and fetching
 from them.
 
-	>>> test_remote = repo.create_remote('test', 'git@server:repo.git')
-	>>> repo.delete_remote(test_remote)	# create and delete remotes
-	>>> origin = repo.remotes.origin	# get default remote by name
-	>>> origin.refs						# local remote references
-	>>> o = origin.rename('new_origin')	# rename remotes
-	>>> o.fetch()					# fetch, pull and push from and to the remote
-	>>> o.pull()
-	>>> o.push()
+    >>> test_remote = repo.create_remote('test', 'git@server:repo.git')
+    >>> repo.delete_remote(test_remote) # create and delete remotes
+    >>> origin = repo.remotes.origin    # get default remote by name
+    >>> origin.refs                     # local remote references
+    >>> o = origin.rename('new_origin') # rename remotes
+    >>> o.fetch()                       # fetch, pull and push from and to the remote
+    >>> o.pull()
+    >>> o.push()
 
 You can easily access configuration information for a remote by accessing options 
 as if they where attributes.
 
-	>>> o.url
-	'git@server:dummy_repo.git'
-	
+    >>> o.url
+    'git@server:dummy_repo.git'
+    
 Change configuration for a specific remote only 
-	>>> o.config_writer.set("url", "other_url")
-	
+    >>> o.config_writer.set("url", "other_url")
+    
 Obtaining Diff Information
 **************************
 
@@ -325,20 +325,20 @@ Diffs can be made between Index and Trees, Index and the working tree, trees and
 trees as well as trees and the working copy. If commits are involved, their tree
 will be used implicitly.
 
-	>>> hcommit = repo.head.commit
-	>>> idiff = hcommit.diff()			# diff tree against index
-	>>> tdiff = hcommit.diff('HEAD~1')	# diff tree against previous tree
-	>>> wdiff = hcommit.diff(None)		# diff tree against working tree
-	
-	>>> index = repo.index
-	>>> index.diff()					# diff index against itself yielding empty diff
-	>>> index.diff(None)				# diff index against working copy
-	>>> index.diff('HEAD')				# diff index against current HEAD tree
+    >>> hcommit = repo.head.commit
+    >>> idiff = hcommit.diff()          # diff tree against index
+    >>> tdiff = hcommit.diff('HEAD~1')  # diff tree against previous tree
+    >>> wdiff = hcommit.diff(None)      # diff tree against working tree
+    
+    >>> index = repo.index
+    >>> index.diff()                    # diff index against itself yielding empty diff
+    >>> index.diff(None)                # diff index against working copy
+    >>> index.diff('HEAD')              # diff index against current HEAD tree
 
 The item returned is a DiffIndex which is essentially a list of Diff objects. It 
 provides additional filtering to find what you might be looking for
 
-	>>> for diff_added in wdiff.iter_change_type('A'): do_something(diff_added)
+    >>> for diff_added in wdiff.iter_change_type('A'): do_something(diff_added)
 
 Switching Branches
 ******************
@@ -346,9 +346,9 @@ To switch between branches, you effectively need to point your HEAD to the new b
 head and reset your index and working copy to match. A simple manual way to do it 
 is the following one.
 
-	>>> repo.head.reference = repo.heads.other_branch
-	>>> repo.head.reset(index=True, working_tree=True
-	
+    >>> repo.head.reference = repo.heads.other_branch
+    >>> repo.head.reset(index=True, working_tree=True
+    
 The previous approach would brutally overwrite the user's changes in the working copy 
 and index though and is less sophisticated than a git-checkout for instance which 
 generally prevents you from destroying your work.
@@ -358,15 +358,15 @@ Using git directly
 In case you are missing functionality as it has not been wrapped, you may conveniently
 use the git command directly. It is owned by each repository instance.
 
-	>>> git = repo.git
-	>>> git.checkout('head', b="my_new_branch")		# default command
-	>>> git.for_each_ref()								# '-' becomes '_' when calling it
-	
+    >>> git = repo.git
+    >>> git.checkout('head', b="my_new_branch")         # default command
+    >>> git.for_each_ref()                              # '-' becomes '_' when calling it
+    
 The return value will by default be a string of the standard output channel produced
 by the command.
 
 Keyword arguments translate to short and long keyword arguments on the commandline.
-The special notion `git.command(flag=True)`_ will create a flag without value like
+The special notion ``git.command(flag=True)`` will create a flag without value like
 ``command --flag``.
 
 If ``None`` is found in the arguments, it will be dropped silently. Lists and tuples 
