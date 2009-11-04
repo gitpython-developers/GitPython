@@ -110,6 +110,7 @@ class Tree(base.IndexObject, diff.Diffable):
 				i += 1
 			# END while not reached NULL
 			name = data[ns:i]
+			path = os.path.join(self.path, name)
 			
 			# byte is NULL, get next 20
 			i += 1
@@ -119,9 +120,9 @@ class Tree(base.IndexObject, diff.Diffable):
 			mode |= type_id<<12
 			hexsha = sha_to_hex(sha)
 			if type_id == self.blob_id or type_id == self.symlink_id:
-				yield blob.Blob(self.repo, hexsha, mode, name)
+				yield blob.Blob(self.repo, hexsha, mode, path)
 			elif type_id == self.tree_id:
-				yield Tree(self.repo, hexsha, mode, name)
+				yield Tree(self.repo, hexsha, mode, path)
 			elif type_id == self.commit_id:
 				# todo 
 				yield None
@@ -157,8 +158,6 @@ class Tree(base.IndexObject, diff.Diffable):
 	def _iter_recursive(cls, repo, tree, cur_depth, max_depth, predicate, prune ):
 		
 		for obj in tree:
-			# adjust path to be complete
-			obj.path = os.path.join(tree.path, obj.path)
 			if predicate(obj):
 				yield obj
 			if obj.type == "tree" and ( max_depth < 0 or cur_depth+1 <= max_depth ) and not prune(obj):
@@ -173,7 +172,8 @@ class Tree(base.IndexObject, diff.Diffable):
 		Returns
 		
 			Iterator to traverse the tree recursively up to the given level.
-			The iterator returns Blob and Tree objects
+			The iterator returns Blob and Tree objects with paths relative to their 
+			repository.
 		
 		``max_depth``
 		

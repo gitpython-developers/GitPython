@@ -196,3 +196,20 @@ class IndexObject(Object):
 		# END for each char
 		return mode
 		
+	@property
+	def name(self):
+		"""
+		Returns
+			Name portion of the path, effectively being the basename
+		"""
+		return os.path.basename(self.path)
+		
+	@property
+	def abspath(self):
+		"""
+		Returns
+			Absolute path to this index object in the file system ( as opposed to the 
+			.path field which is a path relative to the git repository )
+		"""
+		return os.path.join(self.repo.git.git_dir, self.path)
+		

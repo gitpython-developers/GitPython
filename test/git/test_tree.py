@@ -4,6 +4,7 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
+import os
 from test.testlib import *
 from git import *
 
@@ -43,6 +44,19 @@ class TestTree(TestCase):
 		# trees and blobs
 		assert len(set(trees)|set(root.trees)) == len(trees)
 		assert len(set(b for b in root if isinstance(b, Blob)) | set(root.blobs)) == len( root.blobs )
+		subitem = trees[0][0]
+		assert "/" in subitem.path
+		assert subitem.name == os.path.basename(subitem.path)
+		
+		# assure that at some point the traversed paths have a slash in them
+		found_slash = False
+		for item in root.traverse():
+			assert os.path.isabs(item.abspath)
+			if '/' in item.path:
+				found_slash = True
+				break
+		# END for each item
+		assert found_slash
   
 	def test_repr(self):
 		tree = Tree(self.repo, 'abc')
