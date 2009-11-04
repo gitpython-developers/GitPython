@@ -211,8 +211,29 @@ class TestRefs(TestBase):
 		assert not cur_head.is_detached
 		assert head.commit == parent_commit
 		
+		# test checkout
+		active_branch = rw_repo.active_branch
+		for head in rw_repo.heads:
+			checked_out_head = head.checkout()
+			assert checked_out_head == head
+		# END for each head to checkout
+		
+		# checkout with branch creation
+		new_head = active_branch.checkout(b="new_head")
+		assert active_branch != rw_repo.active_branch
+		assert new_head == rw_repo.active_branch
+		
+		# checkout  with force has we have a change
+		# clear file
+		open(new_head.commit.tree.blobs[-1].abspath,'w').close()
+		assert len(new_head.commit.diff(None)) == 1
+		
+		# create a new branch that is likely to touch the file we changed
+		far_away_head = rw_repo.create_head("far_head",'HEAD~100')
+		self.failUnlessRaises(GitCommandError, far_away_head.checkout)
+		assert active_branch == active_branch.checkout(force=True)
+		
 		# test ref listing - assure we have packed refs
 		rw_repo.git.pack_refs(all=True)
 		assert rw_repo.heads
 		assert rw_repo.tags
-		

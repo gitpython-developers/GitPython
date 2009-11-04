@@ -110,8 +110,6 @@ Repo
 * Figure out how to implement a proper merge API. It should be index based, but provide 
   all necessary information to the ones willing to ask for it. The index implementation 
   actually provides this already, but some real use-cases would be great to have a least.
-* repo.checkout should be added that does everything HEAD.reset does, but in addition
-  it allows to checkout heads beforehand, hence its more like a repo.head.reference = other_head.
   
   
 Submodules

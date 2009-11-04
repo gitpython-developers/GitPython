@@ -517,7 +517,39 @@ class Head(Reference):
 		self.path  = "%s/%s" % (self._common_path_default, new_path)
 		return self
 		
-	
+	def checkout(self, force=False, **kwargs):
+		"""
+		Checkout this head by setting the HEAD to this reference, by updating the index
+		to reflect the tree we point to and by updating the working tree to reflect 
+		the latest index.
+		
+		The command will fail if changed working tree files would be overwritten.
+		
+		``force``
+			If True, changes to the index and the working tree will be discarded.
+			If False, GitCommandError will be raised in that situation.
+			
+		``**kwargs``
+			Additional keyword arguments to be passed to git checkout, i.e.
+			b='new_branch' to create a new branch at the given spot.
+		
+		Returns
+			The active branch after the checkout operation, usually self unless
+			a new branch has been created.
+		
+		Note
+			By default it is only allowed to checkout heads - everything else
+			will leave the HEAD detached which is allowed and possible, but remains
+			a special state that some tools might not be able to handle.
+		"""
+		args = list()
+		kwargs['f'] = force
+		if kwargs['f'] == False:
+			kwargs.pop('f')
+		
+		self.repo.git.checkout(self, **kwargs)
+		return self.repo.active_branch
+		
 
 class TagReference(Reference):
 	"""

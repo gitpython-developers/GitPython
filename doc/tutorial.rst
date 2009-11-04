@@ -351,7 +351,10 @@ is the following one.
     
 The previous approach would brutally overwrite the user's changes in the working copy 
 and index though and is less sophisticated than a git-checkout for instance which 
-generally prevents you from destroying your work.
+generally prevents you from destroying your work. Use the safer approach as follows:
+
+	>>> repo.heads.master.checkout()			# checkout the branch using git-checkout
+	>>> repo.heads.other_branch.checkout()
 
 Using git directly
 ******************
