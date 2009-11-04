@@ -607,8 +607,11 @@ class Remote(LazyMixin, Iterable):
 		# END for each line
 		try:
 			proc.wait()
-		except GitCommandError:
+		except GitCommandError,e:
 			# if a push has rejected items, the command has non-zero return status
+			# a return status of 128 indicates a connection error - reraise the previous one
+			if proc.poll() == 128:
+				raise
 			pass
 		# END exception handling 
 		return output

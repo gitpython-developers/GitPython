@@ -5,7 +5,7 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
 import os
-from git import Repo, Remote
+from git import Repo, Remote, GitCommandError
 from unittest import TestCase
 import tempfile
 import shutil
@@ -166,7 +166,15 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
 			# by the user, not by us
 			d_remote = Remote.create(rw_repo, "daemon_origin", remote_repo_dir)
 			d_remote.fetch()
-			d_remote.config_writer.set('url', "git://localhost%s" % remote_repo_dir)
+			remote_repo_url = "git://localhost%s" % remote_repo_dir
+			d_remote.config_writer.set('url', remote_repo_url)
+			
+			# try to list remotes to diagnoes whether the server is up
+			try:
+				rw_repo.git.ls_remote(d_remote)
+			except GitCommandError,e:
+				print str(e)
+				raise AssertionError('Please start a git-daemon to run this test, execute: git-daemon "%s"'%tempfile.gettempdir())
 			
 			try:
 				return func(self, rw_repo, rw_remote_repo)
