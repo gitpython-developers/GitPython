@@ -316,10 +316,6 @@ class TestRemote(TestBase):
 		res = remote.push(all=True)
 		self._test_push_result(res, remote)
 		
-		# pull is essentially a fetch + merge, hence we just do a light 
-		# test here, leave the reset to the actual merge testing
-		# fails as we did not specify a branch and there is no configuration for it
-		self.failUnlessRaises(GitCommandError, remote.pull)
 		remote.pull('master')
 		
 		# cleanup - delete created tags and branches as we are in an innerloop on 

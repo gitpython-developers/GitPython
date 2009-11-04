@@ -223,10 +223,10 @@ class TestRefs(TestBase):
 		assert active_branch != rw_repo.active_branch
 		assert new_head == rw_repo.active_branch
 		
-		# checkout  with force has we have a change
+		# checkout  with force as we have a changed a file
 		# clear file
 		open(new_head.commit.tree.blobs[-1].abspath,'w').close()
-		assert len(new_head.commit.diff(None)) == 1
+		assert len(new_head.commit.diff(None))
 		
 		# create a new branch that is likely to touch the file we changed
 		far_away_head = rw_repo.create_head("far_head",'HEAD~100')
