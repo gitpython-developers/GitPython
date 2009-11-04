@@ -31,8 +31,6 @@ the history of your project.
     >>> master = heads.master		# lists can be accessed by name for convenience
     >>> master.commit				# the commit pointed to by head called master
     >>> master.rename("new_name")	# rename individual heads or
-    >>> repo.delete_head(master)	# delete them or
-    >>> repo.create_head('master')	# create them
     
 Tags are (usually immutable) references to a commit and/or a tag object.
 
@@ -42,6 +40,28 @@ Tags are (usually immutable) references to a commit and/or a tag object.
 	>>> tagref.commit		# but they always point to commits
 	>>> repo.delete_tag(tagref)		# delete or
 	>>> repo.create_tag("my_tag")	# create tags using the repo
+	
+A symbolic reference is a special case of a reference as it points to another
+reference instead of a commit
+
+Modifying References
+********************
+You can easily create and delete reference types or modify where they point to.
+
+	>>> repo.delete_head('master')	
+	>>> master = repo.create_head('master')
+	>>> master.commit = 'HEAD~10'		# set another commit without changing index or working tree	
+
+Create or delete tags the same way except you may not change them afterwards
+
+	>>> new_tag = repo.create_tag('my_tag', 'my message')
+	>>> repo.delete_tag(new_tag)
+	
+Change the symbolic reference to switch branches cheaply ( without adjusting the index
+or the working copy )
+
+	>>> new_branch = repo.create_head('new_branch')
+	>>> repo.head.reference = new_branch
 
 Understanding Objects
 *********************
@@ -54,12 +74,43 @@ Git only knows 4 distinct object types being Blobs, Trees, Commits and Tags.
 In Git-Pyhton, all objects can be accessed through their common base, compared 
 and hashed, as shown in the following example.
 
-	>>> 
+	>>> hc = repo.head.commit
+	>>> hct = hc.tree
+	>>> hc != hct
+	>>> hc != repo.tags[0]
+	>>> hc == repo.head.reference.commit
+	
+Basic fields are
+
+	>>> hct.type
+	'tree'
+	>>> hct.size
+	166
+	>>> hct.sha
+	'a95eeb2a7082212c197cabbf2539185ec74ed0e8'
+	>>> hct.data		# returns string with pure uncompressed data
+	'...' 
+	>>> len(hct.data) == hct.size
 	
 Index Objects are objects that can be put into gits index. These objects are trees
 and blobs which additionally know about their path in the filesystem as well as their
 mode.
 
+	>>> hct.path			# root tree has no path
+	''
+	>>> hct.trees[0].path	# the first subdirectory has one though
+	'dir'
+	>>> htc.mode			# trees have mode 0
+	0
+	>>> '%o' % htc.blobs[0].mode	# blobs have a specific mode though comparable to a standard linux fs
+	100644
+	
+Access blob data (or any object data) directly or using streams.
+	>>> htc.data			# binary tree data
+	>>> htc.blobs[0].data_stream				# stream object to read data from
+	>>> htc.blobs[0].stream_data(my_stream)	# write data to given stream
+	
+	
 The Commit object
 *****************
 
@@ -133,43 +184,29 @@ The Tree object
 A tree records pointers to the contents of a directory. Let's say you want
 the root tree of the latest commit on the master branch.
 
-    >>> tree = repo.commits()[0].tree
+    >>> tree = repo.heads.master.commit.tree
     <git.Tree "a006b5b1a8115185a228b7514cdcd46fed90dc92">
 
-    >>> tree.id
+    >>> tree.sha
     'a006b5b1a8115185a228b7514cdcd46fed90dc92'
 
 Once you have a tree, you can get the contents.
 
-    >>> contents = tree.values()
-    [<git.Blob "6a91a439ea968bf2f5ce8bb1cd8ddf5bf2cad6c7">,
-     <git.Blob "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391">,
-     <git.Tree "eaa0090ec96b054e425603480519e7cf587adfc3">,
-     <git.Blob "980e72ae16b5378009ba5dfd6772b59fe7ccd2df">]
+    >>> tree.trees			# trees are subdirectories
+    [<git.Tree "f7eb5df2e465ab621b1db3f5714850d6732cfed2">]
+    
+    >>> tree.blobs			# blobs are files
+    [<git.Blob "a871e79d59cf8488cac4af0c8f990b7a989e2b53">,
+	<git.Blob "3594e94c04db171e2767224db355f514b13715c5">,
+	<git.Blob "e79b05161e4836e5fbf197aeb52515753e8d6ab6">,
+	<git.Blob "94954abda49de8615a048f8d2e64b5de848e27a1">]
 
-The tree is implements a dictionary protocol so it can be used and acts just
-like a dictionary with some additional properties.
+Its useful to know that a tree behaves like a list with the ability to 
+query entries by name.
 
-    >>> tree.items()
-    [('lib', <git.Tree "310ebc9a0904531438bdde831fd6a27c6b6be58e">),
-     ('LICENSE', <git.Blob "6797c1421052efe2ded9efdbb498b37aeae16415">),
-     ('doc', <git.Tree "a58386dd101f6eb7f33499317e5508726dfd5e4f">),
-     ('MANIFEST.in', <git.Blob "7da4e346bb0a682e99312c48a1f452796d3fb988">),
-     ('.gitignore', <git.Blob "6870991011cc8d9853a7a8a6f02061512c6a8190">),
-     ('test', <git.Tree "c6f6ee37d328987bc6fb47a33fed16c7886df857">),
-     ('VERSION', <git.Blob "9faa1b7a7339db85692f91ad4b922554624a3ef7">),
-     ('AUTHORS', <git.Blob "9f649ef5448f9666d78356a2f66ba07c5fb27229">),
-     ('README', <git.Blob "9643dcf549f34fbd09503d4c941a5d04157570fe">),
-     ('ez_setup.py', <git.Blob "3031ad0d119bd5010648cf8c038e2bbe21969ecb">),
-     ('setup.py', <git.Blob "271074302aee04eb0394a4706c74f0c2eb504746">),
-     ('CHANGES', <git.Blob "0d236f3d9f20d5e5db86daefe1e3ba1ce68e3a97">)]
-
-This tree contains three ``Blob`` objects and one ``Tree`` object. The trees
-are subdirectories and the blobs are files. Trees below the root have
-additional attributes.
-
-    >>> contents = tree["lib"]
-    <git.Tree "c1c7214dde86f76bc3e18806ac1f47c38b2b7a3">
+    >>> tree[0] == tree['dir']
+    <git.Tree "f7eb5df2e465ab621b1db3f5714850d6732cfed2">
+    >>> for entry in tree: do_something(entry)
 
     >>> contents.name
     'test'
@@ -223,6 +260,15 @@ You can also get a blob directly from the repo if you know its name.
 
     >>> repo.blob("b19574431a073333ea09346eafd64e7b1908ef49")
     <git.Blob "b19574431a073333ea09346eafd64e7b1908ef49">
+    
+Handling Remotes
+****************
+
+Obtaining Diff Information
+**************************
+
+Switching Branches
+******************
 
 What Else?
 **********
