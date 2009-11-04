@@ -226,7 +226,7 @@ class Tree(base.IndexObject, diff.Diffable):
 		if isinstance(item, basestring):
 			# compatability
 			for obj in self._cache:
-				if obj.path == item:
+				if obj.name == item:
 					return obj
 			# END for each obj
 			raise KeyError( "Blob or Tree named %s not found" % item )

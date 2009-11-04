@@ -38,6 +38,14 @@ class TestRepo(TestBase):
 		
 		assert isinstance(self.rorepo.heads.master, Head)
 		assert isinstance(self.rorepo.heads['master'], Head)
+		
+	def test_tree_from_revision(self):
+		tree = self.rorepo.tree('0.1.6')
+		assert tree.type == "tree"
+		assert self.rorepo.tree(tree) == tree
+		
+		# try from invalid revision that does not exist
+		self.failUnlessRaises(ValueError, self.rorepo.tree, 'hello world')
 
 	@patch_object(Git, '_call_process')
 	def test_commits(self, git):

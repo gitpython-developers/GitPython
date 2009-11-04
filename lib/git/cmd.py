@@ -336,8 +336,9 @@ class Git(object):
 		"""
 		tokens = header_line.split()
 		if len(tokens) != 3:
-			raise ValueError( "SHA named %s could not be resolved" % tokens[0] )
-			
+			raise ValueError("SHA named %s could not be resolved" % tokens[0] )
+		if len(tokens[0]) != 40:
+			raise ValueError("Failed to parse header: %r" % header_line) 
 		return (tokens[0], tokens[1], int(tokens[2]))
 	
 	def __prepare_ref(self, ref):

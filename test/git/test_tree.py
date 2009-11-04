@@ -16,7 +16,7 @@ class TestTree(TestCase):
 	
 		
 	def test_traverse(self):
-		root = self.repo.tree()
+		root = self.repo.tree('0.1.6')
 		num_recursive = 0
 		all_items = list()
 		for obj in root.traverse():

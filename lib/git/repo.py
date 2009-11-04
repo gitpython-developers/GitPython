@@ -349,12 +349,12 @@ class Repo(object):
 		"""
 		return ( c.tree for c in self.iter_commits(*args, **kwargs) )
 
-	def tree(self, ref=None):
+	def tree(self, rev=None):
 		"""
-		The Tree object for the given treeish reference
+		The Tree object for the given treeish revision
 
-		``ref``
-			is a Ref instance defaulting to the active_branch if None.
+		``rev``
+			is a revision pointing to a Treeish ( being a commit or tree )
 
 		Examples::
 
@@ -364,32 +364,19 @@ class Repo(object):
 			``git.Tree``
 			
 		NOTE
-			A ref is requried here to assure you point to a commit or tag. Otherwise
-			it is not garantueed that you point to the root-level tree.
-			
 			If you need a non-root level tree, find it by iterating the root tree. Otherwise
 			it cannot know about its path relative to the repository root and subsequent 
 			operations might have unexpected results.
 		"""
-		if ref is None:
-			ref = self.active_branch
-		if not isinstance(ref, Reference):
-			raise ValueError( "Reference required, got %r" % ref )
+		if rev is None:
+			rev = self.active_branch
 		
-		
-		# As we are directly reading object information, we must make sure
-		# we truly point to a tree object. We resolve the ref to a sha in all cases
-		# to assure the returned tree can be compared properly. Except for
-		# heads, ids should always be hexshas
-		hexsha, typename, size = self.git.get_object_header( ref )
-		if typename != "tree":
-			# will raise if this is not a valid tree
-			hexsha, typename, size = self.git.get_object_header( str(ref)+'^{tree}' )
-		# END tree handling
-		ref = hexsha
-		
-		# the root has an empty relative path and the default mode
-		return Tree(self, ref, 0, '')
+		c = Object.new(self, rev)
+		if c.type == "commit":
+			return c.tree
+		elif c.type == "tree":
+			return c
+		raise ValueError( "Revision %s did not point to a treeish, but to %s" % (rev, c))
 
 	def iter_commits(self, rev=None, paths='', **kwargs):
 		"""
