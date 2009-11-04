@@ -20,7 +20,31 @@ is my working repository and contains the ``.git`` directory. You can also
 initialize GitPython with a bare repository.
 
     >>> repo = Repo.create("/var/git/git-python.git")
+    
+A repo object provides high-level access to your data, it allows you to create
+and delete heads, tags and remotes and access the configuration of the 
+repository.
+	
+	>>> repo.config_reader()		# get a config reader for read-only access
+	>>> repo.config_writer()		# get a config writer to change configuration 
 
+Query the active branch, query untracked files or whether the repository data 
+has been modified.
+	
+	>>> repo.is_dirty()
+	False
+	>>> repo.untracked_files()
+	['my_untracked_file']
+	
+Clone from existing repositories or initialize new empty ones.
+
+	>>> cloned_repo = repo.clone("to/this/path")
+	>>> new_repo = repo.init("path/for/new/repo")
+	
+Archive the repository contents to a tar file.
+
+	>>> repo.archive(open("repo.tar",'w'))
+	
 Examining References
 ********************
 
@@ -241,9 +265,55 @@ method to obtain an iterator to access entries recursively.
 	>>> for entry in traverse(): do_something(entry)
 
 	
+The Index Object
+****************
+The git index is the stage containing changes to be written to the next commit
+or where merges finally have to take place. You may freely access and manipulate 
+this information using the Index Object.
+
+	>>> index = repo.index
+	
+Access objects and add/remove entries. Commit the changes.
+
+	>>> for stage,blob in index.iter_blobs(): do_something(...)
+	Access blob objects
+	>>> for (path,stage),entry in index.entries.iteritems: pass
+	Access the entries directly
+	>>> index.add(['my_new_file'])		# add a new file to the index
+	>>> index.remove(['dir/existing_file'])
+	>>> new_commit = index.commit("my commit message")
+	
+Create new indices from other trees or as result of a merge. Write that result to 
+a new index.
+
+	>>> tmp_index = Index.from_tree(repo, 'HEAD~1')	# load a tree into a temporary index
+	>>> merge_index = Index.from_tree(repo, 'HEAD', 'some_branch') # merge two trees
+	>>> merge_index.write("merged_index")
+	
 Handling Remotes
 ****************
 
+Remotes are used as alias for a foreign repository to ease pushing to and fetching
+from them.
+
+	>>> test_remote = repo.create_remote('test', 'git@server:repo.git')
+	>>> repo.delete_remote(test_remote)	# create and delete remotes
+	>>> origin = repo.remotes.origin	# get default remote by name
+	>>> origin.refs						# local remote references
+	>>> o = origin.rename('new_origin')	# rename remotes
+	>>> o.fetch()					# fetch, pull and push from and to the remote
+	>>> o.pull()
+	>>> o.push()
+
+You can easily access configuration information for a remote by accessing options 
+as if they where attributes.
+
+	>>> o.url
+	'git@server:dummy_repo.git'
+	
+Change configuration for a specific remote only 
+	>>> o.config_writer.set("url", "other_url")
+	
 Obtaining Diff Information
 **************************
 
