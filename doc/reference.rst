@@ -10,27 +10,63 @@ Actor
    :members:
    :undoc-members:
 
-Blob
-----
+Objects.Base
+------------
 
-.. automodule:: git.blob
+.. automodule:: git.objects.base
+   :members:
+   :undoc-members:  
+ 
+Objects.Blob
+------------
+
+.. automodule:: git.objects.blob
+   :members:
+   :undoc-members:
+   
+Objects.Commit
+--------------
+
+.. automodule:: git.objects.commit
+   :members:
+   :undoc-members:
+   
+Objects.Tag
+-----------
+
+.. automodule:: git.objects.tag
    :members:
    :undoc-members:
 
-Git
----
+Objects.Tree
+------------
+
+.. automodule:: git.objects.tree
+   :members:
+   :undoc-members:
+
+Objects.Utils
+-------------
+
+.. automodule:: git.objects.utils
+   :members:
+   :undoc-members:
+   
+GitCmd
+------
 
 .. automodule:: git.cmd
    :members:
    :undoc-members:
 
-Commit
+
+Config
 ------
 
-.. automodule:: git.commit
+.. automodule:: git.config
    :members:
    :undoc-members:
-
+   
 Diff
 ----
 
@@ -45,17 +81,25 @@ Errors
    :members:
    :undoc-members:
 
-Head
+Index
+------
+
+.. automodule:: git.index
+   :members:
+   :undoc-members:
+   
+ 
+Refs
 ----
 
-.. automodule:: git.head
+.. automodule:: git.refs
    :members:
    :undoc-members:
 
-Lazy
-----
+Remote
+------
 
-.. automodule:: git.lazy
+.. automodule:: git.remote
    :members:
    :undoc-members:
 
@@ -70,20 +114,6 @@ Stats
 -----
 
 .. automodule:: git.stats
-   :members:
-   :undoc-members:
-
-Tag
----
-
-.. automodule:: git.tag
-   :members:
-   :undoc-members:
-
-Tree
-----
-
-.. automodule:: git.tree
    :members:
    :undoc-members:
 

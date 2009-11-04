@@ -3,9 +3,7 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
-"""
-Module implementing a remote object allowing easy access to git remotes
-"""
+"""Module implementing a remote object allowing easy access to git remotes"""
 
 from errors import GitCommandError
 from git.utils import LazyMixin, Iterable, IterableList
@@ -137,6 +135,7 @@ class PushProgress(object):
 		``message``
 			In case of the 'WRITING' operation, it contains the amount of bytes
 			transferred. It may possibly be used for other purposes as well.
+		
 		You may read the contents of the current line in self._cur_line
 		"""
 		pass
@@ -145,15 +144,17 @@ class PushProgress(object):
 class PushInfo(object):
 	"""
 	Carries information about the result of a push operation of a single head::
-	 info = remote.push()[0]
-	 info.flags			# bitflags providing more information about the result
-	 info.local_ref		# Reference pointing to the local reference that was pushed
-	 					# It is None if the ref was deleted.
-	 info.remote_ref_string # path to the remote reference located on the remote side
-	 info.remote_ref	# Remote Reference on the local side corresponding to 
+	
+		info = remote.push()[0]
+		info.flags			# bitflags providing more information about the result
+		info.local_ref		# Reference pointing to the local reference that was pushed
+	 						# It is None if the ref was deleted.
+	 	info.remote_ref_string # path to the remote reference located on the remote side
+	 	info.remote_ref	# Remote Reference on the local side corresponding to 
 	 					# the remote_ref_string. It can be a TagReference as well.
-	 info.old_commit	# commit at which the remote_ref was standing before we pushed
+	 	info.old_commit	# commit at which the remote_ref was standing before we pushed
 	 					# it to local_ref.commit. Will be None if an error was indicated
+	
 	"""
 	__slots__ = ('local_ref', 'remote_ref_string', 'flags', 'old_commit', '_remote')
 	

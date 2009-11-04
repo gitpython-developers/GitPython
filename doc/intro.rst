@@ -16,7 +16,7 @@ Requirements
 
 * Git_ tested with 1.5.3.7
 * `Python Nose`_ - used for running the tests
-* `Mock by Michael Foord`_ used for tests. Requires 0.4
+* `Mock by Michael Foord`_ used for tests. Requires 0.5
 
 .. _Git: http://git-scm.com/
 .. _Python Nose: http://code.google.com/p/python-nose/

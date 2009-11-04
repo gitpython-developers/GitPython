@@ -43,7 +43,11 @@ Diff
   
 Docs
 ----
-Overhaul docs - check examples, check looks, improve existing docs
+* Overhaul docs - check examples, check looks, improve existing docs
+* Config: auto-generated module does not appear at all ( except for two lines )
+  - its probably related to some fishy error lines:
+  :0: (ERROR/3) Unexpected indentation.
+  :0: (ERROR/3) Unexpected indentation.
 
 Index
 -----
