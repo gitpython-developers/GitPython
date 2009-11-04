@@ -8,9 +8,11 @@ import os, sys
 from test.testlib import *
 from git import Git, GitCommandError
 
-class TestGit(object):
-	def setup(self):
-		self.git = Git(GIT_REPO)
+class TestGit(TestCase):
+	
+	@classmethod
+	def setUpAll(cls):
+		cls.git = Git(GIT_REPO)
 
 	@patch_object(Git, 'execute')
 	def test_call_process_calls_execute(self, git):

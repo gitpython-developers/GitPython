@@ -7,171 +7,22 @@
 from test.testlib import *
 from git import *
 
-class TestCommit(object):
-	def setup(self):
-		self.repo = Repo(GIT_REPO)
+class TestCommit(TestBase):
 
 	def test_bake(self):
 
-		commit = Commit(self.repo, **{'id': '2454ae89983a4496a445ce347d7a41c0bb0ea7ae'})
+		commit = Commit(self.rorepo, **{'sha': '2454ae89983a4496a445ce347d7a41c0bb0ea7ae'})
 		commit.author # bake
 
 		assert_equal("Sebastian Thiel", commit.author.name)
 		assert_equal("byronimo@gmail.com", commit.author.email)
+		assert commit.author == commit.committer
+		assert isinstance(commit.authored_date, int) and isinstance(commit.committed_date, int)
+		assert commit.message == "Added missing information to docstrings of commit and stats module"
 
-
-	@patch_object(Git, '_call_process')
-	def test_diff(self, git):
-		git.return_value = fixture('diff_p')
-
-		diffs = Commit.diff(self.repo, 'master')
-
-		assert_equal(15, len(diffs))
-		
-		diff = diffs[0]
-		assert_equal('.gitignore', diff.a_blob.path)
-		assert_equal('.gitignore', diff.b_blob.path)
-		assert_equal('4ebc8aea50e0a67e000ba29a30809d0a7b9b2666', diff.a_blob.id)
-		assert_equal('2dd02534615434d88c51307beb0f0092f21fd103', diff.b_blob.id)
-		
-		assert_mode_644(diff.b_blob.mode)
-		
-		assert_equal(False, diff.new_file)
-		assert_equal(False, diff.deleted_file)
-		assert_equal("--- a/.gitignore\n+++ b/.gitignore\n@@ -1 +1,2 @@\n coverage\n+pkg", diff.diff)
-
-		diff = diffs[5]
-		assert_equal('lib/grit/actor.rb', diff.b_blob.path)
-		assert_equal(None, diff.a_blob)
-		assert_equal('f733bce6b57c0e5e353206e692b0e3105c2527f4', diff.b_blob.id)
-		assert_equal( None, diff.a_mode )
-		assert_equal(True, diff.new_file)
-
-		assert_true(git.called)
-		assert_equal(git.call_args, (('diff', '-M', 'master'), {'full_index': True}))
-
-	@patch_object(Git, '_call_process')
-	def test_diff_with_rename(self, git):
-		git.return_value = fixture('diff_rename')
-
-		diffs = Commit.diff(self.repo, 'rename')
-
-		assert_equal(1, len(diffs))
-
-		diff = diffs[0]
-		assert_true(diff.renamed)
-		assert_equal(diff.rename_from, 'AUTHORS')
-		assert_equal(diff.rename_to, 'CONTRIBUTORS')
-
-		assert_true(git.called)
-		assert_equal(git.call_args, (('diff', '-M', 'rename'), {'full_index': True}))
-
-	@patch_object(Git, '_call_process')
-	def test_diff_with_two_commits(self, git):
-		git.return_value = fixture('diff_2')
-
-		diffs = Commit.diff(self.repo, '59ddc32', '13d27d5')
-
-		assert_equal(3, len(diffs))
-
-		assert_true(git.called)
-		assert_equal(git.call_args, (('diff', '-M', '59ddc32', '13d27d5'), {'full_index': True}))
-
-	@patch_object(Git, '_call_process')
-	def test_diff_with_files(self, git):
-		git.return_value = fixture('diff_f')
-
-		diffs = Commit.diff(self.repo, '59ddc32', ['lib'])
-
-		assert_equal(1, len(diffs))
-		assert_equal('lib/grit/diff.rb', diffs[0].a_blob.path)
-
-		assert_true(git.called)
-		assert_equal(git.call_args, (('diff', '-M', '59ddc32', '--', 'lib'), {'full_index': True}))
-
-	@patch_object(Git, '_call_process')
-	def test_diff_with_two_commits_and_files(self, git):
-		git.return_value = fixture('diff_2f')
-
-		diffs = Commit.diff(self.repo, '59ddc32', '13d27d5', ['lib'])
-
-		assert_equal(1, len(diffs))
-		assert_equal('lib/grit/commit.rb', diffs[0].a_blob.path)
-
-		assert_true(git.called)
-		assert_equal(git.call_args, (('diff', '-M', '59ddc32', '13d27d5', '--', 'lib'), {'full_index': True}))
-
-	@patch_object(Git, '_call_process')
-	def test_diffs(self, git):
-		git.return_value = fixture('diff_p')
-
-		commit = Commit(self.repo, id='91169e1f5fa4de2eaea3f176461f5dc784796769', parents=['038af8c329ef7c1bae4568b98bd5c58510465493'])
-		diffs = commit.diffs
-
-		assert_equal(15, len(diffs))
-
-		diff = diffs[0]
-		assert_equal('.gitignore', diff.a_blob.path)
-		assert_equal('.gitignore', diff.b_blob.path)
-		assert_equal('4ebc8aea50e0a67e000ba29a30809d0a7b9b2666', diff.a_blob.id)
-		assert_equal('2dd02534615434d88c51307beb0f0092f21fd103', diff.b_blob.id)
-		assert_mode_644(diff.b_blob.mode)
-		assert_equal(False, diff.new_file)
-		assert_equal(False, diff.deleted_file)
-		assert_equal("--- a/.gitignore\n+++ b/.gitignore\n@@ -1 +1,2 @@\n coverage\n+pkg", diff.diff)
-
-		diff = diffs[5]
-		assert_equal('lib/grit/actor.rb', diff.b_blob.path)
-		assert_equal(None, diff.a_blob)
-		assert_equal('f733bce6b57c0e5e353206e692b0e3105c2527f4', diff.b_blob.id)
-		assert_equal(True, diff.new_file)
-
-		assert_true(git.called)
-		assert_equal(git.call_args, (('diff', '-M',
-											  '038af8c329ef7c1bae4568b98bd5c58510465493',
-											  '91169e1f5fa4de2eaea3f176461f5dc784796769',
-									  ), {'full_index': True}))
-
-	def test_diffs_on_initial_import(self):
-		commit = Commit(self.repo, '33ebe7acec14b25c5f84f35a664803fcab2f7781')
-		
-		for diff in commit.diffs:
-			assert isinstance(diff, Diff)
-			assert isinstance(diff.a_blob, Blob) or isinstance(diff.b_blob, Blob)
-			
-			if diff.a_mode is not None:
-				assert isinstance(diff.a_mode, int)
-			if diff.b_mode is not None:
-				isinstance(diff.b_mode, int)
-			
-			assert diff.diff is not None 	# can be empty
-			
-			if diff.renamed:
-				assert diff.rename_from and diff.rename_to and diff.rename_from != diff.rename_to
-			if diff.a_blob is None:
-				assert diff.new_file and isinstance(diff.new_file, bool)
-			if diff.b_blob is None:
-				assert diff.deleted_file and isinstance(diff.deleted_file, bool)
-		# END for each diff in initial import commit
-
-	def test_diffs_on_initial_import_without_parents(self):
-		commit = Commit(self.repo, id='33ebe7acec14b25c5f84f35a664803fcab2f7781')
-		diffs = commit.diffs
-		assert diffs
-
-	def test_diffs_with_mode_only_change(self):
-		commit = Commit(self.repo, id='ccde80b7a3037a004a7807a6b79916ce2a1e9729')
-		diffs = commit.diffs
-
-		# in case of mode-only changes, there is no blob
-		assert_equal(1, len(diffs))
-		assert_equal(None, diffs[0].a_blob)
-		assert_equal(None, diffs[0].b_blob)
-		assert_mode_644(diffs[0].a_mode)
-		assert_mode_755(diffs[0].b_mode)
 
 	def test_stats(self):
-		commit = Commit(self.repo, id='33ebe7acec14b25c5f84f35a664803fcab2f7781')
+		commit = Commit(self.rorepo, '33ebe7acec14b25c5f84f35a664803fcab2f7781')
 		stats = commit.stats
 		
 		def check_entries(d):
@@ -189,6 +40,14 @@ class TestCommit(object):
 			check_entries(d)
 		# END for each stated file
 		
+		# assure data is parsed properly
+		michael = Actor._from_string("Michael Trier <mtrier@gmail.com>")
+		assert commit.author == michael
+		assert commit.committer == michael
+		assert commit.authored_date == 1210193388
+		assert commit.committed_date == 1210193388
+		assert commit.message == "initial project"
+		
 	@patch_object(Git, '_call_process')
 	def test_rev_list_bisect_all(self, git):
 		"""
@@ -198,13 +57,13 @@ class TestCommit(object):
 
 		git.return_value = fixture('rev_list_bisect_all')
 
-		revs = self.repo.git.rev_list('HEAD',
+		revs = self.rorepo.git.rev_list('HEAD',
 									  pretty='raw',
 									  first_parent=True,
 									  bisect_all=True)
 		assert_true(git.called)
 
-		commits = Commit._iter_from_process_or_stream(self.repo, ListProcessAdapter(revs))
+		commits = Commit._iter_from_process_or_stream(self.rorepo, ListProcessAdapter(revs), True)
 		expected_ids = (
 			'cf37099ea8d1d8c7fbf9b6d12d7ec0249d3acb8b',
 			'33ebe7acec14b25c5f84f35a664803fcab2f7781',
@@ -213,33 +72,40 @@ class TestCommit(object):
 			'c231551328faa864848bde6ff8127f59c9566e90',
 		)
 		for sha1, commit in zip(expected_ids, commits):
-			assert_equal(sha1, commit.id)
+			assert_equal(sha1, commit.sha)
 
 	def test_count(self):
-		assert Commit.count( self.repo, '0.1.5' ) == 141
+		assert self.rorepo.tag('refs/tags/0.1.5').commit.count( ) == 141
+		
+	def test_list(self):
+		assert isinstance(Commit.list_items(self.rorepo, '0.1.5', max_count=5)['5117c9c8a4d3af19a9958677e45cda9269de1541'], Commit)
 
 	def test_str(self):
-		commit = Commit(self.repo, id='abc')
+		commit = Commit(self.rorepo, 'abc')
 		assert_equal ("abc", str(commit))
 
 	def test_repr(self):
-		commit = Commit(self.repo, id='abc')
+		commit = Commit(self.rorepo, 'abc')
 		assert_equal('<git.Commit "abc">', repr(commit))
 
 	def test_equality(self):
-		commit1 = Commit(self.repo, id='abc')
-		commit2 = Commit(self.repo, id='abc')
-		commit3 = Commit(self.repo, id='zyx')
+		commit1 = Commit(self.rorepo, 'abc')
+		commit2 = Commit(self.rorepo, 'abc')
+		commit3 = Commit(self.rorepo, 'zyx')
 		assert_equal(commit1, commit2)
 		assert_not_equal(commit2, commit3)
 		
 	def test_iter_parents(self):
 		# should return all but ourselves, even if skip is defined
-		c = self.repo.commit('0.1.5')
+		c = self.rorepo.commit('0.1.5')
 		for skip in (0, 1):
 			piter = c.iter_parents(skip=skip)
 			first_parent = piter.next()
 			assert first_parent != c
 			assert first_parent == c.parents[0]
 		# END for each 
+		
+	def test_base(self):
+		name_rev = self.rorepo.head.commit.name_rev
+		assert isinstance(name_rev, basestring)
 		

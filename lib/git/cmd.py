@@ -13,12 +13,15 @@ from errors import GitCommandError
 GIT_PYTHON_TRACE = os.environ.get("GIT_PYTHON_TRACE", False)
 
 execute_kwargs = ('istream', 'with_keep_cwd', 'with_extended_output',
-				  'with_exceptions', 'with_raw_output', 'as_process', 
+				  'with_exceptions', 'as_process', 
 				  'output_stream' )
 
 extra = {}
 if sys.platform == 'win32':
 	extra = {'shell': True}
+
+def dashify(string):
+	return string.replace('_', '-')
 
 class Git(object):
 	"""
@@ -39,12 +42,16 @@ class Git(object):
 		"""
 		Kill/Interrupt the stored process instance once this instance goes out of scope. It is 
 		used to prevent processes piling up in case iterators stop reading.
-		Besides all attributes are wired through to the contained process object
-		"""
-		__slots__= "proc"
+		Besides all attributes are wired through to the contained process object.
 		
-		def __init__(self, proc ):
+		The wait method was overridden to perform automatic status code checking
+		and possibly raise.
+		"""
+		__slots__= ("proc", "args")
+		
+		def __init__(self, proc, args ):
 			self.proc = proc
+			self.args = args
 			
 		def __del__(self):
 			# did the process finish already so we have a return code ?
@@ -61,6 +68,20 @@ class Git(object):
 			
 		def __getattr__(self, attr):
 			return getattr(self.proc, attr)
+			
+		def wait(self):
+			"""
+			Wait for the process and return its status code. 
+			
+			Raise
+				GitCommandError if the return status is not 0
+			"""
+			status = self.proc.wait()
+			if status != 0:
+				raise GitCommandError(self.args, status, self.proc.stderr.read())
+			# END status handling 
+			return status
+			
 	
 	
 	def __init__(self, git_dir=None):
@@ -102,7 +123,6 @@ class Git(object):
 				with_keep_cwd=False,
 				with_extended_output=False,
 				with_exceptions=True,
-				with_raw_output=False,
 				as_process=False, 
 				output_stream=None
 				):
@@ -129,27 +149,33 @@ class Git(object):
 		``with_exceptions``
 			Whether to raise an exception when git returns a non-zero status.
 
-		``with_raw_output``
-			Whether to avoid stripping off trailing whitespace.
-			
 		``as_process``
 			Whether to return the created process instance directly from which 
-			streams can be read on demand. This will render with_extended_output, 
-			with_exceptions and with_raw_output ineffective - the caller will have 
+			streams can be read on demand. This will render with_extended_output and 
+			with_exceptions ineffective - the caller will have 
 			to deal with the details himself.
 			It is important to note that the process will be placed into an AutoInterrupt
 			wrapper that will interrupt the process once it goes out of scope. If you 
 			use the command in iterators, you should pass the whole process instance 
 			instead of a single stream.
+			
 		``output_stream``
 			If set to a file-like object, data produced by the git command will be 
-			output to the given stream directly. 
-			Otherwise a new file will be opened.
+			output to the given stream directly.
+			This feature only has any effect if as_process is False. Processes will
+			always be created with a pipe due to issues with subprocess.
+			This merely is a workaround as data will be copied from the 
+			output pipe to the given output stream directly.
+			
 		
 		Returns::
 		
-		 str(output)								  # extended_output = False (Default)
+		 str(output)								   # extended_output = False (Default)
 		 tuple(int(status), str(stdout), str(stderr)) # extended_output = True
+		 
+		 if ouput_stream is True, the stdout value will be your output stream:
+		 output_stream									# extended_output = False
+		 tuple(int(status), output_stream, str(stderr))# extended_output = True
 		
 		Raise
 			GitCommandError
@@ -167,36 +193,38 @@ class Git(object):
 		else:
 		  cwd=self.git_dir
 		  
-		ostream = subprocess.PIPE
-		if output_stream is not None:
-			ostream = output_stream
-
 		# Start the process
 		proc = subprocess.Popen(command,
 								cwd=cwd,
 								stdin=istream,
 								stderr=subprocess.PIPE,
-								stdout=ostream,
+								stdout=subprocess.PIPE,
 								**extra
 								)
-
 		if as_process:
-			return self.AutoInterrupt(proc)
+			return self.AutoInterrupt(proc, command)
 		
 		# Wait for the process to return
 		status = 0
 		try:
-			stdout_value = proc.stdout.read()
-			stderr_value = proc.stderr.read()
+			if output_stream is None:
+				stdout_value = proc.stdout.read().rstrip()		# strip trailing "\n"
+			else:
+				max_chunk_size = 1024*64
+				while True:
+					chunk = proc.stdout.read(max_chunk_size)
+					output_stream.write(chunk)
+					if len(chunk) < max_chunk_size:
+						break
+				# END reading output stream
+				stdout_value = output_stream
+			# END stdout handling
+			stderr_value = proc.stderr.read().rstrip()			# strip trailing "\n"
+			# waiting here should do nothing as we have finished stream reading
 			status = proc.wait()
 		finally:
 			proc.stdout.close()
 			proc.stderr.close()
-
-		# Strip off trailing whitespace by default
-		if not with_raw_output:
-			stdout_value = stdout_value.rstrip()
-			stderr_value = stderr_value.rstrip()
 
 		if with_exceptions and status != 0:
 			raise GitCommandError(command, status, stderr_value)
@@ -258,7 +286,9 @@ class Git(object):
 			such as in 'ls_files' to call 'ls-files'.
 
 		``args``
-			is the list of arguments
+			is the list of arguments. If None is included, it will be pruned.
+			This allows your commands to call git more conveniently as None
+			is realized as non-existent
 
 		``kwargs``
 			is a dict of keyword arguments.
@@ -284,7 +314,7 @@ class Git(object):
 		# Prepare the argument list
 		opt_args = self.transform_kwargs(**kwargs)
 		
-		ext_args = self.__unpack_args(args)
+		ext_args = self.__unpack_args([a for a in args if a is not None])
 		args = opt_args + ext_args
 
 		call = ["git", dashify(method)]
@@ -306,8 +336,9 @@ class Git(object):
 		"""
 		tokens = header_line.split()
 		if len(tokens) != 3:
-			raise ValueError( "SHA named %s could not be resolved" % tokens[0] )
-			
+			raise ValueError("SHA named %s could not be resolved" % tokens[0] )
+		if len(tokens[0]) != 40:
+			raise ValueError("Failed to parse header: %r" % header_line) 
 		return (tokens[0], tokens[1], int(tokens[2]))
 	
 	def __prepare_ref(self, ref):

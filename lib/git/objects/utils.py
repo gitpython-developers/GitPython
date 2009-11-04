@@ -52,3 +52,21 @@ def parse_actor_and_date(line):
 	m = _re_actor_epoch.search(line)
 	actor, epoch = m.groups()
 	return (Actor._from_string(actor), int(epoch))
+	
+	
+	
+class ProcessStreamAdapter(object):
+	"""
+	Class wireing all calls to the contained Process instance.
+	
+	Use this type to hide the underlying process to provide access only to a specified 
+	stream. The process is usually wrapped into an AutoInterrupt class to kill 
+	it if the instance goes out of scope.
+	"""
+	__slots__ = ("_proc", "_stream")
+	def __init__(self, process, stream_name):
+		self._proc = process
+		self._stream = getattr(process, stream_name)
+	
+	def __getattr__(self, attr):
+		return getattr(self._stream, attr)

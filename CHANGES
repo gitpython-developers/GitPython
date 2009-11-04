@@ -27,6 +27,11 @@ General
   terms are used everywhere, such as "Reference" ( ref ) and "Revision" ( rev ).
   Prevously multiple terms where used making it harder to know which type was allowed
   or not.
+* Unified diff interface to allow easy diffing between trees, trees and index, trees
+  and working tree, index and working tree, trees and index. This closely follows
+  the git-diff capabilities.
+* Git.execute does not take the with_raw_output option anymore. It was not used 
+  by anyone within the project and False by default.
   
 
 Item Iteration
@@ -35,12 +40,62 @@ Item Iteration
   hurt performance and memory consumption and reduce response times. 
   iter_items method provide an iterator that will return items on demand as parsed 
   from a stream. This way any amount of objects can be handled.
+* list_items method returns IterableList allowing to access list members by name
   
 objects Package
 ----------------
 * blob, tree, tag and commit module have been moved to new objects package. This should 
   not affect you though unless you explicitly imported individual objects. If you just 
   used the git package, names did not change.
+  
+Blob
+----
+* former 'name' member renamed to path as it suits the actual data better
+
+GitCommand
+-----------
+* git.subcommand call scheme now prunes out None from the argument list, allowing 
+  to be called more confortably as None can never be a valid to the git command 
+  if converted to a string.
+
+Commit
+------
+* 'count' method is not an instance method to increase its ease of use
+* 'name_rev' property returns a nice name for the commit's sha
+
+Config
+------
+* The git configuration can now be read and manipulated directly from within python
+  using the GitConfigParser
+* Repo.config_reader() returns a read-only parser
+* Repo.config_writer() returns a read-write parser 
+ 
+Diff
+----
+* Members a a_commit and b_commit renamed to a_blob and b_blob - they are populated
+  with Blob objects if possible
+* Members a_path and b_path removed as this information is kept in the blobs
+* Diffs are now returned as DiffIndex allowing to more quickly find the kind of 
+  diffs you are interested in
+  
+Diffing
+-------
+* Commit and Tree objects now support diffing natively with a common interface to 
+  compare agains other Commits or Trees, against the working tree or against the index.
+
+Index
+-----
+* A new Index class allows to read and write index files directly, and to perform
+  simple two and three way merges based on an arbitrary index.
+  
+Referernces
+------------
+* References are object that point to a Commit
+* SymbolicReference are a pointer to a Reference Object, which itself points to a specific
+  Commit
+* They will dynmically retrieve their object at the time of query to assure the information 
+  is actual. Recently objects would be cached, hence ref object not be safely kept 
+  persistent.
   
 Repo
 ----
@@ -49,6 +104,8 @@ Repo
   of the active branch.
 * tree method now requires a Ref instance as input and defaults to the active_branche
   instead of master
+* is_dirty now takes additional arguments allowing fine-grained control about what is 
+  considered dirty
 * Removed the following methods:
   - 'log' method as it as effectively the same as the 'commits' method
   - 'commits_since' as it is just a flag given to rev-list in Commit.iter_items
@@ -60,6 +117,8 @@ Repo
      related repositories, i.e. clones, git-rev-list would be sufficient to find 
      commits that would need to be transferred for example.
   - 'create' method which equals the 'init' method's functionality
+  - 'diff' - it returned a mere string which still had to be parsed
+  - 'commit_diff' - moved to Commit, Tree and Diff types respectively
 * Renamed the following methods:
   - commits to iter_commits to improve the performance, adjusted signature
   - init_bare to init, implying less about the options to be used
@@ -68,16 +127,26 @@ Repo
   - archive_tar_gz and archive_tar and replaced by archive method with different signature
 * 'commits' method has no max-count of returned commits anymore, it now behaves 
  like git-rev-list
+* The following methods and properties were added
+  - 'untracked_files' property, returning all currently untracked files
+  - 'head', creates a head object
+  - 'tag', creates a tag object
+  - 'iter_trees' method
+  - 'config_reader' method
+  - 'config_writer' method
+  - 'bare' property, previously it was a simple attribute that could be written
+  
+Remote
+------
+* Added Remote object allowing easy access to remotes
+* Repo.remotes lists all remotes
+* Repo.remote returns a remote of the specified name if it exists
 
-Diff
-----
-* Members a a_commit and b_commit renamed to a_blob and b_blob - they are populated
-  with Blob objects if possible
-* Members a_path and b_path removed as this information is kept in the blobs
-
-Blob
-----
-* former 'name' member renamed to path as it suits the actual data better
+Test Framework
+--------------
+* Added support for common TestCase base class that provides additional functionality
+  to receive repositories tests can also write to. This way, more aspects can be 
+  tested under real-world ( un-mocked ) conditions.
 
 Tree
 ----
@@ -89,11 +158,6 @@ Tree
 * now mimics behaviour of a read-only list instead of a dict to maintain order.
 * content_from_string method is now private and not part of the public API anymore
 
-Refs
-----
-* Will dynmically retrieve their object at the time of query to assure the information 
-  is actual. Recently objects would be cached, hence ref object not be safely kept 
-  persistent.
 
 0.1.6
 =====

@@ -8,6 +8,7 @@ import os
 import blob
 import base
 import binascii
+import git.diff as diff
 
 def sha_to_hex(sha):
     """Takes a string and returns the hex of the sha within"""
@@ -15,7 +16,7 @@ def sha_to_hex(sha):
     assert len(hexsha) == 40, "Incorrect length of sha1 string: %d" % hexsha
     return hexsha
 
-class Tree(base.IndexObject):
+class Tree(base.IndexObject, diff.Diffable):
 	"""
 	Tress represent a ordered list of Blobs and other Trees. Hence it can be 
 	accessed like a list.
@@ -37,13 +38,14 @@ class Tree(base.IndexObject):
 	__slots__ = "_cache"
 	
 	# using ascii codes for comparison 
-	ascii_commit_id = (0x31 << 4) + 0x36		
-	ascii_blob_id = (0x31 << 4) + 0x30
-	ascii_tree_id = (0x34 << 4) + 0x30
+	commit_id = 016		
+	blob_id = 010
+	symlink_id = 012
+	tree_id = 040
 	
 	
-	def __init__(self, repo, id, mode=0, path=None):
-		super(Tree, self).__init__(repo, id, mode, path)
+	def __init__(self, repo, sha, mode=0, path=None):
+		super(Tree, self).__init__(repo, sha, mode, path)
 
 	def _set_cache_(self, attr):
 		if attr == "_cache":
@@ -87,8 +89,8 @@ class Tree(base.IndexObject):
 			mode = 0
 			mode_boundary = i + 6
 			
-			# keep it ascii - we compare against the respective values
-			type_id = (ord(data[i])<<4) + ord(data[i+1])
+			# read type
+			type_id = ((ord(data[i])-ord_zero)<<3) + (ord(data[i+1])-ord_zero)
 			i += 2
 			
 			while data[i] != ' ':
@@ -108,18 +110,20 @@ class Tree(base.IndexObject):
 				i += 1
 			# END while not reached NULL
 			name = data[ns:i]
+			path = os.path.join(self.path, name)
 			
 			# byte is NULL, get next 20
 			i += 1
 			sha = data[i:i+20]
 			i = i + 20
 			
+			mode |= type_id<<12
 			hexsha = sha_to_hex(sha)
-			if type_id == self.ascii_blob_id:
-				yield blob.Blob(self.repo, hexsha, mode, name)
-			elif type_id == self.ascii_tree_id:
-				yield Tree(self.repo, hexsha, mode, name)
-			elif type_id == self.ascii_commit_id:
+			if type_id == self.blob_id or type_id == self.symlink_id:
+				yield blob.Blob(self.repo, hexsha, mode, path)
+			elif type_id == self.tree_id:
+				yield Tree(self.repo, hexsha, mode, path)
+			elif type_id == self.commit_id:
 				# todo 
 				yield None
 			else:
@@ -148,29 +152,28 @@ class Tree(base.IndexObject):
 
 
 	def __repr__(self):
-		return '<git.Tree "%s">' % self.id
+		return '<git.Tree "%s">' % self.sha
 		
 	@classmethod
-	def _iter_recursive(cls, repo, tree, cur_depth, max_depth, predicate ):
+	def _iter_recursive(cls, repo, tree, cur_depth, max_depth, predicate, prune ):
 		
 		for obj in tree:
-			# adjust path to be complete
-			obj.path = os.path.join(tree.path, obj.path)
-			if not predicate(obj):
-				continue
-			yield obj
-			if obj.type == "tree" and ( max_depth < 0 or cur_depth+1 <= max_depth ):
-				for recursive_obj in cls._iter_recursive( repo, obj, cur_depth+1, max_depth, predicate ):
+			if predicate(obj):
+				yield obj
+			if obj.type == "tree" and ( max_depth < 0 or cur_depth+1 <= max_depth ) and not prune(obj):
+				for recursive_obj in cls._iter_recursive( repo, obj, cur_depth+1, max_depth, predicate, prune ):
 					yield recursive_obj
 				# END for each recursive object
 			# END if we may enter recursion
 		# END for each object
 		
-	def traverse(self, max_depth=-1, predicate = lambda i: True):
+	def traverse(self, max_depth=-1, predicate = lambda i: True, prune = lambda t: False):
 		"""
 		Returns
+		
 			Iterator to traverse the tree recursively up to the given level.
-			The iterator returns Blob and Tree objects
+			The iterator returns Blob and Tree objects with paths relative to their 
+			repository.
 		
 		``max_depth``
 		
@@ -181,8 +184,13 @@ class Tree(base.IndexObject):
 		``predicate``
 		
 			If predicate(item) returns True, item will be returned by iterator
+			
+		``prune``
+			
+			If prune(tree) returns True, the traversal will not continue into the 
+			given tree object.
 		"""
-		return self._iter_recursive( self.repo, self, 0, max_depth, predicate )
+		return self._iter_recursive( self.repo, self, 0, max_depth, predicate, prune )
 		
 	@property
 	def trees(self):
@@ -218,7 +226,7 @@ class Tree(base.IndexObject):
 		if isinstance(item, basestring):
 			# compatability
 			for obj in self._cache:
-				if obj.path == item:
+				if obj.name == item:
 					return obj
 			# END for each obj
 			raise KeyError( "Blob or Tree named %s not found" % item )

@@ -11,7 +11,7 @@ from tree import Tree
 import base
 import utils
 
-class Commit(base.Object, Iterable):
+class Commit(base.Object, Iterable, diff.Diffable):
 	"""
 	Wraps a git Commit object.
 	
@@ -23,8 +23,9 @@ class Commit(base.Object, Iterable):
 	type = "commit"
 	__slots__ = ("tree", "author", "authored_date", "committer", "committed_date",
 					"message", "parents")
+	_id_attribute_ = "sha"
 	
-	def __init__(self, repo, id, tree=None, author=None, authored_date=None,
+	def __init__(self, repo, sha, tree=None, author=None, authored_date=None,
 				 committer=None, committed_date=None, message=None, parents=None):
 		"""
 		Instantiate a new Commit. All keyword arguments taking None as default will 
@@ -32,7 +33,7 @@ class Commit(base.Object, Iterable):
 		
 		The parameter documentation indicates the type of the argument after a colon ':'.
 
-		``id``
+		``sha``
 			is the sha id of the commit or a ref
 
 		``parents`` : tuple( Commit, ... )
@@ -61,15 +62,15 @@ class Commit(base.Object, Iterable):
 		Returns
 			git.Commit
 		"""
-		super(Commit,self).__init__(repo, id)
+		super(Commit,self).__init__(repo, sha)
 		self._set_self_from_args_(locals())
 
 		if parents is not None:
 			self.parents = tuple( self.__class__(repo, p) for p in parents )
 		# END for each parent to convert
 			
-		if self.id and tree is not None:
-			self.tree = Tree(repo, id=tree, path='')
+		if self.sha and tree is not None:
+			self.tree = Tree(repo, tree, path='')
 		# END id to tree conversion
 
 	def _set_cache_(self, attr):
@@ -81,8 +82,8 @@ class Commit(base.Object, Iterable):
 		if attr in Commit.__slots__:
 			# prepare our data lines to match rev-list
 			data_lines = self.data.splitlines()
-			data_lines.insert(0, "commit %s" % self.id)
-			temp = self._iter_from_process_or_stream(self.repo, iter(data_lines)).next()
+			data_lines.insert(0, "commit %s" % self.sha)
+			temp = self._iter_from_process_or_stream(self.repo, iter(data_lines), False).next()
 			self.parents = temp.parents
 			self.tree = temp.tree
 			self.author = temp.author
@@ -101,27 +102,30 @@ class Commit(base.Object, Iterable):
 		"""
 		return self.message.split('\n', 1)[0]
 		
-	@classmethod
-	def count(cls, repo, rev, paths='', **kwargs):
+	def count(self, paths='', **kwargs):
 		"""
-		Count the number of commits reachable from this revision
-
-		``repo``
-			is the Repo
-
-		``rev``
-			revision specifier, see git-rev-parse for viable options
+		Count the number of commits reachable from this commit
 
 		``paths``
 			is an optinal path or a list of paths restricting the return value 
 			to commits actually containing the paths
 
 		``kwargs``
-			Additional options to be passed to git-rev-list
+			Additional options to be passed to git-rev-list. They must not alter
+			the ouput style of the command, or parsing will yield incorrect results
 		Returns
 			int
 		"""
-		return len(repo.git.rev_list(rev, '--', paths, **kwargs).strip().splitlines())
+		return len(self.repo.git.rev_list(self.sha, '--', paths, **kwargs).strip().splitlines())
+
+	@property
+	def name_rev(self):
+		"""
+		Returns
+			String describing the commits hex sha based on the closest Reference.
+			Mostly useful for UI purposes
+		"""
+		return self.repo.git.name_rev(self)
 
 	@classmethod
 	def iter_items(cls, repo, rev, paths='', **kwargs):
@@ -150,9 +154,8 @@ class Commit(base.Object, Iterable):
 		options = {'pretty': 'raw', 'as_process' : True }
 		options.update(kwargs)
 
-		# the test system might confront us with string values - 
 		proc = repo.git.rev_list(rev, '--', paths, **options)
-		return cls._iter_from_process_or_stream(repo, proc)
+		return cls._iter_from_process_or_stream(repo, proc, True)
 		
 	def iter_parents(self, paths='', **kwargs):
 		"""
@@ -176,60 +179,6 @@ class Commit(base.Object, Iterable):
 		
 		return self.iter_items( self.repo, self, paths, **kwargs )
 
-	@classmethod
-	def diff(cls, repo, a, b=None, paths=None):
-		"""
-		Creates diffs between a tree and the index or between two trees:
-
-		``repo``
-			is the Repo
-
-		``a``
-			is a named commit
-
-		``b``
-			is an optional named commit.  Passing a list assumes you
-			wish to omit the second named commit and limit the diff to the
-			given paths.
-
-		``paths``
-			is a list of paths to limit the diff to.
-
-		Returns
-			git.Diff[]::
-			
-			 between tree and the index if only a is given
-			 between two trees if a and b  are given and are commits 
-		"""
-		paths = paths or []
-
-		if isinstance(b, list):
-			paths = b
-			b = None
-
-		if paths:
-			paths.insert(0, "--")
-
-		if b:
-			paths.insert(0, b)
-		paths.insert(0, a)
-		text = repo.git.diff('-M', full_index=True, *paths)
-		return diff.Diff._list_from_string(repo, text)
-
-	@property
-	def diffs(self):
-		"""
-		Returns
-			git.Diff[]
-			Diffs between this commit and its first parent or all changes if this 
-			commit is the first commit and has no parent.
-		"""
-		if not self.parents:
-			d = self.repo.git.show(self.id, '-M', full_index=True, pretty='raw')
-			return diff.Diff._list_from_string(self.repo, d)
-		else:
-			return self.diff(self.repo, self.parents[0].id, self.id)
-
 	@property
 	def stats(self):
 		"""
@@ -240,18 +189,18 @@ class Commit(base.Object, Iterable):
 			git.Stats
 		"""
 		if not self.parents:
-			text = self.repo.git.diff_tree(self.id, '--', numstat=True, root=True)
+			text = self.repo.git.diff_tree(self.sha, '--', numstat=True, root=True)
 			text2 = ""
 			for line in text.splitlines()[1:]:
 				(insertions, deletions, filename) = line.split("\t")
 				text2 += "%s\t%s\t%s\n" % (insertions, deletions, filename)
 			text = text2
 		else:
-			text = self.repo.git.diff(self.parents[0].id, self.id, '--', numstat=True)
+			text = self.repo.git.diff(self.parents[0].sha, self.sha, '--', numstat=True)
 		return stats.Stats._list_from_string(self.repo, text)
 
 	@classmethod
-	def _iter_from_process_or_stream(cls, repo, proc_or_stream):
+	def _iter_from_process_or_stream(cls, repo, proc_or_stream, from_rev_list):
 		"""
 		Parse out commit information into a list of Commit objects
 
@@ -261,6 +210,9 @@ class Commit(base.Object, Iterable):
 		``proc``
 			git-rev-list process instance (raw format)
 
+		``from_rev_list``
+			If True, the stream was created by rev-list in which case we parse 
+			the message differently
 		Returns
 			iterator returning Commit objects
 		"""
@@ -269,8 +221,9 @@ class Commit(base.Object, Iterable):
 			stream = proc_or_stream.stdout
 			
 		for line in stream:
-			id = line.split()[1]
-			assert line.split()[0] == "commit"
+			commit_tokens = line.split() 
+			id = commit_tokens[1]
+			assert commit_tokens[0] == "commit"
 			tree = stream.next().split()[1]
 
 			parents = []
@@ -290,24 +243,31 @@ class Commit(base.Object, Iterable):
 			stream.next()
 			
 			message_lines = []
-			next_line = None
-			for msg_line in stream:
-				if not msg_line.startswith('    '):
-					break
-				# END abort message reading 
-				message_lines.append(msg_line.strip())
-			# END while there are message lines
+			if from_rev_list:
+				for msg_line in stream:
+					if not msg_line.startswith('    '):
+						# and forget about this empty marker
+						break
+					# END abort message reading 
+					# strip leading 4 spaces
+					message_lines.append(msg_line[4:])
+				# END while there are message lines
+			else:
+				# a stream from our data simply gives us the plain message
+				for msg_line in stream:
+					message_lines.append(msg_line)
+			# END message parsing
 			message = '\n'.join(message_lines)
 			
-			yield Commit(repo, id=id, parents=tuple(parents), tree=tree, author=author, authored_date=authored_date,
+			yield Commit(repo, id, parents=tuple(parents), tree=tree, author=author, authored_date=authored_date,
 						  committer=committer, committed_date=committed_date, message=message)
 		# END for each line in stream
 		
 		
 	def __str__(self):
 		""" Convert commit to string which is SHA1 """
-		return self.id
+		return self.sha
 
 	def __repr__(self):
-		return '<git.Commit "%s">' % self.id
+		return '<git.Commit "%s">' % self.sha
 

@@ -5,17 +5,36 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
 import os
+import sys
 import re
 import gzip
 import StringIO
 
 from errors import InvalidGitRepositoryError, NoSuchPathError
-from utils import touch, is_git_dir
 from cmd import Git
 from actor import Actor
 from refs import *
+from index import IndexFile
 from objects import *
+from config import GitConfigParser
+from remote import Remote
 
+def touch(filename):
+	fp = open(filename, "a")
+	fp.close()
+
+def is_git_dir(d):
+	""" This is taken from the git setup.c:is_git_directory
+		function."""
+
+	if os.path.isdir(d) and \
+			os.path.isdir(os.path.join(d, 'objects')) and \
+			os.path.isdir(os.path.join(d, 'refs')):
+		headref = os.path.join(d, 'HEAD')
+		return os.path.isfile(headref) or \
+				(os.path.islink(headref) and
+				os.readlink(headref).startswith('refs'))
+	return False
 
 class Repo(object):
 	"""
@@ -24,12 +43,17 @@ class Repo(object):
 	the log.
 	"""
 	DAEMON_EXPORT_FILE = 'git-daemon-export-ok'
+	__slots__ = ( "wd", "path", "_bare", "git" )
 	
 	# precompiled regex
 	re_whitespace = re.compile(r'\s+')
 	re_hexsha_only = re.compile('^[0-9A-Fa-f]{40}$')
 	re_author_committer_start = re.compile(r'^(author|committer)')
 	re_tab_full_line = re.compile(r'^\t(.*)$')
+	
+	# invariants
+	# represents the configuration level of a configuration file
+	config_level = ("system", "global", "repository")
 
 	def __init__(self, path=None):
 		"""
@@ -57,22 +81,30 @@ class Repo(object):
 
 		self.path = None
 		curpath = epath
+		
+		# walk up the path to find the .git dir
 		while curpath:
 			if is_git_dir(curpath):
-				self.bare = True
 				self.path = curpath
 				self.wd = curpath
 				break
 			gitpath = os.path.join(curpath, '.git')
 			if is_git_dir(gitpath):
-				self.bare = False
 				self.path = gitpath
 				self.wd = curpath
 				break
 			curpath, dummy = os.path.split(curpath)
 			if not dummy:
 				break
+		# END while curpath
 
+		self._bare = False
+		try:
+			self._bare = self.config_reader("repository").getboolean('core','bare') 
+		except Exception:
+			# lets not assume the option exists, although it should
+			pass
+		
 		if self.path is None:
 		   raise InvalidGitRepositoryError(epath)
 
@@ -91,6 +123,15 @@ class Repo(object):
 						   doc="the project's description")
 	del _get_description
 	del _set_description
+	
+	
+	@property
+	def bare(self):
+		"""
+		Returns
+			True if the repository is bare
+		"""
+		return self._bare
 
 	@property
 	def heads(self):
@@ -99,12 +140,58 @@ class Repo(object):
 		this repo
 
 		Returns
-			``git.Head[]``
+			``git.IterableList(Head, ...)``
 		"""
 		return Head.list_items(self)
+		
+	@property
+	def refs(self):
+		"""
+		A list of Reference objects representing tags, heads and remote references.
+		
+		Returns
+			IterableList(Reference, ...)
+		"""
+		return Reference.list_items(self)
 
 	# alias heads
 	branches = heads
+	
+	@property
+	def index(self):
+		"""
+		Returns
+			IndexFile representing this repository's index. 
+		"""
+		return IndexFile(self)
+
+	@property
+	def head(self):
+		"""
+		Return
+			HEAD Object pointing to the current head reference
+		"""
+		return HEAD(self,'HEAD')
+		
+	@property
+	def remotes(self):
+		"""
+		A list of Remote objects allowing to access and manipulate remotes
+		
+		Returns
+			``git.IterableList(Remote, ...)``
+		"""
+		return Remote.list_items(self)
+		
+	def remote(self, name='origin'):
+		"""
+		Return
+			Remote with the specified name
+		
+		Raise 
+			ValueError if no remote with such a name exists
+		"""
+		return Remote(self, name)
 
 	@property
 	def tags(self):
@@ -112,9 +199,129 @@ class Repo(object):
 		A list of ``Tag`` objects that are available in this repo
 
 		Returns
-			``git.Tag[]``
+			``git.IterableList(TagReference, ...)``
 		"""
-		return Tag.list_items(self)
+		return TagReference.list_items(self)
+		
+	def tag(self,path):
+		"""
+		Return
+			TagReference Object, reference pointing to a Commit or Tag
+		
+		``path``
+			path to the tag reference, i.e. 0.1.5 or tags/0.1.5
+		"""
+		return TagReference(self, path)
+		
+	def create_head(self, path, commit='HEAD', force=False, **kwargs ):
+		"""
+		Create a new head within the repository.
+		
+		For more documentation, please see the Head.create method.
+		
+		Returns
+			newly created Head Reference
+		"""
+		return Head.create(self, path, commit, force, **kwargs)
+		
+	def delete_head(self, *heads, **kwargs):
+		"""
+		Delete the given heads
+		
+		``kwargs``
+			Additional keyword arguments to be passed to git-branch 
+		"""
+		return Head.delete(self, *heads, **kwargs)
+		
+	def create_tag(self, path, ref='HEAD', message=None, force=False, **kwargs):
+		"""
+		Create a new tag reference.
+		
+		For more documentation, please see the TagReference.create method.
+		
+		Returns
+			TagReference object
+		"""
+		return TagReference.create(self, path, ref, message, force, **kwargs)
+		
+	def delete_tag(self, *tags):
+		"""
+		Delete the given tag references
+		"""
+		return TagReference.delete(self, *tags)
+		
+	def create_remote(self, name, url, **kwargs):
+		"""
+		Create a new remote.
+		
+		For more information, please see the documentation of the Remote.create 
+		methods 
+		
+		Returns
+			Remote reference
+		"""
+		return Remote.create(self, name, url, **kwargs)
+		
+	def delete_remote(self, remote):
+		"""
+		Delete the given remote.
+		"""
+		return Remote.remove(self, remote)
+		
+	def _get_config_path(self, config_level ):
+		# we do not support an absolute path of the gitconfig on windows , 
+		# use the global config instead
+		if sys.platform == "win32" and config_level == "system":
+			config_level = "global"
+			
+		if config_level == "system":
+			return "/etc/gitconfig"
+		elif config_level == "global":
+			return os.path.expanduser("~/.gitconfig")
+		elif config_level == "repository":
+			return "%s/config" % self.path
+		
+		raise ValueError( "Invalid configuration level: %r" % config_level )
+			
+	def config_reader(self, config_level=None):
+		"""
+		Returns
+			GitConfigParser allowing to read the full git configuration, but not to write it
+			
+			The configuration will include values from the system, user and repository 
+			configuration files.
+			
+			NOTE: On windows, system configuration cannot currently be read as the path is 
+			unknown, instead the global path will be used.
+			
+		``config_level``
+			For possible values, see config_writer method
+			If None, all applicable levels will be used. Specify a level in case 
+			you know which exact file you whish to read to prevent reading multiple files for 
+			instance
+		"""
+		files = None
+		if config_level is None:
+			files = [ self._get_config_path(f) for f in self.config_level ]
+		else:
+			files = [ self._get_config_path(config_level) ]
+		return GitConfigParser(files, read_only=True)
+		
+	def config_writer(self, config_level="repository"):
+		"""
+		Returns
+			GitConfigParser allowing to write values of the specified configuration file level.
+			Config writers should be retrieved, used to change the configuration ,and written 
+			right away as they will lock the configuration file in question and prevent other's
+			to write it.
+			
+		``config_level``
+			One of the following values
+			system = sytem wide configuration file
+			global = user level configuration file
+			repository = configuration file for this repostory only
+		"""
+		return GitConfigParser(self._get_config_path(config_level), read_only = False)
 		
 	def commit(self, rev=None):
 		"""
@@ -129,16 +336,25 @@ class Repo(object):
 		if rev is None:
 			rev = self.active_branch
 		
-		c = Object(self, rev)
+		c = Object.new(self, rev)
 		assert c.type == "commit", "Revision %s did not point to a commit, but to %s" % (rev, c)
 		return c
-
-	def tree(self, ref=None):
+		
+	def iter_trees(self, *args, **kwargs):
 		"""
-		The Tree object for the given treeish reference
+		Returns
+			Iterator yielding Tree objects
+			
+		Note: Takes all arguments known to iter_commits method
+		"""
+		return ( c.tree for c in self.iter_commits(*args, **kwargs) )
 
-		``ref``
-			is a Ref instance defaulting to the active_branch if None.
+	def tree(self, rev=None):
+		"""
+		The Tree object for the given treeish revision
+
+		``rev``
+			is a revision pointing to a Treeish ( being a commit or tree )
 
 		Examples::
 
@@ -148,32 +364,19 @@ class Repo(object):
 			``git.Tree``
 			
 		NOTE
-			A ref is requried here to assure you point to a commit or tag. Otherwise
-			it is not garantueed that you point to the root-level tree.
-			
 			If you need a non-root level tree, find it by iterating the root tree. Otherwise
 			it cannot know about its path relative to the repository root and subsequent 
 			operations might have unexpected results.
 		"""
-		if ref is None:
-			ref = self.active_branch
-		if not isinstance(ref, Reference):
-			raise ValueError( "Reference required, got %r" % ref )
+		if rev is None:
+			rev = self.active_branch
 		
-		
-		# As we are directly reading object information, we must make sure
-		# we truly point to a tree object. We resolve the ref to a sha in all cases
-		# to assure the returned tree can be compared properly. Except for
-		# heads, ids should always be hexshas
-		hexsha, typename, size = self.git.get_object_header( ref )
-		if typename != "tree":
-			# will raise if this is not a valid tree
-			hexsha, typename, size = self.git.get_object_header( str(ref)+'^{tree}' )
-		# END tree handling
-		ref = hexsha
-		
-		# the root has an empty relative path and the default mode
-		return Tree(self, ref, 0, '')
+		c = Object.new(self, rev)
+		if c.type == "commit":
+			return c.tree
+		elif c.type == "tree":
+			return c
+		raise ValueError( "Revision %s did not point to a treeish, but to %s" % (rev, c))
 
 	def iter_commits(self, rev=None, paths='', **kwargs):
 		"""
@@ -249,42 +452,88 @@ class Repo(object):
 		Raises
 			NoSuchPathError
 			
+		Note
+			The method does not check for the existance of the paths in alts
+			as the caller is responsible.
+			
 		Returns
 			None
 		"""
-		for alt in alts:
-			if not os.path.exists(alt):
-				raise NoSuchPathError("Could not set alternates. Alternate path %s must exist" % alt)
-
+		alternates_path = os.path.join(self.path, 'objects', 'info', 'alternates') 
 		if not alts:
-			os.remove(os.path.join(self.path, 'objects', 'info', 'alternates'))
+			if os.path.isfile(alternates_path):
+				os.remove(alternates_path)
 		else:
 			try:
-				f = open(os.path.join(self.path, 'objects', 'info', 'alternates'), 'w')
+				f = open(alternates_path, 'w')
 				f.write("\n".join(alts))
 			finally:
 				f.close()
+			# END file handling 
+		# END alts handling
 
 	alternates = property(_get_alternates, _set_alternates, doc="Retrieve a list of alternates paths or set a list paths to be used as alternates")
 
-	@property
-	def is_dirty(self):
+	def is_dirty(self, index=True, working_tree=True, untracked_files=False):
 		"""
-		Return the status of the index.
-
 		Returns
-			``True``, if the index has any uncommitted changes,
-			otherwise ``False``
-
-		NOTE
-			Working tree changes that have not been staged will not be detected ! 
+			``True``, the repository is considered dirty. By default it will react
+			like a git-status without untracked files, hence it is dirty if the 
+			index or the working copy have changes.
 		"""
-		if self.bare:
+		if self._bare:
 			# Bare repositories with no associated working directory are
 			# always consired to be clean.
 			return False
-
-		return len(self.git.diff('HEAD', '--').strip()) > 0
+		
+		# start from the one which is fastest to evaluate
+		default_args = ('--abbrev=40', '--full-index', '--raw')
+		if index: 
+			# diff index against HEAD
+			if len(self.git.diff('HEAD', '--cached', *default_args)):
+				return True
+		# END index handling
+		if working_tree:
+			# diff index against working tree
+			if len(self.git.diff(*default_args)):
+				return True
+		# END working tree handling
+		if untracked_files:
+			if len(self.untracked_files):
+				return True
+		# END untracked files
+		return False
+		
+	@property
+	def untracked_files(self):
+		"""
+		Returns
+			list(str,...)
+			
+			Files currently untracked as they have not been staged yet. Paths 
+			are relative to the current working directory of the git command.
+			
+		Note
+			ignored files will not appear here, i.e. files mentioned in .gitignore
+		"""
+		# make sure we get all files, no only untracked directores
+		proc = self.git.status(untracked_files=True, as_process=True)
+		stream = iter(proc.stdout)
+		untracked_files = list()
+		for line in stream:
+			if not line.startswith("# Untracked files:"):
+				continue
+			# skip two lines
+			stream.next()
+			stream.next()
+			
+			for untracked_info in stream:
+				if not untracked_info.startswith("#\t"):
+					break
+				untracked_files.append(untracked_info.replace("#\t", "").rstrip())
+			# END for each utracked info line
+		# END for each line
+		return untracked_files
 
 	@property
 	def active_branch(self):
@@ -294,36 +543,8 @@ class Repo(object):
 		Returns
 			Head to the active branch
 		"""
-		return Head( self, self.git.symbolic_ref('HEAD').strip() )
-		
-		
-	def diff(self, a, b, *paths):
-		"""
-		The diff from commit ``a`` to commit ``b``, optionally restricted to the given file(s)
-
-		``a``
-			is the base commit
-		``b``
-			is the other commit
-
-		``paths``
-			is an optional list of file paths on which to restrict the diff
+		return self.head.reference
 			
-		Returns
-			``str``
-		"""
-		return self.git.diff(a, b, '--', *paths)
-
-	def commit_diff(self, commit):
-		"""
-		The commit diff for the given commit
-		  ``commit`` is the commit name/id
-
-		Returns
-			``git.Diff[]``
-		"""
-		return Commit.diff(self, commit)
-		
 	def blame(self, rev, file):
 		"""
 		The blame information for the given file at the given revision.
@@ -388,7 +609,7 @@ class Repo(object):
 							sha = info['id']
 							c = commits.get(sha)
 							if c is None:
-								c = Commit(  self, id=sha,
+								c = Commit(  self, sha,
 											 author=Actor._from_string(info['author'] + ' ' + info['author_email']),
 											 authored_date=info['author_date'],
 											 committer=Actor._from_string(info['committer'] + ' ' + info['committer_email']),
@@ -445,7 +666,7 @@ class Repo(object):
 		Create a clone from this repository.
 
 		``path``
-			is the full path of the new repo (traditionally ends with /<name>.git)
+			is the full path of the new repo (traditionally ends with ./<name>.git).
 
 		``kwargs``
 			keyword arguments to be given to the git-clone command
@@ -476,32 +697,23 @@ class Repo(object):
 
 		Examples::
 
-			>>> repo.archive(open("archive"
+			>>> repo.archive(open("archive"))
 			<String containing tar.gz archive>
-
-			>>> repo.archive_tar_gz('a87ff14')
-			<String containing tar.gz archive for commit a87ff14>
-
-			>>> repo.archive_tar_gz('master', 'myproject/')
-			<String containing tar.gz archive and prefixed with 'myproject/'>
 
 		Raise
 			GitCommandError in case something went wrong
 			
+		Returns
+			self
 		"""
 		if treeish is None:
 			treeish = self.active_branch
 		if prefix and 'prefix' not in kwargs:
 			kwargs['prefix'] = prefix
-		kwargs['as_process'] = True
 		kwargs['output_stream'] = ostream
 		
-		proc =  self.git.archive(treeish, **kwargs)
-		status = proc.wait()
-		if status != 0:
-			raise GitCommandError( "git-archive", status, proc.stderr.read() )
-		
-
+		self.git.archive(treeish, **kwargs)
+		return self
 
 	def __repr__(self):
 		return '<git.Repo "%s">' % self.path

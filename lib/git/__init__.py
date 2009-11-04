@@ -9,17 +9,17 @@ import inspect
 
 __version__ = 'git'
 
+from git.config import GitConfigParser
 from git.objects import *
 from git.refs import *
 from git.actor import Actor
-from git.diff import Diff
+from git.diff import *
 from git.errors import InvalidGitRepositoryError, NoSuchPathError, GitCommandError
 from git.cmd import Git
 from git.repo import Repo
 from git.stats import Stats
-from git.utils import dashify
-from git.utils import touch
-
+from git.remote import *
+from git.index import *
 
 __all__ = [ name for name, obj in locals().items()
 			if not (name.startswith('_') or inspect.ismodule(obj)) ]

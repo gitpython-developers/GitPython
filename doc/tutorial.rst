@@ -4,9 +4,8 @@
 GitPython Tutorial
 ==================
 
-GitPython provides object model access to your git repository. Once you have
-created a repository object, you can traverse it to find parent commit(s),
-trees, blobs, etc.
+GitPython provides object model access to your git repository. This tutorial is 
+composed of multiple sections, each of which explain a real-life usecase.
 
 Initialize a Repo object
 ************************
@@ -21,84 +20,185 @@ is my working repository and contains the ``.git`` directory. You can also
 initialize GitPython with a bare repository.
 
     >>> repo = Repo.create("/var/git/git-python.git")
+    
+A repo object provides high-level access to your data, it allows you to create
+and delete heads, tags and remotes and access the configuration of the 
+repository.
+    
+    >>> repo.config_reader()        # get a config reader for read-only access
+    >>> repo.config_writer()        # get a config writer to change configuration 
 
-Getting a list of commits
-*************************
+Query the active branch, query untracked files or whether the repository data 
+has been modified.
+    
+    >>> repo.is_dirty()
+    False
+    >>> repo.untracked_files()
+    ['my_untracked_file']
+    
+Clone from existing repositories or initialize new empty ones.
 
-From the ``Repo`` object, you can get a list of ``Commit``
-objects.
+    >>> cloned_repo = repo.clone("to/this/path")
+    >>> new_repo = repo.init("path/for/new/repo")
+    
+Archive the repository contents to a tar file.
 
-    >>> repo.commits()
-    [<git.Commit "207c0c4418115df0d30820ab1a9acd2ea4bf4431">,
-     <git.Commit "a91c45eee0b41bf3cdaad3418ca3850664c4a4b4">,
-     <git.Commit "e17c7e11aed9e94d2159e549a99b966912ce1091">,
-     <git.Commit "bd795df2d0e07d10e0298670005c0e9d9a5ed867">]
+    >>> repo.archive(open("repo.tar",'w'))
+    
+Examining References
+********************
 
-Called without arguments, ``Repo.commits`` returns a list of up to ten commits
-reachable by the master branch (starting at the latest commit). You can ask
-for commits beginning at a different branch, commit, tag, etc.
+References are the tips of your commit graph from which you can easily examine 
+the history of your project.
 
-    >>> repo.commits('mybranch')
-    >>> repo.commits('40d3057d09a7a4d61059bca9dca5ae698de58cbe')
-    >>> repo.commits('v0.1')
+    >>> heads = repo.heads
+    >>> master = heads.master       # lists can be accessed by name for convenience
+    >>> master.commit               # the commit pointed to by head called master
+    >>> master.rename("new_name")   # rename individual heads or
+    
+Tags are (usually immutable) references to a commit and/or a tag object.
 
-You can specify the maximum number of commits to return.
+    >>> tags = repo.tags
+    >>> tagref = tags[0]
+    >>> tagref.tag                  # tags may have tag objects carrying additional information
+    >>> tagref.commit               # but they always point to commits
+    >>> repo.delete_tag(tagref)     # delete or
+    >>> repo.create_tag("my_tag")   # create tags using the repo
+    
+A symbolic reference is a special case of a reference as it points to another
+reference instead of a commit
 
-    >>> repo.commits('master', max_count=100)
+Modifying References
+********************
+You can easily create and delete reference types or modify where they point to.
 
-If you need paging, you can specify a number of commits to skip.
+    >>> repo.delete_head('master')  
+    >>> master = repo.create_head('master')
+    >>> master.commit = 'HEAD~10'       # set another commit without changing index or working tree 
 
-    >>> repo.commits('master', max_count=10, skip=20)
+Create or delete tags the same way except you may not change them afterwards
 
-The above will return commits 21-30 from the commit list.
+    >>> new_tag = repo.create_tag('my_tag', 'my message')
+    >>> repo.delete_tag(new_tag)
+    
+Change the symbolic reference to switch branches cheaply ( without adjusting the index
+or the working copy )
 
+    >>> new_branch = repo.create_head('new_branch')
+    >>> repo.head.reference = new_branch
+
+Understanding Objects
+*********************
+An Object is anything storable in gits object database. Objects contain information
+about their type, their uncompressed size as well as their data. Each object is
+uniquely identified by a SHA1 hash, being 40 hexadecimal characters in size. 
+
+Git only knows 4 distinct object types being Blobs, Trees, Commits and Tags.
+
+In Git-Pyhton, all objects can be accessed through their common base, compared 
+and hashed, as shown in the following example.
+
+    >>> hc = repo.head.commit
+    >>> hct = hc.tree
+    >>> hc != hct
+    >>> hc != repo.tags[0]
+    >>> hc == repo.head.reference.commit
+    
+Basic fields are
+
+    >>> hct.type
+    'tree'
+    >>> hct.size
+    166
+    >>> hct.sha
+    'a95eeb2a7082212c197cabbf2539185ec74ed0e8'
+    >>> hct.data        # returns string with pure uncompressed data
+    '...' 
+    >>> len(hct.data) == hct.size
+    
+Index Objects are objects that can be put into gits index. These objects are trees
+and blobs which additionally know about their path in the filesystem as well as their
+mode.
+
+    >>> hct.path            # root tree has no path
+    ''
+    >>> hct.trees[0].path   # the first subdirectory has one though
+    'dir'
+    >>> htc.mode            # trees have mode 0
+    0
+    >>> '%o' % htc.blobs[0].mode    # blobs have a specific mode though comparable to a standard linux fs
+    100644
+    
+Access blob data (or any object data) directly or using streams.
+    >>> htc.data            # binary tree data
+    >>> htc.blobs[0].data_stream                # stream object to read data from
+    >>> htc.blobs[0].stream_data(my_stream) # write data to given stream
+    
+    
 The Commit object
 *****************
 
-Commit objects contain information about a specific commit.
+Commit objects contain information about a specific commit. Obtain commits using 
+references as done in 'Examining References' or as follows
 
-    >>> head = repo.commits()[0]
+Obtain commits at the specified revision:
 
-    >>> head.id
+    >>> repo.commit('master')
+    >>> repo.commit('v0.1')
+    >>> repo.commit('HEAD~10')
+
+Iterate 100 commits
+
+    >>> repo.iter_commits('master', max_count=100)
+
+If you need paging, you can specify a number of commits to skip.
+
+    >>> repo.iter_commits('master', max_count=10, skip=20)
+
+The above will return commits 21-30 from the commit list.
+
+    >>> headcommit = repo.headcommit.commit 
+
+    >>> headcommit.sha
     '207c0c4418115df0d30820ab1a9acd2ea4bf4431'
 
-    >>> head.parents
+    >>> headcommit.parents
     [<git.Commit "a91c45eee0b41bf3cdaad3418ca3850664c4a4b4">]
 
-    >>> head.tree
+    >>> headcommit.tree
     <git.Tree "563413aedbeda425d8d9dcbb744247d0c3e8a0ac">
 
-    >>> head.author
+    >>> headcommit.author
     <git.Actor "Michael Trier <mtrier@gmail.com>">
 
-    >>> head.authored_date
-    (2008, 5, 7, 5, 0, 56, 2, 128, 0)
+    >>> headcommit.authored_date        # seconds since epoch
+    1256291446
 
-    >>> head.committer
+    >>> headcommit.committer
     <git.Actor "Michael Trier <mtrier@gmail.com>">
 
-    >>> head.committed_date
-    (2008, 5, 7, 5, 0, 56, 2, 128, 0)
+    >>> headcommit.committed_date
+    1256291446
 
-    >>> head.message
+    >>> headcommit.message
     'cleaned up a lot of test information. Fixed escaping so it works with
     subprocess.'
 
-Note: date time is represented in a `struct_time`_ format.  Conversion to
+Note: date time is represented in a ``seconds since epock`` format.  Conversion to
 human readable form can be accomplished with the various time module methods.
 
     >>> import time
-    >>> time.asctime(head.committed_date)
+    >>> time.asctime(time.gmtime(headcommit.committed_date))
     'Wed May 7 05:56:02 2008'
 
-    >>> time.strftime("%a, %d %b %Y %H:%M", head.committed_date)
+    >>> time.strftime("%a, %d %b %Y %H:%M", time.gmtime(headcommit.committed_date))
     'Wed, 7 May 2008 05:56'
 
 .. _struct_time: http://docs.python.org/library/time.html
 
 You can traverse a commit's ancestry by chaining calls to ``parents``.
 
-    >>> repo.commits()[0].parents[0].parents[0].parents[0]
+    >>> headcommit.parents[0].parents[0].parents[0]
 
 The above corresponds to ``master^^^`` or ``master~3`` in git parlance.
 
@@ -108,49 +208,37 @@ The Tree object
 A tree records pointers to the contents of a directory. Let's say you want
 the root tree of the latest commit on the master branch.
 
-    >>> tree = repo.commits()[0].tree
+    >>> tree = repo.heads.master.commit.tree
     <git.Tree "a006b5b1a8115185a228b7514cdcd46fed90dc92">
 
-    >>> tree.id
+    >>> tree.sha
     'a006b5b1a8115185a228b7514cdcd46fed90dc92'
 
 Once you have a tree, you can get the contents.
 
-    >>> contents = tree.values()
-    [<git.Blob "6a91a439ea968bf2f5ce8bb1cd8ddf5bf2cad6c7">,
-     <git.Blob "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391">,
-     <git.Tree "eaa0090ec96b054e425603480519e7cf587adfc3">,
-     <git.Blob "980e72ae16b5378009ba5dfd6772b59fe7ccd2df">]
+    >>> tree.trees          # trees are subdirectories
+    [<git.Tree "f7eb5df2e465ab621b1db3f5714850d6732cfed2">]
+    
+    >>> tree.blobs          # blobs are files
+    [<git.Blob "a871e79d59cf8488cac4af0c8f990b7a989e2b53">,
+    <git.Blob "3594e94c04db171e2767224db355f514b13715c5">,
+    <git.Blob "e79b05161e4836e5fbf197aeb52515753e8d6ab6">,
+    <git.Blob "94954abda49de8615a048f8d2e64b5de848e27a1">]
 
-The tree is implements a dictionary protocol so it can be used and acts just
-like a dictionary with some additional properties.
+Its useful to know that a tree behaves like a list with the ability to 
+query entries by name.
 
-    >>> tree.items()
-    [('lib', <git.Tree "310ebc9a0904531438bdde831fd6a27c6b6be58e">),
-     ('LICENSE', <git.Blob "6797c1421052efe2ded9efdbb498b37aeae16415">),
-     ('doc', <git.Tree "a58386dd101f6eb7f33499317e5508726dfd5e4f">),
-     ('MANIFEST.in', <git.Blob "7da4e346bb0a682e99312c48a1f452796d3fb988">),
-     ('.gitignore', <git.Blob "6870991011cc8d9853a7a8a6f02061512c6a8190">),
-     ('test', <git.Tree "c6f6ee37d328987bc6fb47a33fed16c7886df857">),
-     ('VERSION', <git.Blob "9faa1b7a7339db85692f91ad4b922554624a3ef7">),
-     ('AUTHORS', <git.Blob "9f649ef5448f9666d78356a2f66ba07c5fb27229">),
-     ('README', <git.Blob "9643dcf549f34fbd09503d4c941a5d04157570fe">),
-     ('ez_setup.py', <git.Blob "3031ad0d119bd5010648cf8c038e2bbe21969ecb">),
-     ('setup.py', <git.Blob "271074302aee04eb0394a4706c74f0c2eb504746">),
-     ('CHANGES', <git.Blob "0d236f3d9f20d5e5db86daefe1e3ba1ce68e3a97">)]
+    >>> tree[0] == tree['dir']
+    <git.Tree "f7eb5df2e465ab621b1db3f5714850d6732cfed2">
+    >>> for entry in tree: do_something(entry)
 
-This tree contains three ``Blob`` objects and one ``Tree`` object. The trees
-are subdirectories and the blobs are files. Trees below the root have
-additional attributes.
-
-    >>> contents = tree["lib"]
-    <git.Tree "c1c7214dde86f76bc3e18806ac1f47c38b2b7a3">
-
-    >>> contents.name
-    'test'
-
-    >>> contents.mode
-    '040000'
+    >>> blob = tree[0][0]
+    >>> blob.name
+    'file'
+    >>> blob.path
+    'dir/file'
+    >>> blob.abspath
+    '/Users/mtrier/Development/git-python/dir/file'
 
 There is a convenience method that allows you to get a named sub-object
 from a tree with a syntax similar to how paths are written in an unix
@@ -166,46 +254,133 @@ You can also get a tree directly from the repository if you know its name.
 
     >>> repo.tree("c1c7214dde86f76bc3e18806ac1f47c38b2b7a30")
     <git.Tree "c1c7214dde86f76bc3e18806ac1f47c38b2b7a30">
+    >>> repo.tree('0.1.6')
+    <git.Tree "6825a94104164d9f0f5632607bebd2a32a3579e5">
+    
+As trees only allow direct access to their direct entries, use the traverse 
+method to obtain an iterator to access entries recursively.
 
-The Blob object
-***************
+    >>> tree.traverse()
+    <generator object at 0x7f6598bd65a8>
+    >>> for entry in traverse(): do_something(entry)
 
-A blob represents a file. Trees often contain blobs.
+    
+The Index Object
+****************
+The git index is the stage containing changes to be written to the next commit
+or where merges finally have to take place. You may freely access and manipulate 
+this information using the Index Object.
 
-    >>> blob = tree['urls.py']
-    <git.Blob "b19574431a073333ea09346eafd64e7b1908ef49">
+    >>> index = repo.index
+    
+Access objects and add/remove entries. Commit the changes.
 
-A blob has certain attributes.
+    >>> for stage,blob in index.iter_blobs(): do_something(...)
+    Access blob objects
+    >>> for (path,stage),entry in index.entries.iteritems: pass
+    Access the entries directly
+    >>> index.add(['my_new_file'])      # add a new file to the index
+    >>> index.remove(['dir/existing_file'])
+    >>> new_commit = index.commit("my commit message")
+    
+Create new indices from other trees or as result of a merge. Write that result to 
+a new index.
 
-    >>> blob.name
-    'urls.py'
+    >>> tmp_index = Index.from_tree(repo, 'HEAD~1') # load a tree into a temporary index
+    >>> merge_index = Index.from_tree(repo, 'HEAD', 'some_branch') # merge two trees
+    >>> merge_index.write("merged_index")
+    
+Handling Remotes
+****************
 
-    >>> blob.mode
-    '100644'
+Remotes are used as alias for a foreign repository to ease pushing to and fetching
+from them.
 
-    >>> blob.mime_type
-    'text/x-python'
+    >>> test_remote = repo.create_remote('test', 'git@server:repo.git')
+    >>> repo.delete_remote(test_remote) # create and delete remotes
+    >>> origin = repo.remotes.origin    # get default remote by name
+    >>> origin.refs                     # local remote references
+    >>> o = origin.rename('new_origin') # rename remotes
+    >>> o.fetch()                       # fetch, pull and push from and to the remote
+    >>> o.pull()
+    >>> o.push()
 
-    >>> blob.size
-    415
+You can easily access configuration information for a remote by accessing options 
+as if they where attributes.
 
-You can get the data of a blob as a string.
+    >>> o.url
+    'git@server:dummy_repo.git'
+    
+Change configuration for a specific remote only 
+    >>> o.config_writer.set("url", "other_url")
+    
+Obtaining Diff Information
+**************************
 
-    >>> blob.data
-    "from django.conf.urls.defaults import *\nfrom django.conf..."
+Diffs can generally be obtained by Subclasses of ``Diffable`` as they provide 
+the ``diff`` method. This operation yields a DiffIndex allowing you to easily access
+diff information about paths.
 
-You can also get a blob directly from the repo if you know its name.
+Diffs can be made between Index and Trees, Index and the working tree, trees and 
+trees as well as trees and the working copy. If commits are involved, their tree
+will be used implicitly.
 
-    >>> repo.blob("b19574431a073333ea09346eafd64e7b1908ef49")
-    <git.Blob "b19574431a073333ea09346eafd64e7b1908ef49">
+    >>> hcommit = repo.head.commit
+    >>> idiff = hcommit.diff()          # diff tree against index
+    >>> tdiff = hcommit.diff('HEAD~1')  # diff tree against previous tree
+    >>> wdiff = hcommit.diff(None)      # diff tree against working tree
+    
+    >>> index = repo.index
+    >>> index.diff()                    # diff index against itself yielding empty diff
+    >>> index.diff(None)                # diff index against working copy
+    >>> index.diff('HEAD')              # diff index against current HEAD tree
 
-What Else?
-**********
+The item returned is a DiffIndex which is essentially a list of Diff objects. It 
+provides additional filtering to find what you might be looking for
 
-There is more stuff in there, like the ability to tar or gzip repos, stats,
-log, blame, and probably a few other things.  Additionally calls to the git
-instance are handled through a ``__getattr__`` construct, which makes
-available any git commands directly, with a nice conversion of Python dicts
-to command line parameters.
+    >>> for diff_added in wdiff.iter_change_type('A'): do_something(diff_added)
 
-Check the unit tests, they're pretty exhaustive.
+Switching Branches
+******************
+To switch between branches, you effectively need to point your HEAD to the new branch
+head and reset your index and working copy to match. A simple manual way to do it 
+is the following one.
+
+    >>> repo.head.reference = repo.heads.other_branch
+    >>> repo.head.reset(index=True, working_tree=True
+    
+The previous approach would brutally overwrite the user's changes in the working copy 
+and index though and is less sophisticated than a git-checkout for instance which 
+generally prevents you from destroying your work. Use the safer approach as follows:
+
+	>>> repo.heads.master.checkout()			# checkout the branch using git-checkout
+	>>> repo.heads.other_branch.checkout()
+
+Using git directly
+******************
+In case you are missing functionality as it has not been wrapped, you may conveniently
+use the git command directly. It is owned by each repository instance.
+
+    >>> git = repo.git
+    >>> git.checkout('head', b="my_new_branch")         # default command
+    >>> git.for_each_ref()                              # '-' becomes '_' when calling it
+    
+The return value will by default be a string of the standard output channel produced
+by the command.
+
+Keyword arguments translate to short and long keyword arguments on the commandline.
+The special notion ``git.command(flag=True)`` will create a flag without value like
+``command --flag``.
+
+If ``None`` is found in the arguments, it will be dropped silently. Lists and tuples 
+passed as arguments will be unpacked to individual arguments. Objects are converted 
+to strings using the str(...) function.
+
+And even more ...
+*****************
+
+There is more functionality in there, like the ability to archive repositories, get stats
+and logs, blame, and probably a few other things that were not mentioned here.  
+
+Check the unit tests for an in-depth introduction on how each function is supposed to be used.
+

@@ -18,6 +18,15 @@ class Actor(object):
 		self.name = name
 		self.email = email
 
+	def __eq__(self, other):
+		return self.name == other.name and self.email == other.email
+		
+	def __ne__(self, other):
+		return not (self == other)
+		
+	def __hash__(self):
+		return hash((self.name, self.email))
+
 	def __str__(self):
 		return self.name
 
