@@ -4,9 +4,8 @@
 GitPython Tutorial
 ==================
 
-GitPython provides object model access to your git repository. Once you have
-created a repository object, you can traverse it to find parent commit(s),
-trees, blobs, etc.
+GitPython provides object model access to your git repository. This tutorial is 
+composed of multiple sections, each of which explain a real-life usecase.
 
 Initialize a Repo object
 ************************
@@ -22,83 +21,109 @@ initialize GitPython with a bare repository.
 
     >>> repo = Repo.create("/var/git/git-python.git")
 
-Getting a list of commits
-*************************
+Examining References
+********************
 
-From the ``Repo`` object, you can get a list of ``Commit``
-objects.
+References are the tips of your commit graph from which you can easily examine 
+the history of your project.
 
-    >>> repo.commits()
-    [<git.Commit "207c0c4418115df0d30820ab1a9acd2ea4bf4431">,
-     <git.Commit "a91c45eee0b41bf3cdaad3418ca3850664c4a4b4">,
-     <git.Commit "e17c7e11aed9e94d2159e549a99b966912ce1091">,
-     <git.Commit "bd795df2d0e07d10e0298670005c0e9d9a5ed867">]
+    >>> heads = repo.heads
+    >>> master = heads.master		# lists can be accessed by name for convenience
+    >>> master.commit				# the commit pointed to by head called master
+    >>> master.rename("new_name")	# rename individual heads or
+    >>> repo.delete_head(master)	# delete them or
+    >>> repo.create_head('master')	# create them
+    
+Tags are (usually immutable) references to a commit and/or a tag object.
 
-Called without arguments, ``Repo.commits`` returns a list of up to ten commits
-reachable by the master branch (starting at the latest commit). You can ask
-for commits beginning at a different branch, commit, tag, etc.
+	>>> tags = repo.tags
+	>>> tagref = tags[0]
+	>>>	tagref.tag			# tags may have tag objects carrying additional information
+	>>> tagref.commit		# but they always point to commits
+	>>> repo.delete_tag(tagref)		# delete or
+	>>> repo.create_tag("my_tag")	# create tags using the repo
 
-    >>> repo.commits('mybranch')
-    >>> repo.commits('40d3057d09a7a4d61059bca9dca5ae698de58cbe')
-    >>> repo.commits('v0.1')
+Understanding Objects
+*********************
+An Object is anything storable in gits object database. Objects contain information
+about their type, their uncompressed size as well as their data. Each object is
+uniquely identified by a SHA1 hash, being 40 hexadecimal characters in size. 
 
-You can specify the maximum number of commits to return.
+Git only knows 4 distinct object types being Blobs, Trees, Commits and Tags.
 
-    >>> repo.commits('master', max_count=100)
+In Git-Pyhton, all objects can be accessed through their common base, compared 
+and hashed, as shown in the following example.
 
-If you need paging, you can specify a number of commits to skip.
-
-    >>> repo.commits('master', max_count=10, skip=20)
-
-The above will return commits 21-30 from the commit list.
+	>>> 
+	
+Index Objects are objects that can be put into gits index. These objects are trees
+and blobs which additionally know about their path in the filesystem as well as their
+mode.
 
 The Commit object
 *****************
 
-Commit objects contain information about a specific commit.
+Commit objects contain information about a specific commit. Obtain commits using 
+references as done in 'Examining References' or as follows
 
-    >>> head = repo.commits()[0]
+Obtain commits at the specified revision:
 
-    >>> head.id
+    >>> repo.commit('master')
+    >>> repo.commit('v0.1')
+    >>> repo.commit('HEAD~10')
+
+Iterate 100 commits
+
+    >>> repo.iter_commits('master', max_count=100)
+
+If you need paging, you can specify a number of commits to skip.
+
+    >>> repo.iter_commits('master', max_count=10, skip=20)
+
+The above will return commits 21-30 from the commit list.
+
+    >>> headcommit = repo.headcommit.commit 
+
+    >>> headcommit.sha
     '207c0c4418115df0d30820ab1a9acd2ea4bf4431'
 
-    >>> head.parents
+    >>> headcommit.parents
     [<git.Commit "a91c45eee0b41bf3cdaad3418ca3850664c4a4b4">]
 
-    >>> head.tree
+    >>> headcommit.tree
     <git.Tree "563413aedbeda425d8d9dcbb744247d0c3e8a0ac">
 
-    >>> head.author
+    >>> headcommit.author
     <git.Actor "Michael Trier <mtrier@gmail.com>">
 
-    >>> head.authored_date
-    (2008, 5, 7, 5, 0, 56, 2, 128, 0)
+    >>> headcommit.authored_date		# seconds since epoch
+    1256291446
 
-    >>> head.committer
+    >>> headcommit.committer
     <git.Actor "Michael Trier <mtrier@gmail.com>">
 
-    >>> head.committed_date
-    (2008, 5, 7, 5, 0, 56, 2, 128, 0)
+    >>> headcommit.committed_date
+    1256291446
 
-    >>> head.message
+    >>> headcommit.message
     'cleaned up a lot of test information. Fixed escaping so it works with
     subprocess.'
 
-Note: date time is represented in a `struct_time`_ format.  Conversion to
+Note: date time is represented in a `seconds since epock`_ format.  Conversion to
 human readable form can be accomplished with the various time module methods.
 
     >>> import time
-    >>> time.asctime(head.committed_date)
+    >>> time.asctime(time.gmtime(headcommit.committed_date))
     'Wed May 7 05:56:02 2008'
 
-    >>> time.strftime("%a, %d %b %Y %H:%M", head.committed_date)
+    >>> time.strftime("%a, %d %b %Y %H:%M", time.gmtime(headcommit.committed_date))
     'Wed, 7 May 2008 05:56'
 
 .. _struct_time: http://docs.python.org/library/time.html
 
 You can traverse a commit's ancestry by chaining calls to ``parents``.
 
-    >>> repo.commits()[0].parents[0].parents[0].parents[0]
+    >>> headcommit.parents[0].parents[0].parents[0]
 
 The above corresponds to ``master^^^`` or ``master~3`` in git parlance.
 
