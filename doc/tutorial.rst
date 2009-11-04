@@ -317,8 +317,41 @@ Change configuration for a specific remote only
 Obtaining Diff Information
 **************************
 
+Diffs can generally be obtained by Subclasses of ``Diffable`` as they provide 
+the ``diff`` method. This operation yields a DiffIndex allowing you to easily access
+diff information about paths.
+
+Diffs can be made between Index and Trees, Index and the working tree, trees and 
+trees as well as trees and the working copy. If commits are involved, their tree
+will be used implicitly.
+
+	>>> hcommit = repo.head.commit
+	>>> idiff = hcommit.diff()			# diff tree against index
+	>>> tdiff = hcommit.diff('HEAD~1')	# diff tree against previous tree
+	>>> wdiff = hcommit.diff(None)		# diff tree against working tree
+	
+	>>> index = repo.index
+	>>> index.diff()					# diff index against itself yielding empty diff
+	>>> index.diff(None)				# diff index against working copy
+	>>> index.diff('HEAD')				# diff index against current HEAD tree
+
+The item returned is a DiffIndex which is essentially a list of Diff objects. It 
+provides additional filtering to find what you might be looking for
+
+	>>> for diff_added in wdiff.iter_change_type('A'): do_something(diff_added)
+
 Switching Branches
 ******************
+To switch between branches, you effectively need to point your HEAD to the new branch
+head and reset your index and working copy to match. A simple manual way to do it 
+is the following one.
+
+	>>> repo.head.reference = repo.heads.other_branch
+	>>> repo.head.reset(index=True, working_tree=True
+	
+The previous approach would brutally overwrite the user's changes in the working copy 
+and index though and is less sophisticated than a git-checkout for instance which 
+generally prevents you from destroying your work.
 
 Using git directly
 ******************
@@ -340,11 +373,11 @@ If ``None`` is found in the arguments, it will be dropped silently. Lists and tu
 passed as arguments will be unpacked to individual arguments. Objects are converted 
 to strings using the str(...) function.
 
-What Else?
-**********
+And even more ...
+*****************
 
-There is more stuff in there, like the ability to archive repositories, get stats
-and logs, blame, and probably a few other things.  
+There is more functionality in there, like the ability to archive repositories, get stats
+and logs, blame, and probably a few other things that were not mentioned here.  
 
 Check the unit tests for an in-depth introduction on how each function is supposed to be used.
 
