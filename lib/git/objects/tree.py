@@ -40,6 +40,7 @@ class Tree(base.IndexObject, diff.Diffable):
 	# using ascii codes for comparison 
 	commit_id = 016		
 	blob_id = 010
+	symlink_id = 012
 	tree_id = 040
 	
 	
@@ -117,7 +118,7 @@ class Tree(base.IndexObject, diff.Diffable):
 			
 			mode |= type_id<<12
 			hexsha = sha_to_hex(sha)
-			if type_id == self.blob_id:
+			if type_id == self.blob_id or type_id == self.symlink_id:
 				yield blob.Blob(self.repo, hexsha, mode, name)
 			elif type_id == self.tree_id:
 				yield Tree(self.repo, hexsha, mode, name)
