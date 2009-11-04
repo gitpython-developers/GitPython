@@ -114,8 +114,8 @@ class DiffIndex(list):
 	# A = Added
 	# D = Deleted
 	# R = Renamed
-	# NOTE: 'Modified' mode is impllied as it wouldn't be listed as a diff otherwise
-	change_type = ("A", "D", "R")
+	# M = modified
+	change_type = ("A", "D", "R", "M")
 	
 	
 	def iter_change_type(self, change_type):
@@ -124,7 +124,15 @@ class DiffIndex(list):
 			iterator yieling Diff instances that match the given change_type
 		
 		``change_type``
-			Member of DiffIndex.change_type
+			Member of DiffIndex.change_type, namely
+			
+			'A' for added paths
+			
+			'D' for deleted paths
+			
+			'R' for renamed paths
+			
+			'M' for paths with modified data
 		"""
 		if change_type not in self.change_type:
 			raise ValueError( "Invalid change type: %s" % change_type )
@@ -135,6 +143,8 @@ class DiffIndex(list):
 			elif change_type == "D" and diff.deleted_file:
 				yield diff
 			elif change_type == "R" and diff.renamed:
+				yield diff
+			elif change_type == "M" and diff.a_blob and diff.b_blob and diff.a_blob != diff.b_blob:
 				yield diff
 		# END for each diff
 	
