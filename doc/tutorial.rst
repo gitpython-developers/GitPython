@@ -208,11 +208,13 @@ query entries by name.
     <git.Tree "f7eb5df2e465ab621b1db3f5714850d6732cfed2">
     >>> for entry in tree: do_something(entry)
 
-    >>> contents.name
-    'test'
-
-    >>> contents.mode
-    '040000'
+    >>> blob = tree[0][0]
+    >>> blob.name
+    'file'
+    >>> blob.path
+    'dir/file'
+    >>> blob.abspath
+    '/Users/mtrier/Development/git-python/dir/file'
 
 There is a convenience method that allows you to get a named sub-object
 from a tree with a syntax similar to how paths are written in an unix
@@ -228,39 +230,17 @@ You can also get a tree directly from the repository if you know its name.
 
     >>> repo.tree("c1c7214dde86f76bc3e18806ac1f47c38b2b7a30")
     <git.Tree "c1c7214dde86f76bc3e18806ac1f47c38b2b7a30">
-
-The Blob object
-***************
-
-A blob represents a file. Trees often contain blobs.
-
-    >>> blob = tree['urls.py']
-    <git.Blob "b19574431a073333ea09346eafd64e7b1908ef49">
-
-A blob has certain attributes.
-
-    >>> blob.name
-    'urls.py'
-
-    >>> blob.mode
-    '100644'
-
-    >>> blob.mime_type
-    'text/x-python'
-
-    >>> blob.size
-    415
-
-You can get the data of a blob as a string.
-
-    >>> blob.data
-    "from django.conf.urls.defaults import *\nfrom django.conf..."
-
-You can also get a blob directly from the repo if you know its name.
-
-    >>> repo.blob("b19574431a073333ea09346eafd64e7b1908ef49")
-    <git.Blob "b19574431a073333ea09346eafd64e7b1908ef49">
+    >>> repo.tree('0.1.6')
+    <git.Tree "6825a94104164d9f0f5632607bebd2a32a3579e5">
     
+As trees only allow direct access to their direct entries, use the traverse 
+method to obtain an iterator to access entries recursively.
+
+	>>> tree.traverse()
+	<generator object at 0x7f6598bd65a8>
+	>>> for entry in traverse(): do_something(entry)
+
+	
 Handling Remotes
 ****************
 
@@ -270,13 +250,31 @@ Obtaining Diff Information
 Switching Branches
 ******************
 
+Using git directly
+******************
+In case you are missing functionality as it has not been wrapped, you may conveniently
+use the git command directly. It is owned by each repository instance.
+
+	>>> git = repo.git
+	>>> git.checkout('head', b="my_new_branch")		# default command
+	>>> git.for_each_ref()								# '-' becomes '_' when calling it
+	
+The return value will by default be a string of the standard output channel produced
+by the command.
+
+Keyword arguments translate to short and long keyword arguments on the commandline.
+The special notion `git.command(flag=True)`_ will create a flag without value like
+``command --flag``.
+
+If ``None`` is found in the arguments, it will be dropped silently. Lists and tuples 
+passed as arguments will be unpacked to individual arguments. Objects are converted 
+to strings using the str(...) function.
+
 What Else?
 **********
 
-There is more stuff in there, like the ability to tar or gzip repos, stats,
-log, blame, and probably a few other things.  Additionally calls to the git
-instance are handled through a ``__getattr__`` construct, which makes
-available any git commands directly, with a nice conversion of Python dicts
-to command line parameters.
+There is more stuff in there, like the ability to archive repositories, get stats
+and logs, blame, and probably a few other things.  
 
-Check the unit tests, they're pretty exhaustive.
+Check the unit tests for an in-depth introduction on how each function is supposed to be used.
+
