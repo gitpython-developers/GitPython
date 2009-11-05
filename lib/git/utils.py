@@ -131,7 +131,7 @@ class LockFile(object):
 		
 		lock_file = self._lock_file_path()
 		try:
-			fp = open(lock_file, "r")
+			fp = open(lock_file, "rb")
 			pid = int(fp.read())
 			fp.close()
 		except IOError:
@@ -156,7 +156,7 @@ class LockFile(object):
 		if os.path.exists(lock_file):
 			raise IOError("Lock for file %r did already exist, delete %r in case the lock is illegal" % (self._file_path, lock_file))
 		
-		fp = open(lock_file, "w")
+		fp = open(lock_file, "wb")
 		fp.write(str(os.getpid()))
 		fp.close()
 		
@@ -212,7 +212,7 @@ class ConcurrentWriteOperation(LockFile):
 			
 		self._obtain_lock_or_raise()
 		dirname, basename = os.path.split(self._file_path)
-		self._temp_write_fp = open(tempfile.mktemp(basename, '', dirname), "w")
+		self._temp_write_fp = open(tempfile.mktemp(basename, '', dirname), "wb")
 		return self._temp_write_fp
 		
 	def _is_writing(self):

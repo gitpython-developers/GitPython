@@ -56,7 +56,7 @@ class TestUtils(TestCase):
 	def _cmp_contents(self, file_path, data):
 		# raise if data from file at file_path 
 		# does not match data string
-		fp = open(file_path, "r")
+		fp = open(file_path, "rb")
 		try:
 			assert fp.read() == data
 		finally:
@@ -66,7 +66,7 @@ class TestUtils(TestCase):
 		my_file = tempfile.mktemp()
 		orig_data = "hello"
 		new_data = "world"
-		my_file_fp = open(my_file, "w")
+		my_file_fp = open(my_file, "wb")
 		my_file_fp.write(orig_data)
 		my_file_fp.close()
 		

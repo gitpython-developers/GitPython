@@ -42,7 +42,7 @@ class TestTree(TestBase):
 		# write the data - it must match the original
 		tmpfile = tempfile.mktemp()
 		index_merge.write(tmpfile)
-		fp = open(tmpfile, 'r')
+		fp = open(tmpfile, 'rb')
 		assert fp.read() == fixture("index_merge")
 		fp.close()
 		os.remove(tmpfile)
@@ -164,14 +164,14 @@ class TestTree(TestBase):
 		# reset the working copy as well to current head,to pull 'back' as well
 		new_data = "will be reverted"
 		file_path = os.path.join(rw_repo.git.git_dir, "CHANGES")
-		fp = open(file_path, "w")
+		fp = open(file_path, "wb")
 		fp.write(new_data)
 		fp.close()
 		index.reset(rev_head_parent, working_tree=True)
 		assert not index.diff(None)
 		assert cur_branch == rw_repo.active_branch
 		assert cur_commit == rw_repo.head.commit
-		fp = open(file_path)
+		fp = open(file_path,'rb')
 		try:
 			assert fp.read() != new_data
 		finally:
