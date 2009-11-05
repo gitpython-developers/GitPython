@@ -63,7 +63,18 @@ class ListProcessAdapter(object):
 		
 	poll = wait
 	
-	
+
+def _rmtree_onerror(osremove, fullpath, exec_info):
+	"""
+	Handle the case on windows that read-only files cannot be deleted by 
+	os.remove by setting it to mode 777, then retry deletion.
+	"""
+	if os.name != 'nt' or osremove is not os.remove:
+		raise
+		
+	os.chmod(fullpath, 0777)
+	os.remove(fullpath)
+
 def with_bare_rw_repo(func):
 	"""
 	Decorator providing a specially made read-write repository to the test case
@@ -83,7 +94,7 @@ def with_bare_rw_repo(func):
 			return func(self, rw_repo)
 		finally:
 			rw_repo.git.clear_cache()
-			shutil.rmtree(repo_dir)
+			shutil.rmtree(repo_dir, onerror=_rmtree_onerror)
 		# END cleanup
 	# END bare repo creator
 	bare_repo_creator.__name__ = func.__name__
@@ -109,7 +120,7 @@ def with_rw_repo(working_tree_ref):
 				return func(self, rw_repo)
 			finally:
 				rw_repo.git.clear_cache()
-				shutil.rmtree(repo_dir)
+				shutil.rmtree(repo_dir, onerror=_rmtree_onerror)
 			# END cleanup
 		# END rw repo creator
 		repo_creator.__name__ = func.__name__
@@ -186,8 +197,8 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
 			finally:
 				rw_repo.git.clear_cache()
 				rw_remote_repo.git.clear_cache()
-				shutil.rmtree(repo_dir)
-				shutil.rmtree(remote_repo_dir)
+				shutil.rmtree(repo_dir, onerror=_rmtree_onerror)
+				shutil.rmtree(remote_repo_dir, onerror=_rmtree_onerror)
 			# END cleanup
 		# END bare repo creator
 		remote_repo_creator.__name__ = func.__name__
