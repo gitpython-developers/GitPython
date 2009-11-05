@@ -176,7 +176,10 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
 				rw_repo.git.ls_remote(d_remote)
 			except GitCommandError,e:
 				print str(e)
-				raise AssertionError('Please start a git-daemon to run this test, execute: git-daemon "%s"'%tempfile.gettempdir())
+				if os.name == 'nt':
+					raise AssertionError('git-daemon needs to run this test, but windows does not have one. Otherwise, run: git-daemon "%s"'%tempfile.gettempdir()) 
+				else:
+					raise AssertionError('Please start a git-daemon to run this test, execute: git-daemon "%s"'%tempfile.gettempdir())
 			
 			try:
 				return func(self, rw_repo, rw_remote_repo)
