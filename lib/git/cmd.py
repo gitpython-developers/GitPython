@@ -63,7 +63,10 @@ class Git(object):
 				os.kill(self.proc.pid, 2)	# interrupt signal
 			except AttributeError:
 				# try windows 
-				subprocess.call(("TASKKILL", "/T", "/PID", self.proc.pid))
+				# for some reason, providing None for stdout/stderr still prints something. This is why 
+				# we simply use the shell and redirect to nul. Its slower than CreateProcess, question 
+				# is whether we really want to see all these messages. Its annoying no matter what.
+				subprocess.call(("TASKKILL /F /T /PID %s > nul" % str(self.proc.pid)), shell=True)
 			# END exception handling 
 			
 		def __getattr__(self, attr):
