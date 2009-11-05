@@ -116,6 +116,7 @@ class GitConfigParser(cp.RawConfigParser, LockFile):
 			If True, the ConfigParser may only read the data , but not change it.
 			If False, only a single file path or file object may be given.
 		"""
+		super(GitConfigParser, self).__init__()
 		# initialize base with ordered dictionaries to be sure we write the same 
 		# file back 
 		self._sections = OrderedDict()
