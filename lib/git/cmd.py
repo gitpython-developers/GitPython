@@ -17,7 +17,7 @@ execute_kwargs = ('istream', 'with_keep_cwd', 'with_extended_output',
 				  'output_stream' )
 
 extra = {}
-# NOTE: Execution through a shell appears to be slightly faster, but in fact
+# NOTE: Execution through a shell on windows appears to be slightly faster, but in fact
 # I consider it a problem whenever complex strings are passed and *interpreted* 
 # by the shell beforehand. This can cause great confusion and reduces compatability
 # between the OS which is why the shell should not be used ( unless it does not work
@@ -401,3 +401,16 @@ class Git(object):
 		cmd.stdout.read(1)		# finishing newlines
 		
 		return (hexsha, typename, size, data)
+		
+	def clear_cache(self):
+		"""
+		Clear all kinds of internal caches to release resources.
+		
+		Currently persistent commands will be interrupted.
+		
+		Returns
+			self
+		"""
+		self.cat_file_all = None
+		self.cat_file_header = None
+		return self

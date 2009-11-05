@@ -82,6 +82,7 @@ def with_bare_rw_repo(func):
 		try:
 			return func(self, rw_repo)
 		finally:
+			rw_repo.git.clear_cache()
 			shutil.rmtree(repo_dir)
 		# END cleanup
 	# END bare repo creator
@@ -107,6 +108,7 @@ def with_rw_repo(working_tree_ref):
 			try:
 				return func(self, rw_repo)
 			finally:
+				rw_repo.git.clear_cache()
 				shutil.rmtree(repo_dir)
 			# END cleanup
 		# END rw repo creator
@@ -179,6 +181,8 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
 			try:
 				return func(self, rw_repo, rw_remote_repo)
 			finally:
+				rw_repo.git.clear_cache()
+				rw_remote_repo.git.clear_cache()
 				shutil.rmtree(repo_dir)
 				shutil.rmtree(remote_repo_dir)
 			# END cleanup
