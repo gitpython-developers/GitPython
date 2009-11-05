@@ -8,7 +8,7 @@
 import os
 from objects import Object, Commit
 from objects.utils import get_object_type_by_name
-from utils import LazyMixin, Iterable
+from utils import LazyMixin, Iterable, join_path, join_path_native, to_native_path_linux
 
 class Reference(LazyMixin, Iterable):
 	"""
@@ -136,15 +136,15 @@ class Reference(LazyMixin, Iterable):
 		
 		# walk loose refs
 		# Currently we do not follow links 
-		for root, dirs, files in os.walk(os.path.join(repo.path, common_path)):
+		for root, dirs, files in os.walk(join_path_native(repo.path, common_path)):
 			for f in files:
-				abs_path = os.path.join(root, f)
-				rela_paths.add(abs_path.replace(repo.path + '/', ""))
+				abs_path = to_native_path_linux(join_path(root, f))
+				rela_paths.add(abs_path.replace(to_native_path_linux(repo.path) + '/', ""))
 			# END for each file in root directory
 		# END for each directory to walk
 		
 		# read packed refs
-		packed_refs_path = os.path.join(repo.path, 'packed-refs')
+		packed_refs_path = join_path_native(repo.path, 'packed-refs')
 		if os.path.isfile(packed_refs_path):
 			fp = open(packed_refs_path, 'r')
 			try:
@@ -230,7 +230,7 @@ class SymbolicReference(object):
 		return hash(self.name)
 		
 	def _get_path(self):
-		return os.path.join(self.repo.path, self.name)
+		return join_path_native(self.repo.path, self.name)
 		
 	def _get_commit(self):
 		"""

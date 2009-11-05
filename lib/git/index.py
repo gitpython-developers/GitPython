@@ -19,7 +19,7 @@ import subprocess
 import git.diff as diff
 
 from git.objects import Blob, Tree, Object, Commit
-from git.utils import SHA1Writer, LazyMixin, ConcurrentWriteOperation
+from git.utils import SHA1Writer, LazyMixin, ConcurrentWriteOperation, join_path_native
 
 
 class _TemporaryFileSwap(object):
@@ -260,7 +260,7 @@ class IndexFile(LazyMixin, diff.Diffable):
 			super(IndexFile, self)._set_cache_(attr)
 	
 	def _index_path(self):
-		return os.path.join(self.repo.path, "index")
+		return join_path_native(self.repo.path, "index")
 	
 	
 	@property
@@ -440,7 +440,7 @@ class IndexFile(LazyMixin, diff.Diffable):
 		# as it considers existing entries. moving it essentially clears the index.
 		# Unfortunately there is no 'soft' way to do it.
 		# The _TemporaryFileSwap assure the original file get put back
-		index_handler = _TemporaryFileSwap(os.path.join(repo.path, 'index'))
+		index_handler = _TemporaryFileSwap(join_path_native(repo.path, 'index'))
 		try:
 			repo.git.read_tree(*arg_list, **kwargs)
 			index = cls(repo, tmp_index)

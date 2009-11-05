@@ -9,55 +9,88 @@ import sys
 import tempfile
 
 try:
-    import hashlib
+	import hashlib
 except ImportError:
-    import sha
+	import sha
 
 def make_sha(source=''):
-    """
-    A python2.4 workaround for the sha/hashlib module fiasco
-    
+	"""
+	A python2.4 workaround for the sha/hashlib module fiasco
+	
 	Note
 		From the dulwich project
 	"""
-    try:
-        return hashlib.sha1(source)
-    except NameError:
-        sha1 = sha.sha(source)
-        return sha1
+	try:
+		return hashlib.sha1(source)
+	except NameError:
+		sha1 = sha.sha(source)
+		return sha1
+
+def join_path(a, *p):
+	"""Join path tokens together similar to os.path.join, but always use 
+	'/' instead of possibly '\' on windows."""
+	path = a
+	for b in p:
+		if b.startswith('/'):
+			path += b[1:]
+		elif path == '' or path.endswith('/'):
+			path +=	 b
+		else:
+			path += '/' + b
+	return path
+	
+def to_native_path_windows(path):
+	return path.replace('/','\\')
+	
+def to_native_path_linux(path):
+	return path.replace('\\','/')
+
+if sys.platform.startswith('win'):
+	to_native_path = to_native_path_windows
+else:
+	# no need for any work on linux
+	def to_native_path_linux(path):
+		return path
+	to_native_path = to_native_path_linux
+
+def join_path_native(a, *p):
+	"""As join path, but makes sure an OS native path is returned. This is only 
+	needed to play it safe on my dear windows and to assure nice paths that only 
+	use '\'"""
+	return to_native_path(join_path(a, *p))
 
 
 class SHA1Writer(object):
-    """
-    Wrapper around a file-like object that remembers the SHA1 of 
-    the data written to it. It will write a sha when the stream is closed
-    or if the asked for explicitly usign write_sha.
-    
-    Note:
-    	Based on the dulwich project
-    """
-    __slots__ = ("f", "sha1")
-    
-    def __init__(self, f):
-        self.f = f
-        self.sha1 = make_sha("")
+	"""
+	Wrapper around a file-like object that remembers the SHA1 of 
+	the data written to it. It will write a sha when the stream is closed
+	or if the asked for explicitly usign write_sha.
+	
+	Note:
+		Based on the dulwich project
+	"""
+	__slots__ = ("f", "sha1")
+	
+	def __init__(self, f):
+		self.f = f
+		self.sha1 = make_sha("")
 
-    def write(self, data):
-        self.sha1.update(data)
-        self.f.write(data)
+	def write(self, data):
+		self.sha1.update(data)
+		self.f.write(data)
 
-    def write_sha(self):
-        sha = self.sha1.digest()
-        self.f.write(sha)
-        return sha
+	def write_sha(self):
+		sha = self.sha1.digest()
+		self.f.write(sha)
+		return sha
 
-    def close(self):
-        sha = self.write_sha()
-        self.f.close()
-        return sha
+	def close(self):
+		sha = self.write_sha()
+		self.f.close()
+		return sha
 
-    def tell(self):
-        return self.f.tell()
+	def tell(self):
+		return self.f.tell()
 
 
 class LockFile(object):
