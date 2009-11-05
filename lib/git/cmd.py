@@ -17,8 +17,13 @@ execute_kwargs = ('istream', 'with_keep_cwd', 'with_extended_output',
 				  'output_stream' )
 
 extra = {}
-if sys.platform == 'win32':
-	extra = {'shell': True}
+# NOTE: Execution through a shell appears to be slightly faster, but in fact
+# I consider it a problem whenever complex strings are passed and *interpreted* 
+# by the shell beforehand. This can cause great confusion and reduces compatability
+# between the OS which is why the shell should not be used ( unless it does not work
+# otherwise )
+#if sys.platform == 'win32':
+#	extra = {'shell': False}
 
 def dashify(string):
 	return string.replace('_', '-')
