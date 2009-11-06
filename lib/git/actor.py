@@ -11,7 +11,7 @@ class Actor(object):
 	can be committers and authors or anything with a name and an email as 
 	mentioned in the git log entries."""
 	# precompiled regex
-	name_only_regex = re.compile( r'<.+>' )
+	name_only_regex = re.compile( r'<(.+)>' )
 	name_email_regex = re.compile( r'(.*) <(.+?)>' ) 
 	
 	def __init__(self, name, email):
@@ -47,9 +47,16 @@ class Actor(object):
 		Returns
 			Actor
 		"""
-		if cls.name_only_regex.search(string):
-			m = cls.name_email_regex.search(string)
+		m = cls.name_email_regex.search(string)
+		if m:
 			name, email = m.groups()
 			return Actor(name, email)
 		else:
-			return Actor(string, None)
+			m = cls.name_only_regex.search(string)
+			if m:
+				return Actor(m.group(1), None)
+			else:
+				# assume best and use the whole string as name
+				return Actor(string, None)
+			# END special case name
+		# END handle name/email matching
