@@ -9,6 +9,7 @@ import blob
 import base
 import binascii
 import git.diff as diff
+from git.utils import join_path
 
 def sha_to_hex(sha):
     """Takes a string and returns the hex of the sha within"""
@@ -110,7 +111,7 @@ class Tree(base.IndexObject, diff.Diffable):
 				i += 1
 			# END while not reached NULL
 			name = data[ns:i]
-			path = os.path.join(self.path, name)
+			path = join_path(self.path, name)
 			
 			# byte is NULL, get next 20
 			i += 1

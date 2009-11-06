@@ -674,7 +674,38 @@ class Repo(object):
 		Returns
 			``git.Repo`` (the newly cloned repo)
 		"""
-		self.git.clone(self.path, path, **kwargs)
+		# special handling for windows for path at which the clone should be 
+		# created.
+		# tilde '~' will be expanded to the HOME no matter where the ~ occours. Hence
+		# we at least give a proper error instead of letting git fail
+		prev_cwd = None
+		prev_path = None
+		if os.name == 'nt':
+			if '~' in path:
+				raise OSError("Git cannot handle the ~ character in path %r correctly" % path)
+				
+			# on windows, git will think paths like c: are relative and prepend the 
+			# current working dir ( before it fails ). We temporarily adjust the working 
+			# dir to make this actually work
+			match = re.match("(\w:[/\\\])(.*)", path)
+			if match:
+				prev_cwd = os.getcwd()
+				prev_path = path
+				drive, rest_of_path = match.groups()
+				os.chdir(drive)
+				path = rest_of_path
+				kwargs['with_keep_cwd'] = True
+			# END cwd preparation 
+		# END windows handling 
+		
+		try:
+			self.git.clone(self.path, path, **kwargs)
+		finally:
+			if prev_cwd is not None:
+				os.chdir(prev_cwd)
+				path = prev_path
+			# END reset previous working dir
+		# END bad windows handling
 		return Repo(path)
 
 

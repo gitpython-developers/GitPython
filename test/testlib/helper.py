@@ -17,7 +17,7 @@ def fixture_path(name):
 	return os.path.join(test_dir, "fixtures", name)
 
 def fixture(name):
-	return open(fixture_path(name)).read()
+	return open(fixture_path(name), 'rb').read()
 
 def absolute_project_path():
 	return os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -63,7 +63,18 @@ class ListProcessAdapter(object):
 		
 	poll = wait
 	
-	
+
+def _rmtree_onerror(osremove, fullpath, exec_info):
+	"""
+	Handle the case on windows that read-only files cannot be deleted by 
+	os.remove by setting it to mode 777, then retry deletion.
+	"""
+	if os.name != 'nt' or osremove is not os.remove:
+		raise
+		
+	os.chmod(fullpath, 0777)
+	os.remove(fullpath)
+
 def with_bare_rw_repo(func):
 	"""
 	Decorator providing a specially made read-write repository to the test case
@@ -82,7 +93,8 @@ def with_bare_rw_repo(func):
 		try:
 			return func(self, rw_repo)
 		finally:
-			shutil.rmtree(repo_dir)
+			rw_repo.git.clear_cache()
+			shutil.rmtree(repo_dir, onerror=_rmtree_onerror)
 		# END cleanup
 	# END bare repo creator
 	bare_repo_creator.__name__ = func.__name__
@@ -107,7 +119,8 @@ def with_rw_repo(working_tree_ref):
 			try:
 				return func(self, rw_repo)
 			finally:
-				shutil.rmtree(repo_dir)
+				rw_repo.git.clear_cache()
+				shutil.rmtree(repo_dir, onerror=_rmtree_onerror)
 			# END cleanup
 		# END rw repo creator
 		repo_creator.__name__ = func.__name__
@@ -174,13 +187,18 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
 				rw_repo.git.ls_remote(d_remote)
 			except GitCommandError,e:
 				print str(e)
-				raise AssertionError('Please start a git-daemon to run this test, execute: git-daemon "%s"'%tempfile.gettempdir())
+				if os.name == 'nt':
+					raise AssertionError('git-daemon needs to run this test, but windows does not have one. Otherwise, run: git-daemon "%s"'%tempfile.gettempdir()) 
+				else:
+					raise AssertionError('Please start a git-daemon to run this test, execute: git-daemon "%s"'%tempfile.gettempdir())
 			
 			try:
 				return func(self, rw_repo, rw_remote_repo)
 			finally:
-				shutil.rmtree(repo_dir)
-				shutil.rmtree(remote_repo_dir)
+				rw_repo.git.clear_cache()
+				rw_remote_repo.git.clear_cache()
+				shutil.rmtree(repo_dir, onerror=_rmtree_onerror)
+				shutil.rmtree(remote_repo_dir, onerror=_rmtree_onerror)
 			# END cleanup
 		# END bare repo creator
 		remote_repo_creator.__name__ = func.__name__

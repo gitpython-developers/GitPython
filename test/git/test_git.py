@@ -45,13 +45,6 @@ class TestGit(TestCase):
 					 self.git.hash_object(istream=fh, stdin=True))
 		fh.close()
 
-	def test_it_handles_large_input(self):
-		if sys.platform == 'win32':
-			output = self.git.execute(["type", "C:\WINDOWS\system32\cmd.exe"])
-		else:
-			output = self.git.execute(["cat", "/bin/bash"])
-		assert_true(len(output) > 4096) # at least 4k
-
 	@patch_object(Git, 'execute')
 	def test_it_ignores_false_kwargs(self, git):
 		# this_should_not_be_ignored=False implies it *should* be ignored

@@ -75,7 +75,7 @@ class TestCommit(TestBase):
 			assert_equal(sha1, commit.sha)
 
 	def test_count(self):
-		assert self.rorepo.tag('refs/tags/0.1.5').commit.count( ) == 141
+		assert self.rorepo.tag('refs/tags/0.1.5').commit.count( ) == 143
 		
 	def test_list(self):
 		assert isinstance(Commit.list_items(self.rorepo, '0.1.5', max_count=5)['5117c9c8a4d3af19a9958677e45cda9269de1541'], Commit)

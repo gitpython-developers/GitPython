@@ -7,15 +7,14 @@
 import os, sys
 from test.testlib import *
 from git import *
+from git.utils import join_path_native
+import tempfile
 
 class TestRepo(TestBase):
 	
 	@raises(InvalidGitRepositoryError)
 	def test_new_should_raise_on_invalid_repo_location(self):
-		if sys.platform == "win32":
-			Repo("C:\\WINDOWS\\Temp")
-		else:
-			Repo("/tmp")
+		Repo(tempfile.gettempdir())
 
 	@raises(NoSuchPathError)
 	def test_new_should_raise_on_non_existant_path(self):
@@ -220,7 +219,8 @@ class TestRepo(TestBase):
 		
 	def test_untracked_files(self):
 		base = self.rorepo.git.git_dir
-		files = (base+"/__test_myfile", base+"/__test_other_file")
+		files = (	join_path_native(base, "__test_myfile"), 
+					join_path_native(base, "__test_other_file")	)
 		num_recently_untracked = 0
 		try:
 			for fpath in files:
@@ -233,7 +233,7 @@ class TestRepo(TestBase):
 			# assure we have all names - they are relative to the git-dir
 			num_test_untracked = 0
 			for utfile in untracked_files:
-				num_test_untracked += os.path.join(base, utfile) in files
+				num_test_untracked += join_path_native(base, utfile) in files
 			assert len(files) == num_test_untracked
 		finally:
 			for fpath in files:

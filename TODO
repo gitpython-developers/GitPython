@@ -11,9 +11,13 @@ General
   a sha or ref unless cat-file is used where it must be a sha
 * Overhaul command caching - currently its possible to create many instances of 
   the std-in command types, as it appears they are not killed when the repo gets 
-  deleted. A clear() method could already help to allow long-running programs
-  to remove cached commands after an idle time.
-
+  deleted.
+* git command on windows may be killed using the /F options which probably is like
+  SIGKILL. This is bad as the process might be doing something, leaving the resource
+  locked and/or in an inconsistent state. Without the /F option, git does not terminate 
+  itself, probably it listens to SIGINT which is not sent by TASKKILL. We can't really
+  help it, but may be at some point git handles windows signals properly.
+  
 Object
 ------
 * DataStream method should read the data itself. This would be easy once you have 

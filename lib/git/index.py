@@ -19,7 +19,7 @@ import subprocess
 import git.diff as diff
 
 from git.objects import Blob, Tree, Object, Commit
-from git.utils import SHA1Writer, LazyMixin, ConcurrentWriteOperation
+from git.utils import SHA1Writer, LazyMixin, ConcurrentWriteOperation, join_path_native
 
 
 class _TemporaryFileSwap(object):
@@ -36,7 +36,7 @@ class _TemporaryFileSwap(object):
 		
 	def __del__(self):
 		if os.path.isfile(self.tmp_file_path):
-			if sys.platform == "win32" and os.path.exists(self.file_path):
+			if os.name == 'nt' and os.path.exists(self.file_path):
 				os.remove(self.file_path)
 			os.rename(self.tmp_file_path, self.file_path)
 		# END temp file exists
@@ -243,9 +243,10 @@ class IndexFile(LazyMixin, diff.Diffable):
 		if attr == "entries":
 			# read the current index
 			# try memory map for speed
-			fp = open(self._file_path, "r")
+			fp = open(self._file_path, "rb")
 			stream = fp
 			try:
+				raise Exception()
 				stream = mmap.mmap(fp.fileno(), 0, access=mmap.ACCESS_READ)
 			except Exception:
 				pass
@@ -254,13 +255,18 @@ class IndexFile(LazyMixin, diff.Diffable):
 			try:
 				self._read_from_stream(stream)
 			finally:
-				fp.close()
+				pass
+				# make sure we close the stream ( possibly an mmap )
+				# and the file
+				#stream.close()
+				#if stream is not fp:
+				#	fp.close()
 			# END read from default index on demand
 		else:
 			super(IndexFile, self)._set_cache_(attr)
 	
 	def _index_path(self):
-		return os.path.join(self.repo.path, "index")
+		return join_path_native(self.repo.path, "index")
 	
 	
 	@property
@@ -440,7 +446,7 @@ class IndexFile(LazyMixin, diff.Diffable):
 		# as it considers existing entries. moving it essentially clears the index.
 		# Unfortunately there is no 'soft' way to do it.
 		# The _TemporaryFileSwap assure the original file get put back
-		index_handler = _TemporaryFileSwap(os.path.join(repo.path, 'index'))
+		index_handler = _TemporaryFileSwap(join_path_native(repo.path, 'index'))
 		try:
 			repo.git.read_tree(*arg_list, **kwargs)
 			index = cls(repo, tmp_index)
@@ -603,7 +609,7 @@ class IndexFile(LazyMixin, diff.Diffable):
 		"""
 		if not os.path.isabs(path):
 			return path
-		relative_path = path.replace(self.repo.git.git_dir+"/", "")
+		relative_path = path.replace(self.repo.git.git_dir+os.sep, "")
 		if relative_path == path:
 			raise ValueError("Absolute path %r is not in git repository at %r" % (path,self.repo.git.git_dir))
 		return relative_path
@@ -839,10 +845,10 @@ class IndexFile(LazyMixin, diff.Diffable):
 		
 		# create message stream
 		tmp_file_path = tempfile.mktemp()
-		fp = open(tmp_file_path,"w")
+		fp = open(tmp_file_path,"wb")
 		fp.write(str(message))
 		fp.close()
-		fp = open(tmp_file_path,"r")
+		fp = open(tmp_file_path,"rb")
 		fp.seek(0)
 		
 		try:

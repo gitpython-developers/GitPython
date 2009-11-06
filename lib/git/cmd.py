@@ -17,8 +17,13 @@ execute_kwargs = ('istream', 'with_keep_cwd', 'with_extended_output',
 				  'output_stream' )
 
 extra = {}
-if sys.platform == 'win32':
-	extra = {'shell': True}
+# NOTE: Execution through a shell on windows appears to be slightly faster, but in fact
+# I consider it a problem whenever complex strings are passed and *interpreted* 
+# by the shell beforehand. This can cause great confusion and reduces compatability
+# between the OS which is why the shell should not be used ( unless it does not work
+# otherwise )
+#if sys.platform == 'win32':
+#	extra = {'shell': False}
 
 def dashify(string):
 	return string.replace('_', '-')
@@ -63,7 +68,10 @@ class Git(object):
 				os.kill(self.proc.pid, 2)	# interrupt signal
 			except AttributeError:
 				# try windows 
-				subprocess.call(("TASKKILL", "/T", "/PID", self.proc.pid))
+				# for some reason, providing None for stdout/stderr still prints something. This is why 
+				# we simply use the shell and redirect to nul. Its slower than CreateProcess, question 
+				# is whether we really want to see all these messages. Its annoying no matter what.
+				subprocess.call(("TASKKILL /F /T /PID %s 2>nul 1>nul" % str(self.proc.pid)), shell=True)
 			# END exception handling 
 			
 		def __getattr__(self, attr):
@@ -393,3 +401,16 @@ class Git(object):
 		cmd.stdout.read(1)		# finishing newlines
 		
 		return (hexsha, typename, size, data)
+		
+	def clear_cache(self):
+		"""
+		Clear all kinds of internal caches to release resources.
+		
+		Currently persistent commands will be interrupted.
+		
+		Returns
+			self
+		"""
+		self.cat_file_all = None
+		self.cat_file_header = None
+		return self

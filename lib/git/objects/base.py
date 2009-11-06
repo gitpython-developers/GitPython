@@ -4,7 +4,7 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 import os
-from git.utils import LazyMixin
+from git.utils import LazyMixin, join_path_native
 import utils
 	
 _assertion_msg_format = "Created object %r whose python type %r disagrees with the acutal git object type %r"
@@ -209,7 +209,9 @@ class IndexObject(Object):
 		"""
 		Returns
 			Absolute path to this index object in the file system ( as opposed to the 
-			.path field which is a path relative to the git repository )
+			.path field which is a path relative to the git repository ).
+			
+			The returned path will be native to the system and contains '\' on windows. 
 		"""
-		return os.path.join(self.repo.git.git_dir, self.path)
+		return join_path_native(self.repo.git.git_dir, self.path)
 		

@@ -116,7 +116,13 @@ class Commit(base.Object, Iterable, diff.Diffable):
 		Returns
 			int
 		"""
-		return len(self.repo.git.rev_list(self.sha, '--', paths, **kwargs).strip().splitlines())
+		# yes, it makes a difference whether empty paths are given or not in our case
+		# as the empty paths version will ignore merge commits for some reason.
+		if paths:
+			return len(self.repo.git.rev_list(self.sha, '--', paths, **kwargs).splitlines())
+		else:
+			return len(self.repo.git.rev_list(self.sha, **kwargs).splitlines())
+		
 
 	@property
 	def name_rev(self):
