@@ -240,7 +240,13 @@ class TestRemote(TestBase):
 		lhead = rw_repo.head
 		lindex = rw_repo.index
 		# assure we are on master and it is checked out where the remote is
-		lhead.reference = rw_repo.heads.master
+		try:
+			lhead.reference = rw_repo.heads.master
+		except AttributeError:
+			# if the author is on a non-master branch, the clones might not have 
+			# a local master yet. We simply create it
+			lhead.reference = rw_repo.create_head('master')
+		# END master handling 
 		lhead.reset(remote.refs.master, working_tree=True)
 		
 		# push without spec should fail ( without further configuration )
