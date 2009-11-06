@@ -332,7 +332,8 @@ class TestTree(TestBase):
 		
 		# add fake symlink and assure it checks-our as symlink
 		fake_symlink_relapath = "my_fake_symlink"
-		fake_symlink_path = self._make_file(fake_symlink_relapath, "/etc/that", rw_repo)
+		link_target = "/etc/that"
+		fake_symlink_path = self._make_file(fake_symlink_relapath, link_target, rw_repo)
 		fake_entry = BaseIndexEntry((0120000, null_sha, 0, fake_symlink_relapath))
 		entries = index.reset(new_commit).add([fake_entry])
 		assert len(entries) == 1 and S_ISLNK(entries[0].mode)
@@ -341,5 +342,12 @@ class TestTree(TestBase):
 		assert not S_ISLNK(os.stat(fake_symlink_path)[ST_MODE])
 		os.remove(fake_symlink_path)
 		index.checkout(fake_symlink_path)
-		assert S_ISLNK(os.lstat(fake_symlink_path)[ST_MODE])
+		
+		# on windows we will never get symlinks
+		if os.name == 'nt':
+			# simlinks should contain the link as text ( which is what a 
+			# symlink actually is )
+			open(fake_symlink_path,'rb').read() == link_target 
+		else:
+			assert S_ISLNK(os.lstat(fake_symlink_path)[ST_MODE])
 		

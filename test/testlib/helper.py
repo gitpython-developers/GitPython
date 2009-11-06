@@ -17,7 +17,7 @@ def fixture_path(name):
 	return os.path.join(test_dir, "fixtures", name)
 
 def fixture(name):
-	return open(fixture_path(name)).read()
+	return open(fixture_path(name), 'rb').read()
 
 def absolute_project_path():
 	return os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
