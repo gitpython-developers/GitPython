@@ -66,7 +66,9 @@ class Repo(object):
 
 			repo = Repo("/Users/mtrier/Development/git-python")
 			repo = Repo("/Users/mtrier/Development/git-python.git")
-
+			repo = Repo("~/Development/git-python.git")
+			repo = Repo("$REPOSITORIES/Development/git-python.git")
+			
 		Raises
 			InvalidGitRepositoryError or NoSuchPathError
 
@@ -74,7 +76,7 @@ class Repo(object):
 			``git.Repo``
 		"""
 
-		epath = os.path.abspath(os.path.expanduser(path or os.getcwd()))
+		epath = os.path.abspath(os.path.expandvars(os.path.expanduser(path or os.getcwd())))
 
 		if not os.path.exists(epath):
 			raise NoSuchPathError(epath)
