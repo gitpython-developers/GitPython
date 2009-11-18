@@ -160,6 +160,19 @@ class IndexEntry(BaseIndexEntry):
 		return self[10]
 		
 	@classmethod
+	def from_base(cls, base):
+		"""
+		Returns
+			Minimal entry as created from the given BaseIndexEntry instance.
+			Missing values will be set to null-like values
+			
+		``base``
+			Instance of type BaseIndexEntry
+		"""
+		time = struct.pack(">LL", 0, 0)
+		return IndexEntry((base.mode, base.sha, base.stage, base.path, time, time, 1, 1, 1, 1, 0))
+		
+	@classmethod
 	def from_blob(cls, blob):
 		"""
 		Returns
@@ -219,7 +232,8 @@ class IndexFile(LazyMixin, diff.Diffable):
 	The index contains an entries dict whose keys are tuples of type IndexEntry
 	to facilitate access.
 	
-	You may only read the entries dict or manipulate it through designated methods.
+	You may read the entries dict or manipulate it using IndexEntry instance, i.e.::
+		index.entries[index.get_entries_key(index_entry_instance)] = index_entry_instance
 	Otherwise changes to it will be lost when changing the index using its methods.
 	"""
 	__slots__ = ( "repo", "version", "entries", "_extension_data", "_file_path" )
@@ -311,7 +325,7 @@ class IndexFile(LazyMixin, diff.Diffable):
 		self.entries = dict()
 		while count < num_entries:
 			entry = self._read_entry(stream)
-			self.entries[(entry.path, entry.stage)] = entry
+			self.entries[self.get_entries_key(entry)] = entry
 			count += 1
 		# END for each entry
 		
@@ -520,6 +534,18 @@ class IndexFile(LazyMixin, diff.Diffable):
 		# END for each unmerged blob
 		
 		return path_map
+	
+	@classmethod
+	def get_entries_key(cls, entry):
+		"""
+		Returns
+			Key suitable to be used for the index.entries dictionary
+			
+		``entry``
+			Instance of type BaseIndexEntry
+		"""
+		return (entry.path, entry.stage) 
+		
 	
 	def resolve_blobs(self, iter_blobs):
 		"""

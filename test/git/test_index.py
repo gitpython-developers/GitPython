@@ -192,7 +192,8 @@ class TestTree(TestBase):
 		index.checkout(test_file)
 		assert os.path.exists(test_file)
 		
-		
+		# checking out non-existing file is ignored/doesn't raise
+		index.checkout("doesnt_exist_ever.txt.that")
 		
 		# currently it ignore non-existing paths
 		index.checkout(paths=["doesnt/exist"])
@@ -336,7 +337,19 @@ class TestTree(TestBase):
 		fake_symlink_path = self._make_file(fake_symlink_relapath, link_target, rw_repo)
 		fake_entry = BaseIndexEntry((0120000, null_sha, 0, fake_symlink_relapath))
 		entries = index.reset(new_commit).add([fake_entry])
+		assert entries[0].sha != null_sha
 		assert len(entries) == 1 and S_ISLNK(entries[0].mode)
+		
+		# assure this also works with an alternate method
+		full_index_entry = IndexEntry.from_base(BaseIndexEntry((0120000, entries[0].sha, 0, entries[0].path)))
+		entry_key = index.get_entries_key(full_index_entry)
+		index.reset(new_commit)
+		assert entry_key not in index.entries
+		index.entries[entry_key] = full_index_entry
+		index.write()
+		index.update()	# force reread of entries
+		new_entry = index.entries[entry_key]
+		assert S_ISLNK(new_entry.mode)
 		
 		# checkout the fakelink, should be a link then
 		assert not S_ISLNK(os.stat(fake_symlink_path)[ST_MODE])
