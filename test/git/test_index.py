@@ -13,7 +13,34 @@ import tempfile
 import glob
 from stat import *
 
+
 class TestTree(TestBase):
+	
+	def __init__(self, *args):
+		super(TestTree, self).__init__(*args)
+		self._reset_progress()
+	
+	def _assert_add_progress(self, entries):
+		assert len(entries) == len(self._add_progress_map)
+		for path, call_count in self._add_progress_map.iteritems():
+			assert call_count == 2
+		self._reset_progress()
+
+	def _add_progress(self, path, done, item):
+		"""Called as progress func - we keep track of the proper 
+		call order"""
+		assert item is not None
+		self._add_progress_map.setdefault(path, 0)
+		curval = self._add_progress_map[path]
+		if curval == 0:
+			assert not done
+		if curval == 1:
+			assert done
+		self._add_progress_map[path] = curval + 1
+		
+	def _reset_progress(self):
+		# maps paths to the count of calls
+		self._add_progress_map = dict()
 	
 	def test_index_file_base(self):
 		# read from file
@@ -297,19 +324,29 @@ class TestTree(TestBase):
 		assert os.path.isfile(os.path.join(rw_repo.git.git_dir, lib_file_path))
 		
 		# directory
-		entries = index.add(['lib'])
+		entries = index.add(['lib'], fprogress=self._add_progress)
+		self._assert_add_progress(entries)
 		assert len(entries)>1
 		
 		# glob 
-		entries = index.reset(new_commit).add(['lib/*.py'])
+		entries = index.reset(new_commit).add(['lib/git/*.py'], fprogress=self._add_progress)
+		self._assert_add_progress(entries)
 		assert len(entries) == 14
+		
+		# same file 
+		entries = index.reset(new_commit).add(['lib/git/head.py']*2, fprogress=self._add_progress)
+		# would fail, test is too primitive to handle this case
+		# self._assert_add_progress(entries)
+		self._reset_progress()
+		assert len(entries) == 2
 		
 		# missing path
 		self.failUnlessRaises(GitCommandError, index.reset(new_commit).add, ['doesnt/exist/must/raise'])
 		
 		# blob from older revision overrides current index revision
 		old_blob = new_commit.parents[0].tree.blobs[0]
-		entries = index.reset(new_commit).add([old_blob])
+		entries = index.reset(new_commit).add([old_blob], fprogress=self._add_progress)
+		self._assert_add_progress(entries)
 		assert index.entries[(old_blob.path,0)].sha == old_blob.sha and len(entries) == 1 
 		
 		# mode 0 not allowed
@@ -319,14 +356,16 @@ class TestTree(TestBase):
 		# add new file
 		new_file_relapath = "my_new_file"
 		new_file_path = self._make_file(new_file_relapath, "hello world", rw_repo)
-		entries = index.reset(new_commit).add([BaseIndexEntry((010644, null_sha, 0, new_file_relapath))])
+		entries = index.reset(new_commit).add([BaseIndexEntry((010644, null_sha, 0, new_file_relapath))], fprogress=self._add_progress)
+		self._assert_add_progress(entries)
 		assert len(entries) == 1 and entries[0].sha != null_sha
 		
 		# add symlink
 		if sys.platform != "win32":
 			link_file = os.path.join(rw_repo.git.git_dir, "my_real_symlink")
 			os.symlink("/etc/that", link_file)
-			entries = index.reset(new_commit).add([link_file])
+			entries = index.reset(new_commit).add([link_file], fprogress=self._add_progress)
+			self._assert_add_progress(entries)
 			assert len(entries) == 1 and S_ISLNK(entries[0].mode)
 			print "%o" % entries[0].mode
 		# END real symlink test 
@@ -336,7 +375,8 @@ class TestTree(TestBase):
 		link_target = "/etc/that"
 		fake_symlink_path = self._make_file(fake_symlink_relapath, link_target, rw_repo)
 		fake_entry = BaseIndexEntry((0120000, null_sha, 0, fake_symlink_relapath))
-		entries = index.reset(new_commit).add([fake_entry])
+		entries = index.reset(new_commit).add([fake_entry], fprogress=self._add_progress)
+		self._assert_add_progress(entries)
 		assert entries[0].sha != null_sha
 		assert len(entries) == 1 and S_ISLNK(entries[0].mode)
 		
@@ -363,4 +403,3 @@ class TestTree(TestBase):
 			open(fake_symlink_path,'rb').read() == link_target 
 		else:
 			assert S_ISLNK(os.lstat(fake_symlink_path)[ST_MODE])
-		

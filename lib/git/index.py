@@ -16,8 +16,10 @@ import os
 import sys
 import stat
 import subprocess
+import glob
 import git.diff as diff
 
+from errors import GitCommandError
 from git.objects import Blob, Tree, Object, Commit
 from git.utils import SHA1Writer, LazyMixin, ConcurrentWriteOperation, join_path_native
 
@@ -662,7 +664,7 @@ class IndexFile(LazyMixin, diff.Diffable):
 	
 	@clear_cache
 	@default_index
-	def add(self, items, force=True, **kwargs):
+	def add(self, items, force=True, fprogress=lambda *args: None):
 		"""
 		Add files from the working tree, specific blobs or BaseIndexEntries 
 		to the index. The underlying index file will be written immediately, hence
@@ -717,43 +719,130 @@ class IndexFile(LazyMixin, diff.Diffable):
 			as the API user usually wants the item to be added even though 
 			they might be excluded.
 		
-		``**kwargs``
-			Additional keyword arguments to be passed to git-update-index, such 
-			as index_only.
-			
+		``fprogress``
+			Function with signature f(path, done=False, item=item) called for each 
+			path to be added, once once it is about to be added where done==False
+			and once after it was added where done=True.
+			item is set to the actual item we handle, either a Path or a BaseIndexEntry
+			Please note that the processed path is not guaranteed to be present 
+			in the index already as the index is currently being processed.
+		
 		Returns
 			List(BaseIndexEntries) representing the entries just actually added.
+			
+		Raises
+			GitCommandError if a supplied Path did not exist. Please note that BaseIndexEntry
+			Objects that do not have a null sha will be added even if their paths 
+			do not exist.
 		"""
+		# UTILITIES 
+		def raise_exc(e):
+			raise e
+			
+		def expand_paths(paths):
+			"""Expand the directories in list of paths to the corresponding paths accordingly, 
+			they will always be relative to the repository"""
+			out = list()
+			r = self.repo.git.git_dir
+			rs = r + '/'
+			for path in paths:
+				abs_path = path
+				if not os.path.isabs(abs_path):
+					abs_path = os.path.join(r, path)
+				# END make absolute path
+				
+				# resolve globs if possible
+				if '?' in path or '*' in path or '[' in path:
+					out.extend(f.replace(rs, '') for f in expand_paths(glob.glob(abs_path)))
+					continue
+				# END glob handling 
+				try:
+					for root, dirs, files in os.walk(abs_path, onerror=raise_exc):
+						for rela_file in files:
+							# add relative paths only
+							out.append(os.path.join(root.replace(rs, ''), rela_file))
+						# END for each file in subdir
+					# END for each subdirectory
+				except OSError:
+					# was a file or something that could not be iterated
+					out.append(path)
+				# END path exception handling 
+			# END for each path
+			
+			# NOTE: git will add items multiple times even if a glob overlapped 
+			# with manually specified paths or if paths where specified multiple 
+			# times - we respect that and do not prune
+			return out
+		# END expand helper method
+		
+		def write_path_to_stdin(proc, filepath, item, fmakeexc):
+			"""Write path to proc.stdin and make sure it processes the item, including progress.
+			@return: stdout string"""
+			fprogress(filepath, False, item)
+			try:
+				proc.stdin.write("%s\n" % filepath)
+			except IOError:
+				# pipe broke, usually because some error happend
+				raise fmakeexc()
+			# END write exception handling 
+			proc.stdin.flush()
+			# NOTE: if this hangs, you need at lest git 1.6.5.4 as a git-bugfix
+			# is needed for this
+			# TODO: Rewrite this using hash-object and update index to get 
+			# rid of the bug-fix dependency, updaet intro.rst requirements
+			rval = proc.stdout.readline().strip()	# trigger operation
+			fprogress(filepath, True, item)
+			return rval
+		# END write_path_to_stdin
+			
+		
 		# sort the entries into strings and Entries, Blobs are converted to entries
 		# automatically
 		# paths can be git-added, for everything else we use git-update-index
 		entries_added = list()
 		paths, entries = self._preprocess_add_items(items)
 		
+		# HANDLE PATHS 
 		if paths:
-			git_add_output = self.repo.git.add(paths, v=True)
-			# force rereading our entries
+			# to get suitable progress information, pipe paths to stdin
+			args = ("--add", "--replace", "--verbose", "--stdin")
+			proc = self.repo.git.update_index(*args, **{'as_process':True, 'istream':subprocess.PIPE})
+			make_exc = lambda : GitCommandError(("git-update-index",)+args, 128, proc.stderr.readline())
+			filepaths=expand_paths(paths)
+			added_files = list()
+			
+			for filepath in filepaths:
+				write_path_to_stdin(proc, filepath, filepath, make_exc)
+				added_files.append(filepath)
+			# END for each filepath
+			self._flush_stdin_and_wait(proc)	# ignore stdout
+			
+			# force rereading our entries once it is all done
 			del(self.entries)
-			for line in git_add_output.splitlines():
-				# line contains:
-				# add '<path>'
-				added_file = line[5:-1]
-				entries_added.append(self.entries[(added_file,0)])
-			# END for each line
+			entries_added.extend(self.entries[(f,0)] for f in added_files)
 		# END path handling
 		
+		# HANDLE ENTRIES
 		if entries:
 			null_mode_entries = [ e for e in entries if e.mode == 0 ]
 			if null_mode_entries:
 				raise ValueError("At least one Entry has a null-mode - please use index.remove to remove files for clarity")
 			# END null mode should be remove
 			
+			# HANLDE ENTRY OBJECT CREATION
 			# create objects if required, otherwise go with the existing shas
 			null_entries_indices = [ i for i,e in enumerate(entries) if e.sha == Object.NULL_HEX_SHA ]
 			if null_entries_indices:
-				hash_proc = self.repo.git.hash_object(w=True, stdin_paths=True, istream=subprocess.PIPE, as_process=True)
-				hash_proc.stdin.write('\n'.join(entries[i].path for i in null_entries_indices))
-				obj_ids = self._flush_stdin_and_wait(hash_proc).splitlines()
+				# creating object ids is the time consuming part. Hence we will
+				# send progress for these now.
+				args = ("-w", "--stdin-paths")
+				proc = self.repo.git.hash_object(*args, **{'istream':subprocess.PIPE, 'as_process':True})
+				make_exc = lambda : GitCommandError(("git-hash-object",)+args, 128, proc.stderr.readline())
+				obj_ids = list()
+				for ei in null_entries_indices:
+					entry = entries[ei]
+					obj_ids.append(write_path_to_stdin(proc, entry.path, entry, make_exc))
+				# END for each entry index
 				assert len(obj_ids) == len(null_entries_indices), "git-hash-object did not produce all requested objects: want %i, got %i" % ( len(null_entries_indices), len(obj_ids) )
 				
 				# update IndexEntries with new object id
@@ -764,11 +853,22 @@ class IndexFile(LazyMixin, diff.Diffable):
 				# END for each index
 			# END null_entry handling
 				
-			# feed all the data to stdin
-			update_index_proc = self.repo.git.update_index(index_info=True, istream=subprocess.PIPE, as_process=True, **kwargs)
-			update_index_proc.stdin.write('\n'.join(str(e) for e in entries))
+			# feed pure entries to stdin
+			proc = self.repo.git.update_index(index_info=True, istream=subprocess.PIPE, as_process=True)
+			for i, entry in enumerate(entries):
+				progress_sent = i in null_entries_indices
+				if not progress_sent:
+					fprogress(entry.path, False, entry)
+				# it cannot handle too-many newlines in this mode
+				if i != 0:
+					proc.stdin.write('\n')
+				proc.stdin.write(str(entry))
+				proc.stdin.flush()
+				if not progress_sent:
+					fprogress(entry.path, True, entry)
+			# END for each enty
+			self._flush_stdin_and_wait(proc)
 			entries_added.extend(entries)
-			self._flush_stdin_and_wait(update_index_proc)
 		# END if there are base entries
 		
 		return entries_added
