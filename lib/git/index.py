@@ -736,13 +736,14 @@ class IndexFile(LazyMixin, diff.Diffable):
 			do not exist.
 		"""
 		# UTILITIES 
-		def raise_exc(e):
-			raise e
-			
-		def expand_paths(paths):
+		def iter_expand_paths(paths):
 			"""Expand the directories in list of paths to the corresponding paths accordingly, 
-			they will always be relative to the repository"""
-			out = list()
+			
+			Note: git will add items multiple times even if a glob overlapped 
+			with manually specified paths or if paths where specified multiple 
+			times - we respect that and do not prune"""
+			def raise_exc(e):
+				raise e
 			r = self.repo.git.git_dir
 			rs = r + '/'
 			for path in paths:
@@ -753,26 +754,22 @@ class IndexFile(LazyMixin, diff.Diffable):
 				
 				# resolve globs if possible
 				if '?' in path or '*' in path or '[' in path:
-					out.extend(f.replace(rs, '') for f in expand_paths(glob.glob(abs_path)))
+					for f in iter_expand_paths(glob.glob(abs_path)):
+						yield f.replace(rs, '')
 					continue
 				# END glob handling 
 				try:
 					for root, dirs, files in os.walk(abs_path, onerror=raise_exc):
 						for rela_file in files:
 							# add relative paths only
-							out.append(os.path.join(root.replace(rs, ''), rela_file))
+							yield os.path.join(root.replace(rs, ''), rela_file)
 						# END for each file in subdir
 					# END for each subdirectory
 				except OSError:
 					# was a file or something that could not be iterated
-					out.append(path)
+					yield path.replace(rs, '')
 				# END path exception handling 
 			# END for each path
-			
-			# NOTE: git will add items multiple times even if a glob overlapped 
-			# with manually specified paths or if paths where specified multiple 
-			# times - we respect that and do not prune
-			return out
 		# END expand helper method
 		
 		def write_path_to_stdin(proc, filepath, item, fmakeexc, read_from_stdout=True):
@@ -812,10 +809,9 @@ class IndexFile(LazyMixin, diff.Diffable):
 			args = ("--add", "--replace", "--verbose", "--stdin")
 			proc = self.repo.git.update_index(*args, **{'as_process':True, 'istream':subprocess.PIPE})
 			make_exc = lambda : GitCommandError(("git-update-index",)+args, 128, proc.stderr.readline())
-			filepaths=expand_paths(paths)
 			added_files = list()
 			
-			for filepath in filepaths:
+			for filepath in iter_expand_paths(paths):
 				write_path_to_stdin(proc, filepath, filepath, make_exc, read_from_stdout=False)
 				added_files.append(filepath)
 			# END for each filepath
