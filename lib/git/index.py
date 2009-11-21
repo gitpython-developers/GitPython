@@ -775,22 +775,26 @@ class IndexFile(LazyMixin, diff.Diffable):
 			return out
 		# END expand helper method
 		
-		def write_path_to_stdin(proc, filepath, item, fmakeexc):
+		def write_path_to_stdin(proc, filepath, item, fmakeexc, read_from_stdout=True):
 			"""Write path to proc.stdin and make sure it processes the item, including progress.
-			@return: stdout string"""
+			@return: stdout string
+			@param read_from_stdout: if True, proc.stdout will be read after the item
+			was sent to stdin. In that case, it will return None
+			@note: There is a bug in git-update-index that prevents it from sending 
+			reports just in time. This is why we have a version that tries to 
+			read stdout and one which doesn't. In fact, the stdout is not 
+			important as the piped-in files are processed anyway and just in time"""
 			fprogress(filepath, False, item)
+			rval = None
 			try:
 				proc.stdin.write("%s\n" % filepath)
 			except IOError:
 				# pipe broke, usually because some error happend
 				raise fmakeexc()
-			# END write exception handling 
+			# END write exception handling
 			proc.stdin.flush()
-			# NOTE: if this hangs, you need at lest git 1.6.5.4 as a git-bugfix
-			# is needed for this
-			# TODO: Rewrite this using hash-object and update index to get 
-			# rid of the bug-fix dependency, updaet intro.rst requirements
-			rval = proc.stdout.readline().strip()	# trigger operation
+			if read_from_stdout:
+				rval = proc.stdout.readline().strip()
 			fprogress(filepath, True, item)
 			return rval
 		# END write_path_to_stdin
@@ -804,7 +808,7 @@ class IndexFile(LazyMixin, diff.Diffable):
 		
 		# HANDLE PATHS 
 		if paths:
-			# to get suitable progress information, pipe paths to stdin
+			# to get suitable progress information, pipe paths to stdin 
 			args = ("--add", "--replace", "--verbose", "--stdin")
 			proc = self.repo.git.update_index(*args, **{'as_process':True, 'istream':subprocess.PIPE})
 			make_exc = lambda : GitCommandError(("git-update-index",)+args, 128, proc.stderr.readline())
@@ -812,7 +816,7 @@ class IndexFile(LazyMixin, diff.Diffable):
 			added_files = list()
 			
 			for filepath in filepaths:
-				write_path_to_stdin(proc, filepath, filepath, make_exc)
+				write_path_to_stdin(proc, filepath, filepath, make_exc, read_from_stdout=False)
 				added_files.append(filepath)
 			# END for each filepath
 			self._flush_stdin_and_wait(proc)	# ignore stdout
