@@ -493,12 +493,66 @@ class IndexFile(LazyMixin, diff.Diffable):
 		ret |= (index_mode & 0111)
 		return ret
 	
-	@classmethod
-	def _tree_mode_to_index_mode(cls, tree_mode):
-		"""
-		Convert a tree mode to index mode as good as possible
-		"""
 	
+	# UTILITIES 
+	def _iter_expand_paths(self, paths):
+		"""Expand the directories in list of paths to the corresponding paths accordingly, 
+		
+		Note: git will add items multiple times even if a glob overlapped 
+		with manually specified paths or if paths where specified multiple 
+		times - we respect that and do not prune"""
+		def raise_exc(e):
+			raise e
+		r = self.repo.git.git_dir
+		rs = r + '/'
+		for path in paths:
+			abs_path = path
+			if not os.path.isabs(abs_path):
+				abs_path = os.path.join(r, path)
+			# END make absolute path
+			
+			# resolve globs if possible
+			if '?' in path or '*' in path or '[' in path:
+				for f in self._iter_expand_paths(glob.glob(abs_path)):
+					yield f.replace(rs, '')
+				continue
+			# END glob handling 
+			try:
+				for root, dirs, files in os.walk(abs_path, onerror=raise_exc):
+					for rela_file in files:
+						# add relative paths only
+						yield os.path.join(root.replace(rs, ''), rela_file)
+					# END for each file in subdir
+				# END for each subdirectory
+			except OSError:
+				# was a file or something that could not be iterated
+				yield path.replace(rs, '')
+			# END path exception handling 
+		# END for each path
+	
+	def _write_path_to_stdin(self, proc, filepath, item, fmakeexc, fprogress, read_from_stdout=True):
+		"""Write path to proc.stdin and make sure it processes the item, including progress.
+		@return: stdout string
+		@param read_from_stdout: if True, proc.stdout will be read after the item
+		was sent to stdin. In that case, it will return None
+		@note: There is a bug in git-update-index that prevents it from sending 
+		reports just in time. This is why we have a version that tries to 
+		read stdout and one which doesn't. In fact, the stdout is not 
+		important as the piped-in files are processed anyway and just in time"""
+		fprogress(filepath, False, item)
+		rval = None
+		try:
+			proc.stdin.write("%s\n" % filepath)
+		except IOError:
+			# pipe broke, usually because some error happend
+			raise fmakeexc()
+		# END write exception handling
+		proc.stdin.flush()
+		if read_from_stdout:
+			rval = proc.stdout.readline().strip()
+		fprogress(filepath, True, item)
+		return rval
+			
 	def iter_blobs(self, predicate = lambda t: True):
 		"""
 		Returns
@@ -735,68 +789,6 @@ class IndexFile(LazyMixin, diff.Diffable):
 			Objects that do not have a null sha will be added even if their paths 
 			do not exist.
 		"""
-		# UTILITIES 
-		def iter_expand_paths(paths):
-			"""Expand the directories in list of paths to the corresponding paths accordingly, 
-			
-			Note: git will add items multiple times even if a glob overlapped 
-			with manually specified paths or if paths where specified multiple 
-			times - we respect that and do not prune"""
-			def raise_exc(e):
-				raise e
-			r = self.repo.git.git_dir
-			rs = r + '/'
-			for path in paths:
-				abs_path = path
-				if not os.path.isabs(abs_path):
-					abs_path = os.path.join(r, path)
-				# END make absolute path
-				
-				# resolve globs if possible
-				if '?' in path or '*' in path or '[' in path:
-					for f in iter_expand_paths(glob.glob(abs_path)):
-						yield f.replace(rs, '')
-					continue
-				# END glob handling 
-				try:
-					for root, dirs, files in os.walk(abs_path, onerror=raise_exc):
-						for rela_file in files:
-							# add relative paths only
-							yield os.path.join(root.replace(rs, ''), rela_file)
-						# END for each file in subdir
-					# END for each subdirectory
-				except OSError:
-					# was a file or something that could not be iterated
-					yield path.replace(rs, '')
-				# END path exception handling 
-			# END for each path
-		# END expand helper method
-		
-		def write_path_to_stdin(proc, filepath, item, fmakeexc, read_from_stdout=True):
-			"""Write path to proc.stdin and make sure it processes the item, including progress.
-			@return: stdout string
-			@param read_from_stdout: if True, proc.stdout will be read after the item
-			was sent to stdin. In that case, it will return None
-			@note: There is a bug in git-update-index that prevents it from sending 
-			reports just in time. This is why we have a version that tries to 
-			read stdout and one which doesn't. In fact, the stdout is not 
-			important as the piped-in files are processed anyway and just in time"""
-			fprogress(filepath, False, item)
-			rval = None
-			try:
-				proc.stdin.write("%s\n" % filepath)
-			except IOError:
-				# pipe broke, usually because some error happend
-				raise fmakeexc()
-			# END write exception handling
-			proc.stdin.flush()
-			if read_from_stdout:
-				rval = proc.stdout.readline().strip()
-			fprogress(filepath, True, item)
-			return rval
-		# END write_path_to_stdin
-			
-		
 		# sort the entries into strings and Entries, Blobs are converted to entries
 		# automatically
 		# paths can be git-added, for everything else we use git-update-index
@@ -811,8 +803,8 @@ class IndexFile(LazyMixin, diff.Diffable):
 			make_exc = lambda : GitCommandError(("git-update-index",)+args, 128, proc.stderr.readline())
 			added_files = list()
 			
-			for filepath in iter_expand_paths(paths):
-				write_path_to_stdin(proc, filepath, filepath, make_exc, read_from_stdout=False)
+			for filepath in self._iter_expand_paths(paths):
+				self._write_path_to_stdin(proc, filepath, filepath, make_exc, fprogress, read_from_stdout=False)
 				added_files.append(filepath)
 			# END for each filepath
 			self._flush_stdin_and_wait(proc)	# ignore stdout
@@ -841,7 +833,7 @@ class IndexFile(LazyMixin, diff.Diffable):
 				obj_ids = list()
 				for ei in null_entries_indices:
 					entry = entries[ei]
-					obj_ids.append(write_path_to_stdin(proc, entry.path, entry, make_exc))
+					obj_ids.append(self._write_path_to_stdin(proc, entry.path, entry, make_exc, fprogress))
 				# END for each entry index
 				assert len(obj_ids) == len(null_entries_indices), "git-hash-object did not produce all requested objects: want %i, got %i" % ( len(null_entries_indices), len(obj_ids) )
 				
@@ -1001,7 +993,7 @@ class IndexFile(LazyMixin, diff.Diffable):
 		return stdout
 	
 	@default_index
-	def checkout(self, paths=None, force=False, **kwargs):
+	def checkout(self, paths=None, force=False, fprogress=lambda *args: None, **kwargs):
 		"""
 		Checkout the given paths or all files from the version in the index.
 		
@@ -1009,10 +1001,14 @@ class IndexFile(LazyMixin, diff.Diffable):
 			If None, all paths in the index will be checked out. Otherwise an iterable
 			or single path of relative or absolute paths pointing to files is expected.
 			The command will ignore paths that do not exist.
+			The provided progress information will contain None as path and item.
 			
 		``force``
 			If True, existing files will be overwritten. If False, these will 
 			be skipped.
+			
+		``fprogress``
+			see Index.add_ for signature and explanation
 			
 		``**kwargs``
 			Additional arguments to be pasesd to git-checkout-index
@@ -1026,15 +1022,20 @@ class IndexFile(LazyMixin, diff.Diffable):
 		
 		if paths is None:
 			args.append("--all")
+			fprogress(None, False, None)
 			self.repo.git.checkout_index(*args, **kwargs)
+			fprogress(None, True, None)
 		else:
 			if not isinstance(paths, (tuple,list)):
 				paths = [paths]
 				
 			args.append("--stdin")
-			paths = [self._to_relative_path(p) for p in paths]
 			co_proc = self.repo.git.checkout_index(args, as_process=True, istream=subprocess.PIPE, **kwargs)
-			co_proc.stdin.write('\n'.join(paths))
+			make_exc = lambda : GitCommandError(("git-checkout-index",)+args, 128, co_proc.stderr.readline())
+			for path in paths:
+				path = self._to_relative_path(path)
+				self._write_path_to_stdin(co_proc, path, path, make_exc, fprogress, read_from_stdout=False)  
+			# END for each path 
 			self._flush_stdin_and_wait(co_proc)
 		# END paths handling 
 		return self

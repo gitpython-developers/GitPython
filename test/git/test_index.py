@@ -20,27 +20,30 @@ class TestTree(TestBase):
 		super(TestTree, self).__init__(*args)
 		self._reset_progress()
 	
-	def _assert_add_progress(self, entries):
-		assert len(entries) == len(self._add_progress_map)
-		for path, call_count in self._add_progress_map.iteritems():
+	def _assert_fprogress(self, entries):
+		assert len(entries) == len(self._fprogress_map)
+		for path, call_count in self._fprogress_map.iteritems():
 			assert call_count == 2
 		self._reset_progress()
 
-	def _add_progress(self, path, done, item):
-		"""Called as progress func - we keep track of the proper 
-		call order"""
-		assert item is not None
-		self._add_progress_map.setdefault(path, 0)
-		curval = self._add_progress_map[path]
+	def _fprogress(self, path, done, item):
+		self._fprogress_map.setdefault(path, 0)
+		curval = self._fprogress_map[path]
 		if curval == 0:
 			assert not done
 		if curval == 1:
 			assert done
-		self._add_progress_map[path] = curval + 1
+		self._fprogress_map[path] = curval + 1
+		
+	def _fprogress_add(self, path, done, item):
+		"""Called as progress func - we keep track of the proper 
+		call order"""
+		assert item is not None
+		self._fprogress(path, done, item)
 		
 	def _reset_progress(self):
 		# maps paths to the count of calls
-		self._add_progress_map = dict()
+		self._fprogress_map = dict()
 	
 	def test_index_file_base(self):
 		# read from file
@@ -207,22 +210,23 @@ class TestTree(TestBase):
 		# test full checkout
 		test_file = os.path.join(rw_repo.git.git_dir, "CHANGES")
 		os.remove(test_file)
-		index.checkout(None, force=True)
+		index.checkout(None, force=True, fprogress=self._fprogress)
+		self._assert_fprogress([None])
 		assert os.path.isfile(test_file)
 		
 		os.remove(test_file)
-		index.checkout(None, force=False)
+		index.checkout(None, force=False, fprogress=self._fprogress)
+		self._assert_fprogress([None])
 		assert os.path.isfile(test_file)
 		
 		# individual file
 		os.remove(test_file)
-		index.checkout(test_file)
+		index.checkout(test_file, fprogress=self._fprogress)
+		self._assert_fprogress([test_file])
 		assert os.path.exists(test_file)
 		
 		# checking out non-existing file is ignored/doesn't raise
 		index.checkout("doesnt_exist_ever.txt.that")
-		
-		# currently it ignore non-existing paths
 		index.checkout(paths=["doesnt/exist"])
 		
 	
@@ -324,19 +328,19 @@ class TestTree(TestBase):
 		assert os.path.isfile(os.path.join(rw_repo.git.git_dir, lib_file_path))
 		
 		# directory
-		entries = index.add(['lib'], fprogress=self._add_progress)
-		self._assert_add_progress(entries)
+		entries = index.add(['lib'], fprogress=self._fprogress_add)
+		self._assert_fprogress(entries)
 		assert len(entries)>1
 		
 		# glob 
-		entries = index.reset(new_commit).add(['lib/git/*.py'], fprogress=self._add_progress)
-		self._assert_add_progress(entries)
+		entries = index.reset(new_commit).add(['lib/git/*.py'], fprogress=self._fprogress_add)
+		self._assert_fprogress(entries)
 		assert len(entries) == 14
 		
 		# same file 
-		entries = index.reset(new_commit).add(['lib/git/head.py']*2, fprogress=self._add_progress)
+		entries = index.reset(new_commit).add(['lib/git/head.py']*2, fprogress=self._fprogress_add)
 		# would fail, test is too primitive to handle this case
-		# self._assert_add_progress(entries)
+		# self._assert_fprogress(entries)
 		self._reset_progress()
 		assert len(entries) == 2
 		
@@ -345,8 +349,8 @@ class TestTree(TestBase):
 		
 		# blob from older revision overrides current index revision
 		old_blob = new_commit.parents[0].tree.blobs[0]
-		entries = index.reset(new_commit).add([old_blob], fprogress=self._add_progress)
-		self._assert_add_progress(entries)
+		entries = index.reset(new_commit).add([old_blob], fprogress=self._fprogress_add)
+		self._assert_fprogress(entries)
 		assert index.entries[(old_blob.path,0)].sha == old_blob.sha and len(entries) == 1 
 		
 		# mode 0 not allowed
@@ -356,16 +360,16 @@ class TestTree(TestBase):
 		# add new file
 		new_file_relapath = "my_new_file"
 		new_file_path = self._make_file(new_file_relapath, "hello world", rw_repo)
-		entries = index.reset(new_commit).add([BaseIndexEntry((010644, null_sha, 0, new_file_relapath))], fprogress=self._add_progress)
-		self._assert_add_progress(entries)
+		entries = index.reset(new_commit).add([BaseIndexEntry((010644, null_sha, 0, new_file_relapath))], fprogress=self._fprogress_add)
+		self._assert_fprogress(entries)
 		assert len(entries) == 1 and entries[0].sha != null_sha
 		
 		# add symlink
 		if sys.platform != "win32":
 			link_file = os.path.join(rw_repo.git.git_dir, "my_real_symlink")
 			os.symlink("/etc/that", link_file)
-			entries = index.reset(new_commit).add([link_file], fprogress=self._add_progress)
-			self._assert_add_progress(entries)
+			entries = index.reset(new_commit).add([link_file], fprogress=self._fprogress_add)
+			self._assert_fprogress(entries)
 			assert len(entries) == 1 and S_ISLNK(entries[0].mode)
 			print "%o" % entries[0].mode
 		# END real symlink test 
@@ -375,8 +379,8 @@ class TestTree(TestBase):
 		link_target = "/etc/that"
 		fake_symlink_path = self._make_file(fake_symlink_relapath, link_target, rw_repo)
 		fake_entry = BaseIndexEntry((0120000, null_sha, 0, fake_symlink_relapath))
-		entries = index.reset(new_commit).add([fake_entry], fprogress=self._add_progress)
-		self._assert_add_progress(entries)
+		entries = index.reset(new_commit).add([fake_entry], fprogress=self._fprogress_add)
+		self._assert_fprogress(entries)
 		assert entries[0].sha != null_sha
 		assert len(entries) == 1 and S_ISLNK(entries[0].mode)
 		
