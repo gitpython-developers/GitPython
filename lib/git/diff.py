@@ -170,6 +170,14 @@ class Diff(object):
 	
 		b_mode is None
 		b_blob is None
+		
+	``Working Tree Blobs``
+	
+		When comparing to working trees, the working tree blob will have a null hexsha
+		as a corresponding object does not yet exist. The mode will be null as well.
+		But the path will be available though. 
+		If it is listed in a diff the working tree version of the file must 
+		be different to the version in the index or tree, and hence has been modified.
 	"""
 	
 	# precompiled regex
@@ -186,18 +194,20 @@ class Diff(object):
 								(?:^index[ ](?P<a_blob_id>[0-9A-Fa-f]+)
 									\.\.(?P<b_blob_id>[0-9A-Fa-f]+)[ ]?(?P<b_mode>.+)?(?:\n|$))?
 							""", re.VERBOSE | re.MULTILINE)
-	re_is_null_hexsha = re.compile( r'^0{40}$' )
+	# can be used for comparisons
+	null_hex_sha = "0"*40
+	
 	__slots__ = ("a_blob", "b_blob", "a_mode", "b_mode", "new_file", "deleted_file", 
 				 "rename_from", "rename_to", "diff")
 
 	def __init__(self, repo, a_path, b_path, a_blob_id, b_blob_id, a_mode,
 				 b_mode, new_file, deleted_file, rename_from,
 				 rename_to, diff):
-		if not a_blob_id or self.re_is_null_hexsha.search(a_blob_id):
+		if a_blob_id is None:
 			self.a_blob = None
 		else:
 			self.a_blob = blob.Blob(repo, a_blob_id, mode=a_mode, path=a_path)
-		if not b_blob_id or self.re_is_null_hexsha.search(b_blob_id):
+		if not b_blob_id:
 			self.b_blob = None
 		else:
 			self.b_blob = blob.Blob(repo, b_blob_id, mode=b_mode, path=b_path)
@@ -301,10 +311,10 @@ class Diff(object):
 			# NOTE: We cannot conclude from the existance of a blob to change type
 			# as diffs with the working do not have blobs yet
 			if change_type == 'D':
-				b_path = None
+				b_blob_id = None
 				deleted_file = True
 			elif change_type == 'A':
-				a_path = None
+				a_blob_id = None
 				new_file = True
 			# END add/remove handling
 			

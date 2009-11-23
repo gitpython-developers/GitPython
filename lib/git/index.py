@@ -485,7 +485,7 @@ class IndexFile(LazyMixin, diff.Diffable):
 		try:
 			repo.git.read_tree(*arg_list, **kwargs)
 			index = cls(repo, tmp_index)
-			index.entries		# force it to read the file
+			index.entries		# force it to read the file as we will delete the temp-file
 		finally:
 			if os.path.exists(tmp_index):
 				os.remove(tmp_index)
