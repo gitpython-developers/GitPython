@@ -24,6 +24,20 @@ from git.objects import Blob, Tree, Object, Commit
 from git.utils import SHA1Writer, LazyMixin, ConcurrentWriteOperation, join_path_native
 
 
+class CheckoutError( Exception ):
+	"""Thrown if a file could not be checked out from the index as it contained 
+	changes.
+	
+	The .failed_files attribute contains a list of relative paths that failed 
+	to be checked out as they contained changes that did not exist in the index"""
+	def __init__(self, message, failed_files):
+		super(CheckoutError, self).__init__(message)
+		self.failed_files = failed_files
+
+	def __str__(self):
+		return super(CheckoutError, self).__str__() + ":%s" % self.failed_files 
+	
+
 class _TemporaryFileSwap(object):
 	"""
 	Utility class moving a file to a temporary location within the same directory
@@ -800,7 +814,7 @@ class IndexFile(LazyMixin, diff.Diffable):
 			# to get suitable progress information, pipe paths to stdin 
 			args = ("--add", "--replace", "--verbose", "--stdin")
 			proc = self.repo.git.update_index(*args, **{'as_process':True, 'istream':subprocess.PIPE})
-			make_exc = lambda : GitCommandError(("git-update-index",)+args, 128, proc.stderr.readline())
+			make_exc = lambda : GitCommandError(("git-update-index",)+args, 128, proc.stderr.read())
 			added_files = list()
 			
 			for filepath in self._iter_expand_paths(paths):
@@ -829,7 +843,7 @@ class IndexFile(LazyMixin, diff.Diffable):
 				# send progress for these now.
 				args = ("-w", "--stdin-paths")
 				proc = self.repo.git.hash_object(*args, **{'istream':subprocess.PIPE, 'as_process':True})
-				make_exc = lambda : GitCommandError(("git-hash-object",)+args, 128, proc.stderr.readline())
+				make_exc = lambda : GitCommandError(("git-hash-object",)+args, 128, proc.stderr.read())
 				obj_ids = list()
 				for ei in null_entries_indices:
 					entry = entries[ei]
@@ -999,13 +1013,16 @@ class IndexFile(LazyMixin, diff.Diffable):
 		
 		``paths``
 			If None, all paths in the index will be checked out. Otherwise an iterable
-			or single path of relative or absolute paths pointing to files is expected.
-			The command will ignore paths that do not exist.
-			The provided progress information will contain None as path and item.
+			of relative or absolute paths or a single path pointing to files in the index 
+			is expected.
+			The command will raise of files do not exist in the index ( as opposed to the 
+			original git command who ignores them )
+			The provided progress information will contain None as path and item if no 
+			explicit paths are given.
 			
 		``force``
-			If True, existing files will be overwritten. If False, these will 
-			be skipped.
+			If True, existing files will be overwritten even if they contain local modifications. 
+			If False, these will trigger a CheckoutError.
 			
 		``fprogress``
 			see Index.add_ for signature and explanation
@@ -1015,28 +1032,66 @@ class IndexFile(LazyMixin, diff.Diffable):
 			
 		Returns
 			self
+			
+		Raise CheckoutError
+			If at least one file failed to be checked out. This is a summary, 
+			hence it will checkout as many files as it can anyway.
+			Raise GitCommandError if error lines could not be parsed - this truly is 
+			an exceptional state
 		"""
 		args = ["--index"]
 		if force:
 			args.append("--force")
 		
+		def handle_stderr(proc):
+			stderr = proc.stderr.read()
+			if not stderr:
+				return
+			# line contents:
+			# git-checkout-index: this already exists
+			failed_files = list()
+			unknown_lines = list()
+			endings = (' already exists', ' is not in the cache', ' does not exist at stage', ' is unmerged')
+			for line in stderr.splitlines():
+				if not line.startswith("git checkout-index: ") and not line.startswith("git-checkout-index: "):
+					unknown_lines.append(line)
+					continue
+				# END unkown lines parsing
+				
+				for e in endings:
+					if line.endswith(e):
+						failed_files.append(line[20:-len(e)])
+						break
+					# END if ending matches
+				# END for each possible ending
+			# END for each line
+			if unknown_lines:
+				raise GitCommandError(("git-checkout-index", ), 128, stderr)
+			if failed_files:
+				raise CheckoutError("Some files could not be checked out from the index due to local modifications", failed_files)
+		# END stderr handler 
+		
 		if paths is None:
 			args.append("--all")
+			kwargs['as_process'] = 1
 			fprogress(None, False, None)
-			self.repo.git.checkout_index(*args, **kwargs)
+			proc = self.repo.git.checkout_index(*args, **kwargs)
+			proc.wait()
 			fprogress(None, True, None)
+			handle_stderr(proc)
 		else:
-			if not isinstance(paths, (tuple,list)):
+			if isinstance(paths, basestring):
 				paths = [paths]
 				
 			args.append("--stdin")
-			co_proc = self.repo.git.checkout_index(args, as_process=True, istream=subprocess.PIPE, **kwargs)
-			make_exc = lambda : GitCommandError(("git-checkout-index",)+args, 128, co_proc.stderr.readline())
+			proc = self.repo.git.checkout_index(args, as_process=True, istream=subprocess.PIPE, **kwargs)
+			make_exc = lambda : GitCommandError(("git-checkout-index",)+args, 128, proc.stderr.read())
 			for path in paths:
 				path = self._to_relative_path(path)
-				self._write_path_to_stdin(co_proc, path, path, make_exc, fprogress, read_from_stdout=False)  
-			# END for each path 
-			self._flush_stdin_and_wait(co_proc)
+				self._write_path_to_stdin(proc, path, path, make_exc, fprogress, read_from_stdout=False)  
+			# END for each path
+			self._flush_stdin_and_wait(proc)
+			handle_stderr(proc)
 		# END paths handling 
 		return self
 			

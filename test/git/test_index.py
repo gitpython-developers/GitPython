@@ -225,10 +225,26 @@ class TestTree(TestBase):
 		self._assert_fprogress([test_file])
 		assert os.path.exists(test_file)
 		
-		# checking out non-existing file is ignored/doesn't raise
-		index.checkout("doesnt_exist_ever.txt.that")
-		index.checkout(paths=["doesnt/exist"])
+		# checking out non-existing file throws
+		self.failUnlessRaises(CheckoutError, index.checkout, "doesnt_exist_ever.txt.that")
+		self.failUnlessRaises(CheckoutError, index.checkout, paths=["doesnt/exist"])
 		
+		# checkout file with modifications
+		append_data = "hello"
+		fp = open(test_file, "ab")
+		fp.write(append_data)
+		fp.close()
+		try:
+			index.checkout(test_file)
+		except CheckoutError, e:
+			assert len(e.failed_files) == 1 and e.failed_files[0] == os.path.basename(test_file)
+			assert open(test_file).read().endswith(append_data)
+		else:
+			raise AssertionError("Exception CheckoutError not thrown")
+	
+		# if we force it it should work
+		index.checkout(test_file, force=True)
+		assert not open(test_file).read().endswith(append_data)
 	
 	def _count_existing(self, repo, files):
 		"""
