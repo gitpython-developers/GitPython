@@ -11,6 +11,7 @@ import os
 import sys
 import tempfile
 import glob
+import shutil
 from stat import *
 
 
@@ -209,19 +210,22 @@ class TestTree(TestBase):
 			
 		# test full checkout
 		test_file = os.path.join(rw_repo.git.git_dir, "CHANGES")
-		os.remove(test_file)
-		index.checkout(None, force=True, fprogress=self._fprogress)
+		open(test_file, 'ab').write("some data")
+		rval = index.checkout(None, force=True, fprogress=self._fprogress)
+		assert 'CHANGES' in list(rval)
 		self._assert_fprogress([None])
 		assert os.path.isfile(test_file)
 		
 		os.remove(test_file)
-		index.checkout(None, force=False, fprogress=self._fprogress)
+		rval = index.checkout(None, force=False, fprogress=self._fprogress)
+		assert 'CHANGES' in list(rval)
 		self._assert_fprogress([None])
 		assert os.path.isfile(test_file)
 		
 		# individual file
 		os.remove(test_file)
-		index.checkout(test_file, fprogress=self._fprogress)
+		rval = index.checkout(test_file, fprogress=self._fprogress)
+		assert list(rval)[0] == 'CHANGES'
 		self._assert_fprogress([test_file])
 		assert os.path.exists(test_file)
 		
@@ -238,6 +242,7 @@ class TestTree(TestBase):
 			index.checkout(test_file)
 		except CheckoutError, e:
 			assert len(e.failed_files) == 1 and e.failed_files[0] == os.path.basename(test_file)
+			assert len(e.valid_files) == 0
 			assert open(test_file).read().endswith(append_data)
 		else:
 			raise AssertionError("Exception CheckoutError not thrown")
@@ -245,6 +250,11 @@ class TestTree(TestBase):
 		# if we force it it should work
 		index.checkout(test_file, force=True)
 		assert not open(test_file).read().endswith(append_data)
+		
+		# checkout directory
+		shutil.rmtree(os.path.join(rw_repo.git.git_dir, "lib"))
+		rval = index.checkout('lib')
+		assert len(list(rval)) > 1
 	
 	def _count_existing(self, repo, files):
 		"""
