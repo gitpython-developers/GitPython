@@ -1054,9 +1054,16 @@ class IndexFile(LazyMixin, diff.Diffable):
 			endings = (' already exists', ' is not in the cache', ' does not exist at stage', ' is unmerged')
 			for line in stderr.splitlines():
 				if not line.startswith("git checkout-index: ") and not line.startswith("git-checkout-index: "):
-					unknown_lines.append(line)
+					is_a_dir = " is a directory"
+					unlink_issue = "unable to unlink old '"
+					if line.endswith(is_a_dir):
+						failed_files.append(line[:-len(is_a_dir)])
+					elif line.startswith(unlink_issue):
+						failed_files.append(line[len(unlink_issue):line.rfind("'")])
+					else:
+						unknown_lines.append(line)
 					continue
-				# END unkown lines parsing
+				# END special lines parsing
 				
 				for e in endings:
 					if line.endswith(e):
