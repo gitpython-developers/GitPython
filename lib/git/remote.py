@@ -255,10 +255,10 @@ class FetchInfo(object):
 						# i.e. info.flags & info.REJECTED 
 						# is 0 if ref is SymbolicReference
 	 info.note			# additional notes given by git-fetch intended for the user
-	 info.commit_before_forced_update	# if info.flags & info.FORCED_UPDATE, 
+	 info.old_commit	# if info.flags & info.FORCED_UPDATE|info.FAST_FORWARD, 
 						# field is set to the previous location of ref, otherwise None
 	"""
-	__slots__ = ('ref','commit_before_forced_update', 'flags', 'note')
+	__slots__ = ('ref','old_commit', 'flags', 'note')
 	
 	NEW_TAG, NEW_HEAD, HEAD_UPTODATE, TAG_UPDATE, REJECTED, FORCED_UPDATE, \
 	FAST_FORWARD, ERROR = [ 1 << x for x in range(8) ]
@@ -276,7 +276,7 @@ class FetchInfo(object):
 		self.ref = ref
 		self.flags = flags
 		self.note = note
-		self.commit_before_forced_update = old_commit
+		self.old_commit = old_commit
 		
 	def __str__(self):
 		return self.name
@@ -369,8 +369,11 @@ class FetchInfo(object):
 				flags |= cls.NEW_TAG
 			if 'new branch' in operation:
 				flags |= cls.NEW_HEAD
-			if '...' in operation:
-				old_commit = Commit(repo, operation.split('...')[0])
+			if '...' in operation or '..' in operation:
+				split_token = '...'
+				if control_character == ' ':
+					split_token = split_token[:-1]
+				old_commit = Commit(repo, operation.split(split_token)[0])
 			# END handle refspec
 		# END reference flag handling
 		

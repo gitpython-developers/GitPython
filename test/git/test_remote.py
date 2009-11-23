@@ -74,10 +74,10 @@ class TestRemote(TestBase):
 				assert info.flags != 0
 			# END reference type flags handling 
 			assert isinstance(info.ref, (SymbolicReference, Reference))
-			if info.flags & info.FORCED_UPDATE:
-				assert isinstance(info.commit_before_forced_update, Commit)
+			if info.flags & (info.FORCED_UPDATE|info.FAST_FORWARD):
+				assert isinstance(info.old_commit, Commit)
 			else:
-				assert info.commit_before_forced_update is None
+				assert info.old_commit is None
 			# END forced update checking  
 		# END for each info
 		
