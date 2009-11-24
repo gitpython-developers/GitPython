@@ -79,4 +79,11 @@ class TestDiff(TestBase):
 		for key,value in assertion_map.items():
 			assert value, "Did not find diff for %s" % key
 		# END for each iteration type 
+		
+		# test path not existing in the index - should be ignored
+		c = self.rorepo.head.commit
+		cp = c.parents[0]
+		diff_index = c.diff(cp, ["does/not/exist"])
+		assert len(diff_index) == 0
+		
 	
