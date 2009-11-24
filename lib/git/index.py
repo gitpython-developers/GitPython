@@ -422,6 +422,44 @@ class IndexFile(LazyMixin, diff.Diffable):
 		if file_path is not None:
 			self._file_path = file_path
 	
+	@clear_cache
+	@default_index
+	def merge_tree(self, rhs, base=None):
+		"""Merge the given rhs treeish into the current index, possibly taking
+		a common base treeish into account.
+		
+		As opposed to the from_tree_ method, this allows you to use an already
+		existing tree as the left side of the merge
+		
+		``rhs``
+			treeish reference pointing to the 'other' side of the merge.
+			
+		``base``
+			optional treeish reference pointing to the common base of 'rhs' and 
+			this index which equals lhs
+			
+		Returns
+			self ( containing the merge and possibly unmerged entries in case of 
+			conflicts )
+			
+		Raise 
+			GitCommandError in case there is a merge conflict. The error will 
+			be raised at the first conflicting path. If you want to have proper
+			merge resolution to be done by yourself, you have to commit the changed
+			index ( or make a valid tree from it ) and retry with a three-way 
+			index.from_tree call.
+		"""
+		# -i : ignore working tree status
+		# --aggressive : handle more merge cases
+		# -m : do an actual merge
+		args = ["--aggressive", "-i", "-m"]
+		if base is not None:
+			args.append(base)
+		args.append(rhs)
+		
+		self.repo.git.read_tree(args)
+		return self
+	
 	@classmethod
 	def from_tree(cls, repo, *treeish, **kwargs):
 		"""
@@ -611,15 +649,18 @@ class IndexFile(LazyMixin, diff.Diffable):
 		return path_map
 	
 	@classmethod
-	def get_entries_key(cls, entry):
+	def get_entries_key(cls, *entry):
 		"""
 		Returns
 			Key suitable to be used for the index.entries dictionary
 			
 		``entry``
-			Instance of type BaseIndexEntry
+			One instance of type BaseIndexEntry or the path and the stage
 		"""
-		return (entry.path, entry.stage) 
+		if len(entry) == 1:
+			return (entry[0].path, entry[0].stage)
+		else:
+			return tuple(entry)
 		
 	
 	def resolve_blobs(self, iter_blobs):
@@ -677,10 +718,14 @@ class IndexFile(LazyMixin, diff.Diffable):
 		# allows to lazily reread on demand
 		return self
 	
-	def write_tree(self):
+	def write_tree(self, missing_ok=False):
 		"""
 		Writes the Index in self to a corresponding Tree file into the repository
 		object database and returns it as corresponding Tree object.
+		
+		``missing_ok``
+			If True, missing objects referenced by this index will not result 
+			in an error.
 		
 		Returns
 			Tree object representing this index
@@ -689,7 +734,7 @@ class IndexFile(LazyMixin, diff.Diffable):
 		tmp_index_mover = _TemporaryFileSwap(index_path)
 		
 		self.write(index_path)
-		tree_sha = self.repo.git.write_tree()
+		tree_sha = self.repo.git.write_tree(missing_ok=missing_ok)
 		
 		return Tree(self.repo, tree_sha, 0, '')
 		

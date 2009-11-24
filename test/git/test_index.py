@@ -137,6 +137,57 @@ class TestTree(TestBase):
 		assert num_blobs == len(three_way_index.entries)
 	
 	@with_rw_repo('0.1.6')
+	def test_index_merge_tree(self, rw_repo):
+		# SINGLE TREE MERGE
+		# current index is at the (virtual) cur_commit
+		next_commit = "4c39f9da792792d4e73fc3a5effde66576ae128c"
+		parent_commit = rw_repo.head.commit.parents[0]
+		manifest_key = IndexFile.get_entries_key('MANIFEST.in', 0)
+		manifest_entry = rw_repo.index.entries[manifest_key]
+		rw_repo.index.merge_tree(next_commit)
+		# only one change should be recorded
+		assert manifest_entry.sha != rw_repo.index.entries[manifest_key].sha
+		
+		rw_repo.index.reset(rw_repo.head)
+		assert rw_repo.index.entries[manifest_key].sha == manifest_entry.sha
+		
+		# FAKE MERGE
+		#############
+		# Add a change with a NULL sha that should conflict with next_commit. We 
+		# pretend there was a change, but we do not even bother adding a proper 
+		# sha for it ( which makes things faster of course )
+		manifest_fake_entry = BaseIndexEntry((manifest_entry[0], Diff.null_hex_sha, 0, manifest_entry[3]))
+		rw_repo.index.add([manifest_fake_entry])
+		# add actually resolves the null-hex-sha for us as a feature, but we can 
+		# edit the index manually
+		assert rw_repo.index.entries[manifest_key].sha != Diff.null_hex_sha
+		# must operate on the same index for this ! Its a bit problematic as 
+		# it might confuse people
+		index = rw_repo.index 
+		index.entries[manifest_key] = IndexEntry.from_base(manifest_fake_entry)
+		index.write()
+		assert rw_repo.index.entries[manifest_key].sha == Diff.null_hex_sha
+		
+		# a three way merge would result in a conflict and fails as the command will 
+		# not overwrite any entries in our index and hence leave them unmerged. This is 
+		# mainly a protection feature as the current index is not yet in a tree
+		self.failUnlessRaises(GitCommandError, index.merge_tree, next_commit, base=parent_commit)
+		
+		# the only way to get the merged entries is to safe the current index away into a tree, 
+		# which is like a temporary commit for us. This fails as well as the NULL sha deos not
+		# have a corresponding object
+		self.failUnlessRaises(GitCommandError, index.write_tree)
+		
+		# if missing objects are okay, this would work though
+		tree = index.write_tree(missing_ok = True)
+		
+		# now make a proper three way merge with unmerged entries
+		unmerged_tree = IndexFile.from_tree(rw_repo, parent_commit, tree, next_commit)
+		unmerged_blobs = unmerged_tree.unmerged_blobs()
+		assert len(unmerged_blobs) == 1 and unmerged_blobs.keys()[0] == manifest_key[0]
+		
+	
+	@with_rw_repo('0.1.6')
 	def test_index_file_diffing(self, rw_repo):
 		# default Index instance points to our index
 		index = IndexFile(rw_repo)
@@ -397,7 +448,6 @@ class TestTree(TestBase):
 			entries = index.reset(new_commit).add([link_file], fprogress=self._fprogress_add)
 			self._assert_fprogress(entries)
 			assert len(entries) == 1 and S_ISLNK(entries[0].mode)
-			print "%o" % entries[0].mode
 		# END real symlink test 
 		
 		# add fake symlink and assure it checks-our as symlink
