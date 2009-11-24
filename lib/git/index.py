@@ -1108,7 +1108,7 @@ class IndexFile(LazyMixin, diff.Diffable):
 			kwargs['as_process'] = True
 			kwargs['istream'] = subprocess.PIPE
 			proc = self.repo.git.checkout_index(args, **kwargs)
-			make_exc = lambda : GitCommandError(("git-checkout-index",)+args, 128, proc.stderr.read())
+			make_exc = lambda : GitCommandError(("git-checkout-index",)+tuple(args), 128, proc.stderr.read())
 			checked_out_files = list()
 			for path in paths:
 				path = self._to_relative_path(path)

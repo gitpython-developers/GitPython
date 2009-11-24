@@ -70,6 +70,7 @@ class TestRemote(TestBase):
 		# self._print_fetchhead(remote.repo)
 		assert len(results) > 0 and isinstance(results[0], FetchInfo)
 		for info in results:
+			assert isinstance(info.note, basestring)
 			if isinstance(info.ref, Reference):
 				assert info.flags != 0
 			# END reference type flags handling 
@@ -85,6 +86,7 @@ class TestRemote(TestBase):
 		assert len(results) > 0 and isinstance(results[0], PushInfo)
 		for info in results:
 			assert info.flags
+			assert isinstance(info.summary, basestring)
 			if info.old_commit is not None:
 				assert isinstance(info.old_commit, Commit)
 			if info.flags & info.ERROR:

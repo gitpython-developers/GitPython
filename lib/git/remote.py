@@ -154,9 +154,10 @@ class PushInfo(object):
 	 					# the remote_ref_string. It can be a TagReference as well.
 	 	info.old_commit	# commit at which the remote_ref was standing before we pushed
 	 					# it to local_ref.commit. Will be None if an error was indicated
+	 	info.summary	# summary line providing human readable english text about the push
 	
 	"""
-	__slots__ = ('local_ref', 'remote_ref_string', 'flags', 'old_commit', '_remote')
+	__slots__ = ('local_ref', 'remote_ref_string', 'flags', 'old_commit', '_remote', 'summary')
 	
 	NEW_TAG, NEW_HEAD, NO_MATCH, REJECTED, REMOTE_REJECTED, REMOTE_FAILURE, DELETED, \
 	FORCED_UPDATE, FAST_FORWARD, UP_TO_DATE, ERROR = [ 1 << x for x in range(11) ]
@@ -165,7 +166,8 @@ class PushInfo(object):
 					'+' : FORCED_UPDATE, ' ' : FAST_FORWARD, 
 					'=' : UP_TO_DATE, '!' : ERROR }
 	
-	def __init__(self, flags, local_ref, remote_ref_string, remote, old_commit=None):
+	def __init__(self, flags, local_ref, remote_ref_string, remote, old_commit=None, 
+					summary=''):
 		"""
 		Initialize a new instance
 		"""
@@ -174,6 +176,7 @@ class PushInfo(object):
 		self.remote_ref_string = remote_ref_string
 		self._remote = remote
 		self.old_commit = old_commit
+		self.summary = summary
 		
 	@property
 	def remote_ref(self):
@@ -241,7 +244,7 @@ class PushInfo(object):
 			old_commit = Commit(remote.repo, old_sha)
 		# END message handling
 		
-		return PushInfo(flags, from_ref, to_ref_string, remote, old_commit)
+		return PushInfo(flags, from_ref, to_ref_string, remote, old_commit, summary)
 		
 
 class FetchInfo(object):
