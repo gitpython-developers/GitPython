@@ -10,6 +10,8 @@ import git.stats as stats
 from tree import Tree
 import base
 import utils
+import tempfile
+import os
 
 class Commit(base.Object, Iterable, diff.Diffable):
 	"""
@@ -269,6 +271,69 @@ class Commit(base.Object, Iterable, diff.Diffable):
 						  committer=committer, committed_date=committed_date, message=message)
 		# END for each line in stream
 		
+		
+	@classmethod
+	def create_from_tree(cls, repo, tree, message, parent_commits=None, head=True ):
+		"""
+		Commit the given tree, creating a commit object.
+		
+		``repo``
+			is the Repo
+			
+		``tree``
+			Sha of a tree or a tree object to become the tree of the new commit
+		
+		``message``
+			Commit message. It may be an empty string if no message is provided.
+			It will be converted to a string in any case.
+			
+		``parent_commits``
+			Optional Commit objects to use as parents for the new commit.
+			If empty list, the commit will have no parents at all and become 
+			a root commit.
+			If None , the current head commit will be the parent of the 
+			new commit object
+			
+		``head``
+			If True, the HEAD will be advanced to the new commit automatically.
+			Else the HEAD will remain pointing on the previous commit. This could 
+			lead to undesired results when diffing files.
+			
+		Returns
+			Commit object representing the new commit
+			
+		Note:
+			Additional information about hte committer and Author are taken from the
+			environment or from the git configuration, see git-commit-tree for 
+			more information
+		"""
+		parents = parent_commits
+		if parent_commits is None:
+			parent_commits = [ repo.head.commit ]
+		
+		parent_args = [ ("-p", str(commit)) for commit in parent_commits ]
+		
+		# create message stream
+		tmp_file_path = tempfile.mktemp()
+		fp = open(tmp_file_path,"wb")
+		fp.write(str(message))
+		fp.close()
+		fp = open(tmp_file_path,"rb")
+		fp.seek(0)
+		
+		try:
+			# write the current index as tree
+			commit_sha = repo.git.commit_tree(tree, parent_args, istream=fp)
+			new_commit = cls(repo, commit_sha)
+			
+			if head:
+				repo.head.commit = new_commit 
+			# END advance head handling 
+			
+			return new_commit
+		finally:
+			fp.close()
+			os.remove(tmp_file_path)
 		
 	def __str__(self):
 		""" Convert commit to string which is SHA1 """
