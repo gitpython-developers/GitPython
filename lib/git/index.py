@@ -191,7 +191,7 @@ class IndexEntry(BaseIndexEntry):
 			Instance of type BaseIndexEntry
 		"""
 		time = struct.pack(">LL", 0, 0)
-		return IndexEntry((base.mode, base.sha, base.stage, base.path, time, time, 1, 1, 1, 1, 0))
+		return IndexEntry((base.mode, base.sha, base.stage, base.path, time, time, 0, 0, 0, 0, 0))
 		
 	@classmethod
 	def from_blob(cls, blob):
@@ -352,6 +352,10 @@ class IndexFile(LazyMixin, diff.Diffable):
 		
 		# the footer contains extension data and a sha on the content so far
 		# Keep the extension footer,and verify we have a sha in the end
+		# Extension data format is: 
+		# 4 bytes ID
+		# 4 bytes length of chunk
+		# repeated 0 - N times
 		self._extension_data = stream.read(~0)
 		assert len(self._extension_data) > 19, "Index Footer was not at least a sha on content as it was only %i bytes in size" % len(self._extension_data)
 		
@@ -733,8 +737,22 @@ class IndexFile(LazyMixin, diff.Diffable):
 		index_path = self._index_path()
 		tmp_index_mover = _TemporaryFileSwap(index_path)
 		
+		# IMPORTANT: If we have TREE extension data, it will actually 
+		# ignore the index and write the stored tree instead. Hence we 
+		# temporarily forget about it, and in fact I don't know what git 
+		# uses it for
+		stored_ext_data = None
+		if self._extension_data and self._extension_data[:4] == 'TREE':
+			stored_ext_data = self._extension_data
+			self._extension_data = ''
+		# END extension data special handling
+		
 		self.write(index_path)
 		tree_sha = self.repo.git.write_tree(missing_ok=missing_ok)
+		
+		if stored_ext_data:
+			self._extension_data = stored_ext_data
+		# END reset stored exstension data
 		
 		return Tree(self.repo, tree_sha, 0, '')
 		

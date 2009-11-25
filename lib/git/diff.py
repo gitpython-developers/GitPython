@@ -39,6 +39,7 @@ class Diffable(object):
 		``other``
 			Is the item to compare us with. 
 			If None, we will be compared to the working tree.
+			If Treeish, it will be compared against the respective tree
 			If Index ( type ), it will be compared against the index.
 			It defaults to Index to assure the method will not by-default fail
 			on bare repositories.

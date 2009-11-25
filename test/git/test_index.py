@@ -14,7 +14,6 @@ import glob
 import shutil
 from stat import *
 
-
 class TestTree(TestBase):
 	
 	def __init__(self, *args):
@@ -464,12 +463,17 @@ class TestTree(TestBase):
 		full_index_entry = IndexEntry.from_base(BaseIndexEntry((0120000, entries[0].sha, 0, entries[0].path)))
 		entry_key = index.get_entries_key(full_index_entry)
 		index.reset(new_commit)
+		
 		assert entry_key not in index.entries
 		index.entries[entry_key] = full_index_entry
 		index.write()
 		index.update()	# force reread of entries
 		new_entry = index.entries[entry_key]
 		assert S_ISLNK(new_entry.mode)
+		
+		# a tree created from this should contain the symlink
+		tree = index.write_tree(True)
+		assert fake_symlink_relapath in tree
 		
 		# checkout the fakelink, should be a link then
 		assert not S_ISLNK(os.stat(fake_symlink_path)[ST_MODE])
