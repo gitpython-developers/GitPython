@@ -208,7 +208,7 @@ class Diff(object):
 			self.a_blob = None
 		else:
 			self.a_blob = blob.Blob(repo, a_blob_id, mode=a_mode, path=a_path)
-		if not b_blob_id:
+		if b_blob_id is None:
 			self.b_blob = None
 		else:
 			self.b_blob = blob.Blob(repo, b_blob_id, mode=b_mode, path=b_path)
@@ -243,6 +243,45 @@ class Diff(object):
 		
 	def __hash__(self):
 		return hash(tuple(getattr(self,n) for n in self.__slots__))
+
+	def __str__(self):
+		h = "%s"
+		if self.a_blob:
+			h %= self.a_blob.path
+		if self.b_blob:                    
+			h %= self.b_blob.path
+		
+		msg = ''
+		l = None	# temp line
+		ll = 0		# line length
+		for b,n in zip((self.a_blob, self.b_blob), ('lhs', 'rhs')):
+			if b:
+				l = "\n%s: %o | %s" % (n, b.mode, b.sha)
+			else:
+				l = "\n%s: None" % n
+			# END if blob is not None
+			ll = max(len(l), ll)
+			msg += l
+		# END for each blob
+		
+		# add headline
+		h += '\n' + '='*ll
+		
+		if self.deleted_file:
+			msg += '\nfile deleted in rhs'
+		if self.new_file:
+			msg += '\nfile added in rhs'
+		if self.rename_from:
+			msg += '\nfile renamed from %r' % self.rename_from
+		if self.rename_to:
+			msg += '\nfile renamed to %r' % self.rename_to
+		if self.diff:
+			msg += '\n---'
+			msg += self.diff
+			msg += '\n---'
+		# END diff info
+		
+		return h + msg
 
 	@property
 	def renamed(self):
