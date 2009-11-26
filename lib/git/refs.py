@@ -10,192 +10,8 @@ from objects import Object, Commit
 from objects.utils import get_object_type_by_name
 from utils import LazyMixin, Iterable, join_path, join_path_native, to_native_path_linux
 
-class Reference(LazyMixin, Iterable):
-	"""
-	Represents a named reference to any object. Subclasses may apply restrictions though, 
-	i.e. Heads can only point to commits.
-	"""
-	__slots__ = ("repo", "path")
-	_common_path_default = "refs"
-	_id_attribute_ = "name"
-	
-	def __init__(self, repo, path):
-		"""
-		Initialize this instance
-		``repo``
-			Our parent repository
-		
-		``path``
-			Path relative to the .git/ directory pointing to the ref in question, i.e.
-			refs/heads/master
-			
-		"""
-		if not path.startswith(self._common_path_default):
-			raise ValueError("Cannot instantiate %s from path %s" % ( self.__class__.__name__, path ))
-			
-		self.repo = repo
-		self.path = path
-		
-	def __str__(self):
-		return self.name
-		
-	def __repr__(self):
-		return '<git.%s "%s">' % (self.__class__.__name__, self.path)
-		
-	def __eq__(self, other):
-		return self.path == other.path
-		
-	def __ne__(self, other):
-		return not ( self == other )
-		
-	def __hash__(self):
-		return hash(self.path)
-		
-	@property
-	def name(self):
-		"""
-		Returns
-			(shortest) Name of this reference - it may contain path components
-		"""
-		# first two path tokens are can be removed as they are 
-		# refs/heads or refs/tags or refs/remotes
-		tokens = self.path.split('/')
-		if len(tokens) < 3:
-			return self.path	# could be refs/HEAD
-		
-		return '/'.join(tokens[2:])
-	
-	def _get_object(self):
-		"""
-		Returns
-			The object our ref currently refers to. Refs can be cached, they will 
-			always point to the actual object as it gets re-created on each query
-		"""
-		# have to be dynamic here as we may be a tag which can point to anything
-		# Our path will be resolved to the hexsha which will be used accordingly
-		return Object.new(self.repo, self.path)
-		
-	def _set_object(self, ref):
-		"""
-		Set our reference to point to the given ref. It will be converted
-		to a specific hexsha.
-		
-		Note: 
-			TypeChecking is done by the git command
-		"""
-		# do it safely by specifying the old value
-		self.repo.git.update_ref(self.path, ref, self._get_object().sha)
-		
-	object = property(_get_object, _set_object, doc="Return the object our ref currently refers to")
-		
-	def _set_commit(self, commit):
-		"""
-		Set ourselves to point to the given commit. 
-		
-		Raise
-			ValueError if commit does not actually point to a commit
-		"""
-		self._set_object(commit)
-		
-	def _get_commit(self):
-		"""
-		Returns
-			Commit object the reference points to
-		"""
-		commit = self.object
-		if commit.type != "commit":
-			raise TypeError("Object of reference %s did not point to a commit, but to %r" % (self, commit))
-		return commit
-	
-	commit = property(_get_commit, _set_commit, doc="Return Commit object the reference points to")
-	
-	@classmethod
-	def iter_items(cls, repo, common_path = None, **kwargs):
-		"""
-		Find all refs in the repository
 
-		``repo``
-			is the Repo
-
-		``common_path``
-			Optional keyword argument to the path which is to be shared by all
-			returned Ref objects.
-			Defaults to class specific portion if None assuring that only 
-			refs suitable for the actual class are returned.
-
-		Returns
-			git.Reference[]
-			
-			List is lexigraphically sorted
-			The returned objects represent actual subclasses, such as Head or TagReference
-		"""
-		if common_path is None:
-			common_path = cls._common_path_default
-		
-		rela_paths = set()
-		
-		# walk loose refs
-		# Currently we do not follow links 
-		for root, dirs, files in os.walk(join_path_native(repo.path, common_path)):
-			for f in files:
-				abs_path = to_native_path_linux(join_path(root, f))
-				rela_paths.add(abs_path.replace(to_native_path_linux(repo.path) + '/', ""))
-			# END for each file in root directory
-		# END for each directory to walk
-		
-		# read packed refs
-		packed_refs_path = join_path_native(repo.path, 'packed-refs')
-		if os.path.isfile(packed_refs_path):
-			fp = open(packed_refs_path, 'r')
-			try:
-				for line in fp.readlines():
-					if line.startswith('#'):
-						continue
-					# 439689865b9c6e2a0dad61db22a0c9855bacf597 refs/heads/hello
-					line = line.rstrip()
-					first_space = line.find(' ')
-					if first_space == -1:
-						continue
-						
-					rela_path = line[first_space+1:]
-					if rela_path.startswith(common_path):
-						rela_paths.add(rela_path)
-					# END relative path matches common path
-				# END for each line in packed-refs
-			finally:
-				fp.close()
-		# END packed refs reading
-		
-		# return paths in sorted order
-		for path in sorted(rela_paths):
-			if path.endswith('/HEAD'):
-				continue
-			# END skip remote heads
-			yield cls.from_path(repo, path)
-		# END for each sorted relative refpath
-		
-		
-	@classmethod
-	def from_path(cls, repo, path):
-		"""
-		Return
-			Instance of type Reference, Head, or Tag
-			depending on the given path
-		"""
-		if not path:
-			raise ValueError("Cannot create Reference from %r" % path)
-		
-		for ref_type in (Head, RemoteReference, TagReference, Reference):
-			try:
-				return ref_type(repo, path)
-			except ValueError:
-				pass
-			# END exception handling
-		# END for each type to try
-		raise ValueError("Could not find reference type suitable to handle path %r" % path)
-		
-
-class SymbolicReference(object):
+class SymbolicReference(object):                           
 	"""
 	Represents a special case of a reference such that this reference is symbolic.
 	It does not point to a specific commit, but to another Head, which itself 
@@ -224,6 +40,15 @@ class SymbolicReference(object):
 	def __hash__(self):
 		return hash(self.path)
 		
+	@property
+	def name(self):
+		"""
+		Returns
+			In case of symbolic references, the shortest assumable name 
+			is the path itself.
+		"""
+		return self.path	
+	
 	def _get_path(self):
 		return join_path_native(self.repo.path, self.path)
 		
@@ -356,6 +181,157 @@ class SymbolicReference(object):
 			return SymbolicReference(repo, path)
 			
 		raise ValueError("Could not find symbolic reference type suitable to handle path %r" % path)
+		
+
+class Reference(SymbolicReference, LazyMixin, Iterable):
+	"""
+	Represents a named reference to any object. Subclasses may apply restrictions though, 
+	i.e. Heads can only point to commits.
+	"""
+	__slots__ = tuple()
+	_common_path_default = "refs"
+	_id_attribute_ = "name"
+	
+	def __init__(self, repo, path):
+		"""
+		Initialize this instance
+		``repo``
+			Our parent repository
+		
+		``path``
+			Path relative to the .git/ directory pointing to the ref in question, i.e.
+			refs/heads/master
+			
+		"""
+		if not path.startswith(self._common_path_default):
+			raise ValueError("Cannot instantiate %s from path %s" % ( self.__class__.__name__, path ))
+		super(Reference, self).__init__(repo, path)
+		
+
+	def __str__(self):
+		return self.name
+
+	def _get_object(self):
+		"""
+		Returns
+			The object our ref currently refers to. Refs can be cached, they will 
+			always point to the actual object as it gets re-created on each query
+		"""
+		# have to be dynamic here as we may be a tag which can point to anything
+		# Our path will be resolved to the hexsha which will be used accordingly
+		return Object.new(self.repo, self.path)
+		
+	def _set_object(self, ref):
+		"""
+		Set our reference to point to the given ref. It will be converted
+		to a specific hexsha.
+		
+		Note: 
+			TypeChecking is done by the git command
+		"""
+		# do it safely by specifying the old value
+		self.repo.git.update_ref(self.path, ref, self._get_object().sha)
+		
+	object = property(_get_object, _set_object, doc="Return the object our ref currently refers to")
+		
+	@property
+	def name(self):
+		"""
+		Returns
+		   (shortest) Name of this reference - it may contain path components
+		"""
+		# first two path tokens are can be removed as they are 
+		# refs/heads or refs/tags or refs/remotes
+		tokens = self.path.split('/')
+		if len(tokens) < 3:
+			return self.path		   # could be refs/HEAD
+		return '/'.join(tokens[2:])
+	
+	@classmethod
+	def iter_items(cls, repo, common_path = None, **kwargs):
+		"""
+		Find all refs in the repository
+
+		``repo``
+			is the Repo
+
+		``common_path``
+			Optional keyword argument to the path which is to be shared by all
+			returned Ref objects.
+			Defaults to class specific portion if None assuring that only 
+			refs suitable for the actual class are returned.
+
+		Returns
+			git.Reference[]
+			
+			List is lexigraphically sorted
+			The returned objects represent actual subclasses, such as Head or TagReference
+		"""
+		if common_path is None:
+			common_path = cls._common_path_default
+		
+		rela_paths = set()
+		
+		# walk loose refs
+		# Currently we do not follow links 
+		for root, dirs, files in os.walk(join_path_native(repo.path, common_path)):
+			for f in files:
+				abs_path = to_native_path_linux(join_path(root, f))
+				rela_paths.add(abs_path.replace(to_native_path_linux(repo.path) + '/', ""))
+			# END for each file in root directory
+		# END for each directory to walk
+		
+		# read packed refs
+		packed_refs_path = join_path_native(repo.path, 'packed-refs')
+		if os.path.isfile(packed_refs_path):
+			fp = open(packed_refs_path, 'r')
+			try:
+				for line in fp.readlines():
+					if line.startswith('#'):
+						continue
+					# 439689865b9c6e2a0dad61db22a0c9855bacf597 refs/heads/hello
+					line = line.rstrip()
+					first_space = line.find(' ')
+					if first_space == -1:
+						continue
+						
+					rela_path = line[first_space+1:]
+					if rela_path.startswith(common_path):
+						rela_paths.add(rela_path)
+					# END relative path matches common path
+				# END for each line in packed-refs
+			finally:
+				fp.close()
+		# END packed refs reading
+		
+		# return paths in sorted order
+		for path in sorted(rela_paths):
+			if path.endswith('/HEAD'):
+				continue
+			# END skip remote heads
+			yield cls.from_path(repo, path)
+		# END for each sorted relative refpath
+		
+		
+	@classmethod
+	def from_path(cls, repo, path):
+		"""
+		Return
+			Instance of type Reference, Head, or Tag
+			depending on the given path
+		"""
+		if not path:
+			raise ValueError("Cannot create Reference from %r" % path)
+		
+		for ref_type in (Head, RemoteReference, TagReference, Reference):
+			try:
+				return ref_type(repo, path)
+			except ValueError:
+				pass
+			# END exception handling
+		# END for each type to try
+		raise ValueError("Could not find reference type suitable to handle path %r" % path)
+		
 	
 class HEAD(SymbolicReference):
 	"""
