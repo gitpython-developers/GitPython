@@ -43,7 +43,7 @@ class Reference(LazyMixin, Iterable):
 		return '<git.%s "%s">' % (self.__class__.__name__, self.path)
 		
 	def __eq__(self, other):
-		return self.path == other.path and self.object == other.object
+		return self.path == other.path
 		
 	def __ne__(self, other):
 		return not ( self == other )
@@ -203,34 +203,29 @@ class SymbolicReference(object):
 	
 	A typical example for a symbolic reference is HEAD.
 	"""
-	__slots__ = ("repo", "name")
+	__slots__ = ("repo", "path")
 	
-	def __init__(self, repo, name):
-		if '/' in name:
-			# NOTE: Actually they can be looking like ordinary refs. Theoretically we handle this
-			# case incorrectly
-			raise ValueError("SymbolicReferences are not located within a directory, got %s" % name)
-		# END error handling 
+	def __init__(self, repo, path):
 		self.repo = repo
-		self.name = name
+		self.path = path
 		
 	def __str__(self):
-		return self.name
+		return self.path
 		
 	def __repr__(self):
-		return '<git.%s "%s">' % (self.__class__.__name__, self.name)
+		return '<git.%s "%s">' % (self.__class__.__name__, self.path)
 		
 	def __eq__(self, other):
-		return self.name == other.name
+		return self.path == other.path
 		
 	def __ne__(self, other):
 		return not ( self == other )
 		
 	def __hash__(self):
-		return hash(self.name)
+		return hash(self.path)
 		
 	def _get_path(self):
-		return join_path_native(self.repo.path, self.name)
+		return join_path_native(self.repo.path, self.path)
 		
 	def _get_commit(self):
 		"""
@@ -311,7 +306,7 @@ class SymbolicReference(object):
 		# checking
 		# Otherwise we detach it and have to do it manually
 		if write_value.startswith('ref:'):
-			self.repo.git.symbolic_ref(self.name, write_value[5:])
+			self.repo.git.symbolic_ref(self.path, write_value[5:])
 			return 
 		# END non-detached handling 
 		
@@ -346,6 +341,10 @@ class SymbolicReference(object):
 		Return
 			Instance of SymbolicReference or HEAD
 			depending on the given path
+			
+		Note
+			It enforces that symbolic refs in git are only found in the 
+			root of the .git repository, never within a folder.
 		"""
 		if not path:
 			raise ValueError("Cannot create Symbolic Reference from %r" % path)
@@ -366,10 +365,10 @@ class HEAD(SymbolicReference):
 	_HEAD_NAME = 'HEAD'
 	__slots__ = tuple()
 	
-	def __init__(self, repo, name=_HEAD_NAME):
-		if name != self._HEAD_NAME:
-			raise ValueError("HEAD instance must point to %r, got %r" % (self._HEAD_NAME, name))
-		super(HEAD, self).__init__(repo, name)
+	def __init__(self, repo, path=_HEAD_NAME):
+		if path != self._HEAD_NAME:
+			raise ValueError("HEAD instance must point to %r, got %r" % (self._HEAD_NAME, path))
+		super(HEAD, self).__init__(repo, path)
 	
 	
 	def reset(self, commit='HEAD', index=True, working_tree = False, 

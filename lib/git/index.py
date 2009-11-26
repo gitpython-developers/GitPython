@@ -1039,10 +1039,6 @@ class IndexFile(LazyMixin, diff.Diffable):
 			If None, all paths in the index will be checked out. Otherwise an iterable
 			of relative or absolute paths or a single path pointing to files or directories
 			in the index is expected.
-			The command will raise of files or directories do not exist in the index 
-			( as opposed to the  original git command who ignores them ). Additionally 
-			this command allows to checkout directories which is an extension to git-update-index.
-			
 			
 		``force``
 			If True, existing files will be overwritten even if they contain local modifications. 
@@ -1064,6 +1060,8 @@ class IndexFile(LazyMixin, diff.Diffable):
 		Raise CheckoutError
 			If at least one file failed to be checked out. This is a summary, 
 			hence it will checkout as many files as it can anyway.
+			If one of files or directories do not exist in the index 
+			( as opposed to the  original git command who ignores them ). 
 			Raise GitCommandError if error lines could not be parsed - this truly is 
 			an exceptional state
 		"""

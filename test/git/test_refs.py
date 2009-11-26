@@ -10,6 +10,7 @@ from git import *
 import git.refs as refs
 from git.objects.tag import TagObject
 from itertools import chain
+import os
 
 class TestRefs(TestBase):
 
@@ -63,7 +64,7 @@ class TestRefs(TestBase):
 		types_found = set()
 		for ref in self.rorepo.refs:
 			types_found.add(type(ref))
-		assert len(types_found) == 3 
+		assert len(types_found) == 4 
 		
 	@with_rw_repo('0.1.6')
 	def test_head_reset(self, rw_repo):
@@ -233,7 +234,30 @@ class TestRefs(TestBase):
 		self.failUnlessRaises(GitCommandError, far_away_head.checkout)
 		assert active_branch == active_branch.checkout(force=True)
 		
+		# test symbolic references which are not at default locations like HEAD
+		# or FETCH_HEAD - they may also be at spots in refs of course
+		symbol_ref_path = "refs/symbol_ref"
+		symref = SymbolicReference(rw_repo, symbol_ref_path)
+		assert symref.path == symbol_ref_path
+		symbol_ref_abspath = os.path.join(rw_repo.path, symref.path)
+		
+		# set it
+		symref.reference = new_head
+		assert symref.reference == new_head
+		assert os.path.isfile(symbol_ref_abspath)
+		assert symref.commit == new_head.commit
+		
 		# test ref listing - assure we have packed refs
-		rw_repo.git.pack_refs(all=True)
-		assert rw_repo.heads
+		rw_repo.git.pack_refs(all=True, prune=True)
+		heads = rw_repo.heads
+		assert heads
+		assert new_head in heads
+		assert active_branch in heads
 		assert rw_repo.tags
+		
+		# NOTE: It appears git-cat-file cannot resolve refs which are packed !
+		# At least it fails here for some reason
+		# Couldn't reproduce the bug in a simple example though ... lets see.
+		self.failUnlessRaises(ValueError, getattr, new_head, 'commit')
+		self.failUnlessRaises(ValueError, getattr, symref, "commit")
+		

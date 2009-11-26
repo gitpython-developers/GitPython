@@ -344,7 +344,7 @@ class Git(object):
 		"""
 		tokens = header_line.split()
 		if len(tokens) != 3:
-			raise ValueError("SHA named %s could not be resolved" % tokens[0] )
+			raise ValueError("SHA named %s could not be resolved, git returned: %r" % (tokens[0], header_line.strip()) )
 		if len(tokens[0]) != 40:
 			raise ValueError("Failed to parse header: %r" % header_line) 
 		return (tokens[0], tokens[1], int(tokens[2]))
