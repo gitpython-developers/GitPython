@@ -64,7 +64,7 @@ class TestRefs(TestBase):
 		types_found = set()
 		for ref in self.rorepo.refs:
 			types_found.add(type(ref))
-		assert len(types_found) == 4 
+		assert len(types_found) == 3 
 		
 	@with_rw_repo('0.1.6')
 	def test_head_reset(self, rw_repo):
@@ -192,7 +192,7 @@ class TestRefs(TestBase):
 		
 		# setting a non-commit as commit fails, but succeeds as object
 		head_tree = head.commit.tree
-		self.failUnlessRaises(GitCommandError, setattr, head, 'commit', head_tree)
+		self.failUnlessRaises(ValueError, setattr, head, 'commit', head_tree)
 		assert head.commit == old_commit		# and the ref did not change
 		self.failUnlessRaises(GitCommandError, setattr, head, 'object', head_tree)
 		
@@ -254,10 +254,4 @@ class TestRefs(TestBase):
 		assert new_head in heads
 		assert active_branch in heads
 		assert rw_repo.tags
-		
-		# NOTE: It appears git-cat-file cannot resolve refs which are packed !
-		# At least it fails here for some reason
-		# Couldn't reproduce the bug in a simple example though ... lets see.
-		self.failUnlessRaises(ValueError, getattr, new_head, 'commit')
-		self.failUnlessRaises(ValueError, getattr, symref, "commit")
 		

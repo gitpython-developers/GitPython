@@ -52,6 +52,39 @@ class SymbolicReference(object):
 	def _get_path(self):
 		return join_path_native(self.repo.path, self.path)
 		
+	@classmethod
+	def _iter_packed_refs(cls, repo):
+		"""Returns an iterator yielding pairs of sha1/path pairs for the corresponding
+		refs.
+		NOTE: The packed refs file will be kept open as long as we iterate"""
+		try:
+			fp = open(os.path.join(repo.path, 'packed-refs'), 'r')
+			for line in fp:
+				line = line.strip()
+				if not line:
+					continue
+				if line.startswith('#'):
+					if line.startswith('# pack-refs with:') and not line.endswith('peeled'):
+						raise TypeError("PackingType of packed-Refs not understood: %r" % line)
+					# END abort if we do not understand the packing scheme
+					continue
+				# END parse comment
+				
+				# skip dereferenced tag object entries - previous line was actual
+				# tag reference for it
+				if line[0] == '^':
+					continue
+				
+				yield tuple(line.split(' ', 1))
+			# END for each line
+		except (OSError,IOError):
+			raise StopIteration
+		# END no packed-refs file handling 
+		# NOTE: Had try-finally block around here to close the fp, 
+		# but some python version woudn't allow yields within that.
+		# I believe files are closing themselves on destruction, so it is 
+		# alright.
+		
 	def _get_commit(self):
 		"""
 		Returns:
@@ -59,10 +92,22 @@ class SymbolicReference(object):
 			SymbolicReferences
 		"""
 		# we partially reimplement it to prevent unnecessary file access
-		fp = open(self._get_path(), 'r')
-		value = fp.read().rstrip()
-		fp.close()
-		tokens = value.split(" ")
+		tokens = None
+		try:
+			fp = open(self._get_path(), 'r')
+			value = fp.read().rstrip()
+			fp.close()
+			tokens = value.split(" ")
+		except (OSError,IOError):
+			# Probably we are just packed, find our entry in the packed refs file
+			# NOTE: We are not a symbolic ref if we are in a packed file, as these
+			# are excluded explictly
+			for sha, path in self._iter_packed_refs(self.repo):
+				if path != self.path: continue
+				tokens = (sha, path)
+				break
+			# END for each packed ref
+		# END handle packed refs
 		
 		# it is a detached reference
 		if self.repo.re_hexsha_only.match(tokens[0]):
@@ -282,26 +327,10 @@ class Reference(SymbolicReference, LazyMixin, Iterable):
 		# END for each directory to walk
 		
 		# read packed refs
-		packed_refs_path = join_path_native(repo.path, 'packed-refs')
-		if os.path.isfile(packed_refs_path):
-			fp = open(packed_refs_path, 'r')
-			try:
-				for line in fp.readlines():
-					if line.startswith('#'):
-						continue
-					# 439689865b9c6e2a0dad61db22a0c9855bacf597 refs/heads/hello
-					line = line.rstrip()
-					first_space = line.find(' ')
-					if first_space == -1:
-						continue
-						
-					rela_path = line[first_space+1:]
-					if rela_path.startswith(common_path):
-						rela_paths.add(rela_path)
-					# END relative path matches common path
-				# END for each line in packed-refs
-			finally:
-				fp.close()
+		for sha, rela_path in cls._iter_packed_refs(repo):
+			if rela_path.startswith(common_path):
+				rela_paths.add(rela_path)
+			# END relative path matches common path
 		# END packed refs reading
 		
 		# return paths in sorted order
