@@ -173,6 +173,7 @@ class Tree(base.IndexObject, diff.Diffable):
 		Returns
 		
 			Iterator to traverse the tree recursively up to the given level.
+			The traversal is depth-first.
 			The iterator returns Blob and Tree objects with paths relative to their 
 			repository.
 		

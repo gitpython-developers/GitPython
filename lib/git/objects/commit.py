@@ -13,7 +13,7 @@ import utils
 import tempfile
 import os
 
-class Commit(base.Object, Iterable, diff.Diffable):
+class Commit(base.Object, Iterable, diff.Diffable, utils.Traversable):
 	"""
 	Wraps a git Commit object.
 	
@@ -74,6 +74,10 @@ class Commit(base.Object, Iterable, diff.Diffable):
 		if self.sha and tree is not None:
 			self.tree = Tree(repo, tree, path='')
 		# END id to tree conversion
+		
+	@classmethod
+	def _get_intermediate_items(cls, commit):
+		return commit.parents
 
 	def _set_cache_(self, attr):
 		"""

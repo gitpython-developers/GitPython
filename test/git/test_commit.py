@@ -48,6 +48,32 @@ class TestCommit(TestBase):
 		assert commit.committed_date == 1210193388
 		assert commit.message == "initial project"
 		
+	def test_traversal(self):
+		start = self.rorepo.commit("a4d06724202afccd2b5c54f81bcf2bf26dea7fff")
+		p0 = start.parents[0]
+		p1 = start.parents[1]
+		p00 = p0.parents[0]
+		
+		# basic branch first, depth first
+		dfirst = start.traverse(branch_first=False)
+		bfirts = start.traverse(branch_first=True)
+		assert dfirst.next() == p0
+		assert dfirst.next() == p00
+		assert bfirts.next() == p0
+		assert bfirts.next() == p1
+		
+		# ignore self
+		assert start.traverse(ignore_self=False).next() == start
+		
+		# depth 
+		assert len(list(start.traverse(ignore_self=False, depth=0))) == 1
+		
+		# prune
+		assert start.traverse(branch_first=1, prune=lambda i: i==p0).next() == p1
+		
+		# predicate
+		assert start.traverse(branch_first=1, predicate=lambda i: i==p1).next() == p1
+		
 	@patch_object(Git, '_call_process')
 	def test_rev_list_bisect_all(self, git):
 		"""
