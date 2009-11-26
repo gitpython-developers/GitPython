@@ -134,7 +134,7 @@ class Traversable(object):
 	
 		while stack:
 			d, item = stack.pop()			# depth of item, item
-	
+			
 			if item in visited:
 				continue
 	

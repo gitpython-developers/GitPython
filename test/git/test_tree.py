@@ -29,7 +29,7 @@ class TestTree(TestCase):
 		# limit recursion level to 0 - should be same as default iteration
 		assert all_items
 		assert 'CHANGES' in root
-		assert len(list(root)) == len(list(root.traverse(max_depth=0)))
+		assert len(list(root)) == len(list(root.traverse(depth=1)))
 		
 		# only choose trees
 		trees_only = lambda i: i.type == "tree"

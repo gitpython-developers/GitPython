@@ -83,11 +83,16 @@ class TestTree(TestBase):
 			tree = self.rorepo.commit(tree).tree
 		
 		num_blobs = 0
-		for blob in tree.traverse(predicate = lambda e: e.type == "blob"):
+		blist = list()
+		for blob in tree.traverse(predicate = lambda e: e.type == "blob", branch_first=False):
 			assert (blob.path,0) in index.entries
-			num_blobs += 1
+			blist.append(blob)
 		# END for each blob in tree
-		assert num_blobs == len(index.entries)
+		if len(blist) != len(index.entries):
+			iset = set(k[0] for k in index.entries.keys())
+			bset = set(b.path for b in blist)
+			raise AssertionError( "CMP Failed: Missing entries in index: %s, missing in tree: %s" % (bset-iset, iset-bset) )
+		# END assertion message
 	
 	def test_index_file_from_tree(self):
 		common_ancestor_sha = "5117c9c8a4d3af19a9958677e45cda9269de1541"

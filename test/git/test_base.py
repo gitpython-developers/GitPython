@@ -16,10 +16,10 @@ import tempfile
 
 class TestBase(TestBase):
 	
-	type_tuples = (  ("blob", "8741fc1d09d61f02ffd8cded15ff603eff1ec070"), 
-					 ("tree", "3a6a5e3eeed3723c09f1ef0399f81ed6b8d82e79"),
-					 ("commit", "4251bd59fb8e11e40c40548cba38180a9536118c"),
-					 ("tag", "e56a60e8e9cd333cfba0140a77cd12b0d9398f10") ) 
+	type_tuples = (  ("blob", "8741fc1d09d61f02ffd8cded15ff603eff1ec070", "blob.py"), 
+					 ("tree", "3a6a5e3eeed3723c09f1ef0399f81ed6b8d82e79", "directory"),
+					 ("commit", "4251bd59fb8e11e40c40548cba38180a9536118c", None),
+					 ("tag", "e56a60e8e9cd333cfba0140a77cd12b0d9398f10", None) ) 
 	
 	def test_base_object(self):	
 		# test interface of base object classes
@@ -29,8 +29,12 @@ class TestBase(TestBase):
 		s = set()
 		num_objs = 0
 		num_index_objs = 0
-		for obj_type, (typename, hexsha) in zip(types, self.type_tuples):
-			item = obj_type(self.rorepo,hexsha)
+		for obj_type, (typename, hexsha, path) in zip(types, self.type_tuples):
+			item = None
+			if path is None:
+				item = obj_type(self.rorepo,hexsha)
+			else:
+				item = obj_type(self.rorepo,hexsha, 0, path)
 			num_objs += 1
 			assert item.sha == hexsha
 			assert item.type == typename

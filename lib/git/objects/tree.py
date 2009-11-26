@@ -9,6 +9,7 @@ import blob
 import base
 import binascii
 import git.diff as diff
+import utils
 from git.utils import join_path
 
 def sha_to_hex(sha):
@@ -17,7 +18,8 @@ def sha_to_hex(sha):
     assert len(hexsha) == 40, "Incorrect length of sha1 string: %d" % hexsha
     return hexsha
 
-class Tree(base.IndexObject, diff.Diffable):
+
+class Tree(base.IndexObject, diff.Diffable, utils.Traversable):
 	"""
 	Tress represent a ordered list of Blobs and other Trees. Hence it can be 
 	accessed like a list.
@@ -47,6 +49,13 @@ class Tree(base.IndexObject, diff.Diffable):
 	
 	def __init__(self, repo, sha, mode=0, path=None):
 		super(Tree, self).__init__(repo, sha, mode, path)
+
+	@classmethod
+	def _get_intermediate_items(cls, index_object):
+		if index_object.type == "tree":
+			return index_object._cache
+		return tuple()
+
 
 	def _set_cache_(self, attr):
 		if attr == "_cache":
@@ -154,46 +163,7 @@ class Tree(base.IndexObject, diff.Diffable):
 
 	def __repr__(self):
 		return '<git.Tree "%s">' % self.sha
-		
-	@classmethod
-	def _iter_recursive(cls, repo, tree, cur_depth, max_depth, predicate, prune ):
-		
-		for obj in tree:
-			if predicate(obj):
-				yield obj
-			if obj.type == "tree" and ( max_depth < 0 or cur_depth+1 <= max_depth ) and not prune(obj):
-				for recursive_obj in cls._iter_recursive( repo, obj, cur_depth+1, max_depth, predicate, prune ):
-					yield recursive_obj
-				# END for each recursive object
-			# END if we may enter recursion
-		# END for each object
-		
-	def traverse(self, max_depth=-1, predicate = lambda i: True, prune = lambda t: False):
-		"""
-		Returns
-		
-			Iterator to traverse the tree recursively up to the given level.
-			The traversal is depth-first.
-			The iterator returns Blob and Tree objects with paths relative to their 
-			repository.
-		
-		``max_depth``
-		
-			if -1, the whole tree will be traversed
-			if 0, only the first level will be traversed which is the same as 
-			the default non-recursive iterator
 			
-		``predicate``
-		
-			If predicate(item) returns True, item will be returned by iterator
-			
-		``prune``
-			
-			If prune(tree) returns True, the traversal will not continue into the 
-			given tree object.
-		"""
-		return self._iter_recursive( self.repo, self, 0, max_depth, predicate, prune )
-		
 	@property
 	def trees(self):
 		"""

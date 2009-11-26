@@ -173,6 +173,14 @@ class IndexObject(Object):
 		if isinstance(mode, basestring):
 			self.mode = self._mode_str_to_int(mode)
 	
+	def __hash__(self):
+		"""
+		Returns
+			Hash of our path as index items are uniquely identifyable by path, not 
+			by their data !
+		"""
+		return hash(self.path)
+	
 	def _set_cache_(self, attr):
 		if attr in IndexObject.__slots__:
 			# they cannot be retrieved lateron ( not without searching for them )
