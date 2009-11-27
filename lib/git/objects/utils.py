@@ -113,18 +113,15 @@ class Traversable(object):
 		``branch_first``
 			if True, items will be returned branch first, otherwise depth first
 			
-		``visit_once``
-			if True, items will only be returned once, although they might be encountered
-			several times. Loops are prevented that way.
-			
 		``ignore_self``
 			if True, self will be ignored and automatically pruned from
 			the result. Otherwise it will be the first item to be returned"""
-		visited = set()
 		stack = Deque()
 		stack.append( ( 0 ,self ) )		# self is always depth level 0
 	
 		def addToStack( stack, lst, branch_first, dpth ):
+			if not lst:
+				return
 			if branch_first:
 				stack.extendleft( ( dpth , item ) for item in lst )
 			else:
@@ -135,12 +132,6 @@ class Traversable(object):
 		while stack:
 			d, item = stack.pop()			# depth of item, item
 			
-			if item in visited:
-				continue
-	
-			if visit_once:
-				visited.add( item )
-	
 			if prune( item ):
 				continue
 	
