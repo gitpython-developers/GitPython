@@ -50,17 +50,27 @@ class TestCommit(TestBase):
 		
 	def test_traversal(self):
 		start = self.rorepo.commit("a4d06724202afccd2b5c54f81bcf2bf26dea7fff")
+		first = self.rorepo.commit("33ebe7acec14b25c5f84f35a664803fcab2f7781")
 		p0 = start.parents[0]
 		p1 = start.parents[1]
 		p00 = p0.parents[0]
+		p10 = p1.parents[0]
 		
 		# basic branch first, depth first
 		dfirst = start.traverse(branch_first=False)
-		bfirts = start.traverse(branch_first=True)
+		bfirst = start.traverse(branch_first=True)
 		assert dfirst.next() == p0
 		assert dfirst.next() == p00
-		assert bfirts.next() == p0
-		assert bfirts.next() == p1
+		
+		assert bfirst.next() == p0
+		assert bfirst.next() == p1
+		assert bfirst.next() == p00
+		assert bfirst.next() == p10
+		
+		# at some point, both iterations should stop
+		assert list(dfirst)[-1] == first
+		assert list(bfirst)[-1] == first
+		
 		
 		# ignore self
 		assert start.traverse(ignore_self=False).next() == start
@@ -73,6 +83,9 @@ class TestCommit(TestBase):
 		
 		# predicate
 		assert start.traverse(branch_first=1, predicate=lambda i,d: i==p1).next() == p1
+		
+		# traversal should stop when the beginning is reached
+		self.failUnlessRaises(StopIteration, first.traverse().next)
 		
 	@patch_object(Git, '_call_process')
 	def test_rev_list_bisect_all(self, git):
