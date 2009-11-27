@@ -69,8 +69,9 @@ class TestCommit(TestBase):
 		
 		# at some point, both iterations should stop
 		assert list(bfirst)[-1] == first
-		stoptraverse = self.rorepo.commit("254d04aa3180eb8b8daf7b7ff25f010cd69b4e7d").traverse()
-		list(stoptraverse)
+		stoptraverse = self.rorepo.commit("254d04aa3180eb8b8daf7b7ff25f010cd69b4e7d").traverse(as_edge=True)
+		l = list(stoptraverse)
+		assert len(l[0]) == 2
 		
 		# ignore self
 		assert start.traverse(ignore_self=False).next() == start

@@ -92,7 +92,7 @@ class Traversable(object):
 	
 	def traverse( self, predicate = lambda i,d: True,
 						   prune = lambda i,d: False, depth = -1, branch_first=True,
-						   visit_once = True, ignore_self=1 ):
+						   visit_once = True, ignore_self=1, as_edge = False ):
 		"""
 		``Returns``
 			iterator yieling of items found when traversing self
@@ -119,23 +119,30 @@ class Traversable(object):
 		
 		``ignore_self``
 			if True, self will be ignored and automatically pruned from
-			the result. Otherwise it will be the first item to be returned"""
+			the result. Otherwise it will be the first item to be returned.
+			If as_edge is True, the source of the first edge is None
+			
+		``as_edge``
+			if True, return a pair of items, first being the source, second the 
+			destinatination, i.e. tuple(src, dest) with the edge spanning from 
+			source to destination"""
 		visited = set()
 		stack = Deque()
-		stack.append( ( 0 ,self ) )		# self is always depth level 0
+		stack.append( ( 0 ,self, None ) )		# self is always depth level 0
 	
-		def addToStack( stack, lst, branch_first, dpth ):
+		def addToStack( stack, item, branch_first, depth ):
+			lst = self._get_intermediate_items( item )
 			if not lst:
 				return
 			if branch_first:
-				stack.extendleft( ( dpth , item ) for item in lst )
+				stack.extendleft( ( depth , i, item ) for i in lst )
 			else:
-				reviter = ( ( dpth , lst[i] ) for i in range( len( lst )-1,-1,-1) )
+				reviter = ( ( depth , lst[i], item ) for i in range( len( lst )-1,-1,-1) )
 				stack.extend( reviter )
 		# END addToStack local method
 	
 		while stack:
-			d, item = stack.pop()			# depth of item, item
+			d, item, src = stack.pop()			# depth of item, item, item_source
 			
 			if visit_once and item in visited:
 				continue
@@ -143,17 +150,18 @@ class Traversable(object):
 			if visit_once:
 				visited.add(item)
 			
-			if prune( item, d ):
+			rval = ( as_edge and (src, item) ) or item
+			if prune( rval, d ):
 				continue
 	
 			skipStartItem = ignore_self and ( item == self )
-			if not skipStartItem and predicate( item, d ):
-				yield item
+			if not skipStartItem and predicate( rval, d ):
+				yield rval
 	
 			# only continue to next level if this is appropriate !
 			nd = d + 1
 			if depth > -1 and nd > depth:
 				continue
 	
-			addToStack( stack, self._get_intermediate_items( item ), branch_first, nd )
+			addToStack( stack, item, branch_first, nd )
 		# END for each item on work stack
