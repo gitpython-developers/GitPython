@@ -43,9 +43,7 @@ class TestPerformance(TestBase):
 		st = time()
 		for c in self.rorepo.commit('0.1.6').traverse(branch_first=False):
 			num_commits += 1
-			#if c.message == "initial project":
-			#	raise "stop"
 			self._query_commit_info(c)
 		# END for each traversed commit
 		elapsed_time = time() - st
-		print "Traversed %i Commits in %s [s] ( %f objs/s )" % (num_commits, elapsed_time, num_commits/elapsed_time)
+		print "Traversed %i Commits in %s [s] ( %f commits/s )" % (num_commits, elapsed_time, num_commits/elapsed_time)

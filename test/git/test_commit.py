@@ -68,9 +68,9 @@ class TestCommit(TestBase):
 		assert bfirst.next() == p10
 		
 		# at some point, both iterations should stop
-		assert list(dfirst)[-1] == first
 		assert list(bfirst)[-1] == first
-		
+		stoptraverse = self.rorepo.commit("254d04aa3180eb8b8daf7b7ff25f010cd69b4e7d").traverse()
+		list(stoptraverse)
 		
 		# ignore self
 		assert start.traverse(ignore_self=False).next() == start
