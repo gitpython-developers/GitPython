@@ -84,7 +84,7 @@ class TestTree(TestBase):
 		
 		num_blobs = 0
 		blist = list()
-		for blob in tree.traverse(predicate = lambda e: e.type == "blob", branch_first=False):
+		for blob in tree.traverse(predicate = lambda e,d: e.type == "blob", branch_first=False):
 			assert (blob.path,0) in index.entries
 			blist.append(blob)
 		# END for each blob in tree
@@ -134,7 +134,7 @@ class TestTree(TestBase):
 		tree = three_way_index.write_tree()
 		assert isinstance(tree, Tree)
 		num_blobs = 0
-		for blob in tree.traverse(predicate=lambda item: item.type == "blob"):
+		for blob in tree.traverse(predicate=lambda item,d: item.type == "blob"):
 			assert (blob.path,0) in three_way_index.entries
 			num_blobs += 1
 		# END for each blob

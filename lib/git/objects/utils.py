@@ -90,18 +90,18 @@ class Traversable(object):
 		raise NotImplementedError("To be implemented in subclass")
 			
 	
-	def traverse( self, predicate = lambda i: True,
-						   prune = lambda i: False, depth = -1, branch_first=True,
+	def traverse( self, predicate = lambda i,d: True,
+						   prune = lambda i,d: False, depth = -1, branch_first=True,
 						   visit_once = True, ignore_self=1 ):
 		"""
 		``Returns``
 			iterator yieling of items found when traversing self
 			
 		``predicate``
-			f(i) returns False if item i should not be included in the result
+			f(i,d) returns False if item i at depth d should not be included in the result
 			
 		``prune``
-			f(i) return True if the search should stop at item i.
+			f(i,d) return True if the search should stop at item i at depth d.
 			Item i will not be returned.
 			
 		``depth``
@@ -132,11 +132,11 @@ class Traversable(object):
 		while stack:
 			d, item = stack.pop()			# depth of item, item
 			
-			if prune( item ):
+			if prune( item, d ):
 				continue
 	
 			skipStartItem = ignore_self and ( item == self )
-			if not skipStartItem and predicate( item ):
+			if not skipStartItem and predicate( item, d ):
 				yield item
 	
 			# only continue to next level if this is appropriate !

@@ -32,12 +32,12 @@ class TestTree(TestCase):
 		assert len(list(root)) == len(list(root.traverse(depth=1)))
 		
 		# only choose trees
-		trees_only = lambda i: i.type == "tree"
+		trees_only = lambda i,d: i.type == "tree"
 		trees = list(root.traverse(predicate = trees_only))
-		assert len(trees) == len(list( i for i in root.traverse() if trees_only(i) ))
+		assert len(trees) == len(list( i for i in root.traverse() if trees_only(i,0) ))
 		
 		# test prune
-		lib_folder = lambda t: t.path == "lib"
+		lib_folder = lambda t,d: t.path == "lib"
 		pruned_trees = list(root.traverse(predicate = trees_only,prune = lib_folder))
 		assert len(pruned_trees) < len(trees)
 		
