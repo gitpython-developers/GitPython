@@ -62,10 +62,34 @@ class _TemporaryFileSwap(object):
 			os.rename(self.tmp_file_path, self.file_path)
 		# END temp file exists
 	
+class BlobFilter(object):
+	"""
+	Predicate to be used by iter_blobs allowing to filter only return blobs which 
+	match the given list of directories or files.
+	
+	The given paths are given relative to the repository.
+	"""
+	__slots__ = 'paths'
+	
+	def __init__(self, paths):
+		"""
+		``paths``
+			tuple or list of paths which are either pointing to directories or 
+			to files relative to the current repository
+		"""
+		self.paths = paths
+		
+	def __call__(self, stage_blob):
+		path = stage_blob[1].path
+		for p in self.paths:
+			if path.startswith(p):
+				return True
+		# END for each path in filter paths
+		return False
+
 
 class BaseIndexEntry(tuple):
 	"""
-	
 	Small Brother of an index entry which can be created to describe changes
 	done to the index in which case plenty of additional information is not requried.
 	
@@ -621,7 +645,8 @@ class IndexFile(LazyMixin, diff.Diffable):
 			
 		``predicate``
 			Function(t) returning True if tuple(stage, Blob) should be yielded by the 
-			iterator
+			iterator. A default filter, the BlobFilter, allows you to yield blobs 
+			only if they match a given list of paths. 
 		"""
 		for entry in self.entries.itervalues():
 			mode = self._index_mode_to_tree_index_mode(entry.mode)

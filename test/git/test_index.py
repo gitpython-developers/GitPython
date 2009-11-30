@@ -121,6 +121,11 @@ class TestTree(TestBase):
 		assert merge_blobs[0][0] in (1,2,3)
 		assert isinstance(merge_blobs[0][1], Blob)
 		
+		# test BlobFilter
+		prefix = 'lib/git'
+		for stage, blob in base_index.iter_blobs(BlobFilter([prefix])):
+			assert blob.path.startswith(prefix) 
+		
 		
 		# writing a tree should fail with an unmerged index
 		self.failUnlessRaises(GitCommandError, three_way_index.write_tree)
