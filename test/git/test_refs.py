@@ -234,6 +234,23 @@ class TestRefs(TestBase):
 		self.failUnlessRaises(GitCommandError, far_away_head.checkout)
 		assert active_branch == active_branch.checkout(force=True)
 		
+		# test reference creation
+		partial_ref = 'sub/ref'
+		full_ref = 'refs/%s' % partial_ref
+		ref = Reference.create(rw_repo, partial_ref)
+		assert ref.path == full_ref
+		
+		self.failUnlessRaises(OSError, Reference.create, rw_repo, full_ref)
+		Reference.delete(rw_repo, full_ref)
+		
+		# recreate the reference using a full_ref
+		ref = Reference.create(rw_repo, full_ref)
+		assert ref.path == full_ref
+		
+		# recreate using force
+		ref = Reference.create(rw_repo, partial_ref, 'HEAD~1', force=True)
+		assert ref.path == full_ref
+		
 		# test symbolic references which are not at default locations like HEAD
 		# or FETCH_HEAD - they may also be at spots in refs of course
 		symbol_ref_path = "refs/symbol_ref"

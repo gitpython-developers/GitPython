@@ -178,9 +178,14 @@ class SymbolicReference(object):
 		if write_value.startswith('ref:'):
 			self.repo.git.symbolic_ref(self.path, write_value[5:])
 			return 
-		# END non-detached handling 
+		# END non-detached handling
 		
-		fp = open(self._get_path(), "w")
+		path = self._get_path()
+		directory = os.path.dirname(path)
+		if not os.path.isdir(directory):
+			os.makedirs(directory)
+		
+		fp = open(path, "w")
 		try:
 			fp.write(write_value)
 		finally:
@@ -360,6 +365,68 @@ class Reference(SymbolicReference, LazyMixin, Iterable):
 			# END exception handling
 		# END for each type to try
 		raise ValueError("Could not find reference type suitable to handle path %r" % path)
+		
+	
+	@classmethod
+	def _to_full_path(cls, repo, path):
+		full_ref_path = path
+		if not path.startswith(cls._common_path_default+"/"):
+			full_ref_path = '%s/%s' % (cls._common_path_default, path)
+		return full_ref_path
+	
+	@classmethod
+	def create(cls, repo, path, commit='HEAD', force=False ):
+		"""
+		Create a new reference.
+		``repo``
+			Repository to create the reference in 
+			
+		``path``
+			The relative path of the reference, i.e. 'new_branch' or 
+			feature/feature1. The path prefix 'refs/' is implied if not 
+			given explicitly
+			
+		``commit``
+			Commit to which the new reference should point, defaults to the 
+			current HEAD
+		
+		``force``
+			if True, force creation even if a reference with that  name already exists.
+			Raise OSError otherwise
+			
+		Returns
+			Newly created Reference
+			
+		Note
+			This does not alter the current HEAD, index or Working Tree
+		"""
+		full_ref_path = cls._to_full_path(repo, path)
+		
+		abs_ref_path = os.path.join(repo.path, full_ref_path)
+		if not force and os.path.isfile(abs_ref_path):
+			raise OSError("Reference at %s does already exist" % full_ref_path)
+			
+		obj = Object.new(repo, commit)
+		ref = cls(repo, full_ref_path)
+		ref.reference = obj
+		
+		return ref
+		
+	@classmethod
+	def delete(cls, repo, path):
+		"""Delete the reference at the given path
+		
+		``repo``
+			Repository to delete the reference from
+		
+		``path``
+			Short or full path pointing to the reference, i.e. refs/myreference
+			or just "myreference", hence 'refs/' is implied.
+		"""
+		full_ref_path = cls._to_full_path(repo, path)
+		abs_path = os.path.join(repo.path, full_ref_path)
+		if os.path.exists(abs_path):
+			os.remove(abs_path)
 		
 	
 class HEAD(SymbolicReference):
