@@ -239,6 +239,7 @@ class TestRefs(TestBase):
 		full_ref = 'refs/%s' % partial_ref
 		ref = Reference.create(rw_repo, partial_ref)
 		assert ref.path == full_ref
+		assert ref.object == rw_repo.head.commit
 		
 		self.failUnlessRaises(OSError, Reference.create, rw_repo, full_ref)
 		Reference.delete(rw_repo, full_ref)
@@ -246,10 +247,23 @@ class TestRefs(TestBase):
 		# recreate the reference using a full_ref
 		ref = Reference.create(rw_repo, full_ref)
 		assert ref.path == full_ref
+		assert ref.object == rw_repo.head.commit
 		
 		# recreate using force
 		ref = Reference.create(rw_repo, partial_ref, 'HEAD~1', force=True)
 		assert ref.path == full_ref
+		assert ref.object == rw_repo.head.commit.parents[0]
+		
+		# create symbolic refs
+		symref_path = "symrefs/sym"
+		symref = SymbolicReference.create(rw_repo, symref_path, cur_head.reference)
+		assert symref.path == symref_path
+		assert symref.reference == cur_head.reference
+		
+		self.failUnlessRaises(OSError, SymbolicReference.create, rw_repo, symref_path, cur_head.reference)
+		SymbolicReference.delete(rw_repo, symref_path)
+		# would raise if the symref wouldn't have been deleted
+		symref = SymbolicReference.create(rw_repo, symref_path, cur_head.reference)
 		
 		# test symbolic references which are not at default locations like HEAD
 		# or FETCH_HEAD - they may also be at spots in refs of course

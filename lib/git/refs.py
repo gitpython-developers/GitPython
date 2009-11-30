@@ -20,6 +20,8 @@ class SymbolicReference(object):
 	A typical example for a symbolic reference is HEAD.
 	"""
 	__slots__ = ("repo", "path")
+	_common_path_default = ""
+	_id_attribute_ = "name"
 	
 	def __init__(self, repo, path):
 		self.repo = repo
@@ -231,6 +233,79 @@ class SymbolicReference(object):
 			return SymbolicReference(repo, path)
 			
 		raise ValueError("Could not find symbolic reference type suitable to handle path %r" % path)
+
+	@classmethod
+	def _to_full_path(cls, repo, path):
+		full_ref_path = path
+		if not cls._common_path_default:
+			return full_ref_path
+		if not path.startswith(cls._common_path_default+"/"):
+			full_ref_path = '%s/%s' % (cls._common_path_default, path)
+		return full_ref_path
+	
+	@classmethod
+	def delete(cls, repo, path):
+		"""Delete the reference at the given path
+		
+		``repo``
+			Repository to delete the reference from
+		
+		``path``
+			Short or full path pointing to the reference, i.e. refs/myreference
+			or just "myreference", hence 'refs/' is implied.
+		"""
+		full_ref_path = cls._to_full_path(repo, path)
+		abs_path = os.path.join(repo.path, full_ref_path)
+		if os.path.exists(abs_path):
+			os.remove(abs_path)
+			
+	@classmethod
+	def _create(cls, repo, path, resolve, reference, force):
+		"""internal method used to create a new symbolic reference.
+		If resolve is False,, the reference will be taken as is, creating 
+		a proper symbolic reference. Otherwise it will be resolved to the 
+		corresponding object and a detached symbolic reference will be created
+		instead"""
+		full_ref_path = cls._to_full_path(repo, path)
+		
+		abs_ref_path = os.path.join(repo.path, full_ref_path)
+		if not force and os.path.isfile(abs_ref_path):
+			raise OSError("Reference at %s does already exist" % full_ref_path)
+		
+		ref = cls(repo, full_ref_path)
+		target = reference
+		if resolve:
+			target = Object.new(repo, reference)
+		
+		ref.reference = target
+		return ref
+		
+	@classmethod
+	def create(cls, repo, path, reference='HEAD', force=False ):
+		"""
+		Create a new symbolic reference, hence a reference pointing to another 
+		reference.
+		``repo``
+			Repository to create the reference in 
+			
+		``path``
+			full path at which the new symbolic reference is supposed to be 
+			created at, i.e. "NEW_HEAD" or "symrefs/my_new_symref"
+			
+		``reference``
+			The reference to which the new symbolic reference should point to
+		
+		``force``
+			if True, force creation even if a symbolic reference with that name already exists.
+			Raise OSError otherwise
+			
+		Returns
+			Newly created symbolic Reference
+			
+		Note
+			This does not alter the current HEAD, index or Working Tree
+		"""
+		return cls._create(repo, path, False, reference, force)
 		
 
 class Reference(SymbolicReference, LazyMixin, Iterable):
@@ -240,7 +315,6 @@ class Reference(SymbolicReference, LazyMixin, Iterable):
 	"""
 	__slots__ = tuple()
 	_common_path_default = "refs"
-	_id_attribute_ = "name"
 	
 	def __init__(self, repo, path):
 		"""
@@ -368,13 +442,6 @@ class Reference(SymbolicReference, LazyMixin, Iterable):
 		
 	
 	@classmethod
-	def _to_full_path(cls, repo, path):
-		full_ref_path = path
-		if not path.startswith(cls._common_path_default+"/"):
-			full_ref_path = '%s/%s' % (cls._common_path_default, path)
-		return full_ref_path
-	
-	@classmethod
 	def create(cls, repo, path, commit='HEAD', force=False ):
 		"""
 		Create a new reference.
@@ -400,33 +467,7 @@ class Reference(SymbolicReference, LazyMixin, Iterable):
 		Note
 			This does not alter the current HEAD, index or Working Tree
 		"""
-		full_ref_path = cls._to_full_path(repo, path)
-		
-		abs_ref_path = os.path.join(repo.path, full_ref_path)
-		if not force and os.path.isfile(abs_ref_path):
-			raise OSError("Reference at %s does already exist" % full_ref_path)
-			
-		obj = Object.new(repo, commit)
-		ref = cls(repo, full_ref_path)
-		ref.reference = obj
-		
-		return ref
-		
-	@classmethod
-	def delete(cls, repo, path):
-		"""Delete the reference at the given path
-		
-		``repo``
-			Repository to delete the reference from
-		
-		``path``
-			Short or full path pointing to the reference, i.e. refs/myreference
-			or just "myreference", hence 'refs/' is implied.
-		"""
-		full_ref_path = cls._to_full_path(repo, path)
-		abs_path = os.path.join(repo.path, full_ref_path)
-		if os.path.exists(abs_path):
-			os.remove(abs_path)
+		return cls._create(repo, path, True, commit, force)
 		
 	
 class HEAD(SymbolicReference):
