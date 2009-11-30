@@ -248,7 +248,7 @@ class Diff(object):
 		h = "%s"
 		if self.a_blob:
 			h %= self.a_blob.path
-		if self.b_blob:                    
+		elif self.b_blob:          
 			h %= self.b_blob.path
 		
 		msg = ''

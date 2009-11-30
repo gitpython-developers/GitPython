@@ -233,6 +233,7 @@ class TestRefs(TestBase):
 		far_away_head = rw_repo.create_head("far_head",'HEAD~100')
 		self.failUnlessRaises(GitCommandError, far_away_head.checkout)
 		assert active_branch == active_branch.checkout(force=True)
+		assert rw_repo.head.reference != far_away_head
 		
 		# test reference creation
 		partial_ref = 'sub/ref'
@@ -261,8 +262,8 @@ class TestRefs(TestBase):
 		assert symref.reference == cur_head.reference
 		
 		self.failUnlessRaises(OSError, SymbolicReference.create, rw_repo, symref_path, cur_head.reference)
-		SymbolicReference.delete(rw_repo, symref_path)
-		# would raise if the symref wouldn't have been deleted
+		SymbolicReference.delete(rw_repo, symref)
+		# would raise if the symref wouldn't have been deletedpbl
 		symref = SymbolicReference.create(rw_repo, symref_path, cur_head.reference)
 		
 		# test symbolic references which are not at default locations like HEAD

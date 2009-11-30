@@ -236,6 +236,8 @@ class SymbolicReference(object):
 
 	@classmethod
 	def _to_full_path(cls, repo, path):
+		if isinstance(path, SymbolicReference):
+			path = path.path
 		full_ref_path = path
 		if not cls._common_path_default:
 			return full_ref_path
@@ -253,6 +255,7 @@ class SymbolicReference(object):
 		``path``
 			Short or full path pointing to the reference, i.e. refs/myreference
 			or just "myreference", hence 'refs/' is implied.
+			Alternatively the symbolic reference to be deleted
 		"""
 		full_ref_path = cls._to_full_path(repo, path)
 		abs_path = os.path.join(repo.path, full_ref_path)
