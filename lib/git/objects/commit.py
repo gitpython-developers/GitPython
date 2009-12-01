@@ -277,7 +277,7 @@ class Commit(base.Object, Iterable, diff.Diffable, utils.Traversable):
 		
 		
 	@classmethod
-	def create_from_tree(cls, repo, tree, message, parent_commits=None, head=True ):
+	def create_from_tree(cls, repo, tree, message, parent_commits=None, head=False):
 		"""
 		Commit the given tree, creating a commit object.
 		
