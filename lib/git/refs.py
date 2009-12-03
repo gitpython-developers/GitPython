@@ -334,9 +334,15 @@ class SymbolicReference(object):
 			return self
 		
 		new_abs_path = os.path.join(self.repo.git_dir, new_path)
+		cur_abs_path = os.path.join(self.repo.git_dir, self.path)
 		if os.path.isfile(new_abs_path):
 			if not force:
-				raise OSError("File at path %r already exists" % new_abs_path)
+				# if they point to the same file, its not an error
+				if open(new_abs_path,'rb').read() != open(cur_abs_path,'rb').read():
+					raise OSError("File at path %r already exists" % new_abs_path)
+				# else: we could remove ourselves and use the otherone, but 
+				# but clarity we just continue as usual
+			# END not force handling
 			os.remove(new_abs_path)
 		# END handle existing target file
 		
@@ -345,7 +351,6 @@ class SymbolicReference(object):
 			os.makedirs(dirname)
 		# END create directory
 		
-		cur_abs_path = os.path.join(self.repo.git_dir, self.path)
 		os.rename(cur_abs_path, new_abs_path)
 		self.path = new_path
 		

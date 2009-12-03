@@ -267,7 +267,10 @@ class TestRefs(TestBase):
 		# exists, fail unless we force
 		ex_ref_path = far_away_head.path
 		self.failUnlessRaises(OSError, ref.rename, ex_ref_path)
-		assert ref.rename(ex_ref_path, force=True).path == ex_ref_path and ref.object == orig_obj
+		# if it points to the same commit it works
+		far_away_head.commit = ref.commit
+		ref.rename(ex_ref_path)
+		assert ref.path == ex_ref_path and ref.object == orig_obj
 		assert ref.rename(ref.path).path == ex_ref_path	# rename to same name
 		
 		# create symbolic refs
