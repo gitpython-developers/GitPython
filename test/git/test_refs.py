@@ -255,6 +255,21 @@ class TestRefs(TestBase):
 		assert ref.path == full_ref
 		assert ref.object == rw_repo.head.commit.parents[0]
 		
+		# rename it
+		orig_obj = ref.object
+		for name in ('refs/absname', 'rela_name', 'feature/rela_name'):
+			ref_new_name = ref.rename(name)
+			assert isinstance(ref_new_name, Reference)
+			assert name in ref_new_name.path
+			assert ref_new_name.object == orig_obj
+			assert ref_new_name == ref
+		# END for each name type
+		# exists, fail unless we force
+		ex_ref_path = far_away_head.path
+		self.failUnlessRaises(OSError, ref.rename, ex_ref_path)
+		assert ref.rename(ex_ref_path, force=True).path == ex_ref_path and ref.object == orig_obj
+		assert ref.rename(ref.path).path == ex_ref_path	# rename to same name
+		
 		# create symbolic refs
 		symref_path = "symrefs/sym"
 		symref = SymbolicReference.create(rw_repo, symref_path, cur_head.reference)
@@ -278,6 +293,15 @@ class TestRefs(TestBase):
 		assert symref.reference == new_head
 		assert os.path.isfile(symbol_ref_abspath)
 		assert symref.commit == new_head.commit
+		
+		for name in ('absname','folder/rela_name'):
+			symref_new_name = symref.rename(name)
+			assert isinstance(symref_new_name, SymbolicReference)
+			assert name in symref_new_name.path
+			assert symref_new_name.reference == new_head
+			assert symref_new_name == symref
+			assert not symref.is_detached
+		# END for each ref
 		
 		# test ref listing - assure we have packed refs
 		rw_repo.git.pack_refs(all=True, prune=True)

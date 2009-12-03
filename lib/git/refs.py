@@ -309,6 +309,47 @@ class SymbolicReference(object):
 			This does not alter the current HEAD, index or Working Tree
 		"""
 		return cls._create(repo, path, False, reference, force)
+	
+	def rename(self, new_path, force=False):
+		"""
+		Rename self to a new path
+		
+		``new_path``
+			Either a simple name or a full path, i.e. new_name or features/new_name.
+			The prefix refs/ is implied for references and will be set as needed.
+			In case this is a symbolic ref, there is no implied prefix
+			
+		``force``
+			If True, the rename will succeed even if a head with the target name
+			already exists. It will be overwritten in that case
+			
+		Returns
+			self
+			
+		Raises OSError:
+			In case a file at path with that name already exists
+		"""
+		new_path = self._to_full_path(self.repo, new_path)
+		if self.path == new_path:
+			return self
+		
+		new_abs_path = os.path.join(self.repo.git_dir, new_path)
+		if os.path.isfile(new_abs_path):
+			if not force:
+				raise OSError("File at path %r already exists" % new_abs_path)
+			os.remove(new_abs_path)
+		# END handle existing target file
+		
+		dirname = os.path.dirname(new_abs_path)
+		if not os.path.isdir(dirname):
+			os.makedirs(dirname)
+		# END create directory
+		
+		cur_abs_path = os.path.join(self.repo.git_dir, self.path)
+		os.rename(cur_abs_path, new_abs_path)
+		self.path = new_path
+		
+		return self
 		
 
 class Reference(SymbolicReference, LazyMixin, Iterable):
@@ -330,7 +371,7 @@ class Reference(SymbolicReference, LazyMixin, Iterable):
 			refs/heads/master
 			
 		"""
-		if not path.startswith(self._common_path_default):
+		if not path.startswith(self._common_path_default+'/'):
 			raise ValueError("Cannot instantiate %s from path %s" % ( self.__class__.__name__, path ))
 		super(Reference, self).__init__(repo, path)
 		
@@ -471,6 +512,7 @@ class Reference(SymbolicReference, LazyMixin, Iterable):
 			This does not alter the current HEAD, index or Working Tree
 		"""
 		return cls._create(repo, path, True, commit, force)
+		
 		
 	
 class HEAD(SymbolicReference):
@@ -623,6 +665,9 @@ class Head(Reference):
 			
 		Returns
 			self
+			
+		Note
+			respects the ref log as git commands are used
 		"""
 		flag = "-m"
 		if force:

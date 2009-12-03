@@ -362,18 +362,4 @@ class Iterable(object):
 		"""
 		raise NotImplementedError("To be implemented by Subclass")
 		
-def needs_working_tree(func):
-	"""
-	Decorator assuring the wrapped method may only run if the repository has a
-	working tree, hence it is not bare.
-	"""
-	def check_default_index(self, *args, **kwargs):
-		if self.repo.working_tree_dir is None:
-			raise AssertionError( "Cannot call %r bare git repositories" % func.__name__ )
-		return func(self, *args, **kwargs)
-	# END wrpaper method
-	
-	check_default_index.__name__ = func.__name__
-	return check_default_index
-
 		
