@@ -72,6 +72,8 @@ class TestBase(TestCase):
 			for option in r_config.options(section):
 				num_options += 1
 				val = r_config.get(section, option)
+				val_typed = r_config.get_value(section, option)
+				assert isinstance(val_typed, (bool, long, float, basestring))
 				assert val
 				assert "\n" not in option
 				assert "\n" not in val

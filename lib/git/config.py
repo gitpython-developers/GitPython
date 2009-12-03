@@ -346,3 +346,36 @@ class GitConfigParser(cp.RawConfigParser, LockFile):
 			True if this instance may change the configuration file
 		"""
 		return self._read_only
+		
+	def get_value(self, section, option):
+		"""
+		Returns
+			a properly typed value, either int, float or string
+		Raises TypeError in case the value could not be understood
+		"""
+		valuestr = self.get(section, option)
+		types = ( long, float )
+		for numtype in types:
+			try:
+				val = numtype( valuestr )
+
+				# truncated value ?
+				if val != float( valuestr ):
+					continue
+
+				return val
+			except (ValueError,TypeError):
+				continue
+		# END for each numeric type
+		
+		# try boolean values as git uses them
+		vl = valuestr.lower() 
+		if vl == 'false':
+			return False
+		if vl == 'true':
+			return True
+		
+		if not isinstance( valuestr, basestring ):
+			raise TypeError( "Invalid value type: only int, long, float and str are allowed", valuestr )
+		
+		return valuestr
