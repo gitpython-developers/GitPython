@@ -41,9 +41,19 @@ class Repo(object):
 	Represents a git repository and allows you to query references, 
 	gather commit information, generate diffs, create and clone repositories query
 	the log.
+	
+	The following attributes are worth using:
+	
+	'working_dir' is the working directory of the git command, wich is the working tree 
+	directory if available or the .git directory in case of bare repositories
+	
+	'working_tree_dir' is the working tree directory, but will raise AssertionError
+	if we are a bare repository.
+	
+	'git_dir' is the .git repository directoy, which is always set.
 	"""
 	DAEMON_EXPORT_FILE = 'git-daemon-export-ok'
-	__slots__ = ( "wd", "path", "_bare", "git" )
+	__slots__ = ( "working_dir", "_working_tree_dir", "git_dir", "_bare", "git" )
 	
 	# precompiled regex
 	re_whitespace = re.compile(r'\s+')
@@ -81,26 +91,28 @@ class Repo(object):
 		if not os.path.exists(epath):
 			raise NoSuchPathError(epath)
 
-		self.path = None
+		self.working_dir = None
+		self._working_tree_dir = None
+		self.git_dir = None
 		curpath = epath
 		
 		# walk up the path to find the .git dir
 		while curpath:
 			if is_git_dir(curpath):
-				self.path = curpath
-				self.wd = os.path.dirname(curpath)
+				self.git_dir = curpath
+				self._working_tree_dir = os.path.dirname(curpath)
 				break
 			gitpath = os.path.join(curpath, '.git')
 			if is_git_dir(gitpath):
-				self.path = gitpath
-				self.wd = curpath
+				self.git_dir = gitpath
+				self._working_tree_dir = curpath
 				break
 			curpath, dummy = os.path.split(curpath)
 			if not dummy:
 				break
 		# END while curpath
 		
-		if self.path is None:
+		if self.git_dir is None:
 		   raise InvalidGitRepositoryError(epath)
 
 		self._bare = False
@@ -113,17 +125,19 @@ class Repo(object):
 		# adjust the wd in case we are actually bare - we didn't know that 
 		# in the first place
 		if self._bare:
-			self.wd = self.path
-
-		self.git = Git(self.wd)
+			self._working_tree_dir = None
+		# END working dir handling
+		
+		self.working_dir = self._working_tree_dir or self.git_dir
+		self.git = Git(self.working_dir)
 
 	# Description property
 	def _get_description(self):
-		filename = os.path.join(self.path, 'description')
+		filename = os.path.join(self.git_dir, 'description')
 		return file(filename).read().rstrip()
 
 	def _set_description(self, descr):
-		filename = os.path.join(self.path, 'description')
+		filename = os.path.join(self.git_dir, 'description')
 		file(filename, 'w').write(descr+'\n')
 
 	description = property(_get_description, _set_description,
@@ -131,6 +145,18 @@ class Repo(object):
 	del _get_description
 	del _set_description
 	
+	@property
+	def working_tree_dir(self):
+		"""
+		Returns
+			The working tree directory of our git repository
+			
+		Raises AssertionError
+			If we are a bare repository
+		"""
+		if self._working_tree_dir is None:
+			raise AssertionError( "Repository at %r is bare and does not have a working tree directory" % self.git_dir )
+		return self._working_tree_dir
 	
 	@property
 	def bare(self):
@@ -286,7 +312,7 @@ class Repo(object):
 		elif config_level == "global":
 			return os.path.expanduser("~/.gitconfig")
 		elif config_level == "repository":
-			return "%s/config" % self.path
+			return "%s/config" % self.git_dir
 		
 		raise ValueError( "Invalid configuration level: %r" % config_level )
 			
@@ -413,11 +439,11 @@ class Repo(object):
 		return Commit.iter_items(self, rev, paths, **kwargs)
 
 	def _get_daemon_export(self):
-		filename = os.path.join(self.path, self.DAEMON_EXPORT_FILE)
+		filename = os.path.join(self.git_dir, self.DAEMON_EXPORT_FILE)
 		return os.path.exists(filename)
 
 	def _set_daemon_export(self, value):
-		filename = os.path.join(self.path, self.DAEMON_EXPORT_FILE)
+		filename = os.path.join(self.git_dir, self.DAEMON_EXPORT_FILE)
 		fileexists = os.path.exists(filename)
 		if value and not fileexists:
 			touch(filename)
@@ -436,7 +462,7 @@ class Repo(object):
 		Returns
 			list of strings being pathnames of alternates
 		"""
-		alternates_path = os.path.join(self.path, 'objects', 'info', 'alternates')
+		alternates_path = os.path.join(self.git_dir, 'objects', 'info', 'alternates')
 
 		if os.path.exists(alternates_path):
 			try:
@@ -466,7 +492,7 @@ class Repo(object):
 		Returns
 			None
 		"""
-		alternates_path = os.path.join(self.path, 'objects', 'info', 'alternates') 
+		alternates_path = os.path.join(self.git_dir, 'objects', 'info', 'alternates') 
 		if not alts:
 			if os.path.isfile(alternates_path):
 				os.remove(alternates_path)
@@ -706,7 +732,7 @@ class Repo(object):
 		# END windows handling 
 		
 		try:
-			self.git.clone(self.path, path, **kwargs)
+			self.git.clone(self.git_dir, path, **kwargs)
 		finally:
 			if prev_cwd is not None:
 				os.chdir(prev_cwd)
@@ -754,4 +780,4 @@ class Repo(object):
 		return self
 
 	def __repr__(self):
-		return '<git.Repo "%s">' % self.path
+		return '<git.Repo "%s">' % self.git_dir

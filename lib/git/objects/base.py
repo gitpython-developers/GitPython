@@ -223,5 +223,5 @@ class IndexObject(Object):
 			
 			The returned path will be native to the system and contains '\' on windows. 
 		"""
-		return join_path_native(self.repo.git.git_dir, self.path)
+		return join_path_native(self.repo.working_tree_dir, self.path)
 		

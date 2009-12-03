@@ -325,7 +325,7 @@ class IndexFile(LazyMixin, diff.Diffable):
 			super(IndexFile, self)._set_cache_(attr)
 	
 	def _index_path(self):
-		return join_path_native(self.repo.path, "index")
+		return join_path_native(self.repo.git_dir, "index")
 	
 	
 	@property
@@ -539,7 +539,7 @@ class IndexFile(LazyMixin, diff.Diffable):
 		
 		# tmp file created in git home directory to be sure renaming 
 		# works - /tmp/ dirs could be on another device
-		tmp_index = tempfile.mktemp('','',repo.path)
+		tmp_index = tempfile.mktemp('','',repo.git_dir)
 		arg_list.append("--index-output=%s" % tmp_index)
 		arg_list.extend(treeish)
 		
@@ -547,7 +547,7 @@ class IndexFile(LazyMixin, diff.Diffable):
 		# as it considers existing entries. moving it essentially clears the index.
 		# Unfortunately there is no 'soft' way to do it.
 		# The _TemporaryFileSwap assure the original file get put back
-		index_handler = _TemporaryFileSwap(join_path_native(repo.path, 'index'))
+		index_handler = _TemporaryFileSwap(join_path_native(repo.git_dir, 'index'))
 		try:
 			repo.git.read_tree(*arg_list, **kwargs)
 			index = cls(repo, tmp_index)
@@ -579,7 +579,7 @@ class IndexFile(LazyMixin, diff.Diffable):
 		return ret
 	
 	
-	# UTILITIES 
+	# UTILITIES
 	def _iter_expand_paths(self, paths):
 		"""Expand the directories in list of paths to the corresponding paths accordingly, 
 		
@@ -588,7 +588,7 @@ class IndexFile(LazyMixin, diff.Diffable):
 		times - we respect that and do not prune"""
 		def raise_exc(e):
 			raise e
-		r = self.repo.git.git_dir
+		r = self.repo.working_tree_dir
 		rs = r + '/'
 		for path in paths:
 			abs_path = path
@@ -798,9 +798,9 @@ class IndexFile(LazyMixin, diff.Diffable):
 		"""
 		if not os.path.isabs(path):
 			return path
-		relative_path = path.replace(self.repo.git.git_dir+os.sep, "")
+		relative_path = path.replace(self.repo.working_tree_dir+os.sep, "")
 		if relative_path == path:
-			raise ValueError("Absolute path %r is not in git repository at %r" % (path,self.repo.git.git_dir))
+			raise ValueError("Absolute path %r is not in git repository at %r" % (path,self.repo.working_tree_dir))
 		return relative_path
 	
 	def _preprocess_add_items(self, items):

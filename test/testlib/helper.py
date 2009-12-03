@@ -241,7 +241,7 @@ class TestBase(TestCase):
 		with the given data. Returns absolute path to created file.
 		"""
 		repo = repo or self.rorepo
-		abs_path = os.path.join(repo.git.git_dir, rela_path)
+		abs_path = os.path.join(repo.working_tree_dir, rela_path)
 		fp = open(abs_path, "w")
 		fp.write(data)
 		fp.close()

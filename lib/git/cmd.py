@@ -43,6 +43,8 @@ class Git(object):
 		of the command to stdout.
 		Set its value to 'full' to see details about the returned values.
 	"""
+	__slots__ = ("_working_dir", "cat_file_all", "cat_file_header")
+	
 	class AutoInterrupt(object):
 		"""
 		Kill/Interrupt the stored process instance once this instance goes out of scope. It is 
@@ -92,18 +94,18 @@ class Git(object):
 			
 	
 	
-	def __init__(self, git_dir=None):
+	def __init__(self, working_dir=None):
 		"""
 		Initialize this instance with:
 		
-		``git_dir``
+		``working_dir``
 		   Git directory we should work in. If None, we always work in the current 
 		   directory as returned by os.getcwd().
 		   It is meant to be the working tree directory if available, or the 
 		   .git directory in case of bare repositories.
 		"""
 		super(Git, self).__init__()
-		self.git_dir = git_dir
+		self._working_dir = working_dir
 		
 		# cached command slots
 		self.cat_file_header = None
@@ -121,12 +123,12 @@ class Git(object):
 		return lambda *args, **kwargs: self._call_process(name, *args, **kwargs)
 
 	@property
-	def get_dir(self):
+	def working_dir(self):
 		"""
 		Returns
 			Git directory we are working on
 		"""
-		return self.git_dir
+		return self._working_dir
 
 	def execute(self, command,
 				istream=None,
@@ -150,8 +152,8 @@ class Git(object):
 
 		``with_keep_cwd``
 			Whether to use the current working directory from os.getcwd().
-			GitPython uses get_work_tree() as its working directory by
-			default and get_git_dir() for bare repositories.
+			The cmd otherwise uses its own working_dir that it has been initialized
+			with if possible.
 
 		``with_extended_output``
 			Whether to return a (status, stdout, stderr) tuple.
@@ -198,10 +200,10 @@ class Git(object):
 			print ' '.join(command)
 
 		# Allow the user to have the command executed in their working dir.
-		if with_keep_cwd or self.git_dir is None:
+		if with_keep_cwd or self._working_dir is None:
 		  cwd = os.getcwd()
 		else:
-		  cwd=self.git_dir
+		  cwd=self._working_dir
 		  
 		# Start the process
 		proc = subprocess.Popen(command,

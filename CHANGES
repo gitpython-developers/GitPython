@@ -57,6 +57,7 @@ GitCommand
 * git.subcommand call scheme now prunes out None from the argument list, allowing 
   to be called more confortably as None can never be a valid to the git command 
   if converted to a string.
+* Renamed 'git_dir' attribute to 'working_dir' which is exactly how it is used
 
 Commit
 ------
@@ -135,6 +136,11 @@ Repo
   - 'config_reader' method
   - 'config_writer' method
   - 'bare' property, previously it was a simple attribute that could be written
+* Renamed the following attributes
+  - 'path' is now 'git_dir'
+  - 'wd' is now 'working_dir'
+* Added attribute
+  - 'working_tree_dir' which may be None in case of bare repositories
   
 Remote
 ------

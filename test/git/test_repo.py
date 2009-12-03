@@ -21,11 +21,11 @@ class TestRepo(TestBase):
 		Repo("repos/foobar")
 
 	def test_repo_creation_from_different_paths(self):
-		r_from_gitdir = Repo(self.rorepo.path)
-		assert r_from_gitdir.path == self.rorepo.path
-		assert r_from_gitdir.path.endswith('.git')
-		assert not self.rorepo.git.git_dir.endswith('.git')
-		assert r_from_gitdir.git.git_dir == self.rorepo.git.git_dir
+		r_from_gitdir = Repo(self.rorepo.git_dir)
+		assert r_from_gitdir.git_dir == self.rorepo.git_dir
+		assert r_from_gitdir.git_dir.endswith('.git')
+		assert not self.rorepo.git.working_dir.endswith('.git')
+		assert r_from_gitdir.git.working_dir == self.rorepo.git.working_dir
 
 	def test_description(self):
 		txt = "Test repository"
@@ -225,7 +225,7 @@ class TestRepo(TestBase):
 		assert_true( len( tlist ) < sum( len(t) for t in tlist ) )				 # test for single-char bug
 		
 	def test_untracked_files(self):
-		base = self.rorepo.git.git_dir
+		base = self.rorepo.working_tree_dir
 		files = (	join_path_native(base, "__test_myfile"), 
 					join_path_native(base, "__test_other_file")	)
 		num_recently_untracked = 0

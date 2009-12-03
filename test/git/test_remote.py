@@ -62,7 +62,7 @@ class TestPushProgress(PushProgress):
 class TestRemote(TestBase):
 	
 	def _print_fetchhead(self, repo):
-		fp = open(os.path.join(repo.path, "FETCH_HEAD"))
+		fp = open(os.path.join(repo.git_dir, "FETCH_HEAD"))
 		fp.close()
 		
 		
@@ -213,7 +213,7 @@ class TestRemote(TestBase):
 		# must clone with a local path for the repo implementation not to freak out
 		# as it wants local paths only ( which I can understand )
 		other_repo = remote_repo.clone(other_repo_dir, shared=False)
-		remote_repo_url = "git://localhost%s"%remote_repo.path
+		remote_repo_url = "git://localhost%s"%remote_repo.git_dir
 		
 		# put origin to git-url
 		other_origin = other_repo.remotes.origin 

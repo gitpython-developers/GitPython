@@ -271,7 +271,7 @@ class TestRefs(TestBase):
 		symbol_ref_path = "refs/symbol_ref"
 		symref = SymbolicReference(rw_repo, symbol_ref_path)
 		assert symref.path == symbol_ref_path
-		symbol_ref_abspath = os.path.join(rw_repo.path, symref.path)
+		symbol_ref_abspath = os.path.join(rw_repo.git_dir, symref.path)
 		
 		# set it
 		symref.reference = new_head

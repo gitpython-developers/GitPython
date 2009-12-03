@@ -52,7 +52,7 @@ class SymbolicReference(object):
 		return self.path	
 	
 	def _get_path(self):
-		return join_path_native(self.repo.path, self.path)
+		return join_path_native(self.repo.git_dir, self.path)
 		
 	@classmethod
 	def _iter_packed_refs(cls, repo):
@@ -60,7 +60,7 @@ class SymbolicReference(object):
 		refs.
 		NOTE: The packed refs file will be kept open as long as we iterate"""
 		try:
-			fp = open(os.path.join(repo.path, 'packed-refs'), 'r')
+			fp = open(os.path.join(repo.git_dir, 'packed-refs'), 'r')
 			for line in fp:
 				line = line.strip()
 				if not line:
@@ -258,7 +258,7 @@ class SymbolicReference(object):
 			Alternatively the symbolic reference to be deleted
 		"""
 		full_ref_path = cls._to_full_path(repo, path)
-		abs_path = os.path.join(repo.path, full_ref_path)
+		abs_path = os.path.join(repo.git_dir, full_ref_path)
 		if os.path.exists(abs_path):
 			os.remove(abs_path)
 			
@@ -271,7 +271,7 @@ class SymbolicReference(object):
 		instead"""
 		full_ref_path = cls._to_full_path(repo, path)
 		
-		abs_ref_path = os.path.join(repo.path, full_ref_path)
+		abs_ref_path = os.path.join(repo.git_dir, full_ref_path)
 		if not force and os.path.isfile(abs_ref_path):
 			raise OSError("Reference at %s does already exist" % full_ref_path)
 		
@@ -401,10 +401,10 @@ class Reference(SymbolicReference, LazyMixin, Iterable):
 		
 		# walk loose refs
 		# Currently we do not follow links 
-		for root, dirs, files in os.walk(join_path_native(repo.path, common_path)):
+		for root, dirs, files in os.walk(join_path_native(repo.git_dir, common_path)):
 			for f in files:
 				abs_path = to_native_path_linux(join_path(root, f))
-				rela_paths.add(abs_path.replace(to_native_path_linux(repo.path) + '/', ""))
+				rela_paths.add(abs_path.replace(to_native_path_linux(repo.git_dir) + '/', ""))
 			# END for each file in root directory
 		# END for each directory to walk
 		

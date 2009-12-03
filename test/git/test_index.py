@@ -254,7 +254,7 @@ class TestTree(TestBase):
 		
 		# reset the working copy as well to current head,to pull 'back' as well
 		new_data = "will be reverted"
-		file_path = os.path.join(rw_repo.git.git_dir, "CHANGES")
+		file_path = os.path.join(rw_repo.working_tree_dir, "CHANGES")
 		fp = open(file_path, "wb")
 		fp.write(new_data)
 		fp.close()
@@ -269,7 +269,7 @@ class TestTree(TestBase):
 			fp.close()
 			
 		# test full checkout
-		test_file = os.path.join(rw_repo.git.git_dir, "CHANGES")
+		test_file = os.path.join(rw_repo.working_tree_dir, "CHANGES")
 		open(test_file, 'ab').write("some data")
 		rval = index.checkout(None, force=True, fprogress=self._fprogress)
 		assert 'CHANGES' in list(rval)
@@ -312,7 +312,7 @@ class TestTree(TestBase):
 		assert not open(test_file).read().endswith(append_data)
 		
 		# checkout directory
-		shutil.rmtree(os.path.join(rw_repo.git.git_dir, "lib"))
+		shutil.rmtree(os.path.join(rw_repo.working_tree_dir, "lib"))
 		rval = index.checkout('lib')
 		assert len(list(rval)) > 1
 	
@@ -321,7 +321,7 @@ class TestTree(TestBase):
 		Returns count of files that actually exist in the repository directory.
 		"""
 		existing = 0
-		basedir = repo.git.git_dir
+		basedir = repo.working_tree_dir
 		for f in files:
 			existing += os.path.isfile(os.path.join(basedir, f))
 		# END for each deleted file
@@ -375,7 +375,7 @@ class TestTree(TestBase):
 		self.failUnlessRaises(TypeError, index.remove, [1])
 		
 		# absolute path
-		deleted_files = index.remove([os.path.join(rw_repo.git.git_dir,"lib")], r=True)
+		deleted_files = index.remove([os.path.join(rw_repo.working_tree_dir,"lib")], r=True)
 		assert len(deleted_files) > 1
 		self.failUnlessRaises(ValueError, index.remove, ["/doesnt/exists"])
 		
@@ -411,7 +411,7 @@ class TestTree(TestBase):
 		index.reset(new_commit.parents[0], working_tree=True).reset(new_commit, working_tree=False)
 		lib_file_path = "lib/git/__init__.py"
 		assert (lib_file_path, 0) not in index.entries
-		assert os.path.isfile(os.path.join(rw_repo.git.git_dir, lib_file_path))
+		assert os.path.isfile(os.path.join(rw_repo.working_tree_dir, lib_file_path))
 		
 		# directory
 		entries = index.add(['lib'], fprogress=self._fprogress_add)
@@ -452,7 +452,7 @@ class TestTree(TestBase):
 		
 		# add symlink
 		if sys.platform != "win32":
-			link_file = os.path.join(rw_repo.git.git_dir, "my_real_symlink")
+			link_file = os.path.join(rw_repo.working_tree_dir, "my_real_symlink")
 			os.symlink("/etc/that", link_file)
 			entries = index.reset(new_commit).add([link_file], fprogress=self._fprogress_add)
 			self._assert_fprogress(entries)

@@ -575,7 +575,7 @@ class Remote(LazyMixin, Iterable):
 		err_info = stderr.splitlines()[1:]
 		
 		# read head information 
-		fp = open(os.path.join(self.repo.path, 'FETCH_HEAD'),'r')
+		fp = open(os.path.join(self.repo.git_dir, 'FETCH_HEAD'),'r')
 		fetch_head_info = fp.readlines()
 		fp.close()
 		

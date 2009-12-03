@@ -84,15 +84,15 @@ class TestBase(TestBase):
 	@with_bare_rw_repo
 	def test_with_bare_rw_repo(self, bare_rw_repo):
 		assert bare_rw_repo.config_reader("repository").getboolean("core", "bare")
-		assert os.path.isfile(os.path.join(bare_rw_repo.path,'HEAD'))
+		assert os.path.isfile(os.path.join(bare_rw_repo.git_dir,'HEAD'))
 		
 	@with_rw_repo('0.1.6')
 	def test_with_rw_repo(self, rw_repo):
 		assert not rw_repo.config_reader("repository").getboolean("core", "bare")
-		assert os.path.isdir(os.path.join(rw_repo.git.git_dir,'lib'))
+		assert os.path.isdir(os.path.join(rw_repo.working_tree_dir,'lib'))
 		
 	@with_rw_and_rw_remote_repo('0.1.6')
 	def test_with_rw_remote_and_rw_repo(self, rw_repo, rw_remote_repo):
 		assert not rw_repo.config_reader("repository").getboolean("core", "bare")
 		assert rw_remote_repo.config_reader("repository").getboolean("core", "bare")
-		assert os.path.isdir(os.path.join(rw_repo.git.git_dir,'lib'))
+		assert os.path.isdir(os.path.join(rw_repo.working_tree_dir,'lib'))
