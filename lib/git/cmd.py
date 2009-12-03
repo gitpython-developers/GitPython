@@ -98,7 +98,9 @@ class Git(object):
 		
 		``git_dir``
 		   Git directory we should work in. If None, we always work in the current 
-		   directory as returned by os.getcwd()
+		   directory as returned by os.getcwd().
+		   It is meant to be the working tree directory if available, or the 
+		   .git directory in case of bare repositories.
 		"""
 		super(Git, self).__init__()
 		self.git_dir = git_dir

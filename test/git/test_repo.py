@@ -20,6 +20,13 @@ class TestRepo(TestBase):
 	def test_new_should_raise_on_non_existant_path(self):
 		Repo("repos/foobar")
 
+	def test_repo_creation_from_different_paths(self):
+		r_from_gitdir = Repo(self.rorepo.path)
+		assert r_from_gitdir.path == self.rorepo.path
+		assert r_from_gitdir.path.endswith('.git')
+		assert not self.rorepo.git.git_dir.endswith('.git')
+		assert r_from_gitdir.git.git_dir == self.rorepo.git.git_dir
+
 	def test_description(self):
 		txt = "Test repository"
 		self.rorepo.description = txt

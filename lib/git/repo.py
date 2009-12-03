@@ -88,7 +88,7 @@ class Repo(object):
 		while curpath:
 			if is_git_dir(curpath):
 				self.path = curpath
-				self.wd = curpath
+				self.wd = os.path.dirname(curpath)
 				break
 			gitpath = os.path.join(curpath, '.git')
 			if is_git_dir(gitpath):
@@ -99,6 +99,9 @@ class Repo(object):
 			if not dummy:
 				break
 		# END while curpath
+		
+		if self.path is None:
+		   raise InvalidGitRepositoryError(epath)
 
 		self._bare = False
 		try:
@@ -106,9 +109,11 @@ class Repo(object):
 		except Exception:
 			# lets not assume the option exists, although it should
 			pass
-		
-		if self.path is None:
-		   raise InvalidGitRepositoryError(epath)
+
+		# adjust the wd in case we are actually bare - we didn't know that 
+		# in the first place
+		if self._bare:
+			self.wd = self.path
 
 		self.git = Git(self.wd)
 
