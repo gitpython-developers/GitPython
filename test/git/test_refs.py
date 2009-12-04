@@ -274,6 +274,10 @@ class TestRefs(TestBase):
 			assert ref_new_name.object == orig_obj
 			assert ref_new_name == ref
 		# END for each name type
+		
+		# References that don't exist trigger an error if we want to access them
+		self.failUnlessRaises(ValueError, getattr, Reference(rw_repo, "refs/doesntexist"), 'commit')
+		
 		# exists, fail unless we force
 		ex_ref_path = far_away_head.path
 		self.failUnlessRaises(OSError, ref.rename, ex_ref_path)

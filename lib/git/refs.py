@@ -112,6 +112,9 @@ class SymbolicReference(object):
 			# END for each packed ref
 		# END handle packed refs
 		
+		if tokens is None:
+			raise ValueError("Reference at %r does not exist" % self.path)
+		
 		# is it a reference ?
 		if tokens[0] == 'ref:':
 			return (None, tokens[1])
@@ -417,7 +420,6 @@ class SymbolicReference(object):
 	def _iter_items(cls, repo, common_path = None):
 		if common_path is None:
 			common_path = cls._common_path_default
-		
 		rela_paths = set()
 		
 		# walk loose refs
@@ -516,7 +518,7 @@ class Reference(SymbolicReference, LazyMixin, Iterable):
 			
 		"""
 		if not path.startswith(self._common_path_default+'/'):
-			raise ValueError("Cannot instantiate %s from path %s" % ( self.__class__.__name__, path ))
+			raise ValueError("Cannot instantiate %r from path %s" % ( self.__class__.__name__, path ))
 		super(Reference, self).__init__(repo, path)
 		
 

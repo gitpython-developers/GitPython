@@ -135,7 +135,7 @@ class LockFile(object):
 			pid = int(fp.read())
 			fp.close()
 		except IOError:
-			raise AssertionError("GitConfigParser has a lock but the lock file at %s could not be read" % lock_file)
+			raise AssertionError("The lock file at %s could not be read" % lock_file)
 		
 		if pid != os.getpid():
 			raise AssertionError("We claim to own the lock at %s, but it was not owned by our process: %i" % (lock_file, os.getpid()))
