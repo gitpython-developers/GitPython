@@ -242,7 +242,9 @@ class TestRefs(TestBase):
 		assert ref.path == full_ref
 		assert ref.object == rw_repo.head.commit
 		
-		self.failUnlessRaises(OSError, Reference.create, rw_repo, full_ref)
+		self.failUnlessRaises(OSError, Reference.create, rw_repo, full_ref, 'HEAD~20')
+		# it works if it is at the same spot though and points to the same reference
+		assert Reference.create(rw_repo, full_ref, 'HEAD').path == full_ref
 		Reference.delete(rw_repo, full_ref)
 		
 		# recreate the reference using a full_ref
@@ -279,7 +281,9 @@ class TestRefs(TestBase):
 		assert symref.path == symref_path
 		assert symref.reference == cur_head.reference
 		
-		self.failUnlessRaises(OSError, SymbolicReference.create, rw_repo, symref_path, cur_head.reference)
+		self.failUnlessRaises(OSError, SymbolicReference.create, rw_repo, symref_path, cur_head.reference.commit)
+		# it works if the new ref points to the same reference 
+		SymbolicReference.create(rw_repo, symref.path, symref.reference).path == symref.path
 		SymbolicReference.delete(rw_repo, symref)
 		# would raise if the symref wouldn't have been deletedpbl
 		symref = SymbolicReference.create(rw_repo, symref_path, cur_head.reference)

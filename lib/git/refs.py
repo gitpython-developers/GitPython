@@ -187,7 +187,7 @@ class SymbolicReference(object):
 		if not os.path.isdir(directory):
 			os.makedirs(directory)
 		
-		fp = open(path, "w")
+		fp = open(path, "wb")
 		try:
 			fp.write(write_value)
 		finally:
@@ -270,16 +270,24 @@ class SymbolicReference(object):
 		corresponding object and a detached symbolic reference will be created
 		instead"""
 		full_ref_path = cls._to_full_path(repo, path)
-		
 		abs_ref_path = os.path.join(repo.git_dir, full_ref_path)
-		if not force and os.path.isfile(abs_ref_path):
-			raise OSError("Reference at %s does already exist" % full_ref_path)
 		
-		ref = cls(repo, full_ref_path)
+		# figure out target data
 		target = reference
 		if resolve:
 			target = Object.new(repo, reference)
+			
+		if not force and os.path.isfile(abs_ref_path):
+			target_data = str(target)
+			if isinstance(target, SymbolicReference):
+				target_data = target.path
+			if not resolve:
+				target_data = "ref: " + target_data
+			if open(abs_ref_path, 'rb').read().strip() != target_data:
+				raise OSError("Reference at %s does already exist" % full_ref_path)
+		# END no force handling
 		
+		ref = cls(repo, full_ref_path)
 		ref.reference = target
 		return ref
 		
@@ -305,6 +313,9 @@ class SymbolicReference(object):
 		Returns
 			Newly created symbolic Reference
 			
+		Raises OSError	
+			If a (Symbolic)Reference with the same name but different contents
+			already exists.
 		Note
 			This does not alter the current HEAD, index or Working Tree
 		"""
@@ -327,7 +338,7 @@ class SymbolicReference(object):
 			self
 			
 		Raises OSError:
-			In case a file at path with that name already exists
+			In case a file at path but a different contents already exists
 		"""
 		new_path = self._to_full_path(self.repo, new_path)
 		if self.path == new_path:
@@ -338,7 +349,7 @@ class SymbolicReference(object):
 		if os.path.isfile(new_abs_path):
 			if not force:
 				# if they point to the same file, its not an error
-				if open(new_abs_path,'rb').read() != open(cur_abs_path,'rb').read():
+				if open(new_abs_path,'rb').read().strip() != open(cur_abs_path,'rb').read().strip():
 					raise OSError("File at path %r already exists" % new_abs_path)
 				# else: we could remove ourselves and use the otherone, but 
 				# but clarity we just continue as usual
