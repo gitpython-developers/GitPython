@@ -55,12 +55,16 @@ class SymbolicReference(object):
 		return join_path_native(self.repo.git_dir, self.path)
 		
 	@classmethod
+	def _get_packed_refs_path(cls, repo):
+		return os.path.join(repo.git_dir, 'packed-refs')
+		
+	@classmethod
 	def _iter_packed_refs(cls, repo):
 		"""Returns an iterator yielding pairs of sha1/path pairs for the corresponding
 		refs.
 		NOTE: The packed refs file will be kept open as long as we iterate"""
 		try:
-			fp = open(os.path.join(repo.git_dir, 'packed-refs'), 'r')
+			fp = open(cls._get_packed_refs_path(repo), 'r')
 			for line in fp:
 				line = line.strip()
 				if not line:
@@ -87,13 +91,10 @@ class SymbolicReference(object):
 		# I believe files are closing themselves on destruction, so it is 
 		# alright.
 		
-	def _get_commit(self):
-		"""
-		Returns:
-			Commit object we point to, works for detached and non-detached 
-			SymbolicReferences
-		"""
-		# we partially reimplement it to prevent unnecessary file access
+	def _get_ref_info(self):
+		"""Return: (sha, target_ref_path) if available, the sha the file at 
+		rela_path points to, or None. target_ref_path is the reference we 
+		point to, or None"""
 		tokens = None
 		try:
 			fp = open(self._get_path(), 'r')
@@ -111,15 +112,30 @@ class SymbolicReference(object):
 			# END for each packed ref
 		# END handle packed refs
 		
-		# it is a detached reference
+		# is it a reference ?
+		if tokens[0] == 'ref:':
+			return (None, tokens[1])
+			
+		# its a commit
 		if self.repo.re_hexsha_only.match(tokens[0]):
-			return Commit(self.repo, tokens[0])
+			return (tokens[0], None)
+			
+		raise ValueError("Failed to parse reference information from %r" % self.path)
 		
-		# must be a head ! Git does not allow symbol refs to other things than heads
-		# Otherwise it would have detached it
-		if tokens[0] != "ref:":
-			raise ValueError("Failed to parse symbolic refernce: wanted 'ref: <hexsha>', got %r" % value)
-		return Reference.from_path(self.repo, tokens[1]).commit
+	def _get_commit(self):
+		"""
+		Returns:
+			Commit object we point to, works for detached and non-detached 
+			SymbolicReferences
+		"""
+		# we partially reimplement it to prevent unnecessary file access
+		sha, target_ref_path = self._get_ref_info()
+		
+		# it is a detached reference
+		if sha:
+			return Commit(self.repo, sha)
+		
+		return Reference.from_path(self.repo, target_ref_path).commit
 		
 	def _set_commit(self, commit):
 		"""
@@ -138,14 +154,10 @@ class SymbolicReference(object):
 		Returns
 			Reference Object we point to
 		"""
-		fp = open(self._get_path(), 'r')
-		try:
-			tokens = fp.readline().rstrip().split(' ')
-			if tokens[0] != 'ref:':
-				raise TypeError("%s is a detached symbolic reference as it points to %r" % (self, tokens[0]))
-			return Reference.from_path(self.repo, tokens[1])
-		finally:
-			fp.close()
+		sha, target_ref_path = self._get_ref_info()
+		if target_ref_path is None:
+			raise TypeError("%s is a detached symbolic reference as it points to %r" % (self, sha))
+		return Reference.from_path(self.repo, target_ref_path)
 		
 	def _set_reference(self, ref):
 		"""
@@ -261,6 +273,40 @@ class SymbolicReference(object):
 		abs_path = os.path.join(repo.git_dir, full_ref_path)
 		if os.path.exists(abs_path):
 			os.remove(abs_path)
+		else:
+			# check packed refs
+			pack_file_path = cls._get_packed_refs_path(repo)
+			try:
+				reader = open(pack_file_path)
+			except (OSError,IOError):
+				pass # it didnt exist at all
+			else:
+				new_lines = list()
+				made_change = False
+				dropped_last_line = False
+				for line in reader:
+					# keep line if it is a comment or if the ref to delete is not 
+					# in the line
+					# If we deleted the last line and this one is a tag-reference object, 
+					# we drop it as well
+					if ( line.startswith('#') or full_ref_path not in line ) and \
+						( not dropped_last_line or dropped_last_line and not line.startswith('^') ):
+						new_lines.append(line)
+						dropped_last_line = False
+						continue
+					# END skip comments and lines without our path
+					
+					# drop this line
+					made_change = True
+					dropped_last_line = True
+				# END for each line in packed refs
+				reader.close()
+				
+				# write the new lines
+				if made_change:
+					open(pack_file_path, 'w').writelines(new_lines)
+			# END open exception handling
+		# END handle deletion
 			
 	@classmethod
 	def _create(cls, repo, path, resolve, reference, force):
@@ -367,6 +413,88 @@ class SymbolicReference(object):
 		
 		return self
 		
+	@classmethod
+	def _iter_items(cls, repo, common_path = None):
+		if common_path is None:
+			common_path = cls._common_path_default
+		
+		rela_paths = set()
+		
+		# walk loose refs
+		# Currently we do not follow links 
+		for root, dirs, files in os.walk(join_path_native(repo.git_dir, common_path)):
+			if 'refs/' not in root:	# skip non-refs subfolders
+				refs_id = [ i for i,d in enumerate(dirs) if d == 'refs' ]
+				if refs_id:
+					dirs[0:] = ['refs']
+			# END prune non-refs folders
+			
+			for f in files:
+				abs_path = to_native_path_linux(join_path(root, f))
+				rela_paths.add(abs_path.replace(to_native_path_linux(repo.git_dir) + '/', ""))
+			# END for each file in root directory
+		# END for each directory to walk
+		
+		# read packed refs
+		for sha, rela_path in cls._iter_packed_refs(repo):
+			if rela_path.startswith(common_path):
+				rela_paths.add(rela_path)
+			# END relative path matches common path
+		# END packed refs reading
+		
+		# return paths in sorted order
+		for path in sorted(rela_paths):
+			try:
+				yield cls.from_path(repo, path)
+			except ValueError:
+				continue
+		# END for each sorted relative refpath
+		
+	@classmethod
+	def iter_items(cls, repo, common_path = None):
+		"""
+		Find all refs in the repository
+
+		``repo``
+			is the Repo
+
+		``common_path``
+			Optional keyword argument to the path which is to be shared by all
+			returned Ref objects.
+			Defaults to class specific portion if None assuring that only 
+			refs suitable for the actual class are returned.
+
+		Returns
+			git.SymbolicReference[], each of them is guaranteed to be a symbolic
+			ref which is not detached.
+			
+			List is lexigraphically sorted
+			The returned objects represent actual subclasses, such as Head or TagReference
+		"""
+		return ( r for r in cls._iter_items(repo, common_path) if r.__class__ == SymbolicReference or not r.is_detached )
+		
+	@classmethod
+	def from_path(cls, repo, path):
+		"""
+		Return
+			Instance of type Reference, Head, or Tag
+			depending on the given path
+		"""
+		if not path:
+			raise ValueError("Cannot create Reference from %r" % path)
+		
+		for ref_type in (HEAD, Head, RemoteReference, TagReference, Reference, SymbolicReference):
+			try:
+				instance = ref_type(repo, path)
+				if instance.__class__ == SymbolicReference and instance.is_detached:
+					raise ValueError("SymbolRef was detached, we drop it")
+				return instance
+			except ValueError:
+				pass
+			# END exception handling
+		# END for each type to try
+		raise ValueError("Could not find reference type suitable to handle path %r" % path)
+		
 
 class Reference(SymbolicReference, LazyMixin, Iterable):
 	"""
@@ -431,75 +559,6 @@ class Reference(SymbolicReference, LazyMixin, Iterable):
 			return self.path		   # could be refs/HEAD
 		return '/'.join(tokens[2:])
 	
-	@classmethod
-	def iter_items(cls, repo, common_path = None, **kwargs):
-		"""
-		Find all refs in the repository
-
-		``repo``
-			is the Repo
-
-		``common_path``
-			Optional keyword argument to the path which is to be shared by all
-			returned Ref objects.
-			Defaults to class specific portion if None assuring that only 
-			refs suitable for the actual class are returned.
-
-		Returns
-			git.Reference[]
-			
-			List is lexigraphically sorted
-			The returned objects represent actual subclasses, such as Head or TagReference
-		"""
-		if common_path is None:
-			common_path = cls._common_path_default
-		
-		rela_paths = set()
-		
-		# walk loose refs
-		# Currently we do not follow links 
-		for root, dirs, files in os.walk(join_path_native(repo.git_dir, common_path)):
-			for f in files:
-				abs_path = to_native_path_linux(join_path(root, f))
-				rela_paths.add(abs_path.replace(to_native_path_linux(repo.git_dir) + '/', ""))
-			# END for each file in root directory
-		# END for each directory to walk
-		
-		# read packed refs
-		for sha, rela_path in cls._iter_packed_refs(repo):
-			if rela_path.startswith(common_path):
-				rela_paths.add(rela_path)
-			# END relative path matches common path
-		# END packed refs reading
-		
-		# return paths in sorted order
-		for path in sorted(rela_paths):
-			if path.endswith('/HEAD'):
-				continue
-			# END skip remote heads
-			yield cls.from_path(repo, path)
-		# END for each sorted relative refpath
-		
-		
-	@classmethod
-	def from_path(cls, repo, path):
-		"""
-		Return
-			Instance of type Reference, Head, or Tag
-			depending on the given path
-		"""
-		if not path:
-			raise ValueError("Cannot create Reference from %r" % path)
-		
-		for ref_type in (Head, RemoteReference, TagReference, Reference):
-			try:
-				return ref_type(repo, path)
-			except ValueError:
-				pass
-			# END exception handling
-		# END for each type to try
-		raise ValueError("Could not find reference type suitable to handle path %r" % path)
-		
 	
 	@classmethod
 	def create(cls, repo, path, commit='HEAD', force=False ):
@@ -528,8 +587,15 @@ class Reference(SymbolicReference, LazyMixin, Iterable):
 			This does not alter the current HEAD, index or Working Tree
 		"""
 		return cls._create(repo, path, True, commit, force)
-		
-		
+	
+	@classmethod	
+	def iter_items(cls, repo, common_path = None):
+		"""
+		Equivalent to SymbolicReference.iter_items, but will return non-detached
+		references as well.
+		"""
+		return cls._iter_items(repo, common_path)
+	
 	
 class HEAD(SymbolicReference):
 	"""
@@ -850,7 +916,7 @@ class RemoteReference(Head):
 		return '/'.join(tokens[3:])
 		
 	@classmethod
-	def delete(cls, repo, *remotes, **kwargs):
+	def delete(cls, repo, *refs, **kwargs):
 		"""
 		Delete the given remote references.
 		
@@ -858,4 +924,13 @@ class RemoteReference(Head):
 			kwargs are given for compatability with the base class method as we 
 			should not narrow the signature.
 		"""
-		repo.git.branch("-d", "-r", *remotes)
+		repo.git.branch("-d", "-r", *refs)
+		# the official deletion method will ignore remote symbolic refs - these 
+		# are generally ignored in the refs/ folder. We don't though 
+		# and delete remainders manually
+		for ref in refs:
+			try:
+				os.remove(os.path.join(repo.git_dir, ref.path))
+			except OSError:
+				pass
+		# END for each ref

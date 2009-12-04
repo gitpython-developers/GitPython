@@ -347,7 +347,6 @@ class Iterable(object):
 		Returns:
 			list(Item,...) list of item instances 
 		"""
-		#return list(cls.iter_items(repo, *args, **kwargs))
 		out_list = IterableList( cls._id_attribute_ )
 		out_list.extend(cls.iter_items(repo, *args, **kwargs))
 		return out_list

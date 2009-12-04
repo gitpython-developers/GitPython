@@ -318,6 +318,9 @@ class TestRefs(TestBase):
 			assert not symref.is_detached
 		# END for each ref
 		
+		# create a new non-head ref just to be sure we handle it even if packed
+		Reference.create(rw_repo, full_ref)
+		
 		# test ref listing - assure we have packed refs
 		rw_repo.git.pack_refs(all=True, prune=True)
 		heads = rw_repo.heads
@@ -325,4 +328,40 @@ class TestRefs(TestBase):
 		assert new_head in heads
 		assert active_branch in heads
 		assert rw_repo.tags
+		
+		# we should be able to iterate all symbolic refs as well - in that case
+		# we should expect only symbolic references to be returned
+		for symref in SymbolicReference.iter_items(rw_repo):
+			assert not symref.is_detached
+			
+		# when iterating references, we can get references and symrefs
+		# when deleting all refs, I'd expect them to be gone ! Even from 
+		# the packed ones
+		# For this to work, we must not be on any branch
+		rw_repo.head.reference = rw_repo.head.commit
+		deleted_refs = set()
+		for ref in Reference.iter_items(rw_repo):
+			if ref.is_detached:
+				ref.delete(rw_repo, ref)
+				deleted_refs.add(ref)
+			# END delete ref
+		# END for each ref to iterate and to delete
+		assert deleted_refs
+		
+		for ref in Reference.iter_items(rw_repo):
+			if ref.is_detached:
+				assert ref not in deleted_refs
+		# END for each ref
+		
+		# reattach head - head will not be returned if it is not a symbolic 
+		# ref
+		rw_repo.head.reference = Head.create(rw_repo, "master")
+		
+		# At least the head should still exist
+		assert os.path.isfile(os.path.join(rw_repo.git_dir, 'HEAD'))
+		refs = list(SymbolicReference.iter_items(rw_repo))
+		assert len(refs) == 1
+		
+		
+		
 		
