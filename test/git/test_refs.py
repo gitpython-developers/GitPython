@@ -89,20 +89,28 @@ class TestRefs(TestBase):
 		for head in heads:
 			cur_head.reference = head
 			assert cur_head.reference == head
+			assert isinstance(cur_head.reference, Head)
 			assert cur_head.commit == head.commit
 			assert not cur_head.is_detached
 		# END for each head
 		
 		# detach
-		cur_head.reference = heads[0].commit
-		assert cur_head.commit == heads[0].commit
+		active_head = heads[0]
+		curhead_commit = active_head.commit
+		cur_head.reference = curhead_commit
+		assert cur_head.commit == curhead_commit
 		assert cur_head.is_detached
 		self.failUnlessRaises(TypeError, getattr, cur_head, "reference")
 		
+		# tags are references, hence we can point to them
 		some_tag = rw_repo.tags[0]
 		cur_head.reference = some_tag
-		assert cur_head.is_detached
+		assert not cur_head.is_detached
 		assert cur_head.commit == some_tag.commit
+		assert isinstance(cur_head.reference, TagReference) 
+		
+		# put HEAD back to a real head, otherwise everything else fails
+		cur_head.reference = active_head
 		
 		# type check
 		self.failUnlessRaises(ValueError, setattr, cur_head, "reference", "that")

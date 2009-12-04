@@ -119,7 +119,7 @@ class SymbolicReference(object):
 		# Otherwise it would have detached it
 		if tokens[0] != "ref:":
 			raise ValueError("Failed to parse symbolic refernce: wanted 'ref: <hexsha>', got %r" % value)
-		return Head(self.repo, tokens[1]).commit
+		return Reference.from_path(self.repo, tokens[1]).commit
 		
 	def _set_commit(self, commit):
 		"""
@@ -149,13 +149,13 @@ class SymbolicReference(object):
 		
 	def _set_reference(self, ref):
 		"""
-		Set ourselves to the given ref. It will stay a symbol if the ref is a Head.
+		Set ourselves to the given ref. It will stay a symbol if the ref is a Reference.
 		Otherwise we try to get a commit from it using our interface.
 		
 		Strings are allowed but will be checked to be sure we have a commit
 		"""
 		write_value = None
-		if isinstance(ref, Head):
+		if isinstance(ref, SymbolicReference):
 			write_value = "ref: %s" % ref.path
 		elif isinstance(ref, Commit):
 			write_value = ref.sha
