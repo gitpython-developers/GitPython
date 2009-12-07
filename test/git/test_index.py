@@ -302,6 +302,7 @@ class TestTree(TestBase):
 			index.checkout(test_file)
 		except CheckoutError, e:
 			assert len(e.failed_files) == 1 and e.failed_files[0] == os.path.basename(test_file)
+			assert (len(e.failed_files) == len(e.failed_reasons)) and isinstance(e.failed_reasons[0], basestring)
 			assert len(e.valid_files) == 0
 			assert open(test_file).read().endswith(append_data)
 		else:

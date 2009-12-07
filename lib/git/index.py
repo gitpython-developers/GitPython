@@ -31,12 +31,16 @@ class CheckoutError( Exception ):
 	The .failed_files attribute contains a list of relative paths that failed 
 	to be checked out as they contained changes that did not exist in the index.
 	
+	The .failed_reasons attribute contains a string informing about the actual 
+	cause of the issue.
+	
 	The .valid_files attribute contains a list of relative paths to files that 
 	were checked out successfully and hence match the version stored in the 
 	index"""
-	def __init__(self, message, failed_files, valid_files):
+	def __init__(self, message, failed_files, valid_files, failed_reasons):
 		Exception.__init__(self, message)
 		self.failed_files = failed_files
+		self.failed_reasons = failed_reasons
 		self.valid_files = valid_files
 
 	def __str__(self):
@@ -1101,6 +1105,7 @@ class IndexFile(LazyMixin, diff.Diffable):
 			# line contents:
 			# git-checkout-index: this already exists
 			failed_files = list()
+			failed_reasons = list()
 			unknown_lines = list()
 			endings = (' already exists', ' is not in the cache', ' does not exist at stage', ' is unmerged')
 			for line in stderr.splitlines():
@@ -1109,8 +1114,10 @@ class IndexFile(LazyMixin, diff.Diffable):
 					unlink_issue = "unable to unlink old '"
 					if line.endswith(is_a_dir):
 						failed_files.append(line[:-len(is_a_dir)])
+						failed_reasons.append(is_a_dir)
 					elif line.startswith(unlink_issue):
 						failed_files.append(line[len(unlink_issue):line.rfind("'")])
+						failed_reasons.append(unlink_issue)
 					else:
 						unknown_lines.append(line)
 					continue
@@ -1119,6 +1126,7 @@ class IndexFile(LazyMixin, diff.Diffable):
 				for e in endings:
 					if line.endswith(e):
 						failed_files.append(line[20:-len(e)])
+						failed_reasons.append(e)
 						break
 					# END if ending matches
 				# END for each possible ending
@@ -1127,7 +1135,7 @@ class IndexFile(LazyMixin, diff.Diffable):
 				raise GitCommandError(("git-checkout-index", ), 128, stderr)
 			if failed_files:
 				valid_files = list(set(iter_checked_out_files) - set(failed_files))
-				raise CheckoutError("Some files could not be checked out from the index due to local modifications", failed_files, valid_files)
+				raise CheckoutError("Some files could not be checked out from the index due to local modifications", failed_files, valid_files, failed_reasons)
 		# END stderr handler 
 		
 		
