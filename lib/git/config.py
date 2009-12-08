@@ -347,13 +347,21 @@ class GitConfigParser(cp.RawConfigParser, LockFile):
 		"""
 		return self._read_only
 		
-	def get_value(self, section, option):
+	def get_value(self, section, option, default = None):
 		"""
+		``default``
+			If not None, the given default value will be returned in case 
+			the option did not exist
 		Returns
 			a properly typed value, either int, float or string
 		Raises TypeError in case the value could not be understood
+		Otherwise the exceptions known to the ConfigParser will be raised.
 		"""
-		valuestr = self.get(section, option)
+		try:
+			valuestr = self.get(section, option)
+		except Exception:
+			return default
+		
 		types = ( long, float )
 		for numtype in types:
 			try:
