@@ -49,6 +49,12 @@ class TestBase(TestCase):
 			assert w_config.has_option(sname,oname)
 			assert w_config.get(sname, oname) == val
 			
+			sname_new = "new_section"
+			oname_new = "new_key"
+			ival = 10
+			w_config.set_value(sname_new, oname_new, ival)
+			assert w_config.get_value(sname_new, oname_new) == ival
+			
 			file_obj.seek(0)
 			r_config = GitConfigParser(file_obj, read_only=True)
 			assert r_config.has_section(sname)

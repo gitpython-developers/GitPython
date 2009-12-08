@@ -387,3 +387,23 @@ class GitConfigParser(cp.RawConfigParser, LockFile):
 			raise TypeError( "Invalid value type: only int, long, float and str are allowed", valuestr )
 		
 		return valuestr
+	
+	@_needs_values
+	@_set_dirty_and_flush_changes	
+	def set_value(self, section, option, value):
+		"""Sets the given option in section to the given value.
+		It will create the section if required, and will not throw as opposed to the default 
+		ConfigParser 'set' method.
+		
+		``section``
+			Name of the section in which the option resides or should reside
+			
+		``option``
+			Name of the options whose value to set
+			
+		``value``
+			Value to set the option to. It must be a string or convertible to a string
+		"""
+		if not self.has_section(section):
+			self.add_section(section)
+		self.set(section, option, str(value))
