@@ -21,7 +21,7 @@ class _SectionConstraint(object):
 	It supports all ConfigParser methods that operate on an option
 	"""
 	__slots__ = ("_config", "_section_name")
-	_valid_attrs_ = ("get", "set", "getint", "getfloat", "getboolean", "has_option")
+	_valid_attrs_ = ("get_value", "set_value", "get", "set", "getint", "getfloat", "getboolean", "has_option")
 	
 	def __init__(self, config, section):
 		self._config = config
@@ -32,10 +32,10 @@ class _SectionConstraint(object):
 			return lambda *args: self._call_config(attr, *args)
 		return super(_SectionConstraint,self).__getattribute__(attr)
 		
-	def _call_config(self, method, *args):
+	def _call_config(self, method, *args, **kwargs):
 		"""Call the configuration at the given method which must take a section name 
 		as first argument"""
-		return getattr(self._config, method)(self._section_name, *args)
+		return getattr(self._config, method)(self._section_name, *args, **kwargs)
 		
 		
 class PushProgress(object):

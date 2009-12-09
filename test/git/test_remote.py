@@ -358,6 +358,7 @@ class TestRemote(TestBase):
 				val = getattr(remote, opt)
 				reader = remote.config_reader
 				assert reader.get(opt) == val
+				assert reader.get_value(opt, None) == val
 				
 				# unable to write with a reader
 				self.failUnlessRaises(IOError, reader.set, opt, "test")

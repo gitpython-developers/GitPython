@@ -8,6 +8,7 @@ from test.testlib import *
 from git import *
 import StringIO
 from copy import copy
+from ConfigParser import NoSectionError
 
 class TestBase(TestCase):
 	
@@ -96,5 +97,8 @@ class TestBase(TestCase):
 		# get value which doesnt exist, with default
 		default = "my default value"
 		assert r_config.get_value("doesnt", "exist", default) == default
+		
+		# it raises if there is no default though
+		self.failUnlessRaises(NoSectionError, r_config.get_value, "doesnt", "exist")
 		
 		

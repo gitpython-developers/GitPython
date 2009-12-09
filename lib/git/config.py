@@ -360,7 +360,9 @@ class GitConfigParser(cp.RawConfigParser, LockFile):
 		try:
 			valuestr = self.get(section, option)
 		except Exception:
-			return default
+			if default is not None:
+				return default
+			raise
 		
 		types = ( long, float )
 		for numtype in types:
