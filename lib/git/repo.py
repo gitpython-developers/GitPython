@@ -178,7 +178,7 @@ class Repo(object):
 		return Head.list_items(self)
 		
 	@property
-	def refs(self):
+	def references(self):
 		"""
 		A list of Reference objects representing tags, heads and remote references.
 		
@@ -186,8 +186,11 @@ class Repo(object):
 			IterableList(Reference, ...)
 		"""
 		return Reference.list_items(self)
+		
+	# alias for references
+	refs = references
 
-	# alias heads
+	# alias for heads
 	branches = heads
 	
 	@property
