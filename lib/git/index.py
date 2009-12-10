@@ -69,38 +69,7 @@ class _TemporaryFileSwap(object):
 				os.remove(self.file_path)
 			os.rename(self.tmp_file_path, self.file_path)
 		# END temp file exists
-	
-class IndexLock(BlockingLockFile):
-	"""Specialized lock that will wait for the index to be locked and immediately
-	move the lock out of the way. This allows a git command to take the lock 
-	which has to follow right after the lock() call.
-	
-	Right before the lock is released, we will move our original lock back into place.
-	This lock should be used to gain fine-grained control over multiple processes
-	or threads that try to manipulate the index and would otherwise fail.
-	Using this lock, these will wait for each other.
-	
-	NOTE:
-		There is still a small chance that git will fail as file system
-		operations take time as well.
-	"""
-	__slots__ = '_tmp_file_path'
-	
-	def _obtain_lock_or_raise(self):
-		super(IndexLock, self)._obtain_lock_or_raise()
-		self._tmp_file_path = self._lock_file_path() + tempfile.mktemp('','','')
-		# rename lock we aquired to move it out of the way
-		os.rename(self._lock_file_path(), self._tmp_file_path)
-		
-	def _release_lock(self):
-		# move our lock back into place
-		if hasattr(self, '_tmp_file_path') and os.path.isfile(self._tmp_file_path):
-			lock_file = self._lock_file_path()
-			if os.name == 'nt' and os.path.exists(lock_file):
-				os.remove(lock_file)
-			os.rename(self._tmp_file_path, lock_file)
-		# END temp file exists
-		super(IndexLock, self)._release_lock()
+
 	
 class BlobFilter(object):
 	"""
