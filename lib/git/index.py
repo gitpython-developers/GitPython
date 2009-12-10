@@ -57,7 +57,11 @@ class _TemporaryFileSwap(object):
 	def __init__(self, file_path):
 		self.file_path = file_path
 		self.tmp_file_path = self.file_path + tempfile.mktemp('','','')
-		os.rename(self.file_path, self.tmp_file_path)
+		# it may be that the source does not exist
+		try:
+			os.rename(self.file_path, self.tmp_file_path)
+		except OSError:
+			pass
 		
 	def __del__(self):
 		if os.path.isfile(self.tmp_file_path):
@@ -556,6 +560,7 @@ class IndexFile(LazyMixin, diff.Diffable):
 			repo.git.read_tree(*arg_list, **kwargs)
 			index = cls(repo, tmp_index)
 			index.entries		# force it to read the file as we will delete the temp-file
+			del(index_handler)	# release as soon as possible
 		finally:
 			if os.path.exists(tmp_index):
 				os.remove(tmp_index)
@@ -763,9 +768,6 @@ class IndexFile(LazyMixin, diff.Diffable):
 		Returns
 			Tree object representing this index
 		"""
-		index_path = self._index_path()
-		tmp_index_mover = _TemporaryFileSwap(index_path)
-		
 		# IMPORTANT: If we have TREE extension data, it will actually 
 		# ignore the index and write the stored tree instead. Hence we 
 		# temporarily forget about it, and in fact I don't know what git 
@@ -776,8 +778,13 @@ class IndexFile(LazyMixin, diff.Diffable):
 			self._extension_data = ''
 		# END extension data special handling
 		
+		index_path = self._index_path()
+		tmp_index_mover = _TemporaryFileSwap(index_path)
+		
 		self.write(index_path)
 		tree_sha = self.repo.git.write_tree(missing_ok=missing_ok)
+		
+		del(tmp_index_mover)	# as soon as possible
 		
 		if stored_ext_data:
 			self._extension_data = stored_ext_data

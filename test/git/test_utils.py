@@ -11,6 +11,7 @@ from test.testlib import *
 from git.utils import *
 from git import *
 from git.cmd import dashify
+import time
 
 
 class TestUtils(TestCase):
@@ -52,6 +53,19 @@ class TestUtils(TestCase):
 		del(other_lock_file)
 		lock_file._obtain_lock_or_raise()
 		lock_file._release_lock()
+		
+	def test_blocking_lock_file(self):
+		my_file = tempfile.mktemp()
+		lock_file = BlockingLockFile(my_file)
+		lock_file._obtain_lock()
+		
+		# next one waits for the lock
+		start = time.time()
+		wait_time = 0.1
+		wait_lock = BlockingLockFile(my_file, 0.05, wait_time)
+		self.failUnlessRaises(IOError, wait_lock._obtain_lock)
+		elapsed = time.time() - start
+		assert elapsed <= wait_time + 0.02	# some extra time it may cost
 		
 	def _cmp_contents(self, file_path, data):
 		# raise if data from file at file_path 

@@ -6,6 +6,7 @@
 
 import os
 import sys
+import time
 import tempfile
 
 try:
@@ -172,6 +173,45 @@ class LockFile(object):
 		os.remove(self._lock_file_path())
 		self._owns_lock = False
 
+class BlockingLockFile(LockFile):
+	"""The lock file will block until a lock could be obtained, or fail after 
+	a specified timeout"""
+	__slots__ = ("_check_interval", "_max_block_time")
+	def __init__(self, file_path, check_interval_s=0.3, max_block_time_s=sys.maxint):
+		"""Configure the instance
+		
+		``check_interval_s``
+			Period of time to sleep until the lock is checked the next time.
+			By default, it waits a nearly unlimited time
+		
+		``max_block_time_s``
+			Maximum amount of seconds we may lock
+		"""
+		super(BlockingLockFile, self).__init__(file_path)
+		self._check_interval = check_interval_s
+		self._max_block_time = max_block_time_s
+		
+	def _obtain_lock(self):
+		"""This method blocks until it obtained the lock, or raises IOError if 
+		it ran out of time.
+		If this method returns, you are guranteed to own the lock"""
+		starttime = time.time()
+		maxtime = starttime + float(self._max_block_time)
+		while True:
+			try:
+				self._obtain_lock_or_raise()
+			except IOError:
+				curtime = time.time()
+				if curtime >= maxtime:
+					msg = "Waited %f seconds for lock at %r" % ( maxtime - starttime, self._lock_file_path())
+					raise IOError(msg)
+				# END abort if we wait too long
+				time.sleep(self._check_interval)
+			else:
+				break
+		# END endless loop
+	
+	
 
 class ConcurrentWriteOperation(LockFile):
 	"""
