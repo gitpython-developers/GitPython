@@ -926,7 +926,7 @@ class IndexFile(LazyMixin, diff.Diffable):
 				self._write_path_to_stdin(proc, filepath, filepath, make_exc, fprogress, read_from_stdout=False)
 				added_files.append(filepath)
 			# END for each filepath
-			self._flush_stdin_and_wait(proc)	# ignore stdout
+			self._flush_stdin_and_wait(proc, ignore_stdout=True)	# ignore stdout
 			
 			# force rereading our entries once it is all done
 			del(self.entries)
@@ -978,7 +978,7 @@ class IndexFile(LazyMixin, diff.Diffable):
 				if not progress_sent:
 					fprogress(entry.path, True, entry)
 			# END for each enty
-			self._flush_stdin_and_wait(proc)
+			self._flush_stdin_and_wait(proc, ignore_stdout=True)
 			entries_added.extend(entries)
 		# END if there are base entries
 		
@@ -1059,10 +1059,13 @@ class IndexFile(LazyMixin, diff.Diffable):
 		return Commit.create_from_tree(self.repo, tree_sha, message, parent_commits, head)
 			
 	@classmethod
-	def _flush_stdin_and_wait(cls, proc):
+	def _flush_stdin_and_wait(cls, proc, ignore_stdout = False):
 		proc.stdin.flush()
 		proc.stdin.close()
-		stdout = proc.stdout.read()
+		stdout = ''
+		if not ignore_stdout:
+			stdout = proc.stdout.read()
+		proc.stdout.close()
 		proc.wait()
 		return stdout
 	
@@ -1192,7 +1195,7 @@ class IndexFile(LazyMixin, diff.Diffable):
 					checked_out_files.append(path)
 				# END path is a file
 			# END for each path
-			self._flush_stdin_and_wait(proc)
+			self._flush_stdin_and_wait(proc, ignore_stdout=True)
 			
 			handle_stderr(proc, checked_out_files)
 			return checked_out_files
