@@ -214,6 +214,19 @@ class SymbolicReference(object):
 	# alias
 	ref = reference
 		
+	def is_valid(self):
+		"""
+		Returns
+			True if the reference is valid, hence it can be read and points to 
+			a valid object or reference.
+		"""
+		try:
+			self.commit
+		except (OSError, ValueError):
+			return False
+		else:
+			return True
+		
 	@property
 	def is_detached(self):
 		"""

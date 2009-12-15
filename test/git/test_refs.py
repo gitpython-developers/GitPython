@@ -66,6 +66,12 @@ class TestRefs(TestBase):
 			types_found.add(type(ref))
 		assert len(types_found) == 3 
 		
+	def test_is_valid(self):
+		assert Reference(self.rorepo, 'refs/doesnt/exist').is_valid() == False
+		assert self.rorepo.head.is_valid()
+		assert self.rorepo.head.reference.is_valid()
+		assert SymbolicReference(self.rorepo, 'hellothere').is_valid() == False
+		
 	@with_rw_repo('0.1.6')
 	def test_head_reset(self, rw_repo):
 		cur_head = rw_repo.head
