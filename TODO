@@ -32,12 +32,11 @@ Object
   
 Config
 ------
-* Expand .get* methods of GitConfigParser to support default value. If it is not None, 
-  it will be returned instead of raising. This way the class will be much more usable, 
-  and ... I truly hate this config reader as it is so 'old' style. Its not even a new-style
-  class yet showing that it must be ten years old.
-  - If you are at it, why not start a new project that reimplements the ConfigWriter
-  properly, honestly. Tune it for usability ... .
+* Cache the config_reader of the repository and check whether they need to 
+  update their information as the local file(s) have changed. Currently
+  we re-read all configuration data each time a config-reader is created.
+  In a way this leaves it to the user to actually keep the config-reader for 
+  multiple uses, but there are cases when the user can hardly do that.
 
 Diff
 ----

@@ -21,7 +21,7 @@ import git.diff as diff
 
 from errors import GitCommandError
 from git.objects import Blob, Tree, Object, Commit
-from git.utils import SHA1Writer, LazyMixin, ConcurrentWriteOperation, join_path_native, BlockingLockFile
+from git.utils import SHA1Writer, LazyMixin, ConcurrentWriteOperation, join_path_native
 
 
 class CheckoutError( Exception ):
@@ -913,6 +913,7 @@ class IndexFile(LazyMixin, diff.Diffable):
 		# paths can be git-added, for everything else we use git-update-index
 		entries_added = list()
 		paths, entries = self._preprocess_add_items(items)
+		
 		
 		# HANDLE PATHS 
 		if paths:

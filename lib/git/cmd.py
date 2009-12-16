@@ -218,6 +218,8 @@ class Git(object):
 		
 		# Wait for the process to return
 		status = 0
+		stdout_value = ''
+		stderr_value = ''
 		try:
 			if output_stream is None:
 				stdout_value = proc.stdout.read().rstrip()		# strip trailing "\n"
@@ -232,6 +234,7 @@ class Git(object):
 				stdout_value = output_stream
 			# END stdout handling
 			stderr_value = proc.stderr.read().rstrip()			# strip trailing "\n"
+			
 			# waiting here should do nothing as we have finished stream reading
 			status = proc.wait()
 		finally:

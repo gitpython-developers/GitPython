@@ -29,7 +29,7 @@ class _SectionConstraint(object):
 		
 	def __getattr__(self, attr):
 		if attr in self._valid_attrs_:
-			return lambda *args: self._call_config(attr, *args)
+			return lambda *args, **kwargs: self._call_config(attr, *args, **kwargs)
 		return super(_SectionConstraint,self).__getattribute__(attr)
 		
 	def _call_config(self, method, *args, **kwargs):
