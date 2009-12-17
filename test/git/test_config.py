@@ -38,7 +38,7 @@ class TestBase(TestCase):
 			self.failUnlessRaises(IOError, GitConfigParser, file_obj, read_only = False)
 			
 			# should still have a lock and be able to make changes
-			assert w_config._has_lock()
+			assert w_config._lock._has_lock()
 			
 			# changes should be written right away
 			sname = "my_section"

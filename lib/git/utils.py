@@ -163,13 +163,20 @@ class LockFile(object):
 		
 		self._owns_lock = True
 		
+	def _obtain_lock(self):
+		"""
+		The default implementation will raise if a lock cannot be obtained.
+		Subclasses may override this method to provide a different implementation
+		"""
+		return self._obtain_lock_or_raise()
+		
 	def _release_lock(self):
 		"""
 		Release our lock if we have one
 		"""
 		if not self._has_lock():
 			return 
-			
+		
 		os.remove(self._lock_file_path())
 		self._owns_lock = False
 

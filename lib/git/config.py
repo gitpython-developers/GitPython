@@ -72,7 +72,7 @@ def _set_dirty_and_flush_changes(non_const_func):
 	
 	
 
-class GitConfigParser(cp.RawConfigParser, LockFile):
+class GitConfigParser(cp.RawConfigParser, object):
 	"""
 	Implements specifics required to read git style configuration files.
 	
@@ -91,6 +91,15 @@ class GitConfigParser(cp.RawConfigParser, LockFile):
 	"""
 	__metaclass__ = _MetaParserBuilder
 	
+	
+	#{ Configuration
+	# The lock type determines the type of lock to use in new configuration readers.
+	# They must be compatible to the LockFile interface.
+	# A suitable alternative would be the BlockingLockFile
+	t_lock = LockFile
+	
+	#} END configuration 
+	
 	OPTCRE = re.compile(
 		r'\s?(?P<option>[^:=\s][^:=]*)'		  # very permissive, incuding leading whitespace
 		r'\s*(?P<vi>[:=])\s*'				  # any number of space/tab,
@@ -102,7 +111,7 @@ class GitConfigParser(cp.RawConfigParser, LockFile):
 	
 	# list of RawConfigParser methods able to change the instance
 	_mutating_methods_ = ("add_section", "remove_section", "remove_option", "set")
-	__slots__ = ("_sections", "_defaults", "_file_or_files", "_read_only","_is_initialized")
+	__slots__ = ("_sections", "_defaults", "_file_or_files", "_read_only","_is_initialized", '_lock')
 	
 	def __init__(self, file_or_files, read_only=True):
 		"""
@@ -125,7 +134,7 @@ class GitConfigParser(cp.RawConfigParser, LockFile):
 		self._file_or_files = file_or_files
 		self._read_only = read_only
 		self._is_initialized = False
-		
+		self._lock = None
 		
 		if not read_only:
 			if isinstance(file_or_files, (tuple, list)):
@@ -136,9 +145,9 @@ class GitConfigParser(cp.RawConfigParser, LockFile):
 				file_or_files = file_or_files.name
 			# END get filename from handle/stream
 			# initialize lock base - we want to write
-			LockFile.__init__(self, file_or_files)
+			self._lock = self.t_lock(file_or_files)
 			
-			self._obtain_lock_or_raise()	
+			self._lock._obtain_lock()	
 		# END read-only check
 		
 	
@@ -148,7 +157,7 @@ class GitConfigParser(cp.RawConfigParser, LockFile):
 		"""
 		# checking for the lock here makes sure we do not raise during write()
 		# in case an invalid parser was created who could not get a lock
-		if self.read_only or not self._has_lock():
+		if self.read_only or not self._lock._has_lock():
 			return
 		
 		try:
@@ -157,7 +166,7 @@ class GitConfigParser(cp.RawConfigParser, LockFile):
 			except IOError,e:
 				print "Exception during destruction of GitConfigParser: %s" % str(e)
 		finally:
-			self._release_lock()
+			self._lock._release_lock()
 	
 	def optionxform(self, optionstr):
 		"""
@@ -303,7 +312,7 @@ class GitConfigParser(cp.RawConfigParser, LockFile):
 			a file lock
 		"""
 		self._assure_writable("write")
-		self._obtain_lock_or_raise()
+		self._lock._obtain_lock()
 		
 		
 		fp = self._file_or_files
