@@ -119,6 +119,10 @@ class LockFile(object):
 		"""
 		return "%s.lock" % (self._file_path)
 	
+	def _get_id(self):
+		"""Returns string id to be written into the lock file"""
+		return "%i|%i" % (os.getpid(), hash(self))
+	
 	def _has_lock(self):
 		"""
 		Return
@@ -133,13 +137,13 @@ class LockFile(object):
 		lock_file = self._lock_file_path()
 		try:
 			fp = open(lock_file, "rb")
-			pid = int(fp.read())
+			pid = fp.read()
 			fp.close()
 		except IOError:
 			raise AssertionError("The lock file at %s could not be read" % lock_file)
 		
-		if pid != os.getpid():
-			raise AssertionError("We claim to own the lock at %s, but it was not owned by our process %i, but by %i" % (lock_file, os.getpid(), pid))
+		if pid != self._get_id():
+			raise AssertionError("We claim to own the lock at %s, but it was not owned by our process %r, but by %r" % (lock_file, self._get_id(), pid ))
 		
 		return True
 		
@@ -152,14 +156,25 @@ class LockFile(object):
 		"""
 		if self._has_lock():
 			return 
-			
 		lock_file = self._lock_file_path()
-		if os.path.exists(lock_file):
+		if os.path.isfile(lock_file):
 			raise IOError("Lock for file %r did already exist, delete %r in case the lock is illegal" % (self._file_path, lock_file))
-		
+			
+		my_id = self._get_id()
 		fp = open(lock_file, "wb")
-		fp.write(str(os.getpid()))
+		fp.write(my_id)
 		fp.close()
+		
+		# verify its truly us who got the lock - if two threads are doing this within the 
+		# fraction of a millisecond, it is possible to actually trick the FS
+		# and two threads write, but only one succeeds.
+		fp = open(lock_file, 'rb')
+		actual_id = fp.read()
+		fp.close()
+		if actual_id != my_id:
+			msg = "Failed to obtain lock for file %r as the process identified by %r outraced this process or thread %r" % (self._file_path, actual_id, my_id)
+			raise IOError(msg)
+		# END verification
 		
 		self._owns_lock = True
 		
@@ -175,10 +190,10 @@ class LockFile(object):
 		Release our lock if we have one
 		"""
 		if not self._has_lock():
-			return 
-		
+			return
 		os.remove(self._lock_file_path())
 		self._owns_lock = False
+
 
 class BlockingLockFile(LockFile):
 	"""The lock file will block until a lock could be obtained, or fail after 
@@ -206,7 +221,7 @@ class BlockingLockFile(LockFile):
 		maxtime = starttime + float(self._max_block_time)
 		while True:
 			try:
-				self._obtain_lock_or_raise()
+				super(BlockingLockFile, self)._obtain_lock()
 			except IOError:
 				curtime = time.time()
 				if curtime >= maxtime:
@@ -219,7 +234,6 @@ class BlockingLockFile(LockFile):
 		# END endless loop
 	
 	
-
 class ConcurrentWriteOperation(LockFile):
 	"""
 	This class facilitates a safe write operation to a file on disk such that we: 
