@@ -158,7 +158,32 @@ class Tree(base.IndexObject, diff.Diffable, utils.Traversable):
 		Raise 
 			KeyError if given file or tree does not exist in tree
 		"""
-		return self[file]
+		msg = "Blob or Tree named %r not found"
+		if '/' in file:
+			tree = self
+			item = self
+			tokens = file.split('/')
+			for i,token in enumerate(tokens):
+				item = tree[token]
+				if item.type == 'tree':
+					tree = item
+				else:
+					# safety assertion - blobs are at the end of the path
+					if i != len(tokens)-1:
+						raise KeyError(msg % file)  
+					return item
+				# END handle item type
+			# END for each token of split path
+			if item == self:
+				raise KeyError(msg % file)
+			return item
+		else:
+			for obj in self._cache:
+				if obj.name == file:
+					return obj
+			# END for each obj
+			raise KeyError( msg % file )
+		# END handle long paths
 
 
 	def __repr__(self):
@@ -205,11 +230,7 @@ class Tree(base.IndexObject, diff.Diffable, utils.Traversable):
 		
 		if isinstance(item, basestring):
 			# compatability
-			for obj in self._cache:
-				if obj.name == item:
-					return obj
-			# END for each obj
-			raise KeyError( "Blob or Tree named %s not found" % item )
+			return self.__div__(item)
 		# END index is basestring 
 		
 		raise TypeError( "Invalid index type: %r" % item )

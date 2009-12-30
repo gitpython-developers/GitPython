@@ -239,6 +239,7 @@ query entries by name.
     'dir/file'
     >>> blob.abspath
     '/Users/mtrier/Development/git-python/dir/file'
+    >>>tree['dir/file'].sha == blob.sha
 
 There is a convenience method that allows you to get a named sub-object
 from a tree with a syntax similar to how paths are written in an unix
@@ -246,6 +247,7 @@ system.
 
     >>> tree/"lib"
     <git.Tree "c1c7214dde86f76bc3e18806ac1f47c38b2b7a30">
+    >>> tree/"dir/file" == blob.sha
 
 You can also get a tree directly from the repository if you know its name.
 

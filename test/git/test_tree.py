@@ -54,7 +54,10 @@ class TestTree(TestCase):
 			assert os.path.isabs(item.abspath)
 			if '/' in item.path:
 				found_slash = True
-				break
+			# END check for slash
+			
+			# slashes in paths are supported as well 
+			assert root[item.path] == item == root/item.path
 		# END for each item
 		assert found_slash
   
