@@ -38,18 +38,18 @@ class _SectionConstraint(object):
 		return getattr(self._config, method)(self._section_name, *args, **kwargs)
 		
 		
-class PushProgress(object):
+class RemoteProgress(object):
 	"""
 	Handler providing an interface to parse progress information emitted by git-push
-	and to dispatch callbacks allowing subclasses to react to the progress.
+	and git-fetch and to dispatch callbacks allowing subclasses to react to the progress.
 	"""
 	BEGIN, END, COUNTING, COMPRESSING, WRITING =  [ 1 << x for x in range(5) ]
 	STAGE_MASK = BEGIN|END
 	OP_MASK = COUNTING|COMPRESSING|WRITING
 	
 	__slots__ = ("_cur_line", "_seen_ops")
-	re_op_absolute = re.compile("([\w\s]+):\s+()(\d+)()(.*)")
-	re_op_relative = re.compile("([\w\s]+):\s+(\d+)% \((\d+)/(\d+)\)(.*)")
+	re_op_absolute = re.compile("(remote: )?([\w\s]+):\s+()(\d+)()(.*)")
+	re_op_relative = re.compile("(remote: )?([\w\s]+):\s+(\d+)% \((\d+)/(\d+)\)(.*)")
 	
 	def __init__(self):
 		self._seen_ops = list()
@@ -57,13 +57,27 @@ class PushProgress(object):
 	def _parse_progress_line(self, line):
 		"""
 		Parse progress information from the given line as retrieved by git-push
-		"""
+		or git-fetch 
+		@return: list(line, ...) list of lines that could not be processed"""
 		# handle
 		# Counting objects: 4, done. 
 		# Compressing objects:  50% (1/2)   \rCompressing objects: 100% (2/2)   \rCompressing objects: 100% (2/2), done.
 		self._cur_line = line
 		sub_lines = line.split('\r')
+		failed_lines = list()
 		for sline in sub_lines:
+			# find esacpe characters and cut them away - regex will not work with 
+			# them as they are non-ascii. As git might expect a tty, it will send them
+			last_valid_index = None
+			for i,c in enumerate(reversed(sline)):
+				if ord(c) < 32:
+					# its a slice index
+					last_valid_index = -i-1	
+				# END character was non-ascii
+			# END for each character in sline
+			if last_valid_index is not None:
+				sline = sline[:last_valid_index]
+			# END cut away invalid part
 			sline = sline.rstrip()
 			
 			cur_count, max_count = None, None
@@ -73,11 +87,13 @@ class PushProgress(object):
 				
 			if not match:
 				self.line_dropped(sline)
+				failed_lines.append(sline)
 				continue
 			# END could not get match
 			
 			op_code = 0
-			op_name, percent, cur_count, max_count, message = match.groups()
+			remote, op_name, percent, cur_count, max_count, message = match.groups()
+			
 			# get operation id
 			if op_name == "Counting objects":
 				op_code |= self.COUNTING
@@ -106,8 +122,8 @@ class PushProgress(object):
 			# END end message handling
 			
 			self.update(op_code, cur_count, max_count, message)
-			
 		# END for each sub line
+		return failed_lines
 	
 	def line_dropped(self, line):
 		"""
@@ -574,18 +590,67 @@ class Remote(LazyMixin, Iterable):
 		self.repo.git.remote("update", self.name)
 		return self
 	
-	def _get_fetch_info_from_stderr(self, stderr):
+	def _digest_process_messages(self, fh, progress):
+		"""Read progress messages from file-like object fh, supplying the respective
+		progress messages to the progress instance.
+		@return: list(line, ...) list of lines without linebreaks that did 
+		not contain progress information"""
+		line_so_far = ''
+		dropped_lines = list()
+		while True:
+			char = fh.read(1)
+			if not char:
+				break
+			
+			if char in ('\r', '\n'):
+				dropped_lines.extend(progress._parse_progress_line(line_so_far))
+				line_so_far = ''
+			else:
+				line_so_far += char
+			# END process parsed line
+		# END while file is not done reading
+		return dropped_lines
+		
+	
+	def _finalize_proc(self, proc):
+		"""Wait for the process (fetch, pull or push) and handle its errors accordingly"""
+		try:
+			proc.wait()
+		except GitCommandError,e:
+			# if a push has rejected items, the command has non-zero return status
+			# a return status of 128 indicates a connection error - reraise the previous one
+			if proc.poll() == 128:
+				raise
+			pass
+		# END exception handling
+		
+	
+	def _get_fetch_info_from_stderr(self, proc, progress):
 		# skip first line as it is some remote info we are not interested in
 		output = IterableList('name')
-		err_info = stderr.splitlines()[1:]
+		
+		
+		# lines which are no progress are fetch info lines
+		# this also waits for the command to finish
+		# Skip some progress lines that don't provide relevant information
+		fetch_info_lines = list()
+		for line in self._digest_process_messages(proc.stderr, progress):
+			if line.startswith('From') or line.startswith('remote: Total'):
+				continue
+			fetch_info_lines.append(line)
+		# END for each line
 		
 		# read head information 
 		fp = open(os.path.join(self.repo.git_dir, 'FETCH_HEAD'),'r')
 		fetch_head_info = fp.readlines()
 		fp.close()
 		
+		assert len(fetch_info_lines) == len(fetch_head_info)
+		
 		output.extend(FetchInfo._from_line(self.repo, err_line, fetch_line) 
-						for err_line,fetch_line in zip(err_info, fetch_head_info))
+						for err_line,fetch_line in zip(fetch_info_lines, fetch_head_info))
+		
+		self._finalize_proc(proc)
 		return output
 	
 	def _get_push_info(self, proc, progress):
@@ -593,19 +658,7 @@ class Remote(LazyMixin, Iterable):
 		# we hope stdout can hold all the data, it should ...
 		# read the lines manually as it will use carriage returns between the messages
 		# to override the previous one. This is why we read the bytes manually
-		line_so_far = ''
-		while True:
-			char = proc.stderr.read(1)
-			if not char:
-				break
-			
-			if char in ('\r', '\n'):
-				progress._parse_progress_line(line_so_far)
-				line_so_far = ''
-			else:
-				line_so_far += char
-			# END process parsed line
-		# END for each progress line
+		self._digest_process_messages(proc.stderr, progress)
 		
 		output = IterableList('name')
 		for line in proc.stdout.readlines():
@@ -616,19 +669,12 @@ class Remote(LazyMixin, Iterable):
 				pass
 			# END exception handling 
 		# END for each line
-		try:
-			proc.wait()
-		except GitCommandError,e:
-			# if a push has rejected items, the command has non-zero return status
-			# a return status of 128 indicates a connection error - reraise the previous one
-			if proc.poll() == 128:
-				raise
-			pass
-		# END exception handling 
+		
+		self._finalize_proc(proc)
 		return output
 		
 	
-	def fetch(self, refspec=None, **kwargs):
+	def fetch(self, refspec=None, progress=None, **kwargs):
 		"""
 		Fetch the latest changes for this remote
 		
@@ -643,7 +689,9 @@ class Remote(LazyMixin, Iterable):
 			See also git-push(1).
 			
 			Taken from the git manual
-		
+		``progress``
+			See 'push' method
+			
 		``**kwargs``
 			Additional arguments to be passed to git-fetch
 			
@@ -655,16 +703,19 @@ class Remote(LazyMixin, Iterable):
 			As fetch does not provide progress information to non-ttys, we cannot make 
 			it available here unfortunately as in the 'push' method.
 		"""
-		status, stdout, stderr = self.repo.git.fetch(self, refspec, with_extended_output=True, v=True, **kwargs)
-		return self._get_fetch_info_from_stderr(stderr)
+		proc = self.repo.git.fetch(self, refspec, with_extended_output=True, as_process=True, v=True, **kwargs)
+		return self._get_fetch_info_from_stderr(proc, progress or RemoteProgress())
 		
-	def pull(self, refspec=None, **kwargs):
+	def pull(self, refspec=None, progress=None, **kwargs):
 		"""
 		Pull changes from the given branch, being the same as a fetch followed 
 		by a merge of branch with your local branch.
 		
 		``refspec``
 			see 'fetch' method
+			
+		``progress``
+			see 'push' method
 		
 		``**kwargs``
 			Additional arguments to be passed to git-pull
@@ -672,8 +723,8 @@ class Remote(LazyMixin, Iterable):
 		Returns
 			Please see 'fetch' method
 		"""
-		status, stdout, stderr = self.repo.git.pull(self, refspec, with_extended_output=True, v=True, **kwargs)
-		return self._get_fetch_info_from_stderr(stderr)
+		proc = self.repo.git.pull(self, refspec, with_extended_output=True, as_process=True, v=True, **kwargs)
+		return self._get_fetch_info_from_stderr(proc, progress or RemoteProgress())
 		
 	def push(self, refspec=None, progress=None, **kwargs):
 		"""
@@ -683,7 +734,7 @@ class Remote(LazyMixin, Iterable):
 			see 'fetch' method
 		
 		``progress``
-			Instance of type PushProgress allowing the caller to receive 
+			Instance of type RemoteProgress allowing the caller to receive 
 			progress information until the method returns.
 			If None, progress information will be discarded
 		
@@ -700,7 +751,7 @@ class Remote(LazyMixin, Iterable):
 			be null.
 		"""
 		proc = self.repo.git.push(self, refspec, porcelain=True, as_process=True, **kwargs)
-		return self._get_push_info(proc, progress or PushProgress())
+		return self._get_push_info(proc, progress or RemoteProgress())
 		
 	@property
 	def config_reader(self):

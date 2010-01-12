@@ -14,19 +14,21 @@ import random
 # assure we have repeatable results 
 random.seed(0)
 
-class TestPushProgress(PushProgress):
-	__slots__ = ( "_seen_lines", "_stages_per_op" )
+class TestRemoteProgress(RemoteProgress):
+	__slots__ = ( "_seen_lines", "_stages_per_op", '_num_progress_messages' )
 	def __init__(self):
-		super(TestPushProgress, self).__init__()
+		super(TestRemoteProgress, self).__init__()
 		self._seen_lines = list()
 		self._stages_per_op = dict()
+		self._num_progress_messages = 0
 		
 	def _parse_progress_line(self, line):
 		# we may remove the line later if it is dropped
 		# Keep it for debugging
 		self._seen_lines.append(line)
-		super(TestPushProgress, self)._parse_progress_line(line)
+		rval = super(TestRemoteProgress, self)._parse_progress_line(line)
 		assert len(line) > 1, "line %r too short" % line
+		return rval
 		
 	def line_dropped(self, line):
 		try:
@@ -44,11 +46,15 @@ class TestPushProgress(PushProgress):
 		
 		if op_code & (self.WRITING|self.END) == (self.WRITING|self.END):
 			assert message
-		# END check we get message 
+		# END check we get message
+		
+		self._num_progress_messages += 1
+		
 		
 	def make_assertion(self):
+		# we don't always receive messages
 		if not self._seen_lines:
-			return 
+			return
 		
 		# sometimes objects are not compressed which is okay
 		assert len(self._seen_ops) in (2,3)
@@ -58,6 +64,10 @@ class TestPushProgress(PushProgress):
 		for op, stages in self._stages_per_op.items():
 			assert stages & self.STAGE_MASK == self.STAGE_MASK
 		# END for each op/stage
+
+	def assert_received_message(self):
+		assert self._num_progress_messages
+	
 
 class TestRemote(TestBase):
 	
@@ -124,7 +134,10 @@ class TestRemote(TestBase):
 		self._test_fetch_info(rw_repo)
 		
 		def fetch_and_test(remote, **kwargs):
+			progress = TestRemoteProgress()
+			kwargs['progress'] = progress
 			res = remote.fetch(**kwargs)
+			progress.make_assertion()
 			self._test_fetch_result(res, remote)
 			return res
 		# END fetch and check
@@ -257,7 +270,7 @@ class TestRemote(TestBase):
 		
 		# simple file push
 		self._commit_random_file(rw_repo)
-		progress = TestPushProgress()
+		progress = TestRemoteProgress()
 		res = remote.push(lhead.reference, progress)
 		assert isinstance(res, IterableList)
 		self._test_push_result(res, remote)
@@ -281,7 +294,7 @@ class TestRemote(TestBase):
 		assert len(res) == 0
 		
 		# push new tags 
-		progress = TestPushProgress()
+		progress = TestRemoteProgress()
 		to_be_updated = "my_tag.1.0RV"
 		new_tag = TagReference.create(rw_repo, to_be_updated)
 		other_tag = TagReference.create(rw_repo, "my_obj_tag.2.1aRV", message="my message")
@@ -305,10 +318,11 @@ class TestRemote(TestBase):
 		res = remote.push(":%s" % new_tag.path)
 		self._test_push_result(res, remote)
 		assert res[0].flags & PushInfo.DELETED
+		progress.assert_received_message()
 		
 		# push new branch
 		new_head = Head.create(rw_repo, "my_new_branch")
-		progress = TestPushProgress()
+		progress = TestRemoteProgress()
 		res = remote.push(new_head, progress)
 		assert res[0].flags & PushInfo.NEW_HEAD
 		progress.make_assertion()
