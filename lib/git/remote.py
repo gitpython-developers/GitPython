@@ -48,8 +48,8 @@ class PushProgress(object):
 	OP_MASK = COUNTING|COMPRESSING|WRITING
 	
 	__slots__ = ("_cur_line", "_seen_ops")
-	re_op_absolute = re.compile("([\w\s]+):\s+()(\d+)()(, done\.)?\s*")
-	re_op_relative = re.compile("([\w\s]+):\s+(\d+)% \((\d+)/(\d+)\)(,.* done\.)?$")
+	re_op_absolute = re.compile("([\w\s]+):\s+()(\d+)()(.*)")
+	re_op_relative = re.compile("([\w\s]+):\s+(\d+)% \((\d+)/(\d+)\)(.*)")
 	
 	def __init__(self):
 		self._seen_ops = list()
@@ -77,7 +77,7 @@ class PushProgress(object):
 			# END could not get match
 			
 			op_code = 0
-			op_name, percent, cur_count, max_count, done = match.groups()
+			op_name, percent, cur_count, max_count, message = match.groups()
 			# get operation id
 			if op_name == "Counting objects":
 				op_code |= self.COUNTING
@@ -94,11 +94,16 @@ class PushProgress(object):
 				op_code |= self.BEGIN
 			# END begin opcode
 			
-			message = ''
-			if done is not None and 'done.' in done:
+			if message is None:
+				message = ''
+			# END message handling
+			
+			message = message.strip()
+			done_token = ', done.'
+			if message.endswith(done_token):
 				op_code |= self.END
-				message = done.replace( ", done.", "")[2:]
-			# END end flag handling 
+				message = message[:-len(done_token)]
+			# END end message handling
 			
 			self.update(op_code, cur_count, max_count, message)
 			
