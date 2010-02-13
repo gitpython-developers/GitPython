@@ -9,6 +9,7 @@ from test.testlib import *
 from git import *
 from git.utils import join_path_native
 import tempfile
+import shutil
 
 class TestRepo(TestBase):
 	
@@ -90,17 +91,33 @@ class TestRepo(TestBase):
 		assert num_trees == mc
 			
 
-	@patch_object(Repo, '__init__')
-	@patch_object(Git, '_call_process')
-	def test_init(self, git, repo):
-		git.return_value = True
-		repo.return_value = None
-
-		r = Repo.init("repos/foo/bar.git", bare=True)
-		assert isinstance(r, Repo)
-
-		assert_true(git.called)
-		assert_true(repo.called)
+	def test_init(self):
+		prev_cwd = os.getcwd()
+		os.chdir(tempfile.gettempdir())
+		git_dir_rela = "repos/foo/bar.git"
+		del_dir_abs = os.path.abspath("repos")
+		git_dir_abs = os.path.abspath(git_dir_rela)
+		try:
+			# with specific path
+			for path in (git_dir_rela, git_dir_abs):
+				r = Repo.init(path=path, bare=True)
+				assert isinstance(r, Repo)
+				assert r.bare == True
+				assert os.path.isdir(r.git_dir)
+				shutil.rmtree(git_dir_abs)
+			# END for each path
+			
+			os.makedirs(git_dir_rela)
+			os.chdir(git_dir_rela)
+			r = Repo.init(bare=False)
+			r.bare == False
+		finally:
+			try:
+				shutil.rmtree(del_dir_abs)
+			except OSError:
+				pass
+			os.chdir(prev_cwd)
+		# END restore previous state
 		
 	def test_bare_property(self):
 		self.rorepo.bare

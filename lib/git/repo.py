@@ -693,8 +693,9 @@ class Repo(object):
 		if mkdir and path and not os.path.exists(path):
 			os.makedirs(path, 0755)
 
+		# git command automatically chdir into the directory
 		git = Git(path)
-		output = git.init(path, **kwargs)
+		output = git.init(**kwargs)
 		return Repo(path)
 
 	def clone(self, path, **kwargs):

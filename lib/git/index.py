@@ -672,7 +672,7 @@ class IndexFile(LazyMixin, diff.Diffable):
 		Returns
 			Iterator yielding dict(path : list( tuple( stage, Blob, ...))), being 
 			a dictionary associating a path in the index with a list containing 
-			stage/blob pairs
+			sorted stage/blob pairs
 			
 		Note:
 			Blobs that have been removed in one side simply do not exist in the 
@@ -684,7 +684,8 @@ class IndexFile(LazyMixin, diff.Diffable):
 		for stage, blob in self.iter_blobs(is_unmerged_blob):
 			path_map.setdefault(blob.path, list()).append((stage, blob))
 		# END for each unmerged blob
-		
+		for l in path_map.itervalues():
+			l.sort()
 		return path_map
 	
 	@classmethod
@@ -724,7 +725,7 @@ class IndexFile(LazyMixin, diff.Diffable):
 		for blob in iter_blobs:
 			stage_null_key = (blob.path, 0)
 			if stage_null_key in self.entries:
-				raise ValueError( "Blob %r already at stage 0" % blob )
+				raise ValueError( "Path %r already exists at stage 0" % blob.path )
 			# END assert blob is not stage 0 already 
 			
 			# delete all possible stages
