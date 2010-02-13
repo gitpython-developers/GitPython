@@ -313,7 +313,13 @@ class Commit(base.Object, Iterable, diff.Diffable, utils.Traversable):
 		"""
 		parents = parent_commits
 		if parent_commits is None:
-			parent_commits = [ repo.head.commit ]
+			try:
+				parent_commits = [ repo.head.commit ]
+			except ValueError:
+				# empty repositories have no head commit
+				parent_commits = list()
+			# END handle parent commits
+		# END if parent commits are unset
 		
 		parent_args = [ ("-p", str(commit)) for commit in parent_commits ]
 		
@@ -331,7 +337,14 @@ class Commit(base.Object, Iterable, diff.Diffable, utils.Traversable):
 			new_commit = cls(repo, commit_sha)
 			
 			if head:
-				repo.head.commit = new_commit 
+				try:
+					repo.head.commit = new_commit
+				except ValueError:
+					# head is not yet set to master - create it and set it
+					import git.refs
+					master = git.refs.Head.create(repo, 'master', commit=new_commit)
+					repo.head.reference = master
+				# END handle empty repositories
 			# END advance head handling 
 			
 			return new_commit
