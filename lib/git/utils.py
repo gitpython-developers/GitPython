@@ -119,10 +119,6 @@ class LockFile(object):
 		"""
 		return "%s.lock" % (self._file_path)
 	
-	def _get_id(self):
-		"""Returns string id to be written into the lock file"""
-		return "%i|%i" % (os.getpid(), hash(self))
-	
 	def _has_lock(self):
 		"""
 		Return
@@ -133,17 +129,6 @@ class LockFile(object):
 		"""
 		if not self._owns_lock:
 			return False
-		
-		lock_file = self._lock_file_path()
-		try:
-			fp = open(lock_file, "rb")
-			pid = fp.read()
-			fp.close()
-		except IOError:
-			raise AssertionError("The lock file at %s could not be read" % lock_file)
-		
-		if pid != self._get_id():
-			raise AssertionError("We claim to own the lock at %s, but it was not owned by our process %r, but by %r" % (lock_file, self._get_id(), pid ))
 		
 		return True
 		
@@ -160,21 +145,11 @@ class LockFile(object):
 		if os.path.isfile(lock_file):
 			raise IOError("Lock for file %r did already exist, delete %r in case the lock is illegal" % (self._file_path, lock_file))
 			
-		my_id = self._get_id()
-		fp = open(lock_file, "wb")
-		fp.write(my_id)
-		fp.close()
-		
-		# verify its truly us who got the lock - if two threads are doing this within the 
-		# fraction of a millisecond, it is possible to actually trick the FS
-		# and two threads write, but only one succeeds.
-		fp = open(lock_file, 'rb')
-		actual_id = fp.read()
-		fp.close()
-		if actual_id != my_id:
-			msg = "Failed to obtain lock for file %r as the process identified by %r outraced this process or thread %r" % (self._file_path, actual_id, my_id)
-			raise IOError(msg)
-		# END verification
+		try:
+			fd = os.open(lock_file, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0)
+			os.close(fd)
+		except OSError,e:
+			raise IOError(str(e))
 		
 		self._owns_lock = True
 		
