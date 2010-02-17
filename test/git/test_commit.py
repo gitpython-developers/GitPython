@@ -88,6 +88,11 @@ class TestCommit(TestBase):
 		# traversal should stop when the beginning is reached
 		self.failUnlessRaises(StopIteration, first.traverse().next)
 		
+		# parents of the first commit should be empty ( as the only parent has a null 
+		# sha )
+		assert len(first.parents) == 0
+		
+		
 	@patch_object(Git, '_call_process')
 	def test_rev_list_bisect_all(self, git):
 		"""

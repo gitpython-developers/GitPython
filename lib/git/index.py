@@ -1023,7 +1023,7 @@ class IndexFile(LazyMixin, diff.Diffable):
 		Returns
 			List(path_string, ...) list of paths that have been removed effectively.
 			This is interesting to know in case you have provided a directory or 
-			globs. Paths are relative to the 
+			globs. Paths are relative to the repository. 
 		"""
 		args = list()
 		if not working_tree:
