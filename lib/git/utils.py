@@ -166,7 +166,12 @@ class LockFile(object):
 		"""
 		if not self._has_lock():
 			return
-		os.remove(self._lock_file_path())
+			
+		# if someone removed our file beforhand, lets just flag this issue
+		# instead of failing, to make it more usable.
+		lfp = self._lock_file_path()
+		if os.path.isfile(lfp):
+			os.remove(lfp)
 		self._owns_lock = False
 
 
