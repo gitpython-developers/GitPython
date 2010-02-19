@@ -14,10 +14,10 @@ import glob
 import shutil
 from stat import *
 
-class TestTree(TestBase):
+class TestIndex(TestBase):
 	
 	def __init__(self, *args):
-		super(TestTree, self).__init__(*args)
+		super(TestIndex, self).__init__(*args)
 		self._reset_progress()
 	
 	def _assert_fprogress(self, entries):
@@ -498,3 +498,32 @@ class TestTree(TestBase):
 			open(fake_symlink_path,'rb').read() == link_target 
 		else:
 			assert S_ISLNK(os.lstat(fake_symlink_path)[ST_MODE])
+			
+		# TEST RENAMING
+		def assert_mv_rval(rval):
+			for source, dest in rval:
+				assert not os.path.exists(source) and os.path.exists(dest)
+			# END for each renamed item
+		# END move assertion utility
+		
+		self.failUnlessRaises(ValueError, index.move, ['just_one_path'])
+		# file onto existing file
+		files = ['AUTHORS', 'LICENSE']
+		self.failUnlessRaises(GitCommandError, index.move, files)
+		
+		# again, with force	
+		assert_mv_rval(index.move(files, force=True))
+		
+		# files into directory - dry run
+		paths = ['LICENSE', 'VERSION', 'doc']
+		rval = index.move(paths, dry_run=True)
+		assert len(rval) == 2
+		assert os.path.exists(paths[0])
+		
+		# again, no dry run
+		rval = index.move(paths)
+		assert_mv_rval(rval)
+		
+		# dir into dir
+		rval = index.move(['doc', 'test'])
+		assert_mv_rval(rval)

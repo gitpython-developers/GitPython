@@ -986,6 +986,20 @@ class IndexFile(LazyMixin, diff.Diffable):
 		
 		return entries_added
 		
+	def _items_to_rela_paths(self, items):
+		"""Returns a list of repo-relative paths from the given items which 
+		may be absolute or relative paths, entries or blobs"""
+		paths = list()
+		for item in items:
+			if isinstance(item, (BaseIndexEntry,Blob)):
+				paths.append(self._to_relative_path(item.path))
+			elif isinstance(item, basestring):
+				paths.append(self._to_relative_path(item))
+			else:
+				raise TypeError("Invalid item type: %r" % item)
+		# END for each item
+		return paths
+		
 	@clear_cache
 	@default_index
 	def remove(self, items, working_tree=False, **kwargs):
@@ -1021,7 +1035,8 @@ class IndexFile(LazyMixin, diff.Diffable):
 			as 'r' to allow recurive removal of 
 			
 		Returns
-			List(path_string, ...) list of paths that have been removed effectively.
+			List(path_string, ...) list of repository relative paths that have 
+			been removed effectively.
 			This is interesting to know in case you have provided a directory or 
 			globs. Paths are relative to the repository. 
 		"""
@@ -1031,22 +1046,84 @@ class IndexFile(LazyMixin, diff.Diffable):
 		args.append("--")
 		
 		# preprocess paths
-		paths = list()
-		for item in items:
-			if isinstance(item, (BaseIndexEntry,Blob)):
-				paths.append(self._to_relative_path(item.path))
-			elif isinstance(item, basestring):
-				paths.append(self._to_relative_path(item))
-			else:
-				raise TypeError("Invalid item type: %r" % item)
-		# END for each item
-		
+		paths = self._items_to_rela_paths(items)
 		removed_paths = self.repo.git.rm(args, paths, **kwargs).splitlines()
 		
 		# process output to gain proper paths
 		# rm 'path'
 		return [ p[4:-1] for p in removed_paths ]
+	
+	@clear_cache
+	@default_index
+	def move(self, items, skip_errors=False, **kwargs):
+		"""
+		Rename/move the items, whereas the last item is considered the destination of 
+		the move operation. If the destination is a file, the first item ( of two )
+		must be a file as well. If the destination is a directory, it may be preceeded
+		by one or more directories or files.
 		
+		The working tree will be affected in non-bare repositories.
+		
+		``items``
+			Multiple types of items are supported, please see the 'remove' method
+			for reference.
+		``skip_errors``
+			If True, errors such as ones resulting from missing source files will 
+			be skpped.
+		``**kwargs``
+			Additional arguments you would like to pass to git-mv, such as dry_run
+			or force.
+			
+		Returns
+			List(tuple(source_path_string, destination_path_string), ...)
+			A list of pairs, containing the source file moved as well as its 
+			actual destination. Relative to the repository root.
+			
+		Raises
+			ValueErorr: If only one item was given
+			GitCommandError: If git could not handle your request
+		"""
+		args = list()
+		if skip_errors:
+			args.append('-k')
+		
+		paths = self._items_to_rela_paths(items)
+		if len(paths) < 2:
+			raise ValueError("Please provide at least one source and one destination of the move operation")
+		
+		was_dry_run = kwargs.pop('dry_run', kwargs.pop('n', None))
+		kwargs['dry_run'] = True
+		
+		# first execute rename in dryrun so the command tells us what it actually does
+		# ( for later output )
+		out = list()
+		mvlines = self.repo.git.mv(args, paths, **kwargs).splitlines()
+		
+		# parse result - first 0:n/2 lines are 'checking ', the remaining ones
+		# are the 'renaming' ones which we parse
+		for ln in xrange(len(mvlines)/2, len(mvlines)):
+			tokens = mvlines[ln].split(' to ')
+			assert len(tokens) == 2, "Too many tokens in %s" % mvlines[ln]
+			
+			# [0] = Renaming x
+			# [1] = y
+			out.append((tokens[0][9:], tokens[1]))
+		# END for each line to parse
+		
+		# either prepare for the real run, or output the dry-run result
+		if was_dry_run:
+			return out
+		# END handle dryrun
+		
+		
+		# now apply the actual operation
+		kwargs.pop('dry_run')
+		self.repo.git.mv(args, paths, **kwargs)
+		
+		return out
+		
+
+
 	@default_index
 	def commit(self, message, parent_commits=None, head=True):
 		"""

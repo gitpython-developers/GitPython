@@ -90,6 +90,7 @@ def with_bare_rw_repo(func):
 	def bare_repo_creator(self):
 		repo_dir = tempfile.mktemp("bare_repo") 
 		rw_repo = self.rorepo.clone(repo_dir, shared=True, bare=True)
+		prev_cwd = os.getcwd()
 		try:
 			return func(self, rw_repo)
 		finally:
@@ -106,6 +107,9 @@ def with_rw_repo(working_tree_ref):
 	out the working tree at the given working_tree_ref.
 	
 	This repository type is more costly due to the working copy checkout.
+	
+	To make working with relative paths easier, the cwd will be set to the working 
+	dir of the repository.
 	"""
 	assert isinstance(working_tree_ref, basestring), "Decorator requires ref name for working tree checkout"
 	def argument_passer(func):
@@ -116,9 +120,12 @@ def with_rw_repo(working_tree_ref):
 			rw_repo.head.commit = working_tree_ref
 			rw_repo.head.reference.checkout()
 			
+			prev_cwd = os.getcwd()
+			os.chdir(rw_repo.working_dir)
 			try:
 				return func(self, rw_repo)
 			finally:
+				os.chdir(prev_cwd)
 				rw_repo.git.clear_cache()
 				shutil.rmtree(repo_dir, onerror=_rmtree_onerror)
 			# END cleanup
@@ -148,6 +155,8 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
 		def case(self, rw_repo, rw_remote_repo)
 		
 	This setup allows you to test push and pull scenarios and hooks nicely.
+	
+	See working dir info in with_rw_repo
 	"""
 	assert isinstance(working_tree_ref, basestring), "Decorator requires ref name for working tree checkout"
 	def argument_passer(func):
@@ -192,9 +201,13 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
 				else:
 					raise AssertionError('Please start a git-daemon to run this test, execute: git-daemon "%s"'%tempfile.gettempdir())
 			
+			# adjust working dir
+			prev_cwd = os.getcwd()
+			os.chdir(rw_repo.working_dir)
 			try:
 				return func(self, rw_repo, rw_remote_repo)
 			finally:
+				os.chdir(prev_cwd)
 				rw_repo.git.clear_cache()
 				rw_remote_repo.git.clear_cache()
 				shutil.rmtree(repo_dir, onerror=_rmtree_onerror)
