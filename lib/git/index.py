@@ -416,7 +416,7 @@ class IndexFile(LazyMixin, diff.Diffable):
 		real_size = ((stream.tell() - beginoffset + 8) & ~7)
 		stream.write("\0" * ((beginoffset + real_size) - stream.tell()))
 
-	def write(self, file_path = None):
+	def write(self, file_path = None, ignore_tree_extension_data=False):
 		"""
 		Write the current state to our file path or to the given one
 		
@@ -425,6 +425,16 @@ class IndexFile(LazyMixin, diff.Diffable):
 			been initialized. Otherwise we write to the given file path.
 			Please note that this will change the file_path of this index to 
 			the one you gave.
+		
+		``ignore_tree_extension_data``
+			If True, the TREE type extension data read in the index will not 
+			be written to disk. Use this if you have altered the index and 
+			would like to use git-write-tree afterwards to create a tree
+			representing your written changes.
+			If this data is present in the written index, git-write-tree
+			will instead write the stored/cached tree.
+			Alternatively, use IndexFile.write_tree() to handle this case
+			automatically
 		
 		Returns
 			self
@@ -448,8 +458,18 @@ class IndexFile(LazyMixin, diff.Diffable):
 			self._write_cache_entry(stream, entry)
 		# END for each entry
 		
+		stored_ext_data = None
+		if ignore_tree_extension_data and self._extension_data and self._extension_data[:4] == 'TREE':
+			stored_ext_data = self._extension_data
+			self._extension_data = ''
+		# END extension data special handling
+		
 		# write previously cached extensions data
 		stream.write(self._extension_data)
+		
+		if stored_ext_data:
+			self._extension_data = stored_ext_data
+		# END reset previous ext data
 		
 		# write the sha over the content
 		stream.write_sha()
@@ -770,27 +790,13 @@ class IndexFile(LazyMixin, diff.Diffable):
 		Returns
 			Tree object representing this index
 		"""
-		# IMPORTANT: If we have TREE extension data, it will actually 
-		# ignore the index and write the stored tree instead. Hence we 
-		# temporarily forget about it, and in fact I don't know what git 
-		# uses it for
-		stored_ext_data = None
-		if self._extension_data and self._extension_data[:4] == 'TREE':
-			stored_ext_data = self._extension_data
-			self._extension_data = ''
-		# END extension data special handling
-		
 		index_path = self._index_path()
 		tmp_index_mover = _TemporaryFileSwap(index_path)
 		
-		self.write(index_path)
+		self.write(index_path, ignore_tree_extension_data=True)
 		tree_sha = self.repo.git.write_tree(missing_ok=missing_ok)
 		
 		del(tmp_index_mover)	# as soon as possible
-		
-		if stored_ext_data:
-			self._extension_data = stored_ext_data
-		# END reset stored exstension data
 		
 		return Tree(self.repo, tree_sha, 0, '')
 		
@@ -1127,9 +1133,13 @@ class IndexFile(LazyMixin, diff.Diffable):
 	@default_index
 	def commit(self, message, parent_commits=None, head=True):
 		"""
-		Commit the current index, creating a commit object.
+		Commit the current default index file, creating a commit object.
 		
 		For more information on the arguments, see tree.commit.
+		
+		``NOTE``:
+			If you have manually altered the .entries member of this instance, 
+			don't forget to write() your changes to disk beforehand.
 		
 		Returns
 			Commit object representing the new commit
