@@ -44,7 +44,7 @@ class Tree(base.IndexObject, diff.Diffable, utils.Traversable):
 	commit_id = 016		
 	blob_id = 010
 	symlink_id = 012
-	tree_id = 040
+	tree_id = 004
 	
 	
 	def __init__(self, repo, sha, mode=0, path=None):
@@ -97,18 +97,17 @@ class Tree(base.IndexObject, diff.Diffable, utils.Traversable):
 		i = 0
 		while i < len_data:
 			mode = 0
-			mode_boundary = i + 6
 			
-			# read type
-			type_id = ((ord(data[i])-ord_zero)<<3) + (ord(data[i+1])-ord_zero)
-			i += 2
-			
+			# read mode
+			# Some git versions truncate the leading 0, some don't
+			# The type will be extracted from the mode later
 			while data[i] != ' ':
 				# move existing mode integer up one level being 3 bits
 				# and add the actual ordinal value of the character
 				mode = (mode << 3) + (ord(data[i]) - ord_zero)
 				i += 1
 			# END while reading mode
+			type_id = mode >> 12 
 			
 			# byte is space now, skip it
 			i += 1
@@ -127,7 +126,6 @@ class Tree(base.IndexObject, diff.Diffable, utils.Traversable):
 			sha = data[i:i+20]
 			i = i + 20
 			
-			mode |= type_id<<12
 			hexsha = sha_to_hex(sha)
 			if type_id == self.blob_id or type_id == self.symlink_id:
 				yield blob.Blob(self.repo, hexsha, mode, path)
@@ -137,7 +135,7 @@ class Tree(base.IndexObject, diff.Diffable, utils.Traversable):
 				# todo 
 				yield None
 			else:
-				raise TypeError( "Unknown type found in tree data: %i" % type_id )
+				raise TypeError( "Unknown type found in tree data %i for path '%s'" % (type_id, path))
 		# END for each byte in data stream
 
 
