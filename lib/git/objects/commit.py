@@ -165,8 +165,13 @@ class Commit(base.Object, Iterable, diff.Diffable, utils.Traversable):
 		"""
 		options = {'pretty': 'raw', 'as_process' : True }
 		options.update(kwargs)
+		
+		args = list()
+		if paths:
+			args.extend(('--', paths))
+		# END if paths
 
-		proc = repo.git.rev_list(rev, '--', paths, **options)
+		proc = repo.git.rev_list(rev, args, **options)
 		return cls._iter_from_process_or_stream(repo, proc, True)
 		
 	def iter_parents(self, paths='', **kwargs):

@@ -92,6 +92,24 @@ class TestCommit(TestBase):
 		# sha )
 		assert len(first.parents) == 0
 		
+	def test_iteration(self):
+		# we can iterate commits
+		all_commits = Commit.list_items(self.rorepo, 'master')
+		assert all_commits
+		assert all_commits == list(self.rorepo.iter_commits())
+		
+		# this includes merge commits
+		mcomit = Commit(self.rorepo, 'd884adc80c80300b4cc05321494713904ef1df2d')
+		assert mcomit in all_commits
+		
+		# we can limit the result to paths
+		ltd_commits = list(self.rorepo.iter_commits(paths='CHANGES'))
+		assert ltd_commits and len(ltd_commits) < len(all_commits)
+		
+		# show commits of multiple paths, resulting in a union of commits
+		less_ltd_commits = list(Commit.iter_items(self.rorepo, 'master', paths=('CHANGES', 'AUTHORS')))
+		assert len(ltd_commits) < len(less_ltd_commits)
+		
 		
 	@patch_object(Git, '_call_process')
 	def test_rev_list_bisect_all(self, git):
