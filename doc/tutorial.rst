@@ -54,7 +54,7 @@ the history of your project.
     >>> heads = repo.heads
     >>> master = heads.master       # lists can be accessed by name for convenience
     >>> master.commit               # the commit pointed to by head called master
-    >>> master.rename("new_name")   # rename individual heads or
+    >>> master.rename("new_name")   # rename heads
     
 Tags are (usually immutable) references to a commit and/or a tag object.
 
@@ -63,18 +63,22 @@ Tags are (usually immutable) references to a commit and/or a tag object.
     >>> tagref.tag                  # tags may have tag objects carrying additional information
     >>> tagref.commit               # but they always point to commits
     >>> repo.delete_tag(tagref)     # delete or
-    >>> repo.create_tag("my_tag")   # create tags using the repo
+    >>> repo.create_tag("my_tag")   # create tags using the repo for convenience
     
 A symbolic reference is a special case of a reference as it points to another
 reference instead of a commit
+
+    >>> head = repo.head            # the head points to the active branch/ref
+    >>> master = head.reference     # retrieve the reference the head points to
+    >>> master.commit               # from here you use it as any other reference
 
 Modifying References
 ********************
 You can easily create and delete reference types or modify where they point to.
 
-    >>> repo.delete_head('master')  
-    >>> master = repo.create_head('master')
-    >>> master.commit = 'HEAD~10'       # set another commit without changing index or working tree 
+    >>> repo.delete_head('master')           # delete an existing head
+    >>> master = repo.create_head('master')  # create a new one
+    >>> master.commit = 'HEAD~10'            # set branch to another commit without changing index or working tree 
 
 Create or delete tags the same way except you may not change them afterwards
 
@@ -89,9 +93,10 @@ or the working copy )
 
 Understanding Objects
 *********************
-An Object is anything storable in gits object database. Objects contain information
-about their type, their uncompressed size as well as their data. Each object is
-uniquely identified by a SHA1 hash, being 40 hexadecimal characters in size. 
+An Object is anything storable in git's object database. Objects contain information
+about their type, their uncompressed size as well as the actual data. Each object is
+uniquely identified by a SHA1 hash, being 40 hexadecimal characters in size or 20 
+bytes in size.
 
 Git only knows 4 distinct object types being Blobs, Trees, Commits and Tags.
 
@@ -116,7 +121,7 @@ Basic fields are
     '...' 
     >>> len(hct.data) == hct.size
     
-Index Objects are objects that can be put into gits index. These objects are trees
+Index Objects are objects that can be put into git's index. These objects are trees
 and blobs which additionally know about their path in the filesystem as well as their
 mode.
 
@@ -130,8 +135,8 @@ mode.
     100644
     
 Access blob data (or any object data) directly or using streams.
-    >>> htc.data            # binary tree data
-    >>> htc.blobs[0].data_stream                # stream object to read data from
+    >>> htc.data            # binary tree data as string ( inefficient )
+    >>> htc.blobs[0].data_stream            # stream object to read data from
     >>> htc.blobs[0].stream_data(my_stream) # write data to given stream
     
     
@@ -157,7 +162,7 @@ If you need paging, you can specify a number of commits to skip.
 
 The above will return commits 21-30 from the commit list.
 
-    >>> headcommit = repo.headcommit.commit 
+    >>> headcommit = repo.head.commit 
 
     >>> headcommit.sha
     '207c0c4418115df0d30820ab1a9acd2ea4bf4431'
@@ -228,9 +233,9 @@ Once you have a tree, you can get the contents.
 Its useful to know that a tree behaves like a list with the ability to 
 query entries by name.
 
-    >>> tree[0] == tree['dir']
+    >>> tree[0] == tree['dir']			# access by index and by sub-path
     <git.Tree "f7eb5df2e465ab621b1db3f5714850d6732cfed2">
-    >>> for entry in tree: do_something(entry)
+    >>> for entry in tree: do_something_with(entry)
 
     >>> blob = tree[0][0]
     >>> blob.name
@@ -260,18 +265,18 @@ You can also get a tree directly from the repository if you know its name.
     <git.Tree "6825a94104164d9f0f5632607bebd2a32a3579e5">
     
 As trees only allow direct access to their direct entries, use the traverse 
-method to obtain an iterator to access entries recursively.
+method to obtain an iterator to traverse entries recursively.
 
     >>> tree.traverse()
     <generator object at 0x7f6598bd65a8>
-    >>> for entry in traverse(): do_something(entry)
+    >>> for entry in traverse(): do_something_with(entry)
 
     
 The Index Object
 ****************
-The git index is the stage containing changes to be written to the next commit
+The git index is the stage containing changes to be written with the next commit
 or where merges finally have to take place. You may freely access and manipulate 
-this information using the Index Object.
+this information using the IndexFile Object.
 
     >>> index = repo.index
     
@@ -289,7 +294,7 @@ Create new indices from other trees or as result of a merge. Write that result t
 a new index.
 
     >>> tmp_index = Index.from_tree(repo, 'HEAD~1') # load a tree into a temporary index
-    >>> merge_index = Index.from_tree(repo, 'HEAD', 'some_branch') # merge two trees
+    >>> merge_index = Index.from_tree(repo, 'base', 'HEAD', 'some_branch') # merge two trees three-way
     >>> merge_index.write("merged_index")
     
 Handling Remotes
@@ -314,7 +319,7 @@ as if they where attributes.
     'git@server:dummy_repo.git'
     
 Change configuration for a specific remote only 
-    >>> o.config_writer.set("url", "other_url")
+    >>> o.config_writer.set("pushurl", "other_url")
     
 Obtaining Diff Information
 **************************
@@ -323,7 +328,7 @@ Diffs can generally be obtained by Subclasses of ``Diffable`` as they provide
 the ``diff`` method. This operation yields a DiffIndex allowing you to easily access
 diff information about paths.
 
-Diffs can be made between Index and Trees, Index and the working tree, trees and 
+Diffs can be made between the Index and Trees, Index and the working tree, trees and 
 trees as well as trees and the working copy. If commits are involved, their tree
 will be used implicitly.
 
@@ -338,9 +343,9 @@ will be used implicitly.
     >>> index.diff('HEAD')              # diff index against current HEAD tree
 
 The item returned is a DiffIndex which is essentially a list of Diff objects. It 
-provides additional filtering to find what you might be looking for
+provides additional filtering to ease finding what you might be looking for.
 
-    >>> for diff_added in wdiff.iter_change_type('A'): do_something(diff_added)
+    >>> for diff_added in wdiff.iter_change_type('A'): do_something_with(diff_added)
 
 Switching Branches
 ******************
@@ -349,7 +354,7 @@ head and reset your index and working copy to match. A simple manual way to do i
 is the following one.
 
     >>> repo.head.reference = repo.heads.other_branch
-    >>> repo.head.reset(index=True, working_tree=True
+    >>> repo.head.reset(index=True, working_tree=True)
     
 The previous approach would brutally overwrite the user's changes in the working copy 
 and index though and is less sophisticated than a git-checkout for instance which 
