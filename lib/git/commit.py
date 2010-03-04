@@ -1,5 +1,5 @@
 # commit.py
-# Copyright (C) 2008, 2009 Michael Trier (mtrier@gmail.com) and contributors
+# Copyright (C) 2008-2010 Michael Trier (mtrier@gmail.com) and contributors
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
@@ -16,16 +16,16 @@ import stats
 class Commit(LazyMixin):
     """
     Wraps a git Commit object.
-    
-    This class will act lazily on some of its attributes and will query the 
+
+    This class will act lazily on some of its attributes and will query the
     value on demand only if it involves calling the git binary.
     """
     def __init__(self, repo, id, tree=None, author=None, authored_date=None,
                  committer=None, committed_date=None, message=None, parents=None):
         """
-        Instantiate a new Commit. All keyword arguments taking None as default will 
-        be implicitly set if id names a valid sha. 
-        
+        Instantiate a new Commit. All keyword arguments taking None as default will
+        be implicitly set if id names a valid sha.
+
         The parameter documentation indicates the type of the argument after a colon ':'.
 
         ``id``
@@ -75,7 +75,7 @@ class Commit(LazyMixin):
 
     def __bake__(self):
         """
-        Called by LazyMixin superclass when the first uninitialized member needs 
+        Called by LazyMixin superclass when the first uninitialized member needs
         to be set as it is queried.
         """
         temp = Commit.find_all(self.repo, self.id, max_count=1)[0]
@@ -133,7 +133,7 @@ class Commit(LazyMixin):
             is the ref from which to begin (SHA1 or name)
 
         ``path``
-            is an optinal path, if set only Commits that include the path 
+            is an optinal path, if set only Commits that include the path
             will be considered
 
         ``kwargs``
@@ -210,9 +210,9 @@ class Commit(LazyMixin):
 
         Returns
             git.Diff[]::
-            
+
              between tree and the index if only a is given
-             between two trees if a and b  are given and are commits 
+             between two trees if a and b  are given and are commits
         """
         paths = paths or []
 
@@ -234,7 +234,7 @@ class Commit(LazyMixin):
         """
         Returns
             git.Diff[]
-            Diffs between this commit and its first parent or all changes if this 
+            Diffs between this commit and its first parent or all changes if this
             commit is the first commit and has no parent.
         """
         if not self.parents:
@@ -252,9 +252,9 @@ class Commit(LazyMixin):
     @property
     def stats(self):
         """
-        Create a git stat from changes between this commit and its first parent 
+        Create a git stat from changes between this commit and its first parent
         or from all changes done if this is the very first commit.
-        
+
         Return
             git.Stats
         """

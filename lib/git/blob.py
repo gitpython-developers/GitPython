@@ -1,5 +1,5 @@
 # blob.py
-# Copyright (C) 2008, 2009 Michael Trier (mtrier@gmail.com) and contributors
+# Copyright (C) 2008-2010 Michael Trier (mtrier@gmail.com) and contributors
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
@@ -49,7 +49,7 @@ class Blob(object):
 
         Returns
             int
-           
+
         NOTE
             The size will be cached after the first access
         """
@@ -64,7 +64,7 @@ class Blob(object):
 
         Returns
             str
-            
+
         NOTE
             The data will be cached after the first access.
         """
@@ -78,7 +78,7 @@ class Blob(object):
 
         Returns
             str
-            
+
         NOTE
             Defaults to 'text/plain' in case the actual file type is unknown.
         """
@@ -102,7 +102,7 @@ class Blob(object):
 
         Returns
             list: [git.Commit, list: [<line>]]
-            A list of tuples associating a Commit object with a list of lines that 
+            A list of tuples associating a Commit object with a list of lines that
             changed within the given commit. The Commit objects will be given in order
             of appearance.
         """

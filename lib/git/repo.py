@@ -1,5 +1,5 @@
 # repo.py
-# Copyright (C) 2008, 2009 Michael Trier (mtrier@gmail.com) and contributors
+# Copyright (C) 2008-2010 Michael Trier (mtrier@gmail.com) and contributors
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
@@ -19,7 +19,7 @@ from tree import Tree
 
 class Repo(object):
     """
-    Represents a git repository and allows you to query references, 
+    Represents a git repository and allows you to query references,
     gather commit information, generate diffs, create and clone repositories query
     the log.
     """
@@ -125,7 +125,7 @@ class Repo(object):
             is the maximum number of commits to return (default 10)
 
           ``skip``
-            is the number of commits to skip (default 0) which will effectively 
+            is the number of commits to skip (default 0) which will effectively
             move your commit-window by the given number.
 
         Returns
@@ -162,7 +162,7 @@ class Repo(object):
 
         ``path``
             is an optinal path to limit the returned commits to.
-            
+
 
         ``since``
             is a string represeting a date/time
@@ -215,7 +215,7 @@ class Repo(object):
         """
         Returns a list of commits that is in ``other_repo`` but not in self
 
-        Returns 
+        Returns
             git.Commit[]
         """
         repo_refs = self.git.rev_list(ref, '--').strip().splitlines()
@@ -256,7 +256,7 @@ class Repo(object):
     def log(self, commit='master', path=None, **kwargs):
         """
         The Commit for a treeish, and all commits leading to it.
-        
+
         ``kwargs``
         	keyword arguments specifying flags to be used in git-log command,
         	i.e.: max_count=1 to limit the amount of commits returned
@@ -283,7 +283,7 @@ class Repo(object):
 
         ``paths``
             is an optional list of file paths on which to restrict the diff
-            
+
         Returns
         	``str``
         """
@@ -452,20 +452,20 @@ class Repo(object):
         Sets the alternates
 
         ``alts``
-            is the array of string paths representing the alternates at which 
+            is the array of string paths representing the alternates at which
             git should look for objects, i.e. /home/user/repo/.git/objects
 
         Raises
             NoSuchPathError
-            
+
         Note
             The method does not check for the existance of the paths in alts
             as the caller is responsible.
-            
+
         Returns
             None
         """
-        alternates_path = os.path.join(self.path, 'objects', 'info', 'alternates') 
+        alternates_path = os.path.join(self.path, 'objects', 'info', 'alternates')
         if not alts:
             if os.path.isfile(alternates_path):
                 os.remove(alternates_path)
@@ -475,7 +475,7 @@ class Repo(object):
                 f.write("\n".join(alts))
             finally:
                 f.close()
-            # END file handling 
+            # END file handling
         # END alts handling
 
     alternates = property(_get_alternates, _set_alternates, doc="Retrieve a list of alternates paths or set a list paths to be used as alternates")
@@ -489,8 +489,8 @@ class Repo(object):
             ``True``, if the index has any uncommitted changes,
             otherwise ``False``
 
-		NOTE
-			Working tree changes that have not been staged will not be detected ! 
+        NOTE
+            Working tree changes that have not been staged will not be detected !
         """
         if self.bare:
             # Bare repositories with no associated working directory are

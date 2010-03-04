@@ -23,7 +23,7 @@ REQUIREMENTS
 INSTALL
 =======
 
-	python setup.py install
+    python setup.py install
 
 SOURCE
 ======

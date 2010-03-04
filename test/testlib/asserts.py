@@ -1,5 +1,5 @@
 # asserts.py
-# Copyright (C) 2008, 2009 Michael Trier (mtrier@gmail.com) and contributors
+# Copyright (C) 2008-2010 Michael Trier (mtrier@gmail.com) and contributors
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
@@ -9,7 +9,7 @@ import unittest
 from nose import tools
 from nose.tools import *
 
-__all__ = ['assert_instance_of', 'assert_not_instance_of', 
+__all__ = ['assert_instance_of', 'assert_not_instance_of',
            'assert_none', 'assert_not_none',
            'assert_match', 'assert_not_match'] + tools.__all__
 
@@ -20,7 +20,7 @@ def assert_instance_of(expected, actual, msg=None):
 def assert_not_instance_of(expected, actual, msg=None):
     """Verify that object is not an instance of expected """
     assert not isinstance(actual, expected, msg)
-    
+
 def assert_none(actual, msg=None):
     """verify that item is None"""
     assert_equal(None, actual, msg)

@@ -1,5 +1,5 @@
 # tag.py
-# Copyright (C) 2008, 2009 Michael Trier (mtrier@gmail.com) and contributors
+# Copyright (C) 2008-2010 Michael Trier (mtrier@gmail.com) and contributors
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
@@ -29,12 +29,12 @@ class Tag(object):
             is the Repo
 
         ``kwargs``
-            Additional options given as keyword arguments, will be passed 
+            Additional options given as keyword arguments, will be passed
             to git-for-each-ref
 
         Returns
             ``git.Tag[]``
-            
+
             List is sorted by committerdate
         """
         options = {'sort': "committerdate",
@@ -75,11 +75,11 @@ class Tag(object):
             is the formatted tag information
 
         Format::
-            
+
             name: [a-zA-Z_/]+
             <null byte>
             id: [0-9A-Fa-f]{40}
-        
+
         Returns
             git.Tag
         """

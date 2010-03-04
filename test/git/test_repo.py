@@ -1,5 +1,5 @@
 # test_repo.py
-# Copyright (C) 2008, 2009 Michael Trier (mtrier@gmail.com) and contributors
+# Copyright (C) 2008-2010 Michael Trier (mtrier@gmail.com) and contributors
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
@@ -12,7 +12,7 @@ from git import *
 class TestRepo(object):
     def setup(self):
         self.repo = Repo(GIT_REPO)
-    
+
     @raises(InvalidGitRepositoryError)
     def test_new_should_raise_on_invalid_repo_location(self):
         if sys.platform == "win32":
@@ -199,12 +199,12 @@ class TestRepo(object):
         self.repo.archive_tar_gz()
 
     def test_disable_daemon_export(self):
-    	prev_value = self.repo.daemon_export 
+        prev_value = self.repo.daemon_export
         self.repo.daemon_export = not prev_value
         assert_equal(self.repo.daemon_export, not prev_value)
         self.repo.daemon_export = prev_value
         assert_equal(self.repo.daemon_export, prev_value)
-  
+
     def test_alternates(self):
         cur_alternates = self.repo.alternates
         # empty alternates

@@ -1,5 +1,5 @@
 ﻿# cmd.py
-# Copyright (C) 2008, 2009 Michael Trier (mtrier@gmail.com) and contributors
+# Copyright (C) 2008-2010 Michael Trier (mtrier@gmail.com) and contributors
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
@@ -23,24 +23,24 @@ if sys.platform == 'win32':
 class Git(object):
     """
     The Git class manages communication with the Git binary.
-    
+
 	It provides a convenient interface to calling the Git binary, such as in::
-	
+
 	 g = Git( git_dir )
 	 g.init()			        # calls 'git init' program
 	 rval = g.ls_files()		# calls 'git ls-files' program
-	
+
 	``Debugging``
-	    Set the GIT_PYTHON_TRACE environment variable print each invocation 
+	    Set the GIT_PYTHON_TRACE environment variable print each invocation
 	    of the command to stdout.
 	    Set its value to 'full' to see details about the returned values.
     """
     def __init__(self, git_dir=None):
         """
         Initialize this instance with:
-        
+
         ``git_dir``
-           Git directory we should work in. If None, we always work in the current 
+           Git directory we should work in. If None, we always work in the current
            directory as returned by os.getcwd()
         """
         super(Git, self).__init__()
@@ -48,7 +48,7 @@ class Git(object):
 
     def __getattr__(self, name):
         """
-        A convenience method as it allows to call the command as if it was 
+        A convenience method as it allows to call the command as if it was
         an object.
         Returns
             Callable object that will execute call _call_process with your arguments.
@@ -99,15 +99,15 @@ class Git(object):
             Whether to avoid stripping off trailing whitespace.
 
         Returns::
-        
+
          str(output)                                  # extended_output = False (Default)
          tuple(int(status), str(stdout), str(stderr)) # extended_output = True
-        
+
         Raise
-        	GitCommandError
-        
+            GitCommandError
+
         NOTE
-           If you add additional keyword arguments to the signature of this method, 
+           If you add additional keyword arguments to the signature of this method,
            you must update the execute_kwargs tuple housed in this module.
         """
         if GIT_PYTHON_TRACE and not GIT_PYTHON_TRACE == 'full':

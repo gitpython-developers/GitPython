@@ -1,5 +1,5 @@
 # test_blob.py
-# Copyright (C) 2008, 2009 Michael Trier (mtrier@gmail.com) and contributors
+# Copyright (C) 2008-2010 Michael Trier (mtrier@gmail.com) and contributors
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
@@ -11,7 +11,7 @@ from git import *
 class TestBlob(object):
     def setup(self):
         self.repo = Repo(GIT_REPO)
-    
+
     @patch_object(Git, '_call_process')
     def test_should_return_blob_contents(self, git):
         git.return_value = fixture('cat_file_blob')
@@ -27,7 +27,7 @@ class TestBlob(object):
         assert_equal("Hello world\n", blob.data)
         assert_true(git.called)
         assert_equal(git.call_args, (('cat_file', 'abc'), {'p': True, 'with_raw_output': True}))
-    
+
     @patch_object(Git, '_call_process')
     def test_should_cache_data(self, git):
         git.return_value = fixture('cat_file_blob')
@@ -55,15 +55,15 @@ class TestBlob(object):
         assert_true(git.called)
         assert_equal(git.call_count, 1)
         assert_equal(git.call_args, (('cat_file', 'abc'), {'s': True}))
-  
+
     def test_mime_type_should_return_mime_type_for_known_types(self):
         blob = Blob(self.repo, **{'id': 'abc', 'name': 'foo.png'})
         assert_equal("image/png", blob.mime_type)
-  
+
     def test_mime_type_should_return_text_plain_for_unknown_types(self):
         blob = Blob(self.repo, **{'id': 'abc'})
         assert_equal("text/plain", blob.mime_type)
-  
+
     @patch_object(Git, '_call_process')
     def test_should_display_blame_information(self, git):
         git.return_value = fixture('blame')
@@ -75,7 +75,7 @@ class TestBlob(object):
         c = b[0][0]
         assert_true(git.called)
         assert_equal(git.call_args, (('blame', 'master', '--', 'lib/git.py'), {'p': True}))
-        
+
         assert_equal('634396b2f541a9f2d58b00be1a07f0c358b999b3', c.id)
         assert_equal('Tom Preston-Werner', c.author.name)
         assert_equal('tom@mojombo.com', c.author.email)
@@ -84,14 +84,14 @@ class TestBlob(object):
         assert_equal('tom@mojombo.com', c.committer.email)
         assert_equal(time.gmtime(1191997100), c.committed_date)
         assert_equal('initial grit setup', c.message)
-        
+
         # test the 'lines per commit' entries
         tlist = b[0][1]
         assert_true( tlist )
         assert_true( isinstance( tlist[0], basestring ) )
-        assert_true( len( tlist ) < sum( len(t) for t in tlist ) )				 # test for single-char bug
-        
-  
+        assert_true( len( tlist ) < sum( len(t) for t in tlist ) )  # test for single-char bug
+
+
     def test_should_return_appropriate_representation(self):
         blob = Blob(self.repo, **{'id': 'abc'})
         assert_equal('<git.Blob "abc">', repr(blob))

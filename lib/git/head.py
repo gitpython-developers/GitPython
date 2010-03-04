@@ -1,5 +1,5 @@
 # head.py
-# Copyright (C) 2008, 2009 Michael Trier (mtrier@gmail.com) and contributors
+# Copyright (C) 2008-2010 Michael Trier (mtrier@gmail.com) and contributors
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
@@ -16,10 +16,10 @@ class Head(object):
         >>> repo = Repo("/path/to/repo")
         >>> head = repo.heads[0]
 
-        >>> head.name       
+        >>> head.name
         'master'
 
-        >>> head.commit     
+        >>> head.commit
         <git.Commit "1c09f116cbc2cb4100fb6935bb162daa4723f455">
 
         >>> head.commit.id
@@ -53,7 +53,7 @@ class Head(object):
 
         Returns
             git.Head[]
-            
+
             List is sorted by committerdate
         """
 
@@ -96,7 +96,7 @@ class Head(object):
             is the formatted head information
 
         Format::
-        
+
             name: [a-zA-Z_/]+
             <null byte>
             id: [0-9A-Fa-f]{40}
