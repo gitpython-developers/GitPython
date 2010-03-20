@@ -64,9 +64,9 @@ class Tree(LazyMixin):
 
         Examples::
 
-            >>> Repo('/path/to/python-git').tree/'lib'
+            >>> Repo('/path/to/python-git').tree()/'lib'
             <git.Tree "6cc23ee138be09ff8c28b07162720018b244e95e">
-            >>> Repo('/path/to/python-git').tree/'README.txt'
+            >>> Repo('/path/to/python-git').tree()/'README'
             <git.Blob "8b1e02c0fb554eed2ce2ef737a68bb369d7527df">
 
         Returns

@@ -115,7 +115,7 @@ class Commit(LazyMixin):
             is the ref from which to begin (SHA1 or name)
 
         ``path``
-            is an optinal path
+            is an optional path
 
         Returns
             int
@@ -212,7 +212,7 @@ class Commit(LazyMixin):
             git.Diff[]::
 
              between tree and the index if only a is given
-             between two trees if a and b  are given and are commits
+             between two trees if a and b are given and are commits
         """
         paths = paths or []
 

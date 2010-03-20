@@ -1,7 +1,7 @@
 =======
 CHANGES
 =======
-  
+
 0.1.7
 =======
 This is a bugfix release and the last of its kind in 0.1.X, as 0.2.X will receive
@@ -16,7 +16,7 @@ General
 -------
 * The test suite now supports Mock 0.5 and above. The transition between Mock 0.4
   0.5 changed the API which required adjustments.
-* Many small enhancements done to the method documentation 
+* Many small enhancements done to the method documentation
 
 
 0.1.6
@@ -152,14 +152,14 @@ Git
 
 * Added support for ``stderr``, ``stdin``, and ``with_status``.
 
-* ``git_dir`` is now optional in the constructor for ``git.Git``.  Git now 
+* ``git_dir`` is now optional in the constructor for ``git.Git``.  Git now
   falls back to ``os.getcwd()`` when git_dir is not specified.
 
-* add a ``with_exceptions`` keyword argument to git commands. 
+* add a ``with_exceptions`` keyword argument to git commands.
   ``GitCommandError`` is raised when the exit status is non-zero.
 
-* add support for a ``GIT_PYTHON_TRACE`` environment variable. 
-  ``GIT_PYTHON_TRACE`` allows us to debug GitPython's usage of git through 
+* add support for a ``GIT_PYTHON_TRACE`` environment variable.
+  ``GIT_PYTHON_TRACE`` allows us to debug GitPython's usage of git through
   the use of an environment variable.
 
 Tree
@@ -175,8 +175,8 @@ Repo
 
 Tree
 ----
-* Corrected problem with ``Tree.__div__`` not working with zero length files.  
-  Removed ``__len__`` override and replaced with size instead. Also made size 
+* Corrected problem with ``Tree.__div__`` not working with zero length files.
+  Removed ``__len__`` override and replaced with size instead. Also made size
   cach properly. This is a breaking change.
 
 0.1.1

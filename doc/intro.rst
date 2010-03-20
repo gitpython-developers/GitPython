@@ -20,7 +20,7 @@ Requirements
 
 .. _Git: http://git-scm.com/
 .. _Python Nose: http://code.google.com/p/python-nose/
-.. _Mock by Michael Foord: http://www.voidspace.org.uk/python/mock.html
+.. _Mock by Michael Foord: http://www.voidspace.org.uk/python/mock/
 
 Installing GitPython
 ====================
@@ -40,7 +40,7 @@ here:
 
 * `setuptools`_
 * `install setuptools <http://peak.telecommunity.com/DevCenter/EasyInstall#installation-instructions>`_
-* `pypi <http://pypi.python.org/pypi/SQLAlchemy>`_
+* `pypi <http://pypi.python.org/pypi/GitPython>`_
 
 .. _setuptools: http://peak.telecommunity.com/DevCenter/setuptools
 
@@ -69,7 +69,7 @@ Source Code
 
 GitPython's git repo is available on Gitorious, which can be browsed at:
 
-http://gitorious.org/projects/git-python/
+http://gitorious.org/git-python
 
 and cloned from:
 

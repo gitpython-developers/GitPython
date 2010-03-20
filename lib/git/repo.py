@@ -161,11 +161,11 @@ class Repo(object):
             is the branch/commit name (default 'master')
 
         ``path``
-            is an optinal path to limit the returned commits to.
+            is an optional path to limit the returned commits to.
 
 
         ``since``
-            is a string represeting a date/time
+            is a string representing a date/time
 
         Returns
             ``git.Commit[]``
@@ -494,7 +494,7 @@ class Repo(object):
         """
         if self.bare:
             # Bare repositories with no associated working directory are
-            # always consired to be clean.
+            # always considered to be clean.
             return False
 
         return len(self.git.diff('HEAD', '--').strip()) > 0
