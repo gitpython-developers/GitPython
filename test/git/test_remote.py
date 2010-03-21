@@ -76,7 +76,7 @@ class TestRemote(TestBase):
         fp.close()
         
         
-    def _test_fetch_result(self, results, remote):
+    def _do_test_fetch_result(self, results, remote):
         # self._print_fetchhead(remote.repo)
         assert len(results) > 0 and isinstance(results[0], FetchInfo)
         for info in results:
@@ -92,7 +92,7 @@ class TestRemote(TestBase):
             # END forced update checking  
         # END for each info
         
-    def _test_push_result(self, results, remote):
+    def _do_test_push_result(self, results, remote):
         assert len(results) > 0 and isinstance(results[0], PushInfo)
         for info in results:
             assert info.flags
@@ -116,7 +116,7 @@ class TestRemote(TestBase):
         # END for each info 
         
         
-    def _test_fetch_info(self, repo):
+    def _do_test_fetch_info(self, repo):
         self.failUnlessRaises(ValueError, FetchInfo._from_line, repo, "nonsense", '')
         self.failUnlessRaises(ValueError, FetchInfo._from_line, repo, "? [up to date]      0.1.7RC    -> origin/0.1.7RC", '')
         
@@ -129,16 +129,16 @@ class TestRemote(TestBase):
         index.commit("Committing %s" % new_file)
         return new_file
         
-    def _test_fetch(self,remote, rw_repo, remote_repo):
+    def _do_test_fetch(self,remote, rw_repo, remote_repo):
         # specialized fetch testing to de-clutter the main test
-        self._test_fetch_info(rw_repo)
+        self._do_test_fetch_info(rw_repo)
         
         def fetch_and_test(remote, **kwargs):
             progress = TestRemoteProgress()
             kwargs['progress'] = progress
             res = remote.fetch(**kwargs)
             progress.make_assertion()
-            self._test_fetch_result(res, remote)
+            self._do_test_fetch_result(res, remote)
             return res
         # END fetch and check
         
@@ -273,7 +273,7 @@ class TestRemote(TestBase):
         progress = TestRemoteProgress()
         res = remote.push(lhead.reference, progress)
         assert isinstance(res, IterableList)
-        self._test_push_result(res, remote)
+        self._do_test_push_result(res, remote)
         progress.make_assertion()
         
         # rejected - undo last commit
@@ -281,13 +281,13 @@ class TestRemote(TestBase):
         res = remote.push(lhead.reference)
         assert res[0].flags & PushInfo.ERROR 
         assert res[0].flags & PushInfo.REJECTED
-        self._test_push_result(res, remote)
+        self._do_test_push_result(res, remote)
         
         # force rejected pull
         res = remote.push('+%s' % lhead.reference)
         assert res[0].flags & PushInfo.ERROR == 0 
         assert res[0].flags & PushInfo.FORCED_UPDATE
-        self._test_push_result(res, remote)
+        self._do_test_push_result(res, remote)
         
         # invalid refspec
         res = remote.push("hellothere")
@@ -301,13 +301,13 @@ class TestRemote(TestBase):
         res = remote.push(progress=progress, tags=True)
         assert res[-1].flags & PushInfo.NEW_TAG
         progress.make_assertion()
-        self._test_push_result(res, remote)
+        self._do_test_push_result(res, remote)
         
         # update push new tags
         # Rejection is default
         new_tag = TagReference.create(rw_repo, to_be_updated, ref='HEAD~1', force=True)
         res = remote.push(tags=True)
-        self._test_push_result(res, remote)
+        self._do_test_push_result(res, remote)
         assert res[-1].flags & PushInfo.REJECTED and res[-1].flags & PushInfo.ERROR
         
         # push force this tag
@@ -316,7 +316,7 @@ class TestRemote(TestBase):
         
         # delete tag - have to do it using refspec
         res = remote.push(":%s" % new_tag.path)
-        self._test_push_result(res, remote)
+        self._do_test_push_result(res, remote)
         assert res[0].flags & PushInfo.DELETED
         progress.assert_received_message()
         
@@ -326,17 +326,17 @@ class TestRemote(TestBase):
         res = remote.push(new_head, progress)
         assert res[0].flags & PushInfo.NEW_HEAD
         progress.make_assertion()
-        self._test_push_result(res, remote)
+        self._do_test_push_result(res, remote)
         
         # delete new branch on the remote end and locally
         res = remote.push(":%s" % new_head.path)
-        self._test_push_result(res, remote)
+        self._do_test_push_result(res, remote)
         Head.delete(rw_repo, new_head)
         assert res[-1].flags & PushInfo.DELETED
         
         # --all
         res = remote.push(all=True)
-        self._test_push_result(res, remote)
+        self._do_test_push_result(res, remote)
         
         remote.pull('master')
         
@@ -405,7 +405,7 @@ class TestRemote(TestBase):
             # Only for remotes - local cases are the same or less complicated 
             # as additional progress information will never be emitted
             if remote.name == "daemon_origin":
-                self._test_fetch(remote, rw_repo, remote_repo)
+                self._do_test_fetch(remote, rw_repo, remote_repo)
                 ran_fetch_test = True
             # END fetch test  
             
