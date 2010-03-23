@@ -13,6 +13,7 @@ Contents:
    intro
    tutorial
    reference
+   roadmap
 
 Indices and tables
 ==================
