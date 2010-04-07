@@ -71,7 +71,7 @@ GitPython is a port of the grit library in Ruby created by
 Tom Preston-Werner and Chris Wanstrath.
 """,
       classifiers = [
-        "Development Status :: 3 - Alpha",
+        "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
         "License :: OSI Approved :: BSD License",
         "Operating System :: OS Independent",

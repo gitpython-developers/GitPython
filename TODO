@@ -51,6 +51,7 @@ Docs
   - its probably related to some fishy error lines:
   :0: (ERROR/3) Unexpected indentation.
   :0: (ERROR/3) Unexpected indentation.
+* Rewrite doc-strings to use default sphinx fields, such as :param x:
 
 Index
 -----

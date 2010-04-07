@@ -1,4 +1,5 @@
 GitPython was originally written by Michael Trier.
+GitPython 0.2 was partially (re)written by Sebastian Thiel, based on 0.1.6 and git-dulwich.
 
 Contributors are:
 
@@ -10,5 +11,6 @@ Contributors are:
 -Steve Frécinaux <code _at_ istique.net>
 -Kai Lautaportti <kai _at_ lautaportti.fi>
 -Paul Sowden <paul _at_ idontsmoke.co.uk>
+-Sebastian Thiel <byronimo _at_ gmail.com>
 
 Portions derived from other open source works and are clearly marked.
