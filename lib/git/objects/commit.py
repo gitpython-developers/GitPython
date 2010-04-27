@@ -23,12 +23,14 @@ class Commit(base.Object, Iterable, diff.Diffable, utils.Traversable):
     
     # object configuration 
     type = "commit"
-    __slots__ = ("tree", "author", "authored_date", "committer", "committed_date",
-                    "message", "parents")
+    __slots__ = ("tree",
+                 "author", "authored_date", "author_tz_offset",
+                 "committer", "committed_date", "committer_tz_offset",
+                 "message", "parents")
     _id_attribute_ = "sha"
     
-    def __init__(self, repo, sha, tree=None, author=None, authored_date=None,
-                 committer=None, committed_date=None, message=None, parents=None):
+    def __init__(self, repo, sha, tree=None, author=None, authored_date=None, author_tz_offset=None,
+                 committer=None, committed_date=None, committer_tz_offset=None, message=None, parents=None):
         """
         Instantiate a new Commit. All keyword arguments taking None as default will 
         be implicitly set if id names a valid sha. 
@@ -51,12 +53,18 @@ class Commit(base.Object, Iterable, diff.Diffable, utils.Traversable):
             is the authored DateTime - use time.gmtime() to convert it into a 
             different format
 
+        ``author_tz_offset``: int_seconds_west_of_utc
+           is the timezone that the authored_date is in
+
         ``committer`` : Actor
             is the committer string
 
         ``committed_date`` : int_seconds_since_epoch
             is the committed DateTime - use time.gmtime() to convert it into a 
             different format
+
+        ``committer_tz_offset``: int_seconds_west_of_utc
+           is the timezone that the authored_date is in
 
         ``message`` : string
             is the commit message
@@ -94,8 +102,10 @@ class Commit(base.Object, Iterable, diff.Diffable, utils.Traversable):
             self.tree = temp.tree
             self.author = temp.author
             self.authored_date = temp.authored_date
+            self.author_tz_offset = temp.author_tz_offset
             self.committer = temp.committer
             self.committed_date = temp.committed_date
+            self.committer_tz_offset = temp.committer_tz_offset
             self.message = temp.message
         else:
             super(Commit, self)._set_cache_(attr)
@@ -253,8 +263,8 @@ class Commit(base.Object, Iterable, diff.Diffable, utils.Traversable):
                 parents.append(parent_line.split()[-1])
             # END for each parent line
             
-            author, authored_date = utils.parse_actor_and_date(next_line)
-            committer, committed_date = utils.parse_actor_and_date(stream.next())
+            author, authored_date, author_tz_offset = utils.parse_actor_and_date(next_line)
+            committer, committed_date, committer_tz_offset = utils.parse_actor_and_date(stream.next())
             
             # empty line
             stream.next()
@@ -276,8 +286,10 @@ class Commit(base.Object, Iterable, diff.Diffable, utils.Traversable):
             # END message parsing
             message = '\n'.join(message_lines)
             
-            yield Commit(repo, id, parents=tuple(parents), tree=tree, author=author, authored_date=authored_date,
-                          committer=committer, committed_date=committed_date, message=message)
+            yield Commit(repo, id, parents=tuple(parents), tree=tree,
+                         author=author, authored_date=authored_date, author_tz_offset=author_tz_offset,
+                         committer=committer, committed_date=committed_date, committer_tz_offset=committer_tz_offset,
+                         message=message)
         # END for each line in stream
         
         

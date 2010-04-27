@@ -18,6 +18,7 @@ class TestCommit(TestBase):
         assert_equal("byronimo@gmail.com", commit.author.email)
         assert commit.author == commit.committer
         assert isinstance(commit.authored_date, int) and isinstance(commit.committed_date, int)
+        assert isinstance(commit.author_tz_offset, int) and isinstance(commit.committer_tz_offset, int)
         assert commit.message == "Added missing information to docstrings of commit and stats module"
 
 
@@ -46,6 +47,8 @@ class TestCommit(TestBase):
         assert commit.committer == michael
         assert commit.authored_date == 1210193388
         assert commit.committed_date == 1210193388
+        assert commit.author_tz_offset == 14400, commit.author_tz_offset
+        assert commit.committer_tz_offset == 14400, commit.committer_tz_offset
         assert commit.message == "initial project"
         
     def test_traversal(self):

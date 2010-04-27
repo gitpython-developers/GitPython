@@ -15,10 +15,10 @@ class TagObject(base.Object):
     to.
     """
     type = "tag"
-    __slots__ = ( "object", "tag", "tagger", "tagged_date", "message" )
+    __slots__ = ( "object", "tag", "tagger", "tagged_date", "tagger_tz_offset", "message" )
         
     def __init__(self, repo, sha, object=None, tag=None, 
-                tagger=None, tagged_date=None, message=None):
+                tagger=None, tagged_date=None, tagger_tz_offset=None, message=None):
         """
         Initialize a tag object with additional data
         
@@ -40,6 +40,10 @@ class TagObject(base.Object):
           ``tagged_date`` : int_seconds_since_epoch
             is the DateTime of the tag creation - use time.gmtime to convert 
             it into a different format
+
+        ``tagged_tz_offset``: int_seconds_west_of_utc
+          is the timezone that the authored_date is in
+
         """
         super(TagObject, self).__init__(repo, sha )
         self._set_self_from_args_(locals())
@@ -58,7 +62,7 @@ class TagObject(base.Object):
             self.tag = lines[2][4:]  # tag <tag name>
             
             tagger_info = lines[3][7:]# tagger <actor> <date>
-            self.tagger, self.tagged_date = utils.parse_actor_and_date(tagger_info)
+            self.tagger, self.tagged_date, self.tagger_tz_offset = utils.parse_actor_and_date(tagger_info)
             
             # line 4 empty - it could mark the beginning of the next header
             # in csse there really is no message, it would not exist. Otherwise 
