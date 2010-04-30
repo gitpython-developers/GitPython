@@ -427,7 +427,7 @@ class Repo(object):
             Commits that do not contain that path or the paths will not be returned.
         
          ``kwargs``
-            Arguments to be passed to git-rev-parse - common ones are 
+            Arguments to be passed to git-rev-list - common ones are 
             max_count and skip
 
         Note: to receive only commits between two named revisions, use the 

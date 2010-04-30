@@ -13,9 +13,12 @@ class TestPerformance(TestBase):
     def _query_commit_info(self, c):
         c.author
         c.authored_date
+        c.author_tz_offset
         c.committer
         c.committed_date
+        c.committer_tz_offset
         c.message
+        c.parents
         
     def test_iteration(self):
         num_objs = 0

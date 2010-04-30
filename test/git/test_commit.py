@@ -97,7 +97,7 @@ class TestCommit(TestBase):
         
     def test_iteration(self):
         # we can iterate commits
-        all_commits = Commit.list_items(self.rorepo, 'master')
+        all_commits = Commit.list_items(self.rorepo, self.rorepo.head)
         assert all_commits
         assert all_commits == list(self.rorepo.iter_commits())
         
