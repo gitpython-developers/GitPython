@@ -39,7 +39,7 @@ def get_object_type_by_name(object_type_name):
         
     
 # precompiled regex
-_re_actor_epoch = re.compile(r'^.+? (.*) (\d+) .*$')
+_re_actor_epoch = re.compile(r'^.+? (.*) (\d+) ([+-]\d+).*$')
 
 def parse_actor_and_date(line):
     """
@@ -48,11 +48,11 @@ def parse_actor_and_date(line):
      author Tom Preston-Werner <tom@mojombo.com> 1191999972 -0700
     
     Returns
-        [Actor, int_seconds_since_epoch]
+        [Actor, int_seconds_since_epoch, int_timezone_offset]
     """
     m = _re_actor_epoch.search(line)
-    actor, epoch = m.groups()
-    return (Actor._from_string(actor), int(epoch))
+    actor, epoch, offset = m.groups()
+    return (Actor._from_string(actor), int(epoch), -int(float(offset)/100*3600))
     
     
     
