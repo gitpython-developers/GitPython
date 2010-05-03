@@ -248,7 +248,7 @@ def clear_cache(func):
     """
     def clear_cache_if_not_raised(self, *args, **kwargs):
         rval = func(self, *args, **kwargs)
-        del(self.entries)
+        self._delete_entries_cache()
         return rval
             
     # END wrapper method 
@@ -344,6 +344,15 @@ class IndexFile(LazyMixin, diff.Diffable):
             Path to the index file we are representing
         """
         return self._file_path
+    
+    def _delete_entries_cache(self):
+        """Safely clear the entries cache so it can be recreated"""
+        try:
+            del(self.entries)
+        except AttributeError:
+            # fails in python 2.6.5 with this exception
+            pass
+        # END exception handling
     
     @classmethod
     def _read_entry(cls, stream):
@@ -774,7 +783,7 @@ class IndexFile(LazyMixin, diff.Diffable):
         Returns
             self
         """
-        del(self.entries)
+        self._delete_entries_cache() 
         # allows to lazily reread on demand
         return self
     
@@ -937,7 +946,7 @@ class IndexFile(LazyMixin, diff.Diffable):
             self._flush_stdin_and_wait(proc, ignore_stdout=True)    # ignore stdout
             
             # force rereading our entries once it is all done
-            del(self.entries)
+            self._delete_entries_cache() 
             entries_added.extend(self.entries[(f,0)] for f in added_files)
         # END path handling
         
