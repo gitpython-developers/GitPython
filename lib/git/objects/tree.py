@@ -132,7 +132,7 @@ class Tree(base.IndexObject, diff.Diffable, utils.Traversable):
             elif type_id == self.tree_id:
                 yield Tree(self.repo, hexsha, mode, path)
             elif type_id == self.commit_id:
-                # todo 
+                # submodules 
                 yield None
             else:
                 raise TypeError( "Unknown type found in tree data %i for path '%s'" % (type_id, path))

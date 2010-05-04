@@ -68,13 +68,15 @@ An organized section of the GitPthon API is at :ref:`api_reference_toplevel`.
 Source Code
 ===========
 
-GitPython's git repo is available on Gitorious, which can be browsed at:
+GitPython's git repo is available on Gitorious and GitHub, which can be browsed at:
 
-http://gitorious.org/projects/git-python/
+ * http://gitorious.org/projects/git-python/
+ * http://github.com/Byron/GitPython
 
-and cloned from:
+and cloned using::
 
-git://gitorious.org/git-python/mainline.git
+	$ git clone git://gitorious.org/git-python/mainline.git git-python
+	$ git clone git://github.com/Byron/GitPython.git git-python
 
 License Information
 ===================
