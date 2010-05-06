@@ -5,8 +5,6 @@
 GitPython Documentation
 =======================
 
-Contents:
-
 .. toctree::
    :maxdepth: 3
 

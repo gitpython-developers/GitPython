@@ -55,7 +55,7 @@ script:
 Getting Started
 ===============
 
-* :ref:`tutorial_toplevel` - This tutorial provides a walk-through of some of
+* :ref:`tutorial-label` - This tutorial provides a walk-through of some of
   the basic functionality and concepts used in GitPython. It, however, is not
   exhaustive so you are encouraged to spend some time in the
   :ref:`api_reference_toplevel`.
