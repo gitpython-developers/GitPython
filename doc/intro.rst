@@ -78,9 +78,16 @@ and cloned using::
 	$ git clone git://gitorious.org/git-python/mainline.git git-python
 	$ git clone git://github.com/Byron/GitPython.git git-python
 
+Mailing List
+============
+http://groups.google.com/group/git-python
+
+Issue Tracker
+=============
+http://byronimo.lighthouseapp.com/projects/51787-gitpython/milestones
+	
 License Information
 ===================
-
 GitPython is licensed under the New BSD License.  See the LICENSE file for
 more information.
 
