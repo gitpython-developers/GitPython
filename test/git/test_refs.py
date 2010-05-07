@@ -37,6 +37,7 @@ class TestRefs(TestBase):
                 assert tagobj.tag == tag.name
                 assert isinstance( tagobj.tagger, Actor )
                 assert isinstance( tagobj.tagged_date, int )
+                assert isinstance( tagobj.tagger_tz_offset, int )
                 assert tagobj.message
             # END if we have a tag object
         # END for tag in repo-tags
