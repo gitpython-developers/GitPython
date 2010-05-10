@@ -526,7 +526,7 @@ class Repo(object):
         default_args = ('--abbrev=40', '--full-index', '--raw')
         if index: 
             # diff index against HEAD
-            if os.path.isfile(self.index.path) and \
+            if os.path.isfile(self.index.path) and self.head.is_valid() and \
                 len(self.git.diff('HEAD', '--cached', *default_args)):
                 return True
         # END index handling

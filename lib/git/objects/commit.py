@@ -357,9 +357,9 @@ class Commit(base.Object, Iterable, diff.Diffable, utils.Traversable):
                 try:
                     repo.head.commit = new_commit
                 except ValueError:
-                    # head is not yet set to master - create it and set it
+                    # head is not yet set to the ref our HEAD points to.
                     import git.refs
-                    master = git.refs.Head.create(repo, 'master', commit=new_commit)
+                    master = git.refs.Head.create(repo, repo.head.ref, commit=new_commit)
                     repo.head.reference = master
                 # END handle empty repositories
             # END advance head handling 

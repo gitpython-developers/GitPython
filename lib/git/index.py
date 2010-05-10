@@ -907,8 +907,9 @@ class IndexFile(LazyMixin, diff.Diffable):
                 must be a path relative to our repository.
 
                 If their sha is null ( 40*0 ), their path must exist in the file system
-                as an object will be created from the data at the path.The handling
-                now very much equals the way string paths are processed, except that
+                relative to the git repository as an object will be created from 
+                the data at the path.
+                The handling now very much equals the way string paths are processed, except that
                 the mode you have set will be kept. This allows you to create symlinks
                 by settings the mode respectively and writing the target of the symlink
                 directly into the file. This equals a default Linux-Symlink which
@@ -945,6 +946,7 @@ class IndexFile(LazyMixin, diff.Diffable):
             is not identical to the layout of the actual files on your hard-dist.
             If not None and ``items`` contain plain paths, these paths will be
             converted to Entries beforehand and passed to the path_rewriter.
+            Please note that entry.path is relative to the git repository.
 
         :return:
             List(BaseIndexEntries) representing the entries just actually added.
@@ -962,8 +964,9 @@ class IndexFile(LazyMixin, diff.Diffable):
 
         if paths and path_rewriter:
             for path in paths:
-                abspath = os.path.join(self.repo.working_tree_dir, path)
-                blob = Blob(self.repo, Blob.NULL_HEX_SHA, os.stat(abspath).st_mode, path)
+                abspath = os.path.abspath(path)
+                gitrelative_path = abspath[len(self.repo.working_tree_dir)+1:]
+                blob = Blob(self.repo, Blob.NULL_HEX_SHA, os.stat(abspath).st_mode, gitrelative_path)
                 entries.append(BaseIndexEntry.from_blob(blob))
             # END for each path
             del(paths[:])
@@ -1196,8 +1199,6 @@ class IndexFile(LazyMixin, diff.Diffable):
         self.repo.git.mv(args, paths, **kwargs)
 
         return out
-
-
 
     @default_index
     def commit(self, message, parent_commits=None, head=True):
