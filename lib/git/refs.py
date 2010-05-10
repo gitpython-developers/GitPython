@@ -11,7 +11,7 @@ from objects.utils import get_object_type_by_name
 from utils import LazyMixin, Iterable, join_path, join_path_native, to_native_path_linux
 
 
-class SymbolicReference(object):                           
+class SymbolicReference(object):
     """
     Represents a special case of a reference such that this reference is symbolic.
     It does not point to a specific commit, but to another Head, which itself 
@@ -138,7 +138,7 @@ class SymbolicReference(object):
         if sha:
             return Commit(self.repo, sha)
         
-        return Reference.from_path(self.repo, target_ref_path).commit
+        return self.from_path(self.repo, target_ref_path).commit
         
     def _set_commit(self, commit):
         """
@@ -160,7 +160,7 @@ class SymbolicReference(object):
         sha, target_ref_path = self._get_ref_info()
         if target_ref_path is None:
             raise TypeError("%s is a detached symbolic reference as it points to %r" % (self, sha))
-        return Reference.from_path(self.repo, target_ref_path)
+        return self.from_path(self.repo, target_ref_path)
         
     def _set_reference(self, ref):
         """
@@ -240,30 +240,11 @@ class SymbolicReference(object):
         except TypeError:
             return True
     
-    @classmethod
-    def from_path(cls, repo, path):
-        """
-        Return
-            Instance of SymbolicReference or HEAD
-            depending on the given path
-            
-        Note
-            It enforces that symbolic refs in git are only found in the 
-            root of the .git repository, never within a folder.
-        """
-        if not path:
-            raise ValueError("Cannot create Symbolic Reference from %r" % path)
-        
-        if path == 'HEAD':
-            return HEAD(repo, path)
-        
-        if '/' not in path:
-            return SymbolicReference(repo, path)
-            
-        raise ValueError("Could not find symbolic reference type suitable to handle path %r" % path)
 
     @classmethod
-    def _to_full_path(cls, repo, path):
+    def to_full_path(cls, path):
+        """:return: string with a full path name which can be used to initialize 
+        a Reference instance, for instance by using ``Reference.from_path``"""
         if isinstance(path, SymbolicReference):
             path = path.path
         full_ref_path = path
@@ -285,7 +266,7 @@ class SymbolicReference(object):
             or just "myreference", hence 'refs/' is implied.
             Alternatively the symbolic reference to be deleted
         """
-        full_ref_path = cls._to_full_path(repo, path)
+        full_ref_path = cls.to_full_path(path)
         abs_path = os.path.join(repo.git_dir, full_ref_path)
         if os.path.exists(abs_path):
             os.remove(abs_path)
@@ -331,7 +312,7 @@ class SymbolicReference(object):
         a proper symbolic reference. Otherwise it will be resolved to the 
         corresponding object and a detached symbolic reference will be created
         instead"""
-        full_ref_path = cls._to_full_path(repo, path)
+        full_ref_path = cls.to_full_path(path)
         abs_ref_path = os.path.join(repo.git_dir, full_ref_path)
         
         # figure out target data
@@ -402,7 +383,7 @@ class SymbolicReference(object):
         Raises OSError:
             In case a file at path but a different contents already exists
         """
-        new_path = self._to_full_path(self.repo, new_path)
+        new_path = self.to_full_path(new_path)
         if self.path == new_path:
             return self
         

@@ -366,7 +366,7 @@ class IterableList(list):
         try:
             return getattr(self, index)
         except AttributeError:
-            raise IndexError( "No item found with id %r" % self._prefix + index )
+            raise IndexError( "No item found with id %r" % (self._prefix + index) )
 
 class Iterable(object):
     """

@@ -14,6 +14,16 @@ import os
 
 class TestRefs(TestBase):
 
+    def test_from_path(self):
+        # should be able to create any reference directly
+        for ref_type in ( Reference, Head, TagReference, RemoteReference ):
+            for name in ('rela_name', 'path/rela_name'):
+                full_path = ref_type.to_full_path(name)
+                instance = ref_type.from_path(self.rorepo, full_path)
+                assert isinstance(instance, ref_type)
+            # END for each name 
+        # END for each type
+    
     def test_tag_base(self):
         tag_object_refs = list()
         for tag in self.rorepo.tags:

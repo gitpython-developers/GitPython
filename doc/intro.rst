@@ -6,8 +6,8 @@ Overview / Install
 
 GitPython is a python library used to interact with Git repositories.
 
-GitPython is a port of the grit_ library in Ruby created by
-Tom Preston-Werner and Chris Wanstrath.
+GitPython was a port of the grit_ library in Ruby created by
+Tom Preston-Werner and Chris Wanstrath, but grew beyond its heritage through its improved design and performance.
 
 .. _grit: http://grit.rubyforge.org
 

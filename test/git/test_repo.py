@@ -89,7 +89,35 @@ class TestRepo(TestBase):
             assert isinstance(tree, Tree)
         # END for each tree
         assert num_trees == mc
-            
+
+
+    def _test_empty_repo(self, repo):
+        # test all kinds of things with an empty, freshly initialized repo. 
+        # It should throw good errors
+        
+        # entries should be empty
+        assert len(repo.index.entries) == 0
+        
+        # head is accessible
+        assert repo.head
+        assert repo.head.ref
+        assert not repo.head.is_valid()
+        
+        # we can change the head to some other ref
+        head_ref = Head.from_path(repo, Head.to_full_path('some_head'))
+        assert not head_ref.is_valid()
+        repo.head.ref = head_ref
+        
+        # is_dirty can handle all kwargs
+        for args in ((1, 0, 0), (0, 1, 0), (0, 0, 1)):
+            assert not repo.is_dirty(*args)
+        # END for each arg 
+        
+        # we can add a file to the index ( if we are not bare )
+        if not repo.bare:
+        	pass
+        # END test repos with working tree
+        
 
     def test_init(self):
         prev_cwd = os.getcwd()
@@ -104,6 +132,8 @@ class TestRepo(TestBase):
                 assert isinstance(r, Repo)
                 assert r.bare == True
                 assert os.path.isdir(r.git_dir)
+                
+                self._test_empty_repo(r)
                 shutil.rmtree(git_dir_abs)
             # END for each path
             
@@ -111,6 +141,8 @@ class TestRepo(TestBase):
             os.chdir(git_dir_rela)
             r = Repo.init(bare=False)
             r.bare == False
+            
+            self._test_empty_repo(r)
         finally:
             try:
                 shutil.rmtree(del_dir_abs)
