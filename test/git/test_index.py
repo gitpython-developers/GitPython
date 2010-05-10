@@ -527,3 +527,33 @@ class TestIndex(TestBase):
         # dir into dir
         rval = index.move(['doc', 'test'])
         assert_mv_rval(rval)
+        
+        
+        # TEST PATH REWRITING
+        ######################
+        count = [0]
+        def rewriter(entry):
+            rval = str(count[0])
+            count[0] += 1
+            return rval
+        # END rewriter
+        
+        def make_paths():
+            # two existing ones, one new one
+            yield 'CHANGES'
+            yield 'ez_setup.py'
+            yield index.entries[index.get_entries_key('README', 0)]
+            yield index.entries[index.get_entries_key('.gitignore', 0)]
+            
+            for fid in range(3):
+				fname = 'newfile%i' % fid
+				open(fname, 'wb').write("abcd")
+				yield Blob(rw_repo, Blob.NULL_HEX_SHA, 0100644, fname)
+			# END for each new file
+        # END path producer
+        paths = list(make_paths())
+        index.add(paths, path_rewriter=rewriter)
+        
+        for filenum in range(len(paths)):
+            assert index.get_entries_key(str(filenum), 0) in index.entries
+        
