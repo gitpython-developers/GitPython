@@ -147,6 +147,10 @@ class TestIndex(TestBase):
     
     @with_rw_repo('0.1.6')
     def test_index_merge_tree(self, rw_repo):
+        # A bit out of place, but we need a different repo for this: 
+        assert self.rorepo != rw_repo and not (self.rorepo == rw_repo)
+        assert len(set((self.rorepo, self.rorepo, rw_repo, rw_repo))) == 2
+        
         # SINGLE TREE MERGE
         # current index is at the (virtual) cur_commit
         next_commit = "4c39f9da792792d4e73fc3a5effde66576ae128c"
@@ -546,10 +550,10 @@ class TestIndex(TestBase):
             yield index.entries[index.get_entries_key('.gitignore', 0)]
             
             for fid in range(3):
-				fname = 'newfile%i' % fid
-				open(fname, 'wb').write("abcd")
-				yield Blob(rw_repo, Blob.NULL_HEX_SHA, 0100644, fname)
-			# END for each new file
+                fname = 'newfile%i' % fid
+                open(fname, 'wb').write("abcd")
+                yield Blob(rw_repo, Blob.NULL_HEX_SHA, 0100644, fname)
+            # END for each new file
         # END path producer
         paths = list(make_paths())
         index.add(paths, path_rewriter=rewriter)

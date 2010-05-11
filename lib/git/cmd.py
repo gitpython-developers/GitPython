@@ -63,8 +63,12 @@ class Git(object):
         def __del__(self):
             # did the process finish already so we have a return code ?
             if self.proc.poll() is not None:
-                return 
-            
+                return
+                
+            # can be that nothing really exists anymore ... 
+            if os is None:
+                return
+                
             # try to kill it
             try:
                 os.kill(self.proc.pid, 2)   # interrupt signal

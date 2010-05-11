@@ -131,6 +131,20 @@ class Repo(object):
         self.working_dir = self._working_tree_dir or self.git_dir
         self.git = Git(self.working_dir)
 
+    def __eq__(self, rhs):
+    	if isinstance(rhs, Repo):
+    		return self.git_dir == rhs.git_dir
+    	return False
+    	
+    def __ne__(self, rhs):
+    	return not self.__eq__(rhs)
+    	
+    def __hash__(self):
+    	return hash(self.git_dir)
+
+	def __repr__(self):
+		return "%s(%r)" % (type(self).__name__, self.git_dir)
+
     # Description property
     def _get_description(self):
         filename = os.path.join(self.git_dir, 'description')
@@ -144,6 +158,8 @@ class Repo(object):
                            doc="the project's description")
     del _get_description
     del _set_description
+    
+    
     
     @property
     def working_tree_dir(self):

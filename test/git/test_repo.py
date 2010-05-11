@@ -115,7 +115,7 @@ class TestRepo(TestBase):
         
         # we can add a file to the index ( if we are not bare )
         if not repo.bare:
-        	pass
+            pass
         # END test repos with working tree
         
 
@@ -327,3 +327,8 @@ class TestRepo(TestBase):
         
         remote = self.rorepo.create_remote("new_remote", "git@server:repo.git")
         self.rorepo.delete_remote(remote)
+        
+    def test_comparison_and_hash(self):
+        # this is only a preliminary test, more testing done in test_index
+        assert self.rorepo == self.rorepo and not (self.rorepo != self.rorepo)
+        assert len(set((self.rorepo, self.rorepo))) == 1
