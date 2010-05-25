@@ -343,6 +343,7 @@ class Diff(object):
                 continue
             # END its not a valid diff line
             old_mode, new_mode, a_blob_id, b_blob_id, change_type, path = line[1:].split(None, 5)
+            path = path.strip()
             a_path = path
             b_path = path
             deleted_file = False

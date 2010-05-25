@@ -8,17 +8,30 @@ from test.testlib import *
 from git import *
 
 class TestDiff(TestBase):
+            
+    def _assert_diff_format(self, diffs):
+        # verify that the format of the diff is sane
+        for diff in diffs:
+            if diff.a_blob:
+                assert not diff.a_blob.path.endswith('\n')
+            if diff.b_blob:
+                assert not diff.b_blob.path.endswith('\n')
+        # END for each diff
+        return diffs
     
     def test_list_from_string_new_mode(self):
         output = ListProcessAdapter(fixture('diff_new_mode'))
         diffs = Diff._index_from_patch_format(self.rorepo, output.stdout)
+        self._assert_diff_format(diffs)
+        
         assert_equal(1, len(diffs))
         assert_equal(10, len(diffs[0].diff.splitlines()))
 
     def test_diff_with_rename(self):
         output = ListProcessAdapter(fixture('diff_rename'))
         diffs = Diff._index_from_patch_format(self.rorepo, output.stdout)
-
+        self._assert_diff_format(diffs)
+        
         assert_equal(1, len(diffs))
 
         diff = diffs[0]
@@ -54,6 +67,7 @@ class TestDiff(TestBase):
                         assert isinstance(diff_index, DiffIndex)
                         
                         if diff_index:
+                            self._assert_diff_format(diff_index)
                             for ct in DiffIndex.change_type:
                                 key = 'ct_%s'%ct
                                 assertion_map.setdefault(key, 0)
