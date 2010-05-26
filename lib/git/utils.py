@@ -177,7 +177,11 @@ class LockFile(object):
 
 class BlockingLockFile(LockFile):
     """The lock file will block until a lock could be obtained, or fail after 
-    a specified timeout"""
+    a specified timeout.
+    
+	:note: If the directory containing the lock was removed, an exception will 
+		be raised during the blocking period, preventing hangs as the lock 
+		can never be obtained."""
     __slots__ = ("_check_interval", "_max_block_time")
     def __init__(self, file_path, check_interval_s=0.3, max_block_time_s=sys.maxint):
         """Configure the instance
@@ -195,7 +199,7 @@ class BlockingLockFile(LockFile):
         
     def _obtain_lock(self):
         """This method blocks until it obtained the lock, or raises IOError if 
-        it ran out of time.
+        it ran out of time or if the parent directory was not available anymore.
         If this method returns, you are guranteed to own the lock"""
         starttime = time.time()
         maxtime = starttime + float(self._max_block_time)
@@ -203,9 +207,16 @@ class BlockingLockFile(LockFile):
             try:
                 super(BlockingLockFile, self)._obtain_lock()
             except IOError:
-                curtime = time.time()
+            	# synity check: if the directory leading to the lockfile is not
+            	# readable anymore, raise an execption
+            	curtime = time.time()
+            	if not os.path.isdir(os.path.dirname(self._lock_file_path())):
+            		msg = "Directory containing the lockfile %r was not readable anymore after waiting %g seconds" % (self._lock_file_path(), curtime - starttime)
+            		raise IOError(msg)
+            	# END handle missing directory
+            	
                 if curtime >= maxtime:
-                    msg = "Waited %f seconds for lock at %r" % ( maxtime - starttime, self._lock_file_path())
+                    msg = "Waited %g seconds for lock at %r" % ( maxtime - starttime, self._lock_file_path())
                     raise IOError(msg)
                 # END abort if we wait too long
                 time.sleep(self._check_interval)
