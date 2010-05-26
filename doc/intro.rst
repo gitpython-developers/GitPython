@@ -15,7 +15,7 @@ Requirements
 ============
 
 * Git_ tested with 1.5.3.7
-* Requires Git_ 1.6.5.4 or newer if index.add function is to be used 
+* Requires Git_ 1.7.0 or newer 
 * `Python Nose`_ - used for running the tests
 * `Mock by Michael Foord`_ used for tests. Requires 0.5
 

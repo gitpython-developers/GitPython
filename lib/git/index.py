@@ -661,15 +661,11 @@ class IndexFile(LazyMixin, diff.Diffable):
             # END path exception handling
         # END for each path
 
-    def _write_path_to_stdin(self, proc, filepath, item, append_or_prepend_nl,
-                                fmakeexc, fprogress, read_from_stdout=True):
+    def _write_path_to_stdin(self, proc, filepath, item, fmakeexc, fprogress, 
+                                read_from_stdout=True):
         """Write path to proc.stdin and make sure it processes the item, including progress.
 
         :return: stdout string
-        :param append_or_prepend_nl:
-            * if -1, a newline will be sent before the filepath is printed.
-            * If 1, a newline will be appended after the filepath was printed.
-            * If 0, no additional newline will be sent.
         :param read_from_stdout: if True, proc.stdout will be read after the item
             was sent to stdin. In that case, it will return None
         :note: There is a bug in git-update-index that prevents it from sending
@@ -684,11 +680,7 @@ class IndexFile(LazyMixin, diff.Diffable):
         fprogress(filepath, False, item)
         rval = None
         try:
-            if append_or_prepend_nl < 0:
-                proc.stdin.write('\n')
-            proc.stdin.write("%s" % filepath)
-            if append_or_prepend_nl > 0:
-                proc.stdin.write('\n')
+            proc.stdin.write("%s\n" % filepath)
         except IOError:
             # pipe broke, usually because some error happend
             raise fmakeexc()
@@ -980,10 +972,9 @@ class IndexFile(LazyMixin, diff.Diffable):
             make_exc = lambda : GitCommandError(("git-update-index",)+args, 128, proc.stderr.read())
             added_files = list()
 
-            prepend_newline = 0
             for filepath in self._iter_expand_paths(paths):
-                self._write_path_to_stdin(proc, filepath, filepath, prepend_newline, make_exc, fprogress, read_from_stdout=False)
-                prepend_newline = -1
+                self._write_path_to_stdin(proc, filepath, filepath, make_exc, 
+                                            fprogress, read_from_stdout=False)
                 added_files.append(filepath)
             # END for each filepath
             self._flush_stdin_and_wait(proc, ignore_stdout=True)    # ignore stdout
@@ -1010,10 +1001,9 @@ class IndexFile(LazyMixin, diff.Diffable):
                 proc = self.repo.git.hash_object(*args, **{'istream':subprocess.PIPE, 'as_process':True})
                 make_exc = lambda : GitCommandError(("git-hash-object",)+args, 128, proc.stderr.read())
                 obj_ids = list()
-                append_newline = 1
                 for ei in null_entries_indices:
                     entry = entries[ei]
-                    obj_ids.append(self._write_path_to_stdin(proc, entry.path, entry, append_newline,
+                    obj_ids.append(self._write_path_to_stdin(proc, entry.path, entry,
                                                                 make_exc, fprogress, read_from_stdout=True))
                 # END for each entry index
                 assert len(obj_ids) == len(null_entries_indices), "git-hash-object did not produce all requested objects: want %i, got %i" % ( len(null_entries_indices), len(obj_ids) )
@@ -1329,7 +1319,6 @@ class IndexFile(LazyMixin, diff.Diffable):
             proc = self.repo.git.checkout_index(args, **kwargs)
             make_exc = lambda : GitCommandError(("git-checkout-index",)+tuple(args), 128, proc.stderr.read())
             checked_out_files = list()
-            prepend_newline = 0
 
             for path in paths:
                 path = self._to_relative_path(path)
@@ -1345,9 +1334,8 @@ class IndexFile(LazyMixin, diff.Diffable):
                     for entry in self.entries.itervalues():
                         if entry.path.startswith(dir):
                             p = entry.path
-                            self._write_path_to_stdin(proc, p, p, prepend_newline,
-                                                        make_exc, fprogress, read_from_stdout=False)
-                            prepend_newline = -1
+                            self._write_path_to_stdin(proc, p, p, make_exc, 
+                                                        fprogress, read_from_stdout=False)
                             checked_out_files.append(p)
                             path_is_directory = True
                         # END if entry is in directory
@@ -1355,9 +1343,8 @@ class IndexFile(LazyMixin, diff.Diffable):
                 # END path exception handlnig
 
                 if not path_is_directory:
-                    self._write_path_to_stdin(proc, path, path, prepend_newline,
-                                                    make_exc, fprogress, read_from_stdout=False)
-                    prepend_newline = -1
+                    self._write_path_to_stdin(proc, path, path, make_exc, 
+                                                fprogress, read_from_stdout=False)
                     checked_out_files.append(path)
                 # END path is a file
             # END for each path
