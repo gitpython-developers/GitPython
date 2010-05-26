@@ -215,6 +215,7 @@ class Git(object):
                                 stdin=istream,
                                 stderr=subprocess.PIPE,
                                 stdout=subprocess.PIPE,
+                                close_fds=(os.name=='posix'),# unsupported on linux
                                 **extra
                                 )
         if as_process:
