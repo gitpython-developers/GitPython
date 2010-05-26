@@ -51,7 +51,7 @@ class SymbolicReference(object):
         """
         return self.path    
     
-    def _get_path(self):
+    def _abs_path(self):
         return join_path_native(self.repo.git_dir, self.path)
         
     @classmethod
@@ -97,7 +97,7 @@ class SymbolicReference(object):
         point to, or None"""
         tokens = None
         try:
-            fp = open(self._get_path(), 'r')
+            fp = open(self._abs_path(), 'r')
             value = fp.read().rstrip()
             fp.close()
             tokens = value.split(" ")
@@ -143,8 +143,15 @@ class SymbolicReference(object):
     def _set_commit(self, commit):
         """
         Set our commit, possibly dereference our symbolic reference first.
+        If the reference does not exist, it will be created
         """
-        if self.is_detached:
+        is_detached = True
+        try:
+            is_detached = self.is_detached
+        except ValueError:
+            pass
+        # END handle non-existing ones
+        if is_detached:
             return self._set_reference(commit)
             
         # set the commit on our reference
@@ -197,7 +204,7 @@ class SymbolicReference(object):
             return 
         # END non-detached handling
         
-        path = self._get_path()
+        path = self._abs_path()
         directory = os.path.dirname(path)
         if not os.path.isdir(directory):
             os.makedirs(directory)
@@ -533,12 +540,28 @@ class Reference(SymbolicReference, LazyMixin, Iterable):
         """
         Set our reference to point to the given ref. It will be converted
         to a specific hexsha.
+        If the reference does not exist, it will be created.
         
         Note: 
             TypeChecking is done by the git command
         """
+        # check for existence, touch it if required
+        abs_path = self._abs_path()
+        existed = True
+        if not os.path.isfile(abs_path):
+        	existed = False
+        	open(abs_path, 'wb').write(Object.NULL_HEX_SHA)
+        # END quick create 
+        
         # do it safely by specifying the old value
-        self.repo.git.update_ref(self.path, ref, self._get_object().sha)
+        try:
+            self.repo.git.update_ref(self.path, ref, (existed and self._get_object().sha) or None)
+        except:
+            if not existed:
+                os.remove(abs_path)
+            # END remove file on error if it didn't exist before
+            raise
+        # END exception handling
         
     object = property(_get_object, _set_object, doc="Return the object our ref currently refers to")
         
@@ -813,11 +836,12 @@ class TagReference(Reference):
         Returns
             Commit object the tag ref points to
         """
-        if self.object.type == "commit":
-            return self.object
-        elif self.object.type == "tag":
+        obj = self.object
+        if obj.type == "commit":
+            return obj
+        elif obj.type == "tag":
             # it is a tag object which carries the commit as an object - we can point to anything
-            return self.object.object
+            return obj.object
         else:
             raise ValueError( "Tag %s points to a Blob or Tree - have never seen that before" % self )  
 
@@ -828,9 +852,14 @@ class TagReference(Reference):
             Tag object this tag ref points to or None in case 
             we are a light weight tag
         """
-        if self.object.type == "tag":
-            return self.object
+        obj = self.object
+        if obj.type == "tag":
+            return obj
         return None
+        
+    # make object read-only
+    # It should be reasonably hard to adjust an existing tag
+    object = property(Reference._get_object)
         
     @classmethod
     def create(cls, repo, path, ref='HEAD', message=None, force=False, **kwargs):

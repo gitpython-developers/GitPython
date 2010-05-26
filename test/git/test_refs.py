@@ -39,6 +39,9 @@ class TestRefs(TestBase):
                 assert isinstance( tagobj.tagged_date, int )
                 assert isinstance( tagobj.tagger_tz_offset, int )
                 assert tagobj.message
+                assert tag.object == tagobj
+                # can't assign the object
+                self.failUnlessRaises(AttributeError, setattr, tag, 'object', tagobj)
             # END if we have a tag object
         # END for tag in repo-tags
         assert tag_object_refs
@@ -384,5 +387,40 @@ class TestRefs(TestBase):
         assert len(refs) == 1
         
         
+        # test creation of new refs from scratch
+        for path in ("basename", "dir/somename", "dir2/subdir/basename"):
+            # REFERENCES 
+            ############
+            fpath = Reference.to_full_path(path)
+            ref_fp = Reference.from_path(rw_repo, fpath)
+            assert not ref_fp.is_valid()
+            ref = Reference(rw_repo, fpath)
+            assert ref == ref_fp
+            
+            # can be created by assigning a commit
+            ref.commit = rw_repo.head.commit
+            assert ref.is_valid()
+            
+            # if the assignment raises, the ref doesn't exist
+            Reference.delete(ref.repo, ref.path)
+            assert not ref.is_valid()
+            self.failUnlessRaises(ValueError, setattr, ref, 'commit', "nonsense")
+            assert not ref.is_valid()
+            
+            # I am sure I had my reason to make it a class method at first, but
+            # now it doesn't make so much sense anymore, want an instance method as well
+            # See http://byronimo.lighthouseapp.com/projects/51787-gitpython/tickets/27
+            Reference.delete(ref.repo, ref.path)
+            assert not ref.is_valid()
+            
+            ref.object = rw_repo.head.commit
+            assert ref.is_valid()
+            
+            Reference.delete(ref.repo, ref.path)
+            assert not ref.is_valid()
+            self.failUnlessRaises(GitCommandError, setattr, ref, 'object', "nonsense")
+            assert not ref.is_valid()
+            
+        # END for each path
         
         
