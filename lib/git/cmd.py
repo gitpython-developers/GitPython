@@ -16,14 +16,7 @@ execute_kwargs = ('istream', 'with_keep_cwd', 'with_extended_output',
                   'with_exceptions', 'as_process', 
                   'output_stream' )
 
-extra = {}
-# NOTE: Execution through a shell on windows appears to be slightly faster, but in fact
-# I consider it a problem whenever complex strings are passed and *interpreted* 
-# by the shell beforehand. This can cause great confusion and reduces compatability
-# between the OS which is why the shell should not be used ( unless it does not work
-# otherwise )
-#if sys.platform == 'win32':
-#   extra = {'shell': False}
+
 
 def dashify(string):
     return string.replace('_', '-')
@@ -140,7 +133,8 @@ class Git(object):
                 with_extended_output=False,
                 with_exceptions=True,
                 as_process=False, 
-                output_stream=None
+                output_stream=None, 
+                **subprocess_kwargs
                 ):
         """
         Handles executing the command on the shell and consumes and returns
@@ -183,7 +177,11 @@ class Git(object):
             This merely is a workaround as data will be copied from the 
             output pipe to the given output stream directly.
             
-        
+        ``**subprocess_kwargs``
+        	Keyword arguments to be passed to subprocess.Popen. Please note that 
+        	some of the valid kwargs are already set by this method, the ones you 
+        	specify may not be the same ones.
+        	
         Returns::
         
          str(output)                                   # extended_output = False (Default)
@@ -216,7 +214,7 @@ class Git(object):
                                 stderr=subprocess.PIPE,
                                 stdout=subprocess.PIPE,
                                 close_fds=(os.name=='posix'),# unsupported on linux
-                                **extra
+                                **subprocess_kwargs
                                 )
         if as_process:
             return self.AutoInterrupt(proc, command)
