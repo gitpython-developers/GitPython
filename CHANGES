@@ -1,7 +1,11 @@
 =======
 CHANGES
 =======
-  
+
+0.2 Beta 2
+===========
+ * Commit objects now carry the 'encoding' information of their message. It wasn't parsed previously, and defaults to UTF-8
+
 0.2
 =====
 General

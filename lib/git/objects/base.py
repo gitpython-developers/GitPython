@@ -141,6 +141,7 @@ class Object(LazyMixin):
         self.repo.git.cat_file(self.type, self.sha, output_stream=ostream)
         return self
 
+
 class IndexObject(Object):
     """
     Base for all objects that can be part of the index file , namely Tree, Blob and
