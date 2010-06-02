@@ -3,6 +3,7 @@
 from test.testlib import *
 from git.odb.db import *
 from git import Blob
+from git.errors import BadObject
 
 from cStringIO import StringIO
 import os
@@ -26,6 +27,18 @@ class TestDB(TestBase):
 					sha = db.to_object(Blob.type, len(data), StringIO(data), dry_run, hex_sha)
 					assert db.has_object(sha) != dry_run
 					assert len(sha) == 20 + hex_sha * 20
+					
+					# verify data - the slow way, we want to run code
+					if not dry_run:
+						type, size = db.object_info(sha)
+						assert Blob.type == type
+						assert size == len(data)
+						
+						type, size, stream = db.object(sha)
+						assert stream.read() == data
+					else:
+						self.failUnlessRaises(BadObject, db.object_info, sha)
+						self.failUnlessRaises(BadObject, db.object, sha)
 				# END for each sha type
 			# END for each data set
 		# END for each dry_run mode

@@ -22,6 +22,7 @@ def to_bin_sha(sha):
 	return hex_to_bin(sha)
 
 # os shortcuts
+getsize = os.path.getsize
 exists = os.path.exists
 mkdir = os.mkdir
 isdir = os.path.isdir

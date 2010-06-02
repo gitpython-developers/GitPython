@@ -1,9 +1,13 @@
 """Contains implementations of database retrieveing objects"""
 import os
-from git.errors import InvalidDBRoot
+from git.errors import (
+	InvalidDBRoot, 
+	BadObject
+	)
 from git.utils import IndexFileSHA1Writer
 
 from utils import (
+		getsize,
 		to_hex_sha,
 		exists,
 		hex_to_bin,
@@ -16,6 +20,7 @@ from utils import (
 	)
 
 import tempfile
+import mmap
 
 
 class iObjectDBR(object):
@@ -136,27 +141,70 @@ class LooseObjectDB(FileDBBase, iObjectDBR, iObjectDBW):
 		self._hexsha_to_file = dict()
 	
 	#{ Interface 
-	def hexsha_to_object_path(self, hexsha):
+	def object_path(self, hexsha):
 		"""
 		:return: path at which the object with the given hexsha would be stored, 
 			relative to the database root"""
 		return join(hexsha[:2], hexsha[2:])
 	
-	#} END interface
-	
-	def has_object(self, sha):
-		sha = to_hex_sha(sha)
-		# try cache
-		if sha in self._hexsha_to_file:
-			return True
+	def readable_db_object_path(self, hexsha):
+		"""
+		:return: readable object path to the object identified by hexsha
+		:raise BadObject: If the object file does not exist"""
+		try:
+			return self._hexsha_to_file[hexsha]
+		except KeyError:
+			pass
+		# END ignore cache misses 
 			
 		# try filesystem
-		path = self.db_path(self.hexsha_to_object_path(sha))
+		path = self.db_path(self.object_path(hexsha))
 		if exists(path):
-			self._hexsha_to_file[sha] = path
-			return True
+			self._hexsha_to_file[hexsha] = path
+			return path
 		# END handle cache
-		return False
+		raise BadObject(hexsha)
+		
+	#} END interface
+	
+	def _object_header_info(self, mmap):
+		""":return: tuple(type_string, uncompressed_size_in_bytes 
+		:param mmap: newly mapped memory map at position 0. It will be 
+			seeked to the actual start of the object contents, which can be used
+			to initialize a zlib decompress object."""
+		raise NotImplementedError("todo")
+	
+	def _map_object(self, sha):
+		"""
+		:return: tuple(file, mmap) tuple with an opened file for reading, and 
+			a memory map of that file"""
+		db_path = self.readable_db_object_path(to_hex_sha(sha))
+		f = open(db_path, 'rb')
+		m = mmap.mmap(f.fileno(), getsize(db_path), access=mmap.ACCESS_READ)
+		return (f, m)
+			
+	def object_info(self, sha):
+		f, m = self._map_object(sha)
+		try:
+			type, size = self._object_header_info(m)
+		finally:
+			f.close()
+			m.close()
+		# END assure release of system resources
+		
+	def object(self, sha):
+		f, m = self._map_object(sha)
+		type, size = self._object_header_info(m)
+		# TODO: init a dynamic decompress stream from our memory map
+		
+		
+	def has_object(self, sha):
+		try:
+			self.readable_db_object_path(to_hex_sha(sha))
+			return True
+		except BadObject:
+			return False
+		# END check existance
 	
 	def to_object(self, type, size, stream, dry_run=False, sha_as_hex=True):
 		# open a tmp file to write the data to
@@ -194,7 +242,7 @@ class LooseObjectDB(FileDBBase, iObjectDBR, iObjectDBW):
 			os.remove(tmp_path)
 		else:
 			# rename the file into place
-			obj_path = self.db_path(self.hexsha_to_object_path(sha))
+			obj_path = self.db_path(self.object_path(sha))
 			obj_dir = dirname(obj_path)
 			if not isdir(obj_dir):
 				mkdir(obj_dir)
