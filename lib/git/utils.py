@@ -61,11 +61,13 @@ def join_path_native(a, *p):
     return to_native_path(join_path(a, *p))
 
 
-class SHA1Writer(object):
+class IndexFileSHA1Writer(object):
     """
     Wrapper around a file-like object that remembers the SHA1 of 
     the data written to it. It will write a sha when the stream is closed
     or if the asked for explicitly usign write_sha.
+    
+    Only useful to the indexfile
     
     Note:
         Based on the dulwich project
@@ -78,7 +80,7 @@ class SHA1Writer(object):
 
     def write(self, data):
         self.sha1.update(data)
-        self.f.write(data)
+        return self.f.write(data)
 
     def write_sha(self):
         sha = self.sha1.digest()

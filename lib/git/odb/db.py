@@ -1,6 +1,21 @@
 """Contains implementations of database retrieveing objects"""
 import os
 from git.errors import InvalidDBRoot
+from git.utils import IndexFileSHA1Writer
+
+from utils import (
+		to_hex_sha,
+		exists,
+		hex_to_bin,
+		FDCompressedSha1Writer,
+		isdir,
+		mkdir,
+		rename,
+		dirname,
+		join
+	)
+
+import tempfile
 
 
 class iObjectDBR(object):
@@ -9,29 +24,29 @@ class iObjectDBR(object):
 	by sha (20 bytes)"""
 	__slots__ = tuple()
 	
+	def __contains__(self, sha):
+		return self.has_obj
+	
 	#{ Query Interface 
-	def has_obj_hex(self, hexsha):
-		""":return: True if the object identified by the given 40 byte hexsha is 
-		contained in the database"""
+	def has_object(self, sha):
+		"""
+		:return: True if the object identified by the given 40 byte hexsha or 20 bytes
+			binary sha is contained in the database"""
 		raise NotImplementedError("To be implemented in subclass")
 		
-	def has_obj_bin(self, sha):
-		""":return: as ``has_obj_hex``, but takes a 20 byte binary sha"""
+	def object(self, sha):
+		"""
+		:return: tuple(type_string, size_in_bytes, stream) a tuple with object
+			information including its type, its size as well as a stream from which its
+			contents can be read
+		:param sha: 40 bytes hexsha or 20 bytes binary sha  """
 		raise NotImplementedError("To be implemented in subclass")
 		
-	def obj_hex(self, hexsha):
-		""":return: tuple(type_string, size_in_bytes, stream) a tuple with object
-		information including its type, its size as well as a stream from which its
-		contents can be read"""
-		raise NotImplementedError("To be implemented in subclass")
-		
-	def obj_bin(self, sha):
-		""":return: as in ``obj_hex``, but takes a binary sha"""
-		raise NotImplementedError("To be implemented in subclass")
-		
-	def obj_info_hex(self, hexsha):
-		""":return: tuple(type_string, size_in_bytes) tuple with the object's type 
-			string as well as its size in bytes"""
+	def object_info(self, sha):
+		"""
+		:return: tuple(type_string, size_in_bytes) tuple with the object's type 
+			string as well as its size in bytes
+		:param sha: 40 bytes hexsha or 20 bytes binary sha"""
 		raise NotImplementedError("To be implemented in subclass")
 			
 	#} END query interface
@@ -42,7 +57,7 @@ class iObjectDBW(object):
 	
 	#{ Edit Interface
 	
-	def to_obj(self, type, size, stream, dry_run=False, sha_as_hex=True):
+	def to_object(self, type, size, stream, dry_run=False, sha_as_hex=True):
 		"""Create a new object in the database
 		:return: the sha identifying the object in the database
 		:param type: type string identifying the object
@@ -53,7 +68,7 @@ class iObjectDBW(object):
 			hex encoded, not binary"""
 		raise NotImplementedError("To be implemented in subclass")
 	
-	def to_objs(self, iter_info, dry_run=False, sha_as_hex=True, max_threads=0):
+	def to_objects(self, iter_info, dry_run=False, sha_as_hex=True, max_threads=0):
 		"""Create multiple new objects in the database
 		:return: sequence of shas identifying the created objects in the order in which 
 			they where given.
@@ -68,7 +83,7 @@ class iObjectDBW(object):
 		# actually use multiple threads, default False of course. If the add
 		shas = list()
 		for args in iter_info:
-			shas.append(self.to_obj(*args, dry_run=dry_run, sha_as_hex=sha_as_hex))
+			shas.append(self.to_object(*args, dry_run=dry_run, sha_as_hex=sha_as_hex))
 		return shas
 		
 	#} END edit interface
@@ -95,18 +110,103 @@ class FileDBBase(object):
 		""":return: path at which this db operates"""
 		return self._root_path
 	
+	def db_path(self, rela_path):
+		"""
+		:return: the given relative path relative to our database root, allowing 
+			to pontentially access datafiles"""
+		return join(self._root_path, rela_path)
 	#} END interface
 		
 	#{ Utiltities
-	def _root_rela_path(self, rela_path):
-		""":return: the given relative path relative to our database root"""
-		return os.path.join(self._root_path, rela_path)
+	
 		
 	#} END utilities
 	
 	
 class LooseObjectDB(FileDBBase, iObjectDBR, iObjectDBW):
 	"""A database which operates on loose object files"""
+	__slots__ = ('_hexsha_to_file', )
+	
+	# CONFIGURATION
+	# chunks in which data will be copied between streams
+	stream_chunk_size = 1000*1000
+	
+	def __init__(self, root_path):
+		super(LooseObjectDB, self).__init__(root_path)
+		self._hexsha_to_file = dict()
+	
+	#{ Interface 
+	def hexsha_to_object_path(self, hexsha):
+		"""
+		:return: path at which the object with the given hexsha would be stored, 
+			relative to the database root"""
+		return join(hexsha[:2], hexsha[2:])
+	
+	#} END interface
+	
+	def has_object(self, sha):
+		sha = to_hex_sha(sha)
+		# try cache
+		if sha in self._hexsha_to_file:
+			return True
+			
+		# try filesystem
+		path = self.db_path(self.hexsha_to_object_path(sha))
+		if exists(path):
+			self._hexsha_to_file[sha] = path
+			return True
+		# END handle cache
+		return False
+	
+	def to_object(self, type, size, stream, dry_run=False, sha_as_hex=True):
+		# open a tmp file to write the data to
+		fd, tmp_path = tempfile.mkstemp(prefix='obj', dir=self._root_path)
+		writer = FDCompressedSha1Writer(fd)
+		
+		# WRITE HEADER: type SP size NULL
+		writer.write("%s %i%s" % (type, size, chr(0)))
+		
+		# WRITE ALL DATA
+		chunksize = self.stream_chunk_size
+		try:
+			try:
+				while True:
+					data_len = writer.write(stream.read(chunksize))
+					if data_len < chunksize:
+						# WRITE FOOTER
+						writer.write('\n')
+						break
+					# END check for stream end
+				# END duplicate data
+			finally:
+				writer.close()
+			# END assure file was closed
+		except:
+			os.remove(tmp_path)
+			raise
+		# END assure tmpfile removal on error
+		
+		
+		# in dry-run mode, we delete the file afterwards
+		sha = writer.sha(as_hex=True)
+		
+		if dry_run:
+			os.remove(tmp_path)
+		else:
+			# rename the file into place
+			obj_path = self.db_path(self.hexsha_to_object_path(sha))
+			obj_dir = dirname(obj_path)
+			if not isdir(obj_dir):
+				mkdir(obj_dir)
+			# END handle destination directory
+			rename(tmp_path, obj_path)
+		# END handle dry_run
+		
+		if not sha_as_hex:
+			sha = hex_to_bin(sha)
+		# END handle sha format
+		
+		return sha
 	
 	
 class PackedDB(FileDBBase, iObjectDBR):

@@ -21,7 +21,7 @@ import git.diff as diff
 
 from errors import GitCommandError
 from git.objects import Blob, Tree, Object, Commit
-from git.utils import SHA1Writer, LazyMixin, ConcurrentWriteOperation, join_path_native
+from git.utils import IndexFileSHA1Writer, LazyMixin, ConcurrentWriteOperation, join_path_native
 
 
 class CheckoutError( Exception ):
@@ -461,7 +461,7 @@ class IndexFile(LazyMixin, diff.Diffable):
         write_op = ConcurrentWriteOperation(file_path or self._file_path)
         stream = write_op._begin_writing()
 
-        stream = SHA1Writer(stream)
+        stream = IndexFileSHA1Writer(stream)
 
         # header
         stream.write("DIRC")
