@@ -8,19 +8,16 @@ Module containing all exceptions thrown througout the git package,
 """
 
 class InvalidGitRepositoryError(Exception):
-    """
-    Thrown if the given repository appears to have an invalid format. 
-    """
+    """ Thrown if the given repository appears to have an invalid format.  """
+
+class InvalidDBRoot(Exception):
+	"""Thrown if an object database cannot be initialized at the given path"""
 
 class NoSuchPathError(OSError):
-    """
-    Thrown if a path could not be access by the system.
-    """
+    """ Thrown if a path could not be access by the system. """
 
 class GitCommandError(Exception):
-    """
-    Thrown if execution of the git command fails with non-zero status code.
-    """
+    """ Thrown if execution of the git command fails with non-zero status code. """
     def __init__(self, command, status, stderr=None):
         self.stderr = stderr
         self.status = status
