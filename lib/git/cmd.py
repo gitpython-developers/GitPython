@@ -130,8 +130,13 @@ class Git(object):
 			if self._nbr == self._size:
 				return ''
 			
+			# clamp size to lowest allowed value
+			bytes_left = self._size - self._nbr
 			if size > -1:
-				size = min(self._size - self._nbr, size)
+				size = min(bytes_left, size)
+			else:
+				size = bytes_left
+			# END handle size
 			
 			data = self._stream.readline(size)
 			self._nbr += len(data)
