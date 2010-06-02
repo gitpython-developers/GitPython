@@ -4,12 +4,12 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
-from test.testlib import *
+from lib import *
 from git import *
 from time import time
 import sys
 
-class TestPerformance(TestBase):
+class TestPerformance(TestBigRepoReadOnly):
 
 	# ref with about 100 commits in its history
 	ref_100 = '0.1.6'
@@ -48,7 +48,7 @@ class TestPerformance(TestBase):
 		# bound to cat-file parsing performance
 		nc = 0
 		st = time()
-		for c in self.rorepo.commit(self.ref_100).traverse(branch_first=False):
+		for c in self.gitrepo.commit(self.head_sha_2k).traverse(branch_first=False):
 			nc += 1
 			self._query_commit_info(c)
 		# END for each traversed commit
@@ -59,7 +59,7 @@ class TestPerformance(TestBase):
 		# bound to stream parsing performance
 		nc = 0
 		st = time()
-		for c in Commit.iter_items(self.rorepo, self.ref_100):
+		for c in Commit.iter_items(self.gitrepo, self.head_sha_2k):
 			nc += 1
 			self._query_commit_info(c)
 		# END for each traversed commit

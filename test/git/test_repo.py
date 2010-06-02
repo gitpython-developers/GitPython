@@ -55,32 +55,27 @@ class TestRepo(TestBase):
         # try from invalid revision that does not exist
         self.failUnlessRaises(ValueError, self.rorepo.tree, 'hello world')
 
-    @patch_object(Git, '_call_process')
-    def test_commits(self, git):
-        git.return_value = StringProcessAdapter(fixture('rev_list'))
-
-        commits = list(self.rorepo.iter_commits('master', max_count=10))
+    def test_commits(self):
+    	mc = 10
+        commits = list(self.rorepo.iter_commits('0.1.6', max_count=mc))
+        assert len(commits) == mc
         
         c = commits[0]
-        assert_equal('4c8124ffcf4039d292442eeccabdeca5af5c5017', c.sha)
-        assert_equal(["634396b2f541a9f2d58b00be1a07f0c358b999b3"], [p.sha for p in c.parents])
-        assert_equal("672eca9b7f9e09c22dcb128c283e8c3c8d7697a4", c.tree.sha)
-        assert_equal("Tom Preston-Werner", c.author.name)
-        assert_equal("tom@mojombo.com", c.author.email)
-        assert_equal(1191999972, c.authored_date)
-        assert_equal("Tom Preston-Werner", c.committer.name)
-        assert_equal("tom@mojombo.com", c.committer.email)
-        assert_equal(1191999972, c.committed_date)
-        assert_equal("implement Grit#heads", c.message)
+        assert_equal('9a4b1d4d11eee3c5362a4152216376e634bd14cf', c.sha)
+        assert_equal(["c76852d0bff115720af3f27acdb084c59361e5f6"], [p.sha for p in c.parents])
+        assert_equal("ce41fc29549042f1aa09cc03174896cf23f112e3", c.tree.sha)
+        assert_equal("Michael Trier", c.author.name)
+        assert_equal("mtrier@gmail.com", c.author.email)
+        assert_equal(1232829715, c.authored_date)
+        assert_equal(5*3600, c.author_tz_offset)
+        assert_equal("Michael Trier", c.committer.name)
+        assert_equal("mtrier@gmail.com", c.committer.email)
+        assert_equal(1232829715, c.committed_date)
+        assert_equal(5*3600, c.committer_tz_offset)
+        assert_equal("Bumped version 0.1.6", c.message)
 
         c = commits[1]
-        assert_equal(tuple(), c.parents)
-
-        c = commits[2]
-        assert_equal(["6e64c55896aabb9a7d8e9f8f296f426d21a78c2c", "7f874954efb9ba35210445be456c74e037ba6af2"], map(lambda p: p.sha, c.parents))
-        assert_equal("Merge branch 'site'", c.summary)
-
-        assert_true(git.called)
+        assert isinstance(c.parents, tuple)
 
     def test_trees(self):
         mc = 30

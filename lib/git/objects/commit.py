@@ -106,13 +106,12 @@ class Commit(base.Object, Iterable, diff.Diffable, utils.Traversable, utils.Seri
 		return commit.parents
 
 	def _set_cache_(self, attr):
-		"""
-		Called by LazyMixin superclass when the given uninitialized member needs 
+		""" Called by LazyMixin superclass when the given uninitialized member needs 
 		to be set.
-		We set all values at once.
-		"""
+		We set all values at once. """
 		if attr in Commit.__slots__:
 			# read the data in a chunk, its faster - then provide a file wrapper
+			# Could use self.data, but lets try to get it with less calls
 			hexsha, typename, size, data = self.repo.git.get_object_data(self)
 			self._deserialize(StringIO(data))
 		else:
@@ -181,16 +180,16 @@ class Commit(base.Object, Iterable, diff.Diffable, utils.Traversable, utils.Seri
 		Returns
 			iterator yielding Commit items
 		"""
-		options = {'pretty': 'raw', 'as_process' : True }
-		options.update(kwargs)
-		
+		if 'pretty' in kwargs:
+			raise ValueError("--pretty cannot be used as parsing expects single sha's only")
+		# END handle pretty
 		args = list()
 		if paths:
 			args.extend(('--', paths))
 		# END if paths
 
-		proc = repo.git.rev_list(rev, args, **options)
-		return cls._iter_from_process_or_stream(repo, proc, True)
+		proc = repo.git.rev_list(rev, args, as_process=True, **kwargs)
+		return cls._iter_from_process_or_stream(repo, proc)
 		
 	def iter_parents(self, paths='', **kwargs):
 		"""
@@ -235,35 +234,30 @@ class Commit(base.Object, Iterable, diff.Diffable, utils.Traversable, utils.Seri
 		return stats.Stats._list_from_string(self.repo, text)
 
 	@classmethod
-	def _iter_from_process_or_stream(cls, repo, proc_or_stream, from_rev_list):
-		"""
-		Parse out commit information into a list of Commit objects
+	def _iter_from_process_or_stream(cls, repo, proc_or_stream):
+		"""Parse out commit information into a list of Commit objects
+		We expect one-line per commit, and parse the actual commit information directly
+		from our lighting fast object database
 
-		``repo``
-			is the Repo
-
-		``proc``
-			git-rev-list process instance (raw format)
-
-		``from_rev_list``
-			If True, the stream was created by rev-list in which case we parse 
-			the message differently
-		Returns
-			iterator returning Commit objects
-		"""
+		:param proc: git-rev-list process instance - one sha per line
+		:return: iterator returning Commit objects"""
 		stream = proc_or_stream
 		if not hasattr(stream,'readline'):
 			stream = proc_or_stream.stdout
 			
+		readline = stream.readline
 		while True:
-			line = stream.readline()
+			line = readline()
 			if not line:
 				break
-			commit_tokens = line.split()
-			id = commit_tokens[1]
-			assert commit_tokens[0] == "commit"
+			sha = line.strip()
+			if len(sha) > 40:
+				# split additional information, as returned by bisect for instance
+				sha, rest = line.split(None, 1)
+			# END handle extra info
 			
-			yield Commit(repo, id)._deserialize(stream, from_rev_list) 
+			assert len(sha) == 40, "Invalid line: %s" % sha
+			yield Commit(repo, sha)
 		# END for each line in stream
 		
 		
@@ -386,15 +380,16 @@ class Commit(base.Object, Iterable, diff.Diffable, utils.Traversable, utils.Seri
 		# for now, this is very inefficient and in fact shouldn't be used like this
 		return super(Commit, self)._serialize(stream)
 	
-	def _deserialize(self, stream, from_rev_list=False):
+	def _deserialize(self, stream):
 		""":param from_rev_list: if true, the stream format is coming from the rev-list command
 		Otherwise it is assumed to be a plain data stream from our object"""
-		self.tree = Tree(self.repo, stream.readline().split()[1], 0, '')
+		readline = stream.readline
+		self.tree = Tree(self.repo, readline().split()[1], 0, '')
 
 		self.parents = list()
 		next_line = None
 		while True:
-			parent_line = stream.readline()
+			parent_line = readline()
 			if not parent_line.startswith('parent'):
 				next_line = parent_line
 				break
@@ -404,37 +399,24 @@ class Commit(base.Object, Iterable, diff.Diffable, utils.Traversable, utils.Seri
 		self.parents = tuple(self.parents)
 		
 		self.author, self.authored_date, self.author_tz_offset = utils.parse_actor_and_date(next_line)
-		self.committer, self.committed_date, self.committer_tz_offset = utils.parse_actor_and_date(stream.readline())
+		self.committer, self.committed_date, self.committer_tz_offset = utils.parse_actor_and_date(readline())
 		
 		
-		# empty line
+		# now we can have the encoding line, or an empty line followed by the optional
+		# message.
 		self.encoding = self.default_encoding
-		enc = stream.readline()
-		enc.strip()
+		# read encoding or empty line to separate message
+		enc = readline()
+		enc = enc.strip()
 		if enc:
 			self.encoding = enc[enc.find(' ')+1:]
-		# END parse encoding
+			# now comes the message separator 
+			readline()
+		# END handle encoding
 		
-		message_lines = list()
-		if from_rev_list:
-			while True:
-				msg_line = stream.readline()
-				if not msg_line.startswith('    '):
-					# and forget about this empty marker
-					# cut the last newline to get rid of the artificial newline added
-					# by rev-list command. Lets hope its just linux style \n
-					message_lines[-1] = message_lines[-1][:-1]
-					break
-				# END abort message reading 
-				# strip leading 4 spaces
-				message_lines.append(msg_line[4:])
-			# END while there are message lines
-			self.message = ''.join(message_lines)
-		else:
-			# a stream from our data simply gives us the plain message
-			# The end of our message stream is marked with a newline that we strip
-			self.message = stream.read()[:-1]
-		# END message parsing
+		# a stream from our data simply gives us the plain message
+		# The end of our message stream is marked with a newline that we strip
+		self.message = stream.read()[:-1]
 		return self
 		
 	#} END serializable implementation
