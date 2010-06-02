@@ -48,6 +48,7 @@ class TestRepo(TestBase):
         
     def test_tree_from_revision(self):
         tree = self.rorepo.tree('0.1.6')
+        assert len(tree.sha) == 40 
         assert tree.type == "tree"
         assert self.rorepo.tree(tree) == tree
         
@@ -56,9 +57,9 @@ class TestRepo(TestBase):
 
     @patch_object(Git, '_call_process')
     def test_commits(self, git):
-        git.return_value = ListProcessAdapter(fixture('rev_list'))
+        git.return_value = StringProcessAdapter(fixture('rev_list'))
 
-        commits = list( self.rorepo.iter_commits('master', max_count=10) )
+        commits = list(self.rorepo.iter_commits('master', max_count=10))
         
         c = commits[0]
         assert_equal('4c8124ffcf4039d292442eeccabdeca5af5c5017', c.sha)

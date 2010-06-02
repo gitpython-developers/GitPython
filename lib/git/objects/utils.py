@@ -280,3 +280,20 @@ class Traversable(object):
 	
 			addToStack( stack, item, branch_first, nd )
 		# END for each item on work stack
+		
+
+class Serializable(object):
+	"""Defines methods to serialize and deserialize objects from and into a data stream"""
+	
+	def _serialize(self, stream):
+		"""Serialize the data of this object into the given data stream
+		:note: a serialized object would ``_deserialize`` into the same objet
+		:param stream: a file-like object
+		:return: self"""
+		raise NotImplementedError("To be implemented in subclass")
+		
+	def _deserialize(self, stream):
+		"""Deserialize all information regarding this object from the stream
+		:param stream: a file-like object
+		:return: self"""
+		raise NotImplementedError("To be implemented in subclass")

@@ -129,7 +129,7 @@ class TestCommit(TestBase):
                                       bisect_all=True)
         assert_true(git.called)
 
-        commits = Commit._iter_from_process_or_stream(self.rorepo, ListProcessAdapter(revs), True)
+        commits = Commit._iter_from_process_or_stream(self.rorepo, StringProcessAdapter(revs), True)
         expected_ids = (
             'cf37099ea8d1d8c7fbf9b6d12d7ec0249d3acb8b',
             '33ebe7acec14b25c5f84f35a664803fcab2f7781',

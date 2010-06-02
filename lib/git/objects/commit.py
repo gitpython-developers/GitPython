@@ -9,12 +9,14 @@ import git.diff as diff
 import git.stats as stats
 from git.actor import Actor
 from tree import Tree
+from cStringIO import StringIO
 import base
 import utils
 import time
 import os
 
-class Commit(base.Object, Iterable, diff.Diffable, utils.Traversable):
+
+class Commit(base.Object, Iterable, diff.Diffable, utils.Traversable, utils.Serializable):
 	"""
 	Wraps a git Commit object.
 	
@@ -91,7 +93,8 @@ class Commit(base.Object, Iterable, diff.Diffable, utils.Traversable):
 		self._set_self_from_args_(locals())
 
 		if parents is not None:
-			self.parents = tuple( self.__class__(repo, p) for p in parents )
+			cls = type(self)
+			self.parents = tuple(cls(repo, p) for p in parents if not isinstance(p, cls))
 		# END for each parent to convert
 			
 		if self.sha and tree is not None:
@@ -109,20 +112,9 @@ class Commit(base.Object, Iterable, diff.Diffable, utils.Traversable):
 		We set all values at once.
 		"""
 		if attr in Commit.__slots__:
-			# prepare our data lines to match rev-list
-			data_lines = self.data.splitlines()
-			data_lines.insert(0, "commit %s" % self.sha)
-			temp = self._iter_from_process_or_stream(self.repo, iter(data_lines), False).next()
-			self.parents = temp.parents
-			self.tree = temp.tree
-			self.author = temp.author
-			self.authored_date = temp.authored_date
-			self.author_tz_offset = temp.author_tz_offset
-			self.committer = temp.committer
-			self.committed_date = temp.committed_date
-			self.committer_tz_offset = temp.committer_tz_offset
-			self.message = temp.message
-			self.encoding = temp.encoding
+			# read the data in a chunk, its faster - then provide a file wrapper
+			hexsha, typename, size, data = self.repo.git.get_object_data(self)
+			self._deserialize(StringIO(data))
 		else:
 			super(Commit, self)._set_cache_(attr)
 
@@ -260,59 +252,18 @@ class Commit(base.Object, Iterable, diff.Diffable, utils.Traversable):
 			iterator returning Commit objects
 		"""
 		stream = proc_or_stream
-		if not hasattr(stream,'next'):
+		if not hasattr(stream,'readline'):
 			stream = proc_or_stream.stdout
 			
-		for line in stream:
-			commit_tokens = line.split() 
+		while True:
+			line = stream.readline()
+			if not line:
+				break
+			commit_tokens = line.split()
 			id = commit_tokens[1]
 			assert commit_tokens[0] == "commit"
-			tree = stream.next().split()[1]
-
-			parents = []
-			next_line = None
-			for parent_line in stream:
-				if not parent_line.startswith('parent'):
-					next_line = parent_line
-					break
-				# END abort reading parents
-				parents.append(parent_line.split()[-1])
-			# END for each parent line
 			
-			author, authored_date, author_tz_offset = utils.parse_actor_and_date(next_line)
-			committer, committed_date, committer_tz_offset = utils.parse_actor_and_date(stream.next())
-			
-			
-			# empty line
-			encoding = stream.next()
-			encoding.strip()
-			if encoding:
-				encoding = encoding[encoding.find(' ')+1:]
-			# END parse encoding
-			
-			message_lines = list()
-			if from_rev_list:
-				for msg_line in stream:
-					if not msg_line.startswith('    '):
-						# and forget about this empty marker
-						break
-					# END abort message reading 
-					# strip leading 4 spaces
-					message_lines.append(msg_line[4:])
-				# END while there are message lines
-			else:
-				# a stream from our data simply gives us the plain message
-				for msg_line in stream:
-					message_lines.append(msg_line)
-			# END message parsing
-			message = '\n'.join(message_lines)
-			
-			
-			yield Commit(repo, id, tree,  
-						 author, authored_date, author_tz_offset,
-						 committer, committed_date, committer_tz_offset,
-						 message, tuple(parents), 
-						 encoding or cls.default_encoding)
+			yield Commit(repo, id)._deserialize(stream, from_rev_list) 
 		# END for each line in stream
 		
 		
@@ -393,7 +344,7 @@ class Commit(base.Object, Iterable, diff.Diffable, utils.Traversable):
 		
 		# assume utf8 encoding
 		enc_section, enc_option = cls.conf_encoding.split('.')
-		conf_encoding = cr.get_value(enc_section, enc_option, default_encoding)
+		conf_encoding = cr.get_value(enc_section, enc_option, cls.default_encoding)
 		
 		author = Actor(author_name, author_email)
 		committer = Actor(committer_name, committer_email)
@@ -429,3 +380,61 @@ class Commit(base.Object, Iterable, diff.Diffable, utils.Traversable):
 	def __repr__(self):
 		return '<git.Commit "%s">' % self.sha
 
+	#{ Serializable Implementation
+	
+	def _serialize(self, stream):
+		# for now, this is very inefficient and in fact shouldn't be used like this
+		return super(Commit, self)._serialize(stream)
+	
+	def _deserialize(self, stream, from_rev_list=False):
+		""":param from_rev_list: if true, the stream format is coming from the rev-list command
+		Otherwise it is assumed to be a plain data stream from our object"""
+		self.tree = Tree(self.repo, stream.readline().split()[1], 0, '')
+
+		self.parents = list()
+		next_line = None
+		while True:
+			parent_line = stream.readline()
+			if not parent_line.startswith('parent'):
+				next_line = parent_line
+				break
+			# END abort reading parents
+			self.parents.append(type(self)(self.repo, parent_line.split()[-1]))
+		# END for each parent line
+		self.parents = tuple(self.parents)
+		
+		self.author, self.authored_date, self.author_tz_offset = utils.parse_actor_and_date(next_line)
+		self.committer, self.committed_date, self.committer_tz_offset = utils.parse_actor_and_date(stream.readline())
+		
+		
+		# empty line
+		self.encoding = self.default_encoding
+		enc = stream.readline()
+		enc.strip()
+		if enc:
+			self.encoding = enc[enc.find(' ')+1:]
+		# END parse encoding
+		
+		message_lines = list()
+		if from_rev_list:
+			while True:
+				msg_line = stream.readline()
+				if not msg_line.startswith('    '):
+					# and forget about this empty marker
+					# cut the last newline to get rid of the artificial newline added
+					# by rev-list command. Lets hope its just linux style \n
+					message_lines[-1] = message_lines[-1][:-1]
+					break
+				# END abort message reading 
+				# strip leading 4 spaces
+				message_lines.append(msg_line[4:])
+			# END while there are message lines
+			self.message = ''.join(message_lines)
+		else:
+			# a stream from our data simply gives us the plain message
+			# The end of our message stream is marked with a newline that we strip
+			self.message = stream.read()[:-1]
+		# END message parsing
+		return self
+		
+	#} END serializable implementation

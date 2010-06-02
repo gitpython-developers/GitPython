@@ -20,7 +20,7 @@ class TestDiff(TestBase):
         return diffs
     
     def test_list_from_string_new_mode(self):
-        output = ListProcessAdapter(fixture('diff_new_mode'))
+        output = StringProcessAdapter(fixture('diff_new_mode'))
         diffs = Diff._index_from_patch_format(self.rorepo, output.stdout)
         self._assert_diff_format(diffs)
         
@@ -28,7 +28,7 @@ class TestDiff(TestBase):
         assert_equal(10, len(diffs[0].diff.splitlines()))
 
     def test_diff_with_rename(self):
-        output = ListProcessAdapter(fixture('diff_rename'))
+        output = StringProcessAdapter(fixture('diff_rename'))
         diffs = Diff._index_from_patch_format(self.rorepo, output.stdout)
         self._assert_diff_format(diffs)
         
@@ -47,7 +47,7 @@ class TestDiff(TestBase):
                     "diff_tree_numstat_root" )
         
         for fixture_name in fixtures:
-            diff_proc = ListProcessAdapter(fixture(fixture_name))
+            diff_proc = StringProcessAdapter(fixture(fixture_name))
             diffs = Diff._index_from_patch_format(self.rorepo, diff_proc.stdout)
         # END for each fixture
 
