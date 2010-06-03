@@ -103,10 +103,12 @@ class DecompressMemMapReader(object):
 		times we actually allocate. An own zlib implementation would be good here
 		to better support streamed reading - it would only need to keep the mmap
 		and decompress it into chunks, thats all ... """
-	__slots__ = ('_m', '_zip', '_buf', '_buflen', '_br', '_cws', '_cwe', '_s', '_cs', '_close')
+	__slots__ = ('_m', '_zip', '_buf', '_buflen', '_br', '_cws', '_cwe', '_s', '_close')
 	
-	def __init__(self, m, close_on_deletion, cs = 128*1024):
-		"""Initialize with mmap and chunk_size for stream reading"""
+	max_read_size = 512*1024
+	
+	def __init__(self, m, close_on_deletion):
+		"""Initialize with mmap for stream reading"""
 		self._m = m
 		self._zip = zlib.decompressobj()
 		self._buf = None						# buffer of decompressed bytes
@@ -115,7 +117,6 @@ class DecompressMemMapReader(object):
 		self._br = 0							# num uncompressed bytes read
 		self._cws = 0							# start byte of compression window
 		self._cwe = 0							# end byte of compression window
-		self._cs = cs							# chunk size (when reading from zip) 
 		self._close = close_on_deletion			# close the memmap on deletion ?
 		
 	def __del__(self):
@@ -162,6 +163,28 @@ class DecompressMemMapReader(object):
 		if size == 0:
 			return str()
 		# END handle depletion
+		
+		# protect from memory peaks
+		# If he tries to read large chunks, our memory patterns get really bad
+		# as we end up copying a possibly huge chunk from our memory map right into
+		# memory. This might not even be possible. Nonetheless, try to dampen the 
+		# effect a bit by reading in chunks, returning a huge string in the end.
+		# Our performance now depends on StringIO. This way we don't need two large
+		# buffers in peak times, but only one large one in the end which is 
+		# the return buffer
+		if size > self.max_read_size:
+			sio = StringIO()
+			while size:
+				read_size = min(self.max_read_size, size)
+				data = self.read(read_size)
+				sio.write(data)
+				size -= len(data)
+				if len(data) < read_size:
+					break
+			# END data loop
+			sio.seek(0)
+			return sio.getvalue()
+		# END handle maxread
 		
 		# deplete the buffer, then just continue using the decompress object 
 		# which has an own buffer. We just need this to transparently parse the 
