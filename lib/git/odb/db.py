@@ -1,17 +1,18 @@
 """Contains implementations of database retrieveing objects"""
-import os
+from git.utils import IndexFileSHA1Writer
 from git.errors import (
 	InvalidDBRoot, 
-	BadObject
+	BadObject, 
+	BadObjectType
 	)
-from git.utils import IndexFileSHA1Writer
 
 from utils import (
-		getsize,
+		DecompressMemMapReader,
+		FDCompressedSha1Writer,
+		ENOENT,
 		to_hex_sha,
 		exists,
 		hex_to_bin,
-		FDCompressedSha1Writer,
 		isdir,
 		mkdir,
 		rename,
@@ -19,8 +20,15 @@ from utils import (
 		join
 	)
 
+from fun import ( 
+	chunk_size,
+	loose_object_header_info, 
+	write_object
+	)
+
 import tempfile
 import mmap
+import os
 
 
 class iObjectDBR(object):
@@ -36,7 +44,8 @@ class iObjectDBR(object):
 	def has_object(self, sha):
 		"""
 		:return: True if the object identified by the given 40 byte hexsha or 20 bytes
-			binary sha is contained in the database"""
+			binary sha is contained in the database
+		:raise BadObject:"""
 		raise NotImplementedError("To be implemented in subclass")
 		
 	def object(self, sha):
@@ -44,14 +53,16 @@ class iObjectDBR(object):
 		:return: tuple(type_string, size_in_bytes, stream) a tuple with object
 			information including its type, its size as well as a stream from which its
 			contents can be read
-		:param sha: 40 bytes hexsha or 20 bytes binary sha  """
+		:param sha: 40 bytes hexsha or 20 bytes binary sha
+		:raise BadObject:"""
 		raise NotImplementedError("To be implemented in subclass")
 		
 	def object_info(self, sha):
 		"""
 		:return: tuple(type_string, size_in_bytes) tuple with the object's type 
 			string as well as its size in bytes
-		:param sha: 40 bytes hexsha or 20 bytes binary sha"""
+		:param sha: 40 bytes hexsha or 20 bytes binary sha
+		:raise BadObject:"""
 		raise NotImplementedError("To be implemented in subclass")
 			
 	#} END query interface
@@ -70,7 +81,8 @@ class iObjectDBW(object):
 		:param stream: stream providing the data
 		:param dry_run: if True, the object database will not actually be changed
 		:param sha_as_hex: if True, the returned sha identifying the object will be 
-			hex encoded, not binary"""
+			hex encoded, not binary
+		:raise IOError: if data could not be written"""
 		raise NotImplementedError("To be implemented in subclass")
 	
 	def to_objects(self, iter_info, dry_run=False, sha_as_hex=True, max_threads=0):
@@ -82,7 +94,8 @@ class iObjectDBW(object):
 		:param dry_run: see ``to_obj``
 		:param sha_as_hex: see ``to_obj``
 		:param max_threads: if < 1, any number of threads may be started while processing
-			the request, otherwise the given number of threads will be started."""
+			the request, otherwise the given number of threads will be started.
+		:raise IOError: if data could not be written"""
 		# a trivial implementation, ignoring the threads for now
 		# TODO: add configuration to the class to determine whether we may 
 		# actually use multiple threads, default False of course. If the add
@@ -130,15 +143,19 @@ class FileDBBase(object):
 	
 class LooseObjectDB(FileDBBase, iObjectDBR, iObjectDBW):
 	"""A database which operates on loose object files"""
-	__slots__ = ('_hexsha_to_file', )
-	
+	__slots__ = ('_hexsha_to_file', '_fd_open_flags')
 	# CONFIGURATION
 	# chunks in which data will be copied between streams
-	stream_chunk_size = 1000*1000
+	stream_chunk_size = chunk_size
+	
 	
 	def __init__(self, root_path):
 		super(LooseObjectDB, self).__init__(root_path)
 		self._hexsha_to_file = dict()
+		# Additional Flags - might be set to 0 after the first failure
+		# Depending on the root, this might work for some mounts, for others not, which
+		# is why it is per instance
+		self._fd_open_flags = os.O_NOATIME
 	
 	#{ Interface 
 	def object_path(self, hexsha):
@@ -167,36 +184,46 @@ class LooseObjectDB(FileDBBase, iObjectDBR, iObjectDBW):
 		
 	#} END interface
 	
-	def _object_header_info(self, mmap):
-		""":return: tuple(type_string, uncompressed_size_in_bytes 
-		:param mmap: newly mapped memory map at position 0. It will be 
-			seeked to the actual start of the object contents, which can be used
-			to initialize a zlib decompress object."""
-		raise NotImplementedError("todo")
-	
-	def _map_object(self, sha):
+	def _map_loose_object(self, sha):
 		"""
-		:return: tuple(file, mmap) tuple with an opened file for reading, and 
-			a memory map of that file"""
-		db_path = self.readable_db_object_path(to_hex_sha(sha))
-		f = open(db_path, 'rb')
-		m = mmap.mmap(f.fileno(), getsize(db_path), access=mmap.ACCESS_READ)
-		return (f, m)
+		:return: memory map of that file to allow random read access
+		:raise BadObject: if object could not be located"""
+		db_path = self.db_path(self.object_path(to_hex_sha(sha)))
+		try:
+			fd = os.open(db_path, os.O_RDONLY|self._fd_open_flags)
+		except OSError,e:
+			if e.errno != ENOENT:
+				# try again without noatime
+				try:
+					fd = os.open(db_path, os.O_RDONLY)
+				except OSError:
+					raise BadObject(to_hex_sha(sha))
+				# didn't work because of our flag, don't try it again
+				self._fd_open_flags = 0
+			else:
+				raise BadObject(to_hex_sha(sha))
+			# END handle error
+		# END exception handling
+		try:
+			return mmap.mmap(fd, 0, access=mmap.ACCESS_READ)
+		finally:
+			os.close(fd)
+		# END assure file is closed
 			
 	def object_info(self, sha):
-		f, m = self._map_object(sha)
+		m = self._map_loose_object(sha)
 		try:
-			type, size = self._object_header_info(m)
+			return loose_object_header_info(m)
 		finally:
-			f.close()
 			m.close()
 		# END assure release of system resources
 		
 	def object(self, sha):
-		f, m = self._map_object(sha)
-		type, size = self._object_header_info(m)
-		# TODO: init a dynamic decompress stream from our memory map
+		m = self._map_loose_object(sha)
+		reader = DecompressMemMapReader(m, close_on_deletion = True)
+		type, size = reader.initialize()
 		
+		return type, size, reader
 		
 	def has_object(self, sha):
 		try:
@@ -210,25 +237,10 @@ class LooseObjectDB(FileDBBase, iObjectDBR, iObjectDBW):
 		# open a tmp file to write the data to
 		fd, tmp_path = tempfile.mkstemp(prefix='obj', dir=self._root_path)
 		writer = FDCompressedSha1Writer(fd)
-		
-		# WRITE HEADER: type SP size NULL
-		writer.write("%s %i%s" % (type, size, chr(0)))
-		
-		# WRITE ALL DATA
-		chunksize = self.stream_chunk_size
+	
 		try:
-			try:
-				while True:
-					data_len = writer.write(stream.read(chunksize))
-					if data_len < chunksize:
-						# WRITE FOOTER
-						writer.write('\n')
-						break
-					# END check for stream end
-				# END duplicate data
-			finally:
-				writer.close()
-			# END assure file was closed
+			write_object(type, size, stream, writer,
+							close_target_stream=True, chunk_size=self.stream_chunk_size)
 		except:
 			os.remove(tmp_path)
 			raise

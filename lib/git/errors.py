@@ -18,6 +18,9 @@ class InvalidDBRoot(ODBError):
 	
 class BadObject(ODBError):
 	"""The object with the given SHA does not exist"""
+	
+class BadObjectType(ODBError):
+	"""The object had an unsupported type"""
 
 class NoSuchPathError(OSError):
     """ Thrown if a path could not be access by the system. """
