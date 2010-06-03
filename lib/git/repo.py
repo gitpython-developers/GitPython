@@ -13,7 +13,7 @@ from objects import *
 from config import GitConfigParser
 from remote import Remote
 
-from odb.db import LooseObjectDB
+from odb.db import GitObjectDB
 
 import os
 import sys
@@ -68,7 +68,7 @@ class Repo(object):
     # represents the configuration level of a configuration file
     config_level = ("system", "global", "repository")
 
-    def __init__(self, path=None, odbt = LooseObjectDB):
+    def __init__(self, path=None, odbt = GitObjectDB):
         """ Create a new Repo instance
 
 		:param path: is the path to either the root git directory or the bare git repo::
@@ -128,7 +128,12 @@ class Repo(object):
         
         self.working_dir = self._working_tree_dir or self.git_dir
         self.git = Git(self.working_dir)
-        self.odb = odbt(os.path.join(self.git_dir, 'objects'))
+        
+        # special handling, in special times
+        args = [os.path.join(self.git_dir, 'objects')]
+        if issubclass(odbt, GitObjectDB):
+        	args.append(self.git)
+		self.odb = odbt(*args)
 
     def __eq__(self, rhs):
     	if isinstance(rhs, Repo):

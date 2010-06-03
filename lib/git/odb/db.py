@@ -281,9 +281,27 @@ class ReferenceDB(CompoundDB):
 	"""A database consisting of database referred to in a file"""
 	
 	
-class GitObjectDB(CompoundDB, iObjectDBW):
+#class GitObjectDB(CompoundDB, iObjectDBW):
+class GitObjectDB(LooseObjectDB):
 	"""A database representing the default git object store, which includes loose 
 	objects, pack files and an alternates file
 	
-	It will create objects only in the loose object database."""
+	It will create objects only in the loose object database.
+	:note: for now, we use the git command to do all the lookup, just until he 
+		have packs and the other implementations
+	"""
+	__slots__ = ('_git', )
+	def __init__(self, root_path, git):
+		"""Initialize this instance with the root and a git command"""
+		super(GitObjectDB, self).__init__(root_path)
+		self._git = git
+		
+	def object_info(self, sha):
+		discard, type, size = self._git.get_object_header(sha)
+		return type, size
+		
+	def object(self, sha):
+		"""For now, all lookup is done by git itself"""
+		discard, type, size, stream = self._git.stream_object_data(sha)
+		return type, size, stream
 	

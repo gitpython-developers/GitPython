@@ -4,7 +4,7 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 import os
-from git.utils import LazyMixin, join_path_native
+from git.utils import LazyMixin, join_path_native, stream_copy
 import utils
 	
 _assertion_msg_format = "Created object %r whose python type %r disagrees with the acutal git object type %r"
@@ -76,10 +76,11 @@ class Object(LazyMixin):
 		Retrieve object information
 		"""
 		if attr	 == "size":
-			hexsha, typename, self.size = self.repo.git.get_object_header(self.sha)
+			typename, self.size = self.repo.odb.object_info(self.sha)
 			assert typename == self.type, _assertion_msg_format % (self.sha, typename, self.type)
 		elif attr == "data":
-			hexsha, typename, self.size, self.data = self.repo.git.get_object_data(self.sha)
+			typename, self.size, stream = self.repo.odb.object(self.sha)
+			self.data = stream.read()	# once we have an own odb, we can delay reading
 			assert typename == self.type, _assertion_msg_format % (self.sha, typename, self.type)
 		else:
 			super(Object,self)._set_cache_(attr)
@@ -121,24 +122,17 @@ class Object(LazyMixin):
 
 	@property
 	def data_stream(self):
-		"""
-		Returns 
-			File Object compatible stream to the uncompressed raw data of the object
-		"""
-		proc = self.repo.git.cat_file(self.type, self.sha, as_process=True)
-		return utils.ProcessStreamAdapter(proc, "stdout") 
+		""" :return:  File Object compatible stream to the uncompressed raw data of the object
+		:note: returned streams must be read in order"""
+		type, size, stream = self.repo.odb.object(self.sha)
+		return stream
 
 	def stream_data(self, ostream):
-		"""
-		Writes our data directly to the given output stream
-		
-		``ostream``
-			File object compatible stream object.
-			
-		Returns
-			self
-		"""
-		self.repo.git.cat_file(self.type, self.sha, output_stream=ostream)
+		"""Writes our data directly to the given output stream
+		:param ostream: File object compatible stream object.
+		:return: self"""
+		type, size, istream = self.repo.odb.object(self.sha)
+		stream_copy(istream, ostream)
 		return self
 		
 
