@@ -38,6 +38,10 @@ class Git(object):
     """
     __slots__ = ("_working_dir", "cat_file_all", "cat_file_header")
     
+    # CONFIGURATION
+    # The size in bytes read from stdout when copying git's output to another stream
+    max_chunk_size = 1024*64
+    
     class AutoInterrupt(object):
         """
         Kill/Interrupt the stored process instance once this instance goes out of scope. It is 
@@ -173,9 +177,11 @@ class Git(object):
             If set to a file-like object, data produced by the git command will be 
             output to the given stream directly.
             This feature only has any effect if as_process is False. Processes will
-            always be created with a pipe due to issues with subprocess.
-            This merely is a workaround as data will be copied from the 
+            always be created with a pipe as subprocess.Popen can only accept system
+            file descriptors, not python objects ( such as StringIO ).
+            This merely is a workaround as the data will be copied from the 
             output pipe to the given output stream directly.
+            See also: Git.max_chunk_size
             
         ``**subprocess_kwargs``
         	Keyword arguments to be passed to subprocess.Popen. Please note that 
@@ -227,7 +233,7 @@ class Git(object):
             if output_stream is None:
                 stdout_value = proc.stdout.read().rstrip()      # strip trailing "\n"
             else:
-                max_chunk_size = 1024*64
+                max_chunk_size = self.max_chunk_size
                 while True:
                     chunk = proc.stdout.read(max_chunk_size)
                     output_stream.write(chunk)
