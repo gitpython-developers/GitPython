@@ -91,8 +91,8 @@ class iObjectDBW(object):
 			they where given.
 		:param iter_info: iterable yielding tuples containing the type_string
 			size_in_bytes and the steam with the content data.
-		:param dry_run: see ``to_obj``
-		:param sha_as_hex: see ``to_obj``
+		:param dry_run: see ``to_object``
+		:param sha_as_hex: see ``to_object``
 		:param max_threads: if < 1, any number of threads may be started while processing
 			the request, otherwise the given number of threads will be started.
 		:raise IOError: if data could not be written"""

@@ -39,7 +39,7 @@ write = os.write
 close = os.close
 
 # ZLIB configuration
-# used when compressing objects
+# used when compressing objects - 1 to 9 ( slowest )
 Z_BEST_SPEED = 1
 
 #} END Routines
@@ -70,7 +70,7 @@ class FDCompressedSha1Writer(object):
 		bytes_written = write(self.fd, cdata)
 		if bytes_written != len(cdata):
 			raise self.exc
-		return bytes_written
+		return len(data)
 
 	def sha(self, as_hex = False):
 		""":return: sha so far
@@ -175,7 +175,7 @@ class DecompressMemMapReader(object):
 				self._br += size
 				return dat
 			else:
-				dat = self._buf.getvalue()		# ouch, duplicates data
+				dat = self._buf.read()		# ouch, duplicates data
 				size -= self._buflen
 				self._br += self._buflen
 				
@@ -195,28 +195,34 @@ class DecompressMemMapReader(object):
 		# copied once, and another copy of a part of it when it creates the unconsumed
 		# tail. We have to use it to hand in the appropriate amount of bytes durin g
 		# the next read.
-		if self._zip.unconsumed_tail:
+		tail = self._zip.unconsumed_tail
+		if tail:
 			# move the window, make it as large as size demands. For code-clarity, 
 			# we just take the chunk from our map again instead of reusing the unconsumed
 			# tail. The latter one would safe some memory copying, but we could end up
 			# with not getting enough data uncompressed, so we had to sort that out as well.
 			# Now we just assume the worst case, hence the data is uncompressed and the window
 			# needs to be as large as the uncompressed bytes we want to read.
-			self._cws = self._cwe - len(self._zip.unconsumed_tail)
+			self._cws = self._cwe - len(tail)
 			self._cwe = self._cws + size
+			
+			
 			indata = self._m[self._cws:self._cwe]		# another copy ... :(
+			# get the actual window end to be sure we don't use it for computations
+			self._cwe = self._cws + len(indata) 
 		else:
 			cws = self._cws
 			self._cws = self._cwe
 			self._cwe = cws + size 
 			indata = self._m[self._cws:self._cwe]		# ... copy it again :(
 		# END handle tail
-		
+			
 		dcompdat = self._zip.decompress(indata, size)
-		self._br += len(dcompdat)
 		
+		self._br += len(dcompdat)
 		if dat:
-			return dat + dcompdat
+			dcompdat = dat + dcompdat
+			
 		return dcompdat
 		
 #} END classes 
