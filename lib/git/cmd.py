@@ -184,10 +184,10 @@ class Git(object):
             See also: Git.max_chunk_size
             
         ``**subprocess_kwargs``
-        	Keyword arguments to be passed to subprocess.Popen. Please note that 
-        	some of the valid kwargs are already set by this method, the ones you 
-        	specify may not be the same ones.
-        	
+            Keyword arguments to be passed to subprocess.Popen. Please note that 
+            some of the valid kwargs are already set by this method, the ones you 
+            specify may not be the same ones.
+            
         Returns::
         
          str(output)                                   # extended_output = False (Default)
@@ -231,7 +231,13 @@ class Git(object):
         stderr_value = ''
         try:
             if output_stream is None:
-                stdout_value = proc.stdout.read().rstrip()      # strip trailing "\n"
+                stdout_value, stderr_value = proc.communicate()      
+                # strip trailing "\n"
+                if stdout_value.endswith("\n"):
+                    stdout_value = stdout_value[:-1]
+                if stderr_value.endswith("\n"):
+                    stderr_value = stderr_value[:-1]
+                status = proc.returncode
             else:
                 max_chunk_size = self.max_chunk_size
                 while True:
@@ -241,11 +247,12 @@ class Git(object):
                         break
                 # END reading output stream
                 stdout_value = output_stream
+                stderr_value = proc.stderr.read()
+                # strip trailing "\n"
+                if stderr_value.endswith("\n"):
+                    stderr_value = stderr_value[:-1]
+                status = proc.wait()
             # END stdout handling
-            stderr_value = proc.stderr.read().rstrip()          # strip trailing "\n"
-            
-            # waiting here should do nothing as we have finished stream reading
-            status = proc.wait()
         finally:
             proc.stdout.close()
             proc.stderr.close()
