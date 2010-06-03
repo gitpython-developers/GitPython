@@ -14,7 +14,7 @@ import subprocess
 
 
 from lib import (
-	TestBigRepoReadOnly
+	TestBigRepoR
 	)
 
 
@@ -32,7 +32,7 @@ def make_memory_file(size_in_bytes, randomize=False):
 	return actual_size*4, StringIO(a.tostring())
 
 
-class TestObjDBPerformance(TestBigRepoReadOnly):
+class TestObjDBPerformance(TestBigRepoR):
 	
 	large_data_size_bytes = 1000*1000*10		# some MiB should do it
 	moderate_data_size_bytes = 1000*1000*1		# just 1 MiB

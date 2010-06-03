@@ -125,8 +125,8 @@ class Object(LazyMixin):
 		Returns 
 			File Object compatible stream to the uncompressed raw data of the object
 		"""
-		sha, type, size, stream = self.repo.git.stream_object_data(self.sha)
-		return stream 
+		proc = self.repo.git.cat_file(self.type, self.sha, as_process=True)
+		return utils.ProcessStreamAdapter(proc, "stdout") 
 
 	def stream_data(self, ostream):
 		"""

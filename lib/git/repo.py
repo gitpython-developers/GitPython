@@ -4,12 +4,6 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
-import os
-import sys
-import re
-import gzip
-import StringIO
-
 from errors import InvalidGitRepositoryError, NoSuchPathError
 from cmd import Git
 from actor import Actor
@@ -18,6 +12,15 @@ from index import IndexFile
 from objects import *
 from config import GitConfigParser
 from remote import Remote
+
+from odb.db import LooseObjectDB
+
+import os
+import sys
+import re
+import gzip
+import StringIO
+
 
 def touch(filename):
     fp = open(filename, "a")
@@ -53,7 +56,7 @@ class Repo(object):
     'git_dir' is the .git repository directoy, which is always set.
     """
     DAEMON_EXPORT_FILE = 'git-daemon-export-ok'
-    __slots__ = ( "working_dir", "_working_tree_dir", "git_dir", "_bare", "git" )
+    __slots__ = ( "working_dir", "_working_tree_dir", "git_dir", "_bare", "git", "odb" )
     
     # precompiled regex
     re_whitespace = re.compile(r'\s+')
@@ -65,27 +68,22 @@ class Repo(object):
     # represents the configuration level of a configuration file
     config_level = ("system", "global", "repository")
 
-    def __init__(self, path=None):
-        """
-        Create a new Repo instance
+    def __init__(self, path=None, odbt = LooseObjectDB):
+        """ Create a new Repo instance
 
-        ``path``
-            is the path to either the root git directory or the bare git repo
-
-        Examples::
+		:param path: is the path to either the root git directory or the bare git repo::
 
             repo = Repo("/Users/mtrier/Development/git-python")
             repo = Repo("/Users/mtrier/Development/git-python.git")
             repo = Repo("~/Development/git-python.git")
             repo = Repo("$REPOSITORIES/Development/git-python.git")
-            
-        Raises
-            InvalidGitRepositoryError or NoSuchPathError
-
-        Returns
-            ``git.Repo``
-        """
-
+        
+        :param odbt: Object DataBase type - a type which is constructed by providing 
+        	the directory containing the database objects, i.e. .git/objects. It will
+        	be used to access all object data
+        :raise InvalidGitRepositoryError:
+        :raise NoSuchPathError:
+		:return: git.Repo """
         epath = os.path.abspath(os.path.expandvars(os.path.expanduser(path or os.getcwd())))
 
         if not os.path.exists(epath):
@@ -130,6 +128,7 @@ class Repo(object):
         
         self.working_dir = self._working_tree_dir or self.git_dir
         self.git = Git(self.working_dir)
+        self.odb = odbt(os.path.join(self.git_dir, 'objects'))
 
     def __eq__(self, rhs):
     	if isinstance(rhs, Repo):

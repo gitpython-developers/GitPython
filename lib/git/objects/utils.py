@@ -16,7 +16,8 @@ import time
 import os
 
 __all__ = ('get_object_type_by_name', 'get_user_id', 'parse_date', 'parse_actor_and_date', 
-			'ProcessStreamAdapter', 'Traversable')
+			'ProcessStreamAdapter', 'Traversable', 'altz_to_utctz_str', 'utctz_to_altz', 
+			'verify_utctz')
 
 def get_object_type_by_name(object_type_name):
 	"""
@@ -57,14 +58,24 @@ def get_user_id():
 	return "%s@%s" % (username, platform.node())
 		
 
-def _utc_tz_to_altz(utctz):
+def utctz_to_altz(utctz):
 	"""we convert utctz to the timezone in seconds, it is the format time.altzone
 	returns. Git stores it as UTC timezon which has the opposite sign as well, 
 	which explains the -1 * ( that was made explicit here )
 	:param utctz: git utc timezone string, i.e. +0200"""
 	return -1 * int(float(utctz)/100*3600)
+	
+def altz_to_utctz_str(altz):
+	"""As above, but inverses the operation, returning a string that can be used
+	in commit objects"""
+	utci = -1 * int((altz / 3600)*100)
+	utcs = str(abs(utci))
+	utcs = "0"*(4-len(utcs)) + utcs
+	prefix = (utci < 0 and '-') or '+'
+	return prefix + utcs
+	
 
-def _verify_utctz(offset):
+def verify_utctz(offset):
 	""":raise ValueError: if offset is incorrect
 	:return: offset"""
 	fmt_exc = ValueError("Invalid timezone offset format: %s" % offset)
@@ -97,11 +108,11 @@ def parse_date(string_date):
 		if string_date.count(' ') == 1 and string_date.rfind(':') == -1:
 			timestamp, offset = string_date.split()
 			timestamp = int(timestamp)
-			return timestamp, _utc_tz_to_altz(_verify_utctz(offset))
+			return timestamp, utctz_to_altz(verify_utctz(offset))
 		else:
 			offset = "+0000"					# local time by default
 			if string_date[-5] in '-+':
-				offset = _verify_utctz(string_date[-5:])
+				offset = verify_utctz(string_date[-5:])
 				string_date = string_date[:-6]	# skip space as well
 			# END split timezone info
 			
@@ -139,7 +150,7 @@ def parse_date(string_date):
 					fstruct = time.struct_time((dtstruct.tm_year, dtstruct.tm_mon, dtstruct.tm_mday, 
 												tstruct.tm_hour, tstruct.tm_min, tstruct.tm_sec,
 												dtstruct.tm_wday, dtstruct.tm_yday, tstruct.tm_isdst))
-					return int(time.mktime(fstruct)), _utc_tz_to_altz(offset)
+					return int(time.mktime(fstruct)), utctz_to_altz(offset)
 				except ValueError:
 					continue
 				# END exception handling
@@ -167,7 +178,7 @@ def parse_actor_and_date(line):
 	"""
 	m = _re_actor_epoch.search(line)
 	actor, epoch, offset = m.groups()
-	return (Actor._from_string(actor), int(epoch), _utc_tz_to_altz(offset))
+	return (Actor._from_string(actor), int(epoch), utctz_to_altz(offset))
 	
 	
 	

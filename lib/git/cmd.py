@@ -323,12 +323,7 @@ class Git(object):
 				stdout_value = proc.stdout.read().rstrip()		# strip trailing "\n"
 			else:
 				max_chunk_size = 1024*64
-				while True:
-					chunk = proc.stdout.read(max_chunk_size)
-					output_stream.write(chunk)
-					if len(chunk) < max_chunk_size:
-						break
-				# END reading output stream
+				stream_copy(proc.stdout, output_stream, max_chunk_size)
 				stdout_value = output_stream
 			# END stdout handling
 			stderr_value = proc.stderr.read().rstrip()			# strip trailing "\n"

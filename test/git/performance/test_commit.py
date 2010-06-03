@@ -6,10 +6,12 @@
 
 from lib import *
 from git import *
+from test.git.test_commit import assert_commit_serialization
+from cStringIO import StringIO
 from time import time
 import sys
 
-class TestPerformance(TestBigRepoReadOnly):
+class TestPerformance(TestBigRepoRW):
 
 	# ref with about 100 commits in its history
 	ref_100 = '0.1.6'
@@ -48,7 +50,7 @@ class TestPerformance(TestBigRepoReadOnly):
 		# bound to cat-file parsing performance
 		nc = 0
 		st = time()
-		for c in self.gitrepo.commit(self.head_sha_2k).traverse(branch_first=False):
+		for c in self.gitrorepo.commit(self.head_sha_2k).traverse(branch_first=False):
 			nc += 1
 			self._query_commit_info(c)
 		# END for each traversed commit
@@ -59,10 +61,38 @@ class TestPerformance(TestBigRepoReadOnly):
 		# bound to stream parsing performance
 		nc = 0
 		st = time()
-		for c in Commit.iter_items(self.gitrepo, self.head_sha_2k):
+		for c in Commit.iter_items(self.gitrorepo, self.head_sha_2k):
 			nc += 1
 			self._query_commit_info(c)
 		# END for each traversed commit
 		elapsed_time = time() - st
 		print >> sys.stderr, "Iterated %i Commits in %s [s] ( %f commits/s )" % (nc, elapsed_time, nc/elapsed_time)
 		
+	def test_commit_serialization(self):
+		assert_commit_serialization(self.gitrwrepo, self.head_sha_2k, True)
+		
+		rwrepo = self.gitrwrepo
+		make_object = rwrepo.odb.to_object
+		# direct serialization - deserialization can be tested afterwards
+		# serialization is probably limited on IO
+		hc = rwrepo.commit(self.head_sha_2k)
+		
+		commits = list()
+		nc = 5000
+		st = time()
+		for i in xrange(nc):
+			cm = Commit(	rwrepo, Commit.NULL_HEX_SHA, hc.tree, 
+							hc.author, hc.authored_date, hc.author_tz_offset, 
+							hc.committer, hc.committed_date, hc.committer_tz_offset, 
+							str(i), parents=hc.parents, encoding=hc.encoding)
+			
+			stream = StringIO()
+			cm._serialize(stream)
+			slen = stream.tell()
+			stream.seek(0)
+			
+			cm.sha = make_object(Commit.type, slen, stream)
+		# END commit creation
+		elapsed = time() - st
+		
+		print >> sys.stderr, "Serialized %i commits to loose objects in %f s ( %f commits / s )" % (nc, elapsed, nc / elapsed)

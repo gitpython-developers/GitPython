@@ -5,18 +5,18 @@ import sys
 import stat
 
 from lib import (
-	TestBigRepoReadOnly
+	TestBigRepoR
 	)
 
 
-class TestObjDBPerformance(TestBigRepoReadOnly):
+class TestObjDBPerformance(TestBigRepoR):
 	
 	def test_random_access(self):
 		
 		# GET COMMITS
 		# TODO: use the actual db for this
 		st = time()
-		root_commit = self.gitrepo.commit(self.head_sha_2k)
+		root_commit = self.gitrorepo.commit(self.head_sha_2k)
 		commits = list(root_commit.traverse())
 		nc = len(commits)
 		elapsed = time() - st

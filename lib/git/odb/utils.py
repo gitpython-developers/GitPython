@@ -137,7 +137,7 @@ class DecompressMemMapReader(object):
 		# END handle size
 		
 		# read header
-		maxb = 8192
+		maxb = 512				# should really be enough, cgit uses 8192 I believe
 		self._s = maxb
 		hdr = self.read(maxb)
 		hdrend = hdr.find("\0")
@@ -172,20 +172,24 @@ class DecompressMemMapReader(object):
 		# Our performance now depends on StringIO. This way we don't need two large
 		# buffers in peak times, but only one large one in the end which is 
 		# the return buffer
-		if size > self.max_read_size:
-			sio = StringIO()
-			while size:
-				read_size = min(self.max_read_size, size)
-				data = self.read(read_size)
-				sio.write(data)
-				size -= len(data)
-				if len(data) < read_size:
-					break
-			# END data loop
-			sio.seek(0)
-			return sio.getvalue()
-		# END handle maxread
+		# NO: We don't do it - if the user thinks its best, he is right. If he 
+		# has trouble, he will start reading in chunks. According to our tests
+		# its still faster if we read 10 Mb at once instead of chunking it.
 		
+		# if size > self.max_read_size:
+			# sio = StringIO()
+			# while size:
+				# read_size = min(self.max_read_size, size)
+				# data = self.read(read_size)
+				# sio.write(data)
+				# size -= len(data)
+				# if len(data) < read_size:
+					# break
+			# # END data loop
+			# sio.seek(0)
+			# return sio.getvalue()
+		# # END handle maxread
+		# 
 		# deplete the buffer, then just continue using the decompress object 
 		# which has an own buffer. We just need this to transparently parse the 
 		# header from the zlib stream

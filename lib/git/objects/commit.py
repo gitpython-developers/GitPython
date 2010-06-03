@@ -91,15 +91,6 @@ class Commit(base.Object, Iterable, diff.Diffable, utils.Traversable, utils.Seri
 		"""
 		super(Commit,self).__init__(repo, sha)
 		self._set_self_from_args_(locals())
-
-		if parents is not None:
-			cls = type(self)
-			self.parents = tuple(cls(repo, p) for p in parents if not isinstance(p, cls))
-		# END for each parent to convert
-			
-		if self.sha and tree is not None:
-			self.tree = Tree(repo, tree, path='')
-		# END id to tree conversion
 		
 	@classmethod
 	def _get_intermediate_items(cls, commit):
@@ -350,7 +341,12 @@ class Commit(base.Object, Iterable, diff.Diffable, utils.Traversable, utils.Seri
 						committer, committer_time, committer_offset,
 						message, parent_commits, conf_encoding)
 		
-		# serialize !
+		stream = StringIO()
+		new_commit._serialize(stream)
+		streamlen = stream.tell()
+		stream.seek(0)
+		
+		new_commit.sha = repo.odb.to_object(cls.type, streamlen, stream, sha_as_hex=True)
 		
 		if head:
 			try:
@@ -377,8 +373,28 @@ class Commit(base.Object, Iterable, diff.Diffable, utils.Traversable, utils.Seri
 	#{ Serializable Implementation
 	
 	def _serialize(self, stream):
-		# for now, this is very inefficient and in fact shouldn't be used like this
-		return super(Commit, self)._serialize(stream)
+		write = stream.write
+		write("tree %s\n" % self.tree)
+		for p in self.parents:
+			write("parent %s\n" % p)
+			
+		a = self.author
+		c = self.committer
+		fmt = "%s %s <%s> %s %s\n"
+		write(fmt % ("author", a.name, a.email, 
+						self.authored_date, 
+						utils.altz_to_utctz_str(self.author_tz_offset)))
+			
+		write(fmt % ("committer", c.name, c.email, 
+						self.committed_date,
+						utils.altz_to_utctz_str(self.committer_tz_offset)))
+		
+		if self.encoding != self.default_encoding:
+			write("encoding %s\n" % self.encoding)
+		
+		write("\n")
+		write(self.message)
+		return self
 	
 	def _deserialize(self, stream):
 		""":param from_rev_list: if true, the stream format is coming from the rev-list command
@@ -416,7 +432,7 @@ class Commit(base.Object, Iterable, diff.Diffable, utils.Traversable, utils.Seri
 		
 		# a stream from our data simply gives us the plain message
 		# The end of our message stream is marked with a newline that we strip
-		self.message = stream.read()[:-1]
+		self.message = stream.read()
 		return self
 		
 	#} END serializable implementation

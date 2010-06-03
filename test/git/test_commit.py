@@ -7,6 +7,56 @@
 from test.testlib import *
 from git import *
 
+from cStringIO import StringIO
+import time
+import sys
+
+
+def assert_commit_serialization(rwrepo, commit_id, print_performance_info=False):
+	"""traverse all commits in the history of commit identified by commit_id and check 
+	if the serialization works.
+	:param print_performance_info: if True, we will show how fast we are"""
+	ns = 0		# num serializations
+	nds = 0		# num deserializations
+	
+	st = time.time()
+	for cm in rwrepo.commit(commit_id).traverse():
+		nds += 1
+		
+		# assert that we deserialize commits correctly, hence we get the same 
+		# sha on serialization
+		stream = StringIO()
+		cm._serialize(stream)
+		ns += 1
+		streamlen = stream.tell()
+		stream.seek(0)
+		
+		csha = rwrepo.odb.to_object(Commit.type, streamlen, stream)
+		assert csha == cm.sha
+		
+		nc = Commit(rwrepo, Commit.NULL_HEX_SHA, cm.tree.sha,
+						cm.author, cm.authored_date, cm.author_tz_offset, 
+						cm.committer, cm.committed_date, cm.committer_tz_offset, 
+						cm.message, cm.parents, cm.encoding)
+		
+		assert nc.parents == cm.parents
+		stream = StringIO()
+		nc._serialize(stream)
+		ns += 1
+		streamlen = stream.tell()
+		stream.seek(0)
+		nc.sha = rwrepo.odb.to_object(Commit.type, streamlen, stream)
+		
+		# if it worked, we have exactly the same contents !
+		assert nc.sha == cm.sha
+	# END check commits
+	elapsed = time.time() - st
+	
+	if print_performance_info:
+		print >> sys.stderr, "Serialized %i and deserialized %i commits in %f s ( (%f, %f) commits / s" % (ns, nds, elapsed, ns/elapsed, nds/elapsed)
+	# END handle performance info
+	
+
 class TestCommit(TestBase):
 
 	def test_bake(self):
@@ -19,7 +69,7 @@ class TestCommit(TestBase):
 		assert commit.author == commit.committer
 		assert isinstance(commit.authored_date, int) and isinstance(commit.committed_date, int)
 		assert isinstance(commit.author_tz_offset, int) and isinstance(commit.committer_tz_offset, int)
-		assert commit.message == "Added missing information to docstrings of commit and stats module"
+		assert commit.message == "Added missing information to docstrings of commit and stats module\n"
 
 
 	def test_stats(self):
@@ -49,7 +99,7 @@ class TestCommit(TestBase):
 		assert commit.committed_date == 1210193388
 		assert commit.author_tz_offset == 14400, commit.author_tz_offset
 		assert commit.committer_tz_offset == 14400, commit.committer_tz_offset
-		assert commit.message == "initial project"
+		assert commit.message == "initial project\n"
 		
 	def test_traversal(self):
 		start = self.rorepo.commit("a4d06724202afccd2b5c54f81bcf2bf26dea7fff")
@@ -170,4 +220,9 @@ class TestCommit(TestBase):
 	def test_base(self):
 		name_rev = self.rorepo.head.commit.name_rev
 		assert isinstance(name_rev, basestring)
+		
+	@with_bare_rw_repo
+	def test_serialization(self, rwrepo):
+		# create all commits of our repo
+		assert_commit_serialization(rwrepo, '0.1.6')
 		

@@ -1,6 +1,8 @@
 """Contains library functions"""
 import os
 from test.testlib import *
+import shutil
+import tempfile
 
 from git import (
 	Repo
@@ -25,7 +27,7 @@ def resolve_or_fail(env_var):
 
 #{ Base Classes 
 
-class TestBigRepoReadOnly(TestBase):
+class TestBigRepoR(TestBase):
 	"""TestCase providing access to readonly 'big' repositories using the following 
 	member variables:
 	
@@ -40,7 +42,24 @@ class TestBigRepoReadOnly(TestBase):
 	
 	@classmethod
 	def setUpAll(cls):
-		super(TestBigRepoReadOnly, cls).setUpAll()
-		cls.gitrepo = Repo(resolve_or_fail(k_env_git_repo))
+		super(TestBigRepoR, cls).setUpAll()
+		cls.gitrorepo = Repo(resolve_or_fail(k_env_git_repo))
 
+
+class TestBigRepoRW(TestBigRepoR):
+	"""As above, but provides a big repository that we can write to.
+	
+	Provides ``self.gitrwrepo``"""
+	
+	@classmethod
+	def setUpAll(cls):
+		super(TestBigRepoRW, cls).setUpAll()
+		dirname = tempfile.mktemp()
+		os.mkdir(dirname)
+		cls.gitrwrepo = cls.gitrorepo.clone(dirname, shared=True, bare=True)
+	
+	@classmethod
+	def tearDownAll(cls):
+		shutil.rmtree(cls.gitrwrepo.working_tree_dir)
+		
 #} END base classes

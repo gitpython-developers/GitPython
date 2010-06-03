@@ -116,8 +116,6 @@ class TestUtils(TestCase):
 			os.remove(my_file)
 		# END final cleanup
 		
-	  
-		
 	def test_user_id(self):
 		assert '@' in get_user_id()
 		
@@ -127,7 +125,12 @@ class TestUtils(TestCase):
 			assert len(rval) == 2
 			assert isinstance(rval[0], int) and isinstance(rval[1], int)
 			assert rval[0] == veri_time
-			assert rval[1] == offset 
+			assert rval[1] == offset
+			
+			# now that we are here, test our conversion functions as well
+			utctz = altz_to_utctz_str(offset)
+			assert isinstance(utctz, basestring)
+			assert utctz_to_altz(verify_utctz(utctz)) == offset
 		# END assert rval utility
 		
 		rfc = ("Thu, 07 Apr 2005 22:13:11 +0000", 0)

@@ -4,11 +4,11 @@ import sys
 import stat
 
 from lib import (
-	TestBigRepoReadOnly
+	TestBigRepoR
 	)
 
 
-class TestUtilPerformance(TestBigRepoReadOnly):
+class TestUtilPerformance(TestBigRepoR):
 	
 	def test_access(self):
 		# compare dict vs. slot access
