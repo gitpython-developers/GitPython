@@ -60,6 +60,6 @@ class TestBigRepoRW(TestBigRepoR):
 	
 	@classmethod
 	def tearDownAll(cls):
-		shutil.rmtree(cls.gitrwrepo.working_tree_dir)
+		shutil.rmtree(cls.gitrwrepo.working_dir)
 		
 #} END base classes

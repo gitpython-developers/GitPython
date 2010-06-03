@@ -101,7 +101,7 @@ class iObjectDBW(object):
 		# actually use multiple threads, default False of course. If the add
 		shas = list()
 		for args in iter_info:
-			shas.append(self.to_object(*args, dry_run=dry_run, sha_as_hex=sha_as_hex))
+			shas.append(self.to_object(dry_run=dry_run, sha_as_hex=sha_as_hex, *args))
 		return shas
 		
 	#} END edit interface
@@ -155,7 +155,7 @@ class LooseObjectDB(FileDBBase, iObjectDBR, iObjectDBW):
 		# Additional Flags - might be set to 0 after the first failure
 		# Depending on the root, this might work for some mounts, for others not, which
 		# is why it is per instance
-		self._fd_open_flags = os.O_NOATIME
+		self._fd_open_flags = getattr(os, 'O_NOATIME', 0)
 	
 	#{ Interface 
 	def object_path(self, hexsha):

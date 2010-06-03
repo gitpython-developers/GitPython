@@ -73,7 +73,7 @@ class TestRepo(TestBase):
 		assert_equal("mtrier@gmail.com", c.committer.email)
 		assert_equal(1232829715, c.committed_date)
 		assert_equal(5*3600, c.committer_tz_offset)
-		assert_equal("Bumped version 0.1.6", c.message)
+		assert_equal("Bumped version 0.1.6\n", c.message)
 
 		c = commits[1]
 		assert isinstance(c.parents, tuple)
