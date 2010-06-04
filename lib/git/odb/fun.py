@@ -83,26 +83,33 @@ def write_object(type, size, read, write, chunk_size=chunk_size):
 	:param size: amount of bytes to write from source_stream
 	:param read: read method of a stream providing the content data
 	:param write: write method of the output stream
-	:param close_target_stream: if True, the target stream will be closed when 
+	:param close_target_stream: if True, the target stream will be closed when
 		the routine exits, even if an error is thrown
 	:return: The actual amount of bytes written to stream, which includes the header and a trailing newline"""
 	tbw = 0												# total num bytes written
-	dbw = 0												# num data bytes written
 	
 	# WRITE HEADER: type SP size NULL
 	tbw += write("%s %i\0" % (type, size))
+	tbw += stream_copy(read, write, size, chunk_size)
+	
+	return tbw
 
+def stream_copy(read, write, size, chunk_size):
+	"""Copy a stream up to size bytes using the provided read and write methods, 
+	in chunks of chunk_size
+	:note: its much like stream_copy utility, but operates just using methods"""
+	dbw = 0												# num data bytes written
+	
 	# WRITE ALL DATA UP TO SIZE
 	while True:
 		cs = min(chunk_size, size-dbw)
 		data_len = write(read(cs))
 		dbw += data_len
 		if data_len < cs or dbw == size:
-			tbw += dbw
 			break
 		# END check for stream end
 	# END duplicate data
-	return tbw
-
+	return dbw
+	
 	
 #} END routines

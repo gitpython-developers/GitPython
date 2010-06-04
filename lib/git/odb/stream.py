@@ -75,7 +75,7 @@ class OStream(OInfo):
 		""":return: True if reads of this stream yield zlib compressed data. Default False
 		:note: this does not imply anything about the actual internal storage.
 			Hence the data could be uncompressed, but read compressed, or vice versa"""
-		raise False
+		return False
 		
 	#} END interface
 	
@@ -105,10 +105,12 @@ class IStream(list):
 	
 	#{ Interface 
 	
+	@property
 	def hexsha(self):
 		""":return: our sha, hex encoded, 40 bytes"""
 		return to_hex_sha(self[0])
-	
+		
+	@property
 	def binsha(self):
 		""":return: our sha as binary, 20 bytes"""
 		return to_bin_sha(self[0])
@@ -229,10 +231,11 @@ class DecompressMemMapReader(object):
 		and decompress it into chunks, thats all ... """
 	__slots__ = ('_m', '_zip', '_buf', '_buflen', '_br', '_cws', '_cwe', '_s', '_close')
 	
-	max_read_size = 512*1024
+	max_read_size = 512*1024		# currently unused
 	
 	def __init__(self, m, close_on_deletion, size):
-		"""Initialize with mmap for stream reading"""
+		"""Initialize with mmap for stream reading
+		:param m: must be content data - use new if you have object data and no size"""
 		self._m = m
 		self._zip = zlib.decompressobj()
 		self._buf = None						# buffer of decompressed bytes
@@ -248,32 +251,38 @@ class DecompressMemMapReader(object):
 			self._m.close()
 		# END handle resource freeing
 		
+	def _parse_header_info(self):
+		"""If this stream contains object data, parse the header info and skip the 
+		stream to a point where each read will yield object content
+		:return: parsed type_string, size"""
+		# read header
+		maxb = 512				# should really be enough, cgit uses 8192 I believe
+		self._s = maxb
+		hdr = self.read(maxb)
+		hdrend = hdr.find("\0")
+		type, size = hdr[:hdrend].split(" ")
+		size = int(size)
+		self._s = size
+		
+		# adjust internal state to match actual header length that we ignore
+		# The buffer will be depleted first on future reads
+		self._br = 0
+		hdrend += 1									# count terminating \0
+		self._buf = StringIO(hdr[hdrend:])
+		self._buflen = len(hdr) - hdrend
+		
+		return type, size
+		
 	@classmethod
 	def new(self, m, close_on_deletion=False):
 		"""Create a new DecompressMemMapReader instance for acting as a read-only stream
 		This method parses the object header from m and returns the parsed 
 		type and size, as well as the created stream instance.
-		:param m: memory map on which to oparate
+		:param m: memory map on which to oparate. It must be object data ( header + contents )
 		:param close_on_deletion: if True, the memory map will be closed once we are 
 			being deleted"""
 		inst = DecompressMemMapReader(m, close_on_deletion, 0)
-		
-		# read header
-		maxb = 512				# should really be enough, cgit uses 8192 I believe
-		inst._s = maxb
-		hdr = inst.read(maxb)
-		hdrend = hdr.find("\0")
-		type, size = hdr[:hdrend].split(" ")
-		size = int(size)
-		inst._s = size
-		
-		# adjust internal state to match actual header length that we ignore
-		# The buffer will be depleted first on future reads
-		inst._br = 0
-		hdrend += 1									# count terminating \0
-		inst._buf = StringIO(hdr[hdrend:])
-		inst._buflen = len(hdr) - hdrend
-		
+		type, size = inst._parse_header_info()
 		return type, size, inst
 		
 	def read(self, size=-1):
@@ -355,17 +364,22 @@ class DecompressMemMapReader(object):
 			# needs to be as large as the uncompressed bytes we want to read.
 			self._cws = self._cwe - len(tail)
 			self._cwe = self._cws + size
-			
-			
-			indata = self._m[self._cws:self._cwe]		# another copy ... :(
-			# get the actual window end to be sure we don't use it for computations
-			self._cwe = self._cws + len(indata) 
 		else:
 			cws = self._cws
 			self._cws = self._cwe
 			self._cwe = cws + size 
-			indata = self._m[self._cws:self._cwe]		# ... copy it again :(
 		# END handle tail
+		
+		
+		# if window is too small, make it larger so zip can decompress something
+		win_size = self._cwe - self._cws 
+		if win_size < 8:
+			self._cwe = self._cws + 8
+		# END adjust winsize
+		indata = self._m[self._cws:self._cwe]		# another copy ... :(
+		
+		# get the actual window end to be sure we don't use it for computations
+		self._cwe = self._cws + len(indata)
 			
 		dcompdat = self._zip.decompress(indata, size)
 		

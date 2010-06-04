@@ -3,13 +3,11 @@
 from test.testlib import *
 from git.odb import *
 
-from array import array
 from cStringIO import StringIO
 from time import time
 import os
 import sys
 import stat
-import random
 import subprocess
 
 
@@ -18,18 +16,11 @@ from lib import (
 	)
 
 
-
 def make_memory_file(size_in_bytes, randomize=False):
 	""":return: tuple(size_of_stream, stream)
 	:param randomize: try to produce a very random stream"""
-	actual_size = size_in_bytes / 4
-	producer = xrange(actual_size)
-	if randomize:
-		producer = list(producer)
-		random.shuffle(producer)
-	# END randomize
-	a = array('i', producer)
-	return actual_size*4, StringIO(a.tostring())
+	d = make_bytes(size_in_bytes, randomize)
+	return len(d), StringIO(d)
 
 
 class TestObjDBPerformance(TestBigRepoR):
