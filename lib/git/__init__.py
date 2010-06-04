@@ -22,5 +22,8 @@ from git.remote import *
 from git.index import *
 from git.utils import LockFile, BlockingLockFile
 
+# odb is NOT imported intentionally - if you really want it, you should get it 
+# yourself as its part of the core
+
 __all__ = [ name for name, obj in locals().items()
             if not (name.startswith('_') or inspect.ismodule(obj)) ]

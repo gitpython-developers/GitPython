@@ -91,7 +91,7 @@ class TestPerformance(TestBigRepoRW):
 			slen = stream.tell()
 			stream.seek(0)
 			
-			cm.sha = make_object(Commit.type, slen, stream)
+			cm.sha = make_object(IStream(Commit.type, slen, stream)).sha
 		# END commit creation
 		elapsed = time() - st
 		

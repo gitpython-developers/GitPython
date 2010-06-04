@@ -76,12 +76,14 @@ class Object(LazyMixin):
 		Retrieve object information
 		"""
 		if attr	 == "size":
-			typename, self.size = self.repo.odb.info(self.sha)
-			assert typename == self.type, _assertion_msg_format % (self.sha, typename, self.type)
+			oinfo = self.repo.odb.info(self.sha)
+			self.size = oinfo.size
+			assert oinfo.type == self.type, _assertion_msg_format % (self.sha, oinfo.type, self.type)
 		elif attr == "data":
-			typename, self.size, stream = self.repo.odb.stream(self.sha)
-			self.data = stream.read()	# once we have an own odb, we can delay reading
-			assert typename == self.type, _assertion_msg_format % (self.sha, typename, self.type)
+			ostream = self.repo.odb.stream(self.sha)
+			self.size = ostream.size
+			self.data = ostream.read()
+			assert ostream.type == self.type, _assertion_msg_format % (self.sha, ostream.type, self.type)
 		else:
 			super(Object,self)._set_cache_(attr)
 		
@@ -124,14 +126,13 @@ class Object(LazyMixin):
 	def data_stream(self):
 		""" :return:  File Object compatible stream to the uncompressed raw data of the object
 		:note: returned streams must be read in order"""
-		type, size, stream = self.repo.odb.stream(self.sha)
-		return stream
+		return self.repo.odb.stream(self.sha)
 
 	def stream_data(self, ostream):
 		"""Writes our data directly to the given output stream
 		:param ostream: File object compatible stream object.
 		:return: self"""
-		type, size, istream = self.repo.odb.stream(self.sha)
+		istream = self.repo.odb.stream(self.sha)
 		stream_copy(istream, ostream)
 		return self
 		

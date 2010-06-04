@@ -1,7 +1,7 @@
 """Performance data streaming performance"""
 
 from test.testlib import *
-from git.odb.db import *
+from git.odb import *
 
 from array import array
 from cStringIO import StringIO
@@ -51,7 +51,7 @@ class TestObjDBPerformance(TestBigRepoR):
 			
 			# writing - due to the compression it will seem faster than it is 
 			st = time()
-			sha = ldb.store('blob', size, stream)
+			sha = ldb.store(IStream('blob', size, stream)).sha
 			elapsed_add = time() - st
 			assert ldb.has_object(sha)
 			db_file = ldb.readable_db_object_path(sha)
@@ -63,8 +63,8 @@ class TestObjDBPerformance(TestBigRepoR):
 			
 			# reading all at once
 			st = time()
-			type, size, shastream = ldbstreamsha)
-			shadata = shastream.read()
+			ostream = ldb.stream(sha)
+			shadata = ostream.read()
 			elapsed_readall = time() - st
 			
 			stream.seek(0)
@@ -76,9 +76,9 @@ class TestObjDBPerformance(TestBigRepoR):
 			cs = 512*1000
 			chunks = list()
 			st = time()
-			type, size, shastream = ldbstreamsha)
+			ostream = ldb.stream(sha)
 			while True:
-				data = shastream.read(cs)
+				data = ostream.read(cs)
 				chunks.append(data)
 				if len(data) < cs:
 					break

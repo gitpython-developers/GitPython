@@ -21,6 +21,8 @@ type_id_to_type_map = 	{
 # used when dealing with larger streams
 chunk_size = 1000*1000
 
+__all__ = ('is_loose_object', 'loose_object_header_info', 'object_header_info', 
+			'write_object' )
 
 #{ Routines
 
@@ -73,42 +75,34 @@ def object_header_info(m):
 		raise BadObjectType(type_id)
 	# END handle exceptions
 	
-def write_object(type, size, source_stream, target_stream, close_target_stream=True, 
-					chunk_size=chunk_size):
+def write_object(type, size, read, write, chunk_size=chunk_size):
 	"""Write the object as identified by type, size and source_stream into the 
 	target_stream
 	
 	:param type: type string of the object
 	:param size: amount of bytes to write from source_stream
-	:param source_stream: stream as file-like object providing at least size bytes
-	:param target_stream: stream as file-like object to receive the data
+	:param read: read method of a stream providing the content data
+	:param write: write method of the output stream
 	:param close_target_stream: if True, the target stream will be closed when 
 		the routine exits, even if an error is thrown
-	:param chunk_size: size of chunks to read from source. Larger values can be beneficial
-		for io performance, but cost more memory as well
 	:return: The actual amount of bytes written to stream, which includes the header and a trailing newline"""
 	tbw = 0												# total num bytes written
 	dbw = 0												# num data bytes written
-	try:
-		# WRITE HEADER: type SP size NULL
-		tbw += target_stream.write("%s %i\0" % (type, size))
 	
-		# WRITE ALL DATA UP TO SIZE
-		while True:
-			cs = min(chunk_size, size-dbw)
-			data_len = target_stream.write(source_stream.read(cs))
-			dbw += data_len
-			if data_len < cs or dbw == size:
-				tbw += dbw
-				break
-			# END check for stream end
-		# END duplicate data
-		return tbw
-	finally:
-		if close_target_stream:
-			target_stream.close()
-		# END handle stream closing
-	# END assure file was closed
-	
+	# WRITE HEADER: type SP size NULL
+	tbw += write("%s %i\0" % (type, size))
+
+	# WRITE ALL DATA UP TO SIZE
+	while True:
+		cs = min(chunk_size, size-dbw)
+		data_len = write(read(cs))
+		dbw += data_len
+		if data_len < cs or dbw == size:
+			tbw += dbw
+			break
+		# END check for stream end
+	# END duplicate data
+	return tbw
+
 	
 #} END routines

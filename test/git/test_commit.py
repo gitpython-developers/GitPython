@@ -6,6 +6,7 @@
 
 from test.testlib import *
 from git import *
+from git.odb import IStream
 
 from cStringIO import StringIO
 import time
@@ -31,8 +32,8 @@ def assert_commit_serialization(rwrepo, commit_id, print_performance_info=False)
 		streamlen = stream.tell()
 		stream.seek(0)
 		
-		csha = rwrepo.odb.store(Commit.type, streamlen, stream)
-		assert csha == cm.sha
+		istream = rwrepo.odb.store(IStream(Commit.type, streamlen, stream))
+		assert istream.sha == cm.sha
 		
 		nc = Commit(rwrepo, Commit.NULL_HEX_SHA, cm.tree.sha,
 						cm.author, cm.authored_date, cm.author_tz_offset, 
@@ -45,7 +46,12 @@ def assert_commit_serialization(rwrepo, commit_id, print_performance_info=False)
 		ns += 1
 		streamlen = stream.tell()
 		stream.seek(0)
-		nc.sha = rwrepo.odb.store(Commit.type, streamlen, stream)
+		
+		# reuse istream
+		istream.size = streamlen
+		istream.stream = stream
+		istream.sha = None
+		nc.sha = rwrepo.odb.store(istream).sha
 		
 		# if it worked, we have exactly the same contents !
 		assert nc.sha == cm.sha

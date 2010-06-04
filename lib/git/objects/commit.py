@@ -9,6 +9,7 @@ import git.diff as diff
 import git.stats as stats
 from git.actor import Actor
 from tree import Tree
+from git.odb import IStream
 from cStringIO import StringIO
 import base
 import utils
@@ -346,7 +347,8 @@ class Commit(base.Object, Iterable, diff.Diffable, utils.Traversable, utils.Seri
 		streamlen = stream.tell()
 		stream.seek(0)
 		
-		new_commit.sha = repo.odb.store(cls.type, streamlen, stream, sha_as_hex=True)
+		istream = repo.odb.store(IStream(cls.type, streamlen, stream))
+		new_commit.sha = istream.sha
 		
 		if head:
 			try:

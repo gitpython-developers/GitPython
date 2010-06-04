@@ -8,7 +8,10 @@ from git.errors import (
 
 from stream import (
 		DecompressMemMapReader,
-		FDCompressedSha1Writer
+		FDCompressedSha1Writer,
+		Sha1Writer,
+		OStream,
+		OInfo
 	)
 
 from utils import (
@@ -34,11 +37,13 @@ import mmap
 import os
 
 
+__all__ = ('ObjectDBR', 'ObjectDBW', 'FileDBBase', 'LooseObjectDB', 'PackedDB', 
+			'CompoundDB', 'ReferenceDB', 'GitObjectDB' )
+
 class ObjectDBR(object):
 	"""Defines an interface for object database lookup.
 	Objects are identified either by hex-sha (40 bytes) or 
 	by sha (20 bytes)"""
-	__slots__ = tuple()
 	
 	def __contains__(self, sha):
 		return self.has_obj
@@ -52,7 +57,7 @@ class ObjectDBR(object):
 		raise NotImplementedError("To be implemented in subclass")
 		
 	def info(self, sha):
-		""" :return: ODB_Info instance
+		""" :return: OInfo instance
 		:param sha: 40 bytes hexsha or 20 bytes binary sha
 		:raise BadObject:"""
 		raise NotImplementedError("To be implemented in subclass")
@@ -60,27 +65,26 @@ class ObjectDBR(object):
 	def info_async(self, input_channel):
 		"""Retrieve information of a multitude of objects asynchronously
 		:param input_channel: Channel yielding the sha's of the objects of interest
-		:return: Channel yielding ODB_Info|InvalidODB_Info, in any order"""
+		:return: Channel yielding OInfo|InvalidOInfo, in any order"""
 		raise NotImplementedError("To be implemented in subclass")
 		
 	def stream(self, sha):
-		""":return: ODB_OStream instance
+		""":return: OStream instance
 		:param sha: 40 bytes hexsha or 20 bytes binary sha
 		:raise BadObject:"""
 		raise NotImplementedError("To be implemented in subclass")
 		
 	def stream_async(self, input_channel):
-		"""Retrieve the ODB_OStream of multiple objects
+		"""Retrieve the OStream of multiple objects
 		:param input_channel: see ``info``
 		:param max_threads: see ``ObjectDBW.store``
-		:return: Channel yielding ODB_OStream|InvalidODB_OStream instances in any order"""
+		:return: Channel yielding OStream|InvalidOStream instances in any order"""
 		raise NotImplementedError("To be implemented in subclass")
 			
 	#} END query interface
 	
 class ObjectDBW(object):
 	"""Defines an interface to create objects in the database"""
-	__slots__ = "_ostream"
 	
 	def __init__(self, *args, **kwargs):
 		self._ostream = None
@@ -99,12 +103,12 @@ class ObjectDBW(object):
 	def ostream(self):
 		""":return: overridden output stream this instance will write to, or None
 			if it will write to the default stream"""
-			return self._ostream
+		return self._ostream
 	
 	def store(self, istream):
 		"""Create a new object in the database
 		:return: the input istream object with its sha set to its corresponding value
-		:param istream: ODB_IStream compatible instance. If its sha is already set 
+		:param istream: IStream compatible instance. If its sha is already set 
 			to a value, the object will just be stored in the our database format, 
 			in which case the input stream is expected to be in object format ( header + contents ).
 		:raise IOError: if data could not be written"""
@@ -115,22 +119,16 @@ class ObjectDBW(object):
 		return right away, returning an output channel which receives the results as 
 		they are computed.
 		
-		:return: Channel yielding your ODB_IStream which served as input, in any order.
+		:return: Channel yielding your IStream which served as input, in any order.
 			The IStreams sha will be set to the sha it received during the process, 
 			or its error attribute will be set to the exception informing about the error.
-		:param input_channel: Channel yielding ODB_IStream instance.
+		:param input_channel: Channel yielding IStream instance.
 			As the same instances will be used in the output channel, you can create a map
 			between the id(istream) -> istream
 		:note:As some ODB implementations implement this operation as atomic, they might 
 			abort the whole operation if one item could not be processed. Hence check how 
 			many items have actually been produced."""
-		# a trivial implementation, ignoring the threads for now
-		# TODO: add configuration to the class to determine whether we may 
-		# actually use multiple threads, default False of course. If the add
-		shas = list()
-		for args in iter_info:
-			shas.append(self.store(dry_run=dry_run, sha_as_hex=sha_as_hex, *args))
-		return shas
+		raise NotImplementedError("To be implemented in subclass")
 	
 	#} END edit interface
 	
@@ -138,7 +136,6 @@ class ObjectDBW(object):
 class FileDBBase(object):
 	"""Provides basic facilities to retrieve files of interest, including 
 	caching facilities to help mapping hexsha's to objects"""
-	__slots__ = ('_root_path', )
 	
 	def __init__(self, root_path):
 		"""Initialize this instance to look for its files at the given root path
@@ -164,15 +161,11 @@ class FileDBBase(object):
 		return join(self._root_path, rela_path)
 	#} END interface
 		
-	#{ Utiltities
-	
-		
-	#} END utilities
 	
 	
 class LooseObjectDB(FileDBBase, ObjectDBR, ObjectDBW):
 	"""A database which operates on loose object files"""
-	__slots__ = ('_hexsha_to_file', '_fd_open_flags')
+	
 	# CONFIGURATION
 	# chunks in which data will be copied between streams
 	stream_chunk_size = chunk_size
@@ -238,21 +231,26 @@ class LooseObjectDB(FileDBBase, ObjectDBR, ObjectDBW):
 		finally:
 			os.close(fd)
 		# END assure file is closed
+		
+	def set_ostream(self, stream):
+		""":raise TypeError: if the stream does not support the Sha1Writer interface"""
+		if stream is not None and not isinstance(stream, Sha1Writer):
+			raise TypeError("Output stream musst support the %s interface" % Sha1Writer.__name__)
+		return super(LooseObjectDB, self).set_ostream(stream)
 			
 	def info(self, sha):
 		m = self._map_loose_object(sha)
 		try:
-			return loose_object_header_info(m)
+			type, size = loose_object_header_info(m)
+			return OInfo(sha, type, size)
 		finally:
 			m.close()
 		# END assure release of system resources
 		
-	def object(self, sha):
+	def stream(self, sha):
 		m = self._map_loose_object(sha)
-		reader = DecompressMemMapReader(m, close_on_deletion = True)
-		type, size = reader.initialize()
-		
-		return type, size, reader
+		type, size, stream = DecompressMemMapReader.new(m, close_on_deletion = True)
+		return OStream(sha, type, size, stream)
 		
 	def has_object(self, sha):
 		try:
@@ -263,27 +261,33 @@ class LooseObjectDB(FileDBBase, ObjectDBR, ObjectDBW):
 		# END check existance
 	
 	def store(self, istream):
-		# open a tmp file to write the data to
-		# todo: implement ostream properly
-		fd, tmp_path = tempfile.mkstemp(prefix='obj', dir=self._root_path)
-		writer = FDCompressedSha1Writer(fd)
+		"""note: The sha we produce will be hex by nature"""
+		assert istream.sha is None, "Direct istream writing not yet implemented"
+		tmp_path = None
+		writer = self.ostream()
+		if writer is None:
+			# open a tmp file to write the data to
+			fd, tmp_path = tempfile.mkstemp(prefix='obj', dir=self._root_path)
+			writer = FDCompressedSha1Writer(fd)
+		# END handle custom writer
 	
 		try:
-			write_object(type, size, stream, writer,
-							close_target_stream=True, chunk_size=self.stream_chunk_size)
-		except:
-			os.remove(tmp_path)
-			raise
-		# END assure tmpfile removal on error
+			try:
+				write_object(istream.type, istream.size, istream.read, writer.write,
+								chunk_size=self.stream_chunk_size)
+			except:
+				if tmp_path:
+					os.remove(tmp_path)
+				raise
+			# END assure tmpfile removal on error
+		finally:
+			if tmp_path:
+				writer.close()
+		# END assure target stream is closed
 		
-		
-		# in dry-run mode, we delete the file afterwards
 		sha = writer.sha(as_hex=True)
 		
-		if dry_run:
-			os.remove(tmp_path)
-		else:
-			# rename the file into place
+		if tmp_path:
 			obj_path = self.db_path(self.object_path(sha))
 			obj_dir = dirname(obj_path)
 			if not isdir(obj_dir):
@@ -292,11 +296,8 @@ class LooseObjectDB(FileDBBase, ObjectDBR, ObjectDBW):
 			rename(tmp_path, obj_path)
 		# END handle dry_run
 		
-		if not sha_as_hex:
-			sha = hex_to_bin(sha)
-		# END handle sha format
-		
-		return sha
+		istream.sha = sha
+		return istream
 	
 	
 class PackedDB(FileDBBase, ObjectDBR):
@@ -320,18 +321,17 @@ class GitObjectDB(LooseObjectDB):
 	:note: for now, we use the git command to do all the lookup, just until he 
 		have packs and the other implementations
 	"""
-	__slots__ = ('_git', )
 	def __init__(self, root_path, git):
 		"""Initialize this instance with the root and a git command"""
 		super(GitObjectDB, self).__init__(root_path)
 		self._git = git
 		
 	def info(self, sha):
-		discard, type, size = self._git.get_object_header(sha)
-		return type, size
+		t = self._git.get_object_header(sha)
+		return OInfo(t[0], t[1], t[2])
 		
-	def object(self, sha):
+	def stream(self, sha):
 		"""For now, all lookup is done by git itself"""
-		discard, type, size, stream = self._git.stream_object_data(sha)
-		return type, size, stream
+		t = self._git.stream_object_data(sha)
+		return OStream(t[0], t[1], t[2], t[3])
 	

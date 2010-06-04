@@ -2,8 +2,6 @@ import binascii
 import os
 import errno
 
-__all__ = ('FDSha1Writer', )
-
 #{ Routines
 
 hex_to_bin = binascii.a2b_hex
