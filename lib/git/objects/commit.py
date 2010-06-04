@@ -346,7 +346,7 @@ class Commit(base.Object, Iterable, diff.Diffable, utils.Traversable, utils.Seri
 		streamlen = stream.tell()
 		stream.seek(0)
 		
-		new_commit.sha = repo.odb.to_object(cls.type, streamlen, stream, sha_as_hex=True)
+		new_commit.sha = repo.odb.store(cls.type, streamlen, stream, sha_as_hex=True)
 		
 		if head:
 			try:

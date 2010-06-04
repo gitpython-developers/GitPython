@@ -18,26 +18,26 @@ class TestDB(TestBase):
 	all_data = (two_lines, )
 	
 	def _assert_object_writing(self, db):
-		"""General tests to verify object writing, compatible to iObjectDBW
+		"""General tests to verify object writing, compatible to ObjectDBW
 		:note: requires write access to the database"""
 		# start in dry-run mode
 		for dry_run in range(1, -1, -1):
 			for data in self.all_data:
 				for hex_sha in range(2):
-					sha = db.to_object(Blob.type, len(data), StringIO(data), dry_run, hex_sha)
+					sha = db.store(Blob.type, len(data), StringIO(data), dry_run, hex_sha)
 					assert db.has_object(sha) != dry_run
 					assert len(sha) == 20 + hex_sha * 20
 					
 					# verify data - the slow way, we want to run code
 					if not dry_run:
-						type, size = db.object_info(sha)
+						type, size = db.info(sha)
 						assert Blob.type == type
 						assert size == len(data)
 						
-						type, size, stream = db.object(sha)
+						type, size, stream = dbstreamsha)
 						assert stream.read() == data
 					else:
-						self.failUnlessRaises(BadObject, db.object_info, sha)
+						self.failUnlessRaises(BadObject, db.info, sha)
 						self.failUnlessRaises(BadObject, db.object, sha)
 				# END for each sha type
 			# END for each data set

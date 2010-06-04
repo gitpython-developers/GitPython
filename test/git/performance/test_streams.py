@@ -51,7 +51,7 @@ class TestObjDBPerformance(TestBigRepoR):
 			
 			# writing - due to the compression it will seem faster than it is 
 			st = time()
-			sha = ldb.to_object('blob', size, stream)
+			sha = ldb.store('blob', size, stream)
 			elapsed_add = time() - st
 			assert ldb.has_object(sha)
 			db_file = ldb.readable_db_object_path(sha)
@@ -63,7 +63,7 @@ class TestObjDBPerformance(TestBigRepoR):
 			
 			# reading all at once
 			st = time()
-			type, size, shastream = ldb.object(sha)
+			type, size, shastream = ldbstreamsha)
 			shadata = shastream.read()
 			elapsed_readall = time() - st
 			
@@ -76,7 +76,7 @@ class TestObjDBPerformance(TestBigRepoR):
 			cs = 512*1000
 			chunks = list()
 			st = time()
-			type, size, shastream = ldb.object(sha)
+			type, size, shastream = ldbstreamsha)
 			while True:
 				data = shastream.read(cs)
 				chunks.append(data)

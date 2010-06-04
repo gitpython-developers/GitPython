@@ -6,9 +6,12 @@ from git.errors import (
 	BadObjectType
 	)
 
-from utils import (
+from stream import (
 		DecompressMemMapReader,
-		FDCompressedSha1Writer,
+		FDCompressedSha1Writer
+	)
+
+from utils import (
 		ENOENT,
 		to_hex_sha,
 		exists,
@@ -31,7 +34,7 @@ import mmap
 import os
 
 
-class iObjectDBR(object):
+class ObjectDBR(object):
 	"""Defines an interface for object database lookup.
 	Objects are identified either by hex-sha (40 bytes) or 
 	by sha (20 bytes)"""
@@ -48,62 +51,87 @@ class iObjectDBR(object):
 		:raise BadObject:"""
 		raise NotImplementedError("To be implemented in subclass")
 		
-	def object(self, sha):
-		"""
-		:return: tuple(type_string, size_in_bytes, stream) a tuple with object
-			information including its type, its size as well as a stream from which its
-			contents can be read
+	def info(self, sha):
+		""" :return: ODB_Info instance
 		:param sha: 40 bytes hexsha or 20 bytes binary sha
 		:raise BadObject:"""
 		raise NotImplementedError("To be implemented in subclass")
 		
-	def object_info(self, sha):
-		"""
-		:return: tuple(type_string, size_in_bytes) tuple with the object's type 
-			string as well as its size in bytes
+	def info_async(self, input_channel):
+		"""Retrieve information of a multitude of objects asynchronously
+		:param input_channel: Channel yielding the sha's of the objects of interest
+		:return: Channel yielding ODB_Info|InvalidODB_Info, in any order"""
+		raise NotImplementedError("To be implemented in subclass")
+		
+	def stream(self, sha):
+		""":return: ODB_OStream instance
 		:param sha: 40 bytes hexsha or 20 bytes binary sha
 		:raise BadObject:"""
+		raise NotImplementedError("To be implemented in subclass")
+		
+	def stream_async(self, input_channel):
+		"""Retrieve the ODB_OStream of multiple objects
+		:param input_channel: see ``info``
+		:param max_threads: see ``ObjectDBW.store``
+		:return: Channel yielding ODB_OStream|InvalidODB_OStream instances in any order"""
 		raise NotImplementedError("To be implemented in subclass")
 			
 	#} END query interface
 	
-class iObjectDBW(object):
+class ObjectDBW(object):
 	"""Defines an interface to create objects in the database"""
-	__slots__ = tuple()
+	__slots__ = "_ostream"
+	
+	def __init__(self, *args, **kwargs):
+		self._ostream = None
 	
 	#{ Edit Interface
+	def set_ostream(self, stream):
+		"""Adjusts the stream to which all data should be sent when storing new objects
+		:param stream: if not None, the stream to use, if None the default stream
+			will be used.
+		:return: previously installed stream, or None if there was no override
+		:raise TypeError: if the stream doesn't have the supported functionality"""
+		cstream = self._ostream
+		self._ostream = stream
+		return cstream
+		
+	def ostream(self):
+		""":return: overridden output stream this instance will write to, or None
+			if it will write to the default stream"""
+			return self._ostream
 	
-	def to_object(self, type, size, stream, dry_run=False, sha_as_hex=True):
+	def store(self, istream):
 		"""Create a new object in the database
-		:return: the sha identifying the object in the database
-		:param type: type string identifying the object
-		:param size: size of the data to read from stream
-		:param stream: stream providing the data
-		:param dry_run: if True, the object database will not actually be changed
-		:param sha_as_hex: if True, the returned sha identifying the object will be 
-			hex encoded, not binary
+		:return: the input istream object with its sha set to its corresponding value
+		:param istream: ODB_IStream compatible instance. If its sha is already set 
+			to a value, the object will just be stored in the our database format, 
+			in which case the input stream is expected to be in object format ( header + contents ).
 		:raise IOError: if data could not be written"""
 		raise NotImplementedError("To be implemented in subclass")
 	
-	def to_objects(self, iter_info, dry_run=False, sha_as_hex=True, max_threads=0):
-		"""Create multiple new objects in the database
-		:return: sequence of shas identifying the created objects in the order in which 
-			they where given.
-		:param iter_info: iterable yielding tuples containing the type_string
-			size_in_bytes and the steam with the content data.
-		:param dry_run: see ``to_object``
-		:param sha_as_hex: see ``to_object``
-		:param max_threads: if < 1, any number of threads may be started while processing
-			the request, otherwise the given number of threads will be started.
-		:raise IOError: if data could not be written"""
+	def store_async(self, input_channel):
+		"""Create multiple new objects in the database asynchronously. The method will 
+		return right away, returning an output channel which receives the results as 
+		they are computed.
+		
+		:return: Channel yielding your ODB_IStream which served as input, in any order.
+			The IStreams sha will be set to the sha it received during the process, 
+			or its error attribute will be set to the exception informing about the error.
+		:param input_channel: Channel yielding ODB_IStream instance.
+			As the same instances will be used in the output channel, you can create a map
+			between the id(istream) -> istream
+		:note:As some ODB implementations implement this operation as atomic, they might 
+			abort the whole operation if one item could not be processed. Hence check how 
+			many items have actually been produced."""
 		# a trivial implementation, ignoring the threads for now
 		# TODO: add configuration to the class to determine whether we may 
 		# actually use multiple threads, default False of course. If the add
 		shas = list()
 		for args in iter_info:
-			shas.append(self.to_object(dry_run=dry_run, sha_as_hex=sha_as_hex, *args))
+			shas.append(self.store(dry_run=dry_run, sha_as_hex=sha_as_hex, *args))
 		return shas
-		
+	
 	#} END edit interface
 	
 
@@ -118,6 +146,7 @@ class FileDBBase(object):
 		:raise InvalidDBRoot: 
 		:note: The base will perform basic checking for accessability, but the subclass
 			is required to verify that the root_path contains the database structure it needs"""
+		super(FileDBBase, self).__init__()
 		if not os.path.isdir(root_path):
 			raise InvalidDBRoot(root_path)
 		self._root_path = root_path
@@ -141,7 +170,7 @@ class FileDBBase(object):
 	#} END utilities
 	
 	
-class LooseObjectDB(FileDBBase, iObjectDBR, iObjectDBW):
+class LooseObjectDB(FileDBBase, ObjectDBR, ObjectDBW):
 	"""A database which operates on loose object files"""
 	__slots__ = ('_hexsha_to_file', '_fd_open_flags')
 	# CONFIGURATION
@@ -210,7 +239,7 @@ class LooseObjectDB(FileDBBase, iObjectDBR, iObjectDBW):
 			os.close(fd)
 		# END assure file is closed
 			
-	def object_info(self, sha):
+	def info(self, sha):
 		m = self._map_loose_object(sha)
 		try:
 			return loose_object_header_info(m)
@@ -233,8 +262,9 @@ class LooseObjectDB(FileDBBase, iObjectDBR, iObjectDBW):
 			return False
 		# END check existance
 	
-	def to_object(self, type, size, stream, dry_run=False, sha_as_hex=True):
+	def store(self, istream):
 		# open a tmp file to write the data to
+		# todo: implement ostream properly
 		fd, tmp_path = tempfile.mkstemp(prefix='obj', dir=self._root_path)
 		writer = FDCompressedSha1Writer(fd)
 	
@@ -269,11 +299,11 @@ class LooseObjectDB(FileDBBase, iObjectDBR, iObjectDBW):
 		return sha
 	
 	
-class PackedDB(FileDBBase, iObjectDBR):
+class PackedDB(FileDBBase, ObjectDBR):
 	"""A database operating on a set of object packs"""
 	
 	
-class CompoundDB(iObjectDBR):
+class CompoundDB(ObjectDBR):
 	"""A database which delegates calls to sub-databases"""
 	
 
@@ -281,7 +311,7 @@ class ReferenceDB(CompoundDB):
 	"""A database consisting of database referred to in a file"""
 	
 	
-#class GitObjectDB(CompoundDB, iObjectDBW):
+#class GitObjectDB(CompoundDB, ObjectDBW):
 class GitObjectDB(LooseObjectDB):
 	"""A database representing the default git object store, which includes loose 
 	objects, pack files and an alternates file
@@ -296,7 +326,7 @@ class GitObjectDB(LooseObjectDB):
 		super(GitObjectDB, self).__init__(root_path)
 		self._git = git
 		
-	def object_info(self, sha):
+	def info(self, sha):
 		discard, type, size = self._git.get_object_header(sha)
 		return type, size
 		

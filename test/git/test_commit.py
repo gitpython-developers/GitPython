@@ -31,7 +31,7 @@ def assert_commit_serialization(rwrepo, commit_id, print_performance_info=False)
 		streamlen = stream.tell()
 		stream.seek(0)
 		
-		csha = rwrepo.odb.to_object(Commit.type, streamlen, stream)
+		csha = rwrepo.odb.store(Commit.type, streamlen, stream)
 		assert csha == cm.sha
 		
 		nc = Commit(rwrepo, Commit.NULL_HEX_SHA, cm.tree.sha,
@@ -45,7 +45,7 @@ def assert_commit_serialization(rwrepo, commit_id, print_performance_info=False)
 		ns += 1
 		streamlen = stream.tell()
 		stream.seek(0)
-		nc.sha = rwrepo.odb.to_object(Commit.type, streamlen, stream)
+		nc.sha = rwrepo.odb.store(Commit.type, streamlen, stream)
 		
 		# if it worked, we have exactly the same contents !
 		assert nc.sha == cm.sha

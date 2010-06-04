@@ -72,7 +72,7 @@ class TestPerformance(TestBigRepoRW):
 		assert_commit_serialization(self.gitrwrepo, self.head_sha_2k, True)
 		
 		rwrepo = self.gitrwrepo
-		make_object = rwrepo.odb.to_object
+		make_object = rwrepo.odb.store
 		# direct serialization - deserialization can be tested afterwards
 		# serialization is probably limited on IO
 		hc = rwrepo.commit(self.head_sha_2k)
