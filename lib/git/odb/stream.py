@@ -69,15 +69,6 @@ class OStream(OInfo):
 	
 	def __init__(self, *args, **kwargs):
 		tuple.__init__(self)
-	#{ Interface 
-	
-	def is_compressed(self):
-		""":return: True if reads of this stream yield zlib compressed data. Default False
-		:note: this does not imply anything about the actual internal storage.
-			Hence the data could be uncompressed, but read compressed, or vice versa"""
-		return False
-		
-	#} END interface
 	
 	#{ Stream Reader Interface 
 	
@@ -97,11 +88,11 @@ class IStream(list):
 	The only method your content stream must support is 'read'"""
 	__slots__ = tuple()
 	
-	def __new__(cls, type, size, stream, sha=None, compressed=False):
-		return list.__new__(cls, (sha, type, size, stream, compressed, None))
+	def __new__(cls, type, size, stream, sha=None):
+		return list.__new__(cls, (sha, type, size, stream, None))
 		
-	def __init__(self, type, size, stream, sha=None, compressed=None):
-		list.__init__(self, (sha, type, size, stream, compressed, None))
+	def __init__(self, type, size, stream, sha=None):
+		list.__init__(self, (sha, type, size, stream, None))
 	
 	#{ Interface 
 	
@@ -117,11 +108,11 @@ class IStream(list):
 		
 	def _error(self):
 		""":return: the error that occurred when processing the stream, or None"""
-		return self[5]
+		return self[4]
 		
 	def _set_error(self, exc):
 		"""Set this input stream to the given exc, may be None to reset the error"""
-		self[5] = exc
+		self[4] = exc
 			
 	error = property(_error, _set_error)
 	
@@ -172,13 +163,6 @@ class IStream(list):
 	stream = property(_stream, _set_stream)
 	
 	#} END odb info interface 
-	
-	#{ OStream interface 
-	
-	def is_compressed(self):
-		return self[4]
-		
-	#} END OStream interface
 		
 
 class InvalidOInfo(tuple):
@@ -397,6 +381,7 @@ class DecompressMemMapReader(object):
 class Sha1Writer(object):
 	"""Simple stream writer which produces a sha whenever you like as it degests
 	everything it is supposed to write"""
+	__slots__ = "sha1"
 	
 	def __init__(self):
 		self.sha1 = make_sha("")

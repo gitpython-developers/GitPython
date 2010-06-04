@@ -31,7 +31,8 @@ class DummyStream(object):
 			
 		def _assert(self):
 			assert self.was_read
-	
+
+
 class DeriveTest(OStream):
 	def __init__(self, sha, type, size, stream, *args, **kwargs):
 		self.myarg = kwargs.pop('myarg')
@@ -40,6 +41,27 @@ class DeriveTest(OStream):
 	def _assert(self):
 		assert self.args
 		assert self.myarg
+
+
+class ZippedStoreShaWriter(Sha1Writer):
+	"""Remembers everything someone writes to it"""
+	__slots__ = ('buf', 'zip')
+	def __init__(self):
+		Sha1Writer.__init__(self)
+		self.buf = StringIO()
+		self.zip = zlib.compressobj(1)	# fastest
+	
+	def __getattr__(self, attr):
+		return getattr(self.buf, attr)
+	
+	def write(self, data):
+		alen = Sha1Writer.write(self, data)
+		self.buf.write(self.zip.compress(data))
+		return alen
+		
+	def close(self):
+		self.buf.write(self.zip.flush())
+
 
 #} END stream utilitiess
 	
@@ -68,15 +90,11 @@ class TestStream(TestBase):
 		ostream.read(20)
 		assert stream.bytes == 20
 		
-		# defaults false
-		assert not ostream.is_compressed()
-		
 		# derive with own args
 		DeriveTest(sha, Blob.type, s, stream, 'mine',myarg = 3)._assert()
 		
 		# test istream
 		istream = IStream(Blob.type, s, stream)
-		assert not istream.is_compressed()
 		assert istream.sha == None
 		istream.sha = sha
 		assert istream.sha == sha
@@ -93,6 +111,10 @@ class TestStream(TestBase):
 		assert istream.stream is stream
 		istream.stream = None
 		assert istream.stream is None
+		
+		assert istream.error is None
+		istream.error = Exception()
+		assert isinstance(istream.error, Exception)
 		
 	def _assert_stream_reader(self, stream, cdata, rewind_stream=lambda s: None):
 		"""Make stream tests - the orig_stream is seekable, allowing it to be 
@@ -218,13 +240,14 @@ class TestDB(TestBase):
 		"""General tests to verify object writing, compatible to ObjectDBW
 		:note: requires write access to the database"""
 		# start in 'dry-run' mode, using a simple sha1 writer
-		ostreams = (Sha1Writer, None)
+		ostreams = (ZippedStoreShaWriter, None)
 		for ostreamcls in ostreams:
 			for data in self.all_data:
 				dry_run = ostreamcls is not None
 				ostream = None
 				if ostreamcls is not None:
 					ostream = ostreamcls()
+					assert isinstance(ostream, Sha1Writer)
 				# END create ostream
 				
 				prev_ostream = db.set_ostream(ostream)
@@ -252,6 +275,26 @@ class TestDB(TestBase):
 				else:
 					self.failUnlessRaises(BadObject, db.info, sha)
 					self.failUnlessRaises(BadObject, db.stream, sha)
+					
+					# DIRECT STREAM COPY
+					# our data hase been written in object format to the StringIO
+					# we pasesd as output stream. No physical database representation
+					# was created.
+					# Test direct stream copy of object streams, the result must be 
+					# identical to what we fed in
+					ostream.seek(0)
+					istream.stream = ostream
+					assert istream.sha is not None
+					prev_sha = istream.sha
+					
+					db.set_ostream(ZippedStoreShaWriter())
+					db.store(istream)
+					assert istream.sha == prev_sha
+					new_ostream = db.ostream()
+					
+					# note: only works as long our store write uses the same compression
+					# level, which is zip
+					assert ostream.getvalue() == new_ostream.getvalue()
 			# END for each data set
 		# END for each dry_run mode
 				

@@ -29,7 +29,8 @@ from utils import (
 from fun import ( 
 	chunk_size,
 	loose_object_header_info, 
-	write_object
+	write_object,
+	stream_copy
 	)
 
 import tempfile
@@ -262,7 +263,6 @@ class LooseObjectDB(FileDBBase, ObjectDBR, ObjectDBW):
 	
 	def store(self, istream):
 		"""note: The sha we produce will be hex by nature"""
-		assert istream.sha is None, "Direct istream writing not yet implemented"
 		tmp_path = None
 		writer = self.ostream()
 		if writer is None:
@@ -273,8 +273,13 @@ class LooseObjectDB(FileDBBase, ObjectDBR, ObjectDBW):
 	
 		try:
 			try:
-				write_object(istream.type, istream.size, istream.read, writer.write,
-								chunk_size=self.stream_chunk_size)
+				if istream.sha is not None:
+					stream_copy(istream.read, writer.write, istream.size, self.stream_chunk_size)
+				else:
+					# write object with header, we have to make a new one
+					write_object(istream.type, istream.size, istream.read, writer.write,
+									chunk_size=self.stream_chunk_size)
+				# END handle direct stream copies
 			except:
 				if tmp_path:
 					os.remove(tmp_path)
@@ -285,7 +290,7 @@ class LooseObjectDB(FileDBBase, ObjectDBR, ObjectDBW):
 				writer.close()
 		# END assure target stream is closed
 		
-		sha = writer.sha(as_hex=True)
+		sha = istream.sha or writer.sha(as_hex=True)
 		
 		if tmp_path:
 			obj_path = self.db_path(self.object_path(sha))
