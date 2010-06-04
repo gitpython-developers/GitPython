@@ -209,7 +209,7 @@ class Tree(base.IndexObject, diff.Diffable, utils.Traversable):
                            visit_once = False, ignore_self=1 ):
         """For documentation, see utils.Traversable.traverse
         
-        Trees are set to visist_once = False to gain more performance in the traversal"""
+        Trees are set to visit_once = False to gain more performance in the traversal"""
         return super(Tree, self).traverse(predicate, prune, depth, branch_first, visit_once, ignore_self)
 
     # List protocol

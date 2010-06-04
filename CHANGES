@@ -1,7 +1,12 @@
 =======
 CHANGES
 =======
-  
+
+0.2 Beta 2
+===========
+ * Commit objects now carry the 'encoding' information of their message. It wasn't parsed previously, and defaults to UTF-8
+ * Commit.create_from_tree now uses a pure-python implementation, mimicing git-commit-tree
+
 0.2
 =====
 General

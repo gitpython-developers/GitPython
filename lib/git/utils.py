@@ -27,6 +27,21 @@ def make_sha(source=''):
         sha1 = sha.sha(source)
         return sha1
 
+def stream_copy(source, destination, chunk_size=512*1024):
+	"""Copy all data from the source stream into the destination stream in chunks
+	of size chunk_size
+	:return: amount of bytes written"""
+	br = 0
+	while True:
+		chunk = source.read(chunk_size)
+		destination.write(chunk)
+		br += len(chunk)
+		if len(chunk) < chunk_size:
+			break
+	# END reading output stream
+	return br
+	
+
 def join_path(a, *p):
     """Join path tokens together similar to os.path.join, but always use 
     '/' instead of possibly '\' on windows."""
@@ -61,11 +76,13 @@ def join_path_native(a, *p):
     return to_native_path(join_path(a, *p))
 
 
-class SHA1Writer(object):
+class IndexFileSHA1Writer(object):
     """
     Wrapper around a file-like object that remembers the SHA1 of 
     the data written to it. It will write a sha when the stream is closed
     or if the asked for explicitly usign write_sha.
+    
+    Only useful to the indexfile
     
     Note:
         Based on the dulwich project
@@ -78,7 +95,7 @@ class SHA1Writer(object):
 
     def write(self, data):
         self.sha1.update(data)
-        self.f.write(data)
+        return self.f.write(data)
 
     def write_sha(self):
         sha = self.sha1.digest()
