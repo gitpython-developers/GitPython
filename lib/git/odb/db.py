@@ -142,11 +142,10 @@ class FileDBBase(object):
 		"""Initialize this instance to look for its files at the given root path
 		All subsequent operations will be relative to this path
 		:raise InvalidDBRoot: 
-		:note: The base will perform basic checking for accessability, but the subclass
-			is required to verify that the root_path contains the database structure it needs"""
+		:note: The base will not perform any accessablity checking as the base
+			might not yet be accessible, but become accessible before the first 
+			access."""
 		super(FileDBBase, self).__init__()
-		if not os.path.isdir(root_path):
-			raise InvalidDBRoot(root_path)
 		self._root_path = root_path
 		
 		
@@ -333,10 +332,10 @@ class GitObjectDB(LooseObjectDB):
 		
 	def info(self, sha):
 		t = self._git.get_object_header(sha)
-		return OInfo(t[0], t[1], t[2])
+		return OInfo(*t)
 		
 	def stream(self, sha):
 		"""For now, all lookup is done by git itself"""
 		t = self._git.stream_object_data(sha)
-		return OStream(t[0], t[1], t[2], t[3])
+		return OStream(*t)
 	
