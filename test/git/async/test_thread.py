@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """ Test thead classes and functions"""
 from test.testlib import *
-from git.mp.thread import *
+from git.async.thread import *
 from Queue import Queue
 
 class TestWorker(WorkerThread):

@@ -1,6 +1,6 @@
 """Channel testing"""
 from test.testlib import *
-from git.mp.channel import *
+from git.async.channel import *
 
 import time
 
