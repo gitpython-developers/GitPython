@@ -4,7 +4,7 @@ from git.odb.channel import *
 
 import time
 
-class TestDB(TestBase):
+class TestChannels(TestBase):
 	
 	def test_base(self):
 		# creating channel yields a write and a read channal

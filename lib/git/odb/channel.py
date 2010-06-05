@@ -17,6 +17,7 @@ class Channel(object):
 	
 	Create a new channel """
 	__slots__ = tuple()
+	
 	def __new__(cls, *args):
 		if cls is Channel:
 			max_items = 0

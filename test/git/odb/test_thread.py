@@ -27,7 +27,7 @@ class TestWorker(WorkerThread):
 		self.kwargs = None
 		
 
-class TestCase( TestCase ):
+class TestThreads( TestCase ):
 	
 	@terminate_threads
 	def test_worker_thread(self):
