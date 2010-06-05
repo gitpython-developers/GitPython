@@ -30,6 +30,7 @@ class Channel(object):
 		# END constructor mode
 		return object.__new__(cls)
 
+
 class WChannel(Channel):
 	"""The write end of a channel"""
 	__slots__ = ('_closed', '_queue')
