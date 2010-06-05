@@ -1,6 +1,6 @@
 """Channel testing"""
 from test.testlib import *
-from git.odb.pool import *
+from git.mp.pool import *
 
 import time
 
