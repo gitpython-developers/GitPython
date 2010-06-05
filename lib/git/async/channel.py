@@ -7,7 +7,7 @@ from Queue import (
 
 #{ Classes 
 class Channel(object):
-	"""A channel is similar to a system pipe. It has a write end as well as one or
+	"""A channel is similar to a file like object. It has a write end as well as one or
 	more read ends. If Data is in the channel, it can be read, if not the read operation
 	will block until data becomes available.
 	If the channel is closed, any read operation will result in an exception
@@ -51,8 +51,8 @@ class WChannel(Channel):
 		:param block: If True, the call will block until there is free space in the 
 			channel
 		:param timeout: timeout in seconds for blocking calls.
-		:raise IOError: when writing into closed file or when writing into a non-blocking
-			full channel
+		:raise IOError: when writing into closed file
+		:raise EOFError: when writing into a non-blocking full channel
 		:note: may block if the channel has a limited capacity"""
 		if self._closed:
 			raise IOError("Cannot write to a closed channel")
@@ -60,8 +60,13 @@ class WChannel(Channel):
 		try:
 			self._queue.put(item, block, timeout)
 		except Full:
-			raise IOError("Capacity of the channel was exeeded")
+			raise EOFError("Capacity of the channel was exeeded")
 		# END exception handling
+		
+	def size(self):
+		""":return: approximate number of items that could be read from the read-ends
+			of this channel"""
+		return self._queue.qsize()
 		
 	def close(self):
 		"""Close the channel. Multiple close calls on a closed channel are no 
@@ -86,22 +91,42 @@ class RChannel(Channel):
 		
 	#{ Interface
 	
-	def read(self, block=True, timeout=None):
-		""":return: an item read from the channel
+	def read(self, count=0, block=True, timeout=None):
+		"""read a list of items read from the channel. The list, as a sequence
+		of items, is similar to the string of characters returned when reading from 
+		file like objects.
+		:param count: given amount of items to read. If < 1, all items will be read
 		:param block: if True, the call will block until an item is available
 		:param timeout: if positive and block is True, it will block only for the 
 			given amount of seconds.
-		:raise IOError: When reading from an empty channel ( if non-blocking, or 
-			if the channel is still empty after the timeout"""
+		:return: single item in a list if count is 1, or a list of count items. 
+			If the channel was empty and count was 1, an empty list will be returned.
+			If count was greater 1, a list with less than count items will be 
+			returned.
+			If count was < 1, a list with all items that could be read will be 
+			returned."""
 		# if the channel is closed for writing, we never block
 		if self._wc.closed:
 			block = False
-			
+		
+		out = list()
 		try:
-			return self._wc._queue.get(block, timeout)
+			if count == 1:
+				out.append(self._wc._queue.get(block, timeout))
+			elif count < 1:
+				while True:
+					out.append(self._wc._queue.get(block, timeout))
+				# END for each item
+				return out
+			else:
+				for i in xrange(count):
+					out.append(self._wc._queue.get(block, timeout))
+				# END for each item
+			# END handle count
 		except Empty:
-			raise IOError("Error reading from an empty channel")
-		# END handle reading
+			pass
+		# END handle exceptions
+		return out
 		
 	#} END interface 
 	
