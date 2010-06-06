@@ -26,7 +26,7 @@ class TestChannels(TestBase):
 		assert rc.read(timeout=1) == [item, item2]
 		assert time.time() - st >= 1.0
 		
-		# next read blocks, then raises - it waits a second
+		# next read blocks. it waits a second
 		st = time.time()
 		assert len(rc.read(1, True, 1)) == 0
 		assert time.time() - st >= 1.0
