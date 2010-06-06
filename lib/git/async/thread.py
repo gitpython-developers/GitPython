@@ -85,9 +85,9 @@ class TerminatableThread(threading.Thread):
 	
 
 class WorkerThread(TerminatableThread):
-	"""
-	This base allows to call functions on class instances natively and retrieve
-	their results asynchronously using a queue.
+	""" This base allows to call functions on class instances natively.
+	As it is meant to work with a pool, the result of the call must be 
+	handled by the callee.
 	The thread runs forever unless it receives the terminate signal using 
 	its task queue.
 	
@@ -95,11 +95,9 @@ class WorkerThread(TerminatableThread):
 	allow the following:
 	
 	inq = Queue()
-	outq = Queue()
-	w = WorkerThread(inq, outq)
+	w = WorkerThread(inq)
 	w.start()
 	inq.put((WorkerThread.<method>, args, kwargs))
-	res = outq.get()
 	
 	finally we call quit to terminate asap.
 	
@@ -120,10 +118,9 @@ class WorkerThread(TerminatableThread):
 	class InvalidRoutineError(Exception):
 		"""Class sent as return value in case of an error"""
 		
-	def __init__(self, inq = None, outq = None):
+	def __init__(self, inq = None):
 		super(WorkerThread, self).__init__()
 		self.inq = inq or Queue.Queue()
-		self.outq = outq or Queue.Queue()
 	
 	def call(self, function, *args, **kwargs):
 		"""Method that makes the call to the worker using the input queue, 
@@ -135,17 +132,6 @@ class WorkerThread(TerminatableThread):
 		:param args: arguments to pass to function
 		:parma **kwargs: kwargs to pass to function"""
 		self.inq.put((function, args, kwargs))
-		return self.outq
-	
-	def wait_until_idle(self):
-		"""wait until the input queue is empty, in the meanwhile, take all 
-		results off the output queue."""
-		while not self.inq.empty():
-			try:
-				self.outq.get(False)
-			except Queue.Empty:
-				continue
-		# END while there are tasks on the queue
 	
 	def run(self):
 		"""Process input tasks until we receive the quit signal"""
@@ -184,15 +170,12 @@ class WorkerThread(TerminatableThread):
 				else:
 					# ignore unknown items
 					print "%s: task %s was not understood - terminating" % (self.getName(), str(tasktuple))
-					self.outq.put(self.InvalidRoutineError(routine))
 					break
 				# END make routine call
-				self.outq.put(rval)
 			except StopIteration:
 				break
 			except Exception,e:
 				print "%s: Task %s raised unhandled exception: %s" % (self.getName(), str(tasktuple), str(e))
-				self.outq.put(e)
 			# END routine exception handling
 		# END endless loop
 	

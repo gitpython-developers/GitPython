@@ -37,9 +37,7 @@ class TestThreads( TestCase ):
 		# test different method types
 		standalone_func = lambda *args, **kwargs: worker.fun(*args, **kwargs)
 		for function in ("fun", TestWorker.fun, worker.fun, standalone_func):
-			rval = worker.call(function, 1, this='that')
-			assert isinstance(rval, Queue)
-			assert rval.get() is True
+			worker.call(function, 1, this='that')
 			worker.make_assertion()
 		# END for each function type
 		
