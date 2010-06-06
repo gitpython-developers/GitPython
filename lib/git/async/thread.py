@@ -115,23 +115,9 @@ class WorkerThread(TerminatableThread):
 	"""
 	__slots__ = ('inq', 'outq')
 	
-	class InvalidRoutineError(Exception):
-		"""Class sent as return value in case of an error"""
-		
 	def __init__(self, inq = None):
 		super(WorkerThread, self).__init__()
 		self.inq = inq or Queue.Queue()
-	
-	def call(self, function, *args, **kwargs):
-		"""Method that makes the call to the worker using the input queue, 
-		returning our output queue
-		
-		:param funciton: can be a standalone function unrelated to this class, 
-			a class method of this class or any instance method.
-			If it is a string, it will be considered a function residing on this instance
-		:param args: arguments to pass to function
-		:parma **kwargs: kwargs to pass to function"""
-		self.inq.put((function, args, kwargs))
 	
 	def run(self):
 		"""Process input tasks until we receive the quit signal"""
@@ -139,9 +125,7 @@ class WorkerThread(TerminatableThread):
 			if self._should_terminate():
 				break
 			# END check for stop request
-			routine = None
-			args = tuple()
-			kwargs = dict()
+			
 			# don't wait too long, instead check for the termination request more often
 			try:
 				tasktuple = self.inq.get(True, 1)
@@ -149,29 +133,19 @@ class WorkerThread(TerminatableThread):
 				continue
 			# END get task with timeout
 			
-			if isinstance(tasktuple, (tuple, list)):
-				if len(tasktuple) == 3:
-					routine, args, kwargs = tasktuple
-				elif len(tasktuple) == 2:
-					routine, args = tasktuple
-				elif len(tasktuple) == 1:
-					routine = tasktuple[0]
-				# END tasktuple length check
-			elif inspect.isroutine(tasktuple):
-				routine = tasktuple
-			# END tasktuple handling
+			# needing exactly one function, and one arg
+			assert len(tasktuple) == 2, "Need tuple of function, arg - it could be more flexible, but its reduced to what we need"
+			routine, arg = tasktuple
 			
 			try:
 				rval = None
 				if inspect.ismethod(routine):
 					if routine.im_self is None:
-						rval = routine(self, *args, **kwargs)
+						rval = routine(self, arg)
 					else:
-						rval = routine(*args, **kwargs)
+						rval = routine(arg)
 				elif inspect.isroutine(routine):
-					rval = routine(*args, **kwargs)
-				elif isinstance(routine, basestring) and hasattr(self, routine):
-					rval = getattr(self, routine)(*args, **kwargs)
+					rval = routine(arg)
 				else:
 					# ignore unknown items
 					print "%s: task %s was not understood - terminating" % (self.getName(), str(tasktuple))
@@ -180,7 +154,8 @@ class WorkerThread(TerminatableThread):
 			except StopIteration:
 				break
 			except Exception,e:
-				print "%s: Task %s raised unhandled exception: %s" % (self.getName(), str(tasktuple), str(e))
+				print "%s: Task %s raised unhandled exception: %s - this really shouldn't happen !" % (self.getName(), str(tasktuple), str(e))
+				break	# abort ... 
 			# END routine exception handling
 		# END endless loop
 	

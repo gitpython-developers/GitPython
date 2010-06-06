@@ -7,7 +7,13 @@ class OutputChannelTask(Node):
 	additional information on how the task should be queued and processed.
 	
 	Results of the item processing are sent to an output channel, which is to be 
-	set by the creator"""
+	set by the creator
+	
+	* **min_count** assures that not less than min_count items will be processed per call.
+	* **max_chunksize** assures that multi-threading is happening in smaller chunks. If 
+	 someone wants all items to be processed, using read(0), the whole task would go to
+	 one worker, as well as dependent tasks. If you want finer granularity , you can 
+	 specify this here, causing chunks to be no larger than max_chunksize"""
 	__slots__ = (	'_read',			# method to yield items to process 
 					'_out_wc', 			# output write channel
 					'_exc',				# exception caught
@@ -42,7 +48,6 @@ class OutputChannelTask(Node):
 	def process(self, count=0):
 		"""Process count items and send the result individually to the output channel"""
 		items = self._read(count)
-		
 		try:
 			if self.apply_single:
 				for item in items:
@@ -58,6 +63,9 @@ class OutputChannelTask(Node):
 		
 		# if we didn't get all demanded items, which is also the case if count is 0
 		# we have depleted the input channel and are done
+		# We could check our output channel for how many items we have and put that 
+		# into the equation, but whats important is that we were asked to produce
+		# count items.
 		if not items or len(items) != count:
 			self.set_done()
 		# END handle done state

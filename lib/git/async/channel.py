@@ -162,7 +162,15 @@ class RChannel(Channel):
 					try:
 						if wc.closed:
 							have_timeout = True
-							break
+							# its about the 'in the meanwhile' :) - get everything
+							# we can in non-blocking mode. This will raise
+							try:
+								while True:
+									out.append(queue.get(False))
+								# END until it raises Empty
+							except Empty:
+								break
+							# END finally, out of here
 						# END don't continue on closed channels
 						
 						# END abort reading if it was closed ( in the meanwhile )
