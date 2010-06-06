@@ -35,12 +35,17 @@ class Graph(object):
 	def del_node(self, node):
 		"""Delete a node from the graph
 		:return: self"""
+		try:
+			del(self.nodes[self.nodes.index(node)])
+		except ValueError:
+			return self
+		# END ignore if it doesn't exist
+		
 		# clear connections
 		for outn in node.out_nodes:
 			del(outn.in_nodes[outn.in_nodes.index(node)])
 		for inn in node.in_nodes:
 			del(inn.out_nodes[inn.out_nodes.index(node)])
-		del(self.nodes[self.nodes.index(node)]) 
 		return self
 	
 	def add_edge(self, u, v):

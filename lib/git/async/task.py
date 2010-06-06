@@ -58,7 +58,7 @@ class OutputChannelTask(Node):
 		
 		# if we didn't get all demanded items, which is also the case if count is 0
 		# we have depleted the input channel and are done
-		if len(items) != count:
+		if not items or len(items) != count:
 			self.set_done()
 		# END handle done state
 	#{ Configuration

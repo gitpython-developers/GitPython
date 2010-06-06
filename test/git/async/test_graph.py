@@ -54,7 +54,8 @@ class TestGraph(TestBase):
 			
 		# deleting a connected node clears its neighbour connections
 		assert n3.in_nodes[0] is n2
-		g.del_node(n2)
+		assert g.del_node(n2) is g
+		assert g.del_node(n2) is g					# multi-deletion okay
 		assert len(g.nodes) == nn - 1
 		assert len(n3.in_nodes) == 0
 		assert len(n1.out_nodes) == 0
