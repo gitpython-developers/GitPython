@@ -139,10 +139,15 @@ class WorkerThread(TerminatableThread):
 			if self._should_terminate():
 				break
 			# END check for stop request
-			routine = self.__class__.quit
+			routine = None
 			args = tuple()
 			kwargs = dict()
-			tasktuple = self.inq.get()
+			# don't wait too long, instead check for the termination request more often
+			try:
+				tasktuple = self.inq.get(True, 1)
+			except Queue.Empty:
+				continue
+			# END get task with timeout
 			
 			if isinstance(tasktuple, (tuple, list)):
 				if len(tasktuple) == 3:

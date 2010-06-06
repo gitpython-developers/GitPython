@@ -25,7 +25,7 @@ class TestGraph(TestBase):
 		# add a chain of connected nodes
 		last = None
 		for i in range(nn):
-			n = g.add_node(Node())
+			n = g.add_node(Node(i))
 			if last:
 				assert not last.out_nodes
 				assert not n.in_nodes

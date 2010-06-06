@@ -1,14 +1,20 @@
 """Simplistic implementation of a graph"""
 
 class Node(object):
-	"""A quick and dirty to the point implementation of a simple, and slow ascyclic graph.
-	Its not designed to support big graphs, and sports only the functionality 
-	we need"""
-	__slots__ = ('in_nodes', 'out_nodes')
+	"""A Node in the graph. They know their neighbours, and have an id which should 
+	resolve into a string"""
+	__slots__ = ('in_nodes', 'out_nodes', 'id')
 	
-	def __init__(self):
+	def __init__(self, id=None):
+		self.id = id
 		self.in_nodes = list()
 		self.out_nodes = list()
+		
+	def __str__(self):
+		return str(self.id)
+		
+	def __repr__(self):
+		return "%s(%s)" % (type(self).__name__, self.id)
 	
 	
 class Graph(object):
