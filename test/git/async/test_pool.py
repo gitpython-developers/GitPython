@@ -246,6 +246,10 @@ class TestThreadPool(TestBase):
 		p.set_size(2)
 		self._assert_single_task(p, True)
 		
+		# kill it
+		p.set_size(4)
+		self._assert_single_task(p, True)
+		
 		# DEPENDENT TASK ASYNC MODE
 		###########################
 		self._assert_async_dependent_tasks(p)
