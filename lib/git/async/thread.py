@@ -115,6 +115,11 @@ class WorkerThread(TerminatableThread):
 	"""
 	__slots__ = ('inq', 'outq')
 	
+	
+	# define how often we should check for a shutdown request in case our 
+	# taskqueue is empty
+	shutdown_check_time_s = 0.5
+	
 	def __init__(self, inq = None):
 		super(WorkerThread, self).__init__()
 		self.inq = inq or Queue.Queue()

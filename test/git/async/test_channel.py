@@ -22,14 +22,15 @@ class TestChannels(TestBase):
 		wc.write(item2)
 		
 		# read all - it blocks as its still open for writing
+		to = 0.2
 		st = time.time()
-		assert rc.read(timeout=1) == [item, item2]
-		assert time.time() - st >= 1.0
+		assert rc.read(timeout=to) == [item, item2]
+		assert time.time() - st >= to
 		
 		# next read blocks. it waits a second
 		st = time.time()
-		assert len(rc.read(1, True, 1)) == 0
-		assert time.time() - st >= 1.0
+		assert len(rc.read(1, True, to)) == 0
+		assert time.time() - st >= to
 		
 		# writing to a closed channel raises
 		assert not wc.closed
@@ -50,10 +51,10 @@ class TestChannels(TestBase):
 		wc, rc = Channel(1)
 		wc.write(item)			# fine
 		
-		# blocks for a second, its full
+		# blocks for a a moment, its full
 		st = time.time()
-		self.failUnlessRaises(EOFError, wc.write, item, True, 1)
-		assert time.time() - st >= 1.0
+		self.failUnlessRaises(EOFError, wc.write, item, True, to)
+		assert time.time() - st >= to
 		
 		# get our only one
 		assert rc.read(1)[0] == item
