@@ -41,6 +41,18 @@ def cpu_count():
 #} END routines
 
 
+
+class DummyLock(object):
+	"""An object providing a do-nothing lock interface for use in sync mode"""
+	__slots__ = tuple()
+	
+	def acquire(self):
+		pass
+	
+	def release(self):
+		pass
+	
+
 class SyncQueue(deque):
 	"""Adapter to allow using a deque like a queue, without locking"""
 	def get(self, block=True, timeout=None):
@@ -59,7 +71,7 @@ class SyncQueue(deque):
 class HSCondition(_Condition):
 	"""An attempt to make conditions less blocking, which gains performance 
 	in return by sleeping less"""
-	delay = 0.0001		# reduces wait times, but increases overhead
+	delay = 0.00002		# reduces wait times, but increases overhead
 	
 	def wait(self, timeout=None):
 		waiter = Lock()

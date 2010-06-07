@@ -5,6 +5,7 @@ from threading import Lock
 from util import (
 		SyncQueue,
 		AsyncQueue,
+		DummyLock
 	)
 
 from task import InputChannelTask
@@ -461,6 +462,11 @@ class Pool(object):
 				# END handle edge-adding
 			# END add task relation
 		# END handle input channels for connections
+		
+		# fix locks - in serial mode, the task does not need real locks
+		if self.size() == 0:
+			task._slock = DummyLock()
+		# END improve locks
 		
 		return rc
 			
