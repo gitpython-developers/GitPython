@@ -36,7 +36,7 @@ class TestThreadTaskNode(InputIteratorThreadTask):
 		self.plock.release()
 		super(TestThreadTaskNode, self).process(count)
 		
-	def _assert(self, pc, fc):
+	def _assert(self, pc, fc, check_scheduled=False):
 		"""Assert for num process counts (pc) and num function counts (fc)
 		:return: self"""
 		self.plock.acquire()
@@ -49,6 +49,10 @@ class TestThreadTaskNode(InputIteratorThreadTask):
 			print self.item_count, fc
 		assert self.item_count == fc
 		self.lock.release()
+		
+		# if we read all, we can't really use scheduled items
+		if check_scheduled:
+			assert self._scheduled_items == 0
 		assert not self.error()
 		return self
 		
@@ -184,7 +188,7 @@ class TestThreadPool(TestBase):
 			else:
 				assert rc.read(1)[0] == i
 		# END for each item
-		task._assert(ni / task.min_count + 1, ni)
+		task._assert(ni / task.min_count, ni)
 		del(rc)
 		assert p.num_tasks() == null_tasks
 		

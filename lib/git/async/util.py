@@ -59,7 +59,7 @@ class SyncQueue(deque):
 class HSCondition(_Condition):
 	"""An attempt to make conditions less blocking, which gains performance 
 	in return by sleeping less"""
-	delay = 0.00005		# reduces wait times, but increases overhead
+	delay = 0.0001		# reduces wait times, but increases overhead
 	
 	def wait(self, timeout=None):
 		waiter = Lock()
