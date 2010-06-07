@@ -107,6 +107,7 @@ class Pool(object):
 					'_consumed_tasks',		# a queue with tasks that are done or had an error
 					'_workers',				# list of worker threads
 					'_queue', 				# master queue for tasks
+					'_taskorder_cache', 	# map task id -> ordered dependent tasks
 					'_taskgraph_lock',		# lock for accessing the task graph
 				)
 	
@@ -130,6 +131,7 @@ class Pool(object):
 		self._workers = list()
 		self._queue = self.TaskQueueCls()
 		self._taskgraph_lock = self.LockCls()
+		self._taskorder_cache = dict()
 		self.set_size(size)
 		
 	def __del__(self):
@@ -149,10 +151,21 @@ class Pool(object):
 		
 		Tasks which are not done will be put onto the queue for processing, which 
 		is fine as we walked them depth-first."""
-		dfirst_tasks = list()
-		# for the walk, we must make sure the ordering does not change
-		# Note: the result of this could be cached
-		self._tasks.visit_input_inclusive_depth_first(task, lambda n: dfirst_tasks.append(n))
+		# for the walk, we must make sure the ordering does not change. Even 
+		# when accessing the cache, as it is related to graph changes
+		self._taskgraph_lock.acquire()
+		try:
+			try:
+				dfirst_tasks = self._taskorder_cache[id(task)]
+			except KeyError:
+				# have to retrieve the list from the graph
+				dfirst_tasks = list()
+				self._tasks.visit_input_inclusive_depth_first(task, lambda n: dfirst_tasks.append(n))
+				self._taskorder_cache[id(task)] = dfirst_tasks
+			# END handle cached order retrieval
+		finally:
+			self._taskgraph_lock.release()
+		# END handle locking
 		
 		# check the min count on all involved tasks, and be sure that we don't 
 		# have any task which produces less than the maximum min-count of all tasks
@@ -208,7 +221,8 @@ class Pool(object):
 				# the following loops are kind of unrolled - code duplication
 				# should make things execute faster. Putting the if statements 
 				# into the loop would be less code, but ... slower
-				print actual_count, numchunks, chunksize, remainder, task._out_wc.size()
+				# DEBUG
+				# print actual_count, numchunks, chunksize, remainder, task._out_wc.size()
 				if self._workers:
 					# respect the chunk size, and split the task up if we want 
 					# to process too much. This can be defined per task
@@ -332,6 +346,7 @@ class Pool(object):
 		task.set_done()
 		self._taskgraph_lock.acquire()
 		try:
+			self._taskorder_cache.clear()
 			self._tasks.del_node(task)
 		finally:
 			self._taskgraph_lock.release()
@@ -360,6 +375,7 @@ class Pool(object):
 		
 		self._taskgraph_lock.acquire()
 		try:
+			self._taskorder_cache.clear()
 			self._tasks.add_node(task)
 		finally:
 			self._taskgraph_lock.release()

@@ -141,7 +141,8 @@ class WorkerThread(TerminatableThread):
 			# needing exactly one function, and one arg
 			assert len(tasktuple) == 2, "Need tuple of function, arg - it could be more flexible, but its reduced to what we need"
 			routine, arg = tasktuple
-			
+			# DEBUG
+			# print "%s: picked up: %s(%s)" % (self.name, routine, arg)
 			try:
 				rval = None
 				if inspect.ismethod(routine):
