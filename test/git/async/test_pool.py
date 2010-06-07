@@ -2,6 +2,7 @@
 from test.testlib import *
 from git.async.pool import *
 from git.async.task import *
+from git.async.thread import terminate_threads
 from git.async.util import cpu_count
 import threading
 import time
@@ -46,7 +47,7 @@ class TestThreadPool(TestBase):
 		
 		# add a simple task
 		# it iterates n items
-		ni = 1000
+		ni = 500
 		assert ni % 2 == 0, "ni needs to be dividable by 2"
 		assert ni % 4 == 0, "ni needs to be dividable by 4"
 		
@@ -106,8 +107,9 @@ class TestThreadPool(TestBase):
 		assert len(rc.read(1)) == 1			# processes nothing
 		# rest - it has ni/2 - 2 on the queue, and pulls ni-2
 		# It wants too much, so the task realizes its done. The task
-		# doesn't care about the items in its output channel 
-		assert len(rc.read(ni-2)) == ni - 2
+		# doesn't care about the items in its output channel
+		items = rc.read(ni-2)
+		assert len(items) == ni - 2
 		assert p.num_tasks() == null_tasks
 		task._assert(2, ni)						# two chunks, 20 calls ( all items )
 		
@@ -125,7 +127,8 @@ class TestThreadPool(TestBase):
 		assert len(rc.read(ni / 2 + 2)) == ni / 2 + 2
 		# have n / 4 - 2 items on queue, want n / 4 in first chunk, cause 1 processing
 		# ( 4 in total ). Still want n / 4 - 2 in second chunk, causing another processing
-		assert len(rc.read(ni / 2 - 2)) == ni / 2 - 2
+		items = rc.read(ni / 2 - 2)
+		assert len(items) == ni / 2 - 2
 		
 		task._assert( 5, ni)
 		assert p.num_tasks() == null_tasks	# depleted
@@ -158,9 +161,12 @@ class TestThreadPool(TestBase):
 		task.min_count = ni / 4
 		rc = p.add_task(task)
 		for i in range(ni):
-			assert rc.read(1)[0] == i
+			if async:
+				assert len(rc.read(1)) == 1
+			else:
+				assert rc.read(1)[0] == i
 		# END for each item
-		task._assert(ni / task.min_count, ni)
+		task._assert(ni / task.min_count + 1, ni)
 		del(rc)
 		assert p.num_tasks() == null_tasks
 		
@@ -181,6 +187,7 @@ class TestThreadPool(TestBase):
 		# t1 -> x -> t3
 		pass
 	
+	@terminate_threads
 	def test_base(self):
 		p = ThreadPool()
 		
@@ -238,7 +245,6 @@ class TestThreadPool(TestBase):
 		# two threads to compete for a single task
 		p.set_size(2)
 		self._assert_single_task(p, True)
-		
 		
 		# DEPENDENT TASK ASYNC MODE
 		###########################

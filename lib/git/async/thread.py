@@ -15,9 +15,6 @@ def do_terminate_threads(whitelist=list()):
 			continue
 		if whitelist and t not in whitelist:
 			continue
-		if isinstance(t, WorkerThread):
-			t.inq.put(t.quit)
-		# END worker special handling
 		t.stop_and_join()
 	# END for each thread
 
