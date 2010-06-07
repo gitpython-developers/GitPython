@@ -133,12 +133,55 @@ class HSCondition(_Condition):
 	
 class AsyncQueue(Queue):
 	"""A queue using different condition objects to gain multithreading performance"""
-	def __init__(self, maxsize=0):
-		Queue.__init__(self, maxsize)
-		
-		self.not_empty = HSCondition(self.mutex)
-		self.not_full = HSCondition(self.mutex)
-		self.all_tasks_done = HSCondition(self.mutex)
-		
+	__slots__ = ('mutex', 'not_empty', 'queue')
 	
+	def __init__(self, maxsize=0):
+		self.queue = deque()
+		self.mutex = Lock()
+		self.not_empty = HSCondition(self.mutex)
+		
+	def qsize(self):
+		self.mutex.acquire()
+		try:
+			return len(self.queue)
+		finally:
+			self.mutex.release()
+
+	def empty(self):
+		self.mutex.acquire()
+		try:
+			return not len(self.queue)
+		finally:
+			self.mutex.release()
+
+	def put(self, item, block=True, timeout=None):
+		self.mutex.acquire()
+		self.queue.append(item)
+		self.mutex.release()
+		self.not_empty.notify()
+
+	def get(self, block=True, timeout=None):
+		self.not_empty.acquire()
+		q = self.queue
+		try:
+			if not block:
+				if not len(q):
+					raise Empty
+			elif timeout is None:
+				while not len(q):
+					self.not_empty.wait()
+			elif timeout < 0:
+				raise ValueError("'timeout' must be a positive number")
+			else:
+				endtime = _time() + timeout
+				while not len(q):
+					remaining = endtime - _time()
+					if remaining <= 0.0:
+						raise Empty
+					self.not_empty.wait(remaining)
+			return q.popleft()
+		finally:
+			self.not_empty.release()
+
+
 #} END utilities

@@ -61,6 +61,12 @@ class TestThreadPool(TestBase):
 	
 	max_threads = cpu_count()
 	
+	def _add_triple_task(self, p):
+		"""Add a triplet of feeder, transformer and finalizer to the pool, like
+		t1 -> t2 -> t3, return all 3 return channels in order"""
+		t1 = TestThreadTaskNode(make_iter(), 'iterator', None)
+		# TODO:
+	
 	def _assert_single_task(self, p, async=False):
 		"""Performs testing in a synchronized environment"""
 		null_tasks = p.num_tasks()		# in case we had some before
