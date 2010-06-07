@@ -178,6 +178,17 @@ class InputChannelTask(OutputChannelTask):
 		# make sure we don't trigger the pool if we read from a pool channel which 
 		# belongs to our own pool. Channels from different pools are fine though, 
 		# there we want to trigger its computation
+		# PROBLEM: if the user keeps an end, but decides to put the same end into
+		# a task of this pool, then all items might deplete without new ones being 
+		# produced, causing a deadlock. Just triggering the pool would be better, 
+		# but cost's more, unnecessarily if there is just one consumer, which is 
+		# the user.
+		# * could encode usage in the channel type, and fail if the refcount on 
+		#   the read-pool channel is too high
+		# * maybe keep track of the elements that are requested or in-production 
+		#  for each task, which would allow to precisely determine whether 
+		#  the pool as to be triggered, and bail out early. Problem would 
+		#	be the 
 		if isinstance(self._in_rc, RPoolChannel) and self._in_rc._pool is self._pool_ref():
 			self._read = self._in_rc._read
 		

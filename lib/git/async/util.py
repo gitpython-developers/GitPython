@@ -59,7 +59,7 @@ class SyncQueue(deque):
 class HSCondition(_Condition):
 	"""An attempt to make conditions less blocking, which gains performance 
 	in return by sleeping less"""
-	delay = 0.00002		# reduces wait times, but increases overhead
+	delay = 0.00005		# reduces wait times, but increases overhead
 	
 	def wait(self, timeout=None):
 		waiter = Lock()
@@ -85,7 +85,9 @@ class HSCondition(_Condition):
 					remaining = endtime - _time()
 					if remaining <= 0:
 						break
-					delay = min(delay * 2, remaining, .05)
+					# this makes 4 threads working as good as two, but of course
+					# it causes more frequent micro-sleeping
+					#delay = min(delay * 2, remaining, .05)
 					_sleep(delay)
 				# END endless loop
 				if not gotit:

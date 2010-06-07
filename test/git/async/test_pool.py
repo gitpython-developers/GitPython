@@ -12,9 +12,13 @@ class TestThreadTaskNode(InputIteratorThreadTask):
 		super(TestThreadTaskNode, self).__init__(*args, **kwargs)
 		self.reset(self._iterator)
 		self.should_fail = False
+		self.lock = threading.Lock()		# yes, can't safely do x = x + 1 :)
+		self.plock = threading.Lock()
 	
 	def do_fun(self, item):
+		self.lock.acquire()
 		self.item_count += 1
+		self.lock.release()
 		if self.should_fail:
 			raise AssertionError("I am failing just for the fun of it")
 		return item
@@ -25,14 +29,26 @@ class TestThreadTaskNode(InputIteratorThreadTask):
 		self._iterator = iterator
 		
 	def process(self, count=1):
-		super(TestThreadTaskNode, self).process(count)
+		# must do it first, otherwise we might read and check results before
+		# the thread gets here :). Its a lesson !
+		self.plock.acquire()
 		self.process_count += 1
+		self.plock.release()
+		super(TestThreadTaskNode, self).process(count)
 		
 	def _assert(self, pc, fc):
 		"""Assert for num process counts (pc) and num function counts (fc)
 		:return: self"""
+		self.plock.acquire()
+		if self.process_count != pc:
+			print self.process_count, pc
 		assert self.process_count == pc
+		self.plock.release()
+		self.lock.acquire()
+		if self.item_count != fc:
+			print self.item_count, fc
 		assert self.item_count == fc
+		self.lock.release()
 		assert not self.error()
 		return self
 		
@@ -103,15 +119,17 @@ class TestThreadPool(TestBase):
 		# if we query 1 item, it will prepare ni / 2
 		task.min_count = ni / 2
 		rc = p.add_task(task)
-		assert len(rc.read(1)) == 1			# processes ni / 2
-		assert len(rc.read(1)) == 1			# processes nothing
+		items = rc.read(1)
+		assert len(items) == 1 and items[0] == 0			# processes ni / 2
+		items = rc.read(1)
+		assert len(items) == 1 and items[0] == 1			# processes nothing
 		# rest - it has ni/2 - 2 on the queue, and pulls ni-2
 		# It wants too much, so the task realizes its done. The task
 		# doesn't care about the items in its output channel
 		items = rc.read(ni-2)
 		assert len(items) == ni - 2
 		assert p.num_tasks() == null_tasks
-		task._assert(2, ni)						# two chunks, 20 calls ( all items )
+		task._assert(2, ni)						# two chunks, ni calls
 		
 		# its already done, gives us no more
 		assert len(rc.read()) == 0
@@ -246,7 +264,8 @@ class TestThreadPool(TestBase):
 		p.set_size(2)
 		self._assert_single_task(p, True)
 		
-		# kill it
+		# real stress test-  should be native on every dual-core cpu with 2 hardware
+		# threads per core
 		p.set_size(4)
 		self._assert_single_task(p, True)
 		

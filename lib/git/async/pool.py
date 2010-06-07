@@ -67,10 +67,20 @@ class RPoolChannel(RChannel):
 		# if we have count items, don't do any queue preparation - if someone
 		# depletes the queue in the meanwhile, the channel will close and 
 		# we will unblock naturally
+		# PROBLEM: If there are multiple consumer of this channel, we might 
+		# run out of items without being replenished == block forever in the 
+		# worst case. task.min_count could have triggered to produce more ...
+		# usually per read with n items, we put n items on to the queue, 
+		# so we wouldn't check this
+		# Even if we have just one consumer ( we could determine that with 
+		# the reference count ), it could be that in one moment we don't yet
+		# have an item, but its currently being produced by some worker.
+		# This is why we: 
+		# * make no assumptions if there are multiple consumers
+		# * 
 		have_enough = False
 		if count > 0:
-			# explicitly > count, as we want a certain safe range
-			have_enough = self._wc._queue.qsize() > count
+			have_enough = self._wc._queue.qsize() >= count
 		# END risky game
 		
 		########## prepare ##############################
@@ -78,9 +88,11 @@ class RPoolChannel(RChannel):
 			self._pool._prepare_channel_read(self._task, count)
 		
 		
-		######### read data ######
+		####### read data ########
+		##########################
 		# read actual items, tasks were setup to put their output into our channel ( as well )
 		items = RChannel.read(self, count, block, timeout)
+		##########################
 		
 		if self._post_cb:
 			items = self._post_cb(items)
