@@ -110,7 +110,7 @@ class WorkerThread(TerminatableThread):
 	t[1] = optional, tuple or list of arguments to pass to the routine
 	t[2] = optional, dictionary of keyword arguments to pass to the routine
 	"""
-	__slots__ = ('inq', 'outq')
+	__slots__ = ('inq', '_current_routine')
 	
 	
 	# define how often we should check for a shutdown request in case our 
@@ -120,10 +120,12 @@ class WorkerThread(TerminatableThread):
 	def __init__(self, inq = None):
 		super(WorkerThread, self).__init__()
 		self.inq = inq or Queue.Queue()
+		self._current_routine = None				# routine we execute right now
 	
 	def run(self):
 		"""Process input tasks until we receive the quit signal"""
 		while True:
+			self._current_routine = None
 			if self._should_terminate():
 				break
 			# END check for stop request
@@ -138,8 +140,9 @@ class WorkerThread(TerminatableThread):
 			# needing exactly one function, and one arg
 			assert len(tasktuple) == 2, "Need tuple of function, arg - it could be more flexible, but its reduced to what we need"
 			routine, arg = tasktuple
-			# DEBUG
-			# print "%s: picked up: %s(%s)" % (self.name, routine, arg)
+			
+			self._current_routine = routine
+			
 			try:
 				rval = None
 				if inspect.ismethod(routine):
@@ -154,16 +157,15 @@ class WorkerThread(TerminatableThread):
 					print "%s: task %s was not understood - terminating" % (self.getName(), str(tasktuple))
 					break
 				# END make routine call
-			except StopIteration:
-				break
 			except Exception,e:
 				print "%s: Task %s raised unhandled exception: %s - this really shouldn't happen !" % (self.getName(), str(tasktuple), str(e))
 				break	# abort ... 
 			# END routine exception handling
 		# END endless loop
 	
-	def quit(self):
-		raise StopIteration
+	def routine(self):
+		""":return: routine we are currently executing, or None if we have no task"""
+		return self._current_routine
 	
 	
 #} END classes
