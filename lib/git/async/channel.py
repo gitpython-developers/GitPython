@@ -1,10 +1,10 @@
 """Contains a queue based channel implementation"""
 from Queue import (
-	Queue, 
 	Empty, 
 	Full
 	)
 
+from util import AsyncQueue
 from time import time
 import sys
 
@@ -43,7 +43,7 @@ class WChannel(Channel):
 		"""initialize this instance, able to hold max_items at once
 		Write calls will block if the channel is full, until someone reads from it"""
 		self._closed = False
-		self._queue = Queue(max_items)
+		self._queue = AsyncQueue(max_items)
 		
 	
 	#{ Interface 
