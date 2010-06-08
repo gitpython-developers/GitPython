@@ -42,27 +42,9 @@ class TestChannels(TestBase):
 		self.failUnlessRaises(IOError, wc.write, 1)
 		
 		# reading from a closed channel never blocks
+		print "preblock"
 		assert len(rc.read()) == 0
-		
-		
-		
-		# TEST LIMITED SIZE CHANNEL
-		# channel with max-items set
-		wc, rc = Channel(1)
-		wc.write(item)			# fine
-		
-		# blocks for a a moment, its full
-		st = time.time()
-		self.failUnlessRaises(EOFError, wc.write, item, True, to)
-		assert time.time() - st >= to
-		
-		# get our only one
-		assert rc.read(1)[0] == item
-		
-		# its empty,can put one again
-		wc.write(item2)
-		wc.close()
-		
-		# reading 10 will only yield one, it will not block as its closed
-		assert rc.read(10, timeout=1)[0] == item2
+		print "got read(0)"
+		assert len(rc.read(5)) == 0
+		assert len(rc.read(1)) == 0
 		

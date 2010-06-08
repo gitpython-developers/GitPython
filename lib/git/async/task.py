@@ -1,9 +1,10 @@
 from graph import Node
 
 import threading
-import weakref
 import sys
 import new
+
+getrefcount = sys.getrefcount
 
 class OutputChannelTask(Node):
 	"""Abstracts a named task as part of a set of interdependent tasks, which contains 
@@ -53,7 +54,7 @@ class OutputChannelTask(Node):
 	def set_wc(self, wc):
 		"""Set the write channel to the given one
 		:note: resets it done state in order to allow proper queue handling"""
-		self._done = False
+		self._done = False		# TODO : fix this, this is a side-effect
 		self._scheduled_items = 0
 		self._out_wc = wc
 		
@@ -84,10 +85,11 @@ class OutputChannelTask(Node):
 		finally:
 			self._slock.release()
 		# END threadsafe return
-
+		
 	def process(self, count=0):
 		"""Process count items and send the result individually to the output channel"""
 		items = self._read(count)
+		# print "task read", len(items)
 		try:
 			# increase the ref-count - we use this to determine whether anyone else
 			# is currently handling our output channel. As this method runs asynchronously, 
@@ -117,6 +119,7 @@ class OutputChannelTask(Node):
 			# END handle single apply
 		except Exception, e:
 			self._exc = e
+			print "task error:", str(e)	# TODO: REMOVE DEBUG, or make it use logging
 			self.set_done()
 			# unschedule all, we don't know how many have been produced actually
 			# but only if we don't apply single please 
@@ -140,10 +143,10 @@ class OutputChannelTask(Node):
 		# If we appear to be the only one left with our output channel, and are 
 		# closed ( this could have been set in another thread as well ), make 
 		# sure to close the output channel.
-		# The count is: 1 = wc itself, 2 = first reader channel, and we have only 
-		# one, 3 is ours + x for every thread having its copy on the stack 
+		# The count is: 1 = wc itself, 2 = first reader channel, + x for every 
+		# thread having its copy on the stack 
 		# + 1 for the instance we provide to refcount
-		if self.is_done() and sys.getrefcount(self._out_wc) < 5:
+		if self.is_done() and getrefcount(self._out_wc) < 4:
 			self.close()
 		# END handle channel closure
 	#{ Configuration
@@ -201,48 +204,15 @@ class InputChannelTask(OutputChannelTask):
 	"""Uses an input channel as source for reading items
 	For instantiation, it takes all arguments of its base, the first one needs
 	to be the input channel to read from though."""
-	__slots__ = (
-					'in_rc',			# channel to read items from  
-					'_pool_ref'			# to be set by Pool
-				)
 	
 	def __init__(self, in_rc, *args, **kwargs):
 		OutputChannelTask.__init__(self, *args, **kwargs)
-		self._in_rc = in_rc
-		
+		self._read = in_rc.read
+	
 	def process(self, count=1):
-		"""Verify our setup, and do some additional checking, before the 
-		base implementation can permanently perform all operations"""
-		self._read = self._in_rc.read
-		# make sure we don't trigger the pool if we read from a pool channel which 
-		# belongs to our own pool. Channels from different pools are fine though, 
-		# there we want to trigger its computation
-		# PROBLEM: if the user keeps an end, but decides to put the same end into
-		# a task of this pool, then all items might deplete without new ones being 
-		# produced, causing a deadlock. Just triggering the pool would be better, 
-		# but cost's more, unnecessarily if there is just one consumer, which is 
-		# the user.
-		# * could encode usage in the channel type, and fail if the refcount on 
-		#   the read-pool channel is too high
-		# * maybe keep track of the elements that are requested or in-production 
-		#  for each task, which would allow to precisely determine whether 
-		#  the pool as to be triggered, and bail out early. Problem would 
-		#	be the 
-		# * Perhaps one shouldn't seek the perfect solution , but instead
-		#  document whats working and what not, or under which conditions.
-		#  The whole system is simple, but gets more complicated the
-		#  smarter it wants to be.
-		if isinstance(self._in_rc, RPoolChannel) and self._in_rc._pool is self._pool_ref():
-			self._read = self._in_rc._read
-		
-		# permanently install our base for processing
-		self.process = new.instancemethod(OutputChannelTask.__dict__['process'], self, type(self))
-		
-		# and call it 
-		return OutputChannelTask.process(self, count)
-		
-	def set_pool(self, pool):
-		"""Set our pool to the given one, it will be weakref'd"""
-		self._pool_ref = weakref.ref(pool)
+		# for now, just blindly read our input, could trigger a pool, even 
+		# ours, but why not ? It should be able to handle this
+		# TODO: remove this method
+		super(InputChannelTask, self).process(count)
 	#{ Configuration
 	

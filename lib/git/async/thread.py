@@ -80,6 +80,10 @@ class TerminatableThread(threading.Thread):
 		self._terminated()
 	#} END interface
 	
+	
+class StopProcessing(Exception):
+	"""If thrown in a function processed by a WorkerThread, it will terminate"""
+	
 
 class WorkerThread(TerminatableThread):
 	""" This base allows to call functions on class instances natively.
@@ -122,20 +126,22 @@ class WorkerThread(TerminatableThread):
 		self.inq = inq or Queue.Queue()
 		self._current_routine = None				# routine we execute right now
 	
+	@classmethod
+	def stop(cls, *args):
+		"""If send via the inq of the thread, it will stop once it processed the function"""
+		raise StopProcessing
+	
 	def run(self):
 		"""Process input tasks until we receive the quit signal"""
+		gettask = self.inq.get
 		while True:
 			self._current_routine = None
 			if self._should_terminate():
 				break
 			# END check for stop request
 			
-			# don't wait too long, instead check for the termination request more often
-			try:
-				tasktuple = self.inq.get(True, 1)
-			except Queue.Empty:
-				continue
-			# END get task with timeout
+			# we wait and block - to terminate, send the 'stop' method
+			tasktuple = gettask()
 			
 			# needing exactly one function, and one arg
 			assert len(tasktuple) == 2, "Need tuple of function, arg - it could be more flexible, but its reduced to what we need"
@@ -157,6 +163,8 @@ class WorkerThread(TerminatableThread):
 					print "%s: task %s was not understood - terminating" % (self.getName(), str(tasktuple))
 					break
 				# END make routine call
+			except StopProcessing:
+				break
 			except Exception,e:
 				print "%s: Task %s raised unhandled exception: %s - this really shouldn't happen !" % (self.getName(), str(tasktuple), str(e))
 				break	# abort ... 
@@ -167,5 +175,8 @@ class WorkerThread(TerminatableThread):
 		""":return: routine we are currently executing, or None if we have no task"""
 		return self._current_routine
 	
-	
+	def stop_and_join(self):
+		"""Send stop message to ourselves"""
+		self.inq.put((self.stop, None))
+		super(WorkerThread, self).stop_and_join()
 #} END classes
