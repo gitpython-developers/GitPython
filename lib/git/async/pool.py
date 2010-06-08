@@ -41,8 +41,18 @@ class RPoolChannel(RChannel):
 		
 	def __del__(self):
 		"""Assures that our task will be deleted if we were the last reader"""
-		del(self._wc)		# decrement ref-count
-		self._pool._del_task_if_orphaned(self._task)
+		del(self._wc)		# decrement ref-count early
+		# now, if this is the last reader to the wc we just handled, there 
+		# is no way anyone will ever read from the task again. If so, 
+		# delete the task in question, it will take care of itself and orphans
+		# it might leave
+		# 1 is ourselves, + 1 for the call + 1, and 3 magical ones which 
+		# I can't explain, but appears to be normal in the destructor
+		# On the caller side, getrefcount returns 2, as expected
+		if sys.getrefcount(self) < 6:
+			print "__del__"
+			self._pool.del_task(self._task)
+			print "done"
 	
 	def set_pre_cb(self, fun = lambda count: None):
 		"""Install a callback to call with the item count to be read before any 
@@ -105,7 +115,7 @@ class RPoolChannel(RChannel):
 		
 		####### Finalize ########
 		self._pool._post_channel_read(self._task)
-			
+		
 		return items
 		
 	#{ Internal
@@ -227,6 +237,7 @@ class Pool(object):
 			if task.error() or task.is_done():
 				# in theory, the should never be consumed task in the pool, right ?
 				# They delete themselves once they are done.
+				# TODO: remove this check for performance later
 				raise AssertionError("Shouldn't have consumed tasks on the pool, they delete themeselves, what happend ?")
 				#continue
 			# END skip processing
@@ -363,7 +374,11 @@ class Pool(object):
 		
 	def num_tasks(self):
 		""":return: amount of tasks"""
-		return len(self._tasks.nodes)
+		self._taskgraph_lock.acquire()
+		try:
+			return len(self._tasks.nodes)
+		finally:
+			self._taskgraph_lock.release()
 		
 	def del_task(self, task):
 		"""Delete the task
@@ -374,6 +389,7 @@ class Pool(object):
 		This method blocks until all tasks to be removed have been processed, if 
 		they are currently being processed.
 		:return: self"""
+		print "del_task: getting lock"
 		self._taskgraph_lock.acquire()
 		try:
 			# it can be that the task is already deleted, but its chunk was on the 
@@ -414,7 +430,6 @@ class Pool(object):
 		wc, rc = Channel()
 		rc = RPoolChannel(wc, task, self)
 		task.set_wc(wc)
-		task.set_pool(self)
 		
 		self._taskgraph_lock.acquire()
 		try:
