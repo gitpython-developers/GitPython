@@ -6,7 +6,6 @@ from Queue import (
 
 from util import (
 		AsyncQueue, 
-		DummyLock
 		)
 
 from time import time
@@ -56,15 +55,13 @@ class WChannel(Channel):
 			channel
 		:param timeout: timeout in seconds for blocking calls.
 		:raise IOError: when writing into closed file
-		:raise EOFError: when writing into a non-blocking full channel
-		:note: may block if the channel has a limited capacity"""
-		if self._closed:
-			raise IOError("Cannot write to a closed channel")
-			
+		:raise EOFError: when writing into a non-blocking full channel"""
+		# let the queue handle the 'closed' attribute, we write much more often 
+		# to an open channel than to a closed one, saving a few cycles
 		try:
 			self._queue.put(item, block, timeout)
-		except Full:
-			raise EOFError("Capacity of the channel was exeeded")
+		except ReadOnly:
+			raise IOError("Cannot write to a closed channel")
 		# END exception handling
 		
 	def size(self):
@@ -75,21 +72,10 @@ class WChannel(Channel):
 	def close(self):
 		"""Close the channel. Multiple close calls on a closed channel are no 
 		an error"""
-		mutex = self._queue.mutex
-		mutex.acquire()
-		# this is atomic already, due to the GIL - no need to get the queue's mutex
-		print "channel.close()"
+		# yes, close it a little too early, better than having anyone put 
+		# additional items
 		self._closed = True
-		# now make sure that the people waiting for an item are released now
-		# As we it could be that some readers are already on their way to initiate
-		# a blocking get, we must make sure that locks never block before that happens
-		
-		# now we are the only one accessing the queue, so change it
-		self._queue.mutex = DummyLock() 
-		print self._queue.not_empty._waiters
-		self._queue.not_empty.notify_all()
-		print self._queue.not_empty._waiters
-		mutex.release()
+		self._queue.set_writable(False)
 		
 	@property
 	def closed(self):
@@ -124,6 +110,7 @@ class RChannel(Channel):
 			If count was < 1, a list with all items that could be read will be 
 			returned."""
 		# if the channel is closed for writing, we never block
+		# NOTE: is handled by the queue
 		if self._wc.closed or timeout == 0:
 			block = False
 			
@@ -160,9 +147,7 @@ class RChannel(Channel):
 			# could be improved by a separate: no-endtime branch, saving the time calls
 			for i in xrange(count):
 				try:
-					print "about to read", i, count, block, timeout
 					out.append(queue.get(block, timeout))
-					print "got one"
 				except Empty:
 					pass
 				# END ignore empty
@@ -176,7 +161,6 @@ class RChannel(Channel):
 					# Hence we pop it empty without blocking, getting as much
 					# as we can. This effectively lets us race ( with mutexes )
 					# of the other threads.
-					print "stopped because it was closed"
 					try:
 						while True:
 							out.append(queue.get(False))
@@ -186,11 +170,11 @@ class RChannel(Channel):
 					# END ignore emptyness, we have all
 					
 					break
-				# END handle cloased
-					
-					if time() >= endtime:
-						break
-				# END stop on timeout
+				# END handle channel cloased
+				
+				if time() >= endtime:
+					break
+				# END stop operation on timeout
 			# END for each item
 		# END handle blocking
 		return out
