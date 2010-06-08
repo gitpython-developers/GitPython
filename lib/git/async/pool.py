@@ -80,8 +80,8 @@ class RPoolChannel(RChannel):
 		# * make no assumptions if there are multiple consumers
 		# * 
 		have_enough = False
-		if count > 0:
-			have_enough = self._task.scheduled_item_count() >= count or self._wc._queue.qsize() >= count
+		#if count > 0:
+		#	have_enough = self._task.scheduled_item_count() >= count or self._wc._queue.qsize() >= count
 		# END 
 		
 		########## prepare ##############################
@@ -319,6 +319,7 @@ class Pool(object):
 
 	def _del_task_if_orphaned(self, task):
 		"""Check the task, and delete it if it is orphaned"""
+		# 1 as its stored on the task, 1 for the getrefcount call
 		if sys.getrefcount(task._out_wc) < 3:
 			self.del_task(task)
 	#} END internal
@@ -403,7 +404,7 @@ class Pool(object):
 			if not task in self._tasks.nodes:
 				return self
 			# END early abort
-			
+			print "deleting ", id(task)
 			# the task we are currently deleting could also be processed by 
 			# a thread right now. We don't care about it as its taking care about
 			# its write channel itself, and sends everything it can to it.

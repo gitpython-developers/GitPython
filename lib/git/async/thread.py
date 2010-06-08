@@ -124,6 +124,7 @@ class WorkerThread(TerminatableThread):
 	
 	def run(self):
 		"""Process input tasks until we receive the quit signal"""
+		gettask = self.inq.get
 		while True:
 			self._current_routine = None
 			if self._should_terminate():
@@ -132,7 +133,7 @@ class WorkerThread(TerminatableThread):
 			
 			# don't wait too long, instead check for the termination request more often
 			try:
-				tasktuple = self.inq.get(True, 1)
+				tasktuple = gettask(True, 0.25)
 			except Queue.Empty:
 				continue
 			# END get task with timeout

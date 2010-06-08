@@ -63,7 +63,7 @@ class SyncQueue(deque):
 		except IndexError:
 			raise Empty
 		# END raise empty
-			
+
 	def empty(self):
 		return len(self) == 0
 		
@@ -86,13 +86,13 @@ class HSCondition(object):
 		self._waiters = list()
 
 	def release(self):
-		return self._lock.release()
+		self._lock.release()
 		
 	def acquire(self, block=None):
 		if block is None:
 			self._lock.acquire()
 		else:
-			return self._lock.acquire(block)
+			self._lock.acquire(block)
 
 	def wait(self, timeout=None):
 		waiter = _allocate_lock()
@@ -145,6 +145,7 @@ class HSCondition(object):
 			except IndexError:
 				pass
 		else:
+			print "notify", waiters, n
 			for waiter in waiters[:n]:
 				waiter.release()
 				try:
@@ -156,16 +157,6 @@ class HSCondition(object):
 	def notify_all(self):
 		self.notify(len(self._waiters))
 		
-	
-class _AsyncQueue(Queue):
-	"""A queue using different condition objects to gain multithreading performance"""
-	def __init__(self, maxsize=0):
-		Queue.__init__(self, maxsize)
-		
-		self.not_empty = HSCondition(self.mutex)
-		self.not_full = HSCondition(self.mutex)
-		self.all_tasks_done = HSCondition(self.mutex)
-
 
 class ReadOnly(Exception):
 	"""Thrown when trying to write to a read-only queue"""
@@ -205,11 +196,12 @@ class AsyncQueue(Queue):
 			self._writable = state
 			return old
 		finally:
+			self.mutex.release()
+			
 			# if we won't receive anymore items, inform the getters
 			if not state:
 				self.not_empty.notify_all()
 			# END tell everyone
-			self.mutex.release()
 		# END handle locking
 
 	def empty(self):
@@ -222,6 +214,7 @@ class AsyncQueue(Queue):
 	def put(self, item, block=True, timeout=None):
 		self.mutex.acquire()
 		if not self._writable:
+			self.mutex.release()
 			raise ReadOnly
 		# END handle read-only
 		self.queue.append(item)
@@ -245,7 +238,9 @@ class AsyncQueue(Queue):
 						self.not_empty.wait(remaining)
 				# END handle timeout mode
 			# END handle block
-			# can happen if we woke up because we are not writable anymore
+			
+			# can throw if we woke up because we are not writable anymore
+			print len(q), id(q), current_thread()
 			try:
 				return q.popleft()
 			except IndexError:
