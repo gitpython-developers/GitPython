@@ -73,21 +73,22 @@ class SyncQueue(deque):
 class HSCondition(object):
 	"""An attempt to make conditions less blocking, which gains performance 
 	in return by sleeping less"""
-	__slots__ = ("acquire", "release", "_lock", '_waiters')
+	# __slots__ = ("acquire", "release", "_lock", '_waiters')
+	__slots__ = ("_lock", '_waiters')
 	delay = 0.00002		# reduces wait times, but increases overhead
 	
 	def __init__(self, lock=None):
 		if lock is None:
 			lock = Lock()
 		self._lock = lock
-		self.acquire = lock.acquire
-		self.release = lock.release
+		#self.acquire = lock.acquire
+		#self.release = lock.release
 		self._waiters = list()
 
-	def __release(self):
+	def release(self):
 		return self._lock.release()
 		
-	def __acquire(self, block=None):
+	def acquire(self, block=None):
 		if block is None:
 			self._lock.acquire()
 		else:
@@ -156,7 +157,7 @@ class HSCondition(object):
 		self.notify(len(self._waiters))
 		
 	
-class AsyncQueue(Queue):
+class _AsyncQueue(Queue):
 	"""A queue using different condition objects to gain multithreading performance"""
 	def __init__(self, maxsize=0):
 		Queue.__init__(self, maxsize)
@@ -166,7 +167,7 @@ class AsyncQueue(Queue):
 		self.all_tasks_done = HSCondition(self.mutex)
 
 	
-class _AsyncQueue(Queue):
+class AsyncQueue(Queue):
 	"""A queue using different condition objects to gain multithreading performance"""
 	__slots__ = ('mutex', 'not_empty', 'queue')
 	
@@ -194,9 +195,9 @@ class _AsyncQueue(Queue):
 		self.queue.append(item)
 		self.mutex.release()
 		self.not_empty.notify()
-
+		
 	def get(self, block=True, timeout=None):
-		self.not_empty.acquire()
+		self.not_empty.acquire()	# == self.mutex.acquire in that case
 		q = self.queue
 		try:
 			if not block:
@@ -205,16 +206,23 @@ class _AsyncQueue(Queue):
 			elif timeout is None:
 				while not len(q):
 					self.not_empty.wait()
-			elif timeout < 0:
-				raise ValueError("'timeout' must be a positive number")
 			else:
+				print "with timeout", timeout
+				import traceback
+				traceback.print_stack()
 				endtime = _time() + timeout
 				while not len(q):
 					remaining = endtime - _time()
 					if remaining <= 0.0:
 						raise Empty
 					self.not_empty.wait(remaining)
-			return q.popleft()
+			# END handle block
+			# can happen if someone else woke us up
+			try:
+				return q.popleft()
+			except IndexError:
+				raise Empty
+			# END handle unblocking reason
 		finally:
 			self.not_empty.release()
 

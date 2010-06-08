@@ -92,6 +92,7 @@ class TestThreadPool(TestBase):
 		
 		# pull the result completely - we should get one task, which calls its 
 		# function once. In sync mode, the order matches
+		print "read(0)"
 		items = rc.read()
 		assert len(items) == ni
 		task._assert(1, ni).reset(make_iter())
@@ -105,6 +106,7 @@ class TestThreadPool(TestBase):
 		rc = p.add_task(task)
 		assert p.num_tasks() == 1 + null_tasks
 		st = time.time()
+		print "read(1) * %i" % ni
 		for i in range(ni):
 			items = rc.read(1)
 			assert len(items) == 1
@@ -129,20 +131,24 @@ class TestThreadPool(TestBase):
 		# if we query 1 item, it will prepare ni / 2
 		task.min_count = ni / 2
 		rc = p.add_task(task)
+		print "read(1)"
 		items = rc.read(1)
 		assert len(items) == 1 and items[0] == 0			# processes ni / 2
+		print "read(1)"
 		items = rc.read(1)
 		assert len(items) == 1 and items[0] == 1			# processes nothing
 		# rest - it has ni/2 - 2 on the queue, and pulls ni-2
 		# It wants too much, so the task realizes its done. The task
 		# doesn't care about the items in its output channel
 		nri = ni-2
+		print "read(%i)" % nri
 		items = rc.read(nri)
 		assert len(items) == nri
 		assert p.num_tasks() == null_tasks
 		task._assert(2, ni)						# two chunks, ni calls
 		
 		# its already done, gives us no more
+		print "read(0) on closed"
 		assert len(rc.read()) == 0
 		
 		# test chunking
@@ -154,11 +160,13 @@ class TestThreadPool(TestBase):
 		# count is still at ni / 2 - here we want more than that
 		# 2 steps with n / 4 items, + 1 step with n/4 items to get + 2
 		nri = ni / 2 + 2
+		print "read(%i)" % nri
 		items = rc.read(nri)
 		assert len(items) == nri
 		# have n / 4 - 2 items on queue, want n / 4 in first chunk, cause 1 processing
 		# ( 4 in total ). Still want n / 4 - 2 in second chunk, causing another processing
 		nri = ni / 2 - 2
+		print "read(%i)" % nri
 		items = rc.read(nri)
 		assert len(items) == nri
 		
@@ -172,6 +180,7 @@ class TestThreadPool(TestBase):
 		task.min_count = None
 		rc = p.add_task(task)
 		st = time.time()
+		print "read(1) * %i, chunksize set" % ni
 		for i in range(ni):
 			if async:
 				assert len(rc.read(1)) == 1
@@ -192,6 +201,7 @@ class TestThreadPool(TestBase):
 		task.reset(make_iter())
 		task.min_count = ni / 4
 		rc = p.add_task(task)
+		print "read(1) * %i, min_count%i + chunksize" % (ni, task.min_count)
 		for i in range(ni):
 			if async:
 				assert len(rc.read(1)) == 1
@@ -208,9 +218,12 @@ class TestThreadPool(TestBase):
 		task.reset(make_iter())
 		task.should_fail = True
 		rc = p.add_task(task)
+		print "read(0) with failure"
 		assert len(rc.read()) == 0		# failure on first item
+		print "done with everything"
 		assert isinstance(task.error(), AssertionError)
 		assert p.num_tasks() == null_tasks
+		
 		
 	def _assert_async_dependent_tasks(self, p):
 		# includes failure in center task, 'recursive' orphan cleanup

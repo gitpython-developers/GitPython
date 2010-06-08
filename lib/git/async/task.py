@@ -140,10 +140,10 @@ class OutputChannelTask(Node):
 		# If we appear to be the only one left with our output channel, and are 
 		# closed ( this could have been set in another thread as well ), make 
 		# sure to close the output channel.
-		# The count is: 1 = wc itself, 2 = first reader channel, and we have only 
-		# one, 3 is ours + x for every thread having its copy on the stack 
+		# The count is: 1 = wc itself, 2 = first reader channel, + x for every 
+		# thread having its copy on the stack 
 		# + 1 for the instance we provide to refcount
-		if self.is_done() and sys.getrefcount(self._out_wc) < 5:
+		if self.is_done() and sys.getrefcount(self._out_wc) < 4:
 			self.close()
 		# END handle channel closure
 	#{ Configuration
