@@ -26,7 +26,9 @@ class TestThreadTaskNode(InputIteratorThreadTask):
 	def reset(self, iterator):
 		self.process_count = 0
 		self.item_count = 0
+		self._exc = None
 		self._iterator = iterator
+		self._done = False
 		
 	def process(self, count=1):
 		# must do it first, otherwise we might read and check results before
@@ -97,12 +99,13 @@ class TestThreadPool(TestBase):
 		print "read(0)"
 		items = rc.read()
 		assert len(items) == ni
-		task._assert(1, ni).reset(make_iter())
+		task._assert(1, ni)
 		assert items[0] == 0 and items[-1] == ni-1
 		
 		# as the task is done, it should have been removed - we have read everything
 		assert task.is_done()
 		assert p.num_tasks() == null_tasks
+		task.reset(make_iter())
 		
 		# pull individual items
 		rc = p.add_task(task)
