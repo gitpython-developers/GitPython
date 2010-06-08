@@ -136,8 +136,9 @@ class TestThreadPool(TestBase):
 		# rest - it has ni/2 - 2 on the queue, and pulls ni-2
 		# It wants too much, so the task realizes its done. The task
 		# doesn't care about the items in its output channel
-		items = rc.read(ni-2)
-		assert len(items) == ni - 2
+		nri = ni-2
+		items = rc.read(nri)
+		assert len(items) == nri
 		assert p.num_tasks() == null_tasks
 		task._assert(2, ni)						# two chunks, ni calls
 		
@@ -152,11 +153,14 @@ class TestThreadPool(TestBase):
 		# must read a specific item count
 		# count is still at ni / 2 - here we want more than that
 		# 2 steps with n / 4 items, + 1 step with n/4 items to get + 2
-		assert len(rc.read(ni / 2 + 2)) == ni / 2 + 2
+		nri = ni / 2 + 2
+		items = rc.read(nri)
+		assert len(items) == nri
 		# have n / 4 - 2 items on queue, want n / 4 in first chunk, cause 1 processing
 		# ( 4 in total ). Still want n / 4 - 2 in second chunk, causing another processing
-		items = rc.read(ni / 2 - 2)
-		assert len(items) == ni / 2 - 2
+		nri = ni / 2 - 2
+		items = rc.read(nri)
+		assert len(items) == nri
 		
 		task._assert( 5, ni)
 		assert p.num_tasks() == null_tasks	# depleted
