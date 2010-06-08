@@ -89,7 +89,7 @@ class OutputChannelTask(Node):
 	def process(self, count=0):
 		"""Process count items and send the result individually to the output channel"""
 		items = self._read(count)
-		print "task read", len(items)
+		# print "task read", len(items)
 		try:
 			# increase the ref-count - we use this to determine whether anyone else
 			# is currently handling our output channel. As this method runs asynchronously, 

@@ -69,11 +69,12 @@ class TestThreadPool(TestBase):
 	
 	def _assert_single_task(self, p, async=False):
 		"""Performs testing in a synchronized environment"""
+		print >> sys.stderr, "Threadpool: Starting single task (async = %i) with %i threads" % (async, p.size())
 		null_tasks = p.num_tasks()		# in case we had some before
 		
 		# add a simple task
 		# it iterates n items
-		ni = 52
+		ni = 1000
 		assert ni % 2 == 0, "ni needs to be dividable by 2"
 		assert ni % 4 == 0, "ni needs to be dividable by 4"
 		
@@ -287,7 +288,9 @@ class TestThreadPool(TestBase):
 		p.set_size(1)
 		assert len(threading.enumerate()) == num_threads + 1
 		# deleting the pool stops its threads - just to be sure ;)
+		# Its not synchronized, hence we wait a moment
 		del(p)
+		time.sleep(0.15)
 		assert len(threading.enumerate()) == num_threads
 		
 		p = ThreadPool(1)

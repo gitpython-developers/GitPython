@@ -240,7 +240,6 @@ class AsyncQueue(Queue):
 			# END handle block
 			
 			# can throw if we woke up because we are not writable anymore
-			print len(q), id(q), current_thread()
 			try:
 				return q.popleft()
 			except IndexError:

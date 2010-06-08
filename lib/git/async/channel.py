@@ -60,7 +60,6 @@ class WChannel(Channel):
 		# let the queue handle the 'closed' attribute, we write much more often 
 		# to an open channel than to a closed one, saving a few cycles
 		try:
-			print "putting item", item, id(self._queue.queue)
 			self._queue.put(item, block, timeout)
 		except ReadOnly:
 			raise IOError("Cannot write to a closed channel")
@@ -76,7 +75,7 @@ class WChannel(Channel):
 		an error"""
 		# yes, close it a little too early, better than having anyone put 
 		# additional items
-		print "closing channel", self
+		# print "closing channel", self
 		self._closed = True
 		self._queue.set_writable(False)
 		
