@@ -79,7 +79,7 @@ class HSCondition(object):
 		if lock is None:
 			lock = Lock()
 		self._lock = lock
-		self._waiters = list()
+		self._waiters = deque()
 
 	def release(self):
 		self._lock.release()
@@ -146,7 +146,7 @@ class HSCondition(object):
 			# so here we assume this is thead-safe ! It wouldn't be in any other
 			# language, but python it is.
 			try:
-				self._waiters.pop(0).release()
+				self._waiters.popleft().release()
 			except IndexError:
 				pass
 		else:
@@ -156,7 +156,7 @@ class HSCondition(object):
 			# to do that in a thread-safe fashion
 			try:
 				for i in range(min(n, len(self._waiters))):
-					self._waiters.pop(0).release()
+					self._waiters.popleft().release()
 				# END for each waiter to resume
 			finally:
 				self.release()
