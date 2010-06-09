@@ -23,8 +23,6 @@ class OutputChannelTask(Node):
 					'_out_wc', 			# output write channel
 					'_exc',				# exception caught
 					'_done',			# True if we are done
-					'_scheduled_items', # amount of scheduled items that will be processed in total
-					'_slock',			# lock for scheduled items
 					'fun',				# function to call with items read
 					'min_count', 		# minimum amount of items to produce, None means no override
 					'max_chunksize',	# maximium amount of items to process per process call
@@ -37,8 +35,6 @@ class OutputChannelTask(Node):
 		self._out_wc = None					# to be set later
 		self._exc = None
 		self._done = False
-		self._scheduled_items = 0
-		self._slock = threading.Lock()
 		self.fun = fun
 		self.min_count = None
 		self.max_chunksize = 0				# note set
@@ -72,21 +68,6 @@ class OutputChannelTask(Node):
 		""":return: Exception caught during last processing or None"""
 		return self._exc
 
-	def add_scheduled_items(self, count):
-		"""Add the given amount of scheduled items to this task"""
-		self._slock.acquire()
-		self._scheduled_items += count 
-		self._slock.release()
-		
-	def scheduled_item_count(self):
-		""":return: amount of scheduled items for this task"""
-		self._slock.acquire()
-		try:
-			return self._scheduled_items
-		finally:
-			self._slock.release()
-		# END threadsafe return
-		
 	def process(self, count=0):
 		"""Process count items and send the result individually to the output channel"""
 		items = self._read(count)
@@ -101,19 +82,12 @@ class OutputChannelTask(Node):
 			if self.apply_single:
 				for item in items:
 					rval = self.fun(item)
-					# decrement afterwards, the its unscheduled once its produced  
-					self._slock.acquire()
-					self._scheduled_items -= 1
-					self._slock.release()
 					wc.write(rval)
 				# END for each item
 			else:
 				# shouldn't apply single be the default anyway ? 
 				# The task designers should chunk them up in advance
 				rvals = self.fun(items)
-				self._slock.acquire()
-				self._scheduled_items -= len(items)
-				self._slock.release()
 				for rval in rvals:
 					wc.write(rval)
 			# END handle single apply
@@ -122,13 +96,6 @@ class OutputChannelTask(Node):
 			
 			# be sure our task is not scheduled again
 			self.set_done()
-			# unschedule all, we don't know how many have been produced actually
-			# but only if we don't apply single please 
-			if not self.apply_single:
-				self._slock.acquire()
-				self._scheduled_items -= len(items)
-				self._slock.release()
-			# END unschedule all
 			
 			# PROBLEM: We have failed to create at least one item, hence its not 
 			# garantueed that enough items will be produced for a possibly blocking

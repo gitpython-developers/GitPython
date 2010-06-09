@@ -80,27 +80,21 @@ class RPoolChannel(RChannel):
 			self._pre_cb()
 		# END pre callback
 		
-		# if we have count items, don't do any queue preparation - if someone
-		# depletes the queue in the meanwhile, the channel will close and 
-		# we will unblock naturally
-		# PROBLEM: If there are multiple consumer of this channel, we might 
-		# run out of items without being replenished == block forever in the 
-		# worst case. task.min_count could have triggered to produce more ...
-		# usually per read with n items, we put n items on to the queue, 
-		# so we wouldn't check this
-		# Even if we have just one consumer ( we could determine that with 
-		# the reference count ), it could be that in one moment we don't yet
-		# have an item, but its currently being produced by some worker.
-		# This is why we: 
-		# * make no assumptions if there are multiple consumers
-		# *
+		# NOTE: we always queue the operation that would give us count items
+		# as tracking the scheduled items or testing the channels size
+		# is in herently unsafe depending on the design of the task network
+		# If we put on tasks onto the queue for every request, we are sure
+		# to always produce enough items, even if the task.min_count actually
+		# provided enough - its better to have some possibly empty task runs 
+		# than having and empty queue that blocks.
+		
+		# NOTE: TODO: that case is only possible if one Task could be connected 
+		# to multiple input channels in a manner known by the system. Currently
+		# this is not possible, but should be implemented at some point 
 		
 		# if the user tries to use us to read from a done task, we will never 
 		# compute as all produced items are already in the channel
 		skip_compute = self._task.is_done() or self._task.error()
-		#if count > 0:
-		#	skip_compute = self._task.scheduled_item_count() >= count or self._wc._queue.qsize() >= count
-		# END 
 		
 		########## prepare ##############################
 		if not skip_compute:
@@ -249,13 +243,6 @@ class Pool(object):
 				# raise AssertionError("Shouldn't have consumed tasks on the pool, they delete themeselves, what happend ?")
 			# END skip processing
 			
-			# if the task does not have the required output on its queue, schedule
-			# it for processing. If we should process all, we don't care about the 
-			# amount as it should process until its all done.
-			#if count > 1 and task._out_wc.size() >= count:
-			#	continue
-			# END skip if we have enough
-			
 			# but use the actual count to produce the output, we may produce 
 			# more than requested
 			numchunks = 1
@@ -283,33 +270,26 @@ class Pool(object):
 				queue = self._queue
 				if numchunks > 1:
 					for i in xrange(numchunks):
-						# schedule them as early as we know about them
-						task.add_scheduled_items(chunksize)
 						queue.put((task.process, chunksize))
 					# END for each chunk to put
 				else:
-					task.add_scheduled_items(chunksize)
 					queue.put((task.process, chunksize))
 				# END try efficient looping
 				
 				if remainder:
-					task.add_scheduled_items(remainder)
 					queue.put((task.process, remainder))
 				# END handle chunksize
 			else:
 				# no workers, so we have to do the work ourselves
 				if numchunks > 1:
 					for i in xrange(numchunks):
-						task.add_scheduled_items(chunksize)
 						task.process(chunksize)
 					# END for each chunk to put
 				else:
-					task.add_scheduled_items(chunksize)
 					task.process(chunksize)
 				# END try efficient looping
 				
 				if remainder:
-					task.add_scheduled_items(remainder)
 					task.process(remainder)
 				# END handle chunksize
 			# END handle serial mode
@@ -452,7 +432,6 @@ class Pool(object):
 			# This brings about 15% more performance, but sacrifices thread-safety
 			# when reading from multiple threads.
 			if self.size() == 0:
-				task._slock = DummyLock()
 				wctype = SerialWChannel
 			# END improve locks
 			
