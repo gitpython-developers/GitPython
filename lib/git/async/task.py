@@ -1,4 +1,5 @@
 from graph import Node
+from util import ReadOnly
 
 import threading
 import sys
@@ -117,8 +118,9 @@ class OutputChannelTask(Node):
 					wc.write(rval)
 			# END handle single apply
 		except Exception, e:
-			self._exc = e
 			print >> sys.stderr, "task error:", str(e)	# TODO: REMOVE DEBUG, or make it use logging
+			
+			# be sure our task is not scheduled again
 			self.set_done()
 			# unschedule all, we don't know how many have been produced actually
 			# but only if we don't apply single please 
@@ -127,6 +129,25 @@ class OutputChannelTask(Node):
 				self._scheduled_items -= len(items)
 				self._slock.release()
 			# END unschedule all
+			
+			# PROBLEM: We have failed to create at least one item, hence its not 
+			# garantueed that enough items will be produced for a possibly blocking
+			# client on the other end. This is why we have no other choice but
+			# to close the channel, preventing the possibility of blocking.
+			# This implies that dependent tasks will go down with us, but that is
+			# just the right thing to do of course - one loose link in the chain ...
+			# Other chunks of our kind currently being processed will then 
+			# fail to write to the channel and fail as well
+			# self.close()
+			
+			# If some other chunk of our Task had an error, the channel will be closed
+			# This is not an issue, just be sure we don't overwrite the original 
+			# exception with the ReadOnly error that would be emitted in that case.
+			# We imply that ReadOnly is exclusive to us, as it won't be an error
+			# if the user emits it
+			if not isinstance(e, ReadOnly):
+				self._exc = e
+			# END set error flag
 		# END exception handling
 		del(wc)
 		

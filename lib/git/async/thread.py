@@ -125,7 +125,9 @@ class WorkerThread(TerminatableThread):
 	
 	def __init__(self, inq = None):
 		super(WorkerThread, self).__init__()
-		self.inq = inq or Queue.Queue()
+		self.inq = inq
+		if inq is None:
+			self.inq = Queue.Queue()
 		self._current_routine = None				# routine we execute right now
 	
 	@classmethod
@@ -135,6 +137,8 @@ class WorkerThread(TerminatableThread):
 	
 	def run(self):
 		"""Process input tasks until we receive the quit signal"""
+		print self.name, "starts processing"	# DEBUG
+		
 		gettask = self.inq.get
 		while True:
 			self._current_routine = None
@@ -166,7 +170,7 @@ class WorkerThread(TerminatableThread):
 					break
 				# END make routine call
 			except StopProcessing:
-				print self.name, "stops processing"
+				print self.name, "stops processing"	# DEBUG
 				break
 			except Exception,e:
 				print >> sys.stderr, "%s: Task %s raised unhandled exception: %s - this really shouldn't happen !" % (self.getName(), str(tasktuple), str(e))

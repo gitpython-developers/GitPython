@@ -10,7 +10,6 @@ from threading import (
 	)
 
 from Queue import (
-		Queue, 
 		Empty,
 		)
 
@@ -171,15 +170,14 @@ class HSCondition(object):
 class ReadOnly(Exception):
 	"""Thrown when trying to write to a read-only queue"""
 
-class AsyncQueue(Queue):
+class AsyncQueue(deque):
 	"""A queue using different condition objects to gain multithreading performance.
 	Additionally it has a threadsafe writable flag, which will alert all readers
 	that there is nothing more to get here.
 	All default-queue code was cleaned up for performance."""
-	__slots__ = ('mutex', 'not_empty', 'queue', '_writable')
+	__slots__ = ('mutex', 'not_empty', '_writable')
 	
 	def __init__(self, maxsize=0):
-		self.queue = deque()
 		self.mutex = Lock()
 		self.not_empty = HSCondition(self.mutex)
 		self._writable = True
@@ -187,7 +185,7 @@ class AsyncQueue(Queue):
 	def qsize(self):
 		self.mutex.acquire()
 		try:
-			return len(self.queue)
+			return len(self)
 		finally:
 			self.mutex.release()
 
@@ -218,7 +216,7 @@ class AsyncQueue(Queue):
 	def empty(self):
 		self.mutex.acquire()
 		try:
-			return not len(self.queue)
+			return not len(self)
 		finally:
 			self.mutex.release()
 
@@ -228,21 +226,20 @@ class AsyncQueue(Queue):
 			self.mutex.release()
 			raise ReadOnly
 		# END handle read-only
-		self.queue.append(item)
+		self.append(item)
 		self.mutex.release()
 		self.not_empty.notify()
 		
 	def get(self, block=True, timeout=None):
 		self.mutex.acquire()
-		q = self.queue
 		try:
 			if block:
 				if timeout is None:
-					while not len(q) and self._writable:
+					while not len(self) and self._writable:
 						self.not_empty.wait()
 				else:
 					endtime = _time() + timeout
-					while not len(q) and self._writable:
+					while not len(self) and self._writable:
 						remaining = endtime - _time()
 						if remaining <= 0.0:
 							raise Empty
@@ -252,7 +249,7 @@ class AsyncQueue(Queue):
 			
 			# can throw if we woke up because we are not writable anymore
 			try:
-				return q.popleft()
+				return self.popleft()
 			except IndexError:
 				raise Empty
 			# END handle unblocking reason

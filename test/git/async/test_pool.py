@@ -253,13 +253,22 @@ class TestThreadPool(TestBase):
 		assert p.size() == 0
 		
 		# increase and decrease the size
+		num_threads = len(threading.enumerate())
 		for i in range(self.max_threads):
 			p.set_size(i)
 			assert p.size() == i
+			assert len(threading.enumerate()) == num_threads + i
+			
 		for i in range(self.max_threads, -1, -1):
 			p.set_size(i)
 			assert p.size() == i
-			
+		
+		assert p.size() == 0
+		# threads should be killed already, but we let them a tiny amount of time
+		# just to be sure
+		time.sleep(0.05)
+		assert len(threading.enumerate()) == num_threads
+		
 		# SINGLE TASK SERIAL SYNC MODE
 		##############################
 		# put a few unrelated tasks that we forget about
@@ -268,7 +277,6 @@ class TestThreadPool(TestBase):
 		assert p.num_tasks() == 2
 		
 		## SINGLE TASK #################
-		assert p.size() == 0
 		self._assert_single_task(p, False)
 		assert p.num_tasks() == 2
 		del(urc1)
@@ -281,11 +289,12 @@ class TestThreadPool(TestBase):
 		self._assert_async_dependent_tasks(p)
 		
 		
-		# SINGLE TASK THREADED SYNC MODE
+		# SINGLE TASK THREADED ASYNC MODE
 		################################
 		# step one gear up - just one thread for now.
-		num_threads = len(threading.enumerate())
 		p.set_size(1)
+		assert p.size() == 1
+		print len(threading.enumerate()), num_threads
 		assert len(threading.enumerate()) == num_threads + 1
 		# deleting the pool stops its threads - just to be sure ;)
 		# Its not synchronized, hence we wait a moment

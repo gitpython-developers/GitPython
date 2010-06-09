@@ -331,9 +331,8 @@ class Pool(object):
 	
 	def set_size(self, size=0):
 		"""Set the amount of workers to use in this pool. When reducing the size, 
-		the call may block as it waits for threads to finish. 
-		When reducing the size to zero, this thread will process all remaining 
-		items on the queue.
+		threads will continue with their work until they are done before effectively
+		being removed.
 		
 		:return: self
 		:param size: if 0, the pool will do all work itself in the calling thread, 
