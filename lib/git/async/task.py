@@ -208,5 +208,8 @@ class InputChannelTask(OutputChannelTask):
 		OutputChannelTask.__init__(self, *args, **kwargs)
 		self._read = in_rc.read
 	
-	#{ Configuration
-	
+	def rchannel(self):
+		""":return: input channel from which we read"""
+		# the instance is bound in its instance method - lets use this to keep
+		# the refcount at one ( per consumer )
+		return self._read.im_self
