@@ -182,14 +182,13 @@ class Pool(object):
 				dfirst_tasks = self._taskorder_cache[id(task)]
 			except KeyError:
 				# have to retrieve the list from the graph
-				dfirst_tasks = list()
-				self._tasks.visit_input_inclusive_depth_first(task, lambda n: dfirst_tasks.append(n))
+				dfirst_tasks = self._tasks.input_inclusive_dfirst_reversed(task)
 				self._taskorder_cache[id(task)] = dfirst_tasks
 			# END handle cached order retrieval
 		finally:
 			self._taskgraph_lock.release()
 		# END handle locking
-		
+		print dfirst_tasks
 		# check the min count on all involved tasks, and be sure that we don't 
 		# have any task which produces less than the maximum min-count of all tasks
 		# The actual_count is used when chunking tasks up for the queue, whereas 
@@ -309,6 +308,7 @@ class Pool(object):
 			threadsafe to optimize item throughput.
 		
 		:note: currently NOT threadsafe !"""
+		print "set_size", size
 		assert size > -1, "Size cannot be negative"
 		
 		# either start new threads, or kill existing ones.

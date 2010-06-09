@@ -87,25 +87,26 @@ class Graph(object):
 		
 		return self
 	
-	def visit_input_inclusive_depth_first(self, node, visitor=lambda n: True ):
-		"""Visit all input nodes of the given node, depth first, calling visitor
-		for each node on our way. If the function returns False, the traversal 
-		will not go any deeper, but continue at the next branch
-		It will return the actual input node in the end !"""
-		nodes = node.in_nodes[:]
+	def input_inclusive_dfirst_reversed(self, node):
+		"""Return all input nodes of the given node, depth first,
+		It will return the actual input node last, as it is required
+		like that by the pool"""
+		stack = [node]
 		seen = set()
 		
 		# depth first
-		while nodes:
-			n = nodes.pop()
+		out = list()
+		while stack:
+			n = stack.pop()
 			if n in seen:
 				continue
 			seen.add(n)
+			out.append(n)
 			
 			# only proceed in that direction if visitor is fine with it
-			if visitor(n):
-				nodes.extend(n.in_nodes)
+			stack.extend(n.in_nodes)
 			# END call visitor
 		# END while walking
-		visitor(node)
+		out.reverse()
+		return out
 		
