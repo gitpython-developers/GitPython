@@ -388,18 +388,21 @@ class Pool(object):
 			self._taskorder_cache.clear()
 			self._tasks.add_node(task)
 			
-			# fix locks - in serial mode, the task does not need real locks
-			# Additionally, use a non-threadsafe queue
+			# Use a non-threadsafe queue
 			# This brings about 15% more performance, but sacrifices thread-safety
 			# when reading from multiple threads.
 			if self.size() == 0:
 				wctype = SerialWChannel
 			# END improve locks
 			
-			# setup the tasks channel
-			wc = wctype()
+			# setup the tasks channel - respect the task creators choice though
+			# if it is set.
+			wc = task.wchannel()
+			if wc is None:
+				wc = wctype()
+			# END create write channel ifunset
 			rc = RPoolChannel(wc, task, self)
-			task.set_wc(wc)
+			task.set_wchannel(wc)
 		finally:
 			self._taskgraph_lock.release()
 		# END sync task addition
