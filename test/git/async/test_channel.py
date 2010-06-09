@@ -8,12 +8,10 @@ class TestChannels(TestBase):
 	
 	def test_base(self):
 		# creating channel yields a write and a read channal
-		wc, rc = Channel()
-		assert isinstance(wc, WChannel)
+		wc, rc = mkchannel()
+		assert isinstance(wc, WChannel)		# default args
 		assert isinstance(rc, RChannel)
 		
-		# everything else fails
-		self.failUnlessRaises(ValueError, Channel, 1, "too many args")
 		
 		# TEST UNLIMITED SIZE CHANNEL - writing+reading is FIFO
 		item = 1

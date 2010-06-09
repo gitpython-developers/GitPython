@@ -66,7 +66,14 @@ class SyncQueue(deque):
 	def empty(self):
 		return len(self) == 0
 		
-	put = deque.append
+	def set_writable(self, state):
+		pass
+	
+	def writable(self):
+		return True
+
+	def put(self, item, block=True, timeout=None):
+		self.append(item)
 	
 
 class HSCondition(deque):

@@ -6,6 +6,7 @@ from Queue import (
 
 from util import (
 		AsyncQueue, 
+		SyncQueue,
 		ReadOnly
 		)
 
@@ -24,27 +25,19 @@ class Channel(object):
 	
 	Create a new channel """
 	__slots__ = tuple()
-	
-	def __new__(cls, *args):
-		if cls is Channel:
-			if len(args) > 0:
-				raise ValueError("Cannot take any arguments when creating a new channel")
-			wc = WChannel()
-			rc = RChannel(wc)
-			return wc, rc
-		# END constructor mode
-		return object.__new__(cls)
 
 
 class WChannel(Channel):
-	"""The write end of a channel"""
+	"""The write end of a channel - it is thread-safe"""
 	__slots__ = ('_queue')
+	
+	# The queue to use to store the actual data
+	QueueCls = AsyncQueue
 	
 	def __init__(self):
 		"""initialize this instance, able to hold max_items at once
 		Write calls will block if the channel is full, until someone reads from it"""
-		self._queue = AsyncQueue()
-		
+		self._queue = self.QueueCls()
 	
 	#{ Interface 
 	def write(self, item, block=True, timeout=None):
@@ -74,6 +67,12 @@ class WChannel(Channel):
 		return not self._queue.writable()
 	#} END interface 
 	
+
+class SerialWChannel(WChannel):
+	"""A slightly faster version of a WChannel, which sacrificed thead-safety for
+	performance"""
+	QueueCls = SyncQueue
+
 
 class RChannel(Channel):
 	"""The read-end of a corresponding write channel"""
@@ -174,3 +173,14 @@ class RChannel(Channel):
 	#} END interface 
 	
 #} END classes
+
+#{ Constructors
+def mkchannel(wctype = WChannel, rctype = RChannel):
+	"""Create a channel, which consists of one write end and one read end
+	:return: tuple(write_channel, read_channel)
+	:param wctype: The type of the write channel to instantiate
+	:param rctype: The type of the read channel to instantiate"""
+	wc = wctype()
+	rc = rctype(wc)
+	return wc, rc
+#} END constructors
