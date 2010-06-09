@@ -69,17 +69,16 @@ class SyncQueue(deque):
 	put = deque.append
 	
 
-class HSCondition(object):
+class HSCondition(deque):
 	"""Cleaned up code of the original condition object in order 
 	to make it run and respond faster."""
-	__slots__ = ("_lock", '_waiters')
+	__slots__ = ("_lock")
 	delay = 0.0002					# reduces wait times, but increases overhead
 	
 	def __init__(self, lock=None):
 		if lock is None:
 			lock = Lock()
 		self._lock = lock
-		self._waiters = deque()
 
 	def release(self):
 		self._lock.release()
@@ -93,7 +92,7 @@ class HSCondition(object):
 	def wait(self, timeout=None):
 		waiter = _allocate_lock()
 		waiter.acquire()				# get it the first time, no blocking
-		self._waiters.append(waiter)
+		self.append(waiter)
 		
 		# in the momemnt we release our lock, someone else might actually resume
 		self.release()
@@ -124,7 +123,7 @@ class HSCondition(object):
 				# END endless loop
 				if not gotit:
 					try:
-						self._waiters.remove(waiter)
+						self.remove(waiter)
 					except ValueError:
 						pass
 				# END didn't ever get it
@@ -140,13 +139,13 @@ class HSCondition(object):
 		In the multi-notify case, we acquire a lock just for safety, as otherwise
 		we might pop too much of someone else notifies n waiters as well, which 
 		would in the worst case lead to double-releases of locks."""
-		if not self._waiters:
+		if not self:
 			return
 		if n == 1:
 			# so here we assume this is thead-safe ! It wouldn't be in any other
 			# language, but python it is.
 			try:
-				self._waiters.popleft().release()
+				self.popleft().release()
 			except IndexError:
 				pass
 		else:
@@ -155,8 +154,8 @@ class HSCondition(object):
 			# and waits again, but only until we are done, which is important
 			# to do that in a thread-safe fashion
 			try:
-				for i in range(min(n, len(self._waiters))):
-					self._waiters.popleft().release()
+				for i in range(min(n, len(self))):
+					self.popleft().release()
 				# END for each waiter to resume
 			finally:
 				self.release()
@@ -164,7 +163,7 @@ class HSCondition(object):
 		# END handle n = 1 case faster
 	
 	def notify_all(self):
-		self.notify(len(self._waiters))
+		self.notify(len(self))
 		
 
 class ReadOnly(Exception):

@@ -289,8 +289,8 @@ class TestThreadPool(TestBase):
 		self._assert_async_dependent_tasks(p)
 		
 		
-		# SINGLE TASK THREADED ASYNC MODE
-		################################
+		# SINGLE TASK THREADED ASYNC MODE ( 1 thread )
+		##############################################
 		# step one gear up - just one thread for now.
 		p.set_size(1)
 		assert p.size() == 1
@@ -310,8 +310,8 @@ class TestThreadPool(TestBase):
 		
 		
 		
-		# SINGLE TASK ASYNC MODE
-		########################
+		# SINGLE TASK ASYNC MODE ( 2 threads )
+		######################################
 		# two threads to compete for a single task
 		p.set_size(2)
 		self._assert_single_task(p, True)
