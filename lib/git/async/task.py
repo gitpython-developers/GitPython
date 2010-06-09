@@ -66,7 +66,7 @@ class OutputChannelTask(Node):
 		
 	def is_closed(self):
 		""":return: True if the task's write channel is closed"""
-		return self._out_wc.closed
+		return self._out_wc.closed()
 		
 	def error(self):
 		""":return: Exception caught during last processing or None"""

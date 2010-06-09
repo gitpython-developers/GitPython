@@ -33,18 +33,16 @@ class TestChannels(TestBase):
 		assert time.time() - st >= to
 		
 		# writing to a closed channel raises
-		assert not wc.closed
+		assert not wc.closed()
 		wc.close()
-		assert wc.closed
+		assert wc.closed()
 		wc.close()	# fine
-		assert wc.closed
+		assert wc.closed()
 		
-		self.failUnlessRaises(IOError, wc.write, 1)
+		self.failUnlessRaises(ReadOnly, wc.write, 1)
 		
 		# reading from a closed channel never blocks
-		print "preblock"
 		assert len(rc.read()) == 0
-		print "got read(0)"
 		assert len(rc.read(5)) == 0
 		assert len(rc.read(1)) == 0
 		

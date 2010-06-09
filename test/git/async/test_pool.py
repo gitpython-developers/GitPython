@@ -57,6 +57,10 @@ class TestThreadTaskNode(InputIteratorThreadTask):
 		return self
 		
 
+class TestThreadFailureNode(TestThreadTaskNode):
+	"""Fails after X items"""
+		
+
 class TestThreadPool(TestBase):
 	
 	max_threads = cpu_count()
