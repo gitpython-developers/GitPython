@@ -44,3 +44,30 @@ class TestChannels(TestBase):
 		assert len(rc.read(5)) == 0
 		assert len(rc.read(1)) == 0
 		
+		
+		# test callback channels
+		wc, rc = mkchannel(wctype = CallbackWChannel, rctype = CallbackRChannel)
+		
+		cb = [0, 0]		# set slots to one if called
+		def pre_write(item):
+			cb[0] = 1
+			return item + 1
+		def pre_read(count):
+			cb[1] = 1
+			
+		# set, verify it returns previous one
+		assert wc.set_pre_cb(pre_write) is None
+		assert rc.set_pre_cb(pre_read) is None
+		assert wc.set_pre_cb(pre_write) is pre_write
+		assert rc.set_pre_cb(pre_read) is pre_read
+		
+		# writer transforms input
+		val = 5
+		wc.write(val)
+		assert cb[0] == 1 and cb[1] == 0
+		
+		rval = rc.read(1)[0]		# read one item, must not block
+		assert cb[0] == 1 and cb[1] == 1
+		assert rval == val + 1
+		
+		

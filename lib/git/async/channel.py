@@ -68,6 +68,32 @@ class WChannel(Channel):
 	#} END interface 
 	
 
+class CallbackWChannel(WChannel):
+	"""The write end of a channel which allows you to setup a callback to be 
+	called after an item was written to the channel"""
+	__slots__ = ('_pre_cb')
+	
+	def __init__(self):
+		WChannel.__init__(self)
+		self._pre_cb = None
+	
+	def set_pre_cb(self, fun = lambda item: item):
+		"""Install a callback to be called before the given item is written.
+		It returns a possibly altered item which will be written to the channel
+		instead, making it useful for pre-write item conversions.
+		Providing None uninstalls the current method.
+		:return: the previously installed function or None
+		:note: Must be thread-safe if the channel is used in multiple threads"""
+		prev = self._pre_cb
+		self._pre_cb = fun
+		return prev
+	
+	def write(self, item, block=True, timeout=None):
+		if self._pre_cb:
+			item = self._pre_cb(item)
+		WChannel.write(self, item, block, timeout)
+	
+	
 class SerialWChannel(WChannel):
 	"""A slightly faster version of a WChannel, which sacrificed thead-safety for
 	performance"""
@@ -171,7 +197,32 @@ class RChannel(Channel):
 		return out
 		
 	#} END interface 
+
+class CallbackRChannel(RChannel):
+	"""A channel which sends a callback before items are read from the channel"""
+	__slots__ = "_pre_cb"
 	
+	def __init__(self, wc):
+		RChannel.__init__(self, wc)
+		self._pre_cb = None
+	
+	def set_pre_cb(self, fun = lambda count: None):
+		"""Install a callback to call with the item count to be read before any 
+		item is actually read from the channel. 
+		Exceptions will be propagated.
+		If a function is not provided, the call is effectively uninstalled.
+		:return: the previously installed callback or None
+		:note: The callback must be threadsafe if the channel is used by multiple threads."""
+		prev = self._pre_cb
+		self._pre_cb = fun
+		return prev
+	
+	def read(self, count=0, block=True, timeout=None):
+		if self._pre_cb:
+			self._pre_cb(count)
+		return RChannel.read(self, count, block, timeout)
+
+
 #} END classes
 
 #{ Constructors
