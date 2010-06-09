@@ -74,7 +74,7 @@ class TestThreadPool(TestBase):
 		
 		# add a simple task
 		# it iterates n items
-		ni = 1000
+		ni = 5000
 		assert ni % 2 == 0, "ni needs to be dividable by 2"
 		assert ni % 4 == 0, "ni needs to be dividable by 4"
 		
@@ -148,7 +148,7 @@ class TestThreadPool(TestBase):
 		print "read(%i)" % nri
 		items = rc.read(nri)
 		assert len(items) == nri
-		p.del_task(task)
+		p.remove_task(task)
 		assert p.num_tasks() == null_tasks
 		task._assert(2, ni)						# two chunks, ni calls
 		
@@ -204,7 +204,7 @@ class TestThreadPool(TestBase):
 		
 		task._assert(ni, ni)
 		assert p.num_tasks() == 1 + null_tasks
-		assert p.del_task(task) is p		# del manually this time
+		assert p.remove_task(task) is p		# del manually this time
 		assert p.num_tasks() == null_tasks
 		
 		# now with we set the minimum count to reduce the number of processing counts
@@ -231,7 +231,7 @@ class TestThreadPool(TestBase):
 		rc = p.add_task(task)
 		print "read(0) with failure"
 		assert len(rc.read()) == 0		# failure on first item
-		print "done with everything"
+		print >> sys.stderr, "done with everything"
 		assert isinstance(task.error(), AssertionError)
 		assert task.is_done()			# on error, its marked done as well
 		del(rc)
@@ -290,7 +290,7 @@ class TestThreadPool(TestBase):
 		# deleting the pool stops its threads - just to be sure ;)
 		# Its not synchronized, hence we wait a moment
 		del(p)
-		time.sleep(0.15)
+		time.sleep(0.25)
 		assert len(threading.enumerate()) == num_threads
 		
 		p = ThreadPool(1)
@@ -311,7 +311,6 @@ class TestThreadPool(TestBase):
 		# threads per core
 		p.set_size(4)
 		self._assert_single_task(p, True)
-		
 		# DEPENDENT TASK ASYNC MODE
 		###########################
 		self._assert_async_dependent_tasks(p)

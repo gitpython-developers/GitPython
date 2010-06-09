@@ -75,7 +75,6 @@ class WChannel(Channel):
 		an error"""
 		# yes, close it a little too early, better than having anyone put 
 		# additional items
-		# print "closing channel", self
 		self._closed = True
 		self._queue.set_writable(False)
 		

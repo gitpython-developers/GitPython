@@ -89,7 +89,6 @@ class OutputChannelTask(Node):
 	def process(self, count=0):
 		"""Process count items and send the result individually to the output channel"""
 		items = self._read(count)
-		# print "task read", len(items)
 		try:
 			# increase the ref-count - we use this to determine whether anyone else
 			# is currently handling our output channel. As this method runs asynchronously, 
@@ -119,7 +118,7 @@ class OutputChannelTask(Node):
 			# END handle single apply
 		except Exception, e:
 			self._exc = e
-			print "task error:", str(e)	# TODO: REMOVE DEBUG, or make it use logging
+			print >> sys.stderr, "task error:", str(e)	# TODO: REMOVE DEBUG, or make it use logging
 			self.set_done()
 			# unschedule all, we don't know how many have been produced actually
 			# but only if we don't apply single please 

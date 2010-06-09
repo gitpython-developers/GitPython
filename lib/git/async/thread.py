@@ -5,6 +5,8 @@ import threading
 import inspect
 import Queue
 
+import sys
+
 #{ Decorators
 
 def do_terminate_threads(whitelist=list()):
@@ -160,14 +162,15 @@ class WorkerThread(TerminatableThread):
 					rval = routine(arg)
 				else:
 					# ignore unknown items
-					print "%s: task %s was not understood - terminating" % (self.getName(), str(tasktuple))
+					print >> sys.stderr, "%s: task %s was not understood - terminating" % (self.getName(), str(tasktuple))
 					break
 				# END make routine call
 			except StopProcessing:
+				print self.name, "stops processing"
 				break
 			except Exception,e:
-				print "%s: Task %s raised unhandled exception: %s - this really shouldn't happen !" % (self.getName(), str(tasktuple), str(e))
-				break	# abort ... 
+				print >> sys.stderr, "%s: Task %s raised unhandled exception: %s - this really shouldn't happen !" % (self.getName(), str(tasktuple), str(e))
+				continue	# just continue 
 			# END routine exception handling
 		# END endless loop
 	
