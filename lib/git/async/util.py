@@ -95,7 +95,7 @@ class HSCondition(deque):
 		self.append(waiter)
 		
 		# in the momemnt we release our lock, someone else might actually resume
-		self.release()
+		self._lock.release()
 		try:	# restore state no matter what (e.g., KeyboardInterrupt)
 			# now we block, as we hold the lock already
 			if timeout is None:
@@ -129,7 +129,7 @@ class HSCondition(deque):
 				# END didn't ever get it
 		finally:
 			# reacquire the lock 
-			self.acquire()
+			self._lock.acquire()
 		# END assure release lock
 			
 	def notify(self, n=1):
@@ -144,12 +144,23 @@ class HSCondition(deque):
 		if n == 1:
 			# so here we assume this is thead-safe ! It wouldn't be in any other
 			# language, but python it is.
+			# But ... its two objects here - first the popleft, then the relasecall.
+			# If the timing is really really bad, and that happens if you let it 
+			# run often enough ( its a matter of statistics ), this will fail, 
+			# which is why we lock it.
+			# And yes, this causes some slow down, as single notifications happen
+			# alot
+			self._lock.acquire()
 			try:
-				self.popleft().release()
-			except IndexError:
-				pass
+				try:
+					self.popleft().release()
+				except IndexError:
+					pass
+			finally:
+				self._lock.release()
+			# END assure lock is released
 		else:
-			self.acquire()
+			self._lock.acquire()
 			# once the waiter resumes, he will want to acquire the lock
 			# and waits again, but only until we are done, which is important
 			# to do that in a thread-safe fashion
@@ -158,7 +169,7 @@ class HSCondition(deque):
 					self.popleft().release()
 				# END for each waiter to resume
 			finally:
-				self.release()
+				self._lock.release()
 			# END assure we release our lock
 		# END handle n = 1 case faster
 	
