@@ -58,14 +58,17 @@ class RPoolChannel(RChannel):
 	
 	def set_pre_cb(self, fun = lambda count: None):
 		"""Install a callback to call with the item count to be read before any 
-		item is actually  read from the channel.
+		item is actually  read from the channel. The call must be threadsafe if
+		the channel is passed to more than one tasks.
 		If it fails, the read will fail with an IOError
 		If a function is not provided, the call is effectively uninstalled."""
 		self._pre_cb = fun
 	
 	def set_post_cb(self, fun = lambda item: item):
 		"""Install a callback to call after the items were read. The function
-		returns a possibly changed item list. If it raises, the exception will be propagated.
+		returns a possibly changed item list.The call must be threadsafe if
+		the channel is passed to more than one tasks. 
+		If it raises, the exception will be propagated.
 		If a function is not provided, the call is effectively uninstalled."""
 		self._post_cb = fun
 	

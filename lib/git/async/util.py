@@ -133,45 +133,28 @@ class HSCondition(deque):
 		# END assure release lock
 			
 	def notify(self, n=1):
-		"""Its vital that this method is threadsafe - to be fast we don'd get a lock, 
-		but instead rely on pseudo-atomic operations that come with the GIL.
-		Hence we use pop in the n=1 case to be truly atomic.
-		In the multi-notify case, we acquire a lock just for safety, as otherwise
-		we might pop too much of someone else notifies n waiters as well, which 
-		would in the worst case lead to double-releases of locks."""
-		if not self:
-			return
-		if n == 1:
-			# so here we assume this is thead-safe ! It wouldn't be in any other
-			# language, but python it is.
-			# But ... its two objects here - first the popleft, then the relasecall.
-			# If the timing is really really bad, and that happens if you let it 
-			# run often enough ( its a matter of statistics ), this will fail, 
-			# which is why we lock it.
-			# And yes, this causes some slow down, as single notifications happen
-			# alot
-			self._lock.acquire()
-			try:
+		"""Its vital that this method is threadsafe - we absolutely have to 
+		get a lock at the beginning of this method to be sure we get the 
+		correct amount of waiters back. If we bail out, although a waiter
+		is about to be added, it will miss its wakeup notification, and block
+		forever (possibly)"""
+		self._lock.acquire()
+		try:
+			if not self:	# len(self) == 0, but this should be faster
+				return
+			if n == 1:
 				try:
 					self.popleft().release()
 				except IndexError:
 					pass
-			finally:
-				self._lock.release()
-			# END assure lock is released
-		else:
-			self._lock.acquire()
-			# once the waiter resumes, he will want to acquire the lock
-			# and waits again, but only until we are done, which is important
-			# to do that in a thread-safe fashion
-			try:
+			else:
 				for i in range(min(n, len(self))):
 					self.popleft().release()
 				# END for each waiter to resume
-			finally:
-				self._lock.release()
-			# END assure we release our lock
-		# END handle n = 1 case faster
+			# END handle n = 1 case faster
+		finally:
+			self._lock.release()
+		# END assure lock is released
 	
 	def notify_all(self):
 		self.notify(len(self))

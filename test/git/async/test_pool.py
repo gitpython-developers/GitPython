@@ -98,7 +98,8 @@ class TestThreadPool(TestBase):
 		items = rc.read()
 		assert len(items) == ni
 		task._assert(1, ni)
-		assert items[0] == 0 and items[-1] == ni-1
+		if not async:
+			assert items[0] == 0 and items[-1] == ni-1
 		
 		# as the task is done, it should have been removed - we have read everything
 		assert task.is_done()
@@ -152,8 +153,14 @@ class TestThreadPool(TestBase):
 		assert p.num_tasks() == null_tasks
 		task._assert(2, ni)						# two chunks, ni calls
 		
-		# its already done, gives us no more
+		# its already done, gives us no more, its still okay to use it though
+		# as a task doesn't have to be in the graph to allow reading its produced
+		# items
 		print "read(0) on closed"
+		# it can happen that a thread closes the channel just a tiny fraction of time
+		# after we check this, so the test fails, although it is nearly closed.
+		# When we start reading, we should wake up once it sends its signal
+		# assert task.is_closed()
 		assert len(rc.read()) == 0
 		
 		# test chunking
@@ -231,11 +238,17 @@ class TestThreadPool(TestBase):
 		rc = p.add_task(task)
 		print "read(0) with failure"
 		assert len(rc.read()) == 0		# failure on first item
+		
 		print >> sys.stderr, "done with everything"
+		
 		assert isinstance(task.error(), AssertionError)
 		assert task.is_done()			# on error, its marked done as well
 		del(rc)
 		assert p.num_tasks() == null_tasks
+		
+		# test failure after ni / 2 items
+		# This makes sure it correctly closes the channel on failure to prevent blocking
+		
 		
 		
 	def _assert_async_dependent_tasks(self, p):

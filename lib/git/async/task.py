@@ -138,7 +138,7 @@ class OutputChannelTask(Node):
 			# just the right thing to do of course - one loose link in the chain ...
 			# Other chunks of our kind currently being processed will then 
 			# fail to write to the channel and fail as well
-			# self.close()
+			self.close()
 			
 			# If some other chunk of our Task had an error, the channel will be closed
 			# This is not an issue, just be sure we don't overwrite the original 
