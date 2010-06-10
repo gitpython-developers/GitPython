@@ -42,7 +42,7 @@ class _TestTaskBase(object):
 			print self.item_count, fc
 		assert self.item_count == fc
 		self.lock.release()
-		
+		assert self._num_writers == 0
 		return self
 
 
@@ -381,6 +381,7 @@ class TestThreadPool(TestBase):
 		st = time.time()
 		items = rcs[-1].read()
 		elapsed = time.time() - st
+		print len(items), ni
 		assert len(items) == ni
 		del(rcs)
 		assert pool.num_tasks() == 0		# tasks depleted, all done, no handles
