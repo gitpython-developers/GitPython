@@ -191,8 +191,8 @@ class TestThreadPool(TestBase):
 		assert p.num_tasks() == null_tasks
 		rc = p.add_task(task)
 		assert p.num_tasks() == 1 + null_tasks
-		assert isinstance(rc, RPoolChannel)
-		assert task._out_wc is not None
+		assert isinstance(rc, PoolReader)
+		assert task._out_writer is not None
 		
 		# pull the result completely - we should get one task, which calls its 
 		# function once. In sync mode, the order matches
@@ -460,6 +460,7 @@ class TestThreadPool(TestBase):
 		# order of deletion doesnt matter
 		del(ts)
 		del(rcs)
+		print pool.num_tasks()
 		assert pool.num_tasks() == null_tasks
 	
 	

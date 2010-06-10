@@ -1,23 +1,17 @@
 from graph import Node
 from util import ReadOnly
-from channel import (
-		WChannel,
-		CallbackRChannel
-		)
 
 import threading
 import weakref
 import sys
 import new
 
-getrefcount = sys.getrefcount
-
 class OutputChannelTask(Node):
 	"""Abstracts a named task as part of a set of interdependent tasks, which contains 
 	additional information on how the task should be queued and processed.
 	
 	Results of the item processing are sent to a write channel, which is to be 
-	set by the creator using the ``set_wchannel`` method.
+	set by the creator using the ``set_writer`` method.
 	
 	* **min_count** assures that not less than min_count items will be processed per call.
 	* **max_chunksize** assures that multi-threading is happening in smaller chunks. If 
@@ -25,9 +19,11 @@ class OutputChannelTask(Node):
 	 one worker, as well as dependent tasks. If you want finer granularity , you can 
 	 specify this here, causing chunks to be no larger than max_chunksize"""
 	__slots__ = (	'_read',			# method to yield items to process 
-					'_out_wc', 			# output write channel
+					'_out_writer', 			# output write channel
 					'_exc',				# exception caught
 					'_done',			# True if we are done
+					'_num_writers',		# number of concurrent writers
+					'_wlock',			# lock for the above
 					'fun',				# function to call with items read
 					'min_count', 		# minimum amount of items to produce, None means no override
 					'max_chunksize',	# maximium amount of items to process per process call
@@ -35,12 +31,14 @@ class OutputChannelTask(Node):
 					)
 	
 	def __init__(self, id, fun, apply_single=True, min_count=None, max_chunksize=0, 
-					wchannel=None):
+					writer=None):
 		Node.__init__(self, id)
 		self._read = None					# to be set by subclasss 
-		self._out_wc = wchannel				# to be set later
+		self._out_writer = writer
 		self._exc = None
 		self._done = False
+		self._num_writers = 0
+		self._wlock = threading.Lock()
 		self.fun = fun
 		self.min_count = None
 		self.max_chunksize = 0				# note set
@@ -54,29 +52,29 @@ class OutputChannelTask(Node):
 		"""Set ourselves to being done, has we have completed the processing"""
 		self._done = True
 		
-	def set_wchannel(self, wc):
+	def set_writer(self, writer):
 		"""Set the write channel to the given one"""
-		self._out_wc = wc
+		self._out_writer = writer
 		
-	def wchannel(self):
+	def writer(self):
 		""":return: a proxy to our write channel or None if non is set
 		:note: you must not hold a reference to our write channel when the 
 			task is being processed. This would cause the write channel never 
 			to be closed as the task will think there is still another instance
 			being processed which can close the channel once it is done.
 			In the worst case, this will block your reads."""
-		if self._out_wc is None:
+		if self._out_writer is None:
 			return None
-		return self._out_wc
+		return self._out_writer
 		
 	def close(self):
 		"""A closed task will close its channel to assure the readers will wake up
 		:note: its safe to call this method multiple times"""
-		self._out_wc.close()
+		self._out_writer.close()
 		
 	def is_closed(self):
 		""":return: True if the task's write channel is closed"""
-		return self._out_wc.closed()
+		return self._out_writer.closed()
 		
 	def error(self):
 		""":return: Exception caught during last processing or None"""
@@ -88,24 +86,18 @@ class OutputChannelTask(Node):
 		items = self._read(count)
 		# print "%r: done reading %i items" % (self.id, len(items))
 		try:
-			# increase the ref-count - we use this to determine whether anyone else
-			# is currently handling our output channel. As this method runs asynchronously, 
-			# we have to make sure that the channel is closed by the last finishing task,
-			# which is not necessarily the one which determines that he is done
-			# as he couldn't read anymore items.
-			# The refcount will be dropped in the moment we get out of here.
-			wc = self._out_wc
+			write = self._out_writer.write
 			if self.apply_single:
 				for item in items:
 					rval = self.fun(item)
-					wc.write(rval)
+					write(rval)
 				# END for each item
 			else:
 				# shouldn't apply single be the default anyway ? 
 				# The task designers should chunk them up in advance
 				rvals = self.fun(items)
 				for rval in rvals:
-					wc.write(rval)
+					write(rval)
 			# END handle single apply
 		except Exception, e:
 			print >> sys.stderr, "task %s error:" % self.id, type(e), str(e)	# TODO: REMOVE DEBUG, or make it use logging
@@ -131,7 +123,7 @@ class OutputChannelTask(Node):
 				self._exc = e
 			# END set error flag
 		# END exception handling
-		del(wc)
+		
 		
 		# if we didn't get all demanded items, which is also the case if count is 0
 		# we have depleted the input channel and are done
@@ -151,7 +143,7 @@ class OutputChannelTask(Node):
 		# thread having its copy on the stack 
 		# + 1 for the instance we provide to refcount
 		# Soft close, so others can continue writing their results
-		if self.is_done() and getrefcount(self._out_wc) < 4:
+		if self.is_done():
 			# print "Closing channel of %r" % self.id
 			self.close()
 		# END handle channel closure
@@ -212,14 +204,14 @@ class InputChannelTask(OutputChannelTask):
 	to be the input channel to read from though."""
 	__slots__ = "_pool_ref"
 	
-	def __init__(self, in_rc, *args, **kwargs):
+	def __init__(self, in_reader, *args, **kwargs):
 		OutputChannelTask.__init__(self, *args, **kwargs)
-		self._read = in_rc.read
+		self._read = in_reader.read
 		self._pool_ref = None
 
 	#{ Internal Interface 
 	
-	def rchannel(self):
+	def reader(self):
 		""":return: input channel from which we read"""
 		# the instance is bound in its instance method - lets use this to keep
 		# the refcount at one ( per consumer )
