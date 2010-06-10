@@ -84,9 +84,9 @@ class OutputChannelTask(Node):
 
 	def process(self, count=0):
 		"""Process count items and send the result individually to the output channel"""
-		print "%r: reading %i" % (self.id, count)
+		# print "%r: reading %i" % (self.id, count)
 		items = self._read(count)
-		print "%r: done reading" % self.id
+		# print "%r: done reading %i items" % (self.id, len(items))
 		try:
 			# increase the ref-count - we use this to determine whether anyone else
 			# is currently handling our output channel. As this method runs asynchronously, 
@@ -109,7 +109,6 @@ class OutputChannelTask(Node):
 			# END handle single apply
 		except Exception, e:
 			print >> sys.stderr, "task %s error:" % self.id, type(e), str(e)	# TODO: REMOVE DEBUG, or make it use logging
-			
 			# be sure our task is not scheduled again
 			self.set_done()
 			
@@ -153,7 +152,7 @@ class OutputChannelTask(Node):
 		# + 1 for the instance we provide to refcount
 		# Soft close, so others can continue writing their results
 		if self.is_done() and getrefcount(self._out_wc) < 4:
-			print "Closing channel of %r" % self.id
+			# print "Closing channel of %r" % self.id
 			self.close()
 		# END handle channel closure
 	#{ Configuration
