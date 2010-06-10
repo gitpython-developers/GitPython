@@ -359,6 +359,7 @@ class TestThreadPool(TestBase):
 		items = rcs[-1].read()
 		print "finished read(0)"
 		elapsed = time.time() - st
+		print len(items), ni
 		assert len(items) == ni
 		
 		print >> sys.stderr, "Dependent Tasks: evaluated %i items of %i dependent in %f s ( %i items / s )" % (ni, aic, elapsed, ni / elapsed) 
@@ -366,9 +367,7 @@ class TestThreadPool(TestBase):
 		
 		# in the end, we expect all tasks to be gone, automatically
 		# order of deletion doesnt matter
-		print "del ts"
 		del(ts)
-		print "del rcs"
 		del(rcs)
 		assert pool.num_tasks() == null_tasks
 	
@@ -376,7 +375,7 @@ class TestThreadPool(TestBase):
 	
 	# for some reason, sometimes it has multiple workerthreads already when he 
 	# enters the method ... dunno yet, pools should clean up themselvess
-	# @terminate_threads
+	#@terminate_threads
 	def test_base(self):
 		assert len(threading.enumerate()) == 1
 		
@@ -457,3 +456,5 @@ class TestThreadPool(TestBase):
 		self._assert_async_dependent_tasks(p)
 		
 		print >> sys.stderr, "Done with everything"
+		
+		# TODO: test multi-pool connections 

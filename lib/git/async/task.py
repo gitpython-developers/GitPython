@@ -1,8 +1,12 @@
 from graph import Node
-from channel import WChannel
 from util import ReadOnly
+from channel import (
+		WChannel,
+		CallbackRChannel
+		)
 
 import threading
+import weakref
 import sys
 import new
 
@@ -147,6 +151,7 @@ class OutputChannelTask(Node):
 		# The count is: 1 = wc itself, 2 = first reader channel, + x for every 
 		# thread having its copy on the stack 
 		# + 1 for the instance we provide to refcount
+		# Soft close, so others can continue writing their results
 		if self.is_done() and getrefcount(self._out_wc) < 4:
 			print "Closing channel of %r" % self.id
 			self.close()
@@ -206,13 +211,32 @@ class InputChannelTask(OutputChannelTask):
 	"""Uses an input channel as source for reading items
 	For instantiation, it takes all arguments of its base, the first one needs
 	to be the input channel to read from though."""
+	__slots__ = "_pool_ref"
 	
 	def __init__(self, in_rc, *args, **kwargs):
 		OutputChannelTask.__init__(self, *args, **kwargs)
 		self._read = in_rc.read
+		self._pool_ref = None
+
+	#{ Internal Interface 
 	
 	def rchannel(self):
 		""":return: input channel from which we read"""
 		# the instance is bound in its instance method - lets use this to keep
 		# the refcount at one ( per consumer )
 		return self._read.im_self
+		
+	def set_read(self, read):
+		"""Adjust the read method to the given one"""
+		self._read = read
+		
+	def set_pool(self, pool):
+		self._pool_ref = weakref.ref(pool)
+		
+	def pool(self):
+		""":return: pool we are attached to, or None"""
+		if self._pool_ref is None:
+			return None
+		return self._pool_ref()
+		
+	#} END intenral interface
