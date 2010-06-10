@@ -82,7 +82,8 @@ class OutputChannelTask(Node):
 
 	def process(self, count=0):
 		"""Process count items and send the result individually to the output channel"""
-		# first thing: increment the writer count
+		# first thing: increment the writer count - other tasks must be able 
+		# to respond properly ( even if it turns out we don't need it later )
 		self._wlock.acquire()
 		self._num_writers += 1
 		self._wlock.release()
@@ -191,7 +192,11 @@ class InputIteratorTaskBase(OutputChannelTask):
 			raise ValueError("Iterator %r needs a next() function" % iterator)
 		self._iterator = iterator
 		self._lock = self.lock_type()
-		self._read = self.__read
+		
+		# this is necessary to prevent a cyclic ref, preventing us from 
+		# getting deleted ( and collected )
+		weakself = weakref.ref(self)
+		self._read = lambda count: weakself().__read(count)
 		self._empty = False
 		
 	def __read(self, count=0):
@@ -201,6 +206,7 @@ class InputIteratorTaskBase(OutputChannelTask):
 		if self._empty:
 			return list()
 		# END early abort
+		
 		self._lock.acquire()
 		try:
 			if count == 0:

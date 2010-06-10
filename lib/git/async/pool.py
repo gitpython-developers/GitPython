@@ -402,7 +402,7 @@ class Pool(object):
 			
 			# keep its input nodes as we check whether they were orphaned
 			in_tasks = task.in_nodes
-			self._tasks.del_node(task)
+			self._tasks.remove_node(task)
 			self._taskorder_cache.clear()
 		finally:
 			self._taskgraph_lock.release()
