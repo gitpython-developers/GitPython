@@ -25,14 +25,24 @@ class Graph(object):
 	
 	def __init__(self):
 		self.nodes = list()
+
+	def __del__(self):
+		"""Deletes bidericational dependencies"""
+		for node in self.nodes:
+			node.in_nodes = None
+			node.out_nodes = None
+		# END cleanup nodes
+		
+		# otherwise the nodes would keep floating around
 	
+
 	def add_node(self, node):
 		"""Add a new node to the graph
 		:return: the newly added node"""
 		self.nodes.append(node)
 		return node
 	
-	def del_node(self, node):
+	def remove_node(self, node):
 		"""Delete a node from the graph
 		:return: self"""
 		try:
@@ -46,6 +56,8 @@ class Graph(object):
 			del(outn.in_nodes[outn.in_nodes.index(node)])
 		for inn in node.in_nodes:
 			del(inn.out_nodes[inn.out_nodes.index(node)])
+		node.out_nodes = list()
+		node.in_nodes = list()
 		return self
 	
 	def add_edge(self, u, v):

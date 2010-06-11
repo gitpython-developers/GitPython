@@ -116,7 +116,7 @@ class WorkerThread(TerminatableThread):
 	t[1] = optional, tuple or list of arguments to pass to the routine
 	t[2] = optional, dictionary of keyword arguments to pass to the routine
 	"""
-	__slots__ = ('inq', '_current_routine')
+	__slots__ = ('inq')
 	
 	
 	# define how often we should check for a shutdown request in case our 
@@ -128,7 +128,6 @@ class WorkerThread(TerminatableThread):
 		self.inq = inq
 		if inq is None:
 			self.inq = Queue.Queue()
-		self._current_routine = None				# routine we execute right now
 	
 	@classmethod
 	def stop(cls, *args):
@@ -141,34 +140,36 @@ class WorkerThread(TerminatableThread):
 		
 		gettask = self.inq.get
 		while True:
-			self._current_routine = None
 			if self._should_terminate():
 				break
 			# END check for stop request
 			
 			# we wait and block - to terminate, send the 'stop' method
 			tasktuple = gettask()
-			
 			# needing exactly one function, and one arg
-			assert len(tasktuple) == 2, "Need tuple of function, arg - it could be more flexible, but its reduced to what we need"
 			routine, arg = tasktuple
 			
-			self._current_routine = routine
-			
 			try:
-				rval = None
-				if inspect.ismethod(routine):
-					if routine.im_self is None:
-						rval = routine(self, arg)
-					else:
+				try:
+					rval = None
+					if inspect.ismethod(routine):
+						if routine.im_self is None:
+							rval = routine(self, arg)
+						else:
+							rval = routine(arg)
+					elif inspect.isroutine(routine):
 						rval = routine(arg)
-				elif inspect.isroutine(routine):
-					rval = routine(arg)
-				else:
-					# ignore unknown items
-					print >> sys.stderr, "%s: task %s was not understood - terminating" % (self.getName(), str(tasktuple))
-					break
-				# END make routine call
+					else:
+						# ignore unknown items
+						print >> sys.stderr, "%s: task %s was not understood - terminating" % (self.getName(), str(tasktuple))
+						break
+					# END make routine call
+				finally:
+					# make sure we delete the routine to release the reference as soon
+					# as possible. Otherwise objects might not be destroyed 
+					# while we are waiting
+					del(routine)
+					del(tasktuple)
 			except StopProcessing:
 				print self.name, "stops processing"	# DEBUG
 				break
@@ -176,11 +177,9 @@ class WorkerThread(TerminatableThread):
 				print >> sys.stderr, "%s: Task %s raised unhandled exception: %s - this really shouldn't happen !" % (self.getName(), str(tasktuple), str(e))
 				continue	# just continue 
 			# END routine exception handling
+		
+			# END handle routine release
 		# END endless loop
-	
-	def routine(self):
-		""":return: routine we are currently executing, or None if we have no task"""
-		return self._current_routine
 	
 	def stop_and_join(self):
 		"""Send stop message to ourselves"""

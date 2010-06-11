@@ -3,6 +3,7 @@ from test.testlib import *
 from git.async.graph import *
 
 import time
+import sys
 
 class TestGraph(TestBase):
 	
@@ -19,7 +20,7 @@ class TestGraph(TestBase):
 		
 		# delete unconnected nodes
 		for n in g.nodes[:]:
-			g.del_node(n)
+			g.remove_node(n)
 		# END del nodes
 		
 		# add a chain of connected nodes
@@ -54,8 +55,8 @@ class TestGraph(TestBase):
 			
 		# deleting a connected node clears its neighbour connections
 		assert n3.in_nodes[0] is n2
-		assert g.del_node(n2) is g
-		assert g.del_node(n2) is g					# multi-deletion okay
+		assert g.remove_node(n2) is g
+		assert g.remove_node(n2) is g					# multi-deletion okay
 		assert len(g.nodes) == nn - 1
 		assert len(n3.in_nodes) == 0
 		assert len(n1.out_nodes) == 0
@@ -68,3 +69,12 @@ class TestGraph(TestBase):
 		assert dfirst_nodes[-1] == end and dfirst_nodes[-2].id == end.id-1
 		
 		
+		# test cleanup
+		# its at least kept by its graph
+		assert sys.getrefcount(end) > 3
+		del(g)
+		del(n1); del(n2); del(n3)
+		del(dfirst_nodes)
+		del(last)
+		del(n)
+		assert sys.getrefcount(end) == 2

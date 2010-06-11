@@ -9,8 +9,8 @@ class TestChannels(TestBase):
 	def test_base(self):
 		# creating channel yields a write and a read channal
 		wc, rc = mkchannel()
-		assert isinstance(wc, WChannel)		# default args
-		assert isinstance(rc, RChannel)
+		assert isinstance(wc, Writer)		# default args
+		assert isinstance(rc, Reader)
 		
 		
 		# TEST UNLIMITED SIZE CHANNEL - writing+reading is FIFO
@@ -46,7 +46,7 @@ class TestChannels(TestBase):
 		
 		
 		# test callback channels
-		wc, rc = mkchannel(wctype = CallbackWChannel, rctype = CallbackRChannel)
+		wc, rc = mkchannel(wtype = CallbackWriter, rtype = CallbackReader)
 		
 		cb = [0, 0]		# set slots to one if called
 		def pre_write(item):
