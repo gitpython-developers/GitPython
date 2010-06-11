@@ -132,8 +132,13 @@ class TestThreadPool(TestBase):
 		assert len(items) == nri
 		
 		task._assert( 5, ni)
-		assert task.is_done()
+		
+		# delete the handle first, causing the task to be removed and to be set
+		# done. We check for the set-done state later. Depending on the timing, 
+		# The task is not yet set done when we are checking it because we were 
+		# scheduled in before the flag could be set.
 		del(rc)
+		assert task.is_done()
 		assert p.num_tasks() == null_tasks	# depleted
 		
 		# but this only hits if we want too many items, if we want less, it could 
@@ -307,8 +312,40 @@ class TestThreadPool(TestBase):
 		
 		# reading from the last one will evaluate all pools correctly
 		print "read(0) multi-pool"
+		st = time.time()
 		items = p2rcs[-1].read()
+		elapsed = time.time() - st
 		assert len(items) == ni
+		
+		print >> sys.stderr, "Dependent Tasks: evaluated 2 connected pools and %i items with read(0), of %i dependent tasks in %f s ( %i items / s )" % (ni, aic + aic-1, elapsed, ni / elapsed)
+		
+		
+		# loose the handles of the second pool to allow others to go as well
+		del(p2rcs); del(p2ts)
+		assert p2.num_tasks() == 0
+		
+		# now we lost our old handles as well, and the tasks go away
+		ts, rcs = make_task()
+		assert pool.num_tasks() == len(ts)
+		
+		p2ts, p2rcs = add_task_chain(p2, ni, count, feeder_channel=rcs[-1], id_offset=count)
+		assert p2.num_tasks() == len(p2ts) - 1 
+		
+		# Test multi-read(1)
+		print "read(1) * %i" % ni
+		reader = rcs[-1]
+		st = time.time()
+		for i in xrange(ni):
+			items = reader.read(1)
+			assert len(items) == 1
+		# END for each item to get
+		elapsed = time.time() - st
+		del(reader)		# decrement refcount
+		
+		print >> sys.stderr, "Dependent Tasks: evaluated 2 connected pools and %i items with read(1), of %i dependent tasks in %f s ( %i items / s )" % (ni, aic + aic-1, elapsed, ni / elapsed)
+		
+		# another read is empty
+		assert len(rcs[-1].read()) == 0
 		
 		# now that both are connected, I can drop my handle to the reader
 		# without affecting the task-count, but whats more important: 
@@ -329,11 +366,10 @@ class TestThreadPool(TestBase):
 		assert pool.num_tasks() == null_tasks 
 		
 		
-		# TODO: Test multi-read(1)
-			
-		# in the end, we expect all tasks to be gone, automatically
-		# order of deletion doesnt matter
-		
+		# ASSERTION: We already tested that one pool behaves correctly when an error
+		# occours - if two pools handle their ref-counts correctly, which they
+		# do if we are here, then they should handle errors happening during 
+		# the task processing as expected as well. Hence we can safe this here
 		
 	
 	
