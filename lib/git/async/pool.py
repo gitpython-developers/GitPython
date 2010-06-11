@@ -324,7 +324,6 @@ class Pool(object):
 			threadsafe to optimize item throughput.
 		
 		:note: currently NOT threadsafe !"""
-		print "set_size", size
 		assert size > -1, "Size cannot be negative"
 		
 		# either start new threads, or kill existing ones.

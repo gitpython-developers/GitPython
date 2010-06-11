@@ -146,9 +146,7 @@ class WorkerThread(TerminatableThread):
 			
 			# we wait and block - to terminate, send the 'stop' method
 			tasktuple = gettask()
-			
 			# needing exactly one function, and one arg
-			assert len(tasktuple) == 2, "Need tuple of function, arg - it could be more flexible, but its reduced to what we need"
 			routine, arg = tasktuple
 			
 			try:

@@ -101,10 +101,12 @@ class HSCondition(deque):
 		waiter.acquire()				# get it the first time, no blocking
 		self.append(waiter)
 		
-		# in the momemnt we release our lock, someone else might actually resume
-		self._lock.release()
-		try:	# restore state no matter what (e.g., KeyboardInterrupt)
+		
+		try:
+			# restore state no matter what (e.g., KeyboardInterrupt)
 			# now we block, as we hold the lock already
+			# in the momemnt we release our lock, someone else might actually resume
+			self._lock.release()
 			if timeout is None:
 				waiter.acquire()
 			else:
