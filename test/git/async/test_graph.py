@@ -3,6 +3,7 @@ from test.testlib import *
 from git.async.graph import *
 
 import time
+import sys
 
 class TestGraph(TestBase):
 	
@@ -19,7 +20,7 @@ class TestGraph(TestBase):
 		
 		# delete unconnected nodes
 		for n in g.nodes[:]:
-			g.del_node(n)
+			g.remove_node(n)
 		# END del nodes
 		
 		# add a chain of connected nodes
@@ -54,38 +55,26 @@ class TestGraph(TestBase):
 			
 		# deleting a connected node clears its neighbour connections
 		assert n3.in_nodes[0] is n2
-		assert g.del_node(n2) is g
-		assert g.del_node(n2) is g					# multi-deletion okay
+		assert g.remove_node(n2) is g
+		assert g.remove_node(n2) is g					# multi-deletion okay
 		assert len(g.nodes) == nn - 1
 		assert len(n3.in_nodes) == 0
 		assert len(n1.out_nodes) == 0
 		
 		# check the history from the last node
-		last = g.nodes[-1]
-		class Visitor(object):
-			def __init__(self, origin):
-				self.origin_seen = False
-				self.origin = origin
-				self.num_seen = 0
-				
-			def __call__(self, n):
-				if n is self.origin:
-					self.origin_seen = True
-				else:
-					assert not self.origin_seen, "should see origin last"
-				# END check origin 
-				self.num_seen += 1
-				return True
-				
-			def _assert(self, num_expected):
-				assert self.origin_seen
-				assert self.num_seen == num_expected
-		# END visitor helper
-		
 		end = g.nodes[-1] 
-		visitor = Visitor(end)
-		g.visit_input_inclusive_depth_first(end, visitor)
-		
+		dfirst_nodes = g.input_inclusive_dfirst_reversed(end)
 		num_nodes_seen = nn - 2		# deleted second, which leaves first one disconnected
-		visitor._assert(num_nodes_seen)
+		assert len(dfirst_nodes) == num_nodes_seen
+		assert dfirst_nodes[-1] == end and dfirst_nodes[-2].id == end.id-1
 		
+		
+		# test cleanup
+		# its at least kept by its graph
+		assert sys.getrefcount(end) > 3
+		del(g)
+		del(n1); del(n2); del(n3)
+		del(dfirst_nodes)
+		del(last)
+		del(n)
+		assert sys.getrefcount(end) == 2

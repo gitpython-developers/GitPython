@@ -101,10 +101,12 @@ class HSCondition(deque):
 		waiter.acquire()				# get it the first time, no blocking
 		self.append(waiter)
 		
-		# in the momemnt we release our lock, someone else might actually resume
-		self._lock.release()
-		try:	# restore state no matter what (e.g., KeyboardInterrupt)
+		
+		try:
+			# restore state no matter what (e.g., KeyboardInterrupt)
 			# now we block, as we hold the lock already
+			# in the momemnt we release our lock, someone else might actually resume
+			self._lock.release()
 			if timeout is None:
 				waiter.acquire()
 			else:
@@ -206,7 +208,6 @@ class AsyncQueue(deque):
 			return old
 		finally:
 			self.mutex.release()
-			
 			# if we won't receive anymore items, inform the getters
 			if not state:
 				self.not_empty.notify_all()
@@ -222,6 +223,13 @@ class AsyncQueue(deque):
 
 	def put(self, item, block=True, timeout=None):
 		self.mutex.acquire()
+		# NOTE: we explicitly do NOT check for our writable state
+		# Its just used as a notification signal, and we need to be able 
+		# to continue writing to prevent threads ( easily ) from failing
+		# to write their computed results, which we want in fact
+		# NO: we want them to fail and stop processing, as the one who caused
+		# the channel to close had a reason and wants the threads to 
+		# stop on the task as soon as possible
 		if not self._writable:
 			self.mutex.release()
 			raise ReadOnly
