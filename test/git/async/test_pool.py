@@ -19,7 +19,6 @@ class TestThreadPool(TestBase):
 	
 	def _assert_single_task(self, p, async=False):
 		"""Performs testing in a synchronized environment"""
-		# return	# DEBUG TODO: Fixme deactivated it
 		print >> sys.stderr, "Threadpool: Starting single task (async = %i) with %i threads" % (async, p.size())
 		null_tasks = p.num_tasks()		# in case we had some before
 		
@@ -373,10 +372,7 @@ class TestThreadPool(TestBase):
 		
 	
 	
-	
-	# for some reason, sometimes it has multiple workerthreads already when he 
-	# enters the method ... dunno yet, pools should clean up themselvess
-	#@terminate_threads
+	@terminate_threads
 	def test_base(self):
 		assert len(threading.enumerate()) == 1
 		
@@ -463,10 +459,11 @@ class TestThreadPool(TestBase):
 		# threads per core
 		p.set_size(4)
 		self._assert_single_task(p, True)
+		
+		
 		# DEPENDENT TASK ASYNC MODE
 		###########################
 		self._assert_async_dependent_tasks(p)
 		
 		print >> sys.stderr, "Done with everything"
 		
-		# TODO: test multi-pool connections 
