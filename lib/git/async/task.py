@@ -196,6 +196,9 @@ class InputIteratorTaskBase(OutputChannelTask):
 		self._read = lambda count: weakself().__read(count)
 		self._empty = False
 		
+		# defaults to returning our items unchanged
+		self.fun = lambda item: item
+		
 	def __read(self, count=0):
 		"""Read count items from the iterator, and return them"""
 		# not threadsafe, but worst thing that could happen is that 
