@@ -19,7 +19,6 @@ class TestThreadPool(TestBase):
 	
 	def _assert_single_task(self, p, async=False):
 		"""Performs testing in a synchronized environment"""
-		# return	# DEBUG TODO: Fixme deactivated it
 		print >> sys.stderr, "Threadpool: Starting single task (async = %i) with %i threads" % (async, p.size())
 		null_tasks = p.num_tasks()		# in case we had some before
 		

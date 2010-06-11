@@ -2,7 +2,6 @@
 
 from threading import (
 	Lock,
-	current_thread,
 	_allocate_lock,
 	_Condition, 
 	_sleep,

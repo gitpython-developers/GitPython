@@ -88,11 +88,7 @@ class OutputChannelTask(Node):
 		self._num_writers += 1
 		self._wlock.release()
 		
-		#print "%r: reading %i" % (self.id, count)
-		#if hasattr(self, 'reader'):
-		#	print "from", self.reader().channel
 		items = self._read(count)
-		#print "%r: done reading %i items" % (self.id, len(items))
 		
 		try:
 			try:
@@ -117,7 +113,6 @@ class OutputChannelTask(Node):
 				self._wlock.release()
 			# END handle writer count
 		except Exception, e:
-			print >> sys.stderr, "task %s error:" % self.id, type(e), str(e)	# TODO: REMOVE DEBUG, or make it use logging
 			# be sure our task is not scheduled again
 			self.set_done()
 			
@@ -164,7 +159,6 @@ class OutputChannelTask(Node):
 			self._wlock.acquire()
 			try:
 				if self._num_writers == 0:
-					# print "Closing channel of %r" % self.id, len(self._out_writer.channel.queue), self._out_writer.channel
 					self.close()
 				# END handle writers
 			finally:

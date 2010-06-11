@@ -95,10 +95,6 @@ class PoolReader(CallbackReader):
 		# provided enough - its better to have some possibly empty task runs 
 		# than having and empty queue that blocks.
 		
-		# NOTE: TODO: that case is only possible if one Task could be connected 
-		# to multiple input channels in a manner known by the system. Currently
-		# this is not possible, but should be implemented at some point.
-		
 		# if the user tries to use us to read from a done task, we will never 
 		# compute as all produced items are already in the channel
 		task = self._task_ref()
@@ -260,8 +256,6 @@ class Pool(object):
 			# the following loops are kind of unrolled - code duplication
 			# should make things execute faster. Putting the if statements 
 			# into the loop would be less code, but ... slower
-			# DEBUG
-			# print actual_count, numchunks, chunksize, remainder, task._out_writer.size()
 			if self._num_workers:
 				# respect the chunk size, and split the task up if we want 
 				# to process too much. This can be defined per task
