@@ -1,5 +1,7 @@
 """Simplistic implementation of a graph"""
 
+__all__ = ('Node', 'Graph')
+
 class Node(object):
 	"""A Node in the graph. They know their neighbours, and have an id which should 
 	resolve into a string"""

@@ -30,6 +30,8 @@ from time import sleep
 import new
 
 
+__all__ = ('PoolReader', 'Pool', 'ThreadPool')
+
 class PoolReader(CallbackReader):
 	"""A reader designed to read from channels which take part in pools
 	It acts like a handle to the underlying task in the pool."""

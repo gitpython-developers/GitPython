@@ -13,6 +13,9 @@ from util import (
 from time import time
 import sys
 
+__all__ = ('Channel', 'SerialChannel', 'Writer', 'CallbackWriter', 'Reader',
+			'CallbackReader', 'mkchannel', 'ReadOnly')
+
 #{ Classes 
 class Channel(object):
 	"""A channel is similar to a file like object. It has a write end as well as one or

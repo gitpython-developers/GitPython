@@ -7,6 +7,10 @@ import Queue
 
 import sys
 
+__all__ = ('do_terminate_threads', 'terminate_threads', 'TerminatableThread', 
+			'WorkerThread') 
+		
+
 #{ Decorators
 
 def do_terminate_threads(whitelist=list()):

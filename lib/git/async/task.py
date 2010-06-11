@@ -6,8 +6,11 @@ import weakref
 import sys
 import new
 
+__all__ = ('OutputChannelTask', 'ThreadTaskBase', 'InputIteratorTaskBase', 
+			'InputIteratorThreadTask', 'InputChannelTask')
+
 class OutputChannelTask(Node):
-	"""Abstracts a named task as part of a set of interdependent tasks, which contains 
+	"""Abstracts a named task, which contains 
 	additional information on how the task should be queued and processed.
 	
 	Results of the item processing are sent to a write channel, which is to be 
