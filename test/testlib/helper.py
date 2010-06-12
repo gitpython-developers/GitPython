@@ -9,8 +9,6 @@ from git import Repo, Remote, GitCommandError
 from unittest import TestCase
 import tempfile
 import shutil
-import random
-from array import array
 import cStringIO
 
 GIT_REPO = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
@@ -27,24 +25,6 @@ def fixture(name):
 def absolute_project_path():
 	return os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
-def make_bytes(size_in_bytes, randomize=False):
-	""":return: string with given size in bytes
-	:param randomize: try to produce a very random stream"""
-	actual_size = size_in_bytes / 4
-	producer = xrange(actual_size)
-	if randomize:
-		producer = list(producer)
-		random.shuffle(producer)
-	# END randomize
-	a = array('i', producer)
-	return a.tostring()
-
-
-def make_object(type, data):
-	""":return: bytes resembling an uncompressed object"""
-	odata = "blob %i\0" % len(data)
-	return odata + data
-	
 #} END routines
 	
 #{ Adapters 
@@ -87,8 +67,7 @@ def with_bare_rw_repo(func):
 	it will be removed completely.
 	
 	Use this if you want to make purely index based adjustments, change refs, create
-	heads, generally operations that do not need a working tree.
-	"""
+	heads, generally operations that do not need a working tree."""
 	def bare_repo_creator(self):
 		repo_dir = tempfile.mktemp("bare_repo") 
 		rw_repo = self.rorepo.clone(repo_dir, shared=True, bare=True)

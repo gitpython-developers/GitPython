@@ -10,18 +10,6 @@ Module containing all exceptions thrown througout the git package,
 class InvalidGitRepositoryError(Exception):
     """ Thrown if the given repository appears to have an invalid format.  """
 
-class ODBError(Exception):
-	"""All errors thrown by the object database"""
-	
-class InvalidDBRoot(ODBError):
-	"""Thrown if an object database cannot be initialized at the given path"""
-	
-class BadObject(ODBError):
-	"""The object with the given SHA does not exist"""
-	
-class BadObjectType(ODBError):
-	"""The object had an unsupported type"""
-
 class NoSuchPathError(OSError):
     """ Thrown if a path could not be access by the system. """
 

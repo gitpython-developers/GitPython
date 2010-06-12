@@ -9,38 +9,11 @@ import sys
 import time
 import tempfile
 
-try:
-    import hashlib
-except ImportError:
-    import sha
+from gitdb.util import (
+	stream_copy,
+	make_sha
+	)
 
-def make_sha(source=''):
-    """
-    A python2.4 workaround for the sha/hashlib module fiasco
-    
-    Note
-        From the dulwich project
-    """
-    try:
-        return hashlib.sha1(source)
-    except NameError:
-        sha1 = sha.sha(source)
-        return sha1
-
-def stream_copy(source, destination, chunk_size=512*1024):
-	"""Copy all data from the source stream into the destination stream in chunks
-	of size chunk_size
-	:return: amount of bytes written"""
-	br = 0
-	while True:
-		chunk = source.read(chunk_size)
-		destination.write(chunk)
-		br += len(chunk)
-		if len(chunk) < chunk_size:
-			break
-	# END reading output stream
-	return br
-	
 
 def join_path(a, *p):
     """Join path tokens together similar to os.path.join, but always use 

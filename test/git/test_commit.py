@@ -6,7 +6,7 @@
 
 from test.testlib import *
 from git import *
-from git.odb import IStream
+from gitdb import IStream
 
 from cStringIO import StringIO
 import time

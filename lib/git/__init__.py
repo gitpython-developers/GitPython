@@ -5,9 +5,24 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
 import os
+import sys
 import inspect
 
 __version__ = 'git'
+
+
+#{ Initialization
+def _init_externals():
+	"""Initialize external projects by putting them into the path"""
+	sys.path.append(os.path.join(os.path.dirname(__file__), 'ext'))
+	
+#} END initialization
+
+#################
+_init_externals()
+#################
+
+#{ Imports
 
 from git.config import GitConfigParser
 from git.objects import *
@@ -22,8 +37,8 @@ from git.remote import *
 from git.index import *
 from git.utils import LockFile, BlockingLockFile
 
-# odb is NOT imported intentionally - if you really want it, you should get it 
-# yourself as its part of the core
+#} END imports
 
 __all__ = [ name for name, obj in locals().items()
-            if not (name.startswith('_') or inspect.ismodule(obj)) ]
+			if not (name.startswith('_') or inspect.ismodule(obj)) ]
+			

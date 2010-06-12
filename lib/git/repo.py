@@ -13,7 +13,7 @@ from objects import *
 from config import GitConfigParser
 from remote import Remote
 
-from odb import GitObjectDB
+from gitdb import GitObjectDB
 
 import os
 import sys

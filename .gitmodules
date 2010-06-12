@@ -1,0 +1,3 @@
+[submodule "lib/git/ext/gitdb"]
+	path = lib/git/ext/gitdb
+	url = git://gitorious.org/git-python/gitdb.git

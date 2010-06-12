@@ -1,26 +1,19 @@
 """Performance data streaming performance"""
 
 from test.testlib import *
-from git.odb import *
+from gitdb import *
 
-from cStringIO import StringIO
 from time import time
 import os
 import sys
 import stat
 import subprocess
 
+from gitdb.test.lib import make_memory_file
 
 from lib import (
 	TestBigRepoR
 	)
-
-
-def make_memory_file(size_in_bytes, randomize=False):
-	""":return: tuple(size_of_stream, stream)
-	:param randomize: try to produce a very random stream"""
-	d = make_bytes(size_in_bytes, randomize)
-	return len(d), StringIO(d)
 
 
 class TestObjDBPerformance(TestBigRepoR):
@@ -30,6 +23,8 @@ class TestObjDBPerformance(TestBigRepoR):
 	
 	@with_bare_rw_repo
 	def test_large_data_streaming(self, rwrepo):
+		# TODO: This part overlaps with the same file in gitdb.test.performance.test_stream
+		# It should be shared if possible
 		ldb = LooseObjectDB(os.path.join(rwrepo.git_dir, 'objects'))
 		
 		for randomize in range(2):

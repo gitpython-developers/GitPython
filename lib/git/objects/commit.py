@@ -9,7 +9,7 @@ import git.diff as diff
 import git.stats as stats
 from git.actor import Actor
 from tree import Tree
-from git.odb import IStream
+from gitdb import IStream
 from cStringIO import StringIO
 import base
 import utils
