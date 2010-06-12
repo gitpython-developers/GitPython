@@ -198,7 +198,7 @@ class TestThreadPool(TestBase):
 		# test failure after ni / 2 items
 		# This makes sure it correctly closes the channel on failure to prevent blocking
 		nri = ni/2
-		task = make_task(TestThreadFailureNode, fail_after=ni/2)
+		task = make_task(TestFailureThreadTask, fail_after=ni/2)
 		rc = p.add_task(task)
 		assert len(rc.read()) == nri
 		assert task.is_done()
@@ -374,7 +374,14 @@ class TestThreadPool(TestBase):
 	
 	@terminate_threads
 	def test_base(self):
-		assert len(threading.enumerate()) == 1
+		max_wait_attempts = 3
+		sleep_time = 0.1
+		for mc in range(max_wait_attempts):
+			# wait for threads to die
+			if len(threading.enumerate()) != 1:
+				time.sleep(sleep_time)
+		# END for each attempt
+		assert len(threading.enumerate()) == 1, "Waited %f s for threads to die, its still alive" % (max_wait_attempts, sleep_time) 
 		
 		p = ThreadPool()
 		
@@ -401,7 +408,7 @@ class TestThreadPool(TestBase):
 		# SINGLE TASK SERIAL SYNC MODE
 		##############################
 		# put a few unrelated tasks that we forget about - check ref counts and cleanup
-		t1, t2 = TestThreadTaskNode(iter(list()), "nothing1", None), TestThreadTaskNode(iter(list()), "nothing2", None)
+		t1, t2 = TestThreadTask(iter(list()), "nothing1", None), TestThreadTask(iter(list()), "nothing2", None)
 		urc1 = p.add_task(t1)
 		urc2 = p.add_task(t2)
 		assert p.num_tasks() == 2
@@ -416,7 +423,7 @@ class TestThreadPool(TestBase):
 		assert p.num_tasks() == 0
 		assert sys.getrefcount(t2) == 2
 		
-		t3 = TestThreadInputChannelTaskNode(urc2, "channel", None)
+		t3 = TestChannelThreadTask(urc2, "channel", None)
 		urc3 = p.add_task(t3)
 		assert p.num_tasks() == 1
 		del(urc3)

@@ -26,8 +26,8 @@ class TestThreadPoolPerformance(TestBase):
 			for num_transformers in (1, 5, 10):
 				for read_mode in range(2):
 					ts, rcs = add_task_chain(pool, ni, count=num_transformers, 
-												feedercls=InputIteratorThreadTask, 
-												transformercls=TestThreadPerformanceTaskNode, 
+												feedercls=IteratorThreadTask, 
+												transformercls=TestPerformanceThreadTask, 
 												include_verifier=False)
 					
 					mode_info = "read(0)"
