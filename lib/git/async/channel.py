@@ -103,13 +103,14 @@ class ChannelWriter(Writer):
 	#} END interface 
 	
 
-class CallbackChannelWriter(ChannelWriter):
+class CallbackWriterMixin(object):
 	"""The write end of a channel which allows you to setup a callback to be 
 	called after an item was written to the channel"""
-	__slots__ = ('_pre_cb')
+	# slots don't work with mixin's :(
+	# __slots__ = ('_pre_cb')
 	
-	def __init__(self, channel):
-		super(CallbackChannelWriter, self).__init__(channel)
+	def __init__(self, *args):
+		super(CallbackWriterMixin, self).__init__(*args)
 		self._pre_cb = None
 	
 	def set_pre_cb(self, fun = lambda item: item):
@@ -126,7 +127,12 @@ class CallbackChannelWriter(ChannelWriter):
 	def write(self, item, block=True, timeout=None):
 		if self._pre_cb:
 			item = self._pre_cb(item)
-		super(CallbackChannelWriter, self).write(item, block, timeout)
+		super(CallbackWriterMixin, self).write(item, block, timeout)
+	
+	
+class CallbackChannelWriter(CallbackWriterMixin, ChannelWriter):
+	"""Implements a channel writer with callback functionality"""
+	pass
 	
 
 class Reader(object):
@@ -238,12 +244,14 @@ class ChannelReader(Reader):
 		
 	#} END interface 
 
-class CallbackChannelReader(ChannelReader):
+
+class CallbackReaderMixin(object):
 	"""A channel which sends a callback before items are read from the channel"""
-	__slots__ = "_pre_cb"
+	# unfortunately, slots can only use direct inheritance, have to turn it off :(
+	# __slots__ = "_pre_cb"
 	
-	def __init__(self, channel):
-		super(CallbackChannelReader, self).__init__(channel)
+	def __init__(self, *args):
+		super(CallbackReaderMixin, self).__init__(*args)
 		self._pre_cb = None
 	
 	def set_pre_cb(self, fun = lambda count: None):
@@ -260,7 +268,12 @@ class CallbackChannelReader(ChannelReader):
 	def read(self, count=0, block=True, timeout=None):
 		if self._pre_cb:
 			self._pre_cb(count)
-		return super(CallbackChannelReader, self).read(count, block, timeout)
+		return super(CallbackReaderMixin, self).read(count, block, timeout)
+		
+		
+class CallbackChannelReader(CallbackReaderMixin, ChannelReader):
+	"""Implements a channel reader with callback functionality"""
+	pass
 
 
 class IteratorReader(Reader):
