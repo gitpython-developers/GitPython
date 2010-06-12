@@ -9,8 +9,8 @@ class TestChannels(TestBase):
 	def test_base(self):
 		# creating channel yields a write and a read channal
 		wc, rc = mkchannel()
-		assert isinstance(wc, Writer)		# default args
-		assert isinstance(rc, Reader)
+		assert isinstance(wc, ChannelWriter)		# default args
+		assert isinstance(rc, ChannelReader)
 		
 		
 		# TEST UNLIMITED SIZE CHANNEL - writing+reading is FIFO
@@ -46,7 +46,7 @@ class TestChannels(TestBase):
 		
 		
 		# test callback channels
-		wc, rc = mkchannel(wtype = CallbackWriter, rtype = CallbackReader)
+		wc, rc = mkchannel(wtype = CallbackChannelWriter, rtype = CallbackChannelReader)
 		
 		cb = [0, 0]		# set slots to one if called
 		def pre_write(item):
@@ -70,4 +70,18 @@ class TestChannels(TestBase):
 		assert cb[0] == 1 and cb[1] == 1
 		assert rval == val + 1
 		
+		
+		
+		# ITERATOR READER
+		reader = IteratorReader(iter(range(10)))
+		assert len(reader.read(2)) == 2
+		assert len(reader.read(0)) == 8
+		# its empty now
+		assert len(reader.read(0)) == 0
+		assert len(reader.read(5)) == 0
+		
+		# doesn't work if item is not an iterator
+		self.failUnlessRaises(ValueError, IteratorReader, list())
+		
+		# NOTE: its thread-safety is tested by the pool 
 		

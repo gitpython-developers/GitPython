@@ -18,10 +18,10 @@ from Queue import (
 from graph import Graph 
 from channel import (
 		mkchannel,
-		Writer, 
+		ChannelWriter, 
 		Channel,
 		SerialChannel,
-		CallbackReader
+		CallbackChannelReader
 	)
 
 import sys
@@ -32,13 +32,14 @@ import new
 
 __all__ = ('PoolReader', 'Pool', 'ThreadPool')
 
-class PoolReader(CallbackReader):
+
+class PoolReader(CallbackChannelReader):
 	"""A reader designed to read from channels which take part in pools
 	It acts like a handle to the underlying task in the pool."""
 	__slots__ = ('_task_ref', '_pool_ref')
 	
 	def __init__(self, channel, task, pool):
-		CallbackReader.__init__(self, channel)
+		CallbackChannelReader.__init__(self, channel)
 		self._task_ref = weakref.ref(task)
 		self._pool_ref = weakref.ref(pool)
 		
@@ -69,7 +70,7 @@ class PoolReader(CallbackReader):
 
 	#{ Internal
 	def _read(self, count=0, block=True, timeout=None):
-		return CallbackReader.read(self, count, block, timeout)
+		return CallbackChannelReader.read(self, count, block, timeout)
 	
 	#} END internal
 
@@ -115,7 +116,7 @@ class PoolReader(CallbackReader):
 		####### read data ########
 		##########################
 		# read actual items, tasks were setup to put their output into our channel ( as well )
-		items = CallbackReader.read(self, count, block, timeout)
+		items = CallbackChannelReader.read(self, count, block, timeout)
 		##########################
 		
 		
@@ -446,7 +447,7 @@ class Pool(object):
 			ch = None
 			if wc is None:
 				ch = ctype()
-				wc = Writer(ch)
+				wc = ChannelWriter(ch)
 				task.set_writer(wc)
 			else:
 				ch = wc.channel
