@@ -1,71 +1,20 @@
 """Test for object db"""
 from test.testlib import *
-from git.odb import *
-from git.odb.utils import (
-	to_hex_sha, 
-	to_bin_sha
+from lib import (
+		DummyStream,
+		DeriveTest, 
+		Sha1Writer
 	)
-from git.odb.stream import Sha1Writer
+
+from git.odb import *
 from git import Blob
-from git.errors import BadObject
 from cStringIO import StringIO
 import tempfile
 import os
 import zlib
 
 
-#{ Stream Utilities
 
-class DummyStream(object):
-		def __init__(self):
-			self.was_read = False
-			self.bytes = 0
-			self.closed = False
-			
-		def read(self, size):
-			self.was_read = True
-			self.bytes = size
-			
-		def close(self):
-			self.closed = True
-			
-		def _assert(self):
-			assert self.was_read
-
-
-class DeriveTest(OStream):
-	def __init__(self, sha, type, size, stream, *args, **kwargs):
-		self.myarg = kwargs.pop('myarg')
-		self.args = args
-		
-	def _assert(self):
-		assert self.args
-		assert self.myarg
-
-
-class ZippedStoreShaWriter(Sha1Writer):
-	"""Remembers everything someone writes to it"""
-	__slots__ = ('buf', 'zip')
-	def __init__(self):
-		Sha1Writer.__init__(self)
-		self.buf = StringIO()
-		self.zip = zlib.compressobj(1)	# fastest
-	
-	def __getattr__(self, attr):
-		return getattr(self.buf, attr)
-	
-	def write(self, data):
-		alen = Sha1Writer.write(self, data)
-		self.buf.write(self.zip.compress(data))
-		return alen
-		
-	def close(self):
-		self.buf.write(self.zip.flush())
-
-
-#} END stream utilitiess
-	
-	
 
 class TestStream(TestBase):
 	"""Test stream classes"""
@@ -220,88 +169,4 @@ class TestStream(TestBase):
 			os.remove(path)
 		# END for each os
 	
-	
-class TestUtils(TestBase):
-	def test_basics(self):
-		assert to_hex_sha(Blob.NULL_HEX_SHA) == Blob.NULL_HEX_SHA
-		assert len(to_bin_sha(Blob.NULL_HEX_SHA)) == 20
-		assert to_hex_sha(to_bin_sha(Blob.NULL_HEX_SHA)) == Blob.NULL_HEX_SHA
-		
 
-class TestDB(TestBase):
-	"""Test the different db class implementations"""
-	
-	# data
-	two_lines = "1234\nhello world"
-	
-	all_data = (two_lines, )
-	
-	def _assert_object_writing(self, db):
-		"""General tests to verify object writing, compatible to ObjectDBW
-		:note: requires write access to the database"""
-		# start in 'dry-run' mode, using a simple sha1 writer
-		ostreams = (ZippedStoreShaWriter, None)
-		for ostreamcls in ostreams:
-			for data in self.all_data:
-				dry_run = ostreamcls is not None
-				ostream = None
-				if ostreamcls is not None:
-					ostream = ostreamcls()
-					assert isinstance(ostream, Sha1Writer)
-				# END create ostream
-				
-				prev_ostream = db.set_ostream(ostream)
-				assert type(prev_ostream) in ostreams or prev_ostream in ostreams 
-					
-				istream = IStream(Blob.type, len(data), StringIO(data))
-				
-				# store returns same istream instance, with new sha set
-				my_istream = db.store(istream)
-				sha = istream.sha
-				assert my_istream is istream
-				assert db.has_object(sha) != dry_run
-				assert len(sha) == 40		# for now we require 40 byte shas as default
-				
-				# verify data - the slow way, we want to run code
-				if not dry_run:
-					info = db.info(sha)
-					assert Blob.type == info.type
-					assert info.size == len(data)
-					
-					ostream = db.stream(sha)
-					assert ostream.read() == data
-					assert ostream.type == Blob.type
-					assert ostream.size == len(data)
-				else:
-					self.failUnlessRaises(BadObject, db.info, sha)
-					self.failUnlessRaises(BadObject, db.stream, sha)
-					
-					# DIRECT STREAM COPY
-					# our data hase been written in object format to the StringIO
-					# we pasesd as output stream. No physical database representation
-					# was created.
-					# Test direct stream copy of object streams, the result must be 
-					# identical to what we fed in
-					ostream.seek(0)
-					istream.stream = ostream
-					assert istream.sha is not None
-					prev_sha = istream.sha
-					
-					db.set_ostream(ZippedStoreShaWriter())
-					db.store(istream)
-					assert istream.sha == prev_sha
-					new_ostream = db.ostream()
-					
-					# note: only works as long our store write uses the same compression
-					# level, which is zip
-					assert ostream.getvalue() == new_ostream.getvalue()
-			# END for each data set
-		# END for each dry_run mode
-				
-	@with_bare_rw_repo
-	def test_writing(self, rwrepo):
-		ldb = LooseObjectDB(os.path.join(rwrepo.git_dir, 'objects'))
-		
-		# write data
-		self._assert_object_writing(ldb)
-	
