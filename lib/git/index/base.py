@@ -43,7 +43,7 @@ from git.objects.utils import Serializable
 from git.utils import (
 							IndexFileSHA1Writer, 
 							LazyMixin, 
-							ConcurrentWriteOperation, 
+							LockedFD, 
 							join_path_native
 						)
 
@@ -89,18 +89,18 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 		if attr == "entries":
 			# read the current index
 			# try memory map for speed
+			lfd = LockedFD(self._file_path)
 			try:
-				fp = open(self._file_path, "rb")
-			except IOError:
+				stream = lfd.open(write=False, stream=True)
+			except OSError:
+				lfd.rollback()
 				# in new repositories, there may be no index, which means we are empty
 				self.entries = dict()
 				return
 			# END exception handling
 
-			stream = fp
 			try:
-				raise Exception()
-				stream = mmap.mmap(fp.fileno(), 0, access=mmap.ACCESS_READ)
+				stream = mmap.mmap(stream.fileno(), 0, access=mmap.ACCESS_READ)
 			except Exception:
 				pass
 			# END memory mapping
@@ -108,12 +108,8 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 			try:
 				self._deserialize(stream)
 			finally:
-				pass
-				# make sure we close the stream ( possibly an mmap )
-				# and the file
-				#stream.close()
-				#if stream is not fp:
-				#	fp.close()
+				lfd.rollback()
+				# The handles will be closed on desctruction
 			# END read from default index on demand
 		else:
 			super(IndexFile, self)._set_cache_(attr)
@@ -267,12 +263,12 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 		Note
 			Index writing based on the dulwich implementation
 		"""
-		write_op = ConcurrentWriteOperation(file_path or self._file_path)
-		stream = write_op._begin_writing()
+		lfd = LockedFD(file_path or self._file_path)
+		stream = lfd.open(write=True, stream=True)
 
 		self._serialize(stream, ignore_tree_extension_data)
 		
-		write_op._end_writing()
+		lfd.commit()
 
 		# make sure we represent what we have written
 		if file_path is not None:

@@ -1,6 +1,9 @@
 =======
 CHANGES
 =======
+0.3
+===
+ * ConcurrentWriteOperation was removed, and replaced by LockedFD
 
 0.2 Beta 2
 ===========

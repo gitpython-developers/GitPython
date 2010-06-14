@@ -147,8 +147,7 @@ class LockFile(object):
 	
 	As we are a utility class to be derived from, we only use protected methods.
 	
-	Locks will automatically be released on destruction
-	"""
+	Locks will automatically be released on destruction """
 	__slots__ = ("_file_path", "_owns_lock")
 	
 	def __init__(self, file_path):
@@ -216,8 +215,10 @@ class LockFile(object):
 		# if someone removed our file beforhand, lets just flag this issue
 		# instead of failing, to make it more usable.
 		lfp = self._lock_file_path()
-		if os.path.isfile(lfp):
+		try:
 			os.remove(lfp)
+		except OSError:
+			pass
 		self._owns_lock = False
 
 
@@ -271,86 +272,144 @@ class BlockingLockFile(LockFile):
 		# END endless loop
 	
 	
-class ConcurrentWriteOperation(LockFile):
-	"""
-	This class facilitates a safe write operation to a file on disk such that we: 
-	
-		- lock the original file
-		- write to a temporary file
-		- rename temporary file back to the original one on close
-		- unlock the original file
+class FDStreamWrapper(object):
+	"""A simple wrapper providing the most basic functions on a file descriptor 
+	with the fileobject interface. Cannot use os.fdopen as the resulting stream
+	takes ownership"""
+	__slots__ = ("_fd", '_pos')
+	def __init__(self, fd):
+		self._fd = fd
+		self._pos = 0
 		
-	This type handles error correctly in that it will assure a consistent state 
-	on destruction
-	"""
-	__slots__ = "_temp_write_fp"
+	def write(self, data):
+		self._pos += len(data)
+		os.write(self._fd, data)
 	
-	def __init__(self, file_path):
-		"""
-		Initialize an instance able to write the given file_path
-		"""
-		super(ConcurrentWriteOperation, self).__init__(file_path)
-		self._temp_write_fp = None
+	def read(self, count=0):
+		if count == 0:
+			count = os.path.getsize(self._filepath)
+		# END handle read everything
+			
+		bytes = os.read(self._fd, count)
+		self._pos += len(bytes)
+		return bytes
+		
+	def fileno(self):
+		return self._fd
+		
+	def tell(self):
+		return self._pos
+			
+	
+class LockedFD(LockFile):
+	"""This class facilitates a safe read and write operation to a file on disk.
+	If we write to 'file', we obtain a lock file at 'file.lock' and write to 
+	that instead. If we succeed, the lock file will be renamed to overwrite 
+	the original file.
+	
+	When reading, we obtain a lock file, but to prevent other writers from 
+	succeeding while we are reading the file.
+	
+	This type handles error correctly in that it will assure a consistent state 
+	on destruction.
+	
+	:note: with this setup, parallel reading is not possible"""
+	__slots__ = ("_filepath", '_fd', '_write')
+	
+	def __init__(self, filepath):
+		"""Initialize an instance with the givne filepath"""
+		self._filepath = filepath
+		self._fd = None
+		self._write = None			# if True, we write a file
 	
 	def __del__(self):
+		# will do nothing if the file descriptor is already closed
+		if self._fd is not None:
+			self.rollback()
+		
+	def _lockfilepath(self):
+		return "%s.lock" % self._filepath
+		
+	def open(self, write=False, stream=False):
+		"""Open the file descriptor for reading or writing, both in binary mode.
+		:param write: if True, the file descriptor will be opened for writing. Other
+			wise it will be opened read-only.
+		:param stream: if True, the file descriptor will be wrapped into a simple stream 
+			object which supports only reading or writing
+		:return: fd to read from or write to. It is still maintained by this instance
+			and must not be closed directly
+		:raise IOError: if the lock could not be retrieved
+		:raise OSError: If the actual file could not be opened for reading
+		:note: must only be called once"""
+		if self._write is not None:
+			raise AssertionError("Called %s multiple times" % self.open)
+		
+		self._write = write
+		
+		# try to open the lock file
+		binary = getattr(os, 'O_BINARY', 0)
+		lockmode = 	os.O_WRONLY | os.O_CREAT | os.O_EXCL | binary
+		try:
+			fd = os.open(self._lockfilepath(), lockmode)
+			if not write:
+				os.close(fd)
+			else:
+				self._fd = fd
+			# END handle file descriptor
+		except OSError:
+			raise IOError("Lock at %r could not be obtained" % self._lockfilepath())
+		# END handle lock retrieval
+		
+		# open actual file if required
+		if self._fd is None:
+			# we could specify exlusive here, as we obtained the lock anyway
+			self._fd = os.open(self._filepath, os.O_RDONLY | binary)
+		# END open descriptor for reading
+		
+		if stream:
+			return FDStreamWrapper(self._fd)
+		else:
+			return self._fd
+		# END handle stream
+		
+	def commit(self):
+		"""When done writing, call this function to commit your changes into the 
+		actual file. 
+		The file descriptor will be closed, and the lockfile handled.
+		:note: can be called multiple times"""
+		self._end_writing(successful=True)
+		
+	def rollback(self):
+		"""Abort your operation without any changes. The file descriptor will be 
+		closed, and the lock released.
+		:note: can be called multiple times"""
 		self._end_writing(successful=False)
 		
-	def _begin_writing(self):
-		"""
-		Begin writing our file, hence we get a lock and start writing 
-		a temporary file in the same directory.
-		
-		Returns
-			File Object to write to. It is still maintained by this instance
-			and you do not need to manually close 
-		"""
-		# already writing ? 
-		if self._temp_write_fp is not None:
-			return self._temp_write_fp
-			
-		self._obtain_lock_or_raise()
-		dirname, basename = os.path.split(self._file_path)
-		self._temp_write_fp = open(tempfile.mktemp(basename, '', dirname), "wb")
-		return self._temp_write_fp
-		
-	def _is_writing(self):
-		"""
-		Returns 
-			True if we are currently writing a file
-		"""
-		return self._temp_write_fp is not None
-	
 	def _end_writing(self, successful=True):
-		"""
-		Indicate you successfully finished writing the file to:
+		"""Handle the lock according to the write mode """
+		if self._write is None:
+			raise AssertionError("Cannot end operation if it wasn't started yet")
 		
-			- close the underlying stream
-			- rename the remporary file to the original one
-			- release our lock
-		"""
-		# did we start a write operation ?
-		if self._temp_write_fp is None:
-			return 
-			
-		if not self._temp_write_fp.closed:
-			self._temp_write_fp.close()
+		if self._fd is None:
+			return
 		
-		if successful:
+		os.close(self._fd)
+		self._fd = None
+		
+		lockfile = self._lockfilepath()
+		if self._write and successful:
 			# on windows, rename does not silently overwrite the existing one
 			if sys.platform == "win32":
-				if os.path.isfile(self._file_path):
-					os.remove(self._file_path)
+				if os.path.isfile(self._filepath):
+					os.remove(self._filepath)
 				# END remove if exists
 			# END win32 special handling
-			os.rename(self._temp_write_fp.name, self._file_path)
+			os.rename(lockfile, self._filepath)
 		else:
 			# just delete the file so far, we failed
-			os.remove(self._temp_write_fp.name)
+			os.remove(lockfile)
 		# END successful handling
 	
-		# finally reset our handle
-		self._release_lock()
-		self._temp_write_fp = None
 
 
 class LazyMixin(object):

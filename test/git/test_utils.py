@@ -86,31 +86,55 @@ class TestUtils(TestCase):
 		my_file_fp.close()
 		
 		try:
-			cwrite = ConcurrentWriteOperation(my_file)
+			lfd = LockedFD(my_file)
+			lockfilepath = lfd._lockfilepath() 
 			
-			# didn't start writing, doesnt matter
-			cwrite._end_writing(False)
-			cwrite._end_writing(True)
-			assert not cwrite._is_writing()
+			# cannot end before it was started
+			self.failUnlessRaises(AssertionError, lfd.rollback)
+			self.failUnlessRaises(AssertionError, lfd.commit)
+			
+			# open for writing
+			assert not os.path.isfile(lockfilepath)
+			wfd = lfd.open(write=True)
+			assert lfd._fd is wfd
+			assert os.path.isfile(lockfilepath)
 			
 			# write data and fail
-			stream = cwrite._begin_writing()
-			assert cwrite._is_writing()
-			stream.write(new_data)
-			cwrite._end_writing(successful=False)
+			os.write(wfd, new_data)
+			lfd.rollback()
+			assert lfd._fd is None
 			self._cmp_contents(my_file, orig_data)
-			assert not os.path.exists(stream.name)
+			assert not os.path.isfile(lockfilepath)
+			
+			# additional call doesnt fail
+			lfd.commit()
+			lfd.rollback()
+			
+			# test reading
+			lfd = LockedFD(my_file)
+			rfd = lfd.open(write=False)
+			assert os.read(rfd, len(orig_data)) == orig_data
+			
+			assert os.path.isfile(lockfilepath)
+			# deletion rolls back
+			del(lfd)
+			assert not os.path.isfile(lockfilepath)
+			
 			
 			# write data - concurrently
-			ocwrite = ConcurrentWriteOperation(my_file)
-			stream = cwrite._begin_writing()
-			self.failUnlessRaises(IOError, ocwrite._begin_writing)
+			lfd = LockedFD(my_file)
+			olfd = LockedFD(my_file)
+			assert not os.path.isfile(lockfilepath)
+			wfdstream = lfd.open(write=True, stream=True)		# this time as stream
+			assert os.path.isfile(lockfilepath)
+			# another one fails
+			self.failUnlessRaises(IOError, olfd.open)
 			
-			stream.write("world")
-			cwrite._end_writing(successful=True)
+			wfdstream.write(new_data)
+			lfd.commit()
+			assert not os.path.isfile(lockfilepath)
 			self._cmp_contents(my_file, new_data)
-			assert not os.path.exists(stream.name)
-				
+			
 			# could test automatic _end_writing on destruction
 		finally:
 			os.remove(my_file)
