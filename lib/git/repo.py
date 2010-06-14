@@ -6,7 +6,7 @@
 
 from errors import InvalidGitRepositoryError, NoSuchPathError
 from cmd import Git
-from actor import Actor
+from objects import Actor
 from refs import *
 from index import IndexFile
 from objects import *

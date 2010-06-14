@@ -4,10 +4,12 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
-from git.utils import Iterable
+from git.utils import (
+							Iterable,
+							Stats,
+						)
+
 import git.diff as diff
-import git.stats as stats
-from git.actor import Actor
 from tree import Tree
 from gitdb import IStream
 from cStringIO import StringIO
@@ -223,7 +225,7 @@ class Commit(base.Object, Iterable, diff.Diffable, utils.Traversable, utils.Seri
 			text = text2
 		else:
 			text = self.repo.git.diff(self.parents[0].sha, self.sha, '--', numstat=True)
-		return stats.Stats._list_from_string(self.repo, text)
+		return Stats._list_from_string(self.repo, text)
 
 	@classmethod
 	def _iter_from_process_or_stream(cls, repo, proc_or_stream):
@@ -332,8 +334,8 @@ class Commit(base.Object, Iterable, diff.Diffable, utils.Traversable, utils.Seri
 		enc_section, enc_option = cls.conf_encoding.split('.')
 		conf_encoding = cr.get_value(enc_section, enc_option, cls.default_encoding)
 		
-		author = Actor(author_name, author_email)
-		committer = Actor(committer_name, committer_email)
+		author = utils.Actor(author_name, author_email)
+		committer = utils.Actor(committer_name, committer_email)
 		
 		
 		# CREATE NEW COMMIT

@@ -27,15 +27,17 @@ _init_externals()
 from git.config import GitConfigParser
 from git.objects import *
 from git.refs import *
-from git.actor import Actor
 from git.diff import *
 from git.errors import InvalidGitRepositoryError, NoSuchPathError, GitCommandError
 from git.cmd import Git
 from git.repo import Repo
-from git.stats import Stats
 from git.remote import *
 from git.index import *
-from git.utils import LockFile, BlockingLockFile
+from git.utils import (
+						LockFile, 
+						BlockingLockFile, 
+						Stats
+						)
 
 #} END imports
 
