@@ -35,8 +35,10 @@ from git.objects import (
 							Blob, 
 							Tree, 
 							Object, 
-							Commit
+							Commit,
 						)
+
+from git.objects.utils import Serializable
 
 from git.utils import (
 							IndexFileSHA1Writer, 
@@ -48,7 +50,8 @@ from git.utils import (
 
 __all__ = ( 'IndexFile', 'CheckoutError' )
 
-class IndexFile(LazyMixin, diff.Diffable):
+
+class IndexFile(LazyMixin, diff.Diffable, Serializable):
 	"""Implements an Index that can be manipulated using a native implementation in
 	order to save git command function calls wherever possible.
 
@@ -103,7 +106,7 @@ class IndexFile(LazyMixin, diff.Diffable):
 			# END memory mapping
 
 			try:
-				self._read_from_stream(stream)
+				self._deserialize(stream)
 			finally:
 				pass
 				# make sure we close the stream ( possibly an mmap )
@@ -158,7 +161,9 @@ class IndexFile(LazyMixin, diff.Diffable):
 		assert version in (1, 2)
 		return version, num_entries
 
-	def _read_from_stream(self, stream):
+	#{ Serializable Interface 
+
+	def _deserialize(self, stream):
 		""" Initialize this instance with index values read from the given stream """
 		self.version, num_entries = self._read_header(stream)
 		count = 0
@@ -182,7 +187,43 @@ class IndexFile(LazyMixin, diff.Diffable):
 
 		# truncate the sha in the end as we will dynamically create it anyway
 		self._extension_data = self._extension_data[:-20]
+		
+		return self
+		
+	def _serialize(self, stream, ignore_tree_extension_data=False):
+		
+		# wrap the stream into a compatible writer
+		stream = IndexFileSHA1Writer(stream)
 
+		# header
+		stream.write("DIRC")
+		stream.write(pack(">LL", self.version, len(self.entries)))
+
+		# body
+		entries_sorted = self.entries.values()
+		entries_sorted.sort(key=lambda e: (e[3], e[2]))		# use path/stage as sort key
+		for entry in entries_sorted:
+			self._write_cache_entry(stream, entry)
+		# END for each entry
+
+		stored_ext_data = None
+		if ignore_tree_extension_data and self._extension_data and self._extension_data[:4] == 'TREE':
+			stored_ext_data = self._extension_data
+			self._extension_data = ''
+		# END extension data special handling
+
+		# write previously cached extensions data
+		stream.write(self._extension_data)
+
+		if stored_ext_data:
+			self._extension_data = stored_ext_data
+		# END reset previous ext data
+
+		# write the sha over the content
+		stream.write_sha()
+		return self
+
+	#} END serializable interface
 
 	@classmethod
 	def _write_cache_entry(cls, stream, entry):
@@ -229,34 +270,8 @@ class IndexFile(LazyMixin, diff.Diffable):
 		write_op = ConcurrentWriteOperation(file_path or self._file_path)
 		stream = write_op._begin_writing()
 
-		stream = IndexFileSHA1Writer(stream)
-
-		# header
-		stream.write("DIRC")
-		stream.write(pack(">LL", self.version, len(self.entries)))
-
-		# body
-		entries_sorted = self.entries.values()
-		entries_sorted.sort(key=lambda e: (e[3], e[2]))		# use path/stage as sort key
-		for entry in entries_sorted:
-			self._write_cache_entry(stream, entry)
-		# END for each entry
-
-		stored_ext_data = None
-		if ignore_tree_extension_data and self._extension_data and self._extension_data[:4] == 'TREE':
-			stored_ext_data = self._extension_data
-			self._extension_data = ''
-		# END extension data special handling
-
-		# write previously cached extensions data
-		stream.write(self._extension_data)
-
-		if stored_ext_data:
-			self._extension_data = stored_ext_data
-		# END reset previous ext data
-
-		# write the sha over the content
-		stream.write_sha()
+		self._serialize(stream, ignore_tree_extension_data)
+		
 		write_op._end_writing()
 
 		# make sure we represent what we have written
