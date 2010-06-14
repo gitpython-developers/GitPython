@@ -21,6 +21,84 @@ def sha_to_hex(sha):
 	return hexsha
 	
 
+class TreeModifier(object):
+	"""A utility class providing methods to alter the underlying cache in a list-like
+	fashion.
+	Once all adjustments are complete, the _cache, which really is a refernce to 
+	the cache of a tree, will be sorted. Assuring it will be in a serializable state"""
+	__slots__ = '_cache'
+	
+	def __init__(self, cache):
+		self._cache = cache
+	
+	def _index_by_name(self, name):
+		""":return: index of an item with name, or -1 if not found"""
+		for i, t in enumerate(self._cache):
+			if t[2] == name:
+				return i
+			# END found item
+		# END for each item in cache
+		return -1
+	
+	#{ Interface 
+	def set_done(self):
+		"""Call this method once you are done modifying the tree information.
+		It may be called several times, but be aware that each call will cause 
+		a sort operation
+		:return self:"""
+		self._cache.sort(key=lambda t: t[2])	# sort by name
+		return self
+	#} END interface
+	
+	#{ Mutators
+	def add(self, hexsha, mode, name, force=False):
+		"""Add the given item to the tree. If an item with the given name already
+		exists, nothing will be done, but a ValueError will be raised if the 
+		sha and mode of the existing item do not match the one you add, unless 
+		force is True
+		:param hexsha: The 40 byte sha of the item to add
+		:param mode: int representing the stat compatible mode of the item
+		:param force: If True, an item with your name and information will overwrite
+			any existing item with the same name, no matter which information it has
+		:return: self"""
+		if '/' in name:
+			raise ValueError("Name must not contain '/' characters")
+		if len(hexsha) != 40:
+			raise ValueError("Hexsha required, got %r" % hexsha)
+		if (mode >> 12) not in Tree._map_id_to_type:
+			raise ValueError("Invalid object type according to mode %o" % mode)
+		
+		index = self._index_by_name(name)
+		item = (hexsha, mode, name)
+		if index == -1:
+			self._cache.append(item)
+		else:
+			if force:
+				self._cache[index] = item
+			else:
+				ex_item = self._cache[index]
+				if ex_item[0] != hexsha or ex_item[1] != mode:
+					raise ValueError("Item %r existed with different properties" % name)
+				# END handle mismatch
+			# END handle force
+		# END handle name exists
+		return self
+		
+	def add_unchecked(self, hexsha, mode, name):
+		"""Add the given item to the tree, its correctness is assumed, which 
+		puts the caller into responsibility to assure the input is correct. 
+		For more information on the parameters, see ``add``"""
+		self._cache.append((hexsha, mode, name))
+		
+	def __delitem__(self, name):
+		"""Deletes an item with the given name if it exists"""
+		index = self._index_by_name(name)
+		if index > -1:
+			del(self._cache[index])
+		
+	#} END mutators
+
+
 class Tree(base.IndexObject, diff.Diffable, utils.Traversable, utils.Serializable):
 	"""
 	Tress represent a ordered list of Blobs and other Trees. Hence it can be 
@@ -42,8 +120,8 @@ class Tree(base.IndexObject, diff.Diffable, utils.Traversable, utils.Serializabl
 	type = "tree"
 	__slots__ = "_cache"
 	
-	# using ascii codes for comparison 
-	commit_id = 016		
+	# actual integer ids for comparison 
+	commit_id = 016
 	blob_id = 010
 	symlink_id = 012
 	tree_id = 004
@@ -56,7 +134,7 @@ class Tree(base.IndexObject, diff.Diffable, utils.Traversable, utils.Serializabl
 						}
 	
 	
-	def __init__(self, repo, sha, mode=0, path=None):
+	def __init__(self, repo, sha, mode=tree_id<<12, path=None):
 		super(Tree, self).__init__(repo, sha, mode, path)
 
 	@classmethod
@@ -133,7 +211,6 @@ class Tree(base.IndexObject, diff.Diffable, utils.Traversable, utils.Serializabl
 			yield (sha_to_hex(sha), mode, name)
 		# END for each byte in data stream
 
-
 	def __div__(self, file):
 		"""
 		Find the named object in this tree's contents
@@ -198,6 +275,13 @@ class Tree(base.IndexObject, diff.Diffable, utils.Traversable, utils.Serializabl
 		"""
 		return [ i for i in self if i.type == "blob" ]
 
+	@property
+	def cache(self):
+		""":return: An object allowing to modify the internal cache. This can be used
+		to change the tree's contents. When done, make sure you call ``set_done``
+		on the tree modifier, or serialization behaviour will be incorrect.
+		See the ``TreeModifier`` for more information on how to alter the cache"""
+		return TreeModifier(self._cache)
 
 	def traverse( self, predicate = lambda i,d: True,
 						   prune = lambda i,d: False, depth = -1, branch_first=True,
@@ -253,11 +337,9 @@ class Tree(base.IndexObject, diff.Diffable, utils.Traversable, utils.Serializabl
 		
 	def _serialize(self, stream, presort=False):
 		"""Serialize this tree into the stream. Please note that we will assume 
-		our tree data to be in a sorted state. If this is not the case, set the 
-		presort flag True
-		:param presort: if True, default False, sort our tree information before
-			writing it to the stream. This should be done if the cache changed
-			in the meanwhile"""
+		our tree data to be in a sorted state. If this is not the case, serialization
+		will not generate a correct tree representation as these are assumed to be sorted
+		by algorithms"""
 		ord_zero = ord('0')
 		bit_mask = 7			# 3 bits set
 		hex_to_bin = binascii.a2b_hex

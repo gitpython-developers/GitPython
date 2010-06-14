@@ -18,11 +18,12 @@ class TestTree(TestBase):
 			if item.type != Tree.type:
 				continue
 			# END skip non-trees
-			orig_data = item.data
-			orig_cache = item._cache
+			tree = item
+			orig_data = tree.data
+			orig_cache = tree._cache
 			
 			stream = StringIO()
-			item._serialize(stream)
+			tree._serialize(stream)
 			assert stream.getvalue() == orig_data
 			
 			stream.seek(0)
@@ -30,8 +31,60 @@ class TestTree(TestBase):
 			testtree._deserialize(stream)
 			assert testtree._cache == orig_cache
 			
-			# add an item, serialize with presort
-			self.fail("presort")
+			
+			# TEST CACHE MUTATOR
+			mod = testtree.cache
+			self.failUnlessRaises(ValueError, mod.add, "invalid sha", 0, "name")
+			self.failUnlessRaises(ValueError, mod.add, Tree.NULL_HEX_SHA, 0, "invalid mode")
+			self.failUnlessRaises(ValueError, mod.add, Tree.NULL_HEX_SHA, tree.mode, "invalid/name")
+			
+			# add new item
+			name = "fake_dir"
+			mod.add(testtree.NULL_HEX_SHA, tree.mode, name)
+			assert name in testtree
+			
+			# its available in the tree immediately
+			assert isinstance(testtree[name], Tree)
+			
+			# adding it again will not cause multiple of them to be presents
+			cur_count = len(testtree)
+			mod.add(testtree.NULL_HEX_SHA, tree.mode, name)
+			assert len(testtree) == cur_count
+			
+			# fails with a different sha - name exists
+			hexsha = "1"*40
+			self.failUnlessRaises(ValueError, mod.add, hexsha, tree.mode, name)
+			
+			# force it - replace existing one
+			mod.add(hexsha, tree.mode, name, force=True)
+			assert testtree[name].sha == hexsha
+			assert len(testtree) == cur_count
+			
+			# unchecked addition always works, even with invalid items
+			invalid_name = "hi/there"
+			mod.add_unchecked(hexsha, 0, invalid_name)
+			assert len(testtree) == cur_count + 1
+			
+			del(mod[invalid_name])
+			assert len(testtree) == cur_count
+			# del again, its fine
+			del(mod[invalid_name])
+			
+			# have added one item, we are done
+			mod.set_done()
+			mod.set_done()		# multiple times are okay
+			
+			# serialize, its different now
+			stream = StringIO()
+			testtree._serialize(stream)
+			stream.seek(0)
+			assert stream.getvalue() != orig_data
+			
+			# replaces cache, but we make sure of it
+			del(testtree._cache)
+			testtree._deserialize(stream)
+			assert name in testtree
+			assert invalid_name not in testtree
 		# END for each item in tree
 	
 	def test_traverse(self):

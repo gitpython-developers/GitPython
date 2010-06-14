@@ -402,7 +402,7 @@ class Commit(base.Object, Iterable, diff.Diffable, utils.Traversable, utils.Seri
 		""":param from_rev_list: if true, the stream format is coming from the rev-list command
 		Otherwise it is assumed to be a plain data stream from our object"""
 		readline = stream.readline
-		self.tree = Tree(self.repo, readline().split()[1], 0, '')
+		self.tree = Tree(self.repo, readline().split()[1], Tree.tree_id<<12, '')
 
 		self.parents = list()
 		next_line = None

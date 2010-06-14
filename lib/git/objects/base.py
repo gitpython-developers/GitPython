@@ -197,7 +197,7 @@ class IndexObject(Object):
 			for example.
 		"""
 		mode = 0
-		for iteration,char in enumerate(reversed(modestr[-6:])):
+		for iteration, char in enumerate(reversed(modestr[-6:])):
 			mode += int(char) << iteration*3
 		# END for each char
 		return mode
