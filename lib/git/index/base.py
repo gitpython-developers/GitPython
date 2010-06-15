@@ -6,7 +6,6 @@
 """Module containing Index implementation, allowing to perform all kinds of index
 manipulations such as querying and merging. """
 import binascii
-import mmap
 import tempfile
 import os
 import sys
@@ -44,7 +43,8 @@ from git.utils import (
 							IndexFileSHA1Writer, 
 							LazyMixin, 
 							LockedFD, 
-							join_path_native
+							join_path_native, 
+							file_contents_ro
 						)
 
 
@@ -91,7 +91,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 			# try memory map for speed
 			lfd = LockedFD(self._file_path)
 			try:
-				stream = lfd.open(write=False, stream=True)
+				fd = lfd.open(write=False, stream=False)
 			except OSError:
 				lfd.rollback()
 				# in new repositories, there may be no index, which means we are empty
@@ -99,11 +99,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 				return
 			# END exception handling
 
-			try:
-				stream = mmap.mmap(stream.fileno(), 0, access=mmap.ACCESS_READ)
-			except Exception:
-				pass
-			# END memory mapping
+			stream = file_contents_ro(fd, stream=True, allow_mmap=True)
 
 			try:
 				self._deserialize(stream)
