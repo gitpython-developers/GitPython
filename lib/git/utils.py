@@ -10,7 +10,6 @@ import time
 import tempfile
 
 from gitdb.util import (
-	stream_copy,
 	make_sha, 
 	FDStreamWrapper,
 	LockedFD, 
@@ -18,6 +17,21 @@ from gitdb.util import (
 	LazyMixin
 	)
 
+
+def stream_copy(source, destination, chunk_size=512*1024):
+	"""Copy all data from the source stream into the destination stream in chunks
+	of size chunk_size
+	
+	:return: amount of bytes written"""
+	br = 0
+	while True:
+		chunk = source.read(chunk_size)
+		destination.write(chunk)
+		br += len(chunk)
+		if len(chunk) < chunk_size:
+			break
+	# END reading output stream
+	return br
 
 def join_path(a, *p):
 	"""Join path tokens together similar to os.path.join, but always use 
