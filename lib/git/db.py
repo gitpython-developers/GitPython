@@ -4,9 +4,10 @@ from gitdb.base import (
 								OStream
 							)
 
+from gitdb.db import GitDB
 from gitdb.db import LooseObjectDB
 
-__all__ = ('GitCmdObjectDB', )
+__all__ = ('GitCmdObjectDB', 'GitDB' )
 
 #class GitCmdObjectDB(CompoundDB, ObjectDBW):
 class GitCmdObjectDB(LooseObjectDB):
