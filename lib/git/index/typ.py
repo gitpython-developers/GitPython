@@ -137,15 +137,13 @@ class IndexEntry(BaseIndexEntry):
 		return self[10]
 		
 	@classmethod
-	def from_base(cls, base, actual_value=False):
+	def from_base(cls, base):
 		""" 
 		:return:
 			Minimal entry as created from the given BaseIndexEntry instance.
 			Missing values will be set to null-like values
 
-		:param base: Instance of type BaseIndexEntry
-		:param actual_value: if set, instead of writing 0 values for fields that 
-			don't exist in the BaseEntry, the actual values will be written in."""
+		:param base: Instance of type BaseIndexEntry"""
 		time = pack(">LL", 0, 0)
 		return IndexEntry((base.mode, base.sha, base.flags, base.path, time, time, 0, 0, 0, 0, 0))
 

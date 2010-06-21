@@ -643,7 +643,6 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 		# END for each item
 		return (paths, entries)
 
-	@default_index
 	def add(self, items, force=True, fprogress=lambda *args: None, path_rewriter=None):
 		"""Add files from the working tree, specific blobs or BaseIndexEntries
 		to the index. The underlying index file will be written immediately, hence
@@ -734,7 +733,9 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 			for path in paths:
 				abspath = os.path.abspath(path)
 				gitrelative_path = abspath[len(self.repo.working_tree_dir)+1:]
-				blob = Blob(self.repo, Blob.NULL_HEX_SHA, os.stat(abspath).st_mode, gitrelative_path)
+				blob = Blob(self.repo, Blob.NULL_HEX_SHA, 
+							self._stat_mode_to_index_mode(os.stat(abspath).st_mode), 
+							gitrelative_path)
 				entries.append(BaseIndexEntry.from_blob(blob))
 			# END for each path
 			del(paths[:])
@@ -754,7 +755,8 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 			istream = self.repo.odb.store(IStream(Blob.type, st.st_size, stream))
 			fprogress(filepath, True, filepath)
 			
-			return BaseIndexEntry((st.st_mode, istream.sha, 0, filepath))
+			return BaseIndexEntry((self._stat_mode_to_index_mode(st.st_mode), 
+									istream.sha, 0, filepath))
 		# END utility method
 
 
@@ -799,27 +801,14 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 				# END for each entry
 			# END handle path rewriting
 
-			# feed pure entries to stdin
-			proc = self.repo.git.update_index(index_info=True, istream=subprocess.PIPE, as_process=True)
-			lem1 = len(entries)-1
+			# just go through the remaining entries and provide progress info
 			for i, entry in enumerate(entries):
 				progress_sent = i in null_entries_indices
 				if not progress_sent:
 					fprogress(entry.path, False, entry)
-
-				proc.stdin.write(str(entry))
-
-				# the last entry is not \n terminated, as it exepcts to read
-				# another entry then and would block. Hence we skip the last one
-				if i != lem1:
-					proc.stdin.write('\n')
-					proc.stdin.flush()
-				# END skip last newline
-
-				if not progress_sent:
 					fprogress(entry.path, True, entry)
+				# END handle progress
 			# END for each enty
-			self._flush_stdin_and_wait(proc, ignore_stdout=True)
 			entries_added.extend(entries)
 		# END if there are base entries
 
@@ -827,8 +816,6 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 		# add the new entries to this instance, and write it
 		for entry in entries_added:
 			self.entries[(entry.path, 0)] = IndexEntry.from_base(entry)
-
-		# finally write the changed index
 		self.write()
 		
 		return entries_added
