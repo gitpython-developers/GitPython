@@ -12,6 +12,7 @@ import sys
 import stat
 import subprocess
 import glob
+from cStringIO import StringIO
 
 from typ import *
 from util import (
@@ -47,6 +48,10 @@ from git.utils import (
 							file_contents_ro
 						)
 
+
+from gitdb.base import (
+							IStream
+						)
 
 __all__ = ( 'IndexFile', 'CheckoutError' )
 
@@ -255,9 +260,6 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
 		Returns
 			self
-
-		Note
-			Index writing based on the dulwich implementation
 		"""
 		lfd = LockedFD(file_path or self._file_path)
 		stream = lfd.open(write=True, stream=True)
@@ -634,12 +636,10 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 		# END for each item
 		return (paths, entries)
 
-
 	@clear_cache
 	@default_index
 	def add(self, items, force=True, fprogress=lambda *args: None, path_rewriter=None):
-		"""
-		Add files from the working tree, specific blobs or BaseIndexEntries
+		"""Add files from the working tree, specific blobs or BaseIndexEntries
 		to the index. The underlying index file will be written immediately, hence
 		you should provide as many items as possible to minimize the amounts of writes
 
@@ -695,7 +695,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
 		:param fprogress:
 			Function with signature f(path, done=False, item=item) called for each
-			path to be added, once once it is about to be added where done==False
+			path to be added, one time once it is about to be added where done==False
 			and once after it was added where done=True.
 			item is set to the actual item we handle, either a Path or a BaseIndexEntry
 			Please note that the processed path is not guaranteed to be present
@@ -713,8 +713,8 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 		:return:
 			List(BaseIndexEntries) representing the entries just actually added.
 
-		Raises
-			GitCommandError if a supplied Path did not exist. Please note that BaseIndexEntry
+		:raise OSError:
+			if a supplied Path did not exist. Please note that BaseIndexEntry
 			Objects that do not have a null sha will be added even if their paths
 			do not exist.
 		"""
@@ -734,28 +734,45 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 			del(paths[:])
 		# END rewrite paths
 
+
+		def store_path(filepath):
+			"""Store file at filepath in the database and return the base index entry"""
+			st = os.lstat(filepath)		# handles non-symlinks as well
+			stream = None
+			if stat.S_ISLNK(st.st_mode):
+				stream = StringIO(os.readlink(filepath))
+			else:
+				stream = open(filepath, 'rb')
+			# END handle stream
+			fprogress(filepath, False, filepath)
+			istream = self.repo.odb.store(IStream(Blob.type, st.st_size, stream))
+			fprogress(filepath, True, filepath)
+			
+			return BaseIndexEntry((st.st_mode, istream.sha, 0, filepath))
+		# END utility method
+
+
 		# HANDLE PATHS
 		if paths:
-			# to get suitable progress information, pipe paths to stdin
-			args = ("--add", "--replace", "--verbose", "--stdin")
-			proc = self.repo.git.update_index(*args, **{'as_process':True, 'istream':subprocess.PIPE})
-			make_exc = lambda : GitCommandError(("git-update-index",)+args, 128, proc.stderr.read())
+			assert len(entries_added) == 0
 			added_files = list()
-
 			for filepath in self._iter_expand_paths(paths):
-				self._write_path_to_stdin(proc, filepath, filepath, make_exc, 
-											fprogress, read_from_stdout=False)
-				added_files.append(filepath)
+				entries_added.append(store_path(filepath))
 			# END for each filepath
-			self._flush_stdin_and_wait(proc, ignore_stdout=True)	# ignore stdout
+			
+			# add the new entries to this instance, and write it
+			for entry in entries_added:
+				self.entries[(entry.path, 0)] = IndexEntry.from_base(entry)
 
-			# force rereading our entries once it is all done
-			self._delete_entries_cache()
-			entries_added.extend(self.entries[(f,0)] for f in added_files)
+			# finally write the changed index
+			self.write()
 		# END path handling
+
 
 		# HANDLE ENTRIES
 		if entries:
+			# TODO: Add proper IndexEntries to ourselves, and write the index
+			# just once. Currently its done twice at least
 			null_mode_entries = [ e for e in entries if e.mode == 0 ]
 			if null_mode_entries:
 				raise ValueError("At least one Entry has a null-mode - please use index.remove to remove files for clarity")
@@ -765,37 +782,22 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 			# create objects if required, otherwise go with the existing shas
 			null_entries_indices = [ i for i,e in enumerate(entries) if e.sha == Object.NULL_HEX_SHA ]
 			if null_entries_indices:
-				# creating object ids is the time consuming part. Hence we will
-				# send progress for these now.
-				args = ("-w", "--stdin-paths")
-				proc = self.repo.git.hash_object(*args, **{'istream':subprocess.PIPE, 'as_process':True})
-				make_exc = lambda : GitCommandError(("git-hash-object",)+args, 128, proc.stderr.read())
-				obj_ids = list()
 				for ei in null_entries_indices:
-					entry = entries[ei]
-					obj_ids.append(self._write_path_to_stdin(proc, entry.path, entry,
-																make_exc, fprogress, read_from_stdout=True))
+					null_entry = entries[ei]
+					new_entry = store_path(null_entry.path)
+					
+					# update null entry
+					entries[ei] = BaseIndexEntry((null_entry.mode, new_entry.sha, null_entry.stage, null_entry.path))
 				# END for each entry index
-				assert len(obj_ids) == len(null_entries_indices), "git-hash-object did not produce all requested objects: want %i, got %i" % ( len(null_entries_indices), len(obj_ids) )
-
-				# update IndexEntries with new object id
-				for i,new_sha in zip(null_entries_indices, obj_ids):
-					e = entries[i]
-
-					new_entry = BaseIndexEntry((e.mode, new_sha, e.stage, e.path))
-					entries[i] = new_entry
-				# END for each index
 			# END null_entry handling
 
 			# REWRITE PATHS
 			# If we have to rewrite the entries, do so now, after we have generated
 			# all object sha's
 			if path_rewriter:
-				new_entries = list()
-				for e in entries:
-					new_entries.append(BaseIndexEntry((e.mode, e.sha, e.stage, path_rewriter(e))))
+				for i,e in enumerate(entries):
+					entries[i] = BaseIndexEntry((e.mode, e.sha, e.stage, path_rewriter(e)))
 				# END for each entry
-				entries = new_entries
 			# END handle path rewriting
 
 			# feed pure entries to stdin
@@ -821,7 +823,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 			self._flush_stdin_and_wait(proc, ignore_stdout=True)
 			entries_added.extend(entries)
 		# END if there are base entries
-
+		
 		return entries_added
 
 	def _items_to_rela_paths(self, items):

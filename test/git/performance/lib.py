@@ -4,6 +4,11 @@ from test.testlib import *
 import shutil
 import tempfile
 
+from git.db import (
+						GitCmdObjectDB,
+						GitDB
+					)
+
 from git import (
 	Repo
 	)
@@ -31,9 +36,14 @@ class TestBigRepoR(TestBase):
 	"""TestCase providing access to readonly 'big' repositories using the following 
 	member variables:
 	
-	* gitrepo
+	* gitrorepo
 	
-	 * Read-Only git repository - actually the repo of git itself"""
+	 * Read-Only git repository - actually the repo of git itself
+	 
+    * puregitrorepo
+    
+     * As gitrepo, but uses pure python implementation
+    """
 	 
 	#{ Invariants
 	head_sha_2k = '235d521da60e4699e5bd59ac658b5b48bd76ddca'
@@ -43,20 +53,23 @@ class TestBigRepoR(TestBase):
 	@classmethod
 	def setUpAll(cls):
 		super(TestBigRepoR, cls).setUpAll()
-		cls.gitrorepo = Repo(resolve_or_fail(k_env_git_repo))
+		repo_path = resolve_or_fail(k_env_git_repo)
+		cls.gitrorepo = Repo(repo_path, odbt=GitCmdObjectDB)
+		cls.puregitrorepo = Repo(repo_path, odbt=GitDB)
 
 
 class TestBigRepoRW(TestBigRepoR):
 	"""As above, but provides a big repository that we can write to.
 	
-	Provides ``self.gitrwrepo``"""
+	Provides ``self.gitrwrepo`` and ``self.puregitrwrepo``"""
 	
 	@classmethod
 	def setUpAll(cls):
 		super(TestBigRepoRW, cls).setUpAll()
 		dirname = tempfile.mktemp()
 		os.mkdir(dirname)
-		cls.gitrwrepo = cls.gitrorepo.clone(dirname, shared=True, bare=True)
+		cls.gitrwrepo = cls.gitrorepo.clone(dirname, shared=True, bare=True, odbt=GitCmdObjectDB)
+		cls.puregitrwrepo = Repo(dirname, odbt=GitDB)
 	
 	@classmethod
 	def tearDownAll(cls):

@@ -723,16 +723,17 @@ class Repo(object):
 		return Repo(path)
 
 	def clone(self, path, **kwargs):
-		"""
-		Create a clone from this repository.
-
-		``path``
+		"""Create a clone from this repository.
+		:param path:
 			is the full path of the new repo (traditionally ends with ./<name>.git).
 
-		``kwargs``
-			keyword arguments to be given to the git-clone command
-
-		Returns
+		:param kwargs:
+			odbt = ObjectDatabase Type, allowing to determine the object database
+			implementation used by the returned Repo instance
+			
+			All remaining keyword arguments are given to the git-clone command
+			
+		:return:
 			``git.Repo`` (the newly cloned repo)
 		"""
 		# special handling for windows for path at which the clone should be 
@@ -741,6 +742,7 @@ class Repo(object):
 		# we at least give a proper error instead of letting git fail
 		prev_cwd = None
 		prev_path = None
+		odbt = kwargs.pop('odbt', GitCmdObjectDB)
 		if os.name == 'nt':
 			if '~' in path:
 				raise OSError("Git cannot handle the ~ character in path %r correctly" % path)
@@ -767,7 +769,7 @@ class Repo(object):
 				path = prev_path
 			# END reset previous working dir
 		# END bad windows handling
-		return Repo(path)
+		return Repo(path, odbt = odbt)
 
 
 	def archive(self, ostream, treeish=None, prefix=None,  **kwargs):
