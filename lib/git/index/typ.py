@@ -7,6 +7,15 @@ from util import (
 
 __all__ = ('BlobFilter', 'BaseIndexEntry', 'IndexEntry')
 
+#{ Invariants
+CE_NAMEMASK = 0x0fff
+CE_STAGEMASK = 0x3000
+CE_EXTENDED = 0x4000
+CE_VALID = 0x8000
+CE_STAGESHIFT = 12
+
+#} END invariants
+
 class BlobFilter(object):
 	"""
 	Predicate to be used by iter_blobs allowing to filter only return blobs which
@@ -64,17 +73,22 @@ class BaseIndexEntry(tuple):
 		
 		:note: For more information, see http://www.kernel.org/pub/software/scm/git/docs/git-read-tree.html
 		"""
-		return self[2]
+		return (self[2] & CE_STAGEMASK) >> CE_STAGESHIFT
 
 	@property
 	def path(self):
 		""":return: our path relative to the repository working tree root"""
 		return self[3]
 
+	@property
+	def flags(self):
+		""":return: flags stored with this entry"""
+		return self[2]
+
 	@classmethod
 	def from_blob(cls, blob, stage = 0):
 		""":return: Fully equipped BaseIndexEntry at the given stage"""
-		return cls((blob.mode, blob.sha, stage, blob.path))
+		return cls((blob.mode, blob.sha, stage << CE_STAGESHIFT, blob.path))
 
 
 class IndexEntry(BaseIndexEntry):
@@ -121,22 +135,24 @@ class IndexEntry(BaseIndexEntry):
 	def size(self):
 		""":return: Uncompressed size of the blob """
 		return self[10]
-
+		
 	@classmethod
-	def from_base(cls, base):
+	def from_base(cls, base, actual_value=False):
 		""" 
 		:return:
 			Minimal entry as created from the given BaseIndexEntry instance.
 			Missing values will be set to null-like values
 
-		:param base: Instance of type BaseIndexEntry"""
+		:param base: Instance of type BaseIndexEntry
+		:param actual_value: if set, instead of writing 0 values for fields that 
+			don't exist in the BaseEntry, the actual values will be written in."""
 		time = pack(">LL", 0, 0)
-		return IndexEntry((base.mode, base.sha, base.stage, base.path, time, time, 0, 0, 0, 0, 0))
+		return IndexEntry((base.mode, base.sha, base.flags, base.path, time, time, 0, 0, 0, 0, 0))
 
 	@classmethod
-	def from_blob(cls, blob):
-		""":return: Minimal entry resembling the given blob objecft"""
+	def from_blob(cls, blob, stage = 0):
+		""":return: Minimal entry resembling the given blob object"""
 		time = pack(">LL", 0, 0)
-		return IndexEntry((blob.mode, blob.sha, 0, blob.path, time, time, 0, 0, 0, 0, blob.size))
+		return IndexEntry((blob.mode, blob.sha, stage << CE_STAGESHIFT, blob.path, time, time, 0, 0, 0, 0, blob.size))
 
 

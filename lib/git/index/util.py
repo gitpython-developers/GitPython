@@ -3,7 +3,7 @@ import struct
 import tempfile
 import os
 
-__all__ = ( 'TemporaryFileSwap', 'clear_cache', 'default_index' )
+__all__ = ( 'TemporaryFileSwap', 'post_clear_cache', 'default_index' )
 
 #{ Aliases 
 pack = struct.pack
@@ -36,7 +36,7 @@ class TemporaryFileSwap(object):
 
 #{ Decorators 
 
-def clear_cache(func):
+def post_clear_cache(func):
 	"""Decorator for functions that alter the index using the git command. This would
 	invalidate our possibly existing entries dictionary which is why it must be
 	deleted to allow it to be lazily reread later.
@@ -45,14 +45,14 @@ def clear_cache(func):
 		This decorator will not be required once all functions are implemented
 		natively which in fact is possible, but probably not feasible performance wise.
 	"""
-	def clear_cache_if_not_raised(self, *args, **kwargs):
+	def post_clear_cache_if_not_raised(self, *args, **kwargs):
 		rval = func(self, *args, **kwargs)
 		self._delete_entries_cache()
 		return rval
 
 	# END wrapper method
-	clear_cache_if_not_raised.__name__ = func.__name__
-	return clear_cache_if_not_raised
+	post_clear_cache_if_not_raised.__name__ = func.__name__
+	return post_clear_cache_if_not_raised
 
 def default_index(func):
 	"""Decorator assuring the wrapped method may only run if we are the default

@@ -121,7 +121,7 @@ class Tree(base.IndexObject, diff.Diffable, utils.Traversable, utils.Serializabl
 	__slots__ = "_cache"
 	
 	# actual integer ids for comparison 
-	commit_id = 016
+	commit_id = 016		# equals stat.S_IFDIR | stat.S_IFLNK - a directory link
 	blob_id = 010
 	symlink_id = 012
 	tree_id = 004

@@ -9,15 +9,29 @@ import binascii
 import tempfile
 import os
 import sys
-import stat
 import subprocess
 import glob
 from cStringIO import StringIO
 
-from typ import *
+from stat import (
+					S_ISLNK,
+					S_ISDIR,
+					S_IFMT,
+					S_IFDIR,
+					S_IFLNK,
+					S_IFREG
+				)
+
+from typ import (
+					BaseIndexEntry, 
+					IndexEntry, 
+					CE_NAMEMASK,
+					CE_STAGESHIFT
+				)
+
 from util import (
 					TemporaryFileSwap,
-					clear_cache, 
+					post_clear_cache, 
 					default_index,
 					pack, 
 					unpack
@@ -75,7 +89,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 	"""
 	__slots__ = ( "repo", "version", "entries", "_extension_data", "_file_path" )
 	_VERSION = 2			# latest version we support
-	S_IFGITLINK = 0160000
+	S_IFGITLINK = 0160000	# a submodule
 
 	def __init__(self, repo, file_path=None):
 		"""
@@ -141,12 +155,12 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 		mtime = unpack(">8s", stream.read(8))[0]
 		(dev, ino, mode, uid, gid, size, sha, flags) = \
 			unpack(">LLLLLL20sH", stream.read(20 + 4 * 6 + 2))
-		path_size = flags & 0x0fff
+		path_size = flags & CE_NAMEMASK
 		path = stream.read(path_size)
 
 		real_size = ((stream.tell() - beginoffset + 8) & ~7)
 		data = stream.read((beginoffset + real_size) - stream.tell())
-		return IndexEntry((mode, binascii.hexlify(sha), flags >> 12, path, ctime, mtime, dev, ino, uid, gid, size))
+		return IndexEntry((mode, binascii.hexlify(sha), flags, path, ctime, mtime, dev, ino, uid, gid, size))
 
 	@classmethod
 	def _read_header(cls, stream):
@@ -198,7 +212,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
 		# body
 		entries_sorted = self.entries.values()
-		entries_sorted.sort(key=lambda e: (e[3], e[2]))		# use path/stage as sort key
+		entries_sorted.sort(key=lambda e: (e[3], e.stage))		# use path/stage as sort key
 		for entry in entries_sorted:
 			self._write_cache_entry(stream, entry)
 		# END for each entry
@@ -226,17 +240,18 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 	def _write_cache_entry(cls, stream, entry):
 		""" Write an IndexEntry to a stream """
 		beginoffset = stream.tell()
-		stream.write(entry[4])			# ctime
-		stream.write(entry[5])			# mtime
+		write = stream.write
+		write(entry[4])			# ctime
+		write(entry[5])			# mtime
 		path = entry[3]
-		plen = len(path) & 0x0fff		# path length
+		plen = len(path) & CE_NAMEMASK		# path length
 		assert plen == len(path), "Path %s too long to fit into index" % entry[3]
-		flags = plen | (entry[2] << 12)# stage and path length are 2 byte flags
-		stream.write(pack(">LLLLLL20sH", entry[6], entry[7], entry[0],
+		flags = plen | entry[2]
+		write(pack(">LLLLLL20sH", entry[6], entry[7], entry[0],
 									entry[8], entry[9], entry[10], binascii.unhexlify(entry[1]), flags))
-		stream.write(path)
+		write(path)
 		real_size = ((stream.tell() - beginoffset + 8) & ~7)
-		stream.write("\0" * ((beginoffset + real_size) - stream.tell()))
+		write("\0" * ((beginoffset + real_size) - stream.tell()))
 
 	def write(self, file_path = None, ignore_tree_extension_data=False):
 		"""
@@ -272,7 +287,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 		if file_path is not None:
 			self._file_path = file_path
 
-	@clear_cache
+	@post_clear_cache
 	@default_index
 	def merge_tree(self, rhs, base=None):
 		"""Merge the given rhs treeish into the current index, possibly taking
@@ -383,24 +398,14 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 		return index
 
 	@classmethod
-	def _index_mode_to_tree_index_mode(cls, index_mode):
-		"""
-		Cleanup a index_mode value.
-		This will return a index_mode that can be stored in a tree object.
-
-		``index_mode``
-			Index_mode to clean up.
-		"""
-		if stat.S_ISLNK(index_mode):
-			return stat.S_IFLNK
-		elif stat.S_ISDIR(index_mode):
-			return stat.S_IFDIR
-		elif stat.S_IFMT(index_mode) == cls.S_IFGITLINK:
+	def _stat_mode_to_index_mode(cls, mode):
+		"""Convert the given mode from a stat call to the corresponding index mode
+		and return it"""
+		if S_ISLNK(mode):	# symlinks
+			return S_IFLNK
+		if S_ISDIR(mode) or S_IFMT(mode) == cls.S_IFGITLINK:	# submodules
 			return cls.S_IFGITLINK
-		ret = stat.S_IFREG | 0644
-		ret |= (index_mode & 0111)
-		return ret
-
+		return S_IFREG | 644 | (mode & 0100) 		# blobs with or without executable bit
 
 	# UTILITIES
 	def _iter_expand_paths(self, paths):
@@ -479,7 +484,9 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 			only if they match a given list of paths.
 		"""
 		for entry in self.entries.itervalues():
-			mode = self._index_mode_to_tree_index_mode(entry.mode)
+			# TODO: is it necessary to convert the mode ? We did that when adding 
+			# it to the index, right ?
+			mode = self._stat_mode_to_index_mode(entry.mode)
 			blob = Blob(self.repo, entry.sha, mode, entry.path)
 			blob.size = entry.size
 			output = (entry.stage, blob)
@@ -636,7 +643,6 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 		# END for each item
 		return (paths, entries)
 
-	@clear_cache
 	@default_index
 	def add(self, items, force=True, fprogress=lambda *args: None, path_rewriter=None):
 		"""Add files from the working tree, specific blobs or BaseIndexEntries
@@ -739,7 +745,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 			"""Store file at filepath in the database and return the base index entry"""
 			st = os.lstat(filepath)		# handles non-symlinks as well
 			stream = None
-			if stat.S_ISLNK(st.st_mode):
+			if S_ISLNK(st.st_mode):
 				stream = StringIO(os.readlink(filepath))
 			else:
 				stream = open(filepath, 'rb')
@@ -759,13 +765,6 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 			for filepath in self._iter_expand_paths(paths):
 				entries_added.append(store_path(filepath))
 			# END for each filepath
-			
-			# add the new entries to this instance, and write it
-			for entry in entries_added:
-				self.entries[(entry.path, 0)] = IndexEntry.from_base(entry)
-
-			# finally write the changed index
-			self.write()
 		# END path handling
 
 
@@ -823,6 +822,14 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 			self._flush_stdin_and_wait(proc, ignore_stdout=True)
 			entries_added.extend(entries)
 		# END if there are base entries
+
+		# FINALIZE
+		# add the new entries to this instance, and write it
+		for entry in entries_added:
+			self.entries[(entry.path, 0)] = IndexEntry.from_base(entry)
+
+		# finally write the changed index
+		self.write()
 		
 		return entries_added
 
@@ -840,7 +847,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 		# END for each item
 		return paths
 
-	@clear_cache
+	@post_clear_cache
 	@default_index
 	def remove(self, items, working_tree=False, **kwargs):
 		"""
@@ -893,7 +900,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 		# rm 'path'
 		return [ p[4:-1] for p in removed_paths ]
 
-	@clear_cache
+	@post_clear_cache
 	@default_index
 	def move(self, items, skip_errors=False, **kwargs):
 		"""
@@ -1127,7 +1134,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 		# END paths handling
 		assert "Should not reach this point"
 
-	@clear_cache
+	@post_clear_cache
 	@default_index
 	def reset(self, commit='HEAD', working_tree=False, paths=None, head=False, **kwargs):
 		"""
