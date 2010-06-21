@@ -5,13 +5,13 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 """Module containing Index implementation, allowing to perform all kinds of index
 manipulations such as querying and merging. """
-import binascii
 import tempfile
 import os
 import sys
 import subprocess
 import glob
 from cStringIO import StringIO
+from binascii import b2a_hex
 
 from stat import (
 					S_ISLNK,
@@ -25,16 +25,12 @@ from stat import (
 from typ import (
 					BaseIndexEntry, 
 					IndexEntry, 
-					CE_NAMEMASK,
-					CE_STAGESHIFT
 				)
 
 from util import (
 					TemporaryFileSwap,
 					post_clear_cache, 
 					default_index,
-					pack, 
-					unpack
 				)
 
 import git.objects
@@ -60,19 +56,16 @@ from git.utils import (
 							LockedFD, 
 							join_path_native, 
 							file_contents_ro,
-							LockFile
-						)
-
-
-from gitdb.base import (
-							IStream
 						)
 
 from fun import (
 					write_cache,
 					read_cache,
+					write_tree_from_cache,
 					entry_key
 				)
+
+from gitdb.base import IStream
 
 __all__ = ( 'IndexFile', 'CheckoutError' )
 
@@ -161,10 +154,15 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 		self.version, self.entries, self._extension_data, conten_sha = read_cache(stream)
 		return self
 		
-	def _serialize(self, stream, ignore_tree_extension_data=False):
+	def _entries_sorted(self):
+		""":return: list of entries, in a sorted fashion, first by path, then by stage"""
 		entries_sorted = self.entries.values()
-		entries_sorted.sort(key=lambda e: (e[3], e.stage))		# use path/stage as sort key
-		write_cache(entries_sorted,
+		entries_sorted.sort(key=lambda e: (e.path, e.stage))		# use path/stage as sort key
+		return entries_sorted
+		
+	def _serialize(self, stream, ignore_tree_extension_data=False):
+		entries = self._entries_sorted()
+		write_cache(entries,
 					stream,
 					(ignore_tree_extension_data and None) or self._extension_data) 
 		return self
@@ -403,7 +401,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 			# TODO: is it necessary to convert the mode ? We did that when adding 
 			# it to the index, right ?
 			mode = self._stat_mode_to_index_mode(entry.mode)
-			blob = Blob(self.repo, entry.sha, mode, entry.path)
+			blob = Blob(self.repo, entry.hexsha, mode, entry.path)
 			blob.size = entry.size
 			output = (entry.stage, blob)
 			if predicate(output):
@@ -490,33 +488,31 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 		# allows to lazily reread on demand
 		return self
 
-	def _write_tree(self, missing_ok=False):
+	def write_tree(self):
 		"""Writes this index to a corresponding Tree object into the repository's
 		object database and return it.
-
-		:param missing_ok:
-			If True, missing objects referenced by this index will not result
-			in an error.
-
-		:return: Tree object representing this index"""
+		
+		:return: Tree object representing this index
+		:note: The tree will be written even if one or more objects the tree refers to 
+			does not yet exist in the object database. This could happen if you added
+			Entries to the index directly.
+		:raise ValueError: if there are no entries in the cache
+		:raise UnmergedEntriesError: """
 		# we obtain no lock as we just flush our contents to disk as tree
 		if not self.entries:
 			raise ValueError("Cannot write empty index")
 		
+		# TODO: use memory db, this helps to prevent IO if the resulting tree
+		# already exists
+		entries = self._entries_sorted()
+		binsha, tree_items = write_tree_from_cache(entries, self.repo.odb, slice(0, len(entries)))
 		
+		# note: additional deserialization could be saved if write_tree_from_cache
+		# would return sorted tree entries
+		root_tree = Tree(self.repo, b2a_hex(binsha), path='')
+		root_tree._cache = tree_items
+		return root_tree
 		
-		return Tree(self.repo, tree_sha, 0, '')
-		
-	def write_tree(self, missing_ok = False):
-		index_path = self._index_path()
-		tmp_index_mover = TemporaryFileSwap(index_path)
-		
-		self.write(index_path, ignore_tree_extension_data=True)
-		tree_sha = self.repo.git.write_tree(missing_ok=missing_ok)
-		
-		del(tmp_index_mover)	   # as soon as possible
-		return Tree(self.repo, tree_sha, 0, '')
-
 	def _process_diff_args(self, args):
 		try:
 			args.pop(args.index(self))
@@ -524,7 +520,6 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 			pass
 		# END remove self
 		return args
-
 
 	def _to_relative_path(self, path):
 		""":return: Version of path relative to our git directory or raise ValueError
@@ -599,7 +594,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
 			- BaseIndexEntry or type
 				Handling equals the one of Blob objects, but the stage may be
-				explicitly set.
+				explicitly set. Please note that Index Entries require binary sha's.
 
 		:param force:
 			If True, otherwise ignored or excluded files will be
@@ -666,7 +661,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 			fprogress(filepath, True, filepath)
 			
 			return BaseIndexEntry((self._stat_mode_to_index_mode(st.st_mode), 
-									istream.sha, 0, filepath))
+									istream.binsha, 0, filepath))
 		# END utility method
 
 
@@ -691,14 +686,14 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
 			# HANLDE ENTRY OBJECT CREATION
 			# create objects if required, otherwise go with the existing shas
-			null_entries_indices = [ i for i,e in enumerate(entries) if e.sha == Object.NULL_HEX_SHA ]
+			null_entries_indices = [ i for i,e in enumerate(entries) if e.binsha == Object.NULL_BIN_SHA ]
 			if null_entries_indices:
 				for ei in null_entries_indices:
 					null_entry = entries[ei]
 					new_entry = store_path(null_entry.path)
 					
 					# update null entry
-					entries[ei] = BaseIndexEntry((null_entry.mode, new_entry.sha, null_entry.stage, null_entry.path))
+					entries[ei] = BaseIndexEntry((null_entry.mode, new_entry.binsha, null_entry.stage, null_entry.path))
 				# END for each entry index
 			# END null_entry handling
 
@@ -707,7 +702,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 			# all object sha's
 			if path_rewriter:
 				for i,e in enumerate(entries):
-					entries[i] = BaseIndexEntry((e.mode, e.sha, e.stage, path_rewriter(e)))
+					entries[i] = BaseIndexEntry((e.mode, e.binsha, e.stage, path_rewriter(e)))
 				# END for each entry
 			# END handle path rewriting
 

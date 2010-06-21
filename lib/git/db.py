@@ -4,8 +4,11 @@ from gitdb.base import (
 								OStream
 							)
 
+from gitdb.util import to_hex_sha
+
 from gitdb.db import GitDB
 from gitdb.db import LooseObjectDB
+
 
 __all__ = ('GitCmdObjectDB', 'GitDB' )
 
@@ -24,11 +27,11 @@ class GitCmdObjectDB(LooseObjectDB):
 		self._git = git
 		
 	def info(self, sha):
-		t = self._git.get_object_header(sha)
+		t = self._git.get_object_header(to_hex_sha(sha))
 		return OInfo(*t)
 		
 	def stream(self, sha):
 		"""For now, all lookup is done by git itself"""
-		t = self._git.stream_object_data(sha)
+		t = self._git.stream_object_data(to_hex_sha(sha))
 		return OStream(*t)
 	

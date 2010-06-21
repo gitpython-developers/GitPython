@@ -10,12 +10,14 @@ import time
 import tempfile
 
 from gitdb.util import (
-	make_sha, 
-	FDStreamWrapper,
-	LockedFD, 
-	file_contents_ro, 
-	LazyMixin
-	)
+							make_sha, 
+							FDStreamWrapper,
+							LockedFD, 
+							file_contents_ro, 
+							LazyMixin, 
+							to_hex_sha, 
+							to_bin_sha
+						)
 
 
 def stream_copy(source, destination, chunk_size=512*1024):

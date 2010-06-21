@@ -5,6 +5,13 @@ CHANGES
 ===
  * ConcurrentWriteOperation was removed, and replaced by LockedFD
  * IndexFile.get_entries_key was renamed to entry_key
+ * IndexEntry instances contained in IndexFile.entries now use binary sha's. Use
+   the .hexsha property to obtain the hexadecimal version
+ * IndexFile.write_tree: removed missing_ok keyword, its always True now
+   Instead of raising GitCommandError it raises UnmergedEntriesError
+ * diff.Diff.null_hex_sha renamed to NULL_HEX_SHA, to be conforming with 
+   the naming in the Object base class
+   
 
 0.2 Beta 2
 ===========

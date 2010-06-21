@@ -196,7 +196,7 @@ class Diff(object):
                                     \.\.(?P<b_blob_id>[0-9A-Fa-f]+)[ ]?(?P<b_mode>.+)?(?:\n|$))?
                             """, re.VERBOSE | re.MULTILINE)
     # can be used for comparisons
-    null_hex_sha = "0"*40
+    NULL_HEX_SHA = "0"*40
     
     __slots__ = ("a_blob", "b_blob", "a_mode", "b_mode", "new_file", "deleted_file", 
                  "rename_from", "rename_to", "diff")

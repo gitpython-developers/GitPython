@@ -2,6 +2,11 @@
 Contains standalone functions to accompany the index implementation and make it
 more versatile
 """
+from stat import S_IFDIR
+from cStringIO import StringIO
+
+from git.errors import UnmergedEntriesError
+from git.objects.fun import tree_to_stream
 from git.utils import (
 							IndexFileSHA1Writer, 
 						)
@@ -16,12 +21,11 @@ from util import 	(
 					unpack
 					)
 
-from binascii import (
-						hexlify, 
-						unhexlify
-					)
+from gitdb.base import IStream
+from gitdb.typ import str_tree_type
+from binascii import a2b_hex
 
-__all__ = ('write_cache', 'read_cache' )
+__all__ = ('write_cache', 'read_cache', 'write_tree_from_cache', 'entry_key' )
 
 def write_cache_entry(entry, stream):
 	"""Write the given entry to the stream"""
@@ -34,7 +38,7 @@ def write_cache_entry(entry, stream):
 	assert plen == len(path), "Path %s too long to fit into index" % entry[3]
 	flags = plen | entry[2]
 	write(pack(">LLLLLL20sH", entry[6], entry[7], entry[0],
-								entry[8], entry[9], entry[10], unhexlify(entry[1]), flags))
+								entry[8], entry[9], entry[10], entry[1], flags))
 	write(path)
 	real_size = ((stream.tell() - beginoffset + 8) & ~7)
 	write("\0" * ((beginoffset + real_size) - stream.tell()))
@@ -80,7 +84,7 @@ def read_entry(stream):
 
 	real_size = ((stream.tell() - beginoffset + 8) & ~7)
 	data = stream.read((beginoffset + real_size) - stream.tell())
-	return IndexEntry((mode, hexlify(sha), flags, path, ctime, mtime, dev, ino, uid, gid, size))
+	return IndexEntry((mode, sha, flags, path, ctime, mtime, dev, ino, uid, gid, size))
 
 def read_header(stream):
 		"""Return tuple(version_long, num_entries) from the given stream"""
@@ -135,4 +139,59 @@ def read_cache(stream):
 	extension_data = extension_data[:-20]
 	
 	return (version, entries, extension_data, content_sha)
+	
+def write_tree_from_cache(entries, odb, sl, si=0):
+	"""Create a tree from the given sorted list of entries and put the respective
+	trees into the given object database
+	:param entries: **sorted** list of IndexEntries
+	:param odb: object database to store the trees in
+	:param si: start index at which we should start creating subtrees
+	:param sl: slice indicating the range we should process on the entries list
+	:return: tuple(binsha, list(tree_entry, ...)) a tuple of a sha and a list of 
+		tree entries being a tuple of hexsha, mode, name"""
+	tree_items = list()
+	ci = sl.start
+	end = sl.stop
+	while ci < end:
+		entry = entries[ci]
+		if entry.stage != 0:
+			raise UnmergedEntriesError(entry)
+		# END abort on unmerged
+		ci += 1
+		rbound = entry.path.find('/', si)
+		if rbound == -1:
+			# its not a tree
+			tree_items.append((entry.binsha, entry.mode, entry.path[si:]))
+		else:
+			# find common base range
+			base = entry.path[si:rbound]
+			xi = ci
+			while xi < end:
+				oentry = entries[xi]
+				xi += 1
+				orbound = oentry.path.find('/')
+				if orbound == -1 or oentry.path[si:orbound] != base:
+					break
+				# END abort on base mismatch
+			# END find common base
+			
+			# enter recursion
+			# ci - 1 as we want to count our current item as well
+			sha, tree_entry_list = write_tree_from_cache(entries, odb, slice(ci-1, xi), rbound+1)
+			tree_items.append((sha, S_IFDIR, base))
+			
+			# skip ahead
+			ci = xi
+		# END handle bounds 
+	# END for each entry
+	
+	# finally create the tree
+	sio = StringIO()
+	tree_to_stream(tree_items, sio.write)
+	sio.seek(0)
+	
+	istream = odb.store(IStream(str_tree_type, len(sio.getvalue()), sio))
+	return (istream.binsha, tree_items)
+	
+	
 	

@@ -28,7 +28,7 @@ from git.config import GitConfigParser
 from git.objects import *
 from git.refs import *
 from git.diff import *
-from git.errors import InvalidGitRepositoryError, NoSuchPathError, GitCommandError
+from git.errors import *
 from git.cmd import Git
 from git.repo import Repo
 from git.remote import *
