@@ -4,6 +4,7 @@ CHANGES
 0.3
 ===
  * ConcurrentWriteOperation was removed, and replaced by LockedFD
+ * IndexFile.get_entries_key was renamed to entry_key
 
 0.2 Beta 2
 ===========

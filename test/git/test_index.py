@@ -155,7 +155,7 @@ class TestIndex(TestBase):
 		# current index is at the (virtual) cur_commit
 		next_commit = "4c39f9da792792d4e73fc3a5effde66576ae128c"
 		parent_commit = rw_repo.head.commit.parents[0]
-		manifest_key = IndexFile.get_entries_key('MANIFEST.in', 0)
+		manifest_key = IndexFile.entry_key('MANIFEST.in', 0)
 		manifest_entry = rw_repo.index.entries[manifest_key]
 		rw_repo.index.merge_tree(next_commit)
 		# only one change should be recorded
@@ -464,7 +464,7 @@ class TestIndex(TestBase):
 			entries = index.reset(new_commit).add([link_file], fprogress=self._fprogress_add)
 			self._assert_fprogress(entries)
 			assert len(entries) == 1 and S_ISLNK(entries[0].mode)
-			assert S_ISLNK(index.entries[index.get_entries_key("my_real_symlink", 0)].mode)
+			assert S_ISLNK(index.entries[index.entry_key("my_real_symlink", 0)].mode)
 			
 			# we expect only the target to be written
 			assert index.repo.odb.stream(entries[0].sha).read() == target
@@ -482,7 +482,7 @@ class TestIndex(TestBase):
 		
 		# assure this also works with an alternate method
 		full_index_entry = IndexEntry.from_base(BaseIndexEntry((0120000, entries[0].sha, 0, entries[0].path)))
-		entry_key = index.get_entries_key(full_index_entry)
+		entry_key = index.entry_key(full_index_entry)
 		index.reset(new_commit)
 		
 		assert entry_key not in index.entries
@@ -552,8 +552,8 @@ class TestIndex(TestBase):
 			# two existing ones, one new one
 			yield 'CHANGES'
 			yield 'ez_setup.py'
-			yield index.entries[index.get_entries_key('README', 0)]
-			yield index.entries[index.get_entries_key('.gitignore', 0)]
+			yield index.entries[index.entry_key('README', 0)]
+			yield index.entries[index.entry_key('.gitignore', 0)]
 			
 			for fid in range(3):
 				fname = 'newfile%i' % fid
@@ -565,5 +565,5 @@ class TestIndex(TestBase):
 		index.add(paths, path_rewriter=rewriter)
 		
 		for filenum in range(len(paths)):
-			assert index.get_entries_key(str(filenum), 0) in index.entries
+			assert index.entry_key(str(filenum), 0) in index.entries
 		

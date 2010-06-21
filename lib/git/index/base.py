@@ -59,13 +59,20 @@ from git.utils import (
 							LazyMixin, 
 							LockedFD, 
 							join_path_native, 
-							file_contents_ro
+							file_contents_ro,
+							LockFile
 						)
 
 
 from gitdb.base import (
 							IStream
 						)
+
+from fun import (
+					write_cache,
+					read_cache,
+					entry_key
+				)
 
 __all__ = ( 'IndexFile', 'CheckoutError' )
 
@@ -84,7 +91,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 	to facilitate access.
 
 	You may read the entries dict or manipulate it using IndexEntry instance, i.e.::
-		index.entries[index.get_entries_key(index_entry_instance)] = index_entry_instance
+		index.entries[index.entry_key(index_entry_instance)] = index_entry_instance
 	Otherwise changes to it will be lost when changing the index using its methods.
 	"""
 	__slots__ = ( "repo", "version", "entries", "_extension_data", "_file_path" )
@@ -147,123 +154,34 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 			pass
 		# END exception handling
 
-	@classmethod
-	def _read_entry(cls, stream):
-		"""Return: One entry of the given stream"""
-		beginoffset = stream.tell()
-		ctime = unpack(">8s", stream.read(8))[0]
-		mtime = unpack(">8s", stream.read(8))[0]
-		(dev, ino, mode, uid, gid, size, sha, flags) = \
-			unpack(">LLLLLL20sH", stream.read(20 + 4 * 6 + 2))
-		path_size = flags & CE_NAMEMASK
-		path = stream.read(path_size)
-
-		real_size = ((stream.tell() - beginoffset + 8) & ~7)
-		data = stream.read((beginoffset + real_size) - stream.tell())
-		return IndexEntry((mode, binascii.hexlify(sha), flags, path, ctime, mtime, dev, ino, uid, gid, size))
-
-	@classmethod
-	def _read_header(cls, stream):
-		"""Return tuple(version_long, num_entries) from the given stream"""
-		type_id = stream.read(4)
-		if type_id != "DIRC":
-			raise AssertionError("Invalid index file header: %r" % type_id)
-		version, num_entries = unpack(">LL", stream.read(4 * 2))
-		assert version in (1, 2)
-		return version, num_entries
-
 	#{ Serializable Interface 
 
 	def _deserialize(self, stream):
 		""" Initialize this instance with index values read from the given stream """
-		self.version, num_entries = self._read_header(stream)
-		count = 0
-		self.entries = dict()
-		while count < num_entries:
-			entry = self._read_entry(stream)
-			self.entries[self.get_entries_key(entry)] = entry
-			count += 1
-		# END for each entry
-
-		# the footer contains extension data and a sha on the content so far
-		# Keep the extension footer,and verify we have a sha in the end
-		# Extension data format is:
-		# 4 bytes ID
-		# 4 bytes length of chunk
-		# repeated 0 - N times
-		self._extension_data = stream.read(~0)
-		assert len(self._extension_data) > 19, "Index Footer was not at least a sha on content as it was only %i bytes in size" % len(self._extension_data)
-
-		content_sha = self._extension_data[-20:]
-
-		# truncate the sha in the end as we will dynamically create it anyway
-		self._extension_data = self._extension_data[:-20]
-		
+		self.version, self.entries, self._extension_data, conten_sha = read_cache(stream)
 		return self
 		
 	def _serialize(self, stream, ignore_tree_extension_data=False):
-		
-		# wrap the stream into a compatible writer
-		stream = IndexFileSHA1Writer(stream)
-
-		# header
-		stream.write("DIRC")
-		stream.write(pack(">LL", self.version, len(self.entries)))
-
-		# body
 		entries_sorted = self.entries.values()
 		entries_sorted.sort(key=lambda e: (e[3], e.stage))		# use path/stage as sort key
-		for entry in entries_sorted:
-			self._write_cache_entry(stream, entry)
-		# END for each entry
-
-		stored_ext_data = None
-		if ignore_tree_extension_data and self._extension_data and self._extension_data[:4] == 'TREE':
-			stored_ext_data = self._extension_data
-			self._extension_data = ''
-		# END extension data special handling
-
-		# write previously cached extensions data
-		stream.write(self._extension_data)
-
-		if stored_ext_data:
-			self._extension_data = stored_ext_data
-		# END reset previous ext data
-
-		# write the sha over the content
-		stream.write_sha()
+		write_cache(entries_sorted,
+					stream,
+					(ignore_tree_extension_data and None) or self._extension_data) 
 		return self
-
+		
+		
 	#} END serializable interface
 
-	@classmethod
-	def _write_cache_entry(cls, stream, entry):
-		""" Write an IndexEntry to a stream """
-		beginoffset = stream.tell()
-		write = stream.write
-		write(entry[4])			# ctime
-		write(entry[5])			# mtime
-		path = entry[3]
-		plen = len(path) & CE_NAMEMASK		# path length
-		assert plen == len(path), "Path %s too long to fit into index" % entry[3]
-		flags = plen | entry[2]
-		write(pack(">LLLLLL20sH", entry[6], entry[7], entry[0],
-									entry[8], entry[9], entry[10], binascii.unhexlify(entry[1]), flags))
-		write(path)
-		real_size = ((stream.tell() - beginoffset + 8) & ~7)
-		write("\0" * ((beginoffset + real_size) - stream.tell()))
-
 	def write(self, file_path = None, ignore_tree_extension_data=False):
-		"""
-		Write the current state to our file path or to the given one
+		"""Write the current state to our file path or to the given one
 
-		``file_path``
+		:param file_path:
 			If None, we will write to our stored file path from which we have
 			been initialized. Otherwise we write to the given file path.
 			Please note that this will change the file_path of this index to
 			the one you gave.
 
-		``ignore_tree_extension_data``
+		:param ignore_tree_extension_data:
 			If True, the TREE type extension data read in the index will not
 			be written to disk. Use this if you have altered the index and
 			would like to use git-write-tree afterwards to create a tree
@@ -273,12 +191,10 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 			Alternatively, use IndexFile.write_tree() to handle this case
 			automatically
 
-		Returns
-			self
-		"""
+		:return: self"""
 		lfd = LockedFD(file_path or self._file_path)
 		stream = lfd.open(write=True, stream=True)
-
+		
 		self._serialize(stream, ignore_tree_extension_data)
 		
 		lfd.commit()
@@ -516,19 +432,8 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 		return path_map
 
 	@classmethod
-	def get_entries_key(cls, *entry):
-		"""
-		Returns
-			Key suitable to be used for the index.entries dictionary
-
-		``entry``
-			One instance of type BaseIndexEntry or the path and the stage
-		"""
-		if len(entry) == 1:
-			return (entry[0].path, entry[0].stage)
-		else:
-			return tuple(entry)
-
+	def entry_key(cls, *entry):
+		return entry_key(*entry)
 
 	def resolve_blobs(self, iter_blobs):
 		"""
@@ -585,26 +490,31 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 		# allows to lazily reread on demand
 		return self
 
-	def write_tree(self, missing_ok=False):
-		"""
-		Writes the Index in self to a corresponding Tree file into the repository
-		object database and returns it as corresponding Tree object.
+	def _write_tree(self, missing_ok=False):
+		"""Writes this index to a corresponding Tree object into the repository's
+		object database and return it.
 
-		``missing_ok``
+		:param missing_ok:
 			If True, missing objects referenced by this index will not result
 			in an error.
 
-		Returns
-			Tree object representing this index
-		"""
+		:return: Tree object representing this index"""
+		# we obtain no lock as we just flush our contents to disk as tree
+		if not self.entries:
+			raise ValueError("Cannot write empty index")
+		
+		
+		
+		return Tree(self.repo, tree_sha, 0, '')
+		
+	def write_tree(self, missing_ok = False):
 		index_path = self._index_path()
 		tmp_index_mover = TemporaryFileSwap(index_path)
-
+		
 		self.write(index_path, ignore_tree_extension_data=True)
 		tree_sha = self.repo.git.write_tree(missing_ok=missing_ok)
-
-		del(tmp_index_mover)	# as soon as possible
-
+		
+		del(tmp_index_mover)	   # as soon as possible
 		return Tree(self.repo, tree_sha, 0, '')
 
 	def _process_diff_args(self, args):
@@ -837,11 +747,10 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 	@post_clear_cache
 	@default_index
 	def remove(self, items, working_tree=False, **kwargs):
-		"""
-		Remove the given items from the index and optionally from
+		"""Remove the given items from the index and optionally from
 		the working tree as well.
 
-		``items``
+		:param items:
 			Multiple types of items are supported which may be be freely mixed.
 
 			- path string
@@ -859,21 +768,20 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 			- BaseIndexEntry or compatible type
 				The only relevant information here Yis the path. The stage is ignored.
 
-		``working_tree``
+		:param working_tree:
 			If True, the entry will also be removed from the working tree, physically
 			removing the respective file. This may fail if there are uncommited changes
 			in it.
 
-		``**kwargs``
+		:param **kwargs:
 			Additional keyword arguments to be passed to git-rm, such
 			as 'r' to allow recurive removal of
 
-		Returns
+		:return:
 			List(path_string, ...) list of repository relative paths that have
 			been removed effectively.
 			This is interesting to know in case you have provided a directory or
-			globs. Paths are relative to the repository.
-		"""
+			globs. Paths are relative to the repository. """
 		args = list()
 		if not working_tree:
 			args.append("--cached")
