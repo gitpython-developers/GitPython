@@ -133,7 +133,6 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 	def _index_path(self):
 		return join_path_native(self.repo.git_dir, "index")
 
-
 	@property
 	def path(self):
 		""" :return: Path to the index file we are representing """
@@ -241,6 +240,26 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 		return self
 
 	@classmethod
+	def new(cls, repo, *tree_sha):
+		""" Merge the given treeish revisions into a new index which is returned.
+		This method behaves like git-read-tree --aggressive when doing the merge.
+
+		:param repo: The repository treeish are located in.
+
+		:param *tree_sha:
+			see ``from_tree``
+
+		:return:
+			New IndexFile instance. Its path will be undefined. 
+			If you intend to write such a merged Index, supply an alternate file_path 
+			to its 'write' method."""
+		base_entries = aggressive_tree_merge(repo.odb, tree_sha)
+		
+		inst = cls(self.repo)
+		raise NotImplementedError("convert to entries")
+
+
+	@classmethod
 	def from_tree(cls, repo, *treeish, **kwargs):
 		"""
 		Merge the given treeish revisions into a new index which is returned.
@@ -275,8 +294,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
 			As the underlying git-read-tree command takes into account the current index,
 			it will be temporarily moved out of the way to assure there are no unsuspected
-			interferences.
-		"""
+			interferences."""
 		if len(treeish) == 0 or len(treeish) > 3:
 			raise ValueError("Please specify between 1 and 3 treeish, got %i" % len(treeish))
 

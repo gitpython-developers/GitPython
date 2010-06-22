@@ -7,6 +7,10 @@
 import os
 from test.testlib import *
 from git import *
+from git.objects.fun import (
+								traverse_tree_recursive,
+								traverse_trees_recursive
+							)
 from cStringIO import StringIO
 
 class TestTree(TestBase):
@@ -136,3 +140,4 @@ class TestTree(TestBase):
 	def test_repr(self):
 		tree = Tree(self.rorepo, 'abc')
 		assert_equal('<git.Tree "abc">', repr(tree))
+

@@ -12,8 +12,10 @@ from git.utils import (
 						)
 
 from typ import (
+					BaseIndexEntry,
 					IndexEntry,
-					CE_NAMEMASK
+					CE_NAMEMASK, 
+					CE_STAGESHIFT
 				)
 
 from util import 	(
@@ -23,7 +25,6 @@ from util import 	(
 
 from gitdb.base import IStream
 from gitdb.typ import str_tree_type
-from binascii import a2b_hex
 
 __all__ = ('write_cache', 'read_cache', 'write_tree_from_cache', 'entry_key' )
 
@@ -150,6 +151,7 @@ def write_tree_from_cache(entries, odb, sl, si=0):
 	:return: tuple(binsha, list(tree_entry, ...)) a tuple of a sha and a list of 
 		tree entries being a tuple of hexsha, mode, name"""
 	tree_items = list()
+	tree_items_append = tree_items.append
 	ci = sl.start
 	end = sl.stop
 	while ci < end:
@@ -161,7 +163,7 @@ def write_tree_from_cache(entries, odb, sl, si=0):
 		rbound = entry.path.find('/', si)
 		if rbound == -1:
 			# its not a tree
-			tree_items.append((entry.binsha, entry.mode, entry.path[si:]))
+			tree_items_append((entry.binsha, entry.mode, entry.path[si:]))
 		else:
 			# find common base range
 			base = entry.path[si:rbound]
@@ -178,7 +180,7 @@ def write_tree_from_cache(entries, odb, sl, si=0):
 			# enter recursion
 			# ci - 1 as we want to count our current item as well
 			sha, tree_entry_list = write_tree_from_cache(entries, odb, slice(ci-1, xi), rbound+1)
-			tree_items.append((sha, S_IFDIR, base))
+			tree_items_append((sha, S_IFDIR, base))
 			
 			# skip ahead
 			ci = xi
@@ -193,5 +195,24 @@ def write_tree_from_cache(entries, odb, sl, si=0):
 	istream = odb.store(IStream(str_tree_type, len(sio.getvalue()), sio))
 	return (istream.binsha, tree_items)
 	
+def _tree_entry_to_baseindexentry(tree_entry, stage):
+	return BaseIndexEntry(tree_entry[1], tree_entry[0], stage <<CE_STAGESHIFT, tree_entry[2])
 	
+def aggressive_tree_merge(odb, tree_shas):
+	"""
+	:return: list of BaseIndexEntries representing the aggressive merge of the given
+		trees. All valid entries are on stage 0, whereas the conflicting ones are left 
+		on stage 1, 2 or 3, whereas stage 1 corresponds to the common ancestor tree, 
+		2 to our tree and 3 to 'their' tree.
+	:param tree_shas: 1, 2 or 3 trees as identified by their shas"""
+	out = list()
+	out_append = out.append
+	if len(tree_shas) == 1:
+		for entry in traverse_tree_recursive(odb, tree_shas[0]):
+			out_append(_tree_entry_to_baseindexentry(entry, 0))
+		# END for each entry
+	else:
+		raise ValueError("Cannot handle %i trees at once" % len(tree_shas))
+	# END handle tree shas
 	
+	return out

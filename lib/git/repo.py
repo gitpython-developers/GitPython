@@ -71,7 +71,7 @@ class Repo(object):
 	# represents the configuration level of a configuration file
 	config_level = ("system", "global", "repository")
 
-	def __init__(self, path=None, odbt = GitCmdObjectDB):
+	def __init__(self, path=None, odbt = GitDB):
 		""" Create a new Repo instance
 
 		:param path: is the path to either the root git directory or the bare git repo::
