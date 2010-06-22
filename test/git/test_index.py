@@ -6,7 +6,6 @@
 
 from test.testlib import *
 from git import *
-from git.index.util import TemporaryFileSwap
 import inspect
 import os
 import sys
@@ -580,7 +579,13 @@ class TestIndex(TestBase):
 		# END git cmd write tree
 		
 		# write all trees and compare them
+		# its important to have a few submodules in there too
+		max_count = 100
+		count = 0
 		for commit in rw_repo.head.commit.traverse():
+			if count >= max_count:
+				break
+			count += 1
 			index = rw_repo.index.reset(commit)
 			orig_tree = commit.tree
 			new_git_tree = write_tree(index)

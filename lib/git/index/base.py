@@ -66,6 +66,7 @@ from fun import (
 				)
 
 from gitdb.base import IStream
+from gitdb.db import MemoryDB
 
 __all__ = ( 'IndexFile', 'CheckoutError' )
 
@@ -502,10 +503,13 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 		if not self.entries:
 			raise ValueError("Cannot write empty index")
 		
-		# TODO: use memory db, this helps to prevent IO if the resulting tree
-		# already exists
+		mdb = MemoryDB()
 		entries = self._entries_sorted()
-		binsha, tree_items = write_tree_from_cache(entries, self.repo.odb, slice(0, len(entries)))
+		binsha, tree_items = write_tree_from_cache(entries, mdb, slice(0, len(entries)))
+		
+		# copy changed trees only
+		mdb.stream_copy(mdb.sha_iter(), self.repo.odb)
+		
 		
 		# note: additional deserialization could be saved if write_tree_from_cache
 		# would return sorted tree entries
