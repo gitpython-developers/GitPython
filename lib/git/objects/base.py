@@ -21,6 +21,7 @@ class Object(LazyMixin):
 		inst.data	# byte string containing the whole data of the object
 	"""
 	NULL_HEX_SHA = '0'*40
+	NULL_BIN_SHA = '\0'*20
 	TYPES = ("blob", "tree", "commit", "tag")
 	__slots__ = ("repo", "sha", "size", "data" )
 	type = None			# to be set by subclass

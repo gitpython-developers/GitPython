@@ -55,7 +55,7 @@ class TestIndex(TestBase):
 		last_val = None
 		entry = index.entries.itervalues().next()
 		for attr in ("path","ctime","mtime","dev","inode","mode","uid",
-								"gid","size","sha","stage"):
+								"gid","size","binsha", "hexsha", "stage"):
 			val = getattr(entry, attr)
 		# END for each method
 		
@@ -94,23 +94,24 @@ class TestIndex(TestBase):
 			raise AssertionError( "CMP Failed: Missing entries in index: %s, missing in tree: %s" % (bset-iset, iset-bset) )
 		# END assertion message
 	
-	def test_index_file_from_tree(self):
+	@with_rw_repo('0.1.6')
+	def test_index_file_from_tree(self, rw_repo):
 		common_ancestor_sha = "5117c9c8a4d3af19a9958677e45cda9269de1541"
 		cur_sha = "4b43ca7ff72d5f535134241e7c797ddc9c7a3573"
 		other_sha = "39f85c4358b7346fee22169da9cad93901ea9eb9"
 		
 		# simple index from tree 
-		base_index = IndexFile.from_tree(self.rorepo, common_ancestor_sha)
+		base_index = IndexFile.from_tree(rw_repo, common_ancestor_sha)
 		assert base_index.entries
 		self._cmp_tree_index(common_ancestor_sha, base_index)
 		
 		# merge two trees - its like a fast-forward
-		two_way_index = IndexFile.from_tree(self.rorepo, common_ancestor_sha, cur_sha)
+		two_way_index = IndexFile.from_tree(rw_repo, common_ancestor_sha, cur_sha)
 		assert two_way_index.entries
 		self._cmp_tree_index(cur_sha, two_way_index)
 		
 		# merge three trees - here we have a merge conflict
-		three_way_index = IndexFile.from_tree(self.rorepo, common_ancestor_sha, cur_sha, other_sha)
+		three_way_index = IndexFile.from_tree(rw_repo, common_ancestor_sha, cur_sha, other_sha)
 		assert len(list(e for e in three_way_index.entries.values() if e.stage != 0))
 		
 		
@@ -128,7 +129,7 @@ class TestIndex(TestBase):
 		
 		
 		# writing a tree should fail with an unmerged index
-		self.failUnlessRaises(GitCommandError, three_way_index.write_tree)
+		self.failUnlessRaises(UnmergedEntriesError, three_way_index.write_tree)
 		
 		# removed unmerged entries
 		unmerged_blob_map = three_way_index.unmerged_blobs()
@@ -155,31 +156,31 @@ class TestIndex(TestBase):
 		# current index is at the (virtual) cur_commit
 		next_commit = "4c39f9da792792d4e73fc3a5effde66576ae128c"
 		parent_commit = rw_repo.head.commit.parents[0]
-		manifest_key = IndexFile.get_entries_key('MANIFEST.in', 0)
+		manifest_key = IndexFile.entry_key('MANIFEST.in', 0)
 		manifest_entry = rw_repo.index.entries[manifest_key]
 		rw_repo.index.merge_tree(next_commit)
 		# only one change should be recorded
-		assert manifest_entry.sha != rw_repo.index.entries[manifest_key].sha
+		assert manifest_entry.binsha != rw_repo.index.entries[manifest_key].binsha
 		
 		rw_repo.index.reset(rw_repo.head)
-		assert rw_repo.index.entries[manifest_key].sha == manifest_entry.sha
+		assert rw_repo.index.entries[manifest_key].binsha == manifest_entry.binsha
 		
 		# FAKE MERGE
 		#############
 		# Add a change with a NULL sha that should conflict with next_commit. We 
 		# pretend there was a change, but we do not even bother adding a proper 
 		# sha for it ( which makes things faster of course )
-		manifest_fake_entry = BaseIndexEntry((manifest_entry[0], Diff.null_hex_sha, 0, manifest_entry[3]))
+		manifest_fake_entry = BaseIndexEntry((manifest_entry[0], "\0"*20, 0, manifest_entry[3]))
 		rw_repo.index.add([manifest_fake_entry])
 		# add actually resolves the null-hex-sha for us as a feature, but we can 
 		# edit the index manually
-		assert rw_repo.index.entries[manifest_key].sha != Diff.null_hex_sha
+		assert rw_repo.index.entries[manifest_key].binsha != Object.NULL_BIN_SHA
 		# must operate on the same index for this ! Its a bit problematic as 
 		# it might confuse people
 		index = rw_repo.index 
 		index.entries[manifest_key] = IndexEntry.from_base(manifest_fake_entry)
 		index.write()
-		assert rw_repo.index.entries[manifest_key].sha == Diff.null_hex_sha
+		assert rw_repo.index.entries[manifest_key].hexsha == Diff.NULL_HEX_SHA
 		
 		# a three way merge would result in a conflict and fails as the command will 
 		# not overwrite any entries in our index and hence leave them unmerged. This is 
@@ -189,10 +190,11 @@ class TestIndex(TestBase):
 		# the only way to get the merged entries is to safe the current index away into a tree, 
 		# which is like a temporary commit for us. This fails as well as the NULL sha deos not
 		# have a corresponding object
-		self.failUnlessRaises(GitCommandError, index.write_tree)
+		# NOTE: missing_ok is not a kwarg anymore, missing_ok is always true
+		# self.failUnlessRaises(GitCommandError, index.write_tree)
 		
-		# if missing objects are okay, this would work though
-		tree = index.write_tree(missing_ok = True)
+		# if missing objects are okay, this would work though ( they are always okay now )
+		tree = index.write_tree()
 		
 		# now make a proper three way merge with unmerged entries
 		unmerged_tree = IndexFile.from_tree(rw_repo, parent_commit, tree, next_commit)
@@ -348,7 +350,7 @@ class TestIndex(TestBase):
 				if type_id == 0:	# path
 					yield entry.path
 				elif type_id == 1:	# blob
-					yield Blob(rw_repo, entry.sha, entry.mode, entry.path)
+					yield Blob(rw_repo, entry.hexsha, entry.mode, entry.path)
 				elif type_id == 2:	# BaseIndexEntry
 					yield BaseIndexEntry(entry[:4])
 				elif type_id == 3:	# IndexEntry
@@ -442,18 +444,19 @@ class TestIndex(TestBase):
 		old_blob = new_commit.parents[0].tree.blobs[0]
 		entries = index.reset(new_commit).add([old_blob], fprogress=self._fprogress_add)
 		self._assert_fprogress(entries)
-		assert index.entries[(old_blob.path,0)].sha == old_blob.sha and len(entries) == 1 
+		assert index.entries[(old_blob.path,0)].hexsha == old_blob.sha and len(entries) == 1 
 		
 		# mode 0 not allowed
-		null_sha = "0"*40
-		self.failUnlessRaises(ValueError, index.reset(new_commit).add, [BaseIndexEntry((0, null_sha,0,"doesntmatter"))])
+		null_hex_sha = Diff.NULL_HEX_SHA
+		null_bin_sha = "\0" * 20
+		self.failUnlessRaises(ValueError, index.reset(new_commit).add, [BaseIndexEntry((0, null_bin_sha,0,"doesntmatter"))])
 		
 		# add new file
 		new_file_relapath = "my_new_file"
 		new_file_path = self._make_file(new_file_relapath, "hello world", rw_repo)
-		entries = index.reset(new_commit).add([BaseIndexEntry((010644, null_sha, 0, new_file_relapath))], fprogress=self._fprogress_add)
+		entries = index.reset(new_commit).add([BaseIndexEntry((010644, null_bin_sha, 0, new_file_relapath))], fprogress=self._fprogress_add)
 		self._assert_fprogress(entries)
-		assert len(entries) == 1 and entries[0].sha != null_sha
+		assert len(entries) == 1 and entries[0].hexsha != null_hex_sha
 		
 		# add symlink
 		if sys.platform != "win32":
@@ -464,25 +467,25 @@ class TestIndex(TestBase):
 			entries = index.reset(new_commit).add([link_file], fprogress=self._fprogress_add)
 			self._assert_fprogress(entries)
 			assert len(entries) == 1 and S_ISLNK(entries[0].mode)
-			assert S_ISLNK(index.entries[index.get_entries_key("my_real_symlink", 0)].mode)
+			assert S_ISLNK(index.entries[index.entry_key("my_real_symlink", 0)].mode)
 			
 			# we expect only the target to be written
-			assert index.repo.odb.stream(entries[0].sha).read() == target
+			assert index.repo.odb.stream(entries[0].binsha).read() == target
 		# END real symlink test 
 		
 		# add fake symlink and assure it checks-our as symlink
 		fake_symlink_relapath = "my_fake_symlink"
 		link_target = "/etc/that"
 		fake_symlink_path = self._make_file(fake_symlink_relapath, link_target, rw_repo)
-		fake_entry = BaseIndexEntry((0120000, null_sha, 0, fake_symlink_relapath))
+		fake_entry = BaseIndexEntry((0120000, null_bin_sha, 0, fake_symlink_relapath))
 		entries = index.reset(new_commit).add([fake_entry], fprogress=self._fprogress_add)
 		self._assert_fprogress(entries)
-		assert entries[0].sha != null_sha
+		assert entries[0].hexsha != null_hex_sha
 		assert len(entries) == 1 and S_ISLNK(entries[0].mode)
 		
 		# assure this also works with an alternate method
-		full_index_entry = IndexEntry.from_base(BaseIndexEntry((0120000, entries[0].sha, 0, entries[0].path)))
-		entry_key = index.get_entries_key(full_index_entry)
+		full_index_entry = IndexEntry.from_base(BaseIndexEntry((0120000, entries[0].binsha, 0, entries[0].path)))
+		entry_key = index.entry_key(full_index_entry)
 		index.reset(new_commit)
 		
 		assert entry_key not in index.entries
@@ -493,8 +496,9 @@ class TestIndex(TestBase):
 		assert S_ISLNK(new_entry.mode)
 		
 		# a tree created from this should contain the symlink
-		tree = index.write_tree(True)
+		tree = index.write_tree()
 		assert fake_symlink_relapath in tree
+		index.write()						# flush our changes for the checkout
 		
 		# checkout the fakelink, should be a link then
 		assert not S_ISLNK(os.stat(fake_symlink_path)[ST_MODE])
@@ -552,8 +556,8 @@ class TestIndex(TestBase):
 			# two existing ones, one new one
 			yield 'CHANGES'
 			yield 'ez_setup.py'
-			yield index.entries[index.get_entries_key('README', 0)]
-			yield index.entries[index.get_entries_key('.gitignore', 0)]
+			yield index.entries[index.entry_key('README', 0)]
+			yield index.entries[index.entry_key('.gitignore', 0)]
 			
 			for fid in range(3):
 				fname = 'newfile%i' % fid
@@ -565,5 +569,27 @@ class TestIndex(TestBase):
 		index.add(paths, path_rewriter=rewriter)
 		
 		for filenum in range(len(paths)):
-			assert index.get_entries_key(str(filenum), 0) in index.entries
+			assert index.entry_key(str(filenum), 0) in index.entries
+		
+	@with_rw_repo('HEAD')
+	def test_compare_write_tree(self, rw_repo):
+		def write_tree(index):
+			tree_sha = index.repo.git.write_tree(missing_ok=True)
+			return Tree(index.repo, tree_sha, 0, '')
+		# END git cmd write tree
+		
+		# write all trees and compare them
+		# its important to have a few submodules in there too
+		max_count = 100
+		count = 0
+		for commit in rw_repo.head.commit.traverse():
+			if count >= max_count:
+				break
+			count += 1
+			index = rw_repo.index.reset(commit)
+			orig_tree = commit.tree
+			new_git_tree = write_tree(index)
+			assert new_git_tree == orig_tree
+			assert index.write_tree() == orig_tree
+		# END for each commit 
 		

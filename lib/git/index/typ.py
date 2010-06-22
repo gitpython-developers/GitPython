@@ -5,6 +5,11 @@ from util import (
 					unpack
 				)
 
+from binascii import (
+						b2a_hex,
+						a2b_hex
+					)
+
 __all__ = ('BlobFilter', 'BaseIndexEntry', 'IndexEntry')
 
 #{ Invariants
@@ -50,7 +55,7 @@ class BaseIndexEntry(tuple):
 	use numeric indices for performance reasons. """
 
 	def __str__(self):
-		return "%o %s %i\t%s" % (self.mode, self.sha, self.stage, self.path)
+		return "%o %s %i\t%s" % (self.mode, self.hexsha, self.stage, self.path)
 
 	@property
 	def mode(self):
@@ -58,9 +63,14 @@ class BaseIndexEntry(tuple):
 		return self[0]
 
 	@property
-	def sha(self):
-		""" hex sha of the blob """
+	def binsha(self):
+		"""binary sha of the blob """
 		return self[1]
+		
+	@property
+	def hexsha(self):
+		"""hex version of our sha"""
+		return b2a_hex(self[1])
 
 	@property
 	def stage(self):
@@ -88,7 +98,7 @@ class BaseIndexEntry(tuple):
 	@classmethod
 	def from_blob(cls, blob, stage = 0):
 		""":return: Fully equipped BaseIndexEntry at the given stage"""
-		return cls((blob.mode, blob.sha, stage << CE_STAGESHIFT, blob.path))
+		return cls((blob.mode, a2b_hex(blob.sha), stage << CE_STAGESHIFT, blob.path))
 
 
 class IndexEntry(BaseIndexEntry):
@@ -145,12 +155,12 @@ class IndexEntry(BaseIndexEntry):
 
 		:param base: Instance of type BaseIndexEntry"""
 		time = pack(">LL", 0, 0)
-		return IndexEntry((base.mode, base.sha, base.flags, base.path, time, time, 0, 0, 0, 0, 0))
+		return IndexEntry((base.mode, base.binsha, base.flags, base.path, time, time, 0, 0, 0, 0, 0))
 
 	@classmethod
 	def from_blob(cls, blob, stage = 0):
 		""":return: Minimal entry resembling the given blob object"""
 		time = pack(">LL", 0, 0)
-		return IndexEntry((blob.mode, blob.sha, stage << CE_STAGESHIFT, blob.path, time, time, 0, 0, 0, 0, blob.size))
+		return IndexEntry((blob.mode, a2b_hex(blob.sha), stage << CE_STAGESHIFT, blob.path, time, time, 0, 0, 0, 0, blob.size))
 
 

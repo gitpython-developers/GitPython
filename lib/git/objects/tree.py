@@ -5,21 +5,21 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
 import os
+import utils
+import base
+
 from blob import Blob
 from submodule import Submodule
-import base
-import binascii
 import git.diff as diff
-import utils
-from git.utils import join_path
-
 join = os.path.join
 
-def sha_to_hex(sha):
-	"""Takes a string and returns the hex of the sha within"""
-	hexsha = binascii.hexlify(sha)
-	return hexsha
-	
+from fun import (
+					tree_entries_from_data, 
+					tree_to_stream
+				 )
+
+from gitdb.util import to_bin_sha
+from binascii import b2a_hex
 
 class TreeModifier(object):
 	"""A utility class providing methods to alter the underlying cache in a list-like
@@ -51,25 +51,24 @@ class TreeModifier(object):
 	#} END interface
 	
 	#{ Mutators
-	def add(self, hexsha, mode, name, force=False):
+	def add(self, sha, mode, name, force=False):
 		"""Add the given item to the tree. If an item with the given name already
 		exists, nothing will be done, but a ValueError will be raised if the 
 		sha and mode of the existing item do not match the one you add, unless 
 		force is True
-		:param hexsha: The 40 byte sha of the item to add
+		:param sha: The 20 or 40 byte sha of the item to add
 		:param mode: int representing the stat compatible mode of the item
 		:param force: If True, an item with your name and information will overwrite
 			any existing item with the same name, no matter which information it has
 		:return: self"""
 		if '/' in name:
 			raise ValueError("Name must not contain '/' characters")
-		if len(hexsha) != 40:
-			raise ValueError("Hexsha required, got %r" % hexsha)
 		if (mode >> 12) not in Tree._map_id_to_type:
 			raise ValueError("Invalid object type according to mode %o" % mode)
-		
+			
+		sha = to_bin_sha(sha)
 		index = self._index_by_name(name)
-		item = (hexsha, mode, name)
+		item = (sha, mode, name)
 		if index == -1:
 			self._cache.append(item)
 		else:
@@ -77,18 +76,19 @@ class TreeModifier(object):
 				self._cache[index] = item
 			else:
 				ex_item = self._cache[index]
-				if ex_item[0] != hexsha or ex_item[1] != mode:
+				if ex_item[0] != sha or ex_item[1] != mode:
 					raise ValueError("Item %r existed with different properties" % name)
 				# END handle mismatch
 			# END handle force
 		# END handle name exists
 		return self
 		
-	def add_unchecked(self, hexsha, mode, name):
+	def add_unchecked(self, binsha, mode, name):
 		"""Add the given item to the tree, its correctness is assumed, which 
 		puts the caller into responsibility to assure the input is correct. 
-		For more information on the parameters, see ``add``"""
-		self._cache.append((hexsha, mode, name))
+		For more information on the parameters, see ``add``
+		:param binsha: 20 byte binary sha"""
+		self._cache.append((binsha, mode, name))
 		
 	def __delitem__(self, name):
 		"""Deletes an item with the given name if it exists"""
@@ -146,70 +146,21 @@ class Tree(base.IndexObject, diff.Diffable, utils.Traversable, utils.Serializabl
 	def _set_cache_(self, attr):
 		if attr == "_cache":
 			# Set the data when we need it
-			self._cache = self._get_tree_cache(self.data)
+			self._cache = tree_entries_from_data(self.data)
 		else:
 			super(Tree, self)._set_cache_(attr)
 
-	def _get_tree_cache(self, data):
-		""" :return: list(object_instance, ...)
-		:param data: data string containing our serialized information"""
-		return list(self._iter_from_data(data))
-		
 	def _iter_convert_to_object(self, iterable):
 		"""Iterable yields tuples of (hexsha, mode, name), which will be converted
 		to the respective object representation"""
-		for hexsha, mode, name in iterable:
+		for binsha, mode, name in iterable:
 			path = join(self.path, name)
 			type_id = mode >> 12
 			try:
-				yield self._map_id_to_type[type_id](self.repo, hexsha, mode, path)
+				yield self._map_id_to_type[type_id](self.repo, b2a_hex(binsha), mode, path)
 			except KeyError:
 				raise TypeError( "Unknown type %i found in tree data for path '%s'" % (type_id, path))
 		# END for each item 
-		
-	def _iter_from_data(self, data):
-		"""
-		Reads the binary non-pretty printed representation of a tree and converts
-		it into Blob, Tree or Commit objects.
-		
-		Note: This method was inspired by the parse_tree method in dulwich.
-		
-		:yield: Tuple(hexsha, mode, tree_relative_path)
-		"""
-		ord_zero = ord('0')
-		len_data = len(data)
-		i = 0
-		while i < len_data:
-			mode = 0
-			
-			# read mode
-			# Some git versions truncate the leading 0, some don't
-			# The type will be extracted from the mode later
-			while data[i] != ' ':
-				# move existing mode integer up one level being 3 bits
-				# and add the actual ordinal value of the character
-				mode = (mode << 3) + (ord(data[i]) - ord_zero)
-				i += 1
-			# END while reading mode
-			
-			# byte is space now, skip it
-			i += 1
-			
-			# parse name, it is NULL separated
-			
-			ns = i
-			while data[i] != '\0':
-				i += 1
-			# END while not reached NULL
-			name = data[ns:i]
-			
-			# byte is NULL, get next 20
-			i += 1
-			sha = data[i:i+20]
-			i = i + 20
-			
-			yield (sha_to_hex(sha), mode, name)
-		# END for each byte in data stream
 
 	def __div__(self, file):
 		"""
@@ -250,7 +201,7 @@ class Tree(base.IndexObject, diff.Diffable, utils.Traversable, utils.Serializabl
 		else:
 			for info in self._cache:
 				if info[2] == file:		# [2] == name
-					return self._map_id_to_type[info[1] >> 12](self.repo, info[0], info[1], join(self.path, info[2]))
+					return self._map_id_to_type[info[1] >> 12](self.repo, b2a_hex(info[0]), info[1], join(self.path, info[2]))
 			# END for each obj
 			raise KeyError( msg % file )
 		# END handle long paths
@@ -304,7 +255,7 @@ class Tree(base.IndexObject, diff.Diffable, utils.Traversable, utils.Serializabl
 	def __getitem__(self, item):
 		if isinstance(item, int):
 			info = self._cache[item]
-			return self._map_id_to_type[info[1] >> 12](self.repo, info[0], info[1], join(self.path, info[2]))
+			return self._map_id_to_type[info[1] >> 12](self.repo, b2a_hex(info[0]), info[1], join(self.path, info[2]))
 		
 		if isinstance(item, basestring):
 			# compatability
@@ -335,32 +286,16 @@ class Tree(base.IndexObject, diff.Diffable, utils.Traversable, utils.Serializabl
 	def __reversed__(self):
 		return reversed(self._iter_convert_to_object(self._cache))
 		
-	def _serialize(self, stream, presort=False):
+	def _serialize(self, stream):
 		"""Serialize this tree into the stream. Please note that we will assume 
 		our tree data to be in a sorted state. If this is not the case, serialization
 		will not generate a correct tree representation as these are assumed to be sorted
 		by algorithms"""
-		ord_zero = ord('0')
-		bit_mask = 7			# 3 bits set
-		hex_to_bin = binascii.a2b_hex
-		
-		for hexsha, mode, name in self._cache:
-			mode_str = ''
-			for i in xrange(6):
-				mode_str = chr(((mode >> (i*3)) & bit_mask) + ord_zero) + mode_str
-			# END for each 8 octal value
-			
-			# git slices away the first octal if its zero
-			if mode_str[0] == '0':
-				mode_str = mode_str[1:]
-			# END save a byte
-
-			stream.write("%s %s\0%s" % (mode_str, name, hex_to_bin(hexsha))) 
-		# END for each item
+		tree_to_stream(self._cache, stream.write)
 		return self
 		
 	def _deserialize(self, stream):
-		self._cache = self._get_tree_cache(stream.read())
+		self._cache = tree_entries_from_data(stream.read())
 		return self
 		
 		
