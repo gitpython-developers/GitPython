@@ -168,11 +168,11 @@ def write_tree_from_cache(entries, odb, sl, si=0):
 			xi = ci
 			while xi < end:
 				oentry = entries[xi]
-				xi += 1
-				orbound = oentry.path.find('/')
+				orbound = oentry.path.find('/', si)
 				if orbound == -1 or oentry.path[si:orbound] != base:
 					break
 				# END abort on base mismatch
+				xi += 1
 			# END find common base
 			
 			# enter recursion

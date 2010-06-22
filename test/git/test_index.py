@@ -6,6 +6,7 @@
 
 from test.testlib import *
 from git import *
+from git.index.util import TemporaryFileSwap
 import inspect
 import os
 import sys
@@ -94,23 +95,24 @@ class TestIndex(TestBase):
 			raise AssertionError( "CMP Failed: Missing entries in index: %s, missing in tree: %s" % (bset-iset, iset-bset) )
 		# END assertion message
 	
-	def test_index_file_from_tree(self):
+	@with_rw_repo('0.1.6')
+	def test_index_file_from_tree(self, rw_repo):
 		common_ancestor_sha = "5117c9c8a4d3af19a9958677e45cda9269de1541"
 		cur_sha = "4b43ca7ff72d5f535134241e7c797ddc9c7a3573"
 		other_sha = "39f85c4358b7346fee22169da9cad93901ea9eb9"
 		
 		# simple index from tree 
-		base_index = IndexFile.from_tree(self.rorepo, common_ancestor_sha)
+		base_index = IndexFile.from_tree(rw_repo, common_ancestor_sha)
 		assert base_index.entries
 		self._cmp_tree_index(common_ancestor_sha, base_index)
 		
 		# merge two trees - its like a fast-forward
-		two_way_index = IndexFile.from_tree(self.rorepo, common_ancestor_sha, cur_sha)
+		two_way_index = IndexFile.from_tree(rw_repo, common_ancestor_sha, cur_sha)
 		assert two_way_index.entries
 		self._cmp_tree_index(cur_sha, two_way_index)
 		
 		# merge three trees - here we have a merge conflict
-		three_way_index = IndexFile.from_tree(self.rorepo, common_ancestor_sha, cur_sha, other_sha)
+		three_way_index = IndexFile.from_tree(rw_repo, common_ancestor_sha, cur_sha, other_sha)
 		assert len(list(e for e in three_way_index.entries.values() if e.stage != 0))
 		
 		
@@ -476,7 +478,7 @@ class TestIndex(TestBase):
 		fake_symlink_relapath = "my_fake_symlink"
 		link_target = "/etc/that"
 		fake_symlink_path = self._make_file(fake_symlink_relapath, link_target, rw_repo)
-		fake_entry = BaseIndexEntry((0120000, null_hex_sha, 0, fake_symlink_relapath))
+		fake_entry = BaseIndexEntry((0120000, null_bin_sha, 0, fake_symlink_relapath))
 		entries = index.reset(new_commit).add([fake_entry], fprogress=self._fprogress_add)
 		self._assert_fprogress(entries)
 		assert entries[0].hexsha != null_hex_sha
@@ -497,6 +499,7 @@ class TestIndex(TestBase):
 		# a tree created from this should contain the symlink
 		tree = index.write_tree()
 		assert fake_symlink_relapath in tree
+		index.write()						# flush our changes for the checkout
 		
 		# checkout the fakelink, should be a link then
 		assert not S_ISLNK(os.stat(fake_symlink_path)[ST_MODE])
@@ -569,5 +572,19 @@ class TestIndex(TestBase):
 		for filenum in range(len(paths)):
 			assert index.entry_key(str(filenum), 0) in index.entries
 		
-	def test_compare_write_tree(self):
-		self.fail("compare git-write-tree with python implementation, must have same output")
+	@with_rw_repo('HEAD')
+	def test_compare_write_tree(self, rw_repo):
+		def write_tree(index):
+			tree_sha = index.repo.git.write_tree(missing_ok=True)
+			return Tree(index.repo, tree_sha, 0, '')
+		# END git cmd write tree
+		
+		# write all trees and compare them
+		for commit in rw_repo.head.commit.traverse():
+			index = rw_repo.index.reset(commit)
+			orig_tree = commit.tree
+			new_git_tree = write_tree(index)
+			assert new_git_tree == orig_tree
+			assert index.write_tree() == orig_tree
+		# END for each commit 
+		

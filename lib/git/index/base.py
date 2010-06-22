@@ -889,40 +889,41 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
 	@default_index
 	def checkout(self, paths=None, force=False, fprogress=lambda *args: None, **kwargs):
-		"""
-		Checkout the given paths or all files from the version known to the index into
+		"""Checkout the given paths or all files from the version known to the index into
 		the working tree.
+		
+		:note: Be sure you have written pending changes using the ``write`` method
+			in case you have altered the enties dictionary directly
 
-		``paths``
+		:param paths:
 			If None, all paths in the index will be checked out. Otherwise an iterable
 			of relative or absolute paths or a single path pointing to files or directories
 			in the index is expected.
 
-		``force``
+		:param force:
 			If True, existing files will be overwritten even if they contain local modifications.
 			If False, these will trigger a CheckoutError.
 
-		``fprogress``
+		:param fprogress:
 			see Index.add_ for signature and explanation.
 			The provided progress information will contain None as path and item if no
 			explicit paths are given. Otherwise progress information will be send
 			prior and after a file has been checked out
 
-		``**kwargs``
+		:param **kwargs:
 			Additional arguments to be pasesd to git-checkout-index
 
-		Returns
+		:return:
 			iterable yielding paths to files which have been checked out and are
 			guaranteed to match the version stored in the index
 
-		Raise CheckoutError
+		:raise CheckoutError:
 			If at least one file failed to be checked out. This is a summary,
 			hence it will checkout as many files as it can anyway.
 			If one of files or directories do not exist in the index
 			( as opposed to the	 original git command who ignores them ).
 			Raise GitCommandError if error lines could not be parsed - this truly is
-			an exceptional state
-		"""
+			an exceptional state"""
 		args = ["--index"]
 		if force:
 			args.append("--force")

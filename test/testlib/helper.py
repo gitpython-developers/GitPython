@@ -5,6 +5,7 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
 import os
+import sys
 from git import Repo, Remote, GitCommandError
 from unittest import TestCase
 import tempfile
@@ -105,7 +106,10 @@ def with_rw_repo(working_tree_ref):
 			os.chdir(rw_repo.working_dir)
 			try:
 				return func(self, rw_repo)
-			finally:
+			except:
+				print >> sys.stderr, "Keeping repo after failure: %s" % repo_dir
+				raise
+			else:
 				os.chdir(prev_cwd)
 				rw_repo.git.clear_cache()
 				shutil.rmtree(repo_dir, onerror=_rmtree_onerror)
