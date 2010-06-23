@@ -3,7 +3,7 @@ import struct
 import tempfile
 import os
 
-__all__ = ( 'TemporaryFileSwap', 'post_clear_cache', 'default_index' )
+__all__ = ( 'TemporaryFileSwap', 'post_clear_cache', 'default_index', 'git_working_dir' )
 
 #{ Aliases 
 pack = struct.pack
@@ -66,5 +66,21 @@ def default_index(func):
 
 	check_default_index.__name__ = func.__name__
 	return check_default_index
+
+def git_working_dir(func):
+	"""Decorator which changes the current working dir to the one of the git 
+	repository in order to assure relative paths are handled correctly"""
+	def set_git_working_dir(self, *args, **kwargs):
+		cur_wd = os.getcwd()
+		os.chdir(self.repo.working_tree_dir)
+		try:
+			return func(self, *args, **kwargs)
+		finally:
+			os.chdir(cur_wd)
+		# END handle working dir
+	# END wrapper
+	
+	set_git_working_dir.__name__ = func.__name__
+	return set_git_working_dir
 
 #} END decorators

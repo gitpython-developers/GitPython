@@ -182,6 +182,9 @@ class TestIndex(TestBase):
 		index.write()
 		assert rw_repo.index.entries[manifest_key].hexsha == Diff.NULL_HEX_SHA
 		
+		# write an unchanged index ( just for the fun of it )
+		rw_repo.index.write()
+		
 		# a three way merge would result in a conflict and fails as the command will 
 		# not overwrite any entries in our index and hence leave them unmerged. This is 
 		# mainly a protection feature as the current index is not yet in a tree
@@ -432,6 +435,7 @@ class TestIndex(TestBase):
 		
 		# same file 
 		entries = index.reset(new_commit).add(['lib/git/head.py']*2, fprogress=self._fprogress_add)
+		assert entries[0].mode & 0644 == 0644
 		# would fail, test is too primitive to handle this case
 		# self._assert_fprogress(entries)
 		self._reset_progress()
@@ -574,7 +578,7 @@ class TestIndex(TestBase):
 	@with_rw_repo('HEAD')
 	def test_compare_write_tree(self, rw_repo):
 		def write_tree(index):
-			tree_sha = index.repo.git.write_tree(missing_ok=True)
+			tree_sha = index.write_tree().sha
 			return Tree(index.repo, tree_sha, 0, '')
 		# END git cmd write tree
 		

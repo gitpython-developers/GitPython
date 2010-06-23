@@ -11,7 +11,6 @@ import tempfile
 
 from gitdb.util import (
 							make_sha, 
-							FDStreamWrapper,
 							LockedFD, 
 							file_contents_ro, 
 							LazyMixin, 

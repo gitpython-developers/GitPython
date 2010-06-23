@@ -70,7 +70,7 @@ def with_bare_rw_repo(func):
 	Use this if you want to make purely index based adjustments, change refs, create
 	heads, generally operations that do not need a working tree."""
 	def bare_repo_creator(self):
-		repo_dir = tempfile.mktemp("bare_repo") 
+		repo_dir = tempfile.mktemp("bare_repo_%s" % func.__name__) 
 		rw_repo = self.rorepo.clone(repo_dir, shared=True, bare=True)
 		prev_cwd = os.getcwd()
 		try:
@@ -96,7 +96,7 @@ def with_rw_repo(working_tree_ref):
 	assert isinstance(working_tree_ref, basestring), "Decorator requires ref name for working tree checkout"
 	def argument_passer(func):
 		def repo_creator(self):
-			repo_dir = tempfile.mktemp("non_bare_repo") 
+			repo_dir = tempfile.mktemp("non_bare_%s" % func.__name__) 
 			rw_repo = self.rorepo.clone(repo_dir, shared=True, bare=False, n=True)
 			
 			rw_repo.head.commit = working_tree_ref
@@ -105,11 +105,12 @@ def with_rw_repo(working_tree_ref):
 			prev_cwd = os.getcwd()
 			os.chdir(rw_repo.working_dir)
 			try:
-				return func(self, rw_repo)
-			except:
-				print >> sys.stderr, "Keeping repo after failure: %s" % repo_dir
-				raise
-			else:
+				try:
+					return func(self, rw_repo)
+				except:
+					print >> sys.stderr, "Keeping repo after failure: %s" % repo_dir
+					raise
+			finally:
 				os.chdir(prev_cwd)
 				rw_repo.git.clear_cache()
 				shutil.rmtree(repo_dir, onerror=_rmtree_onerror)
@@ -146,7 +147,7 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
 	assert isinstance(working_tree_ref, basestring), "Decorator requires ref name for working tree checkout"
 	def argument_passer(func):
 		def remote_repo_creator(self):
-			remote_repo_dir = tempfile.mktemp("remote_repo")
+			remote_repo_dir = tempfile.mktemp("remote_repo_%s" % func.__name__)
 			repo_dir = tempfile.mktemp("remote_clone_non_bare_repo")
 			
 			rw_remote_repo = self.rorepo.clone(remote_repo_dir, shared=True, bare=True)

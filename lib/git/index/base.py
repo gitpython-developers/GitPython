@@ -31,6 +31,7 @@ from util import (
 					TemporaryFileSwap,
 					post_clear_cache, 
 					default_index,
+					git_working_dir
 				)
 
 import git.objects
@@ -122,7 +123,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 			# END exception handling
 
 			stream = file_contents_ro(fd, stream=True, allow_mmap=True)
-
+			
 			try:
 				self._deserialize(stream)
 			finally:
@@ -192,6 +193,10 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 			automatically
 
 		:return: self"""
+		# make sure we have our entries read before getting a write lock
+		# else it would be done when streaming. This can happen 
+		# if one doesn't change the index, but writes it right away
+		self.entries
 		lfd = LockedFD(file_path or self._file_path)
 		stream = lfd.open(write=True, stream=True)
 		
@@ -345,7 +350,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 			return S_IFLNK
 		if S_ISDIR(mode) or S_IFMT(mode) == cls.S_IFGITLINK:	# submodules
 			return cls.S_IFGITLINK
-		return S_IFREG | 644 | (mode & 0100) 		# blobs with or without executable bit
+		return S_IFREG | 0644 | (mode & 0100) 		# blobs with or without executable bit
 
 	# UTILITIES
 	def _iter_expand_paths(self, paths):
@@ -577,6 +582,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 		# END for each item
 		return (paths, entries)
 
+	@git_working_dir
 	def add(self, items, force=True, fprogress=lambda *args: None, path_rewriter=None):
 		"""Add files from the working tree, specific blobs or BaseIndexEntries
 		to the index. The underlying index file will be written immediately, hence
@@ -688,7 +694,6 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 			fprogress(filepath, False, filepath)
 			istream = self.repo.odb.store(IStream(Blob.type, st.st_size, stream))
 			fprogress(filepath, True, filepath)
-			
 			return BaseIndexEntry((self._stat_mode_to_index_mode(st.st_mode), 
 									istream.binsha, 0, filepath))
 		# END utility method
@@ -706,8 +711,6 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
 		# HANDLE ENTRIES
 		if entries:
-			# TODO: Add proper IndexEntries to ourselves, and write the index
-			# just once. Currently its done twice at least
 			null_mode_entries = [ e for e in entries if e.mode == 0 ]
 			if null_mode_entries:
 				raise ValueError("At least one Entry has a null-mode - please use index.remove to remove files for clarity")
@@ -750,6 +753,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 		# add the new entries to this instance, and write it
 		for entry in entries_added:
 			self.entries[(entry.path, 0)] = IndexEntry.from_base(entry)
+		
 		self.write()
 		
 		return entries_added
@@ -902,8 +906,8 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 		Returns
 			Commit object representing the new commit
 		"""
-		tree_sha = self.repo.git.write_tree()
-		return Commit.create_from_tree(self.repo, tree_sha, message, parent_commits, head)
+		tree = self.write_tree()
+		return Commit.create_from_tree(self.repo, tree, message, parent_commits, head)
 
 	@classmethod
 	def _flush_stdin_and_wait(cls, proc, ignore_stdout = False):
@@ -1012,6 +1016,11 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 			if isinstance(paths, basestring):
 				paths = [paths]
 
+			# make sure we have our entries loaded before we start checkout_index
+			# which will hold a lock on it. We try to get the lock as well during 
+			# our entries initialization
+			self.entries
+			
 			args.append("--stdin")
 			kwargs['as_process'] = True
 			kwargs['istream'] = subprocess.PIPE
