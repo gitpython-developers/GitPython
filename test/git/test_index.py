@@ -580,7 +580,7 @@ class TestIndex(TestBase):
 		
 		# write all trees and compare them
 		# its important to have a few submodules in there too
-		max_count = 100
+		max_count = 25
 		count = 0
 		for commit in rw_repo.head.commit.traverse():
 			if count >= max_count:
@@ -592,4 +592,15 @@ class TestIndex(TestBase):
 			assert new_git_tree == orig_tree
 			assert index.write_tree() == orig_tree
 		# END for each commit 
+		
+	def test_index_new(self):
+		B = self.rorepo.tree("6d9b1f4f9fa8c9f030e3207e7deacc5d5f8bba4e")
+		H = self.rorepo.tree("25dca42bac17d511b7e2ebdd9d1d679e7626db5f")
+		M = self.rorepo.tree("e746f96bcc29238b79118123028ca170adc4ff0f")
+		
+		for args in ((B,), (B,H), (B,H,M)):
+			index = IndexFile.new(self.rorepo, *args)
+			assert isinstance(index, IndexFile)
+		# END for each arg tuple
+		
 		

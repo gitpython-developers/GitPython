@@ -71,7 +71,7 @@ class Repo(object):
 	# represents the configuration level of a configuration file
 	config_level = ("system", "global", "repository")
 
-	def __init__(self, path=None, odbt = GitCmdObjectDB):
+	def __init__(self, path=None, odbt = GitDB):
 		""" Create a new Repo instance
 
 		:param path: is the path to either the root git directory or the bare git repo::
@@ -742,7 +742,7 @@ class Repo(object):
 		# we at least give a proper error instead of letting git fail
 		prev_cwd = None
 		prev_path = None
-		odbt = kwargs.pop('odbt', GitCmdObjectDB)
+		odbt = kwargs.pop('odbt', type(self.odb))
 		if os.name == 'nt':
 			if '~' in path:
 				raise OSError("Git cannot handle the ~ character in path %r correctly" % path)

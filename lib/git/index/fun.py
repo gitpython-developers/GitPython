@@ -5,15 +5,19 @@ more versatile
 from stat import S_IFDIR
 from cStringIO import StringIO
 
+from git.utils import IndexFileSHA1Writer
 from git.errors import UnmergedEntriesError
-from git.objects.fun import tree_to_stream
-from git.utils import (
-							IndexFileSHA1Writer, 
-						)
+from git.objects.fun import (
+								tree_to_stream,
+								traverse_tree_recursive,
+								traverse_trees_recursive
+							)
 
 from typ import (
+					BaseIndexEntry,
 					IndexEntry,
-					CE_NAMEMASK
+					CE_NAMEMASK, 
+					CE_STAGESHIFT
 				)
 
 from util import 	(
@@ -23,7 +27,6 @@ from util import 	(
 
 from gitdb.base import IStream
 from gitdb.typ import str_tree_type
-from binascii import a2b_hex
 
 __all__ = ('write_cache', 'read_cache', 'write_tree_from_cache', 'entry_key' )
 
@@ -75,15 +78,16 @@ def write_cache(entries, stream, extension_data=None, ShaStreamCls=IndexFileSHA1
 def read_entry(stream):
 	"""Return: One entry of the given stream"""
 	beginoffset = stream.tell()
-	ctime = unpack(">8s", stream.read(8))[0]
-	mtime = unpack(">8s", stream.read(8))[0]
+	read = stream.read
+	ctime = unpack(">8s", read(8))[0]
+	mtime = unpack(">8s", read(8))[0]
 	(dev, ino, mode, uid, gid, size, sha, flags) = \
-		unpack(">LLLLLL20sH", stream.read(20 + 4 * 6 + 2))
+		unpack(">LLLLLL20sH", read(20 + 4 * 6 + 2))
 	path_size = flags & CE_NAMEMASK
-	path = stream.read(path_size)
+	path = read(path_size)
 
 	real_size = ((stream.tell() - beginoffset + 8) & ~7)
-	data = stream.read((beginoffset + real_size) - stream.tell())
+	data = read((beginoffset + real_size) - stream.tell())
 	return IndexEntry((mode, sha, flags, path, ctime, mtime, dev, ino, uid, gid, size))
 
 def read_header(stream):
@@ -150,6 +154,7 @@ def write_tree_from_cache(entries, odb, sl, si=0):
 	:return: tuple(binsha, list(tree_entry, ...)) a tuple of a sha and a list of 
 		tree entries being a tuple of hexsha, mode, name"""
 	tree_items = list()
+	tree_items_append = tree_items.append
 	ci = sl.start
 	end = sl.stop
 	while ci < end:
@@ -161,7 +166,7 @@ def write_tree_from_cache(entries, odb, sl, si=0):
 		rbound = entry.path.find('/', si)
 		if rbound == -1:
 			# its not a tree
-			tree_items.append((entry.binsha, entry.mode, entry.path[si:]))
+			tree_items_append((entry.binsha, entry.mode, entry.path[si:]))
 		else:
 			# find common base range
 			base = entry.path[si:rbound]
@@ -178,7 +183,7 @@ def write_tree_from_cache(entries, odb, sl, si=0):
 			# enter recursion
 			# ci - 1 as we want to count our current item as well
 			sha, tree_entry_list = write_tree_from_cache(entries, odb, slice(ci-1, xi), rbound+1)
-			tree_items.append((sha, S_IFDIR, base))
+			tree_items_append((sha, S_IFDIR, base))
 			
 			# skip ahead
 			ci = xi
@@ -193,5 +198,93 @@ def write_tree_from_cache(entries, odb, sl, si=0):
 	istream = odb.store(IStream(str_tree_type, len(sio.getvalue()), sio))
 	return (istream.binsha, tree_items)
 	
+def _tree_entry_to_baseindexentry(tree_entry, stage):
+	return BaseIndexEntry((tree_entry[1], tree_entry[0], stage <<CE_STAGESHIFT, tree_entry[2]))
 	
+def aggressive_tree_merge(odb, tree_shas):
+	"""
+	:return: list of BaseIndexEntries representing the aggressive merge of the given
+		trees. All valid entries are on stage 0, whereas the conflicting ones are left 
+		on stage 1, 2 or 3, whereas stage 1 corresponds to the common ancestor tree, 
+		2 to our tree and 3 to 'their' tree.
+	:param tree_shas: 1, 2 or 3 trees as identified by their shas
+		If 1 or two, the entries will effectively correspond to the last given tree
+		If 3 are given, a 3 way merge is performed"""
+	out = list()
+	out_append = out.append
 	
+	# one and two way is the same for us, as we don't have to handle an existing
+	# index, instrea
+	if len(tree_shas) in (1,2):
+		for entry in traverse_tree_recursive(odb, tree_shas[-1], ''):
+			out_append(_tree_entry_to_baseindexentry(entry, 0))
+		# END for each entry
+		return out
+	# END handle single tree 
+	
+	if len(tree_shas) > 3:
+		raise ValueError("Cannot handle %i trees at once" % len(tree_shas))
+
+	# three trees
+	for base, ours, theirs in traverse_trees_recursive(odb, tree_shas, ''):
+		if base is not None:
+			# base version exists
+			if ours is not None:
+				# ours exists
+				if theirs is not None:
+					# it exists in all branches, if it was changed in both
+					# its a conflict, otherwise we take the changed version
+					# This should be the most common branch, so it comes first
+					if( base[0] != ours[0] and base[0] != theirs[0] and ours[0] != theirs[0] ) or \
+						( base[1] != ours[1] and base[1] != theirs[1] and ours[1] != theirs[1] ):
+						# changed by both
+						out_append(_tree_entry_to_baseindexentry(base, 1))
+						out_append(_tree_entry_to_baseindexentry(ours, 2))
+						out_append(_tree_entry_to_baseindexentry(theirs, 3))
+					elif base[0] != ours[0] or base[1] != ours[1]:
+						# only we changed it
+						out_append(_tree_entry_to_baseindexentry(ours, 0))
+					else:
+						# either nobody changed it, or they did. In either
+						# case, use theirs
+						out_append(_tree_entry_to_baseindexentry(theirs, 0))
+					# END handle modification 
+				else:
+					
+					if ours[0] != base[0] or ours[1] != base[1]:
+						# they deleted it, we changed it, conflict 
+						out_append(_tree_entry_to_baseindexentry(base, 1))
+						out_append(_tree_entry_to_baseindexentry(ours, 2))
+					# else:
+					#	we didn't change it, ignore
+					#	pass
+					# END handle our change
+				# END handle theirs
+			else:
+				if theirs is None:
+					# deleted in both, its fine - its out
+					pass
+				else:
+					if theirs[0] != base[0] or theirs[1] != base[1]:
+						# deleted in ours, changed theirs, conflict
+						out_append(_tree_entry_to_baseindexentry(base, 1))
+						out_append(_tree_entry_to_baseindexentry(theirs, 3))
+					# END theirs changed
+					#else:
+					# 	theirs didnt change
+					#	pass
+				# END handle theirs
+			# END handle ours
+		else:
+			# all three can't be None
+			if ours is None:
+				# added in their branch
+				out_append(_tree_entry_to_baseindexentry(theirs, 0))
+			elif theirs is None:
+				# added in our branch
+				out_append(_tree_entry_to_baseindexentry(ours, 0))
+			# END hanle heads
+		# END handle base exists
+	# END for each entries tuple
+
+	return out

@@ -56,6 +56,9 @@ class BaseIndexEntry(tuple):
 
 	def __str__(self):
 		return "%o %s %i\t%s" % (self.mode, self.hexsha, self.stage, self.path)
+		
+	def __repr__(self):
+		return "(%o, %s, %i, %s)" % (self.mode, self.hexsha, self.stage, self.path)
 
 	@property
 	def mode(self):
