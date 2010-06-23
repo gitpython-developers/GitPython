@@ -218,71 +218,72 @@ def aggressive_tree_merge(odb, tree_shas):
 		for entry in traverse_tree_recursive(odb, tree_shas[-1], ''):
 			out_append(_tree_entry_to_baseindexentry(entry, 0))
 		# END for each entry
-	elif len(tree_shas) == 3:
-		for base, ours, theirs in traverse_trees_recursive(odb, tree_shas, ''):
-			if base is not None:
-				# base version exists
-				if ours is not None:
-					# ours exists
-					if theirs is not None:
-						# it exists in all branches, if it was changed in both
-						# its a conflict, otherwise we take the changed version
-						# This should be the most common branch, so it comes first
-						if( base[0] != ours[0] and base[0] != theirs[0] and ours[0] != theirs[0] ) or \
-							( base[1] != ours[1] and base[1] != theirs[1] and ourse[1] != theirs[1] ):
-							# changed by both
-							out_append(_tree_entry_to_baseindexentry(base, 1))
-							out_append(_tree_entry_to_baseindexentry(ours, 2))
-							out_append(_tree_entry_to_baseindexentry(theirs, 3))
-						elif base[0] != ours[0] or base[1] != ours[1]:
-							# only we changed it
-							out_append(_tree_entry_to_baseindexentry(ours, 0))
-						else:
-							# either nobody changed it, or they did. In either
-							# case, use theirs
-							out_append(_tree_entry_to_baseindexentry(theirs, 0))
-						# END handle modification 
-					else:
-						
-						if ours[0] != base[0] or ours[1] != base[1]:
-							# they deleted it, we changed it, conflict 
-							out_append(_tree_entry_to_baseindexentry(base, 1))
-							out_append(_tree_entry_to_baseindexentry(ours, 2))
-							out_append(_tree_entry_to_baseindexentry(theirs, 3))
-						# else:
-						#	we didn't change it, ignore
-						#	pass
-						# END handle our change
-					# END handle theirs
-				else:
-					if theirs is None:
-						# deleted in both, its fine - its out
-						pass
-					else:
-						if theirs[0] != base[0] or theirs[1] != base[1]:
-							# deleted in ours, changed theirs, conflict
-							out_append(_tree_entry_to_baseindexentry(base, 1))
-							out_append(_tree_entry_to_baseindexentry(ours, 2))
-							out_append(_tree_entry_to_baseindexentry(theirs, 3))
-						# END theirs changed
-						#else:
-						# 	theirs didnt change
-						#	pass
-					# END handle theirs
-				# END handle ours
-			else:
-				# all three can't be None
-				if ours is None:
-					# added in their branch
-					out_append(_tree_entry_to_baseindexentry(theirs, 0))
-				elif theirs is None:
-					# added in our branch
-					out_append(_tree_entry_to_baseindexentry(ours, 0))
-				# END hanle heads
-			# END handle base exists
-		# END for each entries tuple
-	else:
-		raise ValueError("Cannot handle %i trees at once" % len(tree_shas))
-	# END handle tree shas
+		return out
+	# END handle single tree 
 	
+	if len(tree_shas) > 3:
+		raise ValueError("Cannot handle %i trees at once" % len(tree_shas))
+
+	# three trees
+	for base, ours, theirs in traverse_trees_recursive(odb, tree_shas, ''):
+		if base is not None:
+			# base version exists
+			if ours is not None:
+				# ours exists
+				if theirs is not None:
+					# it exists in all branches, if it was changed in both
+					# its a conflict, otherwise we take the changed version
+					# This should be the most common branch, so it comes first
+					if( base[0] != ours[0] and base[0] != theirs[0] and ours[0] != theirs[0] ) or \
+						( base[1] != ours[1] and base[1] != theirs[1] and ours[1] != theirs[1] ):
+						# changed by both
+						out_append(_tree_entry_to_baseindexentry(base, 1))
+						out_append(_tree_entry_to_baseindexentry(ours, 2))
+						out_append(_tree_entry_to_baseindexentry(theirs, 3))
+					elif base[0] != ours[0] or base[1] != ours[1]:
+						# only we changed it
+						out_append(_tree_entry_to_baseindexentry(ours, 0))
+					else:
+						# either nobody changed it, or they did. In either
+						# case, use theirs
+						out_append(_tree_entry_to_baseindexentry(theirs, 0))
+					# END handle modification 
+				else:
+					
+					if ours[0] != base[0] or ours[1] != base[1]:
+						# they deleted it, we changed it, conflict 
+						out_append(_tree_entry_to_baseindexentry(base, 1))
+						out_append(_tree_entry_to_baseindexentry(ours, 2))
+					# else:
+					#	we didn't change it, ignore
+					#	pass
+					# END handle our change
+				# END handle theirs
+			else:
+				if theirs is None:
+					# deleted in both, its fine - its out
+					pass
+				else:
+					if theirs[0] != base[0] or theirs[1] != base[1]:
+						# deleted in ours, changed theirs, conflict
+						out_append(_tree_entry_to_baseindexentry(base, 1))
+						out_append(_tree_entry_to_baseindexentry(theirs, 3))
+					# END theirs changed
+					#else:
+					# 	theirs didnt change
+					#	pass
+				# END handle theirs
+			# END handle ours
+		else:
+			# all three can't be None
+			if ours is None:
+				# added in their branch
+				out_append(_tree_entry_to_baseindexentry(theirs, 0))
+			elif theirs is None:
+				# added in our branch
+				out_append(_tree_entry_to_baseindexentry(ours, 0))
+			# END hanle heads
+		# END handle base exists
+	# END for each entries tuple
+
 	return out

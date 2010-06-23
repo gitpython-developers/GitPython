@@ -1,19 +1,25 @@
 from test.testlib import *
 from git.objects.fun import (
 								traverse_tree_recursive,
-								traverse_trees_recursive
+								traverse_trees_recursive, 
+								tree_to_stream
 							)
 
 from git.index.fun import (
 							aggressive_tree_merge
 							)
 
-from git.index import IndexFile
+from gitdb.base import IStream
+from gitdb.typ import str_tree_type
+
 from stat import (
 					S_IFDIR, 
 					S_IFREG,
 					S_IFLNK
 				)
+
+from git.index import IndexFile
+from cStringIO import StringIO
 
 class TestFun(TestBase):
 	
@@ -55,17 +61,112 @@ class TestFun(TestBase):
 		trees = [B.sha, H.sha, M.sha]
 		self._assert_index_entries(aggressive_tree_merge(odb, trees), trees)
 
-	def make_tree(odb, entries):
+	def mktree(self, odb, entries):
 		"""create a tree from the given tree entries and safe it to the database"""
-		
+		sio = StringIO()
+		tree_to_stream(entries, sio.write)
+		sio.seek(0)
+		istream = odb.store(IStream(str_tree_type, len(sio.getvalue()), sio))
+		return istream.sha
 	
 	@with_rw_repo('0.1.6')
 	def test_three_way_merge(self, rwrepo):
 		def mkfile(name, sha, executable=0):
-			return (sha, S_IFREG | 644 | executable*0111, name)
+			return (sha, S_IFREG | 0644 | executable*0111, name)
 		def mkcommit(name, sha):
 			return (sha, S_IFDIR | S_IFLNK, name)
+		def assert_entries(entries, num_entries, has_conflict=False):
+			assert len(entries) == num_entries
+			assert has_conflict == (len([e for e in entries if e.stage != 0]) > 0)
+		mktree = self.mktree
+			
+		shaa = "\1"*20
+		shab = "\2"*20
+		shac = "\3"*20
+		
 		odb = rwrepo.odb
+		
+		# base tree
+		bfn = 'basefile'
+		fbase = mkfile(bfn, shaa)
+		tb = mktree(odb, [fbase])
+		
+		# non-conflicting new files, same data
+		fa = mkfile('1', shab)
+		th = mktree(odb, [fbase, fa])
+		fb = mkfile('2', shac)
+		tm = mktree(odb, [fbase, fb])
+		
+		# two new files, same base file
+		trees = [tb, th, tm]
+		assert_entries(aggressive_tree_merge(odb, trees), 3)
+		
+		# both delete same file, add own one
+		fa = mkfile('1', shab)
+		th = mktree(odb, [fa])
+		fb = mkfile('2', shac)
+		tm = mktree(odb, [fb])
+		
+		# two new files
+		trees = [tb, th, tm]
+		assert_entries(aggressive_tree_merge(odb, trees), 2)
+		
+		# modify same base file, differently
+		fa = mkfile(bfn, shab)
+		th = mktree(odb, [fa])
+		fb = mkfile(bfn, shac)
+		tm = mktree(odb, [fb])
+		
+		# conflict, 3 versions on 3 stages
+		trees = [tb, th, tm]
+		assert_entries(aggressive_tree_merge(odb, trees), 3, True)
+		
+		
+		# change mode on same base file, by making one a commit, the other executable
+		# no content change ( this is totally unlikely to happen in the real world )
+		fa = mkcommit(bfn, shaa)
+		th = mktree(odb, [fa])
+		fb = mkfile(bfn, shaa, executable=1)
+		tm = mktree(odb, [fb])
+		
+		# conflict, 3 versions on 3 stages, because of different mode
+		trees = [tb, th, tm]
+		assert_entries(aggressive_tree_merge(odb, trees), 3, True)
+		
+		for is_them in range(2):
+			# only we/they change contents
+			fa = mkfile(bfn, shab)
+			th = mktree(odb, [fa])
+			
+			trees = [tb, th, tb]
+			if is_them:
+				trees = [tb, tb, th]
+			entries = aggressive_tree_merge(odb, trees)
+			assert len(entries) == 1 and entries[0].binsha == shab
+			
+			# only we/they change the mode
+			fa = mkcommit(bfn, shaa)
+			th = mktree(odb, [fa])
+			
+			trees = [tb, th, tb]
+			if is_them:
+				trees = [tb, tb, th]
+			entries = aggressive_tree_merge(odb, trees)
+			assert len(entries) == 1 and entries[0].binsha == shaa and entries[0].mode == fa[1]
+			
+			# one side deletes, the other changes = conflict
+			fa = mkfile(bfn, shab)
+			th = mktree(odb, [fa])
+			tm = mktree(odb, [])
+			trees = [tb, th, tm]
+			if is_them:
+				trees = [tb, tm, th]
+			# as one is deleted, there are only 2 entries
+			assert_entries(aggressive_tree_merge(odb, trees), 2, True)
+		# END handle ours, theirs
+		
+		
+		
 		
 	
 	def _assert_tree_entries(self, entries, num_trees):
