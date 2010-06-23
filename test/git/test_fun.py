@@ -60,6 +60,9 @@ class TestFun(TestBase):
 		M = tree("44a601a068f4f543f73fd9c49e264c931b1e1652")
 		trees = [B.sha, H.sha, M.sha]
 		self._assert_index_entries(aggressive_tree_merge(odb, trees), trees)
+		
+		# too many trees
+		self.failUnlessRaises(ValueError, aggressive_tree_merge, odb, trees*2)
 
 	def mktree(self, odb, entries):
 		"""create a tree from the given tree entries and safe it to the database"""
@@ -164,14 +167,10 @@ class TestFun(TestBase):
 			# as one is deleted, there are only 2 entries
 			assert_entries(aggressive_tree_merge(odb, trees), 2, True)
 		# END handle ours, theirs
-		
-		
-		
-		
 	
 	def _assert_tree_entries(self, entries, num_trees):
-		assert len(entries[0]) == num_trees
 		for entry in entries:
+			assert len(entry) == num_trees
 			paths = set(e[2] for e in entry if e)
 			
 			# only one path per set of entries

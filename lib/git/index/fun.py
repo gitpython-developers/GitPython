@@ -78,15 +78,16 @@ def write_cache(entries, stream, extension_data=None, ShaStreamCls=IndexFileSHA1
 def read_entry(stream):
 	"""Return: One entry of the given stream"""
 	beginoffset = stream.tell()
-	ctime = unpack(">8s", stream.read(8))[0]
-	mtime = unpack(">8s", stream.read(8))[0]
+	read = stream.read
+	ctime = unpack(">8s", read(8))[0]
+	mtime = unpack(">8s", read(8))[0]
 	(dev, ino, mode, uid, gid, size, sha, flags) = \
-		unpack(">LLLLLL20sH", stream.read(20 + 4 * 6 + 2))
+		unpack(">LLLLLL20sH", read(20 + 4 * 6 + 2))
 	path_size = flags & CE_NAMEMASK
-	path = stream.read(path_size)
+	path = read(path_size)
 
 	real_size = ((stream.tell() - beginoffset + 8) & ~7)
-	data = stream.read((beginoffset + real_size) - stream.tell())
+	data = read((beginoffset + real_size) - stream.tell())
 	return IndexEntry((mode, sha, flags, path, ctime, mtime, dev, ino, uid, gid, size))
 
 def read_header(stream):

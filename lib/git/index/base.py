@@ -59,14 +59,16 @@ from git.utils import (
 						)
 
 from fun import (
+					entry_key,
 					write_cache,
 					read_cache,
-					write_tree_from_cache,
-					entry_key
+					aggressive_tree_merge,
+					write_tree_from_cache
 				)
 
 from gitdb.base import IStream
 from gitdb.db import MemoryDB
+from itertools import izip
 
 __all__ = ( 'IndexFile', 'CheckoutError' )
 
@@ -253,10 +255,15 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 			New IndexFile instance. Its path will be undefined. 
 			If you intend to write such a merged Index, supply an alternate file_path 
 			to its 'write' method."""
-		base_entries = aggressive_tree_merge(repo.odb, tree_sha)
+		base_entries = aggressive_tree_merge(repo.odb, [str(t) for t in tree_sha])
 		
-		inst = cls(self.repo)
-		raise NotImplementedError("convert to entries")
+		inst = cls(repo)
+		# convert to entries dict
+		entries = dict(izip(((e.path, e.stage) for e in base_entries), 
+							(IndexEntry.from_base(e) for e in base_entries)))
+		
+		inst.entries = entries
+		return inst
 
 
 	@classmethod
