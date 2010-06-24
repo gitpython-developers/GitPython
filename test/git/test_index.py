@@ -171,7 +171,8 @@ class TestIndex(TestBase):
 		# pretend there was a change, but we do not even bother adding a proper 
 		# sha for it ( which makes things faster of course )
 		manifest_fake_entry = BaseIndexEntry((manifest_entry[0], "\0"*20, 0, manifest_entry[3]))
-		rw_repo.index.add([manifest_fake_entry])
+		# try write flag
+		rw_repo.index.add([manifest_fake_entry], write=False)
 		# add actually resolves the null-hex-sha for us as a feature, but we can 
 		# edit the index manually
 		assert rw_repo.index.entries[manifest_key].binsha != Object.NULL_BIN_SHA

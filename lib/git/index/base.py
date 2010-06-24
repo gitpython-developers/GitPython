@@ -581,10 +581,10 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 		return (paths, entries)
 
 	@git_working_dir
-	def add(self, items, force=True, fprogress=lambda *args: None, path_rewriter=None):
+	def add(self, items, force=True, fprogress=lambda *args: None, path_rewriter=None, 
+				write=True):
 		"""Add files from the working tree, specific blobs or BaseIndexEntries
-		to the index. The underlying index file will be written immediately, hence
-		you should provide as many items as possible to minimize the amounts of writes
+		to the index. 
 
 		:param items:
 			Multiple types of items are supported, types can be mixed within one call.
@@ -653,6 +653,10 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 			converted to Entries beforehand and passed to the path_rewriter.
 			Please note that entry.path is relative to the git repository.
 
+		:param write:
+				If True, the index will be written once it was altered. Otherwise
+				the changes only exist in memory and are not available to git commands.
+		
 		:return:
 			List(BaseIndexEntries) representing the entries just actually added.
 
@@ -748,11 +752,13 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 		# END if there are base entries
 
 		# FINALIZE
-		# add the new entries to this instance, and write it
+		# add the new entries to this instance
 		for entry in entries_added:
 			self.entries[(entry.path, 0)] = IndexEntry.from_base(entry)
-		
-		self.write()
+			
+		if write:
+			self.write()
+		# END handle write
 		
 		return entries_added
 
