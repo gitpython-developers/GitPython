@@ -109,11 +109,14 @@ def with_rw_repo(working_tree_ref):
 					return func(self, rw_repo)
 				except:
 					print >> sys.stderr, "Keeping repo after failure: %s" % repo_dir
+					repo_dir = None
 					raise
 			finally:
 				os.chdir(prev_cwd)
 				rw_repo.git.clear_cache()
-				shutil.rmtree(repo_dir, onerror=_rmtree_onerror)
+				if repo_dir is not None:
+					shutil.rmtree(repo_dir, onerror=_rmtree_onerror)
+				# END rm test repo if possible
 			# END cleanup
 		# END rw repo creator
 		repo_creator.__name__ = func.__name__

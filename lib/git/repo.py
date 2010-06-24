@@ -42,6 +42,7 @@ def is_git_dir(d):
 				os.readlink(headref).startswith('refs'))
 	return False
 
+
 class Repo(object):
 	"""
 	Represents a git repository and allows you to query references, 

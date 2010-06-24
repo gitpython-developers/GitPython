@@ -109,6 +109,12 @@ class Git(object):
 			self._size = size
 			self._nbr = 0			# num bytes read
 			
+			# special case: if the object is empty, has null bytes, get the 
+			# final newline right away.
+			if size == 0:
+				stream.read(1)
+			# END handle empty streams
+			
 		def read(self, size=-1):
 			bytes_left = self._size - self._nbr
 			if bytes_left == 0:
@@ -127,7 +133,6 @@ class Git(object):
 			if self._size - self._nbr == 0:
 				self._stream.read(1)	# final newline
 			# END finish reading
-			
 			return data
 			
 		def readline(self, size=-1):
@@ -146,7 +151,6 @@ class Git(object):
 			self._nbr += len(data)
 			
 			# handle final byte
-			# we inline everything, it must be fast !
 			if self._size - self._nbr == 0:
 				self._stream.read(1)
 			# END finish reading
@@ -185,8 +189,9 @@ class Git(object):
 		def __del__(self):
 			bytes_left = self._size - self._nbr
 			if bytes_left:
-				# seek and discard
-				self._stream.seek(bytes_left + 1, os.SEEK_CUR)	# includes terminating newline
+				# read and discard - seeking is impossible within a stream
+				# includes terminating newline
+				self._stream.read(bytes_left + 1)
 			# END handle incomplete read
 	
 	
@@ -454,7 +459,13 @@ class Git(object):
 		"""
 		tokens = header_line.split()
 		if len(tokens) != 3:
-			raise ValueError("SHA named %s could not be resolved, git returned: %r" % (tokens[0], header_line.strip()) )
+			if not tokens:
+				raise ValueError("SHA could not be resolved, git returned: %r" % (header_line.strip()))
+			else:
+				raise ValueError("SHA %s could not be resolved, git returned: %r" % (tokens[0], header_line.strip()))
+			# END handle actual return value
+		# END error handling
+		
 		if len(tokens[0]) != 40:
 			raise ValueError("Failed to parse header: %r" % header_line) 
 		return (tokens[0], tokens[1], int(tokens[2]))
