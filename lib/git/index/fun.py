@@ -283,7 +283,16 @@ def aggressive_tree_merge(odb, tree_shas):
 			elif theirs is None:
 				# added in our branch
 				out_append(_tree_entry_to_baseindexentry(ours, 0))
-			# END hanle heads
+			else:
+				# both have it, except for the base, see whether it changed
+				if ours[0] != theirs[0] or ours[1] != theirs[1]:
+					out_append(_tree_entry_to_baseindexentry(ours, 2))
+					out_append(_tree_entry_to_baseindexentry(theirs, 3))
+				else:
+					# it was added the same in both
+					out_append(_tree_entry_to_baseindexentry(ours, 0))
+				# END handle two items
+			# END handle heads
 		# END handle base exists
 	# END for each entries tuple
 

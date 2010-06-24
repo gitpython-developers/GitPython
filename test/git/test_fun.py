@@ -114,6 +114,36 @@ class TestFun(TestBase):
 		trees = [tb, th, tm]
 		assert_entries(aggressive_tree_merge(odb, trees), 2)
 		
+		# same file added in both, differently
+		fa = mkfile('1', shab)
+		th = mktree(odb, [fa])
+		fb = mkfile('1', shac)
+		tm = mktree(odb, [fb])
+		
+		# expect conflict
+		trees = [tb, th, tm]
+		assert_entries(aggressive_tree_merge(odb, trees), 2, True)
+		
+		# same file added, different mode
+		fa = mkfile('1', shab)
+		th = mktree(odb, [fa])
+		fb = mkcommit('1', shab)
+		tm = mktree(odb, [fb])
+		
+		# expect conflict
+		trees = [tb, th, tm]
+		assert_entries(aggressive_tree_merge(odb, trees), 2, True)
+		
+		# same file added in both
+		fa = mkfile('1', shab)
+		th = mktree(odb, [fa])
+		fb = mkfile('1', shab)
+		tm = mktree(odb, [fb])
+		
+		# expect conflict
+		trees = [tb, th, tm]
+		assert_entries(aggressive_tree_merge(odb, trees), 1)
+		
 		# modify same base file, differently
 		fa = mkfile(bfn, shab)
 		th = mktree(odb, [fa])

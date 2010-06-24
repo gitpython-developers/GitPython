@@ -530,9 +530,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 		:raise ValueError: if there are no entries in the cache
 		:raise UnmergedEntriesError: """
 		# we obtain no lock as we just flush our contents to disk as tree
-		if not self.entries:
-			raise ValueError("Cannot write empty index")
-		
+		# If we are a new index, the entries access will load our data accordingly
 		mdb = MemoryDB()
 		entries = self._entries_sorted()
 		binsha, tree_items = write_tree_from_cache(entries, mdb, slice(0, len(entries)))
@@ -892,7 +890,6 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
 		return out
 
-	@default_index
 	def commit(self, message, parent_commits=None, head=True):
 		"""
 		Commit the current default index file, creating a commit object.
