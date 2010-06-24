@@ -1066,44 +1066,58 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 		# END paths handling
 		assert "Should not reach this point"
 
-	@post_clear_cache
 	@default_index
 	def reset(self, commit='HEAD', working_tree=False, paths=None, head=False, **kwargs):
-		"""
-		Reset the index to reflect the tree at the given commit. This will not
+		"""Reset the index to reflect the tree at the given commit. This will not
 		adjust our HEAD reference as opposed to HEAD.reset by default.
 
-		``commit``
+		:param commit:
 			Revision, Reference or Commit specifying the commit we should represent.
 			If you want to specify a tree only, use IndexFile.from_tree and overwrite
 			the default index.
 
-		``working_tree``
+		:param working_tree:
 			If True, the files in the working tree will reflect the changed index.
 			If False, the working tree will not be touched
 			Please note that changes to the working copy will be discarded without
 			warning !
 
-		``head``
+		:param head:
 			If True, the head will be set to the given commit. This is False by default,
 			but if True, this method behaves like HEAD.reset.
 
-		``**kwargs``
+		:param kwargs:
 			Additional keyword arguments passed to git-reset
 
-		Returns
-			self
-		"""
-		cur_head = self.repo.head
-		prev_commit = cur_head.commit
-
-		# reset to get the tree/working copy
-		cur_head.reset(commit, index=True, working_tree=working_tree, paths=paths, **kwargs)
-
-		# put the head back, possibly
-		if not head:
-			cur_head.reset(prev_commit, index=False, working_tree=False)
-		# END reset head
+		:return: self """
+		# currently we have to use the git command to set the working copy.
+		# Otherwise we can use our own one
+		if working_tree:
+			cur_head = self.repo.head
+			prev_commit = cur_head.commit
+			
+			cur_head.reset(commit, index=True, working_tree=working_tree, paths=paths, **kwargs)
+			
+			# put the head back, possibly
+			if not head:
+				self.repo.head.commit = prev_commit
+				
+			self._delete_entries_cache()
+		else:
+			# what we actually want to do is to merge the tree into our existing
+			# index, which is what git-read-tree does
+			new_inst = type(self).from_tree(self.repo, commit)
+			self.entries = new_inst.entries
+			self.write()
+			
+			#new_inst = type(self).new(self.repo, self.repo.commit(commit).tree)
+			#self.entries = new_inst.entries
+			#self.write()
+			# self.repo.git.update_index(ignore_missing=True, refresh=True, q=True)
+			
+			if head:
+				self.repo.head.commit = self.repo.commit(commit)
+		# END handle working tree
 
 		return self
 

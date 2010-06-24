@@ -578,11 +578,6 @@ class TestIndex(TestBase):
 		
 	@with_rw_repo('HEAD')
 	def test_compare_write_tree(self, rw_repo):
-		def write_tree(index):
-			tree_sha = index.write_tree().sha
-			return Tree(index.repo, tree_sha, 0, '')
-		# END git cmd write tree
-		
 		# write all trees and compare them
 		# its important to have a few submodules in there too
 		max_count = 25
@@ -593,8 +588,6 @@ class TestIndex(TestBase):
 			count += 1
 			index = rw_repo.index.reset(commit)
 			orig_tree = commit.tree
-			new_git_tree = write_tree(index)
-			assert new_git_tree == orig_tree
 			assert index.write_tree() == orig_tree
 		# END for each commit 
 		
