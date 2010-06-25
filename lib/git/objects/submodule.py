@@ -1,5 +1,6 @@
 import base
 
+__all__ = ("Submodule", )
 
 class Submodule(base.IndexObject):
 	"""Implements access to a git submodule. They are special in that their sha

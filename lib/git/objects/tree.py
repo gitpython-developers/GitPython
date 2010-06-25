@@ -3,15 +3,12 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
-
-import os
 import utils
-import base
+from base import IndexObject
 
 from blob import Blob
 from submodule import Submodule
 import git.diff as diff
-join = os.path.join
 
 from fun import (
 					tree_entries_from_data, 
@@ -19,7 +16,8 @@ from fun import (
 				 )
 
 from gitdb.util import to_bin_sha
-from binascii import b2a_hex
+
+__all__ = ("TreeModifier", "Tree")
 
 class TreeModifier(object):
 	"""A utility class providing methods to alter the underlying cache in a list-like
@@ -63,7 +61,7 @@ class TreeModifier(object):
 		:return: self"""
 		if '/' in name:
 			raise ValueError("Name must not contain '/' characters")
-		if (mode >> 12) not in Tree._map_id_to_type:
+		if (mode >> 12) not in self._map_id_to_type:
 			raise ValueError("Invalid object type according to mode %o" % mode)
 			
 		sha = to_bin_sha(sha)
@@ -99,12 +97,8 @@ class TreeModifier(object):
 	#} END mutators
 
 
-class Tree(base.IndexObject, diff.Diffable, utils.Traversable, utils.Serializable):
-	"""
-	Tress represent a ordered list of Blobs and other Trees. Hence it can be 
-	accessed like a list.
-	
-	Tree's will cache their contents after first retrieval to improve efficiency.
+class Tree(IndexObject, diff.Diffable, utils.Traversable, utils.Serializable):
+	"""Tree objects represent an ordered list of Blobs and other Trees.
 	
 	``Tree as a list``::
 		
@@ -113,8 +107,6 @@ class Tree(base.IndexObject, diff.Diffable, utils.Traversable, utils.Serializabl
 		
 		You may as well access by index
 		blob = tree[0]
-		
-		
 	"""
 	
 	type = "tree"
@@ -134,8 +126,8 @@ class Tree(base.IndexObject, diff.Diffable, utils.Traversable, utils.Serializabl
 						}
 	
 	
-	def __init__(self, repo, sha, mode=tree_id<<12, path=None):
-		super(Tree, self).__init__(repo, sha, mode, path)
+	def __init__(self, repo, binsha, mode=tree_id<<12, path=None):
+		super(Tree, self).__init__(repo, binsha, mode, path)
 
 	@classmethod
 	def _get_intermediate_items(cls, index_object):
@@ -146,39 +138,28 @@ class Tree(base.IndexObject, diff.Diffable, utils.Traversable, utils.Serializabl
 	def _set_cache_(self, attr):
 		if attr == "_cache":
 			# Set the data when we need it
-			self._cache = tree_entries_from_data(self.data)
+			ostream = self.repo.odb.stream(self.binsha)
+			self._cache = tree_entries_from_data(ostream.read())
 		else:
 			super(Tree, self)._set_cache_(attr)
+		# END handle attribute 
 
 	def _iter_convert_to_object(self, iterable):
-		"""Iterable yields tuples of (hexsha, mode, name), which will be converted
+		"""Iterable yields tuples of (binsha, mode, name), which will be converted
 		to the respective object representation"""
 		for binsha, mode, name in iterable:
 			path = join(self.path, name)
-			type_id = mode >> 12
 			try:
-				yield self._map_id_to_type[type_id](self.repo, b2a_hex(binsha), mode, path)
+				yield self._map_id_to_type[type_id](self.repo, binsha, mode >> 12, path)
 			except KeyError:
-				raise TypeError( "Unknown type %i found in tree data for path '%s'" % (type_id, path))
+				raise TypeError("Unknown mode %o found in tree data for path '%s'" % (mode, path))
 		# END for each item 
 
 	def __div__(self, file):
-		"""
-		Find the named object in this tree's contents
-
-		Examples::
-
-			>>> Repo('/path/to/python-git').tree/'lib'
-			<git.Tree "6cc23ee138be09ff8c28b07162720018b244e95e">
-			>>> Repo('/path/to/python-git').tree/'README.txt'
-			<git.Blob "8b1e02c0fb554eed2ce2ef737a68bb369d7527df">
-
-		Returns
-			``git.Blob`` or ``git.Tree``
+		"""Find the named object in this tree's contents
+		:return: ``git.Blob`` or ``git.Tree`` or ``git.Submodule``
 		
-		Raise 
-			KeyError if given file or tree does not exist in tree
-		"""
+		:raise KeyError: if given file or tree does not exist in tree"""
 		msg = "Blob or Tree named %r not found"
 		if '/' in file:
 			tree = self
@@ -201,29 +182,20 @@ class Tree(base.IndexObject, diff.Diffable, utils.Traversable, utils.Serializabl
 		else:
 			for info in self._cache:
 				if info[2] == file:		# [2] == name
-					return self._map_id_to_type[info[1] >> 12](self.repo, b2a_hex(info[0]), info[1], join(self.path, info[2]))
+					return self._map_id_to_type[info[1] >> 12](self.repo, info[0], info[1], join(self.path, info[2]))
 			# END for each obj
 			raise KeyError( msg % file )
 		# END handle long paths
 
 
-	def __repr__(self):
-		return '<git.Tree "%s">' % self.sha
-			
 	@property
 	def trees(self):
-		"""
-		Returns
-			list(Tree, ...) list of trees directly below this tree
-		"""
+		""":return: list(Tree, ...) list of trees directly below this tree"""
 		return [ i for i in self if i.type == "tree" ]
 		
 	@property
 	def blobs(self):
-		"""
-		Returns
-			list(Blob, ...) list of blobs directly below this tree
-		"""
+		""":return: list(Blob, ...) list of blobs directly below this tree"""
 		return [ i for i in self if i.type == "blob" ]
 
 	@property
@@ -238,7 +210,6 @@ class Tree(base.IndexObject, diff.Diffable, utils.Traversable, utils.Serializabl
 						   prune = lambda i,d: False, depth = -1, branch_first=True,
 						   visit_once = False, ignore_self=1 ):
 		"""For documentation, see utils.Traversable.traverse
-		
 		Trees are set to visit_once = False to gain more performance in the traversal"""
 		return super(Tree, self).traverse(predicate, prune, depth, branch_first, visit_once, ignore_self)
 
@@ -255,7 +226,7 @@ class Tree(base.IndexObject, diff.Diffable, utils.Traversable, utils.Serializabl
 	def __getitem__(self, item):
 		if isinstance(item, int):
 			info = self._cache[item]
-			return self._map_id_to_type[info[1] >> 12](self.repo, b2a_hex(info[0]), info[1], join(self.path, info[2]))
+			return self._map_id_to_type[info[1] >> 12](self.repo, info[0], info[1], join(self.path, info[2]))
 		
 		if isinstance(item, basestring):
 			# compatability
@@ -266,9 +237,9 @@ class Tree(base.IndexObject, diff.Diffable, utils.Traversable, utils.Serializabl
 		
 		
 	def __contains__(self, item):
-		if isinstance(item, base.IndexObject):
+		if isinstance(item, IndexObject):
 			for info in self._cache:
-				if item.sha == info[0]:
+				if item.binsha == info[0]:
 					return True
 				# END compare sha
 			# END for each entry

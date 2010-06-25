@@ -7,7 +7,6 @@ from util import (
 
 from binascii import (
 						b2a_hex,
-						a2b_hex
 					)
 
 __all__ = ('BlobFilter', 'BaseIndexEntry', 'IndexEntry')
@@ -101,7 +100,7 @@ class BaseIndexEntry(tuple):
 	@classmethod
 	def from_blob(cls, blob, stage = 0):
 		""":return: Fully equipped BaseIndexEntry at the given stage"""
-		return cls((blob.mode, a2b_hex(blob.sha), stage << CE_STAGESHIFT, blob.path))
+		return cls((blob.mode, blob.binsha, stage << CE_STAGESHIFT, blob.path))
 
 
 class IndexEntry(BaseIndexEntry):
@@ -164,6 +163,6 @@ class IndexEntry(BaseIndexEntry):
 	def from_blob(cls, blob, stage = 0):
 		""":return: Minimal entry resembling the given blob object"""
 		time = pack(">LL", 0, 0)
-		return IndexEntry((blob.mode, a2b_hex(blob.sha), stage << CE_STAGESHIFT, blob.path, time, time, 0, 0, 0, 0, blob.size))
+		return IndexEntry((blob.mode, blob.binsha, stage << CE_STAGESHIFT, blob.path, time, time, 0, 0, 0, 0, blob.size))
 
 

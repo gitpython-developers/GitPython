@@ -1,9 +1,10 @@
 """Module with functions which are supposed to be as fast as possible"""
+from stat import S_ISDIR
 
 __all__ = ('tree_to_stream', 'tree_entries_from_data', 'traverse_trees_recursive',
 			'traverse_tree_recursive')
 
-from stat import S_ISDIR
+
 				
 
 def tree_to_stream(entries, write):
@@ -99,7 +100,7 @@ def _to_full_path(item, path_prefix):
 	
 def traverse_trees_recursive(odb, tree_shas, path_prefix):
 	"""
-	:return: list with entries according to the given tree-shas. 
+	:return: list with entries according to the given binary tree-shas. 
 		The result is encoded in a list
 		of n tuple|None per blob/commit, (n == len(tree_shas)), where 
 		* [0] == 20 byte sha
@@ -165,7 +166,7 @@ def traverse_trees_recursive(odb, tree_shas, path_prefix):
 	
 def traverse_tree_recursive(odb, tree_sha, path_prefix):
 	"""
-	:return: list of entries of the tree pointed to by tree_sha. An entry
+	:return: list of entries of the tree pointed to by the binary tree_sha. An entry
 		has the following format:
 		* [0] 20 byte sha
 		* [1] mode as int
