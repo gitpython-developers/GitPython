@@ -74,10 +74,19 @@ def with_bare_rw_repo(func):
 		rw_repo = self.rorepo.clone(repo_dir, shared=True, bare=True)
 		prev_cwd = os.getcwd()
 		try:
-			return func(self, rw_repo)
+			try:
+				return func(self, rw_repo)
+			except:
+				# assure we keep the repo for debugging
+				print >> sys.stderr, "Keeping bare repo after failure: %s" % repo_dir
+				repo_dir = None
+				raise
+			# END handle exceptions
 		finally:
 			rw_repo.git.clear_cache()
-			shutil.rmtree(repo_dir, onerror=_rmtree_onerror)
+			if repo_dir is not None:
+				shutil.rmtree(repo_dir, onerror=_rmtree_onerror)
+			# END remove repo dir
 		# END cleanup
 	# END bare repo creator
 	bare_repo_creator.__name__ = func.__name__
@@ -99,7 +108,7 @@ def with_rw_repo(working_tree_ref):
 			repo_dir = tempfile.mktemp("non_bare_%s" % func.__name__) 
 			rw_repo = self.rorepo.clone(repo_dir, shared=True, bare=False, n=True)
 			
-			rw_repo.head.commit = working_tree_ref
+			rw_repo.head.commit = rw_repo.commit(working_tree_ref)
 			rw_repo.head.reference.checkout()
 			
 			prev_cwd = os.getcwd()

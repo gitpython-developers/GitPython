@@ -21,7 +21,9 @@ from refs import (
 					TagReference
 				)
 
-from gitdb.util import join
+from gitdb.util import (
+						join,
+						)
 import re
 
 __all__ = ('RemoteProgress', 'PushInfo', 'FetchInfo', 'Remote')
@@ -256,7 +258,8 @@ class PushInfo(object):
 			if control_character == " ":
 				split_token = ".."
 			old_sha, new_sha = summary.split(' ')[0].split(split_token)
-			old_commit = Commit(remote.repo, old_sha)
+			# have to use constructor here as the sha usually is abbreviated
+			old_commit = remote.repo.commit(old_sha)
 		# END message handling
 		
 		return PushInfo(flags, from_ref, to_ref_string, remote, old_commit, summary)

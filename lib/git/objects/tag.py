@@ -32,7 +32,7 @@ class TagObject(base.Object):
 			it into a different format
 		:param tagged_tz_offset: int_seconds_west_of_utc is the timezone that the 
 			authored_date is in, in a format similar to time.altzone"""
-		super(TagObject, self).__init__(repo, sha )
+		super(TagObject, self).__init__(repo, binsha )
 		self._set_self_from_args_(locals())
 		
 	def _set_cache_(self, attr):

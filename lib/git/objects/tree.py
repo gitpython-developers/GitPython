@@ -15,7 +15,10 @@ from fun import (
 					tree_to_stream
 				 )
 
-from gitdb.util import to_bin_sha
+from gitdb.util import (
+						to_bin_sha, 
+						join
+						)
 
 __all__ = ("TreeModifier", "Tree")
 
@@ -61,7 +64,7 @@ class TreeModifier(object):
 		:return: self"""
 		if '/' in name:
 			raise ValueError("Name must not contain '/' characters")
-		if (mode >> 12) not in self._map_id_to_type:
+		if (mode >> 12) not in Tree._map_id_to_type:
 			raise ValueError("Invalid object type according to mode %o" % mode)
 			
 		sha = to_bin_sha(sha)
@@ -150,7 +153,7 @@ class Tree(IndexObject, diff.Diffable, utils.Traversable, utils.Serializable):
 		for binsha, mode, name in iterable:
 			path = join(self.path, name)
 			try:
-				yield self._map_id_to_type[type_id](self.repo, binsha, mode >> 12, path)
+				yield self._map_id_to_type[mode >> 12](self.repo, binsha, mode, path)
 			except KeyError:
 				raise TypeError("Unknown mode %o found in tree data for path '%s'" % (mode, path))
 		# END for each item 

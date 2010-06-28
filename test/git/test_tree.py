@@ -23,7 +23,7 @@ class TestTree(TestBase):
 				continue
 			# END skip non-trees
 			tree = item
-			orig_data = tree.data
+			orig_data = tree.data_stream.read()
 			orig_cache = tree._cache
 			
 			stream = StringIO()
@@ -31,7 +31,7 @@ class TestTree(TestBase):
 			assert stream.getvalue() == orig_data
 			
 			stream.seek(0)
-			testtree = Tree(self.rorepo, Tree.NULL_HEX_SHA, 0, '')
+			testtree = Tree(self.rorepo, Tree.NULL_BIN_SHA, 0, '')
 			testtree._deserialize(stream)
 			assert testtree._cache == orig_cache
 			
@@ -61,7 +61,7 @@ class TestTree(TestBase):
 			
 			# force it - replace existing one
 			mod.add(hexsha, tree.mode, name, force=True)
-			assert testtree[name].sha == hexsha
+			assert testtree[name].hexsha == hexsha
 			assert len(testtree) == cur_count
 			
 			# unchecked addition always works, even with invalid items
@@ -137,7 +137,3 @@ class TestTree(TestBase):
 		# END for each item
 		assert found_slash
   
-	def test_repr(self):
-		tree = Tree(self.rorepo, 'abc')
-		assert_equal('<git.Tree "abc">', repr(tree))
-

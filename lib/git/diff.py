@@ -8,6 +8,8 @@ import re
 from objects.blob import Blob
 from objects.utils import mode_str_to_int 
 from errors import GitCommandError
+
+from gitdb.util import hex_to_bin
 	
 __all__ = ('Diffable', 'DiffIndex', 'Diff')
 	
@@ -197,11 +199,11 @@ class Diff(object):
 		if a_blob_id is None:
 			self.a_blob = None
 		else:
-			self.a_blob = Blob(repo, a_blob_id, mode=a_mode, path=a_path)
+			self.a_blob = Blob(repo, hex_to_bin(a_blob_id), mode=a_mode, path=a_path)
 		if b_blob_id is None:
 			self.b_blob = None
 		else:
-			self.b_blob = Blob(repo, b_blob_id, mode=b_mode, path=b_path)
+			self.b_blob = Blob(repo, hex_to_bin(b_blob_id), mode=b_mode, path=b_path)
 
 		self.a_mode = a_mode
 		self.b_mode = b_mode

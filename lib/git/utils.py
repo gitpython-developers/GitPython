@@ -18,6 +18,9 @@ from gitdb.util import (
 							to_bin_sha
 						)
 
+__all__ = ( "stream_copy", "join_path", "to_native_path_windows", "to_native_path_linux", 
+			"join_path_native", "Stats", "IndexFileSHA1Writer", "Iterable", "IterableList", 
+			"BlockingLockFile", "LockFile" )
 
 def stream_copy(source, destination, chunk_size=512*1024):
 	"""Copy all data from the source stream into the destination stream in chunks
@@ -104,7 +107,7 @@ class Stats(object):
 		"""Create a Stat object from output retrieved by git-diff.
 		
 		:return: git.Stat"""
-		hsh = {'total': {'insertions': 0, 'deletions': 0, 'lines': 0, 'files': 0}, 'files': {}}
+		hsh = {'total': {'insertions': 0, 'deletions': 0, 'lines': 0, 'files': 0}, 'files': dict()}
 		for line in text.splitlines():
 			(raw_insertions, raw_deletions, filename) = line.split("\t")
 			insertions = raw_insertions != '-' and int(raw_insertions) or 0
@@ -304,6 +307,7 @@ class IterableList(list):
 			return getattr(self, index)
 		except AttributeError:
 			raise IndexError( "No item found with id %r" % (self._prefix + index) )
+
 
 class Iterable(object):
 	"""Defines an interface for iterable items which is to assure a uniform 

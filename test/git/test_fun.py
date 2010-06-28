@@ -9,6 +9,7 @@ from git.index.fun import (
 							aggressive_tree_merge
 							)
 
+from gitdb.util import bin_to_hex
 from gitdb.base import IStream
 from gitdb.typ import str_tree_type
 
@@ -24,7 +25,7 @@ from cStringIO import StringIO
 class TestFun(TestBase):
 	
 	def _assert_index_entries(self, entries, trees):
-		index = IndexFile.from_tree(self.rorepo, *trees)
+		index = IndexFile.from_tree(self.rorepo, *[self.rorepo.tree(bin_to_hex(t)) for t in trees])
 		assert entries
 		assert len(index.entries) == len(entries)
 		for entry in entries:
@@ -39,11 +40,11 @@ class TestFun(TestBase):
 		B = HC.parents[0].tree
 		
 		# entries from single tree
-		trees = [H.sha]
+		trees = [H.binsha]
 		self._assert_index_entries(aggressive_tree_merge(odb, trees), trees)
 		
 		# from multiple trees
-		trees = [B.sha, H.sha]
+		trees = [B.binsha, H.binsha]
 		self._assert_index_entries(aggressive_tree_merge(odb, trees), trees)
 		
 		# three way, no conflict
@@ -51,14 +52,14 @@ class TestFun(TestBase):
 		B = tree("35a09c0534e89b2d43ec4101a5fb54576b577905")
 		H = tree("4fe5cfa0e063a8d51a1eb6f014e2aaa994e5e7d4")
 		M = tree("1f2b19de3301e76ab3a6187a49c9c93ff78bafbd")
-		trees = [B.sha, H.sha, M.sha]
+		trees = [B.binsha, H.binsha, M.binsha]
 		self._assert_index_entries(aggressive_tree_merge(odb, trees), trees)
 		
 		# three-way, conflict in at least one file, both modified
 		B = tree("a7a4388eeaa4b6b94192dce67257a34c4a6cbd26")
 		H = tree("f9cec00938d9059882bb8eabdaf2f775943e00e5")
 		M = tree("44a601a068f4f543f73fd9c49e264c931b1e1652")
-		trees = [B.sha, H.sha, M.sha]
+		trees = [B.binsha, H.binsha, M.binsha]
 		self._assert_index_entries(aggressive_tree_merge(odb, trees), trees)
 		
 		# too many trees
@@ -70,7 +71,7 @@ class TestFun(TestBase):
 		tree_to_stream(entries, sio.write)
 		sio.seek(0)
 		istream = odb.store(IStream(str_tree_type, len(sio.getvalue()), sio))
-		return istream.sha
+		return istream.binsha
 	
 	@with_rw_repo('0.1.6')
 	def test_three_way_merge(self, rwrepo):
@@ -216,25 +217,25 @@ class TestFun(TestBase):
 		B_old = self.rorepo.tree('1f66cfbbce58b4b552b041707a12d437cc5f400a')	# old base tree
 		
 		# two very different trees
-		entries = traverse_trees_recursive(odb, [B_old.sha, H.sha], '')
+		entries = traverse_trees_recursive(odb, [B_old.binsha, H.binsha], '')
 		self._assert_tree_entries(entries, 2)
 		
-		oentries = traverse_trees_recursive(odb, [H.sha, B_old.sha], '')
+		oentries = traverse_trees_recursive(odb, [H.binsha, B_old.binsha], '')
 		assert len(oentries) == len(entries)
 		self._assert_tree_entries(oentries, 2)
 		
 		# single tree
 		is_no_tree = lambda i, d: i.type != 'tree'
-		entries = traverse_trees_recursive(odb, [B.sha], '')
+		entries = traverse_trees_recursive(odb, [B.binsha], '')
 		assert len(entries) == len(list(B.traverse(predicate=is_no_tree)))
 		self._assert_tree_entries(entries, 1)
 		
 		# two trees
-		entries = traverse_trees_recursive(odb, [B.sha, H.sha], '')
+		entries = traverse_trees_recursive(odb, [B.binsha, H.binsha], '')
 		self._assert_tree_entries(entries, 2)
 		
 		# tree trees
-		entries = traverse_trees_recursive(odb, [B.sha, H.sha, M.sha], '')
+		entries = traverse_trees_recursive(odb, [B.binsha, H.binsha, M.binsha], '')
 		self._assert_tree_entries(entries, 3)
 		
 	def test_tree_traversal_single(self):
@@ -245,6 +246,6 @@ class TestFun(TestBase):
 			if count >= max_count:
 				break
 			count += 1
-			entries = traverse_tree_recursive(odb, commit.tree.sha, '')
+			entries = traverse_tree_recursive(odb, commit.tree.binsha, '')
 			assert entries
 		# END for each commit

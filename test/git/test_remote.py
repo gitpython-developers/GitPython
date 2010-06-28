@@ -6,6 +6,7 @@
 
 from test.testlib import *
 from git import *
+from git.utils import IterableList
 import tempfile
 import shutil
 import os

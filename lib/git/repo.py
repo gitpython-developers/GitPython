@@ -21,7 +21,8 @@ from db import (
 from gitdb.util import (
 							join,
 							isdir, 
-							isfile
+							isfile,
+							hex_to_bin
 						)
 import os
 import sys
@@ -576,7 +577,7 @@ class Repo(object):
 							sha = info['id']
 							c = commits.get(sha)
 							if c is None:
-								c = Commit(	 self, sha,
+								c = Commit(	 self, hex_to_bin(sha),
 											 author=Actor._from_string(info['author'] + ' ' + info['author_email']),
 											 authored_date=info['author_date'],
 											 committer=Actor._from_string(info['committer'] + ' ' + info['committer_email']),

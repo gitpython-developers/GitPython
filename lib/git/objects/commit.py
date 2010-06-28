@@ -23,13 +23,14 @@ from utils import (
 						get_user_id,
 						parse_date,
 						Actor,
-						altz_to_utctz_str
+						altz_to_utctz_str,
 						parse_actor_and_date
 					)
 from time import (
 					time, 
 					altzone
 				)
+import os
 
 __all__ = ('Commit', )
 
@@ -76,7 +77,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
 		:param parents: tuple( Commit, ... ) 
 			is a tuple of commit ids or actual Commits
 		:param tree: Tree
-			20 byte tree sha
+			Tree object
 		:param author: Actor
 			is the author string ( will be implicitly converted into an Actor object )
 		:param authored_date: int_seconds_since_epoch
@@ -103,7 +104,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
 		:note: Timezone information is in the same format and in the same sign 
 			as what time.altzone returns. The sign is inverted compared to git's 
 			UTC timezone."""
-		super(Commit,self).__init__(repo, sha)
+		super(Commit,self).__init__(repo, binsha)
 		self._set_self_from_args_(locals())
 		
 	@classmethod
@@ -227,14 +228,14 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
 			line = readline()
 			if not line:
 				break
-			sha = line.strip()
-			if len(sha) > 40:
+			hexsha = line.strip()
+			if len(hexsha) > 40:
 				# split additional information, as returned by bisect for instance
-				sha, rest = line.split(None, 1)
+				hexsha, rest = line.split(None, 1)
 			# END handle extra info
 			
-			assert len(sha) == 40, "Invalid line: %s" % sha
-			yield Commit(repo, sha)
+			assert len(hexsha) == 40, "Invalid line: %s" % hexsha
+			yield Commit(repo, hex_to_bin(hexsha))
 		# END for each line in stream
 		
 		
@@ -282,7 +283,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
 		
 		# COMMITER AND AUTHOR INFO
 		cr = repo.config_reader()
-		env = environ
+		env = os.environ
 		default_email = get_user_id()
 		default_name = default_email.split('@')[0]
 		

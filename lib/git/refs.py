@@ -25,7 +25,8 @@ from gitdb.util import (
 							isdir,
 							exists,
 							isfile,
-							rename
+							rename,
+							hex_to_bin
 						)
 
 
@@ -147,11 +148,11 @@ class SymbolicReference(object):
 			Commit object we point to, works for detached and non-detached 
 			SymbolicReferences"""
 		# we partially reimplement it to prevent unnecessary file access
-		sha, target_ref_path = self._get_ref_info()
+		hexsha, target_ref_path = self._get_ref_info()
 		
 		# it is a detached reference
-		if sha:
-			return Commit(self.repo, sha)
+		if hexsha:
+			return Commit(self.repo, hex_to_bin(hexsha))
 		
 		return self.from_path(self.repo, target_ref_path).commit
 		
@@ -402,9 +403,9 @@ class SymbolicReference(object):
 			os.remove(new_abs_path)
 		# END handle existing target file
 		
-		dirname = dirname(new_abs_path)
-		if not isdir(dirname):
-			os.makedirs(dirname)
+		dname = dirname(new_abs_path)
+		if not isdir(dname):
+			os.makedirs(dname)
 		# END create directory
 		
 		rename(cur_abs_path, new_abs_path)
