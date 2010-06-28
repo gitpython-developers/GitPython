@@ -2,6 +2,7 @@
 
 from test.testlib import *
 from gitdb import *
+from gitdb.util import bin_to_hex
 
 from time import time
 import os
@@ -37,10 +38,10 @@ class TestObjDBPerformance(TestBigRepoR):
 			
 			# writing - due to the compression it will seem faster than it is 
 			st = time()
-			sha = ldb.store(IStream('blob', size, stream)).sha
+			binsha = ldb.store(IStream('blob', size, stream)).binsha
 			elapsed_add = time() - st
-			assert ldb.has_object(sha)
-			db_file = ldb.readable_db_object_path(sha)
+			assert ldb.has_object(binsha)
+			db_file = ldb.readable_db_object_path(bin_to_hex(binsha))
 			fsize_kib = os.path.getsize(db_file) / 1000
 			
 			
@@ -49,7 +50,7 @@ class TestObjDBPerformance(TestBigRepoR):
 			
 			# reading all at once
 			st = time()
-			ostream = ldb.stream(sha)
+			ostream = ldb.stream(binsha)
 			shadata = ostream.read()
 			elapsed_readall = time() - st
 			
@@ -62,7 +63,7 @@ class TestObjDBPerformance(TestBigRepoR):
 			cs = 512*1000
 			chunks = list()
 			st = time()
-			ostream = ldb.stream(sha)
+			ostream = ldb.stream(binsha)
 			while True:
 				data = ostream.read(cs)
 				chunks.append(data)
@@ -94,7 +95,7 @@ class TestObjDBPerformance(TestBigRepoR):
 			proc.wait()
 			gelapsed_add = time() - st
 			del(data)
-			assert gitsha == sha		# we do it the same way, right ?
+			assert gitsha == bin_to_hex(binsha)		# we do it the same way, right ?
 			
 			#  as its the same sha, we reuse our path
 			fsize_kib = os.path.getsize(db_file) / 1000

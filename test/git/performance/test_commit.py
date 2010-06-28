@@ -6,6 +6,7 @@
 
 from lib import *
 from git import *
+from gitdb import IStream
 from test.git.test_commit import assert_commit_serialization
 from cStringIO import StringIO
 from time import time
@@ -91,7 +92,7 @@ class TestPerformance(TestBigRepoRW):
 			slen = stream.tell()
 			stream.seek(0)
 			
-			cm.sha = make_object(IStream(Commit.type, slen, stream)).sha
+			cm.binsha = make_object(IStream(Commit.type, slen, stream)).binsha
 		# END commit creation
 		elapsed = time() - st
 		
