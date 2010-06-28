@@ -8,24 +8,37 @@ from git.utils import (
 							Iterable,
 							Stats,
 						)
-
-import git.diff as diff
+from git.diff import Diffable
 from tree import Tree
 from gitdb import IStream
 from cStringIO import StringIO
+
 import base
-import utils
-import time
+from gitdb.util import (
+						hex_to_bin
+						)
+from utils import (
+						Traversable,
+						Serializable,
+						get_user_id,
+						parse_date,
+						Actor,
+						altz_to_utctz_str,
+						parse_actor_and_date
+					)
+from time import (
+					time, 
+					altzone
+				)
 import os
 
+__all__ = ('Commit', )
 
-class Commit(base.Object, Iterable, diff.Diffable, utils.Traversable, utils.Serializable):
-	"""
-	Wraps a git Commit object.
+class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
+	"""Wraps a git Commit object.
 	
 	This class will act lazily on some of its attributes and will query the 
-	value on demand only if it involves calling the git binary.
-	"""
+	value on demand only if it involves calling the git binary."""
 	
 	# ENVIRONMENT VARIABLES
 	# read when creating new commits
@@ -52,22 +65,19 @@ class Commit(base.Object, Iterable, diff.Diffable, utils.Traversable, utils.Seri
 				 "author", "authored_date", "author_tz_offset",
 				 "committer", "committed_date", "committer_tz_offset",
 				 "message", "parents", "encoding")
-	_id_attribute_ = "sha"
+	_id_attribute_ = "binsha"
 	
-	def __init__(self, repo, sha, tree=None, author=None, authored_date=None, author_tz_offset=None,
+	def __init__(self, repo, binsha, tree=None, author=None, authored_date=None, author_tz_offset=None,
 				 committer=None, committed_date=None, committer_tz_offset=None, 
 				 message=None,  parents=None, encoding=None):
-		"""
-		Instantiate a new Commit. All keyword arguments taking None as default will 
-		be implicitly set if id names a valid sha. 
+		"""Instantiate a new Commit. All keyword arguments taking None as default will 
+		be implicitly set on first query. 
 		
-		The parameter documentation indicates the type of the argument after a colon ':'.
-
-		:param sha: is the sha id of the commit or a ref
+		:param binsha: 20 byte sha1
 		:param parents: tuple( Commit, ... ) 
 			is a tuple of commit ids or actual Commits
 		:param tree: Tree
-			is the corresponding tree id or an actual Tree
+			Tree object
 		:param author: Actor
 			is the author string ( will be implicitly converted into an Actor object )
 		:param authored_date: int_seconds_since_epoch
@@ -86,13 +96,15 @@ class Commit(base.Object, Iterable, diff.Diffable, utils.Traversable, utils.Seri
 			is the commit message
 		:param encoding: string
 			encoding of the message, defaults to UTF-8
+		:param parents:
+			List or tuple of Commit objects which are our parent(s) in the commit 
+			dependency graph
 		:return: git.Commit
 		
 		:note: Timezone information is in the same format and in the same sign 
 			as what time.altzone returns. The sign is inverted compared to git's 
-			UTC timezone.
-		"""
-		super(Commit,self).__init__(repo, sha)
+			UTC timezone."""
+		super(Commit,self).__init__(repo, binsha)
 		self._set_self_from_args_(locals())
 		
 	@classmethod
@@ -100,80 +112,61 @@ class Commit(base.Object, Iterable, diff.Diffable, utils.Traversable, utils.Seri
 		return commit.parents
 
 	def _set_cache_(self, attr):
-		""" Called by LazyMixin superclass when the given uninitialized member needs 
-		to be set.
-		We set all values at once. """
 		if attr in Commit.__slots__:
 			# read the data in a chunk, its faster - then provide a file wrapper
-			# Could use self.data, but lets try to get it with less calls
-			hexsha, typename, size, data = self.repo.git.get_object_data(self)
-			self._deserialize(StringIO(data))
+			binsha, typename, self.size, stream = self.repo.odb.stream(self.binsha)
+			self._deserialize(StringIO(stream.read()))
 		else:
 			super(Commit, self)._set_cache_(attr)
+		# END handle attrs
 
 	@property
 	def summary(self):
-		"""
-		Returns
-			First line of the commit message.
-		"""
+		""":return: First line of the commit message"""
 		return self.message.split('\n', 1)[0]
 		
 	def count(self, paths='', **kwargs):
-		"""
-		Count the number of commits reachable from this commit
+		"""Count the number of commits reachable from this commit
 
-		``paths``
+		:param paths:
 			is an optinal path or a list of paths restricting the return value 
 			to commits actually containing the paths
 
-		``kwargs``
+		:param kwargs:
 			Additional options to be passed to git-rev-list. They must not alter
 			the ouput style of the command, or parsing will yield incorrect results
-		Returns
-			int
-		"""
+		:return: int defining the number of reachable commits"""
 		# yes, it makes a difference whether empty paths are given or not in our case
 		# as the empty paths version will ignore merge commits for some reason.
 		if paths:
-			return len(self.repo.git.rev_list(self.sha, '--', paths, **kwargs).splitlines())
+			return len(self.repo.git.rev_list(self.hexsha, '--', paths, **kwargs).splitlines())
 		else:
-			return len(self.repo.git.rev_list(self.sha, **kwargs).splitlines())
+			return len(self.repo.git.rev_list(self.hexsha, **kwargs).splitlines())
 		
 
 	@property
 	def name_rev(self):
 		"""
-		Returns
+		:return:
 			String describing the commits hex sha based on the closest Reference.
-			Mostly useful for UI purposes
-		"""
+			Mostly useful for UI purposes"""
 		return self.repo.git.name_rev(self)
 
 	@classmethod
 	def iter_items(cls, repo, rev, paths='', **kwargs):
-		"""
-		Find all commits matching the given criteria.
+		"""Find all commits matching the given criteria.
 
-		``repo``
-			is the Repo
-
-		``rev``
-			revision specifier, see git-rev-parse for viable options
-
-		``paths``
+		:param repo: is the Repo
+		:param rev: revision specifier, see git-rev-parse for viable options
+		:param paths:
 			is an optinal path or list of paths, if set only Commits that include the path 
 			or paths will be considered
-
-		``kwargs``
+		:param kwargs:
 			optional keyword arguments to git rev-list where
 			``max_count`` is the maximum number of commits to fetch
 			``skip`` is the number of commits to skip
 			``since`` all commits since i.e. '1970-01-01'
-
-		Returns
-			iterator yielding Commit items
-		"""
+		:return: iterator yielding Commit items"""
 		if 'pretty' in kwargs:
 			raise ValueError("--pretty cannot be used as parsing expects single sha's only")
 		# END handle pretty
@@ -186,45 +179,36 @@ class Commit(base.Object, Iterable, diff.Diffable, utils.Traversable, utils.Seri
 		return cls._iter_from_process_or_stream(repo, proc)
 		
 	def iter_parents(self, paths='', **kwargs):
-		"""
-		Iterate _all_ parents of this commit.
-		
-		``paths``
+		"""Iterate _all_ parents of this commit.
+		:param paths:
 			Optional path or list of paths limiting the Commits to those that 
 			contain at least one of the paths
-		
-		``kwargs``
-			All arguments allowed by git-rev-list
+		:param kwargs: All arguments allowed by git-rev-list
 			
-		Return:
-			Iterator yielding Commit objects which are parents of self
-		"""
+		:return: Iterator yielding Commit objects which are parents of self """
 		# skip ourselves
 		skip = kwargs.get("skip", 1)
 		if skip == 0:	# skip ourselves 
 			skip = 1
 		kwargs['skip'] = skip
 		
-		return self.iter_items( self.repo, self, paths, **kwargs )
+		return self.iter_items(self.repo, self, paths, **kwargs)
 
 	@property
 	def stats(self):
-		"""
-		Create a git stat from changes between this commit and its first parent 
+		"""Create a git stat from changes between this commit and its first parent 
 		or from all changes done if this is the very first commit.
 		
-		Return
-			git.Stats
-		"""
+		:return: git.Stats"""
 		if not self.parents:
-			text = self.repo.git.diff_tree(self.sha, '--', numstat=True, root=True)
+			text = self.repo.git.diff_tree(self.hexsha, '--', numstat=True, root=True)
 			text2 = ""
 			for line in text.splitlines()[1:]:
 				(insertions, deletions, filename) = line.split("\t")
 				text2 += "%s\t%s\t%s\n" % (insertions, deletions, filename)
 			text = text2
 		else:
-			text = self.repo.git.diff(self.parents[0].sha, self.sha, '--', numstat=True)
+			text = self.repo.git.diff(self.parents[0].hexsha, self.hexsha, '--', numstat=True)
 		return Stats._list_from_string(self.repo, text)
 
 	@classmethod
@@ -244,14 +228,14 @@ class Commit(base.Object, Iterable, diff.Diffable, utils.Traversable, utils.Seri
 			line = readline()
 			if not line:
 				break
-			sha = line.strip()
-			if len(sha) > 40:
+			hexsha = line.strip()
+			if len(hexsha) > 40:
 				# split additional information, as returned by bisect for instance
-				sha, rest = line.split(None, 1)
+				hexsha, rest = line.split(None, 1)
 			# END handle extra info
 			
-			assert len(sha) == 40, "Invalid line: %s" % sha
-			yield Commit(repo, sha)
+			assert len(hexsha) == 40, "Invalid line: %s" % hexsha
+			yield Commit(repo, hex_to_bin(hexsha))
 		# END for each line in stream
 		
 		
@@ -260,7 +244,8 @@ class Commit(base.Object, Iterable, diff.Diffable, utils.Traversable, utils.Seri
 		"""Commit the given tree, creating a commit object.
 		
 		:param repo: Repo object the commit should be part of 
-		:param tree: Sha of a tree or a tree object to become the tree of the new commit
+		:param tree: Tree object or hex or bin sha 
+			the tree of the new commit
 		:param message: Commit message. It may be an empty string if no message is provided.
 			It will be converted to a string in any case.
 		:param parent_commits:
@@ -279,8 +264,7 @@ class Commit(base.Object, Iterable, diff.Diffable, utils.Traversable, utils.Seri
 		:note:
 			Additional information about the committer and Author are taken from the
 			environment or from the git configuration, see git-commit-tree for 
-			more information
-		"""
+			more information"""
 		parents = parent_commits
 		if parent_commits is None:
 			try:
@@ -300,7 +284,7 @@ class Commit(base.Object, Iterable, diff.Diffable, utils.Traversable, utils.Seri
 		# COMMITER AND AUTHOR INFO
 		cr = repo.config_reader()
 		env = os.environ
-		default_email = utils.get_user_id()
+		default_email = get_user_id()
 		default_name = default_email.split('@')[0]
 		
 		conf_name = cr.get_value('user', cls.conf_name, default_name)
@@ -313,19 +297,19 @@ class Commit(base.Object, Iterable, diff.Diffable, utils.Traversable, utils.Seri
 		committer_email = env.get(cls.env_committer_email, conf_email)
 		
 		# PARSE THE DATES
-		unix_time = int(time.time())
-		offset = time.altzone
+		unix_time = int(time())
+		offset = altzone
 		
 		author_date_str = env.get(cls.env_author_date, '')
 		if author_date_str:
-			author_time, author_offset = utils.parse_date(author_date_str)
+			author_time, author_offset = parse_date(author_date_str)
 		else:
 			author_time, author_offset = unix_time, offset
 		# END set author time
 		
 		committer_date_str = env.get(cls.env_committer_date, '')
 		if committer_date_str: 
-			committer_time, committer_offset = utils.parse_date(committer_date_str)
+			committer_time, committer_offset = parse_date(committer_date_str)
 		else:
 			committer_time, committer_offset = unix_time, offset
 		# END set committer time
@@ -334,12 +318,18 @@ class Commit(base.Object, Iterable, diff.Diffable, utils.Traversable, utils.Seri
 		enc_section, enc_option = cls.conf_encoding.split('.')
 		conf_encoding = cr.get_value(enc_section, enc_option, cls.default_encoding)
 		
-		author = utils.Actor(author_name, author_email)
-		committer = utils.Actor(committer_name, committer_email)
+		author = Actor(author_name, author_email)
+		committer = Actor(committer_name, committer_email)
 		
+		
+		# if the tree is no object, make sure we create one - otherwise
+		# the created commit object is invalid
+		if isinstance(tree, str):
+			tree = repo.tree(tree)
+		# END tree conversion
 		
 		# CREATE NEW COMMIT
-		new_commit = cls(repo, cls.NULL_HEX_SHA, tree, 
+		new_commit = cls(repo, cls.NULL_BIN_SHA, tree, 
 						author, author_time, author_offset, 
 						committer, committer_time, committer_offset,
 						message, parent_commits, conf_encoding)
@@ -350,7 +340,7 @@ class Commit(base.Object, Iterable, diff.Diffable, utils.Traversable, utils.Seri
 		stream.seek(0)
 		
 		istream = repo.odb.store(IStream(cls.type, streamlen, stream))
-		new_commit.sha = istream.sha
+		new_commit.binsha = istream.binsha
 		
 		if head:
 			try:
@@ -366,14 +356,6 @@ class Commit(base.Object, Iterable, diff.Diffable, utils.Traversable, utils.Seri
 		
 		return new_commit
 	
-		
-	def __str__(self):
-		""" Convert commit to string which is SHA1 """
-		return self.sha
-
-	def __repr__(self):
-		return '<git.Commit "%s">' % self.sha
-
 	#{ Serializable Implementation
 	
 	def _serialize(self, stream):
@@ -387,11 +369,11 @@ class Commit(base.Object, Iterable, diff.Diffable, utils.Traversable, utils.Seri
 		fmt = "%s %s <%s> %s %s\n"
 		write(fmt % ("author", a.name, a.email, 
 						self.authored_date, 
-						utils.altz_to_utctz_str(self.author_tz_offset)))
+						altz_to_utctz_str(self.author_tz_offset)))
 			
 		write(fmt % ("committer", c.name, c.email, 
 						self.committed_date,
-						utils.altz_to_utctz_str(self.committer_tz_offset)))
+						altz_to_utctz_str(self.committer_tz_offset)))
 		
 		if self.encoding != self.default_encoding:
 			write("encoding %s\n" % self.encoding)
@@ -404,7 +386,7 @@ class Commit(base.Object, Iterable, diff.Diffable, utils.Traversable, utils.Seri
 		""":param from_rev_list: if true, the stream format is coming from the rev-list command
 		Otherwise it is assumed to be a plain data stream from our object"""
 		readline = stream.readline
-		self.tree = Tree(self.repo, readline().split()[1], Tree.tree_id<<12, '')
+		self.tree = Tree(self.repo, hex_to_bin(readline().split()[1]), Tree.tree_id<<12, '')
 
 		self.parents = list()
 		next_line = None
@@ -414,12 +396,12 @@ class Commit(base.Object, Iterable, diff.Diffable, utils.Traversable, utils.Seri
 				next_line = parent_line
 				break
 			# END abort reading parents
-			self.parents.append(type(self)(self.repo, parent_line.split()[-1]))
+			self.parents.append(type(self)(self.repo, hex_to_bin(parent_line.split()[-1])))
 		# END for each parent line
 		self.parents = tuple(self.parents)
 		
-		self.author, self.authored_date, self.author_tz_offset = utils.parse_actor_and_date(next_line)
-		self.committer, self.committed_date, self.committer_tz_offset = utils.parse_actor_and_date(readline())
+		self.author, self.authored_date, self.author_tz_offset = parse_actor_and_date(next_line)
+		self.committer, self.committed_date, self.committer_tz_offset = parse_actor_and_date(readline())
 		
 		
 		# now we can have the encoding line, or an empty line followed by the optional

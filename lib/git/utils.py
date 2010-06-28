@@ -18,6 +18,9 @@ from gitdb.util import (
 							to_bin_sha
 						)
 
+__all__ = ( "stream_copy", "join_path", "to_native_path_windows", "to_native_path_linux", 
+			"join_path_native", "Stats", "IndexFileSHA1Writer", "Iterable", "IterableList", 
+			"BlockingLockFile", "LockFile" )
 
 def stream_copy(source, destination, chunk_size=512*1024):
 	"""Copy all data from the source stream into the destination stream in chunks
@@ -92,9 +95,7 @@ class Stats(object):
 	
 	In addition to the items in the stat-dict, it features additional information::
 	
-	 files = number of changed files as int
-	
-	"""
+	 files = number of changed files as int"""
 	__slots__ = ("total", "files")
 	
 	def __init__(self, total, files):
@@ -103,13 +104,10 @@ class Stats(object):
 
 	@classmethod
 	def _list_from_string(cls, repo, text):
-		"""
-		Create a Stat object from output retrieved by git-diff.
+		"""Create a Stat object from output retrieved by git-diff.
 		
-		Returns
-			git.Stat
-		"""
-		hsh = {'total': {'insertions': 0, 'deletions': 0, 'lines': 0, 'files': 0}, 'files': {}}
+		:return: git.Stat"""
+		hsh = {'total': {'insertions': 0, 'deletions': 0, 'lines': 0, 'files': 0}, 'files': dict()}
 		for line in text.splitlines():
 			(raw_insertions, raw_deletions, filename) = line.split("\t")
 			insertions = raw_insertions != '-' and int(raw_insertions) or 0
@@ -125,16 +123,13 @@ class Stats(object):
 
 
 class IndexFileSHA1Writer(object):
-	"""
-	Wrapper around a file-like object that remembers the SHA1 of 
+	"""Wrapper around a file-like object that remembers the SHA1 of 
 	the data written to it. It will write a sha when the stream is closed
 	or if the asked for explicitly usign write_sha.
 	
 	Only useful to the indexfile
 	
-	Note:
-		Based on the dulwich project
-	"""
+	:note: Based on the dulwich project"""
 	__slots__ = ("f", "sha1")
 	
 	def __init__(self, f):
@@ -160,13 +155,12 @@ class IndexFileSHA1Writer(object):
 
 
 class LockFile(object):
-	"""
-	Provides methods to obtain, check for, and release a file based lock which 
+	"""Provides methods to obtain, check for, and release a file based lock which 
 	should be used to handle concurrent access to the same file.
 	
 	As we are a utility class to be derived from, we only use protected methods.
 	
-	Locks will automatically be released on destruction """
+	Locks will automatically be released on destruction"""
 	__slots__ = ("_file_path", "_owns_lock")
 	
 	def __init__(self, file_path):
@@ -177,32 +171,21 @@ class LockFile(object):
 		self._release_lock()
 	
 	def _lock_file_path(self):
-		"""
-		Return
-			Path to lockfile
-		"""
+		""":return: Path to lockfile"""
 		return "%s.lock" % (self._file_path)
 	
 	def _has_lock(self):
-		"""
-		Return
-			True if we have a lock and if the lockfile still exists
-			
-		Raise
-			AssertionError if our lock-file does not exist
-		"""
+		""":return: True if we have a lock and if the lockfile still exists
+		:raise AssertionError: if our lock-file does not exist"""
 		if not self._owns_lock:
 			return False
 		
 		return True
 		
 	def _obtain_lock_or_raise(self):
-		"""
-		Create a lock file as flag for other instances, mark our instance as lock-holder
+		"""Create a lock file as flag for other instances, mark our instance as lock-holder
 		
-		Raise
-			IOError if a lock was already present or a lock file could not be written
-		"""
+		:raise IOError: if a lock was already present or a lock file could not be written"""
 		if self._has_lock():
 			return 
 		lock_file = self._lock_file_path()
@@ -218,16 +201,12 @@ class LockFile(object):
 		self._owns_lock = True
 		
 	def _obtain_lock(self):
-		"""
-		The default implementation will raise if a lock cannot be obtained.
-		Subclasses may override this method to provide a different implementation
-		"""
+		"""The default implementation will raise if a lock cannot be obtained.
+		Subclasses may override this method to provide a different implementation"""
 		return self._obtain_lock_or_raise()
 		
 	def _release_lock(self):
-		"""
-		Release our lock if we have one
-		"""
+		"""Release our lock if we have one"""
 		if not self._has_lock():
 			return
 			
@@ -252,13 +231,11 @@ class BlockingLockFile(LockFile):
 	def __init__(self, file_path, check_interval_s=0.3, max_block_time_s=sys.maxint):
 		"""Configure the instance
 		
-		``check_interval_s``
+		:parm check_interval_s:
 			Period of time to sleep until the lock is checked the next time.
 			By default, it waits a nearly unlimited time
 		
-		``max_block_time_s``
-			Maximum amount of seconds we may lock
-		"""
+		:parm max_block_time_s: Maximum amount of seconds we may lock"""
 		super(BlockingLockFile, self).__init__(file_path)
 		self._check_interval = check_interval_s
 		self._max_block_time = max_block_time_s
@@ -292,8 +269,7 @@ class BlockingLockFile(LockFile):
 	
 
 class IterableList(list):
-	"""
-	List of iterable objects allowing to query an object by id or by named index::
+	"""List of iterable objects allowing to query an object by id or by named index::
 	 
 	 heads = repo.heads
 	 heads.master
@@ -305,8 +281,7 @@ class IterableList(list):
 	
 	A prefix can be specified which is to be used in case the id returned by the 
 	items always contains a prefix that does not matter to the user, so it 
-	can be left out.
-	"""
+	can be left out."""
 	__slots__ = ('_id_attr', '_prefix')
 	
 	def __new__(cls, id_attr, prefix=''):
@@ -333,26 +308,21 @@ class IterableList(list):
 		except AttributeError:
 			raise IndexError( "No item found with id %r" % (self._prefix + index) )
 
+
 class Iterable(object):
-	"""
-	Defines an interface for iterable items which is to assure a uniform 
-	way to retrieve and iterate items within the git repository
-	"""
+	"""Defines an interface for iterable items which is to assure a uniform 
+	way to retrieve and iterate items within the git repository"""
 	__slots__ = tuple()
 	_id_attribute_ = "attribute that most suitably identifies your instance"
 	
 	@classmethod
 	def list_items(cls, repo, *args, **kwargs):
-		"""
-		Find all items of this type - subclasses can specify args and kwargs differently.
+		"""Find all items of this type - subclasses can specify args and kwargs differently.
 		If no args are given, subclasses are obliged to return all items if no additional 
 		arguments arg given.
 		
-		Note: Favor the iter_items method as it will 
-		
-		Returns:
-			list(Item,...) list of item instances 
-		"""
+		:note: Favor the iter_items method as it will 
+		:return:list(Item,...) list of item instances"""
 		out_list = IterableList( cls._id_attribute_ )
 		out_list.extend(cls.iter_items(repo, *args, **kwargs))
 		return out_list
@@ -360,11 +330,8 @@ class Iterable(object):
 		
 	@classmethod
 	def iter_items(cls, repo, *args, **kwargs):
-		"""
-		For more information about the arguments, see list_items
-		Return: 
-			iterator yielding Items
-		"""
+		"""For more information about the arguments, see list_items
+		:return:  iterator yielding Items"""
 		raise NotImplementedError("To be implemented by Subclass")
 		
 		

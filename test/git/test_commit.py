@@ -7,6 +7,7 @@
 from test.testlib import *
 from git import *
 from gitdb import IStream
+from gitdb.util import hex_to_bin
 
 from cStringIO import StringIO
 import time
@@ -33,9 +34,9 @@ def assert_commit_serialization(rwrepo, commit_id, print_performance_info=False)
 		stream.seek(0)
 		
 		istream = rwrepo.odb.store(IStream(Commit.type, streamlen, stream))
-		assert istream.sha == cm.sha
+		assert istream.hexsha == cm.hexsha
 		
-		nc = Commit(rwrepo, Commit.NULL_HEX_SHA, cm.tree.sha,
+		nc = Commit(rwrepo, Commit.NULL_BIN_SHA, cm.tree,
 						cm.author, cm.authored_date, cm.author_tz_offset, 
 						cm.committer, cm.committed_date, cm.committer_tz_offset, 
 						cm.message, cm.parents, cm.encoding)
@@ -50,11 +51,11 @@ def assert_commit_serialization(rwrepo, commit_id, print_performance_info=False)
 		# reuse istream
 		istream.size = streamlen
 		istream.stream = stream
-		istream.sha = None
-		nc.sha = rwrepo.odb.store(istream).sha
+		istream.binsha = None
+		nc.binsha = rwrepo.odb.store(istream).binsha
 		
 		# if it worked, we have exactly the same contents !
-		assert nc.sha == cm.sha
+		assert nc.hexsha == cm.hexsha
 	# END check commits
 	elapsed = time.time() - st
 	
@@ -67,7 +68,7 @@ class TestCommit(TestBase):
 
 	def test_bake(self):
 
-		commit = Commit(self.rorepo, '2454ae89983a4496a445ce347d7a41c0bb0ea7ae')
+		commit = self.rorepo.commit('2454ae89983a4496a445ce347d7a41c0bb0ea7ae')
 		commit.author # bake
 
 		assert_equal("Sebastian Thiel", commit.author.name)
@@ -79,7 +80,7 @@ class TestCommit(TestBase):
 
 
 	def test_stats(self):
-		commit = Commit(self.rorepo, '33ebe7acec14b25c5f84f35a664803fcab2f7781')
+		commit = self.rorepo.commit('33ebe7acec14b25c5f84f35a664803fcab2f7781')
 		stats = commit.stats
 		
 		def check_entries(d):
@@ -158,7 +159,7 @@ class TestCommit(TestBase):
 		assert all_commits == list(self.rorepo.iter_commits())
 		
 		# this includes merge commits
-		mcomit = Commit(self.rorepo, 'd884adc80c80300b4cc05321494713904ef1df2d')
+		mcomit = self.rorepo.commit('d884adc80c80300b4cc05321494713904ef1df2d')
 		assert mcomit in all_commits
 		
 		# we can limit the result to paths
@@ -190,26 +191,26 @@ class TestCommit(TestBase):
 			'933d23bf95a5bd1624fbcdf328d904e1fa173474'
 		)
 		for sha1, commit in zip(expected_ids, commits):
-			assert_equal(sha1, commit.sha)
+			assert_equal(sha1, commit.hexsha)
 
 	def test_count(self):
 		assert self.rorepo.tag('refs/tags/0.1.5').commit.count( ) == 143
 		
 	def test_list(self):
-		assert isinstance(Commit.list_items(self.rorepo, '0.1.5', max_count=5)['5117c9c8a4d3af19a9958677e45cda9269de1541'], Commit)
+		assert isinstance(Commit.list_items(self.rorepo, '0.1.5', max_count=5)[hex_to_bin('5117c9c8a4d3af19a9958677e45cda9269de1541')], Commit)
 
 	def test_str(self):
-		commit = Commit(self.rorepo, 'abc')
-		assert_equal ("abc", str(commit))
+		commit = Commit(self.rorepo, Commit.NULL_BIN_SHA)
+		assert_equal(Commit.NULL_HEX_SHA, str(commit))
 
 	def test_repr(self):
-		commit = Commit(self.rorepo, 'abc')
-		assert_equal('<git.Commit "abc">', repr(commit))
+		commit = Commit(self.rorepo, Commit.NULL_BIN_SHA)
+		assert_equal('<git.Commit "%s">' % Commit.NULL_HEX_SHA, repr(commit))
 
 	def test_equality(self):
-		commit1 = Commit(self.rorepo, 'abc')
-		commit2 = Commit(self.rorepo, 'abc')
-		commit3 = Commit(self.rorepo, 'zyx')
+		commit1 = Commit(self.rorepo, Commit.NULL_BIN_SHA)
+		commit2 = Commit(self.rorepo, Commit.NULL_BIN_SHA)
+		commit3 = Commit(self.rorepo, "\1"*20)
 		assert_equal(commit1, commit2)
 		assert_not_equal(commit2, commit3)
 		

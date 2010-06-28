@@ -354,7 +354,7 @@ class TestIndex(TestBase):
 				if type_id == 0:	# path
 					yield entry.path
 				elif type_id == 1:	# blob
-					yield Blob(rw_repo, entry.hexsha, entry.mode, entry.path)
+					yield Blob(rw_repo, entry.binsha, entry.mode, entry.path)
 				elif type_id == 2:	# BaseIndexEntry
 					yield BaseIndexEntry(entry[:4])
 				elif type_id == 3:	# IndexEntry
@@ -449,7 +449,7 @@ class TestIndex(TestBase):
 		old_blob = new_commit.parents[0].tree.blobs[0]
 		entries = index.reset(new_commit).add([old_blob], fprogress=self._fprogress_add)
 		self._assert_fprogress(entries)
-		assert index.entries[(old_blob.path,0)].hexsha == old_blob.sha and len(entries) == 1 
+		assert index.entries[(old_blob.path,0)].hexsha == old_blob.hexsha and len(entries) == 1 
 		
 		# mode 0 not allowed
 		null_hex_sha = Diff.NULL_HEX_SHA
@@ -567,7 +567,7 @@ class TestIndex(TestBase):
 			for fid in range(3):
 				fname = 'newfile%i' % fid
 				open(fname, 'wb').write("abcd")
-				yield Blob(rw_repo, Blob.NULL_HEX_SHA, 0100644, fname)
+				yield Blob(rw_repo, Blob.NULL_BIN_SHA, 0100644, fname)
 			# END for each new file
 		# END path producer
 		paths = list(make_paths())

@@ -11,7 +11,6 @@ import sys
 import subprocess
 import glob
 from cStringIO import StringIO
-from binascii import b2a_hex
 
 from stat import (
 					S_ISLNK,
@@ -69,6 +68,7 @@ from fun import (
 
 from gitdb.base import IStream
 from gitdb.db import MemoryDB
+from gitdb.util import to_bin_sha
 from itertools import izip
 
 __all__ = ( 'IndexFile', 'CheckoutError' )
@@ -91,18 +91,16 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 		index.entries[index.entry_key(index_entry_instance)] = index_entry_instance
 	Otherwise changes to it will be lost when changing the index using its methods.
 	"""
-	__slots__ = ( "repo", "version", "entries", "_extension_data", "_file_path" )
+	__slots__ = ("repo", "version", "entries", "_extension_data", "_file_path")
 	_VERSION = 2			# latest version we support
 	S_IFGITLINK = 0160000	# a submodule
 
 	def __init__(self, repo, file_path=None):
-		"""
-		Initialize this Index instance, optionally from the given ``file_path``.
+		"""Initialize this Index instance, optionally from the given ``file_path``.
 		If no file_path is given, we will be created from the current index file.
 
 		If a stream is not given, the stream will be initialized from the current
-		repository's index on demand.
-		"""
+		repository's index on demand."""
 		self.repo = repo
 		self.version = self._VERSION
 		self._extension_data = ''
@@ -153,7 +151,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 	#{ Serializable Interface 
 
 	def _deserialize(self, stream):
-		""" Initialize this instance with index values read from the given stream """
+		"""Initialize this instance with index values read from the given stream"""
 		self.version, self.entries, self._extension_data, conten_sha = read_cache(stream)
 		return self
 		
@@ -217,24 +215,23 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 		As opposed to the from_tree_ method, this allows you to use an already
 		existing tree as the left side of the merge
 
-		``rhs``
+		:param rhs:
 			treeish reference pointing to the 'other' side of the merge.
 
-		``base``
+		:param base:
 			optional treeish reference pointing to the common base of 'rhs' and
 			this index which equals lhs
 
-		Returns
+		:return:
 			self ( containing the merge and possibly unmerged entries in case of
 			conflicts )
 
-		Raise
-			GitCommandError in case there is a merge conflict. The error will
+		:raise GitCommandError:
+			If there is a merge conflict. The error will
 			be raised at the first conflicting path. If you want to have proper
 			merge resolution to be done by yourself, you have to commit the changed
 			index ( or make a valid tree from it ) and retry with a three-way
-			index.from_tree call.
-		"""
+			index.from_tree call. """
 		# -i : ignore working tree status
 		# --aggressive : handle more merge cases
 		# -m : do an actual merge
@@ -254,13 +251,13 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 		:param repo: The repository treeish are located in.
 
 		:param *tree_sha:
-			see ``from_tree``
+			20 byte or 40 byte tree sha or tree objects 
 
 		:return:
 			New IndexFile instance. Its path will be undefined. 
 			If you intend to write such a merged Index, supply an alternate file_path 
 			to its 'write' method."""
-		base_entries = aggressive_tree_merge(repo.odb, [str(t) for t in tree_sha])
+		base_entries = aggressive_tree_merge(repo.odb, [to_bin_sha(str(t)) for t in tree_sha])
 		
 		inst = cls(repo)
 		# convert to entries dict
@@ -273,16 +270,15 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
 	@classmethod
 	def from_tree(cls, repo, *treeish, **kwargs):
-		"""
-		Merge the given treeish revisions into a new index which is returned.
+		"""Merge the given treeish revisions into a new index which is returned.
 		The original index will remain unaltered
 
-		``repo``
+		:param repo:
 			The repository treeish are located in.
 
-		``*treeish``
-			One, two or three Tree Objects or Commits. The result changes according to the
-			amount of trees.
+		:param *treeish:
+			One, two or three Tree Objects, Commits or 40 byte hexshas. The result
+			changes according to the amount of trees.
 			If 1 Tree is given, it will just be read into a new index
 			If 2 Trees are given, they will be merged into a new index using a
 			 two way merge algorithm. Tree 1 is the 'current' tree, tree 2 is the 'other'
@@ -291,15 +287,15 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 			 being the common ancestor of tree 2 and tree 3. Tree 2 is the 'current' tree,
 			 tree 3 is the 'other' one
 
-		``**kwargs``
+		:param **kwargs:
 			Additional arguments passed to git-read-tree
 
-		Returns
+		:return:
 			New IndexFile instance. It will point to a temporary index location which
 			does not exist anymore. If you intend to write such a merged Index, supply
 			an alternate file_path to its 'write' method.
 
-		Note:
+		:note:
 			In the three-way merge case, --aggressive will be specified to automatically
 			resolve more cases in a commonly correct manner. Specify trivial=True as kwarg
 			to override that.
@@ -420,19 +416,17 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
 	def iter_blobs(self, predicate = lambda t: True):
 		"""
-		Returns
-			Iterator yielding tuples of Blob objects and stages, tuple(stage, Blob)
+		:return: Iterator yielding tuples of Blob objects and stages, tuple(stage, Blob)
 
-		``predicate``
+		:param predicate:
 			Function(t) returning True if tuple(stage, Blob) should be yielded by the
 			iterator. A default filter, the BlobFilter, allows you to yield blobs
-			only if they match a given list of paths.
-		"""
+			only if they match a given list of paths. """
 		for entry in self.entries.itervalues():
 			# TODO: is it necessary to convert the mode ? We did that when adding 
 			# it to the index, right ?
 			mode = self._stat_mode_to_index_mode(entry.mode)
-			blob = Blob(self.repo, entry.hexsha, mode, entry.path)
+			blob = Blob(self.repo, entry.binsha, mode, entry.path)
 			blob.size = entry.size
 			output = (entry.stage, blob)
 			if predicate(output):
@@ -465,21 +459,17 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 		return entry_key(*entry)
 
 	def resolve_blobs(self, iter_blobs):
-		"""
-		Resolve the blobs given in blob iterator. This will effectively remove the
+		"""Resolve the blobs given in blob iterator. This will effectively remove the
 		index entries of the respective path at all non-null stages and add the given
 		blob as new stage null blob.
 
 		For each path there may only be one blob, otherwise a ValueError will be raised
 		claiming the path is already at stage 0.
 
-		Raise
-			ValueError if one of the blobs already existed at stage 0
+		:raise ValueError: if one of the blobs already existed at stage 0
+		:return: self
 
-		Returns:
-			self
-
-		Note
+		:note:
 			You will have to write the index manually once you are done, i.e.
 			index.resolve_blobs(blobs).write()
 		"""
@@ -504,17 +494,12 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 		return self
 
 	def update(self):
-		"""
-		Reread the contents of our index file, discarding all cached information
+		"""Reread the contents of our index file, discarding all cached information
 		we might have.
 
-		Note:
-			This is a possibly dangerious operations as it will discard your changes
+		:note: This is a possibly dangerious operations as it will discard your changes
 			to index.entries
-
-		Returns
-			self
-		"""
+		:return: self"""
 		self._delete_entries_cache()
 		# allows to lazily reread on demand
 		return self
@@ -541,7 +526,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 		
 		# note: additional deserialization could be saved if write_tree_from_cache
 		# would return sorted tree entries
-		root_tree = Tree(self.repo, b2a_hex(binsha), path='')
+		root_tree = Tree(self.repo, binsha, path='')
 		root_tree._cache = tree_items
 		return root_tree
 		
@@ -675,7 +660,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 			for path in paths:
 				abspath = os.path.abspath(path)
 				gitrelative_path = abspath[len(self.repo.working_tree_dir)+1:]
-				blob = Blob(self.repo, Blob.NULL_HEX_SHA, 
+				blob = Blob(self.repo, Blob.NULL_BIN_SHA, 
 							self._stat_mode_to_index_mode(os.stat(abspath).st_mode), 
 							gitrelative_path)
 				entries.append(BaseIndexEntry.from_blob(blob))
@@ -830,33 +815,29 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 	@post_clear_cache
 	@default_index
 	def move(self, items, skip_errors=False, **kwargs):
-		"""
-		Rename/move the items, whereas the last item is considered the destination of
+		"""Rename/move the items, whereas the last item is considered the destination of
 		the move operation. If the destination is a file, the first item ( of two )
 		must be a file as well. If the destination is a directory, it may be preceeded
 		by one or more directories or files.
 
 		The working tree will be affected in non-bare repositories.
 
-		``items``
+		:parma items:
 			Multiple types of items are supported, please see the 'remove' method
 			for reference.
-		``skip_errors``
+		:param skip_errors:
 			If True, errors such as ones resulting from missing source files will
 			be skpped.
-		``**kwargs``
+		:param **kwargs:
 			Additional arguments you would like to pass to git-mv, such as dry_run
 			or force.
 
-		Returns
-			List(tuple(source_path_string, destination_path_string), ...)
+		:return:List(tuple(source_path_string, destination_path_string), ...)
 			A list of pairs, containing the source file moved as well as its
 			actual destination. Relative to the repository root.
 
-		Raises
-			ValueErorr: If only one item was given
-			GitCommandError: If git could not handle your request
-		"""
+		:raise ValueErorr: If only one item was given
+			GitCommandError: If git could not handle your request"""
 		args = list()
 		if skip_errors:
 			args.append('-k')
@@ -897,18 +878,15 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 		return out
 
 	def commit(self, message, parent_commits=None, head=True):
-		"""
-		Commit the current default index file, creating a commit object.
+		"""Commit the current default index file, creating a commit object.
 
 		For more information on the arguments, see tree.commit.
-
-		``NOTE``:
+		:note:
 			If you have manually altered the .entries member of this instance,
 			don't forget to write() your changes to disk beforehand.
 
-		Returns
-			Commit object representing the new commit
-		"""
+		:return:
+			Commit object representing the new commit"""
 		tree = self.write_tree()
 		return Commit.create_from_tree(self.repo, tree, message, parent_commits, head)
 
@@ -1123,13 +1101,12 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
 	@default_index
 	def diff(self, other=diff.Diffable.Index, paths=None, create_patch=False, **kwargs):
-		"""
-		Diff this index against the working copy or a Tree or Commit object
+		"""Diff this index against the working copy or a Tree or Commit object
 
 		For a documentation of the parameters and return values, see
 		Diffable.diff
 
-		Note
+		:note:
 			Will only work with indices that represent the default git index as
 			they have not been initialized with a stream.
 		"""

@@ -12,6 +12,11 @@ CHANGES
    Instead of raising GitCommandError it raises UnmergedEntriesError
  * diff.Diff.null_hex_sha renamed to NULL_HEX_SHA, to be conforming with 
    the naming in the Object base class
+ * Object instances, and everything derived from it, now use binary sha's internally. The 'sha' member was removed, in favor of the 'binsha' member.
+    An 'hexsha' property is available for convenient conversions.
+    They may only be initialized using their binary shas, reference names or revision specs are not allowed anymore.
+ * The .data attribute was removed from the Object type, it is only available
+   on the Blob type.
    
 
 0.2 Beta 2

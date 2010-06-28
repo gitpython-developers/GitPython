@@ -3,9 +3,7 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
-"""
-Module for general utility functions
-"""
+"""Module for general utility functions"""
 import re
 from collections import deque as Deque
 import platform
@@ -20,18 +18,28 @@ __all__ = ('get_object_type_by_name', 'get_user_id', 'parse_date', 'parse_actor_
 
 #{ Functions
 
+def mode_str_to_int(modestr):
+	"""
+	:param modestr: string like 755 or 644 or 100644 - only the last 6 chars will be used
+	:return:
+		String identifying a mode compatible to the mode methods ids of the 
+		stat module regarding the rwx permissions for user, group and other, 
+		special flags and file system flags, i.e. whether it is a symlink
+		for example."""
+	mode = 0
+	for iteration, char in enumerate(reversed(modestr[-6:])):
+		mode += int(char) << iteration*3
+	# END for each char
+	return mode
+
 def get_object_type_by_name(object_type_name):
 	"""
-	Returns
-		type suitable to handle the given object type name.
+	:return: type suitable to handle the given object type name.
 		Use the type to create new instances.
 		
-	``object_type_name``
-		Member of TYPES
+	:param object_type_name: Member of TYPES
 		
-	Raises
-		ValueError: In case object_type_name is unknown
-	"""
+	:raise ValueError: In case object_type_name is unknown"""
 	if object_type_name == "commit":
 		import commit
 		return commit.Commit
@@ -169,14 +177,11 @@ def parse_date(string_date):
 _re_actor_epoch = re.compile(r'^.+? (.*) (\d+) ([+-]\d+).*$')
 
 def parse_actor_and_date(line):
-	"""
-	Parse out the actor (author or committer) info from a line like::
+	"""Parse out the actor (author or committer) info from a line like::
 	
-	 author Tom Preston-Werner <tom@mojombo.com> 1191999972 -0700
+		author Tom Preston-Werner <tom@mojombo.com> 1191999972 -0700
 	
-	Returns
-		[Actor, int_seconds_since_epoch, int_timezone_offset]
-	"""
+	:return: [Actor, int_seconds_since_epoch, int_timezone_offset]"""
 	m = _re_actor_epoch.search(line)
 	actor, epoch, offset = m.groups()
 	return (Actor._from_string(actor), int(epoch), utctz_to_altz(offset))
@@ -238,13 +243,11 @@ class Actor(object):
 	
 	
 class ProcessStreamAdapter(object):
-	"""
-	Class wireing all calls to the contained Process instance.
+	"""Class wireing all calls to the contained Process instance.
 	
 	Use this type to hide the underlying process to provide access only to a specified 
 	stream. The process is usually wrapped into an AutoInterrupt class to kill 
-	it if the instance goes out of scope.
-	"""
+	it if the instance goes out of scope."""
 	__slots__ = ("_proc", "_stream")
 	def __init__(self, process, stream_name):
 		self._proc = process
@@ -274,36 +277,33 @@ class Traversable(object):
 	def traverse( self, predicate = lambda i,d: True,
 						   prune = lambda i,d: False, depth = -1, branch_first=True,
 						   visit_once = True, ignore_self=1, as_edge = False ):
-		"""
-		``Returns``
-			iterator yieling of items found when traversing self
+		""":return: iterator yieling of items found when traversing self
 			
-		``predicate``
-			f(i,d) returns False if item i at depth d should not be included in the result
+		:param predicate: f(i,d) returns False if item i at depth d should not be included in the result
 			
-		``prune``
+		:param prune: 
 			f(i,d) return True if the search should stop at item i at depth d.
 			Item i will not be returned.
 			
-		``depth``
+		:param depth:
 			define at which level the iteration should not go deeper
 			if -1, there is no limit
 			if 0, you would effectively only get self, the root of the iteration
 			i.e. if 1, you would only get the first level of predessessors/successors
 			
-		``branch_first``
+		:param branch_first:
 			if True, items will be returned branch first, otherwise depth first
 			
-		``visit_once``
+		:param visit_once:
 			if True, items will only be returned once, although they might be encountered
 			several times. Loops are prevented that way.
 		
-		``ignore_self``
+		:param ignore_self:
 			if True, self will be ignored and automatically pruned from
 			the result. Otherwise it will be the first item to be returned.
 			If as_edge is True, the source of the first edge is None
 			
-		``as_edge``
+		:param as_edge:
 			if True, return a pair of items, first being the source, second the 
 			destinatination, i.e. tuple(src, dest) with the edge spanning from 
 			source to destination"""

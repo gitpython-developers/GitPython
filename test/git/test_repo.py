@@ -49,7 +49,7 @@ class TestRepo(TestBase):
 		
 	def test_tree_from_revision(self):
 		tree = self.rorepo.tree('0.1.6')
-		assert len(tree.sha) == 40 
+		assert len(tree.hexsha) == 40 
 		assert tree.type == "tree"
 		assert self.rorepo.tree(tree) == tree
 		
@@ -62,9 +62,9 @@ class TestRepo(TestBase):
 		assert len(commits) == mc
 		
 		c = commits[0]
-		assert_equal('9a4b1d4d11eee3c5362a4152216376e634bd14cf', c.sha)
-		assert_equal(["c76852d0bff115720af3f27acdb084c59361e5f6"], [p.sha for p in c.parents])
-		assert_equal("ce41fc29549042f1aa09cc03174896cf23f112e3", c.tree.sha)
+		assert_equal('9a4b1d4d11eee3c5362a4152216376e634bd14cf', c.hexsha)
+		assert_equal(["c76852d0bff115720af3f27acdb084c59361e5f6"], [p.hexsha for p in c.parents])
+		assert_equal("ce41fc29549042f1aa09cc03174896cf23f112e3", c.tree.hexsha)
 		assert_equal("Michael Trier", c.author.name)
 		assert_equal("mtrier@gmail.com", c.author.email)
 		assert_equal(1232829715, c.authored_date)
@@ -255,7 +255,7 @@ class TestRepo(TestBase):
 		assert_true(git.called)
 		assert_equal(git.call_args, (('blame', 'master', '--', 'lib/git.py'), {'p': True}))
 		
-		assert_equal('634396b2f541a9f2d58b00be1a07f0c358b999b3', c.sha)
+		assert_equal('634396b2f541a9f2d58b00be1a07f0c358b999b3', c.hexsha)
 		assert_equal('Tom Preston-Werner', c.author.name)
 		assert_equal('tom@mojombo.com', c.author.email)
 		assert_equal(1191997100, c.authored_date)

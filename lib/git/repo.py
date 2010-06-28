@@ -18,12 +18,18 @@ from db import (
 				GitDB
 				)
 
+from gitdb.util import (
+							join,
+							isdir, 
+							isfile,
+							hex_to_bin
+						)
 import os
 import sys
 import re
-import gzip
-import StringIO
 
+
+__all__ = ('Repo', )
 
 def touch(filename):
 	fp = open(filename, "a")
@@ -31,21 +37,20 @@ def touch(filename):
 
 def is_git_dir(d):
 	""" This is taken from the git setup.c:is_git_directory
-		function."""
+	function."""
 
-	if os.path.isdir(d) and \
-			os.path.isdir(os.path.join(d, 'objects')) and \
-			os.path.isdir(os.path.join(d, 'refs')):
-		headref = os.path.join(d, 'HEAD')
-		return os.path.isfile(headref) or \
+	if isdir(d) and \
+			isdir(join(d, 'objects')) and \
+			isdir(join(d, 'refs')):
+		headref = join(d, 'HEAD')
+		return isfile(headref) or \
 				(os.path.islink(headref) and
 				os.readlink(headref).startswith('refs'))
 	return False
 
 
 class Repo(object):
-	"""
-	Represents a git repository and allows you to query references, 
+	"""Represents a git repository and allows you to query references, 
 	gather commit information, generate diffs, create and clone repositories query
 	the log.
 	
@@ -57,8 +62,7 @@ class Repo(object):
 	'working_tree_dir' is the working tree directory, but will raise AssertionError
 	if we are a bare repository.
 	
-	'git_dir' is the .git repository directoy, which is always set.
-	"""
+	'git_dir' is the .git repository directoy, which is always set."""
 	DAEMON_EXPORT_FILE = 'git-daemon-export-ok'
 	__slots__ = ( "working_dir", "_working_tree_dir", "git_dir", "_bare", "git", "odb" )
 	
@@ -73,7 +77,7 @@ class Repo(object):
 	config_level = ("system", "global", "repository")
 
 	def __init__(self, path=None, odbt = GitDB):
-		""" Create a new Repo instance
+		"""Create a new Repo instance
 
 		:param path: is the path to either the root git directory or the bare git repo::
 
@@ -171,44 +175,30 @@ class Repo(object):
 	
 	@property
 	def working_tree_dir(self):
-		"""
-		Returns
-			The working tree directory of our git repository
-			
-		Raises AssertionError
-			If we are a bare repository
-		"""
+		""":return: The working tree directory of our git repository
+		:raise AssertionError: If we are a bare repository"""
 		if self._working_tree_dir is None:
 			raise AssertionError( "Repository at %r is bare and does not have a working tree directory" % self.git_dir )
 		return self._working_tree_dir
 	
 	@property
 	def bare(self):
-		"""
-		Returns
-			True if the repository is bare
-		"""
+		""":return: True if the repository is bare"""
 		return self._bare
 
 	@property
 	def heads(self):
-		"""
-		A list of ``Head`` objects representing the branch heads in
+		"""A list of ``Head`` objects representing the branch heads in
 		this repo
 
-		Returns
-			``git.IterableList(Head, ...)``
-		"""
+		:return: ``git.IterableList(Head, ...)``"""
 		return Head.list_items(self)
 		
 	@property
 	def references(self):
-		"""
-		A list of Reference objects representing tags, heads and remote references.
+		"""A list of Reference objects representing tags, heads and remote references.
 		
-		Returns
-			IterableList(Reference, ...)
-		"""
+		:return: IterableList(Reference, ...)"""
 		return Reference.list_items(self)
 		
 	# alias for references
@@ -219,113 +209,71 @@ class Repo(object):
 	
 	@property
 	def index(self):
-		"""
-		Returns
-			IndexFile representing this repository's index. 
-		"""
+		""":return: IndexFile representing this repository's index."""
 		return IndexFile(self)
 
 	@property
 	def head(self):
-		"""
-		Return
-			HEAD Object pointing to the current head reference
-		"""
+		""":return: HEAD Object pointing to the current head reference"""
 		return HEAD(self,'HEAD')
 		
 	@property
 	def remotes(self):
-		"""
-		A list of Remote objects allowing to access and manipulate remotes
-		
-		Returns
-			``git.IterableList(Remote, ...)``
-		"""
+		"""A list of Remote objects allowing to access and manipulate remotes
+		:return: ``git.IterableList(Remote, ...)``"""
 		return Remote.list_items(self)
 		
 	def remote(self, name='origin'):
-		"""
-		Return
-			Remote with the specified name
-		
-		Raise 
-			ValueError if no remote with such a name exists
-		"""
+		""":return: Remote with the specified name
+		:raise ValueError:  if no remote with such a name exists"""
 		return Remote(self, name)
 
 	@property
 	def tags(self):
-		"""
-		A list of ``Tag`` objects that are available in this repo
-
-		Returns
-			``git.IterableList(TagReference, ...)``
-		"""
+		"""A list of ``Tag`` objects that are available in this repo
+		:return: ``git.IterableList(TagReference, ...)`` """
 		return TagReference.list_items(self)
 		
 	def tag(self,path):
-		"""
-		Return
-			TagReference Object, reference pointing to a Commit or Tag
-		
-		``path``
-			path to the tag reference, i.e. 0.1.5 or tags/0.1.5
-		"""
+		""":return: TagReference Object, reference pointing to a Commit or Tag
+		:param path: path to the tag reference, i.e. 0.1.5 or tags/0.1.5 """
 		return TagReference(self, path)
 		
 	def create_head(self, path, commit='HEAD', force=False, **kwargs ):
-		"""
-		Create a new head within the repository.
-		
+		"""Create a new head within the repository. 
 		For more documentation, please see the Head.create method.
 		
-		Returns
-			newly created Head Reference
-		"""
+		:return: newly created Head Reference"""
 		return Head.create(self, path, commit, force, **kwargs)
 		
 	def delete_head(self, *heads, **kwargs):
-		"""
-		Delete the given heads
+		"""Delete the given heads
 		
-		``kwargs``
-			Additional keyword arguments to be passed to git-branch 
-		"""
+		:param kwargs: Additional keyword arguments to be passed to git-branch"""
 		return Head.delete(self, *heads, **kwargs)
 		
 	def create_tag(self, path, ref='HEAD', message=None, force=False, **kwargs):
-		"""
-		Create a new tag reference.
-		
+		"""Create a new tag reference.
 		For more documentation, please see the TagReference.create method.
 		
-		Returns
-			TagReference object
-		"""
+		:return: TagReference object """
 		return TagReference.create(self, path, ref, message, force, **kwargs)
 		
 	def delete_tag(self, *tags):
-		"""
-		Delete the given tag references
-		"""
+		"""Delete the given tag references"""
 		return TagReference.delete(self, *tags)
 		
 	def create_remote(self, name, url, **kwargs):
-		"""
-		Create a new remote.
+		"""Create a new remote.
 		
 		For more information, please see the documentation of the Remote.create 
 		methods 
 		
-		Returns
-			Remote reference
-		"""
+		:return: Remote reference"""
 		return Remote.create(self, name, url, **kwargs)
 		
 	def delete_remote(self, remote):
-		"""
-		Delete the given remote.
-		"""
+		"""Delete the given remote."""
 		return Remote.remove(self, remote)
 		
 	def _get_config_path(self, config_level ):
@@ -345,21 +293,19 @@ class Repo(object):
 			
 	def config_reader(self, config_level=None):
 		"""
-		Returns
+		:return:
 			GitConfigParser allowing to read the full git configuration, but not to write it
 			
 			The configuration will include values from the system, user and repository 
 			configuration files.
 			
-			NOTE: On windows, system configuration cannot currently be read as the path is 
-			unknown, instead the global path will be used.
-			
-		``config_level``
+		:param config_level:
 			For possible values, see config_writer method
 			If None, all applicable levels will be used. Specify a level in case 
 			you know which exact file you whish to read to prevent reading multiple files for 
 			instance
-		"""
+		:note: On windows, system configuration cannot currently be read as the path is 
+			unknown, instead the global path will be used."""
 		files = None
 		if config_level is None:
 			files = [ self._get_config_path(f) for f in self.config_level ]
@@ -369,30 +315,23 @@ class Repo(object):
 		
 	def config_writer(self, config_level="repository"):
 		"""
-		Returns
+		:return:
 			GitConfigParser allowing to write values of the specified configuration file level.
 			Config writers should be retrieved, used to change the configuration ,and written 
 			right away as they will lock the configuration file in question and prevent other's
 			to write it.
 			
-		``config_level``
+		:param config_level:
 			One of the following values
 			system = sytem wide configuration file
 			global = user level configuration file
-			repository = configuration file for this repostory only
-		"""
+			repository = configuration file for this repostory only"""
 		return GitConfigParser(self._get_config_path(config_level), read_only = False)
 		
 	def commit(self, rev=None):
-		"""
-		The Commit object for the specified revision
-
-		``rev``
-			revision specifier, see git-rev-parse for viable options.
-		
-		Returns
-			``git.Commit``
-		"""
+		"""The Commit object for the specified revision
+		:param rev: revision specifier, see git-rev-parse for viable options.
+		:return: ``git.Commit``"""
 		if rev is None:
 			rev = self.active_branch
 		
@@ -401,33 +340,23 @@ class Repo(object):
 		return c
 		
 	def iter_trees(self, *args, **kwargs):
-		"""
-		Returns
-			Iterator yielding Tree objects
-			
-		Note: Takes all arguments known to iter_commits method
-		"""
+		""":return: Iterator yielding Tree objects
+		:note: Takes all arguments known to iter_commits method"""
 		return ( c.tree for c in self.iter_commits(*args, **kwargs) )
 
 	def tree(self, rev=None):
-		"""
-		The Tree object for the given treeish revision
-
-		``rev``
-			is a revision pointing to a Treeish ( being a commit or tree )
-
+		"""The Tree object for the given treeish revision
 		Examples::
+	
+			  repo.tree(repo.heads[0])
 
-		  repo.tree(repo.heads[0])
-
-		Returns
-			``git.Tree``
+		:param rev: is a revision pointing to a Treeish ( being a commit or tree )
+		:return: ``git.Tree``
 			
-		NOTE
+		:note:
 			If you need a non-root level tree, find it by iterating the root tree. Otherwise
 			it cannot know about its path relative to the repository root and subsequent 
-			operations might have unexpected results.
-		"""
+			operations might have unexpected results."""
 		if rev is None:
 			rev = self.active_branch
 		
@@ -439,27 +368,24 @@ class Repo(object):
 		raise ValueError( "Revision %s did not point to a treeish, but to %s" % (rev, c))
 
 	def iter_commits(self, rev=None, paths='', **kwargs):
-		"""
-		A list of Commit objects representing the history of a given ref/commit
+		"""A list of Commit objects representing the history of a given ref/commit
 
-		``rev``
+		:parm rev:
 			revision specifier, see git-rev-parse for viable options.
 			If None, the active branch will be used.
 
-		 ``paths``
+		:parm paths:
 			is an optional path or a list of paths to limit the returned commits to
 			Commits that do not contain that path or the paths will not be returned.
 		
-		 ``kwargs``
+		:parm kwargs:
 			Arguments to be passed to git-rev-list - common ones are 
 			max_count and skip
 
-		Note: to receive only commits between two named revisions, use the 
-		"revA..revB" revision specifier
+		:note: to receive only commits between two named revisions, use the 
+			"revA..revB" revision specifier
 
-		Returns
-			``git.Commit[]``
-		"""
+		:return ``git.Commit[]``"""
 		if rev is None:
 			rev = self.active_branch
 		
@@ -483,12 +409,9 @@ class Repo(object):
 	del _set_daemon_export
 
 	def _get_alternates(self):
-		"""
-		The list of alternates for this repo from which objects can be retrieved
+		"""The list of alternates for this repo from which objects can be retrieved
 
-		Returns
-			list of strings being pathnames of alternates
-		"""
+		:return: list of strings being pathnames of alternates"""
 		alternates_path = os.path.join(self.git_dir, 'objects', 'info', 'alternates')
 
 		if os.path.exists(alternates_path):
@@ -499,26 +422,19 @@ class Repo(object):
 				f.close()
 			return alts.strip().splitlines()
 		else:
-			return []
+			return list()
 
 	def _set_alternates(self, alts):
-		"""
-		Sets the alternates
+		"""Sets the alternates
 
-		``alts``
+		:parm alts:
 			is the array of string paths representing the alternates at which 
 			git should look for objects, i.e. /home/user/repo/.git/objects
 
-		Raises
-			NoSuchPathError
-			
-		Note
+		:raise NoSuchPathError:
+		:note:
 			The method does not check for the existance of the paths in alts
-			as the caller is responsible.
-			
-		Returns
-			None
-		"""
+			as the caller is responsible."""
 		alternates_path = os.path.join(self.git_dir, 'objects', 'info', 'alternates') 
 		if not alts:
 			if os.path.isfile(alternates_path):
@@ -536,11 +452,10 @@ class Repo(object):
 
 	def is_dirty(self, index=True, working_tree=True, untracked_files=False):
 		"""
-		Returns
+		:return:
 			``True``, the repository is considered dirty. By default it will react
 			like a git-status without untracked files, hence it is dirty if the 
-			index or the working copy have changes.
-		"""
+			index or the working copy have changes."""
 		if self._bare:
 			# Bare repositories with no associated working directory are
 			# always consired to be clean.
@@ -568,15 +483,14 @@ class Repo(object):
 	@property
 	def untracked_files(self):
 		"""
-		Returns
+		:return:
 			list(str,...)
 			
 			Files currently untracked as they have not been staged yet. Paths 
 			are relative to the current working directory of the git command.
 			
-		Note
-			ignored files will not appear here, i.e. files mentioned in .gitignore
-		"""
+		:note:
+			ignored files will not appear here, i.e. files mentioned in .gitignore"""
 		# make sure we get all files, no only untracked directores
 		proc = self.git.status(untracked_files=True, as_process=True)
 		stream = iter(proc.stdout)
@@ -598,30 +512,23 @@ class Repo(object):
 
 	@property
 	def active_branch(self):
-		"""
-		The name of the currently active branch.
+		"""The name of the currently active branch.
 
-		Returns
-			Head to the active branch
-		"""
+		:return: Head to the active branch"""
 		return self.head.reference
 			
 	def blame(self, rev, file):
-		"""
-		The blame information for the given file at the given revision.
+		"""The blame information for the given file at the given revision.
 
-		``rev``
-			revision specifier, see git-rev-parse for viable options.
-
-		Returns
+		:parm rev: revision specifier, see git-rev-parse for viable options.
+		:return:
 			list: [git.Commit, list: [<line>]]
 			A list of tuples associating a Commit object with a list of lines that 
 			changed within the given commit. The Commit objects will be given in order
-			of appearance.
-		"""
+			of appearance."""
 		data = self.git.blame(rev, '--', file, p=True)
-		commits = {}
-		blames = []
+		commits = dict()
+		blames = list()
 		info = None
 
 		for line in data.splitlines(False):
@@ -670,7 +577,7 @@ class Repo(object):
 							sha = info['id']
 							c = commits.get(sha)
 							if c is None:
-								c = Commit(	 self, sha,
+								c = Commit(	 self, hex_to_bin(sha),
 											 author=Actor._from_string(info['author'] + ' ' + info['author_email']),
 											 authored_date=info['author_date'],
 											 committer=Actor._from_string(info['committer'] + ' ' + info['committer_email']),
@@ -691,29 +598,22 @@ class Repo(object):
 
 	@classmethod
 	def init(cls, path=None, mkdir=True, **kwargs):
-		"""
-		Initialize a git repository at the given path if specified
+		"""Initialize a git repository at the given path if specified
 
-		``path``
+		:param path:
 			is the full path to the repo (traditionally ends with /<name>.git)
 			or None in which case the repository will be created in the current 
 			working directory
 
-		``mkdir``
+		:parm mkdir:
 			if specified will create the repository directory if it doesn't
 			already exists. Creates the directory with a mode=0755. 
 			Only effective if a path is explicitly given
 
-		``kwargs``
+		:parm kwargs:
 			keyword arguments serving as additional options to the git-init command
 
-		Examples::
-
-			git.Repo.init('/var/git/myrepo.git',bare=True)
-
-		Returns
-			``git.Repo`` (the newly created repo)
-		"""
+		:return: ``git.Repo`` (the newly created repo)"""
 
 		if mkdir and path and not os.path.exists(path):
 			os.makedirs(path, 0755)
@@ -735,8 +635,7 @@ class Repo(object):
 			All remaining keyword arguments are given to the git-clone command
 			
 		:return:
-			``git.Repo`` (the newly cloned repo)
-		"""
+			``git.Repo`` (the newly cloned repo)"""
 		# special handling for windows for path at which the clone should be 
 		# created.
 		# tilde '~' will be expanded to the HOME no matter where the ~ occours. Hence
@@ -774,33 +673,17 @@ class Repo(object):
 
 
 	def archive(self, ostream, treeish=None, prefix=None,  **kwargs):
-		"""
-		Archive the tree at the given revision.
-		``ostream``
-			file compatible stream object to which the archive will be written
-
-		``treeish``
-			is the treeish name/id, defaults to active branch
-
-		``prefix``
-			is the optional prefix to prepend to each filename in the archive
-			
-		``kwargs``
+		"""Archive the tree at the given revision.
+		:parm ostream: file compatible stream object to which the archive will be written
+		:parm treeish: is the treeish name/id, defaults to active branch
+		:parm prefix: is the optional prefix to prepend to each filename in the archive
+		:parm kwargs:
 			Additional arguments passed to git-archive
 			NOTE: Use the 'format' argument to define the kind of format. Use 
 			specialized ostreams to write any format supported by python
 
-		Examples::
-
-			>>> repo.archive(open("archive"))
-			<String containing tar.gz archive>
-
-		Raise
-			GitCommandError in case something went wrong
-			
-		Returns
-			self
-		"""
+		:raise GitCommandError: in case something went wrong
+		:return: self"""
 		if treeish is None:
 			treeish = self.active_branch
 		if prefix and 'prefix' not in kwargs:

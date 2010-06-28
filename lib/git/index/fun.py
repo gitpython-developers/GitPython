@@ -207,7 +207,7 @@ def aggressive_tree_merge(odb, tree_shas):
 		trees. All valid entries are on stage 0, whereas the conflicting ones are left 
 		on stage 1, 2 or 3, whereas stage 1 corresponds to the common ancestor tree, 
 		2 to our tree and 3 to 'their' tree.
-	:param tree_shas: 1, 2 or 3 trees as identified by their shas
+	:param tree_shas: 1, 2 or 3 trees as identified by their binary 20 byte shas
 		If 1 or two, the entries will effectively correspond to the last given tree
 		If 3 are given, a 3 way merge is performed"""
 	out = list()

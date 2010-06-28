@@ -5,9 +5,14 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
 import os, sys
-import subprocess
 from utils import *
 from errors import GitCommandError
+
+from subprocess import (
+							call, 
+							Popen,
+							PIPE
+						)
 
 # Enables debugging of GitPython's git commands
 GIT_PYTHON_TRACE = os.environ.get("GIT_PYTHON_TRACE", False)
@@ -16,7 +21,7 @@ execute_kwargs = ('istream', 'with_keep_cwd', 'with_extended_output',
 				  'with_exceptions', 'as_process', 
 				  'output_stream' )
 
-
+__all__ = ('Git', )
 
 def dashify(string):
 	return string.replace('_', '-')
@@ -43,14 +48,12 @@ class Git(object):
 	max_chunk_size = 1024*64
 	
 	class AutoInterrupt(object):
-		"""
-		Kill/Interrupt the stored process instance once this instance goes out of scope. It is 
+		"""Kill/Interrupt the stored process instance once this instance goes out of scope. It is 
 		used to prevent processes piling up in case iterators stop reading.
 		Besides all attributes are wired through to the contained process object.
 		
 		The wait method was overridden to perform automatic status code checking
-		and possibly raise.
-		"""
+		and possibly raise."""
 		__slots__= ("proc", "args")
 		
 		def __init__(self, proc, args ):
@@ -74,19 +77,16 @@ class Git(object):
 				# for some reason, providing None for stdout/stderr still prints something. This is why 
 				# we simply use the shell and redirect to nul. Its slower than CreateProcess, question 
 				# is whether we really want to see all these messages. Its annoying no matter what.
-				subprocess.call(("TASKKILL /F /T /PID %s 2>nul 1>nul" % str(self.proc.pid)), shell=True)
+				call(("TASKKILL /F /T /PID %s 2>nul 1>nul" % str(self.proc.pid)), shell=True)
 			# END exception handling 
 			
 		def __getattr__(self, attr):
 			return getattr(self.proc, attr)
 			
 		def wait(self):
-			"""
-			Wait for the process and return its status code. 
+			"""Wait for the process and return its status code. 
 			
-			Raise
-				GitCommandError if the return status is not 0
-			"""
+			:raise GitCommandError: if the return status is not 0"""
 			status = self.proc.wait()
 			if status != 0:
 				raise GitCommandError(self.args, status, self.proc.stderr.read())
@@ -196,15 +196,13 @@ class Git(object):
 	
 	
 	def __init__(self, working_dir=None):
-		"""
-		Initialize this instance with:
+		"""Initialize this instance with:
 		
-		``working_dir``
+		:param working_dir:
 		   Git directory we should work in. If None, we always work in the current 
 		   directory as returned by os.getcwd().
 		   It is meant to be the working tree directory if available, or the 
-		   .git directory in case of bare repositories.
-		"""
+		   .git directory in case of bare repositories."""
 		super(Git, self).__init__()
 		self._working_dir = working_dir
 		
@@ -213,22 +211,16 @@ class Git(object):
 		self.cat_file_all = None
 
 	def __getattr__(self, name):
-		"""
-		A convenience method as it allows to call the command as if it was 
+		"""A convenience method as it allows to call the command as if it was 
 		an object.
-		Returns
-			Callable object that will execute call _call_process with your arguments.
-		"""
+		:return: Callable object that will execute call _call_process with your arguments."""
 		if name[:1] == '_':
 			raise AttributeError(name)
 		return lambda *args, **kwargs: self._call_process(name, *args, **kwargs)
 
 	@property
 	def working_dir(self):
-		"""
-		Returns
-			Git directory we are working on
-		"""
+		""":return: Git directory we are working on"""
 		return self._working_dir
 
 	def execute(self, command,
@@ -240,30 +232,29 @@ class Git(object):
 				output_stream=None, 
 				**subprocess_kwargs
 				):
-		"""
-		Handles executing the command on the shell and consumes and returns
+		"""Handles executing the command on the shell and consumes and returns
 		the returned information (stdout)
 
-		``command``
+		:param command:
 			The command argument list to execute.
 			It should be a string, or a sequence of program arguments. The
 			program to execute is the first item in the args sequence or string.
 
-		``istream``
+		:param istream:
 			Standard input filehandle passed to subprocess.Popen.
 
-		``with_keep_cwd``
+		:param with_keep_cwd:
 			Whether to use the current working directory from os.getcwd().
 			The cmd otherwise uses its own working_dir that it has been initialized
 			with if possible.
 
-		``with_extended_output``
+		:param with_extended_output:
 			Whether to return a (status, stdout, stderr) tuple.
 
-		``with_exceptions``
+		:param with_exceptions:
 			Whether to raise an exception when git returns a non-zero status.
 
-		``as_process``
+		:param as_process:
 			Whether to return the created process instance directly from which 
 			streams can be read on demand. This will render with_extended_output and 
 			with_exceptions ineffective - the caller will have 
@@ -273,7 +264,7 @@ class Git(object):
 			use the command in iterators, you should pass the whole process instance 
 			instead of a single stream.
 			
-		``output_stream``
+		:param output_stream:
 			If set to a file-like object, data produced by the git command will be 
 			output to the given stream directly.
 			This feature only has any effect if as_process is False. Processes will
@@ -281,27 +272,24 @@ class Git(object):
 			This merely is a workaround as data will be copied from the 
 			output pipe to the given output stream directly.
 			
-		``**subprocess_kwargs``
+		:param **subprocess_kwargs:
 			Keyword arguments to be passed to subprocess.Popen. Please note that 
 			some of the valid kwargs are already set by this method, the ones you 
 			specify may not be the same ones.
 			
-		Returns::
+		:return:
+			* str(output) if extended_output = False (Default)
+			* tuple(int(status), str(stdout), str(stderr)) if extended_output = True
+			 
+			if ouput_stream is True, the stdout value will be your output stream:
+			* output_stream if extended_output = False
+			* tuple(int(status), output_stream, str(stderr)) if extended_output = True
+			
+		:raise GitCommandError:
 		
-		 str(output)								   # extended_output = False (Default)
-		 tuple(int(status), str(stdout), str(stderr)) # extended_output = True
-		 
-		 if ouput_stream is True, the stdout value will be your output stream:
-		 output_stream									# extended_output = False
-		 tuple(int(status), output_stream, str(stderr))# extended_output = True
-		
-		Raise
-			GitCommandError
-		
-		NOTE
+		:note:
 		   If you add additional keyword arguments to the signature of this method, 
-		   you must update the execute_kwargs tuple housed in this module.
-		"""
+		   you must update the execute_kwargs tuple housed in this module."""
 		if GIT_PYTHON_TRACE and not GIT_PYTHON_TRACE == 'full':
 			print ' '.join(command)
 
@@ -312,14 +300,14 @@ class Git(object):
 		  cwd=self._working_dir
 		  
 		# Start the process
-		proc = subprocess.Popen(command,
-								cwd=cwd,
-								stdin=istream,
-								stderr=subprocess.PIPE,
-								stdout=subprocess.PIPE,
-								close_fds=(os.name=='posix'),# unsupported on linux
-								**subprocess_kwargs
-								)
+		proc = Popen(command,
+						cwd=cwd,
+						stdin=istream,
+						stderr=PIPE,
+						stdout=PIPE,
+						close_fds=(os.name=='posix'),# unsupported on linux
+						**subprocess_kwargs
+						)
 		if as_process:
 			return self.AutoInterrupt(proc, command)
 		
@@ -367,10 +355,8 @@ class Git(object):
 			return stdout_value
 
 	def transform_kwargs(self, **kwargs):
-		"""
-		Transforms Python style kwargs into git command line options.
-		"""
-		args = []
+		"""Transforms Python style kwargs into git command line options."""
+		args = list()
 		for k, v in kwargs.items():
 			if len(k) == 1:
 				if v is True:
@@ -400,34 +386,30 @@ class Git(object):
 		return outlist
 
 	def _call_process(self, method, *args, **kwargs):
-		"""
-		Run the given git command with the specified arguments and return
+		"""Run the given git command with the specified arguments and return
 		the result as a String
 
-		``method``
+		:param method:
 			is the command. Contained "_" characters will be converted to dashes,
 			such as in 'ls_files' to call 'ls-files'.
 
-		``args``
+		:param args:
 			is the list of arguments. If None is included, it will be pruned.
 			This allows your commands to call git more conveniently as None
 			is realized as non-existent
 
-		``kwargs``
+		:param kwargs:
 			is a dict of keyword arguments.
 			This function accepts the same optional keyword arguments
 			as execute().
 
-		Examples::
+		``Examples``::
 			git.rev_list('master', max_count=10, header=True)
 
-		Returns
-			Same as execute()
-		"""
-
+		:return: Same as ``execute``"""
 		# Handle optional arguments prior to calling transform_kwargs
 		# otherwise these'll end up in args, which is bad.
-		_kwargs = {}
+		_kwargs = dict()
 		for kwarg in execute_kwargs:
 			try:
 				_kwargs[kwarg] = kwargs.pop(kwarg)
@@ -447,16 +429,13 @@ class Git(object):
 		
 	def _parse_object_header(self, header_line):
 		"""
-		``header_line``
+		:param header_line:
 			<hex_sha> type_string size_as_int
 			
-		Returns
-			(hex_sha, type_string, size_as_int)
+		:return: (hex_sha, type_string, size_as_int)
 			
-		Raises
-			ValueError if the header contains indication for an error due to incorrect 
-			input sha
-		"""
+		:raise ValueError: if the header contains indication for an error due to 
+			incorrect input sha"""
 		tokens = header_line.split()
 		if len(tokens) != 3:
 			if not tokens:
@@ -482,7 +461,7 @@ class Git(object):
 		if cur_val is not None:
 			return cur_val
 			
-		options = { "istream" : subprocess.PIPE, "as_process" : True }
+		options = { "istream" : PIPE, "as_process" : True }
 		options.update( kwargs )
 		
 		cmd = self._call_process( cmd_name, *args, **options )
@@ -501,15 +480,14 @@ class Git(object):
 		:note: The method will only suffer from the costs of command invocation 
 			once and reuses the command in subsequent calls. 
 		
-		:return: (hexsha, type_string, size_as_int) """
+		:return: (hexsha, type_string, size_as_int)"""
 		cmd = self.__get_persistent_cmd("cat_file_header", "cat_file", batch_check=True)
 		return self.__get_object_header(cmd, ref)
 		
 	def get_object_data(self, ref):
 		""" As get_object_header, but returns object data as well
 		:return: (hexsha, type_string, size_as_int,data_string)
-		:note: not threadsafe
-		"""
+		:note: not threadsafe"""
 		hexsha, typename, size, stream = self.stream_object_data(ref)
 		data = stream.read(size)
 		del(stream)
@@ -525,14 +503,11 @@ class Git(object):
 		return (hexsha, typename, size, self.CatFileContentStream(size, cmd.stdout))
 		
 	def clear_cache(self):
-		"""
-		Clear all kinds of internal caches to release resources.
+		"""Clear all kinds of internal caches to release resources.
 		
 		Currently persistent commands will be interrupted.
 		
-		Returns
-			self
-		"""
+		:return: self"""
 		self.cat_file_all = None
 		self.cat_file_header = None
 		return self
