@@ -14,17 +14,7 @@ class Blob(base.IndexObject):
 	DEFAULT_MIME_TYPE = "text/plain"
 	type = "blob"
 
-	__slots__ = "data"
-
-	def _set_cache_(self, attr):
-		if attr == "data":
-			ostream = self.repo.odb.stream(self.binsha)
-			self.size = ostream.size
-			self.data = ostream.read()
-			# assert ostream.type == self.type, _assertion_msg_format % (self.binsha, ostream.type, self.type)
-		else:
-			super(Blob, self)._set_cache_(attr)
-		# END handle data
+	__slots__ = tuple()
 
 	@property
 	def mime_type(self):

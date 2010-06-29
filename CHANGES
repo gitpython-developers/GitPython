@@ -1,26 +1,34 @@
 =======
 CHANGES
 =======
+
 0.3
 ===
- * ConcurrentWriteOperation was removed, and replaced by LockedFD
- * IndexFile.get_entries_key was renamed to entry_key
- * IndexEntry instances contained in IndexFile.entries now use binary sha's. Use
-   the .hexsha property to obtain the hexadecimal version. The .sha property
-   was removed to make the use of the respective sha more explicit.
- * IndexFile.write_tree: removed missing_ok keyword, its always True now
-   Instead of raising GitCommandError it raises UnmergedEntriesError
- * diff.Diff.null_hex_sha renamed to NULL_HEX_SHA, to be conforming with 
-   the naming in the Object base class
- * Object instances, and everything derived from it, now use binary sha's internally. The 'sha' member was removed, in favor of the 'binsha' member.
-    An 'hexsha' property is available for convenient conversions.
-    They may only be initialized using their binary shas, reference names or revision specs are not allowed anymore.
- * The .data attribute was removed from the Object type, it is only available
-   on the Blob type.
- * For consistency with naming conventions used in sub-modules like gitdb, the following modules have been renamed
+Renamed Modules
+---------------
+* For consistency with naming conventions used in sub-modules like gitdb, the following modules have been renamed
   * git.utils -> git.util
   * git.errors -> git.exc
   * git.objects.utils -> git.objects.util
+  
+General
+-------
+* Object instances, and everything derived from it, now use binary sha's internally. The 'sha' member was removed, in favor of the 'binsha' member.
+    An 'hexsha' property is available for convenient conversions.
+    They may only be initialized using their binary shas, reference names or revision specs are not allowed anymore.
+* IndexEntry instances contained in IndexFile.entries now use binary sha's. Use the .hexsha property to obtain the hexadecimal version. The .sha property was removed to make the use of the respective sha more explicit.
+* If objects are instantiated explicitly, a binary sha is required to identify the object, where previously any rev-spec could be used. The ref-spec compatible 
+version still exists as Object.new or Repo.commit|Repo.tree respectively.
+* The .data attribute was removed from the Object type, to obtain plain data, use the data_stream property instead.
+* ConcurrentWriteOperation was removed, and replaced by LockedFD
+* IndexFile.get_entries_key was renamed to entry_key
+* IndexFile.write_tree: removed missing_ok keyword, its always True now
+   Instead of raising GitCommandError it raises UnmergedEntriesError.
+   This is required as the pure-python implementation doesn't support the missing_ok keyword yet.
+* diff.Diff.null_hex_sha renamed to NULL_HEX_SHA, to be conforming with 
+   the naming in the Object base class
+ 
+ 
    
 
 0.2 Beta 2

@@ -42,8 +42,6 @@ class TestBase(TestBase):
 			assert item.hexsha == hexsha
 			assert item.type == typename
 			assert item.size
-			if isinstance(item, Blob):
-				assert item.data
 			assert item == item
 			assert not item != item
 			assert str(item) == item.hexsha
