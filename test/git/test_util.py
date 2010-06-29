@@ -8,8 +8,8 @@ import os
 import tempfile
 
 from test.testlib import *
-from git.utils import *
-from git.objects.utils import *
+from git.util import *
+from git.objects.util import *
 from git import *
 from git.cmd import dashify
 

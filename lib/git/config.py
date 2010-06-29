@@ -13,7 +13,7 @@ import inspect
 import cStringIO
 
 from git.odict import OrderedDict
-from git.utils import LockFile
+from git.util import LockFile
 
 __all__ = ('GitConfigParser', )
 

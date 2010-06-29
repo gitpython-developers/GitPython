@@ -4,7 +4,7 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
-from git.utils import (
+from git.util import (
 							Iterable,
 							Stats,
 						)
@@ -17,7 +17,7 @@ import base
 from gitdb.util import (
 						hex_to_bin
 						)
-from utils import (
+from util import (
 						Traversable,
 						Serializable,
 						get_user_id,

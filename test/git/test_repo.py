@@ -7,7 +7,7 @@
 import os, sys
 from test.testlib import *
 from git import *
-from git.utils import join_path_native
+from git.util import join_path_native
 import tempfile
 import shutil
 from cStringIO import StringIO

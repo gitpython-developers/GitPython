@@ -6,7 +6,7 @@
 """ Module containing all object based types. """
 import base
 from gitdb.util import hex_to_bin
-from utils import (
+from util import (
 						get_object_type_by_name,
 						parse_actor_and_date
 					)

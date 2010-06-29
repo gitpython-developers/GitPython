@@ -10,8 +10,8 @@ from objects import (
 						Object, 
 						Commit
 					)
-from objects.utils import get_object_type_by_name
-from utils import (
+from objects.util import get_object_type_by_name
+from util import (
 					LazyMixin, 
 					Iterable, 
 					join_path, 

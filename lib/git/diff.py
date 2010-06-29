@@ -6,8 +6,8 @@
 
 import re
 from objects.blob import Blob
-from objects.utils import mode_str_to_int 
-from errors import GitCommandError
+from objects.util import mode_str_to_int 
+from exc import GitCommandError
 
 from gitdb.util import hex_to_bin
 	

@@ -4,7 +4,7 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
-from errors import InvalidGitRepositoryError, NoSuchPathError
+from exc import InvalidGitRepositoryError, NoSuchPathError
 from cmd import Git
 from objects import Actor
 from refs import *

@@ -17,6 +17,10 @@ CHANGES
     They may only be initialized using their binary shas, reference names or revision specs are not allowed anymore.
  * The .data attribute was removed from the Object type, it is only available
    on the Blob type.
+ * For consistency with naming conventions used in sub-modules like gitdb, the following modules have been renamed
+  * git.utils -> git.util
+  * git.errors -> git.exc
+  * git.objects.utils -> git.objects.util
    
 
 0.2 Beta 2

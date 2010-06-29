@@ -5,8 +5,8 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
 import os, sys
-from utils import *
-from errors import GitCommandError
+from util import *
+from exc import GitCommandError
 
 from subprocess import (
 							call, 

@@ -36,7 +36,7 @@ from util import (
 import git.objects
 import git.diff as diff
 
-from git.errors import (
+from git.exc import (
 							GitCommandError,
 							CheckoutError
 						)
@@ -48,9 +48,9 @@ from git.objects import (
 							Commit,
 						)
 
-from git.objects.utils import Serializable
+from git.objects.util import Serializable
 
-from git.utils import (
+from git.util import (
 							IndexFileSHA1Writer, 
 							LazyMixin, 
 							LockedFD, 

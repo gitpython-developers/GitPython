@@ -5,8 +5,8 @@ more versatile
 from stat import S_IFDIR
 from cStringIO import StringIO
 
-from git.utils import IndexFileSHA1Writer
-from git.errors import UnmergedEntriesError
+from git.util import IndexFileSHA1Writer
+from git.exc import UnmergedEntriesError
 from git.objects.fun import (
 								tree_to_stream,
 								traverse_tree_recursive,

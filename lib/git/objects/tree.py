@@ -3,7 +3,7 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
-import utils
+import util
 from base import IndexObject
 
 from blob import Blob
@@ -101,7 +101,7 @@ class TreeModifier(object):
 	#} END mutators
 
 
-class Tree(IndexObject, diff.Diffable, utils.Traversable, utils.Serializable):
+class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
 	"""Tree objects represent an ordered list of Blobs and other Trees.
 	
 	``Tree as a list``::
@@ -214,7 +214,7 @@ class Tree(IndexObject, diff.Diffable, utils.Traversable, utils.Serializable):
 	def traverse( self, predicate = lambda i,d: True,
 						   prune = lambda i,d: False, depth = -1, branch_first=True,
 						   visit_once = False, ignore_self=1 ):
-		"""For documentation, see utils.Traversable.traverse
+		"""For documentation, see util.Traversable.traverse
 		Trees are set to visit_once = False to gain more performance in the traversal"""
 		return super(Tree, self).traverse(predicate, prune, depth, branch_first, visit_once, ignore_self)
 

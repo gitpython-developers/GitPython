@@ -5,10 +5,10 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 """Module implementing a remote object allowing easy access to git remotes"""
 
-from errors import GitCommandError
+from exc import GitCommandError
 from objects import Commit
 
-from git.utils import (
+from git.util import (
 						LazyMixin,
 						Iterable,
 						IterableList
