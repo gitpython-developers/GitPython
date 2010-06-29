@@ -131,7 +131,20 @@ class TestRepo(TestBase):
 				assert os.path.isdir(r.git_dir)
 				
 				self._test_empty_repo(r)
+				
+				# test clone
+				clone_path = path + "_clone"
+				rc = r.clone(clone_path)
+				self._test_empty_repo(rc)
+				
 				shutil.rmtree(git_dir_abs)
+				try:
+					shutil.rmtree(clone_path)
+				except OSError:
+					# when relative paths are used, the clone may actually be inside
+					# of the parent directory
+					pass
+				# END exception handling
 			# END for each path
 			
 			os.makedirs(git_dir_rela)
@@ -150,46 +163,6 @@ class TestRepo(TestBase):
 		
 	def test_bare_property(self):
 		self.rorepo.bare
-
-	@patch_object(Repo, '__init__')
-	@patch_object(Git, '_call_process')
-	def test_init_with_options(self, git, repo):
-		git.return_value = True
-		repo.return_value = None
-
-		r = Repo.init("repos/foo/bar.git", **{'bare' : True,'template': "/baz/sweet"})
-		assert isinstance(r, Repo)
-
-		assert_true(git.called)
-		assert_true(repo.called)
-
-	@patch_object(Repo, '__init__')
-	@patch_object(Git, '_call_process')
-	def test_clone(self, git, repo):
-		git.return_value = None
-		repo.return_value = None
-
-		self.rorepo.clone("repos/foo/bar.git")
-
-		assert_true(git.called)
-		path = os.path.join(absolute_project_path(), '.git')
-		assert_equal(git.call_args, (('clone', path, 'repos/foo/bar.git'), {}))
-		assert_true(repo.called)
-
-	@patch_object(Repo, '__init__')
-	@patch_object(Git, '_call_process')
-	def test_clone_with_options(self, git, repo):
-		git.return_value = None
-		repo.return_value = None
-
-		self.rorepo.clone("repos/foo/bar.git", **{'template': '/awesome'})
-
-		assert_true(git.called)
-		path = os.path.join(absolute_project_path(), '.git')
-		assert_equal(git.call_args, (('clone', path, 'repos/foo/bar.git'),
-									  { 'template': '/awesome'}))
-		assert_true(repo.called)
-
 
 	def test_daemon_export(self):
 		orig_val = self.rorepo.daemon_export
