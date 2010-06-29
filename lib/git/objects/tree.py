@@ -23,8 +23,8 @@ from gitdb.util import (
 __all__ = ("TreeModifier", "Tree")
 
 class TreeModifier(object):
-	"""A utility class providing methods to alter the underlying cache in a list-like
-	fashion.
+	"""A utility class providing methods to alter the underlying cache in a list-like fashion.
+	
 	Once all adjustments are complete, the _cache, which really is a refernce to 
 	the cache of a tree, will be sorted. Assuring it will be in a serializable state"""
 	__slots__ = '_cache'
@@ -57,6 +57,7 @@ class TreeModifier(object):
 		exists, nothing will be done, but a ValueError will be raised if the 
 		sha and mode of the existing item do not match the one you add, unless 
 		force is True
+		
 		:param sha: The 20 or 40 byte sha of the item to add
 		:param mode: int representing the stat compatible mode of the item
 		:param force: If True, an item with your name and information will overwrite
@@ -203,10 +204,11 @@ class Tree(IndexObject, diff.Diffable, utils.Traversable, utils.Serializable):
 
 	@property
 	def cache(self):
-		""":return: An object allowing to modify the internal cache. This can be used
-		to change the tree's contents. When done, make sure you call ``set_done``
-		on the tree modifier, or serialization behaviour will be incorrect.
-		See the ``TreeModifier`` for more information on how to alter the cache"""
+		"""
+		:return: An object allowing to modify the internal cache. This can be used
+			to change the tree's contents. When done, make sure you call ``set_done``
+			on the tree modifier, or serialization behaviour will be incorrect.
+			See the ``TreeModifier`` for more information on how to alter the cache"""
 		return TreeModifier(self._cache)
 
 	def traverse( self, predicate = lambda i,d: True,

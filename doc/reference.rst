@@ -3,13 +3,6 @@
 API Reference
 =============
 
-Actor
------
-
-.. automodule:: git.actor
-   :members:
-   :undoc-members:
-
 Objects.Base
 ------------
 
@@ -45,10 +38,52 @@ Objects.Tree
    :members:
    :undoc-members:
 
+Objects.Functions
+-----------------
+
+.. automodule:: git.objects.fun
+   :members:
+   :undoc-members:
+
+Objects.Submodule
+-----------------
+
+.. automodule:: git.objects.submodule
+   :members:
+   :undoc-members:
+   
 Objects.Utils
 -------------
 
 .. automodule:: git.objects.utils
+   :members:
+   :undoc-members:
+
+Index.Base
+-------------
+
+.. automodule:: git.index.base
+   :members:
+   :undoc-members:
+
+Index.Functions
+---------------
+
+.. automodule:: git.index.fun
+   :members:
+   :undoc-members:
+   
+Index.Types
+-----------
+
+.. automodule:: git.index.typ
+   :members:
+   :undoc-members:
+   
+Index.Util
+-------------
+
+.. automodule:: git.index.util
    :members:
    :undoc-members:
    
@@ -81,13 +116,6 @@ Errors
    :members:
    :undoc-members:
 
-Index
-------
-
-.. automodule:: git.index
-   :members:
-   :undoc-members:
-   
  
 Refs
 ----
@@ -107,13 +135,6 @@ Repo
 ----
 
 .. automodule:: git.repo
-   :members:
-   :undoc-members:
-
-Stats
------
-
-.. automodule:: git.stats
    :members:
    :undoc-members:
 

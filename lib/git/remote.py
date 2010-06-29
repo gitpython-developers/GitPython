@@ -52,8 +52,10 @@ class _SectionConstraint(object):
 		
 		
 class RemoteProgress(object):
-	"""Handler providing an interface to parse progress information emitted by git-push
-	and git-fetch and to dispatch callbacks allowing subclasses to react to the progress."""
+	"""
+	Handler providing an interface to parse progress information emitted by git-push
+	and git-fetch and to dispatch callbacks allowing subclasses to react to the progress.
+	"""
 	BEGIN, END, COUNTING, COMPRESSING, WRITING =  [ 1 << x for x in range(5) ]
 	STAGE_MASK = BEGIN|END
 	OP_MASK = COUNTING|COMPRESSING|WRITING
@@ -168,7 +170,8 @@ class RemoteProgress(object):
 		
 		
 class PushInfo(object):
-	"""Carries information about the result of a push operation of a single head::
+	"""
+	Carries information about the result of a push operation of a single head::
 	
 		info = remote.push()[0]
 		info.flags			# bitflags providing more information about the result
@@ -179,7 +182,8 @@ class PushInfo(object):
 						# the remote_ref_string. It can be a TagReference as well.
 		info.old_commit # commit at which the remote_ref was standing before we pushed
 						# it to local_ref.commit. Will be None if an error was indicated
-		info.summary	# summary line providing human readable english text about the push"""
+		info.summary	# summary line providing human readable english text about the push
+		"""
 	__slots__ = ('local_ref', 'remote_ref_string', 'flags', 'old_commit', '_remote', 'summary')
 	
 	NEW_TAG, NEW_HEAD, NO_MATCH, REJECTED, REMOTE_REJECTED, REMOTE_FAILURE, DELETED, \
@@ -201,7 +205,8 @@ class PushInfo(object):
 		
 	@property
 	def remote_ref(self):
-		""":return:
+		"""
+		:return:
 			Remote Reference or TagReference in the local repository corresponding 
 			to the remote_ref_string kept in this instance."""
 		# translate heads to a local remote, tags stay as they are
@@ -266,7 +271,8 @@ class PushInfo(object):
 		
 
 class FetchInfo(object):
-	"""Carries information about the results of a fetch operation of a single head::
+	"""
+	Carries information about the results of a fetch operation of a single head::
 	
 	 info = remote.fetch()[0]
 	 info.ref			# Symbolic Reference or RemoteReference to the changed 
@@ -276,7 +282,8 @@ class FetchInfo(object):
 						# is 0 if ref is SymbolicReference
 	 info.note			# additional notes given by git-fetch intended for the user
 	 info.old_commit	# if info.flags & info.FORCED_UPDATE|info.FAST_FORWARD, 
-						# field is set to the previous location of ref, otherwise None"""
+						# field is set to the previous location of ref, otherwise None
+	"""
 	__slots__ = ('ref','old_commit', 'flags', 'note')
 	
 	NEW_TAG, NEW_HEAD, HEAD_UPTODATE, TAG_UPDATE, REJECTED, FORCED_UPDATE, \
@@ -501,7 +508,7 @@ class Remote(LazyMixin, Iterable):
 		:param repo: Repository instance that is to receive the new remote
 		:param name: Desired name of the remote
 		:param url: URL which corresponds to the remote's name
-		:param **kwargs:
+		:param kwargs:
 			Additional arguments to be passed to the git-remote add command
 			
 		:return: New Remote instance
@@ -644,7 +651,7 @@ class Remote(LazyMixin, Iterable):
 			
 			Taken from the git manual
 		:param progress: See 'push' method
-		:param **kwargs: Additional arguments to be passed to git-fetch
+		:param kwargs: Additional arguments to be passed to git-fetch
 		:return:
 			IterableList(FetchInfo, ...) list of FetchInfo instances providing detailed 
 			information about the fetch results
@@ -675,7 +682,7 @@ class Remote(LazyMixin, Iterable):
 			progress information until the method returns.
 			If None, progress information will be discarded
 		
-		:param **kwargs: Additional arguments to be passed to git-push
+		:param kwargs: Additional arguments to be passed to git-push
 		:return:
 			IterableList(PushInfo, ...) iterable list of PushInfo instances, each 
 			one informing about an individual head which had been updated on the remote 

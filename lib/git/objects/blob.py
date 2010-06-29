@@ -28,7 +28,8 @@ class Blob(base.IndexObject):
 
 	@property
 	def mime_type(self):
-		""" :return:String describing the mime type of this file (based on the filename)
+		"""
+		:return: String describing the mime type of this file (based on the filename)
 		:note: Defaults to 'text/plain' in case the actual file type is unknown. """
 		guesses = None
 		if self.path:

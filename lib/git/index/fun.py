@@ -51,8 +51,10 @@ def write_cache(entries, stream, extension_data=None, ShaStreamCls=IndexFileSHA1
 	:param entries: **sorted** list of entries
 	:param stream: stream to wrap into the AdapterStreamCls - it is used for
 		final output.
+		
 	:param ShaStreamCls: Type to use when writing to the stream. It produces a sha
 		while writing to it, before the data is passed on to the wrapped stream
+		
 	:param extension_data: any kind of data to write as a trailer, it must begin
 		a 4 byte identifier, followed by its size ( 4 bytes )"""
 	# wrap the stream into a compatible writer
@@ -103,7 +105,7 @@ def read_header(stream):
 
 def entry_key(*entry):
 	""":return: Key suitable to be used for the index.entries dictionary
-	:param *entry: One instance of type BaseIndexEntry or the path and the stage"""
+	:param entry: One instance of type BaseIndexEntry or the path and the stage"""
 	if len(entry) == 1:
 		return (entry[0].path, entry[0].stage)
 	else:

@@ -272,7 +272,7 @@ class Git(object):
 			This merely is a workaround as data will be copied from the 
 			output pipe to the given output stream directly.
 			
-		:param **subprocess_kwargs:
+		:param subprocess_kwargs:
 			Keyword arguments to be passed to subprocess.Popen. Please note that 
 			some of the valid kwargs are already set by this method, the ones you 
 			specify may not be the same ones.
