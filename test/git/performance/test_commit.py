@@ -82,7 +82,7 @@ class TestPerformance(TestBigRepoRW):
 		nc = 5000
 		st = time()
 		for i in xrange(nc):
-			cm = Commit(	rwrepo, Commit.NULL_HEX_SHA, hc.tree, 
+			cm = Commit(	rwrepo, Commit.NULL_BIN_SHA, hc.tree, 
 							hc.author, hc.authored_date, hc.author_tz_offset, 
 							hc.committer, hc.committed_date, hc.committer_tz_offset, 
 							str(i), parents=hc.parents, encoding=hc.encoding)

@@ -65,7 +65,6 @@ def tree_entries_from_data(data):
 		i += 1
 		sha = data[i:i+20]
 		i = i + 20
-		
 		out.append((sha, mode, name))
 	# END for each byte in data stream
 	return out

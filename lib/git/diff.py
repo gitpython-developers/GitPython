@@ -196,23 +196,24 @@ class Diff(object):
 	def __init__(self, repo, a_path, b_path, a_blob_id, b_blob_id, a_mode,
 				 b_mode, new_file, deleted_file, rename_from,
 				 rename_to, diff):
-		if a_blob_id is None:
-			self.a_blob = None
-		else:
-			self.a_blob = Blob(repo, hex_to_bin(a_blob_id), mode=a_mode, path=a_path)
-		if b_blob_id is None:
-			self.b_blob = None
-		else:
-			self.b_blob = Blob(repo, hex_to_bin(b_blob_id), mode=b_mode, path=b_path)
-
+	
 		self.a_mode = a_mode
 		self.b_mode = b_mode
 		
 		if self.a_mode:
-			self.a_mode = mode_str_to_int( self.a_mode )
+			self.a_mode = mode_str_to_int(self.a_mode)
 		if self.b_mode:
-			self.b_mode = mode_str_to_int( self.b_mode )
-			
+			self.b_mode = mode_str_to_int(self.b_mode)
+		
+		if a_blob_id is None:
+			self.a_blob = None
+		else:
+			self.a_blob = Blob(repo, hex_to_bin(a_blob_id), mode=self.a_mode, path=a_path)
+		if b_blob_id is None:
+			self.b_blob = None
+		else:
+			self.b_blob = Blob(repo, hex_to_bin(b_blob_id), mode=self.b_mode, path=b_path)
+		
 		self.new_file = new_file
 		self.deleted_file = deleted_file
 		

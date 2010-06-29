@@ -482,7 +482,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 			# delete all possible stages
 			for stage in (1, 2, 3):
 				try:
-					del( self.entries[(blob.path, stage)] )
+					del( self.entries[(blob.path, stage)])
 				except KeyError:
 					pass
 				# END ignore key errors

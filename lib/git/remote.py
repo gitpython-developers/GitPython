@@ -384,7 +384,7 @@ class FetchInfo(object):
 				split_token = '...'
 				if control_character == ' ':
 					split_token = split_token[:-1]
-				old_commit = Commit(repo, operation.split(split_token)[0])
+				old_commit = Commit.new(repo, operation.split(split_token)[0])
 			# END handle refspec
 		# END reference flag handling
 		
