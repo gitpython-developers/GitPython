@@ -6,9 +6,10 @@ GitPython Documentation
 =======================
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 2
 
    intro
+   whatsnew
    tutorial
    reference
    roadmap
