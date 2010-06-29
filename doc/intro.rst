@@ -4,20 +4,18 @@
 Overview / Install
 ==================
 
-GitPython is a python library used to interact with Git repositories.
+GitPython is a python library used to interact with git repositories, high-level like git-porcelain, or low-level like git-plumbing.
 
-GitPython was a port of the grit_ library in Ruby created by
-Tom Preston-Werner and Chris Wanstrath, but grew beyond its heritage through its improved design and performance.
+It provides abstractions of git objects for easy access of repository data, and additionally allows you to access the git repository more directly using either a pure python implementation, or the faster, but more resource intensive git command implementation.
 
-.. _grit: http://grit.rubyforge.org
+The object database implementation is optimized for handling large quantities of objects and large datasets, which is achieved by using low-level structures and data streaming.
 
 Requirements
 ============
 
-* Git_ tested with 1.5.3.7
-* Requires Git_ 1.7.0 or newer 
+* Tested with `Git`_ 1.7.0 or newer 
 * `Python Nose`_ - used for running the tests
-* `Mock by Michael Foord`_ used for tests. Requires 0.5
+* `Mock by Michael Foord`_ used for tests. Requires version 0.5
 
 .. _Git: http://git-scm.com/
 .. _Python Nose: http://code.google.com/p/python-nose/

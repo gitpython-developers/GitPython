@@ -52,15 +52,15 @@ Objects.Submodule
    :members:
    :undoc-members:
    
-Objects.Utils
+Objects.Util
 -------------
 
-.. automodule:: git.objects.utils
+.. automodule:: git.objects.util
    :members:
    :undoc-members:
 
 Index.Base
--------------
+----------
 
 .. automodule:: git.index.base
    :members:
@@ -138,9 +138,9 @@ Repo
    :members:
    :undoc-members:
 
-Utils
------
+Util
+----
 
-.. automodule:: git.utils
+.. automodule:: git.util
    :members:
    :undoc-members:

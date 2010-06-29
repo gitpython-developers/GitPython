@@ -8,7 +8,7 @@
 GitPython Tutorial
 ==================
 
-GitPython provides object model access to your git repository. This tutorial is  composed of multiple sections, each of which explain a real-life usecase.
+GitPython provides object model access to your git repository. This tutorial is  composed of multiple sections, each of which explains a real-life usecase.
 
 Initialize a Repo object
 ************************
@@ -17,10 +17,12 @@ The first step is to create a ``Repo`` object to represent your repository::
 
     from git import *
     repo = Repo("/Users/mtrier/Development/git-python")
+    assert repo.bare == False
 
-In the above example, the directory ``/Users/mtrier/Development/git-python`` is my working repository and contains the ``.git`` directory. You can also initialize GitPython with a bare repository::
+In the above example, the directory ``/Users/mtrier/Development/git-python`` is my working repository and contains the ``.git`` directory. You can also initialize GitPython with a *bare* repository::
 
     repo = Repo.create("/var/git/git-python.git")
+    assert repo.bare == True
     
 A repo object provides high-level access to your data, it allows you to create and delete heads, tags and remotes and access the configuration of the  repository::
     
@@ -42,6 +44,25 @@ Clone from existing repositories or initialize new empty ones::
 Archive the repository contents to a tar file::
 
     repo.archive(open("repo.tar",'w'))
+    
+    
+Object Databases
+****************
+``Repo`` instances are powered by its object database instance which will be used when extracting any data, or when writing new objects.
+
+The type of the database determines certain performance characteristics, such as the quantity of objects that can be read per second, the resource usage when reading large data files, as well as the average memory footprint of your application.
+
+GitDB
+=====
+The GitDB is a pure-python implementation of the git object database. It is the default database to use in GitPython 0.3. Its uses less memory when handling huge files, but will be 2 to 5 times slower when extracting large quantities small of objects from densely packed repositories::
+    
+    repo = Repo("path/to/repo", odbt=GitDB)
+
+GitCmdObjectDB
+==============
+The git command database uses persistent git-cat-file instances to read repository information. These operate very fast under all conditions, but will consume additional memory for the process itself. When extracting large files, memory usage will be much higher than the one of the ``GitDB``::
+    
+    repo = Repo("path/to/repo", odbt=GitCmdObjectDB)
     
 Examining References
 ********************
@@ -88,11 +109,11 @@ Change the symbolic reference to switch branches cheaply ( without adjusting the
 
 Understanding Objects
 *********************
-An Object is anything storable in git's object database. Objects contain information about their type, their uncompressed size as well as the actual data. Each object is uniquely identified by a SHA1 hash, being 40 hexadecimal characters in size or 20  bytes in size.
+An Object is anything storable in git's object database. Objects contain information about their type, their uncompressed size as well as the actual data. Each object is uniquely identified by a binary SHA1 hash, being 20 bytes in size.
 
 Git only knows 4 distinct object types being Blobs, Trees, Commits and Tags.
 
-In Git-Pyhton, all objects can be accessed through their common base, compared  and hashed, as shown in the following example::
+In Git-Python, all objects can be accessed through their common base, compared  and hashed. They are usually not instantiated directly, but through references or specialized repository functions::
 
     hc = repo.head.commit
     hct = hc.tree
@@ -100,34 +121,32 @@ In Git-Pyhton, all objects can be accessed through their common base, compared  
     hc != repo.tags[0]
     hc == repo.head.reference.commit
     
-Basic fields are::
+Common fields are::
 
     hct.type
     'tree'
     hct.size
     166
-    hct.sha
+    hct.hexsha
     'a95eeb2a7082212c197cabbf2539185ec74ed0e8'
-    hct.data        # returns string with pure uncompressed data
-    '...' 
-    len(hct.data) == hct.size
+    hct.binsha
+    'binary 20 byte sha1'
     
-Index Objects are objects that can be put into git's index. These objects are trees and blobs which additionally know about their path in the filesystem as well as their mode::
+Index Objects are objects that can be put into git's index. These objects are trees, blobs and submodules which additionally know about their path in the filesystem as well as their mode::
     
     hct.path            # root tree has no path
     ''
     hct.trees[0].path   # the first subdirectory has one though
     'dir'
-    htc.mode            # trees have mode 0
-    0
+    htc.mode            # trees have the mode of a linux directory
+    040000
     '%o' % htc.blobs[0].mode    # blobs have a specific mode though comparable to a standard linux fs
     100644
     
 Access blob data (or any object data) directly or using streams::
     
-    htc.data            # binary tree data as string ( inefficient )
-    htc.blobs[0].data_stream            # stream object to read data from
-    htc.blobs[0].stream_data(my_stream) # write data to given stream
+    htc.blobs[0].data_stream.read()      # stream object to read data from
+    htc.blobs[0].stream_data(open("blob_data", "w")) # write data to given stream
     
     
 The Commit object
@@ -153,11 +172,11 @@ The above will return commits 21-30 from the commit list.::
 
     headcommit = repo.head.commit 
 
-    headcommit.sha
+    headcommit.hexsha
     '207c0c4418115df0d30820ab1a9acd2ea4bf4431'
 
     headcommit.parents
-    [<git.Commit "a91c45eee0b41bf3cdaad3418ca3850664c4a4b4">]
+    (<git.Commit "a91c45eee0b41bf3cdaad3418ca3850664c4a4b4">,)
 
     headcommit.tree
     <git.Tree "563413aedbeda425d8d9dcbb744247d0c3e8a0ac">
@@ -178,7 +197,7 @@ The above will return commits 21-30 from the commit list.::
     'cleaned up a lot of test information. Fixed escaping so it works with
     subprocess.'
 
-Note: date time is represented in a ``seconds since epock`` format. Conversion to human readable form can be accomplished with the various time module methods::
+Note: date time is represented in a ``seconds since epoch`` format. Conversion to human readable form can be accomplished with the various `time module <http://docs.python.org/library/time.html>`_ methods::
 
     import time
     time.asctime(time.gmtime(headcommit.committed_date))
@@ -186,8 +205,6 @@ Note: date time is represented in a ``seconds since epock`` format. Conversion t
 
     time.strftime("%a, %d %b %Y %H:%M", time.gmtime(headcommit.committed_date))
     'Wed, 7 May 2008 05:56'
-
-.. _struct_time: http://docs.python.org/library/time.html
 
 You can traverse a commit's ancestry by chaining calls to ``parents``::
 
@@ -203,7 +220,7 @@ A tree records pointers to the contents of a directory. Let's say you want the r
     tree = repo.heads.master.commit.tree
     <git.Tree "a006b5b1a8115185a228b7514cdcd46fed90dc92">
 
-    tree.sha
+    tree.hexsha
     'a006b5b1a8115185a228b7514cdcd46fed90dc92'
 
 Once you have a tree, you can get the contents::
@@ -230,13 +247,13 @@ Its useful to know that a tree behaves like a list with the ability to  query en
     'dir/file'
     blob.abspath
     '/Users/mtrier/Development/git-python/dir/file'
-    >>>tree['dir/file'].sha == blob.sha
+    >>>tree['dir/file'].binsha == blob.binsha
 
 There is a convenience method that allows you to get a named sub-object from a tree with a syntax similar to how paths are written in an unix system::
 
     tree/"lib"
     <git.Tree "c1c7214dde86f76bc3e18806ac1f47c38b2b7a30">
-    tree/"dir/file" == blob.sha
+    tree/"dir/file" == blob
 
 You can also get a tree directly from the repository if you know its name::
 
@@ -252,7 +269,7 @@ As trees only allow direct access to their direct entries, use the traverse  met
 
     tree.traverse()
     <generator object at 0x7f6598bd65a8>
-    for entry in traverse(): do_something_with(entry)
+    for entry in tree.traverse(): do_something_with(entry)
 
     
 The Index Object
@@ -263,15 +280,15 @@ The git index is the stage containing changes to be written with the next commit
     
 Access objects and add/remove entries. Commit the changes::
 
-    for stage,blob in index.iter_blobs(): do_something(...)
-    Access blob objects
-    for (path,stage),entry in index.entries.iteritems: pass
-    Access the entries directly
+    for stage, blob in index.iter_blobs(): do_something(...)
+    # Access blob objects
+    for (path, stage), entry in index.entries.iteritems: pass
+    # Access the entries directly
     index.add(['my_new_file'])      # add a new file to the index
     index.remove(['dir/existing_file'])
     new_commit = index.commit("my commit message")
     
-Create new indices from other trees or as result of a merge. Write that result to a new index::
+Create new indices from other trees or as result of a merge. Write that result to a new index file::
 
     tmp_index = Index.from_tree(repo, 'HEAD~1') # load a tree into a temporary index
     merge_index = Index.from_tree(repo, 'base', 'HEAD', 'some_branch') # merge two trees three-way
@@ -303,7 +320,7 @@ Change configuration for a specific remote only::
 Obtaining Diff Information
 **************************
 
-Diffs can generally be obtained by Subclasses of ``Diffable`` as they provide  the ``diff`` method. This operation yields a DiffIndex allowing you to easily access diff information about paths.
+Diffs can generally be obtained by subclasses of ``Diffable`` as they provide  the ``diff`` method. This operation yields a DiffIndex allowing you to easily access diff information about paths.
 
 Diffs can be made between the Index and Trees, Index and the working tree, trees and trees as well as trees and the working copy. If commits are involved, their tree will be used implicitly::
 
@@ -346,7 +363,7 @@ The return value will by default be a string of the standard output channel prod
 Keyword arguments translate to short and long keyword arguments on the commandline.
 The special notion ``git.command(flag=True)`` will create a flag without value like ``command --flag``.
 
-If ``None`` is found in the arguments, it will be dropped silently. Lists and tuples  passed as arguments will be unpacked to individual arguments. Objects are converted  to strings using the str(...) function.
+If ``None`` is found in the arguments, it will be dropped silently. Lists and tuples  passed as arguments will be unpacked recursively to individual arguments. Objects are converted to strings using the str(...) function.
 
 And even more ...
 *****************
