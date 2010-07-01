@@ -92,6 +92,10 @@ pygments_style = 'sphinx'
 # Options for HTML output
 # -----------------------
 
+html_theme_options = {
+    "stickysidebar": "true"
+}
+
 # The style sheet to use for HTML and HTML Help pages. A file of that name
 # must exist either in Sphinx' static/ path, or in one of the custom paths
 # given in html_static_path.

@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 try:
     from setuptools import setup, find_packages
 except ImportError:
@@ -54,22 +55,15 @@ setup(name = "GitPython",
       cmdclass={'build_py': build_py, 'sdist': sdist},
       version = VERSION,
       description = "Python Git Library",
-      author = "Michael Trier",
-      author_email = "mtrier@gmail.com",
+      author = "Sebastian Thiel, Michael Trier",
+      author_email = "byronimo@gmail.com, mtrier@gmail.com",
       url = "http://gitorious.org/projects/git-python/",
       packages = find_packages('lib'),
       package_dir = {'':'lib'},
       license = "BSD License",
+      requires=('gitdb (>=0.5)',),
       long_description = """\
-GitPython is a python library used to interact with Git repositories.
-
-GitPython provides object model access to your git repository. Once you have
-created a repository object, you can traverse it to find parent commit(s),
-trees, blobs, etc.
-
-GitPython is a port of the grit library in Ruby created by 
-Tom Preston-Werner and Chris Wanstrath.
-""",
+GitPython is a python library used to interact with Git repositories""",
       classifiers = [
         "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",

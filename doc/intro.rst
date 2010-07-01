@@ -13,13 +13,21 @@ The object database implementation is optimized for handling large quantities of
 Requirements
 ============
 
-* Tested with `Git`_ 1.7.0 or newer 
+* `Git`_ 1.7.0 or newer
+    It should also work with older versions, but it may be that some operations
+    involving remotes will not work as expected.
+* `GitDB`_ - a pure python git database implementation
+
+ * `async`_ - asynchronous task scheduling
+ 
 * `Python Nose`_ - used for running the tests
 * `Mock by Michael Foord`_ used for tests. Requires version 0.5
 
 .. _Git: http://git-scm.com/
 .. _Python Nose: http://code.google.com/p/python-nose/
 .. _Mock by Michael Foord: http://www.voidspace.org.uk/python/mock.html
+.. _GitDB: http://pypi.python.org/pypi/gitdb
+.. _async: http://pypi.python.org/pypi/async
 
 Installing GitPython
 ====================
@@ -49,6 +57,8 @@ script:
 .. sourcecode:: none
 
     # python setup.py install
+    
+.. note:: In this case, you have to manually install `GitDB`_ and `async`_ as well. It would be recommended to use the :ref:`git source repository <source-code-label>` in that case.
 
 Getting Started
 ===============
@@ -63,6 +73,8 @@ API Reference
 
 An organized section of the GitPthon API is at :ref:`api_reference_toplevel`.
 
+.. _source-code-label:
+
 Source Code
 ===========
 
@@ -75,7 +87,16 @@ and cloned using::
 
 	$ git clone git://gitorious.org/git-python/mainline.git git-python
 	$ git clone git://github.com/Byron/GitPython.git git-python
-
+	
+Initialize all submodules to obtain the required dependencies with::
+    
+    $ cd git-python
+    $ git submodule update --init --recursive
+    
+Finally verify the installation by running the `nose powered <http://code.google.com/p/python-nose/>`_ unit tests::
+    
+    $ nosetests
+    
 Mailing List
 ============
 http://groups.google.com/group/git-python
