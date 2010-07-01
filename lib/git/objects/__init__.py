@@ -8,7 +8,7 @@ from blob import *
 from tree import *
 from commit import *
 from submodule import *
-from utils import Actor
+from util import Actor
 
 __all__ = [ name for name, obj in locals().items()
             if not (name.startswith('_') or inspect.ismodule(obj)) ]

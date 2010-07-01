@@ -4,7 +4,7 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
-from git.utils import (
+from git.util import (
 							Iterable,
 							Stats,
 						)
@@ -17,7 +17,7 @@ import base
 from gitdb.util import (
 						hex_to_bin
 						)
-from utils import (
+from util import (
 						Traversable,
 						Serializable,
 						get_user_id,
@@ -182,11 +182,11 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
 		
 	def iter_parents(self, paths='', **kwargs):
 		"""Iterate _all_ parents of this commit.
+		
 		:param paths:
 			Optional path or list of paths limiting the Commits to those that 
 			contain at least one of the paths
 		:param kwargs: All arguments allowed by git-rev-list
-			
 		:return: Iterator yielding Commit objects which are parents of self """
 		# skip ourselves
 		skip = kwargs.get("skip", 1)

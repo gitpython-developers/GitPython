@@ -10,8 +10,8 @@ from objects import (
 						Object, 
 						Commit
 					)
-from objects.utils import get_object_type_by_name
-from utils import (
+from objects.util import get_object_type_by_name
+from util import (
 					LazyMixin, 
 					Iterable, 
 					join_path, 
@@ -64,7 +64,8 @@ class SymbolicReference(object):
 		
 	@property
 	def name(self):
-		""":return:
+		"""
+		:return:
 			In case of symbolic references, the shortest assumable name 
 			is the path itself."""
 		return self.path	
@@ -244,7 +245,8 @@ class SymbolicReference(object):
 		
 	@property
 	def is_detached(self):
-		""":return:
+		"""
+		:return:
 			True if we are a detached reference, hence we point to a specific commit
 			instead to another reference"""
 		try:
@@ -256,8 +258,9 @@ class SymbolicReference(object):
 
 	@classmethod
 	def to_full_path(cls, path):
-		""":return: string with a full path name which can be used to initialize 
-		a Reference instance, for instance by using ``Reference.from_path``"""
+		"""
+		:return: string with a full path name which can be used to initialize 
+			a Reference instance, for instance by using ``Reference.from_path``"""
 		if isinstance(path, SymbolicReference):
 			path = path.path
 		full_ref_path = path
@@ -369,6 +372,7 @@ class SymbolicReference(object):
 		:raise OSError:
 			If a (Symbolic)Reference with the same name but different contents
 			already exists.
+		
 		:note: This does not alter the current HEAD, index or Working Tree"""
 		return cls._create(repo, path, False, reference, force)
 	
@@ -563,17 +567,21 @@ class Reference(SymbolicReference, LazyMixin, Iterable):
 	@classmethod
 	def create(cls, repo, path, commit='HEAD', force=False ):
 		"""Create a new reference.
+		
 		:param repo: Repository to create the reference in 
 		:param path:
 			The relative path of the reference, i.e. 'new_branch' or 
 			feature/feature1. The path prefix 'refs/' is implied if not 
 			given explicitly
+			
 		:param commit:
 			Commit to which the new reference should point, defaults to the 
 			current HEAD
+			
 		:param force:
 			if True, force creation even if a reference with that  name already exists.
 			Raise OSError otherwise
+			
 		:return: Newly created Reference
 			
 		:note: This does not alter the current HEAD, index or Working Tree"""
@@ -666,15 +674,18 @@ class Head(Reference):
 		:param path:
 			The name or path of the head, i.e. 'new_branch' or 
 			feature/feature1. The prefix refs/heads is implied.
+			
 		:param commit:
 			Commit to which the new head should point, defaults to the 
 			current HEAD
+			
 		:param force:
 			if True, force creation even if branch with that  name already exists.
 			
-		:param **kwargs:
+		:param kwargs:
 			Additional keyword arguments to be passed to git-branch, i.e.
 			track, no-track, l
+			
 		:return: Newly created Head
 		:note: This does not alter the current HEAD, index or Working Tree"""
 		if cls is not Head:
@@ -734,7 +745,7 @@ class Head(Reference):
 			If True, changes to the index and the working tree will be discarded.
 			If False, GitCommandError will be raised in that situation.
 			
-		:param **kwargs:
+		:param kwargs:
 			Additional keyword arguments to be passed to git checkout, i.e.
 			b='new_branch' to create a new branch at the given spot.
 		
@@ -818,7 +829,7 @@ class TagReference(Reference):
 		:param force:
 			If True, to force creation of a tag even though that tag already exists.
 			
-		:param **kwargs:
+		:param kwargs:
 			Additional keyword arguments to be passed to git-tag
 			
 		:return: A new TagReference"""

@@ -4,7 +4,7 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 """Module containing Index implementation, allowing to perform all kinds of index
-manipulations such as querying and merging. """
+manipulations such as querying and merging."""
 import tempfile
 import os
 import sys
@@ -36,7 +36,7 @@ from util import (
 import git.objects
 import git.diff as diff
 
-from git.errors import (
+from git.exc import (
 							GitCommandError,
 							CheckoutError
 						)
@@ -48,9 +48,9 @@ from git.objects import (
 							Commit,
 						)
 
-from git.objects.utils import Serializable
+from git.objects.util import Serializable
 
-from git.utils import (
+from git.util import (
 							IndexFileSHA1Writer, 
 							LazyMixin, 
 							LockedFD, 
@@ -75,22 +75,26 @@ __all__ = ( 'IndexFile', 'CheckoutError' )
 
 
 class IndexFile(LazyMixin, diff.Diffable, Serializable):
-	"""Implements an Index that can be manipulated using a native implementation in
+	"""
+	Implements an Index that can be manipulated using a native implementation in
 	order to save git command function calls wherever possible.
-
+	
 	It provides custom merging facilities allowing to merge without actually changing
 	your index or your working tree. This way you can perform own test-merges based
 	on the index only without having to deal with the working copy. This is useful
 	in case of partial working trees.
 
 	``Entries``
+	
 	The index contains an entries dict whose keys are tuples of type IndexEntry
 	to facilitate access.
 
 	You may read the entries dict or manipulate it using IndexEntry instance, i.e.::
+	
 		index.entries[index.entry_key(index_entry_instance)] = index_entry_instance
-	Otherwise changes to it will be lost when changing the index using its methods.
-	"""
+	
+	Make sure you use index.write() once you are done manipulating the index directly
+	before operating on it using the git command"""
 	__slots__ = ("repo", "version", "entries", "_extension_data", "_file_path")
 	_VERSION = 2			# latest version we support
 	S_IFGITLINK = 0160000	# a submodule
@@ -250,7 +254,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
 		:param repo: The repository treeish are located in.
 
-		:param *tree_sha:
+		:param tree_sha:
 			20 byte or 40 byte tree sha or tree objects 
 
 		:return:
@@ -276,7 +280,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 		:param repo:
 			The repository treeish are located in.
 
-		:param *treeish:
+		:param treeish:
 			One, two or three Tree Objects, Commits or 40 byte hexshas. The result
 			changes according to the amount of trees.
 			If 1 Tree is given, it will just be read into a new index
@@ -287,7 +291,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 			 being the common ancestor of tree 2 and tree 3. Tree 2 is the 'current' tree,
 			 tree 3 is the 'other' one
 
-		:param **kwargs:
+		:param kwargs:
 			Additional arguments passed to git-read-tree
 
 		:return:
@@ -790,7 +794,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 			removing the respective file. This may fail if there are uncommited changes
 			in it.
 
-		:param **kwargs:
+		:param kwargs:
 			Additional keyword arguments to be passed to git-rm, such
 			as 'r' to allow recurive removal of
 
@@ -828,7 +832,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 		:param skip_errors:
 			If True, errors such as ones resulting from missing source files will
 			be skpped.
-		:param **kwargs:
+		:param kwargs:
 			Additional arguments you would like to pass to git-mv, such as dry_run
 			or force.
 
@@ -924,7 +928,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 			explicit paths are given. Otherwise progress information will be send
 			prior and after a file has been checked out
 
-		:param **kwargs:
+		:param kwargs:
 			Additional arguments to be pasesd to git-checkout-index
 
 		:return:

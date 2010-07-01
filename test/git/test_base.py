@@ -11,7 +11,7 @@ import os
 from test.testlib import *
 from git import *
 from itertools import chain
-from git.objects.utils import get_object_type_by_name
+from git.objects.util import get_object_type_by_name
 from gitdb.util import hex_to_bin
 import tempfile
 
@@ -42,8 +42,6 @@ class TestBase(TestBase):
 			assert item.hexsha == hexsha
 			assert item.type == typename
 			assert item.size
-			if isinstance(item, Blob):
-				assert item.data
 			assert item == item
 			assert not item != item
 			assert str(item) == item.hexsha

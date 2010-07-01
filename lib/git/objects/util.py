@@ -103,15 +103,15 @@ def verify_utctz(offset):
 def parse_date(string_date):
 	"""
 	Parse the given date as one of the following
+	
 		* Git internal format: timestamp offset
 		* RFC 2822: Thu, 07 Apr 2005 22:13:13 +0200. 
 		* ISO 8601 2005-04-07T22:13:13
-		 The T can be a space as well
+			The T can be a space as well
 		 
-	:return: Tuple(int(timestamp), int(offset), both in seconds since epoch
+	:return: Tuple(int(timestamp), int(offset)), both in seconds since epoch
 	:raise ValueError: If the format could not be understood
-	:note: Date can also be YYYY.MM.DD, MM/DD/YYYY and DD.MM.YYYY 
-	"""
+	:note: Date can also be YYYY.MM.DD, MM/DD/YYYY and DD.MM.YYYY"""
 	# git time
 	try:
 		if string_date.count(' ') == 1 and string_date.rfind(':') == -1:

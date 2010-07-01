@@ -1,0 +1,184 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Overview / Install &mdash; GitPython v0.1.7 documentation</title>
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '#',
+        VERSION:     '0.1.7',
+        COLLAPSE_MODINDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="GitPython v0.1.7 documentation" href="index.html" />
+    <link rel="next" title="GitPython Tutorial" href="tutorial.html" />
+    <link rel="prev" title="GitPython Documentation" href="index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="modindex.html" title="Global Module Index"
+             accesskey="M">modules</a> |</li>
+        <li class="right" >
+          <a href="tutorial.html" title="GitPython Tutorial"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="GitPython Documentation"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">GitPython v0.1.7 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="overview-install">
+<span id="intro-toplevel"></span><h1>Overview / Install<a class="headerlink" href="#overview-install" title="Permalink to this headline">¶</a></h1>
+<p>GitPython is a python library used to interact with Git repositories.</p>
+<p>GitPython is a port of the <a class="reference external" href="http://grit.rubyforge.org">grit</a> library in Ruby created by
+Tom Preston-Werner and Chris Wanstrath.</p>
+<div class="section" id="requirements">
+<h2>Requirements<a class="headerlink" href="#requirements" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><a class="reference external" href="http://git-scm.com/">Git</a> tested with 1.5.3.7</li>
+<li><a class="reference external" href="http://code.google.com/p/python-nose/">Python Nose</a> - used for running the tests</li>
+<li><a class="reference external" href="http://www.voidspace.org.uk/python/mock/">Mock by Michael Foord</a> used for tests. Requires 0.5 or higher</li>
+</ul>
+</div>
+<div class="section" id="installing-gitpython">
+<h2>Installing GitPython<a class="headerlink" href="#installing-gitpython" title="Permalink to this headline">¶</a></h2>
+<p>Installing GitPython is easily done using
+<a class="reference external" href="http://peak.telecommunity.com/DevCenter/setuptools">setuptools</a>. Assuming it is
+installed, just run the following from the command-line:</p>
+<div class="highlight-none"><div class="highlight"><pre># easy_install GitPython
+</pre></div>
+</div>
+<p>This command will download the latest version of GitPython from the
+<a class="reference external" href="http://pypi.python.org/pypi/GitPython">Python Package Index</a> and install it
+to your system. More information about <tt class="docutils literal"><span class="pre">easy_install</span></tt> and pypi can be found
+here:</p>
+<ul class="simple">
+<li><a class="reference external" href="http://peak.telecommunity.com/DevCenter/setuptools">setuptools</a></li>
+<li><a class="reference external" href="http://peak.telecommunity.com/DevCenter/EasyInstall#installation-instructions">install setuptools</a></li>
+<li><a class="reference external" href="http://pypi.python.org/pypi/GitPython">pypi</a></li>
+</ul>
+<p>Alternatively, you can install from the distribution using the <tt class="docutils literal"><span class="pre">setup.py</span></tt>
+script:</p>
+<div class="highlight-none"><div class="highlight"><pre># python setup.py install
+</pre></div>
+</div>
+</div>
+<div class="section" id="getting-started">
+<h2>Getting Started<a class="headerlink" href="#getting-started" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><a class="reference external" href="tutorial.html#tutorial-toplevel"><em>GitPython Tutorial</em></a> - This tutorial provides a walk-through of some of
+the basic functionality and concepts used in GitPython. It, however, is not
+exhaustive so you are encouraged to spend some time in the
+<a class="reference external" href="reference.html#api-reference-toplevel"><em>API Reference</em></a>.</li>
+</ul>
+</div>
+<div class="section" id="api-reference">
+<h2>API Reference<a class="headerlink" href="#api-reference" title="Permalink to this headline">¶</a></h2>
+<p>An organized section of the GitPthon API is at <a class="reference external" href="reference.html#api-reference-toplevel"><em>API Reference</em></a>.</p>
+</div>
+<div class="section" id="source-code">
+<h2>Source Code<a class="headerlink" href="#source-code" title="Permalink to this headline">¶</a></h2>
+<p>GitPython&#8217;s git repo is available on Gitorious, which can be browsed at:</p>
+<p><a class="reference external" href="http://gitorious.org/git-python">http://gitorious.org/git-python</a></p>
+<p>and cloned from:</p>
+<p>git://gitorious.org/git-python/mainline.git</p>
+</div>
+<div class="section" id="license-information">
+<h2>License Information<a class="headerlink" href="#license-information" title="Permalink to this headline">¶</a></h2>
+<p>GitPython is licensed under the New BSD License.  See the LICENSE file for
+more information.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <h3><a href="index.html">Table Of Contents</a></h3>
+            <ul>
+<li><a class="reference external" href="#">Overview / Install</a><ul>
+<li><a class="reference external" href="#requirements">Requirements</a></li>
+<li><a class="reference external" href="#installing-gitpython">Installing GitPython</a></li>
+<li><a class="reference external" href="#getting-started">Getting Started</a></li>
+<li><a class="reference external" href="#api-reference">API Reference</a></li>
+<li><a class="reference external" href="#source-code">Source Code</a></li>
+<li><a class="reference external" href="#license-information">License Information</a></li>
+</ul>
+</li>
+</ul>
+
+            <h4>Previous topic</h4>
+            <p class="topless"><a href="index.html"
+                                  title="previous chapter">GitPython Documentation</a></p>
+            <h4>Next topic</h4>
+            <p class="topless"><a href="tutorial.html"
+                                  title="next chapter">GitPython Tutorial</a></p>
+            <h3>This Page</h3>
+            <ul class="this-page-menu">
+              <li><a href="_sources/intro.txt"
+                     rel="nofollow">Show Source</a></li>
+            </ul>
+          <div id="searchbox" style="display: none">
+            <h3>Quick search</h3>
+              <form class="search" action="search.html" method="get">
+                <input type="text" name="q" size="18" />
+                <input type="submit" value="Go" />
+                <input type="hidden" name="check_keywords" value="yes" />
+                <input type="hidden" name="area" value="default" />
+              </form>
+              <p class="searchtip" style="font-size: 90%">
+              Enter search terms or a module, class or function name.
+              </p>
+          </div>
+          <script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="modindex.html" title="Global Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="tutorial.html" title="GitPython Tutorial"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="GitPython Documentation"
+             >previous</a> |</li>
+        <li><a href="index.html">GitPython v0.1.7 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+      &copy; Copyright Copyright (C) 2008-2010 Michael Trier and contributors.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 0.6.5.
+    </div>
+  </body>
+</html>

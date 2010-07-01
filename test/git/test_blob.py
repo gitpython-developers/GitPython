@@ -10,14 +10,6 @@ from gitdb.util import hex_to_bin
 
 class TestBlob(TestBase):
     
-    def test_should_cache_data(self):
-        bid = 'a802c139d4767c89dcad79d836d05f7004d39aac'
-        blob = Blob(self.rorepo, hex_to_bin(bid))
-        blob.data
-        assert blob.data
-        blob.size
-        blob.size
-        
     def test_mime_type_should_return_mime_type_for_known_types(self):
         blob = Blob(self.rorepo, **{'binsha': Blob.NULL_BIN_SHA, 'path': 'foo.png'})
         assert_equal("image/png", blob.mime_type)

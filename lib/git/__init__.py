@@ -28,12 +28,12 @@ from git.config import GitConfigParser
 from git.objects import *
 from git.refs import *
 from git.diff import *
-from git.errors import *
+from git.exc import *
 from git.cmd import Git
 from git.repo import Repo
 from git.remote import *
 from git.index import *
-from git.utils import (
+from git.util import (
 						LockFile, 
 						BlockingLockFile, 
 						Stats

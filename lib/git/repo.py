@@ -4,7 +4,7 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
-from errors import InvalidGitRepositoryError, NoSuchPathError
+from exc import InvalidGitRepositoryError, NoSuchPathError
 from cmd import Git
 from objects import Actor
 from refs import *
@@ -669,7 +669,12 @@ class Repo(object):
 				path = prev_path
 			# END reset previous working dir
 		# END bad windows handling
-		return Repo(path, odbt = odbt)
+		
+		# our git command could have a different working dir than our actual 
+		# environment, hence we prepend its working dir if required
+		if not os.path.isabs(path) and self.git.working_dir:
+			path = os.path.join(self.git._working_dir, path)
+		return Repo(os.path.abspath(path), odbt = odbt)
 
 
 	def archive(self, ostream, treeish=None, prefix=None,  **kwargs):

@@ -78,10 +78,10 @@ class BaseIndexEntry(tuple):
 	def stage(self):
 		"""Stage of the entry, either:
 		
-			0 = default stage
-			1 = stage before a merge or common ancestor entry in case of a 3 way merge
-			2 = stage of entries from the 'left' side of the merge
-			3 = stage of entries from the right side of the merge
+			* 0 = default stage
+			* 1 = stage before a merge or common ancestor entry in case of a 3 way merge
+			* 2 = stage of entries from the 'left' side of the merge
+			* 3 = stage of entries from the right side of the merge
 		
 		:note: For more information, see http://www.kernel.org/pub/software/scm/git/docs/git-read-tree.html
 		"""
@@ -112,10 +112,10 @@ class IndexEntry(BaseIndexEntry):
 	See the properties for a mapping between names and tuple indices. """
 	@property
 	def ctime(self):
-		""":return:
-			Tuple(int_time_seconds_since_epoch, int_nano_seconds) of the
-			file's creation time
 		"""
+		:return:
+			Tuple(int_time_seconds_since_epoch, int_nano_seconds) of the
+			file's creation time"""
 		return unpack(">LL", self[4])
 
 	@property
