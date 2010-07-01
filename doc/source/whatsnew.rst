@@ -4,7 +4,7 @@ Whats New in 0.3
 ################
 GitPython 0.3 is the first step in creating a hybrid which uses a pure python implementations for all simple git features which can be implemented without significant performance penalties. Everything else is still performed using the git command, which is nicely integrated and easy to use.
 
-Its biggest strength, being the support for all git features through the git command itself, is a weakness as well considering the possibly vast amount of times the git command is being started up. Depending on the actual command being performaned, the git repository will be initialized on many of these invocations, causing additional overhead for possibly tiny operations.
+Its biggest strength, being the support for all git features through the git command itself, is a weakness as well considering the possibly vast amount of times the git command is being started up. Depending on the actual command being performed, the git repository will be initialized on many of these invocations, causing additional overhead for possibly tiny operations.
 
 Keeping as many major operations in the python world will result in improved caching benefits as certain data structures just have to be initialized once and can be reused multiple times. This mode of operation may improve performance when altering the git database on a low level, and is clearly beneficial on operating systems where command invocations are very slow.
 
@@ -33,7 +33,7 @@ GitPython 0.2 essentially behaves like GitPython 0.3 with a Repository using the
 Why you should not upgrade
 **************************
 GitPython 0.3 in most cases will not run faster than GitPython 0.2, the opposite might be the case at it uses the pure python implementation by default.
-There have been a few renames which will need additional adjustments by your code.
+There have been a few renames which will need additional adjustments in your code.
 
 Generally, if you only read git repositories, version 0.2 is sufficient and very well performing.
 
