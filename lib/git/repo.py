@@ -22,6 +22,7 @@ from gitdb.util import (
 							join,
 							isdir, 
 							isfile,
+							join,
 							hex_to_bin
 						)
 import os
@@ -285,9 +286,9 @@ class Repo(object):
 		if config_level == "system":
 			return "/etc/gitconfig"
 		elif config_level == "global":
-			return os.path.expanduser("~/.gitconfig")
+			return os.path.normpath(os.path.expanduser("~/.gitconfig"))
 		elif config_level == "repository":
-			return "%s/config" % self.git_dir
+			return join(self.git_dir, "config")
 		
 		raise ValueError( "Invalid configuration level: %r" % config_level )
 			

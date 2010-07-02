@@ -5,7 +5,7 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 import util
 from base import IndexObject
-
+from git.util import join_path
 from blob import Blob
 from submodule import Submodule
 import git.diff as diff
@@ -17,7 +17,6 @@ from fun import (
 
 from gitdb.util import (
 						to_bin_sha, 
-						join
 						)
 
 __all__ = ("TreeModifier", "Tree")
@@ -152,7 +151,7 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
 		"""Iterable yields tuples of (binsha, mode, name), which will be converted
 		to the respective object representation"""
 		for binsha, mode, name in iterable:
-			path = join(self.path, name)
+			path = join_path(self.path, name)
 			try:
 				yield self._map_id_to_type[mode >> 12](self.repo, binsha, mode, path)
 			except KeyError:
@@ -186,7 +185,7 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
 		else:
 			for info in self._cache:
 				if info[2] == file:		# [2] == name
-					return self._map_id_to_type[info[1] >> 12](self.repo, info[0], info[1], join(self.path, info[2]))
+					return self._map_id_to_type[info[1] >> 12](self.repo, info[0], info[1], join_path(self.path, info[2]))
 			# END for each obj
 			raise KeyError( msg % file )
 		# END handle long paths
@@ -231,7 +230,7 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
 	def __getitem__(self, item):
 		if isinstance(item, int):
 			info = self._cache[item]
-			return self._map_id_to_type[info[1] >> 12](self.repo, info[0], info[1], join(self.path, info[2]))
+			return self._map_id_to_type[info[1] >> 12](self.repo, info[0], info[1], join_path(self.path, info[2]))
 		
 		if isinstance(item, basestring):
 			# compatability
@@ -254,7 +253,7 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
 		# treat item as repo-relative path
 		path = self.path
 		for info in self._cache:
-			if item == join(path, info[2]):
+			if item == join_path(path, info[2]):
 				return True
 		# END for each item
 		return False

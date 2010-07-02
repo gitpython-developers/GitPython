@@ -214,6 +214,11 @@ class LockFile(object):
 		# instead of failing, to make it more usable.
 		lfp = self._lock_file_path()
 		try:
+			# on bloody windows, the file needs write permissions to be removable.
+			# Why ... 
+			if os.name == 'nt':
+				os.chmod(lfp, 0777)
+			# END handle win32
 			os.remove(lfp)
 		except OSError:
 			pass

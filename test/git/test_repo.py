@@ -275,7 +275,7 @@ class TestRepo(TestBase):
 		reader = self.rorepo.config_reader("repository")	# single config file
 		assert reader.read_only
 		
-	def test_config_writer(self):
+	def _test_config_writer(self):
 		for config_level in self.rorepo.config_level:
 			try:
 				writer = self.rorepo.config_writer(config_level)
@@ -294,7 +294,7 @@ class TestRepo(TestBase):
 		
 		tag = self.rorepo.create_tag("new_tag", "HEAD~2")
 		self.rorepo.delete_tag(tag)
-		
+		self.rorepo.config_writer()
 		remote = self.rorepo.create_remote("new_remote", "git@server:repo.git")
 		self.rorepo.delete_remote(remote)
 		
