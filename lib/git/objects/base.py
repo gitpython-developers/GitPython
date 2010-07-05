@@ -53,6 +53,17 @@ class Object(LazyMixin):
 		inst = get_object_type_by_name(typename)(repo, hex_to_bin(hexsha))
 		inst.size = size
 		return inst
+		
+	@classmethod
+	def new_from_sha(cls, repo, sha1):
+		"""
+		:return: new object instance of a type appropriate to represent the given 
+			binary sha1
+		:param sha1: 20 byte binary sha1"""
+		oinfo = repo.odb.info(sha1)
+		inst = get_object_type_by_name(oinfo.type)(repo, oinfo.binsha)
+		inst.size = oinfo.size
+		return inst 
 	
 	def _set_self_from_args_(self, args_dict):
 		"""Initialize attributes on self from the given dict that was retrieved

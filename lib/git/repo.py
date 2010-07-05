@@ -12,12 +12,13 @@ from index import IndexFile
 from objects import *
 from config import GitConfigParser
 from remote import Remote
-
+from string import digits
 from db import (
 				GitCmdObjectDB, 
 				GitDB
 				)
 
+from gitdb.exc import BadObject
 from gitdb.util import (
 							join,
 							isdir, 
@@ -70,6 +71,7 @@ class Repo(object):
 	# precompiled regex
 	re_whitespace = re.compile(r'\s+')
 	re_hexsha_only = re.compile('^[0-9A-Fa-f]{40}$')
+	re_hexsha_shortened = re.compile('^[0-9A-Fa-f]{7:40}$')
 	re_author_committer_start = re.compile(r'^(author|committer)')
 	re_tab_full_line = re.compile(r'^\t(.*)$')
 	
@@ -698,6 +700,167 @@ class Repo(object):
 		
 		self.git.archive(treeish, **kwargs)
 		return self
+		
+	def rev_parse(self, rev):
+		"""
+		:return: Object at the given revision, either Commit, Tag, Tree or Blob
+		:param rev: git-rev-parse compatible revision specification, please see
+			http://www.kernel.org/pub/software/scm/git/docs/git-rev-parse.html
+			for details
+		:note: Currently there is no access to the rev-log, rev-specs may only contain
+			topological tokens such ~ and ^.
+		:raise BadObject: if the given revision could not be found"""
+		if '@' in rev:
+			raise ValueError("There is no rev-log support yet")
+		
+		
+		# colon search mode ?
+		if rev.startswith(':/'):
+			# colon search mode
+			raise NotImplementedError("commit by message search ( regex )")
+		# END handle search
+		
+		# return object specified by the given name
+		def name_to_object(name):
+			hexsha = None
+			
+			# is it a hexsha ?
+			if self.re_hexsha_shortened.match(name):
+				if len(name) != 40:
+					# find long sha for short sha
+					raise NotImplementedError("short sha parsing")
+				else:
+					hexsha = name
+				# END handle short shas
+			else:
+				for base in ('%s', 'refs/%s', 'refs/tags/%s', 'refs/heads/%s', 'refs/remotes/%s', 'refs/remotes/%s/HEAD'):
+					try:
+						hexsha = SymbolicReference.dereference_recursive(self, base % name)
+						break
+					except ValueError:
+						pass
+				# END for each base
+			# END handle hexsha
+			
+			# tried everything ? fail
+			if hexsha is None:
+				raise BadObject(name)
+			# END assert hexsha was found
+			
+			return Object.new_from_sha(self, hex_to_bin(hexsha))
+		# END object by name
+		
+		obj = None
+		output_type = "commit"
+		start = 0
+		parsed_to = 0
+		lr = len(rev)
+		while start < lr and start != -1:
+			if rev[start] not in "^~:":
+				start += 1
+				continue
+			# END handle start
+			
+			if obj is None:
+				# token is a rev name
+				obj = name_to_object(rev[:start])
+			# END initialize obj on first token
+			
+			token = rev[start]
+			start += 1
+			
+			# try to parse {type}
+			if start < lr and rev[start] == '{':
+				end = rev.find('}', start)
+				if end == -1:
+					raise ValueError("Missing closing brace to define type in %s" % rev)
+				output_type = rev[start+1:end]	# exclude brace
+				
+				# handle type 
+				if output_type == 'commit':
+					pass # default
+				elif output_type == 'tree':
+					try:
+						obj = obj.tree
+					except AttributeError:
+						pass	# error raised later
+					# END exception handling
+				elif output_type in ('', 'blob'):
+					while True:
+						try:
+							obj = obj.object 
+						except AttributeError:
+							break
+					# END dereference tag
+				else:
+					raise ValueError("Invalid output type: %s ( in %s )"  % (output_type, rev))
+				# END handle output type
+				
+				if obj.type != output_type:
+					raise ValueError("Could not accomodate requested object type %s, got %s" % (output_type, obj.type))
+				# END verify ouput type
+				
+				start = end+1					# skip brace
+				parsed_to = start
+				continue
+			# END parse type
+			
+			# try to parse a number
+			num = 0
+			if token != ":":
+				while start < lr:
+					if rev[start] in digits:
+						num = num * 10 + int(rev[start])
+						start += 1
+					else:
+						break
+					# END handle number
+				# END number parse loop
+				
+				# no explicit number given, 1 is the default
+				if num == 0:
+					num = 1
+				# END set default num
+			# END number parsing only if non-blob mode
+			
+			
+			parsed_to = start
+			# handle hiererarchy walk
+			try:
+				if token == "~":
+					for item in xrange(num):
+						obj = obj.parents[0]
+					# END for each history item to walk
+				elif token == "^":
+					# must be n'th parent
+					obj = obj.parents[num-1]
+				elif token == ":":
+					if obj.type != "tree":
+						obj = obj.tree
+					# END get tree type
+					obj = obj[rev[start:]]
+					parsed_to = lr
+				else:
+					raise "Invalid token: %r" % token
+				# END end handle tag
+			except (IndexError, AttributeError):
+				raise BadObject("Invalid Revision")
+			# END exception handling
+		# END parse loop
+		
+		# still no obj ? Its probably a simple name
+		if obj is None:
+			obj = name_to_object(rev)
+			parsed_to = lr
+		# END handle simple name
+		
+		if obj is None:
+			raise ValueError("Revision specifier could not be parsed: %s" % rev)
+
+		if parsed_to != lr:
+			raise ValueError("Didn't consume complete rev spec %s, consumed part: %s" % (rev, rev[:parsed_to]))
+		
+		return obj
 
 	def __repr__(self):
 		return '<git.Repo "%s">' % self.git_dir

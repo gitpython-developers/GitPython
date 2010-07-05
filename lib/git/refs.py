@@ -68,7 +68,7 @@ class SymbolicReference(object):
 		:return:
 			In case of symbolic references, the shortest assumable name 
 			is the path itself."""
-		return self.path	
+		return self.path
 	
 	def _abs_path(self):
 		return join_path_native(self.repo.git_dir, self.path)
@@ -108,6 +108,19 @@ class SymbolicReference(object):
 		# but some python version woudn't allow yields within that.
 		# I believe files are closing themselves on destruction, so it is 
 		# alright.
+		
+	@classmethod
+	def dereference_recursive(cls, repo, ref_path):
+		"""
+		:return: hexsha stored in the reference at the given ref_path, recursively dereferencing all
+			intermediate references as required
+		:param repo: the repository containing the reference at ref_path"""
+		while True:
+			ref = cls(repo, ref_path)
+			hexsha, ref_path = ref._get_ref_info()
+			if hexsha is not None:
+				return hexsha
+		# END recursive dereferencing
 		
 	def _get_ref_info(self):
 		"""Return: (sha, target_ref_path) if available, the sha the file at 
@@ -793,6 +806,10 @@ class TagReference(Reference):
 			return obj.object
 		else:
 			raise ValueError( "Tag %s points to a Blob or Tree - have never seen that before" % self )	
+
+	@property
+	def tree(self):
+		return self.commit.tree
 
 	@property
 	def tag(self):

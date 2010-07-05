@@ -11,34 +11,35 @@ from git.util import join_path_native
 import tempfile
 import shutil
 from cStringIO import StringIO
+from git.exc import BadObject
 
 class TestRepo(TestBase):
 	
 	@raises(InvalidGitRepositoryError)
-	def test_new_should_raise_on_invalid_repo_location(self):
+	def _test_new_should_raise_on_invalid_repo_location(self):
 		Repo(tempfile.gettempdir())
 
 	@raises(NoSuchPathError)
-	def test_new_should_raise_on_non_existant_path(self):
+	def _test_new_should_raise_on_non_existant_path(self):
 		Repo("repos/foobar")
 
-	def test_repo_creation_from_different_paths(self):
+	def _test_repo_creation_from_different_paths(self):
 		r_from_gitdir = Repo(self.rorepo.git_dir)
 		assert r_from_gitdir.git_dir == self.rorepo.git_dir
 		assert r_from_gitdir.git_dir.endswith('.git')
 		assert not self.rorepo.git.working_dir.endswith('.git')
 		assert r_from_gitdir.git.working_dir == self.rorepo.git.working_dir
 
-	def test_description(self):
+	def _test_description(self):
 		txt = "Test repository"
 		self.rorepo.description = txt
 		assert_equal(self.rorepo.description, txt)
 
-	def test_heads_should_return_array_of_head_objects(self):
+	def _test_heads_should_return_array_of_head_objects(self):
 		for head in self.rorepo.heads:
 			assert_equal(Head, head.__class__)
 
-	def test_heads_should_populate_head_data(self):
+	def _test_heads_should_populate_head_data(self):
 		for head in self.rorepo.heads:
 			assert head.name
 			assert isinstance(head.commit,Commit)
@@ -47,7 +48,7 @@ class TestRepo(TestBase):
 		assert isinstance(self.rorepo.heads.master, Head)
 		assert isinstance(self.rorepo.heads['master'], Head)
 		
-	def test_tree_from_revision(self):
+	def _test_tree_from_revision(self):
 		tree = self.rorepo.tree('0.1.6')
 		assert len(tree.hexsha) == 40 
 		assert tree.type == "tree"
@@ -56,7 +57,7 @@ class TestRepo(TestBase):
 		# try from invalid revision that does not exist
 		self.failUnlessRaises(ValueError, self.rorepo.tree, 'hello world')
 
-	def test_commits(self):
+	def _test_commits(self):
 		mc = 10
 		commits = list(self.rorepo.iter_commits('0.1.6', max_count=mc))
 		assert len(commits) == mc
@@ -78,7 +79,7 @@ class TestRepo(TestBase):
 		c = commits[1]
 		assert isinstance(c.parents, tuple)
 
-	def test_trees(self):
+	def _test_trees(self):
 		mc = 30
 		num_trees = 0
 		for tree in self.rorepo.iter_trees('0.1.5', max_count=mc):
@@ -116,7 +117,7 @@ class TestRepo(TestBase):
 		# END test repos with working tree
 		
 
-	def test_init(self):
+	def _test_init(self):
 		prev_cwd = os.getcwd()
 		os.chdir(tempfile.gettempdir())
 		git_dir_rela = "repos/foo/bar.git"
@@ -161,17 +162,17 @@ class TestRepo(TestBase):
 			os.chdir(prev_cwd)
 		# END restore previous state
 		
-	def test_bare_property(self):
+	def _test_bare_property(self):
 		self.rorepo.bare
 
-	def test_daemon_export(self):
+	def _test_daemon_export(self):
 		orig_val = self.rorepo.daemon_export
 		self.rorepo.daemon_export = not orig_val
 		assert self.rorepo.daemon_export == ( not orig_val )
 		self.rorepo.daemon_export = orig_val
 		assert self.rorepo.daemon_export == orig_val
   
-	def test_alternates(self):
+	def _test_alternates(self):
 		cur_alternates = self.rorepo.alternates
 		# empty alternates
 		self.rorepo.alternates = []
@@ -181,15 +182,15 @@ class TestRepo(TestBase):
 		assert alts == self.rorepo.alternates
 		self.rorepo.alternates = cur_alternates
 
-	def test_repr(self):
+	def _test_repr(self):
 		path = os.path.join(os.path.abspath(GIT_REPO), '.git')
 		assert_equal('<git.Repo "%s">' % path, repr(self.rorepo))
 
-	def test_is_dirty_with_bare_repository(self):
+	def _test_is_dirty_with_bare_repository(self):
 		self.rorepo._bare = True
 		assert_false(self.rorepo.is_dirty())
 
-	def test_is_dirty(self):
+	def _test_is_dirty(self):
 		self.rorepo._bare = False
 		for index in (0,1):
 			for working_tree in (0,1):
@@ -201,23 +202,23 @@ class TestRepo(TestBase):
 		self.rorepo._bare = True
 		assert self.rorepo.is_dirty() == False
 
-	def test_head(self):
+	def _test_head(self):
 		assert self.rorepo.head.reference.object == self.rorepo.active_branch.object
 
-	def test_index(self):
+	def _test_index(self):
 		index = self.rorepo.index
 		assert isinstance(index, IndexFile)
 	
-	def test_tag(self):
+	def _test_tag(self):
 		assert self.rorepo.tag('refs/tags/0.1.5').commit
 		
-	def test_archive(self):
+	def _test_archive(self):
 		tmpfile = os.tmpfile()
 		self.rorepo.archive(tmpfile, '0.1.5')
 		assert tmpfile.tell()
 		
 	@patch_object(Git, '_call_process')
-	def test_should_display_blame_information(self, git):
+	def _test_should_display_blame_information(self, git):
 		git.return_value = fixture('blame')
 		b = self.rorepo.blame( 'master', 'lib/git.py')
 		assert_equal(13, len(b))
@@ -243,7 +244,7 @@ class TestRepo(TestBase):
 		assert_true( isinstance( tlist[0], basestring ) )
 		assert_true( len( tlist ) < sum( len(t) for t in tlist ) )				 # test for single-char bug
 		
-	def test_untracked_files(self):
+	def _test_untracked_files(self):
 		base = self.rorepo.working_tree_dir
 		files = (	join_path_native(base, "__test_myfile"), 
 					join_path_native(base, "__test_other_file") )
@@ -269,7 +270,7 @@ class TestRepo(TestBase):
 		
 		assert len(self.rorepo.untracked_files) == (num_recently_untracked - len(files))
 		
-	def test_config_reader(self):
+	def _test_config_reader(self):
 		reader = self.rorepo.config_reader()				# all config files 
 		assert reader.read_only
 		reader = self.rorepo.config_reader("repository")	# single config file
@@ -286,7 +287,7 @@ class TestRepo(TestBase):
 				pass 
 		# END for each config level 
 		
-	def test_creation_deletion(self):
+	def _test_creation_deletion(self):
 		# just a very quick test to assure it generally works. There are 
 		# specialized cases in the test_refs module
 		head = self.rorepo.create_head("new_head", "HEAD~1")
@@ -298,12 +299,12 @@ class TestRepo(TestBase):
 		remote = self.rorepo.create_remote("new_remote", "git@server:repo.git")
 		self.rorepo.delete_remote(remote)
 		
-	def test_comparison_and_hash(self):
+	def _test_comparison_and_hash(self):
 		# this is only a preliminary test, more testing done in test_index
 		assert self.rorepo == self.rorepo and not (self.rorepo != self.rorepo)
 		assert len(set((self.rorepo, self.rorepo))) == 1
 		
-	def test_git_cmd(self):
+	def _test_git_cmd(self):
 		# test CatFileContentStream, just to be very sure we have no fencepost errors
 		# last \n is the terminating newline that it expects
 		l1 = "0123456789\n"
@@ -376,3 +377,101 @@ class TestRepo(TestBase):
 		assert s._stream.tell() == 2
 		assert s.read() == l1[2:ts]
 		assert s._stream.tell() == ts+1
+		
+	def _assert_rev_parse_types(self, name, rev_obj):
+		rev_parse = self.rorepo.rev_parse
+		
+		# tree and blob type
+		obj = rev_parse(name + '^{tree}')
+		assert obj == rev_obj.tree
+		
+		obj = rev_parse(name + ':CHANGES')
+		assert obj.type == 'blob' and obj.path == 'CHANGES'
+		assert rev_obj.tree['CHANGES'] == obj
+			
+		
+	def _assert_rev_parse(self, name):
+		"""tries multiple different rev-parse syntaxes with the given name
+		:return: parsed object"""
+		rev_parse = self.rorepo.rev_parse
+		obj = rev_parse(name)
+		
+		# try history
+		rev = name + "~"
+		obj2 = rev_parse(rev)
+		assert obj2 == obj.parents[0]
+		self._assert_rev_parse_types(rev, obj2)
+		
+		# history with number
+		ni = 11
+		history = list()
+		citer = obj.traverse()
+		for pn in range(ni):
+			history.append(citer.next())
+		# END get given amount of commits
+		
+		for pn in range(11):
+			rev = name + "~%i" % (pn+1)
+			obj2 = rev_parse(rev)
+			assert obj2 == history[pn]
+			self._assert_rev_parse_types(rev, obj2)
+		# END history check
+		
+		# parent ( default )
+		rev = name + "^"
+		obj2 = rev_parse(rev)
+		assert obj2 == obj.parents[0]
+		self._assert_rev_parse_types(rev, obj2)
+		
+		# parent with number
+		for pn, parent in enumerate(obj.parents):
+			rev = name + "^%i" % (pn+1)
+			assert rev_parse(rev) == parent
+			self._assert_rev_parse_types(rev, obj2)
+		# END for each parent
+		
+		return obj
+		
+	def test_rev_parse(self):
+		rev_parse = self.rorepo.rev_parse
+		
+		# start from reference
+		num_resolved = 0
+		for ref in Reference.iter_items(self.rorepo):
+			path_tokens = ref.path.split("/")
+			for pt in range(len(path_tokens)):
+				path_section = '/'.join(path_tokens[-(pt+1):]) 
+				try:
+					obj = self._assert_rev_parse(path_section)
+					assert obj.type == ref.object.type
+					num_resolved += 1
+				except BadObject:
+					print "failed on %s" % path_section
+					raise
+					# is fine, in case we have something like 112, which belongs to remotes/rname/merge-requests/112
+					pass
+				# END exception handling
+			# END for each token
+		# END for each reference
+		assert num_resolved
+		
+		# try full sha directly ( including type conversion )
+		
+		
+		# multiple tree types result in the same tree: HEAD^{tree}^{tree}:CHANGES
+		
+		# try to get parents from first revision - it should fail as no such revision
+		# exists
+		
+		# todo: dereference tag into a blob 0.1.7^{blob} - quite a special one
+		
+		# dereference tag using ^{} notation
+		
+		# missing closing brace commit^{tree
+		
+		# missing starting brace
+		
+		# not enough parents ^10
+		
+		# cannot handle rev-log for now 
+		self.failUnlessRaises(ValueError, rev_parse, "hi@there")

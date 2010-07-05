@@ -1,9 +1,11 @@
-# errors.py
+# exc.py
 # Copyright (C) 2008, 2009 Michael Trier (mtrier@gmail.com) and contributors
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 """ Module containing all exceptions thrown througout the git package, """
+
+from gitdb.exc import *
 
 class InvalidGitRepositoryError(Exception):
 	""" Thrown if the given repository appears to have an invalid format.  """
