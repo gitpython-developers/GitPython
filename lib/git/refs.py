@@ -210,7 +210,7 @@ class SymbolicReference(object):
 			except AttributeError:
 				sha = str(ref)
 				try:
-					obj = Object.new(self.repo, sha)
+					obj = Object.new_from_sha(self.repo, hex_to_bin(sha))
 					if obj.type != "commit":
 						raise TypeError("Invalid object type behind sha: %s" % sha)
 					write_value = obj.hexsha
@@ -536,7 +536,7 @@ class Reference(SymbolicReference, LazyMixin, Iterable):
 			always point to the actual object as it gets re-created on each query"""
 		# have to be dynamic here as we may be a tag which can point to anything
 		# Our path will be resolved to the hexsha which will be used accordingly
-		return Object.new(self.repo, self.path)
+		return Object.new_from_sha(self.repo, hex_to_bin(self.dereference_recursive(self.repo, self.path)))
 		
 	def _set_object(self, ref):
 		"""
