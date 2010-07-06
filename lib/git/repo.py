@@ -750,12 +750,31 @@ class Repo(object):
 			return Object.new_from_sha(self, hex_to_bin(hexsha))
 		# END object by name
 		
+		def deref_tag(tag):
+			while True:
+				try:
+					tag = tag.object
+				except AttributeError:
+					break
+			# END dereference tag
+			return tag
+		
+		def to_commit(obj):
+			if obj.type == 'tag':
+				obj = deref_tag(obj)
+				
+			if obj.type != "commit":
+				raise ValueError("Cannot convert object %r to type commit" % obj)
+			# END verify type
+			return obj
+		# END commit converter
+		
 		obj = None
 		output_type = "commit"
 		start = 0
 		parsed_to = 0
 		lr = len(rev)
-		while start < lr and start != -1:
+		while start < lr:
 			if rev[start] not in "^~:":
 				start += 1
 				continue
@@ -781,17 +800,17 @@ class Repo(object):
 					pass # default
 				elif output_type == 'tree':
 					try:
-						obj = obj.tree
-					except AttributeError:
+						obj = to_commit(obj).tree
+					except (AttributeError, ValueError):
 						pass	# error raised later
 					# END exception handling
 				elif output_type in ('', 'blob'):
-					while True:
-						try:
-							obj = obj.object 
-						except AttributeError:
-							break
-					# END dereference tag
+					if obj.type == 'tag':
+						obj = deref_tag(tag)
+					else:
+						# cannot do anything for non-tags
+						pass
+					# END handle tag
 				else:
 					raise ValueError("Invalid output type: %s ( in %s )"  % (output_type, rev))
 				# END handle output type
@@ -808,17 +827,20 @@ class Repo(object):
 			# try to parse a number
 			num = 0
 			if token != ":":
+				found_digit = False
 				while start < lr:
 					if rev[start] in digits:
 						num = num * 10 + int(rev[start])
 						start += 1
+						found_digit = True
 					else:
 						break
 					# END handle number
 				# END number parse loop
 				
 				# no explicit number given, 1 is the default
-				if num == 0:
+				# It could be 0 though 
+				if not found_digit:
 					num = 1
 				# END set default num
 			# END number parsing only if non-blob mode
@@ -827,13 +849,15 @@ class Repo(object):
 			parsed_to = start
 			# handle hiererarchy walk
 			try:
+				obj = to_commit(obj)
 				if token == "~":
 					for item in xrange(num):
 						obj = obj.parents[0]
 					# END for each history item to walk
 				elif token == "^":
 					# must be n'th parent
-					obj = obj.parents[num-1]
+					if num:
+						obj = obj.parents[num-1]
 				elif token == ":":
 					if obj.type != "tree":
 						obj = obj.tree
@@ -841,10 +865,10 @@ class Repo(object):
 					obj = obj[rev[start:]]
 					parsed_to = lr
 				else:
-					raise "Invalid token: %r" % token
+					raise ValueError("Invalid token: %r" % token)
 				# END end handle tag
 			except (IndexError, AttributeError):
-				raise BadObject("Invalid Revision")
+				raise BadObject("Invalid Revision in %s" % rev)
 			# END exception handling
 		# END parse loop
 		

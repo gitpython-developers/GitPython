@@ -808,10 +808,6 @@ class TagReference(Reference):
 			raise ValueError( "Tag %s points to a Blob or Tree - have never seen that before" % self )	
 
 	@property
-	def tree(self):
-		return self.commit.tree
-
-	@property
 	def tag(self):
 		"""
 		:return: Tag object this tag ref points to or None in case 

@@ -40,8 +40,6 @@ class TestRefs(TestBase):
 				assert isinstance( tagobj.tagger_tz_offset, int )
 				assert tagobj.message
 				assert tag.object == tagobj
-				assert tag.tree.type == 'tree'
-				assert tag.tree == tag.commit.tree
 				# can't assign the object
 				self.failUnlessRaises(AttributeError, setattr, tag, 'object', tagobj)
 			# END if we have a tag object

@@ -394,7 +394,12 @@ class TestRepo(TestBase):
 		"""tries multiple different rev-parse syntaxes with the given name
 		:return: parsed object"""
 		rev_parse = self.rorepo.rev_parse
-		obj = rev_parse(name)
+		orig_obj = rev_parse(name)
+		if orig_obj.type == 'tag':
+			obj = orig_obj.object
+		else:
+			obj = orig_obj
+		# END deref tags by default 
 		
 		# try history
 		rev = name + "~"
@@ -404,10 +409,9 @@ class TestRepo(TestBase):
 		
 		# history with number
 		ni = 11
-		history = list()
-		citer = obj.traverse()
+		history = [obj.parents[0]]
 		for pn in range(ni):
-			history.append(citer.next())
+			history.append(history[-1].parents[0])
 		# END get given amount of commits
 		
 		for pn in range(11):
@@ -430,10 +434,13 @@ class TestRepo(TestBase):
 			self._assert_rev_parse_types(rev, obj2)
 		# END for each parent
 		
-		return obj
+		return orig_obj
 		
 	def test_rev_parse(self):
 		rev_parse = self.rorepo.rev_parse
+		
+		# it works with tags !
+		self._assert_rev_parse('0.1.4')
 		
 		# start from reference
 		num_resolved = 0
@@ -447,7 +454,6 @@ class TestRepo(TestBase):
 					num_resolved += 1
 				except BadObject:
 					print "failed on %s" % path_section
-					raise
 					# is fine, in case we have something like 112, which belongs to remotes/rname/merge-requests/112
 					pass
 				# END exception handling
@@ -466,6 +472,12 @@ class TestRepo(TestBase):
 		# todo: dereference tag into a blob 0.1.7^{blob} - quite a special one
 		
 		# dereference tag using ^{} notation
+		
+		# ref^0 returns commit being pointed to, same with ref~0
+		tag = rev_parse('0.1.4')
+		for token in ('~^'):
+			assert tag.object == rev_parse('0.1.4%s0' % token)
+		# END handle multiple tokens
 		
 		# missing closing brace commit^{tree
 		
