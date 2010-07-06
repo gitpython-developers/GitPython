@@ -381,6 +381,9 @@ class TestRepo(TestBase):
 	def _assert_rev_parse_types(self, name, rev_obj):
 		rev_parse = self.rorepo.rev_parse
 		
+		if rev_obj.type == 'tag':
+			rev_obj = rev_obj.object
+		
 		# tree and blob type
 		obj = rev_parse(name + '^{tree}')
 		assert obj == rev_obj.tree
@@ -439,9 +442,6 @@ class TestRepo(TestBase):
 	def test_rev_parse(self):
 		rev_parse = self.rorepo.rev_parse
 		
-		# it works with tags !
-		self._assert_rev_parse('0.1.4')
-		
 		# start from reference
 		num_resolved = 0
 		for ref in Reference.iter_items(self.rorepo):
@@ -461,29 +461,53 @@ class TestRepo(TestBase):
 		# END for each reference
 		assert num_resolved
 		
+		# it works with tags !
+		tag = self._assert_rev_parse('0.1.4')
+		assert tag.type == 'tag'
+		
 		# try full sha directly ( including type conversion )
+		assert tag.object == rev_parse(tag.object.hexsha)
+		self._assert_rev_parse_types(tag.object.hexsha, tag.object)
 		
 		
 		# multiple tree types result in the same tree: HEAD^{tree}^{tree}:CHANGES
+		rev = '0.1.4^{tree}^{tree}'
+		assert rev_parse(rev) == tag.object.tree
+		assert rev_parse(rev+':CHANGES') == tag.object.tree['CHANGES']
+		
 		
 		# try to get parents from first revision - it should fail as no such revision
 		# exists
+		first_rev = "33ebe7acec14b25c5f84f35a664803fcab2f7781"
+		commit = rev_parse(first_rev)
+		assert len(commit.parents) == 0
+		assert commit.hexsha == first_rev
+		self.failUnlessRaises(BadObject, rev_parse, first_rev+"~")
+		self.failUnlessRaises(BadObject, rev_parse, first_rev+"^")
+		
+		# short SHA1
+		commit2 = rev_parse(first_rev[:20])
+		assert commit2 == commit
+		commit2 = rev_parse(first_rev[:5])
+		assert commit2 == commit
+		
 		
 		# todo: dereference tag into a blob 0.1.7^{blob} - quite a special one
+		# needs a tag which points to a blob
 		
-		# dereference tag using ^{} notation
 		
-		# ref^0 returns commit being pointed to, same with ref~0
+		# ref^0 returns commit being pointed to, same with ref~0, and ^{}
 		tag = rev_parse('0.1.4')
-		for token in ('~^'):
-			assert tag.object == rev_parse('0.1.4%s0' % token)
+		for token in (('~0', '^0', '^{}')):
+			assert tag.object == rev_parse('0.1.4%s' % token)
 		# END handle multiple tokens
 		
 		# missing closing brace commit^{tree
+		self.failUnlessRaises(ValueError, rev_parse, '0.1.4^{tree')
 		
 		# missing starting brace
+		self.failUnlessRaises(ValueError, rev_parse, '0.1.4^tree}')
 		
-		# not enough parents ^10
 		
 		# cannot handle rev-log for now 
 		self.failUnlessRaises(ValueError, rev_parse, "hi@there")

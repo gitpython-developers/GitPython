@@ -71,7 +71,8 @@ class Repo(object):
 	# precompiled regex
 	re_whitespace = re.compile(r'\s+')
 	re_hexsha_only = re.compile('^[0-9A-Fa-f]{40}$')
-	re_hexsha_shortened = re.compile('^[0-9A-Fa-f]{7:40}$')
+	re_hexsha_shortened = re.compile('^[0-9A-Fa-f]{7,40}$')
+	re_hexsha_domain = re.compile('^[0-9A-Fa-f]{1,40}$')
 	re_author_committer_start = re.compile(r'^(author|committer)')
 	re_tab_full_line = re.compile(r'^\t(.*)$')
 	
@@ -724,7 +725,7 @@ class Repo(object):
 		def name_to_object(name):
 			hexsha = None
 			
-			# is it a hexsha ?
+			# is it a hexsha ? Try the most common ones, which is 7 to 40
 			if self.re_hexsha_shortened.match(name):
 				if len(name) != 40:
 					# find long sha for short sha
@@ -744,6 +745,11 @@ class Repo(object):
 			
 			# tried everything ? fail
 			if hexsha is None:
+				# it could also be a very short ( less than 7 ) hexsha, which 
+				# wasnt tested in the first run
+				if len(name) < 7 and self.re_hexsha_domain.match(name):
+					raise NotImplementedError()	
+				# END try short name 
 				raise BadObject(name)
 			# END assert hexsha was found
 			
@@ -806,7 +812,7 @@ class Repo(object):
 					# END exception handling
 				elif output_type in ('', 'blob'):
 					if obj.type == 'tag':
-						obj = deref_tag(tag)
+						obj = deref_tag(obj)
 					else:
 						# cannot do anything for non-tags
 						pass
@@ -815,8 +821,9 @@ class Repo(object):
 					raise ValueError("Invalid output type: %s ( in %s )"  % (output_type, rev))
 				# END handle output type
 				
-				if obj.type != output_type:
-					raise ValueError("Could not accomodate requested object type %s, got %s" % (output_type, obj.type))
+				# empty output types don't require any specific type, its just about dereferencing tags
+				if output_type and obj.type != output_type:
+					raise ValueError("Could not accomodate requested object type %r, got %s" % (output_type, obj.type))
 				# END verify ouput type
 				
 				start = end+1					# skip brace
@@ -849,12 +856,13 @@ class Repo(object):
 			parsed_to = start
 			# handle hiererarchy walk
 			try:
-				obj = to_commit(obj)
 				if token == "~":
+					obj = to_commit(obj)
 					for item in xrange(num):
 						obj = obj.parents[0]
 					# END for each history item to walk
 				elif token == "^":
+					obj = to_commit(obj)
 					# must be n'th parent
 					if num:
 						obj = obj.parents[num-1]
