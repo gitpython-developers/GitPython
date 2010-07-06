@@ -208,9 +208,8 @@ class SymbolicReference(object):
 			try:
 				write_value = ref.commit.hexsha
 			except AttributeError:
-				sha = str(ref)
 				try:
-					obj = Object.new_from_sha(self.repo, hex_to_bin(sha))
+					obj = self.repo.rev_parse(ref+"^{}")	# optionally deref tags
 					if obj.type != "commit":
 						raise TypeError("Invalid object type behind sha: %s" % sha)
 					write_value = obj.hexsha
