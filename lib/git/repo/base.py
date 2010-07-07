@@ -606,26 +606,15 @@ class Repo(object):
 		output = git.init(**kwargs)
 		return Repo(path)
 
-	def clone(self, path, **kwargs):
-		"""Create a clone from this repository.
-		:param path:
-			is the full path of the new repo (traditionally ends with ./<name>.git).
-
-		:param kwargs:
-			odbt = ObjectDatabase Type, allowing to determine the object database
-			implementation used by the returned Repo instance
-			
-			All remaining keyword arguments are given to the git-clone command
-			
-		:return:
-			``git.Repo`` (the newly cloned repo)"""
+	@classmethod
+	def _clone(cls, git, url, path, odb_default_type, **kwargs):
 		# special handling for windows for path at which the clone should be 
 		# created.
 		# tilde '~' will be expanded to the HOME no matter where the ~ occours. Hence
 		# we at least give a proper error instead of letting git fail
 		prev_cwd = None
 		prev_path = None
-		odbt = kwargs.pop('odbt', type(self.odb))
+		odbt = kwargs.pop('odbt', odb_default_type)
 		if os.name == 'nt':
 			if '~' in path:
 				raise OSError("Git cannot handle the ~ character in path %r correctly" % path)
@@ -645,7 +634,7 @@ class Repo(object):
 		# END windows handling 
 		
 		try:
-			self.git.clone(self.git_dir, path, **kwargs)
+			git.clone(url, path, **kwargs)
 		finally:
 			if prev_cwd is not None:
 				os.chdir(prev_cwd)
@@ -655,10 +644,32 @@ class Repo(object):
 		
 		# our git command could have a different working dir than our actual 
 		# environment, hence we prepend its working dir if required
-		if not os.path.isabs(path) and self.git.working_dir:
-			path = join(self.git._working_dir, path)
-		return Repo(os.path.abspath(path), odbt = odbt)
+		if not os.path.isabs(path) and git.working_dir:
+			path = join(git._working_dir, path)
+		return cls(os.path.abspath(path), odbt = odbt)
 
+	def clone(self, path, **kwargs):
+		"""Create a clone from this repository.
+		:param path:
+			is the full path of the new repo (traditionally ends with ./<name>.git).
+
+		:param kwargs:
+			odbt = ObjectDatabase Type, allowing to determine the object database
+			implementation used by the returned Repo instance
+			
+			All remaining keyword arguments are given to the git-clone command
+			
+		:return: ``git.Repo`` (the newly cloned repo)"""
+		return self._clone(self.git, self.git_dir, path, type(self.odb), **kwargs)
+
+	@classmethod
+	def clone_from(cls, url, to_path, **kwargs):
+		"""Create a clone from the given URL
+		:param url: valid git url, see http://www.kernel.org/pub/software/scm/git/docs/git-clone.html#URLS
+		:param to_path: Path to which the repository should be cloned to
+		:param **kwargs: see the ``clone`` method
+		:return: Repo instance pointing to the cloned directory"""
+		return cls._clone(Git(os.getcwd()), url, to_path, GitCmdObjectDB, **kwargs)
 
 	def archive(self, ostream, treeish=None, prefix=None,  **kwargs):
 		"""Archive the tree at the given revision.

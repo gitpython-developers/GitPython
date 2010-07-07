@@ -145,6 +145,19 @@ class TestRepo(TestBase):
 				rc = r.clone(clone_path)
 				self._assert_empty_repo(rc)
 				
+				
+				try:
+					shutil.rmtree(clone_path)
+				except OSError:
+					# when relative paths are used, the clone may actually be inside
+					# of the parent directory
+					pass
+				# END exception handling
+				
+				# try again, this time with the absolute version
+				rc = Repo.clone_from(r.git_dir, clone_path)
+				self._assert_empty_repo(rc)
+				
 				shutil.rmtree(git_dir_abs)
 				try:
 					shutil.rmtree(clone_path)
@@ -153,6 +166,7 @@ class TestRepo(TestBase):
 					# of the parent directory
 					pass
 				# END exception handling
+				
 			# END for each path
 			
 			os.makedirs(git_dir_rela)
@@ -441,7 +455,7 @@ class TestRepo(TestBase):
 		for pn, parent in enumerate(obj.parents):
 			rev = name + "^%i" % (pn+1)
 			assert rev_parse(rev) == parent
-			self._assert_rev_parse_types(rev, obj2)
+			self._assert_rev_parse_types(rev, parent)
 		# END for each parent
 		
 		return orig_obj
