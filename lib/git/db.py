@@ -1,5 +1,8 @@
 """Module with our own gitdb implementation - it uses the git command"""
-from exc import GitCommandError
+from exc import (
+					GitCommandError, 
+					BadObject
+				)
 
 from gitdb.base import (
 								OInfo,
@@ -42,7 +45,7 @@ class GitCmdObjectDB(LooseObjectDB):
 	
 	# { Interface
 	
-	def partial_to_complete_sha_hex(partial_hexsha):
+	def partial_to_complete_sha_hex(self, partial_hexsha):
 		""":return: Full binary 20 byte sha from the given partial hexsha
 		:raise AmbiguousObjectName:
 		:raise BadObject:
@@ -51,7 +54,7 @@ class GitCmdObjectDB(LooseObjectDB):
 		try:
 			hexsha, typename, size = self._git.get_object_header(partial_hexsha)
 			return hex_to_bin(hexsha)
-		except GitCommandError:
+		except (GitCommandError, ValueError):
 			raise BadObject(partial_hexsha)
 		# END handle exceptions
 	
