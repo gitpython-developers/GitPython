@@ -345,7 +345,7 @@ class SymbolicReference(object):
 		# figure out target data
 		target = reference
 		if resolve:
-			target = Object.new(repo, reference)
+			target = repo.rev_parse(str(reference))
 			
 		if not force and isfile(abs_ref_path):
 			target_data = str(target)

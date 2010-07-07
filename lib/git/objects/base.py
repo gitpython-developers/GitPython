@@ -49,10 +49,7 @@ class Object(LazyMixin):
 			
 		:note: This cannot be a __new__ method as it would always call __init__
 			with the input id which is not necessarily a binsha."""
-		hexsha, typename, size = repo.git.get_object_header(id)
-		inst = get_object_type_by_name(typename)(repo, hex_to_bin(hexsha))
-		inst.size = size
-		return inst
+		return repo.rev_parse(str(id))
 		
 	@classmethod
 	def new_from_sha(cls, repo, sha1):

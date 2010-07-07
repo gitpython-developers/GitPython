@@ -1122,7 +1122,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 		# item. Handle existing -R flags properly. Transform strings to the object
 		# so that we can call diff on it
 		if isinstance(other, basestring):
-			other = Object.new(self.repo, other)
+			other = self.repo.rev_parse(other)
 		# END object conversion
 
 		if isinstance(other, Object):

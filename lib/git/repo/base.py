@@ -323,11 +323,9 @@ class Repo(object):
 		:param rev: revision specifier, see git-rev-parse for viable options.
 		:return: ``git.Commit``"""
 		if rev is None:
-			rev = self.active_branch
-		
-		c = Object.new(self, rev)
-		assert c.type == "commit", "Revision %s did not point to a commit, but to %s" % (rev, c)
-		return c
+			return self.active_branch.commit
+		else:
+			return self.rev_parse(str(rev)+"^0")
 		
 	def iter_trees(self, *args, **kwargs):
 		""":return: Iterator yielding Tree objects
@@ -348,14 +346,9 @@ class Repo(object):
 			it cannot know about its path relative to the repository root and subsequent 
 			operations might have unexpected results."""
 		if rev is None:
-			rev = self.active_branch
-		
-		c = Object.new(self, rev)
-		if c.type == "commit":
-			return c.tree
-		elif c.type == "tree":
-			return c
-		raise ValueError( "Revision %s did not point to a treeish, but to %s" % (rev, c))
+			return self.active_branch.commit.tree
+		else:
+			return self.rev_parse(str(rev)+"^{tree}")
 
 	def iter_commits(self, rev=None, paths='', **kwargs):
 		"""A list of Commit objects representing the history of a given ref/commit

@@ -7,7 +7,7 @@ from test.testlib import *
 from git import *
 from git.util import join_path_native
 from git.exc import BadObject
-from gitdb.util import hex_to_bin
+from gitdb.util import hex_to_bin, bin_to_hex
 
 import os, sys
 import tempfile
@@ -57,7 +57,12 @@ class TestRepo(TestBase):
 		assert self.rorepo.tree(tree) == tree
 		
 		# try from invalid revision that does not exist
-		self.failUnlessRaises(ValueError, self.rorepo.tree, 'hello world')
+		self.failUnlessRaises(BadObject, self.rorepo.tree, 'hello world')
+		
+	def test_commit_from_revision(self):
+		commit = self.rorepo.commit('0.1.4')
+		assert commit.type == 'commit'
+		assert self.rorepo.commit(commit) == commit
 
 	def test_commits(self):
 		mc = 10
@@ -445,7 +450,7 @@ class TestRepo(TestBase):
 		rev_parse = self.rorepo.rev_parse
 		
 		# try special case: This one failed beforehand
-		assert self.rorepo.odb.partial_to_complete_sha_hex("33ebe") == hex_to_bin("33ebe7acec14b25c5f84f35a664803fcab2f7781")
+		assert rev_parse("33ebe").hexsha == "33ebe7acec14b25c5f84f35a664803fcab2f7781"
 		
 		# start from reference
 		num_resolved = 0
@@ -506,6 +511,16 @@ class TestRepo(TestBase):
 		for token in (('~0', '^0', '^{}')):
 			assert tag.object == rev_parse('0.1.4%s' % token)
 		# END handle multiple tokens
+		
+		# try partial parsing
+		max_items = 40
+		for i, binsha in enumerate(self.rorepo.odb.sha_iter()):
+			assert rev_parse(bin_to_hex(binsha)[:8-(i%2)]).binsha == binsha
+			if i > max_items:
+				# this is rather slow currently, as rev_parse returns an object
+				# which requires accessing packs, it has some additional overhead
+				break
+		# END for each binsha in repo
 		
 		# missing closing brace commit^{tree
 		self.failUnlessRaises(ValueError, rev_parse, '0.1.4^{tree')
