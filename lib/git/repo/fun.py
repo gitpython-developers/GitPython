@@ -7,9 +7,9 @@ from gitdb.util import (
 							join,
 							isdir, 
 							isfile,
-							hex_to_bin
+							hex_to_bin, 
+							bin_to_hex
 						)
-
 from string import digits
 
 __all__ = ('rev_parse', 'is_git_dir', 'touch')
@@ -30,6 +30,18 @@ def is_git_dir(d):
 				os.readlink(headref).startswith('refs'))
 	return False
 
+
+def short_to_long(odb, hexsha):
+	""":return: long hexadecimal sha1 from the given less-than-40 byte hexsha
+		or None if no candidate could be found.
+	:param hexsha: hexsha with less than 40 byte"""
+	try:
+		return bin_to_hex(odb.partial_to_complete_sha_hex(hexsha))
+	except BadObject:
+		return None
+	# END exception handling
+	
+	
 def name_to_object(repo, name):
 	""":return: object specified by the given name, hexshas ( short and long )
 		as well as references are supported"""
@@ -39,7 +51,7 @@ def name_to_object(repo, name):
 	if repo.re_hexsha_shortened.match(name):
 		if len(name) != 40:
 			# find long sha for short sha
-			raise NotImplementedError("short sha parsing")
+			hexsha = short_to_long(repo.odb, name)
 		else:
 			hexsha = name
 		# END handle short shas
@@ -55,11 +67,6 @@ def name_to_object(repo, name):
 	
 	# tried everything ? fail
 	if hexsha is None:
-		# it could also be a very short ( less than 7 ) hexsha, which 
-		# wasnt tested in the first run
-		if len(name) < 7 and repo.re_hexsha_domain.match(name):
-			raise NotImplementedError()
-		# END try short name 
 		raise BadObject(name)
 	# END assert hexsha was found
 	

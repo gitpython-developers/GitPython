@@ -3,43 +3,45 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
-
-import os, sys
 from test.testlib import *
 from git import *
 from git.util import join_path_native
+from git.exc import BadObject
+from gitdb.util import hex_to_bin
+
+import os, sys
 import tempfile
 import shutil
 from cStringIO import StringIO
-from git.exc import BadObject
+
 
 class TestRepo(TestBase):
 	
 	@raises(InvalidGitRepositoryError)
-	def _test_new_should_raise_on_invalid_repo_location(self):
+	def test_new_should_raise_on_invalid_repo_location(self):
 		Repo(tempfile.gettempdir())
 
 	@raises(NoSuchPathError)
-	def _test_new_should_raise_on_non_existant_path(self):
+	def test_new_should_raise_on_non_existant_path(self):
 		Repo("repos/foobar")
 
-	def _test_repo_creation_from_different_paths(self):
+	def test_repo_creation_from_different_paths(self):
 		r_from_gitdir = Repo(self.rorepo.git_dir)
 		assert r_from_gitdir.git_dir == self.rorepo.git_dir
 		assert r_from_gitdir.git_dir.endswith('.git')
 		assert not self.rorepo.git.working_dir.endswith('.git')
 		assert r_from_gitdir.git.working_dir == self.rorepo.git.working_dir
 
-	def _test_description(self):
+	def test_description(self):
 		txt = "Test repository"
 		self.rorepo.description = txt
 		assert_equal(self.rorepo.description, txt)
 
-	def _test_heads_should_return_array_of_head_objects(self):
+	def test_heads_should_return_array_of_head_objects(self):
 		for head in self.rorepo.heads:
 			assert_equal(Head, head.__class__)
 
-	def _test_heads_should_populate_head_data(self):
+	def test_heads_should_populate_head_data(self):
 		for head in self.rorepo.heads:
 			assert head.name
 			assert isinstance(head.commit,Commit)
@@ -48,7 +50,7 @@ class TestRepo(TestBase):
 		assert isinstance(self.rorepo.heads.master, Head)
 		assert isinstance(self.rorepo.heads['master'], Head)
 		
-	def _test_tree_from_revision(self):
+	def test_tree_from_revision(self):
 		tree = self.rorepo.tree('0.1.6')
 		assert len(tree.hexsha) == 40 
 		assert tree.type == "tree"
@@ -57,7 +59,7 @@ class TestRepo(TestBase):
 		# try from invalid revision that does not exist
 		self.failUnlessRaises(ValueError, self.rorepo.tree, 'hello world')
 
-	def _test_commits(self):
+	def test_commits(self):
 		mc = 10
 		commits = list(self.rorepo.iter_commits('0.1.6', max_count=mc))
 		assert len(commits) == mc
@@ -79,7 +81,7 @@ class TestRepo(TestBase):
 		c = commits[1]
 		assert isinstance(c.parents, tuple)
 
-	def _test_trees(self):
+	def test_trees(self):
 		mc = 30
 		num_trees = 0
 		for tree in self.rorepo.iter_trees('0.1.5', max_count=mc):
@@ -89,7 +91,7 @@ class TestRepo(TestBase):
 		assert num_trees == mc
 
 
-	def _test_empty_repo(self, repo):
+	def _assert_empty_repo(self, repo):
 		# test all kinds of things with an empty, freshly initialized repo. 
 		# It should throw good errors
 		
@@ -117,7 +119,7 @@ class TestRepo(TestBase):
 		# END test repos with working tree
 		
 
-	def _test_init(self):
+	def test_init(self):
 		prev_cwd = os.getcwd()
 		os.chdir(tempfile.gettempdir())
 		git_dir_rela = "repos/foo/bar.git"
@@ -131,12 +133,12 @@ class TestRepo(TestBase):
 				assert r.bare == True
 				assert os.path.isdir(r.git_dir)
 				
-				self._test_empty_repo(r)
+				self._assert_empty_repo(r)
 				
 				# test clone
 				clone_path = path + "_clone"
 				rc = r.clone(clone_path)
-				self._test_empty_repo(rc)
+				self._assert_empty_repo(rc)
 				
 				shutil.rmtree(git_dir_abs)
 				try:
@@ -153,7 +155,7 @@ class TestRepo(TestBase):
 			r = Repo.init(bare=False)
 			r.bare == False
 			
-			self._test_empty_repo(r)
+			self._assert_empty_repo(r)
 		finally:
 			try:
 				shutil.rmtree(del_dir_abs)
@@ -162,17 +164,17 @@ class TestRepo(TestBase):
 			os.chdir(prev_cwd)
 		# END restore previous state
 		
-	def _test_bare_property(self):
+	def test_bare_property(self):
 		self.rorepo.bare
 
-	def _test_daemon_export(self):
+	def test_daemon_export(self):
 		orig_val = self.rorepo.daemon_export
 		self.rorepo.daemon_export = not orig_val
 		assert self.rorepo.daemon_export == ( not orig_val )
 		self.rorepo.daemon_export = orig_val
 		assert self.rorepo.daemon_export == orig_val
   
-	def _test_alternates(self):
+	def test_alternates(self):
 		cur_alternates = self.rorepo.alternates
 		# empty alternates
 		self.rorepo.alternates = []
@@ -182,15 +184,15 @@ class TestRepo(TestBase):
 		assert alts == self.rorepo.alternates
 		self.rorepo.alternates = cur_alternates
 
-	def _test_repr(self):
+	def test_repr(self):
 		path = os.path.join(os.path.abspath(GIT_REPO), '.git')
 		assert_equal('<git.Repo "%s">' % path, repr(self.rorepo))
 
-	def _test_is_dirty_with_bare_repository(self):
+	def test_is_dirty_with_bare_repository(self):
 		self.rorepo._bare = True
 		assert_false(self.rorepo.is_dirty())
 
-	def _test_is_dirty(self):
+	def test_is_dirty(self):
 		self.rorepo._bare = False
 		for index in (0,1):
 			for working_tree in (0,1):
@@ -202,23 +204,23 @@ class TestRepo(TestBase):
 		self.rorepo._bare = True
 		assert self.rorepo.is_dirty() == False
 
-	def _test_head(self):
+	def test_head(self):
 		assert self.rorepo.head.reference.object == self.rorepo.active_branch.object
 
-	def _test_index(self):
+	def test_index(self):
 		index = self.rorepo.index
 		assert isinstance(index, IndexFile)
 	
-	def _test_tag(self):
+	def test_tag(self):
 		assert self.rorepo.tag('refs/tags/0.1.5').commit
 		
-	def _test_archive(self):
+	def test_archive(self):
 		tmpfile = os.tmpfile()
 		self.rorepo.archive(tmpfile, '0.1.5')
 		assert tmpfile.tell()
 		
 	@patch_object(Git, '_call_process')
-	def _test_should_display_blame_information(self, git):
+	def test_should_display_blame_information(self, git):
 		git.return_value = fixture('blame')
 		b = self.rorepo.blame( 'master', 'lib/git.py')
 		assert_equal(13, len(b))
@@ -244,7 +246,7 @@ class TestRepo(TestBase):
 		assert_true( isinstance( tlist[0], basestring ) )
 		assert_true( len( tlist ) < sum( len(t) for t in tlist ) )				 # test for single-char bug
 		
-	def _test_untracked_files(self):
+	def test_untracked_files(self):
 		base = self.rorepo.working_tree_dir
 		files = (	join_path_native(base, "__test_myfile"), 
 					join_path_native(base, "__test_other_file") )
@@ -270,13 +272,13 @@ class TestRepo(TestBase):
 		
 		assert len(self.rorepo.untracked_files) == (num_recently_untracked - len(files))
 		
-	def _test_config_reader(self):
+	def test_config_reader(self):
 		reader = self.rorepo.config_reader()				# all config files 
 		assert reader.read_only
 		reader = self.rorepo.config_reader("repository")	# single config file
 		assert reader.read_only
 		
-	def _test_config_writer(self):
+	def test_config_writer(self):
 		for config_level in self.rorepo.config_level:
 			try:
 				writer = self.rorepo.config_writer(config_level)
@@ -287,7 +289,7 @@ class TestRepo(TestBase):
 				pass 
 		# END for each config level 
 		
-	def _test_creation_deletion(self):
+	def test_creation_deletion(self):
 		# just a very quick test to assure it generally works. There are 
 		# specialized cases in the test_refs module
 		head = self.rorepo.create_head("new_head", "HEAD~1")
@@ -299,12 +301,12 @@ class TestRepo(TestBase):
 		remote = self.rorepo.create_remote("new_remote", "git@server:repo.git")
 		self.rorepo.delete_remote(remote)
 		
-	def _test_comparison_and_hash(self):
+	def test_comparison_and_hash(self):
 		# this is only a preliminary test, more testing done in test_index
 		assert self.rorepo == self.rorepo and not (self.rorepo != self.rorepo)
 		assert len(set((self.rorepo, self.rorepo))) == 1
 		
-	def _test_git_cmd(self):
+	def test_git_cmd(self):
 		# test CatFileContentStream, just to be very sure we have no fencepost errors
 		# last \n is the terminating newline that it expects
 		l1 = "0123456789\n"
@@ -441,6 +443,9 @@ class TestRepo(TestBase):
 		
 	def test_rev_parse(self):
 		rev_parse = self.rorepo.rev_parse
+		
+		# try special case: This one failed beforehand
+		assert self.rorepo.odb.partial_to_complete_sha_hex("33ebe") == hex_to_bin("33ebe7acec14b25c5f84f35a664803fcab2f7781")
 		
 		# start from reference
 		num_resolved = 0
