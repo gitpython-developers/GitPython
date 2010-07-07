@@ -1,11 +1,18 @@
-"""Module with our own gitdb implementation - it uses the git command""" 
+"""Module with our own gitdb implementation - it uses the git command"""
+from exc import (
+					GitCommandError, 
+					BadObject
+				)
+
 from gitdb.base import (
 								OInfo,
 								OStream
 							)
 
-from gitdb.util import bin_to_hex
-
+from gitdb.util import (
+							bin_to_hex, 
+							hex_to_bin
+						)
 from gitdb.db import GitDB
 from gitdb.db import LooseObjectDB
 
@@ -35,3 +42,20 @@ class GitCmdObjectDB(LooseObjectDB):
 		t = self._git.stream_object_data(bin_to_hex(sha))
 		return OStream(*t)
 	
+	
+	# { Interface
+	
+	def partial_to_complete_sha_hex(self, partial_hexsha):
+		""":return: Full binary 20 byte sha from the given partial hexsha
+		:raise AmbiguousObjectName:
+		:raise BadObject:
+		:note: currently we only raise BadObject as git does not communicate 
+			AmbiguousObjects separately"""
+		try:
+			hexsha, typename, size = self._git.get_object_header(partial_hexsha)
+			return hex_to_bin(hexsha)
+		except (GitCommandError, ValueError):
+			raise BadObject(partial_hexsha)
+		# END handle exceptions
+	
+	#} END interface

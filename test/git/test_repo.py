@@ -3,14 +3,17 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
-
-import os, sys
 from test.testlib import *
 from git import *
 from git.util import join_path_native
+from git.exc import BadObject
+from gitdb.util import hex_to_bin, bin_to_hex
+
+import os, sys
 import tempfile
 import shutil
 from cStringIO import StringIO
+
 
 class TestRepo(TestBase):
 	
@@ -54,7 +57,12 @@ class TestRepo(TestBase):
 		assert self.rorepo.tree(tree) == tree
 		
 		# try from invalid revision that does not exist
-		self.failUnlessRaises(ValueError, self.rorepo.tree, 'hello world')
+		self.failUnlessRaises(BadObject, self.rorepo.tree, 'hello world')
+		
+	def test_commit_from_revision(self):
+		commit = self.rorepo.commit('0.1.4')
+		assert commit.type == 'commit'
+		assert self.rorepo.commit(commit) == commit
 
 	def test_commits(self):
 		mc = 10
@@ -88,7 +96,7 @@ class TestRepo(TestBase):
 		assert num_trees == mc
 
 
-	def _test_empty_repo(self, repo):
+	def _assert_empty_repo(self, repo):
 		# test all kinds of things with an empty, freshly initialized repo. 
 		# It should throw good errors
 		
@@ -130,12 +138,12 @@ class TestRepo(TestBase):
 				assert r.bare == True
 				assert os.path.isdir(r.git_dir)
 				
-				self._test_empty_repo(r)
+				self._assert_empty_repo(r)
 				
 				# test clone
 				clone_path = path + "_clone"
 				rc = r.clone(clone_path)
-				self._test_empty_repo(rc)
+				self._assert_empty_repo(rc)
 				
 				shutil.rmtree(git_dir_abs)
 				try:
@@ -152,7 +160,7 @@ class TestRepo(TestBase):
 			r = Repo.init(bare=False)
 			r.bare == False
 			
-			self._test_empty_repo(r)
+			self._assert_empty_repo(r)
 		finally:
 			try:
 				shutil.rmtree(del_dir_abs)
@@ -275,7 +283,7 @@ class TestRepo(TestBase):
 		reader = self.rorepo.config_reader("repository")	# single config file
 		assert reader.read_only
 		
-	def _test_config_writer(self):
+	def test_config_writer(self):
 		for config_level in self.rorepo.config_level:
 			try:
 				writer = self.rorepo.config_writer(config_level)
@@ -376,3 +384,150 @@ class TestRepo(TestBase):
 		assert s._stream.tell() == 2
 		assert s.read() == l1[2:ts]
 		assert s._stream.tell() == ts+1
+		
+	def _assert_rev_parse_types(self, name, rev_obj):
+		rev_parse = self.rorepo.rev_parse
+		
+		if rev_obj.type == 'tag':
+			rev_obj = rev_obj.object
+		
+		# tree and blob type
+		obj = rev_parse(name + '^{tree}')
+		assert obj == rev_obj.tree
+		
+		obj = rev_parse(name + ':CHANGES')
+		assert obj.type == 'blob' and obj.path == 'CHANGES'
+		assert rev_obj.tree['CHANGES'] == obj
+			
+		
+	def _assert_rev_parse(self, name):
+		"""tries multiple different rev-parse syntaxes with the given name
+		:return: parsed object"""
+		rev_parse = self.rorepo.rev_parse
+		orig_obj = rev_parse(name)
+		if orig_obj.type == 'tag':
+			obj = orig_obj.object
+		else:
+			obj = orig_obj
+		# END deref tags by default 
+		
+		# try history
+		rev = name + "~"
+		obj2 = rev_parse(rev)
+		assert obj2 == obj.parents[0]
+		self._assert_rev_parse_types(rev, obj2)
+		
+		# history with number
+		ni = 11
+		history = [obj.parents[0]]
+		for pn in range(ni):
+			history.append(history[-1].parents[0])
+		# END get given amount of commits
+		
+		for pn in range(11):
+			rev = name + "~%i" % (pn+1)
+			obj2 = rev_parse(rev)
+			assert obj2 == history[pn]
+			self._assert_rev_parse_types(rev, obj2)
+		# END history check
+		
+		# parent ( default )
+		rev = name + "^"
+		obj2 = rev_parse(rev)
+		assert obj2 == obj.parents[0]
+		self._assert_rev_parse_types(rev, obj2)
+		
+		# parent with number
+		for pn, parent in enumerate(obj.parents):
+			rev = name + "^%i" % (pn+1)
+			assert rev_parse(rev) == parent
+			self._assert_rev_parse_types(rev, obj2)
+		# END for each parent
+		
+		return orig_obj
+		
+	def test_rev_parse(self):
+		rev_parse = self.rorepo.rev_parse
+		
+		# try special case: This one failed beforehand
+		assert rev_parse("33ebe").hexsha == "33ebe7acec14b25c5f84f35a664803fcab2f7781"
+		
+		# start from reference
+		num_resolved = 0
+		for ref in Reference.iter_items(self.rorepo):
+			path_tokens = ref.path.split("/")
+			for pt in range(len(path_tokens)):
+				path_section = '/'.join(path_tokens[-(pt+1):]) 
+				try:
+					obj = self._assert_rev_parse(path_section)
+					assert obj.type == ref.object.type
+					num_resolved += 1
+				except BadObject:
+					print "failed on %s" % path_section
+					# is fine, in case we have something like 112, which belongs to remotes/rname/merge-requests/112
+					pass
+				# END exception handling
+			# END for each token
+		# END for each reference
+		assert num_resolved
+		
+		# it works with tags !
+		tag = self._assert_rev_parse('0.1.4')
+		assert tag.type == 'tag'
+		
+		# try full sha directly ( including type conversion )
+		assert tag.object == rev_parse(tag.object.hexsha)
+		self._assert_rev_parse_types(tag.object.hexsha, tag.object)
+		
+		
+		# multiple tree types result in the same tree: HEAD^{tree}^{tree}:CHANGES
+		rev = '0.1.4^{tree}^{tree}'
+		assert rev_parse(rev) == tag.object.tree
+		assert rev_parse(rev+':CHANGES') == tag.object.tree['CHANGES']
+		
+		
+		# try to get parents from first revision - it should fail as no such revision
+		# exists
+		first_rev = "33ebe7acec14b25c5f84f35a664803fcab2f7781"
+		commit = rev_parse(first_rev)
+		assert len(commit.parents) == 0
+		assert commit.hexsha == first_rev
+		self.failUnlessRaises(BadObject, rev_parse, first_rev+"~")
+		self.failUnlessRaises(BadObject, rev_parse, first_rev+"^")
+		
+		# short SHA1
+		commit2 = rev_parse(first_rev[:20])
+		assert commit2 == commit
+		commit2 = rev_parse(first_rev[:5])
+		assert commit2 == commit
+		
+		
+		# todo: dereference tag into a blob 0.1.7^{blob} - quite a special one
+		# needs a tag which points to a blob
+		
+		
+		# ref^0 returns commit being pointed to, same with ref~0, and ^{}
+		tag = rev_parse('0.1.4')
+		for token in (('~0', '^0', '^{}')):
+			assert tag.object == rev_parse('0.1.4%s' % token)
+		# END handle multiple tokens
+		
+		# try partial parsing
+		max_items = 40
+		for i, binsha in enumerate(self.rorepo.odb.sha_iter()):
+			assert rev_parse(bin_to_hex(binsha)[:8-(i%2)]).binsha == binsha
+			if i > max_items:
+				# this is rather slow currently, as rev_parse returns an object
+				# which requires accessing packs, it has some additional overhead
+				break
+		# END for each binsha in repo
+		
+		# missing closing brace commit^{tree
+		self.failUnlessRaises(ValueError, rev_parse, '0.1.4^{tree')
+		
+		# missing starting brace
+		self.failUnlessRaises(ValueError, rev_parse, '0.1.4^tree}')
+		
+		
+		# cannot handle rev-log for now 
+		self.failUnlessRaises(ValueError, rev_parse, "hi@there")

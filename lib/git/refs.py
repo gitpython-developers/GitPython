@@ -68,7 +68,7 @@ class SymbolicReference(object):
 		:return:
 			In case of symbolic references, the shortest assumable name 
 			is the path itself."""
-		return self.path	
+		return self.path
 	
 	def _abs_path(self):
 		return join_path_native(self.repo.git_dir, self.path)
@@ -108,6 +108,19 @@ class SymbolicReference(object):
 		# but some python version woudn't allow yields within that.
 		# I believe files are closing themselves on destruction, so it is 
 		# alright.
+		
+	@classmethod
+	def dereference_recursive(cls, repo, ref_path):
+		"""
+		:return: hexsha stored in the reference at the given ref_path, recursively dereferencing all
+			intermediate references as required
+		:param repo: the repository containing the reference at ref_path"""
+		while True:
+			ref = cls(repo, ref_path)
+			hexsha, ref_path = ref._get_ref_info()
+			if hexsha is not None:
+				return hexsha
+		# END recursive dereferencing
 		
 	def _get_ref_info(self):
 		"""Return: (sha, target_ref_path) if available, the sha the file at 
@@ -195,9 +208,8 @@ class SymbolicReference(object):
 			try:
 				write_value = ref.commit.hexsha
 			except AttributeError:
-				sha = str(ref)
 				try:
-					obj = Object.new(self.repo, sha)
+					obj = self.repo.rev_parse(ref+"^{}")	# optionally deref tags
 					if obj.type != "commit":
 						raise TypeError("Invalid object type behind sha: %s" % sha)
 					write_value = obj.hexsha
@@ -333,7 +345,7 @@ class SymbolicReference(object):
 		# figure out target data
 		target = reference
 		if resolve:
-			target = Object.new(repo, reference)
+			target = repo.rev_parse(str(reference))
 			
 		if not force and isfile(abs_ref_path):
 			target_data = str(target)
@@ -523,7 +535,7 @@ class Reference(SymbolicReference, LazyMixin, Iterable):
 			always point to the actual object as it gets re-created on each query"""
 		# have to be dynamic here as we may be a tag which can point to anything
 		# Our path will be resolved to the hexsha which will be used accordingly
-		return Object.new(self.repo, self.path)
+		return Object.new_from_sha(self.repo, hex_to_bin(self.dereference_recursive(self.repo, self.path)))
 		
 	def _set_object(self, ref):
 		"""

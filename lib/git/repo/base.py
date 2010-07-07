@@ -4,50 +4,38 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
-from exc import InvalidGitRepositoryError, NoSuchPathError
-from cmd import Git
-from objects import Actor
-from refs import *
-from index import IndexFile
-from objects import *
-from config import GitConfigParser
-from remote import Remote
-
-from db import (
+from git.exc import InvalidGitRepositoryError, NoSuchPathError
+from git.cmd import Git
+from git.objects import Actor
+from git.refs import *
+from git.index import IndexFile
+from git.objects import *
+from git.config import GitConfigParser
+from git.remote import Remote
+from git.db import (
 				GitCmdObjectDB, 
 				GitDB
 				)
 
+
 from gitdb.util import (
 							join,
-							isdir, 
 							isfile,
-							join,
 							hex_to_bin
 						)
+
+from fun import (
+					rev_parse,
+					is_git_dir,
+					touch
+				)
+
 import os
 import sys
 import re
 
 
 __all__ = ('Repo', )
-
-def touch(filename):
-	fp = open(filename, "a")
-	fp.close()
-
-def is_git_dir(d):
-	""" This is taken from the git setup.c:is_git_directory
-	function."""
-
-	if isdir(d) and \
-			isdir(join(d, 'objects')) and \
-			isdir(join(d, 'refs')):
-		headref = join(d, 'HEAD')
-		return isfile(headref) or \
-				(os.path.islink(headref) and
-				os.readlink(headref).startswith('refs'))
-	return False
 
 
 class Repo(object):
@@ -70,6 +58,7 @@ class Repo(object):
 	# precompiled regex
 	re_whitespace = re.compile(r'\s+')
 	re_hexsha_only = re.compile('^[0-9A-Fa-f]{40}$')
+	re_hexsha_shortened = re.compile('^[0-9A-Fa-f]{4,40}$')
 	re_author_committer_start = re.compile(r'^(author|committer)')
 	re_tab_full_line = re.compile(r'^\t(.*)$')
 	
@@ -109,7 +98,7 @@ class Repo(object):
 				self.git_dir = curpath
 				self._working_tree_dir = os.path.dirname(curpath)
 				break
-			gitpath = os.path.join(curpath, '.git')
+			gitpath = join(curpath, '.git')
 			if is_git_dir(gitpath):
 				self.git_dir = gitpath
 				self._working_tree_dir = curpath
@@ -139,7 +128,7 @@ class Repo(object):
 		self.git = Git(self.working_dir)
 		
 		# special handling, in special times
-		args = [os.path.join(self.git_dir, 'objects')]
+		args = [join(self.git_dir, 'objects')]
 		if issubclass(odbt, GitCmdObjectDB):
 			args.append(self.git)
 		self.odb = odbt(*args)
@@ -160,11 +149,11 @@ class Repo(object):
 
 	# Description property
 	def _get_description(self):
-		filename = os.path.join(self.git_dir, 'description')
+		filename = join(self.git_dir, 'description')
 		return file(filename).read().rstrip()
 
 	def _set_description(self, descr):
-		filename = os.path.join(self.git_dir, 'description')
+		filename = join(self.git_dir, 'description')
 		file(filename, 'w').write(descr+'\n')
 
 	description = property(_get_description, _set_description,
@@ -334,11 +323,9 @@ class Repo(object):
 		:param rev: revision specifier, see git-rev-parse for viable options.
 		:return: ``git.Commit``"""
 		if rev is None:
-			rev = self.active_branch
-		
-		c = Object.new(self, rev)
-		assert c.type == "commit", "Revision %s did not point to a commit, but to %s" % (rev, c)
-		return c
+			return self.active_branch.commit
+		else:
+			return self.rev_parse(str(rev)+"^0")
 		
 	def iter_trees(self, *args, **kwargs):
 		""":return: Iterator yielding Tree objects
@@ -359,14 +346,9 @@ class Repo(object):
 			it cannot know about its path relative to the repository root and subsequent 
 			operations might have unexpected results."""
 		if rev is None:
-			rev = self.active_branch
-		
-		c = Object.new(self, rev)
-		if c.type == "commit":
-			return c.tree
-		elif c.type == "tree":
-			return c
-		raise ValueError( "Revision %s did not point to a treeish, but to %s" % (rev, c))
+			return self.active_branch.commit.tree
+		else:
+			return self.rev_parse(str(rev)+"^{tree}")
 
 	def iter_commits(self, rev=None, paths='', **kwargs):
 		"""A list of Commit objects representing the history of a given ref/commit
@@ -393,11 +375,11 @@ class Repo(object):
 		return Commit.iter_items(self, rev, paths, **kwargs)
 
 	def _get_daemon_export(self):
-		filename = os.path.join(self.git_dir, self.DAEMON_EXPORT_FILE)
+		filename = join(self.git_dir, self.DAEMON_EXPORT_FILE)
 		return os.path.exists(filename)
 
 	def _set_daemon_export(self, value):
-		filename = os.path.join(self.git_dir, self.DAEMON_EXPORT_FILE)
+		filename = join(self.git_dir, self.DAEMON_EXPORT_FILE)
 		fileexists = os.path.exists(filename)
 		if value and not fileexists:
 			touch(filename)
@@ -413,7 +395,7 @@ class Repo(object):
 		"""The list of alternates for this repo from which objects can be retrieved
 
 		:return: list of strings being pathnames of alternates"""
-		alternates_path = os.path.join(self.git_dir, 'objects', 'info', 'alternates')
+		alternates_path = join(self.git_dir, 'objects', 'info', 'alternates')
 
 		if os.path.exists(alternates_path):
 			try:
@@ -436,9 +418,9 @@ class Repo(object):
 		:note:
 			The method does not check for the existance of the paths in alts
 			as the caller is responsible."""
-		alternates_path = os.path.join(self.git_dir, 'objects', 'info', 'alternates') 
+		alternates_path = join(self.git_dir, 'objects', 'info', 'alternates') 
 		if not alts:
-			if os.path.isfile(alternates_path):
+			if isfile(alternates_path):
 				os.remove(alternates_path)
 		else:
 			try:
@@ -466,7 +448,7 @@ class Repo(object):
 		default_args = ('--abbrev=40', '--full-index', '--raw')
 		if index: 
 			# diff index against HEAD
-			if os.path.isfile(self.index.path) and self.head.is_valid() and \
+			if isfile(self.index.path) and self.head.is_valid() and \
 				len(self.git.diff('HEAD', '--cached', *default_args)):
 				return True
 		# END index handling
@@ -674,7 +656,7 @@ class Repo(object):
 		# our git command could have a different working dir than our actual 
 		# environment, hence we prepend its working dir if required
 		if not os.path.isabs(path) and self.git.working_dir:
-			path = os.path.join(self.git._working_dir, path)
+			path = join(self.git._working_dir, path)
 		return Repo(os.path.abspath(path), odbt = odbt)
 
 
@@ -693,11 +675,13 @@ class Repo(object):
 		if treeish is None:
 			treeish = self.active_branch
 		if prefix and 'prefix' not in kwargs:
-			kwargs['prefix'] = prefix
+			kwargs['prefix'] = prefix 
 		kwargs['output_stream'] = ostream
 		
 		self.git.archive(treeish, **kwargs)
 		return self
-
+	
+	rev_parse = rev_parse
+		
 	def __repr__(self):
 		return '<git.Repo "%s">' % self.git_dir
