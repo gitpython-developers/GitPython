@@ -62,6 +62,7 @@ setup(name = "GitPython",
       package_dir = {'':'lib'},
       license = "BSD License",
       requires=('gitdb (>=0.5)',),
+      install_requires='gitdb >= 0.5.0',
       long_description = """\
 GitPython is a python library used to interact with Git repositories""",
       classifiers = [
