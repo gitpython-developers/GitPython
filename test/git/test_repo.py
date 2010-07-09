@@ -545,3 +545,10 @@ class TestRepo(TestBase):
 		
 		# cannot handle rev-log for now 
 		self.failUnlessRaises(ValueError, rev_parse, "hi@there")
+		
+	def test_repo_odbtype(self):
+		target_type = GitDB
+		if sys.version_info[1] < 5:
+			target_type = GitCmdObjectDB
+		assert isinstance(self.rorepo.odb, target_type)
+			

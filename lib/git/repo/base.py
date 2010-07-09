@@ -34,6 +34,11 @@ import os
 import sys
 import re
 
+DefaultDBType = GitDB
+if sys.version_info[1] < 5:		# python 2.4 compatiblity
+	DefaultDBType = GitCmdObjectDB
+# END handle python 2.4
+
 
 __all__ = ('Repo', )
 
@@ -66,7 +71,7 @@ class Repo(object):
 	# represents the configuration level of a configuration file
 	config_level = ("system", "global", "repository")
 
-	def __init__(self, path=None, odbt = GitDB):
+	def __init__(self, path=None, odbt = DefaultDBType):
 		"""Create a new Repo instance
 
 		:param path: is the path to either the root git directory or the bare git repo::
