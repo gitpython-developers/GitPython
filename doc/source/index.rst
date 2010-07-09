@@ -13,6 +13,7 @@ GitPython Documentation
    tutorial
    reference
    roadmap
+   changes
 
 Indices and tables
 ==================
