@@ -124,7 +124,13 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 				return
 			# END exception handling
 
-			stream = file_contents_ro(fd, stream=True, allow_mmap=True)
+			# Here it comes: on windows in python 2.5, memory maps aren't closed properly 
+			# Hence we are in trouble if we try to delete a file that is memory mapped, 
+			# which happens during read-tree.
+			# In this case, we will just read the memory in directly.
+			# Its insanely bad ... I am disappointed !
+			allow_mmap = (os.name != 'nt' or sys.version_info[1] > 5)  
+			stream = file_contents_ro(fd, stream=True, allow_mmap=allow_mmap)
 			
 			try:
 				self._deserialize(stream)
