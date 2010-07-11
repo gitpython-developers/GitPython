@@ -25,6 +25,7 @@ from gitdb.util import (
 						join,
 						)
 import re
+import os
 
 __all__ = ('RemoteProgress', 'PushInfo', 'FetchInfo', 'Remote')
 
@@ -417,6 +418,16 @@ class Remote(LazyMixin, Iterable):
 		:param name: the name of the remote, i.e. 'origin'"""
 		self.repo = repo
 		self.name = name
+		
+		if os.name == 'nt':
+			# some oddity: on windows, python 2.5, it for some reason does not realize
+			# that it has the config_writer property, but instead calls __getattr__
+			# which will not yield the expected results. 'pinging' the members
+			# with a dir call creates the config_writer property that we require 
+			# ... bugs like these make me wonder wheter python really wants to be used
+			# for production. It doesn't happen on linux though.
+			dir(self)
+		# END windows special handling
 		
 	def __getattr__(self, attr):
 		"""Allows to call this instance like 

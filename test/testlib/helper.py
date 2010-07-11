@@ -188,13 +188,6 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
 			d_remote.fetch()
 			remote_repo_url = "git://localhost%s" % remote_repo_dir
 			
-			# some oddity: on windows, python 2.5, it for some reason does not realize
-			# that it has the config_writer property, but instead calls __getattr__
-			# which will not yield the expected results. 'pinging' the members
-			# with a dir call creates the config_writer property that we require 
-			# ... bugs like these make me wonder wheter python really wants to be used
-			# for production. It doesn't happen on linux though.
-			dir(d_remote)
 			d_remote.config_writer.set('url', remote_repo_url)
 			
 			# try to list remotes to diagnoes whether the server is up
