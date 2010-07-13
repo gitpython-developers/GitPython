@@ -21,9 +21,9 @@ from refs import (
 					TagReference
 				)
 
-from gitdb.util import (
-						join,
-						)
+from git.util import  join_path
+from gitdb.util import join
+
 import re
 import os
 
@@ -366,7 +366,7 @@ class FetchInfo(object):
 		if ref_type is SymbolicReference:
 			remote_local_ref = ref_type(repo, "FETCH_HEAD") 
 		else:
-			remote_local_ref = Reference.from_path(repo, join(ref_type._common_path_default, remote_local_ref.strip()))
+			remote_local_ref = Reference.from_path(repo, join_path(ref_type._common_path_default, remote_local_ref.strip()))
 		# END create ref instance 
 		
 		note = ( note and note.strip() ) or ''

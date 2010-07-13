@@ -56,6 +56,8 @@ from git.util import (
 							LockedFD, 
 							join_path_native, 
 							file_contents_ro,
+							to_native_path_linux,
+							to_native_path
 						)
 
 from fun import (
@@ -672,7 +674,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 				gitrelative_path = abspath[len(self.repo.working_tree_dir)+1:]
 				blob = Blob(self.repo, Blob.NULL_BIN_SHA, 
 							self._stat_mode_to_index_mode(os.stat(abspath).st_mode), 
-							gitrelative_path)
+							to_native_path_linux(gitrelative_path))
 				entries.append(BaseIndexEntry.from_blob(blob))
 			# END for each path
 			del(paths[:])
@@ -692,7 +694,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 			istream = self.repo.odb.store(IStream(Blob.type, st.st_size, stream))
 			fprogress(filepath, True, filepath)
 			return BaseIndexEntry((self._stat_mode_to_index_mode(st.st_mode), 
-									istream.binsha, 0, filepath))
+									istream.binsha, 0, to_native_path_linux(filepath)))
 		# END utility method
 
 
