@@ -51,7 +51,7 @@ class TestObjDBPerformance(TestBigRepoR):
 			too_many = 15000
 			for blob_list in blobs_per_commit:
 				for blob in blob_list:
-					blob.data
+					blob.data_stream.read()
 				# END for each blobsha
 				nb += len(blob_list)
 				if nb > too_many:
