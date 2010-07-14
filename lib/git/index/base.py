@@ -445,12 +445,12 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
 	def unmerged_blobs(self):
 		"""
-		Returns
+		:return:
 			Iterator yielding dict(path : list( tuple( stage, Blob, ...))), being
 			a dictionary associating a path in the index with a list containing
 			sorted stage/blob pairs
 
-		Note:
+		:note:
 			Blobs that have been removed in one side simply do not exist in the
 			given stage. I.e. a file removed on the 'other' branch whose entries
 			are at stage 3 will not have a stage 3 entry.

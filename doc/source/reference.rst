@@ -131,10 +131,17 @@ Remote
    :members:
    :undoc-members:
 
-Repo
-----
+Repo.Base
+---------
 
-.. automodule:: git.repo
+.. automodule:: git.repo.base
+   :members:
+   :undoc-members:
+   
+Repo.Functions
+--------------
+
+.. automodule:: git.repo.fun
    :members:
    :undoc-members:
 

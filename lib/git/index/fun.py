@@ -48,6 +48,7 @@ def write_cache_entry(entry, stream):
 
 def write_cache(entries, stream, extension_data=None, ShaStreamCls=IndexFileSHA1Writer):
 	"""Write the cache represented by entries to a stream
+	
 	:param entries: **sorted** list of entries
 	:param stream: stream to wrap into the AdapterStreamCls - it is used for
 		final output.
@@ -149,6 +150,7 @@ def read_cache(stream):
 def write_tree_from_cache(entries, odb, sl, si=0):
 	"""Create a tree from the given sorted list of entries and put the respective
 	trees into the given object database
+	
 	:param entries: **sorted** list of IndexEntries
 	:param odb: object database to store the trees in
 	:param si: start index at which we should start creating subtrees
