@@ -151,3 +151,24 @@ class TestUtilPerformance(TestBigRepoR):
 			print >> sys.stderr, "Iterated %i items from iterator in %f s ( %f acc / s)" % (ni, elapsed, ni / elapsed)
 		# END for each number of iterations
 		
+	def test_type_vs_inst_class(self):
+		class NewType(object):
+			pass
+		
+		# lets see which way is faster
+		inst = NewType()
+		
+		ni = 1000000
+		st = time()
+		for i in xrange(ni):
+			inst.__class__()
+		# END for each item
+		elapsed = time() - st
+		print >> sys.stderr, "Created %i items using inst.__class__ in %f s ( %f items / s)" % (ni, elapsed, ni / elapsed)
+		
+		st = time()
+		for i in xrange(ni):
+			type(inst)()
+		# END for each item
+		elapsed = time() - st
+		print >> sys.stderr, "Created %i items using type(inst)() in %f s ( %f items / s)" % (ni, elapsed, ni / elapsed)
