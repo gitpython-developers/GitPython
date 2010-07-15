@@ -25,6 +25,13 @@ def tree_to_stream(entries, write):
 			mode_str = mode_str[1:]
 		# END save a byte
 
+		# here it comes:  if the name is actually unicode, the replacement below
+		# will not work as the binsha is not part of the ascii unicode encoding - 
+		# hence we must convert to an utf8 string for it to work properly.
+		# According to my tests, this is exactly what git does, that is it just
+		# takes the input literally, which appears to be utf8 on linux.
+		if isinstance(name, unicode):
+			name = name.encode("utf8")
 		write("%s %s\0%s" % (mode_str, name, binsha)) 
 	# END for each item
 
