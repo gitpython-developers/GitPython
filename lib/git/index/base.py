@@ -370,7 +370,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 		def raise_exc(e):
 			raise e
 		r = self.repo.working_tree_dir
-		rs = r + '/'
+		rs = r + os.sep
 		for path in paths:
 			abs_path = path
 			if not os.path.isabs(abs_path):
@@ -667,7 +667,6 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 		# paths can be git-added, for everything else we use git-update-index
 		entries_added = list()
 		paths, entries = self._preprocess_add_items(items)
-
 		if paths and path_rewriter:
 			for path in paths:
 				abspath = os.path.abspath(path)

@@ -24,6 +24,7 @@ class TestIndex(TestBase):
 		assert len(entries) == len(self._fprogress_map)
 		for path, call_count in self._fprogress_map.iteritems():
 			assert call_count == 2
+		# END for each item in progress map
 		self._reset_progress()
 
 	def _fprogress(self, path, done, item):
@@ -44,6 +45,13 @@ class TestIndex(TestBase):
 	def _reset_progress(self):
 		# maps paths to the count of calls
 		self._fprogress_map = dict()
+		
+	def _assert_entries(self, entries):
+		for entry in entries:
+			assert isinstance(entry, BaseIndexEntry)
+			assert not os.path.isabs(entry.path)
+			assert not "\\" in entry.path
+		# END for each entry
 	
 	def test_index_file_base(self):
 		# read from file
@@ -172,7 +180,7 @@ class TestIndex(TestBase):
 		# sha for it ( which makes things faster of course )
 		manifest_fake_entry = BaseIndexEntry((manifest_entry[0], "\0"*20, 0, manifest_entry[3]))
 		# try write flag
-		rw_repo.index.add([manifest_fake_entry], write=False)
+		self._assert_entries(rw_repo.index.add([manifest_fake_entry], write=False))
 		# add actually resolves the null-hex-sha for us as a feature, but we can 
 		# edit the index manually
 		assert rw_repo.index.entries[manifest_key].binsha != Object.NULL_BIN_SHA
@@ -420,22 +428,25 @@ class TestIndex(TestBase):
 		# re-add all files in lib
 		# get the lib folder back on disk, but get an index without it
 		index.reset(new_commit.parents[0], working_tree=True).reset(new_commit, working_tree=False)
-		lib_file_path = "lib/git/__init__.py"
+		lib_file_path = os.path.join("lib", "git", "__init__.py")
 		assert (lib_file_path, 0) not in index.entries
 		assert os.path.isfile(os.path.join(rw_repo.working_tree_dir, lib_file_path))
 		
 		# directory
 		entries = index.add(['lib'], fprogress=self._fprogress_add)
+		self._assert_entries(entries)
 		self._assert_fprogress(entries)
 		assert len(entries)>1
 		
 		# glob 
-		entries = index.reset(new_commit).add(['lib/git/*.py'], fprogress=self._fprogress_add)
+		entries = index.reset(new_commit).add([os.path.join('lib', 'git', '*.py')], fprogress=self._fprogress_add)
+		self._assert_entries(entries)
 		self._assert_fprogress(entries)
 		assert len(entries) == 14
 		
 		# same file 
-		entries = index.reset(new_commit).add(['lib/git/head.py']*2, fprogress=self._fprogress_add)
+		entries = index.reset(new_commit).add([os.path.abspath(os.path.join('lib', 'git', 'head.py'))]*2, fprogress=self._fprogress_add)
+		self._assert_entries(entries)
 		assert entries[0].mode & 0644 == 0644
 		# would fail, test is too primitive to handle this case
 		# self._assert_fprogress(entries)
@@ -448,6 +459,7 @@ class TestIndex(TestBase):
 		# blob from older revision overrides current index revision
 		old_blob = new_commit.parents[0].tree.blobs[0]
 		entries = index.reset(new_commit).add([old_blob], fprogress=self._fprogress_add)
+		self._assert_entries(entries)
 		self._assert_fprogress(entries)
 		assert index.entries[(old_blob.path,0)].hexsha == old_blob.hexsha and len(entries) == 1 
 		
@@ -460,6 +472,7 @@ class TestIndex(TestBase):
 		new_file_relapath = "my_new_file"
 		new_file_path = self._make_file(new_file_relapath, "hello world", rw_repo)
 		entries = index.reset(new_commit).add([BaseIndexEntry((010644, null_bin_sha, 0, new_file_relapath))], fprogress=self._fprogress_add)
+		self._assert_entries(entries)
 		self._assert_fprogress(entries)
 		assert len(entries) == 1 and entries[0].hexsha != null_hex_sha
 		
@@ -470,6 +483,7 @@ class TestIndex(TestBase):
 			link_file = os.path.join(rw_repo.working_tree_dir, basename)
 			os.symlink(target, link_file)
 			entries = index.reset(new_commit).add([link_file], fprogress=self._fprogress_add)
+			self._assert_entries(entries)
 			self._assert_fprogress(entries)
 			assert len(entries) == 1 and S_ISLNK(entries[0].mode)
 			assert S_ISLNK(index.entries[index.entry_key("my_real_symlink", 0)].mode)
@@ -484,6 +498,7 @@ class TestIndex(TestBase):
 		fake_symlink_path = self._make_file(fake_symlink_relapath, link_target, rw_repo)
 		fake_entry = BaseIndexEntry((0120000, null_bin_sha, 0, fake_symlink_relapath))
 		entries = index.reset(new_commit).add([fake_entry], fprogress=self._fprogress_add)
+		self._assert_entries(entries)
 		self._assert_fprogress(entries)
 		assert entries[0].hexsha != null_hex_sha
 		assert len(entries) == 1 and S_ISLNK(entries[0].mode)
@@ -571,7 +586,7 @@ class TestIndex(TestBase):
 			# END for each new file
 		# END path producer
 		paths = list(make_paths())
-		index.add(paths, path_rewriter=rewriter)
+		self._assert_entries(index.add(paths, path_rewriter=rewriter))
 		
 		for filenum in range(len(paths)):
 			assert index.entry_key(str(filenum), 0) in index.entries
