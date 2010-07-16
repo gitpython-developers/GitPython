@@ -60,7 +60,7 @@ def get_user_id():
 	""":return: string identifying the currently active system user as name@node
 	:note: user can be set with the 'USER' environment variable, usually set on windows"""
 	ukn = 'UNKNOWN'
-	username = os.environ.get('USER', ukn)
+	username = os.environ.get('USER', os.environ.get('USERNAME', ukn))
 	if username == ukn and hasattr(os, 'getlogin'):
 		username = os.getlogin()
 	# END get username from login
