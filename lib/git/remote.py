@@ -7,6 +7,7 @@
 
 from exc import GitCommandError
 from objects import Commit
+from ConfigParser import NoOptionError 
 
 from git.util import (
 						LazyMixin,
@@ -435,7 +436,13 @@ class Remote(LazyMixin, Iterable):
 		if attr == "_config_reader":
 			return super(Remote, self).__getattr__(attr)
 		
-		return self._config_reader.get(attr)
+		# sometimes, probably due to a bug in python itself, we are being called
+		# even though a slot of the same name exists
+		try:
+			return self._config_reader.get(attr)
+		except NoOptionError:
+			return super(Remote, self).__getattr__(attr)
+		# END handle exception
 	
 	def _config_section_name(self):
 		return 'remote "%s"' % self.name

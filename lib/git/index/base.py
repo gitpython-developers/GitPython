@@ -1021,14 +1021,14 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 			checked_out_files = list()
 
 			for path in paths:
-				path = self._to_relative_path(path)
+				co_path = to_native_path_linux(self._to_relative_path(path))
 				# if the item is not in the index, it could be a directory
 				path_is_directory = False
 
 				try:
-					self.entries[(path, 0)]
+					self.entries[(co_path, 0)]
 				except KeyError:
-					dir = path
+					dir = co_path
 					if not dir.endswith('/'):
 						dir += '/'
 					for entry in self.entries.itervalues():
@@ -1043,9 +1043,9 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 				# END path exception handlnig
 
 				if not path_is_directory:
-					self._write_path_to_stdin(proc, path, path, make_exc, 
+					self._write_path_to_stdin(proc, co_path, path, make_exc, 
 												fprogress, read_from_stdout=False)
-					checked_out_files.append(path)
+					checked_out_files.append(co_path)
 				# END path is a file
 			# END for each path
 			self._flush_stdin_and_wait(proc, ignore_stdout=True)
