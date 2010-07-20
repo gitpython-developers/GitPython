@@ -2,7 +2,18 @@
 Contains standalone functions to accompany the index implementation and make it
 more versatile
 """
-from stat import S_IFDIR
+from stat import (
+					S_IFDIR,
+					S_IFLNK,
+					S_ISLNK,
+					S_IFDIR,
+					S_ISDIR,
+					S_IFMT,
+					S_IFREG,
+				)
+
+S_IFGITLINK = S_IFLNK | S_IFDIR		# a submodule
+
 from cStringIO import StringIO
 
 from git.util import IndexFileSHA1Writer
@@ -28,7 +39,19 @@ from util import 	(
 from gitdb.base import IStream
 from gitdb.typ import str_tree_type
 
-__all__ = ('write_cache', 'read_cache', 'write_tree_from_cache', 'entry_key' )
+__all__ = ('write_cache', 'read_cache', 'write_tree_from_cache', 'entry_key', 
+			'stat_mode_to_index_mode', 'S_IFGITLINK')
+
+
+def stat_mode_to_index_mode(mode):
+	"""Convert the given mode from a stat call to the corresponding index mode
+	and return it"""
+	if S_ISLNK(mode):	# symlinks
+		return S_IFLNK
+	if S_ISDIR(mode) or S_IFMT(mode) == S_IFGITLINK:	# submodules
+		return S_IFGITLINK
+	return S_IFREG | 0644 | (mode & 0100) 		# blobs with or without executable bit
+
 
 def write_cache_entry(entry, stream):
 	"""Write the given entry to the stream"""

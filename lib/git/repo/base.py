@@ -651,7 +651,17 @@ class Repo(object):
 		# environment, hence we prepend its working dir if required
 		if not os.path.isabs(path) and git.working_dir:
 			path = join(git._working_dir, path)
-		return cls(os.path.abspath(path), odbt = odbt)
+			
+		# adjust remotes - there may be operating systems which use backslashes, 
+		# These might be given as initial paths, but when handling the config file
+		# that contains the remote from which we were clones, git stops liking it
+		# as it will escape the backslashes. Hence we undo the escaping just to be 
+		# sure
+		repo = cls(os.path.abspath(path), odbt = odbt)
+		if repo.remotes:
+			repo.remotes[0].config_writer.set_value('url', repo.remotes[0].url.replace("\\\\", "\\").replace("\\", "/"))
+		# END handle remote repo
+		return repo
 
 	def clone(self, path, **kwargs):
 		"""Create a clone from this repository.

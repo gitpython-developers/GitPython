@@ -9,6 +9,7 @@ from binascii import (
 						b2a_hex,
 					)
 
+from git.objects import Blob
 __all__ = ('BlobFilter', 'BaseIndexEntry', 'IndexEntry')
 
 #{ Invariants
@@ -101,6 +102,10 @@ class BaseIndexEntry(tuple):
 	def from_blob(cls, blob, stage = 0):
 		""":return: Fully equipped BaseIndexEntry at the given stage"""
 		return cls((blob.mode, blob.binsha, stage << CE_STAGESHIFT, blob.path))
+		
+	def to_blob(self, repo):
+		""":return: Blob using the information of this index entry"""
+		return Blob(repo, self.binsha, self.mode, self.path) 
 
 
 class IndexEntry(BaseIndexEntry):

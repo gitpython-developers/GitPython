@@ -12,14 +12,7 @@ import subprocess
 import glob
 from cStringIO import StringIO
 
-from stat import (
-					S_ISLNK,
-					S_ISDIR,
-					S_IFMT,
-					S_IFDIR,
-					S_IFLNK,
-					S_IFREG
-				)
+from stat import S_ISLNK
 
 from typ import (
 					BaseIndexEntry, 
@@ -65,7 +58,9 @@ from fun import (
 					write_cache,
 					read_cache,
 					aggressive_tree_merge,
-					write_tree_from_cache
+					write_tree_from_cache,
+					stat_mode_to_index_mode, 
+					S_IFGITLINK
 				)
 
 from gitdb.base import IStream
@@ -99,7 +94,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 	before operating on it using the git command"""
 	__slots__ = ("repo", "version", "entries", "_extension_data", "_file_path")
 	_VERSION = 2			# latest version we support
-	S_IFGITLINK = 0160000	# a submodule
+	S_IFGITLINK = S_IFGITLINK # a submodule
 
 	def __init__(self, repo, file_path=None):
 		"""Initialize this Index instance, optionally from the given ``file_path``.
@@ -350,16 +345,6 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
 		return index
 
-	@classmethod
-	def _stat_mode_to_index_mode(cls, mode):
-		"""Convert the given mode from a stat call to the corresponding index mode
-		and return it"""
-		if S_ISLNK(mode):	# symlinks
-			return S_IFLNK
-		if S_ISDIR(mode) or S_IFMT(mode) == cls.S_IFGITLINK:	# submodules
-			return cls.S_IFGITLINK
-		return S_IFREG | 0644 | (mode & 0100) 		# blobs with or without executable bit
-
 	# UTILITIES
 	def _iter_expand_paths(self, paths):
 		"""Expand the directories in list of paths to the corresponding paths accordingly,
@@ -437,8 +422,8 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 		for entry in self.entries.itervalues():
 			# TODO: is it necessary to convert the mode ? We did that when adding 
 			# it to the index, right ?
-			mode = self._stat_mode_to_index_mode(entry.mode)
-			blob = Blob(self.repo, entry.binsha, mode, entry.path)
+			mode = stat_mode_to_index_mode(entry.mode)
+			blob = entry.to_blob(self.repo)
 			blob.size = entry.size
 			output = (entry.stage, blob)
 			if predicate(output):
@@ -672,7 +657,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 				abspath = os.path.abspath(path)
 				gitrelative_path = abspath[len(self.repo.working_tree_dir)+1:]
 				blob = Blob(self.repo, Blob.NULL_BIN_SHA, 
-							self._stat_mode_to_index_mode(os.stat(abspath).st_mode), 
+							stat_mode_to_index_mode(os.stat(abspath).st_mode), 
 							to_native_path_linux(gitrelative_path))
 				entries.append(BaseIndexEntry.from_blob(blob))
 			# END for each path
@@ -692,7 +677,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 			fprogress(filepath, False, filepath)
 			istream = self.repo.odb.store(IStream(Blob.type, st.st_size, stream))
 			fprogress(filepath, True, filepath)
-			return BaseIndexEntry((self._stat_mode_to_index_mode(st.st_mode), 
+			return BaseIndexEntry((stat_mode_to_index_mode(st.st_mode), 
 									istream.binsha, 0, to_native_path_linux(filepath)))
 		# END utility method
 
