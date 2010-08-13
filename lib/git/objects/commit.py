@@ -31,6 +31,7 @@ from time import (
 					altzone
 				)
 import os
+import sys
 
 __all__ = ('Commit', )
 
@@ -381,7 +382,13 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
 			write("encoding %s\n" % self.encoding)
 		
 		write("\n")
-		write(self.message)
+		
+		# write plain bytes, be sure its encoded according to our encoding
+		if isinstance(self.message, unicode):
+			write(self.message.encode(self.encoding))
+		else:
+			write(self.message)
+		# END handle encoding
 		return self
 	
 	def _deserialize(self, stream):
@@ -421,6 +428,11 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
 		# a stream from our data simply gives us the plain message
 		# The end of our message stream is marked with a newline that we strip
 		self.message = stream.read()
+		try:
+			self.message = self.message.decode(self.encoding)
+		except Exception:
+			print >> sys.stderr, "Failed to decode message: %s" % self.message
+		# END exception handling 
 		return self
 		
 	#} END serializable implementation

@@ -66,7 +66,14 @@ def tree_entries_from_data(data):
 		while data[i] != '\0':
 			i += 1
 		# END while not reached NULL
+		
+		# default encoding for strings in git is utf8
+		# Only use the respective unicode object if the byte stream was encoded
 		name = data[ns:i]
+		name_enc = name.decode("utf-8")
+		if len(name) > len(name_enc):
+			name = name_enc
+		# END handle encoding
 		
 		# byte is NULL, get next 20
 		i += 1
