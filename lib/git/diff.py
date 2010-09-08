@@ -249,7 +249,7 @@ class Diff(object):
 		ll = 0		# line length
 		for b,n in zip((self.a_blob, self.b_blob), ('lhs', 'rhs')):
 			if b:
-				l = "\n%s: %o | %s" % (n, b.mode, b.sha)
+				l = "\n%s: %o | %s" % (n, b.mode, b.hexsha)
 			else:
 				l = "\n%s: None" % n
 			# END if blob is not None
