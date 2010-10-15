@@ -175,7 +175,7 @@ class Diff(object):
 	# precompiled regex
 	re_header = re.compile(r"""
 								#^diff[ ]--git
-									[ ]a/(?P<a_path>\S+)[ ]b/(?P<b_path>\S+)\n
+									[ ]a/(?P<a_path>.+?)[ ]b/(?P<b_path>.+?)\n
 								(?:^similarity[ ]index[ ](?P<similarity_index>\d+)%\n
 								   ^rename[ ]from[ ](?P<rename_from>\S+)\n
 								   ^rename[ ]to[ ](?P<rename_to>\S+)(?:\n|$))?

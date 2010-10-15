@@ -1,7 +1,7 @@
 diff --git a/lib/grit/commit.rb b/lib/grit/commit.rb
 index a093bb1db8e884cccf396b297259181d1caebed4..80fd3d527f269ecbd570b65b8e21fd85baedb6e9 100644
---- a/lib/grit/commit.rb
-+++ b/lib/grit/commit.rb
+--- a/lib/grit/com  mit.rb
++++ b/lib/grit/com  mit.rb
 @@ -156,12 +156,8 @@ module Grit
  
      def diffs
