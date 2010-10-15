@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # test_commit.py
 # Copyright (C) 2008, 2009 Michael Trier (mtrier@gmail.com) and contributors
 #
@@ -107,6 +108,14 @@ class TestCommit(TestBase):
 		assert commit.author_tz_offset == 14400, commit.author_tz_offset
 		assert commit.committer_tz_offset == 14400, commit.committer_tz_offset
 		assert commit.message == "initial project\n"
+		
+	def test_unicode_actor(self):
+		# assure we can parse unicode actors correctly
+		name = "Üäöß ÄußÉ".decode("utf-8")
+		assert len(name) == 9
+		special = Actor._from_string(u"%s <something@this.com>" % name)
+		assert special.name == name
+		assert isinstance(special.name, unicode)
 		
 	def test_traversal(self):
 		start = self.rorepo.commit("a4d06724202afccd2b5c54f81bcf2bf26dea7fff")
