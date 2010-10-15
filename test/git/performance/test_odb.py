@@ -49,9 +49,10 @@ class TestObjDBPerformance(TestBigRepoR):
 			st = time()
 			nb = 0
 			too_many = 15000
+			data_bytes = 0
 			for blob_list in blobs_per_commit:
 				for blob in blob_list:
-					blob.data_stream.read()
+					data_bytes += len(blob.data_stream.read())
 				# END for each blobsha
 				nb += len(blob_list)
 				if nb > too_many:
@@ -59,7 +60,7 @@ class TestObjDBPerformance(TestBigRepoR):
 			# END for each bloblist
 			elapsed = time() - st
 			
-			print >> sys.stderr, "%s: Retrieved %i blob and their data in %g s ( %f blobs / s )" % (type(repo.odb), nb, elapsed, nb / elapsed)
+			print >> sys.stderr, "%s: Retrieved %i blob (%i KiB) and their data in %g s ( %f blobs / s, %f KiB / s )" % (type(repo.odb), nb, data_bytes/1000, elapsed, nb / elapsed, (data_bytes / 1000) / elapsed)
 			results[2].append(elapsed)
 		# END for each repo type
 		

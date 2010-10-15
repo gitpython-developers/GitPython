@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # test_commit.py
 # Copyright (C) 2008, 2009 Michael Trier (mtrier@gmail.com) and contributors
 #
@@ -107,6 +108,14 @@ class TestCommit(TestBase):
 		assert commit.author_tz_offset == 14400, commit.author_tz_offset
 		assert commit.committer_tz_offset == 14400, commit.committer_tz_offset
 		assert commit.message == "initial project\n"
+		
+	def test_unicode_actor(self):
+		# assure we can parse unicode actors correctly
+		name = "Üäöß ÄußÉ".decode("utf-8")
+		assert len(name) == 9
+		special = Actor._from_string(u"%s <something@this.com>" % name)
+		assert special.name == name
+		assert isinstance(special.name, unicode)
 		
 	def test_traversal(self):
 		start = self.rorepo.commit("a4d06724202afccd2b5c54f81bcf2bf26dea7fff")
@@ -232,4 +241,33 @@ class TestCommit(TestBase):
 	def test_serialization(self, rwrepo):
 		# create all commits of our repo
 		assert_commit_serialization(rwrepo, '0.1.6')
+		
+	def test_serialization_unicode_support(self):
+		assert Commit.default_encoding.lower() == 'utf-8'
+		
+		# create a commit with unicode in the message, and the author's name
+		# Verify its serialization and deserialization
+		cmt = self.rorepo.commit('0.1.6')
+		assert isinstance(cmt.message, unicode)		# it automatically decodes it as such
+		assert isinstance(cmt.author.name, unicode)	# same here
+		
+		cmt.message = "üäêèß".decode("utf-8")
+		assert len(cmt.message) == 5
+		
+		cmt.author.name = "äüß".decode("utf-8")
+		assert len(cmt.author.name) == 3
+		
+		cstream = StringIO()
+		cmt._serialize(cstream)
+		cstream.seek(0)
+		assert len(cstream.getvalue())
+		
+		ncmt = Commit(self.rorepo, cmt.binsha)
+		ncmt._deserialize(cstream)
+		
+		assert cmt.author.name == ncmt.author.name
+		assert cmt.message == ncmt.message
+		# actually, it can't be printed in a shell as repr wants to have ascii only
+		# it appears
+		cmt.author.__repr__()
 		
