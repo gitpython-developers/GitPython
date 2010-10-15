@@ -242,3 +242,32 @@ class TestCommit(TestBase):
 		# create all commits of our repo
 		assert_commit_serialization(rwrepo, '0.1.6')
 		
+	def test_serialization_unicode_support(self):
+		assert Commit.default_encoding.lower() == 'utf-8'
+		
+		# create a commit with unicode in the message, and the author's name
+		# Verify its serialization and deserialization
+		cmt = self.rorepo.commit('0.1.6')
+		assert isinstance(cmt.message, unicode)		# it automatically decodes it as such
+		assert isinstance(cmt.author.name, unicode)	# same here
+		
+		cmt.message = "üäêèß".decode("utf-8")
+		assert len(cmt.message) == 5
+		
+		cmt.author.name = "äüß".decode("utf-8")
+		assert len(cmt.author.name) == 3
+		
+		cstream = StringIO()
+		cmt._serialize(cstream)
+		cstream.seek(0)
+		assert len(cstream.getvalue())
+		
+		ncmt = Commit(self.rorepo, cmt.binsha)
+		ncmt._deserialize(cstream)
+		
+		assert cmt.author.name == ncmt.author.name
+		assert cmt.message == ncmt.message
+		# actually, it can't be printed in a shell as repr wants to have ascii only
+		# it appears
+		cmt.author.__repr__()
+		

@@ -368,9 +368,14 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
 			write("parent %s\n" % p)
 			
 		a = self.author
+		aname = a.name
+		if isinstance(aname, unicode):
+			aname = aname.encode(self.encoding)
+		# END handle unicode in name
+		
 		c = self.committer
 		fmt = "%s %s <%s> %s %s\n"
-		write(fmt % ("author", a.name, a.email, 
+		write(fmt % ("author", aname, a.email, 
 						self.authored_date, 
 						altz_to_utctz_str(self.author_tz_offset)))
 			
@@ -425,12 +430,19 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
 			readline()
 		# END handle encoding
 		
+		# decode the authors name
+		try:
+			self.author.name = self.author.name.decode(self.encoding) 
+		except UnicodeDecodeError:
+			print >> sys.stderr, "Failed to decode author name: %s" % self.author.name
+		# END handle author's encoding
+		
 		# a stream from our data simply gives us the plain message
 		# The end of our message stream is marked with a newline that we strip
 		self.message = stream.read()
 		try:
 			self.message = self.message.decode(self.encoding)
-		except Exception:
+		except UnicodeDecodeError:
 			print >> sys.stderr, "Failed to decode message: %s" % self.message
 		# END exception handling 
 		return self

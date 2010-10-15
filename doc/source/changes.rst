@@ -2,6 +2,10 @@
 Changelog
 =========
 
+0.3.0 Beta 3
+============
+* Added unicode support for author names. Commit.author.name is now unicode instead of string.
+
 0.3.0 Beta 2
 ============
 * Added python 2.4 support
