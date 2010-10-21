@@ -71,7 +71,7 @@ class Commit(LazyMixin):
             if parents is not None:
                 self.parents = [Commit(repo, p) for p in parents]
             if tree is not None:
-                self.tree = Tree(repo, id=tree)
+                self.tree = Tree(repo, id=tree, commit_context = self.id)
 
     def __bake__(self):
         """
