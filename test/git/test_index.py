@@ -546,7 +546,7 @@ class TestIndex(TestBase):
 		self.failUnlessRaises(GitCommandError, index.move, files)
 		
 		# again, with force 
-		assert_mv_rval(index.move(files, force=True))
+		assert_mv_rval(index.move(files, f=True))
 		
 		# files into directory - dry run
 		paths = ['LICENSE', 'VERSION', 'doc']
