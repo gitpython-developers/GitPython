@@ -29,6 +29,7 @@ from gitdb.util import (
 							hex_to_bin
 						)
 
+from exc import GitCommandError
 
 __all__ = ("SymbolicReference", "Reference", "HEAD", "Head", "TagReference", 
 			"RemoteReference", "Tag" )
@@ -646,16 +647,36 @@ class HEAD(SymbolicReference):
 		
 		:return: self"""
 		mode = "--soft"
+		add_arg = None
 		if index:
 			mode = "--mixed"
+			
+			# it appears, some git-versions declare mixed and paths deprecated
+			# see http://github.com/Byron/GitPython/issues#issue/2
+			if paths:
+				mode = None
+			# END special case
+		# END handle index
 			
 		if working_tree:
 			mode = "--hard"
 			if not index:
-				raise ValueError( "Cannot reset the working tree if the index is not reset as well") 
+				raise ValueError( "Cannot reset the working tree if the index is not reset as well")
+			
 		# END working tree handling
 		
-		self.repo.git.reset(mode, commit, paths, **kwargs)
+		if paths:
+			add_arg = "--"
+		# END nicely separate paths from rest
+		
+		try:
+			self.repo.git.reset(mode, commit, add_arg, paths, **kwargs)
+		except GitCommandError, e:
+			# git nowadays may use 1 as status to indicate there are still unstaged
+			# modifications after the reset
+			if e.status != 1:
+				raise
+		# END handle exception
 		
 		return self
 	

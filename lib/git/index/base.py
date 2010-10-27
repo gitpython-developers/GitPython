@@ -1059,6 +1059,9 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 		:param head:
 			If True, the head will be set to the given commit. This is False by default,
 			but if True, this method behaves like HEAD.reset.
+			
+		:param paths: if given as an iterable of absolute or repository-relative paths,
+			only these will be reset to their state at the given commit'ish
 
 		:param kwargs:
 			Additional keyword arguments passed to git-reset
@@ -1080,6 +1083,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 		else:
 			# what we actually want to do is to merge the tree into our existing
 			# index, which is what git-read-tree does
+			# TODO: incorporate the given paths !
 			new_inst = type(self).from_tree(self.repo, commit)
 			self.entries = new_inst.entries
 			self.write()

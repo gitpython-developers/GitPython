@@ -89,6 +89,7 @@ class TestRefs(TestBase):
 	@with_rw_repo('0.1.6')
 	def test_head_reset(self, rw_repo):
 		cur_head = rw_repo.head
+		old_head_commit = cur_head.commit
 		new_head_commit = cur_head.ref.commit.parents[0]
 		cur_head.reset(new_head_commit, index=True) # index only
 		assert cur_head.reference.commit == new_head_commit
@@ -98,8 +99,16 @@ class TestRefs(TestBase):
 		cur_head.reset(new_head_commit, index=True, working_tree=True)	# index + wt
 		assert cur_head.reference.commit == new_head_commit
 		
-		# paths
+		# paths - make sure we have something to do
+		rw_repo.index.reset(old_head_commit.parents[0])
+		cur_head.reset(cur_head, paths = "test")
 		cur_head.reset(new_head_commit, paths = "lib")
+		# hard resets with paths don't work, its all or nothing
+		self.failUnlessRaises(GitCommandError, cur_head.reset, new_head_commit, working_tree=True, paths = "lib")
+		
+		# we can do a mixed reset, and then checkout from the index though
+		cur_head.reset(new_head_commit)
+		rw_repo.index.checkout(["lib"], force=True)#
 		
 		
 		# now that we have a write write repo, change the HEAD reference - its 

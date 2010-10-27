@@ -337,16 +337,18 @@ class Git(object):
 			proc.stdout.close()
 			proc.stderr.close()
 
+		if GIT_PYTHON_TRACE == 'full':
+			cmdstr = " ".join(command)
+			if stderr_value:
+				print "%s -> %d; stdout: '%s'; stderr: '%s'" % (cmdstr, status, stdout_value, stderr_value)
+			elif stdout_value:
+				print "%s -> %d; stdout: '%s'" % (cmdstr, status, stdout_value)
+			else:
+				print "%s -> %d" % (cmdstr, status)
+		# END handle debug printing
+
 		if with_exceptions and status != 0:
 			raise GitCommandError(command, status, stderr_value)
-
-		if GIT_PYTHON_TRACE == 'full':
-			if stderr_value:
-			  print "%s -> %d: '%s' !! '%s'" % (command, status, stdout_value, stderr_value)
-			elif stdout_value:
-			  print "%s -> %d: '%s'" % (command, status, stdout_value)
-			else:
-			  print "%s -> %d" % (command, status)
 
 		# Allow access to the command's status code
 		if with_extended_output:
