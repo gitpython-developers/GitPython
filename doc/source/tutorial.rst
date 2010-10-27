@@ -33,7 +33,7 @@ Query the active branch, query untracked files or whether the repository data  h
     
     repo.is_dirty()
     False
-    repo.untracked_files()
+    repo.untracked_files
     ['my_untracked_file']
     
 Clone from existing repositories or initialize new empty ones::
