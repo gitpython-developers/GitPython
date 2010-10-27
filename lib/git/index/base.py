@@ -1061,41 +1061,45 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 			but if True, this method behaves like HEAD.reset.
 			
 		:param paths: if given as an iterable of absolute or repository-relative paths,
-			only these will be reset to their state at the given commit'ish
+			only these will be reset to their state at the given commit'ish.
+			The paths need to exist at the commit, otherwise an exception will be 
+			raised.
 
 		:param kwargs:
 			Additional keyword arguments passed to git-reset
 
 		:return: self """
-		# currently we have to use the git command to set the working copy.
-		# Otherwise we can use our own one
-		if working_tree:
-			cur_head = self.repo.head
-			prev_commit = cur_head.commit
-			
-			cur_head.reset(commit, index=True, working_tree=working_tree, paths=paths, **kwargs)
-			
-			# put the head back, possibly
-			if not head:
-				self.repo.head.commit = prev_commit
-				
-			self._delete_entries_cache()
-		else:
-			# what we actually want to do is to merge the tree into our existing
-			# index, which is what git-read-tree does
-			# TODO: incorporate the given paths !
-			new_inst = type(self).from_tree(self.repo, commit)
+		# what we actually want to do is to merge the tree into our existing
+		# index, which is what git-read-tree does
+		new_inst = type(self).from_tree(self.repo, commit)
+		if not paths:
 			self.entries = new_inst.entries
-			self.write()
-			
-			#new_inst = type(self).new(self.repo, self.repo.commit(commit).tree)
-			#self.entries = new_inst.entries
-			#self.write()
-			# self.repo.git.update_index(ignore_missing=True, refresh=True, q=True)
-			
-			if head:
-				self.repo.head.commit = self.repo.commit(commit)
+		else:
+			nie = new_inst.entries
+			for path in paths:
+				path = self._to_relative_path(path)
+				try:
+					key = entry_key(path, 0)
+					self.entries[key] = nie[key]
+				except KeyError:
+					# if key is not in theirs, it musn't be in ours
+					try:
+						del(self.entries[key])
+					except KeyError:
+						pass
+					# END handle deletion keyerror
+				# END handle keyerror
+			# END for each path
+		# END handle paths
+		self.write()
+		
+		if working_tree:
+			self.checkout(paths=paths, force=True)
 		# END handle working tree
+		
+		if head:
+			self.repo.head.commit = self.repo.commit(commit)
+		# END handle head change
 
 		return self
 

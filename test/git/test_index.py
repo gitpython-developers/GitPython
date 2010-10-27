@@ -599,6 +599,46 @@ class TestIndex(TestBase):
 		
 		for filenum in range(len(paths)):
 			assert index.entry_key(str(filenum), 0) in index.entries
+			
+			
+		# TEST RESET ON PATHS
+		######################
+		arela = "aa"
+		brela = "bb"
+		afile = self._make_file(arela, "adata", rw_repo)
+		bfile = self._make_file(brela, "bdata", rw_repo)
+		akey = index.entry_key(arela, 0)
+		bkey = index.entry_key(brela, 0)
+		keys = (akey, bkey)
+		absfiles = (afile, bfile)
+		files = (arela, brela)
+		
+		for fkey in keys:
+			assert not fkey in index.entries
+		
+		index.add(files, write=True)
+		nc = index.commit("2 files committed", head=False)
+		
+		for fkey in keys:
+			assert fkey in index.entries
+		
+		# just the index
+		index.reset(paths=(arela, afile))
+		assert not akey in index.entries
+		assert bkey in index.entries
+		
+		# now with working tree - files on disk as well as entries must be recreated
+		rw_repo.head.commit = nc
+		for absfile in absfiles:
+			os.remove(absfile)
+		
+		index.reset(working_tree=True, paths=files)
+		
+		for fkey in keys: 
+			assert fkey in index.entries
+		for absfile in absfiles:
+			assert os.path.isfile(absfile)
+				
 		
 	@with_rw_repo('HEAD')
 	def test_compare_write_tree(self, rw_repo):
