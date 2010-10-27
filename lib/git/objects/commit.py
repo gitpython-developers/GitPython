@@ -52,8 +52,8 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
 	env_email = "EMAIL"
 	
 	# CONFIGURATION KEYS
-	conf_email = 'email'
 	conf_name = 'name'
+	conf_email = 'email'
 	conf_encoding = 'i18n.commitencoding'
 	
 	# INVARIANTS
@@ -294,7 +294,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
 		conf_email = cr.get_value('user', cls.conf_email, default_email)
 		
 		author_name = env.get(cls.env_author_name, conf_name)
-		author_email = env.get(cls.env_author_email, default_email)
+		author_email = env.get(cls.env_author_email, conf_email)
 		
 		committer_name = env.get(cls.env_committer_name, conf_name)
 		committer_email = env.get(cls.env_committer_email, conf_email)

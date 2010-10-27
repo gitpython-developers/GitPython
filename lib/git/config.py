@@ -136,7 +136,7 @@ class GitConfigParser(cp.RawConfigParser, object):
 			# initialize lock base - we want to write
 			self._lock = self.t_lock(file_or_files)
 			
-			self._lock._obtain_lock()	
+			self._lock._obtain_lock()
 		# END read-only check
 		
 	

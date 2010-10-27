@@ -353,6 +353,11 @@ class TestIndex(TestBase):
 		num_entries = len(index.entries)
 		cur_head = rw_repo.head
 		
+		uname = "Some Developer"
+		umail = "sd@company.com"
+		rw_repo.config_writer().set_value("user", "name", uname)
+		rw_repo.config_writer().set_value("user", "email", umail) 
+		
 		# remove all of the files, provide a wild mix of paths, BaseIndexEntries, 
 		# IndexEntries
 		def mixed_iterator():
@@ -404,6 +409,10 @@ class TestIndex(TestBase):
 		commit_message = "commit default head"
 		
 		new_commit = index.commit(commit_message, head=False)
+		assert new_commit.author.name == uname
+		assert new_commit.author.email == umail
+		assert new_commit.committer.name == uname
+		assert new_commit.committer.email == umail
 		assert new_commit.message == commit_message
 		assert new_commit.parents[0] == cur_commit
 		assert len(new_commit.parents) == 1
