@@ -20,6 +20,7 @@ from git.repo import Repo
 from git.stats import Stats
 from git.tag import Tag
 from git.tree import Tree
+from git.submodule import Submodule
 from git.utils import dashify
 from git.utils import touch
 

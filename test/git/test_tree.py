@@ -92,7 +92,7 @@ class TestTree(object):
 
         tree = self.repo.tree('master')
 
-        assert_none(tree/'bar')
+        assert_equal('d35b34c6e931b9da8f6941007a92c9c9a9b0141a', (tree/'bar').id)
         assert_equal('2afb47bcedf21663580d5e6d2f406f08f3f65f19', (tree/'foo').id)
         assert_equal('f623ee576a09ca491c4a27e48c0dfe04be5f4a2e', (tree/'baz').id)
 
@@ -133,7 +133,7 @@ class TestTree(object):
 
         tree = self.repo.tree('master')
 
-        assert_none(tree.get('bar'))
+        assert_equal('d35b34c6e931b9da8f6941007a92c9c9a9b0141a', tree['bar'].id)
         assert_equal('2afb47bcedf21663580d5e6d2f406f08f3f65f19', tree['foo'].id)
         assert_equal('f623ee576a09ca491c4a27e48c0dfe04be5f4a2e', tree['baz'].id)
 
@@ -146,7 +146,7 @@ class TestTree(object):
         git.return_value = fixture('ls_tree_commit')
 
         tree = self.repo.tree('master')
-        tree['bar']
+        tree['notthere']
 
     def test_repr(self):
         tree = Tree(self.repo, id='abc')
