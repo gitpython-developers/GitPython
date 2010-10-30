@@ -10,7 +10,7 @@ import blob
 import submodule
 
 class Tree(LazyMixin):
-    def __init__(self, repo, id, mode=None, name=None, commit_context = None, path = ''):
+    def __init__(self, repo, id, mode=None, name=None, commit_context = '', path = ''):
         LazyMixin.__init__(self)
         self.repo = repo
         self.id = id

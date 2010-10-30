@@ -29,7 +29,7 @@ class Submodule(object):
     """
 
     def __init__(self, repo=None, id=None, mode=None, name='',
-                 commit_context=None, path=''):
+                 commit_context='', path=''):
         """
         Initialize a newly instanced Submodule
 

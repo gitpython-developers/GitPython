@@ -48,7 +48,11 @@ class TestTree(object):
         text = fixture('ls_tree_commit').split("\n")[1]
 
         tree = Tree.content_from_string(None, text)
-        assert_none(tree)
+
+        assert_equal(Submodule, tree.__class__)
+        assert_equal("d35b34c6e931b9da8f6941007a92c9c9a9b0141a", tree.id)
+        # assert_equal("100644", tree.mode) # mode of submodule is irrelevant.
+        assert_equal("bar", tree.name)
 
     @raises(TypeError)
     def test_content_from_string_invalid_type_should_raise(self):
