@@ -21,7 +21,6 @@ from git import *
 class test_Submodule(unittest.TestCase):
 
     def setUp(self):
-        raise Exception('we are here')
         _p = tempfile.mkdtemp()
         self.base_path = _p
         demo_repos_file = fixture_path('sample_tree_of_repos_v2.zip')
