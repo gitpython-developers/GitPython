@@ -21,51 +21,41 @@ from git import *
 class test_Submodule(unittest.TestCase):
 
     def setUp(self):
+        raise Exception('we are here')
         _p = tempfile.mkdtemp()
-        demo_repos_file = fixture_path('sample_tree_of_repos_v1.zip')
+        self.base_path = _p
+        demo_repos_file = fixture_path('sample_tree_of_repos_v2.zip')
         zipfile.ZipFile(demo_repos_file).extractall(_p)
-        self.base_path = os.path.join(_p, 'reposbase')
+        self.bare_repo = Repo(os.path.join(_p, 'reposbase' ,'projects', 'demorepoone'))
+        self.repo = Repo(os.path.join(_p, 'reposbase' ,'users', 'joe', 'copy_demorepoone'))
 
     def tearDown(self):
         shutil.rmtree(self.base_path, True)
 
-    def dtest_01_browser_methods(self):
-        _m = self._rpc_tree['browser.listdir']
-        self.assertEquals(
-            _m(''),
-            {'path':'/', 'dirs':[{'name':'projects'},{'name':'teams'},{'name':'users'}]}
-        )
-        self.assertEquals(
-            _m('/'),
-            {'path':'/', 'dirs':[{'name':'projects'},{'name':'teams'},{'name':'users'}]}
-        )
-        self.assertEquals(
-            _m('\\'),
-            {'path':'/', 'dirs':[{'name':'projects'},{'name':'teams'},{'name':'users'}]}
-        )
-        # crossing fingers and hoping the order is same on all platforms.
-        self.assertEquals(
-            _m('projects'),
-            {'path':'/projects', 'dirs':[
-                {'name':'common_files'},
-                {'name':'demorepoone','is_git_dir':True},
-                {'name':'projectone','is_git_dir':True}
-            ]}
-        )
-        self.assertEquals(
-            _m('projects/common_files'),
-            {'path':'/projects/common_files', 'dirs':[]}
-        )
-        # we don't allow seeing files / folders inside repo folders
-        self.assertRaises(grm.PathUnfitError, _m, 'projects/demorepoone')
-        self.assertRaises(grm.PathUnfitError, _m, 'projects/demorepoone/objects')
-        # on top of fobiden, it also does not exist.
-        self.assertRaises(grm.PathUnfitError, _m, 'projects/demorepoone/kjhgjg')
-        # all these should not exist
-        self.assertRaises(grm.PathUnfitError, _m, 'projects/blah')
-        self.assertRaises(grm.PathUnfitError, _m, '/blah')
-        # we should forbid seeing contents of folders above base path.
-        self.assertRaises(grm.PathUnfitError, _m, 'projects/../../../blah')
+    def test_submodule_attributes(self):
+        t = self.repo.commit('3408e8f7720eff4a1fd16e9bf654332036c39bf8').tree
+        tb = self.bare_repo.commit('3408e8f7720eff4a1fd16e9bf654332036c39bf8').tree
+        t_s1 = t['somesubmodule']
+        tb_s1 = t['somesubmodule']
+        t_s2 = t['somefolder']['nestedmodule']
+        tb_s2 = t['somefolder']['nestedmodule']
+
+        self.assertEqual(t_s1.id, '74bc53cdcfd1804b9c3d1afad4db0999931a025c')
+        self.assertEqual(tb_s1.id, '74bc53cdcfd1804b9c3d1afad4db0999931a025c')
+        self.assertEqual(t_s2.id, '08a4dca6a06e2f8893a955d757d505f0431321cb')
+        self.assertEqual(tb_s2.id, '08a4dca6a06e2f8893a955d757d505f0431321cb')
+        self.assertEqual(t_s1.name, 'somesubmodule')
+        self.assertEqual(tb_s1.name, 'somesubmodule')
+        self.assertEqual(t_s2.name, 'nestedmodule')
+        self.assertEqual(tb_s2.name, 'nestedmodule')
+        self.assertEqual(t_s1.path, '/somesubmodule')
+        self.assertEqual(tb_s1.path, '/somesubmodule')
+        self.assertEqual(t_s2.path, '/somefolder/nestedmodule')
+        self.assertEqual(tb_s2.path, '/somefolder/nestedmodule')
+        self.assertEqual(t_s1.url, 'git://gitorious.org/git_http_backend_py/git_http_backend_py.git')
+        self.assertEqual(tb_s1.url, 'git://gitorious.org/git_http_backend_py/git_http_backend_py.git')
+        self.assertEqual(t_s2.url, 'git://gitorious.org/git_http_backend_py/git_http_backend_py.git')
+        self.assertEqual(tb_s2.url, 'git://gitorious.org/git_http_backend_py/git_http_backend_py.git')
 
 if __name__ == "__main__":
     unittest.TextTestRunner(verbosity=2).run(
