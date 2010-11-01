@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # test_submodule.py
 # Copyright (C) 2008-2010 Michael Trier (mtrier@gmail.com) and contributors
 #
@@ -18,7 +19,7 @@ import zipfile
 from test.testlib import *
 from git import *
 
-class test_Submodule(unittest.TestCase):
+class TestSubmodule(unittest.TestCase):
 
     def setUp(self):
         _p = tempfile.mkdtemp()
@@ -59,6 +60,6 @@ class test_Submodule(unittest.TestCase):
 if __name__ == "__main__":
     unittest.TextTestRunner(verbosity=2).run(
         unittest.TestSuite([
-            unittest.TestLoader().loadTestsFromTestCase(test_Submodule),
+            unittest.TestLoader().loadTestsFromTestCase(TestSubmodule),
         ])
     )
