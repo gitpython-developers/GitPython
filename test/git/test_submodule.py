@@ -8,9 +8,6 @@
 import os.path
 import sys
 
-execpath = os.getcwd()
-sys.path.append(os.path.join(execpath, 'gitpython\lib'))
-
 import unittest
 import tempfile
 import shutil
@@ -57,9 +54,3 @@ class TestSubmodule(unittest.TestCase):
         self.assertEqual(t_s2.url, 'git://gitorious.org/git_http_backend_py/git_http_backend_py.git')
         self.assertEqual(tb_s2.url, 'git://gitorious.org/git_http_backend_py/git_http_backend_py.git')
 
-if __name__ == "__main__":
-    unittest.TextTestRunner(verbosity=2).run(
-        unittest.TestSuite([
-            unittest.TestLoader().loadTestsFromTestCase(TestSubmodule),
-        ])
-    )

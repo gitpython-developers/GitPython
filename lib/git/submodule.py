@@ -9,7 +9,8 @@ import re
 class Submodule(object):
     """
     A Submodule is a named reference to a Commit on another Repo.
-    Every Submodule instance contains a name and local and remote paths.
+    Every Submodule instance contains a name, a path into the local repo,
+    and a URI pointing at the remote repository.
 
     Submodules are very close in behavior to HEAD pointer. It just sits on
     top of a structure, in this case, at the end of folders tree, and says
@@ -37,16 +38,16 @@ class Submodule(object):
             Pointer to Repo object instance.
         'id'
             Is the Sha of the commit on a remote server. This object does NOT
-            (usually) exist on this, current repo.
+            (usually) exist in this repo.
         'mode'
             A black hole at this time. Trying to keep the input args
-            similar between Tree, Blob and Subprocess instantiation classes.
+            similar between Tree, Blob and Submodule classes.
         'name'
             This is just the last segment in the submodule's full local path.
             It's the name of the actual folder to which a submodule is tied.
         'mode'
             A black hole at this time. Trying to keep the input args
-            similar between Tree, Blob and Subprocess instantiation classes.
+            similar between Tree, Blob and Submodule classes.
         'commit_context'
             A string with ID of the commit that was the root for the tree
             structure that lead us to this folder (Tree object) that contains
@@ -57,9 +58,9 @@ class Submodule(object):
             the parent folders we passed on the way from root of the commit to
             this point in the folder tree.
             Submodules in the .gitmodules are referenced by their full path
-            and contents of this argument are used to retrieve the URI of the
+            and the contents of this argument is used to retrieve the URI of the
             remote repo tied to this full local path.
-            Example: "/lib/vendor/vendors_repoA"
+            Example: "lib/vendor/vendors_repoA"
         """
         self.repo = repo
         self.id = id
