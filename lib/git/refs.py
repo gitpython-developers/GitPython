@@ -640,7 +640,7 @@ class HEAD(SymbolicReference):
 		
 		:param paths:
 			Single path or list of paths relative to the git root directory
-			that are to be reset. This allow to partially reset individual files.
+			that are to be reset. This allows to partially reset individual files.
 		
 		:param kwargs:
 			Additional arguments passed to git-reset. 
