@@ -21,7 +21,7 @@ The first step is to create a ``Repo`` object to represent your repository::
 
 In the above example, the directory ``/Users/mtrier/Development/git-python`` is my working repository and contains the ``.git`` directory. You can also initialize GitPython with a *bare* repository::
 
-    repo = Repo.create("/var/git/git-python.git")
+    repo = Repo.init("/var/git/git-python.git", bare=True)
     assert repo.bare == True
     
 A repo object provides high-level access to your data, it allows you to create and delete heads, tags and remotes and access the configuration of the  repository::
