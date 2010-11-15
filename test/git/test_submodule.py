@@ -19,7 +19,9 @@ class TestSubmodule(TestBase):
 		# size is invalid
 		self.failUnlessRaises(ValueError, getattr, sm, 'size')
 		
-		# fails if tree has no gitmodule file
+		# set_parent_commit fails if tree has no gitmodule file
+		
+		
 		
 		if rwrepo.bare:
 			# module fails
@@ -28,6 +30,8 @@ class TestSubmodule(TestBase):
 			# get the module repository
 			pass
 		# END bare handling
+		
+		# Writing of historical submodule configurations must not work
 	
 	@with_rw_repo(kCOTag)
 	def test_base_rw(self, rwrepo):

@@ -6,6 +6,13 @@ from git.exc import InvalidGitRepositoryError, NoSuchPathError
 
 __all__ = ("Submodule", )
 
+class SubmoduleConfigParser(GitConfigParser):
+	"""Catches calls to _write, and updates the .gitmodules blob in the index
+	with the new data, if we have written into a stream. Otherwise it will 
+	add the local file to the index to make it correspond with the working tree."""
+	_mutating_methods_ = tuple()
+	
+
 class Submodule(base.IndexObject):
 	"""Implements access to a git submodule. They are special in that their sha
 	represents a commit in the submodule's repository which is to be checked out
@@ -20,14 +27,14 @@ class Submodule(base.IndexObject):
 	# this is a bogus type for base class compatability
 	type = 'submodule'
 	
-	__slots__ = ('_root_tree', '_url', '_ref')
+	__slots__ = ('_parent_commit', '_url', '_ref')
 	
 	def _set_cache_(self, attr):
 		if attr == 'size':
 			raise ValueError("Submodules do not have a size as they do not refer to anything in this repository")
-		elif attr == '_root_tree':
+		elif attr == '_parent_commit':
 			# set a default value, which is the root tree of the current head
-			self._root_tree = self.repo.tree()
+			self._parent_commit = self.repo.commit()
 		elif attr in ('path', '_url', '_ref'):
 			reader = self.config_reader()
 			# default submodule values
@@ -39,13 +46,26 @@ class Submodule(base.IndexObject):
 			super(Submodule, self)._set_cache_(attr)
 		# END handle attribute name
 	
-	def _fp_config(self):
+	def _sio_modules(self):
 		""":return: Configuration file as StringIO - we only access it through the respective blob's data"""
-		return StringIO(self._root_tree[self.kModulesFile].datastream.read())
+		sio = StringIO(self._parent_commit.tree[self.kModulesFile].datastream.read())
+		sio.name = self.kModulesFile
+		return sio
 		
 	def _config_parser(self, read_only):
 		""":return: Config Parser constrained to our submodule in read or write mode"""
-		parser = GitConfigParser(self._fp_config(), read_only = read_only)
+		parent_matches_head = self.repo.head.commit == self._parent_commit
+		if not self.repo.bare and parent_matches_head:
+			fp_module = self.kModulesFile
+		else:
+			fp_module = self._sio_modules()
+		# END handle non-bare working tree
+		
+		if not read_only and not parent_matches_head:
+			raise ValueError("Cannot write blobs of 'historical' submodule configurations")
+		# END handle writes of historical submodules
+		
+		parser = GitConfigParser(fp_module, read_only = read_only)
 		return SectionConstraint(parser, 'submodule "%s"' % self.path)
 		
 	#{ Edit Interface
@@ -61,21 +81,24 @@ class Submodule(base.IndexObject):
 		:param skip_init: if True, the new repository will not be cloned to its location.
 		:return: The newly created submodule instance"""
 		
-	def set_root_tree(self, root_tree):
-		"""Set this instance to use the given tree which is supposed to contain the 
-		.gitmodules blob.
-		:param root_tree: Tree'ish reference pointing at the root_tree
-		:raise ValueError: if the root_tree didn't contain the .gitmodules blob."""
-		tree = self.repo.tree(root_tree)
-		if self.kModulesFile not in tree:
-			raise ValueError("Tree %s did not contain the %s file" % (root_tree, self.kModulesFile))
+	def set_parent_commit(self, commit):
+		"""Set this instance to use the given commit whose tree is supposed to 
+		contain the .gitmodules blob.
+		:param commit: Commit'ish reference pointing at the root_tree
+		:raise ValueError: if the commit's tree didn't contain the .gitmodules blob."""
+		pcommit = self.repo.commit(commit)
+		if self.kModulesFile not in pcommit.tree:
+			raise ValueError("Tree of commit %s did not contain the %s file" % (commit, self.kModulesFile))
 		# END handle exceptions
-		self._root_tree = tree
+		self._parent_commit = pcommit
 		
-		# clear the possibly changing values
-		del(self.path)
-		del(self._ref)
-		del(self._url)
+		# clear the possibly changed values
+		for name in ('path', '_ref', '_url'):
+			try:
+				delattr(self, name)
+			except AttributeError:
+				pass
+		# END for each name to delete
 		
 	def config_writer(self):
 		""":return: a config writer instance allowing you to read and write the data
@@ -108,11 +131,10 @@ class Submodule(base.IndexObject):
 		""":return: The url to the repository which our module-repository refers to"""
 		return self._url
 	
-	def root_tree(self):
-		""":return: Tree instance referring to the tree which contains the .gitmodules file
-		we are to use
-		:note: will always point to the current head's root tree if it was not set explicitly"""
-		return self._root_tree
+	def parent_commit(self):
+		""":return: Commit instance with the tree containing the .gitmodules file
+		:note: will always point to the current head's commit if it was not set explicitly"""
+		return self._parent_commit
 	
 	def config_reader(self):
 		""":return: ConfigReader instance which allows you to qurey the configuration values

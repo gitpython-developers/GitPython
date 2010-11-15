@@ -14,9 +14,7 @@ class TestBase(TestCase):
     
     def _to_memcache(self, file_path):
         fp = open(file_path, "r")
-        sio = StringIO.StringIO()
-        sio.write(fp.read())
-        sio.seek(0)
+        sio = StringIO.StringIO(fp.read())
         sio.name = file_path
         return sio
         

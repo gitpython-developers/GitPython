@@ -271,9 +271,9 @@ class GitConfigParser(cp.RawConfigParser, object):
 			if not hasattr(file_object, "seek"):
 				try:
 					fp = open(file_object)
+					close_fp = True
 				except IOError,e:
 					continue
-				close_fp = True
 			# END fp handling
 				
 			try:
@@ -308,17 +308,21 @@ class GitConfigParser(cp.RawConfigParser, object):
 		:raise IOError: if this is a read-only writer instance or if we could not obtain 
 			a file lock"""
 		self._assure_writable("write")
-		self._lock._obtain_lock()
-		
 		
 		fp = self._file_or_files
 		close_fp = False
+		
+		# we have a physical file on disk, so get a lock
+		if isinstance(fp, (basestring, file)):
+			self._lock._obtain_lock()
+		# END get lock for physical files
 		
 		if not hasattr(fp, "seek"):
 			fp = open(self._file_or_files, "w")
 			close_fp = True
 		else:
 			fp.seek(0)
+		# END handle stream or file
 		
 		# WRITE DATA
 		try:
@@ -390,7 +394,7 @@ class GitConfigParser(cp.RawConfigParser, object):
 		return valuestr
 	
 	@needs_values
-	@set_dirty_and_flush_changes	
+	@set_dirty_and_flush_changes
 	def set_value(self, section, option, value):
 		"""Sets the given option in section to the given value.
 		It will create the section if required, and will not throw as opposed to the default 
