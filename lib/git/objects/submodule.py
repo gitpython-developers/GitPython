@@ -8,6 +8,8 @@ from git.exc import InvalidGitRepositoryError, NoSuchPathError
 import stat
 
 import os
+import sys
+import weakref
 
 __all__ = ("Submodule", "RootModule")
 
@@ -27,11 +29,43 @@ def sm_name(section):
 #{ Classes
 
 class SubmoduleConfigParser(GitConfigParser):
-	"""Catches calls to _write, and updates the .gitmodules blob in the index
+	"""
+	Catches calls to _write, and updates the .gitmodules blob in the index
 	with the new data, if we have written into a stream. Otherwise it will 
-	add the local file to the index to make it correspond with the working tree."""
-	_mutating_methods_ = tuple()
+	add the local file to the index to make it correspond with the working tree.
+	Additionally, the cache must be cleared
+	"""
 	
+	def __init__(self, *args, **kwargs):
+		self._smref = None
+		super(SubmoduleConfigParser, self).__init__(*args, **kwargs)
+	
+	#{ Interface
+	def set_submodule(self, submodule):
+		"""Set this instance's submodule. It must be called before 
+		the first write operation begins"""
+		self._smref = weakref.ref(submodule)
+
+	def flush_to_index(self):
+		"""Flush changes in our configuration file to the index"""
+		assert self._smref is not None
+		# should always have a file here
+		assert not isinstance(self._file_or_files, StringIO)
+		
+		sm = self._smref()
+		if sm is not None:
+			sm.repo.index.add([sm.k_modules_file])
+			sm._clear_cache()
+		# END handle weakref
+
+	#} END interface
+	
+	#{ Overridden Methods
+	def write(self):
+		rval = super(SubmoduleConfigParser, self).write()
+		self.flush_to_index()
+		return rval
+	# END overridden methods
 
 class Submodule(base.IndexObject, Iterable, Traversable):
 	"""Implements access to a git submodule. They are special in that their sha
@@ -44,16 +78,16 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 	
 	_id_attribute_ = "name"
 	k_modules_file = '.gitmodules'
-	k_ref_option = 'ref'
-	k_ref_default = 'master'
+	k_head_option = 'branch'
+	k_head_default = 'master'
 	k_def_mode = stat.S_IFDIR | stat.S_IFLNK		# submodules are directories with link-status
 	
 	# this is a bogus type for base class compatability
 	type = 'submodule'
 	
-	__slots__ = ('_parent_commit', '_url', '_ref', '_name')
+	__slots__ = ('_parent_commit', '_url', '_branch', '_name', '__weakref__')
 	
-	def __init__(self, repo, binsha, mode=None, path=None, name = None, parent_commit=None, url=None, ref=None):
+	def __init__(self, repo, binsha, mode=None, path=None, name = None, parent_commit=None, url=None, branch=None):
 		"""Initialize this instance with its attributes. We only document the ones 
 		that differ from ``IndexObject``
 		:param repo: Our parent repository
@@ -66,8 +100,8 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 			self._parent_commit = parent_commit
 		if url is not None:
 			self._url = url
-		if ref is not None:
-			self._ref = ref
+		if branch is not None:
+			self._branch = branch
 		if name is not None:
 			self._name = name
 	
@@ -77,13 +111,13 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 		elif attr == '_parent_commit':
 			# set a default value, which is the root tree of the current head
 			self._parent_commit = self.repo.commit()
-		elif attr in ('path', '_url', '_ref'):
+		elif attr in ('path', '_url', '_branch'):
 			reader = self.config_reader()
 			# default submodule values
 			self.path = reader.get_value('path')
 			self._url = reader.get_value('url')
 			# git-python extension values - optional
-			self._ref = reader.get_value(self.k_ref_option, self.k_ref_default)
+			self._branch = reader.get_value(self.k_head_option, self.k_head_default)
 		elif attr == '_name':
 			raise AttributeError("Cannot retrieve the name of a submodule if it was not set initially")
 		else:
@@ -132,12 +166,21 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 			# END handle exceptions
 		# END handle non-bare working tree
 		
-		if not read_only and not parent_matches_head:
+		if not read_only and (repo.bare or not parent_matches_head):
 			raise ValueError("Cannot write blobs of 'historical' submodule configurations")
 		# END handle writes of historical submodules
 		
-		return GitConfigParser(fp_module, read_only = read_only)
+		return SubmoduleConfigParser(fp_module, read_only = read_only)
 
+	def _clear_cache(self):
+		# clear the possibly changed values
+		for name in ('path', '_branch', '_url'):
+			try:
+				delattr(self, name)
+			except AttributeError:
+				pass
+			# END try attr deletion
+		# END for each name to delete
 		
 	@classmethod
 	def _sio_modules(cls, parent_commit):
@@ -149,6 +192,7 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 	def _config_parser_constrained(self, read_only):
 		""":return: Config Parser constrained to our submodule in read or write mode"""
 		parser = self._config_parser(self.repo, self._parent_commit, read_only)
+		parser.set_submodule(self)
 		return SectionConstraint(parser, sm_section(self.name))
 		
 	#{ Edit Interface
@@ -178,6 +222,9 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 		
 		try:
 			mrepo = self.module()
+			for remote in mrepo.remotes:
+				remote.fetch()
+			#END fetch new data
 		except InvalidGitRepositoryError:
 			if not init:
 				return self
@@ -194,24 +241,41 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 				# END handle OSError
 			# END handle directory removal
 			
-			# don't check it out at first
-			mrepo = git.Repo.clone_from(self.url, self.path, n=True)
-			# ref can be a tag or a branch - we can checkout branches, but not tags
-			# tag_ref = git.TagReference(mrepo, TagReference.to_full_path(self.ref))
-			if tag_ref.is_valid():
-				#if tag_ref.commit
-				mrepo.git.checkout(tag_ref)
-			else:
-				# assume it is a branch and try it
-				mrepo.git.checkout(self.hexsha, b=self.ref)
-			#if mrepo.head.ref.name != self.ref:
-			#	mrepo.head.ref = git.Head(mrepo, git.Head.to_full_path(self.ref
+			# don't check it out at first - nonetheless it will create a local
+			# branch according to the remote-HEAD if possible
+			mrepo = git.Repo.clone_from(self.url, module_path, n=True)
+			
+			# see whether we have a valid branch to checkout
+			try:
+				remote_branch = mrepo.remotes.origin.refs[self.branch]
+				local_branch = git.Head(mrepo, git.Head.to_full_path(self.branch))
+				if not local_branch.is_valid():
+					mrepo.git.checkout(remote_branch, b=self.branch)
+				# END initial checkout + branch creation
+				# make sure we are not detached
+				mrepo.head.ref = local_branch
+			except IndexError:
+				print >> sys.stderr, "Warning: Failed to checkout tracking branch %s" % self.branch 
+			#END handle tracking branch
 		#END handle initalization
 		
-		# TODO: handle ref-path
-		if mrepo.head.commit.binsha != self.binsha:
-			mrepo.git.checkout(self.binsha)
+		# if the commit to checkout is on the current branch, merge the branch
+		if mrepo.head.is_detached:
+			if mrepo.head.commit.binsha != self.binsha:
+				mrepo.git.checkout(self.hexsha)
+			# END checkout commit
+		else:
+			# TODO: allow to specify a rebase, merge, or reset
+			# TODO: Warn if the hexsha forces the tracking branch off the remote
+			# branch - this should be prevented when setting the branch option
+			mrepo.head.reset(self.hexsha, index=True, working_tree=True)
 		# END handle checkout
+		
+		if recursive:
+			for submodule in self.iter_items(self.module()):
+				submodule.update(recursive, init)
+			# END handle recursive update
+		# END for each submodule
 		
 		return self
 		
@@ -245,14 +309,8 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 		# update our sha, it could have changed
 		self.binsha = pctree[self.path].binsha
 		
-		# clear the possibly changed values
-		for name in ('path', '_ref', '_url'):
-			try:
-				delattr(self, name)
-			except AttributeError:
-				pass
-			# END try attr deletion
-		# END for each name to delete
+		self._clear_cache()
+		
 		return self
 		
 	def config_writer(self):
@@ -262,6 +320,8 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 		:raise ValueError: if trying to get a writer on a parent_commit which does not
 			match the current head commit
 		:raise IOError: If the .gitmodules file/blob could not be read"""
+		if self.repo.bare:
+			raise InvalidGitRepositoryError("Cannot change submodule configuration in a bare repository")
 		return self._config_parser_constrained(read_only=False)
 		
 	#} END edit interface
@@ -279,24 +339,28 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 			raise InvalidGitRepositoryError("Cannot retrieve module repository in bare parent repositories")
 		# END handle bare mode
 		
-		repo_path = join_path_native(self.repo.working_tree_dir, self.path)
+		module_path = self.module_path() 
 		try:
-			repo = Repo(repo_path)
+			repo = Repo(module_path)
 			if repo != self.repo:
 				return repo
 			# END handle repo uninitialized
 		except (InvalidGitRepositoryError, NoSuchPathError):
 			raise InvalidGitRepositoryError("No valid repository at %s" % self.path)
 		else:
-			raise InvalidGitRepositoryError("Repository at %r was not yet checked out" % repo_path)
+			raise InvalidGitRepositoryError("Repository at %r was not yet checked out" % module_path)
 		# END handle exceptions
+		
+	def module_path(self):
+		""":return: full path to the root of our module. It is relative to the filesystem root"""
+		return join_path_native(self.repo.working_tree_dir, self.path)
 	
 	@property
-	def ref(self):
-		""":return: The reference's name that we are to checkout"""
-		return self._ref
+	def branch(self):
+		""":return: The branch name that we are to checkout"""
+		return self._branch
 	
-	@property	
+	@property
 	def url(self):
 		""":return: The url to the repository which our module-repository refers to"""
 		return self._url
@@ -347,9 +411,9 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 			n = sm_name(sms)
 			p = parser.get_value(sms, 'path')
 			u = parser.get_value(sms, 'url')
-			r = cls.k_ref_default
-			if parser.has_option(sms, cls.k_ref_option):
-				r = parser.get_value(sms, cls.k_ref_option)
+			b = cls.k_head_default
+			if parser.has_option(sms, cls.k_head_option):
+				b = parser.get_value(sms, cls.k_head_option)
 			# END handle optional information
 			
 			# get the binsha
@@ -362,7 +426,7 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 			# fill in remaining info - saves time as it doesn't have to be parsed again
 			sm._name = n
 			sm._parent_commit = pc
-			sm._ref = r
+			sm._branch = b
 			sm._url = u
 			
 			yield sm
@@ -389,9 +453,13 @@ class RootModule(Submodule):
 										name = self.k_root_name, 
 										parent_commit = repo.head.commit,
 										url = '',
-										ref = self.k_ref_default
+										branch = self.k_head_default
 										)
 		
+	
+	def _clear_cache(self):
+		"""May not do anything"""
+		pass
 	
 	#{ Interface 
 	def module(self):

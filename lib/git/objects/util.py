@@ -343,7 +343,7 @@ class Traversable(object):
 			if prune( rval, d ):
 				continue
 	
-			skipStartItem = ignore_self and ( item == self )
+			skipStartItem = ignore_self and ( item is self )
 			if not skipStartItem and predicate( rval, d ):
 				yield rval
 	

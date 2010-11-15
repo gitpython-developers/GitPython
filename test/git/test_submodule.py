@@ -4,6 +4,10 @@
 from test.testlib import *
 from git.exc import *
 from git.objects.submodule import *
+from git.util import to_native_path_linux, join_path_native
+import shutil
+import git
+import os
 
 class TestSubmodule(TestBase):
 
@@ -30,8 +34,10 @@ class TestSubmodule(TestBase):
 		assert sm.path == 'lib/git/ext/gitdb'
 		assert sm.path == sm.name				# for now, this is True
 		assert sm.url == 'git://gitorious.org/git-python/gitdb.git'
-		assert sm.ref == 'master'			# its unset in this case
+		assert sm.branch == 'master'			# its unset in this case
 		assert sm.parent_commit == rwrepo.head.commit
+		# size is invalid
+		self.failUnlessRaises(ValueError, getattr, sm, 'size')
 		
 		# some commits earlier we still have a submodule, but its at a different commit
 		smold = Submodule.iter_items(rwrepo, self.k_subm_changed).next()
@@ -44,10 +50,23 @@ class TestSubmodule(TestBase):
 		
 		# test config_reader/writer methods
 		sm.config_reader()
-		sm.config_writer()
+		if rwrepo.bare:
+			self.failUnlessRaises(InvalidGitRepositoryError, sm.config_writer)
+		else:
+			writer = sm.config_writer()
+			# for faster checkout, set the url to the local path
+			new_path = to_native_path_linux(join_path_native(self.rorepo.working_tree_dir, sm.path))
+			writer.set_value('url', new_path)
+			del(writer)
+			assert sm.config_reader().get_value('url') == new_path
+			assert sm.url == new_path
+		# END handle bare repo
 		smold.config_reader()
+		
 		# cannot get a writer on historical submodules
-		self.failUnlessRaises(ValueError, smold.config_writer)
+		if not rwrepo.bare:
+			self.failUnlessRaises(ValueError, smold.config_writer)
+		# END handle bare repo
 		
 		# make the old into a new
 		prev_parent_commit = smold.parent_commit
@@ -71,23 +90,37 @@ class TestSubmodule(TestBase):
 			self.failUnlessRaises(InvalidGitRepositoryError, sm.module)
 			
 			# lets update it - its a recursive one too
+			newdir = os.path.join(sm.module_path(), 'dir')
+			os.makedirs(newdir)
+			
 			# update fails if the path already exists non-empty
-			# self.failUnlessRaises(
+			self.failUnlessRaises(OSError, sm.update)
+			os.rmdir(newdir)
+			
+			assert sm.update() is sm
+			assert isinstance(sm.module(), git.Repo)
+			assert sm.module().working_tree_dir == sm.module_path()
 			
 			# delete the whole directory and re-initialize
+			shutil.rmtree(sm.module_path())
+			sm.update(recursive=True)
 		# END handle bare mode
 		
 		
 		# Error if there is no submodule file here
 		self.failUnlessRaises(IOError, Submodule._config_parser, rwrepo, rwrepo.commit(self.k_no_subm_tag), True)
 		
+		# TODO: Handle bare/unbare
+		# latest submodules write changes into the .gitmodules files
+		
 		# uncached path/url - retrieves information from .gitmodules file
+		
+		# index stays up-to-date with the working tree .gitmodules file
 		
 		# changing the root_tree yields new values when querying them (i.e. cache is cleared)
 		
 		
-		# size is invalid
-		self.failUnlessRaises(ValueError, getattr, sm, 'size')
+		
 		
 		# set_parent_commit fails if tree has no gitmodule file
 		
@@ -122,7 +155,7 @@ class TestSubmodule(TestBase):
 		assert rm.name == rm.k_root_name
 		assert rm.parent_commit == self.rorepo.head.commit
 		rm.url
-		rm.ref
+		rm.branch
 		
 		assert len(rm.list_items(rm.module())) == 1
 		rm.config_reader()

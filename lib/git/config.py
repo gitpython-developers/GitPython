@@ -23,19 +23,23 @@ class MetaParserBuilder(type):
 		"""
 		Equip all base-class methods with a needs_values decorator, and all non-const methods
 		with a set_dirty_and_flush_changes decorator in addition to that."""
-		mutating_methods = clsdict['_mutating_methods_']
-		for base in bases:
-			methods = ( t for t in inspect.getmembers(base, inspect.ismethod) if not t[0].startswith("_") )
-			for name, method in methods:
-				if name in clsdict:
-					continue
-				method_with_values = needs_values(method)
-				if name in mutating_methods:
-					method_with_values = set_dirty_and_flush_changes(method_with_values)
-				# END mutating methods handling
-				
-				clsdict[name] = method_with_values
-		# END for each base
+		kmm = '_mutating_methods_'
+		if kmm in clsdict:
+			mutating_methods = clsdict[kmm]
+			for base in bases:
+				methods = ( t for t in inspect.getmembers(base, inspect.ismethod) if not t[0].startswith("_") )
+				for name, method in methods:
+					if name in clsdict:
+						continue
+					method_with_values = needs_values(method)
+					if name in mutating_methods:
+						method_with_values = set_dirty_and_flush_changes(method_with_values)
+					# END mutating methods handling
+					
+					clsdict[name] = method_with_values
+				# END for each name/method pair
+			# END for each base
+		# END if mutating methods configuration is set
 		
 		new_type = super(MetaParserBuilder, metacls).__new__(metacls, name, bases, clsdict)
 		return new_type
