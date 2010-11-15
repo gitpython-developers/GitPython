@@ -15,7 +15,7 @@ import cStringIO
 from git.odict import OrderedDict
 from git.util import LockFile
 
-__all__ = ('GitConfigParser', )
+__all__ = ('GitConfigParser', 'SectionConstraint')
 
 class MetaParserBuilder(type):
 	"""Utlity class wrapping base-class methods into decorators that assure read-only properties"""
@@ -63,7 +63,29 @@ def set_dirty_and_flush_changes(non_const_func):
 	flush_changes.__name__ = non_const_func.__name__
 	return flush_changes
 	
+
+class SectionConstraint(object):
+	"""Constrains a ConfigParser to only option commands which are constrained to 
+	always use the section we have been initialized with.
 	
+	It supports all ConfigParser methods that operate on an option"""
+	__slots__ = ("_config", "_section_name")
+	_valid_attrs_ = ("get_value", "set_value", "get", "set", "getint", "getfloat", "getboolean", "has_option")
+	
+	def __init__(self, config, section):
+		self._config = config
+		self._section_name = section
+		
+	def __getattr__(self, attr):
+		if attr in self._valid_attrs_:
+			return lambda *args, **kwargs: self._call_config(attr, *args, **kwargs)
+		return super(SectionConstraint,self).__getattribute__(attr)
+		
+	def _call_config(self, method, *args, **kwargs):
+		"""Call the configuration at the given method which must take a section name 
+		as first argument"""
+		return getattr(self._config, method)(self._section_name, *args, **kwargs)
+		
 
 class GitConfigParser(cp.RawConfigParser, object):
 	"""Implements specifics required to read git style configuration files.
