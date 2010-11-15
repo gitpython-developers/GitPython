@@ -102,6 +102,8 @@ class TestTree(TestBase):
 			assert isinstance(obj, (Blob, Tree))
 			all_items.append(obj)
 		# END for each object
+		assert all_items == root.list_traverse()
+		
 		# limit recursion level to 0 - should be same as default iteration
 		assert all_items
 		assert 'CHANGES' in root

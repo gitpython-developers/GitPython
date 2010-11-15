@@ -225,7 +225,7 @@ class Repo(object):
 	@property
 	def submodules(self):
 		""":return: git.IterableList(Submodule, ...) of direct submodules"""
-		return self.list_submodules(recursive=False)
+		return Submodule.list_items(self)
 		
 	def submodule(self, name):
 		""":return: Submodule with the given name
@@ -236,12 +236,11 @@ class Repo(object):
 			raise ValueError("Didn't find submodule named %r" % name)
 		# END exception handling
 		
-	def list_submodules(self, recursive=False):
-		"""A list if Submodule objects available in this repository
-		:param recursive: If True, submodules of submodules (and so forth) will be
-			returned as well as part of a depth-first traversal
-		:return: ``git.IterableList(Submodule, ...)"""
-		return RootModule(self).list_traverse(ignore_self=1, depth = recursive and -1 or 1) 
+	def iter_submodules(self, *args, **kwargs):
+		"""An iterator yielding Submodule instances, see Traversable interface
+		for a description of args and kwargs
+		:return: Iterator"""
+		return RootModule(self).traverse(*args, **kwargs) 
 
 	@property
 	def tags(self):

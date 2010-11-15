@@ -14,6 +14,11 @@ import cStringIO
 
 GIT_REPO = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
+__all__ = (
+			'fixture_path', 'fixture', 'absolute_project_path', 'StringProcessAdapter',
+			'with_rw_repo', 'with_rw_and_rw_remote_repo', 'TestBase', 'TestCase', 'GIT_REPO'
+			)
+
 #{ Routines
 
 def fixture_path(name):
@@ -58,41 +63,7 @@ def _rmtree_onerror(osremove, fullpath, exec_info):
 	os.chmod(fullpath, 0777)
 	os.remove(fullpath)
 
-def with_bare_rw_repo(func):
-	"""
-	Decorator providing a specially made read-write repository to the test case
-	decorated with it. The test case requires the following signature::
-		def case(self, rw_repo)
-	
-	The rwrepo will be a bare clone or the types rorepo. Once the method finishes, 
-	it will be removed completely.
-	
-	Use this if you want to make purely index based adjustments, change refs, create
-	heads, generally operations that do not need a working tree."""
-	def bare_repo_creator(self):
-		repo_dir = tempfile.mktemp("bare_repo_%s" % func.__name__) 
-		rw_repo = self.rorepo.clone(repo_dir, shared=True, bare=True)
-		prev_cwd = os.getcwd()
-		try:
-			try:
-				return func(self, rw_repo)
-			except:
-				# assure we keep the repo for debugging
-				print >> sys.stderr, "Keeping bare repo after failure: %s" % repo_dir
-				repo_dir = None
-				raise
-			# END handle exceptions
-		finally:
-			rw_repo.git.clear_cache()
-			if repo_dir is not None:
-				shutil.rmtree(repo_dir, onerror=_rmtree_onerror)
-			# END remove repo dir
-		# END cleanup
-	# END bare repo creator
-	bare_repo_creator.__name__ = func.__name__
-	return bare_repo_creator
-	
-def with_rw_repo(working_tree_ref):
+def with_rw_repo(working_tree_ref, bare=False):
 	"""
 	Same as with_bare_repo, but clones the rorepo as non-bare repository, checking 
 	out the working tree at the given working_tree_ref.
@@ -105,11 +76,17 @@ def with_rw_repo(working_tree_ref):
 	assert isinstance(working_tree_ref, basestring), "Decorator requires ref name for working tree checkout"
 	def argument_passer(func):
 		def repo_creator(self):
-			repo_dir = tempfile.mktemp("non_bare_%s" % func.__name__) 
-			rw_repo = self.rorepo.clone(repo_dir, shared=True, bare=False, n=True)
+			prefix = 'non_'
+			if bare:
+				prefix = ''
+			#END handle prefix
+			repo_dir = tempfile.mktemp("%sbare_%s" % (prefix, func.__name__)) 
+			rw_repo = self.rorepo.clone(repo_dir, shared=True, bare=bare, n=True)
 			
 			rw_repo.head.commit = rw_repo.commit(working_tree_ref)
-			rw_repo.head.reference.checkout()
+			if not bare:
+				rw_repo.head.reference.checkout()
+			# END handle checkout
 			
 			prev_cwd = os.getcwd()
 			os.chdir(rw_repo.working_dir)

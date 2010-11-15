@@ -105,7 +105,7 @@ class TestSubmodule(TestBase):
 	def test_base_rw(self, rwrepo):
 		self._do_base_tests(rwrepo)
 		
-	@with_bare_rw_repo
+	@with_rw_repo(k_subm_current, bare=True)
 	def test_base_bare(self, rwrepo):
 		self._do_base_tests(rwrepo)
 		

@@ -114,7 +114,10 @@ class Object(LazyMixin):
 class IndexObject(Object):
 	"""Base for all objects that can be part of the index file , namely Tree, Blob and
 	SubModule objects"""
-	__slots__ = ("path", "mode") 
+	__slots__ = ("path", "mode")
+	
+	# for compatability with iterable lists
+	_id_attribute_ = 'path'
 	
 	def __init__(self, repo, binsha, mode=None, path=None):
 		"""Initialize a newly instanced IndexObject

@@ -558,7 +558,7 @@ class TestRepo(TestBase):
 			
 	def test_submodules(self):
 		assert len(self.rorepo.submodules) == 1		# non-recursive
-		assert len(self.rorepo.list_submodules(recursive=True)) == 2
+		assert len(list(self.rorepo.iter_submodules())) == 2
 		
 		assert isinstance(self.rorepo.submodule("lib/git/ext/gitdb"), Submodule)
 		self.failUnlessRaises(ValueError, self.rorepo.submodule, "doesn't exist")

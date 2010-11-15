@@ -237,7 +237,7 @@ class TestCommit(TestBase):
 		name_rev = self.rorepo.head.commit.name_rev
 		assert isinstance(name_rev, basestring)
 		
-	@with_bare_rw_repo
+	@with_rw_repo('HEAD', bare=True)
 	def test_serialization(self, rwrepo):
 		# create all commits of our repo
 		assert_commit_serialization(rwrepo, '0.1.6')
