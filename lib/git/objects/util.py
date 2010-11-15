@@ -4,6 +4,8 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 """Module for general utility functions"""
+from git.util import IterableList
+
 import re
 from collections import deque as Deque
 import platform
@@ -273,6 +275,12 @@ class Traversable(object):
 		"""
 		raise NotImplementedError("To be implemented in subclass")
 			
+	def list_traverse(self, *args, **kwargs):
+		""":return: IterableList with the results of the traversal as produced by
+			traverse()"""
+		out = IterableList(self._id_attribute_)
+		out.extend(self.traverse(*args, **kwargs))
+		return out
 	
 	def traverse( self, predicate = lambda i,d: True,
 						   prune = lambda i,d: False, depth = -1, branch_first=True,

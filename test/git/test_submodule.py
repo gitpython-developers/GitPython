@@ -7,6 +7,7 @@ from git.objects.submodule import *
 
 class TestSubmodule(TestBase):
 
+	k_subm_current = "00ce31ad308ff4c7ef874d2fa64374f47980c85c"
 	k_subm_changed = "394ed7006ee5dc8bddfd132b64001d5dfc0ffdd3"
 	k_no_subm_tag = "0.1.6"
 	
@@ -19,7 +20,7 @@ class TestSubmodule(TestBase):
 		self.failUnlessRaises(AttributeError, getattr, smm, 'name') 
 		
 		# iterate - 1 submodule
-		sms = Submodule.list_items(rwrepo)
+		sms = Submodule.list_items(rwrepo, self.k_subm_current)
 		assert len(sms) == 1
 		sm = sms[0]
 		
@@ -27,6 +28,7 @@ class TestSubmodule(TestBase):
 		assert len(Submodule.list_items(rwrepo, self.k_no_subm_tag)) == 0
 		
 		assert sm.path == 'lib/git/ext/gitdb'
+		assert sm.path == sm.name				# for now, this is True
 		assert sm.url == 'git://gitorious.org/git-python/gitdb.git'
 		assert sm.ref == 'master'			# its unset in this case
 		assert sm.parent_commit == rwrepo.head.commit
@@ -47,10 +49,9 @@ class TestSubmodule(TestBase):
 		# cannot get a writer on historical submodules
 		self.failUnlessRaises(ValueError, smold.config_writer)
 		
-		
 		# make the old into a new
 		prev_parent_commit = smold.parent_commit
-		smold.set_parent_commit('HEAD')
+		smold.set_parent_commit(self.k_subm_current)
 		assert smold.parent_commit != prev_parent_commit
 		assert smold.binsha == sm.binsha
 		smold.set_parent_commit(prev_parent_commit)
@@ -100,7 +101,7 @@ class TestSubmodule(TestBase):
 		
 		# Writing of historical submodule configurations must not work
 	
-	@with_rw_repo('HEAD')
+	@with_rw_repo(k_subm_current)
 	def test_base_rw(self, rwrepo):
 		self._do_base_tests(rwrepo)
 		
@@ -108,4 +109,26 @@ class TestSubmodule(TestBase):
 	def test_base_bare(self, rwrepo):
 		self._do_base_tests(rwrepo)
 		
-
+	def test_root_module(self):
+		# Can query everything without problems
+		rm = RootModule(self.rorepo)
+		assert rm.module() is self.rorepo
+		
+		rm.binsha
+		rm.mode
+		rm.path
+		assert rm.name == rm.k_root_name
+		assert rm.parent_commit == self.rorepo.head.commit
+		rm.url
+		rm.ref
+		
+		assert len(rm.list_items(rm.module())) == 1
+		rm.config_reader()
+		rm.config_writer()
+		
+		# deep traversal gitdb / async
+		assert len(list(rm.traverse())) == 2
+		
+		# cannot set the parent commit as repo name doesn't exist
+		self.failUnlessRaises(ValueError, rm.set_parent_commit, 'HEAD')
+		

@@ -6,7 +6,6 @@
 
 from git.exc import InvalidGitRepositoryError, NoSuchPathError
 from git.cmd import Git
-from git.objects import Actor
 from git.refs import *
 from git.index import IndexFile
 from git.objects import *
@@ -222,6 +221,27 @@ class Repo(object):
 		""":return: Remote with the specified name
 		:raise ValueError:  if no remote with such a name exists"""
 		return Remote(self, name)
+		
+	@property
+	def submodules(self):
+		""":return: git.IterableList(Submodule, ...) of direct submodules"""
+		return self.list_submodules(recursive=False)
+		
+	def submodule(self, name):
+		""":return: Submodule with the given name
+		:raise ValueError: If no such submodule exists"""
+		try:
+			return self.submodules[name]
+		except IndexError:
+			raise ValueError("Didn't find submodule named %r" % name)
+		# END exception handling
+		
+	def list_submodules(self, recursive=False):
+		"""A list if Submodule objects available in this repository
+		:param recursive: If True, submodules of submodules (and so forth) will be
+			returned as well as part of a depth-first traversal
+		:return: ``git.IterableList(Submodule, ...)"""
+		return RootModule(self).list_traverse(ignore_self=1, depth = recursive and -1 or 1) 
 
 	@property
 	def tags(self):

@@ -1,13 +1,15 @@
 import base
+from util import Traversable
 from StringIO import StringIO					# need a dict to set bloody .name field
 from git.util import Iterable
 from git.config import GitConfigParser, SectionConstraint
 from git.util import join_path_native
 from git.exc import InvalidGitRepositoryError, NoSuchPathError
+import stat
 
 import os
 
-__all__ = ("Submodule", )
+__all__ = ("Submodule", "RootModule")
 
 #{ Utilities
 
@@ -31,7 +33,7 @@ class SubmoduleConfigParser(GitConfigParser):
 	_mutating_methods_ = tuple()
 	
 
-class Submodule(base.IndexObject, Iterable):
+class Submodule(base.IndexObject, Iterable, Traversable):
 	"""Implements access to a git submodule. They are special in that their sha
 	represents a commit in the submodule's repository which is to be checked out
 	at the path of this instance. 
@@ -40,10 +42,11 @@ class Submodule(base.IndexObject, Iterable):
 	
 	All methods work in bare and non-bare repositories."""
 	
-	_id_attribute_ = "path"
+	_id_attribute_ = "name"
 	k_modules_file = '.gitmodules'
 	k_ref_option = 'ref'
 	k_ref_default = 'master'
+	k_def_mode = stat.S_IFDIR | stat.S_IFLNK		# submodules are directories with link-status
 	
 	# this is a bogus type for base class compatability
 	type = 'submodule'
@@ -86,6 +89,14 @@ class Submodule(base.IndexObject, Iterable):
 			super(Submodule, self)._set_cache_(attr)
 		# END handle attribute name
 		
+	def _get_intermediate_items(self, item):
+		""":return: all the submodules of our module repository"""
+		try:
+			return type(self).list_items(item.module())
+		except InvalidGitRepositoryError:
+			return list()
+		# END handle intermeditate items
+		
 	def __eq__(self, other):
 		"""Compare with another submodule"""
 		return self.path == other.path and self.url == other.url and super(Submodule, self).__eq__(other)
@@ -107,6 +118,7 @@ class Submodule(base.IndexObject, Iterable):
 			if not os.path.isfile(fp_module_path):
 				raise IOError("%s file was not accessible" % fp_module_path)
 			# END handle existance
+			fp_module = fp_module_path
 		else:
 			try:
 				fp_module = cls._sio_modules(parent_commit)
@@ -300,4 +312,32 @@ class Submodule(base.IndexObject, Iterable):
 	
 	#} END iterable interface
 	
+	
+class RootModule(Submodule):
+	"""A (virtual) Root of all submodules in the given repository. It can be used
+	to more easily traverse all submodules of the master repository"""
+	
+	__slots__ = tuple()
+	
+	k_root_name = '__ROOT__'
+	
+	def __init__(self, repo):
+		# repo, binsha, mode=None, path=None, name = None, parent_commit=None, url=None, ref=None)
+		super(RootModule, self).__init__(
+										repo, 
+										binsha = self.NULL_BIN_SHA, 
+										mode = self.k_def_mode, 
+										path = '', 
+										name = self.k_root_name, 
+										parent_commit = repo.head.commit,
+										url = '',
+										ref = self.k_ref_default
+										)
+		
+	
+	#{ Interface 
+	def module(self):
+		""":return: the actual repository containing the submodules"""
+		return self.repo
+	#} END interface
 #} END classes
