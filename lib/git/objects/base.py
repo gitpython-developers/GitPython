@@ -62,17 +62,6 @@ class Object(LazyMixin):
 		inst.size = oinfo.size
 		return inst 
 	
-	def _set_self_from_args_(self, args_dict):
-		"""Initialize attributes on self from the given dict that was retrieved
-		from locals() in the calling method.
-		
-		Will only set an attribute on self if the corresponding value in args_dict
-		is not None"""
-		for attr, val in args_dict.items():
-			if attr != "self" and val is not None:
-				setattr( self, attr, val )
-		# END set all non-None attributes
-	
 	def _set_cache_(self, attr):
 		"""Retrieve object information"""
 		if attr	 == "size":
@@ -140,7 +129,10 @@ class IndexObject(Object):
 			Path may not be set of the index object has been created directly as it cannot
 			be retrieved without knowing the parent tree."""
 		super(IndexObject, self).__init__(repo, binsha)
-		self._set_self_from_args_(locals())
+		if mode is not None:
+			self.mode = mode
+		if path is not None:
+			self.path = path
 	
 	def __hash__(self):
 		""":return:
