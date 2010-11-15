@@ -56,6 +56,7 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 	def __init__(self, repo, binsha, mode=None, path=None, name = None, parent_commit=None, url=None, ref=None):
 		"""Initialize this instance with its attributes. We only document the ones 
 		that differ from ``IndexObject``
+		:param repo: Our parent repository
 		:param binsha: binary sha referring to a commit in the remote repository, see url parameter
 		:param parent_commit: see set_parent_commit()
 		:param url: The url to the remote repository which is the submodule
@@ -104,6 +105,10 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 	def __ne__(self, other):
 		"""Compare with another submodule for inequality"""
 		return not (self == other)
+		
+	def __hash__(self):
+		"""Hash this instance using its logical id, not the sha"""
+		return hash(self._name)
 		
 	@classmethod
 	def _config_parser(cls, repo, parent_commit, read_only):
@@ -159,6 +164,57 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 		:param skip_init: if True, the new repository will not be cloned to its location.
 		:return: The newly created submodule instance"""
 		
+	def update(self, recursive=False, init=True):
+		"""Update the repository of this submodule to point to the checkout
+		we point at with the binsha of this instance.
+		:param recursive: if True, we will operate recursively and update child-
+			modules as well.
+		:param init: if True, the module repository will be cloned into place if necessary
+		:note: does nothing in bare repositories
+		:return: self"""
+		if self.repo.bare:
+			return self
+		#END pass in bare mode
+		
+		try:
+			mrepo = self.module()
+		except InvalidGitRepositoryError:
+			if not init:
+				return self
+			# END early abort if init is not allowed
+			import git
+			
+			# there is no git-repository yet - but delete empty paths
+			module_path = join_path_native(self.repo.working_tree_dir, self.path)
+			if os.path.isdir(module_path):
+				try:
+					os.rmdir(module_path)
+				except OSError:
+					raise OSError("Module directory at %r does already exist and is non-empty" % module_path)
+				# END handle OSError
+			# END handle directory removal
+			
+			# don't check it out at first
+			mrepo = git.Repo.clone_from(self.url, self.path, n=True)
+			# ref can be a tag or a branch - we can checkout branches, but not tags
+			# tag_ref = git.TagReference(mrepo, TagReference.to_full_path(self.ref))
+			if tag_ref.is_valid():
+				#if tag_ref.commit
+				mrepo.git.checkout(tag_ref)
+			else:
+				# assume it is a branch and try it
+				mrepo.git.checkout(self.hexsha, b=self.ref)
+			#if mrepo.head.ref.name != self.ref:
+			#	mrepo.head.ref = git.Head(mrepo, git.Head.to_full_path(self.ref
+		#END handle initalization
+		
+		# TODO: handle ref-path
+		if mrepo.head.commit.binsha != self.binsha:
+			mrepo.git.checkout(self.binsha)
+		# END handle checkout
+		
+		return self
+		
 	def set_parent_commit(self, commit, check=True):
 		"""Set this instance to use the given commit whose tree is supposed to 
 		contain the .gitmodules blob.
@@ -167,7 +223,8 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 			validity of the submodule.
 		:raise ValueError: if the commit's tree didn't contain the .gitmodules blob.
 		:raise ValueError: if the parent commit didn't store this submodule under the
-			current path"""
+			current path
+		:return: self"""
 		pcommit = self.repo.commit(commit)
 		pctree = pcommit.tree
 		if self.k_modules_file not in pctree:
@@ -196,6 +253,7 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 				pass
 			# END try attr deletion
 		# END for each name to delete
+		return self
 		
 	def config_writer(self):
 		""":return: a config writer instance allowing you to read and write the data

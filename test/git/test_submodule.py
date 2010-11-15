@@ -51,7 +51,7 @@ class TestSubmodule(TestBase):
 		
 		# make the old into a new
 		prev_parent_commit = smold.parent_commit
-		smold.set_parent_commit(self.k_subm_current)
+		assert smold.set_parent_commit(self.k_subm_current) is smold 
 		assert smold.parent_commit != prev_parent_commit
 		assert smold.binsha == sm.binsha
 		smold.set_parent_commit(prev_parent_commit)
@@ -70,7 +70,9 @@ class TestSubmodule(TestBase):
 			# its not checked out in our case
 			self.failUnlessRaises(InvalidGitRepositoryError, sm.module)
 			
-			# lets do it - its a recursive one too
+			# lets update it - its a recursive one too
+			# update fails if the path already exists non-empty
+			# self.failUnlessRaises(
 			
 			# delete the whole directory and re-initialize
 		# END handle bare mode

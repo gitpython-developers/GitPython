@@ -489,6 +489,8 @@ class SymbolicReference(object):
 	@classmethod
 	def from_path(cls, repo, path):
 		"""
+		:param path: full .git-directory-relative path name to the Reference to instantiate
+		:note: use to_full_path() if you only have a partial path of a known Reference Type
 		:return:
 			Instance of type Reference, Head, or Tag
 			depending on the given path"""
