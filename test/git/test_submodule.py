@@ -32,7 +32,7 @@ class TestSubmodule(TestBase):
 		assert len(Submodule.list_items(rwrepo, self.k_no_subm_tag)) == 0
 		
 		assert sm.path == 'lib/git/ext/gitdb'
-		assert sm.path == sm.name				# for now, this is True
+		assert sm.path == sm.name					# for now, this is True
 		assert sm.url == 'git://gitorious.org/git-python/gitdb.git'
 		assert sm.branch.name == 'master'			# its unset in this case
 		assert sm.parent_commit == rwrepo.head.commit
@@ -109,8 +109,6 @@ class TestSubmodule(TestBase):
 			# no url and no module at path fails
 			self.failUnlessRaises(ValueError, Submodule.add, rwrepo, "newsubm", "pathtorepo", url=None)
 			
-			# TODO: Test no remote url in existing repository
-			
 			# CONTINUE UPDATE
 			#################
 			
@@ -123,6 +121,7 @@ class TestSubmodule(TestBase):
 			os.rmdir(newdir)
 			
 			assert sm.update() is sm
+			sm_repopath = sm.path				# cache for later
 			assert sm.module_exists()
 			assert isinstance(sm.module(), git.Repo)
 			assert sm.module().working_tree_dir == sm.module_path()
@@ -146,6 +145,7 @@ class TestSubmodule(TestBase):
 			assert len(sm.children()) == 1			# its not checked out yet
 			csm = sm.children()[0]
 			assert not csm.module_exists()
+			csm_repopath = csm.path
 			
 			# adjust the path of the submodules module to point to the local destination
 			new_csmclone_path = to_native_path_linux(join_path_native(self.rorepo.working_tree_dir, sm.path, csm.path))
@@ -233,10 +233,44 @@ class TestSubmodule(TestBase):
 			assert not sm.exists()
 			assert not sm.module_exists()
 			
+			assert len(rwrepo.submodules) == 0
+			
 			# ADD NEW SUBMODULE
 			###################
-			# raise if url does not match remote url of existing repo
+			# add a simple remote repo - trailing slashes are no problem
+			smid = "newsub"
+			osmid = "othersub"
+			nsm = Submodule.add(rwrepo, smid, sm_repopath, new_smclone_path, None, no_checkout=True)
+			assert nsm.name == smid
+			assert nsm.module_exists()
+			assert nsm.exists()
+			# its not checked out
+			assert not os.path.isfile(join_path_native(nsm.module().working_tree_dir, Submodule.k_modules_file))
+			assert len(rwrepo.submodules) == 1
 			
+			# add another submodule, but into the root, not as submodule
+			osm = Submodule.add(rwrepo, osmid, csm_repopath, new_csmclone_path, Submodule.k_head_default)
+			assert osm != nsm
+			assert osm.module_exists()
+			assert osm.exists()
+			assert os.path.isfile(join_path_native(osm.module().working_tree_dir, 'setup.py'))
+			
+			assert len(rwrepo.submodules) == 2
+			
+			# commit the changes, just to finalize the operation
+			rwrepo.index.commit("my submod commit")
+			assert len(rwrepo.submodules) == 2
+			
+			# if a submodule's repo has no remotes, it can't be added without an explicit url
+			osmod = osm.module()
+			# needs update as the head changed, it thinks its in the history 
+			# of the repo otherwise
+			osm._parent_commit = rwrepo.head.commit
+			osm.remove(module=False)
+			for remote in osmod.remotes:
+				remote.remove(osmod, remote.name)
+			assert not osm.exists()
+			self.failUnlessRaises(ValueError, Submodule.add, rwrepo, osmid, csm_repopath, url=None)   
 		# END handle bare mode
 		
 		

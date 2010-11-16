@@ -85,7 +85,7 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 	k_modules_file = '.gitmodules'
 	k_head_option = 'branch'
 	k_head_default = 'master'
-	k_def_mode = stat.S_IFDIR | stat.S_IFLNK		# submodules are directories with link-status
+	k_default_mode = stat.S_IFDIR | stat.S_IFLNK		# submodules are directories with link-status
 	
 	# this is a bogus type for base class compatability
 	type = 'submodule'
@@ -244,7 +244,7 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 		# END handle trailing slash
 		
 		# INSTANTIATE INTERMEDIATE SM
-		sm = cls(repo, cls.NULL_BIN_SHA, cls.k_def_mode, path, name)
+		sm = cls(repo, cls.NULL_BIN_SHA, cls.k_default_mode, path, name)
 		if sm.exists():
 			# reretrieve submodule from tree
 			return repo.head.commit.tree[path]
@@ -712,10 +712,17 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 			# END handle optional information
 			
 			# get the binsha
+			index = repo.index
 			try:
 				sm = rt[p]
 			except KeyError:
-				raise InvalidGitRepositoryError("Gitmodule path %r did not exist in revision of parent commit %s" % (p, parent_commit))
+				# try the index, maybe it was just added
+				try:
+					entry = index.entries[index.entry_key(p, 0)]
+					sm = cls(repo, entry.binsha, entry.mode, entry.path)
+				except KeyError:
+					raise InvalidGitRepositoryError("Gitmodule path %r did not exist in revision of parent commit %s" % (p, parent_commit))
+				# END handle keyerror
 			# END handle critical error
 			
 			# fill in remaining info - saves time as it doesn't have to be parsed again
@@ -743,7 +750,7 @@ class RootModule(Submodule):
 		super(RootModule, self).__init__(
 										repo, 
 										binsha = self.NULL_BIN_SHA, 
-										mode = self.k_def_mode, 
+										mode = self.k_default_mode, 
 										path = '', 
 										name = self.k_root_name, 
 										parent_commit = repo.head.commit,
