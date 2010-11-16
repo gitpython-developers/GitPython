@@ -88,6 +88,10 @@ class TestSubmodule(TestBase):
 		else:
 			# its not checked out in our case
 			self.failUnlessRaises(InvalidGitRepositoryError, sm.module)
+			assert not sm.module_exists()
+			
+			# currently there is only one submodule
+			assert len(list(rwrepo.iter_submodules())) == 1
 			
 			# lets update it - its a recursive one too
 			newdir = os.path.join(sm.module_path(), 'dir')
@@ -98,12 +102,29 @@ class TestSubmodule(TestBase):
 			os.rmdir(newdir)
 			
 			assert sm.update() is sm
+			assert sm.module_exists()
 			assert isinstance(sm.module(), git.Repo)
 			assert sm.module().working_tree_dir == sm.module_path()
 			
 			# delete the whole directory and re-initialize
 			shutil.rmtree(sm.module_path())
+			sm.update(recursive=False)
+			assert len(list(rwrepo.iter_submodules())) == 2
+			assert len(sm.children()) == 1			# its not checked out yet
+			csm = sm.children()[0]
+			assert not csm.module_exists()
+			
+			# adjust the path of the submodules module to point to the local destination
+			new_csm_path = to_native_path_linux(join_path_native(self.rorepo.working_tree_dir, sm.path, csm.path))
+			csm.config_writer().set_value('url', new_csm_path)
+			assert csm.url == new_csm_path
+			
+			
+			# update recuesively again
 			sm.update(recursive=True)
+			
+			# this flushed in a sub-submodule
+			assert len(list(rwrepo.iter_submodules())) == 2
 		# END handle bare mode
 		
 		

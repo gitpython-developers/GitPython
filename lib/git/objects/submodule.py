@@ -251,6 +251,17 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 				local_branch = git.Head(mrepo, git.Head.to_full_path(self.branch))
 				if not local_branch.is_valid():
 					mrepo.git.checkout(remote_branch, b=self.branch)
+				else:
+					# have a valid branch, but no checkout - make sure we can figure
+					# that out by marking the commit with a null_sha
+					# have to write it directly as .commit = NULLSHA tries to resolve the sha
+					ref = mrepo.head.ref
+					refpath = join_path_native(mrepo.git_dir, ref.to_full_path(ref.path))
+					refdir = os.path.dirname(refpath)
+					if not os.path.isdir(refdir):
+						os.makedirs(refdir)
+					#END handle directory
+					open(refpath, 'w').write(self.NULL_HEX_SHA)
 				# END initial checkout + branch creation
 				# make sure we are not detached
 				mrepo.head.ref = local_branch
@@ -259,24 +270,24 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 			#END handle tracking branch
 		#END handle initalization
 		
-		# if the commit to checkout is on the current branch, merge the branch
-		if mrepo.head.is_detached:
-			if mrepo.head.commit.binsha != self.binsha:
+		# update the working tree
+		if mrepo.head.commit.binsha != self.binsha:
+			if mrepo.head.is_detached:
 				mrepo.git.checkout(self.hexsha)
-			# END checkout commit
-		else:
-			# TODO: allow to specify a rebase, merge, or reset
-			# TODO: Warn if the hexsha forces the tracking branch off the remote
-			# branch - this should be prevented when setting the branch option
-			mrepo.head.reset(self.hexsha, index=True, working_tree=True)
-		# END handle checkout
-		
-		if recursive:
-			for submodule in self.iter_items(self.module()):
-				submodule.update(recursive, init)
-			# END handle recursive update
-		# END for each submodule
-		
+			else:
+				# TODO: allow to specify a rebase, merge, or reset
+				# TODO: Warn if the hexsha forces the tracking branch off the remote
+				# branch - this should be prevented when setting the branch option
+				mrepo.head.reset(self.hexsha, index=True, working_tree=True)
+			# END handle checkout
+			
+			if recursive:
+				for submodule in self.iter_items(self.module()):
+					submodule.update(recursive, init)
+				# END handle recursive update
+			# END for each submodule
+		# END update to new commit only if needed
+			
 		return self
 		
 	def set_parent_commit(self, commit, check=True):
@@ -354,6 +365,15 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 	def module_path(self):
 		""":return: full path to the root of our module. It is relative to the filesystem root"""
 		return join_path_native(self.repo.working_tree_dir, self.path)
+		
+	def module_exists(self):
+		""":return: True if our module exists and is a valid git repository. See module() method"""
+		try:
+			self.module()
+			return True
+		except InvalidGitRepositoryError:
+			return False
+		# END handle exception
 	
 	@property
 	def branch(self):
@@ -390,6 +410,12 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 		:note: Should be cached by the caller and only kept as long as needed
 		:raise IOError: If the .gitmodules file/blob could not be read"""
 		return self._config_parser_constrained(read_only=True)
+		
+	def children(self):
+		""":return: IterableList(Submodule, ...) an iterable list of submodules instances
+		which are children of this submodule
+		:raise InvalidGitRepositoryError: if the submodule is not checked-out"""
+		return self._get_intermediate_items(self)
 		
 	#} END query interface
 	
