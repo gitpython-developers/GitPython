@@ -10,14 +10,15 @@ import stat
 import os
 import sys
 import weakref
+import shutil
 
 __all__ = ("Submodule", "RootModule")
 
 #{ Utilities
 
-def sm_section(path):
+def sm_section(name):
 	""":return: section title used in .gitmodules configuration file"""
-	return 'submodule "%s"' % path
+	return 'submodule "%s"' % name
 
 def sm_name(section):
 	""":return: name of the submodule as parsed from the section name"""
@@ -223,6 +224,7 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 			if the remote repository had a master branch, or of the 'branch' option 
 			was specified for this submodule and the branch existed remotely
 		:note: does nothing in bare repositories
+		:note: method is definitely not atomic if recurisve is True
 		:return: self"""
 		if self.repo.bare:
 			return self
@@ -329,6 +331,111 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 			
 		return self
 		
+	def remove(self, module=True, force=False, configuration=True, dry_run=False):
+		"""Remove this submodule from the repository. This will remove our entry
+		from the .gitmodules file and the entry in the .git/config file.
+		:param module: If True, the module we point to will be deleted 
+			as well. If the module is currently on a commit which is not part 
+			of any branch in the remote, if the currently checked out branch 
+			is ahead of its tracking branch,  if you have modifications in the
+			working tree, or untracked files,
+			In case the removal of the repository fails for these reasons, the 
+			submodule status will not have been altered.
+			If this submodule has child-modules on its own, these will be deleted
+			prior to touching the own module.
+		:param force: Enforces the deletion of the module even though it contains 
+			modifications. This basically enforces a brute-force file system based
+			deletion.
+		:param configuration: if True, the submodule is deleted from the configuration, 
+			otherwise it isn't. Although this should be enabled most of the times, 
+			this flag enables you to safely delete the repository of your submodule.
+		:param dry_run: if True, we will not actually do anything, but throw the errors
+			we would usually throw
+		:note: doesn't work in bare repositories
+		:raise InvalidGitRepositoryError: thrown if the repository cannot be deleted
+		:raise OSError: if directories or files could not be removed"""
+		if self.repo.bare:
+			raise InvalidGitRepositoryError("Cannot delete a submodule in bare repository")
+		# END handle bare mode
+		
+		if not (module + configuration):
+			raise ValueError("Need to specify to delete at least the module, or the configuration")
+		# END handle params
+		
+		# DELETE MODULE REPOSITORY
+		##########################
+		if module and self.module_exists():
+			if force:
+				# take the fast lane and just delete everything in our module path
+				# TODO: If we run into permission problems, we have a highly inconsistent
+				# state. Delete the .git folders last, start with the submodules first
+				mp = self.module_path()
+				method = None
+				if os.path.islink(mp):
+					method = os.remove
+				elif os.path.isdir(mp):
+					method = shutil.rmtree
+				elif os.path.exists(mp):
+					raise AssertionError("Cannot forcibly delete repository as it was neither a link, nor a directory")
+				#END handle brutal deletion
+				if not dry_run:
+					assert method
+					method(mp)
+				#END apply deletion method
+			else:
+				# verify we may delete our module
+				mod = self.module()
+				if mod.is_dirty(untracked_files=True):
+					raise InvalidGitRepositoryError("Cannot delete module at %s with any modifications, unless force is specified" % mod.working_tree_dir)
+				# END check for dirt
+				
+				# figure out whether we have new commits compared to the remotes
+				# NOTE: If the user pulled all the time, the remote heads might 
+				# not have been updated, so commits coming from the remote look
+				# as if they come from us. But we stay strictly read-only and
+				# don't fetch beforhand.
+				for remote in mod.remotes:
+					num_branches_with_new_commits = 0
+					rrefs = remote.refs
+					for rref in rrefs:
+						num_branches_with_new_commits = len(mod.git.cherry(rref)) != 0
+					# END for each remote ref
+					# not a single remote branch contained all our commits
+					if num_branches_with_new_commits == len(rrefs):
+						raise InvalidGitRepositoryError("Cannot delete module at %s as there are new commits" % mod.working_tree_dir)
+					# END handle new commits
+				# END for each remote
+				
+				# gently remove all submodule repositories
+				for sm in self.children():
+					sm.remove(module=True, force=False, configuration=False, dry_run=dry_run)
+				# END for each child-submodule
+				
+				# finally delete our own submodule
+				if not dry_run:
+					shutil.rmtree(mod.working_tree_dir)
+				# END delete tree if possible
+			# END handle force
+		# END handle module deletion
+			
+		# DELETE CONFIGURATION
+		######################
+		if configuration and not dry_run:
+			# first the index-entry
+			index = self.repo.index
+			try:
+				del(index.entries[index.entry_key(self.path, 0)])
+			except KeyError:
+				pass
+			#END delete entry
+			index.write()
+			
+			# now git config - need the config intact, otherwise we can't query 
+			# inforamtion anymore
+			self.repo.config_writer().remove_section(sm_section(self.name))
+			self.config_writer().remove_section()
+		# END delete configuration
+		
 	def set_parent_commit(self, commit, check=True):
 		"""Set this instance to use the given commit whose tree is supposed to 
 		contain the .gitmodules blob.
@@ -410,9 +517,22 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 		try:
 			self.module()
 			return True
-		except InvalidGitRepositoryError:
+		except Exception:
 			return False
 		# END handle exception
+	
+	def exists(self):
+		""":return: True if the submodule exists, False otherwise. Please note that
+		a submodule may exist (in the .gitmodules file) even though its module
+		doesn't exist"""
+		self._clear_cache()
+		try:
+			self.path
+			return True
+		except Exception:
+			# we raise if the path cannot be restored from configuration
+			return False
+		# END handle exceptions
 	
 	@property
 	def branch(self):

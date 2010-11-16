@@ -87,6 +87,7 @@ class TestSubmodule(TestBase):
 		# module retrieval is not always possible
 		if rwrepo.bare:
 			self.failUnlessRaises(InvalidGitRepositoryError, sm.module)
+			self.failUnlessRaises(InvalidGitRepositoryError, sm.remove)
 		else:
 			# its not checked out in our case
 			self.failUnlessRaises(InvalidGitRepositoryError, sm.module)
@@ -155,6 +156,55 @@ class TestSubmodule(TestBase):
 			# undo the changes
 			sm.module().head.ref = smref
 			csm.module().head.ref.set_tracking_branch(csm_tracking_branch)
+			
+			# REMOVAL OF REPOSITOTRY
+			########################
+			# must delete something
+			self.failUnlessRaises(ValueError, csm.remove, module=False, configuration=False)
+			# We have modified the configuration, hence the index is dirty, and the
+			# deletion will fail
+			# NOTE: As we did  a few updates in the meanwhile, the indices where reset
+			# Hence we restore some changes
+			sm.config_writer().set_value("somekey", "somevalue")
+			csm.config_writer().set_value("okey", "ovalue")
+			self.failUnlessRaises(InvalidGitRepositoryError, sm.remove)
+			# if we remove the dirty index, it would work
+			sm.module().index.reset()
+			# still, we have the file modified
+			self.failUnlessRaises(InvalidGitRepositoryError, sm.remove, dry_run=True)
+			sm.module().index.reset(working_tree=True)
+			
+			# this would work
+			sm.remove(dry_run=True)
+			assert sm.module_exists()
+			sm.remove(force=True, dry_run=True)
+			assert sm.module_exists()
+			
+			# but ... we have untracked files in the child submodule
+			fn = join_path_native(csm.module().working_tree_dir, "newfile")
+			open(fn, 'w').write("hi")
+			self.failUnlessRaises(InvalidGitRepositoryError, sm.remove)
+			
+			# forcibly delete the child repository
+			csm.remove(force=True)
+			assert not csm.exists()
+			assert not csm.module_exists()
+			assert len(sm.children()) == 0
+			# now we have a changed index, as configuration was altered.
+			# fix this
+			sm.module().index.reset(working_tree=True)
+			
+			# now delete only the module of the main submodule
+			assert sm.module_exists()
+			sm.remove(configuration=False)
+			assert sm.exists()
+			assert not sm.module_exists()
+			assert sm.config_reader().get_value('url')
+			
+			# delete the rest
+			sm.remove()
+			assert not sm.exists()
+			assert not sm.module_exists()
 		# END handle bare mode
 		
 		
