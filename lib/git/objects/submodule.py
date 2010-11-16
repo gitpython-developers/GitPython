@@ -202,15 +202,101 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 	#{ Edit Interface
 	
 	@classmethod
-	def add(cls, repo, path, url, skip_init=False):
+	def add(cls, repo, name, path, url=None, branch=k_head_default, no_checkout=False):
 		"""Add a new submodule to the given repository. This will alter the index
 		as well as the .gitmodules file, but will not create a new commit.
+		If the submodule already exists, no matter if the configuration differs
+		from the one provided, the existing submodule will be returned.
 		:param repo: Repository instance which should receive the submodule
-		:param path: repository-relative path at which the submodule should be located
+		:param name: The name/identifier for the submodule
+		:param path: repository-relative or absolute path at which the submodule 
+			should be located
 			It will be created as required during the repository initialization.
 		:param url: git-clone compatible URL, see git-clone reference for more information
-		:param skip_init: if True, the new repository will not be cloned to its location.
-		:return: The newly created submodule instance"""
+			If None, the repository is assumed to exist, and the url of the first
+			remote is taken instead. This is useful if you want to make an existing
+			repository a submodule of anotherone.
+		:param branch: branch at which the submodule should (later) be checked out.
+			The given branch must exist in the remote repository, and will be checked
+			out locally as a tracking branch.
+			It will only be written into the configuration if it differs from the
+			default.
+		:param no_checkout: if True, and if the repository has to be cloned manually, 
+			no checkout will be performed
+		:return: The newly created submodule instance
+		:note: works atomically, such that no change will be done if the repository
+			update fails for instance"""
+		if repo.bare:
+			raise InvalidGitRepositoryError("Cannot add a submodule to bare repositories")
+		#END handle bare mode
+		
+		path = to_native_path_linux(path)
+		if path.endswith('/'):
+			path = path[:-1]
+		# END handle trailing slash
+		
+		sm = cls(repo, cls.NULL_BIN_SHA, cls.k_def_mode, path, name)
+		if sm.exists():
+			# reretrieve submodule from tree
+			return repo.head.commit.tree[path]
+		# END handle existing
+		
+		branch = Head(repo, head.to_full_path(branch))
+		has_module = sm.module_exists()
+		branch_is_default = branch.name == cls.k_head_default
+		if has_module and url is not None:
+			if url not in [r.url for r in sm.module().remotes]:
+				raise ValueError("Specified URL %s does not match any remote url of the repository at %s" % (url, sm.module_path()))
+			# END check url
+		# END verify urls match
+		
+		mrepo = None
+		if url is None:
+			if not has_module:
+				raise ValueError("A URL was not given and existing repository did not exsit at %s" % path)
+			# END check url
+			mrepo = sm.module()
+			urls = [r.url for r in mrepo.remotes]
+			if not urls:
+				raise ValueError("Didn't find any remote url in repository at %s" % sm.module_path())
+			# END verify we have url
+			url = urls[0]
+		else:
+			# clone new repo
+			kwargs = {'n' : no_checkout}
+			if branch_is_default:
+				kwargs['b'] = str(branch)
+			# END setup checkout-branch
+			mrepo = git.Repo.clone_from(url, path, **kwargs)
+		# END verify url
+		
+		# update configuration and index
+		writer = sm.config_writer()
+		writer.set_value('url', url)
+		writer.set_value('path', path)
+		
+		sm._url = url
+		if not branch_is_default:
+			# store full path
+			writer.set_value(cls.k_head_option, branch.path)
+			sm._branch = branch
+		# END handle path
+		del(writer)
+		
+		# NOTE: Have to write the repo config file as well, otherwise
+		# the default implementation will be offended and not update the repository
+		# Maybe this is a good way to assure it doesn't get into our way, but 
+		# we want to stay backwards compatible too ... . Its so redundant !
+		repo.config_writer().set_value(sm_section(sm.name), 'url', url)
+		
+		# we deliberatly assume that our head matches our index !
+		pcommit = repo.head.commit
+		sm._parent_commit = pcommit
+		sm.binsha = mrepo.head.commit.binsha
+		repo.index.add([sm], write=True)
+		
+		return sm
+		
 		
 	def update(self, recursive=False, init=True, to_latest_revision=False):
 		"""Update the repository of this submodule to point to the checkout

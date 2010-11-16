@@ -35,7 +35,8 @@ from git.exc import (
 						)
 
 from git.objects import (
-							Blob, 
+							Blob,
+							Submodule,
 							Tree, 
 							Object, 
 							Commit,
@@ -553,7 +554,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 		for item in items:
 			if isinstance(item, basestring):
 				paths.append(self._to_relative_path(item))
-			elif isinstance(item, Blob):
+			elif isinstance(item, (Blob, Submodule)):
 				entries.append(BaseIndexEntry.from_blob(item))
 			elif isinstance(item, BaseIndexEntry):
 				entries.append(item)
@@ -588,7 +589,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
 				They are added at stage 0
 
-			- Blob object
+			- Blob or Submodule object
 				Blobs are added as they are assuming a valid mode is set.
 				The file they refer to may or may not exist in the file system, but
 				must be a path relative to our repository.
@@ -612,6 +613,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 				explicitly set. Please note that Index Entries require binary sha's.
 
 		:param force:
+			**CURRENTLY INEFFECTIVE**
 			If True, otherwise ignored or excluded files will be
 			added anyway.
 			As opposed to the git-add command, we enable this flag by default

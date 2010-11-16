@@ -50,16 +50,18 @@ class TestSubmodule(TestBase):
 		
 		# test config_reader/writer methods
 		sm.config_reader()
+		new_smclone_path = None				# keep custom paths for later 
+		new_csmclone_path = None				# 
 		if rwrepo.bare:
 			self.failUnlessRaises(InvalidGitRepositoryError, sm.config_writer)
 		else:
 			writer = sm.config_writer()
 			# for faster checkout, set the url to the local path
-			new_path = to_native_path_linux(join_path_native(self.rorepo.working_tree_dir, sm.path))
-			writer.set_value('url', new_path)
+			new_smclone_path = to_native_path_linux(join_path_native(self.rorepo.working_tree_dir, sm.path))
+			writer.set_value('url', new_smclone_path)
 			del(writer)
-			assert sm.config_reader().get_value('url') == new_path
-			assert sm.url == new_path
+			assert sm.config_reader().get_value('url') == new_smclone_path
+			assert sm.url == new_smclone_path
 		# END handle bare repo
 		smold.config_reader()
 		
@@ -88,6 +90,7 @@ class TestSubmodule(TestBase):
 		if rwrepo.bare:
 			self.failUnlessRaises(InvalidGitRepositoryError, sm.module)
 			self.failUnlessRaises(InvalidGitRepositoryError, sm.remove)
+			self.failUnlessRaises(InvalidGitRepositoryError, sm.add, rwrepo, 'here', 'there')
 		else:
 			# its not checked out in our case
 			self.failUnlessRaises(InvalidGitRepositoryError, sm.module)
@@ -121,9 +124,9 @@ class TestSubmodule(TestBase):
 			assert not csm.module_exists()
 			
 			# adjust the path of the submodules module to point to the local destination
-			new_csm_path = to_native_path_linux(join_path_native(self.rorepo.working_tree_dir, sm.path, csm.path))
-			csm.config_writer().set_value('url', new_csm_path)
-			assert csm.url == new_csm_path
+			new_csmclone_path = to_native_path_linux(join_path_native(self.rorepo.working_tree_dir, sm.path, csm.path))
+			csm.config_writer().set_value('url', new_csmclone_path)
+			assert csm.url == new_csmclone_path
 			
 			# update recuesively again
 			sm.update(recursive=True)
@@ -205,6 +208,11 @@ class TestSubmodule(TestBase):
 			sm.remove()
 			assert not sm.exists()
 			assert not sm.module_exists()
+			
+			# ADD NEW SUBMODULE
+			###################
+			# raise if url does not match remote url of existing repo
+			
 		# END handle bare mode
 		
 		
