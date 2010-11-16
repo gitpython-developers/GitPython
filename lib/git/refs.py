@@ -29,6 +29,11 @@ from gitdb.util import (
 							hex_to_bin
 						)
 
+from config import 	(
+					GitConfigParser,
+					SectionConstraint
+					)
+
 from exc import GitCommandError
 
 __all__ = ("SymbolicReference", "Reference", "HEAD", "Head", "TagReference", 
@@ -701,6 +706,8 @@ class Head(Reference):
 		>>> head.commit.hexsha
 		'1c09f116cbc2cb4100fb6935bb162daa4723f455'"""
 	_common_path_default = "refs/heads"
+	k_config_remote = "remote"
+	k_config_remote_ref = "merge"			# branch to merge from remote
 	
 	@classmethod
 	def create(cls, repo, path, commit='HEAD', force=False, **kwargs):
@@ -747,6 +754,44 @@ class Head(Reference):
 			flag = "-D"
 		repo.git.branch(flag, *heads)
 		
+		
+	def set_tracking_branch(self, remote_reference):
+		"""Configure this branch to track the given remote reference. This will alter
+		this branch's configuration accordingly.
+		:param remote_reference: The remote reference to track or None to untrack 
+			any references
+		:return: self"""
+		if remote_reference is not None and not isinstance(remote_reference, RemoteReference):
+			raise ValueError("Incorrect parameter type: %r" % remote_reference)
+		# END handle type
+		
+		writer = self.config_writer()
+		if remote_reference is None:
+			writer.remove_option(self.k_config_remote)
+			writer.remove_option(self.k_config_remote_ref)
+			if len(writer.options()) == 0:
+				writer.remove_section()
+			# END handle remove section
+		else:
+			writer.set_value(self.k_config_remote, remote_reference.remote_name)
+			writer.set_value(self.k_config_remote_ref, Head.to_full_path(remote_reference.remote_head))
+		# END handle ref value
+		
+		return self
+		
+		
+	def tracking_branch(self):
+		""":return: The remote_reference we are tracking, or None if we are 
+			not a tracking branch"""
+		reader = self.config_reader()
+		if reader.has_option(self.k_config_remote) and reader.has_option(self.k_config_remote_ref):
+			ref = Head(self.repo, Head.to_full_path(reader.get_value(self.k_config_remote_ref)))
+			remote_refpath = RemoteReference.to_full_path(join_path(reader.get_value(self.k_config_remote), ref.name))
+			return RemoteReference(self.repo, remote_refpath)
+		# END handle have tracking branch
+		
+		# we are not a tracking branch
+		return None
 	
 	def rename(self, new_path, force=False):
 		"""Rename self to a new path
@@ -799,6 +844,29 @@ class Head(Reference):
 		
 		self.repo.git.checkout(self, **kwargs)
 		return self.repo.active_branch
+		
+	#{ Configruation
+	
+	def _config_parser(self, read_only):
+		if read_only:
+			parser = self.repo.config_reader()
+		else:
+			parser = self.repo.config_writer()
+		# END handle parser instance
+		
+		return SectionConstraint(parser, 'branch "%s"' % self.name)
+	
+	def config_reader(self):
+		""":return: A configuration parser instance constrained to only read 
+		this instance's values"""
+		return self._config_parser(read_only=True)
+		
+	def config_writer(self):
+		""":return: A configuration writer instance with read-and write acccess
+			to options of this head"""
+		return self._config_parser(read_only=False)
+	
+	#} END configuration
 		
 
 class TagReference(Reference):
@@ -892,6 +960,16 @@ Tag = TagReference
 class RemoteReference(Head):
 	"""Represents a reference pointing to a remote head."""
 	_common_path_default = "refs/remotes"
+	
+	
+	@classmethod
+	def iter_items(cls, repo, common_path = None, remote=None):
+		"""Iterate remote references, and if given, constrain them to the given remote"""
+		common_path = common_path or cls._common_path_default
+		if remote is not None:
+			common_path = join_path(common_path, str(remote))
+		# END handle remote constraint
+		return super(RemoteReference, cls).iter_items(repo, common_path)
 	
 	@property
 	def remote_name(self):

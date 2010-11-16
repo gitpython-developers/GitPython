@@ -63,8 +63,9 @@ class TestRefs(TestBase):
 		assert len(s) == ref_count
 		assert len(s|s) == ref_count
 		
-	def test_heads(self):
-		for head in self.rorepo.heads:
+	@with_rw_repo('HEAD', bare=False)
+	def test_heads(self, rwrepo):
+		for head in rwrepo.heads:
 			assert head.name
 			assert head.path
 			assert "refs/heads" in head.path
@@ -72,6 +73,23 @@ class TestRefs(TestBase):
 			cur_object = head.object
 			assert prev_object == cur_object		# represent the same git object
 			assert prev_object is not cur_object	# but are different instances
+			
+			writer = head.config_writer()
+			tv = "testopt"
+			writer.set_value(tv, 1)
+			assert writer.get_value(tv) == 1
+			del(writer)
+			assert head.config_reader().get_value(tv) == 1
+			head.config_writer().remove_option(tv)
+			
+			# after the clone, we might still have a tracking branch setup
+			head.set_tracking_branch(None)
+			assert head.tracking_branch() is None
+ 			remote_ref = rwrepo.remotes[0].refs[0]
+			assert head.set_tracking_branch(remote_ref) is head
+			assert head.tracking_branch() == remote_ref
+			head.set_tracking_branch(None)
+			assert head.tracking_branch() is None
 		# END for each head
 		
 	def test_refs(self):
@@ -208,6 +226,8 @@ class TestRefs(TestBase):
 			refs = remote.refs
 			RemoteReference.delete(rw_repo, *refs)
 			remote_refs_so_far += len(refs)
+			for ref in refs:
+				assert ref.remote_name == remote.name
 		# END for each ref to delete
 		assert remote_refs_so_far
 		

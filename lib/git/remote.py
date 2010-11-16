@@ -468,11 +468,7 @@ class Remote(LazyMixin, Iterable):
 			you to omit the remote path portion, i.e.::
 			 remote.refs.master # yields RemoteReference('/refs/remotes/origin/master')"""
 		out_refs = IterableList(RemoteReference._id_attribute_, "%s/" % self.name)
-		for ref in RemoteReference.list_items(self.repo):
-			if ref.remote_name == self.name:
-				out_refs.append(ref)
-			# END if names match
-		# END for each ref
+		out_refs.extend(RemoteReference.list_items(self.repo, remote=self.name))
 		assert out_refs, "Remote %s did not have any references" % self.name
 		return out_refs
 		

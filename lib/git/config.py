@@ -74,7 +74,8 @@ class SectionConstraint(object):
 	
 	It supports all ConfigParser methods that operate on an option"""
 	__slots__ = ("_config", "_section_name")
-	_valid_attrs_ = ("get_value", "set_value", "get", "set", "getint", "getfloat", "getboolean", "has_option")
+	_valid_attrs_ = ("get_value", "set_value", "get", "set", "getint", "getfloat", "getboolean", "has_option", 
+					"remove_section", "remove_option", "options")
 	
 	def __init__(self, config, section):
 		self._config = config
