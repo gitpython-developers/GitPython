@@ -144,6 +144,9 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 		"""Hash this instance using its logical id, not the sha"""
 		return hash(self._name)
 		
+	def __str__(self):
+		return self._name
+		
 	@classmethod
 	def _config_parser(cls, repo, parent_commit, read_only):
 		""":return: Config Parser constrained to our submodule in read or write mode
@@ -250,20 +253,24 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 				remote_branch = mrepo.remotes.origin.refs[self.branch]
 				local_branch = git.Head(mrepo, git.Head.to_full_path(self.branch))
 				if not local_branch.is_valid():
-					mrepo.git.checkout(remote_branch, b=self.branch)
-				else:
-					# have a valid branch, but no checkout - make sure we can figure
-					# that out by marking the commit with a null_sha
-					# have to write it directly as .commit = NULLSHA tries to resolve the sha
-					ref = mrepo.head.ref
-					refpath = join_path_native(mrepo.git_dir, ref.to_full_path(ref.path))
-					refdir = os.path.dirname(refpath)
-					if not os.path.isdir(refdir):
-						os.makedirs(refdir)
-					#END handle directory
-					open(refpath, 'w').write(self.NULL_HEX_SHA)
+					# Setup a tracking configuration - branch doesn't need to 
+					# exist to do that
+					local_branch.set_tracking_branch(remote_branch)
+				#END handle local branch
+				
+				# have a valid branch, but no checkout - make sure we can figure
+				# that out by marking the commit with a null_sha
+				# have to write it directly as .commit = NULLSHA tries to resolve the sha
+				# This will bring the branch into existance
+				refpath = join_path_native(mrepo.git_dir, local_branch.path)
+				refdir = os.path.dirname(refpath)
+				if not os.path.isdir(refdir):
+					os.makedirs(refdir)
+				#END handle directory
+				open(refpath, 'w').write(self.NULL_HEX_SHA)
 				# END initial checkout + branch creation
-				# make sure we are not detached
+				
+				# make sure HEAD is not detached
 				mrepo.head.ref = local_branch
 			except IndexError:
 				print >> sys.stderr, "Warning: Failed to checkout tracking branch %s" % self.branch 
@@ -280,13 +287,14 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 				# branch - this should be prevented when setting the branch option
 				mrepo.head.reset(self.hexsha, index=True, working_tree=True)
 			# END handle checkout
-			
-			if recursive:
-				for submodule in self.iter_items(self.module()):
-					submodule.update(recursive, init)
-				# END handle recursive update
-			# END for each submodule
 		# END update to new commit only if needed
+		
+		# HANDLE RECURSION
+		if recursive:
+			for submodule in self.iter_items(self.module()):
+				submodule.update(recursive, init)
+			# END handle recursive update
+		# END for each submodule
 			
 		return self
 		

@@ -82,6 +82,8 @@ class TestSubmodule(TestBase):
 		
 		# TEST TODO: if a path in the gitmodules file, but not in the index, it raises
 		
+		# TEST UPDATE
+		##############
 		# module retrieval is not always possible
 		if rwrepo.bare:
 			self.failUnlessRaises(InvalidGitRepositoryError, sm.module)
@@ -106,6 +108,9 @@ class TestSubmodule(TestBase):
 			assert isinstance(sm.module(), git.Repo)
 			assert sm.module().working_tree_dir == sm.module_path()
 			
+			# we should have setup a tracking branch, which is also active
+			assert sm.module().head.ref.tracking_branch() is not None
+			
 			# delete the whole directory and re-initialize
 			shutil.rmtree(sm.module_path())
 			sm.update(recursive=False)
@@ -119,9 +124,11 @@ class TestSubmodule(TestBase):
 			csm.config_writer().set_value('url', new_csm_path)
 			assert csm.url == new_csm_path
 			
-			
 			# update recuesively again
 			sm.update(recursive=True)
+			
+			# tracking branch once again
+			csm.module().head.ref.tracking_branch() is not None
 			
 			# this flushed in a sub-submodule
 			assert len(list(rwrepo.iter_submodules())) == 2
