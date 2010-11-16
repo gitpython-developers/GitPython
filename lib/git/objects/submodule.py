@@ -211,18 +211,26 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 		:param skip_init: if True, the new repository will not be cloned to its location.
 		:return: The newly created submodule instance"""
 		
-	def update(self, recursive=False, init=True):
+	def update(self, recursive=False, init=True, to_latest_revision=False):
 		"""Update the repository of this submodule to point to the checkout
 		we point at with the binsha of this instance.
 		:param recursive: if True, we will operate recursively and update child-
 			modules as well.
 		:param init: if True, the module repository will be cloned into place if necessary
+		:param to_latest_revision: if True, the submodule's sha will be ignored during checkout.
+			Instead, the remote will be fetched, and the local tracking branch updated.
+			This only works if we have a local tracking branch, which is the case
+			if the remote repository had a master branch, or of the 'branch' option 
+			was specified for this submodule and the branch existed remotely
 		:note: does nothing in bare repositories
 		:return: self"""
 		if self.repo.bare:
 			return self
 		#END pass in bare mode
 		
+		
+		# ASSURE REPO IS PRESENT AND UPTODATE
+		#####################################
 		try:
 			mrepo = self.module()
 			for remote in mrepo.remotes:
@@ -277,22 +285,45 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 			#END handle tracking branch
 		#END handle initalization
 		
+		
+		# DETERMINE SHAS TO CHECKOUT
+		############################
+		binsha = self.binsha
+		hexsha = self.hexsha
+		is_detached = mrepo.head.is_detached
+		if to_latest_revision:
+			msg_base = "Cannot update to latest revision in repository at %r as " % mrepo.working_dir
+			if not is_detached:
+				rref = mrepo.head.ref.tracking_branch()
+				if rref is not None:
+					rcommit = rref.commit
+					binsha = rcommit.binsha
+					hexsha = rcommit.hexsha
+				else:
+					print >> sys.stderr, "%s a tracking branch was not set for local branch '%s'" % (msg_base, mrepo.head.ref) 
+				# END handle remote ref
+			else:
+				print >> sys.stderr, "%s there was no local tracking branch" % msg_base
+			# END handle detached head
+		# END handle to_latest_revision option
+		
 		# update the working tree
-		if mrepo.head.commit.binsha != self.binsha:
-			if mrepo.head.is_detached:
-				mrepo.git.checkout(self.hexsha)
+		if mrepo.head.commit.binsha != binsha:
+			if is_detached:
+				mrepo.git.checkout(hexsha)
 			else:
 				# TODO: allow to specify a rebase, merge, or reset
 				# TODO: Warn if the hexsha forces the tracking branch off the remote
 				# branch - this should be prevented when setting the branch option
-				mrepo.head.reset(self.hexsha, index=True, working_tree=True)
+				mrepo.head.reset(hexsha, index=True, working_tree=True)
 			# END handle checkout
 		# END update to new commit only if needed
 		
 		# HANDLE RECURSION
+		##################
 		if recursive:
 			for submodule in self.iter_items(self.module()):
-				submodule.update(recursive, init)
+				submodule.update(recursive, init, to_latest_revision)
 			# END handle recursive update
 		# END for each submodule
 			

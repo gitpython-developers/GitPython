@@ -132,6 +132,29 @@ class TestSubmodule(TestBase):
 			
 			# this flushed in a sub-submodule
 			assert len(list(rwrepo.iter_submodules())) == 2
+			
+			
+			# reset both heads to the previous version, verify that to_latest_revision works
+			for repo in (csm.module(), sm.module()):
+				repo.head.reset('HEAD~1', working_tree=1)
+			# END for each repo to reset
+			
+			sm.update(recursive=True, to_latest_revision=True)
+			for repo in (sm.module(), csm.module()):
+				assert repo.head.commit == repo.head.ref.tracking_branch().commit
+			# END for each repo to check
+			
+			# if the head is detached, it still works ( but warns )
+			smref = sm.module().head.ref
+			sm.module().head.ref = 'HEAD~1'
+			# if there is no tracking branch, we get a warning as well
+			csm_tracking_branch = csm.module().head.ref.tracking_branch()
+			csm.module().head.ref.set_tracking_branch(None)
+			sm.update(recursive=True, to_latest_revision=True)
+			
+			# undo the changes
+			sm.module().head.ref = smref
+			csm.module().head.ref.set_tracking_branch(csm_tracking_branch)
 		# END handle bare mode
 		
 		
