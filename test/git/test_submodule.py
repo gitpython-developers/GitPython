@@ -34,7 +34,7 @@ class TestSubmodule(TestBase):
 		assert sm.path == 'lib/git/ext/gitdb'
 		assert sm.path == sm.name				# for now, this is True
 		assert sm.url == 'git://gitorious.org/git-python/gitdb.git'
-		assert sm.branch == 'master'			# its unset in this case
+		assert sm.branch.name == 'master'			# its unset in this case
 		assert sm.parent_commit == rwrepo.head.commit
 		# size is invalid
 		self.failUnlessRaises(ValueError, getattr, sm, 'size')

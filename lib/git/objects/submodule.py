@@ -24,6 +24,10 @@ def sm_name(section):
 	""":return: name of the submodule as parsed from the section name"""
 	section = section.strip()
 	return section[11:-1]
+	
+def mkhead(repo, path):
+	""":return: New branch/head instance"""
+	return git.Head(repo, git.Head.to_full_path(path))
 #} END utilities
 
 
@@ -96,13 +100,14 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 		:param binsha: binary sha referring to a commit in the remote repository, see url parameter
 		:param parent_commit: see set_parent_commit()
 		:param url: The url to the remote repository which is the submodule
-		:param ref: Reference to checkout when cloning the remote repository"""
+		:param branch: Head instance to checkout when cloning the remote repository"""
 		super(Submodule, self).__init__(repo, binsha, mode, path)
 		if parent_commit is not None:
 			self._parent_commit = parent_commit
 		if url is not None:
 			self._url = url
 		if branch is not None:
+			assert isinstance(branch, git.Head)
 			self._branch = branch
 		if name is not None:
 			self._name = name
@@ -119,7 +124,7 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 			self.path = reader.get_value('path')
 			self._url = reader.get_value('url')
 			# git-python extension values - optional
-			self._branch = reader.get_value(self.k_head_option, self.k_head_default)
+			self._branch = mkhead(self.repo, reader.get_value(self.k_head_option, self.k_head_default))
 		elif attr == '_name':
 			raise AttributeError("Cannot retrieve the name of a submodule if it was not set initially")
 		else:
@@ -203,7 +208,7 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 	#{ Edit Interface
 	
 	@classmethod
-	def add(cls, repo, name, path, url=None, branch=k_head_default, no_checkout=False):
+	def add(cls, repo, name, path, url=None, branch=None, no_checkout=False):
 		"""Add a new submodule to the given repository. This will alter the index
 		as well as the .gitmodules file, but will not create a new commit.
 		If the submodule already exists, no matter if the configuration differs
@@ -220,8 +225,10 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 		:param branch: branch at which the submodule should (later) be checked out.
 			The given branch must exist in the remote repository, and will be checked
 			out locally as a tracking branch.
-			It will only be written into the configuration if it differs from the
-			default.
+			It will only be written into the configuration if it not None, which is
+			when the checked out branch will be the one the remote HEAD pointed to.
+			The result you get in these situation is somewhat fuzzy, and it is recommended
+			to specify at least 'master' here
 		:param no_checkout: if True, and if the repository has to be cloned manually, 
 			no checkout will be performed
 		:return: The newly created submodule instance
@@ -243,9 +250,9 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 			return repo.head.commit.tree[path]
 		# END handle existing
 		
-		branch = git.Head(repo, git.Head.to_full_path(branch))
+		br = mkhead(repo, branch or cls.k_head_default)
 		has_module = sm.module_exists()
-		branch_is_default = branch.name == cls.k_head_default
+		branch_is_default = branch is None
 		if has_module and url is not None:
 			if url not in [r.url for r in sm.module().remotes]:
 				raise ValueError("Specified URL '%s' does not match any remote url of the repository at '%s'" % (url, sm.module_path()))
@@ -266,8 +273,8 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 		else:
 			# clone new repo
 			kwargs = {'n' : no_checkout}
-			if branch_is_default:
-				kwargs['b'] = str(branch)
+			if not branch_is_default:
+				kwargs['b'] = str(br)
 			# END setup checkout-branch
 			mrepo = git.Repo.clone_from(url, path, **kwargs)
 		# END verify url
@@ -280,8 +287,8 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 		sm._url = url
 		if not branch_is_default:
 			# store full path
-			writer.set_value(cls.k_head_option, branch.path)
-			sm._branch = branch
+			writer.set_value(cls.k_head_option, br.path)
+			sm._branch = br.path
 		# END handle path
 		del(writer)
 		
@@ -348,8 +355,8 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 			
 			# see whether we have a valid branch to checkout
 			try:
-				remote_branch = mrepo.remotes.origin.refs[self.branch]
-				local_branch = git.Head(mrepo, git.Head.to_full_path(self.branch))
+				remote_branch = mrepo.remotes.origin.refs[self.branch.name]
+				local_branch = self.branch
 				if not local_branch.is_valid():
 					# Setup a tracking configuration - branch doesn't need to 
 					# exist to do that
@@ -578,7 +585,6 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 		:raise InvalidGitRepositoryError: if a repository was not available. This could 
 			also mean that it was not yet initialized"""
 		# late import to workaround circular dependencies
-		from git.repo import Repo
 		
 		if self.repo.bare:
 			raise InvalidGitRepositoryError("Cannot retrieve module repository in bare parent repositories")
@@ -586,7 +592,7 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 		
 		module_path = self.module_path() 
 		try:
-			repo = Repo(module_path)
+			repo = git.Repo(module_path)
 			if repo != self.repo:
 				return repo
 			# END handle repo uninitialized
@@ -640,7 +646,7 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 	
 	@property
 	def branch(self):
-		""":return: The branch name that we are to checkout"""
+		""":return: The branch instance that we are to checkout"""
 		return self._branch
 	
 	@property
@@ -715,7 +721,7 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 			# fill in remaining info - saves time as it doesn't have to be parsed again
 			sm._name = n
 			sm._parent_commit = pc
-			sm._branch = b
+			sm._branch = mkhead(repo, b)
 			sm._url = u
 			
 			yield sm
@@ -742,7 +748,7 @@ class RootModule(Submodule):
 										name = self.k_root_name, 
 										parent_commit = repo.head.commit,
 										url = '',
-										branch = self.k_head_default
+										branch = mkhead(repo, self.k_head_default)
 										)
 		
 	
