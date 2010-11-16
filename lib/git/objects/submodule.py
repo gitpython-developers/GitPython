@@ -1,11 +1,11 @@
 import base
 from util import Traversable
 from StringIO import StringIO					# need a dict to set bloody .name field
-from git.util import Iterable
+from git.util import Iterable, join_path_native, to_native_path_linux
 from git.config import GitConfigParser, SectionConstraint
-from git.util import join_path_native
 from git.exc import InvalidGitRepositoryError, NoSuchPathError
 import stat
+import git
 
 import os
 import sys
@@ -87,6 +87,7 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 	type = 'submodule'
 	
 	__slots__ = ('_parent_commit', '_url', '_branch', '_name', '__weakref__')
+	_cache_attrs = ('path', '_url', '_branch')
 	
 	def __init__(self, repo, binsha, mode=None, path=None, name = None, parent_commit=None, url=None, branch=None):
 		"""Initialize this instance with its attributes. We only document the ones 
@@ -178,7 +179,7 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 
 	def _clear_cache(self):
 		# clear the possibly changed values
-		for name in ('path', '_branch', '_url'):
+		for name in self._cache_attrs:
 			try:
 				delattr(self, name)
 			except AttributeError:
@@ -235,18 +236,19 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 			path = path[:-1]
 		# END handle trailing slash
 		
+		# INSTANTIATE INTERMEDIATE SM
 		sm = cls(repo, cls.NULL_BIN_SHA, cls.k_def_mode, path, name)
 		if sm.exists():
 			# reretrieve submodule from tree
 			return repo.head.commit.tree[path]
 		# END handle existing
 		
-		branch = Head(repo, head.to_full_path(branch))
+		branch = git.Head(repo, git.Head.to_full_path(branch))
 		has_module = sm.module_exists()
 		branch_is_default = branch.name == cls.k_head_default
 		if has_module and url is not None:
 			if url not in [r.url for r in sm.module().remotes]:
-				raise ValueError("Specified URL %s does not match any remote url of the repository at %s" % (url, sm.module_path()))
+				raise ValueError("Specified URL '%s' does not match any remote url of the repository at '%s'" % (url, sm.module_path()))
 			# END check url
 		# END verify urls match
 		
@@ -611,14 +613,30 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 		""":return: True if the submodule exists, False otherwise. Please note that
 		a submodule may exist (in the .gitmodules file) even though its module
 		doesn't exist"""
+		# keep attributes for later, and restore them if we have no valid data
+		# this way we do not actually alter the state of the object
+		loc = locals()
+		for attr in self._cache_attrs:
+			if hasattr(self, attr):
+				loc[attr] = getattr(self, attr)
+			# END if we have the attribute cache
+		#END for each attr
 		self._clear_cache()
+		
 		try:
-			self.path
-			return True
-		except Exception:
-			# we raise if the path cannot be restored from configuration
-			return False
-		# END handle exceptions
+			try:
+				self.path
+				return True
+			except Exception:
+				return False
+			# END handle exceptions
+		finally:
+			for attr in self._cache_attrs:
+				if attr in loc:
+					setattr(self, attr, loc[attr])
+				# END if we have a cache
+			# END reapply each attribute
+		# END handle object state consistency
 	
 	@property
 	def branch(self):

@@ -99,6 +99,21 @@ class TestSubmodule(TestBase):
 			# currently there is only one submodule
 			assert len(list(rwrepo.iter_submodules())) == 1
 			
+			# TEST ADD
+			###########
+			# preliminary tests
+			# adding existing returns exactly the existing
+			sma = Submodule.add(rwrepo, sm.name, sm.path)
+			assert sma.path == sm.path
+			
+			# no url and no module at path fails
+			self.failUnlessRaises(ValueError, Submodule.add, rwrepo, "newsubm", "pathtorepo", url=None)
+			
+			# TODO: Test no remote url in existing repository
+			
+			# CONTINUE UPDATE
+			#################
+			
 			# lets update it - its a recursive one too
 			newdir = os.path.join(sm.module_path(), 'dir')
 			os.makedirs(newdir)
@@ -112,6 +127,15 @@ class TestSubmodule(TestBase):
 			assert isinstance(sm.module(), git.Repo)
 			assert sm.module().working_tree_dir == sm.module_path()
 			
+			# INTERLEAVE ADD TEST
+			#####################
+			# url must match the one in the existing repository ( if submodule name suggests a new one )
+			# or we raise
+			self.failUnlessRaises(ValueError, Submodule.add, rwrepo, "newsubm", sm.path, "git://someurl/repo.git")
+			
+			
+			# CONTINUE UPDATE
+			#################
 			# we should have setup a tracking branch, which is also active
 			assert sm.module().head.ref.tracking_branch() is not None
 			
