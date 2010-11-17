@@ -222,6 +222,8 @@ class Repo(object):
 		:raise ValueError:  if no remote with such a name exists"""
 		return Remote(self, name)
 		
+	#{ Submodules
+		
 	@property
 	def submodules(self):
 		""":return: git.IterableList(Submodule, ...) of direct submodules"""
@@ -240,7 +242,66 @@ class Repo(object):
 		"""An iterator yielding Submodule instances, see Traversable interface
 		for a description of args and kwargs
 		:return: Iterator"""
-		return RootModule(self).traverse(*args, **kwargs) 
+		return RootModule(self).traverse(*args, **kwargs)
+		
+	def submodule_update(self, previous_commit=None, force_remove=False, to_latest_revision=False):
+		"""Update the submodules of this repository to the current HEAD commit.
+		This method behaves smartly by determining changes of the path of a submodules
+		repository, next to changes to the to-be-checked-out commit or the branch to be 
+		checked out. This works if the submodules ID does not change.
+		Additionally it will detect addition and removal of submodules, which will be handled
+		gracefully.
+		
+		:param previous_commit: If set to a commit'ish, the commit we should use 
+			as the previous commit the HEAD pointed to before it was set to the commit it points to now. 
+			If None, it defaults to ORIG_HEAD otherwise, or the parent of the current
+			commit if it is not given
+		:param force_remove: If submodules have been deleted, they will be forcibly removed.
+			Otherwise the update may fail if a submodule's repository cannot be deleted as 
+			changes have been made to it (see Submodule.update() for more information)
+		:param to_latest_revision: If True, instead of checking out the revision pointed to 
+			by this submodule's sha, the checked out tracking branch will be merged with the 
+			newest remote branch fetched from the repository's origin"""
+		if self.bare:
+			raise InvalidGitRepositoryError("Cannot update submodules in bare repositories")
+		# END handle bare
+		
+		# HANDLE COMMITS
+		##################
+		cur_commit = self.head.commit
+		if previous_commit is None:
+			symref = SymbolicReference(self, SymbolicReference.to_full_path('ORIG_HEAD'))
+			try:
+				previous_commit = symref.commit
+			except Exception:
+				pcommits = cur_commit.parents
+				if pcommits:
+					previous_commit = pcommits[0]
+				else:
+					# in this special case, we just diff against ourselve, which
+					# means exactly no change
+					previous_commit = cur_commit
+				# END handle initial commit
+			# END no ORIG_HEAD
+		else:
+			previous_commit = self.commit(previous_commit)	 # obtain commit object 
+		# END handle previous commit
+		
+		sms = self.submodules()
+		
+		# HANDLE REMOVALS
+		
+		# HANDLE PATH RENAMES
+		
+		# FINALLY UPDATE ALL ACTUAL SUBMODULES
+		##########################################
+		if previous_commit == cur_commit:
+			for sm in sms:
+				sm.update(recursive=True, init=True, to_latest_revision=to_latest_revision)
+			# END for each submodule to update
+		# END handle commits are equal
+		
+	#}END submodules
 
 	@property
 	def tags(self):
