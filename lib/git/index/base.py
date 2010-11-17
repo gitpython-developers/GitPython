@@ -750,7 +750,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 		may be absolute or relative paths, entries or blobs"""
 		paths = list()
 		for item in items:
-			if isinstance(item, (BaseIndexEntry,Blob)):
+			if isinstance(item, (BaseIndexEntry,(Blob, Submodule))):
 				paths.append(self._to_relative_path(item.path))
 			elif isinstance(item, basestring):
 				paths.append(self._to_relative_path(item))
@@ -777,7 +777,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
 				The path string may include globs, such as *.c.
 
-			- Blob object
+			- Blob Object
 				Only the path portion is used in this case.
 
 			- BaseIndexEntry or compatible type
