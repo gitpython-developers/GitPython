@@ -202,7 +202,7 @@ class TestSubmodule(TestBase):
 			sm.module().index.reset(working_tree=True)
 			
 			# this would work
-			sm.remove(dry_run=True)
+			assert sm.remove(dry_run=True) is sm
 			assert sm.module_exists()
 			sm.remove(force=True, dry_run=True)
 			assert sm.module_exists()
@@ -213,7 +213,7 @@ class TestSubmodule(TestBase):
 			self.failUnlessRaises(InvalidGitRepositoryError, sm.remove)
 			
 			# forcibly delete the child repository
-			csm.remove(force=True)
+			assert csm.remove(force=True) is csm
 			assert not csm.exists()
 			assert not csm.module_exists()
 			assert len(sm.children()) == 0
@@ -263,8 +263,8 @@ class TestSubmodule(TestBase):
 			
 			# needs update as the head changed, it thinks its in the history 
 			# of the repo otherwise
-			nsm._parent_commit = rwrepo.head.commit
-			osm._parent_commit = rwrepo.head.commit
+			nsm.set_parent_commit(rwrepo.head.commit)
+			osm.set_parent_commit(rwrepo.head.commit)
 			
 			# MOVE MODULE
 			#############
