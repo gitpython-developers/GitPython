@@ -570,4 +570,9 @@ class TestRepo(TestBase):
 		self.failUnlessRaises(InvalidGitRepositoryError, rwrepo.submodule_update)
 		rwrepo._bare = False
 		
+		# test create submodule
+		sm = rwrepo.submodules[0]
+		sm = rwrepo.create_submodule("my_new_sub", "some_path", join_path_native(self.rorepo.working_tree_dir, sm.path))
+		assert isinstance(sm, Submodule)
+		
 		
