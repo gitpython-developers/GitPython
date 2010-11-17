@@ -562,3 +562,12 @@ class TestRepo(TestBase):
 		
 		assert isinstance(self.rorepo.submodule("lib/git/ext/gitdb"), Submodule)
 		self.failUnlessRaises(ValueError, self.rorepo.submodule, "doesn't exist")
+		
+	@with_rw_repo('HEAD', bare=False)
+	def test_submodule_update(self, rwrepo):
+		# fails in bare mode
+		rwrepo._bare = True
+		self.failUnlessRaises(InvalidGitRepositoryError, rwrepo.submodule_update)
+		rwrepo._bare = False
+		
+		

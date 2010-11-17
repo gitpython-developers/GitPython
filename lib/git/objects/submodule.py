@@ -28,6 +28,19 @@ def sm_name(section):
 def mkhead(repo, path):
 	""":return: New branch/head instance"""
 	return git.Head(repo, git.Head.to_full_path(path))
+	
+def unbare_repo(func):
+	"""Methods with this decorator raise InvalidGitRepositoryError if they 
+	encounter a bare repository"""
+	def wrapper(self, *args, **kwargs):
+		if self.repo.bare:
+			raise InvalidGitRepositoryError("Method '%s' cannot operate on bare repositories" % func.__name__)
+		#END bare method
+		return func(self, *args, **kwargs)
+	# END wrapper
+	wrapper.__name__ = func.__name__
+	return wrapper
+	
 #} END utilities
 
 
@@ -39,10 +52,14 @@ class SubmoduleConfigParser(GitConfigParser):
 	with the new data, if we have written into a stream. Otherwise it will 
 	add the local file to the index to make it correspond with the working tree.
 	Additionally, the cache must be cleared
+	
+	Please note that no mutating method will work in bare mode
 	"""
 	
 	def __init__(self, *args, **kwargs):
 		self._smref = None
+		self._index = None
+		self._auto_write = True
 		super(SubmoduleConfigParser, self).__init__(*args, **kwargs)
 	
 	#{ Interface
@@ -59,7 +76,11 @@ class SubmoduleConfigParser(GitConfigParser):
 		
 		sm = self._smref()
 		if sm is not None:
-			sm.repo.index.add([sm.k_modules_file])
+			index = self._index
+			if index is None:
+				index = sm.repo.index
+			# END handle index
+			index.add([sm.k_modules_file], write=self._auto_write)
 			sm._clear_cache()
 		# END handle weakref
 
@@ -102,6 +123,7 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 		:param url: The url to the remote repository which is the submodule
 		:param branch: Head instance to checkout when cloning the remote repository"""
 		super(Submodule, self).__init__(repo, binsha, mode, path)
+		self.size = 0
 		if parent_commit is not None:
 			self._parent_commit = parent_commit
 		if url is not None:
@@ -113,9 +135,7 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 			self._name = name
 	
 	def _set_cache_(self, attr):
-		if attr == 'size':
-			raise ValueError("Submodules do not have a size as they do not refer to anything in this repository")
-		elif attr == '_parent_commit':
+		if attr == '_parent_commit':
 			# set a default value, which is the root tree of the current head
 			self._parent_commit = self.repo.commit()
 		elif attr in ('path', '_url', '_branch'):
@@ -235,8 +255,8 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 		:note: works atomically, such that no change will be done if the repository
 			update fails for instance"""
 		if repo.bare:
-			raise InvalidGitRepositoryError("Cannot add a submodule to bare repositories")
-		#END handle bare mode
+			raise InvalidGitRepositoryError("Cannot add submodules to bare repositories")
+		# END handle bare repos
 		
 		path = to_native_path_linux(path)
 		if path.endswith('/'):
@@ -280,7 +300,8 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 		# END verify url
 		
 		# update configuration and index
-		writer = sm.config_writer()
+		index = sm.repo.index
+		writer = sm.config_writer(index=index, write=False)
 		writer.set_value('url', url)
 		writer.set_value('path', path)
 		
@@ -302,10 +323,9 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 		pcommit = repo.head.commit
 		sm._parent_commit = pcommit
 		sm.binsha = mrepo.head.commit.binsha
-		repo.index.add([sm], write=True)
+		index.add([sm], write=True)
 		
 		return sm
-		
 		
 	def update(self, recursive=False, init=True, to_latest_revision=False):
 		"""Update the repository of this submodule to point to the checkout
@@ -426,6 +446,85 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 			
 		return self
 		
+	@unbare_repo
+	def move(self, module_path):
+		"""Move the submodule to a another module path. This involves physically moving
+		the repository at our current path, changing the configuration, as well as
+		adjusting our index entry accordingly.
+		:param module_path: the path to which to move our module, given as
+			repository-relative path. Intermediate directories will be created
+			accordingly. If the path already exists, it must be empty.
+			Trailling (back)slashes are removed automatically
+		:return: self
+		:raise ValueError: if the module path existed and was not empty, or was a file
+		:note: Currently the method is not atomic, and it could leave the repository
+			in an inconsistent state if a sub-step fails for some reason
+		"""
+		module_path = to_native_path_linux(module_path)
+		if module_path.endswith('/'):
+			module_path = module_path[:-1]
+		# END handle trailing slash
+		
+		# VERIFY DESTINATION
+		if module_path == self.path:
+			return self
+		#END handle no change
+		
+		dest_path = join_path_native(self.repo.working_tree_dir, module_path)
+		if os.path.isfile(dest_path):
+			raise ValueError("Cannot move repository onto a file: %s" % dest_path)
+		# END handle target files
+		
+		# remove existing destination
+		if os.path.exists(dest_path):
+			if len(os.listdir(dest_path)):
+				raise ValueError("Destination module directory was not empty")
+			#END handle non-emptyness
+			
+			if os.path.islink(dest_path):
+				os.remove(dest_path)
+			else:
+				os.rmdir(dest_path)
+			#END handle link
+		else:
+			# recreate parent directories
+			# NOTE: renames() does that now
+			pass
+		#END handle existance
+		
+		# move the module into place if possible
+		cur_path = self.module_path()
+		if os.path.exists(cur_path):
+			os.renames(cur_path, dest_path)
+		#END move physical module
+		
+		# NOTE: from now on, we would have to undo the rename !
+		
+		# rename the index entry - have to manipulate the index directly as 
+		# git-mv cannot be used on submodules ... yeah
+		index = self.repo.index
+		try:
+			ekey = index.entry_key(self.path, 0)
+			entry = index.entries[ekey]
+			del(index.entries[ekey])
+			nentry = git.IndexEntry(entry[:3]+(module_path,)+entry[4:])
+			ekey = index.entry_key(module_path, 0)
+			index.entries[ekey] = nentry
+		except KeyError:
+			raise ValueError("Submodule's entry at %r did not exist" % (self.path))
+		#END handle submodule doesn't exist
+		
+		# update configuration
+		writer = self.config_writer(index=index)		# auto-write
+		writer.set_value('path', module_path)
+		self.path = module_path
+		del(writer)
+		
+		return self
+		
+		
+		
+	@unbare_repo
 	def remove(self, module=True, force=False, configuration=True, dry_run=False):
 		"""Remove this submodule from the repository. This will remove our entry
 		from the .gitmodules file and the entry in the .git/config file.
@@ -449,10 +548,6 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 		:note: doesn't work in bare repositories
 		:raise InvalidGitRepositoryError: thrown if the repository cannot be deleted
 		:raise OSError: if directories or files could not be removed"""
-		if self.repo.bare:
-			raise InvalidGitRepositoryError("Cannot delete a submodule in bare repository")
-		# END handle bare mode
-		
 		if not (module + configuration):
 			raise ValueError("Need to specify to delete at least the module, or the configuration")
 		# END handle params
@@ -565,31 +660,37 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 		
 		return self
 		
-	def config_writer(self):
+	@unbare_repo
+	def config_writer(self, index=None, write=True):
 		""":return: a config writer instance allowing you to read and write the data
 		belonging to this submodule into the .gitmodules file.
 		
+		:param index: if not None, an IndexFile instance which should be written.
+			defaults to the index of the Submodule's parent repository.
+		:param write: if True, the index will be written each time a configuration
+			value changes.
+		:note: the parameters allow for a more efficient writing of the index, 
+			as you can pass in a modified index on your own, prevent automatic writing, 
+			and write yourself once the whole operation is complete
 		:raise ValueError: if trying to get a writer on a parent_commit which does not
 			match the current head commit
 		:raise IOError: If the .gitmodules file/blob could not be read"""
-		if self.repo.bare:
-			raise InvalidGitRepositoryError("Cannot change submodule configuration in a bare repository")
-		return self._config_parser_constrained(read_only=False)
+		writer = self._config_parser_constrained(read_only=False)
+		if index is not None:
+			writer.config._index = index
+		writer.config._auto_write = write
+		return writer
 		
 	#} END edit interface
 	
 	#{ Query Interface
 	
+	@unbare_repo
 	def module(self):
 		""":return: Repo instance initialized from the repository at our submodule path
 		:raise InvalidGitRepositoryError: if a repository was not available. This could 
 			also mean that it was not yet initialized"""
 		# late import to workaround circular dependencies
-		
-		if self.repo.bare:
-			raise InvalidGitRepositoryError("Cannot retrieve module repository in bare parent repositories")
-		# END handle bare mode
-		
 		module_path = self.module_path() 
 		try:
 			repo = git.Repo(module_path)

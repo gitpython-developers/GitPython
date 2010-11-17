@@ -91,6 +91,11 @@ class SectionConstraint(object):
 		as first argument"""
 		return getattr(self._config, method)(self._section_name, *args, **kwargs)
 		
+	@property
+	def config(self):
+		"""return: Configparser instance we constrain"""
+		return self._config
+		
 
 class GitConfigParser(cp.RawConfigParser, object):
 	"""Implements specifics required to read git style configuration files.

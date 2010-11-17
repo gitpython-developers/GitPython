@@ -30,6 +30,7 @@ from typ import (
 					CE_NAMEMASK, 
 					CE_STAGESHIFT
 				)
+CE_NAMEMASK_INV = ~CE_NAMEMASK
 
 from util import 	(
 					pack, 
@@ -84,7 +85,7 @@ def write_cache(entries, stream, extension_data=None, ShaStreamCls=IndexFileSHA1
 		path = entry[3]
 		plen = len(path) & CE_NAMEMASK		# path length
 		assert plen == len(path), "Path %s too long to fit into index" % entry[3]
-		flags = plen | entry[2]
+		flags = plen | (entry[2] & CE_NAMEMASK_INV)		# clear possible previous values
 		write(pack(">LLLLLL20sH", entry[6], entry[7], entry[0],
 									entry[8], entry[9], entry[10], entry[1], flags))
 		write(path)

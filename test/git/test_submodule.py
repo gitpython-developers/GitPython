@@ -36,8 +36,8 @@ class TestSubmodule(TestBase):
 		assert sm.url == 'git://gitorious.org/git-python/gitdb.git'
 		assert sm.branch.name == 'master'			# its unset in this case
 		assert sm.parent_commit == rwrepo.head.commit
-		# size is invalid
-		self.failUnlessRaises(ValueError, getattr, sm, 'size')
+		# size is always 0
+		assert sm.size == 0
 		
 		# some commits earlier we still have a submodule, but its at a different commit
 		smold = Submodule.iter_items(rwrepo, self.k_subm_changed).next()
@@ -240,7 +240,7 @@ class TestSubmodule(TestBase):
 			# add a simple remote repo - trailing slashes are no problem
 			smid = "newsub"
 			osmid = "othersub"
-			nsm = Submodule.add(rwrepo, smid, sm_repopath, new_smclone_path, None, no_checkout=True)
+			nsm = Submodule.add(rwrepo, smid, sm_repopath, new_smclone_path+"/", None, no_checkout=True)
 			assert nsm.name == smid
 			assert nsm.module_exists()
 			assert nsm.exists()
@@ -261,11 +261,29 @@ class TestSubmodule(TestBase):
 			rwrepo.index.commit("my submod commit")
 			assert len(rwrepo.submodules) == 2
 			
-			# if a submodule's repo has no remotes, it can't be added without an explicit url
-			osmod = osm.module()
 			# needs update as the head changed, it thinks its in the history 
 			# of the repo otherwise
+			nsm._parent_commit = rwrepo.head.commit
 			osm._parent_commit = rwrepo.head.commit
+			
+			# MOVE MODULE
+			#############
+			# renaming to the same path does nothing
+			assert nsm.move(sm.path) is nsm
+			
+			# rename a module
+			nmp = join_path_native("new", "module", "dir") + "/" # new module path
+			assert nsm.move(nmp) is nsm
+			nmp = nmp[:-1]			# cut last /
+			assert nsm.path == nmp
+			assert rwrepo.submodules[0].path == nmp
+			
+			
+			# REMOVE 'EM ALL
+			################
+			# if a submodule's repo has no remotes, it can't be added without an explicit url
+			osmod = osm.module()
+			
 			osm.remove(module=False)
 			for remote in osmod.remotes:
 				remote.remove(osmod, remote.name)
@@ -273,35 +291,9 @@ class TestSubmodule(TestBase):
 			self.failUnlessRaises(ValueError, Submodule.add, rwrepo, osmid, csm_repopath, url=None)   
 		# END handle bare mode
 		
-		
 		# Error if there is no submodule file here
 		self.failUnlessRaises(IOError, Submodule._config_parser, rwrepo, rwrepo.commit(self.k_no_subm_tag), True)
 		
-		# TODO: Handle bare/unbare
-		# latest submodules write changes into the .gitmodules files
-		
-		# uncached path/url - retrieves information from .gitmodules file
-		
-		# index stays up-to-date with the working tree .gitmodules file
-		
-		# changing the root_tree yields new values when querying them (i.e. cache is cleared)
-		
-		
-		
-		
-		# set_parent_commit fails if tree has no gitmodule file
-		
-		
-		
-		if rwrepo.bare:
-			# module fails
-			pass
-		else:
-			# get the module repository
-			pass
-		# END bare handling
-		
-		# Writing of historical submodule configurations must not work
 	
 	@with_rw_repo(k_subm_current)
 	def test_base_rw(self, rwrepo):
