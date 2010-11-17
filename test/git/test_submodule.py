@@ -113,7 +113,7 @@ class TestSubmodule(TestBase):
 			#################
 			
 			# lets update it - its a recursive one too
-			newdir = os.path.join(sm.module_path(), 'dir')
+			newdir = os.path.join(sm.abspath, 'dir')
 			os.makedirs(newdir)
 			
 			# update fails if the path already exists non-empty
@@ -124,7 +124,7 @@ class TestSubmodule(TestBase):
 			sm_repopath = sm.path				# cache for later
 			assert sm.module_exists()
 			assert isinstance(sm.module(), git.Repo)
-			assert sm.module().working_tree_dir == sm.module_path()
+			assert sm.module().working_tree_dir == sm.abspath
 			
 			# INTERLEAVE ADD TEST
 			#####################
@@ -139,7 +139,7 @@ class TestSubmodule(TestBase):
 			assert sm.module().head.ref.tracking_branch() is not None
 			
 			# delete the whole directory and re-initialize
-			shutil.rmtree(sm.module_path())
+			shutil.rmtree(sm.abspath)
 			sm.update(recursive=False)
 			assert len(list(rwrepo.iter_submodules())) == 2
 			assert len(sm.children()) == 1			# its not checked out yet
@@ -273,11 +273,29 @@ class TestSubmodule(TestBase):
 			
 			# rename a module
 			nmp = join_path_native("new", "module", "dir") + "/" # new module path
+			pmp = nsm.path
+			abspmp = nsm.abspath
 			assert nsm.move(nmp) is nsm
 			nmp = nmp[:-1]			# cut last /
 			assert nsm.path == nmp
 			assert rwrepo.submodules[0].path == nmp
 			
+			# move it back - but there is a file now - this doesn't work
+			# as the empty directories where removed.
+			self.failUnlessRaises(IOError, open, abspmp, 'w')
+			
+			mpath = 'newsubmodule'
+			absmpath = join_path_native(rwrepo.working_tree_dir, mpath)
+			open(absmpath, 'w').write('')
+			self.failUnlessRaises(ValueError, nsm.move, mpath)
+			os.remove(absmpath)
+			
+			# now it works, as we just move it back
+			nsm.move(pmp)
+			assert nsm.path == pmp
+			assert rwrepo.submodules[0].path == pmp
+			
+			# TODO lowprio: test remaining exceptions ... for now its okay, the code looks right
 			
 			# REMOVE 'EM ALL
 			################

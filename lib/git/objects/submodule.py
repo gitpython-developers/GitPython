@@ -275,7 +275,7 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 		branch_is_default = branch is None
 		if has_module and url is not None:
 			if url not in [r.url for r in sm.module().remotes]:
-				raise ValueError("Specified URL '%s' does not match any remote url of the repository at '%s'" % (url, sm.module_path()))
+				raise ValueError("Specified URL '%s' does not match any remote url of the repository at '%s'" % (url, sm.abspath))
 			# END check url
 		# END verify urls match
 		
@@ -287,7 +287,7 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 			mrepo = sm.module()
 			urls = [r.url for r in mrepo.remotes]
 			if not urls:
-				raise ValueError("Didn't find any remote url in repository at %s" % sm.module_path())
+				raise ValueError("Didn't find any remote url in repository at %s" % sm.abspath)
 			# END verify we have url
 			url = urls[0]
 		else:
@@ -493,7 +493,7 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 		#END handle existance
 		
 		# move the module into place if possible
-		cur_path = self.module_path()
+		cur_path = self.abspath
 		if os.path.exists(cur_path):
 			os.renames(cur_path, dest_path)
 		#END move physical module
@@ -521,8 +521,6 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 		del(writer)
 		
 		return self
-		
-		
 		
 	@unbare_repo
 	def remove(self, module=True, force=False, configuration=True, dry_run=False):
@@ -559,7 +557,7 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 				# take the fast lane and just delete everything in our module path
 				# TODO: If we run into permission problems, we have a highly inconsistent
 				# state. Delete the .git folders last, start with the submodules first
-				mp = self.module_path()
+				mp = self.abspath
 				method = None
 				if os.path.islink(mp):
 					method = os.remove
@@ -691,7 +689,7 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 		:raise InvalidGitRepositoryError: if a repository was not available. This could 
 			also mean that it was not yet initialized"""
 		# late import to workaround circular dependencies
-		module_path = self.module_path() 
+		module_path = self.abspath 
 		try:
 			repo = git.Repo(module_path)
 			if repo != self.repo:
@@ -702,10 +700,6 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 		else:
 			raise InvalidGitRepositoryError("Repository at %r was not yet checked out" % module_path)
 		# END handle exceptions
-		
-	def module_path(self):
-		""":return: full path to the root of our module. It is relative to the filesystem root"""
-		return join_path_native(self.repo.working_tree_dir, self.path)
 		
 	def module_exists(self):
 		""":return: True if our module exists and is a valid git repository. See module() method"""
