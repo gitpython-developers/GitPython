@@ -41,7 +41,7 @@ def unbare_repo(func):
 	wrapper.__name__ = func.__name__
 	return wrapper
 	
-def find_remote_branch(remotes, branch):
+def find_first_remote_branch(remotes, branch):
 	"""Find the remote branch matching the name of the given branch or raise InvalidGitRepositoryError"""
 	for remote in remotes:
 		try:
@@ -394,7 +394,7 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 			# see whether we have a valid branch to checkout
 			try:
 				# find  a remote which has our branch - we try to be flexible
-				remote_branch = find_remote_branch(mrepo.remotes, self.branch)
+				remote_branch = find_first_remote_branch(mrepo.remotes, self.branch)
 				local_branch = self.branch
 				if not local_branch.is_valid():
 					# Setup a tracking configuration - branch doesn't need to 
@@ -1078,14 +1078,23 @@ class RootModule(Submodule):
 					# new remote branch
 					smm = sm.module()
 					smmr = smm.remotes
-					tbr = git.Head.create(smm, sm.branch.name)
-					tbr.set_tracking_branch(find_remote_branch(smmr, sm.branch))
+					try:
+						tbr = git.Head.create(smm, sm.branch.name)
+					except git.GitCommandError, e:
+						if e.status != 128:
+							raise
+						#END handle something unexpected
+						
+						# ... or reuse the existing one
+						tbr = git.Head(smm, git.Head.to_full_path(sm.branch.name))
+					#END assure tracking branch exists
 					
+					tbr.set_tracking_branch(find_first_remote_branch(smmr, sm.branch))
 					# figure out whether the previous tracking branch contains
 					# new commits compared to the other one, if not we can 
 					# delete it.
 					try:
-						tbr = find_remote_branch(smmr, psm.branch)
+						tbr = find_first_remote_branch(smmr, psm.branch)
 						if len(smm.git.cherry(tbr, psm.branch)) == 0:
 							psm.branch.delete(smm, psm.branch)
 						#END delete original tracking branch if there are no changes

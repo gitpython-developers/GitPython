@@ -437,16 +437,34 @@ class TestSubmodule(TestBase):
 		# head changed, as the remote url and its commit changed
 		assert prev_commit != nsm.module().head.commit
 		
-		assert False
+		# add the submodule's changed commit to the index, which is what the
+		# user would do
+		# beforehand, update our instance's binsha with the new one
+		nsm.binsha = nsm.module().head.commit.binsha
+		rwrepo.index.add([nsm])
 		
 		# change branch
 		#=================
-		nsm.set_parent_commit(csmpathchange)
-		# the branch used here is an old failure branch which should ideally stay ... lets see how long that works ;)
-		nbn = 'pack_offset_cache'
-		assert nsm.branch.name != nbn
-		nsm.config_writer().set_value(Submodule.k_head_option, nbn)
-		csmbranchchange = rwrepo.index.commit("changed branch")
+		# we only have one branch, so we switch to a virtual one, and back 
+		# to the current one to trigger the difference
+		cur_branch = nsm.branch
+		nsmm = nsm.module()
+		prev_commit = nsmm.head.commit
+		for branch in ("some_virtual_branch", cur_branch.name):
+			nsm.config_writer().set_value(Submodule.k_head_option, branch)
+			csmbranchchange = rwrepo.index.commit("changed branch to %s" % branch)
+			nsm.set_parent_commit(csmbranchchange)
+		# END for each branch to change
+		
+		# Lets remove our tracking branch to simulate some changes
+		nsmmh = nsmm.head
+		assert nsmmh.ref.tracking_branch() is None					# never set it up until now
+		assert not nsmmh.is_detached
+		
+		rm.update(recursive=False)
+		
+		assert nsmmh.ref.tracking_branch() is not None
+		assert not nsmmh.is_detached
 		
 		
 		# recursive update
