@@ -394,7 +394,8 @@ class TestSubmodule(TestBase):
 		#================
 		nsmn = "newsubmodule"
 		nsmp = "submrepo"
-		nsm = Submodule.add(rwrepo, nsmn, nsmp, url=join_path_native(self.rorepo.working_tree_dir, rsms[0].path, rsms[1].path))
+		async_url = join_path_native(self.rorepo.working_tree_dir, rsms[0].path, rsms[1].path)
+		nsm = Submodule.add(rwrepo, nsmn, nsmp, url=async_url)
 		csmadded = rwrepo.index.commit("Added submodule")
 		nsm.set_parent_commit(csmadded)
 		assert nsm.module_exists()
@@ -466,8 +467,16 @@ class TestSubmodule(TestBase):
 		assert nsmmh.ref.tracking_branch() is not None
 		assert not nsmmh.is_detached
 		
-		
 		# recursive update
 		# =================
 		# finally we recursively update a module, just to run the code at least once
+		# remove the module so that it has more work
+		assert len(nsm.children()) == 1
+		assert nsm.exists() and nsm.module_exists() and len(nsm.children()) == 1
+		# assure we pull locally only
+		nsmc = nsm.children()[0] 
+		nsmc.config_writer().set_value('url', async_url)
+		rm.update(recursive=True)
+		
+		assert len(nsm.children()) == 1 and nsmc.module_exists() 
 		

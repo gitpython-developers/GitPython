@@ -1121,7 +1121,7 @@ class RootModule(Submodule):
 			# or defective depth. The RootSubmodule type will never process itself, 
 			# which was done in the previous expression
 			if recursive:
-				type(cls)(sm.module()).update(recursive=True, force_remove=force_remove, 
+				type(self)(sm.module()).update(recursive=True, force_remove=force_remove, 
 											init=init, to_latest_revision=to_latest_revision)
 			#END handle recursive
 		# END for each submodule to update
