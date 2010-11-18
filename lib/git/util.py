@@ -317,14 +317,6 @@ class IterableList(list):
 		except AttributeError:
 			raise IndexError( "No item found with id %r" % (self._prefix + index) )
 			
-	def __contains__(self, item):
-		try:
-			self[item]
-			return True
-		except IndexError:
-			return False
-		# END handle exception
-
 
 class Iterable(object):
 	"""Defines an interface for iterable items which is to assure a uniform 

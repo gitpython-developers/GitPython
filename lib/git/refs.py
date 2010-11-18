@@ -224,12 +224,30 @@ class SymbolicReference(object):
 			# END end try string  
 		# END try commit attribute
 		
+		# maintain the orig-head if we are currently checked-out
+		head = HEAD(self.repo)
+		try:
+			if head.ref == self:
+				try:
+					# TODO: implement this atomically, if we fail below, orig_head is at an incorrect spot
+					# Enforce the creation of ORIG_HEAD
+					SymbolicReference.create(self.repo, head.orig_head().name, self.commit, force=True)
+				except ValueError:
+					pass
+				#END exception handling
+			# END if we are checked-out
+		except TypeError:
+			pass
+		# END handle detached heads
+		
 		# if we are writing a ref, use symbolic ref to get the reflog and more
 		# checking
-		# Otherwise we detach it and have to do it manually
+		# Otherwise we detach it and have to do it manually. Besides, this works
+		# recursively automaitcally, but should be replaced with a python implementation
+		# soon
 		if write_value.startswith('ref:'):
 			self.repo.git.symbolic_ref(self.path, write_value[5:])
-			return 
+			return
 		# END non-detached handling
 		
 		path = self._abs_path()
@@ -243,10 +261,10 @@ class SymbolicReference(object):
 		finally:
 			fp.close()
 		# END writing
-		
-	reference = property(_get_reference, _set_reference, doc="Returns the Reference we point to")
 	
-	# alias
+
+	# aliased reference
+	reference = property(_get_reference, _set_reference, doc="Returns the Reference we point to")
 	ref = reference
 		
 	def is_valid(self):
@@ -553,7 +571,6 @@ class Reference(SymbolicReference, LazyMixin, Iterable):
 		
 		:note: 
 			TypeChecking is done by the git command"""
-		# check for existence, touch it if required
 		abs_path = self._abs_path()
 		existed = True
 		if not isfile(abs_path):
@@ -618,6 +635,7 @@ class HEAD(SymbolicReference):
 	"""Special case of a Symbolic Reference as it represents the repository's 
 	HEAD reference."""
 	_HEAD_NAME = 'HEAD'
+	_ORIG_HEAD_NAME = 'ORIG_HEAD'
 	__slots__ = tuple()
 	
 	def __init__(self, repo, path=_HEAD_NAME):
@@ -625,6 +643,27 @@ class HEAD(SymbolicReference):
 			raise ValueError("HEAD instance must point to %r, got %r" % (self._HEAD_NAME, path))
 		super(HEAD, self).__init__(repo, path)
 	
+	def orig_head(self):
+		""":return: SymbolicReference pointing at the ORIG_HEAD, which is maintained 
+		to contain the previous value of HEAD"""
+		return SymbolicReference(self.repo, self._ORIG_HEAD_NAME)
+		
+	def _set_reference(self, ref):
+		"""If someone changes the reference through us, we must manually update 
+		the ORIG_HEAD if we are detached. The underlying implementation can only
+		handle un-detached heads as it has to check whether the current head 
+		is the checked-out one"""
+		if self.is_detached:
+			prev_commit = self.commit
+			super(HEAD, self)._set_reference(ref)
+			SymbolicReference.create(self.repo, self._ORIG_HEAD_NAME, prev_commit, force=True)
+		else:
+			super(HEAD, self)._set_reference(ref)
+		# END handle detached mode
+		
+	# aliased reference
+	reference = property(SymbolicReference._get_reference, _set_reference, doc="Returns the Reference we point to")
+	ref = reference
 	
 	def reset(self, commit='HEAD', index=True, working_tree = False, 
 				paths=None, **kwargs):
