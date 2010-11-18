@@ -321,11 +321,13 @@ class TestSubmodule(TestBase):
 	def test_base_bare(self, rwrepo):
 		self._do_base_tests(rwrepo)
 		
-	def test_root_module(self):
+	@with_rw_repo(k_subm_current, bare=False)
+	def test_root_module(self, rwrepo):
 		# Can query everything without problems
 		rm = RootModule(self.rorepo)
 		assert rm.module() is self.rorepo
 		
+		# try attributes
 		rm.binsha
 		rm.mode
 		rm.path
@@ -339,8 +341,46 @@ class TestSubmodule(TestBase):
 		rm.config_writer()
 		
 		# deep traversal gitdb / async
-		assert len(list(rm.traverse())) == 2
+		rsms = list(rm.traverse())
+		assert len(rsms) == 2			# gitdb and async, async being a child of gitdb
 		
-		# cannot set the parent commit as repo name doesn't exist
+		# cannot set the parent commit as root module's path didn't exist
 		self.failUnlessRaises(ValueError, rm.set_parent_commit, 'HEAD')
+		
+		# TEST UPDATE
+		#############
+		# setup commit which remove existing, add new and modify existing submodules
+		rm = RootModule(rwrepo)
+		assert len(rm.children()) == 1
+		
+		# modify path
+		sm = rm.children()[0]
+		pp = "path/prefix"
+		sm.config_writer().set_value('path', join_path_native(pp, sm.path))
+		cpathchange = rwrepo.index.commit("changed sm path")
+		
+		# add submodule
+		nsmn = "newsubmodule"
+		nsmp = "submrepo"
+		nsm = Submodule.add(rwrepo, nsmn, nsmp, url=join_path_native(self.rorepo.working_tree_dir, rsms[0].path, rsms[1].path))
+		csmadded = rwrepo.index.commit("Added submodule")
+		
+		# remove submodule - the previous one
+		sm.set_parent_commit(csmadded)
+		assert not sm.remove().exists()
+		csmremoved = rwrepo.index.commit("Removed submodule")
+		
+		# change url - to the first repository, this way we have a fast checkout, and a completely different 
+		# repository at the different url
+		nsm.set_parent_commit(csmremoved)
+		nsm.config_writer().set_value('url', join_path_native(self.rorepo.working_tree_dir, rsms[0].path))
+		csmpathchange = rwrepo.index.commit("changed url")
+		
+		# change branch
+		nsm.set_parent_commit(csmpathchange)
+		# the branch used here is an old failure branch which should ideally stay ... lets see how long that works ;)
+		nbn = 'pack_offset_cache'
+		assert nsm.branch.name != nbn
+		nsm.config_writer().set_value(Submodule.k_head_option, nbn)
+		csmbranchchange = rwrepo.index.commit("changed branch")
 		

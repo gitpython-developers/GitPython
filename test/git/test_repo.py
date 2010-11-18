@@ -575,4 +575,6 @@ class TestRepo(TestBase):
 		sm = rwrepo.create_submodule("my_new_sub", "some_path", join_path_native(self.rorepo.working_tree_dir, sm.path))
 		assert isinstance(sm, Submodule)
 		
+		# note: the rest of this functionality is tested in test_submodule
+		
 		

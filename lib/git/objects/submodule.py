@@ -50,7 +50,7 @@ def find_remote_branch(remotes, branch):
 			continue
 		# END exception handling
 	#END for remote
-	raise InvalidGitRepositoryError("Didn't find remote branch %r in any of the given remotes", branch
+	raise InvalidGitRepositoryError("Didn't find remote branch %r in any of the given remotes", branch)
 	
 #} END utilities
 
