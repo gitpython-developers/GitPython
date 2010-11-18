@@ -270,6 +270,9 @@ As trees only allow direct access to their direct entries, use the traverse  met
     tree.traverse()
     <generator object at 0x7f6598bd65a8>
     for entry in tree.traverse(): do_something_with(entry)
+    
+    
+.. note:: If tree's return Submodule objects, they will assume that they exist at the current head's commit. The tree it originated from may be rooted at another commit though, which has to be told to the Submodule object using its ``set_parent_commit(my_commit)`` method.
 
     
 The Index Object
@@ -317,6 +320,42 @@ Change configuration for a specific remote only::
     
     o.config_writer.set("pushurl", "other_url")
     
+    
+Submodule Handling
+******************
+Submodules can be conveniently handled using the methods provided by Git-Python, and as an added benefit, Git-Python provides functionality which behave smarter and less error prone than its original c-git implementation, that is Git-Python tries hard to keep your repository consistent when updating submodules recursively or adjusting the existing configuration.
+
+In the following brief example, you will learn about the very basics, assuming you operate on the Git-Python repository itself::
+    
+    >>> repo = Repo('path/to/git-python/repository')
+    >>> sms = repo.submodules
+    [git.Submodule(name=gitdb, path=lib/git/ext/gitdb, url=git://gitorious.org/git-python/gitdb.git, branch=master)]
+    >>> sm = sms[0]
+    >>> sm.name
+    'gitdb'
+    >>> sm.module()                                        # The module is the actual repository referenced by the submodule 
+    <git.Repo "<prefix>/git-python/lib/git/ext/gitdb/.git">
+    >>> sm.module_exists()
+    True
+    >>> sm.abspath == sm.module().working_tree_dir         # the submodule's absolute path is the module's path
+    True
+    >>> sm.hexsha                                          # Its sha defines the commit to checkout
+    '2ddc5bad224d8f545ef3bb2ab3df98dfe063c5b6'
+    >>> sm.exists()                                        # yes, this submodule is valid and exists
+    True
+    >>> sm.config_reader().get_value('path') == sm.path    # read its configuration conveniently
+    True
+    >>> sm.children()                                      # query the submodule hierarchy
+    [git.Submodule(name=async, path=ext/async, url=git://gitorious.org/git-python/async.git, branch=master)]
+
+In addition to the query functionality, you can move the submodule's repository to a different path <``move(...)``>, write its configuration <``config_writer().set_value(...)``>, update its working tree <``update(...)``>, and remove and add them <``remove(...)``, ``add(...)``>.
+
+If you obtained your submodule object by traversing a tree object which is not rooted at the head's commit, you have to inform the submodule about its actual commit to retrieve the data from by using the ``set_parent_commit(...)`` method.
+
+The special ``RootModule`` type allows you to treat your master repository as root of a hierarchy of submodules, which allows very convenient submodule handling. Its ``update(...)`` method is reimplemented to provide an advanced way of updating submodules as they change their values. The update method will track changes and make sure your working tree and submodule checkouts stay consistent, which is very useful in case submodules get deleted or added to name just two of the handled cases.
+
+Additionally, Git-Python adds functionality to track a specific branch, instead of just a commit. Supported by customized update methods, you are able to automatically update submodules to the latest revision available in the remote repository, as well as to keep track of changes and movements of these submodules. To use it, set the name of the branch you want to track to the ``submodule.$name.branch`` option of the *.gitmodules*  file, and use Git-Python update methods on the resulting repository with the ``to_latest_revision`` parameter turned on. In the latter case, the sha of your submodule will be ignored, instead a local tracking branch will be updated to the respective remote branch automatically. The resulting behaviour is much like the one of svn::externals, which can be useful in times. 
+
 Obtaining Diff Information
 **************************
 
