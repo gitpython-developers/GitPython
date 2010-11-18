@@ -1,4 +1,8 @@
 from base import Submodule
+from util import (
+					mkhead, 
+					find_first_remote_branch
+				)
 from git.exc import InvalidGitRepositoryError
 import git
 

@@ -3,7 +3,8 @@
 
 from test.testlib import *
 from git.exc import *
-from git.objects.submodule import *
+from git.objects.submodule.base import Submodule
+from git.objects.submodule.root import RootModule
 from git.util import to_native_path_linux, join_path_native
 import shutil
 import git
@@ -315,7 +316,6 @@ class TestSubmodule(TestBase):
 		# Error if there is no submodule file here
 		self.failUnlessRaises(IOError, Submodule._config_parser, rwrepo, rwrepo.commit(self.k_no_subm_tag), True)
 		
-	
 	@with_rw_repo(k_subm_current)
 	def test_base_rw(self, rwrepo):
 		self._do_base_tests(rwrepo)

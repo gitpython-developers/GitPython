@@ -1,10 +1,24 @@
-import git.objects.base
-from util import *
+import util
+from util import (
+					mkhead,
+					sm_name, 
+					sm_section, 
+					unbare_repo, 
+					SubmoduleConfigParser,
+					find_first_remote_branch
+				)
 from git.objects.util import Traversable
 from StringIO import StringIO					# need a dict to set bloody .name field
-from git.util import Iterable, join_path_native, to_native_path_linux
+from git.util import (
+						Iterable, 
+						join_path_native, 
+						to_native_path_linux
+					)
 from git.config import SectionConstraint
-from git.exc import InvalidGitRepositoryError, NoSuchPathError
+from git.exc import (
+					InvalidGitRepositoryError, 
+					NoSuchPathError
+					)
 import stat
 import git
 
@@ -13,11 +27,13 @@ import sys
 
 import shutil
 
-__all__ = ("Submodule", "RootModule")
+__all__ = ["Submodule"]
 
 
-
-class Submodule(git.objects.base.IndexObject, Iterable, Traversable):
+# IndexObject comes via util module, its a 'hacky' fix thanks to pythons import 
+# mechanism which cause plenty of trouble of the only reason for packages and
+# modules is refactoring - subpackages shoudn't depend on parent packages
+class Submodule(util.IndexObject, Iterable, Traversable):
 	"""Implements access to a git submodule. They are special in that their sha
 	represents a commit in the submodule's repository which is to be checked out
 	at the path of this instance. 
@@ -41,6 +57,7 @@ class Submodule(git.objects.base.IndexObject, Iterable, Traversable):
 	def __init__(self, repo, binsha, mode=None, path=None, name = None, parent_commit=None, url=None, branch=None):
 		"""Initialize this instance with its attributes. We only document the ones 
 		that differ from ``IndexObject``
+		
 		:param repo: Our parent repository
 		:param binsha: binary sha referring to a commit in the remote repository, see url parameter
 		:param parent_commit: see set_parent_commit()
@@ -163,6 +180,7 @@ class Submodule(git.objects.base.IndexObject, Iterable, Traversable):
 		as well as the .gitmodules file, but will not create a new commit.
 		If the submodule already exists, no matter if the configuration differs
 		from the one provided, the existing submodule will be returned.
+		
 		:param repo: Repository instance which should receive the submodule
 		:param name: The name/identifier for the submodule
 		:param path: repository-relative or absolute path at which the submodule 
@@ -260,6 +278,7 @@ class Submodule(git.objects.base.IndexObject, Iterable, Traversable):
 	def update(self, recursive=False, init=True, to_latest_revision=False):
 		"""Update the repository of this submodule to point to the checkout
 		we point at with the binsha of this instance.
+		
 		:param recursive: if True, we will operate recursively and update child-
 			modules as well.
 		:param init: if True, the module repository will be cloned into place if necessary
@@ -382,6 +401,7 @@ class Submodule(git.objects.base.IndexObject, Iterable, Traversable):
 		"""Move the submodule to a another module path. This involves physically moving
 		the repository at our current path, changing the configuration, as well as
 		adjusting our index entry accordingly.
+		
 		:param module_path: the path to which to move our module, given as
 			repository-relative path. Intermediate directories will be created
 			accordingly. If the path already exists, it must be empty.
@@ -484,6 +504,7 @@ class Submodule(git.objects.base.IndexObject, Iterable, Traversable):
 	def remove(self, module=True, force=False, configuration=True, dry_run=False):
 		"""Remove this submodule from the repository. This will remove our entry
 		from the .gitmodules file and the entry in the .git/config file.
+		
 		:param module: If True, the module we point to will be deleted 
 			as well. If the module is currently on a commit which is not part 
 			of any branch in the remote, if the currently checked out branch 
@@ -588,6 +609,7 @@ class Submodule(git.objects.base.IndexObject, Iterable, Traversable):
 	def set_parent_commit(self, commit, check=True):
 		"""Set this instance to use the given commit whose tree is supposed to 
 		contain the .gitmodules blob.
+		
 		:param commit: Commit'ish reference pointing at the root_tree
 		:param check: if True, relatively expensive checks will be performed to verify
 			validity of the submodule.
