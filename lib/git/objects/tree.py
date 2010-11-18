@@ -7,7 +7,7 @@ import util
 from base import IndexObject
 from git.util import join_path
 from blob import Blob
-from submodule import Submodule
+from submodule.base import Submodule
 import git.diff as diff
 
 from fun import (
