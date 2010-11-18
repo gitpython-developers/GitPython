@@ -2,8 +2,9 @@
 Changelog
 =========
 
-0.3.0 Beta 3
+0.3.1 Beta 1
 ============
+* Full Submodule-Support
 * Added unicode support for author names. Commit.author.name is now unicode instead of string.
 
 0.3.0 Beta 2
