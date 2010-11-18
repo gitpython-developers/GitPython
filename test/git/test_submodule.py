@@ -42,7 +42,7 @@ class TestSubmodule(TestBase):
 		# some commits earlier we still have a submodule, but its at a different commit
 		smold = Submodule.iter_items(rwrepo, self.k_subm_changed).next()
 		assert smold.binsha != sm.binsha
-		assert smold != sm
+		assert smold == sm					# the name is still the same
 		
 		# force it to reread its information
 		del(smold._url)
@@ -268,6 +268,9 @@ class TestSubmodule(TestBase):
 			
 			# MOVE MODULE
 			#############
+			# invalid inptu
+			self.failUnlessRaises(ValueError, nsm.move, 'doesntmatter', module=False, configuration=False)
+			
 			# renaming to the same path does nothing
 			assert nsm.move(sm.path) is nsm
 			
@@ -353,11 +356,39 @@ class TestSubmodule(TestBase):
 		rm = RootModule(rwrepo)
 		assert len(rm.children()) == 1
 		
-		# modify path
+		# modify path without modifying the index entry
+		# ( which is what the move method would do properly )
 		sm = rm.children()[0]
 		pp = "path/prefix"
-		sm.config_writer().set_value('path', join_path_native(pp, sm.path))
-		cpathchange = rwrepo.index.commit("changed sm path")
+		fp = join_path_native(pp, sm.path)
+		prep = sm.path
+		assert not sm.module_exists()				# was never updated after rwrepo's clone
+		
+		# assure we clone from a local source 
+		sm.config_writer().set_value('url', join_path_native(self.rorepo.working_tree_dir, sm.path))
+		sm.update(recursive=False)
+		assert sm.module_exists()
+		sm.config_writer().set_value('path', fp)	# change path to something with prefix AFTER url change
+		
+		# update fails as list_items in such a situations cannot work, as it cannot
+		# find the entry at the changed path
+		self.failUnlessRaises(InvalidGitRepositoryError, rm.update, recursive=False)
+		
+		# move it properly - doesn't work as it its path currently points to an indexentry
+		# which doesn't exist ( move it to some path, it doesn't matter here )
+		self.failUnlessRaises(InvalidGitRepositoryError, sm.move, pp)
+		# reset the path(cache) to where it was, now it works
+		sm.path = prep
+		sm.move(fp, module=False)		# leave it at the old location
+		
+		assert not sm.module_exists()
+		cpathchange = rwrepo.index.commit("changed sm path") # finally we can commit
+		
+		# update puts the module into place
+		rm.update(recursive=False)
+		sm.set_parent_commit(cpathchange)
+		assert sm.module_exists()
+		assert False
 		
 		# add submodule
 		nsmn = "newsubmodule"

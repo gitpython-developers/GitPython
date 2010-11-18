@@ -104,6 +104,7 @@ class SubmoduleConfigParser(GitConfigParser):
 		return rval
 	# END overridden methods
 
+
 class Submodule(base.IndexObject, Iterable, Traversable):
 	"""Implements access to a git submodule. They are special in that their sha
 	represents a commit in the submodule's repository which is to be checked out
@@ -172,7 +173,10 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 		
 	def __eq__(self, other):
 		"""Compare with another submodule"""
-		return self.path == other.path and self.url == other.url and super(Submodule, self).__eq__(other)
+		# we may only compare by name as this should be the ID they are hashed with
+		# Otherwise this type wouldn't be hashable
+		# return self.path == other.path and self.url == other.url and super(Submodule, self).__eq__(other)
+		return self._name == other._name
 		
 	def __ne__(self, other):
 		"""Compare with another submodule for inequality"""
@@ -184,6 +188,9 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 		
 	def __str__(self):
 		return self._name
+		
+	def __repr__(self):
+		return "git.%s(name=%s, path=%s, url=%s, branch=%s)" % (type(self).__name__, self._name, self.path, self.url, self.branch) 
 		
 	@classmethod
 	def _config_parser(cls, repo, parent_commit, read_only):
@@ -459,7 +466,7 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 		return self
 		
 	@unbare_repo
-	def move(self, module_path, module_only=False):
+	def move(self, module_path, configuration=True, module=True):
 		"""Move the submodule to a another module path. This involves physically moving
 		the repository at our current path, changing the configuration, as well as
 		adjusting our index entry accordingly.
@@ -467,15 +474,21 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 			repository-relative path. Intermediate directories will be created
 			accordingly. If the path already exists, it must be empty.
 			Trailling (back)slashes are removed automatically
-		:param module_only: if True, only the repository managed by this submodule
+		:param configuration: if True, the configuration will be adjusted to let 
+			the submodule point to the given path.
+		:param module: if True, the repository managed by this submodule
 			will be moved, not the configuration. This will effectively 
 			leave your repository in an inconsistent state unless the configuration
-			and index already point to the target location. 
+			and index already point to the target location.
 		:return: self
 		:raise ValueError: if the module path existed and was not empty, or was a file
 		:note: Currently the method is not atomic, and it could leave the repository
 			in an inconsistent state if a sub-step fails for some reason
 		"""
+		if module + configuration < 1:
+			raise ValueError("You must specify to move at least the module or the configuration of the submodule")
+		#END handle input
+		
 		module_path = to_native_path_linux(module_path)
 		if module_path.endswith('/'):
 			module_path = module_path[:-1]
@@ -494,54 +507,64 @@ class Submodule(base.IndexObject, Iterable, Traversable):
 		index = self.repo.index
 		tekey = index.entry_key(module_path, 0)
 		# if the target item already exists, fail
-		if not module_only and tekey in index.entries:
+		if configuration and tekey in index.entries:
 			raise ValueError("Index entry for target path did alredy exist")
 		#END handle index key already there
 		
 		# remove existing destination
-		if os.path.exists(dest_path):
-			if len(os.listdir(dest_path)):
-				raise ValueError("Destination module directory was not empty")
-			#END handle non-emptyness
-			
-			if os.path.islink(dest_path):
-				os.remove(dest_path)
+		if module:
+			if os.path.exists(dest_path):
+				if len(os.listdir(dest_path)):
+					raise ValueError("Destination module directory was not empty")
+				#END handle non-emptyness
+				
+				if os.path.islink(dest_path):
+					os.remove(dest_path)
+				else:
+					os.rmdir(dest_path)
+				#END handle link
 			else:
-				os.rmdir(dest_path)
-			#END handle link
-		else:
-			# recreate parent directories
-			# NOTE: renames() does that now
-			pass
-		#END handle existance
+				# recreate parent directories
+				# NOTE: renames() does that now
+				pass
+			#END handle existance
+		# END handle module
 		
 		# move the module into place if possible
 		cur_path = self.abspath
-		if os.path.exists(cur_path):
+		renamed_module = False
+		if module and os.path.exists(cur_path):
 			os.renames(cur_path, dest_path)
+			renamed_module = True
 		#END move physical module
 		
-		# NOTE: from now on, we would have to undo the rename !
 		
 		# rename the index entry - have to manipulate the index directly as 
 		# git-mv cannot be used on submodules ... yeah
-		if not module_only:
-			try:
-				ekey = index.entry_key(self.path, 0)
-				entry = index.entries[ekey]
-				del(index.entries[ekey])
-				nentry = git.IndexEntry(entry[:3]+(module_path,)+entry[4:])
-				index.entries[tekey] = nentry
-			except KeyError:
-				raise ValueError("Submodule's entry at %r did not exist" % (self.path))
-			#END handle submodule doesn't exist
-			
-			# update configuration
-			writer = self.config_writer(index=index)		# auto-write
-			writer.set_value('path', module_path)
-			self.path = module_path
-			del(writer)
-		# END handle module_only
+		try:
+			if configuration:
+				try:
+					ekey = index.entry_key(self.path, 0)
+					entry = index.entries[ekey]
+					del(index.entries[ekey])
+					nentry = git.IndexEntry(entry[:3]+(module_path,)+entry[4:])
+					index.entries[tekey] = nentry
+				except KeyError:
+					raise InvalidGitRepositoryError("Submodule's entry at %r did not exist" % (self.path))
+				#END handle submodule doesn't exist
+				
+				# update configuration
+				writer = self.config_writer(index=index)		# auto-write
+				writer.set_value('path', module_path)
+				self.path = module_path
+				del(writer)
+			# END handle configuration flag
+		except Exception:
+			if renamed_module:
+				os.renames(dest_path, cur_path)
+			# END undo module renaming
+			raise
+		#END handle undo rename
 		
 		return self
 		
@@ -917,7 +940,7 @@ class RootModule(Submodule):
 		##################
 		cur_commit = repo.head.commit
 		if previous_commit is None:
-			symref = SymbolicReference(repo, SymbolicReference.to_full_path('ORIG_HEAD'))
+			symref = repo.head.orig_head()
 			try:
 				previous_commit = symref.commit
 			except Exception:
@@ -936,8 +959,8 @@ class RootModule(Submodule):
 		
 		
 		# HANDLE REMOVALS
-		psms = type(self).list_items(repo, parent_commit=previous_commit)
-		sms = self.children()
+		psms = self.list_items(repo, parent_commit=previous_commit)
+		sms = self.list_items(self.module())
 		spsms = set(psms)
 		ssms = set(sms)
 		
@@ -958,7 +981,7 @@ class RootModule(Submodule):
 			
 			if sm.path != psm.path and psm.module_exists():
 				# move the module to the new path
-				psm.move(sm.path, module_only=True)
+				psm.move(sm.path, module=True, configuration=False)
 			# END handle path changes
 			
 			if sm.module_exists():
@@ -970,26 +993,39 @@ class RootModule(Submodule):
 					nn = '__new_origin__'
 					smm = sm.module()
 					rmts = smm.remotes
-					assert nn not in rmts
-					smr = smm.create_remote(nn, sm.url)
-					srm.fetch()
 					
-					# now delete the changed one
-					orig_name = None
-					for remote in rmts:
-						if remote.url == psm.url:
-							orig_name = remote.name
-							smm.delete_remote(remote)
-							break
-						# END if urls match
-					# END for each remote
-					
-					# rename the new remote back to what it was
-					# if we have not found any remote with the original url
-					# we may not have a name. This is a special case, 
-					# and its okay to fail her
-					assert orig_name is not None, "Couldn't find original remote-repo at url %r" % psm.url
-					smr.rename(orig_name)
+					# don't do anything if we already have the url we search in place
+					if len([r for r in rmts if r.url == sm.url]) == 0:
+						assert nn not in [r.name for r in rmts]
+						smr = smm.create_remote(nn, sm.url)
+						smr.fetch()
+						
+						# now delete the changed one
+						orig_name = None
+						for remote in rmts:
+							if remote.url == psm.url:
+								orig_name = remote.name
+								smm.delete_remote(remote)
+								break
+							# END if urls match
+						# END for each remote
+						
+						# if we didn't find a matching remote, but have exactly one, 
+						# we can safely use this one
+						if len(rmts) == 1:
+							orig_name = rmts[0].name
+							smm.delete_remote(rmts[0])
+						else:
+							# if we have not found any remote with the original url
+							# we may not have a name. This is a special case, 
+							# and its okay to fail here
+							# Alternatively we could just generate a unique name
+							raise InvalidGitRepositoryError("Couldn't find original remote-repo at url %r" % psm.url)
+						# END only one remove
+						
+						# rename the new remote back to what it was
+						smr.rename(orig_name)
+					# END skip remote handling if new url already exists in module
 				# END handle url
 				
 				if sm.branch != psm.branch:
@@ -1020,11 +1056,13 @@ class RootModule(Submodule):
 		# FINALLY UPDATE ALL ACTUAL SUBMODULES
 		##########################################
 		for sm in sms:
+			# update the submodule using the default method
 			sm.update(recursive=True, init=init, to_latest_revision=to_latest_revision)
 			
 			# update recursively depth first - question is which inconsitent 
 			# state will be better in case it fails somewhere. Defective branch
-			# or defective depth
+			# or defective depth. The RootSubmodule type will never process itself, 
+			# which was done in the previous expression
 			if recursive:
 				type(cls)(sm.module()).update(recursive=True, force_remove=force_remove, 
 											init=init, to_latest_revision=to_latest_revision)
