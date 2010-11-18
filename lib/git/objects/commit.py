@@ -108,7 +108,26 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
 		super(Commit,self).__init__(repo, binsha)
 		if tree is not None:
 			assert isinstance(tree, Tree), "Tree needs to be a Tree instance, was %s" % type(tree)
-		self._set_self_from_args_(locals())
+		if tree is not None:
+			self.tree = tree
+		if author is not None:
+			self.author = author
+		if authored_date is not None:
+			self.authored_date = authored_date
+		if author_tz_offset is not None:
+			self.author_tz_offset = author_tz_offset
+		if committer is not None:
+			self.committer = committer
+		if committed_date is not None:
+			self.committed_date = committed_date
+		if committer_tz_offset is not None:
+			self.committer_tz_offset = committer_tz_offset
+		if message is not None:
+			self.message = message
+		if parents is not None:
+			self.parents = parents
+		if encoding is not None:
+			self.encoding = encoding
 		
 	@classmethod
 	def _get_intermediate_items(cls, commit):
@@ -346,6 +365,9 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
 		new_commit.binsha = istream.binsha
 		
 		if head:
+			# need late import here, importing git at the very beginning throws
+			# as well ... 
+			import git.refs
 			try:
 				repo.head.commit = new_commit
 			except ValueError:
@@ -434,7 +456,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
 		try:
 			self.author.name = self.author.name.decode(self.encoding) 
 		except UnicodeDecodeError:
-			print >> sys.stderr, "Failed to decode author name: %s" % self.author.name
+			print >> sys.stderr, "Failed to decode author name '%s' using encoding %s" % (self.author.name, self.encoding)
 		# END handle author's encoding
 		
 		# a stream from our data simply gives us the plain message
@@ -443,7 +465,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
 		try:
 			self.message = self.message.decode(self.encoding)
 		except UnicodeDecodeError:
-			print >> sys.stderr, "Failed to decode message: %s" % self.message
+			print >> sys.stderr, "Failed to decode message '%s' using encoding %s" % (self.message, self.encoding)
 		# END exception handling 
 		return self
 		

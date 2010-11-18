@@ -6,7 +6,6 @@
 
 from git.exc import InvalidGitRepositoryError, NoSuchPathError
 from git.cmd import Git
-from git.objects import Actor
 from git.refs import *
 from git.index import IndexFile
 from git.objects import *
@@ -222,6 +221,44 @@ class Repo(object):
 		""":return: Remote with the specified name
 		:raise ValueError:  if no remote with such a name exists"""
 		return Remote(self, name)
+		
+	#{ Submodules
+		
+	@property
+	def submodules(self):
+		""":return: git.IterableList(Submodule, ...) of direct submodules
+			available from the current head"""
+		return Submodule.list_items(self)
+		
+	def submodule(self, name):
+		""":return: Submodule with the given name
+		:raise ValueError: If no such submodule exists"""
+		try:
+			return self.submodules[name]
+		except IndexError:
+			raise ValueError("Didn't find submodule named %r" % name)
+		# END exception handling
+		
+	def create_submodule(self, *args, **kwargs):
+		"""Create a new submodule
+		:note: See the documentation of Submodule.add for a description of the 
+			applicable parameters
+		:return: created submodules"""
+		return Submodule.add(self, *args, **kwargs)
+		
+	def iter_submodules(self, *args, **kwargs):
+		"""An iterator yielding Submodule instances, see Traversable interface
+		for a description of args and kwargs
+		:return: Iterator"""
+		return RootModule(self).traverse(*args, **kwargs)
+		
+	def submodule_update(self, *args, **kwargs):
+		"""Update the submodules, keeping the repository consistent as it will 
+		take the previous state into consideration. For more information, please
+		see the documentation of RootModule.update"""
+		return RootModule(self).update(*args, **kwargs)
+		
+	#}END submodules
 
 	@property
 	def tags(self):

@@ -208,8 +208,10 @@ class TestRepo(TestBase):
 		assert_equal('<git.Repo "%s">' % path, repr(self.rorepo))
 
 	def test_is_dirty_with_bare_repository(self):
+		orig_value = self.rorepo._bare
 		self.rorepo._bare = True
 		assert_false(self.rorepo.is_dirty())
+		self.rorepo._bare = orig_value 
 
 	def test_is_dirty(self):
 		self.rorepo._bare = False
@@ -220,8 +222,10 @@ class TestRepo(TestBase):
 				# END untracked files
 			# END working tree
 		# END index
+		orig_val = self.rorepo._bare
 		self.rorepo._bare = True
 		assert self.rorepo.is_dirty() == False
+		self.rorepo._bare = orig_val
 
 	def test_head(self):
 		assert self.rorepo.head.reference.object == self.rorepo.active_branch.object
@@ -552,3 +556,25 @@ class TestRepo(TestBase):
 			target_type = GitCmdObjectDB
 		assert isinstance(self.rorepo.odb, target_type)
 			
+	def test_submodules(self):
+		assert len(self.rorepo.submodules) == 1		# non-recursive
+		assert len(list(self.rorepo.iter_submodules())) == 2
+		
+		assert isinstance(self.rorepo.submodule("lib/git/ext/gitdb"), Submodule)
+		self.failUnlessRaises(ValueError, self.rorepo.submodule, "doesn't exist")
+		
+	@with_rw_repo('HEAD', bare=False)
+	def test_submodule_update(self, rwrepo):
+		# fails in bare mode
+		rwrepo._bare = True
+		self.failUnlessRaises(InvalidGitRepositoryError, rwrepo.submodule_update)
+		rwrepo._bare = False
+		
+		# test create submodule
+		sm = rwrepo.submodules[0]
+		sm = rwrepo.create_submodule("my_new_sub", "some_path", join_path_native(self.rorepo.working_tree_dir, sm.path))
+		assert isinstance(sm, Submodule)
+		
+		# note: the rest of this functionality is tested in test_submodule
+		
+		

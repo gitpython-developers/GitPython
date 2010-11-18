@@ -7,7 +7,8 @@
 
 from exc import GitCommandError
 from objects import Commit
-from ConfigParser import NoOptionError 
+from ConfigParser import NoOptionError
+from config import SectionConstraint
 
 from git.util import (
 						LazyMixin,
@@ -27,32 +28,10 @@ from gitdb.util import join
 
 import re
 import os
+import sys
 
 __all__ = ('RemoteProgress', 'PushInfo', 'FetchInfo', 'Remote')
 
-class _SectionConstraint(object):
-	"""Constrains a ConfigParser to only option commands which are constrained to 
-	always use the section we have been initialized with.
-	
-	It supports all ConfigParser methods that operate on an option"""
-	__slots__ = ("_config", "_section_name")
-	_valid_attrs_ = ("get_value", "set_value", "get", "set", "getint", "getfloat", "getboolean", "has_option")
-	
-	def __init__(self, config, section):
-		self._config = config
-		self._section_name = section
-		
-	def __getattr__(self, attr):
-		if attr in self._valid_attrs_:
-			return lambda *args, **kwargs: self._call_config(attr, *args, **kwargs)
-		return super(_SectionConstraint,self).__getattribute__(attr)
-		
-	def _call_config(self, method, *args, **kwargs):
-		"""Call the configuration at the given method which must take a section name 
-		as first argument"""
-		return getattr(self._config, method)(self._section_name, *args, **kwargs)
-		
-		
 class RemoteProgress(object):
 	"""
 	Handler providing an interface to parse progress information emitted by git-push
@@ -449,7 +428,7 @@ class Remote(LazyMixin, Iterable):
 	
 	def _set_cache_(self, attr):
 		if attr == "_config_reader":
-			self._config_reader = _SectionConstraint(self.repo.config_reader(), self._config_section_name())
+			self._config_reader = SectionConstraint(self.repo.config_reader(), self._config_section_name())
 		else:
 			super(Remote, self)._set_cache_(attr)
 			
@@ -490,11 +469,7 @@ class Remote(LazyMixin, Iterable):
 			you to omit the remote path portion, i.e.::
 			 remote.refs.master # yields RemoteReference('/refs/remotes/origin/master')"""
 		out_refs = IterableList(RemoteReference._id_attribute_, "%s/" % self.name)
-		for ref in RemoteReference.list_items(self.repo):
-			if ref.remote_name == self.name:
-				out_refs.append(ref)
-			# END if names match
-		# END for each ref
+		out_refs.extend(RemoteReference.list_items(self.repo, remote=self.name))
 		assert out_refs, "Remote %s did not have any references" % self.name
 		return out_refs
 		
@@ -617,6 +592,10 @@ class Remote(LazyMixin, Iterable):
 		for line in self._digest_process_messages(proc.stderr, progress):
 			if line.startswith('From') or line.startswith('remote: Total'):
 				continue
+			elif line.startswith('warning:'):
+				print >> sys.stderr, line
+				continue
+			# END handle special messages
 			fetch_info_lines.append(line)
 		# END for each line
 		
@@ -735,4 +714,4 @@ class Remote(LazyMixin, Iterable):
 		
 		# clear our cache to assure we re-read the possibly changed configuration
 		del(self._config_reader)
-		return _SectionConstraint(writer, self._config_section_name())
+		return SectionConstraint(writer, self._config_section_name())

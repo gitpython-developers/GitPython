@@ -422,7 +422,7 @@ class TestRemote(TestBase):
         origin = rw_repo.remote('origin')
         assert origin == rw_repo.remotes.origin
         
-    @with_bare_rw_repo
+    @with_rw_repo('HEAD', bare=True)
     def test_creation_and_removal(self, bare_rw_repo):
         new_name = "test_new_one"
         arg_list = (new_name, "git@server:hello.git")

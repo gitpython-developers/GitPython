@@ -29,6 +29,11 @@ from gitdb.util import (
 							hex_to_bin
 						)
 
+from config import 	(
+					GitConfigParser,
+					SectionConstraint
+					)
+
 from exc import GitCommandError
 
 __all__ = ("SymbolicReference", "Reference", "HEAD", "Head", "TagReference", 
@@ -219,12 +224,30 @@ class SymbolicReference(object):
 			# END end try string  
 		# END try commit attribute
 		
+		# maintain the orig-head if we are currently checked-out
+		head = HEAD(self.repo)
+		try:
+			if head.ref == self:
+				try:
+					# TODO: implement this atomically, if we fail below, orig_head is at an incorrect spot
+					# Enforce the creation of ORIG_HEAD
+					SymbolicReference.create(self.repo, head.orig_head().name, self.commit, force=True)
+				except ValueError:
+					pass
+				#END exception handling
+			# END if we are checked-out
+		except TypeError:
+			pass
+		# END handle detached heads
+		
 		# if we are writing a ref, use symbolic ref to get the reflog and more
 		# checking
-		# Otherwise we detach it and have to do it manually
+		# Otherwise we detach it and have to do it manually. Besides, this works
+		# recursively automaitcally, but should be replaced with a python implementation
+		# soon
 		if write_value.startswith('ref:'):
 			self.repo.git.symbolic_ref(self.path, write_value[5:])
-			return 
+			return
 		# END non-detached handling
 		
 		path = self._abs_path()
@@ -238,10 +261,10 @@ class SymbolicReference(object):
 		finally:
 			fp.close()
 		# END writing
-		
-	reference = property(_get_reference, _set_reference, doc="Returns the Reference we point to")
 	
-	# alias
+
+	# aliased reference
+	reference = property(_get_reference, _set_reference, doc="Returns the Reference we point to")
 	ref = reference
 		
 	def is_valid(self):
@@ -272,7 +295,7 @@ class SymbolicReference(object):
 	@classmethod
 	def to_full_path(cls, path):
 		"""
-		:return: string with a full path name which can be used to initialize 
+		:return: string with a full repository-relative path which can be used to initialize 
 			a Reference instance, for instance by using ``Reference.from_path``"""
 		if isinstance(path, SymbolicReference):
 			path = path.path
@@ -489,6 +512,8 @@ class SymbolicReference(object):
 	@classmethod
 	def from_path(cls, repo, path):
 		"""
+		:param path: full .git-directory-relative path name to the Reference to instantiate
+		:note: use to_full_path() if you only have a partial path of a known Reference Type
 		:return:
 			Instance of type Reference, Head, or Tag
 			depending on the given path"""
@@ -546,7 +571,6 @@ class Reference(SymbolicReference, LazyMixin, Iterable):
 		
 		:note: 
 			TypeChecking is done by the git command"""
-		# check for existence, touch it if required
 		abs_path = self._abs_path()
 		existed = True
 		if not isfile(abs_path):
@@ -611,6 +635,7 @@ class HEAD(SymbolicReference):
 	"""Special case of a Symbolic Reference as it represents the repository's 
 	HEAD reference."""
 	_HEAD_NAME = 'HEAD'
+	_ORIG_HEAD_NAME = 'ORIG_HEAD'
 	__slots__ = tuple()
 	
 	def __init__(self, repo, path=_HEAD_NAME):
@@ -618,6 +643,27 @@ class HEAD(SymbolicReference):
 			raise ValueError("HEAD instance must point to %r, got %r" % (self._HEAD_NAME, path))
 		super(HEAD, self).__init__(repo, path)
 	
+	def orig_head(self):
+		""":return: SymbolicReference pointing at the ORIG_HEAD, which is maintained 
+		to contain the previous value of HEAD"""
+		return SymbolicReference(self.repo, self._ORIG_HEAD_NAME)
+		
+	def _set_reference(self, ref):
+		"""If someone changes the reference through us, we must manually update 
+		the ORIG_HEAD if we are detached. The underlying implementation can only
+		handle un-detached heads as it has to check whether the current head 
+		is the checked-out one"""
+		if self.is_detached:
+			prev_commit = self.commit
+			super(HEAD, self)._set_reference(ref)
+			SymbolicReference.create(self.repo, self._ORIG_HEAD_NAME, prev_commit, force=True)
+		else:
+			super(HEAD, self)._set_reference(ref)
+		# END handle detached mode
+		
+	# aliased reference
+	reference = property(SymbolicReference._get_reference, _set_reference, doc="Returns the Reference we point to")
+	ref = reference
 	
 	def reset(self, commit='HEAD', index=True, working_tree = False, 
 				paths=None, **kwargs):
@@ -699,6 +745,8 @@ class Head(Reference):
 		>>> head.commit.hexsha
 		'1c09f116cbc2cb4100fb6935bb162daa4723f455'"""
 	_common_path_default = "refs/heads"
+	k_config_remote = "remote"
+	k_config_remote_ref = "merge"			# branch to merge from remote
 	
 	@classmethod
 	def create(cls, repo, path, commit='HEAD', force=False, **kwargs):
@@ -745,6 +793,44 @@ class Head(Reference):
 			flag = "-D"
 		repo.git.branch(flag, *heads)
 		
+		
+	def set_tracking_branch(self, remote_reference):
+		"""Configure this branch to track the given remote reference. This will alter
+		this branch's configuration accordingly.
+		:param remote_reference: The remote reference to track or None to untrack 
+			any references
+		:return: self"""
+		if remote_reference is not None and not isinstance(remote_reference, RemoteReference):
+			raise ValueError("Incorrect parameter type: %r" % remote_reference)
+		# END handle type
+		
+		writer = self.config_writer()
+		if remote_reference is None:
+			writer.remove_option(self.k_config_remote)
+			writer.remove_option(self.k_config_remote_ref)
+			if len(writer.options()) == 0:
+				writer.remove_section()
+			# END handle remove section
+		else:
+			writer.set_value(self.k_config_remote, remote_reference.remote_name)
+			writer.set_value(self.k_config_remote_ref, Head.to_full_path(remote_reference.remote_head))
+		# END handle ref value
+		
+		return self
+		
+		
+	def tracking_branch(self):
+		""":return: The remote_reference we are tracking, or None if we are 
+			not a tracking branch"""
+		reader = self.config_reader()
+		if reader.has_option(self.k_config_remote) and reader.has_option(self.k_config_remote_ref):
+			ref = Head(self.repo, Head.to_full_path(reader.get_value(self.k_config_remote_ref)))
+			remote_refpath = RemoteReference.to_full_path(join_path(reader.get_value(self.k_config_remote), ref.name))
+			return RemoteReference(self.repo, remote_refpath)
+		# END handle have tracking branch
+		
+		# we are not a tracking branch
+		return None
 	
 	def rename(self, new_path, force=False):
 		"""Rename self to a new path
@@ -797,6 +883,29 @@ class Head(Reference):
 		
 		self.repo.git.checkout(self, **kwargs)
 		return self.repo.active_branch
+		
+	#{ Configruation
+	
+	def _config_parser(self, read_only):
+		if read_only:
+			parser = self.repo.config_reader()
+		else:
+			parser = self.repo.config_writer()
+		# END handle parser instance
+		
+		return SectionConstraint(parser, 'branch "%s"' % self.name)
+	
+	def config_reader(self):
+		""":return: A configuration parser instance constrained to only read 
+		this instance's values"""
+		return self._config_parser(read_only=True)
+		
+	def config_writer(self):
+		""":return: A configuration writer instance with read-and write acccess
+			to options of this head"""
+		return self._config_parser(read_only=False)
+	
+	#} END configuration
 		
 
 class TagReference(Reference):
@@ -890,6 +999,16 @@ Tag = TagReference
 class RemoteReference(Head):
 	"""Represents a reference pointing to a remote head."""
 	_common_path_default = "refs/remotes"
+	
+	
+	@classmethod
+	def iter_items(cls, repo, common_path = None, remote=None):
+		"""Iterate remote references, and if given, constrain them to the given remote"""
+		common_path = common_path or cls._common_path_default
+		if remote is not None:
+			common_path = join_path(common_path, str(remote))
+		# END handle remote constraint
+		return super(RemoteReference, cls).iter_items(repo, common_path)
 	
 	@property
 	def remote_name(self):

@@ -33,7 +33,18 @@ class TagObject(base.Object):
 		:param tagged_tz_offset: int_seconds_west_of_utc is the timezone that the 
 			authored_date is in, in a format similar to time.altzone"""
 		super(TagObject, self).__init__(repo, binsha )
-		self._set_self_from_args_(locals())
+		if object is not None:
+			self.object = object
+		if tag is not None:
+			self.tag = tag
+		if tagger is not None:
+			self.tagger = tagger
+		if tagged_date is not None:
+			self.tagged_date = tagged_date
+		if tagger_tz_offset is not None:
+			self.tagger_tz_offset = tagger_tz_offset
+		if message is not None:
+			self.message = message
 		
 	def _set_cache_(self, attr):
 		"""Cache all our attributes at once"""

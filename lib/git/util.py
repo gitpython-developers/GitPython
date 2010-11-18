@@ -296,6 +296,9 @@ class IterableList(list):
 	def __init__(self, id_attr, prefix=''):
 		self._id_attr = id_attr
 		self._prefix = prefix
+		if not isinstance(id_attr, basestring):
+			raise ValueError("First parameter must be a string identifying the name-property. Extend the list after initialization")
+		# END help debugging !
 		
 	def __getattr__(self, attr):
 		attr = self._prefix + attr
@@ -313,7 +316,7 @@ class IterableList(list):
 			return getattr(self, index)
 		except AttributeError:
 			raise IndexError( "No item found with id %r" % (self._prefix + index) )
-
+			
 
 class Iterable(object):
 	"""Defines an interface for iterable items which is to assure a uniform 

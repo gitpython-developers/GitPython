@@ -3,11 +3,18 @@ Import all submodules main classes into the package space
 """
 import inspect
 from base import *
+# Fix import dependency - add IndexObject to the util module, so that it can be 
+# imported by the submodule.base
+import submodule.util
+submodule.util.IndexObject = IndexObject
+from submodule.base import *
+from submodule.root import *
+
+# must come after submodule was made available
 from tag import *
 from blob import *
-from tree import *
 from commit import *
-from submodule import *
+from tree import *
 from util import Actor
 
 __all__ = [ name for name, obj in locals().items()

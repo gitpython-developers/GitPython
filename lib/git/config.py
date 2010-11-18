@@ -15,7 +15,7 @@ import cStringIO
 from git.odict import OrderedDict
 from git.util import LockFile
 
-__all__ = ('GitConfigParser', )
+__all__ = ('GitConfigParser', 'SectionConstraint')
 
 class MetaParserBuilder(type):
 	"""Utlity class wrapping base-class methods into decorators that assure read-only properties"""
@@ -23,19 +23,23 @@ class MetaParserBuilder(type):
 		"""
 		Equip all base-class methods with a needs_values decorator, and all non-const methods
 		with a set_dirty_and_flush_changes decorator in addition to that."""
-		mutating_methods = clsdict['_mutating_methods_']
-		for base in bases:
-			methods = ( t for t in inspect.getmembers(base, inspect.ismethod) if not t[0].startswith("_") )
-			for name, method in methods:
-				if name in clsdict:
-					continue
-				method_with_values = needs_values(method)
-				if name in mutating_methods:
-					method_with_values = set_dirty_and_flush_changes(method_with_values)
-				# END mutating methods handling
-				
-				clsdict[name] = method_with_values
-		# END for each base
+		kmm = '_mutating_methods_'
+		if kmm in clsdict:
+			mutating_methods = clsdict[kmm]
+			for base in bases:
+				methods = ( t for t in inspect.getmembers(base, inspect.ismethod) if not t[0].startswith("_") )
+				for name, method in methods:
+					if name in clsdict:
+						continue
+					method_with_values = needs_values(method)
+					if name in mutating_methods:
+						method_with_values = set_dirty_and_flush_changes(method_with_values)
+					# END mutating methods handling
+					
+					clsdict[name] = method_with_values
+				# END for each name/method pair
+			# END for each base
+		# END if mutating methods configuration is set
 		
 		new_type = super(MetaParserBuilder, metacls).__new__(metacls, name, bases, clsdict)
 		return new_type
@@ -63,7 +67,35 @@ def set_dirty_and_flush_changes(non_const_func):
 	flush_changes.__name__ = non_const_func.__name__
 	return flush_changes
 	
+
+class SectionConstraint(object):
+	"""Constrains a ConfigParser to only option commands which are constrained to 
+	always use the section we have been initialized with.
 	
+	It supports all ConfigParser methods that operate on an option"""
+	__slots__ = ("_config", "_section_name")
+	_valid_attrs_ = ("get_value", "set_value", "get", "set", "getint", "getfloat", "getboolean", "has_option", 
+					"remove_section", "remove_option", "options")
+	
+	def __init__(self, config, section):
+		self._config = config
+		self._section_name = section
+		
+	def __getattr__(self, attr):
+		if attr in self._valid_attrs_:
+			return lambda *args, **kwargs: self._call_config(attr, *args, **kwargs)
+		return super(SectionConstraint,self).__getattribute__(attr)
+		
+	def _call_config(self, method, *args, **kwargs):
+		"""Call the configuration at the given method which must take a section name 
+		as first argument"""
+		return getattr(self._config, method)(self._section_name, *args, **kwargs)
+		
+	@property
+	def config(self):
+		"""return: Configparser instance we constrain"""
+		return self._config
+		
 
 class GitConfigParser(cp.RawConfigParser, object):
 	"""Implements specifics required to read git style configuration files.
@@ -249,9 +281,9 @@ class GitConfigParser(cp.RawConfigParser, object):
 			if not hasattr(file_object, "seek"):
 				try:
 					fp = open(file_object)
+					close_fp = True
 				except IOError,e:
 					continue
-				close_fp = True
 			# END fp handling
 				
 			try:
@@ -286,17 +318,21 @@ class GitConfigParser(cp.RawConfigParser, object):
 		:raise IOError: if this is a read-only writer instance or if we could not obtain 
 			a file lock"""
 		self._assure_writable("write")
-		self._lock._obtain_lock()
-		
 		
 		fp = self._file_or_files
 		close_fp = False
+		
+		# we have a physical file on disk, so get a lock
+		if isinstance(fp, (basestring, file)):
+			self._lock._obtain_lock()
+		# END get lock for physical files
 		
 		if not hasattr(fp, "seek"):
 			fp = open(self._file_or_files, "w")
 			close_fp = True
 		else:
 			fp.seek(0)
+		# END handle stream or file
 		
 		# WRITE DATA
 		try:
@@ -368,7 +404,7 @@ class GitConfigParser(cp.RawConfigParser, object):
 		return valuestr
 	
 	@needs_values
-	@set_dirty_and_flush_changes	
+	@set_dirty_and_flush_changes
 	def set_value(self, section, option, value):
 		"""Sets the given option in section to the given value.
 		It will create the section if required, and will not throw as opposed to the default 

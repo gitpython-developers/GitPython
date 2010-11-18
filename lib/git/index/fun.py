@@ -30,6 +30,7 @@ from typ import (
 					CE_NAMEMASK, 
 					CE_STAGESHIFT
 				)
+CE_NAMEMASK_INV = ~CE_NAMEMASK
 
 from util import 	(
 					pack, 
@@ -53,22 +54,6 @@ def stat_mode_to_index_mode(mode):
 	return S_IFREG | 0644 | (mode & 0100) 		# blobs with or without executable bit
 
 
-def write_cache_entry(entry, stream):
-	"""Write the given entry to the stream"""
-	beginoffset = stream.tell()
-	write = stream.write
-	write(entry[4])			# ctime
-	write(entry[5])			# mtime
-	path = entry[3]
-	plen = len(path) & CE_NAMEMASK		# path length
-	assert plen == len(path), "Path %s too long to fit into index" % entry[3]
-	flags = plen | entry[2]
-	write(pack(">LLLLLL20sH", entry[6], entry[7], entry[0],
-								entry[8], entry[9], entry[10], entry[1], flags))
-	write(path)
-	real_size = ((stream.tell() - beginoffset + 8) & ~7)
-	write("\0" * ((beginoffset + real_size) - stream.tell()))
-
 def write_cache(entries, stream, extension_data=None, ShaStreamCls=IndexFileSHA1Writer):
 	"""Write the cache represented by entries to a stream
 	
@@ -83,15 +68,29 @@ def write_cache(entries, stream, extension_data=None, ShaStreamCls=IndexFileSHA1
 		a 4 byte identifier, followed by its size ( 4 bytes )"""
 	# wrap the stream into a compatible writer
 	stream = ShaStreamCls(stream)
+	
+	tell = stream.tell
+	write = stream.write
 
 	# header
 	version = 2
-	stream.write("DIRC")
-	stream.write(pack(">LL", version, len(entries)))
+	write("DIRC")
+	write(pack(">LL", version, len(entries)))
 
 	# body
 	for entry in entries:
-		write_cache_entry(entry, stream)
+		beginoffset = tell()
+		write(entry[4])			# ctime
+		write(entry[5])			# mtime
+		path = entry[3]
+		plen = len(path) & CE_NAMEMASK		# path length
+		assert plen == len(path), "Path %s too long to fit into index" % entry[3]
+		flags = plen | (entry[2] & CE_NAMEMASK_INV)		# clear possible previous values
+		write(pack(">LLLLLL20sH", entry[6], entry[7], entry[0],
+									entry[8], entry[9], entry[10], entry[1], flags))
+		write(path)
+		real_size = ((tell() - beginoffset + 8) & ~7)
+		write("\0" * ((beginoffset + real_size) - tell()))
 	# END for each entry
 
 	# write previously cached extensions data
@@ -101,21 +100,6 @@ def write_cache(entries, stream, extension_data=None, ShaStreamCls=IndexFileSHA1
 	# write the sha over the content
 	stream.write_sha()
 	
-def read_entry(stream):
-	"""Return: One entry of the given stream"""
-	beginoffset = stream.tell()
-	read = stream.read
-	ctime = unpack(">8s", read(8))[0]
-	mtime = unpack(">8s", read(8))[0]
-	(dev, ino, mode, uid, gid, size, sha, flags) = \
-		unpack(">LLLLLL20sH", read(20 + 4 * 6 + 2))
-	path_size = flags & CE_NAMEMASK
-	path = read(path_size)
-
-	real_size = ((stream.tell() - beginoffset + 8) & ~7)
-	data = read((beginoffset + real_size) - stream.tell())
-	return IndexEntry((mode, sha, flags, path, ctime, mtime, dev, ino, uid, gid, size))
-
 def read_header(stream):
 		"""Return tuple(version_long, num_entries) from the given stream"""
 		type_id = stream.read(4)
@@ -147,10 +131,23 @@ def read_cache(stream):
 	version, num_entries = read_header(stream)
 	count = 0
 	entries = dict()
+	
+	read = stream.read
+	tell = stream.tell
 	while count < num_entries:
-		entry = read_entry(stream)
+		beginoffset = tell()
+		ctime = unpack(">8s", read(8))[0]
+		mtime = unpack(">8s", read(8))[0]
+		(dev, ino, mode, uid, gid, size, sha, flags) = \
+			unpack(">LLLLLL20sH", read(20 + 4 * 6 + 2))
+		path_size = flags & CE_NAMEMASK
+		path = read(path_size)
+	
+		real_size = ((tell() - beginoffset + 8) & ~7)
+		data = read((beginoffset + real_size) - tell())
+		entry = IndexEntry((mode, sha, flags, path, ctime, mtime, dev, ino, uid, gid, size))
 		# entry_key would be the method to use, but we safe the effort
-		entries[(entry.path, entry.stage)] = entry
+		entries[(path, entry.stage)] = entry
 		count += 1
 	# END for each entry
 

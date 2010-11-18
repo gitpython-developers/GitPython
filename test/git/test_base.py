@@ -83,7 +83,7 @@ class TestBase(TestBase):
 		# objects must be resolved to shas so they compare equal
 		assert self.rorepo.head.reference.object == self.rorepo.active_branch.object
 		
-	@with_bare_rw_repo
+	@with_rw_repo('HEAD', bare=True)
 	def test_with_bare_rw_repo(self, bare_rw_repo):
 		assert bare_rw_repo.config_reader("repository").getboolean("core", "bare")
 		assert os.path.isfile(os.path.join(bare_rw_repo.git_dir,'HEAD'))
