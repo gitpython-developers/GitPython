@@ -958,7 +958,6 @@ class RootModule(Submodule):
 		# END handle previous commit
 		
 		
-		# HANDLE REMOVALS
 		psms = self.list_items(repo, parent_commit=previous_commit)
 		sms = self.list_items(self.module())
 		spsms = set(psms)
@@ -974,7 +973,9 @@ class RootModule(Submodule):
 			rsm.remove(configuration=False, module=True, force=force_remove)
 		# END for each removed submodule
 		
-		# HANDLE PATH RENAMES + url changes + branch changes
+		# HANDLE PATH RENAMES
+		#####################
+		# url changes + branch changes
 		for csm in (spsms & ssms):
 			psm = psms[csm.name]
 			sm = sms[csm.name]
@@ -996,35 +997,79 @@ class RootModule(Submodule):
 					
 					# don't do anything if we already have the url we search in place
 					if len([r for r in rmts if r.url == sm.url]) == 0:
+						
+						
 						assert nn not in [r.name for r in rmts]
 						smr = smm.create_remote(nn, sm.url)
 						smr.fetch()
 						
+						# If we have a tracking branch, it should be available
+						# in the new remote as well.
+						if len([r for r in smr.refs if r.remote_head == sm.branch.name]) == 0:
+							raise ValueError("Submodule branch named %r was not available in new submodule remote at %r" % (sm.branch.name, sm.url))
+						# END head is not detached
+						
 						# now delete the changed one
-						orig_name = None
+						rmt_for_deletion = None
 						for remote in rmts:
 							if remote.url == psm.url:
-								orig_name = remote.name
-								smm.delete_remote(remote)
+								rmt_for_deletion = remote
 								break
 							# END if urls match
 						# END for each remote
 						
 						# if we didn't find a matching remote, but have exactly one, 
 						# we can safely use this one
-						if len(rmts) == 1:
-							orig_name = rmts[0].name
-							smm.delete_remote(rmts[0])
-						else:
-							# if we have not found any remote with the original url
-							# we may not have a name. This is a special case, 
-							# and its okay to fail here
-							# Alternatively we could just generate a unique name
-							raise InvalidGitRepositoryError("Couldn't find original remote-repo at url %r" % psm.url)
-						# END only one remove
+						if rmt_for_deletion is None:
+							if len(rmts) == 1:
+								rmt_for_deletion = rmts[0]
+							else:
+								# if we have not found any remote with the original url
+								# we may not have a name. This is a special case, 
+								# and its okay to fail here
+								# Alternatively we could just generate a unique name and leave all
+								# existing ones in place
+								raise InvalidGitRepositoryError("Couldn't find original remote-repo at url %r" % psm.url)
+							#END handle one single remote
+						# END handle check we found a remote
+						
+						orig_name = rmt_for_deletion.name
+						smm.delete_remote(rmt_for_deletion)
+						# NOTE: Currently we leave tags from the deleted remotes
+						# as well as separate tracking branches in the possibly totally 
+						# changed repository ( someone could have changed the url to 
+						# another project ). At some point, one might want to clean
+						# it up, but the danger is high to remove stuff the user
+						# has added explicitly
 						
 						# rename the new remote back to what it was
 						smr.rename(orig_name)
+						
+						# early on, we verified that the our current tracking branch
+						# exists in the remote. Now we have to assure that the 
+						# sha we point to is still contained in the new remote
+						# tracking branch.
+						smsha = sm.binsha
+						found = False
+						rref = smr.refs[self.branch.name]
+						for c in rref.commit.traverse():
+							if c.binsha == smsha:
+								found = True
+								break
+							# END traverse all commits in search for sha
+						# END for each commit
+						
+						if not found:
+							# adjust our internal binsha to use the one of the remote
+							# this way, it will be checked out in the next step
+							# This will change the submodule relative to us, so 
+							# the user will be able to commit the change easily
+							print >> sys.stderr, "WARNING: Current sha %s was not contained in the tracking branch at the new remote, setting it the the remote's tracking branch" % sm.hexsha
+							sm.binsha = rref.commit.binsha
+						#END reset binsha
+						
+						#NOTE: All checkout is performed by the base implementation of update
+						
 					# END skip remote handling if new url already exists in module
 				# END handle url
 				
@@ -1049,12 +1094,15 @@ class RootModule(Submodule):
 						# current remotes, this just means we can't handle it
 						pass
 					# END exception handling
+					
+					#NOTE: All checkout is done in the base implementation of update
+					
 				#END handle branch
 			#END handle 
 		# END for each common submodule 
 		
 		# FINALLY UPDATE ALL ACTUAL SUBMODULES
-		##########################################
+		######################################
 		for sm in sms:
 			# update the submodule using the default method
 			sm.update(recursive=True, init=init, to_latest_revision=to_latest_revision)

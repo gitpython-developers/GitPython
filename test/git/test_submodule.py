@@ -358,6 +358,7 @@ class TestSubmodule(TestBase):
 		
 		# modify path without modifying the index entry
 		# ( which is what the move method would do properly )
+		#==================================================
 		sm = rm.children()[0]
 		pp = "path/prefix"
 		fp = join_path_native(pp, sm.path)
@@ -388,30 +389,67 @@ class TestSubmodule(TestBase):
 		rm.update(recursive=False)
 		sm.set_parent_commit(cpathchange)
 		assert sm.module_exists()
-		assert False
 		
 		# add submodule
+		#================
 		nsmn = "newsubmodule"
 		nsmp = "submrepo"
 		nsm = Submodule.add(rwrepo, nsmn, nsmp, url=join_path_native(self.rorepo.working_tree_dir, rsms[0].path, rsms[1].path))
 		csmadded = rwrepo.index.commit("Added submodule")
+		nsm.set_parent_commit(csmadded)
+		assert nsm.module_exists()
+		# in our case, the module should not exist, which happens if we update a parent
+		# repo and a new submodule comes into life
+		nsm.remove(configuration=False, module=True)
+		assert not nsm.module_exists() and nsm.exists()
+		
+		rm.update(recursive=False)
+		assert nsm.module_exists()
+		
+		
 		
 		# remove submodule - the previous one
+		#====================================
 		sm.set_parent_commit(csmadded)
-		assert not sm.remove().exists()
+		smp = sm.abspath
+		assert not sm.remove(module=False).exists()
+		assert os.path.isdir(smp)			# module still exists
 		csmremoved = rwrepo.index.commit("Removed submodule")
 		
-		# change url - to the first repository, this way we have a fast checkout, and a completely different 
+		# an update will remove the module
+		rm.update(recursive=False)
+		assert not os.path.isdir(smp)
+		
+		
+		# change url 
+		#=============
+		# to the first repository, this way we have a fast checkout, and a completely different 
 		# repository at the different url
 		nsm.set_parent_commit(csmremoved)
-		nsm.config_writer().set_value('url', join_path_native(self.rorepo.working_tree_dir, rsms[0].path))
+		nsmurl = join_path_native(self.rorepo.working_tree_dir, rsms[0].path)
+		nsm.config_writer().set_value('url', nsmurl)
 		csmpathchange = rwrepo.index.commit("changed url")
+		nsm.set_parent_commit(csmpathchange)
+		
+		prev_commit = nsm.module().head.commit
+		rm.update(recursive=False)
+		assert nsm.module().remotes.origin.url == nsmurl
+		# head changed, as the remote url and its commit changed
+		assert prev_commit != nsm.module().head.commit
+		
+		assert False
 		
 		# change branch
+		#=================
 		nsm.set_parent_commit(csmpathchange)
 		# the branch used here is an old failure branch which should ideally stay ... lets see how long that works ;)
 		nbn = 'pack_offset_cache'
 		assert nsm.branch.name != nbn
 		nsm.config_writer().set_value(Submodule.k_head_option, nbn)
 		csmbranchchange = rwrepo.index.commit("changed branch")
+		
+		
+		# recursive update
+		# =================
+		# finally we recursively update a module, just to run the code at least once
 		

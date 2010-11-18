@@ -28,6 +28,7 @@ from gitdb.util import join
 
 import re
 import os
+import sys
 
 __all__ = ('RemoteProgress', 'PushInfo', 'FetchInfo', 'Remote')
 
@@ -591,6 +592,10 @@ class Remote(LazyMixin, Iterable):
 		for line in self._digest_process_messages(proc.stderr, progress):
 			if line.startswith('From') or line.startswith('remote: Total'):
 				continue
+			elif line.startswith('warning:'):
+				print >> sys.stderr, line
+				continue
+			# END handle special messages
 			fetch_info_lines.append(line)
 		# END for each line
 		
