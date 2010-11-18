@@ -277,7 +277,7 @@ class SymbolicReference(object):
 	@classmethod
 	def to_full_path(cls, path):
 		"""
-		:return: string with a full path name which can be used to initialize 
+		:return: string with a full repository-relative path which can be used to initialize 
 			a Reference instance, for instance by using ``Reference.from_path``"""
 		if isinstance(path, SymbolicReference):
 			path = path.path

@@ -365,7 +365,13 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
 		new_commit.binsha = istream.binsha
 		
 		if head:
+			# need late import here, importing git at the very beginning throws
+			# as well ... 
+			import git.refs
 			try:
+				cur_commit = repo.head.commit
+				# Adjust the original head reference - force it
+				git.refs.SymbolicReference.create(repo, 'ORIG_HEAD', cur_commit, force=True)
 				repo.head.commit = new_commit
 			except ValueError:
 				# head is not yet set to the ref our HEAD points to
