@@ -215,7 +215,15 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 		sm = cls(repo, cls.NULL_BIN_SHA, cls.k_default_mode, path, name)
 		if sm.exists():
 			# reretrieve submodule from tree
-			return repo.head.commit.tree[path]
+			try:
+				return repo.head.commit.tree[path]
+			except KeyError:
+				# could only be in index
+				index = repo.index
+				entry = index.entries[index.entry_key(path, 0)]
+				sm.binsha = entry.binsha
+				return sm
+			# END handle exceptions
 		# END handle existing
 		
 		br = mkhead(repo, branch or cls.k_head_default)
