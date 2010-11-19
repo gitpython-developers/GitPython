@@ -595,6 +595,8 @@ class Remote(LazyMixin, Iterable):
 			elif line.startswith('warning:'):
 				print >> sys.stderr, line
 				continue
+			elif line.startswith('fatal:'):
+				raise GitCommandError("Error when fetching: %s" % line)
 			# END handle special messages
 			fetch_info_lines.append(line)
 		# END for each line
