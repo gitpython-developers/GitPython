@@ -12,7 +12,7 @@ import os
 
 class TestSubmodule(TestBase):
 
-	k_subm_current = "00ce31ad308ff4c7ef874d2fa64374f47980c85c"
+	k_subm_current = "45c0f285a6d9d9214f8167742d12af2855f527fb"
 	k_subm_changed = "394ed7006ee5dc8bddfd132b64001d5dfc0ffdd3"
 	k_no_subm_tag = "0.1.6"
 	
@@ -33,7 +33,7 @@ class TestSubmodule(TestBase):
 		assert len(Submodule.list_items(rwrepo, self.k_no_subm_tag)) == 0
 		
 		assert sm.path == 'lib/git/ext/gitdb'
-		assert sm.path == sm.name					# for now, this is True
+		assert sm.path != sm.name					# in our case, we have ids there, which don't equal the path
 		assert sm.url == 'git://gitorious.org/git-python/gitdb.git'
 		assert sm.branch.name == 'master'			# its unset in this case
 		assert sm.parent_commit == rwrepo.head.commit
@@ -43,7 +43,7 @@ class TestSubmodule(TestBase):
 		# some commits earlier we still have a submodule, but its at a different commit
 		smold = Submodule.iter_items(rwrepo, self.k_subm_changed).next()
 		assert smold.binsha != sm.binsha
-		assert smold == sm					# the name is still the same
+		assert smold != sm					# the name changed
 		
 		# force it to reread its information
 		del(smold._url)
@@ -71,12 +71,11 @@ class TestSubmodule(TestBase):
 			self.failUnlessRaises(ValueError, smold.config_writer)
 		# END handle bare repo
 		
-		# make the old into a new
+		# make the old into a new - this doesn't work as the name changed
 		prev_parent_commit = smold.parent_commit
-		assert smold.set_parent_commit(self.k_subm_current) is smold 
-		assert smold.parent_commit != prev_parent_commit
-		assert smold.binsha == sm.binsha
-		smold.set_parent_commit(prev_parent_commit)
+		self.failUnlessRaises(ValueError, smold.set_parent_commit, self.k_subm_current)
+		# the sha is properly updated
+		smold.set_parent_commit(self.k_subm_changed+"~1")
 		assert smold.binsha != sm.binsha
 		
 		# raises if the sm didn't exist in new parent - it keeps its 
@@ -181,6 +180,10 @@ class TestSubmodule(TestBase):
 			csm.module().head.ref.set_tracking_branch(None)
 			sm.update(recursive=True, to_latest_revision=True)
 			
+			# to_latest_revision changes the child submodule's commit, it needs an
+			# update now
+			csm.set_parent_commit(csm.repo.head.commit)
+			
 			# undo the changes
 			sm.module().head.ref = smref
 			csm.module().head.ref.set_tracking_branch(csm_tracking_branch)
@@ -191,8 +194,8 @@ class TestSubmodule(TestBase):
 			self.failUnlessRaises(ValueError, csm.remove, module=False, configuration=False)
 			# We have modified the configuration, hence the index is dirty, and the
 			# deletion will fail
-			# NOTE: As we did  a few updates in the meanwhile, the indices where reset
-			# Hence we restore some changes
+			# NOTE: As we did  a few updates in the meanwhile, the indices were reset
+			# Hence we create some changes
 			sm.config_writer().set_value("somekey", "somevalue")
 			csm.config_writer().set_value("okey", "ovalue")
 			self.failUnlessRaises(InvalidGitRepositoryError, sm.remove)

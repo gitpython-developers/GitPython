@@ -244,7 +244,7 @@ class RootModule(Submodule):
 		######################################
 		for sm in sms:
 			# update the submodule using the default method
-			sm.update(recursive=True, init=init, to_latest_revision=to_latest_revision)
+			sm.update(recursive=False, init=init, to_latest_revision=to_latest_revision)
 			
 			# update recursively depth first - question is which inconsitent 
 			# state will be better in case it fails somewhere. Defective branch

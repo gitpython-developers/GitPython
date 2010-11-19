@@ -261,12 +261,6 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 		# END handle path
 		del(writer)
 		
-		# NOTE: Have to write the repo config file as well, otherwise
-		# the default implementation will be offended and not update the repository
-		# Maybe this is a good way to assure it doesn't get into our way, but 
-		# we want to stay backwards compatible too ... . Its so redundant !
-		repo.config_writer().set_value(sm_section(sm.name), 'url', url)
-		
 		# we deliberatly assume that our head matches our index !
 		pcommit = repo.head.commit
 		sm._parent_commit = pcommit
@@ -350,6 +344,12 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 			except IndexError:
 				print >> sys.stderr, "Warning: Failed to checkout tracking branch %s" % self.branch 
 			#END handle tracking branch
+			
+			# NOTE: Have to write the repo config file as well, otherwise
+			# the default implementation will be offended and not update the repository
+			# Maybe this is a good way to assure it doesn't get into our way, but 
+			# we want to stay backwards compatible too ... . Its so redundant !
+			self.repo.config_writer().set_value(sm_section(self.name), 'url', self.url)
 		#END handle initalization
 		
 		
