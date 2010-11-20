@@ -22,7 +22,7 @@ class TestObjDBPerformance(TestBigRepoR):
 	large_data_size_bytes = 1000*1000*10		# some MiB should do it
 	moderate_data_size_bytes = 1000*1000*1		# just 1 MiB
 	
-	@with_bare_rw_repo
+	@with_rw_repo('HEAD', bare=True)
 	def test_large_data_streaming(self, rwrepo):
 		# TODO: This part overlaps with the same file in gitdb.test.performance.test_stream
 		# It should be shared if possible

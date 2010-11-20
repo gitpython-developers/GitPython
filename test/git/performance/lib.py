@@ -46,8 +46,8 @@ class TestBigRepoR(TestBase):
     """
 	 
 	#{ Invariants
-	head_sha_2k = '235d521da60e4699e5bd59ac658b5b48bd76ddca'
-	head_sha_50 = '32347c375250fd470973a5d76185cac718955fd5'
+	head_sha_2k = 'd9671e15703918048982c9ff4e2e0fef21ede320'
+	head_sha_50 = 'ef9395f5ffe75f4e43d80cd1fa7b34c8a4db66fe'
 	#} END invariants 
 	
 	@classmethod
