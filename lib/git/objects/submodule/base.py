@@ -211,6 +211,12 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 			path = path[:-1]
 		# END handle trailing slash
 		
+		# assure we never put backslashes into the url, as some operating systems 
+		# like it ... 
+		if url != None:
+			url = to_native_path_linux(url)
+		#END assure url correctness
+		
 		# INSTANTIATE INTERMEDIATE SM
 		sm = cls(repo, cls.NULL_BIN_SHA, cls.k_default_mode, path, name)
 		if sm.exists():

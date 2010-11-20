@@ -378,7 +378,7 @@ class TestSubmodule(TestBase):
 		assert not sm.module_exists()				# was never updated after rwrepo's clone
 		
 		# assure we clone from a local source 
-		sm.config_writer().set_value('url', join_path_native(self.rorepo.working_tree_dir, sm.path))
+		sm.config_writer().set_value('url', to_native_path_linux(join_path_native(self.rorepo.working_tree_dir, sm.path)))
 		sm.update(recursive=False)
 		assert sm.module_exists()
 		sm.config_writer().set_value('path', fp)	# change path to something with prefix AFTER url change
@@ -406,7 +406,7 @@ class TestSubmodule(TestBase):
 		#================
 		nsmn = "newsubmodule"
 		nsmp = "submrepo"
-		async_url = join_path_native(self.rorepo.working_tree_dir, rsms[0].path, rsms[1].path)
+		async_url = to_native_path_linux(join_path_native(self.rorepo.working_tree_dir, rsms[0].path, rsms[1].path))
 		nsm = Submodule.add(rwrepo, nsmn, nsmp, url=async_url)
 		csmadded = rwrepo.index.commit("Added submodule")
 		nsm.set_parent_commit(csmadded)
@@ -439,7 +439,7 @@ class TestSubmodule(TestBase):
 		# to the first repository, this way we have a fast checkout, and a completely different 
 		# repository at the different url
 		nsm.set_parent_commit(csmremoved)
-		nsmurl = join_path_native(self.rorepo.working_tree_dir, rsms[0].path)
+		nsmurl = to_native_path_linux(join_path_native(self.rorepo.working_tree_dir, rsms[0].path))
 		nsm.config_writer().set_value('url', nsmurl)
 		csmpathchange = rwrepo.index.commit("changed url")
 		nsm.set_parent_commit(csmpathchange)
