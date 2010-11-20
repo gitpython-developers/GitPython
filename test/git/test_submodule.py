@@ -172,14 +172,16 @@ class TestSubmodule(TestBase):
 			
 			
 			# reset both heads to the previous version, verify that to_latest_revision works
-			for repo in (csm.module(), sm.module()):
+			smods = (sm.module(), csm.module())
+			for repo in smods:
 				repo.head.reset('HEAD~1', working_tree=1)
 			# END for each repo to reset
 			
 			sm.update(recursive=True, to_latest_revision=True)
-			for repo in (sm.module(), csm.module()):
+			for repo in smods:
 				assert repo.head.commit == repo.head.ref.tracking_branch().commit
 			# END for each repo to check
+			del(smods)
 			
 			# if the head is detached, it still works ( but warns )
 			smref = sm.module().head.ref
@@ -356,8 +358,8 @@ class TestSubmodule(TestBase):
 		rm.config_writer()
 		
 		# deep traversal gitdb / async
-		rsms = list(rm.traverse())
-		assert len(rsms) == 2			# gitdb and async, async being a child of gitdb
+		rsmsp = [sm.path for sm in rm.traverse()]
+		assert len(rsmsp) == 2			# gitdb and async, async being a child of gitdb
 		
 		# cannot set the parent commit as root module's path didn't exist
 		self.failUnlessRaises(ValueError, rm.set_parent_commit, 'HEAD')
@@ -378,7 +380,7 @@ class TestSubmodule(TestBase):
 		assert not sm.module_exists()				# was never updated after rwrepo's clone
 		
 		# assure we clone from a local source 
-		sm.config_writer().set_value('url', join_path_native(self.rorepo.working_tree_dir, sm.path))
+		sm.config_writer().set_value('url', to_native_path_linux(join_path_native(self.rorepo.working_tree_dir, sm.path)))
 		sm.update(recursive=False)
 		assert sm.module_exists()
 		sm.config_writer().set_value('path', fp)	# change path to something with prefix AFTER url change
@@ -406,9 +408,9 @@ class TestSubmodule(TestBase):
 		#================
 		nsmn = "newsubmodule"
 		nsmp = "submrepo"
-		async_url = join_path_native(self.rorepo.working_tree_dir, rsms[0].path, rsms[1].path)
+		async_url = to_native_path_linux(join_path_native(self.rorepo.working_tree_dir, rsmsp[0], rsmsp[1]))
 		nsm = Submodule.add(rwrepo, nsmn, nsmp, url=async_url)
-		csmadded = rwrepo.index.commit("Added submodule")
+		csmadded = rwrepo.index.commit("Added submodule").hexsha	# make sure we don't keep the repo reference
 		nsm.set_parent_commit(csmadded)
 		assert nsm.module_exists()
 		# in our case, the module should not exist, which happens if we update a parent
@@ -439,7 +441,7 @@ class TestSubmodule(TestBase):
 		# to the first repository, this way we have a fast checkout, and a completely different 
 		# repository at the different url
 		nsm.set_parent_commit(csmremoved)
-		nsmurl = join_path_native(self.rorepo.working_tree_dir, rsms[0].path)
+		nsmurl = to_native_path_linux(join_path_native(self.rorepo.working_tree_dir, rsmsp[0]))
 		nsm.config_writer().set_value('url', nsmurl)
 		csmpathchange = rwrepo.index.commit("changed url")
 		nsm.set_parent_commit(csmpathchange)

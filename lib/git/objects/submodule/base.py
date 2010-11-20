@@ -24,6 +24,7 @@ import git
 
 import os
 import sys
+import time
 
 import shutil
 
@@ -211,6 +212,12 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 			path = path[:-1]
 		# END handle trailing slash
 		
+		# assure we never put backslashes into the url, as some operating systems 
+		# like it ... 
+		if url != None:
+			url = to_native_path_linux(url)
+		#END assure url correctness
+		
 		# INSTANTIATE INTERMEDIATE SM
 		sm = cls(repo, cls.NULL_BIN_SHA, cls.k_default_mode, path, name)
 		if sm.exists():
@@ -381,7 +388,11 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 		# update the working tree
 		if mrepo.head.commit.binsha != binsha:
 			if is_detached:
-				mrepo.git.checkout(hexsha)
+				# NOTE: for now we force, the user is no supposed to change detached
+				# submodules anyway. Maybe at some point this becomes an option, to 
+				# properly handle user modifications - see below for future options
+				# regarding rebase and merge.
+				mrepo.git.checkout(hexsha, force=True)
 			else:
 				# TODO: allow to specify a rebase, merge, or reset
 				# TODO: Warn if the hexsha forces the tracking branch off the remote
@@ -576,16 +587,26 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 					if num_branches_with_new_commits == len(rrefs):
 						raise InvalidGitRepositoryError("Cannot delete module at %s as there are new commits" % mod.working_tree_dir)
 					# END handle new commits
+					# have to manually delete references as python's scoping is 
+					# not existing, they could keep handles open ( on windows this is a problem )
+					if len(rrefs):
+						del(rref)
+					#END handle remotes
+					del(rrefs)
+					del(remote)
 				# END for each remote
 				
 				# gently remove all submodule repositories
 				for sm in self.children():
 					sm.remove(module=True, force=False, configuration=False, dry_run=dry_run)
+					del(sm)
 				# END for each child-submodule
 				
 				# finally delete our own submodule
 				if not dry_run:
-					shutil.rmtree(mod.working_tree_dir)
+					wtd = mod.working_tree_dir
+					del(mod)		# release file-handles (windows)
+					shutil.rmtree(wtd)
 				# END delete tree if possible
 			# END handle force
 		# END handle module deletion
