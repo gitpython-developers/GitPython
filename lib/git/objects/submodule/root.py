@@ -1,6 +1,5 @@
 from base import Submodule
 from util import (
-					mkhead, 
 					find_first_remote_branch
 				)
 from git.exc import InvalidGitRepositoryError
@@ -29,7 +28,7 @@ class RootModule(Submodule):
 										name = self.k_root_name, 
 										parent_commit = repo.head.commit,
 										url = '',
-										branch = mkhead(repo, self.k_head_default)
+										branch_path = git.Head.to_full_path(self.k_head_default)
 										)
 		
 	
@@ -135,8 +134,8 @@ class RootModule(Submodule):
 						
 						# If we have a tracking branch, it should be available
 						# in the new remote as well.
-						if len([r for r in smr.refs if r.remote_head == sm.branch.name]) == 0:
-							raise ValueError("Submodule branch named %r was not available in new submodule remote at %r" % (sm.branch.name, sm.url))
+						if len([r for r in smr.refs if r.remote_head == sm.branch_name]) == 0:
+							raise ValueError("Submodule branch named %r was not available in new submodule remote at %r" % (sm.branch_name, sm.url))
 						# END head is not detached
 						
 						# now delete the changed one
@@ -181,7 +180,7 @@ class RootModule(Submodule):
 						# tracking branch.
 						smsha = sm.binsha
 						found = False
-						rref = smr.refs[self.branch.name]
+						rref = smr.refs[self.branch_name]
 						for c in rref.commit.traverse():
 							if c.binsha == smsha:
 								found = True
@@ -203,28 +202,28 @@ class RootModule(Submodule):
 					# END skip remote handling if new url already exists in module
 				# END handle url
 				
-				if sm.branch != psm.branch:
+				if sm.branch_path != psm.branch_path:
 					# finally, create a new tracking branch which tracks the 
 					# new remote branch
 					smm = sm.module()
 					smmr = smm.remotes
 					try:
-						tbr = git.Head.create(smm, sm.branch.name)
+						tbr = git.Head.create(smm, sm.branch_name)
 					except git.GitCommandError, e:
 						if e.status != 128:
 							raise
 						#END handle something unexpected
 						
 						# ... or reuse the existing one
-						tbr = git.Head(smm, git.Head.to_full_path(sm.branch.name))
+						tbr = git.Head(smm, sm.branch_path)
 					#END assure tracking branch exists
 					
-					tbr.set_tracking_branch(find_first_remote_branch(smmr, sm.branch))
+					tbr.set_tracking_branch(find_first_remote_branch(smmr, sm.branch_name))
 					# figure out whether the previous tracking branch contains
 					# new commits compared to the other one, if not we can 
 					# delete it.
 					try:
-						tbr = find_first_remote_branch(smmr, psm.branch)
+						tbr = find_first_remote_branch(smmr, psm.branch_name)
 						if len(smm.git.cherry(tbr, psm.branch)) == 0:
 							psm.branch.delete(smm, psm.branch)
 						#END delete original tracking branch if there are no changes

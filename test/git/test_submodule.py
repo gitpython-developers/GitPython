@@ -35,10 +35,19 @@ class TestSubmodule(TestBase):
 		assert sm.path == 'lib/git/ext/gitdb'
 		assert sm.path != sm.name					# in our case, we have ids there, which don't equal the path
 		assert sm.url == 'git://gitorious.org/git-python/gitdb.git'
-		assert sm.branch.name == 'master'			# its unset in this case
+		assert sm.branch_path == 'refs/heads/master'			# the default ...
+		assert sm.branch_name == 'master'
 		assert sm.parent_commit == rwrepo.head.commit
 		# size is always 0
 		assert sm.size == 0
+		# the module is not checked-out yet
+		self.failUnlessRaises(InvalidGitRepositoryError, sm.module)
+		
+		# which is why we can't get the branch either - it points into the module() repository
+		self.failUnlessRaises(InvalidGitRepositoryError, getattr, sm, 'branch')
+		
+		# branch_path works, as its just a string
+		assert isinstance(sm.branch_path, basestring)
 		
 		# some commits earlier we still have a submodule, but its at a different commit
 		smold = Submodule.iter_items(rwrepo, self.k_subm_changed).next()
@@ -455,7 +464,7 @@ class TestSubmodule(TestBase):
 		nsmm = nsm.module()
 		prev_commit = nsmm.head.commit
 		for branch in ("some_virtual_branch", cur_branch.name):
-			nsm.config_writer().set_value(Submodule.k_head_option, branch)
+			nsm.config_writer().set_value(Submodule.k_head_option, git.Head.to_full_path(branch))
 			csmbranchchange = rwrepo.index.commit("changed branch to %s" % branch)
 			nsm.set_parent_commit(csmbranchchange)
 		# END for each branch to change

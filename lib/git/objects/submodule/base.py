@@ -51,10 +51,10 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 	# this is a bogus type for base class compatability
 	type = 'submodule'
 	
-	__slots__ = ('_parent_commit', '_url', '_branch', '_name', '__weakref__')
-	_cache_attrs = ('path', '_url', '_branch')
+	__slots__ = ('_parent_commit', '_url', '_branch_path', '_name', '__weakref__')
+	_cache_attrs = ('path', '_url', '_branch_path')
 	
-	def __init__(self, repo, binsha, mode=None, path=None, name = None, parent_commit=None, url=None, branch=None):
+	def __init__(self, repo, binsha, mode=None, path=None, name = None, parent_commit=None, url=None, branch_path=None):
 		"""Initialize this instance with its attributes. We only document the ones 
 		that differ from ``IndexObject``
 		
@@ -62,16 +62,16 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 		:param binsha: binary sha referring to a commit in the remote repository, see url parameter
 		:param parent_commit: see set_parent_commit()
 		:param url: The url to the remote repository which is the submodule
-		:param branch: Head instance to checkout when cloning the remote repository"""
+		:param branch_path: full (relative) path to ref to checkout when cloning the remote repository"""
 		super(Submodule, self).__init__(repo, binsha, mode, path)
 		self.size = 0
 		if parent_commit is not None:
 			self._parent_commit = parent_commit
 		if url is not None:
 			self._url = url
-		if branch is not None:
-			assert isinstance(branch, git.Head)
-			self._branch = branch
+		if branch_path is not None:
+			assert isinstance(branch_path, basestring)
+			self._branch_path = branch_path
 		if name is not None:
 			self._name = name
 	
@@ -79,13 +79,13 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 		if attr == '_parent_commit':
 			# set a default value, which is the root tree of the current head
 			self._parent_commit = self.repo.commit()
-		elif attr in ('path', '_url', '_branch'):
+		elif attr in ('path', '_url', '_branch_path'):
 			reader = self.config_reader()
 			# default submodule values
 			self.path = reader.get_value('path')
 			self._url = reader.get_value('url')
 			# git-python extension values - optional
-			self._branch = mkhead(self.repo, reader.get_value(self.k_head_option, self.k_head_default))
+			self._branch_path = reader.get_value(self.k_head_option, git.Head.to_full_path(self.k_head_default))
 		elif attr == '_name':
 			raise AttributeError("Cannot retrieve the name of a submodule if it was not set initially")
 		else:
@@ -119,7 +119,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 		return self._name
 		
 	def __repr__(self):
-		return "git.%s(name=%s, path=%s, url=%s, branch=%s)" % (type(self).__name__, self._name, self.path, self.url, self.branch) 
+		return "git.%s(name=%s, path=%s, url=%s, branch_path=%s)" % (type(self).__name__, self._name, self.path, self.url, self.branch_path) 
 		
 	@classmethod
 	def _config_parser(cls, repo, parent_commit, read_only):
@@ -226,7 +226,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 			# END handle exceptions
 		# END handle existing
 		
-		br = mkhead(repo, branch or cls.k_head_default)
+		br = git.Head.to_full_path(str(branch) or cls.k_head_default)
 		has_module = sm.module_exists()
 		branch_is_default = branch is None
 		if has_module and url is not None:
@@ -250,7 +250,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 			# clone new repo
 			kwargs = {'n' : no_checkout}
 			if not branch_is_default:
-				kwargs['b'] = str(br)
+				kwargs['b'] = br
 			# END setup checkout-branch
 			mrepo = git.Repo.clone_from(url, path, **kwargs)
 		# END verify url
@@ -264,8 +264,8 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 		sm._url = url
 		if not branch_is_default:
 			# store full path
-			writer.set_value(cls.k_head_option, br.path)
-			sm._branch = br.path
+			writer.set_value(cls.k_head_option, br)
+			sm._branch_path = br
 		# END handle path
 		del(writer)
 		
@@ -327,13 +327,8 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 			# see whether we have a valid branch to checkout
 			try:
 				# find  a remote which has our branch - we try to be flexible
-				remote_branch = find_first_remote_branch(mrepo.remotes, self.branch)
-				local_branch = self.branch
-				if not local_branch.is_valid():
-					# Setup a tracking configuration - branch doesn't need to 
-					# exist to do that
-					local_branch.set_tracking_branch(remote_branch)
-				#END handle local branch
+				remote_branch = find_first_remote_branch(mrepo.remotes, self.branch_name)
+				local_branch = mkhead(mrepo, self.branch_path)
 				
 				# have a valid branch, but no checkout - make sure we can figure
 				# that out by marking the commit with a null_sha
@@ -349,8 +344,9 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 				
 				# make sure HEAD is not detached
 				mrepo.head.ref = local_branch
+				mrepo.head.ref.set_tracking_branch(remote_branch)
 			except IndexError:
-				print >> sys.stderr, "Warning: Failed to checkout tracking branch %s" % self.branch 
+				print >> sys.stderr, "Warning: Failed to checkout tracking branch %s" % self.branch_path 
 			#END handle tracking branch
 			
 			# NOTE: Have to write the repo config file as well, otherwise
@@ -516,8 +512,8 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 		:param module: If True, the module we point to will be deleted 
 			as well. If the module is currently on a commit which is not part 
 			of any branch in the remote, if the currently checked out branch 
-			is ahead of its tracking branch,  if you have modifications in the
 			working tree, or untracked files,
+			is ahead of its tracking branch,  if you have modifications in the
 			In case the removal of the repository fails for these reasons, the 
 			submodule status will not have been altered.
 			If this submodule has child-modules on its own, these will be deleted
@@ -611,6 +607,9 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 			self.repo.config_writer().remove_section(sm_section(self.name))
 			self.config_writer().remove_section()
 		# END delete configuration
+
+		# void our data not to delay invalid access
+		self._clear_cache()
 		
 		return self
 		
@@ -732,8 +731,22 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 	
 	@property
 	def branch(self):
-		""":return: The branch instance that we are to checkout"""
-		return self._branch
+		""":return: The branch instance that we are to checkout
+		:raise InvalidGitRepositoryError: if our module is not yet checked out"""
+		return mkhead(self.module(), self._branch_path)
+	
+	@property
+	def branch_path(self):
+		""":return: full (relative) path as string to the branch we would checkout
+			from the remote and track"""
+		return self._branch_path
+		
+	@property
+	def branch_name(self):
+		""":return: the name of the branch, which is the shortest possible branch name"""
+		# use an instance method, for this we create a temporary Head instance
+		# which uses a repository that is available at least ( it makes no difference )
+		return git.Head(self.repo, self._branch_path).name
 	
 	@property
 	def url(self):
@@ -814,7 +827,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 			# fill in remaining info - saves time as it doesn't have to be parsed again
 			sm._name = n
 			sm._parent_commit = pc
-			sm._branch = mkhead(repo, b)
+			sm._branch_path = git.Head.to_full_path(b)
 			sm._url = u
 			
 			yield sm

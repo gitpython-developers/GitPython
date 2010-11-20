@@ -34,16 +34,16 @@ def unbare_repo(func):
 	wrapper.__name__ = func.__name__
 	return wrapper
 	
-def find_first_remote_branch(remotes, branch):
+def find_first_remote_branch(remotes, branch_name):
 	"""Find the remote branch matching the name of the given branch or raise InvalidGitRepositoryError"""
 	for remote in remotes:
 		try:
-			return remote.refs[branch.name]
+			return remote.refs[branch_name]
 		except IndexError:
 			continue
 		# END exception handling
 	#END for remote
-	raise InvalidGitRepositoryError("Didn't find remote branch %r in any of the given remotes", branch)
+	raise InvalidGitRepositoryError("Didn't find remote branch %r in any of the given remotes", branch_name)
 	
 #} END utilities
 
