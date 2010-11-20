@@ -387,7 +387,11 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 		# update the working tree
 		if mrepo.head.commit.binsha != binsha:
 			if is_detached:
-				mrepo.git.checkout(hexsha)
+				# NOTE: for now we force, the user is no supposed to change detached
+				# submodules anyway. Maybe at some point this becomes an option, to 
+				# properly handle user modifications - see below for future options
+				# regarding rebase and merge.
+				mrepo.git.checkout(hexsha, force=True)
 			else:
 				# TODO: allow to specify a rebase, merge, or reset
 				# TODO: Warn if the hexsha forces the tracking branch off the remote
