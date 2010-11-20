@@ -24,6 +24,7 @@ import git
 
 import os
 import sys
+import time
 
 import shutil
 
@@ -586,16 +587,26 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 					if num_branches_with_new_commits == len(rrefs):
 						raise InvalidGitRepositoryError("Cannot delete module at %s as there are new commits" % mod.working_tree_dir)
 					# END handle new commits
+					# have to manually delete references as python's scoping is 
+					# not existing, they could keep handles open ( on windows this is a problem )
+					if len(rrefs):
+						del(rref)
+					#END handle remotes
+					del(rrefs)
+					del(remote)
 				# END for each remote
 				
 				# gently remove all submodule repositories
 				for sm in self.children():
 					sm.remove(module=True, force=False, configuration=False, dry_run=dry_run)
+					del(sm)
 				# END for each child-submodule
 				
 				# finally delete our own submodule
 				if not dry_run:
-					shutil.rmtree(mod.working_tree_dir)
+					wtd = mod.working_tree_dir
+					del(mod)		# release file-handles (windows)
+					shutil.rmtree(wtd)
 				# END delete tree if possible
 			# END handle force
 		# END handle module deletion
