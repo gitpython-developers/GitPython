@@ -7,7 +7,7 @@
 from lib import *
 from git import *
 from gitdb import IStream
-from test.git.test_commit import assert_commit_serialization
+from git.test.test_commit import assert_commit_serialization
 from cStringIO import StringIO
 from time import time
 import sys

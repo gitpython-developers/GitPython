@@ -1,4 +1,4 @@
-from test.testlib import *
+from git.test.lib import *
 from git.objects.fun import (
 								traverse_tree_recursive,
 								traverse_trees_recursive, 

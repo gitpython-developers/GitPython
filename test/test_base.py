@@ -8,7 +8,7 @@ import git.objects.base as base
 import git.refs as refs
 import os
 
-from test.testlib import *
+from git.test.lib import *
 from git import *
 from itertools import chain
 from git.objects.util import get_object_type_by_name

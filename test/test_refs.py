@@ -5,7 +5,7 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
 from mock import *
-from test.testlib import *
+from git.test.lib import *
 from git import *
 import git.refs as refs
 from git.objects.tag import TagObject

@@ -1,7 +1,7 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
-from test.testlib import *
+from git.test.lib import *
 from git.exc import *
 from git.objects.submodule.base import Submodule
 from git.objects.submodule.root import RootModule
@@ -12,7 +12,7 @@ import os
 
 class TestSubmodule(TestBase):
 
-	k_subm_current = "45c0f285a6d9d9214f8167742d12af2855f527fb"
+	k_subm_current = "83a9e4a0dad595188ff3fb35bc3dfc4d931eff6d"
 	k_subm_changed = "394ed7006ee5dc8bddfd132b64001d5dfc0ffdd3"
 	k_no_subm_tag = "0.1.6"
 	
@@ -32,7 +32,7 @@ class TestSubmodule(TestBase):
 		# at a different time, there is None
 		assert len(Submodule.list_items(rwrepo, self.k_no_subm_tag)) == 0
 		
-		assert sm.path == 'lib/git/ext/gitdb'
+		assert sm.path == 'ext/gitdb'
 		assert sm.path != sm.name					# in our case, we have ids there, which don't equal the path
 		assert sm.url == 'git://gitorious.org/git-python/gitdb.git'
 		assert sm.branch_path == 'refs/heads/master'			# the default ...
@@ -297,10 +297,6 @@ class TestSubmodule(TestBase):
 			nmp = nmp[:-1]			# cut last /
 			assert nsm.path == nmp
 			assert rwrepo.submodules[0].path == nmp
-			
-			# move it back - but there is a file now - this doesn't work
-			# as the empty directories where removed.
-			self.failUnlessRaises(IOError, open, abspmp, 'w')
 			
 			mpath = 'newsubmodule'
 			absmpath = join_path_native(rwrepo.working_tree_dir, mpath)

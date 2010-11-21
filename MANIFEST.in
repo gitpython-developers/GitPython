@@ -3,3 +3,5 @@ include LICENSE
 include CHANGES
 include AUTHORS
 include README
+
+graft test/fixtures
