@@ -1,0 +1,227 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Overview / Install &mdash; GitPython v0.3.0-beta2 documentation</title>
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '#',
+        VERSION:     '0.3.0-beta2',
+        COLLAPSE_MODINDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="GitPython v0.3.0-beta2 documentation" href="index.html" />
+    <link rel="next" title="Whats New in 0.3" href="whatsnew.html" />
+    <link rel="prev" title="GitPython Documentation" href="index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="modindex.html" title="Global Module Index"
+             accesskey="M">modules</a> |</li>
+        <li class="right" >
+          <a href="whatsnew.html" title="Whats New in 0.3"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="GitPython Documentation"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">GitPython v0.3.0-beta2 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="overview-install">
+<span id="intro-toplevel"></span><h1>Overview / Install<a class="headerlink" href="#overview-install" title="Permalink to this headline">¶</a></h1>
+<p>GitPython is a python library used to interact with git repositories, high-level like git-porcelain, or low-level like git-plumbing.</p>
+<p>It provides abstractions of git objects for easy access of repository data, and additionally allows you to access the git repository more directly using either a pure python implementation, or the faster, but more resource intensive git command implementation.</p>
+<p>The object database implementation is optimized for handling large quantities of objects and large datasets, which is achieved by using low-level structures and data streaming.</p>
+<div class="section" id="requirements">
+<h2>Requirements<a class="headerlink" href="#requirements" title="Permalink to this headline">¶</a></h2>
+<ul>
+<li><dl class="first docutils">
+<dt><a class="reference external" href="http://git-scm.com/">Git</a> 1.7.0 or newer</dt>
+<dd><p class="first last">It should also work with older versions, but it may be that some operations
+involving remotes will not work as expected.</p>
+</dd>
+</dl>
+</li>
+<li><p class="first"><a class="reference external" href="http://pypi.python.org/pypi/gitdb">GitDB</a> - a pure python git database implementation</p>
+</li>
+</ul>
+<blockquote>
+<ul class="simple">
+<li><a class="reference external" href="http://pypi.python.org/pypi/async">async</a> - asynchronous task scheduling</li>
+</ul>
+</blockquote>
+<ul class="simple">
+<li><a class="reference external" href="http://code.google.com/p/python-nose/">Python Nose</a> - used for running the tests</li>
+<li><a class="reference external" href="http://www.voidspace.org.uk/python/mock.html">Mock by Michael Foord</a> used for tests. Requires version 0.5</li>
+</ul>
+</div>
+<div class="section" id="installing-gitpython">
+<h2>Installing GitPython<a class="headerlink" href="#installing-gitpython" title="Permalink to this headline">¶</a></h2>
+<p>Installing GitPython is easily done using
+<a class="reference external" href="http://peak.telecommunity.com/DevCenter/setuptools">setuptools</a>. Assuming it is
+installed, just run the following from the command-line:</p>
+<div class="highlight-none"><div class="highlight"><pre># easy_install GitPython
+</pre></div>
+</div>
+<p>This command will download the latest version of GitPython from the
+<a class="reference external" href="http://pypi.python.org/pypi/GitPython">Python Package Index</a> and install it
+to your system. More information about <tt class="docutils literal"><span class="pre">easy_install</span></tt> and pypi can be found
+here:</p>
+<ul class="simple">
+<li><a class="reference external" href="http://peak.telecommunity.com/DevCenter/setuptools">setuptools</a></li>
+<li><a class="reference external" href="http://peak.telecommunity.com/DevCenter/EasyInstall#installation-instructions">install setuptools</a></li>
+<li><a class="reference external" href="http://pypi.python.org/pypi/SQLAlchemy">pypi</a></li>
+</ul>
+<p>Alternatively, you can install from the distribution using the <tt class="docutils literal"><span class="pre">setup.py</span></tt>
+script:</p>
+<div class="highlight-none"><div class="highlight"><pre># python setup.py install
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">In this case, you have to manually install <a class="reference external" href="http://pypi.python.org/pypi/gitdb">GitDB</a> and <a class="reference external" href="http://pypi.python.org/pypi/async">async</a> as well. It would be recommended to use the <a class="reference internal" href="#source-code-label"><em>git source repository</em></a> in that case.</p>
+</div>
+</div>
+<div class="section" id="getting-started">
+<h2>Getting Started<a class="headerlink" href="#getting-started" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><a class="reference external" href="tutorial.html#tutorial-label"><em>GitPython Tutorial</em></a> - This tutorial provides a walk-through of some of
+the basic functionality and concepts used in GitPython. It, however, is not
+exhaustive so you are encouraged to spend some time in the
+<a class="reference external" href="reference.html#api-reference-toplevel"><em>API Reference</em></a>.</li>
+</ul>
+</div>
+<div class="section" id="api-reference">
+<h2>API Reference<a class="headerlink" href="#api-reference" title="Permalink to this headline">¶</a></h2>
+<p>An organized section of the GitPthon API is at <a class="reference external" href="reference.html#api-reference-toplevel"><em>API Reference</em></a>.</p>
+</div>
+<div class="section" id="source-code">
+<span id="source-code-label"></span><h2>Source Code<a class="headerlink" href="#source-code" title="Permalink to this headline">¶</a></h2>
+<p>GitPython&#8217;s git repo is available on Gitorious and GitHub, which can be browsed at:</p>
+<blockquote>
+<ul class="simple">
+<li><a class="reference external" href="http://gitorious.org/projects/git-python/">http://gitorious.org/projects/git-python/</a></li>
+<li><a class="reference external" href="http://github.com/Byron/GitPython">http://github.com/Byron/GitPython</a></li>
+</ul>
+</blockquote>
+<p>and cloned using:</p>
+<div class="highlight-python"><pre>$ git clone git://gitorious.org/git-python/mainline.git git-python
+$ git clone git://github.com/Byron/GitPython.git git-python</pre>
+</div>
+<p>Initialize all submodules to obtain the required dependencies with:</p>
+<div class="highlight-python"><pre>$ cd git-python
+$ git submodule update --init --recursive</pre>
+</div>
+<p>Finally verify the installation by running the <a class="reference external" href="http://code.google.com/p/python-nose/">nose powered</a> unit tests:</p>
+<div class="highlight-python"><pre>$ nosetests</pre>
+</div>
+</div>
+<div class="section" id="mailing-list">
+<h2>Mailing List<a class="headerlink" href="#mailing-list" title="Permalink to this headline">¶</a></h2>
+<p><a class="reference external" href="http://groups.google.com/group/git-python">http://groups.google.com/group/git-python</a></p>
+</div>
+<div class="section" id="issue-tracker">
+<h2>Issue Tracker<a class="headerlink" href="#issue-tracker" title="Permalink to this headline">¶</a></h2>
+<p><a class="reference external" href="http://byronimo.lighthouseapp.com/projects/51787-gitpython/milestones">http://byronimo.lighthouseapp.com/projects/51787-gitpython/milestones</a></p>
+</div>
+<div class="section" id="license-information">
+<h2>License Information<a class="headerlink" href="#license-information" title="Permalink to this headline">¶</a></h2>
+<p>GitPython is licensed under the New BSD License.  See the LICENSE file for
+more information.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <h3><a href="index.html">Table Of Contents</a></h3>
+            <ul>
+<li><a class="reference external" href="#">Overview / Install</a><ul>
+<li><a class="reference external" href="#requirements">Requirements</a></li>
+<li><a class="reference external" href="#installing-gitpython">Installing GitPython</a></li>
+<li><a class="reference external" href="#getting-started">Getting Started</a></li>
+<li><a class="reference external" href="#api-reference">API Reference</a></li>
+<li><a class="reference external" href="#source-code">Source Code</a></li>
+<li><a class="reference external" href="#mailing-list">Mailing List</a></li>
+<li><a class="reference external" href="#issue-tracker">Issue Tracker</a></li>
+<li><a class="reference external" href="#license-information">License Information</a></li>
+</ul>
+</li>
+</ul>
+
+            <h4>Previous topic</h4>
+            <p class="topless"><a href="index.html"
+                                  title="previous chapter">GitPython Documentation</a></p>
+            <h4>Next topic</h4>
+            <p class="topless"><a href="whatsnew.html"
+                                  title="next chapter">Whats New in 0.3</a></p>
+            <h3>This Page</h3>
+            <ul class="this-page-menu">
+              <li><a href="_sources/intro.txt"
+                     rel="nofollow">Show Source</a></li>
+            </ul>
+          <div id="searchbox" style="display: none">
+            <h3>Quick search</h3>
+              <form class="search" action="search.html" method="get">
+                <input type="text" name="q" size="18" />
+                <input type="submit" value="Go" />
+                <input type="hidden" name="check_keywords" value="yes" />
+                <input type="hidden" name="area" value="default" />
+              </form>
+              <p class="searchtip" style="font-size: 90%">
+              Enter search terms or a module, class or function name.
+              </p>
+          </div>
+          <script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="modindex.html" title="Global Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="whatsnew.html" title="Whats New in 0.3"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="GitPython Documentation"
+             >previous</a> |</li>
+        <li><a href="index.html">GitPython v0.3.0-beta2 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+      &copy; Copyright Copyright (C) 2008, 2009 Michael Trier and contributors, 2010 Sebastian Thiel.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 0.6.5.
+    </div>
+  </body>
+</html>
