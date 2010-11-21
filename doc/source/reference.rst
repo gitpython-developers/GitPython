@@ -45,10 +45,24 @@ Objects.Functions
    :members:
    :undoc-members:
 
-Objects.Submodule
------------------
+Objects.Submodule.base
+----------------------
 
-.. automodule:: git.objects.submodule
+.. automodule:: git.objects.submodule.base
+   :members:
+   :undoc-members:
+
+Objects.Submodule.root
+----------------------
+
+.. automodule:: git.objects.submodule.root
+   :members:
+   :undoc-members:
+   
+Objects.Submodule.util
+----------------------
+
+.. automodule:: git.objects.submodule.util
    :members:
    :undoc-members:
    
@@ -109,10 +123,10 @@ Diff
    :members:
    :undoc-members:
 
-Errors
-------
+Exceptions
+----------
 
-.. automodule:: git.errors
+.. automodule:: git.exc
    :members:
    :undoc-members:
 

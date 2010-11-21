@@ -722,9 +722,10 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 		# END handle exception
 	
 	def exists(self):
-		""":return: True if the submodule exists, False otherwise. Please note that
-		a submodule may exist (in the .gitmodules file) even though its module
-		doesn't exist"""
+		"""
+		:return: True if the submodule exists, False otherwise. Please note that
+			a submodule may exist (in the .gitmodules file) even though its module
+			doesn't exist"""
 		# keep attributes for later, and restore them if we have no valid data
 		# this way we do not actually alter the state of the object
 		loc = locals()
@@ -758,7 +759,8 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 	
 	@property
 	def branch_path(self):
-		""":return: full (relative) path as string to the branch we would checkout
+		"""
+		:return: full (relative) path as string to the branch we would checkout
 			from the remote and track"""
 		return self._branch_path
 		
@@ -792,8 +794,9 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 		return self._name
 	
 	def config_reader(self):
-		""":return: ConfigReader instance which allows you to qurey the configuration values
-		of this submodule, as provided by the .gitmodules file
+		"""
+		:return: ConfigReader instance which allows you to qurey the configuration values
+			of this submodule, as provided by the .gitmodules file
 		:note: The config reader will actually read the data directly from the repository
 			and thus does not need nor care about your working tree.
 		:note: Should be cached by the caller and only kept as long as needed
@@ -801,8 +804,9 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 		return self._config_parser_constrained(read_only=True)
 		
 	def children(self):
-		""":return: IterableList(Submodule, ...) an iterable list of submodules instances
-		which are children of this submodule
+		"""
+		:return: IterableList(Submodule, ...) an iterable list of submodules instances
+			which are children of this submodule
 		:raise InvalidGitRepositoryError: if the submodule is not checked-out"""
 		return self._get_intermediate_items(self)
 		

@@ -226,12 +226,13 @@ class Repo(object):
 		
 	@property
 	def submodules(self):
-		""":return: git.IterableList(Submodule, ...) of direct submodules
+		"""
+		:return: git.IterableList(Submodule, ...) of direct submodules
 			available from the current head"""
 		return Submodule.list_items(self)
 		
 	def submodule(self, name):
-		""":return: Submodule with the given name
+		""" :return: Submodule with the given name 
 		:raise ValueError: If no such submodule exists"""
 		try:
 			return self.submodules[name]
@@ -241,6 +242,7 @@ class Repo(object):
 		
 	def create_submodule(self, *args, **kwargs):
 		"""Create a new submodule
+		
 		:note: See the documentation of Submodule.add for a description of the 
 			applicable parameters
 		:return: created submodules"""
@@ -719,7 +721,7 @@ class Repo(object):
 		"""Create a clone from the given URL
 		:param url: valid git url, see http://www.kernel.org/pub/software/scm/git/docs/git-clone.html#URLS
 		:param to_path: Path to which the repository should be cloned to
-		:param **kwargs: see the ``clone`` method
+		:param kwargs: see the ``clone`` method
 		:return: Repo instance pointing to the cloned directory"""
 		return cls._clone(Git(os.getcwd()), url, to_path, GitCmdObjectDB, **kwargs)
 

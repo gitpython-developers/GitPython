@@ -276,7 +276,8 @@ class Traversable(object):
 		raise NotImplementedError("To be implemented in subclass")
 			
 	def list_traverse(self, *args, **kwargs):
-		""":return: IterableList with the results of the traversal as produced by
+		"""
+		:return: IterableList with the results of the traversal as produced by
 			traverse()"""
 		out = IterableList(self._id_attribute_)
 		out.extend(self.traverse(*args, **kwargs))

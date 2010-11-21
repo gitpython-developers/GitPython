@@ -644,8 +644,9 @@ class HEAD(SymbolicReference):
 		super(HEAD, self).__init__(repo, path)
 	
 	def orig_head(self):
-		""":return: SymbolicReference pointing at the ORIG_HEAD, which is maintained 
-		to contain the previous value of HEAD"""
+		"""
+		:return: SymbolicReference pointing at the ORIG_HEAD, which is maintained 
+			to contain the previous value of HEAD"""
 		return SymbolicReference(self.repo, self._ORIG_HEAD_NAME)
 		
 	def _set_reference(self, ref):
@@ -795,8 +796,10 @@ class Head(Reference):
 		
 		
 	def set_tracking_branch(self, remote_reference):
-		"""Configure this branch to track the given remote reference. This will alter
-		this branch's configuration accordingly.
+		"""
+		Configure this branch to track the given remote reference. This will alter
+			this branch's configuration accordingly.
+		
 		:param remote_reference: The remote reference to track or None to untrack 
 			any references
 		:return: self"""
@@ -820,7 +823,8 @@ class Head(Reference):
 		
 		
 	def tracking_branch(self):
-		""":return: The remote_reference we are tracking, or None if we are 
+		"""
+		:return: The remote_reference we are tracking, or None if we are 
 			not a tracking branch"""
 		reader = self.config_reader()
 		if reader.has_option(self.k_config_remote) and reader.has_option(self.k_config_remote_ref):
@@ -896,12 +900,14 @@ class Head(Reference):
 		return SectionConstraint(parser, 'branch "%s"' % self.name)
 	
 	def config_reader(self):
-		""":return: A configuration parser instance constrained to only read 
-		this instance's values"""
+		"""
+		:return: A configuration parser instance constrained to only read 
+			this instance's values"""
 		return self._config_parser(read_only=True)
 		
 	def config_writer(self):
-		""":return: A configuration writer instance with read-and write acccess
+		"""
+		:return: A configuration writer instance with read-and write acccess
 			to options of this head"""
 		return self._config_parser(read_only=False)
 	
