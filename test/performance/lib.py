@@ -1,6 +1,6 @@
 """Contains library functions"""
 import os
-from test.testlib import *
+from git.test.lib import *
 import shutil
 import tempfile
 

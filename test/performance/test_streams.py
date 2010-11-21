@@ -1,6 +1,6 @@
 """Performance data streaming performance"""
 
-from test.testlib import *
+from git.test.lib import *
 from gitdb import *
 from gitdb.util import bin_to_hex
 
