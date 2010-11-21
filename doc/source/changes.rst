@@ -2,6 +2,12 @@
 Changelog
 =========
 
+0.3.2 Beta 1
+============
+* Flattened directory structure to make development more convenient.
+
+ * .. note:: This alters the way projects using git-python as a submodule have to adjust their sys.path to be able to import git-python successfully.
+
 0.3.1 Beta 1
 ============
 * Full Submodule-Support
