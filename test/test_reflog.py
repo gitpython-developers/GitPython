@@ -2,6 +2,10 @@ from git.test.lib import *
 from git.objects import IndexObject, Actor
 from git.refs import *
 
+import tempfile
+import shutil
+import os
+
 class TestRefLog(TestBase):
 
 	def test_reflogentry(self):
@@ -24,9 +28,47 @@ class TestRefLog(TestBase):
 		assert repr(e).startswith(nullhexsha)
 	
 	def test_base(self):
-		pass
+		rlp_head = fixture_path('reflog_HEAD')
+		rlp_master = fixture_path('reflog_master')
+		tdir = tempfile.mktemp(suffix="test_reflogs")
+		os.mkdir(tdir)
+		
+		# verify we have a ref - with the creation of a new ref, the reflog
+		# will be created as well
+		rlp_master_ro = RefLog.path(self.rorepo.heads.master) 
+		assert os.path.isfile(rlp_master_ro)
+		
+		# simple read
+		reflog = RefLog.from_file(rlp_master_ro)
+		assert isinstance(reflog, RefLog)
+		assert len(reflog)
+		
+		# iter_entries works with path and with stream
+		assert len(list(RefLog.iter_entries(open(rlp_master))))
+		assert len(list(RefLog.iter_entries(rlp_master)))
+		
 		# raise on invalid revlog
 		# TODO: Try multiple corrupted ones !
-	
+		pp = 'reflog_invalid_'
+		for suffix in ('oldsha', 'newsha', 'email', 'date', 'sep'):
+			self.failUnlessRaises(ValueError, RefLog.from_file, fixture_path(pp+suffix))
+		#END for each invalid file
+		
 	
 		# test serialize and deserialize - results must match exactly
+		for rlp in (rlp_head, rlp_master):
+			reflog = RefLog.from_file(rlp)
+			tfile = os.path.join(tdir, os.path.basename(rlp))
+			reflog.to_file(tfile)
+			
+			# parsed result must match ...
+			treflog = RefLog.from_file(tfile)
+			assert treflog == reflog
+			
+			# ... as well as each bytes of the written stream
+			assert open(tfile).read() == open(rlp).read()
+		# END for each reflog 
+		
+		
+		# finally remove our temporary data
+		shutil.rmtree(tdir)

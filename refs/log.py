@@ -7,21 +7,22 @@ from gitdb.util import (
 
 from git.objects.util import (
 								Actor, 
-								parse_actor_and_date,
+								parse_date,
 								Serializable, 
 								utctz_to_altz,
 								altz_to_utctz_str,
 							)
 
 import os
-
+import re
 
 __all__ = ["RefLog", "RefLogEntry"]
 
 
 class RefLogEntry(tuple):
 	"""Named tuple allowing easy access to the revlog data fields"""
-	_fmt = "%s %s %s <%s> %i %s\t%s"
+	_fmt = "%s %s %s <%s> %i %s\t%s\n"
+	_re_hexsha_only = re.compile('^[0-9A-Fa-f]{40}$')
 	__slots__ = tuple()
 	
 	def __repr__(self):
@@ -68,13 +69,34 @@ class RefLogEntry(tuple):
 		return RefLogEntry((oldhexsha, newhexsha, actor, (time, tz_offset), message))
 		
 	@classmethod
-	def from_line(self, line):
+	def from_line(cls, line):
 		""":return: New RefLogEntry instance from the given revlog line.
 		:param line: line without trailing newline
 		:raise ValueError: If line could not be parsed"""
-		raise NotImplementedError("todo")
+		try:
+			info, msg = line.split('\t', 2)
+		except ValueError:
+			raise ValueError("line is missing tab separator")
+		#END handle first plit
+		oldhexsha = info[:40]
+		newhexsha = info[41:81]
+		for hexsha in (oldhexsha, newhexsha):
+			if not cls._re_hexsha_only.match(hexsha):
+				raise ValueError("Invalid hexsha: %s" % hexsha)
+			# END if hexsha re doesn't match
+		#END for each hexsha
+		
+		email_end = info.find('>', 82)
+		if email_end == -1:
+			raise ValueError("Missing token: >")
+		#END handle missing end brace
+		
+		actor = Actor._from_string(info[82:email_end+1])
+		time, tz_offset = parse_date(info[email_end+2:])
+		
+		return RefLogEntry((oldhexsha, newhexsha, actor, (time, tz_offset), msg))
+		
 
-	
 class RefLog(list, Serializable):
 	"""A reflog contains reflog entries, each of which defines a certain state
 	of the head in question. Custom query methods allow to retrieve log entries 
@@ -104,7 +126,7 @@ class RefLog(list, Serializable):
 		return inst
 	
 	@classmethod
-	def reflog_path(cls, ref):
+	def path(cls, ref):
 		"""
 		:return: string to absolute path at which the reflog of the given ref 
 			instance would be found. The path is not guaranteed to point to a valid 
@@ -123,7 +145,12 @@ class RefLog(list, Serializable):
 		if isinstance(stream, basestring):
 			stream = file_contents_ro_filepath(stream)
 		#END handle stream type
-		return (new_entry(line.strip()) for line in stream)
+		while True:
+			line = stream.readline()
+			if not line:
+				return
+			yield new_entry(line.strip())
+		#END endless loop
 	
 	def to_file(self, filepath):
 		"""Write the contents of the reflog instance to a file at the given filepath.
@@ -140,22 +167,13 @@ class RefLog(list, Serializable):
 	#{ Serializable Interface
 	def _serialize(self, stream):
 		lm1 = len(self) - 1
-		write = stream.write()
+		write = stream.write
 		
 		# write all entries
-		for i, e in self:
-			s = repr(e)
-			if i != lm1:
-				s += "\n"
-			#END handle line separator
-			write(s)
+		for i, e in enumerate(self):
+			write(repr(e))
 		#END for each entry
 	
 	def _deserialize(self, stream):
-		new_entry = RefLogEntry.from_line
-		append = self.append
-		# NOTE: should use iter_entries, but this way it will be more direct and faster
-		for line in stream:
-			append(new_entry(line.strip()))
-		#END handle deserializatoin
+		self.extend(self.iter_entries(stream))
 	#} END serializable interface
