@@ -42,9 +42,13 @@ def short_to_long(odb, hexsha):
 	# END exception handling
 	
 	
-def name_to_object(repo, name):
-	""":return: object specified by the given name, hexshas ( short and long )
-		as well as references are supported"""
+def name_to_object(repo, name, return_ref=False):
+	"""
+	:return: object specified by the given name, hexshas ( short and long )
+		as well as references are supported
+	:param return_ref: if name specifies a reference, we will return the reference
+		instead of the object. Otherwise it will raise BadObject
+	"""
 	hexsha = None
 	
 	# is it a hexsha ? Try the most common ones, which is 7 to 40
@@ -59,12 +63,20 @@ def name_to_object(repo, name):
 		for base in ('%s', 'refs/%s', 'refs/tags/%s', 'refs/heads/%s', 'refs/remotes/%s', 'refs/remotes/%s/HEAD'):
 			try:
 				hexsha = SymbolicReference.dereference_recursive(repo, base % name)
+				if return_ref:
+					return SymbolicReference(repo, base % name)
+				#END handle symbolic ref
 				break
 			except ValueError:
 				pass
 		# END for each base
 	# END handle hexsha
-	
+
+	# didn't find any ref, this is an error
+	if return_ref:
+		raise BadObject("Couldn't find reference named %r" % name)
+	#END handle return ref
+
 	# tried everything ? fail
 	if hexsha is None:
 		raise BadObject(name)
@@ -101,9 +113,6 @@ def rev_parse(repo, rev):
 	:note: Currently there is no access to the rev-log, rev-specs may only contain
 		topological tokens such ~ and ^.
 	:raise BadObject: if the given revision could not be found"""
-	if '@' in rev:
-		raise ValueError("There is no rev-log support yet")
-	
 	
 	# colon search mode ?
 	if rev.startswith(':/'):
@@ -112,22 +121,37 @@ def rev_parse(repo, rev):
 	# END handle search
 	
 	obj = None
+	ref = None
 	output_type = "commit"
 	start = 0
 	parsed_to = 0
 	lr = len(rev)
 	while start < lr:
-		if rev[start] not in "^~:":
+		if rev[start] not in "^~:@":
 			start += 1
 			continue
 		# END handle start
 		
+		token = rev[start]
+		
 		if obj is None:
 			# token is a rev name
-			obj = name_to_object(repo, rev[:start])
+			if start == 0:
+				ref = repo.head.ref
+			else:
+				if token == '@':
+					ref = name_to_object(repo, rev[:start], return_ref=True)
+				else:
+					obj = name_to_object(repo, rev[:start])
+				#END handle token
+			#END handle refname
+			
+			if ref is not None:
+				obj = ref.commit
+			#END handle ref
 		# END initialize obj on first token
 		
-		token = rev[start]
+		
 		start += 1
 		
 		# try to parse {type}
@@ -153,6 +177,24 @@ def rev_parse(repo, rev):
 					# cannot do anything for non-tags
 					pass
 				# END handle tag
+			elif token == '@':
+				# try single int
+				assert ref is not None, "Requre Reference to access reflog"
+				revlog_index = None
+				try:
+					# transform reversed index into the format of our revlog
+					revlog_index = -(int(output_type)+1)
+				except ValueError:
+					# TODO: Try to parse the other date options, using parse_date
+					# maybe
+					raise NotImplementedError("Support for additional @{...} modes not implemented")
+				#END handle revlog index
+				
+				entry = ref.log()[revlog_index]
+				obj = Object.new_from_sha(repo, hex_to_bin(entry.newhexsha))
+				
+				# make it pass the following checks
+				output_type = None
 			else:
 				raise ValueError("Invalid output type: %s ( in %s )"  % (output_type, rev))
 			# END handle output type

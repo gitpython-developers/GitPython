@@ -5,6 +5,7 @@ Changelog
 0.3.2 Beta 2
 ============
 * Added reflog support ( reading and writing )
+* Repo.rev_parse now supports the [ref]@{n} syntax, where n is the number of steps to look into the reference's past
 
 0.3.2 Beta 1
 ============

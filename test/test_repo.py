@@ -467,11 +467,12 @@ class TestRepo(TestBase):
 	def test_rev_parse(self):
 		rev_parse = self.rorepo.rev_parse
 		
-		# try special case: This one failed beforehand
+		# try special case: This one failed at some point, make sure its fixed
 		assert rev_parse("33ebe").hexsha == "33ebe7acec14b25c5f84f35a664803fcab2f7781"
 		
 		# start from reference
 		num_resolved = 0
+		
 		for ref in Reference.iter_items(self.rorepo):
 			path_tokens = ref.path.split("/")
 			for pt in range(len(path_tokens)):
@@ -546,9 +547,25 @@ class TestRepo(TestBase):
 		# missing starting brace
 		self.failUnlessRaises(ValueError, rev_parse, '0.1.4^tree}')
 		
+		# REVLOG
+		#######
+		head = self.rorepo.head
 		
-		# cannot handle rev-log for now 
-		self.failUnlessRaises(ValueError, rev_parse, "hi@there")
+		# need to specify a ref when using the @ syntax
+		self.failUnlessRaises(BadObject, rev_parse, "%s@{0}" % head.commit.hexsha)
+		
+		# uses HEAD.ref by default
+		assert rev_parse('@{0}') == head.commit
+		if not head.is_detached:
+			assert rev_parse('%s@{0}' % head.ref.name) == head.ref.commit
+		#END operate on non-detached head
+		
+		# the last position
+		assert rev_parse('@{1}') != head.commit
+		
+		# currently, nothing more is supported
+		self.failUnlessRaises(NotImplementedError, rev_parse, "@{1 week ago}")
+		
 		
 	def test_repo_odbtype(self):
 		target_type = GitDB
