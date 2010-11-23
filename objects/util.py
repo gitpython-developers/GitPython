@@ -71,7 +71,7 @@ def get_user_id():
 
 def utctz_to_altz(utctz):
 	"""we convert utctz to the timezone in seconds, it is the format time.altzone
-	returns. Git stores it as UTC timezon which has the opposite sign as well, 
+	returns. Git stores it as UTC timezone which has the opposite sign as well, 
 	which explains the -1 * ( that was made explicit here )
 	:param utctz: git utc timezone string, i.e. +0200"""
 	return -1 * int(float(utctz)/100*3600)
@@ -195,53 +195,55 @@ def parse_actor_and_date(line):
 #{ Classes 
 
 class Actor(object):
-    """Actors hold information about a person acting on the repository. They 
-    can be committers and authors or anything with a name and an email as 
-    mentioned in the git log entries."""
-    # precompiled regex
-    name_only_regex = re.compile( r'<(.+)>' )
-    name_email_regex = re.compile( r'(.*) <(.+?)>' ) 
-    
-    def __init__(self, name, email):
-        self.name = name
-        self.email = email
+	"""Actors hold information about a person acting on the repository. They 
+	can be committers and authors or anything with a name and an email as 
+	mentioned in the git log entries."""
+	# precompiled regex
+	name_only_regex = re.compile( r'<(.+)>' )
+	name_email_regex = re.compile( r'(.*) <(.+?)>' )
+	
+	__slots__ = ('name', 'email')
+	
+	def __init__(self, name, email):
+		self.name = name
+		self.email = email
 
-    def __eq__(self, other):
-        return self.name == other.name and self.email == other.email
-        
-    def __ne__(self, other):
-        return not (self == other)
-        
-    def __hash__(self):
-        return hash((self.name, self.email))
+	def __eq__(self, other):
+		return self.name == other.name and self.email == other.email
+		
+	def __ne__(self, other):
+		return not (self == other)
+		
+	def __hash__(self):
+		return hash((self.name, self.email))
 
-    def __str__(self):
-        return self.name
+	def __str__(self):
+		return self.name
 
-    def __repr__(self):
-        return '<git.Actor "%s <%s>">' % (self.name, self.email)
+	def __repr__(self):
+		return '<git.Actor "%s <%s>">' % (self.name, self.email)
 
-    @classmethod
-    def _from_string(cls, string):
-        """Create an Actor from a string.
+	@classmethod
+	def _from_string(cls, string):
+		"""Create an Actor from a string.
 		:param string: is the string, which is expected to be in regular git format
 
 				John Doe <jdoe@example.com>
 				
 		:return: Actor """
-        m = cls.name_email_regex.search(string)
-        if m:
-            name, email = m.groups()
-            return Actor(name, email)
-        else:
-            m = cls.name_only_regex.search(string)
-            if m:
-                return Actor(m.group(1), None)
-            else:
-                # assume best and use the whole string as name
-                return Actor(string, None)
-            # END special case name
-        # END handle name/email matching
+		m = cls.name_email_regex.search(string)
+		if m:
+			name, email = m.groups()
+			return Actor(name, email)
+		else:
+			m = cls.name_only_regex.search(string)
+			if m:
+				return Actor(m.group(1), None)
+			else:
+				# assume best and use the whole string as name
+				return Actor(string, None)
+			# END special case name
+		# END handle name/email matching
 	
 	
 class ProcessStreamAdapter(object):
@@ -359,6 +361,7 @@ class Traversable(object):
 
 class Serializable(object):
 	"""Defines methods to serialize and deserialize objects from and into a data stream"""
+	__slots__ = tuple()
 	
 	def _serialize(self, stream):
 		"""Serialize the data of this object into the given data stream

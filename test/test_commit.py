@@ -70,6 +70,8 @@ class TestCommit(TestBase):
 	def test_bake(self):
 
 		commit = self.rorepo.commit('2454ae89983a4496a445ce347d7a41c0bb0ea7ae')
+		# commits have no dict
+		self.failUnlessRaises(AttributeError, setattr, commit, 'someattr', 1)
 		commit.author # bake
 
 		assert_equal("Sebastian Thiel", commit.author.name)

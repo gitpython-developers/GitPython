@@ -16,5 +16,6 @@ import symbolic
 for item in (HEAD, Head, RemoteReference, TagReference, Reference, SymbolicReference):
 	setattr(symbolic, item.__name__, item)
 del(symbolic)
-# git.objects.Commit -> symbolic
-# git.config.SectionConstraint -> head
+
+
+from log import *

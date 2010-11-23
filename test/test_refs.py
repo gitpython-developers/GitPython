@@ -33,6 +33,8 @@ class TestRefs(TestBase):
 			if tag.tag is not None:
 				tag_object_refs.append( tag )
 				tagobj = tag.tag
+				# have no dict
+				self.failUnlessRaises(AttributeError, setattr, tagobj, 'someattr', 1)
 				assert isinstance( tagobj, TagObject ) 
 				assert tagobj.tag == tag.name
 				assert isinstance( tagobj.tagger, Actor )
