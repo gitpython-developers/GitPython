@@ -13,7 +13,8 @@ from gitdb.util import (
 							exists,
 							isfile,
 							rename,
-							hex_to_bin
+							hex_to_bin,
+							LockedFD
 						)
 
 from log import RefLog
@@ -181,11 +182,13 @@ class SymbolicReference(object):
 			raise TypeError("%s is a detached symbolic reference as it points to %r" % (self, sha))
 		return self.from_path(self.repo, target_ref_path)
 		
-	def _set_reference(self, ref):
+	def _set_reference(self, ref, msg = None):
 		"""Set ourselves to the given ref. It will stay a symbol if the ref is a Reference.
 		Otherwise we try to get a commit from it using our interface.
 		
-		Strings are allowed but will be checked to be sure we have a commit"""
+		Strings are allowed but will be checked to be sure we have a commit
+		:param msg: If set to a string, the message will be used in the reflog.
+			Otherwise, a reflog entry is not written for the changed reference"""
 		write_value = None
 		if isinstance(ref, SymbolicReference):
 			write_value = "ref: %s" % ref.path
@@ -204,22 +207,6 @@ class SymbolicReference(object):
 					raise ValueError("Could not extract object from %s" % ref)
 			# END end try string  
 		# END try commit attribute
-		
-		# maintain the orig-head if we are currently checked-out
-		head = HEAD(self.repo)
-		try:
-			if head.ref == self:
-				try:
-					# TODO: implement this atomically, if we fail below, orig_head is at an incorrect spot
-					# Enforce the creation of ORIG_HEAD
-					SymbolicReference.create(self.repo, head.orig_head().name, self.commit, force=True)
-				except ValueError:
-					pass
-				#END exception handling
-			# END if we are checked-out
-		except TypeError:
-			pass
-		# END handle detached heads
 		
 		# if we are writing a ref, use symbolic ref to get the reflog and more
 		# checking

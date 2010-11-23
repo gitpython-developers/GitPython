@@ -29,23 +29,6 @@ class HEAD(SymbolicReference):
 			to contain the previous value of HEAD"""
 		return SymbolicReference(self.repo, self._ORIG_HEAD_NAME)
 		
-	def _set_reference(self, ref):
-		"""If someone changes the reference through us, we must manually update 
-		the ORIG_HEAD if we are detached. The underlying implementation can only
-		handle un-detached heads as it has to check whether the current head 
-		is the checked-out one"""
-		if self.is_detached:
-			prev_commit = self.commit
-			super(HEAD, self)._set_reference(ref)
-			SymbolicReference.create(self.repo, self._ORIG_HEAD_NAME, prev_commit, force=True)
-		else:
-			super(HEAD, self)._set_reference(ref)
-		# END handle detached mode
-		
-	# aliased reference
-	reference = property(SymbolicReference._get_reference, _set_reference, doc="Returns the Reference we point to")
-	ref = reference
-	
 	def reset(self, commit='HEAD', index=True, working_tree = False, 
 				paths=None, **kwargs):
 		"""Reset our HEAD to the given commit optionally synchronizing 

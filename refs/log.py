@@ -1,6 +1,7 @@
 from git.util import (
 						join_path,
 						Actor,
+						LockedFD,
 					)
 
 from gitdb.util import (
@@ -173,13 +174,16 @@ class RefLog(list, Serializable):
 	def to_file(self, filepath):
 		"""Write the contents of the reflog instance to a file at the given filepath.
 		:param filepath: path to file, parent directories are assumed to exist"""
-		# TODO: Use locked fd
-		fp = open(filepath, 'wb')
+		lfd = LockedFD(filepath)
+		fp = lfd.open(write=True, stream=True)
 		try:
 			self._serialize(fp)
-		finally:
-			fp.close()
-		#END handle file streams
+			lfd.commit()
+		except:
+			# on failure it rolls back automatically, but we make it clear
+			lfd.rollback()
+			raise
+		#END handle change
 		
 	def append_entry(self, oldbinsha, newbinsha, message, write=True):
 		"""Append a new log entry to the revlog, changing it in place.
