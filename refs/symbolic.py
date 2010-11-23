@@ -16,6 +16,8 @@ from gitdb.util import (
 							hex_to_bin
 						)
 
+from log import RefLog
+
 __all__ = ["SymbolicReference"]
 
 class SymbolicReference(object):
@@ -270,6 +272,14 @@ class SymbolicReference(object):
 		except TypeError:
 			return True
 	
+	def log(self):
+		"""
+		:return: RefLog for this reference. Its last entry reflects the latest change
+			applied to this reference
+			
+		.. note:: As the log is parsed every time, its recommended to cache it for use
+			instead of calling this method repeatedly"""
+		return RefLog.from_file(RefLog.path(self))
 
 	@classmethod
 	def to_full_path(cls, path):

@@ -488,3 +488,6 @@ class TestRefs(TestBase):
 	def test_dereference_recursive(self):
 		# for now, just test the HEAD
 		assert SymbolicReference.dereference_recursive(self.rorepo, 'HEAD')
+		
+	def test_reflog(self):
+		assert isinstance(self.rorepo.heads.master.log(), RefLog)

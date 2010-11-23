@@ -1,4 +1,3 @@
-from head import Head
 from git.util import join_path
 from gitdb.util import (
 						join,
@@ -170,7 +169,7 @@ class RefLog(list, Serializable):
 		write = stream.write
 		
 		# write all entries
-		for i, e in enumerate(self):
+		for e in self:
 			write(repr(e))
 		#END for each entry
 	
