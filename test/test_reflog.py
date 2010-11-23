@@ -1,6 +1,7 @@
 from git.test.lib import *
-from git.objects import IndexObject, Actor
+from git.objects import IndexObject
 from git.refs import *
+from git.util import Actor
 
 import tempfile
 import shutil
@@ -40,6 +41,7 @@ class TestRefLog(TestBase):
 		
 		# simple read
 		reflog = RefLog.from_file(rlp_master_ro)
+		assert reflog._path is not None
 		assert isinstance(reflog, RefLog)
 		assert len(reflog)
 		
@@ -56,6 +58,8 @@ class TestRefLog(TestBase):
 		
 	
 		# test serialize and deserialize - results must match exactly
+		binsha = chr(255)*20
+		msg = "my reflog message"
 		for rlp in (rlp_head, rlp_master):
 			reflog = RefLog.from_file(rlp)
 			tfile = os.path.join(tdir, os.path.basename(rlp))
@@ -67,6 +71,18 @@ class TestRefLog(TestBase):
 			
 			# ... as well as each bytes of the written stream
 			assert open(tfile).read() == open(rlp).read()
+			
+			# append an entry - it gets written automatically
+			entry = treflog.append_entry(IndexObject.NULL_BIN_SHA, binsha, msg)
+			assert entry.oldhexsha == IndexObject.NULL_HEX_SHA
+			assert entry.newhexsha == 'f'*40
+			assert entry.message == msg
+			assert treflog == RefLog.from_file(tfile)
+			
+			# but not this time
+			treflog.append_entry(binsha, binsha, msg, write=False)
+			assert treflog != RefLog.from_file(tfile)
+			
 		# END for each reflog 
 		
 		

@@ -1,17 +1,22 @@
-from git.util import join_path
+from git.util import (
+						join_path,
+						Actor,
+					)
+
 from gitdb.util import (
+						bin_to_hex,
 						join,
 						file_contents_ro_filepath
 					)
 
 from git.objects.util import (
-								Actor, 
 								parse_date,
 								Serializable, 
 								utctz_to_altz,
 								altz_to_utctz_str,
 							)
 
+import time
 import os
 import re
 
@@ -104,7 +109,28 @@ class RefLog(list, Serializable):
 	Reflog entries are orded, the first added entry is first in the list, the last
 	entry, i.e. the last change of the head or reference, is last in the list."""
 	
-	__slots__ = tuple()
+	__slots__ = ('_path', )
+	
+	def __new__(cls, filepath=None):
+		inst = super(RefLog, cls).__new__(cls)
+		return inst
+		
+	def __init__(self, filepath=None):
+		"""Initialize this instance with an optional filepath, from which we will
+		initialize our data. The path is also used to write changes back using 
+		the write() method"""
+		self._path = filepath
+		if filepath is not None:
+			self._read_from_file()
+		# END handle filepath
+	
+	def _read_from_file(self):
+		fmap = file_contents_ro_filepath(self._path, stream=False, allow_mmap=True)
+		try:
+			self._deserialize(fmap)
+		finally:
+			fmap.close()
+		#END handle closing of handle
 	
 	#{ Interface
 	
@@ -115,14 +141,7 @@ class RefLog(list, Serializable):
 			at the given filepath
 		:param filepath: path to reflog 
 		:raise ValueError: If the file could not be read or was corrupted in some way"""
-		inst = cls()
-		fmap = file_contents_ro_filepath(filepath, stream=False, allow_mmap=True)
-		try:
-			inst._deserialize(fmap)
-		finally:
-			fmap.close()
-		#END handle closing of handle 
-		return inst
+		return cls(filepath)
 	
 	@classmethod
 	def path(cls, ref):
@@ -154,12 +173,35 @@ class RefLog(list, Serializable):
 	def to_file(self, filepath):
 		"""Write the contents of the reflog instance to a file at the given filepath.
 		:param filepath: path to file, parent directories are assumed to exist"""
+		# TODO: Use locked fd
 		fp = open(filepath, 'wb')
 		try:
 			self._serialize(fp)
 		finally:
 			fp.close()
 		#END handle file streams
+		
+	def append_entry(self, oldbinsha, newbinsha, message, write=True):
+		"""Append a new log entry to the revlog, changing it in place.
+		:param oldbinsha: binary sha of the previous commit
+		:param newbinsha: binary sha of the current commit
+		:param message: message describing the change to the reference
+		:param write: If True, the changes will be written right away. Otherwise
+			the change will not be written
+		:return: RefLogEntry objects which was appended to the log"""
+		if len(oldbinsha) != 20 or len(newbinsha) != 20:
+			raise ValueError("Shas need to be given in binary format")
+		#END handle sha type
+		entry = RefLogEntry((bin_to_hex(oldbinsha), bin_to_hex(newbinsha), Actor.committer(), (int(time.time()), time.altzone), message)) 
+		self.append(entry)
+		if write:
+			self.write()
+		#END handle auto-write
+		return entry
+		
+	def write(self):
+		"""Write this instance's data to the file we are originating from"""
+		return self.to_file(self._path)
 	
 	#} END interface
 	

@@ -6,6 +6,7 @@
 
 from git.exc import InvalidGitRepositoryError, NoSuchPathError
 from git.cmd import Git
+from git.util import Actor
 from git.refs import *
 from git.index import IndexFile
 from git.objects import *

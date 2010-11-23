@@ -236,6 +236,7 @@ class SymbolicReference(object):
 		if not isdir(directory):
 			os.makedirs(directory)
 		
+		# TODO: Write using LockedFD
 		fp = open(path, "wb")
 		try:
 			fp.write(write_value)

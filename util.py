@@ -5,8 +5,10 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
 import os
+import re
 import sys
 import time
+import platform
 import tempfile
 
 from gitdb.util import (
@@ -20,7 +22,9 @@ from gitdb.util import (
 
 __all__ = ( "stream_copy", "join_path", "to_native_path_windows", "to_native_path_linux", 
 			"join_path_native", "Stats", "IndexFileSHA1Writer", "Iterable", "IterableList", 
-			"BlockingLockFile", "LockFile" )
+			"BlockingLockFile", "LockFile", 'Actor', 'get_user_id' )
+
+#{ Utility Methods
 
 def stream_copy(source, destination, chunk_size=512*1024):
 	"""Copy all data from the source stream into the destination stream in chunks
@@ -70,6 +74,119 @@ def join_path_native(a, *p):
 	use '\'"""
 	return to_native_path(join_path(a, *p))
 
+def get_user_id():
+	""":return: string identifying the currently active system user as name@node
+	:note: user can be set with the 'USER' environment variable, usually set on windows"""
+	ukn = 'UNKNOWN'
+	username = os.environ.get('USER', os.environ.get('USERNAME', ukn))
+	if username == ukn and hasattr(os, 'getlogin'):
+		username = os.getlogin()
+	# END get username from login
+	return "%s@%s" % (username, platform.node())
+
+#} END utilities
+
+#{ Classes
+
+class Actor(object):
+	"""Actors hold information about a person acting on the repository. They 
+	can be committers and authors or anything with a name and an email as 
+	mentioned in the git log entries."""
+	# PRECOMPILED REGEX
+	name_only_regex = re.compile( r'<(.+)>' )
+	name_email_regex = re.compile( r'(.*) <(.+?)>' )
+	
+	# ENVIRONMENT VARIABLES
+	# read when creating new commits
+	env_author_name = "GIT_AUTHOR_NAME"
+	env_author_email = "GIT_AUTHOR_EMAIL"
+	env_committer_name = "GIT_COMMITTER_NAME"
+	env_committer_email = "GIT_COMMITTER_EMAIL"
+	
+	# CONFIGURATION KEYS
+	conf_name = 'name'
+	conf_email = 'email'
+	
+	__slots__ = ('name', 'email')
+	
+	def __init__(self, name, email):
+		self.name = name
+		self.email = email
+
+	def __eq__(self, other):
+		return self.name == other.name and self.email == other.email
+		
+	def __ne__(self, other):
+		return not (self == other)
+		
+	def __hash__(self):
+		return hash((self.name, self.email))
+
+	def __str__(self):
+		return self.name
+
+	def __repr__(self):
+		return '<git.Actor "%s <%s>">' % (self.name, self.email)
+
+	@classmethod
+	def _from_string(cls, string):
+		"""Create an Actor from a string.
+		:param string: is the string, which is expected to be in regular git format
+
+				John Doe <jdoe@example.com>
+				
+		:return: Actor """
+		m = cls.name_email_regex.search(string)
+		if m:
+			name, email = m.groups()
+			return Actor(name, email)
+		else:
+			m = cls.name_only_regex.search(string)
+			if m:
+				return Actor(m.group(1), None)
+			else:
+				# assume best and use the whole string as name
+				return Actor(string, None)
+			# END special case name
+		# END handle name/email matching
+		
+	@classmethod
+	def _main_actor(cls, env_name, env_email, config_reader=None):
+		actor = Actor('', '')
+		default_email = get_user_id()
+		default_name = default_email.split('@')[0]
+		
+		for attr, evar, cvar, default in (('name', env_name, cls.conf_name, default_name), 
+										('email', env_email, cls.conf_email, default_email)):
+			try:
+				setattr(actor, attr, os.environ[evar])
+			except KeyError:
+				if config_reader is not None:
+					setattr(actor, attr, config_reader.get_value('user', cvar, default))
+				#END config-reader handling
+				if not getattr(actor, attr):
+					setattr(actor, attr, default)
+			#END handle name
+		#END for each item to retrieve
+		return actor
+		
+		
+	@classmethod
+	def committer(cls, config_reader=None):
+		""":return: Actor instance corresponding to the configured committer. It behaves
+		similar to the git implementation, such that the environment will override 
+		configuration values of config_reader. If no value is set at all, it will be
+		generated
+		:param config_reader: ConfigReader to use to retrieve the values from in case
+			they are not set in the environment"""
+		return cls._main_actor(cls.env_committer_name, cls.env_committer_email, config_reader)
+		
+	@classmethod
+	def author(cls, config_reader=None):
+		"""Same as committer(), but defines the main author. It may be specified in the environment, 
+		but defaults to the committer"""
+		return cls._main_actor(cls.env_author_name, cls.env_author_email, config_reader)
+		
 
 class Stats(object):
 	"""
@@ -345,4 +462,4 @@ class Iterable(object):
 		:return:  iterator yielding Items"""
 		raise NotImplementedError("To be implemented by Subclass")
 		
-		
+#} END classes

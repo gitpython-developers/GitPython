@@ -8,6 +8,7 @@ from mock import *
 from git.test.lib import *
 from git import *
 import git.refs as refs
+from git.util import Actor
 from git.objects.tag import TagObject
 from itertools import chain
 import os

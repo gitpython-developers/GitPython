@@ -15,7 +15,6 @@ from tag import *
 from blob import *
 from commit import *
 from tree import *
-from util import Actor
 
 __all__ = [ name for name, obj in locals().items()
             if not (name.startswith('_') or inspect.ismodule(obj)) ]

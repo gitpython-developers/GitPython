@@ -4,19 +4,21 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 """Module for general utility functions"""
-from git.util import IterableList
+from git.util import (
+						IterableList, 
+						Actor
+					)
 
 import re
 from collections import deque as Deque
-import platform
 
 from string import digits
 import time
 import os
 
-__all__ = ('get_object_type_by_name', 'get_user_id', 'parse_date', 'parse_actor_and_date', 
+__all__ = ('get_object_type_by_name', 'parse_date', 'parse_actor_and_date', 
 			'ProcessStreamAdapter', 'Traversable', 'altz_to_utctz_str', 'utctz_to_altz', 
-			'verify_utctz')
+			'verify_utctz', 'Actor')
 
 #{ Functions
 
@@ -57,18 +59,6 @@ def get_object_type_by_name(object_type_name):
 	else:
 		raise ValueError("Cannot handle unknown object type: %s" % object_type_name)
 		
-
-def get_user_id():
-	""":return: string identifying the currently active system user as name@node
-	:note: user can be set with the 'USER' environment variable, usually set on windows"""
-	ukn = 'UNKNOWN'
-	username = os.environ.get('USER', os.environ.get('USERNAME', ukn))
-	if username == ukn and hasattr(os, 'getlogin'):
-		username = os.getlogin()
-	# END get username from login
-	return "%s@%s" % (username, platform.node())
-		
-
 def utctz_to_altz(utctz):
 	"""we convert utctz to the timezone in seconds, it is the format time.altzone
 	returns. Git stores it as UTC timezone which has the opposite sign as well, 
@@ -193,58 +183,6 @@ def parse_actor_and_date(line):
 
 
 #{ Classes 
-
-class Actor(object):
-	"""Actors hold information about a person acting on the repository. They 
-	can be committers and authors or anything with a name and an email as 
-	mentioned in the git log entries."""
-	# precompiled regex
-	name_only_regex = re.compile( r'<(.+)>' )
-	name_email_regex = re.compile( r'(.*) <(.+?)>' )
-	
-	__slots__ = ('name', 'email')
-	
-	def __init__(self, name, email):
-		self.name = name
-		self.email = email
-
-	def __eq__(self, other):
-		return self.name == other.name and self.email == other.email
-		
-	def __ne__(self, other):
-		return not (self == other)
-		
-	def __hash__(self):
-		return hash((self.name, self.email))
-
-	def __str__(self):
-		return self.name
-
-	def __repr__(self):
-		return '<git.Actor "%s <%s>">' % (self.name, self.email)
-
-	@classmethod
-	def _from_string(cls, string):
-		"""Create an Actor from a string.
-		:param string: is the string, which is expected to be in regular git format
-
-				John Doe <jdoe@example.com>
-				
-		:return: Actor """
-		m = cls.name_email_regex.search(string)
-		if m:
-			name, email = m.groups()
-			return Actor(name, email)
-		else:
-			m = cls.name_only_regex.search(string)
-			if m:
-				return Actor(m.group(1), None)
-			else:
-				# assume best and use the whole string as name
-				return Actor(string, None)
-			# END special case name
-		# END handle name/email matching
-	
 	
 class ProcessStreamAdapter(object):
 	"""Class wireing all calls to the contained Process instance.
