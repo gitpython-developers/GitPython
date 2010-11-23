@@ -72,17 +72,12 @@ class TestRefLog(TestBase):
 			# ... as well as each bytes of the written stream
 			assert open(tfile).read() == open(rlp).read()
 			
-			# append an entry - it gets written automatically
-			entry = treflog.append_entry(IndexObject.NULL_BIN_SHA, binsha, msg)
+			# append an entry
+			entry = RefLog.append_entry(tfile, IndexObject.NULL_BIN_SHA, binsha, msg)
 			assert entry.oldhexsha == IndexObject.NULL_HEX_SHA
 			assert entry.newhexsha == 'f'*40
 			assert entry.message == msg
-			assert treflog == RefLog.from_file(tfile)
-			
-			# but not this time
-			treflog.append_entry(binsha, binsha, msg, write=False)
-			assert treflog != RefLog.from_file(tfile)
-			
+			assert RefLog.from_file(tfile)[-1] == entry
 		# END for each reflog 
 		
 		

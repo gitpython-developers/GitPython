@@ -22,7 +22,7 @@ from gitdb.util import (
 
 __all__ = ( "stream_copy", "join_path", "to_native_path_windows", "to_native_path_linux", 
 			"join_path_native", "Stats", "IndexFileSHA1Writer", "Iterable", "IterableList", 
-			"BlockingLockFile", "LockFile", 'Actor', 'get_user_id' )
+			"BlockingLockFile", "LockFile", 'Actor', 'get_user_id', 'assure_directory_exists')
 
 #{ Utility Methods
 
@@ -73,6 +73,20 @@ def join_path_native(a, *p):
 	needed to play it safe on my dear windows and to assure nice paths that only 
 	use '\'"""
 	return to_native_path(join_path(a, *p))
+	
+def assure_directory_exists(path, is_file=False):
+	"""Assure that the directory pointed to by path exists.
+	:param is_file: If True, path is assumed to be a file and handled correctly.
+		Otherwise it must be a directory
+	:return: True if the directory was created, False if it already existed"""
+	if is_file:
+		path = os.path.dirname(path)
+	#END handle file 
+	if not os.path.isdir(path):
+		os.makedirs(path)
+		return True
+	return False
+	
 
 def get_user_id():
 	""":return: string identifying the currently active system user as name@node

@@ -2,12 +2,15 @@ from git.util import (
 						join_path,
 						Actor,
 						LockedFD,
+						LockFile,
+						assure_directory_exists,
+						to_native_path,
 					)
 
 from gitdb.util import (
 						bin_to_hex,
 						join,
-						file_contents_ro_filepath
+						file_contents_ro_filepath,
 					)
 
 from git.objects.util import (
@@ -151,7 +154,7 @@ class RefLog(list, Serializable):
 			instance would be found. The path is not guaranteed to point to a valid 
 			file though.
 		:param ref: SymbolicReference instance"""
-		return join(ref.repo.git_dir, "logs", ref.path)
+		return join(ref.repo.git_dir, "logs", to_native_path(ref.path))
 		
 	@classmethod
 	def iter_entries(cls, stream):
@@ -175,6 +178,8 @@ class RefLog(list, Serializable):
 		"""Write the contents of the reflog instance to a file at the given filepath.
 		:param filepath: path to file, parent directories are assumed to exist"""
 		lfd = LockedFD(filepath)
+		assure_directory_exists(filepath, is_file=True)
+		
 		fp = lfd.open(write=True, stream=True)
 		try:
 			self._serialize(fp)
@@ -185,22 +190,34 @@ class RefLog(list, Serializable):
 			raise
 		#END handle change
 		
-	def append_entry(self, oldbinsha, newbinsha, message, write=True):
-		"""Append a new log entry to the revlog, changing it in place.
+	@classmethod
+	def append_entry(cls, filepath, oldbinsha, newbinsha, message):
+		"""Append a new log entry to the revlog at filepath. 
 		:param oldbinsha: binary sha of the previous commit
 		:param newbinsha: binary sha of the current commit
 		:param message: message describing the change to the reference
 		:param write: If True, the changes will be written right away. Otherwise
 			the change will not be written
-		:return: RefLogEntry objects which was appended to the log"""
+		:return: RefLogEntry objects which was appended to the log
+		:note: As we are append-only, concurrent access is not a problem as we 
+			do not interfere with readers."""
 		if len(oldbinsha) != 20 or len(newbinsha) != 20:
 			raise ValueError("Shas need to be given in binary format")
 		#END handle sha type
-		entry = RefLogEntry((bin_to_hex(oldbinsha), bin_to_hex(newbinsha), Actor.committer(), (int(time.time()), time.altzone), message)) 
-		self.append(entry)
-		if write:
-			self.write()
-		#END handle auto-write
+		assure_directory_exists(filepath, is_file=True)
+		entry = RefLogEntry((bin_to_hex(oldbinsha), bin_to_hex(newbinsha), Actor.committer(), (int(time.time()), time.altzone), message))
+		
+		lf = LockFile(filepath)
+		lf._obtain_lock_or_raise()
+		
+		fd = open(filepath, 'a')
+		try:
+			fd.write(repr(entry))
+		finally:
+			fd.close()
+			lf._release_lock()
+		#END handle write operation
+		
 		return entry
 		
 	def write(self):

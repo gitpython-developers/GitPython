@@ -266,8 +266,19 @@ class SymbolicReference(object):
 			applied to this reference
 			
 		.. note:: As the log is parsed every time, its recommended to cache it for use
-			instead of calling this method repeatedly"""
+			instead of calling this method repeatedly. It should be considered read-only."""
 		return RefLog.from_file(RefLog.path(self))
+		
+	def log_append(self, oldbinsha, message, newbinsha=None):
+		"""Append a logentry to the logfile of this ref
+		:param oldbinsha: binary sha this ref used to point to
+		:param message: A message describing the change
+		:param newbinsha: The sha the ref points to now. If None, our current commit sha
+			will be used
+		:return: added RefLogEntry instance"""
+		return RefLog.append_entry(RefLog.path(self), oldbinsha, 
+									(newbinsha is None and self.commit.binsha) or newbinsha, 
+									message) 
 
 	@classmethod
 	def to_full_path(cls, path):
