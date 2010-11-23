@@ -4,6 +4,8 @@ from reference import Reference
 
 from git.config import SectionConstraint
 
+from git.util import join_path
+
 from git.exc import GitCommandError
 
 __all__ = ["HEAD", "Head"]
