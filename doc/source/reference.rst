@@ -131,13 +131,48 @@ Exceptions
    :undoc-members:
 
  
-Refs
-----
+Refs.symbolic
+-------------
 
-.. automodule:: git.refs
+.. automodule:: git.refs.symbolic
+   :members:
+   :undoc-members:
+   
+Refs.reference
+--------------
+
+.. automodule:: git.refs.reference
    :members:
    :undoc-members:
 
+Refs.head
+---------
+
+.. automodule:: git.refs.head
+   :members:
+   :undoc-members:
+   
+Refs.tag
+------------
+
+.. automodule:: git.refs.tag
+   :members:
+   :undoc-members:
+   
+Refs.remote
+------------
+
+.. automodule:: git.refs.remote
+   :members:
+   :undoc-members:
+   
+Refs.log
+------------
+
+.. automodule:: git.refs.log
+   :members:
+   :undoc-members:
+   
 Remote
 ------
 

@@ -1,4 +1,3 @@
-""" Module containing all ref based objects """
 from symbolic import SymbolicReference
 from reference import Reference
 

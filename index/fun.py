@@ -1,7 +1,6 @@
-"""
-Contains standalone functions to accompany the index implementation and make it
-more versatile
-"""
+# Contains standalone functions to accompany the index implementation and make it
+# more versatile
+# NOTE: Autodoc hates it if this is a docstring
 from stat import (
 					S_IFDIR,
 					S_IFLNK,

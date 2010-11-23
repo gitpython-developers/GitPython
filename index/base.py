@@ -3,8 +3,6 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
-"""Module containing Index implementation, allowing to perform all kinds of index
-manipulations such as querying and merging."""
 import tempfile
 import os
 import sys

@@ -3,7 +3,8 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
-"""Module implementing a remote object allowing easy access to git remotes"""
+
+# Module implementing a remote object allowing easy access to git remotes
 
 from exc import GitCommandError
 from objects import Commit

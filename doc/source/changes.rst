@@ -2,6 +2,10 @@
 Changelog
 =========
 
+0.3.2 Beta 2
+============
+* Added reflog support ( reading and writing )
+
 0.3.2 Beta 1
 ============
 * Flattened directory structure to make development more convenient.

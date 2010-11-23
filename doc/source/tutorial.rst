@@ -88,6 +88,14 @@ A symbolic reference is a special case of a reference as it points to another re
     head = repo.head            # the head points to the active branch/ref
     master = head.reference     # retrieve the reference the head points to
     master.commit               # from here you use it as any other reference
+    
+Access the reflog easily::
+    
+    log = master.log()
+    log[0]                      # first (i.e. oldest) reflog entry
+    log[-1]                     # last (i.e. most recent) reflog entry
+    
+For more information on the reflog, see the ``RefLog`` type's documentation.
 
 Modifying References
 ********************
