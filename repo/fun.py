@@ -1,5 +1,5 @@
 """Package with general repository related functions"""
-
+import os
 from gitdb.exc import BadObject
 from git.refs import SymbolicReference
 from git.objects import Object
