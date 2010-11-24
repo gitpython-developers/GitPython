@@ -113,38 +113,6 @@ class Head(Reference):
 	k_config_remote_ref = "merge"			# branch to merge from remote
 	
 	@classmethod
-	def create(cls, repo, path, commit='HEAD', force=False, **kwargs):
-		"""Create a new head.
-		:param repo: Repository to create the head in 
-		:param path:
-			The name or path of the head, i.e. 'new_branch' or 
-			feature/feature1. The prefix refs/heads is implied.
-			
-		:param commit:
-			Commit to which the new head should point, defaults to the 
-			current HEAD
-			
-		:param force:
-			if True, force creation even if branch with that  name already exists.
-			
-		:param kwargs:
-			Additional keyword arguments to be passed to git-branch, i.e.
-			track, no-track, l
-			
-		:return: Newly created Head
-		:note: This does not alter the current HEAD, index or Working Tree"""
-		if cls is not Head:
-			raise TypeError("Only Heads can be created explicitly, not objects of type %s" % cls.__name__)
-		
-		args = ( path, commit )
-		if force:
-			kwargs['f'] = True
-		
-		repo.git.branch(*args, **kwargs)
-		return cls(repo, "%s/%s" % ( cls._common_path_default, path))
-			
-		
-	@classmethod
 	def delete(cls, repo, *heads, **kwargs):
 		"""Delete the given heads
 		:param force:
@@ -156,7 +124,6 @@ class Head(Reference):
 		if force:
 			flag = "-D"
 		repo.git.branch(flag, *heads)
-		
 		
 	def set_tracking_branch(self, remote_reference):
 		"""

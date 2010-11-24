@@ -3,7 +3,8 @@ from git.objects import Commit
 from git.util import (
 					join_path, 
 					join_path_native, 
-					to_native_path_linux
+					to_native_path_linux,
+					assure_directory_exists
 					)
 
 from gitdb.util import (
@@ -28,6 +29,7 @@ class SymbolicReference(object):
 	
 	A typical example for a symbolic reference is HEAD."""
 	__slots__ = ("repo", "path")
+	_resolve_ref_on_create = False
 	_common_path_default = ""
 	_id_attribute_ = "name"
 	
@@ -58,7 +60,8 @@ class SymbolicReference(object):
 			is the path itself."""
 		return self.path
 	
-	def _abs_path(self):
+	@property
+	def abspath(self):
 		return join_path_native(self.repo.git_dir, self.path)
 		
 	@classmethod
@@ -116,7 +119,7 @@ class SymbolicReference(object):
 		point to, or None"""
 		tokens = None
 		try:
-			fp = open(self._abs_path(), 'r')
+			fp = open(self.abspath, 'r')
 			value = fp.read().rstrip()
 			fp.close()
 			tokens = value.split(" ")
@@ -158,37 +161,48 @@ class SymbolicReference(object):
 		
 		return self.from_path(self.repo, target_ref_path).commit
 		
-	def _set_commit(self, commit):
+	def set_commit(self, commit, msg = None):
 		"""Set our commit, possibly dereference our symbolic reference first.
-		If the reference does not exist, it will be created"""
+		If the reference does not exist, it will be created
+		
+		:param msg: If not None, the message will be used in the reflog entry to be 
+			written. Otherwise the reflog is not altered"""
 		is_detached = True
 		try:
 			is_detached = self.is_detached
 		except ValueError:
 			pass
 		# END handle non-existing ones
+		
 		if is_detached:
-			return self._set_reference(commit)
+			return self.set_reference(commit, msg)
 			
 		# set the commit on our reference
-		self._get_reference().commit = commit
+		self._get_reference().set_commit(commit, msg)
 	
-	commit = property(_get_commit, _set_commit, doc="Query or set commits directly")
+	commit = property(_get_commit, set_commit, doc="Query or set commits directly")
 		
 	def _get_reference(self):
-		""":return: Reference Object we point to"""
+		""":return: Reference Object we point to
+		:raise TypeError: If this symbolic reference is detached, hence it doesn't point
+			to a reference, but to a commit"""
 		sha, target_ref_path = self._get_ref_info()
 		if target_ref_path is None:
 			raise TypeError("%s is a detached symbolic reference as it points to %r" % (self, sha))
 		return self.from_path(self.repo, target_ref_path)
 		
-	def _set_reference(self, ref, msg = None):
+	def set_reference(self, ref, msg = None):
 		"""Set ourselves to the given ref. It will stay a symbol if the ref is a Reference.
-		Otherwise we try to get a commit from it using our interface.
+		Otherwise a commmit, given as Commit object or refspec, is assumed and if valid, 
+		will be set which effectively detaches the refererence if it was a purely 
+		symbolic one.
 		
-		Strings are allowed but will be checked to be sure we have a commit
+		:param ref: SymbolicReference instance, Commit instance or refspec string
 		:param msg: If set to a string, the message will be used in the reflog.
-			Otherwise, a reflog entry is not written for the changed reference"""
+			Otherwise, a reflog entry is not written for the changed reference.
+			The previous commit of the entry will be the commit we point to now.
+			
+			See also: log_append()"""
 		write_value = None
 		if isinstance(ref, SymbolicReference):
 			write_value = "ref: %s" % ref.path
@@ -207,33 +221,31 @@ class SymbolicReference(object):
 					raise ValueError("Could not extract object from %s" % ref)
 			# END end try string  
 		# END try commit attribute
+		oldbinsha = None
+		if msg is not None:
+			try:
+				oldhexsha = self.commit.binsha
+			except ValueError:
+				oldbinsha = Commit.NULL_BIN_SHA
+			#END handle non-existing
+		#END retrieve old hexsha
 		
-		# if we are writing a ref, use symbolic ref to get the reflog and more
-		# checking
-		# Otherwise we detach it and have to do it manually. Besides, this works
-		# recursively automaitcally, but should be replaced with a python implementation
-		# soon
-		if write_value.startswith('ref:'):
-			self.repo.git.symbolic_ref(self.path, write_value[5:])
-			return
-		# END non-detached handling
+		fpath = self.abspath
+		assure_directory_exists(fpath, is_file=True)
 		
-		path = self._abs_path()
-		directory = dirname(path)
-		if not isdir(directory):
-			os.makedirs(directory)
+		lfd = LockedFD(fpath)
+		fd = lfd.open(write=True, stream=True)
+		fd.write(write_value)
+		lfd.commit()
 		
-		# TODO: Write using LockedFD
-		fp = open(path, "wb")
-		try:
-			fp.write(write_value)
-		finally:
-			fp.close()
-		# END writing
-	
+		# Adjust the reflog
+		if msg is not None:
+			self.log_append(oldbinsha, msg)
+		#END handle reflog
+		
 
 	# aliased reference
-	reference = property(_get_reference, _set_reference, doc="Returns the Reference we point to")
+	reference = property(_get_reference, set_reference, doc="Returns the Reference we point to")
 	ref = reference
 		
 	def is_valid(self):
@@ -255,7 +267,7 @@ class SymbolicReference(object):
 			True if we are a detached reference, hence we point to a specific commit
 			instead to another reference"""
 		try:
-			self.reference
+			self.ref
 			return False
 		except TypeError:
 			return True
@@ -343,11 +355,18 @@ class SymbolicReference(object):
 					open(pack_file_path, 'w').writelines(new_lines)
 			# END open exception handling
 		# END handle deletion
+		
+		# delete the reflog
+		reflog_path = RefLog.path(cls(repo, full_ref_path))
+		if os.path.isfile(reflog_path):
+			os.remove(reflog_path)
+		#END remove reflog
+		
 			
 	@classmethod
-	def _create(cls, repo, path, resolve, reference, force):
+	def _create(cls, repo, path, resolve, reference, force, msg=None):
 		"""internal method used to create a new symbolic reference.
-		If resolve is False,, the reference will be taken as is, creating 
+		If resolve is False, the reference will be taken as is, creating 
 		a proper symbolic reference. Otherwise it will be resolved to the 
 		corresponding object and a detached symbolic reference will be created
 		instead"""
@@ -365,16 +384,17 @@ class SymbolicReference(object):
 				target_data = target.path
 			if not resolve:
 				target_data = "ref: " + target_data
-			if open(abs_ref_path, 'rb').read().strip() != target_data:
-				raise OSError("Reference at %s does already exist" % full_ref_path)
+			existing_data = open(abs_ref_path, 'rb').read().strip() 
+			if existing_data != target_data:
+				raise OSError("Reference at %r does already exist, pointing to %r, requested was %r" % (full_ref_path, existing_data, target_data))
 		# END no force handling
 		
 		ref = cls(repo, full_ref_path)
-		ref.reference = target
+		ref.set_reference(target, msg)
 		return ref
 		
 	@classmethod
-	def create(cls, repo, path, reference='HEAD', force=False ):
+	def create(cls, repo, path, reference='HEAD', force=False, msg=None):
 		"""Create a new symbolic reference, hence a reference pointing to another reference.
 		
 		:param repo:
@@ -391,6 +411,10 @@ class SymbolicReference(object):
 			if True, force creation even if a symbolic reference with that name already exists.
 			Raise OSError otherwise
 			
+		:param msg:
+			If not None, the message to append to the reflog. Otherwise no reflog
+			entry is written.
+			
 		:return: Newly created symbolic Reference
 			
 		:raise OSError:
@@ -398,7 +422,7 @@ class SymbolicReference(object):
 			already exists.
 		
 		:note: This does not alter the current HEAD, index or Working Tree"""
-		return cls._create(repo, path, False, reference, force)
+		return cls._create(repo, path, cls._resolve_ref_on_create, reference, force, msg)
 	
 	def rename(self, new_path, force=False):
 		"""Rename self to a new path

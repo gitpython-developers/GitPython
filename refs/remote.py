@@ -56,3 +56,8 @@ class RemoteReference(Head):
 			except OSError:
 				pass
 		# END for each ref
+		
+	@classmethod
+	def create(cls, *args, **kwargs):
+		"""Used to disable this method"""
+		raise TypeError("Cannot explicitly create remote references")

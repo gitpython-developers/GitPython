@@ -205,10 +205,14 @@ class TestRefs(TestBase):
 		for count, new_name in enumerate(("my_new_head", "feature/feature1")):
 			actual_commit = commit+"^"*count
 			new_head = Head.create(rw_repo, new_name, actual_commit)
+			assert new_head.is_detached
 			assert cur_head.commit == prev_head_commit
 			assert isinstance(new_head, Head)
-			# already exists
-			self.failUnlessRaises(GitCommandError, Head.create, rw_repo, new_name)
+			# already exists, but has the same value, so its fine
+			Head.create(rw_repo, new_name, new_head.commit)
+			
+			# its not fine with a different value
+			self.failUnlessRaises(OSError, Head.create, rw_repo, new_name, new_head.commit.parents[0])
 			
 			# force it
 			new_head = Head.create(rw_repo, new_name, actual_commit, force=True)
@@ -230,7 +234,7 @@ class TestRefs(TestBase):
 			assert tmp_head not in heads and new_head not in heads
 			# force on deletion testing would be missing here, code looks okay though ;)
 		# END for each new head name
-		self.failUnlessRaises(TypeError, RemoteReference.create, rw_repo, "some_name")	
+		self.failUnlessRaises(TypeError, RemoteReference.create, rw_repo, "some_name")
 		
 		# tag ref
 		tag_name = "1.0.2"
@@ -495,3 +499,10 @@ class TestRefs(TestBase):
 		
 	def test_reflog(self):
 		assert isinstance(self.rorepo.heads.master.log(), RefLog)
+		
+		
+	def test_todo(self):
+		# delete deletes the reflog
+		# create creates a new entry
+		# set_reference and set_commit and set_object use the reflog if message is given
+		self.fail()

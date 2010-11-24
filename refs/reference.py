@@ -18,6 +18,7 @@ class Reference(SymbolicReference, LazyMixin, Iterable):
 	"""Represents a named reference to any object. Subclasses may apply restrictions though, 
 	i.e. Heads can only point to commits."""
 	__slots__ = tuple()
+	_resolve_ref_on_create = True
 	_common_path_default = "refs"
 	
 	def __init__(self, repo, path):
@@ -52,7 +53,7 @@ class Reference(SymbolicReference, LazyMixin, Iterable):
 		
 		:note: 
 			TypeChecking is done by the git command"""
-		abs_path = self._abs_path()
+		abs_path = self.abspath
 		existed = True
 		if not isfile(abs_path):
 			existed = False
@@ -81,31 +82,7 @@ class Reference(SymbolicReference, LazyMixin, Iterable):
 			return self.path		   # could be refs/HEAD
 		return '/'.join(tokens[2:])
 	
-	
 	@classmethod
-	def create(cls, repo, path, commit='HEAD', force=False ):
-		"""Create a new reference.
-		
-		:param repo: Repository to create the reference in 
-		:param path:
-			The relative path of the reference, i.e. 'new_branch' or 
-			feature/feature1. The path prefix 'refs/' is implied if not 
-			given explicitly
-			
-		:param commit:
-			Commit to which the new reference should point, defaults to the 
-			current HEAD
-			
-		:param force:
-			if True, force creation even if a reference with that  name already exists.
-			Raise OSError otherwise
-			
-		:return: Newly created Reference
-			
-		:note: This does not alter the current HEAD, index or Working Tree"""
-		return cls._create(repo, path, True, commit, force)
-	
-	@classmethod	
 	def iter_items(cls, repo, common_path = None):
 		"""Equivalent to SymbolicReference.iter_items, but will return non-detached
 		references as well."""
