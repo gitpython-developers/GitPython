@@ -274,12 +274,12 @@ class Repo(object):
 		:param path: path to the tag reference, i.e. 0.1.5 or tags/0.1.5 """
 		return TagReference(self, path)
 		
-	def create_head(self, path, commit='HEAD', force=False, **kwargs ):
+	def create_head(self, path, commit='HEAD', force=False, logmsg=None ):
 		"""Create a new head within the repository. 
 		For more documentation, please see the Head.create method.
 		
 		:return: newly created Head Reference"""
-		return Head.create(self, path, commit, force, **kwargs)
+		return Head.create(self, path, commit, force, logmsg)
 		
 	def delete_head(self, *heads, **kwargs):
 		"""Delete the given heads

@@ -68,19 +68,15 @@ class RootModule(Submodule):
 		##################
 		cur_commit = repo.head.commit
 		if previous_commit is None:
-			symref = repo.head.orig_head()
 			try:
-				previous_commit = symref.commit
-			except Exception:
-				pcommits = cur_commit.parents
-				if pcommits:
-					previous_commit = pcommits[0]
-				else:
-					# in this special case, we just diff against ourselve, which
-					# means exactly no change
-					previous_commit = cur_commit
-				# END handle initial commit
-			# END no ORIG_HEAD
+				previous_commit = repo.commit(repo.head.log_entry(-1).oldhexsha)
+				if previous_commit.binsha == previous_commit.NULL_BIN_SHA:
+					raise IndexError
+				#END handle initial commit
+			except IndexError:
+				# in new repositories, there is no previous commit
+				previous_commit = cur_commit
+			#END exception handling
 		else:
 			previous_commit = repo.commit(previous_commit)	 # obtain commit object 
 		# END handle previous commit
@@ -207,12 +203,8 @@ class RootModule(Submodule):
 					smm = sm.module()
 					smmr = smm.remotes
 					try:
-						tbr = git.Head.create(smm, sm.branch_name)
-					except git.GitCommandError, e:
-						if e.status != 128:
-							raise
-						#END handle something unexpected
-						
+						tbr = git.Head.create(smm, sm.branch_name, logmsg='branch: Created from HEAD')
+					except OSError:
 						# ... or reuse the existing one
 						tbr = git.Head(smm, sm.branch_path)
 					#END assure tracking branch exists
