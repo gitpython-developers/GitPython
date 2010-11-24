@@ -172,7 +172,7 @@ class SymbolicReference(object):
 		#END handle type
 		return obj
 		
-	def set_commit(self, commit, msg = None):
+	def set_commit(self, commit, logmsg = None):
 		"""As set_object, but restricts the type of object to be a Commit
 		:raise ValueError: If commit is not a Commit object or doesn't point to 
 			a commit
@@ -196,18 +196,18 @@ class SymbolicReference(object):
 		#END handle raise
 		
 		# we leave strings to the rev-parse method below
-		self.set_object(commit, msg)
+		self.set_object(commit, logmsg)
 		
 		return self
 		
 	
-	def set_object(self, object, msg = None):
+	def set_object(self, object, logmsg = None):
 		"""Set the object we point to, possibly dereference our symbolic reference first.
 		If the reference does not exist, it will be created
 		
 		:param object: a refspec, a SymbolicReference or an Object instance. SymbolicReferences
 			will be dereferenced beforehand to obtain the object they point to
-		:param msg: If not None, the message will be used in the reflog entry to be 
+		:param logmsg: If not None, the message will be used in the reflog entry to be 
 			written. Otherwise the reflog is not altered
 		:note: plain SymbolicReferences may not actually point to objects by convention
 		:return: self"""
@@ -223,10 +223,10 @@ class SymbolicReference(object):
 		# END handle non-existing ones
 		
 		if is_detached:
-			return self.set_reference(object, msg)
+			return self.set_reference(object, logmsg)
 			
 		# set the commit on our reference
-		return self._get_reference().set_object(object, msg)
+		return self._get_reference().set_object(object, logmsg)
 	
 	commit = property(_get_commit, set_commit, doc="Query or set commits directly")
 	object = property(_get_object, set_object, doc="Return the object our ref currently refers to")
@@ -240,7 +240,7 @@ class SymbolicReference(object):
 			raise TypeError("%s is a detached symbolic reference as it points to %r" % (self, sha))
 		return self.from_path(self.repo, target_ref_path)
 		
-	def set_reference(self, ref, msg = None):
+	def set_reference(self, ref, logmsg = None):
 		"""Set ourselves to the given ref. It will stay a symbol if the ref is a Reference.
 		Otherwise an Object, given as Object instance or refspec, is assumed and if valid, 
 		will be set which effectively detaches the refererence if it was a purely 
@@ -249,7 +249,7 @@ class SymbolicReference(object):
 		:param ref: SymbolicReference instance, Object instance or refspec string
 			Only if the ref is a SymbolicRef instance, we will point to it. Everthiny
 			else is dereferenced to obtain the actual object.
-		:param msg: If set to a string, the message will be used in the reflog.
+		:param logmsg: If set to a string, the message will be used in the reflog.
 			Otherwise, a reflog entry is not written for the changed reference.
 			The previous commit of the entry will be the commit we point to now.
 			
@@ -282,7 +282,7 @@ class SymbolicReference(object):
 		#END verify type
 		
 		oldbinsha = None
-		if msg is not None:
+		if logmsg is not None:
 			try:
 				oldbinsha = self.commit.binsha
 			except ValueError:
@@ -299,8 +299,8 @@ class SymbolicReference(object):
 		lfd.commit()
 		
 		# Adjust the reflog
-		if msg is not None:
-			self.log_append(oldbinsha, msg)
+		if logmsg is not None:
+			self.log_append(oldbinsha, logmsg)
 		#END handle reflog
 		
 		return self
@@ -426,7 +426,7 @@ class SymbolicReference(object):
 		
 			
 	@classmethod
-	def _create(cls, repo, path, resolve, reference, force, msg=None):
+	def _create(cls, repo, path, resolve, reference, force, logmsg=None):
 		"""internal method used to create a new symbolic reference.
 		If resolve is False, the reference will be taken as is, creating 
 		a proper symbolic reference. Otherwise it will be resolved to the 
@@ -452,11 +452,11 @@ class SymbolicReference(object):
 		# END no force handling
 		
 		ref = cls(repo, full_ref_path)
-		ref.set_reference(target, msg)
+		ref.set_reference(target, logmsg)
 		return ref
 		
 	@classmethod
-	def create(cls, repo, path, reference='HEAD', force=False, msg=None):
+	def create(cls, repo, path, reference='HEAD', force=False, logmsg=None):
 		"""Create a new symbolic reference, hence a reference pointing to another reference.
 		
 		:param repo:
@@ -473,7 +473,7 @@ class SymbolicReference(object):
 			if True, force creation even if a symbolic reference with that name already exists.
 			Raise OSError otherwise
 			
-		:param msg:
+		:param logmsg:
 			If not None, the message to append to the reflog. Otherwise no reflog
 			entry is written.
 			
@@ -484,7 +484,7 @@ class SymbolicReference(object):
 			already exists.
 		
 		:note: This does not alter the current HEAD, index or Working Tree"""
-		return cls._create(repo, path, cls._resolve_ref_on_create, reference, force, msg)
+		return cls._create(repo, path, cls._resolve_ref_on_create, reference, force, logmsg)
 	
 	def rename(self, new_path, force=False):
 		"""Rename self to a new path

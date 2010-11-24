@@ -37,17 +37,17 @@ class Reference(SymbolicReference, LazyMixin, Iterable):
 	def __str__(self):
 		return self.name
 
-	def set_object(self, object, msg = None):
+	def set_object(self, object, logmsg = None):
 		"""Special version which checks if the head-log needs an update as well"""
 		oldbinsha = None
-		if msg is not None:
+		if logmsg is not None:
 			head = self.repo.head
 			if not head.is_detached and head.ref == self:
 				oldbinsha = self.commit.binsha
 			#END handle commit retrieval
 		#END handle message is set
 		
-		super(Reference, self).set_object(object, msg)
+		super(Reference, self).set_object(object, logmsg)
 		
 		if oldbinsha is not None:
 			# /* from refs.c in git-source
@@ -62,7 +62,7 @@ class Reference(SymbolicReference, LazyMixin, Iterable):
 			# * check with HEAD only which should cover 99% of all usage
 			# * scenarios (even 100% of the default ones).
 			# */
-			self.repo.head.log_append(oldbinsha, msg)
+			self.repo.head.log_append(oldbinsha, logmsg)
 		#END check if the head
 
 	# NOTE: Don't have to overwrite properties as the will only work without a the log

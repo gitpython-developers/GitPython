@@ -102,7 +102,7 @@ class TestRefs(TestBase):
 		pcommit = cur_head.commit.parents[0].parents[0]
 		hlog_len = len(head.log())
 		blog_len = len(cur_head.log())
-		head.set_reference(pcommit, 'detached head')
+		assert head.set_reference(pcommit, 'detached head') is head
 		# one new log-entry
 		thlog = head.log()
 		assert len(thlog) == hlog_len + 1
@@ -125,12 +125,12 @@ class TestRefs(TestBase):
 		
 		
 		# with automatic dereferencing
-		head.set_commit(cur_commit, 'change commit once again')
+		assert head.set_commit(cur_commit, 'change commit once again') is head
 		assert len(head.log()) == hlog_len+4
 		assert len(cur_head.log()) == blog_len+2
 		
 		# a new branch has just a single entry
-		other_head = Head.create(rwrepo, 'mynewhead', pcommit, msg='new head created')
+		other_head = Head.create(rwrepo, 'mynewhead', pcommit, logmsg='new head created')
 		log = other_head.log()
 		assert len(log) == 1
 		assert log[0].oldhexsha == pcommit.NULL_HEX_SHA
@@ -237,7 +237,11 @@ class TestRefs(TestBase):
 			tmp_head.rename(new_head, force=True)
 			assert tmp_head == new_head and tmp_head.object == new_head.object
 			
+			logfile = RefLog.path(tmp_head)
+			assert os.path.isfile(logfile)
 			Head.delete(rw_repo, tmp_head)
+			# deletion removes the log as well
+			assert not os.path.isfile(logfile)
 			heads = rw_repo.heads
 			assert tmp_head not in heads and new_head not in heads
 			# force on deletion testing would be missing here, code looks okay though ;)
@@ -512,10 +516,3 @@ class TestRefs(TestBase):
 	def test_reflog(self):
 		assert isinstance(self.rorepo.heads.master.log(), RefLog)
 		
-		
-	def test_todo(self):
-		# delete deletes the reflog
-		# create creates a new entry
-		# set_reference and set_commit and set_object use the reflog if message is given
-		# if there is no actual head-change, don't do anything
-		self.fail()
