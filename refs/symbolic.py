@@ -175,7 +175,8 @@ class SymbolicReference(object):
 	def set_commit(self, commit, msg = None):
 		"""As set_object, but restricts the type of object to be a Commit
 		:raise ValueError: If commit is not a Commit object or doesn't point to 
-			a commit"""
+			a commit
+		:return: self"""
 		# check the type - assume the best if it is a base-string
 		invalid_type = False
 		if isinstance(commit, Object):
@@ -197,6 +198,8 @@ class SymbolicReference(object):
 		# we leave strings to the rev-parse method below
 		self.set_object(commit, msg)
 		
+		return self
+		
 	
 	def set_object(self, object, msg = None):
 		"""Set the object we point to, possibly dereference our symbolic reference first.
@@ -206,7 +209,8 @@ class SymbolicReference(object):
 			will be dereferenced beforehand to obtain the object they point to
 		:param msg: If not None, the message will be used in the reflog entry to be 
 			written. Otherwise the reflog is not altered
-		:note: plain SymbolicReferences may not actually point to objects by convention"""
+		:note: plain SymbolicReferences may not actually point to objects by convention
+		:return: self"""
 		if isinstance(object, SymbolicReference):
 			object = object.object
 		#END resolve references
@@ -222,7 +226,7 @@ class SymbolicReference(object):
 			return self.set_reference(object, msg)
 			
 		# set the commit on our reference
-		self._get_reference().set_object(object, msg)
+		return self._get_reference().set_object(object, msg)
 	
 	commit = property(_get_commit, set_commit, doc="Query or set commits directly")
 	object = property(_get_object, set_object, doc="Return the object our ref currently refers to")
@@ -250,6 +254,8 @@ class SymbolicReference(object):
 			The previous commit of the entry will be the commit we point to now.
 			
 			See also: log_append()
+		
+		:return: self
 		:note: This symbolic reference will not be dereferenced. For that, see 
 			``set_object(...)``"""
 		write_value = None
@@ -296,6 +302,8 @@ class SymbolicReference(object):
 		if msg is not None:
 			self.log_append(oldbinsha, msg)
 		#END handle reflog
+		
+		return self
 		
 
 	# aliased reference

@@ -96,38 +96,46 @@ class TestRefs(TestBase):
 		# END for each head
 		
 		# verify REFLOG gets altered
-		if False:
-			head = rwrepo.head
-			orig_head = head.orig_head()
-			cur_head = head.ref
-			cur_commit = cur_head.commit
-			pcommit = cur_head.commit.parents[0].parents[0]
-			head.ref = pcommit				# detach head
-			assert orig_head.commit == cur_commit
-			
-			# even if we set it through its reference - chaning the ref
-			# will adjust the orig_head, which still points to cur_commit
-			head.ref = cur_head
-			assert orig_head.commit == pcommit
-			assert head.commit == cur_commit == cur_head.commit
-			
-			cur_head.commit = pcommit
-			assert head.commit == pcommit
-			assert orig_head.commit == cur_commit
-			
-			# with automatic dereferencing
-			head.commit = cur_commit
-			assert orig_head.commit == pcommit
-			
-			# changing branches which are not checked out doesn't affect the ORIG_HEAD
-			other_head = Head.create(rwrepo, 'mynewhead', pcommit)
-			assert other_head.commit == pcommit
-			assert orig_head.commit == pcommit
-			other_head.commit = pcommit.parents[0]
-			assert orig_head.commit == pcommit
+		head = rwrepo.head
+		cur_head = head.ref
+		cur_commit = cur_head.commit
+		pcommit = cur_head.commit.parents[0].parents[0]
+		hlog_len = len(head.log())
+		blog_len = len(cur_head.log())
+		head.set_reference(pcommit, 'detached head')
+		# one new log-entry
+		thlog = head.log()
+		assert len(thlog) == hlog_len + 1
+		assert thlog[-1].oldhexsha == cur_commit.hexsha
+		assert thlog[-1].newhexsha == pcommit.hexsha
 		
-		# TODO: Need changing a ref changes HEAD reflog as well if it pointed to it
+		# the ref didn't change though
+		assert len(cur_head.log()) == blog_len
 		
+		# head changes once again, cur_head doesn't change
+		head.set_reference(cur_head, 'reattach head')
+		assert len(head.log()) == hlog_len+2
+		assert len(cur_head.log()) == blog_len
+		
+		# adjusting the head-ref also adjust the head, so both reflogs are
+		# altered
+		cur_head.set_commit(pcommit, 'changing commit')
+		assert len(cur_head.log()) == blog_len+1
+		assert len(head.log()) == hlog_len+3
+		
+		
+		# with automatic dereferencing
+		head.set_commit(cur_commit, 'change commit once again')
+		assert len(head.log()) == hlog_len+4
+		assert len(cur_head.log()) == blog_len+2
+		
+		# a new branch has just a single entry
+		other_head = Head.create(rwrepo, 'mynewhead', pcommit, msg='new head created')
+		log = other_head.log()
+		assert len(log) == 1
+		assert log[0].oldhexsha == pcommit.NULL_HEX_SHA
+		assert log[0].newhexsha == pcommit.hexsha
+	
 		
 	def test_refs(self):
 		types_found = set()
@@ -509,4 +517,5 @@ class TestRefs(TestBase):
 		# delete deletes the reflog
 		# create creates a new entry
 		# set_reference and set_commit and set_object use the reflog if message is given
+		# if there is no actual head-change, don't do anything
 		self.fail()
