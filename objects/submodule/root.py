@@ -207,12 +207,8 @@ class RootModule(Submodule):
 					smm = sm.module()
 					smmr = smm.remotes
 					try:
-						tbr = git.Head.create(smm, sm.branch_name)
-					except git.GitCommandError, e:
-						if e.status != 128:
-							raise
-						#END handle something unexpected
-						
+						tbr = git.Head.create(smm, sm.branch_name, logmsg='branch: Created from HEAD')
+					except OSError:
 						# ... or reuse the existing one
 						tbr = git.Head(smm, sm.branch_path)
 					#END assure tracking branch exists

@@ -350,12 +350,12 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
 			# as well ... 
 			import git.refs
 			try:
-				repo.head.commit = new_commit
+				repo.head.set_commit(new_commit, logmsg="commit: %s" % message)
 			except ValueError:
 				# head is not yet set to the ref our HEAD points to
 				# Happens on first commit
 				import git.refs
-				master = git.refs.Head.create(repo, repo.head.ref, commit=new_commit)
+				master = git.refs.Head.create(repo, repo.head.ref, commit=new_commit, logmsg="commit (initial): %s" % message)
 				repo.head.reference = master
 			# END handle empty repositories
 		# END advance head handling 
@@ -382,7 +382,12 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
 						self.authored_date, 
 						altz_to_utctz_str(self.author_tz_offset)))
 			
-		write(fmt % ("committer", c.name, c.email, 
+		# encode committer
+		aname = c.name
+		if isinstance(aname, unicode):
+			aname = aname.encode(self.encoding)
+		# END handle unicode in name
+		write(fmt % ("committer", aname, c.email, 
 						self.committed_date,
 						altz_to_utctz_str(self.committer_tz_offset)))
 		
@@ -438,6 +443,13 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
 			self.author.name = self.author.name.decode(self.encoding) 
 		except UnicodeDecodeError:
 			print >> sys.stderr, "Failed to decode author name '%s' using encoding %s" % (self.author.name, self.encoding)
+		# END handle author's encoding
+		
+		# decode committer name
+		try:
+			self.committer.name = self.committer.name.decode(self.encoding) 
+		except UnicodeDecodeError:
+			print >> sys.stderr, "Failed to decode committer name '%s' using encoding %s" % (self.committer.name, self.encoding)
 		# END handle author's encoding
 		
 		# a stream from our data simply gives us the plain message

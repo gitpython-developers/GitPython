@@ -17,9 +17,17 @@ Changelog
      * ``set_commit(...)`` method added (reflog support)
      * ``set_object(...)`` method added (reflog support)
 
- * Intrusive Changes to ``Head`` type
+ * **Intrusive Changes** to ``Head`` type
  
   * ``create(...)`` method now supports the reflog, but will not raise ``GitCommandError`` anymore as it is a pure python implementation now. Instead, it raises ``OSError``.
+  
+ * **Intrusive Changes** to ``Actor`` type
+ 
+  * the *name* field is now using unicode if ascii does not match
+  
+ * **Intrusive Changes** to ``Repo`` type
+ 
+  * ``create_head(...)`` method does not support **kwargs anymore, instead it supports a logmsg parameter
      
 * Repo.rev_parse now supports the [ref]@{n} syntax, where n is the number of steps to look into the reference's past
 

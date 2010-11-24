@@ -112,7 +112,9 @@ def rev_parse(repo, rev):
 		for details
 	:note: Currently there is no access to the rev-log, rev-specs may only contain
 		topological tokens such ~ and ^.
-	:raise BadObject: if the given revision could not be found"""
+	:raise BadObject: if the given revision could not be found
+	:raise ValueError: If rev couldn't be parsed
+	:raise IndexError: If invalid reflog index is specified"""
 	
 	# colon search mode ?
 	if rev.startswith(':/'):
@@ -193,7 +195,7 @@ def rev_parse(repo, rev):
 				try:
 					entry = ref.log_entry(revlog_index)
 				except IndexError:
-					raise BadObject("Invalid revlog index: %i" % revlog_index)
+					raise IndexError("Invalid revlog index: %i" % revlog_index)
 				#END handle index out of bound
 				
 				obj = Object.new_from_sha(repo, hex_to_bin(entry.newhexsha))
