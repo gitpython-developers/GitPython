@@ -7,6 +7,7 @@ from git.util import (
 					assure_directory_exists
 					)
 
+from gitdb.exc import BadObject
 from gitdb.util import (
 							join, 
 							dirname,
@@ -114,13 +115,13 @@ class SymbolicReference(object):
 		# END recursive dereferencing
 		
 	@classmethod
-	def _get_ref_info(cls, repo, path):
+	def _get_ref_info(cls, repo, ref_path):
 		"""Return: (sha, target_ref_path) if available, the sha the file at 
 		rela_path points to, or None. target_ref_path is the reference we 
 		point to, or None"""
 		tokens = None
 		try:
-			fp = open(join(repo.git_dir, path), 'r')
+			fp = open(join(repo.git_dir, ref_path), 'r')
 			value = fp.read().rstrip()
 			fp.close()
 			tokens = value.split(" ")
@@ -129,14 +130,13 @@ class SymbolicReference(object):
 			# NOTE: We are not a symbolic ref if we are in a packed file, as these
 			# are excluded explictly
 			for sha, path in cls._iter_packed_refs(repo):
-				if path != path: continue
+				if path != ref_path: continue
 				tokens = (sha, path)
 				break
 			# END for each packed ref
 		# END handle packed refs
-		
 		if tokens is None:
-			raise ValueError("Reference at %r does not exist" % path)
+			raise ValueError("Reference at %r does not exist" % ref_path)
 		
 		# is it a reference ?
 		if tokens[0] == 'ref:':
@@ -146,7 +146,7 @@ class SymbolicReference(object):
 		if repo.re_hexsha_only.match(tokens[0]):
 			return (tokens[0], None)
 			
-		raise ValueError("Failed to parse reference information from %r" % path)
+		raise ValueError("Failed to parse reference information from %r" % ref_path)
 	
 	def _get_object(self):
 		"""
@@ -163,6 +163,10 @@ class SymbolicReference(object):
 			Commit object we point to, works for detached and non-detached 
 			SymbolicReferences. The symbolic reference will be dereferenced recursively."""
 		obj = self._get_object()
+		if obj.type == 'tag':
+			obj = obj.object
+		#END dereference tag
+		
 		if obj.type != Commit.type:
 			raise TypeError("Symbolic Reference pointed to object %r, commit was required" % obj)
 		#END handle type
@@ -170,11 +174,27 @@ class SymbolicReference(object):
 		
 	def set_commit(self, commit, msg = None):
 		"""As set_object, but restricts the type of object to be a Commit
-		:note: To save cycles, we do not yet check whether the given Object 
-			is actually referring to a commit - for now it may be any of our 
-			Object or Reference types, as well as a refspec"""
-		# may have to check the type ... this is costly as we would have to use 
-		# revparse
+		:raise ValueError: If commit is not a Commit object or doesn't point to 
+			a commit"""
+		# check the type - assume the best if it is a base-string
+		invalid_type = False
+		if isinstance(commit, Object):
+			invalid_type = commit.type != Commit.type
+		elif isinstance(commit, SymbolicReference):
+			invalid_type = commit.object.type != Commit.type
+		else:
+			try:
+				invalid_type = self.repo.rev_parse(commit).type != Commit.type
+			except BadObject:
+				raise ValueError("Invalid object: %s" % commit)
+			#END handle exception
+		# END verify type
+		
+		if invalid_type:
+			raise ValueError("Need commit, got %r" % commit)
+		#END handle raise
+		
+		# we leave strings to the rev-parse method below
 		self.set_object(commit, msg)
 		
 	
@@ -243,7 +263,7 @@ class SymbolicReference(object):
 			try:
 				obj = self.repo.rev_parse(ref+"^{}")	# optionally deref tags
 				write_value = obj.hexsha
-			except Exception:
+			except BadObject:
 				raise ValueError("Could not extract object from %s" % ref)
 			# END end try string
 		else:

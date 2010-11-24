@@ -57,6 +57,10 @@ class Object(LazyMixin):
 		:return: new object instance of a type appropriate to represent the given 
 			binary sha1
 		:param sha1: 20 byte binary sha1"""
+		if sha1 == cls.NULL_BIN_SHA:
+			# the NULL binsha is always the root commit
+			return get_object_type_by_name('commit')(repo, sha1)
+		#END handle special case
 		oinfo = repo.odb.info(sha1)
 		inst = get_object_type_by_name(oinfo.type)(repo, oinfo.binsha)
 		inst.size = oinfo.size

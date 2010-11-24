@@ -60,7 +60,7 @@ class TestRefLog(TestBase):
 		# test serialize and deserialize - results must match exactly
 		binsha = chr(255)*20
 		msg = "my reflog message"
-		cr = repo.config_reader()
+		cr = self.rorepo.config_reader()
 		for rlp in (rlp_head, rlp_master):
 			reflog = RefLog.from_file(rlp)
 			tfile = os.path.join(tdir, os.path.basename(rlp))

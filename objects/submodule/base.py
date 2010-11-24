@@ -14,6 +14,7 @@ from git.util import (
 						join_path_native, 
 						to_native_path_linux
 					)
+
 from git.config import SectionConstraint
 from git.exc import (
 					InvalidGitRepositoryError, 
@@ -339,14 +340,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 				
 				# have a valid branch, but no checkout - make sure we can figure
 				# that out by marking the commit with a null_sha
-				# have to write it directly as .commit = NULLSHA tries to resolve the sha
-				# This will bring the branch into existance
-				refpath = join_path_native(mrepo.git_dir, local_branch.path)
-				refdir = os.path.dirname(refpath)
-				if not os.path.isdir(refdir):
-					os.makedirs(refdir)
-				#END handle directory
-				open(refpath, 'w').write(self.NULL_HEX_SHA)
+				local_branch.set_object(util.Object(mrepo, self.NULL_BIN_SHA))
 				# END initial checkout + branch creation
 				
 				# make sure HEAD is not detached

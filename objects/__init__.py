@@ -7,6 +7,7 @@ from base import *
 # imported by the submodule.base
 import submodule.util
 submodule.util.IndexObject = IndexObject
+submodule.util.Object = Object
 from submodule.base import *
 from submodule.root import *
 
