@@ -190,7 +190,12 @@ def rev_parse(repo, rev):
 					raise NotImplementedError("Support for additional @{...} modes not implemented")
 				#END handle revlog index
 				
-				entry = ref.log()[revlog_index]
+				try:
+					entry = ref.log()[revlog_index]
+				except IndexError:
+					raise BadObject("Invalid revlog index: %i" % revlog_index)
+				#END handle index out of bound
+				
 				obj = Object.new_from_sha(repo, hex_to_bin(entry.newhexsha))
 				
 				# make it pass the following checks

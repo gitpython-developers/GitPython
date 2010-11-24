@@ -557,11 +557,18 @@ class TestRepo(TestBase):
 		# uses HEAD.ref by default
 		assert rev_parse('@{0}') == head.commit
 		if not head.is_detached:
-			assert rev_parse('%s@{0}' % head.ref.name) == head.ref.commit
+			refspec = '%s@{0}' % head.ref.name
+			assert rev_parse(refspec) == head.ref.commit
+			# all additional specs work as well
+			assert rev_parse(refspec+"^{tree}") == head.commit.tree
+			assert rev_parse(refspec+":CHANGES").type == 'blob'
 		#END operate on non-detached head
 		
 		# the last position
 		assert rev_parse('@{1}') != head.commit
+		
+		# position doesn't exist
+		self.failUnlessRaises(BadObject, rev_parse, '@{10000}')
 		
 		# currently, nothing more is supported
 		self.failUnlessRaises(NotImplementedError, rev_parse, "@{1 week ago}")
