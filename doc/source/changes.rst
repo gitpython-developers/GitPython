@@ -2,16 +2,45 @@
 Changelog
 =========
 
-0.3.2 Beta 1
+0.3.1 Beta 2
 ============
-* Flattened directory structure to make development more convenient.
+* Added **reflog support** ( reading and writing )
+
+ * New types: ``RefLog`` and ``RefLogEntry``
+ * Reflog is maintained automatically when creating references and deleting them
+ * Non-intrusive changes to ``SymbolicReference``, these don't require your code to change. They allow to append messages to the reflog.
+ 
+     * ``abspath`` property added, similar to ``abspath`` of Object instances
+     * ``log()`` method added
+     * ``log_append(...)`` method added
+     * ``set_reference(...)`` method added (reflog support)
+     * ``set_commit(...)`` method added (reflog support)
+     * ``set_object(...)`` method added (reflog support)
+
+ * Intrusive Changes to ``Head`` type
+ 
+  * ``create(...)`` method now supports the reflog, but will not raise ``GitCommandError`` anymore as it is a pure python implementation now. Instead, it raises ``OSError``.
+     
+* Repo.rev_parse now supports the [ref]@{n} syntax, where n is the number of steps to look into the reference's past
+
+* **BugFixes**
+
+    * Removed incorrect ORIG_HEAD handling
+ 
+* **Flattened directory** structure to make development more convenient.
 
  * .. note:: This alters the way projects using git-python as a submodule have to adjust their sys.path to be able to import git-python successfully.
+ * Misc smaller changes and bugfixes
 
 0.3.1 Beta 1
 ============
 * Full Submodule-Support
 * Added unicode support for author names. Commit.author.name is now unicode instead of string.
+* Head Type changes
+
+ * config_reader() & config_writer() methods added for access to head specific options.
+ * tracking_branch() & set_tracking_branch() methods addded for easy configuration of tracking branches.
+
 
 0.3.0 Beta 2
 ============

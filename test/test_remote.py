@@ -208,7 +208,7 @@ class TestRemote(TestBase):
         assert tinfo.flags & tinfo.NEW_TAG
         
         # adjust tag commit
-        Reference._set_object(rtag, rhead.commit.parents[0].parents[0])
+        Reference.set_object(rtag, rhead.commit.parents[0].parents[0])
         res = fetch_and_test(remote, tags=True)
         tinfo = res[str(rtag)]
         assert tinfo.commit == rtag.commit

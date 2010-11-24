@@ -16,7 +16,7 @@ from git.cmd import dashify
 import time
 
 
-class TestUtils(TestCase):
+class TestUtils(TestBase):
 	def setup(self):
 		self.testdict = {
 			"string":	"42",
@@ -102,4 +102,8 @@ class TestUtils(TestCase):
 		self.failUnlessRaises(ValueError, parse_date, '123456789 -02000')
 		self.failUnlessRaises(ValueError, parse_date, ' 123456789 -0200')
 		
-		
+	def test_actor(self):
+		for cr in (None, self.rorepo.config_reader()):
+			assert isinstance(Actor.committer(cr), Actor)
+			assert isinstance(Actor.author(cr), Actor)
+		#END assure config reader is handled

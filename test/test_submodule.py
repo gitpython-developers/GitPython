@@ -107,6 +107,7 @@ class TestSubmodule(TestBase):
 			
 			# currently there is only one submodule
 			assert len(list(rwrepo.iter_submodules())) == 1
+			assert sm.binsha != "\0"*20
 			
 			# TEST ADD
 			###########

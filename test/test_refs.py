@@ -8,6 +8,7 @@ from mock import *
 from git.test.lib import *
 from git import *
 import git.refs as refs
+from git.util import Actor
 from git.objects.tag import TagObject
 from itertools import chain
 import os
@@ -33,6 +34,8 @@ class TestRefs(TestBase):
 			if tag.tag is not None:
 				tag_object_refs.append( tag )
 				tagobj = tag.tag
+				# have no dict
+				self.failUnlessRaises(AttributeError, setattr, tagobj, 'someattr', 1)
 				assert isinstance( tagobj, TagObject ) 
 				assert tagobj.tag == tag.name
 				assert isinstance( tagobj.tagger, Actor )
@@ -92,36 +95,47 @@ class TestRefs(TestBase):
 			assert head.tracking_branch() is None
 		# END for each head
 		
-		# verify ORIG_HEAD gets set for detached heads
+		# verify REFLOG gets altered
 		head = rwrepo.head
-		orig_head = head.orig_head()
 		cur_head = head.ref
 		cur_commit = cur_head.commit
 		pcommit = cur_head.commit.parents[0].parents[0]
-		head.ref = pcommit				# detach head
-		assert orig_head.commit == cur_commit
+		hlog_len = len(head.log())
+		blog_len = len(cur_head.log())
+		assert head.set_reference(pcommit, 'detached head') is head
+		# one new log-entry
+		thlog = head.log()
+		assert len(thlog) == hlog_len + 1
+		assert thlog[-1].oldhexsha == cur_commit.hexsha
+		assert thlog[-1].newhexsha == pcommit.hexsha
 		
-		# even if we set it through its reference - chaning the ref
-		# will adjust the orig_head, which still points to cur_commit
-		head.ref = cur_head
-		assert orig_head.commit == pcommit
-		assert head.commit == cur_commit == cur_head.commit
+		# the ref didn't change though
+		assert len(cur_head.log()) == blog_len
 		
-		cur_head.commit = pcommit
-		assert head.commit == pcommit
-		assert orig_head.commit == cur_commit
+		# head changes once again, cur_head doesn't change
+		head.set_reference(cur_head, 'reattach head')
+		assert len(head.log()) == hlog_len+2
+		assert len(cur_head.log()) == blog_len
+		
+		# adjusting the head-ref also adjust the head, so both reflogs are
+		# altered
+		cur_head.set_commit(pcommit, 'changing commit')
+		assert len(cur_head.log()) == blog_len+1
+		assert len(head.log()) == hlog_len+3
+		
 		
 		# with automatic dereferencing
-		head.commit = cur_commit
-		assert orig_head.commit == pcommit
+		assert head.set_commit(cur_commit, 'change commit once again') is head
+		assert len(head.log()) == hlog_len+4
+		assert len(cur_head.log()) == blog_len+2
 		
-		# changing branches which are not checked out doesn't affect the ORIG_HEAD
-		other_head = Head.create(rwrepo, 'mynewhead', pcommit)
-		assert other_head.commit == pcommit
-		assert orig_head.commit == pcommit
-		other_head.commit = pcommit.parents[0]
-		assert orig_head.commit == pcommit
-		
+		# a new branch has just a single entry
+		other_head = Head.create(rwrepo, 'mynewhead', pcommit, logmsg='new head created')
+		log = other_head.log()
+		assert len(log) == 1
+		assert log[0].oldhexsha == pcommit.NULL_HEX_SHA
+		assert log[0].newhexsha == pcommit.hexsha
+	
 		
 	def test_refs(self):
 		types_found = set()
@@ -199,10 +213,14 @@ class TestRefs(TestBase):
 		for count, new_name in enumerate(("my_new_head", "feature/feature1")):
 			actual_commit = commit+"^"*count
 			new_head = Head.create(rw_repo, new_name, actual_commit)
+			assert new_head.is_detached
 			assert cur_head.commit == prev_head_commit
 			assert isinstance(new_head, Head)
-			# already exists
-			self.failUnlessRaises(GitCommandError, Head.create, rw_repo, new_name)
+			# already exists, but has the same value, so its fine
+			Head.create(rw_repo, new_name, new_head.commit)
+			
+			# its not fine with a different value
+			self.failUnlessRaises(OSError, Head.create, rw_repo, new_name, new_head.commit.parents[0])
 			
 			# force it
 			new_head = Head.create(rw_repo, new_name, actual_commit, force=True)
@@ -219,12 +237,16 @@ class TestRefs(TestBase):
 			tmp_head.rename(new_head, force=True)
 			assert tmp_head == new_head and tmp_head.object == new_head.object
 			
+			logfile = RefLog.path(tmp_head)
+			assert os.path.isfile(logfile)
 			Head.delete(rw_repo, tmp_head)
+			# deletion removes the log as well
+			assert not os.path.isfile(logfile)
 			heads = rw_repo.heads
 			assert tmp_head not in heads and new_head not in heads
 			# force on deletion testing would be missing here, code looks okay though ;)
 		# END for each new head name
-		self.failUnlessRaises(TypeError, RemoteReference.create, rw_repo, "some_name")	
+		self.failUnlessRaises(TypeError, RemoteReference.create, rw_repo, "some_name")
 		
 		# tag ref
 		tag_name = "1.0.2"
@@ -282,7 +304,11 @@ class TestRefs(TestBase):
 		head_tree = head.commit.tree
 		self.failUnlessRaises(ValueError, setattr, head, 'commit', head_tree)
 		assert head.commit == old_commit		# and the ref did not change
-		self.failUnlessRaises(GitCommandError, setattr, head, 'object', head_tree)
+		# we allow heds to point to any object
+		head.object = head_tree
+		assert head.object == head_tree
+		# cannot query tree as commit
+		self.failUnlessRaises(TypeError, getattr, head, 'commit') 
 		
 		# set the commit directly using the head. This would never detach the head
 		assert not cur_head.is_detached
@@ -478,7 +504,7 @@ class TestRefs(TestBase):
 			
 			Reference.delete(ref.repo, ref.path)
 			assert not ref.is_valid()
-			self.failUnlessRaises(GitCommandError, setattr, ref, 'object', "nonsense")
+			self.failUnlessRaises(ValueError, setattr, ref, 'object', "nonsense")
 			assert not ref.is_valid()
 			
 		# END for each path
@@ -486,3 +512,7 @@ class TestRefs(TestBase):
 	def test_dereference_recursive(self):
 		# for now, just test the HEAD
 		assert SymbolicReference.dereference_recursive(self.rorepo, 'HEAD')
+		
+	def test_reflog(self):
+		assert isinstance(self.rorepo.heads.master.log(), RefLog)
+		

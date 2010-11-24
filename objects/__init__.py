@@ -7,6 +7,7 @@ from base import *
 # imported by the submodule.base
 import submodule.util
 submodule.util.IndexObject = IndexObject
+submodule.util.Object = Object
 from submodule.base import *
 from submodule.root import *
 
@@ -15,7 +16,6 @@ from tag import *
 from blob import *
 from commit import *
 from tree import *
-from util import Actor
 
 __all__ = [ name for name, obj in locals().items()
             if not (name.startswith('_') or inspect.ismodule(obj)) ]

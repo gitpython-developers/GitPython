@@ -48,8 +48,7 @@ class RootModule(Submodule):
 		
 		:param previous_commit: If set to a commit'ish, the commit we should use 
 			as the previous commit the HEAD pointed to before it was set to the commit it points to now. 
-			If None, it defaults to ORIG_HEAD otherwise, or the parent of the current
-			commit if it is not given
+			If None, it defaults to HEAD@{1} otherwise
 		:param recursive: if True, the children of submodules will be updated as well
 			using the same technique
 		:param force_remove: If submodules have been deleted, they will be forcibly removed.

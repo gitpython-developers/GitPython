@@ -4,7 +4,8 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
-from git.util import (
+from git.util import 		(
+							Actor,
 							Iterable,
 							Stats,
 						)
@@ -20,9 +21,7 @@ from gitdb.util import (
 from util import (
 						Traversable,
 						Serializable,
-						get_user_id,
 						parse_date,
-						Actor,
 						altz_to_utctz_str,
 						parse_actor_and_date
 					)
@@ -43,17 +42,10 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
 	
 	# ENVIRONMENT VARIABLES
 	# read when creating new commits
-	env_author_name = "GIT_AUTHOR_NAME"
-	env_author_email = "GIT_AUTHOR_EMAIL"
 	env_author_date = "GIT_AUTHOR_DATE"
-	env_committer_name = "GIT_COMMITTER_NAME"
-	env_committer_email = "GIT_COMMITTER_EMAIL"
 	env_committer_date = "GIT_COMMITTER_DATE"
-	env_email = "EMAIL"
 	
 	# CONFIGURATION KEYS
-	conf_name = 'name'
-	conf_email = 'email'
 	conf_encoding = 'i18n.commitencoding'
 	
 	# INVARIANTS
@@ -306,17 +298,9 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
 		# COMMITER AND AUTHOR INFO
 		cr = repo.config_reader()
 		env = os.environ
-		default_email = get_user_id()
-		default_name = default_email.split('@')[0]
 		
-		conf_name = cr.get_value('user', cls.conf_name, default_name)
-		conf_email = cr.get_value('user', cls.conf_email, default_email)
-		
-		author_name = env.get(cls.env_author_name, conf_name)
-		author_email = env.get(cls.env_author_email, conf_email)
-		
-		committer_name = env.get(cls.env_committer_name, conf_name)
-		committer_email = env.get(cls.env_committer_email, conf_email)
+		committer = Actor.committer(cr)
+		author = Actor.author(cr)
 		
 		# PARSE THE DATES
 		unix_time = int(time())
@@ -339,9 +323,6 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
 		# assume utf8 encoding
 		enc_section, enc_option = cls.conf_encoding.split('.')
 		conf_encoding = cr.get_value(enc_section, enc_option, cls.default_encoding)
-		
-		author = Actor(author_name, author_email)
-		committer = Actor(committer_name, committer_email)
 		
 		
 		# if the tree is no object, make sure we create one - otherwise

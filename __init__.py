@@ -37,7 +37,8 @@ from git.index import *
 from git.util import (
 						LockFile, 
 						BlockingLockFile, 
-						Stats
+						Stats,
+						Actor
 						)
 
 #} END imports

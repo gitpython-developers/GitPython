@@ -422,7 +422,6 @@ class TestIndex(TestBase):
 		# same index, no parents
 		commit_message = "index without parents"
 		commit_no_parents = index.commit(commit_message, parent_commits=list(), head=True)
-		assert SymbolicReference(rw_repo, 'ORIG_HEAD').commit == cur_commit
 		assert commit_no_parents.message == commit_message
 		assert len(commit_no_parents.parents) == 0
 		assert cur_head.commit == commit_no_parents
