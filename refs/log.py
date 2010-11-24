@@ -191,8 +191,11 @@ class RefLog(list, Serializable):
 		#END handle change
 		
 	@classmethod
-	def append_entry(cls, filepath, oldbinsha, newbinsha, message):
-		"""Append a new log entry to the revlog at filepath. 
+	def append_entry(cls, config_reader, filepath, oldbinsha, newbinsha, message):
+		"""Append a new log entry to the revlog at filepath.
+		:param config_reader: configuration reader of the repository - used to obtain
+			user information. May be None
+		:param filepath: full path to the log file
 		:param oldbinsha: binary sha of the previous commit
 		:param newbinsha: binary sha of the current commit
 		:param message: message describing the change to the reference
@@ -205,7 +208,7 @@ class RefLog(list, Serializable):
 			raise ValueError("Shas need to be given in binary format")
 		#END handle sha type
 		assure_directory_exists(filepath, is_file=True)
-		entry = RefLogEntry((bin_to_hex(oldbinsha), bin_to_hex(newbinsha), Actor.committer(), (int(time.time()), time.altzone), message))
+		entry = RefLogEntry((bin_to_hex(oldbinsha), bin_to_hex(newbinsha), Actor.committer(config_reader), (int(time.time()), time.altzone), message))
 		
 		lf = LockFile(filepath)
 		lf._obtain_lock_or_raise()

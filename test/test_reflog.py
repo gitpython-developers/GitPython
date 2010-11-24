@@ -60,6 +60,7 @@ class TestRefLog(TestBase):
 		# test serialize and deserialize - results must match exactly
 		binsha = chr(255)*20
 		msg = "my reflog message"
+		cr = repo.config_reader()
 		for rlp in (rlp_head, rlp_master):
 			reflog = RefLog.from_file(rlp)
 			tfile = os.path.join(tdir, os.path.basename(rlp))
@@ -73,7 +74,7 @@ class TestRefLog(TestBase):
 			assert open(tfile).read() == open(rlp).read()
 			
 			# append an entry
-			entry = RefLog.append_entry(tfile, IndexObject.NULL_BIN_SHA, binsha, msg)
+			entry = RefLog.append_entry(cr, tfile, IndexObject.NULL_BIN_SHA, binsha, msg)
 			assert entry.oldhexsha == IndexObject.NULL_HEX_SHA
 			assert entry.newhexsha == 'f'*40
 			assert entry.message == msg

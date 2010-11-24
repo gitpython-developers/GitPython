@@ -15,7 +15,7 @@ import os
 
 class TestRefs(TestBase):
 
-	def test_from_path(self):
+	def _test_from_path(self):
 		# should be able to create any reference directly
 		for ref_type in ( Reference, Head, TagReference, RemoteReference ):
 			for name in ('rela_name', 'path/rela_name'):
@@ -25,7 +25,7 @@ class TestRefs(TestBase):
 			# END for each name 
 		# END for each type
 	
-	def test_tag_base(self):
+	def _test_tag_base(self):
 		tag_object_refs = list()
 		for tag in self.rorepo.tags:
 			assert "refs/tags" in tag.path
@@ -50,7 +50,7 @@ class TestRefs(TestBase):
 		assert tag_object_refs
 		assert isinstance(self.rorepo.tags['0.1.5'], TagReference)
 		
-	def test_tags(self):
+	def _test_tags(self):
 		# tag refs can point to tag objects or to commits
 		s = set()
 		ref_count = 0
@@ -67,7 +67,7 @@ class TestRefs(TestBase):
 		assert len(s|s) == ref_count
 		
 	@with_rw_repo('HEAD', bare=False)
-	def test_heads(self, rwrepo):
+	def _test_heads(self, rwrepo):
 		for head in rwrepo.heads:
 			assert head.name
 			assert head.path
@@ -129,7 +129,7 @@ class TestRefs(TestBase):
 		# TODO: Need changing a ref changes HEAD reflog as well if it pointed to it
 		
 		
-	def test_refs(self):
+	def _test_refs(self):
 		types_found = set()
 		for ref in self.rorepo.refs:
 			types_found.add(type(ref))
@@ -142,7 +142,7 @@ class TestRefs(TestBase):
 		assert SymbolicReference(self.rorepo, 'hellothere').is_valid() == False
 		
 	@with_rw_repo('0.1.6')
-	def test_head_reset(self, rw_repo):
+	def _test_head_reset(self, rw_repo):
 		cur_head = rw_repo.head
 		old_head_commit = cur_head.commit
 		new_head_commit = cur_head.ref.commit.parents[0]
@@ -493,15 +493,15 @@ class TestRefs(TestBase):
 			
 		# END for each path
 		
-	def test_dereference_recursive(self):
+	def _test_dereference_recursive(self):
 		# for now, just test the HEAD
 		assert SymbolicReference.dereference_recursive(self.rorepo, 'HEAD')
 		
-	def test_reflog(self):
+	def _test_reflog(self):
 		assert isinstance(self.rorepo.heads.master.log(), RefLog)
 		
 		
-	def test_todo(self):
+	def _test_todo(self):
 		# delete deletes the reflog
 		# create creates a new entry
 		# set_reference and set_commit and set_object use the reflog if message is given

@@ -1,5 +1,5 @@
 import os
-from git.objects import Commit
+from git.objects import Object, Commit
 from git.util import (
 					join_path, 
 					join_path_native, 
@@ -30,6 +30,7 @@ class SymbolicReference(object):
 	A typical example for a symbolic reference is HEAD."""
 	__slots__ = ("repo", "path")
 	_resolve_ref_on_create = False
+	_points_to_commits_only = True
 	_common_path_default = ""
 	_id_attribute_ = "name"
 	
@@ -107,19 +108,19 @@ class SymbolicReference(object):
 			intermediate references as required
 		:param repo: the repository containing the reference at ref_path"""
 		while True:
-			ref = cls(repo, ref_path)
-			hexsha, ref_path = ref._get_ref_info()
+			hexsha, ref_path = cls._get_ref_info(repo, ref_path)
 			if hexsha is not None:
 				return hexsha
 		# END recursive dereferencing
 		
-	def _get_ref_info(self):
+	@classmethod
+	def _get_ref_info(cls, repo, path):
 		"""Return: (sha, target_ref_path) if available, the sha the file at 
 		rela_path points to, or None. target_ref_path is the reference we 
 		point to, or None"""
 		tokens = None
 		try:
-			fp = open(self.abspath, 'r')
+			fp = open(join(repo.git_dir, path), 'r')
 			value = fp.read().rstrip()
 			fp.close()
 			tokens = value.split(" ")
@@ -127,46 +128,69 @@ class SymbolicReference(object):
 			# Probably we are just packed, find our entry in the packed refs file
 			# NOTE: We are not a symbolic ref if we are in a packed file, as these
 			# are excluded explictly
-			for sha, path in self._iter_packed_refs(self.repo):
-				if path != self.path: continue
+			for sha, path in cls._iter_packed_refs(repo):
+				if path != path: continue
 				tokens = (sha, path)
 				break
 			# END for each packed ref
 		# END handle packed refs
 		
 		if tokens is None:
-			raise ValueError("Reference at %r does not exist" % self.path)
+			raise ValueError("Reference at %r does not exist" % path)
 		
 		# is it a reference ?
 		if tokens[0] == 'ref:':
 			return (None, tokens[1])
 			
 		# its a commit
-		if self.repo.re_hexsha_only.match(tokens[0]):
+		if repo.re_hexsha_only.match(tokens[0]):
 			return (tokens[0], None)
 			
-		raise ValueError("Failed to parse reference information from %r" % self.path)
-		
+		raise ValueError("Failed to parse reference information from %r" % path)
+	
+	def _get_object(self):
+		"""
+		:return:
+			The object our ref currently refers to. Refs can be cached, they will 
+			always point to the actual object as it gets re-created on each query"""
+		# have to be dynamic here as we may be a tag which can point to anything
+		# Our path will be resolved to the hexsha which will be used accordingly
+		return Object.new_from_sha(self.repo, hex_to_bin(self.dereference_recursive(self.repo, self.path)))
+	
 	def _get_commit(self):
 		"""
 		:return:
 			Commit object we point to, works for detached and non-detached 
-			SymbolicReferences"""
-		# we partially reimplement it to prevent unnecessary file access
-		hexsha, target_ref_path = self._get_ref_info()
-		
-		# it is a detached reference
-		if hexsha:
-			return Commit(self.repo, hex_to_bin(hexsha))
-		
-		return self.from_path(self.repo, target_ref_path).commit
+			SymbolicReferences. The symbolic reference will be dereferenced recursively."""
+		obj = self._get_object()
+		if obj.type != Commit.type:
+			raise TypeError("Symbolic Reference pointed to object %r, commit was required" % obj)
+		#END handle type
+		return obj
 		
 	def set_commit(self, commit, msg = None):
-		"""Set our commit, possibly dereference our symbolic reference first.
+		"""As set_object, but restricts the type of object to be a Commit
+		:note: To save cycles, we do not yet check whether the given Object 
+			is actually referring to a commit - for now it may be any of our 
+			Object or Reference types, as well as a refspec"""
+		# may have to check the type ... this is costly as we would have to use 
+		# revparse
+		self.set_object(commit, msg)
+		
+	
+	def set_object(self, object, msg = None):
+		"""Set the object we point to, possibly dereference our symbolic reference first.
 		If the reference does not exist, it will be created
 		
+		:param object: a refspec, a SymbolicReference or an Object instance. SymbolicReferences
+			will be dereferenced beforehand to obtain the object they point to
 		:param msg: If not None, the message will be used in the reflog entry to be 
-			written. Otherwise the reflog is not altered"""
+			written. Otherwise the reflog is not altered
+		:note: plain SymbolicReferences may not actually point to objects by convention"""
+		if isinstance(object, SymbolicReference):
+			object = object.object
+		#END resolve references
+		
 		is_detached = True
 		try:
 			is_detached = self.is_detached
@@ -175,56 +199,66 @@ class SymbolicReference(object):
 		# END handle non-existing ones
 		
 		if is_detached:
-			return self.set_reference(commit, msg)
+			return self.set_reference(object, msg)
 			
 		# set the commit on our reference
-		self._get_reference().set_commit(commit, msg)
+		self._get_reference().set_object(object, msg)
 	
 	commit = property(_get_commit, set_commit, doc="Query or set commits directly")
+	object = property(_get_object, set_object, doc="Return the object our ref currently refers to")
 		
 	def _get_reference(self):
 		""":return: Reference Object we point to
 		:raise TypeError: If this symbolic reference is detached, hence it doesn't point
 			to a reference, but to a commit"""
-		sha, target_ref_path = self._get_ref_info()
+		sha, target_ref_path = self._get_ref_info(self.repo, self.path)
 		if target_ref_path is None:
 			raise TypeError("%s is a detached symbolic reference as it points to %r" % (self, sha))
 		return self.from_path(self.repo, target_ref_path)
 		
 	def set_reference(self, ref, msg = None):
 		"""Set ourselves to the given ref. It will stay a symbol if the ref is a Reference.
-		Otherwise a commmit, given as Commit object or refspec, is assumed and if valid, 
+		Otherwise an Object, given as Object instance or refspec, is assumed and if valid, 
 		will be set which effectively detaches the refererence if it was a purely 
 		symbolic one.
 		
-		:param ref: SymbolicReference instance, Commit instance or refspec string
+		:param ref: SymbolicReference instance, Object instance or refspec string
+			Only if the ref is a SymbolicRef instance, we will point to it. Everthiny
+			else is dereferenced to obtain the actual object.
 		:param msg: If set to a string, the message will be used in the reflog.
 			Otherwise, a reflog entry is not written for the changed reference.
 			The previous commit of the entry will be the commit we point to now.
 			
-			See also: log_append()"""
+			See also: log_append()
+		:note: This symbolic reference will not be dereferenced. For that, see 
+			``set_object(...)``"""
 		write_value = None
+		obj = None
 		if isinstance(ref, SymbolicReference):
 			write_value = "ref: %s" % ref.path
-		elif isinstance(ref, Commit):
+		elif isinstance(ref, Object):
+			obj = ref
 			write_value = ref.hexsha
-		else:
+		elif isinstance(ref, basestring):
 			try:
-				write_value = ref.commit.hexsha
-			except AttributeError:
-				try:
-					obj = self.repo.rev_parse(ref+"^{}")	# optionally deref tags
-					if obj.type != "commit":
-						raise TypeError("Invalid object type behind sha: %s" % sha)
-					write_value = obj.hexsha
-				except Exception:
-					raise ValueError("Could not extract object from %s" % ref)
-			# END end try string  
+				obj = self.repo.rev_parse(ref+"^{}")	# optionally deref tags
+				write_value = obj.hexsha
+			except Exception:
+				raise ValueError("Could not extract object from %s" % ref)
+			# END end try string
+		else:
+			raise ValueError("Unrecognized Value: %r" % ref)
 		# END try commit attribute
+		
+		# typecheck
+		if obj is not None and self._points_to_commits_only and obj.type != Commit.type:
+			raise TypeError("Require commit, got %r" % obj)
+		#END verify type
+		
 		oldbinsha = None
 		if msg is not None:
 			try:
-				oldhexsha = self.commit.binsha
+				oldbinsha = self.commit.binsha
 			except ValueError:
 				oldbinsha = Commit.NULL_BIN_SHA
 			#END handle non-existing
@@ -247,14 +281,14 @@ class SymbolicReference(object):
 	# aliased reference
 	reference = property(_get_reference, set_reference, doc="Returns the Reference we point to")
 	ref = reference
-		
+	
 	def is_valid(self):
 		"""
 		:return:
 			True if the reference is valid, hence it can be read and points to 
 			a valid object or reference."""
 		try:
-			self.commit
+			self.object
 		except (OSError, ValueError):
 			return False
 		else:
@@ -288,7 +322,7 @@ class SymbolicReference(object):
 		:param newbinsha: The sha the ref points to now. If None, our current commit sha
 			will be used
 		:return: added RefLogEntry instance"""
-		return RefLog.append_entry(RefLog.path(self), oldbinsha, 
+		return RefLog.append_entry(self.repo.config_reader(), RefLog.path(self), oldbinsha, 
 									(newbinsha is None and self.commit.binsha) or newbinsha, 
 									message) 
 
