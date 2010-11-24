@@ -356,7 +356,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
 				# Happens on first commit
 				import git.refs
 				master = git.refs.Head.create(repo, repo.head.ref, commit=new_commit, logmsg="commit (initial): %s" % message)
-				repo.head.reference = master
+				repo.head.set_reference(master, logmsg='commit: Switching to %s' % master)
 			# END handle empty repositories
 		# END advance head handling 
 		

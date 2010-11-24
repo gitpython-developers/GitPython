@@ -344,7 +344,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 				# END initial checkout + branch creation
 				
 				# make sure HEAD is not detached
-				mrepo.head.ref = local_branch
+				mrepo.head.set_reference(local_branch, logmsg="submodule: attaching head to %s" % local_branch)
 				mrepo.head.ref.set_tracking_branch(remote_branch)
 			except IndexError:
 				print >> sys.stderr, "Warning: Failed to checkout tracking branch %s" % self.branch_path 

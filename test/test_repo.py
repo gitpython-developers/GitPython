@@ -568,7 +568,7 @@ class TestRepo(TestBase):
 		assert rev_parse('@{1}') != head.commit
 		
 		# position doesn't exist
-		self.failUnlessRaises(BadObject, rev_parse, '@{10000}')
+		self.failUnlessRaises(IndexError, rev_parse, '@{10000}')
 		
 		# currently, nothing more is supported
 		self.failUnlessRaises(NotImplementedError, rev_parse, "@{1 week ago}")

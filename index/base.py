@@ -933,7 +933,14 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 			If one of files or directories do not exist in the index
 			( as opposed to the	 original git command who ignores them ).
 			Raise GitCommandError if error lines could not be parsed - this truly is
-			an exceptional state"""
+			an exceptional state
+			
+		.. note:: The checkout is limited to checking out the files in the 
+			index. Files which are not in the index anymore and exist in 
+			the working tree will not be deleted. This behaviour is fundamentally
+			different to *head.checkout*, i.e. if you want git-checkout like behaviour, 
+			use head.checkout instead of index.checkout.
+			"""
 		args = ["--index"]
 		if force:
 			args.append("--force")
@@ -1055,7 +1062,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 			If False, the working tree will not be touched
 			Please note that changes to the working copy will be discarded without
 			warning !
-
+			
 		:param head:
 			If True, the head will be set to the given commit. This is False by default,
 			but if True, this method behaves like HEAD.reset.
@@ -1067,6 +1074,11 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
 		:param kwargs:
 			Additional keyword arguments passed to git-reset
+			
+		.. note:: IndexFile.reset, as opposed to HEAD.reset, will not delete anyfiles
+			in order to maintain a consistent working tree. Instead, it will just
+			checkout the files according to their state in the index.
+			If you want git-reset like behaviour, use *HEAD.reset* instead.
 
 		:return: self """
 		# what we actually want to do is to merge the tree into our existing
@@ -1098,7 +1110,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 		# END handle working tree
 		
 		if head:
-			self.repo.head.commit = self.repo.commit(commit)
+			self.repo.head.set_commit(self.repo.commit(commit), logmsg="%s: Updating HEAD" % commit)
 		# END handle head change
 
 		return self
