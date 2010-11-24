@@ -174,6 +174,7 @@ class SymbolicReference(object):
 		
 	def set_commit(self, commit, logmsg = None):
 		"""As set_object, but restricts the type of object to be a Commit
+		
 		:raise ValueError: If commit is not a Commit object or doesn't point to 
 			a commit
 		:return: self"""
@@ -345,6 +346,7 @@ class SymbolicReference(object):
 		
 	def log_append(self, oldbinsha, message, newbinsha=None):
 		"""Append a logentry to the logfile of this ref
+		
 		:param oldbinsha: binary sha this ref used to point to
 		:param message: A message describing the change
 		:param newbinsha: The sha the ref points to now. If None, our current commit sha

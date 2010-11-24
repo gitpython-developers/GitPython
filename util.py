@@ -69,9 +69,10 @@ else:
 	to_native_path = to_native_path_linux
 
 def join_path_native(a, *p):
-	"""As join path, but makes sure an OS native path is returned. This is only 
-	needed to play it safe on my dear windows and to assure nice paths that only 
-	use '\'"""
+	"""
+	As join path, but makes sure an OS native path is returned. This is only 
+		needed to play it safe on my dear windows and to assure nice paths that only 
+		use '\'"""
 	return to_native_path(join_path(a, *p))
 	
 def assure_directory_exists(path, is_file=False):
@@ -187,10 +188,11 @@ class Actor(object):
 		
 	@classmethod
 	def committer(cls, config_reader=None):
-		""":return: Actor instance corresponding to the configured committer. It behaves
-		similar to the git implementation, such that the environment will override 
-		configuration values of config_reader. If no value is set at all, it will be
-		generated
+		"""
+		:return: Actor instance corresponding to the configured committer. It behaves
+			similar to the git implementation, such that the environment will override 
+			configuration values of config_reader. If no value is set at all, it will be
+			generated
 		:param config_reader: ConfigReader to use to retrieve the values from in case
 			they are not set in the environment"""
 		return cls._main_actor(cls.env_committer_name, cls.env_committer_email, config_reader)

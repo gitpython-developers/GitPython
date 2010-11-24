@@ -182,6 +182,7 @@ class RefLog(list, Serializable):
 			specifiy an entry counted from the end of the list
 			
 		:raise IndexError: If the entry didn't exist
+		
 		.. note:: This method is faster as it only parses the entry at index, skipping
 			all other lines. Nonetheless, the whole file has to be read if 
 			the index is negative
@@ -224,6 +225,7 @@ class RefLog(list, Serializable):
 	@classmethod
 	def append_entry(cls, config_reader, filepath, oldbinsha, newbinsha, message):
 		"""Append a new log entry to the revlog at filepath.
+		
 		:param config_reader: configuration reader of the repository - used to obtain
 			user information. May be None
 		:param filepath: full path to the log file
@@ -255,8 +257,13 @@ class RefLog(list, Serializable):
 		return entry
 		
 	def write(self):
-		"""Write this instance's data to the file we are originating from"""
-		return self.to_file(self._path)
+		"""Write this instance's data to the file we are originating from
+		:return: self"""
+		if self._path is None:
+			raise ValueError("Instance was not initialized with a path, use to_file(...) instead")
+		#END assert path
+		self.to_file(self._path)
+		return self
 	
 	#} END interface
 	

@@ -56,6 +56,8 @@ class TestRefLog(TestBase):
 			self.failUnlessRaises(ValueError, RefLog.from_file, fixture_path(pp+suffix))
 		#END for each invalid file
 		
+		# cannot write an uninitialized reflog
+		self.failUnlessRaises(ValueError, RefLog().write)
 	
 		# test serialize and deserialize - results must match exactly
 		binsha = chr(255)*20
@@ -65,6 +67,7 @@ class TestRefLog(TestBase):
 			reflog = RefLog.from_file(rlp)
 			tfile = os.path.join(tdir, os.path.basename(rlp))
 			reflog.to_file(tfile)
+			assert reflog.write() is reflog
 			
 			# parsed result must match ...
 			treflog = RefLog.from_file(tfile)
