@@ -173,6 +173,37 @@ class RefLog(list, Serializable):
 				return
 			yield new_entry(line.strip())
 		#END endless loop
+		
+	@classmethod
+	def entry_at(cls, filepath, index):
+		""":return: RefLogEntry at the given index
+		:param filepath: full path to the index file from which to read the entry
+		:param index: python list compatible index, i.e. it may be negative to 
+			specifiy an entry counted from the end of the list
+			
+		:raise IndexError: If the entry didn't exist
+		.. note:: This method is faster as it only parses the entry at index, skipping
+			all other lines. Nonetheless, the whole file has to be read if 
+			the index is negative
+		"""
+		fp = open(filepath, 'rb')
+		if index < 0:
+			return RefLogEntry.from_line(fp.readlines()[index].strip())
+		else:
+			# read until index is reached
+			for i in xrange(index+1):
+				line = fp.readline()
+				if not line:
+					break
+				#END abort on eof
+			#END handle runup
+			
+			if i != index or not line:
+				raise IndexError
+			#END handle exception
+			
+			return RefLogEntry.from_line(line.strip())
+		#END handle index
 	
 	def to_file(self, filepath):
 		"""Write the contents of the reflog instance to a file at the given filepath.

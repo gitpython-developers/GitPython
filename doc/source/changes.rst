@@ -15,6 +15,7 @@ Changelog
      * ``log_append(...)`` method added
      * ``set_reference(...)`` method added (reflog support)
      * ``set_commit(...)`` method added (reflog support)
+     * ``set_object(...)`` method added (reflog support)
 
  * Intrusive Changes to ``Head`` type
  

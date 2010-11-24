@@ -79,6 +79,19 @@ class TestRefLog(TestBase):
 			assert entry.newhexsha == 'f'*40
 			assert entry.message == msg
 			assert RefLog.from_file(tfile)[-1] == entry
+			
+			# index entry
+			# raises on invalid index
+			self.failUnlessRaises(IndexError, RefLog.entry_at, rlp, 10000)
+			
+			# indices can be positive ...
+			assert isinstance(RefLog.entry_at(rlp, 0), RefLogEntry)
+			RefLog.entry_at(rlp, 23)
+			
+			# ... and negative
+			for idx in (-1, -24):
+				RefLog.entry_at(rlp, idx)
+			#END for each index to read
 		# END for each reflog 
 		
 		

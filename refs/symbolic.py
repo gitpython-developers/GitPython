@@ -354,6 +354,15 @@ class SymbolicReference(object):
 									(newbinsha is None and self.commit.binsha) or newbinsha, 
 									message) 
 
+	def log_entry(self, index):
+		""":return: RefLogEntry at the given index
+		:param index: python list compatible positive or negative index
+		
+		.. note:: This method must read part of the reflog during execution, hence 
+			it should be used sparringly, or only if you need just one index.
+			In that case, it will be faster than the ``log()`` method"""
+		return RefLog.entry_at(RefLog.path(self), index)
+
 	@classmethod
 	def to_full_path(cls, path):
 		"""

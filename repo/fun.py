@@ -191,7 +191,7 @@ def rev_parse(repo, rev):
 				#END handle revlog index
 				
 				try:
-					entry = ref.log()[revlog_index]
+					entry = ref.log_entry(revlog_index)
 				except IndexError:
 					raise BadObject("Invalid revlog index: %i" % revlog_index)
 				#END handle index out of bound
