@@ -1,4 +1,4 @@
-from base import Submodule
+from base import Submodule, UpdateProgress
 from util import (
 					find_first_remote_branch
 				)
@@ -9,7 +9,7 @@ import sys
 
 __all__ = ["RootModule"]
 
-	
+
 class RootModule(Submodule):
 	"""A (virtual) Root of all submodules in the given repository. It can be used
 	to more easily traverse all submodules of the master repository"""
@@ -38,7 +38,8 @@ class RootModule(Submodule):
 	
 	#{ Interface 
 	
-	def update(self, previous_commit=None, recursive=True, force_remove=False, init=True, to_latest_revision=False):
+	def update(self, previous_commit=None, recursive=True, force_remove=False, init=True, 
+					to_latest_revision=False, progress=None, dry_run=False):
 		"""Update the submodules of this repository to the current HEAD commit.
 		This method behaves smartly by determining changes of the path of a submodules
 		repository, next to changes to the to-be-checked-out commit or the branch to be 
@@ -57,10 +58,17 @@ class RootModule(Submodule):
 		:param init: If we encounter a new module which would need to be initialized, then do it.
 		:param to_latest_revision: If True, instead of checking out the revision pointed to 
 			by this submodule's sha, the checked out tracking branch will be merged with the 
-			newest remote branch fetched from the repository's origin"""
+			newest remote branch fetched from the repository's origin
+		:param progress: UpdateProgress instance or None if no progress should be sent
+		:param dry_run: if True, operations will not actually be performed. Progress messages
+			will change accordingly to indicate the WOULD DO state of the operation."""
 		if self.repo.bare:
 			raise InvalidGitRepositoryError("Cannot update submodules in bare repositories")
 		# END handle bare
+		
+		if progress is None:
+			progress = UpdateProgress()
+		#END assure progress is set
 		
 		repo = self.repo
 		
@@ -125,7 +133,7 @@ class RootModule(Submodule):
 						
 						assert nn not in [r.name for r in rmts]
 						smr = smm.create_remote(nn, sm.url)
-						smr.fetch()
+						smr.fetch(progress=progress)
 						
 						# If we have a tracking branch, it should be available
 						# in the new remote as well.
@@ -234,7 +242,7 @@ class RootModule(Submodule):
 		######################################
 		for sm in sms:
 			# update the submodule using the default method
-			sm.update(recursive=False, init=init, to_latest_revision=to_latest_revision)
+			sm.update(recursive=False, init=init, to_latest_revision=to_latest_revision, progress=progress)
 			
 			# update recursively depth first - question is which inconsitent 
 			# state will be better in case it fails somewhere. Defective branch

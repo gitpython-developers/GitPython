@@ -12,7 +12,8 @@ from StringIO import StringIO					# need a dict to set bloody .name field
 from git.util import (
 						Iterable, 
 						join_path_native, 
-						to_native_path_linux
+						to_native_path_linux,
+						RemoteProgress
 					)
 
 from git.config import SectionConstraint
@@ -20,6 +21,7 @@ from git.exc import (
 					InvalidGitRepositoryError, 
 					NoSuchPathError
 					)
+
 import stat
 import git
 
@@ -29,7 +31,16 @@ import time
 
 import shutil
 
-__all__ = ["Submodule"]
+__all__ = ["Submodule", "UpdateProgress"]
+
+
+class UpdateProgress(RemoteProgress):
+	"""Class providing detailed progress information to the caller who should 
+	derive from it and implement the ``update(...)`` message"""
+	ADD, REMOVE, UPDATE = [1 << x for x in range(RemoteProgress._num_op_codes, RemoteProgress._num_op_codes+3)]
+	
+	__slots__ = tuple()
+	
 
 
 # IndexObject comes via util module, its a 'hacky' fix thanks to pythons import 
@@ -285,7 +296,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 		
 		return sm
 		
-	def update(self, recursive=False, init=True, to_latest_revision=False):
+	def update(self, recursive=False, init=True, to_latest_revision=False, progress=None):
 		"""Update the repository of this submodule to point to the checkout
 		we point at with the binsha of this instance.
 		
@@ -297,6 +308,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 			This only works if we have a local tracking branch, which is the case
 			if the remote repository had a master branch, or of the 'branch' option 
 			was specified for this submodule and the branch existed remotely
+		:param progress: UpdateProgress instance or None of no progress should be shown
 		:note: does nothing in bare repositories
 		:note: method is definitely not atomic if recurisve is True
 		:return: self"""
@@ -304,6 +316,9 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 			return self
 		#END pass in bare mode
 		
+		if progress is None:
+			progress = UpdateProgress()
+		#END handle progress
 		
 		# ASSURE REPO IS PRESENT AND UPTODATE
 		#####################################
