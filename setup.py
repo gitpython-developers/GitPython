@@ -9,6 +9,7 @@ except ImportError:
 from distutils.command.build_py import build_py as _build_py
 from setuptools.command.sdist import sdist as _sdist
 import os
+import sys
 from os import path
 
 v = open(path.join(path.dirname(__file__), 'VERSION'))
@@ -40,7 +41,12 @@ class sdist(_sdist):
 
 def _stamp_version(filename):
 	found, out = False, []
-	f = open(filename, 'r')
+	try:
+		f = open(filename, 'r')
+	except (IOError, OSError):
+		print >> sys.stderr, "Couldn't find file %s to stamp version" % filename
+		return
+	#END handle error, usually happens during binary builds
 	for line in f:
 		if '__version__ =' in line:
 			line = line.replace("'git'", "'%s'" % VERSION)
