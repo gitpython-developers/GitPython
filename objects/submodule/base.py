@@ -37,10 +37,17 @@ __all__ = ["Submodule", "UpdateProgress"]
 class UpdateProgress(RemoteProgress):
 	"""Class providing detailed progress information to the caller who should 
 	derive from it and implement the ``update(...)`` message"""
-	ADD, REMOVE, UPDATE = [1 << x for x in range(RemoteProgress._num_op_codes, RemoteProgress._num_op_codes+3)]
+	CLONE, FETCH, UPDWKTREE = [1 << x for x in range(RemoteProgress._num_op_codes, RemoteProgress._num_op_codes+3)]
+	_num_op_codes = RemoteProgress._num_op_codes + 3
 	
 	__slots__ = tuple()
 	
+	
+BEGIN = UpdateProgress.BEGIN
+END = UpdateProgress.END
+CLONE = UpdateProgress.CLONE
+FETCH = UpdateProgress.FETCH
+UPDWKTREE = UpdateProgress.UPDWKTREE
 
 
 # IndexObject comes via util module, its a 'hacky' fix thanks to pythons import 
@@ -296,7 +303,8 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 		
 		return sm
 		
-	def update(self, recursive=False, init=True, to_latest_revision=False, progress=None):
+	def update(self, recursive=False, init=True, to_latest_revision=False, progress=None, 
+				dry_run=False):
 		"""Update the repository of this submodule to point to the checkout
 		we point at with the binsha of this instance.
 		
@@ -309,6 +317,8 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 			if the remote repository had a master branch, or of the 'branch' option 
 			was specified for this submodule and the branch existed remotely
 		:param progress: UpdateProgress instance or None of no progress should be shown
+		:param dry_run: if True, the operation will only be simulated, but not performed.
+			All performed operations are read-only
 		:note: does nothing in bare repositories
 		:note: method is definitely not atomic if recurisve is True
 		:return: self"""
@@ -324,8 +334,22 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 		#####################################
 		try:
 			mrepo = self.module()
-			for remote in mrepo.remotes:
-				remote.fetch()
+			rmts = mrepo.remotes
+			len_rmts = len(rmts)
+			for i, remote in enumerate(rmts):
+				op = FETCH
+				if i == 0:
+					op |= BEGIN
+				#END handle start
+				
+				progress.update(op, i, len_rmts, "Fetching remote %s" % remote)
+				#===============================
+				remote.fetch(progress=progress)
+				#===============================
+				if i == len_rmts-1:
+					op |= END
+				#END handle end
+				progress.update(op, i, len_rmts, "Done fetching remote %s" % remote)
 			#END fetch new data
 		except InvalidGitRepositoryError:
 			if not init:
@@ -345,7 +369,9 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 			
 			# don't check it out at first - nonetheless it will create a local
 			# branch according to the remote-HEAD if possible
+			progress.update(BEGIN|CLONE, 0, 1, "Cloning %s to %s" % (self.url, module_path))
 			mrepo = git.Repo.clone_from(self.url, module_path, n=True)
+			progress.update(END|CLONE, 0, 1, "Done cloning to %s" % module_path)
 			
 			# see whether we have a valid branch to checkout
 			try:
@@ -396,6 +422,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 		
 		# update the working tree
 		if mrepo.head.commit.binsha != binsha:
+			progress.update(BEGIN|UPDWKTREE, 0, 1, "Updating working tree at %s" % self.path)
 			if is_detached:
 				# NOTE: for now we force, the user is no supposed to change detached
 				# submodules anyway. Maybe at some point this becomes an option, to 
@@ -408,13 +435,14 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 				# branch - this should be prevented when setting the branch option
 				mrepo.head.reset(hexsha, index=True, working_tree=True)
 			# END handle checkout
+			progress.update(END|UPDWKTREE, 0, 1, "Done updating working tree at %s" % self.path)
 		# END update to new commit only if needed
 		
 		# HANDLE RECURSION
 		##################
 		if recursive:
 			for submodule in self.iter_items(self.module()):
-				submodule.update(recursive, init, to_latest_revision)
+				submodule.update(recursive, init, to_latest_revision, progress=progress)
 			# END handle recursive update
 		# END for each submodule
 			

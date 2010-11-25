@@ -10,6 +10,20 @@ import sys
 __all__ = ["RootModule"]
 
 
+class RootUpdateProgress(UpdateProgress):
+	"""Utility class which adds more opcodes to the UpdateProgress"""
+	REMOVE, PATHCHANGE, BRANCHCHANGE, URLCHANGE = [1 << x for x in range(UpdateProgress._num_op_codes, UpdateProgress._num_op_codes+4)]
+	_num_op_codes = UpdateProgress._num_op_codes+4
+	
+	__slots__ = tuple()
+
+BEGIN = RootUpdateProgress.BEGIN
+END = RootUpdateProgress.END
+REMOVE = RootUpdateProgress.REMOVE
+BRANCHCHANGE = RootUpdateProgress.BRANCHCHANGE
+URLCHANGE = RootUpdateProgress.URLCHANGE
+PATHCHANGE = RootUpdateProgress.PATHCHANGE
+
 class RootModule(Submodule):
 	"""A (virtual) Root of all submodules in the given repository. It can be used
 	to more easily traverse all submodules of the master repository"""
@@ -59,7 +73,7 @@ class RootModule(Submodule):
 		:param to_latest_revision: If True, instead of checking out the revision pointed to 
 			by this submodule's sha, the checked out tracking branch will be merged with the 
 			newest remote branch fetched from the repository's origin
-		:param progress: UpdateProgress instance or None if no progress should be sent
+		:param progress: RootUpdateProgress instance or None if no progress should be sent
 		:param dry_run: if True, operations will not actually be performed. Progress messages
 			will change accordingly to indicate the WOULD DO state of the operation."""
 		if self.repo.bare:
@@ -67,13 +81,13 @@ class RootModule(Submodule):
 		# END handle bare
 		
 		if progress is None:
-			progress = UpdateProgress()
+			progress = RootUpdateProgress()
 		#END assure progress is set
 		
 		repo = self.repo
 		
-		# HANDLE COMMITS
-		##################
+		# SETUP BASE COMMIT
+		###################
 		cur_commit = repo.head.commit
 		if previous_commit is None:
 			try:
@@ -97,29 +111,50 @@ class RootModule(Submodule):
 		
 		# HANDLE REMOVALS
 		###################
-		for rsm in (spsms - ssms):
+		rrsm = (spsms - ssms)
+		len_rrsm = len(rrsm)
+		for i, rsm in enumerate(rrsm):
+			op = REMOVE
+			if i == 0:
+				op |= BEGIN
+			#END handle begin
+			
 			# fake it into thinking its at the current commit to allow deletion
 			# of previous module. Trigger the cache to be updated before that
-			#rsm.url
+			progress.update(op, i, len_rrsm, "Removing submodule %s at %s" % (rsm.name, rsm.abspath))
 			rsm._parent_commit = repo.head.commit
 			rsm.remove(configuration=False, module=True, force=force_remove)
+			
+			if i == len_rrsm-1:
+				op |= END
+			#END handle end
+			progress.update(op, i, len_rrsm, "Done removing submodule %s" % rsm.name)
 		# END for each removed submodule
 		
 		# HANDLE PATH RENAMES
 		#####################
 		# url changes + branch changes
-		for csm in (spsms & ssms):
+		csms = (spsms & ssms)
+		len_csms = len(csms)
+		for i, csm in enumerate(csms):
 			psm = psms[csm.name]
 			sm = sms[csm.name]
 			
+			#PATH CHANGES
+			##############
 			if sm.path != psm.path and psm.module_exists():
+				progress.update(BEGIN|PATHCHANGE, i, len_csms, "Moving submodule's %s repository from %s to %s" % (sm.name, psm.abspath, sm.abspath))  
 				# move the module to the new path
 				psm.move(sm.path, module=True, configuration=False)
+				progress.update(END|PATHCHANGE, i, len_csms, "Done moving repository of submodule %s" % sm.name)
 			# END handle path changes
 			
 			if sm.module_exists():
-				# handle url change
+				# HANDLE URL CHANGE
+				###################
 				if sm.url != psm.url:
+					progress.update(BEGIN|URLCHANGE, i, len_csms, "Changing url of submodule %s from %s to %s" % (sm.name, psm.url, sm.url))
+					
 					# Add the new remote, remove the old one
 					# This way, if the url just changes, the commits will not 
 					# have to be re-retrieved
@@ -129,7 +164,6 @@ class RootModule(Submodule):
 					
 					# don't do anything if we already have the url we search in place
 					if len([r for r in rmts if r.url == sm.url]) == 0:
-						
 						
 						assert nn not in [r.name for r in rmts]
 						smr = smm.create_remote(nn, sm.url)
@@ -202,12 +236,16 @@ class RootModule(Submodule):
 						
 						#NOTE: All checkout is performed by the base implementation of update
 						
+						progress.update(END|URLCHANGE, i, len_csms, "Done adjusting url of submodule %s" % (sm.name))
 					# END skip remote handling if new url already exists in module
 				# END handle url
 				
+				# HANDLE PATH CHANGES
+				#####################
 				if sm.branch_path != psm.branch_path:
 					# finally, create a new tracking branch which tracks the 
 					# new remote branch
+					progress.update(BEGIN|BRANCHCHANGE, i, len_csms, "Changing branch of submodule %s from %s to %s" % (sm.name, psm.branch_path, sm.branch_path))
 					smm = sm.module()
 					smmr = smm.remotes
 					try:
@@ -234,6 +272,7 @@ class RootModule(Submodule):
 					
 					#NOTE: All checkout is done in the base implementation of update
 					
+					progress.update(END|BRANCHCHANGE, i, len_csms, "Done changing branch of submodule %s" % sm.name)
 				#END handle branch
 			#END handle 
 		# END for each common submodule 
@@ -242,15 +281,17 @@ class RootModule(Submodule):
 		######################################
 		for sm in sms:
 			# update the submodule using the default method
-			sm.update(recursive=False, init=init, to_latest_revision=to_latest_revision, progress=progress)
+			sm.update(recursive=False, init=init, to_latest_revision=to_latest_revision, 
+						progress=progress, dry_run=dry_run)
 			
 			# update recursively depth first - question is which inconsitent 
 			# state will be better in case it fails somewhere. Defective branch
 			# or defective depth. The RootSubmodule type will never process itself, 
 			# which was done in the previous expression
 			if recursive:
-				type(self)(sm.module()).update(recursive=True, force_remove=force_remove, 
-											init=init, to_latest_revision=to_latest_revision)
+				type(self)(sm.module()).update(	recursive=True, force_remove=force_remove, 
+												init=init, to_latest_revision=to_latest_revision,
+												progress=progress, dry_run=dry_run)
 			#END handle recursive
 		# END for each submodule to update
 
