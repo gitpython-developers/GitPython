@@ -424,7 +424,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 			is_detached = mrepo.head.is_detached
 		#END handle dry_run
 		
-		if not dry_run and to_latest_revision:
+		if mrepo is not None and to_latest_revision:
 			msg_base = "Cannot update to latest revision in repository at %r as " % mrepo.working_dir
 			if not is_detached:
 				rref = mrepo.head.ref.tracking_branch()
@@ -443,7 +443,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 		# update the working tree
 		# handles dry_run
 		if mrepo is not None and mrepo.head.commit.binsha != binsha:
-			progress.update(BEGIN|UPDWKTREE, 0, 1, prefix+"Updating working tree at %s for submodule %r" % (self.path, self.name))
+			progress.update(BEGIN|UPDWKTREE, 0, 1, prefix+"Updating working tree at %s for submodule %r to revision %s" % (self.path, self.name, hexsha))
 			if not dry_run:
 				if is_detached:
 					# NOTE: for now we force, the user is no supposed to change detached
