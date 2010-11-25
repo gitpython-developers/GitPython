@@ -12,7 +12,7 @@ import tempfile
 import shutil
 import cStringIO
 
-GIT_REPO = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+GIT_REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 __all__ = (
 			'fixture_path', 'fixture', 'absolute_project_path', 'StringProcessAdapter',

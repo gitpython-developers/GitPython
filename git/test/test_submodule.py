@@ -20,7 +20,7 @@ prog = TestRootProgress()
 
 class TestSubmodule(TestBase):
 
-	k_subm_current = "83a9e4a0dad595188ff3fb35bc3dfc4d931eff6d"
+	k_subm_current = "cb68eef0865df6aedbc11cd81888625a70da6777"
 	k_subm_changed = "394ed7006ee5dc8bddfd132b64001d5dfc0ffdd3"
 	k_no_subm_tag = "0.1.6"
 	
@@ -40,7 +40,7 @@ class TestSubmodule(TestBase):
 		# at a different time, there is None
 		assert len(Submodule.list_items(rwrepo, self.k_no_subm_tag)) == 0
 		
-		assert sm.path == 'ext/gitdb'
+		assert sm.path == 'git/ext/gitdb'
 		assert sm.path != sm.name					# in our case, we have ids there, which don't equal the path
 		assert sm.url == 'git://gitorious.org/git-python/gitdb.git'
 		assert sm.branch_path == 'refs/heads/master'			# the default ...
@@ -184,7 +184,7 @@ class TestSubmodule(TestBase):
 			sm.update(recursive=True, dry_run=True, progress=prog)
 			assert not csm.module_exists()
 			
-			# update recuesively again
+			# update recursively again
 			sm.update(recursive=True)
 			assert csm.module_exists()
 			
@@ -237,6 +237,7 @@ class TestSubmodule(TestBase):
 			# deletion will fail
 			# NOTE: As we did  a few updates in the meanwhile, the indices were reset
 			# Hence we create some changes
+			csm.set_parent_commit(csm.repo.head.commit)
 			sm.config_writer().set_value("somekey", "somevalue")
 			csm.config_writer().set_value("okey", "ovalue")
 			self.failUnlessRaises(InvalidGitRepositoryError, sm.remove)
