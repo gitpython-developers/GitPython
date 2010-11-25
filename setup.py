@@ -29,8 +29,8 @@ class build_py(_build_py):
 class sdist(_sdist):
 	def make_release_tree (self, base_dir, files):
 		_sdist.make_release_tree(self, base_dir, files)
-		orig = '__init__.py'
-		assert path.exists(orig)
+		orig = path.join('git', '__init__.py')
+		assert path.exists(orig), orig
 		dest = path.join(base_dir, orig)
 		if hasattr(os, 'link') and path.exists(dest):
 			os.unlink(dest)
