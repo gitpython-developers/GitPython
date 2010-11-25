@@ -4,11 +4,19 @@
 from git.test.lib import *
 from git.exc import *
 from git.objects.submodule.base import Submodule
-from git.objects.submodule.root import RootModule
+from git.objects.submodule.root import RootModule, RootUpdateProgress
 from git.util import to_native_path_linux, join_path_native
 import shutil
 import git
 import os
+
+class TestRootProgress(RootUpdateProgress):
+	"""Just prints messages, for now without checking the correctness of the states"""
+	
+	def update(self, op, index, max_count, message=''):
+		print message
+		
+prog = TestRootProgress()
 
 class TestSubmodule(TestBase):
 
@@ -130,6 +138,10 @@ class TestSubmodule(TestBase):
 			self.failUnlessRaises(OSError, sm.update)
 			os.rmdir(newdir)
 			
+			# dry-run does nothing
+			sm.update(dry_run=True, progress=prog)
+			assert not sm.module_exists()
+			
 			assert sm.update() is sm
 			sm_repopath = sm.path				# cache for later
 			assert sm.module_exists()
@@ -150,6 +162,11 @@ class TestSubmodule(TestBase):
 			
 			# delete the whole directory and re-initialize
 			shutil.rmtree(sm.abspath)
+			assert len(sm.children()) == 0
+			# dry-run does nothing
+			sm.update(dry_run=True, recursive=False, progress=prog)
+			assert len(sm.children()) == 0
+			
 			sm.update(recursive=False)
 			assert len(list(rwrepo.iter_submodules())) == 2
 			assert len(sm.children()) == 1			# its not checked out yet
@@ -162,8 +179,14 @@ class TestSubmodule(TestBase):
 			csm.config_writer().set_value('url', new_csmclone_path)
 			assert csm.url == new_csmclone_path
 			
+			# dry-run does nothing
+			assert not csm.module_exists()
+			sm.update(recursive=True, dry_run=True, progress=prog)
+			assert not csm.module_exists()
+			
 			# update recuesively again
 			sm.update(recursive=True)
+			assert csm.module_exists()
 			
 			# tracking branch once again
 			csm.module().head.ref.tracking_branch() is not None
@@ -175,8 +198,14 @@ class TestSubmodule(TestBase):
 			# reset both heads to the previous version, verify that to_latest_revision works
 			smods = (sm.module(), csm.module())
 			for repo in smods:
-				repo.head.reset('HEAD~1', working_tree=1)
+				repo.head.reset('HEAD~2', working_tree=1)
 			# END for each repo to reset
+			
+			# dry run does nothing 
+			sm.update(recursive=True, dry_run=True, progress=prog)
+			for repo in smods:
+				assert repo.head.commit != repo.head.ref.tracking_branch().commit
+			# END for each repo to check
 			
 			sm.update(recursive=True, to_latest_revision=True)
 			for repo in smods:
@@ -378,6 +407,11 @@ class TestSubmodule(TestBase):
 		
 		# assure we clone from a local source 
 		sm.config_writer().set_value('url', to_native_path_linux(join_path_native(self.rorepo.working_tree_dir, sm.path)))
+		
+		# dry-run does nothing
+		sm.update(recursive=False, dry_run=True, progress=prog)
+		assert not sm.module_exists()
+		
 		sm.update(recursive=False)
 		assert sm.module_exists()
 		sm.config_writer().set_value('path', fp)	# change path to something with prefix AFTER url change
@@ -397,7 +431,7 @@ class TestSubmodule(TestBase):
 		cpathchange = rwrepo.index.commit("changed sm path") # finally we can commit
 		
 		# update puts the module into place
-		rm.update(recursive=False)
+		rm.update(recursive=False, progress=prog)
 		sm.set_parent_commit(cpathchange)
 		assert sm.module_exists()
 		
@@ -415,7 +449,12 @@ class TestSubmodule(TestBase):
 		nsm.remove(configuration=False, module=True)
 		assert not nsm.module_exists() and nsm.exists()
 		
-		rm.update(recursive=False)
+		
+		# dry-run does nothing
+		rm.update(recursive=False, dry_run=True, progress=prog)
+		
+		# otherwise it will work
+		rm.update(recursive=False, progress=prog)
 		assert nsm.module_exists()
 		
 		
@@ -429,6 +468,10 @@ class TestSubmodule(TestBase):
 		csmremoved = rwrepo.index.commit("Removed submodule")
 		
 		# an update will remove the module
+		# not in dry_run
+		rm.update(recursive=False, dry_run=True)
+		assert os.path.isdir(smp)
+		
 		rm.update(recursive=False)
 		assert not os.path.isdir(smp)
 		
@@ -444,7 +487,11 @@ class TestSubmodule(TestBase):
 		nsm.set_parent_commit(csmpathchange)
 		
 		prev_commit = nsm.module().head.commit
-		rm.update(recursive=False)
+		# dry-run does nothing
+		rm.update(recursive=False, dry_run=True, progress=prog)
+		assert nsm.module().remotes.origin.url != nsmurl
+		
+		rm.update(recursive=False, progress=prog)
 		assert nsm.module().remotes.origin.url == nsmurl
 		# head changed, as the remote url and its commit changed
 		assert prev_commit != nsm.module().head.commit
@@ -473,7 +520,12 @@ class TestSubmodule(TestBase):
 		assert nsmmh.ref.tracking_branch() is None					# never set it up until now
 		assert not nsmmh.is_detached
 		
-		rm.update(recursive=False)
+		#dry run does nothing
+		rm.update(recursive=False, dry_run=True, progress=prog)
+		assert nsmmh.ref.tracking_branch() is None
+		
+		# the real thing does
+		rm.update(recursive=False, progress=prog)
 		
 		assert nsmmh.ref.tracking_branch() is not None
 		assert not nsmmh.is_detached
@@ -487,7 +539,8 @@ class TestSubmodule(TestBase):
 		# assure we pull locally only
 		nsmc = nsm.children()[0] 
 		nsmc.config_writer().set_value('url', async_url)
-		rm.update(recursive=True)
+		rm.update(recursive=True, progress=prog, dry_run=True)		# just to run the code
+		rm.update(recursive=True, progress=prog)
 		
-		assert len(nsm.children()) == 1 and nsmc.module_exists() 
+		assert len(nsm.children()) == 1 and nsmc.module_exists()
 		
