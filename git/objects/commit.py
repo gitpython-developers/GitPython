@@ -355,7 +355,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
 				# head is not yet set to the ref our HEAD points to
 				# Happens on first commit
 				import git.refs
-				master = git.refs.Head.create(repo, repo.head.ref, commit=new_commit, logmsg="commit (initial): %s" % message)
+				master = git.refs.Head.create(repo, repo.head.ref, new_commit, logmsg="commit (initial): %s" % message)
 				repo.head.set_reference(master, logmsg='commit: Switching to %s' % master)
 			# END handle empty repositories
 		# END advance head handling 

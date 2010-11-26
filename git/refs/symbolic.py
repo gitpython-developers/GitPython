@@ -478,7 +478,8 @@ class SymbolicReference(object):
 			created at, i.e. "NEW_HEAD" or "symrefs/my_new_symref"
 			
 		:param reference:
-			The reference to which the new symbolic reference should point to
+			The reference to which the new symbolic reference should point to.
+			If it is a commit'ish, the symbolic ref will be detached.
 		
 		:param force:
 			if True, force creation even if a symbolic reference with that name already exists.
