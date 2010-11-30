@@ -14,7 +14,13 @@ __version__ = 'git'
 #{ Initialization
 def _init_externals():
 	"""Initialize external projects by putting them into the path"""
-	sys.path.append(os.path.join(os.path.dirname(__file__), 'ext'))
+	sys.path.append(os.path.join(os.path.dirname(__file__), 'ext', 'gitdb'))
+	
+	try:
+		import gitdb
+	except ImportError:
+		raise ImportError("'gitdb' could not be found in your PYTHONPATH")
+	#END verify import
 	
 #} END initialization
 

@@ -20,7 +20,7 @@ prog = TestRootProgress()
 
 class TestSubmodule(TestBase):
 
-	k_subm_current = "cb68eef0865df6aedbc11cd81888625a70da6777"
+	k_subm_current = "e1e3017788213720afcfae0accddb2a6f2d9f052"
 	k_subm_changed = "394ed7006ee5dc8bddfd132b64001d5dfc0ffdd3"
 	k_no_subm_tag = "0.1.6"
 	
@@ -42,7 +42,7 @@ class TestSubmodule(TestBase):
 		
 		assert sm.path == 'git/ext/gitdb'
 		assert sm.path != sm.name					# in our case, we have ids there, which don't equal the path
-		assert sm.url == 'git://gitorious.org/git-python/gitdb.git'
+		assert sm.url == 'git://github.com/gitpython-developers/gitdb.git'
 		assert sm.branch_path == 'refs/heads/master'			# the default ...
 		assert sm.branch_name == 'master'
 		assert sm.parent_commit == rwrepo.head.commit
