@@ -34,11 +34,11 @@ SOURCE
 
 GitPython's git repo is available on GitHub, which can be browsed at:
 
-http://github.com/Byron/GitPython
+https://github.com/gitpython-developers/GitPython
 
 and cloned using:
 
-git clone git://github.com/Byron/GitPython.git git-python
+git clone git://github.com/gitpython-developers/GitPython.git git-python
 
 
 DOCUMENTATION
@@ -53,7 +53,9 @@ http://groups.google.com/group/git-python
 
 ISSUE TRACKER
 =============
-http://byronimo.lighthouseapp.com/projects/51787-gitpython/milestones
+Issues are tracked on github:
+
+https://github.com/gitpython-developers/GitPython/issues
 
 LICENSE
 =======

@@ -78,15 +78,13 @@ An organized section of the GitPthon API is at :ref:`api_reference_toplevel`.
 Source Code
 ===========
 
-GitPython's git repo is available on Gitorious and GitHub, which can be browsed at:
+GitPython's git repo is available on GitHub, which can be browsed at:
 
- * http://gitorious.org/projects/git-python/
- * http://github.com/Byron/GitPython
+ * https://github.com/gitpython-developers/GitPython
 
 and cloned using::
 
-	$ git clone git://gitorious.org/git-python/mainline.git git-python
-	$ git clone git://github.com/Byron/GitPython.git git-python
+	$ git clone git://github.com/gitpython-developers/GitPython.git git-python
 	
 Initialize all submodules to obtain the required dependencies with::
     
@@ -103,7 +101,9 @@ http://groups.google.com/group/git-python
 
 Issue Tracker
 =============
-http://byronimo.lighthouseapp.com/projects/51787-gitpython/milestones
+The issue tracker is hosted by github:
+
+https://github.com/gitpython-developers/GitPython/issues
 	
 License Information
 ===================

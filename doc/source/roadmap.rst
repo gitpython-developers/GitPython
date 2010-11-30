@@ -2,5 +2,8 @@
 #######
 Roadmap
 #######
-The full list of milestones including associated tasks can be found on lighthouse: http://byronimo.lighthouseapp.com/projects/51787-gitpython/milestones
+The full list of milestones including associated tasks can be found on github: 
+https://github.com/gitpython-developers/GitPython/issues
+
+Select the respective milestone to filter the list of issues accordingly.
 

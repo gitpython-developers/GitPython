@@ -337,7 +337,7 @@ In the following brief example, you will learn about the very basics, assuming y
     
     >>> repo = Repo('path/to/git-python/repository')
     >>> sms = repo.submodules
-    [git.Submodule(name=gitdb, path=lib/git/ext/gitdb, url=git://gitorious.org/git-python/gitdb.git, branch=master)]
+    [git.Submodule(name=gitdb, path=lib/git/ext/gitdb, url=git://github.com/gitpython-developers/GitPython.git, branch=master)]
     >>> sm = sms[0]
     >>> sm.name
     'gitdb'
@@ -354,7 +354,7 @@ In the following brief example, you will learn about the very basics, assuming y
     >>> sm.config_reader().get_value('path') == sm.path    # read its configuration conveniently
     True
     >>> sm.children()                                      # query the submodule hierarchy
-    [git.Submodule(name=async, path=ext/async, url=git://gitorious.org/git-python/async.git, branch=master)]
+    [git.Submodule(name=async, path=ext/async, url=git://github.com/gitpython-developers/async.git, branch=master)]
 
 In addition to the query functionality, you can move the submodule's repository to a different path <``move(...)``>, write its configuration <``config_writer().set_value(...)``>, update its working tree <``update(...)``>, and remove and add them <``remove(...)``, ``add(...)``>.
 
