@@ -413,7 +413,11 @@ class Remote(LazyMixin, Iterable):
 		
 		self.repo.git.remote("rename", self.name, new_name)
 		self.name = new_name
-		del(self._config_reader)		# it contains cached values, section names are different now
+		try:
+			del(self._config_reader)		# it contains cached values, section names are different now
+		except AttributeError:
+			pass
+		#END handle exception
 		return self
 		
 	def update(self, **kwargs):
@@ -599,5 +603,9 @@ class Remote(LazyMixin, Iterable):
 		writer = self.repo.config_writer()
 		
 		# clear our cache to assure we re-read the possibly changed configuration
-		del(self._config_reader)
+		try:
+			del(self._config_reader)
+		except AttributeError:
+			pass
+		#END handle exception
 		return SectionConstraint(writer, self._config_section_name())

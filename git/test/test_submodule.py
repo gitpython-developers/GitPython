@@ -20,7 +20,7 @@ prog = TestRootProgress()
 
 class TestSubmodule(TestBase):
 
-	k_subm_current = "e1e3017788213720afcfae0accddb2a6f2d9f052"
+	k_subm_current = "468cad66ff1f80ddaeee4123c24e4d53a032c00d"
 	k_subm_changed = "394ed7006ee5dc8bddfd132b64001d5dfc0ffdd3"
 	k_no_subm_tag = "0.1.6"
 	
