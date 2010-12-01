@@ -109,7 +109,7 @@ class RootModule(Submodule):
 		
 		
 		psms = self.list_items(repo, parent_commit=previous_commit)
-		sms = self.list_items(self.module())
+		sms = self.list_items(repo)
 		spsms = set(psms)
 		ssms = set(sms)
 		

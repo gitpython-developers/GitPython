@@ -905,7 +905,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 				# try the index, maybe it was just added
 				try:
 					entry = index.entries[index.entry_key(p, 0)]
-					sm = cls(repo, entry.binsha, entry.mode, entry.path)
+					sm = Submodule(repo, entry.binsha, entry.mode, entry.path)
 				except KeyError:
 					raise InvalidGitRepositoryError("Gitmodule path %r did not exist in revision of parent commit %s" % (p, parent_commit))
 				# END handle keyerror
