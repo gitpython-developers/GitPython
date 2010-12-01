@@ -1,3 +1,4 @@
 [submodule "gitdb"]
 	path = git/ext/gitdb
 	url = git://github.com/gitpython-developers/gitdb.git
+	branch = master
