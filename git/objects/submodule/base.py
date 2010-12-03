@@ -210,13 +210,14 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 			If None, the repository is assumed to exist, and the url of the first
 			remote is taken instead. This is useful if you want to make an existing
 			repository a submodule of anotherone.
-		:param branch: branch at which the submodule should (later) be checked out.
+		:param branch: name of branch at which the submodule should (later) be checked out.
 			The given branch must exist in the remote repository, and will be checked
 			out locally as a tracking branch.
 			It will only be written into the configuration if it not None, which is
 			when the checked out branch will be the one the remote HEAD pointed to.
 			The result you get in these situation is somewhat fuzzy, and it is recommended
-			to specify at least 'master' here
+			to specify at least 'master' here.
+			Examples are 'master' or 'feature/new'
 		:param no_checkout: if True, and if the repository has to be cloned manually, 
 			no checkout will be performed
 		:return: The newly created submodule instance
@@ -252,7 +253,8 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 			# END handle exceptions
 		# END handle existing
 		
-		br = git.Head.to_full_path(str(branch) or cls.k_head_default)
+		# fake-repo - we only need the functionality on the branch instance
+		br = git.Head(repo, git.Head.to_full_path(str(branch) or cls.k_head_default))
 		has_module = sm.module_exists()
 		branch_is_default = branch is None
 		if has_module and url is not None:
@@ -276,7 +278,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 			# clone new repo
 			kwargs = {'n' : no_checkout}
 			if not branch_is_default:
-				kwargs['b'] = br
+				kwargs['b'] = br.name
 			# END setup checkout-branch
 			mrepo = git.Repo.clone_from(url, path, **kwargs)
 		# END verify url
@@ -290,8 +292,8 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 		sm._url = url
 		if not branch_is_default:
 			# store full path
-			writer.set_value(cls.k_head_option, br)
-			sm._branch_path = br
+			writer.set_value(cls.k_head_option, br.path)
+			sm._branch_path = br.path
 		# END handle path
 		del(writer)
 		
