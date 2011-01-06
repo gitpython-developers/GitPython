@@ -2,6 +2,11 @@
 Changelog
 =========
 
+NEXT
+====
+* Blob Type
+ * Added mode constants to ease the manual creation of blobs
+
 0.3.1 Beta 2
 ============
 * Added **reflog support** ( reading and writing )
