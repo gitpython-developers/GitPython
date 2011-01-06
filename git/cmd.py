@@ -4,7 +4,7 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
-import os, sys
+import os, sys, platform, time
 from util import *
 from exc import GitCommandError
 
@@ -87,6 +87,11 @@ class Git(object):
 			"""Wait for the process and return its status code. 
 			
 			:raise GitCommandError: if the return status is not 0"""
+			
+			#HACK: These two lines are necessary because OSX raises an error if you try to .wait() right after creating the process object.
+			# It is only necessary when using GUI frameworks to instantiate an application.
+			if platform.system().startswith("Darwin") and "pyside" in sys.modules.keys() or "PySide" in sys.modules.keys():
+				time.sleep(0.1)
 			status = self.proc.wait()
 			if status != 0:
 				raise GitCommandError(self.args, status, self.proc.stderr.read())
