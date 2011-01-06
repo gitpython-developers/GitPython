@@ -21,7 +21,7 @@ from gitdb.util import (
 						)
 
 __all__ = ( "stream_copy", "join_path", "to_native_path_windows", "to_native_path_linux", 
-			"join_path_native", "Stats", "IndexFileSHA1Writer", "Iterable", "IterableList", 
+			"join_path_native", "sleep_on_gui_present_osx_crashfix", "Stats", "IndexFileSHA1Writer", "Iterable", "IterableList", 
 			"BlockingLockFile", "LockFile", 'Actor', 'get_user_id', 'assure_directory_exists',
 			'RemoteProgress')
 
@@ -100,6 +100,14 @@ def get_user_id():
 		username = os.getlogin()
 	# END get username from login
 	return "%s@%s" % (username, platform.node())
+
+def sleep_on_gui_present_osx_crashfix():
+	"""This fixes a crash which appears when using pyside on OS X."""
+	
+	#HACK: These two lines are necessary because OSX raises an error if you try to .wait() right after creating the process object.
+	# It is only necessary when using GUI frameworks to instantiate an application.
+	if platform.system().startswith("Darwin") and "PySide" in sys.modules.keys():
+		time.sleep(0.1)
 
 #} END utilities
 

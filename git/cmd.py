@@ -87,6 +87,7 @@ class Git(object):
 			"""Wait for the process and return its status code. 
 			
 			:raise GitCommandError: if the return status is not 0"""
+			sleep_on_gui_present_osx_crashfix()
 			status = self.proc.wait()
 			if status != 0:
 				raise GitCommandError(self.args, status, self.proc.stderr.read())
