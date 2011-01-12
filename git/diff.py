@@ -11,7 +11,6 @@ from exc import GitCommandError
 
 from gitdb.util import hex_to_bin
 
-from util import sleep_on_gui_present_osx_crashfix
 	
 __all__ = ('Diffable', 'DiffIndex', 'Diff')
 	
@@ -101,7 +100,6 @@ class Diffable(object):
 			diff_method = Diff._index_from_patch_format
 		index = diff_method(self.repo, proc.stdout)
 		
-		sleep_on_gui_present_osx_crashfix()
 		status = proc.wait()
 		return index
 
