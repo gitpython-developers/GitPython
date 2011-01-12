@@ -630,7 +630,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 			Function with signature (string) func(BaseIndexEntry) function returning a path
 			for each passed entry which is the path to be actually recorded for the
 			object created from entry.path. This allows you to write an index which
-			is not identical to the layout of the actual files on your hard-dist.
+			is not identical to the layout of the actual files on your hard-disk.
 			If not None and ``items`` contain plain paths, these paths will be
 			converted to Entries beforehand and passed to the path_rewriter.
 			Please note that entry.path is relative to the git repository.

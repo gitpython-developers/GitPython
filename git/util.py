@@ -8,8 +8,8 @@ import os
 import re
 import sys
 import time
-import platform
 import tempfile
+import platform
 
 from gitdb.util import (
 							make_sha, 
@@ -90,7 +90,6 @@ def assure_directory_exists(path, is_file=False):
 		return True
 	return False
 	
-
 def get_user_id():
 	""":return: string identifying the currently active system user as name@node
 	:note: user can be set with the 'USER' environment variable, usually set on windows"""
@@ -106,7 +105,7 @@ def sleep_on_gui_present_osx_crashfix():
 	
 	#HACK: These two lines are necessary because OSX raises an error if you try to .wait() right after creating the process object.
 	# It is only necessary when using GUI frameworks to instantiate an application.
-	if platform.system().startswith("Darwin") and "PySide" in sys.modules.keys():
+	if sys.platform == "darwin" and "PySide" in sys.modules.keys():
 		time.sleep(0.1)
 
 #} END utilities
