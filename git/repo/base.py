@@ -368,7 +368,7 @@ class Repo(object):
 		:param rev: revision specifier, see git-rev-parse for viable options.
 		:return: ``git.Commit``"""
 		if rev is None:
-			return self.active_branch.commit
+			return self.head.commit
 		else:
 			return self.rev_parse(str(rev)+"^0")
 		
@@ -391,7 +391,7 @@ class Repo(object):
 			it cannot know about its path relative to the repository root and subsequent 
 			operations might have unexpected results."""
 		if rev is None:
-			return self.active_branch.commit.tree
+			return self.head.commit.tree
 		else:
 			return self.rev_parse(str(rev)+"^{tree}")
 
@@ -415,7 +415,7 @@ class Repo(object):
 
 		:return ``git.Commit[]``"""
 		if rev is None:
-			rev = self.active_branch
+			rev = self.head.commit
 		
 		return Commit.iter_items(self, rev, paths, **kwargs)
 
@@ -739,7 +739,7 @@ class Repo(object):
 		:raise GitCommandError: in case something went wrong
 		:return: self"""
 		if treeish is None:
-			treeish = self.active_branch
+			treeish = self.head.commit
 		if prefix and 'prefix' not in kwargs:
 			kwargs['prefix'] = prefix 
 		kwargs['output_stream'] = ostream
