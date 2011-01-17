@@ -40,7 +40,7 @@ class sdist(_sdist):
 
 
 def _stamp_version(filename):
-	found, out = False, []
+	found, out = False, list()
 	try:
 		f = open(filename, 'r')
 	except (IOError, OSError):
@@ -61,7 +61,6 @@ def _stamp_version(filename):
 	else:
 		print >> sys.stderr, "WARNING: Couldn't find version line in file %s" % filename
 
-
 setup(name = "GitPython",
 	  cmdclass={'build_py': build_py, 'sdist': sdist},
 	  version = VERSION,
@@ -69,10 +68,10 @@ setup(name = "GitPython",
 	  author = "Sebastian Thiel, Michael Trier",
 	  author_email = "byronimo@gmail.com, mtrier@gmail.com",
 	  url = "http://gitorious.org/projects/git-python/",
-	  packages = ['git.'+p for p in find_packages('.')],
-	  py_modules = ['git.'+f[:-3] for f in os.listdir('.') if f.endswith('.py')],
+	  packages = find_packages('.'),
+	  py_modules = ['git.'+f[:-3] for f in os.listdir('./git') if f.endswith('.py')],
 	  package_data = {'git.test' : ['fixtures/*']},
-	  package_dir = {'git':''},
+	  package_dir = {'git':'git'},
 	  license = "BSD License",
 	  requires=('gitdb (>=0.5.1)',),
 	  install_requires='gitdb >= 0.5.1',
