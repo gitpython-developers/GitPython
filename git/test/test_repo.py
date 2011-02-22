@@ -464,6 +464,12 @@ class TestRepo(TestBase):
 		
 		return orig_obj
 		
+	@with_rw_repo('HEAD', bare=False)
+	def test_rw_rev_parse(self, rwrepo):
+		# verify it does not confuse branches with hexsha ids
+		ahead = rwrepo.create_head('aaaaaaaa')
+		assert(rwrepo.rev_parse(str(ahead)) == ahead.commit)
+		
 	def test_rev_parse(self):
 		rev_parse = self.rorepo.rev_parse
 		
@@ -572,7 +578,6 @@ class TestRepo(TestBase):
 		
 		# currently, nothing more is supported
 		self.failUnlessRaises(NotImplementedError, rev_parse, "@{1 week ago}")
-		
 		
 	def test_repo_odbtype(self):
 		target_type = GitDB

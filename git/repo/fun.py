@@ -59,7 +59,11 @@ def name_to_object(repo, name, return_ref=False):
 		else:
 			hexsha = name
 		# END handle short shas
-	else:
+	#END find sha if it matches
+	
+	# if we couldn't find an object for what seemed to be a short hexsha 
+	# try to find it as reference anyway, it could be named 'aaa' for instance
+	if hexsha is None:
 		for base in ('%s', 'refs/%s', 'refs/tags/%s', 'refs/heads/%s', 'refs/remotes/%s', 'refs/remotes/%s/HEAD'):
 			try:
 				hexsha = SymbolicReference.dereference_recursive(repo, base % name)
