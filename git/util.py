@@ -189,6 +189,7 @@ class RemoteProgress(object):
 			# END end message handling
 			
 			self.update(op_code, cur_count, max_count, message)
+			self(message)
 		# END for each sub line
 		return failed_lines
 	
@@ -220,6 +221,13 @@ class RemoteProgress(object):
 			transferred. It may possibly be used for other purposes as well.
 		
 		You may read the contents of the current line in self._cur_line"""
+		pass
+	
+	def __call__(self, message):
+		"""Same as update, but with a simpler interface which only provides the
+		message of the operation
+		:note: This method will be called in addition to the update method. It is 
+			up to you which one you implement"""
 		pass
 
 

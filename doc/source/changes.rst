@@ -4,6 +4,8 @@ Changelog
 
 NEXT
 ====
+* ### Interface Changes ###
+ * None yet
 * Blob Type
  * Added mode constants to ease the manual creation of blobs
 
