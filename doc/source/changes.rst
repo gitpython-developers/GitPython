@@ -5,7 +5,8 @@ Changelog
 NEXT
 ====
 * ### Interface Changes ###
- * None yet
+ * SymbolicReference
+  * object_binsha property added
 * Blob Type
  * Added mode constants to ease the manual creation of blobs
 

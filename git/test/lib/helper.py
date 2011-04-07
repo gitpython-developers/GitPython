@@ -12,6 +12,8 @@ import tempfile
 import shutil
 import cStringIO
 
+from gitdb.test.lib import maketemp 
+
 GIT_REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 __all__ = (
@@ -52,13 +54,6 @@ class StringProcessAdapter(object):
 
 #{ Decorators 
 
-def _mktemp(*args):
-	"""Wrapper around default tempfile.mktemp to fix an osx issue"""
-	tdir = tempfile.mktemp(*args)
-	if sys.platform == 'darwin':
-		tdir = '/private' + tdir
-	return tdir
-
 def _rmtree_onerror(osremove, fullpath, exec_info):
 	"""
 	Handle the case on windows that read-only files cannot be deleted by 
@@ -87,7 +82,7 @@ def with_rw_repo(working_tree_ref, bare=False):
 			if bare:
 				prefix = ''
 			#END handle prefix
-			repo_dir = _mktemp("%sbare_%s" % (prefix, func.__name__))
+			repo_dir = maketemp("%sbare_%s" % (prefix, func.__name__))
 			rw_repo = self.rorepo.clone(repo_dir, shared=True, bare=bare, n=True)
 			
 			rw_repo.head.commit = rw_repo.commit(working_tree_ref)
@@ -143,8 +138,8 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
 	assert isinstance(working_tree_ref, basestring), "Decorator requires ref name for working tree checkout"
 	def argument_passer(func):
 		def remote_repo_creator(self):
-			remote_repo_dir = _mktemp("remote_repo_%s" % func.__name__)
-			repo_dir = _mktemp("remote_clone_non_bare_repo")
+			remote_repo_dir = maketemp("remote_repo_%s" % func.__name__)
+			repo_dir = maketemp("remote_clone_non_bare_repo")
 			
 			rw_remote_repo = self.rorepo.clone(remote_repo_dir, shared=True, bare=True)
 			rw_repo = rw_remote_repo.clone(repo_dir, shared=True, bare=False, n=True)		# recursive alternates info ?

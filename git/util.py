@@ -17,13 +17,22 @@ from gitdb.util import (
 							file_contents_ro, 
 							LazyMixin, 
 							to_hex_sha, 
-							to_bin_sha
+							to_bin_sha,
+							join_path, 
+							join_path_native,
+							to_native_path_linux,
+							to_native_path_windows,
+							assure_directory_exists,
+							LockFile,
+							BlockingLockFile,
+							Actor,
+							Iterable
 						)
 
 __all__ = ( "stream_copy", "join_path", "to_native_path_windows", "to_native_path_linux", 
 			"join_path_native", "Stats", "IndexFileSHA1Writer", "Iterable", "IterableList", 
 			"BlockingLockFile", "LockFile", 'Actor', 'get_user_id', 'assure_directory_exists',
-			'RemoteProgress')
+			'RemoteProgress', 'RepoAliasMixin')
 
 #{ Utility Methods
 
@@ -41,54 +50,7 @@ def stream_copy(source, destination, chunk_size=512*1024):
 			break
 	# END reading output stream
 	return br
-
-def join_path(a, *p):
-	"""Join path tokens together similar to os.path.join, but always use 
-	'/' instead of possibly '\' on windows."""
-	path = a
-	for b in p:
-		if b.startswith('/'):
-			path += b[1:]
-		elif path == '' or path.endswith('/'):
-			path +=	 b
-		else:
-			path += '/' + b
-	return path
 	
-def to_native_path_windows(path):
-	return path.replace('/','\\')
-	
-def to_native_path_linux(path):
-	return path.replace('\\','/')
-
-if sys.platform.startswith('win'):
-	to_native_path = to_native_path_windows
-else:
-	# no need for any work on linux
-	def to_native_path_linux(path):
-		return path
-	to_native_path = to_native_path_linux
-
-def join_path_native(a, *p):
-	"""
-	As join path, but makes sure an OS native path is returned. This is only 
-		needed to play it safe on my dear windows and to assure nice paths that only 
-		use '\'"""
-	return to_native_path(join_path(a, *p))
-	
-def assure_directory_exists(path, is_file=False):
-	"""Assure that the directory pointed to by path exists.
-	
-	:param is_file: If True, path is assumed to be a file and handled correctly.
-		Otherwise it must be a directory
-	:return: True if the directory was created, False if it already existed"""
-	if is_file:
-		path = os.path.dirname(path)
-	#END handle file 
-	if not os.path.isdir(path):
-		os.makedirs(path)
-		return True
-	return False
 	
 def get_user_id():
 	""":return: string identifying the currently active system user as name@node
@@ -230,107 +192,16 @@ class RemoteProgress(object):
 			up to you which one you implement"""
 		pass
 
-
-class Actor(object):
-	"""Actors hold information about a person acting on the repository. They 
-	can be committers and authors or anything with a name and an email as 
-	mentioned in the git log entries."""
-	# PRECOMPILED REGEX
-	name_only_regex = re.compile( r'<(.+)>' )
-	name_email_regex = re.compile( r'(.*) <(.+?)>' )
+class RepoAliasMixin(object):
+	"""Simple utility providing a repo-property which resolves to the 'odb' attribute
+	of the actual type. This is for api compatability only, as the types previously
+	held repository instances, now they hold odb instances instead"""
+	__slots__ = tuple()
 	
-	# ENVIRONMENT VARIABLES
-	# read when creating new commits
-	env_author_name = "GIT_AUTHOR_NAME"
-	env_author_email = "GIT_AUTHOR_EMAIL"
-	env_committer_name = "GIT_COMMITTER_NAME"
-	env_committer_email = "GIT_COMMITTER_EMAIL"
+	@property
+	def repo(self):
+		return self.odb
 	
-	# CONFIGURATION KEYS
-	conf_name = 'name'
-	conf_email = 'email'
-	
-	__slots__ = ('name', 'email')
-	
-	def __init__(self, name, email):
-		self.name = name
-		self.email = email
-
-	def __eq__(self, other):
-		return self.name == other.name and self.email == other.email
-		
-	def __ne__(self, other):
-		return not (self == other)
-		
-	def __hash__(self):
-		return hash((self.name, self.email))
-
-	def __str__(self):
-		return self.name
-
-	def __repr__(self):
-		return '<git.Actor "%s <%s>">' % (self.name, self.email)
-
-	@classmethod
-	def _from_string(cls, string):
-		"""Create an Actor from a string.
-		:param string: is the string, which is expected to be in regular git format
-
-				John Doe <jdoe@example.com>
-				
-		:return: Actor """
-		m = cls.name_email_regex.search(string)
-		if m:
-			name, email = m.groups()
-			return Actor(name, email)
-		else:
-			m = cls.name_only_regex.search(string)
-			if m:
-				return Actor(m.group(1), None)
-			else:
-				# assume best and use the whole string as name
-				return Actor(string, None)
-			# END special case name
-		# END handle name/email matching
-		
-	@classmethod
-	def _main_actor(cls, env_name, env_email, config_reader=None):
-		actor = Actor('', '')
-		default_email = get_user_id()
-		default_name = default_email.split('@')[0]
-		
-		for attr, evar, cvar, default in (('name', env_name, cls.conf_name, default_name), 
-										('email', env_email, cls.conf_email, default_email)):
-			try:
-				setattr(actor, attr, os.environ[evar])
-			except KeyError:
-				if config_reader is not None:
-					setattr(actor, attr, config_reader.get_value('user', cvar, default))
-				#END config-reader handling
-				if not getattr(actor, attr):
-					setattr(actor, attr, default)
-			#END handle name
-		#END for each item to retrieve
-		return actor
-		
-		
-	@classmethod
-	def committer(cls, config_reader=None):
-		"""
-		:return: Actor instance corresponding to the configured committer. It behaves
-			similar to the git implementation, such that the environment will override 
-			configuration values of config_reader. If no value is set at all, it will be
-			generated
-		:param config_reader: ConfigReader to use to retrieve the values from in case
-			they are not set in the environment"""
-		return cls._main_actor(cls.env_committer_name, cls.env_committer_email, config_reader)
-		
-	@classmethod
-	def author(cls, config_reader=None):
-		"""Same as committer(), but defines the main author. It may be specified in the environment, 
-		but defaults to the committer"""
-		return cls._main_actor(cls.env_author_name, cls.env_author_email, config_reader)
-		
 
 class Stats(object):
 	"""
@@ -415,123 +286,6 @@ class IndexFileSHA1Writer(object):
 		return self.f.tell()
 
 
-class LockFile(object):
-	"""Provides methods to obtain, check for, and release a file based lock which 
-	should be used to handle concurrent access to the same file.
-	
-	As we are a utility class to be derived from, we only use protected methods.
-	
-	Locks will automatically be released on destruction"""
-	__slots__ = ("_file_path", "_owns_lock")
-	
-	def __init__(self, file_path):
-		self._file_path = file_path
-		self._owns_lock = False
-	
-	def __del__(self):
-		self._release_lock()
-	
-	def _lock_file_path(self):
-		""":return: Path to lockfile"""
-		return "%s.lock" % (self._file_path)
-	
-	def _has_lock(self):
-		""":return: True if we have a lock and if the lockfile still exists
-		:raise AssertionError: if our lock-file does not exist"""
-		if not self._owns_lock:
-			return False
-		
-		return True
-		
-	def _obtain_lock_or_raise(self):
-		"""Create a lock file as flag for other instances, mark our instance as lock-holder
-		
-		:raise IOError: if a lock was already present or a lock file could not be written"""
-		if self._has_lock():
-			return 
-		lock_file = self._lock_file_path()
-		if os.path.isfile(lock_file):
-			raise IOError("Lock for file %r did already exist, delete %r in case the lock is illegal" % (self._file_path, lock_file))
-			
-		try:
-			fd = os.open(lock_file, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0)
-			os.close(fd)
-		except OSError,e:
-			raise IOError(str(e))
-		
-		self._owns_lock = True
-		
-	def _obtain_lock(self):
-		"""The default implementation will raise if a lock cannot be obtained.
-		Subclasses may override this method to provide a different implementation"""
-		return self._obtain_lock_or_raise()
-		
-	def _release_lock(self):
-		"""Release our lock if we have one"""
-		if not self._has_lock():
-			return
-			
-		# if someone removed our file beforhand, lets just flag this issue
-		# instead of failing, to make it more usable.
-		lfp = self._lock_file_path()
-		try:
-			# on bloody windows, the file needs write permissions to be removable.
-			# Why ... 
-			if os.name == 'nt':
-				os.chmod(lfp, 0777)
-			# END handle win32
-			os.remove(lfp)
-		except OSError:
-			pass
-		self._owns_lock = False
-
-
-class BlockingLockFile(LockFile):
-	"""The lock file will block until a lock could be obtained, or fail after 
-	a specified timeout.
-	
-	:note: If the directory containing the lock was removed, an exception will 
-		be raised during the blocking period, preventing hangs as the lock 
-		can never be obtained."""
-	__slots__ = ("_check_interval", "_max_block_time")
-	def __init__(self, file_path, check_interval_s=0.3, max_block_time_s=sys.maxint):
-		"""Configure the instance
-		
-		:parm check_interval_s:
-			Period of time to sleep until the lock is checked the next time.
-			By default, it waits a nearly unlimited time
-		
-		:parm max_block_time_s: Maximum amount of seconds we may lock"""
-		super(BlockingLockFile, self).__init__(file_path)
-		self._check_interval = check_interval_s
-		self._max_block_time = max_block_time_s
-		
-	def _obtain_lock(self):
-		"""This method blocks until it obtained the lock, or raises IOError if 
-		it ran out of time or if the parent directory was not available anymore.
-		If this method returns, you are guranteed to own the lock"""
-		starttime = time.time()
-		maxtime = starttime + float(self._max_block_time)
-		while True:
-			try:
-				super(BlockingLockFile, self)._obtain_lock()
-			except IOError:
-				# synity check: if the directory leading to the lockfile is not
-				# readable anymore, raise an execption
-				curtime = time.time()
-				if not os.path.isdir(os.path.dirname(self._lock_file_path())):
-					msg = "Directory containing the lockfile %r was not readable anymore after waiting %g seconds" % (self._lock_file_path(), curtime - starttime)
-					raise IOError(msg)
-				# END handle missing directory
-				
-				if curtime >= maxtime:
-					msg = "Waited %g seconds for lock at %r" % ( maxtime - starttime, self._lock_file_path())
-					raise IOError(msg)
-				# END abort if we wait too long
-				time.sleep(self._check_interval)
-			else:
-				break
-		# END endless loop
 	
 
 class IterableList(list):
@@ -579,31 +333,4 @@ class IterableList(list):
 			raise IndexError( "No item found with id %r" % (self._prefix + index) )
 			
 
-class Iterable(object):
-	"""Defines an interface for iterable items which is to assure a uniform 
-	way to retrieve and iterate items within the git repository"""
-	__slots__ = tuple()
-	_id_attribute_ = "attribute that most suitably identifies your instance"
-	
-	@classmethod
-	def list_items(cls, repo, *args, **kwargs):
-		"""
-		Find all items of this type - subclasses can specify args and kwargs differently.
-		If no args are given, subclasses are obliged to return all items if no additional 
-		arguments arg given.
-		
-		:note: Favor the iter_items method as it will
-		
-		:return:list(Item,...) list of item instances"""
-		out_list = IterableList( cls._id_attribute_ )
-		out_list.extend(cls.iter_items(repo, *args, **kwargs))
-		return out_list
-		
-		
-	@classmethod
-	def iter_items(cls, repo, *args, **kwargs):
-		"""For more information about the arguments, see list_items
-		:return:  iterator yielding Items"""
-		raise NotImplementedError("To be implemented by Subclass")
-		
 #} END classes

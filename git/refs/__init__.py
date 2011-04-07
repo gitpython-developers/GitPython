@@ -8,13 +8,13 @@ from remote import *
 
 # name fixes
 import head
-head.RemoteReference = RemoteReference
+head.Head.RemoteReferenceCls = RemoteReference
 del(head)
 
 
 import symbolic
-for item in (HEAD, Head, RemoteReference, TagReference, Reference, SymbolicReference):
-	setattr(symbolic, item.__name__, item)
+for item in (HEAD, Head, RemoteReference, TagReference, Reference):
+	setattr(symbolic.SymbolicReference, item.__name__+'Cls', item)
 del(symbolic)
 
 

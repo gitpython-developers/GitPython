@@ -23,6 +23,18 @@ import os
 
 __all__ = ('RemoteProgress', 'Remote')
 
+class PushInfo(object):
+	"""Wrapper for basic PushInfo to provide the previous interface which includes
+	resolved objects instead of plain shas
+	
+	old_commit	# object for the corresponding old_commit_sha"""
+	
+	
+	
+class FetchInfo(object):
+	"""Wrapper to restore the previous interface, resolving objects and wrapping 
+	references"""
+
 
 class Remote(LazyMixin, Iterable):
 	"""Provides easy read and write access to a git remote.

@@ -50,11 +50,11 @@ class PushInfo(GitdbPushInfo):
 		info.remote_ref_string # path to the remote reference located on the remote side
 		info.remote_ref # Remote Reference on the local side corresponding to 
 						# the remote_ref_string. It can be a TagReference as well.
-		info.old_commit # commit at which the remote_ref was standing before we pushed
+		info.old_commit_binsha # binary sha at which the remote_ref was standing before we pushed
 						# it to local_ref.commit. Will be None if an error was indicated
 		info.summary	# summary line providing human readable english text about the push
 		"""
-	__slots__ = ('local_ref', 'remote_ref_string', 'flags', 'old_commit', '_remote', 'summary')
+	__slots__ = ('local_ref', 'remote_ref_string', 'flags', 'old_commit_binsha', '_remote', 'summary')
 	
 	_flag_map = {	'X' : GitdbPushInfo.NO_MATCH, 
 					'-' : GitdbPushInfo.DELETED, '*' : 0,
@@ -63,14 +63,14 @@ class PushInfo(GitdbPushInfo):
 					'=' : GitdbPushInfo.UP_TO_DATE, 
 					'!' : GitdbPushInfo.ERROR }
 	
-	def __init__(self, flags, local_ref, remote_ref_string, remote, old_commit=None, 
+	def __init__(self, flags, local_ref, remote_ref_string, remote, old_commit_binsha=None, 
 					summary=''):
 		""" Initialize a new instance """
 		self.flags = flags
 		self.local_ref = local_ref
 		self.remote_ref_string = remote_ref_string
 		self._remote = remote
-		self.old_commit = old_commit
+		self.old_commit_binsha = old_commit_binsha
 		self.summary = summary
 		
 	@property
@@ -111,7 +111,7 @@ class PushInfo(GitdbPushInfo):
 			from_ref = Reference.from_path(remote.repo, from_ref_string)
 		
 		# commit handling, could be message or commit info
-		old_commit = None
+		old_commit_binsha = None
 		if summary.startswith('['):
 			if "[rejected]" in summary:
 				flags |= cls.REJECTED
@@ -134,10 +134,10 @@ class PushInfo(GitdbPushInfo):
 				split_token = ".."
 			old_sha, new_sha = summary.split(' ')[0].split(split_token)
 			# have to use constructor here as the sha usually is abbreviated
-			old_commit = remote.repo.commit(old_sha)
+			old_commit_binsha = remote.repo.commit(old_sha)
 		# END message handling
 		
-		return PushInfo(flags, from_ref, to_ref_string, remote, old_commit, summary)
+		return PushInfo(flags, from_ref, to_ref_string, remote, old_commit_binsha, summary)
 		
 
 class FetchInfo(GitdbFetchInfo):
@@ -151,10 +151,10 @@ class FetchInfo(GitdbFetchInfo):
 						# i.e. info.flags & info.REJECTED 
 						# is 0 if ref is FETCH_HEAD
 	 info.note			# additional notes given by git-fetch intended for the user
-	 info.old_commit	# if info.flags & info.FORCED_UPDATE|info.FAST_FORWARD, 
+	 info.old_commit_binsha	# if info.flags & info.FORCED_UPDATE|info.FAST_FORWARD, 
 						# field is set to the previous location of ref, otherwise None
 	"""
-	__slots__ = ('ref','old_commit', 'flags', 'note')
+	__slots__ = ('ref','old_commit_binsha', 'flags', 'note')
 	
 	#							  %c	%-*s %-*s			  -> %s		  (%s)
 	re_fetch_result = re.compile("^\s*(.) (\[?[\w\s\.]+\]?)\s+(.+) -> ([/\w_\+\.-]+)(	 \(.*\)?$)?")
@@ -166,14 +166,14 @@ class FetchInfo(GitdbFetchInfo):
 					'=' : GitdbFetchInfo.HEAD_UPTODATE, 
 					' ' : GitdbFetchInfo.FAST_FORWARD } 
 	
-	def __init__(self, ref, flags, note = '', old_commit = None):
+	def __init__(self, ref, flags, note = '', old_commit_binsha = None):
 		"""
 		Initialize a new instance
 		"""
 		self.ref = ref
 		self.flags = flags
 		self.note = note
-		self.old_commit = old_commit
+		self.old_commit_binsha = old_commit_binsha
 		
 	def __str__(self):
 		return self.name
@@ -250,7 +250,7 @@ class FetchInfo(GitdbFetchInfo):
 		# END control char exception hanlding 
 		
 		# parse operation string for more info - makes no sense for symbolic refs
-		old_commit = None
+		old_commit_binsha = None
 		if isinstance(remote_local_ref, Reference):
 			if 'rejected' in operation:
 				flags |= cls.REJECTED
@@ -262,11 +262,11 @@ class FetchInfo(GitdbFetchInfo):
 				split_token = '...'
 				if control_character == ' ':
 					split_token = split_token[:-1]
-				old_commit = repo.rev_parse(operation.split(split_token)[0])
+				old_commit_binsha = repo.rev_parse(operation.split(split_token)[0])
 			# END handle refspec
 		# END reference flag handling
 		
-		return cls(remote_local_ref, flags, note, old_commit)
+		return cls(remote_local_ref, flags, note, old_commit_binsha)
 		
 
 class GitCmdObjectDB(LooseObjectDB, TransportDBMixin):
