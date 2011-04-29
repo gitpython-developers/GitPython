@@ -25,7 +25,6 @@ from gitdb.util import (
 						)
 
 from fun import (
-					rev_parse,
 					is_git_dir,
 					touch
 				)
@@ -67,10 +66,6 @@ class Repo(object):
 	re_author_committer_start = re.compile(r'^(author|committer)')
 	re_tab_full_line = re.compile(r'^\t(.*)$')
 	
-	# invariants
-	# represents the configuration level of a configuration file
-	config_level = ("system", "global", "repository")
-
 	def __init__(self, path=None, odbt = DefaultDBType):
 		"""Create a new Repo instance
 
@@ -167,6 +162,9 @@ class Repo(object):
 	del _set_description
 	
 	
+	@property
+	def config_level(self):
+		return self.odb.config_level
 	
 	@property
 	def working_tree_dir(self):
@@ -311,21 +309,6 @@ class Repo(object):
 		"""Delete the given remote."""
 		return Remote.remove(self, remote)
 		
-	def _get_config_path(self, config_level ):
-		# we do not support an absolute path of the gitconfig on windows , 
-		# use the global config instead
-		if sys.platform == "win32" and config_level == "system":
-			config_level = "global"
-			
-		if config_level == "system":
-			return "/etc/gitconfig"
-		elif config_level == "global":
-			return os.path.normpath(os.path.expanduser("~/.gitconfig"))
-		elif config_level == "repository":
-			return join(self.git_dir, "config")
-		
-		raise ValueError( "Invalid configuration level: %r" % config_level )
-			
 	def config_reader(self, config_level=None):
 		"""
 		:return:
@@ -341,12 +324,7 @@ class Repo(object):
 			instance
 		:note: On windows, system configuration cannot currently be read as the path is 
 			unknown, instead the global path will be used."""
-		files = None
-		if config_level is None:
-			files = [ self._get_config_path(f) for f in self.config_level ]
-		else:
-			files = [ self._get_config_path(config_level) ]
-		return GitConfigParser(files, read_only=True)
+		return self.odb.config_reader(config_level) 
 		
 	def config_writer(self, config_level="repository"):
 		"""
@@ -361,7 +339,7 @@ class Repo(object):
 			system = sytem wide configuration file
 			global = user level configuration file
 			repository = configuration file for this repostory only"""
-		return GitConfigParser(self._get_config_path(config_level), read_only = False)
+		return self.odb.config_writer(config_level)
 		
 	def commit(self, rev=None):
 		"""The Commit object for the specified revision
@@ -747,7 +725,8 @@ class Repo(object):
 		self.git.archive(treeish, **kwargs)
 		return self
 	
-	rev_parse = rev_parse
+	def rev_parse(self, name):
+		return self.odb.rev_parse(name)
 		
 	def __repr__(self):
 		return '<git.Repo "%s">' % self.git_dir

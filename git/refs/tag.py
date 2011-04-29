@@ -1,5 +1,4 @@
 from gitdb.ref.tag import TagReference as GitDB_TagReference
-from git.util import RepoAliasMixin
 
 __all__ = ["TagReference", "Tag"]
 

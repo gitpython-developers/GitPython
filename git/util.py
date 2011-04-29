@@ -9,7 +9,6 @@ import re
 import sys
 import time
 import tempfile
-import platform
 
 from gitdb.util import (
 							make_sha, 
@@ -28,28 +27,14 @@ from gitdb.util import (
 							Actor,
 							Iterable,
 							stream_copy,
-							IterableList
+							IterableList,
+							get_user_id
 						)
 
 __all__ = ( "stream_copy", "join_path", "to_native_path_windows", "to_native_path_linux", 
 			"join_path_native", "Stats", "IndexFileSHA1Writer", "Iterable", "IterableList", 
 			"BlockingLockFile", "LockFile", 'Actor', 'get_user_id', 'assure_directory_exists',
 			'RemoteProgress', 'RepoAliasMixin')
-
-#{ Utility Methods
-
-	
-def get_user_id():
-	""":return: string identifying the currently active system user as name@node
-	:note: user can be set with the 'USER' environment variable, usually set on windows"""
-	ukn = 'UNKNOWN'
-	username = os.environ.get('USER', os.environ.get('USERNAME', ukn))
-	if username == ukn and hasattr(os, 'getlogin'):
-		username = os.getlogin()
-	# END get username from login
-	return "%s@%s" % (username, platform.node())
-
-#} END utilities
 
 #{ Classes
 

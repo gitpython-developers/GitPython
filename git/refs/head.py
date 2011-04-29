@@ -1,13 +1,12 @@
 
 from gitdb.ref.head import HEAD as GitDB_HEAD
-from gitdb.ref.head import Head as GitDB_Head
+from gitdb.ref.headref import Head as GitDB_Head
 from git.exc import GitCommandError
-from git.util import RepoAliasMixin
 
 __all__ = ["HEAD", "Head"]
 
 	
-class HEAD(GitDB_HEAD, RepoAliasMixin):
+class HEAD(GitDB_HEAD):
 	"""Provides additional functionality using the git command"""
 	__slots__ = tuple()
 		
@@ -73,7 +72,7 @@ class HEAD(GitDB_HEAD, RepoAliasMixin):
 		return self
 	
 
-class Head(GitDB_Head, RepoAliasMixin):
+class Head(GitDB_Head):
 	"""The GitPyhton Head implementation provides more git-command based features
 	
 	A Head is a named reference to a Commit. Every Head instance contains a name

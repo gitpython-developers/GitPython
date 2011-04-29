@@ -1,11 +1,10 @@
 import os
 from gitdb.ref.remote import RemoteReference as GitDB_RemoteReference
-from git.util import RepoAliasMixin
 
 __all__ = ["RemoteReference"]
 
 	
-class RemoteReference(GitDB_RemoteReference, RepoAliasMixin):
+class RemoteReference(GitDB_RemoteReference):
 	"""Represents a reference pointing to a remote head."""
 	__slots__ = tuple()
 	
