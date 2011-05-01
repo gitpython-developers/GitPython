@@ -49,6 +49,16 @@ class TestRefs(TestBase):
 		# END for tag in repo-tags
 		assert tag_object_refs
 		assert isinstance(self.rorepo.tags['0.1.5'], TagReference)
+
+
+	def test_tags_author(self):
+		tag = self.rorepo.tags[0]
+		tagobj = tag.tag
+		assert isinstance( tagobj.tagger, Actor )
+		tagger_name = tagobj.tagger.name
+		assert tagger_name == 'Michael Trier'
+
+
 		
 	def test_tags(self):
 		# tag refs can point to tag objects or to commits
