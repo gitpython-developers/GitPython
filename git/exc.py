@@ -5,7 +5,40 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 """ Module containing all exceptions thrown througout the git package, """
 
-from gitdb.exc import *
+from util import to_hex_sha
+
+class ODBError(Exception):
+	"""All errors thrown by the object database"""
+
+
+class InvalidDBRoot(ODBError):
+	"""Thrown if an object database cannot be initialized at the given path"""
+
+
+class BadObject(ODBError):
+	"""The object with the given SHA does not exist. Instantiate with the 
+	failed sha"""
+	
+	def __str__(self):
+		return "BadObject: %s" % to_hex_sha(self.args[0])
+
+
+class ParseError(ODBError):
+	"""Thrown if the parsing of a file failed due to an invalid format"""
+
+
+class AmbiguousObjectName(ODBError):
+	"""Thrown if a possibly shortened name does not uniquely represent a single object
+	in the database"""
+
+
+class BadObjectType(ODBError):
+	"""The object had an unsupported type"""
+
+
+class UnsupportedOperation(ODBError):
+	"""Thrown if the given operation cannot be supported by the object database"""
+
 
 class InvalidGitRepositoryError(Exception):
 	""" Thrown if the given repository appears to have an invalid format.  """
@@ -52,6 +85,7 @@ class CheckoutError( Exception ):
 		
 class CacheError(Exception):
 	"""Base for all errors related to the git index, which is called cache internally"""
+
 
 class UnmergedEntriesError(CacheError):
 	"""Thrown if an operation cannot proceed as there are still unmerged 

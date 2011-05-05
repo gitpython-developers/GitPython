@@ -1,14 +1,28 @@
 
-from gitdb.ref.head import HEAD as GitDB_HEAD
-from gitdb.ref.headref import Head as GitDB_Head
+from symbolic import SymbolicReference
 from git.exc import GitCommandError
 
 __all__ = ["HEAD", "Head"]
 
 	
-class HEAD(GitDB_HEAD):
+class HEAD(SymbolicReference):
 	"""Provides additional functionality using the git command"""
 	__slots__ = tuple()
+	
+	_HEAD_NAME = 'HEAD'
+	_ORIG_HEAD_NAME = 'ORIG_HEAD'
+	__slots__ = tuple()
+	
+	def __init__(self, repo, path=_HEAD_NAME):
+		if path != self._HEAD_NAME:
+			raise ValueError("HEAD instance must point to %r, got %r" % (self._HEAD_NAME, path))
+		super(HEAD, self).__init__(repo, path)
+	
+	def orig_head(self):
+		"""
+		:return: SymbolicReference pointing at the ORIG_HEAD, which is maintained 
+			to contain the previous value of HEAD"""
+		return SymbolicReference(self.repo, self._ORIG_HEAD_NAME)
 		
 	def reset(self, commit='HEAD', index=True, working_tree = False, 
 				paths=None, **kwargs):
@@ -71,95 +85,3 @@ class HEAD(GitDB_HEAD):
 		
 		return self
 	
-
-class Head(GitDB_Head):
-	"""The GitPyhton Head implementation provides more git-command based features
-	
-	A Head is a named reference to a Commit. Every Head instance contains a name
-	and a Commit object.
-
-	Examples::
-
-		>>> repo = Repo("/path/to/repo")
-		>>> head = repo.heads[0]
-
-		>>> head.name
-		'master'
-
-		>>> head.commit
-		<git.Commit "1c09f116cbc2cb4100fb6935bb162daa4723f455">
-
-		>>> head.commit.hexsha
-		'1c09f116cbc2cb4100fb6935bb162daa4723f455'"""
-	__slots__ = tuple()
-	
-	_common_path_default = "refs/heads"
-	k_config_remote = "remote"
-	k_config_remote_ref = "merge"			# branch to merge from remote
-	
-	@classmethod
-	def delete(cls, repo, *heads, **kwargs):
-		"""Delete the given heads
-		:param force:
-			If True, the heads will be deleted even if they are not yet merged into
-			the main development stream.
-			Default False"""
-		force = kwargs.get("force", False)
-		flag = "-d"
-		if force:
-			flag = "-D"
-		repo.git.branch(flag, *heads)
-		
-		
-	def rename(self, new_path, force=False):
-		"""Rename self to a new path
-		
-		:param new_path:
-			Either a simple name or a path, i.e. new_name or features/new_name.
-			The prefix refs/heads is implied
-			
-		:param force:
-			If True, the rename will succeed even if a head with the target name
-			already exists.
-			
-		:return: self
-		:note: respects the ref log as git commands are used"""
-		flag = "-m"
-		if force:
-			flag = "-M"
-			
-		self.repo.git.branch(flag, self, new_path)
-		self.path  = "%s/%s" % (self._common_path_default, new_path)
-		return self
-		
-	def checkout(self, force=False, **kwargs):
-		"""Checkout this head by setting the HEAD to this reference, by updating the index
-		to reflect the tree we point to and by updating the working tree to reflect 
-		the latest index.
-		
-		The command will fail if changed working tree files would be overwritten.
-		
-		:param force:
-			If True, changes to the index and the working tree will be discarded.
-			If False, GitCommandError will be raised in that situation.
-			
-		:param kwargs:
-			Additional keyword arguments to be passed to git checkout, i.e.
-			b='new_branch' to create a new branch at the given spot.
-		
-		:return:
-			The active branch after the checkout operation, usually self unless
-			a new branch has been created.
-		
-		:note:
-			By default it is only allowed to checkout heads - everything else
-			will leave the HEAD detached which is allowed and possible, but remains
-			a special state that some tools might not be able to handle."""
-		args = list()
-		kwargs['f'] = force
-		if kwargs['f'] == False:
-			kwargs.pop('f')
-		
-		self.repo.git.checkout(self, **kwargs)
-		return self.repo.active_branch
-

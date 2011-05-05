@@ -73,6 +73,9 @@ class Submodule(GitDB_Submodule, Iterable, Traversable, RepoAliasMixin):
 	# this is a bogus type for base class compatability
 	type = 'submodule'
 	
+	# this type doesn't really have a type id
+	type_id = 0
+	
 	__slots__ = ('_parent_commit', '_url', '_branch_path', '_name', '__weakref__')
 	_cache_attrs = ('path', '_url', '_branch_path')
 	

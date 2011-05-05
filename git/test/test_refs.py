@@ -4,12 +4,13 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
-from mock import *
-from git.test.lib import *
-from git import *
-import git.refs as refs
-from git.util import Actor
-from git.objects.tag import TagObject
+from gitdb.test.lib import *
+from gitdb.ref import *
+import gitdb.ref as ref
+
+from gitdb.util import Actor
+from gitdb.object.tag import TagObject
+
 from itertools import chain
 import os
 
@@ -17,7 +18,7 @@ class TestRefs(TestBase):
 
 	def test_from_path(self):
 		# should be able to create any reference directly
-		for ref_type in ( Reference, Head, TagReference, RemoteReference ):
+		for ref_type in (Reference, Head, TagReference, RemoteReference):
 			for name in ('rela_name', 'path/rela_name'):
 				full_path = ref_type.to_full_path(name)
 				instance = ref_type.from_path(self.rorepo, full_path)
@@ -27,20 +28,20 @@ class TestRefs(TestBase):
 	
 	def test_tag_base(self):
 		tag_object_refs = list()
-		for tag in self.rorepo.tags:
+		for tag in TagReference.list_items(self.rorepo):
 			assert "refs/tags" in tag.path
 			assert tag.name
-			assert isinstance( tag.commit, Commit )
+			assert isinstance(tag.commit, tag.CommitCls)
 			if tag.tag is not None:
-				tag_object_refs.append( tag )
+				tag_object_refs.append(tag)
 				tagobj = tag.tag
 				# have no dict
 				self.failUnlessRaises(AttributeError, setattr, tagobj, 'someattr', 1)
-				assert isinstance( tagobj, TagObject ) 
+				assert isinstance(tagobj, TagObject) 
 				assert tagobj.tag == tag.name
-				assert isinstance( tagobj.tagger, Actor )
-				assert isinstance( tagobj.tagged_date, int )
-				assert isinstance( tagobj.tagger_tz_offset, int )
+				assert isinstance(tagobj.tagger, Actor)
+				assert isinstance(tagobj.tagged_date, int)
+				assert isinstance(tagobj.tagger_tz_offset, int)
 				assert tagobj.message
 				assert tag.object == tagobj
 				# can't assign the object
@@ -48,15 +49,15 @@ class TestRefs(TestBase):
 			# END if we have a tag object
 		# END for tag in repo-tags
 		assert tag_object_refs
-		assert isinstance(self.rorepo.tags['0.1.5'], TagReference)
+		assert isinstance(TagReference.list_items(self.rorepo)['0.5.0'], TagReference)
 		
 	def test_tags(self):
 		# tag refs can point to tag objects or to commits
 		s = set()
 		ref_count = 0
-		for ref in chain(self.rorepo.tags, self.rorepo.heads):
+		for ref in chain(TagReference.list_items(self.rorepo), Head.list_items(self.rorepo)):
 			ref_count += 1
-			assert isinstance(ref, refs.Reference)
+			assert isinstance(ref, Reference)
 			assert str(ref) == ref.name
 			assert repr(ref)
 			assert ref == ref
@@ -66,9 +67,9 @@ class TestRefs(TestBase):
 		assert len(s) == ref_count
 		assert len(s|s) == ref_count
 		
-	@with_rw_repo('HEAD', bare=False)
-	def test_heads(self, rwrepo):
-		for head in rwrepo.heads:
+	@with_rw_repo
+	def test_heads(self, rw_repo):
+		for head in Head.iter_items(rw_repo):
 			assert head.name
 			assert head.path
 			assert "refs/heads" in head.path
@@ -88,7 +89,7 @@ class TestRefs(TestBase):
 			# after the clone, we might still have a tracking branch setup
 			head.set_tracking_branch(None)
 			assert head.tracking_branch() is None
- 			remote_ref = rwrepo.remotes[0].refs[0]
+ 			remote_ref = RemoteReference.list_items(rw_repo)[0]
 			assert head.set_tracking_branch(remote_ref) is head
 			assert head.tracking_branch() == remote_ref
 			head.set_tracking_branch(None)
@@ -96,7 +97,7 @@ class TestRefs(TestBase):
 		# END for each head
 		
 		# verify REFLOG gets altered
-		head = rwrepo.head
+		head = HEAD(rw_repo)
 		cur_head = head.ref
 		cur_commit = cur_head.commit
 		pcommit = cur_head.commit.parents[0].parents[0]
@@ -130,7 +131,7 @@ class TestRefs(TestBase):
 		assert len(cur_head.log()) == blog_len+2
 		
 		# a new branch has just a single entry
-		other_head = Head.create(rwrepo, 'mynewhead', pcommit, logmsg='new head created')
+		other_head = Head.create(rw_repo, 'mynewhead', pcommit, logmsg='new head created')
 		log = other_head.log()
 		assert len(log) == 1
 		assert log[0].oldhexsha == pcommit.NULL_HEX_SHA
@@ -139,24 +140,25 @@ class TestRefs(TestBase):
 		
 	def test_refs(self):
 		types_found = set()
-		for ref in self.rorepo.refs:
+		for ref in Reference.list_items(self.rorepo):
 			types_found.add(type(ref))
 		assert len(types_found) >= 3 
 		
 	def test_is_valid(self):
 		assert Reference(self.rorepo, 'refs/doesnt/exist').is_valid() == False
-		assert self.rorepo.head.is_valid()
-		assert self.rorepo.head.reference.is_valid()
+		assert HEAD(self.rorepo).is_valid()
+		assert HEAD(self.rorepo).reference.is_valid()
 		assert SymbolicReference(self.rorepo, 'hellothere').is_valid() == False
 		
 	def test_orig_head(self):
-		assert type(self.rorepo.head.orig_head()) == SymbolicReference
+		assert type(HEAD(self.rorepo).orig_head()) == SymbolicReference
 		
-	@with_rw_repo('0.1.6')
+	@with_rw_repo
 	def test_head_reset(self, rw_repo):
-		cur_head = rw_repo.head
+		cur_head = HEAD(rw_repo)
 		old_head_commit = cur_head.commit
 		new_head_commit = cur_head.ref.commit.parents[0]
+		
 		cur_head.reset(new_head_commit, index=True) # index only
 		assert cur_head.reference.commit == new_head_commit
 		
@@ -176,10 +178,9 @@ class TestRefs(TestBase):
 		cur_head.reset(new_head_commit)
 		rw_repo.index.checkout(["lib"], force=True)#
 		
-		
 		# now that we have a write write repo, change the HEAD reference - its 
 		# like git-reset --soft
-		heads = rw_repo.heads
+		heads = Head.list_items(rw_repo)
 		assert heads
 		for head in heads:
 			cur_head.reference = head
@@ -198,7 +199,7 @@ class TestRefs(TestBase):
 		self.failUnlessRaises(TypeError, getattr, cur_head, "reference")
 		
 		# tags are references, hence we can point to them
-		some_tag = rw_repo.tags[0]
+		some_tag = TagReference.list_items(rw_repo)[0]
 		cur_head.reference = some_tag
 		assert not cur_head.is_detached
 		assert cur_head.commit == some_tag.commit
@@ -231,7 +232,7 @@ class TestRefs(TestBase):
 			old_name = new_head.name
 			
 			assert new_head.rename("hello").name == "hello"
-			assert new_head.rename("hello/world").name == "hello/world"
+			assert new_head.rename("hello/world").name == "hello/world"	# yes, this must work
 			assert new_head.rename(old_name).name == old_name and new_head.path == old_path
 			
 			# rename with force
@@ -414,7 +415,7 @@ class TestRefs(TestBase):
 		symbol_ref_path = "refs/symbol_ref"
 		symref = SymbolicReference(rw_repo, symbol_ref_path)
 		assert symref.path == symbol_ref_path
-		symbol_ref_abspath = os.path.join(rw_repo.git_dir, symref.path)
+		symbol_ref_abspath = os.path.join(rw_repo.root_path(), symref.path)
 		
 		# set it
 		symref.reference = new_head
@@ -471,7 +472,7 @@ class TestRefs(TestBase):
 		rw_repo.head.reference = Head.create(rw_repo, "master")
 		
 		# At least the head should still exist
-		assert os.path.isfile(os.path.join(rw_repo.git_dir, 'HEAD'))
+		assert os.path.isfile(os.path.join(rw_repo.root_path(), 'HEAD'))
 		refs = list(SymbolicReference.iter_items(rw_repo))
 		assert len(refs) == 1
 		
@@ -517,5 +518,5 @@ class TestRefs(TestBase):
 		assert SymbolicReference.dereference_recursive(self.rorepo, 'HEAD')
 		
 	def test_reflog(self):
-		assert isinstance(self.rorepo.heads.master.log(), RefLog)
+		assert isinstance(Head.list_items(self.rorepo).master.log(), RefLog)
 		

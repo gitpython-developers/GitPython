@@ -2,14 +2,15 @@
 # import all modules in order, fix the names they require
 from symbolic import *
 from reference import *
+from headref import *
 from head import *
 from tag import *
 from remote import *
 
 # name fixes
-import head
-head.Head.RemoteReferenceCls = RemoteReference
-del(head)
+import headref
+headref.Head.RemoteReferenceCls = RemoteReference
+del(headref)
 
 
 import symbolic

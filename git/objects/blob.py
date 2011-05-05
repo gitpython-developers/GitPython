@@ -5,9 +5,32 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
 from git.util import RepoAliasMixin
-from gitdb.object.blob import Blob as GitDB_Blob
+from mimetypes import guess_type
+from gitdb.typ import ObjectType
+
+import base
 
 __all__ = ('Blob', )
 
-class Blob(GitDB_Blob, RepoAliasMixin):
+class Blob(base.IndexObject, RepoAliasMixin):
+	"""A Blob encapsulates a git blob object"""
+	DEFAULT_MIME_TYPE = "text/plain"
+	type = ObjectType.blob
+	type_id = ObjectType.blob_id
+	
+	# valid blob modes
+	executable_mode = 0100755
+	file_mode = 0100644
+	link_mode = 0120000
+
 	__slots__ = tuple()
+
+	@property
+	def mime_type(self):
+		"""
+		:return: String describing the mime type of this file (based on the filename)
+		:note: Defaults to 'text/plain' in case the actual file type is unknown. """
+		guesses = None
+		if self.path:
+			guesses = guess_type(self.path)
+		return guesses and guesses[0] or self.DEFAULT_MIME_TYPE
