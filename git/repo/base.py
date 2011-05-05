@@ -14,7 +14,7 @@ from git.config import GitConfigParser
 from git.remote import Remote
 from git.db import (
 				GitCmdObjectDB, 
-				GitDB
+				PureGitDB
 				)
 
 
@@ -33,7 +33,7 @@ import os
 import sys
 import re
 
-DefaultDBType = GitDB
+DefaultDBType = PureGitDB
 if sys.version_info[1] < 5:		# python 2.4 compatiblity
 	DefaultDBType = GitCmdObjectDB
 # END handle python 2.4

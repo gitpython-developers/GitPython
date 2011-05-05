@@ -2,7 +2,7 @@ from gitdb.ref.tag import TagReference as GitDB_TagReference
 
 __all__ = ["TagReference", "Tag"]
 
-class TagReference(GitDB_TagReference, GitDB_TagReference):
+class TagReference(GitDB_TagReference):
 	__slots__ = tuple()
 	
 	@classmethod

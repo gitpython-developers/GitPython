@@ -4,9 +4,11 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 from git.util import RepoAliasMixin
-from gitdb.object.tree import GitDB_Tree, TreeModifier
+from gitdb.object.tree import Tree as GitDB_Tree
+from gitdb.object.tree import TreeModifier
 import git.diff as diff
 
+from blob import Blob
 from submodule.base import Submodule
 
 __all__ = ("TreeModifier", "Tree")

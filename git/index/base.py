@@ -63,7 +63,7 @@ from fun import (
 				)
 
 from gitdb.base import IStream
-from gitdb.db import MemoryDB
+from gitdb.db.py import PureMemoryDB
 from gitdb.util import to_bin_sha
 from itertools import izip
 
@@ -512,7 +512,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 		:raise UnmergedEntriesError: """
 		# we obtain no lock as we just flush our contents to disk as tree
 		# If we are a new index, the entries access will load our data accordingly
-		mdb = MemoryDB()
+		mdb = PureMemoryDB()
 		entries = self._entries_sorted()
 		binsha, tree_items = write_tree_from_cache(entries, mdb, slice(0, len(entries)))
 		

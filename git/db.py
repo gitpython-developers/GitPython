@@ -13,14 +13,14 @@ from gitdb.util import (
 							bin_to_hex, 
 							hex_to_bin
 						)
-from gitdb.db import (
-						GitDB,
-						LooseObjectDB
+from gitdb.db.py import (
+						PureGitDB,
+						PureLooseObjectODB
 					)
 from git.util import RemoteProgress
-from gitdb.db.base import TransportDBMixin
-from gitdb.db.base import FetchInfo as GitdbFetchInfo
-from gitdb.db.base import PushInfo as GitdbPushInfo
+from gitdb.db.py.base import TransportDB
+from gitdb.db.interface import FetchInfo as GitdbFetchInfo
+from gitdb.db.interface import PushInfo as GitdbPushInfo
 
 from git.util import  join_path
 from gitdb.util import join
@@ -36,7 +36,7 @@ import re
 import sys
 
 
-__all__ = ('GitCmdObjectDB', 'GitDB', 'RemoteProgress' )
+__all__ = ('GitCmdObjectDB', 'PureGitDB', 'RemoteProgress' )
 
 
 class PushInfo(GitdbPushInfo):
@@ -269,7 +269,7 @@ class FetchInfo(GitdbFetchInfo):
 		return cls(remote_local_ref, flags, note, old_commit_binsha)
 		
 
-class GitCmdObjectDB(LooseObjectDB, TransportDBMixin):
+class GitCmdObjectDB(PureLooseObjectODB, TransportDB):
 	"""A database representing the default git object store, which includes loose 
 	objects, pack files and an alternates file
 	

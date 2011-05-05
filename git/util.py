@@ -19,6 +19,7 @@ from gitdb.util import (
 							to_bin_sha,
 							join_path, 
 							join_path_native,
+							to_native_path,
 							to_native_path_linux,
 							to_native_path_windows,
 							assure_directory_exists,
