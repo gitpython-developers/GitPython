@@ -31,7 +31,7 @@ class PureReferenceDB(PureCompoundDB):
 		dbcls = self.ObjectDBCls
 		if dbcls is None:
 			# late import
-			from git import PureGitODB
+			from complex import PureGitODB	# TODO: This should be a configurable for flexibility
 			dbcls = PureGitODB
 		# END get db type
 		

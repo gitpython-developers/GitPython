@@ -1,8 +1,8 @@
 """Module with our own git implementation - it uses the git command"""
-from exc import (
+from git.exc import (
 					GitCommandError, 
 					BadObject
-				)
+					)
 
 from git.base import (
 								OInfo,
@@ -13,10 +13,7 @@ from git.util import (
 							bin_to_hex, 
 							hex_to_bin
 						)
-from git.db.py import (
-						PureGitDB,
-						PureLooseObjectODB
-					)
+from git.db.py.loose import PureLooseObjectODB
 from git.util import RemoteProgress
 from git.db.py.base import TransportDB
 from git.db.interface import FetchInfo as GitdbFetchInfo
@@ -25,18 +22,18 @@ from git.db.interface import PushInfo as GitdbPushInfo
 from git.util import  join_path
 from git.util import join
 
-from refs import (
-					Reference,
-					RemoteReference,
-					SymbolicReference, 
-					TagReference
-				)
+from git.refs import (
+						Reference,
+						RemoteReference,
+						SymbolicReference, 
+						TagReference
+					)
 
 import re
 import sys
 
 
-__all__ = ('GitCmdObjectDB', 'PureGitDB', 'RemoteProgress' )
+__all__ = ('CmdGitDB', 'RemoteProgress' )
 
 
 class PushInfo(GitdbPushInfo):
@@ -269,7 +266,7 @@ class FetchInfo(GitdbFetchInfo):
 		return cls(remote_local_ref, flags, note, old_commit_binsha)
 		
 
-class GitCmdObjectDB(PureLooseObjectODB, TransportDB):
+class CmdGitDB(PureLooseObjectODB, TransportDB):
 	"""A database representing the default git object store, which includes loose 
 	objects, pack files and an alternates file
 	
@@ -279,7 +276,7 @@ class GitCmdObjectDB(PureLooseObjectODB, TransportDB):
 	"""
 	def __init__(self, root_path, git):
 		"""Initialize this instance with the root and a git command"""
-		super(GitCmdObjectDB, self).__init__(root_path)
+		super(CmdGitDB, self).__init__(root_path)
 		self._git = git
 
 	@classmethod

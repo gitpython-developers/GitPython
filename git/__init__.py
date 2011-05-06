@@ -37,9 +37,9 @@ from git.diff import *
 from git.exc import *
 from git.db import *
 from git.cmd import Git
-from git.repo import Repo
 from git.remote import *
 from git.index import *
+from git.repo import Repo
 from git.util import (
 						LockFile, 
 						BlockingLockFile, 

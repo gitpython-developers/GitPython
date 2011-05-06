@@ -12,10 +12,8 @@ from git.index import IndexFile
 from git.objects import *
 from git.config import GitConfigParser
 from git.remote import Remote
-from git.db import (
-				GitCmdObjectDB, 
-				PureGitDB
-				)
+from git.db.cmd import CmdGitDB 
+from git.db.py import PureGitDB
 
 
 from git.util import (
@@ -35,7 +33,7 @@ import re
 
 DefaultDBType = PureGitDB
 if sys.version_info[1] < 5:		# python 2.4 compatiblity
-	DefaultDBType = GitCmdObjectDB
+	DefaultDBType = CmdGitDB
 # END handle python 2.4
 
 
@@ -129,7 +127,7 @@ class Repo(object):
 		
 		# special handling, in special times
 		args = [join(self.git_dir, 'objects')]
-		if issubclass(odbt, GitCmdObjectDB):
+		if issubclass(odbt, CmdGitDB):
 			args.append(self.git)
 		self.odb = odbt(*args)
 
@@ -702,7 +700,7 @@ class Repo(object):
 		:param to_path: Path to which the repository should be cloned to
 		:param kwargs: see the ``clone`` method
 		:return: Repo instance pointing to the cloned directory"""
-		return cls._clone(Git(os.getcwd()), url, to_path, GitCmdObjectDB, **kwargs)
+		return cls._clone(Git(os.getcwd()), url, to_path, CmdGitDB, **kwargs)
 
 	def archive(self, ostream, treeish=None, prefix=None,  **kwargs):
 		"""Archive the tree at the given revision.
@@ -726,7 +724,7 @@ class Repo(object):
 		return self
 	
 	def rev_parse(self, name):
-		return self.odb.rev_parse(name)
+		return self.odb.resolve(name)
 		
 	def __repr__(self):
 		return '<git.Repo "%s">' % self.git_dir

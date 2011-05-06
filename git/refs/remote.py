@@ -8,7 +8,7 @@ from git.util import (
 __all__ = ["RemoteReference"]
 
 	
-class RemoteReference(GitDB_RemoteReference):
+class RemoteReference(Head):
 	"""Represents a reference pointing to a remote head."""
 	__slots__ = tuple()
 	

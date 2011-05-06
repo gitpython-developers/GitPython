@@ -7,7 +7,7 @@ from git.util import (
 							bin_to_hex
 						)
 
-from git.test.lib import *
+from git.test.lib import TestBase
 from git import *
 from git.util import bin_to_hex
 

@@ -10,7 +10,7 @@ from git.util import (
 						file_contents_ro_filepath
 					)
 
-from git.object.util import (
+from git.objects.util import (
 								parse_date,
 								Serializable, 
 								utctz_to_altz,

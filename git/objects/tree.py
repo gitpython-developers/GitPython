@@ -8,7 +8,7 @@ import git.diff as diff
 from git.typ import ObjectType
 from base import IndexObject
 from blob import Blob
-from submodule import Submodule
+from submodule.base import Submodule
 
 from fun import (
 					tree_entries_from_data, 

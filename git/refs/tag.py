@@ -1,8 +1,8 @@
-from git.ref.tag import TagReference as GitDB_TagReference
+from reference import Reference
 
 __all__ = ["TagReference", "Tag"]
 
-class TagReference(GitDB_TagReference):
+class TagReference(Reference):
 	"""Class representing a lightweight tag reference which either points to a commit 
 	,a tag object or any other object. In the latter case additional information, 
 	like the signature or the tag-creator, is available.

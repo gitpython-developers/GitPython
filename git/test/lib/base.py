@@ -3,14 +3,17 @@
 # This module is part of PureGitDB and is released under
 # the New BSD License: http://www.opensource.org/licenses/bsd-license.php
 """Utilities used in ODB testing"""
-from git import OStream
+from git.base import OStream
 from git.db.py import PureGitDB
 from git.stream import ( 
 							Sha1Writer, 
 							ZippedStoreShaWriter
 						)
 
-from git.util import zlib
+from git.util import (
+						zlib,
+						dirname
+					)
 
 import sys
 import random
@@ -31,7 +34,7 @@ def with_rw_directory(func):
 	"""Create a temporary directory which can be written to, remove it if the 
 	test suceeds, but leave it otherwise to aid additional debugging"""
 	def wrapper(self):
-		path = tempfile.mktemp(prefix=func.__name__)
+		path = maketemp(prefix=func.__name__)
 		os.mkdir(path)
 		keep = False
 		try:
@@ -64,7 +67,7 @@ def with_rw_repo(func):
 	that should exist
 	Wrapped function obtains a git repository """
 	def wrapper(self, path):
-		src_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+		src_dir = dirname(dirname(dirname(__file__)))
 		assert(os.path.isdir(path))
 		os.rmdir(path)		# created by wrapper, but must not exist for copy operation
 		shutil.copytree(src_dir, path)
@@ -98,7 +101,7 @@ def with_packs_rw(func):
 def repo_dir():
 	""":return: path to our own repository, being our own .git directory.
 	:note: doesn't work in bare repositories"""
-	base = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), '.git')
+	base = os.path.join(dirname(dirname(dirname(dirname(__file__)))), '.git')
 	assert os.path.isdir(base)
 	return base
 	
@@ -114,7 +117,7 @@ def fixture_path(relapath=''):
 	""":return: absolute path into the fixture directory
 	:param relapath: relative path into the fixtures directory, or ''
 		to obtain the fixture directory itself"""
-	return os.path.join(os.path.dirname(__file__), 'fixtures', relapath)
+	return os.path.join(dirname(__file__), 'fixtures', relapath)
 	
 def copy_files_globbed(source_glob, target_dir, hard_link_ok=False):
 	"""Copy all files found according to the given source glob into the target directory

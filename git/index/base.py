@@ -63,7 +63,7 @@ from fun import (
 				)
 
 from git.base import IStream
-from git.db.py import PureMemoryDB
+from git.db.py.mem import PureMemoryDB
 from git.util import to_bin_sha
 from itertools import izip
 

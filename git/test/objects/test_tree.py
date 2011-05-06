@@ -5,7 +5,7 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
 import os
-from git.test.lib import *
+from git.test.lib import TestBase
 from git import *
 from git.objects.fun import (
 								traverse_tree_recursive,

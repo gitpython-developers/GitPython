@@ -1,11 +1,11 @@
 """Contains library functions"""
 import os
-from git.test.lib import *
+from git.test.lib import TestBase
 import shutil
 import tempfile
 
 from git.db import (
-						GitCmdObjectDB,
+						CmdGitDB,
 						GitDB
 					)
 
@@ -54,7 +54,7 @@ class TestBigRepoR(TestBase):
 	def setUpAll(cls):
 		super(TestBigRepoR, cls).setUpAll()
 		repo_path = resolve_or_fail(k_env_git_repo)
-		cls.gitrorepo = Repo(repo_path, odbt=GitCmdObjectDB)
+		cls.gitrorepo = Repo(repo_path, odbt=CmdGitDB)
 		cls.puregitrorepo = Repo(repo_path, odbt=GitDB)
 
 
@@ -68,7 +68,7 @@ class TestBigRepoRW(TestBigRepoR):
 		super(TestBigRepoRW, cls).setUpAll()
 		dirname = tempfile.mktemp()
 		os.mkdir(dirname)
-		cls.gitrwrepo = cls.gitrorepo.clone(dirname, shared=True, bare=True, odbt=GitCmdObjectDB)
+		cls.gitrwrepo = cls.gitrorepo.clone(dirname, shared=True, bare=True, odbt=CmdGitDB)
 		cls.puregitrwrepo = Repo(dirname, odbt=GitDB)
 	
 	@classmethod

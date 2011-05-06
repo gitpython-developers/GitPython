@@ -35,7 +35,7 @@ import sys
 
 __all__ = ('Commit', )
 
-class Commit(GitDB_Commit, Diffable, Iterable, RepoAliasMixin, base.Object, Traversable, Serializable):
+class Commit(Diffable, Iterable, RepoAliasMixin, base.Object, Traversable, Serializable):
 	"""Wraps a git Commit object.
 	
 	This class will act lazily on some of its attributes and will query the 

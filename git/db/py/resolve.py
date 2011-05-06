@@ -3,8 +3,8 @@ version assuming compatible interface for reference and object types"""
 
 from git.db.interface import ReferencesMixin
 from git.exc import BadObject
-from git.ref import SymbolicReference
-from git.object.base import Object
+from git.refs import SymbolicReference
+from git.objects.base import Object
 from git.util import (
 							join,
 							isdir, 

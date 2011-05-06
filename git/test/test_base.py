@@ -3,12 +3,18 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
+from lib import (
+				TestBase,
+				with_rw_repo,
+				DummyStream,
+				DeriveTest,
+				with_rw_and_rw_remote_repo
+				)
 
 import git.objects.base as base
 import git.refs as refs
 import os
 
-from git.test.lib import *
 from git import *
 from itertools import chain
 from git.objects.util import get_object_type_by_name
@@ -16,11 +22,6 @@ from git.util import hex_to_bin
 import tempfile
 
 ##################
-from lib import (
-		TestBase,
-		DummyStream,
-		DeriveTest, 
-	)
 
 from git import *
 from git.util import (

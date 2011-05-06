@@ -1,7 +1,7 @@
 import os
 import re
 
-from git.object import (
+from git.objects import (
 						Object, 
 						Commit
 						)

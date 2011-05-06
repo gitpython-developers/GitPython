@@ -3,12 +3,11 @@
 # This module is part of GitDB and is released under
 # the New BSD License: http://www.opensource.org/licenses/bsd-license.php
 """Contains the MemoryDatabase implementation"""
-from loose import PureLooseObjectODB
 from base import (
 						PureObjectDBR, 
 						PureObjectDBW
 					)
-
+from loose import PureLooseObjectODB
 from git.base import (
 							OStream,
 							IStream,

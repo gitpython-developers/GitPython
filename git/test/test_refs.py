@@ -4,12 +4,12 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
-from git.test.lib import *
+from git.test.lib import TestBase
 from git.ref import *
 import git.ref as ref
 
 from git.util import Actor
-from git.object.tag import TagObject
+from git.objects.tag import TagObject
 
 from itertools import chain
 import os

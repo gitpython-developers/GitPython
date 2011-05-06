@@ -3,7 +3,7 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
-from git.test.lib import *
+from git.test.lib import TestBase
 from git import *
 from git.util import join_path_native
 from git.exc import BadObject
@@ -582,7 +582,7 @@ class TestRepo(TestBase):
 	def test_repo_odbtype(self):
 		target_type = GitDB
 		if sys.version_info[1] < 5:
-			target_type = GitCmdObjectDB
+			target_type = CmdGitDB
 		assert isinstance(self.rorepo.odb, target_type)
 			
 	def test_submodules(self):

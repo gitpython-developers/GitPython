@@ -5,7 +5,7 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
 import os, sys
-from git.test.lib import *
+from git.test.lib import TestBase
 from git import Git, GitCommandError
 
 class TestGit(TestCase):

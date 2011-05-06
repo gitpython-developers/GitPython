@@ -3,7 +3,6 @@
 # This module is part of GitDB and is released under
 # the New BSD License: http://www.opensource.org/licenses/bsd-license.php
 """Contains basic implementations for the interface building blocks"""
-
 from git.db.interface import *
 
 from git.util import (

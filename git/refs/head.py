@@ -2,7 +2,7 @@
 from symbolic import SymbolicReference
 from git.exc import GitCommandError
 
-__all__ = ["HEAD", "Head"]
+__all__ = ["HEAD"]
 
 	
 class HEAD(SymbolicReference):

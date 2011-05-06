@@ -4,13 +4,22 @@ Changelog
 
 NEXT
 ====
+* ### Class Renames ###
+
+ * Renamed **GitCmdObjectDB** to **CmdGitDB** (analogue to **PureCmdDB**)
+ 
 * ### Interface Changes ###
+
  * SymbolicReference
+ 
   * object_binsha property added
-* Blob Type
- * Added mode constants to ease the manual creation of blobs
+  
+ * Blob Type
+ 
+  * Added mode constants to ease the manual creation of blobs
  
 * ### Module Changes ###
+
  * Removed rev_parse function from git.repo.fun - the respective functionality is available only through the repository's rev_parse method, which might in turn translate to any implementation.
 
 0.3.1 Beta 2
