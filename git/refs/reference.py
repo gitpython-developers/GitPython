@@ -2,7 +2,7 @@ import os
 
 from symbolic import SymbolicReference
 from head import HEAD
-from gitdb.util import (
+from git.util import (
 							LazyMixin, 
 							Iterable,
 							isfile,

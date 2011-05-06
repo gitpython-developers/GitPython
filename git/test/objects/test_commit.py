@@ -7,8 +7,8 @@
 
 from git.test.lib import *
 from git import *
-from gitdb import IStream
-from gitdb.util import hex_to_bin
+from git import IStream
+from git.util import hex_to_bin
 
 from cStringIO import StringIO
 import time

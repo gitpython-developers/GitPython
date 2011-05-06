@@ -3,14 +3,14 @@
 # This module is part of PureGitDB and is released under
 # the New BSD License: http://www.opensource.org/licenses/bsd-license.php
 """Utilities used in ODB testing"""
-from gitdb import OStream
-from gitdb.db.py import PureGitDB
-from gitdb.stream import ( 
+from git import OStream
+from git.db.py import PureGitDB
+from git.stream import ( 
 							Sha1Writer, 
 							ZippedStoreShaWriter
 						)
 
-from gitdb.util import zlib
+from git.util import zlib
 
 import sys
 import random

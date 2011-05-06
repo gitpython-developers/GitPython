@@ -1,6 +1,6 @@
 import os
 from headref import Head
-from gitdb.util import (
+from git.util import (
 						join, 
 						join_path
 						)

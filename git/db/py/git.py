@@ -16,13 +16,13 @@ from loose import PureLooseObjectODB
 from pack import PurePackedODB
 from ref import PureReferenceDB
 
-from gitdb.util import (
+from git.util import (
 						LazyMixin, 
 						normpath,
 						join,
 						dirname
 					)
-from gitdb.exc import (
+from git.exc import (
 						InvalidDBRoot, 
 						BadObject, 
 						AmbiguousObjectName

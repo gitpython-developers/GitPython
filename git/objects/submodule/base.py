@@ -1,5 +1,5 @@
 from git.util import RepoAliasMixin
-from gitdb.object.submodule import Submodule as GitDB_Submodule
+from git.object.submodule import Submodule as GitDB_Submodule
 import util
 from util import (
 					mkhead,

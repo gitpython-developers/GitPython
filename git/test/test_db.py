@@ -5,7 +5,7 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 from git.test.lib import *
 from git.db import *
-from gitdb.util import bin_to_hex
+from git.util import bin_to_hex
 from git.exc import BadObject
 import os
 

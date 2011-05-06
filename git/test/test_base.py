@@ -12,7 +12,7 @@ from git.test.lib import *
 from git import *
 from itertools import chain
 from git.objects.util import get_object_type_by_name
-from gitdb.util import hex_to_bin
+from git.util import hex_to_bin
 import tempfile
 
 ##################
@@ -22,12 +22,12 @@ from lib import (
 		DeriveTest, 
 	)
 
-from gitdb import *
-from gitdb.util import (
+from git import *
+from git.util import (
 	NULL_BIN_SHA
 	)
 
-from gitdb.typ import (
+from git.typ import (
 	str_blob_type
 	)
 

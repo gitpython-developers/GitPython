@@ -9,22 +9,22 @@ from lib import (
 					with_packs_rw,
 					fixture_path
 				)
-from gitdb.stream import DeltaApplyReader
+from git.stream import DeltaApplyReader
 
-from gitdb.pack import (
+from git.pack import (
 							PackEntity,
 							PackIndexFile,
 							PackFile
 						)
 
-from gitdb.base import (
+from git.base import (
 							OInfo, 
 							OStream,
 						)
 
-from gitdb.fun import delta_types
-from gitdb.exc import UnsupportedOperation
-from gitdb.util import to_bin_sha
+from git.fun import delta_types
+from git.exc import UnsupportedOperation
+from git.util import to_bin_sha
 from itertools import izip, chain
 from nose import SkipTest
 

@@ -7,7 +7,7 @@ from git.test.lib import *
 from git import *
 from git.util import join_path_native
 from git.exc import BadObject
-from gitdb.util import hex_to_bin, bin_to_hex
+from git.util import hex_to_bin, bin_to_hex
 
 import os, sys
 import tempfile
@@ -589,7 +589,7 @@ class TestRepo(TestBase):
 		assert len(self.rorepo.submodules) == 1		# non-recursive
 		assert len(list(self.rorepo.iter_submodules())) == 2
 		
-		assert isinstance(self.rorepo.submodule("gitdb"), Submodule)
+		assert isinstance(self.rorepo.submodule("git"), Submodule)
 		self.failUnlessRaises(ValueError, self.rorepo.submodule, "doesn't exist")
 		
 	@with_rw_repo('HEAD', bare=False)

@@ -9,16 +9,16 @@ from base import (
 						PureObjectDBW
 					)
 
-from gitdb.base import (
+from git.base import (
 							OStream,
 							IStream,
 						)
 
-from gitdb.exc import (
+from git.exc import (
 						BadObject,
 						UnsupportedOperation
 						)
-from gitdb.stream import (
+from git.stream import (
 							ZippedStoreShaWriter,
 							DecompressMemMapReader,
 						)

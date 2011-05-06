@@ -9,25 +9,25 @@ from base import (
 				)
 
 
-from gitdb.exc import (
+from git.exc import (
 	InvalidDBRoot, 
 	BadObject,
 	AmbiguousObjectName
 	)
 
-from gitdb.stream import (
+from git.stream import (
 		DecompressMemMapReader,
 		FDCompressedSha1Writer,
 		FDStream,
 		Sha1Writer
 	)
 
-from gitdb.base import (
+from git.base import (
 							OStream,
 							OInfo
 						)
 
-from gitdb.util import (
+from git.util import (
 		file_contents_ro_filepath,
 		ENOENT,
 		hex_to_bin,
@@ -44,7 +44,7 @@ from gitdb.util import (
 		join
 	)
 
-from gitdb.fun import ( 
+from git.fun import ( 
 	chunk_size,
 	loose_object_header_info, 
 	write_object,

@@ -3,10 +3,10 @@
 # This module is part of GitDB and is released under
 # the New BSD License: http://www.opensource.org/licenses/bsd-license.php
 from lib import *
-from gitdb.db.py import PurePackedODB
-from gitdb.test.lib import fixture_path
+from git.db.py import PurePackedODB
+from git.test.lib import fixture_path
 
-from gitdb.exc import BadObject, AmbiguousObjectName
+from git.exc import BadObject, AmbiguousObjectName
 
 import os
 import random

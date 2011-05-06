@@ -6,7 +6,7 @@
 
 from git.test.lib import *
 from git import *
-from gitdb.util import hex_to_bin
+from git.util import hex_to_bin
 
 class TestBlob(TestBase):
 	

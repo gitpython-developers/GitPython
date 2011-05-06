@@ -15,7 +15,7 @@ from git.cmd import dashify
 
 import time
 
-from gitdb.util import (
+from git.util import (
 	to_hex_sha, 
 	to_bin_sha, 
 	NULL_HEX_SHA, 

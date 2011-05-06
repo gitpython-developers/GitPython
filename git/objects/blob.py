@@ -6,7 +6,7 @@
 
 from git.util import RepoAliasMixin
 from mimetypes import guess_type
-from gitdb.typ import ObjectType
+from git.typ import ObjectType
 
 import base
 

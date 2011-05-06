@@ -4,15 +4,17 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
-from gitdb.test.lib import *
-from gitdb.ref import *
-import gitdb.ref as ref
+from git.test.lib import *
+from git.ref import *
+import git.ref as ref
 
-from gitdb.util import Actor
-from gitdb.object.tag import TagObject
+from git.util import Actor
+from git.object.tag import TagObject
 
 from itertools import chain
 import os
+
+from nose import SkipTest
 
 class TestRefs(TestBase):
 
@@ -520,3 +522,5 @@ class TestRefs(TestBase):
 	def test_reflog(self):
 		assert isinstance(Head.list_items(self.rorepo).master.log(), RefLog)
 		
+	def test_pure_python_rename(self):
+		raise SkipTest("Pure python reference renames cannot properly handle refnames which become a directory after rename")

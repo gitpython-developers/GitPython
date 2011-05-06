@@ -1,11 +1,11 @@
 """Module with an implementation for refspec parsing. It is the pure-python
 version assuming compatible interface for reference and object types"""
 
-from gitdb.db.interface import ReferencesMixin
-from gitdb.exc import BadObject
-from gitdb.ref import SymbolicReference
-from gitdb.object.base import Object
-from gitdb.util import (
+from git.db.interface import ReferencesMixin
+from git.exc import BadObject
+from git.ref import SymbolicReference
+from git.object.base import Object
+from git.util import (
 							join,
 							isdir, 
 							isfile,

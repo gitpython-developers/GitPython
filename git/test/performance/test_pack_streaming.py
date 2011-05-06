@@ -7,9 +7,9 @@ from lib import (
 	TestBigRepoR 
 	)
 
-from gitdb.db.pack import PackedDB
-from gitdb.stream import NullStream
-from gitdb.pack import PackEntity
+from git.db.pack import PackedDB
+from git.stream import NullStream
+from git.pack import PackEntity
 
 import os
 import sys

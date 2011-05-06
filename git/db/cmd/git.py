@@ -1,29 +1,29 @@
-"""Module with our own gitdb implementation - it uses the git command"""
+"""Module with our own git implementation - it uses the git command"""
 from exc import (
 					GitCommandError, 
 					BadObject
 				)
 
-from gitdb.base import (
+from git.base import (
 								OInfo,
 								OStream
 							)
 
-from gitdb.util import (
+from git.util import (
 							bin_to_hex, 
 							hex_to_bin
 						)
-from gitdb.db.py import (
+from git.db.py import (
 						PureGitDB,
 						PureLooseObjectODB
 					)
 from git.util import RemoteProgress
-from gitdb.db.py.base import TransportDB
-from gitdb.db.interface import FetchInfo as GitdbFetchInfo
-from gitdb.db.interface import PushInfo as GitdbPushInfo
+from git.db.py.base import TransportDB
+from git.db.interface import FetchInfo as GitdbFetchInfo
+from git.db.interface import PushInfo as GitdbPushInfo
 
 from git.util import  join_path
-from gitdb.util import join
+from git.util import join
 
 from refs import (
 					Reference,

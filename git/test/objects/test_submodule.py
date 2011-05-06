@@ -40,9 +40,9 @@ class TestSubmodule(TestBase):
 		# at a different time, there is None
 		assert len(Submodule.list_items(rwrepo, self.k_no_subm_tag)) == 0
 		
-		assert sm.path == 'git/ext/gitdb'
+		assert sm.path == 'git/ext/git'
 		assert sm.path != sm.name					# in our case, we have ids there, which don't equal the path
-		assert sm.url == 'git://github.com/gitpython-developers/gitdb.git'
+		assert sm.url == 'git://github.com/gitpython-developers/git.git'
 		assert sm.branch_path == 'refs/heads/master'			# the default ...
 		assert sm.branch_name == 'master'
 		assert sm.parent_commit == rwrepo.head.commit
@@ -384,9 +384,9 @@ class TestSubmodule(TestBase):
 		rm.config_reader()
 		rm.config_writer()
 		
-		# deep traversal gitdb / async
+		# deep traversal git / async
 		rsmsp = [sm.path for sm in rm.traverse()]
-		assert len(rsmsp) == 2			# gitdb and async, async being a child of gitdb
+		assert len(rsmsp) == 2			# git and async, async being a child of git
 		
 		# cannot set the parent commit as root module's path didn't exist
 		self.failUnlessRaises(ValueError, rm.set_parent_commit, 'HEAD')

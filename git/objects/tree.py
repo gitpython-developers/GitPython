@@ -5,7 +5,7 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 from git.util import RepoAliasMixin
 import git.diff as diff
-from gitdb.typ import ObjectType
+from git.typ import ObjectType
 from base import IndexObject
 from blob import Blob
 from submodule import Submodule
@@ -15,7 +15,7 @@ from fun import (
 					tree_to_stream
 				 )
 
-from gitdb.util import (
+from git.util import (
 						to_bin_sha,
 						join_path
 						)

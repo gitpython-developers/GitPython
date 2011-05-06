@@ -7,8 +7,8 @@ from lib import (
 	TestBigRepoR 
 	)
 
-from gitdb.exc import UnsupportedOperation
-from gitdb.db.pack import PackedDB
+from git.exc import UnsupportedOperation
+from git.db.pack import PackedDB
 
 import sys
 import os

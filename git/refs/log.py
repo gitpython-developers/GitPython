@@ -1,4 +1,4 @@
-from gitdb.util import (
+from git.util import (
 						join_path,
 						Actor,
 						LockedFD,
@@ -10,7 +10,7 @@ from gitdb.util import (
 						file_contents_ro_filepath
 					)
 
-from gitdb.object.util import (
+from git.object.util import (
 								parse_date,
 								Serializable, 
 								utctz_to_altz,

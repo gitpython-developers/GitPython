@@ -6,12 +6,12 @@
 """ Module containing all object based types. """
 import base
 from git.util import RepoAliasMixin
-from gitdb.util import hex_to_bin
+from git.util import hex_to_bin
 from util import (
 					get_object_type_by_name,
 					parse_actor_and_date
 				)
-from gitdb.typ import ObjectType
+from git.typ import ObjectType
 
 __all__ = ("TagObject", )
 

@@ -23,5 +23,5 @@ __revision__ = '$Id: odict.py 129 2005-09-12 18:15:28Z teknico $'
 __version__ = '0.2.2'
 
 # imported for backward compatibility only
-from gitdb.odict import OrderedDict, SequenceOrderedDict
+from git.odict import OrderedDict, SequenceOrderedDict
 __all__ = ['OrderedDict', 'SequenceOrderedDict']

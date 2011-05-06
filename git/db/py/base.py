@@ -4,9 +4,9 @@
 # the New BSD License: http://www.opensource.org/licenses/bsd-license.php
 """Contains basic implementations for the interface building blocks"""
 
-from gitdb.db.interface import *
+from git.db.interface import *
 
-from gitdb.util import (
+from git.util import (
 		pool,
 		join,
 		normpath,
@@ -21,8 +21,8 @@ from gitdb.util import (
 		is_git_dir
 	)
 
-from gitdb.config import GitConfigParser
-from gitdb.exc import 	(
+from git.config import GitConfigParser
+from git.exc import 	(
 						BadObject, 
 						AmbiguousObjectName,
 						InvalidDBRoot

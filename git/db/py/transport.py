@@ -4,7 +4,7 @@
 # the New BSD License: http://www.opensource.org/licenses/bsd-license.php
 """Implement a transport compatible database which sends objects using the git protocol"""
 
-from gitdb.db.interface import ( TransportDB, 
+from git.db.interface import ( TransportDB, 
 								PushInfo,
 								FetchInfo,
 								RefSpec )

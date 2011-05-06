@@ -3,7 +3,7 @@
 # This module is part of GitDB and is released under
 # the New BSD License: http://www.opensource.org/licenses/bsd-license.php
 """Base classes for object db testing"""
-from gitdb.test.lib import (
+from git.test.lib import (
 	with_rw_directory,
 	with_packs_rw,
 	ZippedStoreShaWriter,
@@ -11,20 +11,20 @@ from gitdb.test.lib import (
 	TestBase
 	)
 
-from gitdb.stream import Sha1Writer
+from git.stream import Sha1Writer
 
 # import database types we want to support
 # they will be set to None if the respective library could not be loaded
-from gitdb.db.py import PureGitDB
+from git.db.py import PureGitDB
 
-from gitdb.base import (
+from git.base import (
 							IStream,
 							OStream,
 							OInfo
 						)
 				
-from gitdb.exc import BadObject
-from gitdb.typ import str_blob_type
+from git.exc import BadObject
+from git.typ import str_blob_type
 
 from async import IteratorReader
 from cStringIO import StringIO

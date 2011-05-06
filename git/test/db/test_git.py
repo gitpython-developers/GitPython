@@ -3,10 +3,10 @@
 # This module is part of GitDB and is released under
 # the New BSD License: http://www.opensource.org/licenses/bsd-license.php
 from lib import *
-from gitdb.exc import BadObject
-from gitdb.db.py import PureGitODB
-from gitdb.base import OStream, OInfo
-from gitdb.util import hex_to_bin, bin_to_hex
+from git.exc import BadObject
+from git.db.py import PureGitODB
+from git.base import OStream, OInfo
+from git.util import hex_to_bin, bin_to_hex
 		
 class TestGitDB(TestDBBase):
 	
@@ -17,9 +17,9 @@ class TestGitDB(TestDBBase):
 		assert 1 < len(gdb.databases()) < 4
 		
 		# access should be possible
-		gitdb_sha = hex_to_bin("5690fd0d3304f378754b23b098bd7cb5f4aa1976")
-		assert isinstance(gdb.info(gitdb_sha), OInfo)
-		assert isinstance(gdb.stream(gitdb_sha), OStream)
+		git_sha = hex_to_bin("5690fd0d3304f378754b23b098bd7cb5f4aa1976")
+		assert isinstance(gdb.info(git_sha), OInfo)
+		assert isinstance(gdb.stream(git_sha), OStream)
 		assert gdb.size() > 200
 		sha_list = list(gdb.sha_iter())
 		assert len(sha_list) == gdb.size()

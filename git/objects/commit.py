@@ -5,11 +5,11 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 import base
 
-from gitdb.typ import ObjectType
+from git.typ import ObjectType
 from tree import Tree
 from cStringIO import StringIO
 
-from gitdb.util import (
+from git.util import (
 						hex_to_bin,
 						Actor,
 						RepoAliasMixin,
@@ -24,7 +24,7 @@ from util import (
 					parse_actor_and_date
 				)
 from git.diff import Diffable
-from gitdb.base import IStream
+from git.base import IStream
 from cStringIO import StringIO
 
 from util import parse_date

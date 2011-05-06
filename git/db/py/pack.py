@@ -3,21 +3,21 @@
 # This module is part of GitDB and is released under
 # the New BSD License: http://www.opensource.org/licenses/bsd-license.php
 """Module containing a database to deal with packs"""
-from gitdb.db import CachingDB
+from git.db import CachingDB
 from base import (
 						PureRootPathDB, 
 						PureObjectDBR 
 				)
 
-from gitdb.util import LazyMixin
+from git.util import LazyMixin
 
-from gitdb.exc import (
+from git.exc import (
 							BadObject,
 							UnsupportedOperation,
 							AmbiguousObjectName
 						)
 
-from gitdb.pack import PackEntity
+from git.pack import PackEntity
 
 import os
 import glob

@@ -1,15 +1,15 @@
 """Performance data streaming performance"""
-from gitdb.db.py import *
-from gitdb.base import *
-from gitdb.stream import *
-from gitdb.util import (
+from git.db.py import *
+from git.base import *
+from git.stream import *
+from git.util import (
 							pool,
 							bin_to_hex
 						)
 
 from git.test.lib import *
-from gitdb import *
-from gitdb.util import bin_to_hex
+from git import *
+from git.util import bin_to_hex
 
 from cStringIO import StringIO
 from time import time
@@ -18,7 +18,7 @@ import sys
 import stat
 import subprocess
 
-from gitdb.test.lib import make_memory_file
+from git.test.lib import make_memory_file
 
 from lib import (
 	TestBigRepoR
@@ -58,7 +58,7 @@ class TestObjDBPerformance(TestBigRepoR):
 	
 	@with_rw_repo('HEAD', bare=True)
 	def test_large_data_streaming(self, rwrepo):
-		# TODO: This part overlaps with the same file in gitdb.test.performance.test_stream
+		# TODO: This part overlaps with the same file in git.test.performance.test_stream
 		# It should be shared if possible
 		ldb = LooseObjectDB(os.path.join(rwrepo.git_dir, 'objects'))
 		

@@ -1,6 +1,6 @@
 """Package with general repository related functions"""
 import os
-from gitdb.util import is_git_dir
+from git.util import is_git_dir
 
 __all__ = ('is_git_dir', 'touch')
 

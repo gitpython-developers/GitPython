@@ -1,4 +1,4 @@
-from gitdb.ref.tag import TagReference as GitDB_TagReference
+from git.ref.tag import TagReference as GitDB_TagReference
 
 __all__ = ["TagReference", "Tag"]
 

@@ -12,18 +12,18 @@ from lib import (
 		fixture_path
 	)
 
-from gitdb import *
-from gitdb.util import (
+from git import *
+from git.util import (
 	NULL_HEX_SHA,
 	hex_to_bin
 	)
 
-from gitdb.util import zlib
-from gitdb.typ import (
+from git.util import zlib
+from git.typ import (
 	str_blob_type
 	)
 
-from gitdb.db.py import PureLooseObjectODB
+from git.db.py import PureLooseObjectODB
 import time
 import tempfile
 import os

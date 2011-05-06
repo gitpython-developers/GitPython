@@ -3,9 +3,9 @@
 # This module is part of GitDB and is released under
 # the New BSD License: http://www.opensource.org/licenses/bsd-license.php
 from lib import *
-from gitdb.db.py import PureLooseObjectODB
-from gitdb.exc import BadObject
-from gitdb.util import bin_to_hex
+from git.db.py import PureLooseObjectODB
+from git.exc import BadObject
+from git.util import bin_to_hex
 		
 class TestLooseDB(TestDBBase):
 	

@@ -6,7 +6,7 @@
 
 from lib import *
 from git import *
-from gitdb import IStream
+from git import IStream
 from git.test.test_commit import assert_commit_serialization
 from cStringIO import StringIO
 from time import time

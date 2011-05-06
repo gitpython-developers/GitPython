@@ -1,11 +1,11 @@
 import os
 import re
 
-from gitdb.object import (
+from git.object import (
 						Object, 
 						Commit
 						)
-from gitdb.util import (
+from git.util import (
 					join_path, 
 					join_path_native, 
 					to_native_path_linux,
@@ -20,7 +20,7 @@ from gitdb.util import (
 					LockedFD
 					)
 
-from gitdb.exc import BadObject
+from git.exc import BadObject
 from log import RefLog
 
 __all__ = ["SymbolicReference"]

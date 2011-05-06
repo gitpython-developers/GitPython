@@ -3,9 +3,9 @@
 # This module is part of GitDB and is released under
 # the New BSD License: http://www.opensource.org/licenses/bsd-license.php
 from lib import *
-from gitdb.db.py import PureReferenceDB
+from git.db.py import PureReferenceDB
 
-from gitdb.util import (
+from git.util import (
 						NULL_BIN_SHA,
 						hex_to_bin
 						)
@@ -44,8 +44,8 @@ class TestPureReferenceDB(TestDBBase):
 		assert len(rdb.databases()) == 1
 		
 		# we should now find a default revision of ours
-		gitdb_sha = hex_to_bin("5690fd0d3304f378754b23b098bd7cb5f4aa1976")
-		assert rdb.has_object(gitdb_sha)
+		git_sha = hex_to_bin("5690fd0d3304f378754b23b098bd7cb5f4aa1976")
+		assert rdb.has_object(git_sha)
 		
 		# remove valid
 		self.make_alt_file(alt_path, ["just/one/invalid/path"])

@@ -62,9 +62,9 @@ from fun import (
 					S_IFGITLINK
 				)
 
-from gitdb.base import IStream
-from gitdb.db.py import PureMemoryDB
-from gitdb.util import to_bin_sha
+from git.base import IStream
+from git.db.py import PureMemoryDB
+from git.util import to_bin_sha
 from itertools import izip
 
 __all__ = ( 'IndexFile', 'CheckoutError' )

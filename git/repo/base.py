@@ -18,7 +18,7 @@ from git.db import (
 				)
 
 
-from gitdb.util import (
+from git.util import (
 							join,
 							isfile,
 							hex_to_bin

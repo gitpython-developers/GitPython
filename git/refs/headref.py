@@ -1,6 +1,6 @@
 from reference import Reference
-from gitdb.config import SectionConstraint
-from gitdb.util import join_path
+from git.config import SectionConstraint
+from git.util import join_path
 
 __all__ = ["Head"]
 

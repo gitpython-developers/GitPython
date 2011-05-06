@@ -12,7 +12,7 @@ import tempfile
 import shutil
 import cStringIO
 
-from gitdb.test.lib import maketemp 
+from git.test.lib import maketemp 
 
 GIT_REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
