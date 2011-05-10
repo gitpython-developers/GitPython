@@ -273,34 +273,70 @@ class PureRepositoryPathsMixin(RepositoryPathsMixin):
 				# lets not assume the option exists, although it should
 				pass
 		#END check bare flag
-
-	
+		
 	#} end subclass interface
+	
+	#{ Object Interface
+	
+	def __eq__(self, rhs):
+		if hasattr(rhs, 'git_dir'):
+			return self.git_dir == rhs.git_dir
+		return False
+		
+	def __ne__(self, rhs):
+		return not self.__eq__(rhs)
+		
+	def __hash__(self):
+		return hash(self.git_dir)
+
+	def __repr__(self):
+		return "%s(%r)" % (type(self).__name__, self.git_dir)
+	
+	#} END object interface
 	
 	#{ Interface
 	
+	@property
 	def is_bare(self):
 		return self._bare
 		
-	def git_path(self):
+	@property
+	def git_dir(self):
 		return self._git_path
 		
-	def working_tree_path(self):
-		if self.is_bare():
-			raise AssertionError("Repository at %s is bare and does not have a working tree directory" % self.git_path())
+	@property
+	def working_tree_dir(self):
+		if self.is_bare:
+			raise AssertionError("Repository at %s is bare and does not have a working tree directory" % self.git_dir)
 		#END assertion
-		return dirname(self.git_path())
-		
-	def objects_path(self):
-		return join(self.git_path(), self.objs_dir)
-		
+		return dirname(self.git_dir)
+	
+	@property
+	def objects_dir(self):
+		return join(self.git_dir, self.objs_dir)
+	
+	@property
 	def working_dir(self):
-		if self.is_bare():
-			return self.git_path()
+		if self.is_bare:
+			return self.git_dir
 		else:
-			return self.working_tree_dir()
+			return self.working_tree_dir
 		#END handle bare state
 		
+	def _mk_description():
+		def _get_description(self):
+			filename = join(self.git_dir, 'description')
+			return file(filename).read().rstrip()
+	
+		def _set_description(self, descr):
+			filename = join(self.git_dir, 'description')
+			file(filename, 'w').write(descr+'\n')
+			
+		return property(_get_description, _set_description, "Descriptive text for the content of the repository")
+
+	description = _mk_description()
+	del(_mk_description)
+	
 	#} END interface
 		
 		
@@ -313,7 +349,7 @@ class PureConfigurationMixin(ConfigurationMixin):
 	
 	def __init__(self, *args, **kwargs):
 		"""Verify prereqs"""
-		assert hasattr(self, 'git_path')
+		assert hasattr(self, 'git_dir')
 	
 	def _path_at_level(self, level ):
 		# we do not support an absolute path of the gitconfig on windows , 
@@ -327,7 +363,7 @@ class PureConfigurationMixin(ConfigurationMixin):
 		elif level == "global":
 			return normpath(expanduser("~/.%s" % self.system_config_file_name))
 		elif level == "repository":
-			return join(self.git_path(), self.repo_config_file_name)
+			return join(self.git_dir, self.repo_config_file_name)
 		#END handle level
 		
 		raise ValueError("Invalid configuration level: %r" % level)
@@ -345,6 +381,7 @@ class PureConfigurationMixin(ConfigurationMixin):
 		
 	def config_writer(self, config_level="repository"):
 		return GitConfigParser(self._path_at_level(config_level), read_only=False)
+	
 	
 	#} END interface
 	

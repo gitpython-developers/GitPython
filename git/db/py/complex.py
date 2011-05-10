@@ -15,6 +15,7 @@ from resolve import PureReferencesMixin
 from loose import PureLooseObjectODB
 from pack import PurePackedODB
 from ref import PureReferenceDB
+from submodule import PureSubmoduleDB
 
 from git.util import (
 						LazyMixin, 
@@ -32,7 +33,7 @@ import os
 __all__ = ('PureGitODB', 'PureGitDB')
 
 
-class PureGitODB(PureRootPathDB, PureObjectDBW, PureCompoundDB):
+class PureGitODB(PureRootPathDB, PureObjectDBW, PureCompoundDB, PureSubmoduleDB):
 	"""A git-style object-only database, which contains all objects in the 'objects'
 	subdirectory.
 	:note: The type needs to be initialized on the ./objects directory to function, 
@@ -107,7 +108,7 @@ class PureGitDB(PureGitODB, PureRepositoryPathsMixin, PureConfigurationMixin, Pu
 	def __init__(self, root_path):
 		"""Initialize ourselves on the .git directory, or the .git/objects directory."""
 		PureRepositoryPathsMixin._initialize(self, root_path)
-		super(PureGitDB, self).__init__(self.objects_path())
+		super(PureGitDB, self).__init__(self.objects_dir)
 	
 	
 	

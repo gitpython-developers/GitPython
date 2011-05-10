@@ -12,10 +12,15 @@ from lib import (
 				)
 
 import git.objects.base as base
+from git.objects import (
+							Blob, 
+							Tree,
+							Commit,
+							TagObject
+						)
 import git.refs as refs
-import os
 
-from git import *
+
 from itertools import chain
 from git.objects.util import get_object_type_by_name
 from git.util import hex_to_bin
@@ -23,14 +28,22 @@ import tempfile
 
 ##################
 
-from git import *
 from git.util import (
 	NULL_BIN_SHA
 	)
 
-from git.typ import (
-	str_blob_type
-	)
+from git.typ import str_blob_type
+from git.base import (
+						OInfo, 
+						OPackInfo, 
+						ODeltaPackInfo, 
+						OStream, 
+						OPackStream,
+						ODeltaPackStream,
+						IStream,
+					)
+
+import os
 
 class TestBase(TestBase):
 	
@@ -94,7 +107,7 @@ class TestBase(TestBase):
 			assert base.Object in get_object_type_by_name(tname).mro()
 		# END for each known type 
 		
-		assert_raises( ValueError, get_object_type_by_name, "doesntexist" )
+		self.failUnlessRaises(ValueError, get_object_type_by_name, "doesntexist")
 
 	def test_object_resolution(self):
 		# objects must be resolved to shas so they compare equal

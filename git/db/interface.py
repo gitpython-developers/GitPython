@@ -6,7 +6,7 @@
 
 __all__ = (	'ObjectDBR', 'ObjectDBW', 'RootPathDB', 'CompoundDB', 'CachingDB', 
 			'TransportDB', 'ConfigurationMixin', 'RepositoryPathsMixin',  
-			'RefSpec', 'FetchInfo', 'PushInfo', 'ReferencesMixin')
+			'RefSpec', 'FetchInfo', 'PushInfo', 'ReferencesMixin', 'SubmoduleDB')
 
 
 class ObjectDBR(object):
@@ -151,7 +151,7 @@ class RootPathDB(object):
 			access."""
 		super(RootPathDB, self).__init__(root_path)
 		
-	#{ Interface 
+	#{ Interface
 	def root_path(self):
 		""":return: path at which this db operates"""
 		raise NotImplementedError()
@@ -390,33 +390,60 @@ class RepositoryPathsMixin(object):
 		raise NotImplementedError()
 	#} end subclass interface
 	
+	#{ Object Interface
+	
+	def __eq__(self, rhs):
+		raise NotImplementedError()
+		
+	def __ne__(self, rhs):
+		raise NotImplementedError()
+		
+	def __hash__(self):
+		raise NotImplementedError()
+
+	def __repr__(self):
+		raise NotImplementedError()
+	
+	#} END object interface
+	
 	#{ Interface
 	
+	@property
 	def is_bare(self):
 		""":return: True if this is a bare repository
 		:note: this value is cached upon initialization"""
 		raise NotImplementedError()
 		
-	def git_path(self):
+	@property
+	def git_dir(self):
 		""":return: path to directory containing this actual git repository (which 
 		in turn provides access to objects and references"""
 		raise NotImplementedError()
 		
-	def working_tree_path(self):
+	@property
+	def working_tree_dir(self):
 		""":return: path to directory containing the working tree checkout of our 
 		git repository.
 		:raise AssertionError: If this is a bare repository"""
 		raise NotImplementedError()
 		
-	def objects_path(self):
+	@property
+	def objects_dir(self):
 		""":return: path to the repository's objects directory"""
 		raise NotImplementedError()
 		
+	@property
 	def working_dir(self):
 		""":return: working directory of the git process or related tools, being 
-		either the working_tree_path if available or the git_path"""
+		either the working_tree_dir if available or the git_path"""
 		raise NotImplementedError()
-		
+
+	@property
+	def description(self):
+		""":return: description text associated with this repository or set the 
+		description."""
+		raise NotImplementedError()
+	
 	#} END interface
 		
 		
@@ -465,5 +492,43 @@ class ConfigurationMixin(object):
 			repository = configuration file for this repostory only"""
 		raise NotImplementedError()
 	
+	
 	#} END interface
 	
+	
+class SubmoduleDB(object):
+	"""Interface providing access to git repository submodules.
+	The actual implementation is found in the Submodule object type, which is
+	currently only available in one implementation."""
+	
+	@property
+	def submodules(self):
+		"""
+		:return: git.IterableList(Submodule, ...) of direct submodules
+			available from the current head"""
+		raise NotImplementedError()
+		
+	def submodule(self, name):
+		""" :return: Submodule with the given name 
+		:raise ValueError: If no such submodule exists"""
+		raise NotImplementedError()
+		
+	def create_submodule(self, *args, **kwargs):
+		"""Create a new submodule
+		
+		:note: See the documentation of Submodule.add for a description of the 
+			applicable parameters
+		:return: created submodules"""
+		raise NotImplementedError()
+		
+	def iter_submodules(self, *args, **kwargs):
+		"""An iterator yielding Submodule instances, see Traversable interface
+		for a description of args and kwargs
+		:return: Iterator"""
+		raise NotImplementedError()
+		
+	def submodule_update(self, *args, **kwargs):
+		"""Update the submodules, keeping the repository consistent as it will 
+		take the previous state into consideration. For more information, please
+		see the documentation of RootModule.update"""
+		raise NotImplementedError()

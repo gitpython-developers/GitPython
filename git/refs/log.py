@@ -151,7 +151,7 @@ class RefLog(list, Serializable):
 			instance would be found. The path is not guaranteed to point to a valid 
 			file though.
 		:param ref: SymbolicReference instance"""
-		return join(ref.repo.git_path(), "logs", to_native_path(ref.path))
+		return join(ref.repo.git_dir, "logs", to_native_path(ref.path))
 		
 	@classmethod
 	def iter_entries(cls, stream):
