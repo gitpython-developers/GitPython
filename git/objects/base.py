@@ -77,10 +77,14 @@ class Object(LazyMixin):
 		
 	def __eq__(self, other):
 		""":return: True if the objects have the same SHA1"""
+		if not hasattr(other, 'binsha'):
+			return False
 		return self.binsha == other.binsha
 		
 	def __ne__(self, other):
 		""":return: True if the objects do not have the same SHA1 """
+		if not hasattr(other, 'binsha'):
+			return True
 		return self.binsha != other.binsha
 		
 	def __hash__(self):
