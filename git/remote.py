@@ -24,7 +24,11 @@ from refs import (
 					TagReference
 				)
 
-from git.util import  join_path
+from git.util import  (
+						join_path,
+						_digest_process_messages,
+						_finalize_proc
+					)
 from gitdb.util import join
 
 import re
@@ -432,42 +436,6 @@ class Remote(LazyMixin, Iterable):
 		self.repo.git.remote("update", self.name)
 		return self
 	
-	def _digest_process_messages(self, fh, progress):
-		"""Read progress messages from file-like object fh, supplying the respective
-		progress messages to the progress instance.
-		
-		:return: list(line, ...) list of lines without linebreaks that did 
-			not contain progress information"""
-		line_so_far = ''
-		dropped_lines = list()
-		while True:
-			char = fh.read(1)
-			if not char:
-				break
-			
-			if char in ('\r', '\n'):
-				dropped_lines.extend(progress._parse_progress_line(line_so_far))
-				line_so_far = ''
-			else:
-				line_so_far += char
-			# END process parsed line
-		# END while file is not done reading
-		return dropped_lines
-		
-	
-	def _finalize_proc(self, proc):
-		"""Wait for the process (fetch, pull or push) and handle its errors accordingly"""
-		try:
-			proc.wait()
-		except GitCommandError,e:
-			# if a push has rejected items, the command has non-zero return status
-			# a return status of 128 indicates a connection error - reraise the previous one
-			if proc.poll() == 128:
-				raise
-			pass
-		# END exception handling
-		
-	
 	def _get_fetch_info_from_stderr(self, proc, progress):
 		# skip first line as it is some remote info we are not interested in
 		output = IterableList('name')
@@ -477,7 +445,7 @@ class Remote(LazyMixin, Iterable):
 		# this also waits for the command to finish
 		# Skip some progress lines that don't provide relevant information
 		fetch_info_lines = list()
-		for line in self._digest_process_messages(proc.stderr, progress):
+		for line in _digest_process_messages(proc.stderr, progress):
 			if line.startswith('From') or line.startswith('remote: Total'):
 				continue
 			elif line.startswith('warning:'):
@@ -499,7 +467,7 @@ class Remote(LazyMixin, Iterable):
 		output.extend(FetchInfo._from_line(self.repo, err_line, fetch_line) 
 						for err_line,fetch_line in zip(fetch_info_lines, fetch_head_info))
 		
-		self._finalize_proc(proc)
+		_finalize_proc(proc)
 		return output
 	
 	def _get_push_info(self, proc, progress):
@@ -507,7 +475,7 @@ class Remote(LazyMixin, Iterable):
 		# we hope stdout can hold all the data, it should ...
 		# read the lines manually as it will use carriage returns between the messages
 		# to override the previous one. This is why we read the bytes manually
-		self._digest_process_messages(proc.stderr, progress)
+		_digest_process_messages(proc.stderr, progress)
 		
 		output = IterableList('name')
 		for line in proc.stdout.readlines():
@@ -519,7 +487,7 @@ class Remote(LazyMixin, Iterable):
 			# END exception handling 
 		# END for each line
 		
-		self._finalize_proc(proc)
+		_finalize_proc(proc)
 		return output
 		
 	
