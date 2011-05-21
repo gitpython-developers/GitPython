@@ -109,8 +109,8 @@ class RemoteProgress(object):
 	Handler providing an interface to parse progress information emitted by git-push
 	and git-fetch and to dispatch callbacks allowing subclasses to react to the progress.
 	"""
-	_num_op_codes = 5
-	BEGIN, END, COUNTING, COMPRESSING, WRITING =  [1 << x for x in range(_num_op_codes)]
+	_num_op_codes = 7
+	BEGIN, END, COUNTING, COMPRESSING, WRITING, RECEIVING, RESOLVING = [1 << x for x in range(_num_op_codes)]
 	STAGE_MASK = BEGIN|END
 	OP_MASK = ~STAGE_MASK
 	
@@ -168,6 +168,10 @@ class RemoteProgress(object):
 				op_code |= self.COMPRESSING
 			elif op_name == "Writing objects":
 				op_code |= self.WRITING
+			elif op_name == 'Receiving objects':
+				op_code |= self.RECEIVING
+			elif op_name == 'Resolving deltas':
+				op_code |= self.RESOLVING
 			else:
 				raise ValueError("Operation name %r unknown" % op_name)
 			
