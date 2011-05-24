@@ -205,13 +205,14 @@ class GitConfigParser(cp.RawConfigParser, object):
 		optname = None
 		lineno = 0
 		e = None								  # None, or an exception
+		comment_re = re.compile('^\s*[#;]')
 		while True:
 			line = fp.readline()
 			if not line:
 				break
 			lineno = lineno + 1
 			# comment or blank line?
-			if line.strip() == '' or line[0] in '#;':
+			if line.strip() == '' or comment_re.match(line):
 				continue
 			if line.split(None, 1)[0].lower() == 'rem' and line[0] in "rR":
 				# no leading whitespace
