@@ -124,7 +124,7 @@ class GitConfigParser(cp.RawConfigParser, object):
 	#} END configuration 
 	
 	OPTCRE = re.compile(
-		r'\s?(?P<option>[^:=\s][^:=]*)'		  # very permissive, incuding leading whitespace
+		r'\s*(?P<option>[^:=\s][^:=]*)'		  # very permissive, incuding leading whitespace
 		r'\s*(?P<vi>[:=])\s*'				  # any number of space/tab,
 											  # followed by separator
 											  # (either : or =), followed
