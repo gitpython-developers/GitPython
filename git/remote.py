@@ -514,7 +514,8 @@ class Remote(LazyMixin, Iterable):
 		:note:
 			As fetch does not provide progress information to non-ttys, we cannot make 
 			it available here unfortunately as in the 'push' method."""
-		proc = self.repo.git.fetch(self, refspec, with_extended_output=True, as_process=True, v=True, progress=True, **kwargs)
+		if self.repo.git.version >= (1, 7, 0, 0): kwargs['progress'] = True
+		proc = self.repo.git.fetch(self, refspec, with_extended_output=True, as_process=True, v=True, **kwargs)
 		return self._get_fetch_info_from_stderr(proc, progress or RemoteProgress())
 		
 	def pull(self, refspec=None, progress=None, **kwargs):
@@ -525,7 +526,8 @@ class Remote(LazyMixin, Iterable):
 		:param progress: see 'push' method
 		:param kwargs: Additional arguments to be passed to git-pull
 		:return: Please see 'fetch' method """
-		proc = self.repo.git.pull(self, refspec, with_extended_output=True, as_process=True, v=True, progress=True, **kwargs)
+		if self.repo.git.version >= (1, 7, 0, 0): kwargs['progress'] = True
+		proc = self.repo.git.pull(self, refspec, with_extended_output=True, as_process=True, v=True, **kwargs)
 		return self._get_fetch_info_from_stderr(proc, progress or RemoteProgress())
 		
 	def push(self, refspec=None, progress=None, **kwargs):
@@ -546,7 +548,8 @@ class Remote(LazyMixin, Iterable):
 			in their flags.
 			If the operation fails completely, the length of the returned IterableList will
 			be null."""
-		proc = self.repo.git.push(self, refspec, porcelain=True, as_process=True, progress=True, **kwargs)
+		if self.repo.git.version >= (1, 7, 0, 0): kwargs['progress'] = True
+		proc = self.repo.git.push(self, refspec, porcelain=True, as_process=True, progress=True, v=True, **kwargs)
 		return self._get_push_info(proc, progress or RemoteProgress())
 		
 	@property
