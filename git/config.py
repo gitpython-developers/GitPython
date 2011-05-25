@@ -216,6 +216,11 @@ class GitConfigParser(cp.RawConfigParser, object):
 			if line.split(None, 1)[0].lower() == 'rem' and line[0] in "rR":
 				# no leading whitespace
 				continue
+                        # continuation line?
+                        if line[0].isspace() and cursect is not None and optname:
+                            value = line.strip()
+                            if value:
+                                cursect[optname] = "%s\n%s" % (cursect[optname], value)
 			else:
 				# is it a section header?
 				mo = self.SECTCRE.match(line)
