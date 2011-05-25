@@ -41,7 +41,7 @@ class Git(object):
 		of the command to stdout.
 		Set its value to 'full' to see details about the returned values.
 	"""
-	__slots__ = ("_working_dir", "cat_file_all", "cat_file_header", "_version")
+	__slots__ = ("_working_dir", "cat_file_all", "cat_file_header", "_version_info")
 	
 	# CONFIGURATION
 	# The size in bytes read from stdout when copying git's output to another stream
@@ -205,7 +205,7 @@ class Git(object):
 		   .git directory in case of bare repositories."""
 		super(Git, self).__init__()
 		self._working_dir = working_dir
-		self._version = self._get_version_as_tuple()
+		self._version_info = self._get_version_as_tuple()
 		
 		# cached command slots
 		self.cat_file_header = None
@@ -522,5 +522,5 @@ class Git(object):
 		return tuple(version_numbers.split('.'))
 
 	@property
-	def version(self):
-		return self._version
+	def version_info(self):
+		return self._version_info
