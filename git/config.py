@@ -218,7 +218,7 @@ class GitConfigParser(cp.RawConfigParser, object):
 				continue
 			else:
 				# is it a section header?
-				mo = self.SECTCRE.match(line)
+				mo = self.SECTCRE.match(line.strip()) # strip the line to remove leading spaces
 				if mo:
 					sectname = mo.group('header')
 					if sectname in self._sections:
