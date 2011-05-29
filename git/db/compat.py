@@ -11,3 +11,20 @@ class RepoCompatInterface(object):
 	@property
 	def bare(self):
 		return self.is_bare
+		
+	def rev_parse(self, *args, **kwargs):
+		return self.resolve_object(*args, **kwargs)
+		
+	@property
+	def odb(self):
+		"""The odb is now an integrated part of each repository"""
+		return self
+		
+	@property
+	def active_branch(self):
+		"""The name of the currently active branch.
+
+		:return: Head to the active branch"""
+		return self.head.reference
+		
+	

@@ -35,7 +35,7 @@ import os
 
 
 __all__ = (	'PureObjectDBR', 'PureObjectDBW', 'PureRootPathDB', 'PureCompoundDB', 
-			'PureConfigurationMixin', 'PureRepositoryPathsMixin')
+			'PureConfigurationMixin', 'PureRepositoryPathsMixin', 'PureAlternatesFileMixin')
 
 
 class PureObjectDBR(ObjectDBR):
@@ -385,3 +385,75 @@ class PureConfigurationMixin(ConfigurationMixin):
 	
 	#} END interface
 	
+	
+class PureAlternatesFileMixin(object):
+	"""Utility able to read and write an alternates file through the alternates property
+	It needs to be part of a type with the git_dir or db_path property.
+	
+	The file by default is assumed to be located at the default location as imposed
+	by the standard git repository layout"""
+	
+	#{ Configuration
+	alternates_filepath = os.path.join('info', 'alternates')	# relative path to alternates file
+	
+	#} END configuration
+	
+	def __init__(self, *args, **kwargs):
+		super(PureAlternatesFileMixin, self).__init__(*args, **kwargs)
+		self._alternates_path()	# throws on incompatible type
+	
+	#{ Interface 
+	
+	def _alternates_path(self):
+		if hasattr(self, 'git_dir'):
+			return join(self.git_dir, 'objects', self.alternates_filepath)
+		elif hasattr(self, 'db_path'):
+			return self.db_path(self.alternates_filepath)
+		else:
+			raise AssertionError("This mixin requires a parent type with either the git_dir property or db_path method")
+		#END handle path
+	
+	def _get_alternates(self):
+		"""The list of alternates for this repo from which objects can be retrieved
+
+		:return: list of strings being pathnames of alternates"""
+		alternates_path = self._alternates_path()
+
+		if os.path.exists(alternates_path):
+			try:
+				f = open(alternates_path)
+				alts = f.read()
+			finally:
+				f.close()
+			return alts.strip().splitlines()
+		else:
+			return list()
+		# END handle path exists
+
+	def _set_alternates(self, alts):
+		"""Sets the alternates
+
+		:parm alts:
+			is the array of string paths representing the alternates at which 
+			git should look for objects, i.e. /home/user/repo/.git/objects
+
+		:raise NoSuchPathError:
+		:note:
+			The method does not check for the existance of the paths in alts
+			as the caller is responsible."""
+		alternates_path = self._alternates_path() 
+		if not alts:
+			if isfile(alternates_path):
+				os.remove(alternates_path)
+		else:
+			try:
+				f = open(alternates_path, 'w')
+				f.write("\n".join(alts))
+			finally:
+				f.close()
+			# END file handling 
+		# END alts handling
+
+	alternates = property(_get_alternates, _set_alternates, doc="Retrieve a list of alternates paths or set a list paths to be used as alternates")
+	
+	#} END interface

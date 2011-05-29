@@ -8,6 +8,7 @@ from base import (
 						PureRootPathDB, 
 						PureRepositoryPathsMixin,
 						PureConfigurationMixin,
+						PureAlternatesFileMixin,
 					)
 
 from resolve import PureReferencesMixin
@@ -16,6 +17,8 @@ from loose import PureLooseObjectODB
 from pack import PurePackedODB
 from ref import PureReferenceDB
 from submodule import PureSubmoduleDB
+
+from git.db.compat import RepoCompatInterface
 
 from git.util import (
 						LazyMixin, 
@@ -30,10 +33,11 @@ from git.exc import (
 						)
 import os
 
-__all__ = ('PureGitODB', 'PureGitDB')
+__all__ = ('PureGitODB', 'PureGitDB', 'PureCompatibilityGitDB')
 
 
-class PureGitODB(PureRootPathDB, PureObjectDBW, PureCompoundDB, PureSubmoduleDB):
+class PureGitODB(PureRootPathDB, PureObjectDBW, PureCompoundDB,
+				PureSubmoduleDB, PureAlternatesFileMixin):
 	"""A git-style object-only database, which contains all objects in the 'objects'
 	subdirectory.
 	:note: The type needs to be initialized on the ./objects directory to function, 
@@ -47,7 +51,7 @@ class PureGitODB(PureRootPathDB, PureObjectDBW, PureCompoundDB, PureSubmoduleDB)
 	# Directories
 	packs_dir = 'pack'
 	loose_dir = ''
-	alternates_dir = os.path.join('info', 'alternates')
+	
 	
 	def __init__(self, root_path):
 		"""Initialize ourselves on a git ./objects directory"""
@@ -59,7 +63,7 @@ class PureGitODB(PureRootPathDB, PureObjectDBW, PureCompoundDB, PureSubmoduleDB)
 			loose_db = None
 			for subpath, dbcls in ((self.packs_dir, self.PackDBCls), 
 									(self.loose_dir, self.LooseDBCls),
-									(self.alternates_dir, self.PureReferenceDBCls)):
+									(self.alternates_filepath, self.PureReferenceDBCls)):
 				path = self.db_path(subpath)
 				if os.path.exists(path):
 					self._dbs.append(dbcls(path))
@@ -75,7 +79,7 @@ class PureGitODB(PureRootPathDB, PureObjectDBW, PureCompoundDB, PureSubmoduleDB)
 			# END handle error
 			
 			# we the first one should have the store method
-			assert loose_db is not None and hasattr(loose_db, 'store'), "First database needs store functionality"
+			assert loose_db is not None and hasattr(loose_db, 'store'), "One database needs store functionality"
 			
 			# finally set the value
 			self._loose_db = loose_db
@@ -97,6 +101,7 @@ class PureGitODB(PureRootPathDB, PureObjectDBW, PureCompoundDB, PureSubmoduleDB)
 	#} END objectdbw interface
 	
 	
+	
 class PureGitDB(PureGitODB, PureRepositoryPathsMixin, PureConfigurationMixin, PureReferencesMixin):
 	"""Git like database with support for object lookup as well as reference resolution.
 	Our rootpath is set to the actual .git directory (bare on unbare).
@@ -111,4 +116,7 @@ class PureGitDB(PureGitODB, PureRepositoryPathsMixin, PureConfigurationMixin, Pu
 		super(PureGitDB, self).__init__(self.objects_dir)
 	
 	
+	
+class PureCompatibilityGitDB(PureGitDB, RepoCompatInterface):
+	"""Pure git database with a compatability layer required by 0.3x code"""
 	

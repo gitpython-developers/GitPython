@@ -33,8 +33,8 @@ class TestUtils(TestBase):
 		}
 
 	def test_it_should_dashify(self):
-		assert_equal('this-is-my-argument', dashify('this_is_my_argument'))
-		assert_equal('foo', dashify('foo'))
+		assert 'this-is-my-argument' == dashify('this_is_my_argument')
+		assert 'foo' == dashify('foo')
 		
 		
 	def test_lock_file(self):

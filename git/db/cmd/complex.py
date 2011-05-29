@@ -14,8 +14,13 @@ from git.util import (
 							hex_to_bin
 						)
 from git.db.py.loose import PureLooseObjectODB
+from git.db.compat import RepoCompatInterface
 from git.util import RemoteProgress
-from git.db.py.base import TransportDB
+from git.db.py.base import (
+							TransportDB,
+							PureRepositoryPathsMixin,
+							PureAlternatesFileMixin
+							)
 from git.db.interface import FetchInfo as GitdbFetchInfo
 from git.db.interface import PushInfo as GitdbPushInfo
 
@@ -33,7 +38,7 @@ import re
 import sys
 
 
-__all__ = ('CmdGitDB', 'RemoteProgress' )
+__all__ = ('CmdGitDB', 'RemoteProgress', 'CmdCompatibilityGitDB' )
 
 
 class PushInfo(GitdbPushInfo):
@@ -266,7 +271,7 @@ class FetchInfo(GitdbFetchInfo):
 		return cls(remote_local_ref, flags, note, old_commit_binsha)
 		
 
-class CmdGitDB(PureLooseObjectODB, TransportDB):
+class CmdGitDB(PureLooseObjectODB, TransportDB, PureRepositoryPathsMixin, PureAlternatesFileMixin):
 	"""A database representing the default git object store, which includes loose 
 	objects, pack files and an alternates file
 	
@@ -276,7 +281,8 @@ class CmdGitDB(PureLooseObjectODB, TransportDB):
 	"""
 	def __init__(self, root_path, git):
 		"""Initialize this instance with the root and a git command"""
-		super(CmdGitDB, self).__init__(root_path)
+		self._initialize(root_path)
+		super(CmdGitDB, self).__init__(self.objects_dir)
 		self._git = git
 
 	@classmethod
@@ -373,7 +379,8 @@ class CmdGitDB(PureLooseObjectODB, TransportDB):
 	
 
 	#{ ODB Interface
-	
+	# overrides from PureOdb Implementation, which is responsible only for writing
+	# objects
 	def info(self, sha):
 		hexsha, typename, size = self._git.get_object_header(bin_to_hex(sha))
 		return OInfo(hex_to_bin(hexsha), typename, size)
@@ -399,6 +406,10 @@ class CmdGitDB(PureLooseObjectODB, TransportDB):
 		except (GitCommandError, ValueError):
 			raise BadObject(partial_hexsha)
 		# END handle exceptions
+		
+	@property
+	def git(self):
+		return self._git
 	
 	#} END interface
 	
@@ -432,3 +443,7 @@ class CmdGitDB(PureLooseObjectODB, TransportDB):
 		return self._get_fetch_info_from_stderr(proc, progress or RemoteProgress())
 		
 	#} end transport db interface
+	
+	
+class CmdCompatibilityGitDB(CmdGitDB, RepoCompatInterface):
+	"""Command git database with the compatabilty interface added for 0.3x code"""

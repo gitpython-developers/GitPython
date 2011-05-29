@@ -180,6 +180,7 @@ class CachingDB(object):
 		
 	# END interface
 
+
 class CompoundDB(object):
 	"""A database which delegates calls to sub-databases.
 	They should usually be cached and lazy-loaded"""
@@ -282,6 +283,7 @@ class TransportDB(object):
 	As refspecs involve symbolic names for references to be handled, we require
 	RefParse functionality. How this is done is up to the actual implementation."""
 	# The following variables need to be set by the derived class
+	__slots__ = tuple()
 	
 	#{ Interface
 	
@@ -325,6 +327,22 @@ class TransportDB(object):
 		:note: Remote objects can also be used for the actual push or fetch operation"""
 		raise NotImplementedError()
 		
+	def remote(self, name='origin'):
+		""":return: Remote object with the given name
+		:note: it does not necessarily exist, hence this is just a more convenient way
+			to construct Remote objects"""
+		raise NotImplementedError()
+		
+	def create_remote(self, name, url, **kwargs):
+		"""Create a new remote with the given name pointing to the given url
+		:return: Remote instance, compatible to the Remote interface"""
+		return Remote.create(self, name, url, **kwargs)
+		
+	def delete_remote(self, remote):
+		"""Delete the given remote.
+		:param remote: a Remote instance"""
+		return Remote.remove(self, remote)
+		
 	#}end interface
 
 
@@ -334,6 +352,7 @@ class ReferencesMixin(object):
 	
 	The returned types are compatible to the interfaces of the pure python 
 	reference implementation in GitDB.ref"""
+	__slots__ = tuple()
 	
 	def resolve(self, name):
 		"""Resolve the given name into a binary sha. Valid names are as defined 
@@ -341,6 +360,13 @@ class ReferencesMixin(object):
 		:return: binary sha matching the name
 		:raise AmbiguousObjectName:
 		:raise BadObject: """
+		raise NotImplementedError()
+		
+	def resolve_object(self, name):
+		"""As ``resolve()``, but returns the Objecft instance pointed to by the 
+		resolved binary sha
+		:return: Object instance of the correct type, e.g. shas pointing to commits
+			will be represented by a Commit object"""
 		raise NotImplementedError()
 	
 	@property
@@ -357,10 +383,64 @@ class ReferencesMixin(object):
 		raise NotImplementedError()
 		
 	@property
-	def tags(self):
-		""":return: An IterableList of TagReferences that are available in this repo"""
+	def head(self):
+		""":return: HEAD Object pointing to the current head reference"""
 		raise NotImplementedError()
 		
+	@property
+	def tags(self):
+		""":return: An IterableList of TagReferences or compatible items that 
+		are available in this repo"""
+		raise NotImplementedError()
+		
+	def tag(self, name):
+		""":return: Tag with the given name
+		:note: It does not necessarily exist, hence this is just a more convenient
+			way to construct TagReference objects"""
+		raise NotImplementedError()
+		
+	def create_head(self, path, commit='HEAD', force=False, logmsg=None ):
+		"""Create a new head within the repository.
+		:param commit:  a resolvable name to the commit or a Commit or Reference instance the new head should point to
+		:param force: if True, a head will be created even though it already exists
+			Otherwise an exception will be raised.
+		:param logmsg: message to append to the reference log. If None, a default message 
+			will be used
+		:return: newly created Head instances"""
+		raise NotImplementedError()
+		
+	def delete_head(self, *heads):
+		"""Delete the given heads
+		:param heads: list of Head references that are to be deleted"""
+		raise NotImplementedError()
+		
+	def create_tag(self, path, ref='HEAD', message=None, force=False):
+		"""Create a new tag reference.
+		:param path: name or path of the new tag.
+		:param ref: resolvable name of the reference or commit, or Commit or Reference
+			instance describing the commit the tag should point to.
+		:param message: message to be attached to the tag reference. This will 
+			create an actual Tag object carrying the message. Otherwise a TagReference
+			will be generated.
+		:param force: if True, the Tag will be created even if another tag does already
+			exist at the given path. Otherwise an exception will be thrown
+		:return: TagReference object """
+		raise NotImplementedError()
+		
+	def delete_tag(self, *tags):
+		"""Delete the given tag references
+		:param tags: TagReferences to delete"""
+		raise NotImplementedError()
+		
+		
+	#{ Backward Compatability
+	# These aliases need to be provided by the implementing interface as well
+	refs = references
+	branches = heads
+	#} END backward compatability
+		
+		
+	
 		
 class RepositoryPathsMixin(object):
 	"""Represents basic functionality of a full git repository. This involves an 
@@ -385,6 +465,13 @@ class RepositoryPathsMixin(object):
 		only. Plain object databases need to be fed the "objects" directory path.
 		
 		:param path: the path to initialize the repository with
+			It is a path to either the root git directory or the bare git repo::
+
+			repo = Repo("/Users/mtrier/Development/git-python")
+			repo = Repo("/Users/mtrier/Development/git-python.git")
+			repo = Repo("~/Development/git-python.git")
+			repo = Repo("$REPOSITORIES/Development/git-python.git")
+		
 		:raise InvalidDBRoot:
 		"""
 		raise NotImplementedError()

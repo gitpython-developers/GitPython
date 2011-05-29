@@ -5,6 +5,9 @@ from git.db.interface import ReferencesMixin
 from git.exc import BadObject
 from git.refs import SymbolicReference
 from git.objects.base import Object
+from git.refs.head import HEAD
+from git.refs.headref import Head
+from git.refs.tag import TagReference
 from git.util import (
 							join,
 							isdir, 
@@ -281,17 +284,52 @@ class PureReferencesMixin(ReferencesMixin):
 	re_hexsha_only = re.compile('^[0-9A-Fa-f]{40}$')
 	re_hexsha_shortened = re.compile('^[0-9A-Fa-f]{4,40}$')
 	
+	#{ Configuration
+	# Types to use when instatiating references
+	TagReferenceCls = TagReference
+	HeadCls = Head
+	ReferenceCls = Reference
+	HEADCls = HEAD
+	#} END configuration
+	
 	def resolve(self, name):
+		return self.resolve_object(name).binsha
+		
+	def resolve_object(self, name):
 		return rev_parse(self, name)
 		
 	@property
 	def references(self):
-		raise NotImplementedError()
+		return self.ReferenceCls.list_items(self)
 		
 	@property
 	def heads(self):
-		raise NotImplementedError()
+		return self.HeadCls.list_items(self)
 		
 	@property
 	def tags(self):
-		raise NotImplementedError()
+		return self.TagReferenceCls.list_items(self)
+	
+	def tag(self, name):
+		return self.tags[name]
+		
+	@property
+	def head(self):
+		return self.HEADCls(self,'HEAD')
+		
+	def create_head(self, path, commit='HEAD', force=False, logmsg=None ):
+		return self.HeadCls.create(self, path, commit, force, logmsg)
+		
+	def delete_head(self, *heads, **kwargs):
+		return self.HeadCls.delete(self, *heads, **kwargs)
+		
+	def create_tag(self, path, ref='HEAD', message=None, force=False, **kwargs):
+		return self.TagReferenceCls.create(self, path, ref, message, force, **kwargs)
+		
+	def delete_tag(self, *tags):
+		return self.TagReferenceCls.delete(self, *tags)
+		
+		
+	# compat
+	branches = heads
+	refs = references

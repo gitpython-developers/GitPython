@@ -10,11 +10,11 @@ NEXT
  
 * ### Interface Changes ###
 
- * SymbolicReference
+ * **SymbolicReference**
  
   * object_binsha property added
   
- * Blob Type
+ * **Blob** Type
  
   * Added mode constants to ease the manual creation of blobs
  
