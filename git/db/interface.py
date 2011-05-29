@@ -6,7 +6,8 @@
 
 __all__ = (	'ObjectDBR', 'ObjectDBW', 'RootPathDB', 'CompoundDB', 'CachingDB', 
 			'TransportDB', 'ConfigurationMixin', 'RepositoryPathsMixin',  
-			'RefSpec', 'FetchInfo', 'PushInfo', 'ReferencesMixin', 'SubmoduleDB')
+			'RefSpec', 'FetchInfo', 'PushInfo', 'ReferencesMixin', 'SubmoduleDB', 
+			'IndexDB', 'HighLevelRepository')
 
 
 class ObjectDBR(object):
@@ -193,6 +194,15 @@ class CompoundDB(object):
 
 	#} END interface
 	
+	
+class IndexDB(object):
+	"""A database which provides a flattened index to all objects in its currently 
+	active tree."""
+	@property
+	def index(self):
+		""":return: IndexFile compatible instance"""
+		raise NotImplementedError()
+	
 
 class RefSpec(object):
 	"""A refspec is a simple container which provides information about the way
@@ -283,7 +293,6 @@ class TransportDB(object):
 	As refspecs involve symbolic names for references to be handled, we require
 	RefParse functionality. How this is done is up to the actual implementation."""
 	# The following variables need to be set by the derived class
-	__slots__ = tuple()
 	
 	#{ Interface
 	
@@ -333,6 +342,11 @@ class TransportDB(object):
 			to construct Remote objects"""
 		raise NotImplementedError()
 		
+	#}end interface
+	
+			
+	#{ Utility Methods
+		
 	def create_remote(self, name, url, **kwargs):
 		"""Create a new remote with the given name pointing to the given url
 		:return: Remote instance, compatible to the Remote interface"""
@@ -343,7 +357,7 @@ class TransportDB(object):
 		:param remote: a Remote instance"""
 		return Remote.remove(self, remote)
 		
-	#}end interface
+	#} END utility methods
 
 
 class ReferencesMixin(object):
@@ -352,7 +366,6 @@ class ReferencesMixin(object):
 	
 	The returned types are compatible to the interfaces of the pure python 
 	reference implementation in GitDB.ref"""
-	__slots__ = tuple()
 	
 	def resolve(self, name):
 		"""Resolve the given name into a binary sha. Valid names are as defined 
@@ -392,12 +405,67 @@ class ReferencesMixin(object):
 		""":return: An IterableList of TagReferences or compatible items that 
 		are available in this repo"""
 		raise NotImplementedError()
-		
+
+	#{ Utility Methods
+	
 	def tag(self, name):
 		""":return: Tag with the given name
 		:note: It does not necessarily exist, hence this is just a more convenient
 			way to construct TagReference objects"""
 		raise NotImplementedError()
+		
+	
+	def commit(self, rev=None):
+		"""The Commit object for the specified revision
+		:param rev: revision specifier, see git-rev-parse for viable options.
+		:return: Commit compatible object"""
+		raise NotImplementedError()
+		
+	def iter_trees(self, *args, **kwargs):
+		""":return: Iterator yielding Tree compatible objects
+		:note: Takes all arguments known to iter_commits method"""
+		raise NotImplementedError()
+
+	def tree(self, rev=None):
+		"""The Tree (compatible) object for the given treeish revision
+		Examples::
+	
+			  repo.tree(repo.heads[0])
+
+		:param rev: is a revision pointing to a Treeish ( being a commit or tree )
+		:return: ``git.Tree``
+			
+		:note:
+			If you need a non-root level tree, find it by iterating the root tree. Otherwise
+			it cannot know about its path relative to the repository root and subsequent 
+			operations might have unexpected results."""
+		raise NotImplementedError()
+
+	def iter_commits(self, rev=None, paths='', **kwargs):
+		"""A list of Commit objects representing the history of a given ref/commit
+
+		:parm rev:
+			revision specifier, see git-rev-parse for viable options.
+			If None, the active branch will be used.
+
+		:parm paths:
+			is an optional path or a list of paths to limit the returned commits to
+			Commits that do not contain that path or the paths will not be returned.
+		
+		:parm kwargs:
+			Arguments to be passed to git-rev-list - common ones are 
+			max_count and skip
+
+		:note: to receive only commits between two named revisions, use the 
+			"revA..revB" revision specifier
+
+		:return: iterator yielding Commit compatible instances"""
+		raise NotImplementedError()
+
+	
+	#} END utility methods
+		
+	#{ Edit Methods
 		
 	def create_head(self, path, commit='HEAD', force=False, logmsg=None ):
 		"""Create a new head within the repository.
@@ -432,6 +500,7 @@ class ReferencesMixin(object):
 		:param tags: TagReferences to delete"""
 		raise NotImplementedError()
 		
+	#}END edit methods
 		
 	#{ Backward Compatability
 	# These aliases need to be provided by the implementing interface as well
@@ -619,3 +688,90 @@ class SubmoduleDB(object):
 		take the previous state into consideration. For more information, please
 		see the documentation of RootModule.update"""
 		raise NotImplementedError()
+		
+		
+class HighLevelRepository(object):
+	"""An interface combining several high-level repository functionality and properties"""
+	
+	@property
+	def daemon_export(self):
+		""":return: True if the repository may be published by the git-daemon"""
+		raise NotImplementedError()
+
+	def is_dirty(self, index=True, working_tree=True, untracked_files=False):
+		"""
+		:return:
+			``True``, the repository is considered dirty. By default it will react
+			like a git-status without untracked files, hence it is dirty if the 
+			index or the working copy have changes."""
+		raise NotImplementedError()
+		
+	@property
+	def untracked_files(self):
+		"""
+		:return:
+			list(str,...)
+			
+		:note:
+			ignored files will not appear here, i.e. files mentioned in .gitignore.
+			Bare repositories never have untracked files"""
+		raise NotImplementedError()
+
+	def blame(self, rev, file):
+		"""The blame information for the given file at the given revision.
+
+		:parm rev: revision specifier, see git-rev-parse for viable options.
+		:return:
+			list: [Commit, list: [<line>]]
+			A list of tuples associating a Commit object with a list of lines that 
+			changed within the given commit. The Commit objects will be given in order
+			of appearance."""
+		raise NotImplementedError()
+		
+	@classmethod
+	def init(cls, path=None, mkdir=True):
+		"""Initialize a git repository at the given path if specified
+
+		:param path:
+			is the full path to the repo (traditionally ends with /<name>.git)
+			or None in which case the repository will be created in the current 
+			working directory
+
+		:parm mkdir:
+			if specified will create the repository directory if it doesn't
+			already exists. Creates the directory with a mode=0755. 
+			Only effective if a path is explicitly given
+
+		:return: Instance pointing to the newly created repository with similar capabilities
+			of this class"""
+		raise NotImplementedError()
+
+	def clone(self, path):
+		"""Create a clone from this repository.
+		:param path:
+			is the full path of the new repo (traditionally ends with ./<name>.git).
+
+		:return: ``git.Repo`` (the newly cloned repo)"""
+		raise NotImplementedError()
+
+	@classmethod
+	def clone_from(cls, url, to_path):
+		"""Create a clone from the given URL
+		:param url: valid git url, see http://www.kernel.org/pub/software/scm/git/docs/git-clone.html#URLS
+		:param to_path: Path to which the repository should be cloned to
+		:return: instance pointing to the cloned directory with similar capabilities as this class"""
+		raise NotImplementedError()
+
+	def archive(self, ostream, treeish=None, prefix=None):
+		"""Archive the tree at the given revision.
+		:parm ostream: file compatible stream object to which the archive will be written
+		:parm treeish: is the treeish name/id, defaults to active branch
+		:parm prefix: is the optional prefix to prepend to each filename in the archive
+		:parm kwargs:
+			Additional arguments passed to git-archive
+			NOTE: Use the 'format' argument to define the kind of format. Use 
+			specialized ostreams to write any format supported by python
+		:return: self"""
+		raise NotImplementedError()
+	
+	

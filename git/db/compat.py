@@ -27,4 +27,5 @@ class RepoCompatInterface(object):
 		:return: Head to the active branch"""
 		return self.head.reference
 		
-	
+	def __repr__(self):
+		return '<git.Repo "%s">' % self.git_dir

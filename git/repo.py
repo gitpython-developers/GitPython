@@ -3,41 +3,12 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
+"""This module is just to maintain compatibility to git-python 0.3x"""
 
-from git.exc import InvalidGitRepositoryError, NoSuchPathError
-from git.cmd import Git
-from git.util import Actor
-from git.refs import *
-from git.index import IndexFile
-from git.objects import *
-from git.config import GitConfigParser
-from git.remote import Remote
 from git.db.cmd import CmdCompatibilityGitDB 
-from git.db.py import PureGitDB
 
-
-from git.util import (
-							join,
-							isfile,
-							hex_to_bin
-						)
-
-from fun import (
-					is_git_dir,
-					touch
-				)
-
-import os
-import sys
-import re
 
 import warnings
-
-DefaultDBType = PureGitDB
-if sys.version_info[1] < 5:		# python 2.4 compatiblity
-	DefaultDBType = CmdGitDB
-# END handle python 2.4
-
 
 __all__ = ('Repo', )
 
@@ -72,7 +43,3 @@ class Repo(CmdCompatibilityGitDB):
 			warnings.warn("deprecated use of odbt", DeprecationWarning)
 		#END handle old parameter
 		super(Repo, self).__init__(path)
-		self._git = Git(self.working_dir)
-		
-	def __repr__(self):
-		return '<git.Repo "%s">' % self.git_dir

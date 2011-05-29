@@ -2,6 +2,7 @@
 #
 # This module is part of PureGitDB and is released under
 # the New BSD License: http://www.opensource.org/licenses/bsd-license.php
+from git.db.interface import HighLevelRepository
 from base import (
 						PureCompoundDB, 
 						PureObjectDBW, 
@@ -9,6 +10,7 @@ from base import (
 						PureRepositoryPathsMixin,
 						PureConfigurationMixin,
 						PureAlternatesFileMixin,
+						PureIndexDB,
 					)
 
 from resolve import PureReferencesMixin
@@ -36,8 +38,7 @@ import os
 __all__ = ('PureGitODB', 'PureGitDB', 'PureCompatibilityGitDB')
 
 
-class PureGitODB(PureRootPathDB, PureObjectDBW, PureCompoundDB,
-				PureSubmoduleDB, PureAlternatesFileMixin):
+class PureGitODB(PureRootPathDB, PureObjectDBW, PureCompoundDB):
 	"""A git-style object-only database, which contains all objects in the 'objects'
 	subdirectory.
 	:note: The type needs to be initialized on the ./objects directory to function, 
@@ -102,7 +103,12 @@ class PureGitODB(PureRootPathDB, PureObjectDBW, PureCompoundDB,
 	
 	
 	
-class PureGitDB(PureGitODB, PureRepositoryPathsMixin, PureConfigurationMixin, PureReferencesMixin):
+class PureGitDB(PureGitODB, 
+				PureRepositoryPathsMixin, PureConfigurationMixin, 
+				PureReferencesMixin, PureSubmoduleDB, PureAlternatesFileMixin, 
+				PureIndexDB,
+				# HighLevelRepository  Currently not implemented !
+				):
 	"""Git like database with support for object lookup as well as reference resolution.
 	Our rootpath is set to the actual .git directory (bare on unbare).
 	

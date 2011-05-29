@@ -20,6 +20,7 @@ from git.util import (
 		is_git_dir
 	)
 
+from git.index import IndexFile
 from git.config import GitConfigParser
 from git.exc import 	(
 						BadObject, 
@@ -35,7 +36,8 @@ import os
 
 
 __all__ = (	'PureObjectDBR', 'PureObjectDBW', 'PureRootPathDB', 'PureCompoundDB', 
-			'PureConfigurationMixin', 'PureRepositoryPathsMixin', 'PureAlternatesFileMixin')
+			'PureConfigurationMixin', 'PureRepositoryPathsMixin', 'PureAlternatesFileMixin',
+			'PureIndexDB')
 
 
 class PureObjectDBR(ObjectDBR):
@@ -384,6 +386,16 @@ class PureConfigurationMixin(ConfigurationMixin):
 	
 	
 	#} END interface
+	
+	
+class PureIndexDB(IndexDB):
+	#{ Configuration
+	IndexCls = IndexFile
+	#} END configuration
+	
+	@property
+	def index(self):
+		return self.IndexCls(self)
 	
 	
 class PureAlternatesFileMixin(object):

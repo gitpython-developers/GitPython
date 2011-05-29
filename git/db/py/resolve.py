@@ -5,6 +5,7 @@ from git.db.interface import ReferencesMixin
 from git.exc import BadObject
 from git.refs import SymbolicReference
 from git.objects.base import Object
+from git.objects.commit import Commit
 from git.refs.head import HEAD
 from git.refs.headref import Head
 from git.refs.tag import TagReference
@@ -290,6 +291,7 @@ class PureReferencesMixin(ReferencesMixin):
 	HeadCls = Head
 	ReferenceCls = Reference
 	HEADCls = HEAD
+	CommitCls = Commit
 	#} END configuration
 	
 	def resolve(self, name):
@@ -312,6 +314,30 @@ class PureReferencesMixin(ReferencesMixin):
 	
 	def tag(self, name):
 		return self.tags[name]
+		
+	
+	def commit(self, rev=None):
+		if rev is None:
+			return self.head.commit
+		else:
+			return self.resolve_object(str(rev)+"^0")
+		#END handle revision
+		
+	def iter_trees(self, *args, **kwargs):
+		return ( c.tree for c in self.iter_commits(*args, **kwargs) )
+
+	def tree(self, rev=None):
+		if rev is None:
+			return self.head.commit.tree
+		else:
+			return self.resolve_object(str(rev)+"^{tree}")
+
+	def iter_commits(self, rev=None, paths='', **kwargs):
+		if rev is None:
+			rev = self.head.commit
+		
+		return self.CommitCls.iter_items(self, rev, paths, **kwargs)
+
 		
 	@property
 	def head(self):
