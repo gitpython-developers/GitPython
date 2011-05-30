@@ -96,8 +96,9 @@ class PureObjectDBW(ObjectDBW):
 class PureRootPathDB(RootPathDB):
 	
 	def __init__(self, root_path):
-		super(PureRootPathDB, self).__init__(root_path)
 		self._root_path = root_path
+		super(PureRootPathDB, self).__init__(root_path)
+		
 		
 		
 	#{ Interface 
@@ -127,8 +128,8 @@ class PureCompoundDB(CompoundDB, PureObjectDBR, LazyMixin, CachingDB):
 	def _set_cache_(self, attr):
 		if attr == '_dbs':
 			self._dbs = list()
-		elif attr == '_db_cache':
-			self._db_cache = dict()
+		elif attr == '_obj_cache':
+			self._obj_cache = dict()
 		else:
 			super(PureCompoundDB, self)._set_cache_(attr)
 	
@@ -138,14 +139,14 @@ class PureCompoundDB(CompoundDB, PureObjectDBR, LazyMixin, CachingDB):
 		# most databases use binary representations, prevent converting 
 		# it everytime a database is being queried
 		try:
-			return self._db_cache[sha]
+			return self._obj_cache[sha]
 		except KeyError:
 			pass
 		# END first level cache
 		
 		for db in self._dbs:
 			if db.has_object(sha):
-				self._db_cache[sha] = db
+				self._obj_cache[sha] = db
 				return db
 		# END for each database
 		raise BadObject(sha)
@@ -181,7 +182,7 @@ class PureCompoundDB(CompoundDB, PureObjectDBR, LazyMixin, CachingDB):
 
 	def update_cache(self, force=False):
 		# something might have changed, clear everything
-		self._db_cache.clear()
+		self._obj_cache.clear()
 		stat = False
 		for db in self._dbs:
 			if isinstance(db, CachingDB):
@@ -191,8 +192,6 @@ class PureCompoundDB(CompoundDB, PureObjectDBR, LazyMixin, CachingDB):
 		return stat
 		
 	def partial_to_complete_sha_hex(self, partial_hexsha):
-		databases = self.databases()
-		
 		len_partial_hexsha = len(partial_hexsha)
 		if len_partial_hexsha % 2 != 0:
 			partial_binsha = hex_to_bin(partial_hexsha + "0")

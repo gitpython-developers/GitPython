@@ -31,8 +31,8 @@ class PureReferenceDB(PureCompoundDB):
 		dbcls = self.ObjectDBCls
 		if dbcls is None:
 			# late import
-			from complex import PureGitODB	# TODO: This should be a configurable for flexibility
-			dbcls = PureGitODB
+			import complex
+			dbcls = complex.PureGitODB
 		# END get db type
 		
 		# try to get as many as possible, don't fail if some are unavailable

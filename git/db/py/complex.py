@@ -38,7 +38,7 @@ import os
 __all__ = ('PureGitODB', 'PurePartialGitDB', 'PureCompatibilityGitDB')
 
 
-class PureGitODB(PureRootPathDB, PureObjectDBW, PureCompoundDB):
+class PureGitODB(PureRootPathDB, PureObjectDBW, PureCompoundDB, PureAlternatesFileMixin):
 	"""A git-style object-only database, which contains all objects in the 'objects'
 	subdirectory.
 	:note: The type needs to be initialized on the ./objects directory to function, 
@@ -105,7 +105,7 @@ class PureGitODB(PureRootPathDB, PureObjectDBW, PureCompoundDB):
 	
 class PurePartialGitDB(PureGitODB, 
 				PureRepositoryPathsMixin, PureConfigurationMixin, 
-				PureReferencesMixin, PureSubmoduleDB, PureAlternatesFileMixin, 
+				PureReferencesMixin, PureSubmoduleDB, 
 				PureIndexDB, PureTransportDB
 				# HighLevelRepository  Currently not implemented !
 				):
