@@ -12,7 +12,7 @@ from lib import (
 		fixture_path
 	)
 
-from git import *
+from git.stream import *
 from git.util import (
 	NULL_HEX_SHA,
 	hex_to_bin
@@ -23,7 +23,7 @@ from git.typ import (
 	str_blob_type
 	)
 
-from git.db.py import PureLooseObjectODB
+from git.db.py.loose import PureLooseObjectODB
 import time
 import tempfile
 import os

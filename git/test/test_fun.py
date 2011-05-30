@@ -1,4 +1,4 @@
-from git.test.lib import TestBase
+from git.test.lib import TestBase, with_rw_repo
 from git.objects.fun import (
 								traverse_tree_recursive,
 								traverse_trees_recursive, 

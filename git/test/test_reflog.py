@@ -1,4 +1,4 @@
-from git.test.lib import TestBase
+from git.test.lib import TestBase, fixture_path
 from git.objects import IndexObject
 from git.refs import *
 from git.util import Actor

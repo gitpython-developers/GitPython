@@ -4,13 +4,13 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
-from git.test.lib import TestBase
-from git import *
+from git.test.lib import TestBase, fixture_path
 import StringIO
+from git.config import *
 from copy import copy
 from ConfigParser import NoSectionError
 
-class TestBase(TestCase):
+class TestConfig(TestBase):
     
     def _to_memcache(self, file_path):
         fp = open(file_path, "r")

@@ -29,7 +29,7 @@ from git.base import IStream
 from cStringIO import StringIO
 
 from util import parse_date
-from time import altzone
+from time import altzone, time
 
 import os
 import sys

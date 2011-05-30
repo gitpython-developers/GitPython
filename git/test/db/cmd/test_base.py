@@ -5,9 +5,8 @@
 from git.test.lib import rorepo_dir
 from git.test.db.base import RepoBase
 
-# immport test
-from git.db.cmd.base import *
-from git.db.cmd.complex import *
+from git.util import bin_to_hex
+from git.exc import BadObject
 
 from git.db.complex import CmdCompatibilityGitDB
 
@@ -15,4 +14,14 @@ class TestBase(RepoBase):
 	RepoCls = CmdCompatibilityGitDB
 
 	def test_basics(self):
-		pass
+		gdb = self.rorepo
+		
+		# partial to complete - works with everything
+		hexsha = bin_to_hex(gdb.partial_to_complete_sha_hex("0.1.6"))
+		assert len(hexsha) == 40
+		
+		assert bin_to_hex(gdb.partial_to_complete_sha_hex(hexsha[:20])) == hexsha
+		
+		# fails with BadObject
+		for invalid_rev in ("0000", "bad/ref", "super bad"):
+			self.failUnlessRaises(BadObject, gdb.partial_to_complete_sha_hex, invalid_rev)

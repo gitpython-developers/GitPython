@@ -4,12 +4,14 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
-from git.test.lib import TestBase
-from git.ref import *
-import git.ref as ref
+from git.test.lib import TestBase, with_rw_repo
+from git.refs import *
+import git.refs as ref
 
 from git.util import Actor
 from git.objects.tag import TagObject
+
+from git.exc import GitCommandError
 
 from itertools import chain
 import os
@@ -51,7 +53,7 @@ class TestRefs(TestBase):
 			# END if we have a tag object
 		# END for tag in repo-tags
 		assert tag_object_refs
-		assert isinstance(TagReference.list_items(self.rorepo)['0.5.0'], TagReference)
+		assert isinstance(TagReference.list_items(self.rorepo)['0.1.6'], TagReference)
 		
 	def test_tags(self):
 		# tag refs can point to tag objects or to commits
@@ -69,7 +71,7 @@ class TestRefs(TestBase):
 		assert len(s) == ref_count
 		assert len(s|s) == ref_count
 		
-	@with_rw_repo
+	@with_rw_repo("0.1.6")
 	def test_heads(self, rw_repo):
 		for head in Head.iter_items(rw_repo):
 			assert head.name
@@ -155,7 +157,7 @@ class TestRefs(TestBase):
 	def test_orig_head(self):
 		assert type(HEAD(self.rorepo).orig_head()) == SymbolicReference
 		
-	@with_rw_repo
+	@with_rw_repo("0.1.6")
 	def test_head_reset(self, rw_repo):
 		cur_head = HEAD(rw_repo)
 		old_head_commit = cur_head.commit

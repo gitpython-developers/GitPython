@@ -219,6 +219,12 @@ class TestBase(TestCase):
 		self.failUnlessRaises(...)
 	"""
 	
+	@classmethod
+	def setUpAll(cls):
+		"""This method is only called to provide the most basic functionality
+		Subclasses may just override it or implement it differently"""
+		cls.rorepo = Repo(rorepo_dir())
+	
 	def _make_file(self, rela_path, data, repo=None):
 		"""
 		Create a file at the given path relative to our repository, filled

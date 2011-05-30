@@ -8,11 +8,7 @@ from git.test.lib import (
 							with_rw_repo,
 							StringProcessAdapter,
 						)
-from git.repo import Repo
 
 class TestObjectBase(TestBase):
 	"""Provides a default read-only repository in the rorepo member"""
-	
-	@classmethod
-	def setUpAll(cls):
-		cls.rorepo = Repo(rorepo_dir())
+	pass

@@ -3,9 +3,9 @@
 # This module is part of GitDB and is released under
 # the New BSD License: http://www.opensource.org/licenses/bsd-license.php
 """Module with examples from the tutorial section of the docs"""
-from lib import *
-from git import IStream
-from git.db.py import PureLooseObjectODB
+from lib import TestBase, fixture_path
+from git.base import IStream
+from git.db.py.loose import PureLooseObjectODB
 from git.util import pool
 		
 from cStringIO import StringIO
