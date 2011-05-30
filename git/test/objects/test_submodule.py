@@ -1,11 +1,12 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
-from git.test.lib import TestBase
+from lib import *
 from git.exc import *
 from git.objects.submodule.base import Submodule
 from git.objects.submodule.root import RootModule, RootUpdateProgress
 from git.util import to_native_path_linux, join_path_native
+
 import shutil
 import git
 import os
@@ -18,7 +19,7 @@ class TestRootProgress(RootUpdateProgress):
 		
 prog = TestRootProgress()
 
-class TestSubmodule(TestBase):
+class TestSubmodule(TestObjectBase):
 
 	k_subm_current = "468cad66ff1f80ddaeee4123c24e4d53a032c00d"
 	k_subm_changed = "394ed7006ee5dc8bddfd132b64001d5dfc0ffdd3"

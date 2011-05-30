@@ -4,16 +4,18 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
-import os
-from git.test.lib import TestBase
-from git import *
+
+from lib import *
 from git.objects.fun import (
 								traverse_tree_recursive,
 								traverse_trees_recursive
 							)
+from git.objects.blob import Blob
+from git.objects.tree import Tree
 from cStringIO import StringIO
+import os
 
-class TestTree(TestBase):
+class TestTree(TestObjectBase):
 	
 	def test_serializable(self):
 		# tree at the given commit contains a submodule as well

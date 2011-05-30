@@ -14,7 +14,8 @@ from git.util import (
 						Actor,
 						RepoAliasMixin,
 						Iterable,
-						Actor
+						Actor,
+						Stats
 						)
 
 from util import (

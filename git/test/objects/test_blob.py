@@ -4,11 +4,11 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
-from git.test.lib import TestBase
-from git import *
+from lib import *
+from git.objects.blob import *
 from git.util import hex_to_bin
 
-class TestBlob(TestBase):
+class TestBlob(TestObjectBase):
 	
 	def test_mime_type_should_return_mime_type_for_known_types(self):
 		blob = Blob(self.rorepo, **{'binsha': Blob.NULL_BIN_SHA, 'path': 'foo.png'})

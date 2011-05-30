@@ -5,10 +5,14 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
-from git.test.lib import TestBase
-from git import *
-from git import IStream
-from git.util import hex_to_bin
+from lib import *
+from git.objects.commit import *
+from git.base import IStream
+
+from git.util import (
+						hex_to_bin,
+						Actor,
+					)
 
 from cStringIO import StringIO
 import time
@@ -65,7 +69,7 @@ def assert_commit_serialization(rwrepo, commit_id, print_performance_info=False)
 	# END handle performance info
 	
 
-class TestCommit(TestBase):
+class TestCommit(TestObjectBase):
 
 	def test_bake(self):
 
