@@ -7,7 +7,10 @@
 
 from util import to_hex_sha
 
-class ODBError(Exception):
+class GitPythonError(Exception):
+	"""Base exception for all git-python related errors"""
+
+class ODBError(GitPythonError):
 	"""All errors thrown by the object database"""
 
 
@@ -40,15 +43,15 @@ class UnsupportedOperation(ODBError):
 	"""Thrown if the given operation cannot be supported by the object database"""
 
 
-class InvalidGitRepositoryError(Exception):
+class InvalidGitRepositoryError(GitPythonError):
 	""" Thrown if the given repository appears to have an invalid format.  """
 
 
-class NoSuchPathError(OSError):
+class NoSuchPathError(GitPythonError):
 	""" Thrown if a path could not be access by the system. """
 
 
-class GitCommandError(Exception):
+class GitCommandError(GitPythonError):
 	""" Thrown if execution of the git command fails with non-zero status code. """
 	def __init__(self, command, status, stderr=None):
 		self.stderr = stderr
@@ -60,7 +63,7 @@ class GitCommandError(Exception):
 					(' '.join(str(i) for i in self.command), self.status, self.stderr))
 
 
-class CheckoutError( Exception ):
+class CheckoutError(GitPythonError):
 	"""Thrown if a file could not be checked out from the index as it contained
 	changes.
 
@@ -83,7 +86,7 @@ class CheckoutError( Exception ):
 		return Exception.__str__(self) + ":%s" % self.failed_files
 		
 		
-class CacheError(Exception):
+class CacheError(GitPythonError):
 	"""Base for all errors related to the git index, which is called cache internally"""
 
 

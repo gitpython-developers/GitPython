@@ -12,13 +12,16 @@ import tempfile
 import shutil
 import cStringIO
 
-from base import maketemp 
+from base import (
+					maketemp,
+					rorepo_dir
+				)
 
-GIT_REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 __all__ = (
 			'fixture_path', 'fixture', 'absolute_project_path', 'StringProcessAdapter',
-			'with_rw_repo', 'with_rw_and_rw_remote_repo', 'TestBase', 'TestCase', 'GIT_REPO'
+			'with_rw_repo', 'with_rw_and_rw_remote_repo', 'TestBase', 'TestCase', 
+			'GlobalsItemDeletorMetaCls'
 			)
 
 #{ Routines
@@ -200,6 +203,26 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
 	return argument_passer
 	
 #} END decorators
+
+#{ Meta Classes
+class GlobalsItemDeletorMetaCls(type):
+	"""Utiltiy to prevent the RepoBase to be picked up by nose as the metacls
+	will delete the instance from the globals"""
+	#{ Configuration
+	# Set this to a string name of the module to delete
+	ModuleToDelete = None
+	#} END configuration
+	
+	def __new__(metacls, name, bases, clsdict):
+		assert metacls.ModuleToDelete is not None, "Invalid metaclass configuration"
+		new_type = super(GlobalsItemDeletorMetaCls, metacls).__new__(metacls, name, bases, clsdict)
+		if name != metacls.ModuleToDelete:
+			mod = __import__(new_type.__module__, globals(), locals(), new_type.__module__)
+			delattr(mod, metacls.ModuleToDelete)
+		#END handle deletion
+		return new_type
+	
+#} END meta classes
 	
 class TestBase(TestCase):
 	"""
@@ -217,7 +240,15 @@ class TestBase(TestCase):
 	  The rorepo is in fact your current project's git repo. If you refer to specific 
 	  shas for your objects, be sure you choose some that are part of the immutable portion 
 	  of the project history ( to assure tests don't fail for others ).
+	  
+	  Derived types can override the default repository type to create a differnt
+	  read-only repo, allowing to test their specific type
 	"""
+	#{ Configuration
+	# The repository type to instantiate. It takes at least a path to operate upon
+	# during instantiation.
+	RepoCls = None
+	#} END configuration
 	
 	@classmethod
 	def setUpAll(cls):
@@ -225,7 +256,8 @@ class TestBase(TestCase):
 		Dynamically add a read-only repository to our actual type. This way 
 		each test type has its own repository
 		"""
-		cls.rorepo = Repo(GIT_REPO)
+		assert cls.RepoCls is not None, "RepoCls class member must be set"
+		cls.rorepo = cls.RepoCls(rorepo_dir())
 	
 	def _make_file(self, rela_path, data, repo=None):
 		"""

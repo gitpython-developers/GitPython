@@ -21,6 +21,10 @@ NEXT
 * ### Module Changes ###
 
  * Removed rev_parse function from git.repo.fun - the respective functionality is available only through the repository's rev_parse method, which might in turn translate to any implementation.
+ 
+* ### Exceptions ###
+ 
+ * There is a new common base for all exceptions git-python will throw, namely `GitPythonError`.
 
 0.3.1 Beta 2
 ============

@@ -3,7 +3,8 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
-from git.test.lib import TestBase
+from lib import TestDBBase
+from git.test.lib import *
 from git import *
 from git.util import join_path_native
 from git.exc import BadObject
@@ -15,18 +16,22 @@ import shutil
 from cStringIO import StringIO
 
 
-class TestRepo(TestBase):
+class RepoGlobalsItemDeletorMetaCls(GlobalsItemDeletorMetaCls):
+	ModuleToDelete = 'RepoBase'
 	
-	@raises(InvalidGitRepositoryError)
-	def test_new_should_raise_on_invalid_repo_location(self):
-		Repo(tempfile.gettempdir())
 
-	@raises(NoSuchPathError)
+class RepoBase(TestDBBase):
+	"""Basic test for everything a fully implemented repository should support"""
+	__metaclass__ = RepoGlobalsItemDeletorMetaCls
+	
+	def test_new_should_raise_on_invalid_repo_location(self):
+		self.failUnlessRaises(InvalidGitRepositoryError, self.RepoCls, tempfile.gettempdir())
+
 	def test_new_should_raise_on_non_existant_path(self):
-		Repo("repos/foobar")
+		self.failUnlessRaises(NoSuchPathError, self.RepoCls, "repos/foobar")
 
 	def test_repo_creation_from_different_paths(self):
-		r_from_gitdir = Repo(self.rorepo.git_dir)
+		r_from_gitdir = self.RepoCls(self.rorepo.git_dir)
 		assert r_from_gitdir.git_dir == self.rorepo.git_dir
 		assert r_from_gitdir.git_dir.endswith('.git')
 		assert not self.rorepo.git.working_dir.endswith('.git')
@@ -184,7 +189,10 @@ class TestRepo(TestBase):
 		# END restore previous state
 		
 	def test_bare_property(self):
-		self.rorepo.bare
+		if isinstance(self.rorepo, RepoCompatibilityInterface):
+			self.rorepo.bare
+		#END handle compatability 
+		self.rorepo.is_bare
 
 	def test_daemon_export(self):
 		orig_val = self.rorepo.daemon_export
@@ -204,7 +212,7 @@ class TestRepo(TestBase):
 		self.rorepo.alternates = cur_alternates
 
 	def test_repr(self):
-		path = os.path.join(os.path.abspath(GIT_REPO), '.git')
+		path = os.path.join(os.path.abspath(rorepo_dir()), '.git')
 		assert_equal('<git.Repo "%s">' % path, repr(self.rorepo))
 
 	def test_is_dirty_with_bare_repository(self):

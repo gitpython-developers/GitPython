@@ -15,7 +15,7 @@ from git.util import (
 							bin_to_hex, 
 							hex_to_bin
 						)
-from git.db.compat import RepoCompatInterface
+from git.db.compat import RepoCompatibilityInterface
 from git.util import RemoteProgress
 from git.db.interface import FetchInfo as GitdbFetchInfo
 from git.db.interface import PushInfo as GitdbPushInfo

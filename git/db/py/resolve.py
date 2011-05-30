@@ -3,12 +3,19 @@ version assuming compatible interface for reference and object types"""
 
 from git.db.interface import ReferencesMixin
 from git.exc import BadObject
-from git.refs import SymbolicReference
-from git.objects.base import Object
-from git.objects.commit import Commit
+from git.refs import (
+						SymbolicReference, 
+						Reference,
+						HEAD,
+						Head,
+						TagReference
+					)
 from git.refs.head import HEAD
 from git.refs.headref import Head
 from git.refs.tag import TagReference
+
+from git.objects.base import Object
+from git.objects.commit import Commit
 from git.util import (
 							join,
 							isdir, 

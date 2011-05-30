@@ -20,7 +20,7 @@ from pack import PurePackedODB
 from ref import PureReferenceDB
 from submodule import PureSubmoduleDB
 
-from git.db.compat import RepoCompatInterface
+from git.db.compat import RepoCompatibilityInterface
 
 from git.util import (
 						LazyMixin, 
@@ -123,6 +123,6 @@ class PureGitDB(PureGitODB,
 	
 	
 	
-class PureCompatibilityGitDB(PureGitDB, RepoCompatInterface):
+class PureCompatibilityGitDB(PureGitDB, RepoCompatibilityInterface):
 	"""Pure git database with a compatability layer required by 0.3x code"""
 	

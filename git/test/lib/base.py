@@ -1,10 +1,9 @@
 # Copyright (C) 2010, 2011 Sebastian Thiel (byronimo@gmail.com) and contributors
 #
-# This module is part of PureGitDB and is released under
+# This module is part of PureCmdGitDB and is released under
 # the New BSD License: http://www.opensource.org/licenses/bsd-license.php
 """Utilities used in ODB testing"""
 from git.base import OStream
-from git.db.py import PureGitDB
 from git.stream import ( 
 							Sha1Writer, 
 							ZippedStoreShaWriter
@@ -73,7 +72,7 @@ def with_rw_repo(func):
 		shutil.copytree(src_dir, path)
 		target_gitdir = os.path.join(path, '.git')
 		assert os.path.isdir(target_gitdir)
-		return func(self, PureGitDB(target_gitdir))
+		return func(self, self.RepoCls(target_gitdir))
 	#END wrapper
 	wrapper.__name__ = func.__name__
 	return with_rw_directory(wrapper)
@@ -98,7 +97,7 @@ def with_packs_rw(func):
 
 #{ Routines
 
-def repo_dir():
+def rorepo_dir():
 	""":return: path to our own repository, being our own .git directory.
 	:note: doesn't work in bare repositories"""
 	base = os.path.join(dirname(dirname(dirname(dirname(__file__)))), '.git')
@@ -106,9 +105,9 @@ def repo_dir():
 	return base
 	
 
-def maketemp(*args):
+def maketemp(*args, **kwargs):
 	"""Wrapper around default tempfile.mktemp to fix an osx issue"""
-	tdir = tempfile.mktemp(*args)
+	tdir = tempfile.mktemp(*args, **kwargs)
 	if sys.platform == 'darwin':
 		tdir = '/private' + tdir
 	return tdir
@@ -191,13 +190,4 @@ class DeriveTest(OStream):
 		assert self.myarg
 
 #} END stream utilitiess
-
-#{ Bases
-
-class TestBase(unittest.TestCase):
-	"""Base class for all tests"""
-	# The non-database specific tests just provides a default pure git database
-	rorepo = PureGitDB(repo_dir())
-
-#} END bases
 

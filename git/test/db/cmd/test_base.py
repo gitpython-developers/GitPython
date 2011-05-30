@@ -2,3 +2,12 @@
 #
 # This module is part of GitDB and is released under
 # the New BSD License: http://www.opensource.org/licenses/bsd-license.php
+from git.test.lib import *
+from git.db import RefSpec
+
+class TestBase(TestDBBase):
+	
+	@with_rw_directory
+	def test_basics(self, path):
+		assert False
+		

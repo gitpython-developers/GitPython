@@ -12,7 +12,7 @@ class TestGit(TestCase):
     
     @classmethod
     def setUpAll(cls):
-        cls.git = Git(GIT_REPO)
+        cls.git = Git(cls.rorepo.working_dir)
 
     @patch_object(Git, 'execute')
     def test_call_process_calls_execute(self, git):

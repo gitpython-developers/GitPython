@@ -4,7 +4,7 @@
 # the New BSD License: http://www.opensource.org/licenses/bsd-license.php
 """Module providing adaptors to maintain backwards compatability"""
 
-class RepoCompatInterface(object):
+class RepoCompatibilityInterface(object):
 	"""Interface to install backwards compatability of the new complex repository
 	types with the previous, all in one, repository."""
 	
