@@ -2,18 +2,18 @@
 #
 # This module is part of GitDB and is released under
 # the New BSD License: http://www.opensource.org/licenses/bsd-license.php
-from git.test.db.lib import *
+from git.test.db.lib import TestDBBase, with_rw_directory
 from git.db.py.loose import PureLooseObjectODB
 from git.exc import BadObject
 from git.util import bin_to_hex
 		
 class TestLooseDB(TestDBBase):
 	
-	RepoCls = PureLooseObjectODB
+	needs_ro_repo = False
 	
 	@with_rw_directory
 	def test_basics(self, path):
-		ldb = self.RepoCls(path)
+		ldb = PureLooseObjectODB(path)
 		
 		# write data
 		self._assert_object_writing(ldb)

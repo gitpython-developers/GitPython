@@ -86,6 +86,7 @@ def with_packs_rw(func):
 	:note: needs with_rw_directory wrapped around it"""
 	def wrapper(self, path):
 		src_pack_glob = fixture_path('packs/*')
+		print src_pack_glob
 		copy_files_globbed(src_pack_glob, path, hard_link_ok=True)
 		return func(self, path)
 	# END wrapper
@@ -103,7 +104,6 @@ def rorepo_dir():
 	base = os.path.join(dirname(dirname(dirname(dirname(__file__)))), '.git')
 	assert os.path.isdir(base)
 	return base
-	
 
 def maketemp(*args, **kwargs):
 	"""Wrapper around default tempfile.mktemp to fix an osx issue"""
@@ -116,8 +116,15 @@ def fixture_path(relapath=''):
 	""":return: absolute path into the fixture directory
 	:param relapath: relative path into the fixtures directory, or ''
 		to obtain the fixture directory itself"""
-	return os.path.join(dirname(__file__), 'fixtures', relapath)
+	test_dir = os.path.dirname(os.path.dirname(__file__))
+	return os.path.join(test_dir, "fixtures", relapath)
 	
+def fixture(name):
+	return open(fixture_path(name), 'rb').read()
+
+def absolute_project_path():
+	return os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+
 def copy_files_globbed(source_glob, target_dir, hard_link_ok=False):
 	"""Copy all files found according to the given source glob into the target directory
 	:param hard_link_ok: if True, hard links will be created if possible. Otherwise 

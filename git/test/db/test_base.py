@@ -6,7 +6,9 @@ from lib import *
 from git.db import RefSpec
 
 class TestBase(TestDBBase):
-	
+
+	needs_ro_repo = False
+
 	@with_rw_directory
 	def test_basics(self, path):
 		self.failUnlessRaises(ValueError, RefSpec, None, None)

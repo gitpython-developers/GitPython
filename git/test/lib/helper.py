@@ -19,24 +19,11 @@ from base import (
 
 
 __all__ = (
-			'fixture_path', 'fixture', 'absolute_project_path', 'StringProcessAdapter',
+			'StringProcessAdapter', 'GlobalsItemDeletorMetaCls', 
 			'with_rw_repo', 'with_rw_and_rw_remote_repo', 'TestBase', 'TestCase', 
-			'GlobalsItemDeletorMetaCls'
-			)
+		)
 
-#{ Routines
 
-def fixture_path(name):
-	test_dir = os.path.dirname(os.path.dirname(__file__))
-	return os.path.join(test_dir, "fixtures", name)
-
-def fixture(name):
-	return open(fixture_path(name), 'rb').read()
-
-def absolute_project_path():
-	return os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-
-#} END routines
 	
 #{ Adapters 
 	
@@ -227,37 +214,10 @@ class GlobalsItemDeletorMetaCls(type):
 class TestBase(TestCase):
 	"""
 	Base Class providing default functionality to all tests such as:
-	
 	- Utility functions provided by the TestCase base of the unittest method such as::
 		self.fail("todo")
 		self.failUnlessRaises(...)
-		
-	- Class level repository which is considered read-only as it is shared among 
-	  all test cases in your type.
-	  Access it using:: 
-	   self.rorepo	# 'ro' stands for read-only
-	   
-	  The rorepo is in fact your current project's git repo. If you refer to specific 
-	  shas for your objects, be sure you choose some that are part of the immutable portion 
-	  of the project history ( to assure tests don't fail for others ).
-	  
-	  Derived types can override the default repository type to create a differnt
-	  read-only repo, allowing to test their specific type
 	"""
-	#{ Configuration
-	# The repository type to instantiate. It takes at least a path to operate upon
-	# during instantiation.
-	RepoCls = None
-	#} END configuration
-	
-	@classmethod
-	def setUpAll(cls):
-		"""
-		Dynamically add a read-only repository to our actual type. This way 
-		each test type has its own repository
-		"""
-		assert cls.RepoCls is not None, "RepoCls class member must be set"
-		cls.rorepo = cls.RepoCls(rorepo_dir())
 	
 	def _make_file(self, rela_path, data, repo=None):
 		"""

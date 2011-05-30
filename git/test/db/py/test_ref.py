@@ -2,8 +2,8 @@
 #
 # This module is part of GitDB and is released under
 # the New BSD License: http://www.opensource.org/licenses/bsd-license.php
-from lib import *
-from git.db.py import PureReferenceDB
+from git.test.db.lib import *
+from git.db.py.ref import PureReferenceDB
 
 from git.util import (
 						NULL_BIN_SHA,
@@ -13,6 +13,8 @@ from git.util import (
 import os
 		
 class TestPureReferenceDB(TestDBBase):
+	
+	needs_ro_repo = False
 	
 	def make_alt_file(self, alt_path, alt_list):
 		"""Create an alternates file which contains the given alternates.
@@ -44,7 +46,7 @@ class TestPureReferenceDB(TestDBBase):
 		assert len(rdb.databases()) == 1
 		
 		# we should now find a default revision of ours
-		git_sha = hex_to_bin("5690fd0d3304f378754b23b098bd7cb5f4aa1976")
+		git_sha = hex_to_bin("5aebcd5cb3340fb31776941d7e4d518a712a8655")
 		assert rdb.has_object(git_sha)
 		
 		# remove valid

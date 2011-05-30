@@ -2,8 +2,9 @@
 #
 # This module is part of GitDB and is released under
 # the New BSD License: http://www.opensource.org/licenses/bsd-license.php
-from lib import *
-from git.db.py import PurePackedODB
+from git.test.db.lib import TestDBBase, with_packs_rw
+
+from git.db.py.pack import PurePackedODB
 from git.test.lib import fixture_path
 
 from git.exc import BadObject, AmbiguousObjectName
@@ -13,12 +14,15 @@ import random
 
 class TestPackDB(TestDBBase):
 	
+	needs_ro_repo = False 
+	
 	@with_packs_rw
 	def test_writing(self, path):
 		pdb = PurePackedODB(path)
 		
 		# on demand, we init our pack cache
 		num_packs = len(pdb.entities())
+		assert num_packs
 		assert pdb._st_mtime != 0
 		
 		# test pack directory changed: 

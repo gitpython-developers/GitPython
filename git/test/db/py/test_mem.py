@@ -2,14 +2,14 @@
 #
 # This module is part of GitDB and is released under
 # the New BSD License: http://www.opensource.org/licenses/bsd-license.php
-from lib import *
-from git.db.py import (
-						PureMemoryDB,
-						PureLooseObjectODB
-					)
+from git.test.db.lib import TestDBBase, with_rw_directory
+from git.db.py.mem import PureMemoryDB
+from git.db.py.loose import PureLooseObjectODB
 		
 class TestPureMemoryDB(TestDBBase):
 	
+	needs_ro_repo = False
+
 	@with_rw_directory
 	def test_writing(self, path):
 		mdb = PureMemoryDB()

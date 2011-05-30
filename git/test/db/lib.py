@@ -8,7 +8,8 @@ from git.test.lib import (
 	with_packs_rw,
 	ZippedStoreShaWriter,
 	fixture_path,
-	TestBase
+	TestBase,
+	rorepo_dir,
 	)
 
 from git.stream import Sha1Writer
@@ -29,12 +30,49 @@ from struct import pack
 __all__ = ('TestDBBase', 'with_rw_directory', 'with_packs_rw', 'fixture_path')
 		
 class TestDBBase(TestBase):
-	"""Base class providing testing routines on databases"""
+	"""Base Class providing default functionality to all tests such as:
+	
+	- Utility functions provided by the TestCase base of the unittest method such as::
+		self.fail("todo")
+		self.failUnlessRaises(...)
+		
+	- Class level repository which is considered read-only as it is shared among 
+	  all test cases in your type.
+	  Access it using:: 
+	   self.rorepo	# 'ro' stands for read-only
+	   
+	  The rorepo is in fact your current project's git repo. If you refer to specific 
+	  shas for your objects, be sure you choose some that are part of the immutable portion 
+	  of the project history ( to assure tests don't fail for others ).
+	  
+	  Derived types can override the default repository type to create a different
+	  read-only repo, allowing to test their specific type
+	"""
 	
 	# data
 	two_lines = "1234\nhello world"
 	all_data = (two_lines, )
 	
+	#{ Configuration
+	# The repository type to instantiate. It takes at least a path to operate upon
+	# during instantiation.
+	RepoCls = None
+	
+	# if True, a read-only repo will be provided and RepoCls must be set.
+	# Otherwise it may remain unset
+	needs_ro_repo = True
+	#} END configuration
+	
+	@classmethod
+	def setUpAll(cls):
+		"""
+		Dynamically add a read-only repository to our actual type. This way 
+		each test type has its own repository
+		"""
+		if cls.needs_ro_repo:
+			assert cls.RepoCls is not None, "RepoCls class member must be set"
+			cls.rorepo = cls.RepoCls(rorepo_dir())
+		#END handle rorepo
 	
 	def _assert_object_writing_simple(self, db):
 		# write a bunch of objects and query their streams and info

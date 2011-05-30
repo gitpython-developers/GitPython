@@ -3,7 +3,7 @@
 # This module is part of GitDB and is released under
 # the New BSD License: http://www.opensource.org/licenses/bsd-license.php
 from git.test.lib import rorepo_dir
-from git.test.db.lib import *
+from git.test.db.lib import TestDBBase, with_rw_directory
 from git.exc import BadObject
 from git.db.py.complex import PureGitODB
 from git.base import OStream, OInfo
@@ -12,10 +12,10 @@ from git.util import hex_to_bin, bin_to_hex
 import os
 
 class TestGitDB(TestDBBase):
-	RepoCls = PureGitODB
+	needs_ro_repo = False
 	
 	def test_reading(self):
-		gdb = self.RepoCls(os.path.join(rorepo_dir(), 'objects'))
+		gdb = PureGitODB(os.path.join(rorepo_dir(), 'objects'))
 		
 		# we have packs and loose objects, alternates doesn't necessarily exist
 		assert 1 < len(gdb.databases()) < 4
@@ -44,7 +44,7 @@ class TestGitDB(TestDBBase):
 		
 	@with_rw_directory
 	def test_writing(self, path):
-		gdb = self.RepoCls(path)
+		gdb = PureGitODB(path)
 		
 		# its possible to write objects
 		self._assert_object_writing(gdb)
