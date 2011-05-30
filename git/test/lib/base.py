@@ -1,6 +1,6 @@
 # Copyright (C) 2010, 2011 Sebastian Thiel (byronimo@gmail.com) and contributors
 #
-# This module is part of PureCmdGitDB and is released under
+# This module is part of PureCompatibilityGitDB and is released under
 # the New BSD License: http://www.opensource.org/licenses/bsd-license.php
 """Utilities used in ODB testing"""
 from git.base import OStream

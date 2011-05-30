@@ -2,17 +2,26 @@
 #
 # This module is part of GitDB and is released under
 # the New BSD License: http://www.opensource.org/licenses/bsd-license.php
-from git.test.lib import *
+from git.test.lib import rorepo_dir
 from git.test.db.base import RepoBase
+
+# import test
+from git.db.py.base import *
+from git.db.py.loose import *
+from git.db.py.mem import *
+from git.db.py.pack import *
+from git.db.py.ref import *
+from git.db.py.resolve import *
+from git.db.py.submodule import *
+from git.db.py.transport import *
 from git.db.py.complex import *
 
-from git.db.complex import PureCmdGitDB
+from git.db.complex import PureCompatibilityGitDB
 
 class TestPyDBBase(RepoBase):
 	
-	RepoCls = PureCmdGitDB
+	RepoCls = PureCompatibilityGitDB
 	
-	def test_instantiation(self):
-		db = PureGitDB(rorepo_dir())
-		cdb = PureCompatibilityGitDB(rorepo_dir())
+	def test_basics(self):
+		pass
 		

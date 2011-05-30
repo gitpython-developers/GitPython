@@ -320,8 +320,7 @@ class PureReferencesMixin(ReferencesMixin):
 		return self.TagReferenceCls.list_items(self)
 	
 	def tag(self, name):
-		return self.tags[name]
-		
+		return self.TagReferenceCls(self, self.TagReferenceCls.to_full_path(name))
 	
 	def commit(self, rev=None):
 		if rev is None:

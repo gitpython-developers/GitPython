@@ -13,16 +13,16 @@ from git.base import (
 
 from git.util import (
 							bin_to_hex, 
-							hex_to_bin
-						)
-from git.db.compat import RepoCompatibilityInterface
-from git.util import RemoteProgress
+							hex_to_bin,
+							RemoteProgress,
+							isfile,
+							join_path,
+							join,
+							Actor
+					)
 from git.db.interface import FetchInfo as GitdbFetchInfo
 from git.db.interface import PushInfo as GitdbPushInfo
 from git.db.interface import HighLevelRepository
-
-from git.util import  join_path
-from git.util import join
 from git.cmd import Git
 from git.refs import (
 						Reference,
@@ -30,8 +30,9 @@ from git.refs import (
 						SymbolicReference, 
 						TagReference
 					)
-
+from git.objects.commit import Commit
 import re
+import os
 import sys
 
 
@@ -472,6 +473,11 @@ class CmdHighLevelRepository(HighLevelRepository):
 	re_author_committer_start = re.compile(r'^(author|committer)')
 	re_tab_full_line = re.compile(r'^\t(.*)$')
 	
+	#{ Configuration
+	CommitCls = Commit
+	GitCls = Git
+	#} END configuration
+	
 	def daemon_export():
 		def _get_daemon_export(self):
 			filename = join(self.git_dir, self.DAEMON_EXPORT_FILE)
@@ -588,7 +594,7 @@ class CmdHighLevelRepository(HighLevelRepository):
 							sha = info['id']
 							c = commits.get(sha)
 							if c is None:
-								c = Commit(	 self, hex_to_bin(sha),
+								c = self.CommitCls(	 self, hex_to_bin(sha),
 											 author=Actor._from_string(info['author'] + ' ' + info['author_email']),
 											 authored_date=info['author_date'],
 											 committer=Actor._from_string(info['committer'] + ' ' + info['committer_email']),
@@ -619,9 +625,9 @@ class CmdHighLevelRepository(HighLevelRepository):
 			os.makedirs(path, 0755)
 
 		# git command automatically chdir into the directory
-		git = Git(path)
+		git = cls.GitCls(path)
 		output = git.init(**kwargs)
-		return Repo(path)
+		return cls(path)
 
 	@classmethod
 	def _clone(cls, git, url, path, **kwargs):
@@ -686,7 +692,7 @@ class CmdHighLevelRepository(HighLevelRepository):
 		"""
 		:param kwargs: see the ``clone`` method
 		For more information, see the respective method in the HighLevelRepository"""
-		return cls._clone(type(self.git)(os.getcwd()), url, to_path, **kwargs)
+		return cls._clone(cls.GitCls(os.getcwd()), url, to_path, **kwargs)
 
 	def archive(self, ostream, treeish=None, prefix=None,  **kwargs):
 		"""For all args see HighLevelRepository interface

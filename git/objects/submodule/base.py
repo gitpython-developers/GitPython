@@ -58,7 +58,7 @@ UPDWKTREE = UpdateProgress.UPDWKTREE
 # IndexObject comes via util module, its a 'hacky' fix thanks to pythons import 
 # mechanism which cause plenty of trouble of the only reason for packages and
 # modules is refactoring - subpackages shoudn't depend on parent packages
-class Submodule(Iterable, Traversable, RepoAliasMixin):
+class Submodule(util.IndexObject, Iterable, Traversable, RepoAliasMixin):
 	"""Implements access to a git submodule. They are special in that their sha
 	represents a commit in the submodule's repository which is to be checked out
 	at the path of this instance. 

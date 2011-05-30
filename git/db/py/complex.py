@@ -1,6 +1,6 @@
 # Copyright (C) 2010, 2011 Sebastian Thiel (byronimo@gmail.com) and contributors
 #
-# This module is part of PureGitDB and is released under
+# This module is part of PurePartialGitDB and is released under
 # the New BSD License: http://www.opensource.org/licenses/bsd-license.php
 from git.db.interface import HighLevelRepository
 from base import (
@@ -12,7 +12,7 @@ from base import (
 						PureAlternatesFileMixin,
 						PureIndexDB,
 					)
-
+from transport import PureTransportDB
 from resolve import PureReferencesMixin
 
 from loose import PureLooseObjectODB
@@ -35,14 +35,14 @@ from git.exc import (
 						)
 import os
 
-__all__ = ('PureGitODB', 'PureGitDB', 'PureCompatibilityGitDB')
+__all__ = ('PureGitODB', 'PurePartialGitDB', 'PureCompatibilityGitDB')
 
 
 class PureGitODB(PureRootPathDB, PureObjectDBW, PureCompoundDB):
 	"""A git-style object-only database, which contains all objects in the 'objects'
 	subdirectory.
 	:note: The type needs to be initialized on the ./objects directory to function, 
-		as it deals solely with object lookup. Use a PureGitDB type if you need
+		as it deals solely with object lookup. Use a PurePartialGitDB type if you need
 		reference and push support."""
 	# Configuration
 	PackDBCls = PurePackedODB
@@ -103,10 +103,10 @@ class PureGitODB(PureRootPathDB, PureObjectDBW, PureCompoundDB):
 	
 	
 	
-class PureGitDB(PureGitODB, 
+class PurePartialGitDB(PureGitODB, 
 				PureRepositoryPathsMixin, PureConfigurationMixin, 
 				PureReferencesMixin, PureSubmoduleDB, PureAlternatesFileMixin, 
-				PureIndexDB,
+				PureIndexDB, PureTransportDB
 				# HighLevelRepository  Currently not implemented !
 				):
 	"""Git like database with support for object lookup as well as reference resolution.
@@ -119,10 +119,10 @@ class PureGitDB(PureGitODB,
 	def __init__(self, root_path):
 		"""Initialize ourselves on the .git directory, or the .git/objects directory."""
 		PureRepositoryPathsMixin._initialize(self, root_path)
-		super(PureGitDB, self).__init__(self.objects_dir)
+		super(PurePartialGitDB, self).__init__(self.objects_dir)
 	
 	
 	
-class PureCompatibilityGitDB(PureGitDB, RepoCompatibilityInterface):
+class PureCompatibilityGitDB(PurePartialGitDB, RepoCompatibilityInterface):
 	"""Pure git database with a compatability layer required by 0.3x code"""
 	

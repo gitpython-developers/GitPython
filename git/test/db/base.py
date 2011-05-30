@@ -5,7 +5,11 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 from lib import TestDBBase
 from git.test.lib import *
-from git import *
+from git.cmd import Git
+from git.objects import *
+from git.exc import *
+from git.index import *
+from git.refs import *
 from git.util import join_path_native
 from git.exc import BadObject
 from git.util import hex_to_bin, bin_to_hex
@@ -14,6 +18,8 @@ import os, sys
 import tempfile
 import shutil
 from cStringIO import StringIO
+
+from git.db.compat import RepoCompatibilityInterface
 
 
 class RepoGlobalsItemDeletorMetaCls(GlobalsItemDeletorMetaCls):
@@ -138,8 +144,8 @@ class RepoBase(TestDBBase):
 		try:
 			# with specific path
 			for path in (git_dir_rela, git_dir_abs):
-				r = Repo.init(path=path, bare=True)
-				assert isinstance(r, Repo)
+				r = self.RepoCls.init(path=path, bare=True)
+				assert isinstance(r, self.RepoCls)
 				assert r.bare == True
 				assert os.path.isdir(r.git_dir)
 				
@@ -160,7 +166,7 @@ class RepoBase(TestDBBase):
 				# END exception handling
 				
 				# try again, this time with the absolute version
-				rc = Repo.clone_from(r.git_dir, clone_path)
+				rc = self.RepoCls.clone_from(r.git_dir, clone_path)
 				self._assert_empty_repo(rc)
 				
 				shutil.rmtree(git_dir_abs)
@@ -176,7 +182,7 @@ class RepoBase(TestDBBase):
 			
 			os.makedirs(git_dir_rela)
 			os.chdir(git_dir_rela)
-			r = Repo.init(bare=False)
+			r = self.RepoCls.init(bare=False)
 			r.bare == False
 			
 			self._assert_empty_repo(r)
@@ -212,8 +218,7 @@ class RepoBase(TestDBBase):
 		self.rorepo.alternates = cur_alternates
 
 	def test_repr(self):
-		path = os.path.join(os.path.abspath(rorepo_dir()), '.git')
-		assert_equal('<git.Repo "%s">' % path, repr(self.rorepo))
+		assert_equal('<git.Repo "%s">' % rorepo_dir(), repr(self.rorepo))
 
 	def test_is_dirty_with_bare_repository(self):
 		orig_value = self.rorepo._bare
@@ -243,6 +248,7 @@ class RepoBase(TestDBBase):
 		assert isinstance(index, IndexFile)
 	
 	def test_tag(self):
+		assert self.rorepo.tag('0.1.5').commit
 		assert self.rorepo.tag('refs/tags/0.1.5').commit
 		
 	def test_archive(self):
@@ -587,17 +593,13 @@ class RepoBase(TestDBBase):
 		# currently, nothing more is supported
 		self.failUnlessRaises(NotImplementedError, rev_parse, "@{1 week ago}")
 		
-	def test_repo_odbtype(self):
-		target_type = GitDB
-		if sys.version_info[1] < 5:
-			target_type = CmdGitDB
-		assert isinstance(self.rorepo.odb, target_type)
-			
 	def test_submodules(self):
 		assert len(self.rorepo.submodules) == 1		# non-recursive
-		assert len(list(self.rorepo.iter_submodules())) == 2
+		# in previous configurations, we had recursive repositories so this would compare to 2
+		# now there is only one left, as gitdb was merged
+		assert len(list(self.rorepo.iter_submodules())) == 1
 		
-		assert isinstance(self.rorepo.submodule("git"), Submodule)
+		assert isinstance(self.rorepo.submodule("git/ext/async"), Submodule)
 		self.failUnlessRaises(ValueError, self.rorepo.submodule, "doesn't exist")
 		
 	@with_rw_repo('HEAD', bare=False)

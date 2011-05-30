@@ -43,11 +43,11 @@ class UnsupportedOperation(ODBError):
 	"""Thrown if the given operation cannot be supported by the object database"""
 
 
-class InvalidGitRepositoryError(GitPythonError):
+class InvalidGitRepositoryError(InvalidDBRoot):
 	""" Thrown if the given repository appears to have an invalid format.  """
 
 
-class NoSuchPathError(GitPythonError):
+class NoSuchPathError(InvalidDBRoot):
 	""" Thrown if a path could not be access by the system. """
 
 

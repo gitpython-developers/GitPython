@@ -28,7 +28,7 @@ class Reference(SymbolicReference, LazyMixin, Iterable):
 			Path relative to the .git/ directory pointing to the ref in question, i.e.
 			refs/heads/master"""
 		if not path.startswith(self._common_path_default+'/'):
-			raise ValueError("Cannot instantiate %r from path %s" % ( self.__class__.__name__, path ))
+			raise ValueError("Cannot instantiate %r from path %s, maybe use %s.to_full_path(name) to safely generate a valid full path from a name" % ( self.__class__.__name__, path, type(self).__name__))
 		super(Reference, self).__init__(repo, path)
 		
 

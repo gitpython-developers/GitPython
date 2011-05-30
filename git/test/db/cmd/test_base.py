@@ -2,12 +2,17 @@
 #
 # This module is part of GitDB and is released under
 # the New BSD License: http://www.opensource.org/licenses/bsd-license.php
-from git.test.lib import *
-from git.db import RefSpec
+from git.test.lib import rorepo_dir
+from git.test.db.base import RepoBase
 
-class TestBase(TestDBBase):
-	
-	@with_rw_directory
-	def test_basics(self, path):
-		assert False
-		
+# immport test
+from git.db.cmd.base import *
+from git.db.cmd.complex import *
+
+from git.db.complex import CmdCompatibilityGitDB
+
+class TestBase(RepoBase):
+	RepoCls = CmdCompatibilityGitDB
+
+	def test_basics(self):
+		pass

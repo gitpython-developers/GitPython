@@ -14,7 +14,8 @@ from git.util import (
 							join_path_native, 
 							stream_copy
 						)
-
+from git.db.interface import RepositoryPathsMixin
+from git.exc import UnsupportedOperation
 from git.typ import ObjectType
 	
 _assertion_msg_format = "Created object %r whose python type %r disagrees with the acutal git object type %r"
@@ -173,7 +174,15 @@ class IndexObject(Object):
 			Absolute path to this index object in the file system ( as opposed to the 
 			.path field which is a path relative to the git repository ).
 			
-			The returned path will be native to the system and contains '\' on windows. """
-		assert False, "Only works if repository is not bare - provide this check in an interface"
-		return join_path_native(dirname(self.odb.root_path()), self.path)
+			The returned path will be native to the system and contains '\' on windows.
+		:raise UnsupportedOperation: if underlying odb does not support the required method to obtain a working dir"""
+		# TODO: Here we suddenly need something better than a plain object database
+		# which indicates our odb should better be named repo !
+		root = ''
+		if isinstance(self.odb, RepositoryPathsMixin):
+			root = self.odb.working_tree_dir
+		else:
+			raise UnsupportedOperation("Cannot provide absolute path from a database without Repository path support")
+		#END handle odb type
+		return join_path_native(root, self.path)
 		

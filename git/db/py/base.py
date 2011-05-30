@@ -8,6 +8,7 @@ from git.db.interface import *
 from git.util import (
 		pool,
 		join,
+		isfile,
 		normpath,
 		abspath,
 		dirname,
@@ -25,7 +26,8 @@ from git.config import GitConfigParser
 from git.exc import 	(
 						BadObject, 
 						AmbiguousObjectName,
-						InvalidDBRoot
+						InvalidGitRepositoryError,
+						NoSuchPathError
 						)
 
 from async import ChannelThreadTask
@@ -240,7 +242,7 @@ class PureRepositoryPathsMixin(RepositoryPathsMixin):
 		epath = abspath(expandvars(expanduser(path or os.getcwd())))
 
 		if not exists(epath):
-			raise InvalidDBRoot(epath)
+			raise NoSuchPathError(epath)
 		#END check file 
 
 		self._working_tree_dir = None
@@ -264,7 +266,7 @@ class PureRepositoryPathsMixin(RepositoryPathsMixin):
 		# END while curpath
 		
 		if self._git_path is None:
-			raise InvalidDBRoot(epath)
+			raise InvalidGitRepositoryError(epath)
 		# END path not found
 
 		self._bare = self._git_path.endswith(self.repo_dir)
@@ -351,6 +353,7 @@ class PureConfigurationMixin(ConfigurationMixin):
 	
 	def __init__(self, *args, **kwargs):
 		"""Verify prereqs"""
+		super(PureConfigurationMixin, self).__init__(*args, **kwargs)
 		assert hasattr(self, 'git_dir')
 	
 	def _path_at_level(self, level ):

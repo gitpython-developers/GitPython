@@ -5,7 +5,7 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 """This module is just to maintain compatibility to git-python 0.3x"""
 
-from git.db.cmd.complex import CmdCompatibilityGitDB
+from git.db.complex import CmdCompatibilityGitDB
 
 
 import warnings
