@@ -419,12 +419,11 @@ class TestRefs(TestBase):
 		symbol_ref_path = "refs/symbol_ref"
 		symref = SymbolicReference(rw_repo, symbol_ref_path)
 		assert symref.path == symbol_ref_path
-		symbol_ref_abspath = os.path.join(rw_repo.root_path(), symref.path)
 		
 		# set it
 		symref.reference = new_head
 		assert symref.reference == new_head
-		assert os.path.isfile(symbol_ref_abspath)
+		assert os.path.isfile(symref.abspath)
 		assert symref.commit == new_head.commit
 		
 		for name in ('absname','folder/rela_name'):
@@ -476,7 +475,7 @@ class TestRefs(TestBase):
 		rw_repo.head.reference = Head.create(rw_repo, "master")
 		
 		# At least the head should still exist
-		assert os.path.isfile(os.path.join(rw_repo.root_path(), 'HEAD'))
+		assert os.path.isfile(rw_repo.head.abspath)
 		refs = list(SymbolicReference.iter_items(rw_repo))
 		assert len(refs) == 1
 		
