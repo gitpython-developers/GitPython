@@ -584,8 +584,15 @@ class RepoBase(TestDBBase):
 			assert rev_parse(refspec+":CHANGES").type == 'blob'
 		#END operate on non-detached head
 		
-		# the last position
-		assert rev_parse('@{1}') != head.commit
+		# the most recent previous position of the currently checked out branch
+		
+		try:
+			assert rev_parse('@{1}') != head.commit
+		except IndexError:
+			# on new checkouts, there isn't even a single past branch position
+			# in the log
+			pass
+		#END handle fresh checkouts
 		
 		# position doesn't exist
 		self.failUnlessRaises(IndexError, rev_parse, '@{10000}')
