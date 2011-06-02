@@ -10,6 +10,7 @@ import sys
 import time
 import tempfile
 import platform
+from exc import GitCommandError
 
 from gitdb.util import (
 							make_sha, 

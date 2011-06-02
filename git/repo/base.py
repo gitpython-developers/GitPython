@@ -684,7 +684,7 @@ class Repo(object):
 		# END windows handling 
 		
 		try:
-			if git.version >= (1, 7, 0, 0): kwargs['progress'] = True
+			if git.version_info >= (1, 7, 0, 0): kwargs['progress'] = True
 			proc = git.clone(url, path, with_extended_output=True, as_process=True, v=True, **kwargs)
 			if progress:
 				_digest_process_messages(proc.stderr, progress)
