@@ -4,7 +4,7 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
-from lib import *
+from git.test.performance.lib import TestBigRepoRW
 from git import *
 from git.base import IStream
 from git.test.objects.test_commit import assert_commit_serialization
