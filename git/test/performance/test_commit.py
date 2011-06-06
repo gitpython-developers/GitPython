@@ -70,9 +70,9 @@ class TestPerformance(TestBigRepoRW):
 		print >> sys.stderr, "Iterated %i Commits in %s [s] ( %f commits/s )" % (nc, elapsed_time, nc/elapsed_time)
 		
 	def test_commit_serialization(self):
-		assert_commit_serialization(self.gitrwrepo, self.head_sha_2k, True)
+		assert_commit_serialization(self.rwrepo, self.head_sha_2k, True)
 		
-		rwrepo = self.gitrwrepo
+		rwrepo = self.rwrepo
 		make_object = rwrepo.odb.store
 		# direct serialization - deserialization can be tested afterwards
 		# serialization is probably limited on IO
