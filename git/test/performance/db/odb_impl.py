@@ -17,6 +17,10 @@ class PerfBaseDeletorMetaClass(GlobalsItemDeletorMetaCls):
 class TestObjDBPerformanceBase(TestBigRepoR):
 	__metaclass__ = PerfBaseDeletorMetaClass
 	
+	#{ Configuration 
+	RepoCls = None	# to be set by subclass
+	#} END configuration
+	
 	def test_random_access_test(self):
 		repo = self.rorepo
 	

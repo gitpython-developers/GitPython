@@ -7,6 +7,8 @@ from git.test.lib import (
 import shutil
 import tempfile
 
+from git import Repo
+
 #{ Invvariants
 k_env_git_repo = "GIT_PYTHON_TEST_GIT_REPO_BASE"
 #} END invariants
@@ -41,7 +43,7 @@ class TestBigRepoR(TestBase):
 	#} END invariants 
 	
 	#{ Configuration
-	RepoCls = None
+	RepoCls = Repo
 	#} END configuration
 	
 	@classmethod

@@ -8,17 +8,26 @@ from lib import (
 	)
 
 from git.exc import UnsupportedOperation
-from git.db.pack import PackedDB
+from git.db.py.pack import PurePackedODB
 
 import sys
 import os
 from time import time
 import random
 
-class TestPackedDBPerformance(TestBigRepoR):
+class TestPurePackedODBPerformance(TestBigRepoR):
 	
-	def _test_pack_random_access(self):
-		pdb = PackedDB(os.path.join(self.gitrepopath, "objects/pack"))
+	#{ Configuration
+	PackedODBCls = PurePackedODB
+	#} END configuration
+	
+	@classmethod
+	def setUpAll(cls):
+		super(TestPurePackedODBPerformance, cls).setUpAll()
+		cls.ropdb = cls.PackedODBCls(cls.rorepo.db_path("pack"))
+	
+	def test_pack_random_access(self):
+		pdb = self.ropdb
 		
 		# sha lookup
 		st = time()
@@ -66,7 +75,7 @@ class TestPackedDBPerformance(TestBigRepoR):
 		print >> sys.stderr, "PDB: Obtained %i streams by sha and read all bytes totallying %i KiB ( %f KiB / s ) in %f s ( %f streams/s )" % (max_items, total_kib, total_kib/elapsed , elapsed, max_items / elapsed)
 		
 	def test_correctness(self):
-		pdb = PackedDB(os.path.join(self.gitrepopath, "objects/pack"))
+		pdb = self.ropdb
 		# disabled for now as it used to work perfectly, checking big repositories takes a long time
 		print >> sys.stderr, "Endurance run: verify streaming of objects (crc and sha)"
 		for crc in range(2):
