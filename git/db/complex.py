@@ -8,7 +8,10 @@ __all__ = ['CmdGitDB', 'PureGitDB', 'CmdCompatibilityGitDB', 'PureCompatibilityG
 
 class CmdGitDB(CmdPartialGitDB, PurePartialGitDB):
 	"""A database which uses primarily the git command implementation, but falls back
-	to pure python where it is more feasible"""
+	to pure python where it is more feasible
+	:note: To assure consistent behaviour across implementations, when calling the 
+		``stream()`` method a cache is created. This makes this implementation a bad
+		choice when reading big files as these are streamed from memory in all cases."""
 
 class CmdCompatibilityGitDB(RepoCompatibilityInterface, CmdGitDB):
 	"""A database which fills in its missing implementation using the pure python 

@@ -31,6 +31,7 @@ from git.refs import (
 						TagReference
 					)
 from git.objects.commit import Commit
+from cStringIO import StringIO
 import re
 import os
 import sys
@@ -305,9 +306,15 @@ class CmdObjectDBRMixin(object):
 		return OInfo(hex_to_bin(hexsha), typename, size)
 		
 	def stream(self, sha):
-		"""For now, all lookup is done by git itself"""
-		hexsha, typename, size, stream = self._git.stream_object_data(bin_to_hex(sha))
-		return OStream(hex_to_bin(hexsha), typename, size, stream)
+		"""For now, all lookup is done by git itself
+		:note: As we don't know when the stream is actually read (and if it is 
+			stored for later use) we read the data rigth away and cache it.
+			This has HUGE performance implication, both for memory as for 
+			reading/deserializing objects, but we have no other choice in order
+			to make the database behaviour consistent with other implementations !"""
+		
+		hexsha, typename, size, data = self._git.get_object_data(bin_to_hex(sha))
+		return OStream(hex_to_bin(hexsha), typename, size, StringIO(data))
 		
 	def partial_to_complete_sha_hex(self, partial_hexsha):
 		""":return: Full binary 20 byte sha from the given partial hexsha
