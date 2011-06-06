@@ -33,31 +33,38 @@ class TestPurePackedODB(TestPurePackedODBPerformanceBase):
 	PackedODBCls = PurePackedODB
 	#} END configuration
 	
+	def test_pack_writing_note(self):
+		sys.stderr.write("test_pack_writing should be adjusted to support different databases to read from - see test for more info")
+		raise SkipTest()
+	
 	def test_pack_writing(self):
 		# see how fast we can write a pack from object streams.
 		# This will not be fast, as we take time for decompressing the streams as well
+		# For now we test the fast streaming and slow streaming versions manually
 		ostream = CountedNullStream()
-		pdb = self.ropdb
-		
-		ni = 5000
-		count = 0
-		total_size = 0
-		st = time()
-		objs = list()
-		for sha in pdb.sha_iter():
-			count += 1
-			objs.append(pdb.stream(sha))
-			if count == ni:
-				break
-		#END gather objects for pack-writing
-		elapsed = time() - st
-		print >> sys.stderr, "PDB Streaming: Got %i streams by sha in in %f s ( %f streams/s )" % (ni, elapsed, ni / elapsed)
-		
-		st = time()
-		PackEntity.write_pack(objs, ostream.write)
-		elapsed = time() - st
-		total_kb = ostream.bytes_written() / 1000
-		print >> sys.stderr, "PDB Streaming: Wrote pack of size %i kb in %f s (%f kb/s)" % (total_kb, elapsed, total_kb/elapsed)
+		# NOTE: We use the same repo twice to see whether OS caching helps
+		for rorepo in (self.rorepo, self.rorepo, self.ropdb):
+			
+			ni = 5000
+			count = 0
+			total_size = 0
+			st = time()
+			objs = list()
+			for sha in rorepo.sha_iter():
+				count += 1
+				objs.append(rorepo.stream(sha))
+				if count == ni:
+					break
+			#END gather objects for pack-writing
+			elapsed = time() - st
+			print >> sys.stderr, "PDB Streaming: Got %i streams from %s by sha in in %f s ( %f streams/s )" % (ni, rorepo.__class__.__name__, elapsed, ni / elapsed)
+			
+			st = time()
+			PackEntity.write_pack(objs, ostream.write)
+			elapsed = time() - st
+			total_kb = ostream.bytes_written() / 1000
+			print >> sys.stderr, "PDB Streaming: Wrote pack of size %i kb in %f s (%f kb/s)" % (total_kb, elapsed, total_kb/elapsed)
+		#END for each rorepo
 		
 	
 	def test_stream_reading(self):
