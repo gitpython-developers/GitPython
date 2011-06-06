@@ -3,27 +3,35 @@
 # This module is part of GitDB and is released under
 # the New BSD License: http://www.opensource.org/licenses/bsd-license.php
 """Performance tests for object store"""
-from lib import (
-	TestBigRepoR 
+from git.test.performance.lib import (
+	TestBigRepoR, 
+	GlobalsItemDeletorMetaCls
 	)
 
 from git.exc import UnsupportedOperation
-from git.db.py.pack import PurePackedODB
 
 import sys
 import os
 from time import time
 import random
 
-class TestPurePackedODBPerformance(TestBigRepoR):
+
+class PerfBaseDeletorMetaClass(GlobalsItemDeletorMetaCls):
+	ModuleToDelete = 'TestPurePackedODBPerformanceBase'
+
+class TestPurePackedODBPerformanceBase(TestBigRepoR):
+	__metaclass__ = PerfBaseDeletorMetaClass
 	
 	#{ Configuration
-	PackedODBCls = PurePackedODB
+	PackedODBCls = None
 	#} END configuration
 	
 	@classmethod
 	def setUpAll(cls):
-		super(TestPurePackedODBPerformance, cls).setUpAll()
+		super(TestPurePackedODBPerformanceBase, cls).setUpAll()
+		if cls.PackedODBCls is None:
+			raise AssertionError("PackedODBCls must be set in subclass")
+		#END assert configuration
 		cls.ropdb = cls.PackedODBCls(cls.rorepo.db_path("pack"))
 	
 	def test_pack_random_access(self):

@@ -3,7 +3,6 @@
 from time import time
 import sys
 import stat
-import copy
 
 from git.test.performance.lib import (
 	TestBigRepoR,
