@@ -65,7 +65,7 @@ class TestBigRepoRW(TestBigRepoR):
 		super(TestBigRepoRW, cls).setUpAll()
 		dirname = tempfile.mktemp()
 		os.mkdir(dirname)
-		cls.rwrepo = cls.gitrorepo.clone(dirname, shared=True, bare=True)
+		cls.rwrepo = cls.rorepo.clone(dirname, shared=True, bare=True)
 	
 	@classmethod
 	def tearDownAll(cls):

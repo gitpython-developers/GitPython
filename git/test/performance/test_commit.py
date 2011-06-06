@@ -6,16 +6,16 @@
 
 from lib import *
 from git import *
-from git import IStream
-from git.test.test_commit import assert_commit_serialization
+from git.base import IStream
+from git.test.objects.test_commit import assert_commit_serialization
 from cStringIO import StringIO
 from time import time
 import sys
 
 class TestPerformance(TestBigRepoRW):
-
+	
 	# ref with about 100 commits in its history
-	ref_100 = '0.1.6'
+	ref_100 = 'v0.99'
 
 	def _query_commit_info(self, c):
 		c.author
@@ -45,13 +45,14 @@ class TestPerformance(TestBigRepoRW):
 			# END for each object
 		# END for each commit
 		elapsed_time = time() - st
+		assert no, "Should have traversed a few objects"
 		print >> sys.stderr, "Traversed %i Trees and a total of %i unchached objects in %s [s] ( %f objs/s )" % (nc, no, elapsed_time, no/elapsed_time) 
 		
 	def test_commit_traversal(self):
 		# bound to cat-file parsing performance
 		nc = 0
 		st = time()
-		for c in self.gitrorepo.commit(self.head_sha_2k).traverse(branch_first=False):
+		for c in self.rorepo.commit(self.head_sha_2k).traverse(branch_first=False):
 			nc += 1
 			self._query_commit_info(c)
 		# END for each traversed commit
@@ -62,7 +63,7 @@ class TestPerformance(TestBigRepoRW):
 		# bound to stream parsing performance
 		nc = 0
 		st = time()
-		for c in Commit.iter_items(self.gitrorepo, self.head_sha_2k):
+		for c in Commit.iter_items(self.rorepo, self.head_sha_2k):
 			nc += 1
 			self._query_commit_info(c)
 		# END for each traversed commit
@@ -73,7 +74,7 @@ class TestPerformance(TestBigRepoRW):
 		assert_commit_serialization(self.rwrepo, self.head_sha_2k, True)
 		
 		rwrepo = self.rwrepo
-		make_object = rwrepo.odb.store
+		make_object = rwrepo.store
 		# direct serialization - deserialization can be tested afterwards
 		# serialization is probably limited on IO
 		hc = rwrepo.commit(self.head_sha_2k)
