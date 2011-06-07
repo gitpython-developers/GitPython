@@ -91,3 +91,10 @@ class TestGit(TestBase):
 		hexsha, typename, size =  self.git.get_object_header(hexsha)
 		hexsha, typename_two, size_two, data = self.git.get_object_data(hexsha)
 		assert typename == typename_two and size == size_two
+		
+	def test_version(self):
+		v = self.git.version_info
+		assert isinstance(v, tuple)
+		for n in v:
+			assert isinstance(n, int)
+		#END verify number types
