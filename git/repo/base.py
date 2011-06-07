@@ -11,17 +11,17 @@ from git.refs import *
 from git.index import IndexFile
 from git.objects import *
 from git.config import GitConfigParser
-from git.remote import Remote
+from git.remote import (
+						Remote,
+						digest_process_messages,
+						finalize_process,
+						add_progress
+					)
+
 from git.db import (
 				GitCmdObjectDB, 
 				GitDB
 				)
-
-
-from git.util import (
-						_digest_process_messages,
-						_finalize_proc
-					)
 
 from gitdb.util import (
 							join,
@@ -684,10 +684,11 @@ class Repo(object):
 		# END windows handling 
 		
 		try:
-			proc = git.clone(url, path, with_extended_output=True, as_process=True, v=True, progress=True, **kwargs)
+			proc = git.clone(url, path, with_extended_output=True, as_process=True, v=True, **add_progress(kwargs, git, progress))
 			if progress:
-				_digest_process_messages(proc.stderr, progress)
-			_finalize_proc(proc)
+				digest_process_messages(proc.stderr, progress)
+			#END handle progress
+			finalize_process(proc)
 		finally:
 			if prev_cwd is not None:
 				os.chdir(prev_cwd)

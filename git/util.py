@@ -100,40 +100,6 @@ def get_user_id():
 	# END get username from login
 	return "%s@%s" % (username, platform.node())
 
-def _digest_process_messages(fh, progress):
-	"""Read progress messages from file-like object fh, supplying the respective
-	progress messages to the progress instance.
-
-	:return: list(line, ...) list of lines without linebreaks that did
-		not contain progress information"""
-	line_so_far = ''
-	dropped_lines = list()
-	while True:
-		char = fh.read(1)
-		if not char:
-			break
-
-		if char in ('\r', '\n'):
-			dropped_lines.extend(progress._parse_progress_line(line_so_far))
-			line_so_far = ''
-		else:
-			line_so_far += char
-		# END process parsed line
-	# END while file is not done reading
-	return dropped_lines
-
-def _finalize_proc(proc):
-	"""Wait for the process (clone, fetch, pull or push) and handle its errors accordingly"""
-	try:
-		proc.wait()
-	except GitCommandError,e:
-		# if a push has rejected items, the command has non-zero return status
-		# a return status of 128 indicates a connection error - reraise the previous one
-		if proc.poll() == 128:
-			raise
-		pass
-	# END exception handling
-
 #} END utilities
 
 #{ Classes
