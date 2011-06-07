@@ -25,11 +25,27 @@ class TestSubmodule(TestObjectBase):
 	k_subm_current = "468cad66ff1f80ddaeee4123c24e4d53a032c00d"
 	k_subm_changed = "394ed7006ee5dc8bddfd132b64001d5dfc0ffdd3"
 	k_no_subm_tag = "0.1.6"
-	
+	k_github_gitdb_url = 'git://github.com/gitpython-developers/gitdb.git'
 	env_gitdb_local_path = "GITPYTHON_TEST_GITDB_LOCAL_PATH"
 	
 	def _generate_async_local_path(self):
 		return to_native_path_linux(join_path_native(self.rorepo.working_tree_dir, 'git/ext/async'))
+
+	def _rewrite_gitdb_to_local_path(self, smgitdb):
+		"""Rewrites the given submodule to point to the local path of the gitdb repository, if possible.
+		Otherwise it leaves it unchanged
+		:return: new clone path, or None if no new path was set"""
+		new_smclone_path = os.environ.get(self.env_gitdb_local_path)
+		if new_smclone_path is not None:
+			writer = smgitdb.config_writer()
+			writer.set_value('url', new_smclone_path)
+			del(writer)
+			assert smgitdb.config_reader().get_value('url') == new_smclone_path
+			assert smgitdb.url == new_smclone_path
+		else:
+			sys.stderr.write("Submodule tests need the gitdb repository. You can specify a local source setting the %s environment variable. Otherwise it will be downloaded from the internet" % self.env_gitdb_local_path)
+		#END handle submodule path
+		return new_smclone_path
 
 	def _do_base_tests(self, rwrepo):
 		"""Perform all tests in the given repository, it may be bare or nonbare"""
@@ -48,7 +64,7 @@ class TestSubmodule(TestObjectBase):
 		
 		assert sm.path == 'git/ext/gitdb'
 		assert sm.path != sm.name					# in our case, we have ids there, which don't equal the path
-		assert sm.url == 'git://github.com/gitpython-developers/gitdb.git'
+		assert sm.url == self.k_github_gitdb_url
 		assert sm.branch_path == 'refs/heads/master'			# the default ...
 		assert sm.branch_name == 'master'
 		assert sm.parent_commit == rwrepo.head.commit
@@ -83,17 +99,7 @@ class TestSubmodule(TestObjectBase):
 			# Note: This is nice but doesn't work anymore with the latest git-python
 			# version. This would also mean we need internet for this to work which 
 			# is why we allow an override using an environment variable
-			new_smclone_path = os.environ.get(self.env_gitdb_local_path)
-			if new_smclone_path is not None:
-				writer = sm.config_writer()
-				writer.set_value('url', new_smclone_path)
-				del(writer)
-				assert sm.config_reader().get_value('url') == new_smclone_path
-				assert sm.url == new_smclone_path
-			else:
-				sys.stderr.write("Submodule tests need the gitdb repository. You can specify a local source setting the %s environment variable. Otherwise it will be downloaded from the internet" % self.env_gitdb_local_path)
-			#END handle submodule path 
-			
+			new_smclone_path = self._rewrite_gitdb_to_local_path(sm)
 		# END handle bare repo
 		smold.config_reader()
 		
@@ -405,7 +411,7 @@ class TestSubmodule(TestObjectBase):
 		
 		# deep traversal git / async
 		rsmsp = [sm.path for sm in rm.traverse()]
-		assert len(rsmsp) == 2			# git and async, async being a child of git
+		assert len(rsmsp) == 1			# git and async, async being a child of git
 		
 		# cannot set the parent commit as root module's path didn't exist
 		self.failUnlessRaises(ValueError, rm.set_parent_commit, 'HEAD')
@@ -425,8 +431,8 @@ class TestSubmodule(TestObjectBase):
 		prep = sm.path
 		assert not sm.module_exists()				# was never updated after rwrepo's clone
 		
-		# assure we clone from a local source 
-		sm.config_writer().set_value('url', to_native_path_linux(join_path_native(self.rorepo.working_tree_dir, sm.path)))
+		# assure we clone from a local source
+		self._rewrite_gitdb_to_local_path(sm)
 		
 		# dry-run does nothing
 		sm.update(recursive=False, dry_run=True, progress=prog)
@@ -459,7 +465,7 @@ class TestSubmodule(TestObjectBase):
 		#================
 		nsmn = "newsubmodule"
 		nsmp = "submrepo"
-		async_url = to_native_path_linux(join_path_native(self.rorepo.working_tree_dir, rsmsp[0], rsmsp[1]))
+		async_url = self._generate_async_local_path()
 		nsm = Submodule.add(rwrepo, nsmn, nsmp, url=async_url)
 		csmadded = rwrepo.index.commit("Added submodule").hexsha	# make sure we don't keep the repo reference
 		nsm.set_parent_commit(csmadded)
@@ -501,7 +507,11 @@ class TestSubmodule(TestObjectBase):
 		# to the first repository, this way we have a fast checkout, and a completely different 
 		# repository at the different url
 		nsm.set_parent_commit(csmremoved)
-		nsmurl = to_native_path_linux(join_path_native(self.rorepo.working_tree_dir, rsmsp[0]))
+		nsmurl = os.environ.get(self.env_gitdb_local_path, self.k_github_gitdb_url)
+		
+		# Note: We would have liked to have a different url, but we cannot 
+		# provoke this case
+		assert nsm.url != nsmurl
 		nsm.config_writer().set_value('url', nsmurl)
 		csmpathchange = rwrepo.index.commit("changed url")
 		nsm.set_parent_commit(csmpathchange)
