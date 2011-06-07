@@ -237,7 +237,8 @@ class Git(LazyMixin):
 		
 	@property
 	def version_info(self):
-		""":return: tuple(int, ...) tuple with integers representing the major, minor
+		"""
+		:return: tuple(int, ...) tuple with integers representing the major, minor
 			and additional version numbers as parsed from git version.
 			This value is generated on demand and is cached"""
 		return self._version_info

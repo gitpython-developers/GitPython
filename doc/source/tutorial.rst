@@ -385,6 +385,21 @@ The item returned is a DiffIndex which is essentially a list of Diff objects. It
 
     for diff_added in wdiff.iter_change_type('A'): do_something_with(diff_added)
 
+Use the diff framework if you want to implement git-status like functionality.     
+
+* A diff between the index and the commit's tree your HEAD points to
+ 
+ * use repo.index.diff(repo.head)
+  
+* A diff between the index and the working tree
+ 
+ * use repo.index.diff(None)
+  
+* A list of untracked files
+ 
+ * use repo.untracked_files
+
+    
 Switching Branches
 ******************
 To switch between branches, you effectively need to point your HEAD to the new branch head and reset your index and working copy to match. A simple manual way to do it is the following one::

@@ -2,10 +2,23 @@
 Changelog
 =========
 
-NEXT
-====
-* Blob Type
+0.3.1
+=====
+* **git** command wrapper
+
+ * Added ``version_info`` property which returns a tuple of integers representing the installed git version.
+
+* **Blob** Type
+
  * Added mode constants to ease the manual creation of blobs
+
+* **More Changes**
+
+ * Configuration file parsing is more robust. It should now be able to handle everything that the git command can parse as well.
+ * The progress parsing was updated to support git 1.7.0.3 and newer. Previously progress was not enabled for the git command or only worked with ssh in case of older git versions.
+ * Parsing of tags was improved. Previously some parts of the name could not be parsed properly.
+ * The rev-parse pure python implementation now handles branches correctly if they look like hexadecimal sha's. 
+ 
 
 0.3.1 Beta 2
 ============
