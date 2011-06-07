@@ -10,6 +10,7 @@ import sys
 import time
 import tempfile
 import platform
+from exc import GitCommandError
 
 from gitdb.util import (
 							make_sha, 
@@ -100,6 +101,40 @@ def get_user_id():
 	# END get username from login
 	return "%s@%s" % (username, platform.node())
 
+def _digest_process_messages(fh, progress):
+	"""Read progress messages from file-like object fh, supplying the respective
+	progress messages to the progress instance.
+
+	:return: list(line, ...) list of lines without linebreaks that did
+		not contain progress information"""
+	line_so_far = ''
+	dropped_lines = list()
+	while True:
+		char = fh.read(1)
+		if not char:
+			break
+
+		if char in ('\r', '\n'):
+			dropped_lines.extend(progress._parse_progress_line(line_so_far))
+			line_so_far = ''
+		else:
+			line_so_far += char
+		# END process parsed line
+	# END while file is not done reading
+	return dropped_lines
+
+def _finalize_proc(proc):
+	"""Wait for the process (clone, fetch, pull or push) and handle its errors accordingly"""
+	try:
+		proc.wait()
+	except GitCommandError,e:
+		# if a push has rejected items, the command has non-zero return status
+		# a return status of 128 indicates a connection error - reraise the previous one
+		if proc.poll() == 128:
+			raise
+		pass
+	# END exception handling
+
 #} END utilities
 
 #{ Classes
@@ -109,8 +144,8 @@ class RemoteProgress(object):
 	Handler providing an interface to parse progress information emitted by git-push
 	and git-fetch and to dispatch callbacks allowing subclasses to react to the progress.
 	"""
-	_num_op_codes = 5
-	BEGIN, END, COUNTING, COMPRESSING, WRITING =  [1 << x for x in range(_num_op_codes)]
+	_num_op_codes = 7
+	BEGIN, END, COUNTING, COMPRESSING, WRITING, RECEIVING, RESOLVING = [1 << x for x in range(_num_op_codes)]
 	STAGE_MASK = BEGIN|END
 	OP_MASK = ~STAGE_MASK
 	
@@ -168,6 +203,10 @@ class RemoteProgress(object):
 				op_code |= self.COMPRESSING
 			elif op_name == "Writing objects":
 				op_code |= self.WRITING
+			elif op_name == 'Receiving objects':
+				op_code |= self.RECEIVING
+			elif op_name == 'Resolving deltas':
+				op_code |= self.RESOLVING
 			else:
 				raise ValueError("Operation name %r unknown" % op_name)
 			
