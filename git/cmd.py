@@ -5,7 +5,10 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
 import os, sys
-from util import *
+from util import (
+					LazyMixin, 
+					stream_copy
+				)
 from exc import GitCommandError
 
 from subprocess import (
@@ -26,7 +29,7 @@ __all__ = ('Git', )
 def dashify(string):
 	return string.replace('_', '-')
 
-class Git(object):
+class Git(LazyMixin):
 	"""
 	The Git class manages communication with the Git binary.
 	
@@ -41,7 +44,7 @@ class Git(object):
 		of the command to stdout.
 		Set its value to 'full' to see details about the returned values.
 	"""
-	__slots__ = ("_working_dir", "cat_file_all", "cat_file_header")
+	__slots__ = ("_working_dir", "cat_file_all", "cat_file_header", "_version_info")
 	
 	# CONFIGURATION
 	# The size in bytes read from stdout when copying git's output to another stream
@@ -214,14 +217,30 @@ class Git(object):
 		"""A convenience method as it allows to call the command as if it was 
 		an object.
 		:return: Callable object that will execute call _call_process with your arguments."""
-		if name[:1] == '_':
-			raise AttributeError(name)
+		if name[0] == '_':
+			return LazyMixin.__getattr__(self, name)
 		return lambda *args, **kwargs: self._call_process(name, *args, **kwargs)
+
+	def _set_cache_(self, attr):
+		if attr == '_version_info':
+			version_numbers = self._call_process('version').rpartition(' ')[2]
+			self._version_info = tuple(int(n) for n in version_numbers.split('.'))
+		else:
+			super(Git, self)._set_cache_(attr)
+		#END handle version info
+			
 
 	@property
 	def working_dir(self):
 		""":return: Git directory we are working on"""
 		return self._working_dir
+		
+	@property
+	def version_info(self):
+		""":return: tuple(int, ...) tuple with integers representing the major, minor
+			and additional version numbers as parsed from git version.
+			This value is generated on demand and is cached"""
+		return self._version_info
 
 	def execute(self, command,
 				istream=None,
