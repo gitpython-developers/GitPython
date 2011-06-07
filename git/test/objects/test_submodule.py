@@ -10,6 +10,7 @@ from git.util import to_native_path_linux, join_path_native
 import shutil
 import git
 import os
+import sys
 
 class TestRootProgress(RootUpdateProgress):
 	"""Just prints messages, for now without checking the correctness of the states"""
@@ -25,6 +26,10 @@ class TestSubmodule(TestObjectBase):
 	k_subm_changed = "394ed7006ee5dc8bddfd132b64001d5dfc0ffdd3"
 	k_no_subm_tag = "0.1.6"
 	
+	env_gitdb_local_path = "GITPYTHON_TEST_GITDB_LOCAL_PATH"
+	
+	def _generate_async_local_path(self):
+		return to_native_path_linux(join_path_native(self.rorepo.working_tree_dir, 'git/ext/async'))
 
 	def _do_base_tests(self, rwrepo):
 		"""Perform all tests in the given repository, it may be bare or nonbare"""
@@ -41,9 +46,9 @@ class TestSubmodule(TestObjectBase):
 		# at a different time, there is None
 		assert len(Submodule.list_items(rwrepo, self.k_no_subm_tag)) == 0
 		
-		assert sm.path == 'git/ext/git'
+		assert sm.path == 'git/ext/gitdb'
 		assert sm.path != sm.name					# in our case, we have ids there, which don't equal the path
-		assert sm.url == 'git://github.com/gitpython-developers/git.git'
+		assert sm.url == 'git://github.com/gitpython-developers/gitdb.git'
 		assert sm.branch_path == 'refs/heads/master'			# the default ...
 		assert sm.branch_name == 'master'
 		assert sm.parent_commit == rwrepo.head.commit
@@ -74,13 +79,21 @@ class TestSubmodule(TestObjectBase):
 		if rwrepo.bare:
 			self.failUnlessRaises(InvalidGitRepositoryError, sm.config_writer)
 		else:
-			writer = sm.config_writer()
 			# for faster checkout, set the url to the local path
-			new_smclone_path = to_native_path_linux(join_path_native(self.rorepo.working_tree_dir, sm.path))
-			writer.set_value('url', new_smclone_path)
-			del(writer)
-			assert sm.config_reader().get_value('url') == new_smclone_path
-			assert sm.url == new_smclone_path
+			# Note: This is nice but doesn't work anymore with the latest git-python
+			# version. This would also mean we need internet for this to work which 
+			# is why we allow an override using an environment variable
+			new_smclone_path = os.environ.get(self.env_gitdb_local_path)
+			if new_smclone_path is not None:
+				writer = sm.config_writer()
+				writer.set_value('url', new_smclone_path)
+				del(writer)
+				assert sm.config_reader().get_value('url') == new_smclone_path
+				assert sm.url == new_smclone_path
+			else:
+				sys.stderr.write("Submodule tests need the gitdb repository. You can specify a local source setting the %s environment variable. Otherwise it will be downloaded from the internet" % self.env_gitdb_local_path)
+			#END handle submodule path 
+			
 		# END handle bare repo
 		smold.config_reader()
 		
@@ -176,7 +189,8 @@ class TestSubmodule(TestObjectBase):
 			csm_repopath = csm.path
 			
 			# adjust the path of the submodules module to point to the local destination
-			new_csmclone_path = to_native_path_linux(join_path_native(self.rorepo.working_tree_dir, sm.path, csm.path))
+			# In the current gitpython version, async is used directly by gitpython
+			new_csmclone_path = self._generate_async_local_path()
 			csm.config_writer().set_value('url', new_csmclone_path)
 			assert csm.url == new_csmclone_path
 			
@@ -247,6 +261,10 @@ class TestSubmodule(TestObjectBase):
 			# still, we have the file modified
 			self.failUnlessRaises(InvalidGitRepositoryError, sm.remove, dry_run=True)
 			sm.module().index.reset(working_tree=True)
+			
+			# make sure sub-submodule is not modified by forcing it to update
+			# to the revision it is supposed to point to.
+			csm.update()
 			
 			# this would work
 			assert sm.remove(dry_run=True) is sm

@@ -29,7 +29,7 @@ from git.exc import (
 					)
 
 import stat
-import git
+import git			# we use some types indirectly to prevent cyclic imports !
 
 import os
 import sys
@@ -769,14 +769,18 @@ class Submodule(util.IndexObject, Iterable, Traversable, RepoAliasMixin):
 	#{ Query Interface
 	
 	@unbare_repo
-	def module(self):
-		""":return: Repo instance initialized from the repository at our submodule path
+	def module(self, repoType=None):
+		""":return: Repository instance initialized from the repository at our submodule path
+		:param repoType: The type of repository to be created. It must be possible to instatiate it
+			from a single repository path.
+			If None, a default repository type will be used
 		:raise InvalidGitRepositoryError: if a repository was not available. This could 
 			also mean that it was not yet initialized"""
 		# late import to workaround circular dependencies
-		module_path = self.abspath 
+		module_path = self.abspath
+		repoType = repoType or git.Repo
 		try:
-			repo = git.Repo(module_path)
+			repo = repoType(module_path)
 			if repo != self.repo:
 				return repo
 			# END handle repo uninitialized
