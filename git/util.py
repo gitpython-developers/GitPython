@@ -47,12 +47,15 @@ def join_path(a, *p):
 	'/' instead of possibly '\' on windows."""
 	path = a
 	for b in p:
+		if len(b) == 0:
+			continue
 		if b.startswith('/'):
 			path += b[1:]
 		elif path == '' or path.endswith('/'):
 			path +=	 b
 		else:
 			path += '/' + b
+	# END for each path token to add
 	return path
 	
 def to_native_path_windows(path):
