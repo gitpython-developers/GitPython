@@ -141,14 +141,17 @@ def get_push_info(repo, remotename_or_url, proc, progress):
 	finalize_process(proc)
 	return output
 
-def add_progress(kwargs, git):
+def add_progress(kwargs, git, progress):
 	"""Add the --progress flag to the given kwargs dict if supported by the 
-	git command
+	git command. If the actual progress in the given progress instance is not 
+	given, we do not request any progress
 	:return: possibly altered kwargs"""
-	v = git.version_info
-	if v[0] > 1 or v[1] > 7 or v[2] > 0 or v[3] > 3:
-		kwargs['progress'] = True
-	#END handle --progress
+	if progress._progress is not None:
+		v = git.version_info
+		if v[0] > 1 or v[1] > 7 or v[2] > 0 or v[3] > 3:
+			kwargs['progress'] = True
+		#END handle --progress
+	#END handle progress
 	return kwargs
 
 #} END utilities
@@ -218,6 +221,10 @@ class CmdRemoteProgress(RemoteProgress):
 				op_code |= self.COMPRESSING
 			elif op_name == "Writing objects":
 				op_code |= self.WRITING
+			elif op_name == "Receiving objects":
+				op_code |= self.RECEIVING
+			elif op_name == "Resolving deltas":
+				op_code |= self.RESOLVING
 			else:
 				raise ValueError("Operation name %r unknown" % op_name)
 			
@@ -527,8 +534,9 @@ class CmdTransportMixin(TransportDB):
 		:param refspecs: single string, RefSpec instance or list of such or None.
 		:param progress: RemoteProgress derived instance or None
 		:param **kwargs: Additional arguments to be passed to the git-push process"""
-		proc = self._git.push(url, refspecs, porcelain=True, as_process=True, **add_progress(kwargs, self.git))
-		return get_push_info(self, url, proc, CmdRemoteProgress(progress))
+		progress = CmdRemoteProgress(progress)
+		proc = self._git.push(url, refspecs, porcelain=True, as_process=True, **add_progress(kwargs, self.git, progress))
+		return get_push_info(self, url, proc, progress)
 		
 	def pull(self, url, refspecs=None, progress=None, **kwargs):
 		"""Fetch and merge the given refspecs. 
@@ -537,16 +545,18 @@ class CmdTransportMixin(TransportDB):
 		:param url: may be a remote name or a url
 		:param refspecs: see push()
 		:param progress: see push()"""
-		proc = self._git.pull(url, refspecs, with_extended_output=True, as_process=True, v=True, **add_progress(kwargs, self.git))
-		return get_fetch_info_from_stderr(self, proc, CmdRemoteProgress(progress))
+		progress = CmdRemoteProgress(progress)
+		proc = self._git.pull(url, refspecs, with_extended_output=True, as_process=True, v=True, **add_progress(kwargs, self.git, progress))
+		return get_fetch_info_from_stderr(self, proc, progress)
 		
 	def fetch(self, url, refspecs=None, progress=None, **kwargs):
 		"""Fetch the latest changes
 		:param url: may be a remote name or a url
 		:param refspecs: see push()
 		:param progress: see push()"""
-		proc = self._git.fetch(url, refspecs, with_extended_output=True, as_process=True, v=True, **add_progress(kwargs, self.git))
-		return get_fetch_info_from_stderr(self, proc, CmdRemoteProgress(progress))
+		progress = CmdRemoteProgress(progress)
+		proc = self._git.fetch(url, refspecs, with_extended_output=True, as_process=True, v=True, **add_progress(kwargs, self.git, progress))
+		return get_fetch_info_from_stderr(self, proc, progress)
 		
 	#} end transport db interface
 	
@@ -750,7 +760,7 @@ class CmdHighLevelRepository(HighLevelRepository):
 		# END windows handling 
 		
 		try:
-			proc = git.clone(url, path, with_extended_output=True, as_process=True, v=True, **add_progress(kwargs, git))
+			proc = git.clone(url, path, with_extended_output=True, as_process=True, v=True, **add_progress(kwargs, git, progress))
 			if progress is not None:
 				digest_process_messages(proc.stderr, progress)
 			#END digest progress messages

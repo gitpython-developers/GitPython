@@ -245,8 +245,8 @@ class RemoteProgress(object):
 	
 	Subclasses should derive from this type.
 	"""
-	_num_op_codes = 5
-	BEGIN, END, COUNTING, COMPRESSING, WRITING =  [1 << x for x in range(_num_op_codes)]
+	_num_op_codes = 7
+	BEGIN, END, COUNTING, COMPRESSING, WRITING, RECEIVING, RESOLVING =  [1 << x for x in range(_num_op_codes)]
 	STAGE_MASK = BEGIN|END
 	OP_MASK = ~STAGE_MASK
 	

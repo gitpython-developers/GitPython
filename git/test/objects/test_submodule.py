@@ -15,7 +15,7 @@ import sys
 class TestRootProgress(RootUpdateProgress):
 	"""Just prints messages, for now without checking the correctness of the states"""
 	
-	def update(self, op, index, max_count, message=''):
+	def update(self, op, index, max_count, message='', input=''):
 		print message
 		
 prog = TestRootProgress()
