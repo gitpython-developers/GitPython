@@ -304,7 +304,7 @@ class TransportDB(object):
 			as well, these are assumed to resovle to a meaningful string though.
 		:param refspecs: iterable of reference specifiers or RefSpec instance, 
 			identifying the references to be fetch from the remote.
-		:param progress: callable which receives progress messages for user consumption
+		:param progress: RemoteProgress derived instance which receives progress messages for user consumption or None
 		:param kwargs: may be used for additional parameters that the actual implementation could 
 			find useful.
 		:return: List of FetchInfo compatible instances which provide information about what 
@@ -746,19 +746,24 @@ class HighLevelRepository(object):
 			of this class"""
 		raise NotImplementedError()
 
-	def clone(self, path):
+	def clone(self, path, progress = None):
 		"""Create a clone from this repository.
 		:param path:
 			is the full path of the new repo (traditionally ends with ./<name>.git).
 
+		:param progress:
+			a RemoteProgress instance or None if no progress information is required
+		
 		:return: ``git.Repo`` (the newly cloned repo)"""
 		raise NotImplementedError()
 
 	@classmethod
-	def clone_from(cls, url, to_path):
+	def clone_from(cls, url, to_path, progress = None):
 		"""Create a clone from the given URL
 		:param url: valid git url, see http://www.kernel.org/pub/software/scm/git/docs/git-clone.html#URLS
 		:param to_path: Path to which the repository should be cloned to
+		:param progress:
+			a RemoteProgress instance or None if no progress information is required
 		:return: instance pointing to the cloned directory with similar capabilities as this class"""
 		raise NotImplementedError()
 

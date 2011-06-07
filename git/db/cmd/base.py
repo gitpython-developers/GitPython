@@ -50,6 +50,96 @@ __all__ = ('CmdTransportMixin', 'RemoteProgress', 'GitCommandMixin',
 def touch(filename):
 	fp = open(filename, "a")
 	fp.close()
+	
+	
+def digest_process_messages(fh, progress):
+	"""Read progress messages from file-like object fh, supplying the respective
+	progress messages to the progress instance.
+	
+	:return: list(line, ...) list of lines without linebreaks that did 
+		not contain progress information"""
+	line_so_far = ''
+	dropped_lines = list()
+	while True:
+		char = fh.read(1)
+		if not char:
+			break
+		
+		if char in ('\r', '\n'):
+			dropped_lines.extend(progress._parse_progress_line(line_so_far))
+			line_so_far = ''
+		else:
+			line_so_far += char
+		# END process parsed line
+	# END while file is not done reading
+	return dropped_lines
+	
+def finalize_process(proc):
+	"""Wait for the process (fetch, pull or push) and handle its errors accordingly"""
+	try:
+		proc.wait()
+	except GitCommandError,e:
+		# if a push has rejected items, the command has non-zero return status
+		# a return status of 128 indicates a connection error - reraise the previous one
+		if proc.poll() == 128:
+			raise
+		pass
+	# END exception handling
+	
+
+def get_fetch_info_from_stderr(repo, proc, progress):
+	# skip first line as it is some remote info we are not interested in
+	output = IterableList('name')
+	
+	
+	# lines which are no progress are fetch info lines
+	# this also waits for the command to finish
+	# Skip some progress lines that don't provide relevant information
+	fetch_info_lines = list()
+	for line in digest_process_messages(proc.stderr, progress):
+		if line.startswith('From') or line.startswith('remote: Total'):
+			continue
+		elif line.startswith('warning:'):
+			print >> sys.stderr, line
+			continue
+		elif line.startswith('fatal:'):
+			raise GitCommandError(("Error when fetching: %s" % line,), 2)
+		# END handle special messages
+		fetch_info_lines.append(line)
+	# END for each line
+	
+	# read head information 
+	fp = open(join(repo.git_dir, 'FETCH_HEAD'),'r')
+	fetch_head_info = fp.readlines()
+	fp.close()
+	
+	assert len(fetch_info_lines) == len(fetch_head_info)
+	
+	output.extend(FetchInfo._from_line(repo, err_line, fetch_line) 
+					for err_line,fetch_line in zip(fetch_info_lines, fetch_head_info))
+	
+	finalize_process(proc)
+	return output
+
+def get_push_info(repo, proc, progress):
+	# read progress information from stderr
+	# we hope stdout can hold all the data, it should ...
+	# read the lines manually as it will use carriage returns between the messages
+	# to override the previous one. This is why we read the bytes manually
+	digest_process_messages(proc.stderr, progress)
+	
+	output = IterableList('name')
+	for line in proc.stdout.readlines():
+		try:
+			output.append(PushInfo._from_line(repo, line))
+		except ValueError:
+			# if an error happens, additional info is given which we cannot parse
+			pass
+		# END exception handling 
+	# END for each line
+	
+	finalize_process(proc)
+	return output
 
 #} END utilities
 
@@ -344,98 +434,6 @@ class CmdTransportMixin(TransportDB):
 		have packs and the other implementations
 	"""
 	
-	@classmethod
-	def _digest_process_messages(cls, fh, progress):
-		"""Read progress messages from file-like object fh, supplying the respective
-		progress messages to the progress instance.
-		
-		:return: list(line, ...) list of lines without linebreaks that did 
-			not contain progress information"""
-		line_so_far = ''
-		dropped_lines = list()
-		while True:
-			char = fh.read(1)
-			if not char:
-				break
-			
-			if char in ('\r', '\n'):
-				dropped_lines.extend(progress._parse_progress_line(line_so_far))
-				line_so_far = ''
-			else:
-				line_so_far += char
-			# END process parsed line
-		# END while file is not done reading
-		return dropped_lines
-		
-	@classmethod
-	def _finalize_proc(cls, proc):
-		"""Wait for the process (fetch, pull or push) and handle its errors accordingly"""
-		try:
-			proc.wait()
-		except GitCommandError,e:
-			# if a push has rejected items, the command has non-zero return status
-			# a return status of 128 indicates a connection error - reraise the previous one
-			if proc.poll() == 128:
-				raise
-			pass
-		# END exception handling
-		
-	
-	def _get_fetch_info_from_stderr(self, proc, progress):
-		# skip first line as it is some remote info we are not interested in
-		output = IterableList('name')
-		
-		
-		# lines which are no progress are fetch info lines
-		# this also waits for the command to finish
-		# Skip some progress lines that don't provide relevant information
-		fetch_info_lines = list()
-		for line in self._digest_process_messages(proc.stderr, progress):
-			if line.startswith('From') or line.startswith('remote: Total'):
-				continue
-			elif line.startswith('warning:'):
-				print >> sys.stderr, line
-				continue
-			elif line.startswith('fatal:'):
-				raise GitCommandError(("Error when fetching: %s" % line,), 2)
-			# END handle special messages
-			fetch_info_lines.append(line)
-		# END for each line
-		
-		# read head information 
-		fp = open(join(self.git_dir, 'FETCH_HEAD'),'r')
-		fetch_head_info = fp.readlines()
-		fp.close()
-		
-		assert len(fetch_info_lines) == len(fetch_head_info)
-		
-		output.extend(FetchInfo._from_line(self, err_line, fetch_line) 
-						for err_line,fetch_line in zip(fetch_info_lines, fetch_head_info))
-		
-		self._finalize_proc(proc)
-		return output
-	
-	def _get_push_info(self, proc, progress):
-		# read progress information from stderr
-		# we hope stdout can hold all the data, it should ...
-		# read the lines manually as it will use carriage returns between the messages
-		# to override the previous one. This is why we read the bytes manually
-		self._digest_process_messages(proc.stderr, progress)
-		
-		output = IterableList('name')
-		for line in proc.stdout.readlines():
-			try:
-				output.append(PushInfo._from_line(self, line))
-			except ValueError:
-				# if an error happens, additional info is given which we cannot parse
-				pass
-			# END exception handling 
-		# END for each line
-		
-		self._finalize_proc(proc)
-		return output
-		
-	
 	#{ Transport DB interface
 	
 	def push(self, url, refspecs=None, progress=None, **kwargs):
@@ -445,7 +443,7 @@ class CmdTransportMixin(TransportDB):
 		:param progress: RemoteProgress derived instance or None
 		:param **kwargs: Additional arguments to be passed to the git-push process"""
 		proc = self._git.push(url, refspecs, porcelain=True, as_process=True, **kwargs)
-		return self._get_push_info(proc, progress or RemoteProgress())
+		return get_push_info(self, proc, progress or RemoteProgress())
 		
 	def pull(self, url, refspecs=None, progress=None, **kwargs):
 		"""Fetch and merge the given refspecs. 
@@ -455,7 +453,7 @@ class CmdTransportMixin(TransportDB):
 		:param refspecs: see push()
 		:param progress: see push()"""
 		proc = self._git.pull(url, refspecs, with_extended_output=True, as_process=True, v=True, **kwargs)
-		return self._get_fetch_info_from_stderr(proc, progress or RemoteProgress())
+		return get_fetch_info_from_stderr(self, proc, progress or RemoteProgress())
 		
 	def fetch(self, url, refspecs=None, progress=None, **kwargs):
 		"""Fetch the latest changes
@@ -463,7 +461,7 @@ class CmdTransportMixin(TransportDB):
 		:param refspecs: see push()
 		:param progress: see push()"""
 		proc = self._git.fetch(url, refspecs, with_extended_output=True, as_process=True, v=True, **kwargs)
-		return self._get_fetch_info_from_stderr(proc, progress or RemoteProgress())
+		return get_fetch_info_from_stderr(self, proc, progress or RemoteProgress())
 		
 	#} end transport db interface
 	
@@ -641,7 +639,7 @@ class CmdHighLevelRepository(HighLevelRepository):
 		return cls(path)
 
 	@classmethod
-	def _clone(cls, git, url, path, **kwargs):
+	def _clone(cls, git, url, path, progress, **kwargs):
 		# special handling for windows for path at which the clone should be 
 		# created.
 		# tilde '~' will be expanded to the HOME no matter where the ~ occours. Hence
@@ -667,7 +665,11 @@ class CmdHighLevelRepository(HighLevelRepository):
 		# END windows handling 
 		
 		try:
-			git.clone(url, path, **kwargs)
+			proc = git.clone(url, path, with_extended_output=True, as_process=True, v=True, **kwargs)
+			if progress is not None:
+				digest_process_messages(proc.stderr, progress)
+			#END digest progress messages
+			finalize_process(proc)
 		finally:
 			if prev_cwd is not None:
 				os.chdir(prev_cwd)
@@ -691,19 +693,20 @@ class CmdHighLevelRepository(HighLevelRepository):
 		# END handle remote repo
 		return repo
 
-	def clone(self, path, **kwargs):
-		""":param kwargs:
+	def clone(self, path, progress = None, **kwargs):
+		"""
+		:param kwargs:
 			All remaining keyword arguments are given to the git-clone command
 			
 		For more information, see the respective method in HighLevelRepository"""
-		return self._clone(self.git, self.git_dir, path, **kwargs)
+		return self._clone(self.git, self.git_dir, path, progress or RemoteProgress(), **kwargs)
 
 	@classmethod
-	def clone_from(cls, url, to_path, **kwargs):
+	def clone_from(cls, url, to_path, progress = None, **kwargs):
 		"""
 		:param kwargs: see the ``clone`` method
 		For more information, see the respective method in the HighLevelRepository"""
-		return cls._clone(cls.GitCls(os.getcwd()), url, to_path, **kwargs)
+		return cls._clone(cls.GitCls(os.getcwd()), url, to_path, progress or RemoteProgress(), **kwargs)
 
 	def archive(self, ostream, treeish=None, prefix=None,  **kwargs):
 		"""For all args see HighLevelRepository interface

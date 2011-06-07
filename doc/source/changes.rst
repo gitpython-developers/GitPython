@@ -18,6 +18,8 @@ NEXT
  
   * Added mode constants to ease the manual creation of blobs
   
+ * **Repo** (i.e. **HighLevelRepository**) now supports a progress instance to be provided for its ``clone()`` and ``clone_from`` methods.
+  
 * ### Module Changes ###
 
  * Removed rev_parse function from git.repo.fun - the respective functionality is available only through the repository's rev_parse method, which might in turn translate to any implementation.
