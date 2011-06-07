@@ -120,11 +120,12 @@ class GitConfigParser(cp.RawConfigParser, object):
 	# They must be compatible to the LockFile interface.
 	# A suitable alternative would be the BlockingLockFile
 	t_lock = LockFile
+	re_comment = re.compile('^\s*[#;]')
 	
 	#} END configuration 
 	
 	OPTCRE = re.compile(
-		r'\s?(?P<option>[^:=\s][^:=]*)'		  # very permissive, incuding leading whitespace
+		r'\s*(?P<option>[^:=\s][^:=]*)'		  # very permissive, incuding leading whitespace
 		r'\s*(?P<vi>[:=])\s*'				  # any number of space/tab,
 											  # followed by separator
 											  # (either : or =), followed
@@ -211,16 +212,16 @@ class GitConfigParser(cp.RawConfigParser, object):
 				break
 			lineno = lineno + 1
 			# comment or blank line?
-			if line.strip() == '' or line[0] in '#;':
+			if line.strip() == '' or self.re_comment.match(line):
 				continue
 			if line.split(None, 1)[0].lower() == 'rem' and line[0] in "rR":
 				# no leading whitespace
 				continue
 			else:
 				# is it a section header?
-				mo = self.SECTCRE.match(line)
+				mo = self.SECTCRE.match(line.strip())
 				if mo:
-					sectname = mo.group('header')
+					sectname = mo.group('header').strip()
 					if sectname in self._sections:
 						cursect = self._sections[sectname]
 					elif sectname == cp.DEFAULTSECT:
@@ -332,6 +333,10 @@ class GitConfigParser(cp.RawConfigParser, object):
 			close_fp = True
 		else:
 			fp.seek(0)
+			# make sure we do not overwrite into an existing file
+			if hasattr(fp, 'truncate'):
+				fp.truncate()
+			#END 
 		# END handle stream or file
 		
 		# WRITE DATA

@@ -12,26 +12,18 @@ import tempfile
 import shutil
 import cStringIO
 
-GIT_REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+from base import (
+					maketemp,
+					rorepo_dir
+				)
+
 
 __all__ = (
-			'fixture_path', 'fixture', 'absolute_project_path', 'StringProcessAdapter',
-			'with_rw_repo', 'with_rw_and_rw_remote_repo', 'TestBase', 'TestCase', 'GIT_REPO'
-			)
+			'StringProcessAdapter', 'GlobalsItemDeletorMetaCls', 
+			'with_rw_repo', 'with_rw_and_rw_remote_repo', 'TestBase', 'TestCase', 
+		)
 
-#{ Routines
 
-def fixture_path(name):
-	test_dir = os.path.dirname(os.path.dirname(__file__))
-	return os.path.join(test_dir, "fixtures", name)
-
-def fixture(name):
-	return open(fixture_path(name), 'rb').read()
-
-def absolute_project_path():
-	return os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-
-#} END routines
 	
 #{ Adapters 
 	
@@ -51,13 +43,6 @@ class StringProcessAdapter(object):
 #} END adapters
 
 #{ Decorators 
-
-def _mktemp(*args):
-	"""Wrapper around default tempfile.mktemp to fix an osx issue"""
-	tdir = tempfile.mktemp(*args)
-	if sys.platform == 'darwin':
-		tdir = '/private' + tdir
-	return tdir
 
 def _rmtree_onerror(osremove, fullpath, exec_info):
 	"""
@@ -87,7 +72,7 @@ def with_rw_repo(working_tree_ref, bare=False):
 			if bare:
 				prefix = ''
 			#END handle prefix
-			repo_dir = _mktemp("%sbare_%s" % (prefix, func.__name__))
+			repo_dir = maketemp("%sbare_%s" % (prefix, func.__name__))
 			rw_repo = self.rorepo.clone(repo_dir, shared=True, bare=bare, n=True)
 			
 			rw_repo.head.commit = rw_repo.commit(working_tree_ref)
@@ -143,8 +128,8 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
 	assert isinstance(working_tree_ref, basestring), "Decorator requires ref name for working tree checkout"
 	def argument_passer(func):
 		def remote_repo_creator(self):
-			remote_repo_dir = _mktemp("remote_repo_%s" % func.__name__)
-			repo_dir = _mktemp("remote_clone_non_bare_repo")
+			remote_repo_dir = maketemp("remote_repo_%s" % func.__name__)
+			repo_dir = maketemp("remote_clone_non_bare_repo")
 			
 			rw_remote_repo = self.rorepo.clone(remote_repo_dir, shared=True, bare=True)
 			rw_repo = rw_remote_repo.clone(repo_dir, shared=True, bare=False, n=True)		# recursive alternates info ?
@@ -205,32 +190,40 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
 	return argument_passer
 	
 #} END decorators
+
+#{ Meta Classes
+class GlobalsItemDeletorMetaCls(type):
+	"""Utiltiy to prevent the RepoBase to be picked up by nose as the metacls
+	will delete the instance from the globals"""
+	#{ Configuration
+	# Set this to a string name of the module to delete
+	ModuleToDelete = None
+	#} END configuration
+	
+	def __new__(metacls, name, bases, clsdict):
+		assert metacls.ModuleToDelete is not None, "Invalid metaclass configuration"
+		new_type = super(GlobalsItemDeletorMetaCls, metacls).__new__(metacls, name, bases, clsdict)
+		if name != metacls.ModuleToDelete:
+			mod = __import__(new_type.__module__, globals(), locals(), new_type.__module__)
+			delattr(mod, metacls.ModuleToDelete)
+		#END handle deletion
+		return new_type
+	
+#} END meta classes
 	
 class TestBase(TestCase):
 	"""
 	Base Class providing default functionality to all tests such as:
-	
 	- Utility functions provided by the TestCase base of the unittest method such as::
 		self.fail("todo")
 		self.failUnlessRaises(...)
-		
-	- Class level repository which is considered read-only as it is shared among 
-	  all test cases in your type.
-	  Access it using:: 
-	   self.rorepo	# 'ro' stands for read-only
-	   
-	  The rorepo is in fact your current project's git repo. If you refer to specific 
-	  shas for your objects, be sure you choose some that are part of the immutable portion 
-	  of the project history ( to assure tests don't fail for others ).
 	"""
 	
 	@classmethod
 	def setUpAll(cls):
-		"""
-		Dynamically add a read-only repository to our actual type. This way 
-		each test type has its own repository
-		"""
-		cls.rorepo = Repo(GIT_REPO)
+		"""This method is only called to provide the most basic functionality
+		Subclasses may just override it or implement it differently"""
+		cls.rorepo = Repo(rorepo_dir())
 	
 	def _make_file(self, rela_path, data, repo=None):
 		"""

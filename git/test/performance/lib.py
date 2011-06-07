@@ -1,17 +1,13 @@
 """Contains library functions"""
 import os
-from git.test.lib import *
+from git.test.lib import (
+						TestBase, 
+						GlobalsItemDeletorMetaCls
+						)
 import shutil
 import tempfile
 
-from git.db import (
-						GitCmdObjectDB,
-						GitDB
-					)
-
-from git import (
-	Repo
-	)
+from git import Repo
 
 #{ Invvariants
 k_env_git_repo = "GIT_PYTHON_TEST_GIT_REPO_BASE"
@@ -38,11 +34,7 @@ class TestBigRepoR(TestBase):
 	
 	* gitrorepo
 	
-	 * Read-Only git repository - actually the repo of git itself
-	 
-    * puregitrorepo
-    
-     * As gitrepo, but uses pure python implementation
+	 * a big read-only git repository
     """
 	 
 	#{ Invariants
@@ -50,29 +42,33 @@ class TestBigRepoR(TestBase):
 	head_sha_50 = '32347c375250fd470973a5d76185cac718955fd5'
 	#} END invariants 
 	
+	#{ Configuration
+	RepoCls = Repo
+	#} END configuration
+	
 	@classmethod
 	def setUpAll(cls):
 		super(TestBigRepoR, cls).setUpAll()
-		repo_path = resolve_or_fail(k_env_git_repo)
-		cls.gitrorepo = Repo(repo_path, odbt=GitCmdObjectDB)
-		cls.puregitrorepo = Repo(repo_path, odbt=GitDB)
+		if cls.RepoCls is None:
+			raise AssertionError("Require RepoCls in class %s to be set" % cls)
+		#END assert configuration
+		cls.rorepo = cls.RepoCls(resolve_or_fail(k_env_git_repo))
 
 
 class TestBigRepoRW(TestBigRepoR):
 	"""As above, but provides a big repository that we can write to.
 	
-	Provides ``self.gitrwrepo`` and ``self.puregitrwrepo``"""
+	Provides ``self.rwrepo``"""
 	
 	@classmethod
 	def setUpAll(cls):
 		super(TestBigRepoRW, cls).setUpAll()
 		dirname = tempfile.mktemp()
 		os.mkdir(dirname)
-		cls.gitrwrepo = cls.gitrorepo.clone(dirname, shared=True, bare=True, odbt=GitCmdObjectDB)
-		cls.puregitrwrepo = Repo(dirname, odbt=GitDB)
+		cls.rwrepo = cls.rorepo.clone(dirname, shared=True, bare=True)
 	
 	@classmethod
 	def tearDownAll(cls):
-		shutil.rmtree(cls.gitrwrepo.working_dir)
+		shutil.rmtree(cls.rwrepo.working_dir)
 		
 #} END base classes

@@ -1,4 +1,3 @@
-[submodule "gitdb"]
-	path = git/ext/gitdb
-	url = git://github.com/gitpython-developers/gitdb.git
-	branch = master
+[submodule "git/ext/async"]
+	path = git/ext/async
+	url = git://github.com/gitpython-developers/async.git

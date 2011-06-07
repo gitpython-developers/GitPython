@@ -1,3 +1,7 @@
+# Copyright (C) 2010, 2011 Sebastian Thiel (byronimo@gmail.com) and contributors
+#
+# This module is part of GitDB and is released under
+# the New BSD License: http://www.opensource.org/licenses/bsd-license.php
 from base import Submodule, UpdateProgress
 from util import (
 					find_first_remote_branch
@@ -23,6 +27,7 @@ REMOVE = RootUpdateProgress.REMOVE
 BRANCHCHANGE = RootUpdateProgress.BRANCHCHANGE
 URLCHANGE = RootUpdateProgress.URLCHANGE
 PATHCHANGE = RootUpdateProgress.PATHCHANGE
+
 
 class RootModule(Submodule):
 	"""A (virtual) Root of all submodules in the given repository. It can be used

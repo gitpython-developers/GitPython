@@ -13,255 +13,27 @@ from config import SectionConstraint
 from git.util import (
 						LazyMixin,
 						Iterable,
-						IterableList,
-						RemoteProgress
+						IterableList
 						)
+from git.db.interface import TransportDB
+from refs import RemoteReference
 
-from refs import (
-					Reference,
-					RemoteReference,
-					SymbolicReference, 
-					TagReference
-				)
-
-from git.util import  join_path
-from gitdb.util import join
-
-import re
 import os
-import sys
 
-__all__ = ('RemoteProgress', 'PushInfo', 'FetchInfo', 'Remote')
+__all__ = ['Remote']
 
-		
 class PushInfo(object):
-	"""
-	Carries information about the result of a push operation of a single head::
+	"""Wrapper for basic PushInfo to provide the previous interface which includes
+	resolved objects instead of plain shas
 	
-		info = remote.push()[0]
-		info.flags			# bitflags providing more information about the result
-		info.local_ref		# Reference pointing to the local reference that was pushed
-							# It is None if the ref was deleted.
-		info.remote_ref_string # path to the remote reference located on the remote side
-		info.remote_ref # Remote Reference on the local side corresponding to 
-						# the remote_ref_string. It can be a TagReference as well.
-		info.old_commit # commit at which the remote_ref was standing before we pushed
-						# it to local_ref.commit. Will be None if an error was indicated
-		info.summary	# summary line providing human readable english text about the push
-		"""
-	__slots__ = ('local_ref', 'remote_ref_string', 'flags', 'old_commit', '_remote', 'summary')
+	old_commit	# object for the corresponding old_commit_sha"""
 	
-	NEW_TAG, NEW_HEAD, NO_MATCH, REJECTED, REMOTE_REJECTED, REMOTE_FAILURE, DELETED, \
-	FORCED_UPDATE, FAST_FORWARD, UP_TO_DATE, ERROR = [ 1 << x for x in range(11) ]
-
-	_flag_map = {	'X' : NO_MATCH, '-' : DELETED, '*' : 0,
-					'+' : FORCED_UPDATE, ' ' : FAST_FORWARD, 
-					'=' : UP_TO_DATE, '!' : ERROR }
 	
-	def __init__(self, flags, local_ref, remote_ref_string, remote, old_commit=None, 
-					summary=''):
-		""" Initialize a new instance """
-		self.flags = flags
-		self.local_ref = local_ref
-		self.remote_ref_string = remote_ref_string
-		self._remote = remote
-		self.old_commit = old_commit
-		self.summary = summary
-		
-	@property
-	def remote_ref(self):
-		"""
-		:return:
-			Remote Reference or TagReference in the local repository corresponding 
-			to the remote_ref_string kept in this instance."""
-		# translate heads to a local remote, tags stay as they are
-		if self.remote_ref_string.startswith("refs/tags"):
-			return TagReference(self._remote.repo, self.remote_ref_string)
-		elif self.remote_ref_string.startswith("refs/heads"):
-			remote_ref = Reference(self._remote.repo, self.remote_ref_string)
-			return RemoteReference(self._remote.repo, "refs/remotes/%s/%s" % (str(self._remote), remote_ref.name))
-		else:
-			raise ValueError("Could not handle remote ref: %r" % self.remote_ref_string)
-		# END 
-		
-	@classmethod
-	def _from_line(cls, remote, line):
-		"""Create a new PushInfo instance as parsed from line which is expected to be like
-			refs/heads/master:refs/heads/master 05d2687..1d0568e"""
-		control_character, from_to, summary = line.split('\t', 3)
-		flags = 0
-		
-		# control character handling
-		try:
-			flags |= cls._flag_map[ control_character ]
-		except KeyError:
-			raise ValueError("Control Character %r unknown as parsed from line %r" % (control_character, line)) 
-		# END handle control character
-		
-		# from_to handling
-		from_ref_string, to_ref_string = from_to.split(':')
-		if flags & cls.DELETED:
-			from_ref = None
-		else:
-			from_ref = Reference.from_path(remote.repo, from_ref_string)
-		
-		# commit handling, could be message or commit info
-		old_commit = None
-		if summary.startswith('['):
-			if "[rejected]" in summary:
-				flags |= cls.REJECTED
-			elif "[remote rejected]" in summary:
-				flags |= cls.REMOTE_REJECTED
-			elif "[remote failure]" in summary:
-				flags |= cls.REMOTE_FAILURE
-			elif "[no match]" in summary:
-				flags |= cls.ERROR
-			elif "[new tag]" in summary:
-				flags |= cls.NEW_TAG
-			elif "[new branch]" in summary:
-				flags |= cls.NEW_HEAD
-			# uptodate encoded in control character
-		else:
-			# fast-forward or forced update - was encoded in control character, 
-			# but we parse the old and new commit
-			split_token = "..."
-			if control_character == " ":
-				split_token = ".."
-			old_sha, new_sha = summary.split(' ')[0].split(split_token)
-			# have to use constructor here as the sha usually is abbreviated
-			old_commit = remote.repo.commit(old_sha)
-		# END message handling
-		
-		return PushInfo(flags, from_ref, to_ref_string, remote, old_commit, summary)
-		
-
+	
 class FetchInfo(object):
-	"""
-	Carries information about the results of a fetch operation of a single head::
-	
-	 info = remote.fetch()[0]
-	 info.ref			# Symbolic Reference or RemoteReference to the changed 
-						# remote head or FETCH_HEAD
-	 info.flags			# additional flags to be & with enumeration members, 
-						# i.e. info.flags & info.REJECTED 
-						# is 0 if ref is SymbolicReference
-	 info.note			# additional notes given by git-fetch intended for the user
-	 info.old_commit	# if info.flags & info.FORCED_UPDATE|info.FAST_FORWARD, 
-						# field is set to the previous location of ref, otherwise None
-	"""
-	__slots__ = ('ref','old_commit', 'flags', 'note')
-	
-	NEW_TAG, NEW_HEAD, HEAD_UPTODATE, TAG_UPDATE, REJECTED, FORCED_UPDATE, \
-	FAST_FORWARD, ERROR = [ 1 << x for x in range(8) ]
-	
-	#							  %c	%-*s %-*s			  -> %s		  (%s)
-	re_fetch_result = re.compile("^\s*(.) (\[?[\w\s\.]+\]?)\s+(.+) -> ([/\w_\+\.-]+)(	 \(.*\)?$)?")
-	
-	_flag_map = {	'!' : ERROR, '+' : FORCED_UPDATE, '-' : TAG_UPDATE, '*' : 0,
-					'=' : HEAD_UPTODATE, ' ' : FAST_FORWARD } 
-	
-	def __init__(self, ref, flags, note = '', old_commit = None):
-		"""
-		Initialize a new instance
-		"""
-		self.ref = ref
-		self.flags = flags
-		self.note = note
-		self.old_commit = old_commit
-		
-	def __str__(self):
-		return self.name
-		
-	@property
-	def name(self):
-		""":return: Name of our remote ref"""
-		return self.ref.name
-		
-	@property
-	def commit(self):
-		""":return: Commit of our remote ref"""
-		return self.ref.commit
-		
-	@classmethod
-	def _from_line(cls, repo, line, fetch_line):
-		"""Parse information from the given line as returned by git-fetch -v
-		and return a new FetchInfo object representing this information.
-		
-		We can handle a line as follows
-		"%c %-*s %-*s -> %s%s"
-		
-		Where c is either ' ', !, +, -, *, or =
-		! means error
-		+ means success forcing update
-		- means a tag was updated
-		* means birth of new branch or tag
-		= means the head was up to date ( and not moved )
-		' ' means a fast-forward
-		
-		fetch line is the corresponding line from FETCH_HEAD, like
-		acb0fa8b94ef421ad60c8507b634759a472cd56c	not-for-merge	branch '0.1.7RC' of /tmp/tmpya0vairemote_repo"""
-		match = cls.re_fetch_result.match(line)
-		if match is None:
-			raise ValueError("Failed to parse line: %r" % line)
-			
-		# parse lines
-		control_character, operation, local_remote_ref, remote_local_ref, note = match.groups()
-		try:
-			new_hex_sha, fetch_operation, fetch_note = fetch_line.split("\t")
-			ref_type_name, fetch_note = fetch_note.split(' ', 1)
-		except ValueError:	# unpack error
-			raise ValueError("Failed to parse FETCH__HEAD line: %r" % fetch_line)
-		
-		# handle FETCH_HEAD and figure out ref type
-		# If we do not specify a target branch like master:refs/remotes/origin/master, 
-		# the fetch result is stored in FETCH_HEAD which destroys the rule we usually
-		# have. In that case we use a symbolic reference which is detached 
-		ref_type = None
-		if remote_local_ref == "FETCH_HEAD":
-			ref_type = SymbolicReference
-		elif ref_type_name	== "branch":
-			ref_type = RemoteReference
-		elif ref_type_name == "tag":
-			ref_type = TagReference
-		else:
-			raise TypeError("Cannot handle reference type: %r" % ref_type_name)
-			
-		# create ref instance
-		if ref_type is SymbolicReference:
-			remote_local_ref = ref_type(repo, "FETCH_HEAD") 
-		else:
-			remote_local_ref = Reference.from_path(repo, join_path(ref_type._common_path_default, remote_local_ref.strip()))
-		# END create ref instance 
-		
-		note = ( note and note.strip() ) or ''
-		
-		# parse flags from control_character
-		flags = 0
-		try:
-			flags |= cls._flag_map[control_character]
-		except KeyError:
-			raise ValueError("Control character %r unknown as parsed from line %r" % (control_character, line))
-		# END control char exception hanlding 
-		
-		# parse operation string for more info - makes no sense for symbolic refs
-		old_commit = None
-		if isinstance(remote_local_ref, Reference):
-			if 'rejected' in operation:
-				flags |= cls.REJECTED
-			if 'new tag' in operation:
-				flags |= cls.NEW_TAG
-			if 'new branch' in operation:
-				flags |= cls.NEW_HEAD
-			if '...' in operation or '..' in operation:
-				split_token = '...'
-				if control_character == ' ':
-					split_token = split_token[:-1]
-				old_commit = repo.rev_parse(operation.split(split_token)[0])
-			# END handle refspec
-		# END reference flag handling
-		
-		return cls(remote_local_ref, flags, note, old_commit)
-	
+	"""Wrapper to restore the previous interface, resolving objects and wrapping 
+	references"""
+
 
 class Remote(LazyMixin, Iterable):
 	"""Provides easy read and write access to a git remote.
@@ -280,6 +52,16 @@ class Remote(LazyMixin, Iterable):
 		
 		:param repo: The repository we are a remote of
 		:param name: the name of the remote, i.e. 'origin'"""
+		if not hasattr(repo, 'git'):
+			# note: at some point we could just create a git command instance ourselves
+			# but lets just be lazy for now
+			raise AssertionError("Require repository to provide a git command instance currently")
+		#END assert git cmd
+		
+		if not isinstance(repo, TransportDB):
+			raise AssertionError("Require TransportDB interface implementation")
+		#END verify interface
+		
 		self.repo = repo
 		self.name = name
 		
@@ -432,97 +214,6 @@ class Remote(LazyMixin, Iterable):
 		self.repo.git.remote("update", self.name)
 		return self
 	
-	def _digest_process_messages(self, fh, progress):
-		"""Read progress messages from file-like object fh, supplying the respective
-		progress messages to the progress instance.
-		
-		:return: list(line, ...) list of lines without linebreaks that did 
-			not contain progress information"""
-		line_so_far = ''
-		dropped_lines = list()
-		while True:
-			char = fh.read(1)
-			if not char:
-				break
-			
-			if char in ('\r', '\n'):
-				dropped_lines.extend(progress._parse_progress_line(line_so_far))
-				line_so_far = ''
-			else:
-				line_so_far += char
-			# END process parsed line
-		# END while file is not done reading
-		return dropped_lines
-		
-	
-	def _finalize_proc(self, proc):
-		"""Wait for the process (fetch, pull or push) and handle its errors accordingly"""
-		try:
-			proc.wait()
-		except GitCommandError,e:
-			# if a push has rejected items, the command has non-zero return status
-			# a return status of 128 indicates a connection error - reraise the previous one
-			if proc.poll() == 128:
-				raise
-			pass
-		# END exception handling
-		
-	
-	def _get_fetch_info_from_stderr(self, proc, progress):
-		# skip first line as it is some remote info we are not interested in
-		output = IterableList('name')
-		
-		
-		# lines which are no progress are fetch info lines
-		# this also waits for the command to finish
-		# Skip some progress lines that don't provide relevant information
-		fetch_info_lines = list()
-		for line in self._digest_process_messages(proc.stderr, progress):
-			if line.startswith('From') or line.startswith('remote: Total'):
-				continue
-			elif line.startswith('warning:'):
-				print >> sys.stderr, line
-				continue
-			elif line.startswith('fatal:'):
-				raise GitCommandError(("Error when fetching: %s" % line,), 2)
-			# END handle special messages
-			fetch_info_lines.append(line)
-		# END for each line
-		
-		# read head information 
-		fp = open(join(self.repo.git_dir, 'FETCH_HEAD'),'r')
-		fetch_head_info = fp.readlines()
-		fp.close()
-		
-		assert len(fetch_info_lines) == len(fetch_head_info)
-		
-		output.extend(FetchInfo._from_line(self.repo, err_line, fetch_line) 
-						for err_line,fetch_line in zip(fetch_info_lines, fetch_head_info))
-		
-		self._finalize_proc(proc)
-		return output
-	
-	def _get_push_info(self, proc, progress):
-		# read progress information from stderr
-		# we hope stdout can hold all the data, it should ...
-		# read the lines manually as it will use carriage returns between the messages
-		# to override the previous one. This is why we read the bytes manually
-		self._digest_process_messages(proc.stderr, progress)
-		
-		output = IterableList('name')
-		for line in proc.stdout.readlines():
-			try:
-				output.append(PushInfo._from_line(self, line))
-			except ValueError:
-				# if an error happens, additional info is given which we cannot parse
-				pass
-			# END exception handling 
-		# END for each line
-		
-		self._finalize_proc(proc)
-		return output
-		
-	
 	def fetch(self, refspec=None, progress=None, **kwargs):
 		"""Fetch the latest changes for this remote
 		
@@ -546,8 +237,7 @@ class Remote(LazyMixin, Iterable):
 		:note:
 			As fetch does not provide progress information to non-ttys, we cannot make 
 			it available here unfortunately as in the 'push' method."""
-		proc = self.repo.git.fetch(self, refspec, with_extended_output=True, as_process=True, v=True, **kwargs)
-		return self._get_fetch_info_from_stderr(proc, progress or RemoteProgress())
+		return self.repo.fetch(self.name, refspec, progress, **kwargs)
 		
 	def pull(self, refspec=None, progress=None, **kwargs):
 		"""Pull changes from the given branch, being the same as a fetch followed 
@@ -557,8 +247,7 @@ class Remote(LazyMixin, Iterable):
 		:param progress: see 'push' method
 		:param kwargs: Additional arguments to be passed to git-pull
 		:return: Please see 'fetch' method """
-		proc = self.repo.git.pull(self, refspec, with_extended_output=True, as_process=True, v=True, **kwargs)
-		return self._get_fetch_info_from_stderr(proc, progress or RemoteProgress())
+		return self.repo.pull(self.name, refspec, progress, **kwargs)
 		
 	def push(self, refspec=None, progress=None, **kwargs):
 		"""Push changes from source branch in refspec to target branch in refspec.
@@ -578,8 +267,7 @@ class Remote(LazyMixin, Iterable):
 			in their flags.
 			If the operation fails completely, the length of the returned IterableList will
 			be null."""
-		proc = self.repo.git.push(self, refspec, porcelain=True, as_process=True, **kwargs)
-		return self._get_push_info(proc, progress or RemoteProgress())
+		return self.repo.push(self.name, refspec, progress, **kwargs)
 		
 	@property
 	def config_reader(self):

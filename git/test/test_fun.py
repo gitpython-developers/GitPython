@@ -1,4 +1,4 @@
-from git.test.lib import *
+from git.test.lib import TestBase, with_rw_repo
 from git.objects.fun import (
 								traverse_tree_recursive,
 								traverse_trees_recursive, 
@@ -9,9 +9,9 @@ from git.index.fun import (
 							aggressive_tree_merge
 							)
 
-from gitdb.util import bin_to_hex
-from gitdb.base import IStream
-from gitdb.typ import str_tree_type
+from git.util import bin_to_hex
+from git.base import IStream
+from git.typ import str_tree_type
 
 from stat import (
 					S_IFDIR, 

@@ -3,15 +3,20 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
-from git.util import LazyMixin, join_path_native, stream_copy
+
 from util import get_object_type_by_name
-from gitdb.util import (
+from git.util import (
 							hex_to_bin,
 							bin_to_hex,
-							basename
+							dirname,
+							basename, 
+							LazyMixin, 
+							join_path_native, 
+							stream_copy
 						)
-
-import gitdb.typ as dbtyp
+from git.db.interface import RepositoryPathsMixin
+from git.exc import UnsupportedOperation
+from git.typ import ObjectType
 	
 _assertion_msg_format = "Created object %r whose python type %r disagrees with the acutal git object type %r"
 
@@ -22,24 +27,26 @@ class Object(LazyMixin):
 	NULL_HEX_SHA = '0'*40
 	NULL_BIN_SHA = '\0'*20
 	
-	TYPES = (dbtyp.str_blob_type, dbtyp.str_tree_type, dbtyp.str_commit_type, dbtyp.str_tag_type)
-	__slots__ = ("repo", "binsha", "size" )
-	type = None			# to be set by subclass
+	TYPES = (ObjectType.blob, ObjectType.tree, ObjectType.commit, ObjectType.tag)
+	__slots__ = ("odb", "binsha", "size" )
 	
-	def __init__(self, repo, binsha):
+	type = None			# to be set by subclass
+	type_id = None		# to be set by subclass
+	
+	def __init__(self, odb, binsha):
 		"""Initialize an object by identifying it by its binary sha. 
 		All keyword arguments will be set on demand if None.
 		
-		:param repo: repository this object is located in
+		:param odb: repository this object is located in
 			
 		:param binsha: 20 byte SHA1"""
 		super(Object,self).__init__()
-		self.repo = repo
+		self.odb = odb
 		self.binsha = binsha
 		assert len(binsha) == 20, "Require 20 byte binary sha, got %r, len = %i" % (binsha, len(binsha))
 
 	@classmethod
-	def new(cls, repo, id):
+	def new(cls, odb, id):
 		"""
 		:return: New Object instance of a type appropriate to the object type behind 
 			id. The id of the newly created object will be a binsha even though 
@@ -49,27 +56,27 @@ class Object(LazyMixin):
 			
 		:note: This cannot be a __new__ method as it would always call __init__
 			with the input id which is not necessarily a binsha."""
-		return repo.rev_parse(str(id))
+		return odb.rev_parse(str(id))
 		
 	@classmethod
-	def new_from_sha(cls, repo, sha1):
+	def new_from_sha(cls, odb, sha1):
 		"""
 		:return: new object instance of a type appropriate to represent the given 
 			binary sha1
 		:param sha1: 20 byte binary sha1"""
 		if sha1 == cls.NULL_BIN_SHA:
 			# the NULL binsha is always the root commit
-			return get_object_type_by_name('commit')(repo, sha1)
+			return get_object_type_by_name('commit')(odb, sha1)
 		#END handle special case
-		oinfo = repo.odb.info(sha1)
-		inst = get_object_type_by_name(oinfo.type)(repo, oinfo.binsha)
+		oinfo = odb.info(sha1)
+		inst = get_object_type_by_name(oinfo.type)(odb, oinfo.binsha)
 		inst.size = oinfo.size
 		return inst 
 	
 	def _set_cache_(self, attr):
 		"""Retrieve object information"""
 		if attr	 == "size":
-			oinfo = self.repo.odb.info(self.binsha)
+			oinfo = self.odb.info(self.binsha)
 			self.size = oinfo.size
 			# assert oinfo.type == self.type, _assertion_msg_format % (self.binsha, oinfo.type, self.type)
 		else:
@@ -77,10 +84,14 @@ class Object(LazyMixin):
 		
 	def __eq__(self, other):
 		""":return: True if the objects have the same SHA1"""
+		if not hasattr(other, 'binsha'):
+			return False
 		return self.binsha == other.binsha
 		
 	def __ne__(self, other):
 		""":return: True if the objects do not have the same SHA1 """
+		if not hasattr(other, 'binsha'):
+			return True
 		return self.binsha != other.binsha
 		
 	def __hash__(self):
@@ -104,13 +115,13 @@ class Object(LazyMixin):
 	def data_stream(self):
 		""" :return:  File Object compatible stream to the uncompressed raw data of the object
 		:note: returned streams must be read in order"""
-		return self.repo.odb.stream(self.binsha)
+		return self.odb.stream(self.binsha)
 
 	def stream_data(self, ostream):
 		"""Writes our data directly to the given output stream
 		:param ostream: File object compatible stream object.
 		:return: self"""
-		istream = self.repo.odb.stream(self.binsha)
+		istream = self.odb.stream(self.binsha)
 		stream_copy(istream, ostream)
 		return self
 		
@@ -123,9 +134,9 @@ class IndexObject(Object):
 	# for compatability with iterable lists
 	_id_attribute_ = 'path'
 	
-	def __init__(self, repo, binsha, mode=None, path=None):
+	def __init__(self, odb, binsha, mode=None, path=None):
 		"""Initialize a newly instanced IndexObject
-		:param repo: is the Repo we are located in
+		:param odb: is the object database we are located in
 		:param binsha: 20 byte sha1
 		:param mode: is the stat compatible file mode as int, use the stat module
 			to evaluate the infomration
@@ -135,7 +146,7 @@ class IndexObject(Object):
 		:note:
 			Path may not be set of the index object has been created directly as it cannot
 			be retrieved without knowing the parent tree."""
-		super(IndexObject, self).__init__(repo, binsha)
+		super(IndexObject, self).__init__(odb, binsha)
 		if mode is not None:
 			self.mode = mode
 		if path is not None:
@@ -167,6 +178,15 @@ class IndexObject(Object):
 			Absolute path to this index object in the file system ( as opposed to the 
 			.path field which is a path relative to the git repository ).
 			
-			The returned path will be native to the system and contains '\' on windows. """
-		return join_path_native(self.repo.working_tree_dir, self.path)
+			The returned path will be native to the system and contains '\' on windows.
+		:raise UnsupportedOperation: if underlying odb does not support the required method to obtain a working dir"""
+		# TODO: Here we suddenly need something better than a plain object database
+		# which indicates our odb should better be named repo !
+		root = ''
+		if isinstance(self.odb, RepositoryPathsMixin):
+			root = self.odb.working_tree_dir
+		else:
+			raise UnsupportedOperation("Cannot provide absolute path from a database without Repository path support")
+		#END handle odb type
+		return join_path_native(root, self.path)
 		

@@ -2,8 +2,6 @@ from reference import Reference
 
 __all__ = ["TagReference", "Tag"]
 
-
-	
 class TagReference(Reference):
 	"""Class representing a lightweight tag reference which either points to a commit 
 	,a tag object or any other object. In the latter case additional information, 
@@ -16,7 +14,6 @@ class TagReference(Reference):
 	 print tagref.commit.message
 	 if tagref.tag is not None:
 		print tagref.tag.message"""
-	
 	__slots__ = tuple()
 	_common_path_default = "refs/tags"
 	
@@ -45,7 +42,7 @@ class TagReference(Reference):
 	# make object read-only
 	# It should be reasonably hard to adjust an existing tag
 	object = property(Reference._get_object)
-		
+	
 	@classmethod
 	def create(cls, repo, path, ref='HEAD', message=None, force=False, **kwargs):
 		"""Create a new tag reference.
@@ -84,8 +81,6 @@ class TagReference(Reference):
 	def delete(cls, repo, *tags):
 		"""Delete the given existing tag or tags"""
 		repo.git.tag("-d", *tags)
-		
-		
 		
 # provide an alias
 Tag = TagReference

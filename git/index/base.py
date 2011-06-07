@@ -62,9 +62,8 @@ from fun import (
 					S_IFGITLINK
 				)
 
-from gitdb.base import IStream
-from gitdb.db import MemoryDB
-from gitdb.util import to_bin_sha
+from git.base import IStream
+from git.util import to_bin_sha
 from itertools import izip
 
 __all__ = ( 'IndexFile', 'CheckoutError' )
@@ -512,7 +511,9 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 		:raise UnmergedEntriesError: """
 		# we obtain no lock as we just flush our contents to disk as tree
 		# If we are a new index, the entries access will load our data accordingly
-		mdb = MemoryDB()
+		# Needs delayed import as db.py import IndexFile as well
+		import git.db.py.mem
+		mdb = git.db.py.mem.PureMemoryDB()
 		entries = self._entries_sorted()
 		binsha, tree_items = write_tree_from_cache(entries, mdb, slice(0, len(entries)))
 		
@@ -959,12 +960,16 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 				if not line.startswith("git checkout-index: ") and not line.startswith("git-checkout-index: "):
 					is_a_dir = " is a directory"
 					unlink_issue = "unable to unlink old '"
+					already_exists_issue = ' already exists, no checkout'	# created by entry.c:checkout_entry(...)
 					if line.endswith(is_a_dir):
 						failed_files.append(line[:-len(is_a_dir)])
 						failed_reasons.append(is_a_dir)
 					elif line.startswith(unlink_issue):
 						failed_files.append(line[len(unlink_issue):line.rfind("'")])
 						failed_reasons.append(unlink_issue)
+					elif line.endswith(already_exists_issue):
+						failed_files.append(line[:-len(already_exists_issue)])
+						failed_reasons.append(already_exists_issue)
 					else:
 						unknown_lines.append(line)
 					continue

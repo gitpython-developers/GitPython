@@ -1,15 +1,17 @@
-from head import Head
-from git.util import join_path
-from gitdb.util import join
-
 import os
-
+from headref import Head
+from git.util import (
+						join, 
+						join_path
+						)
 
 __all__ = ["RemoteReference"]
 
 	
 class RemoteReference(Head):
 	"""Represents a reference pointing to a remote head."""
+	__slots__ = tuple()
+	
 	_common_path_default = "refs/remotes"
 	
 	
@@ -41,6 +43,11 @@ class RemoteReference(Head):
 		return '/'.join(tokens[3:])
 		
 	@classmethod
+	def create(cls, *args, **kwargs):
+		"""Used to disable this method"""
+		raise TypeError("Cannot explicitly create remote references")
+	
+	@classmethod
 	def delete(cls, repo, *refs, **kwargs):
 		"""Delete the given remote references.
 		:note:
@@ -56,8 +63,3 @@ class RemoteReference(Head):
 			except OSError:
 				pass
 		# END for each ref
-		
-	@classmethod
-	def create(cls, *args, **kwargs):
-		"""Used to disable this method"""
-		raise TypeError("Cannot explicitly create remote references")

@@ -4,7 +4,12 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
-from git.test.lib import *
+from git.test.lib import (
+							TestBase, 
+							with_rw_repo, 
+							fixture_path,
+							fixture
+						)
 from git import *
 import inspect
 import os
@@ -12,6 +17,7 @@ import sys
 import tempfile
 import glob
 import shutil
+import time
 from stat import *
 
 class TestIndex(TestBase):

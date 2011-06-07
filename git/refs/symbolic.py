@@ -1,24 +1,26 @@
 import os
-from git.objects import Object, Commit
+import re
+
+from git.objects import (
+						Object, 
+						Commit
+						)
 from git.util import (
 					join_path, 
 					join_path_native, 
 					to_native_path_linux,
-					assure_directory_exists
+					assure_directory_exists,
+					join, 
+					dirname,
+					isdir,
+					exists,
+					isfile,
+					rename,
+					hex_to_bin,
+					LockedFD
 					)
 
-from gitdb.exc import BadObject
-from gitdb.util import (
-							join, 
-							dirname,
-							isdir,
-							exists,
-							isfile,
-							rename,
-							hex_to_bin,
-							LockedFD
-						)
-
+from git.exc import BadObject
 from log import RefLog
 
 __all__ = ["SymbolicReference"]
@@ -30,10 +32,26 @@ class SymbolicReference(object):
 	
 	A typical example for a symbolic reference is HEAD."""
 	__slots__ = ("repo", "path")
+	
 	_resolve_ref_on_create = False
 	_points_to_commits_only = True
 	_common_path_default = ""
 	_id_attribute_ = "name"
+	
+	re_hexsha_only = re.compile('^[0-9A-Fa-f]{40}$')
+	
+	#{ Configuration
+	# Object class to be used when instantiating objects
+	ObjectCls = Object
+	CommitCls = Commit
+	
+	# all of the following are set by the package initializer
+	HEADCls = None
+	HeadCls = None
+	RemoteReferenceCls = None
+	TagReferenceCls = None
+	ReferenceCls = None
+	#}END configuration
 	
 	def __init__(self, repo, path):
 		self.repo = repo
@@ -143,76 +161,37 @@ class SymbolicReference(object):
 			return (None, tokens[1])
 			
 		# its a commit
-		if repo.re_hexsha_only.match(tokens[0]):
+		if cls.re_hexsha_only.match(tokens[0]):
 			return (tokens[0], None)
 			
 		raise ValueError("Failed to parse reference information from %r" % ref_path)
 	
+	def _get_object_sha(self):
+		"""
+		:return:
+			The binary sha to the object our ref currently refers to. Refs can be cached, they will 
+			always point to the actual object as it gets re-created on each query"""
+		return hex_to_bin(self.dereference_recursive(self.repo, self.path))
+	
 	def _get_object(self):
 		"""
 		:return:
-			The object our ref currently refers to. Refs can be cached, they will 
-			always point to the actual object as it gets re-created on each query"""
+			The object our ref currently refers to."""
 		# have to be dynamic here as we may be a tag which can point to anything
 		# Our path will be resolved to the hexsha which will be used accordingly
-		return Object.new_from_sha(self.repo, hex_to_bin(self.dereference_recursive(self.repo, self.path)))
+		return self.ObjectCls.new_from_sha(self.repo, self._get_object_sha())
 	
-	def _get_commit(self):
-		"""
-		:return:
-			Commit object we point to, works for detached and non-detached 
-			SymbolicReferences. The symbolic reference will be dereferenced recursively."""
-		obj = self._get_object()
-		if obj.type == 'tag':
-			obj = obj.object
-		#END dereference tag
-		
-		if obj.type != Commit.type:
-			raise TypeError("Symbolic Reference pointed to object %r, commit was required" % obj)
-		#END handle type
-		return obj
-		
-	def set_commit(self, commit, logmsg = None):
-		"""As set_object, but restricts the type of object to be a Commit
-		
-		:raise ValueError: If commit is not a Commit object or doesn't point to 
-			a commit
-		:return: self"""
-		# check the type - assume the best if it is a base-string
-		invalid_type = False
-		if isinstance(commit, Object):
-			invalid_type = commit.type != Commit.type
-		elif isinstance(commit, SymbolicReference):
-			invalid_type = commit.object.type != Commit.type
-		else:
-			try:
-				invalid_type = self.repo.rev_parse(commit).type != Commit.type
-			except BadObject:
-				raise ValueError("Invalid object: %s" % commit)
-			#END handle exception
-		# END verify type
-		
-		if invalid_type:
-			raise ValueError("Need commit, got %r" % commit)
-		#END handle raise
-		
-		# we leave strings to the rev-parse method below
-		self.set_object(commit, logmsg)
-		
-		return self
-		
-	
-	def set_object(self, object, logmsg = None):
+	def set_object(self, object_id, logmsg = None):
 		"""Set the object we point to, possibly dereference our symbolic reference first.
 		If the reference does not exist, it will be created
 		
-		:param object: a refspec, a SymbolicReference or an Object instance. SymbolicReferences
-			will be dereferenced beforehand to obtain the object they point to
+		:param object: a reference specifier string, a SymbolicReference or an object hex sha. 
+			SymbolicReferences will be dereferenced beforehand to obtain the object they point to
 		:param logmsg: If not None, the message will be used in the reflog entry to be 
 			written. Otherwise the reflog is not altered
 		:note: plain SymbolicReferences may not actually point to objects by convention
 		:return: self"""
-		if isinstance(object, SymbolicReference):
+		if isinstance(object_id, SymbolicReference):
 			object = object.object
 		#END resolve references
 		
@@ -224,13 +203,59 @@ class SymbolicReference(object):
 		# END handle non-existing ones
 		
 		if is_detached:
-			return self.set_reference(object, logmsg)
+			return self.set_reference(object_id, logmsg)
 			
 		# set the commit on our reference
-		return self._get_reference().set_object(object, logmsg)
+		return self._get_reference().set_object(object_id, logmsg)
+		
+	def _get_commit(self):
+		"""
+		:return:
+			Commit object we point to, works for detached and non-detached 
+			SymbolicReferences. The symbolic reference will be dereferenced recursively."""
+		obj = self._get_object()
+		if obj.type == 'tag':
+			obj = obj.object
+		#END dereference tag
+		
+		if obj.type != self.CommitCls.type:
+			raise TypeError("Symbolic Reference pointed to object %r, commit was required" % obj)
+		#END handle type
+		return obj
+		
+	def set_commit(self, commit, logmsg = None):
+		"""As set_object, but restricts the type of object to be a Commit
+		
+		:raise ValueError: If commit is not a Commit object or doesn't point to 
+			a commit
+		:return: self"""
+		# check the type - assume the best if it is a base-string
+		is_invalid_type = False
+		if isinstance(commit, self.ObjectCls):
+			is_invalid_type = commit.type != self.CommitCls.type
+		elif isinstance(commit, SymbolicReference):
+			is_invalid_type = commit.object.type != self.CommitCls.type
+		else:
+			try:
+				is_invalid_type = self.repo.resolve_object(commit).type != self.CommitCls.type
+			except BadObject:
+				raise ValueError("Invalid object: %s" % commit)
+			#END handle exception
+		# END verify type
+		
+		if is_invalid_type:
+			raise ValueError("Need commit, got %r" % commit)
+		#END handle raise
+		
+		# we leave strings to the rev-parse method below
+		self.set_object(commit, logmsg)
+		
+		return self
+		
 	
 	commit = property(_get_commit, set_commit, doc="Query or set commits directly")
 	object = property(_get_object, set_object, doc="Return the object our ref currently refers to")
+	object_binsha = property(_get_object_sha, set_object, doc="Return the object our ref currently refers to")
 		
 	def _get_reference(self):
 		""":return: Reference Object we point to
@@ -247,7 +272,7 @@ class SymbolicReference(object):
 		will be set which effectively detaches the refererence if it was a purely 
 		symbolic one.
 		
-		:param ref: SymbolicReference instance, Object instance or refspec string
+		:param ref: SymbolicReference instance, hexadecimal sha string or refspec string
 			Only if the ref is a SymbolicRef instance, we will point to it. Everthiny
 			else is dereferenced to obtain the actual object.
 		:param logmsg: If set to a string, the message will be used in the reflog.
@@ -263,12 +288,12 @@ class SymbolicReference(object):
 		obj = None
 		if isinstance(ref, SymbolicReference):
 			write_value = "ref: %s" % ref.path
-		elif isinstance(ref, Object):
+		elif isinstance(ref, self.ObjectCls):
 			obj = ref
 			write_value = ref.hexsha
 		elif isinstance(ref, basestring):
 			try:
-				obj = self.repo.rev_parse(ref+"^{}")	# optionally deref tags
+				obj = self.repo.resolve_object(ref+"^{}")	# optionally deref tags
 				write_value = obj.hexsha
 			except BadObject:
 				raise ValueError("Could not extract object from %s" % ref)
@@ -318,7 +343,7 @@ class SymbolicReference(object):
 			a valid object or reference."""
 		try:
 			self.object
-		except (OSError, ValueError):
+		except (OSError, ValueError, BadObject):
 			return False
 		else:
 			return True
@@ -449,7 +474,16 @@ class SymbolicReference(object):
 		# figure out target data
 		target = reference
 		if resolve:
-			target = repo.rev_parse(str(reference))
+			# could just use the resolve method, but it could be expensive
+			# so we handle most common cases ourselves
+			if isinstance(reference, cls.ObjectCls):
+				target = reference.hexsha
+			elif isinstance(reference, SymbolicReference):
+				target = reference.object.hexsha
+			else:
+				target = repo.resolve_object(str(reference))
+			#END handle resoltion
+		#END need resolution
 			
 		if not force and isfile(abs_ref_path):
 			target_data = str(target)
@@ -579,7 +613,7 @@ class SymbolicReference(object):
 	def iter_items(cls, repo, common_path = None):
 		"""Find all refs in the repository
 
-		:param repo: is the Repo
+		:param repo: is the repo
 
 		:param common_path:
 			Optional keyword argument to the path which is to be shared by all
@@ -588,12 +622,12 @@ class SymbolicReference(object):
 			refs suitable for the actual class are returned.
 
 		:return:
-			git.SymbolicReference[], each of them is guaranteed to be a symbolic
-			ref which is not detached.
+			git.SymbolicReference[], each of them is guaranteed to be a *only* a symbolic
+			ref, or a derived class which is not detached
 			
 			List is lexigraphically sorted
 			The returned objects represent actual subclasses, such as Head or TagReference"""
-		return ( r for r in cls._iter_items(repo, common_path) if r.__class__ == SymbolicReference or not r.is_detached )
+		return ( r for r in cls._iter_items(repo, common_path) if r.__class__ == cls or not r.is_detached )
 		
 	@classmethod
 	def from_path(cls, repo, path):
@@ -606,7 +640,7 @@ class SymbolicReference(object):
 		if not path:
 			raise ValueError("Cannot create Reference from %r" % path)
 		
-		for ref_type in (HEAD, Head, RemoteReference, TagReference, Reference, SymbolicReference):
+		for ref_type in (cls.HEADCls, cls.HeadCls, cls.RemoteReferenceCls, cls.TagReferenceCls, cls.ReferenceCls, cls):
 			try:
 				instance = ref_type(repo, path)
 				if instance.__class__ == SymbolicReference and instance.is_detached:

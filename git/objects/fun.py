@@ -1,4 +1,5 @@
 """Module with functions which are supposed to be as fast as possible"""
+
 from stat import S_ISDIR
 
 __all__ = ('tree_to_stream', 'tree_entries_from_data', 'traverse_trees_recursive',
@@ -197,3 +198,4 @@ def traverse_tree_recursive(odb, tree_sha, path_prefix):
 	# END for each item
 	
 	return entries
+

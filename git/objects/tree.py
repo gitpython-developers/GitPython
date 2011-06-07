@@ -3,21 +3,23 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
-import util
+from git.util import RepoAliasMixin
+import git.diff as diff
+from git.typ import ObjectType
 from base import IndexObject
-from git.util import join_path
 from blob import Blob
 from submodule.base import Submodule
-import git.diff as diff
 
 from fun import (
 					tree_entries_from_data, 
 					tree_to_stream
 				 )
 
-from gitdb.util import (
-						to_bin_sha, 
+from git.util import (
+						to_bin_sha,
+						join_path
 						)
+import util
 
 __all__ = ("TreeModifier", "Tree")
 
@@ -100,7 +102,7 @@ class TreeModifier(object):
 	#} END mutators
 
 
-class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
+class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable, RepoAliasMixin):
 	"""Tree objects represent an ordered list of Blobs and other Trees.
 	
 	``Tree as a list``::
@@ -112,7 +114,9 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
 		blob = tree[0]
 	"""
 	
-	type = "tree"
+	type = ObjectType.tree
+	type_id = ObjectType.tree_id
+	
 	__slots__ = "_cache"
 	
 	# actual integer ids for comparison 
@@ -121,12 +125,17 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
 	symlink_id = 012
 	tree_id = 004
 	
+	#{ Configuration
+	
+	# override in subclass if you would like your own types to be instantiated instead
 	_map_id_to_type = {
 						commit_id : Submodule, 
 						blob_id : Blob, 
 						symlink_id : Blob
 						# tree id added once Tree is defined
 						}
+	
+	#} end configuration
 	
 	
 	def __init__(self, repo, binsha, mode=tree_id<<12, path=None):
@@ -141,7 +150,7 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
 	def _set_cache_(self, attr):
 		if attr == "_cache":
 			# Set the data when we need it
-			ostream = self.repo.odb.stream(self.binsha)
+			ostream = self.odb.stream(self.binsha)
 			self._cache = tree_entries_from_data(ostream.read())
 		else:
 			super(Tree, self)._set_cache_(attr)

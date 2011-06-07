@@ -5,12 +5,9 @@ from git.util import (
 						LockFile,
 						assure_directory_exists,
 						to_native_path,
-					)
-
-from gitdb.util import (
 						bin_to_hex,
 						join,
-						file_contents_ro_filepath,
+						file_contents_ro_filepath
 					)
 
 from git.objects.util import (

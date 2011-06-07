@@ -4,28 +4,149 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
+import platform
+import binascii
 import os
-import re
+import mmap
 import sys
+import errno
+import re
 import time
 import tempfile
-import platform
-
-from gitdb.util import (
-							make_sha, 
-							LockedFD, 
-							file_contents_ro, 
-							LazyMixin, 
-							to_hex_sha, 
-							to_bin_sha
-						)
 
 __all__ = ( "stream_copy", "join_path", "to_native_path_windows", "to_native_path_linux", 
 			"join_path_native", "Stats", "IndexFileSHA1Writer", "Iterable", "IterableList", 
 			"BlockingLockFile", "LockFile", 'Actor', 'get_user_id', 'assure_directory_exists',
-			'RemoteProgress')
+			'RepoAliasMixin', 'LockedFD', 'LazyMixin' )
 
-#{ Utility Methods
+from cStringIO import StringIO
+
+# in py 2.4, StringIO is only StringI, without write support.
+# Hence we must use the python implementation for this
+if sys.version_info[1] < 5:
+	from StringIO import StringIO
+# END handle python 2.4
+
+try:
+	import async.mod.zlib as zlib
+except ImportError:
+	import zlib
+# END try async zlib
+
+from async import ThreadPool
+
+try:
+    import hashlib
+except ImportError:
+    import sha
+
+try:
+	from struct import unpack_from
+except ImportError:
+	from struct import unpack, calcsize
+	__calcsize_cache = dict()
+	def unpack_from(fmt, data, offset=0):
+		try:
+			size = __calcsize_cache[fmt]
+		except KeyError:
+			size = calcsize(fmt)
+			__calcsize_cache[fmt] = size
+		# END exception handling
+		return unpack(fmt, data[offset : offset + size])
+	# END own unpack_from implementation
+
+
+#{ Globals
+
+# A pool distributing tasks, initially with zero threads, hence everything 
+# will be handled in the main thread
+pool = ThreadPool(0)
+
+#} END globals
+
+
+#{ Aliases
+
+hex_to_bin = binascii.a2b_hex
+bin_to_hex = binascii.b2a_hex
+
+# errors
+ENOENT = errno.ENOENT
+
+# os shortcuts
+exists = os.path.exists
+mkdir = os.mkdir
+chmod = os.chmod
+isdir = os.path.isdir
+isfile = os.path.isfile
+rename = os.rename
+remove = os.remove
+dirname = os.path.dirname
+basename = os.path.basename
+normpath = os.path.normpath
+expandvars = os.path.expandvars
+expanduser = os.path.expanduser
+abspath = os.path.abspath
+join = os.path.join
+read = os.read
+write = os.write
+close = os.close
+fsync = os.fsync
+
+# constants
+NULL_HEX_SHA = "0"*40
+NULL_BIN_SHA = "\0"*20
+
+#} END Aliases
+
+#{ compatibility stuff ... 
+
+class _RandomAccessStringIO(object):
+	"""Wrapper to provide required functionality in case memory maps cannot or may 
+	not be used. This is only really required in python 2.4"""
+	__slots__ = '_sio'
+	
+	def __init__(self, buf=''):
+		self._sio = StringIO(buf)
+		
+	def __getattr__(self, attr):
+		return getattr(self._sio, attr)
+	
+	def __len__(self):
+		return len(self.getvalue())
+		
+	def __getitem__(self, i):
+		return self.getvalue()[i]
+		
+	def __getslice__(self, start, end):
+		return self.getvalue()[start:end]
+	
+#} END compatibility stuff ...
+
+#{ Routines
+
+def get_user_id():
+	""":return: string identifying the currently active system user as name@node
+	:note: user can be set with the 'USER' environment variable, usually set on windows"""
+	ukn = 'UNKNOWN'
+	username = os.environ.get('USER', os.environ.get('USERNAME', ukn))
+	if username == ukn and hasattr(os, 'getlogin'):
+		username = os.getlogin()
+	# END get username from login
+	return "%s@%s" % (username, platform.node())
+
+def is_git_dir(d):
+	""" This is taken from the git setup.c:is_git_directory
+	function."""
+	if isdir(d) and \
+			isdir(join(d, 'objects')) and \
+			isdir(join(d, 'refs')):
+		headref = join(d, 'HEAD')
+		return isfile(headref) or \
+				(os.path.islink(headref) and
+				os.readlink(headref).startswith('refs'))
+	return False
+
 
 def stream_copy(source, destination, chunk_size=512*1024):
 	"""Copy all data from the source stream into the destination stream in chunks
@@ -41,6 +162,87 @@ def stream_copy(source, destination, chunk_size=512*1024):
 			break
 	# END reading output stream
 	return br
+	
+def make_sha(source=''):
+    """A python2.4 workaround for the sha/hashlib module fiasco 
+    :note: From the dulwich project """
+    try:
+        return hashlib.sha1(source)
+    except NameError:
+        sha1 = sha.sha(source)
+        return sha1
+
+def allocate_memory(size):
+	""":return: a file-protocol accessible memory block of the given size"""
+	if size == 0:
+		return _RandomAccessStringIO('')
+	# END handle empty chunks gracefully
+	
+	try:
+		return mmap.mmap(-1, size)	# read-write by default
+	except EnvironmentError:
+		# setup real memory instead
+		# this of course may fail if the amount of memory is not available in
+		# one chunk - would only be the case in python 2.4, being more likely on 
+		# 32 bit systems.
+		return _RandomAccessStringIO("\0"*size)
+	# END handle memory allocation
+	
+
+def file_contents_ro(fd, stream=False, allow_mmap=True):
+	""":return: read-only contents of the file represented by the file descriptor fd
+	:param fd: file descriptor opened for reading
+	:param stream: if False, random access is provided, otherwise the stream interface
+		is provided.
+	:param allow_mmap: if True, its allowed to map the contents into memory, which 
+		allows large files to be handled and accessed efficiently. The file-descriptor
+		will change its position if this is False"""
+	try:
+		if allow_mmap:
+			# supports stream and random access
+			try:
+				return mmap.mmap(fd, 0, access=mmap.ACCESS_READ)
+			except EnvironmentError:
+				# python 2.4 issue, 0 wants to be the actual size
+				return mmap.mmap(fd, os.fstat(fd).st_size, access=mmap.ACCESS_READ)
+			# END handle python 2.4
+	except OSError:
+		pass
+	# END exception handling
+	
+	# read manully
+	contents = os.read(fd, os.fstat(fd).st_size)
+	if stream:
+		return _RandomAccessStringIO(contents)
+	return contents
+	
+def file_contents_ro_filepath(filepath, stream=False, allow_mmap=True, flags=0):
+	"""Get the file contents at filepath as fast as possible
+	:return: random access compatible memory of the given filepath
+	:param stream: see ``file_contents_ro``
+	:param allow_mmap: see ``file_contents_ro``
+	:param flags: additional flags to pass to os.open
+	:raise OSError: If the file could not be opened
+	:note: for now we don't try to use O_NOATIME directly as the right value needs to be 
+		shared per database in fact. It only makes a real difference for loose object 
+		databases anyway, and they use it with the help of the ``flags`` parameter"""
+	fd = os.open(filepath, os.O_RDONLY|getattr(os, 'O_BINARY', 0)|flags)
+	try:
+		return file_contents_ro(fd, stream, allow_mmap)
+	finally:
+		close(fd)
+	# END assure file is closed
+	
+def to_hex_sha(sha):
+	""":return: hexified version  of sha"""
+	if len(sha) == 40:
+		return sha
+	return bin_to_hex(sha)
+	
+def to_bin_sha(sha):
+	if len(sha) == 20:
+		return sha
+	return hex_to_bin(sha)
 
 def join_path(a, *p):
 	"""Join path tokens together similar to os.path.join, but always use 
@@ -61,6 +263,7 @@ def to_native_path_windows(path):
 def to_native_path_linux(path):
 	return path.replace('\\','/')
 
+
 if sys.platform.startswith('win'):
 	to_native_path = to_native_path_windows
 else:
@@ -75,7 +278,7 @@ def join_path_native(a, *p):
 		needed to play it safe on my dear windows and to assure nice paths that only 
 		use '\'"""
 	return to_native_path(join_path(a, *p))
-	
+
 def assure_directory_exists(path, is_file=False):
 	"""Assure that the directory pointed to by path exists.
 	
@@ -89,324 +292,170 @@ def assure_directory_exists(path, is_file=False):
 		os.makedirs(path)
 		return True
 	return False
-	
-def get_user_id():
-	""":return: string identifying the currently active system user as name@node
-	:note: user can be set with the 'USER' environment variable, usually set on windows"""
-	ukn = 'UNKNOWN'
-	username = os.environ.get('USER', os.environ.get('USERNAME', ukn))
-	if username == ukn and hasattr(os, 'getlogin'):
-		username = os.getlogin()
-	# END get username from login
-	return "%s@%s" % (username, platform.node())
 
-#} END utilities
 
-#{ Classes
+#} END routines
 
-class RemoteProgress(object):
+
+#{ Utilities
+
+class LazyMixin(object):
 	"""
-	Handler providing an interface to parse progress information emitted by git-push
-	and git-fetch and to dispatch callbacks allowing subclasses to react to the progress.
+	Base class providing an interface to lazily retrieve attribute values upon
+	first access. If slots are used, memory will only be reserved once the attribute
+	is actually accessed and retrieved the first time. All future accesses will
+	return the cached value as stored in the Instance's dict or slot.
 	"""
-	_num_op_codes = 5
-	BEGIN, END, COUNTING, COMPRESSING, WRITING =  [1 << x for x in range(_num_op_codes)]
-	STAGE_MASK = BEGIN|END
-	OP_MASK = ~STAGE_MASK
 	
-	__slots__ = ("_cur_line", "_seen_ops")
-	re_op_absolute = re.compile("(remote: )?([\w\s]+):\s+()(\d+)()(.*)")
-	re_op_relative = re.compile("(remote: )?([\w\s]+):\s+(\d+)% \((\d+)/(\d+)\)(.*)")
+	__slots__ = tuple()
 	
-	def __init__(self):
-		self._seen_ops = list()
-	
-	def _parse_progress_line(self, line):
-		"""Parse progress information from the given line as retrieved by git-push
-		or git-fetch
-		
-		:return: list(line, ...) list of lines that could not be processed"""
-		# handle
-		# Counting objects: 4, done. 
-		# Compressing objects:	50% (1/2)	\rCompressing objects: 100% (2/2)	\rCompressing objects: 100% (2/2), done.
-		self._cur_line = line
-		sub_lines = line.split('\r')
-		failed_lines = list()
-		for sline in sub_lines:
-			# find esacpe characters and cut them away - regex will not work with 
-			# them as they are non-ascii. As git might expect a tty, it will send them
-			last_valid_index = None
-			for i,c in enumerate(reversed(sline)):
-				if ord(c) < 32:
-					# its a slice index
-					last_valid_index = -i-1 
-				# END character was non-ascii
-			# END for each character in sline
-			if last_valid_index is not None:
-				sline = sline[:last_valid_index]
-			# END cut away invalid part
-			sline = sline.rstrip()
-			
-			cur_count, max_count = None, None
-			match = self.re_op_relative.match(sline)
-			if match is None:
-				match = self.re_op_absolute.match(sline)
-				
-			if not match:
-				self.line_dropped(sline)
-				failed_lines.append(sline)
-				continue
-			# END could not get match
-			
-			op_code = 0
-			remote, op_name, percent, cur_count, max_count, message = match.groups()
-			
-			# get operation id
-			if op_name == "Counting objects":
-				op_code |= self.COUNTING
-			elif op_name == "Compressing objects":
-				op_code |= self.COMPRESSING
-			elif op_name == "Writing objects":
-				op_code |= self.WRITING
-			else:
-				raise ValueError("Operation name %r unknown" % op_name)
-			
-			# figure out stage
-			if op_code not in self._seen_ops:
-				self._seen_ops.append(op_code)
-				op_code |= self.BEGIN
-			# END begin opcode
-			
-			if message is None:
-				message = ''
-			# END message handling
-			
-			message = message.strip()
-			done_token = ', done.'
-			if message.endswith(done_token):
-				op_code |= self.END
-				message = message[:-len(done_token)]
-			# END end message handling
-			
-			self.update(op_code, cur_count, max_count, message)
-		# END for each sub line
-		return failed_lines
-	
-	def line_dropped(self, line):
-		"""Called whenever a line could not be understood and was therefore dropped."""
-		pass
-	
-	def update(self, op_code, cur_count, max_count=None, message=''):
-		"""Called whenever the progress changes
-		
-		:param op_code:
-			Integer allowing to be compared against Operation IDs and stage IDs.
-			
-			Stage IDs are BEGIN and END. BEGIN will only be set once for each Operation 
-			ID as well as END. It may be that BEGIN and END are set at once in case only
-			one progress message was emitted due to the speed of the operation.
-			Between BEGIN and END, none of these flags will be set
-			
-			Operation IDs are all held within the OP_MASK. Only one Operation ID will 
-			be active per call.
-		:param cur_count: Current absolute count of items
-			
-		:param max_count:
-			The maximum count of items we expect. It may be None in case there is 
-			no maximum number of items or if it is (yet) unknown.
-		
-		:param message:
-			In case of the 'WRITING' operation, it contains the amount of bytes
-			transferred. It may possibly be used for other purposes as well.
-		
-		You may read the contents of the current line in self._cur_line"""
-		pass
-
-
-class Actor(object):
-	"""Actors hold information about a person acting on the repository. They 
-	can be committers and authors or anything with a name and an email as 
-	mentioned in the git log entries."""
-	# PRECOMPILED REGEX
-	name_only_regex = re.compile( r'<(.+)>' )
-	name_email_regex = re.compile( r'(.*) <(.+?)>' )
-	
-	# ENVIRONMENT VARIABLES
-	# read when creating new commits
-	env_author_name = "GIT_AUTHOR_NAME"
-	env_author_email = "GIT_AUTHOR_EMAIL"
-	env_committer_name = "GIT_COMMITTER_NAME"
-	env_committer_email = "GIT_COMMITTER_EMAIL"
-	
-	# CONFIGURATION KEYS
-	conf_name = 'name'
-	conf_email = 'email'
-	
-	__slots__ = ('name', 'email')
-	
-	def __init__(self, name, email):
-		self.name = name
-		self.email = email
-
-	def __eq__(self, other):
-		return self.name == other.name and self.email == other.email
-		
-	def __ne__(self, other):
-		return not (self == other)
-		
-	def __hash__(self):
-		return hash((self.name, self.email))
-
-	def __str__(self):
-		return self.name
-
-	def __repr__(self):
-		return '<git.Actor "%s <%s>">' % (self.name, self.email)
-
-	@classmethod
-	def _from_string(cls, string):
-		"""Create an Actor from a string.
-		:param string: is the string, which is expected to be in regular git format
-
-				John Doe <jdoe@example.com>
-				
-		:return: Actor """
-		m = cls.name_email_regex.search(string)
-		if m:
-			name, email = m.groups()
-			return Actor(name, email)
-		else:
-			m = cls.name_only_regex.search(string)
-			if m:
-				return Actor(m.group(1), None)
-			else:
-				# assume best and use the whole string as name
-				return Actor(string, None)
-			# END special case name
-		# END handle name/email matching
-		
-	@classmethod
-	def _main_actor(cls, env_name, env_email, config_reader=None):
-		actor = Actor('', '')
-		default_email = get_user_id()
-		default_name = default_email.split('@')[0]
-		
-		for attr, evar, cvar, default in (('name', env_name, cls.conf_name, default_name), 
-										('email', env_email, cls.conf_email, default_email)):
-			try:
-				setattr(actor, attr, os.environ[evar])
-			except KeyError:
-				if config_reader is not None:
-					setattr(actor, attr, config_reader.get_value('user', cvar, default))
-				#END config-reader handling
-				if not getattr(actor, attr):
-					setattr(actor, attr, default)
-			#END handle name
-		#END for each item to retrieve
-		return actor
-		
-		
-	@classmethod
-	def committer(cls, config_reader=None):
+	def __getattr__(self, attr):
 		"""
-		:return: Actor instance corresponding to the configured committer. It behaves
-			similar to the git implementation, such that the environment will override 
-			configuration values of config_reader. If no value is set at all, it will be
-			generated
-		:param config_reader: ConfigReader to use to retrieve the values from in case
-			they are not set in the environment"""
-		return cls._main_actor(cls.env_committer_name, cls.env_committer_email, config_reader)
-		
-	@classmethod
-	def author(cls, config_reader=None):
-		"""Same as committer(), but defines the main author. It may be specified in the environment, 
-		but defaults to the committer"""
-		return cls._main_actor(cls.env_author_name, cls.env_author_email, config_reader)
-		
+		Whenever an attribute is requested that we do not know, we allow it 
+		to be created and set. Next time the same attribute is reqeusted, it is simply
+		returned from our dict/slots. """
+		self._set_cache_(attr)
+		# will raise in case the cache was not created
+		return object.__getattribute__(self, attr)
 
-class Stats(object):
+	def _set_cache_(self, attr):
+		"""
+		This method should be overridden in the derived class. 
+		It should check whether the attribute named by attr can be created
+		and cached. Do nothing if you do not know the attribute or call your subclass
+		
+		The derived class may create as many additional attributes as it deems 
+		necessary in case a git command returns more information than represented 
+		in the single attribute."""
+		pass
+
+	
+class LockedFD(object):
 	"""
-	Represents stat information as presented by git at the end of a merge. It is 
-	created from the output of a diff operation.
+	This class facilitates a safe read and write operation to a file on disk.
+	If we write to 'file', we obtain a lock file at 'file.lock' and write to 
+	that instead. If we succeed, the lock file will be renamed to overwrite 
+	the original file.
 	
-	``Example``::
+	When reading, we obtain a lock file, but to prevent other writers from 
+	succeeding while we are reading the file.
 	
-	 c = Commit( sha1 )
-	 s = c.stats
-	 s.total		 # full-stat-dict
-	 s.files		 # dict( filepath : stat-dict )
-	 
-	``stat-dict``
+	This type handles error correctly in that it will assure a consistent state 
+	on destruction.
 	
-	A dictionary with the following keys and values::
-	 
-	  deletions = number of deleted lines as int
-	  insertions = number of inserted lines as int
-	  lines = total number of lines changed as int, or deletions + insertions
-	  
-	``full-stat-dict``
+	:note: with this setup, parallel reading is not possible"""
+	__slots__ = ("_filepath", '_fd', '_write')
 	
-	In addition to the items in the stat-dict, it features additional information::
+	def __init__(self, filepath):
+		"""Initialize an instance with the givne filepath"""
+		self._filepath = filepath
+		self._fd = None
+		self._write = None			# if True, we write a file
 	
-	 files = number of changed files as int"""
-	__slots__ = ("total", "files")
-	
-	def __init__(self, total, files):
-		self.total = total
-		self.files = files
-
-	@classmethod
-	def _list_from_string(cls, repo, text):
-		"""Create a Stat object from output retrieved by git-diff.
+	def __del__(self):
+		# will do nothing if the file descriptor is already closed
+		if self._fd is not None:
+			self.rollback()
 		
-		:return: git.Stat"""
-		hsh = {'total': {'insertions': 0, 'deletions': 0, 'lines': 0, 'files': 0}, 'files': dict()}
-		for line in text.splitlines():
-			(raw_insertions, raw_deletions, filename) = line.split("\t")
-			insertions = raw_insertions != '-' and int(raw_insertions) or 0
-			deletions = raw_deletions != '-' and int(raw_deletions) or 0
-			hsh['total']['insertions'] += insertions
-			hsh['total']['deletions'] += deletions
-			hsh['total']['lines'] += insertions + deletions
-			hsh['total']['files'] += 1
-			hsh['files'][filename.strip()] = {'insertions': insertions,
-											  'deletions': deletions,
-											  'lines': insertions + deletions}
-		return Stats(hsh['total'], hsh['files'])
-
-
-class IndexFileSHA1Writer(object):
-	"""Wrapper around a file-like object that remembers the SHA1 of 
-	the data written to it. It will write a sha when the stream is closed
-	or if the asked for explicitly usign write_sha.
-	
-	Only useful to the indexfile
-	
-	:note: Based on the dulwich project"""
-	__slots__ = ("f", "sha1")
-	
-	def __init__(self, f):
-		self.f = f
-		self.sha1 = make_sha("")
-
-	def write(self, data):
-		self.sha1.update(data)
-		return self.f.write(data)
-
-	def write_sha(self):
-		sha = self.sha1.digest()
-		self.f.write(sha)
-		return sha
-
-	def close(self):
-		sha = self.write_sha()
-		self.f.close()
-		return sha
-
-	def tell(self):
-		return self.f.tell()
-
-
+	def _lockfilepath(self):
+		return "%s.lock" % self._filepath
+		
+	def open(self, write=False, stream=False):
+		"""
+		Open the file descriptor for reading or writing, both in binary mode.
+		
+		:param write: if True, the file descriptor will be opened for writing. Other
+			wise it will be opened read-only.
+		:param stream: if True, the file descriptor will be wrapped into a simple stream 
+			object which supports only reading or writing
+		:return: fd to read from or write to. It is still maintained by this instance
+			and must not be closed directly
+		:raise IOError: if the lock could not be retrieved
+		:raise OSError: If the actual file could not be opened for reading
+		:note: must only be called once"""
+		if self._write is not None:
+			raise AssertionError("Called %s multiple times" % self.open)
+		
+		self._write = write
+		
+		# try to open the lock file
+		binary = getattr(os, 'O_BINARY', 0)
+		lockmode = 	os.O_WRONLY | os.O_CREAT | os.O_EXCL | binary
+		try:
+			fd = os.open(self._lockfilepath(), lockmode, 0600)
+			if not write:
+				os.close(fd)
+			else:
+				self._fd = fd
+			# END handle file descriptor
+		except OSError:
+			raise IOError("Lock at %r could not be obtained" % self._lockfilepath())
+		# END handle lock retrieval
+		
+		# open actual file if required
+		if self._fd is None:
+			# we could specify exlusive here, as we obtained the lock anyway
+			try:
+				self._fd = os.open(self._filepath, os.O_RDONLY | binary)
+			except:
+				# assure we release our lockfile
+				os.remove(self._lockfilepath())
+				raise
+			# END handle lockfile
+		# END open descriptor for reading
+		
+		if stream:
+			# need delayed import
+			from stream import FDStream
+			return FDStream(self._fd)
+		else:
+			return self._fd
+		# END handle stream
+		
+	def commit(self):
+		"""When done writing, call this function to commit your changes into the 
+		actual file. 
+		The file descriptor will be closed, and the lockfile handled.
+		:note: can be called multiple times"""
+		self._end_writing(successful=True)
+		
+	def rollback(self):
+		"""Abort your operation without any changes. The file descriptor will be 
+		closed, and the lock released.
+		:note: can be called multiple times"""
+		self._end_writing(successful=False)
+		
+	def _end_writing(self, successful=True):
+		"""Handle the lock according to the write mode """
+		if self._write is None:
+			raise AssertionError("Cannot end operation if it wasn't started yet")
+		
+		if self._fd is None:
+			return
+		
+		os.close(self._fd)
+		self._fd = None
+		
+		lockfile = self._lockfilepath()
+		if self._write and successful:
+			# on windows, rename does not silently overwrite the existing one
+			if sys.platform == "win32":
+				if isfile(self._filepath):
+					os.remove(self._filepath)
+				# END remove if exists
+			# END win32 special handling
+			os.rename(lockfile, self._filepath)
+			
+			# assure others can at least read the file - the tmpfile left it at rw--
+			# We may also write that file, on windows that boils down to a remove-
+			# protection as well
+			chmod(self._filepath, 0644)
+		else:
+			# just delete the file so far, we failed
+			os.remove(lockfile)
+		# END successful handling
+		
+		
 class LockFile(object):
 	"""Provides methods to obtain, check for, and release a file based lock which 
 	should be used to handle concurrent access to the same file.
@@ -524,7 +573,136 @@ class BlockingLockFile(LockFile):
 			else:
 				break
 		# END endless loop
+
+
+class Actor(object):
+	"""Actors hold information about a person acting on the repository. They 
+	can be committers and authors or anything with a name and an email as 
+	mentioned in the git log entries."""
+	# PRECOMPILED REGEX
+	name_only_regex = re.compile( r'<(.+)>' )
+	name_email_regex = re.compile( r'(.*) <(.+?)>' )
 	
+	# ENVIRONMENT VARIABLES
+	# read when creating new commits
+	env_author_name = "GIT_AUTHOR_NAME"
+	env_author_email = "GIT_AUTHOR_EMAIL"
+	env_committer_name = "GIT_COMMITTER_NAME"
+	env_committer_email = "GIT_COMMITTER_EMAIL"
+	
+	# CONFIGURATION KEYS
+	conf_name = 'name'
+	conf_email = 'email'
+	
+	__slots__ = ('name', 'email')
+	
+	def __init__(self, name, email):
+		self.name = name
+		self.email = email
+
+	def __eq__(self, other):
+		return self.name == other.name and self.email == other.email
+		
+	def __ne__(self, other):
+		return not (self == other)
+		
+	def __hash__(self):
+		return hash((self.name, self.email))
+
+	def __str__(self):
+		return self.name
+
+	def __repr__(self):
+		return '<git.Actor "%s <%s>">' % (self.name, self.email)
+
+	@classmethod
+	def _from_string(cls, string):
+		"""Create an Actor from a string.
+		:param string: is the string, which is expected to be in regular git format
+
+				John Doe <jdoe@example.com>
+				
+		:return: Actor """
+		m = cls.name_email_regex.search(string)
+		if m:
+			name, email = m.groups()
+			return cls(name, email)
+		else:
+			m = cls.name_only_regex.search(string)
+			if m:
+				return cls(m.group(1), None)
+			else:
+				# assume best and use the whole string as name
+				return cls(string, None)
+			# END special case name
+		# END handle name/email matching
+		
+	@classmethod
+	def _main_actor(cls, env_name, env_email, config_reader=None):
+		actor = cls('', '')
+		default_email = get_user_id()
+		default_name = default_email.split('@')[0]
+		
+		for attr, evar, cvar, default in (('name', env_name, cls.conf_name, default_name), 
+										('email', env_email, cls.conf_email, default_email)):
+			try:
+				setattr(actor, attr, os.environ[evar])
+			except KeyError:
+				if config_reader is not None:
+					setattr(actor, attr, config_reader.get_value('user', cvar, default))
+				#END config-reader handling
+				if not getattr(actor, attr):
+					setattr(actor, attr, default)
+			#END handle name
+		#END for each item to retrieve
+		return actor
+		
+		
+	@classmethod
+	def committer(cls, config_reader=None):
+		"""
+		:return: Actor instance corresponding to the configured committer. It behaves
+			similar to the git implementation, such that the environment will override 
+			configuration values of config_reader. If no value is set at all, it will be
+			generated
+		:param config_reader: ConfigReader to use to retrieve the values from in case
+			they are not set in the environment"""
+		return cls._main_actor(cls.env_committer_name, cls.env_committer_email, config_reader)
+		
+	@classmethod
+	def author(cls, config_reader=None):
+		"""Same as committer(), but defines the main author. It may be specified in the environment, 
+		but defaults to the committer"""
+		return cls._main_actor(cls.env_author_name, cls.env_author_email, config_reader)
+		
+
+class Iterable(object):
+	"""Defines an interface for iterable items which is to assure a uniform 
+	way to retrieve and iterate items within the git repository"""
+	__slots__ = tuple()
+	_id_attribute_ = "attribute that most suitably identifies your instance"
+	
+	@classmethod
+	def list_items(cls, repo, *args, **kwargs):
+		"""
+		Find all items of this type - subclasses can specify args and kwargs differently.
+		If no args are given, subclasses are obliged to return all items if no additional 
+		arguments arg given.
+		
+		:note: Favor the iter_items method as it will
+		
+		:return:list(Item,...) list of item instances"""
+		out_list = IterableList( cls._id_attribute_ )
+		out_list.extend(cls.iter_items(repo, *args, **kwargs))
+		return out_list
+		
+		
+	@classmethod
+	def iter_items(cls, repo, *args, **kwargs):
+		"""For more information about the arguments, see list_items
+		:return:  iterator yielding Items"""
+		raise NotImplementedError("To be implemented by Subclass")
+		
 
 class IterableList(list):
 	"""
@@ -571,31 +749,103 @@ class IterableList(list):
 			raise IndexError( "No item found with id %r" % (self._prefix + index) )
 			
 
-class Iterable(object):
-	"""Defines an interface for iterable items which is to assure a uniform 
-	way to retrieve and iterate items within the git repository"""
+
+#} END utilities
+
+#{ Classes
+
+class RepoAliasMixin(object):
+	"""Simple utility providing a repo-property which resolves to the 'odb' attribute
+	of the actual type. This is for api compatability only, as the types previously
+	held repository instances, now they hold odb instances instead"""
 	__slots__ = tuple()
-	_id_attribute_ = "attribute that most suitably identifies your instance"
 	
+	@property
+	def repo(self):
+		return self.odb
+	
+
+class Stats(object):
+	"""
+	Represents stat information as presented by git at the end of a merge. It is 
+	created from the output of a diff operation.
+	
+	``Example``::
+	
+	 c = Commit( sha1 )
+	 s = c.stats
+	 s.total		 # full-stat-dict
+	 s.files		 # dict( filepath : stat-dict )
+	 
+	``stat-dict``
+	
+	A dictionary with the following keys and values::
+	 
+	  deletions = number of deleted lines as int
+	  insertions = number of inserted lines as int
+	  lines = total number of lines changed as int, or deletions + insertions
+	  
+	``full-stat-dict``
+	
+	In addition to the items in the stat-dict, it features additional information::
+	
+	 files = number of changed files as int"""
+	__slots__ = ("total", "files")
+	
+	def __init__(self, total, files):
+		self.total = total
+		self.files = files
+
 	@classmethod
-	def list_items(cls, repo, *args, **kwargs):
-		"""
-		Find all items of this type - subclasses can specify args and kwargs differently.
-		If no args are given, subclasses are obliged to return all items if no additional 
-		arguments arg given.
+	def _list_from_string(cls, repo, text):
+		"""Create a Stat object from output retrieved by git-diff.
 		
-		:note: Favor the iter_items method as it will
-		
-		:return:list(Item,...) list of item instances"""
-		out_list = IterableList( cls._id_attribute_ )
-		out_list.extend(cls.iter_items(repo, *args, **kwargs))
-		return out_list
-		
-		
-	@classmethod
-	def iter_items(cls, repo, *args, **kwargs):
-		"""For more information about the arguments, see list_items
-		:return:  iterator yielding Items"""
-		raise NotImplementedError("To be implemented by Subclass")
-		
+		:return: git.Stat"""
+		hsh = {'total': {'insertions': 0, 'deletions': 0, 'lines': 0, 'files': 0}, 'files': dict()}
+		for line in text.splitlines():
+			(raw_insertions, raw_deletions, filename) = line.split("\t")
+			insertions = raw_insertions != '-' and int(raw_insertions) or 0
+			deletions = raw_deletions != '-' and int(raw_deletions) or 0
+			hsh['total']['insertions'] += insertions
+			hsh['total']['deletions'] += deletions
+			hsh['total']['lines'] += insertions + deletions
+			hsh['total']['files'] += 1
+			hsh['files'][filename.strip()] = {'insertions': insertions,
+											  'deletions': deletions,
+											  'lines': insertions + deletions}
+		return Stats(hsh['total'], hsh['files'])
+
+
+class IndexFileSHA1Writer(object):
+	"""Wrapper around a file-like object that remembers the SHA1 of 
+	the data written to it. It will write a sha when the stream is closed
+	or if the asked for explicitly usign write_sha.
+	
+	Only useful to the indexfile
+	
+	:note: Based on the dulwich project"""
+	__slots__ = ("f", "sha1")
+	
+	def __init__(self, f):
+		self.f = f
+		self.sha1 = make_sha("")
+
+	def write(self, data):
+		self.sha1.update(data)
+		return self.f.write(data)
+
+	def write_sha(self):
+		sha = self.sha1.digest()
+		self.f.write(sha)
+		return sha
+
+	def close(self):
+		sha = self.write_sha()
+		self.f.close()
+		return sha
+
+	def tell(self):
+		return self.f.tell()
+
+
 #} END classes

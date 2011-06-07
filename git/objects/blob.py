@@ -4,15 +4,19 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
+from git.util import RepoAliasMixin
 from mimetypes import guess_type
+from git.typ import ObjectType
+
 import base
 
 __all__ = ('Blob', )
 
-class Blob(base.IndexObject):
+class Blob(base.IndexObject, RepoAliasMixin):
 	"""A Blob encapsulates a git blob object"""
 	DEFAULT_MIME_TYPE = "text/plain"
-	type = "blob"
+	type = ObjectType.blob
+	type_id = ObjectType.blob_id
 	
 	# valid blob modes
 	executable_mode = 0100755

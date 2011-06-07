@@ -9,7 +9,7 @@ from objects.blob import Blob
 from objects.util import mode_str_to_int 
 from exc import GitCommandError
 
-from gitdb.util import hex_to_bin
+from git.util import hex_to_bin
 
 	
 __all__ = ('Diffable', 'DiffIndex', 'Diff')

@@ -36,8 +36,8 @@ from util import 	(
 					unpack
 					)
 
-from gitdb.base import IStream
-from gitdb.typ import str_tree_type
+from git.base import IStream
+from git.typ import str_tree_type
 
 __all__ = ('write_cache', 'read_cache', 'write_tree_from_cache', 'entry_key', 
 			'stat_mode_to_index_mode', 'S_IFGITLINK')

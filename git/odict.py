@@ -16,16 +16,11 @@
 
 """A dict that keeps keys in insertion order"""
 from __future__ import generators
-
 __author__ = ('Nicola Larosa <nico-NoSp@m-tekNico.net>,'
     'Michael Foord <fuzzyman AT voidspace DOT org DOT uk>')
-
 __docformat__ = "restructuredtext en"
-
 __revision__ = '$Id: odict.py 129 2005-09-12 18:15:28Z teknico $'
-
 __version__ = '0.2.2'
-
 __all__ = ['OrderedDict', 'SequenceOrderedDict']
 
 import sys

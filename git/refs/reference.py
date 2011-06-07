@@ -1,12 +1,10 @@
-from symbolic import SymbolicReference
 import os
-from git.objects import Object
-from git.util import (
-					LazyMixin, 
-					Iterable, 
-					)
 
-from gitdb.util import (
+from symbolic import SymbolicReference
+from head import HEAD
+from git.util import (
+							LazyMixin, 
+							Iterable,
 							isfile,
 							hex_to_bin
 						)
@@ -30,7 +28,7 @@ class Reference(SymbolicReference, LazyMixin, Iterable):
 			Path relative to the .git/ directory pointing to the ref in question, i.e.
 			refs/heads/master"""
 		if not path.startswith(self._common_path_default+'/'):
-			raise ValueError("Cannot instantiate %r from path %s" % ( self.__class__.__name__, path ))
+			raise ValueError("Cannot instantiate %r from path %s, maybe use %s.to_full_path(name) to safely generate a valid full path from a name" % ( self.__class__.__name__, path, type(self).__name__))
 		super(Reference, self).__init__(repo, path)
 		
 
@@ -40,8 +38,8 @@ class Reference(SymbolicReference, LazyMixin, Iterable):
 	def set_object(self, object, logmsg = None):
 		"""Special version which checks if the head-log needs an update as well"""
 		oldbinsha = None
+		head = HEAD(self.repo)
 		if logmsg is not None:
-			head = self.repo.head
 			if not head.is_detached and head.ref == self:
 				oldbinsha = self.commit.binsha
 			#END handle commit retrieval
@@ -62,7 +60,7 @@ class Reference(SymbolicReference, LazyMixin, Iterable):
 			# * check with HEAD only which should cover 99% of all usage
 			# * scenarios (even 100% of the default ones).
 			# */
-			self.repo.head.log_append(oldbinsha, logmsg)
+			head.log_append(oldbinsha, logmsg)
 		#END check if the head
 
 	# NOTE: Don't have to overwrite properties as the will only work without a the log
