@@ -93,7 +93,7 @@ class SymbolicReference(object):
 		"""Returns an iterator yielding pairs of sha1/path pairs for the corresponding refs.
 		:note: The packed refs file will be kept open as long as we iterate"""
 		try:
-			fp = open(cls._get_packed_refs_path(repo), 'r')
+			fp = open(cls._get_packed_refs_path(repo), 'rb')
 			for line in fp:
 				line = line.strip()
 				if not line:
@@ -423,7 +423,7 @@ class SymbolicReference(object):
 			# check packed refs
 			pack_file_path = cls._get_packed_refs_path(repo)
 			try:
-				reader = open(pack_file_path)
+				reader = open(pack_file_path, 'rb')
 			except (OSError,IOError):
 				pass # it didnt exist at all
 			else:
@@ -450,7 +450,10 @@ class SymbolicReference(object):
 				
 				# write the new lines
 				if made_change:
-					open(pack_file_path, 'w').writelines(new_lines)
+					# write-binary is required, otherwise windows will
+					# open the file in text mode and change LF to CRLF !
+					open(pack_file_path, 'wb').writelines(new_lines)
+				# END write out file
 			# END open exception handling
 		# END handle deletion
 		
@@ -583,7 +586,7 @@ class SymbolicReference(object):
 		# Currently we do not follow links 
 		for root, dirs, files in os.walk(join_path_native(repo.git_dir, common_path)):
 			if 'refs/' not in root: # skip non-refs subfolders
-				refs_id = [ i for i,d in enumerate(dirs) if d == 'refs' ]
+				refs_id = [ d for d in dirs if d == 'refs' ]
 				if refs_id:
 					dirs[0:] = ['refs']
 			# END prune non-refs folders
