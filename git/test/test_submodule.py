@@ -247,6 +247,9 @@ class TestSubmodule(TestBase):
 			self.failUnlessRaises(InvalidGitRepositoryError, sm.remove, dry_run=True)
 			sm.module().index.reset(working_tree=True)
 			
+			# enforce the submodule to be checked out at the right spot as well.
+			csm.update()
+			
 			# this would work
 			assert sm.remove(dry_run=True) is sm
 			assert sm.module_exists()
