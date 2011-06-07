@@ -18,11 +18,15 @@ from git.util import (
 							isfile,
 							join_path,
 							join,
-							Actor
+							Actor,
+							IterableList
 					)
 from git.db.interface import FetchInfo as GitdbFetchInfo
 from git.db.interface import PushInfo as GitdbPushInfo
-from git.db.interface import HighLevelRepository
+from git.db.interface import (
+							HighLevelRepository,
+							TransportDB
+							)
 from git.cmd import Git
 from git.refs import (
 						Reference,
@@ -332,7 +336,7 @@ class CmdObjectDBRMixin(object):
 	#} END odb interface
 	
 
-class CmdTransportMixin(object):
+class CmdTransportMixin(TransportDB):
 	"""A mixin requiring the .git property as well as repository paths
 	
 	It will create objects only in the loose object database.
@@ -399,13 +403,13 @@ class CmdTransportMixin(object):
 		# END for each line
 		
 		# read head information 
-		fp = open(join(self.root_path(), 'FETCH_HEAD'),'r')
+		fp = open(join(self.git_dir, 'FETCH_HEAD'),'r')
 		fetch_head_info = fp.readlines()
 		fp.close()
 		
 		assert len(fetch_info_lines) == len(fetch_head_info)
 		
-		output.extend(FetchInfo._from_line(self.repo, err_line, fetch_line) 
+		output.extend(FetchInfo._from_line(self, err_line, fetch_line) 
 						for err_line,fetch_line in zip(fetch_info_lines, fetch_head_info))
 		
 		self._finalize_proc(proc)
@@ -450,7 +454,7 @@ class CmdTransportMixin(object):
 		:param url: may be a remote name or a url
 		:param refspecs: see push()
 		:param progress: see push()"""
-		proc = self._git.pull(url, refspec, with_extended_output=True, as_process=True, v=True, **kwargs)
+		proc = self._git.pull(url, refspecs, with_extended_output=True, as_process=True, v=True, **kwargs)
 		return self._get_fetch_info_from_stderr(proc, progress or RemoteProgress())
 		
 	def fetch(self, url, refspecs=None, progress=None, **kwargs):
@@ -458,7 +462,7 @@ class CmdTransportMixin(object):
 		:param url: may be a remote name or a url
 		:param refspecs: see push()
 		:param progress: see push()"""
-		proc = self._git.fetch(url, refspec, with_extended_output=True, as_process=True, v=True, **kwargs)
+		proc = self._git.fetch(url, refspecs, with_extended_output=True, as_process=True, v=True, **kwargs)
 		return self._get_fetch_info_from_stderr(proc, progress or RemoteProgress())
 		
 	#} end transport db interface

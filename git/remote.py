@@ -16,7 +16,7 @@ from git.util import (
 						IterableList,
 						RemoteProgress
 						)
-
+from git.db.interface import TransportDB
 from refs import RemoteReference
 
 import os
@@ -53,6 +53,16 @@ class Remote(LazyMixin, Iterable):
 		
 		:param repo: The repository we are a remote of
 		:param name: the name of the remote, i.e. 'origin'"""
+		if not hasattr(repo, 'git'):
+			# note: at some point we could just create a git command instance ourselves
+			# but lets just be lazy for now
+			raise AssertionError("Require repository to provide a git command instance currently")
+		#END assert git cmd
+		
+		if not isinstance(repo, TransportDB):
+			raise AssertionError("Require TransportDB interface implementation")
+		#END verify interface
+		
 		self.repo = repo
 		self.name = name
 		
@@ -228,8 +238,7 @@ class Remote(LazyMixin, Iterable):
 		:note:
 			As fetch does not provide progress information to non-ttys, we cannot make 
 			it available here unfortunately as in the 'push' method."""
-		proc = self.repo.git.fetch(self, refspec, with_extended_output=True, as_process=True, v=True, **kwargs)
-		return self._get_fetch_info_from_stderr(proc, progress or RemoteProgress())
+		return self.repo.fetch(self.name, refspec, progress, **kwargs)
 		
 	def pull(self, refspec=None, progress=None, **kwargs):
 		"""Pull changes from the given branch, being the same as a fetch followed 
@@ -239,8 +248,7 @@ class Remote(LazyMixin, Iterable):
 		:param progress: see 'push' method
 		:param kwargs: Additional arguments to be passed to git-pull
 		:return: Please see 'fetch' method """
-		proc = self.repo.git.pull(self, refspec, with_extended_output=True, as_process=True, v=True, **kwargs)
-		return self._get_fetch_info_from_stderr(proc, progress or RemoteProgress())
+		return self.repo.pull(self.name, refspec, progress, **kwargs)
 		
 	def push(self, refspec=None, progress=None, **kwargs):
 		"""Push changes from source branch in refspec to target branch in refspec.
@@ -260,8 +268,7 @@ class Remote(LazyMixin, Iterable):
 			in their flags.
 			If the operation fails completely, the length of the returned IterableList will
 			be null."""
-		proc = self.repo.git.push(self, refspec, porcelain=True, as_process=True, **kwargs)
-		return self._get_push_info(proc, progress or RemoteProgress())
+		return self.repo.push(self.name, refspec, progress, **Kwargs)
 		
 	@property
 	def config_reader(self):
