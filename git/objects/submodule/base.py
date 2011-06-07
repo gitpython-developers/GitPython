@@ -204,7 +204,7 @@ class Submodule(util.IndexObject, Iterable, Traversable, RepoAliasMixin):
 	#{ Edit Interface
 	
 	@classmethod
-	def add(cls, repo, name, path, url=None, branch=None, no_checkout=False):
+	def add(cls, repo, name, path, url=None, branch=None, no_checkout=False,  repoType=None):
 		"""Add a new submodule to the given repository. This will alter the index
 		as well as the .gitmodules file, but will not create a new commit.
 		If the submodule already exists, no matter if the configuration differs
@@ -229,12 +229,16 @@ class Submodule(util.IndexObject, Iterable, Traversable, RepoAliasMixin):
 			Examples are 'master' or 'feature/new'
 		:param no_checkout: if True, and if the repository has to be cloned manually, 
 			no checkout will be performed
+		:param repoType: The repository type to use. It must provide the clone_from method.
+			If None, the default implementation is used.
 		:return: The newly created submodule instance
 		:note: works atomically, such that no change will be done if the repository
 			update fails for instance"""
 		if repo.bare:
 			raise InvalidGitRepositoryError("Cannot add submodules to bare repositories")
 		# END handle bare repos
+		
+		repoType = repoType or git.Repo
 		
 		path = to_native_path_linux(path)
 		if path.endswith('/'):
@@ -289,7 +293,7 @@ class Submodule(util.IndexObject, Iterable, Traversable, RepoAliasMixin):
 			if not branch_is_default:
 				kwargs['b'] = br.name
 			# END setup checkout-branch
-			mrepo = git.Repo.clone_from(url, path, **kwargs)
+			mrepo = repoType.clone_from(url, path, **kwargs)
 		# END verify url
 		
 		# update configuration and index
@@ -315,7 +319,7 @@ class Submodule(util.IndexObject, Iterable, Traversable, RepoAliasMixin):
 		return sm
 		
 	def update(self, recursive=False, init=True, to_latest_revision=False, progress=None, 
-				dry_run=False):
+				dry_run=False, ):
 		"""Update the repository of this submodule to point to the checkout
 		we point at with the binsha of this instance.
 		
@@ -377,7 +381,6 @@ class Submodule(util.IndexObject, Iterable, Traversable, RepoAliasMixin):
 			if not init:
 				return self
 			# END early abort if init is not allowed
-			import git
 			
 			# there is no git-repository yet - but delete empty paths
 			module_path = join_path_native(self.repo.working_tree_dir, self.path)
@@ -393,7 +396,7 @@ class Submodule(util.IndexObject, Iterable, Traversable, RepoAliasMixin):
 			# branch according to the remote-HEAD if possible
 			progress.update(BEGIN|CLONE, 0, 1, prefix+"Cloning %s to %s in submodule %r" % (self.url, module_path, self.name))
 			if not dry_run:
-				mrepo = git.Repo.clone_from(self.url, module_path, n=True)
+				mrepo = type(self.repo).clone_from(self.url, module_path, n=True)
 			#END handle dry-run
 			progress.update(END|CLONE, 0, 1, prefix+"Done cloning to %s" % module_path)
 			
@@ -779,6 +782,7 @@ class Submodule(util.IndexObject, Iterable, Traversable, RepoAliasMixin):
 		# late import to workaround circular dependencies
 		module_path = self.abspath
 		repoType = repoType or git.Repo
+		
 		try:
 			repo = repoType(module_path)
 			if repo != self.repo:
