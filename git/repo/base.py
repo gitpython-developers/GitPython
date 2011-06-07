@@ -11,12 +11,17 @@ from git.refs import *
 from git.index import IndexFile
 from git.objects import *
 from git.config import GitConfigParser
-from git.remote import Remote
+from git.remote import (
+						Remote,
+						digest_process_messages,
+						finalize_process,
+						add_progress
+					)
+
 from git.db import (
 				GitCmdObjectDB, 
 				GitDB
 				)
-
 
 from gitdb.util import (
 							join,
@@ -652,7 +657,7 @@ class Repo(object):
 		return Repo(path)
 
 	@classmethod
-	def _clone(cls, git, url, path, odb_default_type, **kwargs):
+	def _clone(cls, git, url, path, odb_default_type, progress, **kwargs):
 		# special handling for windows for path at which the clone should be 
 		# created.
 		# tilde '~' will be expanded to the HOME no matter where the ~ occours. Hence
@@ -679,7 +684,11 @@ class Repo(object):
 		# END windows handling 
 		
 		try:
-			git.clone(url, path, **kwargs)
+			proc = git.clone(url, path, with_extended_output=True, as_process=True, v=True, **add_progress(kwargs, git, progress))
+			if progress:
+				digest_process_messages(proc.stderr, progress)
+			#END handle progress
+			finalize_process(proc)
 		finally:
 			if prev_cwd is not None:
 				os.chdir(prev_cwd)
@@ -703,10 +712,12 @@ class Repo(object):
 		# END handle remote repo
 		return repo
 
-	def clone(self, path, **kwargs):
+	def clone(self, path, progress=None, **kwargs):
 		"""Create a clone from this repository.
 		:param path:
 			is the full path of the new repo (traditionally ends with ./<name>.git).
+
+		:param progress: See 'git.remote.Remote.push'.
 
 		:param kwargs:
 			odbt = ObjectDatabase Type, allowing to determine the object database
@@ -715,16 +726,17 @@ class Repo(object):
 			All remaining keyword arguments are given to the git-clone command
 			
 		:return: ``git.Repo`` (the newly cloned repo)"""
-		return self._clone(self.git, self.git_dir, path, type(self.odb), **kwargs)
+		return self._clone(self.git, self.git_dir, path, type(self.odb), progress, **kwargs)
 
 	@classmethod
-	def clone_from(cls, url, to_path, **kwargs):
+	def clone_from(cls, url, to_path, progress=None, **kwargs):
 		"""Create a clone from the given URL
 		:param url: valid git url, see http://www.kernel.org/pub/software/scm/git/docs/git-clone.html#URLS
 		:param to_path: Path to which the repository should be cloned to
+		:param progress: See 'git.remote.Remote.push'.
 		:param kwargs: see the ``clone`` method
 		:return: Repo instance pointing to the cloned directory"""
-		return cls._clone(Git(os.getcwd()), url, to_path, GitCmdObjectDB, **kwargs)
+		return cls._clone(Git(os.getcwd()), url, to_path, GitCmdObjectDB, progress, **kwargs)
 
 	def archive(self, ostream, treeish=None, prefix=None,  **kwargs):
 		"""Archive the tree at the given revision.
