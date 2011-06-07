@@ -14,18 +14,18 @@ from git.base import (
 from git.util import (
 							bin_to_hex, 
 							hex_to_bin,
-							RemoteProgress,
 							isfile,
 							join_path,
 							join,
 							Actor,
-							IterableList
+							IterableList,
 					)
-from git.db.interface import FetchInfo as GitdbFetchInfo
-from git.db.interface import PushInfo as GitdbPushInfo
 from git.db.interface import (
+							FetchInfo,
+							PushInfo,
 							HighLevelRepository,
-							TransportDB
+							TransportDB,
+							RemoteProgress
 							)
 from git.cmd import Git
 from git.refs import (
@@ -41,8 +41,8 @@ import os
 import sys
 
 
-__all__ = ('CmdTransportMixin', 'RemoteProgress', 'GitCommandMixin', 
-			'CmdObjectDBRMixin', 'CmdHighLevelRepository')
+__all__ = ('CmdTransportMixin', 'GitCommandMixin', 'CmdPushInfo', 'CmdFetchInfo', 
+			'CmdRemoteProgress', 'CmdObjectDBRMixin', 'CmdHighLevelRepository')
 
 
 #{ Utilities
@@ -115,13 +115,13 @@ def get_fetch_info_from_stderr(repo, proc, progress):
 	
 	assert len(fetch_info_lines) == len(fetch_head_info)
 	
-	output.extend(FetchInfo._from_line(repo, err_line, fetch_line) 
+	output.extend(CmdFetchInfo._from_line(repo, err_line, fetch_line) 
 					for err_line,fetch_line in zip(fetch_info_lines, fetch_head_info))
 	
 	finalize_process(proc)
 	return output
 
-def get_push_info(repo, proc, progress):
+def get_push_info(repo, remotename_or_url, proc, progress):
 	# read progress information from stderr
 	# we hope stdout can hold all the data, it should ...
 	# read the lines manually as it will use carriage returns between the messages
@@ -131,7 +131,7 @@ def get_push_info(repo, proc, progress):
 	output = IterableList('name')
 	for line in proc.stdout.readlines():
 		try:
-			output.append(PushInfo._from_line(repo, line))
+			output.append(CmdPushInfo._from_line(repo, remotename_or_url, line))
 		except ValueError:
 			# if an error happens, additional info is given which we cannot parse
 			pass
@@ -143,37 +143,119 @@ def get_push_info(repo, proc, progress):
 
 #} END utilities
 
-class PushInfo(GitdbPushInfo):
+class CmdRemoteProgress(RemoteProgress):
 	"""
-	Carries information about the result of a push operation of a single head::
+	A Remote progress implementation taking a user derived progress to call the 
+	respective methods on.
+	"""
+	__slots__ = ("_seen_ops", '_progress')
+	re_op_absolute = re.compile("(remote: )?([\w\s]+):\s+()(\d+)()(.*)")
+	re_op_relative = re.compile("(remote: )?([\w\s]+):\s+(\d+)% \((\d+)/(\d+)\)(.*)")
 	
-		info = remote.push()[0]
-		info.flags			# bitflags providing more information about the result
-		info.local_ref		# Reference pointing to the local reference that was pushed
-							# It is None if the ref was deleted.
-		info.remote_ref_string # path to the remote reference located on the remote side
-		info.remote_ref # Remote Reference on the local side corresponding to 
-						# the remote_ref_string. It can be a TagReference as well.
-		info.old_commit_binsha # binary sha at which the remote_ref was standing before we pushed
-						# it to local_ref.commit. Will be None if an error was indicated
-		info.summary	# summary line providing human readable english text about the push
-		"""
-	__slots__ = ('local_ref', 'remote_ref_string', 'flags', 'old_commit_binsha', '_remote', 'summary')
+	def __init__(self, progress_instance = None):
+		self._seen_ops = list()
+		if progress_instance is None:
+			progress_instance = RemoteProgress()
+		#END assure proper instance
+		self._progress = progress_instance
 	
-	_flag_map = {	'X' : GitdbPushInfo.NO_MATCH, 
-					'-' : GitdbPushInfo.DELETED, '*' : 0,
-					'+' : GitdbPushInfo.FORCED_UPDATE, 
-					' ' : GitdbPushInfo.FAST_FORWARD, 
-					'=' : GitdbPushInfo.UP_TO_DATE, 
-					'!' : GitdbPushInfo.ERROR }
+	def _parse_progress_line(self, line):
+		"""Parse progress information from the given line as retrieved by git-push
+		or git-fetch
+		
+		Call the own update(), __call__() and line_dropped() methods according 
+		to the parsed result.
+		
+		:return: list(line, ...) list of lines that could not be processed"""
+		# handle
+		# Counting objects: 4, done. 
+		# Compressing objects:	50% (1/2)	\rCompressing objects: 100% (2/2)	\rCompressing objects: 100% (2/2), done.
+		sub_lines = line.split('\r')
+		failed_lines = list()
+		for sline in sub_lines:
+			# find esacpe characters and cut them away - regex will not work with 
+			# them as they are non-ascii. As git might expect a tty, it will send them
+			last_valid_index = None
+			for i,c in enumerate(reversed(sline)):
+				if ord(c) < 32:
+					# its a slice index
+					last_valid_index = -i-1 
+				# END character was non-ascii
+			# END for each character in sline
+			if last_valid_index is not None:
+				sline = sline[:last_valid_index]
+			# END cut away invalid part
+			sline = sline.rstrip()
+			
+			cur_count, max_count = None, None
+			match = self.re_op_relative.match(sline)
+			if match is None:
+				match = self.re_op_absolute.match(sline)
+				
+			if not match:
+				self._progress.line_dropped(sline)
+				failed_lines.append(sline)
+				continue
+			# END could not get match
+			
+			op_code = 0
+			remote, op_name, percent, cur_count, max_count, message = match.groups()
+			
+			# get operation id
+			if op_name == "Counting objects":
+				op_code |= self.COUNTING
+			elif op_name == "Compressing objects":
+				op_code |= self.COMPRESSING
+			elif op_name == "Writing objects":
+				op_code |= self.WRITING
+			else:
+				raise ValueError("Operation name %r unknown" % op_name)
+			
+			# figure out stage
+			if op_code not in self._seen_ops:
+				self._seen_ops.append(op_code)
+				op_code |= self.BEGIN
+			# END begin opcode
+			
+			if message is None:
+				message = ''
+			# END message handling
+			
+			message = message.strip()
+			done_token = ', done.'
+			if message.endswith(done_token):
+				op_code |= self.END
+				message = message[:-len(done_token)]
+			# END end message handling
+			
+			self._progress.update(op_code, cur_count, max_count, message, line)
+			self._progress(message, line)
+		# END for each sub line
+		return failed_lines
+
+
+class CmdPushInfo(PushInfo):
+	"""
+	Pure Python implementation of a PushInfo interface
+	"""
+	__slots__ = ('local_ref', 'remote_ref_string', 'flags', 'old_commit_binsha', 
+				'_remotename_or_url', 'repo', 'summary')
 	
-	def __init__(self, flags, local_ref, remote_ref_string, remote, old_commit_binsha=None, 
+	_flag_map = {	'X' : PushInfo.NO_MATCH, 
+					'-' : PushInfo.DELETED, '*' : 0,
+					'+' : PushInfo.FORCED_UPDATE, 
+					' ' : PushInfo.FAST_FORWARD, 
+					'=' : PushInfo.UP_TO_DATE, 
+					'!' : PushInfo.ERROR }
+	
+	def __init__(self, flags, local_ref, remote_ref_string, repo, remotename_or_url, old_commit_binsha=None, 
 					summary=''):
 		""" Initialize a new instance """
 		self.flags = flags
 		self.local_ref = local_ref
+		self.repo = repo
 		self.remote_ref_string = remote_ref_string
-		self._remote = remote
+		self._remotename_or_url = remotename_or_url
 		self.old_commit_binsha = old_commit_binsha
 		self.summary = summary
 		
@@ -185,16 +267,20 @@ class PushInfo(GitdbPushInfo):
 			to the remote_ref_string kept in this instance."""
 		# translate heads to a local remote, tags stay as they are
 		if self.remote_ref_string.startswith("refs/tags"):
-			return TagReference(self._remote.repo, self.remote_ref_string)
+			return TagReference(self.repo, self.remote_ref_string)
 		elif self.remote_ref_string.startswith("refs/heads"):
-			remote_ref = Reference(self._remote.repo, self.remote_ref_string)
-			return RemoteReference(self._remote.repo, "refs/remotes/%s/%s" % (str(self._remote), remote_ref.name))
+			remote_ref = Reference(self.repo, self.remote_ref_string)
+			if '/' in self._remotename_or_url:
+				sys.stderr.write("Cannot provide RemoteReference instance if it was created from a url instead of of a remote name: %s. Returning Reference instance instead" % sefl._remotename_or_url)
+				return remote_ref
+			#END assert correct input
+			return RemoteReference(self.repo, "refs/remotes/%s/%s" % (str(self._remotename_or_url), remote_ref.name))
 		else:
 			raise ValueError("Could not handle remote ref: %r" % self.remote_ref_string)
 		# END 
 		
 	@classmethod
-	def _from_line(cls, remote, line):
+	def _from_line(cls, repo, remotename_or_url, line):
 		"""Create a new PushInfo instance as parsed from line which is expected to be like
 			refs/heads/master:refs/heads/master 05d2687..1d0568e"""
 		control_character, from_to, summary = line.split('\t', 3)
@@ -212,7 +298,7 @@ class PushInfo(GitdbPushInfo):
 		if flags & cls.DELETED:
 			from_ref = None
 		else:
-			from_ref = Reference.from_path(remote.repo, from_ref_string)
+			from_ref = Reference.from_path(repo, from_ref_string)
 		
 		# commit handling, could be message or commit info
 		old_commit_binsha = None
@@ -237,38 +323,27 @@ class PushInfo(GitdbPushInfo):
 			if control_character == " ":
 				split_token = ".."
 			old_sha, new_sha = summary.split(' ')[0].split(split_token)
-			# have to use constructor here as the sha usually is abbreviated
-			old_commit_binsha = remote.repo.commit(old_sha)
+			old_commit_binsha = repo.resolve(old_sha)
 		# END message handling
 		
-		return PushInfo(flags, from_ref, to_ref_string, remote, old_commit_binsha, summary)
+		return cls(flags, from_ref, to_ref_string, repo, remotename_or_url, old_commit_binsha, summary)
 		
 
-class FetchInfo(GitdbFetchInfo):
+class CmdFetchInfo(FetchInfo):
 	"""
-	Carries information about the results of a fetch operation of a single head::
-	
-	 info = remote.fetch()[0]
-	 info.ref			# Symbolic Reference or RemoteReference to the changed 
-						# remote head or FETCH_HEAD
-	 info.flags			# additional flags to be & with enumeration members, 
-						# i.e. info.flags & info.REJECTED 
-						# is 0 if ref is FETCH_HEAD
-	 info.note			# additional notes given by git-fetch intended for the user
-	 info.old_commit_binsha	# if info.flags & info.FORCED_UPDATE|info.FAST_FORWARD, 
-						# field is set to the previous location of ref, otherwise None
+	Pure python implementation of a FetchInfo interface
 	"""
 	__slots__ = ('ref','old_commit_binsha', 'flags', 'note')
 	
 	#							  %c	%-*s %-*s			  -> %s		  (%s)
 	re_fetch_result = re.compile("^\s*(.) (\[?[\w\s\.]+\]?)\s+(.+) -> ([/\w_\+\.-]+)(	 \(.*\)?$)?")
 	
-	_flag_map = {	'!' : GitdbFetchInfo.ERROR, 
-					'+' : GitdbFetchInfo.FORCED_UPDATE, 
-					'-' : GitdbFetchInfo.TAG_UPDATE, 
+	_flag_map = {	'!' : FetchInfo.ERROR, 
+					'+' : FetchInfo.FORCED_UPDATE, 
+					'-' : FetchInfo.TAG_UPDATE, 
 					'*' : 0,
-					'=' : GitdbFetchInfo.HEAD_UPTODATE, 
-					' ' : GitdbFetchInfo.FAST_FORWARD } 
+					'=' : FetchInfo.HEAD_UPTODATE, 
+					' ' : FetchInfo.FAST_FORWARD } 
 	
 	def __init__(self, ref, flags, note = '', old_commit_binsha = None):
 		"""
@@ -295,7 +370,7 @@ class FetchInfo(GitdbFetchInfo):
 	@classmethod
 	def _from_line(cls, repo, line, fetch_line):
 		"""Parse information from the given line as returned by git-fetch -v
-		and return a new FetchInfo object representing this information.
+		and return a new CmdFetchInfo object representing this information.
 		
 		We can handle a line as follows
 		"%c %-*s %-*s -> %s%s"
@@ -366,7 +441,7 @@ class FetchInfo(GitdbFetchInfo):
 				split_token = '...'
 				if control_character == ' ':
 					split_token = split_token[:-1]
-				old_commit_binsha = repo.rev_parse(operation.split(split_token)[0])
+				old_commit_binsha = repo.resolve(operation.split(split_token)[0])
 			# END handle refspec
 		# END reference flag handling
 		
@@ -443,7 +518,7 @@ class CmdTransportMixin(TransportDB):
 		:param progress: RemoteProgress derived instance or None
 		:param **kwargs: Additional arguments to be passed to the git-push process"""
 		proc = self._git.push(url, refspecs, porcelain=True, as_process=True, **kwargs)
-		return get_push_info(self, proc, progress or RemoteProgress())
+		return get_push_info(self, url, proc, CmdRemoteProgress(progress))
 		
 	def pull(self, url, refspecs=None, progress=None, **kwargs):
 		"""Fetch and merge the given refspecs. 
@@ -453,7 +528,7 @@ class CmdTransportMixin(TransportDB):
 		:param refspecs: see push()
 		:param progress: see push()"""
 		proc = self._git.pull(url, refspecs, with_extended_output=True, as_process=True, v=True, **kwargs)
-		return get_fetch_info_from_stderr(self, proc, progress or RemoteProgress())
+		return get_fetch_info_from_stderr(self, proc, CmdRemoteProgress(progress))
 		
 	def fetch(self, url, refspecs=None, progress=None, **kwargs):
 		"""Fetch the latest changes
@@ -461,7 +536,7 @@ class CmdTransportMixin(TransportDB):
 		:param refspecs: see push()
 		:param progress: see push()"""
 		proc = self._git.fetch(url, refspecs, with_extended_output=True, as_process=True, v=True, **kwargs)
-		return get_fetch_info_from_stderr(self, proc, progress or RemoteProgress())
+		return get_fetch_info_from_stderr(self, proc, CmdRemoteProgress(progress))
 		
 	#} end transport db interface
 	
@@ -699,14 +774,14 @@ class CmdHighLevelRepository(HighLevelRepository):
 			All remaining keyword arguments are given to the git-clone command
 			
 		For more information, see the respective method in HighLevelRepository"""
-		return self._clone(self.git, self.git_dir, path, progress or RemoteProgress(), **kwargs)
+		return self._clone(self.git, self.git_dir, path, CmdRemoteProgress(progress), **kwargs)
 
 	@classmethod
 	def clone_from(cls, url, to_path, progress = None, **kwargs):
 		"""
 		:param kwargs: see the ``clone`` method
 		For more information, see the respective method in the HighLevelRepository"""
-		return cls._clone(cls.GitCls(os.getcwd()), url, to_path, progress or RemoteProgress(), **kwargs)
+		return cls._clone(cls.GitCls(os.getcwd()), url, to_path, CmdRemoteProgress(progress), **kwargs)
 
 	def archive(self, ostream, treeish=None, prefix=None,  **kwargs):
 		"""For all args see HighLevelRepository interface

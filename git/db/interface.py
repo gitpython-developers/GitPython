@@ -238,6 +238,64 @@ class RefSpec(object):
 		return self.source is None
 		
 		
+class RemoteProgress(object):
+	"""
+	Handler providing an interface to parse progress information emitted by git-push
+	and git-fetch and to dispatch callbacks allowing subclasses to react to the progress.
+	
+	Subclasses should derive from this type.
+	"""
+	_num_op_codes = 5
+	BEGIN, END, COUNTING, COMPRESSING, WRITING =  [1 << x for x in range(_num_op_codes)]
+	STAGE_MASK = BEGIN|END
+	OP_MASK = ~STAGE_MASK
+	
+	#{ Subclass Interface
+	
+	def line_dropped(self, line):
+		"""Called whenever a line could not be understood and was therefore dropped."""
+		pass
+	
+	def update(self, op_code, cur_count, max_count=None, message='', input=''):
+		"""Called whenever the progress changes
+		
+		:param op_code:
+			Integer allowing to be compared against Operation IDs and stage IDs.
+			
+			Stage IDs are BEGIN and END. BEGIN will only be set once for each Operation 
+			ID as well as END. It may be that BEGIN and END are set at once in case only
+			one progress message was emitted due to the speed of the operation.
+			Between BEGIN and END, none of these flags will be set
+			
+			Operation IDs are all held within the OP_MASK. Only one Operation ID will 
+			be active per call.
+		:param cur_count: Current absolute count of items
+			
+		:param max_count:
+			The maximum count of items we expect. It may be None in case there is 
+			no maximum number of items or if it is (yet) unknown.
+		
+		:param message:
+			In case of the 'WRITING' operation, it contains the amount of bytes
+			transferred. It may possibly be used for other purposes as well.
+		
+		:param input:
+			The actual input string that was used to parse the information from.
+			This is usually a line from the output of git-fetch, but really
+			depends on the implementation
+		
+		You may read the contents of the current line in self._cur_line"""
+		pass
+	
+	def __call__(self, message, input=''):
+		"""Same as update, but with a simpler interface which only provides the
+		message of the operation.
+		:note: This method will be called in addition to the update method. It is 
+			up to you which one you implement"""
+		pass
+	#} END subclass interface
+	
+		
 class PushInfo(object):
 	"""A type presenting information about the result of a push operation for exactly
 	one refspec
@@ -248,7 +306,7 @@ class PushInfo(object):
 	remote_ref_string 	# path to the remote reference located on the remote side
 	remote_ref 			# Remote Reference on the local side corresponding to 
 						# the remote_ref_string. It can be a TagReference as well.
-	old_commit 			# commit at which the remote_ref was standing before we pushed
+	old_commit_binsha 	# binary sha to commit at which the remote_ref was standing before we pushed
 						# it to local_ref.commit. Will be None if an error was indicated
 	summary				# summary line providing human readable english text about the push
 	"""
@@ -269,10 +327,8 @@ class FetchInfo(object):
 					# i.e. info.flags & info.REJECTED 
 					# is 0 if ref is FETCH_HEAD
 	note				# additional notes given by the fetch-pack implementation intended for the user
-	old_commit		# if info.flags & info.FORCED_UPDATE|info.FAST_FORWARD, 
-					# field is set to the previous location of ref as hexsha or None
-					# Implementors may use their own type too, but it should decay into a
-					# string of its hexadecimal sha representation"""
+	old_commit_binsha# if info.flags & info.FORCED_UPDATE|info.FAST_FORWARD, 
+					# field is set to the previous location of ref as binary sha or None"""
 	__slots__ = tuple()
 	
 	NEW_TAG, NEW_HEAD, HEAD_UPTODATE, TAG_UPDATE, REJECTED, FORCED_UPDATE, \

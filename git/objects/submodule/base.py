@@ -18,8 +18,9 @@ from git.util import (
 						Iterable, 
 						join_path_native, 
 						to_native_path_linux,
-						RemoteProgress
 					)
+
+from git.db.interface import RemoteProgress
 
 from git.config import SectionConstraint
 from git.exc import (

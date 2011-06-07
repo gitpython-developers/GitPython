@@ -18,7 +18,7 @@ from git.util import (
 		expandvars,
 		expanduser,
 		exists,
-		is_git_dir
+		is_git_dir,
 	)
 
 from git.index import IndexFile
@@ -40,7 +40,7 @@ import os
 __all__ = (	'PureObjectDBR', 'PureObjectDBW', 'PureRootPathDB', 'PureCompoundDB', 
 			'PureConfigurationMixin', 'PureRepositoryPathsMixin', 'PureAlternatesFileMixin',
 			'PureIndexDB')
-
+                                                                        
 
 class PureObjectDBR(ObjectDBR):
 	
@@ -471,3 +471,4 @@ class PureAlternatesFileMixin(object):
 	alternates = property(_get_alternates, _set_alternates, doc="Retrieve a list of alternates paths or set a list paths to be used as alternates")
 	
 	#} END interface
+	

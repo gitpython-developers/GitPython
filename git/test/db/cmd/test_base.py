@@ -9,6 +9,7 @@ from git.util import bin_to_hex
 from git.exc import BadObject
 
 from git.db.complex import CmdCompatibilityGitDB
+from git.db.cmd.base import *
 
 class TestBase(RepoBase):
 	RepoCls = CmdCompatibilityGitDB
@@ -25,3 +26,7 @@ class TestBase(RepoBase):
 		# fails with BadObject
 		for invalid_rev in ("0000", "bad/ref", "super bad"):
 			self.failUnlessRaises(BadObject, gdb.partial_to_complete_sha_hex, invalid_rev)
+			
+	def test_fetch_info(self):
+		self.failUnlessRaises(ValueError, CmdFetchInfo._from_line, self.rorepo, "nonsense", '')
+		self.failUnlessRaises(ValueError, CmdFetchInfo._from_line, self.rorepo, "? [up to date]      0.1.7RC    -> origin/0.1.7RC", '')

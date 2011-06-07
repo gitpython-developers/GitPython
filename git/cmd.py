@@ -5,7 +5,10 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
 import os, sys
-from util import LazyMixin
+from util import (
+					LazyMixin, 
+					stream_copy
+				)
 from exc import GitCommandError
 
 from subprocess import (

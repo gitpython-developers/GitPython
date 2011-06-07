@@ -13,15 +13,14 @@ from config import SectionConstraint
 from git.util import (
 						LazyMixin,
 						Iterable,
-						IterableList,
-						RemoteProgress
+						IterableList
 						)
 from git.db.interface import TransportDB
 from refs import RemoteReference
 
 import os
 
-__all__ = ('RemoteProgress', 'Remote')
+__all__ = ['Remote']
 
 class PushInfo(object):
 	"""Wrapper for basic PushInfo to provide the previous interface which includes
@@ -268,7 +267,7 @@ class Remote(LazyMixin, Iterable):
 			in their flags.
 			If the operation fails completely, the length of the returned IterableList will
 			be null."""
-		return self.repo.push(self.name, refspec, progress, **Kwargs)
+		return self.repo.push(self.name, refspec, progress, **kwargs)
 		
 	@property
 	def config_reader(self):
