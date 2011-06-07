@@ -960,12 +960,16 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 				if not line.startswith("git checkout-index: ") and not line.startswith("git-checkout-index: "):
 					is_a_dir = " is a directory"
 					unlink_issue = "unable to unlink old '"
+					already_exists_issue = ' already exists, no checkout'	# created by entry.c:checkout_entry(...)
 					if line.endswith(is_a_dir):
 						failed_files.append(line[:-len(is_a_dir)])
 						failed_reasons.append(is_a_dir)
 					elif line.startswith(unlink_issue):
 						failed_files.append(line[len(unlink_issue):line.rfind("'")])
 						failed_reasons.append(unlink_issue)
+					elif line.endswith(already_exists_issue):
+						failed_files.append(line[:-len(already_exists_issue)])
+						failed_reasons.append(already_exists_issue)
 					else:
 						unknown_lines.append(line)
 					continue
