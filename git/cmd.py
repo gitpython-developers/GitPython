@@ -223,8 +223,9 @@ class Git(LazyMixin):
 
 	def _set_cache_(self, attr):
 		if attr == '_version_info':
+			# We only use the first 4 numbers, as everthing else could be strings in fact (on windows)
 			version_numbers = self._call_process('version').rpartition(' ')[2]
-			self._version_info = tuple(int(n) for n in version_numbers.split('.'))
+			self._version_info = tuple(int(n) for n in version_numbers.split('.')[:4])
 		else:
 			super(Git, self)._set_cache_(attr)
 		#END handle version info
@@ -238,7 +239,7 @@ class Git(LazyMixin):
 	@property
 	def version_info(self):
 		"""
-		:return: tuple(int, ...) tuple with integers representing the major, minor
+		:return: tuple(int, int, int, int) tuple with integers representing the major, minor
 			and additional version numbers as parsed from git version.
 			This value is generated on demand and is cached"""
 		return self._version_info
