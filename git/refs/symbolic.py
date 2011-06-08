@@ -64,7 +64,9 @@ class SymbolicReference(object):
 		return '<git.%s "%s">' % (self.__class__.__name__, self.path)
 		
 	def __eq__(self, other):
-		return self.path == other.path
+		if hasattr(other, 'path'):
+			return self.path == other.path
+		return False
 		
 	def __ne__(self, other):
 		return not ( self == other )

@@ -140,7 +140,6 @@ class TestRefs(TestBase):
 		assert len(log) == 1
 		assert log[0].oldhexsha == pcommit.NULL_HEX_SHA
 		assert log[0].newhexsha == pcommit.hexsha
-	
 		
 	def test_refs(self):
 		types_found = set()
@@ -285,6 +284,15 @@ class TestRefs(TestBase):
 		assert remotes
 		for remote in remotes:
 			refs = remote.refs
+			
+			# If a HEAD exists, it must be deleted first. Otherwise it might
+			# end up pointing to an invalid ref it the ref was deleted before.
+			remote_head_name = "HEAD"
+			if remote_head_name in refs:
+				RemoteReference.delete(rw_repo, refs[remote_head_name])
+				del(refs[remote_head_name])
+			#END handle HEAD deletion
+			
 			RemoteReference.delete(rw_repo, *refs)
 			remote_refs_so_far += len(refs)
 			for ref in refs:
