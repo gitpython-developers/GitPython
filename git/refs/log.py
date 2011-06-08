@@ -127,7 +127,7 @@ class RefLog(list, Serializable):
 	
 	def _read_from_file(self):
 		try:
-			fmap = file_contents_ro_filepath(self._path, stream=False, allow_mmap=True)
+			fmap = file_contents_ro_filepath(self._path, stream=True, allow_mmap=True)
 		except OSError:
 			# it is possible and allowed that the file doesn't exist !
 			return
