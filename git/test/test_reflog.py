@@ -34,9 +34,7 @@ class TestRefLog(TestBase):
 		tdir = tempfile.mktemp(suffix="test_reflogs")
 		os.mkdir(tdir)
 		
-		# verify we have a ref - with the creation of a new ref, the reflog
-		# will be created as well
-		rlp_master_ro = RefLog.path(self.rorepo.heads.master) 
+		rlp_master_ro = RefLog.path(self.rorepo.head) 
 		assert os.path.isfile(rlp_master_ro)
 		
 		# simple read
