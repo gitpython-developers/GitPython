@@ -7,14 +7,23 @@
 import os
 import tempfile
 
-from git.test.lib import *
 from git.util import *
+from git.test.lib import *
 from git.objects.util import *
 from git import *
 from git.cmd import dashify
 
 import time
 
+
+class TestIterableMember(object):
+	"""A member of an iterable list"""
+	__slots__ = ("name", "prefix_name")
+	
+	def __init__(self, name):
+		self.name = name
+		self.prefix_name = name
+		
 
 class TestUtils(TestBase):
 	def setup(self):
@@ -107,3 +116,51 @@ class TestUtils(TestBase):
 			assert isinstance(Actor.committer(cr), Actor)
 			assert isinstance(Actor.author(cr), Actor)
 		#END assure config reader is handled
+		
+	def test_iterable_list(self):
+		for args in (('name',), ('name', 'prefix_')):
+			l = IterableList('name')
+			
+			m1 = TestIterableMember('one')
+			m2 = TestIterableMember('two')
+			
+			l.extend((m1, m2))
+			
+			assert len(l) == 2
+			
+			# contains works with name and identity
+			assert m1.name in l
+			assert m2.name in l
+			assert m2 in l
+			assert m2 in l
+			assert 'invalid' not in l
+			
+			# with string index
+			assert l[m1.name] is m1
+			assert l[m2.name] is m2
+			
+			# with int index
+			assert l[0] is m1
+			assert l[1] is m2
+			
+			# with getattr
+			assert l.one is m1
+			assert l.two is m2
+			
+			# test exceptions
+			self.failUnlessRaises(AttributeError, getattr, l, 'something')
+			self.failUnlessRaises(IndexError, l.__getitem__, 'something')
+			
+			# delete by name and index
+			self.failUnlessRaises(IndexError, l.__delitem__, 'something')
+			del(l[m2.name])
+			assert len(l) == 1
+			assert m2.name not in l and m1.name in l
+			del(l[0])
+			assert m1.name not in l
+			assert len(l) == 0
+			
+			self.failUnlessRaises(IndexError, l.__delitem__, 0)
+			self.failUnlessRaises(IndexError, l.__delitem__, 'something')
+		#END for each possible mode
+

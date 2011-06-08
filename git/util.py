@@ -330,7 +330,6 @@ class Actor(object):
 		but defaults to the committer"""
 		return cls._main_actor(cls.env_author_name, cls.env_author_email, config_reader)
 		
-
 class Stats(object):
 	"""
 	Represents stat information as presented by git at the end of a merge. It is 
@@ -560,6 +559,21 @@ class IterableList(list):
 			raise ValueError("First parameter must be a string identifying the name-property. Extend the list after initialization")
 		# END help debugging !
 		
+	def __contains__(self, attr):
+		# first try identy match for performance
+		rval = list.__contains__(self, attr)
+		if rval:
+			return rval
+		#END handle match
+		
+		# otherwise make a full name search
+		try:
+			getattr(self, attr)
+			return True
+		except (AttributeError, TypeError):
+			return False
+		#END handle membership
+		
 	def __getattr__(self, attr):
 		attr = self._prefix + attr
 		for item in self:
@@ -576,7 +590,25 @@ class IterableList(list):
 			return getattr(self, index)
 		except AttributeError:
 			raise IndexError( "No item found with id %r" % (self._prefix + index) )
+		# END handle getattr
 			
+	def __delitem__(self, index):
+		delindex = index
+		if not isinstance(index, int):
+			delindex = -1
+			name = self._prefix + index
+			for i, item in enumerate(self):
+				if getattr(item, self._id_attr) == name:
+					delindex = i
+					break
+				#END search index
+			#END for each item
+			if delindex == -1:
+				raise IndexError("Item with name %s not found" % name)
+			#END handle error
+		#END get index to delete
+		list.__delitem__(self, delindex)
+		
 
 class Iterable(object):
 	"""Defines an interface for iterable items which is to assure a uniform 

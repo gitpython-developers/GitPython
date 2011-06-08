@@ -11,6 +11,10 @@ Changelog
 * **Blob** Type
 
  * Added mode constants to ease the manual creation of blobs
+ 
+* **IterableList**
+
+ * Added __contains__ and __delitem__ methods
 
 * **More Changes**
 
