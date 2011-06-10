@@ -262,10 +262,11 @@ class TestSubmodule(TestBase):
 			self.failUnlessRaises(InvalidGitRepositoryError, sm.remove)
 			
 			# forcibly delete the child repository
+			prev_count = len(sm.children())
 			assert csm.remove(force=True) is csm
 			assert not csm.exists()
 			assert not csm.module_exists()
-			assert len(sm.children()) == 0
+			assert len(sm.children()) == prev_count - 1
 			# now we have a changed index, as configuration was altered.
 			# fix this
 			sm.module().index.reset(working_tree=True)
@@ -389,7 +390,7 @@ class TestSubmodule(TestBase):
 		
 		# deep traversal gitdb / async
 		rsmsp = [sm.path for sm in rm.traverse()]
-		assert len(rsmsp) == 2			# gitdb and async, async being a child of gitdb
+		assert len(rsmsp) >= 2			# gitdb and async [and smmap], async being a child of gitdb
 		
 		# cannot set the parent commit as root module's path didn't exist
 		self.failUnlessRaises(ValueError, rm.set_parent_commit, 'HEAD')
@@ -538,13 +539,13 @@ class TestSubmodule(TestBase):
 		# =================
 		# finally we recursively update a module, just to run the code at least once
 		# remove the module so that it has more work
-		assert len(nsm.children()) == 1
-		assert nsm.exists() and nsm.module_exists() and len(nsm.children()) == 1
+		assert len(nsm.children()) >= 1 # could include smmap
+		assert nsm.exists() and nsm.module_exists() and len(nsm.children()) >= 1
 		# assure we pull locally only
 		nsmc = nsm.children()[0] 
 		nsmc.config_writer().set_value('url', async_url)
 		rm.update(recursive=True, progress=prog, dry_run=True)		# just to run the code
 		rm.update(recursive=True, progress=prog)
 		
-		assert len(nsm.children()) == 1 and nsmc.module_exists()
+		assert len(nsm.children()) >= 2 and nsmc.module_exists()
 		
