@@ -562,5 +562,6 @@ class TestSubmodule(TestBase):
 		rm.update(recursive=True, progress=prog, dry_run=True)		# just to run the code
 		rm.update(recursive=True, progress=prog)
 		
-		assert len(nsm.children()) >= 2 and nsmc.module_exists()
+		# gitdb: has either 1 or 2 submodules depending on the version
+		assert len(nsm.children()) >= 1 and nsmc.module_exists()
 		
