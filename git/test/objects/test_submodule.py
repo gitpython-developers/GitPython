@@ -9,8 +9,22 @@ from git.util import to_native_path_linux, join_path_native
 
 import shutil
 import git
+import sys
 import os
 import sys
+
+# Change the configuration if possible to prevent the underlying memory manager
+# to keep file handles open. On windows we get problems as they are not properly
+# closed due to mmap bugs on windows (as it appears)
+if sys.platform == 'win32':
+	try:
+		import smmap.util
+		smmap.util.MapRegion._test_read_into_memory = True
+	except ImportError:
+		sys.stderr.write("The submodule tests will fail as some files cannot be removed due to open file handles.\n")
+		sys.stderr.write("The latest version of gitdb uses a memory map manager which can be configured to work around this problem")
+#END handle windows platform
+
 
 class TestRootProgress(RootUpdateProgress):
 	"""Just prints messages, for now without checking the correctness of the states"""
