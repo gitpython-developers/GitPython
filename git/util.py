@@ -8,6 +8,8 @@ import os
 import re
 import sys
 import time
+import stat
+import shutil
 import tempfile
 import platform
 
@@ -23,9 +25,25 @@ from gitdb.util import (
 __all__ = ( "stream_copy", "join_path", "to_native_path_windows", "to_native_path_linux", 
 			"join_path_native", "Stats", "IndexFileSHA1Writer", "Iterable", "IterableList", 
 			"BlockingLockFile", "LockFile", 'Actor', 'get_user_id', 'assure_directory_exists',
-			'RemoteProgress')
+			'RemoteProgress', 'rmtree')
 
 #{ Utility Methods
+
+def rmtree(path):
+	"""Remove the given recursively.
+	:note: we use shutil rmtree but adjust its behaviour to see whether files that
+		couldn't be deleted are read-only. Windows will not remove them in that case"""
+	def onerror(func, path, exc_info):
+		if not os.access(path, os.W_OK):
+			# Is the error an access error ?
+			os.chmod(path, stat.S_IWUSR)
+			func(path)
+		else:
+			raise
+	# END end onerror
+	return shutil.rmtree(path, False, onerror)
+
+	
 
 def stream_copy(source, destination, chunk_size=512*1024):
 	"""Copy all data from the source stream into the destination stream in chunks

@@ -13,7 +13,8 @@ from git.util import (
 						Iterable, 
 						join_path_native, 
 						to_native_path_linux,
-						RemoteProgress
+						RemoteProgress,
+						rmtree
 					)
 
 from git.config import SectionConstraint
@@ -28,8 +29,6 @@ import git
 import os
 import sys
 import time
-
-import shutil
 
 __all__ = ["Submodule", "UpdateProgress"]
 
@@ -622,7 +621,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 				if os.path.islink(mp):
 					method = os.remove
 				elif os.path.isdir(mp):
-					method = shutil.rmtree
+					method = rmtree
 				elif os.path.exists(mp):
 					raise AssertionError("Cannot forcibly delete repository as it was neither a link, nor a directory")
 				#END handle brutal deletion
@@ -671,7 +670,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 				if not dry_run:
 					wtd = mod.working_tree_dir
 					del(mod)		# release file-handles (windows)
-					shutil.rmtree(wtd)
+					rmtree(wtd)
 				# END delete tree if possible
 			# END handle force
 		# END handle module deletion
