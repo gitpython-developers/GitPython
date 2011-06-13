@@ -176,7 +176,18 @@ class RemoteProgress(object):
 			elif op_name == 'Resolving deltas':
 				op_code |= self.RESOLVING
 			else:
-				raise ValueError("Operation name %r unknown" % op_name)
+				# Note: On windows it can happen that partial lines are sent
+				# Hence we get something like "CompreReceiving objects", which is 
+				# a blend of "Compressing objects" and "Receiving objects".
+				# This can't really be prevented, so we drop the line verbosely
+				# to make sure we get informed in case the process spits out new
+				# commands at some point.
+				self.line_dropped(sline)
+				sys.stderr.write("Operation name %r unknown - skipping line '%s'" % (op_name, sline))
+				# Note: Don't add this line to the failed lines, as we have to silently
+				# drop it
+				return failed_lines
+			# END handle op code
 			
 			# figure out stage
 			if op_code not in self._seen_ops:
