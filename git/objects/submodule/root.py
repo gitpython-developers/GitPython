@@ -37,15 +37,14 @@ class RootModule(Submodule):
 	
 	k_root_name = '__ROOT__'
 	
-	def __init__(self, repo):
-		# repo, binsha, mode=None, path=None, name = None, parent_commit=None, url=None, ref=None)
+	def __init__(self, repo, parent_commit = None):
 		super(RootModule, self).__init__(
 										repo, 
 										binsha = self.NULL_BIN_SHA, 
 										mode = self.k_default_mode, 
 										path = '', 
 										name = self.k_root_name, 
-										parent_commit = repo.head.commit,
+										parent_commit = parent_commit or repo.head.commit,
 										url = '',
 										branch_path = git.Head.to_full_path(self.k_head_default)
 										)

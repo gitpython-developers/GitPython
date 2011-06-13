@@ -89,7 +89,7 @@ class Submodule(util.IndexObject, Iterable, Traversable, RepoAliasMixin):
 		
 		:param repo: Our parent repository
 		:param binsha: binary sha referring to a commit in the remote repository, see url parameter
-		:param parent_commit: see set_parent_commit()
+		:param parent_commit: a Commit object instance, see set_parent_commit() for more information
 		:param url: The url to the remote repository which is the submodule
 		:param branch_path: full (relative) path to ref to checkout when cloning the remote repository"""
 		super(Submodule, self).__init__(repo, binsha, mode, path)

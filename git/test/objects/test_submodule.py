@@ -394,15 +394,17 @@ class TestSubmodule(TestObjectBase):
 	@with_rw_repo(k_subm_current, bare=False)
 	def test_root_module(self, rwrepo):
 		# Can query everything without problems
-		rm = RootModule(self.rorepo)
-		assert rm.module() is self.rorepo
+		rm = RootModule(rwrepo)
+		# test new constructor
+		assert rm.parent_commit == RootModule(self.rorepo, self.rorepo.commit(self.k_subm_current)).parent_commit
+		assert rm.module() is rwrepo
 		
 		# try attributes
 		rm.binsha
 		rm.mode
 		rm.path
 		assert rm.name == rm.k_root_name
-		assert rm.parent_commit == self.rorepo.head.commit
+		assert rm.parent_commit == self.rorepo.commit(self.k_subm_current)
 		rm.url
 		rm.branch
 		
@@ -412,7 +414,7 @@ class TestSubmodule(TestObjectBase):
 		
 		# deep traversal git / async
 		rsmsp = [sm.path for sm in rm.traverse()]
-		assert len(rsmsp) == 2			# git, async, smmap, async being a child of git.
+		assert len(rsmsp) == 1			# gitdb only - its not yet uptodate so it has no submodule
 		
 		# cannot set the parent commit as root module's path didn't exist
 		self.failUnlessRaises(ValueError, rm.set_parent_commit, 'HEAD')
