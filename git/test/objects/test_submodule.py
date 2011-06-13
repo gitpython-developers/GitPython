@@ -366,8 +366,9 @@ class TestSubmodule(TestObjectBase):
 			abspmp = nsm.abspath
 			assert nsm.move(nmp) is nsm
 			nmp = nmp[:-1]			# cut last /
-			assert nsm.path == nmp
-			assert rwrepo.submodules[0].path == nmp
+			nmpl = to_native_path_linux(nmp)
+			assert nsm.path == nmpl
+			assert rwrepo.submodules[0].path == nmpl
 			
 			mpath = 'newsubmodule'
 			absmpath = join_path_native(rwrepo.working_tree_dir, mpath)
