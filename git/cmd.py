@@ -224,7 +224,7 @@ class Git(LazyMixin):
 	def _set_cache_(self, attr):
 		if attr == '_version_info':
 			# We only use the first 4 numbers, as everthing else could be strings in fact (on windows)
-			version_numbers = self._call_process('version').rpartition(' ')[2]
+			version_numbers = self._call_process('version').split(' ')[2]
 			self._version_info = tuple(int(n) for n in version_numbers.split('.')[:4])
 		else:
 			super(Git, self)._set_cache_(attr)
