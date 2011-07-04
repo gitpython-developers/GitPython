@@ -29,6 +29,11 @@ class TestRefs(TestBase):
 				assert isinstance(instance, ref_type)
 			# END for each name 
 		# END for each type
+		
+		# invalid path
+		self.failUnlessRaises(ValueError, TagReference, self.rorepo, "refs/invalid/tag")
+		# works without path check
+		TagReference(self.rorepo, "refs/invalid/tag", check_path=False)
 	
 	def test_tag_base(self):
 		tag_object_refs = list()
