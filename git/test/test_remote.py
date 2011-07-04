@@ -256,7 +256,7 @@ class TestRemote(TestBase):
 			shutil.rmtree(other_repo_dir)
 		# END test and cleanup
 		
-	def _test_push_and_pull(self,remote, rw_repo, remote_repo):
+	def _verify_push_and_pull(self,remote, rw_repo, remote_repo):
 		# push our changes
 		lhead = rw_repo.head
 		lindex = rw_repo.index
@@ -407,7 +407,7 @@ class TestRemote(TestBase):
 			# END for each rename ( back to prev_name )
 			
 			# PUSH/PULL TESTING
-			self._test_push_and_pull(remote, rw_repo, remote_repo)
+			self._verify_push_and_pull(remote, rw_repo, remote_repo)
 			
 			# FETCH TESTING
 			# Only for remotes - local cases are the same or less complicated 
