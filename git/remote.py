@@ -279,12 +279,36 @@ class FetchInfo(object):
 			ref_type = TagReference
 		else:
 			raise TypeError("Cannot handle reference type: %r" % ref_type_name)
+		#END handle ref type
 			
 		# create ref instance
 		if ref_type is SymbolicReference:
 			remote_local_ref = ref_type(repo, "FETCH_HEAD") 
 		else:
-			remote_local_ref = Reference.from_path(repo, join_path(ref_type._common_path_default, remote_local_ref.strip()))
+			# determine prefix. Tags are usually pulled into refs/tags, they may have subdirectories.
+			# It is not clear sometimes where exactly the item is, unless we have an absolute path as indicated
+			# by the 'ref/' prefix. Otherwise even a tag could be in refs/remotes, which is when it will have the
+			# 'tags/' subdirectory in its path.
+			# We don't want to test for actual existence, but try to figure everything out analytically.
+			ref_path = None
+			remote_local_ref = remote_local_ref.strip()
+			if remote_local_ref.startswith(Reference._common_path_default + "/"):
+				# always use actual type if we get absolute paths
+				# Will always be the case if something is fetched outside of refs/remotes (if its not a tag)
+				ref_path = remote_local_ref
+				if ref_type is not TagReference and not remote_local_ref.startswith(RemoteReference._common_path_default + "/"):
+					ref_type = Reference
+				#END downgrade remote reference
+			elif ref_type is TagReference and 'tags/' in remote_local_ref:
+				# even though its a tag, it is located in refs/remotes
+				ref_path = join_path(RemoteReference._common_path_default, remote_local_ref)
+			else:
+				ref_path = join_path(ref_type._common_path_default, remote_local_ref)
+			#END obtain refpath
+			
+			# even though the path could be within the git conventions, we make 
+			# sure we respect whatever the user wanted, and disabled path checking
+			remote_local_ref = ref_type(repo, ref_path, check_path=False)
 		# END create ref instance 
 		
 		note = ( note and note.strip() ) or ''
