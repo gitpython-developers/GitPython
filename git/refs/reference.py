@@ -22,15 +22,17 @@ class Reference(SymbolicReference, LazyMixin, Iterable):
 	_resolve_ref_on_create = True
 	_common_path_default = "refs"
 	
-	def __init__(self, repo, path):
+	def __init__(self, repo, path, check_path = True):
 		"""Initialize this instance
 		:param repo: Our parent repository
 		
 		:param path:
 			Path relative to the .git/ directory pointing to the ref in question, i.e.
-			refs/heads/master"""
-		if not path.startswith(self._common_path_default+'/'):
-			raise ValueError("Cannot instantiate %r from path %s" % ( self.__class__.__name__, path ))
+			refs/heads/master
+		:param check_path: if False, you can provide any path. Otherwise the path must start with the 
+			default path prefix of this type."""
+		if check_path and not path.startswith(self._common_path_default+'/'):
+			raise ValueError("Cannot instantiate %r from path %s" % (self.__class__.__name__, path))
 		super(Reference, self).__init__(repo, path)
 		
 
