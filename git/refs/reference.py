@@ -13,6 +13,18 @@ from gitdb.util import (
 
 __all__ = ["Reference"]
 
+#{ Utilities
+def require_remote_ref_path(func):
+	"""A decorator raising a TypeError if we are not a valid remote, based on the path"""
+	def wrapper(self, *args):
+		if not self.path.startswith(self._remote_common_path_default + "/"):
+			raise ValueError("ref path does not point to a remote reference: %s" % path)
+		return func(self, *args)
+	#END wrapper
+	wrapper.__name__ = func.__name__
+	return wrapper
+#}END utilites
+
 
 class Reference(SymbolicReference, LazyMixin, Iterable):
 	"""Represents a named reference to any object. Subclasses may apply restrictions though, 
@@ -38,6 +50,8 @@ class Reference(SymbolicReference, LazyMixin, Iterable):
 
 	def __str__(self):
 		return self.name
+		
+	#{ Interface
 
 	def set_object(self, object, logmsg = None):
 		"""Special version which checks if the head-log needs an update as well"""
@@ -84,3 +98,30 @@ class Reference(SymbolicReference, LazyMixin, Iterable):
 		"""Equivalent to SymbolicReference.iter_items, but will return non-detached
 		references as well."""
 		return cls._iter_items(repo, common_path)
+		
+	#}END interface
+	
+	
+	#{ Remote Interface
+	
+	@property
+	@require_remote_ref_path
+	def remote_name(self):
+		"""
+		:return:
+			Name of the remote we are a reference of, such as 'origin' for a reference
+			named 'origin/master'"""
+		tokens = self.path.split('/')
+		# /refs/remotes/<remote name>/<branch_name>
+		return tokens[2]
+		
+	@property
+	@require_remote_ref_path
+	def remote_head(self):
+		""":return: Name of the remote head itself, i.e. master.
+		:note: The returned name is usually not qualified enough to uniquely identify
+			a branch"""
+		tokens = self.path.split('/')
+		return '/'.join(tokens[3:])
+	
+	#} END remote interface

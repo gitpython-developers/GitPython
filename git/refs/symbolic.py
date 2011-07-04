@@ -33,6 +33,7 @@ class SymbolicReference(object):
 	_resolve_ref_on_create = False
 	_points_to_commits_only = True
 	_common_path_default = ""
+	_remote_common_path_default = "refs/remotes"
 	_id_attribute_ = "name"
 	
 	def __init__(self, repo, path):
