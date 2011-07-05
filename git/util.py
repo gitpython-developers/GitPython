@@ -15,6 +15,13 @@ import time
 import stat
 import shutil
 import tempfile
+from smmap import (
+					StaticWindowMapManager,
+					SlidingWindowMapManager,
+					SlidingWindowMapBuffer
+				)
+
+
 
 __all__ = ( "stream_copy", "join_path", "to_native_path_windows", "to_native_path_linux", 
 			"join_path_native", "Stats", "IndexFileSHA1Writer", "Iterable", "IterableList", 
@@ -63,6 +70,14 @@ except ImportError:
 # A pool distributing tasks, initially with zero threads, hence everything 
 # will be handled in the main thread
 pool = ThreadPool(0)
+
+# initialize our global memory manager instance
+# Use it to free cached (and unused) resources.
+if sys.version_info[1] < 6:
+	mman = StaticWindowMapManager()
+else:
+	mman = SlidingWindowMapManager()
+#END handle mman
 
 #} END globals
 
