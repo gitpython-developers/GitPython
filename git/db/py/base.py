@@ -74,7 +74,11 @@ class PureObjectDBR(ObjectDBR):
 class PureObjectDBW(ObjectDBW):
 	
 	def __init__(self, *args, **kwargs):
-		super(PureObjectDBW, self).__init__(*args, **kwargs)
+		try:
+			super(PureObjectDBW, self).__init__(*args, **kwargs)
+		except TypeError:
+			pass
+		#END handle py 2.6 
 		self._ostream = None
 	
 	#{ Edit Interface
@@ -352,7 +356,11 @@ class PureConfigurationMixin(ConfigurationMixin):
 	
 	def __init__(self, *args, **kwargs):
 		"""Verify prereqs"""
-		super(PureConfigurationMixin, self).__init__(*args, **kwargs)
+		try:
+			super(PureConfigurationMixin, self).__init__(*args, **kwargs)
+		except TypeError:
+			pass
+		#END handle code-breaking change in python 2.6
 		assert hasattr(self, 'git_dir')
 	
 	def _path_at_level(self, level ):

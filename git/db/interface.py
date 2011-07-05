@@ -150,7 +150,11 @@ class RootPathDB(object):
 		:note: The base will not perform any accessablity checking as the base
 			might not yet be accessible, but become accessible before the first 
 			access."""
-		super(RootPathDB, self).__init__(root_path)
+		try:
+			super(RootPathDB, self).__init__(root_path)
+		except TypeError:
+			pass
+		# END handle py 2.6
 		
 	#{ Interface
 	def root_path(self):
