@@ -7,7 +7,9 @@ Changelog
 * **git** command wrapper
 
  * Added ``version_info`` property which returns a tuple of integers representing the installed git version.
-
+ 
+ * Added GIT_PYTHON_GIT_EXECUTABLE environment variable, which can be used to set the desired git executable to be used. despite of what would be found in the path.
+ 
 * **Blob** Type
 
  * Added mode constants to ease the manual creation of blobs
@@ -21,7 +23,9 @@ Changelog
  * Configuration file parsing is more robust. It should now be able to handle everything that the git command can parse as well.
  * The progress parsing was updated to support git 1.7.0.3 and newer. Previously progress was not enabled for the git command or only worked with ssh in case of older git versions.
  * Parsing of tags was improved. Previously some parts of the name could not be parsed properly.
- * The rev-parse pure python implementation now handles branches correctly if they look like hexadecimal sha's. 
+ * The rev-parse pure python implementation now handles branches correctly if they look like hexadecimal sha's.
+ * GIT_PYTHON_TRACE is now set on class level of the Git type, previously it was a module level global variable.
+ * GIT_PYTHON_GIT_EXECUTABLE is a class level variable as well. 
  
 
 0.3.1 Beta 2
