@@ -98,3 +98,13 @@ class TestGit(TestBase):
 		for n in v:
 			assert isinstance(n, int)
 		#END verify number types
+		
+	def test_cmd_override(self):
+		prev_cmd = self.git.GIT_PYTHON_GIT_EXECUTABLE
+		try:
+			# set it to something that doens't exist, assure it raises
+			type(self.git).GIT_PYTHON_GIT_EXECUTABLE = os.path.join("some", "path", "which", "doesn't", "exist", "gitbinary")
+			self.failUnlessRaises(OSError, self.git.version)
+		finally:
+			type(self.git).GIT_PYTHON_GIT_EXECUTABLE = prev_cmd
+		#END undo adjustment

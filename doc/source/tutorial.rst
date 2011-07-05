@@ -412,6 +412,20 @@ The special notion ``git.command(flag=True)`` will create a flag without value l
 
 If ``None`` is found in the arguments, it will be dropped silently. Lists and tuples  passed as arguments will be unpacked recursively to individual arguments. Objects are converted to strings using the str(...) function.
 
+Git Command Debugging and Customization
+***************************************
+
+Using environment variables, you can further adjust the behaviour of the git command.
+
+* **GIT_PYTHON_TRACE**
+
+ * If set to non-0, all executed git commands will be printed to stdout.
+ * if set to *full*, the executed git command will be printed along with its output.
+ 
+* **GIT_PYTHON_GIT_EXECUTABLE**
+
+ * If set, it should contain the full path to the git executable, e.g. *c:\\Program Files (x86)\\Git\\bin\\git.exe* on windows or */usr/bin/git* on linux.
+
 And even more ...
 *****************
 

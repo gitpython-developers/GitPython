@@ -17,9 +17,6 @@ from subprocess import (
 							PIPE
 						)
 
-# Enables debugging of GitPython's git commands
-GIT_PYTHON_TRACE = os.environ.get("GIT_PYTHON_TRACE", False)
-
 execute_kwargs = ('istream', 'with_keep_cwd', 'with_extended_output',
 				  'with_exceptions', 'as_process', 
 				  'output_stream' )
@@ -28,6 +25,7 @@ __all__ = ('Git', )
 
 def dashify(string):
 	return string.replace('_', '-')
+
 
 class Git(LazyMixin):
 	"""
@@ -49,6 +47,13 @@ class Git(LazyMixin):
 	# CONFIGURATION
 	# The size in bytes read from stdout when copying git's output to another stream
 	max_chunk_size = 1024*64
+	
+	# Enables debugging of GitPython's git commands
+	GIT_PYTHON_TRACE = os.environ.get("GIT_PYTHON_TRACE", False)
+	
+	# Provide the full path to the git executable. Otherwise it assumes git is in the path
+	GIT_PYTHON_GIT_EXECUTABLE = os.environ.get("GIT_PYTHON_GIT_EXECUTABLE", 'git')
+	
 	
 	class AutoInterrupt(object):
 		"""Kill/Interrupt the stored process instance once this instance goes out of scope. It is 
@@ -311,7 +316,7 @@ class Git(LazyMixin):
 		:note:
 		   If you add additional keyword arguments to the signature of this method, 
 		   you must update the execute_kwargs tuple housed in this module."""
-		if GIT_PYTHON_TRACE and not GIT_PYTHON_TRACE == 'full':
+		if self.GIT_PYTHON_TRACE and not self.GIT_PYTHON_TRACE == 'full':
 			print ' '.join(command)
 
 		# Allow the user to have the command executed in their working dir.
@@ -358,7 +363,7 @@ class Git(LazyMixin):
 			proc.stdout.close()
 			proc.stderr.close()
 
-		if GIT_PYTHON_TRACE == 'full':
+		if self.GIT_PYTHON_TRACE == 'full':
 			cmdstr = " ".join(command)
 			if stderr_value:
 				print "%s -> %d; stdout: '%s'; stderr: '%s'" % (cmdstr, status, stdout_value, stderr_value)
@@ -445,7 +450,7 @@ class Git(LazyMixin):
 		ext_args = self.__unpack_args([a for a in args if a is not None])
 		args = opt_args + ext_args
 
-		call = ["git", dashify(method)]
+		call = [self.GIT_PYTHON_GIT_EXECUTABLE, dashify(method)]
 		call.extend(args)
 
 		return self.execute(call, **_kwargs)

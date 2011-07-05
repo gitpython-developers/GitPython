@@ -27,6 +27,9 @@ NEXT
 * ### Git Cmd ###
 
  * Added ``version_info`` property to git command, returning a tuple of version numbers.
+ * Added GIT_PYTHON_GIT_EXECUTABLE environment variable, which can be used to set the desired git executable to be used. despite of what would be found in the path.
+ * GIT_PYTHON_TRACE is now set on class level of the Git type, previously it was a module level global variable.
+ * GIT_PYTHON_GIT_EXECUTABLE is a class level variable as well.
  
 * ### Exceptions ###
  
