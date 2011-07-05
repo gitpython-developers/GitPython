@@ -49,18 +49,17 @@ class TestPurePackedODB(TestPurePackedODBPerformanceBase):
 			count = 0
 			total_size = 0
 			st = time()
-			objs = list()
 			for sha in rorepo.sha_iter():
 				count += 1
-				objs.append(rorepo.stream(sha))
+				rorepo.stream(sha)
 				if count == ni:
 					break
 			#END gather objects for pack-writing
 			elapsed = time() - st
-			print >> sys.stderr, "PDB Streaming: Got %i streams from %s by sha in in %f s ( %f streams/s )" % (ni, rorepo.__class__.__name__, elapsed, ni / elapsed)
+			print >> sys.stderr, "PDB Streaming: Got %i streams from %s by sha in in %f s ( %f streams/s )" % (count, rorepo.__class__.__name__, elapsed, count / elapsed)
 			
 			st = time()
-			PackEntity.write_pack(objs, ostream.write)
+			PackEntity.write_pack((rorepo.stream(sha) for sha in rorepo.sha_iter()), ostream.write, object_count=ni)
 			elapsed = time() - st
 			total_kb = ostream.bytes_written() / 1000
 			print >> sys.stderr, "PDB Streaming: Wrote pack of size %i kb in %f s (%f kb/s)" % (total_kb, elapsed, total_kb/elapsed)

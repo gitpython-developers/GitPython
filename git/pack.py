@@ -73,7 +73,7 @@ __all__ = ('PackIndexFile', 'PackFile', 'PackEntity')
 	
 #{ Utilities 
 
-def pack_object_at(data, offset, as_stream):
+def pack_object_at(cursor, offset, as_stream):
 	"""
 	:return: Tuple(abs_data_offset, PackInfo|PackStream)
 		an object of the correct type according to the type_id  of the object.
@@ -83,7 +83,7 @@ def pack_object_at(data, offset, as_stream):
 	:parma offset: offset in to the data at which the object information is located
 	:param as_stream: if True, a stream object will be returned that can read 
 		the data, otherwise you receive an info object only"""
-	data = buffer(data, offset)
+	data = cursor.use_region(offset).buffer()
 	type_id, uncomp_size, data_rela_offset = pack_object_header_info(data)
 	total_rela_offset = None				# set later, actual offset until data stream begins
 	delta_info = None
@@ -269,6 +269,10 @@ class PackIndexFile(LazyMixin):
 			# that we can actually write to the location - it could be a read-only
 			# alternate for instance
 			self._cursor = mman.make_cursor(self._indexpath).use_region()
+			# We will assume that the index will always fully fit into memory !
+			if mman.window_size() > 0 and self._cursor.file_size() > mman.window_size():
+				raise AssertionError("The index file at %s is too large to fit into a mapped window (%i > %i). This is a limitation of the implementation" % (self._indexpath, self._cursor.file_size(), mman.window_size()))
+			#END assert window size
 		else:
 			# now its time to initialize everything - if we are here, someone wants
 			# to access the fanout table or related properties
@@ -527,13 +531,13 @@ class PackFile(LazyMixin):
 		
 	def _iter_objects(self, start_offset, as_stream=True):
 		"""Handle the actual iteration of objects within this pack"""
-		data = self._cursor.map()
-		content_size = len(data) - self.footer_size
+		c = self._cursor
+		content_size = c.file_size() - self.footer_size
 		cur_offset = start_offset or self.first_object_offset
 		
 		null = NullStream()
 		while cur_offset < content_size:
-			data_offset, ostream = pack_object_at(data, cur_offset, True)
+			data_offset, ostream = pack_object_at(c, cur_offset, True)
 			# scrub the stream to the end - this decompresses the object, but yields
 			# the amount of compressed bytes we need to get to the next offset
 				
@@ -562,12 +566,14 @@ class PackFile(LazyMixin):
 	def data(self):
 		"""
 		:return: read-only data of this pack. It provides random access and usually
-			is a memory map"""
-		return self._cursor.map()
+			is a memory map.
+		:note: This method is unsafe as it returns a window into a file which might be larger than than the actual window size"""
+		# can use map as we are starting at offset 0. Otherwise we would have to use buffer()
+		return self._cursor.use_region().map()
 		
 	def checksum(self):
 		""":return: 20 byte sha1 hash on all object sha's contained in this file"""
-		return self._cursor.map()[-20:]
+		return self._cursor.use_region(self._cursor.file_size()-20).buffer()[:]
 	
 	def path(self):
 		""":return: path to the packfile"""
@@ -586,9 +592,9 @@ class PackFile(LazyMixin):
 			If the object at offset is no delta, the size of the list is 1.
 		:param offset: specifies the first byte of the object within this pack"""
 		out = list()
-		data = self._cursor.map()
+		c = self._cursor
 		while True:
-			ostream = pack_object_at(data, offset, True)[1]
+			ostream = pack_object_at(c, offset, True)[1]
 			out.append(ostream)
 			if ostream.type_id == OFS_DELTA:
 				offset = ostream.pack_offset - ostream.delta_info
@@ -610,14 +616,14 @@ class PackFile(LazyMixin):
 		
 		:param offset: byte offset
 		:return: OPackInfo instance, the actual type differs depending on the type_id attribute"""
-		return pack_object_at(self._cursor.map(), offset or self.first_object_offset, False)[1]
+		return pack_object_at(self._cursor, offset or self.first_object_offset, False)[1]
 		
 	def stream(self, offset):
 		"""Retrieve an object at the given file-relative offset as stream along with its information
 		
 		:param offset: byte offset
 		:return: OPackStream instance, the actual type differs depending on the type_id attribute"""
-		return pack_object_at(self._cursor.map(), offset or self.first_object_offset, True)[1]
+		return pack_object_at(self._cursor, offset or self.first_object_offset, True)[1]
 		
 	def stream_iter(self, start_offset=0):
 		"""
@@ -700,7 +706,7 @@ class PackEntity(LazyMixin):
 			sha = self._index.sha(index)
 		# END assure sha is present ( in output )
 		offset = self._index.offset(index)
-		type_id, uncomp_size, data_rela_offset = pack_object_header_info(buffer(self._pack._cursor.map(), offset))
+		type_id, uncomp_size, data_rela_offset = pack_object_header_info(self._pack._cursor.use_region(offset).buffer())
 		if as_stream:
 			if type_id not in delta_types:
 				packstream = self._pack.stream(offset)

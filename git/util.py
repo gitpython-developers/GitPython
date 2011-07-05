@@ -17,6 +17,7 @@ import shutil
 import tempfile
 from smmap import (
 					StaticWindowMapManager,
+					SlidingWindowMapManager,
 					SlidingWindowMapBuffer
 				)
 
@@ -72,7 +73,11 @@ pool = ThreadPool(0)
 
 # initialize our global memory manager instance
 # Use it to free cached (and unused) resources.
-mman = StaticWindowMapManager()
+if sys.version_info[1] < 6:
+	mman = StaticWindowMapManager()
+else:
+	mman = SlidingWindowMapManager()
+#END handle mman
 
 #} END globals
 
