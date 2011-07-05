@@ -10,10 +10,10 @@ from git.exc import (
 						)
 from util import (
 					zlib,
+					mman,
 					LazyMixin,
 					unpack_from,
 					bin_to_hex,
-					file_contents_ro_filepath,
 					)
 
 from fun import (
@@ -247,7 +247,7 @@ class PackIndexFile(LazyMixin):
 	
 	# Dont use slots as we dynamically bind functions for each version, need a dict for this
 	# The slots you see here are just to keep track of our instance variables
-	# __slots__ = ('_indexpath', '_fanout_table', '_data', '_version', 
+	# __slots__ = ('_indexpath', '_fanout_table', '_cursor', '_version', 
 	#				'_sha_list_offset', '_crc_list_offset', '_pack_offset', '_pack_64_offset')
 
 	# used in v2 indices
@@ -261,22 +261,23 @@ class PackIndexFile(LazyMixin):
 	
 	def _set_cache_(self, attr):
 		if attr == "_packfile_checksum":
-			self._packfile_checksum = self._data[-40:-20]
+			self._packfile_checksum = self._cursor.map()[-40:-20]
 		elif attr == "_packfile_checksum":
-			self._packfile_checksum = self._data[-20:]
-		elif attr == "_data":
+			self._packfile_checksum = self._cursor.map()[-20:]
+		elif attr == "_cursor":
 			# Note: We don't lock the file when reading as we cannot be sure
 			# that we can actually write to the location - it could be a read-only
 			# alternate for instance
-			self._data = file_contents_ro_filepath(self._indexpath)
+			self._cursor = mman.make_cursor(self._indexpath).use_region()
 		else:
 			# now its time to initialize everything - if we are here, someone wants
 			# to access the fanout table or related properties
 			
 			# CHECK VERSION
-			self._version = (self._data[:4] == self.index_v2_signature and 2) or 1
+			mmap = self._cursor.map()
+			self._version = (mmap[:4] == self.index_v2_signature and 2) or 1
 			if self._version == 2:
-				version_id = unpack_from(">L", self._data, 4)[0] 
+				version_id = unpack_from(">L", mmap, 4)[0] 
 				assert version_id == self._version, "Unsupported index version: %i" % version_id
 			# END assert version
 			
@@ -297,16 +298,16 @@ class PackIndexFile(LazyMixin):
 	
 	def _entry_v1(self, i):
 		""":return: tuple(offset, binsha, 0)"""
-		return unpack_from(">L20s", self._data, 1024 + i*24) + (0, ) 
+		return unpack_from(">L20s", self._cursor.map(), 1024 + i*24) + (0, ) 
 	
 	def _offset_v1(self, i):
 		"""see ``_offset_v2``"""
-		return unpack_from(">L", self._data, 1024 + i*24)[0]
+		return unpack_from(">L", self._cursor.map(), 1024 + i*24)[0]
 	
 	def _sha_v1(self, i):
 		"""see ``_sha_v2``"""
 		base = 1024 + (i*24)+4
-		return self._data[base:base+20]
+		return self._cursor.map()[base:base+20]
 		
 	def _crc_v1(self, i):
 		"""unsupported"""
@@ -322,13 +323,13 @@ class PackIndexFile(LazyMixin):
 	def _offset_v2(self, i):
 		""":return: 32 or 64 byte offset into pack files. 64 byte offsets will only 
 			be returned if the pack is larger than 4 GiB, or 2^32"""
-		offset = unpack_from(">L", self._data, self._pack_offset + i * 4)[0]
+		offset = unpack_from(">L", self._cursor.map(), self._pack_offset + i * 4)[0]
 		
 		# if the high-bit is set, this indicates that we have to lookup the offset
 		# in the 64 bit region of the file. The current offset ( lower 31 bits )
 		# are the index into it
 		if offset & 0x80000000:
-			offset = unpack_from(">Q", self._data, self._pack_64_offset + (offset & ~0x80000000) * 8)[0]
+			offset = unpack_from(">Q", self._cursor.map(), self._pack_64_offset + (offset & ~0x80000000) * 8)[0]
 		# END handle 64 bit offset
 		
 		return offset
@@ -336,11 +337,11 @@ class PackIndexFile(LazyMixin):
 	def _sha_v2(self, i):
 		""":return: sha at the given index of this file index instance"""
 		base = self._sha_list_offset + i * 20
-		return self._data[base:base+20]
+		return self._cursor.map()[base:base+20]
 		
 	def _crc_v2(self, i):
 		""":return: 4 bytes crc for the object at index i"""
-		return unpack_from(">L", self._data, self._crc_list_offset + i * 4)[0] 
+		return unpack_from(">L", self._cursor.map(), self._crc_list_offset + i * 4)[0] 
 		
 	#} END access V2
 	
@@ -358,7 +359,7 @@ class PackIndexFile(LazyMixin):
 		
 	def _read_fanout(self, byte_offset):
 		"""Generate a fanout table from our data"""
-		d = self._data
+		d = self._cursor.map()
 		out = list()
 		append = out.append
 		for i in range(256):
@@ -382,11 +383,11 @@ class PackIndexFile(LazyMixin):
 		
 	def packfile_checksum(self):
 		""":return: 20 byte sha representing the sha1 hash of the pack file"""
-		return self._data[-40:-20]
+		return self._cursor.map()[-40:-20]
 		
 	def indexfile_checksum(self):
 		""":return: 20 byte sha representing the sha1 hash of this index file"""
-		return self._data[-20:]
+		return self._cursor.map()[-20:]
 		
 	def offsets(self):
 		""":return: sequence of all offsets in the order in which they were written
@@ -394,7 +395,7 @@ class PackIndexFile(LazyMixin):
 		if self._version == 2:
 			# read stream to array, convert to tuple
 			a = array.array('I')	# 4 byte unsigned int, long are 8 byte on 64 bit it appears
-			a.fromstring(buffer(self._data, self._pack_offset, self._pack_64_offset - self._pack_offset))
+			a.fromstring(buffer(self._cursor.map(), self._pack_offset, self._pack_64_offset - self._pack_offset))
 			
 			# networkbyteorder to something array likes more
 			if sys.byteorder == 'little':
@@ -501,7 +502,7 @@ class PackFile(LazyMixin):
 		for some reason - one clearly doesn't want to read 10GB at once in that 
 		case"""
 	
-	__slots__ = ('_packpath', '_data', '_size', '_version')
+	__slots__ = ('_packpath', '_cursor', '_size', '_version')
 	pack_signature = 0x5041434b		# 'PACK'
 	pack_version_default = 2
 	
@@ -513,26 +514,20 @@ class PackFile(LazyMixin):
 		self._packpath = packpath
 		
 	def _set_cache_(self, attr):
-		if attr == '_data':
-			self._data = file_contents_ro_filepath(self._packpath)
-			
-			# read the header information
-			type_id, self._version, self._size = unpack_from(">LLL", self._data, 0)
-			
-			# TODO: figure out whether we should better keep the lock, or maybe
-			# add a .keep file instead ?
-		else: # must be '_size' or '_version'
-			# read header info - we do that just with a file stream
-			type_id, self._version, self._size = unpack(">LLL", open(self._packpath).read(12))
-		# END handle header
+		# we fill the whole cache, whichever attribute gets queried first
+		self._cursor = mman.make_cursor(self._packpath).use_region()
 		
+		# read the header information
+		type_id, self._version, self._size = unpack_from(">LLL", self._cursor.map(), 0)
+			
+		# TODO: figure out whether we should better keep the lock, or maybe
+		# add a .keep file instead ?
 		if type_id != self.pack_signature:
 			raise ParseError("Invalid pack signature: %i" % type_id)
-		#END assert type id
 		
 	def _iter_objects(self, start_offset, as_stream=True):
 		"""Handle the actual iteration of objects within this pack"""
-		data = self._data
+		data = self._cursor.map()
 		content_size = len(data) - self.footer_size
 		cur_offset = start_offset or self.first_object_offset
 		
@@ -568,11 +563,11 @@ class PackFile(LazyMixin):
 		"""
 		:return: read-only data of this pack. It provides random access and usually
 			is a memory map"""
-		return self._data
+		return self._cursor.map()
 		
 	def checksum(self):
 		""":return: 20 byte sha1 hash on all object sha's contained in this file"""
-		return self._data[-20:]
+		return self._cursor.map()[-20:]
 	
 	def path(self):
 		""":return: path to the packfile"""
@@ -591,8 +586,9 @@ class PackFile(LazyMixin):
 			If the object at offset is no delta, the size of the list is 1.
 		:param offset: specifies the first byte of the object within this pack"""
 		out = list()
+		data = self._cursor.map()
 		while True:
-			ostream = pack_object_at(self._data, offset, True)[1]
+			ostream = pack_object_at(data, offset, True)[1]
 			out.append(ostream)
 			if ostream.type_id == OFS_DELTA:
 				offset = ostream.pack_offset - ostream.delta_info
@@ -614,14 +610,14 @@ class PackFile(LazyMixin):
 		
 		:param offset: byte offset
 		:return: OPackInfo instance, the actual type differs depending on the type_id attribute"""
-		return pack_object_at(self._data, offset or self.first_object_offset, False)[1]
+		return pack_object_at(self._cursor.map(), offset or self.first_object_offset, False)[1]
 		
 	def stream(self, offset):
 		"""Retrieve an object at the given file-relative offset as stream along with its information
 		
 		:param offset: byte offset
 		:return: OPackStream instance, the actual type differs depending on the type_id attribute"""
-		return pack_object_at(self._data, offset or self.first_object_offset, True)[1]
+		return pack_object_at(self._cursor.map(), offset or self.first_object_offset, True)[1]
 		
 	def stream_iter(self, start_offset=0):
 		"""
@@ -704,7 +700,7 @@ class PackEntity(LazyMixin):
 			sha = self._index.sha(index)
 		# END assure sha is present ( in output )
 		offset = self._index.offset(index)
-		type_id, uncomp_size, data_rela_offset = pack_object_header_info(buffer(self._pack._data, offset))
+		type_id, uncomp_size, data_rela_offset = pack_object_header_info(buffer(self._pack._cursor.map(), offset))
 		if as_stream:
 			if type_id not in delta_types:
 				packstream = self._pack.stream(offset)
