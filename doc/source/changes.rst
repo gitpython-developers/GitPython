@@ -2,8 +2,8 @@
 Changelog
 =========
 
-0.3.2
-=====
+0.3.2 RC1
+=========
 * **git** command wrapper
 
  * Added ``version_info`` property which returns a tuple of integers representing the installed git version.
