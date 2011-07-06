@@ -48,11 +48,15 @@ class Git(LazyMixin):
 	# The size in bytes read from stdout when copying git's output to another stream
 	max_chunk_size = 1024*64
 	
+	git_exec_name = "git"			# default that should work on linux and windows
+	git_exec_name_win = "git.cmd"	# alternate command name, windows only
+	
 	# Enables debugging of GitPython's git commands
 	GIT_PYTHON_TRACE = os.environ.get("GIT_PYTHON_TRACE", False)
 	
 	# Provide the full path to the git executable. Otherwise it assumes git is in the path
-	GIT_PYTHON_GIT_EXECUTABLE = os.environ.get("GIT_PYTHON_GIT_EXECUTABLE", 'git')
+	_git_exec_env_var = "GIT_PYTHON_GIT_EXECUTABLE"
+	GIT_PYTHON_GIT_EXECUTABLE = os.environ.get(_git_exec_env_var, git_exec_name)
 	
 	
 	class AutoInterrupt(object):
@@ -449,11 +453,40 @@ class Git(LazyMixin):
 		
 		ext_args = self.__unpack_args([a for a in args if a is not None])
 		args = opt_args + ext_args
-
-		call = [self.GIT_PYTHON_GIT_EXECUTABLE, dashify(method)]
-		call.extend(args)
-
-		return self.execute(call, **_kwargs)
+		
+		def make_call():
+			call = [self.GIT_PYTHON_GIT_EXECUTABLE, dashify(method)]
+			call.extend(args)
+			return call
+		#END utility to recreate call after changes
+		
+		if sys.platform == 'win32':
+			try:
+				try:
+					return self.execute(make_call(), **_kwargs)
+				except WindowsError:
+					# did we switch to git.cmd already, or was it changed from default ? permanently fail
+					if self.GIT_PYTHON_GIT_EXECUTABLE != self.git_exec_name:
+						raise
+					#END handle overridden variable
+					type(self).GIT_PYTHON_GIT_EXECUTABLE = self.git_exec_name_win
+					call = [self.GIT_PYTHON_GIT_EXECUTABLE] + list(args)
+					
+					try:
+						return self.execute(make_call(), **_kwargs)
+					finally:
+						import warnings
+						msg = "WARNING: Automatically switched to use git.cmd as git executable, which reduces performance by ~70%."
+						msg += "Its recommended to put git.exe into the PATH or to set the %s environment variable to the executable's location" % self._git_exec_env_var 
+						warnings.warn(msg)
+					#END print of warning
+				#END catch first failure
+			except WindowsError:
+				raise WindowsError("The system cannot find or execute the file at %r" % self.GIT_PYTHON_GIT_EXECUTABLE)
+			#END provide better error message
+		else:
+			return self.execute(make_call(), **_kwargs)
+		#END handle windows default installation
 		
 	def _parse_object_header(self, header_line):
 		"""
