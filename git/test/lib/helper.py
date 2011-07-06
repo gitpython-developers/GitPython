@@ -207,7 +207,11 @@ class GlobalsItemDeletorMetaCls(type):
 		new_type = super(GlobalsItemDeletorMetaCls, metacls).__new__(metacls, name, bases, clsdict)
 		if name != metacls.ModuleToDelete:
 			mod = __import__(new_type.__module__, globals(), locals(), new_type.__module__)
-			delattr(mod, metacls.ModuleToDelete)
+			try:
+				delattr(mod, metacls.ModuleToDelete)
+			except AttributeError:
+				pass
+			#END skip case that people import our base without actually using it
 		#END handle deletion
 		return new_type
 	

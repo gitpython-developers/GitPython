@@ -70,7 +70,8 @@ class TestDBBase(TestBase):
 		each test type has its own repository
 		"""
 		if cls.needs_ro_repo:
-			assert cls.RepoCls is not None, "RepoCls class member must be set"
+			if cls is not TestDBBase:
+				assert cls.RepoCls is not None, "RepoCls class member must be set in %s" % cls
 			cls.rorepo = cls.RepoCls(rorepo_dir())
 		#END handle rorepo
 	
