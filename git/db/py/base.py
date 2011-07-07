@@ -131,44 +131,33 @@ class PureCompoundDB(CompoundDB, PureObjectDBR, LazyMixin, CachingDB):
 	def _set_cache_(self, attr):
 		if attr == '_dbs':
 			self._dbs = list()
-		elif attr == '_obj_cache':
-			self._obj_cache = dict()
 		else:
 			super(PureCompoundDB, self)._set_cache_(attr)
-	
-	def _db_query(self, sha):
-		""":return: database containing the given 20 byte sha
-		:raise BadObject:"""
-		# most databases use binary representations, prevent converting 
-		# it everytime a database is being queried
-		try:
-			return self._obj_cache[sha]
-		except KeyError:
-			pass
-		# END first level cache
-		
-		for db in self._dbs:
-			if db.has_object(sha):
-				self._obj_cache[sha] = db
-				return db
-		# END for each database
-		raise BadObject(sha)
 	
 	#{ PureObjectDBR interface 
 	
 	def has_object(self, sha):
-		try:
-			self._db_query(sha)
-			return True
-		except BadObject:
-			return False
-		# END handle exceptions
+		for db in self._dbs:
+			if db.has_object(sha):
+				return True
+		#END for each db
+		return False
 		
 	def info(self, sha):
-		return self._db_query(sha).info(sha)
+		for db in self._dbs:
+			try:
+				return db.info(sha)
+			except BadObject:
+				pass
+		#END for each db
 		
 	def stream(self, sha):
-		return self._db_query(sha).stream(sha)
+		for db in self._dbs:
+			try:
+				return db.stream(sha)
+			except BadObject:
+				pass
+		#END for each db
 
 	def size(self):
 		return reduce(lambda x,y: x+y, (db.size() for db in self._dbs), 0)
@@ -185,7 +174,6 @@ class PureCompoundDB(CompoundDB, PureObjectDBR, LazyMixin, CachingDB):
 
 	def update_cache(self, force=False):
 		# something might have changed, clear everything
-		self._obj_cache.clear()
 		stat = False
 		for db in self._dbs:
 			if isinstance(db, CachingDB):
