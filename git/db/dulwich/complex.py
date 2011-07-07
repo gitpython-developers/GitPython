@@ -26,7 +26,12 @@ class DulwichGitODB(PureGitODB):
 	def __init__(self, objects_root):
 		"""Initalize this instance"""
 		PureGitODB.__init__(self, objects_root)
-		self._dw_repo = DulwichRepo(self.working_dir)
+		if hasattr(self, 'working_dir'):
+			wd = self.working_dir
+		else:
+			wd = os.path.dirname(os.path.dirname(objects_root))
+		#END try to figure out good entry for dulwich, which doesn't do an extensive search
+		self._dw_repo = DulwichRepo(wd)
 		
 	def __getattr__(self, attr):
 		try:
