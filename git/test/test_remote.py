@@ -21,6 +21,8 @@ from git.refs import (
 						SymbolicReference
 					)
 
+from nose import SkipTest
+
 import tempfile
 import shutil
 import os
@@ -352,7 +354,13 @@ class TestRemote(TestBase):
 		# the same repository
 		TagReference.delete(rw_repo, new_tag, other_tag)
 		remote.push(":%s" % other_tag.path)
+
+	def test_todo(self):
+		# If you see this, plesase remind yourself, that all this needs to be run
+		# per repository type !
+		raise SkipTest("todo")
 	
+
 	@with_rw_and_rw_remote_repo('0.1.6')
 	def test_base(self, rw_repo, remote_repo):
 		num_remotes = 0

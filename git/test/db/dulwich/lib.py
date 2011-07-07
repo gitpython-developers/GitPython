@@ -1,6 +1,11 @@
 """dulwich specific utilities, as well as all the default ones"""
 
-from git.test.lib import *
+from git.test.lib import (
+							InheritedTestMethodsOverrideWrapperMetaClsAutoMixin,
+							needs_module_or_skip
+						)
+
+__all__ = ['needs_dulwich_or_skip', 'DulwichRequiredMetaMixin']
 
 #{ Decoorators
 

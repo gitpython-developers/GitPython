@@ -104,7 +104,6 @@ class PureRootPathDB(RootPathDB):
 		super(PureRootPathDB, self).__init__(root_path)
 		
 		
-		
 	#{ Interface 
 	def root_path(self):
 		return self._root_path
@@ -233,7 +232,7 @@ class PureCompoundDB(CompoundDB, PureObjectDBR, LazyMixin, CachingDB):
 		
 class PureRepositoryPathsMixin(RepositoryPathsMixin):
 	# slots has no effect here, its just to keep track of used attrs
-	__slots__  = ("_git_path", '_bare')
+	__slots__  = ("_git_path", '_bare', '_working_tree_dir')
 	
 	#{ Configuration 
 	repo_dir = '.git'
@@ -272,14 +271,16 @@ class PureRepositoryPathsMixin(RepositoryPathsMixin):
 			raise InvalidGitRepositoryError(epath)
 		# END path not found
 
-		self._bare = self._git_path.endswith(self.repo_dir)
+		self._bare = self._working_tree_dir is None
 		if hasattr(self, 'config_reader'):
 			try:
 				self._bare = self.config_reader("repository").getboolean('core','bare') 
 			except Exception:
 				# lets not assume the option exists, although it should
 				pass
+			#END handle exception
 		#END check bare flag
+		self._working_tree_dir = self._bare and None or self._working_tree_dir
 		
 	#} end subclass interface
 	
@@ -313,7 +314,7 @@ class PureRepositoryPathsMixin(RepositoryPathsMixin):
 		
 	@property
 	def working_tree_dir(self):
-		if self.is_bare:
+		if self._working_tree_dir is None:
 			raise AssertionError("Repository at %s is bare and does not have a working tree directory" % self.git_dir)
 		#END assertion
 		return dirname(self.git_dir)
@@ -353,6 +354,10 @@ class PureConfigurationMixin(ConfigurationMixin):
 	system_config_file_name = "gitconfig"
 	repo_config_file_name = "config"
 	#} END
+	
+	def __new__(cls, *args, **kwargs):
+		"""This is just a stupid workaround for the evil py2.6 change which makes mixins quite impossible"""
+		return super(PureConfigurationMixin, cls).__new__(cls, *args, **kwargs)
 	
 	def __init__(self, *args, **kwargs):
 		"""Verify prereqs"""
@@ -421,7 +426,11 @@ class PureAlternatesFileMixin(object):
 	#} END configuration
 	
 	def __init__(self, *args, **kwargs):
-		super(PureAlternatesFileMixin, self).__init__(*args, **kwargs)
+		try:
+			super(PureAlternatesFileMixin, self).__init__(*args, **kwargs)
+		except TypeError:
+			pass
+		#END handle py2.6 code breaking changes
 		self._alternates_path()	# throws on incompatible type
 	
 	#{ Interface 

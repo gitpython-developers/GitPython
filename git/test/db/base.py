@@ -613,8 +613,14 @@ class RepoBase(TestDBBase):
 	def test_submodule_update(self, rwrepo):
 		# fails in bare mode
 		rwrepo._bare = True
+		# special handling: there are repo implementations which have a bare attribute. IN that case, set it directly
+		if not rwrepo.bare:
+			rwrepo.bare = True
 		self.failUnlessRaises(InvalidGitRepositoryError, rwrepo.submodule_update)
 		rwrepo._bare = False
+		if rwrepo.bare:
+			rwrepo.bare = False
+		#END special repo handling
 		
 		# test create submodule
 		sm = rwrepo.submodules[0]
