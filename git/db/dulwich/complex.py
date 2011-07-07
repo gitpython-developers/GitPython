@@ -17,6 +17,10 @@ from git.db.compat import RepoCompatibilityInterfaceNoBare
 #from git.db.interface import ObjectDBW, ObjectDBR
 from dulwich.repo import Repo as DulwichRepo
 
+from git.base import OInfo, OStream
+from git.fun import type_id_to_type_map 
+
+from cStringIO import StringIO 
 import os
 
 
@@ -41,6 +45,18 @@ class DulwichGitODB(PureGitODB):
 			# now assume its on the dulwich repository ... for now
 			return getattr(self._dw_repo, attr)
 		#END handle attr
+		
+	#{ Object DBR
+	
+	def info(self, binsha):
+		type_id, uncomp_data = self._dw_repo.object_store.get_raw(binsha) 
+		return OInfo(binsha, type_id_to_type_map[type_id], len(uncomp_data))
+	
+	def stream(self, binsha):
+		type_id, uncomp_data = self._dw_repo.object_store.get_raw(binsha)
+		return OStream(binsha, type_id_to_type_map[type_id], len(uncomp_data), StringIO(uncomp_data))
+	
+	#}END object dbr
 		
 		
 class DulwichGitDB(		PureRepositoryPathsMixin, PureConfigurationMixin, 
