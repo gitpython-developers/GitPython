@@ -601,12 +601,12 @@ class RepoBase(TestDBBase):
 		self.failUnlessRaises(NotImplementedError, rev_parse, "@{1 week ago}")
 		
 	def test_submodules(self):
-		assert len(self.rorepo.submodules) == 1		# non-recursive
+		assert len(self.rorepo.submodules) == 2		# non-recursive
 		# in previous configurations, we had recursive repositories so this would compare to 2
-		# now there is only one left, as gitdb was merged
-		assert len(list(self.rorepo.iter_submodules())) == 1
+		# now there is only one left, as gitdb was merged, but we have smmap instead
+		assert len(list(self.rorepo.iter_submodules())) == 2
 		
-		assert isinstance(self.rorepo.submodule("git/ext/async"), Submodule)
+		assert isinstance(self.rorepo.submodule("async"), Submodule)
 		self.failUnlessRaises(ValueError, self.rorepo.submodule, "doesn't exist")
 		
 	@with_rw_repo('HEAD', bare=False)

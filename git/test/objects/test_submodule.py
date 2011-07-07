@@ -284,7 +284,9 @@ class TestSubmodule(TestObjectBase):
 			
 			# make sure sub-submodule is not modified by forcing it to update
 			# to the revision it is supposed to point to.
-			csm.update()
+			for subitem in sm.traverse():
+				subitem.update()
+			#END checkout to right commit
 			
 			# this would work
 			assert sm.remove(dry_run=True) is sm
