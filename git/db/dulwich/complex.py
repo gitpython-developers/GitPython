@@ -16,9 +16,10 @@ from git.db.compat import RepoCompatibilityInterfaceNoBare
 
 #from git.db.interface import ObjectDBW, ObjectDBR
 from dulwich.repo import Repo as DulwichRepo
+from dulwich.objects import ShaFile
 
 from git.base import OInfo, OStream
-from git.fun import type_id_to_type_map 
+from git.fun import type_id_to_type_map, type_to_type_id_map 
 
 from cStringIO import StringIO 
 import os
@@ -57,7 +58,16 @@ class DulwichGitODB(PureGitODB):
 		return OStream(binsha, type_id_to_type_map[type_id], len(uncomp_data), StringIO(uncomp_data))
 	
 	#}END object dbr
+	
+	#{ Object DBW
+	
+	def store(self, istream):
+		obj = ShaFile.from_raw_string(type_to_type_id_map[istream.type], istream.read())
+		self._dw_repo.object_store.add_object(obj)
+		istream.binsha = obj.sha().digest()
+		return istream
 		
+	#}END object dbw
 		
 class DulwichGitDB(		PureRepositoryPathsMixin, PureConfigurationMixin, 
 						PureReferencesMixin, PureSubmoduleDB, 
