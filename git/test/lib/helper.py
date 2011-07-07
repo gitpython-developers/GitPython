@@ -12,6 +12,9 @@ import tempfile
 import shutil
 import cStringIO
 
+import warnings
+from nose import SkipTest
+
 from base import (
 					maketemp,
 					rorepo_dir
@@ -19,8 +22,9 @@ from base import (
 
 
 __all__ = (
-			'StringProcessAdapter', 'GlobalsItemDeletorMetaCls', 
-			'with_rw_repo', 'with_rw_and_rw_remote_repo', 'TestBase', 'TestCase', 
+			'StringProcessAdapter', 'GlobalsItemDeletorMetaCls', 'InheritedTestMethodsOverrideWrapperInstanceDecorator',
+			'InheritedTestMethodsOverrideWrapperMetaClsAutoMixin',
+			'with_rw_repo', 'with_rw_and_rw_remote_repo', 'TestBase', 'TestCase', 'needs_module_or_skip' 
 		)
 
 
@@ -191,6 +195,27 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
 	
 	return argument_passer
 	
+def needs_module_or_skip(module):
+	"""Decorator to be used for test cases only.
+	Print a warning if the given module could not be imported, and skip the test.
+	Otherwise run the test as usual
+	:param module: the name of the module to skip"""
+	def argpasser(func):
+		def wrapper(self, *args, **kwargs):
+			try:
+				__import__(module)
+			except ImportError:
+				msg = "Module %r is required to run this test - skipping" % module
+				warnings.warn(msg)
+				raise SkipTest(msg)
+			#END check import
+			return func(self, *args, **kwargs)
+		#END wrapper
+		wrapper.__name__ = func.__name__
+		return wrapper
+	#END argpasser
+	return argpasser
+	
 #} END decorators
 
 #{ Meta Classes
@@ -214,6 +239,71 @@ class GlobalsItemDeletorMetaCls(type):
 			#END skip case that people import our base without actually using it
 		#END handle deletion
 		return new_type
+
+
+class InheritedTestMethodsOverrideWrapperInstanceDecorator(object):
+	"""Utility to wrap all inherited methods into a given decorator and set up new
+	overridden methods on our actual type. This allows to adjust tests which are inherited
+	by our parent type, automatically. The decorator set in a derived type should 
+	do what it has to do, possibly skipping the test if some prerequesites are not met.
+	
+	To use it, instatiate it and use it as a wrapper for the __new__ function of your metacls, as in
+	
+	__new__ = @InheritedTestMethodsOverrideWrapperInstanceDecorator(mydecorator)(MyMetaclsBase.__new__)"""
+	
+	
+	def __init__(self, decorator):
+		self.decorator = decorator
+	
+	def _patch_methods_recursive(self, bases, clsdict):
+		"""depth-first patching of methods"""
+		for base in bases:
+			self._patch_methods_recursive(base.__bases__, clsdict)
+			for name, item in base.__dict__.iteritems():
+				if not name.startswith('test_'):
+					continue
+				#END skip non-tests
+				clsdict[name] = self.decorator(item)
+			#END for each item
+		#END for each base
+		
+	def __call__(self, func):
+		def wrapper(metacls, name, bases, clsdict):
+			self._patch_methods_recursive(bases, clsdict)
+			return func(metacls, name, bases, clsdict)
+		#END wrapper
+		assert func.__name__ == '__new__', "Can only wrap __new__ function of metaclasses"
+		wrapper.__name__ = func.__name__
+		return wrapper
+
+		
+		
+class InheritedTestMethodsOverrideWrapperMetaClsAutoMixin(object):
+	"""Automatically picks up the actual metaclass of the the type to be created, 
+	that is the one inherited by one of the bases, and patch up its __new__ to use
+	the InheritedTestMethodsOverrideWrapperInstanceDecorator with our configured decorator"""
+	
+	#{ Configuration
+	# decorator function to use when wrapping the inherited methods. Put it into a list as first member
+	# to hide it from being created as class method
+	decorator = []
+	#}END configuration
+	
+	@classmethod
+	def _find_metacls(metacls, bases):
+		"""emulate pythons lookup"""
+		mcls_attr = '__metaclass__'
+		for base in bases:
+			if hasattr(base, mcls_attr):
+				return getattr(base, mcls_attr)
+			return metacls._find_metacls(base.__bases__)
+		#END for each base
+		raise AssertionError("base class had not metaclass attached")
+	
+	def __new__(metacls, name, bases, clsdict):
+		assert metacls.decorator, "'decorator' member needs to be set in subclass"
+		base_metacls = metacls._find_metacls(bases)
+		return InheritedTestMethodsOverrideWrapperInstanceDecorator(metacls.decorator[0])(base_metacls.__new__)(base_metacls, name, bases, clsdict)
 	
 #} END meta classes
 	
