@@ -601,20 +601,26 @@ class RepoBase(TestDBBase):
 		self.failUnlessRaises(NotImplementedError, rev_parse, "@{1 week ago}")
 		
 	def test_submodules(self):
-		assert len(self.rorepo.submodules) == 1		# non-recursive
+		assert len(self.rorepo.submodules) == 2		# non-recursive
 		# in previous configurations, we had recursive repositories so this would compare to 2
-		# now there is only one left, as gitdb was merged
-		assert len(list(self.rorepo.iter_submodules())) == 1
+		# now there is only one left, as gitdb was merged, but we have smmap instead
+		assert len(list(self.rorepo.iter_submodules())) == 2
 		
-		assert isinstance(self.rorepo.submodule("git/ext/async"), Submodule)
+		assert isinstance(self.rorepo.submodule("async"), Submodule)
 		self.failUnlessRaises(ValueError, self.rorepo.submodule, "doesn't exist")
 		
 	@with_rw_repo('HEAD', bare=False)
 	def test_submodule_update(self, rwrepo):
 		# fails in bare mode
 		rwrepo._bare = True
+		# special handling: there are repo implementations which have a bare attribute. IN that case, set it directly
+		if not rwrepo.bare:
+			rwrepo.bare = True
 		self.failUnlessRaises(InvalidGitRepositoryError, rwrepo.submodule_update)
 		rwrepo._bare = False
+		if rwrepo.bare:
+			rwrepo.bare = False
+		#END special repo handling
 		
 		# test create submodule
 		sm = rwrepo.submodules[0]

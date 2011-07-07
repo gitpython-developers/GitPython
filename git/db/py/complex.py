@@ -22,17 +22,7 @@ from submodule import PureSubmoduleDB
 
 from git.db.compat import RepoCompatibilityInterface
 
-from git.util import (
-						LazyMixin, 
-						normpath,
-						join,
-						dirname
-					)
-from git.exc import (
-						InvalidDBRoot, 
-						BadObject, 
-						AmbiguousObjectName
-						)
+from git.exc import InvalidDBRoot
 import os
 
 __all__ = ('PureGitODB', 'PurePartialGitDB', 'PureCompatibilityGitDB')
@@ -106,7 +96,8 @@ class PureGitODB(PureRootPathDB, PureObjectDBW, PureCompoundDB, PureAlternatesFi
 class PurePartialGitDB(PureGitODB, 
 				PureRepositoryPathsMixin, PureConfigurationMixin, 
 				PureReferencesMixin, PureSubmoduleDB, 
-				PureIndexDB, PureTransportDB
+				PureIndexDB, 
+				PureTransportDB # not fully implemented
 				# HighLevelRepository  Currently not implemented !
 				):
 	"""Git like database with support for object lookup as well as reference resolution.
@@ -120,7 +111,6 @@ class PurePartialGitDB(PureGitODB,
 		"""Initialize ourselves on the .git directory, or the .git/objects directory."""
 		PureRepositoryPathsMixin._initialize(self, root_path)
 		super(PurePartialGitDB, self).__init__(self.objects_dir)
-	
 	
 	
 class PureCompatibilityGitDB(PurePartialGitDB, RepoCompatibilityInterface):

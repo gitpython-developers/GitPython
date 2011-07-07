@@ -361,7 +361,3 @@ class PureReferencesMixin(ReferencesMixin):
 	def delete_tag(self, *tags):
 		return self.TagReferenceCls.delete(self, *tags)
 		
-		
-	# compat
-	branches = heads
-	refs = references

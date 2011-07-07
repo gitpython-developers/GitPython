@@ -561,16 +561,8 @@ class ReferencesMixin(object):
 		raise NotImplementedError()
 		
 	#}END edit methods
-		
-	#{ Backward Compatability
-	# These aliases need to be provided by the implementing interface as well
-	refs = references
-	branches = heads
-	#} END backward compatability
-		
-		
-	
-		
+
+
 class RepositoryPathsMixin(object):
 	"""Represents basic functionality of a full git repository. This involves an 
 	optional working tree, a git directory with references and an object directory.

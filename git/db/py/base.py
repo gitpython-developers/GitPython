@@ -104,7 +104,6 @@ class PureRootPathDB(RootPathDB):
 		super(PureRootPathDB, self).__init__(root_path)
 		
 		
-		
 	#{ Interface 
 	def root_path(self):
 		return self._root_path
@@ -132,44 +131,33 @@ class PureCompoundDB(CompoundDB, PureObjectDBR, LazyMixin, CachingDB):
 	def _set_cache_(self, attr):
 		if attr == '_dbs':
 			self._dbs = list()
-		elif attr == '_obj_cache':
-			self._obj_cache = dict()
 		else:
 			super(PureCompoundDB, self)._set_cache_(attr)
-	
-	def _db_query(self, sha):
-		""":return: database containing the given 20 byte sha
-		:raise BadObject:"""
-		# most databases use binary representations, prevent converting 
-		# it everytime a database is being queried
-		try:
-			return self._obj_cache[sha]
-		except KeyError:
-			pass
-		# END first level cache
-		
-		for db in self._dbs:
-			if db.has_object(sha):
-				self._obj_cache[sha] = db
-				return db
-		# END for each database
-		raise BadObject(sha)
 	
 	#{ PureObjectDBR interface 
 	
 	def has_object(self, sha):
-		try:
-			self._db_query(sha)
-			return True
-		except BadObject:
-			return False
-		# END handle exceptions
+		for db in self._dbs:
+			if db.has_object(sha):
+				return True
+		#END for each db
+		return False
 		
 	def info(self, sha):
-		return self._db_query(sha).info(sha)
+		for db in self._dbs:
+			try:
+				return db.info(sha)
+			except BadObject:
+				pass
+		#END for each db
 		
 	def stream(self, sha):
-		return self._db_query(sha).stream(sha)
+		for db in self._dbs:
+			try:
+				return db.stream(sha)
+			except BadObject:
+				pass
+		#END for each db
 
 	def size(self):
 		return reduce(lambda x,y: x+y, (db.size() for db in self._dbs), 0)
@@ -186,7 +174,6 @@ class PureCompoundDB(CompoundDB, PureObjectDBR, LazyMixin, CachingDB):
 
 	def update_cache(self, force=False):
 		# something might have changed, clear everything
-		self._obj_cache.clear()
 		stat = False
 		for db in self._dbs:
 			if isinstance(db, CachingDB):
@@ -233,7 +220,7 @@ class PureCompoundDB(CompoundDB, PureObjectDBR, LazyMixin, CachingDB):
 		
 class PureRepositoryPathsMixin(RepositoryPathsMixin):
 	# slots has no effect here, its just to keep track of used attrs
-	__slots__  = ("_git_path", '_bare')
+	__slots__  = ("_git_path", '_bare', '_working_tree_dir')
 	
 	#{ Configuration 
 	repo_dir = '.git'
@@ -272,14 +259,16 @@ class PureRepositoryPathsMixin(RepositoryPathsMixin):
 			raise InvalidGitRepositoryError(epath)
 		# END path not found
 
-		self._bare = self._git_path.endswith(self.repo_dir)
+		self._bare = self._working_tree_dir is None
 		if hasattr(self, 'config_reader'):
 			try:
 				self._bare = self.config_reader("repository").getboolean('core','bare') 
 			except Exception:
 				# lets not assume the option exists, although it should
 				pass
+			#END handle exception
 		#END check bare flag
+		self._working_tree_dir = self._bare and None or self._working_tree_dir
 		
 	#} end subclass interface
 	
@@ -313,7 +302,7 @@ class PureRepositoryPathsMixin(RepositoryPathsMixin):
 		
 	@property
 	def working_tree_dir(self):
-		if self.is_bare:
+		if self._working_tree_dir is None:
 			raise AssertionError("Repository at %s is bare and does not have a working tree directory" % self.git_dir)
 		#END assertion
 		return dirname(self.git_dir)
@@ -353,6 +342,10 @@ class PureConfigurationMixin(ConfigurationMixin):
 	system_config_file_name = "gitconfig"
 	repo_config_file_name = "config"
 	#} END
+	
+	def __new__(cls, *args, **kwargs):
+		"""This is just a stupid workaround for the evil py2.6 change which makes mixins quite impossible"""
+		return super(PureConfigurationMixin, cls).__new__(cls, *args, **kwargs)
 	
 	def __init__(self, *args, **kwargs):
 		"""Verify prereqs"""
@@ -421,7 +414,11 @@ class PureAlternatesFileMixin(object):
 	#} END configuration
 	
 	def __init__(self, *args, **kwargs):
-		super(PureAlternatesFileMixin, self).__init__(*args, **kwargs)
+		try:
+			super(PureAlternatesFileMixin, self).__init__(*args, **kwargs)
+		except TypeError:
+			pass
+		#END handle py2.6 code breaking changes
 		self._alternates_path()	# throws on incompatible type
 	
 	#{ Interface 
