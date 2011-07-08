@@ -7,7 +7,7 @@ except ImportError:
 from git.test.db.dulwich.lib import DulwichRequiredMetaMixin
 from odb_impl import TestObjDBPerformanceBase
 
-class TestPureDB(TestObjDBPerformanceBase):
+class TestDulwichDB(TestObjDBPerformanceBase):
 	__metaclass__ = DulwichRequiredMetaMixin
 	RepoCls = DulwichCompatibilityGitDB
 	

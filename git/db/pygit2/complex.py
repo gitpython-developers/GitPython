@@ -17,7 +17,8 @@ from git.db.compat import RepoCompatibilityInterface
 from pygit2 import Repository as Pygit2Repo
 
 from git.base import OInfo, OStream
-from git.fun import type_id_to_type_map, type_to_type_id_map 
+from git.fun import type_id_to_type_map, type_to_type_id_map
+from git.util import hex_to_bin
 
 from cStringIO import StringIO 
 import os
@@ -49,23 +50,25 @@ class Pygit2GitODB(PureGitODB):
 		
 	#{ Object DBR
 	
-	# def info(self, binsha):
-		# type_id, uncomp_data = self._py2_repo.object_store.get_raw(binsha) 
-		# return OInfo(binsha, type_id_to_type_map[type_id], len(uncomp_data))
-	# 
-	# def stream(self, binsha):
-		# type_id, uncomp_data = self._py2_repo.object_store.get_raw(binsha)
-		# return OStream(binsha, type_id_to_type_map[type_id], len(uncomp_data), StringIO(uncomp_data))
-	# 
+	def info(self, binsha):
+		type_id, uncomp_data = self._py2_repo.read(binsha) 
+		return OInfo(binsha, type_id_to_type_map[type_id], len(uncomp_data))
+	 
+	def stream(self, binsha):
+		type_id, uncomp_data = self._py2_repo.read(binsha)
+		return OStream(binsha, type_id_to_type_map[type_id], len(uncomp_data), StringIO(uncomp_data))
+	 
 	# #}END object dbr
 	# 
 	# #{ Object DBW
-	# 
-	# def store(self, istream):
-		# obj = ShaFile.from_raw_string(type_to_type_id_map[istream.type], istream.read())
-		# self._py2_repo.object_store.add_object(obj)
-		# istream.binsha = obj.sha().digest()
-		# return istream
+	def store(self, istream):
+		# TODO: remove this check once the required functionality was merged in pygit2
+		if hasattr(self._py2_repo, 'write'):
+			istream.binsha = hex_to_bin(self._py2_repo.write(type_to_type_id_map[istream.type], istream.read()))
+			return istream
+		else:
+			return super(Pygit2GitODB, self).store(istream)
+		#END handle write support
 		
 	#}END object dbw
 		

@@ -1,13 +1,13 @@
 try:
-	from git.db.dulwich.complex import DulwichCompatibilityGitDB
+	from git.db.pygit2.complex import Pygit2CompatibilityGitDB
 except ImportError:
-	from git.db.complex import PureCompatibilityGitDB as DulwichCompatibilityGitDB
-#END handle dulwich compatibility
+	from git.db.complex import PureCompatibilityGitDB as Pygit2CompatibilityGitDB
+#END handle pygit2 compatibility
 
-from git.test.db.dulwich.lib import DulwichRequiredMetaMixin
+from git.test.db.pygit2.lib import Pygit2RequiredMetaMixin
 from odb_impl import TestObjDBPerformanceBase
 
-class TestPureDB(TestObjDBPerformanceBase):
-	__metaclass__ = DulwichRequiredMetaMixin
-	RepoCls = DulwichCompatibilityGitDB
+class TestPygit2DB(TestObjDBPerformanceBase):
+	__metaclass__ = Pygit2RequiredMetaMixin
+	RepoCls = Pygit2CompatibilityGitDB
 	
