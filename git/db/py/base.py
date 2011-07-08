@@ -108,7 +108,9 @@ class PureRootPathDB(RootPathDB):
 	def root_path(self):
 		return self._root_path
 	
-	def db_path(self, rela_path):
+	def db_path(self, rela_path=None):
+		if not rela_path:
+			return self._root_path
 		return join(self._root_path, rela_path)
 	#} END interface
 		
