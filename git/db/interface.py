@@ -164,7 +164,9 @@ class RootPathDB(object):
 	def db_path(self, rela_path):
 		"""
 		:return: the given relative path relative to our database root, allowing 
-			to pontentially access datafiles"""
+			to pontentially access datafiles
+		:param rela_path: if not None or '', the relative path will be appended 
+			to the database root path. Otherwise you will obtain the database root path itself"""
 		raise NotImplementedError()
 	#} END interface
 		
