@@ -701,6 +701,9 @@ class CmdHighLevelRepository(HighLevelRepository):
 				if len(digits) == 3:
 					info = {'id': firstpart}
 					blames.append([None, []])
+				elif info['id'] != firstpart:
+					info = {'id': firstpart}
+					blames.append([commits.get(firstpart), []])
 				# END blame data initialization
 			else:
 				m = self.re_author_committer_start.search(firstpart)
@@ -747,8 +750,8 @@ class CmdHighLevelRepository(HighLevelRepository):
 							m = self.re_tab_full_line.search(line)
 							text,  = m.groups()
 							blames[-1][0] = c
-							blames[-1][1].append( text )
-							info = None
+							blames[-1][1].append(text)
+							info = { 'id' : sha }
 						# END if we collected commit info
 					# END distinguish filename,summary,rest
 				# END distinguish author|committer vs filename,summary,rest
