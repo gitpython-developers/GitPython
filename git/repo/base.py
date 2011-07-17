@@ -570,11 +570,14 @@ class Repo(object):
 			if self.re_hexsha_only.search(firstpart):
 				# handles 
 				# 634396b2f541a9f2d58b00be1a07f0c358b999b3 1 1 7		- indicates blame-data start
-				# 634396b2f541a9f2d58b00be1a07f0c358b999b3 2 2
+				# 634396b2f541a9f2d58b00be1a07f0c358b999b3 2 2			- indicates another line of blame with the same data
 				digits = parts[-1].split(" ")
 				if len(digits) == 3:
 					info = {'id': firstpart}
 					blames.append([None, []])
+				elif info['id'] != firstpart:
+					info = {'id': firstpart}
+					blames.append([commits.get(firstpart), []])
 				# END blame data initialization
 			else:
 				m = self.re_author_committer_start.search(firstpart)
@@ -622,7 +625,7 @@ class Repo(object):
 							text,  = m.groups()
 							blames[-1][0] = c
 							blames[-1][1].append( text )
-							info = None
+							info = {'id': sha}
 						# END if we collected commit info
 					# END distinguish filename,summary,rest
 				# END distinguish author|committer vs filename,summary,rest
