@@ -276,7 +276,7 @@ class TestRepo(TestBase):
 			c += 1
 			b = self.rorepo.blame(self.rorepo.head, item.path)
 		#END for each item to traverse
-		assert b
+		assert c
 		
 	def test_untracked_files(self):
 		base = self.rorepo.working_tree_dir
