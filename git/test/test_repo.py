@@ -269,6 +269,15 @@ class TestRepo(TestBase):
 		assert_true( isinstance( tlist[0], basestring ) )
 		assert_true( len( tlist ) < sum( len(t) for t in tlist ) )				 # test for single-char bug
 		
+	def test_blame_real(self):
+		c = 0
+		for item in self.rorepo.head.commit.tree.traverse(
+					predicate=lambda i, d: i.type == 'blob' and i.path.endswith('.py')):
+			c += 1
+			b = self.rorepo.blame(self.rorepo.head, item.path)
+		#END for each item to traverse
+		assert b
+		
 	def test_untracked_files(self):
 		base = self.rorepo.working_tree_dir
 		files = (	join_path_native(base, "__test_myfile"), 
