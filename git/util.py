@@ -20,7 +20,9 @@ from smmap import (
 					SlidingWindowMapManager,
 					SlidingWindowMapBuffer
 				)
-
+# Import the user database on unix based systems
+if os.name == "posix":
+    import pwd
 
 
 __all__ = ( "stream_copy", "join_path", "to_native_path_windows", "to_native_path_linux", 
@@ -144,12 +146,17 @@ class _RandomAccessStringIO(object):
 
 def get_user_id():
 	""":return: string identifying the currently active system user as name@node
-	:note: user can be set with the 'USER' environment variable, usually set on windows"""
-	ukn = 'UNKNOWN'
-	username = os.environ.get('USER', os.environ.get('USERNAME', ukn))
-	if username == ukn and hasattr(os, 'getlogin'):
-		username = os.getlogin()
-	# END get username from login
+	:note: user can be set with the 'USER' environment variable, usually set on windows
+	:note: on unix based systems you can use the password database
+	to get the login name of the effective process user"""
+        if os.name == "posix":
+                username = pwd.getpwuid(os.geteuid()).pw_name
+        else:
+	        ukn = 'UNKNOWN'
+	        username = os.environ.get('USER', os.environ.get('USERNAME', ukn))
+	        if username == ukn and hasattr(os, 'getlogin'):
+		        username = os.getlogin()
+	        # END get username from login
 	return "%s@%s" % (username, platform.node())
 
 def is_git_dir(d):
