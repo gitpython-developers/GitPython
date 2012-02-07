@@ -245,6 +245,8 @@ class GitConfigParser(cp.RawConfigParser, object):
 							if pos != -1 and optval[pos-1].isspace():
 								optval = optval[:pos]
 						optval = optval.strip()
+						optval = optval.replace(r'\\', r'\') # Replace escaped backslashes
+						optval = optval.replace(r'\"', r'"') # Replace escaped quotes
 						if optval == '""':
 							optval = ''
 						optname = self.optionxform(optname.rstrip())
@@ -303,7 +305,10 @@ class GitConfigParser(cp.RawConfigParser, object):
 			fp.write("[%s]\n" % name)
 			for (key, value) in section_dict.items():
 				if key != "__name__":
-					fp.write("\t%s = %s\n" % (key, str(value).replace('\n', '\n\t')))
+					escaped_value = str(value).replace('\n', '\n\t')
+					escaped_value = escaped_value.replace(r'\', r'\\') # Escape backslahes
+					escaped_value = escaped_value.replace(r'"', r'\"') # Escape quotes
+					fp.write("\t%s = %s\n" % (key, escaped_value))
 				# END if key is not __name__
 		# END section writing 
 		
