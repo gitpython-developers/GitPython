@@ -254,8 +254,13 @@ class GitConfigParser(cp.RawConfigParser, object):
 							if not escaped and c == '"':
 								in_quote = not in_quote
 							else:
-								escaped = (c == '\\')
+								escaped = (c == '\\') and not escaped
 								unquoted_optval += c
+						
+						if in_quote:
+							if not e:
+								e = cp.ParsingError(fpname)
+							e.append(lineno, repr(line))
 						
 						optval = unquoted_optval
 						
