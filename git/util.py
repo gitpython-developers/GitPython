@@ -147,8 +147,8 @@ def get_user_id():
 	:note: user can be set with the 'USER' environment variable, usually set on windows"""
 	ukn = 'UNKNOWN'
 	username = os.environ.get('USER', os.environ.get('USERNAME', ukn))
-	if username == ukn and hasattr(os, 'getlogin'):
-		username = os.getlogin()
+	if username == ukn and hasattr(os, 'getuid'):
+		username = pwd.getpwuid(os.getuid())[0]
 	# END get username from login
 	return "%s@%s" % (username, platform.node())
 
