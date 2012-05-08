@@ -87,6 +87,8 @@ class Git(LazyMixin):
             # try to kill it
             try:
                 os.kill(self.proc.pid, 2)   # interrupt signal
+            except OSError:
+                pass # ignore error when process already died
             except AttributeError:
                 # try windows 
                 # for some reason, providing None for stdout/stderr still prints something. This is why 
