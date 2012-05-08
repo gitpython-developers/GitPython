@@ -73,6 +73,9 @@ class Git(LazyMixin):
             self.args = args
             
         def __del__(self):
+            self.proc.stdout.close()
+            self.proc.stderr.close()
+
             # did the process finish already so we have a return code ?
             if self.proc.poll() is not None:
                 return
@@ -100,6 +103,8 @@ class Git(LazyMixin):
             
             :raise GitCommandError: if the return status is not 0"""
             status = self.proc.wait()
+            self.proc.stdout.close()
+            self.proc.stderr.close()
             if status != 0:
                 raise GitCommandError(self.args, status, self.proc.stderr.read())
             # END status handling 
