@@ -101,4 +101,28 @@ class TestConfig(TestBase):
         # it raises if there is no default though
         self.failUnlessRaises(NoSectionError, r_config.get_value, "doesnt", "exist")
         
-        
+    def test_values(self):
+        file_obj = self._to_memcache(fixture_path("git_config_values"))
+        w_config = GitConfigParser(file_obj, read_only = False)
+        w_config.write() # enforce writing
+        orig_value = file_obj.getvalue()
+
+        # Reading must unescape backslashes
+        backslash = w_config.get('values', 'backslash')
+        assert backslash == r'some\data'
+
+        # Reading must unescape quotes
+        quote = w_config.get('values', 'quote')
+        assert quote == 'this is a "quoted value"'
+
+        # Reading must remove surrounding quotes
+        quoted = w_config.get('values', 'quoted')
+        assert quoted == 'all your "quotes" are belong to us'
+
+        # Writing must escape backslashes and quotes
+        w_config.set('values', 'backslash', backslash)
+        w_config.set('values', 'quote', quote)
+        w_config.write() # enforce writing
+
+        # Contents shouldn't differ
+        assert file_obj.getvalue() == orig_value
