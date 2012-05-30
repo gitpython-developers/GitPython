@@ -1,0 +1,4 @@
+[values]
+	backslash = some\\data
+	quote = this is a \"quoted value\"
+	quoted = "all" "your \"quotes\" a"re bel"ong to """"us"
