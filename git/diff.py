@@ -310,12 +310,11 @@ class Diff(object):
 	@classmethod
 	def _index_from_raw_format(cls, repo, stream):
 		"""Create a new DiffIndex from the given stream which must be in raw format.
-		:note: 
-			This format is inherently incapable of detecting renames, hence we only 
-			modify, delete and add files
 		:return: git.DiffIndex"""
 		# handles 
 		# :100644 100644 6870991011cc8d9853a7a8a6f02061512c6a8190 37c5e30c879213e9ae83b21e9d11e55fc20c54b7 M	.gitignore
+		# or
+		# :100644 100644 4aab7ea753e2867dd464f2a50dd266d426ddc8c8 4aab7ea753e2867dd464f2a50dd266d426ddc8c8 R100 src/bootstrap/package.json	package.json
 		index = DiffIndex()
 		for line in stream:
 			if not line.startswith(":"):
@@ -323,8 +322,12 @@ class Diff(object):
 			# END its not a valid diff line
 			old_mode, new_mode, a_blob_id, b_blob_id, change_type, path = line[1:].split(None, 5)
 			path = path.strip()
-			a_path = path
-			b_path = path
+			if change_type[0] != 'R':
+				a_path = b_path = path
+				rename_from = rename_to = None
+			else:
+				a_path, b_path = path.split('\t')
+				rename_from, rename_to = a_path, b_path
 			deleted_file = False
 			new_file = False
 			
@@ -339,7 +342,7 @@ class Diff(object):
 			# END add/remove handling
 			
 			diff = Diff(repo, a_path, b_path, a_blob_id, b_blob_id, old_mode, new_mode,
-						new_file, deleted_file, None, None, '')
+						new_file, deleted_file, rename_from, rename_to, '')
 			index.append(diff)
 		# END for each line
 		
