@@ -51,6 +51,19 @@ class TestDiff(TestBase):
 		assert_equal(diff.rename_from, 'AUTHORS')
 		assert_equal(diff.rename_to, 'CONTRIBUTORS')
 
+	def test_diff_with_rename_raw(self):
+		output = StringProcessAdapter(fixture('diff_rename_raw'))
+		diffs = Diff._index_from_raw_format(self.rorepo, output.stdout)
+		self._assert_diff_format(diffs)
+
+		diffs = filter(lambda d: d.renamed, diffs)
+		assert_equal(3, len(diffs))
+
+		diff = diffs[0]
+		assert_true(diff.renamed)
+		assert_equal(diff.rename_from, 'git/test/test_reflog.py')
+		assert_equal(diff.rename_to, 'git/test/refs/test_reflog.py')
+
 	def test_diff_patch_format(self):
 		# test all of the 'old' format diffs for completness - it should at least
 		# be able to deal with it
@@ -98,6 +111,14 @@ class TestDiff(TestBase):
 				# END for each path option
 			# END for each other side
 		# END for each commit
+
+		# test rename detection
+		rename_commit = self.rorepo.rev_parse('4772fe0')
+		rename_diffs = rename_commit.parents[0].diff(rename_commit, M=True)
+		rename_diffs = filter(lambda d: d.renamed, rename_diffs)
+		assert len(rename_diffs) == 3
+		assert rename_diffs[0].rename_from == rename_diffs[0].a_blob.path
+		assert rename_diffs[0].rename_to == rename_diffs[0].b_blob.path
 		
 		# assert we could always find at least one instance of the members we 
 		# can iterate in the diff index - if not this indicates its not working correctly
