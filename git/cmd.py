@@ -337,12 +337,15 @@ class Git(LazyMixin):
 		  cwd=self._working_dir
 		  
 		# Start the process
+		env = os.environ.copy()
+		env['LANG'] = 'C'
 		proc = Popen(command,
 						cwd=cwd,
 						stdin=istream,
 						stderr=PIPE,
 						stdout=PIPE,
 						close_fds=(os.name=='posix'),# unsupported on linux
+						env=env,
 						**subprocess_kwargs
 						)
 		if as_process:
