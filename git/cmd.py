@@ -19,7 +19,7 @@ from subprocess import (
 
 execute_kwargs = ('istream', 'with_keep_cwd', 'with_extended_output',
 				  'with_exceptions', 'as_process', 
-				  'output_stream' )
+				  'output_stream', 'output_nostrip' )
 
 __all__ = ('Git', )
 
@@ -267,6 +267,7 @@ class Git(LazyMixin):
 				with_exceptions=True,
 				as_process=False, 
 				output_stream=None, 
+				output_nostrip=False,
 				**subprocess_kwargs
 				):
 		"""Handles executing the command on the shell and consumes and returns
@@ -308,6 +309,11 @@ class Git(LazyMixin):
 			always be created with a pipe due to issues with subprocess.
 			This merely is a workaround as data will be copied from the 
 			output pipe to the given output stream directly.
+			
+		:param output_nostrip:
+			The last line of the output normally is stripped if it is empty. If
+			output_nostrip is True, this behavior is disabled. This can be important
+			when constructing patches e.g. using the diff command.
 			
 		:param subprocess_kwargs:
 			Keyword arguments to be passed to subprocess.Popen. Please note that 
@@ -359,7 +365,7 @@ class Git(LazyMixin):
 			if output_stream is None:
 				stdout_value, stderr_value = proc.communicate() 
 				# strip trailing "\n"
-				if stdout_value.endswith("\n"):
+				if stdout_value.endswith("\n") and not output_nostrip:
 					stdout_value = stdout_value[:-1]
 				if stderr_value.endswith("\n"):
 					stderr_value = stderr_value[:-1]
