@@ -108,3 +108,25 @@ class TestGit(TestBase):
 		finally:
 			type(self.git).GIT_PYTHON_GIT_EXECUTABLE = prev_cmd
 		#END undo adjustment
+		
+	def test_output_strip(self):
+		import subprocess as sp
+		hexsha = "b2339455342180c7cc1e9bba3e9f181f7baa5167"
+
+		# Verify that a trailing newline is stripped from the output of a git
+		# command.
+		content = self.git.cat_file('blob', hexsha)
+		g = self.git.hash_object(istream=sp.PIPE, as_process=True, stdin=True)
+		g.stdin.write(content)
+		g.stdin.close()
+		newsha = g.stdout.readline().strip()
+		self.assertNotEquals(newsha, hexsha)
+
+		# Verify that output of a git command which ends with an empty
+		# line is not modified when the output_strip flag is cleared.
+		content = self.git.cat_file('blob', hexsha, output_strip=False)
+		g = self.git.hash_object(istream=sp.PIPE, as_process=True, stdin=True)
+		g.stdin.write(content)
+		g.stdin.close()
+		newsha = g.stdout.readline().strip()
+		self.assertEquals(newsha, hexsha)
