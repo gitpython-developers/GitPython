@@ -72,7 +72,7 @@ class TestBigRepoRW(TestBigRepoR):
 		cls.puregitrwrepo = Repo(dirname, odbt=GitDB)
 	
 	@classmethod
-	def tearDownAll(cls):
+	def tearDownClass(cls):
 		shutil.rmtree(cls.gitrwrepo.working_dir)
 		
 #} END base classes
