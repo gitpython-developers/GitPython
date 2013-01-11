@@ -68,7 +68,7 @@ class TestBigRepoRW(TestBigRepoR):
 		cls.rwrepo = cls.rorepo.clone(dirname, shared=True, bare=True)
 	
 	@classmethod
-	def tearDownAll(cls):
+	def tearDownClass(cls):
 		shutil.rmtree(cls.rwrepo.working_dir)
 		
 #} END base classes
