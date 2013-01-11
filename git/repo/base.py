@@ -71,6 +71,7 @@ class Repo(object):
 	re_hexsha_shortened = re.compile('^[0-9A-Fa-f]{4,40}$')
 	re_author_committer_start = re.compile(r'^(author|committer)')
 	re_tab_full_line = re.compile(r'^\t(.*)$')
+	re_git_file_gitdir = re.compile('gitdir: (.*)')
 	
 	# invariants
 	# represents the configuration level of a configuration file
@@ -113,6 +114,17 @@ class Repo(object):
 				self.git_dir = gitpath
 				self._working_tree_dir = curpath
 				break
+			if isfile(gitpath):
+				line = open(gitpath, 'r').readline().strip()
+				match = self.re_git_file_gitdir.match(line)
+				if match:
+					gitpath = match.group(1)
+					if not os.path.isabs(gitpath):
+						gitpath = os.path.normpath(join(curpath, gitpath))
+					if is_git_dir(gitpath):
+						self.git_dir = gitpath
+						self._working_tree_dir = curpath
+						break
 			curpath, dummy = os.path.split(curpath)
 			if not dummy:
 				break
