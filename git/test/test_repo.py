@@ -594,6 +594,23 @@ class TestRepo(TestBase):
 			target_type = GitCmdObjectDB
 		assert isinstance(self.rorepo.odb, target_type)
 			
+	@with_rw_repo('HEAD')
+	def test_git_file(self, rwrepo):
+		# Move the .git directory to another location and create the .git file.
+		real_path_abs = os.path.abspath(join_path_native(rwrepo.working_tree_dir, '.real'))
+		os.rename(rwrepo.git_dir, real_path_abs)
+		git_file_path = join_path_native(rwrepo.working_tree_dir, '.git')
+		open(git_file_path, 'wb').write(fixture('git_file'))
+		
+		# Create a repo and make sure it's pointing to the relocated .git directory.
+		git_file_repo = Repo(rwrepo.working_tree_dir)
+		assert os.path.abspath(git_file_repo.git_dir) == real_path_abs
+		
+		# Test using an absolute gitdir path in the .git file.
+		open(git_file_path, 'wb').write('gitdir: %s\n' % real_path_abs)
+		git_file_repo = Repo(rwrepo.working_tree_dir)
+		assert os.path.abspath(git_file_repo.git_dir) == real_path_abs
+		
 	def test_submodules(self):
 		assert len(self.rorepo.submodules) == 1		# non-recursive
 		assert len(list(self.rorepo.iter_submodules())) >= 2
