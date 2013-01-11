@@ -60,8 +60,8 @@ class TestLooseDBWPerformanceBase(TestBigRepoR):
 	#} END configuration
 	
 	@classmethod
-	def setUpAll(cls):
-		super(TestLooseDBWPerformanceBase, cls).setUpAll()
+	def setUpClass(cls):
+		super(TestLooseDBWPerformanceBase, cls).setUpClass()
 		if cls.LooseODBCls is None:
 			raise AssertionError("LooseODBCls must be set in subtype")
 		#END assert configuration

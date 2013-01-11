@@ -292,7 +292,7 @@ class TestBase(TestCase):
 	"""
 	
 	@classmethod
-	def setUpAll(cls):
+	def setUpClass(cls):
 		"""This method is only called to provide the most basic functionality
 		Subclasses may just override it or implement it differently"""
 		cls.rorepo = Repo(rorepo_dir())

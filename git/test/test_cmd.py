@@ -19,8 +19,8 @@ from git import Git, GitCommandError
 class TestGit(TestBase):
 	
 	@classmethod
-	def setUpAll(cls):
-		super(TestGit, cls).setUpAll()
+	def setUpClass(cls):
+		super(TestGit, cls).setUpClass()
 		cls.git = Git(cls.rorepo.working_dir)
 
 	@patch_object(Git, 'execute')
