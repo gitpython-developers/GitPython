@@ -17,14 +17,15 @@ class NoSuchPathError(OSError):
 
 class GitCommandError(Exception):
 	""" Thrown if execution of the git command fails with non-zero status code. """
-	def __init__(self, command, status, stderr=None):
+	def __init__(self, command, status, stderr=None, stdout=None):
 		self.stderr = stderr
+		self.stdout = stdout
 		self.status = status
 		self.command = command
 		
 	def __str__(self):
 		return ("'%s' returned exit status %i: %s" %
-					(' '.join(str(i) for i in self.command), self.status, self.stderr))
+					(' '.join(str(i) for i in self.command), self.status, self.stderr, self.stdout))
 
 
 class CheckoutError( Exception ):
