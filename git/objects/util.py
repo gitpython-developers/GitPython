@@ -167,6 +167,7 @@ def parse_date(string_date):
 	
 # precompiled regex
 _re_actor_epoch = re.compile(r'^.+? (.*) (\d+) ([+-]\d+).*$')
+_re_only_actor = re.compile(r'^.+? (.*)$')
 
 def parse_actor_and_date(line):
 	"""Parse out the actor (author or committer) info from a line like::
@@ -174,8 +175,13 @@ def parse_actor_and_date(line):
 		author Tom Preston-Werner <tom@mojombo.com> 1191999972 -0700
 	
 	:return: [Actor, int_seconds_since_epoch, int_timezone_offset]"""
+	actor, epoch, offset = '', 0, 0
 	m = _re_actor_epoch.search(line)
-	actor, epoch, offset = m.groups()
+	if m:
+		actor, epoch, offset = m.groups()
+	else:
+		m = _re_only_actor.search(line)
+		actor = _re_only_actor.search(line).group(1) if m else line or ''
 	return (Actor._from_string(actor), int(epoch), utctz_to_altz(offset))
 	
 
