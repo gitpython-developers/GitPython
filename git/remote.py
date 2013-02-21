@@ -534,6 +534,8 @@ class Remote(LazyMixin, Iterable):
 		# read head information 
 		fp = open(join(self.repo.git_dir, 'FETCH_HEAD'),'r')
 		fetch_head_info = fp.readlines()
+		if fetch_head_info[0].startswith('POST'):
+			fetch_head_info.pop(0)
 		fp.close()
 		
 		assert len(fetch_info_lines) == len(fetch_head_info), "len(%s) != len(%s)" % (fetch_head_info, fetch_info_lines)
