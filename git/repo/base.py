@@ -32,6 +32,7 @@ from gitdb.util import (
 from fun import (
 					rev_parse,
 					is_git_dir,
+					read_gitfile,
 					touch
 				)
 
@@ -110,6 +111,11 @@ class Repo(object):
 				break
 			gitpath = join(curpath, '.git')
 			if is_git_dir(gitpath):
+				self.git_dir = gitpath
+				self._working_tree_dir = curpath
+				break
+			gitpath = read_gitfile(gitpath)
+			if gitpath:
 				self.git_dir = gitpath
 				self._working_tree_dir = curpath
 				break
