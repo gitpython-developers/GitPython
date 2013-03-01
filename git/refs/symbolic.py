@@ -368,6 +368,10 @@ class SymbolicReference(object):
 			In that case, it will be faster than the ``log()`` method"""
 		return RefLog.entry_at(RefLog.path(self), index)
 
+        def isremote(self):
+                """:return: (boolean) Is the reference to a remote branch"""
+                return self.path.startswith(self._remote_common_path_default + "/")
+
 	@classmethod
 	def to_full_path(cls, path):
 		"""
