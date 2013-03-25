@@ -84,7 +84,7 @@ GitPython's git repo is available on GitHub, which can be browsed at:
 
 and cloned using::
 
-	$ git clone git://github.com/gitpython-developers/GitPython.git git-python
+    $ git clone git://github.com/gitpython-developers/GitPython.git git-python
 
 Initialize all submodules to obtain the required dependencies with::
 
