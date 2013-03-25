@@ -19,7 +19,7 @@ Requirements
 * `GitDB`_ - a pure python git database implementation
 
  * `async`_ - asynchronous task scheduling
- 
+
 * `Python Nose`_ - used for running the tests
 * `Mock by Michael Foord`_ used for tests. Requires version 0.5
 
@@ -57,7 +57,7 @@ script:
 .. sourcecode:: none
 
     # python setup.py install
-    
+
 .. note:: In this case, you have to manually install `GitDB`_ and `async`_ as well. It would be recommended to use the :ref:`git source repository <source-code-label>` in that case.
 
 Getting Started
@@ -85,16 +85,16 @@ GitPython's git repo is available on GitHub, which can be browsed at:
 and cloned using::
 
 	$ git clone git://github.com/gitpython-developers/GitPython.git git-python
-	
+
 Initialize all submodules to obtain the required dependencies with::
-    
+
     $ cd git-python
     $ git submodule update --init --recursive
-    
+
 Finally verify the installation by running the `nose powered <http://code.google.com/p/python-nose/>`_ unit tests::
-    
+
     $ nosetests
-    
+
 Mailing List
 ============
 http://groups.google.com/group/git-python
@@ -104,7 +104,7 @@ Issue Tracker
 The issue tracker is hosted by github:
 
 https://github.com/gitpython-developers/GitPython/issues
-	
+
 License Information
 ===================
 GitPython is licensed under the New BSD License.  See the LICENSE file for
