@@ -36,9 +36,9 @@ Installing GitPython is easily done using
 `setuptools`_. Assuming it is
 installed, just run the following from the command-line:
 
-.. sourcecode:: none
+.. sourcecode:: console
 
-    # easy_install GitPython
+    $ easy_install GitPython
 
 This command will download the latest version of GitPython from the
 `Python Package Index <http://pypi.python.org/pypi/GitPython>`_ and install it
@@ -54,9 +54,9 @@ here:
 Alternatively, you can install from the distribution using the ``setup.py``
 script:
 
-.. sourcecode:: none
+.. sourcecode:: console
 
-    # python setup.py install
+    $ python setup.py install
 
 .. note:: In this case, you have to manually install `GitDB`_ and `async`_ as well. It would be recommended to use the :ref:`git source repository <source-code-label>` in that case.
 
@@ -82,16 +82,22 @@ GitPython's git repo is available on GitHub, which can be browsed at:
 
  * https://github.com/gitpython-developers/GitPython
 
-and cloned using::
+and cloned using:
+
+.. sourcecode:: console
 
     $ git clone git://github.com/gitpython-developers/GitPython.git git-python
 
-Initialize all submodules to obtain the required dependencies with::
+Initialize all submodules to obtain the required dependencies with:
+
+.. sourcecode:: console
 
     $ cd git-python
     $ git submodule update --init --recursive
 
-Finally verify the installation by running the `nose powered <http://code.google.com/p/python-nose/>`_ unit tests::
+Finally verify the installation by running the `nose powered <http://code.google.com/p/python-nose/>`_ unit tests:
+
+.. sourcecode:: console
 
     $ nosetests
 
