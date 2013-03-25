@@ -80,7 +80,7 @@ Source Code
 
 GitPython's git repo is available on GitHub, which can be browsed at:
 
- * https://github.com/gitpython-developers/GitPython
+* https://github.com/gitpython-developers/GitPython
 
 and cloned using:
 
