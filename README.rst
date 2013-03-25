@@ -31,7 +31,7 @@ or if you want to obtain a copy more easily:
 
 A distribution package can be obtained for manual installation at:
 
-    http://pypi.python.org/pypi/GitPython
+http://pypi.python.org/pypi/GitPython
 
 SOURCE
 ======
