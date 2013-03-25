@@ -19,11 +19,15 @@ INSTALL
 =======
 If you have downloaded the source code:
 
-	python setup.py install
+.. code-block:: console
+
+   $ python setup.py install
 
 or if you want to obtain a copy more easily:
 
-    easy_install gitpython
+.. code-block:: console
+
+   $ easy_install gitpython
 
 A distribution package can be obtained for manual installation at:
 
@@ -38,7 +42,9 @@ https://github.com/gitpython-developers/GitPython
 
 and cloned using:
 
-git clone git://github.com/gitpython-developers/GitPython.git git-python
+.. code-block:: console
+
+    $ git clone git://github.com/gitpython-developers/GitPython.git git-python
 
 
 DOCUMENTATION
