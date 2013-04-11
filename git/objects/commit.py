@@ -426,11 +426,18 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
 		self.committer, self.committed_date, self.committer_tz_offset = parse_actor_and_date(readline())
 		
 		
+		# we might run into one or more mergetag blocks, skip those for now
+		next_line = readline()
+		while next_line.startswith('mergetag '):
+			next_line = readline()
+			while next_line.startswith(' '):
+				next_line = readline()
+		
 		# now we can have the encoding line, or an empty line followed by the optional
 		# message.
 		self.encoding = self.default_encoding
 		# read encoding or empty line to separate message
-		enc = readline()
+		enc = next_line
 		enc = enc.strip()
 		if enc:
 			self.encoding = enc[enc.find(' ')+1:]
