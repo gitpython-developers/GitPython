@@ -249,3 +249,8 @@ class TestFun(TestBase):
 			entries = traverse_tree_recursive(odb, commit.tree.binsha, '')
 			assert entries
 		# END for each commit
+
+def test_tree_entries_from_data():
+    from git.objects.fun import tree_entries_from_data
+    r = tree_entries_from_data(b'100644 \x9f\0aaa')
+    assert r == [('aaa', 33188, '\x9f')], r
