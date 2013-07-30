@@ -146,9 +146,9 @@ Index Objects are objects that can be put into git's index. These objects are tr
     ''
     hct.trees[0].path   # the first subdirectory has one though
     'dir'
-    htc.mode            # trees have the mode of a linux directory
-    040000
-    '%o' % htc.blobs[0].mode    # blobs have a specific mode though comparable to a standard linux fs
+    hct.mode            # trees have the mode of a linux directory
+    16384
+    '%o' % hct.blobs[0].mode    # blobs have a specific mode though comparable to a standard linux fs
     100644
     
 Access blob data (or any object data) directly or using streams::
