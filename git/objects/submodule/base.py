@@ -657,7 +657,7 @@ class Submodule(util.IndexObject, Iterable, Traversable, RepoAliasMixin):
 					num_branches_with_new_commits = 0
 					rrefs = remote.refs
 					for rref in rrefs:
-						num_branches_with_new_commits = len(mod.git.cherry(rref)) != 0
+						num_branches_with_new_commits += len(mod.git.cherry(rref)) != 0
 					# END for each remote ref
 					# not a single remote branch contained all our commits
 					if num_branches_with_new_commits == len(rrefs):
