@@ -68,7 +68,7 @@ def join_path(a, *p):
 		if len(b) == 0:
 			continue
 		if b.startswith('/'):
-			path += b[1:]
+			path = b
 		elif path == '' or path.endswith('/'):
 			path +=	 b
 		else:
