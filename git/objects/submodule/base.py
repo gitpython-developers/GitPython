@@ -859,7 +859,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 	
 	def config_reader(self):
 		"""
-		:return: ConfigReader instance which allows you to qurey the configuration values
+		:return: ConfigReader instance which allows you to query the configuration values
 			of this submodule, as provided by the .gitmodules file
 		:note: The config reader will actually read the data directly from the repository
 			and thus does not need nor care about your working tree.
