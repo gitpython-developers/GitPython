@@ -298,12 +298,11 @@ XMNvSK8IZtWLkx7k3A3QYt1cN4y1zdSHLR2S+BVCEJea1mvUE+jK5wiB9S4XNtKm
 BX/otlTa8pNE3fWYBxURvfHnMY4i3HQT7Bc1QjImAhMnyo2vJk4ORBJIZ1FTNIhJ
 JzJMZDRLQLFvnzqZuCjE
 =przd
------END PGP SIGNATURE-----
-"""
+-----END PGP SIGNATURE-----"""
 		assert cmt.gpgsig == fixture_sig
 
 		cmt.gpgsig = "<test\ndummy\nsig>"
-		assert cmt.gpgsig != sig
+		assert cmt.gpgsig != fixture_sig
 
 		cstream = StringIO()
 		cmt._serialize(cstream)
@@ -312,7 +311,7 @@ JzJMZDRLQLFvnzqZuCjE
 		cstream.seek(0)
 		cmt.gpgsig = None
 		cmt._deserialize(cstream)
-		assert cmt.gpgsig == "<test\ndummy\nsig>\n"
+		assert cmt.gpgsig == "<test\ndummy\nsig>"
 
 		cmt.gpgsig = None
 		cstream = StringIO()

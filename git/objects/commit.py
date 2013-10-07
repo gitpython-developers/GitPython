@@ -403,7 +403,7 @@ class Commit(Diffable, Iterable, RepoAliasMixin, base.Object, Traversable, Seria
 
 		if self.gpgsig:
 			write("gpgsig")
-			for sigline in self.gpgsig.split("\n"):
+			for sigline in self.gpgsig.rstrip("\n").split("\n"):
 				write(" "+sigline+"\n")
 		
 		write("\n")
@@ -458,7 +458,7 @@ class Commit(Diffable, Iterable, RepoAliasMixin, base.Object, Traversable, Seria
 						is_next_header = True
 						break
 					sig += sigbuf[1:]
-				self.gpgsig = sig
+				self.gpgsig = sig.rstrip("\n")
 				if is_next_header:
 					continue
 			buf = readline().strip()
