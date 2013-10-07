@@ -7,6 +7,7 @@ from git.test.lib import (
 							assert_not_equal,
 							with_rw_repo,
 							StringProcessAdapter,
+                                                        fixture_path,
 						)
 
 class TestObjectBase(TestBase):
