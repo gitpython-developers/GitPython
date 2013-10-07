@@ -17,6 +17,7 @@ from git.util import (
 from cStringIO import StringIO
 import time
 import sys
+import re
 
 
 def assert_commit_serialization(rwrepo, commit_id, print_performance_info=False):
@@ -277,3 +278,42 @@ class TestCommit(TestObjectBase):
 		# it appears
 		cmt.author.__repr__()
 		
+	def test_gpgsig(self):
+		cmt = self.rorepo.commit()
+		cmt._deserialize(open(fixture_path('commit_with_gpgsig')))
+
+		fixture_sig = """-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.4.11 (GNU/Linux)
+
+iQIcBAABAgAGBQJRk8zMAAoJEG5mS6x6i9IjsTEP/0v2Wx/i7dqyKban6XMIhVdj
+uI0DycfXqnCCZmejidzeao+P+cuK/ZAA/b9fU4MtwkDm2USvnIOrB00W0isxsrED
+sdv6uJNa2ybGjxBolLrfQcWutxGXLZ1FGRhEvkPTLMHHvVriKoNFXcS7ewxP9MBf
+NH97K2wauqA+J4BDLDHQJgADCOmLrGTAU+G1eAXHIschDqa6PZMH5nInetYZONDh
+3SkOOv8VKFIF7gu8X7HC+7+Y8k8U0TW0cjlQ2icinwCc+KFoG6GwXS7u/VqIo1Yp
+Tack6sxIdK7NXJhV5gAeAOMJBGhO0fHl8UUr96vGEKwtxyZhWf8cuIPOWLk06jA0
+g9DpLqmy/pvyRfiPci+24YdYRBua/vta+yo/Lp85N7Hu/cpIh+q5WSLvUlv09Dmo
+TTTG8Hf6s3lEej7W8z2xcNZoB6GwXd8buSDU8cu0I6mEO9sNtAuUOHp2dBvTA6cX
+PuQW8jg3zofnx7CyNcd3KF3nh2z8mBcDLgh0Q84srZJCPRuxRcp9ylggvAG7iaNd
+XMNvSK8IZtWLkx7k3A3QYt1cN4y1zdSHLR2S+BVCEJea1mvUE+jK5wiB9S4XNtKm
+BX/otlTa8pNE3fWYBxURvfHnMY4i3HQT7Bc1QjImAhMnyo2vJk4ORBJIZ1FTNIhJ
+JzJMZDRLQLFvnzqZuCjE
+=przd
+-----END PGP SIGNATURE-----"""
+		assert cmt.gpgsig == fixture_sig
+
+		cmt.gpgsig = "<test\ndummy\nsig>"
+		assert cmt.gpgsig != fixture_sig
+
+		cstream = StringIO()
+		cmt._serialize(cstream)
+		assert re.search(r"^gpgsig <test\n dummy\n sig>$", cstream.getvalue(), re.MULTILINE)
+
+		cstream.seek(0)
+		cmt.gpgsig = None
+		cmt._deserialize(cstream)
+		assert cmt.gpgsig == "<test\ndummy\nsig>"
+
+		cmt.gpgsig = None
+		cstream = StringIO()
+		cmt._serialize(cstream)
+		assert not re.search(r"^gpgsig ", cstream.getvalue(), re.MULTILINE)
