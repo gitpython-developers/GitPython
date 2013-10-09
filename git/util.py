@@ -121,6 +121,18 @@ def get_user_id():
 	# END get username from login
 	return "%s@%s" % (username, platform.node())
 
+def finalize_process(proc):
+	"""Wait for the process (clone, fetch, pull or push) and handle its errors accordingly"""
+	try:
+		proc.wait()
+	except GitCommandError,e:
+		# if a push has rejected items, the command has non-zero return status
+		# a return status of 128 indicates a connection error - reraise the previous one
+		if proc.poll() == 128:
+			raise
+		pass
+	# END exception handling
+
 #} END utilities
 
 #{ Classes

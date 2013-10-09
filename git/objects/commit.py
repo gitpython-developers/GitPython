@@ -8,6 +8,7 @@ from git.util import 		(
 							Actor,
 							Iterable,
 							Stats,
+							finalize_process
 						)
 from git.diff import Diffable
 from tree import Tree
@@ -251,6 +252,8 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
 			assert len(hexsha) == 40, "Invalid line: %s" % hexsha
 			yield Commit(repo, hex_to_bin(hexsha))
 		# END for each line in stream
+		if has_attr(proc_or_stream, 'wait'):
+			finalize_process(proc_or_stream)
 		
 		
 	@classmethod
