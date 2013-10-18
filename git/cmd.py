@@ -336,6 +336,7 @@ class Git(LazyMixin):
 						stderr=PIPE,
 						stdout=PIPE,
 						close_fds=(os.name=='posix'),# unsupported on linux
+						shell=True,
 						**subprocess_kwargs
 						)
 		if as_process:
