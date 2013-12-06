@@ -433,9 +433,15 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
 		enc = readline()
 		enc = enc.strip()
 		if enc:
-			self.encoding = enc[enc.find(' ')+1:]
-			# now comes the message separator 
-			readline()
+			if enc.startswith('mergetag'):
+				# skip the whole mergetag message
+				while enc and len(enc) > 0:
+					enc = readline()
+					enc = enc.strip()
+			else:
+				self.encoding = enc[enc.find(' ')+1:]
+				# now comes the message separator
+				readline()
 		# END handle encoding
 		
 		# decode the authors name
