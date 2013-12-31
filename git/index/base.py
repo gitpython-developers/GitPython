@@ -562,7 +562,48 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 		# END for each item
 		return (paths, entries)
 
+
 	@git_working_dir
+	def _store_path(self, filepath, fprogress):
+		"""Store file at filepath in the database and return the base index entry"""
+		st = os.lstat(filepath)		# handles non-symlinks as well
+		stream = None
+		if S_ISLNK(st.st_mode):
+			stream = StringIO(os.readlink(filepath))
+		else:
+			stream = open(filepath, 'rb')
+		# END handle stream
+		fprogress(filepath, False, filepath)
+		istream = self.repo.odb.store(IStream(Blob.type, st.st_size, stream))
+		fprogress(filepath, True, filepath)
+		return BaseIndexEntry((stat_mode_to_index_mode(st.st_mode), 
+							istream.binsha, 0, to_native_path_linux(filepath)))
+
+	@git_working_dir
+	def _entries_for_paths(self, paths, path_rewriter, fprogress):
+		entries_added = list()
+		if path_rewriter:
+			for path in paths:
+				abspath = os.path.abspath(path)
+				gitrelative_path = abspath[len(self.repo.working_tree_dir)+1:]
+				blob = Blob(self.repo, Blob.NULL_BIN_SHA, 
+							stat_mode_to_index_mode(os.stat(abspath).st_mode), 
+							to_native_path_linux(gitrelative_path))
+				entries.append(BaseIndexEntry.from_blob(blob))
+			# END for each path
+			del(paths[:])
+		# END rewrite paths
+
+		# HANDLE PATHS
+		assert len(entries_added) == 0
+		added_files = list()
+		for filepath in self._iter_expand_paths(paths):
+			entries_added.append(self._store_path(filepath, fprogress))
+		# END for each filepath
+		# END path handling
+		return entries_added
+
+
 	def add(self, items, force=True, fprogress=lambda *args: None, path_rewriter=None, 
 				write=True):
 		"""Add files from the working tree, specific blobs or BaseIndexEntries
@@ -651,47 +692,10 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 		# sort the entries into strings and Entries, Blobs are converted to entries
 		# automatically
 		# paths can be git-added, for everything else we use git-update-index
-		entries_added = list()
 		paths, entries = self._preprocess_add_items(items)
-		if paths and path_rewriter:
-			for path in paths:
-				abspath = os.path.abspath(path)
-				gitrelative_path = abspath[len(self.repo.working_tree_dir)+1:]
-				blob = Blob(self.repo, Blob.NULL_BIN_SHA, 
-							stat_mode_to_index_mode(os.stat(abspath).st_mode), 
-							to_native_path_linux(gitrelative_path))
-				entries.append(BaseIndexEntry.from_blob(blob))
-			# END for each path
-			del(paths[:])
-		# END rewrite paths
-
-
-		def store_path(filepath):
-			"""Store file at filepath in the database and return the base index entry"""
-			st = os.lstat(filepath)		# handles non-symlinks as well
-			stream = None
-			if S_ISLNK(st.st_mode):
-				stream = StringIO(os.readlink(filepath))
-			else:
-				stream = open(filepath, 'rb')
-			# END handle stream
-			fprogress(filepath, False, filepath)
-			istream = self.repo.odb.store(IStream(Blob.type, st.st_size, stream))
-			fprogress(filepath, True, filepath)
-			return BaseIndexEntry((stat_mode_to_index_mode(st.st_mode), 
-									istream.binsha, 0, to_native_path_linux(filepath)))
-		# END utility method
-
-
-		# HANDLE PATHS
+		entries_added = list()
 		if paths:
-			assert len(entries_added) == 0
-			added_files = list()
-			for filepath in self._iter_expand_paths(paths):
-				entries_added.append(store_path(filepath))
-			# END for each filepath
-		# END path handling
-
+			entries_added.extend(self._entries_for_paths(paths, path_rewriter, fprogress))
 
 		# HANDLE ENTRIES
 		if entries:
@@ -706,7 +710,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 			if null_entries_indices:
 				for ei in null_entries_indices:
 					null_entry = entries[ei]
-					new_entry = store_path(null_entry.path)
+					new_entry = self._store_path(null_entry.path, fprogress)
 					
 					# update null entry
 					entries[ei] = BaseIndexEntry((null_entry.mode, new_entry.binsha, null_entry.stage, null_entry.path))
