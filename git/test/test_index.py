@@ -20,6 +20,12 @@ import shutil
 import time
 from stat import *
 
+from StringIO import StringIO
+from gitdb.base import IStream
+from git.objects import Blob
+from git.index.typ import BaseIndexEntry
+
+
 class TestIndex(TestBase):
 	
 	def __init__(self, *args):
@@ -646,6 +652,34 @@ class TestIndex(TestBase):
 		for absfile in absfiles:
 			assert os.path.isfile(absfile)
 				
+	@with_rw_repo('HEAD', bare=True)
+	def test_index_bare_add(self, rw_bare_repo):
+		# Something is wrong after cloning to a bare repo, reading the
+		# property rw_bare_repo.working_tree_dir will return '/tmp'
+		# instead of throwing the Exception we are expecting. This is
+		# a quick hack to make this test fail when expected.
+		rw_bare_repo._working_tree_dir = None
+		contents = 'This is a StringIO file'
+		filesize = len(contents)
+		fileobj = StringIO(contents)
+		filename = 'my-imaginary-file'
+		istream = rw_bare_repo.odb.store(
+				IStream(Blob.type, filesize, fileobj))
+		entry = BaseIndexEntry((100644, istream.binsha, 0, filename))
+		try:
+		rw_bare_repo.index.add([entry])
+		except AssertionError, e:
+			self.fail("Adding to the index of a bare repo is not allowed.")
+
+		# Adding using a path should still require a non-bare repository.
+		asserted = False
+		path = os.path.join('git', 'test', 'test_index.py')
+		try:
+			rw_bare_repo.index.add([path])
+		except Exception, e:
+			asserted = "does not have a working tree" in e.message
+		assert asserted, "Adding using a filename is not correctly asserted."
+
 		
 	@with_rw_repo('HEAD')
 	def test_compare_write_tree(self, rw_repo):
