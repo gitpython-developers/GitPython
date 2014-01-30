@@ -13,6 +13,8 @@ import shutil
 import tempfile
 import platform
 
+from exc import GitCommandError
+
 from gitdb.util import (
 							make_sha, 
 							LockedFD, 
