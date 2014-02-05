@@ -47,8 +47,8 @@ class TestBigRepoR(TestBase):
 	#} END configuration
 	
 	@classmethod
-	def setUpAll(cls):
-		super(TestBigRepoR, cls).setUpAll()
+	def setUpClass(cls):
+		super(TestBigRepoR, cls).setUpClass()
 		if cls.RepoCls is None:
 			raise AssertionError("Require RepoCls in class %s to be set" % cls)
 		#END assert configuration
@@ -61,14 +61,14 @@ class TestBigRepoRW(TestBigRepoR):
 	Provides ``self.rwrepo``"""
 	
 	@classmethod
-	def setUpAll(cls):
-		super(TestBigRepoRW, cls).setUpAll()
+	def setUpClass(cls):
+		super(TestBigRepoRW, cls).setUpClass()
 		dirname = tempfile.mktemp()
 		os.mkdir(dirname)
 		cls.rwrepo = cls.rorepo.clone(dirname, shared=True, bare=True)
 	
 	@classmethod
-	def tearDownAll(cls):
+	def tearDownClass(cls):
 		shutil.rmtree(cls.rwrepo.working_dir)
 		
 #} END base classes
