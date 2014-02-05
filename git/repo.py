@@ -14,20 +14,20 @@ __all__ = ('Repo', )
 
 
 class Repo(CmdCompatibilityGitDB):
-	"""Represents a git repository and allows you to query references, 
+	"""Represents a git repository and allows you to query references,
 	gather commit information, generate diffs, create and clone repositories query
 	the log.
-	
+
 	The following attributes are worth using:
-	
-	'working_dir' is the working directory of the git command, wich is the working tree 
+
+	'working_dir' is the working directory of the git command, wich is the working tree
 	directory if available or the .git directory in case of bare repositories
-	
+
 	'working_tree_dir' is the working tree directory, but will raise AssertionError
 	if we are a bare repository.
-	
+
 	'git_dir' is the .git repository directoy, which is always set."""
-	
+
 	def __init__(self, path=None, odbt = None):
 		"""Create a new Repo instance
 
