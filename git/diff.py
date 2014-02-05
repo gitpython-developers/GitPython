@@ -79,12 +79,12 @@ class Diffable(object):
 		if paths is not None and not isinstance(paths, (tuple,list)):
 			paths = [ paths ]
 
+		args.insert(0,self)
+		
 		if other is not None and other is not self.Index:
 			args.insert(0, other)
 		if other is self.Index:
 			args.insert(0, "--cached")
-		
-		args.insert(0,self)
 		
 		# paths is list here or None
 		if paths:
