@@ -8,9 +8,9 @@ from git.test.db.base import RepoBase
 from git.db.complex import PureCompatibilityGitDB
 
 class TestPyDBBase(RepoBase):
-	
-	RepoCls = PureCompatibilityGitDB
-	
-	def test_basics(self):
-		pass
-		
+    
+    RepoCls = PureCompatibilityGitDB
+    
+    def test_basics(self):
+        pass
+        

@@ -5,10 +5,10 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
 from git.test.lib import (
-						TestBase, 
-						fixture, 
-						assert_equal
-						)
+                        TestBase, 
+                        fixture, 
+                        assert_equal
+                        )
 from git.util import Stats
 
 class TestStats(TestBase):

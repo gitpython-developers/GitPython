@@ -15,7 +15,7 @@ del(headref)
 
 import symbolic
 for item in (HEAD, Head, RemoteReference, TagReference, Reference):
-	setattr(symbolic.SymbolicReference, item.__name__+'Cls', item)
+    setattr(symbolic.SymbolicReference, item.__name__+'Cls', item)
 del(symbolic)
 
 

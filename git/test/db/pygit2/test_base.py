@@ -9,24 +9,24 @@ from git.test.db.base import RepoBase
 
 
 try:
-	import pygit2
+    import pygit2
 except ImportError:
-	# om this case, all other pygit2 tests will be skipped
-	# Need to properly initialize the class though, otherwise it would fail
-	from git.db.complex import PureCompatibilityGitDB as Pygit2DB
+    # om this case, all other pygit2 tests will be skipped
+    # Need to properly initialize the class though, otherwise it would fail
+    from git.db.complex import PureCompatibilityGitDB as Pygit2DB
 else:
-	# now we know pygit2 is available, to do futher imports
-	from git.db.pygit2.complex import Pygit2CompatibilityGitDB as Pygit2DB
-	
+    # now we know pygit2 is available, to do futher imports
+    from git.db.pygit2.complex import Pygit2CompatibilityGitDB as Pygit2DB
+    
 #END handle imports
 
 class TestPyGit2DBBase(RepoBase):
-	__metaclass__ = Pygit2RequiredMetaMixin
-	RepoCls = Pygit2DB
-	
-	@needs_pygit2_or_skip
-	@with_rw_repo('HEAD', bare=False)
-	def test_basics(self, rw_repo):
-		db = Pygit2DB(rw_repo.working_tree_dir)
-		
-		
+    __metaclass__ = Pygit2RequiredMetaMixin
+    RepoCls = Pygit2DB
+    
+    @needs_pygit2_or_skip
+    @with_rw_repo('HEAD', bare=False)
+    def test_basics(self, rw_repo):
+        db = Pygit2DB(rw_repo.working_tree_dir)
+        
+        
