@@ -227,7 +227,7 @@ class TestBase(TestCase):
     """
     
     @classmethod
-    def setUpAll(cls):
+    def setUp(cls):
         """
         Dynamically add a read-only repository to our actual type. This way 
         each test type has its own repository

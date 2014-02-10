@@ -19,7 +19,7 @@ from git import Git, GitCommandError
 class TestGit(TestBase):
     
     @classmethod
-    def setUpAll(cls):
+    def setUp(cls):
         super(TestGit, cls).setUpAll()
         cls.git = Git(cls.rorepo.working_dir)
 

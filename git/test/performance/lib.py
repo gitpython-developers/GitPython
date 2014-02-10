@@ -51,7 +51,7 @@ class TestBigRepoR(TestBase):
     #} END invariants 
     
     @classmethod
-    def setUpAll(cls):
+    def setUp(cls):
         super(TestBigRepoR, cls).setUpAll()
         repo_path = resolve_or_fail(k_env_git_repo)
         cls.gitrorepo = Repo(repo_path, odbt=GitCmdObjectDB)
@@ -64,7 +64,7 @@ class TestBigRepoRW(TestBigRepoR):
     Provides ``self.gitrwrepo`` and ``self.puregitrwrepo``"""
     
     @classmethod
-    def setUpAll(cls):
+    def setUp(cls):
         super(TestBigRepoRW, cls).setUpAll()
         dirname = tempfile.mktemp()
         os.mkdir(dirname)
