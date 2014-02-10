@@ -11,9 +11,11 @@ The object database implementation is optimized for handling large quantities of
 REQUIREMENTS
 ============
 
-* Git ( tested with 1.7.3.2 )
+* Git ( tested with 1.8.3.4 )
 * Python Nose - used for running the tests
-* Mock by Michael Foord used for tests. Requires 0.5
+ * Tested with nose 1.3.0
+* Mock by Michael Foord used for tests
+ * Tested with 1.0.1
 
 INSTALL
 =======

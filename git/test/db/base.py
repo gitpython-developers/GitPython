@@ -256,7 +256,7 @@ class RepoBase(TestDBBase):
         self.rorepo.archive(tmpfile, '0.1.5')
         assert tmpfile.tell()
         
-    @patch_object(Git, '_call_process')
+    @patch.object(Git, '_call_process')
     def test_should_display_blame_information(self, git):
         git.return_value = fixture('blame')
         b = self.rorepo.blame( 'master', 'lib/git.py')

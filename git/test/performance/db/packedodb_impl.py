@@ -27,8 +27,8 @@ class TestPurePackedODBPerformanceBase(TestBigRepoR):
     #} END configuration
     
     @classmethod
-    def setUpAll(cls):
-        super(TestPurePackedODBPerformanceBase, cls).setUpAll()
+    def setUp(cls):
+        super(TestPurePackedODBPerformanceBase, cls).setUp()
         if cls.PackedODBCls is None:
             raise AssertionError("PackedODBCls must be set in subclass")
         #END assert configuration
