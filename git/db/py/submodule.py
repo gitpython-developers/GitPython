@@ -9,25 +9,25 @@ from git.db.interface import SubmoduleDB
 __all__ = ["PureSubmoduleDB"]
 
 class PureSubmoduleDB(SubmoduleDB):
-	"""Pure python implementation of submodule functionality"""
-	
-	@property
-	def submodules(self):
-		return Submodule.list_items(self)
-		
-	def submodule(self, name):
-		try:
-			return self.submodules[name]
-		except IndexError:
-			raise ValueError("Didn't find submodule named %r" % name)
-		# END exception handling
-		
-	def create_submodule(self, *args, **kwargs):
-		return Submodule.add(self, *args, **kwargs)
-		
-	def iter_submodules(self, *args, **kwargs):
-		return RootModule(self).traverse(*args, **kwargs)
-		
-	def submodule_update(self, *args, **kwargs):
-		return RootModule(self).update(*args, **kwargs)
-	
+    """Pure python implementation of submodule functionality"""
+    
+    @property
+    def submodules(self):
+        return Submodule.list_items(self)
+        
+    def submodule(self, name):
+        try:
+            return self.submodules[name]
+        except IndexError:
+            raise ValueError("Didn't find submodule named %r" % name)
+        # END exception handling
+        
+    def create_submodule(self, *args, **kwargs):
+        return Submodule.add(self, *args, **kwargs)
+        
+    def iter_submodules(self, *args, **kwargs):
+        return RootModule(self).traverse(*args, **kwargs)
+        
+    def submodule_update(self, *args, **kwargs):
+        return RootModule(self).update(*args, **kwargs)
+    

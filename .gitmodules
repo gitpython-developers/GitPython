@@ -1,6 +1,8 @@
 [submodule "async"]
 	path = git/ext/async
 	url = http://github.com/gitpython-developers/async.git
+	branch = master
 [submodule "smmap"]
 	path = git/ext/smmap
 	url = http://github.com/Byron/smmap.git 
+	branch = master

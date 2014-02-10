@@ -7,14 +7,14 @@ from git.db import RefSpec
 
 class TestBase(TestDBBase):
 
-	needs_ro_repo = False
+    needs_ro_repo = False
 
-	@with_rw_directory
-	def test_basics(self, path):
-		self.failUnlessRaises(ValueError, RefSpec, None, None)
-		rs = RefSpec(None, "something")
-		assert rs.force == False
-		assert rs.delete_destination()
-		assert rs.source is None
-		assert rs.destination == "something"
-		
+    @with_rw_directory
+    def test_basics(self, path):
+        self.failUnlessRaises(ValueError, RefSpec, None, None)
+        rs = RefSpec(None, "something")
+        assert rs.force == False
+        assert rs.delete_destination()
+        assert rs.source is None
+        assert rs.destination == "something"
+        

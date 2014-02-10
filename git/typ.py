@@ -13,15 +13,15 @@ str_tree_type = "tree"
 str_tag_type = "tag"
 
 class ObjectType(object):
-	"""Enumeration providing object types as strings and ids"""
-	blob = str_blob_type
-	commit = str_commit_type
-	tree = str_tree_type
-	tag = str_tag_type
+    """Enumeration providing object types as strings and ids"""
+    blob = str_blob_type
+    commit = str_commit_type
+    tree = str_tree_type
+    tag = str_tag_type
 
-	commit_id = 1
-	tree_id = 2
-	blob_id = 3
-	tag_id = 4
+    commit_id = 1
+    tree_id = 2
+    blob_id = 3
+    tag_id = 4
 
 #} END string types

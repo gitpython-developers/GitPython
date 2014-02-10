@@ -7,8 +7,8 @@
 import git.util
 
 def _init_pool():
-	"""Assure the pool is actually threaded"""
-	size = 2
-	print "Setting ThreadPool to %i" % size
-	git.util.pool.set_size(size)
+    """Assure the pool is actually threaded"""
+    size = 2
+    print "Setting ThreadPool to %i" % size
+    git.util.pool.set_size(size)
 
