@@ -5,25 +5,24 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
 import os, sys
-from git.test.lib import (
-                            TestBase, 
-                            patch_object, 
+from git.test.lib import (  TestBase,
+                            patch, 
                             raises,
                             assert_equal,
                             assert_true,
                             assert_match,
-                            fixture_path
-                        )
-from git import Git, GitCommandError
+                            fixture_path )
+from git import (   Git,
+                    GitCommandError )
 
 class TestGit(TestBase):
     
     @classmethod
     def setUp(cls):
-        super(TestGit, cls).setUpAll()
+        super(TestGit, cls).setUp()
         cls.git = Git(cls.rorepo.working_dir)
 
-    @patch_object(Git, 'execute')
+    @patch.object(Git, 'execute')
     def test_call_process_calls_execute(self, git):
         git.return_value = ''
         self.git.version()
@@ -54,7 +53,7 @@ class TestGit(TestBase):
                      self.git.hash_object(istream=fh, stdin=True))
         fh.close()
 
-    @patch_object(Git, 'execute')
+    @patch.object(Git, 'execute')
     def test_it_ignores_false_kwargs(self, git):
         # this_should_not_be_ignored=False implies it *should* be ignored
         output = self.git.version(pass_this_kwarg=False)

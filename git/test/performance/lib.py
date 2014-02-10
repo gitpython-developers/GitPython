@@ -52,7 +52,7 @@ class TestBigRepoR(TestBase):
     
     @classmethod
     def setUp(cls):
-        super(TestBigRepoR, cls).setUpAll()
+        super(TestBigRepoR, cls).setUp()
         repo_path = resolve_or_fail(k_env_git_repo)
         cls.gitrorepo = Repo(repo_path, odbt=GitCmdObjectDB)
         cls.puregitrorepo = Repo(repo_path, odbt=GitDB)
@@ -65,7 +65,7 @@ class TestBigRepoRW(TestBigRepoR):
     
     @classmethod
     def setUp(cls):
-        super(TestBigRepoRW, cls).setUpAll()
+        super(TestBigRepoRW, cls).setUp()
         dirname = tempfile.mktemp()
         os.mkdir(dirname)
         cls.gitrwrepo = cls.gitrorepo.clone(dirname, shared=True, bare=True, odbt=GitCmdObjectDB)

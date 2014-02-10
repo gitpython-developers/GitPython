@@ -3,7 +3,15 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
-from git.test.lib import *
+from git.test.lib import (patch,
+                          TestBase,
+                          with_rw_repo,
+                          fixture,
+                          GIT_REPO,
+                          assert_false,
+                          assert_equal,
+                          assert_true,
+                          raises)
 from git import *
 from git.util import join_path_native
 from git.exc import BadObject
@@ -242,7 +250,7 @@ class TestRepo(TestBase):
         self.rorepo.archive(tmpfile, '0.1.5')
         assert tmpfile.tell()
         
-    @patch_object(Git, '_call_process')
+    @patch.object(Git, '_call_process')
     def test_should_display_blame_information(self, git):
         git.return_value = fixture('blame')
         b = self.rorepo.blame( 'master', 'lib/git.py')
