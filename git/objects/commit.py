@@ -58,12 +58,12 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
 	__slots__ = ("tree",
 				 "author", "authored_date", "author_tz_offset",
 				 "committer", "committed_date", "committer_tz_offset",
-				 "message", "parents", "encoding")
+				 "message", "parents", "encoding", "gpgsig")
 	_id_attribute_ = "binsha"
 	
 	def __init__(self, repo, binsha, tree=None, author=None, authored_date=None, author_tz_offset=None,
 				 committer=None, committed_date=None, committer_tz_offset=None, 
-				 message=None,  parents=None, encoding=None):
+				 message=None,  parents=None, encoding=None, gpgsig=None):
 		"""Instantiate a new Commit. All keyword arguments taking None as default will 
 		be implicitly set on first query. 
 		
@@ -121,6 +121,8 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
 			self.parents = parents
 		if encoding is not None:
 			self.encoding = encoding
+		if gpgsig is not None:
+			self.gpgsig = gpgsig
 		
 	@classmethod
 	def _get_intermediate_items(cls, commit):
@@ -439,15 +441,29 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
 		# now we can have the encoding line, or an empty line followed by the optional
 		# message.
 		self.encoding = self.default_encoding
-		# read encoding or empty line to separate message
+
+		# read headers
 		enc = next_line
-		enc = enc.strip()
-		if enc:
-			self.encoding = enc[enc.find(' ')+1:]
-			# now comes the message separator 
-			readline()
-		# END handle encoding
-		
+		buf = enc.strip()
+		while buf != "":
+			if buf[0:10] == "encoding ":
+				self.encoding = buf[buf.find(' ')+1:]
+			elif buf[0:7] == "gpgsig ":
+				sig = buf[buf.find(' ')+1:] + "\n"
+				is_next_header = False
+				while True:
+					sigbuf = readline()
+					if sigbuf == "": break
+					if sigbuf[0:1] != " ":
+						buf = sigbuf.strip()
+						is_next_header = True
+						break
+					sig += sigbuf[1:]
+				self.gpgsig = sig.rstrip("\n")
+				if is_next_header:
+					continue
+			buf = readline().strip()
+
 		# decode the authors name
 		try:
 			self.author.name = self.author.name.decode(self.encoding) 
