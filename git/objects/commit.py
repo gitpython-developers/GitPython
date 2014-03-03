@@ -398,6 +398,11 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
 		
 		if self.encoding != self.default_encoding:
 			write("encoding %s\n" % self.encoding)
+
+		if self.gpgsig:
+			write("gpgsig")
+			for sigline in self.gpgsig.rstrip("\n").split("\n"):
+				write(" "+sigline+"\n")
 		
 		write("\n")
 		
