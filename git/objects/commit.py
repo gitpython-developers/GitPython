@@ -121,7 +121,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
 			self.parents = parents
 		if encoding is not None:
 			self.encoding = encoding
-		if gpgsig is not None:
+		if binsha == '\x00'*20 or gpgsig is not None:
 			self.gpgsig = gpgsig
 		
 	@classmethod
