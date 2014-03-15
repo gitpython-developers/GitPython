@@ -521,7 +521,7 @@ class Remote(LazyMixin, Iterable):
         fetch_info_lines = list()
         seen_refs = set()
         for line in digest_process_messages(proc.stderr, progress):
-            if line.startswith('From') or line.startswith('remote: Total'):
+            if line.startswith('From') or line.startswith('remote: Total') or line.startswith('POST'):
                 continue
             elif line.startswith('warning:'):
                 print >> sys.stderr, line
