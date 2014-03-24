@@ -247,7 +247,7 @@ class RefLog(list, Serializable):
             raise ValueError("Shas need to be given in binary format")
         #END handle sha type
         assure_directory_exists(filepath, is_file=True)
-        entry = RefLogEntry((bin_to_hex(oldbinsha), bin_to_hex(newbinsha), Actor.committer(config_reader), (int(time.time()), time.altzone), message))
+        entry = RefLogEntry((bin_to_hex(oldbinsha), bin_to_hex(newbinsha), config_reader, (int(time.time()), time.altzone), message))
         
         lf = LockFile(filepath)
         lf._obtain_lock_or_raise()
