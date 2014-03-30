@@ -21,11 +21,11 @@ INSTALL
 =======
 If you have downloaded the source code:
 
-	python setup.py install
+    python setup.py install
 	
 or if you want to obtain a copy more easily: 
 
-    easy_install gitpython
+    pip install gitpython
     
 A distribution package can be obtained for manual installation at:
 
