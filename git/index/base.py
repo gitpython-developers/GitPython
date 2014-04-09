@@ -873,7 +873,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
         return out
 
-    def def commit(self, message, parent_commits=None, head=True, author=None, committer=None):
+    def commit(self, message, parent_commits=None, head=True, author=None, committer=None):
         """Commit the current default index file, creating a commit object.
 
         For more information on the arguments, see tree.commit.
