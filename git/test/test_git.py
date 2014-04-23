@@ -119,3 +119,5 @@ class TestGit(TestBase):
         output_value = self.git(c='user.name={}'.format(input_value)).config('--get', 'user.name')
         self.assertEquals(input_value, output_value)
 
+    def test_change_to_transform_kwargs_does_not_break_command_options(self):
+        self.git.log(n=1)
