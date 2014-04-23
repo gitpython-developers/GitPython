@@ -388,7 +388,7 @@ class Git(LazyMixin):
         else:
             return stdout_value
 
-    def transform_kwargs(self, **kwargs):
+    def transform_kwargs(self, split_single_char_options=False, **kwargs):
         """Transforms Python style kwargs into git command line options."""
         args = list()
         for k, v in kwargs.items():
@@ -396,7 +396,10 @@ class Git(LazyMixin):
                 if v is True:
                     args.append("-%s" % k)
                 elif type(v) is not bool:
-                    args.append("-%s%s" % (k, v))
+                    if split_single_char_options:
+                        args.extend(["-%s" % k, "%s" % v])
+                    else:
+                        args.append("-%s%s" % (k, v))
             else:
                 if v is True:
                     args.append("--%s" % dashify(k))
@@ -431,7 +434,8 @@ class Git(LazyMixin):
 
         ``Examples``::
             git(work_tree='/tmp').difftool()"""
-        self._git_options = self.transform_kwargs(**kwargs)
+        self._git_options = self.transform_kwargs(
+            split_single_char_options=True, **kwargs)
         return self
 
     def _call_process(self, method, *args, **kwargs):

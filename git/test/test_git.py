@@ -107,3 +107,15 @@ class TestGit(TestBase):
         finally:
             type(self.git).GIT_PYTHON_GIT_EXECUTABLE = prev_cmd
         #END undo adjustment
+
+    def test_options_are_passed_to_git(self):
+        # This work because any command after git --version is ignored
+        git_version = self.git(version=True).NoOp()
+        git_command_version = self.git.version()
+        self.assertEquals(git_version, git_command_version)
+
+    def test_single_char_git_options_are_passed_to_git(self):
+        input_value='TestValue'
+        output_value = self.git(c='user.name={}'.format(input_value)).config('--get', 'user.name')
+        self.assertEquals(input_value, output_value)
+
