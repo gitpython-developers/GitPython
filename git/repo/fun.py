@@ -7,6 +7,7 @@ from gitdb.util import (
                             join,
                             isdir, 
                             isfile,
+                            dirname,
                             hex_to_bin, 
                             bin_to_hex
                         )
@@ -29,6 +30,18 @@ def is_git_dir(d):
                 (os.path.islink(headref) and
                 os.readlink(headref).startswith('refs'))
     return False
+
+
+def find_git_dir(d):
+    if is_git_dir(d):
+        return d
+    elif isfile(d):
+        with open(d) as fp:
+            content = fp.read().rstrip()
+        if content.startswith('gitdir: '):
+            d = join(dirname(d), content[8:])
+            return find_git_dir(d)
+    return None
 
 
 def short_to_long(odb, hexsha):
