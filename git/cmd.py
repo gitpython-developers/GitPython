@@ -42,7 +42,8 @@ class Git(LazyMixin):
         of the command to stdout.
         Set its value to 'full' to see details about the returned values.
     """
-    __slots__ = ("_working_dir", "cat_file_all", "cat_file_header", "_version_info")
+    __slots__ = ("_working_dir", "cat_file_all", "cat_file_header", "_version_info",
+                 "_git_options")
     
     # CONFIGURATION
     # The size in bytes read from stdout when copying git's output to another stream
@@ -217,7 +218,8 @@ class Git(LazyMixin):
            .git directory in case of bare repositories."""
         super(Git, self).__init__()
         self._working_dir = working_dir
-        
+        self._git_options = ()
+
         # cached command slots
         self.cat_file_header = None
         self.cat_file_all = None
@@ -386,7 +388,7 @@ class Git(LazyMixin):
         else:
             return stdout_value
 
-    def transform_kwargs(self, **kwargs):
+    def transform_kwargs(self, split_single_char_options=False, **kwargs):
         """Transforms Python style kwargs into git command line options."""
         args = list()
         for k, v in kwargs.items():
@@ -394,7 +396,10 @@ class Git(LazyMixin):
                 if v is True:
                     args.append("-%s" % k)
                 elif type(v) is not bool:
-                    args.append("-%s%s" % (k, v))
+                    if split_single_char_options:
+                        args.extend(["-%s" % k, "%s" % v])
+                    else:
+                        args.append("-%s%s" % (k, v))
             else:
                 if v is True:
                     args.append("--%s" % dashify(k))
@@ -416,6 +421,22 @@ class Git(LazyMixin):
                 outlist.append(str(arg))
         # END for each arg
         return outlist
+
+    def __call__(self, **kwargs):
+        """Specify command line options to the git executable
+        for a subcommand call
+
+        :param kwargs:
+            is a dict of keyword arguments.
+            these arguments are passed as in _call_process
+            but will be passed to the git command rather than
+            the subcommand.
+
+        ``Examples``::
+            git(work_tree='/tmp').difftool()"""
+        self._git_options = self.transform_kwargs(
+            split_single_char_options=True, **kwargs)
+        return self
 
     def _call_process(self, method, *args, **kwargs):
         """Run the given git command with the specified arguments and return
@@ -455,7 +476,14 @@ class Git(LazyMixin):
         args = opt_args + ext_args
         
         def make_call():
-            call = [self.GIT_PYTHON_GIT_EXECUTABLE, dashify(method)]
+            call = [self.GIT_PYTHON_GIT_EXECUTABLE]
+
+            # add the git options, the reset to empty
+            # to avoid side_effects
+            call.extend(self._git_options)
+            self._git_options = ()
+
+            call.extend([dashify(method)])
             call.extend(args)
             return call
         #END utility to recreate call after changes
