@@ -32,6 +32,7 @@ from gitdb.util import (
 from fun import (
                     rev_parse,
                     is_git_dir,
+                    find_git_dir,
                     touch
                 )
 
@@ -108,8 +109,8 @@ class Repo(object):
                 self.git_dir = curpath
                 self._working_tree_dir = os.path.dirname(curpath)
                 break
-            gitpath = join(curpath, '.git')
-            if is_git_dir(gitpath):
+            gitpath = find_git_dir(join(curpath, '.git'))
+            if gitpath is not None:
                 self.git_dir = gitpath
                 self._working_tree_dir = curpath
                 break
@@ -119,7 +120,7 @@ class Repo(object):
         # END while curpath
         
         if self.git_dir is None:
-           raise InvalidGitRepositoryError(epath)
+            raise InvalidGitRepositoryError(epath)
 
         self._bare = False
         try:
