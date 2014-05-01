@@ -895,7 +895,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
             u = parser.get_value(sms, 'url')
             b = cls.k_head_default
             if parser.has_option(sms, cls.k_head_option):
-                b = parser.get_value(sms, cls.k_head_option)
+                b = str(parser.get_value(sms, cls.k_head_option))
             # END handle optional information
             
             # get the binsha
