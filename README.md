@@ -1,6 +1,6 @@
 ## GitPython
 
-.. image:: https://travis-ci.org/gitpython-developers/GitPython.svg?branch=master   :target: https://travis-ci.org/gitpython-developers/GitPython
+[![Build Status](https://travis-ci.org/gitpython-developers/GitPython.svg?branch=0.3)](https://travis-ci.org/gitpython-developers/GitPython)
 
 GitPython is a python library used to interact with git repositories, high-level like git-porcelain, or low-level like git-plumbing.
 
