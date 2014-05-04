@@ -6,5 +6,6 @@ python:
 
 install:
   - git submodule update --init --recursive
+  - git fetch --tags
 script: 
   - nosetests
