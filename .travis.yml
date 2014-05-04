@@ -4,4 +4,7 @@ python:
   - "2.7"
   # - "pypy" - won't work as smmap doesn't work (see gitdb/.travis.yml for details)
 
-script: nosetests
+install:
+  - git submodule update --init --recursive
+script: 
+  - nosetests
