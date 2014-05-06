@@ -513,35 +513,33 @@ class Repo(object):
                 return True
         # END untracked files
         return False
-        
+
     @property
     def untracked_files(self):
         """
         :return:
             list(str,...)
-            
-            Files currently untracked as they have not been staged yet. Paths 
+
+            Files currently untracked as they have not been staged yet. Paths
             are relative to the current working directory of the git command.
-            
+
         :note:
             ignored files will not appear here, i.e. files mentioned in .gitignore"""
         # make sure we get all files, no only untracked directores
-        proc = self.git.status(untracked_files=True, as_process=True)
-        stream = iter(proc.stdout)
+        proc = self.git.status(porcelain=True,
+                               untracked_files=True,
+                               as_process=True)
+        # Untracked files preffix in porcelain mode
+        prefix = "?? "
         untracked_files = list()
-        for line in stream:
-            if not line.startswith("# Untracked files:"):
+        for line in proc.stdout:
+            if not line.startswith(prefix):
                 continue
-            # skip two lines
-            stream.next()
-            stream.next()
-            
-            for untracked_info in stream:
-                if not untracked_info.startswith("#\t"):
-                    break
-                untracked_files.append(untracked_info.replace("#\t", "").rstrip())
-            # END for each utracked info line
-        # END for each line
+            filename = line[len(preffix):].rstrip('\n')
+            # Special characters are escaped
+            if filename[0] == filename[-1] == '"':
+                filename = filename[1:-1].decode('string_escape')
+            untracked_files.append(filename)
         return untracked_files
 
     @property
