@@ -535,7 +535,7 @@ class Repo(object):
         for line in proc.stdout:
             if not line.startswith(prefix):
                 continue
-            filename = line[len(preffix):].rstrip('\n')
+            filename = line[len(prefix):].rstrip('\n')
             # Special characters are escaped
             if filename[0] == filename[-1] == '"':
                 filename = filename[1:-1].decode('string_escape')
