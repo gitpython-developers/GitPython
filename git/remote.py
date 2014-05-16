@@ -513,14 +513,15 @@ class Remote(LazyMixin, Iterable):
     def _get_fetch_info_from_stderr(self, proc, progress):
         # skip first line as it is some remote info we are not interested in
         output = IterableList('name')
-        
-        
+
+
         # lines which are no progress are fetch info lines
         # this also waits for the command to finish
         # Skip some progress lines that don't provide relevant information
         fetch_info_lines = list()
         for line in digest_process_messages(proc.stderr, progress):
-            if line.startswith('From') or line.startswith('remote: Total') or line.startswith('POST'):
+            if line.startswith('From') or line.startswith('remote: Total') or line.startswith('POST') \
+                    or line.startswith(' ='):
                 continue
             elif line.startswith('warning:'):
                 print >> sys.stderr, line
