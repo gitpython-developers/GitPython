@@ -31,6 +31,7 @@ A distribution package can be obtained for manual installation at:
 ### DEVELOPMENT STATUS
 
 [![Build Status](https://travis-ci.org/gitpython-developers/GitPython.svg?branch=0.3)](https://travis-ci.org/gitpython-developers/GitPython)
+[![Coverage Status](https://coveralls.io/repos/gitpython-developers/GitPython/badge.png)](https://coveralls.io/r/gitpython-developers/GitPython)
 
 The project was idle for 2 years, the last release was made about 3 years ago. Reason for this might have been the project's dependency on me as sole active maintainer, which is an issue in itself.
 

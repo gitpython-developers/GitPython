@@ -2,6 +2,8 @@
 *.swp
 *~
 /lib/GitPython.egg-info
+cover/
+.coverage
 /build
 /dist
 /doc/_build
