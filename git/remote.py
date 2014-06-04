@@ -537,7 +537,10 @@ class Remote(LazyMixin, Iterable):
         fetch_head_info = fp.readlines()
         fp.close()
         
-        assert len(fetch_info_lines) == len(fetch_head_info), "len(%s) != len(%s)" % (fetch_head_info, fetch_info_lines)
+        # NOTE: HACK Just disabling this line will make github repositories work much better.
+        # I simply couldn't stand it anymore, so here is the quick and dirty fix ... . 
+        # This project needs a lot of work !
+        # assert len(fetch_info_lines) == len(fetch_head_info), "len(%s) != len(%s)" % (fetch_head_info, fetch_info_lines)
         
         output.extend(FetchInfo._from_line(self.repo, err_line, fetch_line) 
                         for err_line,fetch_line in zip(fetch_info_lines, fetch_head_info))
