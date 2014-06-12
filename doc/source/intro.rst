@@ -47,7 +47,7 @@ here:
 
 * `setuptools`_
 * `install setuptools <http://peak.telecommunity.com/DevCenter/EasyInstall#installation-instructions>`_
-* `pypi <http://pypi.python.org/pypi/SQLAlchemy>`_
+* `pypi <https://pypi.python.org/pypi/GitPython>`_
 
 .. _setuptools: http://peak.telecommunity.com/DevCenter/setuptools
 
