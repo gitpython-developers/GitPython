@@ -56,13 +56,13 @@ class Repo(object):
     
     The following attributes are worth using:
     
-    'working_dir' is the working directory of the git command, wich is the working tree 
+    'working_dir' is the working directory of the git command, which is the working tree 
     directory if available or the .git directory in case of bare repositories
     
     'working_tree_dir' is the working tree directory, but will raise AssertionError
     if we are a bare repository.
     
-    'git_dir' is the .git repository directoy, which is always set."""
+    'git_dir' is the .git repository directory, which is always set."""
     DAEMON_EXPORT_FILE = 'git-daemon-export-ok'
     __slots__ = ( "working_dir", "_working_tree_dir", "git_dir", "_bare", "git", "odb" )
     
