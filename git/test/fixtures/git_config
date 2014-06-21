@@ -27,3 +27,8 @@
 [branch "mainline_performance"]
 	remote = mainline
 	merge = refs/heads/master
+[filter "indent"]
+	clean = indent
+	smudge = cat
+	# A vauleless option
+	required

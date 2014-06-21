@@ -77,18 +77,22 @@ class TestConfig(TestBase):
         assert r_config._is_initialized == False
         for section in r_config.sections():
             num_sections += 1
-            for option in r_config.options(section):
-                num_options += 1
-                val = r_config.get(section, option)
-                val_typed = r_config.get_value(section, option)
-                assert isinstance(val_typed, (bool, long, float, basestring))
-                assert val
-                assert "\n" not in option
-                assert "\n" not in val
+            if section != 'filter "indent"':
+                for option in r_config.options(section):
+                    num_options += 1
+                    val = r_config.get(section, option)
+                    val_typed = r_config.get_value(section, option)
+                    assert isinstance(val_typed, (bool, long, float, basestring))
+                    assert val
+                    assert "\n" not in option
+                    assert "\n" not in val
 
-                # writing must fail
-                self.failUnlessRaises(IOError, r_config.set, section, option, None)
-                self.failUnlessRaises(IOError, r_config.remove_option, section, option)
+                    # writing must fail
+                    self.failUnlessRaises(IOError, r_config.set, section, option, None)
+                    self.failUnlessRaises(IOError, r_config.remove_option, section, option)
+            else:
+                val = r_config.get(section, 'required')
+                assert val is None
             # END for each option
             self.failUnlessRaises(IOError, r_config.remove_section, section)
         # END for each section

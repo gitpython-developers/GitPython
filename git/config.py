@@ -131,19 +131,20 @@ class GitConfigParser(cp.RawConfigParser, object):
 
     OPTCRE = re.compile(
         r'\s*(?P<option>[^:=\s][^:=]*)'       # very permissive, incuding leading whitespace
-        r'\s*(?P<vi>[:=])\s*'                 # any number of space/tab,
-                                              # followed by separator
-                                              # (either : or =), followed
-                                              # by any # space/tab
-        r'(?P<value>.*)$'                     # everything up to eol
-    )
+        r'\s*(?:'                             # any number of space/tab,
+        r'(?P<vi>[:=])\s*'                    # optionally followed by
+                                              # separator (either : or
+                                              # =), followed by any #
+                                              # space/tab
+        r'(?P<value>.*))?$'                   # everything up to eol
+        )
 
     # list of RawConfigParser methods able to change the instance
     _mutating_methods_ = ("add_section", "remove_section", "remove_option", "set")
     __slots__ = ("_sections", "_defaults", "_file_or_files", "_read_only", "_is_initialized", '_lock')
 
     def __init__(self, file_or_files, read_only=True):
-        """Initialize a configuration reader to read the given file_or_files and to 
+        """Initialize a configuration reader to read the given file_or_files and to
         possibly allow changes to it by setting read_only False
 
         :param file_or_files:
@@ -198,10 +199,10 @@ class GitConfigParser(cp.RawConfigParser, object):
         return optionstr
 
     def _read(self, fp, fpname):
-        """A direct copy of the py2.4 version of the super class's _read method
+        """A direct copy of the py2.7 version of the super class's _read method
         to assure it uses ordered dicts. Had to change one line to make it work.
 
-        Future versions have this fixed, but in fact its quite embarassing for the 
+        Future versions have this fixed, but in fact its quite embarassing for the
         guys not to have done it right in the first place !
 
         Removed big comments to make it more compact.
@@ -222,6 +223,7 @@ class GitConfigParser(cp.RawConfigParser, object):
             if line.split(None, 1)[0].lower() == 'rem' and line[0] in "rR":
                 # no leading whitespace
                 continue
+            # a section header or option header?
             else:
                 # is it a section header?
                 mo = self.SECTCRE.match(line.strip())
@@ -245,43 +247,48 @@ class GitConfigParser(cp.RawConfigParser, object):
                     mo = self.OPTCRE.match(line)
                     if mo:
                         optname, vi, optval = mo.group('option', 'vi', 'value')
-                        if vi in ('=', ':') and ';' in optval:
-                            pos = optval.find(';')
-                            if pos != -1 and optval[pos - 1].isspace():
-                                optval = optval[:pos]
-                        optval = optval.strip()
-
-                        # Remove paired unescaped-quotes
-                        unquoted_optval = ''
-                        escaped = False
-                        in_quote = False
-                        for c in optval:
-                            if not escaped and c == '"':
-                                in_quote = not in_quote
-                            else:
-                                escaped = (c == '\\') and not escaped
-                                unquoted_optval += c
-
-                        if in_quote:
-                            if not e:
-                                e = cp.ParsingError(fpname)
-                            e.append(lineno, repr(line))
-
-                        optval = unquoted_optval
-
-                        optval = optval.replace('\\\\', '\\')  # Unescape backslashes
-                        optval = optval.replace(r'\"', '"')  # Unescape quotes
-
                         optname = self.optionxform(optname.rstrip())
-                        cursect[optname] = optval
+                        if optval is not None:
+                            if vi in ('=', ':') and ';' in optval:
+                                # ';' is a comment delimiter only if it follows
+                                # a spacing character
+                                pos = optval.find(';')
+                                if pos != -1 and optval[pos-1].isspace():
+                                    optval = optval[:pos]
+                            optval = optval.strip()
+                            # allow empty values
+                            if optval == '""':
+                                optval = ''
+                            # Remove paired unescaped-quotes
+                            unquoted_optval = ''
+                            escaped = False
+                            in_quote = False
+                            for c in optval:
+                                if not escaped and c == '"':
+                                    in_quote = not in_quote
+                                else:
+                                    escaped = (c == '\\') and not escaped
+                                    unquoted_optval += c
+                            if in_quote:
+                                if not e:
+                                    e = cp.ParsingError(fpname)
+                                e.append(lineno, repr(line))
+
+                            optval = unquoted_optval
+                            optval = optval.replace('\\\\', '\\')  # Unescape backslashes
+                            optval = optval.replace(r'\"', '"')  # Unescape quotes
+                            cursect[optname] = optval
+                        else:
+                            # valueless option handling
+                            cursect[optname] = optval
                     else:
+                        # a non-fatal parsing error occurred.  set up the
+                        # exception but keep going. the exception will be
+                        # raised at the end of the file and will contain a
+                        # list of all bogus lines
                         if not e:
                             e = cp.ParsingError(fpname)
                         e.append(lineno, repr(line))
-                    # END
-                # END ?
-            # END ?
-        # END while reading
         # if any parsing errors occurred, raise an exception
         if e:
             raise e
@@ -398,7 +405,7 @@ class GitConfigParser(cp.RawConfigParser, object):
         :param default:
             If not None, the given default value will be returned in case 
             the option did not exist
-        :return: a properly typed value, either int, float or string
+        :return: a properly typed value, either int, bool, float, string or None
 
         :raise TypeError: in case the value could not be understood
             Otherwise the exceptions known to the ConfigParser will be raised."""
@@ -408,6 +415,9 @@ class GitConfigParser(cp.RawConfigParser, object):
             if default is not None:
                 return default
             raise
+
+        if valuestr is None:
+            return valuestr
 
         types = (long, float)
         for numtype in types:
