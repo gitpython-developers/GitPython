@@ -583,6 +583,10 @@ class Remote(LazyMixin, Iterable):
             See also git-push(1).
             
             Taken from the git manual
+
+            Fetch supports multiple refspecs (as the
+            underlying git-fetch does) - supplying a list rather than a string
+            for 'refspec' will make use of this facility.
         :param progress: See 'push' method
         :param kwargs: Additional arguments to be passed to git-fetch
         :return:
@@ -593,7 +597,11 @@ class Remote(LazyMixin, Iterable):
             As fetch does not provide progress information to non-ttys, we cannot make 
             it available here unfortunately as in the 'push' method."""
         kwargs = add_progress(kwargs, self.repo.git, progress)
-        proc = self.repo.git.fetch(self, refspec, with_extended_output=True, as_process=True, v=True, **kwargs)
+        if isinstance(refspec, list):
+            args = refspec
+        else:
+            args = [refspec]
+        proc = self.repo.git.fetch(self, *args, with_extended_output=True, as_process=True, v=True, **kwargs)
         return self._get_fetch_info_from_stderr(proc, progress or RemoteProgress())
         
     def pull(self, refspec=None, progress=None, **kwargs):
