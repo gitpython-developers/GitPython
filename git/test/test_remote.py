@@ -199,6 +199,10 @@ class TestRemote(TestBase):
         # ... with respec and no target
         res = fetch_and_test(remote, refspec='master')
         assert len(res) == 1
+
+        # ... multiple refspecs
+        res = fetch_and_test(remote, refspec=['master', 'fred'])
+        assert len(res) == 1
         
         # add new tag reference
         rtag = TagReference.create(remote_repo, "1.0-RV_hello.there")
