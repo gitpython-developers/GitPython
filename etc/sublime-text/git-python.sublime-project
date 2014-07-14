@@ -1,0 +1,71 @@
+{
+	"folders":
+	[
+		// GIT-PYTHON
+		/////////////
+		{
+			"follow_symlinks": true,
+			"path": "../..",
+			"file_exclude_patterns" : [
+				"*.sublime-workspace",
+				".git",
+				".noseids",
+				".coverage"
+			],
+			"folder_exclude_patterns" : [
+				".git",
+				"cover",
+				"git/ext"
+			]
+		},
+		// GITDB
+		////////
+		{
+			"follow_symlinks": true,
+			"path": "../../git/ext/gitdb",
+			"file_exclude_patterns" : [
+				"*.sublime-workspace",
+				".git",
+				".noseids",
+				".coverage"
+			],
+			"folder_exclude_patterns" : [
+				".git",
+				"cover",
+				"gitdb/ext"
+			]
+		},
+		// SMMAP
+		////////
+		{
+			"follow_symlinks": true,
+			"path": "../../git/ext/gitdb/gitdb/ext/smmap",
+			"file_exclude_patterns" : [
+				"*.sublime-workspace",
+				".git",
+				".noseids",
+				".coverage"
+			],
+			"folder_exclude_patterns" : [
+				".git",
+				"cover",
+			]
+		},
+		// ASYNC
+		////////
+		{
+			"follow_symlinks": true,
+			"path": "../../git/ext/gitdb/gitdb/ext/async",
+			"file_exclude_patterns" : [
+				"*.sublime-workspace",
+				".git",
+				".noseids",
+				".coverage"
+			],
+			"folder_exclude_patterns" : [
+				".git",
+				"cover",
+			]
+		},
+	]
+}

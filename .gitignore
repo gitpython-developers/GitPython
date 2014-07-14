@@ -8,3 +8,4 @@ cover/
 /dist
 /doc/_build
 nbproject
+*.sublime-workspace
