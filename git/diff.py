@@ -75,6 +75,10 @@ class Diffable(object):
             args.append("-M")               # check for renames
         else:
             args.append("--raw")
+
+        # in any way, assure we don't see colored output, 
+        # fixes https://github.com/gitpython-developers/GitPython/issues/172
+        args.append('--no-color')
         
         if paths is not None and not isinstance(paths, (tuple,list)):
             paths = [ paths ]
