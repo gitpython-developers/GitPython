@@ -16,6 +16,8 @@ v = open(path.join(path.dirname(__file__), 'VERSION'))
 VERSION = v.readline().strip()
 v.close()
 
+with open('requirements.txt') as reqs_file:
+    requirements = reqs_file.read().splitlines()
 
 class build_py(_build_py):
     def run(self):
@@ -73,7 +75,7 @@ setup(name = "GitPython",
       package_data = {'git.test' : ['fixtures/*']},
       package_dir = {'git':'git'},
       license = "BSD License",
-      install_requires='gitdb >= 0.5.1',
+      install_requires=requirements,
       zip_safe=False,
       long_description = """\
 GitPython is a python library used to interact with Git repositories""",

@@ -14,16 +14,20 @@ The object database implementation is optimized for handling large quantities of
 * Mock by Michael Foord used for tests
     - Tested with 1.0.1
 
+The list of dependencies are listed in /requirements.txt. The installer takes care of installing them for you though.
+
 ### INSTALL
 
 If you have downloaded the source code:
 
     python setup.py install
-    
-or if you want to obtain a copy more easily: 
+
+or if you want to obtain a copy from the Pypi repository:
 
     pip install gitpython
-    
+
+Both commands will install the required package dependencies.
+
 A distribution package can be obtained for manual installation at:
 
     http://pypi.python.org/pypi/GitPython

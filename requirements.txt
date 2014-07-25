@@ -1,0 +1,2 @@
+# Remember to update README.md
+gitdb>=0.5.1
