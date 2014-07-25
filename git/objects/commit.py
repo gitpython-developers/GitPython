@@ -10,20 +10,20 @@ from tree import Tree
 from cStringIO import StringIO
 
 from git.util import (
-                        hex_to_bin,
-                        Actor,
-                        RepoAliasMixin,
-                        Iterable,
-                        Actor,
-                        Stats
-                        )
+    hex_to_bin,
+    Actor,
+    RepoAliasMixin,
+    Iterable,
+    Actor,
+    Stats
+)
 
 from util import (
-                    Traversable,
-                    Serializable,
-                    altz_to_utctz_str,
-                    parse_actor_and_date
-                )
+    Traversable,
+    Serializable,
+    altz_to_utctz_str,
+    parse_actor_and_date
+)
 from git.diff import Diffable
 from git.base import IStream
 from cStringIO import StringIO
@@ -36,36 +36,36 @@ import sys
 
 __all__ = ('Commit', )
 
+
 class Commit(Diffable, Iterable, RepoAliasMixin, base.Object, Traversable, Serializable):
+
     """Wraps a git Commit object.
-    
+
     This class will act lazily on some of its attributes and will query the 
     value on demand only if it involves calling the git binary."""
     __slots__ = tuple()
-    
+
     # ENVIRONMENT VARIABLES
     # read when creating new commits
     env_author_date = "GIT_AUTHOR_DATE"
     env_committer_date = "GIT_COMMITTER_DATE"
-    
+
     # CONFIGURATION KEYS
     conf_encoding = 'i18n.commitencoding'
-    
+
     # INVARIANTS
     default_encoding = "UTF-8"
-    
-    
-    # object configuration 
+
+    # object configuration
     type = ObjectType.commit
     type_id = ObjectType.commit_id
-    
+
     __slots__ = ("tree",
                  "author", "authored_date", "author_tz_offset",
                  "committer", "committed_date", "committer_tz_offset",
                  "message", "parents", "encoding")
     _id_attribute_ = "binsha"
-    
-    
+
     def count(self, paths='', **kwargs):
         """Count the number of commits reachable from this commit
 
@@ -83,7 +83,6 @@ class Commit(Diffable, Iterable, RepoAliasMixin, base.Object, Traversable, Seria
             return len(self.repo.git.rev_list(self.hexsha, '--', paths, **kwargs).splitlines())
         else:
             return len(self.repo.git.rev_list(self.hexsha, **kwargs).splitlines())
-        
 
     @property
     def name_rev(self):
@@ -118,10 +117,10 @@ class Commit(Diffable, Iterable, RepoAliasMixin, base.Object, Traversable, Seria
 
         proc = repo.git.rev_list(rev, args, as_process=True, **kwargs)
         return cls._iter_from_process_or_stream(repo, proc)
-        
+
     def iter_parents(self, paths='', **kwargs):
         """Iterate _all_ parents of this commit.
-        
+
         :param paths:
             Optional path or list of paths limiting the Commits to those that 
             contain at least one of the paths
@@ -129,17 +128,17 @@ class Commit(Diffable, Iterable, RepoAliasMixin, base.Object, Traversable, Seria
         :return: Iterator yielding Commit objects which are parents of self """
         # skip ourselves
         skip = kwargs.get("skip", 1)
-        if skip == 0:   # skip ourselves 
+        if skip == 0:   # skip ourselves
             skip = 1
         kwargs['skip'] = skip
-        
+
         return self.iter_items(self.repo, self, paths, **kwargs)
 
     @property
     def stats(self):
         """Create a git stat from changes between this commit and its first parent 
         or from all changes done if this is the very first commit.
-        
+
         :return: git.Stats"""
         if not self.parents:
             text = self.repo.git.diff_tree(self.hexsha, '--', numstat=True, root=True)
@@ -152,11 +151,10 @@ class Commit(Diffable, Iterable, RepoAliasMixin, base.Object, Traversable, Seria
             text = self.repo.git.diff(self.parents[0].hexsha, self.hexsha, '--', numstat=True)
         return Stats._list_from_string(self.repo, text)
 
-        
     @classmethod
     def create_from_tree(cls, repo, tree, message, parent_commits=None, head=False):
         """Commit the given tree, creating a commit object.
-        
+
         :param repo: Repo object the commit should be part of 
         :param tree: Tree object or hex or bin sha 
             the tree of the new commit
@@ -172,9 +170,9 @@ class Commit(Diffable, Iterable, RepoAliasMixin, base.Object, Traversable, Seria
             If True, the HEAD will be advanced to the new commit automatically.
             Else the HEAD will remain pointing on the previous commit. This could 
             lead to undesired results when diffing files.
-            
+
         :return: Commit object representing the new commit
-            
+
         :note:
             Additional information about the committer and Author are taken from the
             environment or from the git configuration, see git-commit-tree for 
@@ -182,72 +180,71 @@ class Commit(Diffable, Iterable, RepoAliasMixin, base.Object, Traversable, Seria
         parents = parent_commits
         if parent_commits is None:
             try:
-                parent_commits = [ repo.head.commit ]
+                parent_commits = [repo.head.commit]
             except ValueError:
                 # empty repositories have no head commit
                 parent_commits = list()
             # END handle parent commits
         # END if parent commits are unset
-        
-        # retrieve all additional information, create a commit object, and 
+
+        # retrieve all additional information, create a commit object, and
         # serialize it
-        # Generally: 
+        # Generally:
         # * Environment variables override configuration values
         # * Sensible defaults are set according to the git documentation
-        
+
         # COMMITER AND AUTHOR INFO
         cr = repo.config_reader()
         env = os.environ
-        
+
         committer = Actor.committer(cr)
         author = Actor.author(cr)
-        
+
         # PARSE THE DATES
         unix_time = int(time())
         offset = altzone
-        
+
         author_date_str = env.get(cls.env_author_date, '')
         if author_date_str:
             author_time, author_offset = parse_date(author_date_str)
         else:
             author_time, author_offset = unix_time, offset
         # END set author time
-        
+
         committer_date_str = env.get(cls.env_committer_date, '')
-        if committer_date_str: 
+        if committer_date_str:
             committer_time, committer_offset = parse_date(committer_date_str)
         else:
             committer_time, committer_offset = unix_time, offset
         # END set committer time
-        
+
         # assume utf8 encoding
         enc_section, enc_option = cls.conf_encoding.split('.')
         conf_encoding = cr.get_value(enc_section, enc_option, cls.default_encoding)
-        
-        
+
         # if the tree is no object, make sure we create one - otherwise
         # the created commit object is invalid
         if isinstance(tree, str):
             tree = repo.tree(tree)
         # END tree conversion
-        
+
         # CREATE NEW COMMIT
-        new_commit = cls(repo, cls.NULL_BIN_SHA, tree, 
-                        author, author_time, author_offset, 
-                        committer, committer_time, committer_offset,
-                        message, parent_commits, conf_encoding)
-        
+        new_commit = cls(repo, cls.NULL_BIN_SHA, tree,
+                         author, author_time, author_offset,
+                         committer, committer_time, committer_offset,
+                         message, parent_commits, conf_encoding)
+
         stream = StringIO()
         new_commit._serialize(stream)
         streamlen = stream.tell()
         stream.seek(0)
-        
+
         istream = repo.odb.store(IStream(cls.type, streamlen, stream))
         new_commit.binsha = istream.binsha
-        
+
         if head:
             # need late import here, importing git at the very beginning throws
-            # as well ... 
+            # as well ...
             import git.refs
             try:
                 repo.head.set_commit(new_commit, logmsg="commit: %s" % message)
@@ -258,16 +255,16 @@ class Commit(Diffable, Iterable, RepoAliasMixin, base.Object, Traversable, Seria
                 master = git.refs.Head.create(repo, repo.head.ref, new_commit, logmsg="commit (initial): %s" % message)
                 repo.head.set_reference(master, logmsg='commit: Switching to %s' % master)
             # END handle empty repositories
-        # END advance head handling 
-        
+        # END advance head handling
+
         return new_commit
-        
+
     def __init__(self, odb, binsha, tree=None, author=None, authored_date=None, author_tz_offset=None,
-                 committer=None, committed_date=None, committer_tz_offset=None, 
+                 committer=None, committed_date=None, committer_tz_offset=None,
                  message=None,  parents=None, encoding=None):
         """Instantiate a new Commit. All keyword arguments taking None as default will 
         be implicitly set on first query. 
-        
+
         :param binsha: 20 byte sha1
         :param parents: tuple( Commit, ... ) 
             is a tuple of commit ids or actual Commits
@@ -295,11 +292,11 @@ class Commit(Diffable, Iterable, RepoAliasMixin, base.Object, Traversable, Seria
             List or tuple of Commit objects which are our parent(s) in the commit 
             dependency graph
         :return: git.Commit
-        
+
         :note: Timezone information is in the same format and in the same sign 
             as what time.altzone returns. The sign is inverted compared to git's 
             UTC timezone."""
-        super(Commit,self).__init__(odb, binsha)
+        super(Commit, self).__init__(odb, binsha)
         if tree is not None:
             assert isinstance(tree, Tree), "Tree needs to be a Tree instance, was %s" % type(tree)
         if tree is not None:
@@ -322,7 +319,7 @@ class Commit(Diffable, Iterable, RepoAliasMixin, base.Object, Traversable, Seria
             self.parents = parents
         if encoding is not None:
             self.encoding = encoding
-        
+
     @classmethod
     def _get_intermediate_items(cls, commit):
         return commit.parents
@@ -340,7 +337,7 @@ class Commit(Diffable, Iterable, RepoAliasMixin, base.Object, Traversable, Seria
     def summary(self):
         """:return: First line of the commit message"""
         return self.message.split('\n', 1)[0]
-        
+
     @classmethod
     def _iter_from_process_or_stream(cls, odb, proc_or_stream):
         """Parse out commit information into a list of Commit objects
@@ -351,10 +348,10 @@ class Commit(Diffable, Iterable, RepoAliasMixin, base.Object, Traversable, Seria
         :return: iterator returning Commit objects"""
         stream = proc_or_stream
         close_std_err = False
-        if not hasattr(stream,'readline'):
+        if not hasattr(stream, 'readline'):
             stream = proc_or_stream.stdout
             close_std_err = True
-            
+
         readline = stream.readline
         try:
             while True:
@@ -366,7 +363,7 @@ class Commit(Diffable, Iterable, RepoAliasMixin, base.Object, Traversable, Seria
                     # split additional information, as returned by bisect for instance
                     hexsha, rest = line.split(None, 1)
                 # END handle extra info
-                
+
                 assert len(hexsha) == 40, "Invalid line: %s" % hexsha
                 yield cls(odb, hex_to_bin(hexsha))
             # END for each line in stream
@@ -376,39 +373,39 @@ class Commit(Diffable, Iterable, RepoAliasMixin, base.Object, Traversable, Seria
                 proc_or_stream.stderr.close()
 
     #{ Serializable Implementation
-    
+
     def _serialize(self, stream):
         write = stream.write
         write("tree %s\n" % self.tree)
         for p in self.parents:
             write("parent %s\n" % p)
-            
+
         a = self.author
         aname = a.name
         if isinstance(aname, unicode):
             aname = aname.encode(self.encoding)
         # END handle unicode in name
-        
+
         c = self.committer
         fmt = "%s %s <%s> %s %s\n"
-        write(fmt % ("author", aname, a.email, 
-                        self.authored_date, 
-                        altz_to_utctz_str(self.author_tz_offset)))
-            
+        write(fmt % ("author", aname, a.email,
+                     self.authored_date,
+                     altz_to_utctz_str(self.author_tz_offset)))
+
         # encode committer
         aname = c.name
         if isinstance(aname, unicode):
             aname = aname.encode(self.encoding)
         # END handle unicode in name
-        write(fmt % ("committer", aname, c.email, 
-                        self.committed_date,
-                        altz_to_utctz_str(self.committer_tz_offset)))
-        
+        write(fmt % ("committer", aname, c.email,
+                     self.committed_date,
+                     altz_to_utctz_str(self.committer_tz_offset)))
+
         if self.encoding != self.default_encoding:
             write("encoding %s\n" % self.encoding)
-        
+
         write("\n")
-        
+
         # write plain bytes, be sure its encoded according to our encoding
         if isinstance(self.message, unicode):
             write(self.message.encode(self.encoding))
@@ -416,12 +413,12 @@ class Commit(Diffable, Iterable, RepoAliasMixin, base.Object, Traversable, Seria
             write(self.message)
         # END handle encoding
         return self
-    
+
     def _deserialize(self, stream):
         """:param from_rev_list: if true, the stream format is coming from the rev-list command
         Otherwise it is assumed to be a plain data stream from our object"""
         readline = stream.readline
-        self.tree = Tree(self.odb, hex_to_bin(readline().split()[1]), Tree.tree_id<<12, '')
+        self.tree = Tree(self.odb, hex_to_bin(readline().split()[1]), Tree.tree_id << 12, '')
 
         self.parents = list()
         next_line = None
@@ -434,11 +431,10 @@ class Commit(Diffable, Iterable, RepoAliasMixin, base.Object, Traversable, Seria
             self.parents.append(type(self)(self.odb, hex_to_bin(parent_line.split()[-1])))
         # END for each parent line
         self.parents = tuple(self.parents)
-        
+
         self.author, self.authored_date, self.author_tz_offset = parse_actor_and_date(next_line)
         self.committer, self.committed_date, self.committer_tz_offset = parse_actor_and_date(readline())
-        
-        
+
         # now we can have the encoding line, or an empty line followed by the optional
         # message.
         self.encoding = self.default_encoding
@@ -446,25 +442,27 @@ class Commit(Diffable, Iterable, RepoAliasMixin, base.Object, Traversable, Seria
         enc = readline()
         enc = enc.strip()
         if enc:
-            self.encoding = enc[enc.find(' ')+1:]
-            # now comes the message separator 
+            self.encoding = enc[enc.find(' ') + 1:]
+            # now comes the message separator
             readline()
         # END handle encoding
-        
+
         # decode the authors name
         try:
-            self.author.name = self.author.name.decode(self.encoding) 
+            self.author.name = self.author.name.decode(self.encoding)
         except UnicodeDecodeError:
-            print >> sys.stderr, "Failed to decode author name '%s' using encoding %s" % (self.author.name, self.encoding)
+            print >> sys.stderr, "Failed to decode author name '%s' using encoding %s" % (
+                self.author.name, self.encoding)
         # END handle author's encoding
-        
+
         # decode committer name
         try:
-            self.committer.name = self.committer.name.decode(self.encoding) 
+            self.committer.name = self.committer.name.decode(self.encoding)
         except UnicodeDecodeError:
-            print >> sys.stderr, "Failed to decode committer name '%s' using encoding %s" % (self.committer.name, self.encoding)
+            print >> sys.stderr, "Failed to decode committer name '%s' using encoding %s" % (
+                self.committer.name, self.encoding)
         # END handle author's encoding
-        
+
         # a stream from our data simply gives us the plain message
         # The end of our message stream is marked with a newline that we strip
         self.message = stream.read()
@@ -472,8 +470,7 @@ class Commit(Diffable, Iterable, RepoAliasMixin, base.Object, Traversable, Seria
             self.message = self.message.decode(self.encoding)
         except UnicodeDecodeError:
             print >> sys.stderr, "Failed to decode message '%s' using encoding %s" % (self.message, self.encoding)
-        # END exception handling 
+        # END exception handling
         return self
-    
-    #} END serializable implementation
 
+    #} END serializable implementation

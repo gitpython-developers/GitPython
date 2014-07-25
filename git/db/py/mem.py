@@ -4,72 +4,74 @@
 # the New BSD License: http://www.opensource.org/licenses/bsd-license.php
 """Contains the MemoryDatabase implementation"""
 from base import (
-                        PureObjectDBR, 
-                        PureObjectDBW
-                    )
+    PureObjectDBR,
+    PureObjectDBW
+)
 from loose import PureLooseObjectODB
 from git.base import (
-                            OStream,
-                            IStream,
-                        )
+    OStream,
+    IStream,
+)
 
 from git.exc import (
-                        BadObject,
-                        UnsupportedOperation
-                        )
+    BadObject,
+    UnsupportedOperation
+)
 from git.stream import (
-                            ZippedStoreShaWriter,
-                            DecompressMemMapReader,
-                        )
+    ZippedStoreShaWriter,
+    DecompressMemMapReader,
+)
 
 from cStringIO import StringIO
 
 __all__ = ("PureMemoryDB", )
 
+
 class PureMemoryDB(PureObjectDBR, PureObjectDBW):
+
     """A memory database stores everything to memory, providing fast IO and object
     retrieval. It should be used to buffer results and obtain SHAs before writing
     it to the actual physical storage, as it allows to query whether object already
     exists in the target storage before introducing actual IO
-    
+
     :note: memory is currently not threadsafe, hence the async methods cannot be used
         for storing"""
-    
+
     def __init__(self):
         super(PureMemoryDB, self).__init__()
         self._db = PureLooseObjectODB("path/doesnt/matter")
-        
+
         # maps 20 byte shas to their OStream objects
         self._cache = dict()
-        
+
     def set_ostream(self, stream):
         raise UnsupportedOperation("PureMemoryDB's always stream into memory")
-        
+
     def store(self, istream):
         zstream = ZippedStoreShaWriter()
         self._db.set_ostream(zstream)
-        
+
         istream = self._db.store(istream)
         zstream.close()     # close to flush
         zstream.seek(0)
-        
-        # don't provide a size, the stream is written in object format, hence the 
+
+        # don't provide a size, the stream is written in object format, hence the
         # header needs decompression
-        decomp_stream = DecompressMemMapReader(zstream.getvalue(), close_on_deletion=False) 
+        decomp_stream = DecompressMemMapReader(zstream.getvalue(), close_on_deletion=False)
         self._cache[istream.binsha] = OStream(istream.binsha, istream.type, istream.size, decomp_stream)
-        
+
         return istream
-        
+
     def store_async(self, reader):
         raise UnsupportedOperation("PureMemoryDBs cannot currently be used for async write access")
-    
+
     def has_object(self, sha):
         return sha in self._cache
 
     def info(self, sha):
         # we always return streams, which are infos as well
         return self.stream(sha)
-    
+
     def stream(self, sha):
         try:
             ostream = self._cache[sha]
@@ -79,15 +81,14 @@ class PureMemoryDB(PureObjectDBR, PureObjectDBW):
         except KeyError:
             raise BadObject(sha)
         # END exception handling
-    
+
     def size(self):
         return len(self._cache)
-        
+
     def sha_iter(self):
         return self._cache.iterkeys()
-        
-        
-    #{ Interface 
+
+    #{ Interface
     def stream_copy(self, sha_iter, odb):
         """Copy the streams as identified by sha's yielded by sha_iter into the given odb
         The streams will be copied directly
@@ -99,12 +100,12 @@ class PureMemoryDB(PureObjectDBR, PureObjectDBW):
             if odb.has_object(sha):
                 continue
             # END check object existance
-            
+
             ostream = self.stream(sha)
             # compressed data including header
             sio = StringIO(ostream.stream.data())
             istream = IStream(ostream.type, ostream.size, sio, sha)
-            
+
             odb.store(istream)
             count += 1
         # END for each sha

@@ -5,17 +5,17 @@
 """Module containing a database to deal with packs"""
 from git.db import CachingDB
 from base import (
-                        PureRootPathDB, 
-                        PureObjectDBR 
-                )
+    PureRootPathDB,
+    PureObjectDBR
+)
 
 from git.util import LazyMixin
 
 from git.exc import (
-                            BadObject,
-                            UnsupportedOperation,
-                            AmbiguousObjectName
-                        )
+    BadObject,
+    UnsupportedOperation,
+    AmbiguousObjectName
+)
 
 from git.pack import PackEntity
 
@@ -28,16 +28,17 @@ __all__ = ('PurePackedODB', )
 
 
 class PurePackedODB(PureRootPathDB, PureObjectDBR, CachingDB, LazyMixin):
+
     """A database operating on a set of object packs"""
-    
+
     # the type to use when instantiating a pack entity
     PackEntityCls = PackEntity
-    
+
     # sort the priority list every N queries
-    # Higher values are better, performance tests don't show this has 
+    # Higher values are better, performance tests don't show this has
     # any effect, but it should have one
     _sort_interval = 500
-    
+
     def __init__(self, root_path):
         super(PurePackedODB, self).__init__(root_path)
         # list of lists with three items:
@@ -47,16 +48,16 @@ class PurePackedODB(PureRootPathDB, PureObjectDBR, CachingDB, LazyMixin):
         # self._entities = list()       # lazy loaded list
         self._hit_count = 0             # amount of hits
         self._st_mtime = 0              # last modification data of our root path
-        
+
     def _set_cache_(self, attr):
         if attr == '_entities':
             self._entities = list()
             self.update_cache(force=True)
         # END handle entities initialization
-        
+
     def _sort_entities(self):
         self._entities.sort(key=lambda l: l[0], reverse=True)
-        
+
     def _pack_info(self, sha):
         """:return: tuple(entity, index) for an item at the given sha
         :param sha: 20 or 40 byte sha
@@ -69,7 +70,7 @@ class PurePackedODB(PureRootPathDB, PureObjectDBR, CachingDB, LazyMixin):
         if self._hit_count % self._sort_interval == 0:
             self._sort_entities()
         # END update sorting
-        
+
         for item in self._entities:
             index = item[2](sha)
             if index is not None:
@@ -78,14 +79,14 @@ class PurePackedODB(PureRootPathDB, PureObjectDBR, CachingDB, LazyMixin):
                 return (item[1], index)
             # END index found in pack
         # END for each item
-        
+
         # no hit, see whether we have to update packs
         # NOTE: considering packs don't change very often, we safe this call
         # and leave it to the super-caller to trigger that
         raise BadObject(sha)
-    
-    #{ Object DB Read 
-    
+
+    #{ Object DB Read
+
     def has_object(self, sha):
         try:
             self._pack_info(sha)
@@ -93,15 +94,15 @@ class PurePackedODB(PureRootPathDB, PureObjectDBR, CachingDB, LazyMixin):
         except BadObject:
             return False
         # END exception handling
-        
+
     def info(self, sha):
         entity, index = self._pack_info(sha)
         return entity.info_at_index(index)
-    
+
     def stream(self, sha):
         entity, index = self._pack_info(sha)
         return entity.stream_at_index(index)
-        
+
     def sha_iter(self):
         sha_list = list()
         for entity in self.entities():
@@ -111,35 +112,34 @@ class PurePackedODB(PureRootPathDB, PureObjectDBR, CachingDB, LazyMixin):
                 yield sha_by_index(index)
             # END for each index
         # END for each entity
-    
+
     def size(self):
         sizes = [item[1].index().size() for item in self._entities]
-        return reduce(lambda x,y: x+y, sizes, 0)
-    
+        return reduce(lambda x, y: x + y, sizes, 0)
+
     #} END object db read
-    
+
     #{ object db write
-    
+
     def store(self, istream):
         """Storing individual objects is not feasible as a pack is designed to 
         hold multiple objects. Writing or rewriting packs for single objects is
         inefficient"""
         raise UnsupportedOperation()
-        
+
     def store_async(self, reader):
         # TODO: add PureObjectDBRW before implementing this
         raise NotImplementedError()
-    
+
     #} END object db write
-    
-    
-    #{ Interface 
-    
+
+    #{ Interface
+
     def update_cache(self, force=False):
         """
         Update our cache with the acutally existing packs on disk. Add new ones, 
         and remove deleted ones. We keep the unchanged ones
-        
+
         :param force: If True, the cache will be updated even though the directory
             does not appear to have changed according to its modification timestamp.
         :return: True if the packs have been updated so there is new information, 
@@ -149,12 +149,12 @@ class PurePackedODB(PureRootPathDB, PureObjectDBR, CachingDB, LazyMixin):
             return False
         # END abort early on no change
         self._st_mtime = stat.st_mtime
-        
+
         # packs are supposed to be prefixed with pack- by git-convention
         # get all pack files, figure out what changed
         pack_files = set(glob.glob(os.path.join(self.root_path(), "pack-*.pack")))
         our_pack_files = set(item[1].pack().path() for item in self._entities)
-        
+
         # new packs
         for pack_file in (pack_files - our_pack_files):
             # init the hit-counter/priority with the size, a good measure for hit-
@@ -162,7 +162,7 @@ class PurePackedODB(PureRootPathDB, PureObjectDBR, CachingDB, LazyMixin):
             entity = self.PackEntityCls(pack_file)
             self._entities.append([entity.pack().size(), entity, entity.index().sha_to_index])
         # END for each new packfile
-        
+
         # removed packs
         for pack_file in (our_pack_files - pack_files):
             del_index = -1
@@ -175,15 +175,15 @@ class PurePackedODB(PureRootPathDB, PureObjectDBR, CachingDB, LazyMixin):
             assert del_index != -1
             del(self._entities[del_index])
         # END for each removed pack
-        
+
         # reinitialize prioritiess
         self._sort_entities()
         return True
-        
+
     def entities(self):
         """:return: list of pack entities operated upon by this database"""
-        return [ item[1] for item in self._entities ]
-        
+        return [item[1] for item in self._entities]
+
     def partial_to_complete_sha(self, partial_binsha, canonical_length):
         """:return: 20 byte sha as inferred by the given partial binary sha
         :param partial_binsha: binary sha with less than 20 bytes 
@@ -202,11 +202,11 @@ class PurePackedODB(PureRootPathDB, PureObjectDBR, CachingDB, LazyMixin):
                 candidate = sha
             # END handle full sha could be found
         # END for each entity
-        
+
         if candidate:
             return candidate
-        
+
         # still not found ?
         raise BadObject(partial_binsha)
-    
+
     #} END interface

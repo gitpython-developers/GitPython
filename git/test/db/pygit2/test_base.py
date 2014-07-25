@@ -7,7 +7,6 @@ from git.test.lib import TestBase, with_rw_repo
 from git.test.db.base import RepoBase
 
 
-
 try:
     import pygit2
 except ImportError:
@@ -17,16 +16,15 @@ except ImportError:
 else:
     # now we know pygit2 is available, to do futher imports
     from git.db.pygit2.complex import Pygit2CompatibilityGitDB as Pygit2DB
-    
-#END handle imports
+
+# END handle imports
+
 
 class TestPyGit2DBBase(RepoBase):
     __metaclass__ = Pygit2RequiredMetaMixin
     RepoCls = Pygit2DB
-    
+
     @needs_pygit2_or_skip
     @with_rw_repo('HEAD', bare=False)
     def test_basics(self, rw_repo):
         db = Pygit2DB(rw_repo.working_tree_dir)
-        
-        

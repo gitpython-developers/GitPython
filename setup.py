@@ -18,6 +18,7 @@ v.close()
 
 
 class build_py(_build_py):
+
     def run(self):
         init = path.join(self.build_lib, 'git', '__init__.py')
         if path.exists(init):
@@ -28,7 +29,8 @@ class build_py(_build_py):
 
 
 class sdist(_sdist):
-    def make_release_tree (self, base_dir, files):
+
+    def make_release_tree(self, base_dir, files):
         _sdist.make_release_tree(self, base_dir, files)
         orig = path.join('git', '__init__.py')
         assert path.exists(orig), orig
@@ -46,7 +48,7 @@ def _stamp_version(filename):
     except (IOError, OSError):
         print >> sys.stderr, "Couldn't find file %s to stamp version" % filename
         return
-    #END handle error, usually happens during binary builds
+    # END handle error, usually happens during binary builds
     for line in f:
         if '__version__ =' in line:
             line = line.replace("'git'", "'%s'" % VERSION)
@@ -61,31 +63,31 @@ def _stamp_version(filename):
     else:
         print >> sys.stderr, "WARNING: Couldn't find version line in file %s" % filename
 
-setup(name = "GitPython",
+setup(name="GitPython",
       cmdclass={'build_py': build_py, 'sdist': sdist},
-      version = VERSION,
-      description = "Python Git Library",
-      author = "Sebastian Thiel, Michael Trier",
-      author_email = "byronimo@gmail.com, mtrier@gmail.com",
-      url = "http://gitorious.org/projects/git-python/",
-      packages = find_packages('.'),
-      py_modules = ['git.'+f[:-3] for f in os.listdir('./git') if f.endswith('.py')],
-      package_data = {'git.test' : ['fixtures/*']},
-      package_dir = {'git':'git'},
-      license = "BSD License",
+      version=VERSION,
+      description="Python Git Library",
+      author="Sebastian Thiel, Michael Trier",
+      author_email="byronimo@gmail.com, mtrier@gmail.com",
+      url="http://gitorious.org/projects/git-python/",
+      packages=find_packages('.'),
+      py_modules=['git.' + f[:-3] for f in os.listdir('./git') if f.endswith('.py')],
+      package_data={'git.test': ['fixtures/*']},
+      package_dir={'git': 'git'},
+      license="BSD License",
       requires=('gitdb (>=0.5.1)',),
       install_requires='gitdb >= 0.5.1',
       zip_safe=False,
       long_description = """\
 GitPython is a python library used to interact with Git repositories""",
       classifiers = [
-        "Development Status :: 4 - Beta",
-        "Intended Audience :: Developers",
-        "License :: OSI Approved :: BSD License",
-        "Operating System :: OS Independent",
-        "Programming Language :: Python",
-        "Programming Language :: Python :: 2.5",
-        "Programming Language :: Python :: 2.6",
-        "Topic :: Software Development :: Libraries :: Python Modules",
-        ]
+          "Development Status :: 4 - Beta",
+          "Intended Audience :: Developers",
+          "License :: OSI Approved :: BSD License",
+          "Operating System :: OS Independent",
+          "Programming Language :: Python",
+          "Programming Language :: Python :: 2.5",
+          "Programming Language :: Python :: 2.6",
+          "Topic :: Software Development :: Libraries :: Python Modules",
+      ]
       )

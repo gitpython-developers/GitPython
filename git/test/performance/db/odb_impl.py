@@ -7,31 +7,33 @@ import stat
 from git.test.performance.lib import (
     TestBigRepoR,
     GlobalsItemDeletorMetaCls
-    )
+)
+
 
 class PerfBaseDeletorMetaClass(GlobalsItemDeletorMetaCls):
     ModuleToDelete = 'TestObjDBPerformanceBase'
-    
+
 
 class TestObjDBPerformanceBase(TestBigRepoR):
     __metaclass__ = PerfBaseDeletorMetaClass
-    
-    #{ Configuration 
+
+    #{ Configuration
     RepoCls = None  # to be set by subclass
     #} END configuration
-    
+
     def test_random_access_test(self):
         repo = self.rorepo
-    
+
         # GET COMMITS
         st = time()
         root_commit = repo.commit(self.head_sha_2k)
         commits = list(root_commit.traverse())
         nc = len(commits)
         elapsed = time() - st
-        
-        print >> sys.stderr, "%s: Retrieved %i commits from ObjectStore in %g s ( %f commits / s )" % (type(repo.odb), nc, elapsed, nc / elapsed)
-            
+
+        print >> sys.stderr, "%s: Retrieved %i commits from ObjectStore in %g s ( %f commits / s )" % (
+            type(repo.odb), nc, elapsed, nc / elapsed)
+
         # GET TREES
         # walk all trees of all commits
         st = time()
@@ -49,9 +51,10 @@ class TestObjDBPerformanceBase(TestBigRepoR):
             blobs_per_commit.append(blobs)
         # END for each commit
         elapsed = time() - st
-        
-        print >> sys.stderr, "%s: Retrieved %i objects from %i commits in %g s ( %f objects / s )" % (type(repo.odb), nt, len(commits), elapsed, nt / elapsed)
-        
+
+        print >> sys.stderr, "%s: Retrieved %i objects from %i commits in %g s ( %f objects / s )" % (
+            type(repo.odb), nt, len(commits), elapsed, nt / elapsed)
+
         # GET BLOBS
         st = time()
         nb = 0
@@ -66,7 +69,6 @@ class TestObjDBPerformanceBase(TestBigRepoR):
                 break
         # END for each bloblist
         elapsed = time() - st
-        
-        print >> sys.stderr, "%s: Retrieved %i blob (%i KiB) and their data in %g s ( %f blobs / s, %f KiB / s )" % (type(repo.odb), nb, data_bytes/1000, elapsed, nb / elapsed, (data_bytes / 1000) / elapsed)
-        
-        
+
+        print >> sys.stderr, "%s: Retrieved %i blob (%i KiB) and their data in %g s ( %f blobs / s, %f KiB / s )" % (
+            type(repo.odb), nb, data_bytes / 1000, elapsed, nb / elapsed, (data_bytes / 1000) / elapsed)

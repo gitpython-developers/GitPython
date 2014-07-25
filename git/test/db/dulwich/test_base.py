@@ -7,7 +7,6 @@ from git.test.lib import TestBase, with_rw_repo
 from git.test.db.base import RepoBase
 
 
-
 try:
     import dulwich
 except ImportError:
@@ -17,16 +16,15 @@ except ImportError:
 else:
     # now we know dulwich is available, to do futher imports
     from git.db.dulwich.complex import DulwichCompatibilityGitDB as DulwichDB
-    
-#END handle imports
+
+# END handle imports
+
 
 class TestDulwichDBBase(RepoBase):
     __metaclass__ = DulwichRequiredMetaMixin
     RepoCls = DulwichDB
-    
+
     @needs_dulwich_or_skip
     @with_rw_repo('HEAD', bare=False)
     def test_basics(self, rw_repo):
         db = DulwichDB(rw_repo.working_tree_dir)
-        
-        
