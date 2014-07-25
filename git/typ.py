@@ -4,7 +4,7 @@
 # the New BSD License: http://www.opensource.org/licenses/bsd-license.php
 """Module containing information about types known to the database"""
 
-#{ String types 
+#{ String types
 
 # For compatability only, use ObjectType instead
 str_blob_type = "blob"
@@ -12,7 +12,9 @@ str_commit_type = "commit"
 str_tree_type = "tree"
 str_tag_type = "tag"
 
+
 class ObjectType(object):
+
     """Enumeration providing object types as strings and ids"""
     blob = str_blob_type
     commit = str_commit_type

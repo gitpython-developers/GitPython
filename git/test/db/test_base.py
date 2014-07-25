@@ -5,6 +5,7 @@
 from lib import *
 from git.db import RefSpec
 
+
 class TestBase(TestDBBase):
 
     needs_ro_repo = False
@@ -17,4 +18,3 @@ class TestBase(TestDBBase):
         assert rs.delete_destination()
         assert rs.source is None
         assert rs.destination == "something"
-        

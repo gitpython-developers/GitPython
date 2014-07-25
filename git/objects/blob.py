@@ -12,12 +12,14 @@ import base
 
 __all__ = ('Blob', )
 
+
 class Blob(base.IndexObject, RepoAliasMixin):
+
     """A Blob encapsulates a git blob object"""
     DEFAULT_MIME_TYPE = "text/plain"
     type = ObjectType.blob
     type_id = ObjectType.blob_id
-    
+
     # valid blob modes
     executable_mode = 0100755
     file_mode = 0100644

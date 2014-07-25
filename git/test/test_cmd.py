@@ -4,17 +4,19 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
-import os, sys
+import os
+import sys
 from git.test.lib import (
-                            TestBase,
-                            patch,
-                            raises,
-                            assert_equal,
-                            assert_true,
-                            assert_match,
-                            fixture_path
-                        )
+    TestBase,
+    patch,
+    raises,
+    assert_equal,
+    assert_true,
+    assert_match,
+    fixture_path
+)
 from git import Git, GitCommandError
+
 
 class TestGit(TestBase):
 
@@ -42,7 +44,6 @@ class TestGit(TestBase):
     def test_it_raises_errors(self):
         self.git.this_does_not_exist()
 
-
     def test_it_transforms_kwargs_into_git_command_arguments(self):
         assert_equal(["-s"], self.git.transform_kwargs(**{'s': True}))
         assert_equal(["-s5"], self.git.transform_kwargs(**{'s': 5}))
@@ -53,7 +54,7 @@ class TestGit(TestBase):
         assert_equal(["-s", "-t"], self.git.transform_kwargs(**{'s': True, 't': True}))
 
     def test_it_executes_git_to_shell_and_returns_result(self):
-        assert_match('^git version [\d\.]{2}.*$', self.git.execute(["git","version"]))
+        assert_match('^git version [\d\.]{2}.*$', self.git.execute(["git", "version"]))
 
     def test_it_accepts_stdin(self):
         filename = fixture_path("cat_file_blob")
@@ -72,13 +73,13 @@ class TestGit(TestBase):
         # read header only
         import subprocess as sp
         hexsha = "b2339455342180c7cc1e9bba3e9f181f7baa5167"
-        g = self.git.cat_file(batch_check=True, istream=sp.PIPE,as_process=True)
+        g = self.git.cat_file(batch_check=True, istream=sp.PIPE, as_process=True)
         g.stdin.write("b2339455342180c7cc1e9bba3e9f181f7baa5167\n")
         g.stdin.flush()
         obj_info = g.stdout.readline()
 
         # read header + data
-        g = self.git.cat_file(batch=True, istream=sp.PIPE,as_process=True)
+        g = self.git.cat_file(batch=True, istream=sp.PIPE, as_process=True)
         g.stdin.write("b2339455342180c7cc1e9bba3e9f181f7baa5167\n")
         g.stdin.flush()
         obj_info_two = g.stdout.readline()
@@ -94,9 +95,8 @@ class TestGit(TestBase):
         g.stdin.flush()
         assert g.stdout.readline() == obj_info
 
-
         # same can be achived using the respective command functions
-        hexsha, typename, size =  self.git.get_object_header(hexsha)
+        hexsha, typename, size = self.git.get_object_header(hexsha)
         hexsha, typename_two, size_two, data = self.git.get_object_data(hexsha)
         assert typename == typename_two and size == size_two
 
@@ -105,17 +105,18 @@ class TestGit(TestBase):
         assert isinstance(v, tuple)
         for n in v:
             assert isinstance(n, int)
-        #END verify number types
+        # END verify number types
 
     def test_cmd_override(self):
         prev_cmd = self.git.GIT_PYTHON_GIT_EXECUTABLE
         try:
             # set it to something that doens't exist, assure it raises
-            type(self.git).GIT_PYTHON_GIT_EXECUTABLE = os.path.join("some", "path", "which", "doesn't", "exist", "gitbinary")
+            type(self.git).GIT_PYTHON_GIT_EXECUTABLE = os.path.join(
+                "some", "path", "which", "doesn't", "exist", "gitbinary")
             self.failUnlessRaises(OSError, self.git.version)
         finally:
             type(self.git).GIT_PYTHON_GIT_EXECUTABLE = prev_cmd
-        #END undo adjustment
+        # END undo adjustment
 
     def test_output_strip(self):
         import subprocess as sp

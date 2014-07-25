@@ -1,9 +1,9 @@
 """Contains library functions"""
 import os
 from git.test.lib import (
-                        TestBase, 
-                        GlobalsItemDeletorMetaCls
-                        )
+    TestBase,
+    GlobalsItemDeletorMetaCls
+)
 import shutil
 import tempfile
 
@@ -26,49 +26,51 @@ def resolve_or_fail(env_var):
 #} END utilities
 
 
-#{ Base Classes 
+#{ Base Classes
 
 class TestBigRepoR(TestBase):
+
     """TestCase providing access to readonly 'big' repositories using the following 
     member variables:
-    
+
     * gitrorepo
-    
+
      * a big read-only git repository
     """
-     
+
     #{ Invariants
     head_sha_2k = '235d521da60e4699e5bd59ac658b5b48bd76ddca'
     head_sha_50 = '32347c375250fd470973a5d76185cac718955fd5'
-    #} END invariants 
-    
+    #} END invariants
+
     #{ Configuration
     RepoCls = Repo
     #} END configuration
-    
+
     @classmethod
     def setUp(cls):
         super(TestBigRepoR, cls).setUp()
         if cls.RepoCls is None:
             raise AssertionError("Require RepoCls in class %s to be set" % cls)
-        #END assert configuration
+        # END assert configuration
         cls.rorepo = cls.RepoCls(resolve_or_fail(k_env_git_repo))
 
 
 class TestBigRepoRW(TestBigRepoR):
+
     """As above, but provides a big repository that we can write to.
-    
+
     Provides ``self.rwrepo``"""
-    
+
     @classmethod
     def setUp(cls):
         super(TestBigRepoRW, cls).setUp()
         dirname = tempfile.mktemp()
         os.mkdir(dirname)
         cls.rwrepo = cls.rorepo.clone(dirname, shared=True, bare=True)
-    
+
     @classmethod
     def tearDownAll(cls):
         shutil.rmtree(cls.rwrepo.working_dir)
-        
+
 #} END base classes

@@ -7,10 +7,10 @@ from base import *
 __all__ = ['CmdPartialGitDB']
 
 
-class CmdPartialGitDB(  GitCommandMixin, CmdObjectDBRMixin, CmdTransportMixin, 
-                        CmdHighLevelRepository ):
+class CmdPartialGitDB(GitCommandMixin, CmdObjectDBRMixin, CmdTransportMixin,
+                      CmdHighLevelRepository):
+
     """Utility repository which only partially implements all required methods.
     It cannot be reliably used alone, but is provided to allow mixing it with other 
     implementations"""
     pass
-
