@@ -382,6 +382,11 @@ class Git(LazyMixin):
         finally:
             proc.stdout.close()
             proc.stderr.close()
+            if proc.stdin:
+                proc.stdin.close()
+            proc.poll()
+            if proc.returncode is None:
+                proc.terminate()
 
         if self.GIT_PYTHON_TRACE == 'full':
             cmdstr = " ".join(command)

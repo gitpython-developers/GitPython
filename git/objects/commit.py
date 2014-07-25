@@ -350,24 +350,31 @@ class Commit(Diffable, Iterable, RepoAliasMixin, base.Object, Traversable, Seria
         :param proc: git-rev-list process instance - one sha per line
         :return: iterator returning Commit objects"""
         stream = proc_or_stream
+        close_std_err = False
         if not hasattr(stream,'readline'):
             stream = proc_or_stream.stdout
+            close_std_err = True
             
         readline = stream.readline
-        while True:
-            line = readline()
-            if not line:
-                break
-            hexsha = line.strip()
-            if len(hexsha) > 40:
-                # split additional information, as returned by bisect for instance
-                hexsha, rest = line.split(None, 1)
-            # END handle extra info
-            
-            assert len(hexsha) == 40, "Invalid line: %s" % hexsha
-            yield cls(odb, hex_to_bin(hexsha))
-        # END for each line in stream
-    
+        try:
+            while True:
+                line = readline()
+                if not line:
+                    break
+                hexsha = line.strip()
+                if len(hexsha) > 40:
+                    # split additional information, as returned by bisect for instance
+                    hexsha, rest = line.split(None, 1)
+                # END handle extra info
+                
+                assert len(hexsha) == 40, "Invalid line: %s" % hexsha
+                yield cls(odb, hex_to_bin(hexsha))
+            # END for each line in stream
+        finally:
+            stream.close()
+            if close_std_err:
+                proc_or_stream.stderr.close()
+
     #{ Serializable Implementation
     
     def _serialize(self, stream):
