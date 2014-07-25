@@ -1,0 +1,4 @@
+# Remember to update README.md
+coverage
+nose
+mock

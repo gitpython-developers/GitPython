@@ -9,3 +9,6 @@ cover/
 /doc/_build
 nbproject
 *.sublime-workspace
+
+/*egg-info
+/.tox
