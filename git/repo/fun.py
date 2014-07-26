@@ -4,20 +4,22 @@ from gitdb.exc import BadObject
 from git.refs import SymbolicReference
 from git.objects import Object
 from gitdb.util import (
-                            join,
-                            isdir, 
-                            isfile,
-                            dirname,
-                            hex_to_bin, 
-                            bin_to_hex
-                        )
+    join,
+    isdir,
+    isfile,
+    dirname,
+    hex_to_bin,
+    bin_to_hex
+)
 from string import digits
 
 __all__ = ('rev_parse', 'is_git_dir', 'touch')
 
+
 def touch(filename):
     fp = open(filename, "a")
     fp.close()
+
 
 def is_git_dir(d):
     """ This is taken from the git setup.c:is_git_directory
@@ -27,8 +29,8 @@ def is_git_dir(d):
             isdir(join(d, 'refs')):
         headref = join(d, 'HEAD')
         return isfile(headref) or \
-                (os.path.islink(headref) and
-                os.readlink(headref).startswith('refs'))
+            (os.path.islink(headref) and
+             os.readlink(headref).startswith('refs'))
     return False
 
 
@@ -53,8 +55,8 @@ def short_to_long(odb, hexsha):
     except BadObject:
         return None
     # END exception handling
-    
-    
+
+
 def name_to_object(repo, name, return_ref=False):
     """
     :return: object specified by the given name, hexshas ( short and long )
@@ -63,7 +65,7 @@ def name_to_object(repo, name, return_ref=False):
         instead of the object. Otherwise it will raise BadObject
     """
     hexsha = None
-    
+
     # is it a hexsha ? Try the most common ones, which is 7 to 40
     if repo.re_hexsha_shortened.match(name):
         if len(name) != 40:
@@ -72,9 +74,9 @@ def name_to_object(repo, name, return_ref=False):
         else:
             hexsha = name
         # END handle short shas
-    #END find sha if it matches
-    
-    # if we couldn't find an object for what seemed to be a short hexsha 
+    # END find sha if it matches
+
+    # if we couldn't find an object for what seemed to be a short hexsha
     # try to find it as reference anyway, it could be named 'aaa' for instance
     if hexsha is None:
         for base in ('%s', 'refs/%s', 'refs/tags/%s', 'refs/heads/%s', 'refs/remotes/%s', 'refs/remotes/%s/HEAD'):
@@ -82,7 +84,7 @@ def name_to_object(repo, name, return_ref=False):
                 hexsha = SymbolicReference.dereference_recursive(repo, base % name)
                 if return_ref:
                     return SymbolicReference(repo, base % name)
-                #END handle symbolic ref
+                # END handle symbolic ref
                 break
             except ValueError:
                 pass
@@ -92,14 +94,15 @@ def name_to_object(repo, name, return_ref=False):
     # didn't find any ref, this is an error
     if return_ref:
         raise BadObject("Couldn't find reference named %r" % name)
-    #END handle return ref
+    # END handle return ref
 
     # tried everything ? fail
     if hexsha is None:
         raise BadObject(name)
     # END assert hexsha was found
-    
+
     return Object.new_from_sha(repo, hex_to_bin(hexsha))
+
 
 def deref_tag(tag):
     """Recursively dereerence a tag and return the resulting object"""
@@ -111,15 +114,17 @@ def deref_tag(tag):
     # END dereference tag
     return tag
 
+
 def to_commit(obj):
     """Convert the given object to a commit if possible and return it"""
     if obj.type == 'tag':
         obj = deref_tag(obj)
-        
+
     if obj.type != "commit":
         raise ValueError("Cannot convert object %r to type commit" % obj)
     # END verify type
     return obj
+
 
 def rev_parse(repo, rev):
     """
@@ -132,13 +137,13 @@ def rev_parse(repo, rev):
     :raise BadObject: if the given revision could not be found
     :raise ValueError: If rev couldn't be parsed
     :raise IndexError: If invalid reflog index is specified"""
-    
+
     # colon search mode ?
     if rev.startswith(':/'):
         # colon search mode
         raise NotImplementedError("commit by message search ( regex )")
     # END handle search
-    
+
     obj = None
     ref = None
     output_type = "commit"
@@ -150,9 +155,9 @@ def rev_parse(repo, rev):
             start += 1
             continue
         # END handle start
-        
+
         token = rev[start]
-        
+
         if obj is None:
             # token is a rev name
             if start == 0:
@@ -162,27 +167,26 @@ def rev_parse(repo, rev):
                     ref = name_to_object(repo, rev[:start], return_ref=True)
                 else:
                     obj = name_to_object(repo, rev[:start])
-                #END handle token
-            #END handle refname
-            
+                # END handle token
+            # END handle refname
+
             if ref is not None:
                 obj = ref.commit
-            #END handle ref
+            # END handle ref
         # END initialize obj on first token
-        
-        
+
         start += 1
-        
+
         # try to parse {type}
         if start < lr and rev[start] == '{':
             end = rev.find('}', start)
             if end == -1:
                 raise ValueError("Missing closing brace to define type in %s" % rev)
-            output_type = rev[start+1:end]  # exclude brace
-            
-            # handle type 
+            output_type = rev[start + 1:end]  # exclude brace
+
+            # handle type
             if output_type == 'commit':
-                pass # default
+                pass  # default
             elif output_type == 'tree':
                 try:
                     obj = to_commit(obj).tree
@@ -202,37 +206,37 @@ def rev_parse(repo, rev):
                 revlog_index = None
                 try:
                     # transform reversed index into the format of our revlog
-                    revlog_index = -(int(output_type)+1)
+                    revlog_index = -(int(output_type) + 1)
                 except ValueError:
                     # TODO: Try to parse the other date options, using parse_date
                     # maybe
                     raise NotImplementedError("Support for additional @{...} modes not implemented")
-                #END handle revlog index
-                
+                # END handle revlog index
+
                 try:
                     entry = ref.log_entry(revlog_index)
                 except IndexError:
                     raise IndexError("Invalid revlog index: %i" % revlog_index)
-                #END handle index out of bound
-                
+                # END handle index out of bound
+
                 obj = Object.new_from_sha(repo, hex_to_bin(entry.newhexsha))
-                
+
                 # make it pass the following checks
                 output_type = None
             else:
-                raise ValueError("Invalid output type: %s ( in %s )"  % (output_type, rev))
+                raise ValueError("Invalid output type: %s ( in %s )" % (output_type, rev))
             # END handle output type
-            
+
             # empty output types don't require any specific type, its just about dereferencing tags
             if output_type and obj.type != output_type:
                 raise ValueError("Could not accomodate requested object type %r, got %s" % (output_type, obj.type))
             # END verify ouput type
-            
-            start = end+1                   # skip brace
+
+            start = end + 1                   # skip brace
             parsed_to = start
             continue
         # END parse type
-        
+
         # try to parse a number
         num = 0
         if token != ":":
@@ -246,15 +250,14 @@ def rev_parse(repo, rev):
                     break
                 # END handle number
             # END number parse loop
-            
+
             # no explicit number given, 1 is the default
-            # It could be 0 though 
+            # It could be 0 though
             if not found_digit:
                 num = 1
             # END set default num
         # END number parsing only if non-blob mode
-        
-        
+
         parsed_to = start
         # handle hiererarchy walk
         try:
@@ -267,7 +270,7 @@ def rev_parse(repo, rev):
                 obj = to_commit(obj)
                 # must be n'th parent
                 if num:
-                    obj = obj.parents[num-1]
+                    obj = obj.parents[num - 1]
             elif token == ":":
                 if obj.type != "tree":
                     obj = obj.tree
@@ -281,17 +284,17 @@ def rev_parse(repo, rev):
             raise BadObject("Invalid Revision in %s" % rev)
         # END exception handling
     # END parse loop
-    
+
     # still no obj ? Its probably a simple name
     if obj is None:
         obj = name_to_object(repo, rev)
         parsed_to = lr
     # END handle simple name
-    
+
     if obj is None:
         raise ValueError("Revision specifier could not be parsed: %s" % rev)
 
     if parsed_to != lr:
         raise ValueError("Didn't consume complete rev spec %s, consumed part: %s" % (rev, rev[:parsed_to]))
-    
+
     return obj
