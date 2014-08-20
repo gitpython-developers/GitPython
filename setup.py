@@ -75,7 +75,7 @@ setup(name="GitPython",
       package_data={'git.test': ['fixtures/*']},
       package_dir={'git': 'git'},
       license="BSD License",
-      requires=('gitdb (>=0.5.1)',),
+      requires=['gitdb (>=0.5.1)',],
       install_requires='gitdb >= 0.5.1',
       zip_safe=False,
       long_description = """\
