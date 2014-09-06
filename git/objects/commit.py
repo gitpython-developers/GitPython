@@ -358,7 +358,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
             # as well ...
             import git.refs
             try:
-                repo.head.set_commit(new_commit, logmsg="commit: %s" % message)
+                repo.head.set_commit(new_commit, logmsg=message)
             except ValueError:
                 # head is not yet set to the ref our HEAD points to
                 # Happens on first commit
