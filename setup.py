@@ -63,6 +63,7 @@ def _stamp_version(filename):
     else:
         print >> sys.stderr, "WARNING: Couldn't find version line in file %s" % filename
 
+test_requirements = ['mock', 'nose', 'gitdb >= 0.5.1']
 setup(name="GitPython",
       cmdclass={'build_py': build_py, 'sdist': sdist},
       version=VERSION,
@@ -75,8 +76,8 @@ setup(name="GitPython",
       package_data={'git.test': ['fixtures/*']},
       package_dir={'git': 'git'},
       license="BSD License",
-      requires=['gitdb (>=0.5.1)',],
-      install_requires='gitdb >= 0.5.1',
+      tests_require=test_requirements,
+      install_requires=['async', 'smmap', 'dulwich'] + test_requirements,
       zip_safe=False,
       long_description = """\
 GitPython is a python library used to interact with Git repositories""",
