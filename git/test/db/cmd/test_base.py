@@ -37,7 +37,7 @@ class TestBase(RepoBase):
 
     def test_fetch_info(self):
         # assure we can handle remote-tracking branches
-        fetch_info_line_fmt = "c437ee5deb8d00cf02f03720693e4c802e99f390 not-for-merge   %s '0.3' of git://github.com/gitpython-developers/GitPython"
+        fetch_info_line_fmt = "c437ee5deb8d00cf02f03720693e4c802e99f390\tnot-for-merge\t%s '0.3' of git://github.com/gitpython-developers/GitPython"
         remote_info_line_fmt = "* [new branch]      nomatter     -> %s"
         fi = CmdFetchInfo._from_line(self.rorepo,
                                      remote_info_line_fmt % "local/master",
