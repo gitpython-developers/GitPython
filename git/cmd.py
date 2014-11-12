@@ -410,12 +410,16 @@ class Git(LazyMixin):
     @classmethod
     def __unpack_args(cls, arg_list):
         if not isinstance(arg_list, (list,tuple)):
+            if isinstance(arg_list, unicode):
+                return [arg_list.encode('utf-8')]
             return [ str(arg_list) ]
             
         outlist = list()
         for arg in arg_list:
             if isinstance(arg_list, (list, tuple)):
                 outlist.extend(cls.__unpack_args( arg ))
+            elif isinstance(arg_list, unicode):
+                outlist.append(arg_list.encode('utf-8'))
             # END recursion 
             else:
                 outlist.append(str(arg))

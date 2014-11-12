@@ -5,8 +5,9 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
 import os, sys
-from git.test.lib import (  TestBase,
-                            patch, 
+from git.test.lib import (
+                            TestBase,
+                            patch,
                             raises,
                             assert_equal,
                             assert_true,
@@ -16,7 +17,7 @@ from git import (   Git,
                     GitCommandError )
 
 class TestGit(TestBase):
-    
+
     @classmethod
     def setUp(cls):
         super(TestGit, cls).setUp()
@@ -28,6 +29,14 @@ class TestGit(TestBase):
         self.git.version()
         assert_true(git.called)
         assert_equal(git.call_args, ((['git', 'version'],), {}))
+
+    def test_call_unpack_args_unicode(self):
+        args = Git._Git__unpack_args(u'Unicode' + unichr(40960))
+        assert_equal(args, ['Unicode\xea\x80\x80'])
+
+    def test_call_unpack_args(self):
+        args = Git._Git__unpack_args(['git', 'log', '--', u'Unicode' + unichr(40960)])
+        assert_equal(args, ['git', 'log', '--', 'Unicode\xea\x80\x80'])
 
     @raises(GitCommandError)
     def test_it_raises_errors(self):
@@ -58,7 +67,7 @@ class TestGit(TestBase):
         # this_should_not_be_ignored=False implies it *should* be ignored
         output = self.git.version(pass_this_kwarg=False)
         assert_true("pass_this_kwarg" not in git.call_args[1])
-        
+
     def test_persistent_cat_file_command(self):
         # read header only
         import subprocess as sp
@@ -67,37 +76,37 @@ class TestGit(TestBase):
         g.stdin.write("b2339455342180c7cc1e9bba3e9f181f7baa5167\n")
         g.stdin.flush()
         obj_info = g.stdout.readline()
-        
+
         # read header + data
         g = self.git.cat_file(batch=True, istream=sp.PIPE,as_process=True)
         g.stdin.write("b2339455342180c7cc1e9bba3e9f181f7baa5167\n")
         g.stdin.flush()
         obj_info_two = g.stdout.readline()
         assert obj_info == obj_info_two
-        
+
         # read data - have to read it in one large chunk
         size = int(obj_info.split()[2])
         data = g.stdout.read(size)
         terminating_newline = g.stdout.read(1)
-        
+
         # now we should be able to read a new object
         g.stdin.write("b2339455342180c7cc1e9bba3e9f181f7baa5167\n")
         g.stdin.flush()
         assert g.stdout.readline() == obj_info
-        
-        
+
+
         # same can be achived using the respective command functions
         hexsha, typename, size =  self.git.get_object_header(hexsha)
         hexsha, typename_two, size_two, data = self.git.get_object_data(hexsha)
         assert typename == typename_two and size == size_two
-        
+
     def test_version(self):
         v = self.git.version_info
         assert isinstance(v, tuple)
         for n in v:
             assert isinstance(n, int)
         #END verify number types
-        
+
     def test_cmd_override(self):
         prev_cmd = self.git.GIT_PYTHON_GIT_EXECUTABLE
         try:
