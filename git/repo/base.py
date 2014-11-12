@@ -376,7 +376,7 @@ class Repo(object):
         if rev is None:
             return self.head.commit
         else:
-            return self.rev_parse(str(rev)+"^0")
+            return self.rev_parse(unicode(rev)+"^0")
         
     def iter_trees(self, *args, **kwargs):
         """:return: Iterator yielding Tree objects
@@ -399,7 +399,7 @@ class Repo(object):
         if rev is None:
             return self.head.commit.tree
         else:
-            return self.rev_parse(str(rev)+"^{tree}")
+            return self.rev_parse(unicode(rev)+"^{tree}")
 
     def iter_commits(self, rev=None, paths='', **kwargs):
         """A list of Commit objects representing the history of a given ref/commit
