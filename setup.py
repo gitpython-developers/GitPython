@@ -16,6 +16,8 @@ v = open(path.join(path.dirname(__file__), 'VERSION'))
 VERSION = v.readline().strip()
 v.close()
 
+with open('requirements.txt') as reqs_file:
+    requirements = reqs_file.read().splitlines()
 
 class build_py(_build_py):
     def run(self):
