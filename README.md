@@ -13,6 +13,9 @@ The object database implementation is optimized for handling large quantities of
     -  Tested with nose 1.3.0
 * Mock by Michael Foord used for tests
     - Tested with 1.0.1
+* Coverage - used for tests coverage
+
+The list of dependencies are listed in /requirements.txt and /test-requirements.txt. The installer takes care of installing them for you though.
 
 ### INSTALL
 
@@ -22,14 +25,26 @@ The object database implementation is optimized for handling large quantities of
 If you have downloaded the source code:
 
     python setup.py install
-    
-or if you want to obtain a copy more easily: 
+
+or if you want to obtain a copy from the Pypi repository:
 
     pip install gitpython
-    
+
+Both commands will install the required package dependencies.
+
 A distribution package can be obtained for manual installation at:
 
     http://pypi.python.org/pypi/GitPython
+
+### RUNNING TESTS
+
+The easiest way to run test is by using [tox](https://pypi.python.org/pypi/tox) a wrapper around virtualenv. It will take care of setting up environnements with the proper dependencies installed and execute test commands. To install it simply:
+
+    pip install tox
+
+Then run:
+
+    tox
 
 ### SOURCE
 
