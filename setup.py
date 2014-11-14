@@ -61,6 +61,7 @@ def _stamp_version(filename):
     else:
         print >> sys.stderr, "WARNING: Couldn't find version line in file %s" % filename
 
+install_requires = ('gitdb >= 0.6.0',)
 setup(name = "GitPython",
       cmdclass={'build_py': build_py, 'sdist': sdist},
       version = VERSION,
@@ -73,18 +74,35 @@ setup(name = "GitPython",
       package_data = {'git.test' : ['fixtures/*']},
       package_dir = {'git':'git'},
       license = "BSD License",
-      install_requires='gitdb >= 0.5.1',
+      requires=('gitdb (>=0.6.0)', ),
+      install_requires=install_requires,
+      test_requirements = ('mock', 'nose') + install_requires,
       zip_safe=False,
       long_description = """\
 GitPython is a python library used to interact with Git repositories""",
-      classifiers = [
+      classifiers=[
+          # Picked from
+        #    http://pypi.python.org/pypi?:action=list_classifiers
+        #"Development Status :: 1 - Planning",
+        #"Development Status :: 2 - Pre-Alpha",
+        #"Development Status :: 3 - Alpha",
         "Development Status :: 4 - Beta",
+        # "Development Status :: 5 - Production/Stable",
+        #"Development Status :: 6 - Mature",
+        #"Development Status :: 7 - Inactive",
+        "Environment :: Console",
         "Intended Audience :: Developers",
         "License :: OSI Approved :: BSD License",
         "Operating System :: OS Independent",
+        "Operating System :: POSIX",
+        "Operating System :: Microsoft :: Windows",
+        "Operating System :: MacOS :: MacOS X",
         "Programming Language :: Python",
-        "Programming Language :: Python :: 2.5",
+        "Programming Language :: Python :: 2",
         "Programming Language :: Python :: 2.6",
-        "Topic :: Software Development :: Libraries :: Python Modules",
-        ]
+        "Programming Language :: Python :: 2.7",
+        # "Programming Language :: Python :: 3",
+        # "Programming Language :: Python :: 3.3",
+        # "Programming Language :: Python :: 3.4",
+      ]
       )

@@ -2,6 +2,12 @@
 Changelog
 =========
 
+0.3.2 
+=====
+
+* Release of most recent version as non-RC build, just to allow pip to install the latest version right away.
+* Have a look at the milestones (https://github.com/gitpython-developers/GitPython/milestones) to see what's next.
+
 0.3.2 RC1
 =========
 * **git** command wrapper

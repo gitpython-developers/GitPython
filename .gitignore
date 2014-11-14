@@ -1,6 +1,7 @@
 *.py[co]
 *.swp
 *~
+/*.egg-info
 /lib/GitPython.egg-info
 cover/
 .coverage
