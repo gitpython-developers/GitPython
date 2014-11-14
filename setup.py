@@ -19,7 +19,9 @@ v.close()
 with open('requirements.txt') as reqs_file:
     requirements = reqs_file.read().splitlines()
 
+
 class build_py(_build_py):
+
     def run(self):
         init = path.join(self.build_lib, 'git', '__init__.py')
         if path.exists(init):
@@ -30,7 +32,8 @@ class build_py(_build_py):
 
 
 class sdist(_sdist):
-    def make_release_tree (self, base_dir, files):
+
+    def make_release_tree(self, base_dir, files):
         _sdist.make_release_tree(self, base_dir, files)
         orig = path.join('git', '__init__.py')
         assert path.exists(orig), orig
@@ -48,7 +51,7 @@ def _stamp_version(filename):
     except (IOError, OSError):
         print >> sys.stderr, "Couldn't find file %s to stamp version" % filename
         return
-    #END handle error, usually happens during binary builds
+    # END handle error, usually happens during binary builds
     for line in f:
         if '__version__ =' in line:
             line = line.replace("'git'", "'%s'" % VERSION)
@@ -63,35 +66,37 @@ def _stamp_version(filename):
     else:
         print >> sys.stderr, "WARNING: Couldn't find version line in file %s" % filename
 
-install_requires = ['gitdb >= 0.6.0',]
-setup(name = "GitPython",
-      cmdclass={'build_py': build_py, 'sdist': sdist},
-      version = VERSION,
-      description = "Python Git Library",
-      author = "Sebastian Thiel, Michael Trier",
-      author_email = "byronimo@gmail.com, mtrier@gmail.com",
-      url = "http://gitorious.org/projects/git-python/",
-      packages = find_packages('.'),
-      py_modules = ['git.'+f[:-3] for f in os.listdir('./git') if f.endswith('.py')],
-      package_data = {'git.test' : ['fixtures/*']},
-      package_dir = {'git':'git'},
-      license = "BSD License",
-      requires=['gitdb (>=0.6.0)'],
-      install_requires=install_requires,
-      test_requirements = ['mock', 'nose'] + install_requires,
-      zip_safe=False,
-      long_description = """\
+install_requires = ['gitdb >= 0.6.0']
+
+setup(
+    name="GitPython",
+    cmdclass={'build_py': build_py, 'sdist': sdist},
+    version=VERSION,
+    description="Python Git Library",
+    author="Sebastian Thiel, Michael Trier",
+    author_email="byronimo@gmail.com, mtrier@gmail.com",
+    url="http://gitorious.org/projects/git-python/",
+    packages=find_packages('.'),
+    py_modules=['git.'+f[:-3] for f in os.listdir('./git') if f.endswith('.py')],
+    package_data={'git.test': ['fixtures/*']},
+    package_dir={'git': 'git'},
+    license="BSD License",
+    requires=['gitdb (>=0.6.0)'],
+    install_requires=install_requires,
+    test_requirements=['mock', 'nose'] + install_requires,
+    zip_safe=False,
+    long_description="""\
 GitPython is a python library used to interact with Git repositories""",
-      classifiers=[
-          # Picked from
-        #    http://pypi.python.org/pypi?:action=list_classifiers
-        #"Development Status :: 1 - Planning",
-        #"Development Status :: 2 - Pre-Alpha",
-        #"Development Status :: 3 - Alpha",
+    classifiers=[
+        # Picked from
+        #   http://pypi.python.org/pypi?:action=list_classifiers
+        # "Development Status :: 1 - Planning",
+        # "Development Status :: 2 - Pre-Alpha",
+        # "Development Status :: 3 - Alpha",
         "Development Status :: 4 - Beta",
         # "Development Status :: 5 - Production/Stable",
-        #"Development Status :: 6 - Mature",
-        #"Development Status :: 7 - Inactive",
+        # "Development Status :: 6 - Mature",
+        # "Development Status :: 7 - Inactive",
         "Environment :: Console",
         "Intended Audience :: Developers",
         "License :: OSI Approved :: BSD License",
@@ -106,5 +111,5 @@ GitPython is a python library used to interact with Git repositories""",
         # "Programming Language :: Python :: 3",
         # "Programming Language :: Python :: 3.3",
         # "Programming Language :: Python :: 3.4",
-      ]
-      )
+    ]
+)
