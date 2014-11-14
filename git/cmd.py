@@ -316,6 +316,9 @@ class Git(LazyMixin):
             if ouput_stream is True, the stdout value will be your output stream:
             * output_stream if extended_output = False
             * tuple(int(status), output_stream, str(stderr)) if extended_output = True
+
+            Note git is executed with LC_MESSAGES="C" to ensure consitent
+            output regardless of system language.
             
         :raise GitCommandError:
         
@@ -333,6 +336,7 @@ class Git(LazyMixin):
           
         # Start the process
         proc = Popen(command,
+                        env={"LC_MESSAGES": "C"},
                         cwd=cwd,
                         stdin=istream,
                         stderr=PIPE,
