@@ -662,8 +662,8 @@ class CmdHighLevelRepository(HighLevelRepository):
         default_args = ('--abbrev=40', '--full-index', '--raw')
         if index:
             # diff index against HEAD
-            if isfile(self.index.path) and self.head.is_valid() and \
-                    len(self.git.diff('HEAD', '--cached', *default_args)):
+            if isfile(self.index.path) and \
+                    len(self.git.diff('--cached', *default_args)):
                 return True
         # END index handling
         if working_tree:
