@@ -10,22 +10,20 @@ import sys
 import time
 import stat
 import shutil
-import tempfile
 import platform
+import getpass
 
+# NOTE:  Some of the unused imports might be used/imported by others.
+# Handle once test-cases are back up and running.
 from gitdb.util import (
-                            make_sha, 
-                            LockedFD, 
-                            file_contents_ro, 
-                            LazyMixin, 
-                            to_hex_sha, 
-                            to_bin_sha
-                        )
+    make_sha, 
+    LockedFD, 
+    file_contents_ro, 
+    LazyMixin, 
+    to_hex_sha, 
+    to_bin_sha
+)
 
-# Import the user database on unix based systems
-if os.name == "posix":
-    import pwd
-    
 __all__ = ( "stream_copy", "join_path", "to_native_path_windows", "to_native_path_linux", 
             "join_path_native", "Stats", "IndexFileSHA1Writer", "Iterable", "IterableList", 
             "BlockingLockFile", "LockFile", 'Actor', 'get_user_id', 'assure_directory_exists',
@@ -116,19 +114,8 @@ def assure_directory_exists(path, is_file=False):
     return False
     
 def get_user_id():
-    """:return: string identifying the currently active system user as name@node
-    :note: user can be set with the 'USER' environment variable, usually set on windows
-    :note: on unix based systems you can use the password database
-    to get the login name of the effective process user"""
-    if os.name == "posix":
-        username = pwd.getpwuid(os.geteuid()).pw_name
-    else:
-        ukn = 'UNKNOWN'
-        username = os.environ.get('USER', os.environ.get('USERNAME', ukn))
-        if username == ukn and hasattr(os, 'getlogin'):
-            username = os.getlogin()
-        # END get username from login
-    return "%s@%s" % (username, platform.node())
+    """:return: string identifying the currently active system user as name@node"""
+    return "%s@%s" % (getpass.getuser(), platform.node())
 
 #} END utilities
 
@@ -492,7 +479,7 @@ class LockFile(object):
         try:
             fd = os.open(lock_file, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0)
             os.close(fd)
-        except OSError,e:
+        except OSError as e:
             raise IOError(str(e))
         
         self._owns_lock = True
@@ -514,7 +501,7 @@ class LockFile(object):
             # on bloody windows, the file needs write permissions to be removable.
             # Why ... 
             if os.name == 'nt':
-                os.chmod(lfp, 0777)
+                os.chmod(lfp, int("0777", 8))
             # END handle win32
             os.remove(lfp)
         except OSError:
@@ -593,9 +580,6 @@ class IterableList(list):
     def __init__(self, id_attr, prefix=''):
         self._id_attr = id_attr
         self._prefix = prefix
-        if not isinstance(id_attr, basestring):
-            raise ValueError("First parameter must be a string identifying the name-property. Extend the list after initialization")
-        # END help debugging !
         
     def __contains__(self, attr):
         # first try identy match for performance
