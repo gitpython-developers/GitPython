@@ -4,10 +4,9 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
-import os, sys
-from git.test.lib import (
-                            TestBase,
-                            patch,
+import os
+from git.test.lib import (  TestBase,
+                            patch, 
                             raises,
                             assert_equal,
                             assert_true,
@@ -65,7 +64,7 @@ class TestGit(TestBase):
     @patch.object(Git, 'execute')
     def test_it_ignores_false_kwargs(self, git):
         # this_should_not_be_ignored=False implies it *should* be ignored
-        output = self.git.version(pass_this_kwarg=False)
+        self.git.version(pass_this_kwarg=False)
         assert_true("pass_this_kwarg" not in git.call_args[1])
 
     def test_persistent_cat_file_command(self):
@@ -87,8 +86,8 @@ class TestGit(TestBase):
         # read data - have to read it in one large chunk
         size = int(obj_info.split()[2])
         data = g.stdout.read(size)
-        terminating_newline = g.stdout.read(1)
-
+        g.stdout.read(1)
+        
         # now we should be able to read a new object
         g.stdin.write("b2339455342180c7cc1e9bba3e9f181f7baa5167\n")
         g.stdin.flush()
