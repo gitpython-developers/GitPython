@@ -18,8 +18,8 @@ from git import (   Git,
 class TestGit(TestBase):
 
     @classmethod
-    def setUp(cls):
-        super(TestGit, cls).setUp()
+    def setUpClass(cls):
+        super(TestGit, cls).setUpClass()
         cls.git = Git(cls.rorepo.working_dir)
 
     @patch.object(Git, 'execute')

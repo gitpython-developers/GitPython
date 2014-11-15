@@ -24,7 +24,10 @@ from refs import (
                     TagReference
                 )
 
-from git.util import join_path
+from git.util import (
+		join_path,
+		finalize_process
+	)
 from gitdb.util import join
 
 import re
@@ -57,18 +60,6 @@ def digest_process_messages(fh, progress):
         # END process parsed line
     # END while file is not done reading
     return dropped_lines
-
-def finalize_process(proc):
-    """Wait for the process (clone, fetch, pull or push) and handle its errors accordingly"""
-    try:
-        proc.wait()
-    except GitCommandError,e:
-        # if a push has rejected items, the command has non-zero return status
-        # a return status of 128 indicates a connection error - reraise the previous one
-        if proc.poll() == 128:
-            raise
-        pass
-    # END exception handling
 
 def add_progress(kwargs, git, progress):
     """Add the --progress flag to the given kwargs dict if supported by the 
