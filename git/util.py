@@ -15,6 +15,8 @@ import getpass
 
 # NOTE:  Some of the unused imports might be used/imported by others.
 # Handle once test-cases are back up and running.
+from exc import GitCommandError
+
 from gitdb.util import (
     make_sha, 
     LockedFD, 
@@ -116,6 +118,18 @@ def assure_directory_exists(path, is_file=False):
 def get_user_id():
     """:return: string identifying the currently active system user as name@node"""
     return "%s@%s" % (getpass.getuser(), platform.node())
+
+def finalize_process(proc):
+	"""Wait for the process (clone, fetch, pull or push) and handle its errors accordingly"""
+	try:
+		proc.wait()
+	except GitCommandError,e:
+		# if a push has rejected items, the command has non-zero return status
+		# a return status of 128 indicates a connection error - reraise the previous one
+		if proc.poll() == 128:
+			raise
+		pass
+	# END exception handling
 
 #} END utilities
 

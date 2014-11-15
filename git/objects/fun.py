@@ -70,9 +70,13 @@ def tree_entries_from_data(data):
         # default encoding for strings in git is utf8
         # Only use the respective unicode object if the byte stream was encoded
         name = data[ns:i]
-        name_enc = name.decode("utf-8")
-        if len(name) > len(name_enc):
-            name = name_enc
+        try:
+            name_enc = name.decode("utf-8")
+        except UnicodeDecodeError:
+            pass
+        else:
+            if len(name) > len(name_enc):
+                name = name_enc
         # END handle encoding
         
         # byte is NULL, get next 20
@@ -84,6 +88,7 @@ def tree_entries_from_data(data):
     return out
     
     
+
 def _find_by_name(tree_data, name, is_dir, start_at):
     """return data entry matching the given name and tree mode
     or None.

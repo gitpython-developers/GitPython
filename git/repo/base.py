@@ -6,7 +6,10 @@
 
 from git.exc import InvalidGitRepositoryError, NoSuchPathError
 from git.cmd import Git
-from git.util import Actor
+from git.util import (
+		Actor,
+		finalize_process
+	)
 from git.refs import *
 from git.index import IndexFile
 from git.objects import *
@@ -14,7 +17,6 @@ from git.config import GitConfigParser
 from git.remote import (
                         Remote,
                         digest_process_messages,
-                        finalize_process,
                         add_progress
                     )
 
@@ -540,6 +542,7 @@ class Repo(object):
             if filename[0] == filename[-1] == '"':
                 filename = filename[1:-1].decode('string_escape')
             untracked_files.append(filename)
+        finalize_process(proc)
         return untracked_files
 
     @property

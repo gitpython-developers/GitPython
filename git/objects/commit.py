@@ -8,6 +8,7 @@ from git.util import        (
                             Actor,
                             Iterable,
                             Stats,
+                            finalize_process
                         )
 from git.diff import Diffable
 from tree import Tree
@@ -65,7 +66,6 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
                  message=None,  parents=None, encoding=None, gpgsig=None):
         """Instantiate a new Commit. All keyword arguments taking None as default will
         be implicitly set on first query.
-
         :param binsha: 20 byte sha1
         :param parents: tuple( Commit, ... ) 
             is a tuple of commit ids or actual Commits
@@ -252,6 +252,10 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
             assert len(hexsha) == 40, "Invalid line: %s" % hexsha
             yield Commit(repo, hex_to_bin(hexsha))
         # END for each line in stream
+        # TODO: Review this - it seems process handling got a bit out of control
+        # due to many developers trying to fix the open file handles issue
+        if hasattr(proc_or_stream, 'wait'):
+            finalize_process(proc_or_stream)
         
         
     @classmethod
@@ -430,14 +434,21 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
         
         self.author, self.authored_date, self.author_tz_offset = parse_actor_and_date(next_line)
         self.committer, self.committed_date, self.committer_tz_offset = parse_actor_and_date(readline())
-        
+
+        # we might run into one or more mergetag blocks, skip those for now
+        next_line = readline()
+        while next_line.startswith('mergetag '):
+            next_line = readline()
+            while next_line.startswith(' '):
+                next_line = readline()
         
         # now we can have the encoding line, or an empty line followed by the optional
         # message.
         self.encoding = self.default_encoding
 
         # read headers
-        buf = readline().strip()
+        enc = next_line
+        buf = enc.strip()
         while buf != "":
             if buf[0:10] == "encoding ":
                 self.encoding = buf[buf.find(' ')+1:]
