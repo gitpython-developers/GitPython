@@ -77,7 +77,7 @@ setup(
     author_email="byronimo@gmail.com, mtrier@gmail.com",
     url="http://gitorious.org/projects/git-python/",
     packages=find_packages('.'),
-    py_modules=['git.'+f[:-3] for f in os.listdir('./git') if f.endswith('.py')],
+    py_modules=['git.' + f[:-3] for f in os.listdir('./git') if f.endswith('.py')],
     package_data={'git.test': ['fixtures/*']},
     package_dir={'git': 'git'},
     license="BSD License",

@@ -67,7 +67,7 @@ from gitdb.db import MemoryDB
 from gitdb.util import to_bin_sha
 from itertools import izip
 
-__all__ = ( 'IndexFile', 'CheckoutError' )
+__all__ = ('IndexFile', 'CheckoutError')
 
 
 class IndexFile(LazyMixin, diff.Diffable, Serializable):
@@ -177,7 +177,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
     #} END serializable interface
 
-    def write(self, file_path = None, ignore_tree_extension_data=False):
+    def write(self, file_path=None, ignore_tree_extension_data=False):
         """Write the current state to our file path or to the given one
 
         :param file_path:
@@ -322,7 +322,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
         # tmp file created in git home directory to be sure renaming
         # works - /tmp/ dirs could be on another device
-        tmp_index = tempfile.mktemp('','',repo.git_dir)
+        tmp_index = tempfile.mktemp('', '', repo.git_dir)
         arg_list.append("--index-output=%s" % tmp_index)
         arg_list.extend(treeish)
 
@@ -409,7 +409,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         fprogress(filepath, True, item)
         return rval
 
-    def iter_blobs(self, predicate = lambda t: True):
+    def iter_blobs(self, predicate=lambda t: True):
         """
         :return: Iterator yielding tuples of Blob objects and stages, tuple(stage, Blob)
 
@@ -471,13 +471,13 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         for blob in iter_blobs:
             stage_null_key = (blob.path, 0)
             if stage_null_key in self.entries:
-                raise ValueError( "Path %r already exists at stage 0" % blob.path )
+                raise ValueError("Path %r already exists at stage 0" % blob.path)
             # END assert blob is not stage 0 already
 
             # delete all possible stages
             for stage in (1, 2, 3):
                 try:
-                    del( self.entries[(blob.path, stage)])
+                    del(self.entries[(blob.path, stage)])
                 except KeyError:
                     pass
                 # END ignore key errors
@@ -537,9 +537,9 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         if it is not within our git direcotory"""
         if not os.path.isabs(path):
             return path
-        relative_path = path.replace(self.repo.working_tree_dir+os.sep, "")
+        relative_path = path.replace(self.repo.working_tree_dir + os.sep, "")
         if relative_path == path:
-            raise ValueError("Absolute path %r is not in git repository at %r" % (path,self.repo.working_tree_dir))
+            raise ValueError("Absolute path %r is not in git repository at %r" % (path, self.repo.working_tree_dir))
         return relative_path
 
     def _preprocess_add_items(self, items):
@@ -653,7 +653,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         if paths and path_rewriter:
             for path in paths:
                 abspath = os.path.abspath(path)
-                gitrelative_path = abspath[len(self.repo.working_tree_dir)+1:]
+                gitrelative_path = abspath[len(self.repo.working_tree_dir) + 1:]
                 blob = Blob(self.repo, Blob.NULL_BIN_SHA, 
                             stat_mode_to_index_mode(os.stat(abspath).st_mode), 
                             to_native_path_linux(gitrelative_path))
@@ -689,14 +689,14 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
         # HANDLE ENTRIES
         if entries:
-            null_mode_entries = [ e for e in entries if e.mode == 0 ]
+            null_mode_entries = [e for e in entries if e.mode == 0]
             if null_mode_entries:
                 raise ValueError("At least one Entry has a null-mode - please use index.remove to remove files for clarity")
             # END null mode should be remove
 
             # HANLDE ENTRY OBJECT CREATION
             # create objects if required, otherwise go with the existing shas
-            null_entries_indices = [ i for i,e in enumerate(entries) if e.binsha == Object.NULL_BIN_SHA ]
+            null_entries_indices = [i for i, e in enumerate(entries) if e.binsha == Object.NULL_BIN_SHA]
             if null_entries_indices:
                 for ei in null_entries_indices:
                     null_entry = entries[ei]
@@ -711,7 +711,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             # If we have to rewrite the entries, do so now, after we have generated
             # all object sha's
             if path_rewriter:
-                for i,e in enumerate(entries):
+                for i, e in enumerate(entries):
                     entries[i] = BaseIndexEntry((e.mode, e.binsha, e.stage, path_rewriter(e)))
                 # END for each entry
             # END handle path rewriting
@@ -743,7 +743,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         may be absolute or relative paths, entries or blobs"""
         paths = list()
         for item in items:
-            if isinstance(item, (BaseIndexEntry,(Blob, Submodule))):
+            if isinstance(item, (BaseIndexEntry, (Blob, Submodule))):
                 paths.append(self._to_relative_path(item.path))
             elif isinstance(item, basestring):
                 paths.append(self._to_relative_path(item))
@@ -801,7 +801,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
         # process output to gain proper paths
         # rm 'path'
-        return [ p[4:-1] for p in removed_paths ]
+        return [p[4:-1] for p in removed_paths]
 
     @post_clear_cache
     @default_index
@@ -847,7 +847,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
         # parse result - first 0:n/2 lines are 'checking ', the remaining ones
         # are the 'renaming' ones which we parse
-        for ln in xrange(len(mvlines)/2, len(mvlines)):
+        for ln in xrange(len(mvlines) / 2, len(mvlines)):
             tokens = mvlines[ln].split(' to ')
             assert len(tokens) == 2, "Too many tokens in %s" % mvlines[ln]
 
@@ -881,7 +881,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         return Commit.create_from_tree(self.repo, tree, message, parent_commits, head)
 
     @classmethod
-    def _flush_stdin_and_wait(cls, proc, ignore_stdout = False):
+    def _flush_stdin_and_wait(cls, proc, ignore_stdout=False):
         proc.stdin.flush()
         proc.stdin.close()
         stdout = ''
@@ -990,7 +990,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             proc = self.repo.git.checkout_index(*args, **kwargs)
             proc.wait()
             fprogress(None, True, None)
-            rval_iter = ( e.path for e in self.entries.itervalues() )
+            rval_iter = (e.path for e in self.entries.itervalues())
             handle_stderr(proc, rval_iter)
             return rval_iter
         else:
@@ -1006,7 +1006,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             kwargs['as_process'] = True
             kwargs['istream'] = subprocess.PIPE
             proc = self.repo.git.checkout_index(args, **kwargs)
-            make_exc = lambda : GitCommandError(("git-checkout-index",)+tuple(args), 128, proc.stderr.read())
+            make_exc = lambda: GitCommandError(("git-checkout-index",) + tuple(args), 128, proc.stderr.read())
             checked_out_files = list()
 
             for path in paths:
@@ -1143,7 +1143,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
         # if other is not None here, something is wrong
         if other is not None:
-            raise ValueError( "other must be None, Diffable.Index, a Tree or Commit, was %r" % other )
+            raise ValueError("other must be None, Diffable.Index, a Tree or Commit, was %r" % other)
 
         # diff against working copy - can be handled by superclass natively
         return super(IndexFile, self).diff(other, paths, create_patch, **kwargs)

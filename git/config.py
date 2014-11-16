@@ -29,7 +29,7 @@ class MetaParserBuilder(type):
         if kmm in clsdict:
             mutating_methods = clsdict[kmm]
             for base in bases:
-                methods = ( t for t in inspect.getmembers(base, inspect.ismethod) if not t[0].startswith("_") )
+                methods = (t for t in inspect.getmembers(base, inspect.ismethod) if not t[0].startswith("_"))
                 for name, method in methods:
                     if name in clsdict:
                         continue
@@ -89,7 +89,7 @@ class SectionConstraint(object):
     def __getattr__(self, attr):
         if attr in self._valid_attrs_:
             return lambda *args, **kwargs: self._call_config(attr, *args, **kwargs)
-        return super(SectionConstraint,self).__getattribute__(attr)
+        return super(SectionConstraint, self).__getattribute__(attr)
 
     def _call_config(self, method, *args, **kwargs):
         """Call the configuration at the given method which must take a section name 
@@ -140,7 +140,7 @@ class GitConfigParser(cp.RawConfigParser, object):
 
     # list of RawConfigParser methods able to change the instance
     _mutating_methods_ = ("add_section", "remove_section", "remove_option", "set")
-    __slots__ = ("_sections", "_defaults", "_file_or_files", "_read_only","_is_initialized", '_lock')
+    __slots__ = ("_sections", "_defaults", "_file_or_files", "_read_only", "_is_initialized", '_lock')
 
     def __init__(self, file_or_files, read_only=True):
         """Initialize a configuration reader to read the given file_or_files and to 
@@ -187,7 +187,7 @@ class GitConfigParser(cp.RawConfigParser, object):
         try:
             try:
                 self.write()
-            except IOError,e:
+            except IOError, e:
                 print "Exception during destruction of GitConfigParser: %s" % str(e)
         finally:
             self._lock._release_lock()
@@ -246,7 +246,7 @@ class GitConfigParser(cp.RawConfigParser, object):
                         optname, vi, optval = mo.group('option', 'vi', 'value')
                         if vi in ('=', ':') and ';' in optval:
                             pos = optval.find(';')
-                            if pos != -1 and optval[pos-1].isspace():
+                            if pos != -1 and optval[pos - 1].isspace():
                                 optval = optval[:pos]
                         optval = optval.strip()
                         if optval == '""':
@@ -276,7 +276,7 @@ class GitConfigParser(cp.RawConfigParser, object):
 
         files_to_read = self._file_or_files
         if not isinstance(files_to_read, (tuple, list)):
-            files_to_read = [ files_to_read ]
+            files_to_read = [files_to_read]
 
         for file_object in files_to_read:
             fp = file_object
@@ -286,7 +286,7 @@ class GitConfigParser(cp.RawConfigParser, object):
                 try:
                     fp = open(file_object)
                     close_fp = True
-                except IOError,e:
+                except IOError, e:
                     continue
             # END fp handling
 
@@ -312,7 +312,7 @@ class GitConfigParser(cp.RawConfigParser, object):
 
         if self._defaults:
             write_section(cp.DEFAULTSECT, self._defaults)
-        map(lambda t: write_section(t[0],t[1]), self._sections.items())
+        map(lambda t: write_section(t[0], t[1]), self._sections.items())
 
     @needs_values
     def write(self):
@@ -368,7 +368,7 @@ class GitConfigParser(cp.RawConfigParser, object):
         """:return: True if this instance may change the configuration file"""
         return self._read_only
 
-    def get_value(self, section, option, default = None):
+    def get_value(self, section, option, default=None):
         """
         :param default:
             If not None, the given default value will be returned in case 
@@ -384,17 +384,17 @@ class GitConfigParser(cp.RawConfigParser, object):
                 return default
             raise
 
-        types = ( long, float )
+        types = (long, float)
         for numtype in types:
             try:
-                val = numtype( valuestr )
+                val = numtype(valuestr)
 
                 # truncated value ?
-                if val != float( valuestr ):
+                if val != float(valuestr):
                     continue
 
                 return val
-            except (ValueError,TypeError):
+            except (ValueError, TypeError):
                 continue
         # END for each numeric type
 
@@ -405,8 +405,8 @@ class GitConfigParser(cp.RawConfigParser, object):
         if vl == 'true':
             return True
 
-        if not isinstance( valuestr, basestring ):
-            raise TypeError( "Invalid value type: only int, long, float and str are allowed", valuestr )
+        if not isinstance(valuestr, basestring):
+            raise TypeError("Invalid value type: only int, long, float and str are allowed", valuestr)
 
         return valuestr
 

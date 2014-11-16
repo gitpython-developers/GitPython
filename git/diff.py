@@ -69,8 +69,8 @@ class Diffable(object):
             On a bare repository, 'other' needs to be provided as Index or as 
             as Tree/Commit, or a git command error will occour"""
         args = list()
-        args.append( "--abbrev=40" )        # we need full shas
-        args.append( "--full-index" )       # get full index paths, not only filenames
+        args.append("--abbrev=40")        # we need full shas
+        args.append("--full-index")       # get full index paths, not only filenames
 
         if create_patch:
             args.append("-p")
@@ -82,15 +82,15 @@ class Diffable(object):
         # fixes https://github.com/gitpython-developers/GitPython/issues/172
         args.append('--no-color')
 
-        if paths is not None and not isinstance(paths, (tuple,list)):
-            paths = [ paths ]
+        if paths is not None and not isinstance(paths, (tuple, list)):
+            paths = [paths]
 
         if other is not None and other is not self.Index:
             args.insert(0, other)
         if other is self.Index:
             args.insert(0, "--cached")
 
-        args.insert(0,self)
+        args.insert(0, self)
 
         # paths is list here or None
         if paths:
@@ -136,7 +136,7 @@ class DiffIndex(list):
             * 'R' for renamed paths
             * 'M' for paths with modified data"""
         if change_type not in self.change_type:
-            raise ValueError( "Invalid change type: %s" % change_type )
+            raise ValueError("Invalid change type: %s" % change_type)
 
         for diff in self:
             if change_type == "A" and diff.new_file:
@@ -195,8 +195,8 @@ class Diff(object):
                                     \.\.(?P<b_blob_id>[0-9A-Fa-f]+)[ ]?(?P<b_mode>.+)?(?:\n|$))?
                             """, re.VERBOSE | re.MULTILINE)
     # can be used for comparisons
-    NULL_HEX_SHA = "0"*40
-    NULL_BIN_SHA = "\0"*20
+    NULL_HEX_SHA = "0" * 40
+    NULL_BIN_SHA = "\0" * 20
 
     __slots__ = ("a_blob", "b_blob", "a_mode", "b_mode", "new_file", "deleted_file", 
                  "rename_from", "rename_to", "diff")
@@ -239,10 +239,10 @@ class Diff(object):
         return True
 
     def __ne__(self, other):
-        return not ( self == other )
+        return not (self == other)
 
     def __hash__(self):
-        return hash(tuple(getattr(self,n) for n in self.__slots__))
+        return hash(tuple(getattr(self, n) for n in self.__slots__))
 
     def __str__(self):
         h = "%s"
@@ -254,7 +254,7 @@ class Diff(object):
         msg = ''
         l = None    # temp line
         ll = 0      # line length
-        for b,n in zip((self.a_blob, self.b_blob), ('lhs', 'rhs')):
+        for b, n in zip((self.a_blob, self.b_blob), ('lhs', 'rhs')):
             if b:
                 l = "\n%s: %o | %s" % (n, b.mode, b.hexsha)
             else:
@@ -265,7 +265,7 @@ class Diff(object):
         # END for each blob
 
         # add headline
-        h += '\n' + '='*ll
+        h += '\n' + '=' * ll
 
         if self.deleted_file:
             msg += '\nfile deleted in rhs'

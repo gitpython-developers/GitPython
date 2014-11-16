@@ -37,7 +37,7 @@ class UpdateProgress(RemoteProgress):
 
     """Class providing detailed progress information to the caller who should 
     derive from it and implement the ``update(...)`` message"""
-    CLONE, FETCH, UPDWKTREE = [1 << x for x in range(RemoteProgress._num_op_codes, RemoteProgress._num_op_codes+3)]
+    CLONE, FETCH, UPDWKTREE = [1 << x for x in range(RemoteProgress._num_op_codes, RemoteProgress._num_op_codes + 3)]
     _num_op_codes = RemoteProgress._num_op_codes + 3
 
     __slots__ = tuple()
@@ -75,7 +75,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
     __slots__ = ('_parent_commit', '_url', '_branch_path', '_name', '__weakref__')
     _cache_attrs = ('path', '_url', '_branch_path')
 
-    def __init__(self, repo, binsha, mode=None, path=None, name = None, parent_commit=None, url=None, branch_path=None):
+    def __init__(self, repo, binsha, mode=None, path=None, name=None, parent_commit=None, url=None, branch_path=None):
         """Initialize this instance with its attributes. We only document the ones 
         that differ from ``IndexObject``
 
@@ -168,7 +168,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
             raise ValueError("Cannot write blobs of 'historical' submodule configurations")
         # END handle writes of historical submodules
 
-        return SubmoduleConfigParser(fp_module, read_only = read_only)
+        return SubmoduleConfigParser(fp_module, read_only=read_only)
 
     def _clear_cache(self):
         # clear the possibly changed values
@@ -277,7 +277,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
             url = urls[0]
         else:
             # clone new repo
-            kwargs = {'n' : no_checkout}
+            kwargs = {'n': no_checkout}
             if not branch_is_default:
                 kwargs['b'] = br.name
             # END setup checkout-branch
@@ -354,16 +354,16 @@ class Submodule(util.IndexObject, Iterable, Traversable):
                     op |= BEGIN
                 #END handle start
 
-                progress.update(op, i, len_rmts, prefix+"Fetching remote %s of submodule %r" % (remote, self.name))
+                progress.update(op, i, len_rmts, prefix + "Fetching remote %s of submodule %r" % (remote, self.name))
                 #===============================
                 if not dry_run:
                     remote.fetch(progress=progress)
                 #END handle dry-run
                 #===============================
-                if i == len_rmts-1:
+                if i == len_rmts - 1:
                     op |= END
                 #END handle end
-                progress.update(op, i, len_rmts, prefix+"Done fetching remote of submodule %r" % self.name)
+                progress.update(op, i, len_rmts, prefix + "Done fetching remote of submodule %r" % self.name)
             #END fetch new data
         except InvalidGitRepositoryError:
             if not init:
@@ -383,11 +383,11 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 
             # don't check it out at first - nonetheless it will create a local
             # branch according to the remote-HEAD if possible
-            progress.update(BEGIN|CLONE, 0, 1, prefix+"Cloning %s to %s in submodule %r" % (self.url, module_path, self.name))
+            progress.update(BEGIN | CLONE, 0, 1, prefix + "Cloning %s to %s in submodule %r" % (self.url, module_path, self.name))
             if not dry_run:
                 mrepo = git.Repo.clone_from(self.url, module_path, n=True)
             #END handle dry-run
-            progress.update(END|CLONE, 0, 1, prefix+"Done cloning to %s" % module_path)
+            progress.update(END | CLONE, 0, 1, prefix + "Done cloning to %s" % module_path)
 
             if not dry_run:
                 # see whether we have a valid branch to checkout
@@ -444,7 +444,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
         # update the working tree
         # handles dry_run
         if mrepo is not None and mrepo.head.commit.binsha != binsha:
-            progress.update(BEGIN|UPDWKTREE, 0, 1, prefix+"Updating working tree at %s for submodule %r to revision %s" % (self.path, self.name, hexsha))
+            progress.update(BEGIN | UPDWKTREE, 0, 1, prefix + "Updating working tree at %s for submodule %r to revision %s" % (self.path, self.name, hexsha))
             if not dry_run:
                 if is_detached:
                     # NOTE: for now we force, the user is no supposed to change detached
@@ -459,7 +459,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
                     mrepo.head.reset(hexsha, index=True, working_tree=True)
                 # END handle checkout
             #END handle dry_run
-            progress.update(END|UPDWKTREE, 0, 1, prefix+"Done updating working tree for submodule %r" % self.name)
+            progress.update(END | UPDWKTREE, 0, 1, prefix + "Done updating working tree for submodule %r" % self.name)
         # END update to new commit only if needed
 
         # HANDLE RECURSION
@@ -557,7 +557,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
                     ekey = index.entry_key(self.path, 0)
                     entry = index.entries[ekey]
                     del(index.entries[ekey])
-                    nentry = git.IndexEntry(entry[:3]+(module_path,)+entry[4:])
+                    nentry = git.IndexEntry(entry[:3] + (module_path,) + entry[4:])
                     index.entries[tekey] = nentry
                 except KeyError:
                     raise InvalidGitRepositoryError("Submodule's entry at %r did not exist" % (self.path))

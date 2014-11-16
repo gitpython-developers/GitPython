@@ -4,7 +4,7 @@ from git.config import GitConfigParser
 from StringIO import StringIO
 import weakref
 
-__all__ = ( 'sm_section', 'sm_name', 'mkhead', 'unbare_repo', 'find_first_remote_branch', 
+__all__ = ('sm_section', 'sm_name', 'mkhead', 'unbare_repo', 'find_first_remote_branch', 
             'SubmoduleConfigParser')
 
 #{ Utilities

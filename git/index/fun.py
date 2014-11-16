@@ -209,7 +209,7 @@ def write_tree_from_cache(entries, odb, sl, si=0):
 
             # enter recursion
             # ci - 1 as we want to count our current item as well
-            sha, tree_entry_list = write_tree_from_cache(entries, odb, slice(ci-1, xi), rbound+1)
+            sha, tree_entry_list = write_tree_from_cache(entries, odb, slice(ci - 1, xi), rbound + 1)
             tree_items_append((sha, S_IFDIR, base))
 
             # skip ahead
@@ -244,7 +244,7 @@ def aggressive_tree_merge(odb, tree_shas):
 
     # one and two way is the same for us, as we don't have to handle an existing
     # index, instrea
-    if len(tree_shas) in (1,2):
+    if len(tree_shas) in (1, 2):
         for entry in traverse_tree_recursive(odb, tree_shas[-1], ''):
             out_append(_tree_entry_to_baseindexentry(entry, 0))
         # END for each entry
@@ -265,7 +265,7 @@ def aggressive_tree_merge(odb, tree_shas):
                     # its a conflict, otherwise we take the changed version
                     # This should be the most common branch, so it comes first
                     if( base[0] != ours[0] and base[0] != theirs[0] and ours[0] != theirs[0] ) or \
-                        ( base[1] != ours[1] and base[1] != theirs[1] and ours[1] != theirs[1] ):
+                        (base[1] != ours[1] and base[1] != theirs[1] and ours[1] != theirs[1]):
                         # changed by both
                         out_append(_tree_entry_to_baseindexentry(base, 1))
                         out_append(_tree_entry_to_baseindexentry(ours, 2))

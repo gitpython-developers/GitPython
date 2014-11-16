@@ -50,7 +50,7 @@ class TestDiff(TestBase):
         # be able to deal with it
         fixtures = ("diff_2", "diff_2f", "diff_f", "diff_i", "diff_mode_only", 
                     "diff_new_mode", "diff_numstat", "diff_p", "diff_rename", 
-                    "diff_tree_numstat_root" )
+                    "diff_tree_numstat_root")
 
         for fixture_name in fixtures:
             diff_proc = StringProcessAdapter(fixture(fixture_name))
@@ -62,7 +62,7 @@ class TestDiff(TestBase):
         assertion_map = dict()
         for i, commit in enumerate(self.rorepo.iter_commits('0.1.6', max_count=2)):
             diff_item = commit
-            if i%2 == 0:
+            if i % 2 == 0:
                 diff_item = commit.tree
             # END use tree every second item
 
@@ -75,9 +75,9 @@ class TestDiff(TestBase):
                         if diff_index:
                             self._assert_diff_format(diff_index)
                             for ct in DiffIndex.change_type:
-                                key = 'ct_%s'%ct
+                                key = 'ct_%s' % ct
                                 assertion_map.setdefault(key, 0)
-                                assertion_map[key] = assertion_map[key]+len(list(diff_index.iter_change_type(ct)))  
+                                assertion_map[key] = assertion_map[key] + len(list(diff_index.iter_change_type(ct)))  
                             # END for each changetype
 
                             # check entries
@@ -96,7 +96,7 @@ class TestDiff(TestBase):
         # assert we could always find at least one instance of the members we 
         # can iterate in the diff index - if not this indicates its not working correctly
         # or our test does not span the whole range of possibilities
-        for key,value in assertion_map.items():
+        for key, value in assertion_map.items():
             assert value, "Did not find diff for %s" % key
         # END for each iteration type 
 

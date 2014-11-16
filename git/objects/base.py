@@ -21,11 +21,11 @@ __all__ = ("Object", "IndexObject")
 class Object(LazyMixin):
 
     """Implements an Object which may be Blobs, Trees, Commits and Tags"""
-    NULL_HEX_SHA = '0'*40
-    NULL_BIN_SHA = '\0'*20
+    NULL_HEX_SHA = '0' * 40
+    NULL_BIN_SHA = '\0' * 20
 
     TYPES = (dbtyp.str_blob_type, dbtyp.str_tree_type, dbtyp.str_commit_type, dbtyp.str_tag_type)
-    __slots__ = ("repo", "binsha", "size" )
+    __slots__ = ("repo", "binsha", "size")
     type = None         # to be set by subclass
 
     def __init__(self, repo, binsha):
@@ -35,7 +35,7 @@ class Object(LazyMixin):
         :param repo: repository this object is located in
 
         :param binsha: 20 byte SHA1"""
-        super(Object,self).__init__()
+        super(Object, self).__init__()
         self.repo = repo
         self.binsha = binsha
         assert len(binsha) == 20, "Require 20 byte binary sha, got %r, len = %i" % (binsha, len(binsha))
@@ -75,7 +75,7 @@ class Object(LazyMixin):
             self.size = oinfo.size
             # assert oinfo.type == self.type, _assertion_msg_format % (self.binsha, oinfo.type, self.type)
         else:
-            super(Object,self)._set_cache_(attr)
+            super(Object, self)._set_cache_(attr)
 
     def __eq__(self, other):
         """:return: True if the objects have the same SHA1"""
@@ -157,7 +157,7 @@ class IndexObject(Object):
     def _set_cache_(self, attr):
         if attr in IndexObject.__slots__:
             # they cannot be retrieved lateron ( not without searching for them )
-            raise AttributeError( "path and mode attributes must have been set during %s object creation" % type(self).__name__ )
+            raise AttributeError("path and mode attributes must have been set during %s object creation" % type(self).__name__)
         else:
             super(IndexObject, self)._set_cache_(attr)
         # END hanlde slot attribute

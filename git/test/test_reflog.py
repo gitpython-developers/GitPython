@@ -52,14 +52,14 @@ class TestRefLog(TestBase):
         # TODO: Try multiple corrupted ones !
         pp = 'reflog_invalid_'
         for suffix in ('oldsha', 'newsha', 'email', 'date', 'sep'):
-            self.failUnlessRaises(ValueError, RefLog.from_file, fixture_path(pp+suffix))
+            self.failUnlessRaises(ValueError, RefLog.from_file, fixture_path(pp + suffix))
         #END for each invalid file
 
         # cannot write an uninitialized reflog
         self.failUnlessRaises(ValueError, RefLog().write)
 
         # test serialize and deserialize - results must match exactly
-        binsha = chr(255)*20
+        binsha = chr(255) * 20
         msg = "my reflog message"
         cr = self.rorepo.config_reader()
         for rlp in (rlp_head, rlp_master):
@@ -78,7 +78,7 @@ class TestRefLog(TestBase):
             # append an entry
             entry = RefLog.append_entry(cr, tfile, IndexObject.NULL_BIN_SHA, binsha, msg)
             assert entry.oldhexsha == IndexObject.NULL_HEX_SHA
-            assert entry.newhexsha == 'f'*40
+            assert entry.newhexsha == 'f' * 40
             assert entry.message == msg
             assert RefLog.from_file(tfile)[-1] == entry
 

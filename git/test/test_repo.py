@@ -52,7 +52,7 @@ class TestRepo(TestBase):
     def test_heads_should_populate_head_data(self):
         for head in self.rorepo.heads:
             assert head.name
-            assert isinstance(head.commit,Commit)
+            assert isinstance(head.commit, Commit)
         # END for each head 
 
         assert isinstance(self.rorepo.heads.master, Head)
@@ -84,11 +84,11 @@ class TestRepo(TestBase):
         assert_equal("Michael Trier", c.author.name)
         assert_equal("mtrier@gmail.com", c.author.email)
         assert_equal(1232829715, c.authored_date)
-        assert_equal(5*3600, c.author_tz_offset)
+        assert_equal(5 * 3600, c.author_tz_offset)
         assert_equal("Michael Trier", c.committer.name)
         assert_equal("mtrier@gmail.com", c.committer.email)
         assert_equal(1232829715, c.committed_date)
-        assert_equal(5*3600, c.committer_tz_offset)
+        assert_equal(5 * 3600, c.committer_tz_offset)
         assert_equal("Bumped version 0.1.6\n", c.message)
 
         c = commits[1]
@@ -194,7 +194,7 @@ class TestRepo(TestBase):
     def test_daemon_export(self):
         orig_val = self.rorepo.daemon_export
         self.rorepo.daemon_export = not orig_val
-        assert self.rorepo.daemon_export == ( not orig_val )
+        assert self.rorepo.daemon_export == (not orig_val)
         self.rorepo.daemon_export = orig_val
         assert self.rorepo.daemon_export == orig_val
 
@@ -203,7 +203,7 @@ class TestRepo(TestBase):
         # empty alternates
         self.rorepo.alternates = []
         assert self.rorepo.alternates == []
-        alts = [ "other/location", "this/location" ]
+        alts = ["other/location", "this/location"]
         self.rorepo.alternates = alts
         assert alts == self.rorepo.alternates
         self.rorepo.alternates = cur_alternates
@@ -220,9 +220,9 @@ class TestRepo(TestBase):
 
     def test_is_dirty(self):
         self.rorepo._bare = False
-        for index in (0,1):
-            for working_tree in (0,1):
-                for untracked_files in (0,1):
+        for index in (0, 1):
+            for working_tree in (0, 1):
+                for untracked_files in (0, 1):
                     assert self.rorepo.is_dirty(index, working_tree, untracked_files) in (True, False)
                 # END untracked files
             # END working tree
@@ -250,9 +250,9 @@ class TestRepo(TestBase):
     @patch.object(Git, '_call_process')
     def test_should_display_blame_information(self, git):
         git.return_value = fixture('blame')
-        b = self.rorepo.blame( 'master', 'lib/git.py')
+        b = self.rorepo.blame('master', 'lib/git.py')
         assert_equal(13, len(b))
-        assert_equal( 2, len(b[0]) )
+        assert_equal(2, len(b[0]))
         # assert_equal(25, reduce(lambda acc, x: acc + len(x[-1]), b))
         assert_equal(hash(b[0][0]), hash(b[9][0]))
         c = b[0][0]
@@ -270,9 +270,9 @@ class TestRepo(TestBase):
 
         # test the 'lines per commit' entries
         tlist = b[0][1]
-        assert_true( tlist )
-        assert_true( isinstance( tlist[0], basestring ) )
-        assert_true( len( tlist ) < sum( len(t) for t in tlist ) )               # test for single-char bug
+        assert_true(tlist)
+        assert_true(isinstance(tlist[0], basestring))
+        assert_true(len(tlist) < sum(len(t) for t in tlist))               # test for single-char bug
 
     def test_blame_real(self):
         c = 0
@@ -285,12 +285,12 @@ class TestRepo(TestBase):
 
     def test_untracked_files(self):
         base = self.rorepo.working_tree_dir
-        files = (   join_path_native(base, "__test_myfile"), 
-                    join_path_native(base, "__test_other_file") )
+        files = (join_path_native(base, "__test_myfile"), 
+                    join_path_native(base, "__test_other_file"))
         num_recently_untracked = 0
         try:
             for fpath in files:
-                fd = open(fpath,"wb")
+                fd = open(fpath, "wb")
                 fd.close()
             # END for each filename
             untracked_files = self.rorepo.untracked_files
@@ -356,7 +356,7 @@ class TestRepo(TestBase):
         # full size
         # size is without terminating newline
         def mkfull():
-            return Git.CatFileContentStream(len(d)-1, StringIO(d))
+            return Git.CatFileContentStream(len(d) - 1, StringIO(d))
 
         ts = 5
 
@@ -378,7 +378,7 @@ class TestRepo(TestBase):
         s = mktiny()
         lines = s.readlines()
         assert len(lines) == 1 and lines[0] == l1p
-        assert s._stream.tell() == ts+1
+        assert s._stream.tell() == ts + 1
 
         # readline no limit
         s = mkfull()
@@ -397,7 +397,7 @@ class TestRepo(TestBase):
         s = mktiny()
         assert s.readline() == l1p
         assert s.readline() == ''
-        assert s._stream.tell() == ts+1
+        assert s._stream.tell() == ts + 1
 
         # read no limit
         s = mkfull()
@@ -416,7 +416,7 @@ class TestRepo(TestBase):
         assert s.read(2) == l1[:2]
         assert s._stream.tell() == 2
         assert s.read() == l1[2:ts]
-        assert s._stream.tell() == ts+1
+        assert s._stream.tell() == ts + 1
 
     def _assert_rev_parse_types(self, name, rev_obj):
         rev_parse = self.rorepo.rev_parse
@@ -457,7 +457,7 @@ class TestRepo(TestBase):
         # END get given amount of commits
 
         for pn in range(11):
-            rev = name + "~%i" % (pn+1)
+            rev = name + "~%i" % (pn + 1)
             obj2 = rev_parse(rev)
             assert obj2 == history[pn]
             self._assert_rev_parse_types(rev, obj2)
@@ -471,7 +471,7 @@ class TestRepo(TestBase):
 
         # parent with number
         for pn, parent in enumerate(obj.parents):
-            rev = name + "^%i" % (pn+1)
+            rev = name + "^%i" % (pn + 1)
             assert rev_parse(rev) == parent
             self._assert_rev_parse_types(rev, parent)
         # END for each parent
@@ -496,7 +496,7 @@ class TestRepo(TestBase):
         for ref in Reference.iter_items(self.rorepo):
             path_tokens = ref.path.split("/")
             for pt in range(len(path_tokens)):
-                path_section = '/'.join(path_tokens[-(pt+1):]) 
+                path_section = '/'.join(path_tokens[-(pt + 1):]) 
                 try:
                     obj = self._assert_rev_parse(path_section)
                     assert obj.type == ref.object.type
@@ -521,7 +521,7 @@ class TestRepo(TestBase):
         # multiple tree types result in the same tree: HEAD^{tree}^{tree}:CHANGES
         rev = '0.1.4^{tree}^{tree}'
         assert rev_parse(rev) == tag.object.tree
-        assert rev_parse(rev+':CHANGES') == tag.object.tree['CHANGES']
+        assert rev_parse(rev + ':CHANGES') == tag.object.tree['CHANGES']
 
         # try to get parents from first revision - it should fail as no such revision
         # exists
@@ -529,8 +529,8 @@ class TestRepo(TestBase):
         commit = rev_parse(first_rev)
         assert len(commit.parents) == 0
         assert commit.hexsha == first_rev
-        self.failUnlessRaises(BadObject, rev_parse, first_rev+"~")
-        self.failUnlessRaises(BadObject, rev_parse, first_rev+"^")
+        self.failUnlessRaises(BadObject, rev_parse, first_rev + "~")
+        self.failUnlessRaises(BadObject, rev_parse, first_rev + "^")
 
         # short SHA1
         commit2 = rev_parse(first_rev[:20])
@@ -550,7 +550,7 @@ class TestRepo(TestBase):
         # try partial parsing
         max_items = 40
         for i, binsha in enumerate(self.rorepo.odb.sha_iter()):
-            assert rev_parse(bin_to_hex(binsha)[:8-(i%2)]).binsha == binsha
+            assert rev_parse(bin_to_hex(binsha)[:8 - (i % 2)]).binsha == binsha
             if i > max_items:
                 # this is rather slow currently, as rev_parse returns an object
                 # which requires accessing packs, it has some additional overhead
@@ -576,8 +576,8 @@ class TestRepo(TestBase):
             refspec = '%s@{0}' % head.ref.name
             assert rev_parse(refspec) == head.ref.commit
             # all additional specs work as well
-            assert rev_parse(refspec+"^{tree}") == head.commit.tree
-            assert rev_parse(refspec+":CHANGES").type == 'blob'
+            assert rev_parse(refspec + "^{tree}") == head.commit.tree
+            assert rev_parse(refspec + ":CHANGES").type == 'blob'
         #END operate on non-detached head
 
         # the last position

@@ -36,7 +36,7 @@ class Reference(SymbolicReference, LazyMixin, Iterable):
     _resolve_ref_on_create = True
     _common_path_default = "refs"
 
-    def __init__(self, repo, path, check_path = True):
+    def __init__(self, repo, path, check_path=True):
         """Initialize this instance
         :param repo: Our parent repository
 
@@ -45,7 +45,7 @@ class Reference(SymbolicReference, LazyMixin, Iterable):
             refs/heads/master
         :param check_path: if False, you can provide any path. Otherwise the path must start with the 
             default path prefix of this type."""
-        if check_path and not path.startswith(self._common_path_default+'/'):
+        if check_path and not path.startswith(self._common_path_default + '/'):
             raise ValueError("Cannot instantiate %r from path %s" % (self.__class__.__name__, path))
         super(Reference, self).__init__(repo, path)
 
@@ -54,7 +54,7 @@ class Reference(SymbolicReference, LazyMixin, Iterable):
 
     #{ Interface
 
-    def set_object(self, object, logmsg = None):
+    def set_object(self, object, logmsg=None):
         """Special version which checks if the head-log needs an update as well"""
         oldbinsha = None
         if logmsg is not None:
@@ -95,7 +95,7 @@ class Reference(SymbolicReference, LazyMixin, Iterable):
         return '/'.join(tokens[2:])
 
     @classmethod
-    def iter_items(cls, repo, common_path = None):
+    def iter_items(cls, repo, common_path=None):
         """Equivalent to SymbolicReference.iter_items, but will return non-detached
         references as well."""
         return cls._iter_items(repo, common_path)

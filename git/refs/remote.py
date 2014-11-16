@@ -14,7 +14,7 @@ class RemoteReference(Head):
     _common_path_default = Head._remote_common_path_default
 
     @classmethod
-    def iter_items(cls, repo, common_path = None, remote=None):
+    def iter_items(cls, repo, common_path=None, remote=None):
         """Iterate remote references, and if given, constrain them to the given remote"""
         common_path = common_path or cls._common_path_default
         if remote is not None:

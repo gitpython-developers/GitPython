@@ -65,7 +65,7 @@ class TestUtilPerformance(TestBigRepoR):
     def test_instantiation(self):
         ni = 100000
         max_num_items = 4
-        for mni in range(max_num_items+1):
+        for mni in range(max_num_items + 1):
             for cls in (tuple, list):
                 st = time()
                 for i in xrange(ni):
@@ -74,11 +74,11 @@ class TestUtilPerformance(TestBigRepoR):
                     elif mni == 1:
                         cls((1,))
                     elif mni == 2:
-                        cls((1,2))
+                        cls((1, 2))
                     elif mni == 3:
-                        cls((1,2,3))
+                        cls((1, 2, 3))
                     elif mni == 4:
-                        cls((1,2,3,4))
+                        cls((1, 2, 3, 4))
                     else:
                         cls(x for x in xrange(mni))
                     # END handle empty cls
@@ -91,22 +91,22 @@ class TestUtilPerformance(TestBigRepoR):
         # tuple and tuple direct
         st = time()
         for i in xrange(ni):
-            t = (1,2,3,4)
+            t = (1, 2, 3, 4)
         # END for each item
         elapsed = time() - st
         print >> sys.stderr, "Created %i tuples (1,2,3,4) in %f s ( %f tuples / s)" % (ni, elapsed, ni / elapsed)
 
         st = time()
         for i in xrange(ni):
-            t = tuple((1,2,3,4))
+            t = tuple((1, 2, 3, 4))
         # END for each item
         elapsed = time() - st
         print >> sys.stderr, "Created %i tuples tuple((1,2,3,4)) in %f s ( %f tuples / s)" % (ni, elapsed, ni / elapsed)
 
     def test_unpacking_vs_indexing(self):
         ni = 1000000
-        list_items = [1,2,3,4]
-        tuple_items = (1,2,3,4)
+        list_items = [1, 2, 3, 4]
+        tuple_items = (1, 2, 3, 4)
 
         for sequence in (list_items, tuple_items):
             st = time()

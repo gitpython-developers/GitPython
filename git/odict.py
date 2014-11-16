@@ -654,7 +654,7 @@ class OrderedDict(dict):
             raise IndexError('popitem(): index %s not valid' % i)
         return (key, self.pop(key))
 
-    def setdefault(self, key, defval = None):
+    def setdefault(self, key, defval=None):
         """
         >>> d = OrderedDict(((1, 3), (3, 2), (2, 1)))
         >>> d.setdefault(1)
@@ -967,7 +967,7 @@ class Keys(object):
 
     def sort(self, *args, **kwds): self._main._sequence.sort(*args, **kwds)
 
-    def __mul__(self, n): return self._main._sequence*n
+    def __mul__(self, n): return self._main._sequence * n
     __rmul__ = __mul__
 
     def __add__(self, other): return self._main._sequence + other
@@ -1075,7 +1075,7 @@ class Items(object):
 
     def sort(self, *args, **kwds): self._main.sort(*args, **kwds)
 
-    def __mul__(self, n): return self._main.items()*n
+    def __mul__(self, n): return self._main.items() * n
     __rmul__ = __mul__
 
     def __add__(self, other): return self._main.items() + other
@@ -1205,7 +1205,7 @@ class Values(object):
         vals.sort(*args, **kwds)
         self[:] = vals
 
-    def __mul__(self, n): return self._main.values()*n
+    def __mul__(self, n): return self._main.values() * n
     __rmul__ = __mul__
 
     def __add__(self, other): return self._main.values() + other

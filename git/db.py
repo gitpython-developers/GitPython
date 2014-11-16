@@ -17,7 +17,7 @@ from gitdb.db import GitDB
 from gitdb.db import LooseObjectDB
 
 
-__all__ = ('GitCmdObjectDB', 'GitDB' )
+__all__ = ('GitCmdObjectDB', 'GitDB')
 
 #class GitCmdObjectDB(CompoundDB, ObjectDBW):
 

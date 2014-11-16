@@ -5,15 +5,15 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
 import os
-from git.test.lib import (  TestBase,
+from git.test.lib import (TestBase,
                             patch, 
                             raises,
                             assert_equal,
                             assert_true,
                             assert_match,
-                            fixture_path )
-from git import (   Git,
-                    GitCommandError )
+                            fixture_path)
+from git import (Git,
+                    GitCommandError)
 
 
 class TestGit(TestBase):
@@ -52,7 +52,7 @@ class TestGit(TestBase):
         assert_equal(["-s", "-t"], self.git.transform_kwargs(**{'s': True, 't': True}))
 
     def test_it_executes_git_to_shell_and_returns_result(self):
-        assert_match('^git version [\d\.]{2}.*$', self.git.execute(["git","version"]))
+        assert_match('^git version [\d\.]{2}.*$', self.git.execute(["git", "version"]))
 
     def test_it_accepts_stdin(self):
         filename = fixture_path("cat_file_blob")
@@ -71,13 +71,13 @@ class TestGit(TestBase):
         # read header only
         import subprocess as sp
         hexsha = "b2339455342180c7cc1e9bba3e9f181f7baa5167"
-        g = self.git.cat_file(batch_check=True, istream=sp.PIPE,as_process=True)
+        g = self.git.cat_file(batch_check=True, istream=sp.PIPE, as_process=True)
         g.stdin.write("b2339455342180c7cc1e9bba3e9f181f7baa5167\n")
         g.stdin.flush()
         obj_info = g.stdout.readline()
 
         # read header + data
-        g = self.git.cat_file(batch=True, istream=sp.PIPE,as_process=True)
+        g = self.git.cat_file(batch=True, istream=sp.PIPE, as_process=True)
         g.stdin.write("b2339455342180c7cc1e9bba3e9f181f7baa5167\n")
         g.stdin.flush()
         obj_info_two = g.stdout.readline()

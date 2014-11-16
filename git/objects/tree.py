@@ -125,13 +125,13 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
     tree_id = 004
 
     _map_id_to_type = {
-                        commit_id : Submodule, 
-                        blob_id : Blob, 
-                        symlink_id : Blob
+                        commit_id: Submodule, 
+                        blob_id: Blob, 
+                        symlink_id: Blob
                         # tree id added once Tree is defined
                         }
 
-    def __init__(self, repo, binsha, mode=tree_id<<12, path=None):
+    def __init__(self, repo, binsha, mode=tree_id << 12, path=None):
         super(Tree, self).__init__(repo, binsha, mode, path)
 
     @classmethod
@@ -170,13 +170,13 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
             tree = self
             item = self
             tokens = file.split('/')
-            for i,token in enumerate(tokens):
+            for i, token in enumerate(tokens):
                 item = tree[token]
                 if item.type == 'tree':
                     tree = item
                 else:
                     # safety assertion - blobs are at the end of the path
-                    if i != len(tokens)-1:
+                    if i != len(tokens) - 1:
                         raise KeyError(msg % file)
                     return item
                 # END handle item type
@@ -189,18 +189,18 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
                 if info[2] == file:     # [2] == name
                     return self._map_id_to_type[info[1] >> 12](self.repo, info[0], info[1], join_path(self.path, info[2]))
             # END for each obj
-            raise KeyError( msg % file )
+            raise KeyError(msg % file)
         # END handle long paths
 
     @property
     def trees(self):
         """:return: list(Tree, ...) list of trees directly below this tree"""
-        return [ i for i in self if i.type == "tree" ]
+        return [i for i in self if i.type == "tree"]
 
     @property
     def blobs(self):
         """:return: list(Blob, ...) list of blobs directly below this tree"""
-        return [ i for i in self if i.type == "blob" ]
+        return [i for i in self if i.type == "blob"]
 
     @property
     def cache(self):
@@ -211,9 +211,9 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
             See the ``TreeModifier`` for more information on how to alter the cache"""
         return TreeModifier(self._cache)
 
-    def traverse( self, predicate = lambda i,d: True,
-                           prune = lambda i,d: False, depth = -1, branch_first=True,
-                           visit_once = False, ignore_self=1 ):
+    def traverse(self, predicate=lambda i, d: True,
+                           prune=lambda i, d: False, depth=-1, branch_first=True,
+                           visit_once=False, ignore_self=1):
         """For documentation, see util.Traversable.traverse
         Trees are set to visit_once = False to gain more performance in the traversal"""
         return super(Tree, self).traverse(predicate, prune, depth, branch_first, visit_once, ignore_self)
@@ -238,7 +238,7 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
             return self.__div__(item)
         # END index is basestring 
 
-        raise TypeError( "Invalid index type: %r" % item )
+        raise TypeError("Invalid index type: %r" % item)
 
     def __contains__(self, item):
         if isinstance(item, IndexObject):

@@ -30,7 +30,7 @@ class TagReference(Reference):
             # it is a tag object which carries the commit as an object - we can point to anything
             return obj.object
         else:
-            raise ValueError( "Tag %s points to a Blob or Tree - have never seen that before" % self )  
+            raise ValueError("Tag %s points to a Blob or Tree - have never seen that before" % self)  
 
     @property
     def tag(self):
@@ -71,7 +71,7 @@ class TagReference(Reference):
             Additional keyword arguments to be passed to git-tag
 
         :return: A new TagReference"""
-        args = ( path, ref )
+        args = (path, ref)
         if message:
             kwargs['m'] = message
         if force:

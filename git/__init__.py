@@ -49,5 +49,5 @@ from git.util import (
 
 #} END imports
 
-__all__ = [ name for name, obj in locals().items()
-            if not (name.startswith('_') or inspect.ismodule(obj)) ]
+__all__ = [name for name, obj in locals().items()
+            if not (name.startswith('_') or inspect.ismodule(obj))]

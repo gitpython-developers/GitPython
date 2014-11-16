@@ -67,7 +67,7 @@ class Repo(object):
 
     'git_dir' is the .git repository directory, which is always set."""
     DAEMON_EXPORT_FILE = 'git-daemon-export-ok'
-    __slots__ = ( "working_dir", "_working_tree_dir", "git_dir", "_bare", "git", "odb" )
+    __slots__ = ("working_dir", "_working_tree_dir", "git_dir", "_bare", "git", "odb")
 
     # precompiled regex
     re_whitespace = re.compile(r'\s+')
@@ -80,7 +80,7 @@ class Repo(object):
     # represents the configuration level of a configuration file
     config_level = ("system", "global", "repository")
 
-    def __init__(self, path=None, odbt = DefaultDBType):
+    def __init__(self, path=None, odbt=DefaultDBType):
         """Create a new Repo instance
 
         :param path: is the path to either the root git directory or the bare git repo::
@@ -127,7 +127,7 @@ class Repo(object):
 
         self._bare = False
         try:
-            self._bare = self.config_reader("repository").getboolean('core','bare') 
+            self._bare = self.config_reader("repository").getboolean('core', 'bare') 
         except Exception:
             # lets not assume the option exists, although it should
             pass
@@ -168,7 +168,7 @@ class Repo(object):
 
     def _set_description(self, descr):
         filename = join(self.git_dir, 'description')
-        file(filename, 'w').write(descr+'\n')
+        file(filename, 'w').write(descr + '\n')
 
     description = property(_get_description, _set_description,
                            doc="the project's description")
@@ -180,7 +180,7 @@ class Repo(object):
         """:return: The working tree directory of our git repository
         :raise AssertionError: If we are a bare repository"""
         if self._working_tree_dir is None:
-            raise AssertionError( "Repository at %r is bare and does not have a working tree directory" % self.git_dir )
+            raise AssertionError("Repository at %r is bare and does not have a working tree directory" % self.git_dir)
         return self._working_tree_dir
 
     @property
@@ -217,7 +217,7 @@ class Repo(object):
     @property
     def head(self):
         """:return: HEAD Object pointing to the current head reference"""
-        return HEAD(self,'HEAD')
+        return HEAD(self, 'HEAD')
 
     @property
     def remotes(self):
@@ -276,12 +276,12 @@ class Repo(object):
         :return: ``git.IterableList(TagReference, ...)`` """
         return TagReference.list_items(self)
 
-    def tag(self,path):
+    def tag(self, path):
         """:return: TagReference Object, reference pointing to a Commit or Tag
         :param path: path to the tag reference, i.e. 0.1.5 or tags/0.1.5 """
         return TagReference(self, path)
 
-    def create_head(self, path, commit='HEAD', force=False, logmsg=None ):
+    def create_head(self, path, commit='HEAD', force=False, logmsg=None):
         """Create a new head within the repository. 
         For more documentation, please see the Head.create method.
 
@@ -318,7 +318,7 @@ class Repo(object):
         """Delete the given remote."""
         return Remote.remove(self, remote)
 
-    def _get_config_path(self, config_level ):
+    def _get_config_path(self, config_level):
         # we do not support an absolute path of the gitconfig on windows , 
         # use the global config instead
         if sys.platform == "win32" and config_level == "system":
@@ -331,7 +331,7 @@ class Repo(object):
         elif config_level == "repository":
             return join(self.git_dir, "config")
 
-        raise ValueError( "Invalid configuration level: %r" % config_level )
+        raise ValueError("Invalid configuration level: %r" % config_level)
 
     def config_reader(self, config_level=None):
         """
@@ -350,9 +350,9 @@ class Repo(object):
             unknown, instead the global path will be used."""
         files = None
         if config_level is None:
-            files = [ self._get_config_path(f) for f in self.config_level ]
+            files = [self._get_config_path(f) for f in self.config_level]
         else:
-            files = [ self._get_config_path(config_level) ]
+            files = [self._get_config_path(config_level)]
         return GitConfigParser(files, read_only=True)
 
     def config_writer(self, config_level="repository"):
@@ -368,7 +368,7 @@ class Repo(object):
             system = sytem wide configuration file
             global = user level configuration file
             repository = configuration file for this repostory only"""
-        return GitConfigParser(self._get_config_path(config_level), read_only = False)
+        return GitConfigParser(self._get_config_path(config_level), read_only=False)
 
     def commit(self, rev=None):
         """The Commit object for the specified revision
@@ -377,12 +377,12 @@ class Repo(object):
         if rev is None:
             return self.head.commit
         else:
-            return self.rev_parse(unicode(rev)+"^0")
+            return self.rev_parse(unicode(rev) + "^0")
 
     def iter_trees(self, *args, **kwargs):
         """:return: Iterator yielding Tree objects
         :note: Takes all arguments known to iter_commits method"""
-        return ( c.tree for c in self.iter_commits(*args, **kwargs) )
+        return (c.tree for c in self.iter_commits(*args, **kwargs))
 
     def tree(self, rev=None):
         """The Tree object for the given treeish revision
@@ -400,7 +400,7 @@ class Repo(object):
         if rev is None:
             return self.head.commit.tree
         else:
-            return self.rev_parse(unicode(rev)+"^{tree}")
+            return self.rev_parse(unicode(rev) + "^{tree}")
 
     def iter_commits(self, rev=None, paths='', **kwargs):
         """A list of Commit objects representing the history of a given ref/commit
@@ -614,7 +614,7 @@ class Repo(object):
                             sha = info['id']
                             c = commits.get(sha)
                             if c is None:
-                                c = Commit(  self, hex_to_bin(sha),
+                                c = Commit(self, hex_to_bin(sha),
                                              author=Actor._from_string(info['author'] + ' ' + info['author_email']),
                                              authored_date=info['author_date'],
                                              committer=Actor._from_string(info['committer'] + ' ' + info['committer_email']),
@@ -623,9 +623,9 @@ class Repo(object):
                                 commits[sha] = c
                             # END if commit objects needs initial creation
                             m = self.re_tab_full_line.search(line)
-                            text,  = m.groups()
+                            text, = m.groups()
                             blames[-1][0] = c
-                            blames[-1][1].append( text )
+                            blames[-1][1].append(text)
                             info = {'id': sha}
                         # END if we collected commit info
                     # END distinguish filename,summary,rest
@@ -710,7 +710,7 @@ class Repo(object):
         # that contains the remote from which we were clones, git stops liking it
         # as it will escape the backslashes. Hence we undo the escaping just to be 
         # sure
-        repo = cls(os.path.abspath(path), odbt = odbt)
+        repo = cls(os.path.abspath(path), odbt=odbt)
         if repo.remotes:
             repo.remotes[0].config_writer.set_value('url', repo.remotes[0].url.replace("\\\\", "\\").replace("\\", "/"))
         # END handle remote repo
@@ -742,7 +742,7 @@ class Repo(object):
         :return: Repo instance pointing to the cloned directory"""
         return cls._clone(Git(os.getcwd()), url, to_path, GitCmdObjectDB, progress, **kwargs)
 
-    def archive(self, ostream, treeish=None, prefix=None,  **kwargs):
+    def archive(self, ostream, treeish=None, prefix=None, **kwargs):
         """Archive the tree at the given revision.
         :parm ostream: file compatible stream object to which the archive will be written
         :parm treeish: is the treeish name/id, defaults to active branch

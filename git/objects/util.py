@@ -33,7 +33,7 @@ def mode_str_to_int(modestr):
         for example."""
     mode = 0
     for iteration, char in enumerate(reversed(modestr[-6:])):
-        mode += int(char) << iteration*3
+        mode += int(char) << iteration * 3
     # END for each char
     return mode
 
@@ -67,15 +67,15 @@ def utctz_to_altz(utctz):
     returns. Git stores it as UTC timezone which has the opposite sign as well, 
     which explains the -1 * ( that was made explicit here )
     :param utctz: git utc timezone string, i.e. +0200"""
-    return -1 * int(float(utctz)/100*3600)
+    return -1 * int(float(utctz) / 100 * 3600)
 
 
 def altz_to_utctz_str(altz):
     """As above, but inverses the operation, returning a string that can be used
     in commit objects"""
-    utci = -1 * int((altz / 3600)*100)
+    utci = -1 * int((altz / 3600) * 100)
     utcs = str(abs(utci))
-    utcs = "0"*(4-len(utcs)) + utcs
+    utcs = "0" * (4 - len(utcs)) + utcs
     prefix = (utci < 0 and '-') or '+'
     return prefix + utcs
 
@@ -144,7 +144,7 @@ def parse_date(string_date):
             assert splitter > -1
 
             # split date and time
-            time_part = string_date[splitter+1:]    # skip space
+            time_part = string_date[splitter + 1:]    # skip space
             date_part = string_date[:splitter]
 
             # parse time
@@ -237,9 +237,9 @@ class Traversable(object):
         out.extend(self.traverse(*args, **kwargs))
         return out
 
-    def traverse( self, predicate = lambda i,d: True,
-                           prune = lambda i,d: False, depth = -1, branch_first=True,
-                           visit_once = True, ignore_self=1, as_edge = False ):
+    def traverse(self, predicate=lambda i, d: True,
+                           prune=lambda i, d: False, depth=-1, branch_first=True,
+                           visit_once=True, ignore_self=1, as_edge=False):
         """:return: iterator yieling of items found when traversing self
 
         :param predicate: f(i,d) returns False if item i at depth d should not be included in the result
@@ -272,17 +272,17 @@ class Traversable(object):
             source to destination"""
         visited = set()
         stack = Deque()
-        stack.append( ( 0 ,self, None ) )       # self is always depth level 0
+        stack.append((0, self, None))       # self is always depth level 0
 
-        def addToStack( stack, item, branch_first, depth ):
-            lst = self._get_intermediate_items( item )
+        def addToStack(stack, item, branch_first, depth):
+            lst = self._get_intermediate_items(item)
             if not lst:
                 return
             if branch_first:
-                stack.extendleft( ( depth , i, item ) for i in lst )
+                stack.extendleft((depth, i, item) for i in lst)
             else:
-                reviter = ( ( depth , lst[i], item ) for i in range( len( lst )-1,-1,-1) )
-                stack.extend( reviter )
+                reviter = ((depth, lst[i], item) for i in range(len(lst) - 1, -1, -1))
+                stack.extend(reviter)
         # END addToStack local method
 
         while stack:
@@ -294,12 +294,12 @@ class Traversable(object):
             if visit_once:
                 visited.add(item)
 
-            rval = ( as_edge and (src, item) ) or item
-            if prune( rval, d ):
+            rval = (as_edge and (src, item)) or item
+            if prune(rval, d):
                 continue
 
-            skipStartItem = ignore_self and ( item is self )
-            if not skipStartItem and predicate( rval, d ):
+            skipStartItem = ignore_self and (item is self)
+            if not skipStartItem and predicate(rval, d):
                 yield rval
 
             # only continue to next level if this is appropriate !
@@ -307,7 +307,7 @@ class Traversable(object):
             if depth > -1 and nd > depth:
                 continue
 
-            addToStack( stack, item, branch_first, nd )
+            addToStack(stack, item, branch_first, nd)
         # END for each item on work stack
 
 

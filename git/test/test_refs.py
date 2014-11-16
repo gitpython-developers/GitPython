@@ -18,7 +18,7 @@ class TestRefs(TestBase):
 
     def test_from_path(self):
         # should be able to create any reference directly
-        for ref_type in ( Reference, Head, TagReference, RemoteReference ):
+        for ref_type in (Reference, Head, TagReference, RemoteReference):
             for name in ('rela_name', 'path/rela_name'):
                 full_path = ref_type.to_full_path(name)
                 instance = ref_type.from_path(self.rorepo, full_path)
@@ -36,17 +36,17 @@ class TestRefs(TestBase):
         for tag in self.rorepo.tags:
             assert "refs/tags" in tag.path
             assert tag.name
-            assert isinstance( tag.commit, Commit )
+            assert isinstance(tag.commit, Commit)
             if tag.tag is not None:
-                tag_object_refs.append( tag )
+                tag_object_refs.append(tag)
                 tagobj = tag.tag
                 # have no dict
                 self.failUnlessRaises(AttributeError, setattr, tagobj, 'someattr', 1)
-                assert isinstance( tagobj, TagObject ) 
+                assert isinstance(tagobj, TagObject) 
                 assert tagobj.tag == tag.name
-                assert isinstance( tagobj.tagger, Actor )
-                assert isinstance( tagobj.tagged_date, int )
-                assert isinstance( tagobj.tagger_tz_offset, int )
+                assert isinstance(tagobj.tagger, Actor)
+                assert isinstance(tagobj.tagged_date, int)
+                assert isinstance(tagobj.tagger_tz_offset, int)
                 assert tagobj.message
                 assert tag.object == tagobj
                 # can't assign the object
@@ -59,7 +59,7 @@ class TestRefs(TestBase):
     def test_tags_author(self):
         tag = self.rorepo.tags[0]
         tagobj = tag.tag
-        assert isinstance( tagobj.tagger, Actor )
+        assert isinstance(tagobj.tagger, Actor)
         tagger_name = tagobj.tagger.name
         assert tagger_name == 'Michael Trier'
 
@@ -77,7 +77,7 @@ class TestRefs(TestBase):
             s.add(ref)
         # END for each ref
         assert len(s) == ref_count
-        assert len(s|s) == ref_count
+        assert len(s | s) == ref_count
 
     @with_rw_repo('HEAD', bare=False)
     def test_heads(self, rwrepo):
@@ -127,19 +127,19 @@ class TestRefs(TestBase):
 
         # head changes once again, cur_head doesn't change
         head.set_reference(cur_head, 'reattach head')
-        assert len(head.log()) == hlog_len+2
+        assert len(head.log()) == hlog_len + 2
         assert len(cur_head.log()) == blog_len
 
         # adjusting the head-ref also adjust the head, so both reflogs are
         # altered
         cur_head.set_commit(pcommit, 'changing commit')
-        assert len(cur_head.log()) == blog_len+1
-        assert len(head.log()) == hlog_len+3
+        assert len(cur_head.log()) == blog_len + 1
+        assert len(head.log()) == hlog_len + 3
 
         # with automatic dereferencing
         assert head.set_commit(cur_commit, 'change commit once again') is head
-        assert len(head.log()) == hlog_len+4
-        assert len(cur_head.log()) == blog_len+2
+        assert len(head.log()) == hlog_len + 4
+        assert len(cur_head.log()) == blog_len + 2
 
         # a new branch has just a single entry
         other_head = Head.create(rwrepo, 'mynewhead', pcommit, logmsg='new head created')
@@ -178,10 +178,10 @@ class TestRefs(TestBase):
 
         # paths - make sure we have something to do
         rw_repo.index.reset(old_head_commit.parents[0])
-        cur_head.reset(cur_head, paths = "test")
-        cur_head.reset(new_head_commit, paths = "lib")
+        cur_head.reset(cur_head, paths="test")
+        cur_head.reset(new_head_commit, paths="lib")
         # hard resets with paths don't work, its all or nothing
-        self.failUnlessRaises(GitCommandError, cur_head.reset, new_head_commit, working_tree=True, paths = "lib")
+        self.failUnlessRaises(GitCommandError, cur_head.reset, new_head_commit, working_tree=True, paths="lib")
 
         # we can do a mixed reset, and then checkout from the index though
         cur_head.reset(new_head_commit)
@@ -224,7 +224,7 @@ class TestRefs(TestBase):
         commit = 'HEAD'
         prev_head_commit = cur_head.commit
         for count, new_name in enumerate(("my_new_head", "feature/feature1")):
-            actual_commit = commit+"^"*count
+            actual_commit = commit + "^" * count
             new_head = Head.create(rw_repo, new_name, actual_commit)
             assert new_head.is_detached
             assert cur_head.commit == prev_head_commit
@@ -265,7 +265,7 @@ class TestRefs(TestBase):
         tag_name = "1.0.2"
         light_tag = TagReference.create(rw_repo, tag_name)
         self.failUnlessRaises(GitCommandError, TagReference.create, rw_repo, tag_name)
-        light_tag = TagReference.create(rw_repo, tag_name, "HEAD~1", force = True)
+        light_tag = TagReference.create(rw_repo, tag_name, "HEAD~1", force=True)
         assert isinstance(light_tag, TagReference)
         assert light_tag.name == tag_name
         assert light_tag.commit == cur_head.commit.parents[0]
@@ -362,11 +362,11 @@ class TestRefs(TestBase):
 
         # checkout  with force as we have a changed a file
         # clear file
-        open(new_head.commit.tree.blobs[-1].abspath,'w').close()
+        open(new_head.commit.tree.blobs[-1].abspath, 'w').close()
         assert len(new_head.commit.diff(None))
 
         # create a new branch that is likely to touch the file we changed
-        far_away_head = rw_repo.create_head("far_head",'HEAD~100')
+        far_away_head = rw_repo.create_head("far_head", 'HEAD~100')
         self.failUnlessRaises(GitCommandError, far_away_head.checkout)
         assert active_branch == active_branch.checkout(force=True)
         assert rw_repo.head.reference != far_away_head
@@ -441,7 +441,7 @@ class TestRefs(TestBase):
         assert os.path.isfile(symbol_ref_abspath)
         assert symref.commit == new_head.commit
 
-        for name in ('absname','folder/rela_name'):
+        for name in ('absname', 'folder/rela_name'):
             symref_new_name = symref.rename(name)
             assert isinstance(symref_new_name, SymbolicReference)
             assert name in symref_new_name.path

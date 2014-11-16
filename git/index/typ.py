@@ -102,7 +102,7 @@ class BaseIndexEntry(tuple):
         return self[2]
 
     @classmethod
-    def from_blob(cls, blob, stage = 0):
+    def from_blob(cls, blob, stage=0):
         """:return: Fully equipped BaseIndexEntry at the given stage"""
         return cls((blob.mode, blob.binsha, stage << CE_STAGESHIFT, blob.path))
 
@@ -169,7 +169,7 @@ class IndexEntry(BaseIndexEntry):
         return IndexEntry((base.mode, base.binsha, base.flags, base.path, time, time, 0, 0, 0, 0, 0))
 
     @classmethod
-    def from_blob(cls, blob, stage = 0):
+    def from_blob(cls, blob, stage=0):
         """:return: Minimal entry resembling the given blob object"""
         time = pack(">LL", 0, 0)
         return IndexEntry((blob.mode, blob.binsha, stage << CE_STAGESHIFT, blob.path, time, time, 0, 0, 0, 0, blob.size))

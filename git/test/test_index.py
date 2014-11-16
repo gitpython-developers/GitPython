@@ -63,8 +63,8 @@ class TestIndex(TestBase):
         # test entry
         last_val = None
         entry = index.entries.itervalues().next()
-        for attr in ("path","ctime","mtime","dev","inode","mode","uid",
-                                "gid","size","binsha", "hexsha", "stage"):
+        for attr in ("path", "ctime", "mtime", "dev", "inode", "mode", "uid",
+                                "gid", "size", "binsha", "hexsha", "stage"):
             val = getattr(entry, attr)
         # END for each method
 
@@ -76,7 +76,7 @@ class TestIndex(TestBase):
         # test stage
         index_merge = IndexFile(self.rorepo, fixture_path("index_merge"))
         assert len(index_merge.entries) == 106
-        assert len(list(e for e in index_merge.entries.itervalues() if e.stage != 0 ))
+        assert len(list(e for e in index_merge.entries.itervalues() if e.stage != 0))
 
         # write the data - it must match the original
         tmpfile = tempfile.mktemp()
@@ -93,14 +93,14 @@ class TestIndex(TestBase):
 
         num_blobs = 0
         blist = list()
-        for blob in tree.traverse(predicate = lambda e,d: e.type == "blob", branch_first=False):
-            assert (blob.path,0) in index.entries
+        for blob in tree.traverse(predicate=lambda e, d: e.type == "blob", branch_first=False):
+            assert (blob.path, 0) in index.entries
             blist.append(blob)
         # END for each blob in tree
         if len(blist) != len(index.entries):
             iset = set(k[0] for k in index.entries.keys())
             bset = set(b.path for b in blist)
-            raise AssertionError( "CMP Failed: Missing entries in index: %s, missing in tree: %s" % (bset-iset, iset-bset) )
+            raise AssertionError("CMP Failed: Missing entries in index: %s, missing in tree: %s" % (bset - iset, iset - bset))
         # END assertion message
 
     @with_rw_repo('0.1.6')
@@ -127,7 +127,7 @@ class TestIndex(TestBase):
         merge_required = lambda t: t[0] != 0
         merge_blobs = list(three_way_index.iter_blobs(merge_required))
         assert merge_blobs
-        assert merge_blobs[0][0] in (1,2,3)
+        assert merge_blobs[0][0] in (1, 2, 3)
         assert isinstance(merge_blobs[0][1], Blob)
 
         # test BlobFilter
@@ -143,12 +143,12 @@ class TestIndex(TestBase):
         assert unmerged_blob_map
 
         # pick the first blob at the first stage we find and use it as resolved version
-        three_way_index.resolve_blobs( l[0][1] for l in unmerged_blob_map.itervalues() )
+        three_way_index.resolve_blobs(l[0][1] for l in unmerged_blob_map.itervalues())
         tree = three_way_index.write_tree()
         assert isinstance(tree, Tree)
         num_blobs = 0
-        for blob in tree.traverse(predicate=lambda item,d: item.type == "blob"):
-            assert (blob.path,0) in three_way_index.entries
+        for blob in tree.traverse(predicate=lambda item, d: item.type == "blob"):
+            assert (blob.path, 0) in three_way_index.entries
             num_blobs += 1
         # END for each blob
         assert num_blobs == len(three_way_index.entries)
@@ -177,7 +177,7 @@ class TestIndex(TestBase):
         # Add a change with a NULL sha that should conflict with next_commit. We 
         # pretend there was a change, but we do not even bother adding a proper 
         # sha for it ( which makes things faster of course )
-        manifest_fake_entry = BaseIndexEntry((manifest_entry[0], "\0"*20, 0, manifest_entry[3]))
+        manifest_fake_entry = BaseIndexEntry((manifest_entry[0], "\0" * 20, 0, manifest_entry[3]))
         # try write flag
         self._assert_entries(rw_repo.index.add([manifest_fake_entry], write=False))
         # add actually resolves the null-hex-sha for us as a feature, but we can 
@@ -278,7 +278,7 @@ class TestIndex(TestBase):
         assert not index.diff(None)
         assert cur_branch == rw_repo.active_branch
         assert cur_commit == rw_repo.head.commit
-        fp = open(file_path,'rb')
+        fp = open(file_path, 'rb')
         try:
             assert fp.read() != new_data
         finally:
@@ -397,7 +397,7 @@ class TestIndex(TestBase):
         self.failUnlessRaises(TypeError, index.remove, [1])
 
         # absolute path
-        deleted_files = index.remove([os.path.join(rw_repo.working_tree_dir,"lib")], r=True)
+        deleted_files = index.remove([os.path.join(rw_repo.working_tree_dir, "lib")], r=True)
         assert len(deleted_files) > 1
         self.failUnlessRaises(ValueError, index.remove, ["/doesnt/exists"])
 
@@ -426,7 +426,7 @@ class TestIndex(TestBase):
 
         # same index, multiple parents
         commit_message = "Index with multiple parents\n    commit with another line"
-        commit_multi_parent = index.commit(commit_message,parent_commits=(commit_no_parents, new_commit))
+        commit_multi_parent = index.commit(commit_message, parent_commits=(commit_no_parents, new_commit))
         assert commit_multi_parent.message == commit_message
         assert len(commit_multi_parent.parents) == 2
         assert commit_multi_parent.parents[0] == commit_no_parents
@@ -453,7 +453,7 @@ class TestIndex(TestBase):
         assert len(entries) == 14
 
         # same file 
-        entries = index.reset(new_commit).add([os.path.abspath(os.path.join('lib', 'git', 'head.py'))]*2, fprogress=self._fprogress_add)
+        entries = index.reset(new_commit).add([os.path.abspath(os.path.join('lib', 'git', 'head.py'))] * 2, fprogress=self._fprogress_add)
         self._assert_entries(entries)
         assert entries[0].mode & 0644 == 0644
         # would fail, test is too primitive to handle this case
@@ -469,12 +469,12 @@ class TestIndex(TestBase):
         entries = index.reset(new_commit).add([old_blob], fprogress=self._fprogress_add)
         self._assert_entries(entries)
         self._assert_fprogress(entries)
-        assert index.entries[(old_blob.path,0)].hexsha == old_blob.hexsha and len(entries) == 1 
+        assert index.entries[(old_blob.path, 0)].hexsha == old_blob.hexsha and len(entries) == 1 
 
         # mode 0 not allowed
         null_hex_sha = Diff.NULL_HEX_SHA
         null_bin_sha = "\0" * 20
-        self.failUnlessRaises(ValueError, index.reset(new_commit).add, [BaseIndexEntry((0, null_bin_sha,0,"doesntmatter"))])
+        self.failUnlessRaises(ValueError, index.reset(new_commit).add, [BaseIndexEntry((0, null_bin_sha, 0, "doesntmatter"))])
 
         # add new file
         new_file_relapath = "my_new_file"
@@ -537,7 +537,7 @@ class TestIndex(TestBase):
         if os.name == 'nt':
             # simlinks should contain the link as text ( which is what a 
             # symlink actually is )
-            open(fake_symlink_path,'rb').read() == link_target 
+            open(fake_symlink_path, 'rb').read() == link_target 
         else:
             assert S_ISLNK(os.lstat(fake_symlink_path)[ST_MODE])
 
@@ -657,7 +657,7 @@ class TestIndex(TestBase):
         H = self.rorepo.tree("25dca42bac17d511b7e2ebdd9d1d679e7626db5f")
         M = self.rorepo.tree("e746f96bcc29238b79118123028ca170adc4ff0f")
 
-        for args in ((B,), (B,H), (B,H,M)):
+        for args in ((B,), (B, H), (B, H, M)):
             index = IndexFile.new(self.rorepo, *args)
             assert isinstance(index, IndexFile)
         # END for each arg tuple

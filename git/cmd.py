@@ -19,7 +19,7 @@ from subprocess import (
 
 execute_kwargs = ('istream', 'with_keep_cwd', 'with_extended_output',
                   'with_exceptions', 'as_process', 
-                  'output_stream' )
+                  'output_stream')
 
 __all__ = ('Git', )
 
@@ -49,7 +49,7 @@ class Git(LazyMixin):
 
     # CONFIGURATION
     # The size in bytes read from stdout when copying git's output to another stream
-    max_chunk_size = 1024*64
+    max_chunk_size = 1024 * 64
 
     git_exec_name = "git"           # default that should work on linux and windows
     git_exec_name_win = "git.cmd"   # alternate command name, windows only
@@ -71,7 +71,7 @@ class Git(LazyMixin):
         and possibly raise."""
         __slots__ = ("proc", "args")
 
-        def __init__(self, proc, args ):
+        def __init__(self, proc, args):
             self.proc = proc
             self.args = args
 
@@ -423,15 +423,15 @@ class Git(LazyMixin):
 
     @classmethod
     def __unpack_args(cls, arg_list):
-        if not isinstance(arg_list, (list,tuple)):
+        if not isinstance(arg_list, (list, tuple)):
             if isinstance(arg_list, unicode):
                 return [arg_list.encode('utf-8')]
-            return [ str(arg_list) ]
+            return [str(arg_list)]
 
         outlist = list()
         for arg in arg_list:
             if isinstance(arg_list, (list, tuple)):
-                outlist.extend(cls.__unpack_args( arg ))
+                outlist.extend(cls.__unpack_args(arg))
             elif isinstance(arg_list, unicode):
                 outlist.append(arg_list.encode('utf-8'))
             # END recursion 
@@ -563,16 +563,16 @@ class Git(LazyMixin):
             return refstr
         return refstr + "\n"
 
-    def __get_persistent_cmd(self, attr_name, cmd_name, *args,**kwargs):
+    def __get_persistent_cmd(self, attr_name, cmd_name, *args, **kwargs):
         cur_val = getattr(self, attr_name)
         if cur_val is not None:
             return cur_val
 
-        options = { "istream" : PIPE, "as_process" : True }
-        options.update( kwargs )
+        options = {"istream": PIPE, "as_process": True}
+        options.update(kwargs)
 
-        cmd = self._call_process( cmd_name, *args, **options )
-        setattr(self, attr_name, cmd )
+        cmd = self._call_process(cmd_name, *args, **options)
+        setattr(self, attr_name, cmd)
         return cmd
 
     def __get_object_header(self, cmd, ref):

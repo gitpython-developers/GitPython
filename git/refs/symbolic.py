@@ -54,7 +54,7 @@ class SymbolicReference(object):
         return False
 
     def __ne__(self, other):
-        return not ( self == other )
+        return not (self == other)
 
     def __hash__(self):
         return hash(self.path)
@@ -99,7 +99,7 @@ class SymbolicReference(object):
 
                 yield tuple(line.split(' ', 1))
             # END for each line
-        except (OSError,IOError):
+        except (OSError, IOError):
             raise StopIteration
         # END no packed-refs file handling 
         # NOTE: Had try-finally block around here to close the fp, 
@@ -130,7 +130,7 @@ class SymbolicReference(object):
             value = fp.read().rstrip()
             fp.close()
             tokens = value.split(" ")
-        except (OSError,IOError):
+        except (OSError, IOError):
             # Probably we are just packed, find our entry in the packed refs file
             # NOTE: We are not a symbolic ref if we are in a packed file, as these
             # are excluded explictly
@@ -177,7 +177,7 @@ class SymbolicReference(object):
         #END handle type
         return obj
 
-    def set_commit(self, commit, logmsg = None):
+    def set_commit(self, commit, logmsg=None):
         """As set_object, but restricts the type of object to be a Commit
 
         :raise ValueError: If commit is not a Commit object or doesn't point to 
@@ -206,7 +206,7 @@ class SymbolicReference(object):
 
         return self
 
-    def set_object(self, object, logmsg = None):
+    def set_object(self, object, logmsg=None):
         """Set the object we point to, possibly dereference our symbolic reference first.
         If the reference does not exist, it will be created
 
@@ -245,7 +245,7 @@ class SymbolicReference(object):
             raise TypeError("%s is a detached symbolic reference as it points to %r" % (self, sha))
         return self.from_path(self.repo, target_ref_path)
 
-    def set_reference(self, ref, logmsg = None):
+    def set_reference(self, ref, logmsg=None):
         """Set ourselves to the given ref. It will stay a symbol if the ref is a Reference.
         Otherwise an Object, given as Object instance or refspec, is assumed and if valid, 
         will be set which effectively detaches the refererence if it was a purely 
@@ -272,7 +272,7 @@ class SymbolicReference(object):
             write_value = ref.hexsha
         elif isinstance(ref, basestring):
             try:
-                obj = self.repo.rev_parse(ref+"^{}")    # optionally deref tags
+                obj = self.repo.rev_parse(ref + "^{}")    # optionally deref tags
                 write_value = obj.hexsha
             except BadObject:
                 raise ValueError("Could not extract object from %s" % ref)
@@ -378,7 +378,7 @@ class SymbolicReference(object):
         full_ref_path = path
         if not cls._common_path_default:
             return full_ref_path
-        if not path.startswith(cls._common_path_default+"/"):
+        if not path.startswith(cls._common_path_default + "/"):
             full_ref_path = '%s/%s' % (cls._common_path_default, path)
         return full_ref_path
 
@@ -402,7 +402,7 @@ class SymbolicReference(object):
             pack_file_path = cls._get_packed_refs_path(repo)
             try:
                 reader = open(pack_file_path, 'rb')
-            except (OSError,IOError):
+            except (OSError, IOError):
                 pass # it didnt exist at all
             else:
                 new_lines = list()
@@ -414,7 +414,7 @@ class SymbolicReference(object):
                     # If we deleted the last line and this one is a tag-reference object, 
                     # we drop it as well
                     if ( line.startswith('#') or full_ref_path not in line ) and \
-                        ( not dropped_last_line or dropped_last_line and not line.startswith('^') ):
+                        (not dropped_last_line or dropped_last_line and not line.startswith('^')):
                         new_lines.append(line)
                         dropped_last_line = False
                         continue
@@ -526,7 +526,7 @@ class SymbolicReference(object):
         if isfile(new_abs_path):
             if not force:
                 # if they point to the same file, its not an error
-                if open(new_abs_path,'rb').read().strip() != open(cur_abs_path,'rb').read().strip():
+                if open(new_abs_path, 'rb').read().strip() != open(cur_abs_path, 'rb').read().strip():
                     raise OSError("File at path %r already exists" % new_abs_path)
                 # else: we could remove ourselves and use the otherone, but 
                 # but clarity we just continue as usual
@@ -545,7 +545,7 @@ class SymbolicReference(object):
         return self
 
     @classmethod
-    def _iter_items(cls, repo, common_path = None):
+    def _iter_items(cls, repo, common_path=None):
         if common_path is None:
             common_path = cls._common_path_default
         rela_paths = set()
@@ -554,7 +554,7 @@ class SymbolicReference(object):
         # Currently we do not follow links 
         for root, dirs, files in os.walk(join_path_native(repo.git_dir, common_path)):
             if 'refs/' not in root: # skip non-refs subfolders
-                refs_id = [ d for d in dirs if d == 'refs' ]
+                refs_id = [d for d in dirs if d == 'refs']
                 if refs_id:
                     dirs[0:] = ['refs']
             # END prune non-refs folders
@@ -581,7 +581,7 @@ class SymbolicReference(object):
         # END for each sorted relative refpath
 
     @classmethod
-    def iter_items(cls, repo, common_path = None):
+    def iter_items(cls, repo, common_path=None):
         """Find all refs in the repository
 
         :param repo: is the Repo
@@ -598,7 +598,7 @@ class SymbolicReference(object):
 
             List is lexigraphically sorted
             The returned objects represent actual subclasses, such as Head or TagReference"""
-        return ( r for r in cls._iter_items(repo, common_path) if r.__class__ == SymbolicReference or not r.is_detached )
+        return (r for r in cls._iter_items(repo, common_path) if r.__class__ == SymbolicReference or not r.is_detached)
 
     @classmethod
     def from_path(cls, repo, path):

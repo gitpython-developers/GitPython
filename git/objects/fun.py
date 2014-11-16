@@ -15,7 +15,7 @@ def tree_to_stream(entries, write):
     for binsha, mode, name in entries:
         mode_str = ''
         for i in xrange(6):
-            mode_str = chr(((mode >> (i*3)) & bit_mask) + ord_zero) + mode_str
+            mode_str = chr(((mode >> (i * 3)) & bit_mask) + ord_zero) + mode_str
         # END for each 8 octal value
 
         # git slices away the first octal if its zero
@@ -79,7 +79,7 @@ def tree_entries_from_data(data):
 
         # byte is NULL, get next 20
         i += 1
-        sha = data[i:i+20]
+        sha = data[i:i + 20]
         i = i + 20
         out.append((sha, mode, name))
     # END for each byte in data stream
@@ -112,7 +112,7 @@ def _to_full_path(item, path_prefix):
     """Rebuild entry with given path prefix"""
     if not item:
         return item
-    return (item[0], item[1], path_prefix+item[2])
+    return (item[0], item[1], path_prefix + item[2])
 
 
 def traverse_trees_recursive(odb, tree_shas, path_prefix):
@@ -152,7 +152,7 @@ def traverse_trees_recursive(odb, tree_shas, path_prefix):
             if not item:
                 continue
             # END skip already done items
-            entries = [ None for n in range(nt) ]
+            entries = [None for n in range(nt)]
             entries[ti] = item
             sha, mode, name = item                          # its faster to unpack
             is_dir = S_ISDIR(mode)                          # type mode bits
@@ -160,14 +160,14 @@ def traverse_trees_recursive(odb, tree_shas, path_prefix):
             # find this item in all other tree data items
             # wrap around, but stop one before our current index, hence 
             # ti+nt, not ti+1+nt
-            for tio in range(ti+1, ti+nt):
+            for tio in range(ti + 1, ti + nt):
                 tio = tio % nt
                 entries[tio] = _find_by_name(trees_data[tio], name, is_dir, ii)
             # END for each other item data
 
             # if we are a directory, enter recursion
             if is_dir:
-                out.extend(traverse_trees_recursive(odb, [((ei and ei[0]) or None) for ei in entries], path_prefix+name+'/'))
+                out.extend(traverse_trees_recursive(odb, [((ei and ei[0]) or None) for ei in entries], path_prefix + name + '/'))
             else:
                 out_append(tuple(_to_full_path(e, path_prefix) for e in entries))
             # END handle recursion
@@ -196,9 +196,9 @@ def traverse_tree_recursive(odb, tree_sha, path_prefix):
     # unpacking/packing is faster than accessing individual items
     for sha, mode, name in data:
         if S_ISDIR(mode):
-            entries.extend(traverse_tree_recursive(odb, sha, path_prefix+name+'/'))
+            entries.extend(traverse_tree_recursive(odb, sha, path_prefix + name + '/'))
         else:
-            entries.append((sha, mode, path_prefix+name))
+            entries.append((sha, mode, path_prefix + name))
     # END for each item
 
     return entries

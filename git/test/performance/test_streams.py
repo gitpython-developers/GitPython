@@ -19,8 +19,8 @@ from lib import (
 
 class TestObjDBPerformance(TestBigRepoR):
 
-    large_data_size_bytes = 1000*1000*10        # some MiB should do it
-    moderate_data_size_bytes = 1000*1000*1      # just 1 MiB
+    large_data_size_bytes = 1000 * 1000 * 10        # some MiB should do it
+    moderate_data_size_bytes = 1000 * 1000 * 1      # just 1 MiB
 
     @with_rw_repo('HEAD', bare=True)
     def test_large_data_streaming(self, rwrepo):
@@ -58,7 +58,7 @@ class TestObjDBPerformance(TestBigRepoR):
             print >> sys.stderr, "Read %i KiB of %s data at once from loose odb in %f s ( %f Read KiB / s)" % (size_kib, desc, elapsed_readall, size_kib / elapsed_readall)
 
             # reading in chunks of 1 MiB
-            cs = 512*1000
+            cs = 512 * 1000
             chunks = list()
             st = time()
             ostream = ldb.stream(binsha)

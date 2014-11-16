@@ -18,7 +18,7 @@ class TestActor(object):
 
         # base type capabilities
         assert a == a
-        assert not ( a != a )
+        assert not (a != a)
         m = set()
         m.add(a)
         m.add(a)

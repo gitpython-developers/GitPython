@@ -16,7 +16,7 @@ class TestBlob(TestBase):
         assert_equal("image/png", blob.mime_type)
 
     def test_mime_type_should_return_text_plain_for_unknown_types(self):
-        blob = Blob(self.rorepo, **{'binsha': Blob.NULL_BIN_SHA,'path': 'something'})
+        blob = Blob(self.rorepo, **{'binsha': Blob.NULL_BIN_SHA, 'path': 'something'})
         assert_equal("text/plain", blob.mime_type)
 
     def test_nodict(self):

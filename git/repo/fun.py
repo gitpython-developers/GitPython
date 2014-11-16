@@ -182,7 +182,7 @@ def rev_parse(repo, rev):
             end = rev.find('}', start)
             if end == -1:
                 raise ValueError("Missing closing brace to define type in %s" % rev)
-            output_type = rev[start+1:end]  # exclude brace
+            output_type = rev[start + 1:end]  # exclude brace
 
             # handle type 
             if output_type == 'commit':
@@ -206,7 +206,7 @@ def rev_parse(repo, rev):
                 revlog_index = None
                 try:
                     # transform reversed index into the format of our revlog
-                    revlog_index = -(int(output_type)+1)
+                    revlog_index = -(int(output_type) + 1)
                 except ValueError:
                     # TODO: Try to parse the other date options, using parse_date
                     # maybe
@@ -232,7 +232,7 @@ def rev_parse(repo, rev):
                 raise ValueError("Could not accomodate requested object type %r, got %s" % (output_type, obj.type))
             # END verify ouput type
 
-            start = end+1                   # skip brace
+            start = end + 1                   # skip brace
             parsed_to = start
             continue
         # END parse type
@@ -270,7 +270,7 @@ def rev_parse(repo, rev):
                 obj = to_commit(obj)
                 # must be n'th parent
                 if num:
-                    obj = obj.parents[num-1]
+                    obj = obj.parents[num - 1]
             elif token == ":":
                 if obj.type != "tree":
                     obj = obj.tree

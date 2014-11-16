@@ -27,7 +27,7 @@ class TestBase(TestCase):
         for filename in ("git_config", "git_config_global"):
             file_obj = self._to_memcache(fixture_path(filename))
             file_obj_orig = copy(file_obj)
-            w_config = GitConfigParser(file_obj, read_only = False)
+            w_config = GitConfigParser(file_obj, read_only=False)
             w_config.read()                 # enforce reading
             assert w_config._sections
             w_config.write()                # enforce writing
@@ -36,7 +36,7 @@ class TestBase(TestCase):
             assert file_obj.getvalue() != file_obj_orig.getvalue()
 
             # creating an additional config writer must fail due to exclusive access
-            self.failUnlessRaises(IOError, GitConfigParser, file_obj, read_only = False)
+            self.failUnlessRaises(IOError, GitConfigParser, file_obj, read_only=False)
 
             # should still have a lock and be able to make changes
             assert w_config._lock._has_lock()
@@ -48,7 +48,7 @@ class TestBase(TestCase):
             w_config.add_section(sname)
             assert w_config.has_section(sname)
             w_config.set(sname, oname, val)
-            assert w_config.has_option(sname,oname)
+            assert w_config.has_option(sname, oname)
             assert w_config.get(sname, oname) == val
 
             sname_new = "new_section"
@@ -88,7 +88,7 @@ class TestBase(TestCase):
 
                 # writing must fail
                 self.failUnlessRaises(IOError, r_config.set, section, option, None)
-                self.failUnlessRaises(IOError, r_config.remove_option, section, option )
+                self.failUnlessRaises(IOError, r_config.remove_option, section, option)
             # END for each option
             self.failUnlessRaises(IOError, r_config.remove_section, section)
         # END for each section 

@@ -100,8 +100,8 @@ class RefLogEntry(tuple):
             raise ValueError("Missing token: >")
         #END handle missing end brace
 
-        actor = Actor._from_string(info[82:email_end+1])
-        time, tz_offset = parse_date(info[email_end+2:])
+        actor = Actor._from_string(info[82:email_end + 1])
+        time, tz_offset = parse_date(info[email_end + 2:])
 
         return RefLogEntry((oldhexsha, newhexsha, actor, (time, tz_offset), msg))
 
@@ -200,7 +200,7 @@ class RefLog(list, Serializable):
             return RefLogEntry.from_line(fp.readlines()[index].strip())
         else:
             # read until index is reached
-            for i in xrange(index+1):
+            for i in xrange(index + 1):
                 line = fp.readline()
                 if not line:
                     break

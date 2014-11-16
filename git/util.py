@@ -26,7 +26,7 @@ from gitdb.util import (
     to_bin_sha
 )
 
-__all__ = ( "stream_copy", "join_path", "to_native_path_windows", "to_native_path_linux", 
+__all__ = ("stream_copy", "join_path", "to_native_path_windows", "to_native_path_linux", 
             "join_path_native", "Stats", "IndexFileSHA1Writer", "Iterable", "IterableList", 
             "BlockingLockFile", "LockFile", 'Actor', 'get_user_id', 'assure_directory_exists',
             'RemoteProgress', 'rmtree')
@@ -49,7 +49,7 @@ def rmtree(path):
     return shutil.rmtree(path, False, onerror)
 
 
-def stream_copy(source, destination, chunk_size=512*1024):
+def stream_copy(source, destination, chunk_size=512 * 1024):
     """Copy all data from the source stream into the destination stream in chunks
     of size chunk_size
 
@@ -83,11 +83,11 @@ def join_path(a, *p):
 
 
 def to_native_path_windows(path):
-    return path.replace('/','\\')
+    return path.replace('/', '\\')
 
 
 def to_native_path_linux(path):
-    return path.replace('\\','/')
+    return path.replace('\\', '/')
 
 if sys.platform.startswith('win'):
     to_native_path = to_native_path_windows
@@ -130,7 +130,7 @@ def finalize_process(proc):
     """Wait for the process (clone, fetch, pull or push) and handle its errors accordingly"""
     try:
         proc.wait()
-    except GitCommandError,e:
+    except GitCommandError, e:
         # if a push has rejected items, the command has non-zero return status
         # a return status of 128 indicates a connection error - reraise the previous one
         if proc.poll() == 128:
@@ -151,7 +151,7 @@ class RemoteProgress(object):
     """
     _num_op_codes = 7
     BEGIN, END, COUNTING, COMPRESSING, WRITING, RECEIVING, RESOLVING = [1 << x for x in range(_num_op_codes)]
-    STAGE_MASK = BEGIN|END
+    STAGE_MASK = BEGIN | END
     OP_MASK = ~STAGE_MASK
 
     __slots__ = ("_cur_line", "_seen_ops")
@@ -176,10 +176,10 @@ class RemoteProgress(object):
             # find esacpe characters and cut them away - regex will not work with 
             # them as they are non-ascii. As git might expect a tty, it will send them
             last_valid_index = None
-            for i,c in enumerate(reversed(sline)):
+            for i, c in enumerate(reversed(sline)):
                 if ord(c) < 32:
                     # its a slice index
-                    last_valid_index = -i-1 
+                    last_valid_index = -i - 1 
                 # END character was non-ascii
             # END for each character in sline
             if last_valid_index is not None:
@@ -284,8 +284,8 @@ class Actor(object):
     can be committers and authors or anything with a name and an email as 
     mentioned in the git log entries."""
     # PRECOMPILED REGEX
-    name_only_regex = re.compile( r'<(.+)>' )
-    name_email_regex = re.compile( r'(.*) <(.+?)>' )
+    name_only_regex = re.compile(r'<(.+)>')
+    name_email_regex = re.compile(r'(.*) <(.+?)>')
 
     # ENVIRONMENT VARIABLES
     # read when creating new commits
@@ -577,7 +577,7 @@ class BlockingLockFile(LockFile):
                 # END handle missing directory
 
                 if curtime >= maxtime:
-                    msg = "Waited %g seconds for lock at %r" % ( maxtime - starttime, self._lock_file_path())
+                    msg = "Waited %g seconds for lock at %r" % (maxtime - starttime, self._lock_file_path())
                     raise IOError(msg)
                 # END abort if we wait too long
                 time.sleep(self._check_interval)
@@ -605,7 +605,7 @@ class IterableList(list):
     __slots__ = ('_id_attr', '_prefix')
 
     def __new__(cls, id_attr, prefix=''):
-        return super(IterableList,cls).__new__(cls)
+        return super(IterableList, cls).__new__(cls)
 
     def __init__(self, id_attr, prefix=''):
         self._id_attr = id_attr
@@ -636,12 +636,12 @@ class IterableList(list):
 
     def __getitem__(self, index):
         if isinstance(index, int):
-            return list.__getitem__(self,index)
+            return list.__getitem__(self, index)
 
         try:
             return getattr(self, index)
         except AttributeError:
-            raise IndexError( "No item found with id %r" % (self._prefix + index) )
+            raise IndexError("No item found with id %r" % (self._prefix + index))
         # END handle getattr
 
     def __delitem__(self, index):
@@ -679,7 +679,7 @@ class Iterable(object):
         :note: Favor the iter_items method as it will
 
         :return:list(Item,...) list of item instances"""
-        out_list = IterableList( cls._id_attribute_ )
+        out_list = IterableList(cls._id_attribute_)
         out_list.extend(cls.iter_items(repo, *args, **kwargs))
         return out_list
 

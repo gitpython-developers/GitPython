@@ -43,7 +43,7 @@ class TestSubmodule(TestBase):
     def _do_base_tests(self, rwrepo):
         """Perform all tests in the given repository, it may be bare or nonbare"""
         # manual instantiation
-        smm = Submodule(rwrepo, "\0"*20)
+        smm = Submodule(rwrepo, "\0" * 20)
         # name needs to be set in advance
         self.failUnlessRaises(AttributeError, getattr, smm, 'name') 
 
@@ -107,7 +107,7 @@ class TestSubmodule(TestBase):
         prev_parent_commit = smold.parent_commit
         self.failUnlessRaises(ValueError, smold.set_parent_commit, self.k_subm_current)
         # the sha is properly updated
-        smold.set_parent_commit(self.k_subm_changed+"~1")
+        smold.set_parent_commit(self.k_subm_changed + "~1")
         assert smold.binsha != sm.binsha
 
         # raises if the sm didn't exist in new parent - it keeps its 
@@ -130,7 +130,7 @@ class TestSubmodule(TestBase):
 
             # currently there is only one submodule
             assert len(list(rwrepo.iter_submodules())) == 1
-            assert sm.binsha != "\0"*20
+            assert sm.binsha != "\0" * 20
 
             # TEST ADD
             ###########
@@ -303,7 +303,7 @@ class TestSubmodule(TestBase):
             # add a simple remote repo - trailing slashes are no problem
             smid = "newsub"
             osmid = "othersub"
-            nsm = Submodule.add(rwrepo, smid, sm_repopath, new_smclone_path+"/", None, no_checkout=True)
+            nsm = Submodule.add(rwrepo, smid, sm_repopath, new_smclone_path + "/", None, no_checkout=True)
             assert nsm.name == smid
             assert nsm.module_exists()
             assert nsm.exists()

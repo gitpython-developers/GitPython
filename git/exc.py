@@ -36,7 +36,7 @@ class GitCommandError(Exception):
         return ret
 
 
-class CheckoutError( Exception ):
+class CheckoutError(Exception):
 
     """Thrown if a file could not be checked out from the index as it contained
     changes.

@@ -64,7 +64,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
 
     def __init__(self, repo, binsha, tree=None, author=None, authored_date=None, author_tz_offset=None,
                  committer=None, committed_date=None, committer_tz_offset=None,
-                 message=None,  parents=None, encoding=None, gpgsig=None):
+                 message=None, parents=None, encoding=None, gpgsig=None):
         """Instantiate a new Commit. All keyword arguments taking None as default will
         be implicitly set on first query.
         :param binsha: 20 byte sha1
@@ -98,7 +98,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
         :note: Timezone information is in the same format and in the same sign 
             as what time.altzone returns. The sign is inverted compared to git's 
             UTC timezone."""
-        super(Commit,self).__init__(repo, binsha)
+        super(Commit, self).__init__(repo, binsha)
         if tree is not None:
             assert isinstance(tree, Tree), "Tree needs to be a Tree instance, was %s" % type(tree)
         if tree is not None:
@@ -235,7 +235,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
         :param proc: git-rev-list process instance - one sha per line
         :return: iterator returning Commit objects"""
         stream = proc_or_stream
-        if not hasattr(stream,'readline'):
+        if not hasattr(stream, 'readline'):
             stream = proc_or_stream.stdout
 
         readline = stream.readline
@@ -286,7 +286,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
         parents = parent_commits
         if parent_commits is None:
             try:
-                parent_commits = [ repo.head.commit ]
+                parent_commits = [repo.head.commit]
             except ValueError:
                 # empty repositories have no head commit
                 parent_commits = list()
@@ -400,7 +400,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
         if self.gpgsig:
             write("gpgsig")
             for sigline in self.gpgsig.rstrip("\n").split("\n"):
-                write(" "+sigline+"\n")
+                write(" " + sigline + "\n")
 
         write("\n")
 
@@ -416,7 +416,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
         """:param from_rev_list: if true, the stream format is coming from the rev-list command
         Otherwise it is assumed to be a plain data stream from our object"""
         readline = stream.readline
-        self.tree = Tree(self.repo, hex_to_bin(readline().split()[1]), Tree.tree_id<<12, '')
+        self.tree = Tree(self.repo, hex_to_bin(readline().split()[1]), Tree.tree_id << 12, '')
 
         self.parents = list()
         next_line = None
@@ -449,9 +449,9 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
         buf = enc.strip()
         while buf != "":
             if buf[0:10] == "encoding ":
-                self.encoding = buf[buf.find(' ')+1:]
+                self.encoding = buf[buf.find(' ') + 1:]
             elif buf[0:7] == "gpgsig ":
-                sig = buf[buf.find(' ')+1:] + "\n"
+                sig = buf[buf.find(' ') + 1:] + "\n"
                 is_next_header = False
                 while True:
                     sigbuf = readline()

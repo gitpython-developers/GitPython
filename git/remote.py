@@ -98,11 +98,11 @@ class PushInfo(object):
     __slots__ = ('local_ref', 'remote_ref_string', 'flags', 'old_commit', '_remote', 'summary')
 
     NEW_TAG, NEW_HEAD, NO_MATCH, REJECTED, REMOTE_REJECTED, REMOTE_FAILURE, DELETED, \
-    FORCED_UPDATE, FAST_FORWARD, UP_TO_DATE, ERROR = [ 1 << x for x in range(11) ]
+    FORCED_UPDATE, FAST_FORWARD, UP_TO_DATE, ERROR = [1 << x for x in range(11)]
 
-    _flag_map = {   'X' : NO_MATCH, '-' : DELETED, '*' : 0,
-                    '+' : FORCED_UPDATE, ' ' : FAST_FORWARD, 
-                    '=' : UP_TO_DATE, '!' : ERROR }
+    _flag_map = {'X': NO_MATCH, '-': DELETED, '*': 0,
+                    '+': FORCED_UPDATE, ' ': FAST_FORWARD, 
+                    '=': UP_TO_DATE, '!': ERROR}
 
     def __init__(self, flags, local_ref, remote_ref_string, remote, old_commit=None, 
                     summary=''):
@@ -139,7 +139,7 @@ class PushInfo(object):
 
         # control character handling
         try:
-            flags |= cls._flag_map[ control_character ]
+            flags |= cls._flag_map[control_character]
         except KeyError:
             raise ValueError("Control Character %r unknown as parsed from line %r" % (control_character, line)) 
         # END handle control character
@@ -196,18 +196,18 @@ class FetchInfo(object):
      info.old_commit    # if info.flags & info.FORCED_UPDATE|info.FAST_FORWARD, 
                         # field is set to the previous location of ref, otherwise None
     """
-    __slots__ = ('ref','old_commit', 'flags', 'note')
+    __slots__ = ('ref', 'old_commit', 'flags', 'note')
 
     NEW_TAG, NEW_HEAD, HEAD_UPTODATE, TAG_UPDATE, REJECTED, FORCED_UPDATE, \
-    FAST_FORWARD, ERROR = [ 1 << x for x in range(8) ]
+    FAST_FORWARD, ERROR = [1 << x for x in range(8)]
 
     #                             %c    %-*s %-*s             -> %s       (%s)
     re_fetch_result = re.compile("^\s*(.) (\[?[\w\s\.]+\]?)\s+(.+) -> ([/\w_\+\.-]+)(    \(.*\)?$)?")
 
-    _flag_map = {   '!' : ERROR, '+' : FORCED_UPDATE, '-' : TAG_UPDATE, '*' : 0,
-                    '=' : HEAD_UPTODATE, ' ' : FAST_FORWARD } 
+    _flag_map = {'!': ERROR, '+': FORCED_UPDATE, '-': TAG_UPDATE, '*': 0,
+                    '=': HEAD_UPTODATE, ' ': FAST_FORWARD} 
 
-    def __init__(self, ref, flags, note = '', old_commit = None):
+    def __init__(self, ref, flags, note='', old_commit=None):
         """
         Initialize a new instance
         """
@@ -306,7 +306,7 @@ class FetchInfo(object):
             remote_local_ref = ref_type(repo, ref_path, check_path=False)
         # END create ref instance 
 
-        note = ( note and note.strip() ) or ''
+        note = (note and note.strip()) or ''
 
         # parse flags from control_character
         flags = 0
@@ -346,7 +346,7 @@ class Remote(LazyMixin, Iterable):
     NOTE: When querying configuration, the configuration accessor will be cached
     to speed up subsequent accesses."""
 
-    __slots__ = ( "repo", "name", "_config_reader" )
+    __slots__ = ("repo", "name", "_config_reader")
     _id_attribute_ = "name"
 
     def __init__(self, repo, name):
@@ -400,7 +400,7 @@ class Remote(LazyMixin, Iterable):
         return self.name == other.name
 
     def __ne__(self, other):
-        return not ( self == other )
+        return not (self == other)
 
     def __hash__(self):
         return hash(self.name)
@@ -415,7 +415,7 @@ class Remote(LazyMixin, Iterable):
             rbound = section.rfind('"')
             if lbound == -1 or rbound == -1:
                 raise ValueError("Remote-Section has invalid format: %r" % section)
-            yield Remote(repo, section[lbound+1:rbound])
+            yield Remote(repo, section[lbound + 1:rbound])
         # END for each configuration section
 
     @property
@@ -447,7 +447,7 @@ class Remote(LazyMixin, Iterable):
             token = " * [would prune] " 
             if not line.startswith(token):
                 raise ValueError("Could not parse git-remote prune result: %r" % line)
-            fqhn = "%s/%s" % (RemoteReference._common_path_default,line.replace(token, ""))
+            fqhn = "%s/%s" % (RemoteReference._common_path_default, line.replace(token, ""))
             out_refs.append(RemoteReference(self.repo, fqhn))
         # END for each line 
         return out_refs
@@ -464,14 +464,14 @@ class Remote(LazyMixin, Iterable):
         :return: New Remote instance
 
         :raise GitCommandError: in case an origin with that name already exists"""
-        repo.git.remote( "add", name, url, **kwargs )
+        repo.git.remote("add", name, url, **kwargs)
         return cls(repo, name)
 
     # add is an alias
     add = create
 
     @classmethod
-    def remove(cls, repo, name ):
+    def remove(cls, repo, name):
         """Remove the remote with the given name"""
         repo.git.remote("rm", name)
 
@@ -527,7 +527,7 @@ class Remote(LazyMixin, Iterable):
         # END for each line
 
         # read head information 
-        fp = open(join(self.repo.git_dir, 'FETCH_HEAD'),'r')
+        fp = open(join(self.repo.git_dir, 'FETCH_HEAD'), 'r')
         fetch_head_info = fp.readlines()
         fp.close()
 
@@ -537,7 +537,7 @@ class Remote(LazyMixin, Iterable):
         # assert len(fetch_info_lines) == len(fetch_head_info), "len(%s) != len(%s)" % (fetch_head_info, fetch_info_lines)
 
         output.extend(FetchInfo._from_line(self.repo, err_line, fetch_line) 
-                        for err_line,fetch_line in zip(fetch_info_lines, fetch_head_info))
+                        for err_line, fetch_line in zip(fetch_info_lines, fetch_head_info))
 
         finalize_process(proc)
         return output

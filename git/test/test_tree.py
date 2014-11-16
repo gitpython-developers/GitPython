@@ -59,7 +59,7 @@ class TestTree(TestBase):
             assert len(testtree) == cur_count
 
             # fails with a different sha - name exists
-            hexsha = "1"*40
+            hexsha = "1" * 40
             self.failUnlessRaises(ValueError, mod.add, hexsha, tree.mode, name)
 
             # force it - replace existing one
@@ -113,18 +113,18 @@ class TestTree(TestBase):
         assert len(list(root)) == len(list(root.traverse(depth=1)))
 
         # only choose trees
-        trees_only = lambda i,d: i.type == "tree"
-        trees = list(root.traverse(predicate = trees_only))
-        assert len(trees) == len(list( i for i in root.traverse() if trees_only(i,0) ))
+        trees_only = lambda i, d: i.type == "tree"
+        trees = list(root.traverse(predicate=trees_only))
+        assert len(trees) == len(list(i for i in root.traverse() if trees_only(i, 0)))
 
         # test prune
-        lib_folder = lambda t,d: t.path == "lib"
-        pruned_trees = list(root.traverse(predicate = trees_only,prune = lib_folder))
+        lib_folder = lambda t, d: t.path == "lib"
+        pruned_trees = list(root.traverse(predicate=trees_only, prune=lib_folder))
         assert len(pruned_trees) < len(trees)
 
         # trees and blobs
-        assert len(set(trees)|set(root.trees)) == len(trees)
-        assert len(set(b for b in root if isinstance(b, Blob)) | set(root.blobs)) == len( root.blobs )
+        assert len(set(trees) | set(root.trees)) == len(trees)
+        assert len(set(b for b in root if isinstance(b, Blob)) | set(root.blobs)) == len(root.blobs)
         subitem = trees[0][0]
         assert "/" in subitem.path
         assert subitem.name == os.path.basename(subitem.path)
@@ -138,6 +138,6 @@ class TestTree(TestBase):
             # END check for slash
 
             # slashes in paths are supported as well 
-            assert root[item.path] == item == root/item.path
+            assert root[item.path] == item == root / item.path
         # END for each item
         assert found_slash

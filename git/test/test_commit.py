@@ -62,7 +62,7 @@ def assert_commit_serialization(rwrepo, commit_id, print_performance_info=False)
     elapsed = time.time() - st
 
     if print_performance_info:
-        print >> sys.stderr, "Serialized %i and deserialized %i commits in %f s ( (%f, %f) commits / s" % (ns, nds, elapsed, ns/elapsed, nds/elapsed)
+        print >> sys.stderr, "Serialized %i and deserialized %i commits in %f s ( (%f, %f) commits / s" % (ns, nds, elapsed, ns / elapsed, nds / elapsed)
     # END handle performance info
 
 
@@ -151,10 +151,10 @@ class TestCommit(TestBase):
         assert len(list(start.traverse(ignore_self=False, depth=0))) == 1
 
         # prune
-        assert start.traverse(branch_first=1, prune=lambda i,d: i == p0).next() == p1
+        assert start.traverse(branch_first=1, prune=lambda i, d: i == p0).next() == p1
 
         # predicate
-        assert start.traverse(branch_first=1, predicate=lambda i,d: i == p1).next() == p1
+        assert start.traverse(branch_first=1, predicate=lambda i, d: i == p1).next() == p1
 
         # traversal should stop when the beginning is reached
         self.failUnlessRaises(StopIteration, first.traverse().next)
@@ -205,7 +205,7 @@ class TestCommit(TestBase):
             assert_equal(sha1, commit.hexsha)
 
     def test_count(self):
-        assert self.rorepo.tag('refs/tags/0.1.5').commit.count( ) == 143
+        assert self.rorepo.tag('refs/tags/0.1.5').commit.count() == 143
 
     def test_list(self):
         assert isinstance(Commit.list_items(self.rorepo, '0.1.5', max_count=5)[hex_to_bin('5117c9c8a4d3af19a9958677e45cda9269de1541')], Commit)
@@ -221,7 +221,7 @@ class TestCommit(TestBase):
     def test_equality(self):
         commit1 = Commit(self.rorepo, Commit.NULL_BIN_SHA)
         commit2 = Commit(self.rorepo, Commit.NULL_BIN_SHA)
-        commit3 = Commit(self.rorepo, "\1"*20)
+        commit3 = Commit(self.rorepo, "\1" * 20)
         assert_equal(commit1, commit2)
         assert_not_equal(commit2, commit3)
 

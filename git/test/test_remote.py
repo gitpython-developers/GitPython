@@ -17,7 +17,7 @@ random.seed(0)
 
 
 class TestRemoteProgress(RemoteProgress):
-    __slots__ = ( "_seen_lines", "_stages_per_op", '_num_progress_messages' )
+    __slots__ = ("_seen_lines", "_stages_per_op", '_num_progress_messages')
 
     def __init__(self):
         super(TestRemoteProgress, self).__init__()
@@ -45,9 +45,9 @@ class TestRemoteProgress(RemoteProgress):
         assert op_id in (self.COUNTING, self.COMPRESSING, self.WRITING)
 
         self._stages_per_op.setdefault(op_id, 0)
-        self._stages_per_op[ op_id ] = self._stages_per_op[ op_id ] | (op_code & self.STAGE_MASK)
+        self._stages_per_op[op_id] = self._stages_per_op[op_id] | (op_code & self.STAGE_MASK)
 
-        if op_code & (self.WRITING|self.END) == (self.WRITING|self.END):
+        if op_code & (self.WRITING | self.END) == (self.WRITING | self.END):
             assert message
         # END check we get message
 
@@ -59,7 +59,7 @@ class TestRemoteProgress(RemoteProgress):
             return
 
         # sometimes objects are not compressed which is okay
-        assert len(self._seen_ops) in (2,3)
+        assert len(self._seen_ops) in (2, 3)
         assert self._stages_per_op
 
         # must have seen all stages
@@ -86,7 +86,7 @@ class TestRemote(TestBase):
                 assert info.flags != 0
             # END reference type flags handling 
             assert isinstance(info.ref, (SymbolicReference, Reference))
-            if info.flags & (info.FORCED_UPDATE|info.FAST_FORWARD):
+            if info.flags & (info.FORCED_UPDATE | info.FAST_FORWARD):
                 assert isinstance(info.old_commit, Commit)
             else:
                 assert info.old_commit is None
@@ -124,12 +124,12 @@ class TestRemote(TestBase):
         #Create a file with a random name and random data and commit it to  repo.
         # Return the commited absolute file path
         index = repo.index
-        new_file = self._make_file(os.path.basename(tempfile.mktemp()),str(random.random()), repo)
+        new_file = self._make_file(os.path.basename(tempfile.mktemp()), str(random.random()), repo)
         index.add([new_file])
         index.commit("Committing %s" % new_file)
         return new_file
 
-    def _do_test_fetch(self,remote, rw_repo, remote_repo):
+    def _do_test_fetch(self, remote, rw_repo, remote_repo):
         # specialized fetch testing to de-clutter the main test
         self._do_test_fetch_info(rw_repo)
 
@@ -143,7 +143,7 @@ class TestRemote(TestBase):
         # END fetch and check
 
         def get_info(res, remote, name):
-            return res["%s/%s"%(remote,name)]
+            return res["%s/%s" % (remote, name)]
 
         # put remote head to master as it is garantueed to exist
         remote_repo.head.reference = remote_repo.heads.master
@@ -159,7 +159,7 @@ class TestRemote(TestBase):
         remote_commit = rhead.commit
         rhead.reset("HEAD~2", index=False)
         res = fetch_and_test(remote)
-        mkey = "%s/%s"%(remote,'master')
+        mkey = "%s/%s" % (remote, 'master')
         master_info = res[mkey]
         assert master_info.flags & FetchInfo.FORCED_UPDATE and master_info.note is not None
 
@@ -192,7 +192,7 @@ class TestRemote(TestBase):
         RemoteReference.delete(rw_repo, *stale_refs)
 
         # test single branch fetch with refspec including target remote
-        res = fetch_and_test(remote, refspec="master:refs/remotes/%s/master"%remote)
+        res = fetch_and_test(remote, refspec="master:refs/remotes/%s/master" % remote)
         assert len(res) == 1 and get_info(res, remote, 'master')
 
         # ... with respec and no target
@@ -230,7 +230,7 @@ class TestRemote(TestBase):
         # must clone with a local path for the repo implementation not to freak out
         # as it wants local paths only ( which I can understand )
         other_repo = remote_repo.clone(other_repo_dir, shared=False)
-        remote_repo_url = "git://localhost%s"%remote_repo.git_dir
+        remote_repo_url = "git://localhost%s" % remote_repo.git_dir
 
         # put origin to git-url
         other_origin = other_repo.remotes.origin 
@@ -254,7 +254,7 @@ class TestRemote(TestBase):
             shutil.rmtree(other_repo_dir)
         # END test and cleanup
 
-    def _assert_push_and_pull(self,remote, rw_repo, remote_repo):
+    def _assert_push_and_pull(self, remote, rw_repo, remote_repo):
         # push our changes
         lhead = rw_repo.head
         lindex = rw_repo.index
@@ -429,7 +429,7 @@ class TestRemote(TestBase):
     def test_creation_and_removal(self, bare_rw_repo):
         new_name = "test_new_one"
         arg_list = (new_name, "git@server:hello.git")
-        remote = Remote.create(bare_rw_repo, *arg_list )
+        remote = Remote.create(bare_rw_repo, *arg_list)
         assert remote.name == "test_new_one"
         assert remote in bare_rw_repo.remotes
 

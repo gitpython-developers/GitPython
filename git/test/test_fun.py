@@ -65,7 +65,7 @@ class TestFun(TestBase):
         self._assert_index_entries(aggressive_tree_merge(odb, trees), trees)
 
         # too many trees
-        self.failUnlessRaises(ValueError, aggressive_tree_merge, odb, trees*2)
+        self.failUnlessRaises(ValueError, aggressive_tree_merge, odb, trees * 2)
 
     def mktree(self, odb, entries):
         """create a tree from the given tree entries and safe it to the database"""
@@ -78,7 +78,7 @@ class TestFun(TestBase):
     @with_rw_repo('0.1.6')
     def test_three_way_merge(self, rwrepo):
         def mkfile(name, sha, executable=0):
-            return (sha, S_IFREG | 0644 | executable*0111, name)
+            return (sha, S_IFREG | 0644 | executable * 0111, name)
 
         def mkcommit(name, sha):
             return (sha, S_IFDIR | S_IFLNK, name)
@@ -88,9 +88,9 @@ class TestFun(TestBase):
             assert has_conflict == (len([e for e in entries if e.stage != 0]) > 0)
         mktree = self.mktree
 
-        shaa = "\1"*20
-        shab = "\2"*20
-        shac = "\3"*20
+        shaa = "\1" * 20
+        shab = "\2" * 20
+        shac = "\3" * 20
 
         odb = rwrepo.odb
 

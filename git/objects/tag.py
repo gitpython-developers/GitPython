@@ -18,7 +18,7 @@ class TagObject(base.Object):
 
     """Non-Lightweight tag carrying additional information about an object we are pointing to."""
     type = "tag"
-    __slots__ = ( "object", "tag", "tagger", "tagged_date", "tagger_tz_offset", "message" )
+    __slots__ = ("object", "tag", "tagger", "tagged_date", "tagger_tz_offset", "message")
 
     def __init__(self, repo, binsha, object=None, tag=None, 
                 tagger=None, tagged_date=None, tagger_tz_offset=None, message=None):
@@ -34,7 +34,7 @@ class TagObject(base.Object):
             it into a different format
         :param tagged_tz_offset: int_seconds_west_of_utc is the timezone that the 
             authored_date is in, in a format similar to time.altzone"""
-        super(TagObject, self).__init__(repo, binsha )
+        super(TagObject, self).__init__(repo, binsha)
         if object is not None:
             self.object = object
         if tag is not None:

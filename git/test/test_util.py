@@ -30,9 +30,9 @@ class TestUtils(TestBase):
 
     def setup(self):
         self.testdict = {
-            "string":   "42",
-            "int":      42,
-            "array":    [ 42 ],
+            "string": "42",
+            "int": 42,
+            "array": [42],
         }
 
     def test_it_should_dashify(self):

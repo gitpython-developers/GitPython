@@ -188,7 +188,7 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
             # try to list remotes to diagnoes whether the server is up
             try:
                 rw_repo.git.ls_remote(d_remote)
-            except GitCommandError,e:
+            except GitCommandError, e:
                 print str(e)
                 if os.name == 'nt':
                     raise AssertionError('git-daemon needs to run this test, but windows does not have one. Otherwise, run: git-daemon "%s"' % os.path.dirname(_mktemp())) 
