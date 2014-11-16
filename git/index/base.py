@@ -71,6 +71,7 @@ __all__ = ( 'IndexFile', 'CheckoutError' )
 
 
 class IndexFile(LazyMixin, diff.Diffable, Serializable):
+
     """
     Implements an Index that can be manipulated using a native implementation in
     order to save git command function calls wherever possible.
@@ -174,7 +175,6 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
                     (ignore_tree_extension_data and None) or self._extension_data) 
         return self
 
-
     #} END serializable interface
 
     def write(self, file_path = None, ignore_tree_extension_data=False):
@@ -272,7 +272,6 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
         inst.entries = entries
         return inst
-
 
     @classmethod
     def from_tree(cls, repo, *treeish, **kwargs):
@@ -519,7 +518,6 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         # copy changed trees only
         mdb.stream_copy(mdb.sha_iter(), self.repo.odb)
 
-
         # note: additional deserialization could be saved if write_tree_from_cache
         # would return sorted tree entries
         root_tree = Tree(self.repo, binsha, path='')
@@ -664,7 +662,6 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             del(paths[:])
         # END rewrite paths
 
-
         def store_path(filepath):
             """Store file at filepath in the database and return the base index entry"""
             st = os.lstat(filepath)     # handles non-symlinks as well
@@ -681,7 +678,6 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
                                     istream.binsha, 0, to_native_path_linux(filepath)))
         # END utility method
 
-
         # HANDLE PATHS
         if paths:
             assert len(entries_added) == 0
@@ -690,7 +686,6 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
                 entries_added.append(store_path(filepath))
             # END for each filepath
         # END path handling
-
 
         # HANDLE ENTRIES
         if entries:
@@ -866,7 +861,6 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             return out
         # END handle dryrun
 
-
         # now apply the actual operation
         kwargs.pop('dry_run')
         self.repo.git.mv(args, paths, **kwargs)
@@ -988,7 +982,6 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
                 valid_files = list(set(iter_checked_out_files) - set(failed_files))
                 raise CheckoutError("Some files could not be checked out from the index due to local modifications", failed_files, valid_files, failed_reasons)
         # END stderr handler
-
 
         if paths is None:
             args.append("--all")

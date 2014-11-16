@@ -7,6 +7,7 @@
 from git.test.lib import *
 from git import *
 
+
 class TestDiff(TestBase):
 
     def _assert_diff_format(self, diffs):

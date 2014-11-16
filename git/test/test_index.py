@@ -14,6 +14,7 @@ import glob
 import shutil
 from stat import *
 
+
 class TestIndex(TestBase):
 
     def __init__(self, *args):
@@ -122,7 +123,6 @@ class TestIndex(TestBase):
         three_way_index = IndexFile.from_tree(rw_repo, common_ancestor_sha, cur_sha, other_sha)
         assert len(list(e for e in three_way_index.entries.values() if e.stage != 0))
 
-
         # ITERATE BLOBS
         merge_required = lambda t: t[0] != 0
         merge_blobs = list(three_way_index.iter_blobs(merge_required))
@@ -134,7 +134,6 @@ class TestIndex(TestBase):
         prefix = 'lib/git'
         for stage, blob in base_index.iter_blobs(BlobFilter([prefix])):
             assert blob.path.startswith(prefix) 
-
 
         # writing a tree should fail with an unmerged index
         self.failUnlessRaises(UnmergedEntriesError, three_way_index.write_tree)
@@ -212,7 +211,6 @@ class TestIndex(TestBase):
         unmerged_tree = IndexFile.from_tree(rw_repo, parent_commit, tree, next_commit)
         unmerged_blobs = unmerged_tree.unmerged_blobs()
         assert len(unmerged_blobs) == 1 and unmerged_blobs.keys()[0] == manifest_key[0]
-
 
     @with_rw_repo('0.1.6')
     def test_index_file_diffing(self, rw_repo):
@@ -572,10 +570,10 @@ class TestIndex(TestBase):
         rval = index.move(['doc', 'test'])
         assert_mv_rval(rval)
 
-
         # TEST PATH REWRITING
         ######################
         count = [0]
+
         def rewriter(entry):
             rval = str(count[0])
             count[0] += 1
@@ -600,7 +598,6 @@ class TestIndex(TestBase):
 
         for filenum in range(len(paths)):
             assert index.entry_key(str(filenum), 0) in index.entries
-
 
         # TEST RESET ON PATHS
         ######################
@@ -639,7 +636,6 @@ class TestIndex(TestBase):
             assert fkey in index.entries
         for absfile in absfiles:
             assert os.path.isfile(absfile)
-
 
     @with_rw_repo('HEAD')
     def test_compare_write_tree(self, rw_repo):

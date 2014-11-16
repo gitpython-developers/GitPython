@@ -13,7 +13,9 @@ from util import (
 
 __all__ = ("TagObject", )
 
+
 class TagObject(base.Object):
+
     """Non-Lightweight tag carrying additional information about an object we are pointing to."""
     type = "tag"
     __slots__ = ( "object", "tag", "tagger", "tagged_date", "tagger_tz_offset", "message" )

@@ -15,6 +15,7 @@ from git.objects.util import get_object_type_by_name
 from gitdb.util import hex_to_bin
 import tempfile
 
+
 class TestBase(TestBase):
 
     type_tuples = (  ("blob", "8741fc1d09d61f02ffd8cded15ff603eff1ec070", "blob.py"), 

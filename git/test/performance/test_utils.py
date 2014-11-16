@@ -14,20 +14,24 @@ class TestUtilPerformance(TestBigRepoR):
         # compare dict vs. slot access
         class Slotty(object):
             __slots__ = "attr"
+
             def __init__(self):
                 self.attr = 1
 
         class Dicty(object):
+
             def __init__(self):
                 self.attr = 1
 
         class BigSlotty(object):
             __slots__ = ('attr', ) + tuple('abcdefghijk')
+
             def __init__(self):
                 for attr in self.__slots__:
                     setattr(self, attr, 1)
 
         class BigDicty(object):
+
             def __init__(self):
                 for attr in BigSlotty.__slots__:
                     setattr(self, attr, 1)

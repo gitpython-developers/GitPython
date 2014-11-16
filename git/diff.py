@@ -14,7 +14,9 @@ from gitdb.util import hex_to_bin
 
 __all__ = ('Diffable', 'DiffIndex', 'Diff')
 
+
 class Diffable(object):
+
     """Common interface for all object that can be diffed against another object of compatible type.
 
     :note: 
@@ -109,6 +111,7 @@ class Diffable(object):
 
 
 class DiffIndex(list):
+
     """Implements an Index for diffs, allowing a list of Diffs to be queried by 
     the diff properties.
 
@@ -119,7 +122,6 @@ class DiffIndex(list):
     # R = Renamed
     # M = modified
     change_type = ("A", "D", "R", "M")
-
 
     def iter_change_type(self, change_type):
         """
@@ -149,6 +151,7 @@ class DiffIndex(list):
 
 
 class Diff(object):
+
     """A Diff contains diff information between two Trees.
 
     It contains two sides a and b of the diff, members are prefixed with 
@@ -227,7 +230,6 @@ class Diff(object):
         self.rename_to = rename_to or None
 
         self.diff = diff
-
 
     def __eq__(self, other):
         for name in self.__slots__:

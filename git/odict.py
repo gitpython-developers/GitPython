@@ -35,7 +35,9 @@ if INTP_VER < (2, 2):
 
 import types, warnings
 
+
 class OrderedDict(dict):
+
     """
     A class of dictionary that keeps the insertion order of keys.
 
@@ -537,6 +539,7 @@ class OrderedDict(dict):
         Traceback (most recent call last):
         StopIteration
         """
+
         def make_iter(self=self):
             keys = self.iterkeys()
             while True:
@@ -574,6 +577,7 @@ class OrderedDict(dict):
         Traceback (most recent call last):
         StopIteration
         """
+
         def make_iter(self=self):
             keys = self.iterkeys()
             while True:
@@ -871,8 +875,10 @@ class OrderedDict(dict):
         """
         self._sequence.sort(*args, **kwargs)
 
+
 class Keys(object):
     # FIXME: should this object be a subclass of list?
+
     """
     Custom object for accessing the keys of an OrderedDict.
 
@@ -933,37 +939,61 @@ class Keys(object):
     # FIXME: do we need to check if we are comparing with another ``Keys``
     #   object? (like the __cast method of UserList)
     def __lt__(self, other): return self._main._sequence < other
+
     def __le__(self, other): return self._main._sequence <= other
+
     def __eq__(self, other): return self._main._sequence == other
+
     def __ne__(self, other): return self._main._sequence != other
+
     def __gt__(self, other): return self._main._sequence > other
+
     def __ge__(self, other): return self._main._sequence >= other
     # FIXME: do we need __cmp__ as well as rich comparisons?
+
     def __cmp__(self, other): return cmp(self._main._sequence, other)
 
     def __contains__(self, item): return item in self._main._sequence
+
     def __len__(self): return len(self._main._sequence)
+
     def __iter__(self): return self._main.iterkeys()
+
     def count(self, item): return self._main._sequence.count(item)
+
     def index(self, item, *args): return self._main._sequence.index(item, *args)
+
     def reverse(self): self._main._sequence.reverse()
+
     def sort(self, *args, **kwds): self._main._sequence.sort(*args, **kwds)
+
     def __mul__(self, n): return self._main._sequence*n
     __rmul__ = __mul__
+
     def __add__(self, other): return self._main._sequence + other
+
     def __radd__(self, other): return other + self._main._sequence
 
     ## following methods not implemented for keys ##
     def __delitem__(self, i): raise TypeError('Can\'t delete items from keys')
+
     def __iadd__(self, other): raise TypeError('Can\'t add in place to keys')
+
     def __imul__(self, n): raise TypeError('Can\'t multiply keys in place')
+
     def append(self, item): raise TypeError('Can\'t append items to keys')
+
     def insert(self, i, item): raise TypeError('Can\'t insert items into keys')
+
     def pop(self, i=-1): raise TypeError('Can\'t pop items from keys')
+
     def remove(self, item): raise TypeError('Can\'t remove items from keys')
+
     def extend(self, other): raise TypeError('Can\'t extend keys')
 
+
 class Items(object):
+
     """
     Custom object for accessing the items of an OrderedDict.
 
@@ -1018,23 +1048,38 @@ class Items(object):
     # FIXME: do we need to check if we are comparing with another ``Items``
     #   object? (like the __cast method of UserList)
     def __lt__(self, other): return self._main.items() < other
+
     def __le__(self, other): return self._main.items() <= other
+
     def __eq__(self, other): return self._main.items() == other
+
     def __ne__(self, other): return self._main.items() != other
+
     def __gt__(self, other): return self._main.items() > other
+
     def __ge__(self, other): return self._main.items() >= other
+
     def __cmp__(self, other): return cmp(self._main.items(), other)
 
     def __contains__(self, item): return item in self._main.items()
+
     def __len__(self): return len(self._main._sequence) # easier :-)
+
     def __iter__(self): return self._main.iteritems()
+
     def count(self, item): return self._main.items().count(item)
+
     def index(self, item, *args): return self._main.items().index(item, *args)
+
     def reverse(self): self._main.reverse()
+
     def sort(self, *args, **kwds): self._main.sort(*args, **kwds)
+
     def __mul__(self, n): return self._main.items()*n
     __rmul__ = __mul__
+
     def __add__(self, other): return self._main.items() + other
+
     def __radd__(self, other): return other + self._main.items()
 
     def append(self, item):
@@ -1073,7 +1118,9 @@ class Items(object):
 
     def __imul__(self, n): raise TypeError('Can\'t multiply items in place')
 
+
 class Values(object):
+
     """
     Custom object for accessing the values of an OrderedDict.
 
@@ -1122,17 +1169,27 @@ class Values(object):
     # FIXME: do we need to check if we are comparing with another ``Values``
     #   object? (like the __cast method of UserList)
     def __lt__(self, other): return self._main.values() < other
+
     def __le__(self, other): return self._main.values() <= other
+
     def __eq__(self, other): return self._main.values() == other
+
     def __ne__(self, other): return self._main.values() != other
+
     def __gt__(self, other): return self._main.values() > other
+
     def __ge__(self, other): return self._main.values() >= other
+
     def __cmp__(self, other): return cmp(self._main.values(), other)
 
     def __contains__(self, item): return item in self._main.values()
+
     def __len__(self): return len(self._main._sequence) # easier :-)
+
     def __iter__(self): return self._main.itervalues()
+
     def count(self, item): return self._main.values().count(item)
+
     def index(self, item, *args): return self._main.values().index(item, *args)
 
     def reverse(self):
@@ -1150,20 +1207,31 @@ class Values(object):
 
     def __mul__(self, n): return self._main.values()*n
     __rmul__ = __mul__
+
     def __add__(self, other): return self._main.values() + other
+
     def __radd__(self, other): return other + self._main.values()
 
     ## following methods not implemented for values ##
     def __delitem__(self, i): raise TypeError('Can\'t delete items from values')
+
     def __iadd__(self, other): raise TypeError('Can\'t add in place to values')
+
     def __imul__(self, n): raise TypeError('Can\'t multiply values in place')
+
     def append(self, item): raise TypeError('Can\'t append items to values')
+
     def insert(self, i, item): raise TypeError('Can\'t insert items into values')
+
     def pop(self, i=-1): raise TypeError('Can\'t pop items from values')
+
     def remove(self, item): raise TypeError('Can\'t remove items from values')
+
     def extend(self, other): raise TypeError('Can\'t extend values')
 
+
 class SequenceOrderedDict(OrderedDict):
+
     """
     Experimental version of OrderedDict that has a custom object for ``keys``,
     ``values``, and ``items``.

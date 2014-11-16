@@ -8,7 +8,9 @@ import os
 from git.test.lib import *
 from git import *
 
+
 class TestActor(object):
+
     def test_from_string_should_separate_name_and_email(self):
         a = Actor._from_string("Michael Trier <mtrier@example.com>")
         assert_equal("Michael Trier", a.name)

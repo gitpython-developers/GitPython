@@ -15,8 +15,10 @@ import random
 # assure we have repeatable results 
 random.seed(0)
 
+
 class TestRemoteProgress(RemoteProgress):
     __slots__ = ( "_seen_lines", "_stages_per_op", '_num_progress_messages' )
+
     def __init__(self):
         super(TestRemoteProgress, self).__init__()
         self._seen_lines = list()
@@ -51,7 +53,6 @@ class TestRemoteProgress(RemoteProgress):
 
         self._num_progress_messages += 1
 
-
     def make_assertion(self):
         # we don't always receive messages
         if not self._seen_lines:
@@ -75,7 +76,6 @@ class TestRemote(TestBase):
     def _print_fetchhead(self, repo):
         fp = open(os.path.join(repo.git_dir, "FETCH_HEAD"))
         fp.close()
-
 
     def _do_test_fetch_result(self, results, remote):
         # self._print_fetchhead(remote.repo)
@@ -115,7 +115,6 @@ class TestRemote(TestBase):
                 assert type(info.remote_ref) in (TagReference, RemoteReference)
             # END error checking
         # END for each info 
-
 
     def _do_test_fetch_info(self, repo):
         self.failUnlessRaises(ValueError, FetchInfo._from_line, repo, "nonsense", '')

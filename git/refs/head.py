@@ -10,8 +10,8 @@ from git.exc import GitCommandError
 __all__ = ["HEAD", "Head"]
 
 
-
 class HEAD(SymbolicReference):
+
     """Special case of a Symbolic Reference as it represents the repository's 
     HEAD reference."""
     _HEAD_NAME = 'HEAD'
@@ -92,6 +92,7 @@ class HEAD(SymbolicReference):
 
 
 class Head(Reference):
+
     """A Head is a named reference to a Commit. Every Head instance contains a name
     and a Commit object.
 
@@ -150,7 +151,6 @@ class Head(Reference):
         # END handle ref value
 
         return self
-
 
     def tracking_branch(self):
         """

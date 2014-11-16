@@ -20,7 +20,10 @@ from gitdb.db import LooseObjectDB
 __all__ = ('GitCmdObjectDB', 'GitDB' )
 
 #class GitCmdObjectDB(CompoundDB, ObjectDBW):
+
+
 class GitCmdObjectDB(LooseObjectDB):
+
     """A database representing the default git object store, which includes loose 
     objects, pack files and an alternates file
 
@@ -28,6 +31,7 @@ class GitCmdObjectDB(LooseObjectDB):
     :note: for now, we use the git command to do all the lookup, just until he 
         have packs and the other implementations
     """
+
     def __init__(self, root_path, git):
         """Initialize this instance with the root and a git command"""
         super(GitCmdObjectDB, self).__init__(root_path)
@@ -41,7 +45,6 @@ class GitCmdObjectDB(LooseObjectDB):
         """For now, all lookup is done by git itself"""
         hexsha, typename, size, stream = self._git.stream_object_data(bin_to_hex(sha))
         return OStream(hex_to_bin(hexsha), typename, size, stream)
-
 
     # { Interface
 

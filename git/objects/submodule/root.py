@@ -11,6 +11,7 @@ __all__ = ["RootModule", "RootUpdateProgress"]
 
 
 class RootUpdateProgress(UpdateProgress):
+
     """Utility class which adds more opcodes to the UpdateProgress"""
     REMOVE, PATHCHANGE, BRANCHCHANGE, URLCHANGE = [1 << x for x in range(UpdateProgress._num_op_codes, UpdateProgress._num_op_codes+4)]
     _num_op_codes = UpdateProgress._num_op_codes+4
@@ -24,7 +25,9 @@ BRANCHCHANGE = RootUpdateProgress.BRANCHCHANGE
 URLCHANGE = RootUpdateProgress.URLCHANGE
 PATHCHANGE = RootUpdateProgress.PATHCHANGE
 
+
 class RootModule(Submodule):
+
     """A (virtual) Root of all submodules in the given repository. It can be used
     to more easily traverse all submodules of the master repository"""
 
@@ -44,7 +47,6 @@ class RootModule(Submodule):
                                         url = '',
                                         branch_path = git.Head.to_full_path(self.k_head_default)
                                         )
-
 
     def _clear_cache(self):
         """May not do anything"""
@@ -106,7 +108,6 @@ class RootModule(Submodule):
         else:
             previous_commit = repo.commit(previous_commit)   # obtain commit object 
         # END handle previous commit
-
 
         psms = self.list_items(repo, parent_commit=previous_commit)
         sms = self.list_items(repo)

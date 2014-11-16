@@ -33,6 +33,7 @@ def resolve_or_fail(env_var):
 #{ Base Classes 
 
 class TestBigRepoR(TestBase):
+
     """TestCase providing access to readonly 'big' repositories using the following 
     member variables:
 
@@ -59,6 +60,7 @@ class TestBigRepoR(TestBase):
 
 
 class TestBigRepoRW(TestBigRepoR):
+
     """As above, but provides a big repository that we can write to.
 
     Provides ``self.gitrwrepo`` and ``self.puregitrwrepo``"""

@@ -9,7 +9,9 @@ import base
 
 __all__ = ('Blob', )
 
+
 class Blob(base.IndexObject):
+
     """A Blob encapsulates a git blob object"""
     DEFAULT_MIME_TYPE = "text/plain"
     type = "blob"

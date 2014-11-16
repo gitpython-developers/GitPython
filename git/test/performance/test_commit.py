@@ -12,6 +12,7 @@ from cStringIO import StringIO
 from time import time
 import sys
 
+
 class TestPerformance(TestBigRepoRW):
 
     # ref with about 100 commits in its history

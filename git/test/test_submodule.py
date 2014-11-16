@@ -25,6 +25,7 @@ if sys.platform == 'win32':
 
 
 class TestRootProgress(RootUpdateProgress):
+
     """Just prints messages, for now without checking the correctness of the states"""
 
     def update(self, op, index, max_count, message=''):
@@ -32,12 +33,12 @@ class TestRootProgress(RootUpdateProgress):
 
 prog = TestRootProgress()
 
+
 class TestSubmodule(TestBase):
 
     k_subm_current = "468cad66ff1f80ddaeee4123c24e4d53a032c00d"
     k_subm_changed = "394ed7006ee5dc8bddfd132b64001d5dfc0ffdd3"
     k_no_subm_tag = "0.1.6"
-
 
     def _do_base_tests(self, rwrepo):
         """Perform all tests in the given repository, it may be bare or nonbare"""
@@ -168,7 +169,6 @@ class TestSubmodule(TestBase):
             # or we raise
             self.failUnlessRaises(ValueError, Submodule.add, rwrepo, "newsubm", sm.path, "git://someurl/repo.git")
 
-
             # CONTINUE UPDATE
             #################
             # we should have setup a tracking branch, which is also active
@@ -207,7 +207,6 @@ class TestSubmodule(TestBase):
 
             # this flushed in a sub-submodule
             assert len(list(rwrepo.iter_submodules())) == 2
-
 
             # reset both heads to the previous version, verify that to_latest_revision works
             smods = (sm.module(), csm.module())
@@ -469,15 +468,12 @@ class TestSubmodule(TestBase):
         nsm.remove(configuration=False, module=True)
         assert not nsm.module_exists() and nsm.exists()
 
-
         # dry-run does nothing
         rm.update(recursive=False, dry_run=True, progress=prog)
 
         # otherwise it will work
         rm.update(recursive=False, progress=prog)
         assert nsm.module_exists()
-
-
 
         # remove submodule - the previous one
         #====================================
@@ -494,7 +490,6 @@ class TestSubmodule(TestBase):
 
         rm.update(recursive=False)
         assert not os.path.isdir(smp)
-
 
         # change url 
         #=============

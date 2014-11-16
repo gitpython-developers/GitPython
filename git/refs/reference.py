@@ -12,8 +12,11 @@ from gitdb.util import (
 __all__ = ["Reference"]
 
 #{ Utilities
+
+
 def require_remote_ref_path(func):
     """A decorator raising a TypeError if we are not a valid remote, based on the path"""
+
     def wrapper(self, *args):
         if not self.path.startswith(self._remote_common_path_default + "/"):
             raise ValueError("ref path does not point to a remote reference: %s" % self.path)
@@ -25,6 +28,7 @@ def require_remote_ref_path(func):
 
 
 class Reference(SymbolicReference, LazyMixin, Iterable):
+
     """Represents a named reference to any object. Subclasses may apply restrictions though, 
     i.e. Heads can only point to commits."""
     __slots__ = tuple()
@@ -44,7 +48,6 @@ class Reference(SymbolicReference, LazyMixin, Iterable):
         if check_path and not path.startswith(self._common_path_default+'/'):
             raise ValueError("Cannot instantiate %r from path %s" % (self.__class__.__name__, path))
         super(Reference, self).__init__(repo, path)
-
 
     def __str__(self):
         return self.name
@@ -98,7 +101,6 @@ class Reference(SymbolicReference, LazyMixin, Iterable):
         return cls._iter_items(repo, common_path)
 
     #}END interface
-
 
     #{ Remote Interface
 

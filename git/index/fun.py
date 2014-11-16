@@ -99,6 +99,7 @@ def write_cache(entries, stream, extension_data=None, ShaStreamCls=IndexFileSHA1
     # write the sha over the content
     stream.write_sha()
 
+
 def read_header(stream):
         """Return tuple(version_long, num_entries) from the given stream"""
         type_id = stream.read(4)
@@ -110,6 +111,7 @@ def read_header(stream):
         assert version in (1, 2)
         return version, num_entries
 
+
 def entry_key(*entry):
     """:return: Key suitable to be used for the index.entries dictionary
     :param entry: One instance of type BaseIndexEntry or the path and the stage"""
@@ -118,6 +120,7 @@ def entry_key(*entry):
     else:
         return tuple(entry)
     # END handle entry
+
 
 def read_cache(stream):
     """Read a cache file from the given stream
@@ -165,6 +168,7 @@ def read_cache(stream):
     extension_data = extension_data[:-20]
 
     return (version, entries, extension_data, content_sha)
+
 
 def write_tree_from_cache(entries, odb, sl, si=0):
     """Create a tree from the given sorted list of entries and put the respective
@@ -221,8 +225,10 @@ def write_tree_from_cache(entries, odb, sl, si=0):
     istream = odb.store(IStream(str_tree_type, len(sio.getvalue()), sio))
     return (istream.binsha, tree_items)
 
+
 def _tree_entry_to_baseindexentry(tree_entry, stage):
     return BaseIndexEntry((tree_entry[1], tree_entry[0], stage << CE_STAGESHIFT, tree_entry[2]))
+
 
 def aggressive_tree_merge(odb, tree_shas):
     """

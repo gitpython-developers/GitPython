@@ -9,9 +9,9 @@ __all__ = ["RemoteReference"]
 
 
 class RemoteReference(Head):
+
     """Represents a reference pointing to a remote head."""
     _common_path_default = Head._remote_common_path_default
-
 
     @classmethod
     def iter_items(cls, repo, common_path = None, remote=None):

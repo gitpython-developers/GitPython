@@ -17,7 +17,9 @@ from git.util import LockFile
 
 __all__ = ('GitConfigParser', 'SectionConstraint')
 
+
 class MetaParserBuilder(type):
+
     """Utlity class wrapping base-class methods into decorators that assure read-only properties"""
     def __new__(metacls, name, bases, clsdict):
         """
@@ -45,9 +47,9 @@ class MetaParserBuilder(type):
         return new_type
 
 
-
 def needs_values(func):
     """Returns method assuring we read values (on demand) before we try to access them"""
+
     def assure_data_present(self, *args, **kwargs):
         self.read()
         return func(self, *args, **kwargs)
@@ -55,10 +57,12 @@ def needs_values(func):
     assure_data_present.__name__ = func.__name__
     return assure_data_present
 
+
 def set_dirty_and_flush_changes(non_const_func):
     """Return method that checks whether given non constant function may be called.
     If so, the instance will be set dirty.
     Additionally, we flush the changes right to disk"""
+
     def flush_changes(self, *args, **kwargs):
         rval = non_const_func(self, *args, **kwargs)
         self.write()
@@ -69,6 +73,7 @@ def set_dirty_and_flush_changes(non_const_func):
 
 
 class SectionConstraint(object):
+
     """Constrains a ConfigParser to only option commands which are constrained to 
     always use the section we have been initialized with.
 
@@ -98,6 +103,7 @@ class SectionConstraint(object):
 
 
 class GitConfigParser(cp.RawConfigParser, object):
+
     """Implements specifics required to read git style configuration files.
 
     This variation behaves much like the git.config command such that the configuration
@@ -113,7 +119,6 @@ class GitConfigParser(cp.RawConfigParser, object):
         The config is case-sensitive even when queried, hence section and option names
         must match perfectly."""
     __metaclass__ = MetaParserBuilder
-
 
     #{ Configuration
     # The lock type determines the type of lock to use in new configuration readers.
@@ -171,7 +176,6 @@ class GitConfigParser(cp.RawConfigParser, object):
 
             self._lock._obtain_lock()
         # END read-only check
-
 
     def __del__(self):
         """Write pending changes if required and release locks"""
@@ -261,7 +265,6 @@ class GitConfigParser(cp.RawConfigParser, object):
         if e:
             raise e
 
-
     def read(self):
         """Reads the data stored in the files we have been initialized with. It will 
         ignore files that cannot be read, possibly leaving an empty configuration
@@ -310,7 +313,6 @@ class GitConfigParser(cp.RawConfigParser, object):
         if self._defaults:
             write_section(cp.DEFAULTSECT, self._defaults)
         map(lambda t: write_section(t[0],t[1]), self._sections.items())
-
 
     @needs_values
     def write(self):

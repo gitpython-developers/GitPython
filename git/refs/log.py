@@ -28,6 +28,7 @@ __all__ = ["RefLog", "RefLogEntry"]
 
 
 class RefLogEntry(tuple):
+
     """Named tuple allowing easy access to the revlog data fields"""
     _fmt = "%s %s %s <%s> %i %s\t%s\n"
     _re_hexsha_only = re.compile('^[0-9A-Fa-f]{40}$')
@@ -106,6 +107,7 @@ class RefLogEntry(tuple):
 
 
 class RefLog(list, Serializable):
+
     """A reflog contains reflog entries, each of which defines a certain state
     of the head in question. Custom query methods allow to retrieve log entries 
     by date or by other criteria.

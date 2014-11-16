@@ -7,6 +7,7 @@
 from git.test.lib import *
 from git import *
 
+
 class TestStats(TestBase):
 
     def test__list_from_string(self):

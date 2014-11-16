@@ -21,12 +21,15 @@ __all__ = (
 
 #{ Routines
 
+
 def fixture_path(name):
     test_dir = os.path.dirname(os.path.dirname(__file__))
     return os.path.join(test_dir, "fixtures", name)
 
+
 def fixture(name):
     return open(fixture_path(name), 'rb').read()
+
 
 def absolute_project_path():
     return os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -35,7 +38,9 @@ def absolute_project_path():
 
 #{ Adapters 
 
+
 class StringProcessAdapter(object):
+
     """Allows to use strings as Process object as returned by SubProcess.Popen.
     Its tailored to work with the test system only"""
 
@@ -52,12 +57,14 @@ class StringProcessAdapter(object):
 
 #{ Decorators 
 
+
 def _mktemp(*args):
     """Wrapper around default tempfile.mktemp to fix an osx issue"""
     tdir = tempfile.mktemp(*args)
     if sys.platform == 'darwin':
         tdir = '/private' + tdir
     return tdir
+
 
 def _rmtree_onerror(osremove, fullpath, exec_info):
     """
@@ -70,6 +77,7 @@ def _rmtree_onerror(osremove, fullpath, exec_info):
     os.chmod(fullpath, 0777)
     os.remove(fullpath)
 
+
 def with_rw_repo(working_tree_ref, bare=False):
     """
     Same as with_bare_repo, but clones the rorepo as non-bare repository, checking 
@@ -81,6 +89,7 @@ def with_rw_repo(working_tree_ref, bare=False):
     dir of the repository.
     """
     assert isinstance(working_tree_ref, basestring), "Decorator requires ref name for working tree checkout"
+
     def argument_passer(func):
         def repo_creator(self):
             prefix = 'non_'
@@ -117,6 +126,7 @@ def with_rw_repo(working_tree_ref, bare=False):
     # END argument passer
     return argument_passer
 
+
 def with_rw_and_rw_remote_repo(working_tree_ref):
     """
     Same as with_rw_repo, but also provides a writable remote repository from which the
@@ -141,6 +151,7 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
     See working dir info in with_rw_repo
     """
     assert isinstance(working_tree_ref, basestring), "Decorator requires ref name for working tree checkout"
+
     def argument_passer(func):
         def remote_repo_creator(self):
             remote_repo_dir = _mktemp("remote_repo_%s" % func.__name__)
@@ -208,7 +219,9 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
 
 #} END decorators
 
+
 class TestBase(TestCase):
+
     """
     Base Class providing default functionality to all tests such as:
 

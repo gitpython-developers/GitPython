@@ -8,6 +8,7 @@ from git.test.lib import *
 from git import *
 from gitdb.util import hex_to_bin
 
+
 class TestBlob(TestBase):
 
     def test_mime_type_should_return_mime_type_for_known_types(self):

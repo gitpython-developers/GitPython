@@ -13,6 +13,7 @@ from git.objects.tag import TagObject
 from itertools import chain
 import os
 
+
 class TestRefs(TestBase):
 
     def test_from_path(self):
@@ -55,15 +56,12 @@ class TestRefs(TestBase):
         assert tag_object_refs
         assert isinstance(self.rorepo.tags['0.1.5'], TagReference)
 
-
     def test_tags_author(self):
         tag = self.rorepo.tags[0]
         tagobj = tag.tag
         assert isinstance( tagobj.tagger, Actor )
         tagger_name = tagobj.tagger.name
         assert tagger_name == 'Michael Trier'
-
-
 
     def test_tags(self):
         # tag refs can point to tag objects or to commits
@@ -138,7 +136,6 @@ class TestRefs(TestBase):
         assert len(cur_head.log()) == blog_len+1
         assert len(head.log()) == hlog_len+3
 
-
         # with automatic dereferencing
         assert head.set_commit(cur_commit, 'change commit once again') is head
         assert len(head.log()) == hlog_len+4
@@ -150,7 +147,6 @@ class TestRefs(TestBase):
         assert len(log) == 1
         assert log[0].oldhexsha == pcommit.NULL_HEX_SHA
         assert log[0].newhexsha == pcommit.hexsha
-
 
     def test_refs(self):
         types_found = set()
@@ -190,7 +186,6 @@ class TestRefs(TestBase):
         # we can do a mixed reset, and then checkout from the index though
         cur_head.reset(new_head_commit)
         rw_repo.index.checkout(["lib"], force=True)#
-
 
         # now that we have a write write repo, change the HEAD reference - its 
         # like git-reset --soft
@@ -498,7 +493,6 @@ class TestRefs(TestBase):
         assert os.path.isfile(os.path.join(rw_repo.git_dir, 'HEAD'))
         refs = list(SymbolicReference.iter_items(rw_repo))
         assert len(refs) == 1
-
 
         # test creation of new refs from scratch
         for path in ("basename", "dir/somename", "dir2/subdir/basename"):

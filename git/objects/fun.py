@@ -5,8 +5,6 @@ __all__ = ('tree_to_stream', 'tree_entries_from_data', 'traverse_trees_recursive
             'traverse_tree_recursive')
 
 
-
-
 def tree_to_stream(entries, write):
     """Write the give list of entries into a stream using its write method
     :param entries: **sorted** list of tuples with (binsha, mode, name)
@@ -88,7 +86,6 @@ def tree_entries_from_data(data):
     return out
 
 
-
 def _find_by_name(tree_data, name, is_dir, start_at):
     """return data entry matching the given name and tree mode
     or None.
@@ -110,11 +107,13 @@ def _find_by_name(tree_data, name, is_dir, start_at):
     # END for each item
     return None
 
+
 def _to_full_path(item, path_prefix):
     """Rebuild entry with given path prefix"""
     if not item:
         return item
     return (item[0], item[1], path_prefix+item[2])
+
 
 def traverse_trees_recursive(odb, tree_shas, path_prefix):
     """
@@ -181,6 +180,7 @@ def traverse_trees_recursive(odb, tree_shas, path_prefix):
         del(tree_data[:])
     # END for each tree_data chunk
     return out
+
 
 def traverse_tree_recursive(odb, tree_sha, path_prefix):
     """

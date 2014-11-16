@@ -34,6 +34,7 @@ __all__ = ["Submodule", "UpdateProgress"]
 
 
 class UpdateProgress(RemoteProgress):
+
     """Class providing detailed progress information to the caller who should 
     derive from it and implement the ``update(...)`` message"""
     CLONE, FETCH, UPDWKTREE = [1 << x for x in range(RemoteProgress._num_op_codes, RemoteProgress._num_op_codes+3)]
@@ -53,6 +54,7 @@ UPDWKTREE = UpdateProgress.UPDWKTREE
 # mechanism which cause plenty of trouble of the only reason for packages and
 # modules is refactoring - subpackages shoudn't depend on parent packages
 class Submodule(util.IndexObject, Iterable, Traversable):
+
     """Implements access to a git submodule. They are special in that their sha
     represents a commit in the submodule's repository which is to be checked out
     at the path of this instance. 
@@ -387,7 +389,6 @@ class Submodule(util.IndexObject, Iterable, Traversable):
             #END handle dry-run
             progress.update(END|CLONE, 0, 1, prefix+"Done cloning to %s" % module_path)
 
-
             if not dry_run:
                 # see whether we have a valid branch to checkout
                 try:
@@ -414,7 +415,6 @@ class Submodule(util.IndexObject, Iterable, Traversable):
                 self.repo.config_writer().set_value(sm_section(self.name), 'url', self.url)
             #END handle dry_run
         #END handle initalization
-
 
         # DETERMINE SHAS TO CHECKOUT
         ############################
@@ -548,7 +548,6 @@ class Submodule(util.IndexObject, Iterable, Traversable):
             os.renames(cur_path, dest_path)
             renamed_module = True
         #END move physical module
-
 
         # rename the index entry - have to manipulate the index directly as 
         # git-mv cannot be used on submodules ... yeah

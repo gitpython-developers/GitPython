@@ -35,7 +35,9 @@ import sys
 
 __all__ = ('Commit', )
 
+
 class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
+
     """Wraps a git Commit object.
 
     This class will act lazily on some of its attributes and will query the 
@@ -51,7 +53,6 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
 
     # INVARIANTS
     default_encoding = "UTF-8"
-
 
     # object configuration 
     type = "commit"
@@ -158,7 +159,6 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
         else:
             return len(self.repo.git.rev_list(self.hexsha, **kwargs).splitlines())
 
-
     @property
     def name_rev(self):
         """
@@ -257,7 +257,6 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
         if hasattr(proc_or_stream, 'wait'):
             finalize_process(proc_or_stream)
 
-
     @classmethod
     def create_from_tree(cls, repo, tree, message, parent_commits=None, head=False):
         """Commit the given tree, creating a commit object.
@@ -328,7 +327,6 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
         # assume utf8 encoding
         enc_section, enc_option = cls.conf_encoding.split('.')
         conf_encoding = cr.get_value(enc_section, enc_option, cls.default_encoding)
-
 
         # if the tree is no object, make sure we create one - otherwise
         # the created commit object is invalid

@@ -52,6 +52,7 @@ __all__ = ('Repo', )
 
 
 class Repo(object):
+
     """Represents a git repository and allows you to query references, 
     gather commit information, generate diffs, create and clone repositories query
     the log.
@@ -173,8 +174,6 @@ class Repo(object):
                            doc="the project's description")
     del _get_description
     del _set_description
-
-
 
     @property
     def working_tree_dir(self):

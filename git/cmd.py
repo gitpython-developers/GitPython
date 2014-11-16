@@ -23,11 +23,13 @@ execute_kwargs = ('istream', 'with_keep_cwd', 'with_extended_output',
 
 __all__ = ('Git', )
 
+
 def dashify(string):
     return string.replace('_', '-')
 
 
 class Git(LazyMixin):
+
     """
     The Git class manages communication with the Git binary.
 
@@ -59,8 +61,8 @@ class Git(LazyMixin):
     _git_exec_env_var = "GIT_PYTHON_GIT_EXECUTABLE"
     GIT_PYTHON_GIT_EXECUTABLE = os.environ.get(_git_exec_env_var, git_exec_name)
 
-
     class AutoInterrupt(object):
+
         """Kill/Interrupt the stored process instance once this instance goes out of scope. It is 
         used to prevent processes piling up in case iterators stop reading.
         Besides all attributes are wired through to the contained process object.
@@ -114,6 +116,7 @@ class Git(LazyMixin):
     # END auto interrupt
 
     class CatFileContentStream(object):
+
         """Object representing a sized read-only stream returning the contents of 
         an object.
         It behaves like a stream, but counts the data read and simulates an empty 
@@ -213,7 +216,6 @@ class Git(LazyMixin):
                 self._stream.read(bytes_left + 1)
             # END handle incomplete read
 
-
     def __init__(self, working_dir=None):
         """Initialize this instance with:
 
@@ -246,7 +248,6 @@ class Git(LazyMixin):
         else:
             super(Git, self)._set_cache_(attr)
         #END handle version info
-
 
     @property
     def working_dir(self):

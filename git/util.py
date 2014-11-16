@@ -33,6 +33,7 @@ __all__ = ( "stream_copy", "join_path", "to_native_path_windows", "to_native_pat
 
 #{ Utility Methods
 
+
 def rmtree(path):
     """Remove the given recursively.
     :note: we use shutil rmtree but adjust its behaviour to see whether files that
@@ -46,7 +47,6 @@ def rmtree(path):
             raise
     # END end onerror
     return shutil.rmtree(path, False, onerror)
-
 
 
 def stream_copy(source, destination, chunk_size=512*1024):
@@ -64,6 +64,7 @@ def stream_copy(source, destination, chunk_size=512*1024):
     # END reading output stream
     return br
 
+
 def join_path(a, *p):
     """Join path tokens together similar to os.path.join, but always use 
     '/' instead of possibly '\' on windows."""
@@ -80,8 +81,10 @@ def join_path(a, *p):
     # END for each path token to add
     return path
 
+
 def to_native_path_windows(path):
     return path.replace('/','\\')
+
 
 def to_native_path_linux(path):
     return path.replace('\\','/')
@@ -94,12 +97,14 @@ else:
         return path
     to_native_path = to_native_path_linux
 
+
 def join_path_native(a, *p):
     """
     As join path, but makes sure an OS native path is returned. This is only 
         needed to play it safe on my dear windows and to assure nice paths that only 
         use '\'"""
     return to_native_path(join_path(a, *p))
+
 
 def assure_directory_exists(path, is_file=False):
     """Assure that the directory pointed to by path exists.
@@ -115,9 +120,11 @@ def assure_directory_exists(path, is_file=False):
         return True
     return False
 
+
 def get_user_id():
     """:return: string identifying the currently active system user as name@node"""
     return "%s@%s" % (getpass.getuser(), platform.node())
+
 
 def finalize_process(proc):
     """Wait for the process (clone, fetch, pull or push) and handle its errors accordingly"""
@@ -135,7 +142,9 @@ def finalize_process(proc):
 
 #{ Classes
 
+
 class RemoteProgress(object):
+
     """
     Handler providing an interface to parse progress information emitted by git-push
     and git-fetch and to dispatch callbacks allowing subclasses to react to the progress.
@@ -270,6 +279,7 @@ class RemoteProgress(object):
 
 
 class Actor(object):
+
     """Actors hold information about a person acting on the repository. They 
     can be committers and authors or anything with a name and an email as 
     mentioned in the git log entries."""
@@ -351,7 +361,6 @@ class Actor(object):
         #END for each item to retrieve
         return actor
 
-
     @classmethod
     def committer(cls, config_reader=None):
         """
@@ -369,7 +378,9 @@ class Actor(object):
         but defaults to the committer"""
         return cls._main_actor(cls.env_author_name, cls.env_author_email, config_reader)
 
+
 class Stats(object):
+
     """
     Represents stat information as presented by git at the end of a merge. It is 
     created from the output of a diff operation.
@@ -421,6 +432,7 @@ class Stats(object):
 
 
 class IndexFileSHA1Writer(object):
+
     """Wrapper around a file-like object that remembers the SHA1 of 
     the data written to it. It will write a sha when the stream is closed
     or if the asked for explicitly usign write_sha.
@@ -453,6 +465,7 @@ class IndexFileSHA1Writer(object):
 
 
 class LockFile(object):
+
     """Provides methods to obtain, check for, and release a file based lock which 
     should be used to handle concurrent access to the same file.
 
@@ -524,6 +537,7 @@ class LockFile(object):
 
 
 class BlockingLockFile(LockFile):
+
     """The lock file will block until a lock could be obtained, or fail after 
     a specified timeout.
 
@@ -531,6 +545,7 @@ class BlockingLockFile(LockFile):
         be raised during the blocking period, preventing hangs as the lock 
         can never be obtained."""
     __slots__ = ("_check_interval", "_max_block_time")
+
     def __init__(self, file_path, check_interval_s=0.3, max_block_time_s=sys.maxint):
         """Configure the instance
 
@@ -572,6 +587,7 @@ class BlockingLockFile(LockFile):
 
 
 class IterableList(list):
+
     """
     List of iterable objects allowing to query an object by id or by named index::
 
@@ -647,6 +663,7 @@ class IterableList(list):
 
 
 class Iterable(object):
+
     """Defines an interface for iterable items which is to assure a uniform 
     way to retrieve and iterate items within the git repository"""
     __slots__ = tuple()
@@ -665,7 +682,6 @@ class Iterable(object):
         out_list = IterableList( cls._id_attribute_ )
         out_list.extend(cls.iter_items(repo, *args, **kwargs))
         return out_list
-
 
     @classmethod
     def iter_items(cls, repo, *args, **kwargs):

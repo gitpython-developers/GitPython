@@ -17,7 +17,9 @@ _assertion_msg_format = "Created object %r whose python type %r disagrees with t
 
 __all__ = ("Object", "IndexObject")
 
+
 class Object(LazyMixin):
+
     """Implements an Object which may be Blobs, Trees, Commits and Tags"""
     NULL_HEX_SHA = '0'*40
     NULL_BIN_SHA = '\0'*20
@@ -120,6 +122,7 @@ class Object(LazyMixin):
 
 
 class IndexObject(Object):
+
     """Base for all objects that can be part of the index file , namely Tree, Blob and
     SubModule objects"""
     __slots__ = ("path", "mode")

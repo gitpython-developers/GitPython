@@ -22,6 +22,7 @@ __all__ = ('get_object_type_by_name', 'parse_date', 'parse_actor_and_date',
 
 #{ Functions
 
+
 def mode_str_to_int(modestr):
     """
     :param modestr: string like 755 or 644 or 100644 - only the last 6 chars will be used
@@ -35,6 +36,7 @@ def mode_str_to_int(modestr):
         mode += int(char) << iteration*3
     # END for each char
     return mode
+
 
 def get_object_type_by_name(object_type_name):
     """
@@ -59,12 +61,14 @@ def get_object_type_by_name(object_type_name):
     else:
         raise ValueError("Cannot handle unknown object type: %s" % object_type_name)
 
+
 def utctz_to_altz(utctz):
     """we convert utctz to the timezone in seconds, it is the format time.altzone
     returns. Git stores it as UTC timezone which has the opposite sign as well, 
     which explains the -1 * ( that was made explicit here )
     :param utctz: git utc timezone string, i.e. +0200"""
     return -1 * int(float(utctz)/100*3600)
+
 
 def altz_to_utctz_str(altz):
     """As above, but inverses the operation, returning a string that can be used
@@ -91,6 +95,7 @@ def verify_utctz(offset):
         raise fmt_exc
     # END for each char
     return offset
+
 
 def parse_date(string_date):
     """
@@ -169,6 +174,7 @@ def parse_date(string_date):
 _re_actor_epoch = re.compile(r'^.+? (.*) (\d+) ([+-]\d+).*$')
 _re_only_actor = re.compile(r'^.+? (.*)$')
 
+
 def parse_actor_and_date(line):
     """Parse out the actor (author or committer) info from a line like::
 
@@ -190,12 +196,14 @@ def parse_actor_and_date(line):
 #{ Classes 
 
 class ProcessStreamAdapter(object):
+
     """Class wireing all calls to the contained Process instance.
 
     Use this type to hide the underlying process to provide access only to a specified 
     stream. The process is usually wrapped into an AutoInterrupt class to kill 
     it if the instance goes out of scope."""
     __slots__ = ("_proc", "_stream")
+
     def __init__(self, process, stream_name):
         self._proc = process
         self._stream = getattr(process, stream_name)
@@ -205,6 +213,7 @@ class ProcessStreamAdapter(object):
 
 
 class Traversable(object):
+
     """Simple interface to perforam depth-first or breadth-first traversals 
     into one direction.
     Subclasses only need to implement one function.
@@ -303,6 +312,7 @@ class Traversable(object):
 
 
 class Serializable(object):
+
     """Defines methods to serialize and deserialize objects from and into a data stream"""
     __slots__ = tuple()
 

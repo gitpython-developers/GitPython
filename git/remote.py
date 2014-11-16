@@ -38,6 +38,7 @@ __all__ = ('RemoteProgress', 'PushInfo', 'FetchInfo', 'Remote')
 
 #{ Utilities
 
+
 def digest_process_messages(fh, progress):
     """Read progress messages from file-like object fh, supplying the respective
     progress messages to the progress instance.
@@ -61,6 +62,7 @@ def digest_process_messages(fh, progress):
     # END while file is not done reading
     return dropped_lines
 
+
 def add_progress(kwargs, git, progress):
     """Add the --progress flag to the given kwargs dict if supported by the 
     git command. If the actual progress in the given progress instance is not 
@@ -78,6 +80,7 @@ def add_progress(kwargs, git, progress):
 
 
 class PushInfo(object):
+
     """
     Carries information about the result of a push operation of a single head::
 
@@ -179,6 +182,7 @@ class PushInfo(object):
 
 
 class FetchInfo(object):
+
     """
     Carries information about the results of a fetch operation of a single head::
 
@@ -333,6 +337,7 @@ class FetchInfo(object):
 
 
 class Remote(LazyMixin, Iterable):
+
     """Provides easy read and write access to a git remote.
 
     Everything not part of this interface is considered an option for the current 
@@ -384,7 +389,6 @@ class Remote(LazyMixin, Iterable):
             self._config_reader = SectionConstraint(self.repo.config_reader(), self._config_section_name())
         else:
             super(Remote, self)._set_cache_(attr)
-
 
     def __str__(self):
         return self.name 
@@ -505,7 +509,6 @@ class Remote(LazyMixin, Iterable):
         # skip first line as it is some remote info we are not interested in
         output = IterableList('name')
 
-
         # lines which are no progress are fetch info lines
         # this also waits for the command to finish
         # Skip some progress lines that don't provide relevant information
@@ -558,7 +561,6 @@ class Remote(LazyMixin, Iterable):
 
         finalize_process(proc)
         return output
-
 
     def fetch(self, refspec=None, progress=None, **kwargs):
         """Fetch the latest changes for this remote

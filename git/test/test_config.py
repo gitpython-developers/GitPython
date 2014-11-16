@@ -10,6 +10,7 @@ import StringIO
 from copy import copy
 from ConfigParser import NoSectionError
 
+
 class TestBase(TestCase):
 
     def _to_memcache(self, file_path):

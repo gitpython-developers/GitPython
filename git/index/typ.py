@@ -21,7 +21,9 @@ CE_STAGESHIFT = 12
 
 #} END invariants
 
+
 class BlobFilter(object):
+
     """
     Predicate to be used by iter_blobs allowing to filter only return blobs which
     match the given list of directories or files.
@@ -47,6 +49,7 @@ class BlobFilter(object):
 
 
 class BaseIndexEntry(tuple):
+
     """Small Brother of an index entry which can be created to describe changes
     done to the index in which case plenty of additional information is not requried.
 
@@ -109,6 +112,7 @@ class BaseIndexEntry(tuple):
 
 
 class IndexEntry(BaseIndexEntry):
+
     """Allows convenient access to IndexEntry data without completely unpacking it.
 
     Attributes usully accessed often are cached in the tuple whereas others are

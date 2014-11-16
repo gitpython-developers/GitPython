@@ -103,7 +103,6 @@ class TestRepo(TestBase):
         # END for each tree
         assert num_trees == mc
 
-
     def _assert_empty_repo(self, repo):
         # test all kinds of things with an empty, freshly initialized repo. 
         # It should throw good errors
@@ -131,7 +130,6 @@ class TestRepo(TestBase):
             pass
         # END test repos with working tree
 
-
     def test_init(self):
         prev_cwd = os.getcwd()
         os.chdir(tempfile.gettempdir())
@@ -152,7 +150,6 @@ class TestRepo(TestBase):
                 clone_path = path + "_clone"
                 rc = r.clone(clone_path)
                 self._assert_empty_repo(rc)
-
 
                 try:
                     shutil.rmtree(clone_path)
@@ -362,6 +359,7 @@ class TestRepo(TestBase):
             return Git.CatFileContentStream(len(d)-1, StringIO(d))
 
         ts = 5
+
         def mktiny():
             return Git.CatFileContentStream(ts, StringIO(d))
 
@@ -433,7 +431,6 @@ class TestRepo(TestBase):
         obj = rev_parse(name + ':CHANGES')
         assert obj.type == 'blob' and obj.path == 'CHANGES'
         assert rev_obj.tree['CHANGES'] == obj
-
 
     def _assert_rev_parse(self, name):
         """tries multiple different rev-parse syntaxes with the given name
@@ -521,12 +518,10 @@ class TestRepo(TestBase):
         assert tag.object == rev_parse(tag.object.hexsha)
         self._assert_rev_parse_types(tag.object.hexsha, tag.object)
 
-
         # multiple tree types result in the same tree: HEAD^{tree}^{tree}:CHANGES
         rev = '0.1.4^{tree}^{tree}'
         assert rev_parse(rev) == tag.object.tree
         assert rev_parse(rev+':CHANGES') == tag.object.tree['CHANGES']
-
 
         # try to get parents from first revision - it should fail as no such revision
         # exists
@@ -543,10 +538,8 @@ class TestRepo(TestBase):
         commit2 = rev_parse(first_rev[:5])
         assert commit2 == commit
 
-
         # todo: dereference tag into a blob 0.1.7^{blob} - quite a special one
         # needs a tag which points to a blob
-
 
         # ref^0 returns commit being pointed to, same with ref~0, and ^{}
         tag = rev_parse('0.1.4')

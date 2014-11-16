@@ -9,22 +9,27 @@ __all__ = ( 'sm_section', 'sm_name', 'mkhead', 'unbare_repo', 'find_first_remote
 
 #{ Utilities
 
+
 def sm_section(name):
     """:return: section title used in .gitmodules configuration file"""
     return 'submodule "%s"' % name
+
 
 def sm_name(section):
     """:return: name of the submodule as parsed from the section name"""
     section = section.strip()
     return section[11:-1]
 
+
 def mkhead(repo, path):
     """:return: New branch/head instance"""
     return git.Head(repo, git.Head.to_full_path(path))
 
+
 def unbare_repo(func):
     """Methods with this decorator raise InvalidGitRepositoryError if they 
     encounter a bare repository"""
+
     def wrapper(self, *args, **kwargs):
         if self.repo.bare:
             raise InvalidGitRepositoryError("Method '%s' cannot operate on bare repositories" % func.__name__)
@@ -33,6 +38,7 @@ def unbare_repo(func):
     # END wrapper
     wrapper.__name__ = func.__name__
     return wrapper
+
 
 def find_first_remote_branch(remotes, branch_name):
     """Find the remote branch matching the name of the given branch or raise InvalidGitRepositoryError"""
@@ -51,6 +57,7 @@ def find_first_remote_branch(remotes, branch_name):
 #{ Classes
 
 class SubmoduleConfigParser(GitConfigParser):
+
     """
     Catches calls to _write, and updates the .gitmodules blob in the index
     with the new data, if we have written into a stream. Otherwise it will 

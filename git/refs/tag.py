@@ -3,8 +3,8 @@ from reference import Reference
 __all__ = ["TagReference", "Tag"]
 
 
-
 class TagReference(Reference):
+
     """Class representing a lightweight tag reference which either points to a commit 
     ,a tag object or any other object. In the latter case additional information, 
     like the signature or the tag-creator, is available.
@@ -84,7 +84,6 @@ class TagReference(Reference):
     def delete(cls, repo, *tags):
         """Delete the given existing tag or tags"""
         repo.git.tag("-d", *tags)
-
 
 
 # provide an alias

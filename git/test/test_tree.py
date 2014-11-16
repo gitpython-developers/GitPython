@@ -13,6 +13,7 @@ from git.objects.fun import (
                             )
 from cStringIO import StringIO
 
+
 class TestTree(TestBase):
 
     def test_serializable(self):
@@ -37,7 +38,6 @@ class TestTree(TestBase):
             testtree = Tree(self.rorepo, Tree.NULL_BIN_SHA, 0, '')
             testtree._deserialize(stream)
             assert testtree._cache == orig_cache
-
 
             # TEST CACHE MUTATOR
             mod = testtree.cache

@@ -23,7 +23,9 @@ from log import RefLog
 
 __all__ = ["SymbolicReference"]
 
+
 class SymbolicReference(object):
+
     """Represents a special case of a reference such that this reference is symbolic.
     It does not point to a specific commit, but to another Head, which itself 
     specifies a commit.
@@ -204,7 +206,6 @@ class SymbolicReference(object):
 
         return self
 
-
     def set_object(self, object, logmsg = None):
         """Set the object we point to, possibly dereference our symbolic reference first.
         If the reference does not exist, it will be created
@@ -308,7 +309,6 @@ class SymbolicReference(object):
         #END handle reflog
 
         return self
-
 
     # aliased reference
     reference = property(_get_reference, set_reference, doc="Returns the Reference we point to")
@@ -440,7 +440,6 @@ class SymbolicReference(object):
         if os.path.isfile(reflog_path):
             os.remove(reflog_path)
         #END remove reflog
-
 
     @classmethod
     def _create(cls, repo, path, resolve, reference, force, logmsg=None):

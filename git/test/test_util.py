@@ -17,6 +17,7 @@ import time
 
 
 class TestIterableMember(object):
+
     """A member of an iterable list"""
     __slots__ = ("name", "prefix_name")
 
@@ -26,6 +27,7 @@ class TestIterableMember(object):
 
 
 class TestUtils(TestBase):
+
     def setup(self):
         self.testdict = {
             "string":   "42",
@@ -36,7 +38,6 @@ class TestUtils(TestBase):
     def test_it_should_dashify(self):
         assert_equal('this-is-my-argument', dashify('this_is_my_argument'))
         assert_equal('foo', dashify('foo'))
-
 
     def test_lock_file(self):
         my_file = tempfile.mktemp()

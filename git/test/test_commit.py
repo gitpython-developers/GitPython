@@ -82,7 +82,6 @@ class TestCommit(TestBase):
         assert isinstance(commit.author_tz_offset, int) and isinstance(commit.committer_tz_offset, int)
         assert commit.message == "Added missing information to docstrings of commit and stats module\n"
 
-
     def test_stats(self):
         commit = self.rorepo.commit('33ebe7acec14b25c5f84f35a664803fcab2f7781')
         stats = commit.stats

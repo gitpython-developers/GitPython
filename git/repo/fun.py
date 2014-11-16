@@ -15,9 +15,11 @@ from string import digits
 
 __all__ = ('rev_parse', 'is_git_dir', 'touch')
 
+
 def touch(filename):
     fp = open(filename, "a")
     fp.close()
+
 
 def is_git_dir(d):
     """ This is taken from the git setup.c:is_git_directory
@@ -101,6 +103,7 @@ def name_to_object(repo, name, return_ref=False):
 
     return Object.new_from_sha(repo, hex_to_bin(hexsha))
 
+
 def deref_tag(tag):
     """Recursively dereerence a tag and return the resulting object"""
     while True:
@@ -111,6 +114,7 @@ def deref_tag(tag):
     # END dereference tag
     return tag
 
+
 def to_commit(obj):
     """Convert the given object to a commit if possible and return it"""
     if obj.type == 'tag':
@@ -120,6 +124,7 @@ def to_commit(obj):
         raise ValueError("Cannot convert object %r to type commit" % obj)
     # END verify type
     return obj
+
 
 def rev_parse(repo, rev):
     """
@@ -169,7 +174,6 @@ def rev_parse(repo, rev):
                 obj = ref.commit
             #END handle ref
         # END initialize obj on first token
-
 
         start += 1
 
@@ -253,7 +257,6 @@ def rev_parse(repo, rev):
                 num = 1
             # END set default num
         # END number parsing only if non-blob mode
-
 
         parsed_to = start
         # handle hiererarchy walk

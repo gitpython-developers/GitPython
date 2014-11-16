@@ -7,6 +7,7 @@ import tempfile
 import shutil
 import os
 
+
 class TestRefLog(TestBase):
 
     def test_reflogentry(self):
@@ -94,7 +95,6 @@ class TestRefLog(TestBase):
                 RefLog.entry_at(rlp, idx)
             #END for each index to read
         # END for each reflog 
-
 
         # finally remove our temporary data
         shutil.rmtree(tdir)

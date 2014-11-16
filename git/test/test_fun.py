@@ -23,6 +23,7 @@ from stat import (
 from git.index import IndexFile
 from cStringIO import StringIO
 
+
 class TestFun(TestBase):
 
     def _assert_index_entries(self, entries, trees):
@@ -78,8 +79,10 @@ class TestFun(TestBase):
     def test_three_way_merge(self, rwrepo):
         def mkfile(name, sha, executable=0):
             return (sha, S_IFREG | 0644 | executable*0111, name)
+
         def mkcommit(name, sha):
             return (sha, S_IFDIR | S_IFLNK, name)
+
         def assert_entries(entries, num_entries, has_conflict=False):
             assert len(entries) == num_entries
             assert has_conflict == (len([e for e in entries if e.stage != 0]) > 0)
@@ -155,7 +158,6 @@ class TestFun(TestBase):
         # conflict, 3 versions on 3 stages
         trees = [tb, th, tm]
         assert_entries(aggressive_tree_merge(odb, trees), 3, True)
-
 
         # change mode on same base file, by making one a commit, the other executable
         # no content change ( this is totally unlikely to happen in the real world )

@@ -13,6 +13,7 @@ unpack = struct.unpack
 #} END aliases
 
 class TemporaryFileSwap(object):
+
     """Utility class moving a file to a temporary location within the same directory
     and moving it back on to where on object deletion."""
     __slots__ = ("file_path", "tmp_file_path")
@@ -45,6 +46,7 @@ def post_clear_cache(func):
         This decorator will not be required once all functions are implemented
         natively which in fact is possible, but probably not feasible performance wise.
     """
+
     def post_clear_cache_if_not_raised(self, *args, **kwargs):
         rval = func(self, *args, **kwargs)
         self._delete_entries_cache()
@@ -54,10 +56,12 @@ def post_clear_cache(func):
     post_clear_cache_if_not_raised.__name__ = func.__name__
     return post_clear_cache_if_not_raised
 
+
 def default_index(func):
     """Decorator assuring the wrapped method may only run if we are the default
     repository index. This is as we rely on git commands that operate
     on that index only. """
+
     def check_default_index(self, *args, **kwargs):
         if self._file_path != self._index_path():
             raise AssertionError( "Cannot call %r on indices that do not represent the default git index" % func.__name__ )
@@ -67,9 +71,11 @@ def default_index(func):
     check_default_index.__name__ = func.__name__
     return check_default_index
 
+
 def git_working_dir(func):
     """Decorator which changes the current working dir to the one of the git 
     repository in order to assure relative paths are handled correctly"""
+
     def set_git_working_dir(self, *args, **kwargs):
         cur_wd = os.getcwd()
         os.chdir(self.repo.working_tree_dir)

@@ -9,6 +9,7 @@ from gitdb.util import bin_to_hex
 from git.exc import BadObject
 import os
 
+
 class TestDB(TestBase):
 
     def test_base(self):

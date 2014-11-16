@@ -21,7 +21,9 @@ from gitdb.util import (
 
 __all__ = ("TreeModifier", "Tree")
 
+
 class TreeModifier(object):
+
     """A utility class providing methods to alter the underlying cache in a list-like fashion.
 
     Once all adjustments are complete, the _cache, which really is a refernce to 
@@ -101,6 +103,7 @@ class TreeModifier(object):
 
 
 class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
+
     """Tree objects represent an ordered list of Blobs and other Trees.
 
     ``Tree as a list``::
@@ -127,7 +130,6 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
                         symlink_id : Blob
                         # tree id added once Tree is defined
                         }
-
 
     def __init__(self, repo, binsha, mode=tree_id<<12, path=None):
         super(Tree, self).__init__(repo, binsha, mode, path)
@@ -190,7 +192,6 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
             raise KeyError( msg % file )
         # END handle long paths
 
-
     @property
     def trees(self):
         """:return: list(Tree, ...) list of trees directly below this tree"""
@@ -238,7 +239,6 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
         # END index is basestring 
 
         raise TypeError( "Invalid index type: %r" % item )
-
 
     def __contains__(self, item):
         if isinstance(item, IndexObject):
