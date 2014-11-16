@@ -12,7 +12,7 @@ import shutil
 import os
 import random
 
-# assure we have repeatable results 
+# assure we have repeatable results
 random.seed(0)
 
 
@@ -84,13 +84,13 @@ class TestRemote(TestBase):
             assert isinstance(info.note, basestring)
             if isinstance(info.ref, Reference):
                 assert info.flags != 0
-            # END reference type flags handling 
+            # END reference type flags handling
             assert isinstance(info.ref, (SymbolicReference, Reference))
             if info.flags & (info.FORCED_UPDATE | info.FAST_FORWARD):
                 assert isinstance(info.old_commit, Commit)
             else:
                 assert info.old_commit is None
-            # END forced update checking  
+            # END forced update checking
         # END for each info
 
     def _do_test_push_result(self, results, remote):
@@ -108,13 +108,13 @@ class TestRemote(TestBase):
                 assert has_one
             else:
                 # there must be a remote commit
-                if info.flags & info.DELETED == 0: 
+                if info.flags & info.DELETED == 0:
                     assert isinstance(info.local_ref, Reference)
                 else:
                     assert info.local_ref is None
                 assert type(info.remote_ref) in (TagReference, RemoteReference)
             # END error checking
-        # END for each info 
+        # END for each info
 
     def _do_test_fetch_info(self, repo):
         self.failUnlessRaises(ValueError, FetchInfo._from_line, repo, "nonsense", '')
@@ -222,7 +222,7 @@ class TestRemote(TestBase):
         res = fetch_and_test(remote, tags=True)
         self.failUnlessRaises(IndexError, get_info, res, remote, str(rtag))
 
-        # provoke to receive actual objects to see what kind of output we have to 
+        # provoke to receive actual objects to see what kind of output we have to
         # expect. For that we need a remote transport protocol
         # Create a new UN-shared repo and fetch into it after we pushed a change
         # to the shared repo
@@ -233,7 +233,7 @@ class TestRemote(TestBase):
         remote_repo_url = "git://localhost%s" % remote_repo.git_dir
 
         # put origin to git-url
-        other_origin = other_repo.remotes.origin 
+        other_origin = other_repo.remotes.origin
         other_origin.config_writer.set("url", remote_repo_url)
         # it automatically creates alternates as remote_repo is shared as well.
         # It will use the transport though and ignore alternates when fetching
@@ -245,8 +245,8 @@ class TestRemote(TestBase):
             self._commit_random_file(rw_repo)
             remote.push(rw_repo.head.reference)
 
-            # here I would expect to see remote-information about packing 
-            # objects and so on. Unfortunately, this does not happen 
+            # here I would expect to see remote-information about packing
+            # objects and so on. Unfortunately, this does not happen
             # if we are redirecting the output - git explicitly checks for this
             # and only provides progress information to ttys
             res = fetch_and_test(other_origin)
@@ -262,10 +262,10 @@ class TestRemote(TestBase):
         try:
             lhead.reference = rw_repo.heads.master
         except AttributeError:
-            # if the author is on a non-master branch, the clones might not have 
+            # if the author is on a non-master branch, the clones might not have
             # a local master yet. We simply create it
             lhead.reference = rw_repo.create_head('master')
-        # END master handling 
+        # END master handling
         lhead.reset(remote.refs.master, working_tree=True)
 
         # push without spec should fail ( without further configuration )
@@ -283,13 +283,13 @@ class TestRemote(TestBase):
         # rejected - undo last commit
         lhead.reset("HEAD~1")
         res = remote.push(lhead.reference)
-        assert res[0].flags & PushInfo.ERROR 
+        assert res[0].flags & PushInfo.ERROR
         assert res[0].flags & PushInfo.REJECTED
         self._do_test_push_result(res, remote)
 
         # force rejected pull
         res = remote.push('+%s' % lhead.reference)
-        assert res[0].flags & PushInfo.ERROR == 0 
+        assert res[0].flags & PushInfo.ERROR == 0
         assert res[0].flags & PushInfo.FORCED_UPDATE
         self._do_test_push_result(res, remote)
 
@@ -297,7 +297,7 @@ class TestRemote(TestBase):
         res = remote.push("hellothere")
         assert len(res) == 0
 
-        # push new tags 
+        # push new tags
         progress = TestRemoteProgress()
         to_be_updated = "my_tag.1.0RV"
         new_tag = TagReference.create(rw_repo, to_be_updated)
@@ -322,7 +322,7 @@ class TestRemote(TestBase):
         res = remote.push(":%s" % new_tag.path)
         self._do_test_push_result(res, remote)
         assert res[0].flags & PushInfo.DELETED
-        # Currently progress is not properly transferred, especially not using 
+        # Currently progress is not properly transferred, especially not using
         # the git daemon
         # progress.assert_received_message()
 
@@ -346,7 +346,7 @@ class TestRemote(TestBase):
 
         remote.pull('master')
 
-        # cleanup - delete created tags and branches as we are in an innerloop on 
+        # cleanup - delete created tags and branches as we are in an innerloop on
         # the same repository
         TagReference.delete(rw_repo, new_tag, other_tag)
         remote.push(":%s" % other_tag.path)
@@ -364,7 +364,7 @@ class TestRemote(TestBase):
             remote_set.add(remote)
             remote_set.add(remote)  # should already exist
 
-            # REFS 
+            # REFS
             refs = remote.refs
             assert refs
             for ref in refs:
@@ -392,9 +392,9 @@ class TestRemote(TestBase):
                 assert writer.get(opt) == val
                 del(writer)
                 assert getattr(remote, opt) == val
-            # END for each default option key 
+            # END for each default option key
 
-            # RENAME 
+            # RENAME
             other_name = "totally_other_name"
             prev_name = remote.name
             assert remote.rename(other_name) == remote
@@ -408,12 +408,12 @@ class TestRemote(TestBase):
             self._assert_push_and_pull(remote, rw_repo, remote_repo)
 
             # FETCH TESTING
-            # Only for remotes - local cases are the same or less complicated 
+            # Only for remotes - local cases are the same or less complicated
             # as additional progress information will never be emitted
             if remote.name == "daemon_origin":
                 self._do_test_fetch(remote, rw_repo, remote_repo)
                 ran_fetch_test = True
-            # END fetch test  
+            # END fetch test
 
             remote.update()
         # END for each remote
@@ -449,7 +449,7 @@ class TestRemote(TestBase):
         fetch_info_line_fmt = "c437ee5deb8d00cf02f03720693e4c802e99f390 not-for-merge   %s '0.3' of git://github.com/gitpython-developers/GitPython"
         remote_info_line_fmt = "* [new branch]      nomatter     -> %s"
         fi = FetchInfo._from_line(self.rorepo,
-                            remote_info_line_fmt % "local/master", 
+                            remote_info_line_fmt % "local/master",
                             fetch_info_line_fmt % 'remote-tracking branch')
         assert fi.ref.is_valid()
         assert fi.ref.commit
@@ -458,7 +458,7 @@ class TestRemote(TestBase):
         # or a special path just in refs/something for instance
 
         fi = FetchInfo._from_line(self.rorepo,
-                            remote_info_line_fmt % "subdir/tagname", 
+                            remote_info_line_fmt % "subdir/tagname",
                             fetch_info_line_fmt % 'tag')
 
         assert isinstance(fi.ref, TagReference)
@@ -466,7 +466,7 @@ class TestRemote(TestBase):
 
         # it could be in a remote direcftory though
         fi = FetchInfo._from_line(self.rorepo,
-                            remote_info_line_fmt % "remotename/tags/tagname", 
+                            remote_info_line_fmt % "remotename/tags/tagname",
                             fetch_info_line_fmt % 'tag')
 
         assert isinstance(fi.ref, TagReference)
@@ -475,7 +475,7 @@ class TestRemote(TestBase):
         # it can also be anywhere !
         tag_path = "refs/something/remotename/tags/tagname"
         fi = FetchInfo._from_line(self.rorepo,
-                            remote_info_line_fmt % tag_path, 
+                            remote_info_line_fmt % tag_path,
                             fetch_info_line_fmt % 'tag')
 
         assert isinstance(fi.ref, TagReference)
@@ -483,7 +483,7 @@ class TestRemote(TestBase):
 
         # branches default to refs/remotes
         fi = FetchInfo._from_line(self.rorepo,
-                            remote_info_line_fmt % "remotename/branch", 
+                            remote_info_line_fmt % "remotename/branch",
                             fetch_info_line_fmt % 'branch')
 
         assert isinstance(fi.ref, RemoteReference)
@@ -491,7 +491,7 @@ class TestRemote(TestBase):
 
         # but you can force it anywhere, in which case we only have a references
         fi = FetchInfo._from_line(self.rorepo,
-                            remote_info_line_fmt % "refs/something/branch", 
+                            remote_info_line_fmt % "refs/something/branch",
                             fetch_info_line_fmt % 'branch')
 
         assert type(fi.ref) is Reference

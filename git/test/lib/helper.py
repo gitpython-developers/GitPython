@@ -36,7 +36,7 @@ def absolute_project_path():
 
 #} END routines
 
-#{ Adapters 
+#{ Adapters
 
 
 class StringProcessAdapter(object):
@@ -55,7 +55,7 @@ class StringProcessAdapter(object):
 
 #} END adapters
 
-#{ Decorators 
+#{ Decorators
 
 
 def _mktemp(*args):
@@ -68,7 +68,7 @@ def _mktemp(*args):
 
 def _rmtree_onerror(osremove, fullpath, exec_info):
     """
-    Handle the case on windows that read-only files cannot be deleted by 
+    Handle the case on windows that read-only files cannot be deleted by
     os.remove by setting it to mode 777, then retry deletion.
     """
     if os.name != 'nt' or osremove is not os.remove:
@@ -80,12 +80,12 @@ def _rmtree_onerror(osremove, fullpath, exec_info):
 
 def with_rw_repo(working_tree_ref, bare=False):
     """
-    Same as with_bare_repo, but clones the rorepo as non-bare repository, checking 
+    Same as with_bare_repo, but clones the rorepo as non-bare repository, checking
     out the working tree at the given working_tree_ref.
 
     This repository type is more costly due to the working copy checkout.
 
-    To make working with relative paths easier, the cwd will be set to the working 
+    To make working with relative paths easier, the cwd will be set to the working
     dir of the repository.
     """
     assert isinstance(working_tree_ref, basestring), "Decorator requires ref name for working tree checkout"
@@ -130,14 +130,14 @@ def with_rw_repo(working_tree_ref, bare=False):
 def with_rw_and_rw_remote_repo(working_tree_ref):
     """
     Same as with_rw_repo, but also provides a writable remote repository from which the
-    rw_repo has been forked as well as a handle for a git-daemon that may be started to 
+    rw_repo has been forked as well as a handle for a git-daemon that may be started to
     run the remote_repo.
-    The remote repository was cloned as bare repository from the rorepo, wheras 
+    The remote repository was cloned as bare repository from the rorepo, wheras
     the rw repo has a working tree and was cloned from the remote repository.
 
-    remote_repo has two remotes: origin and daemon_origin. One uses a local url, 
-    the other uses a server url. The daemon setup must be done on system level 
-    and should be an inetd service that serves tempdir.gettempdir() and all 
+    remote_repo has two remotes: origin and daemon_origin. One uses a local url,
+    the other uses a server url. The daemon setup must be done on system level
+    and should be an inetd service that serves tempdir.gettempdir() and all
     directories in it.
 
     The following scetch demonstrates this::
@@ -176,7 +176,7 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
             # release lock
             del(crw)
 
-            # initialize the remote - first do it as local remote and pull, then 
+            # initialize the remote - first do it as local remote and pull, then
             # we change the url to point to the daemon. The daemon should be started
             # by the user, not by us
             d_remote = Remote.create(rw_repo, "daemon_origin", remote_repo_dir)
@@ -191,7 +191,7 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
             except GitCommandError, e:
                 print str(e)
                 if os.name == 'nt':
-                    raise AssertionError('git-daemon needs to run this test, but windows does not have one. Otherwise, run: git-daemon "%s"' % os.path.dirname(_mktemp())) 
+                    raise AssertionError('git-daemon needs to run this test, but windows does not have one. Otherwise, run: git-daemon "%s"' % os.path.dirname(_mktemp()))
                 else:
                     raise AssertionError('Please start a git-daemon to run this test, execute: git-daemon "%s"' % os.path.dirname(_mktemp()))
                 # END make assertion
@@ -229,20 +229,20 @@ class TestBase(TestCase):
         self.fail("todo")
         self.failUnlessRaises(...)
 
-    - Class level repository which is considered read-only as it is shared among 
+    - Class level repository which is considered read-only as it is shared among
       all test cases in your type.
-      Access it using:: 
+      Access it using::
        self.rorepo  # 'ro' stands for read-only
 
-      The rorepo is in fact your current project's git repo. If you refer to specific 
-      shas for your objects, be sure you choose some that are part of the immutable portion 
+      The rorepo is in fact your current project's git repo. If you refer to specific
+      shas for your objects, be sure you choose some that are part of the immutable portion
       of the project history ( to assure tests don't fail for others ).
     """
 
     @classmethod
     def setUpClass(cls):
         """
-        Dynamically add a read-only repository to our actual type. This way 
+        Dynamically add a read-only repository to our actual type. This way
         each test type has its own repository
         """
         cls.rorepo = Repo(GIT_REPO)

@@ -1,7 +1,7 @@
 from symbolic import SymbolicReference
 from git.util import (
-                    LazyMixin, 
-                    Iterable, 
+                    LazyMixin,
+                    Iterable,
                     )
 
 from gitdb.util import (
@@ -29,7 +29,7 @@ def require_remote_ref_path(func):
 
 class Reference(SymbolicReference, LazyMixin, Iterable):
 
-    """Represents a named reference to any object. Subclasses may apply restrictions though, 
+    """Represents a named reference to any object. Subclasses may apply restrictions though,
     i.e. Heads can only point to commits."""
     __slots__ = tuple()
     _points_to_commits_only = False
@@ -43,7 +43,7 @@ class Reference(SymbolicReference, LazyMixin, Iterable):
         :param path:
             Path relative to the .git/ directory pointing to the ref in question, i.e.
             refs/heads/master
-        :param check_path: if False, you can provide any path. Otherwise the path must start with the 
+        :param check_path: if False, you can provide any path. Otherwise the path must start with the
             default path prefix of this type."""
         if check_path and not path.startswith(self._common_path_default + '/'):
             raise ValueError("Cannot instantiate %r from path %s" % (self.__class__.__name__, path))
@@ -87,7 +87,7 @@ class Reference(SymbolicReference, LazyMixin, Iterable):
     @property
     def name(self):
         """:return: (shortest) Name of this reference - it may contain path components"""
-        # first two path tokens are can be removed as they are 
+        # first two path tokens are can be removed as they are
         # refs/heads or refs/tags or refs/remotes
         tokens = self.path.split('/')
         if len(tokens) < 3:

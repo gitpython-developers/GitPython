@@ -36,7 +36,7 @@ class TestObjDBPerformance(TestBigRepoR):
             elapsed = time() - st
             print >> sys.stderr, "Done (in %f s)" % elapsed
 
-            # writing - due to the compression it will seem faster than it is 
+            # writing - due to the compression it will seem faster than it is
             st = time()
             binsha = ldb.store(IStream('blob', size, stream)).binsha
             elapsed_add = time() - st
@@ -79,7 +79,7 @@ class TestObjDBPerformance(TestBigRepoR):
             # del db file so git has something to do
             os.remove(db_file)
 
-            # VS. CGIT 
+            # VS. CGIT
             ##########
             # CGIT ! Can using the cgit programs be faster ?
             proc = rwrepo.git.hash_object('-w', '--stdin', as_process=True, istream=subprocess.PIPE)
@@ -99,7 +99,7 @@ class TestObjDBPerformance(TestBigRepoR):
             fsize_kib = os.path.getsize(db_file) / 1000
             print >> sys.stderr, "Added %i KiB (filesize = %i KiB) of %s data to using git-hash-object in %f s ( %f Write KiB / s)" % (size_kib, fsize_kib, desc, gelapsed_add, size_kib / gelapsed_add)
 
-            # compare ... 
+            # compare ...
             print >> sys.stderr, "Git-Python is %f %% faster than git when adding big %s files" % (100.0 - (elapsed_add / gelapsed_add) * 100, desc)
 
             # read all
@@ -108,7 +108,7 @@ class TestObjDBPerformance(TestBigRepoR):
             gelapsed_readall = time() - st
             print >> sys.stderr, "Read %i KiB of %s data at once using git-cat-file in %f s ( %f Read KiB / s)" % (size_kib, desc, gelapsed_readall, size_kib / gelapsed_readall)
 
-            # compare 
+            # compare
             print >> sys.stderr, "Git-Python is %f %% faster than git when reading big %sfiles" % (100.0 - (elapsed_readall / gelapsed_readall) * 100, desc)
 
             # read chunks
@@ -122,6 +122,6 @@ class TestObjDBPerformance(TestBigRepoR):
             gelapsed_readchunks = time() - st
             print >> sys.stderr, "Read %i KiB of %s data in %i KiB chunks from git-cat-file in %f s ( %f Read KiB / s)" % (size_kib, desc, cs_kib, gelapsed_readchunks, size_kib / gelapsed_readchunks)
 
-            # compare 
+            # compare
             print >> sys.stderr, "Git-Python is %f %% faster than git when reading big %s files in chunks" % (100.0 - (elapsed_readchunks / gelapsed_readchunks) * 100, desc)
         # END for each randomization factor

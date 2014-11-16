@@ -24,13 +24,13 @@ def tree_to_stream(entries, write):
         # END save a byte
 
         # here it comes:  if the name is actually unicode, the replacement below
-        # will not work as the binsha is not part of the ascii unicode encoding - 
+        # will not work as the binsha is not part of the ascii unicode encoding -
         # hence we must convert to an utf8 string for it to work properly.
         # According to my tests, this is exactly what git does, that is it just
         # takes the input literally, which appears to be utf8 on linux.
         if isinstance(name, unicode):
             name = name.encode("utf8")
-        write("%s %s\0%s" % (mode_str, name, binsha)) 
+        write("%s %s\0%s" % (mode_str, name, binsha))
     # END for each item
 
 
@@ -89,7 +89,7 @@ def tree_entries_from_data(data):
 def _find_by_name(tree_data, name, is_dir, start_at):
     """return data entry matching the given name and tree mode
     or None.
-    Before the item is returned, the respective data item is set 
+    Before the item is returned, the respective data item is set
     None in the tree_data list to mark it done"""
     try:
         item = tree_data[start_at]
@@ -117,17 +117,17 @@ def _to_full_path(item, path_prefix):
 
 def traverse_trees_recursive(odb, tree_shas, path_prefix):
     """
-    :return: list with entries according to the given binary tree-shas. 
+    :return: list with entries according to the given binary tree-shas.
         The result is encoded in a list
-        of n tuple|None per blob/commit, (n == len(tree_shas)), where 
+        of n tuple|None per blob/commit, (n == len(tree_shas)), where
         * [0] == 20 byte sha
         * [1] == mode as int
         * [2] == path relative to working tree root
-        The entry tuple is None if the respective blob/commit did not 
+        The entry tuple is None if the respective blob/commit did not
         exist in the given tree.
-    :param tree_shas: iterable of shas pointing to trees. All trees must 
+    :param tree_shas: iterable of shas pointing to trees. All trees must
         be on the same level. A tree-sha may be None in which case None
-    :param path_prefix: a prefix to be added to the returned paths on this level, 
+    :param path_prefix: a prefix to be added to the returned paths on this level,
         set it '' for the first iteration
     :note: The ordering of the returned items will be partially lost"""
     trees_data = list()
@@ -158,7 +158,7 @@ def traverse_trees_recursive(odb, tree_shas, path_prefix):
             is_dir = S_ISDIR(mode)                          # type mode bits
 
             # find this item in all other tree data items
-            # wrap around, but stop one before our current index, hence 
+            # wrap around, but stop one before our current index, hence
             # ti+nt, not ti+1+nt
             for tio in range(ti + 1, ti + nt):
                 tio = tio % nt

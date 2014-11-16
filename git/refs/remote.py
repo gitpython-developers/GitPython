@@ -26,11 +26,11 @@ class RemoteReference(Head):
     def delete(cls, repo, *refs, **kwargs):
         """Delete the given remote references.
         :note:
-            kwargs are given for compatability with the base class method as we 
+            kwargs are given for compatability with the base class method as we
             should not narrow the signature."""
         repo.git.branch("-d", "-r", *refs)
-        # the official deletion method will ignore remote symbolic refs - these 
-        # are generally ignored in the refs/ folder. We don't though 
+        # the official deletion method will ignore remote symbolic refs - these
+        # are generally ignored in the refs/ folder. We don't though
         # and delete remainders manually
         for ref in refs:
             try:

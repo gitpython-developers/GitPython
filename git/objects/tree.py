@@ -11,12 +11,12 @@ from submodule.base import Submodule
 import git.diff as diff
 
 from fun import (
-                    tree_entries_from_data, 
+                    tree_entries_from_data,
                     tree_to_stream
                  )
 
 from gitdb.util import (
-                        to_bin_sha, 
+                        to_bin_sha,
                         )
 
 __all__ = ("TreeModifier", "Tree")
@@ -26,7 +26,7 @@ class TreeModifier(object):
 
     """A utility class providing methods to alter the underlying cache in a list-like fashion.
 
-    Once all adjustments are complete, the _cache, which really is a refernce to 
+    Once all adjustments are complete, the _cache, which really is a refernce to
     the cache of a tree, will be sorted. Assuring it will be in a serializable state"""
     __slots__ = '_cache'
 
@@ -42,10 +42,10 @@ class TreeModifier(object):
         # END for each item in cache
         return -1
 
-    #{ Interface 
+    #{ Interface
     def set_done(self):
         """Call this method once you are done modifying the tree information.
-        It may be called several times, but be aware that each call will cause 
+        It may be called several times, but be aware that each call will cause
         a sort operation
         :return self:"""
         self._cache.sort(key=lambda t: t[2])    # sort by name
@@ -55,8 +55,8 @@ class TreeModifier(object):
     #{ Mutators
     def add(self, sha, mode, name, force=False):
         """Add the given item to the tree. If an item with the given name already
-        exists, nothing will be done, but a ValueError will be raised if the 
-        sha and mode of the existing item do not match the one you add, unless 
+        exists, nothing will be done, but a ValueError will be raised if the
+        sha and mode of the existing item do not match the one you add, unless
         force is True
 
         :param sha: The 20 or 40 byte sha of the item to add
@@ -87,8 +87,8 @@ class TreeModifier(object):
         return self
 
     def add_unchecked(self, binsha, mode, name):
-        """Add the given item to the tree, its correctness is assumed, which 
-        puts the caller into responsibility to assure the input is correct. 
+        """Add the given item to the tree, its correctness is assumed, which
+        puts the caller into responsibility to assure the input is correct.
         For more information on the parameters, see ``add``
         :param binsha: 20 byte binary sha"""
         self._cache.append((binsha, mode, name))
@@ -108,7 +108,7 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
 
     ``Tree as a list``::
 
-        Access a specific blob using the  
+        Access a specific blob using the
         tree['filename'] notation.
 
         You may as well access by index
@@ -118,15 +118,15 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
     type = "tree"
     __slots__ = "_cache"
 
-    # actual integer ids for comparison 
+    # actual integer ids for comparison
     commit_id = 016     # equals stat.S_IFDIR | stat.S_IFLNK - a directory link
     blob_id = 010
     symlink_id = 012
     tree_id = 004
 
     _map_id_to_type = {
-                        commit_id: Submodule, 
-                        blob_id: Blob, 
+                        commit_id: Submodule,
+                        blob_id: Blob,
                         symlink_id: Blob
                         # tree id added once Tree is defined
                         }
@@ -147,7 +147,7 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
             self._cache = tree_entries_from_data(ostream.read())
         else:
             super(Tree, self)._set_cache_(attr)
-        # END handle attribute 
+        # END handle attribute
 
     def _iter_convert_to_object(self, iterable):
         """Iterable yields tuples of (binsha, mode, name), which will be converted
@@ -158,7 +158,7 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
                 yield self._map_id_to_type[mode >> 12](self.repo, binsha, mode, path)
             except KeyError:
                 raise TypeError("Unknown mode %o found in tree data for path '%s'" % (mode, path))
-        # END for each item 
+        # END for each item
 
     def __div__(self, file):
         """Find the named object in this tree's contents
@@ -236,7 +236,7 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
         if isinstance(item, basestring):
             # compatability
             return self.__div__(item)
-        # END index is basestring 
+        # END index is basestring
 
         raise TypeError("Invalid index type: %r" % item)
 
@@ -262,7 +262,7 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
         return reversed(self._iter_convert_to_object(self._cache))
 
     def _serialize(self, stream):
-        """Serialize this tree into the stream. Please note that we will assume 
+        """Serialize this tree into the stream. Please note that we will assume
         our tree data to be in a sorted state. If this is not the case, serialization
         will not generate a correct tree representation as these are assumed to be sorted
         by algorithms"""

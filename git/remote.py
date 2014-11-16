@@ -20,7 +20,7 @@ from git.util import (
 from refs import (
                     Reference,
                     RemoteReference,
-                    SymbolicReference, 
+                    SymbolicReference,
                     TagReference
                 )
 
@@ -43,7 +43,7 @@ def digest_process_messages(fh, progress):
     """Read progress messages from file-like object fh, supplying the respective
     progress messages to the progress instance.
 
-    :param fh: File handle to read from 
+    :param fh: File handle to read from
     :return: list(line, ...) list of lines without linebreaks that did
         not contain progress information"""
     line_so_far = ''
@@ -64,8 +64,8 @@ def digest_process_messages(fh, progress):
 
 
 def add_progress(kwargs, git, progress):
-    """Add the --progress flag to the given kwargs dict if supported by the 
-    git command. If the actual progress in the given progress instance is not 
+    """Add the --progress flag to the given kwargs dict if supported by the
+    git command. If the actual progress in the given progress instance is not
     given, we do not request any progress
     :return: possibly altered kwargs"""
     if progress is not None:
@@ -89,7 +89,7 @@ class PushInfo(object):
         info.local_ref      # Reference pointing to the local reference that was pushed
                             # It is None if the ref was deleted.
         info.remote_ref_string # path to the remote reference located on the remote side
-        info.remote_ref # Remote Reference on the local side corresponding to 
+        info.remote_ref # Remote Reference on the local side corresponding to
                         # the remote_ref_string. It can be a TagReference as well.
         info.old_commit # commit at which the remote_ref was standing before we pushed
                         # it to local_ref.commit. Will be None if an error was indicated
@@ -101,10 +101,10 @@ class PushInfo(object):
     FORCED_UPDATE, FAST_FORWARD, UP_TO_DATE, ERROR = [1 << x for x in range(11)]
 
     _flag_map = {'X': NO_MATCH, '-': DELETED, '*': 0,
-                    '+': FORCED_UPDATE, ' ': FAST_FORWARD, 
+                    '+': FORCED_UPDATE, ' ': FAST_FORWARD,
                     '=': UP_TO_DATE, '!': ERROR}
 
-    def __init__(self, flags, local_ref, remote_ref_string, remote, old_commit=None, 
+    def __init__(self, flags, local_ref, remote_ref_string, remote, old_commit=None,
                     summary=''):
         """ Initialize a new instance """
         self.flags = flags
@@ -118,7 +118,7 @@ class PushInfo(object):
     def remote_ref(self):
         """
         :return:
-            Remote Reference or TagReference in the local repository corresponding 
+            Remote Reference or TagReference in the local repository corresponding
             to the remote_ref_string kept in this instance."""
         # translate heads to a local remote, tags stay as they are
         if self.remote_ref_string.startswith("refs/tags"):
@@ -128,7 +128,7 @@ class PushInfo(object):
             return RemoteReference(self._remote.repo, "refs/remotes/%s/%s" % (str(self._remote), remote_ref.name))
         else:
             raise ValueError("Could not handle remote ref: %r" % self.remote_ref_string)
-        # END 
+        # END
 
     @classmethod
     def _from_line(cls, remote, line):
@@ -141,7 +141,7 @@ class PushInfo(object):
         try:
             flags |= cls._flag_map[control_character]
         except KeyError:
-            raise ValueError("Control Character %r unknown as parsed from line %r" % (control_character, line)) 
+            raise ValueError("Control Character %r unknown as parsed from line %r" % (control_character, line))
         # END handle control character
 
         # from_to handling
@@ -168,7 +168,7 @@ class PushInfo(object):
                 flags |= cls.NEW_HEAD
             # uptodate encoded in control character
         else:
-            # fast-forward or forced update - was encoded in control character, 
+            # fast-forward or forced update - was encoded in control character,
             # but we parse the old and new commit
             split_token = "..."
             if control_character == " ":
@@ -187,13 +187,13 @@ class FetchInfo(object):
     Carries information about the results of a fetch operation of a single head::
 
      info = remote.fetch()[0]
-     info.ref           # Symbolic Reference or RemoteReference to the changed 
+     info.ref           # Symbolic Reference or RemoteReference to the changed
                         # remote head or FETCH_HEAD
-     info.flags         # additional flags to be & with enumeration members, 
-                        # i.e. info.flags & info.REJECTED 
+     info.flags         # additional flags to be & with enumeration members,
+                        # i.e. info.flags & info.REJECTED
                         # is 0 if ref is SymbolicReference
      info.note          # additional notes given by git-fetch intended for the user
-     info.old_commit    # if info.flags & info.FORCED_UPDATE|info.FAST_FORWARD, 
+     info.old_commit    # if info.flags & info.FORCED_UPDATE|info.FAST_FORWARD,
                         # field is set to the previous location of ref, otherwise None
     """
     __slots__ = ('ref', 'old_commit', 'flags', 'note')
@@ -205,7 +205,7 @@ class FetchInfo(object):
     re_fetch_result = re.compile("^\s*(.) (\[?[\w\s\.]+\]?)\s+(.+) -> ([/\w_\+\.-]+)(    \(.*\)?$)?")
 
     _flag_map = {'!': ERROR, '+': FORCED_UPDATE, '-': TAG_UPDATE, '*': 0,
-                    '=': HEAD_UPTODATE, ' ': FAST_FORWARD} 
+                    '=': HEAD_UPTODATE, ' ': FAST_FORWARD}
 
     def __init__(self, ref, flags, note='', old_commit=None):
         """
@@ -260,9 +260,9 @@ class FetchInfo(object):
             raise ValueError("Failed to parse FETCH__HEAD line: %r" % fetch_line)
 
         # handle FETCH_HEAD and figure out ref type
-        # If we do not specify a target branch like master:refs/remotes/origin/master, 
+        # If we do not specify a target branch like master:refs/remotes/origin/master,
         # the fetch result is stored in FETCH_HEAD which destroys the rule we usually
-        # have. In that case we use a symbolic reference which is detached 
+        # have. In that case we use a symbolic reference which is detached
         ref_type = None
         if remote_local_ref == "FETCH_HEAD":
             ref_type = SymbolicReference
@@ -278,7 +278,7 @@ class FetchInfo(object):
 
         # create ref instance
         if ref_type is SymbolicReference:
-            remote_local_ref = ref_type(repo, "FETCH_HEAD") 
+            remote_local_ref = ref_type(repo, "FETCH_HEAD")
         else:
             # determine prefix. Tags are usually pulled into refs/tags, they may have subdirectories.
             # It is not clear sometimes where exactly the item is, unless we have an absolute path as indicated
@@ -301,10 +301,10 @@ class FetchInfo(object):
                 ref_path = join_path(ref_type._common_path_default, remote_local_ref)
             #END obtain refpath
 
-            # even though the path could be within the git conventions, we make 
+            # even though the path could be within the git conventions, we make
             # sure we respect whatever the user wanted, and disabled path checking
             remote_local_ref = ref_type(repo, ref_path, check_path=False)
-        # END create ref instance 
+        # END create ref instance
 
         note = (note and note.strip()) or ''
 
@@ -314,7 +314,7 @@ class FetchInfo(object):
             flags |= cls._flag_map[control_character]
         except KeyError:
             raise ValueError("Control character %r unknown as parsed from line %r" % (control_character, line))
-        # END control char exception hanlding 
+        # END control char exception hanlding
 
         # parse operation string for more info - makes no sense for symbolic refs
         old_commit = None
@@ -340,7 +340,7 @@ class Remote(LazyMixin, Iterable):
 
     """Provides easy read and write access to a git remote.
 
-    Everything not part of this interface is considered an option for the current 
+    Everything not part of this interface is considered an option for the current
     remote, allowing constructs like remote.pushurl to query the pushurl.
 
     NOTE: When querying configuration, the configuration accessor will be cached
@@ -361,14 +361,14 @@ class Remote(LazyMixin, Iterable):
             # some oddity: on windows, python 2.5, it for some reason does not realize
             # that it has the config_writer property, but instead calls __getattr__
             # which will not yield the expected results. 'pinging' the members
-            # with a dir call creates the config_writer property that we require 
+            # with a dir call creates the config_writer property that we require
             # ... bugs like these make me wonder wheter python really wants to be used
             # for production. It doesn't happen on linux though.
             dir(self)
         # END windows special handling
 
     def __getattr__(self, attr):
-        """Allows to call this instance like 
+        """Allows to call this instance like
         remote.special( *args, **kwargs) to call git-remote special self.name"""
         if attr == "_config_reader":
             return super(Remote, self).__getattr__(attr)
@@ -391,7 +391,7 @@ class Remote(LazyMixin, Iterable):
             super(Remote, self)._set_cache_(attr)
 
     def __str__(self):
-        return self.name 
+        return self.name
 
     def __repr__(self):
         return '<git.%s "%s">' % (self.__class__.__name__, self.name)
@@ -422,7 +422,7 @@ class Remote(LazyMixin, Iterable):
     def refs(self):
         """
         :return:
-            IterableList of RemoteReference objects. It is prefixed, allowing 
+            IterableList of RemoteReference objects. It is prefixed, allowing
             you to omit the remote path portion, i.e.::
              remote.refs.master # yields RemoteReference('/refs/remotes/origin/master')"""
         out_refs = IterableList(RemoteReference._id_attribute_, "%s/" % self.name)
@@ -434,22 +434,22 @@ class Remote(LazyMixin, Iterable):
     def stale_refs(self):
         """
         :return:
-            IterableList RemoteReference objects that do not have a corresponding 
-            head in the remote reference anymore as they have been deleted on the 
+            IterableList RemoteReference objects that do not have a corresponding
+            head in the remote reference anymore as they have been deleted on the
             remote side, but are still available locally.
 
             The IterableList is prefixed, hence the 'origin' must be omitted. See
             'refs' property for an example."""
         out_refs = IterableList(RemoteReference._id_attribute_, "%s/" % self.name)
         for line in self.repo.git.remote("prune", "--dry-run", self).splitlines()[2:]:
-            # expecting 
+            # expecting
             # * [would prune] origin/new_branch
-            token = " * [would prune] " 
+            token = " * [would prune] "
             if not line.startswith(token):
                 raise ValueError("Could not parse git-remote prune result: %r" % line)
             fqhn = "%s/%s" % (RemoteReference._common_path_default, line.replace(token, ""))
             out_refs.append(RemoteReference(self.repo, fqhn))
-        # END for each line 
+        # END for each line
         return out_refs
 
     @classmethod
@@ -494,7 +494,7 @@ class Remote(LazyMixin, Iterable):
         return self
 
     def update(self, **kwargs):
-        """Fetch all changes for this remote, including new branches which will 
+        """Fetch all changes for this remote, including new branches which will
         be forced in ( in case your local remote branch is not part the new remote branches
         ancestry anymore ).
 
@@ -526,17 +526,17 @@ class Remote(LazyMixin, Iterable):
             fetch_info_lines.append(line)
         # END for each line
 
-        # read head information 
+        # read head information
         fp = open(join(self.repo.git_dir, 'FETCH_HEAD'), 'r')
         fetch_head_info = fp.readlines()
         fp.close()
 
         # NOTE: HACK Just disabling this line will make github repositories work much better.
-        # I simply couldn't stand it anymore, so here is the quick and dirty fix ... . 
+        # I simply couldn't stand it anymore, so here is the quick and dirty fix ... .
         # This project needs a lot of work !
         # assert len(fetch_info_lines) == len(fetch_head_info), "len(%s) != len(%s)" % (fetch_head_info, fetch_info_lines)
 
-        output.extend(FetchInfo._from_line(self.repo, err_line, fetch_line) 
+        output.extend(FetchInfo._from_line(self.repo, err_line, fetch_line)
                         for err_line, fetch_line in zip(fetch_info_lines, fetch_head_info))
 
         finalize_process(proc)
@@ -556,7 +556,7 @@ class Remote(LazyMixin, Iterable):
             except ValueError:
                 # if an error happens, additional info is given which we cannot parse
                 pass
-            # END exception handling 
+            # END exception handling
         # END for each line
 
         finalize_process(proc)
@@ -566,13 +566,13 @@ class Remote(LazyMixin, Iterable):
         """Fetch the latest changes for this remote
 
         :param refspec:
-            A "refspec" is used by fetch and push to describe the mapping 
-            between remote ref and local ref. They are combined with a colon in 
-            the format <src>:<dst>, preceded by an optional plus sign, +. 
-            For example: git fetch $URL refs/heads/master:refs/heads/origin means 
-            "grab the master branch head from the $URL and store it as my origin 
-            branch head". And git push $URL refs/heads/master:refs/heads/to-upstream 
-            means "publish my master branch head as to-upstream branch at $URL". 
+            A "refspec" is used by fetch and push to describe the mapping
+            between remote ref and local ref. They are combined with a colon in
+            the format <src>:<dst>, preceded by an optional plus sign, +.
+            For example: git fetch $URL refs/heads/master:refs/heads/origin means
+            "grab the master branch head from the $URL and store it as my origin
+            branch head". And git push $URL refs/heads/master:refs/heads/to-upstream
+            means "publish my master branch head as to-upstream branch at $URL".
             See also git-push(1).
 
             Taken from the git manual
@@ -583,11 +583,11 @@ class Remote(LazyMixin, Iterable):
         :param progress: See 'push' method
         :param kwargs: Additional arguments to be passed to git-fetch
         :return:
-            IterableList(FetchInfo, ...) list of FetchInfo instances providing detailed 
+            IterableList(FetchInfo, ...) list of FetchInfo instances providing detailed
             information about the fetch results
 
         :note:
-            As fetch does not provide progress information to non-ttys, we cannot make 
+            As fetch does not provide progress information to non-ttys, we cannot make
             it available here unfortunately as in the 'push' method."""
         kwargs = add_progress(kwargs, self.repo.git, progress)
         if isinstance(refspec, list):
@@ -598,7 +598,7 @@ class Remote(LazyMixin, Iterable):
         return self._get_fetch_info_from_stderr(proc, progress or RemoteProgress())
 
     def pull(self, refspec=None, progress=None, **kwargs):
-        """Pull changes from the given branch, being the same as a fetch followed 
+        """Pull changes from the given branch, being the same as a fetch followed
         by a merge of branch with your local branch.
 
         :param refspec: see 'fetch' method
@@ -614,14 +614,14 @@ class Remote(LazyMixin, Iterable):
 
         :param refspec: see 'fetch' method
         :param progress:
-            Instance of type RemoteProgress allowing the caller to receive 
+            Instance of type RemoteProgress allowing the caller to receive
             progress information until the method returns.
             If None, progress information will be discarded
 
         :param kwargs: Additional arguments to be passed to git-push
         :return:
-            IterableList(PushInfo, ...) iterable list of PushInfo instances, each 
-            one informing about an individual head which had been updated on the remote 
+            IterableList(PushInfo, ...) iterable list of PushInfo instances, each
+            one informing about an individual head which had been updated on the remote
             side.
             If the push contains rejected heads, these will have the PushInfo.ERROR bit set
             in their flags.
@@ -644,11 +644,11 @@ class Remote(LazyMixin, Iterable):
         """
         :return: GitConfigParser compatible object able to write options for this remote.
         :note:
-            You can only own one writer at a time - delete it to release the 
+            You can only own one writer at a time - delete it to release the
             configuration file and make it useable by others.
 
-            To assure consistent results, you should only query options through the 
-            writer. Once you are done writing, you are free to use the config reader 
+            To assure consistent results, you should only query options through the
+            writer. Once you are done writing, you are free to use the config reader
             once again."""
         writer = self.repo.config_writer()
 

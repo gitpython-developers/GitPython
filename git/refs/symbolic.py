@@ -1,15 +1,15 @@
 import os
 from git.objects import Object, Commit
 from git.util import (
-                    join_path, 
-                    join_path_native, 
+                    join_path,
+                    join_path_native,
                     to_native_path_linux,
                     assure_directory_exists
                     )
 
 from gitdb.exc import BadObject
 from gitdb.util import (
-                            join, 
+                            join,
                             dirname,
                             isdir,
                             exists,
@@ -27,7 +27,7 @@ __all__ = ["SymbolicReference"]
 class SymbolicReference(object):
 
     """Represents a special case of a reference such that this reference is symbolic.
-    It does not point to a specific commit, but to another Head, which itself 
+    It does not point to a specific commit, but to another Head, which itself
     specifies a commit.
 
     A typical example for a symbolic reference is HEAD."""
@@ -63,7 +63,7 @@ class SymbolicReference(object):
     def name(self):
         """
         :return:
-            In case of symbolic references, the shortest assumable name 
+            In case of symbolic references, the shortest assumable name
             is the path itself."""
         return self.path
 
@@ -101,10 +101,10 @@ class SymbolicReference(object):
             # END for each line
         except (OSError, IOError):
             raise StopIteration
-        # END no packed-refs file handling 
-        # NOTE: Had try-finally block around here to close the fp, 
+        # END no packed-refs file handling
+        # NOTE: Had try-finally block around here to close the fp,
         # but some python version woudn't allow yields within that.
-        # I believe files are closing themselves on destruction, so it is 
+        # I believe files are closing themselves on destruction, so it is
         # alright.
 
     @classmethod
@@ -121,8 +121,8 @@ class SymbolicReference(object):
 
     @classmethod
     def _get_ref_info(cls, repo, ref_path):
-        """Return: (sha, target_ref_path) if available, the sha the file at 
-        rela_path points to, or None. target_ref_path is the reference we 
+        """Return: (sha, target_ref_path) if available, the sha the file at
+        rela_path points to, or None. target_ref_path is the reference we
         point to, or None"""
         tokens = None
         try:
@@ -156,7 +156,7 @@ class SymbolicReference(object):
     def _get_object(self):
         """
         :return:
-            The object our ref currently refers to. Refs can be cached, they will 
+            The object our ref currently refers to. Refs can be cached, they will
             always point to the actual object as it gets re-created on each query"""
         # have to be dynamic here as we may be a tag which can point to anything
         # Our path will be resolved to the hexsha which will be used accordingly
@@ -165,7 +165,7 @@ class SymbolicReference(object):
     def _get_commit(self):
         """
         :return:
-            Commit object we point to, works for detached and non-detached 
+            Commit object we point to, works for detached and non-detached
             SymbolicReferences. The symbolic reference will be dereferenced recursively."""
         obj = self._get_object()
         if obj.type == 'tag':
@@ -180,7 +180,7 @@ class SymbolicReference(object):
     def set_commit(self, commit, logmsg=None):
         """As set_object, but restricts the type of object to be a Commit
 
-        :raise ValueError: If commit is not a Commit object or doesn't point to 
+        :raise ValueError: If commit is not a Commit object or doesn't point to
             a commit
         :return: self"""
         # check the type - assume the best if it is a base-string
@@ -212,7 +212,7 @@ class SymbolicReference(object):
 
         :param object: a refspec, a SymbolicReference or an Object instance. SymbolicReferences
             will be dereferenced beforehand to obtain the object they point to
-        :param logmsg: If not None, the message will be used in the reflog entry to be 
+        :param logmsg: If not None, the message will be used in the reflog entry to be
             written. Otherwise the reflog is not altered
         :note: plain SymbolicReferences may not actually point to objects by convention
         :return: self"""
@@ -247,8 +247,8 @@ class SymbolicReference(object):
 
     def set_reference(self, ref, logmsg=None):
         """Set ourselves to the given ref. It will stay a symbol if the ref is a Reference.
-        Otherwise an Object, given as Object instance or refspec, is assumed and if valid, 
-        will be set which effectively detaches the refererence if it was a purely 
+        Otherwise an Object, given as Object instance or refspec, is assumed and if valid,
+        will be set which effectively detaches the refererence if it was a purely
         symbolic one.
 
         :param ref: SymbolicReference instance, Object instance or refspec string
@@ -261,7 +261,7 @@ class SymbolicReference(object):
             See also: log_append()
 
         :return: self
-        :note: This symbolic reference will not be dereferenced. For that, see 
+        :note: This symbolic reference will not be dereferenced. For that, see
             ``set_object(...)``"""
         write_value = None
         obj = None
@@ -317,7 +317,7 @@ class SymbolicReference(object):
     def is_valid(self):
         """
         :return:
-            True if the reference is valid, hence it can be read and points to 
+            True if the reference is valid, hence it can be read and points to
             a valid object or reference."""
         try:
             self.object
@@ -355,15 +355,15 @@ class SymbolicReference(object):
         :param newbinsha: The sha the ref points to now. If None, our current commit sha
             will be used
         :return: added RefLogEntry instance"""
-        return RefLog.append_entry(self.repo.config_reader(), RefLog.path(self), oldbinsha, 
-                                    (newbinsha is None and self.commit.binsha) or newbinsha, 
-                                    message) 
+        return RefLog.append_entry(self.repo.config_reader(), RefLog.path(self), oldbinsha,
+                                    (newbinsha is None and self.commit.binsha) or newbinsha,
+                                    message)
 
     def log_entry(self, index):
         """:return: RefLogEntry at the given index
         :param index: python list compatible positive or negative index
 
-        .. note:: This method must read part of the reflog during execution, hence 
+        .. note:: This method must read part of the reflog during execution, hence
             it should be used sparringly, or only if you need just one index.
             In that case, it will be faster than the ``log()`` method"""
         return RefLog.entry_at(RefLog.path(self), index)
@@ -371,7 +371,7 @@ class SymbolicReference(object):
     @classmethod
     def to_full_path(cls, path):
         """
-        :return: string with a full repository-relative path which can be used to initialize 
+        :return: string with a full repository-relative path which can be used to initialize
             a Reference instance, for instance by using ``Reference.from_path``"""
         if isinstance(path, SymbolicReference):
             path = path.path
@@ -409,9 +409,9 @@ class SymbolicReference(object):
                 made_change = False
                 dropped_last_line = False
                 for line in reader:
-                    # keep line if it is a comment or if the ref to delete is not 
+                    # keep line if it is a comment or if the ref to delete is not
                     # in the line
-                    # If we deleted the last line and this one is a tag-reference object, 
+                    # If we deleted the last line and this one is a tag-reference object,
                     # we drop it as well
                     if ( line.startswith('#') or full_ref_path not in line ) and \
                         (not dropped_last_line or dropped_last_line and not line.startswith('^')):
@@ -444,8 +444,8 @@ class SymbolicReference(object):
     @classmethod
     def _create(cls, repo, path, resolve, reference, force, logmsg=None):
         """internal method used to create a new symbolic reference.
-        If resolve is False, the reference will be taken as is, creating 
-        a proper symbolic reference. Otherwise it will be resolved to the 
+        If resolve is False, the reference will be taken as is, creating
+        a proper symbolic reference. Otherwise it will be resolved to the
         corresponding object and a detached symbolic reference will be created
         instead"""
         full_ref_path = cls.to_full_path(path)
@@ -462,7 +462,7 @@ class SymbolicReference(object):
                 target_data = target.path
             if not resolve:
                 target_data = "ref: " + target_data
-            existing_data = open(abs_ref_path, 'rb').read().strip() 
+            existing_data = open(abs_ref_path, 'rb').read().strip()
             if existing_data != target_data:
                 raise OSError("Reference at %r does already exist, pointing to %r, requested was %r" % (full_ref_path, existing_data, target_data))
         # END no force handling
@@ -476,10 +476,10 @@ class SymbolicReference(object):
         """Create a new symbolic reference, hence a reference pointing to another reference.
 
         :param repo:
-            Repository to create the reference in 
+            Repository to create the reference in
 
         :param path:
-            full path at which the new symbolic reference is supposed to be 
+            full path at which the new symbolic reference is supposed to be
             created at, i.e. "NEW_HEAD" or "symrefs/my_new_symref"
 
         :param reference:
@@ -528,7 +528,7 @@ class SymbolicReference(object):
                 # if they point to the same file, its not an error
                 if open(new_abs_path, 'rb').read().strip() != open(cur_abs_path, 'rb').read().strip():
                     raise OSError("File at path %r already exists" % new_abs_path)
-                # else: we could remove ourselves and use the otherone, but 
+                # else: we could remove ourselves and use the otherone, but
                 # but clarity we just continue as usual
             # END not force handling
             os.remove(new_abs_path)
@@ -551,7 +551,7 @@ class SymbolicReference(object):
         rela_paths = set()
 
         # walk loose refs
-        # Currently we do not follow links 
+        # Currently we do not follow links
         for root, dirs, files in os.walk(join_path_native(repo.git_dir, common_path)):
             if 'refs/' not in root:  # skip non-refs subfolders
                 refs_id = [d for d in dirs if d == 'refs']
@@ -589,7 +589,7 @@ class SymbolicReference(object):
         :param common_path:
             Optional keyword argument to the path which is to be shared by all
             returned Ref objects.
-            Defaults to class specific portion if None assuring that only 
+            Defaults to class specific portion if None assuring that only
             refs suitable for the actual class are returned.
 
         :return:

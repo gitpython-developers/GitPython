@@ -27,7 +27,7 @@ from util import (
                         parse_actor_and_date
                     )
 from time import (
-                    time, 
+                    time,
                     altzone
                 )
 import os
@@ -40,7 +40,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
 
     """Wraps a git Commit object.
 
-    This class will act lazily on some of its attributes and will query the 
+    This class will act lazily on some of its attributes and will query the
     value on demand only if it involves calling the git binary."""
 
     # ENVIRONMENT VARIABLES
@@ -54,7 +54,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
     # INVARIANTS
     default_encoding = "UTF-8"
 
-    # object configuration 
+    # object configuration
     type = "commit"
     __slots__ = ("tree",
                  "author", "authored_date", "author_tz_offset",
@@ -68,21 +68,21 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
         """Instantiate a new Commit. All keyword arguments taking None as default will
         be implicitly set on first query.
         :param binsha: 20 byte sha1
-        :param parents: tuple( Commit, ... ) 
+        :param parents: tuple( Commit, ... )
             is a tuple of commit ids or actual Commits
         :param tree: Tree
             Tree object
         :param author: Actor
             is the author string ( will be implicitly converted into an Actor object )
         :param authored_date: int_seconds_since_epoch
-            is the authored DateTime - use time.gmtime() to convert it into a 
+            is the authored DateTime - use time.gmtime() to convert it into a
             different format
         :param author_tz_offset: int_seconds_west_of_utc
             is the timezone that the authored_date is in
         :param committer: Actor
             is the committer string
         :param committed_date: int_seconds_since_epoch
-            is the committed DateTime - use time.gmtime() to convert it into a 
+            is the committed DateTime - use time.gmtime() to convert it into a
             different format
         :param committer_tz_offset: int_seconds_west_of_utc
             is the timezone that the authored_date is in
@@ -91,12 +91,12 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
         :param encoding: string
             encoding of the message, defaults to UTF-8
         :param parents:
-            List or tuple of Commit objects which are our parent(s) in the commit 
+            List or tuple of Commit objects which are our parent(s) in the commit
             dependency graph
         :return: git.Commit
 
-        :note: Timezone information is in the same format and in the same sign 
-            as what time.altzone returns. The sign is inverted compared to git's 
+        :note: Timezone information is in the same format and in the same sign
+            as what time.altzone returns. The sign is inverted compared to git's
             UTC timezone."""
         super(Commit, self).__init__(repo, binsha)
         if tree is not None:
@@ -145,7 +145,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
         """Count the number of commits reachable from this commit
 
         :param paths:
-            is an optinal path or a list of paths restricting the return value 
+            is an optinal path or a list of paths restricting the return value
             to commits actually containing the paths
 
         :param kwargs:
@@ -174,7 +174,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
         :param repo: is the Repo
         :param rev: revision specifier, see git-rev-parse for viable options
         :param paths:
-            is an optinal path or list of paths, if set only Commits that include the path 
+            is an optinal path or list of paths, if set only Commits that include the path
             or paths will be considered
         :param kwargs:
             optional keyword arguments to git rev-list where
@@ -197,13 +197,13 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
         """Iterate _all_ parents of this commit.
 
         :param paths:
-            Optional path or list of paths limiting the Commits to those that 
+            Optional path or list of paths limiting the Commits to those that
             contain at least one of the paths
         :param kwargs: All arguments allowed by git-rev-list
         :return: Iterator yielding Commit objects which are parents of self """
         # skip ourselves
         skip = kwargs.get("skip", 1)
-        if skip == 0:   # skip ourselves 
+        if skip == 0:   # skip ourselves
             skip = 1
         kwargs['skip'] = skip
 
@@ -211,7 +211,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
 
     @property
     def stats(self):
-        """Create a git stat from changes between this commit and its first parent 
+        """Create a git stat from changes between this commit and its first parent
         or from all changes done if this is the very first commit.
 
         :return: git.Stats"""
@@ -261,27 +261,27 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
     def create_from_tree(cls, repo, tree, message, parent_commits=None, head=False):
         """Commit the given tree, creating a commit object.
 
-        :param repo: Repo object the commit should be part of 
-        :param tree: Tree object or hex or bin sha 
+        :param repo: Repo object the commit should be part of
+        :param tree: Tree object or hex or bin sha
             the tree of the new commit
         :param message: Commit message. It may be an empty string if no message is provided.
             It will be converted to a string in any case.
         :param parent_commits:
             Optional Commit objects to use as parents for the new commit.
-            If empty list, the commit will have no parents at all and become 
+            If empty list, the commit will have no parents at all and become
             a root commit.
-            If None , the current head commit will be the parent of the 
+            If None , the current head commit will be the parent of the
             new commit object
         :param head:
             If True, the HEAD will be advanced to the new commit automatically.
-            Else the HEAD will remain pointing on the previous commit. This could 
+            Else the HEAD will remain pointing on the previous commit. This could
             lead to undesired results when diffing files.
 
         :return: Commit object representing the new commit
 
         :note:
             Additional information about the committer and Author are taken from the
-            environment or from the git configuration, see git-commit-tree for 
+            environment or from the git configuration, see git-commit-tree for
             more information"""
         parents = parent_commits
         if parent_commits is None:
@@ -293,9 +293,9 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
             # END handle parent commits
         # END if parent commits are unset
 
-        # retrieve all additional information, create a commit object, and 
+        # retrieve all additional information, create a commit object, and
         # serialize it
-        # Generally: 
+        # Generally:
         # * Environment variables override configuration values
         # * Sensible defaults are set according to the git documentation
 
@@ -318,7 +318,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
         # END set author time
 
         committer_date_str = env.get(cls.env_committer_date, '')
-        if committer_date_str: 
+        if committer_date_str:
             committer_time, committer_offset = parse_date(committer_date_str)
         else:
             committer_time, committer_offset = unix_time, offset
@@ -335,8 +335,8 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
         # END tree conversion
 
         # CREATE NEW COMMIT
-        new_commit = cls(repo, cls.NULL_BIN_SHA, tree, 
-                        author, author_time, author_offset, 
+        new_commit = cls(repo, cls.NULL_BIN_SHA, tree,
+                        author, author_time, author_offset,
                         committer, committer_time, committer_offset,
                         message, parent_commits, conf_encoding)
 
@@ -350,7 +350,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
 
         if head:
             # need late import here, importing git at the very beginning throws
-            # as well ... 
+            # as well ...
             import git.refs
             try:
                 repo.head.set_commit(new_commit, logmsg="commit: %s" % message)
@@ -361,7 +361,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
                 master = git.refs.Head.create(repo, repo.head.ref, new_commit, logmsg="commit (initial): %s" % message)
                 repo.head.set_reference(master, logmsg='commit: Switching to %s' % master)
             # END handle empty repositories
-        # END advance head handling 
+        # END advance head handling
 
         return new_commit
 
@@ -381,8 +381,8 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
 
         c = self.committer
         fmt = "%s %s <%s> %s %s\n"
-        write(fmt % ("author", aname, a.email, 
-                        self.authored_date, 
+        write(fmt % ("author", aname, a.email,
+                        self.authored_date,
                         altz_to_utctz_str(self.author_tz_offset)))
 
         # encode committer
@@ -390,7 +390,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
         if isinstance(aname, unicode):
             aname = aname.encode(self.encoding)
         # END handle unicode in name
-        write(fmt % ("committer", aname, c.email, 
+        write(fmt % ("committer", aname, c.email,
                         self.committed_date,
                         altz_to_utctz_str(self.committer_tz_offset)))
 
@@ -468,14 +468,14 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
 
         # decode the authors name
         try:
-            self.author.name = self.author.name.decode(self.encoding) 
+            self.author.name = self.author.name.decode(self.encoding)
         except UnicodeDecodeError:
             print >> sys.stderr, "Failed to decode author name '%s' using encoding %s" % (self.author.name, self.encoding)
         # END handle author's encoding
 
         # decode committer name
         try:
-            self.committer.name = self.committer.name.decode(self.encoding) 
+            self.committer.name = self.committer.name.decode(self.encoding)
         except UnicodeDecodeError:
             print >> sys.stderr, "Failed to decode committer name '%s' using encoding %s" % (self.committer.name, self.encoding)
         # END handle author's encoding
@@ -487,7 +487,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
             self.message = self.message.decode(self.encoding)
         except UnicodeDecodeError:
             print >> sys.stderr, "Failed to decode message '%s' using encoding %s" % (self.message, self.encoding)
-        # END exception handling 
+        # END exception handling
         return self
 
     #} END serializable implementation

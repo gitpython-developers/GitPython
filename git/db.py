@@ -1,6 +1,6 @@
 """Module with our own gitdb implementation - it uses the git command"""
 from exc import (
-                    GitCommandError, 
+                    GitCommandError,
                     BadObject
                 )
 
@@ -10,7 +10,7 @@ from gitdb.base import (
                             )
 
 from gitdb.util import (
-                            bin_to_hex, 
+                            bin_to_hex,
                             hex_to_bin
                         )
 from gitdb.db import GitDB
@@ -24,11 +24,11 @@ __all__ = ('GitCmdObjectDB', 'GitDB')
 
 class GitCmdObjectDB(LooseObjectDB):
 
-    """A database representing the default git object store, which includes loose 
+    """A database representing the default git object store, which includes loose
     objects, pack files and an alternates file
 
     It will create objects only in the loose object database.
-    :note: for now, we use the git command to do all the lookup, just until he 
+    :note: for now, we use the git command to do all the lookup, just until he
         have packs and the other implementations
     """
 
@@ -52,7 +52,7 @@ class GitCmdObjectDB(LooseObjectDB):
         """:return: Full binary 20 byte sha from the given partial hexsha
         :raise AmbiguousObjectName:
         :raise BadObject:
-        :note: currently we only raise BadObject as git does not communicate 
+        :note: currently we only raise BadObject as git does not communicate
             AmbiguousObjects separately"""
         try:
             hexsha, typename, size = self._git.get_object_header(partial_hexsha)

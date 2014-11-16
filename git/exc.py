@@ -68,5 +68,5 @@ class CacheError(Exception):
 
 class UnmergedEntriesError(CacheError):
 
-    """Thrown if an operation cannot proceed as there are still unmerged 
+    """Thrown if an operation cannot proceed as there are still unmerged
     entries in the cache"""

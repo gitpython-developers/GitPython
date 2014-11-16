@@ -30,11 +30,11 @@ def resolve_or_fail(env_var):
 #} END utilities
 
 
-#{ Base Classes 
+#{ Base Classes
 
 class TestBigRepoR(TestBase):
 
-    """TestCase providing access to readonly 'big' repositories using the following 
+    """TestCase providing access to readonly 'big' repositories using the following
     member variables:
 
     * gitrorepo
@@ -49,7 +49,7 @@ class TestBigRepoR(TestBase):
     #{ Invariants
     head_sha_2k = '235d521da60e4699e5bd59ac658b5b48bd76ddca'
     head_sha_50 = '32347c375250fd470973a5d76185cac718955fd5'
-    #} END invariants 
+    #} END invariants
 
     @classmethod
     def setUp(cls):

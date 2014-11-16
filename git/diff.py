@@ -6,7 +6,7 @@
 
 import re
 from objects.blob import Blob
-from objects.util import mode_str_to_int 
+from objects.util import mode_str_to_int
 from exc import GitCommandError
 
 from gitdb.util import hex_to_bin
@@ -19,14 +19,14 @@ class Diffable(object):
 
     """Common interface for all object that can be diffed against another object of compatible type.
 
-    :note: 
-        Subclasses require a repo member as it is the case for Object instances, for practical 
+    :note:
+        Subclasses require a repo member as it is the case for Object instances, for practical
         reasons we do not derive from Object."""
     __slots__ = tuple()
 
     # standin indicating you want to diff against the index
     class Index(object):
-        pass 
+        pass
 
     def _process_diff_args(self, args):
         """
@@ -37,11 +37,11 @@ class Diffable(object):
         return args
 
     def diff(self, other=Index, paths=None, create_patch=False, **kwargs):
-        """Creates diffs between two items being trees, trees and index or an 
+        """Creates diffs between two items being trees, trees and index or an
         index and the working tree.
 
         :param other:
-            Is the item to compare us with. 
+            Is the item to compare us with.
             If None, we will be compared to the working tree.
             If Treeish, it will be compared against the respective tree
             If Index ( type ), it will be compared against the index.
@@ -58,7 +58,7 @@ class Diffable(object):
             and diffed.
 
         :param kwargs:
-            Additional arguments passed to git-diff, such as 
+            Additional arguments passed to git-diff, such as
             R=True to swap both sides of the diff.
 
         :return: git.DiffIndex
@@ -66,7 +66,7 @@ class Diffable(object):
         :note:
             Rename detection will only work if create_patch is True.
 
-            On a bare repository, 'other' needs to be provided as Index or as 
+            On a bare repository, 'other' needs to be provided as Index or as
             as Tree/Commit, or a git command error will occour"""
         args = list()
         args.append("--abbrev=40")        # we need full shas
@@ -78,7 +78,7 @@ class Diffable(object):
         else:
             args.append("--raw")
 
-        # in any way, assure we don't see colored output, 
+        # in any way, assure we don't see colored output,
         # fixes https://github.com/gitpython-developers/GitPython/issues/172
         args.append('--no-color')
 
@@ -112,7 +112,7 @@ class Diffable(object):
 
 class DiffIndex(list):
 
-    """Implements an Index for diffs, allowing a list of Diffs to be queried by 
+    """Implements an Index for diffs, allowing a list of Diffs to be queried by
     the diff properties.
 
     The class improves the diff handling convenience"""
@@ -154,10 +154,10 @@ class Diff(object):
 
     """A Diff contains diff information between two Trees.
 
-    It contains two sides a and b of the diff, members are prefixed with 
+    It contains two sides a and b of the diff, members are prefixed with
     "a" and "b" respectively to inidcate that.
 
-    Diffs keep information about the changed blob objects, the file mode, renames, 
+    Diffs keep information about the changed blob objects, the file mode, renames,
     deletions and new files.
 
     There are a few cases where None has to be expected as member variable value:
@@ -176,8 +176,8 @@ class Diff(object):
 
         When comparing to working trees, the working tree blob will have a null hexsha
         as a corresponding object does not yet exist. The mode will be null as well.
-        But the path will be available though. 
-        If it is listed in a diff the working tree version of the file must 
+        But the path will be available though.
+        If it is listed in a diff the working tree version of the file must
         be different to the version in the index or tree, and hence has been modified."""
 
     # precompiled regex
@@ -198,7 +198,7 @@ class Diff(object):
     NULL_HEX_SHA = "0" * 40
     NULL_BIN_SHA = "\0" * 20
 
-    __slots__ = ("a_blob", "b_blob", "a_mode", "b_mode", "new_file", "deleted_file", 
+    __slots__ = ("a_blob", "b_blob", "a_mode", "b_mode", "new_file", "deleted_file",
                  "rename_from", "rename_to", "diff")
 
     def __init__(self, repo, a_path, b_path, a_blob_id, b_blob_id, a_mode,
@@ -248,7 +248,7 @@ class Diff(object):
         h = "%s"
         if self.a_blob:
             h %= self.a_blob.path
-        elif self.b_blob:          
+        elif self.b_blob:
             h %= self.b_blob.path
 
         msg = ''
@@ -291,7 +291,7 @@ class Diff(object):
     @classmethod
     def _index_from_patch_format(cls, repo, stream):
         """Create a new DiffIndex from the given text which must be in patch format
-        :param repo: is the repository we are operating on - it is required 
+        :param repo: is the repository we are operating on - it is required
         :param stream: result of 'git diff' as a stream (supporting file protocol)
         :return: git.DiffIndex """
         # for now, we have to bake the stream
@@ -316,11 +316,11 @@ class Diff(object):
     @classmethod
     def _index_from_raw_format(cls, repo, stream):
         """Create a new DiffIndex from the given stream which must be in raw format.
-        :note: 
-            This format is inherently incapable of detecting renames, hence we only 
+        :note:
+            This format is inherently incapable of detecting renames, hence we only
             modify, delete and add files
         :return: git.DiffIndex"""
-        # handles 
+        # handles
         # :100644 100644 6870991011cc8d9853a7a8a6f02061512c6a8190 37c5e30c879213e9ae83b21e9d11e55fc20c54b7 M    .gitignore
         index = DiffIndex()
         for line in stream:

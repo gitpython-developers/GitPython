@@ -5,7 +5,7 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 """Module for general utility functions"""
 from git.util import (
-                        IterableList, 
+                        IterableList,
                         Actor
                     )
 
@@ -16,8 +16,8 @@ from string import digits
 import time
 import os
 
-__all__ = ('get_object_type_by_name', 'parse_date', 'parse_actor_and_date', 
-            'ProcessStreamAdapter', 'Traversable', 'altz_to_utctz_str', 'utctz_to_altz', 
+__all__ = ('get_object_type_by_name', 'parse_date', 'parse_actor_and_date',
+            'ProcessStreamAdapter', 'Traversable', 'altz_to_utctz_str', 'utctz_to_altz',
             'verify_utctz', 'Actor')
 
 #{ Functions
@@ -27,8 +27,8 @@ def mode_str_to_int(modestr):
     """
     :param modestr: string like 755 or 644 or 100644 - only the last 6 chars will be used
     :return:
-        String identifying a mode compatible to the mode methods ids of the 
-        stat module regarding the rwx permissions for user, group and other, 
+        String identifying a mode compatible to the mode methods ids of the
+        stat module regarding the rwx permissions for user, group and other,
         special flags and file system flags, i.e. whether it is a symlink
         for example."""
     mode = 0
@@ -64,7 +64,7 @@ def get_object_type_by_name(object_type_name):
 
 def utctz_to_altz(utctz):
     """we convert utctz to the timezone in seconds, it is the format time.altzone
-    returns. Git stores it as UTC timezone which has the opposite sign as well, 
+    returns. Git stores it as UTC timezone which has the opposite sign as well,
     which explains the -1 * ( that was made explicit here )
     :param utctz: git utc timezone string, i.e. +0200"""
     return -1 * int(float(utctz) / 100 * 3600)
@@ -102,7 +102,7 @@ def parse_date(string_date):
     Parse the given date as one of the following
 
         * Git internal format: timestamp offset
-        * RFC 2822: Thu, 07 Apr 2005 22:13:13 +0200. 
+        * RFC 2822: Thu, 07 Apr 2005 22:13:13 +0200.
         * ISO 8601 2005-04-07T22:13:13
             The T can be a space as well
 
@@ -139,7 +139,7 @@ def parse_date(string_date):
                 if splitter == -1:
                     splitter = string_date.rfind(' ')
                 # END handle 'T' and ' '
-            # END handle rfc or iso 
+            # END handle rfc or iso
 
             assert splitter > -1
 
@@ -153,7 +153,7 @@ def parse_date(string_date):
             for fmt in date_formats:
                 try:
                     dtstruct = time.strptime(date_part, fmt)
-                    fstruct = time.struct_time((dtstruct.tm_year, dtstruct.tm_mon, dtstruct.tm_mday, 
+                    fstruct = time.struct_time((dtstruct.tm_year, dtstruct.tm_mon, dtstruct.tm_mday,
                                                 tstruct.tm_hour, tstruct.tm_min, tstruct.tm_sec,
                                                 dtstruct.tm_wday, dtstruct.tm_yday, tstruct.tm_isdst))
                     return int(time.mktime(fstruct)), utctz_to_altz(offset)
@@ -166,7 +166,7 @@ def parse_date(string_date):
             raise ValueError("no format matched")
         # END handle format
     except Exception:
-        raise ValueError("Unsupported date format: %s" % string_date)  
+        raise ValueError("Unsupported date format: %s" % string_date)
     # END handle exceptions
 
 
@@ -193,14 +193,14 @@ def parse_actor_and_date(line):
 #} END functions
 
 
-#{ Classes 
+#{ Classes
 
 class ProcessStreamAdapter(object):
 
     """Class wireing all calls to the contained Process instance.
 
-    Use this type to hide the underlying process to provide access only to a specified 
-    stream. The process is usually wrapped into an AutoInterrupt class to kill 
+    Use this type to hide the underlying process to provide access only to a specified
+    stream. The process is usually wrapped into an AutoInterrupt class to kill
     it if the instance goes out of scope."""
     __slots__ = ("_proc", "_stream")
 
@@ -214,7 +214,7 @@ class ProcessStreamAdapter(object):
 
 class Traversable(object):
 
-    """Simple interface to perforam depth-first or breadth-first traversals 
+    """Simple interface to perforam depth-first or breadth-first traversals
     into one direction.
     Subclasses only need to implement one function.
     Instances of the Subclass must be hashable"""
@@ -244,7 +244,7 @@ class Traversable(object):
 
         :param predicate: f(i,d) returns False if item i at depth d should not be included in the result
 
-        :param prune: 
+        :param prune:
             f(i,d) return True if the search should stop at item i at depth d.
             Item i will not be returned.
 
@@ -267,8 +267,8 @@ class Traversable(object):
             If as_edge is True, the source of the first edge is None
 
         :param as_edge:
-            if True, return a pair of items, first being the source, second the 
-            destinatination, i.e. tuple(src, dest) with the edge spanning from 
+            if True, return a pair of items, first being the source, second the
+            destinatination, i.e. tuple(src, dest) with the edge spanning from
             source to destination"""
         visited = set()
         stack = Deque()

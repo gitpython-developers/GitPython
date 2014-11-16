@@ -15,7 +15,7 @@ from gitdb.util import (
 
 from git.objects.util import (
                                 parse_date,
-                                Serializable, 
+                                Serializable,
                                 utctz_to_altz,
                                 altz_to_utctz_str,
                             )
@@ -38,12 +38,12 @@ class RefLogEntry(tuple):
         """Representation of ourselves in git reflog format"""
         act = self.actor
         time = self.time
-        return self._fmt % (self.oldhexsha, self.newhexsha, act.name, act.email, 
+        return self._fmt % (self.oldhexsha, self.newhexsha, act.name, act.email,
                             time[0], altz_to_utctz_str(time[1]), self.message)
 
     @property
     def oldhexsha(self):
-        """The hexsha to the commit the ref pointed to before the change""" 
+        """The hexsha to the commit the ref pointed to before the change"""
         return self[0]
 
     @property
@@ -74,7 +74,7 @@ class RefLogEntry(tuple):
         """:return: New instance of a RefLogEntry"""
         if not isinstance(actor, Actor):
             raise ValueError("Need actor instance, got %s" % actor)
-        # END check types 
+        # END check types
         return RefLogEntry((oldhexsha, newhexsha, actor, (time, tz_offset), message))
 
     @classmethod
@@ -109,7 +109,7 @@ class RefLogEntry(tuple):
 class RefLog(list, Serializable):
 
     """A reflog contains reflog entries, each of which defines a certain state
-    of the head in question. Custom query methods allow to retrieve log entries 
+    of the head in question. Custom query methods allow to retrieve log entries
     by date or by other criteria.
 
     Reflog entries are orded, the first added entry is first in the list, the last
@@ -123,7 +123,7 @@ class RefLog(list, Serializable):
 
     def __init__(self, filepath=None):
         """Initialize this instance with an optional filepath, from which we will
-        initialize our data. The path is also used to write changes back using 
+        initialize our data. The path is also used to write changes back using
         the write() method"""
         self._path = filepath
         if filepath is not None:
@@ -149,17 +149,17 @@ class RefLog(list, Serializable):
     @classmethod
     def from_file(cls, filepath):
         """
-        :return: a new RefLog instance containing all entries from the reflog 
+        :return: a new RefLog instance containing all entries from the reflog
             at the given filepath
-        :param filepath: path to reflog 
+        :param filepath: path to reflog
         :raise ValueError: If the file could not be read or was corrupted in some way"""
         return cls(filepath)
 
     @classmethod
     def path(cls, ref):
         """
-        :return: string to absolute path at which the reflog of the given ref 
-            instance would be found. The path is not guaranteed to point to a valid 
+        :return: string to absolute path at which the reflog of the given ref
+            instance would be found. The path is not guaranteed to point to a valid
             file though.
         :param ref: SymbolicReference instance"""
         return join(ref.repo.git_dir, "logs", to_native_path(ref.path))
@@ -167,7 +167,7 @@ class RefLog(list, Serializable):
     @classmethod
     def iter_entries(cls, stream):
         """
-        :return: Iterator yielding RefLogEntry instances, one for each line read 
+        :return: Iterator yielding RefLogEntry instances, one for each line read
             sfrom the given stream.
         :param stream: file-like object containing the revlog in its native format
             or basestring instance pointing to a file to read"""
@@ -186,13 +186,13 @@ class RefLog(list, Serializable):
     def entry_at(cls, filepath, index):
         """:return: RefLogEntry at the given index
         :param filepath: full path to the index file from which to read the entry
-        :param index: python list compatible index, i.e. it may be negative to 
+        :param index: python list compatible index, i.e. it may be negative to
             specifiy an entry counted from the end of the list
 
         :raise IndexError: If the entry didn't exist
 
         .. note:: This method is faster as it only parses the entry at index, skipping
-            all other lines. Nonetheless, the whole file has to be read if 
+            all other lines. Nonetheless, the whole file has to be read if
             the index is negative
         """
         fp = open(filepath, 'rb')
@@ -243,7 +243,7 @@ class RefLog(list, Serializable):
         :param write: If True, the changes will be written right away. Otherwise
             the change will not be written
         :return: RefLogEntry objects which was appended to the log
-        :note: As we are append-only, concurrent access is not a problem as we 
+        :note: As we are append-only, concurrent access is not a problem as we
             do not interfere with readers."""
         if len(oldbinsha) != 20 or len(newbinsha) != 20:
             raise ValueError("Shas need to be given in binary format")

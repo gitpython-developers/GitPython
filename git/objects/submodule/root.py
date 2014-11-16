@@ -38,11 +38,11 @@ class RootModule(Submodule):
     def __init__(self, repo):
         # repo, binsha, mode=None, path=None, name = None, parent_commit=None, url=None, ref=None)
         super(RootModule, self).__init__(
-                                        repo, 
-                                        binsha=self.NULL_BIN_SHA, 
-                                        mode=self.k_default_mode, 
-                                        path='', 
-                                        name=self.k_root_name, 
+                                        repo,
+                                        binsha=self.NULL_BIN_SHA,
+                                        mode=self.k_default_mode,
+                                        path='',
+                                        name=self.k_root_name,
                                         parent_commit=repo.head.commit,
                                         url='',
                                         branch_path=git.Head.to_full_path(self.k_head_default)
@@ -52,28 +52,28 @@ class RootModule(Submodule):
         """May not do anything"""
         pass
 
-    #{ Interface 
+    #{ Interface
 
-    def update(self, previous_commit=None, recursive=True, force_remove=False, init=True, 
+    def update(self, previous_commit=None, recursive=True, force_remove=False, init=True,
                     to_latest_revision=False, progress=None, dry_run=False):
         """Update the submodules of this repository to the current HEAD commit.
         This method behaves smartly by determining changes of the path of a submodules
-        repository, next to changes to the to-be-checked-out commit or the branch to be 
+        repository, next to changes to the to-be-checked-out commit or the branch to be
         checked out. This works if the submodules ID does not change.
         Additionally it will detect addition and removal of submodules, which will be handled
         gracefully.
 
-        :param previous_commit: If set to a commit'ish, the commit we should use 
-            as the previous commit the HEAD pointed to before it was set to the commit it points to now. 
+        :param previous_commit: If set to a commit'ish, the commit we should use
+            as the previous commit the HEAD pointed to before it was set to the commit it points to now.
             If None, it defaults to HEAD@{1} otherwise
         :param recursive: if True, the children of submodules will be updated as well
             using the same technique
         :param force_remove: If submodules have been deleted, they will be forcibly removed.
-            Otherwise the update may fail if a submodule's repository cannot be deleted as 
+            Otherwise the update may fail if a submodule's repository cannot be deleted as
             changes have been made to it (see Submodule.update() for more information)
         :param init: If we encounter a new module which would need to be initialized, then do it.
-        :param to_latest_revision: If True, instead of checking out the revision pointed to 
-            by this submodule's sha, the checked out tracking branch will be merged with the 
+        :param to_latest_revision: If True, instead of checking out the revision pointed to
+            by this submodule's sha, the checked out tracking branch will be merged with the
             newest remote branch fetched from the repository's origin
         :param progress: RootUpdateProgress instance or None if no progress should be sent
         :param dry_run: if True, operations will not actually be performed. Progress messages
@@ -106,7 +106,7 @@ class RootModule(Submodule):
                 previous_commit = cur_commit
             #END exception handling
         else:
-            previous_commit = repo.commit(previous_commit)   # obtain commit object 
+            previous_commit = repo.commit(previous_commit)   # obtain commit object
         # END handle previous commit
 
         psms = self.list_items(repo, parent_commit=previous_commit)
@@ -150,7 +150,7 @@ class RootModule(Submodule):
             #PATH CHANGES
             ##############
             if sm.path != psm.path and psm.module_exists():
-                progress.update(BEGIN | PATHCHANGE, i, len_csms, prefix + "Moving repository of submodule %r from %s to %s" % (sm.name, psm.abspath, sm.abspath))  
+                progress.update(BEGIN | PATHCHANGE, i, len_csms, prefix + "Moving repository of submodule %r from %s to %s" % (sm.name, psm.abspath, sm.abspath))
                 # move the module to the new path
                 if not dry_run:
                     psm.move(sm.path, module=True, configuration=False)
@@ -163,7 +163,7 @@ class RootModule(Submodule):
                 ###################
                 if sm.url != psm.url:
                     # Add the new remote, remove the old one
-                    # This way, if the url just changes, the commits will not 
+                    # This way, if the url just changes, the commits will not
                     # have to be re-retrieved
                     nn = '__new_origin__'
                     smm = sm.module()
@@ -193,14 +193,14 @@ class RootModule(Submodule):
                                 # END if urls match
                             # END for each remote
 
-                            # if we didn't find a matching remote, but have exactly one, 
+                            # if we didn't find a matching remote, but have exactly one,
                             # we can safely use this one
                             if rmt_for_deletion is None:
                                 if len(rmts) == 1:
                                     rmt_for_deletion = rmts[0]
                                 else:
                                     # if we have not found any remote with the original url
-                                    # we may not have a name. This is a special case, 
+                                    # we may not have a name. This is a special case,
                                     # and its okay to fail here
                                     # Alternatively we could just generate a unique name and leave all
                                     # existing ones in place
@@ -211,8 +211,8 @@ class RootModule(Submodule):
                             orig_name = rmt_for_deletion.name
                             smm.delete_remote(rmt_for_deletion)
                             # NOTE: Currently we leave tags from the deleted remotes
-                            # as well as separate tracking branches in the possibly totally 
-                            # changed repository ( someone could have changed the url to 
+                            # as well as separate tracking branches in the possibly totally
+                            # changed repository ( someone could have changed the url to
                             # another project ). At some point, one might want to clean
                             # it up, but the danger is high to remove stuff the user
                             # has added explicitly
@@ -221,7 +221,7 @@ class RootModule(Submodule):
                             smr.rename(orig_name)
 
                             # early on, we verified that the our current tracking branch
-                            # exists in the remote. Now we have to assure that the 
+                            # exists in the remote. Now we have to assure that the
                             # sha we point to is still contained in the new remote
                             # tracking branch.
                             smsha = sm.binsha
@@ -237,7 +237,7 @@ class RootModule(Submodule):
                             if not found:
                                 # adjust our internal binsha to use the one of the remote
                                 # this way, it will be checked out in the next step
-                                # This will change the submodule relative to us, so 
+                                # This will change the submodule relative to us, so
                                 # the user will be able to commit the change easily
                                 print >> sys.stderr, "WARNING: Current sha %s was not contained in the tracking branch at the new remote, setting it the the remote's tracking branch" % sm.hexsha
                                 sm.binsha = rref.commit.binsha
@@ -252,7 +252,7 @@ class RootModule(Submodule):
                 # HANDLE PATH CHANGES
                 #####################
                 if sm.branch_path != psm.branch_path:
-                    # finally, create a new tracking branch which tracks the 
+                    # finally, create a new tracking branch which tracks the
                     # new remote branch
                     progress.update(BEGIN | BRANCHCHANGE, i, len_csms, prefix + "Changing branch of submodule %r from %s to %s" % (sm.name, psm.branch_path, sm.branch_path))
                     if not dry_run:
@@ -267,7 +267,7 @@ class RootModule(Submodule):
 
                         tbr.set_tracking_branch(find_first_remote_branch(smmr, sm.branch_name))
                         # figure out whether the previous tracking branch contains
-                        # new commits compared to the other one, if not we can 
+                        # new commits compared to the other one, if not we can
                         # delete it.
                         try:
                             tbr = find_first_remote_branch(smmr, psm.branch_name)
@@ -285,24 +285,24 @@ class RootModule(Submodule):
 
                     progress.update(END | BRANCHCHANGE, i, len_csms, prefix + "Done changing branch of submodule %r" % sm.name)
                 #END handle branch
-            #END handle 
-        # END for each common submodule 
+            #END handle
+        # END for each common submodule
 
         # FINALLY UPDATE ALL ACTUAL SUBMODULES
         ######################################
         for sm in sms:
             # update the submodule using the default method
-            sm.update(recursive=False, init=init, to_latest_revision=to_latest_revision, 
+            sm.update(recursive=False, init=init, to_latest_revision=to_latest_revision,
                         progress=progress, dry_run=dry_run)
 
-            # update recursively depth first - question is which inconsitent 
+            # update recursively depth first - question is which inconsitent
             # state will be better in case it fails somewhere. Defective branch
-            # or defective depth. The RootSubmodule type will never process itself, 
+            # or defective depth. The RootSubmodule type will never process itself,
             # which was done in the previous expression
             if recursive:
                 # the module would exist by now if we are not in dry_run mode
                 if sm.module_exists():
-                    type(self)(sm.module()).update(recursive=True, force_remove=force_remove, 
+                    type(self)(sm.module()).update(recursive=True, force_remove=force_remove,
                                                     init=init, to_latest_revision=to_latest_revision,
                                                     progress=progress, dry_run=dry_run)
                 #END handle dry_run

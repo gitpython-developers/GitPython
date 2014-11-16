@@ -29,7 +29,7 @@ class Object(LazyMixin):
     type = None         # to be set by subclass
 
     def __init__(self, repo, binsha):
-        """Initialize an object by identifying it by its binary sha. 
+        """Initialize an object by identifying it by its binary sha.
         All keyword arguments will be set on demand if None.
 
         :param repo: repository this object is located in
@@ -43,8 +43,8 @@ class Object(LazyMixin):
     @classmethod
     def new(cls, repo, id):
         """
-        :return: New Object instance of a type appropriate to the object type behind 
-            id. The id of the newly created object will be a binsha even though 
+        :return: New Object instance of a type appropriate to the object type behind
+            id. The id of the newly created object will be a binsha even though
             the input id may have been a Reference or Rev-Spec
 
         :param id: reference, rev-spec, or hexsha
@@ -56,7 +56,7 @@ class Object(LazyMixin):
     @classmethod
     def new_from_sha(cls, repo, sha1):
         """
-        :return: new object instance of a type appropriate to represent the given 
+        :return: new object instance of a type appropriate to represent the given
             binary sha1
         :param sha1: 20 byte binary sha1"""
         if sha1 == cls.NULL_BIN_SHA:
@@ -66,7 +66,7 @@ class Object(LazyMixin):
         oinfo = repo.odb.info(sha1)
         inst = get_object_type_by_name(oinfo.type)(repo, oinfo.binsha)
         inst.size = oinfo.size
-        return inst 
+        return inst
 
     def _set_cache_(self, attr):
         """Retrieve object information"""
@@ -150,7 +150,7 @@ class IndexObject(Object):
 
     def __hash__(self):
         """:return:
-            Hash of our path as index items are uniquely identifyable by path, not 
+            Hash of our path as index items are uniquely identifyable by path, not
             by their data !"""
         return hash(self.path)
 
@@ -171,7 +171,7 @@ class IndexObject(Object):
     def abspath(self):
         """
         :return:
-            Absolute path to this index object in the file system ( as opposed to the 
+            Absolute path to this index object in the file system ( as opposed to the
             .path field which is a path relative to the git repository ).
 
             The returned path will be native to the system and contains '\' on windows. """

@@ -18,16 +18,16 @@ import getpass
 from exc import GitCommandError
 
 from gitdb.util import (
-    make_sha, 
-    LockedFD, 
-    file_contents_ro, 
-    LazyMixin, 
-    to_hex_sha, 
+    make_sha,
+    LockedFD,
+    file_contents_ro,
+    LazyMixin,
+    to_hex_sha,
     to_bin_sha
 )
 
-__all__ = ("stream_copy", "join_path", "to_native_path_windows", "to_native_path_linux", 
-            "join_path_native", "Stats", "IndexFileSHA1Writer", "Iterable", "IterableList", 
+__all__ = ("stream_copy", "join_path", "to_native_path_windows", "to_native_path_linux",
+            "join_path_native", "Stats", "IndexFileSHA1Writer", "Iterable", "IterableList",
             "BlockingLockFile", "LockFile", 'Actor', 'get_user_id', 'assure_directory_exists',
             'RemoteProgress', 'rmtree')
 
@@ -66,7 +66,7 @@ def stream_copy(source, destination, chunk_size=512 * 1024):
 
 
 def join_path(a, *p):
-    """Join path tokens together similar to os.path.join, but always use 
+    """Join path tokens together similar to os.path.join, but always use
     '/' instead of possibly '\' on windows."""
     path = a
     for b in p:
@@ -100,8 +100,8 @@ else:
 
 def join_path_native(a, *p):
     """
-    As join path, but makes sure an OS native path is returned. This is only 
-        needed to play it safe on my dear windows and to assure nice paths that only 
+    As join path, but makes sure an OS native path is returned. This is only
+        needed to play it safe on my dear windows and to assure nice paths that only
         use '\'"""
     return to_native_path(join_path(a, *p))
 
@@ -114,7 +114,7 @@ def assure_directory_exists(path, is_file=False):
     :return: True if the directory was created, False if it already existed"""
     if is_file:
         path = os.path.dirname(path)
-    #END handle file 
+    #END handle file
     if not os.path.isdir(path):
         os.makedirs(path)
         return True
@@ -167,19 +167,19 @@ class RemoteProgress(object):
 
         :return: list(line, ...) list of lines that could not be processed"""
         # handle
-        # Counting objects: 4, done. 
+        # Counting objects: 4, done.
         # Compressing objects:  50% (1/2)   \rCompressing objects: 100% (2/2)   \rCompressing objects: 100% (2/2), done.
         self._cur_line = line
         sub_lines = line.split('\r')
         failed_lines = list()
         for sline in sub_lines:
-            # find esacpe characters and cut them away - regex will not work with 
+            # find esacpe characters and cut them away - regex will not work with
             # them as they are non-ascii. As git might expect a tty, it will send them
             last_valid_index = None
             for i, c in enumerate(reversed(sline)):
                 if ord(c) < 32:
                     # its a slice index
-                    last_valid_index = -i - 1 
+                    last_valid_index = -i - 1
                 # END character was non-ascii
             # END for each character in sline
             if last_valid_index is not None:
@@ -214,7 +214,7 @@ class RemoteProgress(object):
                 op_code |= self.RESOLVING
             else:
                 # Note: On windows it can happen that partial lines are sent
-                # Hence we get something like "CompreReceiving objects", which is 
+                # Hence we get something like "CompreReceiving objects", which is
                 # a blend of "Compressing objects" and "Receiving objects".
                 # This can't really be prevented, so we drop the line verbosely
                 # to make sure we get informed in case the process spits out new
@@ -257,17 +257,17 @@ class RemoteProgress(object):
         :param op_code:
             Integer allowing to be compared against Operation IDs and stage IDs.
 
-            Stage IDs are BEGIN and END. BEGIN will only be set once for each Operation 
+            Stage IDs are BEGIN and END. BEGIN will only be set once for each Operation
             ID as well as END. It may be that BEGIN and END are set at once in case only
             one progress message was emitted due to the speed of the operation.
             Between BEGIN and END, none of these flags will be set
 
-            Operation IDs are all held within the OP_MASK. Only one Operation ID will 
+            Operation IDs are all held within the OP_MASK. Only one Operation ID will
             be active per call.
         :param cur_count: Current absolute count of items
 
         :param max_count:
-            The maximum count of items we expect. It may be None in case there is 
+            The maximum count of items we expect. It may be None in case there is
             no maximum number of items or if it is (yet) unknown.
 
         :param message:
@@ -280,8 +280,8 @@ class RemoteProgress(object):
 
 class Actor(object):
 
-    """Actors hold information about a person acting on the repository. They 
-    can be committers and authors or anything with a name and an email as 
+    """Actors hold information about a person acting on the repository. They
+    can be committers and authors or anything with a name and an email as
     mentioned in the git log entries."""
     # PRECOMPILED REGEX
     name_only_regex = re.compile(r'<(.+)>')
@@ -347,7 +347,7 @@ class Actor(object):
         default_email = get_user_id()
         default_name = default_email.split('@')[0]
 
-        for attr, evar, cvar, default in (('name', env_name, cls.conf_name, default_name), 
+        for attr, evar, cvar, default in (('name', env_name, cls.conf_name, default_name),
                                         ('email', env_email, cls.conf_email, default_email)):
             try:
                 setattr(actor, attr, os.environ[evar])
@@ -365,7 +365,7 @@ class Actor(object):
     def committer(cls, config_reader=None):
         """
         :return: Actor instance corresponding to the configured committer. It behaves
-            similar to the git implementation, such that the environment will override 
+            similar to the git implementation, such that the environment will override
             configuration values of config_reader. If no value is set at all, it will be
             generated
         :param config_reader: ConfigReader to use to retrieve the values from in case
@@ -374,7 +374,7 @@ class Actor(object):
 
     @classmethod
     def author(cls, config_reader=None):
-        """Same as committer(), but defines the main author. It may be specified in the environment, 
+        """Same as committer(), but defines the main author. It may be specified in the environment,
         but defaults to the committer"""
         return cls._main_actor(cls.env_author_name, cls.env_author_email, config_reader)
 
@@ -382,7 +382,7 @@ class Actor(object):
 class Stats(object):
 
     """
-    Represents stat information as presented by git at the end of a merge. It is 
+    Represents stat information as presented by git at the end of a merge. It is
     created from the output of a diff operation.
 
     ``Example``::
@@ -433,7 +433,7 @@ class Stats(object):
 
 class IndexFileSHA1Writer(object):
 
-    """Wrapper around a file-like object that remembers the SHA1 of 
+    """Wrapper around a file-like object that remembers the SHA1 of
     the data written to it. It will write a sha when the stream is closed
     or if the asked for explicitly usign write_sha.
 
@@ -466,7 +466,7 @@ class IndexFileSHA1Writer(object):
 
 class LockFile(object):
 
-    """Provides methods to obtain, check for, and release a file based lock which 
+    """Provides methods to obtain, check for, and release a file based lock which
     should be used to handle concurrent access to the same file.
 
     As we are a utility class to be derived from, we only use protected methods.
@@ -498,7 +498,7 @@ class LockFile(object):
 
         :raise IOError: if a lock was already present or a lock file could not be written"""
         if self._has_lock():
-            return 
+            return
         lock_file = self._lock_file_path()
         if os.path.isfile(lock_file):
             raise IOError("Lock for file %r did already exist, delete %r in case the lock is illegal" % (self._file_path, lock_file))
@@ -526,7 +526,7 @@ class LockFile(object):
         lfp = self._lock_file_path()
         try:
             # on bloody windows, the file needs write permissions to be removable.
-            # Why ... 
+            # Why ...
             if os.name == 'nt':
                 os.chmod(lfp, int("0777", 8))
             # END handle win32
@@ -538,11 +538,11 @@ class LockFile(object):
 
 class BlockingLockFile(LockFile):
 
-    """The lock file will block until a lock could be obtained, or fail after 
+    """The lock file will block until a lock could be obtained, or fail after
     a specified timeout.
 
-    :note: If the directory containing the lock was removed, an exception will 
-        be raised during the blocking period, preventing hangs as the lock 
+    :note: If the directory containing the lock was removed, an exception will
+        be raised during the blocking period, preventing hangs as the lock
         can never be obtained."""
     __slots__ = ("_check_interval", "_max_block_time")
 
@@ -559,7 +559,7 @@ class BlockingLockFile(LockFile):
         self._max_block_time = max_block_time_s
 
     def _obtain_lock(self):
-        """This method blocks until it obtained the lock, or raises IOError if 
+        """This method blocks until it obtained the lock, or raises IOError if
         it ran out of time or if the parent directory was not available anymore.
         If this method returns, you are guranteed to own the lock"""
         starttime = time.time()
@@ -596,11 +596,11 @@ class IterableList(list):
      heads['master']
      heads[0]
 
-    It requires an id_attribute name to be set which will be queried from its 
+    It requires an id_attribute name to be set which will be queried from its
     contained items to have a means for comparison.
 
-    A prefix can be specified which is to be used in case the id returned by the 
-    items always contains a prefix that does not matter to the user, so it 
+    A prefix can be specified which is to be used in case the id returned by the
+    items always contains a prefix that does not matter to the user, so it
     can be left out."""
     __slots__ = ('_id_attr', '_prefix')
 
@@ -664,7 +664,7 @@ class IterableList(list):
 
 class Iterable(object):
 
-    """Defines an interface for iterable items which is to assure a uniform 
+    """Defines an interface for iterable items which is to assure a uniform
     way to retrieve and iterate items within the git repository"""
     __slots__ = tuple()
     _id_attribute_ = "attribute that most suitably identifies your instance"
@@ -673,7 +673,7 @@ class Iterable(object):
     def list_items(cls, repo, *args, **kwargs):
         """
         Find all items of this type - subclasses can specify args and kwargs differently.
-        If no args are given, subclasses are obliged to return all items if no additional 
+        If no args are given, subclasses are obliged to return all items if no additional
         arguments arg given.
 
         :note: Favor the iter_items method as it will

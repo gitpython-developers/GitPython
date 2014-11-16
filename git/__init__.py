@@ -41,8 +41,8 @@ from git.repo import Repo
 from git.remote import *
 from git.index import *
 from git.util import (
-                        LockFile, 
-                        BlockingLockFile, 
+                        LockFile,
+                        BlockingLockFile,
                         Stats,
                         Actor
                         )

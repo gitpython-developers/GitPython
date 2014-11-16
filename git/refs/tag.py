@@ -5,8 +5,8 @@ __all__ = ["TagReference", "Tag"]
 
 class TagReference(Reference):
 
-    """Class representing a lightweight tag reference which either points to a commit 
-    ,a tag object or any other object. In the latter case additional information, 
+    """Class representing a lightweight tag reference which either points to a commit
+    ,a tag object or any other object. In the latter case additional information,
     like the signature or the tag-creator, is available.
 
     This tag object will always point to a commit object, but may carray additional
@@ -30,12 +30,12 @@ class TagReference(Reference):
             # it is a tag object which carries the commit as an object - we can point to anything
             return obj.object
         else:
-            raise ValueError("Tag %s points to a Blob or Tree - have never seen that before" % self)  
+            raise ValueError("Tag %s points to a Blob or Tree - have never seen that before" % self)
 
     @property
     def tag(self):
         """
-        :return: Tag object this tag ref points to or None in case 
+        :return: Tag object this tag ref points to or None in case
             we are a light weight tag"""
         obj = self.object
         if obj.type == "tag":
@@ -51,15 +51,15 @@ class TagReference(Reference):
         """Create a new tag reference.
 
         :param path:
-            The name of the tag, i.e. 1.0 or releases/1.0. 
+            The name of the tag, i.e. 1.0 or releases/1.0.
             The prefix refs/tags is implied
 
         :param ref:
-            A reference to the object you want to tag. It can be a commit, tree or 
+            A reference to the object you want to tag. It can be a commit, tree or
             blob.
 
         :param message:
-            If not None, the message will be used in your tag object. This will also 
+            If not None, the message will be used in your tag object. This will also
             create an additional tag object that allows to obtain that information, i.e.::
 
                 tagref.tag.message

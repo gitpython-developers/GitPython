@@ -91,7 +91,7 @@ class TestBase(TestCase):
                 self.failUnlessRaises(IOError, r_config.remove_option, section, option)
             # END for each option
             self.failUnlessRaises(IOError, r_config.remove_section, section)
-        # END for each section 
+        # END for each section
         assert num_sections and num_options
         assert r_config._is_initialized == True
 

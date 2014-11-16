@@ -53,14 +53,14 @@ class TestRepo(TestBase):
         for head in self.rorepo.heads:
             assert head.name
             assert isinstance(head.commit, Commit)
-        # END for each head 
+        # END for each head
 
         assert isinstance(self.rorepo.heads.master, Head)
         assert isinstance(self.rorepo.heads['master'], Head)
 
     def test_tree_from_revision(self):
         tree = self.rorepo.tree('0.1.6')
-        assert len(tree.hexsha) == 40 
+        assert len(tree.hexsha) == 40
         assert tree.type == "tree"
         assert self.rorepo.tree(tree) == tree
 
@@ -104,7 +104,7 @@ class TestRepo(TestBase):
         assert num_trees == mc
 
     def _assert_empty_repo(self, repo):
-        # test all kinds of things with an empty, freshly initialized repo. 
+        # test all kinds of things with an empty, freshly initialized repo.
         # It should throw good errors
 
         # entries should be empty
@@ -123,7 +123,7 @@ class TestRepo(TestBase):
         # is_dirty can handle all kwargs
         for args in ((1, 0, 0), (0, 1, 0), (0, 0, 1)):
             assert not repo.is_dirty(*args)
-        # END for each arg 
+        # END for each arg
 
         # we can add a file to the index ( if we are not bare )
         if not repo.bare:
@@ -216,7 +216,7 @@ class TestRepo(TestBase):
         orig_value = self.rorepo._bare
         self.rorepo._bare = True
         assert_false(self.rorepo.is_dirty())
-        self.rorepo._bare = orig_value 
+        self.rorepo._bare = orig_value
 
     def test_is_dirty(self):
         self.rorepo._bare = False
@@ -285,7 +285,7 @@ class TestRepo(TestBase):
 
     def test_untracked_files(self):
         base = self.rorepo.working_tree_dir
-        files = (join_path_native(base, "__test_myfile"), 
+        files = (join_path_native(base, "__test_myfile"),
                     join_path_native(base, "__test_other_file"))
         num_recently_untracked = 0
         try:
@@ -305,12 +305,12 @@ class TestRepo(TestBase):
             for fpath in files:
                 if os.path.isfile(fpath):
                     os.remove(fpath)
-        # END handle files 
+        # END handle files
 
         assert len(self.rorepo.untracked_files) == (num_recently_untracked - len(files))
 
     def test_config_reader(self):
-        reader = self.rorepo.config_reader()                # all config files 
+        reader = self.rorepo.config_reader()                # all config files
         assert reader.read_only
         reader = self.rorepo.config_reader("repository")    # single config file
         assert reader.read_only
@@ -321,13 +321,13 @@ class TestRepo(TestBase):
                 writer = self.rorepo.config_writer(config_level)
                 assert not writer.read_only
             except IOError:
-                # its okay not to get a writer for some configuration files if we 
+                # its okay not to get a writer for some configuration files if we
                 # have no permissions
-                pass 
-        # END for each config level 
+                pass
+        # END for each config level
 
     def test_creation_deletion(self):
-        # just a very quick test to assure it generally works. There are 
+        # just a very quick test to assure it generally works. There are
         # specialized cases in the test_refs module
         head = self.rorepo.create_head("new_head", "HEAD~1")
         self.rorepo.delete_head(head)
@@ -348,7 +348,7 @@ class TestRepo(TestBase):
         # last \n is the terminating newline that it expects
         l1 = "0123456789\n"
         l2 = "abcdefghijklmnopqrstxy\n"
-        l3 = "z\n" 
+        l3 = "z\n"
         d = "%s%s%s\n" % (l1, l2, l3)
 
         l1p = l1[:5]
@@ -441,7 +441,7 @@ class TestRepo(TestBase):
             obj = orig_obj.object
         else:
             obj = orig_obj
-        # END deref tags by default 
+        # END deref tags by default
 
         # try history
         rev = name + "~"
@@ -496,7 +496,7 @@ class TestRepo(TestBase):
         for ref in Reference.iter_items(self.rorepo):
             path_tokens = ref.path.split("/")
             for pt in range(len(path_tokens)):
-                path_section = '/'.join(path_tokens[-(pt + 1):]) 
+                path_section = '/'.join(path_tokens[-(pt + 1):])
                 try:
                     obj = self._assert_rev_parse(path_section)
                     assert obj.type == ref.object.type

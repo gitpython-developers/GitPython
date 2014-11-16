@@ -17,7 +17,7 @@ import re
 
 
 def assert_commit_serialization(rwrepo, commit_id, print_performance_info=False):
-    """traverse all commits in the history of commit identified by commit_id and check 
+    """traverse all commits in the history of commit identified by commit_id and check
     if the serialization works.
     :param print_performance_info: if True, we will show how fast we are"""
     ns = 0      # num serializations
@@ -27,7 +27,7 @@ def assert_commit_serialization(rwrepo, commit_id, print_performance_info=False)
     for cm in rwrepo.commit(commit_id).traverse():
         nds += 1
 
-        # assert that we deserialize commits correctly, hence we get the same 
+        # assert that we deserialize commits correctly, hence we get the same
         # sha on serialization
         stream = StringIO()
         cm._serialize(stream)
@@ -39,8 +39,8 @@ def assert_commit_serialization(rwrepo, commit_id, print_performance_info=False)
         assert istream.hexsha == cm.hexsha
 
         nc = Commit(rwrepo, Commit.NULL_BIN_SHA, cm.tree,
-                        cm.author, cm.authored_date, cm.author_tz_offset, 
-                        cm.committer, cm.committed_date, cm.committer_tz_offset, 
+                        cm.author, cm.authored_date, cm.author_tz_offset,
+                        cm.committer, cm.committed_date, cm.committer_tz_offset,
                         cm.message, cm.parents, cm.encoding)
 
         assert nc.parents == cm.parents
@@ -90,11 +90,11 @@ class TestCommit(TestBase):
             assert isinstance(d, dict)
             for key in ("insertions", "deletions", "lines"):
                 assert key in d
-        # END assertion helper 
-        assert stats.files 
+        # END assertion helper
+        assert stats.files
         assert stats.total
 
-        check_entries(stats.total) 
+        check_entries(stats.total)
         assert "files" in stats.total
 
         for filepath, d in stats.files.items():
@@ -147,7 +147,7 @@ class TestCommit(TestBase):
         # ignore self
         assert start.traverse(ignore_self=False).next() == start
 
-        # depth 
+        # depth
         assert len(list(start.traverse(ignore_self=False, depth=0))) == 1
 
         # prune
@@ -159,7 +159,7 @@ class TestCommit(TestBase):
         # traversal should stop when the beginning is reached
         self.failUnlessRaises(StopIteration, first.traverse().next)
 
-        # parents of the first commit should be empty ( as the only parent has a null 
+        # parents of the first commit should be empty ( as the only parent has a null
         # sha )
         assert len(first.parents) == 0
 
@@ -233,7 +233,7 @@ class TestCommit(TestBase):
             first_parent = piter.next()
             assert first_parent != c
             assert first_parent == c.parents[0]
-        # END for each 
+        # END for each
 
     def test_base(self):
         name_rev = self.rorepo.head.commit.name_rev

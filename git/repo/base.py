@@ -21,7 +21,7 @@ from git.remote import (
                     )
 
 from git.db import (
-                GitCmdObjectDB, 
+                GitCmdObjectDB,
                 GitDB
                 )
 
@@ -53,13 +53,13 @@ __all__ = ('Repo', )
 
 class Repo(object):
 
-    """Represents a git repository and allows you to query references, 
+    """Represents a git repository and allows you to query references,
     gather commit information, generate diffs, create and clone repositories query
     the log.
 
     The following attributes are worth using:
 
-    'working_dir' is the working directory of the git command, which is the working tree 
+    'working_dir' is the working directory of the git command, which is the working tree
     directory if available or the .git directory in case of bare repositories
 
     'working_tree_dir' is the working tree directory, but will raise AssertionError
@@ -90,7 +90,7 @@ class Repo(object):
             repo = Repo("~/Development/git-python.git")
             repo = Repo("$REPOSITORIES/Development/git-python.git")
 
-        :param odbt: Object DataBase type - a type which is constructed by providing 
+        :param odbt: Object DataBase type - a type which is constructed by providing
             the directory containing the database objects, i.e. .git/objects. It will
             be used to access all object data
         :raise InvalidGitRepositoryError:
@@ -127,12 +127,12 @@ class Repo(object):
 
         self._bare = False
         try:
-            self._bare = self.config_reader("repository").getboolean('core', 'bare') 
+            self._bare = self.config_reader("repository").getboolean('core', 'bare')
         except Exception:
             # lets not assume the option exists, although it should
             pass
 
-        # adjust the wd in case we are actually bare - we didn't know that 
+        # adjust the wd in case we are actually bare - we didn't know that
         # in the first place
         if self._bare:
             self._working_tree_dir = None
@@ -240,7 +240,7 @@ class Repo(object):
         return Submodule.list_items(self)
 
     def submodule(self, name):
-        """ :return: Submodule with the given name 
+        """ :return: Submodule with the given name
         :raise ValueError: If no such submodule exists"""
         try:
             return self.submodules[name]
@@ -251,7 +251,7 @@ class Repo(object):
     def create_submodule(self, *args, **kwargs):
         """Create a new submodule
 
-        :note: See the documentation of Submodule.add for a description of the 
+        :note: See the documentation of Submodule.add for a description of the
             applicable parameters
         :return: created submodules"""
         return Submodule.add(self, *args, **kwargs)
@@ -263,7 +263,7 @@ class Repo(object):
         return RootModule(self).traverse(*args, **kwargs)
 
     def submodule_update(self, *args, **kwargs):
-        """Update the submodules, keeping the repository consistent as it will 
+        """Update the submodules, keeping the repository consistent as it will
         take the previous state into consideration. For more information, please
         see the documentation of RootModule.update"""
         return RootModule(self).update(*args, **kwargs)
@@ -282,7 +282,7 @@ class Repo(object):
         return TagReference(self, path)
 
     def create_head(self, path, commit='HEAD', force=False, logmsg=None):
-        """Create a new head within the repository. 
+        """Create a new head within the repository.
         For more documentation, please see the Head.create method.
 
         :return: newly created Head Reference"""
@@ -308,8 +308,8 @@ class Repo(object):
     def create_remote(self, name, url, **kwargs):
         """Create a new remote.
 
-        For more information, please see the documentation of the Remote.create 
-        methods 
+        For more information, please see the documentation of the Remote.create
+        methods
 
         :return: Remote reference"""
         return Remote.create(self, name, url, **kwargs)
@@ -319,7 +319,7 @@ class Repo(object):
         return Remote.remove(self, remote)
 
     def _get_config_path(self, config_level):
-        # we do not support an absolute path of the gitconfig on windows , 
+        # we do not support an absolute path of the gitconfig on windows ,
         # use the global config instead
         if sys.platform == "win32" and config_level == "system":
             config_level = "global"
@@ -338,15 +338,15 @@ class Repo(object):
         :return:
             GitConfigParser allowing to read the full git configuration, but not to write it
 
-            The configuration will include values from the system, user and repository 
+            The configuration will include values from the system, user and repository
             configuration files.
 
         :param config_level:
             For possible values, see config_writer method
-            If None, all applicable levels will be used. Specify a level in case 
-            you know which exact file you whish to read to prevent reading multiple files for 
+            If None, all applicable levels will be used. Specify a level in case
+            you know which exact file you whish to read to prevent reading multiple files for
             instance
-        :note: On windows, system configuration cannot currently be read as the path is 
+        :note: On windows, system configuration cannot currently be read as the path is
             unknown, instead the global path will be used."""
         files = None
         if config_level is None:
@@ -359,7 +359,7 @@ class Repo(object):
         """
         :return:
             GitConfigParser allowing to write values of the specified configuration file level.
-            Config writers should be retrieved, used to change the configuration ,and written 
+            Config writers should be retrieved, used to change the configuration ,and written
             right away as they will lock the configuration file in question and prevent other's
             to write it.
 
@@ -395,7 +395,7 @@ class Repo(object):
 
         :note:
             If you need a non-root level tree, find it by iterating the root tree. Otherwise
-            it cannot know about its path relative to the repository root and subsequent 
+            it cannot know about its path relative to the repository root and subsequent
             operations might have unexpected results."""
         if rev is None:
             return self.head.commit.tree
@@ -414,10 +414,10 @@ class Repo(object):
             Commits that do not contain that path or the paths will not be returned.
 
         :parm kwargs:
-            Arguments to be passed to git-rev-list - common ones are 
+            Arguments to be passed to git-rev-list - common ones are
             max_count and skip
 
-        :note: to receive only commits between two named revisions, use the 
+        :note: to receive only commits between two named revisions, use the
             "revA..revB" revision specifier
 
         :return ``git.Commit[]``"""
@@ -463,14 +463,14 @@ class Repo(object):
         """Sets the alternates
 
         :parm alts:
-            is the array of string paths representing the alternates at which 
+            is the array of string paths representing the alternates at which
             git should look for objects, i.e. /home/user/repo/.git/objects
 
         :raise NoSuchPathError:
         :note:
             The method does not check for the existance of the paths in alts
             as the caller is responsible."""
-        alternates_path = join(self.git_dir, 'objects', 'info', 'alternates') 
+        alternates_path = join(self.git_dir, 'objects', 'info', 'alternates')
         if not alts:
             if isfile(alternates_path):
                 os.remove(alternates_path)
@@ -480,7 +480,7 @@ class Repo(object):
                 f.write("\n".join(alts))
             finally:
                 f.close()
-            # END file handling 
+            # END file handling
         # END alts handling
 
     alternates = property(_get_alternates, _set_alternates, doc="Retrieve a list of alternates paths or set a list paths to be used as alternates")
@@ -489,7 +489,7 @@ class Repo(object):
         """
         :return:
             ``True``, the repository is considered dirty. By default it will react
-            like a git-status without untracked files, hence it is dirty if the 
+            like a git-status without untracked files, hence it is dirty if the
             index or the working copy have changes."""
         if self._bare:
             # Bare repositories with no associated working directory are
@@ -498,7 +498,7 @@ class Repo(object):
 
         # start from the one which is fastest to evaluate
         default_args = ('--abbrev=40', '--full-index', '--raw')
-        if index: 
+        if index:
             # diff index against HEAD
             if isfile(self.index.path) and \
                 len(self.git.diff('--cached', *default_args)):
@@ -557,7 +557,7 @@ class Repo(object):
         :parm rev: revision specifier, see git-rev-parse for viable options.
         :return:
             list: [git.Commit, list: [<line>]]
-            A list of tuples associating a Commit object with a list of lines that 
+            A list of tuples associating a Commit object with a list of lines that
             changed within the given commit. The Commit objects will be given in order
             of appearance."""
         data = self.git.blame(rev, '--', file, p=True)
@@ -569,7 +569,7 @@ class Repo(object):
             parts = self.re_whitespace.split(line, 1)
             firstpart = parts[0]
             if self.re_hexsha_only.search(firstpart):
-                # handles 
+                # handles
                 # 634396b2f541a9f2d58b00be1a07f0c358b999b3 1 1 7        - indicates blame-data start
                 # 634396b2f541a9f2d58b00be1a07f0c358b999b3 2 2          - indicates another line of blame with the same data
                 digits = parts[-1].split(" ")
@@ -583,7 +583,7 @@ class Repo(object):
             else:
                 m = self.re_author_committer_start.search(firstpart)
                 if m:
-                    # handles: 
+                    # handles:
                     # author Tom Preston-Werner
                     # author-mail <tom@mojombo.com>
                     # author-time 1192271832
@@ -639,12 +639,12 @@ class Repo(object):
 
         :param path:
             is the full path to the repo (traditionally ends with /<name>.git)
-            or None in which case the repository will be created in the current 
+            or None in which case the repository will be created in the current
             working directory
 
         :parm mkdir:
             if specified will create the repository directory if it doesn't
-            already exists. Creates the directory with a mode=0755. 
+            already exists. Creates the directory with a mode=0755.
             Only effective if a path is explicitly given
 
         :parm kwargs:
@@ -662,7 +662,7 @@ class Repo(object):
 
     @classmethod
     def _clone(cls, git, url, path, odb_default_type, progress, **kwargs):
-        # special handling for windows for path at which the clone should be 
+        # special handling for windows for path at which the clone should be
         # created.
         # tilde '~' will be expanded to the HOME no matter where the ~ occours. Hence
         # we at least give a proper error instead of letting git fail
@@ -673,8 +673,8 @@ class Repo(object):
             if '~' in path:
                 raise OSError("Git cannot handle the ~ character in path %r correctly" % path)
 
-            # on windows, git will think paths like c: are relative and prepend the 
-            # current working dir ( before it fails ). We temporarily adjust the working 
+            # on windows, git will think paths like c: are relative and prepend the
+            # current working dir ( before it fails ). We temporarily adjust the working
             # dir to make this actually work
             match = re.match("(\w:[/\\\])(.*)", path)
             if match:
@@ -684,8 +684,8 @@ class Repo(object):
                 os.chdir(drive)
                 path = rest_of_path
                 kwargs['with_keep_cwd'] = True
-            # END cwd preparation 
-        # END windows handling 
+            # END cwd preparation
+        # END windows handling
 
         try:
             proc = git.clone(url, path, with_extended_output=True, as_process=True, v=True, **add_progress(kwargs, git, progress))
@@ -700,15 +700,15 @@ class Repo(object):
             # END reset previous working dir
         # END bad windows handling
 
-        # our git command could have a different working dir than our actual 
+        # our git command could have a different working dir than our actual
         # environment, hence we prepend its working dir if required
         if not os.path.isabs(path) and git.working_dir:
             path = join(git._working_dir, path)
 
-        # adjust remotes - there may be operating systems which use backslashes, 
+        # adjust remotes - there may be operating systems which use backslashes,
         # These might be given as initial paths, but when handling the config file
         # that contains the remote from which we were clones, git stops liking it
-        # as it will escape the backslashes. Hence we undo the escaping just to be 
+        # as it will escape the backslashes. Hence we undo the escaping just to be
         # sure
         repo = cls(os.path.abspath(path), odbt=odbt)
         if repo.remotes:
@@ -749,7 +749,7 @@ class Repo(object):
         :parm prefix: is the optional prefix to prepend to each filename in the archive
         :parm kwargs:
             Additional arguments passed to git-archive
-            NOTE: Use the 'format' argument to define the kind of format. Use 
+            NOTE: Use the 'format' argument to define the kind of format. Use
             specialized ostreams to write any format supported by python
 
         :raise GitCommandError: in case something went wrong
@@ -757,7 +757,7 @@ class Repo(object):
         if treeish is None:
             treeish = self.head.commit
         if prefix and 'prefix' not in kwargs:
-            kwargs['prefix'] = prefix 
+            kwargs['prefix'] = prefix
         kwargs['output_stream'] = ostream
 
         self.git.archive(treeish, **kwargs)

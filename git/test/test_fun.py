@@ -1,7 +1,7 @@
 from git.test.lib import *
 from git.objects.fun import (
                                 traverse_tree_recursive,
-                                traverse_trees_recursive, 
+                                traverse_trees_recursive,
                                 tree_to_stream,
                                 tree_entries_from_data
                             )
@@ -15,7 +15,7 @@ from gitdb.base import IStream
 from gitdb.typ import str_tree_type
 
 from stat import (
-                    S_IFDIR, 
+                    S_IFDIR,
                     S_IFREG,
                     S_IFLNK
                 )
@@ -37,7 +37,7 @@ class TestFun(TestBase):
     def test_aggressive_tree_merge(self):
         # head tree with additions, removals and modification compared to its predecessor
         odb = self.rorepo.odb
-        HC = self.rorepo.commit("6c1faef799095f3990e9970bc2cb10aa0221cf9c") 
+        HC = self.rorepo.commit("6c1faef799095f3990e9970bc2cb10aa0221cf9c")
         H = HC.tree
         B = HC.parents[0].tree
 

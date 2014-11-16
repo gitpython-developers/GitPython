@@ -4,7 +4,7 @@ from git.config import GitConfigParser
 from StringIO import StringIO
 import weakref
 
-__all__ = ('sm_section', 'sm_name', 'mkhead', 'unbare_repo', 'find_first_remote_branch', 
+__all__ = ('sm_section', 'sm_name', 'mkhead', 'unbare_repo', 'find_first_remote_branch',
             'SubmoduleConfigParser')
 
 #{ Utilities
@@ -27,7 +27,7 @@ def mkhead(repo, path):
 
 
 def unbare_repo(func):
-    """Methods with this decorator raise InvalidGitRepositoryError if they 
+    """Methods with this decorator raise InvalidGitRepositoryError if they
     encounter a bare repository"""
 
     def wrapper(self, *args, **kwargs):
@@ -60,7 +60,7 @@ class SubmoduleConfigParser(GitConfigParser):
 
     """
     Catches calls to _write, and updates the .gitmodules blob in the index
-    with the new data, if we have written into a stream. Otherwise it will 
+    with the new data, if we have written into a stream. Otherwise it will
     add the local file to the index to make it correspond with the working tree.
     Additionally, the cache must be cleared
 
@@ -75,7 +75,7 @@ class SubmoduleConfigParser(GitConfigParser):
 
     #{ Interface
     def set_submodule(self, submodule):
-        """Set this instance's submodule. It must be called before 
+        """Set this instance's submodule. It must be called before
         the first write operation begins"""
         self._smref = weakref.ref(submodule)
 

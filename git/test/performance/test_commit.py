@@ -32,8 +32,8 @@ class TestPerformance(TestBigRepoRW):
         no = 0
         nc = 0
 
-        # find the first commit containing the given path - always do a full 
-        # iteration ( restricted to the path in question ), but in fact it should 
+        # find the first commit containing the given path - always do a full
+        # iteration ( restricted to the path in question ), but in fact it should
         # return quite a lot of commits, we just take one and hence abort the operation
 
         st = time()
@@ -46,7 +46,7 @@ class TestPerformance(TestBigRepoRW):
             # END for each object
         # END for each commit
         elapsed_time = time() - st
-        print >> sys.stderr, "Traversed %i Trees and a total of %i unchached objects in %s [s] ( %f objs/s )" % (nc, no, elapsed_time, no / elapsed_time) 
+        print >> sys.stderr, "Traversed %i Trees and a total of %i unchached objects in %s [s] ( %f objs/s )" % (nc, no, elapsed_time, no / elapsed_time)
 
     def test_commit_traversal(self):
         # bound to cat-file parsing performance
@@ -83,9 +83,9 @@ class TestPerformance(TestBigRepoRW):
         nc = 5000
         st = time()
         for i in xrange(nc):
-            cm = Commit(rwrepo, Commit.NULL_BIN_SHA, hc.tree, 
-                            hc.author, hc.authored_date, hc.author_tz_offset, 
-                            hc.committer, hc.committed_date, hc.committer_tz_offset, 
+            cm = Commit(rwrepo, Commit.NULL_BIN_SHA, hc.tree,
+                            hc.author, hc.authored_date, hc.author_tz_offset,
+                            hc.committer, hc.committed_date, hc.committer_tz_offset,
                             str(i), parents=hc.parents, encoding=hc.encoding)
 
             stream = StringIO()

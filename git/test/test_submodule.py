@@ -45,7 +45,7 @@ class TestSubmodule(TestBase):
         # manual instantiation
         smm = Submodule(rwrepo, "\0" * 20)
         # name needs to be set in advance
-        self.failUnlessRaises(AttributeError, getattr, smm, 'name') 
+        self.failUnlessRaises(AttributeError, getattr, smm, 'name')
 
         # iterate - 1 submodule
         sms = Submodule.list_items(rwrepo, self.k_subm_current)
@@ -83,8 +83,8 @@ class TestSubmodule(TestBase):
 
         # test config_reader/writer methods
         sm.config_reader()
-        new_smclone_path = None             # keep custom paths for later 
-        new_csmclone_path = None                # 
+        new_smclone_path = None             # keep custom paths for later
+        new_csmclone_path = None                #
         if rwrepo.bare:
             self.failUnlessRaises(InvalidGitRepositoryError, sm.config_writer)
         else:
@@ -110,7 +110,7 @@ class TestSubmodule(TestBase):
         smold.set_parent_commit(self.k_subm_changed + "~1")
         assert smold.binsha != sm.binsha
 
-        # raises if the sm didn't exist in new parent - it keeps its 
+        # raises if the sm didn't exist in new parent - it keeps its
         # parent_commit unchanged
         self.failUnlessRaises(ValueError, smold.set_parent_commit, self.k_no_subm_tag)
 
@@ -214,7 +214,7 @@ class TestSubmodule(TestBase):
                 repo.head.reset('HEAD~2', working_tree=1)
             # END for each repo to reset
 
-            # dry run does nothing 
+            # dry run does nothing
             sm.update(recursive=True, dry_run=True, progress=prog)
             for repo in smods:
                 assert repo.head.commit != repo.head.ref.tracking_branch().commit
@@ -324,7 +324,7 @@ class TestSubmodule(TestBase):
             rwrepo.index.commit("my submod commit")
             assert len(rwrepo.submodules) == 2
 
-            # needs update as the head changed, it thinks its in the history 
+            # needs update as the head changed, it thinks its in the history
             # of the repo otherwise
             nsm.set_parent_commit(rwrepo.head.commit)
             osm.set_parent_commit(rwrepo.head.commit)
@@ -369,7 +369,7 @@ class TestSubmodule(TestBase):
             for remote in osmod.remotes:
                 remote.remove(osmod, remote.name)
             assert not osm.exists()
-            self.failUnlessRaises(ValueError, Submodule.add, rwrepo, osmid, csm_repopath, url=None)   
+            self.failUnlessRaises(ValueError, Submodule.add, rwrepo, osmid, csm_repopath, url=None)
         # END handle bare mode
 
         # Error if there is no submodule file here
@@ -424,7 +424,7 @@ class TestSubmodule(TestBase):
         prep = sm.path
         assert not sm.module_exists()               # was never updated after rwrepo's clone
 
-        # assure we clone from a local source 
+        # assure we clone from a local source
         sm.config_writer().set_value('url', to_native_path_linux(join_path_native(self.rorepo.working_tree_dir, sm.path)))
 
         # dry-run does nothing
@@ -491,9 +491,9 @@ class TestSubmodule(TestBase):
         rm.update(recursive=False)
         assert not os.path.isdir(smp)
 
-        # change url 
+        # change url
         #=============
-        # to the first repository, this way we have a fast checkout, and a completely different 
+        # to the first repository, this way we have a fast checkout, and a completely different
         # repository at the different url
         nsm.set_parent_commit(csmremoved)
         nsmurl = to_native_path_linux(join_path_native(self.rorepo.working_tree_dir, rsmsp[0]))
@@ -519,7 +519,7 @@ class TestSubmodule(TestBase):
 
         # change branch
         #=================
-        # we only have one branch, so we switch to a virtual one, and back 
+        # we only have one branch, so we switch to a virtual one, and back
         # to the current one to trigger the difference
         cur_branch = nsm.branch
         nsmm = nsm.module()
@@ -552,7 +552,7 @@ class TestSubmodule(TestBase):
         assert len(nsm.children()) >= 1  # could include smmap
         assert nsm.exists() and nsm.module_exists() and len(nsm.children()) >= 1
         # assure we pull locally only
-        nsmc = nsm.children()[0] 
+        nsmc = nsm.children()[0]
         nsmc.config_writer().set_value('url', async_url)
         rm.update(recursive=True, progress=prog, dry_run=True)      # just to run the code
         rm.update(recursive=True, progress=prog)

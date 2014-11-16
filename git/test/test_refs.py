@@ -23,7 +23,7 @@ class TestRefs(TestBase):
                 full_path = ref_type.to_full_path(name)
                 instance = ref_type.from_path(self.rorepo, full_path)
                 assert isinstance(instance, ref_type)
-            # END for each name 
+            # END for each name
         # END for each type
 
         # invalid path
@@ -42,7 +42,7 @@ class TestRefs(TestBase):
                 tagobj = tag.tag
                 # have no dict
                 self.failUnlessRaises(AttributeError, setattr, tagobj, 'someattr', 1)
-                assert isinstance(tagobj, TagObject) 
+                assert isinstance(tagobj, TagObject)
                 assert tagobj.tag == tag.name
                 assert isinstance(tagobj.tagger, Actor)
                 assert isinstance(tagobj.tagged_date, int)
@@ -152,7 +152,7 @@ class TestRefs(TestBase):
         types_found = set()
         for ref in self.rorepo.refs:
             types_found.add(type(ref))
-        assert len(types_found) >= 3 
+        assert len(types_found) >= 3
 
     def test_is_valid(self):
         assert Reference(self.rorepo, 'refs/doesnt/exist').is_valid() == False
@@ -187,7 +187,7 @@ class TestRefs(TestBase):
         cur_head.reset(new_head_commit)
         rw_repo.index.checkout(["lib"], force=True)
 
-        # now that we have a write write repo, change the HEAD reference - its 
+        # now that we have a write write repo, change the HEAD reference - its
         # like git-reset --soft
         heads = rw_repo.heads
         assert heads
@@ -212,7 +212,7 @@ class TestRefs(TestBase):
         cur_head.reference = some_tag
         assert not cur_head.is_detached
         assert cur_head.commit == some_tag.commit
-        assert isinstance(cur_head.reference, TagReference) 
+        assert isinstance(cur_head.reference, TagReference)
 
         # put HEAD back to a real head, otherwise everything else fails
         cur_head.reference = active_head
@@ -220,7 +220,7 @@ class TestRefs(TestBase):
         # type check
         self.failUnlessRaises(ValueError, setattr, cur_head, "reference", "that")
 
-        # head handling 
+        # head handling
         commit = 'HEAD'
         prev_head_commit = cur_head.commit
         for count, new_name in enumerate(("my_new_head", "feature/feature1")):
@@ -286,7 +286,7 @@ class TestRefs(TestBase):
 
         # remote deletion
         remote_refs_so_far = 0
-        remotes = rw_repo.remotes 
+        remotes = rw_repo.remotes
         assert remotes
         for remote in remotes:
             refs = remote.refs
@@ -330,7 +330,7 @@ class TestRefs(TestBase):
         head.object = head_tree
         assert head.object == head_tree
         # cannot query tree as commit
-        self.failUnlessRaises(TypeError, getattr, head, 'commit') 
+        self.failUnlessRaises(TypeError, getattr, head, 'commit')
 
         # set the commit directly using the head. This would never detach the head
         assert not cur_head.is_detached
@@ -422,7 +422,7 @@ class TestRefs(TestBase):
         assert symref.reference == cur_head.reference
 
         self.failUnlessRaises(OSError, SymbolicReference.create, rw_repo, symref_path, cur_head.reference.commit)
-        # it works if the new ref points to the same reference 
+        # it works if the new ref points to the same reference
         SymbolicReference.create(rw_repo, symref.path, symref.reference).path == symref.path
         SymbolicReference.delete(rw_repo, symref)
         # would raise if the symref wouldn't have been deletedpbl
@@ -467,7 +467,7 @@ class TestRefs(TestBase):
             assert not symref.is_detached
 
         # when iterating references, we can get references and symrefs
-        # when deleting all refs, I'd expect them to be gone ! Even from 
+        # when deleting all refs, I'd expect them to be gone ! Even from
         # the packed ones
         # For this to work, we must not be on any branch
         rw_repo.head.reference = rw_repo.head.commit
@@ -485,7 +485,7 @@ class TestRefs(TestBase):
                 assert ref not in deleted_refs
         # END for each ref
 
-        # reattach head - head will not be returned if it is not a symbolic 
+        # reattach head - head will not be returned if it is not a symbolic
         # ref
         rw_repo.head.reference = Head.create(rw_repo, "master")
 
@@ -496,7 +496,7 @@ class TestRefs(TestBase):
 
         # test creation of new refs from scratch
         for path in ("basename", "dir/somename", "dir2/subdir/basename"):
-            # REFERENCES 
+            # REFERENCES
             ############
             fpath = Reference.to_full_path(path)
             ref_fp = Reference.from_path(rw_repo, fpath)

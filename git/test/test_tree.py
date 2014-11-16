@@ -137,7 +137,7 @@ class TestTree(TestBase):
                 found_slash = True
             # END check for slash
 
-            # slashes in paths are supported as well 
+            # slashes in paths are supported as well
             assert root[item.path] == item == root / item.path
         # END for each item
         assert found_slash

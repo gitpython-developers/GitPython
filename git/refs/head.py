@@ -12,7 +12,7 @@ __all__ = ["HEAD", "Head"]
 
 class HEAD(SymbolicReference):
 
-    """Special case of a Symbolic Reference as it represents the repository's 
+    """Special case of a Symbolic Reference as it represents the repository's
     HEAD reference."""
     _HEAD_NAME = 'HEAD'
     _ORIG_HEAD_NAME = 'ORIG_HEAD'
@@ -25,18 +25,18 @@ class HEAD(SymbolicReference):
 
     def orig_head(self):
         """
-        :return: SymbolicReference pointing at the ORIG_HEAD, which is maintained 
+        :return: SymbolicReference pointing at the ORIG_HEAD, which is maintained
             to contain the previous value of HEAD"""
         return SymbolicReference(self.repo, self._ORIG_HEAD_NAME)
 
-    def reset(self, commit='HEAD', index=True, working_tree=False, 
+    def reset(self, commit='HEAD', index=True, working_tree=False,
                 paths=None, **kwargs):
-        """Reset our HEAD to the given commit optionally synchronizing 
-        the index and working tree. The reference we refer to will be set to 
+        """Reset our HEAD to the given commit optionally synchronizing
+        the index and working tree. The reference we refer to will be set to
         commit as well.
 
         :param commit:
-            Commit object, Reference Object or string identifying a revision we 
+            Commit object, Reference Object or string identifying a revision we
             should reset HEAD to.
 
         :param index:
@@ -53,7 +53,7 @@ class HEAD(SymbolicReference):
             that are to be reset. This allows to partially reset individual files.
 
         :param kwargs:
-            Additional arguments passed to git-reset. 
+            Additional arguments passed to git-reset.
 
         :return: self"""
         mode = "--soft"
@@ -131,7 +131,7 @@ class Head(Reference):
         Configure this branch to track the given remote reference. This will alter
             this branch's configuration accordingly.
 
-        :param remote_reference: The remote reference to track or None to untrack 
+        :param remote_reference: The remote reference to track or None to untrack
             any references
         :return: self"""
         if remote_reference is not None and not isinstance(remote_reference, RemoteReference):
@@ -154,7 +154,7 @@ class Head(Reference):
 
     def tracking_branch(self):
         """
-        :return: The remote_reference we are tracking, or None if we are 
+        :return: The remote_reference we are tracking, or None if we are
             not a tracking branch"""
         reader = self.config_reader()
         if reader.has_option(self.k_config_remote) and reader.has_option(self.k_config_remote_ref):
@@ -189,7 +189,7 @@ class Head(Reference):
 
     def checkout(self, force=False, **kwargs):
         """Checkout this head by setting the HEAD to this reference, by updating the index
-        to reflect the tree we point to and by updating the working tree to reflect 
+        to reflect the tree we point to and by updating the working tree to reflect
         the latest index.
 
         The command will fail if changed working tree files would be overwritten.
@@ -231,7 +231,7 @@ class Head(Reference):
 
     def config_reader(self):
         """
-        :return: A configuration parser instance constrained to only read 
+        :return: A configuration parser instance constrained to only read
             this instance's values"""
         return self._config_parser(read_only=True)
 

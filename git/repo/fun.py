@@ -5,10 +5,10 @@ from git.refs import SymbolicReference
 from git.objects import Object
 from gitdb.util import (
                             join,
-                            isdir, 
+                            isdir,
                             isfile,
                             dirname,
-                            hex_to_bin, 
+                            hex_to_bin,
                             bin_to_hex
                         )
 from string import digits
@@ -76,7 +76,7 @@ def name_to_object(repo, name, return_ref=False):
         # END handle short shas
     #END find sha if it matches
 
-    # if we couldn't find an object for what seemed to be a short hexsha 
+    # if we couldn't find an object for what seemed to be a short hexsha
     # try to find it as reference anyway, it could be named 'aaa' for instance
     if hexsha is None:
         for base in ('%s', 'refs/%s', 'refs/tags/%s', 'refs/heads/%s', 'refs/remotes/%s', 'refs/remotes/%s/HEAD'):
@@ -184,7 +184,7 @@ def rev_parse(repo, rev):
                 raise ValueError("Missing closing brace to define type in %s" % rev)
             output_type = rev[start + 1:end]  # exclude brace
 
-            # handle type 
+            # handle type
             if output_type == 'commit':
                 pass  # default
             elif output_type == 'tree':
@@ -252,7 +252,7 @@ def rev_parse(repo, rev):
             # END number parse loop
 
             # no explicit number given, 1 is the default
-            # It could be 0 though 
+            # It could be 0 though
             if not found_digit:
                 num = 1
             # END set default num

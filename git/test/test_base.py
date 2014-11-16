@@ -18,12 +18,12 @@ import tempfile
 
 class TestBase(TestBase):
 
-    type_tuples = (("blob", "8741fc1d09d61f02ffd8cded15ff603eff1ec070", "blob.py"), 
+    type_tuples = (("blob", "8741fc1d09d61f02ffd8cded15ff603eff1ec070", "blob.py"),
                      ("tree", "3a6a5e3eeed3723c09f1ef0399f81ed6b8d82e79", "directory"),
                      ("commit", "4251bd59fb8e11e40c40548cba38180a9536118c", None),
-                     ("tag", "e56a60e8e9cd333cfba0140a77cd12b0d9398f10", None)) 
+                     ("tag", "e56a60e8e9cd333cfba0140a77cd12b0d9398f10", None))
 
-    def test_base_object(self): 
+    def test_base_object(self):
         # test interface of base object classes
         types = (Blob, Tree, Commit, TagObject)
         assert len(types) == len(self.type_tuples)
@@ -76,7 +76,7 @@ class TestBase(TestBase):
     def test_get_object_type_by_name(self):
         for tname in base.Object.TYPES:
             assert base.Object in get_object_type_by_name(tname).mro()
-        # END for each known type 
+        # END for each known type
 
         assert_raises(ValueError, get_object_type_by_name, "doesntexist")
 

@@ -60,7 +60,7 @@ class TestUtilPerformance(TestBigRepoR):
             elapsed = time() - st
             na = ni * 3
             print >> sys.stderr, "Accessed %s[x] %i times in %s s ( %f acc / s)" % (cls.__name__, na, elapsed, na / elapsed)
-        # END for each sequence 
+        # END for each sequence
 
     def test_instantiation(self):
         ni = 100000
@@ -138,7 +138,7 @@ class TestUtilPerformance(TestBigRepoR):
                 yield i
         # END slow iter - be closer to the real world
 
-        # alloc doesn't play a role here it seems 
+        # alloc doesn't play a role here it seems
         for ni in (500, 1000, 10000, 20000, 40000):
             st = time()
             for i in list(xrange(ni)):

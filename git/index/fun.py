@@ -26,20 +26,20 @@ from git.objects.fun import (
 from typ import (
                     BaseIndexEntry,
                     IndexEntry,
-                    CE_NAMEMASK, 
+                    CE_NAMEMASK,
                     CE_STAGESHIFT
                 )
 CE_NAMEMASK_INV = ~CE_NAMEMASK
 
 from util import (
-                    pack, 
+                    pack,
                     unpack
                     )
 
 from gitdb.base import IStream
 from gitdb.typ import str_tree_type
 
-__all__ = ('write_cache', 'read_cache', 'write_tree_from_cache', 'entry_key', 
+__all__ = ('write_cache', 'read_cache', 'write_tree_from_cache', 'entry_key',
             'stat_mode_to_index_mode', 'S_IFGITLINK')
 
 
@@ -178,7 +178,7 @@ def write_tree_from_cache(entries, odb, sl, si=0):
     :param odb: object database to store the trees in
     :param si: start index at which we should start creating subtrees
     :param sl: slice indicating the range we should process on the entries list
-    :return: tuple(binsha, list(tree_entry, ...)) a tuple of a sha and a list of 
+    :return: tuple(binsha, list(tree_entry, ...)) a tuple of a sha and a list of
         tree entries being a tuple of hexsha, mode, name"""
     tree_items = list()
     tree_items_append = tree_items.append
@@ -214,7 +214,7 @@ def write_tree_from_cache(entries, odb, sl, si=0):
 
             # skip ahead
             ci = xi
-        # END handle bounds 
+        # END handle bounds
     # END for each entry
 
     # finally create the tree
@@ -233,8 +233,8 @@ def _tree_entry_to_baseindexentry(tree_entry, stage):
 def aggressive_tree_merge(odb, tree_shas):
     """
     :return: list of BaseIndexEntries representing the aggressive merge of the given
-        trees. All valid entries are on stage 0, whereas the conflicting ones are left 
-        on stage 1, 2 or 3, whereas stage 1 corresponds to the common ancestor tree, 
+        trees. All valid entries are on stage 0, whereas the conflicting ones are left
+        on stage 1, 2 or 3, whereas stage 1 corresponds to the common ancestor tree,
         2 to our tree and 3 to 'their' tree.
     :param tree_shas: 1, 2 or 3 trees as identified by their binary 20 byte shas
         If 1 or two, the entries will effectively correspond to the last given tree
@@ -249,7 +249,7 @@ def aggressive_tree_merge(odb, tree_shas):
             out_append(_tree_entry_to_baseindexentry(entry, 0))
         # END for each entry
         return out
-    # END handle single tree 
+    # END handle single tree
 
     if len(tree_shas) > 3:
         raise ValueError("Cannot handle %i trees at once" % len(tree_shas))
@@ -277,11 +277,11 @@ def aggressive_tree_merge(odb, tree_shas):
                         # either nobody changed it, or they did. In either
                         # case, use theirs
                         out_append(_tree_entry_to_baseindexentry(theirs, 0))
-                    # END handle modification 
+                    # END handle modification
                 else:
 
                     if ours[0] != base[0] or ours[1] != base[1]:
-                        # they deleted it, we changed it, conflict 
+                        # they deleted it, we changed it, conflict
                         out_append(_tree_entry_to_baseindexentry(base, 1))
                         out_append(_tree_entry_to_baseindexentry(ours, 2))
                     # else:

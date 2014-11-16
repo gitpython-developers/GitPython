@@ -20,7 +20,7 @@ class TagObject(base.Object):
     type = "tag"
     __slots__ = ("object", "tag", "tagger", "tagged_date", "tagger_tz_offset", "message")
 
-    def __init__(self, repo, binsha, object=None, tag=None, 
+    def __init__(self, repo, binsha, object=None, tag=None,
                 tagger=None, tagged_date=None, tagger_tz_offset=None, message=None):
         """Initialize a tag object with additional data
 
@@ -30,9 +30,9 @@ class TagObject(base.Object):
         :param tag: name of this tag
         :param tagger: Actor identifying the tagger
         :param tagged_date: int_seconds_since_epoch
-            is the DateTime of the tag creation - use time.gmtime to convert 
+            is the DateTime of the tag creation - use time.gmtime to convert
             it into a different format
-        :param tagged_tz_offset: int_seconds_west_of_utc is the timezone that the 
+        :param tagged_tz_offset: int_seconds_west_of_utc is the timezone that the
             authored_date is in, in a format similar to time.altzone"""
         super(TagObject, self).__init__(repo, binsha)
         if object is not None:
@@ -64,7 +64,7 @@ class TagObject(base.Object):
             self.tagger, self.tagged_date, self.tagger_tz_offset = parse_actor_and_date(tagger_info)
 
             # line 4 empty - it could mark the beginning of the next header
-            # in case there really is no message, it would not exist. Otherwise 
+            # in case there really is no message, it would not exist. Otherwise
             # a newline separates header from message
             if len(lines) > 5:
                 self.message = "\n".join(lines[5:])

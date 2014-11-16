@@ -6,19 +6,19 @@
 
 import os, sys
 from util import (
-                    LazyMixin, 
+                    LazyMixin,
                     stream_copy
                 )
 from exc import GitCommandError
 
 from subprocess import (
-                            call, 
+                            call,
                             Popen,
                             PIPE
                         )
 
 execute_kwargs = ('istream', 'with_keep_cwd', 'with_extended_output',
-                  'with_exceptions', 'as_process', 
+                  'with_exceptions', 'as_process',
                   'output_stream')
 
 __all__ = ('Git', )
@@ -40,7 +40,7 @@ class Git(LazyMixin):
      rval = g.ls_files()        # calls 'git ls-files' program
 
     ``Debugging``
-        Set the GIT_PYTHON_TRACE environment variable print each invocation 
+        Set the GIT_PYTHON_TRACE environment variable print each invocation
         of the command to stdout.
         Set its value to 'full' to see details about the returned values.
     """
@@ -63,7 +63,7 @@ class Git(LazyMixin):
 
     class AutoInterrupt(object):
 
-        """Kill/Interrupt the stored process instance once this instance goes out of scope. It is 
+        """Kill/Interrupt the stored process instance once this instance goes out of scope. It is
         used to prevent processes piling up in case iterators stop reading.
         Besides all attributes are wired through to the contained process object.
 
@@ -83,7 +83,7 @@ class Git(LazyMixin):
             if self.proc.poll() is not None:
                 return
 
-            # can be that nothing really exists anymore ... 
+            # can be that nothing really exists anymore ...
             if os is None:
                 return
 
@@ -94,34 +94,34 @@ class Git(LazyMixin):
             except OSError:
                 pass  # ignore error when process already died
             except AttributeError:
-                # try windows 
-                # for some reason, providing None for stdout/stderr still prints something. This is why 
-                # we simply use the shell and redirect to nul. Its slower than CreateProcess, question 
+                # try windows
+                # for some reason, providing None for stdout/stderr still prints something. This is why
+                # we simply use the shell and redirect to nul. Its slower than CreateProcess, question
                 # is whether we really want to see all these messages. Its annoying no matter what.
                 call(("TASKKILL /F /T /PID %s 2>nul 1>nul" % str(self.proc.pid)), shell=True)
-            # END exception handling 
+            # END exception handling
 
         def __getattr__(self, attr):
             return getattr(self.proc, attr)
 
         def wait(self):
-            """Wait for the process and return its status code. 
+            """Wait for the process and return its status code.
 
             :raise GitCommandError: if the return status is not 0"""
             status = self.proc.wait()
             if status != 0:
                 raise GitCommandError(self.args, status, self.proc.stderr.read())
-            # END status handling 
+            # END status handling
             return status
     # END auto interrupt
 
     class CatFileContentStream(object):
 
-        """Object representing a sized read-only stream returning the contents of 
+        """Object representing a sized read-only stream returning the contents of
         an object.
-        It behaves like a stream, but counts the data read and simulates an empty 
+        It behaves like a stream, but counts the data read and simulates an empty
         stream once our sized content region is empty.
-        If not all data is read to the end of the objects's lifetime, we read the 
+        If not all data is read to the end of the objects's lifetime, we read the
         rest to assure the underlying stream continues to work"""
 
         __slots__ = ('_stream', '_nbr', '_size')
@@ -131,7 +131,7 @@ class Git(LazyMixin):
             self._size = size
             self._nbr = 0           # num bytes read
 
-            # special case: if the object is empty, has null bytes, get the 
+            # special case: if the object is empty, has null bytes, get the
             # final newline right away.
             if size == 0:
                 stream.read(1)
@@ -220,9 +220,9 @@ class Git(LazyMixin):
         """Initialize this instance with:
 
         :param working_dir:
-           Git directory we should work in. If None, we always work in the current 
+           Git directory we should work in. If None, we always work in the current
            directory as returned by os.getcwd().
-           It is meant to be the working tree directory if available, or the 
+           It is meant to be the working tree directory if available, or the
            .git directory in case of bare repositories."""
         super(Git, self).__init__()
         self._working_dir = working_dir
@@ -233,7 +233,7 @@ class Git(LazyMixin):
         self.cat_file_all = None
 
     def __getattr__(self, name):
-        """A convenience method as it allows to call the command as if it was 
+        """A convenience method as it allows to call the command as if it was
         an object.
         :return: Callable object that will execute call _call_process with your arguments."""
         if name[0] == '_':
@@ -267,8 +267,8 @@ class Git(LazyMixin):
                 with_keep_cwd=False,
                 with_extended_output=False,
                 with_exceptions=True,
-                as_process=False, 
-                output_stream=None, 
+                as_process=False,
+                output_stream=None,
                 **subprocess_kwargs
                 ):
         """Handles executing the command on the shell and consumes and returns
@@ -294,26 +294,26 @@ class Git(LazyMixin):
             Whether to raise an exception when git returns a non-zero status.
 
         :param as_process:
-            Whether to return the created process instance directly from which 
-            streams can be read on demand. This will render with_extended_output and 
-            with_exceptions ineffective - the caller will have 
+            Whether to return the created process instance directly from which
+            streams can be read on demand. This will render with_extended_output and
+            with_exceptions ineffective - the caller will have
             to deal with the details himself.
             It is important to note that the process will be placed into an AutoInterrupt
-            wrapper that will interrupt the process once it goes out of scope. If you 
-            use the command in iterators, you should pass the whole process instance 
+            wrapper that will interrupt the process once it goes out of scope. If you
+            use the command in iterators, you should pass the whole process instance
             instead of a single stream.
 
         :param output_stream:
-            If set to a file-like object, data produced by the git command will be 
+            If set to a file-like object, data produced by the git command will be
             output to the given stream directly.
             This feature only has any effect if as_process is False. Processes will
             always be created with a pipe due to issues with subprocess.
-            This merely is a workaround as data will be copied from the 
+            This merely is a workaround as data will be copied from the
             output pipe to the given output stream directly.
 
         :param subprocess_kwargs:
-            Keyword arguments to be passed to subprocess.Popen. Please note that 
-            some of the valid kwargs are already set by this method, the ones you 
+            Keyword arguments to be passed to subprocess.Popen. Please note that
+            some of the valid kwargs are already set by this method, the ones you
             specify may not be the same ones.
 
         :return:
@@ -330,7 +330,7 @@ class Git(LazyMixin):
         :raise GitCommandError:
 
         :note:
-           If you add additional keyword arguments to the signature of this method, 
+           If you add additional keyword arguments to the signature of this method,
            you must update the execute_kwargs tuple housed in this module."""
         if self.GIT_PYTHON_TRACE and not self.GIT_PYTHON_TRACE == 'full':
             print ' '.join(command)
@@ -360,7 +360,7 @@ class Git(LazyMixin):
         stderr_value = ''
         try:
             if output_stream is None:
-                stdout_value, stderr_value = proc.communicate() 
+                stdout_value, stderr_value = proc.communicate()
                 # strip trailing "\n"
                 if stdout_value.endswith("\n"):
                     stdout_value = stdout_value[:-1]
@@ -434,7 +434,7 @@ class Git(LazyMixin):
                 outlist.extend(cls.__unpack_args(arg))
             elif isinstance(arg_list, unicode):
                 outlist.append(arg_list.encode('utf-8'))
-            # END recursion 
+            # END recursion
             else:
                 outlist.append(str(arg))
         # END for each arg
@@ -523,7 +523,7 @@ class Git(LazyMixin):
                     finally:
                         import warnings
                         msg = "WARNING: Automatically switched to use git.cmd as git executable, which reduces performance by ~70%."
-                        msg += "Its recommended to put git.exe into the PATH or to set the %s environment variable to the executable's location" % self._git_exec_env_var 
+                        msg += "Its recommended to put git.exe into the PATH or to set the %s environment variable to the executable's location" % self._git_exec_env_var
                         warnings.warn(msg)
                     #END print of warning
                 #END catch first failure
@@ -541,7 +541,7 @@ class Git(LazyMixin):
 
         :return: (hex_sha, type_string, size_as_int)
 
-        :raise ValueError: if the header contains indication for an error due to 
+        :raise ValueError: if the header contains indication for an error due to
             incorrect input sha"""
         tokens = header_line.split()
         if len(tokens) != 3:
@@ -553,7 +553,7 @@ class Git(LazyMixin):
         # END error handling
 
         if len(tokens[0]) != 40:
-            raise ValueError("Failed to parse header: %r" % header_line) 
+            raise ValueError("Failed to parse header: %r" % header_line)
         return (tokens[0], tokens[1], int(tokens[2]))
 
     def __prepare_ref(self, ref):
@@ -581,11 +581,11 @@ class Git(LazyMixin):
         return self._parse_object_header(cmd.stdout.readline())
 
     def get_object_header(self, ref):
-        """ Use this method to quickly examine the type and size of the object behind 
-        the given ref. 
+        """ Use this method to quickly examine the type and size of the object behind
+        the given ref.
 
-        :note: The method will only suffer from the costs of command invocation 
-            once and reuses the command in subsequent calls. 
+        :note: The method will only suffer from the costs of command invocation
+            once and reuses the command in subsequent calls.
 
         :return: (hexsha, type_string, size_as_int)"""
         cmd = self.__get_persistent_cmd("cat_file_header", "cat_file", batch_check=True)

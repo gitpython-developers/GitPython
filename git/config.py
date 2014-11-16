@@ -74,12 +74,12 @@ def set_dirty_and_flush_changes(non_const_func):
 
 class SectionConstraint(object):
 
-    """Constrains a ConfigParser to only option commands which are constrained to 
+    """Constrains a ConfigParser to only option commands which are constrained to
     always use the section we have been initialized with.
 
     It supports all ConfigParser methods that operate on an option"""
     __slots__ = ("_config", "_section_name")
-    _valid_attrs_ = ("get_value", "set_value", "get", "set", "getint", "getfloat", "getboolean", "has_option", 
+    _valid_attrs_ = ("get_value", "set_value", "get", "set", "getint", "getfloat", "getboolean", "has_option",
                     "remove_section", "remove_option", "options")
 
     def __init__(self, config, section):
@@ -92,7 +92,7 @@ class SectionConstraint(object):
         return super(SectionConstraint, self).__getattribute__(attr)
 
     def _call_config(self, method, *args, **kwargs):
-        """Call the configuration at the given method which must take a section name 
+        """Call the configuration at the given method which must take a section name
         as first argument"""
         return getattr(self._config, method)(self._section_name, *args, **kwargs)
 
@@ -109,10 +109,10 @@ class GitConfigParser(cp.RawConfigParser, object):
     This variation behaves much like the git.config command such that the configuration
     will be read on demand based on the filepath given during initialization.
 
-    The changes will automatically be written once the instance goes out of scope, but 
+    The changes will automatically be written once the instance goes out of scope, but
     can be triggered manually as well.
 
-    The configuration file will be locked if you intend to change values preventing other 
+    The configuration file will be locked if you intend to change values preventing other
     instances to write concurrently.
 
     :note:
@@ -127,7 +127,7 @@ class GitConfigParser(cp.RawConfigParser, object):
     t_lock = LockFile
     re_comment = re.compile('^\s*[#;]')
 
-    #} END configuration 
+    #} END configuration
 
     OPTCRE = re.compile(
         r'\s*(?P<option>[^:=\s][^:=]*)'       # very permissive, incuding leading whitespace
@@ -143,7 +143,7 @@ class GitConfigParser(cp.RawConfigParser, object):
     __slots__ = ("_sections", "_defaults", "_file_or_files", "_read_only", "_is_initialized", '_lock')
 
     def __init__(self, file_or_files, read_only=True):
-        """Initialize a configuration reader to read the given file_or_files and to 
+        """Initialize a configuration reader to read the given file_or_files and to
         possibly allow changes to it by setting read_only False
 
         :param file_or_files:
@@ -153,8 +153,8 @@ class GitConfigParser(cp.RawConfigParser, object):
             If True, the ConfigParser may only read the data , but not change it.
             If False, only a single file path or file object may be given."""
         super(GitConfigParser, self).__init__()
-        # initialize base with ordered dictionaries to be sure we write the same 
-        # file back 
+        # initialize base with ordered dictionaries to be sure we write the same
+        # file back
         self._sections = OrderedDict()
         self._defaults = OrderedDict()
 
@@ -200,7 +200,7 @@ class GitConfigParser(cp.RawConfigParser, object):
         """A direct copy of the py2.4 version of the super class's _read method
         to assure it uses ordered dicts. Had to change one line to make it work.
 
-        Future versions have this fixed, but in fact its quite embarassing for the 
+        Future versions have this fixed, but in fact its quite embarassing for the
         guys not to have done it right in the first place !
 
         Removed big comments to make it more compact.
@@ -257,16 +257,16 @@ class GitConfigParser(cp.RawConfigParser, object):
                         if not e:
                             e = cp.ParsingError(fpname)
                         e.append(lineno, repr(line))
-                    # END  
-                # END ? 
+                    # END
+                # END ?
             # END ?
-        # END while reading 
+        # END while reading
         # if any parsing errors occurred, raise an exception
         if e:
             raise e
 
     def read(self):
-        """Reads the data stored in the files we have been initialized with. It will 
+        """Reads the data stored in the files we have been initialized with. It will
         ignore files that cannot be read, possibly leaving an empty configuration
 
         :return: Nothing
@@ -300,7 +300,7 @@ class GitConfigParser(cp.RawConfigParser, object):
         self._is_initialized = True
 
     def _write(self, fp):
-        """Write an .ini-format representation of the configuration state in 
+        """Write an .ini-format representation of the configuration state in
         git compatible format"""
         def write_section(name, section_dict):
             fp.write("[%s]\n" % name)
@@ -308,7 +308,7 @@ class GitConfigParser(cp.RawConfigParser, object):
                 if key != "__name__":
                     fp.write("\t%s = %s\n" % (key, str(value).replace('\n', '\n\t')))
                 # END if key is not __name__
-        # END section writing 
+        # END section writing
 
         if self._defaults:
             write_section(cp.DEFAULTSECT, self._defaults)
@@ -318,7 +318,7 @@ class GitConfigParser(cp.RawConfigParser, object):
     def write(self):
         """Write changes to our file, if there are changes at all
 
-        :raise IOError: if this is a read-only writer instance or if we could not obtain 
+        :raise IOError: if this is a read-only writer instance or if we could not obtain
             a file lock"""
         self._assure_writable("write")
 
@@ -338,7 +338,7 @@ class GitConfigParser(cp.RawConfigParser, object):
             # make sure we do not overwrite into an existing file
             if hasattr(fp, 'truncate'):
                 fp.truncate()
-            #END 
+            #END
         # END handle stream or file
 
         # WRITE DATA
@@ -349,7 +349,7 @@ class GitConfigParser(cp.RawConfigParser, object):
                 fp.close()
         # END data writing
 
-        # we do not release the lock - it will be done automatically once the 
+        # we do not release the lock - it will be done automatically once the
         # instance vanishes
 
     def _assure_writable(self, method_name):
@@ -371,7 +371,7 @@ class GitConfigParser(cp.RawConfigParser, object):
     def get_value(self, section, option, default=None):
         """
         :param default:
-            If not None, the given default value will be returned in case 
+            If not None, the given default value will be returned in case
             the option did not exist
         :return: a properly typed value, either int, float or string
 
@@ -399,7 +399,7 @@ class GitConfigParser(cp.RawConfigParser, object):
         # END for each numeric type
 
         # try boolean values as git uses them
-        vl = valuestr.lower() 
+        vl = valuestr.lower()
         if vl == 'false':
             return False
         if vl == 'true':
@@ -414,13 +414,13 @@ class GitConfigParser(cp.RawConfigParser, object):
     @set_dirty_and_flush_changes
     def set_value(self, section, option, value):
         """Sets the given option in section to the given value.
-        It will create the section if required, and will not throw as opposed to the default 
+        It will create the section if required, and will not throw as opposed to the default
         ConfigParser 'set' method.
 
         :param section: Name of the section in which the option resides or should reside
         :param option: Name of the options whose value to set
 
-        :param value: Value to set the option to. It must be a string or convertible 
+        :param value: Value to set the option to. It must be a string or convertible
             to a string"""
         if not self.has_section(section):
             self.add_section(section)

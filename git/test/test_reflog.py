@@ -35,7 +35,7 @@ class TestRefLog(TestBase):
         tdir = tempfile.mktemp(suffix="test_reflogs")
         os.mkdir(tdir)
 
-        rlp_master_ro = RefLog.path(self.rorepo.head) 
+        rlp_master_ro = RefLog.path(self.rorepo.head)
         assert os.path.isfile(rlp_master_ro)
 
         # simple read
@@ -94,7 +94,7 @@ class TestRefLog(TestBase):
             for idx in (-1, -24):
                 RefLog.entry_at(rlp, idx)
             #END for each index to read
-        # END for each reflog 
+        # END for each reflog
 
         # finally remove our temporary data
         shutil.rmtree(tdir)

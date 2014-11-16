@@ -3,7 +3,7 @@ Import all submodules main classes into the package space
 """
 import inspect
 from base import *
-# Fix import dependency - add IndexObject to the util module, so that it can be 
+# Fix import dependency - add IndexObject to the util module, so that it can be
 # imported by the submodule.base
 import submodule.util
 submodule.util.IndexObject = IndexObject

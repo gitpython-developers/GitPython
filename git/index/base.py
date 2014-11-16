@@ -13,13 +13,13 @@ from cStringIO import StringIO
 from stat import S_ISLNK
 
 from typ import (
-                    BaseIndexEntry, 
-                    IndexEntry, 
+                    BaseIndexEntry,
+                    IndexEntry,
                 )
 
 from util import (
                     TemporaryFileSwap,
-                    post_clear_cache, 
+                    post_clear_cache,
                     default_index,
                     git_working_dir
                 )
@@ -35,18 +35,18 @@ from git.exc import (
 from git.objects import (
                             Blob,
                             Submodule,
-                            Tree, 
-                            Object, 
+                            Tree,
+                            Object,
                             Commit,
                         )
 
 from git.objects.util import Serializable
 
 from git.util import (
-                            IndexFileSHA1Writer, 
-                            LazyMixin, 
-                            LockedFD, 
-                            join_path_native, 
+                            IndexFileSHA1Writer,
+                            LazyMixin,
+                            LockedFD,
+                            join_path_native,
                             file_contents_ro,
                             to_native_path_linux,
                             to_native_path
@@ -58,7 +58,7 @@ from fun import (
                     read_cache,
                     aggressive_tree_merge,
                     write_tree_from_cache,
-                    stat_mode_to_index_mode, 
+                    stat_mode_to_index_mode,
                     S_IFGITLINK
                 )
 
@@ -121,12 +121,12 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
                 return
             # END exception handling
 
-            # Here it comes: on windows in python 2.5, memory maps aren't closed properly 
-            # Hence we are in trouble if we try to delete a file that is memory mapped, 
+            # Here it comes: on windows in python 2.5, memory maps aren't closed properly
+            # Hence we are in trouble if we try to delete a file that is memory mapped,
             # which happens during read-tree.
             # In this case, we will just read the memory in directly.
             # Its insanely bad ... I am disappointed !
-            allow_mmap = (os.name != 'nt' or sys.version_info[1] > 5)  
+            allow_mmap = (os.name != 'nt' or sys.version_info[1] > 5)
             stream = file_contents_ro(fd, stream=True, allow_mmap=allow_mmap)
 
             try:
@@ -155,7 +155,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             pass
         # END exception handling
 
-    #{ Serializable Interface 
+    #{ Serializable Interface
 
     def _deserialize(self, stream):
         """Initialize this instance with index values read from the given stream"""
@@ -172,7 +172,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         entries = self._entries_sorted()
         write_cache(entries,
                     stream,
-                    (ignore_tree_extension_data and None) or self._extension_data) 
+                    (ignore_tree_extension_data and None) or self._extension_data)
         return self
 
     #} END serializable interface
@@ -198,7 +198,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
         :return: self"""
         # make sure we have our entries read before getting a write lock
-        # else it would be done when streaming. This can happen 
+        # else it would be done when streaming. This can happen
         # if one doesn't change the index, but writes it right away
         self.entries
         lfd = LockedFD(file_path or self._file_path)
@@ -257,17 +257,17 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         :param repo: The repository treeish are located in.
 
         :param tree_sha:
-            20 byte or 40 byte tree sha or tree objects 
+            20 byte or 40 byte tree sha or tree objects
 
         :return:
-            New IndexFile instance. Its path will be undefined. 
-            If you intend to write such a merged Index, supply an alternate file_path 
+            New IndexFile instance. Its path will be undefined.
+            If you intend to write such a merged Index, supply an alternate file_path
             to its 'write' method."""
         base_entries = aggressive_tree_merge(repo.odb, [to_bin_sha(str(t)) for t in tree_sha])
 
         inst = cls(repo)
         # convert to entries dict
-        entries = dict(izip(((e.path, e.stage) for e in base_entries), 
+        entries = dict(izip(((e.path, e.stage) for e in base_entries),
                             (IndexEntry.from_base(e) for e in base_entries)))
 
         inst.entries = entries
@@ -379,7 +379,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             # END path exception handling
         # END for each path
 
-    def _write_path_to_stdin(self, proc, filepath, item, fmakeexc, fprogress, 
+    def _write_path_to_stdin(self, proc, filepath, item, fmakeexc, fprogress,
                                 read_from_stdout=True):
         """Write path to proc.stdin and make sure it processes the item, including progress.
 
@@ -418,7 +418,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             iterator. A default filter, the BlobFilter, allows you to yield blobs
             only if they match a given list of paths. """
         for entry in self.entries.itervalues():
-            # TODO: is it necessary to convert the mode ? We did that when adding 
+            # TODO: is it necessary to convert the mode ? We did that when adding
             # it to the index, right ?
             mode = stat_mode_to_index_mode(entry.mode)
             blob = entry.to_blob(self.repo)
@@ -504,7 +504,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         object database and return it.
 
         :return: Tree object representing this index
-        :note: The tree will be written even if one or more objects the tree refers to 
+        :note: The tree will be written even if one or more objects the tree refers to
             does not yet exist in the object database. This could happen if you added
             Entries to the index directly.
         :raise ValueError: if there are no entries in the cache
@@ -560,10 +560,10 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         return (paths, entries)
 
     @git_working_dir
-    def add(self, items, force=True, fprogress=lambda *args: None, path_rewriter=None, 
+    def add(self, items, force=True, fprogress=lambda *args: None, path_rewriter=None,
                 write=True):
         """Add files from the working tree, specific blobs or BaseIndexEntries
-        to the index. 
+        to the index.
 
         :param items:
             Multiple types of items are supported, types can be mixed within one call.
@@ -591,7 +591,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
                 must be a path relative to our repository.
 
                 If their sha is null ( 40*0 ), their path must exist in the file system
-                relative to the git repository as an object will be created from 
+                relative to the git repository as an object will be created from
                 the data at the path.
                 The handling now very much equals the way string paths are processed, except that
                 the mode you have set will be kept. This allows you to create symlinks
@@ -654,8 +654,8 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             for path in paths:
                 abspath = os.path.abspath(path)
                 gitrelative_path = abspath[len(self.repo.working_tree_dir) + 1:]
-                blob = Blob(self.repo, Blob.NULL_BIN_SHA, 
-                            stat_mode_to_index_mode(os.stat(abspath).st_mode), 
+                blob = Blob(self.repo, Blob.NULL_BIN_SHA,
+                            stat_mode_to_index_mode(os.stat(abspath).st_mode),
                             to_native_path_linux(gitrelative_path))
                 entries.append(BaseIndexEntry.from_blob(blob))
             # END for each path
@@ -674,7 +674,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             fprogress(filepath, False, filepath)
             istream = self.repo.odb.store(IStream(Blob.type, st.st_size, stream))
             fprogress(filepath, True, filepath)
-            return BaseIndexEntry((stat_mode_to_index_mode(st.st_mode), 
+            return BaseIndexEntry((stat_mode_to_index_mode(st.st_mode),
                                     istream.binsha, 0, to_native_path_linux(filepath)))
         # END utility method
 
@@ -929,10 +929,10 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             Raise GitCommandError if error lines could not be parsed - this truly is
             an exceptional state
 
-        .. note:: The checkout is limited to checking out the files in the 
-            index. Files which are not in the index anymore and exist in 
+        .. note:: The checkout is limited to checking out the files in the
+            index. Files which are not in the index anymore and exist in
             the working tree will not be deleted. This behaviour is fundamentally
-            different to *head.checkout*, i.e. if you want git-checkout like behaviour, 
+            different to *head.checkout*, i.e. if you want git-checkout like behaviour,
             use head.checkout instead of index.checkout.
             """
         args = ["--index"]
@@ -998,7 +998,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
                 paths = [paths]
 
             # make sure we have our entries loaded before we start checkout_index
-            # which will hold a lock on it. We try to get the lock as well during 
+            # which will hold a lock on it. We try to get the lock as well during
             # our entries initialization
             self.entries
 
@@ -1023,7 +1023,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
                     for entry in self.entries.itervalues():
                         if entry.path.startswith(dir):
                             p = entry.path
-                            self._write_path_to_stdin(proc, p, p, make_exc, 
+                            self._write_path_to_stdin(proc, p, p, make_exc,
                                                         fprogress, read_from_stdout=False)
                             checked_out_files.append(p)
                             path_is_directory = True
@@ -1032,7 +1032,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
                 # END path exception handlnig
 
                 if not path_is_directory:
-                    self._write_path_to_stdin(proc, co_path, path, make_exc, 
+                    self._write_path_to_stdin(proc, co_path, path, make_exc,
                                                 fprogress, read_from_stdout=False)
                     checked_out_files.append(co_path)
                 # END path is a file
@@ -1066,7 +1066,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
         :param paths: if given as an iterable of absolute or repository-relative paths,
             only these will be reset to their state at the given commit'ish.
-            The paths need to exist at the commit, otherwise an exception will be 
+            The paths need to exist at the commit, otherwise an exception will be
             raised.
 
         :param kwargs:

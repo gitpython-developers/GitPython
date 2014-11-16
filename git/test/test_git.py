@@ -6,7 +6,7 @@
 
 import os
 from git.test.lib import (TestBase,
-                            patch, 
+                            patch,
                             raises,
                             assert_equal,
                             assert_true,

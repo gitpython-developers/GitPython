@@ -1,7 +1,7 @@
 """Module with additional types used by the index"""
 
 from util import (
-                    pack, 
+                    pack,
                     unpack
                 )
 
@@ -108,7 +108,7 @@ class BaseIndexEntry(tuple):
 
     def to_blob(self, repo):
         """:return: Blob using the information of this index entry"""
-        return Blob(repo, self.binsha, self.mode, self.path) 
+        return Blob(repo, self.binsha, self.mode, self.path)
 
 
 class IndexEntry(BaseIndexEntry):
@@ -159,7 +159,7 @@ class IndexEntry(BaseIndexEntry):
 
     @classmethod
     def from_base(cls, base):
-        """ 
+        """
         :return:
             Minimal entry as created from the given BaseIndexEntry instance.
             Missing values will be set to null-like values

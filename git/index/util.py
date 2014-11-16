@@ -5,7 +5,7 @@ import os
 
 __all__ = ('TemporaryFileSwap', 'post_clear_cache', 'default_index', 'git_working_dir')
 
-#{ Aliases 
+#{ Aliases
 pack = struct.pack
 unpack = struct.unpack
 
@@ -35,7 +35,7 @@ class TemporaryFileSwap(object):
         # END temp file exists
 
 
-#{ Decorators 
+#{ Decorators
 
 def post_clear_cache(func):
     """Decorator for functions that alter the index using the git command. This would
@@ -73,7 +73,7 @@ def default_index(func):
 
 
 def git_working_dir(func):
-    """Decorator which changes the current working dir to the one of the git 
+    """Decorator which changes the current working dir to the one of the git
     repository in order to assure relative paths are handled correctly"""
 
     def set_git_working_dir(self, *args, **kwargs):
