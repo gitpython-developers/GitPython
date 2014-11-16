@@ -94,7 +94,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
     before operating on it using the git command"""
     __slots__ = ("repo", "version", "entries", "_extension_data", "_file_path")
     _VERSION = 2            # latest version we support
-    S_IFGITLINK = S_IFGITLINK # a submodule
+    S_IFGITLINK = S_IFGITLINK  # a submodule
 
     def __init__(self, repo, file_path=None):
         """Initialize this Index instance, optionally from the given ``file_path``.

@@ -403,7 +403,7 @@ class SymbolicReference(object):
             try:
                 reader = open(pack_file_path, 'rb')
             except (OSError, IOError):
-                pass # it didnt exist at all
+                pass  # it didnt exist at all
             else:
                 new_lines = list()
                 made_change = False
@@ -553,7 +553,7 @@ class SymbolicReference(object):
         # walk loose refs
         # Currently we do not follow links 
         for root, dirs, files in os.walk(join_path_native(repo.git_dir, common_path)):
-            if 'refs/' not in root: # skip non-refs subfolders
+            if 'refs/' not in root:  # skip non-refs subfolders
                 refs_id = [d for d in dirs if d == 'refs']
                 if refs_id:
                     dirs[0:] = ['refs']

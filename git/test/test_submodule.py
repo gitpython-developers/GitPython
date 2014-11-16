@@ -338,7 +338,7 @@ class TestSubmodule(TestBase):
             assert nsm.move(sm.path) is nsm
 
             # rename a module
-            nmp = join_path_native("new", "module", "dir") + "/" # new module path
+            nmp = join_path_native("new", "module", "dir") + "/"  # new module path
             pmp = nsm.path
             abspmp = nsm.abspath
             assert nsm.move(nmp) is nsm
@@ -447,7 +447,7 @@ class TestSubmodule(TestBase):
         sm.move(fp, module=False)       # leave it at the old location
 
         assert not sm.module_exists()
-        cpathchange = rwrepo.index.commit("changed sm path") # finally we can commit
+        cpathchange = rwrepo.index.commit("changed sm path")  # finally we can commit
 
         # update puts the module into place
         rm.update(recursive=False, progress=prog)
@@ -549,7 +549,7 @@ class TestSubmodule(TestBase):
         # =================
         # finally we recursively update a module, just to run the code at least once
         # remove the module so that it has more work
-        assert len(nsm.children()) >= 1 # could include smmap
+        assert len(nsm.children()) >= 1  # could include smmap
         assert nsm.exists() and nsm.module_exists() and len(nsm.children()) >= 1
         # assure we pull locally only
         nsmc = nsm.children()[0] 

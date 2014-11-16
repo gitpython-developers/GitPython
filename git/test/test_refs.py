@@ -168,7 +168,7 @@ class TestRefs(TestBase):
         cur_head = rw_repo.head
         old_head_commit = cur_head.commit
         new_head_commit = cur_head.ref.commit.parents[0]
-        cur_head.reset(new_head_commit, index=True) # index only
+        cur_head.reset(new_head_commit, index=True)  # index only
         assert cur_head.reference.commit == new_head_commit
 
         self.failUnlessRaises(ValueError, cur_head.reset, new_head_commit, index=False, working_tree=True)
@@ -185,7 +185,7 @@ class TestRefs(TestBase):
 
         # we can do a mixed reset, and then checkout from the index though
         cur_head.reset(new_head_commit)
-        rw_repo.index.checkout(["lib"], force=True)#
+        rw_repo.index.checkout(["lib"], force=True)
 
         # now that we have a write write repo, change the HEAD reference - its 
         # like git-reset --soft
@@ -413,7 +413,7 @@ class TestRefs(TestBase):
         far_away_head.commit = ref.commit
         ref.rename(ex_ref_path)
         assert ref.path == ex_ref_path and ref.object == orig_obj
-        assert ref.rename(ref.path).path == ex_ref_path # rename to same name
+        assert ref.rename(ref.path).path == ex_ref_path  # rename to same name
 
         # create symbolic refs
         symref_path = "symrefs/sym"

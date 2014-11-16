@@ -186,7 +186,7 @@ def rev_parse(repo, rev):
 
             # handle type 
             if output_type == 'commit':
-                pass # default
+                pass  # default
             elif output_type == 'tree':
                 try:
                     obj = to_commit(obj).tree

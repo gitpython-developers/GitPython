@@ -1063,7 +1063,7 @@ class Items(object):
 
     def __contains__(self, item): return item in self._main.items()
 
-    def __len__(self): return len(self._main._sequence) # easier :-)
+    def __len__(self): return len(self._main._sequence)  # easier :-)
 
     def __iter__(self): return self._main.iteritems()
 
@@ -1184,7 +1184,7 @@ class Values(object):
 
     def __contains__(self, item): return item in self._main.values()
 
-    def __len__(self): return len(self._main._sequence) # easier :-)
+    def __len__(self): return len(self._main._sequence)  # easier :-)
 
     def __iter__(self): return self._main.itervalues()
 

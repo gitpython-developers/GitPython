@@ -92,7 +92,7 @@ class Git(LazyMixin):
                 os.kill(self.proc.pid, 2)   # interrupt signal
                 self.proc.wait()    # ensure process goes away
             except OSError:
-                pass # ignore error when process already died
+                pass  # ignore error when process already died
             except AttributeError:
                 # try windows 
                 # for some reason, providing None for stdout/stderr still prints something. This is why 
@@ -348,7 +348,7 @@ class Git(LazyMixin):
                         stdin=istream,
                         stderr=PIPE,
                         stdout=PIPE,
-                        close_fds=(os.name == 'posix'),# unsupported on linux
+                        close_fds=(os.name == 'posix'),  # unsupported on linux
                         **subprocess_kwargs
                         )
         if as_process:

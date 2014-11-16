@@ -55,12 +55,12 @@ class TagObject(base.Object):
             lines = ostream.read().splitlines()
 
             obj, hexsha = lines[0].split(" ")       # object <hexsha>
-            type_token, type_name = lines[1].split(" ") # type <type_name>
+            type_token, type_name = lines[1].split(" ")  # type <type_name>
             self.object = get_object_type_by_name(type_name)(self.repo, hex_to_bin(hexsha))
 
             self.tag = lines[2][4:]  # tag <tag name>
 
-            tagger_info = lines[3]# tagger <actor> <date>
+            tagger_info = lines[3]  # tagger <actor> <date>
             self.tagger, self.tagged_date, self.tagger_tz_offset = parse_actor_and_date(tagger_info)
 
             # line 4 empty - it could mark the beginning of the next header

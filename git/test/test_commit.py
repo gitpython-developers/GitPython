@@ -73,7 +73,7 @@ class TestCommit(TestBase):
         commit = self.rorepo.commit('2454ae89983a4496a445ce347d7a41c0bb0ea7ae')
         # commits have no dict
         self.failUnlessRaises(AttributeError, setattr, commit, 'someattr', 1)
-        commit.author # bake
+        commit.author  # bake
 
         assert_equal("Sebastian Thiel", commit.author.name)
         assert_equal("byronimo@gmail.com", commit.author.email)
@@ -251,7 +251,7 @@ class TestCommit(TestBase):
         # Verify its serialization and deserialization
         cmt = self.rorepo.commit('0.1.6')
         assert isinstance(cmt.message, unicode)     # it automatically decodes it as such
-        assert isinstance(cmt.author.name, unicode) # same here
+        assert isinstance(cmt.author.name, unicode)  # same here
 
         cmt.message = "üäêèß".decode("utf-8")
         assert len(cmt.message) == 5
