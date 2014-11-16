@@ -22,7 +22,7 @@ def assert_instance_of(expected, actual, msg=None):
 def assert_not_instance_of(expected, actual, msg=None):
     """Verify that object is not an instance of expected """
     assert not isinstance(actual, expected, msg)
-    
+
 def assert_none(actual, msg=None):
     """verify that item is None"""
     assert actual is None, msg
@@ -38,7 +38,7 @@ def assert_match(pattern, string, msg=None):
 def assert_not_match(pattern, string, msg=None):
     """verify that the pattern does not match the string"""
     assert_none(re.search(pattern, string), msg)
-    
+
 def assert_mode_644(mode):
     """Verify given mode is 644"""
     assert (mode & stat.S_IROTH) and (mode & stat.S_IRGRP) 

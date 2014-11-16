@@ -13,7 +13,7 @@ class Blob(base.IndexObject):
     """A Blob encapsulates a git blob object"""
     DEFAULT_MIME_TYPE = "text/plain"
     type = "blob"
-    
+
     # valid blob modes
     executable_mode = 0100755
     file_mode = 0100644

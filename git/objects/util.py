@@ -40,9 +40,9 @@ def get_object_type_by_name(object_type_name):
     """
     :return: type suitable to handle the given object type name.
         Use the type to create new instances.
-        
+
     :param object_type_name: Member of TYPES
-        
+
     :raise ValueError: In case object_type_name is unknown"""
     if object_type_name == "commit":
         import commit
@@ -58,14 +58,14 @@ def get_object_type_by_name(object_type_name):
         return tree.Tree
     else:
         raise ValueError("Cannot handle unknown object type: %s" % object_type_name)
-        
+
 def utctz_to_altz(utctz):
     """we convert utctz to the timezone in seconds, it is the format time.altzone
     returns. Git stores it as UTC timezone which has the opposite sign as well, 
     which explains the -1 * ( that was made explicit here )
     :param utctz: git utc timezone string, i.e. +0200"""
     return -1 * int(float(utctz)/100*3600)
-    
+
 def altz_to_utctz_str(altz):
     """As above, but inverses the operation, returning a string that can be used
     in commit objects"""
@@ -74,7 +74,7 @@ def altz_to_utctz_str(altz):
     utcs = "0"*(4-len(utcs)) + utcs
     prefix = (utci < 0 and '-') or '+'
     return prefix + utcs
-    
+
 
 def verify_utctz(offset):
     """:raise ValueError: if offset is incorrect
@@ -95,12 +95,12 @@ def verify_utctz(offset):
 def parse_date(string_date):
     """
     Parse the given date as one of the following
-    
+
         * Git internal format: timestamp offset
         * RFC 2822: Thu, 07 Apr 2005 22:13:13 +0200. 
         * ISO 8601 2005-04-07T22:13:13
             The T can be a space as well
-         
+
     :return: Tuple(int(timestamp), int(offset)), both in seconds since epoch
     :raise ValueError: If the format could not be understood
     :note: Date can also be YYYY.MM.DD, MM/DD/YYYY and DD.MM.YYYY"""
@@ -116,7 +116,7 @@ def parse_date(string_date):
                 offset = verify_utctz(string_date[-5:])
                 string_date = string_date[:-6]  # skip space as well
             # END split timezone info
-            
+
             # now figure out the date and time portion - split time
             date_formats = list()
             splitter = -1
@@ -129,22 +129,22 @@ def parse_date(string_date):
                 date_formats.append("%Y.%m.%d")
                 date_formats.append("%m/%d/%Y")
                 date_formats.append("%d.%m.%Y")
-                
+
                 splitter = string_date.rfind('T')
                 if splitter == -1:
                     splitter = string_date.rfind(' ')
                 # END handle 'T' and ' '
             # END handle rfc or iso 
-            
+
             assert splitter > -1
-            
+
             # split date and time
             time_part = string_date[splitter+1:]    # skip space
             date_part = string_date[:splitter]
-            
+
             # parse time
             tstruct = time.strptime(time_part, "%H:%M:%S")
-            
+
             for fmt in date_formats:
                 try:
                     dtstruct = time.strptime(date_part, fmt)
@@ -156,7 +156,7 @@ def parse_date(string_date):
                     continue
                 # END exception handling
             # END for each fmt
-            
+
             # still here ? fail
             raise ValueError("no format matched")
         # END handle format
@@ -164,16 +164,16 @@ def parse_date(string_date):
         raise ValueError("Unsupported date format: %s" % string_date)  
     # END handle exceptions
 
-    
+
 # precompiled regex
 _re_actor_epoch = re.compile(r'^.+? (.*) (\d+) ([+-]\d+).*$')
 _re_only_actor = re.compile(r'^.+? (.*)$')
 
 def parse_actor_and_date(line):
     """Parse out the actor (author or committer) info from a line like::
-    
+
         author Tom Preston-Werner <tom@mojombo.com> 1191999972 -0700
-    
+
     :return: [Actor, int_seconds_since_epoch, int_timezone_offset]"""
     actor, epoch, offset = '', 0, 0
     m = _re_actor_epoch.search(line)
@@ -188,10 +188,10 @@ def parse_actor_and_date(line):
 
 
 #{ Classes 
-    
+
 class ProcessStreamAdapter(object):
     """Class wireing all calls to the contained Process instance.
-    
+
     Use this type to hide the underlying process to provide access only to a specified 
     stream. The process is usually wrapped into an AutoInterrupt class to kill 
     it if the instance goes out of scope."""
@@ -199,18 +199,18 @@ class ProcessStreamAdapter(object):
     def __init__(self, process, stream_name):
         self._proc = process
         self._stream = getattr(process, stream_name)
-    
+
     def __getattr__(self, attr):
         return getattr(self._stream, attr)
-        
-        
+
+
 class Traversable(object):
     """Simple interface to perforam depth-first or breadth-first traversals 
     into one direction.
     Subclasses only need to implement one function.
     Instances of the Subclass must be hashable"""
     __slots__ = tuple()
-    
+
     @classmethod
     def _get_intermediate_items(cls, item):
         """
@@ -219,7 +219,7 @@ class Traversable(object):
             Must be implemented in subclass
         """
         raise NotImplementedError("To be implemented in subclass")
-            
+
     def list_traverse(self, *args, **kwargs):
         """
         :return: IterableList with the results of the traversal as produced by
@@ -227,36 +227,36 @@ class Traversable(object):
         out = IterableList(self._id_attribute_)
         out.extend(self.traverse(*args, **kwargs))
         return out
-    
+
     def traverse( self, predicate = lambda i,d: True,
                            prune = lambda i,d: False, depth = -1, branch_first=True,
                            visit_once = True, ignore_self=1, as_edge = False ):
         """:return: iterator yieling of items found when traversing self
-            
+
         :param predicate: f(i,d) returns False if item i at depth d should not be included in the result
-            
+
         :param prune: 
             f(i,d) return True if the search should stop at item i at depth d.
             Item i will not be returned.
-            
+
         :param depth:
             define at which level the iteration should not go deeper
             if -1, there is no limit
             if 0, you would effectively only get self, the root of the iteration
             i.e. if 1, you would only get the first level of predessessors/successors
-            
+
         :param branch_first:
             if True, items will be returned branch first, otherwise depth first
-            
+
         :param visit_once:
             if True, items will only be returned once, although they might be encountered
             several times. Loops are prevented that way.
-        
+
         :param ignore_self:
             if True, self will be ignored and automatically pruned from
             the result. Otherwise it will be the first item to be returned.
             If as_edge is True, the source of the first edge is None
-            
+
         :param as_edge:
             if True, return a pair of items, first being the source, second the 
             destinatination, i.e. tuple(src, dest) with the edge spanning from 
@@ -264,7 +264,7 @@ class Traversable(object):
         visited = set()
         stack = Deque()
         stack.append( ( 0 ,self, None ) )       # self is always depth level 0
-    
+
         def addToStack( stack, item, branch_first, depth ):
             lst = self._get_intermediate_items( item )
             if not lst:
@@ -275,44 +275,44 @@ class Traversable(object):
                 reviter = ( ( depth , lst[i], item ) for i in range( len( lst )-1,-1,-1) )
                 stack.extend( reviter )
         # END addToStack local method
-    
+
         while stack:
             d, item, src = stack.pop()          # depth of item, item, item_source
-            
+
             if visit_once and item in visited:
                 continue
-                
+
             if visit_once:
                 visited.add(item)
-            
+
             rval = ( as_edge and (src, item) ) or item
             if prune( rval, d ):
                 continue
-    
+
             skipStartItem = ignore_self and ( item is self )
             if not skipStartItem and predicate( rval, d ):
                 yield rval
-    
+
             # only continue to next level if this is appropriate !
             nd = d + 1
             if depth > -1 and nd > depth:
                 continue
-    
+
             addToStack( stack, item, branch_first, nd )
         # END for each item on work stack
-        
+
 
 class Serializable(object):
     """Defines methods to serialize and deserialize objects from and into a data stream"""
     __slots__ = tuple()
-    
+
     def _serialize(self, stream):
         """Serialize the data of this object into the given data stream
         :note: a serialized object would ``_deserialize`` into the same objet
         :param stream: a file-like object
         :return: self"""
         raise NotImplementedError("To be implemented in subclass")
-        
+
     def _deserialize(self, stream):
         """Deserialize all information regarding this object from the stream
         :param stream: a file-like object

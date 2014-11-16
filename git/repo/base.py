@@ -7,9 +7,9 @@
 from git.exc import InvalidGitRepositoryError, NoSuchPathError
 from git.cmd import Git
 from git.util import (
-		Actor,
-		finalize_process
-	)
+    Actor,
+    finalize_process
+    )
 from git.refs import *
 from git.index import IndexFile
 from git.objects import *
@@ -55,26 +55,26 @@ class Repo(object):
     """Represents a git repository and allows you to query references, 
     gather commit information, generate diffs, create and clone repositories query
     the log.
-    
+
     The following attributes are worth using:
-    
+
     'working_dir' is the working directory of the git command, which is the working tree 
     directory if available or the .git directory in case of bare repositories
-    
+
     'working_tree_dir' is the working tree directory, but will raise AssertionError
     if we are a bare repository.
-    
+
     'git_dir' is the .git repository directory, which is always set."""
     DAEMON_EXPORT_FILE = 'git-daemon-export-ok'
     __slots__ = ( "working_dir", "_working_tree_dir", "git_dir", "_bare", "git", "odb" )
-    
+
     # precompiled regex
     re_whitespace = re.compile(r'\s+')
     re_hexsha_only = re.compile('^[0-9A-Fa-f]{40}$')
     re_hexsha_shortened = re.compile('^[0-9A-Fa-f]{4,40}$')
     re_author_committer_start = re.compile(r'^(author|committer)')
     re_tab_full_line = re.compile(r'^\t(.*)$')
-    
+
     # invariants
     # represents the configuration level of a configuration file
     config_level = ("system", "global", "repository")
@@ -88,7 +88,7 @@ class Repo(object):
             repo = Repo("/Users/mtrier/Development/git-python.git")
             repo = Repo("~/Development/git-python.git")
             repo = Repo("$REPOSITORIES/Development/git-python.git")
-        
+
         :param odbt: Object DataBase type - a type which is constructed by providing 
             the directory containing the database objects, i.e. .git/objects. It will
             be used to access all object data
@@ -104,7 +104,7 @@ class Repo(object):
         self._working_tree_dir = None
         self.git_dir = None
         curpath = epath
-        
+
         # walk up the path to find the .git dir
         while curpath:
             if is_git_dir(curpath):
@@ -120,7 +120,7 @@ class Repo(object):
             if not dummy:
                 break
         # END while curpath
-        
+
         if self.git_dir is None:
             raise InvalidGitRepositoryError(epath)
 
@@ -136,10 +136,10 @@ class Repo(object):
         if self._bare:
             self._working_tree_dir = None
         # END working dir handling
-        
+
         self.working_dir = self._working_tree_dir or self.git_dir
         self.git = Git(self.working_dir)
-        
+
         # special handling, in special times
         args = [join(self.git_dir, 'objects')]
         if issubclass(odbt, GitCmdObjectDB):
@@ -150,10 +150,10 @@ class Repo(object):
         if isinstance(rhs, Repo):
             return self.git_dir == rhs.git_dir
         return False
-        
+
     def __ne__(self, rhs):
         return not self.__eq__(rhs)
-        
+
     def __hash__(self):
         return hash(self.git_dir)
 
@@ -173,9 +173,9 @@ class Repo(object):
                            doc="the project's description")
     del _get_description
     del _set_description
-    
-    
-    
+
+
+
     @property
     def working_tree_dir(self):
         """:return: The working tree directory of our git repository
@@ -183,7 +183,7 @@ class Repo(object):
         if self._working_tree_dir is None:
             raise AssertionError( "Repository at %r is bare and does not have a working tree directory" % self.git_dir )
         return self._working_tree_dir
-    
+
     @property
     def bare(self):
         """:return: True if the repository is bare"""
@@ -196,20 +196,20 @@ class Repo(object):
 
         :return: ``git.IterableList(Head, ...)``"""
         return Head.list_items(self)
-        
+
     @property
     def references(self):
         """A list of Reference objects representing tags, heads and remote references.
-        
+
         :return: IterableList(Reference, ...)"""
         return Reference.list_items(self)
-        
+
     # alias for references
     refs = references
 
     # alias for heads
     branches = heads
-    
+
     @property
     def index(self):
         """:return: IndexFile representing this repository's index."""
@@ -219,27 +219,27 @@ class Repo(object):
     def head(self):
         """:return: HEAD Object pointing to the current head reference"""
         return HEAD(self,'HEAD')
-        
+
     @property
     def remotes(self):
         """A list of Remote objects allowing to access and manipulate remotes
         :return: ``git.IterableList(Remote, ...)``"""
         return Remote.list_items(self)
-        
+
     def remote(self, name='origin'):
         """:return: Remote with the specified name
         :raise ValueError:  if no remote with such a name exists"""
         return Remote(self, name)
-        
+
     #{ Submodules
-        
+
     @property
     def submodules(self):
         """
         :return: git.IterableList(Submodule, ...) of direct submodules
             available from the current head"""
         return Submodule.list_items(self)
-        
+
     def submodule(self, name):
         """ :return: Submodule with the given name 
         :raise ValueError: If no such submodule exists"""
@@ -248,27 +248,27 @@ class Repo(object):
         except IndexError:
             raise ValueError("Didn't find submodule named %r" % name)
         # END exception handling
-        
+
     def create_submodule(self, *args, **kwargs):
         """Create a new submodule
-        
+
         :note: See the documentation of Submodule.add for a description of the 
             applicable parameters
         :return: created submodules"""
         return Submodule.add(self, *args, **kwargs)
-        
+
     def iter_submodules(self, *args, **kwargs):
         """An iterator yielding Submodule instances, see Traversable interface
         for a description of args and kwargs
         :return: Iterator"""
         return RootModule(self).traverse(*args, **kwargs)
-        
+
     def submodule_update(self, *args, **kwargs):
         """Update the submodules, keeping the repository consistent as it will 
         take the previous state into consideration. For more information, please
         see the documentation of RootModule.update"""
         return RootModule(self).update(*args, **kwargs)
-        
+
     #}END submodules
 
     @property
@@ -276,72 +276,72 @@ class Repo(object):
         """A list of ``Tag`` objects that are available in this repo
         :return: ``git.IterableList(TagReference, ...)`` """
         return TagReference.list_items(self)
-        
+
     def tag(self,path):
         """:return: TagReference Object, reference pointing to a Commit or Tag
         :param path: path to the tag reference, i.e. 0.1.5 or tags/0.1.5 """
         return TagReference(self, path)
-        
+
     def create_head(self, path, commit='HEAD', force=False, logmsg=None ):
         """Create a new head within the repository. 
         For more documentation, please see the Head.create method.
-        
+
         :return: newly created Head Reference"""
         return Head.create(self, path, commit, force, logmsg)
-        
+
     def delete_head(self, *heads, **kwargs):
         """Delete the given heads
-        
+
         :param kwargs: Additional keyword arguments to be passed to git-branch"""
         return Head.delete(self, *heads, **kwargs)
-        
+
     def create_tag(self, path, ref='HEAD', message=None, force=False, **kwargs):
         """Create a new tag reference.
         For more documentation, please see the TagReference.create method.
-        
+
         :return: TagReference object """
         return TagReference.create(self, path, ref, message, force, **kwargs)
-        
+
     def delete_tag(self, *tags):
         """Delete the given tag references"""
         return TagReference.delete(self, *tags)
-        
+
     def create_remote(self, name, url, **kwargs):
         """Create a new remote.
-        
+
         For more information, please see the documentation of the Remote.create 
         methods 
-        
+
         :return: Remote reference"""
         return Remote.create(self, name, url, **kwargs)
-        
+
     def delete_remote(self, remote):
         """Delete the given remote."""
         return Remote.remove(self, remote)
-        
+
     def _get_config_path(self, config_level ):
         # we do not support an absolute path of the gitconfig on windows , 
         # use the global config instead
         if sys.platform == "win32" and config_level == "system":
             config_level = "global"
-            
+
         if config_level == "system":
             return "/etc/gitconfig"
         elif config_level == "global":
             return os.path.normpath(os.path.expanduser("~/.gitconfig"))
         elif config_level == "repository":
             return join(self.git_dir, "config")
-        
+
         raise ValueError( "Invalid configuration level: %r" % config_level )
-            
+
     def config_reader(self, config_level=None):
         """
         :return:
             GitConfigParser allowing to read the full git configuration, but not to write it
-            
+
             The configuration will include values from the system, user and repository 
             configuration files.
-            
+
         :param config_level:
             For possible values, see config_writer method
             If None, all applicable levels will be used. Specify a level in case 
@@ -355,7 +355,7 @@ class Repo(object):
         else:
             files = [ self._get_config_path(config_level) ]
         return GitConfigParser(files, read_only=True)
-        
+
     def config_writer(self, config_level="repository"):
         """
         :return:
@@ -363,14 +363,14 @@ class Repo(object):
             Config writers should be retrieved, used to change the configuration ,and written 
             right away as they will lock the configuration file in question and prevent other's
             to write it.
-            
+
         :param config_level:
             One of the following values
             system = sytem wide configuration file
             global = user level configuration file
             repository = configuration file for this repostory only"""
         return GitConfigParser(self._get_config_path(config_level), read_only = False)
-        
+
     def commit(self, rev=None):
         """The Commit object for the specified revision
         :param rev: revision specifier, see git-rev-parse for viable options.
@@ -379,7 +379,7 @@ class Repo(object):
             return self.head.commit
         else:
             return self.rev_parse(unicode(rev)+"^0")
-        
+
     def iter_trees(self, *args, **kwargs):
         """:return: Iterator yielding Tree objects
         :note: Takes all arguments known to iter_commits method"""
@@ -388,12 +388,12 @@ class Repo(object):
     def tree(self, rev=None):
         """The Tree object for the given treeish revision
         Examples::
-    
+
               repo.tree(repo.heads[0])
 
         :param rev: is a revision pointing to a Treeish ( being a commit or tree )
         :return: ``git.Tree``
-            
+
         :note:
             If you need a non-root level tree, find it by iterating the root tree. Otherwise
             it cannot know about its path relative to the repository root and subsequent 
@@ -413,7 +413,7 @@ class Repo(object):
         :parm paths:
             is an optional path or a list of paths to limit the returned commits to
             Commits that do not contain that path or the paths will not be returned.
-        
+
         :parm kwargs:
             Arguments to be passed to git-rev-list - common ones are 
             max_count and skip
@@ -424,7 +424,7 @@ class Repo(object):
         :return ``git.Commit[]``"""
         if rev is None:
             rev = self.head.commit
-        
+
         return Commit.iter_items(self, rev, paths, **kwargs)
 
     def _get_daemon_export(self):
@@ -496,7 +496,7 @@ class Repo(object):
             # Bare repositories with no associated working directory are
             # always consired to be clean.
             return False
-        
+
         # start from the one which is fastest to evaluate
         default_args = ('--abbrev=40', '--full-index', '--raw')
         if index: 
@@ -551,7 +551,7 @@ class Repo(object):
 
         :return: Head to the active branch"""
         return self.head.reference
-            
+
     def blame(self, rev, file):
         """The blame information for the given file at the given revision.
 
@@ -673,7 +673,7 @@ class Repo(object):
         if os.name == 'nt':
             if '~' in path:
                 raise OSError("Git cannot handle the ~ character in path %r correctly" % path)
-                
+
             # on windows, git will think paths like c: are relative and prepend the 
             # current working dir ( before it fails ). We temporarily adjust the working 
             # dir to make this actually work
@@ -687,7 +687,7 @@ class Repo(object):
                 kwargs['with_keep_cwd'] = True
             # END cwd preparation 
         # END windows handling 
-        
+
         try:
             proc = git.clone(url, path, with_extended_output=True, as_process=True, v=True, **add_progress(kwargs, git, progress))
             if progress:
@@ -700,12 +700,12 @@ class Repo(object):
                 path = prev_path
             # END reset previous working dir
         # END bad windows handling
-        
+
         # our git command could have a different working dir than our actual 
         # environment, hence we prepend its working dir if required
         if not os.path.isabs(path) and git.working_dir:
             path = join(git._working_dir, path)
-            
+
         # adjust remotes - there may be operating systems which use backslashes, 
         # These might be given as initial paths, but when handling the config file
         # that contains the remote from which we were clones, git stops liking it
@@ -727,9 +727,9 @@ class Repo(object):
         :param kwargs:
             odbt = ObjectDatabase Type, allowing to determine the object database
             implementation used by the returned Repo instance
-            
+
             All remaining keyword arguments are given to the git-clone command
-            
+
         :return: ``git.Repo`` (the newly cloned repo)"""
         return self._clone(self.git, self.git_dir, path, type(self.odb), progress, **kwargs)
 
@@ -760,11 +760,11 @@ class Repo(object):
         if prefix and 'prefix' not in kwargs:
             kwargs['prefix'] = prefix 
         kwargs['output_stream'] = ostream
-        
+
         self.git.archive(treeish, **kwargs)
         return self
-    
+
     rev_parse = rev_parse
-        
+
     def __repr__(self):
         return '<git.Repo "%s">' % self.git_dir

@@ -79,7 +79,7 @@ def git_working_dir(func):
             os.chdir(cur_wd)
         # END handle working dir
     # END wrapper
-    
+
     set_git_working_dir.__name__ = func.__name__
     return set_git_working_dir
 

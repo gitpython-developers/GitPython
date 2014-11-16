@@ -23,14 +23,14 @@ __all__ = ("TreeModifier", "Tree")
 
 class TreeModifier(object):
     """A utility class providing methods to alter the underlying cache in a list-like fashion.
-    
+
     Once all adjustments are complete, the _cache, which really is a refernce to 
     the cache of a tree, will be sorted. Assuring it will be in a serializable state"""
     __slots__ = '_cache'
-    
+
     def __init__(self, cache):
         self._cache = cache
-    
+
     def _index_by_name(self, name):
         """:return: index of an item with name, or -1 if not found"""
         for i, t in enumerate(self._cache):
@@ -39,7 +39,7 @@ class TreeModifier(object):
             # END found item
         # END for each item in cache
         return -1
-    
+
     #{ Interface 
     def set_done(self):
         """Call this method once you are done modifying the tree information.
@@ -49,14 +49,14 @@ class TreeModifier(object):
         self._cache.sort(key=lambda t: t[2])    # sort by name
         return self
     #} END interface
-    
+
     #{ Mutators
     def add(self, sha, mode, name, force=False):
         """Add the given item to the tree. If an item with the given name already
         exists, nothing will be done, but a ValueError will be raised if the 
         sha and mode of the existing item do not match the one you add, unless 
         force is True
-        
+
         :param sha: The 20 or 40 byte sha of the item to add
         :param mode: int representing the stat compatible mode of the item
         :param force: If True, an item with your name and information will overwrite
@@ -66,7 +66,7 @@ class TreeModifier(object):
             raise ValueError("Name must not contain '/' characters")
         if (mode >> 12) not in Tree._map_id_to_type:
             raise ValueError("Invalid object type according to mode %o" % mode)
-            
+
         sha = to_bin_sha(sha)
         index = self._index_by_name(name)
         item = (sha, mode, name)
@@ -83,52 +83,52 @@ class TreeModifier(object):
             # END handle force
         # END handle name exists
         return self
-        
+
     def add_unchecked(self, binsha, mode, name):
         """Add the given item to the tree, its correctness is assumed, which 
         puts the caller into responsibility to assure the input is correct. 
         For more information on the parameters, see ``add``
         :param binsha: 20 byte binary sha"""
         self._cache.append((binsha, mode, name))
-        
+
     def __delitem__(self, name):
         """Deletes an item with the given name if it exists"""
         index = self._index_by_name(name)
         if index > -1:
             del(self._cache[index])
-        
+
     #} END mutators
 
 
 class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
     """Tree objects represent an ordered list of Blobs and other Trees.
-    
+
     ``Tree as a list``::
-        
+
         Access a specific blob using the  
         tree['filename'] notation.
-        
+
         You may as well access by index
         blob = tree[0]
     """
-    
+
     type = "tree"
     __slots__ = "_cache"
-    
+
     # actual integer ids for comparison 
     commit_id = 016     # equals stat.S_IFDIR | stat.S_IFLNK - a directory link
     blob_id = 010
     symlink_id = 012
     tree_id = 004
-    
+
     _map_id_to_type = {
                         commit_id : Submodule, 
                         blob_id : Blob, 
                         symlink_id : Blob
                         # tree id added once Tree is defined
                         }
-    
-    
+
+
     def __init__(self, repo, binsha, mode=tree_id<<12, path=None):
         super(Tree, self).__init__(repo, binsha, mode, path)
 
@@ -161,7 +161,7 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
     def __div__(self, file):
         """Find the named object in this tree's contents
         :return: ``git.Blob`` or ``git.Tree`` or ``git.Submodule``
-        
+
         :raise KeyError: if given file or tree does not exist in tree"""
         msg = "Blob or Tree named %r not found"
         if '/' in file:
@@ -195,7 +195,7 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
     def trees(self):
         """:return: list(Tree, ...) list of trees directly below this tree"""
         return [ i for i in self if i.type == "tree" ]
-        
+
     @property
     def blobs(self):
         """:return: list(Blob, ...) list of blobs directly below this tree"""
@@ -220,26 +220,26 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
     # List protocol
     def __getslice__(self, i, j):
         return list(self._iter_convert_to_object(self._cache[i:j]))
-        
+
     def __iter__(self):
         return self._iter_convert_to_object(self._cache)
-        
+
     def __len__(self):
         return len(self._cache)
-        
+
     def __getitem__(self, item):
         if isinstance(item, int):
             info = self._cache[item]
             return self._map_id_to_type[info[1] >> 12](self.repo, info[0], info[1], join_path(self.path, info[2]))
-        
+
         if isinstance(item, basestring):
             # compatability
             return self.__div__(item)
         # END index is basestring 
-        
+
         raise TypeError( "Invalid index type: %r" % item )
-        
-        
+
+
     def __contains__(self, item):
         if isinstance(item, IndexObject):
             for info in self._cache:
@@ -249,7 +249,7 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
             # END for each entry
         # END handle item is index object
         # compatability
-        
+
         # treat item as repo-relative path
         path = self.path
         for info in self._cache:
@@ -257,10 +257,10 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
                 return True
         # END for each item
         return False
-    
+
     def __reversed__(self):
         return reversed(self._iter_convert_to_object(self._cache))
-        
+
     def _serialize(self, stream):
         """Serialize this tree into the stream. Please note that we will assume 
         our tree data to be in a sorted state. If this is not the case, serialization
@@ -268,12 +268,12 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
         by algorithms"""
         tree_to_stream(self._cache, stream.write)
         return self
-        
+
     def _deserialize(self, stream):
         self._cache = tree_entries_from_data(stream.read())
         return self
-        
-        
+
+
 # END tree
 
 # finalize map definition

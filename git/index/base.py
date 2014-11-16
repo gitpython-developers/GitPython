@@ -74,21 +74,21 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
     """
     Implements an Index that can be manipulated using a native implementation in
     order to save git command function calls wherever possible.
-    
+
     It provides custom merging facilities allowing to merge without actually changing
     your index or your working tree. This way you can perform own test-merges based
     on the index only without having to deal with the working copy. This is useful
     in case of partial working trees.
 
     ``Entries``
-    
+
     The index contains an entries dict whose keys are tuples of type IndexEntry
     to facilitate access.
 
     You may read the entries dict or manipulate it using IndexEntry instance, i.e.::
-    
+
         index.entries[index.entry_key(index_entry_instance)] = index_entry_instance
-    
+
     Make sure you use index.write() once you are done manipulating the index directly
     before operating on it using the git command"""
     __slots__ = ("repo", "version", "entries", "_extension_data", "_file_path")
@@ -127,7 +127,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             # Its insanely bad ... I am disappointed !
             allow_mmap = (os.name != 'nt' or sys.version_info[1] > 5)  
             stream = file_contents_ro(fd, stream=True, allow_mmap=allow_mmap)
-            
+
             try:
                 self._deserialize(stream)
             finally:
@@ -160,21 +160,21 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         """Initialize this instance with index values read from the given stream"""
         self.version, self.entries, self._extension_data, conten_sha = read_cache(stream)
         return self
-        
+
     def _entries_sorted(self):
         """:return: list of entries, in a sorted fashion, first by path, then by stage"""
         entries_sorted = self.entries.values()
         entries_sorted.sort(key=lambda e: (e.path, e.stage))        # use path/stage as sort key
         return entries_sorted
-        
+
     def _serialize(self, stream, ignore_tree_extension_data=False):
         entries = self._entries_sorted()
         write_cache(entries,
                     stream,
                     (ignore_tree_extension_data and None) or self._extension_data) 
         return self
-        
-        
+
+
     #} END serializable interface
 
     def write(self, file_path = None, ignore_tree_extension_data=False):
@@ -203,9 +203,9 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         self.entries
         lfd = LockedFD(file_path or self._file_path)
         stream = lfd.open(write=True, stream=True)
-        
+
         self._serialize(stream, ignore_tree_extension_data)
-        
+
         lfd.commit()
 
         # make sure we represent what we have written
@@ -264,12 +264,12 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             If you intend to write such a merged Index, supply an alternate file_path 
             to its 'write' method."""
         base_entries = aggressive_tree_merge(repo.odb, [to_bin_sha(str(t)) for t in tree_sha])
-        
+
         inst = cls(repo)
         # convert to entries dict
         entries = dict(izip(((e.path, e.stage) for e in base_entries), 
                             (IndexEntry.from_base(e) for e in base_entries)))
-        
+
         inst.entries = entries
         return inst
 
@@ -314,7 +314,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
         arg_list = list()
         # ignore that working tree and index possibly are out of date
-        if len(treeish)>1:
+        if len(treeish) > 1:
             # drop unmerged entries when reading our index and merging
             arg_list.append("--reset")
             # handle non-trivial cases the way a real merge does
@@ -503,7 +503,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
     def write_tree(self):
         """Writes this index to a corresponding Tree object into the repository's
         object database and return it.
-        
+
         :return: Tree object representing this index
         :note: The tree will be written even if one or more objects the tree refers to 
             does not yet exist in the object database. This could happen if you added
@@ -515,17 +515,17 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         mdb = MemoryDB()
         entries = self._entries_sorted()
         binsha, tree_items = write_tree_from_cache(entries, mdb, slice(0, len(entries)))
-        
+
         # copy changed trees only
         mdb.stream_copy(mdb.sha_iter(), self.repo.odb)
-        
-        
+
+
         # note: additional deserialization could be saved if write_tree_from_cache
         # would return sorted tree entries
         root_tree = Tree(self.repo, binsha, path='')
         root_tree._cache = tree_items
         return root_tree
-        
+
     def _process_diff_args(self, args):
         try:
             args.pop(args.index(self))
@@ -638,7 +638,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         :param write:
                 If True, the index will be written once it was altered. Otherwise
                 the changes only exist in memory and are not available to git commands.
-        
+
         :return:
             List(BaseIndexEntries) representing the entries just actually added.
 
@@ -706,7 +706,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
                 for ei in null_entries_indices:
                     null_entry = entries[ei]
                     new_entry = store_path(null_entry.path)
-                    
+
                     # update null entry
                     entries[ei] = BaseIndexEntry((null_entry.mode, new_entry.binsha, null_entry.stage, null_entry.path))
                 # END for each entry index
@@ -736,11 +736,11 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         # add the new entries to this instance
         for entry in entries_added:
             self.entries[(entry.path, 0)] = IndexEntry.from_base(entry)
-            
+
         if write:
             self.write()
         # END handle write
-        
+
         return entries_added
 
     def _items_to_rela_paths(self, items):
@@ -901,7 +901,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
     def checkout(self, paths=None, force=False, fprogress=lambda *args: None, **kwargs):
         """Checkout the given paths or all files from the version known to the index into
         the working tree.
-        
+
         :note: Be sure you have written pending changes using the ``write`` method
             in case you have altered the enties dictionary directly
 
@@ -934,7 +934,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             ( as opposed to the  original git command who ignores them ).
             Raise GitCommandError if error lines could not be parsed - this truly is
             an exceptional state
-            
+
         .. note:: The checkout is limited to checking out the files in the 
             index. Files which are not in the index anymore and exist in 
             the working tree will not be deleted. This behaviour is fundamentally
@@ -1008,7 +1008,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             # which will hold a lock on it. We try to get the lock as well during 
             # our entries initialization
             self.entries
-            
+
             args.append("--stdin")
             kwargs['as_process'] = True
             kwargs['istream'] = subprocess.PIPE
@@ -1066,11 +1066,11 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             If False, the working tree will not be touched
             Please note that changes to the working copy will be discarded without
             warning !
-            
+
         :param head:
             If True, the head will be set to the given commit. This is False by default,
             but if True, this method behaves like HEAD.reset.
-            
+
         :param paths: if given as an iterable of absolute or repository-relative paths,
             only these will be reset to their state at the given commit'ish.
             The paths need to exist at the commit, otherwise an exception will be 
@@ -1078,7 +1078,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
         :param kwargs:
             Additional keyword arguments passed to git-reset
-            
+
         .. note:: IndexFile.reset, as opposed to HEAD.reset, will not delete anyfiles
             in order to maintain a consistent working tree. Instead, it will just
             checkout the files according to their state in the index.
@@ -1108,11 +1108,11 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             # END for each path
         # END handle paths
         self.write()
-        
+
         if working_tree:
             self.checkout(paths=paths, force=True)
         # END handle working tree
-        
+
         if head:
             self.repo.head.set_commit(self.repo.commit(commit), logmsg="%s: Updating HEAD" % commit)
         # END handle head change
@@ -1154,4 +1154,3 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
         # diff against working copy - can be handled by superclass natively
         return super(IndexFile, self).diff(other, paths, create_patch, **kwargs)
-

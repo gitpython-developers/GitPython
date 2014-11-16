@@ -22,7 +22,7 @@ class GitCommandError(Exception):
         self.stdout = stdout
         self.status = status
         self.command = command
-        
+
     def __str__(self):
         ret = "'%s' returned exit status %i: %s" % \
               (' '.join(str(i) for i in self.command), self.status, self.stderr)
@@ -52,8 +52,8 @@ class CheckoutError( Exception ):
 
     def __str__(self):
         return Exception.__str__(self) + ":%s" % self.failed_files
-        
-        
+
+
 class CacheError(Exception):
     """Base for all errors related to the git index, which is called cache internally"""
 

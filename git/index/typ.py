@@ -56,7 +56,7 @@ class BaseIndexEntry(tuple):
 
     def __str__(self):
         return "%o %s %i\t%s" % (self.mode, self.hexsha, self.stage, self.path)
-        
+
     def __repr__(self):
         return "(%o, %s, %i, %s)" % (self.mode, self.hexsha, self.stage, self.path)
 
@@ -69,7 +69,7 @@ class BaseIndexEntry(tuple):
     def binsha(self):
         """binary sha of the blob """
         return self[1]
-        
+
     @property
     def hexsha(self):
         """hex version of our sha"""
@@ -78,12 +78,12 @@ class BaseIndexEntry(tuple):
     @property
     def stage(self):
         """Stage of the entry, either:
-        
+
             * 0 = default stage
             * 1 = stage before a merge or common ancestor entry in case of a 3 way merge
             * 2 = stage of entries from the 'left' side of the merge
             * 3 = stage of entries from the right side of the merge
-        
+
         :note: For more information, see http://www.kernel.org/pub/software/scm/git/docs/git-read-tree.html
         """
         return (self[2] & CE_STAGEMASK) >> CE_STAGESHIFT
@@ -102,7 +102,7 @@ class BaseIndexEntry(tuple):
     def from_blob(cls, blob, stage = 0):
         """:return: Fully equipped BaseIndexEntry at the given stage"""
         return cls((blob.mode, blob.binsha, stage << CE_STAGESHIFT, blob.path))
-        
+
     def to_blob(self, repo):
         """:return: Blob using the information of this index entry"""
         return Blob(repo, self.binsha, self.mode, self.path) 
@@ -152,7 +152,7 @@ class IndexEntry(BaseIndexEntry):
     def size(self):
         """:return: Uncompressed size of the blob """
         return self[10]
-        
+
     @classmethod
     def from_base(cls, base):
         """ 
@@ -169,5 +169,3 @@ class IndexEntry(BaseIndexEntry):
         """:return: Minimal entry resembling the given blob object"""
         time = pack(">LL", 0, 0)
         return IndexEntry((blob.mode, blob.binsha, stage << CE_STAGESHIFT, blob.path, time, time, 0, 0, 0, 0, blob.size))
-
-

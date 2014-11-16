@@ -87,7 +87,7 @@ class TestGit(TestBase):
         size = int(obj_info.split()[2])
         data = g.stdout.read(size)
         g.stdout.read(1)
-        
+
         # now we should be able to read a new object
         g.stdin.write("b2339455342180c7cc1e9bba3e9f181f7baa5167\n")
         g.stdin.flush()
@@ -95,7 +95,7 @@ class TestGit(TestBase):
 
 
         # same can be achived using the respective command functions
-        hexsha, typename, size =  self.git.get_object_header(hexsha)
+        hexsha, typename, size = self.git.get_object_header(hexsha)
         hexsha, typename_two, size_two, data = self.git.get_object_data(hexsha)
         assert typename == typename_two and size == size_two
 
@@ -123,7 +123,7 @@ class TestGit(TestBase):
         self.assertEquals(git_version, git_command_version)
 
     def test_single_char_git_options_are_passed_to_git(self):
-        input_value='TestValue'
+        input_value = 'TestValue'
         output_value = self.git(c='user.name={}'.format(input_value)).config('--get', 'user.name')
         self.assertEquals(input_value, output_value)
 

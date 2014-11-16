@@ -13,7 +13,7 @@ class TestActor(object):
         a = Actor._from_string("Michael Trier <mtrier@example.com>")
         assert_equal("Michael Trier", a.name)
         assert_equal("mtrier@example.com", a.email)
-        
+
         # base type capabilities
         assert a == a
         assert not ( a != a )

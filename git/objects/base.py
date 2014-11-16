@@ -12,7 +12,7 @@ from gitdb.util import (
                         )
 
 import gitdb.typ as dbtyp
-    
+
 _assertion_msg_format = "Created object %r whose python type %r disagrees with the acutal git object type %r"
 
 __all__ = ("Object", "IndexObject")
@@ -21,17 +21,17 @@ class Object(LazyMixin):
     """Implements an Object which may be Blobs, Trees, Commits and Tags"""
     NULL_HEX_SHA = '0'*40
     NULL_BIN_SHA = '\0'*20
-    
+
     TYPES = (dbtyp.str_blob_type, dbtyp.str_tree_type, dbtyp.str_commit_type, dbtyp.str_tag_type)
     __slots__ = ("repo", "binsha", "size" )
     type = None         # to be set by subclass
-    
+
     def __init__(self, repo, binsha):
         """Initialize an object by identifying it by its binary sha. 
         All keyword arguments will be set on demand if None.
-        
+
         :param repo: repository this object is located in
-            
+
         :param binsha: 20 byte SHA1"""
         super(Object,self).__init__()
         self.repo = repo
@@ -44,13 +44,13 @@ class Object(LazyMixin):
         :return: New Object instance of a type appropriate to the object type behind 
             id. The id of the newly created object will be a binsha even though 
             the input id may have been a Reference or Rev-Spec
-            
+
         :param id: reference, rev-spec, or hexsha
-            
+
         :note: This cannot be a __new__ method as it would always call __init__
             with the input id which is not necessarily a binsha."""
         return repo.rev_parse(str(id))
-        
+
     @classmethod
     def new_from_sha(cls, repo, sha1):
         """
@@ -65,36 +65,36 @@ class Object(LazyMixin):
         inst = get_object_type_by_name(oinfo.type)(repo, oinfo.binsha)
         inst.size = oinfo.size
         return inst 
-    
+
     def _set_cache_(self, attr):
         """Retrieve object information"""
-        if attr  == "size":
+        if attr == "size":
             oinfo = self.repo.odb.info(self.binsha)
             self.size = oinfo.size
             # assert oinfo.type == self.type, _assertion_msg_format % (self.binsha, oinfo.type, self.type)
         else:
             super(Object,self)._set_cache_(attr)
-        
+
     def __eq__(self, other):
         """:return: True if the objects have the same SHA1"""
         if not hasattr(other, 'binsha'):
             return False
         return self.binsha == other.binsha
-        
+
     def __ne__(self, other):
         """:return: True if the objects do not have the same SHA1 """
         if not hasattr(other, 'binsha'):
             return True
         return self.binsha != other.binsha
-        
+
     def __hash__(self):
         """:return: Hash of our id allowing objects to be used in dicts and sets"""
         return hash(self.binsha)
-        
+
     def __str__(self):
         """:return: string of our SHA1 as understood by all git commands"""
         return bin_to_hex(self.binsha)
-        
+
     def __repr__(self):
         """:return: string with pythonic representation of our object"""
         return '<git.%s "%s">' % (self.__class__.__name__, self.hexsha)
@@ -117,16 +117,16 @@ class Object(LazyMixin):
         istream = self.repo.odb.stream(self.binsha)
         stream_copy(istream, ostream)
         return self
-        
+
 
 class IndexObject(Object):
     """Base for all objects that can be part of the index file , namely Tree, Blob and
     SubModule objects"""
     __slots__ = ("path", "mode")
-    
+
     # for compatability with iterable lists
     _id_attribute_ = 'path'
-    
+
     def __init__(self, repo, binsha, mode=None, path=None):
         """Initialize a newly instanced IndexObject
         :param repo: is the Repo we are located in
@@ -144,13 +144,13 @@ class IndexObject(Object):
             self.mode = mode
         if path is not None:
             self.path = path
-    
+
     def __hash__(self):
         """:return:
             Hash of our path as index items are uniquely identifyable by path, not 
             by their data !"""
         return hash(self.path)
-    
+
     def _set_cache_(self, attr):
         if attr in IndexObject.__slots__:
             # they cannot be retrieved lateron ( not without searching for them )
@@ -158,19 +158,18 @@ class IndexObject(Object):
         else:
             super(IndexObject, self)._set_cache_(attr)
         # END hanlde slot attribute
-    
+
     @property
     def name(self):
         """:return: Name portion of the path, effectively being the basename"""
         return basename(self.path)
-        
+
     @property
     def abspath(self):
         """
         :return:
             Absolute path to this index object in the file system ( as opposed to the 
             .path field which is a path relative to the git repository ).
-            
+
             The returned path will be native to the system and contains '\' on windows. """
         return join_path_native(self.repo.working_tree_dir, self.path)
-        
