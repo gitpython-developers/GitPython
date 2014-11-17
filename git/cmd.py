@@ -29,7 +29,6 @@ def dashify(string):
 
 
 class Git(LazyMixin):
-
     """
     The Git class manages communication with the Git binary.
 
@@ -348,6 +347,9 @@ class Git(LazyMixin):
                         stdin=istream,
                         stderr=PIPE,
                         stdout=PIPE,
+                        # Prevent cmd prompt popups on windows by using a shell ... .
+                        # See https://github.com/gitpython-developers/GitPython/pull/126
+                        shell=sys.platform == 'win32',
                         close_fds=(os.name == 'posix'),  # unsupported on linux
                         **subprocess_kwargs
                         )
