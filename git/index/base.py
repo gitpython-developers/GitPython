@@ -867,7 +867,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
         return out
 
-    def commit(self, message, parent_commits=None, head=True):
+    def commit(self, message, parent_commits=None, head=True, author=None, committer=None):
         """Commit the current default index file, creating a commit object.
 
         For more information on the arguments, see tree.commit.
@@ -878,7 +878,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         :return:
             Commit object representing the new commit"""
         tree = self.write_tree()
-        return Commit.create_from_tree(self.repo, tree, message, parent_commits, head)
+        return Commit.create_from_tree(self.repo, tree, message, parent_commits, head, author=author, committer=committer)
 
     @classmethod
     def _flush_stdin_and_wait(cls, proc, ignore_stdout=False):

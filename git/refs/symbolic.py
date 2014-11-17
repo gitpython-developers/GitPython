@@ -355,8 +355,16 @@ class SymbolicReference(object):
         :param newbinsha: The sha the ref points to now. If None, our current commit sha
             will be used
         :return: added RefLogEntry instance"""
-        return RefLog.append_entry(self.repo.config_reader(), RefLog.path(self), oldbinsha,
-                                    (newbinsha is None and self.commit.binsha) or newbinsha,
+        # NOTE: we use the committer of the currently active commit - this should be 
+        # correct to allow overriding the committer on a per-commit level.
+        # See https://github.com/gitpython-developers/GitPython/pull/146
+        try:
+            committer_or_reader = self.commit.committer
+        except ValueError:
+            committer_or_reader = self.repo.config_reader()
+        # end handle newly cloned repositories
+        return RefLog.append_entry(committer_or_reader, RefLog.path(self), oldbinsha, 
+                                    (newbinsha is None and self.commit.binsha) or newbinsha, 
                                     message)
 
     def log_entry(self, index):

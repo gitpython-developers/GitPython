@@ -235,7 +235,8 @@ class RefLog(list, Serializable):
         """Append a new log entry to the revlog at filepath.
 
         :param config_reader: configuration reader of the repository - used to obtain
-            user information. May be None
+            user information. May also be an Actor instance identifying the committer directly.
+            May also be None
         :param filepath: full path to the log file
         :param oldbinsha: binary sha of the previous commit
         :param newbinsha: binary sha of the current commit
@@ -249,8 +250,9 @@ class RefLog(list, Serializable):
             raise ValueError("Shas need to be given in binary format")
         #END handle sha type
         assure_directory_exists(filepath, is_file=True)
-        entry = RefLogEntry((bin_to_hex(oldbinsha), bin_to_hex(newbinsha), Actor.committer(config_reader), (int(time.time()), time.altzone), message))
-
+        committer = isinstance(config_reader, Actor) and config_reader or Actor.committer(config_reader)
+        entry = RefLogEntry((bin_to_hex(oldbinsha), bin_to_hex(newbinsha), committer, (int(time.time()), time.altzone), message))
+        
         lf = LockFile(filepath)
         lf._obtain_lock_or_raise()
 
