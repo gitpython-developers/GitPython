@@ -692,7 +692,7 @@ class TestIndex(TestBase):
                 IStream(Blob.type, filesize, fileobj))
         entry = BaseIndexEntry((100644, istream.binsha, 0, filename))
         try:
-        rw_bare_repo.index.add([entry])
+            rw_bare_repo.index.add([entry])
         except AssertionError, e:
             self.fail("Adding to the index of a bare repo is not allowed.")
 
