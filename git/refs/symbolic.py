@@ -355,9 +355,11 @@ class SymbolicReference(object):
         :param newbinsha: The sha the ref points to now. If None, our current commit sha
             will be used
         :return: added RefLogEntry instance"""
-        return RefLog.append_entry(self.repo.config_reader(), RefLog.path(self), oldbinsha,
-                                    (newbinsha is None and self.commit.binsha) or newbinsha,
-                                    message)
+        # NOTE: we use the committer of the currently active commit - this should be 
+        # correct. See https://github.com/gitpython-developers/GitPython/pull/146
+        return RefLog.append_entry(self.commit.committer, RefLog.path(self), oldbinsha, 
+                                    (newbinsha is None and self.commit.binsha) or newbinsha, 
+                                    message) 
 
     def log_entry(self, index):
         """:return: RefLogEntry at the given index

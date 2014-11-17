@@ -258,7 +258,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
             finalize_process(proc_or_stream)
 
     @classmethod
-    def create_from_tree(cls, repo, tree, message, parent_commits=None, head=False):
+    def create_from_tree(cls, repo, tree, message, parent_commits=None, head=False, author=None, committer=None):
         """Commit the given tree, creating a commit object.
 
         :param repo: Repo object the commit should be part of
@@ -303,8 +303,8 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
         cr = repo.config_reader()
         env = os.environ
 
-        committer = Actor.committer(cr)
-        author = Actor.author(cr)
+        committer = committer or Actor.committer(cr)
+        author = author or Actor.author(cr)
 
         # PARSE THE DATES
         unix_time = int(time())
