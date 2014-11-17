@@ -6,11 +6,11 @@
 Keeping this code separate from the beginning makes it easier to out-source
 it into c later, if required"""
 
-from exc import (
+from git.exc import (
     BadObjectType
 )
 
-from util import zlib
+from git.util import zlib
 decompressobj = zlib.decompressobj
 
 import mmap
