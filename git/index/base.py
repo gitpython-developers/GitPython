@@ -559,9 +559,9 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         # END for each item
         return (paths, entries)
 
-    @git_working_dir
     def _store_path(self, filepath, fprogress):
-        """Store file at filepath in the database and return the base index entry"""
+        """Store file at filepath in the database and return the base index entry
+        Needs the git_working_dir decorator active ! This must be assured in the calling code"""
         st = os.lstat(filepath)     # handles non-symlinks as well
         stream = None
         if S_ISLNK(st.st_mode):
@@ -707,13 +707,17 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             # create objects if required, otherwise go with the existing shas
             null_entries_indices = [ i for i,e in enumerate(entries) if e.binsha == Object.NULL_BIN_SHA ]
             if null_entries_indices:
-                for ei in null_entries_indices:
-                    null_entry = entries[ei]
-                    new_entry = self._store_path(null_entry.path, fprogress)
-                    
-                    # update null entry
-                    entries[ei] = BaseIndexEntry((null_entry.mode, new_entry.binsha, null_entry.stage, null_entry.path))
-                # END for each entry index
+                @git_working_dir
+                def handle_null_entries(self):
+                    for ei in null_entries_indices:
+                        null_entry = entries[ei]
+                        new_entry = self._store_path(null_entry.path, fprogress)
+                        
+                        # update null entry
+                        entries[ei] = BaseIndexEntry((null_entry.mode, new_entry.binsha, null_entry.stage, null_entry.path))
+                    # END for each entry index
+                # end closure
+                handle_null_entries(self)
             # END null_entry handling
 
             # REWRITE PATHS
