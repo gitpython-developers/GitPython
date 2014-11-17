@@ -341,8 +341,10 @@ class Git(LazyMixin):
           cwd = self._working_dir
 
         # Start the process
+        env = os.environ.copy()
+        env["LC_MESSAGES"] = "C"
         proc = Popen(command,
-                        env={"LC_MESSAGES": "C"},
+                        env=env,
                         cwd=cwd,
                         stdin=istream,
                         stderr=PIPE,

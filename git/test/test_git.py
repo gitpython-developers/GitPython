@@ -5,6 +5,7 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
 import os
+import mock
 from git.test.lib import (TestBase,
                             patch,
                             raises,
@@ -128,3 +129,8 @@ class TestGit(TestBase):
 
     def test_change_to_transform_kwargs_does_not_break_command_options(self):
         self.git.log(n=1)
+
+    def test_env_vars_passed_to_git(self):
+        editor = 'non_existant_editor'
+        with mock.patch.dict('os.environ', {'GIT_EDITOR': editor}):
+            assert self.git.var("GIT_EDITOR") == editor
