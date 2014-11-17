@@ -26,20 +26,20 @@ from git.objects.fun import (
 from typ import (
                     BaseIndexEntry,
                     IndexEntry,
-                    CE_NAMEMASK, 
+                    CE_NAMEMASK,
                     CE_STAGESHIFT
                 )
 CE_NAMEMASK_INV = ~CE_NAMEMASK
 
-from util import    (
-                    pack, 
+from util import (
+                    pack,
                     unpack
                     )
 
 from gitdb.base import IStream
 from gitdb.typ import str_tree_type
 
-__all__ = ('write_cache', 'read_cache', 'write_tree_from_cache', 'entry_key', 
+__all__ = ('write_cache', 'read_cache', 'write_tree_from_cache', 'entry_key',
             'stat_mode_to_index_mode', 'S_IFGITLINK')
 
 
@@ -55,19 +55,19 @@ def stat_mode_to_index_mode(mode):
 
 def write_cache(entries, stream, extension_data=None, ShaStreamCls=IndexFileSHA1Writer):
     """Write the cache represented by entries to a stream
-    
+
     :param entries: **sorted** list of entries
     :param stream: stream to wrap into the AdapterStreamCls - it is used for
         final output.
-        
+
     :param ShaStreamCls: Type to use when writing to the stream. It produces a sha
         while writing to it, before the data is passed on to the wrapped stream
-        
+
     :param extension_data: any kind of data to write as a trailer, it must begin
         a 4 byte identifier, followed by its size ( 4 bytes )"""
     # wrap the stream into a compatible writer
     stream = ShaStreamCls(stream)
-    
+
     tell = stream.tell
     write = stream.write
 
@@ -98,17 +98,19 @@ def write_cache(entries, stream, extension_data=None, ShaStreamCls=IndexFileSHA1
 
     # write the sha over the content
     stream.write_sha()
-    
+
+
 def read_header(stream):
         """Return tuple(version_long, num_entries) from the given stream"""
         type_id = stream.read(4)
         if type_id != "DIRC":
             raise AssertionError("Invalid index file header: %r" % type_id)
         version, num_entries = unpack(">LL", stream.read(4 * 2))
-        
+
         # TODO: handle version 3: extended data, see read-cache.c
         assert version in (1, 2)
         return version, num_entries
+
 
 def entry_key(*entry):
     """:return: Key suitable to be used for the index.entries dictionary
@@ -118,6 +120,7 @@ def entry_key(*entry):
     else:
         return tuple(entry)
     # END handle entry
+
 
 def read_cache(stream):
     """Read a cache file from the given stream
@@ -130,7 +133,7 @@ def read_cache(stream):
     version, num_entries = read_header(stream)
     count = 0
     entries = dict()
-    
+
     read = stream.read
     tell = stream.tell
     while count < num_entries:
@@ -141,7 +144,7 @@ def read_cache(stream):
             unpack(">LLLLLL20sH", read(20 + 4 * 6 + 2))
         path_size = flags & CE_NAMEMASK
         path = read(path_size)
-    
+
         real_size = ((tell() - beginoffset + 8) & ~7)
         data = read((beginoffset + real_size) - tell())
         entry = IndexEntry((mode, sha, flags, path, ctime, mtime, dev, ino, uid, gid, size))
@@ -163,18 +166,19 @@ def read_cache(stream):
 
     # truncate the sha in the end as we will dynamically create it anyway
     extension_data = extension_data[:-20]
-    
+
     return (version, entries, extension_data, content_sha)
-    
+
+
 def write_tree_from_cache(entries, odb, sl, si=0):
     """Create a tree from the given sorted list of entries and put the respective
     trees into the given object database
-    
+
     :param entries: **sorted** list of IndexEntries
     :param odb: object database to store the trees in
     :param si: start index at which we should start creating subtrees
     :param sl: slice indicating the range we should process on the entries list
-    :return: tuple(binsha, list(tree_entry, ...)) a tuple of a sha and a list of 
+    :return: tuple(binsha, list(tree_entry, ...)) a tuple of a sha and a list of
         tree entries being a tuple of hexsha, mode, name"""
     tree_items = list()
     tree_items_append = tree_items.append
@@ -202,49 +206,51 @@ def write_tree_from_cache(entries, odb, sl, si=0):
                 # END abort on base mismatch
                 xi += 1
             # END find common base
-            
+
             # enter recursion
             # ci - 1 as we want to count our current item as well
-            sha, tree_entry_list = write_tree_from_cache(entries, odb, slice(ci-1, xi), rbound+1)
+            sha, tree_entry_list = write_tree_from_cache(entries, odb, slice(ci - 1, xi), rbound + 1)
             tree_items_append((sha, S_IFDIR, base))
-            
+
             # skip ahead
             ci = xi
-        # END handle bounds 
+        # END handle bounds
     # END for each entry
-    
+
     # finally create the tree
     sio = StringIO()
     tree_to_stream(tree_items, sio.write)
     sio.seek(0)
-    
+
     istream = odb.store(IStream(str_tree_type, len(sio.getvalue()), sio))
     return (istream.binsha, tree_items)
-    
+
+
 def _tree_entry_to_baseindexentry(tree_entry, stage):
-    return BaseIndexEntry((tree_entry[1], tree_entry[0], stage <<CE_STAGESHIFT, tree_entry[2]))
-    
+    return BaseIndexEntry((tree_entry[1], tree_entry[0], stage << CE_STAGESHIFT, tree_entry[2]))
+
+
 def aggressive_tree_merge(odb, tree_shas):
     """
     :return: list of BaseIndexEntries representing the aggressive merge of the given
-        trees. All valid entries are on stage 0, whereas the conflicting ones are left 
-        on stage 1, 2 or 3, whereas stage 1 corresponds to the common ancestor tree, 
+        trees. All valid entries are on stage 0, whereas the conflicting ones are left
+        on stage 1, 2 or 3, whereas stage 1 corresponds to the common ancestor tree,
         2 to our tree and 3 to 'their' tree.
     :param tree_shas: 1, 2 or 3 trees as identified by their binary 20 byte shas
         If 1 or two, the entries will effectively correspond to the last given tree
         If 3 are given, a 3 way merge is performed"""
     out = list()
     out_append = out.append
-    
+
     # one and two way is the same for us, as we don't have to handle an existing
     # index, instrea
-    if len(tree_shas) in (1,2):
+    if len(tree_shas) in (1, 2):
         for entry in traverse_tree_recursive(odb, tree_shas[-1], ''):
             out_append(_tree_entry_to_baseindexentry(entry, 0))
         # END for each entry
         return out
-    # END handle single tree 
-    
+    # END handle single tree
+
     if len(tree_shas) > 3:
         raise ValueError("Cannot handle %i trees at once" % len(tree_shas))
 
@@ -259,7 +265,7 @@ def aggressive_tree_merge(odb, tree_shas):
                     # its a conflict, otherwise we take the changed version
                     # This should be the most common branch, so it comes first
                     if( base[0] != ours[0] and base[0] != theirs[0] and ours[0] != theirs[0] ) or \
-                        ( base[1] != ours[1] and base[1] != theirs[1] and ours[1] != theirs[1] ):
+                        (base[1] != ours[1] and base[1] != theirs[1] and ours[1] != theirs[1]):
                         # changed by both
                         out_append(_tree_entry_to_baseindexentry(base, 1))
                         out_append(_tree_entry_to_baseindexentry(ours, 2))
@@ -271,11 +277,11 @@ def aggressive_tree_merge(odb, tree_shas):
                         # either nobody changed it, or they did. In either
                         # case, use theirs
                         out_append(_tree_entry_to_baseindexentry(theirs, 0))
-                    # END handle modification 
+                    # END handle modification
                 else:
-                    
+
                     if ours[0] != base[0] or ours[1] != base[1]:
-                        # they deleted it, we changed it, conflict 
+                        # they deleted it, we changed it, conflict
                         out_append(_tree_entry_to_baseindexentry(base, 1))
                         out_append(_tree_entry_to_baseindexentry(ours, 2))
                     # else:

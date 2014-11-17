@@ -13,26 +13,28 @@ from util import (
 
 __all__ = ("TagObject", )
 
+
 class TagObject(base.Object):
+
     """Non-Lightweight tag carrying additional information about an object we are pointing to."""
     type = "tag"
-    __slots__ = ( "object", "tag", "tagger", "tagged_date", "tagger_tz_offset", "message" )
-        
-    def __init__(self, repo, binsha, object=None, tag=None, 
+    __slots__ = ("object", "tag", "tagger", "tagged_date", "tagger_tz_offset", "message")
+
+    def __init__(self, repo, binsha, object=None, tag=None,
                 tagger=None, tagged_date=None, tagger_tz_offset=None, message=None):
         """Initialize a tag object with additional data
-        
+
         :param repo: repository this object is located in
         :param binsha: 20 byte SHA1
         :param object: Object instance of object we are pointing to
         :param tag: name of this tag
         :param tagger: Actor identifying the tagger
         :param tagged_date: int_seconds_since_epoch
-            is the DateTime of the tag creation - use time.gmtime to convert 
+            is the DateTime of the tag creation - use time.gmtime to convert
             it into a different format
-        :param tagged_tz_offset: int_seconds_west_of_utc is the timezone that the 
+        :param tagged_tz_offset: int_seconds_west_of_utc is the timezone that the
             authored_date is in, in a format similar to time.altzone"""
-        super(TagObject, self).__init__(repo, binsha )
+        super(TagObject, self).__init__(repo, binsha)
         if object is not None:
             self.object = object
         if tag is not None:
@@ -45,24 +47,24 @@ class TagObject(base.Object):
             self.tagger_tz_offset = tagger_tz_offset
         if message is not None:
             self.message = message
-        
+
     def _set_cache_(self, attr):
         """Cache all our attributes at once"""
         if attr in TagObject.__slots__:
             ostream = self.repo.odb.stream(self.binsha)
             lines = ostream.read().splitlines()
-            
+
             obj, hexsha = lines[0].split(" ")       # object <hexsha>
-            type_token, type_name = lines[1].split(" ") # type <type_name>
+            type_token, type_name = lines[1].split(" ")  # type <type_name>
             self.object = get_object_type_by_name(type_name)(self.repo, hex_to_bin(hexsha))
-            
+
             self.tag = lines[2][4:]  # tag <tag name>
-            
-            tagger_info = lines[3]# tagger <actor> <date>
+
+            tagger_info = lines[3]  # tagger <actor> <date>
             self.tagger, self.tagged_date, self.tagger_tz_offset = parse_actor_and_date(tagger_info)
-            
+
             # line 4 empty - it could mark the beginning of the next header
-            # in case there really is no message, it would not exist. Otherwise 
+            # in case there really is no message, it would not exist. Otherwise
             # a newline separates header from message
             if len(lines) > 5:
                 self.message = "\n".join(lines[5:])
@@ -71,6 +73,3 @@ class TagObject(base.Object):
         # END check our attributes
         else:
             super(TagObject, self)._set_cache_(attr)
-        
-        
-

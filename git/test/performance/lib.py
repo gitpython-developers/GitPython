@@ -30,26 +30,27 @@ def resolve_or_fail(env_var):
 #} END utilities
 
 
-#{ Base Classes 
+#{ Base Classes
 
 class TestBigRepoR(TestBase):
-    """TestCase providing access to readonly 'big' repositories using the following 
+
+    """TestCase providing access to readonly 'big' repositories using the following
     member variables:
-    
+
     * gitrorepo
-    
+
      * Read-Only git repository - actually the repo of git itself
-     
+
     * puregitrorepo
-    
+
      * As gitrepo, but uses pure python implementation
     """
-     
+
     #{ Invariants
     head_sha_2k = '235d521da60e4699e5bd59ac658b5b48bd76ddca'
     head_sha_50 = '32347c375250fd470973a5d76185cac718955fd5'
-    #} END invariants 
-    
+    #} END invariants
+
     @classmethod
     def setUp(cls):
         super(TestBigRepoR, cls).setUp()
@@ -59,10 +60,11 @@ class TestBigRepoR(TestBase):
 
 
 class TestBigRepoRW(TestBigRepoR):
+
     """As above, but provides a big repository that we can write to.
-    
+
     Provides ``self.gitrwrepo`` and ``self.puregitrwrepo``"""
-    
+
     @classmethod
     def setUp(cls):
         super(TestBigRepoRW, cls).setUp()
@@ -70,9 +72,9 @@ class TestBigRepoRW(TestBigRepoR):
         os.mkdir(dirname)
         cls.gitrwrepo = cls.gitrorepo.clone(dirname, shared=True, bare=True, odbt=GitCmdObjectDB)
         cls.puregitrwrepo = Repo(dirname, odbt=GitDB)
-    
+
     @classmethod
     def tearDownAll(cls):
         shutil.rmtree(cls.gitrwrepo.working_dir)
-        
+
 #} END base classes

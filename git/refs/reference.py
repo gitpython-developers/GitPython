@@ -1,7 +1,7 @@
 from symbolic import SymbolicReference
 from git.util import (
-                    LazyMixin, 
-                    Iterable, 
+                    LazyMixin,
+                    Iterable,
                     )
 
 from gitdb.util import (
@@ -12,8 +12,11 @@ from gitdb.util import (
 __all__ = ["Reference"]
 
 #{ Utilities
+
+
 def require_remote_ref_path(func):
     """A decorator raising a TypeError if we are not a valid remote, based on the path"""
+
     def wrapper(self, *args):
         if not self.path.startswith(self._remote_common_path_default + "/"):
             raise ValueError("ref path does not point to a remote reference: %s" % self.path)
@@ -25,33 +28,33 @@ def require_remote_ref_path(func):
 
 
 class Reference(SymbolicReference, LazyMixin, Iterable):
-    """Represents a named reference to any object. Subclasses may apply restrictions though, 
+
+    """Represents a named reference to any object. Subclasses may apply restrictions though,
     i.e. Heads can only point to commits."""
     __slots__ = tuple()
     _points_to_commits_only = False
     _resolve_ref_on_create = True
     _common_path_default = "refs"
-    
-    def __init__(self, repo, path, check_path = True):
+
+    def __init__(self, repo, path, check_path=True):
         """Initialize this instance
         :param repo: Our parent repository
-        
+
         :param path:
             Path relative to the .git/ directory pointing to the ref in question, i.e.
             refs/heads/master
-        :param check_path: if False, you can provide any path. Otherwise the path must start with the 
+        :param check_path: if False, you can provide any path. Otherwise the path must start with the
             default path prefix of this type."""
-        if check_path and not path.startswith(self._common_path_default+'/'):
+        if check_path and not path.startswith(self._common_path_default + '/'):
             raise ValueError("Cannot instantiate %r from path %s" % (self.__class__.__name__, path))
         super(Reference, self).__init__(repo, path)
-        
 
     def __str__(self):
         return self.name
-        
+
     #{ Interface
 
-    def set_object(self, object, logmsg = None):
+    def set_object(self, object, logmsg=None):
         """Special version which checks if the head-log needs an update as well"""
         oldbinsha = None
         if logmsg is not None:
@@ -60,9 +63,9 @@ class Reference(SymbolicReference, LazyMixin, Iterable):
                 oldbinsha = self.commit.binsha
             #END handle commit retrieval
         #END handle message is set
-        
+
         super(Reference, self).set_object(object, logmsg)
-        
+
         if oldbinsha is not None:
             # /* from refs.c in git-source
             # * Special hack: If a branch is updated directly and HEAD
@@ -84,24 +87,23 @@ class Reference(SymbolicReference, LazyMixin, Iterable):
     @property
     def name(self):
         """:return: (shortest) Name of this reference - it may contain path components"""
-        # first two path tokens are can be removed as they are 
+        # first two path tokens are can be removed as they are
         # refs/heads or refs/tags or refs/remotes
         tokens = self.path.split('/')
         if len(tokens) < 3:
             return self.path           # could be refs/HEAD
         return '/'.join(tokens[2:])
-    
+
     @classmethod
-    def iter_items(cls, repo, common_path = None):
+    def iter_items(cls, repo, common_path=None):
         """Equivalent to SymbolicReference.iter_items, but will return non-detached
         references as well."""
         return cls._iter_items(repo, common_path)
-        
+
     #}END interface
-    
-    
+
     #{ Remote Interface
-    
+
     @property
     @require_remote_ref_path
     def remote_name(self):
@@ -112,7 +114,7 @@ class Reference(SymbolicReference, LazyMixin, Iterable):
         tokens = self.path.split('/')
         # /refs/remotes/<remote name>/<branch_name>
         return tokens[2]
-        
+
     @property
     @require_remote_ref_path
     def remote_head(self):
@@ -121,5 +123,5 @@ class Reference(SymbolicReference, LazyMixin, Iterable):
             a branch"""
         tokens = self.path.split('/')
         return '/'.join(tokens[3:])
-    
+
     #} END remote interface
