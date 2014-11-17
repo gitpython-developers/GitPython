@@ -276,6 +276,10 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
             If True, the HEAD will be advanced to the new commit automatically.
             Else the HEAD will remain pointing on the previous commit. This could
             lead to undesired results when diffing files.
+        :param author: The name of the author, optional. If unset, the repository 
+            configuration is used to obtain this value.
+        :param committer: The name of the committer, optional. If unset, the 
+            repository configuration is used to obtain this value.
 
         :return: Commit object representing the new commit
 
@@ -283,7 +287,6 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
             Additional information about the committer and Author are taken from the
             environment or from the git configuration, see git-commit-tree for
             more information"""
-        parents = parent_commits
         if parent_commits is None:
             try:
                 parent_commits = [repo.head.commit]
@@ -357,7 +360,6 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
             except ValueError:
                 # head is not yet set to the ref our HEAD points to
                 # Happens on first commit
-                import git.refs
                 master = git.refs.Head.create(repo, repo.head.ref, new_commit, logmsg="commit (initial): %s" % message)
                 repo.head.set_reference(master, logmsg='commit: Switching to %s' % master)
             # END handle empty repositories
