@@ -2,6 +2,10 @@
 Changelog
 =========
 
+0.3.2.1
+=======
+* `Fix for #207 <https://github.com/gitpython-developers/GitPython/issues/207>`_
+
 0.3.2 
 =====
 
