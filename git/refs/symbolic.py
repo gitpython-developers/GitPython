@@ -630,3 +630,7 @@ class SymbolicReference(object):
             # END exception handling
         # END for each type to try
         raise ValueError("Could not find reference type suitable to handle path %r" % path)
+
+    def is_remote(self):
+        """:return: True if this symbolic reference points to a remote branch"""
+        return self.path.startswith(self._remote_common_path_default + "/")

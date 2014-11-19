@@ -18,7 +18,7 @@ def require_remote_ref_path(func):
     """A decorator raising a TypeError if we are not a valid remote, based on the path"""
 
     def wrapper(self, *args):
-        if not self.path.startswith(self._remote_common_path_default + "/"):
+        if not self.is_remote():
             raise ValueError("ref path does not point to a remote reference: %s" % self.path)
         return func(self, *args)
     #END wrapper
