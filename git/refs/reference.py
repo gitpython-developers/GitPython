@@ -1,13 +1,13 @@
 from symbolic import SymbolicReference
 from git.util import (
-                    LazyMixin,
-                    Iterable,
-                    )
+    LazyMixin,
+    Iterable,
+)
 
 from gitdb.util import (
-                            isfile,
-                            hex_to_bin
-                        )
+    isfile,
+    hex_to_bin
+)
 
 __all__ = ["Reference"]
 
@@ -21,7 +21,7 @@ def require_remote_ref_path(func):
         if not self.is_remote():
             raise ValueError("ref path does not point to a remote reference: %s" % self.path)
         return func(self, *args)
-    #END wrapper
+    # END wrapper
     wrapper.__name__ = func.__name__
     return wrapper
 #}END utilites
@@ -61,8 +61,8 @@ class Reference(SymbolicReference, LazyMixin, Iterable):
             head = self.repo.head
             if not head.is_detached and head.ref == self:
                 oldbinsha = self.commit.binsha
-            #END handle commit retrieval
-        #END handle message is set
+            # END handle commit retrieval
+        # END handle message is set
 
         super(Reference, self).set_object(object, logmsg)
 
@@ -80,7 +80,7 @@ class Reference(SymbolicReference, LazyMixin, Iterable):
             # * scenarios (even 100% of the default ones).
             # */
             self.repo.head.log_append(oldbinsha, logmsg)
-        #END check if the head
+        # END check if the head
 
     # NOTE: Don't have to overwrite properties as the will only work without a the log
 

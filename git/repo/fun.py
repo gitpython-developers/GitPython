@@ -4,16 +4,16 @@ from gitdb.exc import BadObject
 from git.refs import SymbolicReference
 from git.objects import Object
 from gitdb.util import (
-                            join,
-                            isdir,
-                            isfile,
-                            dirname,
-                            hex_to_bin,
-                            bin_to_hex
-                        )
+    join,
+    isdir,
+    isfile,
+    dirname,
+    hex_to_bin,
+    bin_to_hex
+)
 from string import digits
 
-__all__ = ('rev_parse', 'is_git_dir', 'touch', 'read_gitfile', 'find_git_dir', 'name_to_object', 
+__all__ = ('rev_parse', 'is_git_dir', 'touch', 'read_gitfile', 'find_git_dir', 'name_to_object',
            'short_to_long', 'deref_tag', 'to_commit')
 
 
@@ -30,8 +30,8 @@ def is_git_dir(d):
             isdir(join(d, 'refs')):
         headref = join(d, 'HEAD')
         return isfile(headref) or \
-                (os.path.islink(headref) and
-                os.readlink(headref).startswith('refs'))
+            (os.path.islink(headref) and
+             os.readlink(headref).startswith('refs'))
     return False
 
 
@@ -46,13 +46,14 @@ def find_git_dir(d):
             return find_git_dir(d)
     return None
 
+
 def read_gitfile(f):
     """ This is taken from the git setup.c:read_gitfile function.
     :return gitdir path or None if gitfile is invalid."""
     if f is None:
         return None
     try:
-       line = open(f, 'r').readline().rstrip()
+        line = open(f, 'r').readline().rstrip()
     except (OSError, IOError):
         # File might not exist or is unreadable - ignore
         return None
@@ -61,6 +62,7 @@ def read_gitfile(f):
         return None
     path = os.path.realpath(line[8:])
     return path if is_git_dir(path) else None
+
 
 def short_to_long(odb, hexsha):
     """:return: long hexadecimal sha1 from the given less-than-40 byte hexsha
@@ -90,7 +92,7 @@ def name_to_object(repo, name, return_ref=False):
         else:
             hexsha = name
         # END handle short shas
-    #END find sha if it matches
+    # END find sha if it matches
 
     # if we couldn't find an object for what seemed to be a short hexsha
     # try to find it as reference anyway, it could be named 'aaa' for instance
@@ -100,7 +102,7 @@ def name_to_object(repo, name, return_ref=False):
                 hexsha = SymbolicReference.dereference_recursive(repo, base % name)
                 if return_ref:
                     return SymbolicReference(repo, base % name)
-                #END handle symbolic ref
+                # END handle symbolic ref
                 break
             except ValueError:
                 pass
@@ -110,7 +112,7 @@ def name_to_object(repo, name, return_ref=False):
     # didn't find any ref, this is an error
     if return_ref:
         raise BadObject("Couldn't find reference named %r" % name)
-    #END handle return ref
+    # END handle return ref
 
     # tried everything ? fail
     if hexsha is None:
@@ -183,12 +185,12 @@ def rev_parse(repo, rev):
                     ref = name_to_object(repo, rev[:start], return_ref=True)
                 else:
                     obj = name_to_object(repo, rev[:start])
-                #END handle token
-            #END handle refname
+                # END handle token
+            # END handle refname
 
             if ref is not None:
                 obj = ref.commit
-            #END handle ref
+            # END handle ref
         # END initialize obj on first token
 
         start += 1
@@ -227,13 +229,13 @@ def rev_parse(repo, rev):
                     # TODO: Try to parse the other date options, using parse_date
                     # maybe
                     raise NotImplementedError("Support for additional @{...} modes not implemented")
-                #END handle revlog index
+                # END handle revlog index
 
                 try:
                     entry = ref.log_entry(revlog_index)
                 except IndexError:
                     raise IndexError("Invalid revlog index: %i" % revlog_index)
-                #END handle index out of bound
+                # END handle index out of bound
 
                 obj = Object.new_from_sha(repo, hex_to_bin(entry.newhexsha))
 

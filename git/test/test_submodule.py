@@ -20,8 +20,9 @@ if sys.platform == 'win32':
         smmap.util.MapRegion._test_read_into_memory = True
     except ImportError:
         sys.stderr.write("The submodule tests will fail as some files cannot be removed due to open file handles.\n")
-        sys.stderr.write("The latest version of gitdb uses a memory map manager which can be configured to work around this problem")
-#END handle windows platform
+        sys.stderr.write(
+            "The latest version of gitdb uses a memory map manager which can be configured to work around this problem")
+# END handle windows platform
 
 
 class TestRootProgress(RootUpdateProgress):
@@ -425,7 +426,8 @@ class TestSubmodule(TestBase):
         assert not sm.module_exists()               # was never updated after rwrepo's clone
 
         # assure we clone from a local source
-        sm.config_writer().set_value('url', to_native_path_linux(join_path_native(self.rorepo.working_tree_dir, sm.path)))
+        sm.config_writer().set_value(
+            'url', to_native_path_linux(join_path_native(self.rorepo.working_tree_dir, sm.path)))
 
         # dry-run does nothing
         sm.update(recursive=False, dry_run=True, progress=prog)
@@ -535,7 +537,7 @@ class TestSubmodule(TestBase):
         assert nsmmh.ref.tracking_branch() is None                  # never set it up until now
         assert not nsmmh.is_detached
 
-        #dry run does nothing
+        # dry run does nothing
         rm.update(recursive=False, dry_run=True, progress=prog)
         assert nsmmh.ref.tracking_branch() is None
 

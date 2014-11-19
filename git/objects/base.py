@@ -6,10 +6,10 @@
 from git.util import LazyMixin, join_path_native, stream_copy
 from util import get_object_type_by_name
 from gitdb.util import (
-                            hex_to_bin,
-                            bin_to_hex,
-                            basename
-                        )
+    hex_to_bin,
+    bin_to_hex,
+    basename
+)
 
 import gitdb.typ as dbtyp
 
@@ -62,7 +62,7 @@ class Object(LazyMixin):
         if sha1 == cls.NULL_BIN_SHA:
             # the NULL binsha is always the root commit
             return get_object_type_by_name('commit')(repo, sha1)
-        #END handle special case
+        # END handle special case
         oinfo = repo.odb.info(sha1)
         inst = get_object_type_by_name(oinfo.type)(repo, oinfo.binsha)
         inst.size = oinfo.size
@@ -157,7 +157,8 @@ class IndexObject(Object):
     def _set_cache_(self, attr):
         if attr in IndexObject.__slots__:
             # they cannot be retrieved lateron ( not without searching for them )
-            raise AttributeError("path and mode attributes must have been set during %s object creation" % type(self).__name__)
+            raise AttributeError(
+                "path and mode attributes must have been set during %s object creation" % type(self).__name__)
         else:
             super(IndexObject, self)._set_cache_(attr)
         # END hanlde slot attribute

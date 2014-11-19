@@ -5,13 +5,13 @@ import shutil
 import tempfile
 
 from git.db import (
-                        GitCmdObjectDB,
-                        GitDB
-                    )
+    GitCmdObjectDB,
+    GitDB
+)
 
 from git import (
     Repo
-    )
+)
 
 #{ Invvariants
 k_env_git_repo = "GIT_PYTHON_TEST_GIT_REPO_BASE"

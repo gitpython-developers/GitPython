@@ -5,7 +5,7 @@ from StringIO import StringIO
 import weakref
 
 __all__ = ('sm_section', 'sm_name', 'mkhead', 'unbare_repo', 'find_first_remote_branch',
-            'SubmoduleConfigParser')
+           'SubmoduleConfigParser')
 
 #{ Utilities
 
@@ -33,7 +33,7 @@ def unbare_repo(func):
     def wrapper(self, *args, **kwargs):
         if self.repo.bare:
             raise InvalidGitRepositoryError("Method '%s' cannot operate on bare repositories" % func.__name__)
-        #END bare method
+        # END bare method
         return func(self, *args, **kwargs)
     # END wrapper
     wrapper.__name__ = func.__name__
@@ -48,7 +48,7 @@ def find_first_remote_branch(remotes, branch_name):
         except IndexError:
             continue
         # END exception handling
-    #END for remote
+    # END for remote
     raise InvalidGitRepositoryError("Didn't find remote branch %r in any of the given remotes", branch_name)
 
 #} END utilities

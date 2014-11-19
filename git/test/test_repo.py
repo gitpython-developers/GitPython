@@ -17,13 +17,15 @@ from git.util import join_path_native
 from git.exc import BadObject
 from gitdb.util import hex_to_bin, bin_to_hex
 
-import os, sys
+import os
+import sys
 import tempfile
 import shutil
 from cStringIO import StringIO
 
 
 class TestRepo(TestBase):
+
     @raises(InvalidGitRepositoryError)
     def test_new_should_raise_on_invalid_repo_location(self):
         Repo(tempfile.gettempdir())
@@ -276,16 +278,16 @@ class TestRepo(TestBase):
     def test_blame_real(self):
         c = 0
         for item in self.rorepo.head.commit.tree.traverse(
-                    predicate=lambda i, d: i.type == 'blob' and i.path.endswith('.py')):
+                predicate=lambda i, d: i.type == 'blob' and i.path.endswith('.py')):
             c += 1
             b = self.rorepo.blame(self.rorepo.head, item.path)
-        #END for each item to traverse
+        # END for each item to traverse
         assert c
 
     def test_untracked_files(self):
         base = self.rorepo.working_tree_dir
         files = (join_path_native(base, "__test_myfile"),
-                    join_path_native(base, "__test_other_file"))
+                 join_path_native(base, "__test_other_file"))
         num_recently_untracked = 0
         try:
             for fpath in files:
@@ -577,7 +579,7 @@ class TestRepo(TestBase):
             # all additional specs work as well
             assert rev_parse(refspec + "^{tree}") == head.commit.tree
             assert rev_parse(refspec + ":CHANGES").type == 'blob'
-        #END operate on non-detached head
+        # END operate on non-detached head
 
         # the last position
         assert rev_parse('@{1}') != head.commit
@@ -622,11 +624,11 @@ class TestRepo(TestBase):
         os.rename(rwrepo.git_dir, real_path_abs)
         git_file_path = join_path_native(rwrepo.working_tree_dir, '.git')
         open(git_file_path, 'wb').write(fixture('git_file'))
-        
+
         # Create a repo and make sure it's pointing to the relocated .git directory.
         git_file_repo = Repo(rwrepo.working_tree_dir)
         assert os.path.abspath(git_file_repo.git_dir) == real_path_abs
-        
+
         # Test using an absolute gitdir path in the .git file.
         open(git_file_path, 'wb').write('gitdir: %s\n' % real_path_abs)
         git_file_repo = Repo(rwrepo.working_tree_dir)

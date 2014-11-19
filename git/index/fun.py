@@ -2,14 +2,14 @@
 # more versatile
 # NOTE: Autodoc hates it if this is a docstring
 from stat import (
-                    S_IFDIR,
-                    S_IFLNK,
-                    S_ISLNK,
-                    S_IFDIR,
-                    S_ISDIR,
-                    S_IFMT,
-                    S_IFREG,
-                )
+    S_IFDIR,
+    S_IFLNK,
+    S_ISLNK,
+    S_IFDIR,
+    S_ISDIR,
+    S_IFMT,
+    S_IFREG,
+)
 
 S_IFGITLINK = S_IFLNK | S_IFDIR     # a submodule
 
@@ -18,29 +18,29 @@ from cStringIO import StringIO
 from git.util import IndexFileSHA1Writer
 from git.exc import UnmergedEntriesError
 from git.objects.fun import (
-                                tree_to_stream,
-                                traverse_tree_recursive,
-                                traverse_trees_recursive
-                            )
+    tree_to_stream,
+    traverse_tree_recursive,
+    traverse_trees_recursive
+)
 
 from typ import (
-                    BaseIndexEntry,
-                    IndexEntry,
-                    CE_NAMEMASK,
-                    CE_STAGESHIFT
-                )
+    BaseIndexEntry,
+    IndexEntry,
+    CE_NAMEMASK,
+    CE_STAGESHIFT
+)
 CE_NAMEMASK_INV = ~CE_NAMEMASK
 
 from util import (
-                    pack,
-                    unpack
-                    )
+    pack,
+    unpack
+)
 
 from gitdb.base import IStream
 from gitdb.typ import str_tree_type
 
 __all__ = ('write_cache', 'read_cache', 'write_tree_from_cache', 'entry_key',
-            'stat_mode_to_index_mode', 'S_IFGITLINK')
+           'stat_mode_to_index_mode', 'S_IFGITLINK')
 
 
 def stat_mode_to_index_mode(mode):
@@ -86,7 +86,7 @@ def write_cache(entries, stream, extension_data=None, ShaStreamCls=IndexFileSHA1
         assert plen == len(path), "Path %s too long to fit into index" % entry[3]
         flags = plen | (entry[2] & CE_NAMEMASK_INV)     # clear possible previous values
         write(pack(">LLLLLL20sH", entry[6], entry[7], entry[0],
-                                    entry[8], entry[9], entry[10], entry[1], flags))
+                   entry[8], entry[9], entry[10], entry[1], flags))
         write(path)
         real_size = ((tell() - beginoffset + 8) & ~7)
         write("\0" * ((beginoffset + real_size) - tell()))
@@ -101,15 +101,15 @@ def write_cache(entries, stream, extension_data=None, ShaStreamCls=IndexFileSHA1
 
 
 def read_header(stream):
-        """Return tuple(version_long, num_entries) from the given stream"""
-        type_id = stream.read(4)
-        if type_id != "DIRC":
-            raise AssertionError("Invalid index file header: %r" % type_id)
-        version, num_entries = unpack(">LL", stream.read(4 * 2))
+    """Return tuple(version_long, num_entries) from the given stream"""
+    type_id = stream.read(4)
+    if type_id != "DIRC":
+        raise AssertionError("Invalid index file header: %r" % type_id)
+    version, num_entries = unpack(">LL", stream.read(4 * 2))
 
-        # TODO: handle version 3: extended data, see read-cache.c
-        assert version in (1, 2)
-        return version, num_entries
+    # TODO: handle version 3: extended data, see read-cache.c
+    assert version in (1, 2)
+    return version, num_entries
 
 
 def entry_key(*entry):
@@ -160,7 +160,8 @@ def read_cache(stream):
     # 4 bytes length of chunk
     # repeated 0 - N times
     extension_data = stream.read(~0)
-    assert len(extension_data) > 19, "Index Footer was not at least a sha on content as it was only %i bytes in size" % len(extension_data)
+    assert len(extension_data) > 19, "Index Footer was not at least a sha on content as it was only %i bytes in size" % len(
+        extension_data)
 
     content_sha = extension_data[-20:]
 
@@ -265,7 +266,7 @@ def aggressive_tree_merge(odb, tree_shas):
                     # its a conflict, otherwise we take the changed version
                     # This should be the most common branch, so it comes first
                     if( base[0] != ours[0] and base[0] != theirs[0] and ours[0] != theirs[0] ) or \
-                        (base[1] != ours[1] and base[1] != theirs[1] and ours[1] != theirs[1]):
+                            (base[1] != ours[1] and base[1] != theirs[1] and ours[1] != theirs[1]):
                         # changed by both
                         out_append(_tree_entry_to_baseindexentry(base, 1))
                         out_append(_tree_entry_to_baseindexentry(ours, 2))
@@ -299,7 +300,7 @@ def aggressive_tree_merge(odb, tree_shas):
                         out_append(_tree_entry_to_baseindexentry(base, 1))
                         out_append(_tree_entry_to_baseindexentry(theirs, 3))
                     # END theirs changed
-                    #else:
+                    # else:
                     #   theirs didnt change
                     #   pass
                 # END handle theirs

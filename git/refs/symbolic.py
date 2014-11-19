@@ -1,23 +1,23 @@
 import os
 from git.objects import Object, Commit
 from git.util import (
-                    join_path,
-                    join_path_native,
-                    to_native_path_linux,
-                    assure_directory_exists
-                    )
+    join_path,
+    join_path_native,
+    to_native_path_linux,
+    assure_directory_exists
+)
 
 from gitdb.exc import BadObject
 from gitdb.util import (
-                            join,
-                            dirname,
-                            isdir,
-                            exists,
-                            isfile,
-                            rename,
-                            hex_to_bin,
-                            LockedFD
-                        )
+    join,
+    dirname,
+    isdir,
+    exists,
+    isfile,
+    rename,
+    hex_to_bin,
+    LockedFD
+)
 
 from log import RefLog
 
@@ -135,7 +135,8 @@ class SymbolicReference(object):
             # NOTE: We are not a symbolic ref if we are in a packed file, as these
             # are excluded explictly
             for sha, path in cls._iter_packed_refs(repo):
-                if path != ref_path: continue
+                if path != ref_path:
+                    continue
                 tokens = (sha, path)
                 break
             # END for each packed ref
@@ -170,11 +171,11 @@ class SymbolicReference(object):
         obj = self._get_object()
         if obj.type == 'tag':
             obj = obj.object
-        #END dereference tag
+        # END dereference tag
 
         if obj.type != Commit.type:
             raise TypeError("Symbolic Reference pointed to object %r, commit was required" % obj)
-        #END handle type
+        # END handle type
         return obj
 
     def set_commit(self, commit, logmsg=None):
@@ -194,12 +195,12 @@ class SymbolicReference(object):
                 invalid_type = self.repo.rev_parse(commit).type != Commit.type
             except BadObject:
                 raise ValueError("Invalid object: %s" % commit)
-            #END handle exception
+            # END handle exception
         # END verify type
 
         if invalid_type:
             raise ValueError("Need commit, got %r" % commit)
-        #END handle raise
+        # END handle raise
 
         # we leave strings to the rev-parse method below
         self.set_object(commit, logmsg)
@@ -218,7 +219,7 @@ class SymbolicReference(object):
         :return: self"""
         if isinstance(object, SymbolicReference):
             object = object.object
-        #END resolve references
+        # END resolve references
 
         is_detached = True
         try:
@@ -284,7 +285,7 @@ class SymbolicReference(object):
         # typecheck
         if obj is not None and self._points_to_commits_only and obj.type != Commit.type:
             raise TypeError("Require commit, got %r" % obj)
-        #END verify type
+        # END verify type
 
         oldbinsha = None
         if logmsg is not None:
@@ -292,8 +293,8 @@ class SymbolicReference(object):
                 oldbinsha = self.commit.binsha
             except ValueError:
                 oldbinsha = Commit.NULL_BIN_SHA
-            #END handle non-existing
-        #END retrieve old hexsha
+            # END handle non-existing
+        # END retrieve old hexsha
 
         fpath = self.abspath
         assure_directory_exists(fpath, is_file=True)
@@ -306,7 +307,7 @@ class SymbolicReference(object):
         # Adjust the reflog
         if logmsg is not None:
             self.log_append(oldbinsha, logmsg)
-        #END handle reflog
+        # END handle reflog
 
         return self
 
@@ -355,7 +356,7 @@ class SymbolicReference(object):
         :param newbinsha: The sha the ref points to now. If None, our current commit sha
             will be used
         :return: added RefLogEntry instance"""
-        # NOTE: we use the committer of the currently active commit - this should be 
+        # NOTE: we use the committer of the currently active commit - this should be
         # correct to allow overriding the committer on a per-commit level.
         # See https://github.com/gitpython-developers/GitPython/pull/146
         try:
@@ -363,9 +364,9 @@ class SymbolicReference(object):
         except ValueError:
             committer_or_reader = self.repo.config_reader()
         # end handle newly cloned repositories
-        return RefLog.append_entry(committer_or_reader, RefLog.path(self), oldbinsha, 
-                                    (newbinsha is None and self.commit.binsha) or newbinsha, 
-                                    message)
+        return RefLog.append_entry(committer_or_reader, RefLog.path(self), oldbinsha,
+                                   (newbinsha is None and self.commit.binsha) or newbinsha,
+                                   message)
 
     def log_entry(self, index):
         """:return: RefLogEntry at the given index
@@ -422,7 +423,7 @@ class SymbolicReference(object):
                     # If we deleted the last line and this one is a tag-reference object,
                     # we drop it as well
                     if ( line.startswith('#') or full_ref_path not in line ) and \
-                        (not dropped_last_line or dropped_last_line and not line.startswith('^')):
+                            (not dropped_last_line or dropped_last_line and not line.startswith('^')):
                         new_lines.append(line)
                         dropped_last_line = False
                         continue
@@ -447,7 +448,7 @@ class SymbolicReference(object):
         reflog_path = RefLog.path(cls(repo, full_ref_path))
         if os.path.isfile(reflog_path):
             os.remove(reflog_path)
-        #END remove reflog
+        # END remove reflog
 
     @classmethod
     def _create(cls, repo, path, resolve, reference, force, logmsg=None):
@@ -472,7 +473,8 @@ class SymbolicReference(object):
                 target_data = "ref: " + target_data
             existing_data = open(abs_ref_path, 'rb').read().strip()
             if existing_data != target_data:
-                raise OSError("Reference at %r does already exist, pointing to %r, requested was %r" % (full_ref_path, existing_data, target_data))
+                raise OSError("Reference at %r does already exist, pointing to %r, requested was %r" %
+                              (full_ref_path, existing_data, target_data))
         # END no force handling
 
         ref = cls(repo, full_ref_path)

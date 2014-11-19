@@ -308,8 +308,8 @@ class Diff(object):
             new_file, deleted_file = bool(new_file_mode), bool(deleted_file_mode)
 
             index.append(Diff(repo, a_path, b_path, a_blob_id, b_blob_id,
-                old_mode or deleted_file_mode, new_mode or new_file_mode or b_mode,
-                new_file, deleted_file, rename_from, rename_to, diff[header.end():]))
+                              old_mode or deleted_file_mode, new_mode or new_file_mode or b_mode,
+                              new_file, deleted_file, rename_from, rename_to, diff[header.end():]))
 
         return index
 

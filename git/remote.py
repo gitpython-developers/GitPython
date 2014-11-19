@@ -11,23 +11,23 @@ from ConfigParser import NoOptionError
 from config import SectionConstraint
 
 from git.util import (
-                        LazyMixin,
-                        Iterable,
-                        IterableList,
-                        RemoteProgress
-                        )
+    LazyMixin,
+    Iterable,
+    IterableList,
+    RemoteProgress
+)
 
 from refs import (
-                    Reference,
-                    RemoteReference,
-                    SymbolicReference,
-                    TagReference
-                )
+    Reference,
+    RemoteReference,
+    SymbolicReference,
+    TagReference
+)
 
 from git.util import (
     join_path,
     finalize_process
-    )
+)
 from gitdb.util import join
 
 import re
@@ -72,8 +72,8 @@ def add_progress(kwargs, git, progress):
         v = git.version_info
         if v[0] > 1 or v[1] > 7 or v[2] > 0 or v[3] > 3:
             kwargs['progress'] = True
-        #END handle --progress
-    #END handle progress
+        # END handle --progress
+    # END handle progress
     return kwargs
 
 #} END utilities
@@ -98,14 +98,14 @@ class PushInfo(object):
     __slots__ = ('local_ref', 'remote_ref_string', 'flags', 'old_commit', '_remote', 'summary')
 
     NEW_TAG, NEW_HEAD, NO_MATCH, REJECTED, REMOTE_REJECTED, REMOTE_FAILURE, DELETED, \
-    FORCED_UPDATE, FAST_FORWARD, UP_TO_DATE, ERROR = [1 << x for x in range(11)]
+        FORCED_UPDATE, FAST_FORWARD, UP_TO_DATE, ERROR = [1 << x for x in range(11)]
 
     _flag_map = {'X': NO_MATCH, '-': DELETED, '*': 0,
-                    '+': FORCED_UPDATE, ' ': FAST_FORWARD,
-                    '=': UP_TO_DATE, '!': ERROR}
+                 '+': FORCED_UPDATE, ' ': FAST_FORWARD,
+                 '=': UP_TO_DATE, '!': ERROR}
 
     def __init__(self, flags, local_ref, remote_ref_string, remote, old_commit=None,
-                    summary=''):
+                 summary=''):
         """ Initialize a new instance """
         self.flags = flags
         self.local_ref = local_ref
@@ -199,13 +199,13 @@ class FetchInfo(object):
     __slots__ = ('ref', 'old_commit', 'flags', 'note')
 
     NEW_TAG, NEW_HEAD, HEAD_UPTODATE, TAG_UPDATE, REJECTED, FORCED_UPDATE, \
-    FAST_FORWARD, ERROR = [1 << x for x in range(8)]
+        FAST_FORWARD, ERROR = [1 << x for x in range(8)]
 
     #                             %c    %-*s %-*s             -> %s       (%s)
     re_fetch_result = re.compile("^\s*(.) (\[?[\w\s\.]+\]?)\s+(.+) -> ([/\w_\+\.-]+)(    \(.*\)?$)?")
 
     _flag_map = {'!': ERROR, '+': FORCED_UPDATE, '-': TAG_UPDATE, '*': 0,
-                    '=': HEAD_UPTODATE, ' ': FAST_FORWARD}
+                 '=': HEAD_UPTODATE, ' ': FAST_FORWARD}
 
     def __init__(self, ref, flags, note='', old_commit=None):
         """
@@ -274,7 +274,7 @@ class FetchInfo(object):
             ref_type = TagReference
         else:
             raise TypeError("Cannot handle reference type: %r" % ref_type_name)
-        #END handle ref type
+        # END handle ref type
 
         # create ref instance
         if ref_type is SymbolicReference:
@@ -293,13 +293,13 @@ class FetchInfo(object):
                 ref_path = remote_local_ref
                 if ref_type is not TagReference and not remote_local_ref.startswith(RemoteReference._common_path_default + "/"):
                     ref_type = Reference
-                #END downgrade remote reference
+                # END downgrade remote reference
             elif ref_type is TagReference and 'tags/' in remote_local_ref:
                 # even though its a tag, it is located in refs/remotes
                 ref_path = join_path(RemoteReference._common_path_default, remote_local_ref)
             else:
                 ref_path = join_path(ref_type._common_path_default, remote_local_ref)
-            #END obtain refpath
+            # END obtain refpath
 
             # even though the path could be within the git conventions, we make
             # sure we respect whatever the user wanted, and disabled path checking
@@ -490,7 +490,7 @@ class Remote(LazyMixin, Iterable):
             del(self._config_reader)        # it contains cached values, section names are different now
         except AttributeError:
             pass
-        #END handle exception
+        # END handle exception
         return self
 
     def update(self, **kwargs):
@@ -537,7 +537,7 @@ class Remote(LazyMixin, Iterable):
         # assert len(fetch_info_lines) == len(fetch_head_info), "len(%s) != len(%s)" % (fetch_head_info, fetch_info_lines)
 
         output.extend(FetchInfo._from_line(self.repo, err_line, fetch_line)
-                        for err_line, fetch_line in zip(fetch_info_lines, fetch_head_info))
+                      for err_line, fetch_line in zip(fetch_info_lines, fetch_head_info))
 
         finalize_process(proc)
         return output
@@ -657,5 +657,5 @@ class Remote(LazyMixin, Iterable):
             del(self._config_reader)
         except AttributeError:
             pass
-        #END handle exception
+        # END handle exception
         return SectionConstraint(writer, self._config_section_name())

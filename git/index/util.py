@@ -64,7 +64,8 @@ def default_index(func):
 
     def check_default_index(self, *args, **kwargs):
         if self._file_path != self._index_path():
-            raise AssertionError("Cannot call %r on indices that do not represent the default git index" % func.__name__)
+            raise AssertionError(
+                "Cannot call %r on indices that do not represent the default git index" % func.__name__)
         return func(self, *args, **kwargs)
     # END wrpaper method
 

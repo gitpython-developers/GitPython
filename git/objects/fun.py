@@ -2,7 +2,7 @@
 from stat import S_ISDIR
 
 __all__ = ('tree_to_stream', 'tree_entries_from_data', 'traverse_trees_recursive',
-            'traverse_tree_recursive')
+           'traverse_tree_recursive')
 
 
 def tree_to_stream(entries, write):
@@ -167,7 +167,8 @@ def traverse_trees_recursive(odb, tree_shas, path_prefix):
 
             # if we are a directory, enter recursion
             if is_dir:
-                out.extend(traverse_trees_recursive(odb, [((ei and ei[0]) or None) for ei in entries], path_prefix + name + '/'))
+                out.extend(traverse_trees_recursive(
+                    odb, [((ei and ei[0]) or None) for ei in entries], path_prefix + name + '/'))
             else:
                 out_append(tuple(_to_full_path(e, path_prefix) for e in entries))
             # END handle recursion

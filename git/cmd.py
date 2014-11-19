@@ -4,18 +4,19 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
-import os, sys
+import os
+import sys
 from util import (
-                    LazyMixin,
-                    stream_copy
-                )
+    LazyMixin,
+    stream_copy
+)
 from exc import GitCommandError
 
 from subprocess import (
-                            call,
-                            Popen,
-                            PIPE
-                        )
+    call,
+    Popen,
+    PIPE
+)
 
 execute_kwargs = ('istream', 'with_keep_cwd', 'with_extended_output',
                   'with_exceptions', 'as_process',
@@ -29,6 +30,7 @@ def dashify(string):
 
 
 class Git(LazyMixin):
+
     """
     The Git class manages communication with the Git binary.
 
@@ -246,7 +248,7 @@ class Git(LazyMixin):
             self._version_info = tuple(int(n) for n in version_numbers.split('.')[:4] if n.isdigit())
         else:
             super(Git, self)._set_cache_(attr)
-        #END handle version info
+        # END handle version info
 
     @property
     def working_dir(self):
@@ -336,25 +338,25 @@ class Git(LazyMixin):
 
         # Allow the user to have the command executed in their working dir.
         if with_keep_cwd or self._working_dir is None:
-          cwd = os.getcwd()
+            cwd = os.getcwd()
         else:
-          cwd = self._working_dir
+            cwd = self._working_dir
 
         # Start the process
         env = os.environ.copy()
         env["LC_MESSAGES"] = "C"
         proc = Popen(command,
-                        env=env,
-                        cwd=cwd,
-                        stdin=istream,
-                        stderr=PIPE,
-                        stdout=PIPE,
-                        # Prevent cmd prompt popups on windows by using a shell ... .
-                        # See https://github.com/gitpython-developers/GitPython/pull/126
-                        shell=sys.platform == 'win32',
-                        close_fds=(os.name == 'posix'),  # unsupported on linux
-                        **subprocess_kwargs
-                        )
+                     env=env,
+                     cwd=cwd,
+                     stdin=istream,
+                     stderr=PIPE,
+                     stdout=PIPE,
+                     # Prevent cmd prompt popups on windows by using a shell ... .
+                     # See https://github.com/gitpython-developers/GitPython/pull/126
+                     shell=sys.platform == 'win32',
+                     close_fds=(os.name == 'posix'),  # unsupported on linux
+                     **subprocess_kwargs
+                     )
         if as_process:
             return self.AutoInterrupt(proc, command)
 
@@ -508,7 +510,7 @@ class Git(LazyMixin):
             call.extend([dashify(method)])
             call.extend(args)
             return call
-        #END utility to recreate call after changes
+        # END utility to recreate call after changes
 
         if sys.platform == 'win32':
             try:
@@ -518,7 +520,7 @@ class Git(LazyMixin):
                     # did we switch to git.cmd already, or was it changed from default ? permanently fail
                     if self.GIT_PYTHON_GIT_EXECUTABLE != self.git_exec_name:
                         raise
-                    #END handle overridden variable
+                    # END handle overridden variable
                     type(self).GIT_PYTHON_GIT_EXECUTABLE = self.git_exec_name_win
                     call = [self.GIT_PYTHON_GIT_EXECUTABLE] + list(args)
 
@@ -529,14 +531,14 @@ class Git(LazyMixin):
                         msg = "WARNING: Automatically switched to use git.cmd as git executable, which reduces performance by ~70%."
                         msg += "Its recommended to put git.exe into the PATH or to set the %s environment variable to the executable's location" % self._git_exec_env_var
                         warnings.warn(msg)
-                    #END print of warning
-                #END catch first failure
+                    # END print of warning
+                # END catch first failure
             except WindowsError:
                 raise WindowsError("The system cannot find or execute the file at %r" % self.GIT_PYTHON_GIT_EXECUTABLE)
-            #END provide better error message
+            # END provide better error message
         else:
             return self.execute(make_call(), **_kwargs)
-        #END handle windows default installation
+        # END handle windows default installation
 
     def _parse_object_header(self, header_line):
         """

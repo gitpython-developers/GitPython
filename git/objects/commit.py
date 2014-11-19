@@ -5,11 +5,11 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
 from git.util import (
-                            Actor,
-                            Iterable,
-                            Stats,
-                            finalize_process
-                        )
+    Actor,
+    Iterable,
+    Stats,
+    finalize_process
+)
 from git.diff import Diffable
 from tree import Tree
 from gitdb import IStream
@@ -17,19 +17,19 @@ from cStringIO import StringIO
 
 import base
 from gitdb.util import (
-                        hex_to_bin
-                        )
+    hex_to_bin
+)
 from util import (
-                        Traversable,
-                        Serializable,
-                        parse_date,
-                        altz_to_utctz_str,
-                        parse_actor_and_date
-                    )
+    Traversable,
+    Serializable,
+    parse_date,
+    altz_to_utctz_str,
+    parse_actor_and_date
+)
 from time import (
-                    time,
-                    altzone
-                )
+    time,
+    altzone
+)
 import os
 import sys
 
@@ -339,9 +339,9 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
 
         # CREATE NEW COMMIT
         new_commit = cls(repo, cls.NULL_BIN_SHA, tree,
-                        author, author_time, author_offset,
-                        committer, committer_time, committer_offset,
-                        message, parent_commits, conf_encoding)
+                         author, author_time, author_offset,
+                         committer, committer_time, committer_offset,
+                         message, parent_commits, conf_encoding)
 
         stream = StringIO()
         new_commit._serialize(stream)
@@ -384,8 +384,8 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
         c = self.committer
         fmt = "%s %s <%s> %s %s\n"
         write(fmt % ("author", aname, a.email,
-                        self.authored_date,
-                        altz_to_utctz_str(self.author_tz_offset)))
+                     self.authored_date,
+                     altz_to_utctz_str(self.author_tz_offset)))
 
         # encode committer
         aname = c.name
@@ -393,8 +393,8 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
             aname = aname.encode(self.encoding)
         # END handle unicode in name
         write(fmt % ("committer", aname, c.email,
-                        self.committed_date,
-                        altz_to_utctz_str(self.committer_tz_offset)))
+                     self.committed_date,
+                     altz_to_utctz_str(self.committer_tz_offset)))
 
         if self.encoding != self.default_encoding:
             write("encoding %s\n" % self.encoding)
@@ -457,7 +457,8 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
                 is_next_header = False
                 while True:
                     sigbuf = readline()
-                    if sigbuf == "": break
+                    if sigbuf == "":
+                        break
                     if sigbuf[0:1] != " ":
                         buf = sigbuf.strip()
                         is_next_header = True
@@ -472,14 +473,16 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
         try:
             self.author.name = self.author.name.decode(self.encoding)
         except UnicodeDecodeError:
-            print >> sys.stderr, "Failed to decode author name '%s' using encoding %s" % (self.author.name, self.encoding)
+            print >> sys.stderr, "Failed to decode author name '%s' using encoding %s" % (
+                self.author.name, self.encoding)
         # END handle author's encoding
 
         # decode committer name
         try:
             self.committer.name = self.committer.name.decode(self.encoding)
         except UnicodeDecodeError:
-            print >> sys.stderr, "Failed to decode committer name '%s' using encoding %s" % (self.committer.name, self.encoding)
+            print >> sys.stderr, "Failed to decode committer name '%s' using encoding %s" % (
+                self.committer.name, self.encoding)
         # END handle author's encoding
 
         # a stream from our data simply gives us the plain message

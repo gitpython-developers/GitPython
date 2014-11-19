@@ -27,9 +27,9 @@ from gitdb.util import (
 )
 
 __all__ = ("stream_copy", "join_path", "to_native_path_windows", "to_native_path_linux",
-            "join_path_native", "Stats", "IndexFileSHA1Writer", "Iterable", "IterableList",
-            "BlockingLockFile", "LockFile", 'Actor', 'get_user_id', 'assure_directory_exists',
-            'RemoteProgress', 'rmtree')
+           "join_path_native", "Stats", "IndexFileSHA1Writer", "Iterable", "IterableList",
+           "BlockingLockFile", "LockFile", 'Actor', 'get_user_id', 'assure_directory_exists',
+           'RemoteProgress', 'rmtree')
 
 #{ Utility Methods
 
@@ -114,7 +114,7 @@ def assure_directory_exists(path, is_file=False):
     :return: True if the directory was created, False if it already existed"""
     if is_file:
         path = os.path.dirname(path)
-    #END handle file
+    # END handle file
     if not os.path.isdir(path):
         os.makedirs(path)
         return True
@@ -348,17 +348,17 @@ class Actor(object):
         default_name = default_email.split('@')[0]
 
         for attr, evar, cvar, default in (('name', env_name, cls.conf_name, default_name),
-                                        ('email', env_email, cls.conf_email, default_email)):
+                                          ('email', env_email, cls.conf_email, default_email)):
             try:
                 setattr(actor, attr, os.environ[evar])
             except KeyError:
                 if config_reader is not None:
                     setattr(actor, attr, config_reader.get_value('user', cvar, default))
-                #END config-reader handling
+                # END config-reader handling
                 if not getattr(actor, attr):
                     setattr(actor, attr, default)
-            #END handle name
-        #END for each item to retrieve
+            # END handle name
+        # END for each item to retrieve
         return actor
 
     @classmethod
@@ -501,7 +501,8 @@ class LockFile(object):
             return
         lock_file = self._lock_file_path()
         if os.path.isfile(lock_file):
-            raise IOError("Lock for file %r did already exist, delete %r in case the lock is illegal" % (self._file_path, lock_file))
+            raise IOError("Lock for file %r did already exist, delete %r in case the lock is illegal" %
+                          (self._file_path, lock_file))
 
         try:
             fd = os.open(lock_file, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0)
@@ -572,7 +573,8 @@ class BlockingLockFile(LockFile):
                 # readable anymore, raise an execption
                 curtime = time.time()
                 if not os.path.isdir(os.path.dirname(self._lock_file_path())):
-                    msg = "Directory containing the lockfile %r was not readable anymore after waiting %g seconds" % (self._lock_file_path(), curtime - starttime)
+                    msg = "Directory containing the lockfile %r was not readable anymore after waiting %g seconds" % (
+                        self._lock_file_path(), curtime - starttime)
                     raise IOError(msg)
                 # END handle missing directory
 
@@ -616,7 +618,7 @@ class IterableList(list):
         rval = list.__contains__(self, attr)
         if rval:
             return rval
-        #END handle match
+        # END handle match
 
         # otherwise make a full name search
         try:
@@ -624,7 +626,7 @@ class IterableList(list):
             return True
         except (AttributeError, TypeError):
             return False
-        #END handle membership
+        # END handle membership
 
     def __getattr__(self, attr):
         attr = self._prefix + attr
@@ -653,12 +655,12 @@ class IterableList(list):
                 if getattr(item, self._id_attr) == name:
                     delindex = i
                     break
-                #END search index
-            #END for each item
+                # END search index
+            # END for each item
             if delindex == -1:
                 raise IndexError("Item with name %s not found" % name)
-            #END handle error
-        #END get index to delete
+            # END handle error
+        # END get index to delete
         list.__delitem__(self, delindex)
 
 

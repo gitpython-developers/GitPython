@@ -1,13 +1,13 @@
 """Module with additional types used by the index"""
 
 from util import (
-                    pack,
-                    unpack
-                )
+    pack,
+    unpack
+)
 
 from binascii import (
-                        b2a_hex,
-                    )
+    b2a_hex,
+)
 
 from git.objects import Blob
 __all__ = ('BlobFilter', 'BaseIndexEntry', 'IndexEntry')

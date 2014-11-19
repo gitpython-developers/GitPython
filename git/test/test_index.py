@@ -19,6 +19,7 @@ from gitdb.base import IStream
 from git.objects import Blob
 from git.index.typ import BaseIndexEntry
 
+
 class TestIndex(TestBase):
 
     def __init__(self, *args):
@@ -68,7 +69,7 @@ class TestIndex(TestBase):
         last_val = None
         entry = index.entries.itervalues().next()
         for attr in ("path", "ctime", "mtime", "dev", "inode", "mode", "uid",
-                                "gid", "size", "binsha", "hexsha", "stage"):
+                     "gid", "size", "binsha", "hexsha", "stage"):
             val = getattr(entry, attr)
         # END for each method
 
@@ -104,7 +105,8 @@ class TestIndex(TestBase):
         if len(blist) != len(index.entries):
             iset = set(k[0] for k in index.entries.keys())
             bset = set(b.path for b in blist)
-            raise AssertionError("CMP Failed: Missing entries in index: %s, missing in tree: %s" % (bset - iset, iset - bset))
+            raise AssertionError("CMP Failed: Missing entries in index: %s, missing in tree: %s" %
+                                 (bset - iset, iset - bset))
         # END assertion message
 
     @with_rw_repo('0.1.6')
@@ -457,7 +459,8 @@ class TestIndex(TestBase):
         assert len(entries) == 14
 
         # same file
-        entries = index.reset(new_commit).add([os.path.abspath(os.path.join('lib', 'git', 'head.py'))] * 2, fprogress=self._fprogress_add)
+        entries = index.reset(new_commit).add(
+            [os.path.abspath(os.path.join('lib', 'git', 'head.py'))] * 2, fprogress=self._fprogress_add)
         self._assert_entries(entries)
         assert entries[0].mode & 0644 == 0644
         # would fail, test is too primitive to handle this case
@@ -478,12 +481,14 @@ class TestIndex(TestBase):
         # mode 0 not allowed
         null_hex_sha = Diff.NULL_HEX_SHA
         null_bin_sha = "\0" * 20
-        self.failUnlessRaises(ValueError, index.reset(new_commit).add, [BaseIndexEntry((0, null_bin_sha, 0, "doesntmatter"))])
+        self.failUnlessRaises(ValueError, index.reset(
+            new_commit).add, [BaseIndexEntry((0, null_bin_sha, 0, "doesntmatter"))])
 
         # add new file
         new_file_relapath = "my_new_file"
         new_file_path = self._make_file(new_file_relapath, "hello world", rw_repo)
-        entries = index.reset(new_commit).add([BaseIndexEntry((010644, null_bin_sha, 0, new_file_relapath))], fprogress=self._fprogress_add)
+        entries = index.reset(new_commit).add(
+            [BaseIndexEntry((010644, null_bin_sha, 0, new_file_relapath))], fprogress=self._fprogress_add)
         self._assert_entries(entries)
         self._assert_fprogress(entries)
         assert len(entries) == 1 and entries[0].hexsha != null_hex_sha
@@ -678,7 +683,7 @@ class TestIndex(TestBase):
         fileobj = StringIO(contents)
         filename = 'my-imaginary-file'
         istream = rw_bare_repo.odb.store(
-                IStream(Blob.type, filesize, fileobj))
+            IStream(Blob.type, filesize, fileobj))
         entry = BaseIndexEntry((100644, istream.binsha, 0, filename))
         try:
             rw_bare_repo.index.add([entry])
@@ -693,5 +698,3 @@ class TestIndex(TestBase):
         except Exception, e:
             asserted = "does not have a working tree" in e.message
         assert asserted, "Adding using a filename is not correctly asserted."
-
-
