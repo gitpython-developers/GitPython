@@ -39,7 +39,7 @@ Query the active branch, query untracked files or whether the repository data  h
 Clone from existing repositories or initialize new empty ones::
 
     cloned_repo = repo.clone("to/this/path")
-    new_repo = repo.init("path/for/new/repo")
+    new_repo = Repo.init("path/for/new/repo")
     
 Archive the repository contents to a tar file::
 
