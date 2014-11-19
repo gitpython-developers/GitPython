@@ -55,7 +55,7 @@ GitPython's git repo is available on GitHub, which can be browsed at [github](ht
 
 ### INFRASTRUCTURE
 
-* [User Documentation](http://packages.python.org/GitPython/)
+* [User Documentation](http://gitpython.readthedocs.org)
 * [Mailing List](http://groups.google.com/group/git-python)
 * [Issue Tracker](https://github.com/gitpython-developers/GitPython/issues)
 
@@ -67,6 +67,8 @@ New BSD License.  See the LICENSE file.
 
 [![Build Status](https://travis-ci.org/gitpython-developers/GitPython.svg?branch=0.3)](https://travis-ci.org/gitpython-developers/GitPython)
 [![Coverage Status](https://coveralls.io/repos/gitpython-developers/GitPython/badge.png)](https://coveralls.io/r/gitpython-developers/GitPython)
+[![Documentation Status](https://readthedocs.org/projects/gitpython/badge/?version=stable)](https://readthedocs.org/projects/gitpython/?badge=stable)
+
 
 The project was idle for 2 years, the last release (v0.3.2 RC1) was made on July 2011. Reason for this might have been the project's dependency on me as sole active maintainer, which is an issue in itself.
 
