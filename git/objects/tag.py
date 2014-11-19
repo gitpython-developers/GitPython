@@ -7,9 +7,9 @@
 import base
 from gitdb.util import hex_to_bin
 from util import (
-                        get_object_type_by_name,
-                        parse_actor_and_date
-                    )
+    get_object_type_by_name,
+    parse_actor_and_date
+)
 
 __all__ = ("TagObject", )
 
@@ -21,7 +21,7 @@ class TagObject(base.Object):
     __slots__ = ("object", "tag", "tagger", "tagged_date", "tagger_tz_offset", "message")
 
     def __init__(self, repo, binsha, object=None, tag=None,
-                tagger=None, tagged_date=None, tagger_tz_offset=None, message=None):
+                 tagger=None, tagged_date=None, tagger_tz_offset=None, message=None):
         """Initialize a tag object with additional data
 
         :param repo: repository this object is located in

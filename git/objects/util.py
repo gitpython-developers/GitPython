@@ -5,9 +5,9 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 """Module for general utility functions"""
 from git.util import (
-                        IterableList,
-                        Actor
-                    )
+    IterableList,
+    Actor
+)
 
 import re
 from collections import deque as Deque
@@ -17,8 +17,8 @@ import time
 import os
 
 __all__ = ('get_object_type_by_name', 'parse_date', 'parse_actor_and_date',
-            'ProcessStreamAdapter', 'Traversable', 'altz_to_utctz_str', 'utctz_to_altz',
-            'verify_utctz', 'Actor')
+           'ProcessStreamAdapter', 'Traversable', 'altz_to_utctz_str', 'utctz_to_altz',
+           'verify_utctz', 'Actor')
 
 #{ Functions
 
@@ -89,9 +89,9 @@ def verify_utctz(offset):
     if offset[0] not in "+-":
         raise fmt_exc
     if  offset[1] not in digits or \
-        offset[2] not in digits or \
-        offset[3] not in digits or \
-        offset[4] not in digits:
+            offset[2] not in digits or \
+            offset[3] not in digits or \
+            offset[4] not in digits:
         raise fmt_exc
     # END for each char
     return offset
@@ -238,8 +238,8 @@ class Traversable(object):
         return out
 
     def traverse(self, predicate=lambda i, d: True,
-                           prune=lambda i, d: False, depth=-1, branch_first=True,
-                           visit_once=True, ignore_self=1, as_edge=False):
+                 prune=lambda i, d: False, depth=-1, branch_first=True,
+                 visit_once=True, ignore_self=1, as_edge=False):
         """:return: iterator yieling of items found when traversing self
 
         :param predicate: f(i,d) returns False if item i at depth d should not be included in the result

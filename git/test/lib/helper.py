@@ -15,9 +15,9 @@ import cStringIO
 GIT_REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 __all__ = (
-            'fixture_path', 'fixture', 'absolute_project_path', 'StringProcessAdapter',
-            'with_rw_repo', 'with_rw_and_rw_remote_repo', 'TestBase', 'TestCase', 'GIT_REPO'
-            )
+    'fixture_path', 'fixture', 'absolute_project_path', 'StringProcessAdapter',
+    'with_rw_repo', 'with_rw_and_rw_remote_repo', 'TestBase', 'TestCase', 'GIT_REPO'
+)
 
 #{ Routines
 
@@ -95,7 +95,7 @@ def with_rw_repo(working_tree_ref, bare=False):
             prefix = 'non_'
             if bare:
                 prefix = ''
-            #END handle prefix
+            # END handle prefix
             repo_dir = _mktemp("%sbare_%s" % (prefix, func.__name__))
             rw_repo = self.rorepo.clone(repo_dir, shared=True, bare=bare, n=True)
 
@@ -158,7 +158,8 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
             repo_dir = _mktemp("remote_clone_non_bare_repo")
 
             rw_remote_repo = self.rorepo.clone(remote_repo_dir, shared=True, bare=True)
-            rw_repo = rw_remote_repo.clone(repo_dir, shared=True, bare=False, n=True)       # recursive alternates info ?
+            # recursive alternates info ?
+            rw_repo = rw_remote_repo.clone(repo_dir, shared=True, bare=False, n=True)
             rw_repo.head.commit = working_tree_ref
             rw_repo.head.reference.checkout()
 
@@ -191,11 +192,13 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
             except GitCommandError, e:
                 print str(e)
                 if os.name == 'nt':
-                    raise AssertionError('git-daemon needs to run this test, but windows does not have one. Otherwise, run: git-daemon "%s"' % os.path.dirname(_mktemp()))
+                    raise AssertionError(
+                        'git-daemon needs to run this test, but windows does not have one. Otherwise, run: git-daemon "%s"' % os.path.dirname(_mktemp()))
                 else:
-                    raise AssertionError('Please start a git-daemon to run this test, execute: git-daemon "%s"' % os.path.dirname(_mktemp()))
+                    raise AssertionError(
+                        'Please start a git-daemon to run this test, execute: git-daemon "%s"' % os.path.dirname(_mktemp()))
                 # END make assertion
-            #END catch ls remote error
+            # END catch ls remote error
 
             # adjust working dir
             prev_cwd = os.getcwd()

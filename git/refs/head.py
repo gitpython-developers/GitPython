@@ -30,7 +30,7 @@ class HEAD(SymbolicReference):
         return SymbolicReference(self.repo, self._ORIG_HEAD_NAME)
 
     def reset(self, commit='HEAD', index=True, working_tree=False,
-                paths=None, **kwargs):
+              paths=None, **kwargs):
         """Reset our HEAD to the given commit optionally synchronizing
         the index and working tree. The reference we refer to will be set to
         commit as well.

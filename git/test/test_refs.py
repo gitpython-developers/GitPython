@@ -297,7 +297,7 @@ class TestRefs(TestBase):
             if remote_head_name in refs:
                 RemoteReference.delete(rw_repo, refs[remote_head_name])
                 del(refs[remote_head_name])
-            #END handle HEAD deletion
+            # END handle HEAD deletion
 
             RemoteReference.delete(rw_repo, *refs)
             remote_refs_so_far += len(refs)

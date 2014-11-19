@@ -11,13 +11,13 @@ from submodule.base import Submodule
 import git.diff as diff
 
 from fun import (
-                    tree_entries_from_data,
-                    tree_to_stream
-                 )
+    tree_entries_from_data,
+    tree_to_stream
+)
 
 from gitdb.util import (
-                        to_bin_sha,
-                        )
+    to_bin_sha,
+)
 
 __all__ = ("TreeModifier", "Tree")
 
@@ -125,11 +125,11 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
     tree_id = 004
 
     _map_id_to_type = {
-                        commit_id: Submodule,
-                        blob_id: Blob,
-                        symlink_id: Blob
-                        # tree id added once Tree is defined
-                        }
+        commit_id: Submodule,
+        blob_id: Blob,
+        symlink_id: Blob
+        # tree id added once Tree is defined
+    }
 
     def __init__(self, repo, binsha, mode=tree_id << 12, path=None):
         super(Tree, self).__init__(repo, binsha, mode, path)
@@ -212,8 +212,8 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
         return TreeModifier(self._cache)
 
     def traverse(self, predicate=lambda i, d: True,
-                           prune=lambda i, d: False, depth=-1, branch_first=True,
-                           visit_once=False, ignore_self=1):
+                 prune=lambda i, d: False, depth=-1, branch_first=True,
+                 visit_once=False, ignore_self=1):
         """For documentation, see util.Traversable.traverse
         Trees are set to visit_once = False to gain more performance in the traversal"""
         return super(Tree, self).traverse(predicate, prune, depth, branch_first, visit_once, ignore_self)

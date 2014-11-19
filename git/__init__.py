@@ -20,7 +20,7 @@ def _init_externals():
         import gitdb
     except ImportError:
         raise ImportError("'gitdb' could not be found in your PYTHONPATH")
-    #END verify import
+    # END verify import
 
 #} END initialization
 
@@ -41,13 +41,13 @@ from git.repo import Repo
 from git.remote import *
 from git.index import *
 from git.util import (
-                        LockFile,
-                        BlockingLockFile,
-                        Stats,
-                        Actor
-                        )
+    LockFile,
+    BlockingLockFile,
+    Stats,
+    Actor
+)
 
 #} END imports
 
 __all__ = [name for name, obj in locals().items()
-            if not (name.startswith('_') or inspect.ismodule(obj))]
+           if not (name.startswith('_') or inspect.ismodule(obj))]

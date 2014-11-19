@@ -7,14 +7,14 @@
 import os
 import mock
 from git.test.lib import (TestBase,
-                            patch,
-                            raises,
-                            assert_equal,
-                            assert_true,
-                            assert_match,
-                            fixture_path)
+                          patch,
+                          raises,
+                          assert_equal,
+                          assert_true,
+                          assert_match,
+                          fixture_path)
 from git import (Git,
-                    GitCommandError)
+                 GitCommandError)
 
 
 class TestGit(TestBase):
@@ -104,17 +104,18 @@ class TestGit(TestBase):
         assert isinstance(v, tuple)
         for n in v:
             assert isinstance(n, int)
-        #END verify number types
+        # END verify number types
 
     def test_cmd_override(self):
         prev_cmd = self.git.GIT_PYTHON_GIT_EXECUTABLE
         try:
             # set it to something that doens't exist, assure it raises
-            type(self.git).GIT_PYTHON_GIT_EXECUTABLE = os.path.join("some", "path", "which", "doesn't", "exist", "gitbinary")
+            type(self.git).GIT_PYTHON_GIT_EXECUTABLE = os.path.join(
+                "some", "path", "which", "doesn't", "exist", "gitbinary")
             self.failUnlessRaises(OSError, self.git.version)
         finally:
             type(self.git).GIT_PYTHON_GIT_EXECUTABLE = prev_cmd
-        #END undo adjustment
+        # END undo adjustment
 
     def test_options_are_passed_to_git(self):
         # This work because any command after git --version is ignored

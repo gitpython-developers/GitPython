@@ -9,35 +9,35 @@ from git.cmd import Git
 from git.util import (
     Actor,
     finalize_process
-    )
+)
 from git.refs import *
 from git.index import IndexFile
 from git.objects import *
 from git.config import GitConfigParser
 from git.remote import (
-                        Remote,
-                        digest_process_messages,
-                        add_progress
-                    )
+    Remote,
+    digest_process_messages,
+    add_progress
+)
 
 from git.db import (
-                GitCmdObjectDB,
-                GitDB
-                )
+    GitCmdObjectDB,
+    GitDB
+)
 
 from gitdb.util import (
-                            join,
-                            isfile,
-                            hex_to_bin
-                        )
+    join,
+    isfile,
+    hex_to_bin
+)
 
 from fun import (
-                    rev_parse,
-                    is_git_dir,
-                    find_git_dir,
-                    read_gitfile,
-                    touch,
-				)
+    rev_parse,
+    is_git_dir,
+    find_git_dir,
+    read_gitfile,
+    touch,
+)
 
 import os
 import sys
@@ -53,6 +53,7 @@ __all__ = ('Repo', )
 
 
 class Repo(object):
+
     """Represents a git repository and allows you to query references,
     gather commit information, generate diffs, create and clone repositories query
     the log.
@@ -488,7 +489,8 @@ class Repo(object):
             # END file handling
         # END alts handling
 
-    alternates = property(_get_alternates, _set_alternates, doc="Retrieve a list of alternates paths or set a list paths to be used as alternates")
+    alternates = property(_get_alternates, _set_alternates,
+                          doc="Retrieve a list of alternates paths or set a list paths to be used as alternates")
 
     def is_dirty(self, index=True, working_tree=True, untracked_files=False):
         """
@@ -506,7 +508,7 @@ class Repo(object):
         if index:
             # diff index against HEAD
             if isfile(self.index.path) and \
-                len(self.git.diff('--cached', *default_args)):
+                    len(self.git.diff('--cached', *default_args)):
                 return True
         # END index handling
         if working_tree:
@@ -576,7 +578,8 @@ class Repo(object):
             if self.re_hexsha_only.search(firstpart):
                 # handles
                 # 634396b2f541a9f2d58b00be1a07f0c358b999b3 1 1 7        - indicates blame-data start
-                # 634396b2f541a9f2d58b00be1a07f0c358b999b3 2 2          - indicates another line of blame with the same data
+                # 634396b2f541a9f2d58b00be1a07f0c358b999b3 2 2          - indicates
+                # another line of blame with the same data
                 digits = parts[-1].split(" ")
                 if len(digits) == 3:
                     info = {'id': firstpart}
@@ -620,11 +623,12 @@ class Repo(object):
                             c = commits.get(sha)
                             if c is None:
                                 c = Commit(self, hex_to_bin(sha),
-                                             author=Actor._from_string(info['author'] + ' ' + info['author_email']),
-                                             authored_date=info['author_date'],
-                                             committer=Actor._from_string(info['committer'] + ' ' + info['committer_email']),
-                                             committed_date=info['committer_date'],
-                                             message=info['summary'])
+                                           author=Actor._from_string(info['author'] + ' ' + info['author_email']),
+                                           authored_date=info['author_date'],
+                                           committer=Actor._from_string(
+                                               info['committer'] + ' ' + info['committer_email']),
+                                           committed_date=info['committer_date'],
+                                           message=info['summary'])
                                 commits[sha] = c
                             # END if commit objects needs initial creation
                             m = self.re_tab_full_line.search(line)
@@ -693,10 +697,11 @@ class Repo(object):
         # END windows handling
 
         try:
-            proc = git.clone(url, path, with_extended_output=True, as_process=True, v=True, **add_progress(kwargs, git, progress))
+            proc = git.clone(url, path, with_extended_output=True, as_process=True,
+                             v=True, **add_progress(kwargs, git, progress))
             if progress:
                 digest_process_messages(proc.stderr, progress)
-            #END handle progress
+            # END handle progress
             finalize_process(proc)
         finally:
             if prev_cwd is not None:

@@ -39,9 +39,9 @@ def assert_commit_serialization(rwrepo, commit_id, print_performance_info=False)
         assert istream.hexsha == cm.hexsha
 
         nc = Commit(rwrepo, Commit.NULL_BIN_SHA, cm.tree,
-                        cm.author, cm.authored_date, cm.author_tz_offset,
-                        cm.committer, cm.committed_date, cm.committer_tz_offset,
-                        cm.message, cm.parents, cm.encoding)
+                    cm.author, cm.authored_date, cm.author_tz_offset,
+                    cm.committer, cm.committed_date, cm.committer_tz_offset,
+                    cm.message, cm.parents, cm.encoding)
 
         assert nc.parents == cm.parents
         stream = StringIO()
@@ -62,7 +62,8 @@ def assert_commit_serialization(rwrepo, commit_id, print_performance_info=False)
     elapsed = time.time() - st
 
     if print_performance_info:
-        print >> sys.stderr, "Serialized %i and deserialized %i commits in %f s ( (%f, %f) commits / s" % (ns, nds, elapsed, ns / elapsed, nds / elapsed)
+        print >> sys.stderr, "Serialized %i and deserialized %i commits in %f s ( (%f, %f) commits / s" % (
+            ns, nds, elapsed, ns / elapsed, nds / elapsed)
     # END handle performance info
 
 
@@ -191,8 +192,8 @@ class TestCommit(TestBase):
         in the commit header.  This test ensures that we properly parse it.
         """
         revs = self.rorepo.git.rev_list('933d23bf95a5bd1624fbcdf328d904e1fa173474',
-                                      first_parent=True,
-                                      bisect_all=True)
+                                        first_parent=True,
+                                        bisect_all=True)
 
         commits = Commit._iter_from_process_or_stream(self.rorepo, StringProcessAdapter(revs))
         expected_ids = (
@@ -208,7 +209,8 @@ class TestCommit(TestBase):
         assert self.rorepo.tag('refs/tags/0.1.5').commit.count() == 143
 
     def test_list(self):
-        assert isinstance(Commit.list_items(self.rorepo, '0.1.5', max_count=5)[hex_to_bin('5117c9c8a4d3af19a9958677e45cda9269de1541')], Commit)
+        assert isinstance(Commit.list_items(self.rorepo, '0.1.5', max_count=5)[
+                          hex_to_bin('5117c9c8a4d3af19a9958677e45cda9269de1541')], Commit)
 
     def test_str(self):
         commit = Commit(self.rorepo, Commit.NULL_BIN_SHA)

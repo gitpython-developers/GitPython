@@ -8,9 +8,9 @@ import os
 from git.test.lib import *
 from git import *
 from git.objects.fun import (
-                                traverse_tree_recursive,
-                                traverse_trees_recursive
-                            )
+    traverse_tree_recursive,
+    traverse_trees_recursive
+)
 from cStringIO import StringIO
 
 

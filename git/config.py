@@ -80,7 +80,7 @@ class SectionConstraint(object):
     It supports all ConfigParser methods that operate on an option"""
     __slots__ = ("_config", "_section_name")
     _valid_attrs_ = ("get_value", "set_value", "get", "set", "getint", "getfloat", "getboolean", "has_option",
-                    "remove_section", "remove_option", "options")
+                     "remove_section", "remove_option", "options")
 
     def __init__(self, config, section):
         self._config = config
@@ -136,7 +136,7 @@ class GitConfigParser(cp.RawConfigParser, object):
                                               # (either : or =), followed
                                               # by any # space/tab
         r'(?P<value>.*)$'                     # everything up to eol
-        )
+    )
 
     # list of RawConfigParser methods able to change the instance
     _mutating_methods_ = ("add_section", "remove_section", "remove_option", "set")
@@ -165,7 +165,8 @@ class GitConfigParser(cp.RawConfigParser, object):
 
         if not read_only:
             if isinstance(file_or_files, (tuple, list)):
-                raise ValueError("Write-ConfigParsers can operate on a single file only, multiple files have been passed")
+                raise ValueError(
+                    "Write-ConfigParsers can operate on a single file only, multiple files have been passed")
             # END single file check
 
             if not isinstance(file_or_files, basestring):
@@ -338,7 +339,7 @@ class GitConfigParser(cp.RawConfigParser, object):
             # make sure we do not overwrite into an existing file
             if hasattr(fp, 'truncate'):
                 fp.truncate()
-            #END
+            # END
         # END handle stream or file
 
         # WRITE DATA

@@ -13,54 +13,54 @@ from cStringIO import StringIO
 from stat import S_ISLNK
 
 from typ import (
-                    BaseIndexEntry,
-                    IndexEntry,
-                )
+    BaseIndexEntry,
+    IndexEntry,
+)
 
 from util import (
-                    TemporaryFileSwap,
-                    post_clear_cache,
-                    default_index,
-                    git_working_dir
-                )
+    TemporaryFileSwap,
+    post_clear_cache,
+    default_index,
+    git_working_dir
+)
 
 import git.objects
 import git.diff as diff
 
 from git.exc import (
-                            GitCommandError,
-                            CheckoutError
-                        )
+    GitCommandError,
+    CheckoutError
+)
 
 from git.objects import (
-                            Blob,
-                            Submodule,
-                            Tree,
-                            Object,
-                            Commit,
-                        )
+    Blob,
+    Submodule,
+    Tree,
+    Object,
+    Commit,
+)
 
 from git.objects.util import Serializable
 
 from git.util import (
-                            IndexFileSHA1Writer,
-                            LazyMixin,
-                            LockedFD,
-                            join_path_native,
-                            file_contents_ro,
-                            to_native_path_linux,
-                            to_native_path
-                        )
+    IndexFileSHA1Writer,
+    LazyMixin,
+    LockedFD,
+    join_path_native,
+    file_contents_ro,
+    to_native_path_linux,
+    to_native_path
+)
 
 from fun import (
-                    entry_key,
-                    write_cache,
-                    read_cache,
-                    aggressive_tree_merge,
-                    write_tree_from_cache,
-                    stat_mode_to_index_mode,
-                    S_IFGITLINK
-                )
+    entry_key,
+    write_cache,
+    read_cache,
+    aggressive_tree_merge,
+    write_tree_from_cache,
+    stat_mode_to_index_mode,
+    S_IFGITLINK
+)
 
 from gitdb.base import IStream
 from gitdb.db import MemoryDB
@@ -380,7 +380,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         # END for each path
 
     def _write_path_to_stdin(self, proc, filepath, item, fmakeexc, fprogress,
-                                read_from_stdout=True):
+                             read_from_stdout=True):
         """Write path to proc.stdin and make sure it processes the item, including progress.
 
         :return: stdout string
@@ -572,8 +572,8 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         fprogress(filepath, False, filepath)
         istream = self.repo.odb.store(IStream(Blob.type, st.st_size, stream))
         fprogress(filepath, True, filepath)
-        return BaseIndexEntry((stat_mode_to_index_mode(st.st_mode), 
-                            istream.binsha, 0, to_native_path_linux(filepath)))
+        return BaseIndexEntry((stat_mode_to_index_mode(st.st_mode),
+                               istream.binsha, 0, to_native_path_linux(filepath)))
 
     @git_working_dir
     def _entries_for_paths(self, paths, path_rewriter, fprogress, entries):
@@ -581,9 +581,9 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         if path_rewriter:
             for path in paths:
                 abspath = os.path.abspath(path)
-                gitrelative_path = abspath[len(self.repo.working_tree_dir)+1:]
-                blob = Blob(self.repo, Blob.NULL_BIN_SHA, 
-                            stat_mode_to_index_mode(os.stat(abspath).st_mode), 
+                gitrelative_path = abspath[len(self.repo.working_tree_dir) + 1:]
+                blob = Blob(self.repo, Blob.NULL_BIN_SHA,
+                            stat_mode_to_index_mode(os.stat(abspath).st_mode),
                             to_native_path_linux(gitrelative_path))
                 # TODO: variable undefined
                 entries.append(BaseIndexEntry.from_blob(blob))
@@ -599,9 +599,8 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         # END path handling
         return entries_added
 
-
-    def add(self, items, force=True, fprogress=lambda *args: None, path_rewriter=None, 
-                write=True):
+    def add(self, items, force=True, fprogress=lambda *args: None, path_rewriter=None,
+            write=True):
         """Add files from the working tree, specific blobs or BaseIndexEntries
         to the index. 
 
@@ -676,7 +675,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         :param write:
                 If True, the index will be written once it was altered. Otherwise
                 the changes only exist in memory and are not available to git commands.
-        
+
         :return:
             List(BaseIndexEntries) representing the entries just actually added.
 
@@ -698,23 +697,25 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
         # HANDLE ENTRIES
         if entries:
-            null_mode_entries = [ e for e in entries if e.mode == 0 ]
+            null_mode_entries = [e for e in entries if e.mode == 0]
             if null_mode_entries:
-                raise ValueError("At least one Entry has a null-mode - please use index.remove to remove files for clarity")
+                raise ValueError(
+                    "At least one Entry has a null-mode - please use index.remove to remove files for clarity")
             # END null mode should be remove
 
             # HANLDE ENTRY OBJECT CREATION
             # create objects if required, otherwise go with the existing shas
-            null_entries_indices = [ i for i,e in enumerate(entries) if e.binsha == Object.NULL_BIN_SHA ]
+            null_entries_indices = [i for i, e in enumerate(entries) if e.binsha == Object.NULL_BIN_SHA]
             if null_entries_indices:
                 @git_working_dir
                 def handle_null_entries(self):
                     for ei in null_entries_indices:
                         null_entry = entries[ei]
                         new_entry = self._store_path(null_entry.path, fprogress)
-                        
+
                         # update null entry
-                        entries[ei] = BaseIndexEntry((null_entry.mode, new_entry.binsha, null_entry.stage, null_entry.path))
+                        entries[ei] = BaseIndexEntry(
+                            (null_entry.mode, new_entry.binsha, null_entry.stage, null_entry.path))
                     # END for each entry index
                 # end closure
                 handle_null_entries(self)
@@ -724,7 +725,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             # If we have to rewrite the entries, do so now, after we have generated
             # all object sha's
             if path_rewriter:
-                for i,e in enumerate(entries):
+                for i, e in enumerate(entries):
                     entries[i] = BaseIndexEntry((e.mode, e.binsha, e.stage, path_rewriter(e)))
                 # END for each entry
             # END handle path rewriting
@@ -744,11 +745,11 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         # add the new entries to this instance
         for entry in entries_added:
             self.entries[(entry.path, 0)] = IndexEntry.from_base(entry)
-            
+
         if write:
             self.write()
         # END handle write
-        
+
         return entries_added
 
     def _items_to_rela_paths(self, items):
@@ -993,7 +994,8 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
                 raise GitCommandError(("git-checkout-index", ), 128, stderr)
             if failed_files:
                 valid_files = list(set(iter_checked_out_files) - set(failed_files))
-                raise CheckoutError("Some files could not be checked out from the index due to local modifications", failed_files, valid_files, failed_reasons)
+                raise CheckoutError(
+                    "Some files could not be checked out from the index due to local modifications", failed_files, valid_files, failed_reasons)
         # END stderr handler
 
         if paths is None:
@@ -1037,7 +1039,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
                         if entry.path.startswith(dir):
                             p = entry.path
                             self._write_path_to_stdin(proc, p, p, make_exc,
-                                                        fprogress, read_from_stdout=False)
+                                                      fprogress, read_from_stdout=False)
                             checked_out_files.append(p)
                             path_is_directory = True
                         # END if entry is in directory
@@ -1046,7 +1048,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
                 if not path_is_directory:
                     self._write_path_to_stdin(proc, co_path, path, make_exc,
-                                                fprogress, read_from_stdout=False)
+                                              fprogress, read_from_stdout=False)
                     checked_out_files.append(co_path)
                 # END path is a file
             # END for each path

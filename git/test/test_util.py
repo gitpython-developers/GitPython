@@ -116,7 +116,7 @@ class TestUtils(TestBase):
         for cr in (None, self.rorepo.config_reader()):
             assert isinstance(Actor.committer(cr), Actor)
             assert isinstance(Actor.author(cr), Actor)
-        #END assure config reader is handled
+        # END assure config reader is handled
 
     def test_iterable_list(self):
         for args in (('name',), ('name', 'prefix_')):
@@ -163,4 +163,4 @@ class TestUtils(TestBase):
 
             self.failUnlessRaises(IndexError, l.__delitem__, 0)
             self.failUnlessRaises(IndexError, l.__delitem__, 'something')
-        #END for each possible mode
+        # END for each possible mode

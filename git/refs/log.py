@@ -1,24 +1,24 @@
 from git.util import (
-                        join_path,
-                        Actor,
-                        LockedFD,
-                        LockFile,
-                        assure_directory_exists,
-                        to_native_path,
-                    )
+    join_path,
+    Actor,
+    LockedFD,
+    LockFile,
+    assure_directory_exists,
+    to_native_path,
+)
 
 from gitdb.util import (
-                        bin_to_hex,
-                        join,
-                        file_contents_ro_filepath,
-                    )
+    bin_to_hex,
+    join,
+    file_contents_ro_filepath,
+)
 
 from git.objects.util import (
-                                parse_date,
-                                Serializable,
-                                utctz_to_altz,
-                                altz_to_utctz_str,
-                            )
+    parse_date,
+    Serializable,
+    utctz_to_altz,
+    altz_to_utctz_str,
+)
 
 import time
 import os
@@ -86,19 +86,19 @@ class RefLogEntry(tuple):
             info, msg = line.split('\t', 2)
         except ValueError:
             raise ValueError("line is missing tab separator")
-        #END handle first plit
+        # END handle first plit
         oldhexsha = info[:40]
         newhexsha = info[41:81]
         for hexsha in (oldhexsha, newhexsha):
             if not cls._re_hexsha_only.match(hexsha):
                 raise ValueError("Invalid hexsha: %s" % hexsha)
             # END if hexsha re doesn't match
-        #END for each hexsha
+        # END for each hexsha
 
         email_end = info.find('>', 82)
         if email_end == -1:
             raise ValueError("Missing token: >")
-        #END handle missing end brace
+        # END handle missing end brace
 
         actor = Actor._from_string(info[82:email_end + 1])
         time, tz_offset = parse_date(info[email_end + 2:])
@@ -136,13 +136,13 @@ class RefLog(list, Serializable):
         except OSError:
             # it is possible and allowed that the file doesn't exist !
             return
-        #END handle invalid log
+        # END handle invalid log
 
         try:
             self._deserialize(fmap)
         finally:
             fmap.close()
-        #END handle closing of handle
+        # END handle closing of handle
 
     #{ Interface
 
@@ -174,13 +174,13 @@ class RefLog(list, Serializable):
         new_entry = RefLogEntry.from_line
         if isinstance(stream, basestring):
             stream = file_contents_ro_filepath(stream)
-        #END handle stream type
+        # END handle stream type
         while True:
             line = stream.readline()
             if not line:
                 return
             yield new_entry(line.strip())
-        #END endless loop
+        # END endless loop
 
     @classmethod
     def entry_at(cls, filepath, index):
@@ -204,15 +204,15 @@ class RefLog(list, Serializable):
                 line = fp.readline()
                 if not line:
                     break
-                #END abort on eof
-            #END handle runup
+                # END abort on eof
+            # END handle runup
 
             if i != index or not line:
                 raise IndexError
-            #END handle exception
+            # END handle exception
 
             return RefLogEntry.from_line(line.strip())
-        #END handle index
+        # END handle index
 
     def to_file(self, filepath):
         """Write the contents of the reflog instance to a file at the given filepath.
@@ -228,7 +228,7 @@ class RefLog(list, Serializable):
             # on failure it rolls back automatically, but we make it clear
             lfd.rollback()
             raise
-        #END handle change
+        # END handle change
 
     @classmethod
     def append_entry(cls, config_reader, filepath, oldbinsha, newbinsha, message):
@@ -248,11 +248,12 @@ class RefLog(list, Serializable):
             do not interfere with readers."""
         if len(oldbinsha) != 20 or len(newbinsha) != 20:
             raise ValueError("Shas need to be given in binary format")
-        #END handle sha type
+        # END handle sha type
         assure_directory_exists(filepath, is_file=True)
         committer = isinstance(config_reader, Actor) and config_reader or Actor.committer(config_reader)
-        entry = RefLogEntry((bin_to_hex(oldbinsha), bin_to_hex(newbinsha), committer, (int(time.time()), time.altzone), message))
-        
+        entry = RefLogEntry(
+            (bin_to_hex(oldbinsha), bin_to_hex(newbinsha), committer, (int(time.time()), time.altzone), message))
+
         lf = LockFile(filepath)
         lf._obtain_lock_or_raise()
 
@@ -262,7 +263,7 @@ class RefLog(list, Serializable):
         finally:
             fd.close()
             lf._release_lock()
-        #END handle write operation
+        # END handle write operation
 
         return entry
 
@@ -271,7 +272,7 @@ class RefLog(list, Serializable):
         :return: self"""
         if self._path is None:
             raise ValueError("Instance was not initialized with a path, use to_file(...) instead")
-        #END assert path
+        # END assert path
         self.to_file(self._path)
         return self
 
@@ -285,7 +286,7 @@ class RefLog(list, Serializable):
         # write all entries
         for e in self:
             write(repr(e))
-        #END for each entry
+        # END for each entry
 
     def _deserialize(self, stream):
         self.extend(self.iter_entries(stream))

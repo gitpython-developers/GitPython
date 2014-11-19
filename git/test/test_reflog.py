@@ -53,7 +53,7 @@ class TestRefLog(TestBase):
         pp = 'reflog_invalid_'
         for suffix in ('oldsha', 'newsha', 'email', 'date', 'sep'):
             self.failUnlessRaises(ValueError, RefLog.from_file, fixture_path(pp + suffix))
-        #END for each invalid file
+        # END for each invalid file
 
         # cannot write an uninitialized reflog
         self.failUnlessRaises(ValueError, RefLog().write)
@@ -93,7 +93,7 @@ class TestRefLog(TestBase):
             # ... and negative
             for idx in (-1, -24):
                 RefLog.entry_at(rlp, idx)
-            #END for each index to read
+            # END for each index to read
         # END for each reflog
 
         # finally remove our temporary data
