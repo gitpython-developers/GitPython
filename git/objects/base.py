@@ -4,7 +4,7 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
-from util import get_object_type_by_name
+from git.objects.util import get_object_type_by_name
 from git.util import (
     hex_to_bin,
     bin_to_hex,

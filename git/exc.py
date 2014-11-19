@@ -5,7 +5,7 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 """ Module containing all exceptions thrown througout the git package, """
 
-from util import to_hex_sha
+from git.util import to_hex_sha
 
 
 class GitPythonError(Exception):

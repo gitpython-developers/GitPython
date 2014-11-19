@@ -30,11 +30,14 @@ __all__ = ("stream_copy", "join_path", "to_native_path_windows", "to_native_path
            "BlockingLockFile", "LockFile", 'Actor', 'get_user_id', 'assure_directory_exists',
            'RepoAliasMixin', 'LockedFD', 'LazyMixin', 'rmtree')
 
-from cStringIO import StringIO
+if sys.version_info < (3, ):
+    from cStringIO import StringIO
+else:
+    from io import StringIO
 
 # in py 2.4, StringIO is only StringI, without write support.
 # Hence we must use the python implementation for this
-if sys.version_info[1] < 5:
+if sys.version_info < (3, ) and sys.version_info[1] < 5:
     from StringIO import StringIO
 # END handle python 2.4
 
@@ -441,7 +444,7 @@ class LockedFD(object):
         binary = getattr(os, 'O_BINARY', 0)
         lockmode = os.O_WRONLY | os.O_CREAT | os.O_EXCL | binary
         try:
-            fd = os.open(self._lockfilepath(), lockmode, 0600)
+            fd = os.open(self._lockfilepath(), lockmode, 0o600)
             if not write:
                 os.close(fd)
             else:
@@ -508,7 +511,7 @@ class LockedFD(object):
             # assure others can at least read the file - the tmpfile left it at rw--
             # We may also write that file, on windows that boils down to a remove-
             # protection as well
-            chmod(self._filepath, 0644)
+            chmod(self._filepath, 0o644)
         else:
             # just delete the file so far, we failed
             os.remove(lockfile)
@@ -558,7 +561,7 @@ class LockFile(object):
         try:
             fd = os.open(lock_file, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0)
             os.close(fd)
-        except OSError, e:
+        except OSError as e:
             raise IOError(str(e))
 
         self._owns_lock = True
@@ -580,7 +583,7 @@ class LockFile(object):
             # on bloody windows, the file needs write permissions to be removable.
             # Why ...
             if os.name == 'nt':
-                os.chmod(lfp, 0777)
+                os.chmod(lfp, 0o777)
             # END handle win32
             os.remove(lfp)
         except OSError:
@@ -598,7 +601,7 @@ class BlockingLockFile(LockFile):
         can never be obtained."""
     __slots__ = ("_check_interval", "_max_block_time")
 
-    def __init__(self, file_path, check_interval_s=0.3, max_block_time_s=sys.maxint):
+    def __init__(self, file_path, check_interval_s=0.3, max_block_time_s=sys.maxsize):
         """Configure the instance
 
         :parm check_interval_s:
