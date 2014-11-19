@@ -349,6 +349,8 @@ class Remote(LazyMixin, Iterable):
     __slots__ = ("repo", "name", "_config_reader")
     _id_attribute_ = "name"
 
+    _re_find_info = re.compile(r'\b(\S+)\s+->\s')
+
     def __init__(self, repo, name):
         """Initialize a remote instance
 
@@ -513,6 +515,9 @@ class Remote(LazyMixin, Iterable):
         # this also waits for the command to finish
         # Skip some progress lines that don't provide relevant information
         fetch_info_lines = list()
+        # NOTE: We only keep this information for an assertion, which might as well go away.
+        # Implementation based on https://github.com/gitpython-developers/GitPython/pull/143
+        seen_refs = set()
         for line in digest_process_messages(proc.stderr, progress):
             if line.startswith('From') or line.startswith('remote: Total') or line.startswith('POST') \
                     or line.startswith(' ='):
@@ -523,6 +528,9 @@ class Remote(LazyMixin, Iterable):
             elif line.startswith('fatal:'):
                 raise GitCommandError(("Error when fetching: %s" % line,), 2)
             # END handle special messages
+            ref = self._re_find_info.search(line)
+            if ref:
+                seen_refs.add(ref.group(1))
             fetch_info_lines.append(line)
         # END for each line
 
@@ -535,6 +543,8 @@ class Remote(LazyMixin, Iterable):
         # I simply couldn't stand it anymore, so here is the quick and dirty fix ... .
         # This project needs a lot of work !
         # assert len(fetch_info_lines) == len(fetch_head_info), "len(%s) != len(%s)" % (fetch_head_info, fetch_info_lines)
+        assert len(seen_refs) == len(fetch_head_info), "len(%s) != len(%s)" % (fetch_head_info, seen_refs)
+
 
         output.extend(FetchInfo._from_line(self.repo, err_line, fetch_line)
                         for err_line, fetch_line in zip(fetch_info_lines, fetch_head_info))
