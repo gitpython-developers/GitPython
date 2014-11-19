@@ -35,8 +35,8 @@ from fun import (
                     rev_parse,
                     is_git_dir,
                     find_git_dir,
-                    touch
-					read_gitfile,
+                    read_gitfile,
+                    touch,
 				)
 
 import os
@@ -117,7 +117,7 @@ class Repo(object):
                 self.git_dir = gitpath
                 self._working_tree_dir = curpath
                 break
-            gitpath = read_gitfile(gitpath)
+            gitpath = read_gitfile(curpath)
             if gitpath:
                 self.git_dir = gitpath
                 self._working_tree_dir = curpath
