@@ -75,7 +75,7 @@ setup(
     description="Python Git Library",
     author="Sebastian Thiel, Michael Trier",
     author_email="byronimo@gmail.com, mtrier@gmail.com",
-    url="http://gitorious.org/projects/git-python/",
+    url="https://github.com/gitpython-developers/GitPython",
     packages=find_packages('.'),
     py_modules=['git.' + f[:-3] for f in os.listdir('./git') if f.endswith('.py')],
     package_data={'git.test': ['fixtures/*']},
