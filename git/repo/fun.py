@@ -13,7 +13,8 @@ from gitdb.util import (
                         )
 from string import digits
 
-__all__ = ('rev_parse', 'is_git_dir', 'touch')
+__all__ = ('rev_parse', 'is_git_dir', 'touch', 'read_gitfile', 'find_git_dir', 'name_to_object', 
+           'short_to_long', 'deref_tag', 'to_commit')
 
 
 def touch(filename):
@@ -45,6 +46,21 @@ def find_git_dir(d):
             return find_git_dir(d)
     return None
 
+def read_gitfile(f):
+    """ This is taken from the git setup.c:read_gitfile function.
+    :return gitdir path or None if gitfile is invalid."""
+    if f is None:
+        return None
+    try:
+       line = open(f, 'r').readline().rstrip()
+    except (OSError, IOError):
+        # File might not exist or is unreadable - ignore
+        return None
+    # end handle file access
+    if line[0:8] != 'gitdir: ':
+        return None
+    path = os.path.realpath(line[8:])
+    return path if is_git_dir(path) else None
 
 def short_to_long(odb, hexsha):
     """:return: long hexadecimal sha1 from the given less-than-40 byte hexsha

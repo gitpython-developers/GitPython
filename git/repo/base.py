@@ -35,8 +35,9 @@ from fun import (
                     rev_parse,
                     is_git_dir,
                     find_git_dir,
-                    touch
-                )
+                    read_gitfile,
+                    touch,
+				)
 
 import os
 import sys
@@ -52,7 +53,6 @@ __all__ = ('Repo', )
 
 
 class Repo(object):
-
     """Represents a git repository and allows you to query references,
     gather commit information, generate diffs, create and clone repositories query
     the log.
@@ -114,6 +114,11 @@ class Repo(object):
                 break
             gitpath = find_git_dir(join(curpath, '.git'))
             if gitpath is not None:
+                self.git_dir = gitpath
+                self._working_tree_dir = curpath
+                break
+            gitpath = read_gitfile(curpath)
+            if gitpath:
                 self.git_dir = gitpath
                 self._working_tree_dir = curpath
                 break
