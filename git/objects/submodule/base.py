@@ -60,7 +60,6 @@ UPDWKTREE = UpdateProgress.UPDWKTREE
 # mechanism which cause plenty of trouble of the only reason for packages and
 # modules is refactoring - subpackages shoudn't depend on parent packages
 class Submodule(util.IndexObject, Iterable, Traversable, RepoAliasMixin):
-
     """Implements access to a git submodule. They are special in that their sha
     represents a commit in the submodule's repository which is to be checked out
     at the path of this instance. 
@@ -662,7 +661,7 @@ class Submodule(util.IndexObject, Iterable, Traversable, RepoAliasMixin):
                     num_branches_with_new_commits = 0
                     rrefs = remote.refs
                     for rref in rrefs:
-                        num_branches_with_new_commits = len(mod.git.cherry(rref)) != 0
+                        num_branches_with_new_commits += len(mod.git.cherry(rref)) != 0
                     # END for each remote ref
                     # not a single remote branch contained all our commits
                     if num_branches_with_new_commits == len(rrefs):
