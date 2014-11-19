@@ -129,7 +129,9 @@ class SymbolicReference(object):
             fp = open(join(repo.git_dir, ref_path), 'r')
             value = fp.read().rstrip()
             fp.close()
-            tokens = value.split(" ")
+            # Don't only split on spaces, but on whitespace, which allows to parse lines like
+            # 60b64ef992065e2600bfef6187a97f92398a9144                branch 'master' of git-server:/path/to/repo
+            tokens = value.split()
         except (OSError, IOError):
             # Probably we are just packed, find our entry in the packed refs file
             # NOTE: We are not a symbolic ref if we are in a packed file, as these
