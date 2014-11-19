@@ -52,7 +52,7 @@ Guided Upgrade
 **************
 This guide should help to make the upgrade as painless as possible, hence it points out where to start, and what to look out for.
 
-* Have a look at the CHANGES log file and read all important changes about 0.3 for an overview.
+* Have a look at https://github.com/gitpython-developers/GitPython/blob/0.3/doc/source/changes.rst
 * Start applying the renames, generally the ``utils`` modules are now called ``util``, ``errors`` is called ``exc``.
 * Search for occurrences of the ``sha`` property of object instances. A similar value can be obtained through the new ``hexsha`` property. The native sha1 value is the ``binsha`` though.
 * Search for code which instantiates objects directly. Their initializer now requires a 20 byte binary Sha1, rev-specs cannot be used anymore. For a similar effect, either convert your hexadecimal shas to binary shas beforehand ( ``binascii.unhexlify`` for instance ), or use higher level functions such as ``Object.new``, ``Repo.commit`` or ``Repo.tree``. The latter ones takes rev-specs and hexadecimal sha1 hashes.
