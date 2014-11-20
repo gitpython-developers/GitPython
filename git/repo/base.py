@@ -558,16 +558,17 @@ class Repo(object):
         :return: Head to the active branch"""
         return self.head.reference
 
-    def blame(self, rev, file):
+    def blame(self, rev, file, **kwargs):
         """The blame information for the given file at the given revision.
 
         :parm rev: revision specifier, see git-rev-parse for viable options.
+        :parm kwargs: kwargs to pass into git-blame
         :return:
             list: [git.Commit, list: [<line>]]
             A list of tuples associating a Commit object with a list of lines that
             changed within the given commit. The Commit objects will be given in order
             of appearance."""
-        data = self.git.blame(rev, '--', file, p=True)
+        data = self.git.blame(rev, '--', file, p=True, **kwargs)
         commits = dict()
         blames = list()
         info = None

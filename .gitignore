@@ -13,3 +13,7 @@ nbproject
 
 /*egg-info
 /.tox
+
+# Eclipse + PyDev
+.project
+.pydevproject
