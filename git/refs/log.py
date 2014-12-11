@@ -37,8 +37,9 @@ class RefLogEntry(tuple):
     def __repr__(self):
         """Representation of ourselves in git reflog format"""
         act = self.actor
+        name = act.name.encode('utf-8')
         time = self.time
-        return self._fmt % (self.oldhexsha, self.newhexsha, act.name, act.email,
+        return self._fmt % (self.oldhexsha, self.newhexsha, name, act.email,
                             time[0], altz_to_utctz_str(time[1]), self.message)
 
     @property
