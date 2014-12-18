@@ -102,7 +102,7 @@ class TestUtils(TestBase):
         iso3 = ("2005.04.07 22:13:11 -0000", 0)
         alt = ("04/07/2005 22:13:11", 0)
         alt2 = ("07.04.2005 22:13:11", 0)
-        veri_time = 1112904791      # the time this represents
+        veri_time = 1112911991      # the time this represents
         for date, offset in (rfc, iso, iso2, iso3, alt, alt2):
             assert_rval(parse_date(date), veri_time, offset)
         # END for each date type

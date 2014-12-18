@@ -156,7 +156,10 @@ def parse_date(string_date):
                     fstruct = time.struct_time((dtstruct.tm_year, dtstruct.tm_mon, dtstruct.tm_mday,
                                                 tstruct.tm_hour, tstruct.tm_min, tstruct.tm_sec,
                                                 dtstruct.tm_wday, dtstruct.tm_yday, tstruct.tm_isdst))
-                    return int(time.mktime(fstruct)), utctz_to_altz(offset)
+                    utctime = time.mktime(fstruct)
+                    # time.mktime returns local time, so we need to adjust it for local offset
+                    utctime -= time.altzone if time.daylight else time.timezone
+                    return int(utctime), utctz_to_altz(offset)
                 except ValueError:
                     continue
                 # END exception handling
