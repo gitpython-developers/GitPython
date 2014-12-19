@@ -14,6 +14,7 @@ from collections import deque as Deque
 
 from string import digits
 import time
+import calendar
 import os
 
 __all__ = ('get_object_type_by_name', 'parse_date', 'parse_actor_and_date',
@@ -106,9 +107,10 @@ def parse_date(string_date):
         * ISO 8601 2005-04-07T22:13:13
             The T can be a space as well
 
-    :return: Tuple(int(timestamp), int(offset)), both in seconds since epoch
+    :return: Tuple(int(timestamp_UTC), int(offset)), both in seconds since epoch
     :raise ValueError: If the format could not be understood
-    :note: Date can also be YYYY.MM.DD, MM/DD/YYYY and DD.MM.YYYY"""
+    :note: Date can also be YYYY.MM.DD, MM/DD/YYYY and DD.MM.YYYY.
+    """
     # git time
     try:
         if string_date.count(' ') == 1 and string_date.rfind(':') == -1:
@@ -121,6 +123,7 @@ def parse_date(string_date):
                 offset = verify_utctz(string_date[-5:])
                 string_date = string_date[:-6]  # skip space as well
             # END split timezone info
+            offset = utctz_to_altz(offset)
 
             # now figure out the date and time portion - split time
             date_formats = list()
@@ -153,10 +156,10 @@ def parse_date(string_date):
             for fmt in date_formats:
                 try:
                     dtstruct = time.strptime(date_part, fmt)
-                    fstruct = time.struct_time((dtstruct.tm_year, dtstruct.tm_mon, dtstruct.tm_mday,
+                    utctime = calendar.timegm((dtstruct.tm_year, dtstruct.tm_mon, dtstruct.tm_mday,
                                                 tstruct.tm_hour, tstruct.tm_min, tstruct.tm_sec,
                                                 dtstruct.tm_wday, dtstruct.tm_yday, tstruct.tm_isdst))
-                    return int(time.mktime(fstruct)), utctz_to_altz(offset)
+                    return int(utctime), offset
                 except ValueError:
                     continue
                 # END exception handling
