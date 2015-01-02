@@ -6,7 +6,7 @@
 
 import os
 import sys
-from git import Repo, Remote, GitCommandError
+from git import Repo, Remote, GitCommandError, Git
 from unittest import TestCase
 import tempfile
 import shutil
@@ -149,6 +149,7 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
     This setup allows you to test push and pull scenarios and hooks nicely.
 
     See working dir info in with_rw_repo
+    :note: We attempt to launch our own invocation of git-daemon, which will be shutdown at the end of the test.
     """
     assert isinstance(working_tree_ref, basestring), "Decorator requires ref name for working tree checkout"
 
@@ -186,17 +187,30 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
 
             d_remote.config_writer.set('url', remote_repo_url)
 
+            temp_dir = os.path.dirname(_mktemp())
+            # On windows, this will fail ... we deal with failures anyway and default to telling the user to do it
+            try:
+                gd = Git().daemon(temp_dir, as_process=True)
+            except Exception as err:
+                gd = None
+            # end 
+
             # try to list remotes to diagnoes whether the server is up
             try:
                 rw_repo.git.ls_remote(d_remote)
             except GitCommandError, e:
+                # We assume in good faith that we didn't start the daemon - but make sure we kill it anyway
+                # Of course we expect it to work here already, but maybe there are timing constraints
+                # on some platforms ?
+                if gd is not None:
+                    os.kill(gd.proc.pid, 15)
                 print str(e)
                 if os.name == 'nt':
                     raise AssertionError(
-                        'git-daemon needs to run this test, but windows does not have one. Otherwise, run: git-daemon "%s"' % os.path.dirname(_mktemp()))
+                        'git-daemon needs to run this test, but windows does not have one. Otherwise, run: git-daemon "%s"' % temp_dir)
                 else:
                     raise AssertionError(
-                        'Please start a git-daemon to run this test, execute: git-daemon "%s"' % os.path.dirname(_mktemp()))
+                        'Please start a git-daemon to run this test, execute: git-daemon "%s"' % temp_dir)
                 # END make assertion
             # END catch ls remote error
 
@@ -206,11 +220,16 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
             try:
                 return func(self, rw_repo, rw_remote_repo)
             finally:
+                # gd.proc.kill() ... no idea why that doesn't work
+                os.kill(gd.proc.pid, 15)
+
                 os.chdir(prev_cwd)
                 rw_repo.git.clear_cache()
                 rw_remote_repo.git.clear_cache()
                 shutil.rmtree(repo_dir, onerror=_rmtree_onerror)
                 shutil.rmtree(remote_repo_dir, onerror=_rmtree_onerror)
+
+                gd.proc.wait()
             # END cleanup
         # END bare repo creator
         remote_repo_creator.__name__ = func.__name__
