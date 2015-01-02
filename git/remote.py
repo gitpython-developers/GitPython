@@ -202,7 +202,7 @@ class FetchInfo(object):
         FAST_FORWARD, ERROR = [1 << x for x in range(8)]
 
     #                             %c    %-*s %-*s             -> %s       (%s)
-    re_fetch_result = re.compile("^\s*(.) (\[?[\w\s\.]+\]?)\s+(.+) -> ([/\w_\+\.-]+)(    \(.*\)?$)?")
+    re_fetch_result = re.compile("^\s*(.) (\[?[\w\s\.]+\]?)\s+(.+) -> ([/\w_\+\.\-#]+)(    \(.*\)?$)?")
 
     _flag_map = {'!': ERROR, '+': FORCED_UPDATE, '-': TAG_UPDATE, '*': 0,
                  '=': HEAD_UPTODATE, ' ': FAST_FORWARD}
