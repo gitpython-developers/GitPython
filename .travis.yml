@@ -32,7 +32,7 @@ install:
   - git config --global user.name "Travis Runner"
 
   # debugging
-  - tree .git/logs
+  - find .git/logs
   - cat .git/logs/HEAD
 script: 
   - nosetests -v --with-coverage
