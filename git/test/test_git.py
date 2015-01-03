@@ -125,7 +125,7 @@ class TestGit(TestBase):
 
     def test_single_char_git_options_are_passed_to_git(self):
         input_value = 'TestValue'
-        output_value = self.git(c='user.name={}'.format(input_value)).config('--get', 'user.name')
+        output_value = self.git(c='user.name=%s' % input_value).config('--get', 'user.name')
         self.assertEquals(input_value, output_value)
 
     def test_change_to_transform_kwargs_does_not_break_command_options(self):
