@@ -34,12 +34,13 @@ class TestRepo(TestBase):
     def test_new_should_raise_on_non_existant_path(self):
         Repo("repos/foobar")
 
-    def test_repo_creation_from_different_paths(self):
-        r_from_gitdir = Repo(self.rorepo.git_dir)
-        assert r_from_gitdir.git_dir == self.rorepo.git_dir
+    @with_rw_repo('0.3.2.1')
+    def test_repo_creation_from_different_paths(self, rw_repo):
+        r_from_gitdir = Repo(rw_repo.git_dir)
+        assert r_from_gitdir.git_dir == rw_repo.git_dir
         assert r_from_gitdir.git_dir.endswith('.git')
-        assert not self.rorepo.git.working_dir.endswith('.git')
-        assert r_from_gitdir.git.working_dir == self.rorepo.git.working_dir
+        assert not rw_repo.git.working_dir.endswith('.git')
+        assert r_from_gitdir.git.working_dir == rw_repo.git.working_dir
 
     def test_description(self):
         txt = "Test repository"
@@ -210,8 +211,7 @@ class TestRepo(TestBase):
         self.rorepo.alternates = cur_alternates
 
     def test_repr(self):
-        path = os.path.join(os.path.abspath(GIT_REPO), '.git')
-        assert_equal('<git.Repo "%s">' % path, repr(self.rorepo))
+        assert repr(self.rorepo).startswith('<git.Repo ')
 
     def test_is_dirty_with_bare_repository(self):
         orig_value = self.rorepo._bare

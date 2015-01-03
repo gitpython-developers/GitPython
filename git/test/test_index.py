@@ -6,6 +6,7 @@
 
 from git.test.lib import *
 from git import *
+from gitdb.util import hex_to_bin
 import inspect
 import os
 import sys
@@ -17,7 +18,10 @@ from stat import *
 from StringIO import StringIO
 from gitdb.base import IStream
 from git.objects import Blob
-from git.index.typ import BaseIndexEntry
+from git.index.typ import (
+    BaseIndexEntry,
+    IndexEntry
+)
 
 
 class TestIndex(TestBase):
@@ -211,6 +215,8 @@ class TestIndex(TestBase):
         # self.failUnlessRaises(GitCommandError, index.write_tree)
 
         # if missing objects are okay, this would work though ( they are always okay now )
+        # As we can't read back the tree with NULL_SHA, we rather set it to something else
+        index.entries[manifest_key] = IndexEntry(manifest_entry[:1] + (hex_to_bin('f'*40),) + manifest_entry[2:])
         tree = index.write_tree()
 
         # now make a proper three way merge with unmerged entries
@@ -322,7 +328,7 @@ class TestIndex(TestBase):
         fp.close()
         try:
             index.checkout(test_file)
-        except CheckoutError, e:
+        except CheckoutError as e:
             assert len(e.failed_files) == 1 and e.failed_files[0] == os.path.basename(test_file)
             assert (len(e.failed_files) == len(e.failed_reasons)) and isinstance(e.failed_reasons[0], basestring)
             assert len(e.valid_files) == 0

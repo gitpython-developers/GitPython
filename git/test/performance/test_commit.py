@@ -8,6 +8,7 @@ from lib import *
 from git import *
 from gitdb import IStream
 from git.test.test_commit import assert_commit_serialization
+from gitdb.test.lib import skip_on_travis_ci
 from cStringIO import StringIO
 from time import time
 import sys
@@ -28,6 +29,7 @@ class TestPerformance(TestBigRepoRW):
         c.message
         c.parents
 
+    @skip_on_travis_ci
     def test_iteration(self):
         no = 0
         nc = 0
@@ -49,6 +51,7 @@ class TestPerformance(TestBigRepoRW):
         print >> sys.stderr, "Traversed %i Trees and a total of %i unchached objects in %s [s] ( %f objs/s )" % (
             nc, no, elapsed_time, no / elapsed_time)
 
+    @skip_on_travis_ci
     def test_commit_traversal(self):
         # bound to cat-file parsing performance
         nc = 0
@@ -60,6 +63,7 @@ class TestPerformance(TestBigRepoRW):
         elapsed_time = time() - st
         print >> sys.stderr, "Traversed %i Commits in %s [s] ( %f commits/s )" % (nc, elapsed_time, nc / elapsed_time)
 
+    @skip_on_travis_ci
     def test_commit_iteration(self):
         # bound to stream parsing performance
         nc = 0
@@ -71,6 +75,7 @@ class TestPerformance(TestBigRepoRW):
         elapsed_time = time() - st
         print >> sys.stderr, "Iterated %i Commits in %s [s] ( %f commits/s )" % (nc, elapsed_time, nc / elapsed_time)
 
+    @skip_on_travis_ci
     def test_commit_serialization(self):
         assert_commit_serialization(self.gitrwrepo, self.head_sha_2k, True)
 
@@ -80,7 +85,6 @@ class TestPerformance(TestBigRepoRW):
         # serialization is probably limited on IO
         hc = rwrepo.commit(self.head_sha_2k)
 
-        commits = list()
         nc = 5000
         st = time()
         for i in xrange(nc):

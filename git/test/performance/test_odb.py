@@ -2,7 +2,7 @@
 
 from time import time
 import sys
-import stat
+from gitdb.test.lib import skip_on_travis_ci
 
 from lib import (
     TestBigRepoR
@@ -11,6 +11,7 @@ from lib import (
 
 class TestObjDBPerformance(TestBigRepoR):
 
+    @skip_on_travis_ci
     def test_random_access(self):
         results = [["Iterate Commits"], ["Iterate Blobs"], ["Retrieve Blob Data"]]
         for repo in (self.gitrorepo, self.puregitrorepo):

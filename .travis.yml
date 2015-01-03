@@ -11,6 +11,18 @@ install:
   - git submodule update --init --recursive
   - git fetch --tags
   - pip install coveralls
+  # for now we have to make sure there is a master branch - at some point we should just have it by default
+  - git branch master 0.3
+  # generate some reflog as git-python tests need it
+  - git reset --hard HEAD~1
+  - git reset --hard HEAD~1
+  - git reset --hard HEAD~1
+  - git reset --hard origin/0.3
+  - git checkout master
+  - git reset --hard HEAD~1
+  - git reset --hard HEAD~1
+  - git reset --hard origin/0.3
+  - git checkout 0.3
 script: 
   - nosetests -v --with-coverage
 after_success:
