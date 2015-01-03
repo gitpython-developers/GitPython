@@ -2,6 +2,10 @@
 Changelog
 =========
 
+0.3.3
+=====
+* When fetching, pulling or pushing, and an error occours, it will not be reported on stdout anymore. However, if there is a fatal error, it will still result in a GitCommandError to be thrown. This goes hand in hand with improved fetch result parsing.
+
 0.3.2.1
 =======
 * `Fix for #207 <https://github.com/gitpython-developers/GitPython/issues/207>`_

@@ -100,9 +100,13 @@ class PushInfo(object):
     NEW_TAG, NEW_HEAD, NO_MATCH, REJECTED, REMOTE_REJECTED, REMOTE_FAILURE, DELETED, \
         FORCED_UPDATE, FAST_FORWARD, UP_TO_DATE, ERROR = [1 << x for x in range(11)]
 
-    _flag_map = {'X': NO_MATCH, '-': DELETED, '*': 0,
-                 '+': FORCED_UPDATE, ' ': FAST_FORWARD,
-                 '=': UP_TO_DATE, '!': ERROR}
+    _flag_map = {'X': NO_MATCH, 
+                 '-': DELETED, 
+                 '*': 0,
+                 '+': FORCED_UPDATE, 
+                 ' ': FAST_FORWARD,
+                 '=': UP_TO_DATE, 
+                 '!': ERROR}
 
     def __init__(self, flags, local_ref, remote_ref_string, remote, old_commit=None,
                  summary=''):
@@ -299,6 +303,8 @@ class FetchInfo(object):
         if remote_local_ref == "FETCH_HEAD":
             ref_type = SymbolicReference
         elif ref_type_name == "tag" or is_tag_operation:
+            # the ref_type_name can be branch, whereas we are still seeing a tag operation. It happens during
+            # testing, which is based on actual git operations
             ref_type = TagReference
         elif ref_type_name in ("remote-tracking", "branch"):
             # note: remote-tracking is just the first part of the 'remote-tracking branch' token.
@@ -520,25 +526,19 @@ class Remote(LazyMixin, Iterable):
         # this also waits for the command to finish
         # Skip some progress lines that don't provide relevant information
         fetch_info_lines = list()
-        # fetches all for later in case we don't get any ... this handling is a bit fishy as 
-        # the underlying logic of git is not properly understood. This fix merely helps a test-case, and probably 
-        # won't be too wrong otherwise.
-        fetch_info_lines_reserve = list()
+        # Basically we want all fetch info lines which appear to be in regular form, and thus have a 
+        # command character. Everything else we ignore, 
+        cmds = set(PushInfo._flag_map.keys()) & set(FetchInfo._flag_map.keys())
         for line in digest_process_messages(proc.stderr, progress):
-            # cc, _, _ = line.split('\t', 3)
-            if line.startswith('From') or line.startswith('remote: Total') or line.startswith('POST') \
-                    or line.startswith(' ='):
-                # Why do we even skip lines that begin with a = ?
-                if line.startswith(' ='):
-                    fetch_info_lines_reserve.append(line)
-                continue
-            elif line.startswith('warning:'):
-                print >> sys.stderr, line
-                continue
-            elif line.startswith('fatal:'):
+            if line.startswith('fatal:'):
                 raise GitCommandError(("Error when fetching: %s" % line,), 2)
             # END handle special messages
-            fetch_info_lines.append(line)
+            for cmd in cmds:
+                if line[1] == cmd:
+                    fetch_info_lines.append(line)
+                    continue
+                # end find command code
+            # end for each comand code we know
         # END for each line
 
         # read head information
@@ -546,17 +546,9 @@ class Remote(LazyMixin, Iterable):
         fetch_head_info = fp.readlines()
         fp.close()
 
-        # NOTE: HACK Just disabling this line will make github repositories work much better.
-        # I simply couldn't stand it anymore, so here is the quick and dirty fix ... .
-        # This project needs a lot of work !
-        # assert len(fetch_info_lines) == len(fetch_head_info), "len(%s) != len(%s)" % (fetch_head_info, fetch_info_lines)
-
-        # EVIL HACK: This basically fixes our test-case, and possibly helps better results to be returned in future
-        # The actual question is why we are unable to properly parse progress messages and sync them to the 
-        # respective fetch-head information ... .
-        if len(fetch_info_lines) != len(fetch_head_info) and len(fetch_info_lines_reserve) == len(fetch_head_info):
-            fetch_info_lines = fetch_info_lines_reserve
-        # end 
+        # NOTE: We assume to fetch at least enough progress lines to allow matching each fetch head line with it.
+        assert len(fetch_info_lines) >= len(fetch_head_info), "len(%s) <= len(%s)" % (fetch_head_info, 
+            fetch_info_lines)
 
         output.extend(FetchInfo._from_line(self.repo, err_line, fetch_line)
                       for err_line, fetch_line in zip(fetch_info_lines, fetch_head_info))
