@@ -333,7 +333,7 @@ class Git(LazyMixin):
         :note:
            If you add additional keyword arguments to the signature of this method,
            you must update the execute_kwargs tuple housed in this module."""
-        if self.GIT_PYTHON_TRACE and not self.GIT_PYTHON_TRACE == 'full':
+        if self.GIT_PYTHON_TRACE and (self.GIT_PYTHON_TRACE != 'full' or as_process):
             print ' '.join(command)
 
         # Allow the user to have the command executed in their working dir.

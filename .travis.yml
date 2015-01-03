@@ -3,12 +3,15 @@ python:
   - "2.6"
   - "2.7"
   # - "pypy" - won't work as smmap doesn't work (see gitdb/.travis.yml for details)
-
+git:
+  # a higher depth is needed for most of the tests - must be high enough to not actually be shallow
+  # as we clone our own repository in the process
+  depth: 99999
 install:
   - git submodule update --init --recursive
   - git fetch --tags
   - pip install coveralls
 script: 
-  - nosetests --with-coverage
-# after_success: as long as we are not running smoothly ... give it the cover treatment every time
+  - nosetests -v --with-coverage
+after_success:
   - coveralls
