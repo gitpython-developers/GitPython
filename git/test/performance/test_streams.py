@@ -3,7 +3,6 @@
 from git.test.lib import *
 from gitdb import *
 from gitdb.util import bin_to_hex
-from gitdb.test.lib import skip_on_travis_ci
 
 from time import time
 import os
@@ -22,7 +21,6 @@ class TestObjDBPerformance(TestBigRepoR):
     large_data_size_bytes = 1000 * 1000 * 10        # some MiB should do it
     moderate_data_size_bytes = 1000 * 1000 * 1      # just 1 MiB
 
-    @skip_on_travis_ci
     @with_rw_repo('HEAD', bare=True)
     def test_large_data_streaming(self, rwrepo):
         # TODO: This part overlaps with the same file in gitdb.test.performance.test_stream

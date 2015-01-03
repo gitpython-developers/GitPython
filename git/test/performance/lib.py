@@ -1,6 +1,7 @@
 """Contains library functions"""
 import os
 from git.test.lib import *
+from gitdb.test.lib import skip_on_travis_ci
 import shutil
 import tempfile
 import logging
@@ -36,11 +37,11 @@ class TestBigRepoR(TestBase):
     """
 
     #{ Invariants
-    head_sha_2k = '235d521da60e4699e5bd59ac658b5b48bd76ddca'
-    head_sha_50 = '32347c375250fd470973a5d76185cac718955fd5'
     #} END invariants
 
     def setUp(self):
+        # This will raise on travis, which is what we want to happen early as to prevent us to do any work
+        skip_on_travis_ci(lambda *args: None)(self)
         try:
             super(TestBigRepoR, self).setUp()
         except AttributeError:
@@ -54,7 +55,6 @@ class TestBigRepoR(TestBase):
         self.gitrorepo = Repo(repo_path, odbt=GitCmdObjectDB)
         self.puregitrorepo = Repo(repo_path, odbt=GitDB)
 
-
 class TestBigRepoRW(TestBigRepoR):
 
     """As above, but provides a big repository that we can write to.
@@ -62,6 +62,7 @@ class TestBigRepoRW(TestBigRepoR):
     Provides ``self.gitrwrepo`` and ``self.puregitrwrepo``"""
 
     def setUp(self):
+        self.gitrwrepo = None
         try:
             super(TestBigRepoRW, self).setUp()
         except AttributeError:
@@ -72,6 +73,7 @@ class TestBigRepoRW(TestBigRepoR):
         self.puregitrwrepo = Repo(dirname, odbt=GitDB)
 
     def tearDown(self):
-        shutil.rmtree(self.gitrwrepo.working_dir)
+        if self.gitrwrepo is not None:
+            shutil.rmtree(self.gitrwrepo.working_dir)
 
 #} END base classes

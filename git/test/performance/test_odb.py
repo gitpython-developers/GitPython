@@ -2,7 +2,6 @@
 
 from time import time
 import sys
-from gitdb.test.lib import skip_on_travis_ci
 
 from lib import (
     TestBigRepoR
@@ -11,13 +10,12 @@ from lib import (
 
 class TestObjDBPerformance(TestBigRepoR):
 
-    @skip_on_travis_ci
     def test_random_access(self):
         results = [["Iterate Commits"], ["Iterate Blobs"], ["Retrieve Blob Data"]]
         for repo in (self.gitrorepo, self.puregitrorepo):
             # GET COMMITS
             st = time()
-            root_commit = repo.commit(self.head_sha_2k)
+            root_commit = repo.commit(repo.head)
             commits = list(root_commit.traverse())
             nc = len(commits)
             elapsed = time() - st

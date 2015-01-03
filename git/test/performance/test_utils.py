@@ -2,8 +2,6 @@
 from time import time
 import sys
 
-from gitdb.test.lib import skip_on_travis_ci
-
 from lib import (
     TestBigRepoR
 )
@@ -11,7 +9,6 @@ from lib import (
 
 class TestUtilPerformance(TestBigRepoR):
 
-    @skip_on_travis_ci
     def test_access(self):
         # compare dict vs. slot access
         class Slotty(object):
@@ -66,7 +63,6 @@ class TestUtilPerformance(TestBigRepoR):
                 cls.__name__, na, elapsed, na / elapsed)
         # END for each sequence
 
-    @skip_on_travis_ci
     def test_instantiation(self):
         ni = 100000
         max_num_items = 4
@@ -109,7 +105,6 @@ class TestUtilPerformance(TestBigRepoR):
         elapsed = time() - st
         print >> sys.stderr, "Created %i tuples tuple((1,2,3,4)) in %f s ( %f tuples / s)" % (ni, elapsed, ni / elapsed)
 
-    @skip_on_travis_ci
     def test_unpacking_vs_indexing(self):
         ni = 1000000
         list_items = [1, 2, 3, 4]
@@ -141,7 +136,6 @@ class TestUtilPerformance(TestBigRepoR):
                 ni, type(sequence).__name__, len(sequence), elapsed, ni / elapsed)
         # END for each sequence
 
-    @skip_on_travis_ci
     def test_large_list_vs_iteration(self):
         # what costs more: alloc/realloc of lists, or the cpu strain of iterators ?
         def slow_iter(ni):
@@ -166,7 +160,6 @@ class TestUtilPerformance(TestBigRepoR):
             print >> sys.stderr, "Iterated %i items from iterator in %f s ( %f acc / s)" % (ni, elapsed, ni / elapsed)
         # END for each number of iterations
 
-    @skip_on_travis_ci
     def test_type_vs_inst_class(self):
         class NewType(object):
             pass
