@@ -1,5 +1,4 @@
 from git.util import (
-    join_path,
     Actor,
     LockedFD,
     LockFile,
@@ -16,12 +15,10 @@ from gitdb.util import (
 from git.objects.util import (
     parse_date,
     Serializable,
-    utctz_to_altz,
     altz_to_utctz_str,
 )
 
 import time
-import os
 import re
 
 __all__ = ["RefLog", "RefLogEntry"]
@@ -281,7 +278,6 @@ class RefLog(list, Serializable):
 
     #{ Serializable Interface
     def _serialize(self, stream):
-        lm1 = len(self) - 1
         write = stream.write
 
         # write all entries

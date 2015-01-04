@@ -32,7 +32,7 @@ class TestRootProgress(RootUpdateProgress):
     """Just prints messages, for now without checking the correctness of the states"""
 
     def update(self, op, index, max_count, message=''):
-        print message
+        print(message)
 
 prog = TestRootProgress()
 
@@ -107,7 +107,6 @@ class TestSubmodule(TestBase):
         # END handle bare repo
 
         # make the old into a new - this doesn't work as the name changed
-        prev_parent_commit = smold.parent_commit
         self.failUnlessRaises(ValueError, smold.set_parent_commit, self.k_subm_current)
         # the sha is properly updated
         smold.set_parent_commit(self.k_subm_changed + "~1")
@@ -343,7 +342,6 @@ class TestSubmodule(TestBase):
             # rename a module
             nmp = join_path_native("new", "module", "dir") + "/"  # new module path
             pmp = nsm.path
-            abspmp = nsm.abspath
             assert nsm.move(nmp) is nsm
             nmp = nmp[:-1]          # cut last /
             nmpl = to_native_path_linux(nmp)

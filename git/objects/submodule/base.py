@@ -28,7 +28,6 @@ import git
 
 import os
 import sys
-import time
 
 __all__ = ["Submodule", "UpdateProgress"]
 
@@ -140,7 +139,8 @@ class Submodule(util.IndexObject, Iterable, Traversable):
         return self._name
 
     def __repr__(self):
-        return "git.%s(name=%s, path=%s, url=%s, branch_path=%s)" % (type(self).__name__, self._name, self.path, self.url, self.branch_path)
+        return "git.%s(name=%s, path=%s, url=%s, branch_path=%s)"\
+               % (type(self).__name__, self._name, self.path, self.url, self.branch_path)
 
     @classmethod
     def _config_parser(cls, repo, parent_commit, read_only):
@@ -236,7 +236,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 
         # assure we never put backslashes into the url, as some operating systems
         # like it ...
-        if url != None:
+        if url is not None:
             url = to_native_path_linux(url)
         # END assure url correctness
 
@@ -449,7 +449,8 @@ class Submodule(util.IndexObject, Iterable, Traversable):
         # handles dry_run
         if mrepo is not None and mrepo.head.commit.binsha != binsha:
             progress.update(BEGIN | UPDWKTREE, 0, 1, prefix +
-                            "Updating working tree at %s for submodule %r to revision %s" % (self.path, self.name, hexsha))
+                            "Updating working tree at %s for submodule %r to revision %s"
+                            % (self.path, self.name, hexsha))
             if not dry_run:
                 if is_detached:
                     # NOTE: for now we force, the user is no supposed to change detached
@@ -638,7 +639,8 @@ class Submodule(util.IndexObject, Iterable, Traversable):
                 mod = self.module()
                 if mod.is_dirty(untracked_files=True):
                     raise InvalidGitRepositoryError(
-                        "Cannot delete module at %s with any modifications, unless force is specified" % mod.working_tree_dir)
+                        "Cannot delete module at %s with any modifications, unless force is specified"
+                        % mod.working_tree_dir)
                 # END check for dirt
 
                 # figure out whether we have new commits compared to the remotes

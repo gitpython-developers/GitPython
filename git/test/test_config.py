@@ -74,7 +74,7 @@ class TestBase(TestCase):
         num_options = 0
 
         # test reader methods
-        assert r_config._is_initialized == False
+        assert r_config._is_initialized is False
         for section in r_config.sections():
             num_sections += 1
             for option in r_config.options(section):
@@ -93,7 +93,7 @@ class TestBase(TestCase):
             self.failUnlessRaises(IOError, r_config.remove_section, section)
         # END for each section
         assert num_sections and num_options
-        assert r_config._is_initialized == True
+        assert r_config._is_initialized is True
 
         # get value which doesnt exist, with default
         default = "my default value"

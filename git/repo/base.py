@@ -164,9 +164,6 @@ class Repo(object):
     def __hash__(self):
         return hash(self.git_dir)
 
-    def __repr__(self):
-        return "%s(%r)" % (type(self).__name__, self.git_dir)
-
     # Description property
     def _get_description(self):
         filename = join(self.git_dir, 'description')
@@ -666,7 +663,7 @@ class Repo(object):
 
         # git command automatically chdir into the directory
         git = Git(path)
-        output = git.init(**kwargs)
+        git.init(**kwargs)
         return Repo(path)
 
     @classmethod

@@ -15,7 +15,6 @@ from collections import deque as Deque
 from string import digits
 import time
 import calendar
-import os
 
 __all__ = ('get_object_type_by_name', 'parse_date', 'parse_actor_and_date',
            'ProcessStreamAdapter', 'Traversable', 'altz_to_utctz_str', 'utctz_to_altz',
@@ -89,10 +88,10 @@ def verify_utctz(offset):
         raise fmt_exc
     if offset[0] not in "+-":
         raise fmt_exc
-    if  offset[1] not in digits or \
-            offset[2] not in digits or \
-            offset[3] not in digits or \
-            offset[4] not in digits:
+    if offset[1] not in digits or\
+       offset[2] not in digits or\
+       offset[3] not in digits or\
+       offset[4] not in digits:
         raise fmt_exc
     # END for each char
     return offset

@@ -66,7 +66,7 @@ New BSD License.  See the LICENSE file.
 ### DEVELOPMENT STATUS
 
 [![Build Status](https://travis-ci.org/gitpython-developers/GitPython.svg?branch=0.3)](https://travis-ci.org/gitpython-developers/GitPython)
-[![Coverage Status](https://coveralls.io/repos/gitpython-developers/GitPython/badge.png)](https://coveralls.io/r/gitpython-developers/GitPython)
+[![Coverage Status](https://coveralls.io/repos/gitpython-developers/GitPython/badge.png?branch=0.3)](https://coveralls.io/r/gitpython-developers/GitPython?branch=0.3)
 [![Documentation Status](https://readthedocs.org/projects/gitpython/badge/?version=stable)](https://readthedocs.org/projects/gitpython/?badge=stable)
 
 

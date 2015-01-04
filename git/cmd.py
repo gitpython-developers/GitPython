@@ -334,7 +334,7 @@ class Git(LazyMixin):
            If you add additional keyword arguments to the signature of this method,
            you must update the execute_kwargs tuple housed in this module."""
         if self.GIT_PYTHON_TRACE and (self.GIT_PYTHON_TRACE != 'full' or as_process):
-            print ' '.join(command)
+            print(' '.join(command))
 
         # Allow the user to have the command executed in their working dir.
         if with_keep_cwd or self._working_dir is None:
@@ -389,11 +389,11 @@ class Git(LazyMixin):
         if self.GIT_PYTHON_TRACE == 'full':
             cmdstr = " ".join(command)
             if stderr_value:
-                print "%s -> %d; stdout: '%s'; stderr: '%s'" % (cmdstr, status, stdout_value, stderr_value)
+                print("%s -> %d; stdout: '%s'; stderr: '%s'" % (cmdstr, status, stdout_value, stderr_value))
             elif stdout_value:
-                print "%s -> %d; stdout: '%s'" % (cmdstr, status, stdout_value)
+                print("%s -> %d; stdout: '%s'" % (cmdstr, status, stdout_value))
             else:
-                print "%s -> %d" % (cmdstr, status)
+                print("%s -> %d" % (cmdstr, status))
         # END handle debug printing
 
         if with_exceptions and status != 0:
@@ -522,14 +522,16 @@ class Git(LazyMixin):
                         raise
                     # END handle overridden variable
                     type(self).GIT_PYTHON_GIT_EXECUTABLE = self.git_exec_name_win
-                    call = [self.GIT_PYTHON_GIT_EXECUTABLE] + list(args)
 
                     try:
                         return self.execute(make_call(), **_kwargs)
                     finally:
                         import warnings
-                        msg = "WARNING: Automatically switched to use git.cmd as git executable, which reduces performance by ~70%."
-                        msg += "Its recommended to put git.exe into the PATH or to set the %s environment variable to the executable's location" % self._git_exec_env_var
+                        msg = "WARNING: Automatically switched to use git.cmd as git executable"
+                        msg += ", which reduces performance by ~70%."
+                        msg += "Its recommended to put git.exe into the PATH or to "
+                        msg += "set the %s " % self._git_exec_env_var
+                        msg += "environment variable to the executable's location"
                         warnings.warn(msg)
                     # END print of warning
                 # END catch first failure

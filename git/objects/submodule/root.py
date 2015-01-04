@@ -186,7 +186,9 @@ class RootModule(Submodule):
                             # in the new remote as well.
                             if len([r for r in smr.refs if r.remote_head == sm.branch_name]) == 0:
                                 raise ValueError(
-                                    "Submodule branch named %r was not available in new submodule remote at %r" % (sm.branch_name, sm.url))
+                                    "Submodule branch named %r was not available in new submodule remote at %r"
+                                    % (sm.branch_name, sm.url)
+                                )
                             # END head is not detached
 
                             # now delete the changed one
@@ -245,7 +247,8 @@ class RootModule(Submodule):
                                 # this way, it will be checked out in the next step
                                 # This will change the submodule relative to us, so
                                 # the user will be able to commit the change easily
-                                print >> sys.stderr, "WARNING: Current sha %s was not contained in the tracking branch at the new remote, setting it the the remote's tracking branch" % sm.hexsha
+                                print >> sys.stderr, "WARNING: Current sha %s was not contained in the tracking\
+         branch at the new remote, setting it the the remote's tracking branch" % sm.hexsha
                                 sm.binsha = rref.commit.binsha
                             # END reset binsha
 
@@ -262,7 +265,8 @@ class RootModule(Submodule):
                     # finally, create a new tracking branch which tracks the
                     # new remote branch
                     progress.update(BEGIN | BRANCHCHANGE, i, len_csms, prefix +
-                                    "Changing branch of submodule %r from %s to %s" % (sm.name, psm.branch_path, sm.branch_path))
+                                    "Changing branch of submodule %r from %s to %s"
+                                    % (sm.name, psm.branch_path, sm.branch_path))
                     if not dry_run:
                         smm = sm.module()
                         smmr = smm.remotes

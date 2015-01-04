@@ -172,4 +172,5 @@ class IndexEntry(BaseIndexEntry):
     def from_blob(cls, blob, stage=0):
         """:return: Minimal entry resembling the given blob object"""
         time = pack(">LL", 0, 0)
-        return IndexEntry((blob.mode, blob.binsha, stage << CE_STAGESHIFT, blob.path, time, time, 0, 0, 0, 0, blob.size))
+        return IndexEntry((blob.mode, blob.binsha, stage << CE_STAGESHIFT, blob.path,
+                           time, time, 0, 0, 0, 0, blob.size))

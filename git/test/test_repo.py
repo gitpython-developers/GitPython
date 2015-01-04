@@ -7,7 +7,6 @@ from git.test.lib import (patch,
                           TestBase,
                           with_rw_repo,
                           fixture,
-                          GIT_REPO,
                           assert_false,
                           assert_equal,
                           assert_true,
@@ -15,7 +14,7 @@ from git.test.lib import (patch,
 from git import *
 from git.util import join_path_native
 from git.exc import BadObject
-from gitdb.util import hex_to_bin, bin_to_hex
+from gitdb.util import bin_to_hex
 
 import os
 import sys
@@ -143,7 +142,7 @@ class TestRepo(TestBase):
             for path in (git_dir_rela, git_dir_abs):
                 r = Repo.init(path=path, bare=True)
                 assert isinstance(r, Repo)
-                assert r.bare == True
+                assert r.bare is True
                 assert os.path.isdir(r.git_dir)
 
                 self._assert_empty_repo(r)
@@ -179,7 +178,7 @@ class TestRepo(TestBase):
             os.makedirs(git_dir_rela)
             os.chdir(git_dir_rela)
             r = Repo.init(bare=False)
-            r.bare == False
+            assert r.bare is False
 
             self._assert_empty_repo(r)
         finally:
@@ -230,7 +229,7 @@ class TestRepo(TestBase):
         # END index
         orig_val = self.rorepo._bare
         self.rorepo._bare = True
-        assert self.rorepo.is_dirty() == False
+        assert self.rorepo.is_dirty() is False
         self.rorepo._bare = orig_val
 
     def test_head(self):
@@ -280,7 +279,7 @@ class TestRepo(TestBase):
         for item in self.rorepo.head.commit.tree.traverse(
                 predicate=lambda i, d: i.type == 'blob' and i.path.endswith('.py')):
             c += 1
-            b = self.rorepo.blame(self.rorepo.head, item.path)
+            self.rorepo.blame(self.rorepo.head, item.path)
         # END for each item to traverse
         assert c
 
@@ -503,7 +502,7 @@ class TestRepo(TestBase):
                     assert obj.type == ref.object.type
                     num_resolved += 1
                 except BadObject:
-                    print "failed on %s" % path_section
+                    print ("failed on %s" % path_section)
                     # is fine, in case we have something like 112, which belongs to remotes/rname/merge-requests/112
                     pass
                 # END exception handling

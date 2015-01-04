@@ -210,9 +210,8 @@ class Head(Reference):
             By default it is only allowed to checkout heads - everything else
             will leave the HEAD detached which is allowed and possible, but remains
             a special state that some tools might not be able to handle."""
-        args = list()
         kwargs['f'] = force
-        if kwargs['f'] == False:
+        if kwargs['f'] is False:
             kwargs.pop('f')
 
         self.repo.git.checkout(self, **kwargs)

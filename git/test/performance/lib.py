@@ -50,7 +50,8 @@ class TestBigRepoR(TestBase):
         repo_path = os.environ.get(k_env_git_repo)
         if repo_path is None:
             logging.info(
-                "You can set the %s environment variable to a .git repository of your choice - defaulting to the gitpython repository", k_env_git_repo)
+                ("You can set the %s environment variable to a .git repository of" % k_env_git_repo) +
+                "your choice - defaulting to the gitpython repository")
             repo_path = os.path.dirname(__file__)
         # end set some repo path
         self.gitrorepo = Repo(repo_path, odbt=GitCmdObjectDB)

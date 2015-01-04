@@ -1,4 +1,6 @@
 """Initialize the index package"""
 
-from base import *
-from typ import *
+from __future__ import absolute_import
+
+from .base import *
+from .typ import *

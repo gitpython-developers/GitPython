@@ -54,7 +54,7 @@ class TestDiff(TestBase):
 
         for fixture_name in fixtures:
             diff_proc = StringProcessAdapter(fixture(fixture_name))
-            diffs = Diff._index_from_patch_format(self.rorepo, diff_proc.stdout)
+            Diff._index_from_patch_format(self.rorepo, diff_proc.stdout)
         # END for each fixture
 
     def test_diff_interface(self):

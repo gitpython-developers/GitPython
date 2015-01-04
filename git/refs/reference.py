@@ -4,11 +4,6 @@ from git.util import (
     Iterable,
 )
 
-from gitdb.util import (
-    isfile,
-    hex_to_bin
-)
-
 __all__ = ["Reference"]
 
 #{ Utilities

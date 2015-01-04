@@ -424,7 +424,7 @@ class SymbolicReference(object):
                     # in the line
                     # If we deleted the last line and this one is a tag-reference object,
                     # we drop it as well
-                    if ( line.startswith('#') or full_ref_path not in line ) and \
+                    if (line.startswith('#') or full_ref_path not in line) and \
                             (not dropped_last_line or dropped_last_line and not line.startswith('^')):
                         new_lines.append(line)
                         dropped_last_line = False
@@ -623,6 +623,8 @@ class SymbolicReference(object):
         if not path:
             raise ValueError("Cannot create Reference from %r" % path)
 
+        # Names like HEAD are inserted after the refs module is imported - we have an import dependency
+        # cycle and don't want to import these names in-function
         for ref_type in (HEAD, Head, RemoteReference, TagReference, Reference, SymbolicReference):
             try:
                 instance = ref_type(repo, path)

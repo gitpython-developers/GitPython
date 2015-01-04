@@ -7,10 +7,8 @@
 configuration files"""
 
 import re
-import os
 import ConfigParser as cp
 import inspect
-import cStringIO
 
 from git.odict import OrderedDict
 from git.util import LockFile
@@ -188,8 +186,8 @@ class GitConfigParser(cp.RawConfigParser, object):
         try:
             try:
                 self.write()
-            except IOError, e:
-                print "Exception during destruction of GitConfigParser: %s" % str(e)
+            except IOError as e:
+                print("Exception during destruction of GitConfigParser: %s" % str(e))
         finally:
             self._lock._release_lock()
 
@@ -287,7 +285,7 @@ class GitConfigParser(cp.RawConfigParser, object):
                 try:
                     fp = open(file_object)
                     close_fp = True
-                except IOError, e:
+                except IOError:
                     continue
             # END fp handling
 

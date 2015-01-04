@@ -75,7 +75,7 @@ def _rmtree_onerror(osremove, fullpath, exec_info):
     if os.name != 'nt' or osremove is not os.remove:
         raise
 
-    os.chmod(fullpath, 0777)
+    os.chmod(fullpath, 0o777)
     os.remove(fullpath)
 
 
@@ -194,26 +194,27 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
                 gd = Git().daemon(temp_dir, as_process=True)
                 # yes, I know ... fortunately, this is always going to work if sleep time is just large enough
                 time.sleep(0.5)
-            except Exception as err:
+            except Exception:
                 gd = None
             # end
 
             # try to list remotes to diagnoes whether the server is up
             try:
                 rw_repo.git.ls_remote(d_remote)
-            except GitCommandError, e:
+            except GitCommandError as e:
                 # We assume in good faith that we didn't start the daemon - but make sure we kill it anyway
                 # Of course we expect it to work here already, but maybe there are timing constraints
                 # on some platforms ?
                 if gd is not None:
                     os.kill(gd.proc.pid, 15)
-                print str(e)
+                print(str(e))
                 if os.name == 'nt':
-                    raise AssertionError(
-                        'git-daemon needs to run this test, but windows does not have one. Otherwise, run: git-daemon "%s"' % temp_dir)
+                    msg = "git-daemon needs to run this test, but windows does not have one. "
+                    msg += 'Otherwise, run: git-daemon "%s"' % temp_dir
+                    raise AssertionError(msg)
                 else:
-                    raise AssertionError(
-                        'Please start a git-daemon to run this test, execute: git-daemon "%s"' % temp_dir)
+                    msg = 'Please start a git-daemon to run this test, execute: git-daemon "%s"' % temp_dir
+                    raise AssertionError(msg)
                 # END make assertion
             # END catch ls remote error
 

@@ -5,7 +5,6 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
 import re
-import unittest
 from nose import tools
 from nose.tools import *
 import stat

@@ -5,15 +5,12 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
 import git.objects.base as base
-import git.refs as refs
 import os
 
 from git.test.lib import *
 from git import *
-from itertools import chain
 from git.objects.util import get_object_type_by_name
 from gitdb.util import hex_to_bin
-import tempfile
 
 
 class TestBase(TestBase):

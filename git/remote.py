@@ -32,7 +32,6 @@ from gitdb.util import join
 
 import re
 import os
-import sys
 
 __all__ = ('RemoteProgress', 'PushInfo', 'FetchInfo', 'Remote')
 
@@ -329,7 +328,8 @@ class FetchInfo(object):
                 # always use actual type if we get absolute paths
                 # Will always be the case if something is fetched outside of refs/remotes (if its not a tag)
                 ref_path = remote_local_ref
-                if ref_type is not TagReference and not remote_local_ref.startswith(RemoteReference._common_path_default + "/"):
+                if ref_type is not TagReference and not \
+                   remote_local_ref.startswith(RemoteReference._common_path_default + "/"):
                     ref_type = Reference
                 # END downgrade remote reference
             elif ref_type is TagReference and 'tags/' in remote_local_ref:

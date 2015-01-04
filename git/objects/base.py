@@ -6,7 +6,6 @@
 from git.util import LazyMixin, join_path_native, stream_copy
 from util import get_object_type_by_name
 from gitdb.util import (
-    hex_to_bin,
     bin_to_hex,
     basename
 )

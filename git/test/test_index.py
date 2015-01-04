@@ -7,13 +7,14 @@
 from git.test.lib import *
 from git import *
 from gitdb.util import hex_to_bin
-import inspect
 import os
 import sys
 import tempfile
-import glob
 import shutil
-from stat import *
+from stat import (
+    S_ISLNK,
+    ST_MODE
+)
 
 from StringIO import StringIO
 from gitdb.base import IStream
@@ -60,7 +61,7 @@ class TestIndex(TestBase):
         for entry in entries:
             assert isinstance(entry, BaseIndexEntry)
             assert not os.path.isabs(entry.path)
-            assert not "\\" in entry.path
+            assert "\\" not in entry.path
         # END for each entry
 
     def test_index_file_base(self):
@@ -70,11 +71,10 @@ class TestIndex(TestBase):
         assert index.version > 0
 
         # test entry
-        last_val = None
         entry = index.entries.itervalues().next()
         for attr in ("path", "ctime", "mtime", "dev", "inode", "mode", "uid",
                      "gid", "size", "binsha", "hexsha", "stage"):
-            val = getattr(entry, attr)
+            getattr(entry, attr)
         # END for each method
 
         # test update
@@ -100,7 +100,6 @@ class TestIndex(TestBase):
         if isinstance(tree, str):
             tree = self.rorepo.commit(tree).tree
 
-        num_blobs = 0
         blist = list()
         for blob in tree.traverse(predicate=lambda e, d: e.type == "blob", branch_first=False):
             assert (blob.path, 0) in index.entries
@@ -240,7 +239,7 @@ class TestIndex(TestBase):
         # resetting the head will leave the index in a different state, and the
         # diff will yield a few changes
         cur_head_commit = rw_repo.head.reference.commit
-        ref = rw_repo.head.reset('HEAD~6', index=True, working_tree=False)
+        rw_repo.head.reset('HEAD~6', index=True, working_tree=False)
 
         # diff against same index is 0
         diff = index.diff()
@@ -468,7 +467,7 @@ class TestIndex(TestBase):
         entries = index.reset(new_commit).add(
             [os.path.abspath(os.path.join('lib', 'git', 'head.py'))] * 2, fprogress=self._fprogress_add)
         self._assert_entries(entries)
-        assert entries[0].mode & 0644 == 0644
+        assert entries[0].mode & 0o644 == 0o644
         # would fail, test is too primitive to handle this case
         # self._assert_fprogress(entries)
         self._reset_progress()
@@ -492,9 +491,9 @@ class TestIndex(TestBase):
 
         # add new file
         new_file_relapath = "my_new_file"
-        new_file_path = self._make_file(new_file_relapath, "hello world", rw_repo)
+        self._make_file(new_file_relapath, "hello world", rw_repo)
         entries = index.reset(new_commit).add(
-            [BaseIndexEntry((010644, null_bin_sha, 0, new_file_relapath))], fprogress=self._fprogress_add)
+            [BaseIndexEntry((0o10644, null_bin_sha, 0, new_file_relapath))], fprogress=self._fprogress_add)
         self._assert_entries(entries)
         self._assert_fprogress(entries)
         assert len(entries) == 1 and entries[0].hexsha != null_hex_sha
@@ -519,7 +518,7 @@ class TestIndex(TestBase):
         fake_symlink_relapath = "my_fake_symlink"
         link_target = "/etc/that"
         fake_symlink_path = self._make_file(fake_symlink_relapath, link_target, rw_repo)
-        fake_entry = BaseIndexEntry((0120000, null_bin_sha, 0, fake_symlink_relapath))
+        fake_entry = BaseIndexEntry((0o120000, null_bin_sha, 0, fake_symlink_relapath))
         entries = index.reset(new_commit).add([fake_entry], fprogress=self._fprogress_add)
         self._assert_entries(entries)
         self._assert_fprogress(entries)
@@ -527,7 +526,7 @@ class TestIndex(TestBase):
         assert len(entries) == 1 and S_ISLNK(entries[0].mode)
 
         # assure this also works with an alternate method
-        full_index_entry = IndexEntry.from_base(BaseIndexEntry((0120000, entries[0].binsha, 0, entries[0].path)))
+        full_index_entry = IndexEntry.from_base(BaseIndexEntry((0o120000, entries[0].binsha, 0, entries[0].path)))
         entry_key = index.entry_key(full_index_entry)
         index.reset(new_commit)
 
@@ -605,7 +604,7 @@ class TestIndex(TestBase):
             for fid in range(3):
                 fname = 'newfile%i' % fid
                 open(fname, 'wb').write("abcd")
-                yield Blob(rw_repo, Blob.NULL_BIN_SHA, 0100644, fname)
+                yield Blob(rw_repo, Blob.NULL_BIN_SHA, 0o100644, fname)
             # END for each new file
         # END path producer
         paths = list(make_paths())
@@ -627,7 +626,7 @@ class TestIndex(TestBase):
         files = (arela, brela)
 
         for fkey in keys:
-            assert not fkey in index.entries
+            assert fkey not in index.entries
 
         index.add(files, write=True)
         nc = index.commit("2 files committed", head=False)
@@ -637,7 +636,7 @@ class TestIndex(TestBase):
 
         # just the index
         index.reset(paths=(arela, afile))
-        assert not akey in index.entries
+        assert akey not in index.entries
         assert bkey in index.entries
 
         # now with working tree - files on disk as well as entries must be recreated
@@ -690,10 +689,10 @@ class TestIndex(TestBase):
         filename = 'my-imaginary-file'
         istream = rw_bare_repo.odb.store(
             IStream(Blob.type, filesize, fileobj))
-        entry = BaseIndexEntry((100644, istream.binsha, 0, filename))
+        entry = BaseIndexEntry((0o100644, istream.binsha, 0, filename))
         try:
             rw_bare_repo.index.add([entry])
-        except AssertionError, e:
+        except AssertionError:
             self.fail("Adding to the index of a bare repo is not allowed.")
 
         # Adding using a path should still require a non-bare repository.
@@ -701,6 +700,6 @@ class TestIndex(TestBase):
         path = os.path.join('git', 'test', 'test_index.py')
         try:
             rw_bare_repo.index.add([path])
-        except Exception, e:
+        except Exception as e:
             asserted = "does not have a working tree" in e.message
         assert asserted, "Adding using a filename is not correctly asserted."

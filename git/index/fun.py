@@ -5,7 +5,6 @@ from stat import (
     S_IFDIR,
     S_IFLNK,
     S_ISLNK,
-    S_IFDIR,
     S_ISDIR,
     S_IFMT,
     S_IFREG,
@@ -146,7 +145,7 @@ def read_cache(stream):
         path = read(path_size)
 
         real_size = ((tell() - beginoffset + 8) & ~7)
-        data = read((beginoffset + real_size) - tell())
+        read((beginoffset + real_size) - tell())
         entry = IndexEntry((mode, sha, flags, path, ctime, mtime, dev, ino, uid, gid, size))
         # entry_key would be the method to use, but we safe the effort
         entries[(path, entry.stage)] = entry
@@ -160,8 +159,8 @@ def read_cache(stream):
     # 4 bytes length of chunk
     # repeated 0 - N times
     extension_data = stream.read(~0)
-    assert len(extension_data) > 19, "Index Footer was not at least a sha on content as it was only %i bytes in size" % len(
-        extension_data)
+    assert len(extension_data) > 19, "Index Footer was not at least a sha on content as it was only %i bytes in size"\
+                                     % len(extension_data)
 
     content_sha = extension_data[-20:]
 
@@ -265,7 +264,7 @@ def aggressive_tree_merge(odb, tree_shas):
                     # it exists in all branches, if it was changed in both
                     # its a conflict, otherwise we take the changed version
                     # This should be the most common branch, so it comes first
-                    if( base[0] != ours[0] and base[0] != theirs[0] and ours[0] != theirs[0] ) or \
+                    if(base[0] != ours[0] and base[0] != theirs[0] and ours[0] != theirs[0]) or \
                             (base[1] != ours[1] and base[1] != theirs[1] and ours[1] != theirs[1]):
                         # changed by both
                         out_append(_tree_entry_to_baseindexentry(base, 1))

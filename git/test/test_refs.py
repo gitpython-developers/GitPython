@@ -155,10 +155,10 @@ class TestRefs(TestBase):
         assert len(types_found) >= 3
 
     def test_is_valid(self):
-        assert Reference(self.rorepo, 'refs/doesnt/exist').is_valid() == False
+        assert not Reference(self.rorepo, 'refs/doesnt/exist').is_valid()
         assert self.rorepo.head.is_valid()
         assert self.rorepo.head.reference.is_valid()
-        assert SymbolicReference(self.rorepo, 'hellothere').is_valid() == False
+        assert not SymbolicReference(self.rorepo, 'hellothere').is_valid()
 
     def test_orig_head(self):
         assert type(self.rorepo.head.orig_head()) == SymbolicReference

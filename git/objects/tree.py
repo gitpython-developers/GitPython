@@ -187,7 +187,8 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
         else:
             for info in self._cache:
                 if info[2] == file:     # [2] == name
-                    return self._map_id_to_type[info[1] >> 12](self.repo, info[0], info[1], join_path(self.path, info[2]))
+                    return self._map_id_to_type[info[1] >> 12](self.repo, info[0], info[1],
+                                                               join_path(self.path, info[2]))
             # END for each obj
             raise KeyError(msg % file)
         # END handle long paths

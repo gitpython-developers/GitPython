@@ -616,8 +616,7 @@ class OrderedDict(dict):
         TypeError: pop expected at most 2 arguments, got 3
         """
         if len(args) > 1:
-            raise TypeError, ('pop expected at most 2 arguments, got %s' %
-                              (len(args) + 1))
+            raise TypeError('pop expected at most 2 arguments, got %s' % (len(args) + 1))
         if key in self:
             val = self[key]
             del self[key]
@@ -1199,7 +1198,7 @@ class Values(object):
             keys = self._main._sequence[index]
             if len(keys) != len(value):
                 raise ValueError('attempt to assign sequence of size %s '
-                                 'to slice of size %s' % (len(name), len(keys)))
+                                 'to slice of size %s' % (len(value), len(keys)))
             # FIXME: efficiency?  Would be better to calculate the indexes
             #   directly from the slice object
             # NOTE: the new keys can collide with existing keys (or even
@@ -1511,7 +1510,7 @@ class SequenceOrderedDict(OrderedDict):
 
     def __setattr__(self, name, value):
         """Protect keys, items, and values."""
-        if not '_att_dict' in self.__dict__:
+        if '_att_dict' not in self.__dict__:
             object.__setattr__(self, name, value)
         else:
             try:

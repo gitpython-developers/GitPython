@@ -7,7 +7,6 @@
 import re
 from objects.blob import Blob
 from objects.util import mode_str_to_int
-from exc import GitCommandError
 
 from gitdb.util import hex_to_bin
 
@@ -106,7 +105,7 @@ class Diffable(object):
             diff_method = Diff._index_from_patch_format
         index = diff_method(self.repo, proc.stdout)
 
-        status = proc.wait()
+        proc.wait()
         return index
 
 
@@ -321,7 +320,7 @@ class Diff(object):
             modify, delete and add files
         :return: git.DiffIndex"""
         # handles
-        # :100644 100644 6870991011cc8d9853a7a8a6f02061512c6a8190 37c5e30c879213e9ae83b21e9d11e55fc20c54b7 M    .gitignore
+        # :100644 100644 687099101... 37c5e30c8... M    .gitignore
         index = DiffIndex()
         for line in stream:
             if not line.startswith(":"):

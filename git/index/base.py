@@ -24,7 +24,6 @@ from util import (
     git_working_dir
 )
 
-import git.objects
 import git.diff as diff
 
 from git.exc import (
@@ -43,13 +42,11 @@ from git.objects import (
 from git.objects.util import Serializable
 
 from git.util import (
-    IndexFileSHA1Writer,
     LazyMixin,
     LockedFD,
     join_path_native,
     file_contents_ro,
     to_native_path_linux,
-    to_native_path
 )
 
 from fun import (
@@ -418,9 +415,6 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             iterator. A default filter, the BlobFilter, allows you to yield blobs
             only if they match a given list of paths. """
         for entry in self.entries.itervalues():
-            # TODO: is it necessary to convert the mode ? We did that when adding
-            # it to the index, right ?
-            mode = stat_mode_to_index_mode(entry.mode)
             blob = entry.to_blob(self.repo)
             blob.size = entry.size
             output = (entry.stage, blob)
@@ -602,7 +596,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
     def add(self, items, force=True, fprogress=lambda *args: None, path_rewriter=None,
             write=True):
         """Add files from the working tree, specific blobs or BaseIndexEntries
-        to the index. 
+        to the index.
 
         :param items:
             Multiple types of items are supported, types can be mixed within one call.
@@ -630,7 +624,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
                 must be a path relative to our repository.
 
                 If their sha is null ( 40*0 ), their path must exist in the file system
-                relative to the git repository as an object will be created from 
+                relative to the git repository as an object will be created from
                 the data at the path.
                 The handling now very much equals the way string paths are processed, except that
                 the mode you have set will be kept. This allows you to create symlinks
@@ -892,7 +886,8 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         :return:
             Commit object representing the new commit"""
         tree = self.write_tree()
-        return Commit.create_from_tree(self.repo, tree, message, parent_commits, head, author=author, committer=committer)
+        return Commit.create_from_tree(self.repo, tree, message, parent_commits,
+                                       head, author=author, committer=committer)
 
     @classmethod
     def _flush_stdin_and_wait(cls, proc, ignore_stdout=False):
@@ -995,7 +990,8 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             if failed_files:
                 valid_files = list(set(iter_checked_out_files) - set(failed_files))
                 raise CheckoutError(
-                    "Some files could not be checked out from the index due to local modifications", failed_files, valid_files, failed_reasons)
+                    "Some files could not be checked out from the index due to local modifications",
+                    failed_files, valid_files, failed_reasons)
         # END stderr handler
 
         if paths is None:

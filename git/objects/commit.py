@@ -276,9 +276,9 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
             If True, the HEAD will be advanced to the new commit automatically.
             Else the HEAD will remain pointing on the previous commit. This could
             lead to undesired results when diffing files.
-        :param author: The name of the author, optional. If unset, the repository 
+        :param author: The name of the author, optional. If unset, the repository
             configuration is used to obtain this value.
-        :param committer: The name of the committer, optional. If unset, the 
+        :param committer: The name of the committer, optional. If unset, the
             repository configuration is used to obtain this value.
 
         :return: Commit object representing the new commit

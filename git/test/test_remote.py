@@ -259,7 +259,6 @@ class TestRemote(TestBase):
     def _assert_push_and_pull(self, remote, rw_repo, remote_repo):
         # push our changes
         lhead = rw_repo.head
-        lindex = rw_repo.index
         # assure we are on master and it is checked out where the remote is
         try:
             lhead.reference = rw_repo.heads.master
@@ -448,7 +447,8 @@ class TestRemote(TestBase):
 
     def test_fetch_info(self):
         # assure we can handle remote-tracking branches
-        fetch_info_line_fmt = "c437ee5deb8d00cf02f03720693e4c802e99f390	not-for-merge	%s '0.3' of git://github.com/gitpython-developers/GitPython"
+        fetch_info_line_fmt = "c437ee5deb8d00cf02f03720693e4c802e99f390	not-for-merge	%s '0.3' of "
+        fetch_info_line_fmt += "git://github.com/gitpython-developers/GitPython"
         remote_info_line_fmt = "* [new branch]      nomatter     -> %s"
         fi = FetchInfo._from_line(self.rorepo,
                                   remote_info_line_fmt % "local/master",

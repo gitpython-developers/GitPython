@@ -17,6 +17,8 @@ import getpass
 # Handle once test-cases are back up and running.
 from exc import GitCommandError
 
+# Most of these are unused here, but are for use by git-python modules so these
+# don't see gitdb all the time. Flake of course doesn't like it.
 from gitdb.util import (
     make_sha,
     LockedFD,
@@ -130,7 +132,7 @@ def finalize_process(proc):
     """Wait for the process (clone, fetch, pull or push) and handle its errors accordingly"""
     try:
         proc.wait()
-    except GitCommandError, e:
+    except GitCommandError:
         # if a push has rejected items, the command has non-zero return status
         # a return status of 128 indicates a connection error - reraise the previous one
         if proc.poll() == 128:
