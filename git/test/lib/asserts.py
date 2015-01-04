@@ -5,15 +5,27 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
 import re
-from nose import tools
-from nose.tools import *
 import stat
 
 __all__ = ['assert_instance_of', 'assert_not_instance_of',
            'assert_none', 'assert_not_none',
            'assert_match', 'assert_not_match', 'assert_mode_644',
-           'assert_mode_755'] + tools.__all__
+           'assert_mode_755',
+           'assert_equal', 'assert_not_equal', 'assert_raises', 'patch', 'raises',
+           'assert_true', 'assert_false']
 
+from nose.tools import (
+    assert_equal,
+    assert_not_equal,
+    assert_raises,
+    raises,
+    assert_true,
+    assert_false
+)
+
+from mock import (
+    patch
+)
 
 def assert_instance_of(expected, actual, msg=None):
     """Verify that object is an instance of expected """

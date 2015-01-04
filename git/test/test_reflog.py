@@ -1,6 +1,12 @@
-from git.test.lib import *
+from git.test.lib import (
+    TestBase,
+    fixture_path
+)
 from git.objects import IndexObject
-from git.refs import *
+from git.refs import (
+    RefLogEntry,
+    RefLog
+)
 from git.util import Actor
 
 import tempfile

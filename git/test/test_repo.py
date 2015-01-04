@@ -3,15 +3,30 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
-from git.test.lib import (patch,
-                          TestBase,
-                          with_rw_repo,
-                          fixture,
-                          assert_false,
-                          assert_equal,
-                          assert_true,
-                          raises)
-from git import *
+from git.test.lib import (
+    patch,
+    TestBase,
+    with_rw_repo,
+    fixture,
+    assert_false,
+    assert_equal,
+    assert_true,
+    raises
+)
+from git import (
+    InvalidGitRepositoryError,
+    Repo,
+    NoSuchPathError,
+    Head,
+    Commit,
+    Tree,
+    IndexFile,
+    Git,
+    Reference,
+    GitDB,
+    Submodule,
+    GitCmdObjectDB
+)
 from git.util import join_path_native
 from git.exc import BadObject
 from gitdb.util import bin_to_hex

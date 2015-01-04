@@ -1,20 +1,23 @@
 """Performance data streaming performance"""
-
-from git.test.lib import *
-from gitdb import *
-from gitdb.util import bin_to_hex
-
 from time import time
 import os
 import sys
 import subprocess
 
+from git.test.lib import (
+    with_rw_repo
+)
+from gitdb.util import bin_to_hex
 from gitdb.test.lib import make_memory_file
 
-from lib import (
+from .lib import (
     TestBigRepoR
 )
 
+from gitdb import (
+    LooseObjectDB,
+    IStream
+)
 
 class TestObjDBPerformance(TestBigRepoR):
 

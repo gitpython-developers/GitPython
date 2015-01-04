@@ -2,7 +2,7 @@
 from time import time
 import sys
 
-from lib import (
+from .lib import (
     TestBigRepoR
 )
 
@@ -93,14 +93,14 @@ class TestUtilPerformance(TestBigRepoR):
         # tuple and tuple direct
         st = time()
         for i in xrange(ni):
-            t = (1, 2, 3, 4)
+            (1, 2, 3, 4)
         # END for each item
         elapsed = time() - st
         print >> sys.stderr, "Created %i tuples (1,2,3,4) in %f s ( %f tuples / s)" % (ni, elapsed, ni / elapsed)
 
         st = time()
         for i in xrange(ni):
-            t = tuple((1, 2, 3, 4))
+            tuple((1, 2, 3, 4))
         # END for each item
         elapsed = time() - st
         print >> sys.stderr, "Created %i tuples tuple((1,2,3,4)) in %f s ( %f tuples / s)" % (ni, elapsed, ni / elapsed)

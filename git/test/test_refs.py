@@ -4,9 +4,20 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
-from mock import *
-from git.test.lib import *
-from git import *
+from git.test.lib import (
+    TestBase,
+    with_rw_repo
+)
+from git import (
+    Reference,
+    Head,
+    TagReference,
+    RemoteReference,
+    Commit,
+    SymbolicReference,
+    GitCommandError,
+    RefLog
+)
 import git.refs as refs
 from git.util import Actor
 from git.objects.tag import TagObject

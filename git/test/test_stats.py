@@ -4,13 +4,17 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
-from git.test.lib import *
-from git import *
+from git.test.lib import (
+    TestBase,
+    fixture,
+    assert_equal
+)
+from git import Stats
 
 
 class TestStats(TestBase):
 
-    def test__list_from_string(self):
+    def test_list_from_string(self):
         output = fixture('diff_numstat')
         stats = Stats._list_from_string(self.rorepo, output)
 

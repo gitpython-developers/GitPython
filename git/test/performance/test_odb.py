@@ -3,7 +3,7 @@
 from time import time
 import sys
 
-from lib import (
+from .lib import (
     TestBigRepoR
 )
 

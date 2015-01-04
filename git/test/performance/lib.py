@@ -1,6 +1,8 @@
 """Contains library functions"""
 import os
-from git.test.lib import *
+from git.test.lib import (
+    TestBase
+)
 from gitdb.test.lib import skip_on_travis_ci
 import shutil
 import tempfile

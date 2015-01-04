@@ -1,4 +1,7 @@
-from git.test.lib import *
+from git.test.lib import (
+    TestBase,
+    with_rw_repo
+)
 from git.objects.fun import (
     traverse_tree_recursive,
     traverse_trees_recursive,
@@ -78,7 +81,7 @@ class TestFun(TestBase):
     @with_rw_repo('0.1.6')
     def test_three_way_merge(self, rwrepo):
         def mkfile(name, sha, executable=0):
-            return (sha, S_IFREG | 0644 | executable * 0111, name)
+            return (sha, S_IFREG | 0o644 | executable * 0o111, name)
 
         def mkcommit(name, sha):
             return (sha, S_IFDIR | S_IFLNK, name)

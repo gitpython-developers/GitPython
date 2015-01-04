@@ -5,8 +5,18 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
-from git.test.lib import *
-from git import *
+from git.test.lib import (
+    TestBase,
+    assert_equal,
+    assert_not_equal,
+    with_rw_repo,
+    fixture_path,
+    StringProcessAdapter
+)
+from git import (
+    Commit,
+    Actor,
+)
 from gitdb import IStream
 from gitdb.util import hex_to_bin
 

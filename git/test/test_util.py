@@ -6,10 +6,23 @@
 
 import tempfile
 
-from git.util import *
-from git.test.lib import *
-from git.objects.util import *
-from git import *
+from git.test.lib import (
+    TestBase,
+    assert_equal
+)
+from git.util import (
+    LockFile,
+    BlockingLockFile,
+    get_user_id,
+    Actor,
+    IterableList
+)
+from git.objects.util import (
+    altz_to_utctz_str,
+    utctz_to_altz,
+    verify_utctz,
+    parse_date,
+)
 from git.cmd import dashify
 
 import time

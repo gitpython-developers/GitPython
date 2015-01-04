@@ -4,9 +4,19 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
-from git.test.lib import *
-from git import *
+from git.test.lib import (
+    TestBase,
+    StringProcessAdapter,
+    fixture,
+    assert_equal,
+    assert_true,
 
+)
+
+from git import (
+    Diff,
+    DiffIndex
+)
 
 class TestDiff(TestBase):
 

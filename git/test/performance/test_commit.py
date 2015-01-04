@@ -4,8 +4,8 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
-from lib import *
-from git import *
+from .lib import TestBigRepoRW
+from git import Commit
 from gitdb import IStream
 from git.test.test_commit import assert_commit_serialization
 from cStringIO import StringIO

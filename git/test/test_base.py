@@ -7,8 +7,18 @@
 import git.objects.base as base
 import os
 
-from git.test.lib import *
-from git import *
+from git.test.lib import (
+    TestBase,
+    assert_raises,
+    with_rw_repo,
+    with_rw_and_rw_remote_repo
+)
+from git import (
+    Blob,
+    Tree,
+    Commit,
+    TagObject
+)
 from git.objects.util import get_object_type_by_name
 from gitdb.util import hex_to_bin
 

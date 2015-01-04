@@ -5,8 +5,11 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
 import os
-from git.test.lib import *
-from git import *
+from git.test.lib import TestBase
+from git import (
+    Tree,
+    Blob
+)
 
 from cStringIO import StringIO
 
