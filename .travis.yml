@@ -32,7 +32,7 @@ install:
   - git config --global user.name "Travis Runner"
 
   # DEBUG
-  cat /home/travis/build/gitpython-developers/GitPython/.git/logs/refs/heads/0.3
+  - cat /home/travis/build/gitpython-developers/GitPython/.git/logs/refs/heads/0.3
 script: 
   - nosetests -v --with-coverage
 after_success:
