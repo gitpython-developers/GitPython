@@ -33,6 +33,8 @@ install:
 
   # DEBUG
   - cat /home/travis/build/gitpython-developers/GitPython/.git/logs/refs/heads/0.3
+  - cat /home/travis/build/gitpython-developers/GitPython/.git/logs/refs/heads/master
+  - cat /home/travis/build/gitpython-developers/GitPython/.git/logs/HEAD
 script: 
   - nosetests -v --with-coverage
 after_success:
