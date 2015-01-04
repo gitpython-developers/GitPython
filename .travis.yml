@@ -13,9 +13,9 @@ install:
   - pip install coveralls
 
   # for now we have to make sure there is a master branch - at some point we should just have it by default
-  - git branch master 0.3
+  - git branch master
 
-  # generate some reflog as git-python tests need it
+  # generate some reflog as git-python tests need it (in 0.3)
   - git reset --hard HEAD~1
   - git reset --hard HEAD~1
   - git reset --hard HEAD~1
@@ -30,10 +30,6 @@ install:
   # as commits are performed with the default user, it needs to be set for travis too
   - git config --global user.email "travis@ci.com"
   - git config --global user.name "Travis Runner"
-
-  # debugging
-  - find .git/logs
-  - cat .git/logs/HEAD
 script: 
   - nosetests -v --with-coverage
 after_success:

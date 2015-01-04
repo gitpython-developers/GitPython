@@ -581,14 +581,16 @@ class TestRepo(TestBase):
             assert rev_parse(refspec + ":CHANGES").type == 'blob'
         # END operate on non-detached head
 
-        # the last position
-        assert rev_parse('@{1}') != head.commit
-
         # position doesn't exist
         self.failUnlessRaises(IndexError, rev_parse, '@{10000}')
 
         # currently, nothing more is supported
         self.failUnlessRaises(NotImplementedError, rev_parse, "@{1 week ago}")
+
+        # the last position
+        # For some reason, this test fails on travis - lets gather more information
+        print self.rorepo
+        assert rev_parse('@{1}') != head.commit
 
     def test_repo_odbtype(self):
         target_type = GitDB
