@@ -30,6 +30,7 @@ from git import (
 from git.util import join_path_native
 from git.exc import BadObject
 from gitdb.util import bin_to_hex
+from git.compat import string_types
 
 import os
 import sys
@@ -286,7 +287,7 @@ class TestRepo(TestBase):
         # test the 'lines per commit' entries
         tlist = b[0][1]
         assert_true(tlist)
-        assert_true(isinstance(tlist[0], basestring))
+        assert_true(isinstance(tlist[0], string_types))
         assert_true(len(tlist) < sum(len(t) for t in tlist))               # test for single-char bug
 
     def test_blame_real(self):

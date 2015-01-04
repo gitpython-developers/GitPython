@@ -47,6 +47,7 @@ from .fun import (
     read_gitfile,
     touch,
 )
+from git.compat import text_type
 
 import os
 import sys
@@ -176,11 +177,11 @@ class Repo(object):
     # Description property
     def _get_description(self):
         filename = join(self.git_dir, 'description')
-        return file(filename).read().rstrip()
+        return open(filename).read().rstrip()
 
     def _set_description(self, descr):
         filename = join(self.git_dir, 'description')
-        file(filename, 'w').write(descr + '\n')
+        open(filename, 'w').write(descr + '\n')
 
     description = property(_get_description, _set_description,
                            doc="the project's description")
@@ -389,7 +390,7 @@ class Repo(object):
         if rev is None:
             return self.head.commit
         else:
-            return self.rev_parse(unicode(rev) + "^0")
+            return self.rev_parse(text_type(rev) + "^0")
 
     def iter_trees(self, *args, **kwargs):
         """:return: Iterator yielding Tree objects
@@ -412,7 +413,7 @@ class Repo(object):
         if rev is None:
             return self.head.commit.tree
         else:
-            return self.rev_parse(unicode(rev) + "^{tree}")
+            return self.rev_parse(text_type(rev) + "^{tree}")
 
     def iter_commits(self, rev=None, paths='', **kwargs):
         """A list of Commit objects representing the history of a given ref/commit

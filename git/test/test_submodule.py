@@ -9,6 +9,7 @@ from git.exc import InvalidGitRepositoryError
 from git.objects.submodule.base import Submodule
 from git.objects.submodule.root import RootModule, RootUpdateProgress
 from git.util import to_native_path_linux, join_path_native
+from git.compat import string_types
 import shutil
 import git
 import sys
@@ -76,7 +77,7 @@ class TestSubmodule(TestBase):
         self.failUnlessRaises(InvalidGitRepositoryError, getattr, sm, 'branch')
 
         # branch_path works, as its just a string
-        assert isinstance(sm.branch_path, basestring)
+        assert isinstance(sm.branch_path, string_types)
 
         # some commits earlier we still have a submodule, but its at a different commit
         smold = Submodule.iter_items(rwrepo, self.k_subm_changed).next()

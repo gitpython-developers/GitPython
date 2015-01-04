@@ -19,7 +19,7 @@ from .util import (
     stream_copy
 )
 from .exc import GitCommandError
-
+from git.compat import text_type
 
 execute_kwargs = ('istream', 'with_keep_cwd', 'with_extended_output',
                   'with_exceptions', 'as_process',
@@ -435,7 +435,7 @@ class Git(LazyMixin):
     @classmethod
     def __unpack_args(cls, arg_list):
         if not isinstance(arg_list, (list, tuple)):
-            if isinstance(arg_list, unicode):
+            if isinstance(arg_list, text_type):
                 return [arg_list.encode('utf-8')]
             return [str(arg_list)]
 
@@ -443,7 +443,7 @@ class Git(LazyMixin):
         for arg in arg_list:
             if isinstance(arg_list, (list, tuple)):
                 outlist.extend(cls.__unpack_args(arg))
-            elif isinstance(arg_list, unicode):
+            elif isinstance(arg_list, text_type):
                 outlist.append(arg_list.encode('utf-8'))
             # END recursion
             else:

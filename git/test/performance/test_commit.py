@@ -4,13 +4,16 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 from __future__ import print_function
-from .lib import TestBigRepoRW
-from git import Commit
-from gitdb import IStream
-from git.test.test_commit import assert_commit_serialization
 from io import StringIO
 from time import time
 import sys
+
+from .lib import TestBigRepoRW
+from git import Commit
+from gitdb import IStream
+from git.compat import xrange
+from git.test.test_commit import assert_commit_serialization
+
 
 
 class TestPerformance(TestBigRepoRW):

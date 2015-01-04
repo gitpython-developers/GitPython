@@ -11,6 +11,7 @@ from . import util
 from .base import IndexObject
 from .blob import Blob
 from .submodule.base import Submodule
+from git.compat import string_types
 
 from .fun import (
     tree_entries_from_data,
@@ -232,7 +233,7 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
             info = self._cache[item]
             return self._map_id_to_type[info[1] >> 12](self.repo, info[0], info[1], join_path(self.path, info[2]))
 
-        if isinstance(item, basestring):
+        if isinstance(item, string_types):
             # compatability
             return self.__div__(item)
         # END index is basestring

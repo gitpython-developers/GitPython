@@ -23,6 +23,7 @@ from .util import (
     altz_to_utctz_str,
     parse_actor_and_date
 )
+from git.compat import text_type
 
 from time import (
     time,
@@ -378,7 +379,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
 
         a = self.author
         aname = a.name
-        if isinstance(aname, unicode):
+        if isinstance(aname, text_type):
             aname = aname.encode(self.encoding)
         # END handle unicode in name
 
@@ -390,7 +391,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
 
         # encode committer
         aname = c.name
-        if isinstance(aname, unicode):
+        if isinstance(aname, text_type):
             aname = aname.encode(self.encoding)
         # END handle unicode in name
         write(fmt % ("committer", aname, c.email,
@@ -408,7 +409,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
         write("\n")
 
         # write plain bytes, be sure its encoded according to our encoding
-        if isinstance(self.message, unicode):
+        if isinstance(self.message, text_type):
             write(self.message.encode(self.encoding))
         else:
             write(self.message)

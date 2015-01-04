@@ -22,6 +22,7 @@ from git.exc import (
     InvalidGitRepositoryError,
     NoSuchPathError
 )
+from git.compat import string_types
 
 import stat
 import git
@@ -93,7 +94,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
         if url is not None:
             self._url = url
         if branch_path is not None:
-            assert isinstance(branch_path, basestring)
+            assert isinstance(branch_path, string_types)
             self._branch_path = branch_path
         if name is not None:
             self._name = name

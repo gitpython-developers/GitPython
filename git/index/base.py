@@ -39,7 +39,11 @@ from git.objects import (
 )
 
 from git.objects.util import Serializable
-from git.compat import izip
+from git.compat import (
+    izip,
+    xrange,
+    string_types,
+)
 
 from git.util import (
     LazyMixin,
@@ -541,7 +545,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         entries = list()
 
         for item in items:
-            if isinstance(item, basestring):
+            if isinstance(item, string_types):
                 paths.append(self._to_relative_path(item))
             elif isinstance(item, (Blob, Submodule)):
                 entries.append(BaseIndexEntry.from_blob(item))
@@ -752,7 +756,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         for item in items:
             if isinstance(item, (BaseIndexEntry, (Blob, Submodule))):
                 paths.append(self._to_relative_path(item.path))
-            elif isinstance(item, basestring):
+            elif isinstance(item, string_types):
                 paths.append(self._to_relative_path(item))
             else:
                 raise TypeError("Invalid item type: %r" % item)
@@ -1004,7 +1008,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             handle_stderr(proc, rval_iter)
             return rval_iter
         else:
-            if isinstance(paths, basestring):
+            if isinstance(paths, string_types):
                 paths = [paths]
 
             # make sure we have our entries loaded before we start checkout_index
@@ -1140,7 +1144,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         # index against anything but None is a reverse diff with the respective
         # item. Handle existing -R flags properly. Transform strings to the object
         # so that we can call diff on it
-        if isinstance(other, basestring):
+        if isinstance(other, string_types):
             other = self.repo.rev_parse(other)
         # END object conversion
 

@@ -13,6 +13,7 @@ from gitdb.util import (
     hex_to_bin,
     bin_to_hex
 )
+from git.compat import xrange
 
 
 __all__ = ('rev_parse', 'is_git_dir', 'touch', 'read_gitfile', 'find_git_dir', 'name_to_object',

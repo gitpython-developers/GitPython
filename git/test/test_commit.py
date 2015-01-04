@@ -20,6 +20,10 @@ from git import (
 )
 from gitdb import IStream
 from gitdb.util import hex_to_bin
+from git.compat import (
+    string_types,
+    text_type
+)
 
 from io import StringIO
 import time
@@ -129,7 +133,7 @@ class TestCommit(TestBase):
         assert len(name) == 9
         special = Actor._from_string(u"%s <something@this.com>" % name)
         assert special.name == name
-        assert isinstance(special.name, unicode)
+        assert isinstance(special.name, text_type)
 
     def test_traversal(self):
         start = self.rorepo.commit("a4d06724202afccd2b5c54f81bcf2bf26dea7fff")
@@ -250,7 +254,7 @@ class TestCommit(TestBase):
 
     def test_base(self):
         name_rev = self.rorepo.head.commit.name_rev
-        assert isinstance(name_rev, basestring)
+        assert isinstance(name_rev, string_types)
 
     @with_rw_repo('HEAD', bare=True)
     def test_serialization(self, rwrepo):
@@ -263,8 +267,8 @@ class TestCommit(TestBase):
         # create a commit with unicode in the message, and the author's name
         # Verify its serialization and deserialization
         cmt = self.rorepo.commit('0.1.6')
-        assert isinstance(cmt.message, unicode)     # it automatically decodes it as such
-        assert isinstance(cmt.author.name, unicode)  # same here
+        assert isinstance(cmt.message, text_type)     # it automatically decodes it as such
+        assert isinstance(cmt.author.name, text_type)  # same here
 
         cmt.message = "üäêèß".decode("utf-8")
         assert len(cmt.message) == 5

@@ -17,6 +17,10 @@ from git.objects.util import (
     Serializable,
     altz_to_utctz_str,
 )
+from git.compat import (
+    xrange,
+    string_types
+)
 
 import time
 import re
@@ -170,7 +174,7 @@ class RefLog(list, Serializable):
         :param stream: file-like object containing the revlog in its native format
             or basestring instance pointing to a file to read"""
         new_entry = RefLogEntry.from_line
-        if isinstance(stream, basestring):
+        if isinstance(stream, string_types):
             stream = file_contents_ro_filepath(stream)
         # END handle stream type
         while True:

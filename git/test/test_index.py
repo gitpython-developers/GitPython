@@ -20,6 +20,7 @@ from git import (
     GitCommandError,
     CheckoutError,
 )
+from git.compat import string_types
 from gitdb.util import hex_to_bin
 import os
 import sys
@@ -343,7 +344,7 @@ class TestIndex(TestBase):
             index.checkout(test_file)
         except CheckoutError as e:
             assert len(e.failed_files) == 1 and e.failed_files[0] == os.path.basename(test_file)
-            assert (len(e.failed_files) == len(e.failed_reasons)) and isinstance(e.failed_reasons[0], basestring)
+            assert (len(e.failed_files) == len(e.failed_reasons)) and isinstance(e.failed_reasons[0], string_types)
             assert len(e.valid_files) == 0
             assert open(test_file).read().endswith(append_data)
         else:

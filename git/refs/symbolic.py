@@ -19,6 +19,7 @@ from gitdb.util import (
     hex_to_bin,
     LockedFD
 )
+from git.compat import string_types
 
 from .log import RefLog
 
@@ -274,7 +275,7 @@ class SymbolicReference(object):
         elif isinstance(ref, Object):
             obj = ref
             write_value = ref.hexsha
-        elif isinstance(ref, basestring):
+        elif isinstance(ref, string_types):
             try:
                 obj = self.repo.rev_parse(ref + "^{}")    # optionally deref tags
                 write_value = obj.hexsha

@@ -1,5 +1,9 @@
 """Module with functions which are supposed to be as fast as possible"""
 from stat import S_ISDIR
+from git.compat import (
+    xrange,
+    text_type
+)
 
 __all__ = ('tree_to_stream', 'tree_entries_from_data', 'traverse_trees_recursive',
            'traverse_tree_recursive')
@@ -28,7 +32,7 @@ def tree_to_stream(entries, write):
         # hence we must convert to an utf8 string for it to work properly.
         # According to my tests, this is exactly what git does, that is it just
         # takes the input literally, which appears to be utf8 on linux.
-        if isinstance(name, unicode):
+        if isinstance(name, text_type):
             name = name.encode("utf8")
         write("%s %s\0%s" % (mode_str, name, binsha))
     # END for each item

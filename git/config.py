@@ -17,6 +17,10 @@ import logging
 
 from git.odict import OrderedDict
 from git.util import LockFile
+from git.compat import (
+    string_types,
+    FileType
+)
 
 __all__ = ('GitConfigParser', 'SectionConstraint')
 
@@ -175,7 +179,7 @@ class GitConfigParser(cp.RawConfigParser, object):
                     "Write-ConfigParsers can operate on a single file only, multiple files have been passed")
             # END single file check
 
-            if not isinstance(file_or_files, basestring):
+            if not isinstance(file_or_files, string_types):
                 file_or_files = file_or_files.name
             # END get filename from handle/stream
             # initialize lock base - we want to write
@@ -333,7 +337,7 @@ class GitConfigParser(cp.RawConfigParser, object):
         close_fp = False
 
         # we have a physical file on disk, so get a lock
-        if isinstance(fp, (basestring, file)):
+        if isinstance(fp, string_types + (FileType, )):
             self._lock._obtain_lock()
         # END get lock for physical files
 
@@ -391,7 +395,7 @@ class GitConfigParser(cp.RawConfigParser, object):
                 return default
             raise
 
-        types = (long, float)
+        types = (int, float)
         for numtype in types:
             try:
                 val = numtype(valuestr)
@@ -412,7 +416,7 @@ class GitConfigParser(cp.RawConfigParser, object):
         if vl == 'true':
             return True
 
-        if not isinstance(valuestr, basestring):
+        if not isinstance(valuestr, string_types):
             raise TypeError("Invalid value type: only int, long, float and str are allowed", valuestr)
 
         return valuestr

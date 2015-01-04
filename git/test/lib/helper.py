@@ -6,12 +6,14 @@
 from __future__ import print_function
 import os
 import sys
-from git import Repo, Remote, GitCommandError, Git
 from unittest import TestCase
 import time
 import tempfile
 import shutil
 import io
+
+from git import Repo, Remote, GitCommandError, Git
+from git.compat import string_types
 
 GIT_REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
@@ -89,7 +91,7 @@ def with_rw_repo(working_tree_ref, bare=False):
     To make working with relative paths easier, the cwd will be set to the working
     dir of the repository.
     """
-    assert isinstance(working_tree_ref, basestring), "Decorator requires ref name for working tree checkout"
+    assert isinstance(working_tree_ref, string_types), "Decorator requires ref name for working tree checkout"
 
     def argument_passer(func):
         def repo_creator(self):
@@ -152,7 +154,7 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
     See working dir info in with_rw_repo
     :note: We attempt to launch our own invocation of git-daemon, which will be shutdown at the end of the test.
     """
-    assert isinstance(working_tree_ref, basestring), "Decorator requires ref name for working tree checkout"
+    assert isinstance(working_tree_ref, string_types), "Decorator requires ref name for working tree checkout"
 
     def argument_passer(func):
         def remote_repo_creator(self):
