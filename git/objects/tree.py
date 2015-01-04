@@ -119,10 +119,10 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
     __slots__ = "_cache"
 
     # actual integer ids for comparison
-    commit_id = 016     # equals stat.S_IFDIR | stat.S_IFLNK - a directory link
-    blob_id = 010
-    symlink_id = 012
-    tree_id = 004
+    commit_id = 0o16     # equals stat.S_IFDIR | stat.S_IFLNK - a directory link
+    blob_id = 0o10
+    symlink_id = 0o12
+    tree_id = 0o04
 
     _map_id_to_type = {
         commit_id: Submodule,

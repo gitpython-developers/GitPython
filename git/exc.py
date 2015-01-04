@@ -5,7 +5,7 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 """ Module containing all exceptions thrown througout the git package, """
 
-from gitdb.exc import *
+from gitdb.exc import *     # NOQA
 
 
 class InvalidGitRepositoryError(Exception):

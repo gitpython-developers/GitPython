@@ -17,9 +17,9 @@ class Blob(base.IndexObject):
     type = "blob"
 
     # valid blob modes
-    executable_mode = 0100755
-    file_mode = 0100644
-    link_mode = 0120000
+    executable_mode = 0o100755
+    file_mode = 0o100644
+    link_mode = 0o120000
 
     __slots__ = tuple()
 

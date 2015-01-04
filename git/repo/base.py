@@ -6,13 +6,22 @@
 
 from git.exc import InvalidGitRepositoryError, NoSuchPathError
 from git.cmd import Git
+from git.refs import (
+    HEAD,
+    Head,
+    Reference,
+    TagReference,
+)
+from git.objects import (
+    Submodule,
+    RootModule,
+    Commit
+)
 from git.util import (
     Actor,
     finalize_process
 )
-from git.refs import *
 from git.index import IndexFile
-from git.objects import *
 from git.config import GitConfigParser
 from git.remote import (
     Remote,
@@ -659,7 +668,7 @@ class Repo(object):
         :return: ``git.Repo`` (the newly created repo)"""
 
         if mkdir and path and not os.path.exists(path):
-            os.makedirs(path, 0755)
+            os.makedirs(path, 0o755)
 
         # git command automatically chdir into the directory
         git = Git(path)

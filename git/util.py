@@ -19,7 +19,7 @@ from exc import GitCommandError
 
 # Most of these are unused here, but are for use by git-python modules so these
 # don't see gitdb all the time. Flake of course doesn't like it.
-from gitdb.util import (
+from gitdb.util import (  # NOQA
     make_sha,
     LockedFD,
     file_contents_ro,
@@ -84,14 +84,13 @@ def join_path(a, *p):
     return path
 
 
-def to_native_path_windows(path):
-    return path.replace('/', '\\')
-
-
-def to_native_path_linux(path):
-    return path.replace('\\', '/')
-
 if sys.platform.startswith('win'):
+    def to_native_path_windows(path):
+        return path.replace('/', '\\')
+
+    def to_native_path_linux(path):
+        return path.replace('\\', '/')
+
     to_native_path = to_native_path_windows
 else:
     # no need for any work on linux

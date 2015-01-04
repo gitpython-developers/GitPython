@@ -81,7 +81,7 @@ class HEAD(SymbolicReference):
 
         try:
             self.repo.git.reset(mode, commit, add_arg, paths, **kwargs)
-        except GitCommandError, e:
+        except GitCommandError as e:
             # git nowadays may use 1 as status to indicate there are still unstaged
             # modifications after the reset
             if e.status != 1:
@@ -134,6 +134,7 @@ class Head(Reference):
         :param remote_reference: The remote reference to track or None to untrack
             any references
         :return: self"""
+        from .remote import RemoteReference
         if remote_reference is not None and not isinstance(remote_reference, RemoteReference):
             raise ValueError("Incorrect parameter type: %r" % remote_reference)
         # END handle type
@@ -156,6 +157,7 @@ class Head(Reference):
         """
         :return: The remote_reference we are tracking, or None if we are
             not a tracking branch"""
+        from .remote import RemoteReference
         reader = self.config_reader()
         if reader.has_option(self.k_config_remote) and reader.has_option(self.k_config_remote_ref):
             ref = Head(self.repo, Head.to_full_path(reader.get_value(self.k_config_remote_ref)))
