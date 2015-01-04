@@ -12,16 +12,13 @@ install:
   - git fetch --tags
   - pip install coveralls
 
-  # for now we have to make sure there is a master branch - at some point we should just have it by default
-  - git branch master 0.3
-
   # generate some reflog as git-python tests need it (in 0.3)
   - git checkout 0.3
   - git reset --hard HEAD~1
   - git reset --hard HEAD~1
   - git reset --hard HEAD~1
   - git reset --hard origin/0.3
-  - git checkout master
+  - git checkout -b master
   - git reset --hard HEAD~1
   - git reset --hard HEAD~1
   - git reset --hard HEAD~1
