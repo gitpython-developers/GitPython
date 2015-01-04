@@ -197,8 +197,6 @@ class RefLog(list, Serializable):
             the index is negative
         """
         fp = open(filepath, 'rb')
-        # DEBUG
-        print filepath
         if index < 0:
             return RefLogEntry.from_line(fp.readlines()[index].strip())
         else:
