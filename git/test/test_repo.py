@@ -588,8 +588,6 @@ class TestRepo(TestBase):
         self.failUnlessRaises(NotImplementedError, rev_parse, "@{1 week ago}")
 
         # the last position
-        # For some reason, this test fails on travis - even though there is a rev log
-        # from all I see there.
         assert rev_parse('@{1}') != head.commit
 
     def test_repo_odbtype(self):
