@@ -31,7 +31,9 @@ from time import (
     altzone
 )
 import os
-import sys
+import logging
+
+log = logging.getLogger('git.objects.commit')
 
 __all__ = ('Commit', )
 
@@ -473,16 +475,16 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
         try:
             self.author.name = self.author.name.decode(self.encoding)
         except UnicodeDecodeError:
-            print >> sys.stderr, "Failed to decode author name '%s' using encoding %s" % (
-                self.author.name, self.encoding)
+            log.error("Failed to decode author name '%s' using encoding %s", self.author.name, self.encoding,
+                      exc_info=True)
         # END handle author's encoding
 
         # decode committer name
         try:
             self.committer.name = self.committer.name.decode(self.encoding)
         except UnicodeDecodeError:
-            print >> sys.stderr, "Failed to decode committer name '%s' using encoding %s" % (
-                self.committer.name, self.encoding)
+            log.error("Failed to decode committer name '%s' using encoding %s", self.committer.name, self.encoding,
+                      exc_info=True)
         # END handle author's encoding
 
         # a stream from our data simply gives us the plain message
@@ -491,7 +493,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
         try:
             self.message = self.message.decode(self.encoding)
         except UnicodeDecodeError:
-            print >> sys.stderr, "Failed to decode message '%s' using encoding %s" % (self.message, self.encoding)
+            log.error("Failed to decode message '%s' using encoding %s", self.message, self.encoding, exc_info=True)
         # END exception handling
         return self
 

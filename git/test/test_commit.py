@@ -4,6 +4,7 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
+from __future__ import print_function
 
 from git.test.lib import (
     TestBase,
@@ -72,8 +73,8 @@ def assert_commit_serialization(rwrepo, commit_id, print_performance_info=False)
     elapsed = time.time() - st
 
     if print_performance_info:
-        print >> sys.stderr, "Serialized %i and deserialized %i commits in %f s ( (%f, %f) commits / s" % (
-            ns, nds, elapsed, ns / elapsed, nds / elapsed)
+        print("Serialized %i and deserialized %i commits in %f s ( (%f, %f) commits / s"
+              % (ns, nds, elapsed, ns / elapsed, nds / elapsed), file=sys.stderr)
     # END handle performance info
 
 

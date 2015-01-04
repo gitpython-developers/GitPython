@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import print_function
 try:
     from setuptools import setup, find_packages
 except ImportError:
@@ -49,7 +50,7 @@ def _stamp_version(filename):
     try:
         f = open(filename, 'r')
     except (IOError, OSError):
-        print >> sys.stderr, "Couldn't find file %s to stamp version" % filename
+        print("Couldn't find file %s to stamp version" % filename, file=sys.stderr)
         return
     # END handle error, usually happens during binary builds
     for line in f:
@@ -64,9 +65,12 @@ def _stamp_version(filename):
         f.writelines(out)
         f.close()
     else:
-        print >> sys.stderr, "WARNING: Couldn't find version line in file %s" % filename
+        print("WARNING: Couldn't find version line in file %s" % filename, file=sys.stderr)
 
 install_requires = ['gitdb >= 0.6.1']
+if sys.version_info[:2] < (2, 7):
+    install_requires.append('ordereddict')
+# end
 
 setup(
     name="GitPython",

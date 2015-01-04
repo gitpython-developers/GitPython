@@ -6,6 +6,7 @@
 
 import os
 import sys
+import logging
 from util import (
     LazyMixin,
     stream_copy
@@ -21,6 +22,8 @@ from subprocess import (
 execute_kwargs = ('istream', 'with_keep_cwd', 'with_extended_output',
                   'with_exceptions', 'as_process',
                   'output_stream')
+
+log = logging.getLogger('git.cmd')
 
 __all__ = ('Git', )
 
@@ -334,7 +337,7 @@ class Git(LazyMixin):
            If you add additional keyword arguments to the signature of this method,
            you must update the execute_kwargs tuple housed in this module."""
         if self.GIT_PYTHON_TRACE and (self.GIT_PYTHON_TRACE != 'full' or as_process):
-            print(' '.join(command))
+            log.info(' '.join(command))
 
         # Allow the user to have the command executed in their working dir.
         if with_keep_cwd or self._working_dir is None:
@@ -389,11 +392,11 @@ class Git(LazyMixin):
         if self.GIT_PYTHON_TRACE == 'full':
             cmdstr = " ".join(command)
             if stderr_value:
-                print("%s -> %d; stdout: '%s'; stderr: '%s'" % (cmdstr, status, stdout_value, stderr_value))
+                log.info("%s -> %d; stdout: '%s'; stderr: '%s'", cmdstr, status, stdout_value, stderr_value)
             elif stdout_value:
-                print("%s -> %d; stdout: '%s'" % (cmdstr, status, stdout_value))
+                log.info("%s -> %d; stdout: '%s'", cmdstr, status, stdout_value)
             else:
-                print("%s -> %d" % (cmdstr, status))
+                log.info("%s -> %d", cmdstr, status)
         # END handle debug printing
 
         if with_exceptions and status != 0:

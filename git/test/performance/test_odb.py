@@ -1,5 +1,5 @@
 """Performance tests for object store"""
-
+from __future__ import print_function
 from time import time
 import sys
 
@@ -20,8 +20,8 @@ class TestObjDBPerformance(TestBigRepoR):
             nc = len(commits)
             elapsed = time() - st
 
-            print >> sys.stderr, "%s: Retrieved %i commits from ObjectStore in %g s ( %f commits / s )" % (
-                type(repo.odb), nc, elapsed, nc / elapsed)
+            print("%s: Retrieved %i commits from ObjectStore in %g s ( %f commits / s )"
+                  % (type(repo.odb), nc, elapsed, nc / elapsed), file=sys.stderr)
             results[0].append(elapsed)
 
             # GET TREES
@@ -42,8 +42,8 @@ class TestObjDBPerformance(TestBigRepoR):
             # END for each commit
             elapsed = time() - st
 
-            print >> sys.stderr, "%s: Retrieved %i objects from %i commits in %g s ( %f objects / s )" % (
-                type(repo.odb), nt, len(commits), elapsed, nt / elapsed)
+            print("%s: Retrieved %i objects from %i commits in %g s ( %f objects / s )"
+                  % (type(repo.odb), nt, len(commits), elapsed, nt / elapsed), file=sys.stderr)
             results[1].append(elapsed)
 
             # GET BLOBS
@@ -63,11 +63,11 @@ class TestObjDBPerformance(TestBigRepoR):
 
             msg = "%s: Retrieved %i blob (%i KiB) and their data in %g s ( %f blobs / s, %f KiB / s )"\
                 % (type(repo.odb), nb, data_bytes / 1000, elapsed, nb / elapsed, (data_bytes / 1000) / elapsed)
+            print(msg, file=sys.stderr)
             results[2].append(elapsed)
-            print >> sys.stderr, msg
         # END for each repo type
 
         # final results
         for test_name, a, b in results:
-            print >> sys.stderr, "%s: %f s vs %f s, pure is %f times slower" % (test_name, a, b, b / a)
+            print("%s: %f s vs %f s, pure is %f times slower" % (test_name, a, b, b / a), file=sys.stderr)
         # END for each result

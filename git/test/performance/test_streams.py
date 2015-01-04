@@ -1,4 +1,6 @@
 """Performance data streaming performance"""
+from __future__ import print_function
+
 from time import time
 import os
 import sys
@@ -19,6 +21,7 @@ from gitdb import (
     IStream
 )
 
+
 class TestObjDBPerformance(TestBigRepoR):
 
     large_data_size_bytes = 1000 * 1000 * 10        # some MiB should do it
@@ -32,11 +35,11 @@ class TestObjDBPerformance(TestBigRepoR):
 
         for randomize in range(2):
             desc = (randomize and 'random ') or ''
-            print >> sys.stderr, "Creating %s data ..." % desc
+            print("Creating %s data ..." % desc, file=sys.stderr)
             st = time()
             size, stream = make_memory_file(self.large_data_size_bytes, randomize)
             elapsed = time() - st
-            print >> sys.stderr, "Done (in %f s)" % elapsed
+            print("Done (in %f s)" % elapsed, file=sys.stderr)
 
             # writing - due to the compression it will seem faster than it is
             st = time()
@@ -49,7 +52,7 @@ class TestObjDBPerformance(TestBigRepoR):
             size_kib = size / 1000
             msg = "Added %i KiB (filesize = %i KiB) of %s data to loose odb in %f s ( %f Write KiB / s)"
             msg %= (size_kib, fsize_kib, desc, elapsed_add, size_kib / elapsed_add)
-            print >> sys.stderr, msg
+            print(msg, file=sys.stderr)
 
             # reading all at once
             st = time()
@@ -61,7 +64,7 @@ class TestObjDBPerformance(TestBigRepoR):
             assert shadata == stream.getvalue()
             msg = "Read %i KiB of %s data at once from loose odb in %f s ( %f Read KiB / s)"
             msg %= (size_kib, desc, elapsed_readall, size_kib / elapsed_readall)
-            print >> sys.stderr, msg
+            print(msg, file=sys.stderr)
 
             # reading in chunks of 1 MiB
             cs = 512 * 1000
@@ -80,8 +83,8 @@ class TestObjDBPerformance(TestBigRepoR):
             assert ''.join(chunks) == stream.getvalue()
 
             cs_kib = cs / 1000
-            print >> sys.stderr, "Read %i KiB of %s data in %i KiB chunks from loose odb in %f s ( %f Read KiB / s)" % (
-                size_kib, desc, cs_kib, elapsed_readchunks, size_kib / elapsed_readchunks)
+            print("Read %i KiB of %s data in %i KiB chunks from loose odb in %f s ( %f Read KiB / s)"
+                  % (size_kib, desc, cs_kib, elapsed_readchunks, size_kib / elapsed_readchunks), file=sys.stderr)
 
             # del db file so git has something to do
             os.remove(db_file)
@@ -106,22 +109,22 @@ class TestObjDBPerformance(TestBigRepoR):
             fsize_kib = os.path.getsize(db_file) / 1000
             msg = "Added %i KiB (filesize = %i KiB) of %s data to using git-hash-object in %f s ( %f Write KiB / s)"
             msg %= (size_kib, fsize_kib, desc, gelapsed_add, size_kib / gelapsed_add)
-            print >> sys.stderr, msg
+            print(msg, file=sys.stderr)
 
             # compare ...
-            print >> sys.stderr, "Git-Python is %f %% faster than git when adding big %s files" % (
-                100.0 - (elapsed_add / gelapsed_add) * 100, desc)
+            print("Git-Python is %f %% faster than git when adding big %s files"
+                  % (100.0 - (elapsed_add / gelapsed_add) * 100, desc), file=sys.stderr)
 
             # read all
             st = time()
             s, t, size, data = rwrepo.git.get_object_data(gitsha)
             gelapsed_readall = time() - st
-            print >> sys.stderr, "Read %i KiB of %s data at once using git-cat-file in %f s ( %f Read KiB / s)" % (
-                size_kib, desc, gelapsed_readall, size_kib / gelapsed_readall)
+            print("Read %i KiB of %s data at once using git-cat-file in %f s ( %f Read KiB / s)"
+                  % (size_kib, desc, gelapsed_readall, size_kib / gelapsed_readall), file=sys.stderr)
 
             # compare
-            print >> sys.stderr, "Git-Python is %f %% faster than git when reading big %sfiles" % (
-                100.0 - (elapsed_readall / gelapsed_readall) * 100, desc)
+            print("Git-Python is %f %% faster than git when reading big %sfiles"
+                  % (100.0 - (elapsed_readall / gelapsed_readall) * 100, desc), file=sys.stderr)
 
             # read chunks
             st = time()
@@ -134,9 +137,9 @@ class TestObjDBPerformance(TestBigRepoR):
             gelapsed_readchunks = time() - st
             msg = "Read %i KiB of %s data in %i KiB chunks from git-cat-file in %f s ( %f Read KiB / s)"
             msg %= (size_kib, desc, cs_kib, gelapsed_readchunks, size_kib / gelapsed_readchunks)
-            print >> sys.stderr, msg
+            print(msg, file=sys.stderr)
 
             # compare
-            print >> sys.stderr, "Git-Python is %f %% faster than git when reading big %s files in chunks" % (
-                100.0 - (elapsed_readchunks / gelapsed_readchunks) * 100, desc)
+            print ("Git-Python is %f %% faster than git when reading big %s files in chunks"
+                   % (100.0 - (elapsed_readchunks / gelapsed_readchunks) * 100, desc), file=sys.stderr)
         # END for each randomization factor

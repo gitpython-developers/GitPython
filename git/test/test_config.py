@@ -64,7 +64,6 @@ class TestBase(TestCase):
 
             file_obj.seek(0)
             r_config = GitConfigParser(file_obj, read_only=True)
-            # print file_obj.getvalue()
             assert r_config.has_section(sname)
             assert r_config.has_option(sname, oname)
             assert r_config.get(sname, oname) == val

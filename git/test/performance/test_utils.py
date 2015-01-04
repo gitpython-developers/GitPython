@@ -1,4 +1,5 @@
 """Performance of utilities"""
+from __future__ import print_function
 from time import time
 import sys
 
@@ -43,8 +44,8 @@ class TestUtilPerformance(TestBigRepoR):
                 cli.attr
             # END for each access
             elapsed = time() - st
-            print >> sys.stderr, "Accessed %s.attr %i times in %s s ( %f acc / s)" % (
-                cls.__name__, ni, elapsed, ni / elapsed)
+            print("Accessed %s.attr %i times in %s s ( %f acc / s)"
+                  % (cls.__name__, ni, elapsed, ni / elapsed), file=sys.stderr)
         # END for each class type
 
         # check num of sequence-acceses
@@ -59,8 +60,8 @@ class TestUtilPerformance(TestBigRepoR):
             # END for
             elapsed = time() - st
             na = ni * 3
-            print >> sys.stderr, "Accessed %s[x] %i times in %s s ( %f acc / s)" % (
-                cls.__name__, na, elapsed, na / elapsed)
+            print("Accessed %s[x] %i times in %s s ( %f acc / s)"
+                  % (cls.__name__, na, elapsed, na / elapsed), file=sys.stderr)
         # END for each sequence
 
     def test_instantiation(self):
@@ -85,8 +86,8 @@ class TestUtilPerformance(TestBigRepoR):
                     # END handle empty cls
                 # END for each item
                 elapsed = time() - st
-                print >> sys.stderr, "Created %i %ss of size %i in %f s ( %f inst / s)" % (
-                    ni, cls.__name__, mni, elapsed, ni / elapsed)
+                print("Created %i %ss of size %i in %f s ( %f inst / s)"
+                      % (ni, cls.__name__, mni, elapsed, ni / elapsed), file=sys.stderr)
             # END for each type
         # END for each item count
 
@@ -96,14 +97,16 @@ class TestUtilPerformance(TestBigRepoR):
             (1, 2, 3, 4)
         # END for each item
         elapsed = time() - st
-        print >> sys.stderr, "Created %i tuples (1,2,3,4) in %f s ( %f tuples / s)" % (ni, elapsed, ni / elapsed)
+        print("Created %i tuples (1,2,3,4) in %f s ( %f tuples / s)"
+              % (ni, elapsed, ni / elapsed), file=sys.stderr)
 
         st = time()
         for i in xrange(ni):
             tuple((1, 2, 3, 4))
         # END for each item
         elapsed = time() - st
-        print >> sys.stderr, "Created %i tuples tuple((1,2,3,4)) in %f s ( %f tuples / s)" % (ni, elapsed, ni / elapsed)
+        print("Created %i tuples tuple((1,2,3,4)) in %f s ( %f tuples / s)"
+              % (ni, elapsed, ni / elapsed), file=sys.stderr)
 
     def test_unpacking_vs_indexing(self):
         ni = 1000000
@@ -116,24 +119,24 @@ class TestUtilPerformance(TestBigRepoR):
                 one, two, three, four = sequence
             # END for eac iteration
             elapsed = time() - st
-            print >> sys.stderr, "Unpacked %i %ss of size %i in %f s ( %f acc / s)" % (
-                ni, type(sequence).__name__, len(sequence), elapsed, ni / elapsed)
+            print("Unpacked %i %ss of size %i in %f s ( %f acc / s)"
+                  % (ni, type(sequence).__name__, len(sequence), elapsed, ni / elapsed), file=sys.stderr)
 
             st = time()
             for i in xrange(ni):
                 one, two, three, four = sequence[0], sequence[1], sequence[2], sequence[3]
             # END for eac iteration
             elapsed = time() - st
-            print >> sys.stderr, "Unpacked %i %ss of size %i individually in %f s ( %f acc / s)" % (
-                ni, type(sequence).__name__, len(sequence), elapsed, ni / elapsed)
+            print("Unpacked %i %ss of size %i individually in %f s ( %f acc / s)"
+                  % (ni, type(sequence).__name__, len(sequence), elapsed, ni / elapsed), file=sys.stderr)
 
             st = time()
             for i in xrange(ni):
                 one, two = sequence[0], sequence[1]
             # END for eac iteration
             elapsed = time() - st
-            print >> sys.stderr, "Unpacked %i %ss of size %i individually (2 of 4) in %f s ( %f acc / s)" % (
-                ni, type(sequence).__name__, len(sequence), elapsed, ni / elapsed)
+            print("Unpacked %i %ss of size %i individually (2 of 4) in %f s ( %f acc / s)"
+                  % (ni, type(sequence).__name__, len(sequence), elapsed, ni / elapsed), file=sys.stderr)
         # END for each sequence
 
     def test_large_list_vs_iteration(self):
@@ -150,14 +153,16 @@ class TestUtilPerformance(TestBigRepoR):
                 i
             # END for each item
             elapsed = time() - st
-            print >> sys.stderr, "Iterated %i items from list in %f s ( %f acc / s)" % (ni, elapsed, ni / elapsed)
+            print("Iterated %i items from list in %f s ( %f acc / s)"
+                  % (ni, elapsed, ni / elapsed), file=sys.stderr)
 
             st = time()
             for i in slow_iter(ni):
                 i
             # END for each item
             elapsed = time() - st
-            print >> sys.stderr, "Iterated %i items from iterator in %f s ( %f acc / s)" % (ni, elapsed, ni / elapsed)
+            print("Iterated %i items from iterator in %f s ( %f acc / s)"
+                  % (ni, elapsed, ni / elapsed), file=sys.stderr)
         # END for each number of iterations
 
     def test_type_vs_inst_class(self):
@@ -173,12 +178,13 @@ class TestUtilPerformance(TestBigRepoR):
             inst.__class__()
         # END for each item
         elapsed = time() - st
-        print >> sys.stderr, "Created %i items using inst.__class__ in %f s ( %f items / s)" % (
-            ni, elapsed, ni / elapsed)
+        print("Created %i items using inst.__class__ in %f s ( %f items / s)"
+              % (ni, elapsed, ni / elapsed), file=sys.stderr)
 
         st = time()
         for i in xrange(ni):
             type(inst)()
         # END for each item
         elapsed = time() - st
-        print >> sys.stderr, "Created %i items using type(inst)() in %f s ( %f items / s)" % (ni, elapsed, ni / elapsed)
+        print("Created %i items using type(inst)() in %f s ( %f items / s)"
+              % (ni, elapsed, ni / elapsed), file=sys.stderr)

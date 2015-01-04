@@ -9,11 +9,15 @@ configuration files"""
 import re
 import ConfigParser as cp
 import inspect
+import logging
 
 from git.odict import OrderedDict
 from git.util import LockFile
 
 __all__ = ('GitConfigParser', 'SectionConstraint')
+
+
+log = logging.getLogger('git.config')
 
 
 class MetaParserBuilder(type):
@@ -186,8 +190,8 @@ class GitConfigParser(cp.RawConfigParser, object):
         try:
             try:
                 self.write()
-            except IOError as e:
-                print("Exception during destruction of GitConfigParser: %s" % str(e))
+            except IOError:
+                log.error("Exception during destruction of GitConfigParser", exc_info=True)
         finally:
             self._lock._release_lock()
 

@@ -50,7 +50,9 @@ class TestGit(TestBase):
         assert_equal(["--max-count"], self.git.transform_kwargs(**{'max_count': True}))
         assert_equal(["--max-count=5"], self.git.transform_kwargs(**{'max_count': 5}))
 
-        assert_equal(["-s", "-t"], self.git.transform_kwargs(**{'s': True, 't': True}))
+        # order is undefined
+        res = self.git.transform_kwargs(**{'s': True, 't': True})
+        assert ['-s', '-t'] == res or ['-t', '-s'] == res
 
     def test_it_executes_git_to_shell_and_returns_result(self):
         assert_match('^git version [\d\.]{2}.*$', self.git.execute(["git", "version"]))

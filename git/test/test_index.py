@@ -19,7 +19,6 @@ from git import (
     Diff,
     GitCommandError,
     CheckoutError,
-    
 )
 from gitdb.util import hex_to_bin
 import os

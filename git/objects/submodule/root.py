@@ -5,9 +5,11 @@ from util import (
 from git.exc import InvalidGitRepositoryError
 import git
 
-import sys
+import logging
 
 __all__ = ["RootModule", "RootUpdateProgress"]
+
+log = logging.getLogger('git.objects.submodule.root')
 
 
 class RootUpdateProgress(UpdateProgress):
@@ -247,8 +249,8 @@ class RootModule(Submodule):
                                 # this way, it will be checked out in the next step
                                 # This will change the submodule relative to us, so
                                 # the user will be able to commit the change easily
-                                print >> sys.stderr, "WARNING: Current sha %s was not contained in the tracking\
-         branch at the new remote, setting it the the remote's tracking branch" % sm.hexsha
+                                log.warn("Current sha %s was not contained in the tracking\
+         branch at the new remote, setting it the the remote's tracking branch", sm.hexsha)
                                 sm.binsha = rref.commit.binsha
                             # END reset binsha
 

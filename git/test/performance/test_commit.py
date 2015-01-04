@@ -3,7 +3,7 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
-
+from __future__ import print_function
 from .lib import TestBigRepoRW
 from git import Commit
 from gitdb import IStream
@@ -46,8 +46,8 @@ class TestPerformance(TestBigRepoRW):
             # END for each object
         # END for each commit
         elapsed_time = time() - st
-        print >> sys.stderr, "Traversed %i Trees and a total of %i unchached objects in %s [s] ( %f objs/s )" % (
-            nc, no, elapsed_time, no / elapsed_time)
+        print("Traversed %i Trees and a total of %i unchached objects in %s [s] ( %f objs/s )"
+              % (nc, no, elapsed_time, no / elapsed_time), file=sys.stderr)
 
     def test_commit_traversal(self):
         # bound to cat-file parsing performance
@@ -58,7 +58,8 @@ class TestPerformance(TestBigRepoRW):
             self._query_commit_info(c)
         # END for each traversed commit
         elapsed_time = time() - st
-        print >> sys.stderr, "Traversed %i Commits in %s [s] ( %f commits/s )" % (nc, elapsed_time, nc / elapsed_time)
+        print("Traversed %i Commits in %s [s] ( %f commits/s )"
+              % (nc, elapsed_time, nc / elapsed_time), file=sys.stderr)
 
     def test_commit_iteration(self):
         # bound to stream parsing performance
@@ -69,7 +70,8 @@ class TestPerformance(TestBigRepoRW):
             self._query_commit_info(c)
         # END for each traversed commit
         elapsed_time = time() - st
-        print >> sys.stderr, "Iterated %i Commits in %s [s] ( %f commits/s )" % (nc, elapsed_time, nc / elapsed_time)
+        print("Iterated %i Commits in %s [s] ( %f commits/s )"
+              % (nc, elapsed_time, nc / elapsed_time), file=sys.stderr)
 
     def test_commit_serialization(self):
         assert_commit_serialization(self.gitrwrepo, self.gitrwrepo.head, True)
@@ -97,5 +99,5 @@ class TestPerformance(TestBigRepoRW):
         # END commit creation
         elapsed = time() - st
 
-        print >> sys.stderr, "Serialized %i commits to loose objects in %f s ( %f commits / s )" % (
-            nc, elapsed, nc / elapsed)
+        print("Serialized %i commits to loose objects in %f s ( %f commits / s )"
+              % (nc, elapsed, nc / elapsed), file=sys.stderr)

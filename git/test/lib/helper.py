@@ -3,7 +3,7 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
-
+from __future__ import print_function
 import os
 import sys
 from git import Repo, Remote, GitCommandError, Git
@@ -111,7 +111,7 @@ def with_rw_repo(working_tree_ref, bare=False):
                 try:
                     return func(self, rw_repo)
                 except:
-                    print >> sys.stderr, "Keeping repo after failure: %s" % repo_dir
+                    print("Keeping repo after failure: %s" % repo_dir, file=sys.stderr)
                     repo_dir = None
                     raise
             finally:

@@ -18,6 +18,7 @@ from git import (
     DiffIndex
 )
 
+
 class TestDiff(TestBase):
 
     def _assert_diff_format(self, diffs):

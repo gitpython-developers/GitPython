@@ -27,6 +27,7 @@ from mock import (
     patch
 )
 
+
 def assert_instance_of(expected, actual, msg=None):
     """Verify that object is an instance of expected """
     assert isinstance(actual, expected), msg

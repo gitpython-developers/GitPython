@@ -13,9 +13,9 @@ class TagReference(Reference):
     information in a tag object::
 
      tagref = TagReference.list_items(repo)[0]
-     print tagref.commit.message
+     print(tagref.commit.message)
      if tagref.tag is not None:
-        print tagref.tag.message"""
+        print(tagref.tag.message)"""
 
     __slots__ = tuple()
     _common_path_default = "refs/tags"

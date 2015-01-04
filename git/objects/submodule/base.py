@@ -27,9 +27,12 @@ import stat
 import git
 
 import os
-import sys
+import logging
 
 __all__ = ["Submodule", "UpdateProgress"]
+
+
+log = logging.getLogger('git.objects.submodule.base')
 
 
 class UpdateProgress(RemoteProgress):
@@ -408,7 +411,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
                     mrepo.head.set_reference(local_branch, logmsg="submodule: attaching head to %s" % local_branch)
                     mrepo.head.ref.set_tracking_branch(remote_branch)
                 except IndexError:
-                    print >> sys.stderr, "Warning: Failed to checkout tracking branch %s" % self.branch_path
+                    log.warn("Failed to checkout tracking branch %s", self.branch_path)
                 # END handle tracking branch
 
                 # NOTE: Have to write the repo config file as well, otherwise
@@ -437,11 +440,10 @@ class Submodule(util.IndexObject, Iterable, Traversable):
                     binsha = rcommit.binsha
                     hexsha = rcommit.hexsha
                 else:
-                    print >> sys.stderr, "%s a tracking branch was not set for local branch '%s'" % (
-                        msg_base, mrepo.head.ref)
+                    log.error("%s a tracking branch was not set for local branch '%s'", msg_base, mrepo.head.ref)
                 # END handle remote ref
             else:
-                print >> sys.stderr, "%s there was no local tracking branch" % msg_base
+                log.error("%s there was no local tracking branch", msg_base)
             # END handle detached head
         # END handle to_latest_revision option
 
