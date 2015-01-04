@@ -11,7 +11,7 @@ from unittest import TestCase
 import time
 import tempfile
 import shutil
-import cStringIO
+import io
 
 GIT_REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
@@ -46,8 +46,8 @@ class StringProcessAdapter(object):
     Its tailored to work with the test system only"""
 
     def __init__(self, input_string):
-        self.stdout = cStringIO.StringIO(input_string)
-        self.stderr = cStringIO.StringIO()
+        self.stdout = io.StringIO(input_string)
+        self.stderr = io.StringIO()
 
     def wait(self):
         return 0

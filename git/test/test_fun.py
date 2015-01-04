@@ -24,7 +24,7 @@ from stat import (
 )
 
 from git.index import IndexFile
-from cStringIO import StringIO
+from io import StringIO
 
 
 class TestFun(TestBase):

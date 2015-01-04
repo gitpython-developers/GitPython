@@ -1,4 +1,5 @@
 import os
+
 from git.objects import Object, Commit
 from git.util import (
     join_path,
@@ -19,7 +20,7 @@ from gitdb.util import (
     LockedFD
 )
 
-from log import RefLog
+from .log import RefLog
 
 __all__ = ["SymbolicReference"]
 

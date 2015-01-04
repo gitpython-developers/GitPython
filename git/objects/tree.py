@@ -3,20 +3,18 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
-import util
-from base import IndexObject
 from git.util import join_path
-from blob import Blob
-from submodule.base import Submodule
 import git.diff as diff
+from gitdb.util import to_bin_sha
 
-from fun import (
+from . import util
+from .base import IndexObject
+from .blob import Blob
+from .submodule.base import Submodule
+
+from .fun import (
     tree_entries_from_data,
     tree_to_stream
-)
-
-from gitdb.util import (
-    to_bin_sha,
 )
 
 __all__ = ("TreeModifier", "Tree")

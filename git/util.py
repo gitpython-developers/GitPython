@@ -15,7 +15,8 @@ import getpass
 
 # NOTE:  Some of the unused imports might be used/imported by others.
 # Handle once test-cases are back up and running.
-from exc import GitCommandError
+from .exc import GitCommandError
+from .compat import MAXSIZE
 
 # Most of these are unused here, but are for use by git-python modules so these
 # don't see gitdb all the time. Flake of course doesn't like it.
@@ -548,7 +549,7 @@ class BlockingLockFile(LockFile):
         can never be obtained."""
     __slots__ = ("_check_interval", "_max_block_time")
 
-    def __init__(self, file_path, check_interval_s=0.3, max_block_time_s=sys.maxint):
+    def __init__(self, file_path, check_interval_s=0.3, max_block_time_s=MAXSIZE):
         """Configure the instance
 
         :parm check_interval_s:

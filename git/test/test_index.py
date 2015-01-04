@@ -30,7 +30,7 @@ from stat import (
     ST_MODE
 )
 
-from StringIO import StringIO
+from io import StringIO
 from gitdb.base import IStream
 from git.objects import Blob
 from git.index.typ import (

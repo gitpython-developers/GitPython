@@ -7,7 +7,11 @@
 configuration files"""
 
 import re
-import ConfigParser as cp
+try:
+    import ConfigParser as cp
+except ImportError:
+    # PY3
+    import configparser as cp
 import inspect
 import logging
 

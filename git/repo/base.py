@@ -40,7 +40,7 @@ from gitdb.util import (
     hex_to_bin
 )
 
-from fun import (
+from .fun import (
     rev_parse,
     is_git_dir,
     find_git_dir,

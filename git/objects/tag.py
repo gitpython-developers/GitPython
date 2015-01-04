@@ -4,12 +4,12 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 """ Module containing all object based types. """
-import base
-from gitdb.util import hex_to_bin
-from util import (
+from . import base
+from .util import (
     get_object_type_by_name,
     parse_actor_and_date
 )
+from gitdb.util import hex_to_bin
 
 __all__ = ("TagObject", )
 

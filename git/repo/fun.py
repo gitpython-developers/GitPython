@@ -1,5 +1,7 @@
 """Package with general repository related functions"""
 import os
+from string import digits
+
 from gitdb.exc import BadObject
 from git.refs import SymbolicReference
 from git.objects import Object
@@ -11,7 +13,7 @@ from gitdb.util import (
     hex_to_bin,
     bin_to_hex
 )
-from string import digits
+
 
 __all__ = ('rev_parse', 'is_git_dir', 'touch', 'read_gitfile', 'find_git_dir', 'name_to_object',
            'short_to_long', 'deref_tag', 'to_commit')

@@ -3,9 +3,8 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
-
 from mimetypes import guess_type
-import base
+from . import base
 
 __all__ = ('Blob', )
 

@@ -12,7 +12,7 @@ from stat import (
 
 S_IFGITLINK = S_IFLNK | S_IFDIR     # a submodule
 
-from cStringIO import StringIO
+from io import StringIO
 
 from git.util import IndexFileSHA1Writer
 from git.exc import UnmergedEntriesError
@@ -22,7 +22,7 @@ from git.objects.fun import (
     traverse_trees_recursive
 )
 
-from typ import (
+from .typ import (
     BaseIndexEntry,
     IndexEntry,
     CE_NAMEMASK,
@@ -30,7 +30,7 @@ from typ import (
 )
 CE_NAMEMASK_INV = ~CE_NAMEMASK
 
-from util import (
+from .util import (
     pack,
     unpack
 )
@@ -49,7 +49,7 @@ def stat_mode_to_index_mode(mode):
         return S_IFLNK
     if S_ISDIR(mode) or S_IFMT(mode) == S_IFGITLINK:    # submodules
         return S_IFGITLINK
-    return S_IFREG | 0644 | (mode & 0100)       # blobs with or without executable bit
+    return S_IFREG | 0o644 | (mode & 0o100)       # blobs with or without executable bit
 
 
 def write_cache(entries, stream, extension_data=None, ShaStreamCls=IndexFileSHA1Writer):

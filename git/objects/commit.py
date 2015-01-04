@@ -4,6 +4,8 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
+from gitdb import IStream
+from gitdb.util import hex_to_bin
 from git.util import (
     Actor,
     Iterable,
@@ -11,26 +13,23 @@ from git.util import (
     finalize_process
 )
 from git.diff import Diffable
-from tree import Tree
-from gitdb import IStream
-from cStringIO import StringIO
 
-import base
-from gitdb.util import (
-    hex_to_bin
-)
-from util import (
+from .tree import Tree
+from . import base
+from .util import (
     Traversable,
     Serializable,
     parse_date,
     altz_to_utctz_str,
     parse_actor_and_date
 )
+
 from time import (
     time,
     altzone
 )
 import os
+from io import StringIO
 import logging
 
 log = logging.getLogger('git.objects.commit')

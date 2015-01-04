@@ -1,5 +1,5 @@
-import util
-from util import (
+from . import util
+from .util import (
     mkhead,
     sm_name,
     sm_section,
@@ -8,7 +8,7 @@ from util import (
     find_first_remote_branch
 )
 from git.objects.util import Traversable
-from StringIO import StringIO                   # need a dict to set bloody .name field
+from io import StringIO                   # need a dict to set bloody .name field
 from git.util import (
     Iterable,
     join_path_native,

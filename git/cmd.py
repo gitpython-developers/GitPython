@@ -7,17 +7,19 @@
 import os
 import sys
 import logging
-from util import (
-    LazyMixin,
-    stream_copy
-)
-from exc import GitCommandError
-
 from subprocess import (
     call,
     Popen,
     PIPE
 )
+
+
+from .util import (
+    LazyMixin,
+    stream_copy
+)
+from .exc import GitCommandError
+
 
 execute_kwargs = ('istream', 'with_keep_cwd', 'with_extended_output',
                   'with_exceptions', 'as_process',

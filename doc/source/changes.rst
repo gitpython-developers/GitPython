@@ -6,6 +6,7 @@ Changelog
 =====
 * When fetching, pulling or pushing, and an error occours, it will not be reported on stdout anymore. However, if there is a fatal error, it will still result in a GitCommandError to be thrown. This goes hand in hand with improved fetch result parsing.
 * Code Cleanup (in preparation for python 3 support)
+
   * Applied autopep8 and cleaned up code
   * Using python logging module instead of print statments to signal certain kinds of errors
 

@@ -8,16 +8,16 @@ import os
 import sys
 import subprocess
 import glob
-from cStringIO import StringIO
+from io import StringIO
 
 from stat import S_ISLNK
 
-from typ import (
+from .typ import (
     BaseIndexEntry,
     IndexEntry,
 )
 
-from util import (
+from .util import (
     TemporaryFileSwap,
     post_clear_cache,
     default_index,
@@ -25,7 +25,6 @@ from util import (
 )
 
 import git.diff as diff
-
 from git.exc import (
     GitCommandError,
     CheckoutError
@@ -40,6 +39,7 @@ from git.objects import (
 )
 
 from git.objects.util import Serializable
+from git.compat import izip
 
 from git.util import (
     LazyMixin,
@@ -49,7 +49,7 @@ from git.util import (
     to_native_path_linux,
 )
 
-from fun import (
+from .fun import (
     entry_key,
     write_cache,
     read_cache,
@@ -62,7 +62,6 @@ from fun import (
 from gitdb.base import IStream
 from gitdb.db import MemoryDB
 from gitdb.util import to_bin_sha
-from itertools import izip
 
 __all__ = ('IndexFile', 'CheckoutError')
 

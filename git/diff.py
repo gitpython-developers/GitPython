@@ -3,12 +3,12 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
-
 import re
-from objects.blob import Blob
-from objects.util import mode_str_to_int
 
 from gitdb.util import hex_to_bin
+
+from .objects.blob import Blob
+from .objects.util import mode_str_to_int
 
 
 __all__ = ('Diffable', 'DiffIndex', 'Diff')

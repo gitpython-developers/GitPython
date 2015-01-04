@@ -21,7 +21,7 @@ from git import (
 from gitdb import IStream
 from gitdb.util import hex_to_bin
 
-from cStringIO import StringIO
+from io import StringIO
 import time
 import sys
 import re

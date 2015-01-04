@@ -7,13 +7,6 @@
 import re
 import stat
 
-__all__ = ['assert_instance_of', 'assert_not_instance_of',
-           'assert_none', 'assert_not_none',
-           'assert_match', 'assert_not_match', 'assert_mode_644',
-           'assert_mode_755',
-           'assert_equal', 'assert_not_equal', 'assert_raises', 'patch', 'raises',
-           'assert_true', 'assert_false']
-
 from nose.tools import (
     assert_equal,
     assert_not_equal,
@@ -23,9 +16,14 @@ from nose.tools import (
     assert_false
 )
 
-from mock import (
-    patch
-)
+from mock import patch
+
+__all__ = ['assert_instance_of', 'assert_not_instance_of',
+           'assert_none', 'assert_not_none',
+           'assert_match', 'assert_not_match', 'assert_mode_644',
+           'assert_mode_755',
+           'assert_equal', 'assert_not_equal', 'assert_raises', 'patch', 'raises',
+           'assert_true', 'assert_false']
 
 
 def assert_instance_of(expected, actual, msg=None):

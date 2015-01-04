@@ -7,9 +7,10 @@ import inspect
 from .base import *
 # Fix import dependency - add IndexObject to the util module, so that it can be
 # imported by the submodule.base
-from .submodule import util
-util.IndexObject = IndexObject
-util.Object = Object
+from .submodule import util as smutil
+smutil.IndexObject = IndexObject
+smutil.Object = Object
+del(smutil)
 from .submodule.base import *
 from .submodule.root import *
 

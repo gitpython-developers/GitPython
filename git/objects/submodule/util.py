@@ -1,7 +1,7 @@
 import git
 from git.exc import InvalidGitRepositoryError
 from git.config import GitConfigParser
-from StringIO import StringIO
+from io import StringIO
 import weakref
 
 __all__ = ('sm_section', 'sm_name', 'mkhead', 'unbare_repo', 'find_first_remote_branch',

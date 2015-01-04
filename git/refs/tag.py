@@ -1,4 +1,4 @@
-from reference import Reference
+from .reference import Reference
 
 __all__ = ["TagReference", "Tag"]
 

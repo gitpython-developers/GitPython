@@ -5,10 +5,21 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
 # Module implementing a remote object allowing easy access to git remotes
+import re
+import os
 
-from exc import GitCommandError
-from ConfigParser import NoOptionError
-from config import SectionConstraint
+from .exc import GitCommandError
+from .config import (
+    SectionConstraint,
+    cp,
+)
+from .refs import (
+    Reference,
+    RemoteReference,
+    SymbolicReference,
+    TagReference
+)
+
 
 from git.util import (
     LazyMixin,
@@ -16,22 +27,12 @@ from git.util import (
     IterableList,
     RemoteProgress
 )
-
-from refs import (
-    Reference,
-    RemoteReference,
-    SymbolicReference,
-    TagReference
-)
-
 from git.util import (
     join_path,
     finalize_process
 )
 from gitdb.util import join
 
-import re
-import os
 
 __all__ = ('RemoteProgress', 'PushInfo', 'FetchInfo', 'Remote')
 
@@ -390,7 +391,7 @@ class Remote(LazyMixin, Iterable):
         # even though a slot of the same name exists
         try:
             return self._config_reader.get(attr)
-        except NoOptionError:
+        except cp.NoOptionError:
             return super(Remote, self).__getattr__(attr)
         # END handle exception
 

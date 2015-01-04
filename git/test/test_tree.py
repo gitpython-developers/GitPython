@@ -11,7 +11,7 @@ from git import (
     Blob
 )
 
-from cStringIO import StringIO
+from io import StringIO
 
 
 class TestTree(TestBase):

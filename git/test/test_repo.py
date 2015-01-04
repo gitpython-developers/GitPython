@@ -35,7 +35,7 @@ import os
 import sys
 import tempfile
 import shutil
-from cStringIO import StringIO
+from io import StringIO
 
 
 class TestRepo(TestBase):
