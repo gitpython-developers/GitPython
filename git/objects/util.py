@@ -157,8 +157,8 @@ def parse_date(string_date):
                 try:
                     dtstruct = time.strptime(date_part, fmt)
                     utctime = calendar.timegm((dtstruct.tm_year, dtstruct.tm_mon, dtstruct.tm_mday,
-                                                tstruct.tm_hour, tstruct.tm_min, tstruct.tm_sec,
-                                                dtstruct.tm_wday, dtstruct.tm_yday, tstruct.tm_isdst))
+                                               tstruct.tm_hour, tstruct.tm_min, tstruct.tm_sec,
+                                               dtstruct.tm_wday, dtstruct.tm_yday, tstruct.tm_isdst))
                     return int(utctime), offset
                 except ValueError:
                     continue

@@ -216,7 +216,7 @@ class TestIndex(TestBase):
 
         # if missing objects are okay, this would work though ( they are always okay now )
         # As we can't read back the tree with NULL_SHA, we rather set it to something else
-        index.entries[manifest_key] = IndexEntry(manifest_entry[:1] + (hex_to_bin('f'*40),) + manifest_entry[2:])
+        index.entries[manifest_key] = IndexEntry(manifest_entry[:1] + (hex_to_bin('f' * 40),) + manifest_entry[2:])
         tree = index.write_tree()
 
         # now make a proper three way merge with unmerged entries

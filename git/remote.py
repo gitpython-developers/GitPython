@@ -100,12 +100,12 @@ class PushInfo(object):
     NEW_TAG, NEW_HEAD, NO_MATCH, REJECTED, REMOTE_REJECTED, REMOTE_FAILURE, DELETED, \
         FORCED_UPDATE, FAST_FORWARD, UP_TO_DATE, ERROR = [1 << x for x in range(11)]
 
-    _flag_map = {'X': NO_MATCH, 
-                 '-': DELETED, 
+    _flag_map = {'X': NO_MATCH,
+                 '-': DELETED,
                  '*': 0,
-                 '+': FORCED_UPDATE, 
+                 '+': FORCED_UPDATE,
                  ' ': FAST_FORWARD,
-                 '=': UP_TO_DATE, 
+                 '=': UP_TO_DATE,
                  '!': ERROR}
 
     def __init__(self, flags, local_ref, remote_ref_string, remote, old_commit=None,
@@ -208,11 +208,11 @@ class FetchInfo(object):
     #                             %c    %-*s %-*s             -> %s       (%s)
     re_fetch_result = re.compile("^\s*(.) (\[?[\w\s\.]+\]?)\s+(.+) -> ([/\w_\+\.\-#]+)(    \(.*\)?$)?")
 
-    _flag_map = {'!': ERROR, 
-                 '+': FORCED_UPDATE, 
-                 '-': TAG_UPDATE, 
+    _flag_map = {'!': ERROR,
+                 '+': FORCED_UPDATE,
+                 '-': TAG_UPDATE,
                  '*': 0,
-                 '=': HEAD_UPTODATE, 
+                 '=': HEAD_UPTODATE,
                  ' ': FAST_FORWARD}
 
     def __init__(self, ref, flags, note='', old_commit=None):
@@ -526,8 +526,8 @@ class Remote(LazyMixin, Iterable):
         # this also waits for the command to finish
         # Skip some progress lines that don't provide relevant information
         fetch_info_lines = list()
-        # Basically we want all fetch info lines which appear to be in regular form, and thus have a 
-        # command character. Everything else we ignore, 
+        # Basically we want all fetch info lines which appear to be in regular form, and thus have a
+        # command character. Everything else we ignore,
         cmds = set(PushInfo._flag_map.keys()) & set(FetchInfo._flag_map.keys())
         for line in digest_process_messages(proc.stderr, progress):
             if line.startswith('fatal:'):
@@ -547,8 +547,8 @@ class Remote(LazyMixin, Iterable):
         fp.close()
 
         # NOTE: We assume to fetch at least enough progress lines to allow matching each fetch head line with it.
-        assert len(fetch_info_lines) >= len(fetch_head_info), "len(%s) <= len(%s)" % (fetch_head_info, 
-            fetch_info_lines)
+        assert len(fetch_info_lines) >= len(fetch_head_info), "len(%s) <= len(%s)" % (fetch_head_info,
+                                                                                      fetch_info_lines)
 
         output.extend(FetchInfo._from_line(self.repo, err_line, fetch_line)
                       for err_line, fetch_line in zip(fetch_info_lines, fetch_head_info))

@@ -196,7 +196,7 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
                 time.sleep(0.5)
             except Exception as err:
                 gd = None
-            # end 
+            # end
 
             # try to list remotes to diagnoes whether the server is up
             try:
