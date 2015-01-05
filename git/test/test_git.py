@@ -1,3 +1,4 @@
+#-*-coding:utf-8-*-
 # test_git.py
 # Copyright (C) 2008, 2009 Michael Trier (mtrier@gmail.com) and contributors
 #
@@ -32,12 +33,12 @@ class TestGit(TestBase):
         assert_equal(git.call_args, ((['git', 'version'],), {}))
 
     def test_call_unpack_args_unicode(self):
-        args = Git._Git__unpack_args(u'Unicode' + unichr(40960))
-        assert_equal(args, ['Unicode\xea\x80\x80'])
+        args = Git._Git__unpack_args(u'Unicode€™')
+        assert_equal(args, [b'Unicode\xe2\x82\xac\xe2\x84\xa2'])
 
     def test_call_unpack_args(self):
-        args = Git._Git__unpack_args(['git', 'log', '--', u'Unicode' + unichr(40960)])
-        assert_equal(args, ['git', 'log', '--', 'Unicode\xea\x80\x80'])
+        args = Git._Git__unpack_args(['git', 'log', '--', u'Unicode€™'])
+        assert_equal(args, [b'git', b'log', b'--', b'Unicode\xe2\x82\xac\xe2\x84\xa2'])
 
     @raises(GitCommandError)
     def test_it_raises_errors(self):
@@ -75,13 +76,13 @@ class TestGit(TestBase):
         import subprocess as sp
         hexsha = "b2339455342180c7cc1e9bba3e9f181f7baa5167"
         g = self.git.cat_file(batch_check=True, istream=sp.PIPE, as_process=True)
-        g.stdin.write("b2339455342180c7cc1e9bba3e9f181f7baa5167\n")
+        g.stdin.write(b"b2339455342180c7cc1e9bba3e9f181f7baa5167\n")
         g.stdin.flush()
         obj_info = g.stdout.readline()
 
         # read header + data
         g = self.git.cat_file(batch=True, istream=sp.PIPE, as_process=True)
-        g.stdin.write("b2339455342180c7cc1e9bba3e9f181f7baa5167\n")
+        g.stdin.write(b"b2339455342180c7cc1e9bba3e9f181f7baa5167\n")
         g.stdin.flush()
         obj_info_two = g.stdout.readline()
         assert obj_info == obj_info_two
@@ -92,7 +93,7 @@ class TestGit(TestBase):
         g.stdout.read(1)
 
         # now we should be able to read a new object
-        g.stdin.write("b2339455342180c7cc1e9bba3e9f181f7baa5167\n")
+        g.stdin.write(b"b2339455342180c7cc1e9bba3e9f181f7baa5167\n")
         g.stdin.flush()
         assert g.stdout.readline() == obj_info
 
