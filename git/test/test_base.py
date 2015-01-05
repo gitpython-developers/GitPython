@@ -1,3 +1,4 @@
+#-*-coding:utf-8-*-
 # test_base.py
 # Copyright (C) 2008, 2009 Michael Trier (mtrier@gmail.com) and contributors
 #
@@ -106,3 +107,13 @@ class TestBase(TestBase):
         assert not rw_repo.config_reader("repository").getboolean("core", "bare")
         assert rw_remote_repo.config_reader("repository").getboolean("core", "bare")
         assert os.path.isdir(os.path.join(rw_repo.working_tree_dir, 'lib'))
+
+    @with_rw_repo('0.1.6')
+    def test_add_unicode(self, rw_repo):
+        filename = u"שלום.txt"
+
+        file_path = os.path.join(rw_repo.working_dir, filename)
+        open(file_path, "wb").write('something')
+
+        rw_repo.git.add(rw_repo.working_dir)
+        rw_repo.index.commit('message')

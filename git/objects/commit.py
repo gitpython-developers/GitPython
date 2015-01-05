@@ -373,40 +373,33 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
 
     def _serialize(self, stream):
         write = stream.write
-        write("tree %s\n" % self.tree)
+        write(("tree %s\n" % self.tree).encode('ascii'))
         for p in self.parents:
-            write("parent %s\n" % p)
+            write(("parent %s\n" % p).encode('ascii'))
 
         a = self.author
         aname = a.name
-        if isinstance(aname, text_type):
-            aname = aname.encode(self.encoding)
-        # END handle unicode in name
-
         c = self.committer
         fmt = "%s %s <%s> %s %s\n"
-        write(fmt % ("author", aname, a.email,
+        write((fmt % ("author", aname, a.email,
                      self.authored_date,
-                     altz_to_utctz_str(self.author_tz_offset)))
+                     altz_to_utctz_str(self.author_tz_offset))).encode(self.encoding))
 
         # encode committer
         aname = c.name
-        if isinstance(aname, text_type):
-            aname = aname.encode(self.encoding)
-        # END handle unicode in name
-        write(fmt % ("committer", aname, c.email,
+        write((fmt % ("committer", aname, c.email,
                      self.committed_date,
-                     altz_to_utctz_str(self.committer_tz_offset)))
+                     altz_to_utctz_str(self.committer_tz_offset))).encode(self.encoding))
 
         if self.encoding != self.default_encoding:
-            write("encoding %s\n" % self.encoding)
+            write(("encoding %s\n" % self.encoding).encode('ascii'))
 
         if self.gpgsig:
             write("gpgsig")
             for sigline in self.gpgsig.rstrip("\n").split("\n"):
-                write(" " + sigline + "\n")
+                write((" " + sigline + "\n").encode('ascii'))
 
-        write("\n")
+        write(b"\n")
 
         # write plain bytes, be sure its encoded according to our encoding
         if isinstance(self.message, text_type):
