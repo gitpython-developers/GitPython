@@ -10,6 +10,8 @@ from gitdb.util import hex_to_bin
 from .objects.blob import Blob
 from .objects.util import mode_str_to_int
 
+from git.compat import defenc
+
 
 __all__ = ('Diffable', 'DiffIndex', 'Diff')
 
@@ -294,7 +296,7 @@ class Diff(object):
         :param stream: result of 'git diff' as a stream (supporting file protocol)
         :return: git.DiffIndex """
         # for now, we have to bake the stream
-        text = stream.read()
+        text = stream.read().decode(defenc)
         index = DiffIndex()
 
         diff_header = cls.re_header.match
@@ -323,6 +325,7 @@ class Diff(object):
         # :100644 100644 687099101... 37c5e30c8... M    .gitignore
         index = DiffIndex()
         for line in stream:
+            line = line.decode(defenc)
             if not line.startswith(":"):
                 continue
             # END its not a valid diff line
