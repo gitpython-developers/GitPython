@@ -7,6 +7,8 @@
 """utilities to help provide compatibility with python 3"""
 # flake8: noqa
 
+import sys
+
 from gitdb.utils.compat import (
     PY3,
     xrange,
@@ -17,11 +19,39 @@ from gitdb.utils.compat import (
 from gitdb.utils.encoding import (
     string_types,
     text_type,
-    force_bytes
+    force_bytes,
+    force_text
 )
 
+defenc = sys.getdefaultencoding()
 if PY3:
     import io
     FileType = io.IOBase
 else:
     FileType = file
+    # usually, this is just ascii, which might not enough for our encoding needs
+    # Unless it's set specifically, we override it to be utf-8
+    if defenc == 'ascii':
+        defenc = 'utf-8'
+
+
+def with_metaclass(meta, *bases):
+    """copied from https://github.com/Byron/bcore/blob/master/src/python/butility/future.py#L15"""
+    class metaclass(meta):
+        __call__ = type.__call__
+        __init__ = type.__init__
+
+        def __new__(cls, name, nbases, d):
+            if nbases is None:
+                return type.__new__(cls, name, (), d)
+            # There may be clients who rely on this attribute to be set to a reasonable value, which is why
+            # we set the __metaclass__ attribute explicitly
+            if not PY3 and '___metaclass__' not in d:
+                d['__metaclass__'] = meta
+            # end
+            return meta(name, bases, d)
+        # end
+    # end metaclass
+    return metaclass(meta.__name__ + 'Helper', None, {})
+    # end handle py2
+

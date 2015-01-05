@@ -2,6 +2,10 @@
 Changelog
 =========
 
+0.3.4 - python 3 support
+========================
+* Internally, hexadecimal SHA1 are treated as ascii encoded strings. Binary SHA1 are treated as bytes.
+
 0.3.3
 =====
 * When fetching, pulling or pushing, and an error occours, it will not be reported on stdout anymore. However, if there is a fatal error, it will still result in a GitCommandError to be thrown. This goes hand in hand with improved fetch result parsing.

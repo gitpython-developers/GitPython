@@ -19,7 +19,11 @@ from .util import (
     stream_copy
 )
 from .exc import GitCommandError
-from git.compat import text_type
+from git.compat import (
+    text_type,
+    string_types,
+    defenc
+)
 
 execute_kwargs = ('istream', 'with_keep_cwd', 'with_extended_output',
                   'with_exceptions', 'as_process',
@@ -373,9 +377,9 @@ class Git(LazyMixin):
             if output_stream is None:
                 stdout_value, stderr_value = proc.communicate()
                 # strip trailing "\n"
-                if stdout_value.endswith("\n"):
+                if stdout_value.endswith(b"\n"):
                     stdout_value = stdout_value[:-1]
-                if stderr_value.endswith("\n"):
+                if stderr_value.endswith(b"\n"):
                     stderr_value = stderr_value[:-1]
                 status = proc.returncode
             else:
@@ -394,9 +398,9 @@ class Git(LazyMixin):
         if self.GIT_PYTHON_TRACE == 'full':
             cmdstr = " ".join(command)
             if stderr_value:
-                log.info("%s -> %d; stdout: '%s'; stderr: '%s'", cmdstr, status, stdout_value, stderr_value)
+                log.info("%s -> %d; stdout: '%s'; stderr: '%s'", cmdstr, status, stdout_value.decode(defenc), stderr_value.decode(defenc))
             elif stdout_value:
-                log.info("%s -> %d; stdout: '%s'", cmdstr, status, stdout_value)
+                log.info("%s -> %d; stdout: '%s'", cmdstr, status, stdout_value.decode(defenc))
             else:
                 log.info("%s -> %d", cmdstr, status)
         # END handle debug printing
@@ -436,7 +440,7 @@ class Git(LazyMixin):
     def __unpack_args(cls, arg_list):
         if not isinstance(arg_list, (list, tuple)):
             if isinstance(arg_list, text_type):
-                return [arg_list.encode('utf-8')]
+                return [arg_list.encode(defenc)]
             return [str(arg_list)]
 
         outlist = list()
@@ -444,7 +448,7 @@ class Git(LazyMixin):
             if isinstance(arg_list, (list, tuple)):
                 outlist.extend(cls.__unpack_args(arg))
             elif isinstance(arg_list, text_type):
-                outlist.append(arg_list.encode('utf-8'))
+                outlist.append(arg_list.encode(defenc))
             # END recursion
             else:
                 outlist.append(str(arg))
@@ -569,14 +573,20 @@ class Git(LazyMixin):
             raise ValueError("Failed to parse header: %r" % header_line)
         return (tokens[0], tokens[1], int(tokens[2]))
 
-    def __prepare_ref(self, ref):
-        # required for command to separate refs on stdin
-        refstr = str(ref)               # could be ref-object
-        if refstr.endswith("\n"):
-            return refstr
-        return refstr + "\n"
+    def _prepare_ref(self, ref):
+        # required for command to separate refs on stdin, as bytes
+        refstr = ref
+        if isinstance(ref, bytes):
+            # Assume 40 bytes hexsha - bin-to-ascii for some reason returns bytes, not text
+            refstr = ref.decode('ascii')
+        elif not isinstance(ref, string_types):
+            refstr = str(ref)               # could be ref-object
 
-    def __get_persistent_cmd(self, attr_name, cmd_name, *args, **kwargs):
+        if not refstr.endswith("\n"):
+            refstr += "\n"
+        return refstr.encode(defenc)
+
+    def _get_persistent_cmd(self, attr_name, cmd_name, *args, **kwargs):
         cur_val = getattr(self, attr_name)
         if cur_val is not None:
             return cur_val
@@ -589,7 +599,7 @@ class Git(LazyMixin):
         return cmd
 
     def __get_object_header(self, cmd, ref):
-        cmd.stdin.write(self.__prepare_ref(ref))
+        cmd.stdin.write(self._prepare_ref(ref))
         cmd.stdin.flush()
         return self._parse_object_header(cmd.stdout.readline())
 
@@ -601,7 +611,7 @@ class Git(LazyMixin):
             once and reuses the command in subsequent calls.
 
         :return: (hexsha, type_string, size_as_int)"""
-        cmd = self.__get_persistent_cmd("cat_file_header", "cat_file", batch_check=True)
+        cmd = self._get_persistent_cmd("cat_file_header", "cat_file", batch_check=True)
         return self.__get_object_header(cmd, ref)
 
     def get_object_data(self, ref):
@@ -618,7 +628,7 @@ class Git(LazyMixin):
         :return: (hexsha, type_string, size_as_int, stream)
         :note: This method is not threadsafe, you need one independent  Command instance
             per thread to be safe !"""
-        cmd = self.__get_persistent_cmd("cat_file_all", "cat_file", batch=True)
+        cmd = self._get_persistent_cmd("cat_file_all", "cat_file", batch=True)
         hexsha, typename, size = self.__get_object_header(cmd, ref)
         return (hexsha, typename, size, self.CatFileContentStream(size, cmd.stdout))
 

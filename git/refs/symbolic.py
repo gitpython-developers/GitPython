@@ -19,7 +19,9 @@ from gitdb.util import (
     hex_to_bin,
     LockedFD
 )
-from git.compat import string_types
+from git.compat import (
+    string_types,
+)
 
 from .log import RefLog
 
@@ -79,10 +81,10 @@ class SymbolicReference(object):
 
     @classmethod
     def _iter_packed_refs(cls, repo):
-        """Returns an iterator yielding pairs of sha1/path pairs for the corresponding refs.
+        """Returns an iterator yielding pairs of sha1/path pairs (as bytes) for the corresponding refs.
         :note: The packed refs file will be kept open as long as we iterate"""
         try:
-            fp = open(cls._get_packed_refs_path(repo), 'rb')
+            fp = open(cls._get_packed_refs_path(repo), 'rt')
             for line in fp:
                 line = line.strip()
                 if not line:
@@ -123,12 +125,12 @@ class SymbolicReference(object):
 
     @classmethod
     def _get_ref_info(cls, repo, ref_path):
-        """Return: (sha, target_ref_path) if available, the sha the file at
+        """Return: (str(sha), str(target_ref_path)) if available, the sha the file at
         rela_path points to, or None. target_ref_path is the reference we
         point to, or None"""
         tokens = None
         try:
-            fp = open(join(repo.git_dir, ref_path), 'r')
+            fp = open(join(repo.git_dir, ref_path), 'rt')
             value = fp.read().rstrip()
             fp.close()
             # Don't only split on spaces, but on whitespace, which allows to parse lines like
@@ -141,7 +143,8 @@ class SymbolicReference(object):
             for sha, path in cls._iter_packed_refs(repo):
                 if path != ref_path:
                     continue
-                tokens = (sha, path)
+                # sha will be used as 
+                tokens = sha, path
                 break
             # END for each packed ref
         # END handle packed refs

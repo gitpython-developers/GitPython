@@ -32,6 +32,7 @@ from git.util import (
     finalize_process
 )
 from gitdb.util import join
+from git.compat import defenc
 
 
 __all__ = ('RemoteProgress', 'PushInfo', 'FetchInfo', 'Remote')
@@ -46,16 +47,16 @@ def digest_process_messages(fh, progress):
     :param fh: File handle to read from
     :return: list(line, ...) list of lines without linebreaks that did
         not contain progress information"""
-    line_so_far = ''
+    line_so_far = b''
     dropped_lines = list()
     while True:
-        char = fh.read(1)
+        char = fh.read(1)       # reads individual single byte strings
         if not char:
             break
 
-        if char in ('\r', '\n') and line_so_far:
-            dropped_lines.extend(progress._parse_progress_line(line_so_far))
-            line_so_far = ''
+        if char in (b'\r', b'\n') and line_so_far:
+            dropped_lines.extend(progress._parse_progress_line(line_so_far.decode(defenc)))
+            line_so_far = b''
         else:
             line_so_far += char
         # END process parsed line
