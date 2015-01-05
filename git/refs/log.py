@@ -80,11 +80,15 @@ class RefLogEntry(tuple):
         """:return: New RefLogEntry instance from the given revlog line.
         :param line: line without trailing newline
         :raise ValueError: If line could not be parsed"""
-        try:
-            info, msg = line.split('\t', 2)
-        except ValueError:
-            raise ValueError("line is missing tab separator")
-        # END handle first plit
+        fields = line.split('\t', 1)
+        if len(fields) == 1:
+            info, msg = fields[0], None
+        elif len(fields) == 2:
+            info, msg = fields
+        else:
+            raise ValueError("Line must have up to two TAB-separated fields."
+                             " Got %s" % repr(line))
+        # END handle first split
         oldhexsha = info[:40]
         newhexsha = info[41:81]
         for hexsha in (oldhexsha, newhexsha):
