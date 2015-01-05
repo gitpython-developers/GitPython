@@ -62,7 +62,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
                  "author", "authored_date", "author_tz_offset",
                  "committer", "committed_date", "committer_tz_offset",
                  "message", "parents", "encoding", "gpgsig")
-    _id_attribute_ = "binsha"
+    _id_attribute_ = "hexsha"
 
     def __init__(self, repo, binsha, tree=None, author=None, authored_date=None, author_tz_offset=None,
                  committer=None, committed_date=None, committer_tz_offset=None,
@@ -395,7 +395,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
             write(("encoding %s\n" % self.encoding).encode('ascii'))
 
         if self.gpgsig:
-            write("gpgsig")
+            write(b"gpgsig")
             for sigline in self.gpgsig.rstrip("\n").split("\n"):
                 write((" " + sigline + "\n").encode('ascii'))
 

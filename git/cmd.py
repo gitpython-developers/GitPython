@@ -320,6 +320,7 @@ class Git(LazyMixin):
             always be created with a pipe due to issues with subprocess.
             This merely is a workaround as data will be copied from the
             output pipe to the given output stream directly.
+            Judging from the implementation, you shouldn't use this flag !
 
         :param subprocess_kwargs:
             Keyword arguments to be passed to subprocess.Popen. Please note that
@@ -411,9 +412,13 @@ class Git(LazyMixin):
             else:
                 raise GitCommandError(command, status, stderr_value)
 
+
+        if isinstance(stdout_value, bytes): # could also be output_stream
+            stdout_value = stdout_value.decode(defenc)
+
         # Allow access to the command's status code
         if with_extended_output:
-            return (status, stdout_value, stderr_value)
+            return (status, stdout_value, stderr_value.decode(defenc))
         else:
             return stdout_value
 

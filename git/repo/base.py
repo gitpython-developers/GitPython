@@ -47,7 +47,10 @@ from .fun import (
     read_gitfile,
     touch,
 )
-from git.compat import text_type
+from git.compat import (
+    text_type,
+    defenc
+)
 
 import os
 import sys
@@ -177,11 +180,11 @@ class Repo(object):
     # Description property
     def _get_description(self):
         filename = join(self.git_dir, 'description')
-        return open(filename).read().rstrip()
+        return open(filename, 'rb').read().rstrip().decode(defenc)
 
     def _set_description(self, descr):
         filename = join(self.git_dir, 'description')
-        open(filename, 'w').write(descr + '\n')
+        open(filename, 'wb').write((descr + '\n').encode(defenc))
 
     description = property(_get_description, _set_description,
                            doc="the project's description")
@@ -464,8 +467,8 @@ class Repo(object):
 
         if os.path.exists(alternates_path):
             try:
-                f = open(alternates_path)
-                alts = f.read()
+                f = open(alternates_path, 'rb')
+                alts = f.read().decode(defenc)
             finally:
                 f.close()
             return alts.strip().splitlines()
@@ -489,8 +492,8 @@ class Repo(object):
                 os.remove(alternates_path)
         else:
             try:
-                f = open(alternates_path, 'w')
-                f.write("\n".join(alts))
+                f = open(alternates_path, 'wb')
+                f.write("\n".join(alts).encode(defenc))
             finally:
                 f.close()
             # END file handling

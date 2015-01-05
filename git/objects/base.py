@@ -21,7 +21,7 @@ class Object(LazyMixin):
 
     """Implements an Object which may be Blobs, Trees, Commits and Tags"""
     NULL_HEX_SHA = '0' * 40
-    NULL_BIN_SHA = '\0' * 20
+    NULL_BIN_SHA = b'\0' * 20
 
     TYPES = (dbtyp.str_blob_type, dbtyp.str_tree_type, dbtyp.str_commit_type, dbtyp.str_tag_type)
     __slots__ = ("repo", "binsha", "size")
@@ -94,7 +94,7 @@ class Object(LazyMixin):
 
     def __str__(self):
         """:return: string of our SHA1 as understood by all git commands"""
-        return bin_to_hex(self.binsha)
+        return self.hexsha
 
     def __repr__(self):
         """:return: string with pythonic representation of our object"""
@@ -103,7 +103,8 @@ class Object(LazyMixin):
     @property
     def hexsha(self):
         """:return: 40 byte hex version of our 20 byte binary sha"""
-        return bin_to_hex(self.binsha)
+        # b2a_hex produces bytes
+        return bin_to_hex(self.binsha).decode('ascii')
 
     @property
     def data_stream(self):

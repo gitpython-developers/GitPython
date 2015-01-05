@@ -2,7 +2,6 @@
 from stat import S_ISDIR
 from git.compat import (
     byte_ord,
-    force_bytes,
     defenc,
     xrange,
     text_type
@@ -37,7 +36,7 @@ def tree_to_stream(entries, write):
         # takes the input literally, which appears to be utf8 on linux.
         if isinstance(name, text_type):
             name = name.encode(defenc)
-        write(b''.join(mode_str, b' ', name, b'\0', binsha))
+        write(b''.join((mode_str, b' ', name, b'\0', binsha)))
     # END for each item
 
 def tree_entries_from_data(data):

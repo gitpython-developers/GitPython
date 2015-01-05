@@ -51,7 +51,7 @@ def assert_commit_serialization(rwrepo, commit_id, print_performance_info=False)
         stream.seek(0)
 
         istream = rwrepo.odb.store(IStream(Commit.type, streamlen, stream))
-        assert istream.hexsha == cm.hexsha
+        assert istream.hexsha == cm.hexsha.encode('ascii')
 
         nc = Commit(rwrepo, Commit.NULL_BIN_SHA, cm.tree,
                     cm.author, cm.authored_date, cm.author_tz_offset,
@@ -129,7 +129,7 @@ class TestCommit(TestBase):
 
     def test_unicode_actor(self):
         # assure we can parse unicode actors correctly
-        name = "Üäöß ÄußÉ".decode("utf-8")
+        name = u"Üäöß ÄußÉ"
         assert len(name) == 9
         special = Actor._from_string(u"%s <something@this.com>" % name)
         assert special.name == name
@@ -146,13 +146,13 @@ class TestCommit(TestBase):
         # basic branch first, depth first
         dfirst = start.traverse(branch_first=False)
         bfirst = start.traverse(branch_first=True)
-        assert dfirst.next() == p0
-        assert dfirst.next() == p00
+        assert next(dfirst) == p0
+        assert next(dfirst) == p00
 
-        assert bfirst.next() == p0
-        assert bfirst.next() == p1
-        assert bfirst.next() == p00
-        assert bfirst.next() == p10
+        assert next(bfirst) == p0
+        assert next(bfirst) == p1
+        assert next(bfirst) == p00
+        assert next(bfirst) == p10
 
         # at some point, both iterations should stop
         assert list(bfirst)[-1] == first
@@ -161,19 +161,19 @@ class TestCommit(TestBase):
         assert len(l[0]) == 2
 
         # ignore self
-        assert start.traverse(ignore_self=False).next() == start
+        assert next(start.traverse(ignore_self=False)) == start
 
         # depth
         assert len(list(start.traverse(ignore_self=False, depth=0))) == 1
 
         # prune
-        assert start.traverse(branch_first=1, prune=lambda i, d: i == p0).next() == p1
+        assert next(start.traverse(branch_first=1, prune=lambda i, d: i == p0)) == p1
 
         # predicate
-        assert start.traverse(branch_first=1, predicate=lambda i, d: i == p1).next() == p1
+        assert next(start.traverse(branch_first=1, predicate=lambda i, d: i == p1)) == p1
 
         # traversal should stop when the beginning is reached
-        self.failUnlessRaises(StopIteration, first.traverse().next)
+        self.failUnlessRaises(StopIteration, next, first.traverse())
 
         # parents of the first commit should be empty ( as the only parent has a null
         # sha )
@@ -210,7 +210,7 @@ class TestCommit(TestBase):
                                         first_parent=True,
                                         bisect_all=True)
 
-        commits = Commit._iter_from_process_or_stream(self.rorepo, StringProcessAdapter(revs))
+        commits = Commit._iter_from_process_or_stream(self.rorepo, StringProcessAdapter(revs.encode('ascii')))
         expected_ids = (
             '7156cece3c49544abb6bf7a0c218eb36646fad6d',
             '1f66cfbbce58b4b552b041707a12d437cc5f400a',
@@ -224,8 +224,10 @@ class TestCommit(TestBase):
         assert self.rorepo.tag('refs/tags/0.1.5').commit.count() == 143
 
     def test_list(self):
+        # This doesn't work anymore, as we will either attempt getattr with bytes, or compare 20 byte string
+        # with actual 20 byte bytes. This usage makes no sense anyway
         assert isinstance(Commit.list_items(self.rorepo, '0.1.5', max_count=5)[
-                          hex_to_bin('5117c9c8a4d3af19a9958677e45cda9269de1541')], Commit)
+                          '5117c9c8a4d3af19a9958677e45cda9269de1541'], Commit)
 
     def test_str(self):
         commit = Commit(self.rorepo, Commit.NULL_BIN_SHA)
@@ -247,12 +249,12 @@ class TestCommit(TestBase):
         c = self.rorepo.commit('0.1.5')
         for skip in (0, 1):
             piter = c.iter_parents(skip=skip)
-            first_parent = piter.next()
+            first_parent = next(piter)
             assert first_parent != c
             assert first_parent == c.parents[0]
         # END for each
 
-    def test_base(self):
+    def test_name_rev(self):
         name_rev = self.rorepo.head.commit.name_rev
         assert isinstance(name_rev, string_types)
 
@@ -270,10 +272,10 @@ class TestCommit(TestBase):
         assert isinstance(cmt.message, text_type)     # it automatically decodes it as such
         assert isinstance(cmt.author.name, text_type)  # same here
 
-        cmt.message = "üäêèß".decode("utf-8")
+        cmt.message = u"üäêèß"
         assert len(cmt.message) == 5
 
-        cmt.author.name = "äüß".decode("utf-8")
+        cmt.author.name = u"äüß"
         assert len(cmt.author.name) == 3
 
         cstream = BytesIO()
@@ -292,7 +294,7 @@ class TestCommit(TestBase):
 
     def test_gpgsig(self):
         cmt = self.rorepo.commit()
-        cmt._deserialize(open(fixture_path('commit_with_gpgsig')))
+        cmt._deserialize(open(fixture_path('commit_with_gpgsig'), 'rb'))
 
         fixture_sig = """-----BEGIN PGP SIGNATURE-----
 Version: GnuPG v1.4.11 (GNU/Linux)
@@ -318,7 +320,7 @@ JzJMZDRLQLFvnzqZuCjE
 
         cstream = BytesIO()
         cmt._serialize(cstream)
-        assert re.search(r"^gpgsig <test\n dummy\n sig>$", cstream.getvalue(), re.MULTILINE)
+        assert re.search(r"^gpgsig <test\n dummy\n sig>$", cstream.getvalue().decode('ascii'), re.MULTILINE)
 
         cstream.seek(0)
         cmt.gpgsig = None
@@ -328,4 +330,4 @@ JzJMZDRLQLFvnzqZuCjE
         cmt.gpgsig = None
         cstream = BytesIO()
         cmt._serialize(cstream)
-        assert not re.search(r"^gpgsig ", cstream.getvalue(), re.MULTILINE)
+        assert not re.search(r"^gpgsig ", cstream.getvalue().decode('ascii'), re.MULTILINE)

@@ -195,7 +195,7 @@ class Diff(object):
                             """, re.VERBOSE | re.MULTILINE)
     # can be used for comparisons
     NULL_HEX_SHA = "0" * 40
-    NULL_BIN_SHA = "\0" * 20
+    NULL_BIN_SHA = b"\0" * 20
 
     __slots__ = ("a_blob", "b_blob", "a_mode", "b_mode", "new_file", "deleted_file",
                  "rename_from", "rename_to", "diff")

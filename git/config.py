@@ -201,6 +201,11 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
                 self.write()
             except IOError:
                 log.error("Exception during destruction of GitConfigParser", exc_info=True)
+            except ReferenceError:
+                # This happens in PY3 ... and usually means that some state cannot be written
+                # as the sections dict cannot be iterated
+                # Usually when shutting down the interpreter, don'y know how to fix this
+                pass
         finally:
             self._lock._release_lock()
 
@@ -345,7 +350,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
         # END get lock for physical files
 
         if not hasattr(fp, "seek"):
-            fp = open(self._file_or_files, "w")
+            fp = open(self._file_or_files, "wb")
             close_fp = True
         else:
             fp.seek(0)
