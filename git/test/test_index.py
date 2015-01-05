@@ -31,7 +31,7 @@ from stat import (
     ST_MODE
 )
 
-from io import StringIO
+from io import BytesIO
 from gitdb.base import IStream
 from git.objects import Blob
 from git.index.typ import (
@@ -698,9 +698,9 @@ class TestIndex(TestBase):
         # instead of throwing the Exception we are expecting. This is
         # a quick hack to make this test fail when expected.
         rw_bare_repo._working_tree_dir = None
-        contents = 'This is a StringIO file'
+        contents = b'This is a BytesIO file'
         filesize = len(contents)
-        fileobj = StringIO(contents)
+        fileobj = BytesIO(contents)
         filename = 'my-imaginary-file'
         istream = rw_bare_repo.odb.store(
             IStream(Blob.type, filesize, fileobj))

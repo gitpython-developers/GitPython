@@ -30,7 +30,7 @@ from time import (
     altzone
 )
 import os
-from io import StringIO
+from io import BytesIO
 import logging
 
 log = logging.getLogger('git.objects.commit')
@@ -133,7 +133,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
         if attr in Commit.__slots__:
             # read the data in a chunk, its faster - then provide a file wrapper
             binsha, typename, self.size, stream = self.repo.odb.stream(self.binsha)
-            self._deserialize(StringIO(stream.read()))
+            self._deserialize(BytesIO(stream.read()))
         else:
             super(Commit, self)._set_cache_(attr)
         # END handle attrs
@@ -345,7 +345,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
                          committer, committer_time, committer_offset,
                          message, parent_commits, conf_encoding)
 
-        stream = StringIO()
+        stream = BytesIO()
         new_commit._serialize(stream)
         streamlen = stream.tell()
         stream.seek(0)

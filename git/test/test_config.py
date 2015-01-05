@@ -12,7 +12,7 @@ from git import (
     GitConfigParser
 )
 from git.compat import string_types
-import StringIO
+import io
 from copy import copy
 from ConfigParser import NoSectionError
 
@@ -21,7 +21,7 @@ class TestBase(TestCase):
 
     def _to_memcache(self, file_path):
         fp = open(file_path, "r")
-        sio = StringIO.StringIO(fp.read())
+        sio = io.BytesIO(fp.read())
         sio.name = file_path
         return sio
 

@@ -36,7 +36,7 @@ import os
 import sys
 import tempfile
 import shutil
-from io import StringIO
+from io import BytesIO
 
 
 class TestRepo(TestBase):
@@ -362,22 +362,22 @@ class TestRepo(TestBase):
     def test_git_cmd(self):
         # test CatFileContentStream, just to be very sure we have no fencepost errors
         # last \n is the terminating newline that it expects
-        l1 = "0123456789\n"
-        l2 = "abcdefghijklmnopqrstxy\n"
-        l3 = "z\n"
-        d = "%s%s%s\n" % (l1, l2, l3)
+        l1 = b"0123456789\n"
+        l2 = b"abcdefghijklmnopqrstxy\n"
+        l3 = b"z\n"
+        d = b"%s%s%s\n" % (l1, l2, l3)
 
         l1p = l1[:5]
 
         # full size
         # size is without terminating newline
         def mkfull():
-            return Git.CatFileContentStream(len(d) - 1, StringIO(d))
+            return Git.CatFileContentStream(len(d) - 1, BytesIO(d))
 
         ts = 5
 
         def mktiny():
-            return Git.CatFileContentStream(ts, StringIO(d))
+            return Git.CatFileContentStream(ts, BytesIO(d))
 
         # readlines no limit
         s = mkfull()

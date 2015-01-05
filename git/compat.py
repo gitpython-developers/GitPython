@@ -16,7 +16,8 @@ from gitdb.utils.compat import (
 
 from gitdb.utils.encoding import (
     string_types,
-    text_type
+    text_type,
+    force_bytes
 )
 
 if PY3:

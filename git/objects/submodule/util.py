@@ -1,7 +1,7 @@
 import git
 from git.exc import InvalidGitRepositoryError
 from git.config import GitConfigParser
-from io import StringIO
+from io import BytesIO
 import weakref
 
 __all__ = ('sm_section', 'sm_name', 'mkhead', 'unbare_repo', 'find_first_remote_branch',
@@ -83,7 +83,7 @@ class SubmoduleConfigParser(GitConfigParser):
         """Flush changes in our configuration file to the index"""
         assert self._smref is not None
         # should always have a file here
-        assert not isinstance(self._file_or_files, StringIO)
+        assert not isinstance(self._file_or_files, BytesIO)
 
         sm = self._smref()
         if sm is not None:

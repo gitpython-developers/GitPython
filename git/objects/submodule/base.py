@@ -8,7 +8,7 @@ from .util import (
     find_first_remote_branch
 )
 from git.objects.util import Traversable
-from io import StringIO                   # need a dict to set bloody .name field
+from io import BytesIO                   # need a dict to set bloody .name field
 from git.util import (
     Iterable,
     join_path_native,
@@ -187,8 +187,8 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 
     @classmethod
     def _sio_modules(cls, parent_commit):
-        """:return: Configuration file as StringIO - we only access it through the respective blob's data"""
-        sio = StringIO(parent_commit.tree[cls.k_modules_file].data_stream.read())
+        """:return: Configuration file as BytesIO - we only access it through the respective blob's data"""
+        sio = BytesIO(parent_commit.tree[cls.k_modules_file].data_stream.read())
         sio.name = cls.k_modules_file
         return sio
 

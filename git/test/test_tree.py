@@ -11,7 +11,7 @@ from git import (
     Blob
 )
 
-from io import StringIO
+from io import BytesIO
 
 
 class TestTree(TestBase):
@@ -30,7 +30,7 @@ class TestTree(TestBase):
             orig_data = tree.data_stream.read()
             orig_cache = tree._cache
 
-            stream = StringIO()
+            stream = BytesIO()
             tree._serialize(stream)
             assert stream.getvalue() == orig_data
 
@@ -82,7 +82,7 @@ class TestTree(TestBase):
             mod.set_done()      # multiple times are okay
 
             # serialize, its different now
-            stream = StringIO()
+            stream = BytesIO()
             testtree._serialize(stream)
             stream.seek(0)
             assert stream.getvalue() != orig_data

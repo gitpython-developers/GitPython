@@ -12,7 +12,7 @@ from stat import (
 
 S_IFGITLINK = S_IFLNK | S_IFDIR     # a submodule
 
-from io import StringIO
+from io import BytesIO
 
 from git.util import IndexFileSHA1Writer
 from git.exc import UnmergedEntriesError
@@ -218,7 +218,7 @@ def write_tree_from_cache(entries, odb, sl, si=0):
     # END for each entry
 
     # finally create the tree
-    sio = StringIO()
+    sio = BytesIO()
     tree_to_stream(tree_items, sio.write)
     sio.seek(0)
 

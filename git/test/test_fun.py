@@ -24,7 +24,7 @@ from stat import (
 )
 
 from git.index import IndexFile
-from io import StringIO
+from io import BytesIO
 
 
 class TestFun(TestBase):
@@ -72,7 +72,7 @@ class TestFun(TestBase):
 
     def mktree(self, odb, entries):
         """create a tree from the given tree entries and safe it to the database"""
-        sio = StringIO()
+        sio = BytesIO()
         tree_to_stream(entries, sio.write)
         sio.seek(0)
         istream = odb.store(IStream(str_tree_type, len(sio.getvalue()), sio))

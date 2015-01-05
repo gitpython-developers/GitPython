@@ -8,7 +8,7 @@ import os
 import sys
 import subprocess
 import glob
-from io import StringIO
+from io import BytesIO
 
 from stat import S_ISLNK
 
@@ -43,6 +43,7 @@ from git.compat import (
     izip,
     xrange,
     string_types,
+    force_bytes
 )
 
 from git.util import (
@@ -562,7 +563,8 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         st = os.lstat(filepath)     # handles non-symlinks as well
         stream = None
         if S_ISLNK(st.st_mode):
-            stream = StringIO(os.readlink(filepath))
+            # in PY3, readlink is string, but we need bytes. In PY2, it's just OS encoded bytes, we assume UTF-8
+            stream = BytesIO(force_bytes(os.readlink(filepath), encoding='utf-8'))
         else:
             stream = open(filepath, 'rb')
         # END handle stream

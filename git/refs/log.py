@@ -85,7 +85,7 @@ class RefLogEntry(tuple):
         :param line: line without trailing newline
         :raise ValueError: If line could not be parsed"""
         try:
-            info, msg = line.split('\t', 2)
+            info, msg = line.split('\t', 1)
         except ValueError:
             raise ValueError("line is missing tab separator")
         # END handle first plit

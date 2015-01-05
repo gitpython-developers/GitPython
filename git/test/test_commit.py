@@ -25,7 +25,7 @@ from git.compat import (
     text_type
 )
 
-from io import StringIO
+from io import BytesIO
 import time
 import sys
 import re
@@ -44,7 +44,7 @@ def assert_commit_serialization(rwrepo, commit_id, print_performance_info=False)
 
         # assert that we deserialize commits correctly, hence we get the same
         # sha on serialization
-        stream = StringIO()
+        stream = BytesIO()
         cm._serialize(stream)
         ns += 1
         streamlen = stream.tell()
@@ -59,7 +59,7 @@ def assert_commit_serialization(rwrepo, commit_id, print_performance_info=False)
                     cm.message, cm.parents, cm.encoding)
 
         assert nc.parents == cm.parents
-        stream = StringIO()
+        stream = BytesIO()
         nc._serialize(stream)
         ns += 1
         streamlen = stream.tell()
@@ -276,7 +276,7 @@ class TestCommit(TestBase):
         cmt.author.name = "äüß".decode("utf-8")
         assert len(cmt.author.name) == 3
 
-        cstream = StringIO()
+        cstream = BytesIO()
         cmt._serialize(cstream)
         cstream.seek(0)
         assert len(cstream.getvalue())
@@ -316,7 +316,7 @@ JzJMZDRLQLFvnzqZuCjE
         cmt.gpgsig = "<test\ndummy\nsig>"
         assert cmt.gpgsig != fixture_sig
 
-        cstream = StringIO()
+        cstream = BytesIO()
         cmt._serialize(cstream)
         assert re.search(r"^gpgsig <test\n dummy\n sig>$", cstream.getvalue(), re.MULTILINE)
 
@@ -326,6 +326,6 @@ JzJMZDRLQLFvnzqZuCjE
         assert cmt.gpgsig == "<test\ndummy\nsig>"
 
         cmt.gpgsig = None
-        cstream = StringIO()
+        cstream = BytesIO()
         cmt._serialize(cstream)
         assert not re.search(r"^gpgsig ", cstream.getvalue(), re.MULTILINE)

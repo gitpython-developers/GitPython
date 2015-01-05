@@ -48,8 +48,8 @@ class StringProcessAdapter(object):
     Its tailored to work with the test system only"""
 
     def __init__(self, input_string):
-        self.stdout = io.StringIO(input_string)
-        self.stderr = io.StringIO()
+        self.stdout = io.BytesIO(input_string)
+        self.stderr = io.BytesIO()
 
     def wait(self):
         return 0
