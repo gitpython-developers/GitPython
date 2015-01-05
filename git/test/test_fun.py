@@ -30,7 +30,7 @@ from io import BytesIO
 class TestFun(TestBase):
 
     def _assert_index_entries(self, entries, trees):
-        index = IndexFile.from_tree(self.rorepo, *[self.rorepo.tree(bin_to_hex(t)) for t in trees])
+        index = IndexFile.from_tree(self.rorepo, *[self.rorepo.tree(bin_to_hex(t).decode('ascii')) for t in trees])
         assert entries
         assert len(index.entries) == len(entries)
         for entry in entries:
@@ -91,9 +91,9 @@ class TestFun(TestBase):
             assert has_conflict == (len([e for e in entries if e.stage != 0]) > 0)
         mktree = self.mktree
 
-        shaa = "\1" * 20
-        shab = "\2" * 20
-        shac = "\3" * 20
+        shaa = b"\1" * 20
+        shab = b"\2" * 20
+        shac = b"\3" * 20
 
         odb = rwrepo.odb
 
@@ -256,6 +256,6 @@ class TestFun(TestBase):
             assert entries
         # END for each commit
 
-    def test_tree_entries_from_data(self):
+    def test_tree_entries_from_data_with_failing_name_decode(self):
         r = tree_entries_from_data(b'100644 \x9f\0aaa')
-        assert r == [('aaa', 33188, '\x9f')], r
+        assert r == [(b'aaa', 33188, b'\x9f')], r

@@ -29,6 +29,8 @@ if PY3:
     FileType = io.IOBase
     def byte_ord(b):
         return b
+    def bchr(n):
+        return bytes([n])
 else:
     FileType = file
     # usually, this is just ascii, which might not enough for our encoding needs
@@ -36,6 +38,7 @@ else:
     if defenc == 'ascii':
         defenc = 'utf-8'
     byte_ord = ord
+    bchr = chr
 
 
 def with_metaclass(meta, *bases):
