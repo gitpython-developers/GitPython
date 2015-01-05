@@ -419,23 +419,25 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
         next_line = None
         while True:
             parent_line = readline()
-            if not parent_line.startswith('parent'):
+            if not parent_line.startswith(b'parent'):
                 next_line = parent_line
                 break
             # END abort reading parents
-            self.parents.append(type(self)(self.repo, hex_to_bin(parent_line.split()[-1])))
+            self.parents.append(type(self)(self.repo, hex_to_bin(parent_line.split()[-1].decode('ascii'))))
         # END for each parent line
         self.parents = tuple(self.parents)
 
-        self.author, self.authored_date, self.author_tz_offset = parse_actor_and_date(next_line)
-        self.committer, self.committed_date, self.committer_tz_offset = parse_actor_and_date(readline())
+        # we don't know actual author encoding before we have parsed it, so keep the lines around
+        author_line = next_line
+        committer_line = readline()
 
         # we might run into one or more mergetag blocks, skip those for now
         next_line = readline()
-        while next_line.startswith('mergetag '):
+        while next_line.startswith(b'mergetag '):
             next_line = readline()
             while next_line.startswith(' '):
                 next_line = readline()
+        # end skip mergetags
 
         # now we can have the encoding line, or an empty line followed by the optional
         # message.
@@ -444,39 +446,40 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
         # read headers
         enc = next_line
         buf = enc.strip()
-        while buf != "":
-            if buf[0:10] == "encoding ":
-                self.encoding = buf[buf.find(' ') + 1:]
-            elif buf[0:7] == "gpgsig ":
-                sig = buf[buf.find(' ') + 1:] + "\n"
+        while buf:
+            if buf[0:10] == b"encoding ":
+                self.encoding = buf[buf.find(' ') + 1:].decode('ascii')
+            elif buf[0:7] == b"gpgsig ":
+                sig = buf[buf.find(b' ') + 1:] + b"\n"
                 is_next_header = False
                 while True:
                     sigbuf = readline()
-                    if sigbuf == "":
+                    if not sigbuf:
                         break
-                    if sigbuf[0:1] != " ":
+                    if sigbuf[0:1] != b" ":
                         buf = sigbuf.strip()
                         is_next_header = True
                         break
                     sig += sigbuf[1:]
-                self.gpgsig = sig.rstrip("\n")
+                # end read all signature
+                self.gpgsig = sig.rstrip(b"\n").decode('ascii')
                 if is_next_header:
                     continue
             buf = readline().strip()
-
         # decode the authors name
-        try:
-            self.author.name = self.author.name.decode(self.encoding)
-        except UnicodeDecodeError:
-            log.error("Failed to decode author name '%s' using encoding %s", self.author.name, self.encoding,
-                      exc_info=True)
-        # END handle author's encoding
 
-        # decode committer name
         try:
-            self.committer.name = self.committer.name.decode(self.encoding)
+            self.author, self.authored_date, self.author_tz_offset = \
+                parse_actor_and_date(author_line.decode(self.encoding))
         except UnicodeDecodeError:
-            log.error("Failed to decode committer name '%s' using encoding %s", self.committer.name, self.encoding,
+            log.error("Failed to decode author line '%s' using encoding %s", author_line, self.encoding,
+                      exc_info=True)
+
+        try:
+            self.committer, self.committed_date, self.committer_tz_offset = \
+                parse_actor_and_date(committer_line.decode(self.encoding))
+        except UnicodeDecodeError:
+            log.error("Failed to decode committer line '%s' using encoding %s", committer_line, self.encoding,
                       exc_info=True)
         # END handle author's encoding
 
@@ -488,6 +491,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
         except UnicodeDecodeError:
             log.error("Failed to decode message '%s' using encoding %s", self.message, self.encoding, exc_info=True)
         # END exception handling
+
         return self
 
     #} END serializable implementation

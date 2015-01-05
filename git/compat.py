@@ -27,12 +27,15 @@ defenc = sys.getdefaultencoding()
 if PY3:
     import io
     FileType = io.IOBase
+    def byte_ord(b):
+        return b
 else:
     FileType = file
     # usually, this is just ascii, which might not enough for our encoding needs
     # Unless it's set specifically, we override it to be utf-8
     if defenc == 'ascii':
         defenc = 'utf-8'
+    byte_ord = ord
 
 
 def with_metaclass(meta, *bases):
@@ -54,4 +57,3 @@ def with_metaclass(meta, *bases):
     # end metaclass
     return metaclass(meta.__name__ + 'Helper', None, {})
     # end handle py2
-
