@@ -67,7 +67,7 @@ def _stamp_version(filename):
     else:
         print("WARNING: Couldn't find version line in file %s" % filename, file=sys.stderr)
 
-install_requires = ['gitdb >= 0.6.1']
+install_requires = ['gitdb >= 0.6.2']
 if sys.version_info[:2] < (2, 7):
     install_requires.append('ordereddict')
 # end
@@ -85,7 +85,7 @@ setup(
     package_data={'git.test': ['fixtures/*']},
     package_dir={'git': 'git'},
     license="BSD License",
-    requires=['gitdb (>=0.6.1)'],
+    requires=['gitdb (>=0.6.2)'],
     install_requires=install_requires,
     test_requirements=['mock', 'nose'] + install_requires,
     zip_safe=False,

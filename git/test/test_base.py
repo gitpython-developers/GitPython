@@ -118,9 +118,8 @@ class TestBase(TestBase):
         file_path = os.path.join(rw_repo.working_dir, filename)
         open(file_path, "wb").write(b'something')
 
-
         if os.name == 'nt':
-            # on windows, there is no way this works, see images on 
+            # on windows, there is no way this works, see images on
             # https://github.com/gitpython-developers/GitPython/issues/147#issuecomment-68881897
             # Therefore, it must be added using the python implementation
             rw_repo.index.add([file_path])
