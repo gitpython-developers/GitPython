@@ -21,6 +21,7 @@ from gitdb.util import (
 )
 from git.compat import (
     string_types,
+    defenc
 )
 
 from .log import RefLog
@@ -429,6 +430,7 @@ class SymbolicReference(object):
                     # in the line
                     # If we deleted the last line and this one is a tag-reference object,
                     # we drop it as well
+                    line = line.decode(defenc)
                     if (line.startswith('#') or full_ref_path not in line) and \
                             (not dropped_last_line or dropped_last_line and not line.startswith('^')):
                         new_lines.append(line)
@@ -446,7 +448,7 @@ class SymbolicReference(object):
                 if made_change:
                     # write-binary is required, otherwise windows will
                     # open the file in text mode and change LF to CRLF !
-                    open(pack_file_path, 'wb').writelines(new_lines)
+                    open(pack_file_path, 'wb').writelines(l.encode(defenc) for l in new_lines)
                 # END write out file
             # END open exception handling
         # END handle deletion
@@ -478,7 +480,7 @@ class SymbolicReference(object):
                 target_data = target.path
             if not resolve:
                 target_data = "ref: " + target_data
-            existing_data = open(abs_ref_path, 'rb').read().strip()
+            existing_data = open(abs_ref_path, 'rb').read().decode(defenc).strip()
             if existing_data != target_data:
                 raise OSError("Reference at %r does already exist, pointing to %r, requested was %r" %
                               (full_ref_path, existing_data, target_data))

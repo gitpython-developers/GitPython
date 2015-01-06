@@ -10,6 +10,7 @@ from .util import (
     parse_actor_and_date
 )
 from gitdb.util import hex_to_bin
+from git.compat import defenc
 
 __all__ = ("TagObject", )
 
@@ -52,11 +53,12 @@ class TagObject(base.Object):
         """Cache all our attributes at once"""
         if attr in TagObject.__slots__:
             ostream = self.repo.odb.stream(self.binsha)
-            lines = ostream.read().splitlines()
+            lines = ostream.read().decode(defenc).splitlines()
 
             obj, hexsha = lines[0].split(" ")       # object <hexsha>
             type_token, type_name = lines[1].split(" ")  # type <type_name>
-            self.object = get_object_type_by_name(type_name)(self.repo, hex_to_bin(hexsha))
+            self.object = \
+                get_object_type_by_name(type_name.encode('ascii'))(self.repo, hex_to_bin(hexsha))
 
             self.tag = lines[2][4:]  # tag <tag name>
 
