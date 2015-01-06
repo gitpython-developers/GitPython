@@ -159,7 +159,7 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
                 raise TypeError("Unknown mode %o found in tree data for path '%s'" % (mode, path))
         # END for each item
 
-    def __div__(self, file):
+    def join(self, file):
         """Find the named object in this tree's contents
         :return: ``git.Blob`` or ``git.Tree`` or ``git.Submodule``
 
@@ -191,6 +191,14 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
             # END for each obj
             raise KeyError(msg % file)
         # END handle long paths
+
+    def __div__(self, file):
+        """For PY2 only"""
+        return self.join(file)
+
+    def __truediv__(self, file):
+        """For PY3 only"""
+        return self.join(file)
 
     @property
     def trees(self):
@@ -235,7 +243,7 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
 
         if isinstance(item, string_types):
             # compatability
-            return self.__div__(item)
+            return self.join(item)
         # END index is basestring
 
         raise TypeError("Invalid index type: %r" % item)

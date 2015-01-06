@@ -138,6 +138,7 @@ class TestTree(TestBase):
             # END check for slash
 
             # slashes in paths are supported as well
+            # NOTE: on py3, / doesn't work with strings anymore ... 
             assert root[item.path] == item == root / item.path
         # END for each item
         assert found_slash
