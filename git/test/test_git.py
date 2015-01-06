@@ -17,6 +17,8 @@ from git.test.lib import (TestBase,
 from git import (Git,
                  GitCommandError)
 
+from git.compat import PY3
+
 
 class TestGit(TestBase):
 
@@ -34,11 +36,19 @@ class TestGit(TestBase):
 
     def test_call_unpack_args_unicode(self):
         args = Git._Git__unpack_args(u'Unicode€™')
-        assert_equal(args, ['Unicode\u20ac\u2122'])
+        if PY3:
+            mangled_value = 'Unicode\u20ac\u2122'
+        else:
+            mangled_value = 'Unicode\xe2\x82\xac\xe2\x84\xa2'
+        assert_equal(args, [mangled_value])
 
     def test_call_unpack_args(self):
         args = Git._Git__unpack_args(['git', 'log', '--', u'Unicode€™'])
-        assert_equal(args, ['git', 'log', '--', 'Unicode\u20ac\u2122'])
+        if PY3:
+            mangled_value = 'Unicode\u20ac\u2122'
+        else:
+            mangled_value = 'Unicode\xe2\x82\xac\xe2\x84\xa2'
+        assert_equal(args, ['git', 'log', '--', mangled_value])
 
     @raises(GitCommandError)
     def test_it_raises_errors(self):
