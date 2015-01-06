@@ -86,7 +86,7 @@ class TestBase(TestBase):
             assert base.Object in get_object_type_by_name(tname).mro()
         # END for each known type
 
-        assert_raises(ValueError, get_object_type_by_name, "doesntexist")
+        assert_raises(ValueError, get_object_type_by_name, b"doesntexist")
 
     def test_object_resolution(self):
         # objects must be resolved to shas so they compare equal

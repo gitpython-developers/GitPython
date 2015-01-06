@@ -80,7 +80,7 @@ class TestSubmodule(TestBase):
         assert isinstance(sm.branch_path, string_types)
 
         # some commits earlier we still have a submodule, but its at a different commit
-        smold = Submodule.iter_items(rwrepo, self.k_subm_changed).next()
+        smold = next(Submodule.iter_items(rwrepo, self.k_subm_changed))
         assert smold.binsha != sm.binsha
         assert smold != sm                  # the name changed
 
