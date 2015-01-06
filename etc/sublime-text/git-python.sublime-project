@@ -15,7 +15,11 @@
 			"folder_exclude_patterns" : [
 				".git",
 				"cover",
-				"git/ext"
+				"git/ext",
+				"dist",
+				".tox",
+				"doc/build",
+				"*.egg-info"
 			]
 		},
 		// GITDB
@@ -32,40 +36,27 @@
 			"folder_exclude_patterns" : [
 				".git",
 				"cover",
-				"gitdb/ext"
+				"gitdb/ext",
+				"dist",
+				"doc/build",
+				".tox",
 			]
 		},
 		// // SMMAP
 		// ////////
-		// {
-		// 	"follow_symlinks": true,
-		// 	"path": "../../git/ext/gitdb/gitdb/ext/smmap",
-		// 	"file_exclude_patterns" : [
-		// 		"*.sublime-workspace",
-		// 		".git",
-		// 		".noseids",
-		// 		".coverage"
-		// 	],
-		// 	"folder_exclude_patterns" : [
-		// 		".git",
-		// 		"cover",
-		// 	]
-		// },
-		// // ASYNC
-		// ////////
-		// {
-		// 	"follow_symlinks": true,
-		// 	"path": "../../git/ext/gitdb/gitdb/ext/async",
-		// 	"file_exclude_patterns" : [
-		// 		"*.sublime-workspace",
-		// 		".git",
-		// 		".noseids",
-		// 		".coverage"
-		// 	],
-		// 	"folder_exclude_patterns" : [
-		// 		".git",
-		// 		"cover",
-		// 	]
-		// },
+		{
+			"follow_symlinks": true,
+			"path": "../../git/ext/gitdb/gitdb/ext/smmap",
+			"file_exclude_patterns" : [
+				"*.sublime-workspace",
+				".git",
+				".noseids",
+				".coverage"
+			],
+			"folder_exclude_patterns" : [
+				".git",
+				"cover",
+			]
+		},
 	]
 }

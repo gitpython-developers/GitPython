@@ -3,8 +3,5 @@ source = git
 
 ; to make nosetests happy
 [report]
-omit = 
-	*/yaml*
-	*/tests/*
-    */python?.?/*
-    */site-packages/nose/*
+include = */git/*
+omit = */git/ext/*
