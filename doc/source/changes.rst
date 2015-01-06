@@ -2,7 +2,7 @@
 Changelog
 =========
 
-0.3.4 - python 3 support
+0.3.4 - Python 3 Support
 ========================
 * Internally, hexadecimal SHA1 are treated as ascii encoded strings. Binary SHA1 are treated as bytes.
 * Id attribute of Commit objects is now `hexsha`, instead of `binsha`. The latter makes no sense in python 3 and I see no application of it anyway besides its artificial usage in test cases.
