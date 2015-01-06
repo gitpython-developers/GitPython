@@ -118,5 +118,16 @@ class TestBase(TestBase):
         file_path = os.path.join(rw_repo.working_dir, filename)
         open(file_path, "wb").write(b'something')
 
-        rw_repo.git.add(rw_repo.working_dir)
+
+        if os.name == 'nt':
+            # on windows, there is no way this works, see images on 
+            # https://github.com/gitpython-developers/GitPython/issues/147#issuecomment-68881897
+            # Therefore, it must be added using the python implementation
+            rw_repo.index.add([file_path])
+            # However, when the test winds down, rmtree fails to delete this file, which is recognized
+            # as ??? only.
+        else:
+            # on posix, we can just add unicode files without problems
+            rw_repo.git.add(rw_repo.working_dir)
+        # end
         rw_repo.index.commit('message')

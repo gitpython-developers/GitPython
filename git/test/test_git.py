@@ -121,11 +121,16 @@ class TestGit(TestBase):
 
     def test_cmd_override(self):
         prev_cmd = self.git.GIT_PYTHON_GIT_EXECUTABLE
+        if os.name == 'nt':
+            exc = GitCommandError
+        else:
+            exc = OSError
+        # end handle windows case
         try:
             # set it to something that doens't exist, assure it raises
             type(self.git).GIT_PYTHON_GIT_EXECUTABLE = os.path.join(
                 "some", "path", "which", "doesn't", "exist", "gitbinary")
-            self.failUnlessRaises(OSError, self.git.version)
+            self.failUnlessRaises(exc, self.git.version)
         finally:
             type(self.git).GIT_PYTHON_GIT_EXECUTABLE = prev_cmd
         # END undo adjustment
