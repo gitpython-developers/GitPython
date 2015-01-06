@@ -40,6 +40,7 @@ def tree_to_stream(entries, write):
         write(b''.join((mode_str, b' ', name, b'\0', binsha)))
     # END for each item
 
+
 def tree_entries_from_data(data):
     """Reads the binary representation of a tree and returns tuples of Tree items
     :param data: data block with tree data (as bytes)

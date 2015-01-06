@@ -15,7 +15,6 @@ from git.compat import xrange
 from git.test.test_commit import assert_commit_serialization
 
 
-
 class TestPerformance(TestBigRepoRW):
 
     # ref with about 100 commits in its history

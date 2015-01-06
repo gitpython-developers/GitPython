@@ -18,6 +18,7 @@ import io
 from copy import copy
 from git.config import cp
 
+
 class TestBase(TestCase):
 
     def _to_memcache(self, file_path):

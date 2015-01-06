@@ -178,7 +178,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
         # Used in python 3, needs to stay in sync with sections for underlying implementation to work
         if not hasattr(self, '_proxies'):
             self._proxies = self._dict()
-        
+
         self._file_or_files = file_or_files
         self._read_only = read_only
         self._is_initialized = False
@@ -206,7 +206,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
 
     def release(self):
         """Flush changes and release the configuration write lock. This instance must not be used anymore afterwards.
-        In Python 3, it's required to explicitly release locks and flush changes, as __del__ is not called 
+        In Python 3, it's required to explicitly release locks and flush changes, as __del__ is not called
         deterministically anymore."""
         # checking for the lock here makes sure we do not raise during write()
         # in case an invalid parser was created who could not get a lock

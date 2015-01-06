@@ -256,7 +256,7 @@ class RefLog(list, Serializable):
         committer = isinstance(config_reader, Actor) and config_reader or Actor.committer(config_reader)
         entry = RefLogEntry((
             bin_to_hex(oldbinsha).decode('ascii'),
-            bin_to_hex(newbinsha).decode('ascii'), 
+            bin_to_hex(newbinsha).decode('ascii'),
             committer, (int(time.time()), time.altzone), message
         ))
 

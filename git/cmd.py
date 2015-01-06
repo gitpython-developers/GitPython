@@ -20,7 +20,6 @@ from .util import (
 )
 from .exc import GitCommandError
 from git.compat import (
-    text_type,
     string_types,
     defenc,
     PY3
@@ -400,7 +399,8 @@ class Git(LazyMixin):
         if self.GIT_PYTHON_TRACE == 'full':
             cmdstr = " ".join(command)
             if stderr_value:
-                log.info("%s -> %d; stdout: '%s'; stderr: '%s'", cmdstr, status, stdout_value.decode(defenc), stderr_value.decode(defenc))
+                log.info("%s -> %d; stdout: '%s'; stderr: '%s'",
+                         cmdstr, status, stdout_value.decode(defenc), stderr_value.decode(defenc))
             elif stdout_value:
                 log.info("%s -> %d; stdout: '%s'", cmdstr, status, stdout_value.decode(defenc))
             else:
@@ -413,8 +413,7 @@ class Git(LazyMixin):
             else:
                 raise GitCommandError(command, status, stderr_value)
 
-
-        if isinstance(stdout_value, bytes): # could also be output_stream
+        if isinstance(stdout_value, bytes):  # could also be output_stream
             stdout_value = stdout_value.decode(defenc)
 
         # Allow access to the command's status code

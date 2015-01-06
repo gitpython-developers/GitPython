@@ -12,6 +12,7 @@ from git.test.lib import (
 from git import Stats
 from git.compat import defenc
 
+
 class TestStats(TestBase):
 
     def test_list_from_string(self):

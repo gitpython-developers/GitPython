@@ -144,7 +144,7 @@ class SymbolicReference(object):
             for sha, path in cls._iter_packed_refs(repo):
                 if path != ref_path:
                     continue
-                # sha will be used as 
+                # sha will be used
                 tokens = sha, path
                 break
             # END for each packed ref

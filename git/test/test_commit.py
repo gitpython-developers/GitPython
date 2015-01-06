@@ -19,7 +19,6 @@ from git import (
     Actor,
 )
 from gitdb import IStream
-from gitdb.util import hex_to_bin
 from git.compat import (
     string_types,
     text_type
