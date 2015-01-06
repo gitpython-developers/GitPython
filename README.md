@@ -69,31 +69,15 @@ New BSD License.  See the LICENSE file.
 [![Coverage Status](https://coveralls.io/repos/gitpython-developers/GitPython/badge.png?branch=0.3)](https://coveralls.io/r/gitpython-developers/GitPython?branch=0.3)
 [![Documentation Status](https://readthedocs.org/projects/gitpython/badge/?version=stable)](https://readthedocs.org/projects/gitpython/?badge=stable)
 
-
-The project was idle for 2 years, the last release (v0.3.2 RC1) was made on July 2011. Reason for this might have been the project's dependency on me as sole active maintainer, which is an issue in itself.
-
 Now that there seems to be a massive user base, this should be motivation enough to let git-python return to a proper state, which means
 
 * no open pull requests
 * no open issues describing bugs
 
-In short, I want to make a new release of 0.3 with all contributions and fixes included, foster community building to facilitate contributions.
-
-#### PRESENT GOALS
-
-The goals I have set for myself, in order, are as follows, all on branch 0.3.
-
-* evaluate python 3.3 compatibility and establish it if possible
-
-While that is happening, I will try hard to foster community around the project. This means being more responsive on the mailing list and in issues, as well as setting up clear guide lines about the [contribution](http://rfc.zeromq.org/spec:22) and maintenance workflow.
-
 #### FUTURE GOALS
 
 There has been a lot of work in the master branch, which is the direction I want git-python to go. Namely, it should be able to freely mix and match the back-end used, depending on your requirements and environment.
 
-* restructure master to match my [OSS standard](https://github.com/Byron/bcore)
-* review code base and bring test-suite back online
-* establish python 3.3 compatibility
-* make it work similarly to 0.3, but with the option to swap for at least one additional backend
+* make new master work similarly to 0.3, but with the option to swap for at least one additional backend
 * make a 1.0 release
 * add backends as required
