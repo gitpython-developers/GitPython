@@ -80,7 +80,7 @@ class TestObjDBPerformance(TestBigRepoR):
             elapsed_readchunks = time() - st
 
             stream.seek(0)
-            assert ''.join(chunks) == stream.getvalue()
+            assert b''.join(chunks) == stream.getvalue()
 
             cs_kib = cs / 1000
             print("Read %i KiB of %s data in %i KiB chunks from loose odb in %f s ( %f Read KiB / s)"
