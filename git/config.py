@@ -7,12 +7,23 @@
 configuration files"""
 
 import re
-import ConfigParser as cp
+try:
+    import ConfigParser as cp
+except ImportError:
+    # PY3
+    import configparser as cp
 import inspect
 import logging
+import abc
 
 from git.odict import OrderedDict
 from git.util import LockFile
+from git.compat import (
+    string_types,
+    FileType,
+    defenc,
+    with_metaclass
+)
 
 __all__ = ('GitConfigParser', 'SectionConstraint')
 
@@ -20,7 +31,7 @@ __all__ = ('GitConfigParser', 'SectionConstraint')
 log = logging.getLogger('git.config')
 
 
-class MetaParserBuilder(type):
+class MetaParserBuilder(abc.ABCMeta):
 
     """Utlity class wrapping base-class methods into decorators that assure read-only properties"""
     def __new__(metacls, name, bases, clsdict):
@@ -31,7 +42,7 @@ class MetaParserBuilder(type):
         if kmm in clsdict:
             mutating_methods = clsdict[kmm]
             for base in bases:
-                methods = (t for t in inspect.getmembers(base, inspect.ismethod) if not t[0].startswith("_"))
+                methods = (t for t in inspect.getmembers(base, inspect.isroutine) if not t[0].startswith("_"))
                 for name, method in methods:
                     if name in clsdict:
                         continue
@@ -88,6 +99,12 @@ class SectionConstraint(object):
         self._config = config
         self._section_name = section
 
+    def __del__(self):
+        # Yes, for some reason, we have to call it explicitly for it to work in PY3 !
+        # Apparently __del__ doesn't get call anymore if refcount becomes 0
+        # Ridiculous ... .
+        self._config.release()
+
     def __getattr__(self, attr):
         if attr in self._valid_attrs_:
             return lambda *args, **kwargs: self._call_config(attr, *args, **kwargs)
@@ -103,8 +120,12 @@ class SectionConstraint(object):
         """return: Configparser instance we constrain"""
         return self._config
 
+    def release(self):
+        """Equivalent to GitConfigParser.release(), which is called on our underlying parser instance"""
+        return self._config.release()
 
-class GitConfigParser(cp.RawConfigParser, object):
+
+class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, object)):
 
     """Implements specifics required to read git style configuration files.
 
@@ -120,7 +141,6 @@ class GitConfigParser(cp.RawConfigParser, object):
     :note:
         The config is case-sensitive even when queried, hence section and option names
         must match perfectly."""
-    __metaclass__ = MetaParserBuilder
 
     #{ Configuration
     # The lock type determines the type of lock to use in new configuration readers.
@@ -142,7 +162,6 @@ class GitConfigParser(cp.RawConfigParser, object):
 
     # list of RawConfigParser methods able to change the instance
     _mutating_methods_ = ("add_section", "remove_section", "remove_option", "set")
-    __slots__ = ("_sections", "_defaults", "_file_or_files", "_read_only", "_is_initialized", '_lock')
 
     def __init__(self, file_or_files, read_only=True):
         """Initialize a configuration reader to read the given file_or_files and to
@@ -154,11 +173,11 @@ class GitConfigParser(cp.RawConfigParser, object):
         :param read_only:
             If True, the ConfigParser may only read the data , but not change it.
             If False, only a single file path or file object may be given."""
-        super(GitConfigParser, self).__init__()
-        # initialize base with ordered dictionaries to be sure we write the same
-        # file back
-        self._sections = OrderedDict()
-        self._defaults = OrderedDict()
+        cp.RawConfigParser.__init__(self, dict_type=OrderedDict)
+
+        # Used in python 3, needs to stay in sync with sections for underlying implementation to work
+        if not hasattr(self, '_proxies'):
+            self._proxies = self._dict()
 
         self._file_or_files = file_or_files
         self._read_only = read_only
@@ -171,7 +190,7 @@ class GitConfigParser(cp.RawConfigParser, object):
                     "Write-ConfigParsers can operate on a single file only, multiple files have been passed")
             # END single file check
 
-            if not isinstance(file_or_files, basestring):
+            if not isinstance(file_or_files, string_types):
                 file_or_files = file_or_files.name
             # END get filename from handle/stream
             # initialize lock base - we want to write
@@ -182,9 +201,16 @@ class GitConfigParser(cp.RawConfigParser, object):
 
     def __del__(self):
         """Write pending changes if required and release locks"""
+        # NOTE: only consistent in PY2
+        self.release()
+
+    def release(self):
+        """Flush changes and release the configuration write lock. This instance must not be used anymore afterwards.
+        In Python 3, it's required to explicitly release locks and flush changes, as __del__ is not called
+        deterministically anymore."""
         # checking for the lock here makes sure we do not raise during write()
         # in case an invalid parser was created who could not get a lock
-        if self.read_only or not self._lock._has_lock():
+        if self.read_only or (self._lock and not self._lock._has_lock()):
             return
 
         try:
@@ -192,6 +218,11 @@ class GitConfigParser(cp.RawConfigParser, object):
                 self.write()
             except IOError:
                 log.error("Exception during destruction of GitConfigParser", exc_info=True)
+            except ReferenceError:
+                # This happens in PY3 ... and usually means that some state cannot be written
+                # as the sections dict cannot be iterated
+                # Usually when shutting down the interpreter, don'y know how to fix this
+                pass
         finally:
             self._lock._release_lock()
 
@@ -214,7 +245,8 @@ class GitConfigParser(cp.RawConfigParser, object):
         lineno = 0
         e = None                                  # None, or an exception
         while True:
-            line = fp.readline()
+            # we assume to read binary !
+            line = fp.readline().decode(defenc)
             if not line:
                 break
             lineno = lineno + 1
@@ -234,9 +266,9 @@ class GitConfigParser(cp.RawConfigParser, object):
                     elif sectname == cp.DEFAULTSECT:
                         cursect = self._defaults
                     else:
-                        # THE ONLY LINE WE CHANGED !
-                        cursect = OrderedDict((('__name__', sectname),))
+                        cursect = self._dict((('__name__', sectname),))
                         self._sections[sectname] = cursect
+                        self._proxies[sectname] = None
                     # So sections can't start with a continuation line
                     optname = None
                 # no section header in the file?
@@ -287,7 +319,7 @@ class GitConfigParser(cp.RawConfigParser, object):
             # assume a path if it is not a file-object
             if not hasattr(file_object, "seek"):
                 try:
-                    fp = open(file_object)
+                    fp = open(file_object, 'rb')
                     close_fp = True
                 except IOError:
                     continue
@@ -306,16 +338,17 @@ class GitConfigParser(cp.RawConfigParser, object):
         """Write an .ini-format representation of the configuration state in
         git compatible format"""
         def write_section(name, section_dict):
-            fp.write("[%s]\n" % name)
+            fp.write(("[%s]\n" % name).encode(defenc))
             for (key, value) in section_dict.items():
                 if key != "__name__":
-                    fp.write("\t%s = %s\n" % (key, str(value).replace('\n', '\n\t')))
+                    fp.write(("\t%s = %s\n" % (key, str(value).replace('\n', '\n\t'))).encode(defenc))
                 # END if key is not __name__
         # END section writing
 
         if self._defaults:
             write_section(cp.DEFAULTSECT, self._defaults)
-        map(lambda t: write_section(t[0], t[1]), self._sections.items())
+        for name, value in self._sections.items():
+            write_section(name, value)
 
     @needs_values
     def write(self):
@@ -329,12 +362,12 @@ class GitConfigParser(cp.RawConfigParser, object):
         close_fp = False
 
         # we have a physical file on disk, so get a lock
-        if isinstance(fp, (basestring, file)):
+        if isinstance(fp, string_types + (FileType, )):
             self._lock._obtain_lock()
         # END get lock for physical files
 
         if not hasattr(fp, "seek"):
-            fp = open(self._file_or_files, "w")
+            fp = open(self._file_or_files, "wb")
             close_fp = True
         else:
             fp.seek(0)
@@ -363,8 +396,7 @@ class GitConfigParser(cp.RawConfigParser, object):
     @set_dirty_and_flush_changes
     def add_section(self, section):
         """Assures added options will stay in order"""
-        super(GitConfigParser, self).add_section(section)
-        self._sections[section] = OrderedDict()
+        return super(GitConfigParser, self).add_section(section)
 
     @property
     def read_only(self):
@@ -387,7 +419,7 @@ class GitConfigParser(cp.RawConfigParser, object):
                 return default
             raise
 
-        types = (long, float)
+        types = (int, float)
         for numtype in types:
             try:
                 val = numtype(valuestr)
@@ -408,7 +440,7 @@ class GitConfigParser(cp.RawConfigParser, object):
         if vl == 'true':
             return True
 
-        if not isinstance(valuestr, basestring):
+        if not isinstance(valuestr, string_types):
             raise TypeError("Invalid value type: only int, long, float and str are allowed", valuestr)
 
         return valuestr

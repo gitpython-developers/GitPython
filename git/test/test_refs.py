@@ -105,9 +105,11 @@ class TestRefs(TestBase):
             tv = "testopt"
             writer.set_value(tv, 1)
             assert writer.get_value(tv) == 1
-            del(writer)
+            writer.release()
             assert head.config_reader().get_value(tv) == 1
-            head.config_writer().remove_option(tv)
+            writer = head.config_writer()
+            writer.remove_option(tv)
+            writer.release()
 
             # after the clone, we might still have a tracking branch setup
             head.set_tracking_branch(None)

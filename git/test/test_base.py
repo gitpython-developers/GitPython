@@ -1,12 +1,13 @@
+#-*-coding:utf-8-*-
 # test_base.py
 # Copyright (C) 2008, 2009 Michael Trier (mtrier@gmail.com) and contributors
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
+import os
+import tempfile
 
 import git.objects.base as base
-import os
-
 from git.test.lib import (
     TestBase,
     assert_raises,
@@ -68,10 +69,13 @@ class TestBase(TestBase):
             data = data_stream.read()
             assert data
 
-            tmpfile = os.tmpfile()
+            tmpfilename = tempfile.mktemp(suffix='test-stream')
+            tmpfile = open(tmpfilename, 'wb+')
             assert item == item.stream_data(tmpfile)
             tmpfile.seek(0)
             assert tmpfile.read() == data
+            tmpfile.close()
+            os.remove(tmpfilename)
             # END stream to file directly
         # END for each object type to create
 
@@ -85,7 +89,7 @@ class TestBase(TestBase):
             assert base.Object in get_object_type_by_name(tname).mro()
         # END for each known type
 
-        assert_raises(ValueError, get_object_type_by_name, "doesntexist")
+        assert_raises(ValueError, get_object_type_by_name, b"doesntexist")
 
     def test_object_resolution(self):
         # objects must be resolved to shas so they compare equal
@@ -106,3 +110,13 @@ class TestBase(TestBase):
         assert not rw_repo.config_reader("repository").getboolean("core", "bare")
         assert rw_remote_repo.config_reader("repository").getboolean("core", "bare")
         assert os.path.isdir(os.path.join(rw_repo.working_tree_dir, 'lib'))
+
+    @with_rw_repo('0.1.6')
+    def test_add_unicode(self, rw_repo):
+        filename = u"שלום.txt"
+
+        file_path = os.path.join(rw_repo.working_dir, filename)
+        open(file_path, "wb").write(b'something')
+
+        rw_repo.git.add(rw_repo.working_dir)
+        rw_repo.index.commit('message')

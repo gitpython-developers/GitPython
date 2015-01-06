@@ -1,20 +1,19 @@
 """Module with our own gitdb implementation - it uses the git command"""
-from exc import (
-    GitCommandError,
-    BadObject
-)
-
 from gitdb.base import (
     OInfo,
     OStream
 )
-
 from gitdb.util import (
     bin_to_hex,
     hex_to_bin
 )
 from gitdb.db import GitDB
 from gitdb.db import LooseObjectDB
+
+from .exc import (
+    GitCommandError,
+    BadObject
+)
 
 
 __all__ = ('GitCmdObjectDB', 'GitDB')

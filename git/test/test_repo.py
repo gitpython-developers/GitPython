@@ -30,12 +30,16 @@ from git import (
 from git.util import join_path_native
 from git.exc import BadObject
 from gitdb.util import bin_to_hex
+from git.compat import (
+    string_types,
+    defenc
+)
 
 import os
 import sys
 import tempfile
 import shutil
-from cStringIO import StringIO
+from io import BytesIO
 
 
 class TestRepo(TestBase):
@@ -258,13 +262,16 @@ class TestRepo(TestBase):
         assert self.rorepo.tag('refs/tags/0.1.5').commit
 
     def test_archive(self):
-        tmpfile = os.tmpfile()
-        self.rorepo.archive(tmpfile, '0.1.5')
-        assert tmpfile.tell()
+        tmpfile = tempfile.mktemp(suffix='archive-test')
+        stream = open(tmpfile, 'wb')
+        self.rorepo.archive(stream, '0.1.5')
+        assert stream.tell()
+        stream.close()
+        os.remove(tmpfile)
 
     @patch.object(Git, '_call_process')
     def test_should_display_blame_information(self, git):
-        git.return_value = fixture('blame')
+        git.return_value = fixture('blame').decode(defenc)
         b = self.rorepo.blame('master', 'lib/git.py')
         assert_equal(13, len(b))
         assert_equal(2, len(b[0]))
@@ -286,7 +293,7 @@ class TestRepo(TestBase):
         # test the 'lines per commit' entries
         tlist = b[0][1]
         assert_true(tlist)
-        assert_true(isinstance(tlist[0], basestring))
+        assert_true(isinstance(tlist[0], string_types))
         assert_true(len(tlist) < sum(len(t) for t in tlist))               # test for single-char bug
 
     def test_blame_real(self):
@@ -335,6 +342,7 @@ class TestRepo(TestBase):
             try:
                 writer = self.rorepo.config_writer(config_level)
                 assert not writer.read_only
+                writer.release()
             except IOError:
                 # its okay not to get a writer for some configuration files if we
                 # have no permissions
@@ -349,7 +357,8 @@ class TestRepo(TestBase):
 
         tag = self.rorepo.create_tag("new_tag", "HEAD~2")
         self.rorepo.delete_tag(tag)
-        self.rorepo.config_writer()
+        writer = self.rorepo.config_writer()
+        writer.release()
         remote = self.rorepo.create_remote("new_remote", "git@server:repo.git")
         self.rorepo.delete_remote(remote)
 
@@ -361,27 +370,27 @@ class TestRepo(TestBase):
     def test_git_cmd(self):
         # test CatFileContentStream, just to be very sure we have no fencepost errors
         # last \n is the terminating newline that it expects
-        l1 = "0123456789\n"
-        l2 = "abcdefghijklmnopqrstxy\n"
-        l3 = "z\n"
-        d = "%s%s%s\n" % (l1, l2, l3)
+        l1 = b"0123456789\n"
+        l2 = b"abcdefghijklmnopqrstxy\n"
+        l3 = b"z\n"
+        d = l1 + l2 + l3 + b"\n"
 
         l1p = l1[:5]
 
         # full size
         # size is without terminating newline
         def mkfull():
-            return Git.CatFileContentStream(len(d) - 1, StringIO(d))
+            return Git.CatFileContentStream(len(d) - 1, BytesIO(d))
 
         ts = 5
 
         def mktiny():
-            return Git.CatFileContentStream(ts, StringIO(d))
+            return Git.CatFileContentStream(ts, BytesIO(d))
 
         # readlines no limit
         s = mkfull()
         lines = s.readlines()
-        assert len(lines) == 3 and lines[-1].endswith('\n')
+        assert len(lines) == 3 and lines[-1].endswith(b'\n')
         assert s._stream.tell() == len(d)   # must have scrubbed to the end
 
         # realines line limit
@@ -565,7 +574,7 @@ class TestRepo(TestBase):
         # try partial parsing
         max_items = 40
         for i, binsha in enumerate(self.rorepo.odb.sha_iter()):
-            assert rev_parse(bin_to_hex(binsha)[:8 - (i % 2)]).binsha == binsha
+            assert rev_parse(bin_to_hex(binsha)[:8 - (i % 2)].decode('ascii')).binsha == binsha
             if i > max_items:
                 # this is rather slow currently, as rev_parse returns an object
                 # which requires accessing packs, it has some additional overhead
@@ -644,6 +653,6 @@ class TestRepo(TestBase):
         assert os.path.abspath(git_file_repo.git_dir) == real_path_abs
 
         # Test using an absolute gitdir path in the .git file.
-        open(git_file_path, 'wb').write('gitdir: %s\n' % real_path_abs)
+        open(git_file_path, 'wb').write(('gitdir: %s\n' % real_path_abs).encode('ascii'))
         git_file_repo = Repo(rwrepo.working_tree_dir)
         assert os.path.abspath(git_file_repo.git_dir) == real_path_abs

@@ -83,10 +83,6 @@ In short, I want to make a new release of 0.3 with all contributions and fixes i
 
 The goals I have set for myself, in order, are as follows, all on branch 0.3.
 
-* bring the test suite back online to work with the most commonly used git version
-* merge all open pull requests, may there be a test-case or not, back. If something breaks, fix it if possible or let the contributor know
-* conform git-python's structure and toolchain to the one used in my [other OSS projects](https://github.com/Byron/bcore)
-* evaluate all open issues and close them if possible
 * evaluate python 3.3 compatibility and establish it if possible
 
 While that is happening, I will try hard to foster community around the project. This means being more responsive on the mailing list and in issues, as well as setting up clear guide lines about the [contribution](http://rfc.zeromq.org/spec:22) and maintenance workflow.

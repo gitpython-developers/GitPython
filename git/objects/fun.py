@@ -1,5 +1,12 @@
 """Module with functions which are supposed to be as fast as possible"""
 from stat import S_ISDIR
+from git.compat import (
+    byte_ord,
+    defenc,
+    xrange,
+    text_type,
+    bchr
+)
 
 __all__ = ('tree_to_stream', 'tree_entries_from_data', 'traverse_trees_recursive',
            'traverse_tree_recursive')
@@ -13,13 +20,13 @@ def tree_to_stream(entries, write):
     bit_mask = 7            # 3 bits set
 
     for binsha, mode, name in entries:
-        mode_str = ''
+        mode_str = b''
         for i in xrange(6):
-            mode_str = chr(((mode >> (i * 3)) & bit_mask) + ord_zero) + mode_str
+            mode_str = bchr(((mode >> (i * 3)) & bit_mask) + ord_zero) + mode_str
         # END for each 8 octal value
 
         # git slices away the first octal if its zero
-        if mode_str[0] == '0':
+        if byte_ord(mode_str[0]) == ord_zero:
             mode_str = mode_str[1:]
         # END save a byte
 
@@ -28,17 +35,18 @@ def tree_to_stream(entries, write):
         # hence we must convert to an utf8 string for it to work properly.
         # According to my tests, this is exactly what git does, that is it just
         # takes the input literally, which appears to be utf8 on linux.
-        if isinstance(name, unicode):
-            name = name.encode("utf8")
-        write("%s %s\0%s" % (mode_str, name, binsha))
+        if isinstance(name, text_type):
+            name = name.encode(defenc)
+        write(b''.join((mode_str, b' ', name, b'\0', binsha)))
     # END for each item
 
 
 def tree_entries_from_data(data):
     """Reads the binary representation of a tree and returns tuples of Tree items
-    :param data: data block with tree data
+    :param data: data block with tree data (as bytes)
     :return: list(tuple(binsha, mode, tree_relative_path), ...)"""
     ord_zero = ord('0')
+    space_ord = ord(' ')
     len_data = len(data)
     i = 0
     out = list()
@@ -48,10 +56,10 @@ def tree_entries_from_data(data):
         # read mode
         # Some git versions truncate the leading 0, some don't
         # The type will be extracted from the mode later
-        while data[i] != ' ':
+        while byte_ord(data[i]) != space_ord:
             # move existing mode integer up one level being 3 bits
             # and add the actual ordinal value of the character
-            mode = (mode << 3) + (ord(data[i]) - ord_zero)
+            mode = (mode << 3) + (byte_ord(data[i]) - ord_zero)
             i += 1
         # END while reading mode
 
@@ -61,7 +69,7 @@ def tree_entries_from_data(data):
         # parse name, it is NULL separated
 
         ns = i
-        while data[i] != '\0':
+        while byte_ord(data[i]) != 0:
             i += 1
         # END while not reached NULL
 
@@ -69,12 +77,9 @@ def tree_entries_from_data(data):
         # Only use the respective unicode object if the byte stream was encoded
         name = data[ns:i]
         try:
-            name_enc = name.decode("utf-8")
+            name = name.decode(defenc)
         except UnicodeDecodeError:
             pass
-        else:
-            if len(name) > len(name_enc):
-                name = name_enc
         # END handle encoding
 
         # byte is NULL, get next 20

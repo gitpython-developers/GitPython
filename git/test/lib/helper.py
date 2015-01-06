@@ -6,12 +6,14 @@
 from __future__ import print_function
 import os
 import sys
-from git import Repo, Remote, GitCommandError, Git
 from unittest import TestCase
 import time
 import tempfile
 import shutil
-import cStringIO
+import io
+
+from git import Repo, Remote, GitCommandError, Git
+from git.compat import string_types
 
 GIT_REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
@@ -46,8 +48,8 @@ class StringProcessAdapter(object):
     Its tailored to work with the test system only"""
 
     def __init__(self, input_string):
-        self.stdout = cStringIO.StringIO(input_string)
-        self.stderr = cStringIO.StringIO()
+        self.stdout = io.BytesIO(input_string)
+        self.stderr = io.BytesIO()
 
     def wait(self):
         return 0
@@ -89,7 +91,7 @@ def with_rw_repo(working_tree_ref, bare=False):
     To make working with relative paths easier, the cwd will be set to the working
     dir of the repository.
     """
-    assert isinstance(working_tree_ref, basestring), "Decorator requires ref name for working tree checkout"
+    assert isinstance(working_tree_ref, string_types), "Decorator requires ref name for working tree checkout"
 
     def argument_passer(func):
         def repo_creator(self):
@@ -152,7 +154,7 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
     See working dir info in with_rw_repo
     :note: We attempt to launch our own invocation of git-daemon, which will be shutdown at the end of the test.
     """
-    assert isinstance(working_tree_ref, basestring), "Decorator requires ref name for working tree checkout"
+    assert isinstance(working_tree_ref, string_types), "Decorator requires ref name for working tree checkout"
 
     def argument_passer(func):
         def remote_repo_creator(self):
@@ -177,6 +179,7 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
                 pass
             crw.set(section, "receivepack", True)
             # release lock
+            crw.release()
             del(crw)
 
             # initialize the remote - first do it as local remote and pull, then
@@ -191,7 +194,7 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
             temp_dir = os.path.dirname(_mktemp())
             # On windows, this will fail ... we deal with failures anyway and default to telling the user to do it
             try:
-                gd = Git().daemon(temp_dir, as_process=True)
+                gd = Git().daemon(temp_dir, enable='receive-pack', as_process=True)
                 # yes, I know ... fortunately, this is always going to work if sleep time is just large enough
                 time.sleep(0.5)
             except Exception:
@@ -213,7 +216,8 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
                     msg += 'Otherwise, run: git-daemon "%s"' % temp_dir
                     raise AssertionError(msg)
                 else:
-                    msg = 'Please start a git-daemon to run this test, execute: git-daemon "%s"' % temp_dir
+                    msg = 'Please start a git-daemon to run this test, execute: git daemon --enable=receive-pack "%s"'
+                    msg %= temp_dir
                     raise AssertionError(msg)
                 # END make assertion
             # END catch ls remote error
@@ -225,7 +229,8 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
                 return func(self, rw_repo, rw_remote_repo)
             finally:
                 # gd.proc.kill() ... no idea why that doesn't work
-                os.kill(gd.proc.pid, 15)
+                if gd is not None:
+                    os.kill(gd.proc.pid, 15)
 
                 os.chdir(prev_cwd)
                 rw_repo.git.clear_cache()
@@ -233,7 +238,8 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
                 shutil.rmtree(repo_dir, onerror=_rmtree_onerror)
                 shutil.rmtree(remote_repo_dir, onerror=_rmtree_onerror)
 
-                gd.proc.wait()
+                if gd is not None:
+                    gd.proc.wait()
             # END cleanup
         # END bare repo creator
         remote_repo_creator.__name__ = func.__name__

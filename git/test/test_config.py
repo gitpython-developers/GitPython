@@ -11,16 +11,19 @@ from git.test.lib import (
 from git import (
     GitConfigParser
 )
-import StringIO
+from git.compat import (
+    string_types,
+)
+import io
 from copy import copy
-from ConfigParser import NoSectionError
+from git.config import cp
 
 
 class TestBase(TestCase):
 
     def _to_memcache(self, file_path):
-        fp = open(file_path, "r")
-        sio = StringIO.StringIO(fp.read())
+        fp = open(file_path, "rb")
+        sio = io.BytesIO(fp.read())
         sio.name = file_path
         return sio
 
@@ -38,7 +41,7 @@ class TestBase(TestCase):
             w_config.write()                # enforce writing
 
             # we stripped lines when reading, so the results differ
-            assert file_obj.getvalue() != file_obj_orig.getvalue()
+            assert file_obj.getvalue() and file_obj.getvalue() != file_obj_orig.getvalue()
 
             # creating an additional config writer must fail due to exclusive access
             self.failUnlessRaises(IOError, GitConfigParser, file_obj, read_only=False)
@@ -85,7 +88,7 @@ class TestBase(TestCase):
                 num_options += 1
                 val = r_config.get(section, option)
                 val_typed = r_config.get_value(section, option)
-                assert isinstance(val_typed, (bool, long, float, basestring))
+                assert isinstance(val_typed, (bool, int, float, ) + string_types)
                 assert val
                 assert "\n" not in option
                 assert "\n" not in val
@@ -104,4 +107,4 @@ class TestBase(TestCase):
         assert r_config.get_value("doesnt", "exist", default) == default
 
         # it raises if there is no default though
-        self.failUnlessRaises(NoSectionError, r_config.get_value, "doesnt", "exist")
+        self.failUnlessRaises(cp.NoSectionError, r_config.get_value, "doesnt", "exist")

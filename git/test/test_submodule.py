@@ -9,6 +9,7 @@ from git.exc import InvalidGitRepositoryError
 from git.objects.submodule.base import Submodule
 from git.objects.submodule.root import RootModule, RootUpdateProgress
 from git.util import to_native_path_linux, join_path_native
+from git.compat import string_types
 import shutil
 import git
 import sys
@@ -76,10 +77,10 @@ class TestSubmodule(TestBase):
         self.failUnlessRaises(InvalidGitRepositoryError, getattr, sm, 'branch')
 
         # branch_path works, as its just a string
-        assert isinstance(sm.branch_path, basestring)
+        assert isinstance(sm.branch_path, string_types)
 
         # some commits earlier we still have a submodule, but its at a different commit
-        smold = Submodule.iter_items(rwrepo, self.k_subm_changed).next()
+        smold = next(Submodule.iter_items(rwrepo, self.k_subm_changed))
         assert smold.binsha != sm.binsha
         assert smold != sm                  # the name changed
 
@@ -98,7 +99,7 @@ class TestSubmodule(TestBase):
             # for faster checkout, set the url to the local path
             new_smclone_path = to_native_path_linux(join_path_native(self.rorepo.working_tree_dir, sm.path))
             writer.set_value('url', new_smclone_path)
-            del(writer)
+            writer.release()
             assert sm.config_reader().get_value('url') == new_smclone_path
             assert sm.url == new_smclone_path
         # END handle bare repo
@@ -195,7 +196,9 @@ class TestSubmodule(TestBase):
 
             # adjust the path of the submodules module to point to the local destination
             new_csmclone_path = to_native_path_linux(join_path_native(self.rorepo.working_tree_dir, sm.path, csm.path))
-            csm.config_writer().set_value('url', new_csmclone_path)
+            writer = csm.config_writer()
+            writer.set_value('url', new_csmclone_path)
+            writer.release()
             assert csm.url == new_csmclone_path
 
             # dry-run does nothing
@@ -256,8 +259,12 @@ class TestSubmodule(TestBase):
             # NOTE: As we did  a few updates in the meanwhile, the indices were reset
             # Hence we create some changes
             csm.set_parent_commit(csm.repo.head.commit)
-            sm.config_writer().set_value("somekey", "somevalue")
-            csm.config_writer().set_value("okey", "ovalue")
+            writer = sm.config_writer()
+            writer.set_value("somekey", "somevalue")
+            writer.release()
+            writer = csm.config_writer()
+            writer.set_value("okey", "ovalue")
+            writer.release()
             self.failUnlessRaises(InvalidGitRepositoryError, sm.remove)
             # if we remove the dirty index, it would work
             sm.module().index.reset()
@@ -405,7 +412,8 @@ class TestSubmodule(TestBase):
 
         assert len(rm.list_items(rm.module())) == 1
         rm.config_reader()
-        rm.config_writer()
+        w = rm.config_writer()
+        w.release()
 
         # deep traversal gitdb / async
         rsmsp = [sm.path for sm in rm.traverse()]
@@ -430,8 +438,9 @@ class TestSubmodule(TestBase):
         assert not sm.module_exists()               # was never updated after rwrepo's clone
 
         # assure we clone from a local source
-        sm.config_writer().set_value(
-            'url', to_native_path_linux(join_path_native(self.rorepo.working_tree_dir, sm.path)))
+        writer = sm.config_writer()
+        writer.set_value('url', to_native_path_linux(join_path_native(self.rorepo.working_tree_dir, sm.path)))
+        writer.release()
 
         # dry-run does nothing
         sm.update(recursive=False, dry_run=True, progress=prog)
@@ -439,7 +448,9 @@ class TestSubmodule(TestBase):
 
         sm.update(recursive=False)
         assert sm.module_exists()
-        sm.config_writer().set_value('path', fp)    # change path to something with prefix AFTER url change
+        writer = sm.config_writer()
+        writer.set_value('path', fp)    # change path to something with prefix AFTER url change
+        writer.release()
 
         # update fails as list_items in such a situations cannot work, as it cannot
         # find the entry at the changed path
@@ -503,7 +514,9 @@ class TestSubmodule(TestBase):
         # repository at the different url
         nsm.set_parent_commit(csmremoved)
         nsmurl = to_native_path_linux(join_path_native(self.rorepo.working_tree_dir, rsmsp[0]))
-        nsm.config_writer().set_value('url', nsmurl)
+        writer = nsm.config_writer()
+        writer.set_value('url', nsmurl)
+        writer.release()
         csmpathchange = rwrepo.index.commit("changed url")
         nsm.set_parent_commit(csmpathchange)
 
@@ -531,7 +544,9 @@ class TestSubmodule(TestBase):
         nsmm = nsm.module()
         prev_commit = nsmm.head.commit
         for branch in ("some_virtual_branch", cur_branch.name):
-            nsm.config_writer().set_value(Submodule.k_head_option, git.Head.to_full_path(branch))
+            writer = nsm.config_writer()
+            writer.set_value(Submodule.k_head_option, git.Head.to_full_path(branch))
+            writer.release()
             csmbranchchange = rwrepo.index.commit("changed branch to %s" % branch)
             nsm.set_parent_commit(csmbranchchange)
         # END for each branch to change
@@ -559,7 +574,9 @@ class TestSubmodule(TestBase):
         assert nsm.exists() and nsm.module_exists() and len(nsm.children()) >= 1
         # assure we pull locally only
         nsmc = nsm.children()[0]
-        nsmc.config_writer().set_value('url', async_url)
+        writer = nsmc.config_writer()
+        writer.set_value('url', async_url)
+        writer.release()
         rm.update(recursive=True, progress=prog, dry_run=True)      # just to run the code
         rm.update(recursive=True, progress=prog)
 

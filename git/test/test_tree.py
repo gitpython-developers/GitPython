@@ -11,7 +11,7 @@ from git import (
     Blob
 )
 
-from cStringIO import StringIO
+from io import BytesIO
 
 
 class TestTree(TestBase):
@@ -30,7 +30,7 @@ class TestTree(TestBase):
             orig_data = tree.data_stream.read()
             orig_cache = tree._cache
 
-            stream = StringIO()
+            stream = BytesIO()
             tree._serialize(stream)
             assert stream.getvalue() == orig_data
 
@@ -82,7 +82,7 @@ class TestTree(TestBase):
             mod.set_done()      # multiple times are okay
 
             # serialize, its different now
-            stream = StringIO()
+            stream = BytesIO()
             testtree._serialize(stream)
             stream.seek(0)
             assert stream.getvalue() != orig_data
@@ -138,6 +138,7 @@ class TestTree(TestBase):
             # END check for slash
 
             # slashes in paths are supported as well
+            # NOTE: on py3, / doesn't work with strings anymore ...
             assert root[item.path] == item == root / item.path
         # END for each item
         assert found_slash

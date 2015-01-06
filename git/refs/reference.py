@@ -1,8 +1,9 @@
-from symbolic import SymbolicReference
 from git.util import (
     LazyMixin,
     Iterable,
 )
+from .symbolic import SymbolicReference
+
 
 __all__ = ["Reference"]
 

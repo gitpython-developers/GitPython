@@ -1,5 +1,8 @@
-from base import Submodule, UpdateProgress
-from util import (
+from .base import (
+    Submodule,
+    UpdateProgress
+)
+from .util import (
     find_first_remote_branch
 )
 from git.exc import InvalidGitRepositoryError

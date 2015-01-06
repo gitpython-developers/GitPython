@@ -20,6 +20,7 @@ from git import (
     GitCommandError,
     CheckoutError,
 )
+from git.compat import string_types
 from gitdb.util import hex_to_bin
 import os
 import sys
@@ -30,7 +31,7 @@ from stat import (
     ST_MODE
 )
 
-from StringIO import StringIO
+from io import BytesIO
 from gitdb.base import IStream
 from git.objects import Blob
 from git.index.typ import (
@@ -47,7 +48,7 @@ class TestIndex(TestBase):
 
     def _assert_fprogress(self, entries):
         assert len(entries) == len(self._fprogress_map)
-        for path, call_count in self._fprogress_map.iteritems():
+        for path, call_count in self._fprogress_map.items():
             assert call_count == 2
         # END for each item in progress map
         self._reset_progress()
@@ -85,7 +86,7 @@ class TestIndex(TestBase):
         assert index.version > 0
 
         # test entry
-        entry = index.entries.itervalues().next()
+        entry = next(iter(index.entries.values()))
         for attr in ("path", "ctime", "mtime", "dev", "inode", "mode", "uid",
                      "gid", "size", "binsha", "hexsha", "stage"):
             getattr(entry, attr)
@@ -99,7 +100,7 @@ class TestIndex(TestBase):
         # test stage
         index_merge = IndexFile(self.rorepo, fixture_path("index_merge"))
         assert len(index_merge.entries) == 106
-        assert len(list(e for e in index_merge.entries.itervalues() if e.stage != 0))
+        assert len(list(e for e in index_merge.entries.values() if e.stage != 0))
 
         # write the data - it must match the original
         tmpfile = tempfile.mktemp()
@@ -166,7 +167,7 @@ class TestIndex(TestBase):
         assert unmerged_blob_map
 
         # pick the first blob at the first stage we find and use it as resolved version
-        three_way_index.resolve_blobs(l[0][1] for l in unmerged_blob_map.itervalues())
+        three_way_index.resolve_blobs(l[0][1] for l in unmerged_blob_map.values())
         tree = three_way_index.write_tree()
         assert isinstance(tree, Tree)
         num_blobs = 0
@@ -200,7 +201,7 @@ class TestIndex(TestBase):
         # Add a change with a NULL sha that should conflict with next_commit. We
         # pretend there was a change, but we do not even bother adding a proper
         # sha for it ( which makes things faster of course )
-        manifest_fake_entry = BaseIndexEntry((manifest_entry[0], "\0" * 20, 0, manifest_entry[3]))
+        manifest_fake_entry = BaseIndexEntry((manifest_entry[0], b"\0" * 20, 0, manifest_entry[3]))
         # try write flag
         self._assert_entries(rw_repo.index.add([manifest_fake_entry], write=False))
         # add actually resolves the null-hex-sha for us as a feature, but we can
@@ -235,7 +236,7 @@ class TestIndex(TestBase):
         # now make a proper three way merge with unmerged entries
         unmerged_tree = IndexFile.from_tree(rw_repo, parent_commit, tree, next_commit)
         unmerged_blobs = unmerged_tree.unmerged_blobs()
-        assert len(unmerged_blobs) == 1 and unmerged_blobs.keys()[0] == manifest_key[0]
+        assert len(unmerged_blobs) == 1 and list(unmerged_blobs.keys())[0] == manifest_key[0]
 
     @with_rw_repo('0.1.6')
     def test_index_file_diffing(self, rw_repo):
@@ -294,7 +295,7 @@ class TestIndex(TestBase):
         assert index.diff(None)
 
         # reset the working copy as well to current head,to pull 'back' as well
-        new_data = "will be reverted"
+        new_data = b"will be reverted"
         file_path = os.path.join(rw_repo.working_tree_dir, "CHANGES")
         fp = open(file_path, "wb")
         fp.write(new_data)
@@ -311,7 +312,7 @@ class TestIndex(TestBase):
 
         # test full checkout
         test_file = os.path.join(rw_repo.working_tree_dir, "CHANGES")
-        open(test_file, 'ab').write("some data")
+        open(test_file, 'ab').write(b"some data")
         rval = index.checkout(None, force=True, fprogress=self._fprogress)
         assert 'CHANGES' in list(rval)
         self._assert_fprogress([None])
@@ -335,7 +336,7 @@ class TestIndex(TestBase):
         self.failUnlessRaises(CheckoutError, index.checkout, paths=["doesnt/exist"])
 
         # checkout file with modifications
-        append_data = "hello"
+        append_data = b"hello"
         fp = open(test_file, "ab")
         fp.write(append_data)
         fp.close()
@@ -343,15 +344,15 @@ class TestIndex(TestBase):
             index.checkout(test_file)
         except CheckoutError as e:
             assert len(e.failed_files) == 1 and e.failed_files[0] == os.path.basename(test_file)
-            assert (len(e.failed_files) == len(e.failed_reasons)) and isinstance(e.failed_reasons[0], basestring)
+            assert (len(e.failed_files) == len(e.failed_reasons)) and isinstance(e.failed_reasons[0], string_types)
             assert len(e.valid_files) == 0
-            assert open(test_file).read().endswith(append_data)
+            assert open(test_file, 'rb').read().endswith(append_data)
         else:
             raise AssertionError("Exception CheckoutError not thrown")
 
         # if we force it it should work
         index.checkout(test_file, force=True)
-        assert not open(test_file).read().endswith(append_data)
+        assert not open(test_file, 'rb').read().endswith(append_data)
 
         # checkout directory
         shutil.rmtree(os.path.join(rw_repo.working_tree_dir, "lib"))
@@ -378,14 +379,16 @@ class TestIndex(TestBase):
 
         uname = "Some Developer"
         umail = "sd@company.com"
-        rw_repo.config_writer().set_value("user", "name", uname)
-        rw_repo.config_writer().set_value("user", "email", umail)
+        writer = rw_repo.config_writer()
+        writer.set_value("user", "name", uname)
+        writer.set_value("user", "email", umail)
+        writer.release()
 
         # remove all of the files, provide a wild mix of paths, BaseIndexEntries,
         # IndexEntries
         def mixed_iterator():
             count = 0
-            for entry in index.entries.itervalues():
+            for entry in index.entries.values():
                 type_id = count % 4
                 if type_id == 0:    # path
                     yield entry.path
@@ -499,7 +502,7 @@ class TestIndex(TestBase):
 
         # mode 0 not allowed
         null_hex_sha = Diff.NULL_HEX_SHA
-        null_bin_sha = "\0" * 20
+        null_bin_sha = b"\0" * 20
         self.failUnlessRaises(ValueError, index.reset(
             new_commit).add, [BaseIndexEntry((0, null_bin_sha, 0, "doesntmatter"))])
 
@@ -525,7 +528,7 @@ class TestIndex(TestBase):
             assert S_ISLNK(index.entries[index.entry_key("my_real_symlink", 0)].mode)
 
             # we expect only the target to be written
-            assert index.repo.odb.stream(entries[0].binsha).read() == target
+            assert index.repo.odb.stream(entries[0].binsha).read().decode('ascii') == target
         # END real symlink test
 
         # add fake symlink and assure it checks-our as symlink
@@ -617,7 +620,7 @@ class TestIndex(TestBase):
 
             for fid in range(3):
                 fname = 'newfile%i' % fid
-                open(fname, 'wb').write("abcd")
+                open(fname, 'wb').write(b"abcd")
                 yield Blob(rw_repo, Blob.NULL_BIN_SHA, 0o100644, fname)
             # END for each new file
         # END path producer
@@ -697,9 +700,9 @@ class TestIndex(TestBase):
         # instead of throwing the Exception we are expecting. This is
         # a quick hack to make this test fail when expected.
         rw_bare_repo._working_tree_dir = None
-        contents = 'This is a StringIO file'
+        contents = b'This is a BytesIO file'
         filesize = len(contents)
-        fileobj = StringIO(contents)
+        fileobj = BytesIO(contents)
         filename = 'my-imaginary-file'
         istream = rw_bare_repo.odb.store(
             IStream(Blob.type, filesize, fileobj))
@@ -715,5 +718,5 @@ class TestIndex(TestBase):
         try:
             rw_bare_repo.index.add([path])
         except Exception as e:
-            asserted = "does not have a working tree" in e.message
+            asserted = "does not have a working tree" in str(e)
         assert asserted, "Adding using a filename is not correctly asserted."

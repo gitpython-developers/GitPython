@@ -3,20 +3,19 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
-import util
-from base import IndexObject
 from git.util import join_path
-from blob import Blob
-from submodule.base import Submodule
 import git.diff as diff
+from gitdb.util import to_bin_sha
 
-from fun import (
+from . import util
+from .base import IndexObject
+from .blob import Blob
+from .submodule.base import Submodule
+from git.compat import string_types
+
+from .fun import (
     tree_entries_from_data,
     tree_to_stream
-)
-
-from gitdb.util import (
-    to_bin_sha,
 )
 
 __all__ = ("TreeModifier", "Tree")
@@ -160,7 +159,7 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
                 raise TypeError("Unknown mode %o found in tree data for path '%s'" % (mode, path))
         # END for each item
 
-    def __div__(self, file):
+    def join(self, file):
         """Find the named object in this tree's contents
         :return: ``git.Blob`` or ``git.Tree`` or ``git.Submodule``
 
@@ -192,6 +191,14 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
             # END for each obj
             raise KeyError(msg % file)
         # END handle long paths
+
+    def __div__(self, file):
+        """For PY2 only"""
+        return self.join(file)
+
+    def __truediv__(self, file):
+        """For PY3 only"""
+        return self.join(file)
 
     @property
     def trees(self):
@@ -234,9 +241,9 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
             info = self._cache[item]
             return self._map_id_to_type[info[1] >> 12](self.repo, info[0], info[1], join_path(self.path, info[2]))
 
-        if isinstance(item, basestring):
+        if isinstance(item, string_types):
             # compatability
-            return self.__div__(item)
+            return self.join(item)
         # END index is basestring
 
         raise TypeError("Invalid index type: %r" % item)

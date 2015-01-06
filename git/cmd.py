@@ -7,16 +7,22 @@
 import os
 import sys
 import logging
-from util import (
-    LazyMixin,
-    stream_copy
-)
-from exc import GitCommandError
-
 from subprocess import (
     call,
     Popen,
     PIPE
+)
+
+
+from .util import (
+    LazyMixin,
+    stream_copy
+)
+from .exc import GitCommandError
+from git.compat import (
+    string_types,
+    defenc,
+    PY3
 )
 
 execute_kwargs = ('istream', 'with_keep_cwd', 'with_extended_output',
@@ -114,7 +120,7 @@ class Git(LazyMixin):
             :raise GitCommandError: if the return status is not 0"""
             status = self.proc.wait()
             if status != 0:
-                raise GitCommandError(self.args, status, self.proc.stderr.read())
+                raise GitCommandError(self.args, status, self.proc.stderr.read().decode(defenc))
             # END status handling
             return status
     # END auto interrupt
@@ -314,6 +320,7 @@ class Git(LazyMixin):
             always be created with a pipe due to issues with subprocess.
             This merely is a workaround as data will be copied from the
             output pipe to the given output stream directly.
+            Judging from the implementation, you shouldn't use this flag !
 
         :param subprocess_kwargs:
             Keyword arguments to be passed to subprocess.Popen. Please note that
@@ -365,15 +372,15 @@ class Git(LazyMixin):
 
         # Wait for the process to return
         status = 0
-        stdout_value = ''
-        stderr_value = ''
+        stdout_value = b''
+        stderr_value = b''
         try:
             if output_stream is None:
                 stdout_value, stderr_value = proc.communicate()
                 # strip trailing "\n"
-                if stdout_value.endswith("\n"):
+                if stdout_value.endswith(b"\n"):
                     stdout_value = stdout_value[:-1]
-                if stderr_value.endswith("\n"):
+                if stderr_value.endswith(b"\n"):
                     stderr_value = stderr_value[:-1]
                 status = proc.returncode
             else:
@@ -381,7 +388,7 @@ class Git(LazyMixin):
                 stdout_value = output_stream
                 stderr_value = proc.stderr.read()
                 # strip trailing "\n"
-                if stderr_value.endswith("\n"):
+                if stderr_value.endswith(b"\n"):
                     stderr_value = stderr_value[:-1]
                 status = proc.wait()
             # END stdout handling
@@ -392,9 +399,10 @@ class Git(LazyMixin):
         if self.GIT_PYTHON_TRACE == 'full':
             cmdstr = " ".join(command)
             if stderr_value:
-                log.info("%s -> %d; stdout: '%s'; stderr: '%s'", cmdstr, status, stdout_value, stderr_value)
+                log.info("%s -> %d; stdout: '%s'; stderr: '%s'",
+                         cmdstr, status, stdout_value.decode(defenc), stderr_value.decode(defenc))
             elif stdout_value:
-                log.info("%s -> %d; stdout: '%s'", cmdstr, status, stdout_value)
+                log.info("%s -> %d; stdout: '%s'", cmdstr, status, stdout_value.decode(defenc))
             else:
                 log.info("%s -> %d", cmdstr, status)
         # END handle debug printing
@@ -405,9 +413,12 @@ class Git(LazyMixin):
             else:
                 raise GitCommandError(command, status, stderr_value)
 
+        if isinstance(stdout_value, bytes):  # could also be output_stream
+            stdout_value = stdout_value.decode(defenc)
+
         # Allow access to the command's status code
         if with_extended_output:
-            return (status, stdout_value, stderr_value)
+            return (status, stdout_value, stderr_value.decode(defenc))
         else:
             return stdout_value
 
@@ -433,16 +444,18 @@ class Git(LazyMixin):
     @classmethod
     def __unpack_args(cls, arg_list):
         if not isinstance(arg_list, (list, tuple)):
-            if isinstance(arg_list, unicode):
-                return [arg_list.encode('utf-8')]
+            # This is just required for unicode conversion, as subprocess can't handle it
+            # However, in any other case, passing strings (usually utf-8 encoded) is totally fine
+            if not PY3 and isinstance(arg_list, unicode):
+                return [arg_list.encode(defenc)]
             return [str(arg_list)]
 
         outlist = list()
         for arg in arg_list:
             if isinstance(arg_list, (list, tuple)):
                 outlist.extend(cls.__unpack_args(arg))
-            elif isinstance(arg_list, unicode):
-                outlist.append(arg_list.encode('utf-8'))
+            elif not PY3 and isinstance(arg_list, unicode):
+                outlist.append(arg_list.encode(defenc))
             # END recursion
             else:
                 outlist.append(str(arg))
@@ -498,8 +511,8 @@ class Git(LazyMixin):
 
         # Prepare the argument list
         opt_args = self.transform_kwargs(**kwargs)
-
         ext_args = self.__unpack_args([a for a in args if a is not None])
+
         args = opt_args + ext_args
 
         def make_call():
@@ -567,14 +580,20 @@ class Git(LazyMixin):
             raise ValueError("Failed to parse header: %r" % header_line)
         return (tokens[0], tokens[1], int(tokens[2]))
 
-    def __prepare_ref(self, ref):
-        # required for command to separate refs on stdin
-        refstr = str(ref)               # could be ref-object
-        if refstr.endswith("\n"):
-            return refstr
-        return refstr + "\n"
+    def _prepare_ref(self, ref):
+        # required for command to separate refs on stdin, as bytes
+        refstr = ref
+        if isinstance(ref, bytes):
+            # Assume 40 bytes hexsha - bin-to-ascii for some reason returns bytes, not text
+            refstr = ref.decode('ascii')
+        elif not isinstance(ref, string_types):
+            refstr = str(ref)               # could be ref-object
 
-    def __get_persistent_cmd(self, attr_name, cmd_name, *args, **kwargs):
+        if not refstr.endswith("\n"):
+            refstr += "\n"
+        return refstr.encode(defenc)
+
+    def _get_persistent_cmd(self, attr_name, cmd_name, *args, **kwargs):
         cur_val = getattr(self, attr_name)
         if cur_val is not None:
             return cur_val
@@ -587,7 +606,7 @@ class Git(LazyMixin):
         return cmd
 
     def __get_object_header(self, cmd, ref):
-        cmd.stdin.write(self.__prepare_ref(ref))
+        cmd.stdin.write(self._prepare_ref(ref))
         cmd.stdin.flush()
         return self._parse_object_header(cmd.stdout.readline())
 
@@ -599,7 +618,7 @@ class Git(LazyMixin):
             once and reuses the command in subsequent calls.
 
         :return: (hexsha, type_string, size_as_int)"""
-        cmd = self.__get_persistent_cmd("cat_file_header", "cat_file", batch_check=True)
+        cmd = self._get_persistent_cmd("cat_file_header", "cat_file", batch_check=True)
         return self.__get_object_header(cmd, ref)
 
     def get_object_data(self, ref):
@@ -616,7 +635,7 @@ class Git(LazyMixin):
         :return: (hexsha, type_string, size_as_int, stream)
         :note: This method is not threadsafe, you need one independent  Command instance
             per thread to be safe !"""
-        cmd = self.__get_persistent_cmd("cat_file_all", "cat_file", batch=True)
+        cmd = self._get_persistent_cmd("cat_file_all", "cat_file", batch=True)
         hexsha, typename, size = self.__get_object_header(cmd, ref)
         return (hexsha, typename, size, self.CatFileContentStream(size, cmd.stdout))
 

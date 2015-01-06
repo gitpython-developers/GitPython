@@ -1,5 +1,7 @@
 """Package with general repository related functions"""
 import os
+from string import digits
+
 from gitdb.exc import BadObject
 from git.refs import SymbolicReference
 from git.objects import Object
@@ -11,14 +13,15 @@ from gitdb.util import (
     hex_to_bin,
     bin_to_hex
 )
-from string import digits
+from git.compat import xrange
+
 
 __all__ = ('rev_parse', 'is_git_dir', 'touch', 'read_gitfile', 'find_git_dir', 'name_to_object',
            'short_to_long', 'deref_tag', 'to_commit')
 
 
 def touch(filename):
-    fp = open(filename, "a")
+    fp = open(filename, "ab")
     fp.close()
 
 
@@ -147,7 +150,7 @@ def to_commit(obj):
 def rev_parse(repo, rev):
     """
     :return: Object at the given revision, either Commit, Tag, Tree or Blob
-    :param rev: git-rev-parse compatible revision specification, please see
+    :param rev: git-rev-parse compatible revision specification as string, please see
         http://www.kernel.org/pub/software/scm/git/docs/git-rev-parse.html
         for details
     :note: Currently there is no access to the rev-log, rev-specs may only contain

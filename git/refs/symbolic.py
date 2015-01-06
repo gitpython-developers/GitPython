@@ -1,4 +1,5 @@
 import os
+
 from git.objects import Object, Commit
 from git.util import (
     join_path,
@@ -18,8 +19,12 @@ from gitdb.util import (
     hex_to_bin,
     LockedFD
 )
+from git.compat import (
+    string_types,
+    defenc
+)
 
-from log import RefLog
+from .log import RefLog
 
 __all__ = ["SymbolicReference"]
 
@@ -77,10 +82,10 @@ class SymbolicReference(object):
 
     @classmethod
     def _iter_packed_refs(cls, repo):
-        """Returns an iterator yielding pairs of sha1/path pairs for the corresponding refs.
+        """Returns an iterator yielding pairs of sha1/path pairs (as bytes) for the corresponding refs.
         :note: The packed refs file will be kept open as long as we iterate"""
         try:
-            fp = open(cls._get_packed_refs_path(repo), 'rb')
+            fp = open(cls._get_packed_refs_path(repo), 'rt')
             for line in fp:
                 line = line.strip()
                 if not line:
@@ -121,12 +126,12 @@ class SymbolicReference(object):
 
     @classmethod
     def _get_ref_info(cls, repo, ref_path):
-        """Return: (sha, target_ref_path) if available, the sha the file at
+        """Return: (str(sha), str(target_ref_path)) if available, the sha the file at
         rela_path points to, or None. target_ref_path is the reference we
         point to, or None"""
         tokens = None
         try:
-            fp = open(join(repo.git_dir, ref_path), 'r')
+            fp = open(join(repo.git_dir, ref_path), 'rt')
             value = fp.read().rstrip()
             fp.close()
             # Don't only split on spaces, but on whitespace, which allows to parse lines like
@@ -139,7 +144,8 @@ class SymbolicReference(object):
             for sha, path in cls._iter_packed_refs(repo):
                 if path != ref_path:
                     continue
-                tokens = (sha, path)
+                # sha will be used
+                tokens = sha, path
                 break
             # END for each packed ref
         # END handle packed refs
@@ -273,7 +279,7 @@ class SymbolicReference(object):
         elif isinstance(ref, Object):
             obj = ref
             write_value = ref.hexsha
-        elif isinstance(ref, basestring):
+        elif isinstance(ref, string_types):
             try:
                 obj = self.repo.rev_parse(ref + "^{}")    # optionally deref tags
                 write_value = obj.hexsha
@@ -303,7 +309,7 @@ class SymbolicReference(object):
 
         lfd = LockedFD(fpath)
         fd = lfd.open(write=True, stream=True)
-        fd.write(write_value)
+        fd.write(write_value.encode('ascii'))
         lfd.commit()
 
         # Adjust the reflog
@@ -424,6 +430,7 @@ class SymbolicReference(object):
                     # in the line
                     # If we deleted the last line and this one is a tag-reference object,
                     # we drop it as well
+                    line = line.decode(defenc)
                     if (line.startswith('#') or full_ref_path not in line) and \
                             (not dropped_last_line or dropped_last_line and not line.startswith('^')):
                         new_lines.append(line)
@@ -441,7 +448,7 @@ class SymbolicReference(object):
                 if made_change:
                     # write-binary is required, otherwise windows will
                     # open the file in text mode and change LF to CRLF !
-                    open(pack_file_path, 'wb').writelines(new_lines)
+                    open(pack_file_path, 'wb').writelines(l.encode(defenc) for l in new_lines)
                 # END write out file
             # END open exception handling
         # END handle deletion
@@ -473,7 +480,7 @@ class SymbolicReference(object):
                 target_data = target.path
             if not resolve:
                 target_data = "ref: " + target_data
-            existing_data = open(abs_ref_path, 'rb').read().strip()
+            existing_data = open(abs_ref_path, 'rb').read().decode(defenc).strip()
             if existing_data != target_data:
                 raise OSError("Reference at %r does already exist, pointing to %r, requested was %r" %
                               (full_ref_path, existing_data, target_data))

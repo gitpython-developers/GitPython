@@ -4,6 +4,8 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
+from gitdb import IStream
+from gitdb.util import hex_to_bin
 from git.util import (
     Actor,
     Iterable,
@@ -11,26 +13,24 @@ from git.util import (
     finalize_process
 )
 from git.diff import Diffable
-from tree import Tree
-from gitdb import IStream
-from cStringIO import StringIO
 
-import base
-from gitdb.util import (
-    hex_to_bin
-)
-from util import (
+from .tree import Tree
+from . import base
+from .util import (
     Traversable,
     Serializable,
     parse_date,
     altz_to_utctz_str,
     parse_actor_and_date
 )
+from git.compat import text_type
+
 from time import (
     time,
     altzone
 )
 import os
+from io import BytesIO
 import logging
 
 log = logging.getLogger('git.objects.commit')
@@ -62,7 +62,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
                  "author", "authored_date", "author_tz_offset",
                  "committer", "committed_date", "committer_tz_offset",
                  "message", "parents", "encoding", "gpgsig")
-    _id_attribute_ = "binsha"
+    _id_attribute_ = "hexsha"
 
     def __init__(self, repo, binsha, tree=None, author=None, authored_date=None, author_tz_offset=None,
                  committer=None, committed_date=None, committer_tz_offset=None,
@@ -133,7 +133,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
         if attr in Commit.__slots__:
             # read the data in a chunk, its faster - then provide a file wrapper
             binsha, typename, self.size, stream = self.repo.odb.stream(self.binsha)
-            self._deserialize(StringIO(stream.read()))
+            self._deserialize(BytesIO(stream.read()))
         else:
             super(Commit, self)._set_cache_(attr)
         # END handle attrs
@@ -345,7 +345,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
                          committer, committer_time, committer_offset,
                          message, parent_commits, conf_encoding)
 
-        stream = StringIO()
+        stream = BytesIO()
         new_commit._serialize(stream)
         streamlen = stream.tell()
         stream.seek(0)
@@ -373,43 +373,36 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
 
     def _serialize(self, stream):
         write = stream.write
-        write("tree %s\n" % self.tree)
+        write(("tree %s\n" % self.tree).encode('ascii'))
         for p in self.parents:
-            write("parent %s\n" % p)
+            write(("parent %s\n" % p).encode('ascii'))
 
         a = self.author
         aname = a.name
-        if isinstance(aname, unicode):
-            aname = aname.encode(self.encoding)
-        # END handle unicode in name
-
         c = self.committer
         fmt = "%s %s <%s> %s %s\n"
-        write(fmt % ("author", aname, a.email,
-                     self.authored_date,
-                     altz_to_utctz_str(self.author_tz_offset)))
+        write((fmt % ("author", aname, a.email,
+                      self.authored_date,
+                      altz_to_utctz_str(self.author_tz_offset))).encode(self.encoding))
 
         # encode committer
         aname = c.name
-        if isinstance(aname, unicode):
-            aname = aname.encode(self.encoding)
-        # END handle unicode in name
-        write(fmt % ("committer", aname, c.email,
-                     self.committed_date,
-                     altz_to_utctz_str(self.committer_tz_offset)))
+        write((fmt % ("committer", aname, c.email,
+                      self.committed_date,
+                      altz_to_utctz_str(self.committer_tz_offset))).encode(self.encoding))
 
         if self.encoding != self.default_encoding:
-            write("encoding %s\n" % self.encoding)
+            write(("encoding %s\n" % self.encoding).encode('ascii'))
 
         if self.gpgsig:
-            write("gpgsig")
+            write(b"gpgsig")
             for sigline in self.gpgsig.rstrip("\n").split("\n"):
-                write(" " + sigline + "\n")
+                write((" " + sigline + "\n").encode('ascii'))
 
-        write("\n")
+        write(b"\n")
 
         # write plain bytes, be sure its encoded according to our encoding
-        if isinstance(self.message, unicode):
+        if isinstance(self.message, text_type):
             write(self.message.encode(self.encoding))
         else:
             write(self.message)
@@ -426,23 +419,25 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
         next_line = None
         while True:
             parent_line = readline()
-            if not parent_line.startswith('parent'):
+            if not parent_line.startswith(b'parent'):
                 next_line = parent_line
                 break
             # END abort reading parents
-            self.parents.append(type(self)(self.repo, hex_to_bin(parent_line.split()[-1])))
+            self.parents.append(type(self)(self.repo, hex_to_bin(parent_line.split()[-1].decode('ascii'))))
         # END for each parent line
         self.parents = tuple(self.parents)
 
-        self.author, self.authored_date, self.author_tz_offset = parse_actor_and_date(next_line)
-        self.committer, self.committed_date, self.committer_tz_offset = parse_actor_and_date(readline())
+        # we don't know actual author encoding before we have parsed it, so keep the lines around
+        author_line = next_line
+        committer_line = readline()
 
         # we might run into one or more mergetag blocks, skip those for now
         next_line = readline()
-        while next_line.startswith('mergetag '):
+        while next_line.startswith(b'mergetag '):
             next_line = readline()
             while next_line.startswith(' '):
                 next_line = readline()
+        # end skip mergetags
 
         # now we can have the encoding line, or an empty line followed by the optional
         # message.
@@ -451,39 +446,40 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
         # read headers
         enc = next_line
         buf = enc.strip()
-        while buf != "":
-            if buf[0:10] == "encoding ":
-                self.encoding = buf[buf.find(' ') + 1:]
-            elif buf[0:7] == "gpgsig ":
-                sig = buf[buf.find(' ') + 1:] + "\n"
+        while buf:
+            if buf[0:10] == b"encoding ":
+                self.encoding = buf[buf.find(' ') + 1:].decode('ascii')
+            elif buf[0:7] == b"gpgsig ":
+                sig = buf[buf.find(b' ') + 1:] + b"\n"
                 is_next_header = False
                 while True:
                     sigbuf = readline()
-                    if sigbuf == "":
+                    if not sigbuf:
                         break
-                    if sigbuf[0:1] != " ":
+                    if sigbuf[0:1] != b" ":
                         buf = sigbuf.strip()
                         is_next_header = True
                         break
                     sig += sigbuf[1:]
-                self.gpgsig = sig.rstrip("\n")
+                # end read all signature
+                self.gpgsig = sig.rstrip(b"\n").decode('ascii')
                 if is_next_header:
                     continue
             buf = readline().strip()
-
         # decode the authors name
-        try:
-            self.author.name = self.author.name.decode(self.encoding)
-        except UnicodeDecodeError:
-            log.error("Failed to decode author name '%s' using encoding %s", self.author.name, self.encoding,
-                      exc_info=True)
-        # END handle author's encoding
 
-        # decode committer name
         try:
-            self.committer.name = self.committer.name.decode(self.encoding)
+            self.author, self.authored_date, self.author_tz_offset = \
+                parse_actor_and_date(author_line.decode(self.encoding))
         except UnicodeDecodeError:
-            log.error("Failed to decode committer name '%s' using encoding %s", self.committer.name, self.encoding,
+            log.error("Failed to decode author line '%s' using encoding %s", author_line, self.encoding,
+                      exc_info=True)
+
+        try:
+            self.committer, self.committed_date, self.committer_tz_offset = \
+                parse_actor_and_date(committer_line.decode(self.encoding))
+        except UnicodeDecodeError:
+            log.error("Failed to decode committer line '%s' using encoding %s", committer_line, self.encoding,
                       exc_info=True)
         # END handle author's encoding
 
@@ -495,6 +491,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
         except UnicodeDecodeError:
             log.error("Failed to decode message '%s' using encoding %s", self.message, self.encoding, exc_info=True)
         # END exception handling
+
         return self
 
     #} END serializable implementation

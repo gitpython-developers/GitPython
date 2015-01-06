@@ -12,7 +12,7 @@ from stat import (
 
 S_IFGITLINK = S_IFLNK | S_IFDIR     # a submodule
 
-from cStringIO import StringIO
+from io import BytesIO
 
 from git.util import IndexFileSHA1Writer
 from git.exc import UnmergedEntriesError
@@ -22,7 +22,7 @@ from git.objects.fun import (
     traverse_trees_recursive
 )
 
-from typ import (
+from .typ import (
     BaseIndexEntry,
     IndexEntry,
     CE_NAMEMASK,
@@ -30,13 +30,14 @@ from typ import (
 )
 CE_NAMEMASK_INV = ~CE_NAMEMASK
 
-from util import (
+from .util import (
     pack,
     unpack
 )
 
 from gitdb.base import IStream
 from gitdb.typ import str_tree_type
+from git.compat import defenc
 
 __all__ = ('write_cache', 'read_cache', 'write_tree_from_cache', 'entry_key',
            'stat_mode_to_index_mode', 'S_IFGITLINK')
@@ -49,7 +50,7 @@ def stat_mode_to_index_mode(mode):
         return S_IFLNK
     if S_ISDIR(mode) or S_IFMT(mode) == S_IFGITLINK:    # submodules
         return S_IFGITLINK
-    return S_IFREG | 0644 | (mode & 0100)       # blobs with or without executable bit
+    return S_IFREG | 0o644 | (mode & 0o100)       # blobs with or without executable bit
 
 
 def write_cache(entries, stream, extension_data=None, ShaStreamCls=IndexFileSHA1Writer):
@@ -72,7 +73,7 @@ def write_cache(entries, stream, extension_data=None, ShaStreamCls=IndexFileSHA1
 
     # header
     version = 2
-    write("DIRC")
+    write(b"DIRC")
     write(pack(">LL", version, len(entries)))
 
     # body
@@ -86,9 +87,9 @@ def write_cache(entries, stream, extension_data=None, ShaStreamCls=IndexFileSHA1
         flags = plen | (entry[2] & CE_NAMEMASK_INV)     # clear possible previous values
         write(pack(">LLLLLL20sH", entry[6], entry[7], entry[0],
                    entry[8], entry[9], entry[10], entry[1], flags))
-        write(path)
+        write(path.encode(defenc))
         real_size = ((tell() - beginoffset + 8) & ~7)
-        write("\0" * ((beginoffset + real_size) - tell()))
+        write(b"\0" * ((beginoffset + real_size) - tell()))
     # END for each entry
 
     # write previously cached extensions data
@@ -102,7 +103,7 @@ def write_cache(entries, stream, extension_data=None, ShaStreamCls=IndexFileSHA1
 def read_header(stream):
     """Return tuple(version_long, num_entries) from the given stream"""
     type_id = stream.read(4)
-    if type_id != "DIRC":
+    if type_id != b"DIRC":
         raise AssertionError("Invalid index file header: %r" % type_id)
     version, num_entries = unpack(">LL", stream.read(4 * 2))
 
@@ -142,7 +143,7 @@ def read_cache(stream):
         (dev, ino, mode, uid, gid, size, sha, flags) = \
             unpack(">LLLLLL20sH", read(20 + 4 * 6 + 2))
         path_size = flags & CE_NAMEMASK
-        path = read(path_size)
+        path = read(path_size).decode(defenc)
 
         real_size = ((tell() - beginoffset + 8) & ~7)
         read((beginoffset + real_size) - tell())
@@ -218,7 +219,7 @@ def write_tree_from_cache(entries, odb, sl, si=0):
     # END for each entry
 
     # finally create the tree
-    sio = StringIO()
+    sio = BytesIO()
     tree_to_stream(tree_items, sio.write)
     sio.seek(0)
 

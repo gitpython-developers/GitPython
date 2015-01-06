@@ -40,12 +40,16 @@ from gitdb.util import (
     hex_to_bin
 )
 
-from fun import (
+from .fun import (
     rev_parse,
     is_git_dir,
     find_git_dir,
     read_gitfile,
     touch,
+)
+from git.compat import (
+    text_type,
+    defenc
 )
 
 import os
@@ -176,11 +180,11 @@ class Repo(object):
     # Description property
     def _get_description(self):
         filename = join(self.git_dir, 'description')
-        return file(filename).read().rstrip()
+        return open(filename, 'rb').read().rstrip().decode(defenc)
 
     def _set_description(self, descr):
         filename = join(self.git_dir, 'description')
-        file(filename, 'w').write(descr + '\n')
+        open(filename, 'wb').write((descr + '\n').encode(defenc))
 
     description = property(_get_description, _set_description,
                            doc="the project's description")
@@ -389,7 +393,7 @@ class Repo(object):
         if rev is None:
             return self.head.commit
         else:
-            return self.rev_parse(unicode(rev) + "^0")
+            return self.rev_parse(text_type(rev) + "^0")
 
     def iter_trees(self, *args, **kwargs):
         """:return: Iterator yielding Tree objects
@@ -412,7 +416,7 @@ class Repo(object):
         if rev is None:
             return self.head.commit.tree
         else:
-            return self.rev_parse(unicode(rev) + "^{tree}")
+            return self.rev_parse(text_type(rev) + "^{tree}")
 
     def iter_commits(self, rev=None, paths='', **kwargs):
         """A list of Commit objects representing the history of a given ref/commit
@@ -463,8 +467,8 @@ class Repo(object):
 
         if os.path.exists(alternates_path):
             try:
-                f = open(alternates_path)
-                alts = f.read()
+                f = open(alternates_path, 'rb')
+                alts = f.read().decode(defenc)
             finally:
                 f.close()
             return alts.strip().splitlines()
@@ -488,8 +492,8 @@ class Repo(object):
                 os.remove(alternates_path)
         else:
             try:
-                f = open(alternates_path, 'w')
-                f.write("\n".join(alts))
+                f = open(alternates_path, 'wb')
+                f.write("\n".join(alts).encode(defenc))
             finally:
                 f.close()
             # END file handling
@@ -547,6 +551,7 @@ class Repo(object):
         prefix = "?? "
         untracked_files = list()
         for line in proc.stdout:
+            line = line.decode(defenc)
             if not line.startswith(prefix):
                 continue
             filename = line[len(prefix):].rstrip('\n')
@@ -728,7 +733,10 @@ class Repo(object):
         # sure
         repo = cls(os.path.abspath(path), odbt=odbt)
         if repo.remotes:
-            repo.remotes[0].config_writer.set_value('url', repo.remotes[0].url.replace("\\\\", "\\").replace("\\", "/"))
+            writer = repo.remotes[0].config_writer
+            writer.set_value('url', repo.remotes[0].url.replace("\\\\", "\\").replace("\\", "/"))
+            # PY3: be sure cleanup is performed and lock is released
+            writer.release()
         # END handle remote repo
         return repo
 
@@ -760,7 +768,7 @@ class Repo(object):
 
     def archive(self, ostream, treeish=None, prefix=None, **kwargs):
         """Archive the tree at the given revision.
-        :parm ostream: file compatible stream object to which the archive will be written
+        :parm ostream: file compatible stream object to which the archive will be written as bytes
         :parm treeish: is the treeish name/id, defaults to active branch
         :parm prefix: is the optional prefix to prepend to each filename in the archive
         :parm kwargs:

@@ -1,6 +1,7 @@
-from head import Head
 from git.util import join_path
 from gitdb.util import join
+
+from .head import Head
 
 import os
 

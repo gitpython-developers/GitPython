@@ -8,6 +8,7 @@ from git.refs import (
     RefLog
 )
 from git.util import Actor
+from gitdb.util import hex_to_bin
 
 import tempfile
 import shutil
@@ -51,7 +52,7 @@ class TestRefLog(TestBase):
         assert len(reflog)
 
         # iter_entries works with path and with stream
-        assert len(list(RefLog.iter_entries(open(rlp_master))))
+        assert len(list(RefLog.iter_entries(open(rlp_master, 'rb'))))
         assert len(list(RefLog.iter_entries(rlp_master)))
 
         # raise on invalid revlog
@@ -65,7 +66,7 @@ class TestRefLog(TestBase):
         self.failUnlessRaises(ValueError, RefLog().write)
 
         # test serialize and deserialize - results must match exactly
-        binsha = chr(255) * 20
+        binsha = hex_to_bin(('f' * 40).encode('ascii'))
         msg = "my reflog message"
         cr = self.rorepo.config_reader()
         for rlp in (rlp_head, rlp_master):

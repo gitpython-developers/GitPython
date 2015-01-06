@@ -4,13 +4,15 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 from __future__ import print_function
+from io import BytesIO
+from time import time
+import sys
+
 from .lib import TestBigRepoRW
 from git import Commit
 from gitdb import IStream
+from git.compat import xrange
 from git.test.test_commit import assert_commit_serialization
-from cStringIO import StringIO
-from time import time
-import sys
 
 
 class TestPerformance(TestBigRepoRW):
@@ -90,7 +92,7 @@ class TestPerformance(TestBigRepoRW):
                         hc.committer, hc.committed_date, hc.committer_tz_offset,
                         str(i), parents=hc.parents, encoding=hc.encoding)
 
-            stream = StringIO()
+            stream = BytesIO()
             cm._serialize(stream)
             slen = stream.tell()
             stream.seek(0)

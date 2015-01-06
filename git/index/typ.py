@@ -1,15 +1,14 @@
 """Module with additional types used by the index"""
 
-from util import (
+from binascii import b2a_hex
+
+from .util import (
     pack,
     unpack
 )
-
-from binascii import (
-    b2a_hex,
-)
-
 from git.objects import Blob
+
+
 __all__ = ('BlobFilter', 'BaseIndexEntry', 'IndexEntry')
 
 #{ Invariants
@@ -76,7 +75,7 @@ class BaseIndexEntry(tuple):
     @property
     def hexsha(self):
         """hex version of our sha"""
-        return b2a_hex(self[1])
+        return b2a_hex(self[1]).decode('ascii')
 
     @property
     def stage(self):
