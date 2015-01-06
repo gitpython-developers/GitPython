@@ -120,7 +120,7 @@ class Git(LazyMixin):
             :raise GitCommandError: if the return status is not 0"""
             status = self.proc.wait()
             if status != 0:
-                raise GitCommandError(self.args, status, self.proc.stderr.read())
+                raise GitCommandError(self.args, status, self.proc.stderr.read().decode(defenc))
             # END status handling
             return status
     # END auto interrupt

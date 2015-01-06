@@ -138,7 +138,7 @@ class PushInfo(object):
     @classmethod
     def _from_line(cls, remote, line):
         """Create a new PushInfo instance as parsed from line which is expected to be like
-            refs/heads/master:refs/heads/master 05d2687..1d0568e"""
+            refs/heads/master:refs/heads/master 05d2687..1d0568e as bytes"""
         control_character, from_to, summary = line.split('\t', 3)
         flags = 0
 
@@ -522,6 +522,7 @@ class Remote(LazyMixin, Iterable):
 
     def _get_fetch_info_from_stderr(self, proc, progress):
         # skip first line as it is some remote info we are not interested in
+        # TODO: Use poll() to process stdout and stderr at same time
         output = IterableList('name')
 
         # lines which are no progress are fetch info lines
@@ -544,8 +545,8 @@ class Remote(LazyMixin, Iterable):
         # END for each line
 
         # read head information
-        fp = open(join(self.repo.git_dir, 'FETCH_HEAD'), 'r')
-        fetch_head_info = fp.readlines()
+        fp = open(join(self.repo.git_dir, 'FETCH_HEAD'), 'rb')
+        fetch_head_info = [l.decode(defenc) for l in fp.readlines()]
         fp.close()
 
         # NOTE: We assume to fetch at least enough progress lines to allow matching each fetch head line with it.
@@ -562,10 +563,12 @@ class Remote(LazyMixin, Iterable):
         # we hope stdout can hold all the data, it should ...
         # read the lines manually as it will use carriage returns between the messages
         # to override the previous one. This is why we read the bytes manually
+        # TODO: poll() on file descriptors to know what to read next, process streams concurrently
         digest_process_messages(proc.stderr, progress)
 
         output = IterableList('name')
         for line in proc.stdout.readlines():
+            line = line.decode(defenc)
             try:
                 output.append(PushInfo._from_line(self, line))
             except ValueError:
@@ -573,7 +576,6 @@ class Remote(LazyMixin, Iterable):
                 pass
             # END exception handling
         # END for each line
-
         finalize_process(proc)
         return output
 

@@ -193,7 +193,7 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
             temp_dir = os.path.dirname(_mktemp())
             # On windows, this will fail ... we deal with failures anyway and default to telling the user to do it
             try:
-                gd = Git().daemon(temp_dir, as_process=True)
+                gd = Git().daemon(temp_dir, enable='receive-pack', as_process=True)
                 # yes, I know ... fortunately, this is always going to work if sleep time is just large enough
                 time.sleep(0.5)
             except Exception:
@@ -215,7 +215,8 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
                     msg += 'Otherwise, run: git-daemon "%s"' % temp_dir
                     raise AssertionError(msg)
                 else:
-                    msg = 'Please start a git-daemon to run this test, execute: git-daemon "%s"' % temp_dir
+                    msg = 'Please start a git-daemon to run this test, execute: git daemon --enable=receive-pack "%s"'
+                    msg %= temp_dir
                     raise AssertionError(msg)
                 # END make assertion
             # END catch ls remote error
@@ -227,7 +228,8 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
                 return func(self, rw_repo, rw_remote_repo)
             finally:
                 # gd.proc.kill() ... no idea why that doesn't work
-                os.kill(gd.proc.pid, 15)
+                if gd is not None:
+                    os.kill(gd.proc.pid, 15)
 
                 os.chdir(prev_cwd)
                 rw_repo.git.clear_cache()
@@ -235,7 +237,8 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
                 shutil.rmtree(repo_dir, onerror=_rmtree_onerror)
                 shutil.rmtree(remote_repo_dir, onerror=_rmtree_onerror)
 
-                gd.proc.wait()
+                if gd is not None:
+                    gd.proc.wait()
             # END cleanup
         # END bare repo creator
         remote_repo_creator.__name__ = func.__name__

@@ -21,7 +21,7 @@ __all__ = ('rev_parse', 'is_git_dir', 'touch', 'read_gitfile', 'find_git_dir', '
 
 
 def touch(filename):
-    fp = open(filename, "a")
+    fp = open(filename, "ab")
     fp.close()
 
 

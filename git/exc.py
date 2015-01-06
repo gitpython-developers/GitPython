@@ -29,10 +29,12 @@ class GitCommandError(Exception):
         self.command = command
 
     def __str__(self):
-        ret = "'%s' returned exit status %i: %s" % \
-              (' '.join(str(i) for i in self.command), self.status, self.stderr)
-        if self.stdout is not None:
-            ret += "\nstdout: %s" % self.stdout
+        ret = "'%s' returned with exit code %i" % \
+              (' '.join(str(i) for i in self.command), self.status)
+        if self.stderr:
+            ret += "\nstderr: '%s'" % self.stderr
+        if self.stdout:
+            ret += "\nstdout: '%s'" % self.stdout
         return ret
 
 
