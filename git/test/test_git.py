@@ -34,11 +34,11 @@ class TestGit(TestBase):
 
     def test_call_unpack_args_unicode(self):
         args = Git._Git__unpack_args(u'Unicode€™')
-        assert_equal(args, [b'Unicode\xe2\x82\xac\xe2\x84\xa2'])
+        assert_equal(args, ['Unicode\u20ac\u2122'])
 
     def test_call_unpack_args(self):
         args = Git._Git__unpack_args(['git', 'log', '--', u'Unicode€™'])
-        assert_equal(args, [b'git', b'log', b'--', b'Unicode\xe2\x82\xac\xe2\x84\xa2'])
+        assert_equal(args, ['git', 'log', '--', 'Unicode\u20ac\u2122'])
 
     @raises(GitCommandError)
     def test_it_raises_errors(self):
