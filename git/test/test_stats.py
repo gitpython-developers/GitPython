@@ -10,12 +10,12 @@ from git.test.lib import (
     assert_equal
 )
 from git import Stats
-
+from git.compat import defenc
 
 class TestStats(TestBase):
 
     def test_list_from_string(self):
-        output = fixture('diff_numstat')
+        output = fixture('diff_numstat').decode(defenc)
         stats = Stats._list_from_string(self.rorepo, output)
 
         assert_equal(2, stats.total['files'])
