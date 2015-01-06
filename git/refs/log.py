@@ -84,6 +84,7 @@ class RefLogEntry(tuple):
         """:return: New RefLogEntry instance from the given revlog line.
         :param line: line bytes without trailing newline
         :raise ValueError: If line could not be parsed"""
+        line = line.decode(defenc)
         fields = line.split('\t', 1)
         if len(fields) == 1:
             info, msg = fields[0], None
