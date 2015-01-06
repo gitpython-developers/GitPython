@@ -99,6 +99,13 @@ class SectionConstraint(object):
         self._config = config
         self._section_name = section
 
+    def __del__(self):
+        # Yes, for some reason, we have to call it explicitly for it to work in PY3 !
+        # Apparently __del__ doesn't get call anymore if refcount becomes 0
+        # Ridiculous ... .
+        self._config.__del__()
+        # del self._config
+
     def __getattr__(self, attr):
         if attr in self._valid_attrs_:
             return lambda *args, **kwargs: self._call_config(attr, *args, **kwargs)
@@ -193,7 +200,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
         """Write pending changes if required and release locks"""
         # checking for the lock here makes sure we do not raise during write()
         # in case an invalid parser was created who could not get a lock
-        if self.read_only or not self._lock._has_lock():
+        if self.read_only or (self._lock and not self._lock._has_lock()):
             return
 
         try:

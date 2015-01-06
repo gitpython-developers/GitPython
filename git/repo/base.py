@@ -732,7 +732,10 @@ class Repo(object):
         # sure
         repo = cls(os.path.abspath(path), odbt=odbt)
         if repo.remotes:
-            repo.remotes[0].config_writer.set_value('url', repo.remotes[0].url.replace("\\\\", "\\").replace("\\", "/"))
+            writer = repo.remotes[0].config_writer
+            writer.set_value('url', repo.remotes[0].url.replace("\\\\", "\\").replace("\\", "/"))
+            # PY3: be sure cleanup is performed and lock is released
+            del writer
         # END handle remote repo
         return repo
 

@@ -73,7 +73,7 @@ def write_cache(entries, stream, extension_data=None, ShaStreamCls=IndexFileSHA1
 
     # header
     version = 2
-    write("DIRC")
+    write(b"DIRC")
     write(pack(">LL", version, len(entries)))
 
     # body

@@ -75,7 +75,7 @@ class BaseIndexEntry(tuple):
     @property
     def hexsha(self):
         """hex version of our sha"""
-        return b2a_hex(self[1])
+        return b2a_hex(self[1]).decode('ascii')
 
     @property
     def stage(self):

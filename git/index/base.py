@@ -43,7 +43,9 @@ from git.compat import (
     izip,
     xrange,
     string_types,
-    force_bytes
+    force_bytes,
+    defenc,
+    mviter
 )
 
 from git.util import (
@@ -105,7 +107,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         repository's index on demand."""
         self.repo = repo
         self.version = self._VERSION
-        self._extension_data = ''
+        self._extension_data = b''
         self._file_path = file_path or self._index_path()
 
     def _set_cache_(self, attr):
@@ -165,9 +167,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
     def _entries_sorted(self):
         """:return: list of entries, in a sorted fashion, first by path, then by stage"""
-        entries_sorted = self.entries.values()
-        entries_sorted.sort(key=lambda e: (e.path, e.stage))        # use path/stage as sort key
-        return entries_sorted
+        return sorted(self.entries.values(), key=lambda e: (e.path, e.stage))
 
     def _serialize(self, stream, ignore_tree_extension_data=False):
         entries = self._entries_sorted()
@@ -399,7 +399,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         fprogress(filepath, False, item)
         rval = None
         try:
-            proc.stdin.write("%s\n" % filepath)
+            proc.stdin.write(("%s\n" % filepath).encode(defenc))
         except IOError:
             # pipe broke, usually because some error happend
             raise fmakeexc()
@@ -418,7 +418,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             Function(t) returning True if tuple(stage, Blob) should be yielded by the
             iterator. A default filter, the BlobFilter, allows you to yield blobs
             only if they match a given list of paths. """
-        for entry in self.entries.itervalues():
+        for entry in mviter(self.entries):
             blob = entry.to_blob(self.repo)
             blob.size = entry.size
             output = (entry.stage, blob)
@@ -443,7 +443,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         for stage, blob in self.iter_blobs(is_unmerged_blob):
             path_map.setdefault(blob.path, list()).append((stage, blob))
         # END for each unmerged blob
-        for l in path_map.itervalues():
+        for l in mviter(path_map):
             l.sort()
         return path_map
 
@@ -860,7 +860,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
         # parse result - first 0:n/2 lines are 'checking ', the remaining ones
         # are the 'renaming' ones which we parse
-        for ln in xrange(len(mvlines) / 2, len(mvlines)):
+        for ln in xrange(int(len(mvlines) / 2), len(mvlines)):
             tokens = mvlines[ln].split(' to ')
             assert len(tokens) == 2, "Too many tokens in %s" % mvlines[ln]
 
@@ -958,6 +958,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             if not stderr:
                 return
             # line contents:
+            stderr = stderr.decode(defenc)
             # git-checkout-index: this already exists
             failed_files = list()
             failed_reasons = list()
@@ -1006,7 +1007,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             proc = self.repo.git.checkout_index(*args, **kwargs)
             proc.wait()
             fprogress(None, True, None)
-            rval_iter = (e.path for e in self.entries.itervalues())
+            rval_iter = (e.path for e in mviter(self.entries))
             handle_stderr(proc, rval_iter)
             return rval_iter
         else:
@@ -1036,7 +1037,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
                     dir = co_path
                     if not dir.endswith('/'):
                         dir += '/'
-                    for entry in self.entries.itervalues():
+                    for entry in mviter(self.entries):
                         if entry.path.startswith(dir):
                             p = entry.path
                             self._write_path_to_stdin(proc, p, p, make_exc,

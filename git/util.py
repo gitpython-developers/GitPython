@@ -446,7 +446,7 @@ class IndexFileSHA1Writer(object):
 
     def __init__(self, f):
         self.f = f
-        self.sha1 = make_sha("")
+        self.sha1 = make_sha(b"")
 
     def write(self, data):
         self.sha1.update(data)
@@ -490,10 +490,7 @@ class LockFile(object):
     def _has_lock(self):
         """:return: True if we have a lock and if the lockfile still exists
         :raise AssertionError: if our lock-file does not exist"""
-        if not self._owns_lock:
-            return False
-
-        return True
+        return self._owns_lock
 
     def _obtain_lock_or_raise(self):
         """Create a lock file as flag for other instances, mark our instance as lock-holder
@@ -531,7 +528,7 @@ class LockFile(object):
             # on bloody windows, the file needs write permissions to be removable.
             # Why ...
             if os.name == 'nt':
-                os.chmod(lfp, int("0777", 8))
+                os.chmod(lfp, 0o777)
             # END handle win32
             os.remove(lfp)
         except OSError:
