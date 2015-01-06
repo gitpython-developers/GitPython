@@ -179,6 +179,7 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
                 pass
             crw.set(section, "receivepack", True)
             # release lock
+            crw.release()
             del(crw)
 
             # initialize the remote - first do it as local remote and pull, then

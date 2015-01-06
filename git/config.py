@@ -103,8 +103,7 @@ class SectionConstraint(object):
         # Yes, for some reason, we have to call it explicitly for it to work in PY3 !
         # Apparently __del__ doesn't get call anymore if refcount becomes 0
         # Ridiculous ... .
-        self._config.__del__()
-        # del self._config
+        self._config.release()
 
     def __getattr__(self, attr):
         if attr in self._valid_attrs_:
@@ -120,6 +119,10 @@ class SectionConstraint(object):
     def config(self):
         """return: Configparser instance we constrain"""
         return self._config
+
+    def release(self):
+        """Equivalent to GitConfigParser.release(), which is called on our underlying parser instance"""
+        return self._config.release()
 
 
 class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, object)):
@@ -198,6 +201,13 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
 
     def __del__(self):
         """Write pending changes if required and release locks"""
+        # NOTE: only consistent in PY2
+        self.release()
+
+    def release(self):
+        """Flush changes and release the configuration write lock. This instance must not be used anymore afterwards.
+        In Python 3, it's required to explicitly release locks and flush changes, as __del__ is not called 
+        deterministically anymore."""
         # checking for the lock here makes sure we do not raise during write()
         # in case an invalid parser was created who could not get a lock
         if self.read_only or (self._lock and not self._lock._has_lock()):

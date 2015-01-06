@@ -17,7 +17,10 @@ from git.util import (
     rmtree
 )
 
-from git.config import SectionConstraint
+from git.config import (
+    SectionConstraint,
+    cp
+)
 from git.exc import (
     InvalidGitRepositoryError,
     NoSuchPathError
@@ -302,6 +305,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
             writer.set_value(cls.k_head_option, br.path)
             sm._branch_path = br.path
         # END handle path
+        writer.release()
         del(writer)
 
         # we deliberatly assume that our head matches our index !
@@ -419,7 +423,9 @@ class Submodule(util.IndexObject, Iterable, Traversable):
                 # the default implementation will be offended and not update the repository
                 # Maybe this is a good way to assure it doesn't get into our way, but
                 # we want to stay backwards compatible too ... . Its so redundant !
-                self.repo.config_writer().set_value(sm_section(self.name), 'url', self.url)
+                writer = self.repo.config_writer()
+                writer.set_value(sm_section(self.name), 'url', self.url)
+                writer.release()
             # END handle dry_run
         # END handle initalization
 
@@ -576,6 +582,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
                 writer = self.config_writer(index=index)        # auto-write
                 writer.set_value('path', module_path)
                 self.path = module_path
+                writer.release()
                 del(writer)
             # END handle configuration flag
         except Exception:
@@ -700,8 +707,12 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 
             # now git config - need the config intact, otherwise we can't query
             # inforamtion anymore
-            self.repo.config_writer().remove_section(sm_section(self.name))
-            self.config_writer().remove_section()
+            writer = self.repo.config_writer()
+            writer.remove_section(sm_section(self.name))
+            writer.release()
+            writer = self.config_writer()
+            writer.remove_section()
+            writer.release()
         # END delete configuration
 
         # void our data not to delay invalid access
@@ -800,14 +811,18 @@ class Submodule(util.IndexObject, Iterable, Traversable):
         """
         :return: True if the submodule exists, False otherwise. Please note that
             a submodule may exist (in the .gitmodules file) even though its module
-            doesn't exist"""
+            doesn't exist on disk"""
         # keep attributes for later, and restore them if we have no valid data
         # this way we do not actually alter the state of the object
         loc = locals()
         for attr in self._cache_attrs:
-            if hasattr(self, attr):
-                loc[attr] = getattr(self, attr)
-            # END if we have the attribute cache
+            try:
+                if hasattr(self, attr):
+                    loc[attr] = getattr(self, attr)
+                # END if we have the attribute cache
+            except cp.NoSectionError:
+                # on PY3, this can happen apparently ... don't know why this doesn't happen on PY2
+                pass
         # END for each attr
         self._clear_cache()
 

@@ -7,6 +7,8 @@
 
 from gitdb.exc import *     # NOQA
 
+from git.compat import defenc
+
 
 class InvalidGitRepositoryError(Exception):
 
@@ -32,9 +34,9 @@ class GitCommandError(Exception):
         ret = "'%s' returned with exit code %i" % \
               (' '.join(str(i) for i in self.command), self.status)
         if self.stderr:
-            ret += "\nstderr: '%s'" % self.stderr
+            ret += "\nstderr: '%s'" % self.stderr.decode(defenc)
         if self.stdout:
-            ret += "\nstdout: '%s'" % self.stdout
+            ret += "\nstdout: '%s'" % self.stdout.decode(defenc)
         return ret
 
 

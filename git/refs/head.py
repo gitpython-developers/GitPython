@@ -148,6 +148,7 @@ class Head(Reference):
             writer.set_value(self.k_config_remote, remote_reference.remote_name)
             writer.set_value(self.k_config_remote_ref, Head.to_full_path(remote_reference.remote_head))
         # END handle ref value
+        writer.release()
 
         return self
 

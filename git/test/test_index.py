@@ -382,6 +382,7 @@ class TestIndex(TestBase):
         writer = rw_repo.config_writer()
         writer.set_value("user", "name", uname)
         writer.set_value("user", "email", umail)
+        writer.release()
 
         # remove all of the files, provide a wild mix of paths, BaseIndexEntries,
         # IndexEntries

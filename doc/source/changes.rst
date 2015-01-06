@@ -6,6 +6,7 @@ Changelog
 ========================
 * Internally, hexadecimal SHA1 are treated as ascii encoded strings. Binary SHA1 are treated as bytes.
 * Id attribute of Commit objects is now `hexsha`, instead of `binsha`. The latter makes no sense in python 3 and I see no application of it anyway besides its artificial usage in test cases.
+* **IMPORTANT**: If you were using the config_writer(), you implicitly relied on __del__ to work as expected to flush changes. To be sure changes are flushed under PY3, you will have to call the new `release()` method to trigger a flush. For some reason, __del__ is not called necessarily anymore when a symbol goes out of scope.
 
 0.3.3
 =====

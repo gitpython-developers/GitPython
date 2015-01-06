@@ -150,7 +150,7 @@ def to_commit(obj):
 def rev_parse(repo, rev):
     """
     :return: Object at the given revision, either Commit, Tag, Tree or Blob
-    :param rev: git-rev-parse compatible revision specification, please see
+    :param rev: git-rev-parse compatible revision specification as string, please see
         http://www.kernel.org/pub/software/scm/git/docs/git-rev-parse.html
         for details
     :note: Currently there is no access to the rev-log, rev-specs may only contain

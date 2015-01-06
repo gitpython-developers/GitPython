@@ -551,6 +551,7 @@ class Repo(object):
         prefix = "?? "
         untracked_files = list()
         for line in proc.stdout:
+            line = line.decode(defenc)
             if not line.startswith(prefix):
                 continue
             filename = line[len(prefix):].rstrip('\n')
@@ -735,7 +736,7 @@ class Repo(object):
             writer = repo.remotes[0].config_writer
             writer.set_value('url', repo.remotes[0].url.replace("\\\\", "\\").replace("\\", "/"))
             # PY3: be sure cleanup is performed and lock is released
-            del writer
+            writer.release()
         # END handle remote repo
         return repo
 
@@ -767,7 +768,7 @@ class Repo(object):
 
     def archive(self, ostream, treeish=None, prefix=None, **kwargs):
         """Archive the tree at the given revision.
-        :parm ostream: file compatible stream object to which the archive will be written
+        :parm ostream: file compatible stream object to which the archive will be written as bytes
         :parm treeish: is the treeish name/id, defaults to active branch
         :parm prefix: is the optional prefix to prepend to each filename in the archive
         :parm kwargs:

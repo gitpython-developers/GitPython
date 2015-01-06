@@ -22,7 +22,8 @@ from .exc import GitCommandError
 from git.compat import (
     text_type,
     string_types,
-    defenc
+    defenc,
+    PY3
 )
 
 execute_kwargs = ('istream', 'with_keep_cwd', 'with_extended_output',
@@ -372,8 +373,8 @@ class Git(LazyMixin):
 
         # Wait for the process to return
         status = 0
-        stdout_value = ''
-        stderr_value = ''
+        stdout_value = b''
+        stderr_value = b''
         try:
             if output_stream is None:
                 stdout_value, stderr_value = proc.communicate()
@@ -388,7 +389,7 @@ class Git(LazyMixin):
                 stdout_value = output_stream
                 stderr_value = proc.stderr.read()
                 # strip trailing "\n"
-                if stderr_value.endswith("\n"):
+                if stderr_value.endswith(b"\n"):
                     stderr_value = stderr_value[:-1]
                 status = proc.wait()
             # END stdout handling
@@ -444,7 +445,9 @@ class Git(LazyMixin):
     @classmethod
     def __unpack_args(cls, arg_list):
         if not isinstance(arg_list, (list, tuple)):
-            if isinstance(arg_list, text_type):
+            # This is just required for unicode conversion, as subprocess can't handle it
+            # However, in any other case, passing strings (usually utf-8 encoded) is totally fine
+            if not PY3 and isinstance(arg_list, unicode):
                 return [arg_list.encode(defenc)]
             return [str(arg_list)]
 
@@ -452,7 +455,7 @@ class Git(LazyMixin):
         for arg in arg_list:
             if isinstance(arg_list, (list, tuple)):
                 outlist.extend(cls.__unpack_args(arg))
-            elif isinstance(arg_list, text_type):
+            elif not PY3 and isinstance(arg_list, unicode):
                 outlist.append(arg_list.encode(defenc))
             # END recursion
             else:
@@ -509,8 +512,8 @@ class Git(LazyMixin):
 
         # Prepare the argument list
         opt_args = self.transform_kwargs(**kwargs)
-
         ext_args = self.__unpack_args([a for a in args if a is not None])
+
         args = opt_args + ext_args
 
         def make_call():
