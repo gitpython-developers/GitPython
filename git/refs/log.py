@@ -19,7 +19,8 @@ from git.objects.util import (
 )
 from git.compat import (
     xrange,
-    string_types
+    string_types,
+    defenc
 )
 
 import time
@@ -38,9 +39,8 @@ class RefLogEntry(tuple):
     def __repr__(self):
         """Representation of ourselves in git reflog format"""
         act = self.actor
-        name = act.name.encode('utf-8')
         time = self.time
-        return self._fmt % (self.oldhexsha, self.newhexsha, name, act.email,
+        return self._fmt % (self.oldhexsha, self.newhexsha, act.name, act.email,
                             time[0], altz_to_utctz_str(time[1]), self.message)
 
     @property
@@ -82,8 +82,9 @@ class RefLogEntry(tuple):
     @classmethod
     def from_line(cls, line):
         """:return: New RefLogEntry instance from the given revlog line.
-        :param line: line without trailing newline
+        :param line: line bytes without trailing newline
         :raise ValueError: If line could not be parsed"""
+        line = line.decode(defenc)
         try:
             info, msg = line.split('\t', 1)
         except ValueError:
@@ -253,15 +254,18 @@ class RefLog(list, Serializable):
         # END handle sha type
         assure_directory_exists(filepath, is_file=True)
         committer = isinstance(config_reader, Actor) and config_reader or Actor.committer(config_reader)
-        entry = RefLogEntry(
-            (bin_to_hex(oldbinsha), bin_to_hex(newbinsha), committer, (int(time.time()), time.altzone), message))
+        entry = RefLogEntry((
+            bin_to_hex(oldbinsha).decode('ascii'),
+            bin_to_hex(newbinsha).decode('ascii'), 
+            committer, (int(time.time()), time.altzone), message
+        ))
 
         lf = LockFile(filepath)
         lf._obtain_lock_or_raise()
 
-        fd = open(filepath, 'a')
+        fd = open(filepath, 'ab')
         try:
-            fd.write(repr(entry))
+            fd.write(repr(entry).encode(defenc))
         finally:
             fd.close()
             lf._release_lock()
@@ -286,7 +290,7 @@ class RefLog(list, Serializable):
 
         # write all entries
         for e in self:
-            write(repr(e))
+            write(repr(e).encode(defenc))
         # END for each entry
 
     def _deserialize(self, stream):
