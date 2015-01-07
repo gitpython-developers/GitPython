@@ -33,6 +33,7 @@ if PY3:
         return bytes([n])
     def mviter(d):
         return d.values()
+    unicode = str
 else:
     FileType = file
     # usually, this is just ascii, which might not enough for our encoding needs
@@ -41,6 +42,7 @@ else:
         defenc = 'utf-8'
     byte_ord = ord
     bchr = chr
+    unicode = unicode
     def mviter(d):
         return d.itervalues()
 

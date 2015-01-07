@@ -22,7 +22,9 @@ from .exc import GitCommandError
 from git.compat import (
     string_types,
     defenc,
-    PY3
+    PY3,
+    # just to satisfy flake8 on py3
+    unicode
 )
 
 execute_kwargs = ('istream', 'with_keep_cwd', 'with_extended_output',

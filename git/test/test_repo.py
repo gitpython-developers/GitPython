@@ -526,7 +526,7 @@ class TestRepo(TestBase):
                     assert obj.type == ref.object.type
                     num_resolved += 1
                 except BadObject:
-                    print ("failed on %s" % path_section)
+                    print("failed on %s" % path_section)
                     # is fine, in case we have something like 112, which belongs to remotes/rname/merge-requests/112
                     pass
                 # END exception handling
