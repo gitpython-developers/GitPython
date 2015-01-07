@@ -40,6 +40,7 @@ __all__ = ('RemoteProgress', 'PushInfo', 'FetchInfo', 'Remote')
 
 #{ Utilities
 
+
 def add_progress(kwargs, git, progress):
     """Add the --progress flag to the given kwargs dict if supported by the
     git command. If the actual progress in the given progress instance is not
@@ -510,6 +511,7 @@ class Remote(LazyMixin, Iterable):
         cmds = set(PushInfo._flag_map.keys()) & set(FetchInfo._flag_map.keys())
 
         progress_handler = progress.new_message_handler()
+
         def my_progress_handler(line):
             for pline in progress_handler(line):
                 if line.startswith('fatal:'):
@@ -520,11 +522,11 @@ class Remote(LazyMixin, Iterable):
                         fetch_info_lines.append(line)
                         continue
                     # end find command code
-                # end for each comand code we know                
+                # end for each comand code we know
             # end for each line progress didn't handle
         # end
 
-        # We are only interested in stderr here ... 
+        # We are only interested in stderr here ...
         handle_process_output(proc, None, my_progress_handler, finalize_process)
 
         # read head information

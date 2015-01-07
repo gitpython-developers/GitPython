@@ -251,7 +251,7 @@ class RemoteProgress(object):
         return failed_lines
 
     def new_message_handler(self):
-        """:return: a progress handler suitable for handle_process_output(), passing lines on to this Progress 
+        """:return: a progress handler suitable for handle_process_output(), passing lines on to this Progress
         handler in a suitable format"""
         def handler(line):
             return self._parse_progress_line(line.rstrip())
@@ -704,26 +704,26 @@ class Iterable(object):
 
 class WaitGroup(object):
     """WaitGroup is like Go sync.WaitGroup.
-    
+
     Without all the useful corner cases.
     By Peter Teichman, taken from https://gist.github.com/pteichman/84b92ae7cef0ab98f5a8
     """
     def __init__(self):
         self.count = 0
         self.cv = threading.Condition()
- 
+
     def add(self, n):
         self.cv.acquire()
         self.count += n
         self.cv.release()
- 
+
     def done(self):
         self.cv.acquire()
         self.count -= 1
         if self.count == 0:
             self.cv.notify_all()
         self.cv.release()
- 
+
     def wait(self):
         self.cv.acquire()
         while self.count > 0:

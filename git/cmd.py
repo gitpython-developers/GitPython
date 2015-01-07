@@ -46,8 +46,8 @@ __all__ = ('Git', )
 ## @{
 
 def handle_process_output(process, stdout_handler, stderr_handler, finalizer):
-    """Registers for notifications to lean that process output is ready to read, and dispatches lines to 
-    the respective line handlers. We are able to handle carriage returns in case progress is sent by that 
+    """Registers for notifications to lean that process output is ready to read, and dispatches lines to
+    the respective line handlers. We are able to handle carriage returns in case progress is sent by that
     mean. For performance reasons, we only apply this to stderr.
     This function returns once the finalizer returns
     :return: result of finalizer
@@ -77,7 +77,7 @@ def handle_process_output(process, stdout_handler, stderr_handler, finalizer):
     def dispatch_line(fno):
             stream, handler, readline = fdmap[fno]
             # this can possibly block for a while, but since we wake-up with at least one or more lines to handle,
-            # we are good ... 
+            # we are good ...
             line = readline(stream).decode(defenc)
             if line and handler:
                 handler(line)
@@ -93,13 +93,13 @@ def handle_process_output(process, stdout_handler, stderr_handler, finalizer):
         # end deplete buffer
         if wg:
             wg.done()
-    # end 
+    # end
 
-    fdmap = { process.stdout.fileno() : (process.stdout, stdout_handler, read_line_fast),
-              process.stderr.fileno() : (process.stderr, stderr_handler, read_line_slow) }
+    fdmap = {process.stdout.fileno(): (process.stdout, stdout_handler, read_line_fast),
+             process.stderr.fileno(): (process.stderr, stderr_handler, read_line_slow)}
 
     if hasattr(select, 'poll'):
-        # poll is preferred, as select is limited to file handles up to 1024 ... . This could otherwise be 
+        # poll is preferred, as select is limited to file handles up to 1024 ... . This could otherwise be
         # an issue for us, as it matters how many handles or own process has
         poll = select.poll()
         READ_ONLY = select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLERR
@@ -137,10 +137,10 @@ def handle_process_output(process, stdout_handler, stderr_handler, finalizer):
         wg = WaitGroup()
         for fno in fdmap.keys():
             wg.add(1)
-            t = threading.Thread(target = lambda: deplete_buffer(fno, wg))
+            t = threading.Thread(target=lambda: deplete_buffer(fno, wg))
             t.start()
         # end
-        # NOTE: Just joining threads can possibly fail as there is a gap between .start() and when it's 
+        # NOTE: Just joining threads can possibly fail as there is a gap between .start() and when it's
         # actually started, which could make the wait() call to just return because the thread is not yet
         # active
         wg.wait()
@@ -148,7 +148,7 @@ def handle_process_output(process, stdout_handler, stderr_handler, finalizer):
 
     return finalizer(process)
 
-    
+
 def dashify(string):
     return string.replace('_', '-')
 
