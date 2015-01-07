@@ -656,3 +656,20 @@ class TestRepo(TestBase):
         open(git_file_path, 'wb').write(('gitdir: %s\n' % real_path_abs).encode('ascii'))
         git_file_repo = Repo(rwrepo.working_tree_dir)
         assert os.path.abspath(git_file_repo.git_dir) == real_path_abs
+
+    def test_file_handle_leaks(self):
+        def last_commit(repo, rev, path):
+            commit = next(repo.iter_commits(rev, path, max_count=1))
+            commit.tree[path]
+
+        # This is based on this comment
+        # https://github.com/gitpython-developers/GitPython/issues/60#issuecomment-23558741
+        # And we expect to set max handles to a low value, like 64
+        # You should set ulimit -n X, see .travis.yml
+        # The loops below would easily create 500 handles if these would leak (4 pipes + multiple mapped files)
+        for i in range(64):
+            for repo_type in (GitCmdObjectDB, GitDB):
+                repo = Repo(self.rorepo.working_tree_dir, odbt=repo_type)
+                last_commit(repo, 'master', 'git/test/test_base.py')
+            # end for each repository type
+        # end for each iteration

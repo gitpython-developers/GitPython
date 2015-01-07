@@ -204,6 +204,7 @@ class RefLog(list, Serializable):
                 return
             yield new_entry(line.strip())
         # END endless loop
+        stream.close()
 
     @classmethod
     def entry_at(cls, filepath, index):

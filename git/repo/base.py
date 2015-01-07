@@ -168,6 +168,10 @@ class Repo(object):
             args.append(self.git)
         self.odb = odbt(*args)
 
+    def __del__(self):
+        if self.git:
+            self.git.clear_cache()
+
     def __eq__(self, rhs):
         if isinstance(rhs, Repo):
             return self.git_dir == rhs.git_dir

@@ -59,6 +59,12 @@ class TestBigRepoR(TestBase):
         self.gitrorepo = Repo(repo_path, odbt=GitCmdObjectDB)
         self.puregitrorepo = Repo(repo_path, odbt=GitDB)
 
+    def tearDown(self):
+        self.gitrorepo.git.clear_cache()
+        self.gitrorepo = None
+        self.puregitrorepo.git.clear_cache()
+        self.puregitrorepo = None
+
 
 class TestBigRepoRW(TestBigRepoR):
 
@@ -78,7 +84,12 @@ class TestBigRepoRW(TestBigRepoR):
         self.puregitrwrepo = Repo(dirname, odbt=GitDB)
 
     def tearDown(self):
+        super(TestBigRepoRW, self).tearDown()
         if self.gitrwrepo is not None:
             shutil.rmtree(self.gitrwrepo.working_dir)
+            self.gitrwrepo.git.clear_cache()
+        self.gitrwrepo = None
+        self.puregitrwrepo.git.clear_cache()
+        self.puregitrwrepo = None
 
 #} END base classes

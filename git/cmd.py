@@ -38,6 +38,9 @@ log = logging.getLogger('git.cmd')
 
 __all__ = ('Git', )
 
+if sys.platform != 'win32':
+    WindowsError = OSError
+
 
 # ==============================================================================
 ## @name Utilities
@@ -203,11 +206,18 @@ class Git(LazyMixin):
             self.args = args
 
         def __del__(self):
-            self.proc.stdout.close()
-            self.proc.stderr.close()
+            if self.proc is None:
+                return
+
+            proc = self.proc
+            self.proc = None
+            if proc.stdin:
+                proc.stdin.close()
+            proc.stdout.close()
+            proc.stderr.close()
 
             # did the process finish already so we have a return code ?
-            if self.proc.poll() is not None:
+            if proc.poll() is not None:
                 return
 
             # can be that nothing really exists anymore ...
@@ -216,8 +226,8 @@ class Git(LazyMixin):
 
             # try to kill it
             try:
-                os.kill(self.proc.pid, 2)   # interrupt signal
-                self.proc.wait()    # ensure process goes away
+                os.kill(proc.pid, 2)   # interrupt signal
+                proc.wait()    # ensure process goes away
             except (OSError, WindowsError):
                 pass  # ignore error when process already died
             except AttributeError:
@@ -225,7 +235,7 @@ class Git(LazyMixin):
                 # for some reason, providing None for stdout/stderr still prints something. This is why
                 # we simply use the shell and redirect to nul. Its slower than CreateProcess, question
                 # is whether we really want to see all these messages. Its annoying no matter what.
-                call(("TASKKILL /F /T /PID %s 2>nul 1>nul" % str(self.proc.pid)), shell=True)
+                call(("TASKKILL /F /T /PID %s 2>nul 1>nul" % str(proc.pid)), shell=True)
             # END exception handling
 
         def __getattr__(self, attr):

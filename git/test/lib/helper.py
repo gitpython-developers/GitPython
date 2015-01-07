@@ -279,6 +279,11 @@ class TestBase(TestCase):
         """
         cls.rorepo = Repo(GIT_REPO)
 
+    @classmethod
+    def tearDownClass(cls):
+        cls.rorepo.git.clear_cache()
+        cls.rorepo.git = None
+
     def _make_file(self, rela_path, data, repo=None):
         """
         Create a file at the given path relative to our repository, filled
