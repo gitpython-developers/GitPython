@@ -39,8 +39,14 @@ class RefLogEntry(tuple):
         """Representation of ourselves in git reflog format"""
         act = self.actor
         time = self.time
-        return u"{0} {1} {2} <{3}> {4!s} {5}\t{6}\n".format(self.oldhexsha, self.newhexsha, act.name, act.email, 
-                            time[0], altz_to_utctz_str(time[1]), self.message).encode("utf-8")
+        return u"{0} {1} {2} <{3}> {4!s} {5}\t{6}\n".format(self.oldhexsha,
+                                                            self.newhexsha,
+                                                            act.name,
+                                                            act.email,
+                                                            time[0],
+                                                            altz_to_utctz_str(time[1]),
+                                                            self.message).encode("utf-8")
+
     @property
     def oldhexsha(self):
         """The hexsha to the commit the ref pointed to before the change"""

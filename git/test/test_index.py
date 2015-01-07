@@ -10,6 +10,7 @@ from git.test.lib import (
     fixture,
     with_rw_repo
 )
+from git.util import Actor
 from git import (
     IndexFile,
     BlobFilter,
@@ -444,10 +445,10 @@ class TestIndex(TestBase):
         assert new_commit.parents[0] == cur_commit
         assert len(new_commit.parents) == 1
         assert cur_head.commit == cur_commit
-        
+
         # commit with other actor
         cur_commit = cur_head.commit
-        
+
         my_author = Actor("An author", "author@example.com")
         my_committer = Actor("An committer", "committer@example.com")
         commit_actor = index.commit(commit_message, author=my_author, committer=my_committer)
