@@ -444,6 +444,22 @@ class TestIndex(TestBase):
         assert new_commit.parents[0] == cur_commit
         assert len(new_commit.parents) == 1
         assert cur_head.commit == cur_commit
+        
+        # commit with other actor
+        cur_commit = cur_head.commit
+        
+        my_author = Actor("An author", "author@example.com")
+        my_committer = Actor("An committer", "committer@example.com")
+        commit_actor = index.commit(commit_message, author=my_author, committer=my_committer)
+        assert cur_commit != commit_actor
+        assert commit_actor.author.name == "An author"
+        assert commit_actor.author.email == "author@example.com"
+        assert commit_actor.committer.name == "An committer"
+        assert commit_actor.committer.email == "committer@example.com"
+        assert commit_actor.message == commit_message
+        assert commit_actor.parents[0] == cur_commit
+        assert len(new_commit.parents) == 1
+        assert cur_head.commit == cur_commit
 
         # same index, no parents
         commit_message = "index without parents"
