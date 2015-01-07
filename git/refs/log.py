@@ -32,7 +32,6 @@ __all__ = ["RefLog", "RefLogEntry"]
 class RefLogEntry(tuple):
 
     """Named tuple allowing easy access to the revlog data fields"""
-    _fmt = "%s %s %s <%s> %i %s\t%s\n"
     _re_hexsha_only = re.compile('^[0-9A-Fa-f]{40}$')
     __slots__ = tuple()
 
@@ -40,8 +39,13 @@ class RefLogEntry(tuple):
         """Representation of ourselves in git reflog format"""
         act = self.actor
         time = self.time
-        return self._fmt % (self.oldhexsha, self.newhexsha, act.name, act.email,
-                            time[0], altz_to_utctz_str(time[1]), self.message)
+        return u"{0} {1} {2} <{3}> {4!s} {5}\t{6}\n".format(self.oldhexsha,
+                                                            self.newhexsha,
+                                                            act.name,
+                                                            act.email,
+                                                            time[0],
+                                                            altz_to_utctz_str(time[1]),
+                                                            self.message).encode("utf-8")
 
     @property
     def oldhexsha(self):
@@ -267,7 +271,6 @@ class RefLog(list, Serializable):
 
         lf = LockFile(filepath)
         lf._obtain_lock_or_raise()
-
         fd = open(filepath, 'ab')
         try:
             fd.write(repr(entry).encode(defenc))
