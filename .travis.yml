@@ -12,7 +12,7 @@ git:
 install:
   - git submodule update --init --recursive
   - git fetch --tags
-  - pip install coveralls
+  - pip install coveralls flake8
 
   # generate some reflog as git-python tests need it (in master)
   - git checkout master
@@ -26,5 +26,6 @@ install:
   - git config --global user.name "Travis Runner"
 script: 
   - nosetests -v --with-coverage
+  - flake8
 after_success:
   - coveralls
