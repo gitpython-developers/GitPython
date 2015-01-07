@@ -18,7 +18,8 @@ from subprocess import (
 
 from .util import (
     LazyMixin,
-    stream_copy
+    stream_copy,
+    WaitGroup
 )
 from .exc import GitCommandError
 from git.compat import (
@@ -84,12 +85,14 @@ def handle_process_output(process, stdout_handler, stderr_handler, finalizer):
         # end dispatch helper
     # end
 
-    def deplete_buffer(fno):
+    def deplete_buffer(fno, wg=None):
         while True:
             line = dispatch_line(fno)
             if not line:
                 break
         # end deplete buffer
+        if wg:
+            wg.done()
     # end 
 
     fdmap = { process.stdout.fileno() : (process.stdout, stdout_handler, read_line_fast),
@@ -131,15 +134,16 @@ def handle_process_output(process, stdout_handler, stderr_handler, finalizer):
         # The only reliable way to do this now is to use threads and wait for both to finish
         # Since the finalizer is expected to wait, we don't have to introduce our own wait primitive
         # NO: It's not enough unfortunately, and we will have to sync the threads
-        threads = list()
+        wg = WaitGroup()
         for fno in fdmap.keys():
-            t = threading.Thread(target = lambda: deplete_buffer(fno))
-            threads.append(t)
+            wg.add(1)
+            t = threading.Thread(target = lambda: deplete_buffer(fno, wg))
             t.start()
         # end
-        for t in threads:
-            t.join()
-        # end
+        # NOTE: Just joining threads can possibly fail as there is a gap between .start() and when it's 
+        # actually started, which could make the wait() call to just return because the thread is not yet
+        # active
+        wg.wait()
     # end
 
     return finalizer(process)
