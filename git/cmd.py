@@ -6,6 +6,7 @@
 
 import os
 import sys
+import select
 import logging
 from subprocess import (
     call,
@@ -36,8 +37,103 @@ log = logging.getLogger('git.cmd')
 __all__ = ('Git', )
 
 
+# ==============================================================================
+## @name Utilities
+# ------------------------------------------------------------------------------
+# Documentation
+## @{
+
+def handle_process_output(process, stdout_handler, stderr_handler, finalizer):
+    """Registers for notifications to lean that process output is ready to read, and dispatches lines to 
+    the respective line handlers. We are able to handle carriage returns in case progress is sent by that 
+    mean. For performance reasons, we only apply this to stderr.
+    This function returns once the finalizer returns
+    :return: result of finalizer
+    :param process: subprocess.Popen instance
+    :param stdout_handler: f(stdout_line_string), or None
+    :param stderr_hanlder: f(stderr_line_string), or None
+    :param finalizer: f(proc) - wait for proc to finish"""
+    def read_line_fast(stream):
+        return stream.readline()
+
+    def read_line_slow(stream):
+        line = b''
+        while True:
+            char = stream.read(1)       # reads individual single byte strings
+            if not char:
+                break
+
+            if char in (b'\r', b'\n') and line:
+                break
+            else:
+                line += char
+            # END process parsed line
+        # END while file is not done reading
+        return line
+    # end
+
+    fdmap = { process.stdout.fileno() : (process.stdout, stdout_handler, read_line_fast),
+              process.stderr.fileno() : (process.stderr, stderr_handler, read_line_slow) }
+
+    if hasattr(select, 'poll'):
+        def dispatch_line(fd):
+            stream, handler, readline = fdmap[fd]
+            # this can possibly block for a while, but since we wake-up with at least one or more lines to handle,
+            # we are good ... 
+            line = readline(stream).decode(defenc)
+            if line and handler:
+                handler(line)
+            return line
+        # end dispatch helper
+
+        # poll is preferred, as select is limited to file handles up to 1024 ... . Not an issue for us though,
+        # as we deal with relatively blank processes
+        poll = select.poll()
+        READ_ONLY = select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLERR
+        CLOSED = select.POLLHUP | select.POLLERR
+
+        poll.register(process.stdout, READ_ONLY)
+        poll.register(process.stderr, READ_ONLY)
+
+        closed_streams = set()
+        while True:
+            # no timeout
+            poll_result = poll.poll()
+            for fd, result in poll_result:
+                if result & CLOSED:
+                    closed_streams.add(fd)
+                else:
+                    dispatch_line(fd)
+                # end handle closed stream
+            # end for each poll-result tuple
+
+            if len(closed_streams) == len(fdmap):
+                break
+            # end its all done
+        # end endless loop
+
+        # Depelete all remaining buffers
+        for fno, _ in fdmap.items():
+            while True:
+                line = dispatch_line(fno)
+                if not line:
+                    break
+            # end deplete buffer
+        # end for each file handle
+    else:
+        # Oh ... probably we are on windows. select.select() can only handle sockets, we have files
+        # The only reliable way to do this now is to use threads and wait for both to finish
+        # Since the finalizer is expected to wait, we don't have to introduce our own wait primitive
+        raise NotImplementedError()
+    # end
+
+    return finalizer(process)
+
+    
 def dashify(string):
     return string.replace('_', '-')
+
+## -- End Utilities -- @}
 
 
 class Git(LazyMixin):

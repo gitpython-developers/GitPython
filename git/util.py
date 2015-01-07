@@ -249,6 +249,14 @@ class RemoteProgress(object):
         # END for each sub line
         return failed_lines
 
+    def new_message_handler(self):
+        """:return: a progress handler suitable for handle_process_output(), passing lines on to this Progress 
+        handler in a suitable format"""
+        def handler(line):
+            return self._parse_progress_line(line.rstrip())
+        # end
+        return handler
+
     def line_dropped(self, line):
         """Called whenever a line could not be understood and was therefore dropped."""
         pass

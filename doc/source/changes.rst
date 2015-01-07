@@ -2,6 +2,11 @@
 Changelog
 =========
 
+0.3.5 - Bugfixes
+================
+* push/pull/fetch operations will not block anymore
+* A list of all fixed issues can be found here: https://github.com/gitpython-developers/GitPython/issues?q=milestone%3A%22v0.3.5+-+bugfixes%22+
+
 0.3.4 - Python 3 Support
 ========================
 * Internally, hexadecimal SHA1 are treated as ascii encoded strings. Binary SHA1 are treated as bytes.
