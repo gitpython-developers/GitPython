@@ -141,5 +141,5 @@ class TestObjDBPerformance(TestBigRepoR):
 
             # compare
             print("Git-Python is %f %% faster than git when reading big %s files in chunks"
-                   % (100.0 - (elapsed_readchunks / gelapsed_readchunks) * 100, desc), file=sys.stderr)
+                  % (100.0 - (elapsed_readchunks / gelapsed_readchunks) * 100, desc), file=sys.stderr)
         # END for each randomization factor
