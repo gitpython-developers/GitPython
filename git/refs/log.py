@@ -18,6 +18,7 @@ from git.objects.util import (
     altz_to_utctz_str,
 )
 from git.compat import (
+    PY3,
     xrange,
     string_types,
     defenc
@@ -37,6 +38,16 @@ class RefLogEntry(tuple):
 
     def __repr__(self):
         """Representation of ourselves in git reflog format"""
+        res = self.format()
+        if PY3:
+            return res
+        else:
+            # repr must return a string, which it will auto-encode from unicode using the default encoding.
+            # This usually fails, so we encode ourselves
+            return res.encode(defenc)
+
+    def format(self):
+        """:return: a string suitable to be placed in a reflog file"""
         act = self.actor
         time = self.time
         return u"{0} {1} {2} <{3}> {4!s} {5}\t{6}\n".format(self.oldhexsha,
@@ -45,7 +56,7 @@ class RefLogEntry(tuple):
                                                             act.email,
                                                             time[0],
                                                             altz_to_utctz_str(time[1]),
-                                                            self.message).encode("utf-8")
+                                                            self.message)
 
     @property
     def oldhexsha(self):
@@ -273,7 +284,7 @@ class RefLog(list, Serializable):
         lf._obtain_lock_or_raise()
         fd = open(filepath, 'ab')
         try:
-            fd.write(repr(entry).encode(defenc))
+            fd.write(entry.format().encode(defenc))
         finally:
             fd.close()
             lf._release_lock()
@@ -298,7 +309,7 @@ class RefLog(list, Serializable):
 
         # write all entries
         for e in self:
-            write(repr(e).encode(defenc))
+            write(e.format().encode(defenc))
         # END for each entry
 
     def _deserialize(self, stream):

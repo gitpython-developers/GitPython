@@ -1,3 +1,4 @@
+#-*-coding:utf-8-*-
 # test_index.py
 # Copyright (C) 2008, 2009 Michael Trier (mtrier@gmail.com) and contributors
 #
@@ -433,7 +434,7 @@ class TestIndex(TestBase):
         # TEST COMMITTING
         # commit changed index
         cur_commit = cur_head.commit
-        commit_message = "commit default head"
+        commit_message = u"commit default head by Frèderic Çaufl€"
 
         new_commit = index.commit(commit_message, head=False)
         assert cur_commit != new_commit
@@ -449,18 +450,19 @@ class TestIndex(TestBase):
         # commit with other actor
         cur_commit = cur_head.commit
 
-        my_author = Actor("An author", "author@example.com")
-        my_committer = Actor("An committer", "committer@example.com")
+        my_author = Actor(u"Frèderic Çaufl€", "author@example.com")
+        my_committer = Actor(u"Committing Frèderic Çaufl€", "committer@example.com")
         commit_actor = index.commit(commit_message, author=my_author, committer=my_committer)
         assert cur_commit != commit_actor
-        assert commit_actor.author.name == "An author"
+        assert commit_actor.author.name == u"Frèderic Çaufl€"
         assert commit_actor.author.email == "author@example.com"
-        assert commit_actor.committer.name == "An committer"
+        assert commit_actor.committer.name == u"Committing Frèderic Çaufl€"
         assert commit_actor.committer.email == "committer@example.com"
         assert commit_actor.message == commit_message
         assert commit_actor.parents[0] == cur_commit
         assert len(new_commit.parents) == 1
-        assert cur_head.commit == cur_commit
+        assert cur_head.commit == commit_actor
+        assert cur_head.log()[-1].actor == my_committer
 
         # same index, no parents
         commit_message = "index without parents"
