@@ -297,7 +297,10 @@ Access objects and add/remove entries. Commit the changes::
     # Access the entries directly
     index.add(['my_new_file'])      # add a new file to the index
     index.remove(['dir/existing_file'])
-    new_commit = index.commit("my commit message")
+    new_commit = index.commit("my commit message") # commit by commit message first
+    my_author = Actor("An author", "author@example.com")
+    my_committer = Actor("A committer", "committer@example.com")
+    next_commit = index.commit("my commit message", author=my_author, commiter=my_committer) # commit by commit message and author and committer
     
 Create new indices from other trees or as result of a merge. Write that result to a new index file::
 
