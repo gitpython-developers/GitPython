@@ -31,6 +31,7 @@ from git.util import (
     join_path,
     finalize_process
 )
+from git.cmd import handle_process_output
 from gitdb.util import join
 from git.compat import defenc
 
@@ -38,30 +39,6 @@ from git.compat import defenc
 __all__ = ('RemoteProgress', 'PushInfo', 'FetchInfo', 'Remote')
 
 #{ Utilities
-
-
-def digest_process_messages(fh, progress):
-    """Read progress messages from file-like object fh, supplying the respective
-    progress messages to the progress instance.
-
-    :param fh: File handle to read from
-    :return: list(line, ...) list of lines without linebreaks that did
-        not contain progress information"""
-    line_so_far = b''
-    dropped_lines = list()
-    while True:
-        char = fh.read(1)       # reads individual single byte strings
-        if not char:
-            break
-
-        if char in (b'\r', b'\n') and line_so_far:
-            dropped_lines.extend(progress._parse_progress_line(line_so_far.decode(defenc)))
-            line_so_far = b''
-        else:
-            line_so_far += char
-        # END process parsed line
-    # END while file is not done reading
-    return dropped_lines
 
 
 def add_progress(kwargs, git, progress):
@@ -532,17 +509,25 @@ class Remote(LazyMixin, Iterable):
         # Basically we want all fetch info lines which appear to be in regular form, and thus have a
         # command character. Everything else we ignore,
         cmds = set(PushInfo._flag_map.keys()) & set(FetchInfo._flag_map.keys())
-        for line in digest_process_messages(proc.stderr, progress):
-            if line.startswith('fatal:'):
-                raise GitCommandError(("Error when fetching: %s" % line,), 2)
-            # END handle special messages
-            for cmd in cmds:
-                if line[1] == cmd:
-                    fetch_info_lines.append(line)
-                    continue
-                # end find command code
-            # end for each comand code we know
-        # END for each line
+
+        progress_handler = progress.new_message_handler()
+
+        def my_progress_handler(line):
+            for pline in progress_handler(line):
+                if line.startswith('fatal:'):
+                    raise GitCommandError(("Error when fetching: %s" % line,), 2)
+                # END handle special messages
+                for cmd in cmds:
+                    if line[1] == cmd:
+                        fetch_info_lines.append(line)
+                        continue
+                    # end find command code
+                # end for each comand code we know
+            # end for each line progress didn't handle
+        # end
+
+        # We are only interested in stderr here ...
+        handle_process_output(proc, None, my_progress_handler, finalize_process)
 
         # read head information
         fp = open(join(self.repo.git_dir, 'FETCH_HEAD'), 'rb')
@@ -555,7 +540,6 @@ class Remote(LazyMixin, Iterable):
 
         output.extend(FetchInfo._from_line(self.repo, err_line, fetch_line)
                       for err_line, fetch_line in zip(fetch_info_lines, fetch_head_info))
-        finalize_process(proc)
         return output
 
     def _get_push_info(self, proc, progress):
@@ -564,11 +548,10 @@ class Remote(LazyMixin, Iterable):
         # read the lines manually as it will use carriage returns between the messages
         # to override the previous one. This is why we read the bytes manually
         # TODO: poll() on file descriptors to know what to read next, process streams concurrently
-        digest_process_messages(proc.stderr, progress)
-
+        progress_handler = progress.new_message_handler()
         output = IterableList('name')
-        for line in proc.stdout.readlines():
-            line = line.decode(defenc)
+
+        def stdout_handler(line):
             try:
                 output.append(PushInfo._from_line(self, line))
             except ValueError:
@@ -576,7 +559,8 @@ class Remote(LazyMixin, Iterable):
                 pass
             # END exception handling
         # END for each line
-        finalize_process(proc)
+
+        handle_process_output(proc, stdout_handler, progress_handler, finalize_process)
         return output
 
     def fetch(self, refspec=None, progress=None, **kwargs):

@@ -5,7 +5,10 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
 from git.exc import InvalidGitRepositoryError, NoSuchPathError
-from git.cmd import Git
+from git.cmd import (
+    Git,
+    handle_process_output
+)
 from git.refs import (
     HEAD,
     Head,
@@ -25,7 +28,6 @@ from git.index import IndexFile
 from git.config import GitConfigParser
 from git.remote import (
     Remote,
-    digest_process_messages,
     add_progress
 )
 
@@ -711,9 +713,10 @@ class Repo(object):
             proc = git.clone(url, path, with_extended_output=True, as_process=True,
                              v=True, **add_progress(kwargs, git, progress))
             if progress:
-                digest_process_messages(proc.stderr, progress)
-            # END handle progress
-            finalize_process(proc)
+                handle_process_output(proc, None, progress.new_message_handler(), finalize_process)
+            else:
+                finalize_process(proc)
+            # end handle progress
         finally:
             if prev_cwd is not None:
                 os.chdir(prev_cwd)

@@ -287,11 +287,11 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             changes according to the amount of trees.
             If 1 Tree is given, it will just be read into a new index
             If 2 Trees are given, they will be merged into a new index using a
-             two way merge algorithm. Tree 1 is the 'current' tree, tree 2 is the 'other'
-             one. It behaves like a fast-forward.
-             If 3 Trees are given, a 3-way merge will be performed with the first tree
-             being the common ancestor of tree 2 and tree 3. Tree 2 is the 'current' tree,
-             tree 3 is the 'other' one
+            two way merge algorithm. Tree 1 is the 'current' tree, tree 2 is the 'other'
+            one. It behaves like a fast-forward.
+            If 3 Trees are given, a 3-way merge will be performed with the first tree
+            being the common ancestor of tree 2 and tree 3. Tree 2 is the 'current' tree,
+            tree 3 is the 'other' one
 
         :param kwargs:
             Additional arguments passed to git-read-tree
@@ -882,14 +882,11 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
     def commit(self, message, parent_commits=None, head=True, author=None, committer=None):
         """Commit the current default index file, creating a commit object.
-
         For more information on the arguments, see tree.commit.
-        :note:
-            If you have manually altered the .entries member of this instance,
-            don't forget to write() your changes to disk beforehand.
 
-        :return:
-            Commit object representing the new commit"""
+        :note: If you have manually altered the .entries member of this instance,
+               don't forget to write() your changes to disk beforehand.
+        :return: Commit object representing the new commit"""
         tree = self.write_tree()
         return Commit.create_from_tree(self.repo, tree, message, parent_commits,
                                        head, author=author, committer=committer)
