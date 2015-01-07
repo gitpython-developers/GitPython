@@ -103,7 +103,7 @@ class Git(LazyMixin):
             try:
                 os.kill(self.proc.pid, 2)   # interrupt signal
                 self.proc.wait()    # ensure process goes away
-            except OSError:
+            except (OSError, WindowsError):
                 pass  # ignore error when process already died
             except AttributeError:
                 # try windows
