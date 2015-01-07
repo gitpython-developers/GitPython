@@ -8,6 +8,7 @@ import os
 import sys
 import select
 import logging
+import threading
 from subprocess import (
     call,
     Popen,
@@ -72,12 +73,8 @@ def handle_process_output(process, stdout_handler, stderr_handler, finalizer):
         return line
     # end
 
-    fdmap = { process.stdout.fileno() : (process.stdout, stdout_handler, read_line_fast),
-              process.stderr.fileno() : (process.stderr, stderr_handler, read_line_slow) }
-
-    if hasattr(select, 'poll'):
-        def dispatch_line(fd):
-            stream, handler, readline = fdmap[fd]
+    def dispatch_line(fno):
+            stream, handler, readline = fdmap[fno]
             # this can possibly block for a while, but since we wake-up with at least one or more lines to handle,
             # we are good ... 
             line = readline(stream).decode(defenc)
@@ -85,9 +82,22 @@ def handle_process_output(process, stdout_handler, stderr_handler, finalizer):
                 handler(line)
             return line
         # end dispatch helper
+    # end
 
-        # poll is preferred, as select is limited to file handles up to 1024 ... . Not an issue for us though,
-        # as we deal with relatively blank processes
+    def deplete_buffer(fno):
+        while True:
+            line = dispatch_line(fno)
+            if not line:
+                break
+        # end deplete buffer
+    # end 
+
+    fdmap = { process.stdout.fileno() : (process.stdout, stdout_handler, read_line_fast),
+              process.stderr.fileno() : (process.stderr, stderr_handler, read_line_slow) }
+
+    if hasattr(select, 'poll'):
+        # poll is preferred, as select is limited to file handles up to 1024 ... . This could otherwise be 
+        # an issue for us, as it matters how many handles or own process has
         poll = select.poll()
         READ_ONLY = select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLERR
         CLOSED = select.POLLHUP | select.POLLERR
@@ -113,18 +123,23 @@ def handle_process_output(process, stdout_handler, stderr_handler, finalizer):
         # end endless loop
 
         # Depelete all remaining buffers
-        for fno, _ in fdmap.items():
-            while True:
-                line = dispatch_line(fno)
-                if not line:
-                    break
-            # end deplete buffer
+        for fno in fdmap.keys():
+            deplete_buffer(fno)
         # end for each file handle
     else:
         # Oh ... probably we are on windows. select.select() can only handle sockets, we have files
         # The only reliable way to do this now is to use threads and wait for both to finish
         # Since the finalizer is expected to wait, we don't have to introduce our own wait primitive
-        raise NotImplementedError()
+        # NO: It's not enough unfortunately, and we will have to sync the threads
+        threads = list()
+        for fno in fdmap.keys():
+            t = threading.Thread(target = lambda: deplete_buffer(fno))
+            threads.append(t)
+            t.start()
+        # end
+        for t in threads:
+            t.join()
+        # end
     # end
 
     return finalizer(process)
