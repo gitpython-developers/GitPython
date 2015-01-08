@@ -26,8 +26,10 @@ from git import (
     GitDB,
     Submodule,
     GitCmdObjectDB,
-    Remote
+    Remote,
+    BadName
 )
+from git.repo.fun import touch
 from git.util import join_path_native
 from git.exc import BadObject
 from gitdb.util import bin_to_hex
@@ -35,6 +37,7 @@ from git.compat import (
     string_types,
     defenc
 )
+from gitdb.test.lib import with_rw_directory
 
 import os
 import sys
@@ -682,3 +685,25 @@ class TestRepo(TestBase):
     def test_remote_method(self):
         self.failUnlessRaises(ValueError, self.rorepo.remote, 'foo-blue')
         assert isinstance(self.rorepo.remote(name='origin'), Remote)
+
+    @with_rw_directory
+    def test_empty_repo(self, rw_dir):
+        """Assure we can handle empty repositories"""
+        r = Repo.init(rw_dir, mkdir=False)
+        # It's ok not to be able to iterate a commit, as there is none
+        self.failUnlessRaises(ValueError, r.iter_commits)
+        assert r.active_branch.name == 'master'
+        assert not r.active_branch.is_valid(), "Branch is yet to be born"
+
+        # actually, when trying to create a new branch without a commit, git itself fails
+        # We should, however, not fail ungracefully
+        self.failUnlessRaises(BadName, r.create_head, 'foo')
+
+        new_file_path = os.path.join(rw_dir, "new_file.ext")
+        touch(new_file_path)
+        r.index.add([new_file_path])
+        r.index.commit("initial commit")
+
+        # Now a branch should be creatable
+        nb = r.create_head('foo')
+        assert nb.is_valid()

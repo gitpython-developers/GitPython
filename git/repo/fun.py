@@ -2,7 +2,10 @@
 import os
 from string import digits
 
-from gitdb.exc import BadObject
+from gitdb.exc import (
+    BadObject,
+    BadName
+)
 from git.refs import SymbolicReference
 from git.objects import Object
 from gitdb.util import (
@@ -83,7 +86,7 @@ def name_to_object(repo, name, return_ref=False):
     :return: object specified by the given name, hexshas ( short and long )
         as well as references are supported
     :param return_ref: if name specifies a reference, we will return the reference
-        instead of the object. Otherwise it will raise BadObject
+        instead of the object. Otherwise it will raise BadObject or BadName
     """
     hexsha = None
 
@@ -119,7 +122,7 @@ def name_to_object(repo, name, return_ref=False):
 
     # tried everything ? fail
     if hexsha is None:
-        raise BadObject(name)
+        raise BadName(name)
     # END assert hexsha was found
 
     return Object.new_from_sha(repo, hex_to_bin(hexsha))
