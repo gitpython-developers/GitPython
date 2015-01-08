@@ -80,7 +80,7 @@ class TestDiff(TestBase):
             for other in (None, commit.Index, commit.parents[0]):
                 for paths in (None, "CHANGES", ("CHANGES", "lib")):
                     for create_patch in range(2):
-                        diff_index = diff_item.diff(other, paths, create_patch)
+                        diff_index = diff_item.diff(other=other, paths=paths, create_patch=create_patch)
                         assert isinstance(diff_index, DiffIndex)
 
                         if diff_index:

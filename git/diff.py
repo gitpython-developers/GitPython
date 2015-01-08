@@ -302,6 +302,7 @@ class Diff(object):
         diff_header = cls.re_header.match
         for diff in ('\n' + text).split('\ndiff --git')[1:]:
             header = diff_header(diff)
+            assert header is not None, "Failed to parse diff header from " % diff
 
             a_path, b_path, similarity_index, rename_from, rename_to, \
                 old_mode, new_mode, new_file_mode, deleted_file_mode, \

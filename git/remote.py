@@ -404,7 +404,7 @@ class Remote(LazyMixin, Iterable):
             self.config_reader.get('url')
             return True
         except cp.NoOptionError:
-            # we have the section at least ... 
+            # we have the section at least ...
             return True
         except cp.NoSectionError:
             return False
