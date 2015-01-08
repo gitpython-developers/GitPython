@@ -299,12 +299,16 @@ class TestRepo(TestBase):
 
     def test_blame_real(self):
         c = 0
+        nml = 0   # amount of multi-lines per blame
         for item in self.rorepo.head.commit.tree.traverse(
                 predicate=lambda i, d: i.type == 'blob' and i.path.endswith('.py')):
             c += 1
-            self.rorepo.blame(self.rorepo.head, item.path)
+
+            for b in self.rorepo.blame(self.rorepo.head, item.path):
+                nml += int(len(b[1]) > 1)
         # END for each item to traverse
-        assert c
+        assert c, "Should have executed at least one blame command"
+        assert nml, "There should at least be one blame commit that contains multiple lines"
 
     def test_untracked_files(self):
         base = self.rorepo.working_tree_dir
