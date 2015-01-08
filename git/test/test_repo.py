@@ -620,7 +620,7 @@ class TestRepo(TestBase):
 
     def test_repo_odbtype(self):
         target_type = GitDB
-        if sys.version_info[1] < 5:
+        if sys.version_info[:2] < (2, 5):
             target_type = GitCmdObjectDB
         assert isinstance(self.rorepo.odb, target_type)
 
