@@ -59,7 +59,7 @@ import sys
 import re
 
 DefaultDBType = GitDB
-if sys.version_info[1] < 5:     # python 2.4 compatiblity
+if sys.version_info[:2] < (2, 5):     # python 2.4 compatiblity
     DefaultDBType = GitCmdObjectDB
 # END handle python 2.4
 

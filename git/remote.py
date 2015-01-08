@@ -611,7 +611,8 @@ class Remote(LazyMixin, Iterable):
 
         proc = self.repo.git.fetch(self, *args, with_extended_output=True, as_process=True, v=True, **kwargs)
         res = self._get_fetch_info_from_stderr(proc, progress or RemoteProgress())
-        self.repo.odb.update_cache()
+        if hasattr(self.repo.odb, 'update_cache'):
+            self.repo.odb.update_cache()
         return res
 
     def pull(self, refspec=None, progress=None, **kwargs):
@@ -625,7 +626,8 @@ class Remote(LazyMixin, Iterable):
         kwargs = add_progress(kwargs, self.repo.git, progress)
         proc = self.repo.git.pull(self, refspec, with_extended_output=True, as_process=True, v=True, **kwargs)
         res = self._get_fetch_info_from_stderr(proc, progress or RemoteProgress())
-        self.repo.odb.update_cache()
+        if hasattr(self.repo.odb, 'update_cache'):
+            self.repo.odb.update_cache()
         return res
 
     def push(self, refspec=None, progress=None, **kwargs):
