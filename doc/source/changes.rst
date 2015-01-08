@@ -5,6 +5,7 @@ Changelog
 0.3.5 - Bugfixes
 ================
 * push/pull/fetch operations will not block anymore
+* diff() can now properly detect renames, both in patch and raw format. Previously it only worked when create_patch was True.
 * A list of all fixed issues can be found here: https://github.com/gitpython-developers/GitPython/issues?q=milestone%3A%22v0.3.5+-+bugfixes%22+
 
 0.3.4 - Python 3 Support

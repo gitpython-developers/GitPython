@@ -56,6 +56,15 @@ class TestDiff(TestBase):
         assert_equal(diff.rename_from, 'AUTHORS')
         assert_equal(diff.rename_to, 'CONTRIBUTORS')
 
+        output = StringProcessAdapter(fixture('diff_rename_raw'))
+        diffs = Diff._index_from_raw_format(self.rorepo, output.stdout)
+        assert len(diffs) == 1
+        diff = diffs[0]
+        assert diff.renamed
+        assert diff.rename_from == 'this'
+        assert diff.rename_to == 'that'
+        assert len(list(diffs.iter_change_type('R'))) == 1
+
     def test_diff_patch_format(self):
         # test all of the 'old' format diffs for completness - it should at least
         # be able to deal with it

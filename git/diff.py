@@ -73,9 +73,9 @@ class Diffable(object):
         args.append("--abbrev=40")        # we need full shas
         args.append("--full-index")       # get full index paths, not only filenames
 
+        args.append("-M")                 # check for renames, in both formats
         if create_patch:
             args.append("-p")
-            args.append("-M")               # check for renames
         else:
             args.append("--raw")
 
@@ -318,14 +318,11 @@ class Diff(object):
     @classmethod
     def _index_from_raw_format(cls, repo, stream):
         """Create a new DiffIndex from the given stream which must be in raw format.
-        :note:
-            This format is inherently incapable of detecting renames, hence we only
-            modify, delete and add files
         :return: git.DiffIndex"""
         # handles
         # :100644 100644 687099101... 37c5e30c8... M    .gitignore
         index = DiffIndex()
-        for line in stream:
+        for line in stream.readlines():
             line = line.decode(defenc)
             if not line.startswith(":"):
                 continue
@@ -336,6 +333,8 @@ class Diff(object):
             b_path = path
             deleted_file = False
             new_file = False
+            rename_from = None
+            rename_to = None
 
             # NOTE: We cannot conclude from the existance of a blob to change type
             # as diffs with the working do not have blobs yet
@@ -345,10 +344,13 @@ class Diff(object):
             elif change_type == 'A':
                 a_blob_id = None
                 new_file = True
+            elif change_type[0] == 'R':     # parses RXXX, where XXX is a confidence value
+                a_path, b_path = path.split('\t', 1)
+                rename_from, rename_to = a_path, b_path
             # END add/remove handling
 
             diff = Diff(repo, a_path, b_path, a_blob_id, b_blob_id, old_mode, new_mode,
-                        new_file, deleted_file, None, None, '')
+                        new_file, deleted_file, rename_from, rename_to, '')
             index.append(diff)
         # END for each line
 
