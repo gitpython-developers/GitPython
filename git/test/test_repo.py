@@ -25,7 +25,8 @@ from git import (
     Reference,
     GitDB,
     Submodule,
-    GitCmdObjectDB
+    GitCmdObjectDB,
+    Remote
 )
 from git.util import join_path_native
 from git.exc import BadObject
@@ -673,3 +674,7 @@ class TestRepo(TestBase):
                 last_commit(repo, 'master', 'git/test/test_base.py')
             # end for each repository type
         # end for each iteration
+
+    def test_remote_method(self):
+        self.failUnlessRaises(ValueError, self.rorepo.remote, 'foo-blue')
+        assert isinstance(self.rorepo.remote(name='origin'), Remote)

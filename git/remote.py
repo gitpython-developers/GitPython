@@ -397,6 +397,19 @@ class Remote(LazyMixin, Iterable):
     def __hash__(self):
         return hash(self.name)
 
+    def exists(self):
+        """:return: True if this is a valid, existing remote.
+        Valid remotes have an entry in the repository's configuration"""
+        try:
+            self.config_reader.get('url')
+            return True
+        except cp.NoOptionError:
+            # we have the section at least ... 
+            return True
+        except cp.NoSectionError:
+            return False
+        # end
+
     @classmethod
     def iter_items(cls, repo):
         """:return: Iterator yielding Remote objects of the given repository"""

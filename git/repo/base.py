@@ -250,7 +250,10 @@ class Repo(object):
     def remote(self, name='origin'):
         """:return: Remote with the specified name
         :raise ValueError:  if no remote with such a name exists"""
-        return Remote(self, name)
+        r = Remote(self, name)
+        if not r.exists():
+            raise ValueError("Remote named '%s' didn't exist" % name)
+        return r
 
     #{ Submodules
 
