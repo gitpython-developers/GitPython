@@ -89,7 +89,7 @@ class TestRepo(TestBase):
         assert self.rorepo.tree(tree) == tree
 
         # try from invalid revision that does not exist
-        self.failUnlessRaises(BadObject, self.rorepo.tree, 'hello world')
+        self.failUnlessRaises(BadName, self.rorepo.tree, 'hello world')
 
     def test_commit_from_revision(self):
         commit = self.rorepo.commit('0.1.4')
@@ -533,7 +533,7 @@ class TestRepo(TestBase):
                     obj = self._assert_rev_parse(path_section)
                     assert obj.type == ref.object.type
                     num_resolved += 1
-                except BadObject:
+                except (BadName, BadObject):
                     print("failed on %s" % path_section)
                     # is fine, in case we have something like 112, which belongs to remotes/rname/merge-requests/112
                     pass
@@ -698,6 +698,9 @@ class TestRepo(TestBase):
         # actually, when trying to create a new branch without a commit, git itself fails
         # We should, however, not fail ungracefully
         self.failUnlessRaises(BadName, r.create_head, 'foo')
+        self.failUnlessRaises(BadName, r.create_head, 'master')
+        # It's expected to not be able to access a tree
+        self.failUnlessRaises(ValueError, r.tree)
 
         new_file_path = os.path.join(rw_dir, "new_file.ext")
         touch(new_file_path)
