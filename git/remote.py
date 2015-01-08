@@ -518,7 +518,7 @@ class Remote(LazyMixin, Iterable):
                     raise GitCommandError(("Error when fetching: %s" % line,), 2)
                 # END handle special messages
                 for cmd in cmds:
-                    if line[1] == cmd:
+                    if len(line) > 1 and line[0] == ' ' and line[1] == cmd:
                         fetch_info_lines.append(line)
                         continue
                     # end find command code

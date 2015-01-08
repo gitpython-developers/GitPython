@@ -83,7 +83,12 @@ def handle_process_output(process, stdout_handler, stderr_handler, finalizer):
             # we are good ...
             line = readline(stream).decode(defenc)
             if line and handler:
-                handler(line)
+                try:
+                    handler(line)
+                except Exception:
+                    # Keep reading, have to pump the lines empty nontheless
+                    log.error("Line handler exception on line: %s", line, exc_info=True)
+                # end
             return line
         # end dispatch helper
     # end

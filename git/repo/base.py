@@ -113,7 +113,7 @@ class Repo(object):
         :raise NoSuchPathError:
         :return: git.Repo """
         epath = os.path.abspath(os.path.expandvars(os.path.expanduser(path or os.getcwd())))
-
+        self.git = None  # should be set for __del__ not to fail in case we raise
         if not os.path.exists(epath):
             raise NoSuchPathError(epath)
 
