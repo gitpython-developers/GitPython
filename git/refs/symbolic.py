@@ -8,7 +8,10 @@ from git.util import (
     assure_directory_exists
 )
 
-from gitdb.exc import BadObject
+from gitdb.exc import (
+    BadObject,
+    BadName
+)
 from gitdb.util import (
     join,
     dirname,
@@ -201,7 +204,7 @@ class SymbolicReference(object):
         else:
             try:
                 invalid_type = self.repo.rev_parse(commit).type != Commit.type
-            except BadObject:
+            except (BadObject, BadName):
                 raise ValueError("Invalid object: %s" % commit)
             # END handle exception
         # END verify type
@@ -283,7 +286,7 @@ class SymbolicReference(object):
             try:
                 obj = self.repo.rev_parse(ref + "^{}")    # optionally deref tags
                 write_value = obj.hexsha
-            except BadObject:
+            except (BadObject, BadName):
                 raise ValueError("Could not extract object from %s" % ref)
             # END end try string
         else:
