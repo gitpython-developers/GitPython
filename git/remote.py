@@ -610,7 +610,9 @@ class Remote(LazyMixin, Iterable):
             args = [refspec]
 
         proc = self.repo.git.fetch(self, *args, with_extended_output=True, as_process=True, v=True, **kwargs)
-        return self._get_fetch_info_from_stderr(proc, progress or RemoteProgress())
+        res = self._get_fetch_info_from_stderr(proc, progress or RemoteProgress())
+        self.repo.odb.update_cache()
+        return res
 
     def pull(self, refspec=None, progress=None, **kwargs):
         """Pull changes from the given branch, being the same as a fetch followed
@@ -622,7 +624,9 @@ class Remote(LazyMixin, Iterable):
         :return: Please see 'fetch' method """
         kwargs = add_progress(kwargs, self.repo.git, progress)
         proc = self.repo.git.pull(self, refspec, with_extended_output=True, as_process=True, v=True, **kwargs)
-        return self._get_fetch_info_from_stderr(proc, progress or RemoteProgress())
+        res = self._get_fetch_info_from_stderr(proc, progress or RemoteProgress())
+        self.repo.odb.update_cache()
+        return res
 
     def push(self, refspec=None, progress=None, **kwargs):
         """Push changes from source branch in refspec to target branch in refspec.

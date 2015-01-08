@@ -6,6 +6,7 @@ Changelog
 ================
 * push/pull/fetch operations will not block anymore
 * diff() can now properly detect renames, both in patch and raw format. Previously it only worked when create_patch was True.
+* repo.odb.update_cache() is now called automatically after fetch and pull operations. In case you did that in your own code, you might want to remove your line to prevent a double-update that causes unnecessary IO.
 * A list of all fixed issues can be found here: https://github.com/gitpython-developers/GitPython/issues?q=milestone%3A%22v0.3.5+-+bugfixes%22+
 
 0.3.4 - Python 3 Support
