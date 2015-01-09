@@ -33,10 +33,7 @@ from git.repo.fun import touch
 from git.util import join_path_native
 from git.exc import BadObject
 from gitdb.util import bin_to_hex
-from git.compat import (
-    string_types,
-    defenc
-)
+from git.compat import string_types
 from gitdb.test.lib import with_rw_directory
 
 import os
@@ -275,7 +272,7 @@ class TestRepo(TestBase):
 
     @patch.object(Git, '_call_process')
     def test_should_display_blame_information(self, git):
-        git.return_value = fixture('blame').decode(defenc)
+        git.return_value = fixture('blame')
         b = self.rorepo.blame('master', 'lib/git.py')
         assert_equal(13, len(b))
         assert_equal(2, len(b[0]))
@@ -283,7 +280,6 @@ class TestRepo(TestBase):
         assert_equal(hash(b[0][0]), hash(b[9][0]))
         c = b[0][0]
         assert_true(git.called)
-        assert_equal(git.call_args, (('blame', 'master', '--', 'lib/git.py'), {'p': True}))
 
         assert_equal('634396b2f541a9f2d58b00be1a07f0c358b999b3', c.hexsha)
         assert_equal('Tom Preston-Werner', c.author.name)
@@ -299,6 +295,11 @@ class TestRepo(TestBase):
         assert_true(tlist)
         assert_true(isinstance(tlist[0], string_types))
         assert_true(len(tlist) < sum(len(t) for t in tlist))               # test for single-char bug
+
+        # BINARY BLAME
+        git.return_value = fixture('blame_binary')
+        blames = self.rorepo.blame('master', 'rps')
+        assert len(blames) == 2
 
     def test_blame_real(self):
         c = 0

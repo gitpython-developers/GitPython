@@ -587,14 +587,28 @@ class Repo(object):
             A list of tuples associating a Commit object with a list of lines that
             changed within the given commit. The Commit objects will be given in order
             of appearance."""
-        data = self.git.blame(rev, '--', file, p=True)
+        data = self.git.blame(rev, '--', file, p=True, stdout_as_string=False)
         commits = dict()
         blames = list()
         info = None
 
-        for line in data.splitlines(False):
-            parts = self.re_whitespace.split(line, 1)
-            firstpart = parts[0]
+        keepends = True
+        for line in data.splitlines(keepends):
+            try:
+                line = line.rstrip().decode(defenc)
+            except UnicodeDecodeError:
+                firstpart = ''
+                is_binary = True
+            else:
+                # As we don't have an idea when the binary data ends, as it could contain multiple newlines
+                # in the process. So we rely on being able to decode to tell us what is is.
+                # This can absolutely fail even on text files, but even if it does, we should be fine treating it
+                # as binary instead
+                parts = self.re_whitespace.split(line, 1)
+                firstpart = parts[0]
+                is_binary = False
+            # end handle decode of line
+
             if self.re_hexsha_only.search(firstpart):
                 # handles
                 # 634396b2f541a9f2d58b00be1a07f0c358b999b3 1 1 7        - indicates blame-data start
@@ -651,10 +665,18 @@ class Repo(object):
                                            message=info['summary'])
                                 commits[sha] = c
                             # END if commit objects needs initial creation
-                            m = self.re_tab_full_line.search(line)
-                            text, = m.groups()
+                            if not is_binary:
+                                if line and line[0] == '\t':
+                                    line = line[1:]
+                            else:
+                                # NOTE: We are actually parsing lines out of binary data, which can lead to the
+                                # binary being split up along the newline separator. We will append this to the blame
+                                # we are currently looking at, even though it should be concatenated with the last line
+                                # we have seen.
+                                pass
+                            # end handle line contents
                             blames[-1][0] = c
-                            blames[-1][1].append(text)
+                            blames[-1][1].append(line)
                             info = {'id': sha}
                         # END if we collected commit info
                     # END distinguish filename,summary,rest

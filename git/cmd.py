@@ -31,7 +31,7 @@ from git.compat import (
 )
 
 execute_kwargs = ('istream', 'with_keep_cwd', 'with_extended_output',
-                  'with_exceptions', 'as_process',
+                  'with_exceptions', 'as_process', 'stdout_as_string',
                   'output_stream')
 
 log = logging.getLogger('git.cmd')
@@ -411,6 +411,7 @@ class Git(LazyMixin):
                 with_exceptions=True,
                 as_process=False,
                 output_stream=None,
+                stdout_as_string=True,
                 **subprocess_kwargs
                 ):
         """Handles executing the command on the shell and consumes and returns
@@ -453,6 +454,11 @@ class Git(LazyMixin):
             This merely is a workaround as data will be copied from the
             output pipe to the given output stream directly.
             Judging from the implementation, you shouldn't use this flag !
+
+        :param stdout_as_string:
+            if False, the commands standard output will be bytes. Otherwise, it will be
+            decoded into a string using the default encoding (usually utf-8).
+            The latter can fail, if the output contains binary data.
 
         :param subprocess_kwargs:
             Keyword arguments to be passed to subprocess.Popen. Please note that
@@ -545,7 +551,7 @@ class Git(LazyMixin):
             else:
                 raise GitCommandError(command, status, stderr_value)
 
-        if isinstance(stdout_value, bytes):  # could also be output_stream
+        if isinstance(stdout_value, bytes) and stdout_as_string:  # could also be output_stream
             stdout_value = stdout_value.decode(defenc)
 
         # Allow access to the command's status code
