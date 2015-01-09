@@ -314,6 +314,13 @@ class TestRepo(TestBase):
         assert c, "Should have executed at least one blame command"
         assert nml, "There should at least be one blame commit that contains multiple lines"
 
+    @patch.object(Git, '_call_process')
+    def test_blame_complex_revision(self, git):
+        git.return_value = fixture('blame_complex_revision')
+        res = self.rorepo.blame("HEAD~10..HEAD", "README.md")
+        assert len(res) == 1
+        assert len(res[0][1]) == 83, "Unexpected amount of parsed blame lines"
+
     def test_untracked_files(self):
         base = self.rorepo.working_tree_dir
         files = (join_path_native(base, "__test_myfile"),
