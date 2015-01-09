@@ -65,6 +65,16 @@ class TestDiff(TestBase):
         assert diff.rename_to == 'that'
         assert len(list(diffs.iter_change_type('R'))) == 1
 
+    def test_binary_diff(self):
+        for method, file_name in ((Diff._index_from_patch_format, 'diff_patch_binary'),
+                                  (Diff._index_from_raw_format, 'diff_raw_binary')):
+            res = method(None, StringProcessAdapter(fixture(file_name)).stdout)
+            assert len(res) == 1
+            assert len(list(res.iter_change_type('M'))) == 1
+            if res[0].diff:
+                assert res[0].diff == "Binary files a/rps and b/rps differ\n", "in patch mode, we get a diff text"
+        # end for each method to test
+
     def test_diff_patch_format(self):
         # test all of the 'old' format diffs for completness - it should at least
         # be able to deal with it
