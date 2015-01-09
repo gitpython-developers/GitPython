@@ -10,7 +10,10 @@ from gitdb.util import hex_to_bin
 from .objects.blob import Blob
 from .objects.util import mode_str_to_int
 
-from git.compat import defenc
+from git.compat import (
+    defenc,
+    PY3
+)
 
 
 __all__ = ('Diffable', 'DiffIndex', 'Diff')
@@ -194,7 +197,7 @@ class Diff(object):
                                 (?:^deleted[ ]file[ ]mode[ ](?P<deleted_file_mode>.+)(?:\n|$))?
                                 (?:^index[ ](?P<a_blob_id>[0-9A-Fa-f]+)
                                     \.\.(?P<b_blob_id>[0-9A-Fa-f]+)[ ]?(?P<b_mode>.+)?(?:\n|$))?
-                            """, re.VERBOSE | re.MULTILINE)
+                            """.encode('ascii'), re.VERBOSE | re.MULTILINE)
     # can be used for comparisons
     NULL_HEX_SHA = "0" * 40
     NULL_BIN_SHA = b"\0" * 20
@@ -280,11 +283,21 @@ class Diff(object):
             msg += '\nfile renamed to %r' % self.rename_to
         if self.diff:
             msg += '\n---'
-            msg += self.diff
+            try:
+                msg += self.diff.decode(defenc)
+            except UnicodeDecodeError:
+                msg += 'OMITTED BINARY DATA'
+            # end handle encoding
             msg += '\n---'
         # END diff info
 
-        return h + msg
+        # Python2 sillyness: have to assure we convert our likely to be unicode object to a string with the
+        # right encoding. Otherwise it tries to convert it using ascii, which may fail ungracefully
+        res = h + msg
+        if not PY3:
+            res = res.encode(defenc)
+        # end
+        return res
 
     @property
     def renamed(self):
@@ -298,7 +311,7 @@ class Diff(object):
         :param stream: result of 'git diff' as a stream (supporting file protocol)
         :return: git.DiffIndex """
         # for now, we have to bake the stream
-        text = stream.read().decode(defenc)
+        text = stream.read()
         index = DiffIndex()
         previous_header = None
         for header in cls.re_header.finditer(text):
@@ -317,8 +330,17 @@ class Diff(object):
             # We just use the one mode we should have parsed
             a_mode = old_mode or deleted_file_mode or (a_path and (b_mode or new_mode or new_file_mode))
             b_mode = b_mode or new_mode or new_file_mode or (b_path and a_mode)
-            index.append(Diff(repo, a_path, b_path, a_blob_id, b_blob_id, a_mode, b_mode,
-                              new_file, deleted_file, rename_from, rename_to, None))
+            index.append(Diff(repo,
+                              a_path and a_path.decode(defenc),
+                              b_path and b_path.decode(defenc),
+                              a_blob_id and a_blob_id.decode(defenc),
+                              b_blob_id and b_blob_id.decode(defenc),
+                              a_mode and a_mode.decode(defenc),
+                              b_mode and b_mode.decode(defenc),
+                              new_file, deleted_file,
+                              rename_from and rename_from.decode(defenc),
+                              rename_to and rename_to.decode(defenc),
+                              None))
 
             previous_header = header
         # end for each header we parse
