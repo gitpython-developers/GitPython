@@ -73,7 +73,19 @@ class TestDiff(TestBase):
             assert len(list(res.iter_change_type('M'))) == 1
             if res[0].diff:
                 assert res[0].diff == "Binary files a/rps and b/rps differ\n", "in patch mode, we get a diff text"
+                assert isinstance(str(res[0]), str), "This call should just work"
         # end for each method to test
+
+    def test_diff_index(self):
+        output = StringProcessAdapter(fixture('diff_index_patch'))
+        res = Diff._index_from_patch_format(None, output.stdout)
+        assert len(res) == 6
+        for dr in res:
+            assert dr.diff
+        # end for each diff
+
+        dr = res[3]
+        assert dr.diff.endswith("+Binary files a/rps and b/rps differ\n")
 
     def test_diff_patch_format(self):
         # test all of the 'old' format diffs for completness - it should at least

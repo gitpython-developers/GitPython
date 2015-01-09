@@ -158,7 +158,8 @@ class IndexObject(Object):
         if attr in IndexObject.__slots__:
             # they cannot be retrieved lateron ( not without searching for them )
             raise AttributeError(
-                "path and mode attributes must have been set during %s object creation" % type(self).__name__)
+                "Attribute '%s' unset: path and mode attributes must have been set during %s object creation"
+                % (attr, type(self).__name__))
         else:
             super(IndexObject, self)._set_cache_(attr)
         # END hanlde slot attribute

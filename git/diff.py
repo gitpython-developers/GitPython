@@ -183,8 +183,8 @@ class Diff(object):
 
     # precompiled regex
     re_header = re.compile(r"""
-                                #^diff[ ]--git
-                                    [ ]a/(?P<a_path>.+?)[ ]b/(?P<b_path>.+?)\n
+                                ^diff[ ]--git
+                                    [ ](?:a/)?(?P<a_path>.+?)[ ](?:b/)?(?P<b_path>.+?)\n
                                 (?:^similarity[ ]index[ ](?P<similarity_index>\d+)%\n
                                    ^rename[ ]from[ ](?P<rename_from>\S+)\n
                                    ^rename[ ]to[ ](?P<rename_to>\S+)(?:\n|$))?
@@ -298,20 +298,30 @@ class Diff(object):
         # for now, we have to bake the stream
         text = stream.read().decode(defenc)
         index = DiffIndex()
-
-        diff_header = cls.re_header.match
-        for diff in ('\n' + text).split('\ndiff --git')[1:]:
-            header = diff_header(diff)
-            assert header is not None, "Failed to parse diff header from " % diff
-
+        previous_header = None
+        for header in cls.re_header.finditer(text):
             a_path, b_path, similarity_index, rename_from, rename_to, \
                 old_mode, new_mode, new_file_mode, deleted_file_mode, \
                 a_blob_id, b_blob_id, b_mode = header.groups()
             new_file, deleted_file = bool(new_file_mode), bool(deleted_file_mode)
 
+            # Our only means to find the actual text is to see what has not been matched by our regex,
+            # and then retro-actively assin it to our index
+            if previous_header is not None:
+                index[-1].diff = text[previous_header.end():header.start()]
+            # end assign actual diff
+
+            # Make sure the mode is set if the path is set. Otherwise the resulting blob is invalid
+            # We just use the one mode we should have parsed
             index.append(Diff(repo, a_path, b_path, a_blob_id, b_blob_id,
-                              old_mode or deleted_file_mode, new_mode or new_file_mode or b_mode,
-                              new_file, deleted_file, rename_from, rename_to, diff[header.end():]))
+                              old_mode or deleted_file_mode or b_mode, new_mode or new_file_mode or b_mode,
+                              new_file, deleted_file, rename_from, rename_to, None))
+
+            previous_header = header
+        # end for each header we parse
+        if index:
+            index[-1].diff = text[header.end():]
+        # end assign last diff
 
         return index
 
