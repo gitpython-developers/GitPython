@@ -73,7 +73,7 @@ class TestDiff(TestBase):
             assert len(list(res.iter_change_type('M'))) == 1
             if res[0].diff:
                 assert res[0].diff == "Binary files a/rps and b/rps differ\n", "in patch mode, we get a diff text"
-                assert isinstance(str(res[0]), str), "This call should just work"
+                assert str(res[0]), "This call should just work"
         # end for each method to test
 
     def test_diff_index(self):
@@ -82,6 +82,7 @@ class TestDiff(TestBase):
         assert len(res) == 6
         for dr in res:
             assert dr.diff
+            assert str(dr), "Diff to string conversion should be possible"
         # end for each diff
 
         dr = res[3]
@@ -129,6 +130,9 @@ class TestDiff(TestBase):
                             assert len(diff_set) == 1
                             assert diff_index[0] == diff_index[0]
                             assert not (diff_index[0] != diff_index[0])
+
+                            for dr in diff_index:
+                                assert str(dr), "Diff to string conversion should be possible"
                         # END diff index checking
                     # END for each patch option
                 # END for each path option

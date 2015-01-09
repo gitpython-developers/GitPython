@@ -217,10 +217,12 @@ class Diff(object):
         if a_blob_id is None:
             self.a_blob = None
         else:
+            assert self.a_mode
             self.a_blob = Blob(repo, hex_to_bin(a_blob_id), mode=self.a_mode, path=a_path)
         if b_blob_id is None:
             self.b_blob = None
         else:
+            assert self.b_mode
             self.b_blob = Blob(repo, hex_to_bin(b_blob_id), mode=self.b_mode, path=b_path)
 
         self.new_file = new_file
@@ -313,8 +315,9 @@ class Diff(object):
 
             # Make sure the mode is set if the path is set. Otherwise the resulting blob is invalid
             # We just use the one mode we should have parsed
-            index.append(Diff(repo, a_path, b_path, a_blob_id, b_blob_id,
-                              old_mode or deleted_file_mode or b_mode, new_mode or new_file_mode or b_mode,
+            a_mode = old_mode or deleted_file_mode or (a_path and (b_mode or new_mode or new_file_mode))
+            b_mode = b_mode or new_mode or new_file_mode or (b_path and a_mode)
+            index.append(Diff(repo, a_path, b_path, a_blob_id, b_blob_id, a_mode, b_mode,
                               new_file, deleted_file, rename_from, rename_to, None))
 
             previous_header = header
