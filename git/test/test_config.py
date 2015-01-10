@@ -3,10 +3,13 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
+# The test test_multi_line_config requires whitespace (especially tabs) to remain
+# flake8: noqa
 
 from git.test.lib import (
     TestCase,
-    fixture_path
+    fixture_path,
+    assert_equal
 )
 from git import (
     GitConfigParser
@@ -71,6 +74,23 @@ class TestBase(TestCase):
             assert r_config.has_option(sname, oname)
             assert r_config.get(sname, oname) == val
         # END for each filename
+
+    def test_multi_line_config(self):
+        file_obj = self._to_memcache(fixture_path("git_config_with_comments"))
+        config = GitConfigParser(file_obj, read_only=False)
+        ev = r"""ruby -e '
+		system %(git), %(merge-file), %(--marker-size=%L), %(%A), %(%O), %(%B)
+		b = File.read(%(%A))
+		b.sub!(/^<+ .*\nActiveRecord::Schema\.define.:version => (\d+). do\n=+\nActiveRecord::Schema\.define.:version => (\d+). do\n>+ .*/) do
+		  %(ActiveRecord::Schema.define(:version => #{[$1, $2].max}) do)
+		end
+		File.open(%(%A), %(w)) {|f| f.write(b)}
+		exit 1 if b.include?(%(<)*%L)'"""
+        assert_equal(config.get('merge "railsschema"', 'driver'), ev)
+        assert_equal(config.get('alias', 'lg'),
+                     "log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr)%Creset'"
+                     " --abbrev-commit --date=relative")
+        assert len(config.sections()) == 23
 
     def test_base(self):
         path_repo = fixture_path("git_config")

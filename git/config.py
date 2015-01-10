@@ -22,7 +22,8 @@ from git.compat import (
     string_types,
     FileType,
     defenc,
-    with_metaclass
+    with_metaclass,
+    PY3
 )
 
 __all__ = ('GitConfigParser', 'SectionConstraint')
@@ -243,7 +244,21 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
         cursect = None                            # None, or a dictionary
         optname = None
         lineno = 0
+        is_multi_line = False
         e = None                                  # None, or an exception
+
+        def string_decode(v):
+            if v[-1] == '\\':
+                v = v[:-1]
+            # end cut trailing escapes to prevent decode error
+
+            if PY3:
+                return v.encode(defenc).decode('unicode_escape')
+            else:
+                return v.decode('string_escape')
+            # end
+        # end
+
         while True:
             # we assume to read binary !
             line = fp.readline().decode(defenc)
@@ -256,46 +271,60 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
             if line.split(None, 1)[0].lower() == 'rem' and line[0] in "rR":
                 # no leading whitespace
                 continue
-            else:
-                # is it a section header?
-                mo = self.SECTCRE.match(line.strip())
-                if mo:
-                    sectname = mo.group('header').strip()
-                    if sectname in self._sections:
-                        cursect = self._sections[sectname]
-                    elif sectname == cp.DEFAULTSECT:
-                        cursect = self._defaults
-                    else:
-                        cursect = self._dict((('__name__', sectname),))
-                        self._sections[sectname] = cursect
-                        self._proxies[sectname] = None
-                    # So sections can't start with a continuation line
-                    optname = None
-                # no section header in the file?
-                elif cursect is None:
-                    raise cp.MissingSectionHeaderError(fpname, lineno, line)
-                # an option line?
+
+            # is it a section header?
+            mo = self.SECTCRE.match(line.strip())
+            if not is_multi_line and mo:
+                sectname = mo.group('header').strip()
+                if sectname in self._sections:
+                    cursect = self._sections[sectname]
+                elif sectname == cp.DEFAULTSECT:
+                    cursect = self._defaults
                 else:
-                    mo = self.OPTCRE.match(line)
-                    if mo:
-                        optname, vi, optval = mo.group('option', 'vi', 'value')
-                        if vi in ('=', ':') and ';' in optval:
-                            pos = optval.find(';')
-                            if pos != -1 and optval[pos - 1].isspace():
-                                optval = optval[:pos]
-                        optval = optval.strip()
-                        if optval == '""':
-                            optval = ''
-                        optname = self.optionxform(optname.rstrip())
-                        cursect[optname] = optval
-                    else:
-                        if not e:
-                            e = cp.ParsingError(fpname)
-                        e.append(lineno, repr(line))
-                    # END
-                # END ?
-            # END ?
+                    cursect = self._dict((('__name__', sectname),))
+                    self._sections[sectname] = cursect
+                    self._proxies[sectname] = None
+                # So sections can't start with a continuation line
+                optname = None
+            # no section header in the file?
+            elif cursect is None:
+                raise cp.MissingSectionHeaderError(fpname, lineno, line)
+            # an option line?
+            elif not is_multi_line:
+                mo = self.OPTCRE.match(line)
+                if mo:
+                    # We might just have handled the last line, which could contain a quotation we want to remove
+                    optname, vi, optval = mo.group('option', 'vi', 'value')
+                    if vi in ('=', ':') and ';' in optval:
+                        pos = optval.find(';')
+                        if pos != -1 and optval[pos - 1].isspace():
+                            optval = optval[:pos]
+                    optval = optval.strip()
+                    if optval == '""':
+                        optval = ''
+                    # end handle empty string
+                    optname = self.optionxform(optname.rstrip())
+                    if len(optval) > 1 and optval[0] == '"' and optval[-1] != '"':
+                        is_multi_line = True
+                        optval = string_decode(optval[1:])
+                    # end handle multi-line
+                    cursect[optname] = optval
+                else:
+                    if not e:
+                        e = cp.ParsingError(fpname)
+                    e.append(lineno, repr(line))
+                    print(lineno, line)
+                    continue
+            else:
+                line = line.rstrip()
+                if line.endswith('"'):
+                    is_multi_line = False
+                    line = line[:-1]
+                # end handle quotations
+                cursect[optname] += string_decode(line)
+            # END parse section or option
         # END while reading
+
         # if any parsing errors occurred, raise an exception
         if e:
             raise e
