@@ -97,7 +97,7 @@ class Repo(object):
 
     # invariants
     # represents the configuration level of a configuration file
-    config_level = ("system", "global", "repository")
+    config_level = ("system", "user", "global", "repository")
 
     def __init__(self, path=None, odbt=DefaultDBType, search_parent_directories=False):
         """Create a new Repo instance
@@ -353,6 +353,13 @@ class Repo(object):
 
         if config_level == "system":
             return "/etc/gitconfig"
+        elif config_level == "user":
+            for evar in ("XDG_CONFIG_HOME", "HOME"):
+                if evar not in os.environ:
+                    continue
+                return os.path.join(os.environ[evar], '.config/git/config')
+            # end for each evar to check
+            raise AssertionError("Didn't find a single HOME related environment variable")
         elif config_level == "global":
             return os.path.normpath(os.path.expanduser("~/.gitconfig"))
         elif config_level == "repository":
