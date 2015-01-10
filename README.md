@@ -52,6 +52,12 @@ GitPython's git repo is available on GitHub, which can be browsed at [github](ht
 
     git clone git://github.com/gitpython-developers/GitPython.git git-python
 
+### Live Coding
+
+You can watch me fix issues or implement new features [live on Twitch][twitch-channel], or have a look at [past recordings on youtube][youtube-playlist]
+
+* [Live on Twitch][twitch-channel] (just follow the channel to be notified when a session starts)
+* [Archive on Youtube][youtube-playlist]
 
 ### INFRASTRUCTURE
 
@@ -81,3 +87,7 @@ There has been a lot of work in the master branch, which is the direction I want
 * make new master work similarly to 0.3, but with the option to swap for at least one additional backend
 * make a 1.0 release
 * add backends as required
+
+
+[twitch-channel]: http://www.twitch.tv/byronimo/profile
+[youtube-playlist]: http://www.twitch.tv/byronimo/profile
