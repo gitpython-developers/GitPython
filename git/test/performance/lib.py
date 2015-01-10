@@ -56,8 +56,8 @@ class TestBigRepoR(TestBase):
                 "your choice - defaulting to the gitpython repository")
             repo_path = os.path.dirname(__file__)
         # end set some repo path
-        self.gitrorepo = Repo(repo_path, odbt=GitCmdObjectDB)
-        self.puregitrorepo = Repo(repo_path, odbt=GitDB)
+        self.gitrorepo = Repo(repo_path, odbt=GitCmdObjectDB, search_parent_directories=True)
+        self.puregitrorepo = Repo(repo_path, odbt=GitDB, search_parent_directories=True)
 
     def tearDown(self):
         self.gitrorepo.git.clear_cache()

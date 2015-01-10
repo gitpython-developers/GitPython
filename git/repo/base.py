@@ -46,7 +46,6 @@ from .fun import (
     rev_parse,
     is_git_dir,
     find_git_dir,
-    read_gitfile,
     touch,
 )
 from git.compat import (
@@ -96,7 +95,7 @@ class Repo(object):
     # represents the configuration level of a configuration file
     config_level = ("system", "global", "repository")
 
-    def __init__(self, path=None, odbt=DefaultDBType):
+    def __init__(self, path=None, odbt=DefaultDBType, search_parent_directories=False):
         """Create a new Repo instance
 
         :param path: is the path to either the root git directory or the bare git repo::
@@ -128,15 +127,14 @@ class Repo(object):
                 self.git_dir = curpath
                 self._working_tree_dir = os.path.dirname(curpath)
                 break
+
             gitpath = find_git_dir(join(curpath, '.git'))
             if gitpath is not None:
                 self.git_dir = gitpath
                 self._working_tree_dir = curpath
                 break
-            gitpath = read_gitfile(curpath)
-            if gitpath:
-                self.git_dir = gitpath
-                self._working_tree_dir = curpath
+            
+            if not search_parent_directories:
                 break
             curpath, dummy = os.path.split(curpath)
             if not dummy:

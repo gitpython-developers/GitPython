@@ -19,8 +19,8 @@ from gitdb.util import (
 from git.compat import xrange
 
 
-__all__ = ('rev_parse', 'is_git_dir', 'touch', 'read_gitfile', 'find_git_dir', 'name_to_object',
-           'short_to_long', 'deref_tag', 'to_commit')
+__all__ = ('rev_parse', 'is_git_dir', 'touch', 'find_git_dir', 'name_to_object', 'short_to_long', 'deref_tag', 
+           'to_commit')
 
 
 def touch(filename):
@@ -44,30 +44,19 @@ def is_git_dir(d):
 def find_git_dir(d):
     if is_git_dir(d):
         return d
-    elif isfile(d):
+
+    try:
         with open(d) as fp:
             content = fp.read().rstrip()
+    except (IOError, OSError):
+        # it's probably not a file
+        pass
+    else:
         if content.startswith('gitdir: '):
             d = join(dirname(d), content[8:])
             return find_git_dir(d)
+    # end handle exception
     return None
-
-
-def read_gitfile(f):
-    """ This is taken from the git setup.c:read_gitfile function.
-    :return gitdir path or None if gitfile is invalid."""
-    if f is None:
-        return None
-    try:
-        line = open(f, 'r').readline().rstrip()
-    except (OSError, IOError):
-        # File might not exist or is unreadable - ignore
-        return None
-    # end handle file access
-    if line[0:8] != 'gitdir: ':
-        return None
-    path = os.path.realpath(line[8:])
-    return path if is_git_dir(path) else None
 
 
 def short_to_long(odb, hexsha):
