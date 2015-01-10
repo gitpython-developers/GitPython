@@ -19,7 +19,7 @@ from gitdb.util import (
 from git.compat import xrange
 
 
-__all__ = ('rev_parse', 'is_git_dir', 'touch', 'find_git_dir', 'name_to_object', 'short_to_long', 'deref_tag', 
+__all__ = ('rev_parse', 'is_git_dir', 'touch', 'find_git_dir', 'name_to_object', 'short_to_long', 'deref_tag',
            'to_commit')
 
 
@@ -53,8 +53,10 @@ def find_git_dir(d):
         pass
     else:
         if content.startswith('gitdir: '):
-            d = join(dirname(d), content[8:])
-            return find_git_dir(d)
+            path = content[8:]
+            if not os.path.isabs(path):
+                path = join(dirname(d), path)
+            return find_git_dir(path)
     # end handle exception
     return None
 

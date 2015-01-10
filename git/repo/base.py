@@ -66,6 +66,10 @@ if sys.version_info[:2] < (2, 5):     # python 2.4 compatiblity
 __all__ = ('Repo', )
 
 
+def _expand_path(p):
+    return os.path.abspath(os.path.expandvars(os.path.expanduser(p)))
+
+
 class Repo(object):
 
     """Represents a git repository and allows you to query references,
@@ -111,7 +115,7 @@ class Repo(object):
         :raise InvalidGitRepositoryError:
         :raise NoSuchPathError:
         :return: git.Repo """
-        epath = os.path.abspath(os.path.expandvars(os.path.expanduser(path or os.getcwd())))
+        epath = _expand_path(path or os.getcwd())
         self.git = None  # should be set for __del__ not to fail in case we raise
         if not os.path.exists(epath):
             raise NoSuchPathError(epath)
@@ -133,7 +137,7 @@ class Repo(object):
                 self.git_dir = gitpath
                 self._working_tree_dir = curpath
                 break
-            
+
             if not search_parent_directories:
                 break
             curpath, dummy = os.path.split(curpath)
@@ -700,7 +704,8 @@ class Repo(object):
             keyword arguments serving as additional options to the git-init command
 
         :return: ``git.Repo`` (the newly created repo)"""
-
+        if path:
+            path = _expand_path(path)
         if mkdir and path and not os.path.exists(path):
             os.makedirs(path, 0o755)
 
