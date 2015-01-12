@@ -63,11 +63,11 @@ class StringProcessAdapter(object):
 
 def _mktemp(*args):
     """Wrapper around default tempfile.mktemp to fix an osx issue
-    :note: the OSX special case was removed as it was unclear why that was needed in the first place. It seems 
+    :note: the OSX special case was removed as it was unclear why that was needed in the first place. It seems
     to be just fine without it. However, if we leave this special case, and if TMPDIR is set to something custom,
     prefixing /private/ will lead to incorrect paths on OSX."""
     tdir = tempfile.mktemp(*args)
-    # See :note: above to learn why this is comented out. 
+    # See :note: above to learn why this is comented out.
     # if sys.platform == 'darwin':
     #     tdir = '/private' + tdir
     return tdir

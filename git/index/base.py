@@ -579,8 +579,14 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         entries_added = list()
         if path_rewriter:
             for path in paths:
-                abspath = os.path.abspath(path)
-                gitrelative_path = abspath[len(self.repo.working_tree_dir) + 1:]
+                if os.path.isabs(path):
+                    abspath = path
+                    gitrelative_path = path[len(self.repo.working_tree_dir) + 1:]
+                else:
+                    gitrelative_path = path
+                    abspath = os.path.join(self.repo.working_tree_dir, gitrelative_path)
+                # end obtain relative and absolute paths
+
                 blob = Blob(self.repo, Blob.NULL_BIN_SHA,
                             stat_mode_to_index_mode(os.stat(abspath).st_mode),
                             to_native_path_linux(gitrelative_path))

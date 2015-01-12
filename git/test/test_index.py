@@ -501,7 +501,7 @@ class TestIndex(TestBase):
 
         # same file
         entries = index.reset(new_commit).add(
-            [os.path.abspath(os.path.join('lib', 'git', 'head.py'))] * 2, fprogress=self._fprogress_add)
+            [os.path.join(rw_repo.working_tree_dir, 'lib', 'git', 'head.py')] * 2, fprogress=self._fprogress_add)
         self._assert_entries(entries)
         assert entries[0].mode & 0o644 == 0o644
         # would fail, test is too primitive to handle this case
