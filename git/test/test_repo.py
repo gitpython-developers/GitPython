@@ -365,6 +365,11 @@ class TestRepo(TestBase):
                 pass
         # END for each config level
 
+    def test_config_level_paths(self):
+        for config_level in self.rorepo.config_level:
+            assert self.rorepo._get_config_path(config_level)
+        # end for each config level
+
     def test_creation_deletion(self):
         # just a very quick test to assure it generally works. There are
         # specialized cases in the test_refs module

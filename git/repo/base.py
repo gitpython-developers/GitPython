@@ -354,7 +354,7 @@ class Repo(object):
         if config_level == "system":
             return "/etc/gitconfig"
         elif config_level == "user":
-            config_home = os.environ.get("XDG_CONFIG_HOME") or join(os.environ.get("HOME", '~'), ".config")
+            config_home = os.environ.get("XDG_CONFIG_HOME") or os.path.join(os.environ.get("HOME", '~'), ".config")
             return os.path.expanduser(join(config_home, "git", "config"))
         elif config_level == "global":
             return os.path.normpath(os.path.expanduser("~/.gitconfig"))

@@ -10,6 +10,6 @@ cover/
 /doc/_build
 nbproject
 *.sublime-workspace
-
+.DS_Store
 /*egg-info
 /.tox
