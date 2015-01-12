@@ -13,9 +13,14 @@ from stat import (
 S_IFGITLINK = S_IFLNK | S_IFDIR     # a submodule
 
 from io import BytesIO
+import os
+import subprocess
 
 from git.util import IndexFileSHA1Writer
-from git.exc import UnmergedEntriesError
+from git.exc import (
+    UnmergedEntriesError,
+    HookExecutionError
+)
 from git.objects.fun import (
     tree_to_stream,
     traverse_tree_recursive,
@@ -37,10 +42,46 @@ from .util import (
 
 from gitdb.base import IStream
 from gitdb.typ import str_tree_type
-from git.compat import defenc
+from git.compat import (
+    defenc,
+    force_text
+)
 
 __all__ = ('write_cache', 'read_cache', 'write_tree_from_cache', 'entry_key',
-           'stat_mode_to_index_mode', 'S_IFGITLINK')
+           'stat_mode_to_index_mode', 'S_IFGITLINK', 'run_commit_hook', 'hook_path')
+
+
+def hook_path(name, git_dir):
+    """:return: path to the given named hook in the given git repository directory"""
+    return os.path.join(git_dir, 'hooks', name)
+
+
+def run_commit_hook(name, index):
+    """Run the commit hook of the given name. Silently ignores hooks that do not exist.
+    :param name: name of hook, like 'pre-commit'
+    :param index: IndexFile instance
+    :raises HookExecutionError: """
+    hp = hook_path(name, index.repo.git_dir)
+    if not os.access(hp, os.X_OK):
+        return
+
+    env = os.environ.copy()
+    env['GIT_INDEX_FILE'] = index.path
+    env['GIT_EDITOR'] = ':'
+    cmd = subprocess.Popen(hp,
+                           env=env,
+                           stdout=subprocess.PIPE,
+                           stderr=subprocess.PIPE,
+                           close_fds=(os.name == 'posix'))
+    stdout, stderr = cmd.communicate()
+    cmd.stdout.close()
+    cmd.stderr.close()
+
+    if cmd.returncode != 0:
+        stdout = force_text(stdout, defenc)
+        stderr = force_text(stderr, defenc)
+        raise HookExecutionError(hp, cmd.returncode, stdout, stderr)
+    # end handle return code
 
 
 def stat_mode_to_index_mode(mode):

@@ -11,17 +11,14 @@ from git.compat import defenc
 
 
 class InvalidGitRepositoryError(Exception):
-
     """ Thrown if the given repository appears to have an invalid format.  """
 
 
 class NoSuchPathError(OSError):
-
     """ Thrown if a path could not be access by the system. """
 
 
 class GitCommandError(Exception):
-
     """ Thrown if execution of the git command fails with non-zero status code. """
 
     def __init__(self, command, status, stderr=None, stdout=None):
@@ -41,7 +38,6 @@ class GitCommandError(Exception):
 
 
 class CheckoutError(Exception):
-
     """Thrown if a file could not be checked out from the index as it contained
     changes.
 
@@ -71,6 +67,20 @@ class CacheError(Exception):
 
 
 class UnmergedEntriesError(CacheError):
-
     """Thrown if an operation cannot proceed as there are still unmerged
     entries in the cache"""
+
+
+class HookExecutionError(Exception):
+    """Thrown if a hook exits with a non-zero exit code. It provides access to the exit code and the string returned
+    via standard output"""
+
+    def __init__(self, command, status, stdout, stderr):
+        self.command = command
+        self.status = status
+        self.stdout = stdout
+        self.stderr = stderr
+
+    def __str__(self):
+        return ("'%s' hook returned with exit code %i\nstdout: '%s'\nstderr: '%s'"
+                % (self.command, self.status, self.stdout, self.stderr))

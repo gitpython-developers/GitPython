@@ -12,6 +12,7 @@ from git.test.lib import (
     with_rw_repo
 )
 from git.util import Actor
+from git.exc import HookExecutionError
 from git import (
     IndexFile,
     BlobFilter,
@@ -40,6 +41,7 @@ from git.index.typ import (
     BaseIndexEntry,
     IndexEntry
 )
+from git.index.fun import hook_path
 
 
 class TestIndex(TestBase):
@@ -665,6 +667,25 @@ class TestIndex(TestBase):
             assert fkey not in index.entries
 
         index.add(files, write=True)
+        if os.name != 'nt':
+            hp = hook_path('pre-commit', index.repo.git_dir)
+            with open(hp, "wt") as fp:
+                fp.write("#!/usr/bin/env sh\necho stdout; echo stderr 1>&2; exit 1")
+            # end
+            os.chmod(hp, 0o544)
+            try:
+                index.commit("This should fail")
+            except HookExecutionError as err:
+                assert err.status == 1
+                assert err.command == hp
+                assert err.stdout == 'stdout\n'
+                assert err.stderr == 'stderr\n'
+                assert str(err)
+            else:
+                raise AssertionError("Should have cought a HookExecutionError")
+            # end exception handling
+            os.remove(hp)
+        # end hook testing
         nc = index.commit("2 files committed", head=False)
 
         for fkey in keys:

@@ -63,7 +63,8 @@ from .fun import (
     aggressive_tree_merge,
     write_tree_from_cache,
     stat_mode_to_index_mode,
-    S_IFGITLINK
+    S_IFGITLINK,
+    run_commit_hook
 )
 
 from gitdb.base import IStream
@@ -893,9 +894,12 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         :note: If you have manually altered the .entries member of this instance,
                don't forget to write() your changes to disk beforehand.
         :return: Commit object representing the new commit"""
+        run_commit_hook('pre-commit', self)
         tree = self.write_tree()
-        return Commit.create_from_tree(self.repo, tree, message, parent_commits,
+        rval = Commit.create_from_tree(self.repo, tree, message, parent_commits,
                                        head, author=author, committer=committer)
+        run_commit_hook('post-commit', self)
+        return rval
 
     @classmethod
     def _flush_stdin_and_wait(cls, proc, ignore_stdout=False):

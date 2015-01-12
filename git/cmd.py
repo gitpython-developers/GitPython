@@ -502,7 +502,7 @@ class Git(LazyMixin):
                      # Prevent cmd prompt popups on windows by using a shell ... .
                      # See https://github.com/gitpython-developers/GitPython/pull/126
                      shell=sys.platform == 'win32',
-                     close_fds=(os.name == 'posix'),  # unsupported on linux
+                     close_fds=(os.name == 'posix'),  # unsupported on windows
                      **subprocess_kwargs
                      )
         if as_process:
