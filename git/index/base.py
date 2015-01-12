@@ -535,7 +535,6 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         if it is not within our git direcotory"""
         if not os.path.isabs(path):
             return path
-        path = os.path.realpath(path)
         relative_path = path.replace(self.repo.working_tree_dir + os.sep, "")
         if relative_path == path:
             raise ValueError("Absolute path %r is not in git repository at %r" % (path, self.repo.working_tree_dir))

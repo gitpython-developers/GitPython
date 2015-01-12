@@ -128,14 +128,14 @@ class Repo(object):
         # walk up the path to find the .git dir
         while curpath:
             if is_git_dir(curpath):
-                self.git_dir = os.path.realpath(curpath)
+                self.git_dir = curpath
                 self._working_tree_dir = os.path.dirname(self.git_dir)
                 break
 
             gitpath = find_git_dir(join(curpath, '.git'))
             if gitpath is not None:
-                self.git_dir = os.path.realpath(gitpath)
-                self._working_tree_dir = os.path.realpath(curpath)
+                self.git_dir = gitpath
+                self._working_tree_dir = curpath
                 break
 
             if not search_parent_directories:
