@@ -354,12 +354,8 @@ class Repo(object):
         if config_level == "system":
             return "/etc/gitconfig"
         elif config_level == "user":
-            for evar in ("XDG_CONFIG_HOME", "HOME"):
-                if evar not in os.environ:
-                    continue
-                return os.path.join(os.environ[evar], '.config/git/config')
-            # end for each evar to check
-            raise AssertionError("Didn't find a single HOME related environment variable")
+            config_home = os.environ.get("XDG_CONFIG_HOME") or join(os.environ.get("HOME", '~'), ".config")
+            return os.path.expanduser(join(config_home, "git", "config"))
         elif config_level == "global":
             return os.path.normpath(os.path.expanduser("~/.gitconfig"))
         elif config_level == "repository":
