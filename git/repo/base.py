@@ -4,7 +4,11 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
-from git.exc import InvalidGitRepositoryError, NoSuchPathError
+from git.exc import (
+    InvalidGitRepositoryError,
+    NoSuchPathError,
+    GitCommandError
+)
 from git.cmd import (
     Git,
     handle_process_output
@@ -455,6 +459,36 @@ class Repo(object):
             rev = self.head.commit
 
         return Commit.iter_items(self, rev, paths, **kwargs)
+
+    def merge_base(self, *rev, **kwargs):
+        """Find the closest common ancestor for the given revision (e.g. Commits, Tags, References, etc).
+        :param rev: At least two revs to find the common ancestor for.
+        :param kwargs: Additional arguments to be passed to the repo.git.merge_base() command which does all the work.
+        :return: A list of Commit objects. If --all was not specified as kwarg, the list will have at max one Commit,
+            or is empty if no common merge base exists.
+        :raises ValueError: If not at least two revs are provided
+        """
+        if len(rev) < 2:
+            raise ValueError("Please specify at least two revs, got only %i" % len(rev))
+        # end handle input
+
+        res = list()
+        try:
+            lines = self.git.merge_base(*rev, **kwargs).splitlines()
+        except GitCommandError as err:
+            if err.status == 128:
+                raise
+            # end handle invalid rev
+            # Status code 1 is returned if there is no merge-base
+            # (see https://github.com/git/git/blob/master/builtin/merge-base.c#L16)
+            return res
+        # end exception handling
+
+        for line in lines:
+            res.append(self.commit(line))
+        # end for each merge-base
+
+        return res
 
     def _get_daemon_export(self):
         filename = join(self.git_dir, self.DAEMON_EXPORT_FILE)

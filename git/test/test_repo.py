@@ -27,7 +27,8 @@ from git import (
     Submodule,
     GitCmdObjectDB,
     Remote,
-    BadName
+    BadName,
+    GitCommandError
 )
 from git.repo.fun import touch
 from git.util import join_path_native
@@ -737,3 +738,24 @@ class TestRepo(TestBase):
         # Now a branch should be creatable
         nb = r.create_head('foo')
         assert nb.is_valid()
+
+    def test_merge_base(self):
+        repo = self.rorepo
+        c1 = 'f6aa8d1'
+        c2 = repo.commit('d46e3fe')
+        c3 = '763ef75'
+        self.failUnlessRaises(ValueError, repo.merge_base)
+        self.failUnlessRaises(ValueError, repo.merge_base, 'foo')
+
+        # two commit merge-base
+        res = repo.merge_base(c1, c2)
+        assert isinstance(res, list) and len(res) == 1 and isinstance(res[0], Commit)
+        assert res[0].hexsha.startswith('3936084')
+
+        for kw in ('a', 'all'):
+            res = repo.merge_base(c1, c2, c3, **{kw: True})
+            assert isinstance(res, list) and len(res) == 1
+        # end for eaech keyword signalling all merge-bases to be returned
+
+        # Test for no merge base - can't do as we have
+        self.failUnlessRaises(GitCommandError, repo.merge_base, c1, 'ffffff')

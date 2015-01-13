@@ -2,6 +2,11 @@
 Changelog
 =========
 
+0.3.6 - Features
+================
+* Added `Repo.merge_base()` implementation. See the `respective issue on github <https://github.com/gitpython-developers/GitPython/issues/169>`_
+* A list of all issues can be found here: https://github.com/gitpython-developers/GitPython/issues?q=milestone%3A%22v0.3.6+-+Features%22+
+
 0.3.5 - Bugfixes
 ================
 * push/pull/fetch operations will not block anymore
