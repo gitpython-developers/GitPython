@@ -90,4 +90,4 @@ There has been a lot of work in the master branch, which is the direction I want
 
 
 [twitch-channel]: http://www.twitch.tv/byronimo/profile
-[youtube-playlist]: http://www.twitch.tv/byronimo/profile
+[youtube-playlist]: https://www.youtube.com/playlist?list=PLMHbQxe1e9MnoEcLhn6Yhv5KAvpWkJbL0
