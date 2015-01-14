@@ -27,3 +27,6 @@
 [branch "mainline_performance"]
 	remote = mainline
 	merge = refs/heads/master
+[include]
+	path = doesntexist.cfg
+	abspath = /usr/bin/foodoesntexist.bar

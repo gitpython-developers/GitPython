@@ -7,8 +7,9 @@
 from git.test.lib import (
     TestCase,
     fixture_path,
-    assert_equal
+    assert_equal,
 )
+from gitdb.test.lib import with_rw_directory
 from git import (
     GitConfigParser
 )
@@ -16,6 +17,7 @@ from git.compat import (
     string_types,
 )
 import io
+import os
 from copy import copy
 from git.config import cp
 
@@ -127,3 +129,67 @@ class TestBase(TestCase):
 
         # it raises if there is no default though
         self.failUnlessRaises(cp.NoSectionError, r_config.get_value, "doesnt", "exist")
+
+    @with_rw_directory
+    def test_config_include(self, rw_dir):
+        def write_test_value(cw, value):
+            cw.set_value(value, 'value', value)
+        # end
+
+        def check_test_value(cr, value):
+            assert cr.get_value(value, 'value') == value
+        # end
+
+        # PREPARE CONFIG FILE A
+        fpa = os.path.join(rw_dir, 'a')
+        cw = GitConfigParser(fpa, read_only=False)
+        write_test_value(cw, 'a')
+
+        fpb = os.path.join(rw_dir, 'b')
+        fpc = os.path.join(rw_dir, 'c')
+        cw.set_value('include', 'relative_path_b', 'b')
+        cw.set_value('include', 'doesntexist', 'foobar')
+        cw.set_value('include', 'relative_cycle_a_a', 'a')
+        cw.set_value('include', 'absolute_cycle_a_a', fpa)
+        cw.release()
+        assert os.path.exists(fpa)
+
+        # PREPARE CONFIG FILE B
+        cw = GitConfigParser(fpb, read_only=False)
+        write_test_value(cw, 'b')
+        cw.set_value('include', 'relative_cycle_b_a', 'a')
+        cw.set_value('include', 'absolute_cycle_b_a', fpa)
+        cw.set_value('include', 'relative_path_c', 'c')
+        cw.set_value('include', 'absolute_path_c', fpc)
+        cw.release()
+
+        # PREPARE CONFIG FILE C
+        cw = GitConfigParser(fpc, read_only=False)
+        write_test_value(cw, 'c')
+        cw.release()
+
+        cr = GitConfigParser(fpa, read_only=True)
+        for tv in ('a', 'b', 'c'):
+            check_test_value(cr, tv)
+        # end for each test to verify
+        assert len(cr.items('include')) == 8, "Expected all include sections to be merged"
+        cr.release()
+
+        # test writable config writers - assure write-back doesn't involve includes
+        cw = GitConfigParser(fpa, read_only=False, merge_includes=True)
+        tv = 'x'
+        write_test_value(cw, tv)
+        cw.release()
+
+        cr = GitConfigParser(fpa, read_only=True)
+        self.failUnlessRaises(cp.NoSectionError, check_test_value, cr, tv)
+        cr.release()
+
+        # But can make it skip includes alltogether, and thus allow write-backs
+        cw = GitConfigParser(fpa, read_only=False, merge_includes=False)
+        write_test_value(cw, tv)
+        cw.release()
+
+        cr = GitConfigParser(fpa, read_only=True)
+        check_test_value(cr, tv)
+        cr.release()

@@ -15,6 +15,7 @@ except ImportError:
 import inspect
 import logging
 import abc
+import os
 
 from git.odict import OrderedDict
 from git.util import LockFile
@@ -164,7 +165,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
     # list of RawConfigParser methods able to change the instance
     _mutating_methods_ = ("add_section", "remove_section", "remove_option", "set")
 
-    def __init__(self, file_or_files, read_only=True):
+    def __init__(self, file_or_files, read_only=True, merge_includes=True):
         """Initialize a configuration reader to read the given file_or_files and to
         possibly allow changes to it by setting read_only False
 
@@ -173,7 +174,13 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
 
         :param read_only:
             If True, the ConfigParser may only read the data , but not change it.
-            If False, only a single file path or file object may be given."""
+            If False, only a single file path or file object may be given. We will write back the changes
+            when they happen, or when the ConfigParser is released. This will not happen if other
+            configuration files have been included
+        :param merge_includes: if True, we will read files mentioned in [include] sections and merge their
+            contents into ours. This makes it impossible to write back an individual configuration file.
+            Thus, if you want to modify a single conifguration file, turn this off to leave the original
+            dataset unaltered when reading it."""
         cp.RawConfigParser.__init__(self, dict_type=OrderedDict)
 
         # Used in python 3, needs to stay in sync with sections for underlying implementation to work
@@ -183,6 +190,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
         self._file_or_files = file_or_files
         self._read_only = read_only
         self._is_initialized = False
+        self._merge_includes = merge_includes
         self._lock = None
 
         if not read_only:
@@ -313,7 +321,6 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
                     if not e:
                         e = cp.ParsingError(fpname)
                     e.append(lineno, repr(line))
-                    print(lineno, line)
                     continue
             else:
                 line = line.rstrip()
@@ -329,6 +336,9 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
         if e:
             raise e
 
+    def _has_includes(self):
+        return self._merge_includes and self.has_section('include')
+
     def read(self):
         """Reads the data stored in the files we have been initialized with. It will
         ignore files that cannot be read, possibly leaving an empty configuration
@@ -337,18 +347,25 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
         :raise IOError: if a file cannot be handled"""
         if self._is_initialized:
             return
+        self._is_initialized = True
 
-        files_to_read = self._file_or_files
-        if not isinstance(files_to_read, (tuple, list)):
-            files_to_read = [files_to_read]
+        if not isinstance(self._file_or_files, (tuple, list)):
+            files_to_read = [self._file_or_files]
+        else:
+            files_to_read = list(self._file_or_files)
+        # end assure we have a copy of the paths to handle
 
-        for file_object in files_to_read:
-            fp = file_object
+        seen = set(files_to_read)
+        num_read_include_files = 0
+        while files_to_read:
+            file_path = files_to_read.pop(0)
+            fp = file_path
             close_fp = False
+
             # assume a path if it is not a file-object
-            if not hasattr(file_object, "seek"):
+            if not hasattr(fp, "seek"):
                 try:
-                    fp = open(file_object, 'rb')
+                    fp = open(file_path, 'rb')
                     close_fp = True
                 except IOError:
                     continue
@@ -360,8 +377,33 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
                 if close_fp:
                     fp.close()
             # END read-handling
-        # END  for each file object to read
-        self._is_initialized = True
+
+            # Read includes and append those that we didn't handle yet
+            # We expect all paths to be normalized and absolute (and will assure that is the case)
+            if self._has_includes():
+                for _, include_path in self.items('include'):
+                    if not os.path.isabs(include_path):
+                        if not close_fp:
+                            continue
+                        # end ignore relative paths if we don't know the configuration file path
+                        assert os.path.isabs(file_path), "Need absolute paths to be sure our cycle checks will work"
+                        include_path = os.path.join(os.path.dirname(file_path), include_path)
+                    # end make include path absolute
+                    include_path = os.path.normpath(include_path)
+                    if include_path in seen or not os.access(include_path, os.R_OK):
+                        continue
+                    seen.add(include_path)
+                    files_to_read.append(include_path)
+                    num_read_include_files += 1
+                # each include path in configuration file
+            # end handle includes
+        # END for each file object to read
+
+        # If there was no file included, we can safely write back (potentially) the configuration file
+        # without altering it's meaning
+        if num_read_include_files == 0:
+            self._merge_includes = False
+        # end
 
     def _write(self, fp):
         """Write an .ini-format representation of the configuration state in
@@ -379,6 +421,10 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
         for name, value in self._sections.items():
             write_section(name, value)
 
+    def items(self, section_name):
+        """:return: list((option, value), ...) pairs of all items in the given section"""
+        return [(k, v) for k, v in super(GitConfigParser, self).items(section_name) if k != '__name__']
+
     @needs_values
     def write(self):
         """Write changes to our file, if there are changes at all
@@ -386,6 +432,17 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
         :raise IOError: if this is a read-only writer instance or if we could not obtain
             a file lock"""
         self._assure_writable("write")
+
+        if isinstance(self._file_or_files, (list, tuple)):
+            raise AssertionError("Cannot write back if there is not exactly a single file to write to, have %i files"
+                                 % len(self._file_or_files))
+        # end assert multiple files
+
+        if self._has_includes():
+            log.debug("Skipping write-back of confiuration file as include files were merged in." +
+                      "Set merge_includes=False to prevent this.")
+            return
+        # end
 
         fp = self._file_or_files
         close_fp = False

@@ -359,11 +359,11 @@ class Repo(object):
             return "/etc/gitconfig"
         elif config_level == "user":
             config_home = os.environ.get("XDG_CONFIG_HOME") or os.path.join(os.environ.get("HOME", '~'), ".config")
-            return os.path.expanduser(join(config_home, "git", "config"))
+            return os.path.normpath(os.path.expanduser(join(config_home, "git", "config")))
         elif config_level == "global":
             return os.path.normpath(os.path.expanduser("~/.gitconfig"))
         elif config_level == "repository":
-            return join(self.git_dir, "config")
+            return os.path.normpath(join(self.git_dir, "config"))
 
         raise ValueError("Invalid configuration level: %r" % config_level)
 
