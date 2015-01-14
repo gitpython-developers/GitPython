@@ -25,7 +25,8 @@ class RemoteReference(Head):
 
     @classmethod
     def delete(cls, repo, *refs, **kwargs):
-        """Delete the given remote references.
+        """Delete the given remote references
+
         :note:
             kwargs are given for compatability with the base class method as we
             should not narrow the signature."""

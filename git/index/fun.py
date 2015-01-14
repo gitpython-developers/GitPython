@@ -166,11 +166,10 @@ def entry_key(*entry):
 def read_cache(stream):
     """Read a cache file from the given stream
     :return: tuple(version, entries_dict, extension_data, content_sha)
-        * version is the integer version number
-        * entries dict is a dictionary which maps IndexEntry instances to a path
-            at a stage
-        * extension_data is '' or 4 bytes of type + 4 bytes of size + size bytes
-        * content_sha is a 20 byte sha on all cache file contents"""
+    * version is the integer version number
+    * entries dict is a dictionary which maps IndexEntry instances to a path at a stage
+    * extension_data is '' or 4 bytes of type + 4 bytes of size + size bytes
+    * content_sha is a 20 byte sha on all cache file contents"""
     version, num_entries = read_header(stream)
     count = 0
     entries = dict()

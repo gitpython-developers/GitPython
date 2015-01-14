@@ -398,8 +398,9 @@ class Remote(LazyMixin, Iterable):
         return hash(self.name)
 
     def exists(self):
-        """:return: True if this is a valid, existing remote.
-        Valid remotes have an entry in the repository's configuration"""
+        """
+        :return: True if this is a valid, existing remote.
+            Valid remotes have an entry in the repository's configuration"""
         try:
             self.config_reader.get('url')
             return True
@@ -429,7 +430,7 @@ class Remote(LazyMixin, Iterable):
         :return:
             IterableList of RemoteReference objects. It is prefixed, allowing
             you to omit the remote path portion, i.e.::
-             remote.refs.master # yields RemoteReference('/refs/remotes/origin/master')"""
+            remote.refs.master # yields RemoteReference('/refs/remotes/origin/master')"""
         out_refs = IterableList(RemoteReference._id_attribute_, "%s/" % self.name)
         out_refs.extend(RemoteReference.list_items(self.repo, remote=self.name))
         assert out_refs, "Remote %s did not have any references" % self.name
@@ -463,11 +464,8 @@ class Remote(LazyMixin, Iterable):
         :param repo: Repository instance that is to receive the new remote
         :param name: Desired name of the remote
         :param url: URL which corresponds to the remote's name
-        :param kwargs:
-            Additional arguments to be passed to the git-remote add command
-
+        :param kwargs: Additional arguments to be passed to the git-remote add command
         :return: New Remote instance
-
         :raise GitCommandError: in case an origin with that name already exists"""
         repo.git.remote("add", name, url, **kwargs)
         return cls(repo, name)

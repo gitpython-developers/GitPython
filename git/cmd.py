@@ -769,10 +769,10 @@ class Git(LazyMixin):
         return (hexsha, typename, size, data)
 
     def stream_object_data(self, ref):
-        """As get_object_header, but returns the data as a stream
+        """ As get_object_header, but returns the data as a stream
+
         :return: (hexsha, type_string, size_as_int, stream)
-        :note: This method is not threadsafe, you need one independent  Command instance
-            per thread to be safe !"""
+        :note: This method is not threadsafe, you need one independent Command instance per thread to be safe !"""
         cmd = self._get_persistent_cmd("cat_file_all", "cat_file", batch=True)
         hexsha, typename, size = self.__get_object_header(cmd, ref)
         return (hexsha, typename, size, self.CatFileContentStream(size, cmd.stdout))

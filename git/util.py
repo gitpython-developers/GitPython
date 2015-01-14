@@ -40,6 +40,7 @@ __all__ = ("stream_copy", "join_path", "to_native_path_windows", "to_native_path
 
 def rmtree(path):
     """Remove the given recursively.
+
     :note: we use shutil rmtree but adjust its behaviour to see whether files that
         couldn't be deleted are read-only. Windows will not remove them in that case"""
     def onerror(func, path, exc_info):
@@ -251,8 +252,10 @@ class RemoteProgress(object):
         return failed_lines
 
     def new_message_handler(self):
-        """:return: a progress handler suitable for handle_process_output(), passing lines on to this Progress
-        handler in a suitable format"""
+        """
+        :return:
+            a progress handler suitable for handle_process_output(), passing lines on to this Progress
+            handler in a suitable format"""
         def handler(line):
             return self._parse_progress_line(line.rstrip())
         # end

@@ -461,7 +461,8 @@ class Repo(object):
         return Commit.iter_items(self, rev, paths, **kwargs)
 
     def merge_base(self, *rev, **kwargs):
-        """Find the closest common ancestor for the given revision (e.g. Commits, Tags, References, etc).
+        """Find the closest common ancestor for the given revision (e.g. Commits, Tags, References, etc)
+
         :param rev: At least two revs to find the common ancestor for.
         :param kwargs: Additional arguments to be passed to the repo.git.merge_base() command which does all the work.
         :return: A list of Commit objects. If --all was not specified as kwarg, the list will have at max one Commit,
@@ -814,16 +815,13 @@ class Repo(object):
 
     def clone(self, path, progress=None, **kwargs):
         """Create a clone from this repository.
-        :param path:
-            is the full path of the new repo (traditionally ends with ./<name>.git).
 
+        :param path: is the full path of the new repo (traditionally ends with ./<name>.git).
         :param progress: See 'git.remote.Remote.push'.
-
         :param kwargs:
-            odbt = ObjectDatabase Type, allowing to determine the object database
-            implementation used by the returned Repo instance
-
-            All remaining keyword arguments are given to the git-clone command
+            * odbt = ObjectDatabase Type, allowing to determine the object database
+              implementation used by the returned Repo instance
+            * All remaining keyword arguments are given to the git-clone command
 
         :return: ``git.Repo`` (the newly cloned repo)"""
         return self._clone(self.git, self.git_dir, path, type(self.odb), progress, **kwargs)
@@ -840,16 +838,16 @@ class Repo(object):
 
     def archive(self, ostream, treeish=None, prefix=None, **kwargs):
         """Archive the tree at the given revision.
+
         :parm ostream: file compatible stream object to which the archive will be written as bytes
         :parm treeish: is the treeish name/id, defaults to active branch
         :parm prefix: is the optional prefix to prepend to each filename in the archive
-        :parm kwargs:
-            Additional arguments passed to git-archive
-            NOTE: Use the 'format' argument to define the kind of format. Use
-            specialized ostreams to write any format supported by python.
+        :parm kwargs: Additional arguments passed to git-archive
 
-            You may specify the special 'path' keyword, which may either be a repository-relative
-            path to a directory or file to place into the archive, or a list or tuple of multipe paths.
+            * Use the 'format' argument to define the kind of format. Use
+              specialized ostreams to write any format supported by python.
+            * You may specify the special **path** keyword, which may either be a repository-relative
+              path to a directory or file to place into the archive, or a list or tuple of multipe paths.
 
         :raise GitCommandError: in case something went wrong
         :return: self"""

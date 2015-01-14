@@ -114,6 +114,7 @@ class Head(Reference):
     @classmethod
     def delete(cls, repo, *heads, **kwargs):
         """Delete the given heads
+
         :param force:
             If True, the heads will be deleted even if they are not yet merged into
             the main development stream.
