@@ -266,7 +266,7 @@ class TestRepo(TestBase):
     def test_archive(self):
         tmpfile = tempfile.mktemp(suffix='archive-test')
         stream = open(tmpfile, 'wb')
-        self.rorepo.archive(stream, '0.1.5')
+        self.rorepo.archive(stream, '0.1.6', path='doc')
         assert stream.tell()
         stream.close()
         os.remove(tmpfile)

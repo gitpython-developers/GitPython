@@ -846,7 +846,10 @@ class Repo(object):
         :parm kwargs:
             Additional arguments passed to git-archive
             NOTE: Use the 'format' argument to define the kind of format. Use
-            specialized ostreams to write any format supported by python
+            specialized ostreams to write any format supported by python.
+
+            You may specify the special 'path' keyword, which may either be a repository-relative
+            path to a directory or file to place into the archive, or a list or tuple of multipe paths.
 
         :raise GitCommandError: in case something went wrong
         :return: self"""
@@ -855,8 +858,12 @@ class Repo(object):
         if prefix and 'prefix' not in kwargs:
             kwargs['prefix'] = prefix
         kwargs['output_stream'] = ostream
+        path = kwargs.pop('path', list())
+        if not isinstance(path, (tuple, list)):
+            path = [path]
+        # end assure paths is list
 
-        self.git.archive(treeish, **kwargs)
+        self.git.archive(treeish, *path, **kwargs)
         return self
 
     rev_parse = rev_parse
