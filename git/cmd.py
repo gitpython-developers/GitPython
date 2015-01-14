@@ -77,8 +77,7 @@ def handle_process_output(process, stdout_handler, stderr_handler, finalizer):
         return line
     # end
 
-    def dispatch_line(fno):
-            stream, handler, readline = fdmap[fno]
+    def dispatch_line(stream, handler, readline):
             # this can possibly block for a while, but since we wake-up with at least one or more lines to handle,
             # we are good ...
             line = readline(stream).decode(defenc)
@@ -93,9 +92,9 @@ def handle_process_output(process, stdout_handler, stderr_handler, finalizer):
         # end dispatch helper
     # end
 
-    def deplete_buffer(fno, wg=None):
+    def deplete_buffer(stream, handler, readline, wg=None):
         while True:
-            line = dispatch_line(fno)
+            line = dispatch_line(stream, handler, readline)
             if not line:
                 break
         # end deplete buffer
@@ -124,7 +123,7 @@ def handle_process_output(process, stdout_handler, stderr_handler, finalizer):
                 if result & CLOSED:
                     closed_streams.add(fd)
                 else:
-                    dispatch_line(fd)
+                    dispatch_line(*fdmap[fd])
                 # end handle closed stream
             # end for each poll-result tuple
 
@@ -134,8 +133,8 @@ def handle_process_output(process, stdout_handler, stderr_handler, finalizer):
         # end endless loop
 
         # Depelete all remaining buffers
-        for fno in fdmap.keys():
-            deplete_buffer(fno)
+        for stream, handler, readline in fdmap.values():
+            deplete_buffer(stream, handler, readline)
         # end for each file handle
     else:
         # Oh ... probably we are on windows. select.select() can only handle sockets, we have files
@@ -145,7 +144,8 @@ def handle_process_output(process, stdout_handler, stderr_handler, finalizer):
         wg = WaitGroup()
         for fno in fdmap.keys():
             wg.add(1)
-            t = threading.Thread(target=lambda: deplete_buffer(fno, wg))
+            stream, handler, readline = fdmap[fno]
+            t = threading.Thread(target=lambda: deplete_buffer(stream, handler, readline, wg))
             t.start()
         # end
         # NOTE: Just joining threads can possibly fail as there is a gap between .start() and when it's
