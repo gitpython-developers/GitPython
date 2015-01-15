@@ -1,19 +1,21 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
+import shutil
+import sys
+import os
+
+import git
 
 from git.test.lib import (
     TestBase,
     with_rw_repo
 )
+from gitdb.test.lib import with_rw_directory
 from git.exc import InvalidGitRepositoryError
 from git.objects.submodule.base import Submodule
 from git.objects.submodule.root import RootModule, RootUpdateProgress
 from git.util import to_native_path_linux, join_path_native
 from git.compat import string_types
-import shutil
-import git
-import sys
-import os
 
 from nose import SkipTest
 
@@ -597,3 +599,17 @@ class TestSubmodule(TestBase):
         self.failUnlessRaises(ValueError, rwrepo.create_submodule, 'fail', os.path.expanduser('~'))
         self.failUnlessRaises(ValueError, rwrepo.create_submodule, 'fail-too',
                               rwrepo.working_tree_dir + os.path.sep)
+
+    @with_rw_directory
+    def test_add_empty_repo(self, rwdir):
+        parent_dir = os.path.join(rwdir, 'parent')
+        os.mkdir(parent_dir)
+        empty_repo_dir = os.path.join(rwdir, 'empty-repo')
+
+        parent = git.Repo.init(parent_dir)
+        git.Repo.init(empty_repo_dir)
+
+        for checkout_mode in range(2):
+            self.failUnlessRaises(ValueError, parent.create_submodule, 'empty', 'empty',
+                                  url=empty_repo_dir, no_checkout=checkout_mode)
+        # end for each checkout mode
