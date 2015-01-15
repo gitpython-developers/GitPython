@@ -256,7 +256,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
         # END assure url correctness
 
         # INSTANTIATE INTERMEDIATE SM
-        sm = cls(repo, cls.NULL_BIN_SHA, cls.k_default_mode, path, name)
+        sm = cls(repo, cls.NULL_BIN_SHA, cls.k_default_mode, path, name, url='invalid-temporary')
         if sm.exists():
             # reretrieve submodule from tree
             try:
@@ -298,7 +298,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
             if not branch_is_default:
                 kwargs['b'] = br.name
             # END setup checkout-branch
-            mrepo = git.Repo.clone_from(url, path, **kwargs)
+            mrepo = git.Repo.clone_from(url, os.path.join(repo.working_tree_dir, path), **kwargs)
         # END verify url
 
         # update configuration and index

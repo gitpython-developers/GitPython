@@ -610,6 +610,7 @@ class TestSubmodule(TestBase):
         git.Repo.init(empty_repo_dir)
 
         for checkout_mode in range(2):
-            self.failUnlessRaises(ValueError, parent.create_submodule, 'empty', 'empty',
-                                  url=empty_repo_dir, no_checkout=checkout_mode)
+            name = 'empty' + str(checkout_mode)
+            self.failUnlessRaises(ValueError, parent.create_submodule, name, name,
+                                  url=empty_repo_dir, no_checkout=checkout_mode and True or False)
         # end for each checkout mode
