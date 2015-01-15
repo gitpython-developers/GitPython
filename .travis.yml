@@ -12,7 +12,7 @@ git:
 install:
   - git submodule update --init --recursive
   - git fetch --tags
-  - pip install coveralls flake8
+  - pip install coveralls flake8 sphinx
 
   # generate some reflog as git-python tests need it (in master)
   - git checkout master
@@ -30,5 +30,6 @@ script:
   - ulimit -n
   - nosetests -v --with-coverage
   - flake8
+  - cd doc && make html
 after_success:
   - coveralls
