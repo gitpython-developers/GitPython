@@ -586,6 +586,14 @@ class TestSubmodule(TestBase):
     @with_rw_repo(k_no_subm_tag, bare=False)
     def test_first_submodule(self, rwrepo):
         assert len(list(rwrepo.iter_submodules())) == 0
-        sm = rwrepo.create_submodule('first', 'submodules/first', rwrepo.git_dir, no_checkout=True)
-        assert sm.exists() and sm.module_exists()
-        rwrepo.index.commit("Added submodule")
+
+        for sm_name, sm_path in (('first', 'submodules/first'),
+                                 ('second', os.path.join(rwrepo.working_tree_dir, 'submodules/second'))):
+            sm = rwrepo.create_submodule(sm_name, sm_path, rwrepo.git_dir, no_checkout=True)
+            assert sm.exists() and sm.module_exists()
+            rwrepo.index.commit("Added submodule " + sm_name)
+        # end for each submodule path to add
+
+        self.failUnlessRaises(ValueError, rwrepo.create_submodule, 'fail', os.path.expanduser('~'))
+        self.failUnlessRaises(ValueError, rwrepo.create_submodule, 'fail-too',
+                              rwrepo.working_tree_dir + os.path.sep)

@@ -238,6 +238,17 @@ class Submodule(util.IndexObject, Iterable, Traversable):
             path = path[:-1]
         # END handle trailing slash
 
+        if os.path.isabs(path):
+            working_tree_linux = to_native_path_linux(repo.working_tree_dir)
+            if not path.startswith(working_tree_linux):
+                raise ValueError("Submodule checkout path '%s' needs to be within the parents repository at '%s'"
+                                 % (working_tree_linux, path))
+            path = path[len(working_tree_linux) + 1:]
+            if not path:
+                raise ValueError("Absolute submodule path '%s' didn't yield a valid relative path" % path)
+            # end verify converted relative path makes sense
+        # end convert to a relative path
+
         # assure we never put backslashes into the url, as some operating systems
         # like it ...
         if url is not None:
