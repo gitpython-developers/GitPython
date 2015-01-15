@@ -582,3 +582,10 @@ class TestSubmodule(TestBase):
 
         # gitdb: has either 1 or 2 submodules depending on the version
         assert len(nsm.children()) >= 1 and nsmc.module_exists()
+
+    @with_rw_repo(k_no_subm_tag, bare=False)
+    def test_first_submodule(self, rwrepo):
+        assert len(list(rwrepo.iter_submodules())) == 0
+        sm = rwrepo.create_submodule('first', 'submodules/first', rwrepo.git_dir, no_checkout=True)
+        assert sm.exists() and sm.module_exists()
+        rwrepo.index.commit("Added submodule")

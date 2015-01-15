@@ -159,7 +159,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
         if not repo.bare and parent_matches_head:
             fp_module = cls.k_modules_file
             fp_module_path = os.path.join(repo.working_tree_dir, fp_module)
-            if not os.path.isfile(fp_module_path):
+            if read_only and not os.path.isfile(fp_module_path):
                 raise IOError("%s file was not accessible" % fp_module_path)
             # END handle existance
             fp_module = fp_module_path
