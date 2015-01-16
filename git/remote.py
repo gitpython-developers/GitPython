@@ -338,7 +338,7 @@ class Remote(LazyMixin, Iterable):
     NOTE: When querying configuration, the configuration accessor will be cached
     to speed up subsequent accesses."""
 
-    __slots__ = ("repo", "name", "_config_reader")
+    __slots__ = ("repo", "name", "_config_reader", "fetch_no")
     _id_attribute_ = "name"
 
     def __init__(self, repo, name):
@@ -348,6 +348,7 @@ class Remote(LazyMixin, Iterable):
         :param name: the name of the remote, i.e. 'origin'"""
         self.repo = repo
         self.name = name
+        self.fetch_no = 0
 
         if os.name == 'nt':
             # some oddity: on windows, python 2.5, it for some reason does not realize
@@ -523,7 +524,9 @@ class Remote(LazyMixin, Iterable):
 
         progress_handler = progress.new_message_handler()
 
+        stderr_fetch = open(join(self.repo.git_dir, '%03i_debug_git-python_stderr' % self.fetch_no), 'wb')
         def my_progress_handler(line):
+            stderr_fetch.write((line + '\n').encode(defenc))
             for pline in progress_handler(line):
                 if line.startswith('fatal:'):
                     raise GitCommandError(("Error when fetching: %s" % line,), 2)
@@ -539,8 +542,12 @@ class Remote(LazyMixin, Iterable):
 
         # We are only interested in stderr here ...
         handle_process_output(proc, None, my_progress_handler, finalize_process)
+        stderr_fetch.close()
 
         # read head information
+        import shutil
+        shutil.copyfile(join(self.repo.git_dir, 'FETCH_HEAD'), join(self.repo.git_dir, '%03i_debug_git-python_FETCH_HEAD' % self.fetch_no))
+        self.fetch_no += 1
         fp = open(join(self.repo.git_dir, 'FETCH_HEAD'), 'rb')
         fetch_head_info = [l.decode(defenc) for l in fp.readlines()]
         fp.close()
