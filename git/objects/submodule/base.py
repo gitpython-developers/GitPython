@@ -127,6 +127,10 @@ class Submodule(util.IndexObject, Iterable, Traversable):
             return list()
         # END handle intermeditate items
 
+    @classmethod
+    def _need_gitfile_submodules(cls, git):
+        return git.version_info[:3] >= (1, 8, 0)
+
     def __eq__(self, other):
         """Compare with another submodule"""
         # we may only compare by name as this should be the ID they are hashed with
@@ -157,9 +161,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
             access of the config parser"""
         parent_matches_head = repo.head.commit == parent_commit
         if not repo.bare and parent_matches_head:
-            fp_module = cls.k_modules_file
-            fp_module_path = os.path.join(repo.working_tree_dir, fp_module)
-            fp_module = fp_module_path
+            fp_module = os.path.join(repo.working_tree_dir, cls.k_modules_file)
         else:
             try:
                 fp_module = cls._sio_modules(parent_commit)
@@ -197,6 +199,23 @@ class Submodule(util.IndexObject, Iterable, Traversable):
         parser = self._config_parser(self.repo, self._parent_commit, read_only)
         parser.set_submodule(self)
         return SectionConstraint(parser, sm_section(self.name))
+
+    @classmethod
+    def _module_abspath(cls, parent_repo, path, name):
+        if cls._need_gitfile_submodules(parent_repo.git):
+            return os.path.join(parent_repo.git_dir, 'modules', name)
+        else:
+            return os.path.join(parent_repo.working_tree_dir, path)
+        # end
+
+    @classmethod
+    def _write_git_file(cls, working_tree_dir, module_abspath, overwrite_existing=False):
+        """Writes a .git file containing a (preferably) relative path to the actual git module repository.
+        It is an error if the module_abspath cannot be made into a relative path, relative to the working_tree_dir
+        :param working_tree_dir: directory to write the .git file into
+        :param module_abspath: absolute path to the bare repository
+        :param overwrite_existing: if True, we may rewrite existing .git files, otherwise we raise"""
+        raise NotImplementedError
 
     #{ Edit Interface
 
@@ -298,7 +317,17 @@ class Submodule(util.IndexObject, Iterable, Traversable):
             if not branch_is_default:
                 kwargs['b'] = br.name
             # END setup checkout-branch
-            mrepo = git.Repo.clone_from(url, os.path.join(repo.working_tree_dir, path), **kwargs)
+            module_abspath = cls._module_abspath(repo, path, name)
+            module_checkout_path = module_abspath
+            if cls._need_gitfile_submodules(repo.git):
+                kwargs['separate_git_dir'] = module_abspath
+                module_abspath_dir = os.path.dirname(module_abspath)
+                if not os.path.isdir(module_abspath_dir):
+                    os.makedirs(module_abspath_dir)
+                module_checkout_path = os.path.join(repo.working_tree_dir, path)
+            # end
+
+            mrepo = git.Repo.clone_from(url, module_checkout_path, **kwargs)
         # END verify url
 
         # update configuration and index
@@ -390,7 +419,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
             import git
 
             # there is no git-repository yet - but delete empty paths
-            module_path = join_path_native(self.repo.working_tree_dir, self.path)
+            module_path = self._module_abspath(self.repo, self.path, self.name)
             if not dry_run and os.path.isdir(module_path):
                 try:
                     os.rmdir(module_path)

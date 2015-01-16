@@ -16,6 +16,7 @@ from git.objects.submodule.base import Submodule
 from git.objects.submodule.root import RootModule, RootUpdateProgress
 from git.util import to_native_path_linux, join_path_native
 from git.compat import string_types
+from git.repo.fun import find_git_dir
 
 from nose import SkipTest
 
@@ -602,11 +603,9 @@ class TestSubmodule(TestBase):
 
     @with_rw_directory
     def test_add_empty_repo(self, rwdir):
-        parent_dir = os.path.join(rwdir, 'parent')
-        os.mkdir(parent_dir)
         empty_repo_dir = os.path.join(rwdir, 'empty-repo')
 
-        parent = git.Repo.init(parent_dir)
+        parent = git.Repo.init(os.path.join(rwdir, 'parent'))
         git.Repo.init(empty_repo_dir)
 
         for checkout_mode in range(2):
@@ -614,3 +613,46 @@ class TestSubmodule(TestBase):
             self.failUnlessRaises(ValueError, parent.create_submodule, name, name,
                                   url=empty_repo_dir, no_checkout=checkout_mode and True or False)
         # end for each checkout mode
+
+    def _submodule_url(self):
+        return os.path.join(self.rorepo.working_tree_dir, 'git/ext/gitdb/gitdb/ext/smmap')
+
+    @with_rw_directory
+    def test_git_submodules(self, rwdir):
+        parent = git.Repo.init(os.path.join(rwdir, 'parent'))
+        parent.git.submodule('add', self._submodule_url(), 'module')
+        parent.index.commit("added submodule")
+
+        assert len(parent.submodules) == 1
+        sm = parent.submodules[0]
+
+        assert sm.exists() and sm.module_exists()
+
+        # test move and rename
+        # TODO
+
+    @with_rw_directory
+    def test_git_submodule_compatibility(self, rwdir):
+        parent = git.Repo.init(os.path.join(rwdir, 'parent'))
+        empty_file = os.path.join(parent.working_tree_dir, "empty")
+        with open(empty_file, 'wb') as fp:
+            fp.close()
+        parent.index.add([empty_file])
+        parent.index.commit("initial commit - can't yet add submodules to empty parent dir")
+
+        sm_path = 'submodules/intermediate/one'
+        sm = parent.create_submodule('mymodules/myname', sm_path, url=self._submodule_url())
+        parent.index.commit("added submodule")
+
+        # As git is backwards compatible itself, it would still recognize what we do here ... unless we really
+        # muss it up. That's the only reason why the test is still here ... .
+        assert len(parent.git.submodule().splitlines()) == 1
+
+        module_repo_path = os.path.join(sm.module().working_tree_dir, '.git')
+        assert module_repo_path.startswith(os.path.join(parent.working_tree_dir, sm_path))
+        if not sm._need_gitfile_submodules(parent.git):
+            assert os.path.isdir(module_repo_path)
+        else:
+            assert os.path.isfile(module_repo_path)
+            assert find_git_dir(module_repo_path) is not None, "module pointed to by .git file must be valid"
+        # end verify submodule 'style'
