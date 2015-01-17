@@ -19,6 +19,7 @@ from git.util import (
 
 from git.config import (
     SectionConstraint,
+    GitConfigParser,
     cp
 )
 from git.exc import (
@@ -231,7 +232,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 
         clone = git.Repo.clone_from(url, module_checkout_path, **kwargs)
         if cls._need_gitfile_submodules(repo.git):
-            cls._write_git_file(module_checkout_path, module_abspath)
+            cls._write_git_file_and_module_config(module_checkout_path, module_abspath)
         # end
         return clone
 
@@ -258,10 +259,13 @@ class Submodule(util.IndexObject, Iterable, Traversable):
         return path
 
     @classmethod
-    def _write_git_file(cls, working_tree_dir, module_abspath):
+    def _write_git_file_and_module_config(cls, working_tree_dir, module_abspath):
         """Writes a .git file containing a (preferably) relative path to the actual git module repository.
         It is an error if the module_abspath cannot be made into a relative path, relative to the working_tree_dir
         :note: will overwrite existing files !
+        :note: as we rewrite both the git file as well as the module configuration, we might fail on the configuration
+            and will not roll back changes done to the git file. This should be a non-issue, but may easily be fixed
+            if it becomes one
         :param working_tree_dir: directory to write the .git file into
         :param module_abspath: absolute path to the bare repository
         """
@@ -270,6 +274,10 @@ class Submodule(util.IndexObject, Iterable, Traversable):
         fp = open(git_file, 'wb')
         fp.write(("gitdir: %s" % rela_path).encode(defenc))
         fp.close()
+
+        writer = GitConfigParser(os.path.join(module_abspath, 'config'), read_only=False, merge_includes=False)
+        writer.set_value('core', 'worktree', os.path.relpath(working_tree_dir, start=module_abspath))
+        writer.release()
 
     #{ Edit Interface
 
@@ -629,7 +637,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 
             if self._need_gitfile_submodules(self.repo.git):
                 module_abspath = self._module_abspath(self.repo, self.path, self.name)
-                self._write_git_file(module_checkout_abspath, module_abspath)
+                self._write_git_file_and_module_config(module_checkout_abspath, module_abspath)
             # end handle git file rewrite
         # END move physical module
 
@@ -668,7 +676,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
         """Remove this submodule from the repository. This will remove our entry
         from the .gitmodules file and the entry in the .git/config file.
 
-        :param module: If True, the module we point to will be deleted
+        :param module: If True, the module checkout we point to will be deleted
             as well. If the module is currently on a commit which is not part
             of any branch in the remote, if the currently checked out branch
             working tree, or untracked files,
@@ -687,15 +695,25 @@ class Submodule(util.IndexObject, Iterable, Traversable):
             we would usually throw
         :return: self
         :note: doesn't work in bare repositories
+        :note: doesn't work atomically, as failure to remove any part of the submodule will leave 
+            an inconsistent state
         :raise InvalidGitRepositoryError: thrown if the repository cannot be deleted
         :raise OSError: if directories or files could not be removed"""
         if not (module + configuration):
             raise ValueError("Need to specify to delete at least the module, or the configuration")
-        # END handle params
+        # END handle parameters
 
-        # DELETE MODULE REPOSITORY
-        ##########################
+        # Recursively remove children of this submodule
+        for csm in self.children():
+            csm.remove(module, force, configuration, dry_run)
+            del(csm)
+        # end 
+
+        # DELETE REPOSITORY WORKING TREE
+        ################################
         if module and self.module_exists():
+            mod = self.module()
+            git_dir = mod.git_dir
             if force:
                 # take the fast lane and just delete everything in our module path
                 # TODO: If we run into permission problems, we have a highly inconsistent
@@ -715,7 +733,6 @@ class Submodule(util.IndexObject, Iterable, Traversable):
                 # END apply deletion method
             else:
                 # verify we may delete our module
-                mod = self.module()
                 if mod.is_dirty(untracked_files=True):
                     raise InvalidGitRepositoryError(
                         "Cannot delete module at %s with any modifications, unless force is specified"
@@ -747,12 +764,6 @@ class Submodule(util.IndexObject, Iterable, Traversable):
                     del(remote)
                 # END for each remote
 
-                # gently remove all submodule repositories
-                for sm in self.children():
-                    sm.remove(module=True, force=False, configuration=False, dry_run=dry_run)
-                    del(sm)
-                # END for each child-submodule
-
                 # finally delete our own submodule
                 if not dry_run:
                     wtd = mod.working_tree_dir
@@ -760,6 +771,10 @@ class Submodule(util.IndexObject, Iterable, Traversable):
                     rmtree(wtd)
                 # END delete tree if possible
             # END handle force
+
+            if os.path.isdir(git_dir):
+                rmtree(git_dir)
+            # end handle separate bare repository
         # END handle module deletion
 
         # DELETE CONFIGURATION
@@ -786,7 +801,6 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 
         # void our data not to delay invalid access
         self._clear_cache()
-
         return self
 
     def set_parent_commit(self, commit, check=True):

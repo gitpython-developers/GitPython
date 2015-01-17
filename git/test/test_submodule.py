@@ -665,8 +665,10 @@ class TestSubmodule(TestBase):
         assert sm.module_exists()
 
         # remove
-        sm.remove()
-        assert sm.exist()
         sm_module_path = sm.module().git_dir
-        assert sm.module_exists()
-        assert os.path.isdir(sm_module_path)
+        sm.remove()
+        assert not sm.exists()
+        assert not sm.module_exists()
+        assert not os.path.isdir(sm_module_path)
+
+
