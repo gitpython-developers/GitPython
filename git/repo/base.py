@@ -132,8 +132,8 @@ class Repo(object):
         # walk up the path to find the .git dir
         while curpath:
             # ABOUT os.path.NORMPATH
-            # It's important to normalize the paths, as submodules will otherwise initialize their 
-            # repo instances with paths that depend on path-portions that will not exist after being 
+            # It's important to normalize the paths, as submodules will otherwise initialize their
+            # repo instances with paths that depend on path-portions that will not exist after being
             # removed. It's just cleaner.
             if is_git_dir(curpath):
                 self.git_dir = os.path.normpath(curpath)

@@ -508,7 +508,11 @@ class TestSubmodule(TestBase):
         rm.update(recursive=False, dry_run=True)
         assert os.path.isdir(smp)
 
-        rm.update(recursive=False)
+        # when removing submodules, we may get new commits as nested submodules are auto-committing changes
+        # to allow deletions without force, as the index would be dirty otherwise.
+        # QUESTION: Why does this seem to work in test_git_submodule_compatibility() ?
+        self.failUnlessRaises(InvalidGitRepositoryError, rm.update, recursive=False, force_remove=False)
+        rm.update(recursive=False, force_remove=True)
         assert not os.path.isdir(smp)
 
         # change url
@@ -664,14 +668,19 @@ class TestSubmodule(TestBase):
         assert sm.exists()
         assert sm.module_exists()
 
+        # Add additional submodule level
+        sm.module().create_submodule('nested-submodule', 'nested-submodule/working-tree',
+                                     url=self._submodule_url())
+        sm.module().index.commit("added nested submodule")
+        # Fails because there are new commits, compared to the remote we cloned from
+        self.failUnlessRaises(InvalidGitRepositoryError, sm.remove, dry_run=True)
+
         # remove
         sm_module_path = sm.module().git_dir
 
         for dry_run in (True, False):
-            sm.remove(dry_run=dry_run)
+            sm.remove(dry_run=dry_run, force=True)
             assert sm.exists() == dry_run
             assert sm.module_exists() == dry_run
             assert os.path.isdir(sm_module_path) == dry_run
         # end for each dry-run mode
-
-

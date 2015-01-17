@@ -572,14 +572,14 @@ class Submodule(util.IndexObject, Iterable, Traversable):
         the repository at our current path, changing the configuration, as well as
         adjusting our index entry accordingly.
 
-        :param module_path: the path to which to move our module in the parent repostory's working tree, 
+        :param module_path: the path to which to move our module in the parent repostory's working tree,
             given as repository-relative or absolute path. Intermediate directories will be created
             accordingly. If the path already exists, it must be empty.
             Trailing (back)slashes are removed automatically
         :param configuration: if True, the configuration will be adjusted to let
             the submodule point to the given path.
         :param module: if True, the repository managed by this submodule
-            will be moved as well. If False, we don't move the submodule's checkout, which may leave 
+            will be moved as well. If False, we don't move the submodule's checkout, which may leave
             the parent repository in an inconsistent state.
         :return: self
         :raise ValueError: if the module path existed and was not empty, or was a file
@@ -672,7 +672,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
         return self
 
     @unbare_repo
-    def remove(self, module=True, force=False, configuration=True, dry_run=False, _is_recursive=False):
+    def remove(self, module=True, force=False, configuration=True, dry_run=False):
         """Remove this submodule from the repository. This will remove our entry
         from the .gitmodules file and the entry in the .git/config file.
 
@@ -695,7 +695,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
             we would usually throw
         :return: self
         :note: doesn't work in bare repositories
-        :note: doesn't work atomically, as failure to remove any part of the submodule will leave 
+        :note: doesn't work atomically, as failure to remove any part of the submodule will leave
             an inconsistent state
         :raise InvalidGitRepositoryError: thrown if the repository cannot be deleted
         :raise OSError: if directories or files could not be removed"""
@@ -704,10 +704,17 @@ class Submodule(util.IndexObject, Iterable, Traversable):
         # END handle parameters
 
         # Recursively remove children of this submodule
+        nc = 0
         for csm in self.children():
-            csm.remove(module, force, configuration, dry_run, _is_recursive=True)
+            nc += 1
+            csm.remove(module, force, configuration, dry_run)
             del(csm)
-        # end 
+        # end
+        if nc > 0:
+            # Assure we don't leave the parent repository in a dirty state, and commit our changes
+            # It's important for recursive, unforced, deletions to work as expected
+            self.module().index.commit("Removed submodule '%s'" % self.name)
+        # end handle recursion
 
         # DELETE REPOSITORY WORKING TREE
         ################################
@@ -733,7 +740,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
                 # END apply deletion method
             else:
                 # verify we may delete our module
-                if mod.is_dirty(untracked_files=True):
+                if mod.is_dirty(index=True, working_tree=True, untracked_files=True):
                     raise InvalidGitRepositoryError(
                         "Cannot delete module at %s with any modifications, unless force is specified"
                         % mod.working_tree_dir)
@@ -743,7 +750,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
                 # NOTE: If the user pulled all the time, the remote heads might
                 # not have been updated, so commits coming from the remote look
                 # as if they come from us. But we stay strictly read-only and
-                # don't fetch beforhand.
+                # don't fetch beforehand.
                 for remote in mod.remotes:
                     num_branches_with_new_commits = 0
                     rrefs = remote.refs
@@ -794,15 +801,10 @@ class Submodule(util.IndexObject, Iterable, Traversable):
             writer = self.repo.config_writer()
             writer.remove_section(sm_section(self.name))
             writer.release()
+
             writer = self.config_writer()
             writer.remove_section()
             writer.release()
-
-            # Assure we don't leave the parent repository in a dirty state, and commit our changes
-            # It's important for recursive, unforced, deletions to work as expected
-            if _is_recursive:
-                self.module().index.commit("Removed submodule '%s'" % self.name)
-            # end
         # END delete configuration
 
         # void our data not to delay invalid access
@@ -875,16 +877,16 @@ class Submodule(util.IndexObject, Iterable, Traversable):
         :raise InvalidGitRepositoryError: if a repository was not available. This could
             also mean that it was not yet initialized"""
         # late import to workaround circular dependencies
-        module_path = self.abspath
+        module_checkout_abspath = self.abspath
         try:
-            repo = git.Repo(module_path)
+            repo = git.Repo(module_checkout_abspath)
             if repo != self.repo:
                 return repo
             # END handle repo uninitialized
         except (InvalidGitRepositoryError, NoSuchPathError):
-            raise InvalidGitRepositoryError("No valid repository at %s" % self.path)
+            raise InvalidGitRepositoryError("No valid repository at %s" % module_checkout_abspath)
         else:
-            raise InvalidGitRepositoryError("Repository at %r was not yet checked out" % module_path)
+            raise InvalidGitRepositoryError("Repository at %r was not yet checked out" % module_checkout_abspath)
         # END handle exceptions
 
     def module_exists(self):
