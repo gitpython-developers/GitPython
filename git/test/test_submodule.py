@@ -666,9 +666,12 @@ class TestSubmodule(TestBase):
 
         # remove
         sm_module_path = sm.module().git_dir
-        sm.remove()
-        assert not sm.exists()
-        assert not sm.module_exists()
-        assert not os.path.isdir(sm_module_path)
+
+        for dry_run in (True, False):
+            sm.remove(dry_run=dry_run)
+            assert sm.exists() == dry_run
+            assert sm.module_exists() == dry_run
+            assert os.path.isdir(sm_module_path) == dry_run
+        # end for each dry-run mode
 
 

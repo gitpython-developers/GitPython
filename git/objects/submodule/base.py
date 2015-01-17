@@ -672,7 +672,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
         return self
 
     @unbare_repo
-    def remove(self, module=True, force=False, configuration=True, dry_run=False):
+    def remove(self, module=True, force=False, configuration=True, dry_run=False, _is_recursive=False):
         """Remove this submodule from the repository. This will remove our entry
         from the .gitmodules file and the entry in the .git/config file.
 
@@ -705,7 +705,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 
         # Recursively remove children of this submodule
         for csm in self.children():
-            csm.remove(module, force, configuration, dry_run)
+            csm.remove(module, force, configuration, dry_run, _is_recursive=True)
             del(csm)
         # end 
 
@@ -772,7 +772,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
                 # END delete tree if possible
             # END handle force
 
-            if os.path.isdir(git_dir):
+            if not dry_run and os.path.isdir(git_dir):
                 rmtree(git_dir)
             # end handle separate bare repository
         # END handle module deletion
@@ -781,22 +781,28 @@ class Submodule(util.IndexObject, Iterable, Traversable):
         ######################
         if configuration and not dry_run:
             # first the index-entry
-            index = self.repo.index
+            parent_index = self.repo.index
             try:
-                del(index.entries[index.entry_key(self.path, 0)])
+                del(parent_index.entries[parent_index.entry_key(self.path, 0)])
             except KeyError:
                 pass
             # END delete entry
-            index.write()
+            parent_index.write()
 
             # now git config - need the config intact, otherwise we can't query
-            # inforamtion anymore
+            # information anymore
             writer = self.repo.config_writer()
             writer.remove_section(sm_section(self.name))
             writer.release()
             writer = self.config_writer()
             writer.remove_section()
             writer.release()
+
+            # Assure we don't leave the parent repository in a dirty state, and commit our changes
+            # It's important for recursive, unforced, deletions to work as expected
+            if _is_recursive:
+                self.module().index.commit("Removed submodule '%s'" % self.name)
+            # end
         # END delete configuration
 
         # void our data not to delay invalid access
