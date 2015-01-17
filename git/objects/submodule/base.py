@@ -25,7 +25,10 @@ from git.exc import (
     InvalidGitRepositoryError,
     NoSuchPathError
 )
-from git.compat import string_types
+from git.compat import (
+    string_types,
+    defenc
+)
 
 import stat
 import git
@@ -209,13 +212,64 @@ class Submodule(util.IndexObject, Iterable, Traversable):
         # end
 
     @classmethod
-    def _write_git_file(cls, working_tree_dir, module_abspath, overwrite_existing=False):
+    def _clone_repo(cls, repo, url, path, name, **kwargs):
+        """:return: Repo instance of newly cloned repository
+        :param repo: our parent repository
+        :param url: url to clone from
+        :param path: repository-relative path to the submodule checkout location
+        :param name: canonical of the submodule
+        :param kwrags: additinoal arguments given to git.clone"""
+        module_abspath = cls._module_abspath(repo, path, name)
+        module_checkout_path = module_abspath
+        if cls._need_gitfile_submodules(repo.git):
+            kwargs['separate_git_dir'] = module_abspath
+            module_abspath_dir = os.path.dirname(module_abspath)
+            if not os.path.isdir(module_abspath_dir):
+                os.makedirs(module_abspath_dir)
+            module_checkout_path = os.path.join(repo.working_tree_dir, path)
+        # end
+
+        clone = git.Repo.clone_from(url, module_checkout_path, **kwargs)
+        if cls._need_gitfile_submodules(repo.git):
+            cls._write_git_file(module_checkout_path, module_abspath)
+        # end
+        return clone
+
+    @classmethod
+    def _to_relative_path(cls, parent_repo, path):
+        """:return: a path guaranteed  to be relative to the given parent-repository
+        :raise ValueError: if path is not contained in the parent repository's working tree"""
+        path = to_native_path_linux(path)
+        if path.endswith('/'):
+            path = path[:-1]
+        # END handle trailing slash
+
+        if os.path.isabs(path):
+            working_tree_linux = to_native_path_linux(parent_repo.working_tree_dir)
+            if not path.startswith(working_tree_linux):
+                raise ValueError("Submodule checkout path '%s' needs to be within the parents repository at '%s'"
+                                 % (working_tree_linux, path))
+            path = path[len(working_tree_linux) + 1:]
+            if not path:
+                raise ValueError("Absolute submodule path '%s' didn't yield a valid relative path" % path)
+            # end verify converted relative path makes sense
+        # end convert to a relative path
+
+        return path
+
+    @classmethod
+    def _write_git_file(cls, working_tree_dir, module_abspath):
         """Writes a .git file containing a (preferably) relative path to the actual git module repository.
         It is an error if the module_abspath cannot be made into a relative path, relative to the working_tree_dir
+        :note: will overwrite existing files !
         :param working_tree_dir: directory to write the .git file into
         :param module_abspath: absolute path to the bare repository
-        :param overwrite_existing: if True, we may rewrite existing .git files, otherwise we raise"""
-        raise NotImplementedError
+        """
+        git_file = os.path.join(working_tree_dir, '.git')
+        rela_path = os.path.relpath(module_abspath, start=working_tree_dir)
+        fp = open(git_file, 'wb')
+        fp.write(("gitdir: %s" % rela_path).encode(defenc))
+        fp.close()
 
     #{ Edit Interface
 
@@ -252,21 +306,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
             raise InvalidGitRepositoryError("Cannot add submodules to bare repositories")
         # END handle bare repos
 
-        path = to_native_path_linux(path)
-        if path.endswith('/'):
-            path = path[:-1]
-        # END handle trailing slash
-
-        if os.path.isabs(path):
-            working_tree_linux = to_native_path_linux(repo.working_tree_dir)
-            if not path.startswith(working_tree_linux):
-                raise ValueError("Submodule checkout path '%s' needs to be within the parents repository at '%s'"
-                                 % (working_tree_linux, path))
-            path = path[len(working_tree_linux) + 1:]
-            if not path:
-                raise ValueError("Absolute submodule path '%s' didn't yield a valid relative path" % path)
-            # end verify converted relative path makes sense
-        # end convert to a relative path
+        path = cls._to_relative_path(repo, path)
 
         # assure we never put backslashes into the url, as some operating systems
         # like it ...
@@ -317,17 +357,9 @@ class Submodule(util.IndexObject, Iterable, Traversable):
             if not branch_is_default:
                 kwargs['b'] = br.name
             # END setup checkout-branch
-            module_abspath = cls._module_abspath(repo, path, name)
-            module_checkout_path = module_abspath
-            if cls._need_gitfile_submodules(repo.git):
-                kwargs['separate_git_dir'] = module_abspath
-                module_abspath_dir = os.path.dirname(module_abspath)
-                if not os.path.isdir(module_abspath_dir):
-                    os.makedirs(module_abspath_dir)
-                module_checkout_path = os.path.join(repo.working_tree_dir, path)
-            # end
 
-            mrepo = git.Repo.clone_from(url, module_checkout_path, **kwargs)
+            # _clone_repo(cls, repo, url, path, name, **kwargs):
+            mrepo = cls._clone_repo(repo, url, path, name, **kwargs)
         # END verify url
 
         # update configuration and index
@@ -416,7 +448,6 @@ class Submodule(util.IndexObject, Iterable, Traversable):
             if not init:
                 return self
             # END early abort if init is not allowed
-            import git
 
             # there is no git-repository yet - but delete empty paths
             module_path = self._module_abspath(self.repo, self.path, self.name)
@@ -433,7 +464,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
             progress.update(BEGIN | CLONE, 0, 1, prefix + "Cloning %s to %s in submodule %r" %
                             (self.url, module_path, self.name))
             if not dry_run:
-                mrepo = git.Repo.clone_from(self.url, module_path, n=True)
+                mrepo = self._clone_repo(self.repo, self.url, self.path, self.name, n=True)
             # END handle dry-run
             progress.update(END | CLONE, 0, 1, prefix + "Done cloning to %s" % module_path)
 
@@ -533,16 +564,15 @@ class Submodule(util.IndexObject, Iterable, Traversable):
         the repository at our current path, changing the configuration, as well as
         adjusting our index entry accordingly.
 
-        :param module_path: the path to which to move our module, given as
-            repository-relative path. Intermediate directories will be created
+        :param module_path: the path to which to move our module in the parent repostory's working tree, 
+            given as repository-relative or absolute path. Intermediate directories will be created
             accordingly. If the path already exists, it must be empty.
-            Trailling (back)slashes are removed automatically
+            Trailing (back)slashes are removed automatically
         :param configuration: if True, the configuration will be adjusted to let
             the submodule point to the given path.
         :param module: if True, the repository managed by this submodule
-            will be moved, not the configuration. This will effectively
-            leave your repository in an inconsistent state unless the configuration
-            and index already point to the target location.
+            will be moved as well. If False, we don't move the submodule's checkout, which may leave 
+            the parent repository in an inconsistent state.
         :return: self
         :raise ValueError: if the module path existed and was not empty, or was a file
         :note: Currently the method is not atomic, and it could leave the repository
@@ -552,53 +582,55 @@ class Submodule(util.IndexObject, Iterable, Traversable):
             raise ValueError("You must specify to move at least the module or the configuration of the submodule")
         # END handle input
 
-        module_path = to_native_path_linux(module_path)
-        if module_path.endswith('/'):
-            module_path = module_path[:-1]
-        # END handle trailing slash
+        module_checkout_path = self._to_relative_path(self.repo, module_path)
 
         # VERIFY DESTINATION
-        if module_path == self.path:
+        if module_checkout_path == self.path:
             return self
         # END handle no change
 
-        dest_path = join_path_native(self.repo.working_tree_dir, module_path)
-        if os.path.isfile(dest_path):
-            raise ValueError("Cannot move repository onto a file: %s" % dest_path)
+        module_checkout_abspath = join_path_native(self.repo.working_tree_dir, module_checkout_path)
+        if os.path.isfile(module_checkout_abspath):
+            raise ValueError("Cannot move repository onto a file: %s" % module_checkout_abspath)
         # END handle target files
 
         index = self.repo.index
-        tekey = index.entry_key(module_path, 0)
+        tekey = index.entry_key(module_checkout_path, 0)
         # if the target item already exists, fail
         if configuration and tekey in index.entries:
-            raise ValueError("Index entry for target path did alredy exist")
+            raise ValueError("Index entry for target path did already exist")
         # END handle index key already there
 
         # remove existing destination
         if module:
-            if os.path.exists(dest_path):
-                if len(os.listdir(dest_path)):
+            if os.path.exists(module_checkout_abspath):
+                if len(os.listdir(module_checkout_abspath)):
                     raise ValueError("Destination module directory was not empty")
-                # END handle non-emptyness
+                # END handle non-emptiness
 
-                if os.path.islink(dest_path):
-                    os.remove(dest_path)
+                if os.path.islink(module_checkout_abspath):
+                    os.remove(module_checkout_abspath)
                 else:
-                    os.rmdir(dest_path)
+                    os.rmdir(module_checkout_abspath)
                 # END handle link
             else:
                 # recreate parent directories
                 # NOTE: renames() does that now
                 pass
-            # END handle existance
+            # END handle existence
         # END handle module
 
         # move the module into place if possible
         cur_path = self.abspath
         renamed_module = False
         if module and os.path.exists(cur_path):
-            os.renames(cur_path, dest_path)
+            os.renames(cur_path, module_checkout_abspath)
             renamed_module = True
+
+            if self._need_gitfile_submodules(self.repo.git):
+                module_abspath = self._module_abspath(self.repo, self.path, self.name)
+                self._write_git_file(module_checkout_abspath, module_abspath)
+            # end handle git file rewrite
         # END move physical module
 
         # rename the index entry - have to manipulate the index directly as
@@ -609,7 +641,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
                     ekey = index.entry_key(self.path, 0)
                     entry = index.entries[ekey]
                     del(index.entries[ekey])
-                    nentry = git.IndexEntry(entry[:3] + (module_path,) + entry[4:])
+                    nentry = git.IndexEntry(entry[:3] + (module_checkout_path,) + entry[4:])
                     index.entries[tekey] = nentry
                 except KeyError:
                     raise InvalidGitRepositoryError("Submodule's entry at %r did not exist" % (self.path))
@@ -617,14 +649,14 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 
                 # update configuration
                 writer = self.config_writer(index=index)        # auto-write
-                writer.set_value('path', module_path)
-                self.path = module_path
+                writer.set_value('path', module_checkout_path)
+                self.path = module_checkout_path
                 writer.release()
                 del(writer)
             # END handle configuration flag
         except Exception:
             if renamed_module:
-                os.renames(dest_path, cur_path)
+                os.renames(module_checkout_abspath, cur_path)
             # END undo module renaming
             raise
         # END handle undo rename

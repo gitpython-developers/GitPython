@@ -656,3 +656,17 @@ class TestSubmodule(TestBase):
             assert os.path.isfile(module_repo_path)
             assert find_git_dir(module_repo_path) is not None, "module pointed to by .git file must be valid"
         # end verify submodule 'style'
+
+        # test move
+        new_sm_path = 'submodules/one'
+        sm.set_parent_commit(parent.commit())
+        sm.move(new_sm_path)
+        assert sm.exists()
+        assert sm.module_exists()
+
+        # remove
+        sm.remove()
+        assert sm.exist()
+        sm_module_path = sm.module().git_dir
+        assert sm.module_exists()
+        assert os.path.isdir(sm_module_path)
