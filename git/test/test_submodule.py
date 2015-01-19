@@ -377,8 +377,6 @@ class TestSubmodule(TestBase):
             assert nsm.path == pmp
             assert rwrepo.submodules[0].path == pmp
 
-            # TODO lowprio: test remaining exceptions ... for now its okay, the code looks right
-
             # REMOVE 'EM ALL
             ################
             # if a submodule's repo has no remotes, it can't be added without an explicit url
@@ -636,8 +634,20 @@ class TestSubmodule(TestBase):
 
         assert sm.exists() and sm.module_exists()
 
-        # test move and rename
-        # TODO
+        clone = git.Repo.clone_from(self._submodule_url(),
+                                    os.path.join(parent.working_tree_dir, 'existing-subrepository'))
+        sm2 = parent.create_submodule('nongit-file-submodule', clone.working_tree_dir)
+        assert len(parent.submodules) == 2
+
+        for _ in range(2):
+            for init in (False, True):
+                sm.update(init=init)
+                sm2.update(init=init)
+            # end for each init state
+        # end for each iteration
+
+        sm.move(sm.path + '_moved')
+        sm2.move(sm2.path + '_moved')
 
     @with_rw_directory
     def test_git_submodule_compatibility(self, rwdir):

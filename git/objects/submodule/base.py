@@ -636,7 +636,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
             os.renames(cur_path, module_checkout_abspath)
             renamed_module = True
 
-            if self._need_gitfile_submodules(self.repo.git):
+            if os.path.isfile(os.path.join(module_checkout_abspath, '.git')):
                 module_abspath = self._module_abspath(self.repo, self.path, self.name)
                 self._write_git_file_and_module_config(module_checkout_abspath, module_abspath)
             # end handle git file rewrite
