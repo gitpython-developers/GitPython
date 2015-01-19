@@ -675,6 +675,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 
         # rename the index entry - have to manipulate the index directly as
         # git-mv cannot be used on submodules ... yeah
+        previous_sm_path = self.path
         try:
             if configuration:
                 try:
@@ -700,6 +701,11 @@ class Submodule(util.IndexObject, Iterable, Traversable):
             # END undo module renaming
             raise
         # END handle undo rename
+
+        # Auto-rename submodule if it's name was 'default', that is, the checkout directory
+        if previous_sm_path == self.name:
+            self.rename(module_checkout_path)
+        # end
 
         return self
 

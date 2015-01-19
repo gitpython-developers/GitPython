@@ -707,11 +707,14 @@ class TestSubmodule(TestBase):
     def test_rename(self, rwdir):
         parent = git.Repo.init(os.path.join(rwdir, 'parent'))
         sm_name = 'mymodules/myname'
-        sm = parent.create_submodule(sm_name, 'submodules/intermediate/one', url=self._submodule_url())
+        sm = parent.create_submodule(sm_name, sm_name, url=self._submodule_url())
         parent.index.commit("Added submodule")
         assert sm._parent_commit is not None
 
         assert sm.rename(sm_name) is sm and sm.name == sm_name
+
+        new_path = 'renamed/myname'
+        assert sm.move(new_path).name == new_path
 
         new_sm_name = "shortname"
         assert sm.rename(new_sm_name) is sm
