@@ -109,7 +109,12 @@ class Submodule(util.IndexObject, Iterable, Traversable):
     def _set_cache_(self, attr):
         if attr == '_parent_commit':
             # set a default value, which is the root tree of the current head
-            self._parent_commit = self.repo.commit()
+            try:
+                self._parent_commit = self.repo.commit()
+            except ValueError:
+                # This fails in an empty repository.
+                self._parent_commit = None
+            # end exception handling
         elif attr in ('path', '_url', '_branch_path'):
             reader = self.config_reader()
             # default submodule values
@@ -163,7 +168,13 @@ class Submodule(util.IndexObject, Iterable, Traversable):
         :raise IOError: If the .gitmodules file cannot be found, either locally or in the repository
             at the given parent commit. Otherwise the exception would be delayed until the first
             access of the config parser"""
-        parent_matches_head = repo.head.commit == parent_commit
+        try:
+            parent_matches_head = repo.head.commit == parent_commit
+        except ValueError:
+            # We are most likely in an empty repository, so the HEAD doesn't point to a valid ref
+            parent_matches_head = True
+        # end
+
         if not repo.bare and parent_matches_head:
             fp_module = os.path.join(repo.working_tree_dir, cls.k_modules_file)
         else:
@@ -370,6 +381,14 @@ class Submodule(util.IndexObject, Iterable, Traversable):
             mrepo = cls._clone_repo(repo, url, path, name, **kwargs)
         # END verify url
 
+        # It's important to add the URL to the parent config, to let `git submodule` know.
+        # otherwise there is a '-' character in front of the submodule listing
+        #  a38efa84daef914e4de58d1905a500d8d14aaf45 mymodule (v0.9.0-1-ga38efa8)
+        # -a38efa84daef914e4de58d1905a500d8d14aaf45 submodules/intermediate/one
+        writer = sm.repo.config_writer()
+        writer.set_value(sm_section(name), 'url', url)
+        writer.release()
+
         # update configuration and index
         index = sm.repo.index
         writer = sm.config_writer(index=index, write=False)
@@ -386,10 +405,22 @@ class Submodule(util.IndexObject, Iterable, Traversable):
         del(writer)
 
         # we deliberatly assume that our head matches our index !
-        pcommit = repo.head.commit
-        sm._parent_commit = pcommit
+        parent_repo_is_empty = False
+        try:
+            sm._parent_commit = repo.head.commit
+        except ValueError:
+            parent_repo_is_empty = True
+            # Can't set this yet, if the parent repo is empty.
+        # end
         sm.binsha = mrepo.head.commit.binsha
         index.add([sm], write=True)
+
+        if parent_repo_is_empty:
+            # The user is expected to make a commit, and this submodule will initialize itself when
+            # _parent_commit is required
+            del sm._parent_commit
+            log.debug("Will not set _parent_commit now as the parent repository has no commit yet.")
+        # end
 
         return sm
 
@@ -874,6 +905,49 @@ class Submodule(util.IndexObject, Iterable, Traversable):
             writer.config._index = index
         writer.config._auto_write = write
         return writer
+
+    @unbare_repo
+    def rename(self, new_name):
+        """Rename this submodule
+        :note: This method takes care of renaming the submodule in various places, such as
+
+            * $parent_git_dir/config
+            * $working_tree_dir/.gitmodules
+            * (git >=v1.8.0: move submodule repository to new name)
+
+        As .gitmodules will be changed, you would need to make a commit afterwards. The changed .gitmodules file
+        will already be added to the index
+
+        :return: this submodule instance
+        """
+        if self.name == new_name:
+            return self
+
+        # .git/config
+        pw = self.repo.config_writer()
+        # As we ourselves didn't write anything about submodules into the parent .git/config, we will not require
+        # it to exist, and just ignore missing entries
+        if pw.has_section(sm_section(self.name)):
+            pw.rename_section(sm_section(self.name), sm_section(new_name))
+        # end
+        pw.release()
+
+        # .gitmodules
+        cw = self.config_writer().config
+        cw.rename_section(sm_section(self.name), sm_section(new_name))
+        cw.release()
+
+        self._name = new_name
+
+        # .git/modules
+        mod = self.module()
+        if mod.has_separate_working_tree():
+            module_abspath = self._module_abspath(self.repo, self.path, new_name)
+            os.renames(mod.git_dir, module_abspath)
+            self._write_git_file_and_module_config(mod.working_tree_dir, module_abspath)
+        # end move separate git repository
+
+        return self
 
     #} END edit interface
 

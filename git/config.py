@@ -478,8 +478,6 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
         if self.read_only:
             raise IOError("Cannot execute non-constant method %s.%s" % (self, method_name))
 
-    @needs_values
-    @set_dirty_and_flush_changes
     def add_section(self, section):
         """Assures added options will stay in order"""
         return super(GitConfigParser, self).add_section(section)
@@ -546,3 +544,23 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
         if not self.has_section(section):
             self.add_section(section)
         self.set(section, option, str(value))
+
+    def rename_section(self, section, new_name):
+        """rename the given section to new_name
+        :raise ValueError: if section doesn't exit
+        :raise ValueError: if a section with new_name does already exist
+        :return: this instance
+        """
+        if not self.has_section(section):
+            raise ValueError("Source section '%s' doesn't exist" % section)
+        if self.has_section(new_name):
+            raise ValueError("Destination section '%s' already exists" % new_name)
+
+        super(GitConfigParser, self).add_section(new_name)
+        for k, v in self.items(section):
+            self.set(new_name, k, str(v))
+        # end for each value to copy
+
+        # This call writes back the changes, which is why we don't have the respective decorator
+        self.remove_section(section)
+        return self

@@ -164,6 +164,7 @@ class TestRepo(TestBase):
                 r = Repo.init(path=path, bare=True)
                 assert isinstance(r, Repo)
                 assert r.bare is True
+                assert not r.has_separate_working_tree()
                 assert os.path.isdir(r.git_dir)
 
                 self._assert_empty_repo(r)
@@ -200,6 +201,7 @@ class TestRepo(TestBase):
             os.chdir(git_dir_rela)
             r = Repo.init(bare=False)
             assert r.bare is False
+            assert not r.has_separate_working_tree()
 
             self._assert_empty_repo(r)
         finally:

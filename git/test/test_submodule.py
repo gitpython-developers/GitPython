@@ -670,8 +670,10 @@ class TestSubmodule(TestBase):
         assert module_repo_path.startswith(os.path.join(parent.working_tree_dir, sm_path))
         if not sm._need_gitfile_submodules(parent.git):
             assert os.path.isdir(module_repo_path)
+            assert not sm.module().has_separate_working_tree()
         else:
             assert os.path.isfile(module_repo_path)
+            assert sm.module().has_separate_working_tree()
             assert find_git_dir(module_repo_path) is not None, "module pointed to by .git file must be valid"
         # end verify submodule 'style'
 
@@ -689,6 +691,8 @@ class TestSubmodule(TestBase):
         # Fails because there are new commits, compared to the remote we cloned from
         self.failUnlessRaises(InvalidGitRepositoryError, sm.remove, dry_run=True)
 
+        # TODO: rename nested submodule
+
         # remove
         sm_module_path = sm.module().git_dir
 
@@ -698,3 +702,22 @@ class TestSubmodule(TestBase):
             assert sm.module_exists() == dry_run
             assert os.path.isdir(sm_module_path) == dry_run
         # end for each dry-run mode
+
+    @with_rw_directory
+    def test_rename(self, rwdir):
+        parent = git.Repo.init(os.path.join(rwdir, 'parent'))
+        sm_name = 'mymodules/myname'
+        sm = parent.create_submodule(sm_name, 'submodules/intermediate/one', url=self._submodule_url())
+        parent.index.commit("Added submodule")
+        assert sm._parent_commit is not None
+
+        assert sm.rename(sm_name) is sm and sm.name == sm_name
+
+        new_sm_name = "shortname"
+        assert sm.rename(new_sm_name) is sm
+        assert sm.exists()
+
+        sm_mod = sm.module()
+        if os.path.isfile(os.path.join(sm_mod.working_tree_dir, '.git')) == sm._need_gitfile_submodules(parent.git):
+            assert sm_mod.git_dir.endswith(".git/modules/" + new_sm_name)
+        # end

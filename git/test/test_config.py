@@ -193,3 +193,16 @@ class TestBase(TestCase):
         cr = GitConfigParser(fpa, read_only=True)
         check_test_value(cr, tv)
         cr.release()
+
+    def test_rename(self):
+        file_obj = self._to_memcache(fixture_path('git_config'))
+        cw = GitConfigParser(file_obj, read_only=False, merge_includes=False)
+
+        self.failUnlessRaises(ValueError, cw.rename_section, "doesntexist", "foo")
+        self.failUnlessRaises(ValueError, cw.rename_section, "core", "include")
+
+        nn = "bee"
+        assert cw.rename_section('core', nn) is cw
+        assert not cw.has_section('core')
+        assert len(cw.items(nn)) == 4
+        cw.release()

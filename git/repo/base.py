@@ -868,6 +868,15 @@ class Repo(object):
         self.git.archive(treeish, *path, **kwargs)
         return self
 
+    def has_separate_working_tree(self):
+        """:return: True if our git_dir is not at the root of our working_tree_dir, but a .git file with a
+        platform agnositic symbolic link. Our git_dir will be whereever the .git file points to
+        :note: bare repositories will always return False here
+        """
+        if self.bare:
+            return False
+        return os.path.isfile(os.path.join(self.working_tree_dir, '.git'))
+
     rev_parse = rev_parse
 
     def __repr__(self):
