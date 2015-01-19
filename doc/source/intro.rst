@@ -17,9 +17,6 @@ Requirements
     It should also work with older versions, but it may be that some operations
     involving remotes will not work as expected.
 * `GitDB`_ - a pure python git database implementation
-
- * `async`_ - asynchronous task scheduling
- 
 * `Python Nose`_ - used for running the tests
 * `Mock by Michael Foord`_ used for tests. Requires version 0.5
 
@@ -27,29 +24,27 @@ Requirements
 .. _Python Nose: http://code.google.com/p/python-nose/
 .. _Mock by Michael Foord: http://www.voidspace.org.uk/python/mock.html
 .. _GitDB: http://pypi.python.org/pypi/gitdb
-.. _async: http://pypi.python.org/pypi/async
 
 Installing GitPython
 ====================
 
 Installing GitPython is easily done using
-`setuptools`_. Assuming it is
+`pip`_. Assuming it is
 installed, just run the following from the command-line:
 
 .. sourcecode:: none
 
-    # easy_install GitPython
+    # pip install gitpython
 
 This command will download the latest version of GitPython from the
 `Python Package Index <http://pypi.python.org/pypi/GitPython>`_ and install it
-to your system. More information about ``easy_install`` and pypi can be found
+to your system. More information about ``pip`` and pypi can be found
 here:
 
-* `setuptools`_
-* `install setuptools <http://peak.telecommunity.com/DevCenter/EasyInstall#installation-instructions>`_
+* `install pip <https://pip.pypa.io/en/latest/installing.html>`_
 * `pypi <https://pypi.python.org/pypi/GitPython>`_
 
-.. _setuptools: http://peak.telecommunity.com/DevCenter/setuptools
+.. _pip: https://pip.pypa.io/en/latest/installing.html
 
 Alternatively, you can install from the distribution using the ``setup.py``
 script:
@@ -58,7 +53,7 @@ script:
 
     # python setup.py install
     
-.. note:: In this case, you have to manually install `GitDB`_ and `async`_ as well. It would be recommended to use the :ref:`git source repository <source-code-label>` in that case.
+.. note:: In this case, you have to manually install `GitDB`_ as well. It would be recommended to use the :ref:`git source repository <source-code-label>` in that case.
 
 Getting Started
 ===============
@@ -84,7 +79,7 @@ GitPython's git repo is available on GitHub, which can be browsed at:
 
 and cloned using::
 
-	$ git clone git://github.com/gitpython-developers/GitPython.git git-python
+	$ git clone https://github.com/gitpython-developers/GitPython git-python
 	
 Initialize all submodules to obtain the required dependencies with::
     
