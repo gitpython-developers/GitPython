@@ -73,6 +73,7 @@ class TestBase(TestCase):
             assert r_config.has_section(sname)
             assert r_config.has_option(sname, oname)
             assert r_config.get(sname, oname) == val
+            w_config.release()
         # END for each filename
 
     def test_multi_line_config(self):
