@@ -17,7 +17,11 @@ import threading
 # NOTE:  Some of the unused imports might be used/imported by others.
 # Handle once test-cases are back up and running.
 from .exc import GitCommandError
-from .compat import MAXSIZE
+from .compat import (
+    MAXSIZE,
+    defenc,
+    PY3
+)
 
 # Most of these are unused here, but are for use by git-python modules so these
 # don't see gitdb all the time. Flake of course doesn't like it.
@@ -364,7 +368,11 @@ class Actor(object):
         for attr, evar, cvar, default in (('name', env_name, cls.conf_name, default_name),
                                           ('email', env_email, cls.conf_email, default_email)):
             try:
-                setattr(actor, attr, os.environ[evar])
+                val = os.environ[evar]
+                if not PY3:
+                    val = val.decode(defenc)
+                # end assure we don't get 'invalid strings'
+                setattr(actor, attr, val)
             except KeyError:
                 if config_reader is not None:
                     setattr(actor, attr, config_reader.get_value('user', cvar, default))

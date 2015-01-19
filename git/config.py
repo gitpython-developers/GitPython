@@ -23,6 +23,7 @@ from git.compat import (
     string_types,
     FileType,
     defenc,
+    force_text,
     with_metaclass,
     PY3
 )
@@ -412,7 +413,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
             fp.write(("[%s]\n" % name).encode(defenc))
             for (key, value) in section_dict.items():
                 if key != "__name__":
-                    fp.write(("\t%s = %s\n" % (key, str(value).replace('\n', '\n\t'))).encode(defenc))
+                    fp.write(("\t%s = %s\n" % (key, self._value_to_string(value).replace('\n', '\n\t'))).encode(defenc))
                 # END if key is not __name__
         # END section writing
 
@@ -529,6 +530,11 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
 
         return valuestr
 
+    def _value_to_string(self, value):
+        if isinstance(value, (int, float, bool)):
+            return str(value)
+        return force_text(value)
+
     @needs_values
     @set_dirty_and_flush_changes
     def set_value(self, section, option, value):
@@ -543,7 +549,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
             to a string"""
         if not self.has_section(section):
             self.add_section(section)
-        self.set(section, option, str(value))
+        self.set(section, option, self._value_to_string(value))
 
     def rename_section(self, section, new_name):
         """rename the given section to new_name
@@ -558,7 +564,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
 
         super(GitConfigParser, self).add_section(new_name)
         for k, v in self.items(section):
-            self.set(new_name, k, str(v))
+            self.set(new_name, k, self._value_to_string(v))
         # end for each value to copy
 
         # This call writes back the changes, which is why we don't have the respective decorator

@@ -381,12 +381,13 @@ class TestIndex(TestBase):
         num_entries = len(index.entries)
         cur_head = rw_repo.head
 
-        uname = "Some Developer"
+        uname = u"Thomas Müller"
         umail = "sd@company.com"
         writer = rw_repo.config_writer()
         writer.set_value("user", "name", uname)
         writer.set_value("user", "email", umail)
         writer.release()
+        assert writer.get_value("user", "name") == uname
 
         # remove all of the files, provide a wild mix of paths, BaseIndexEntries,
         # IndexEntries
