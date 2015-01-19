@@ -415,6 +415,22 @@ The previous approach would brutally overwrite the user's changes in the working
 	repo.heads.master.checkout()			# checkout the branch using git-checkout
 	repo.heads.other_branch.checkout()
 
+Initializing a repository
+*************************
+
+In this example, we will initialize an empty repository, add an empty file to the index, and commit the change::
+
+    repo_dir = 'my-new-repo'
+    file_name = os.path.join(repo_dir, 'new-file')
+
+    r = git.Repo.init(repo_dir)
+    # This function just creates an empty file ... 
+    touch(file_name)
+    r.index.add([file_name])
+    r.index.commit("initial commit")
+
+Please have a look at the individual methods as they usually support a vast amount of arguments to customize their behavior.
+
 Using git directly
 ******************
 In case you are missing functionality as it has not been wrapped, you may conveniently use the git command directly. It is owned by each repository instance::
