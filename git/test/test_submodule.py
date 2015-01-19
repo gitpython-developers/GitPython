@@ -1,6 +1,5 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
-import shutil
 import sys
 import os
 
@@ -17,8 +16,6 @@ from git.objects.submodule.root import RootModule, RootUpdateProgress
 from git.util import to_native_path_linux, join_path_native
 from git.compat import string_types
 from git.repo.fun import find_git_dir
-
-from nose import SkipTest
 
 # Change the configuration if possible to prevent the underlying memory manager
 # to keep file handles open. On windows we get problems as they are not properly
@@ -46,7 +43,7 @@ prog = TestRootProgress()
 
 class TestSubmodule(TestBase):
 
-    k_subm_current = "468cad66ff1f80ddaeee4123c24e4d53a032c00d"
+    k_subm_current = "c15a6e1923a14bc760851913858a3942a4193cdb"
     k_subm_changed = "394ed7006ee5dc8bddfd132b64001d5dfc0ffdd3"
     k_no_subm_tag = "0.1.6"
 
@@ -67,7 +64,7 @@ class TestSubmodule(TestBase):
 
         assert sm.path == 'git/ext/gitdb'
         assert sm.path != sm.name                   # in our case, we have ids there, which don't equal the path
-        assert sm.url == 'git://github.com/gitpython-developers/gitdb.git'
+        assert sm.url.endswith('github.com/gitpython-developers/gitdb.git')
         assert sm.branch_path == 'refs/heads/master'            # the default ...
         assert sm.branch_name == 'master'
         assert sm.parent_commit == rwrepo.head.commit
@@ -184,7 +181,9 @@ class TestSubmodule(TestBase):
             assert sm.module().head.ref.tracking_branch() is not None
 
             # delete the whole directory and re-initialize
-            shutil.rmtree(sm.abspath)
+            assert len(sm.children()) != 0
+            # shutil.rmtree(sm.abspath)
+            sm.remove(force=True, configuration=False)
             assert len(sm.children()) == 0
             # dry-run does nothing
             sm.update(dry_run=True, recursive=False, progress=prog)
@@ -277,9 +276,12 @@ class TestSubmodule(TestBase):
 
             # enforce the submodule to be checked out at the right spot as well.
             csm.update()
+            assert csm.module_exists()
+            assert csm.exists()
+            assert os.path.isdir(csm.module().working_tree_dir)
 
             # this would work
-            assert sm.remove(dry_run=True) is sm
+            assert sm.remove(force=True, dry_run=True) is sm
             assert sm.module_exists()
             sm.remove(force=True, dry_run=True)
             assert sm.module_exists()
@@ -291,17 +293,20 @@ class TestSubmodule(TestBase):
 
             # forcibly delete the child repository
             prev_count = len(sm.children())
-            assert csm.remove(force=True) is csm
+            self.failUnlessRaises(ValueError, csm.remove, force=True)
+            # We removed sm, which removed all submodules. Howver, the instance we have
+            # still points to the commit prior to that, where it still existed
+            csm.set_parent_commit(csm.repo.commit(), check=False)
             assert not csm.exists()
             assert not csm.module_exists()
-            assert len(sm.children()) == prev_count - 1
+            assert len(sm.children()) == prev_count
             # now we have a changed index, as configuration was altered.
             # fix this
             sm.module().index.reset(working_tree=True)
 
             # now delete only the module of the main submodule
             assert sm.module_exists()
-            sm.remove(configuration=False)
+            sm.remove(configuration=False, force=True)
             assert sm.exists()
             assert not sm.module_exists()
             assert sm.config_reader().get_value('url')
@@ -391,7 +396,6 @@ class TestSubmodule(TestBase):
 
     @with_rw_repo(k_subm_current)
     def test_base_rw(self, rwrepo):
-        raise SkipTest("Disabled as long as it fails and submodule support wasn't overhauled")
         self._do_base_tests(rwrepo)
 
     @with_rw_repo(k_subm_current, bare=True)

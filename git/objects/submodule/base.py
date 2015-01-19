@@ -458,23 +458,24 @@ class Submodule(util.IndexObject, Iterable, Traversable):
             # END early abort if init is not allowed
 
             # there is no git-repository yet - but delete empty paths
-            module_path = self._module_abspath(self.repo, self.path, self.name)
-            if not dry_run and os.path.isdir(module_path):
+            checkout_module_abspath = self.abspath
+            if not dry_run and os.path.isdir(checkout_module_abspath):
                 try:
-                    os.rmdir(module_path)
+                    os.rmdir(checkout_module_abspath)
                 except OSError:
-                    raise OSError("Module directory at %r does already exist and is non-empty" % module_path)
+                    raise OSError("Module directory at %r does already exist and is non-empty"
+                                  % checkout_module_abspath)
                 # END handle OSError
             # END handle directory removal
 
             # don't check it out at first - nonetheless it will create a local
             # branch according to the remote-HEAD if possible
             progress.update(BEGIN | CLONE, 0, 1, prefix + "Cloning %s to %s in submodule %r" %
-                            (self.url, module_path, self.name))
+                            (self.url, checkout_module_abspath, self.name))
             if not dry_run:
                 mrepo = self._clone_repo(self.repo, self.url, self.path, self.name, n=True)
             # END handle dry-run
-            progress.update(END | CLONE, 0, 1, prefix + "Done cloning to %s" % module_path)
+            progress.update(END | CLONE, 0, 1, prefix + "Done cloning to %s" % checkout_module_abspath)
 
             if not dry_run:
                 # see whether we have a valid branch to checkout
@@ -784,6 +785,10 @@ class Submodule(util.IndexObject, Iterable, Traversable):
             # end handle separate bare repository
         # END handle module deletion
 
+        # void our data not to delay invalid access
+        if not dry_run:
+            self._clear_cache()
+
         # DELETE CONFIGURATION
         ######################
         if configuration and not dry_run:
@@ -807,8 +812,6 @@ class Submodule(util.IndexObject, Iterable, Traversable):
             writer.release()
         # END delete configuration
 
-        # void our data not to delay invalid access
-        self._clear_cache()
         return self
 
     def set_parent_commit(self, commit, check=True):
@@ -840,10 +843,15 @@ class Submodule(util.IndexObject, Iterable, Traversable):
         # END handle checking mode
 
         # update our sha, it could have changed
-        self.binsha = pctree[self.path].binsha
+        # If check is False, we might see a parent-commit that doens't even contain the submodule anymore.
+        # in that case, mark our sha as being NULL
+        try:
+            self.binsha = pctree[self.path].binsha
+        except KeyError:
+            self.binsha = self.NULL_BIN_SHA
+        # end
 
         self._clear_cache()
-
         return self
 
     @unbare_repo
