@@ -116,7 +116,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
             except cp.NoSectionError:
                 raise ValueError("This submodule instance does not exist anymore in '%s' file"
                                  % os.path.join(self.repo.working_tree_dir, '.gitmodules'))
-            # end 
+            # end
             self._url = reader.get_value('url')
             # git-python extension values - optional
             self._branch_path = reader.get_value(self.k_head_option, git.Head.to_full_path(self.k_head_default))
@@ -411,7 +411,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
         del(writer)
 
         # we deliberatly assume that our head matches our index !
-        
+
         try:
             repo.head.commit
             parent_repo_is_empty = False
@@ -429,7 +429,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
         return sm
 
     def update(self, recursive=False, init=True, to_latest_revision=False, progress=None, dry_run=False,
-                     force=False, keep_going=False):
+               force=False, keep_going=False):
         """Update the repository of this submodule to point to the checkout
         we point at with the binsha of this instance.
 
@@ -444,14 +444,14 @@ class Submodule(util.IndexObject, Iterable, Traversable):
         :param progress: UpdateProgress instance or None of no progress should be shown
         :param dry_run: if True, the operation will only be simulated, but not performed.
             All performed operations are read-only
-        :param force: 
+        :param force:
             If True, we may reset heads even if the repository in question is dirty. Additinoally we will be allowed
-            to set a tracking branch which is ahead of its remote branch back into the past or the location of the 
+            to set a tracking branch which is ahead of its remote branch back into the past or the location of the
             remote branch. This will essentially 'forget' commits.
-            If False, local tracking branches that are in the future of their respective remote branches will simply 
+            If False, local tracking branches that are in the future of their respective remote branches will simply
             not be moved.
-        :param keep_going: if True, we will ignore but log all errors, and keep going recursively. 
-            Unless dry_run is set as well, keep_going could cause subsequent/inherited errors you wouldn't see 
+        :param keep_going: if True, we will ignore but log all errors, and keep going recursively.
+            Unless dry_run is set as well, keep_going could cause subsequent/inherited errors you wouldn't see
             otherwise.
             In conjunction with dry_run, it can be useful to anticipate all errors when updating submodules
         :note: does nothing in bare repositories
@@ -487,7 +487,8 @@ class Submodule(util.IndexObject, Iterable, Traversable):
                         op |= BEGIN
                     # END handle start
 
-                    progress.update(op, i, len_rmts, prefix + "Fetching remote %s of submodule %r" % (remote, self.name))
+                    progress.update(op, i, len_rmts, prefix + "Fetching remote %s of submodule %r"
+                                    % (remote, self.name))
                     #===============================
                     if not dry_run:
                         remote.fetch(progress=progress)
@@ -589,11 +590,11 @@ class Submodule(util.IndexObject, Iterable, Traversable):
                     base_commit = mrepo.merge_base(mrepo.head.commit, hexsha)
                     if len(base_commit) == 0 or base_commit[0].hexsha == hexsha:
                         if force:
-                            log.debug("Will force checkout or reset on local branch that is possibly in the future of" +
-                                      "the commit it will be checked out to, effectively 'forgetting' new commits")
+                            log.debug("Will force checkout or reset on local branch that is possibly in the future of"
+                                      + "the commit it will be checked out to, effectively 'forgetting' new commits")
                         else:
-                            log.info("Skipping %s on branch '%s' of submodule repo '%s' as it contains un-pushed commits",
-                                     is_detached and "checkout" or "reset", mrepo.head, mrepo)
+                            log.info("Skipping %s on branch '%s' of submodule repo '%s' as it contains "
+                                     + "un-pushed commits", is_detached and "checkout" or "reset", mrepo.head, mrepo)
                             may_reset = False
                         # end handle force
                     # end handle if we are in the future
@@ -619,7 +620,8 @@ class Submodule(util.IndexObject, Iterable, Traversable):
                         mrepo.head.reset(hexsha, index=True, working_tree=True)
                     # END handle checkout
                 # if we may reset/checkout
-                progress.update(END | UPDWKTREE, 0, 1, prefix + "Done updating working tree for submodule %r" % self.name)
+                progress.update(END | UPDWKTREE, 0, 1, prefix + "Done updating working tree for submodule %r"
+                                % self.name)
             # END update to new commit only if needed
         except Exception as err:
             if not keep_going:
@@ -633,7 +635,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
             # in dry_run mode, the module might not exist
             if mrepo is not None:
                 for submodule in self.iter_items(self.module()):
-                    submodule.update(recursive, init, to_latest_revision, progress=progress, dry_run=dry_run, 
+                    submodule.update(recursive, init, to_latest_revision, progress=progress, dry_run=dry_run,
                                      force=force, keep_going=keep_going)
                 # END handle recursive update
             # END handle dry run
@@ -898,14 +900,14 @@ class Submodule(util.IndexObject, Iterable, Traversable):
         """Set this instance to use the given commit whose tree is supposed to
         contain the .gitmodules blob.
 
-        :param commit: 
-            Commit'ish reference pointing at the root_tree, or None to always point to the 
+        :param commit:
+            Commit'ish reference pointing at the root_tree, or None to always point to the
             most recent commit
         :param check:
             if True, relatively expensive checks will be performed to verify
             validity of the submodule.
         :raise ValueError: if the commit's tree didn't contain the .gitmodules blob.
-        :raise ValueError: 
+        :raise ValueError:
             if the parent commit didn't store this submodule under the current path
         :return: self"""
         if commit is None:

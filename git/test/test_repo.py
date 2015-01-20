@@ -591,8 +591,8 @@ class TestRepo(TestBase):
         commit = rev_parse(first_rev)
         assert len(commit.parents) == 0
         assert commit.hexsha == first_rev
-        self.failUnlessRaises(BadObject, rev_parse, first_rev + "~")
-        self.failUnlessRaises(BadObject, rev_parse, first_rev + "^")
+        self.failUnlessRaises(BadName, rev_parse, first_rev + "~")
+        self.failUnlessRaises(BadName, rev_parse, first_rev + "^")
 
         # short SHA1
         commit2 = rev_parse(first_rev[:20])

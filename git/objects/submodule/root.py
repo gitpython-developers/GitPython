@@ -85,13 +85,13 @@ class RootModule(Submodule):
             Unless force_reset is specified, a local tracking branch will never be reset into its past, therefore
             the remote branch must be in the future for this to have an effect.
         :param force_reset: if True, submodules may checkout or reset their branch even if the repository has
-            pending changes that would be overwritten, or if the local tracking branch is in the future of the 
+            pending changes that would be overwritten, or if the local tracking branch is in the future of the
             remote tracking branch and would be reset into its past.
         :param progress: RootUpdateProgress instance or None if no progress should be sent
         :param dry_run: if True, operations will not actually be performed. Progress messages
             will change accordingly to indicate the WOULD DO state of the operation.
-        :param keep_going: if True, we will ignore but log all errors, and keep going recursively. 
-            Unless dry_run is set as well, keep_going could cause subsequent/inherited errors you wouldn't see 
+        :param keep_going: if True, we will ignore but log all errors, and keep going recursively.
+            Unless dry_run is set as well, keep_going could cause subsequent/inherited errors you wouldn't see
             otherwise.
             In conjunction with dry_run, it can be useful to anticipate all errors when updating submodules
         :return: self"""
@@ -136,7 +136,7 @@ class RootModule(Submodule):
             ###################
             rrsm = (spsms - ssms)
             len_rrsm = len(rrsm)
-            
+
             for i, rsm in enumerate(rrsm):
                 op = REMOVE
                 if i == 0:
@@ -168,7 +168,8 @@ class RootModule(Submodule):
                 ##############
                 if sm.path != psm.path and psm.module_exists():
                     progress.update(BEGIN | PATHCHANGE, i, len_csms, prefix +
-                                    "Moving repository of submodule %r from %s to %s" % (sm.name, psm.abspath, sm.abspath))
+                                    "Moving repository of submodule %r from %s to %s"
+                                    % (sm.name, psm.abspath, sm.abspath))
                     # move the module to the new path
                     if not dry_run:
                         psm.move(sm.path, module=True, configuration=False)

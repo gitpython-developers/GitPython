@@ -535,7 +535,7 @@ class TestSubmodule(TestBase):
         touch(nsm_file)
         nsm.module().index.add([nsm])
         nsm.module().index.commit("added new file")
-        rm.update(recursive=False, dry_run=True, progress=prog) # would not change head, and thus doens't fail
+        rm.update(recursive=False, dry_run=True, progress=prog)  # would not change head, and thus doens't fail
         # Everything we can do from now on will trigger the 'future' check, so no is_dirty() check will even run
         # This would only run if our local branch is in the past and we have uncommitted changes
 
@@ -691,7 +691,7 @@ class TestSubmodule(TestBase):
         def assert_exists(sm, value=True):
             assert sm.exists() == value
             assert sm.module_exists() == value
-        # end 
+        # end
 
         # As git is backwards compatible itself, it would still recognize what we do here ... unless we really
         # muss it up. That's the only reason why the test is still here ... .

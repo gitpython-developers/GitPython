@@ -251,9 +251,9 @@ class RemoteProgress(object):
                 message = message[:-len(done_token)]
             # END end message handling
 
-            self.update(op_code, 
-                        cur_count and float(cur_count), 
-                        max_count and float(max_count), 
+            self.update(op_code,
+                        cur_count and float(cur_count),
+                        max_count and float(max_count),
                         message)
         # END for each sub line
         return failed_lines
