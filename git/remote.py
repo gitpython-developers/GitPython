@@ -525,8 +525,10 @@ class Remote(LazyMixin, Iterable):
         progress_handler = progress.new_message_handler()
 
         stderr_fetch = open(join(self.repo.git_dir, '%03i_debug_git-python_stderr' % self.fetch_no), 'wb')
-        def my_progress_handler(line):
-            stderr_fetch.write((line + '\n').encode(defenc))
+        for line in proc.stderr:
+            line = line.decode(defenc)
+            stderr_fetch.write((line).encode(defenc))
+            line = line.rstrip()
             for pline in progress_handler(line):
                 if line.startswith('fatal:'):
                     raise GitCommandError(("Error when fetching: %s" % line,), 2)
@@ -541,12 +543,13 @@ class Remote(LazyMixin, Iterable):
         # end
 
         # We are only interested in stderr here ...
-        handle_process_output(proc, None, my_progress_handler, finalize_process)
+        finalize_process(proc)
         stderr_fetch.close()
 
         # read head information
         import shutil
-        shutil.copyfile(join(self.repo.git_dir, 'FETCH_HEAD'), join(self.repo.git_dir, '%03i_debug_git-python_FETCH_HEAD' % self.fetch_no))
+        shutil.copyfile(join(self.repo.git_dir, 'FETCH_HEAD'),
+                        join(self.repo.git_dir, '%03i_debug_git-python_FETCH_HEAD' % self.fetch_no))
         self.fetch_no += 1
         fp = open(join(self.repo.git_dir, 'FETCH_HEAD'), 'rb')
         fetch_head_info = [l.decode(defenc) for l in fp.readlines()]
@@ -615,6 +618,7 @@ class Remote(LazyMixin, Iterable):
             args = [refspec]
 
         proc = self.repo.git.fetch(self, *args, with_extended_output=True, as_process=True, v=True, **kwargs)
+        proc.stdout.close()
         res = self._get_fetch_info_from_stderr(proc, progress or RemoteProgress())
         if hasattr(self.repo.odb, 'update_cache'):
             self.repo.odb.update_cache()
@@ -630,6 +634,7 @@ class Remote(LazyMixin, Iterable):
         :return: Please see 'fetch' method """
         kwargs = add_progress(kwargs, self.repo.git, progress)
         proc = self.repo.git.pull(self, refspec, with_extended_output=True, as_process=True, v=True, **kwargs)
+        proc.stdout.close()
         res = self._get_fetch_info_from_stderr(proc, progress or RemoteProgress())
         if hasattr(self.repo.odb, 'update_cache'):
             self.repo.odb.update_cache()
