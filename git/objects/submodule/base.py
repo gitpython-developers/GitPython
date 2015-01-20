@@ -429,7 +429,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
         return sm
 
     def update(self, recursive=False, init=True, to_latest_revision=False, progress=None, dry_run=False,
-                     force=False):
+                     force=False, keep_going=False):
         """Update the repository of this submodule to point to the checkout
         we point at with the binsha of this instance.
 
@@ -450,6 +450,10 @@ class Submodule(util.IndexObject, Iterable, Traversable):
             remote branch. This will essentially 'forget' commits.
             If False, local tracking branches that are in the future of their respective remote branches will simply 
             not be moved.
+        :param keep_going: if True, we will ignore but log all errors, and keep going recursively. 
+            Unless dry_run is set as well, keep_going could cause subsequent/inherited errors you wouldn't see 
+            otherwise.
+            In conjunction with dry_run, it can be useful to anticipate all errors when updating submodules
         :note: does nothing in bare repositories
         :note: method is definitely not atomic if recurisve is True
         :return: self"""
@@ -470,152 +474,158 @@ class Submodule(util.IndexObject, Iterable, Traversable):
             mrepo = None
         # END init mrepo
 
-        # ASSURE REPO IS PRESENT AND UPTODATE
-        #####################################
         try:
-            mrepo = self.module()
-            rmts = mrepo.remotes
-            len_rmts = len(rmts)
-            for i, remote in enumerate(rmts):
-                op = FETCH
-                if i == 0:
-                    op |= BEGIN
-                # END handle start
+            # ASSURE REPO IS PRESENT AND UPTODATE
+            #####################################
+            try:
+                mrepo = self.module()
+                rmts = mrepo.remotes
+                len_rmts = len(rmts)
+                for i, remote in enumerate(rmts):
+                    op = FETCH
+                    if i == 0:
+                        op |= BEGIN
+                    # END handle start
 
-                progress.update(op, i, len_rmts, prefix + "Fetching remote %s of submodule %r" % (remote, self.name))
-                #===============================
+                    progress.update(op, i, len_rmts, prefix + "Fetching remote %s of submodule %r" % (remote, self.name))
+                    #===============================
+                    if not dry_run:
+                        remote.fetch(progress=progress)
+                    # END handle dry-run
+                    #===============================
+                    if i == len_rmts - 1:
+                        op |= END
+                    # END handle end
+                    progress.update(op, i, len_rmts, prefix + "Done fetching remote of submodule %r" % self.name)
+                # END fetch new data
+            except InvalidGitRepositoryError:
+                if not init:
+                    return self
+                # END early abort if init is not allowed
+
+                # there is no git-repository yet - but delete empty paths
+                checkout_module_abspath = self.abspath
+                if not dry_run and os.path.isdir(checkout_module_abspath):
+                    try:
+                        os.rmdir(checkout_module_abspath)
+                    except OSError:
+                        raise OSError("Module directory at %r does already exist and is non-empty"
+                                      % checkout_module_abspath)
+                    # END handle OSError
+                # END handle directory removal
+
+                # don't check it out at first - nonetheless it will create a local
+                # branch according to the remote-HEAD if possible
+                progress.update(BEGIN | CLONE, 0, 1, prefix + "Cloning url '%s' to '%s' in submodule %r" %
+                                (self.url, checkout_module_abspath, self.name))
                 if not dry_run:
-                    remote.fetch(progress=progress)
+                    mrepo = self._clone_repo(self.repo, self.url, self.path, self.name, n=True)
                 # END handle dry-run
-                #===============================
-                if i == len_rmts - 1:
-                    op |= END
-                # END handle end
-                progress.update(op, i, len_rmts, prefix + "Done fetching remote of submodule %r" % self.name)
-            # END fetch new data
-        except InvalidGitRepositoryError:
-            if not init:
-                return self
-            # END early abort if init is not allowed
+                progress.update(END | CLONE, 0, 1, prefix + "Done cloning to %s" % checkout_module_abspath)
 
-            # there is no git-repository yet - but delete empty paths
-            checkout_module_abspath = self.abspath
-            if not dry_run and os.path.isdir(checkout_module_abspath):
-                try:
-                    os.rmdir(checkout_module_abspath)
-                except OSError:
-                    raise OSError("Module directory at %r does already exist and is non-empty"
-                                  % checkout_module_abspath)
-                # END handle OSError
-            # END handle directory removal
+                if not dry_run:
+                    # see whether we have a valid branch to checkout
+                    try:
+                        # find  a remote which has our branch - we try to be flexible
+                        remote_branch = find_first_remote_branch(mrepo.remotes, self.branch_name)
+                        local_branch = mkhead(mrepo, self.branch_path)
 
-            # don't check it out at first - nonetheless it will create a local
-            # branch according to the remote-HEAD if possible
-            progress.update(BEGIN | CLONE, 0, 1, prefix + "Cloning %s to %s in submodule %r" %
-                            (self.url, checkout_module_abspath, self.name))
-            if not dry_run:
-                mrepo = self._clone_repo(self.repo, self.url, self.path, self.name, n=True)
-            # END handle dry-run
-            progress.update(END | CLONE, 0, 1, prefix + "Done cloning to %s" % checkout_module_abspath)
+                        # have a valid branch, but no checkout - make sure we can figure
+                        # that out by marking the commit with a null_sha
+                        local_branch.set_object(util.Object(mrepo, self.NULL_BIN_SHA))
+                        # END initial checkout + branch creation
 
-            if not dry_run:
-                # see whether we have a valid branch to checkout
-                try:
-                    # find  a remote which has our branch - we try to be flexible
-                    remote_branch = find_first_remote_branch(mrepo.remotes, self.branch_name)
-                    local_branch = mkhead(mrepo, self.branch_path)
+                        # make sure HEAD is not detached
+                        mrepo.head.set_reference(local_branch, logmsg="submodule: attaching head to %s" % local_branch)
+                        mrepo.head.ref.set_tracking_branch(remote_branch)
+                    except IndexError:
+                        log.warn("Failed to checkout tracking branch %s", self.branch_path)
+                    # END handle tracking branch
 
-                    # have a valid branch, but no checkout - make sure we can figure
-                    # that out by marking the commit with a null_sha
-                    local_branch.set_object(util.Object(mrepo, self.NULL_BIN_SHA))
-                    # END initial checkout + branch creation
+                    # NOTE: Have to write the repo config file as well, otherwise
+                    # the default implementation will be offended and not update the repository
+                    # Maybe this is a good way to assure it doesn't get into our way, but
+                    # we want to stay backwards compatible too ... . Its so redundant !
+                    writer = self.repo.config_writer()
+                    writer.set_value(sm_section(self.name), 'url', self.url)
+                    writer.release()
+                # END handle dry_run
+            # END handle initalization
 
-                    # make sure HEAD is not detached
-                    mrepo.head.set_reference(local_branch, logmsg="submodule: attaching head to %s" % local_branch)
-                    mrepo.head.ref.set_tracking_branch(remote_branch)
-                except IndexError:
-                    log.warn("Failed to checkout tracking branch %s", self.branch_path)
-                # END handle tracking branch
-
-                # NOTE: Have to write the repo config file as well, otherwise
-                # the default implementation will be offended and not update the repository
-                # Maybe this is a good way to assure it doesn't get into our way, but
-                # we want to stay backwards compatible too ... . Its so redundant !
-                writer = self.repo.config_writer()
-                writer.set_value(sm_section(self.name), 'url', self.url)
-                writer.release()
+            # DETERMINE SHAS TO CHECKOUT
+            ############################
+            binsha = self.binsha
+            hexsha = self.hexsha
+            if mrepo is not None:
+                # mrepo is only set if we are not in dry-run mode or if the module existed
+                is_detached = mrepo.head.is_detached
             # END handle dry_run
-        # END handle initalization
 
-        # DETERMINE SHAS TO CHECKOUT
-        ############################
-        binsha = self.binsha
-        hexsha = self.hexsha
-        if mrepo is not None:
-            # mrepo is only set if we are not in dry-run mode or if the module existed
-            is_detached = mrepo.head.is_detached
-        # END handle dry_run
-
-        if mrepo is not None and to_latest_revision:
-            msg_base = "Cannot update to latest revision in repository at %r as " % mrepo.working_dir
-            if not is_detached:
-                rref = mrepo.head.ref.tracking_branch()
-                if rref is not None:
-                    rcommit = rref.commit
-                    binsha = rcommit.binsha
-                    hexsha = rcommit.hexsha
-                else:
-                    log.error("%s a tracking branch was not set for local branch '%s'", msg_base, mrepo.head.ref)
-                # END handle remote ref
-            else:
-                log.error("%s there was no local tracking branch", msg_base)
-            # END handle detached head
-        # END handle to_latest_revision option
-
-        # update the working tree
-        # handles dry_run
-        if mrepo is not None and mrepo.head.commit.binsha != binsha:
-            # We must assure that our destination sha (the one to point to) is in the future of our current head.
-            # Otherwise, we will reset changes that might have been done on the submodule, but were not yet pushed
-            # We also handle the case that history has been rewritten, leaving no merge-base. In that case
-            # we behave conservatively, protecting possible changes the user had done
-            may_reset = True
-            if mrepo.head.commit.binsha != self.NULL_BIN_SHA:
-                base_commit = mrepo.merge_base(mrepo.head.commit, hexsha)
-                if len(base_commit) == 0 or base_commit[0].hexsha == hexsha:
-                    if force:
-                        log.debug("Will force checkout or reset on local branch that is possibly in the future of" +
-                                  "the commit it will be checked out to, effectively 'forgetting' new commits")
+            if mrepo is not None and to_latest_revision:
+                msg_base = "Cannot update to latest revision in repository at %r as " % mrepo.working_dir
+                if not is_detached:
+                    rref = mrepo.head.ref.tracking_branch()
+                    if rref is not None:
+                        rcommit = rref.commit
+                        binsha = rcommit.binsha
+                        hexsha = rcommit.hexsha
                     else:
-                        log.info("Skipping %s on branch '%s' of submodule repo '%s' as it contains un-pushed commits",
-                                 is_detached and "checkout" or "reset", mrepo.head, mrepo)
-                        may_reset = False
-                    # end handle force
-                # end handle if we are in the future
-
-                if may_reset and not force and mrepo.is_dirty(index=True, working_tree=True, untracked_files=True):
-                    raise RepositoryDirtyError(mrepo, "Cannot reset a dirty repository")
-                # end handle force and dirty state
-            # end handle empty repo
-
-            # end verify future/past
-            progress.update(BEGIN | UPDWKTREE, 0, 1, prefix +
-                            "Updating working tree at %s for submodule %r to revision %s"
-                            % (self.path, self.name, hexsha))
-
-            if not dry_run and may_reset:
-                if is_detached:
-                    # NOTE: for now we force, the user is no supposed to change detached
-                    # submodules anyway. Maybe at some point this becomes an option, to
-                    # properly handle user modifications - see below for future options
-                    # regarding rebase and merge.
-                    mrepo.git.checkout(hexsha, force=force)
+                        log.error("%s a tracking branch was not set for local branch '%s'", msg_base, mrepo.head.ref)
+                    # END handle remote ref
                 else:
-                    mrepo.head.reset(hexsha, index=True, working_tree=True)
-                # END handle checkout
-            # if we may reset/checkout
-            progress.update(END | UPDWKTREE, 0, 1, prefix + "Done updating working tree for submodule %r" % self.name)
-        # END update to new commit only if needed
+                    log.error("%s there was no local tracking branch", msg_base)
+                # END handle detached head
+            # END handle to_latest_revision option
+
+            # update the working tree
+            # handles dry_run
+            if mrepo is not None and mrepo.head.commit.binsha != binsha:
+                # We must assure that our destination sha (the one to point to) is in the future of our current head.
+                # Otherwise, we will reset changes that might have been done on the submodule, but were not yet pushed
+                # We also handle the case that history has been rewritten, leaving no merge-base. In that case
+                # we behave conservatively, protecting possible changes the user had done
+                may_reset = True
+                if mrepo.head.commit.binsha != self.NULL_BIN_SHA:
+                    base_commit = mrepo.merge_base(mrepo.head.commit, hexsha)
+                    if len(base_commit) == 0 or base_commit[0].hexsha == hexsha:
+                        if force:
+                            log.debug("Will force checkout or reset on local branch that is possibly in the future of" +
+                                      "the commit it will be checked out to, effectively 'forgetting' new commits")
+                        else:
+                            log.info("Skipping %s on branch '%s' of submodule repo '%s' as it contains un-pushed commits",
+                                     is_detached and "checkout" or "reset", mrepo.head, mrepo)
+                            may_reset = False
+                        # end handle force
+                    # end handle if we are in the future
+
+                    if may_reset and not force and mrepo.is_dirty(index=True, working_tree=True, untracked_files=True):
+                        raise RepositoryDirtyError(mrepo, "Cannot reset a dirty repository")
+                    # end handle force and dirty state
+                # end handle empty repo
+
+                # end verify future/past
+                progress.update(BEGIN | UPDWKTREE, 0, 1, prefix +
+                                "Updating working tree at %s for submodule %r to revision %s"
+                                % (self.path, self.name, hexsha))
+
+                if not dry_run and may_reset:
+                    if is_detached:
+                        # NOTE: for now we force, the user is no supposed to change detached
+                        # submodules anyway. Maybe at some point this becomes an option, to
+                        # properly handle user modifications - see below for future options
+                        # regarding rebase and merge.
+                        mrepo.git.checkout(hexsha, force=force)
+                    else:
+                        mrepo.head.reset(hexsha, index=True, working_tree=True)
+                    # END handle checkout
+                # if we may reset/checkout
+                progress.update(END | UPDWKTREE, 0, 1, prefix + "Done updating working tree for submodule %r" % self.name)
+            # END update to new commit only if needed
+        except Exception as err:
+            if not keep_going:
+                raise
+            log.error(str(err))
+        # end handle keep_going
 
         # HANDLE RECURSION
         ##################
@@ -624,7 +634,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
             if mrepo is not None:
                 for submodule in self.iter_items(self.module()):
                     submodule.update(recursive, init, to_latest_revision, progress=progress, dry_run=dry_run, 
-                                     force=force)
+                                     force=force, keep_going=keep_going)
                 # END handle recursive update
             # END handle dry run
         # END for each submodule
@@ -887,13 +897,16 @@ class Submodule(util.IndexObject, Iterable, Traversable):
     def set_parent_commit(self, commit, check=True):
         """Set this instance to use the given commit whose tree is supposed to
         contain the .gitmodules blob.
-        :param commit: Commit'ish reference pointing at the root_tree, or None to always point to the 
+
+        :param commit: 
+            Commit'ish reference pointing at the root_tree, or None to always point to the 
             most recent commit
-        :param check: if True, relatively expensive checks will be performed to verify
+        :param check:
+            if True, relatively expensive checks will be performed to verify
             validity of the submodule.
         :raise ValueError: if the commit's tree didn't contain the .gitmodules blob.
-        :raise ValueError: if the parent commit didn't store this submodule under the
-            current path
+        :raise ValueError: 
+            if the parent commit didn't store this submodule under the current path
         :return: self"""
         if commit is None:
             self._parent_commit = None
@@ -976,7 +989,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
         pw.release()
 
         # .gitmodules
-        cw = self.config_writer(write=False).config
+        cw = self.config_writer(write=True).config
         cw.rename_section(sm_section(self.name), sm_section(new_name))
         cw.release()
 

@@ -731,18 +731,21 @@ class TestSubmodule(TestBase):
         new_name = csm.name + '/mine'
         assert csm.rename(new_name).name == new_name
         assert_exists(csm)
+        assert csm.repo.is_dirty(index=True, working_tree=False), "index must contain changed .gitmodules file"
+        csm.repo.index.commit("renamed module")
 
         # keep_going evaluation
         rsm = parent.submodule_update()
         assert_exists(sm)
         assert_exists(csm)
-        csm_writer = csm.config_writer().set_value('url', 'foo')
+        csm_writer = csm.config_writer().set_value('url', 'bar')
         csm_writer.release()
         csm.repo.index.commit("Have to commit submodule change for algorithm to pick it up")
-        assert csm.url == 'foo'
+        assert csm.url == 'bar'
 
         self.failUnlessRaises(Exception, rsm.update, recursive=True, to_latest_revision=True, progress=prog)
         assert_exists(csm)
+        rsm.update(recursive=True, to_latest_revision=True, progress=prog, keep_going=True)
 
         # remove
         sm_module_path = sm.module().git_dir
