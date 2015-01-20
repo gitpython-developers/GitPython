@@ -320,9 +320,11 @@ class TestSubmodule(TestBase):
             assert sm.config_reader().get_value('url')
 
             # delete the rest
+            sm_path = sm.path
             sm.remove()
             assert not sm.exists()
             assert not sm.module_exists()
+            self.failUnlessRaises(ValueError, getattr, sm, 'path')
 
             assert len(rwrepo.submodules) == 0
 
@@ -359,11 +361,11 @@ class TestSubmodule(TestBase):
 
             # MOVE MODULE
             #############
-            # invalid inptu
+            # invalid input
             self.failUnlessRaises(ValueError, nsm.move, 'doesntmatter', module=False, configuration=False)
 
             # renaming to the same path does nothing
-            assert nsm.move(sm.path) is nsm
+            assert nsm.move(sm_path) is nsm
 
             # rename a module
             nmp = join_path_native("new", "module", "dir") + "/"  # new module path
@@ -708,7 +710,6 @@ class TestSubmodule(TestBase):
 
         # test move
         new_sm_path = 'submodules/one'
-        sm.set_parent_commit(parent.commit())
         sm.move(new_sm_path)
         assert_exists(sm)
 
@@ -717,7 +718,6 @@ class TestSubmodule(TestBase):
                                            url=self._submodule_url())
         sm.module().index.commit("added nested submodule")
         sm_head_commit = sm.module().commit()
-        csm.set_parent_commit(sm_head_commit)
         assert_exists(csm)
 
         # Fails because there are new commits, compared to the remote we cloned from
@@ -739,7 +739,6 @@ class TestSubmodule(TestBase):
         csm_writer = csm.config_writer().set_value('url', 'foo')
         csm_writer.release()
         csm.repo.index.commit("Have to commit submodule change for algorithm to pick it up")
-        csm.set_parent_commit(csm.repo.commit())
         assert csm.url == 'foo'
 
         self.failUnlessRaises(Exception, rsm.update, recursive=True, to_latest_revision=True, progress=prog)
@@ -760,7 +759,6 @@ class TestSubmodule(TestBase):
         sm_name = 'mymodules/myname'
         sm = parent.create_submodule(sm_name, sm_name, url=self._submodule_url())
         parent.index.commit("Added submodule")
-        assert sm._parent_commit is not None
 
         assert sm.rename(sm_name) is sm and sm.name == sm_name
         assert not sm.repo.is_dirty(index=True, working_tree=False, untracked_files=False)

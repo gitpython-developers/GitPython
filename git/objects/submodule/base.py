@@ -98,8 +98,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
         :param branch_path: full (relative) path to ref to checkout when cloning the remote repository"""
         super(Submodule, self).__init__(repo, binsha, mode, path)
         self.size = 0
-        if parent_commit is not None:
-            self._parent_commit = parent_commit
+        self._parent_commit = parent_commit
         if url is not None:
             self._url = url
         if branch_path is not None:
@@ -109,18 +108,15 @@ class Submodule(util.IndexObject, Iterable, Traversable):
             self._name = name
 
     def _set_cache_(self, attr):
-        if attr == '_parent_commit':
-            # set a default value, which is the root tree of the current head
-            try:
-                self._parent_commit = self.repo.commit()
-            except ValueError:
-                # This fails in an empty repository.
-                self._parent_commit = None
-            # end exception handling
-        elif attr in ('path', '_url', '_branch_path'):
+        if attr in ('path', '_url', '_branch_path'):
             reader = self.config_reader()
             # default submodule values
-            self.path = reader.get_value('path')
+            try:
+                self.path = reader.get_value('path')
+            except cp.NoSectionError:
+                raise ValueError("This submodule instance does not exist anymore in '%s' file"
+                                 % os.path.join(self.repo.working_tree_dir, '.gitmodules'))
+            # end 
             self._url = reader.get_value('url')
             # git-python extension values - optional
             self._branch_path = reader.get_value(self.k_head_option, git.Head.to_full_path(self.k_head_default))
@@ -170,16 +166,19 @@ class Submodule(util.IndexObject, Iterable, Traversable):
         :raise IOError: If the .gitmodules file cannot be found, either locally or in the repository
             at the given parent commit. Otherwise the exception would be delayed until the first
             access of the config parser"""
-        try:
-            parent_matches_head = repo.head.commit == parent_commit
-        except ValueError:
-            # We are most likely in an empty repository, so the HEAD doesn't point to a valid ref
-            parent_matches_head = True
-        # end
+        parent_matches_head = True
+        if parent_commit is not None:
+            try:
+                parent_matches_head = repo.head.commit == parent_commit
+            except ValueError:
+                # We are most likely in an empty repository, so the HEAD doesn't point to a valid ref
+                pass
+        # end hanlde parent_commit
 
         if not repo.bare and parent_matches_head:
             fp_module = os.path.join(repo.working_tree_dir, cls.k_modules_file)
         else:
+            assert parent_commit is not None, "need valid parent_commit in bare repositories"
             try:
                 fp_module = cls._sio_modules(parent_commit)
             except KeyError:
@@ -213,7 +212,12 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 
     def _config_parser_constrained(self, read_only):
         """:return: Config Parser constrained to our submodule in read or write mode"""
-        parser = self._config_parser(self.repo, self._parent_commit, read_only)
+        try:
+            pc = self.parent_commit
+        except ValueError:
+            pc = None
+        # end hande empty parent repository
+        parser = self._config_parser(self.repo, pc, read_only)
         parser.set_submodule(self)
         return SectionConstraint(parser, sm_section(self.name))
 
@@ -407,9 +411,10 @@ class Submodule(util.IndexObject, Iterable, Traversable):
         del(writer)
 
         # we deliberatly assume that our head matches our index !
-        parent_repo_is_empty = False
+        
         try:
-            sm._parent_commit = repo.head.commit
+            repo.head.commit
+            parent_repo_is_empty = False
         except ValueError:
             parent_repo_is_empty = True
             # Can't set this yet, if the parent repo is empty.
@@ -418,9 +423,6 @@ class Submodule(util.IndexObject, Iterable, Traversable):
         index.add([sm], write=True)
 
         if parent_repo_is_empty:
-            # The user is expected to make a commit, and this submodule will initialize itself when
-            # _parent_commit is required
-            del sm._parent_commit
             log.debug("Will not set _parent_commit now as the parent repository has no commit yet.")
         # end
 
@@ -885,13 +887,18 @@ class Submodule(util.IndexObject, Iterable, Traversable):
     def set_parent_commit(self, commit, check=True):
         """Set this instance to use the given commit whose tree is supposed to
         contain the .gitmodules blob.
-        :param commit: Commit'ish reference pointing at the root_tree, or None always point to the most recent commit
+        :param commit: Commit'ish reference pointing at the root_tree, or None to always point to the 
+            most recent commit
         :param check: if True, relatively expensive checks will be performed to verify
             validity of the submodule.
         :raise ValueError: if the commit's tree didn't contain the .gitmodules blob.
         :raise ValueError: if the parent commit didn't store this submodule under the
             current path
         :return: self"""
+        if commit is None:
+            self._parent_commit = None
+            return self
+        # end handle None
         pcommit = self.repo.commit(commit)
         pctree = pcommit.tree
         if self.k_modules_file not in pctree:
@@ -1036,7 +1043,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
                 if hasattr(self, attr):
                     loc[attr] = getattr(self, attr)
                 # END if we have the attribute cache
-            except cp.NoSectionError:
+            except (cp.NoSectionError, ValueError):
                 # on PY3, this can happen apparently ... don't know why this doesn't happen on PY2
                 pass
         # END for each attr
@@ -1086,6 +1093,8 @@ class Submodule(util.IndexObject, Iterable, Traversable):
     def parent_commit(self):
         """:return: Commit instance with the tree containing the .gitmodules file
         :note: will always point to the current head's commit if it was not set explicitly"""
+        if self._parent_commit is None:
+            return self.repo.commit()
         return self._parent_commit
 
     @property
@@ -1157,7 +1166,9 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 
             # fill in remaining info - saves time as it doesn't have to be parsed again
             sm._name = n
-            sm._parent_commit = pc
+            if pc != repo.commit():
+                sm._parent_commit = pc
+            # end set only if not most recent !
             sm._branch_path = git.Head.to_full_path(b)
             sm._url = u
 
