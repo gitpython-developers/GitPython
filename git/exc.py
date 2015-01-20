@@ -84,3 +84,14 @@ class HookExecutionError(Exception):
     def __str__(self):
         return ("'%s' hook returned with exit code %i\nstdout: '%s'\nstderr: '%s'"
                 % (self.command, self.status, self.stdout, self.stderr))
+
+
+class RepositoryDirtyError(Exception):
+    """Thrown whenever an operation on a repository fails as it has uncommited changes that would be overwritten"""
+
+    def __init__(self, repo, message):
+        self.repo = repo
+        self.message = message
+
+    def __str__(self):
+        return "Operation cannot be performed on %r: %s" % (self.repo, self.message)

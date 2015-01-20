@@ -24,7 +24,8 @@ from git.config import (
 )
 from git.exc import (
     InvalidGitRepositoryError,
-    NoSuchPathError
+    NoSuchPathError,
+    RepositoryDirtyError
 )
 from git.compat import (
     string_types,
@@ -36,6 +37,7 @@ import git
 
 import os
 import logging
+import tempfile
 
 __all__ = ["Submodule", "UpdateProgress"]
 
@@ -424,8 +426,8 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 
         return sm
 
-    def update(self, recursive=False, init=True, to_latest_revision=False, progress=None,
-               dry_run=False):
+    def update(self, recursive=False, init=True, to_latest_revision=False, progress=None, dry_run=False,
+                     force=False):
         """Update the repository of this submodule to point to the checkout
         we point at with the binsha of this instance.
 
@@ -440,6 +442,12 @@ class Submodule(util.IndexObject, Iterable, Traversable):
         :param progress: UpdateProgress instance or None of no progress should be shown
         :param dry_run: if True, the operation will only be simulated, but not performed.
             All performed operations are read-only
+        :param force: 
+            If True, we may reset heads even if the repository in question is dirty. Additinoally we will be allowed
+            to set a tracking branch which is ahead of its remote branch back into the past or the location of the 
+            remote branch. This will essentially 'forget' commits.
+            If False, local tracking branches that are in the future of their respective remote branches will simply 
+            not be moved.
         :note: does nothing in bare repositories
         :note: method is definitely not atomic if recurisve is True
         :return: self"""
@@ -565,23 +573,45 @@ class Submodule(util.IndexObject, Iterable, Traversable):
         # update the working tree
         # handles dry_run
         if mrepo is not None and mrepo.head.commit.binsha != binsha:
+            # We must assure that our destination sha (the one to point to) is in the future of our current head.
+            # Otherwise, we will reset changes that might have been done on the submodule, but were not yet pushed
+            # We also handle the case that history has been rewritten, leaving no merge-base. In that case
+            # we behave conservatively, protecting possible changes the user had done
+            may_reset = True
+            if mrepo.head.commit.binsha != self.NULL_BIN_SHA:
+                base_commit = mrepo.merge_base(mrepo.head.commit, hexsha)
+                if len(base_commit) == 0 or base_commit[0].hexsha == hexsha:
+                    if force:
+                        log.debug("Will force checkout or reset on local branch that is possibly in the future of" +
+                                  "the commit it will be checked out to, effectively 'forgetting' new commits")
+                    else:
+                        log.info("Skipping %s on branch '%s' of submodule repo '%s' as it contains un-pushed commits",
+                                 is_detached and "checkout" or "reset", mrepo.head, mrepo)
+                        may_reset = False
+                    # end handle force
+                # end handle if we are in the future
+
+                if may_reset and not force and mrepo.is_dirty(index=True, working_tree=True, untracked_files=True):
+                    raise RepositoryDirtyError(mrepo, "Cannot reset a dirty repository")
+                # end handle force and dirty state
+            # end handle empty repo
+
+            # end verify future/past
             progress.update(BEGIN | UPDWKTREE, 0, 1, prefix +
                             "Updating working tree at %s for submodule %r to revision %s"
                             % (self.path, self.name, hexsha))
-            if not dry_run:
+
+            if not dry_run and may_reset:
                 if is_detached:
                     # NOTE: for now we force, the user is no supposed to change detached
                     # submodules anyway. Maybe at some point this becomes an option, to
                     # properly handle user modifications - see below for future options
                     # regarding rebase and merge.
-                    mrepo.git.checkout(hexsha, force=True)
+                    mrepo.git.checkout(hexsha, force=force)
                 else:
-                    # TODO: allow to specify a rebase, merge, or reset
-                    # TODO: Warn if the hexsha forces the tracking branch off the remote
-                    # branch - this should be prevented when setting the branch option
                     mrepo.head.reset(hexsha, index=True, working_tree=True)
                 # END handle checkout
-            # END handle dry_run
+            # if we may reset/checkout
             progress.update(END | UPDWKTREE, 0, 1, prefix + "Done updating working tree for submodule %r" % self.name)
         # END update to new commit only if needed
 
@@ -591,7 +621,8 @@ class Submodule(util.IndexObject, Iterable, Traversable):
             # in dry_run mode, the module might not exist
             if mrepo is not None:
                 for submodule in self.iter_items(self.module()):
-                    submodule.update(recursive, init, to_latest_revision, progress=progress, dry_run=dry_run)
+                    submodule.update(recursive, init, to_latest_revision, progress=progress, dry_run=dry_run, 
+                                     force=force)
                 # END handle recursive update
             # END handle dry run
         # END for each submodule
@@ -748,7 +779,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
             csm.remove(module, force, configuration, dry_run)
             del(csm)
         # end
-        if nc > 0:
+        if not dry_run and nc > 0:
             # Assure we don't leave the parent repository in a dirty state, and commit our changes
             # It's important for recursive, unforced, deletions to work as expected
             self.module().index.commit("Removed submodule '%s'" % self.name)
@@ -854,8 +885,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
     def set_parent_commit(self, commit, check=True):
         """Set this instance to use the given commit whose tree is supposed to
         contain the .gitmodules blob.
-
-        :param commit: Commit'ish reference pointing at the root_tree
+        :param commit: Commit'ish reference pointing at the root_tree, or None always point to the most recent commit
         :param check: if True, relatively expensive checks will be performed to verify
             validity of the submodule.
         :raise ValueError: if the commit's tree didn't contain the .gitmodules blob.
@@ -939,7 +969,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
         pw.release()
 
         # .gitmodules
-        cw = self.config_writer().config
+        cw = self.config_writer(write=False).config
         cw.rename_section(sm_section(self.name), sm_section(new_name))
         cw.release()
 
@@ -948,9 +978,16 @@ class Submodule(util.IndexObject, Iterable, Traversable):
         # .git/modules
         mod = self.module()
         if mod.has_separate_working_tree():
-            module_abspath = self._module_abspath(self.repo, self.path, new_name)
-            os.renames(mod.git_dir, module_abspath)
-            self._write_git_file_and_module_config(mod.working_tree_dir, module_abspath)
+            destination_module_abspath = self._module_abspath(self.repo, self.path, new_name)
+            source_dir = mod.git_dir
+            # Let's be sure the submodule name is not so obviously tied to a directory
+            if destination_module_abspath.startswith(mod.git_dir):
+                tmp_dir = self._module_abspath(self.repo, self.path, os.path.basename(tempfile.mkdtemp()))
+                os.renames(source_dir, tmp_dir)
+                source_dir = tmp_dir
+            # end handle self-containment
+            os.renames(source_dir, destination_module_abspath)
+            self._write_git_file_and_module_config(mod.working_tree_dir, destination_module_abspath)
         # end move separate git repository
 
         return self

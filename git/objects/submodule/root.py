@@ -61,7 +61,7 @@ class RootModule(Submodule):
     #{ Interface
 
     def update(self, previous_commit=None, recursive=True, force_remove=False, init=True,
-               to_latest_revision=False, progress=None, dry_run=False):
+               to_latest_revision=False, progress=None, dry_run=False, force_reset=False):
         """Update the submodules of this repository to the current HEAD commit.
         This method behaves smartly by determining changes of the path of a submodules
         repository, next to changes to the to-be-checked-out commit or the branch to be
@@ -80,10 +80,16 @@ class RootModule(Submodule):
         :param init: If we encounter a new module which would need to be initialized, then do it.
         :param to_latest_revision: If True, instead of checking out the revision pointed to
             by this submodule's sha, the checked out tracking branch will be merged with the
-            newest remote branch fetched from the repository's origin
+            latest remote branch fetched from the repository's origin.
+            Unless force_reset is specified, a local tracking branch will never be reset into its past, therefore
+            the remote branch must be in the future for this to have an effect.
+        :param force_reset: if True, submodules may checkout or reset their branch even if the repository has
+            pending changes that would be overwritten, or if the local tracking branch is in the future of the 
+            remote tracking branch and would be reset into its past.
         :param progress: RootUpdateProgress instance or None if no progress should be sent
         :param dry_run: if True, operations will not actually be performed. Progress messages
-            will change accordingly to indicate the WOULD DO state of the operation."""
+            will change accordingly to indicate the WOULD DO state of the operation.
+        :return: self"""
         if self.repo.bare:
             raise InvalidGitRepositoryError("Cannot update submodules in bare repositories")
         # END handle bare
@@ -134,9 +140,7 @@ class RootModule(Submodule):
             # of previous module. Trigger the cache to be updated before that
             progress.update(op, i, len_rrsm, prefix + "Removing submodule %r at %s" % (rsm.name, rsm.abspath))
             rsm._parent_commit = repo.head.commit
-            if not dry_run:
-                rsm.remove(configuration=False, module=True, force=force_remove)
-            # END handle dry-run
+            rsm.remove(configuration=False, module=True, force=force_remove, dry_run=dry_run)
 
             if i == len_rrsm - 1:
                 op |= END
@@ -311,7 +315,7 @@ class RootModule(Submodule):
         for sm in sms:
             # update the submodule using the default method
             sm.update(recursive=False, init=init, to_latest_revision=to_latest_revision,
-                      progress=progress, dry_run=dry_run)
+                      progress=progress, dry_run=dry_run, force=force_reset)
 
             # update recursively depth first - question is which inconsitent
             # state will be better in case it fails somewhere. Defective branch
@@ -322,10 +326,12 @@ class RootModule(Submodule):
                 if sm.module_exists():
                     type(self)(sm.module()).update(recursive=True, force_remove=force_remove,
                                                    init=init, to_latest_revision=to_latest_revision,
-                                                   progress=progress, dry_run=dry_run)
+                                                   progress=progress, dry_run=dry_run, force_reset=force_reset)
                 # END handle dry_run
             # END handle recursive
         # END for each submodule to update
+
+        return self
 
     def module(self):
         """:return: the actual repository containing the submodules"""

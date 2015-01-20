@@ -296,7 +296,7 @@ def rev_parse(repo, rev):
                 raise ValueError("Invalid token: %r" % token)
             # END end handle tag
         except (IndexError, AttributeError):
-            raise BadObject("Invalid Revision in %s" % rev)
+            raise BadName("Invalid revision spec '%s' - not enough parent commits to reach '%s%i'" % (rev, token, num))
         # END exception handling
     # END parse loop
 

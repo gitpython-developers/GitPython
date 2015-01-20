@@ -546,10 +546,12 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
         :param option: Name of the options whose value to set
 
         :param value: Value to set the option to. It must be a string or convertible
-            to a string"""
+            to a string
+        :return: this instance"""
         if not self.has_section(section):
             self.add_section(section)
         self.set(section, option, self._value_to_string(value))
+        return self
 
     def rename_section(self, section, new_name):
         """rename the given section to new_name
