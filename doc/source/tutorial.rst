@@ -8,42 +8,54 @@
 GitPython Tutorial
 ==================
 
-GitPython provides object model access to your git repository. This tutorial is  composed of multiple sections, each of which explains a real-life usecase.
+GitPython provides object model access to your git repository. This tutorial is composed of multiple sections, each of which explains a real-life usecase.
 
-Initialize a Repo object
-************************
+Meet the Repo type
+******************
 
-The first step is to create a ``Repo`` object to represent your repository::
+The first step is to create a :class:`git.Repo <git.repo.base.Repo>` object to represent your repository.
 
-    from git import *
-    repo = Repo("/Users/mtrier/Development/git-python")
-    assert repo.bare == False
+.. literalinclude:: ../../git/test/test_docs.py
+    :language: python
+    :start-after: def test_init_repo_object
+    :end-before: # ![1-test_init_repo_object]
 
-In the above example, the directory ``/Users/mtrier/Development/git-python`` is my working repository and contains the ``.git`` directory. You can also initialize GitPython with a *bare* repository::
+In the above example, the directory ``self.rorepo.working_tree_dir`` equals ``/Users/mtrier/Development/git-python`` and is my working repository which contains the ``.git`` directory. You can also initialize GitPython with a *bare* repository.
 
-    repo = Repo.init("/var/git/git-python.git", bare=True)
-    assert repo.bare == True
+.. literalinclude:: ../../git/test/test_docs.py
+    :language: python
+    :start-after: # [2-test_init_repo_object]
+    :end-before: # ![2-test_init_repo_object]
     
-A repo object provides high-level access to your data, it allows you to create and delete heads, tags and remotes and access the configuration of the  repository::
+A repo object provides high-level access to your data, it allows you to create and delete heads, tags and remotes and access the configuration of the repository.
     
-    repo.config_reader()        # get a config reader for read-only access
-    repo.config_writer()        # get a config writer to change configuration 
+.. literalinclude:: ../../git/test/test_docs.py
+    :language: python
+    :start-after: # [3-test_init_repo_object]
+    :end-before: # ![3-test_init_repo_object]
 
-Query the active branch, query untracked files or whether the repository data  has been modified::
+Query the active branch, query untracked files or whether the repository data has been modified.
     
-    repo.is_dirty()
-    False
-    repo.untracked_files
-    ['my_untracked_file']
+.. literalinclude:: ../../git/test/test_docs.py
+    :language: python
+    :start-after: # [4-test_init_repo_object]
+    :end-before: # ![4-test_init_repo_object]
     
-Clone from existing repositories or initialize new empty ones::
+Clone from existing repositories or initialize new empty ones.
 
-    cloned_repo = repo.clone("to/this/path")
-    new_repo = Repo.init("path/for/new/repo")
+.. literalinclude:: ../../git/test/test_docs.py
+    :language: python
+    :start-after: # [5-test_init_repo_object]
+    :end-before: # ![5-test_init_repo_object]
     
-Archive the repository contents to a tar file::
+Archive the repository contents to a tar file.
 
-    repo.archive(open("repo.tar",'w'))
+.. literalinclude:: ../../git/test/test_docs.py
+    :language: python
+    :start-after: # [6-test_init_repo_object]
+    :end-before: # ![6-test_init_repo_object]
+
+.. todo repo paths, heads, remotes, submodules
     
     
 Object Databases
@@ -418,16 +430,12 @@ The previous approach would brutally overwrite the user's changes in the working
 Initializing a repository
 *************************
 
-In this example, we will initialize an empty repository, add an empty file to the index, and commit the change::
+In this example, we will initialize an empty repository, add an empty file to the index, and commit the change.
 
-    repo_dir = 'my-new-repo'
-    file_name = os.path.join(repo_dir, 'new-file')
-
-    r = git.Repo.init(repo_dir)
-    # This function just creates an empty file ... 
-    touch(file_name)
-    r.index.add([file_name])
-    r.index.commit("initial commit")
+.. literalinclude:: ../../git/test/test_docs.py
+    :language: python
+    :start-after: def test_add_file_and_commit
+    :end-before: # ![test_add_file_and_commit]
 
 Please have a look at the individual methods as they usually support a vast amount of arguments to customize their behavior.
 

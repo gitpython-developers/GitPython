@@ -8,7 +8,8 @@ Objects.Base
 
 .. automodule:: git.objects.base
    :members:
-   :undoc-members:  
+   :undoc-members:
+   :special-members:
  
 Objects.Blob
 ------------

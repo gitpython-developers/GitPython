@@ -132,9 +132,11 @@ class IndexObject(Object):
 
     def __init__(self, repo, binsha, mode=None, path=None):
         """Initialize a newly instanced IndexObject
+
         :param repo: is the Repo we are located in
         :param binsha: 20 byte sha1
-        :param mode: is the stat compatible file mode as int, use the stat module
+        :param mode: 
+            is the stat compatible file mode as int, use the stat module
             to evaluate the infomration
         :param path:
             is the path to the file in the file system, relative to the git repository root, i.e.
@@ -149,7 +151,8 @@ class IndexObject(Object):
             self.path = path
 
     def __hash__(self):
-        """:return:
+        """
+        :return:
             Hash of our path as index items are uniquely identifyable by path, not
             by their data !"""
         return hash(self.path)

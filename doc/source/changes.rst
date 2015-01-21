@@ -7,6 +7,8 @@ Changelog
 * Added `Repo.merge_base()` implementation. See the `respective issue on github <https://github.com/gitpython-developers/GitPython/issues/169>`_
 * `[include]` sections in git configuration files are now respected
 * Added `GitConfigParser.rename_section()`
+* DOCS: special members like `__init__` are now listed in the API documentation
+* DOCS: tutorial section was revised entirely
 * Added `Submodule.rename()`
 * **POSSIBLY BREAKING CHANGE**: As `rev_parse` will now throw `BadName` as well as `BadObject`, client code will have to catch both exception types.
 * A list of all issues can be found here: https://github.com/gitpython-developers/GitPython/issues?q=milestone%3A%22v0.3.6+-+Features%22+

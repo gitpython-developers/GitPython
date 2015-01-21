@@ -783,7 +783,7 @@ class TestSubmodule(TestBase):
         # Setup initial sandbox:
         # parent repo has one submodule, which has all the latest changes
         source_url = self._submodule_url()
-        sm_source_repo = git.Repo.clone_from(source_url, os.path.join(rw_dir, 'sm-source'))
+        sm_source_repo = git.Repo.clone_from(source_url, os.path.join(rw_dir, 'sm-source'), b='master')
         parent_repo = git.Repo.init(os.path.join(rw_dir, 'parent'))
         sm = parent_repo.create_submodule('mysubmodule', 'subdir/submodule',
                                           sm_source_repo.working_tree_dir, branch='master')
