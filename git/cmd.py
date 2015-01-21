@@ -5,6 +5,7 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
 import os
+import os.path
 import sys
 import select
 import logging
@@ -12,6 +13,7 @@ import threading
 import errno
 import mmap
 
+from contextlib import contextmanager
 from subprocess import (
     call,
     Popen,
@@ -223,7 +225,7 @@ class Git(LazyMixin):
         Set its value to 'full' to see details about the returned values.
     """
     __slots__ = ("_working_dir", "cat_file_all", "cat_file_header", "_version_info",
-                 "_git_options")
+                 "_git_options", "_environment")
 
     # CONFIGURATION
     # The size in bytes read from stdout when copying git's output to another stream
@@ -413,6 +415,9 @@ class Git(LazyMixin):
         self._working_dir = working_dir
         self._git_options = ()
 
+        # Extra environment variables to pass to git commands
+        self._environment = {}
+
         # cached command slots
         self.cat_file_header = None
         self.cat_file_all = None
@@ -536,6 +541,8 @@ class Git(LazyMixin):
         # Start the process
         env = os.environ.copy()
         env["LC_MESSAGES"] = "C"
+        env.update(self._environment)
+
         proc = Popen(command,
                      env=env,
                      cwd=cwd,
@@ -607,6 +614,73 @@ class Git(LazyMixin):
             return (status, stdout_value, stderr_value.decode(defenc))
         else:
             return stdout_value
+
+    def set_environment(self, **kwargs):
+        """
+        Set environment variables for future git invocations. Return all changed
+        values in a format that can be passed back into this function to revert
+        the changes:
+
+        ``Examples``::
+
+            old_env = self.set_environment(PWD='/tmp')
+            self.set_environment(**old_env)
+
+        :param kwargs: environment variables to use for git processes
+        :return: dict that maps environment variables to their old values
+        """
+        old_env = {}
+        for key, value in kwargs.iteritems():
+            # set value if it is None
+            if value is not None:
+                if key in self._environment:
+                    old_env[key] = self._environment[key]
+                else:
+                    old_env[key] = None
+                self._environment[key] = value
+            # remove key from environment if its value is None
+            elif key in self._environment:
+                old_env[key] = self._environment[key]
+                del self._environment[key]
+        return old_env
+
+    @contextmanager
+    def environment(self, **kwargs):
+        """
+        A context manager around the above set_environment to restore the
+        environment back to its previous state after operation.
+
+        ``Examples``::
+
+            with self.environment(GIT_SSH='/bin/ssh_wrapper'):
+                repo.remotes.origin.fetch()
+
+        :param kwargs: see set_environment
+        """
+        old_env = self.set_environment(**kwargs)
+        try:
+            yield
+        finally:
+            self.set_environment(**old_env)
+
+    @contextmanager
+    def sshkey(self, sshkey_file):
+        """
+        A context manager to temporarily set an SSH key for all operations that
+        run inside it.
+
+        ``Examples``::
+
+            with self.environment(GIT_SSH=project_dir+'deployment_key'):
+                repo.remotes.origin.fetch()
+
+        :param sshkey_file: Path to a private SSH key file
+        """
+        this_dir = os.path.dirname(__file__)
+        ssh_wrapper = os.path.join(this_dir, '..', 'scripts', 'ssh_wrapper.py')
+
+        with self.environment(GIT_SSH_KEY_FILE=sshkey_file, GIT_SSH=ssh_wrapper):
+            yield
 
     def transform_kwargs(self, split_single_char_options=False, **kwargs):
         """Transforms Python style kwargs into git command line options."""
