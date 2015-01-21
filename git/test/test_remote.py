@@ -348,6 +348,7 @@ class TestRemote(TestBase):
         new_head = Head.create(rw_repo, "my_new_branch")
         progress = TestRemoteProgress()
         res = remote.push(new_head, progress)
+        assert len(res) > 0
         assert res[0].flags & PushInfo.NEW_HEAD
         progress.make_assertion()
         self._do_test_push_result(res, remote)
