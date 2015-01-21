@@ -4,7 +4,7 @@ from git.config import GitConfigParser
 from io import BytesIO
 import weakref
 
-__all__ = ('sm_section', 'sm_name', 'mkhead', 'unbare_repo', 'find_first_remote_branch',
+__all__ = ('sm_section', 'sm_name', 'mkhead', 'find_first_remote_branch',
            'SubmoduleConfigParser')
 
 #{ Utilities
@@ -24,20 +24,6 @@ def sm_name(section):
 def mkhead(repo, path):
     """:return: New branch/head instance"""
     return git.Head(repo, git.Head.to_full_path(path))
-
-
-def unbare_repo(func):
-    """Methods with this decorator raise InvalidGitRepositoryError if they
-    encounter a bare repository"""
-
-    def wrapper(self, *args, **kwargs):
-        if self.repo.bare:
-            raise InvalidGitRepositoryError("Method '%s' cannot operate on bare repositories" % func.__name__)
-        # END bare method
-        return func(self, *args, **kwargs)
-    # END wrapper
-    wrapper.__name__ = func.__name__
-    return wrapper
 
 
 def find_first_remote_branch(remotes, branch_name):

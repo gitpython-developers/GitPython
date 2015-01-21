@@ -16,7 +16,11 @@ import threading
 
 # NOTE:  Some of the unused imports might be used/imported by others.
 # Handle once test-cases are back up and running.
-from .exc import GitCommandError
+from .exc import (
+    GitCommandError,
+    InvalidGitRepositoryError
+)
+
 from .compat import (
     MAXSIZE,
     defenc,
@@ -37,9 +41,23 @@ from gitdb.util import (  # NOQA
 __all__ = ("stream_copy", "join_path", "to_native_path_windows", "to_native_path_linux",
            "join_path_native", "Stats", "IndexFileSHA1Writer", "Iterable", "IterableList",
            "BlockingLockFile", "LockFile", 'Actor', 'get_user_id', 'assure_directory_exists',
-           'RemoteProgress', 'rmtree', 'WaitGroup')
+           'RemoteProgress', 'rmtree', 'WaitGroup', 'unbare_repo')
 
 #{ Utility Methods
+
+
+def unbare_repo(func):
+    """Methods with this decorator raise InvalidGitRepositoryError if they
+    encounter a bare repository"""
+
+    def wrapper(self, *args, **kwargs):
+        if self.repo.bare:
+            raise InvalidGitRepositoryError("Method '%s' cannot operate on bare repositories" % func.__name__)
+        # END bare method
+        return func(self, *args, **kwargs)
+    # END wrapper
+    wrapper.__name__ = func.__name__
+    return wrapper
 
 
 def rmtree(path):

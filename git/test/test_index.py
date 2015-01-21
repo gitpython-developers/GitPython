@@ -12,7 +12,10 @@ from git.test.lib import (
     with_rw_repo
 )
 from git.util import Actor
-from git.exc import HookExecutionError
+from git.exc import (
+    HookExecutionError,
+    InvalidGitRepositoryError
+)
 from git import (
     IndexFile,
     BlobFilter,
@@ -740,7 +743,8 @@ class TestIndex(TestBase):
         # property rw_bare_repo.working_tree_dir will return '/tmp'
         # instead of throwing the Exception we are expecting. This is
         # a quick hack to make this test fail when expected.
-        rw_bare_repo._working_tree_dir = None
+        assert rw_bare_repo.working_tree_dir is None
+        assert rw_bare_repo.bare
         contents = b'This is a BytesIO file'
         filesize = len(contents)
         fileobj = BytesIO(contents)
@@ -758,6 +762,6 @@ class TestIndex(TestBase):
         path = os.path.join('git', 'test', 'test_index.py')
         try:
             rw_bare_repo.index.add([path])
-        except Exception as e:
-            asserted = "does not have a working tree" in str(e)
+        except InvalidGitRepositoryError:
+            asserted = True
         assert asserted, "Adding using a filename is not correctly asserted."

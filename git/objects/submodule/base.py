@@ -3,7 +3,6 @@ from .util import (
     mkhead,
     sm_name,
     sm_section,
-    unbare_repo,
     SubmoduleConfigParser,
     find_first_remote_branch
 )
@@ -14,7 +13,8 @@ from git.util import (
     join_path_native,
     to_native_path_linux,
     RemoteProgress,
-    rmtree
+    rmtree,
+    unbare_repo
 )
 
 from git.config import (

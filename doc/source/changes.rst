@@ -10,7 +10,12 @@ Changelog
 * DOCS: special members like `__init__` are now listed in the API documentation
 * DOCS: tutorial section was revised entirely
 * Added `Submodule.rename()`
-* **POSSIBLY BREAKING CHANGE**: As `rev_parse` will now throw `BadName` as well as `BadObject`, client code will have to catch both exception types.
+* **POSSIBLY BREAKING CHANGES**
+
+  * As `rev_parse` will now throw `BadName` as well as `BadObject`, client code will have to catch both exception types.
+  * Repo.working_tree_dir now returns None if it is bare. Previously it raised AssertionError.
+  * IndexFile.add() previously raised AssertionError when paths where used with bare repository, now it raises InvalidGitRepositoryError
+
 * A list of all issues can be found here: https://github.com/gitpython-developers/GitPython/issues?q=milestone%3A%22v0.3.6+-+Features%22+
 
 0.3.5 - Bugfixes

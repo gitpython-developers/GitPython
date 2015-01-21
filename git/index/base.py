@@ -27,7 +27,8 @@ from .util import (
 import git.diff as diff
 from git.exc import (
     GitCommandError,
-    CheckoutError
+    CheckoutError,
+    InvalidGitRepositoryError
 )
 
 from git.objects import (
@@ -54,6 +55,7 @@ from git.util import (
     join_path_native,
     file_contents_ro,
     to_native_path_linux,
+    unbare_repo
 )
 
 from .fun import (
@@ -346,6 +348,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         return index
 
     # UTILITIES
+    @unbare_repo
     def _iter_expand_paths(self, paths):
         """Expand the directories in list of paths to the corresponding paths accordingly,
 
@@ -536,6 +539,8 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         if it is not within our git direcotory"""
         if not os.path.isabs(path):
             return path
+        if self.repo.bare:
+            raise InvalidGitRepositoryError("require non-bare repository")
         relative_path = path.replace(self.repo.working_tree_dir + os.sep, "")
         if relative_path == path:
             raise ValueError("Absolute path %r is not in git repository at %r" % (path, self.repo.working_tree_dir))
@@ -575,6 +580,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         return BaseIndexEntry((stat_mode_to_index_mode(st.st_mode),
                                istream.binsha, 0, to_native_path_linux(filepath)))
 
+    @unbare_repo
     @git_working_dir
     def _entries_for_paths(self, paths, path_rewriter, fprogress, entries):
         entries_added = list()
