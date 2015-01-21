@@ -49,7 +49,7 @@ def find_first_remote_branch(remotes, branch_name):
             continue
         # END exception handling
     # END for remote
-    raise InvalidGitRepositoryError("Didn't find remote branch %r in any of the given remotes", branch_name)
+    raise InvalidGitRepositoryError("Didn't find remote branch '%r' in any of the given remotes" % branch_name)
 
 #} END utilities
 

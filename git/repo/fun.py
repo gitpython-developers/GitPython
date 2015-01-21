@@ -26,6 +26,7 @@ __all__ = ('rev_parse', 'is_git_dir', 'touch', 'find_git_dir', 'name_to_object',
 def touch(filename):
     fp = open(filename, "ab")
     fp.close()
+    return filename
 
 
 def is_git_dir(d):

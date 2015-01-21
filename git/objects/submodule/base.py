@@ -411,20 +411,8 @@ class Submodule(util.IndexObject, Iterable, Traversable):
         del(writer)
 
         # we deliberatly assume that our head matches our index !
-
-        try:
-            repo.head.commit
-            parent_repo_is_empty = False
-        except ValueError:
-            parent_repo_is_empty = True
-            # Can't set this yet, if the parent repo is empty.
-        # end
         sm.binsha = mrepo.head.commit.binsha
         index.add([sm], write=True)
-
-        if parent_repo_is_empty:
-            log.debug("Will not set _parent_commit now as the parent repository has no commit yet.")
-        # end
 
         return sm
 

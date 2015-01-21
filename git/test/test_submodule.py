@@ -529,10 +529,9 @@ class TestSubmodule(TestBase):
 
         # 'apply work' to the nested submodule and assure this is not removed/altered during updates
         # Need to commit first, otherwise submodule.update wouldn't have a reason to change the head
-        nsm_file = os.path.join(nsm.module().working_tree_dir, 'new-file')
+        touch(os.path.join(nsm.module().working_tree_dir, 'new-file'))
         # We cannot expect is_dirty to even run as we wouldn't reset a head to the same location
         assert nsm.module().head.commit.hexsha == nsm.hexsha
-        touch(nsm_file)
         nsm.module().index.add([nsm])
         nsm.module().index.commit("added new file")
         rm.update(recursive=False, dry_run=True, progress=prog)  # would not change head, and thus doens't fail
@@ -778,3 +777,67 @@ class TestSubmodule(TestBase):
         if os.path.isfile(os.path.join(sm_mod.working_tree_dir, '.git')) == sm._need_gitfile_submodules(parent.git):
             assert sm_mod.git_dir.endswith(".git/modules/" + new_sm_name)
         # end
+
+    @with_rw_directory
+    def test_branch_renames(self, rw_dir):
+        # Setup initial sandbox:
+        # parent repo has one submodule, which has all the latest changes
+        source_url = self._submodule_url()
+        sm_source_repo = git.Repo.clone_from(source_url, os.path.join(rw_dir, 'sm-source'))
+        parent_repo = git.Repo.init(os.path.join(rw_dir, 'parent'))
+        sm = parent_repo.create_submodule('mysubmodule', 'subdir/submodule',
+                                          sm_source_repo.working_tree_dir, branch='master')
+        parent_repo.index.commit('added submodule')
+        assert sm.exists()
+
+        # Create feature branch with one new commit in submodule source
+        sm_fb = sm_source_repo.create_head('feature')
+        sm_fb.checkout()
+        new_file = touch(os.path.join(sm_source_repo.working_tree_dir, 'new-file'))
+        sm_source_repo.index.add([new_file])
+        sm.repo.index.commit("added new file")
+
+        # change designated submodule checkout branch to the new upstream feature branch
+        smcw = sm.config_writer()
+        smcw.set_value('branch', sm_fb.name)
+        smcw.release()
+        assert sm.repo.is_dirty(index=True, working_tree=False)
+        sm.repo.index.commit("changed submodule branch to '%s'" % sm_fb)
+
+        # verify submodule update with feature branch that leaves currently checked out branch in it's past
+        sm_mod = sm.module()
+        prev_commit = sm_mod.commit()
+        assert sm_mod.head.ref.name == 'master'
+        assert parent_repo.submodule_update()
+        assert sm_mod.head.ref.name == sm_fb.name
+        assert sm_mod.commit() == prev_commit, "Without to_latest_revision, we don't change the commit"
+
+        assert parent_repo.submodule_update(to_latest_revision=True)
+        assert sm_mod.head.ref.name == sm_fb.name
+        assert sm_mod.commit() == sm_fb.commit
+
+        # Create new branch which is in our past, and thus seemingly unrelated to the currently checked out one
+        # To make it even 'harder', we shall fork and create a new commit
+        sm_pfb = sm_source_repo.create_head('past-feature', commit='HEAD~20')
+        sm_pfb.checkout()
+        sm_source_repo.index.add([touch(os.path.join(sm_source_repo.working_tree_dir, 'new-file'))])
+        sm_source_repo.index.commit("new file added, to past of '%r'" % sm_fb)
+
+        # Change designated submodule checkout branch to a new commit in its own past
+        smcw = sm.config_writer()
+        smcw.set_value('branch', sm_pfb.path)
+        smcw.release()
+        sm.repo.index.commit("changed submodule branch to '%s'" % sm_pfb)
+
+        # Test submodule updates - must fail if submodule is dirty
+        touch(os.path.join(sm_mod.working_tree_dir, 'unstaged file'))
+        # This doesn't fail as our own submodule binsha didn't change, and the reset is only triggered if
+        # to latest revision is True.
+        parent_repo.submodule_update(to_latest_revision=False)
+        sm_mod.head.ref.name == sm_pfb.name, "should have been switched to past head"
+        sm_mod.commit() == sm_fb.commit, "Head wasn't reset"
+
+        self.failUnlessRaises(RepositoryDirtyError, parent_repo.submodule_update, to_latest_revision=True)
+        parent_repo.submodule_update(to_latest_revision=True, force_reset=True)
+        assert sm_mod.commit() == sm_pfb.commit, "Now head should have been reset"
+        assert sm_mod.head.ref.name == sm_pfb.name

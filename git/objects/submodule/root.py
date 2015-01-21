@@ -287,6 +287,11 @@ class RootModule(Submodule):
                         if not dry_run:
                             smm = sm.module()
                             smmr = smm.remotes
+                            # As the branch might not exist yet, we will have to fetch all remotes to be sure ... .
+                            for remote in smmr:
+                                remote.fetch(progress=progress)
+                            # end for each remote
+
                             try:
                                 tbr = git.Head.create(smm, sm.branch_name, logmsg='branch: Created from HEAD')
                             except OSError:
@@ -295,21 +300,11 @@ class RootModule(Submodule):
                             # END assure tracking branch exists
 
                             tbr.set_tracking_branch(find_first_remote_branch(smmr, sm.branch_name))
-                            # figure out whether the previous tracking branch contains
-                            # new commits compared to the other one, if not we can
-                            # delete it.
-                            try:
-                                tbr = find_first_remote_branch(smmr, psm.branch_name)
-                                if len(smm.git.cherry(tbr, psm.branch)) == 0:
-                                    psm.branch.delete(smm, psm.branch)
-                                # END delete original tracking branch if there are no changes
-                            except InvalidGitRepositoryError:
-                                # ignore it if the previous branch couldn't be found in the
-                                # current remotes, this just means we can't handle it
-                                pass
-                            # END exception handling
-
-                            # NOTE: All checkout is done in the base implementation of update
+                            # NOTE: All head-resetting is done in the base implementation of update
+                            # but we will have to checkout the new branch here. As it still points to the currently
+                            # checkout out commit, we don't do any harm.
+                            # As we don't want to update working-tree or index, changing the ref is all there is to do
+                            smm.head.reference = tbr
                         # END handle dry_run
 
                         progress.update(
