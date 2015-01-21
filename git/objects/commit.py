@@ -69,6 +69,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
                  message=None, parents=None, encoding=None, gpgsig=None):
         """Instantiate a new Commit. All keyword arguments taking None as default will
         be implicitly set on first query.
+
         :param binsha: 20 byte sha1
         :param parents: tuple( Commit, ... )
             is a tuple of commit ids or actual Commits
@@ -97,7 +98,8 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
             dependency graph
         :return: git.Commit
 
-        :note: Timezone information is in the same format and in the same sign
+        :note:
+            Timezone information is in the same format and in the same sign
             as what time.altzone returns. The sign is inverted compared to git's
             UTC timezone."""
         super(Commit, self).__init__(repo, binsha)
@@ -296,6 +298,11 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
                 # empty repositories have no head commit
                 parent_commits = list()
             # END handle parent commits
+        else:
+            for p in parent_commits:
+                if not isinstance(p, cls):
+                    raise ValueError("Parent commit '%r' must be of type %s" % (p, cls))
+            # end check parent commit types
         # END if parent commits are unset
 
         # retrieve all additional information, create a commit object, and

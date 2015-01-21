@@ -51,7 +51,8 @@ class Reference(SymbolicReference, LazyMixin, Iterable):
     #{ Interface
 
     def set_object(self, object, logmsg=None):
-        """Special version which checks if the head-log needs an update as well"""
+        """Special version which checks if the head-log needs an update as well
+        :return: self"""
         oldbinsha = None
         if logmsg is not None:
             head = self.repo.head
@@ -77,6 +78,8 @@ class Reference(SymbolicReference, LazyMixin, Iterable):
             # */
             self.repo.head.log_append(oldbinsha, logmsg)
         # END check if the head
+
+        return self
 
     # NOTE: Don't have to overwrite properties as the will only work without a the log
 

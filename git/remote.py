@@ -378,6 +378,8 @@ class Remote(LazyMixin, Iterable):
 
     def _set_cache_(self, attr):
         if attr == "_config_reader":
+            # NOTE: This is cached as __getattr__ is overridden to return remote config values implicitly, such as
+            # in print(r.pushurl)
             self._config_reader = SectionConstraint(self.repo.config_reader(), self._config_section_name())
         else:
             super(Remote, self)._set_cache_(attr)
@@ -475,8 +477,13 @@ class Remote(LazyMixin, Iterable):
 
     @classmethod
     def remove(cls, repo, name):
-        """Remove the remote with the given name"""
+        """Remove the remote with the given name
+        :return: the passed remote name to remove
+        """
         repo.git.remote("rm", name)
+        if isinstance(name, cls):
+            name._clear_cache()
+        return name
 
     # alias
     rm = remove
@@ -489,11 +496,8 @@ class Remote(LazyMixin, Iterable):
 
         self.repo.git.remote("rename", self.name, new_name)
         self.name = new_name
-        try:
-            del(self._config_reader)        # it contains cached values, section names are different now
-        except AttributeError:
-            pass
-        # END handle exception
+        self._clear_cache()
+
         return self
 
     def update(self, **kwargs):
@@ -662,6 +666,13 @@ class Remote(LazyMixin, Iterable):
             Hence you may simple type config.get("pushurl") to obtain the information"""
         return self._config_reader
 
+    def _clear_cache(self):
+        try:
+            del(self._config_reader)
+        except AttributeError:
+            pass
+        # END handle exception
+
     @property
     def config_writer(self):
         """
@@ -676,9 +687,5 @@ class Remote(LazyMixin, Iterable):
         writer = self.repo.config_writer()
 
         # clear our cache to assure we re-read the possibly changed configuration
-        try:
-            del(self._config_reader)
-        except AttributeError:
-            pass
-        # END handle exception
+        self._clear_cache()
         return SectionConstraint(writer, self._config_section_name())

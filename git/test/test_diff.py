@@ -1,3 +1,4 @@
+#-*-coding:utf-8-*-
 # test_diff.py
 # Copyright (C) 2008, 2009 Michael Trier (mtrier@gmail.com) and contributors
 #
@@ -53,8 +54,9 @@ class TestDiff(TestBase):
 
         diff = diffs[0]
         assert_true(diff.renamed)
-        assert_equal(diff.rename_from, 'AUTHORS')
-        assert_equal(diff.rename_to, 'CONTRIBUTORS')
+        assert_equal(diff.rename_from, u'Jérôme')
+        assert_equal(diff.rename_to, u'müller')
+        assert isinstance(str(diff), str)
 
         output = StringProcessAdapter(fixture('diff_rename_raw'))
         diffs = Diff._index_from_raw_format(self.rorepo, output.stdout)

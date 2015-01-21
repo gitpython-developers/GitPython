@@ -55,26 +55,67 @@ Archive the repository contents to a tar file.
     :start-after: # [6-test_init_repo_object]
     :end-before: # ![6-test_init_repo_object]
 
-.. todo repo paths, heads, remotes, submodules
-    
-    
-Object Databases
-****************
-``Repo`` instances are powered by its object database instance which will be used when extracting any data, or when writing new objects.
+Advanced Repo Usage
+===================
 
-The type of the database determines certain performance characteristics, such as the quantity of objects that can be read per second, the resource usage when reading large data files, as well as the average memory footprint of your application.
+And of course, there is much more you can do with this type, most of the following will be explained in greater detail in specific tutorials.
 
-GitDB
-=====
-The GitDB is a pure-python implementation of the git object database. It is the default database to use in GitPython 0.3. Its uses less memory when handling huge files, but will be 2 to 5 times slower when extracting large quantities small of objects from densely packed repositories::
-    
-    repo = Repo("path/to/repo", odbt=GitDB)
+Query relevant repository paths ... 
 
-GitCmdObjectDB
-==============
-The git command database uses persistent git-cat-file instances to read repository information. These operate very fast under all conditions, but will consume additional memory for the process itself. When extracting large files, memory usage will be much higher than the one of the ``GitDB``::
-    
-    repo = Repo("path/to/repo", odbt=GitCmdObjectDB)
+.. literalinclude:: ../../git/test/test_docs.py
+    :language: python
+    :start-after: # [7-test_init_repo_object]
+    :end-before: # ![7-test_init_repo_object]
+
+:class:`Heads <git.refs.head.Head>` Heads are branches in git-speak. :class:`References <git.refs.reference.Reference>` are pointers to a specific commit or to other references. Heads and :class:`Tags <git.refs.tag.TagReference>` are a kind of references. GitPython allows you to query them rather intuitively.
+
+.. literalinclude:: ../../git/test/test_docs.py
+    :language: python
+    :start-after: # [8-test_init_repo_object]
+    :end-before: # ![8-test_init_repo_object]
+
+You can also create new heads ...
+
+.. literalinclude:: ../../git/test/test_docs.py
+    :language: python
+    :start-after: # [9-test_init_repo_object]
+    :end-before: # ![9-test_init_repo_object]
+
+... and tags ... 
+
+.. literalinclude:: ../../git/test/test_docs.py
+    :language: python
+    :start-after: # [10-test_init_repo_object]
+    :end-before: # ![10-test_init_repo_object]
+
+You can traverse down to :class:`git objects <git.objects.base.Object>` through references and other objects. Some objects like :class:`commits <git.objects.commit.Commit>` have additional meta-data to query.
+
+.. literalinclude:: ../../git/test/test_docs.py
+    :language: python
+    :start-after: # [11-test_init_repo_object]
+    :end-before: # ![11-test_init_repo_object]
+
+:class:`Remotes <git.remote.Remote>` allow to handle fetch, pull and push operations, while providing optional real-time progress information to :class:`progress delegates <git.util.RemoteProgress>`.
+
+.. literalinclude:: ../../git/test/test_docs.py
+    :language: python
+    :start-after: # [12-test_init_repo_object]
+    :end-before: # ![12-test_init_repo_object]
+
+The :class:`index <git.index.base.IndexFile>` is also called stage in git-speak. It is used to prepare new commits, and can be used to keep results of merge operations. Our index implementation allows to stream date into the index, which is useful for bare repositories that do not have a working tree.
+
+.. literalinclude:: ../../git/test/test_docs.py
+    :language: python
+    :start-after: # [13-test_init_repo_object]
+    :end-before: # ![13-test_init_repo_object]
+
+:class:`Submodules <git.objects.submodule.Submodule>` represent all aspects of git submodules, which allows you query all of their related information, and manipulate in various ways.
+
+.. literalinclude:: ../../git/test/test_docs.py
+    :language: python
+    :start-after: # [14-test_init_repo_object]
+    :end-before: # ![14-test_init_repo_object]
+
     
 Examining References
 ********************
@@ -107,7 +148,7 @@ Access the reflog easily::
     log[0]                      # first (i.e. oldest) reflog entry
     log[-1]                     # last (i.e. most recent) reflog entry
     
-For more information on the reflog, see the ``RefLog`` type's documentation.
+For more information on the reflog, see the :class:`git.RefLog <git.refs.log.RefLog>` type's documentation.
 
 Modifying References
 ********************
@@ -453,6 +494,26 @@ Keyword arguments translate to short and long keyword arguments on the commandli
 The special notion ``git.command(flag=True)`` will create a flag without value like ``command --flag``.
 
 If ``None`` is found in the arguments, it will be dropped silently. Lists and tuples  passed as arguments will be unpacked recursively to individual arguments. Objects are converted to strings using the str(...) function.
+
+
+Object Databases
+****************
+:class:`git.Repo <git.repo.base.Repo>` instances are powered by its object database instance which will be used when extracting any data, or when writing new objects.
+
+The type of the database determines certain performance characteristics, such as the quantity of objects that can be read per second, the resource usage when reading large data files, as well as the average memory footprint of your application.
+
+GitDB
+=====
+The GitDB is a pure-python implementation of the git object database. It is the default database to use in GitPython 0.3. Its uses less memory when handling huge files, but will be 2 to 5 times slower when extracting large quantities small of objects from densely packed repositories::
+    
+    repo = Repo("path/to/repo", odbt=GitDB)
+
+
+GitCmdObjectDB
+==============
+The git command database uses persistent git-cat-file instances to read repository information. These operate very fast under all conditions, but will consume additional memory for the process itself. When extracting large files, memory usage will be much higher than the one of the ``GitDB``::
+    
+    repo = Repo("path/to/repo", odbt=GitCmdObjectDB)
 
 Git Command Debugging and Customization
 ***************************************

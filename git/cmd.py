@@ -579,11 +579,16 @@ class Git(LazyMixin):
 
         if self.GIT_PYTHON_TRACE == 'full':
             cmdstr = " ".join(command)
+
+            def as_text(stdout_value):
+                return not output_stream and stdout_value.decode(defenc) or '<OUTPUT_STREAM>'
+            # end
+
             if stderr_value:
                 log.info("%s -> %d; stdout: '%s'; stderr: '%s'",
-                         cmdstr, status, stdout_value.decode(defenc), stderr_value.decode(defenc))
+                         cmdstr, status, as_text(stdout_value), stderr_value.decode(defenc))
             elif stdout_value:
-                log.info("%s -> %d; stdout: '%s'", cmdstr, status, stdout_value.decode(defenc))
+                log.info("%s -> %d; stdout: '%s'", cmdstr, status, as_text(stdout_value))
             else:
                 log.info("%s -> %d", cmdstr, status)
         # END handle debug printing

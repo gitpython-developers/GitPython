@@ -135,7 +135,7 @@ class IndexObject(Object):
 
         :param repo: is the Repo we are located in
         :param binsha: 20 byte sha1
-        :param mode: 
+        :param mode:
             is the stat compatible file mode as int, use the stat module
             to evaluate the infomration
         :param path:

@@ -451,11 +451,15 @@ class TestRemote(TestBase):
         remote = Remote.create(bare_rw_repo, *arg_list)
         assert remote.name == "test_new_one"
         assert remote in bare_rw_repo.remotes
+        assert remote.exists()
 
         # create same one again
         self.failUnlessRaises(GitCommandError, Remote.create, bare_rw_repo, *arg_list)
 
         Remote.remove(bare_rw_repo, new_name)
+        assert remote.exists()      # We still have a cache that doesn't know we were deleted by name
+        remote._clear_cache()
+        assert not remote.exists()  # Cache should be renewed now. This is an issue ...
 
         for remote in bare_rw_repo.remotes:
             if remote.name == new_name:

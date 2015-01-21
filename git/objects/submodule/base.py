@@ -781,7 +781,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
             csm.remove(module, force, configuration, dry_run)
             del(csm)
         # end
-        if not dry_run and nc > 0:
+        if configuration and not dry_run and nc > 0:
             # Assure we don't leave the parent repository in a dirty state, and commit our changes
             # It's important for recursive, unforced, deletions to work as expected
             self.module().index.commit("Removed submodule '%s'" % self.name)

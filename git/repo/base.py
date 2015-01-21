@@ -209,10 +209,8 @@ class Repo(object):
 
     @property
     def working_tree_dir(self):
-        """:return: The working tree directory of our git repository
-        :raise AssertionError: If we are a bare repository"""
-        if self._working_tree_dir is None:
-            raise AssertionError("Repository at %r is bare and does not have a working tree directory" % self.git_dir)
+        """:return: The working tree directory of our git repository. If this is a bare repository, None is returned.
+        """
         return self._working_tree_dir
 
     @property

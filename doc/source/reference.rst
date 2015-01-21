@@ -17,6 +17,7 @@ Objects.Blob
 .. automodule:: git.objects.blob
    :members:
    :undoc-members:
+   :special-members:
    
 Objects.Commit
 --------------
@@ -24,6 +25,7 @@ Objects.Commit
 .. automodule:: git.objects.commit
    :members:
    :undoc-members:
+   :special-members:
    
 Objects.Tag
 -----------

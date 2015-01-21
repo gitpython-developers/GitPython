@@ -8,5 +8,5 @@ committer Michael Trier <mtrier@gmail.com> 1229389391 -0500
 
 diff --git a/AUTHORS b/CONTRIBUTORS
 similarity index 100%
-rename from AUTHORS
-rename to CONTRIBUTORS
+rename from Jérôme
+rename to müller
