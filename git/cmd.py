@@ -139,7 +139,7 @@ def handle_process_output(process, stdout_handler, stderr_handler, finalizer):
 
     if hasattr(select, 'poll'):
         # poll is preferred, as select is limited to file handles up to 1024 ... . This could otherwise be
-        # an issue for us, as it matters how many handles or own process has
+        # an issue for us, as it matters how many handles our own process has
         poll = select.poll()
         READ_ONLY = select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLERR
         CLOSED = select.POLLHUP | select.POLLERR
@@ -731,7 +731,7 @@ class Git(LazyMixin):
                         import warnings
                         msg = "WARNING: Automatically switched to use git.cmd as git executable"
                         msg += ", which reduces performance by ~70%."
-                        msg += "Its recommended to put git.exe into the PATH or to "
+                        msg += "It is recommended to put git.exe into the PATH or to "
                         msg += "set the %s " % self._git_exec_env_var
                         msg += "environment variable to the executable's location"
                         warnings.warn(msg)

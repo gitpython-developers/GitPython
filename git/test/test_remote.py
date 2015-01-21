@@ -163,11 +163,11 @@ class TestRemote(TestBase):
         def get_info(res, remote, name):
             return res["%s/%s" % (remote, name)]
 
-        # put remote head to master as it is garantueed to exist
+        # put remote head to master as it is guaranteed to exist
         remote_repo.head.reference = remote_repo.heads.master
 
         res = fetch_and_test(remote)
-        # all uptodate
+        # all up to date
         for info in res:
             assert info.flags & info.HEAD_UPTODATE
 

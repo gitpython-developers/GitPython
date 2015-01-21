@@ -354,7 +354,7 @@ class Remote(LazyMixin, Iterable):
             # that it has the config_writer property, but instead calls __getattr__
             # which will not yield the expected results. 'pinging' the members
             # with a dir call creates the config_writer property that we require
-            # ... bugs like these make me wonder wheter python really wants to be used
+            # ... bugs like these make me wonder whether python really wants to be used
             # for production. It doesn't happen on linux though.
             dir(self)
         # END windows special handling
