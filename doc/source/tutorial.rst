@@ -384,7 +384,7 @@ Change configuration for a specific remote only::
     
     o.config_writer.set("pushurl", "other_url")
 
-You can also specify an SSH key to use for any operations on the remotes:
+You can also specify an SSH key to use for any operations on the remotes::
 
     private_key_file = project_dir+'id_rsa_deployment_key'
     with repo.git.sshkey(private_key_file):

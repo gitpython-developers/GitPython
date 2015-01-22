@@ -439,6 +439,10 @@ class Git(LazyMixin):
             super(Git, self)._set_cache_(attr)
         # END handle version info
 
+    def _sshkey_script_path(self):
+        this_dir = os.path.dirname(__file__)
+        return os.path.join(this_dir, 'scripts', 'ssh_wrapper.sh')
+
     @property
     def working_dir(self):
         """:return: Git directory we are working on"""
@@ -541,6 +545,7 @@ class Git(LazyMixin):
         # Start the process
         env = os.environ.copy()
         env["LC_MESSAGES"] = "C"
+        print(self._environment)
         env.update(self._environment)
 
         proc = Popen(command,
@@ -633,7 +638,7 @@ class Git(LazyMixin):
         :return: dict that maps environment variables to their old values
         """
         old_env = {}
-        for key, value in kwargs.iteritems():
+        for key, value in kwargs.items():
             # set value if it is None
             if value is not None:
                 if key in self._environment:
@@ -648,14 +653,14 @@ class Git(LazyMixin):
         return old_env
 
     @contextmanager
-    def with_environment(self, **kwargs):
+    def custom_environment(self, **kwargs):
         """
-        A context manager around the above update_environment to restore the
+        A context manager around the above ``update_environment`` method to restore the
         environment back to its previous state after operation.
 
         ``Examples``::
 
-            with self.with_environment(GIT_SSH='/bin/ssh_wrapper'):
+            with self.custom_environment(GIT_SSH='/bin/ssh_wrapper'):
                 repo.remotes.origin.fetch()
 
         :param kwargs: see update_environment
@@ -667,22 +672,20 @@ class Git(LazyMixin):
             self.update_environment(**old_env)
 
     @contextmanager
-    def sshkey(self, sshkey_file):
+    def sshkey(self, sshkey_file_path):
         """
         A context manager to temporarily set an SSH key for all operations that
         run inside it.
 
         ``Examples``::
 
-            with self.environment(GIT_SSH=project_dir+'deployment_key'):
+            with self.sshkey('deployment_key'):
                 repo.remotes.origin.fetch()
 
-        :param sshkey_file: Path to a private SSH key file
+        :param sshkey_file_path: Path to a private SSH key file
         """
-        this_dir = os.path.dirname(__file__)
-        ssh_wrapper = os.path.join(this_dir, '..', 'scripts', 'ssh_wrapper.py')
-
-        with self.with_environment(GIT_SSH_KEY_FILE=sshkey_file, GIT_SSH=ssh_wrapper):
+        ssh_wrapper = self._sshkey_script_path()
+        with self.custom_environment(GIT_SSH_KEY_FILE=sshkey_file_path, GIT_SSH=ssh_wrapper):
             yield
 
     def transform_kwargs(self, split_single_char_options=False, **kwargs):

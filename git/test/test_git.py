@@ -4,18 +4,24 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
-
 import os
 import mock
-from git.test.lib import (TestBase,
-                          patch,
-                          raises,
-                          assert_equal,
-                          assert_true,
-                          assert_match,
-                          fixture_path)
-from git import (Git,
-                 GitCommandError)
+
+from git.test.lib import (
+    TestBase,
+    patch,
+    raises,
+    assert_equal,
+    assert_true,
+    assert_match,
+    fixture_path
+)
+from git import (
+    Git,
+    GitCommandError,
+    Repo
+)
+from gitdb.test.lib import with_rw_directory
 
 from git.compat import PY3
 
@@ -154,12 +160,13 @@ class TestGit(TestBase):
         with mock.patch.dict('os.environ', {'GIT_EDITOR': editor}):
             assert self.git.var("GIT_EDITOR") == editor
 
-    def test_environment(self):
+    @with_rw_directory
+    def test_environment(self, rw_dir):
         # sanity check
         assert self.git.environment() == {}
 
         # make sure the context manager works and cleans up after itself
-        with self.git.with_environment(PWD='/tmp'):
+        with self.git.custom_environment(PWD='/tmp'):
             assert self.git.environment() == {'PWD': '/tmp'}
 
         assert self.git.environment() == {}
@@ -173,3 +180,12 @@ class TestGit(TestBase):
         new_env = self.git.update_environment(**old_env)
         assert new_env == {'VARKEY': 'VARVALUE'}
         assert self.git.environment() == {}
+
+        rw_repo = Repo.init(os.path.join(rw_dir, 'repo'))
+        remote = rw_repo.create_remote('ssh-origin', "ssh://git@server/foo")
+
+        with rw_repo.git.sshkey('doesntexist.key'):
+            remote.fetch()
+        # end
+
+
