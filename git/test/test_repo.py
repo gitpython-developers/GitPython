@@ -34,10 +34,7 @@ from git.repo.fun import touch
 from git.util import join_path_native
 from git.exc import BadObject
 from gitdb.util import bin_to_hex
-from git.compat import (
-    string_types,
-    # PY3
-)
+from git.compat import string_types
 from gitdb.test.lib import with_rw_directory
 
 import os
@@ -615,7 +612,6 @@ class TestRepo(TestBase):
         # END handle multiple tokens
 
         # try partial parsing
-        # if not (PY3 and 'TRAVIS' in os.environ):
         max_items = 40
         for i, binsha in enumerate(self.rorepo.odb.sha_iter()):
             assert rev_parse(bin_to_hex(binsha)[:8 - (i % 2)].decode('ascii')).binsha == binsha
@@ -624,7 +620,6 @@ class TestRepo(TestBase):
                 # which requires accessing packs, it has some additional overhead
                 break
         # END for each binsha in repo
-        # end travis special handling
 
         # missing closing brace commit^{tree
         self.failUnlessRaises(ValueError, rev_parse, '0.1.4^{tree')
