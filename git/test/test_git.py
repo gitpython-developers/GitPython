@@ -153,3 +153,23 @@ class TestGit(TestBase):
         editor = 'non_existant_editor'
         with mock.patch.dict('os.environ', {'GIT_EDITOR': editor}):
             assert self.git.var("GIT_EDITOR") == editor
+
+    def test_environment(self):
+        # sanity check
+        assert self.git.environment() == {}
+
+        # make sure the context manager works and cleans up after itself
+        with self.git.with_environment(PWD='/tmp'):
+            assert self.git.environment() == {'PWD': '/tmp'}
+
+        assert self.git.environment() == {}
+
+        old_env = self.git.update_environment(VARKEY='VARVALUE')
+        # The returned dict can be used to revert the change, hence why it has
+        # an entry with value 'None'.
+        assert old_env == {'VARKEY': None}
+        assert self.git.environment() == {'VARKEY': 'VARVALUE'}
+
+        new_env = self.git.update_environment(**old_env)
+        assert new_env == {'VARKEY': 'VARVALUE'}
+        assert self.git.environment() == {}
