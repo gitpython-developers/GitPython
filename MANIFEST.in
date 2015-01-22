@@ -4,7 +4,7 @@ include CHANGES
 include AUTHORS
 include README
 include requirements.txt
+include scripts/ssh_wrapper.py
 
 graft git/test/fixtures
 graft git/test/performance
-
