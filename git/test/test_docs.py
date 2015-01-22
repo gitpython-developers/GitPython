@@ -438,8 +438,8 @@ class Tutorials(TestBase):
         # ![31-test_references_and_objects]
 
         # [32-test_references_and_objects]
-        private_key_file = os.path.join(rw_dir, 'id_rsa_deployment_key')
-        with repo.git.sshkey(private_key_file):
+        ssh_executable = os.path.join(rw_dir, 'my_ssh_executable.sh')
+        with repo.git.custom_environment(GIT_SSH=ssh_executable):
             # Note that we don't actually make the call here, as our test-setup doesn't permit it to
             # succeed.
             # It will in your case :)

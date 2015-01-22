@@ -439,10 +439,6 @@ class Git(LazyMixin):
             super(Git, self)._set_cache_(attr)
         # END handle version info
 
-    def _sshkey_script_path(self):
-        this_dir = os.path.dirname(__file__)
-        return os.path.join(this_dir, 'scripts', 'ssh_wrapper.sh')
-
     @property
     def working_dir(self):
         """:return: Git directory we are working on"""
@@ -669,23 +665,6 @@ class Git(LazyMixin):
             yield
         finally:
             self.update_environment(**old_env)
-
-    @contextmanager
-    def sshkey(self, sshkey_file_path):
-        """
-        A context manager to temporarily set an SSH key for all operations that
-        run inside it.
-
-        ``Examples``::
-
-            with self.sshkey('deployment_key'):
-                repo.remotes.origin.fetch()
-
-        :param sshkey_file_path: Path to a private SSH key file
-        """
-        ssh_wrapper = self._sshkey_script_path()
-        with self.custom_environment(GIT_SSH_KEY_FILE=sshkey_file_path, GIT_SSH=ssh_wrapper):
-            yield
 
     def transform_kwargs(self, split_single_char_options=False, **kwargs):
         """Transforms Python style kwargs into git command line options."""

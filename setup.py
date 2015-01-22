@@ -82,7 +82,7 @@ setup(
     url="https://github.com/gitpython-developers/GitPython",
     packages=find_packages('.'),
     py_modules=['git.' + f[:-3] for f in os.listdir('./git') if f.endswith('.py')],
-    package_data={'git.test': ['fixtures/*'], 'git' : ['scripts/*']},
+    package_data={'git.test': ['fixtures/*']},
     package_dir={'git': 'git'},
     license="BSD License",
     requires=['gitdb (>=0.6.4)'],

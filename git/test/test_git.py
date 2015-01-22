@@ -181,23 +181,17 @@ class TestGit(TestBase):
         assert new_env == {'VARKEY': 'VARVALUE'}
         assert self.git.environment() == {}
 
-        class TestRepo(Repo):
-            class GitCommandWrapperType(Git):
-                def _sshkey_script_path(self):
-                    path = os.path.join(rw_dir, 'failing-script.sh')
-                    stream = open(path, 'wt')
-                    stream.write("#!/usr/bin/env sh\n" +
-                                 "echo FOO\n")
-                    stream.close()
-                    os.chmod(path, 0o555)
-                    return path
-            # end Git
-        # end Repo
+        path = os.path.join(rw_dir, 'failing-script.sh')
+        stream = open(path, 'wt')
+        stream.write("#!/usr/bin/env sh\n" +
+                     "echo FOO\n")
+        stream.close()
+        os.chmod(path, 0o555)
 
-        rw_repo = TestRepo.init(os.path.join(rw_dir, 'repo'))
+        rw_repo = Repo.init(os.path.join(rw_dir, 'repo'))
         remote = rw_repo.create_remote('ssh-origin', "ssh://git@server/foo")
 
-        with rw_repo.git.sshkey('doesntexist.key'):
+        with rw_repo.git.custom_environment(GIT_SSH=path):
             try:
                 remote.fetch()
             except GitCommandError as err:
