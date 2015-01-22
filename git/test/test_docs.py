@@ -431,7 +431,7 @@ class Tutorials(TestBase):
 
         # [31-test_references_and_objects]
         git = repo.git
-        git.checkout('head', b="my_new_branch")         # create a new branch
+        git.checkout('HEAD', b="my_new_branch")         # create a new branch
         git.branch('another-new-one')
         git.branch('-D', 'another-new-one')             # pass strings for full control over argument order
         git.for_each_ref()                              # '-' becomes '_' when calling it
