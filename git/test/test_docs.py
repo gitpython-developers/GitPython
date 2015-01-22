@@ -181,7 +181,7 @@ class Tutorials(TestBase):
     def test_references_and_objects(self, rw_dir):
         # [1-test_references_and_objects]
         import git
-        repo = git.Repo.clone_from(self._small_repo_url(), os.path.join(rw_dir, 'repo'))
+        repo = git.Repo.clone_from(self._small_repo_url(), os.path.join(rw_dir, 'repo'), branch='master')
 
         heads = repo.heads
         master = heads.master       # lists can be accessed by name for convenience
