@@ -689,7 +689,7 @@ class TestSubmodule(TestBase):
     @with_rw_directory
     def test_git_submodule_compatibility(self, rwdir):
         parent = git.Repo.init(os.path.join(rwdir, 'parent'))
-        sm_path = 'submodules/intermediate/one'
+        sm_path = join_path_native('submodules', 'intermediate', 'one')
         sm = parent.create_submodule('mymodules/myname', sm_path, url=self._small_repo_url())
         parent.index.commit("added submodule")
 
@@ -714,12 +714,12 @@ class TestSubmodule(TestBase):
         # end verify submodule 'style'
 
         # test move
-        new_sm_path = 'submodules/one'
+        new_sm_path = join_path_native('submodules', 'one')
         sm.move(new_sm_path)
         assert_exists(sm)
 
         # Add additional submodule level
-        csm = sm.module().create_submodule('nested-submodule', 'nested-submodule/working-tree',
+        csm = sm.module().create_submodule('nested-submodule', join_path_native('nested-submodule', 'working-tree'),
                                            url=self._small_repo_url())
         sm.module().index.commit("added nested submodule")
         sm_head_commit = sm.module().commit()
@@ -781,7 +781,7 @@ class TestSubmodule(TestBase):
 
         sm_mod = sm.module()
         if os.path.isfile(os.path.join(sm_mod.working_tree_dir, '.git')) == sm._need_gitfile_submodules(parent.git):
-            assert sm_mod.git_dir.endswith(".git/modules/" + new_sm_name)
+            assert sm_mod.git_dir.endswith(join_path_native('.git', 'modules', new_sm_name))
         # end
 
     @with_rw_directory
