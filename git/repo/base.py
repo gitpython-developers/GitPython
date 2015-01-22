@@ -75,7 +75,6 @@ def _expand_path(p):
 
 
 class Repo(object):
-
     """Represents a git repository and allows you to query references,
     gather commit information, generate diffs, create and clone repositories query
     the log.
@@ -758,7 +757,7 @@ class Repo(object):
         # git command automatically chdir into the directory
         git = Git(path)
         git.init(**kwargs)
-        return Repo(path)
+        return cls(path)
 
     @classmethod
     def _clone(cls, git, url, path, odb_default_type, progress, **kwargs):

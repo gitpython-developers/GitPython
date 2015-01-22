@@ -440,7 +440,7 @@ class Tutorials(TestBase):
         # [32-test_references_and_objects]
         private_key_file = os.path.join(rw_dir, 'id_rsa_deployment_key')
         with repo.git.sshkey(private_key_file):
-            # Note that we don't actually make the call here, as our test-setup doesn't permit it to 
+            # Note that we don't actually make the call here, as our test-setup doesn't permit it to
             # succeed.
             # It will in your case :)
             repo.remotes.origin.fetch
