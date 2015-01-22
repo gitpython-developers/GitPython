@@ -615,6 +615,9 @@ class Git(LazyMixin):
         else:
             return stdout_value
 
+    def environment(self):
+        return self._environment
+
     def set_environment(self, **kwargs):
         """
         Set environment variables for future git invocations. Return all changed
