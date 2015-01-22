@@ -618,7 +618,7 @@ class Git(LazyMixin):
     def environment(self):
         return self._environment
 
-    def set_environment(self, **kwargs):
+    def update_environment(self, **kwargs):
         """
         Set environment variables for future git invocations. Return all changed
         values in a format that can be passed back into this function to revert
@@ -626,8 +626,8 @@ class Git(LazyMixin):
 
         ``Examples``::
 
-            old_env = self.set_environment(PWD='/tmp')
-            self.set_environment(**old_env)
+            old_env = self.update_environment(PWD='/tmp')
+            self.update_environment(**old_env)
 
         :param kwargs: environment variables to use for git processes
         :return: dict that maps environment variables to their old values
@@ -648,23 +648,23 @@ class Git(LazyMixin):
         return old_env
 
     @contextmanager
-    def environment(self, **kwargs):
+    def with_environment(self, **kwargs):
         """
-        A context manager around the above set_environment to restore the
+        A context manager around the above update_environment to restore the
         environment back to its previous state after operation.
 
         ``Examples``::
 
-            with self.environment(GIT_SSH='/bin/ssh_wrapper'):
+            with self.with_environment(GIT_SSH='/bin/ssh_wrapper'):
                 repo.remotes.origin.fetch()
 
-        :param kwargs: see set_environment
+        :param kwargs: see update_environment
         """
-        old_env = self.set_environment(**kwargs)
+        old_env = self.update_environment(**kwargs)
         try:
             yield
         finally:
-            self.set_environment(**old_env)
+            self.update_environment(**old_env)
 
     @contextmanager
     def sshkey(self, sshkey_file):
@@ -682,7 +682,7 @@ class Git(LazyMixin):
         this_dir = os.path.dirname(__file__)
         ssh_wrapper = os.path.join(this_dir, '..', 'scripts', 'ssh_wrapper.py')
 
-        with self.environment(GIT_SSH_KEY_FILE=sshkey_file, GIT_SSH=ssh_wrapper):
+        with self.with_environment(GIT_SSH_KEY_FILE=sshkey_file, GIT_SSH=ssh_wrapper):
             yield
 
     def transform_kwargs(self, split_single_char_options=False, **kwargs):
