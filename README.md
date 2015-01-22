@@ -50,7 +50,7 @@ Then run:
 
 GitPython's git repo is available on GitHub, which can be browsed at [github](https://github.com/gitpython-developers/GitPython) and cloned like that:
 
-    git clone git://github.com/gitpython-developers/GitPython.git git-python
+    git clone https://github.com/gitpython-developers/GitPython
 
 ### Live Coding
 

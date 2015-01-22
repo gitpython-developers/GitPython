@@ -361,7 +361,7 @@ class Remote(LazyMixin, Iterable):
 
     def __getattr__(self, attr):
         """Allows to call this instance like
-        remote.special( *args, **kwargs) to call git-remote special self.name"""
+        remote.special( \*args, \*\*kwargs) to call git-remote special self.name"""
         if attr == "_config_reader":
             return super(Remote, self).__getattr__(attr)
 

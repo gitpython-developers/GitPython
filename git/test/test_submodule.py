@@ -264,6 +264,15 @@ class TestSubmodule(TestBase):
             ########################
             # must delete something
             self.failUnlessRaises(ValueError, csm.remove, module=False, configuration=False)
+
+            # module() is supposed to point to gitdb, which has a child-submodule whose URL is still pointing
+            # to github. To save time, we will change it to
+            csm.set_parent_commit(csm.repo.head.commit)
+            cw = csm.config_writer()
+            cw.set_value('url', self._small_repo_url())
+            cw.release()
+            csm.repo.index.commit("adjusted URL to point to local source, instead of the internet")
+
             # We have modified the configuration, hence the index is dirty, and the
             # deletion will fail
             # NOTE: As we did  a few updates in the meanwhile, the indices were reset
@@ -651,13 +660,10 @@ class TestSubmodule(TestBase):
                                   url=empty_repo_dir, no_checkout=checkout_mode and True or False)
         # end for each checkout mode
 
-    def _submodule_url(self):
-        return os.path.join(self.rorepo.working_tree_dir, 'git/ext/gitdb/gitdb/ext/smmap')
-
     @with_rw_directory
     def test_git_submodules(self, rwdir):
         parent = git.Repo.init(os.path.join(rwdir, 'parent'))
-        parent.git.submodule('add', self._submodule_url(), 'module')
+        parent.git.submodule('add', self._small_repo_url(), 'module')
         parent.index.commit("added submodule")
 
         assert len(parent.submodules) == 1
@@ -665,7 +671,7 @@ class TestSubmodule(TestBase):
 
         assert sm.exists() and sm.module_exists()
 
-        clone = git.Repo.clone_from(self._submodule_url(),
+        clone = git.Repo.clone_from(self._small_repo_url(),
                                     os.path.join(parent.working_tree_dir, 'existing-subrepository'))
         sm2 = parent.create_submodule('nongit-file-submodule', clone.working_tree_dir)
         assert len(parent.submodules) == 2
@@ -684,7 +690,7 @@ class TestSubmodule(TestBase):
     def test_git_submodule_compatibility(self, rwdir):
         parent = git.Repo.init(os.path.join(rwdir, 'parent'))
         sm_path = 'submodules/intermediate/one'
-        sm = parent.create_submodule('mymodules/myname', sm_path, url=self._submodule_url())
+        sm = parent.create_submodule('mymodules/myname', sm_path, url=self._small_repo_url())
         parent.index.commit("added submodule")
 
         def assert_exists(sm, value=True):
@@ -714,7 +720,7 @@ class TestSubmodule(TestBase):
 
         # Add additional submodule level
         csm = sm.module().create_submodule('nested-submodule', 'nested-submodule/working-tree',
-                                           url=self._submodule_url())
+                                           url=self._small_repo_url())
         sm.module().index.commit("added nested submodule")
         sm_head_commit = sm.module().commit()
         assert_exists(csm)
@@ -759,7 +765,7 @@ class TestSubmodule(TestBase):
     def test_rename(self, rwdir):
         parent = git.Repo.init(os.path.join(rwdir, 'parent'))
         sm_name = 'mymodules/myname'
-        sm = parent.create_submodule(sm_name, sm_name, url=self._submodule_url())
+        sm = parent.create_submodule(sm_name, sm_name, url=self._small_repo_url())
         parent.index.commit("Added submodule")
 
         assert sm.rename(sm_name) is sm and sm.name == sm_name
@@ -782,7 +788,7 @@ class TestSubmodule(TestBase):
     def test_branch_renames(self, rw_dir):
         # Setup initial sandbox:
         # parent repo has one submodule, which has all the latest changes
-        source_url = self._submodule_url()
+        source_url = self._small_repo_url()
         sm_source_repo = git.Repo.clone_from(source_url, os.path.join(rw_dir, 'sm-source'), b='master')
         parent_repo = git.Repo.init(os.path.join(rw_dir, 'parent'))
         sm = parent_repo.create_submodule('mysubmodule', 'subdir/submodule',

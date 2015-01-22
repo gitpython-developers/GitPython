@@ -264,7 +264,7 @@ class SymbolicReference(object):
         symbolic one.
 
         :param ref: SymbolicReference instance, Object instance or refspec string
-            Only if the ref is a SymbolicRef instance, we will point to it. Everthiny
+            Only if the ref is a SymbolicRef instance, we will point to it. Everthing
             else is dereferenced to obtain the actual object.
         :param logmsg: If set to a string, the message will be used in the reflog.
             Otherwise, a reflog entry is not written for the changed reference.
