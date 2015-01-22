@@ -103,17 +103,23 @@ class Repo(object):
     # represents the configuration level of a configuration file
     config_level = ("system", "user", "global", "repository")
 
+    # Subclass configuration
+    # Subclasses may easily bring in their own custom types by placing a constructor or type here
+    GitCommandWrapperType = Git
+
     def __init__(self, path=None, odbt=DefaultDBType, search_parent_directories=False):
         """Create a new Repo instance
 
-        :param path: is the path to either the root git directory or the bare git repo::
+        :param path:
+            the path to either the root git directory or the bare git repo::
 
-            repo = Repo("/Users/mtrier/Development/git-python")
-            repo = Repo("/Users/mtrier/Development/git-python.git")
-            repo = Repo("~/Development/git-python.git")
-            repo = Repo("$REPOSITORIES/Development/git-python.git")
+                repo = Repo("/Users/mtrier/Development/git-python")
+                repo = Repo("/Users/mtrier/Development/git-python.git")
+                repo = Repo("~/Development/git-python.git")
+                repo = Repo("$REPOSITORIES/Development/git-python.git")
 
-        :param odbt: Object DataBase type - a type which is constructed by providing
+        :param odbt:
+            Object DataBase type - a type which is constructed by providing
             the directory containing the database objects, i.e. .git/objects. It will
             be used to access all object data
         :raise InvalidGitRepositoryError:
@@ -170,7 +176,7 @@ class Repo(object):
         # END working dir handling
 
         self.working_dir = self._working_tree_dir or self.git_dir
-        self.git = Git(self.working_dir)
+        self.git = self.GitCommandWrapperType(self.working_dir)
 
         # special handling, in special times
         args = [join(self.git_dir, 'objects')]

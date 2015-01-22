@@ -148,8 +148,6 @@ def rev_parse(repo, rev):
     :param rev: git-rev-parse compatible revision specification as string, please see
         http://www.kernel.org/pub/software/scm/git/docs/git-rev-parse.html
         for details
-    :note: Currently there is no access to the rev-log, rev-specs may only contain
-        topological tokens such ~ and ^.
     :raise BadObject: if the given revision could not be found
     :raise ValueError: If rev couldn't be parsed
     :raise IndexError: If invalid reflog index is specified"""

@@ -14,6 +14,7 @@ class Tutorials(TestBase):
 
     @with_rw_directory
     def test_init_repo_object(self, rw_dir):
+        # [1-test_init_repo_object]
         from git import Repo
         join = os.path.join
 
@@ -36,9 +37,8 @@ class Tutorials(TestBase):
         # ![3-test_init_repo_object]
 
         # [4-test_init_repo_object]
-        repo.is_dirty()
-        # False
-        repo.untracked_files
+        assert not bare_repo.is_dirty()  # check the dirty state
+        repo.untracked_files             # retrieve a list of untracked files
         # ['my_untracked_file']
         # ![4-test_init_repo_object]
 
@@ -177,6 +177,297 @@ class Tutorials(TestBase):
         assert sm.module_exists()                             # The submodules working tree was checked out by update
         # ![14-test_init_repo_object]
 
+    @with_rw_directory
+    def test_references_and_objects(self, rw_dir):
+        # [1-test_references_and_objects]
+        import git
+        repo = git.Repo.clone_from(self._small_repo_url(), os.path.join(rw_dir, 'repo'), branch='master')
+
+        heads = repo.heads
+        master = heads.master       # lists can be accessed by name for convenience
+        master.commit               # the commit pointed to by head called master
+        master.rename('new_name')   # rename heads
+        master.rename('master')
+        # ![1-test_references_and_objects]
+
+        # [2-test_references_and_objects]
+        tags = repo.tags
+        tagref = tags[0]
+        tagref.tag                  # tags may have tag objects carrying additional information
+        tagref.commit               # but they always point to commits
+        repo.delete_tag(tagref)     # delete or
+        repo.create_tag("my_tag")   # create tags using the repo for convenience
+        # ![2-test_references_and_objects]
+
+        # [3-test_references_and_objects]
+        head = repo.head            # the head points to the active branch/ref
+        master = head.reference     # retrieve the reference the head points to
+        master.commit               # from here you use it as any other reference
+        # ![3-test_references_and_objects]
+
+        # [4-test_references_and_objects]
+        log = master.log()
+        log[0]                      # first (i.e. oldest) reflog entry
+        log[-1]                     # last (i.e. most recent) reflog entry
+        # ![4-test_references_and_objects]
+
+        # [5-test_references_and_objects]
+        new_branch = repo.create_head('new')     # create a new one
+        new_branch.commit = 'HEAD~10'            # set branch to another commit without changing index or working trees
+        repo.delete_head(new_branch)             # delete an existing head - only works if it is not checked out
+        # ![5-test_references_and_objects]
+
+        # [6-test_references_and_objects]
+        new_tag = repo.create_tag('my_new_tag', message='my message')
+        # You cannot change the commit a tag points to. Tags need to be re-created
+        self.failUnlessRaises(AttributeError, setattr, new_tag, 'commit', repo.commit('HEAD~1'))
+        repo.delete_tag(new_tag)
+        # ![6-test_references_and_objects]
+
+        # [7-test_references_and_objects]
+        new_branch = repo.create_head('another-branch')
+        repo.head.reference = new_branch
+        # ![7-test_references_and_objects]
+
+        # [8-test_references_and_objects]
+        hc = repo.head.commit
+        hct = hc.tree
+        hc != hct
+        hc != repo.tags[0]
+        hc == repo.head.reference.commit
+        # ![8-test_references_and_objects]
+
+        # [9-test_references_and_objects]
+        assert hct.type == 'tree'           # preset string type, being a class attribute
+        assert hct.size > 0                 # size in bytes
+        assert len(hct.hexsha) == 40
+        assert len(hct.binsha) == 20
+        # ![9-test_references_and_objects]
+
+        # [10-test_references_and_objects]
+        assert hct.path == ''                  # root tree has no path
+        assert hct.trees[0].path != ''         # the first contained item has one though
+        assert hct.mode == 0o40000              # trees have the mode of a linux directory
+        assert hct.blobs[0].mode == 0o100644   # blobs have a specific mode though comparable to a standard linux fs
+        # ![10-test_references_and_objects]
+
+        # [11-test_references_and_objects]
+        hct.blobs[0].data_stream.read()        # stream object to read data from
+        hct.blobs[0].stream_data(open(os.path.join(rw_dir, 'blob_data'), 'wb'))  # write data to given stream
+        # ![11-test_references_and_objects]
+
+        # [12-test_references_and_objects]
+        repo.commit('master')
+        repo.commit('v0.8.1')
+        repo.commit('HEAD~10')
+        # ![12-test_references_and_objects]
+
+        # [13-test_references_and_objects]
+        fifty_first_commits = list(repo.iter_commits('master', max_count=50))
+        assert len(fifty_first_commits) == 50
+        # this will return commits 21-30 from the commit list as traversed backwards master
+        ten_commits_past_twenty = list(repo.iter_commits('master', max_count=10, skip=20))
+        assert len(ten_commits_past_twenty) == 10
+        assert fifty_first_commits[20:30] == ten_commits_past_twenty
+        # ![13-test_references_and_objects]
+
+        # [14-test_references_and_objects]
+        headcommit = repo.head.commit
+        assert len(headcommit.hexsha) == 40
+        assert len(headcommit.parents) > 0
+        assert headcommit.tree.type == 'tree'
+        assert headcommit.author.name == 'Sebastian Thiel'
+        assert isinstance(headcommit.authored_date, int)
+        assert headcommit.committer.name == 'Sebastian Thiel'
+        assert isinstance(headcommit.committed_date, int)
+        assert headcommit.message != ''
+        # ![14-test_references_and_objects]
+
+        # [15-test_references_and_objects]
+        import time
+        time.asctime(time.gmtime(headcommit.committed_date))
+        time.strftime("%a, %d %b %Y %H:%M", time.gmtime(headcommit.committed_date))
+        # ![15-test_references_and_objects]
+
+        # [16-test_references_and_objects]
+        assert headcommit.parents[0].parents[0].parents[0] == repo.commit('master^^^')
+        # ![16-test_references_and_objects]
+
+        # [17-test_references_and_objects]
+        tree = repo.heads.master.commit.tree
+        assert len(tree.hexsha) == 40
+        # ![17-test_references_and_objects]
+
+        # [18-test_references_and_objects]
+        assert len(tree.trees) > 0          # trees are subdirectories
+        assert len(tree.blobs) > 0          # blobs are files
+        assert len(tree.blobs) + len(tree.trees) == len(tree)
+        # ![18-test_references_and_objects]
+
+        # [19-test_references_and_objects]
+        assert tree['smmap'] == tree / 'smmap'          # access by index and by sub-path
+        for entry in tree:                                         # intuitive iteration of tree members
+            print(entry)
+        blob = tree.trees[0].blobs[0]                              # let's get a blob in a sub-tree
+        assert blob.name
+        assert len(blob.path) < len(blob.abspath)
+        assert tree.trees[0].name + '/' + blob.name == blob.path   # this is how the relative blob path is generated
+        assert tree[blob.path] == blob                             # you can use paths like 'dir/file' in tree[...]
+        # ![19-test_references_and_objects]
+
+        # [20-test_references_and_objects]
+        assert tree / 'smmap' == tree['smmap']
+        assert tree / blob.path == tree[blob.path]
+        # ![20-test_references_and_objects]
+
+        # [21-test_references_and_objects]
+        # This example shows the various types of allowed ref-specs
+        assert repo.tree() == repo.head.commit.tree
+        past = repo.commit('HEAD~5')
+        assert repo.tree(past) == repo.tree(past.hexsha)
+        assert repo.tree('v0.8.1').type == 'tree'               # yes, you can provide any refspec - works everywhere
+        # ![21-test_references_and_objects]
+
+        # [22-test_references_and_objects]
+        assert len(tree) < len(list(tree.traverse()))
+        # ![22-test_references_and_objects]
+
+        # [23-test_references_and_objects]
+        index = repo.index
+        # The index contains all blobs in a flat list
+        assert len(list(index.iter_blobs())) == len([o for o in repo.head.commit.tree.traverse() if o.type == 'blob'])
+        # Access blob objects
+        for (path, stage), entry in index.entries.items():
+            pass
+        new_file_path = os.path.join(repo.working_tree_dir, 'new-file-name')
+        open(new_file_path, 'w').close()
+        index.add([new_file_path])                                             # add a new file to the index
+        index.remove(['LICENSE'])                                              # remove an existing one
+        assert os.path.isfile(os.path.join(repo.working_tree_dir, 'LICENSE'))  # working tree is untouched
+
+        assert index.commit("my commit message").type == 'commit'              # commit changed index
+        repo.active_branch.commit = repo.commit('HEAD~1')                      # forget last commit
+
+        from git import Actor
+        author = Actor("An author", "author@example.com")
+        committer = Actor("A committer", "committer@example.com")
+        # commit by commit message and author and committer
+        index.commit("my commit message", author=author, committer=committer)
+        # ![23-test_references_and_objects]
+
+        # [24-test_references_and_objects]
+        from git import IndexFile
+        # loads a tree into a temporary index, which exists just in memory
+        IndexFile.from_tree(repo, 'HEAD~1')
+        # merge two trees three-way into memory
+        merge_index = IndexFile.from_tree(repo, 'HEAD~10', 'HEAD', repo.merge_base('HEAD~10', 'HEAD'))
+        # and persist it
+        merge_index.write(os.path.join(rw_dir, 'merged_index'))
+        # ![24-test_references_and_objects]
+
+        # [25-test_references_and_objects]
+        empty_repo = git.Repo.init(os.path.join(rw_dir, 'empty'))
+        origin = empty_repo.create_remote('origin', repo.remotes.origin.url)
+        assert origin.exists()
+        assert origin == empty_repo.remotes.origin == empty_repo.remotes['origin']
+        origin.fetch()                  # assure we actually have data. fetch() returns useful information
+        # Setup a local tracking branch of a remote branch
+        empty_repo.create_head('master', origin.refs.master).set_tracking_branch(origin.refs.master)
+        origin.rename('new_origin')   # rename remotes
+        # push and pull behaves similarly to `git push|pull`
+        origin.pull()
+        origin.push()
+        # assert not empty_repo.delete_remote(origin).exists()     # create and delete remotes
+        # ![25-test_references_and_objects]
+
+        # [26-test_references_and_objects]
+        assert origin.url == repo.remotes.origin.url
+        cw = origin.config_writer
+        cw.set("pushurl", "other_url")
+        cw.release()
+
+        # Please note that in python 2, writing origin.config_writer.set(...) is totally safe.
+        # In py3 __del__ calls can be delayed, thus not writing changes in time.
+        # ![26-test_references_and_objects]
+
+        # [27-test_references_and_objects]
+        hcommit = repo.head.commit
+        hcommit.diff()                  # diff tree against index
+        hcommit.diff('HEAD~1')          # diff tree against previous tree
+        hcommit.diff(None)              # diff tree against working tree
+        
+        index = repo.index
+        index.diff()                    # diff index against itself yielding empty diff
+        index.diff(None)                # diff index against working copy
+        index.diff('HEAD')              # diff index against current HEAD tree
+        # ![27-test_references_and_objects]
+
+        # [28-test_references_and_objects]
+        # Traverse added Diff objects only
+        for diff_added in hcommit.diff('HEAD~1').iter_change_type('A'):
+            print(diff_added)
+        # ![28-test_references_and_objects]
+
+        # [29-test_references_and_objects]
+        # Reset our working tree 10 commits into the past
+        past_branch = repo.create_head('past_branch', 'HEAD~10')
+        repo.head.reference = past_branch
+        assert not repo.head.is_detached
+        # reset the index and working tree to match the pointed-to commit
+        repo.head.reset(index=True, working_tree=True)
+
+        # To detach your head, you have to point to a commit directy
+        repo.head.reference = repo.commit('HEAD~5')
+        assert repo.head.is_detached
+        # now our head points 15 commits into the past, whereas the working tree
+        # and index are 10 commits in the past
+        # ![29-test_references_and_objects]
+
+        # [30-test_references_and_objects]
+        # checkout the branch using git-checkout. It will fail as the working tree appears dirty
+        self.failUnlessRaises(git.GitCommandError, repo.heads.master.checkout)
+        repo.heads.past_branch.checkout()
+        # ![30-test_references_and_objects]
+
+        # [31-test_references_and_objects]
+        git = repo.git
+        git.checkout('HEAD', b="my_new_branch")         # create a new branch
+        git.branch('another-new-one')
+        git.branch('-D', 'another-new-one')             # pass strings for full control over argument order
+        git.for_each_ref()                              # '-' becomes '_' when calling it
+        # ![31-test_references_and_objects]
+
+        # [32-test_references_and_objects]
+        private_key_file = os.path.join(rw_dir, 'id_rsa_deployment_key')
+        with repo.git.sshkey(private_key_file):
+            # Note that we don't actually make the call here, as our test-setup doesn't permit it to 
+            # succeed.
+            # It will in your case :)
+            repo.remotes.origin.fetch
+        # ![32-test_references_and_objects]
+
+    def test_submodules(self):
+        # [1-test_submodules]
+        repo = self.rorepo
+        sms = repo.submodules
+
+        assert len(sms) == 1
+        sm = sms[0]
+        assert sm.name == 'gitdb'                         # git-python has gitdb as single submodule ...
+        assert sm.children()[0].name == 'smmap'           # ... which has smmap as single submodule
+        
+        # The module is the repository referenced by the submodule
+        assert sm.module_exists()                         # the module is available, which doesn't have to be the case.
+        assert sm.module().working_tree_dir.endswith('gitdb')
+        # the submodule's absolute path is the module's path
+        assert sm.abspath == sm.module().working_tree_dir
+        assert len(sm.hexsha) == 40                       # Its sha defines the commit to checkout
+        assert sm.exists()                                # yes, this submodule is valid and exists
+        # read its configuration conveniently
+        assert sm.config_reader().get_value('path') == sm.path
+        assert len(sm.children()) == 1                    # query the submodule hierarchy
+        # ![1-test_submodules]
+        
     @with_rw_directory
     def test_add_file_and_commit(self, rw_dir):
         import git

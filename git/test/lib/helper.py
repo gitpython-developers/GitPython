@@ -275,6 +275,10 @@ class TestBase(TestCase):
       of the project history ( to assure tests don't fail for others ).
     """
 
+    def _small_repo_url(self):
+        """:return" a path to a small, clonable repository"""
+        return os.path.join(self.rorepo.working_tree_dir, 'git/ext/gitdb/gitdb/ext/smmap')
+
     @classmethod
     def setUpClass(cls):
         """

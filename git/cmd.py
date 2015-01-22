@@ -545,7 +545,6 @@ class Git(LazyMixin):
         # Start the process
         env = os.environ.copy()
         env["LC_MESSAGES"] = "C"
-        print(self._environment)
         env.update(self._environment)
 
         proc = Popen(command,

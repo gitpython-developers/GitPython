@@ -7,7 +7,8 @@
 from git.test.lib import (
     TestBase,
     with_rw_repo,
-    with_rw_and_rw_remote_repo
+    with_rw_and_rw_remote_repo,
+    fixture
 )
 from git import (
     RemoteProgress,
@@ -520,3 +521,16 @@ class TestRemote(TestBase):
 
         assert type(fi.ref) is Reference
         assert fi.ref.path == "refs/something/branch"
+
+    def test_uncommon_branch_names(self):
+        stderr_lines = fixture('uncommon_branch_prefix_stderr').decode('ascii').splitlines()
+        fetch_lines = fixture('uncommon_branch_prefix_FETCH_HEAD').decode('ascii').splitlines()
+
+        # The contents of the files above must be fetched with a custom refspec:
+        # +refs/pull/*:refs/heads/pull/*
+        res = [FetchInfo._from_line('ShouldntMatterRepo', stderr, fetch_line)
+               for stderr, fetch_line in zip(stderr_lines, fetch_lines)]
+        assert len(res)
+        assert res[0].remote_ref_path == 'refs/pull/1/head'
+        assert res[0].ref.path == 'refs/heads/pull/1/head'
+        assert isinstance(res[0].ref, Head)

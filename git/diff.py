@@ -42,7 +42,7 @@ class Diffable(object):
 
     def diff(self, other=Index, paths=None, create_patch=False, **kwargs):
         """Creates diffs between two items being trees, trees and index or an
-        index and the working tree.
+        index and the working tree. It will detect renames automatically.
 
         :param other:
             Is the item to compare us with.
@@ -68,8 +68,6 @@ class Diffable(object):
         :return: git.DiffIndex
 
         :note:
-            Rename detection will only work if create_patch is True.
-
             On a bare repository, 'other' needs to be provided as Index or as
             as Tree/Commit, or a git command error will occour"""
         args = list()

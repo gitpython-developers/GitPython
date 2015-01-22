@@ -32,7 +32,8 @@ class BlobFilter(object):
     __slots__ = 'paths'
 
     def __init__(self, paths):
-        """:param paths:
+        """
+        :param paths:
             tuple or list of paths which are either pointing to directories or
             to files relative to the current repository
         """

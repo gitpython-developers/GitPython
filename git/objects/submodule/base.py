@@ -770,7 +770,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
             an inconsistent state
         :raise InvalidGitRepositoryError: thrown if the repository cannot be deleted
         :raise OSError: if directories or files could not be removed"""
-        if not (module + configuration):
+        if not (module or configuration):
             raise ValueError("Need to specify to delete at least the module, or the configuration")
         # END handle parameters
 
@@ -784,7 +784,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
         if configuration and not dry_run and nc > 0:
             # Assure we don't leave the parent repository in a dirty state, and commit our changes
             # It's important for recursive, unforced, deletions to work as expected
-            self.module().index.commit("Removed submodule '%s'" % self.name)
+            self.module().index.commit("Removed at least one of child-modules of '%s'" % self.name)
         # end handle recursion
 
         # DELETE REPOSITORY WORKING TREE

@@ -14,6 +14,7 @@ from .config import (
     cp,
 )
 from .refs import (
+    Head,
     Reference,
     RemoteReference,
     SymbolicReference,
@@ -177,8 +178,9 @@ class FetchInfo(object):
      info.note          # additional notes given by git-fetch intended for the user
      info.old_commit    # if info.flags & info.FORCED_UPDATE|info.FAST_FORWARD,
                         # field is set to the previous location of ref, otherwise None
+     info.remote_ref_path # The path from which we fetched on the remote. It's the remote's version of our info.ref
     """
-    __slots__ = ('ref', 'old_commit', 'flags', 'note')
+    __slots__ = ('ref', 'old_commit', 'flags', 'note', 'remote_ref_path')
 
     NEW_TAG, NEW_HEAD, HEAD_UPTODATE, TAG_UPDATE, REJECTED, FORCED_UPDATE, \
         FAST_FORWARD, ERROR = [1 << x for x in range(8)]
@@ -193,7 +195,7 @@ class FetchInfo(object):
                  '=': HEAD_UPTODATE,
                  ' ': FAST_FORWARD}
 
-    def __init__(self, ref, flags, note='', old_commit=None):
+    def __init__(self, ref, flags, note='', old_commit=None, remote_ref_path=None):
         """
         Initialize a new instance
         """
@@ -201,6 +203,7 @@ class FetchInfo(object):
         self.flags = flags
         self.note = note
         self.old_commit = old_commit
+        self.remote_ref_path = remote_ref_path
 
     def __str__(self):
         return self.name
@@ -243,7 +246,7 @@ class FetchInfo(object):
             new_hex_sha, fetch_operation, fetch_note = fetch_line.split("\t")
             ref_type_name, fetch_note = fetch_note.split(' ', 1)
         except ValueError:  # unpack error
-            raise ValueError("Failed to parse FETCH__HEAD line: %r" % fetch_line)
+            raise ValueError("Failed to parse FETCH_HEAD line: %r" % fetch_line)
 
         # parse flags from control_character
         flags = 0
@@ -288,6 +291,11 @@ class FetchInfo(object):
             # note: remote-tracking is just the first part of the 'remote-tracking branch' token.
             # We don't parse it correctly, but its enough to know what to do, and its new in git 1.7something
             ref_type = RemoteReference
+        elif '/' in ref_type_name:
+            # If the fetch spec look something like this '+refs/pull/*:refs/heads/pull/*', and is thus pretty
+            # much anything the user wants, we will have trouble to determine what's going on
+            # For now, we assume the local ref is a Head
+            ref_type = Head
         else:
             raise TypeError("Cannot handle reference type: %r" % ref_type_name)
         # END handle ref type
@@ -325,7 +333,7 @@ class FetchInfo(object):
 
         note = (note and note.strip()) or ''
 
-        return cls(remote_local_ref, flags, note, old_commit)
+        return cls(remote_local_ref, flags, note, old_commit, local_remote_ref)
 
 
 class Remote(LazyMixin, Iterable):
@@ -361,7 +369,7 @@ class Remote(LazyMixin, Iterable):
 
     def __getattr__(self, attr):
         """Allows to call this instance like
-        remote.special( *args, **kwargs) to call git-remote special self.name"""
+        remote.special( \*args, \*\*kwargs) to call git-remote special self.name"""
         if attr == "_config_reader":
             return super(Remote, self).__getattr__(attr)
 
