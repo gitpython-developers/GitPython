@@ -517,7 +517,7 @@ class Remote(LazyMixin, Iterable):
             Additional arguments passed to git-remote update
 
         :return: self """
-        self.repo.git.remote("update", self.name)
+        self.repo.git.remote("update", self.name, **kwargs)
         return self
 
     def _get_fetch_info_from_stderr(self, proc, progress):
