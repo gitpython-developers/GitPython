@@ -445,6 +445,19 @@ class TestRemote(TestBase):
         origin = rw_repo.remote('origin')
         assert origin == rw_repo.remotes.origin
 
+        # Verify we can handle prunes when fetching
+        # stderr lines look like this:  x [deleted]         (none)     -> origin/experiment-2012
+        # These should just be skipped
+        num_deleted = False
+        for branch in remote_repo.heads:
+            if branch.name != 'master':
+                branch.delete(remote_repo, branch, force=True)
+                num_deleted += 1
+            # end
+        # end for each branch
+        assert num_deleted > 0
+        assert len(rw_repo.remotes.origin.fetch(prune=True)) == 1, "deleted everything but master"
+
     @with_rw_repo('HEAD', bare=True)
     def test_creation_and_removal(self, bare_rw_repo):
         new_name = "test_new_one"
