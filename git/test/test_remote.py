@@ -448,6 +448,11 @@ class TestRemote(TestBase):
         # Verify we can handle prunes when fetching
         # stderr lines look like this:  x [deleted]         (none)     -> origin/experiment-2012
         # These should just be skipped
+        # If we don't have a manual checkout, we can't actually assume there are any non-master branches
+        remote_repo.create_head("myone_for_deletion")
+        # Get the branch - to be pruned later
+        origin.fetch()
+
         num_deleted = False
         for branch in remote_repo.heads:
             if branch.name != 'master':
