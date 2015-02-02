@@ -8,14 +8,11 @@ The object database implementation is optimized for handling large quantities of
 
 ### REQUIREMENTS
 
-* Git ( tested with 1.8.3.4 )
-* Python Nose - used for running the tests
-    -  Tested with nose 1.3.0
-* Mock by Michael Foord used for tests
-    - Tested with 1.0.1
-* Coverage - used for tests coverage
+GitPython needs the `git` executable to be installed on the system and available in your `PATH` for most operations. If it is not in your `PATH`, you can help GitPython find it by setting the `GIT_PYTHON_GIT_EXECUTABLE=<path/to/git>` environment variable.
 
-The list of dependencies are listed in /requirements.txt and /test-requirements.txt. The installer takes care of installing them for you though.
+* Git (1.7.x or newer)
+
+The list of dependencies are listed in `./requirements.txt` and `./test-requirements.txt`. The installer takes care of installing them for you.
 
 ### INSTALL
 
@@ -62,8 +59,16 @@ You can watch me fix issues or implement new features [live on Twitch][twitch-ch
 ### INFRASTRUCTURE
 
 * [User Documentation](http://gitpython.readthedocs.org)
+* [Questions and Answers](http://stackexchange.com/filters/167317/gitpython)
+ * Please post on stackoverflow and use the `gitpython` tag
 * [Mailing List](http://groups.google.com/group/git-python)
+ * Please use it for everything that doesn't fit Stackoverflow.
 * [Issue Tracker](https://github.com/gitpython-developers/GitPython/issues)
+  * Post reproducible bugs and feature requests as a new issue. Please be sure to provide the following information if posting bugs:
+    * GitPython version (e.g. `import git; git.__version__`)
+    * Python version (e.g. `python --version`)
+    * The encountered stack-trace, if applicable
+    * Enough information to allow reproducing the issue
 
 ### LICENSE
 
