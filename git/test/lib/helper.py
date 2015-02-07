@@ -15,7 +15,7 @@ import io
 from git import Repo, Remote, GitCommandError, Git
 from git.compat import string_types
 
-GIT_REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+GIT_REPO = os.environ.get("GIT_PYTHON_TEST_GIT_REPO_BASE", os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
 
 __all__ = (
     'fixture_path', 'fixture', 'absolute_project_path', 'StringProcessAdapter',
