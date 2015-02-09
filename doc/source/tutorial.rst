@@ -331,12 +331,11 @@ You can easily access configuration information for a remote by accessing option
     :start-after: # [26-test_references_and_objects]
     :end-before: # ![26-test_references_and_objects]
 
-You can also specify per-call custom environments using a new context manager on the Git command
+You can also specify per-call custom environments using a new context manager on the Git command, e.g. for using a specific SSH key.
 
-.. literalinclude:: ../../git/test/test_docs.py
-    :language: python
-    :start-after: # [32-test_references_and_objects]
-    :end-before: # ![32-test_references_and_objects]    
+    ssh_cmd = 'ssh -i id_deployment_key'
+    with repo.git.custom_environment(GIT_SSH_COMMAND=ssh_cmd):
+        repo.remotes.origin.fetch()
     
 Submodule Handling
 ******************
