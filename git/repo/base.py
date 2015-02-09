@@ -121,6 +121,11 @@ class Repo(object):
             Object DataBase type - a type which is constructed by providing
             the directory containing the database objects, i.e. .git/objects. It will
             be used to access all object data
+        :param search_parent_directories:
+            if True, all parent directories will be searched for a valid repo as well.
+
+            Please note that this was the default behaviour in older versions of GitPython,
+            which is considered a bug though.
         :raise InvalidGitRepositoryError:
         :raise NoSuchPathError:
         :return: git.Repo """
