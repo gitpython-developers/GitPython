@@ -72,6 +72,7 @@ def run_commit_hook(name, index):
                            env=env,
                            stdout=subprocess.PIPE,
                            stderr=subprocess.PIPE,
+                           cwd=index.repo.working_dir,
                            close_fds=(os.name == 'posix'))
     stdout, stderr = cmd.communicate()
     cmd.stdout.close()
