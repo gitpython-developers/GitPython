@@ -5,6 +5,7 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 import os
+import sys
 import tempfile
 
 import git.objects.base as base
@@ -116,6 +117,14 @@ class TestBase(TestBase):
         filename = u"שלום.txt"
 
         file_path = os.path.join(rw_repo.working_dir, filename)
+
+        # verify first that we could encode file name in this environment
+        try:
+            file_path.encode(sys.getfilesystemencoding())
+        except UnicodeEncodeError:
+            from nose import SkipTest
+            raise SkipTest("Environment doesn't support unicode filenames")
+
         open(file_path, "wb").write(b'something')
 
         if os.name == 'nt':
