@@ -10,8 +10,6 @@ from stat import (
     S_IFREG,
 )
 
-S_IFGITLINK = S_IFLNK | S_IFDIR     # a submodule
-
 from io import BytesIO
 import os
 import subprocess
@@ -33,7 +31,6 @@ from .typ import (
     CE_NAMEMASK,
     CE_STAGESHIFT
 )
-CE_NAMEMASK_INV = ~CE_NAMEMASK
 
 from .util import (
     pack,
@@ -46,6 +43,9 @@ from git.compat import (
     defenc,
     force_text
 )
+
+S_IFGITLINK = S_IFLNK | S_IFDIR     # a submodule
+CE_NAMEMASK_INV = ~CE_NAMEMASK
 
 __all__ = ('write_cache', 'read_cache', 'write_tree_from_cache', 'entry_key',
            'stat_mode_to_index_mode', 'S_IFGITLINK', 'run_commit_hook', 'hook_path')

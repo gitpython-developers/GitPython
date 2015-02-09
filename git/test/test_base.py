@@ -120,7 +120,7 @@ class TestBase(TestBase):
 
         # verify first that we could encode file name in this environment
         try:
-            _ = file_path.encode(sys.getfilesystemencoding())
+            file_path.encode(sys.getfilesystemencoding())
         except UnicodeEncodeError:
             from nose import SkipTest
             raise SkipTest("Environment doesn't support unicode filenames")
