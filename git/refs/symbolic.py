@@ -140,6 +140,7 @@ class SymbolicReference(object):
             # Don't only split on spaces, but on whitespace, which allows to parse lines like
             # 60b64ef992065e2600bfef6187a97f92398a9144                branch 'master' of git-server:/path/to/repo
             tokens = value.split()
+            assert(len(tokens) != 0)
         except (OSError, IOError):
             # Probably we are just packed, find our entry in the packed refs file
             # NOTE: We are not a symbolic ref if we are in a packed file, as these
@@ -582,6 +583,8 @@ class SymbolicReference(object):
             # END prune non-refs folders
 
             for f in files:
+                if f == 'packed-refs':
+                    continue
                 abs_path = to_native_path_linux(join_path(root, f))
                 rela_paths.add(abs_path.replace(to_native_path_linux(repo.git_dir) + '/', ""))
             # END for each file in root directory
