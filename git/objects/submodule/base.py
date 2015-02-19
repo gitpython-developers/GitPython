@@ -578,11 +578,13 @@ class Submodule(util.IndexObject, Iterable, Traversable):
                     base_commit = mrepo.merge_base(mrepo.head.commit, hexsha)
                     if len(base_commit) == 0 or base_commit[0].hexsha == hexsha:
                         if force:
-                            log.debug("Will force checkout or reset on local branch that is possibly in the future of"
-                                      + "the commit it will be checked out to, effectively 'forgetting' new commits")
+                            msg = "Will force checkout or reset on local branch that is possibly in the future of"
+                            msg += "the commit it will be checked out to, effectively 'forgetting' new commits"
+                            log.debug(msg)
                         else:
-                            log.info("Skipping %s on branch '%s' of submodule repo '%s' as it contains "
-                                     + "un-pushed commits", is_detached and "checkout" or "reset", mrepo.head, mrepo)
+                            msg = "Skipping %s on branch '%s' of submodule repo '%s' as it contains un-pushed commits"
+                            msg %= (is_detached and "checkout" or "reset", mrepo.head, mrepo)
+                            log.info(msg)
                             may_reset = False
                         # end handle force
                     # end handle if we are in the future
