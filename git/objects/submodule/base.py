@@ -37,7 +37,7 @@ import git
 
 import os
 import logging
-import tempfile
+import uuid
 
 __all__ = ["Submodule", "UpdateProgress"]
 
@@ -992,7 +992,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
             source_dir = mod.git_dir
             # Let's be sure the submodule name is not so obviously tied to a directory
             if destination_module_abspath.startswith(mod.git_dir):
-                tmp_dir = self._module_abspath(self.repo, self.path, os.path.basename(tempfile.mkdtemp()))
+                tmp_dir = self._module_abspath(self.repo, self.path, str(uuid.uuid4()))
                 os.renames(source_dir, tmp_dir)
                 source_dir = tmp_dir
             # end handle self-containment
