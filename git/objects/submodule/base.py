@@ -136,7 +136,8 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 
     @classmethod
     def _need_gitfile_submodules(cls, git):
-        return git.version_info[:3] >= (1, 8, 0)
+        # on debian wheezy, it seems to already support git files at this version. Maybe even earler, who knows
+        return git.version_info[:3] >= (1, 7, 10)
 
     def __eq__(self, other):
         """Compare with another submodule"""
