@@ -1,4 +1,4 @@
-language: python
+language: erlang
 #python:
 #  - "2.6"
 #  - "2.7"
@@ -47,6 +47,7 @@ install:
   - git config --global user.name "Travis Runner"
   - wget -q http://neuro.debian.net/travis-chroot && chmod +x travis-chroot
   - ./travis-chroot prepare # before ulimit hits hard ;-)
+  - ./travis-chroot run pip install -r test-requirements.txt
 script: 
   # Make sure we limit open handles to see if we are leaking them
   - ulimit -n 96
