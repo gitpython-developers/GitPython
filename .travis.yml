@@ -26,7 +26,7 @@ install:
   - git config --global user.name "Travis Runner"
 script: 
   # Make sure we limit open handles to see if we are leaking them
-  - ulimit -n 64
+  - ulimit -n 96
   - ulimit -n
   - nosetests -v --with-coverage
   - flake8
