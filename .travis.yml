@@ -21,7 +21,7 @@ env:
   - DIST=debian REL=sid ARCH=amd64 COVERAGE=1
   #- DIST=ubuntu REL=precise ARCH=i386
   - DIST=ubuntu REL=precise ARCH=amd64
-  #- DIST=ubuntu REL=saucy ARCH=i386
+  - DIST=ubuntu REL=saucy ARCH=i386
   #- DIST=ubuntu REL=saucy ARCH=amd64
   #- DIST=ubuntu REL=trusty ARCH=i386
   - DIST=ubuntu REL=trusty ARCH=amd64
