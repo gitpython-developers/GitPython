@@ -1,16 +1,16 @@
 language: python
-python:
-  - "2.6"
-  - "2.7"
-  - "3.3"
-  - "3.4"
-  # - "pypy" - won't work as smmap doesn't work (see gitdb/.travis.yml for details)
+#python:
+#  - "2.6"
+#  - "2.7"
+#  - "3.3"
+#  - "3.4"
+#  # - "pypy" - won't work as smmap doesn't work (see gitdb/.travis.yml for details)
 env:
  matrix:
   # Do not be greedy and enable all at once -- free public services
   # might start puking into your face.  Select known to
   # fail/representative set:
-  - DIST= REL= ARCH=
+  #- DIST= REL= ARCH=
   #- DIST=debian REL=wheezy ARCH=i386
   - DIST=debian REL=wheezy ARCH=amd64
   - DIST=debian REL=jessie ARCH=i386
@@ -43,12 +43,12 @@ install:
   # as commits are performed with the default user, it needs to be set for travis too
   - git config --global user.email "travis@ci.com"
   - git config --global user.name "Travis Runner"
-  - if [ ! -z "$DIST" ]; then  wget -q http://neuro.debian.net/travis-chroot && chmod +x travis-chroot; fi
+  - wget -q http://neuro.debian.net/travis-chroot && chmod +x travis-chroot
 script: 
   # Make sure we limit open handles to see if we are leaking them
   - ulimit -n 96
   - ulimit -n
-  - if [ -z "$DIST" ]; then nosetests -v --with-coverage; else ./travis-chroot run nosetests -v --with-coverage; fi
+  - ./travis-chroot run nosetests -v --with-coverage
   - flake8
   - cd doc && make html
 after_success:
