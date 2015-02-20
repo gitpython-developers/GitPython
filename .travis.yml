@@ -44,6 +44,7 @@ install:
   - git config --global user.email "travis@ci.com"
   - git config --global user.name "Travis Runner"
   - wget -q http://neuro.debian.net/travis-chroot && chmod +x travis-chroot
+  - ./travis-chroot prepare # before ulimit hits hard ;-)
 script: 
   # Make sure we limit open handles to see if we are leaking them
   - ulimit -n 96
