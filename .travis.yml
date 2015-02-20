@@ -6,6 +6,8 @@ language: python
 #  - "3.4"
 #  # - "pypy" - won't work as smmap doesn't work (see gitdb/.travis.yml for details)
 env:
+ global:
+  - NEURODEBIAN=1  # I have generated chroots only for neurodebian-enabled everything
  matrix:
   # Do not be greedy and enable all at once -- free public services
   # might start puking into your face.  Select known to
