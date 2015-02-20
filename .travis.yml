@@ -32,7 +32,7 @@ git:
 install:
   - git submodule update --init --recursive
   - git fetch --tags
-  - pip install coveralls flake8 sphinx
+  #- pip install coveralls flake8 sphinx
 
   # generate some reflog as git-python tests need it (in master)
   - git tag __testing_point__
@@ -47,13 +47,15 @@ install:
   - git config --global user.name "Travis Runner"
   - wget -q http://neuro.debian.net/travis-chroot && chmod +x travis-chroot
   - ./travis-chroot prepare # before ulimit hits hard ;-)
-  - ./travis-chroot run pip install -r test-requirements.txt
+  - ./travis-chroot run sudo apt-get install python-nose python-mock
+  #- pip install -r test-requirements.txt
 script: 
   # Make sure we limit open handles to see if we are leaking them
   - ulimit -n 96
   - ulimit -n
-  - ./travis-chroot run nosetests -v --with-coverage
-  - flake8
-  - cd doc && make html
+  - ./travis-chroot run nosetests -v
+  #--with-coverage
+  #- flake8
+  #- cd doc && make html
 after_success:
   - coveralls
