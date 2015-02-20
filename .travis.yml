@@ -48,6 +48,7 @@ install:
   - wget -q http://neuro.debian.net/travis-chroot && chmod +x travis-chroot
   - ./travis-chroot prepare # before ulimit hits hard ;-)
   - ./travis-chroot run sudo apt-get install python-nose python-mock
+  - ./travis-chroot run sudo apt-get install git
   #- pip install -r test-requirements.txt
 script: 
   # Make sure we limit open handles to see if we are leaking them
