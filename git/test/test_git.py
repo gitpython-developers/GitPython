@@ -155,6 +155,10 @@ class TestGit(TestBase):
     def test_change_to_transform_kwargs_does_not_break_command_options(self):
         self.git.log(n=1)
 
+    def test_insert_after_kwarg_raises(self):
+        # This isn't a complete add command, which doesn't matter here
+        self.failUnlessRaises(ValueError, self.git.remote, 'add', insert_kwargs_after='foo')
+
     def test_env_vars_passed_to_git(self):
         editor = 'non_existant_editor'
         with mock.patch.dict('os.environ', {'GIT_EDITOR': editor}):

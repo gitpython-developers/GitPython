@@ -753,11 +753,23 @@ class Git(LazyMixin):
             except KeyError:
                 pass
 
+        insert_after_this_arg = kwargs.pop('insert_kwargs_after', None)
+
         # Prepare the argument list
         opt_args = self.transform_kwargs(**kwargs)
         ext_args = self.__unpack_args([a for a in args if a is not None])
 
-        args = opt_args + ext_args
+        if insert_after_this_arg is None:
+            args = opt_args + ext_args
+        else:
+            try:
+                index = ext_args.index(insert_after_this_arg)
+            except ValueError:
+                raise ValueError("Couldn't find argument '%s' in args %s to insert kwargs after"
+                                 % (insert_after_this_arg, str(ext_args)))
+            # end handle error
+            args = ext_args[:index + 1] + opt_args + ext_args[index + 1:]
+        # end handle kwargs
 
         def make_call():
             call = [self.GIT_PYTHON_GIT_EXECUTABLE]

@@ -477,7 +477,9 @@ class Remote(LazyMixin, Iterable):
         :param kwargs: Additional arguments to be passed to the git-remote add command
         :return: New Remote instance
         :raise GitCommandError: in case an origin with that name already exists"""
-        repo.git.remote("add", name, url, **kwargs)
+        scmd = 'add'
+        kwargs['insert_kwargs_after'] = scmd
+        repo.git.remote(scmd, name, url, **kwargs)
         return cls(repo, name)
 
     # add is an alias
@@ -517,7 +519,9 @@ class Remote(LazyMixin, Iterable):
             Additional arguments passed to git-remote update
 
         :return: self """
-        self.repo.git.remote("update", self.name, **kwargs)
+        scmd = 'update'
+        kwargs['insert_kwargs_after'] = scmd
+        self.repo.git.remote(scmd, self.name, **kwargs)
         return self
 
     def _get_fetch_info_from_stderr(self, proc, progress):

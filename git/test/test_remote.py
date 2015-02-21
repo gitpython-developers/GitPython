@@ -486,6 +486,9 @@ class TestRemote(TestBase):
             # END if deleted remote matches existing remote's name
         # END for each remote
 
+        # Issue #262 - the next call would fail if bug wasn't fixed
+        bare_rw_repo.create_remote('bogus', '/bogus/path', mirror='push')
+
     def test_fetch_info(self):
         # assure we can handle remote-tracking branches
         fetch_info_line_fmt = "c437ee5deb8d00cf02f03720693e4c802e99f390	not-for-merge	%s '0.3' of "
