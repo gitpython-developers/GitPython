@@ -458,7 +458,7 @@ class Remote(LazyMixin, Iterable):
             'refs' property for an example.
 
             To make things more complicated, it can be possble for the list to include
-            other kinds of references, for example, tag references, if these are stale 
+            other kinds of references, for example, tag references, if these are stale
             as well. This is a fix for the issue described here:
             https://github.com/gitpython-developers/GitPython/issues/260
             """
