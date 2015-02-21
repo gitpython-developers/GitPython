@@ -15,11 +15,12 @@ install:
   - pip install coveralls flake8 sphinx
 
   # generate some reflog as git-python tests need it (in master)
+  - git tag __testing_point__
   - git checkout master
   - git reset --hard HEAD~1
   - git reset --hard HEAD~1
   - git reset --hard HEAD~1
-  - git reset --hard origin/master
+  - git reset --hard __testing_point__
 
   # as commits are performed with the default user, it needs to be set for travis too
   - git config --global user.email "travis@ci.com"
