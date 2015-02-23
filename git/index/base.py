@@ -625,6 +625,10 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
                 strings denote a relative or absolute path into the repository pointing to
                 an existing file, i.e. CHANGES, lib/myfile.ext, '/home/gitrepo/lib/myfile.ext'.
 
+                Absolute paths must start with working tree directory of this index's repository
+                to be considered valid. For example, if it was initialized with a non-normalized path, like
+                `/root/repo/../repo`, absolute paths to be added must start with `/root/repo/../repo`.
+
                 Paths provided like this must exist. When added, they will be written
                 into the object database.
 
