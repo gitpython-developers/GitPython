@@ -19,15 +19,19 @@ from git import (
     Actor,
 )
 from gitdb import IStream
+from gitdb.test.lib import with_rw_directory
 from git.compat import (
     string_types,
     text_type
 )
+from git import Repo
+from git.repo.fun import touch
 
 from io import BytesIO
 import time
 import sys
 import re
+import os
 
 
 def assert_commit_serialization(rwrepo, commit_id, print_performance_info=False):
@@ -218,6 +222,15 @@ class TestCommit(TestBase):
         )
         for sha1, commit in zip(expected_ids, commits):
             assert_equal(sha1, commit.hexsha)
+
+    @with_rw_directory
+    def test_ambiguous_arg_iteration(self, rw_dir):
+        rw_repo = Repo.init(os.path.join(rw_dir, 'test_ambiguous_arg'))
+        path = os.path.join(rw_repo.working_tree_dir, 'master')
+        touch(path)
+        rw_repo.index.add([path])
+        rw_repo.index.commit('initial commit')
+        list(rw_repo.iter_commits(rw_repo.head.ref))  # should fail unless bug is fixed
 
     def test_count(self):
         assert self.rorepo.tag('refs/tags/0.1.5').commit.count() == 143
