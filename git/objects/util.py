@@ -216,7 +216,7 @@ class ProcessStreamAdapter(object):
 
 class Traversable(object):
 
-    """Simple interface to perforam depth-first or breadth-first traversals
+    """Simple interface to perform depth-first or breadth-first traversals
     into one direction.
     Subclasses only need to implement one function.
     Instances of the Subclass must be hashable"""
