@@ -44,7 +44,10 @@ from git.index.typ import (
     BaseIndexEntry,
     IndexEntry
 )
+from gitdb.test.lib import with_rw_directory
 from git.index.fun import hook_path
+
+import git
 
 
 class TestIndex(TestBase):
@@ -765,3 +768,15 @@ class TestIndex(TestBase):
         except InvalidGitRepositoryError:
             asserted = True
         assert asserted, "Adding using a filename is not correctly asserted."
+
+    @with_rw_directory
+    def test_index_add_corruption(self, rw_dir):
+        # Test for https://github.com/gitpython-developers/GitPython/issues/265
+        repo = git.Repo.clone_from("git://pkgs.fedoraproject.org/GitPython", rw_dir)
+        assert not repo.is_dirty()
+        file_path = os.path.join(rw_dir, "GitPython.spec")
+        open(file_path, 'wb').close()
+        assert repo.is_dirty()
+        repo.index.add(['0001-GPG-signature-support-on-commit-object.patch', 'GitPython.spec', '.gitignore', 'sources'])
+        repo.git.commit(m="committing file")
+        assert not repo.is_dirty()
