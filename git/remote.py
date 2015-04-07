@@ -455,7 +455,13 @@ class Remote(LazyMixin, Iterable):
             remote side, but are still available locally.
 
             The IterableList is prefixed, hence the 'origin' must be omitted. See
-            'refs' property for an example."""
+            'refs' property for an example.
+
+            To make things more complicated, it can be possble for the list to include
+            other kinds of references, for example, tag references, if these are stale
+            as well. This is a fix for the issue described here:
+            https://github.com/gitpython-developers/GitPython/issues/260
+            """
         out_refs = IterableList(RemoteReference._id_attribute_, "%s/" % self.name)
         for line in self.repo.git.remote("prune", "--dry-run", self).splitlines()[2:]:
             # expecting
@@ -463,8 +469,14 @@ class Remote(LazyMixin, Iterable):
             token = " * [would prune] "
             if not line.startswith(token):
                 raise ValueError("Could not parse git-remote prune result: %r" % line)
-            fqhn = "%s/%s" % (RemoteReference._common_path_default, line.replace(token, ""))
-            out_refs.append(RemoteReference(self.repo, fqhn))
+            ref_name = line.replace(token, "")
+            # sometimes, paths start with a full ref name, like refs/tags/foo, see #260
+            if ref_name.startswith(Reference._common_path_default + '/'):
+                out_refs.append(SymbolicReference.from_path(self.repo, ref_name))
+            else:
+                fqhn = "%s/%s" % (RemoteReference._common_path_default, ref_name)
+                out_refs.append(RemoteReference(self.repo, fqhn))
+            # end special case handlin
         # END for each line
         return out_refs
 
@@ -477,7 +489,9 @@ class Remote(LazyMixin, Iterable):
         :param kwargs: Additional arguments to be passed to the git-remote add command
         :return: New Remote instance
         :raise GitCommandError: in case an origin with that name already exists"""
-        repo.git.remote("add", name, url, **kwargs)
+        scmd = 'add'
+        kwargs['insert_kwargs_after'] = scmd
+        repo.git.remote(scmd, name, url, **kwargs)
         return cls(repo, name)
 
     # add is an alias
@@ -517,7 +531,9 @@ class Remote(LazyMixin, Iterable):
             Additional arguments passed to git-remote update
 
         :return: self """
-        self.repo.git.remote("update", self.name, **kwargs)
+        scmd = 'update'
+        kwargs['insert_kwargs_after'] = scmd
+        self.repo.git.remote(scmd, self.name, **kwargs)
         return self
 
     def _get_fetch_info_from_stderr(self, proc, progress):

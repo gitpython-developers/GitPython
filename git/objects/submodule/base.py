@@ -293,7 +293,8 @@ class Submodule(util.IndexObject, Iterable, Traversable):
         fp.close()
 
         writer = GitConfigParser(os.path.join(module_abspath, 'config'), read_only=False, merge_includes=False)
-        writer.set_value('core', 'worktree', os.path.relpath(working_tree_dir, start=module_abspath))
+        writer.set_value('core', 'worktree',
+                         to_native_path_linux(os.path.relpath(working_tree_dir, start=module_abspath)))
         writer.release()
 
     #{ Edit Interface

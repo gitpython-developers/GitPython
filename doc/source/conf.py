@@ -94,7 +94,6 @@ pygments_style = 'sphinx'
 # -----------------------
 
 html_theme_options = {
-    "stickysidebar": "true"
 }
 
 # The style sheet to use for HTML and HTML Help pages. A file of that name

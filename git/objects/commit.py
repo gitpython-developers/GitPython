@@ -189,9 +189,12 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
         if 'pretty' in kwargs:
             raise ValueError("--pretty cannot be used as parsing expects single sha's only")
         # END handle pretty
-        args = list()
+
+        # use -- in any case, to prevent possibility of ambiguous arguments
+        # see https://github.com/gitpython-developers/GitPython/issues/264
+        args = ['--']
         if paths:
-            args.extend(('--', paths))
+            args.extend((paths, ))
         # END if paths
 
         proc = repo.git.rev_list(rev, args, as_process=True, **kwargs)
