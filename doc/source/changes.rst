@@ -16,6 +16,9 @@ Changelog
   obvious by throwing `GitCommandNotFound`, both on unix and on windows.
 
   - Those who support **GUI on windows** will now have to set `git.Git.USE_SHELL = True` to get the previous behaviour.
+    
+* A list of all issues can be found `on github <https://github.com/gitpython-developers/GitPython/issues?q=milestone%3A%22v0.3.7+-+Fixes%22+is%3Aclosed>`_  
+  
 
 0.3.6 - Features
 ================
