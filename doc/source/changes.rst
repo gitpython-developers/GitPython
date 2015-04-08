@@ -7,6 +7,10 @@ Changelog
 * `IndexFile.add()` will now write the index without any extension data by default. However, you may override this behaviour with the new `write_extension_data` keyword argument.
 
   - Renamed `ignore_tree_extension_data` keyword argument in `IndexFile.write(...)` to `ignore_extension_data`
+* If the git command executed during `Remote.push(...)|fetch(...)` returns with an non-zero exit code and GitPython didn't 
+  obtain any head-information, the corresponding `GitCommandError` will be raised. This may break previous code which expected
+  these operations to never raise. However, that behavious is undesirable as it would effectively hide the fact that there 
+  was an error. See `this issue <https://github.com/gitpython-developers/GitPython/issues/271>`_ for more information.
 
 0.3.6 - Features
 ================

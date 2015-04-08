@@ -313,8 +313,7 @@ class TestRemote(TestBase):
         self._do_test_push_result(res, remote)
 
         # invalid refspec
-        res = remote.push("hellothere")
-        assert len(res) == 0
+        self.failUnlessRaises(GitCommandError, remote.push, "hellothere")
 
         # push new tags
         progress = TestRemoteProgress()

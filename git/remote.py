@@ -568,7 +568,12 @@ class Remote(LazyMixin, Iterable):
         # end
 
         # We are only interested in stderr here ...
-        finalize_process(proc)
+        try:
+            finalize_process(proc)
+        except Exception:
+            if len(fetch_info_lines) == 0:
+                raise
+        # end exception handler
 
         # read head information
         fp = open(join(self.repo.git_dir, 'FETCH_HEAD'), 'rb')
@@ -601,7 +606,11 @@ class Remote(LazyMixin, Iterable):
             # END exception handling
         # END for each line
 
-        handle_process_output(proc, stdout_handler, progress_handler, finalize_process)
+        try:
+            handle_process_output(proc, stdout_handler, progress_handler, finalize_process)
+        except Exception:
+            if len(output) == 0:
+                raise
         return output
 
     def fetch(self, refspec=None, progress=None, **kwargs):
