@@ -579,6 +579,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         fprogress(filepath, False, filepath)
         istream = self.repo.odb.store(IStream(Blob.type, st.st_size, stream))
         fprogress(filepath, True, filepath)
+        stream.close()
         return BaseIndexEntry((stat_mode_to_index_mode(st.st_mode),
                                istream.binsha, 0, to_native_path_linux(filepath)))
 
