@@ -2,6 +2,13 @@
 Changelog
 =========
 
+1.0.0 - Notes
+=============
+
+This version is equivalent to v0.3.7, but finally acknowledges that GitPython is stable and production ready.
+
+It follows the `semantic version scheme <http://semver.org>`_, and thus will not break its existing API unless it goes 2.0.
+
 0.3.7 - Fixes
 =============
 * `IndexFile.add()` will now write the index without any extension data by default. However, you may override this behaviour with the new `write_extension_data` keyword argument.
