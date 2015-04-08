@@ -437,15 +437,6 @@ class Tutorials(TestBase):
         git.for_each_ref()                              # '-' becomes '_' when calling it
         # ![31-test_references_and_objects]
 
-        # [32-test_references_and_objects]
-        ssh_executable = os.path.join(rw_dir, 'my_ssh_executable.sh')
-        with repo.git.custom_environment(GIT_SSH=ssh_executable):
-            # Note that we don't actually make the call here, as our test-setup doesn't permit it to
-            # succeed.
-            # It will in your case :)
-            repo.remotes.origin.fetch
-        # ![32-test_references_and_objects]
-
     def test_submodules(self):
         # [1-test_submodules]
         repo = self.rorepo
