@@ -2,6 +2,12 @@
 Changelog
 =========
 
+0.3.7 - Fixes
+=============
+* `IndexFile.add()` will now write the index without any extension data by default. However, you may override this behaviour with the new `write_extension_data` keyword argument.
+
+  - Renamed `ignore_tree_extension_data` keyword argument in `IndexFile.write(...)` to `ignore_extension_data`
+
 0.3.6 - Features
 ================
 * **DOCS**

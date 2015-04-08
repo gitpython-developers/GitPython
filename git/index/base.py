@@ -172,16 +172,17 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         """:return: list of entries, in a sorted fashion, first by path, then by stage"""
         return sorted(self.entries.values(), key=lambda e: (e.path, e.stage))
 
-    def _serialize(self, stream, ignore_tree_extension_data=False):
+    def _serialize(self, stream, ignore_extension_data=False):
         entries = self._entries_sorted()
-        write_cache(entries,
-                    stream,
-                    (ignore_tree_extension_data and None) or self._extension_data)
+        extension_data = self._extension_data
+        if ignore_extension_data:
+            extension_data = None
+        write_cache(entries, stream, extension_data)
         return self
 
     #} END serializable interface
 
-    def write(self, file_path=None, ignore_tree_extension_data=False):
+    def write(self, file_path=None, ignore_extension_data=False):
         """Write the current state to our file path or to the given one
 
         :param file_path:
@@ -190,9 +191,10 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             Please note that this will change the file_path of this index to
             the one you gave.
 
-        :param ignore_tree_extension_data:
+        :param ignore_extension_data:
             If True, the TREE type extension data read in the index will not
-            be written to disk. Use this if you have altered the index and
+            be written to disk. NOTE that no extension data is actually written.
+            Use this if you have altered the index and
             would like to use git-write-tree afterwards to create a tree
             representing your written changes.
             If this data is present in the written index, git-write-tree
@@ -208,7 +210,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         lfd = LockedFD(file_path or self._file_path)
         stream = lfd.open(write=True, stream=True)
 
-        self._serialize(stream, ignore_tree_extension_data)
+        self._serialize(stream, ignore_extension_data)
 
         lfd.commit()
 
@@ -612,7 +614,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         return entries_added
 
     def add(self, items, force=True, fprogress=lambda *args: None, path_rewriter=None,
-            write=True):
+            write=True, write_extension_data=False):
         """Add files from the working tree, specific blobs or BaseIndexEntries
         to the index.
 
@@ -689,8 +691,19 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             Please note that entry.path is relative to the git repository.
 
         :param write:
-                If True, the index will be written once it was altered. Otherwise
-                the changes only exist in memory and are not available to git commands.
+            If True, the index will be written once it was altered. Otherwise
+            the changes only exist in memory and are not available to git commands.
+
+        :param write_extension_data:
+            If True, extension data will be written back to the index. This can lead to issues in case
+            it is containing the 'TREE' extension, which will cause the `git commit` command to write an
+            old tree, instead of a new one representing the now changed index.
+            This doesn't matter if you use `IndexFile.commit()`, which ignores the `TREE` extension altogether.
+            You should set it to True if you intend to use `IndexFile.commit()` exclusively while maintaining
+            support for third-party extensions. Besides that, you can usually safely ignore the built-in
+            extensions when using GitPython on repositories that are not handled manually at all.
+            All current built-in extensions are listed here:
+            http://opensource.apple.com/source/Git/Git-26/src/git-htmldocs/technical/index-format.txt
 
         :return:
             List(BaseIndexEntries) representing the entries just actually added.
@@ -763,7 +776,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             self.entries[(entry.path, 0)] = IndexEntry.from_base(entry)
 
         if write:
-            self.write()
+            self.write(ignore_extension_data=not write_extension_data)
         # END handle write
 
         return entries_added
