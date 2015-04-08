@@ -12,6 +12,11 @@ Changelog
   these operations to never raise. However, that behavious is undesirable as it would effectively hide the fact that there 
   was an error. See `this issue <https://github.com/gitpython-developers/GitPython/issues/271>`_ for more information.
 
+* If the git executable can't be found in the PATH or at the path provided by `GIT_PYTHON_GIT_EXECUTABLE`, this is made
+  obvious by throwing `GitCommandNotFound`, both on unix and on windows.
+
+  - Those who support **GUI on windows** will now have to set `git.Git.USE_SHELL = True` to get the previous behaviour.
+
 0.3.6 - Features
 ================
 * **DOCS**

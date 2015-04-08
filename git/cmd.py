@@ -26,7 +26,10 @@ from .util import (
     stream_copy,
     WaitGroup
 )
-from .exc import GitCommandError
+from .exc import (
+    GitCommandError,
+    GitCommandNotFound
+)
 from git.compat import (
     string_types,
     defenc,
@@ -240,6 +243,12 @@ class Git(LazyMixin):
     # Provide the full path to the git executable. Otherwise it assumes git is in the path
     _git_exec_env_var = "GIT_PYTHON_GIT_EXECUTABLE"
     GIT_PYTHON_GIT_EXECUTABLE = os.environ.get(_git_exec_env_var, git_exec_name)
+
+    # If True, a shell will be used when executing git commands.
+    # This should only be desirable on windows, see https://github.com/gitpython-developers/GitPython/pull/126
+    # for more information
+    # Override this value using `Git.USE_SHELL = True`
+    USE_SHELL = False
 
     class AutoInterrupt(object):
 
@@ -543,18 +552,29 @@ class Git(LazyMixin):
         env["LC_MESSAGES"] = "C"
         env.update(self._environment)
 
-        proc = Popen(command,
-                     env=env,
-                     cwd=cwd,
-                     stdin=istream,
-                     stderr=PIPE,
-                     stdout=PIPE,
-                     # Prevent cmd prompt popups on windows by using a shell ... .
-                     # See https://github.com/gitpython-developers/GitPython/pull/126
-                     shell=sys.platform == 'win32',
-                     close_fds=(os.name == 'posix'),  # unsupported on windows
-                     **subprocess_kwargs
-                     )
+        if sys.platform == 'win32':
+            cmd_not_found_exception = WindowsError
+        else:
+            if sys.version_info[0] > 2:
+                cmd_not_found_exception = FileNotFoundError  # NOQA # this is defined, but flake8 doesn't know
+            else:
+                cmd_not_found_exception = OSError
+        # end handle
+
+        try:
+            proc = Popen(command,
+                         env=env,
+                         cwd=cwd,
+                         stdin=istream,
+                         stderr=PIPE,
+                         stdout=PIPE,
+                         shell=self.USE_SHELL,
+                         close_fds=(os.name == 'posix'),  # unsupported on windows
+                         **subprocess_kwargs
+                         )
+        except cmd_not_found_exception as err:
+            raise GitCommandNotFound(str(err))
+
         if as_process:
             return self.AutoInterrupt(proc, command)
 

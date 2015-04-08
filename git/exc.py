@@ -18,6 +18,12 @@ class NoSuchPathError(OSError):
     """ Thrown if a path could not be access by the system. """
 
 
+class GitCommandNotFound(Exception):
+    """Thrown if we cannot find the `git` executable in the PATH or at the path given by
+    the GIT_PYTHON_GIT_EXECUTABLE environment variable"""
+    pass
+
+
 class GitCommandError(Exception):
     """ Thrown if execution of the git command fails with non-zero status code. """
 
