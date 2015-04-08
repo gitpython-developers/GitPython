@@ -87,14 +87,5 @@ Now that there seems to be a massive user base, this should be motivation enough
 * no open pull requests
 * no open issues describing bugs
 
-#### FUTURE GOALS
-
-There has been a lot of work in the master branch, which is the direction I want git-python to go. Namely, it should be able to freely mix and match the back-end used, depending on your requirements and environment.
-
-* make new master work similarly to 0.3, but with the option to swap for at least one additional backend
-* make a 1.0 release
-* add backends as required
-
-
 [twitch-channel]: http://www.twitch.tv/byronimo/profile
 [youtube-playlist]: https://www.youtube.com/playlist?list=PLMHbQxe1e9MnoEcLhn6Yhv5KAvpWkJbL0
