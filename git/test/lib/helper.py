@@ -232,7 +232,13 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
             prev_cwd = os.getcwd()
             os.chdir(rw_repo.working_dir)
             try:
-                return func(self, rw_repo, rw_remote_repo)
+                try:
+                    return func(self, rw_repo, rw_remote_repo)
+                except:
+                    print("Keeping repos after failure: repo_dir = %s, remote_repo_dir = %s"
+                          % (repo_dir, remote_repo_dir), file=sys.stderr)
+                    repo_dir = remote_repo_dir = None
+                    raise
             finally:
                 # gd.proc.kill() ... no idea why that doesn't work
                 if gd is not None:
@@ -241,8 +247,10 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
                 os.chdir(prev_cwd)
                 rw_repo.git.clear_cache()
                 rw_remote_repo.git.clear_cache()
-                shutil.rmtree(repo_dir, onerror=_rmtree_onerror)
-                shutil.rmtree(remote_repo_dir, onerror=_rmtree_onerror)
+                if repo_dir:
+                    shutil.rmtree(repo_dir, onerror=_rmtree_onerror)
+                if remote_repo_dir:
+                    shutil.rmtree(remote_repo_dir, onerror=_rmtree_onerror)
 
                 if gd is not None:
                     gd.proc.wait()

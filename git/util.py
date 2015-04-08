@@ -159,6 +159,23 @@ def finalize_process(proc):
     except GitCommandError:
         # if a push has rejected items, the command has non-zero return status
         # a return status of 128 indicates a connection error - reraise the previous one
+        # Everything else will still be parsed and made available through PushInfo flags
+        # Estimated error results look like this:
+        # ```bash
+        # To /var/folders/xp/m48gs2tx2vg95tmtzw7tprs40000gn/T/tmpk5jeBeremote_repo_test_base
+        # !   refs/heads/master:refs/heads/master [rejected] (non-fast-forward)
+        # Done
+        # error: failed to push some refs to
+        # '/var/folders/xp/m48gs2tx2vg95tmtzw7tprs40000gn/T/tmpk5jeBeremote_repo_test_base'
+        # hint: Updates were rejected because the tip of your current branch is behind
+        # hint: its remote counterpart. Integrate the remote changes (e.g.
+        # hint: 'git pull ...') before pushing again.
+        # hint: See the 'Note about fast-forwards' in 'git push --help' for details.
+        # ```
+        # See https://github.com/gitpython-developers/GitPython/blob/master/git/test/test_remote.py#L305
+        # on how to check for these kinds of errors.
+        # Also see this issue for a reason for this verbosity:
+        # https://github.com/gitpython-developers/GitPython/issues/271
         if proc.poll() == 128:
             raise
         pass
