@@ -165,7 +165,7 @@ class RemoteProgress(object):
     and git-fetch and to dispatch callbacks allowing subclasses to react to the progress.
     """
     _num_op_codes = 7
-    BEGIN, END, COUNTING, COMPRESSING, WRITING, RECEIVING, RESOLVING = [1 << x for x in range(_num_op_codes)]
+    BEGIN, END, COUNTING, COMPRESSING, WRITING, RECEIVING, RESOLVING, FINDING_SOURCES = [1 << x for x in range(_num_op_codes)]
     STAGE_MASK = BEGIN | END
     OP_MASK = ~STAGE_MASK
 
@@ -227,6 +227,8 @@ class RemoteProgress(object):
                 op_code |= self.RECEIVING
             elif op_name == 'Resolving deltas':
                 op_code |= self.RESOLVING
+            elif op_name == 'Finding sources':
+                op_code |= self.FINDING_SOURCES
             else:
                 # Note: On windows it can happen that partial lines are sent
                 # Hence we get something like "CompreReceiving objects", which is
