@@ -360,7 +360,7 @@ General
   a treeish git cowardly refuses to pick one and asks for the command to use
   the unambiguous syntax where '--' seperates the treeish from the paths.
 
-* ``Repo.commits``, ``Repo.commits_between``, ``Reop.commits_since``,
+* ``Repo.commits``, ``Repo.commits_between``, ``Repo.commits_since``,
   ``Repo.commit_count``, ``Repo.commit``, ``Commit.count`` and
   ``Commit.find_all`` all now optionally take a path argument which
   constrains the lookup by path.  This changes the order of the positional
