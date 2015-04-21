@@ -200,7 +200,7 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
             temp_dir = osp(_mktemp())
             # On windows, this will fail ... we deal with failures anyway and default to telling the user to do it
             try:
-                gd = Git().daemon(temp_dir, enable='receive-pack', as_process=True)
+                gd = Git().daemon(temp_dir, enable='receive-pack', listen='127.0.0.1', as_process=True)
                 # yes, I know ... fortunately, this is always going to work if sleep time is just large enough
                 time.sleep(0.5)
             except Exception:
