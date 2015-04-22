@@ -2,6 +2,11 @@
 Changelog
 =========
 
+1.0.1 - Fixes
+=============
+
+* A list of all issues can be found `on github <https://github.com/gitpython-developers/GitPython/issues?q=milestone%3A%22v1.0.1+-+Fixes%22+is%3Aclosed>`_  
+
 1.0.0 - Notes
 =============
 
