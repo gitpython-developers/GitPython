@@ -1,0 +1,3 @@
+[alias]
+    rbi = "!g() { git rebase -i origin/${1:-master} ; } ; g"
+    expush = "!f() { git branch -f tmp ; { git rbi $1 && git push ; } ; git reset --hard tmp ; git rebase origin/${1:-master}; } ; f"

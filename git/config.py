@@ -81,6 +81,7 @@ def set_dirty_and_flush_changes(non_const_func):
 
     def flush_changes(self, *args, **kwargs):
         rval = non_const_func(self, *args, **kwargs)
+        self._dirty = True
         self.write()
         return rval
     # END wrapper method
@@ -190,6 +191,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
 
         self._file_or_files = file_or_files
         self._read_only = read_only
+        self._dirty = False
         self._is_initialized = False
         self._merge_includes = merge_includes
         self._lock = None
@@ -304,7 +306,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
                 if mo:
                     # We might just have handled the last line, which could contain a quotation we want to remove
                     optname, vi, optval = mo.group('option', 'vi', 'value')
-                    if vi in ('=', ':') and ';' in optval:
+                    if vi in ('=', ':') and ';' in optval and not optval.strip().startswith('"'):
                         pos = optval.find(';')
                         if pos != -1 and optval[pos - 1].isspace():
                             optval = optval[:pos]
@@ -433,6 +435,8 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
         :raise IOError: if this is a read-only writer instance or if we could not obtain
             a file lock"""
         self._assure_writable("write")
+        if not self._dirty:
+            return
 
         if isinstance(self._file_or_files, (list, tuple)):
             raise AssertionError("Cannot write back if there is not exactly a single file to write to, have %i files"

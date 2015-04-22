@@ -18,7 +18,6 @@ from git.compat import (
 )
 import io
 import os
-from copy import copy
 from git.config import cp
 
 
@@ -30,21 +29,18 @@ class TestBase(TestCase):
         sio.name = file_path
         return sio
 
-    def _parsers_equal_or_raise(self, lhs, rhs):
-        pass
-
     def test_read_write(self):
         # writer must create the exact same file as the one read before
         for filename in ("git_config", "git_config_global"):
             file_obj = self._to_memcache(fixture_path(filename))
-            file_obj_orig = copy(file_obj)
             w_config = GitConfigParser(file_obj, read_only=False)
             w_config.read()                 # enforce reading
             assert w_config._sections
             w_config.write()                # enforce writing
 
             # we stripped lines when reading, so the results differ
-            assert file_obj.getvalue() and file_obj.getvalue() != file_obj_orig.getvalue()
+            assert file_obj.getvalue()
+            self.assertEqual(file_obj.getvalue(), self._to_memcache(fixture_path(filename)).getvalue())
 
             # creating an additional config writer must fail due to exclusive access
             self.failUnlessRaises(IOError, GitConfigParser, file_obj, read_only=False)
@@ -207,3 +203,10 @@ class TestBase(TestCase):
         assert not cw.has_section('core')
         assert len(cw.items(nn)) == 4
         cw.release()
+
+    def test_complex_aliases(self):
+        file_obj = self._to_memcache(fixture_path('.gitconfig'))
+        w_config = GitConfigParser(file_obj, read_only=False)
+        self.assertEqual(w_config.get('alias', 'rbi'), '"!g() { git rebase -i origin/${1:-master} ; } ; g"')
+        w_config.release()
+        self.assertEqual(file_obj.getvalue(), self._to_memcache(fixture_path('.gitconfig')).getvalue())

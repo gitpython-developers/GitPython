@@ -25,6 +25,9 @@ install:
   # as commits are performed with the default user, it needs to be set for travis too
   - git config --global user.email "travis@ci.com"
   - git config --global user.name "Travis Runner"
+  # If we rewrite the user's config by accident, we will mess it up
+  # and cause subsequent tests to fail
+  - cp git/test/fixtures/.gitconfig ~/
 script: 
   # Make sure we limit open handles to see if we are leaking them
   - ulimit -n 96
