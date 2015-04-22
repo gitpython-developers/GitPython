@@ -27,7 +27,7 @@ install:
   - git config --global user.name "Travis Runner"
   # If we rewrite the user's config by accident, we will mess it up
   # and cause subsequent tests to fail
-  - cp git/test/fixtures/.gitconfig ~/
+  - cat git/test/fixtures/.gitconfig >> ~/.gitconfig
 script: 
   # Make sure we limit open handles to see if we are leaking them
   - ulimit -n 96
