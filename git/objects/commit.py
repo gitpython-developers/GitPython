@@ -445,7 +445,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
         next_line = readline()
         while next_line.startswith(b'mergetag '):
             next_line = readline()
-            while next_line.startswith(' '):
+            while next_line.startswith(b' '):
                 next_line = readline()
         # end skip mergetags
 
