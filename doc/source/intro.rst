@@ -90,9 +90,11 @@ Finally verify the installation by running the `nose powered <http://code.google
     
     $ nosetests
     
-Mailing List
-============
-http://groups.google.com/group/git-python
+Questions and Answers
+=====================
+Please use stackoverflow for questions, and don't forget to tag it with `gitpython` to assure the right people see the question in a timely manner.
+
+http://stackoverflow.com/questions/tagged/gitpython
 
 Issue Tracker
 =============
