@@ -530,7 +530,7 @@ class Git(LazyMixin):
             * output_stream if extended_output = False
             * tuple(int(status), output_stream, str(stderr)) if extended_output = True
 
-            Note git is executed with LC_MESSAGES="C" to ensure consitent
+            Note git is executed with LC_MESSAGES="C" to ensure consistent
             output regardless of system language.
 
         :raise GitCommandError:
@@ -549,7 +549,9 @@ class Git(LazyMixin):
 
         # Start the process
         env = os.environ.copy()
-        env["LC_MESSAGES"] = "C"
+        # Attempt to force all output to plain ascii english, which is what some parsing code
+        # may expect.
+        env["LC_ALL"] = "C"
         env.update(self._environment)
 
         if sys.platform == 'win32':
