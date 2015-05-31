@@ -551,6 +551,9 @@ class Git(LazyMixin):
         env = os.environ.copy()
         # Attempt to force all output to plain ascii english, which is what some parsing code
         # may expect.
+        # According to stackoverflow (http://goo.gl/l74GC8), we are setting LANGUAGE as well
+        # just to be sure.
+        env["LANGUAGE"] = "C"
         env["LC_ALL"] = "C"
         env.update(self._environment)
 
