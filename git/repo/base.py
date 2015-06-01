@@ -750,6 +750,11 @@ class Repo(object):
             already exists. Creates the directory with a mode=0755.
             Only effective if a path is explicitly given
 
+        :param odbt:
+            Object DataBase type - a type which is constructed by providing
+            the directory containing the database objects, i.e. .git/objects.
+            It will be used to access all object data
+
         :parm kwargs:
             keyword arguments serving as additional options to the git-init command
 
