@@ -737,7 +737,7 @@ class Repo(object):
         return blames
 
     @classmethod
-    def init(cls, path=None, mkdir=True, **kwargs):
+    def init(cls, path=None, mkdir=True, odbt=DefaultDBType, **kwargs):
         """Initialize a git repository at the given path if specified
 
         :param path:
@@ -762,7 +762,7 @@ class Repo(object):
         # git command automatically chdir into the directory
         git = Git(path)
         git.init(**kwargs)
-        return cls(path)
+        return cls(path, odbt=odbt)
 
     @classmethod
     def _clone(cls, git, url, path, odb_default_type, progress, **kwargs):
