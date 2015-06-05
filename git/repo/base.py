@@ -563,7 +563,8 @@ class Repo(object):
     alternates = property(_get_alternates, _set_alternates,
                           doc="Retrieve a list of alternates paths or set a list paths to be used as alternates")
 
-    def is_dirty(self, index=True, working_tree=True, untracked_files=False):
+    def is_dirty(self, index=True, working_tree=True, untracked_files=False,
+                 consider_submodules=True):
         """
         :return:
             ``True``, the repository is considered dirty. By default it will react
@@ -575,7 +576,9 @@ class Repo(object):
             return False
 
         # start from the one which is fastest to evaluate
-        default_args = ('--abbrev=40', '--full-index', '--raw')
+        default_args = ['--abbrev=40', '--full-index', '--raw']
+        if not consider_submodules:
+            default_args.append('--ignore-submodules')
         if index:
             # diff index against HEAD
             if isfile(self.index.path) and \
@@ -588,7 +591,10 @@ class Repo(object):
                 return True
         # END working tree handling
         if untracked_files:
-            if len(self.untracked_files):
+            kwargs = {}
+            if not consider_submodules:
+                kwargs['ignore_submodules'] = True
+            if len(self._get_untracked_files(**kwargs)):
                 return True
         # END untracked files
         return False
@@ -604,10 +610,14 @@ class Repo(object):
 
         :note:
             ignored files will not appear here, i.e. files mentioned in .gitignore"""
+        return self._get_untracked_files()
+
+    def _get_untracked_files(self, **kwargs):
         # make sure we get all files, no only untracked directores
         proc = self.git.status(porcelain=True,
                                untracked_files=True,
-                               as_process=True)
+                               as_process=True,
+                               **kwargs)
         # Untracked files preffix in porcelain mode
         prefix = "?? "
         untracked_files = list()
