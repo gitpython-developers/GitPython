@@ -564,7 +564,7 @@ class Repo(object):
                           doc="Retrieve a list of alternates paths or set a list paths to be used as alternates")
 
     def is_dirty(self, index=True, working_tree=True, untracked_files=False,
-                 consider_submodules=True):
+                 submodules=True):
         """
         :return:
             ``True``, the repository is considered dirty. By default it will react
@@ -577,7 +577,7 @@ class Repo(object):
 
         # start from the one which is fastest to evaluate
         default_args = ['--abbrev=40', '--full-index', '--raw']
-        if not consider_submodules:
+        if not submodules:
             default_args.append('--ignore-submodules')
         if index:
             # diff index against HEAD
@@ -591,10 +591,7 @@ class Repo(object):
                 return True
         # END working tree handling
         if untracked_files:
-            kwargs = {}
-            if not consider_submodules:
-                kwargs['ignore_submodules'] = True
-            if len(self._get_untracked_files(**kwargs)):
+            if len(self._get_untracked_files(ignore_submodules=not submodules)):
                 return True
         # END untracked files
         return False
