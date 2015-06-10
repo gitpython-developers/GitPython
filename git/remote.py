@@ -555,7 +555,7 @@ class Remote(LazyMixin, Iterable):
             line = line.decode(defenc)
             line = line.rstrip()
             for pline in progress_handler(line):
-                if line.startswith('fatal:'):
+                if line.startswith('fatal:') or line.startswith('error:'):
                     raise GitCommandError(("Error when fetching: %s" % line,), 2)
                 # END handle special messages
                 for cmd in cmds:
