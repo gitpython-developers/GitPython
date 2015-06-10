@@ -343,13 +343,13 @@ This one sets a custom script to be executed in place of `ssh`, and can be used 
     with repo.git.custom_environment(GIT_SSH=ssh_executable):
         repo.remotes.origin.fetch()
 
-Here's an executable used as GIT_SSH::
+Here's an example executable that can be used in place of the `ssh_executable` above::
 
     #!/bin/sh
     ID_RSA=/var/lib/openshift/5562b947ecdd5ce939000038/app-deployments/id_rsa
     exec /usr/bin/ssh -o StrictHostKeyChecking=no -i $ID_RSA "$@"
 
-Please note script must have executable permissions. StrictHostKeyChecking=no is used to avoid prompts asking to save hots key to ~/.ssh/known_hosts (this is in case you run this in some service)
+Please note that the script must be executable (i.e. `chomd +x script.sh`). `StrictHostKeyChecking=no` is used to avoid prompts asking to save the hosts key to `~/.ssh/known_hosts`, which happens in case you run this as daemon.
 
 You might also have a look at `Git.update_environment(...)` in case you want to setup a changed environment more permanently.
     
