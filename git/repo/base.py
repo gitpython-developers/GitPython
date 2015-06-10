@@ -744,7 +744,7 @@ class Repo(object):
         return blames
 
     @classmethod
-    def init(cls, path=None, mkdir=True, **kwargs):
+    def init(cls, path=None, mkdir=True, odbt=DefaultDBType, **kwargs):
         """Initialize a git repository at the given path if specified
 
         :param path:
@@ -756,6 +756,11 @@ class Repo(object):
             if specified will create the repository directory if it doesn't
             already exists. Creates the directory with a mode=0755.
             Only effective if a path is explicitly given
+
+        :param odbt:
+            Object DataBase type - a type which is constructed by providing
+            the directory containing the database objects, i.e. .git/objects.
+            It will be used to access all object data
 
         :parm kwargs:
             keyword arguments serving as additional options to the git-init command
@@ -769,7 +774,7 @@ class Repo(object):
         # git command automatically chdir into the directory
         git = Git(path)
         git.init(**kwargs)
-        return cls(path)
+        return cls(path, odbt=odbt)
 
     @classmethod
     def _clone(cls, git, url, path, odb_default_type, progress, **kwargs):
