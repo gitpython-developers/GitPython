@@ -604,6 +604,18 @@ class Remote(LazyMixin, Iterable):
                 raise
         return output
 
+    def _assert_refspec(self):
+        """Turns out we can't deal with remotes if the refspec is missing"""
+        config = self.config_reader
+        try:
+            if config.get_value('fetch', default=type) is type:
+                msg = "Remote '%s' has no refspec set.\n"
+                msg += "You can set it as follows:"
+                msg += " 'git config --add \"remote.%s.fetch +refs/heads/*:refs/heads/*\"'." % self.name
+                raise AssertionError(msg)
+        finally:
+            config.release()
+
     def fetch(self, refspec=None, progress=None, **kwargs):
         """Fetch the latest changes for this remote
 
@@ -631,6 +643,7 @@ class Remote(LazyMixin, Iterable):
         :note:
             As fetch does not provide progress information to non-ttys, we cannot make
             it available here unfortunately as in the 'push' method."""
+        self._assert_refspec()
         kwargs = add_progress(kwargs, self.repo.git, progress)
         if isinstance(refspec, list):
             args = refspec
@@ -651,6 +664,7 @@ class Remote(LazyMixin, Iterable):
         :param progress: see 'push' method
         :param kwargs: Additional arguments to be passed to git-pull
         :return: Please see 'fetch' method """
+        self._assert_refspec()
         kwargs = add_progress(kwargs, self.repo.git, progress)
         proc = self.repo.git.pull(self, refspec, with_extended_output=True, as_process=True, v=True, **kwargs)
         res = self._get_fetch_info_from_stderr(proc, progress or RemoteProgress())

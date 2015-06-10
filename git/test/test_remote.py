@@ -494,6 +494,11 @@ class TestRemote(TestBase):
         fetch_info_line_fmt = "c437ee5deb8d00cf02f03720693e4c802e99f390	not-for-merge	%s '0.3' of "
         fetch_info_line_fmt += "git://github.com/gitpython-developers/GitPython"
         remote_info_line_fmt = "* [new branch]      nomatter     -> %s"
+
+        self.failUnlessRaises(ValueError, FetchInfo._from_line, self.rorepo,
+                              remote_info_line_fmt % "refs/something/branch",
+                              "269c498e56feb93e408ed4558c8138d750de8893\t\t/Users/ben/test/foo\n")
+
         fi = FetchInfo._from_line(self.rorepo,
                                   remote_info_line_fmt % "local/master",
                                   fetch_info_line_fmt % 'remote-tracking branch')
