@@ -44,6 +44,7 @@ execute_kwargs = ('istream', 'with_keep_cwd', 'with_extended_output',
                   'output_stream')
 
 log = logging.getLogger('git.cmd')
+log.addHandler(logging.NullHandler())
 
 __all__ = ('Git', )
 

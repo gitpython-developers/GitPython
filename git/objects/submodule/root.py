@@ -13,6 +13,7 @@ import logging
 __all__ = ["RootModule", "RootUpdateProgress"]
 
 log = logging.getLogger('git.objects.submodule.root')
+log.addHandler(logging.NullHandler())
 
 
 class RootUpdateProgress(UpdateProgress):
