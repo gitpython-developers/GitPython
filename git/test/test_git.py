@@ -199,7 +199,8 @@ class TestGit(TestBase):
                 try:
                     remote.fetch()
                 except GitCommandError as err:
-                    assert 'FOO' in str(err)
+                    assert 'ssh-origin' in str(err)
+                    assert err.status == 128
                 # end
             # end
         # end if select.poll exists
