@@ -34,6 +34,7 @@ from io import BytesIO
 import logging
 
 log = logging.getLogger('git.objects.commit')
+log.addHandler(logging.NullHandler())
 
 __all__ = ('Commit', )
 

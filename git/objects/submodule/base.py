@@ -43,6 +43,7 @@ __all__ = ["Submodule", "UpdateProgress"]
 
 
 log = logging.getLogger('git.objects.submodule.base')
+log.addHandler(logging.NullHandler())
 
 
 class UpdateProgress(RemoteProgress):

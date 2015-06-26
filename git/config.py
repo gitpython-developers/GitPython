@@ -32,6 +32,7 @@ __all__ = ('GitConfigParser', 'SectionConstraint')
 
 
 log = logging.getLogger('git.config')
+log.addHandler(logging.NullHandler())
 
 
 class MetaParserBuilder(abc.ABCMeta):
