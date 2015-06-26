@@ -13,6 +13,7 @@ import shutil
 import platform
 import getpass
 import threading
+import logging
 
 # NOTE:  Some of the unused imports might be used/imported by others.
 # Handle once test-cases are back up and running.
@@ -753,3 +754,12 @@ class WaitGroup(object):
         while self.count > 0:
             self.cv.wait()
         self.cv.release()
+
+
+class NullHandler(logging.Handler):
+    def emit(self, record):
+        pass
+
+# In Python 2.6, there is no NullHandler yet. Let's monkey-patch it for a workaround.
+if not hasattr(logging, 'NullHandler'):
+    logging.NullHandler = NullHandler
