@@ -367,6 +367,17 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
                 abs_path = os.path.join(r, path)
             # END make absolute path
 
+            try:
+                st = os.lstat(abs_path)     # handles non-symlinks as well
+            except OSError:
+                # the lstat call may fail as the path may contain globs as well
+                pass
+            else:
+                if S_ISLNK(st.st_mode):
+                    yield abs_path.replace(rs, '')
+                    continue
+            # end check symlink
+
             # resolve globs if possible
             if '?' in path or '*' in path or '[' in path:
                 for f in self._iter_expand_paths(glob.glob(abs_path)):

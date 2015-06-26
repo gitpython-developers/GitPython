@@ -542,18 +542,22 @@ class TestIndex(TestBase):
 
         # add symlink
         if sys.platform != "win32":
-            basename = "my_real_symlink"
-            target = "/etc/that"
-            link_file = os.path.join(rw_repo.working_tree_dir, basename)
-            os.symlink(target, link_file)
-            entries = index.reset(new_commit).add([link_file], fprogress=self._fprogress_add)
-            self._assert_entries(entries)
-            self._assert_fprogress(entries)
-            assert len(entries) == 1 and S_ISLNK(entries[0].mode)
-            assert S_ISLNK(index.entries[index.entry_key("my_real_symlink", 0)].mode)
+            for target in ('/etc/nonexisting', '/etc/passwd', '/etc'):
+                basename = "my_real_symlink"
+                
+                link_file = os.path.join(rw_repo.working_tree_dir, basename)
+                os.symlink(target, link_file)
+                entries = index.reset(new_commit).add([link_file], fprogress=self._fprogress_add)
+                self._assert_entries(entries)
+                self._assert_fprogress(entries)
+                assert len(entries) == 1 and S_ISLNK(entries[0].mode)
+                assert S_ISLNK(index.entries[index.entry_key("my_real_symlink", 0)].mode)
 
-            # we expect only the target to be written
-            assert index.repo.odb.stream(entries[0].binsha).read().decode('ascii') == target
+                # we expect only the target to be written
+                assert index.repo.odb.stream(entries[0].binsha).read().decode('ascii') == target
+
+                os.remove(link_file)
+            # end for each target
         # END real symlink test
 
         # add fake symlink and assure it checks-our as symlink
