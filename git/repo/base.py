@@ -853,6 +853,7 @@ class Repo(object):
     @classmethod
     def clone_from(cls, url, to_path, progress=None, **kwargs):
         """Create a clone from the given URL
+
         :param url: valid git url, see http://www.kernel.org/pub/software/scm/git/docs/git-clone.html#URLS
         :param to_path: Path to which the repository should be cloned to
         :param progress: See 'git.remote.Remote.push'.
