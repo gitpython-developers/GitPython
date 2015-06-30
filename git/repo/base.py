@@ -851,15 +851,19 @@ class Repo(object):
         return self._clone(self.git, self.git_dir, path, type(self.odb), progress, **kwargs)
 
     @classmethod
-    def clone_from(cls, url, to_path, progress=None, **kwargs):
+    def clone_from(cls, url, to_path, progress=None, env=None, **kwargs):
         """Create a clone from the given URL
 
         :param url: valid git url, see http://www.kernel.org/pub/software/scm/git/docs/git-clone.html#URLS
         :param to_path: Path to which the repository should be cloned to
         :param progress: See 'git.remote.Remote.push'.
+        :param env: Optional dictionary containing the desired environment variables.
         :param kwargs: see the ``clone`` method
         :return: Repo instance pointing to the cloned directory"""
-        return cls._clone(Git(os.getcwd()), url, to_path, GitCmdObjectDB, progress, **kwargs)
+        git = Git(os.getcwd())
+        if env is not None:
+            git.update_environment(**env)
+        return cls._clone(git, url, to_path, GitCmdObjectDB, progress, **kwargs)
 
     def archive(self, ostream, treeish=None, prefix=None, **kwargs):
         """Archive the tree at the given revision.
