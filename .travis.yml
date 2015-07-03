@@ -28,11 +28,14 @@ install:
   # If we rewrite the user's config by accident, we will mess it up
   # and cause subsequent tests to fail
   - cat git/test/fixtures/.gitconfig >> ~/.gitconfig
+  # used later when testing for specific issue
+  - git clone git@github.com:gitpython-developers/gitpython_issue_301.git issue-301-repo
 script: 
   # Make sure we limit open handles to see if we are leaking them
   - ulimit -n 96
   - ulimit -n
   - nosetests -v --with-coverage
+  - '( cd issue-301-repo && PYTHONPATH=$PWD/.. ./reproduce.py )'
   - flake8
   - cd doc && make html
 after_success:
