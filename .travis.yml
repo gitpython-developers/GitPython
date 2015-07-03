@@ -29,6 +29,9 @@ install:
   # and cause subsequent tests to fail
   - cat git/test/fixtures/.gitconfig >> ~/.gitconfig
   # used later when testing for specific issue
+  # copy the configured key into place so clone can work
+  # The key just has read-only access to the test-repository
+  - cp .travis.private-ssh-key-for-issue-301 ~/.ssh/id_rsa
   - git clone git@github.com:gitpython-developers/gitpython_issue_301.git issue-301-repo
 script: 
   # Make sure we limit open handles to see if we are leaking them
