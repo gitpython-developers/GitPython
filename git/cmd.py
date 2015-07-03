@@ -65,6 +65,84 @@ else:
 # Documentation
 ## @{
 
+def _parse_lines_from_buffer(buf):
+    line = b''
+    bi = 0
+    lb = len(buf)
+    while bi < lb:
+        char = _bchr(buf[bi])
+        bi += 1
+
+        if char in (b'\r', b'\n') and line:
+            yield bi, line
+            line = b''
+        else:
+            line += char
+        # END process parsed line
+    # END while file is not done reading
+# end
+
+def _read_lines_from_fno(fno, last_buf_list):
+    buf = os.read(fno, mmap.PAGESIZE)
+    buf = last_buf_list[0] + buf
+
+    bi = 0
+    for bi, line in _parse_lines_from_buffer(buf):
+        yield line
+    # for each line to parse from the buffer
+
+    # keep remainder
+    last_buf_list[0] = buf[bi:]
+
+def _dispatch_single_line(line, handler):
+    line = line.decode(defenc)
+    if line and handler:
+        try:
+            handler(line)
+        except Exception:
+            # Keep reading, have to pump the lines empty nontheless
+            log.error("Line handler exception on line: %s", line, exc_info=True)
+        # end
+    # end dispatch helper
+# end single line helper
+
+def _dispatch_lines(fno, handler, buf_list):
+    lc = 0
+    last_buf = buf_list[0]
+    while True:
+        for line in _read_lines_from_fno(fno, buf_list):
+            _dispatch_single_line(line, handler)
+            lc += 1
+        # for each line
+
+        if last_buf == buf_list[0]:
+            break
+
+        last_buf = buf_list[0]
+    # end endless loop
+    return lc
+# end
+
+def _deplete_buffer(fno, handler, buf_list, wg=None):
+    lc = 0
+    while True:
+        line_count = _dispatch_lines(fno, handler, buf_list)
+        lc += line_count
+        if line_count == 0:
+            break
+    # end deplete buffer
+
+    if buf_list[0]:
+        _dispatch_single_line(buf_list[0], handler)
+        lc += 1
+    # end
+
+    if wg:
+        wg.done()
+
+    return lc
+# end
+
 def handle_process_output(process, stdout_handler, stderr_handler, finalizer):
     """Registers for notifications to lean that process output is ready to read, and dispatches lines to
     the respective line handlers. We are able to handle carriage returns in case progress is sent by that
@@ -75,71 +153,6 @@ def handle_process_output(process, stdout_handler, stderr_handler, finalizer):
     :param stdout_handler: f(stdout_line_string), or None
     :param stderr_hanlder: f(stderr_line_string), or None
     :param finalizer: f(proc) - wait for proc to finish"""
-    def parse_lines_from_buffer(fno, buf):
-        line = b''
-        bi = 0
-        lb = len(buf)
-        while bi < lb:
-            char = _bchr(buf[bi])
-            bi += 1
-
-            if char in (b'\r', b'\n') and line:
-                yield bi, line
-                line = b''
-            else:
-                line += char
-            # END process parsed line
-        # END while file is not done reading
-    # end
-
-    def read_lines_from_fno(fno, last_buf_list):
-        buf = os.read(fno, mmap.PAGESIZE)
-        buf = last_buf_list[0] + buf
-
-        bi = 0
-        for bi, line in parse_lines_from_buffer(fno, buf):
-            yield line
-        # for each line to parse from the buffer
-
-        # keep remainder
-        last_buf_list[0] = buf[bi:]
-
-    def dispatch_single_line(line, handler):
-        line = line.decode(defenc)
-        if line and handler:
-            try:
-                handler(line)
-            except Exception:
-                # Keep reading, have to pump the lines empty nontheless
-                log.error("Line handler exception on line: %s", line, exc_info=True)
-            # end
-        # end dispatch helper
-    # end single line helper
-
-    def dispatch_lines(fno, handler, buf_list):
-        lc = 0
-        for line in read_lines_from_fno(fno, buf_list):
-            dispatch_single_line(line, handler)
-            lc += 1
-        # for each line
-        return lc
-    # end
-
-    def deplete_buffer(fno, handler, buf_list, wg=None):
-        while True:
-            line_count = dispatch_lines(fno, handler, buf_list)
-            if line_count == 0:
-                break
-        # end deplete buffer
-
-        if buf_list[0]:
-            dispatch_single_line(buf_list[0], handler)
-        # end
-
-        if wg:
-            wg.done()
-    # end
-
     fdmap = {process.stdout.fileno(): (stdout_handler, [b'']),
              process.stderr.fileno(): (stderr_handler, [b''])}
 
@@ -169,7 +182,7 @@ def handle_process_output(process, stdout_handler, stderr_handler, finalizer):
                 if result & CLOSED:
                     closed_streams.add(fd)
                 else:
-                    dispatch_lines(fd, *fdmap[fd])
+                    _dispatch_lines(fd, *fdmap[fd])
                 # end handle closed stream
             # end for each poll-result tuple
 
@@ -180,7 +193,7 @@ def handle_process_output(process, stdout_handler, stderr_handler, finalizer):
 
         # Depelete all remaining buffers
         for fno, (handler, buf_list) in fdmap.items():
-            deplete_buffer(fno, handler, buf_list)
+            _deplete_buffer(fno, handler, buf_list)
         # end for each file handle
 
         for fno in fdmap.keys():
@@ -194,7 +207,7 @@ def handle_process_output(process, stdout_handler, stderr_handler, finalizer):
         wg = WaitGroup()
         for fno, (handler, buf_list) in fdmap.items():
             wg.add(1)
-            t = threading.Thread(target=lambda: deplete_buffer(fno, handler, buf_list, wg))
+            t = threading.Thread(target=lambda: _deplete_buffer(fno, handler, buf_list, wg))
             t.start()
         # end
         # NOTE: Just joining threads can possibly fail as there is a gap between .start() and when it's
