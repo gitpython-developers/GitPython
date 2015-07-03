@@ -573,8 +573,9 @@ class Remote(LazyMixin, Iterable):
         fp.close()
 
         # NOTE: We assume to fetch at least enough progress lines to allow matching each fetch head line with it.
-        assert len(fetch_info_lines) >= len(fetch_head_info), "len(%s) <= len(%s)" % (fetch_head_info,
-                                                                                      fetch_info_lines)
+        l_fil = len(fetch_info_lines)
+        l_fhi = len(fetch_head_info)
+        assert l_fil >= l_fhi, "len(%s) <= len(%s)" % (l_fil, l_fhi)
 
         output.extend(FetchInfo._from_line(self.repo, err_line, fetch_line)
                       for err_line, fetch_line in zip(fetch_info_lines, fetch_head_info))
