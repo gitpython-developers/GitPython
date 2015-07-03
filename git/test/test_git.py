@@ -207,17 +207,15 @@ class TestGit(TestBase):
         # end if select.poll exists
 
     def test_dispatch_lines(self):
-        for path, line_count in ((fixture_path('issue-301_stderr'), 5002),
-                                 (fixture_path('issue-301_FETCH_HEAD'), 5001)):
-            count = [0]
-            def counter(line):
-                count[0] += 1
+        line_count = 5002
+        count = [0]
+        def counter(line):
+            count[0] += 1
 
-            fd = os.open(path, os.O_RDONLY)
-            buf_list = [b'']
-            lines_parsed = _deplete_buffer(fd, counter, buf_list)
-            os.close(fd)
+        fd = os.open(fixture_path('issue-301_stderr'), os.O_RDONLY)
+        buf_list = [b'']
+        lines_parsed = _deplete_buffer(fd, counter, buf_list)
+        os.close(fd)
 
-            assert lines_parsed == line_count
-            assert count[0] == line_count
-        # end for each file to read
+        assert lines_parsed == line_count
+        assert count[0] == line_count
