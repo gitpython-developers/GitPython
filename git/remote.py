@@ -550,7 +550,7 @@ class Remote(LazyMixin, Iterable):
 
         progress_handler = progress.new_message_handler()
 
-        def my_progress_handler(line):
+        for line in proc.stderr.readlines():
             for pline in progress_handler(line):
                 if line.startswith('fatal:') or line.startswith('error:'):
                     raise GitCommandError(("Error when fetching: %s" % line,), 2)
@@ -563,9 +563,7 @@ class Remote(LazyMixin, Iterable):
                 # end for each comand code we know
             # end for each line progress didn't handle
         # end
-
-        # We are only interested in stderr here ...
-        handle_process_output(proc, None, my_progress_handler, finalize_process)
+        finalize_process(proc)
 
         # read head information
         fp = open(join(self.repo.git_dir, 'FETCH_HEAD'), 'rb')
@@ -651,7 +649,8 @@ class Remote(LazyMixin, Iterable):
         else:
             args = [refspec]
 
-        proc = self.repo.git.fetch(self, *args, with_extended_output=True, as_process=True, v=True, **kwargs)
+        proc = self.repo.git.fetch(self, *args, with_extended_output=True, as_process=True, with_stdout=True, v=True,
+                                   **kwargs)
         res = self._get_fetch_info_from_stderr(proc, progress or RemoteProgress())
         if hasattr(self.repo.odb, 'update_cache'):
             self.repo.odb.update_cache()

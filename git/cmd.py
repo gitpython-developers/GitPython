@@ -41,7 +41,7 @@ from git.compat import (
 
 execute_kwargs = ('istream', 'with_keep_cwd', 'with_extended_output',
                   'with_exceptions', 'as_process', 'stdout_as_string',
-                  'output_stream')
+                  'output_stream', 'with_stdout')
 
 log = logging.getLogger('git.cmd')
 log.addHandler(logging.NullHandler())
@@ -65,84 +65,6 @@ else:
 # Documentation
 ## @{
 
-def _parse_lines_from_buffer(buf):
-    line = b''
-    bi = 0
-    lb = len(buf)
-    while bi < lb:
-        char = _bchr(buf[bi])
-        bi += 1
-
-        if char in (b'\r', b'\n') and line:
-            yield bi, line
-            line = b''
-        else:
-            line += char
-        # END process parsed line
-    # END while file is not done reading
-# end
-
-def _read_lines_from_fno(fno, last_buf_list):
-    buf = os.read(fno, mmap.PAGESIZE)
-    buf = last_buf_list[0] + buf
-
-    bi = 0
-    for bi, line in _parse_lines_from_buffer(buf):
-        yield line
-    # for each line to parse from the buffer
-
-    # keep remainder
-    last_buf_list[0] = buf[bi:]
-
-def _dispatch_single_line(line, handler):
-    line = line.decode(defenc)
-    if line and handler:
-        try:
-            handler(line)
-        except Exception:
-            # Keep reading, have to pump the lines empty nontheless
-            log.error("Line handler exception on line: %s", line, exc_info=True)
-        # end
-    # end dispatch helper
-# end single line helper
-
-def _dispatch_lines(fno, handler, buf_list):
-    lc = 0
-    last_buf = buf_list[0]
-    while True:
-        for line in _read_lines_from_fno(fno, buf_list):
-            _dispatch_single_line(line, handler)
-            lc += 1
-        # for each line
-
-        if last_buf == buf_list[0]:
-            break
-
-        last_buf = buf_list[0]
-    # end endless loop
-    return lc
-# end
-
-def _deplete_buffer(fno, handler, buf_list, wg=None):
-    lc = 0
-    while True:
-        line_count = _dispatch_lines(fno, handler, buf_list)
-        lc += line_count
-        if line_count == 0:
-            break
-    # end deplete buffer
-
-    if buf_list[0]:
-        _dispatch_single_line(buf_list[0], handler)
-        lc += 1
-    # end
-
-    if wg:
-        wg.done()
-
-    return lc
-# end
-
 def handle_process_output(process, stdout_handler, stderr_handler, finalizer):
     """Registers for notifications to lean that process output is ready to read, and dispatches lines to
     the respective line handlers. We are able to handle carriage returns in case progress is sent by that
@@ -155,6 +77,76 @@ def handle_process_output(process, stdout_handler, stderr_handler, finalizer):
     :param finalizer: f(proc) - wait for proc to finish"""
     fdmap = {process.stdout.fileno(): (stdout_handler, [b'']),
              process.stderr.fileno(): (stderr_handler, [b''])}
+
+    def _parse_lines_from_buffer(buf):
+        line = b''
+        bi = 0
+        lb = len(buf)
+        while bi < lb:
+            char = _bchr(buf[bi])
+            bi += 1
+
+            if char in (b'\r', b'\n') and line:
+                yield bi, line
+                line = b''
+            else:
+                line += char
+            # END process parsed line
+        # END while file is not done reading
+    # end
+
+    def _read_lines_from_fno(fno, last_buf_list):
+        buf = os.read(fno, mmap.PAGESIZE)
+        buf = last_buf_list[0] + buf
+
+        bi = 0
+        for bi, line in _parse_lines_from_buffer(buf):
+            yield line
+        # for each line to parse from the buffer
+
+        # keep remainder
+        last_buf_list[0] = buf[bi:]
+
+    def _dispatch_single_line(line, handler):
+        line = line.decode(defenc)
+        if line and handler:
+            try:
+                handler(line)
+            except Exception:
+                # Keep reading, have to pump the lines empty nontheless
+                log.error("Line handler exception on line: %s", line, exc_info=True)
+            # end
+        # end dispatch helper
+    # end single line helper
+
+    def _dispatch_lines(fno, handler, buf_list):
+        lc = 0
+        for line in _read_lines_from_fno(fno, buf_list):
+            _dispatch_single_line(line, handler)
+            lc += 1
+        # for each line
+        return lc
+    # end
+
+    def _deplete_buffer(fno, handler, buf_list, wg=None):
+        lc = 0
+        while True:
+            line_count = _dispatch_lines(fno, handler, buf_list)
+            lc += line_count
+            if line_count == 0:
+                break
+        # end deplete buffer
+
+        if buf_list[0]:
+            _dispatch_single_line(buf_list[0], handler)
+            lc += 1
+        # end
+
+        if wg:
+            wg.done()
+
+        return lc
+    # end
 
     if hasattr(select, 'poll'):
         # poll is preferred, as select is limited to file handles up to 1024 ... . This could otherwise be
@@ -483,6 +475,7 @@ class Git(LazyMixin):
                 as_process=False,
                 output_stream=None,
                 stdout_as_string=True,
+                with_stdout=True,
                 **subprocess_kwargs
                 ):
         """Handles executing the command on the shell and consumes and returns
@@ -536,6 +529,8 @@ class Git(LazyMixin):
             some of the valid kwargs are already set by this method, the ones you
             specify may not be the same ones.
 
+        :param with_stdout: If True, default True, we open stdout on the created process
+
         :return:
             * str(output) if extended_output = False (Default)
             * tuple(int(status), str(stdout), str(stderr)) if extended_output = True
@@ -586,7 +581,7 @@ class Git(LazyMixin):
                          cwd=cwd,
                          stdin=istream,
                          stderr=PIPE,
-                         stdout=PIPE,
+                         stdout=with_stdout and PIPE or None,
                          shell=self.USE_SHELL,
                          close_fds=(os.name == 'posix'),  # unsupported on windows
                          **subprocess_kwargs

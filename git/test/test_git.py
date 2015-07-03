@@ -5,7 +5,9 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 import os
+import sys
 import mock
+import subprocess
 
 from git.test.lib import (
     TestBase,
@@ -22,7 +24,6 @@ from git import (
     GitCommandNotFound,
     Repo
 )
-from git.cmd import _deplete_buffer
 from gitdb.test.lib import with_rw_directory
 
 from git.compat import PY3
@@ -206,16 +207,25 @@ class TestGit(TestBase):
             # end
         # end if select.poll exists
 
-    def test_dispatch_lines(self):
+    def test_handle_process_output(self):
+        from git.cmd import handle_process_output
+
         line_count = 5002
-        count = [0]
-        def counter(line):
-            count[0] += 1
+        count = [None, 0, 0]
 
-        fd = os.open(fixture_path('issue-301_stderr'), os.O_RDONLY)
-        buf_list = [b'']
-        lines_parsed = _deplete_buffer(fd, counter, buf_list)
-        os.close(fd)
+        def counter_stdout(line):
+            count[1] += 1
 
-        assert lines_parsed == line_count
-        assert count[0] == line_count
+        def counter_stderr(line):
+            count[2] += 1
+
+        proc = subprocess.Popen([sys.executable, fixture_path('cat_file.py'), str(fixture_path('issue-301_stderr'))],
+                                stdin=None,
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE,
+                                shell=False)
+
+        handle_process_output(proc, counter_stdout, counter_stderr, lambda proc: proc.wait())
+
+        assert count[1] == line_count
+        assert count[2] == line_count
