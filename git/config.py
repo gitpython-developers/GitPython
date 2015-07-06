@@ -386,7 +386,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
             # We expect all paths to be normalized and absolute (and will assure that is the case)
             if self._has_includes():
                 for _, include_path in self.items('include'):
-                    if '~' in include_path:
+                    if include_path.startswith('~'):
                         include_path = os.path.expanduser(include_path)
                     if not os.path.isabs(include_path):
                         if not close_fp:
