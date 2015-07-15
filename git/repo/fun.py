@@ -121,7 +121,7 @@ def name_to_object(repo, name, return_ref=False):
 
 
 def deref_tag(tag):
-    """Recursively dereerence a tag and return the resulting object"""
+    """Recursively dereference a tag and return the resulting object"""
     while True:
         try:
             tag = tag.object
