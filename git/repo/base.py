@@ -464,7 +464,7 @@ class Repo(object):
             max_count and skip
 
         :note: to receive only commits between two named revisions, use the
-            "revA..revB" revision specifier
+            "revA...revB" revision specifier
 
         :return ``git.Commit[]``"""
         if rev is None:
