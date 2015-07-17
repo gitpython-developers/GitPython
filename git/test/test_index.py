@@ -470,6 +470,17 @@ class TestIndex(TestBase):
         assert cur_head.commit == commit_actor
         assert cur_head.log()[-1].actor == my_committer
 
+        # commit with author_date and commit_date
+        cur_commit = cur_head.commit
+        commit_message = u"commit with dates by Avinash Sajjanshetty"
+
+        new_commit = index.commit(commit_message, author_date="2006-04-07T22:13:13", commit_date="2005-04-07T22:13:13")
+        assert cur_commit != new_commit
+        print(new_commit.authored_date, new_commit.committed_date)
+        assert new_commit.message == commit_message
+        assert new_commit.authored_date == 1144447993
+        assert new_commit.committed_date == 1112911993
+
         # same index, no parents
         commit_message = "index without parents"
         commit_no_parents = index.commit(commit_message, parent_commits=list(), head=True)

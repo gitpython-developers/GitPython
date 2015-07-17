@@ -266,7 +266,8 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
             finalize_process(proc_or_stream)
 
     @classmethod
-    def create_from_tree(cls, repo, tree, message, parent_commits=None, head=False, author=None, committer=None):
+    def create_from_tree(cls, repo, tree, message, parent_commits=None, head=False, author=None, committer=None,
+                         author_date=None, commit_date=None):
         """Commit the given tree, creating a commit object.
 
         :param repo: Repo object the commit should be part of
@@ -288,6 +289,8 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
             configuration is used to obtain this value.
         :param committer: The name of the committer, optional. If unset, the
             repository configuration is used to obtain this value.
+        :param author_date: The timestamp for the author field
+        :param commit_date: The timestamp for the committer field
 
         :return: Commit object representing the new commit
 
@@ -327,14 +330,18 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
         offset = altzone
 
         author_date_str = env.get(cls.env_author_date, '')
-        if author_date_str:
+        if author_date:
+            author_time, author_offset = parse_date(author_date)
+        elif author_date_str:
             author_time, author_offset = parse_date(author_date_str)
         else:
             author_time, author_offset = unix_time, offset
         # END set author time
 
         committer_date_str = env.get(cls.env_committer_date, '')
-        if committer_date_str:
+        if commit_date:
+            committer_time, committer_offset = parse_date(commit_date)
+        elif committer_date_str:
             committer_time, committer_offset = parse_date(committer_date_str)
         else:
             committer_time, committer_offset = unix_time, offset
