@@ -922,7 +922,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
         return out
 
-    def commit(self, message, parent_commits=None, head=True, author=None, committer=None):
+    def commit(self, message, parent_commits=None, head=True, author=None, committer=None, author_date=None, commit_date=None):
         """Commit the current default index file, creating a commit object.
         For more information on the arguments, see tree.commit.
 
@@ -932,7 +932,8 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         run_commit_hook('pre-commit', self)
         tree = self.write_tree()
         rval = Commit.create_from_tree(self.repo, tree, message, parent_commits,
-                                       head, author=author, committer=committer)
+                                       head, author=author, committer=committer,
+                                       author_date=author_date, commit_date=commit_date)
         run_commit_hook('post-commit', self)
         return rval
 
