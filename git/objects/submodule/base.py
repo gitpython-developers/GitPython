@@ -431,7 +431,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
             This only works if we have a local tracking branch, which is the case
             if the remote repository had a master branch, or of the 'branch' option
             was specified for this submodule and the branch existed remotely
-        :param progress: UpdateProgress instance or None of no progress should be shown
+        :param progress: UpdateProgress instance or None if no progress should be shown
         :param dry_run: if True, the operation will only be simulated, but not performed.
             All performed operations are read-only
         :param force:
