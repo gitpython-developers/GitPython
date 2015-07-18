@@ -55,7 +55,6 @@ class HEAD(SymbolicReference):
 
         :return: self"""
         mode = "--soft"
-        add_arg = None
         if index:
             mode = "--mixed"
 
@@ -73,12 +72,8 @@ class HEAD(SymbolicReference):
 
         # END working tree handling
 
-        if paths:
-            add_arg = "--"
-        # END nicely separate paths from rest
-
         try:
-            self.repo.git.reset(mode, commit, add_arg, paths, **kwargs)
+            self.repo.git.reset(mode, commit, '--', paths, **kwargs)
         except GitCommandError as e:
             # git nowadays may use 1 as status to indicate there are still unstaged
             # modifications after the reset
