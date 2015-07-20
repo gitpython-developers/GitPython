@@ -54,7 +54,6 @@ from .fun import (
 )
 from git.compat import (
     text_type,
-    force_text,
     defenc,
     PY3
 )
