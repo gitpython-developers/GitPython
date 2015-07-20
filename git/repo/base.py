@@ -54,7 +54,9 @@ from .fun import (
 )
 from git.compat import (
     text_type,
-    defenc
+    force_text,
+    defenc,
+    PY3
 )
 
 import os
@@ -625,7 +627,12 @@ class Repo(object):
             filename = line[len(prefix):].rstrip('\n')
             # Special characters are escaped
             if filename[0] == filename[-1] == '"':
-                filename = filename[1:-1].decode('string_escape').decode(defenc)
+                filename = filename[1:-1]
+                if PY3:
+                    # WHATEVER ... it's a mess, but works for me
+                    filename = filename.encode('ascii').decode('unicode_escape').encode('latin1').decode(defenc)
+                else:
+                    filename = filename.decode('string_escape').decode(defenc)
             untracked_files.append(filename)
         finalize_process(proc)
         return untracked_files
