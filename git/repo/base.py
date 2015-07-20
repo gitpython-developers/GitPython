@@ -625,7 +625,7 @@ class Repo(object):
             filename = line[len(prefix):].rstrip('\n')
             # Special characters are escaped
             if filename[0] == filename[-1] == '"':
-                filename = filename[1:-1].decode('string_escape')
+                filename = filename[1:-1].decode('string_escape').decode(defenc)
             untracked_files.append(filename)
         finalize_process(proc)
         return untracked_files

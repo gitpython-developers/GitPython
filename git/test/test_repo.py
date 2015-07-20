@@ -1,3 +1,4 @@
+#-*-coding:utf-8-*-
 # test_repo.py
 # Copyright (C) 2008, 2009 Michael Trier (mtrier@gmail.com) and contributors
 #
@@ -324,17 +325,21 @@ class TestRepo(TestBase):
         assert len(res) == 1
         assert len(res[0][1]) == 83, "Unexpected amount of parsed blame lines"
 
-    def test_untracked_files(self):
-        base = self.rorepo.working_tree_dir
-        files = (join_path_native(base, "__test_myfile"),
-                 join_path_native(base, "__test_other_file"))
-        num_recently_untracked = 0
-        try:
+    @with_rw_repo('HEAD', bare=False)
+    def test_untracked_files(self, rwrepo):
+        for (run, repo_add) in enumerate((rwrepo.index.add, rwrepo.git.add)):
+            base = rwrepo.working_tree_dir
+            files = (join_path_native(base, u"%i_test _myfile" % run),
+                     join_path_native(base, "%i_test_other_file" % run),
+                     join_path_native(base, u"%i__çava verböten" % run),
+                     join_path_native(base, u"%i_çava-----verböten" % run))
+
+            num_recently_untracked = 0
             for fpath in files:
                 fd = open(fpath, "wb")
                 fd.close()
             # END for each filename
-            untracked_files = self.rorepo.untracked_files
+            untracked_files = rwrepo.untracked_files
             num_recently_untracked = len(untracked_files)
 
             # assure we have all names - they are relative to the git-dir
@@ -342,13 +347,10 @@ class TestRepo(TestBase):
             for utfile in untracked_files:
                 num_test_untracked += join_path_native(base, utfile) in files
             assert len(files) == num_test_untracked
-        finally:
-            for fpath in files:
-                if os.path.isfile(fpath):
-                    os.remove(fpath)
-        # END handle files
 
-        assert len(self.rorepo.untracked_files) == (num_recently_untracked - len(files))
+            repo_add(untracked_files)
+            assert len(rwrepo.untracked_files) == (num_recently_untracked - len(files))
+        # end for each run
 
     def test_config_reader(self):
         reader = self.rorepo.config_reader()                # all config files

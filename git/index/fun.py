@@ -124,12 +124,13 @@ def write_cache(entries, stream, extension_data=None, ShaStreamCls=IndexFileSHA1
         write(entry[4])         # ctime
         write(entry[5])         # mtime
         path = entry[3]
+        path = path.encode(defenc)
         plen = len(path) & CE_NAMEMASK      # path length
         assert plen == len(path), "Path %s too long to fit into index" % entry[3]
         flags = plen | (entry[2] & CE_NAMEMASK_INV)     # clear possible previous values
         write(pack(">LLLLLL20sH", entry[6], entry[7], entry[0],
                    entry[8], entry[9], entry[10], entry[1], flags))
-        write(path.encode(defenc))
+        write(path)
         real_size = ((tell() - beginoffset + 8) & ~7)
         write(b"\0" * ((beginoffset + real_size) - tell()))
     # END for each entry
