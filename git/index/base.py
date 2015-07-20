@@ -610,7 +610,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
                 blob = Blob(self.repo, Blob.NULL_BIN_SHA,
                             stat_mode_to_index_mode(os.stat(abspath).st_mode),
-                            to_native_path_linux(gitrelative_path), encoding=defenc)
+                            to_native_path_linux(gitrelative_path))
                 # TODO: variable undefined
                 entries.append(BaseIndexEntry.from_blob(blob))
             # END for each path
