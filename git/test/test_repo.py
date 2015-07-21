@@ -42,6 +42,7 @@ import os
 import sys
 import tempfile
 import shutil
+import itertools
 from io import BytesIO
 
 
@@ -765,3 +766,16 @@ class TestRepo(TestBase):
 
         # Test for no merge base - can't do as we have
         self.failUnlessRaises(GitCommandError, repo.merge_base, c1, 'ffffff')
+
+    def test_is_ancestor(self):
+        repo = self.rorepo
+        c1 = 'f6aa8d1'
+        c2 = '763ef75'
+        self.assertTrue(repo.is_ancestor(c1, c1))
+        self.assertTrue(repo.is_ancestor("master", "master"))
+        self.assertTrue(repo.is_ancestor(c1, c2))
+        self.assertTrue(repo.is_ancestor(c1, "master"))
+        self.assertFalse(repo.is_ancestor(c2, c1))
+        self.assertFalse(repo.is_ancestor("master", c1))
+        for i, j in itertools.permutations([c1, 'ffffff', ''], r=2):
+            self.assertRaises(GitCommandError, repo.is_ancestor, i, j)

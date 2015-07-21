@@ -504,6 +504,21 @@ class Repo(object):
 
         return res
 
+    def is_ancestor(self, ancestor_rev, rev):
+        """Check if a commit  is an ancestor of another
+
+        :param ancestor_rev: Rev which should be an ancestor
+        :param rev: Rev to test against ancestor_rev
+        :return: ``True``, ancestor_rev is an accestor to rev.
+        """
+        try:
+            self.git.merge_base(ancestor_rev, rev, is_ancestor=True)
+        except GitCommandError as err:
+            if err.status == 1:
+                return False
+            raise
+        return True
+
     def _get_daemon_export(self):
         filename = join(self.git_dir, self.DAEMON_EXPORT_FILE)
         return os.path.exists(filename)
