@@ -137,7 +137,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 
     @classmethod
     def _need_gitfile_submodules(cls, git):
-        return git.version_info[:3] >= (1, 7, 0)
+        return git.version_info[:3] >= (1, 7, 5)
 
     def __eq__(self, other):
         """Compare with another submodule"""
