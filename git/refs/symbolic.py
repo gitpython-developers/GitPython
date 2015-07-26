@@ -88,25 +88,25 @@ class SymbolicReference(object):
         """Returns an iterator yielding pairs of sha1/path pairs (as bytes) for the corresponding refs.
         :note: The packed refs file will be kept open as long as we iterate"""
         try:
-            fp = open(cls._get_packed_refs_path(repo), 'rt')
-            for line in fp:
-                line = line.strip()
-                if not line:
-                    continue
-                if line.startswith('#'):
-                    if line.startswith('# pack-refs with:') and not line.endswith('peeled'):
-                        raise TypeError("PackingType of packed-Refs not understood: %r" % line)
-                    # END abort if we do not understand the packing scheme
-                    continue
-                # END parse comment
+            with open(cls._get_packed_refs_path(repo), 'rt') as fp:
+                for line in fp:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    if line.startswith('#'):
+                        if line.startswith('# pack-refs with:') and not line.endswith('peeled'):
+                            raise TypeError("PackingType of packed-Refs not understood: %r" % line)
+                        # END abort if we do not understand the packing scheme
+                        continue
+                    # END parse comment
 
-                # skip dereferenced tag object entries - previous line was actual
-                # tag reference for it
-                if line[0] == '^':
-                    continue
+                    # skip dereferenced tag object entries - previous line was actual
+                    # tag reference for it
+                    if line[0] == '^':
+                        continue
 
-                yield tuple(line.split(' ', 1))
-            # END for each line
+                    yield tuple(line.split(' ', 1))
+                # END for each line
         except (OSError, IOError):
             raise StopIteration
         # END no packed-refs file handling
