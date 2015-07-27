@@ -393,7 +393,7 @@ Use the diff framework if you want to implement git-status like functionality.
 
 * A diff between the index and the commit's tree your HEAD points to
  
- * use ``repo.index.diff(repo.head)``
+ * use ``repo.index.diff(repo.head.commit)``
   
 * A diff between the index and the working tree
  
