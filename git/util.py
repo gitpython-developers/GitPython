@@ -239,7 +239,6 @@ class RemoteProgress(object):
                 # to make sure we get informed in case the process spits out new
                 # commands at some point.
                 self.line_dropped(sline)
-                sys.stderr.write("Operation name %r unknown - skipping line '%s'" % (op_name, sline))
                 # Note: Don't add this line to the failed lines, as we have to silently
                 # drop it
                 return failed_lines
