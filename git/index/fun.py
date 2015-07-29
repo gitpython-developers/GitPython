@@ -41,7 +41,8 @@ from gitdb.base import IStream
 from gitdb.typ import str_tree_type
 from git.compat import (
     defenc,
-    force_text
+    force_text,
+    force_bytes
 )
 
 S_IFGITLINK = S_IFLNK | S_IFDIR     # a submodule
@@ -124,7 +125,7 @@ def write_cache(entries, stream, extension_data=None, ShaStreamCls=IndexFileSHA1
         write(entry[4])         # ctime
         write(entry[5])         # mtime
         path = entry[3]
-        path = path.encode(defenc)
+        path = force_bytes(path, encoding=defenc)
         plen = len(path) & CE_NAMEMASK      # path length
         assert plen == len(path), "Path %s too long to fit into index" % entry[3]
         flags = plen | (entry[2] & CE_NAMEMASK_INV)     # clear possible previous values

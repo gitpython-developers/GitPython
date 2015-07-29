@@ -18,6 +18,7 @@ from git.exc import (
 )
 from git import (
     IndexFile,
+    Repo,
     BlobFilter,
     UnmergedEntriesError,
     Tree,
@@ -45,6 +46,7 @@ from git.index.typ import (
     IndexEntry
 )
 from git.index.fun import hook_path
+from gitdb.test.lib import with_rw_directory
 
 
 class TestIndex(TestBase):
@@ -780,3 +782,14 @@ class TestIndex(TestBase):
         except InvalidGitRepositoryError:
             asserted = True
         assert asserted, "Adding using a filename is not correctly asserted."
+
+    @with_rw_directory
+    def test_add_utf8P_path(self, rw_dir):
+        # NOTE: fp is not a Unicode object in python 2 (which is the source of the problem)
+        fp = os.path.join(rw_dir, 'ø.txt')
+        with open(fp, 'w') as fs:
+            fs.write('content of ø')
+
+        r = Repo.init(rw_dir)
+        r.index.add([fp])
+        r.index.commit('Added orig and prestable')
