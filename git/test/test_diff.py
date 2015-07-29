@@ -4,6 +4,7 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
+import os
 
 from git.test.lib import (
     TestBase,
@@ -14,7 +15,11 @@ from git.test.lib import (
 
 )
 
+from gitdb.test.lib import with_rw_directory
+
 from git import (
+    Repo,
+    GitCommandError,
     Diff,
     DiffIndex
 )
@@ -36,6 +41,33 @@ class TestDiff(TestBase):
                 assert not diff.b_blob.path.endswith('\n')
         # END for each diff
         return diffs
+
+    @with_rw_directory
+    def test_diff_with_staged_file(self, rw_dir):
+        # SETUP INDEX WITH MULTIPLE STAGES
+        r = Repo.init(rw_dir)
+        fp = os.path.join(rw_dir, 'hello.txt')
+        with open(fp, 'w') as fs:
+            fs.write("hello world")
+        r.git.add(fp)
+        r.git.commit(message="init")
+
+        with open(fp, 'w') as fs:
+            fs.write("Hola Mundo")
+        r.git.commit(all=True, message="change on master")
+
+        r.git.checkout('HEAD~1', b='topic')
+        with open(fp, 'w') as fs:
+            fs.write("Hallo Welt")
+        r.git.commit(all=True, message="change on topic branch")
+
+        # there must be a merge-conflict
+        self.failUnlessRaises(GitCommandError, r.git.cherry_pick, 'master')
+
+        # Now do the actual testing - this should just work
+        assert len(r.index.diff(None)) == 2
+
+        assert len(r.index.diff(None, create_patch=True)) == 0, "This should work, but doesn't right now ... it's OK"
 
     def test_list_from_string_new_mode(self):
         output = StringProcessAdapter(fixture('diff_new_mode'))

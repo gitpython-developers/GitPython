@@ -223,12 +223,12 @@ class Diff(object):
         if a_blob_id is None:
             self.a_blob = None
         else:
-            assert self.a_mode
+            assert self.a_mode is not None
             self.a_blob = Blob(repo, hex_to_bin(a_blob_id), mode=self.a_mode, path=a_path)
         if b_blob_id is None:
             self.b_blob = None
         else:
-            assert self.b_mode
+            assert self.b_mode is not None
             self.b_blob = Blob(repo, hex_to_bin(b_blob_id), mode=self.b_mode, path=b_path)
 
         self.new_file = new_file
