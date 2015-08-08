@@ -697,7 +697,7 @@ class TestSubmodule(TestBase):
 
         # submodules are retrieved from the current commit's tree, therefore we can't really get a new submodule
         # object pointing to the new submodule commit
-        sm_too = parent.submodules[0]
+        sm_too = parent.submodules['module_moved']
         assert parent.head.commit.tree[sm.path].binsha == sm.binsha
         assert sm_too.binsha == sm.binsha, "cached submodule should point to the same commit as updated one"
 
