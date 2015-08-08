@@ -661,7 +661,7 @@ class TestSubmodule(TestBase):
         # end for each checkout mode
 
     @with_rw_directory
-    def test_git_submodules(self, rwdir):
+    def test_git_submodules_and_add_sm_with_new_commit(self, rwdir):
         parent = git.Repo.init(os.path.join(rwdir, 'parent'))
         parent.git.submodule('add', self._small_repo_url(), 'module')
         parent.index.commit("added submodule")
@@ -685,6 +685,37 @@ class TestSubmodule(TestBase):
 
         sm.move(sm.path + '_moved')
         sm2.move(sm2.path + '_moved')
+
+        parent.index.commit("moved submodules")
+
+        smm = sm.module()
+        fp = os.path.join(smm.working_tree_dir, 'empty-file')
+        with open(fp, 'w'):
+            pass
+        smm.git.add(fp)
+        smm.git.commit(m="new file added")
+
+        # submodules are retrieved from the current commit's tree, therefore we can't really get a new submodule
+        # object pointing to the new submodule commit
+        sm_too = parent.submodules[0]
+        assert parent.head.commit.tree[sm.path].binsha == sm.binsha
+        assert sm_too.binsha == sm.binsha, "cached submodule should point to the same commit as updated one"
+
+        added_bies = parent.index.add([sm])  # addded base-index-entries
+        assert len(added_bies) == 1
+        parent.index.commit("add same submodule entry")
+        commit_sm = parent.head.commit.tree[sm.path]
+        assert commit_sm.binsha == added_bies[0].binsha
+        assert commit_sm.binsha == sm.binsha
+
+        sm_too.binsha = sm_too.module().head.commit.binsha
+        added_bies = parent.index.add([sm_too])
+        assert len(added_bies) == 1
+        parent.index.commit("add new submodule entry")
+        commit_sm = parent.head.commit.tree[sm.path]
+        assert commit_sm.binsha == added_bies[0].binsha
+        assert commit_sm.binsha == sm_too.binsha
+        assert sm_too.binsha != sm.binsha
 
     @with_rw_directory
     def test_git_submodule_compatibility(self, rwdir):
