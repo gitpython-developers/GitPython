@@ -787,8 +787,8 @@ class TestIndex(TestBase):
     def test_add_utf8P_path(self, rw_dir):
         # NOTE: fp is not a Unicode object in python 2 (which is the source of the problem)
         fp = os.path.join(rw_dir, 'ø.txt')
-        with open(fp, 'w') as fs:
-            fs.write('content of ø')
+        with open(fp, 'wb') as fs:
+            fs.write(u'content of ø'.encode('utf-8'))
 
         r = Repo.init(rw_dir)
         r.index.add([fp])
