@@ -76,7 +76,7 @@ class TestPerformance(TestBigRepoRW):
               % (nc, elapsed_time, nc / elapsed_time), file=sys.stderr)
 
     def test_commit_serialization(self):
-        assert_commit_serialization(self.gitrwrepo, self.gitrwrepo.head, True)
+        assert_commit_serialization(self.gitrwrepo, '58c78e6', True)
 
         rwrepo = self.gitrwrepo
         make_object = rwrepo.odb.store
