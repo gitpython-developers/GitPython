@@ -700,7 +700,7 @@ class Git(LazyMixin):
         finally:
             self.update_environment(**old_env)
 
-    def transform_kwargs(self, split_single_char_options=False, **kwargs):
+    def transform_kwargs(self, split_single_char_options=True, **kwargs):
         """Transforms Python style kwargs into git command line options."""
         args = list()
         for k, v in kwargs.items():

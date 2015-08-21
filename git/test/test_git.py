@@ -65,7 +65,7 @@ class TestGit(TestBase):
 
     def test_it_transforms_kwargs_into_git_command_arguments(self):
         assert_equal(["-s"], self.git.transform_kwargs(**{'s': True}))
-        assert_equal(["-s5"], self.git.transform_kwargs(**{'s': 5}))
+        assert_equal(["-s", "5"], self.git.transform_kwargs(**{'s': 5}))
 
         assert_equal(["--max-count"], self.git.transform_kwargs(**{'max_count': True}))
         assert_equal(["--max-count=5"], self.git.transform_kwargs(**{'max_count': 5}))
