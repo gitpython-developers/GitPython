@@ -5,6 +5,9 @@ Changelog
 1.0.2 - Fixes
 =============
 
+* IMPORTANT: Changed default object database of `Repo` objects to `GitComdObjectDB`. The pure-python implementation
+  used previously usually fails to release its resources (i.e. file handles), which can lead to problems when working
+  with large repositories.
 * CRITICAL: fixed incorrect `Commit` object serialization when authored or commit date had timezones which were not
   divisable by 3600 seconds. This would happen if the timezone was something like `+0530` for instance.
 * A list of all additional fixes can be found `on github <https://github.com/gitpython-developers/GitPython/issues?q=milestone%3A%22v1.0.2+-+Fixes%22+is%3Aclosed>`_

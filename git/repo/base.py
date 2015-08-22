@@ -35,10 +35,7 @@ from git.remote import (
     add_progress
 )
 
-from git.db import (
-    GitCmdObjectDB,
-    GitDB
-)
+from git.db import GitCmdObjectDB
 
 from gitdb.util import (
     join,
@@ -62,7 +59,7 @@ import os
 import sys
 import re
 
-DefaultDBType = GitDB
+DefaultDBType = GitCmdObjectDB
 if sys.version_info[:2] < (2, 5):     # python 2.4 compatiblity
     DefaultDBType = GitCmdObjectDB
 # END handle python 2.4
