@@ -14,6 +14,10 @@ class InvalidGitRepositoryError(Exception):
     """ Thrown if the given repository appears to have an invalid format.  """
 
 
+class WorkTreeRepositoryUnsupported(InvalidGitRepositoryError):
+    """ Thrown to indicate we can't handle work tree repositories """
+
+
 class NoSuchPathError(OSError):
     """ Thrown if a path could not be access by the system. """
 

@@ -33,7 +33,10 @@ from git import (
 )
 from git.repo.fun import touch
 from git.util import join_path_native
-from git.exc import BadObject
+from git.exc import (
+    BadObject,
+    WorkTreeRepositoryUnsupported
+)
 from gitdb.util import bin_to_hex
 from git.compat import string_types
 from gitdb.test.lib import with_rw_directory
@@ -44,6 +47,8 @@ import tempfile
 import shutil
 import itertools
 from io import BytesIO
+
+from nose import SkipTest
 
 
 class TestRepo(TestBase):
@@ -779,3 +784,16 @@ class TestRepo(TestBase):
         self.assertFalse(repo.is_ancestor("master", c1))
         for i, j in itertools.permutations([c1, 'ffffff', ''], r=2):
             self.assertRaises(GitCommandError, repo.is_ancestor, i, j)
+
+    @with_rw_directory
+    def test_work_tree_unsupported(self, rw_dir):
+        git = Git(rw_dir)
+        if git.version_info[:3] < (2, 5, 1):
+            raise SkipTest("worktree feature unsupported")
+
+        rw_master = self.rorepo.clone(join_path_native(rw_dir, 'master_repo'))
+        rw_master.git.checkout('HEAD~10')
+        worktree_path = join_path_native(rw_dir, 'worktree_repo')
+        rw_master.git.worktree('add', worktree_path, 'master')
+
+        self.failUnlessRaises(WorkTreeRepositoryUnsupported, Repo, worktree_path)

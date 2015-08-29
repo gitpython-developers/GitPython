@@ -4,7 +4,7 @@ from string import digits
 
 from gitdb.exc import (
     BadObject,
-    BadName
+    BadName,
 )
 from git.refs import SymbolicReference
 from git.objects import Object
@@ -16,6 +16,7 @@ from gitdb.util import (
     hex_to_bin,
     bin_to_hex
 )
+from git.exc import WorkTreeRepositoryUnsupported
 from git.compat import xrange
 
 
@@ -31,14 +32,20 @@ def touch(filename):
 
 def is_git_dir(d):
     """ This is taken from the git setup.c:is_git_directory
-    function."""
-    if isdir(d) and \
-            isdir(join(d, 'objects')) and \
-            isdir(join(d, 'refs')):
-        headref = join(d, 'HEAD')
-        return isfile(headref) or \
-            (os.path.islink(headref) and
-             os.readlink(headref).startswith('refs'))
+    function.
+
+    @throws WorkTreeRepositoryUnsupported if it sees a worktree directory. It's quite hacky to do that here,
+            but at least clearly indicates that we don't support it.
+            There is the unlikely danger to throw if we see directories which just look like a worktree dir,
+            but are none."""
+    if isdir(d):
+        if isdir(join(d, 'objects')) and isdir(join(d, 'refs')):
+            headref = join(d, 'HEAD')
+            return isfile(headref) or \
+                (os.path.islink(headref) and
+                 os.readlink(headref).startswith('refs'))
+        elif isfile(join(d, 'gitdir')) and isfile(join(d, 'commondir')) and isfile(join(d, 'gitfile')):
+            raise WorkTreeRepositoryUnsupported(d)
     return False
 
 
