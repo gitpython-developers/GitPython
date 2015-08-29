@@ -690,6 +690,9 @@ class TestIndex(TestBase):
         index.add(files, write=True)
         if os.name != 'nt':
             hp = hook_path('pre-commit', index.repo.git_dir)
+            hpd = os.path.dirname(hp)
+            if not os.path.isdir(hpd):
+                os.mkdir(hpd)
             with open(hp, "wt") as fp:
                 fp.write("#!/usr/bin/env sh\necho stdout; echo stderr 1>&2; exit 1")
             # end
