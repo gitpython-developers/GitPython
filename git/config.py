@@ -156,14 +156,20 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
 
     #} END configuration
 
+    optvalueonly_source = r'\s*(?P<option>[^:=\s][^:=]*)'
+
+    OPTVALUEONLY = re.compile(optvalueonly_source)
+
     OPTCRE = re.compile(
-        r'\s*(?P<option>[^:=\s][^:=]*)'       # very permissive, incuding leading whitespace
-        r'\s*(?P<vi>[:=])\s*'                 # any number of space/tab,
+        optvalueonly_source                          # very permissive, incuding leading whitespace
+        + r'\s*(?P<vi>[:=])\s*'               # any number of space/tab,
                                               # followed by separator
                                               # (either : or =), followed
                                               # by any # space/tab
-        r'(?P<value>.*)$'                     # everything up to eol
+        + r'(?P<value>.*)$'                     # everything up to eol
     )
+
+    del optvalueonly_source
 
     # list of RawConfigParser methods able to change the instance
     _mutating_methods_ = ("add_section", "remove_section", "remove_option", "set")
@@ -322,9 +328,11 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
                     # end handle multi-line
                     cursect[optname] = optval
                 else:
-                    if not e:
-                        e = cp.ParsingError(fpname)
-                    e.append(lineno, repr(line))
+                    # check if it's an option with no value - it's just ignored by git
+                    if not self.OPTVALUEONLY.match(line):
+                        if not e:
+                            e = cp.ParsingError(fpname)
+                        e.append(lineno, repr(line))
                     continue
             else:
                 line = line.rstrip()

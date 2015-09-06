@@ -210,3 +210,10 @@ class TestBase(TestCase):
         self.assertEqual(w_config.get('alias', 'rbi'), '"!g() { git rebase -i origin/${1:-master} ; } ; g"')
         w_config.release()
         self.assertEqual(file_obj.getvalue(), self._to_memcache(fixture_path('.gitconfig')).getvalue())
+
+    def test_empty_config_value(self):
+        cr = GitConfigParser(fixture_path('git_config_with_empty_value'), read_only=True)
+
+        assert cr.get_value('core', 'filemode'), "Should read keys with values"
+
+        self.failUnlessRaises(cp.NoOptionError, cr.get_value, 'color', 'ui')
