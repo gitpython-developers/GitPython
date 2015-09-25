@@ -61,8 +61,6 @@ You can watch me fix issues or implement new features [live on Twitch][twitch-ch
 * [User Documentation](http://gitpython.readthedocs.org)
 * [Questions and Answers](http://stackexchange.com/filters/167317/gitpython)
  * Please post on stackoverflow and use the `gitpython` tag
-* [Mailing List](http://groups.google.com/group/git-python)
- * Please use it for everything that doesn't fit Stackoverflow.
 * [Issue Tracker](https://github.com/gitpython-developers/GitPython/issues)
   * Post reproducible bugs and feature requests as a new issue. Please be sure to provide the following information if posting bugs:
     * GitPython version (e.g. `import git; git.__version__`)
