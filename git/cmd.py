@@ -14,6 +14,7 @@ import errno
 import mmap
 
 from contextlib import contextmanager
+from signal import SIGKILL
 from subprocess import (
     call,
     Popen,
@@ -41,7 +42,7 @@ from git.compat import (
 
 execute_kwargs = ('istream', 'with_keep_cwd', 'with_extended_output',
                   'with_exceptions', 'as_process', 'stdout_as_string',
-                  'output_stream', 'with_stdout')
+                  'output_stream', 'with_stdout', 'timeout')
 
 log = logging.getLogger('git.cmd')
 log.addHandler(logging.NullHandler())
@@ -475,6 +476,7 @@ class Git(LazyMixin):
                 as_process=False,
                 output_stream=None,
                 stdout_as_string=True,
+                timeout=None,
                 with_stdout=True,
                 **subprocess_kwargs
                 ):
@@ -530,6 +532,12 @@ class Git(LazyMixin):
             specify may not be the same ones.
 
         :param with_stdout: If True, default True, we open stdout on the created process
+
+        :param timeout:
+            To specify a timeout in seconds for the git command, after which the process
+            should be killed. This will have no effect if as_process is set to True. It is
+            set to None by default and will let the process run until the timeout is
+            explicitly specified.
 
         :return:
             * str(output) if extended_output = False (Default)
@@ -592,13 +600,43 @@ class Git(LazyMixin):
         if as_process:
             return self.AutoInterrupt(proc, command)
 
+        kill_check = threading.Event()
+
+        def _kill_process(pid):
+            """ Callback method to kill a process. """
+            p = Popen(['ps', '--ppid', str(pid)], stdout=PIPE)
+            child_pids = []
+            for line in p.stdout:
+                if len(line.split()) > 0:
+                    local_pid = (line.split())[0]
+                    if local_pid.isdigit():
+                        child_pids.append(int(local_pid))
+            try:
+                os.kill(pid, SIGKILL)
+                for child_pid in child_pids:
+                    os.kill(child_pid, SIGKILL)
+                kill_check.set()    # tell the main routine that the process was killed
+            except OSError:
+                # It is possible that the process gets completed in the duration after timeout
+                # happens and before we try to kill the process.
+                pass
+            return
+        # end
+
+        watchdog = threading.Timer(timeout, _kill_process, args=(proc.pid, ))
+
         # Wait for the process to return
         status = 0
         stdout_value = b''
         stderr_value = b''
         try:
             if output_stream is None:
+                watchdog.start()
                 stdout_value, stderr_value = proc.communicate()
+                watchdog.cancel()
+                if kill_check.isSet():
+                    stderr_value = 'Timeout: the command "%s" did not complete in %d ' \
+                                   'secs.' % (" ".join(command), timeout)
                 # strip trailing "\n"
                 if stdout_value.endswith(b"\n"):
                     stdout_value = stdout_value[:-1]
