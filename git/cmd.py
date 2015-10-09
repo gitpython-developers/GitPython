@@ -576,6 +576,8 @@ class Git(LazyMixin):
 
         if sys.platform == 'win32':
             cmd_not_found_exception = WindowsError
+            if timeout:
+                raise GitCommandError('"timeout" feature is not supported on Windows.')
         else:
             if sys.version_info[0] > 2:
                 cmd_not_found_exception = FileNotFoundError  # NOQA # this is defined, but flake8 doesn't know
