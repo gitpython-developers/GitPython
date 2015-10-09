@@ -602,8 +602,6 @@ class Git(LazyMixin):
         if as_process:
             return self.AutoInterrupt(proc, command)
 
-        kill_check = threading.Event()
-
         def _kill_process(pid):
             """ Callback method to kill a process. """
             p = Popen(['ps', '--ppid', str(pid)], stdout=PIPE)
@@ -625,7 +623,9 @@ class Git(LazyMixin):
             return
         # end
 
-        watchdog = threading.Timer(timeout, _kill_process, args=(proc.pid, ))
+        if timeout:
+            kill_check = threading.Event()
+            watchdog = threading.Timer(timeout, _kill_process, args=(proc.pid, ))
 
         # Wait for the process to return
         status = 0
@@ -633,12 +633,14 @@ class Git(LazyMixin):
         stderr_value = b''
         try:
             if output_stream is None:
-                watchdog.start()
+                if timeout:
+                    watchdog.start()
                 stdout_value, stderr_value = proc.communicate()
-                watchdog.cancel()
-                if kill_check.isSet():
-                    stderr_value = 'Timeout: the command "%s" did not complete in %d ' \
-                                   'secs.' % (" ".join(command), timeout)
+                if timeout:
+                    watchdog.cancel()
+                    if kill_check.isSet():
+                        stderr_value = 'Timeout: the command "%s" did not complete in %d ' \
+                                       'secs.' % (" ".join(command), timeout)
                 # strip trailing "\n"
                 if stdout_value.endswith(b"\n"):
                     stdout_value = stdout_value[:-1]
