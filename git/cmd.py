@@ -618,7 +618,10 @@ class Git(LazyMixin):
             try:
                 os.kill(pid, SIGKILL)
                 for child_pid in child_pids:
-                    os.kill(child_pid, SIGKILL)
+                    try:
+                        os.kill(child_pid, SIGKILL)
+                    except OSError:
+                        pass
                 kill_check.set()    # tell the main routine that the process was killed
             except OSError:
                 # It is possible that the process gets completed in the duration after timeout
