@@ -42,7 +42,7 @@ from git.compat import (
 
 execute_kwargs = ('istream', 'with_keep_cwd', 'with_extended_output',
                   'with_exceptions', 'as_process', 'stdout_as_string',
-                  'output_stream', 'with_stdout', 'timeout')
+                  'output_stream', 'with_stdout', 'kill_after_timeout')
 
 log = logging.getLogger('git.cmd')
 log.addHandler(logging.NullHandler())
@@ -476,7 +476,7 @@ class Git(LazyMixin):
                 as_process=False,
                 output_stream=None,
                 stdout_as_string=True,
-                timeout=None,
+                kill_after_timeout=None,
                 with_stdout=True,
                 **subprocess_kwargs
                 ):
@@ -533,7 +533,7 @@ class Git(LazyMixin):
 
         :param with_stdout: If True, default True, we open stdout on the created process
 
-        :param timeout:
+        :param kill_after_timeout:
             To specify a timeout in seconds for the git command, after which the process
             should be killed. This will have no effect if as_process is set to True. It is
             set to None by default and will let the process run until the timeout is
@@ -576,8 +576,8 @@ class Git(LazyMixin):
 
         if sys.platform == 'win32':
             cmd_not_found_exception = WindowsError
-            if timeout:
-                raise GitCommandError('"timeout" feature is not supported on Windows.')
+            if kill_after_timeout:
+                raise GitCommandError('"kill_after_timeout" feature is not supported on Windows.')
         else:
             if sys.version_info[0] > 2:
                 cmd_not_found_exception = FileNotFoundError  # NOQA # this is defined, but flake8 doesn't know
@@ -623,9 +623,9 @@ class Git(LazyMixin):
             return
         # end
 
-        if timeout:
+        if kill_after_timeout:
             kill_check = threading.Event()
-            watchdog = threading.Timer(timeout, _kill_process, args=(proc.pid, ))
+            watchdog = threading.Timer(kill_after_timeout, _kill_process, args=(proc.pid, ))
 
         # Wait for the process to return
         status = 0
@@ -633,14 +633,14 @@ class Git(LazyMixin):
         stderr_value = b''
         try:
             if output_stream is None:
-                if timeout:
+                if kill_after_timeout:
                     watchdog.start()
                 stdout_value, stderr_value = proc.communicate()
-                if timeout:
+                if kill_after_timeout:
                     watchdog.cancel()
                     if kill_check.isSet():
                         stderr_value = 'Timeout: the command "%s" did not complete in %d ' \
-                                       'secs.' % (" ".join(command), timeout)
+                                       'secs.' % (" ".join(command), kill_after_timeout)
                 # strip trailing "\n"
                 if stdout_value.endswith(b"\n"):
                     stdout_value = stdout_value[:-1]
