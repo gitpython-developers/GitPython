@@ -537,7 +537,11 @@ class Git(LazyMixin):
             To specify a timeout in seconds for the git command, after which the process
             should be killed. This will have no effect if as_process is set to True. It is
             set to None by default and will let the process run until the timeout is
-            explicitly specified.
+            explicitly specified. This feature is not supported on Windows. It's also worth
+            noting that kill_after_timeout uses SIGKILL, which can have negative side
+            effects on a repository. For example, stale locks in case of git gc could
+            render the repository incapable of accepting changes until the lock is manually
+            removed.
 
         :return:
             * str(output) if extended_output = False (Default)
