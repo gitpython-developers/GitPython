@@ -12,6 +12,7 @@ import logging
 import threading
 import errno
 import mmap
+import warnings
 
 from contextlib import contextmanager
 from subprocess import (
@@ -309,6 +310,7 @@ class Git(LazyMixin):
         def wait(self):
             """Wait for the process and return its status code.
 
+            :warn: may deadlock if output or error pipes are used and not handled separately.
             :raise GitCommandError: if the return status is not 0"""
             status = self.proc.wait()
             if status != 0:
