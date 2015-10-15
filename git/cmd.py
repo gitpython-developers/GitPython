@@ -12,7 +12,6 @@ import logging
 import threading
 import errno
 import mmap
-import warnings
 
 from contextlib import contextmanager
 from subprocess import (
