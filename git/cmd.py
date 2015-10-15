@@ -310,11 +310,11 @@ class Git(LazyMixin):
             """Wait for the process and return its status code.
 
             :raise GitCommandError: if the return status is not 0"""
-            stderr_value = self.proc.communicate()[1]
-            if self.proc.returncode != 0:
-                raise GitCommandError(self.args, status, stderr_value)
+            status = self.proc.wait()
+            if status != 0:
+                raise GitCommandError(self.args, status, self.proc.stderr.read())
             # END status handling
-            return self.proc.returncode
+            return status
     # END auto interrupt
 
     class CatFileContentStream(object):
