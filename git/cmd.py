@@ -14,6 +14,7 @@ import errno
 import mmap
 
 from contextlib import contextmanager
+from signal import SIGKILL
 from subprocess import (
     call,
     Popen,
@@ -41,7 +42,7 @@ from git.compat import (
 
 execute_kwargs = ('istream', 'with_keep_cwd', 'with_extended_output',
                   'with_exceptions', 'as_process', 'stdout_as_string',
-                  'output_stream', 'with_stdout')
+                  'output_stream', 'with_stdout', 'kill_after_timeout')
 
 log = logging.getLogger('git.cmd')
 log.addHandler(logging.NullHandler())
@@ -476,6 +477,7 @@ class Git(LazyMixin):
                 as_process=False,
                 output_stream=None,
                 stdout_as_string=True,
+                kill_after_timeout=None,
                 with_stdout=True,
                 **subprocess_kwargs
                 ):
@@ -532,6 +534,16 @@ class Git(LazyMixin):
 
         :param with_stdout: If True, default True, we open stdout on the created process
 
+        :param kill_after_timeout:
+            To specify a timeout in seconds for the git command, after which the process
+            should be killed. This will have no effect if as_process is set to True. It is
+            set to None by default and will let the process run until the timeout is
+            explicitly specified. This feature is not supported on Windows. It's also worth
+            noting that kill_after_timeout uses SIGKILL, which can have negative side
+            effects on a repository. For example, stale locks in case of git gc could
+            render the repository incapable of accepting changes until the lock is manually
+            removed.
+
         :return:
             * str(output) if extended_output = False (Default)
             * tuple(int(status), str(stdout), str(stderr)) if extended_output = True
@@ -569,6 +581,8 @@ class Git(LazyMixin):
 
         if sys.platform == 'win32':
             cmd_not_found_exception = WindowsError
+            if kill_after_timeout:
+                raise GitCommandError('"kill_after_timeout" feature is not supported on Windows.')
         else:
             if sys.version_info[0] > 2:
                 cmd_not_found_exception = FileNotFoundError  # NOQA # this is defined, but flake8 doesn't know
@@ -593,13 +607,48 @@ class Git(LazyMixin):
         if as_process:
             return self.AutoInterrupt(proc, command)
 
+        def _kill_process(pid):
+            """ Callback method to kill a process. """
+            p = Popen(['ps', '--ppid', str(pid)], stdout=PIPE)
+            child_pids = []
+            for line in p.stdout:
+                if len(line.split()) > 0:
+                    local_pid = (line.split())[0]
+                    if local_pid.isdigit():
+                        child_pids.append(int(local_pid))
+            try:
+                os.kill(pid, SIGKILL)
+                for child_pid in child_pids:
+                    try:
+                        os.kill(child_pid, SIGKILL)
+                    except OSError:
+                        pass
+                kill_check.set()    # tell the main routine that the process was killed
+            except OSError:
+                # It is possible that the process gets completed in the duration after timeout
+                # happens and before we try to kill the process.
+                pass
+            return
+        # end
+
+        if kill_after_timeout:
+            kill_check = threading.Event()
+            watchdog = threading.Timer(kill_after_timeout, _kill_process, args=(proc.pid, ))
+
         # Wait for the process to return
         status = 0
         stdout_value = b''
         stderr_value = b''
         try:
             if output_stream is None:
+                if kill_after_timeout:
+                    watchdog.start()
                 stdout_value, stderr_value = proc.communicate()
+                if kill_after_timeout:
+                    watchdog.cancel()
+                    if kill_check.isSet():
+                        stderr_value = 'Timeout: the command "%s" did not complete in %d ' \
+                                       'secs.' % (" ".join(command), kill_after_timeout)
                 # strip trailing "\n"
                 if stdout_value.endswith(b"\n"):
                     stdout_value = stdout_value[:-1]
