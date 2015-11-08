@@ -27,7 +27,10 @@ from git.compat import text_type
 
 from time import (
     time,
-    altzone
+    daylight,
+    altzone,
+    timezone,
+    localtime
 )
 import os
 from io import BytesIO
@@ -327,7 +330,8 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
 
         # PARSE THE DATES
         unix_time = int(time())
-        offset = altzone
+        is_dst = daylight and localtime().tm_isdst > 0
+        offset = altzone if is_dst else timezone
 
         author_date_str = env.get(cls.env_author_date, '')
         if author_date:
