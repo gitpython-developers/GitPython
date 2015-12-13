@@ -35,7 +35,6 @@ def git_cmp(t1, t2):
     if min_cmp:
         return min_cmp
 
-    # return len_a - len_b
     return len_b - len_a
 
 if PY3:
