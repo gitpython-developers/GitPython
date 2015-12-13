@@ -77,9 +77,29 @@ class TestTree(TestBase):
             # del again, its fine
             del(mod[invalid_name])
 
+            # SPECIAL ORDERING !
+            # Add items which should sort differently from standard alum sort order
+            mod.add(hexsha, Tree.blob_id << 12, 'fild')
+            mod.add(hexsha, Tree.blob_id << 12, 'file')
+            mod.add(hexsha, Tree.blob_id << 12, 'file.second')
+            mod.add(hexsha, Tree.blob_id << 12, 'filf')
+
+            def names_in_mod_cache():
+                return [t[2] for t in mod._cache]
+
+            def chunk_from(a, name, size):
+                index = a.index(name)
+                return a[index:index + size]
+
+            assert chunk_from(names_in_mod_cache(), 'fild', 4) == ['fild', 'file', 'file.second',
+                                                                   'filf']
+
             # have added one item, we are done
             mod.set_done()
             mod.set_done()      # multiple times are okay
+
+            assert chunk_from(names_in_mod_cache(), 'fild', 4) == ['fild', 'file.second', 'file',
+                                                                   'filf']
 
             # serialize, its different now
             stream = BytesIO()

@@ -18,7 +18,51 @@ from .fun import (
     tree_to_stream
 )
 
+from gitdb.utils.compat import PY3
+
+if PY3:
+    cmp = lambda a, b: (a > b) - (a < b)
+
 __all__ = ("TreeModifier", "Tree")
+
+
+def git_cmp(t1, t2):
+    a, b = t1[2], t2[2]
+    len_a, len_b = len(a), len(b)
+    min_len = min(len_a, len_b)
+    min_cmp = cmp(a[:min_len], b[:min_len])
+
+    if min_cmp:
+        return min_cmp
+
+    # return len_a - len_b
+    return len_b - len_a
+
+if PY3:
+    # taken from https://wiki.python.org/moin/HowTo/Sorting#The_Old_Way_Using_the_cmp_Parameter
+    class CmpToKey(object):
+        __slots__ = 'obj'
+
+        def __init__(self, obj, *args):
+            self.obj = obj
+
+        def __lt__(self, other):
+            return git_cmp(self.obj, other.obj) < 0
+
+        def __gt__(self, other):
+            return git_cmp(self.obj, other.obj) > 0
+
+        def __eq__(self, other):
+            return git_cmp(self.obj, other.obj) == 0
+
+        def __le__(self, other):
+            return git_cmp(self.obj, other.obj) <= 0
+
+        def __ge__(self, other):
+            return git_cmp(self.obj, other.obj) >= 0
+
+        def __ne__(self, other):
+            return git_cmp(self.obj, other.obj) != 0
 
 
 class TreeModifier(object):
@@ -47,7 +91,10 @@ class TreeModifier(object):
         It may be called several times, but be aware that each call will cause
         a sort operation
         :return self:"""
-        self._cache.sort(key=lambda t: t[2])    # sort by name
+        if PY3:
+            self._cache.sort(key=CmpToKey)
+        else:
+            self._cache.sort(cmp=git_cmp)
         return self
     #} END interface
 
@@ -286,3 +333,4 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
 
 # finalize map definition
 Tree._map_id_to_type[Tree.tree_id] = Tree
+#
