@@ -35,33 +35,42 @@ def git_cmp(t1, t2):
     if min_cmp:
         return min_cmp
 
-    return len_b - len_a
+    return len_a - len_b
 
-if PY3:
-    # taken from https://wiki.python.org/moin/HowTo/Sorting#The_Old_Way_Using_the_cmp_Parameter
-    class CmpToKey(object):
-        __slots__ = 'obj'
 
-        def __init__(self, obj, *args):
-            self.obj = obj
+def merge_sort(a, cmp):
+    if len(a) < 2:
+        return
 
-        def __lt__(self, other):
-            return git_cmp(self.obj, other.obj) < 0
+    mid = len(a) // 2
+    lefthalf = a[:mid]
+    righthalf = a[mid:]
 
-        def __gt__(self, other):
-            return git_cmp(self.obj, other.obj) > 0
+    merge_sort(lefthalf, cmp)
+    merge_sort(righthalf, cmp)
 
-        def __eq__(self, other):
-            return git_cmp(self.obj, other.obj) == 0
+    i = 0
+    j = 0
+    k = 0
 
-        def __le__(self, other):
-            return git_cmp(self.obj, other.obj) <= 0
+    while i < len(lefthalf) and j < len(righthalf):
+        if cmp(lefthalf[i], righthalf[j]) <= 0:
+            a[k] = lefthalf[i]
+            i = i + 1
+        else:
+            a[k] = righthalf[j]
+            j = j + 1
+        k = k + 1
 
-        def __ge__(self, other):
-            return git_cmp(self.obj, other.obj) >= 0
+    while i < len(lefthalf):
+        a[k] = lefthalf[i]
+        i = i + 1
+        k = k + 1
 
-        def __ne__(self, other):
-            return git_cmp(self.obj, other.obj) != 0
+    while j < len(righthalf):
+        a[k] = righthalf[j]
+        j = j + 1
+        k = k + 1
 
 
 class TreeModifier(object):
@@ -90,10 +99,7 @@ class TreeModifier(object):
         It may be called several times, but be aware that each call will cause
         a sort operation
         :return self:"""
-        if PY3:
-            self._cache.sort(key=CmpToKey)
-        else:
-            self._cache.sort(cmp=git_cmp)
+        merge_sort(self._cache, git_cmp)
         return self
     #} END interface
 

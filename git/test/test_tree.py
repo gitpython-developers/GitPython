@@ -77,29 +77,9 @@ class TestTree(TestBase):
             # del again, its fine
             del(mod[invalid_name])
 
-            # SPECIAL ORDERING !
-            # Add items which should sort differently from standard alum sort order
-            mod.add(hexsha, Tree.blob_id << 12, 'fild')
-            mod.add(hexsha, Tree.blob_id << 12, 'file')
-            mod.add(hexsha, Tree.blob_id << 12, 'file.second')
-            mod.add(hexsha, Tree.blob_id << 12, 'filf')
-
-            def names_in_mod_cache():
-                return [t[2] for t in mod._cache]
-
-            def chunk_from(a, name, size):
-                index = a.index(name)
-                return a[index:index + size]
-
-            assert chunk_from(names_in_mod_cache(), 'fild', 4) == ['fild', 'file', 'file.second',
-                                                                   'filf']
-
             # have added one item, we are done
             mod.set_done()
             mod.set_done()      # multiple times are okay
-
-            assert chunk_from(names_in_mod_cache(), 'fild', 4) == ['fild', 'file.second', 'file',
-                                                                   'filf']
 
             # serialize, its different now
             stream = BytesIO()
@@ -113,6 +93,41 @@ class TestTree(TestBase):
             assert name in testtree
             assert invalid_name not in testtree
         # END for each item in tree
+
+    def test_tree_modifier_ordering(self):
+        hexsha = '6c1faef799095f3990e9970bc2cb10aa0221cf9c'
+        roottree = self.rorepo.tree(hexsha)
+        blob_mode = Tree.blob_id << 12
+        tree_mode = Tree.tree_id << 12
+
+        files_in_desired_order = [
+            (blob_mode, '_.htaccess'),
+            (tree_mode, 'fileadmin'),
+            (blob_mode, 'index.php'),
+            (tree_mode, 'typo3'),
+            (tree_mode, 'typo3_src-6.2.12'),
+            (tree_mode, 'typo3_src'),
+            (blob_mode, 'typo3cms'),
+            (tree_mode, 'typo3conf'),
+            (tree_mode, 'uploads'),
+        ]
+        mod = roottree.cache
+        for (file_mode, file_name) in files_in_desired_order:
+            mod.add(hexsha, file_mode, file_name)
+        # end for each file
+
+        def file_names_in_order():
+            return [t[1] for t in files_in_desired_order]
+
+        def names_in_mod_cache():
+            a = [t[2] for t in mod._cache]
+            here = file_names_in_order()
+            return [e for e in a if e in here]
+
+        assert names_in_mod_cache() == file_names_in_order(), 'add() keeps order'
+
+        mod.set_done()
+        assert names_in_mod_cache() == file_names_in_order(), 'set_done() performs git-sorting'
 
     def test_traverse(self):
         root = self.rorepo.tree('0.1.6')
