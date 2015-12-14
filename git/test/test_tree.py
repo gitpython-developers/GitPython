@@ -39,95 +39,10 @@ class TestTree(TestBase):
             testtree._deserialize(stream)
             assert testtree._cache == orig_cache
 
-            # TEST CACHE MUTATOR
-            mod = testtree.cache
-            self.failUnlessRaises(ValueError, mod.add, "invalid sha", 0, "name")
-            self.failUnlessRaises(ValueError, mod.add, Tree.NULL_HEX_SHA, 0, "invalid mode")
-            self.failUnlessRaises(ValueError, mod.add, Tree.NULL_HEX_SHA, tree.mode, "invalid/name")
-
-            # add new item
-            name = "fake_dir"
-            mod.add(testtree.NULL_HEX_SHA, tree.mode, name)
-            assert name in testtree
-
-            # its available in the tree immediately
-            assert isinstance(testtree[name], Tree)
-
-            # adding it again will not cause multiple of them to be presents
-            cur_count = len(testtree)
-            mod.add(testtree.NULL_HEX_SHA, tree.mode, name)
-            assert len(testtree) == cur_count
-
-            # fails with a different sha - name exists
-            hexsha = "1" * 40
-            self.failUnlessRaises(ValueError, mod.add, hexsha, tree.mode, name)
-
-            # force it - replace existing one
-            mod.add(hexsha, tree.mode, name, force=True)
-            assert testtree[name].hexsha == hexsha
-            assert len(testtree) == cur_count
-
-            # unchecked addition always works, even with invalid items
-            invalid_name = "hi/there"
-            mod.add_unchecked(hexsha, 0, invalid_name)
-            assert len(testtree) == cur_count + 1
-
-            del(mod[invalid_name])
-            assert len(testtree) == cur_count
-            # del again, its fine
-            del(mod[invalid_name])
-
-            # have added one item, we are done
-            mod.set_done()
-            mod.set_done()      # multiple times are okay
-
-            # serialize, its different now
-            stream = BytesIO()
-            testtree._serialize(stream)
-            stream.seek(0)
-            assert stream.getvalue() != orig_data
-
             # replaces cache, but we make sure of it
             del(testtree._cache)
             testtree._deserialize(stream)
-            assert name in testtree
-            assert invalid_name not in testtree
         # END for each item in tree
-
-    def test_tree_modifier_ordering(self):
-        hexsha = '6c1faef799095f3990e9970bc2cb10aa0221cf9c'
-        roottree = self.rorepo.tree(hexsha)
-        blob_mode = Tree.blob_id << 12
-        tree_mode = Tree.tree_id << 12
-
-        files_in_desired_order = [
-            (blob_mode, '_.htaccess'),
-            (tree_mode, 'fileadmin'),
-            (blob_mode, 'index.php'),
-            (tree_mode, 'typo3'),
-            (tree_mode, 'typo3_src-6.2.12'),
-            (tree_mode, 'typo3_src'),
-            (blob_mode, 'typo3cms'),
-            (tree_mode, 'typo3conf'),
-            (tree_mode, 'uploads'),
-        ]
-        mod = roottree.cache
-        for (file_mode, file_name) in files_in_desired_order:
-            mod.add(hexsha, file_mode, file_name)
-        # end for each file
-
-        def file_names_in_order():
-            return [t[1] for t in files_in_desired_order]
-
-        def names_in_mod_cache():
-            a = [t[2] for t in mod._cache]
-            here = file_names_in_order()
-            return [e for e in a if e in here]
-
-        assert names_in_mod_cache() == file_names_in_order(), 'add() keeps order'
-
-        mod.set_done()
-        assert names_in_mod_cache() == file_names_in_order(), 'set_done() performs git-sorting'
 
     def test_traverse(self):
         root = self.rorepo.tree('0.1.6')
