@@ -14,7 +14,7 @@ import errno
 import mmap
 
 from contextlib import contextmanager
-from signal import SIGKILL
+import signal
 from subprocess import (
     call,
     Popen,
@@ -617,10 +617,12 @@ class Git(LazyMixin):
                     if local_pid.isdigit():
                         child_pids.append(int(local_pid))
             try:
-                os.kill(pid, SIGKILL)
+                # Windows does not have SIGKILL, so use SIGTERM instead
+                sig = getattr(signal, 'SIGKILL', signal.SIGTERM)
+                os.kill(pid, sig)
                 for child_pid in child_pids:
                     try:
-                        os.kill(child_pid, SIGKILL)
+                        os.kill(child_pid, sig)
                     except OSError:
                         pass
                 kill_check.set()    # tell the main routine that the process was killed
