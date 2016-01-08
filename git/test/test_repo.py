@@ -767,7 +767,7 @@ class TestRepo(TestBase):
         for kw in ('a', 'all'):
             res = repo.merge_base(c1, c2, c3, **{kw: True})
             assert isinstance(res, list) and len(res) == 1
-        # end for eaech keyword signalling all merge-bases to be returned
+        # end for each keyword signalling all merge-bases to be returned
 
         # Test for no merge base - can't do as we have
         self.failUnlessRaises(GitCommandError, repo.merge_base, c1, 'ffffff')

@@ -838,7 +838,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
         :param kwargs:
             Additional keyword arguments to be passed to git-rm, such
-            as 'r' to allow recurive removal of
+            as 'r' to allow recursive removal of
 
         :return:
             List(path_string, ...) list of repository relative paths that have
