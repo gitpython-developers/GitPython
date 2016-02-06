@@ -772,6 +772,10 @@ class TestRepo(TestBase):
         self.failUnlessRaises(GitCommandError, repo.merge_base, c1, 'ffffff')
 
     def test_is_ancestor(self):
+        git = self.rorepo.git
+        if git.version_info[:3] < (1, 8, 0):
+            raise SkipTest("git merge-base --is-ancestor feature unsupported")
+
         repo = self.rorepo
         c1 = 'f6aa8d1'
         c2 = '763ef75'
