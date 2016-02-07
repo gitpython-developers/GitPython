@@ -35,7 +35,6 @@ from git.repo.fun import touch
 from git.util import join_path_native
 from git.exc import (
     BadObject,
-    WorkTreeRepositoryUnsupported
 )
 from gitdb.util import bin_to_hex
 from git.compat import string_types

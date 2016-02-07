@@ -650,7 +650,7 @@ class Remote(LazyMixin, Iterable):
         else:
             args = [refspec]
 
-        proc = self.repo.git.fetch(self, *args, with_extended_output=True, as_process=True, with_stdout=True, v=True,
+        proc = self.repo.git.fetch(self, *args, with_extended_output=True, as_process=True, with_stdout=False, v=True,
                                    **kwargs)
         res = self._get_fetch_info_from_stderr(proc, progress or RemoteProgress())
         if hasattr(self.repo.odb, 'update_cache'):
