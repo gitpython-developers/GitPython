@@ -796,4 +796,4 @@ class TestRepo(TestBase):
         worktree_path = join_path_native(rw_dir, 'worktree_repo')
         rw_master.git.worktree('add', worktree_path, 'master')
 
-        self.failUnlessRaises(WorkTreeRepositoryUnsupported, Repo, worktree_path)
+        self.failUnlessRaises(InvalidGitRepositoryError, Repo, worktree_path)
