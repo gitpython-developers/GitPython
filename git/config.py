@@ -160,14 +160,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
 
     OPTVALUEONLY = re.compile(optvalueonly_source)
 
-    OPTCRE = re.compile(
-        optvalueonly_source                          # very permissive, incuding leading whitespace
-        + r'\s*(?P<vi>[:=])\s*'               # any number of space/tab,
-                                              # followed by separator
-                                              # (either : or =), followed
-                                              # by any # space/tab
-        + r'(?P<value>.*)$'                     # everything up to eol
-    )
+    OPTCRE = re.compile(optvalueonly_source + r'\s*(?P<vi>[:=])\s*' + r'(?P<value>.*)$')
 
     del optvalueonly_source
 

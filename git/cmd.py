@@ -279,8 +279,10 @@ class Git(LazyMixin):
             self.proc = None
             if proc.stdin:
                 proc.stdin.close()
-            proc.stdout.close()
-            proc.stderr.close()
+            if proc.stdout:
+                proc.stdout.close()
+            if proc.stderr:
+                proc.stderr.close()
 
             # did the process finish already so we have a return code ?
             if proc.poll() is not None:

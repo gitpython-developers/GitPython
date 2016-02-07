@@ -650,7 +650,7 @@ class Remote(LazyMixin, Iterable):
         else:
             args = [refspec]
 
-        proc = self.repo.git.fetch(self, *args, with_extended_output=True, as_process=True, with_stdout=False, v=True,
+        proc = self.repo.git.fetch(self, *args, as_process=True, with_stdout=False, v=True,
                                    **kwargs)
         res = self._get_fetch_info_from_stderr(proc, progress or RemoteProgress())
         if hasattr(self.repo.odb, 'update_cache'):
@@ -667,7 +667,7 @@ class Remote(LazyMixin, Iterable):
         :return: Please see 'fetch' method """
         self._assert_refspec()
         kwargs = add_progress(kwargs, self.repo.git, progress)
-        proc = self.repo.git.pull(self, refspec, with_extended_output=True, as_process=True, v=True, **kwargs)
+        proc = self.repo.git.pull(self, refspec, with_stdout=False, as_process=True, v=True, **kwargs)
         res = self._get_fetch_info_from_stderr(proc, progress or RemoteProgress())
         if hasattr(self.repo.odb, 'update_cache'):
             self.repo.odb.update_cache()
