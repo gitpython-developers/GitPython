@@ -275,7 +275,7 @@ class TestRefs(TestBase):
         self.failUnlessRaises(TypeError, RemoteReference.create, rw_repo, "some_name")
 
         # tag ref
-        tag_name = "1.0.2"
+        tag_name = "5.0.2"
         light_tag = TagReference.create(rw_repo, tag_name)
         self.failUnlessRaises(GitCommandError, TagReference.create, rw_repo, tag_name)
         light_tag = TagReference.create(rw_repo, tag_name, "HEAD~1", force=True)
