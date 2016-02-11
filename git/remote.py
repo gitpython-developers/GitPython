@@ -124,7 +124,7 @@ class PushInfo(object):
         try:
             flags |= cls._flag_map[control_character]
         except KeyError:
-            raise ValueError("Control Character %r unknown as parsed from line %r" % (control_character, line))
+            raise ValueError("Control character %r unknown as parsed from line %r" % (control_character, line))
         # END handle control character
 
         # from_to handling
