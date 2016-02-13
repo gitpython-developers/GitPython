@@ -323,7 +323,7 @@ class Git(LazyMixin):
                     return ''
 
             if status != 0:
-                errstr = read_all_from_possibly_closed_stream(self.proc.stderr.read)
+                errstr = read_all_from_possibly_closed_stream(self.proc.stderr)
                 raise GitCommandError(self.args, status, errstr)
             # END status handling
             return status
