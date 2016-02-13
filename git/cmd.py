@@ -315,8 +315,16 @@ class Git(LazyMixin):
             :warn: may deadlock if output or error pipes are used and not handled separately.
             :raise GitCommandError: if the return status is not 0"""
             status = self.proc.wait()
+
+            def read_all_from_possibly_closed_stream(stream):
+                try:
+                    return stream.read()
+                except ValueError:
+                    return ''
+
             if status != 0:
-                raise GitCommandError(self.args, status, self.proc.stderr.read())
+                errstr = read_all_from_possibly_closed_stream(self.proc.stderr.read)
+                raise GitCommandError(self.args, status, errstr)
             # END status handling
             return status
     # END auto interrupt
