@@ -150,9 +150,9 @@ def get_user_id():
     return "%s@%s" % (getpass.getuser(), platform.node())
 
 
-def finalize_process(proc):
+def finalize_process(proc, **kwargs):
     """Wait for the process (clone, fetch, pull or push) and handle its errors accordingly"""
-    proc.wait()
+    proc.wait(**kwargs)
 
 #} END utilities
 

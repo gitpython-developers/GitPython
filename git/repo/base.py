@@ -827,8 +827,8 @@ class Repo(object):
             if progress:
                 handle_process_output(proc, None, progress.new_message_handler(), finalize_process)
             else:
-                proc.communicate()
-                finalize_process(proc)
+                (stdout, stderr) = proc.communicate()
+                finalize_process(proc, stderr=stderr)
             # end handle progress
         finally:
             if prev_cwd is not None:
