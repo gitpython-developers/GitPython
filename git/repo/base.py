@@ -403,7 +403,7 @@ class Repo(object):
         """
         :return:
             GitConfigParser allowing to write values of the specified configuration file level.
-            Config writers should be retrieved, used to change the configuration ,and written
+            Config writers should be retrieved, used to change the configuration, and written
             right away as they will lock the configuration file in question and prevent other's
             to write it.
 
