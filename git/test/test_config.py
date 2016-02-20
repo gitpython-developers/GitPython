@@ -139,57 +139,49 @@ class TestBase(TestCase):
 
         # PREPARE CONFIG FILE A
         fpa = os.path.join(rw_dir, 'a')
-        cw = GitConfigParser(fpa, read_only=False)
-        write_test_value(cw, 'a')
+        with GitConfigParser(fpa, read_only=False) as cw:
+            write_test_value(cw, 'a')
 
-        fpb = os.path.join(rw_dir, 'b')
-        fpc = os.path.join(rw_dir, 'c')
-        cw.set_value('include', 'relative_path_b', 'b')
-        cw.set_value('include', 'doesntexist', 'foobar')
-        cw.set_value('include', 'relative_cycle_a_a', 'a')
-        cw.set_value('include', 'absolute_cycle_a_a', fpa)
-        cw.release()
+            fpb = os.path.join(rw_dir, 'b')
+            fpc = os.path.join(rw_dir, 'c')
+            cw.set_value('include', 'relative_path_b', 'b')
+            cw.set_value('include', 'doesntexist', 'foobar')
+            cw.set_value('include', 'relative_cycle_a_a', 'a')
+            cw.set_value('include', 'absolute_cycle_a_a', fpa)
         assert os.path.exists(fpa)
 
         # PREPARE CONFIG FILE B
-        cw = GitConfigParser(fpb, read_only=False)
-        write_test_value(cw, 'b')
-        cw.set_value('include', 'relative_cycle_b_a', 'a')
-        cw.set_value('include', 'absolute_cycle_b_a', fpa)
-        cw.set_value('include', 'relative_path_c', 'c')
-        cw.set_value('include', 'absolute_path_c', fpc)
-        cw.release()
+        with GitConfigParser(fpb, read_only=False) as cw:
+            write_test_value(cw, 'b')
+            cw.set_value('include', 'relative_cycle_b_a', 'a')
+            cw.set_value('include', 'absolute_cycle_b_a', fpa)
+            cw.set_value('include', 'relative_path_c', 'c')
+            cw.set_value('include', 'absolute_path_c', fpc)
 
         # PREPARE CONFIG FILE C
-        cw = GitConfigParser(fpc, read_only=False)
-        write_test_value(cw, 'c')
-        cw.release()
+        with GitConfigParser(fpc, read_only=False) as cw:
+            write_test_value(cw, 'c')
 
-        cr = GitConfigParser(fpa, read_only=True)
-        for tv in ('a', 'b', 'c'):
-            check_test_value(cr, tv)
-        # end for each test to verify
-        assert len(cr.items('include')) == 8, "Expected all include sections to be merged"
-        cr.release()
+        with GitConfigParser(fpa, read_only=True) as cr:
+            for tv in ('a', 'b', 'c'):
+                check_test_value(cr, tv)
+            # end for each test to verify
+            assert len(cr.items('include')) == 8, "Expected all include sections to be merged"
 
         # test writable config writers - assure write-back doesn't involve includes
-        cw = GitConfigParser(fpa, read_only=False, merge_includes=True)
-        tv = 'x'
-        write_test_value(cw, tv)
-        cw.release()
+        with GitConfigParser(fpa, read_only=False, merge_includes=True) as cw:
+            tv = 'x'
+            write_test_value(cw, tv)
 
-        cr = GitConfigParser(fpa, read_only=True)
-        self.failUnlessRaises(cp.NoSectionError, check_test_value, cr, tv)
-        cr.release()
+        with GitConfigParser(fpa, read_only=True) as cr:
+            self.failUnlessRaises(cp.NoSectionError, check_test_value, cr, tv)
 
         # But can make it skip includes alltogether, and thus allow write-backs
-        cw = GitConfigParser(fpa, read_only=False, merge_includes=False)
-        write_test_value(cw, tv)
-        cw.release()
+        with GitConfigParser(fpa, read_only=False, merge_includes=False) as cw:
+            write_test_value(cw, tv)
 
-        cr = GitConfigParser(fpa, read_only=True)
-        check_test_value(cr, tv)
-        cr.release()
+        with GitConfigParser(fpa, read_only=True) as cr:
+            check_test_value(cr, tv)
 
     def test_rename(self):
         file_obj = self._to_memcache(fixture_path('git_config'))

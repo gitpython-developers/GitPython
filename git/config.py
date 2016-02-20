@@ -95,7 +95,10 @@ class SectionConstraint(object):
     """Constrains a ConfigParser to only option commands which are constrained to
     always use the section we have been initialized with.
 
-    It supports all ConfigParser methods that operate on an option"""
+    It supports all ConfigParser methods that operate on an option.
+
+    :note:
+        If used as a context manager, will release the wrapped ConfigParser."""
     __slots__ = ("_config", "_section_name")
     _valid_attrs_ = ("get_value", "set_value", "get", "set", "getint", "getfloat", "getboolean", "has_option",
                      "remove_section", "remove_option", "options")
@@ -129,6 +132,12 @@ class SectionConstraint(object):
         """Equivalent to GitConfigParser.release(), which is called on our underlying parser instance"""
         return self._config.release()
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exception_type, exception_value, traceback):
+        self.release()
+
 
 class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, object)):
 
@@ -145,7 +154,9 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
 
     :note:
         The config is case-sensitive even when queried, hence section and option names
-        must match perfectly."""
+        must match perfectly.
+        If used as a context manager, will release the locked file. This parser cannot
+        be used afterwards."""
 
     #{ Configuration
     # The lock type determines the type of lock to use in new configuration readers.
@@ -214,6 +225,12 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
     def __del__(self):
         """Write pending changes if required and release locks"""
         # NOTE: only consistent in PY2
+        self.release()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exception_type, exception_value, traceback):
         self.release()
 
     def release(self):
