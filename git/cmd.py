@@ -605,6 +605,7 @@ class Git(LazyMixin):
             proc = Popen(command,
                          env=env,
                          cwd=cwd,
+                         bufsize=-1,
                          stdin=istream,
                          stderr=PIPE,
                          stdout=with_stdout and PIPE or None,
