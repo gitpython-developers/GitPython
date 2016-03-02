@@ -135,7 +135,7 @@ Please note that due to breaking changes, we have to increase the major version.
 1.0.2 - Fixes
 =============
 
-* IMPORTANT: Changed default object database of `Repo` objects to `GitComdObjectDB`. The pure-python implementation
+* IMPORTANT: Changed default object database of `Repo` objects to `GitCmdObjectDB`. The pure-python implementation
   used previously usually fails to release its resources (i.e. file handles), which can lead to problems when working
   with large repositories.
 * CRITICAL: fixed incorrect `Commit` object serialization when authored or commit date had timezones which were not
