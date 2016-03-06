@@ -72,6 +72,23 @@ class TestBase(TestCase):
             w_config.release()
         # END for each filename
 
+    @with_rw_directory
+    def test_lock_reentry(self, rw_dir):
+        fpl = os.path.join(rw_dir, 'l')
+        gcp = GitConfigParser(fpl, read_only=False)
+        with gcp as cw:
+            cw.set_value('include', 'some_value', 'a')
+        # entering again locks the file again...
+        with gcp as cw:
+            cw.set_value('include', 'some_other_value', 'b')
+            # ...so creating an additional config writer must fail due to exclusive access
+            self.failUnlessRaises(IOError, GitConfigParser, fpl, read_only=False)
+        # but work when the lock is removed
+        with GitConfigParser(fpl, read_only=False):
+            assert os.path.exists(fpl)
+            # reentering with an existing lock must fail due to exclusive access
+            self.failUnlessRaises(IOError, gcp.__enter__)
+
     def test_multi_line_config(self):
         file_obj = self._to_memcache(fixture_path("git_config_with_comments"))
         config = GitConfigParser(file_obj, read_only=False)
