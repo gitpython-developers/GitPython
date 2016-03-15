@@ -327,7 +327,8 @@ class Diff(object):
             if not line.startswith(":"):
                 continue
             # END its not a valid diff line
-            old_mode, new_mode, a_blob_id, b_blob_id, change_type, path = line[1:].split(None, 5)
+            meta, _, path = line[1:].partition('\t')
+            old_mode, new_mode, a_blob_id, b_blob_id, change_type = meta.split(None, 4)
             path = path.strip()
             a_path = path
             b_path = path
