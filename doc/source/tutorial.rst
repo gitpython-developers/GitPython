@@ -260,7 +260,7 @@ A :class:`tree <git.objects.tree.Tree>` records pointers to the contents of a di
     :start-after: # [17-test_references_and_objects]
     :end-before: # ![17-test_references_and_objects]            
 
-Once you have a tree, you can get it's contents
+Once you have a tree, you can get its contents
 
 .. literalinclude:: ../../git/test/test_docs.py
     :language: python
