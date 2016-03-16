@@ -122,6 +122,12 @@ class TestDiff(TestBase):
         dr = res[3]
         assert dr.diff.endswith(b"+Binary files a/rps and b/rps differ\n")
 
+    def test_diff_index_raw_format(self):
+        output = StringProcessAdapter(fixture('diff_index_raw'))
+        res = Diff._index_from_raw_format(None, output.stdout)
+        assert res[0].deleted_file
+        assert res[0].b_path == ''
+
     def test_diff_patch_format(self):
         # test all of the 'old' format diffs for completness - it should at least
         # be able to deal with it
