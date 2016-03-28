@@ -1,6 +1,7 @@
 *.py[co]
 *.swp
 *~
+.venv/
 /*.egg-info
 /lib/GitPython.egg-info
 cover/

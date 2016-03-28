@@ -108,7 +108,7 @@ class SymbolicReference(object):
                     yield tuple(line.split(' ', 1))
                 # END for each line
         except (OSError, IOError):
-            raise StopIteration
+            return
         # END no packed-refs file handling
         # NOTE: Had try-finally block around here to close the fp,
         # but some python version woudn't allow yields within that.
