@@ -607,11 +607,12 @@ class Remote(LazyMixin, Iterable):
     def _assert_refspec(self):
         """Turns out we can't deal with remotes if the refspec is missing"""
         config = self.config_reader
+        unset = 'placeholder'
         try:
-            if config.get_value('fetch', default=type) is type:
+            if config.get_value('fetch', default=unset) is unset:
                 msg = "Remote '%s' has no refspec set.\n"
                 msg += "You can set it as follows:"
-                msg += " 'git config --add \"remote.%s.fetch +refs/heads/*:refs/heads/*\"'." % self.name
+                msg += " 'git config --add \"remote.%s.fetch +refs/heads/*:refs/heads/*\"'." % (self.name, self.name)
                 raise AssertionError(msg)
         finally:
             config.release()
