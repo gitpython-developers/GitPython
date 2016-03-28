@@ -644,7 +644,9 @@ class Remote(LazyMixin, Iterable):
         :note:
             As fetch does not provide progress information to non-ttys, we cannot make
             it available here unfortunately as in the 'push' method."""
-        self._assert_refspec()
+        if refspec is None:
+            # No argument refspec, then ensure the repo's config has a fetch refspec.
+            self._assert_refspec()
         kwargs = add_progress(kwargs, self.repo.git, progress)
         if isinstance(refspec, list):
             args = refspec
@@ -666,7 +668,9 @@ class Remote(LazyMixin, Iterable):
         :param progress: see 'push' method
         :param kwargs: Additional arguments to be passed to git-pull
         :return: Please see 'fetch' method """
-        self._assert_refspec()
+        if refspec is None:
+            # No argument refspec, then ensure the repo's config has a fetch refspec.
+            self._assert_refspec()
         kwargs = add_progress(kwargs, self.repo.git, progress)
         proc = self.repo.git.pull(self, refspec, with_stdout=False, as_process=True, v=True, **kwargs)
         res = self._get_fetch_info_from_stderr(proc, progress or RemoteProgress())
