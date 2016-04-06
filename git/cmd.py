@@ -355,7 +355,7 @@ class Git(LazyMixin):
         def read(self, size=-1):
             bytes_left = self._size - self._nbr
             if bytes_left == 0:
-                return ''
+                return b''
             if size > -1:
                 # assure we don't try to read past our limit
                 size = min(bytes_left, size)
@@ -374,7 +374,7 @@ class Git(LazyMixin):
 
         def readline(self, size=-1):
             if self._nbr == self._size:
-                return ''
+                return b''
 
             # clamp size to lowest allowed value
             bytes_left = self._size - self._nbr
