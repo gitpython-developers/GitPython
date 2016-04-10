@@ -454,7 +454,7 @@ class TestRepo(TestBase):
         assert s.readline() == l1
         assert s.readline() == l2
         assert s.readline() == l3
-        assert s.readline() == ''
+        assert s.readline() == b''
         assert s._stream.tell() == len(d)
 
         # readline limit
@@ -465,13 +465,13 @@ class TestRepo(TestBase):
         # readline on tiny section
         s = mktiny()
         assert s.readline() == l1p
-        assert s.readline() == ''
+        assert s.readline() == b''
         assert s._stream.tell() == ts + 1
 
         # read no limit
         s = mkfull()
         assert s.read() == d[:-1]
-        assert s.read() == ''
+        assert s.read() == b''
         assert s._stream.tell() == len(d)
 
         # read limit
