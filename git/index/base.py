@@ -380,9 +380,17 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
             # resolve globs if possible
             if '?' in path or '*' in path or '[' in path:
-                for f in self._iter_expand_paths(glob.glob(abs_path)):
-                    yield f.replace(rs, '')
-                continue
+                resolved_paths = glob.glob(abs_path)
+                # not abs_path in resolved_paths:
+                #   a glob() resolving to the same path we are feeding it with
+                #   is a glob() that failed to resolve. If we continued calling
+                #   ourselves we'd endlessly recurse. If the condition below
+                #   evaluates to true then we are likely dealing with a file
+                #   whose name contains wildcard characters.
+                if abs_path not in resolved_paths:
+                    for f in self._iter_expand_paths(glob.glob(abs_path)):
+                        yield f.replace(rs, '')
+                    continue
             # END glob handling
             try:
                 for root, dirs, files in os.walk(abs_path, onerror=raise_exc):
