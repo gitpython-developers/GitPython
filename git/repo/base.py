@@ -714,7 +714,7 @@ class Repo(object):
 
             yield commits[hexsha], range(lineno, lineno + num_lines)
 
-    def blame(self, rev, file, incremental=False):
+    def blame(self, rev, file, incremental=False, **kwargs):
         """The blame information for the given file at the given revision.
 
         :parm rev: revision specifier, see git-rev-parse for viable options.
@@ -724,9 +724,9 @@ class Repo(object):
             changed within the given commit. The Commit objects will be given in order
             of appearance."""
         if incremental:
-            return self.blame_incremental(rev, file)
+            return self.blame_incremental(rev, file, **kwargs)
 
-        data = self.git.blame(rev, '--', file, p=True, stdout_as_string=False)
+        data = self.git.blame(rev, '--', file, p=True, stdout_as_string=False, **kwargs)
         commits = dict()
         blames = list()
         info = None
