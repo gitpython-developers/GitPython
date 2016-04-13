@@ -801,7 +801,7 @@ class TestIndex(TestBase):
     def test_add_a_file_with_wildcard_chars(self, rw_dir):
         # see issue #407
         fp = os.path.join(rw_dir, '[.exe')
-        with open(fp, "w") as f:
+        with open(fp, "wb") as f:
             f.write(b'something')
 
         r = Repo.init(rw_dir)
