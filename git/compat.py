@@ -8,7 +8,6 @@
 # flake8: noqa
 
 import sys
-import six
 
 from gitdb.utils.compat import (
     PY3,
@@ -34,6 +33,7 @@ if PY3:
         return bytes([n])
     def mviter(d):
         return d.values()
+    range = xrange
     unicode = str
 else:
     FileType = file
@@ -44,6 +44,7 @@ else:
     byte_ord = ord
     bchr = chr
     unicode = unicode
+    range = xrange
     def mviter(d):
         return d.itervalues()
 
@@ -52,9 +53,9 @@ PRE_PY27 = sys.version_info < (2, 7)
 
 def safe_decode(s):
     """Safely decodes a binary string to unicode"""
-    if isinstance(s, six.text_type):
+    if isinstance(s, unicode):
         return s
-    elif isinstance(s, six.binary_type):
+    elif isinstance(s, bytes):
         if PRE_PY27:
             return s.decode(defenc)  # we're screwed
         else:
