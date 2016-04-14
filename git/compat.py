@@ -8,6 +8,7 @@
 # flake8: noqa
 
 import sys
+import six
 
 from gitdb.utils.compat import (
     PY3,
@@ -45,6 +46,20 @@ else:
     unicode = unicode
     def mviter(d):
         return d.itervalues()
+
+PRE_PY27 = sys.version_info < (2, 7)
+
+
+def safe_decode(s):
+    """Safely decodes a binary string to unicode"""
+    if isinstance(s, six.text_type):
+        return s
+    elif isinstance(s, six.binary_type):
+        if PRE_PY27:
+            return s.decode(defenc)  # we're screwed
+        else:
+            return s.decode(defenc, errors='replace')
+    raise TypeError('Expected bytes or text, but got %r' % (s,))
 
 
 def with_metaclass(meta, *bases):
