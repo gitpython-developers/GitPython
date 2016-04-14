@@ -208,8 +208,8 @@ class Diff(object):
                                 (?:^deleted[ ]file[ ]mode[ ](?P<deleted_file_mode>.+)(?:\n|$))?
                                 (?:^index[ ](?P<a_blob_id>[0-9A-Fa-f]+)
                                     \.\.(?P<b_blob_id>[0-9A-Fa-f]+)[ ]?(?P<b_mode>.+)?(?:\n|$))?
-                                (?:^---[ ](?:a/)?(?P<a_path>.*)(?:\n|$))?
-                                (?:^\+\+\+[ ](?:b/)?(?P<b_path>.*)(?:\n|$))?
+                                (?:^---[ ](?:a/)?(?P<a_path>[^\t\n\r\f\v]*)[\t\r\f\v]*(?:\n|$))?
+                                (?:^\+\+\+[ ](?:b/)?(?P<b_path>[^\t\n\r\f\v]*)[\t\r\f\v]*(?:\n|$))?
                             """.encode('ascii'), re.VERBOSE | re.MULTILINE)
     # can be used for comparisons
     NULL_HEX_SHA = "0" * 40
