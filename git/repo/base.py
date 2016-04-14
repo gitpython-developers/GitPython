@@ -54,12 +54,12 @@ from git.compat import (
     defenc,
     PY3,
     safe_decode,
+    range,
 )
 
 import os
 import sys
 import re
-from six.moves import range
 
 DefaultDBType = GitCmdObjectDB
 if sys.version_info[:2] < (2, 5):     # python 2.4 compatiblity
