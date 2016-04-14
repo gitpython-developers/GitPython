@@ -796,3 +796,14 @@ class TestIndex(TestBase):
         r = Repo.init(rw_dir)
         r.index.add([fp])
         r.index.commit('Added orig and prestable')
+
+    @with_rw_directory
+    def test_add_a_file_with_wildcard_chars(self, rw_dir):
+        # see issue #407
+        fp = os.path.join(rw_dir, '[.exe')
+        with open(fp, "wb") as f:
+            f.write(b'something')
+
+        r = Repo.init(rw_dir)
+        r.index.add([fp])
+        r.index.commit('Added [.exe')
