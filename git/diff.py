@@ -16,7 +16,7 @@ from git.compat import (
 )
 
 
-__all__ = ('Diffable', 'DiffIndex', 'Diff')
+__all__ = ('Diffable', 'DiffIndex', 'Diff', 'NULL_TREE')
 
 # Special object to compare against the empty tree in diffs
 NULL_TREE = object()
