@@ -76,7 +76,7 @@ class TestDiff(TestBase):
         self._assert_diff_format(diffs)
 
         assert_equal(1, len(diffs))
-        assert_equal(10, len(diffs[0].diff.splitlines()))
+        assert_equal(8, len(diffs[0].diff.splitlines()))
 
     def test_diff_with_rename(self):
         output = StringProcessAdapter(fixture('diff_rename'))
@@ -140,7 +140,8 @@ class TestDiff(TestBase):
 
         # ...and with creating a patch
         diff_index = initial_commit.diff(NULL_TREE, create_patch=True)
-        assert diff_index[0].b_path == 'CHANGES'
+        assert diff_index[0].a_path is None, repr(diff_index[0].a_path)
+        assert diff_index[0].b_path == 'CHANGES', repr(diff_index[0].b_path)
         assert diff_index[0].new_file
         assert diff_index[0].diff == fixture('diff_initial')
 
@@ -155,6 +156,12 @@ class TestDiff(TestBase):
             diff_proc = StringProcessAdapter(fixture(fixture_name))
             Diff._index_from_patch_format(self.rorepo, diff_proc.stdout)
         # END for each fixture
+
+    def test_diff_with_spaces(self):
+        data = StringProcessAdapter(fixture('diff_file_with_spaces'))
+        diff_index = Diff._index_from_patch_format(self.rorepo, data.stdout)
+        assert diff_index[0].a_path is None, repr(diff_index[0].a_path)
+        assert diff_index[0].b_path == u'file with spaces', repr(diff_index[0].b_path)
 
     def test_diff_interface(self):
         # test a few variations of the main diff routine
