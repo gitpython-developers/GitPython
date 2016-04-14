@@ -18,6 +18,9 @@ from git.compat import (
 
 __all__ = ('Diffable', 'DiffIndex', 'Diff')
 
+# Special object to compare against the empty tree in diffs
+NULL_TREE = object()
+
 
 class Diffable(object):
 
@@ -49,7 +52,7 @@ class Diffable(object):
             If None, we will be compared to the working tree.
             If Treeish, it will be compared against the respective tree
             If Index ( type ), it will be compared against the index.
-            If the string 'root', it will compare the empty tree against this tree.
+            If git.NULL_TREE, it will compare against the empty tree.
             It defaults to Index to assure the method will not by-default fail
             on bare repositories.
 
@@ -91,7 +94,7 @@ class Diffable(object):
         diff_cmd = self.repo.git.diff
         if other is self.Index:
             args.insert(0, '--cached')
-        elif other == 'root':
+        elif other is NULL_TREE:
             args.insert(0, '--root')
             diff_cmd = self.repo.git.diff_tree
         elif other is not None:
