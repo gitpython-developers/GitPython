@@ -95,9 +95,11 @@ class Diffable(object):
         if other is self.Index:
             args.insert(0, '--cached')
         elif other is NULL_TREE:
+            args.insert(0, '-r')  # recursive diff-tree
             args.insert(0, '--root')
             diff_cmd = self.repo.git.diff_tree
         elif other is not None:
+            args.insert(0, '-r')  # recursive diff-tree
             args.insert(0, other)
             diff_cmd = self.repo.git.diff_tree
 
