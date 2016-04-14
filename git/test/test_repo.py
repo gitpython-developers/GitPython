@@ -341,11 +341,18 @@ class TestRepo(TestBase):
         assert len(blame_output) == 5
 
         # Check all outputted line numbers
-        ranges = flatten([line_numbers for _, line_numbers in blame_output])
+        ranges = flatten([entry.linenos for entry in blame_output])
         assert ranges == flatten([range(2, 3), range(14, 15), range(1, 2), range(3, 14), range(15, 17)]), str(ranges)
 
-        commits = [c.hexsha[:7] for c, _ in blame_output]
+        commits = [entry.commit.hexsha[:7] for entry in blame_output]
         assert commits == ['82b8902', '82b8902', 'c76852d', 'c76852d', 'c76852d'], str(commits)
+
+        # Original filenames
+        assert all([entry.orig_path == u'AUTHORS' for entry in blame_output])
+
+        # Original line numbers
+        orig_ranges = flatten([entry.orig_linenos for entry in blame_output])
+        assert orig_ranges == flatten([range(2, 3), range(14, 15), range(1, 2), range(2, 13), range(13, 15)]), str(orig_ranges)  # noqa
 
     @patch.object(Git, '_call_process')
     def test_blame_complex_revision(self, git):
