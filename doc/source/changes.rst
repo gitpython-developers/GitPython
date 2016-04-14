@@ -5,9 +5,23 @@ Changelog
 1.0.3 - Fixes
 =============
 
-* `Commit.diff()` now supports diffing the root commit via `Commit.diff(NULL_TREE)`.
-* `Repo.blame()` now respects `incremental=True`, supporting incremental blames.  Incremental blames are slightly faster since they don't include the file's contents in them.
-* IMPORTANT: This release drops support for python 2.6, which is officially deprecated by the python maintainers.
+* `Commit.diff()` now supports diffing the root commit via
+  `Commit.diff(NULL_TREE)`.
+* `Repo.blame()` now respects `incremental=True`, supporting incremental
+  blames.  Incremental blames are slightly faster since they don't include
+  the file's contents in them.
+* Fix: `Diff` objects created with patch output will now have their
+  `a_path` and `b_path` properties parsed out correctly.  Previously, some
+  values may have been populated incorrectly when a file was added or
+  deleted.
+* IMPORTANT: This release drops support for python 2.6, which is
+  officially deprecated by the python maintainers.
+* CRITICAL: `Diff` objects created with patch output will now not carry
+  the --- and +++ header lines anymore.  All diffs now start with the
+  @@ header line directly.  Users that rely on the old behaviour can now
+  (reliably) read this information from the a_path and b_path properties
+  without having to parse these lines manually.
+
 
 1.0.2 - Fixes
 =============
