@@ -56,7 +56,9 @@ def safe_decode(s):
         return s
     elif isinstance(s, six.binary_type):
         if PRE_PY27:
-            return s.decode(defenc)  # we're screwed
+            # Python 2.6 does not support the `errors` argument, so we cannot
+            # control the replacement of unsafe chars in it.
+            return s.decode(defenc)
         else:
             return s.decode(defenc, errors='replace')
     raise TypeError('Expected bytes or text, but got %r' % (s,))
