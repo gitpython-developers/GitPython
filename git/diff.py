@@ -199,11 +199,11 @@ class Diff(object):
     re_header = re.compile(r"""
                                 ^diff[ ]--git
                                     [ ](?:a/)?(?P<a_path_fallback>.+?)[ ](?:b/)?(?P<b_path_fallback>.+?)\n
+                                (?:^old[ ]mode[ ](?P<old_mode>\d+)\n
+                                   ^new[ ]mode[ ](?P<new_mode>\d+)(?:\n|$))?
                                 (?:^similarity[ ]index[ ]\d+%\n
                                    ^rename[ ]from[ ](?P<rename_from>.*)\n
                                    ^rename[ ]to[ ](?P<rename_to>.*)(?:\n|$))?
-                                (?:^old[ ]mode[ ](?P<old_mode>\d+)\n
-                                   ^new[ ]mode[ ](?P<new_mode>\d+)(?:\n|$))?
                                 (?:^new[ ]file[ ]mode[ ](?P<new_file_mode>.+)(?:\n|$))?
                                 (?:^deleted[ ]file[ ]mode[ ](?P<deleted_file_mode>.+)(?:\n|$))?
                                 (?:^index[ ](?P<a_blob_id>[0-9A-Fa-f]+)
@@ -331,8 +331,9 @@ class Diff(object):
         previous_header = None
         for header in cls.re_header.finditer(text):
             a_path_fallback, b_path_fallback, \
+                old_mode, new_mode, \
                 rename_from, rename_to, \
-                old_mode, new_mode, new_file_mode, deleted_file_mode, \
+                new_file_mode, deleted_file_mode, \
                 a_blob_id, b_blob_id, b_mode, \
                 a_path, b_path = header.groups()
             new_file, deleted_file = bool(new_file_mode), bool(deleted_file_mode)
