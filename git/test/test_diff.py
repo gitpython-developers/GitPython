@@ -116,7 +116,7 @@ class TestDiff(TestBase):
         res = Diff._index_from_patch_format(None, output.stdout)
         assert len(res) == 6
         for dr in res:
-            assert dr.diff
+            assert dr.diff.startswith(b'@@')
             assert str(dr), "Diff to string conversion should be possible"
         # end for each diff
 
