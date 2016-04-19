@@ -16,7 +16,10 @@ from git.compat import (
 )
 
 
-__all__ = ('Diffable', 'DiffIndex', 'Diff')
+__all__ = ('Diffable', 'DiffIndex', 'Diff', 'NULL_TREE')
+
+# Special object to compare against the empty tree in diffs
+NULL_TREE = object()
 
 
 class Diffable(object):
@@ -49,6 +52,7 @@ class Diffable(object):
             If None, we will be compared to the working tree.
             If Treeish, it will be compared against the respective tree
             If Index ( type ), it will be compared against the index.
+            If git.NULL_TREE, it will compare against the empty tree.
             It defaults to Index to assure the method will not by-default fail
             on bare repositories.
 
@@ -87,10 +91,17 @@ class Diffable(object):
         if paths is not None and not isinstance(paths, (tuple, list)):
             paths = [paths]
 
-        if other is not None and other is not self.Index:
-            args.insert(0, other)
+        diff_cmd = self.repo.git.diff
         if other is self.Index:
-            args.insert(0, "--cached")
+            args.insert(0, '--cached')
+        elif other is NULL_TREE:
+            args.insert(0, '-r')  # recursive diff-tree
+            args.insert(0, '--root')
+            diff_cmd = self.repo.git.diff_tree
+        elif other is not None:
+            args.insert(0, '-r')  # recursive diff-tree
+            args.insert(0, other)
+            diff_cmd = self.repo.git.diff_tree
 
         args.insert(0, self)
 
@@ -101,7 +112,7 @@ class Diffable(object):
         # END paths handling
 
         kwargs['as_process'] = True
-        proc = self.repo.git.diff(*self._process_diff_args(args), **kwargs)
+        proc = diff_cmd(*self._process_diff_args(args), **kwargs)
 
         diff_method = Diff._index_from_raw_format
         if create_patch:
