@@ -198,16 +198,18 @@ class Diff(object):
     # precompiled regex
     re_header = re.compile(r"""
                                 ^diff[ ]--git
-                                    [ ](?:a/)?(?P<a_path>.+?)[ ](?:b/)?(?P<b_path>.+?)\n
-                                (?:^similarity[ ]index[ ](?P<similarity_index>\d+)%\n
-                                   ^rename[ ]from[ ](?P<rename_from>\S+)\n
-                                   ^rename[ ]to[ ](?P<rename_to>\S+)(?:\n|$))?
+                                    [ ](?:a/)?(?P<a_path_fallback>.+?)[ ](?:b/)?(?P<b_path_fallback>.+?)\n
                                 (?:^old[ ]mode[ ](?P<old_mode>\d+)\n
                                    ^new[ ]mode[ ](?P<new_mode>\d+)(?:\n|$))?
+                                (?:^similarity[ ]index[ ]\d+%\n
+                                   ^rename[ ]from[ ](?P<rename_from>.*)\n
+                                   ^rename[ ]to[ ](?P<rename_to>.*)(?:\n|$))?
                                 (?:^new[ ]file[ ]mode[ ](?P<new_file_mode>.+)(?:\n|$))?
                                 (?:^deleted[ ]file[ ]mode[ ](?P<deleted_file_mode>.+)(?:\n|$))?
                                 (?:^index[ ](?P<a_blob_id>[0-9A-Fa-f]+)
                                     \.\.(?P<b_blob_id>[0-9A-Fa-f]+)[ ]?(?P<b_mode>.+)?(?:\n|$))?
+                                (?:^---[ ](?:a/)?(?P<a_path>[^\t\n\r\f\v]*)[\t\r\f\v]*(?:\n|$))?
+                                (?:^\+\+\+[ ](?:b/)?(?P<b_path>[^\t\n\r\f\v]*)[\t\r\f\v]*(?:\n|$))?
                             """.encode('ascii'), re.VERBOSE | re.MULTILINE)
     # can be used for comparisons
     NULL_HEX_SHA = "0" * 40
@@ -231,15 +233,14 @@ class Diff(object):
         if self.b_mode:
             self.b_mode = mode_str_to_int(self.b_mode)
 
-        if a_blob_id is None:
+        if a_blob_id is None or a_blob_id == self.NULL_HEX_SHA:
             self.a_blob = None
         else:
-            assert self.a_mode is not None
             self.a_blob = Blob(repo, hex_to_bin(a_blob_id), mode=self.a_mode, path=a_path)
-        if b_blob_id is None:
+
+        if b_blob_id is None or b_blob_id == self.NULL_HEX_SHA:
             self.b_blob = None
         else:
-            assert self.b_mode is not None
             self.b_blob = Blob(repo, hex_to_bin(b_blob_id), mode=self.b_mode, path=b_path)
 
         self.new_file = new_file
@@ -329,10 +330,22 @@ class Diff(object):
         index = DiffIndex()
         previous_header = None
         for header in cls.re_header.finditer(text):
-            a_path, b_path, similarity_index, rename_from, rename_to, \
-                old_mode, new_mode, new_file_mode, deleted_file_mode, \
-                a_blob_id, b_blob_id, b_mode = header.groups()
+            a_path_fallback, b_path_fallback, \
+                old_mode, new_mode, \
+                rename_from, rename_to, \
+                new_file_mode, deleted_file_mode, \
+                a_blob_id, b_blob_id, b_mode, \
+                a_path, b_path = header.groups()
             new_file, deleted_file = bool(new_file_mode), bool(deleted_file_mode)
+
+            a_path = a_path or rename_from or a_path_fallback
+            b_path = b_path or rename_to or b_path_fallback
+
+            if a_path == b'/dev/null':
+                a_path = None
+
+            if b_path == b'/dev/null':
+                b_path = None
 
             # Our only means to find the actual text is to see what has not been matched by our regex,
             # and then retro-actively assin it to our index
