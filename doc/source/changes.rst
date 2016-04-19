@@ -2,6 +2,10 @@
 Changelog
 =========
 
+1.0.3 - Fixes
+=============
+* IMPORTANT: This release drops support for python 2.6, which is officially deprecated by the python maintainers.
+
 1.0.2 - Fixes
 =============
 
