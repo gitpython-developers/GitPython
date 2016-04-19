@@ -22,7 +22,6 @@ from git.objects.util import (
     utctz_to_altz,
     verify_utctz,
     parse_date,
-    tzoffset,
 )
 from git.cmd import dashify
 from git.compat import string_types
