@@ -764,23 +764,31 @@ class Git(LazyMixin):
         finally:
             self.update_environment(**old_env)
 
+    def transform_kwarg(self, name, value, split_single_char_options):
+        if len(name) == 1:
+            if value is True:
+                return ["-%s" % name]
+            elif type(value) is not bool:
+                if split_single_char_options:
+                    return ["-%s" % name, "%s" % value]
+                else:
+                    return ["-%s%s" % (name, value)]
+        else:
+            if value is True:
+                return ["--%s" % dashify(name)]
+            elif type(value) is not bool:
+                return ["--%s=%s" % (dashify(name), value)]
+        return []
+
     def transform_kwargs(self, split_single_char_options=True, **kwargs):
         """Transforms Python style kwargs into git command line options."""
         args = list()
         for k, v in kwargs.items():
-            if len(k) == 1:
-                if v is True:
-                    args.append("-%s" % k)
-                elif type(v) is not bool:
-                    if split_single_char_options:
-                        args.extend(["-%s" % k, "%s" % v])
-                    else:
-                        args.append("-%s%s" % (k, v))
+            if isinstance(v, (list, tuple)):
+                for value in v:
+                    args += self.transform_kwarg(k, value, split_single_char_options)
             else:
-                if v is True:
-                    args.append("--%s" % dashify(k))
-                elif type(v) is not bool:
-                    args.append("--%s=%s" % (dashify(k), v))
+                args += self.transform_kwarg(k, v, split_single_char_options)
         return args
 
     @classmethod
