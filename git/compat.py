@@ -48,18 +48,13 @@ else:
     def mviter(d):
         return d.itervalues()
 
-PRE_PY27 = sys.version_info < (2, 7)
-
 
 def safe_decode(s):
     """Safely decodes a binary string to unicode"""
     if isinstance(s, unicode):
         return s
     elif isinstance(s, bytes):
-        if PRE_PY27:
-            return s.decode(defenc)  # we're screwed
-        else:
-            return s.decode(defenc, errors='replace')
+        return s.decode(defenc, errors='replace')
     raise TypeError('Expected bytes or text, but got %r' % (s,))
 
 

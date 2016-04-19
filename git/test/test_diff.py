@@ -21,7 +21,8 @@ from git import (
     Repo,
     GitCommandError,
     Diff,
-    DiffIndex
+    DiffIndex,
+    NULL_TREE,
 )
 
 
@@ -128,6 +129,21 @@ class TestDiff(TestBase):
         assert res[0].deleted_file
         assert res[0].b_path == ''
 
+    def test_diff_initial_commit(self):
+        initial_commit = self.rorepo.commit('33ebe7acec14b25c5f84f35a664803fcab2f7781')
+
+        # Without creating a patch...
+        diff_index = initial_commit.diff(NULL_TREE)
+        assert diff_index[0].b_path == 'CHANGES'
+        assert diff_index[0].new_file
+        assert diff_index[0].diff == ''
+
+        # ...and with creating a patch
+        diff_index = initial_commit.diff(NULL_TREE, create_patch=True)
+        assert diff_index[0].b_path == 'CHANGES'
+        assert diff_index[0].new_file
+        assert diff_index[0].diff == fixture('diff_initial')
+
     def test_diff_patch_format(self):
         # test all of the 'old' format diffs for completness - it should at least
         # be able to deal with it
@@ -149,7 +165,7 @@ class TestDiff(TestBase):
                 diff_item = commit.tree
             # END use tree every second item
 
-            for other in (None, commit.Index, commit.parents[0]):
+            for other in (None, NULL_TREE, commit.Index, commit.parents[0]):
                 for paths in (None, "CHANGES", ("CHANGES", "lib")):
                     for create_patch in range(2):
                         diff_index = diff_item.diff(other=other, paths=paths, create_patch=create_patch)

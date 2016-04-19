@@ -2,6 +2,13 @@
 Changelog
 =========
 
+1.0.3 - Fixes
+=============
+
+* `Commit.diff()` now supports diffing the root commit via `Commit.diff(NULL_TREE)`.
+* `Repo.blame()` now respects `incremental=True`, supporting incremental blames.  Incremental blames are slightly faster since they don't include the file's contents in them.
+* IMPORTANT: This release drops support for python 2.6, which is officially deprecated by the python maintainers.
+
 1.0.2 - Fixes
 =============
 
