@@ -27,7 +27,10 @@ def decode_path(path, has_ab_prefix=True):
         return None
 
     if path.startswith(b'"') and path.endswith(b'"'):
-        path = path[1:-1].decode('string_escape')
+        path = (path[1:-1].replace(b'\\n', b'\n')
+                          .replace(b'\\t', b'\t')
+                          .replace(b'\\"', b'"')
+                          .replace(b'\\\\', b'\\'))
 
     if has_ab_prefix:
         assert path.startswith(b'a/') or path.startswith(b'b/')

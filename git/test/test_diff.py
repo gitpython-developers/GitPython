@@ -158,7 +158,7 @@ class TestDiff(TestBase):
         self.assertEqual(res[5].b_path, u'path/with\nnewline')
         self.assertEqual(res[6].b_path, u'path/with spaces')
         self.assertEqual(res[7].b_path, u'path/with-question-mark?')
-        self.assertEqual(res[8].b_path, ur'path/¯\_(ツ)_|¯')
+        self.assertEqual(res[8].b_path, u'path/¯\\_(ツ)_|¯')
 
         # The "Moves"
         # NOTE: The path prefixes a/ and b/ here are legit!  We're actually
