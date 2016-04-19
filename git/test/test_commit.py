@@ -32,6 +32,8 @@ import time
 import sys
 import re
 import os
+from datetime import datetime
+from git.objects.util import tzoffset, utc
 
 
 def assert_commit_serialization(rwrepo, commit_id, print_performance_info=False):
@@ -343,3 +345,12 @@ JzJMZDRLQLFvnzqZuCjE
         cstream = BytesIO()
         cmt._serialize(cstream)
         assert not re.search(r"^gpgsig ", cstream.getvalue().decode('ascii'), re.MULTILINE)
+
+    def test_datetimes(self):
+        commit = self.rorepo.commit('4251bd5')
+        assert commit.authored_date == 1255018625
+        assert commit.committed_date == 1255026171
+        assert commit.authored_datetime == datetime(2009, 10, 8, 18, 17, 5, tzinfo=tzoffset(-7200)), commit.authored_datetime  # noqa
+        assert commit.authored_datetime == datetime(2009, 10, 8, 16, 17, 5, tzinfo=utc), commit.authored_datetime
+        assert commit.committed_datetime == datetime(2009, 10, 8, 20, 22, 51, tzinfo=tzoffset(-7200))
+        assert commit.committed_datetime == datetime(2009, 10, 8, 18, 22, 51, tzinfo=utc), commit.committed_datetime
