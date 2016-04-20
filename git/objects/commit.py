@@ -21,7 +21,8 @@ from .util import (
     Serializable,
     parse_date,
     altz_to_utctz_str,
-    parse_actor_and_date
+    parse_actor_and_date,
+    from_timestamp,
 )
 from git.compat import text_type
 
@@ -143,6 +144,14 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
         else:
             super(Commit, self)._set_cache_(attr)
         # END handle attrs
+
+    @property
+    def authored_datetime(self):
+        return from_timestamp(self.authored_date, self.author_tz_offset)
+
+    @property
+    def committed_datetime(self):
+        return from_timestamp(self.committed_date, self.committer_tz_offset)
 
     @property
     def summary(self):

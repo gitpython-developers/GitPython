@@ -15,10 +15,13 @@ from collections import deque as Deque
 from string import digits
 import time
 import calendar
+from datetime import datetime, timedelta, tzinfo
 
 __all__ = ('get_object_type_by_name', 'parse_date', 'parse_actor_and_date',
            'ProcessStreamAdapter', 'Traversable', 'altz_to_utctz_str', 'utctz_to_altz',
-           'verify_utctz', 'Actor')
+           'verify_utctz', 'Actor', 'tzoffset', 'utc')
+
+ZERO = timedelta(0)
 
 #{ Functions
 
@@ -95,6 +98,31 @@ def verify_utctz(offset):
         raise fmt_exc
     # END for each char
     return offset
+
+
+class tzoffset(tzinfo):
+    def __init__(self, secs_west_of_utc, name=None):
+        self._offset = timedelta(seconds=-secs_west_of_utc)
+        self._name = name or 'fixed'
+
+    def utcoffset(self, dt):
+        return self._offset
+
+    def tzname(self, dt):
+        return self._name
+
+    def dst(self, dt):
+        return ZERO
+
+
+utc = tzoffset(0, 'UTC')
+
+
+def from_timestamp(timestamp, tz_offset):
+    """Converts a timestamp + tz_offset into an aware datetime instance."""
+    utc_dt = datetime.fromtimestamp(timestamp, utc)
+    local_dt = utc_dt.astimezone(tzoffset(tz_offset))
+    return local_dt
 
 
 def parse_date(string_date):
