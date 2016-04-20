@@ -17,6 +17,8 @@ Changelog
   `a_path` and `b_path` properties parsed out correctly.  Previously, some
   values may have been populated incorrectly when a file was added or
   deleted.
+* Fix: diff parsing issues with paths that contain "unsafe" chars, like
+  spaces, tabs, backslashes, etc.
 * IMPORTANT: This release drops support for python 2.6, which is
   officially deprecated by the python maintainers.
 * CRITICAL: `Diff` objects created with patch output will now not carry
