@@ -1,4 +1,4 @@
-#-*-coding:utf-8-*-
+# coding: utf-8
 # test_diff.py
 # Copyright (C) 2008, 2009 Michael Trier (mtrier@gmail.com) and contributors
 #
@@ -145,12 +145,37 @@ class TestDiff(TestBase):
         assert diff_index[0].new_file
         assert diff_index[0].diff == fixture('diff_initial')
 
+    def test_diff_unsafe_paths(self):
+        output = StringProcessAdapter(fixture('diff_patch_unsafe_paths'))
+        res = Diff._index_from_patch_format(None, output.stdout)
+
+        # The "Additions"
+        self.assertEqual(res[0].b_path, u'path/ starting with a space')
+        self.assertEqual(res[1].b_path, u'path/"with-quotes"')
+        self.assertEqual(res[2].b_path, u"path/'with-single-quotes'")
+        self.assertEqual(res[3].b_path, u'path/ending in a space ')
+        self.assertEqual(res[4].b_path, u'path/with\ttab')
+        self.assertEqual(res[5].b_path, u'path/with\nnewline')
+        self.assertEqual(res[6].b_path, u'path/with spaces')
+        self.assertEqual(res[7].b_path, u'path/with-question-mark?')
+        self.assertEqual(res[8].b_path, u'path/¯\\_(ツ)_|¯')
+
+        # The "Moves"
+        # NOTE: The path prefixes a/ and b/ here are legit!  We're actually
+        # verifying that it's not "a/a/" that shows up, see the fixture data.
+        self.assertEqual(res[9].a_path, u'a/with spaces')       # NOTE: path a/ here legit!
+        self.assertEqual(res[9].b_path, u'b/with some spaces')  # NOTE: path b/ here legit!
+        self.assertEqual(res[10].a_path, u'a/ending in a space ')
+        self.assertEqual(res[10].b_path, u'b/ending with space ')
+        self.assertEqual(res[11].a_path, u'a/"with-quotes"')
+        self.assertEqual(res[11].b_path, u'b/"with even more quotes"')
+
     def test_diff_patch_format(self):
         # test all of the 'old' format diffs for completness - it should at least
         # be able to deal with it
         fixtures = ("diff_2", "diff_2f", "diff_f", "diff_i", "diff_mode_only",
                     "diff_new_mode", "diff_numstat", "diff_p", "diff_rename",
-                    "diff_tree_numstat_root")
+                    "diff_tree_numstat_root", "diff_patch_unsafe_paths")
 
         for fixture_name in fixtures:
             diff_proc = StringProcessAdapter(fixture(fixture_name))
