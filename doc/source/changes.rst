@@ -2,8 +2,8 @@
 Changelog
 =========
 
-1.0.3 - Fixes
-=============
+1.1.0 - Features
+================
 
 * `Commit` now has extra properties `authored_datetime` and
   `committer_datetime` (to get Python datetime instances rather than
