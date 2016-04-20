@@ -5,6 +5,9 @@ Changelog
 1.0.3 - Fixes
 =============
 
+* `Commit` now has extra properties `authored_datetime` and
+  `committer_datetime` (to get Python datetime instances rather than
+  timestamps)
 * `Commit.diff()` now supports diffing the root commit via
   `Commit.diff(NULL_TREE)`.
 * `Repo.blame()` now respects `incremental=True`, supporting incremental
