@@ -2,9 +2,18 @@
 Changelog
 =========
 
-1.1.0 - Features
+2.0.0 - Features
 ================
 
+Please note that due to breaking changes, we have to increase the major version.
+
+* **IMPORTANT**: This release drops support for python 2.6, which is
+  officially deprecated by the python maintainers.
+* **CRITICAL**: `Diff` objects created with patch output will now not carry
+  the --- and +++ header lines anymore.  All diffs now start with the
+  @@ header line directly.  Users that rely on the old behaviour can now
+  (reliably) read this information from the a_path and b_path properties
+  without having to parse these lines manually.
 * `Commit` now has extra properties `authored_datetime` and
   `committer_datetime` (to get Python datetime instances rather than
   timestamps)
@@ -19,14 +28,6 @@ Changelog
   deleted.
 * Fix: diff parsing issues with paths that contain "unsafe" chars, like
   spaces, tabs, backslashes, etc.
-* IMPORTANT: This release drops support for python 2.6, which is
-  officially deprecated by the python maintainers.
-* CRITICAL: `Diff` objects created with patch output will now not carry
-  the --- and +++ header lines anymore.  All diffs now start with the
-  @@ header line directly.  Users that rely on the old behaviour can now
-  (reliably) read this information from the a_path and b_path properties
-  without having to parse these lines manually.
-
 
 1.0.2 - Fixes
 =============
