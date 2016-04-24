@@ -2,6 +2,11 @@
 Changelog
 =========
 
+2.0.1 - Fixes
+=============
+
+* Fix: remote output parser now correctly matches refs with "@" in them
+
 2.0.0 - Features
 ================
 
