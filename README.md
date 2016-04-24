@@ -70,31 +70,15 @@ You can watch me fix issues or implement new features [live on Twitch][twitch-ch
 
 ### How to make a new release
 
-* assure `changes.rst` is up-to-date
-* put new version into `VERSION` file
-* run `./setup.py sdist`
-* On https://pypi.python.org
- - Click `GitPython` (and pray it will not timeout)
- - Lucky ? Click `edit` on the last version, and copy the main description text
-   to your clipboard - it's needed later.
- - On top of that page, click the `PKG file` button or drag & drop the one from
-   `./GitPython.egg-info/PKG-INFO` on it. Then click the `add ...` button to 
-   create a new version.
- - Paste the previously copied description text into the description field, and click the `add information` button on the very bottom of the page.
- - Click `GitPython` again and then click `files` of the newly created version.
- - Select `source package` in the dropdown, then choose or drag & drop 
-   `./dist/GitPython-<version>.tar.gz` onto the file path.
- - Click the `upload` button.
-* Run `git tag <version>` to mark the version you just uploaded to pypi.
-* Run `git push --tags origin master` to publish the changes.
-* finally, set the upcoming version in the `VERSION` file, usually be incrementing
-  the patch level, and possibly by appending `-dev`. Probably you want to `git push` once more.
+* Update/verify the version in the `VERSION` file
+* Update/verify that the changelog has been updated
+* Commit everything
+* Run `git tag <version>` to tag the version in Git
+* Run `make release`
+* Finally, set the upcoming version in the `VERSION` file, usually be
+  incrementing the patch level, and possibly by appending `-dev`. Probably you
+  want to `git push` once more.
   
-*NOTE:* At the time of writing, pypi wouldn't hear my prayers and did timeout on 
-me, which is why button names are just *guesses*. It's advised to update this text
-next time someone manages to publish a new release to a system so firmly rooted in
-the past.
-
 ### LICENSE
 
 New BSD License.  See the LICENSE file.
