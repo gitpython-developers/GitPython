@@ -13,7 +13,6 @@ release: clean
 	make force_release
 
 force_release: clean
-	@which -s twine || echo "Twine not installed, run pip install twine first"
 	git push --tags
 	python setup.py sdist bdist_wheel
 	twine upload dist/*
