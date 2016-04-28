@@ -5,6 +5,8 @@ include AUTHORS
 include README
 include requirements.txt
 
+recursive-include doc *
+
 graft git/test/fixtures
 graft git/test/performance
 
