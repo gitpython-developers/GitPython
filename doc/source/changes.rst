@@ -2,6 +2,12 @@
 Changelog
 =========
 
+2.0.2 - Fixes
+=============
+
+* Fix: source package does not include \*.pyc files
+* Fix: source package does include doc sources
+
 2.0.1 - Fixes
 =============
 
