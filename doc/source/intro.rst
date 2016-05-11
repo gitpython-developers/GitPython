@@ -13,6 +13,8 @@ The object database implementation is optimized for handling large quantities of
 Requirements
 ============
 
+* `Python`_ 2.7 or newer
+    Since GitPython 2.0.0
 * `Git`_ 1.7.0 or newer
     It should also work with older versions, but it may be that some operations
     involving remotes will not work as expected.
@@ -20,10 +22,11 @@ Requirements
 * `Python Nose`_ - used for running the tests
 * `Mock by Michael Foord`_ used for tests. Requires version 0.5
 
-.. _Git: http://git-scm.com/
-.. _Python Nose: http://code.google.com/p/python-nose/
+.. _Python: https://www.python.org
+.. _Git: https://git-scm.com/
+.. _Python Nose: https://nose.readthedocs.io/en/latest/
 .. _Mock by Michael Foord: http://www.voidspace.org.uk/python/mock.html
-.. _GitDB: http://pypi.python.org/pypi/gitdb
+.. _GitDB: https://pypi.python.org/pypi/gitdb
 
 Installing GitPython
 ====================
@@ -52,7 +55,7 @@ script:
 .. sourcecode:: none
 
     # python setup.py install
-    
+
 .. note:: In this case, you have to manually install `GitDB`_ as well. It would be recommended to use the :ref:`git source repository <source-code-label>` in that case.
 
 Getting Started
@@ -80,16 +83,16 @@ GitPython's git repo is available on GitHub, which can be browsed at:
 and cloned using::
 
 	$ git clone https://github.com/gitpython-developers/GitPython git-python
-	
+
 Initialize all submodules to obtain the required dependencies with::
-    
+
     $ cd git-python
     $ git submodule update --init --recursive
-    
+
 Finally verify the installation by running the `nose powered <http://code.google.com/p/python-nose/>`_ unit tests::
-    
+
     $ nosetests
-    
+
 Questions and Answers
 =====================
 Please use stackoverflow for questions, and don't forget to tag it with `gitpython` to assure the right people see the question in a timely manner.
@@ -101,7 +104,7 @@ Issue Tracker
 The issue tracker is hosted by github:
 
 https://github.com/gitpython-developers/GitPython/issues
-	
+
 License Information
 ===================
 GitPython is licensed under the New BSD License.  See the LICENSE file for
