@@ -13,6 +13,8 @@ import threading
 import errno
 import mmap
 
+from collections import OrderedDict
+
 from contextlib import contextmanager
 import signal
 from subprocess import (
@@ -783,6 +785,7 @@ class Git(LazyMixin):
     def transform_kwargs(self, split_single_char_options=True, **kwargs):
         """Transforms Python style kwargs into git command line options."""
         args = list()
+        kwargs = OrderedDict(sorted(kwargs.items(), key=lambda x: x[0]))
         for k, v in kwargs.items():
             if isinstance(v, (list, tuple)):
                 for value in v:
