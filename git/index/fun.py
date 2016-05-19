@@ -93,7 +93,7 @@ def stat_mode_to_index_mode(mode):
         return S_IFLNK
     if S_ISDIR(mode) or S_IFMT(mode) == S_IFGITLINK:    # submodules
         return S_IFGITLINK
-    return S_IFREG | 0o644 | (mode & 0o100)       # blobs with or without executable bit
+    return S_IFREG | 0o644 | (mode & 0o111)       # blobs with or without executable bit
 
 
 def write_cache(entries, stream, extension_data=None, ShaStreamCls=IndexFileSHA1Writer):

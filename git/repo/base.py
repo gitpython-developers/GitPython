@@ -628,7 +628,7 @@ class Repo(object):
         :note:
             ignored files will not appear here, i.e. files mentioned in .gitignore
         :note:
-            This property is expensive, as no cache is involved. To process the result, please 
+            This property is expensive, as no cache is involved. To process the result, please
             consider caching it yourself."""
         return self._get_untracked_files()
 
