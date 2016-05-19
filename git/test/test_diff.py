@@ -86,6 +86,7 @@ class TestDiff(TestBase):
         assert_equal(1, len(diffs))
 
         diff = diffs[0]
+        assert_true(diff.renamed_file)
         assert_true(diff.renamed)
         assert_equal(diff.rename_from, u'Jérôme')
         assert_equal(diff.rename_to, u'müller')
@@ -95,6 +96,7 @@ class TestDiff(TestBase):
         diffs = Diff._index_from_raw_format(self.rorepo, output.stdout)
         assert len(diffs) == 1
         diff = diffs[0]
+        assert diff.renamed_file
         assert diff.renamed
         assert diff.rename_from == 'this'
         assert diff.rename_to == 'that'
