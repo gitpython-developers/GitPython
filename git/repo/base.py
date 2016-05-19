@@ -254,7 +254,9 @@ class Repo(object):
 
     @property
     def index(self):
-        """:return: IndexFile representing this repository's index."""
+        """:return: IndexFile representing this repository's index.
+        :note: This property can be expensive, as the returned ``IndexFile`` will be
+         reinitialized. It's recommended to re-use the object."""
         return IndexFile(self)
 
     @property
@@ -624,7 +626,10 @@ class Repo(object):
             are relative to the current working directory of the git command.
 
         :note:
-            ignored files will not appear here, i.e. files mentioned in .gitignore"""
+            ignored files will not appear here, i.e. files mentioned in .gitignore
+        :note:
+            This property is expensive, as no cache is involved. To process the result, please 
+            consider caching it yourself."""
         return self._get_untracked_files()
 
     def _get_untracked_files(self, **kwargs):
