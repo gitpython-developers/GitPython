@@ -685,7 +685,7 @@ class Repo(object):
         stream = iter(data.split(b'\n'))
         while True:
             line = next(stream)  # when exhausted, casues a StopIteration, terminating this function
-            if line.strip() == '':
+            if line.strip() == '' or line.strip() == b'':
                 # Skip over empty lines
                 continue
             hexsha, orig_lineno, lineno, num_lines = line.split()
