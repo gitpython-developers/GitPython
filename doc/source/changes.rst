@@ -2,6 +2,12 @@
 Changelog
 =========
 
+2.0.3 - Fixes
+=============
+
+* Fix: progress handler exceptions are not caught anymore, which would usually just hide bugs
+  previously.
+
 2.0.2 - Fixes
 =============
 

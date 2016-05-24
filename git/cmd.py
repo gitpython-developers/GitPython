@@ -113,12 +113,7 @@ def handle_process_output(process, stdout_handler, stderr_handler, finalizer):
     def _dispatch_single_line(line, handler):
         line = line.decode(defenc)
         if line and handler:
-            try:
-                handler(line)
-            except Exception:
-                # Keep reading, have to pump the lines empty nontheless
-                log.error("Line handler exception on line: %s", line, exc_info=True)
-            # end
+            handler(line)
         # end dispatch helper
     # end single line helper
 
