@@ -605,7 +605,7 @@ class Git(LazyMixin):
                          bufsize=-1,
                          stdin=istream,
                          stderr=PIPE,
-                         stdout=with_stdout and PIPE or None,
+                         stdout=with_stdout and PIPE or open(os.devnull, 'wb'),
                          shell=self.USE_SHELL,
                          close_fds=(os.name == 'posix'),  # unsupported on windows
                          **subprocess_kwargs
