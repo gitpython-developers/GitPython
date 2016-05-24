@@ -682,10 +682,12 @@ class Repo(object):
         data = self.git.blame(rev, '--', file, p=True, incremental=True, stdout_as_string=False, **kwargs)
         commits = dict()
 
-        stream = iter(data.splitlines())
+        stream = iter(data.split(b'\n'))
         while True:
             line = next(stream)  # when exhausted, casues a StopIteration, terminating this function
-
+            if line.strip() == '':
+                # Skip over empty lines
+                continue
             hexsha, orig_lineno, lineno, num_lines = line.split()
             lineno = int(lineno)
             num_lines = int(num_lines)
