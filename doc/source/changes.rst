@@ -7,10 +7,11 @@ Changelog
 
 * Fix: bug in `git-blame --incremental` output parser that broken when
   commit messages contained `\r` characters
-* Fix: progress handler exceptions are not caught anymore, which would usually just hide bugs
-  previously.
-* Fix: The `Git.execute` method will now redirect `stdout` to `devnull` if `with_stdout` is false, 
-  which is the intended behaviour based on the parameter's documentation.
+* Fix: progress handler exceptions are not caught anymore, which would
+  usually just hide bugs previously.
+* Fix: The `Git.execute` method will now redirect `stdout` to `devnull` if
+  `with_stdout` is false, which is the intended behaviour based on the
+  parameter's documentation.
 
 2.0.2 - Fixes
 =============
