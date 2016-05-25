@@ -171,12 +171,16 @@ class RemoteProgress(object):
     STAGE_MASK = BEGIN | END
     OP_MASK = ~STAGE_MASK
 
+    DONE_TOKEN = 'done.'
+    TOKEN_SEPARATOR = ', '
+
     __slots__ = ("_cur_line", "_seen_ops")
-    re_op_absolute = re.compile("(remote: )?([\w\s]+):\s+()(\d+)()(.*)")
-    re_op_relative = re.compile("(remote: )?([\w\s]+):\s+(\d+)% \((\d+)/(\d+)\)(.*)")
+    re_op_absolute = re.compile(r"(remote: )?([\w\s]+):\s+()(\d+)()(.*)")
+    re_op_relative = re.compile(r"(remote: )?([\w\s]+):\s+(\d+)% \((\d+)/(\d+)\)(.*)")
 
     def __init__(self):
         self._seen_ops = list()
+        self._cur_line = None
 
     def _parse_progress_line(self, line):
         """Parse progress information from the given line as retrieved by git-push
@@ -257,11 +261,11 @@ class RemoteProgress(object):
             # END message handling
 
             message = message.strip()
-            done_token = ', done.'
-            if message.endswith(done_token):
+            if message.endswith(self.DONE_TOKEN):
                 op_code |= self.END
-                message = message[:-len(done_token)]
+                message = message[:-len(self.DONE_TOKEN)]
             # END end message handling
+            message = message.strip(self.TOKEN_SEPARATOR)
 
             self.update(op_code,
                         cur_count and float(cur_count),

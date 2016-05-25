@@ -62,6 +62,14 @@ class TestRemoteProgress(RemoteProgress):
         # check each stage only comes once
         op_id = op_code & self.OP_MASK
         assert op_id in (self.COUNTING, self.COMPRESSING, self.WRITING)
+        
+        if op_code & self.WRITING > 0:
+            if op_code & self.BEGIN > 0:
+                assert not message, 'should not have message when remote begins writing'
+            elif op_code & self.END > 0:
+                assert message
+                assert not message.startswith(', '), "Sanitize progress messages: '%s'" % message
+                assert not message.endswith(', '), "Sanitize progress messages: '%s'" % message
 
         self._stages_per_op.setdefault(op_id, 0)
         self._stages_per_op[op_id] = self._stages_per_op[op_id] | (op_code & self.STAGE_MASK)
