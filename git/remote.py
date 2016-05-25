@@ -20,8 +20,6 @@ from .refs import (
     SymbolicReference,
     TagReference
 )
-
-
 from git.util import (
     LazyMixin,
     Iterable,
@@ -35,6 +33,9 @@ from git.util import (
 from git.cmd import handle_process_output
 from gitdb.util import join
 from git.compat import defenc
+import logging
+
+log = logging.getLogger('git.remote')
 
 
 __all__ = ('RemoteProgress', 'PushInfo', 'FetchInfo', 'Remote')
@@ -570,10 +571,16 @@ class Remote(LazyMixin, Iterable):
         fetch_head_info = [l.decode(defenc) for l in fp.readlines()]
         fp.close()
 
-        # NOTE: We assume to fetch at least enough progress lines to allow matching each fetch head line with it.
         l_fil = len(fetch_info_lines)
         l_fhi = len(fetch_head_info)
-        assert l_fil >= l_fhi, "len(%s) <= len(%s)" % (l_fil, l_fhi)
+        if l_fil >= l_fhi:
+            msg = "Fetch head does not contain enough lines to match with progress information\n"
+            msg += "length of progress lines %i should be equal to lines in FETCH_HEAD file %i\n"
+            msg += "Will ignore extra progress lines."
+            msg %= (l_fil, l_fhi)
+            log.warn(msg)
+            fetch_info_lines = fetch_info_lines[:l_fhi]
+        # end sanity check + sanitization
 
         output.extend(FetchInfo._from_line(self.repo, err_line, fetch_line)
                       for err_line, fetch_line in zip(fetch_info_lines, fetch_head_info))
