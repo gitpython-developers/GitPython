@@ -2,6 +2,11 @@
 Changelog
 =========
 
+2.0.4 - Fixes
+=============
+
+* Fix: `RemoteProgress` will now strip the ', ' prefix or suffix from messages.
+
 2.0.3 - Fixes
 =============
 
@@ -11,7 +16,6 @@ Changelog
   previously.
 * Fix: The `Git.execute` method will now redirect `stdout` to `devnull` if `with_stdout` is false, 
   which is the intended behaviour based on the parameter's documentation.
-* Fix: `RemoteProgress` will now strip the ', ' prefix or suffix from messages.
 
 2.0.2 - Fixes
 =============
