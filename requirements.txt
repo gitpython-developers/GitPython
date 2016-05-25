@@ -1,2 +1,1 @@
-GitPython
 gitdb>=0.6.4
