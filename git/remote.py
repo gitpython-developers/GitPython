@@ -573,15 +573,19 @@ class Remote(LazyMixin, Iterable):
 
         l_fil = len(fetch_info_lines)
         l_fhi = len(fetch_head_info)
-        if l_fil >= l_fhi:
-            msg = "Fetch head does not contain enough lines to match with progress information\n"
+        if l_fil != l_fhi:
+            msg = "Fetch head lines do not match lines provided via progress information\n"
             msg += "length of progress lines %i should be equal to lines in FETCH_HEAD file %i\n"
-            msg += "Will ignore extra progress lines."
+            msg += "Will ignore extra progress lines or fetch head lines."
             msg %= (l_fil, l_fhi)
             log.warn(msg)
-            fetch_info_lines = fetch_info_lines[:l_fhi]
+            if l_fil < l_fhi:
+                fetch_head_info = fetch_head_info[:l_fil]
+            else:
+                fetch_info_lines = fetch_info_lines[:l_fhi]
+            # end truncate correct list
         # end sanity check + sanitization
-
+        
         output.extend(FetchInfo._from_line(self.repo, err_line, fetch_line)
                       for err_line, fetch_line in zip(fetch_info_lines, fetch_head_info))
         return output
