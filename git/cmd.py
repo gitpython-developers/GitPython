@@ -13,7 +13,7 @@ import threading
 import errno
 import mmap
 
-from collections import OrderedDict
+from git.odict import OrderedDict
 
 from contextlib import contextmanager
 import signal
