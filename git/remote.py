@@ -550,7 +550,7 @@ class Remote(LazyMixin, Iterable):
 
         progress_handler = progress.new_message_handler()
 
-        for line in proc.stderr.readlines():
+        for line in proc.stderr:
             line = line.decode(defenc)
             for pline in progress_handler(line):
                 if line.startswith('fatal:') or line.startswith('error:'):
