@@ -32,7 +32,7 @@ from git.util import (
 )
 from git.cmd import handle_process_output
 from gitdb.util import join
-from git.compat import (defenc, safe_decode)
+from git.compat import (defenc, force_text)
 import logging
 
 log = logging.getLogger('git.remote')
@@ -551,7 +551,7 @@ class Remote(LazyMixin, Iterable):
         progress_handler = progress.new_message_handler()
 
         for line in proc.stderr:
-            line = safe_decode(line)
+            line = force_text(line)
             for pline in progress_handler(line):
                 if line.startswith('fatal:') or line.startswith('error:'):
                     raise GitCommandError(("Error when fetching: %s" % line,), 2)
