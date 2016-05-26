@@ -578,7 +578,7 @@ class Remote(LazyMixin, Iterable):
             msg += "length of progress lines %i should be equal to lines in FETCH_HEAD file %i\n"
             msg += "Will ignore extra progress lines or fetch head lines."
             msg %= (l_fil, l_fhi)
-            log.warn(msg)
+            log.debug(msg)
             if l_fil < l_fhi:
                 fetch_head_info = fetch_head_info[:l_fil]
             else:
