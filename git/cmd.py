@@ -609,7 +609,7 @@ class Git(LazyMixin):
                          bufsize=-1,
                          stdin=istream,
                          stderr=PIPE,
-                         stdout=with_stdout and PIPE or open(os.devnull, 'wb'),
+                         stdout=PIPE if with_stdout else open(os.devnull, 'wb'),
                          shell=self.USE_SHELL,
                          close_fds=(os.name == 'posix'),  # unsupported on windows
                          universal_newlines=universal_newlines,
