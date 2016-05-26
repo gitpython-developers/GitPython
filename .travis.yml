@@ -1,10 +1,14 @@
 language: python
 python:
+  - "2.6"
   - "2.7"
   - "3.3"
   - "3.4"
   - "3.5"
   # - "pypy" - won't work as smmap doesn't work (see gitdb/.travis.yml for details)
+matrix:
+  allow_failures:
+    python: "2.6"
 git:
   # a higher depth is needed for most of the tests - must be high enough to not actually be shallow
   # as we clone our own repository in the process
