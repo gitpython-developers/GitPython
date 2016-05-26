@@ -44,7 +44,8 @@ from git.compat import (
 
 execute_kwargs = ('istream', 'with_keep_cwd', 'with_extended_output',
                   'with_exceptions', 'as_process', 'stdout_as_string',
-                  'output_stream', 'with_stdout', 'kill_after_timeout')
+                  'output_stream', 'with_stdout', 'kill_after_timeout',
+                  'universal_newlines')
 
 log = logging.getLogger('git.cmd')
 log.addHandler(logging.NullHandler())
@@ -487,6 +488,7 @@ class Git(LazyMixin):
                 stdout_as_string=True,
                 kill_after_timeout=None,
                 with_stdout=True,
+                universal_newlines=False,
                 **subprocess_kwargs
                 ):
         """Handles executing the command on the shell and consumes and returns
@@ -541,7 +543,9 @@ class Git(LazyMixin):
             specify may not be the same ones.
 
         :param with_stdout: If True, default True, we open stdout on the created process
-
+        :param universal_newlines:
+            if True, pipes will be opened as text, and lines are split at
+            all known line endings.
         :param kill_after_timeout:
             To specify a timeout in seconds for the git command, after which the process
             should be killed. This will have no effect if as_process is set to True. It is
@@ -608,6 +612,7 @@ class Git(LazyMixin):
                          stdout=with_stdout and PIPE or open(os.devnull, 'wb'),
                          shell=self.USE_SHELL,
                          close_fds=(os.name == 'posix'),  # unsupported on windows
+                         universal_newlines=universal_newlines,
                          **subprocess_kwargs
                          )
         except cmd_not_found_exception as err:

@@ -663,8 +663,8 @@ class Remote(LazyMixin, Iterable):
         else:
             args = [refspec]
 
-        proc = self.repo.git.fetch(self, *args, as_process=True, with_stdout=False, v=True,
-                                   **kwargs)
+        proc = self.repo.git.fetch(self, *args, as_process=True, with_stdout=False,
+                                   universal_newlines=True, v=True, **kwargs)
         res = self._get_fetch_info_from_stderr(proc, progress or RemoteProgress())
         if hasattr(self.repo.odb, 'update_cache'):
             self.repo.odb.update_cache()
@@ -682,7 +682,8 @@ class Remote(LazyMixin, Iterable):
             # No argument refspec, then ensure the repo's config has a fetch refspec.
             self._assert_refspec()
         kwargs = add_progress(kwargs, self.repo.git, progress)
-        proc = self.repo.git.pull(self, refspec, with_stdout=False, as_process=True, v=True, **kwargs)
+        proc = self.repo.git.pull(self, refspec, with_stdout=False, as_process=True,
+                                  universal_newlines=True, v=True, **kwargs)
         res = self._get_fetch_info_from_stderr(proc, progress or RemoteProgress())
         if hasattr(self.repo.odb, 'update_cache'):
             self.repo.odb.update_cache()
@@ -707,7 +708,8 @@ class Remote(LazyMixin, Iterable):
             If the operation fails completely, the length of the returned IterableList will
             be null."""
         kwargs = add_progress(kwargs, self.repo.git, progress)
-        proc = self.repo.git.push(self, refspec, porcelain=True, as_process=True, **kwargs)
+        proc = self.repo.git.push(self, refspec, porcelain=True, as_process=True,
+                                  universal_newlines=True, **kwargs)
         return self._get_push_info(proc, progress or RemoteProgress())
 
     @property
