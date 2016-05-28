@@ -14,7 +14,8 @@ Requirements
 ============
 
 * `Python`_ 2.7 or newer
-    Since GitPython 2.0.0
+    Since GitPython 2.0.0. Please note that python 2.6 is still reasonably well supported, but might
+    deteriorate over time.
 * `Git`_ 1.7.0 or newer
     It should also work with older versions, but it may be that some operations
     involving remotes will not work as expected.

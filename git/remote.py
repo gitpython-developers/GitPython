@@ -20,8 +20,6 @@ from .refs import (
     SymbolicReference,
     TagReference
 )
-
-
 from git.util import (
     LazyMixin,
     Iterable,
@@ -34,7 +32,10 @@ from git.util import (
 )
 from git.cmd import handle_process_output
 from gitdb.util import join
-from git.compat import defenc
+from git.compat import (defenc, force_text)
+import logging
+
+log = logging.getLogger('git.remote')
 
 
 __all__ = ('RemoteProgress', 'PushInfo', 'FetchInfo', 'Remote')
@@ -568,8 +569,8 @@ class Remote(LazyMixin, Iterable):
 
         progress_handler = progress.new_message_handler()
 
-        for line in proc.stderr.readlines():
-            line = line.decode(defenc)
+        for line in proc.stderr:
+            line = force_text(line)
             for pline in progress_handler(line):
                 if line.startswith('fatal:') or line.startswith('error:'):
                     raise GitCommandError(("Error when fetching: %s" % line,), 2)
@@ -589,11 +590,21 @@ class Remote(LazyMixin, Iterable):
         fetch_head_info = [l.decode(defenc) for l in fp.readlines()]
         fp.close()
 
-        # NOTE: We assume to fetch at least enough progress lines to allow matching each fetch head line with it.
         l_fil = len(fetch_info_lines)
         l_fhi = len(fetch_head_info)
-        assert l_fil >= l_fhi, "len(%s) <= len(%s)" % (l_fil, l_fhi)
-
+        if l_fil != l_fhi:
+            msg = "Fetch head lines do not match lines provided via progress information\n"
+            msg += "length of progress lines %i should be equal to lines in FETCH_HEAD file %i\n"
+            msg += "Will ignore extra progress lines or fetch head lines."
+            msg %= (l_fil, l_fhi)
+            log.debug(msg)
+            if l_fil < l_fhi:
+                fetch_head_info = fetch_head_info[:l_fil]
+            else:
+                fetch_info_lines = fetch_info_lines[:l_fhi]
+            # end truncate correct list
+        # end sanity check + sanitization
+        
         output.extend(FetchInfo._from_line(self.repo, err_line, fetch_line)
                       for err_line, fetch_line in zip(fetch_info_lines, fetch_head_info))
         return output
@@ -673,8 +684,8 @@ class Remote(LazyMixin, Iterable):
         else:
             args = [refspec]
 
-        proc = self.repo.git.fetch(self, *args, as_process=True, with_stdout=False, v=True,
-                                   **kwargs)
+        proc = self.repo.git.fetch(self, *args, as_process=True, with_stdout=False,
+                                   universal_newlines=True, v=True, **kwargs)
         res = self._get_fetch_info_from_stderr(proc, progress)
         if hasattr(self.repo.odb, 'update_cache'):
             self.repo.odb.update_cache()
@@ -692,7 +703,8 @@ class Remote(LazyMixin, Iterable):
             # No argument refspec, then ensure the repo's config has a fetch refspec.
             self._assert_refspec()
         kwargs = add_progress(kwargs, self.repo.git, progress)
-        proc = self.repo.git.pull(self, refspec, with_stdout=False, as_process=True, v=True, **kwargs)
+        proc = self.repo.git.pull(self, refspec, with_stdout=False, as_process=True,
+                                  universal_newlines=True, v=True, **kwargs)
         res = self._get_fetch_info_from_stderr(proc, progress)
         if hasattr(self.repo.odb, 'update_cache'):
             self.repo.odb.update_cache()
@@ -733,7 +745,8 @@ class Remote(LazyMixin, Iterable):
             If the operation fails completely, the length of the returned IterableList will
             be null."""
         kwargs = add_progress(kwargs, self.repo.git, progress)
-        proc = self.repo.git.push(self, refspec, porcelain=True, as_process=True, **kwargs)
+        proc = self.repo.git.push(self, refspec, porcelain=True, as_process=True,
+                                  universal_newlines=True, **kwargs)
         return self._get_push_info(proc, progress)
 
     @property
