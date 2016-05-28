@@ -174,11 +174,16 @@ class RemoteProgress(object):
     DONE_TOKEN = 'done.'
     TOKEN_SEPARATOR = ', '
 
-    __slots__ = ("_cur_line", "_seen_ops")
+    __slots__ = ("_cur_line", "_seen_ops", "__progress_function")
     re_op_absolute = re.compile(r"(remote: )?([\w\s]+):\s+()(\d+)()(.*)")
     re_op_relative = re.compile(r"(remote: )?([\w\s]+):\s+(\d+)% \((\d+)/(\d+)\)(.*)")
 
-    def __init__(self):
+    def __init__(self, progress_function=None):
+        if progress_function is not None:
+            self.__progress_function = progress_function
+        else:
+            self.__progress_function = self.update
+
         self._seen_ops = list()
         self._cur_line = None
 
@@ -267,7 +272,7 @@ class RemoteProgress(object):
             # END end message handling
             message = message.strip(self.TOKEN_SEPARATOR)
 
-            self.update(op_code,
+            self.__progress_function(op_code,
                         cur_count and float(cur_count),
                         max_count and float(max_count),
                         message)
@@ -313,7 +318,6 @@ class RemoteProgress(object):
 
         You may read the contents of the current line in self._cur_line"""
         pass
-
 
 class Actor(object):
 
