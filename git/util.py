@@ -39,7 +39,7 @@ from gitdb.util import (  # NOQA
 __all__ = ("stream_copy", "join_path", "to_native_path_windows", "to_native_path_linux",
            "join_path_native", "Stats", "IndexFileSHA1Writer", "Iterable", "IterableList",
            "BlockingLockFile", "LockFile", 'Actor', 'get_user_id', 'assure_directory_exists',
-           'RemoteProgress', 'rmtree', 'WaitGroup', 'unbare_repo')
+           'RemoteProgress', 'CallableRemoteProgress', 'rmtree', 'WaitGroup', 'unbare_repo')
 
 #{ Utility Methods
 
@@ -160,7 +160,6 @@ def finalize_process(proc, **kwargs):
 
 
 class RemoteProgress(object):
-
     """
     Handler providing an interface to parse progress information emitted by git-push
     and git-fetch and to dispatch callbacks allowing subclasses to react to the progress.
@@ -174,12 +173,11 @@ class RemoteProgress(object):
     DONE_TOKEN = 'done.'
     TOKEN_SEPARATOR = ', '
 
-    __slots__ = ("_cur_line", "_seen_ops", "__progress_function")
+    __slots__ = ("_cur_line", "_seen_ops")
     re_op_absolute = re.compile(r"(remote: )?([\w\s]+):\s+()(\d+)()(.*)")
     re_op_relative = re.compile(r"(remote: )?([\w\s]+):\s+(\d+)% \((\d+)/(\d+)\)(.*)")
 
-    def __init__(self, progress_function=None):
-        self.__progress_function = progress_function if progress_function else self.update
+    def __init__(self):
         self._seen_ops = list()
         self._cur_line = None
 
@@ -268,10 +266,10 @@ class RemoteProgress(object):
             # END end message handling
             message = message.strip(self.TOKEN_SEPARATOR)
 
-            self.__progress_function(op_code,
-                                     cur_count and float(cur_count),
-                                     max_count and float(max_count),
-                                     message)
+            self.update(op_code,
+                        cur_count and float(cur_count),
+                        max_count and float(max_count),
+                        message)
         # END for each sub line
         return failed_lines
 
@@ -314,7 +312,18 @@ class RemoteProgress(object):
 
         You may read the contents of the current line in self._cur_line"""
         pass
+        
 
+class CallableRemoteProgress(RemoteProgress):
+    """An implementation forwarding updates to any callable"""
+    __slots__ = ('_callable')
+    
+    def __init__(self, fn):
+        self._callable = fn
+        
+    def update(self, *args, **kwargs):
+        self._callable(*args, **kwargs)
+        
 
 class Actor(object):
 

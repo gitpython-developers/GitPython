@@ -24,7 +24,8 @@ from git.util import (
     LazyMixin,
     Iterable,
     IterableList,
-    RemoteProgress
+    RemoteProgress,
+    CallableRemoteProgress
 )
 from git.util import (
     join_path,
@@ -65,7 +66,7 @@ def to_progress_instance(progress):
     """
     # new API only needs progress as a function
     if callable(progress):
-        return RemoteProgress(progress)
+        return CallableRemoteProgress(progress)
 
     # where None is passed create a parser that eats the progress
     elif progress is None:
