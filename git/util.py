@@ -320,10 +320,10 @@ class CallableRemoteProgress(RemoteProgress):
     
     def __init__(self, fn):
         self._callable = fn
-        
+        RemoteProgress.__init__(self)
+
     def update(self, *args, **kwargs):
         self._callable(*args, **kwargs)
-        
 
 class Actor(object):
 
