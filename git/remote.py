@@ -646,6 +646,10 @@ class Remote(LazyMixin, Iterable):
 
         try:
             handle_process_output(proc, stdout_handler, progress_handler, finalize_process)
+        except GitCommandError as err:
+            # convert any error from wait() into the same error with stdout lines
+            raise GitCommandError( err.command, err.status, progress.get_stderr() )
+
         except Exception:
             if len(output) == 0:
                 raise
