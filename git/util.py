@@ -325,8 +325,8 @@ class CallableRemoteProgress(RemoteProgress):
     def update(self, *args, **kwargs):
         self._callable(*args, **kwargs)
 
-class Actor(object):
 
+class Actor(object):
     """Actors hold information about a person acting on the repository. They
     can be committers and authors or anything with a name and an email as
     mentioned in the git log entries."""
