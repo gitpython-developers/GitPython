@@ -58,6 +58,22 @@ def add_progress(kwargs, git, progress):
 
 #} END utilities
 
+def progress_object(progress):
+    """Given the 'progress' return a suitable object derived from
+    RemoteProgress().
+    """
+    # new API only needs progress as a function
+    if callable(progress):
+        return RemoteProgress(progress)
+
+    # where None is passed create a parser that eats the progress
+    elif progress is None:
+        return RemoteProgress()
+
+    # assume its the old API with an instance of RemoteProgress.
+    else:
+        return progress
+
 
 class PushInfo(object):
 
@@ -536,7 +552,10 @@ class Remote(LazyMixin, Iterable):
         self.repo.git.remote(scmd, self.name, **kwargs)
         return self
 
+
     def _get_fetch_info_from_stderr(self, proc, progress):
+        progress = progress_object(progress)
+
         # skip first line as it is some remote info we are not interested in
         output = IterableList('name')
 
@@ -591,6 +610,8 @@ class Remote(LazyMixin, Iterable):
         return output
 
     def _get_push_info(self, proc, progress):
+        progress = progress_object(progress)
+
         # read progress information from stderr
         # we hope stdout can hold all the data, it should ...
         # read the lines manually as it will use carriage returns between the messages
@@ -665,7 +686,7 @@ class Remote(LazyMixin, Iterable):
 
         proc = self.repo.git.fetch(self, *args, as_process=True, with_stdout=False,
                                    universal_newlines=True, v=True, **kwargs)
-        res = self._get_fetch_info_from_stderr(proc, progress or RemoteProgress())
+        res = self._get_fetch_info_from_stderr(proc, progress)
         if hasattr(self.repo.odb, 'update_cache'):
             self.repo.odb.update_cache()
         return res
@@ -684,7 +705,7 @@ class Remote(LazyMixin, Iterable):
         kwargs = add_progress(kwargs, self.repo.git, progress)
         proc = self.repo.git.pull(self, refspec, with_stdout=False, as_process=True,
                                   universal_newlines=True, v=True, **kwargs)
-        res = self._get_fetch_info_from_stderr(proc, progress or RemoteProgress())
+        res = self._get_fetch_info_from_stderr(proc, progress)
         if hasattr(self.repo.odb, 'update_cache'):
             self.repo.odb.update_cache()
         return res
@@ -694,9 +715,25 @@ class Remote(LazyMixin, Iterable):
 
         :param refspec: see 'fetch' method
         :param progress:
-            Instance of type RemoteProgress allowing the caller to receive
-            progress information until the method returns.
             If None, progress information will be discarded
+
+            No further progress information is returned after push returns.
+
+            A function (callable) that is called with the progress infomation:
+
+            progress( op_code, cur_count, max_count=None, message='' )
+
+            op_code is a bit mask of values defined in git.RemoteProgress
+
+            cur_count and max_count are float values.
+
+            max_count is None if there is no max_count
+
+            messages is '' if there is no additon message.
+
+            Deprecated: Pass in a class derived from git.RemoteProgres that
+            overrides the update() function.
+
 
         :param kwargs: Additional arguments to be passed to git-push
         :return:
@@ -710,7 +747,7 @@ class Remote(LazyMixin, Iterable):
         kwargs = add_progress(kwargs, self.repo.git, progress)
         proc = self.repo.git.push(self, refspec, porcelain=True, as_process=True,
                                   universal_newlines=True, **kwargs)
-        return self._get_push_info(proc, progress or RemoteProgress())
+        return self._get_push_info(proc, progress)
 
     @property
     def config_reader(self):

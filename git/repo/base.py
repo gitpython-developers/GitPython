@@ -32,7 +32,8 @@ from git.index import IndexFile
 from git.config import GitConfigParser
 from git.remote import (
     Remote,
-    add_progress
+    add_progress,
+    progress_object
 )
 
 from git.db import GitCmdObjectDB
@@ -872,6 +873,8 @@ class Repo(object):
 
     @classmethod
     def _clone(cls, git, url, path, odb_default_type, progress, **kwargs):
+        progress = progress_object(progress)
+
         # special handling for windows for path at which the clone should be
         # created.
         # tilde '~' will be expanded to the HOME no matter where the ~ occours. Hence
