@@ -50,8 +50,8 @@ def add_progress(kwargs, git, progress):
     given, we do not request any progress
     :return: possibly altered kwargs"""
     if progress is not None:
-        v = git.version_info
-        if v[0] > 1 or v[1] > 7 or v[2] > 0 or v[3] > 3:
+        v = git.version_info[:2]
+        if v >= (1, 7):
             kwargs['progress'] = True
         # END handle --progress
     # END handle progress
