@@ -33,7 +33,7 @@ from git.config import GitConfigParser
 from git.remote import (
     Remote,
     add_progress,
-    progress_object
+    to_progress_instance
 )
 
 from git.db import GitCmdObjectDB
@@ -873,7 +873,7 @@ class Repo(object):
 
     @classmethod
     def _clone(cls, git, url, path, odb_default_type, progress, **kwargs):
-        progress = progress_object(progress)
+        progress = to_progress_instance(progress)
 
         # special handling for windows for path at which the clone should be
         # created.

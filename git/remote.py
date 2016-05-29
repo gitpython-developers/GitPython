@@ -58,7 +58,8 @@ def add_progress(kwargs, git, progress):
 
 #} END utilities
 
-def progress_object(progress):
+
+def to_progress_instance(progress):
     """Given the 'progress' return a suitable object derived from
     RemoteProgress().
     """
@@ -552,9 +553,8 @@ class Remote(LazyMixin, Iterable):
         self.repo.git.remote(scmd, self.name, **kwargs)
         return self
 
-
     def _get_fetch_info_from_stderr(self, proc, progress):
-        progress = progress_object(progress)
+        progress = to_progress_instance(progress)
 
         # skip first line as it is some remote info we are not interested in
         output = IterableList('name')
@@ -610,7 +610,7 @@ class Remote(LazyMixin, Iterable):
         return output
 
     def _get_push_info(self, proc, progress):
-        progress = progress_object(progress)
+        progress = to_progress_instance(progress)
 
         # read progress information from stderr
         # we hope stdout can hold all the data, it should ...
@@ -715,26 +715,19 @@ class Remote(LazyMixin, Iterable):
 
         :param refspec: see 'fetch' method
         :param progress:
-            If None, progress information will be discarded
-
-            No further progress information is returned after push returns.
-
-            A function (callable) that is called with the progress infomation:
-
-            progress( op_code, cur_count, max_count=None, message='' )
-
-            op_code is a bit mask of values defined in git.RemoteProgress
-
-            cur_count and max_count are float values.
-
-            max_count is None if there is no max_count
-
-            messages is '' if there is no additon message.
-
-            Deprecated: Pass in a class derived from git.RemoteProgres that
-            overrides the update() function.
-
-
+            Can take one of many value types:
+            
+            * None to discard progress information
+            * A function (callable) that is called with the progress infomation.
+            
+              Signature: ``progress(op_code, cur_count, max_count=None, message='')``.
+              
+             `Click here <http://goo.gl/NPa7st>`_ for a description of all arguments
+              given to the function.
+            * An instance of a class derived from ``git.RemoteProgress`` that
+              overrides the ``update()`` function.
+              
+        :note: No further progress information is returned after push returns.
         :param kwargs: Additional arguments to be passed to git-push
         :return:
             IterableList(PushInfo, ...) iterable list of PushInfo instances, each
