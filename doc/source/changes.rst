@@ -6,6 +6,9 @@ Changelog
 =============
 
 * Fix: `RemoteProgress` will now strip the ', ' prefix or suffix from messages.
+* API: Remote.[fetch|push|pull](...) methods now allow the ``progress`` argument to
+  be a callable. This saves you from creating a custom type with usually just one
+  implemented method.
 
 2.0.3 - Fixes
 =============
