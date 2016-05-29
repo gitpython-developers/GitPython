@@ -570,11 +570,16 @@ class Remote(LazyMixin, Iterable):
 
         progress_handler = progress.new_message_handler()
 
+        error_message = None
+        stderr_text = None
+
         for line in proc.stderr:
             line = force_text(line)
             for pline in progress_handler(line):
                 if line.startswith('fatal:') or line.startswith('error:'):
-                    raise GitCommandError(("Error when fetching: %s" % line,), 2)
+                    error_message = "Error when fetching: %s" % (line,)
+                    break
+
                 # END handle special messages
                 for cmd in cmds:
                     if len(line) > 1 and line[0] == ' ' and line[1] == cmd:
@@ -582,9 +587,19 @@ class Remote(LazyMixin, Iterable):
                         continue
                     # end find command code
                 # end for each comand code we know
+
+            if error_message is not None:
+                break
             # end for each line progress didn't handle
+
+        if error_message is not None:
+            stderr_text = proc.stderr.read()
+
         # end
-        finalize_process(proc)
+        finalize_process(proc, stderr=stderr_text)
+
+        if error_message is not None:
+            raise GitCommandError( error_message, 2, stderr=stderr_text )
 
         # read head information
         fp = open(join(self.repo.git_dir, 'FETCH_HEAD'), 'rb')

@@ -307,7 +307,7 @@ class Git(LazyMixin):
         def __getattr__(self, attr):
             return getattr(self.proc, attr)
 
-        def wait(self, stderr=None):
+        def wait(self, stderr=''):
             """Wait for the process and return its status code.
 
             :param stderr: Previously read value of stderr, in case stderr is already closed.
@@ -317,7 +317,7 @@ class Git(LazyMixin):
 
             def read_all_from_possibly_closed_stream(stream):
                 try:
-                    return stream.read()
+                    return stderr + stream.read()
                 except ValueError:
                     return stderr or ''
 
@@ -678,7 +678,7 @@ class Git(LazyMixin):
                 # strip trailing "\n"
                 if stderr_value.endswith(b"\n"):
                     stderr_value = stderr_value[:-1]
-                status = proc.wait()
+                status = proc.wait(stderr=stderr_value)
             # END stdout handling
         finally:
             proc.stdout.close()
