@@ -320,7 +320,7 @@ class CallableRemoteProgress(RemoteProgress):
     
     def __init__(self, fn):
         self._callable = fn
-        RemoteProgress.__init__(self)
+        super(CallableRemoteProgress, self).__init__()
 
     def update(self, *args, **kwargs):
         self._callable(*args, **kwargs)
