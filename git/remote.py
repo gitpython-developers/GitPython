@@ -599,7 +599,7 @@ class Remote(LazyMixin, Iterable):
         finalize_process(proc, stderr=stderr_text)
 
         if error_message is not None:
-            raise GitCommandError( error_message, 2, stderr=stderr_text )
+            raise GitCommandError(error_message, 2, stderr=stderr_text)
 
         # read head information
         fp = open(join(self.repo.git_dir, 'FETCH_HEAD'), 'rb')
@@ -648,7 +648,7 @@ class Remote(LazyMixin, Iterable):
             handle_process_output(proc, stdout_handler, progress_handler, finalize_process)
         except GitCommandError as err:
             # convert any error from wait() into the same error with stdout lines
-            raise GitCommandError( err.command, err.status, progress.get_stderr() )
+            raise GitCommandError(err.command, err.status, progress.get_stderr())
 
         except Exception:
             if len(output) == 0:

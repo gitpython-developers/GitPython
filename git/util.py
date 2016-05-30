@@ -194,8 +194,8 @@ class RemoteProgress(object):
         # Counting objects: 4, done.
         # Compressing objects:  50% (1/2)   \rCompressing objects: 100% (2/2)   \rCompressing objects: 100% (2/2), done.
         self._cur_line = line
-        if len(self._error_lines) > 0 or self._cur_line.startswith( ('error:', 'fatal:') ):
-            self._error_lines.append( self._cur_line )
+        if len(self._error_lines) > 0 or self._cur_line.startswith(('error:', 'fatal:')):
+            self._error_lines.append(self._cur_line)
             return []
 
         sub_lines = line.split('\r')
