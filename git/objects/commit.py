@@ -501,14 +501,14 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
 
         try:
             self.author, self.authored_date, self.author_tz_offset = \
-                parse_actor_and_date(author_line.decode(self.encoding))
+                parse_actor_and_date(author_line.decode(self.encoding, errors='replace'))
         except UnicodeDecodeError:
             log.error("Failed to decode author line '%s' using encoding %s", author_line, self.encoding,
                       exc_info=True)
 
         try:
             self.committer, self.committed_date, self.committer_tz_offset = \
-                parse_actor_and_date(committer_line.decode(self.encoding))
+                parse_actor_and_date(committer_line.decode(self.encoding, errors='replace'))
         except UnicodeDecodeError:
             log.error("Failed to decode committer line '%s' using encoding %s", committer_line, self.encoding,
                       exc_info=True)
@@ -518,7 +518,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
         # The end of our message stream is marked with a newline that we strip
         self.message = stream.read()
         try:
-            self.message = self.message.decode(self.encoding)
+            self.message = self.message.decode(self.encoding, errors='replace')
         except UnicodeDecodeError:
             log.error("Failed to decode message '%s' using encoding %s", self.message, self.encoding, exc_info=True)
         # END exception handling
