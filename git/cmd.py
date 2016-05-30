@@ -307,19 +307,28 @@ class Git(LazyMixin):
         def __getattr__(self, attr):
             return getattr(self.proc, attr)
 
-        def wait(self, stderr=''):
+        def wait(self, stderr=b''):
             """Wait for the process and return its status code.
 
             :param stderr: Previously read value of stderr, in case stderr is already closed.
             :warn: may deadlock if output or error pipes are used and not handled separately.
             :raise GitCommandError: if the return status is not 0"""
+
+            # stderr must be a bytes object as it will
+            # combined with more data from the process and
+            # decoded by the caller
+            if stderr is None:
+                stderr = b''
+            elif type(stderr) == unicode:
+                stderr = stderr.encode(defenc)
+
             status = self.proc.wait()
 
             def read_all_from_possibly_closed_stream(stream):
                 try:
                     return stderr + stream.read()
                 except ValueError:
-                    return stderr or ''
+                    return stderr or b''
 
             if status != 0:
                 errstr = read_all_from_possibly_closed_stream(self.proc.stderr)
@@ -678,7 +687,7 @@ class Git(LazyMixin):
                 # strip trailing "\n"
                 if stderr_value.endswith(b"\n"):
                     stderr_value = stderr_value[:-1]
-                status = proc.wait(stderr=stderr_value)
+                status = proc.wait()
             # END stdout handling
         finally:
             proc.stdout.close()

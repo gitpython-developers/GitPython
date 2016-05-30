@@ -772,10 +772,10 @@ class WaitGroup(object):
             self.cv.notify_all()
         self.cv.release()
 
-    def wait(self):
+    def wait(self, stderr=b''):
         self.cv.acquire()
         while self.count > 0:
-            self.cv.wait()
+            self.cv.wait(strerr=stderr)
         self.cv.release()
 
 
