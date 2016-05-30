@@ -5,6 +5,9 @@ Changelog
 2.0.4 - Fixes
 =============
 
+* Fix: parser of commit object data is now robust against cases where
+  commit object contains invalid bytes.  The invalid characters are now
+  replaced rather than choked on.
 * Fix: non-ASCII paths are now properly decoded and returned in
   ``.diff()`` output
 * Fix: `RemoteProgress` will now strip the ', ' prefix or suffix from messages.
