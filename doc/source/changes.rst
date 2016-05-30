@@ -2,6 +2,11 @@
 Changelog
 =========
 
+2.0.5 - Fixes
+=============
+
+* Fix: parser of fetch info lines choked on some legitimate lines
+
 2.0.4 - Fixes
 =============
 
