@@ -15,11 +15,22 @@ from git.compat import (
     PY3
 )
 
-
 __all__ = ('Diffable', 'DiffIndex', 'Diff', 'NULL_TREE')
 
 # Special object to compare against the empty tree in diffs
 NULL_TREE = object()
+
+_octal_byte_re = re.compile(b'\\\\([0-9]{3})')
+
+
+def _octal_repl(matchobj):
+    value = matchobj.group(1)
+    value = int(value, 8)
+    if PY3:
+        value = bytes(bytearray((value,)))
+    else:
+        value = chr(value)
+    return value
 
 
 def decode_path(path, has_ab_prefix=True):
@@ -31,6 +42,8 @@ def decode_path(path, has_ab_prefix=True):
                           .replace(b'\\t', b'\t')
                           .replace(b'\\"', b'"')
                           .replace(b'\\\\', b'\\'))
+
+    path = _octal_byte_re.sub(_octal_repl, path)
 
     if has_ab_prefix:
         assert path.startswith(b'a/') or path.startswith(b'b/')
@@ -337,7 +350,7 @@ class Diff(object):
         :note: This property is deprecated, please use ``renamed_file`` instead.
         """
         return self.renamed_file
-        
+
     @property
     def renamed_file(self):
         """:returns: True if the blob of our diff has been renamed
