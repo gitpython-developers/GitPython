@@ -306,6 +306,13 @@ class TestCommit(TestBase):
         # it appears
         cmt.author.__repr__()
 
+    def test_invalid_commit(self):
+        cmt = self.rorepo.commit()
+        cmt._deserialize(open(fixture_path('commit_invalid_data'), 'rb'))
+
+        assert cmt.author.name == u'E.Azer Ko�o�o�oculu', cmt.author.name
+        assert cmt.author.email == 'azer@kodfabrik.com', cmt.author.email
+
     def test_gpgsig(self):
         cmt = self.rorepo.commit()
         cmt._deserialize(open(fixture_path('commit_with_gpgsig'), 'rb'))
