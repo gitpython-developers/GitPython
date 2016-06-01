@@ -5,7 +5,8 @@ Changelog
 2.0.6 - Fixes
 =============
 
-* ...
+* Fix: TypeError about passing keyword argument to string decode() on
+  Python 2.6.
 
 2.0.5 - Fixes
 =============
