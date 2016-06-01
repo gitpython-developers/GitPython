@@ -11,8 +11,6 @@ from gitdb.test.lib import skip_on_travis_ci, with_rw_directory
 
 
 class Tutorials(TestBase):
-
-    @skip_on_travis_ci
     @with_rw_directory
     def test_init_repo_object(self, rw_dir):
         # [1-test_init_repo_object]
