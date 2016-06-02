@@ -7,7 +7,7 @@
 import os
 
 from git.test.lib import TestBase
-from gitdb.test.lib import skip_on_travis_ci, with_rw_directory
+from gitdb.test.lib import with_rw_directory
 
 
 class Tutorials(TestBase):
