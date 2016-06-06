@@ -628,6 +628,7 @@ class Git(LazyMixin):
         # end handle
 
         try:
+            log.info('env GIT_SSH=%r' % (env.get('GET_SSH', None),))
             proc = Popen(command,
                          env=env,
                          cwd=cwd,
