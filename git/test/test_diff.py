@@ -162,16 +162,17 @@ class TestDiff(TestBase):
         self.assertEqual(res[7].b_path, u'path/with-question-mark?')
         self.assertEqual(res[8].b_path, u'path/¯\\_(ツ)_|¯')
         self.assertEqual(res[9].b_path, u'path/💩.txt')
+        self.assertEqual(res[10].b_path, u'path/�-invalid-unicode-path.txt')
 
         # The "Moves"
         # NOTE: The path prefixes a/ and b/ here are legit!  We're actually
         # verifying that it's not "a/a/" that shows up, see the fixture data.
-        self.assertEqual(res[10].a_path, u'a/with spaces')       # NOTE: path a/ here legit!
-        self.assertEqual(res[10].b_path, u'b/with some spaces')  # NOTE: path b/ here legit!
-        self.assertEqual(res[11].a_path, u'a/ending in a space ')
-        self.assertEqual(res[11].b_path, u'b/ending with space ')
-        self.assertEqual(res[12].a_path, u'a/"with-quotes"')
-        self.assertEqual(res[12].b_path, u'b/"with even more quotes"')
+        self.assertEqual(res[11].a_path, u'a/with spaces')       # NOTE: path a/ here legit!
+        self.assertEqual(res[11].b_path, u'b/with some spaces')  # NOTE: path b/ here legit!
+        self.assertEqual(res[12].a_path, u'a/ending in a space ')
+        self.assertEqual(res[12].b_path, u'b/ending with space ')
+        self.assertEqual(res[13].a_path, u'a/"with-quotes"')
+        self.assertEqual(res[13].b_path, u'b/"with even more quotes"')
 
     def test_diff_patch_format(self):
         # test all of the 'old' format diffs for completness - it should at least
