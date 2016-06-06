@@ -69,6 +69,10 @@ else:
 # Documentation
 ## @{
 
+def _drop_output_handler(line):
+    pass
+
+
 def handle_process_output(process, stdout_handler, stderr_handler, finalizer):
     """Registers for notifications to lean that process output is ready to read, and dispatches lines to
     the respective line handlers. We are able to handle carriage returns in case progress is sent by that
@@ -79,6 +83,13 @@ def handle_process_output(process, stdout_handler, stderr_handler, finalizer):
     :param stdout_handler: f(stdout_line_string), or None
     :param stderr_hanlder: f(stderr_line_string), or None
     :param finalizer: f(proc) - wait for proc to finish"""
+
+    log.debug('handle_process_output( process=%r, stdout_handler=%r, stderr_handler=%r, finalizer=%r'
+              % (process, stdout_handler, stderr_handler, finalizer))
+
+    if stdout_handler is None:
+        stdout_handler = _drop_output_handler
+
     fdmap = {process.stdout.fileno(): (stdout_handler, [b'']),
              process.stderr.fileno(): (stderr_handler, [b''])}
 
@@ -119,6 +130,7 @@ def handle_process_output(process, stdout_handler, stderr_handler, finalizer):
     # end single line helper
 
     def _dispatch_lines(fno, handler, buf_list):
+        log.debug('fno=%d, handler=%r, buf_list=%r' % (fno, handler, buf_list))
         lc = 0
         for line in _read_lines_from_fno(fno, buf_list):
             _dispatch_single_line(line, handler)
@@ -332,6 +344,7 @@ class Git(LazyMixin):
 
             if status != 0:
                 errstr = read_all_from_possibly_closed_stream(self.proc.stderr)
+                log.debug('AutoInterrupt wait stderr: %r' % (errstr,))
                 raise GitCommandError(self.args, status, errstr)
             # END status handling
             return status
@@ -618,7 +631,7 @@ class Git(LazyMixin):
                          bufsize=-1,
                          stdin=istream,
                          stderr=PIPE,
-                         stdout=PIPE if with_stdout else open(os.devnull, 'wb'),
+                         stdout=PIPE,
                          shell=self.USE_SHELL,
                          close_fds=(os.name == 'posix'),  # unsupported on windows
                          universal_newlines=universal_newlines,
