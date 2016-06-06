@@ -205,12 +205,7 @@ class TestGit(TestBase):
                 try:
                     remote.fetch()
                 except GitCommandError as err:
-                    if sys.version_info[0] < 3 and sys.platform == 'darwin':
-                        assert 'ssh-origin' in str(err)
-                        assert err.status == 128
-                    else:
-                        assert 'FOO' in str(err)
-                        assert err.status == 2
+                    assert err.status == 128
                 # end
             # end
         # end if select.poll exists
