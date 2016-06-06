@@ -11,7 +11,6 @@ from gitdb.test.lib import with_rw_directory
 
 
 class Tutorials(TestBase):
-
     @with_rw_directory
     def test_init_repo_object(self, rw_dir):
         # [1-test_init_repo_object]
@@ -165,7 +164,7 @@ class Tutorials(TestBase):
         for sm in cloned_repo.submodules:
             assert not sm.remove().exists()                   # after removal, the sm doesn't exist anymore
         sm = cloned_repo.create_submodule('mysubrepo', 'path/to/subrepo', url=bare_repo.git_dir, branch='master')
-        
+
         # .gitmodules was written and added to the index, which is now being committed
         cloned_repo.index.commit("Added submodule")
         assert sm.exists() and sm.module_exists()             # this submodule is defintely available
@@ -395,7 +394,7 @@ class Tutorials(TestBase):
         hcommit.diff()                  # diff tree against index
         hcommit.diff('HEAD~1')          # diff tree against previous tree
         hcommit.diff(None)              # diff tree against working tree
-        
+
         index = repo.index
         index.diff()                    # diff index against itself yielding empty diff
         index.diff(None)                # diff index against working copy
@@ -446,7 +445,7 @@ class Tutorials(TestBase):
         sm = sms[0]
         assert sm.name == 'gitdb'                         # git-python has gitdb as single submodule ...
         assert sm.children()[0].name == 'smmap'           # ... which has smmap as single submodule
-        
+
         # The module is the repository referenced by the submodule
         assert sm.module_exists()                         # the module is available, which doesn't have to be the case.
         assert sm.module().working_tree_dir.endswith('gitdb')
@@ -458,7 +457,7 @@ class Tutorials(TestBase):
         assert sm.config_reader().get_value('path') == sm.path
         assert len(sm.children()) == 1                    # query the submodule hierarchy
         # ![1-test_submodules]
-        
+
     @with_rw_directory
     def test_add_file_and_commit(self, rw_dir):
         import git

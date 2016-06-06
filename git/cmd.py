@@ -287,7 +287,7 @@ class Git(LazyMixin):
                 return
 
             # can be that nothing really exists anymore ...
-            if os is None:
+            if os is None or os.kill is None:
                 return
 
             # try to kill it

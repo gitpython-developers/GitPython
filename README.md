@@ -6,11 +6,13 @@ It provides abstractions of git objects for easy access of repository data, and 
 
 The object database implementation is optimized for handling large quantities of objects and large datasets, which is achieved by using low-level structures and data streaming.
 
+
 ### REQUIREMENTS
 
 GitPython needs the `git` executable to be installed on the system and available in your `PATH` for most operations. If it is not in your `PATH`, you can help GitPython find it by setting the `GIT_PYTHON_GIT_EXECUTABLE=<path/to/git>` environment variable.
 
 * Git (1.7.x or newer)
+* Python 2.7 to 3.5, while python 2.6 is supported on a *best-effort basis*.
 
 The list of dependencies are listed in `./requirements.txt` and `./test-requirements.txt`. The installer takes care of installing them for you.
 

@@ -204,7 +204,7 @@ class FetchInfo(object):
     NEW_TAG, NEW_HEAD, HEAD_UPTODATE, TAG_UPDATE, REJECTED, FORCED_UPDATE, \
         FAST_FORWARD, ERROR = [1 << x for x in range(8)]
 
-    re_fetch_result = re.compile("^\s*(.) (\[?[\w\s\.$@]+\]?)\s+(.+) -> ([/\w_\+\.\-$@#]+)(    \(.*\)?$)?")
+    re_fetch_result = re.compile("^\s*(.) (\[?[\w\s\.$@]+\]?)\s+(.+) -> ([/\w_\+\.\-$@#()]+)(    \(.*\)?$)?")
 
     _flag_map = {'!': ERROR,
                  '+': FORCED_UPDATE,
