@@ -338,7 +338,10 @@ class Git(LazyMixin):
 
             def read_all_from_possibly_closed_stream(stream):
                 try:
-                    return stderr + stream.read()
+                    last_stderr = stream.read()
+                    if type(last_stderr) == unicode:
+                        last_stderr = last_stderr.encode(defenc)
+                    return stderr + last_stderr
                 except ValueError:
                     return stderr or b''
 
