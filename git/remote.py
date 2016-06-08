@@ -477,10 +477,10 @@ class Remote(LazyMixin, Iterable):
     def urls(self):
         """:return: Iterator yielding all configured URL targets on a remote
         as strings"""
-        scmd = 'get-url'
-        kwargs = {'insert_kwargs_after': scmd}
-        for url in self.repo.git.remote(scmd, self.name, all=True, **kwargs).split('\n'):
-            yield url
+        remote_details = self.repo.git.remote("show", self.name)
+        for line in remote_details.split('\n'):
+            if '  Push  URL:' in line:
+                yield line.split(': ')[-1]
 
     @property
     def refs(self):
