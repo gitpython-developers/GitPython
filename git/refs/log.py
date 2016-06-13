@@ -114,7 +114,7 @@ class RefLogEntry(tuple):
         newhexsha = info[41:81]
         for hexsha in (oldhexsha, newhexsha):
             if not cls._re_hexsha_only.match(hexsha):
-                raise ValueError("Invalid hexsha: %s" % hexsha)
+                raise ValueError("Invalid hexsha: %r" % (hexsha,))
             # END if hexsha re doesn't match
         # END for each hexsha
 
@@ -274,11 +274,12 @@ class RefLog(list, Serializable):
             raise ValueError("Shas need to be given in binary format")
         # END handle sha type
         assure_directory_exists(filepath, is_file=True)
+        first_line = message.split('\n')[0]
         committer = isinstance(config_reader, Actor) and config_reader or Actor.committer(config_reader)
         entry = RefLogEntry((
             bin_to_hex(oldbinsha).decode('ascii'),
             bin_to_hex(newbinsha).decode('ascii'),
-            committer, (int(time.time()), time.altzone), message
+            committer, (int(time.time()), time.altzone), first_line
         ))
 
         lf = LockFile(filepath)
