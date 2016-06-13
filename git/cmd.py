@@ -614,7 +614,7 @@ class Git(LazyMixin):
                          cwd=cwd,
                          bufsize=-1,
                          stdin=istream,
-                         stderr=PIPE, 
+                         stderr=PIPE,
                          stdout=PIPE if with_stdout else open(os.devnull, 'wb'),
                          shell=self.USE_SHELL,
                          close_fds=(os.name == 'posix'),  # unsupported on windows
