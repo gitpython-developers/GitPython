@@ -45,11 +45,9 @@ Then run:
 
     tox
 
-### SOURCE
+### Contributions
 
-GitPython's git repo is available on GitHub, which can be browsed at [github](https://github.com/gitpython-developers/GitPython) and cloned like that:
-
-    git clone https://github.com/gitpython-developers/GitPython
+Please have a look at the [contributions file][contributing].
 
 ### Live Coding
 
@@ -100,3 +98,4 @@ Now that there seems to be a massive user base, this should be motivation enough
 
 [twitch-channel]: http://www.twitch.tv/byronimo/profile
 [youtube-playlist]: https://www.youtube.com/playlist?list=PLMHbQxe1e9MnoEcLhn6Yhv5KAvpWkJbL0
+[contributing]: https://github.com/gitpython-developers/GitPython/blob/master/README.md
