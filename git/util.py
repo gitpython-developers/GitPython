@@ -182,12 +182,16 @@ class RemoteProgress(object):
         self._cur_line = None
         self._error_lines = []
 
-    def get_stderr(self):
-        return '\n'.join(self._error_lines)
+    def error_lines(self):
+        """Returns all lines that started with error: or fatal:"""
+        return self._error_lines
 
     def _parse_progress_line(self, line):
         """Parse progress information from the given line as retrieved by git-push
-        or git-fetch
+        or git-fetch.
+
+        Lines that seem to contain an error (i.e. start with error: or fatal:) are stored
+        separately and can be queried using `error_lines()`.
 
         :return: list(line, ...) list of lines that could not be processed"""
         # handle
@@ -775,7 +779,7 @@ class WaitGroup(object):
     def wait(self, stderr=b''):
         self.cv.acquire()
         while self.count > 0:
-            self.cv.wait(strerr=stderr)
+            self.cv.wait()
         self.cv.release()
 
 
