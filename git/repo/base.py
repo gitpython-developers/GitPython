@@ -873,7 +873,8 @@ class Repo(object):
 
     @classmethod
     def _clone(cls, git, url, path, odb_default_type, progress, **kwargs):
-        progress = to_progress_instance(progress)
+        if progress is not None:
+            progress = to_progress_instance(progress)
 
         # special handling for windows for path at which the clone should be
         # created.
