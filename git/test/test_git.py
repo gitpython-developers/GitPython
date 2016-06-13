@@ -210,7 +210,6 @@ class TestGit(TestBase):
                         assert err.status == 128
                     else:
                         assert 'FOO' in str(err)
-                        assert err.status == 2
                 # end
             # end
         # end if select.poll exists
