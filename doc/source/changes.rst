@@ -2,11 +2,12 @@
 Changelog
 =========
 
-2.0.6 - Fixes
-=============
+2.0.6 - Fixes and Features
+==========================
 
 * Fix: TypeError about passing keyword argument to string decode() on
   Python 2.6.
+* Feature: `setUrl API on Remotes <https://github.com/gitpython-developers/GitPython/pull/446#issuecomment-224670539>`_
 
 2.0.5 - Fixes
 =============
