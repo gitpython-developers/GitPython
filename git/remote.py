@@ -451,6 +451,54 @@ class Remote(LazyMixin, Iterable):
             yield Remote(repo, section[lbound + 1:rbound])
         # END for each configuration section
 
+    def set_url(self, new_url, old_url=None, **kwargs):
+        """Configure URLs on current remote (cf command git remote set_url)
+
+        This command manages URLs on the remote.
+
+        :param new_url: string being the URL to add as an extra remote URL
+        :param old_url: when set, replaces this URL with new_url for the remote
+        :return: self
+        """
+        scmd = 'set-url'
+        kwargs['insert_kwargs_after'] = scmd
+        if old_url:
+            self.repo.git.remote(scmd, self.name, old_url, new_url, **kwargs)
+        else:
+            self.repo.git.remote(scmd, self.name, new_url, **kwargs)
+        return self
+
+    def add_url(self, url, **kwargs):
+        """Adds a new url on current remote (special case of git remote set_url)
+
+        This command adds new URLs to a given remote, making it possible to have
+        multiple URLs for a single remote.
+
+        :param url: string being the URL to add as an extra remote URL
+        :return: self
+        """
+        return self.set_url(url, add=True)
+
+    def delete_url(self, url, **kwargs):
+        """Deletes a new url on current remote (special case of git remote set_url)
+
+        This command deletes new URLs to a given remote, making it possible to have
+        multiple URLs for a single remote.
+
+        :param url: string being the URL to delete from the remote
+        :return: self
+        """
+        return self.set_url(url, delete=True)
+
+    @property
+    def urls(self):
+        """:return: Iterator yielding all configured URL targets on a remote
+        as strings"""
+        remote_details = self.repo.git.remote("show", self.name)
+        for line in remote_details.split('\n'):
+            if '  Push  URL:' in line:
+                yield line.split(': ')[-1]
+
     @property
     def refs(self):
         """
