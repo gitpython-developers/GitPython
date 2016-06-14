@@ -8,7 +8,6 @@
 import re
 import os
 
-from .exc import GitCommandError
 from .config import (
     SectionConstraint,
     cp,
