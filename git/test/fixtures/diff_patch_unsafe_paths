@@ -68,6 +68,13 @@ index 0000000000000000000000000000000000000000..eaf5f7510320b6a327fb308379de2f94
 +++ "b/path/\360\237\222\251.txt"
 @@ -0,0 +1 @@
 +dummy content
+diff --git "a/path/\200-invalid-unicode-path.txt" "b/path/\200-invalid-unicode-path.txt"
+new file mode 100644
+index 0000000000000000000000000000000000000000..eaf5f7510320b6a327fb308379de2f94d8859a54
+--- /dev/null
++++ "b/path/\200-invalid-unicode-path.txt"
+@@ -0,0 +1 @@
++dummy content
 diff --git a/a/with spaces b/b/with some spaces
 similarity index 100%
 rename from a/with spaces

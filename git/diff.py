@@ -404,15 +404,15 @@ class Diff(object):
             a_mode = old_mode or deleted_file_mode or (a_path and (b_mode or new_mode or new_file_mode))
             b_mode = b_mode or new_mode or new_file_mode or (b_path and a_mode)
             index.append(Diff(repo,
-                              a_path and a_path.decode(defenc),
-                              b_path and b_path.decode(defenc),
+                              a_path and a_path.decode(defenc, 'replace'),
+                              b_path and b_path.decode(defenc, 'replace'),
                               a_blob_id and a_blob_id.decode(defenc),
                               b_blob_id and b_blob_id.decode(defenc),
                               a_mode and a_mode.decode(defenc),
                               b_mode and b_mode.decode(defenc),
                               new_file, deleted_file,
-                              rename_from and rename_from.decode(defenc),
-                              rename_to and rename_to.decode(defenc),
+                              rename_from and rename_from.decode(defenc, 'replace'),
+                              rename_to and rename_to.decode(defenc, 'replace'),
                               None))
 
             previous_header = header
