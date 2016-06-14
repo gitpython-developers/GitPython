@@ -54,7 +54,7 @@ def safe_decode(s):
     if isinstance(s, unicode):
         return s
     elif isinstance(s, bytes):
-        return s.decode(defenc, errors='replace')
+        return s.decode(defenc, 'replace')
     raise TypeError('Expected bytes or text, but got %r' % (s,))
 
 
