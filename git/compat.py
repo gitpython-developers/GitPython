@@ -35,6 +35,7 @@ if PY3:
         return d.values()
     range = xrange
     unicode = str
+    binary_type = bytes
 else:
     FileType = file
     # usually, this is just ascii, which might not enough for our encoding needs
@@ -44,6 +45,7 @@ else:
     byte_ord = ord
     bchr = chr
     unicode = unicode
+    binary_type = str
     range = xrange
     def mviter(d):
         return d.itervalues()

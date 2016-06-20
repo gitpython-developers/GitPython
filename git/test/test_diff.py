@@ -90,6 +90,8 @@ class TestDiff(TestBase):
         assert_true(diff.renamed)
         assert_equal(diff.rename_from, u'Jérôme')
         assert_equal(diff.rename_to, u'müller')
+        assert_equal(diff.raw_rename_from, b'J\xc3\xa9r\xc3\xb4me')
+        assert_equal(diff.raw_rename_to, b'm\xc3\xbcller')
         assert isinstance(str(diff), str)
 
         output = StringProcessAdapter(fixture('diff_rename_raw'))
@@ -129,7 +131,7 @@ class TestDiff(TestBase):
         output = StringProcessAdapter(fixture('diff_index_raw'))
         res = Diff._index_from_raw_format(None, output.stdout)
         assert res[0].deleted_file
-        assert res[0].b_path == ''
+        assert res[0].b_path is None
 
     def test_diff_initial_commit(self):
         initial_commit = self.rorepo.commit('33ebe7acec14b25c5f84f35a664803fcab2f7781')
@@ -162,7 +164,9 @@ class TestDiff(TestBase):
         self.assertEqual(res[7].b_path, u'path/with-question-mark?')
         self.assertEqual(res[8].b_path, u'path/¯\\_(ツ)_|¯')
         self.assertEqual(res[9].b_path, u'path/💩.txt')
+        self.assertEqual(res[9].b_rawpath, b'path/\xf0\x9f\x92\xa9.txt')
         self.assertEqual(res[10].b_path, u'path/�-invalid-unicode-path.txt')
+        self.assertEqual(res[10].b_rawpath, b'path/\x80-invalid-unicode-path.txt')
 
         # The "Moves"
         # NOTE: The path prefixes a/ and b/ here are legit!  We're actually
