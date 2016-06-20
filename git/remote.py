@@ -77,7 +77,6 @@ def to_progress_instance(progress):
 
 
 class PushInfo(object):
-
     """
     Carries information about the result of a push operation of a single head::
 
@@ -92,7 +91,7 @@ class PushInfo(object):
                         # it to local_ref.commit. Will be None if an error was indicated
         info.summary    # summary line providing human readable english text about the push
         """
-    __slots__ = ('local_ref', 'remote_ref_string', 'flags', 'old_commit', '_remote', 'summary')
+    __slots__ = ('local_ref', 'remote_ref_string', 'flags', '_old_commit_sha', '_remote', 'summary')
 
     NEW_TAG, NEW_HEAD, NO_MATCH, REJECTED, REMOTE_REJECTED, REMOTE_FAILURE, DELETED, \
         FORCED_UPDATE, FAST_FORWARD, UP_TO_DATE, ERROR = [1 << x for x in range(11)]
@@ -112,8 +111,12 @@ class PushInfo(object):
         self.local_ref = local_ref
         self.remote_ref_string = remote_ref_string
         self._remote = remote
-        self.old_commit = old_commit
+        self._old_commit_sha = old_commit
         self.summary = summary
+        
+    @property
+    def old_commit(self):
+        return self._old_commit_sha and self._remote.repo.commit(self._old_commit_sha) or None
 
     @property
     def remote_ref(self):
@@ -176,7 +179,7 @@ class PushInfo(object):
                 split_token = ".."
             old_sha, new_sha = summary.split(' ')[0].split(split_token)
             # have to use constructor here as the sha usually is abbreviated
-            old_commit = remote.repo.commit(old_sha)
+            old_commit = old_sha
         # END message handling
 
         return PushInfo(flags, from_ref, to_ref_string, remote, old_commit, summary)
