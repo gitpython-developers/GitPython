@@ -39,7 +39,8 @@ from git.compat import (
     PY3,
     bchr,
     # just to satisfy flake8 on py3
-    unicode
+    unicode,
+    safe_decode,
 )
 
 execute_kwargs = ('istream', 'with_keep_cwd', 'with_extended_output',
@@ -693,12 +694,12 @@ class Git(LazyMixin):
             cmdstr = " ".join(command)
 
             def as_text(stdout_value):
-                return not output_stream and stdout_value.decode(defenc) or '<OUTPUT_STREAM>'
+                return not output_stream and safe_decode(stdout_value) or '<OUTPUT_STREAM>'
             # end
 
             if stderr_value:
                 log.info("%s -> %d; stdout: '%s'; stderr: '%s'",
-                         cmdstr, status, as_text(stdout_value), stderr_value.decode(defenc))
+                         cmdstr, status, as_text(stdout_value), safe_decode(stderr_value))
             elif stdout_value:
                 log.info("%s -> %d; stdout: '%s'", cmdstr, status, as_text(stdout_value))
             else:
@@ -712,11 +713,11 @@ class Git(LazyMixin):
                 raise GitCommandError(command, status, stderr_value)
 
         if isinstance(stdout_value, bytes) and stdout_as_string:  # could also be output_stream
-            stdout_value = stdout_value.decode(defenc)
+            stdout_value = safe_decode(stdout_value)
 
         # Allow access to the command's status code
         if with_extended_output:
-            return (status, stdout_value, stderr_value.decode(defenc))
+            return (status, stdout_value, safe_decode(stderr_value))
         else:
             return stdout_value
 
