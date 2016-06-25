@@ -931,19 +931,24 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         return out
 
     def commit(self, message, parent_commits=None, head=True, author=None,
-               committer=None, author_date=None, commit_date=None):
+               committer=None, author_date=None, commit_date=None,
+               skip_hooks=False):
         """Commit the current default index file, creating a commit object.
         For more information on the arguments, see tree.commit.
 
         :note: If you have manually altered the .entries member of this instance,
                don't forget to write() your changes to disk beforehand.
+               Passing skip_hooks=True is the equivalent of using `-n`
+               or `--no-verify` on the command line.
         :return: Commit object representing the new commit"""
-        run_commit_hook('pre-commit', self)
+        if not skip_hooks:
+            run_commit_hook('pre-commit', self)
         tree = self.write_tree()
         rval = Commit.create_from_tree(self.repo, tree, message, parent_commits,
                                        head, author=author, committer=committer,
                                        author_date=author_date, commit_date=commit_date)
-        run_commit_hook('post-commit', self)
+        if not skip_hooks:
+            run_commit_hook('post-commit', self)
         return rval
 
     @classmethod
