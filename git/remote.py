@@ -77,7 +77,6 @@ def to_progress_instance(progress):
 
 
 class PushInfo(object):
-
     """
     Carries information about the result of a push operation of a single head::
 
@@ -92,7 +91,7 @@ class PushInfo(object):
                         # it to local_ref.commit. Will be None if an error was indicated
         info.summary    # summary line providing human readable english text about the push
         """
-    __slots__ = ('local_ref', 'remote_ref_string', 'flags', 'old_commit', '_remote', 'summary')
+    __slots__ = ('local_ref', 'remote_ref_string', 'flags', '_old_commit_sha', '_remote', 'summary')
 
     NEW_TAG, NEW_HEAD, NO_MATCH, REJECTED, REMOTE_REJECTED, REMOTE_FAILURE, DELETED, \
         FORCED_UPDATE, FAST_FORWARD, UP_TO_DATE, ERROR = [1 << x for x in range(11)]
@@ -112,8 +111,12 @@ class PushInfo(object):
         self.local_ref = local_ref
         self.remote_ref_string = remote_ref_string
         self._remote = remote
-        self.old_commit = old_commit
+        self._old_commit_sha = old_commit
         self.summary = summary
+        
+    @property
+    def old_commit(self):
+        return self._old_commit_sha and self._remote.repo.commit(self._old_commit_sha) or None
 
     @property
     def remote_ref(self):
@@ -176,7 +179,7 @@ class PushInfo(object):
                 split_token = ".."
             old_sha, new_sha = summary.split(' ')[0].split(split_token)
             # have to use constructor here as the sha usually is abbreviated
-            old_commit = remote.repo.commit(old_sha)
+            old_commit = old_sha
         # END message handling
 
         return PushInfo(flags, from_ref, to_ref_string, remote, old_commit, summary)
@@ -203,7 +206,7 @@ class FetchInfo(object):
     NEW_TAG, NEW_HEAD, HEAD_UPTODATE, TAG_UPDATE, REJECTED, FORCED_UPDATE, \
         FAST_FORWARD, ERROR = [1 << x for x in range(8)]
 
-    re_fetch_result = re.compile("^\s*(.) (\[?[\w\s\.$@]+\]?)\s+(.+) -> ([/\w_\+\.\-$@#()]+)(    \(.*\)?$)?")
+    re_fetch_result = re.compile('^\s*(.) (\[?[\w\s\.$@]+\]?)\s+(.+) -> ([^\s]+)(    \(.*\)?$)?')
 
     _flag_map = {'!': ERROR,
                  '+': FORCED_UPDATE,
@@ -450,6 +453,54 @@ class Remote(LazyMixin, Iterable):
                 raise ValueError("Remote-Section has invalid format: %r" % section)
             yield Remote(repo, section[lbound + 1:rbound])
         # END for each configuration section
+
+    def set_url(self, new_url, old_url=None, **kwargs):
+        """Configure URLs on current remote (cf command git remote set_url)
+
+        This command manages URLs on the remote.
+
+        :param new_url: string being the URL to add as an extra remote URL
+        :param old_url: when set, replaces this URL with new_url for the remote
+        :return: self
+        """
+        scmd = 'set-url'
+        kwargs['insert_kwargs_after'] = scmd
+        if old_url:
+            self.repo.git.remote(scmd, self.name, old_url, new_url, **kwargs)
+        else:
+            self.repo.git.remote(scmd, self.name, new_url, **kwargs)
+        return self
+
+    def add_url(self, url, **kwargs):
+        """Adds a new url on current remote (special case of git remote set_url)
+
+        This command adds new URLs to a given remote, making it possible to have
+        multiple URLs for a single remote.
+
+        :param url: string being the URL to add as an extra remote URL
+        :return: self
+        """
+        return self.set_url(url, add=True)
+
+    def delete_url(self, url, **kwargs):
+        """Deletes a new url on current remote (special case of git remote set_url)
+
+        This command deletes new URLs to a given remote, making it possible to have
+        multiple URLs for a single remote.
+
+        :param url: string being the URL to delete from the remote
+        :return: self
+        """
+        return self.set_url(url, delete=True)
+
+    @property
+    def urls(self):
+        """:return: Iterator yielding all configured URL targets on a remote
+        as strings"""
+        remote_details = self.repo.git.remote("show", self.name)
+        for line in remote_details.split('\n'):
+            if '  Push  URL:' in line:
+                yield line.split(': ')[-1]
 
     @property
     def refs(self):

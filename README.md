@@ -34,8 +34,18 @@ Both commands will install the required package dependencies.
 A distribution package can be obtained for manual installation at:
 
     http://pypi.python.org/pypi/GitPython
+    
+If you like to clone from source, you can do it like so:
+
+```bash
+git clone https://github.com/gitpython-developers/GitPython
+git submodule update --init --recursive
+./init-tests-after-clone.sh
+```
 
 ### RUNNING TESTS
+
+*Important*: Right after cloning this repository, please be sure to have executed the `init-tests-after-clone.sh` script in the repository root. Otherwise you will encounter test failures.
 
 The easiest way to run test is by using [tox](https://pypi.python.org/pypi/tox) a wrapper around virtualenv. It will take care of setting up environnements with the proper dependencies installed and execute test commands. To install it simply:
 
@@ -44,6 +54,9 @@ The easiest way to run test is by using [tox](https://pypi.python.org/pypi/tox) 
 Then run:
 
     tox
+    
+    
+For more fine-grained control, you can use `nose`.
 
 ### Contributions
 

@@ -9,7 +9,8 @@ from git.test.lib import (
     with_rw_repo,
     with_rw_and_rw_remote_repo,
     fixture,
-    GIT_DAEMON_PORT
+    GIT_DAEMON_PORT,
+    assert_raises
 )
 from git import (
     RemoteProgress,
@@ -62,7 +63,7 @@ class TestRemoteProgress(RemoteProgress):
         # check each stage only comes once
         op_id = op_code & self.OP_MASK
         assert op_id in (self.COUNTING, self.COMPRESSING, self.WRITING)
-        
+
         if op_code & self.WRITING > 0:
             if op_code & self.BEGIN > 0:
                 assert not message, 'should not have message when remote begins writing'
@@ -568,3 +569,47 @@ class TestRemote(TestBase):
         assert res[0].remote_ref_path == 'refs/pull/1/head'
         assert res[0].ref.path == 'refs/heads/pull/1/head'
         assert isinstance(res[0].ref, Head)
+
+    @with_rw_repo('HEAD', bare=False)
+    def test_multiple_urls(self, rw_repo):
+        # test addresses
+        test1 = 'https://github.com/gitpython-developers/GitPython'
+        test2 = 'https://github.com/gitpython-developers/gitdb'
+        test3 = 'https://github.com/gitpython-developers/smmap'
+
+        remote = rw_repo.remotes[0]
+        # Testing setting a single URL
+        remote.set_url(test1)
+        assert list(remote.urls) == [test1]
+
+        # Testing replacing that single URL
+        remote.set_url(test1)
+        assert list(remote.urls) == [test1]
+        # Testing adding new URLs
+        remote.set_url(test2, add=True)
+        assert list(remote.urls) == [test1, test2]
+        remote.set_url(test3, add=True)
+        assert list(remote.urls) == [test1, test2, test3]
+        # Testing removing an URL
+        remote.set_url(test2, delete=True)
+        assert list(remote.urls) == [test1, test3]
+        # Testing changing an URL
+        remote.set_url(test3, test2)
+        assert list(remote.urls) == [test1, test2]
+
+        # will raise: fatal: --add --delete doesn't make sense
+        assert_raises(GitCommandError, remote.set_url, test2, add=True, delete=True)
+
+        # Testing on another remote, with the add/delete URL
+        remote = rw_repo.create_remote('another', url=test1)
+        remote.add_url(test2)
+        assert list(remote.urls) == [test1, test2]
+        remote.add_url(test3)
+        assert list(remote.urls) == [test1, test2, test3]
+        # Testing removing all the URLs
+        remote.delete_url(test2)
+        assert list(remote.urls) == [test1, test3]
+        remote.delete_url(test1)
+        assert list(remote.urls) == [test3]
+        # will raise fatal: Will not delete all non-push URLs
+        assert_raises(GitCommandError, remote.delete_url, test3)
