@@ -714,8 +714,7 @@ class Repo(object):
                            authored_date=int(props[b'author-time']),
                            committer=Actor(safe_decode(props[b'committer']),
                                            safe_decode(props[b'committer-mail'].lstrip(b'<').rstrip(b'>'))),
-                           committed_date=int(props[b'committer-time']),
-                           message=safe_decode(props[b'summary']))
+                           committed_date=int(props[b'committer-time']))
                 commits[hexsha] = c
             else:
                 # Discard the next line (it's a filename end tag)
@@ -815,8 +814,7 @@ class Repo(object):
                                            authored_date=info['author_date'],
                                            committer=Actor._from_string(
                                                info['committer'] + ' ' + info['committer_email']),
-                                           committed_date=info['committer_date'],
-                                           message=info['summary'])
+                                           committed_date=info['committer_date'])
                                 commits[sha] = c
                             # END if commit objects needs initial creation
                             if not is_binary:
