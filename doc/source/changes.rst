@@ -2,6 +2,12 @@
 Changelog
 =========
 
+2.0.7 - New Features
+====================
+
+* `IndexFile.commit(...,skip_hooks=False)` added. This parameter emulates the 
+   behaviour of `--no-verify` on the command-line.
+
 2.0.6 - Fixes and Features
 ==========================
 
