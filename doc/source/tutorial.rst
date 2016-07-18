@@ -474,8 +474,13 @@ Using environment variables, you can further adjust the behaviour of the git com
 
 * **GIT_PYTHON_TRACE**
 
- * If set to non-0, all executed git commands will be logged using a python logger.
- * if set to *full*, the executed git command and its output on stdout and stderr will be logged using a python logger.
+ * If set to non-0, all executed git commands will be shown as they happen
+ * If set to *full*, the executed git command _and_ its entire output on stdout and stderr will be shown as they happen
+
+ **NOTE**: All logging is outputted using a Python logger, so make sure your program is configured to show INFO-level messages.  If this is not the case, try adding the following to your program::
+ 
+    import logging
+    logging.basicConfig(level=logging.INFO)
  
 * **GIT_PYTHON_GIT_EXECUTABLE**
 
