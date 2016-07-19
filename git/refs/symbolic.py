@@ -313,7 +313,7 @@ class SymbolicReference(object):
 
         lfd = LockedFD(fpath)
         fd = lfd.open(write=True, stream=True)
-        fd.write(write_value.encode('ascii') + '\n')
+        fd.write(write_value.encode('ascii') + b'\n')
         lfd.commit()
 
         # Adjust the reflog
