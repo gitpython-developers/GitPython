@@ -2,6 +2,12 @@
 Changelog
 =========
 
+2.0.8 - Bugfixes
+================
+
+* `DiffIndex.iter_change_type(...)` produces better results when diffing
+  an index against the working tree.
+
 2.0.7 - New Features
 ====================
 

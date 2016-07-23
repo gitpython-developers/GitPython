@@ -104,6 +104,15 @@ class TestDiff(TestBase):
         assert diff.rename_to == 'that'
         assert len(list(diffs.iter_change_type('R'))) == 1
 
+    def test_diff_of_modified_files_not_added_to_the_index(self):
+        output = StringProcessAdapter(fixture('diff_abbrev-40_full-index_M_raw_no-color'))
+        diffs = Diff._index_from_raw_format(self.rorepo, output.stdout)
+        
+        assert len(diffs) == 1, 'one modification'
+        assert len(list(diffs.iter_change_type('M'))) == 1, 'one modification'
+        assert diffs[0].change_type == 'M'
+        assert diffs[0].b_blob is None
+        
     def test_binary_diff(self):
         for method, file_name in ((Diff._index_from_patch_format, 'diff_patch_binary'),
                                   (Diff._index_from_raw_format, 'diff_raw_binary')):

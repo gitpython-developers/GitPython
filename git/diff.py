@@ -183,7 +183,9 @@ class DiffIndex(list):
             raise ValueError("Invalid change type: %s" % change_type)
 
         for diff in self:
-            if change_type == "A" and diff.new_file:
+            if diff.change_type == change_type:
+                yield diff
+            elif change_type == "A" and diff.new_file:
                 yield diff
             elif change_type == "D" and diff.deleted_file:
                 yield diff
@@ -247,11 +249,12 @@ class Diff(object):
     NULL_BIN_SHA = b"\0" * 20
 
     __slots__ = ("a_blob", "b_blob", "a_mode", "b_mode", "a_rawpath", "b_rawpath",
-                 "new_file", "deleted_file", "raw_rename_from", "raw_rename_to", "diff")
+                 "new_file", "deleted_file", "raw_rename_from", "raw_rename_to",
+                 "diff", "change_type")
 
     def __init__(self, repo, a_rawpath, b_rawpath, a_blob_id, b_blob_id, a_mode,
                  b_mode, new_file, deleted_file, raw_rename_from,
-                 raw_rename_to, diff):
+                 raw_rename_to, diff, change_type):
 
         self.a_mode = a_mode
         self.b_mode = b_mode
@@ -286,6 +289,7 @@ class Diff(object):
         self.raw_rename_to = raw_rename_to or None
 
         self.diff = diff
+        self.change_type = change_type
 
     def __eq__(self, other):
         for name in self.__slots__:
@@ -435,7 +439,7 @@ class Diff(object):
                               new_file, deleted_file,
                               rename_from,
                               rename_to,
-                              None))
+                              None, None))
 
             previous_header = header
         # end for each header we parse
@@ -483,7 +487,7 @@ class Diff(object):
             # END add/remove handling
 
             diff = Diff(repo, a_path, b_path, a_blob_id, b_blob_id, old_mode, new_mode,
-                        new_file, deleted_file, rename_from, rename_to, '')
+                        new_file, deleted_file, rename_from, rename_to, '', change_type)
             index.append(diff)
         # END for each line
 
