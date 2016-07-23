@@ -18,9 +18,6 @@ The list of dependencies are listed in `./requirements.txt` and `./test-requirem
 
 ### INSTALL
 
-[![Latest Version](https://pypip.in/version/GitPython/badge.svg)](https://pypi.python.org/pypi/GitPython/)
-[![Supported Python Versions](https://pypip.in/py_versions/GitPython/badge.svg)](https://pypi.python.org/pypi/GitPython/)
-
 If you have downloaded the source code:
 
     python setup.py install
