@@ -609,6 +609,12 @@ class Git(LazyMixin):
         # end handle
 
         try:
+            if sys.platform == 'win32':
+                CREATE_NO_WINDOW = 0x08000000
+                creationflags = CREATE_NO_WINDOW
+            else:
+                creationflags = None
+
             proc = Popen(command,
                          env=env,
                          cwd=cwd,
@@ -619,6 +625,7 @@ class Git(LazyMixin):
                          shell=self.USE_SHELL,
                          close_fds=(os.name == 'posix'),  # unsupported on windows
                          universal_newlines=universal_newlines,
+                         creationflags=creationflags,
                          **subprocess_kwargs
                          )
         except cmd_not_found_exception as err:
@@ -629,7 +636,13 @@ class Git(LazyMixin):
 
         def _kill_process(pid):
             """ Callback method to kill a process. """
-            p = Popen(['ps', '--ppid', str(pid)], stdout=PIPE)
+            if sys.platform == 'win32':
+                CREATE_NO_WINDOW = 0x08000000
+                creationflags = CREATE_NO_WINDOW
+            else:
+                creationflags = None
+
+            p = Popen(['ps', '--ppid', str(pid)], stdout=PIPE, creationflags)
             child_pids = []
             for line in p.stdout:
                 if len(line.split()) > 0:
