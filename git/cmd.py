@@ -642,7 +642,7 @@ class Git(LazyMixin):
             else:
                 creationflags = None
 
-            p = Popen(['ps', '--ppid', str(pid)], stdout=PIPE, creationflags)
+            p = Popen(['ps', '--ppid', str(pid)], stdout=PIPE, creationflags=creationflags)
             child_pids = []
             for line in p.stdout:
                 if len(line.split()) > 0:
