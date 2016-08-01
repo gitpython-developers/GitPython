@@ -271,6 +271,24 @@ class TestRepo(TestBase):
         assert self.rorepo.is_dirty() is False
         self.rorepo._bare = orig_val
 
+    @with_rw_repo('HEAD')
+    def test_is_dirty_with_path(self, rwrepo):
+        assert rwrepo.is_dirty(path="git") is False
+
+        with open(os.path.join(rwrepo.working_dir, "git", "util.py"), "at") as f:
+            f.write("junk")
+        assert rwrepo.is_dirty(path="git") is True
+        assert rwrepo.is_dirty(path="doc") is False
+
+        rwrepo.git.add(os.path.join("git", "util.py"))
+        assert rwrepo.is_dirty(index=False, path="git") is False
+        assert rwrepo.is_dirty(path="git") is True
+
+        with open(os.path.join(rwrepo.working_dir, "doc", "no-such-file.txt"), "wt") as f:
+            f.write("junk")
+        assert rwrepo.is_dirty(path="doc") is False
+        assert rwrepo.is_dirty(untracked_files=True, path="doc") is True
+
     def test_head(self):
         assert self.rorepo.head.reference.object == self.rorepo.active_branch.object
 

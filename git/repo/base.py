@@ -585,7 +585,7 @@ class Repo(object):
                           doc="Retrieve a list of alternates paths or set a list paths to be used as alternates")
 
     def is_dirty(self, index=True, working_tree=True, untracked_files=False,
-                 submodules=True):
+                 submodules=True, path=None):
         """
         :return:
             ``True``, the repository is considered dirty. By default it will react
@@ -600,6 +600,8 @@ class Repo(object):
         default_args = ['--abbrev=40', '--full-index', '--raw']
         if not submodules:
             default_args.append('--ignore-submodules')
+        if path:
+            default_args.append(path)
         if index:
             # diff index against HEAD
             if isfile(self.index.path) and \
@@ -612,7 +614,7 @@ class Repo(object):
                 return True
         # END working tree handling
         if untracked_files:
-            if len(self._get_untracked_files(ignore_submodules=not submodules)):
+            if len(self._get_untracked_files(path, ignore_submodules=not submodules)):
                 return True
         # END untracked files
         return False
@@ -633,9 +635,10 @@ class Repo(object):
             consider caching it yourself."""
         return self._get_untracked_files()
 
-    def _get_untracked_files(self, **kwargs):
+    def _get_untracked_files(self, *args, **kwargs):
         # make sure we get all files, no only untracked directores
-        proc = self.git.status(porcelain=True,
+        proc = self.git.status(*args,
+                               porcelain=True,
                                untracked_files=True,
                                as_process=True,
                                **kwargs)
