@@ -43,6 +43,9 @@ from git.compat import (
     safe_decode,
 )
 
+# value of Windows process creation flag taken from MSDN
+CREATE_NO_WINDOW = 0x08000000
+
 execute_kwargs = ('istream', 'with_keep_cwd', 'with_extended_output',
                   'with_exceptions', 'as_process', 'stdout_as_string',
                   'output_stream', 'with_stdout', 'kill_after_timeout',
@@ -610,10 +613,9 @@ class Git(LazyMixin):
 
         try:
             if sys.platform == 'win32':
-                CREATE_NO_WINDOW = 0x08000000
                 creationflags = CREATE_NO_WINDOW
             else:
-                creationflags = None
+                creationflags = 0
 
             proc = Popen(command,
                          env=env,
@@ -637,10 +639,9 @@ class Git(LazyMixin):
         def _kill_process(pid):
             """ Callback method to kill a process. """
             if sys.platform == 'win32':
-                CREATE_NO_WINDOW = 0x08000000
                 creationflags = CREATE_NO_WINDOW
             else:
-                creationflags = None
+                creationflags = 0
 
             p = Popen(['ps', '--ppid', str(pid)], stdout=PIPE, creationflags=creationflags)
             child_pids = []
