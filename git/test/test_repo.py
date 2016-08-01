@@ -781,13 +781,13 @@ class TestRepo(TestBase):
         nb = r.create_head('foo')
         assert nb.is_valid()
 
-        with open( new_file_path, 'w' ) as f:
-            f.write( 'Line 1\n' )
+        with open(new_file_path, 'w') as f:
+            f.write('Line 1\n')
 
         r.index.add([new_file_path])
         r.index.commit("add line 1\nBAD MESSAGE 2\n")
 
-        with open( '%s/.git/logs/refs/heads/master' % (rw_dir,), 'r' ) as f:
+        with open('%s/.git/logs/refs/heads/master' % (rw_dir,), 'r') as f:
             contents = f.read()
 
         assert 'BAD MESSAGE' not in contents, 'log is corrupt'
