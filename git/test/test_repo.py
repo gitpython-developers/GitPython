@@ -775,11 +775,22 @@ class TestRepo(TestBase):
         new_file_path = os.path.join(rw_dir, "new_file.ext")
         touch(new_file_path)
         r.index.add([new_file_path])
-        r.index.commit("initial commit")
+        r.index.commit("initial commit\nBAD MESSAGE 1\n")
 
         # Now a branch should be creatable
         nb = r.create_head('foo')
         assert nb.is_valid()
+
+        with open(new_file_path, 'w') as f:
+            f.write('Line 1\n')
+
+        r.index.add([new_file_path])
+        r.index.commit("add line 1\nBAD MESSAGE 2\n")
+
+        with open('%s/.git/logs/refs/heads/master' % (rw_dir,), 'r') as f:
+            contents = f.read()
+
+        assert 'BAD MESSAGE' not in contents, 'log is corrupt'
 
     def test_merge_base(self):
         repo = self.rorepo

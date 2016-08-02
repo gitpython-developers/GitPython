@@ -246,6 +246,9 @@ class Git(LazyMixin):
     # Enables debugging of GitPython's git commands
     GIT_PYTHON_TRACE = os.environ.get("GIT_PYTHON_TRACE", False)
 
+    # value of Windows process creation flag taken from MSDN
+    CREATE_NO_WINDOW = 0x08000000
+    
     # Provide the full path to the git executable. Otherwise it assumes git is in the path
     _git_exec_env_var = "GIT_PYTHON_GIT_EXECUTABLE"
     GIT_PYTHON_GIT_EXECUTABLE = os.environ.get(_git_exec_env_var, git_exec_name)
@@ -608,6 +611,7 @@ class Git(LazyMixin):
                 cmd_not_found_exception = OSError
         # end handle
 
+        creationflags = self.CREATE_NO_WINDOW if sys.platform == 'win32' else 0
         try:
             proc = Popen(command,
                          env=env,
@@ -619,6 +623,7 @@ class Git(LazyMixin):
                          shell=self.USE_SHELL,
                          close_fds=(os.name == 'posix'),  # unsupported on windows
                          universal_newlines=universal_newlines,
+                         creationflags=creationflags,
                          **subprocess_kwargs
                          )
         except cmd_not_found_exception as err:
@@ -629,7 +634,7 @@ class Git(LazyMixin):
 
         def _kill_process(pid):
             """ Callback method to kill a process. """
-            p = Popen(['ps', '--ppid', str(pid)], stdout=PIPE)
+            p = Popen(['ps', '--ppid', str(pid)], stdout=PIPE, creationflags=creationflags)
             child_pids = []
             for line in p.stdout:
                 if len(line.split()) > 0:
