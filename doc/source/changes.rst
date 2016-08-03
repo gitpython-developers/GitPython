@@ -2,11 +2,17 @@
 Changelog
 =========
 
-2.0.8 - Bugfixes
-================
+2.0.8 - Features and Bugfixes
+=============================
 
 * `DiffIndex.iter_change_type(...)` produces better results when diffing
   an index against the working tree.
+* `Repo().is_dirty(...)` now supports the `path` parameter, to specify a single
+  path by which to filter the output. Similar to `git status <path>`
+* Symbolic refs created by this library will now be written with a newline
+  character, which was previously missing.
+* `blame()` now properly preserves multi-line commit messages.
+* No longer corrupt ref-logs by writing multi-line comments into them.
 
 2.0.7 - New Features
 ====================
