@@ -141,7 +141,7 @@ class Repo(object):
         self.working_dir = None
         self._working_tree_dir = None
         self.git_dir = None
-        curpath = epath
+        curpath = os.getenv('GIT_DIR', epath)
 
         # walk up the path to find the .git dir
         while curpath:
