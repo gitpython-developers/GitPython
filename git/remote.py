@@ -511,7 +511,6 @@ class Remote(LazyMixin, Iterable):
             remote.refs.master # yields RemoteReference('/refs/remotes/origin/master')"""
         out_refs = IterableList(RemoteReference._id_attribute_, "%s/" % self.name)
         out_refs.extend(RemoteReference.list_items(self.repo, remote=self.name))
-        assert out_refs, "Remote %s did not have any references" % self.name
         return out_refs
 
     @property

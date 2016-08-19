@@ -320,8 +320,8 @@ class TestRefs(TestBase):
         assert remote_refs_so_far
 
         for remote in remotes:
-            # remotes without references throw
-            self.failUnlessRaises(AssertionError, getattr, remote, 'refs')
+            # remotes without references should produce an empty list
+            self.assertEqual(remote.refs, [])
         # END for each remote
 
         # change where the active head points to
