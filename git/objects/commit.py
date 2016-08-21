@@ -130,7 +130,8 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
             self.parents = parents
         if encoding is not None:
             self.encoding = encoding
-        self.gpgsig = gpgsig
+        if gpgsig is not None:
+            self.gpgsig = gpgsig
 
     @classmethod
     def _get_intermediate_items(cls, commit):
@@ -425,10 +426,13 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
         if self.encoding != self.default_encoding:
             write(("encoding %s\n" % self.encoding).encode('ascii'))
 
-        if self.gpgsig:
-            write(b"gpgsig")
-            for sigline in self.gpgsig.rstrip("\n").split("\n"):
-                write((" " + sigline + "\n").encode('ascii'))
+        try:
+            if self.__getattribute__('gpgsig') is not None:
+                write(b"gpgsig")
+                for sigline in self.gpgsig.rstrip("\n").split("\n"):
+                    write((" " + sigline + "\n").encode('ascii'))
+        except AttributeError:
+            pass
 
         write(b"\n")
 
@@ -473,6 +477,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
         # now we can have the encoding line, or an empty line followed by the optional
         # message.
         self.encoding = self.default_encoding
+        self.gpgsig = None
 
         # read headers
         enc = next_line
