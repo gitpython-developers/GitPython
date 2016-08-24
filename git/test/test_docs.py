@@ -377,7 +377,7 @@ class Tutorials(TestBase):
         empty_repo.heads.master.set_tracking_branch(origin.refs.master) # set local "master" to track remote "master
         empty_repo.heads.master.checkout() # checkout local "master" to working tree
         # Three above commands in one:
-        empty_repo.create_head('master', origin.refs.master().set_tracking_branch(origin.refs.master).checkout()
+        empty_repo.create_head('master'), origin.refs.master().set_tracking_branch(origin.refs.master).checkout()
         # rename remotes
         origin.rename('new_origin')
         # push and pull behaves similarly to `git push|pull`
