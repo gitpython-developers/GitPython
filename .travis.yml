@@ -13,10 +13,15 @@ git:
   # a higher depth is needed for most of the tests - must be high enough to not actually be shallow
   # as we clone our own repository in the process
   depth: 99999
+env:
+  # test with paths containing the unicode characters
+  - TMPDIR="/tmp/ссылка"
 install:
   - git submodule update --init --recursive
   - git fetch --tags
   - pip install coveralls flake8 sphinx
+  
+  - if [ ! -z "$TMPDIR" ]; then echo "Symlinking $TMPDIR"; ln -s /tmp "$TMPDIR"; fi
 
   # generate some reflog as git-python tests need it (in master)
   - ./init-tests-after-clone.sh
