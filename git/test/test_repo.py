@@ -4,6 +4,8 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
+import pickle
+
 from git.test.lib import (
     patch,
     TestBase,
@@ -104,13 +106,15 @@ class TestRepo(TestBase):
 
         # try from invalid revision that does not exist
         self.failUnlessRaises(BadName, self.rorepo.tree, 'hello world')
+        
+    def test_pickleable(self):
+        pickle.loads(pickle.dumps(self.rorepo))
 
     def test_commit_from_revision(self):
         commit = self.rorepo.commit('0.1.4')
         assert commit.type == 'commit'
         assert self.rorepo.commit(commit) == commit
 
-    def test_commits(self):
         mc = 10
         commits = list(self.rorepo.iter_commits('0.1.6', max_count=mc))
         assert len(commits) == mc

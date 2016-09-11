@@ -93,7 +93,6 @@ class Repo(object):
 
     'git_dir' is the .git repository directory, which is always set."""
     DAEMON_EXPORT_FILE = 'git-daemon-export-ok'
-    __slots__ = ("working_dir", "_working_tree_dir", "git_dir", "_bare", "git", "odb")
 
     # precompiled regex
     re_whitespace = re.compile(r'\s+')
