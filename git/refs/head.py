@@ -202,6 +202,8 @@ class Head(Reference):
         :return:
             The active branch after the checkout operation, usually self unless
             a new branch has been created.
+            If there is no active branch, as the HEAD is now detached, the HEAD
+            reference will be returned instead.
 
         :note:
             By default it is only allowed to checkout heads - everything else
@@ -212,7 +214,10 @@ class Head(Reference):
             kwargs.pop('f')
 
         self.repo.git.checkout(self, **kwargs)
-        return self.repo.active_branch
+        if self.repo.head.is_detached:
+            return self.repo.head
+        else:
+            return self.repo.active_branch
 
     #{ Configruation
 

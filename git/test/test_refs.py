@@ -175,6 +175,12 @@ class TestRefs(TestBase):
 
     def test_orig_head(self):
         assert type(self.rorepo.head.orig_head()) == SymbolicReference
+        
+    @with_rw_repo('0.1.6')
+    def test_head_checkout_detached_head(self, rw_repo):
+        res = rw_repo.remotes.origin.refs.master.checkout()
+        assert isinstance(res, SymbolicReference)
+        assert res.name == 'HEAD'
 
     @with_rw_repo('0.1.6')
     def test_head_reset(self, rw_repo):

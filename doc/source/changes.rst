@@ -7,6 +7,8 @@ Changelog
 
 * `tag.commit` will now resolve commits deeply.
 * `Repo` objects can now be pickled, which helps with multi-processing.
+* `Head.checkout()` now deals with detached heads, which is when it will return
+  the `HEAD` reference instead.
 
 * `DiffIndex.iter_change_type(...)` produces better results when diffing
 2.0.8 - Features and Bugfixes
