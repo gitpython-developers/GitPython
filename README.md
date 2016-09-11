@@ -40,6 +40,20 @@ git submodule update --init --recursive
 ./init-tests-after-clone.sh
 ```
 
+### Limitations
+
+#### Leakage of System Resources
+
+GitPython is not suited for long-running processes (like daemons) as it tends to
+leak system resources. It was written in a time where destructors (as implemented 
+in the `__del__` method) still ran deterministically.
+
+In case you still want to use it in such a context, you will want to search the
+codebase for `__del__` implementations and call these yourself when you see fit.
+
+Another way assure proper cleanup of resources is to factor out GitPython into a
+separate process which can be dropped periodically.
+
 ### RUNNING TESTS
 
 *Important*: Right after cloning this repository, please be sure to have executed the `init-tests-after-clone.sh` script in the repository root. Otherwise you will encounter test failures.
@@ -58,13 +72,6 @@ For more fine-grained control, you can use `nose`.
 ### Contributions
 
 Please have a look at the [contributions file][contributing].
-
-### Live Coding
-
-You can watch me fix issues or implement new features [live on Twitch][twitch-channel], or have a look at [past recordings on youtube][youtube-playlist]
-
-* [Live on Twitch][twitch-channel] (just follow the channel to be notified when a session starts)
-* [Archive on Youtube][youtube-playlist]
 
 ### INFRASTRUCTURE
 
@@ -104,6 +111,4 @@ Now that there seems to be a massive user base, this should be motivation enough
 * no open pull requests
 * no open issues describing bugs
 
-[twitch-channel]: http://www.twitch.tv/byronimo/profile
-[youtube-playlist]: https://www.youtube.com/playlist?list=PLMHbQxe1e9MnoEcLhn6Yhv5KAvpWkJbL0
 [contributing]: https://github.com/gitpython-developers/GitPython/blob/master/README.md

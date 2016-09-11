@@ -59,6 +59,22 @@ script:
 
 .. note:: In this case, you have to manually install `GitDB`_ as well. It would be recommended to use the :ref:`git source repository <source-code-label>` in that case.
 
+Limitations
+===========
+
+Leakage of System Resources
+---------------------------
+
+GitPython is not suited for long-running processes (like daemons) as it tends to
+leak system resources. It was written in a time where destructors (as implemented 
+in the `__del__` method) still ran deterministically.
+
+In case you still want to use it in such a context, you will want to search the
+codebase for `__del__` implementations and call these yourself when you see fit.
+
+Another way assure proper cleanup of resources is to factor out GitPython into a
+separate process which can be dropped periodically.
+
 Getting Started
 ===============
 
