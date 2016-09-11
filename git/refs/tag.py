@@ -24,13 +24,13 @@ class TagReference(Reference):
     def commit(self):
         """:return: Commit object the tag ref points to"""
         obj = self.object
-        if obj.type == "commit":
-            return obj
-        elif obj.type == "tag":
-            # it is a tag object which carries the commit as an object - we can point to anything
-            return obj.object
-        else:
-            raise ValueError("Tag %s points to a Blob or Tree - have never seen that before" % self)
+        while obj.type != 'commit':
+            if obj.type == "tag":
+                # it is a tag object which carries the commit as an object - we can point to anything
+                obj = obj.object
+            else:
+                raise ValueError("Tag %s points to a Blob or Tree - have never seen that before" % self)
+        return obj
 
     @property
     def tag(self):
