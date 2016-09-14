@@ -14,3 +14,4 @@ nbproject
 .DS_Store
 /*egg-info
 /.tox
+.cache
