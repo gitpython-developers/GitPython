@@ -6,7 +6,6 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 import os
 import sys
-import mock
 import subprocess
 
 from git.test.lib import (
@@ -27,6 +26,11 @@ from git import (
 from gitdb.test.lib import with_rw_directory
 
 from git.compat import PY3
+
+try:
+    from unittest import mock
+except ImportError:
+    import mock
 
 
 class TestGit(TestBase):

@@ -68,8 +68,10 @@ def _stamp_version(filename):
         print("WARNING: Couldn't find version line in file %s" % filename, file=sys.stderr)
 
 install_requires = ['gitdb >= 0.6.4']
+test_requires = ['node']
 if sys.version_info[:2] < (2, 7):
     install_requires.append('ordereddict')
+    test_requires.append('mock')
 # end
 
 setup(
@@ -87,7 +89,7 @@ setup(
     license="BSD License",
     requires=['gitdb (>=0.6.4)'],
     install_requires=install_requires,
-    test_requirements=['mock', 'nose'] + install_requires,
+    test_requirements=test_requires + install_requires,
     zip_safe=False,
     long_description="""\
 GitPython is a python library used to interact with Git repositories""",

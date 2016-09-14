@@ -34,7 +34,11 @@ import re
 import os
 from datetime import datetime
 from git.objects.util import tzoffset, utc
-from mock import Mock
+
+try:
+    from unittest.mock import Mock
+except ImportError:
+    from mock import Mock
 
 
 def assert_commit_serialization(rwrepo, commit_id, print_performance_info=False):
@@ -343,9 +347,9 @@ JzJMZDRLQLFvnzqZuCjE
         cstream = BytesIO()
         cmt._serialize(cstream)
         assert re.search(r"^gpgsig <test\n dummy\n sig>$", cstream.getvalue().decode('ascii'), re.MULTILINE)
-        
+
         self.assert_gpgsig_deserialization(cstream)
-        
+
         cstream.seek(0)
         cmt.gpgsig = None
         cmt._deserialize(cstream)
@@ -355,27 +359,27 @@ JzJMZDRLQLFvnzqZuCjE
         cstream = BytesIO()
         cmt._serialize(cstream)
         assert not re.search(r"^gpgsig ", cstream.getvalue().decode('ascii'), re.MULTILINE)
-        
+
     def assert_gpgsig_deserialization(self, cstream):
         assert 'gpgsig' in 'precondition: need gpgsig'
-        
+
         class RepoMock:
             def __init__(self, bytestr):
                 self.bytestr = bytestr
-                
+
             @property
             def odb(self):
                 class ODBMock:
                     def __init__(self, bytestr):
                         self.bytestr = bytestr
-                        
+
                     def stream(self, *args):
                         stream = Mock(spec_set=['read'], return_value=self.bytestr)
                         stream.read.return_value = self.bytestr
                         return ('binsha', 'typename', 'size', stream)
-                        
+
                 return ODBMock(self.bytestr)
-                    
+
         repo_mock = RepoMock(cstream.getvalue())
         for field in Commit.__slots__:
             c = Commit(repo_mock, b'x' * 20)

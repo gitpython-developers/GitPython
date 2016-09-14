@@ -5,7 +5,6 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
 import os
-import os.path
 import sys
 import select
 import logging
@@ -213,11 +212,11 @@ def handle_process_output(process, stdout_handler, stderr_handler, finalizer):
 
 def dashify(string):
     return string.replace('_', '-')
-    
+
 
 def slots_to_dict(self, exclude=()):
     return dict((s, getattr(self, s)) for s in self.__slots__ if s not in exclude)
-    
+
 
 def dict_to_slots_and__excluded_are_none(self, d, excluded=()):
     for k, v in d.items():
@@ -246,15 +245,15 @@ class Git(LazyMixin):
     """
     __slots__ = ("_working_dir", "cat_file_all", "cat_file_header", "_version_info",
                  "_git_options", "_environment")
-                 
+
     _excluded_ = ('cat_file_all', 'cat_file_header', '_version_info')
-    
+
     def __getstate__(self):
         return slots_to_dict(self, exclude=self._excluded_)
-        
+
     def __setstate__(self, d):
         dict_to_slots_and__excluded_are_none(self, d, excluded=self._excluded_)
-        
+
     # CONFIGURATION
     # The size in bytes read from stdout when copying git's output to another stream
     max_chunk_size = 1024 * 64
@@ -267,7 +266,7 @@ class Git(LazyMixin):
 
     # value of Windows process creation flag taken from MSDN
     CREATE_NO_WINDOW = 0x08000000
-    
+
     # Provide the full path to the git executable. Otherwise it assumes git is in the path
     _git_exec_env_var = "GIT_PYTHON_GIT_EXECUTABLE"
     GIT_PYTHON_GIT_EXECUTABLE = os.environ.get(_git_exec_env_var, git_exec_name)
@@ -339,7 +338,7 @@ class Git(LazyMixin):
             if stderr is None:
                 stderr = b''
             stderr = force_bytes(stderr)
-            
+
             status = self.proc.wait()
 
             def read_all_from_possibly_closed_stream(stream):

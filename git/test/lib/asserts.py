@@ -16,7 +16,10 @@ from nose.tools import (
     assert_false
 )
 
-from mock import patch
+try:
+    from unittest.mock import patch
+except ImportError:
+    from mock import patch
 
 __all__ = ['assert_instance_of', 'assert_not_instance_of',
            'assert_none', 'assert_not_none',
