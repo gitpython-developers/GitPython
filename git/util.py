@@ -564,19 +564,13 @@ class LockFile(object):
 
         lock_file = self._lock_file_path()
 
-        # Create lock file
+        # Create file and lock
         try:
-            open(lock_file, 'a').close()
-        except OSError as e:
-            # Silence error only if file exists
-            if e.errno != 17:  # 17 -> File exists
-                raise
-
-        try:
-            fd = os.open(lock_file, os.O_WRONLY, 0)
-            flock(fd, LOCK_EX | LOCK_NB)
+            fd = os.open(lock_file, os.O_CREAT, 0)
         except OSError as e:
             raise IOError(str(e))
+
+        flock(fd, LOCK_EX | LOCK_NB)
 
         self._file_descriptor = fd
         self._owns_lock = True
