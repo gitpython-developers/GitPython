@@ -53,6 +53,7 @@ __all__ = ("stream_copy", "join_path", "to_native_path_windows", "to_native_path
            'HIDE_WINDOWS_KNOWN_ERRORS')
 
 log = logging.getLogger(__name__)
+log.addHandler(logging.NullHandler())
 
 #: We need an easy way to see if Appveyor TCs start failing,
 #: so the errors marked with this var are considered "acknowledged" ones, awaiting remedy,
@@ -384,6 +385,8 @@ class RemoteProgress(object):
         # handle
         # Counting objects: 4, done.
         # Compressing objects:  50% (1/2)   \rCompressing objects: 100% (2/2)   \rCompressing objects: 100% (2/2), done.
+        log.info(line)
+
         self._cur_line = line
         if len(self.error_lines) > 0 or self._cur_line.startswith(('error:', 'fatal:')):
             self.error_lines.append(self._cur_line)
