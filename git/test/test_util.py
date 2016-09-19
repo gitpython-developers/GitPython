@@ -5,6 +5,7 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
 import tempfile
+import gc
 
 from git.test.lib import (
     TestBase,
@@ -76,6 +77,7 @@ class TestUtils(TestBase):
 
         # auto-release on destruction
         del(other_lock_file)
+        gc.collect()
         lock_file._obtain_lock_or_raise()
         lock_file._release_lock()
 
