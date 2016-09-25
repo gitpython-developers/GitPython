@@ -15,7 +15,7 @@ Requirements
 
 * `Python`_ 2.7 or newer
     Since GitPython 2.0.0. Please note that python 2.6 is still reasonably well supported, but might
-    deteriorate over time.
+    deteriorate over time. Support is provided on a best-effort basis only.
 * `Git`_ 1.7.0 or newer
     It should also work with older versions, but it may be that some operations
     involving remotes will not work as expected.
@@ -74,6 +74,12 @@ codebase for `__del__` implementations and call these yourself when you see fit.
 
 Another way assure proper cleanup of resources is to factor out GitPython into a
 separate process which can be dropped periodically.
+
+Best-effort for Python 2.6 and Windows support
+----------------------------------------------
+
+This means that support for these platforms is likely to worsen over time
+as they are kept alive solely by their users, or not.
 
 Getting Started
 ===============

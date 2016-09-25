@@ -54,6 +54,11 @@ codebase for `__del__` implementations and call these yourself when you see fit.
 Another way assure proper cleanup of resources is to factor out GitPython into a
 separate process which can be dropped periodically.
 
+#### Best-effort for Python 2.6 and Windows support
+
+This means that support for these platforms is likely to worsen over time
+as they are kept alive solely by their users, or not.
+
 ### RUNNING TESTS
 
 *Important*: Right after cloning this repository, please be sure to have executed the `init-tests-after-clone.sh` script in the repository root. Otherwise you will encounter test failures.

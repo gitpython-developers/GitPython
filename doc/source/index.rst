@@ -9,7 +9,6 @@ GitPython Documentation
    :maxdepth: 2
 
    intro
-   whatsnew
    tutorial
    reference
    roadmap
