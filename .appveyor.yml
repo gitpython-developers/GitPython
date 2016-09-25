@@ -2,15 +2,15 @@
 environment:
 
     matrix:
-      - PYTHON: "C:\\Miniconda"
+      - PYTHON: "C:\\Python27"
         PYTHON_VERSION: "2.7"
       - PYTHON: "C:\\Miniconda"
         PYTHON_VERSION: "2.7"
-        GIT_PATH: "C:\\cygwin64\\bin"
+        GIT_PATH: "C:\\cygwin\\bin"
 
       - PYTHON: "C:\\Miniconda3-x64"
         PYTHON_VERSION: "3.4"
-      - PYTHON: "C:\\Miniconda3-x64"
+      - PYTHON: "C:\\Python34"
         PYTHON_VERSION: "3.4"
         GIT_PATH: "C:\\cygwin64\\bin"
 
@@ -30,9 +30,11 @@ install:
         where git
         python --version
         python -c "import struct; print(struct.calcsize('P') * 8)"
-        conda info -a
 
-    - conda install --yes --quiet pip
+    - IF EXIST "%PYTHON%\conda.exe" (
+        conda info -a &
+        conda install --yes --quiet pip
+      )
     - pip install  nose wheel coveralls
     -   IF "%PYTHON_VERSION%"=="2.7" (
             pip install mock
@@ -60,15 +62,7 @@ install:
 build: off
 
 test_script:
-    - |
-        echo "+++  Checking archives for PyPI repo..."
-        python setup.py bdist_wheel
-
-    -   IF "%PYTHON_VERSION%"=="3.4" (
-            nosetests -v --with-coverage
-        ) ELSE (
-            nosetests -v
-        )
+    - "nosetests -v"
 
 #on_success:
 #    - IF "%PYTHON_VERSION%"=="3.4" (coveralls)

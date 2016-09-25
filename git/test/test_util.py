@@ -90,7 +90,7 @@ class TestUtils(TestBase):
         wait_lock = BlockingLockFile(my_file, 0.05, wait_time)
         self.failUnlessRaises(IOError, wait_lock._obtain_lock)
         elapsed = time.time() - start
-        assert elapsed <= wait_time + 0.02  # some extra time it may cost
+        assert elapsed <= wait_time + 0.02, elapsed  # some extra time it may cost
 
     def test_user_id(self):
         assert '@' in get_user_id()
