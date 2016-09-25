@@ -40,6 +40,10 @@ class TestGit(TestBase):
         super(TestGit, cls).setUpClass()
         cls.git = Git(cls.rorepo.working_dir)
 
+    def tearDown(self):
+        import gc
+        gc.collect()
+
     @patch.object(Git, 'execute')
     def test_call_process_calls_execute(self, git):
         git.return_value = ''

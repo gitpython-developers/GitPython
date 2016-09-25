@@ -101,6 +101,10 @@ class TestRemoteProgress(RemoteProgress):
 
 class TestRemote(TestBase):
 
+    def tearDown(self):
+        import gc
+        gc.collect()
+
     def _print_fetchhead(self, repo):
         fp = open(os.path.join(repo.git_dir, "FETCH_HEAD"))
         fp.close()

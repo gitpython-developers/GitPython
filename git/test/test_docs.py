@@ -11,6 +11,11 @@ from gitdb.test.lib import with_rw_directory
 
 
 class Tutorials(TestBase):
+
+    def tearDown(self):
+        import gc
+        gc.collect()
+
     @with_rw_directory
     def test_init_repo_object(self, rw_dir):
         # [1-test_init_repo_object]
@@ -64,7 +69,7 @@ class Tutorials(TestBase):
         assert repo.head.ref == repo.heads.master                   # head is a symbolic reference pointing to master
         assert repo.tags['0.3.5'] == repo.tag('refs/tags/0.3.5')    # you can access tags in various ways too
         assert repo.refs.master == repo.heads['master']             # .refs provides access to all refs, i.e. heads ...
-        
+
         if 'TRAVIS' not in os.environ:
             assert repo.refs['origin/master'] == repo.remotes.origin.refs.master  # ... remotes ...
         assert repo.refs['0.3.5'] == repo.tags['0.3.5']             # ... and tags

@@ -49,6 +49,10 @@ prog = TestRootProgress()
 
 class TestSubmodule(TestBase):
 
+    def tearDown(self):
+        import gc
+        gc.collect()
+
     k_subm_current = "c15a6e1923a14bc760851913858a3942a4193cdb"
     k_subm_changed = "394ed7006ee5dc8bddfd132b64001d5dfc0ffdd3"
     k_no_subm_tag = "0.1.6"

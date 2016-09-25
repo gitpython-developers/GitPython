@@ -64,6 +64,10 @@ def flatten(lol):
 
 class TestRepo(TestBase):
 
+    def tearDown(self):
+        import gc
+        gc.collect()
+
     @raises(InvalidGitRepositoryError)
     def test_new_should_raise_on_invalid_repo_location(self):
         Repo(tempfile.gettempdir())

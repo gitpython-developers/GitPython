@@ -299,6 +299,8 @@ class TestBase(TestCase):
         Dynamically add a read-only repository to our actual type. This way
         each test type has its own repository
         """
+        import gc
+        gc.collect()
         cls.rorepo = Repo(GIT_REPO)
 
     @classmethod
