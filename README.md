@@ -1,3 +1,4 @@
+[![Stories in Ready](https://badge.waffle.io/gitpython-developers/GitPython.png?label=ready&title=Ready)](https://waffle.io/gitpython-developers/GitPython)
 ## GitPython
 
 GitPython is a python library used to interact with git repositories, high-level like git-porcelain, or low-level like git-plumbing.
