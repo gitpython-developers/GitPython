@@ -135,6 +135,23 @@ class TestIndex(TestBase):
             raise AssertionError("CMP Failed: Missing entries in index: %s, missing in tree: %s" %
                                  (bset - iset, iset - bset))
         # END assertion message
+        
+    @with_rw_repo('0.1.6')
+    def test_index_lock_handling(self, rw_repo):
+        def add_bad_blob():
+            rw_repo.index.add([Blob(rw_repo, b'f' * 20, 'bad-permissions', 'foo')])
+
+        try:
+            ## 1st fail on purpose adding into index.
+            add_bad_blob()
+        except Exception as ex:
+            assert "cannot convert argument to integer" in str(ex)
+
+        ## 2nd time should not fail due to stray lock file
+        try:
+            add_bad_blob()
+        except Exception as ex:
+            assert "index.lock' could not be obtained" not in str(ex)
 
     @with_rw_repo('0.1.6')
     def test_index_file_from_tree(self, rw_repo):

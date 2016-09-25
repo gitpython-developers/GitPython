@@ -118,13 +118,17 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             # read the current index
             # try memory map for speed
             lfd = LockedFD(self._file_path)
+            ok = False
             try:
                 fd = lfd.open(write=False, stream=False)
+                ok = True
             except OSError:
-                lfd.rollback()
                 # in new repositories, there may be no index, which means we are empty
                 self.entries = dict()
                 return
+            finally:
+                if not ok:
+                    lfd.rollback()
             # END exception handling
 
             # Here it comes: on windows in python 2.5, memory maps aren't closed properly
@@ -209,8 +213,14 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         self.entries
         lfd = LockedFD(file_path or self._file_path)
         stream = lfd.open(write=True, stream=True)
+        ok = False
 
-        self._serialize(stream, ignore_extension_data)
+        try:
+            self._serialize(stream, ignore_extension_data)
+            ok = True
+        finally:
+            if not ok:
+                lfd.rollback()
 
         lfd.commit()
 
