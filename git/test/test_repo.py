@@ -115,6 +115,7 @@ class TestRepo(TestBase):
         assert commit.type == 'commit'
         assert self.rorepo.commit(commit) == commit
 
+    def test_commits(self):
         mc = 10
         commits = list(self.rorepo.iter_commits('0.1.6', max_count=mc))
         assert len(commits) == mc
