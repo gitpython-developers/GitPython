@@ -238,9 +238,11 @@ class TestGit(TestBase):
                                 stdin=None,
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE,
-                                shell=False)
+                                shell=False,
+                                creationflags=Git.CREATE_NO_WINDOW if sys.platform == 'win32' else 0,
+                                )
 
         handle_process_output(proc, counter_stdout, counter_stderr, lambda proc: proc.wait())
 
-        assert count[1] == line_count
-        assert count[2] == line_count
+        self.assertEqual(count[1], line_count)
+        self.assertEqual(count[2], line_count)

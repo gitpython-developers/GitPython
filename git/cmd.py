@@ -193,14 +193,24 @@ def handle_process_output(process, stdout_handler, stderr_handler, finalizer):
     else:
         # Oh ... probably we are on windows. select.select() can only handle sockets, we have files
         # The only reliable way to do this now is to use threads and wait for both to finish
+        def _handle_lines(fd, handler, wg):
+            for line in fd:
+                line = line.decode(defenc)
+                if line and handler:
+                    handler(line)
+            if wg:
+                wg.done()
+
         # Since the finalizer is expected to wait, we don't have to introduce our own wait primitive
         # NO: It's not enough unfortunately, and we will have to sync the threads
         wg = WaitGroup()
-        for fno, (handler, buf_list) in fdmap.items():
+        for fd, handler in zip((process.stdout, process.stderr),
+                               (stdout_handler, stderr_handler)):
             wg.add(1)
-            t = threading.Thread(target=lambda: _deplete_buffer(fno, handler, buf_list, wg))
+            t = threading.Thread(target=_handle_lines, args=(fd, handler, wg))
+            t.setDaemon(True)
             t.start()
-        # end
+
         # NOTE: Just joining threads can possibly fail as there is a gap between .start() and when it's
         # actually started, which could make the wait() call to just return because the thread is not yet
         # active
