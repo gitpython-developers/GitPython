@@ -1,0 +1,74 @@
+# CI on Windows via appveyor
+environment:
+
+    matrix:
+      - PYTHON: "C:\\Miniconda"
+        PYTHON_VERSION: "2.7"
+      - PYTHON: "C:\\Miniconda"
+        PYTHON_VERSION: "2.7"
+        GIT_PATH: "C:\\cygwin64\\bin"
+
+      - PYTHON: "C:\\Miniconda3-x64"
+        PYTHON_VERSION: "3.4"
+      - PYTHON: "C:\\Miniconda3-x64"
+        PYTHON_VERSION: "3.4"
+        GIT_PATH: "C:\\cygwin64\\bin"
+
+      - PYTHON: "C:\Python35-x64"
+        PYTHON_VERSION: "3.5"
+      - PYTHON: "C:\Python35-x64"
+        PYTHON_VERSION: "3.5"
+        GIT_PATH: "C:\\cygwin64\\bin"
+
+install:
+    - set PATH=%PYTHON%;%PYTHON%\Scripts;%GIT_PATH%;%PATH%
+
+    ## Print architecture, python & git used for debugging.
+    #
+    - |
+        uname -a
+        where git
+        python --version
+        python -c "import struct; print(struct.calcsize('P') * 8)"
+        conda info -a
+
+    - conda install --yes --quiet pip
+    - pip install  nose wheel coveralls
+    -   IF "%PYTHON_VERSION%"=="2.7" (
+            pip install mock
+        )
+
+    ## Copied from `init-tests-after-clone.sh`.
+    #
+    - |
+        git submodule update --init --recursive
+        git fetch --tags
+        git tag __testing_point__
+        git checkout master || git checkout -b master
+        git reset --hard HEAD~1
+        git reset --hard HEAD~1
+        git reset --hard HEAD~1
+        git reset --hard __testing_point__
+
+    ## For commits performed with the default user.
+    - |
+        git config --global user.email "travis@ci.com"
+        git config --global user.name "Travis Runner"
+
+    - python setup.py develop
+
+build: off
+
+test_script:
+    - |
+        echo "+++  Checking archives for PyPI repo..."
+        python setup.py bdist_wheel
+
+    -   IF "%PYTHON_VERSION%"=="3.4" (
+            nosetests -v --with-coverage
+        ) ELSE (
+            nosetests -v
+        )
+
+#on_success:
+#    - IF "%PYTHON_VERSION%"=="3.4" (coveralls)

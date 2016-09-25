@@ -31,7 +31,7 @@ Both commands will install the required package dependencies.
 A distribution package can be obtained for manual installation at:
 
     http://pypi.python.org/pypi/GitPython
-    
+
 If you like to clone from source, you can do it like so:
 
 ```bash
@@ -45,7 +45,7 @@ git submodule update --init --recursive
 #### Leakage of System Resources
 
 GitPython is not suited for long-running processes (like daemons) as it tends to
-leak system resources. It was written in a time where destructors (as implemented 
+leak system resources. It was written in a time where destructors (as implemented
 in the `__del__` method) still ran deterministically.
 
 In case you still want to use it in such a context, you will want to search the
@@ -61,7 +61,7 @@ as they are kept alive solely by their users, or not.
 
 ### RUNNING TESTS
 
-*Important*: Right after cloning this repository, please be sure to have executed the `init-tests-after-clone.sh` script in the repository root. Otherwise you will encounter test failures.
+*Important*: Right after cloning this repository, please be sure to have executed the `./init-tests-after-clone.sh` script in the repository root. Otherwise you will encounter test failures.
 
 The easiest way to run test is by using [tox](https://pypi.python.org/pypi/tox) a wrapper around virtualenv. It will take care of setting up environnements with the proper dependencies installed and execute test commands. To install it simply:
 
@@ -70,8 +70,8 @@ The easiest way to run test is by using [tox](https://pypi.python.org/pypi/tox) 
 Then run:
 
     tox
-    
-    
+
+
 For more fine-grained control, you can use `nose`.
 
 ### Contributions
@@ -100,7 +100,7 @@ Please have a look at the [contributions file][contributing].
 * Finally, set the upcoming version in the `VERSION` file, usually be
   incrementing the patch level, and possibly by appending `-dev`. Probably you
   want to `git push` once more.
-  
+
 ### LICENSE
 
 New BSD License.  See the LICENSE file.
