@@ -145,7 +145,9 @@ class TestIndex(TestBase):
             ## 1st fail on purpose adding into index.
             add_bad_blob()
         except Exception as ex:
-            assert "cannot convert argument to integer" in str(ex)
+            msg_py3 = "required argument is not an integer"
+            msg_py2 = "cannot convert argument to integer"
+            assert msg_py2 in str(ex) or msg_py3 in str(ex)
 
         ## 2nd time should not fail due to stray lock file
         try:
