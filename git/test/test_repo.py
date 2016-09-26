@@ -110,7 +110,7 @@ class TestRepo(TestBase):
 
         # try from invalid revision that does not exist
         self.failUnlessRaises(BadName, self.rorepo.tree, 'hello world')
-        
+
     def test_pickleable(self):
         pickle.loads(pickle.dumps(self.rorepo))
 
@@ -318,6 +318,9 @@ class TestRepo(TestBase):
 
     @patch.object(Git, '_call_process')
     def test_should_display_blame_information(self, git):
+        if sys.version_info < (2, 7):
+            ## Skipped, not `assertRaisesRegexp` in py2.6
+            return
         git.return_value = fixture('blame')
         b = self.rorepo.blame('master', 'lib/git.py')
         assert_equal(13, len(b))

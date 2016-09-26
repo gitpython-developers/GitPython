@@ -6,17 +6,19 @@ environment:
         PYTHON_VERSION: "2.7"
       - PYTHON: "C:\\Miniconda"
         PYTHON_VERSION: "2.7"
+        IS_CONDA: "yes"
         GIT_PATH: "C:\\cygwin\\bin"
 
       - PYTHON: "C:\\Miniconda3-x64"
         PYTHON_VERSION: "3.4"
+        IS_CONDA: "yes"
       - PYTHON: "C:\\Python34"
         PYTHON_VERSION: "3.4"
         GIT_PATH: "C:\\cygwin64\\bin"
 
-      - PYTHON: "C:\Python35-x64"
+      - PYTHON: "C:\\Python35-x64"
         PYTHON_VERSION: "3.5"
-      - PYTHON: "C:\Python35-x64"
+      - PYTHON: "C:\\Python35-x64"
         PYTHON_VERSION: "3.5"
         GIT_PATH: "C:\\cygwin64\\bin"
 
@@ -28,12 +30,13 @@ install:
     - |
         uname -a
         where git
+        where python pip pip2 pip3 pip34 pip35 pip36
         python --version
         python -c "import struct; print(struct.calcsize('P') * 8)"
 
-    - IF EXIST "%PYTHON%\conda.exe" (
+    - IF "%IS_CONDA%"=="yes" (
         conda info -a &
-        conda install --yes --quiet pip
+        conda install --yes --quiet  pip
       )
     - pip install  nose wheel coveralls
     -   IF "%PYTHON_VERSION%"=="2.7" (
@@ -59,7 +62,7 @@ install:
 
     - python setup.py develop
 
-build: off
+build: false
 
 test_script:
     - "nosetests -v"

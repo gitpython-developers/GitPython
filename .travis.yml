@@ -32,7 +32,8 @@ script:
   - ulimit -n 96
   - ulimit -n
   - nosetests -v --with-coverage
-  - flake8
-  - cd doc && make html
+  - if [ "$TRAVIS_PYTHON_VERSION" != '2.6' ]; then flake8; fi
+  - if [ "$TRAVIS_PYTHON_VERSION" != '2.6' ]; then cd doc && make html; fi
+  -
 after_success:
   - coveralls
