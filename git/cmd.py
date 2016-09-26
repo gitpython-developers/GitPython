@@ -15,6 +15,7 @@ import mmap
 from git.odict import OrderedDict
 from contextlib import contextmanager
 import signal
+import subprocess
 from subprocess import (
     call,
     Popen,
@@ -229,6 +230,15 @@ def dict_to_slots_and__excluded_are_none(self, d, excluded=()):
 
 ## -- End Utilities -- @}
 
+# value of Windows process creation flag taken from MSDN
+CREATE_NO_WINDOW = 0x08000000
+
+## CREATE_NEW_PROCESS_GROUP is needed to allow killing it afterwards,
+# seehttps://docs.python.org/3/library/subprocess.html#subprocess.Popen.send_signal
+PROC_CREATIONFLAGS = (CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP
+                      if sys.platform == 'win32'
+                      else 0)
+
 
 class Git(LazyMixin):
 
@@ -266,9 +276,6 @@ class Git(LazyMixin):
 
     # Enables debugging of GitPython's git commands
     GIT_PYTHON_TRACE = os.environ.get("GIT_PYTHON_TRACE", False)
-
-    # value of Windows process creation flag taken from MSDN
-    CREATE_NO_WINDOW = 0x08000000
 
     # Provide the full path to the git executable. Otherwise it assumes git is in the path
     _git_exec_env_var = "GIT_PYTHON_GIT_EXECUTABLE"
@@ -317,7 +324,7 @@ class Git(LazyMixin):
 
             # try to kill it
             try:
-                os.kill(proc.pid, 2)   # interrupt signal
+                proc.terminate()
                 proc.wait()    # ensure process goes away
             except (OSError, WindowsError):
                 pass  # ignore error when process already died
@@ -632,7 +639,6 @@ class Git(LazyMixin):
                 cmd_not_found_exception = OSError
         # end handle
 
-        creationflags = self.CREATE_NO_WINDOW if sys.platform == 'win32' else 0
         try:
             proc = Popen(command,
                          env=env,
@@ -644,7 +650,7 @@ class Git(LazyMixin):
                          shell=self.USE_SHELL,
                          close_fds=(os.name == 'posix'),  # unsupported on windows
                          universal_newlines=universal_newlines,
-                         creationflags=creationflags,
+                         creationflags=PROC_CREATIONFLAGS,
                          **subprocess_kwargs
                          )
         except cmd_not_found_exception as err:
@@ -655,7 +661,8 @@ class Git(LazyMixin):
 
         def _kill_process(pid):
             """ Callback method to kill a process. """
-            p = Popen(['ps', '--ppid', str(pid)], stdout=PIPE, creationflags=creationflags)
+            p = Popen(['ps', '--ppid', str(pid)], stdout=PIPE,
+                      creationflags=PROC_CREATIONFLAGS)
             child_pids = []
             for line in p.stdout:
                 if len(line.split()) > 0:

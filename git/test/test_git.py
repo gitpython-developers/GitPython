@@ -21,7 +21,8 @@ from git import (
     Git,
     GitCommandError,
     GitCommandNotFound,
-    Repo
+    Repo,
+    cmd
 )
 from gitdb.test.lib import with_rw_directory
 
@@ -240,7 +241,7 @@ class TestGit(TestBase):
                                 stderr=subprocess.PIPE,
                                 shell=False,
                                 universal_newlines=True,
-                                creationflags=Git.CREATE_NO_WINDOW if sys.platform == 'win32' else 0,
+                                creationflags=cmd.PROC_CREATIONFLAGS,
                                 )
 
         handle_process_output(proc, counter_stdout, counter_stderr, lambda proc: proc.wait())

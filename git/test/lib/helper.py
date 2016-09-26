@@ -5,12 +5,12 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 from __future__ import print_function
 import os
-import sys
 from unittest import TestCase
 import time
 import tempfile
 import shutil
 import io
+import logging
 
 from git import Repo, Remote, GitCommandError, Git
 from git.compat import string_types
@@ -24,6 +24,8 @@ __all__ = (
     'fixture_path', 'fixture', 'absolute_project_path', 'StringProcessAdapter',
     'with_rw_repo', 'with_rw_and_rw_remote_repo', 'TestBase', 'TestCase', 'GIT_REPO', 'GIT_DAEMON_PORT'
 )
+
+log = logging.getLogger('git.util')
 
 #{ Routines
 
@@ -120,7 +122,7 @@ def with_rw_repo(working_tree_ref, bare=False):
                 try:
                     return func(self, rw_repo)
                 except:
-                    print("Keeping repo after failure: %s" % repo_dir, file=sys.stderr)
+                    log.info("Keeping repo after failure: %s", repo_dir)
                     repo_dir = None
                     raise
             finally:
@@ -218,7 +220,7 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
                 # on some platforms ?
                 if gd is not None:
                     os.kill(gd.proc.pid, 15)
-                print(str(e))
+                log.warning('git-ls-remote failed due to: %s(%s)', type(e), e)
                 if os.name == 'nt':
                     msg = "git-daemon needs to run this test, but windows does not have one. "
                     msg += 'Otherwise, run: git-daemon "%s"' % temp_dir
@@ -239,8 +241,8 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
                 try:
                     return func(self, rw_repo, rw_remote_repo)
                 except:
-                    print("Keeping repos after failure: repo_dir = %s, remote_repo_dir = %s"
-                          % (repo_dir, remote_repo_dir), file=sys.stderr)
+                    log.info("Keeping repos after failure: repo_dir = %s, remote_repo_dir = %s",
+                             repo_dir, remote_repo_dir)
                     repo_dir = remote_repo_dir = None
                     raise
             finally:
