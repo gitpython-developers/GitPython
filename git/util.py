@@ -12,7 +12,6 @@ import stat
 import shutil
 import platform
 import getpass
-import threading
 import logging
 
 # NOTE:  Some of the unused imports might be used/imported by others.
@@ -39,7 +38,7 @@ from gitdb.util import (  # NOQA
 __all__ = ("stream_copy", "join_path", "to_native_path_windows", "to_native_path_linux",
            "join_path_native", "Stats", "IndexFileSHA1Writer", "Iterable", "IterableList",
            "BlockingLockFile", "LockFile", 'Actor', 'get_user_id', 'assure_directory_exists',
-           'RemoteProgress', 'CallableRemoteProgress', 'rmtree', 'WaitGroup', 'unbare_repo')
+           'RemoteProgress', 'CallableRemoteProgress', 'rmtree', 'unbare_repo')
 
 #{ Utility Methods
 
@@ -324,12 +323,12 @@ class RemoteProgress(object):
 
         You may read the contents of the current line in self._cur_line"""
         pass
-        
+
 
 class CallableRemoteProgress(RemoteProgress):
     """An implementation forwarding updates to any callable"""
     __slots__ = ('_callable')
-    
+
     def __init__(self, fn):
         self._callable = fn
         super(CallableRemoteProgress, self).__init__()
@@ -752,35 +751,6 @@ class Iterable(object):
         raise NotImplementedError("To be implemented by Subclass")
 
 #} END classes
-
-
-class WaitGroup(object):
-    """WaitGroup is like Go sync.WaitGroup.
-
-    Without all the useful corner cases.
-    By Peter Teichman, taken from https://gist.github.com/pteichman/84b92ae7cef0ab98f5a8
-    """
-    def __init__(self):
-        self.count = 0
-        self.cv = threading.Condition()
-
-    def add(self, n):
-        self.cv.acquire()
-        self.count += n
-        self.cv.release()
-
-    def done(self):
-        self.cv.acquire()
-        self.count -= 1
-        if self.count == 0:
-            self.cv.notify_all()
-        self.cv.release()
-
-    def wait(self, stderr=b''):
-        self.cv.acquire()
-        while self.count > 0:
-            self.cv.wait()
-        self.cv.release()
 
 
 class NullHandler(logging.Handler):
