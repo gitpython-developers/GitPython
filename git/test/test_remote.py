@@ -26,7 +26,8 @@ from git import (
     GitCommandError
 )
 from git.util import IterableList
-from git.compat import string_types
+from git.compat import string_types, is_win
+from unittest import skipIf
 import tempfile
 import shutil
 import os
@@ -99,6 +100,7 @@ class TestRemoteProgress(RemoteProgress):
         assert self._num_progress_messages
 
 
+@skipIf(is_win(), "git-daemon proc stuck on Appveyor!")
 class TestRemote(TestBase):
 
     def tearDown(self):
@@ -407,7 +409,7 @@ class TestRemote(TestBase):
 
             # OPTIONS
             # cannot use 'fetch' key anymore as it is now a method
-            for opt in ("url", ):
+            for opt in ("url",):
                 val = getattr(remote, opt)
                 reader = remote.config_reader
                 assert reader.get(opt) == val

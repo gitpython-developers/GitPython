@@ -30,7 +30,7 @@ install:
     - |
         uname -a
         where git
-        where python pip pip2 pip3 pip34 pip35 pip36
+        where python pip
         python --version
         python -c "import struct; print(struct.calcsize('P') * 8)"
 
@@ -66,7 +66,6 @@ build: false
 
 test_script:
     - nosetests -v
-    - echo OK
 
 #on_success:
 #    - IF "%PYTHON_VERSION%"=="3.4" (coveralls)

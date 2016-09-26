@@ -112,6 +112,7 @@ class TestBase(TestBase):
         assert not rw_repo.config_reader("repository").getboolean("core", "bare")
         assert os.path.isdir(os.path.join(rw_repo.working_tree_dir, 'lib'))
 
+    @skipIf(is_win(), "git-daemon proc stuck on Appveyor!")
     @with_rw_and_rw_remote_repo('0.1.6')
     def test_with_rw_remote_and_rw_repo(self, rw_repo, rw_remote_repo):
         assert not rw_repo.config_reader("repository").getboolean("core", "bare")
