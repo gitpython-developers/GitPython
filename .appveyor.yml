@@ -65,7 +65,8 @@ install:
 build: false
 
 test_script:
-    - "nosetests -v"
+    - nosetests -v
+    - echo OK
 
 #on_success:
 #    - IF "%PYTHON_VERSION%"=="3.4" (coveralls)

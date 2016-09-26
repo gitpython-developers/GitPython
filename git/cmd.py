@@ -43,6 +43,7 @@ from git.compat import (
     is_posix,
     is_win,
 )
+import io
 
 execute_kwargs = ('istream', 'with_keep_cwd', 'with_extended_output',
                   'with_exceptions', 'as_process', 'stdout_as_string',
@@ -271,7 +272,7 @@ class Git(LazyMixin):
 
     # CONFIGURATION
     # The size in bytes read from stdout when copying git's output to another stream
-    max_chunk_size = 1024 * 64
+    max_chunk_size = io.DEFAULT_BUFFER_SIZE
 
     git_exec_name = "git"           # default that should work on linux and windows
     git_exec_name_win = "git.cmd"   # alternate command name, windows only

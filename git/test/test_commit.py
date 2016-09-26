@@ -61,14 +61,14 @@ def assert_commit_serialization(rwrepo, commit_id, print_performance_info=False)
         stream.seek(0)
 
         istream = rwrepo.odb.store(IStream(Commit.type, streamlen, stream))
-        assert istream.hexsha == cm.hexsha.encode('ascii')
+        assert_equal(istream.hexsha, cm.hexsha.encode('ascii'))
 
         nc = Commit(rwrepo, Commit.NULL_BIN_SHA, cm.tree,
                     cm.author, cm.authored_date, cm.author_tz_offset,
                     cm.committer, cm.committed_date, cm.committer_tz_offset,
                     cm.message, cm.parents, cm.encoding)
 
-        assert nc.parents == cm.parents
+        assert_equal(nc.parents, cm.parents)
         stream = BytesIO()
         nc._serialize(stream)
         ns += 1
@@ -82,7 +82,7 @@ def assert_commit_serialization(rwrepo, commit_id, print_performance_info=False)
         nc.binsha = rwrepo.odb.store(istream).binsha
 
         # if it worked, we have exactly the same contents !
-        assert nc.hexsha == cm.hexsha
+        assert_equal(nc.hexsha, cm.hexsha)
     # END check commits
     elapsed = time.time() - st
 
@@ -103,10 +103,10 @@ class TestCommit(TestBase):
 
         assert_equal("Sebastian Thiel", commit.author.name)
         assert_equal("byronimo@gmail.com", commit.author.email)
-        assert commit.author == commit.committer
+        self.assertEqual(commit.author, commit.committer)
         assert isinstance(commit.authored_date, int) and isinstance(commit.committed_date, int)
         assert isinstance(commit.author_tz_offset, int) and isinstance(commit.committer_tz_offset, int)
-        assert commit.message == "Added missing information to docstrings of commit and stats module\n"
+        self.assertEqual(commit.message, "Added missing information to docstrings of commit and stats module\n")
 
     def test_stats(self):
         commit = self.rorepo.commit('33ebe7acec14b25c5f84f35a664803fcab2f7781')
@@ -129,20 +129,20 @@ class TestCommit(TestBase):
 
         # assure data is parsed properly
         michael = Actor._from_string("Michael Trier <mtrier@gmail.com>")
-        assert commit.author == michael
-        assert commit.committer == michael
-        assert commit.authored_date == 1210193388
-        assert commit.committed_date == 1210193388
-        assert commit.author_tz_offset == 14400, commit.author_tz_offset
-        assert commit.committer_tz_offset == 14400, commit.committer_tz_offset
-        assert commit.message == "initial project\n"
+        self.assertEqual(commit.author, michael)
+        self.assertEqual(commit.committer, michael)
+        self.assertEqual(commit.authored_date, 1210193388)
+        self.assertEqual(commit.committed_date, 1210193388)
+        self.assertEqual(commit.author_tz_offset, 14400, commit.author_tz_offset)
+        self.assertEqual(commit.committer_tz_offset, 14400, commit.committer_tz_offset)
+        self.assertEqual(commit.message, "initial project\n")
 
     def test_unicode_actor(self):
         # assure we can parse unicode actors correctly
         name = u"Üäöß ÄußÉ"
-        assert len(name) == 9
+        self.assertEqual(len(name), 9)
         special = Actor._from_string(u"%s <something@this.com>" % name)
-        assert special.name == name
+        self.assertEqual(special.name, name)
         assert isinstance(special.name, text_type)
 
     def test_traversal(self):
@@ -156,44 +156,44 @@ class TestCommit(TestBase):
         # basic branch first, depth first
         dfirst = start.traverse(branch_first=False)
         bfirst = start.traverse(branch_first=True)
-        assert next(dfirst) == p0
-        assert next(dfirst) == p00
+        self.assertEqual(next(dfirst), p0)
+        self.assertEqual(next(dfirst), p00)
 
-        assert next(bfirst) == p0
-        assert next(bfirst) == p1
-        assert next(bfirst) == p00
-        assert next(bfirst) == p10
+        self.assertEqual(next(bfirst), p0)
+        self.assertEqual(next(bfirst), p1)
+        self.assertEqual(next(bfirst), p00)
+        self.assertEqual(next(bfirst), p10)
 
         # at some point, both iterations should stop
-        assert list(bfirst)[-1] == first
+        self.assertEqual(list(bfirst)[-1], first)
         stoptraverse = self.rorepo.commit("254d04aa3180eb8b8daf7b7ff25f010cd69b4e7d").traverse(as_edge=True)
         l = list(stoptraverse)
-        assert len(l[0]) == 2
+        self.assertEqual(len(l[0]), 2)
 
         # ignore self
-        assert next(start.traverse(ignore_self=False)) == start
+        self.assertEqual(next(start.traverse(ignore_self=False)), start)
 
         # depth
-        assert len(list(start.traverse(ignore_self=False, depth=0))) == 1
+        self.assertEqual(len(list(start.traverse(ignore_self=False, depth=0))), 1)
 
         # prune
-        assert next(start.traverse(branch_first=1, prune=lambda i, d: i == p0)) == p1
+        self.assertEqual(next(start.traverse(branch_first=1, prune=lambda i, d: i == p0)), p1)
 
         # predicate
-        assert next(start.traverse(branch_first=1, predicate=lambda i, d: i == p1)) == p1
+        self.assertEqual(next(start.traverse(branch_first=1, predicate=lambda i, d: i == p1)), p1)
 
         # traversal should stop when the beginning is reached
         self.failUnlessRaises(StopIteration, next, first.traverse())
 
         # parents of the first commit should be empty ( as the only parent has a null
         # sha )
-        assert len(first.parents) == 0
+        self.assertEqual(len(first.parents), 0)
 
     def test_iteration(self):
         # we can iterate commits
         all_commits = Commit.list_items(self.rorepo, self.rorepo.head)
         assert all_commits
-        assert all_commits == list(self.rorepo.iter_commits())
+        self.assertEqual(all_commits, list(self.rorepo.iter_commits()))
 
         # this includes merge commits
         mcomit = self.rorepo.commit('d884adc80c80300b4cc05321494713904ef1df2d')
@@ -240,7 +240,7 @@ class TestCommit(TestBase):
         list(rw_repo.iter_commits(rw_repo.head.ref))  # should fail unless bug is fixed
 
     def test_count(self):
-        assert self.rorepo.tag('refs/tags/0.1.5').commit.count() == 143
+        self.assertEqual(self.rorepo.tag('refs/tags/0.1.5').commit.count(), 143)
 
     def test_list(self):
         # This doesn't work anymore, as we will either attempt getattr with bytes, or compare 20 byte string
@@ -270,7 +270,7 @@ class TestCommit(TestBase):
             piter = c.iter_parents(skip=skip)
             first_parent = next(piter)
             assert first_parent != c
-            assert first_parent == c.parents[0]
+            self.assertEqual(first_parent, c.parents[0])
         # END for each
 
     def test_name_rev(self):
@@ -283,7 +283,7 @@ class TestCommit(TestBase):
         assert_commit_serialization(rwrepo, '0.1.6')
 
     def test_serialization_unicode_support(self):
-        assert Commit.default_encoding.lower() == 'utf-8'
+        self.assertEqual(Commit.default_encoding.lower(), 'utf-8')
 
         # create a commit with unicode in the message, and the author's name
         # Verify its serialization and deserialization
@@ -292,10 +292,10 @@ class TestCommit(TestBase):
         assert isinstance(cmt.author.name, text_type)  # same here
 
         cmt.message = u"üäêèß"
-        assert len(cmt.message) == 5
+        self.assertEqual(len(cmt.message), 5)
 
         cmt.author.name = u"äüß"
-        assert len(cmt.author.name) == 3
+        self.assertEqual(len(cmt.author.name), 3)
 
         cstream = BytesIO()
         cmt._serialize(cstream)
@@ -305,8 +305,8 @@ class TestCommit(TestBase):
         ncmt = Commit(self.rorepo, cmt.binsha)
         ncmt._deserialize(cstream)
 
-        assert cmt.author.name == ncmt.author.name
-        assert cmt.message == ncmt.message
+        self.assertEqual(cmt.author.name, ncmt.author.name)
+        self.assertEqual(cmt.message, ncmt.message)
         # actually, it can't be printed in a shell as repr wants to have ascii only
         # it appears
         cmt.author.__repr__()
@@ -315,8 +315,8 @@ class TestCommit(TestBase):
         cmt = self.rorepo.commit()
         cmt._deserialize(open(fixture_path('commit_invalid_data'), 'rb'))
 
-        assert cmt.author.name == u'E.Azer Ko�o�o�oculu', cmt.author.name
-        assert cmt.author.email == 'azer@kodfabrik.com', cmt.author.email
+        self.assertEqual(cmt.author.name, u'E.Azer Ko�o�o�oculu', cmt.author.name)
+        self.assertEqual(cmt.author.email, 'azer@kodfabrik.com', cmt.author.email)
 
     def test_gpgsig(self):
         cmt = self.rorepo.commit()
@@ -339,7 +339,7 @@ BX/otlTa8pNE3fWYBxURvfHnMY4i3HQT7Bc1QjImAhMnyo2vJk4ORBJIZ1FTNIhJ
 JzJMZDRLQLFvnzqZuCjE
 =przd
 -----END PGP SIGNATURE-----"""
-        assert cmt.gpgsig == fixture_sig
+        self.assertEqual(cmt.gpgsig, fixture_sig)
 
         cmt.gpgsig = "<test\ndummy\nsig>"
         assert cmt.gpgsig != fixture_sig
@@ -353,7 +353,7 @@ JzJMZDRLQLFvnzqZuCjE
         cstream.seek(0)
         cmt.gpgsig = None
         cmt._deserialize(cstream)
-        assert cmt.gpgsig == "<test\ndummy\nsig>"
+        self.assertEqual(cmt.gpgsig, "<test\ndummy\nsig>")
 
         cmt.gpgsig = None
         cstream = BytesIO()
@@ -387,9 +387,13 @@ JzJMZDRLQLFvnzqZuCjE
 
     def test_datetimes(self):
         commit = self.rorepo.commit('4251bd5')
-        assert commit.authored_date == 1255018625
-        assert commit.committed_date == 1255026171
-        assert commit.authored_datetime == datetime(2009, 10, 8, 18, 17, 5, tzinfo=tzoffset(-7200)), commit.authored_datetime  # noqa
-        assert commit.authored_datetime == datetime(2009, 10, 8, 16, 17, 5, tzinfo=utc), commit.authored_datetime
-        assert commit.committed_datetime == datetime(2009, 10, 8, 20, 22, 51, tzinfo=tzoffset(-7200))
-        assert commit.committed_datetime == datetime(2009, 10, 8, 18, 22, 51, tzinfo=utc), commit.committed_datetime
+        self.assertEqual(commit.authored_date, 1255018625)
+        self.assertEqual(commit.committed_date, 1255026171)
+        self.assertEqual(commit.authored_datetime,
+                         datetime(2009, 10, 8, 18, 17, 5, tzinfo=tzoffset(-7200)), commit.authored_datetime)  # noqa
+        self.assertEqual(commit.authored_datetime,
+                         datetime(2009, 10, 8, 16, 17, 5, tzinfo=utc), commit.authored_datetime)
+        self.assertEqual(commit.committed_datetime,
+                         datetime(2009, 10, 8, 20, 22, 51, tzinfo=tzoffset(-7200)))
+        self.assertEqual(commit.committed_datetime,
+                         datetime(2009, 10, 8, 18, 22, 51, tzinfo=utc), commit.committed_datetime)

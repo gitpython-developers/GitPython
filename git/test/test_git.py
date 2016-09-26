@@ -240,7 +240,6 @@ class TestGit(TestBase):
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE,
                                 shell=False,
-                                universal_newlines=True,
                                 creationflags=cmd.PROC_CREATIONFLAGS,
                                 )
 

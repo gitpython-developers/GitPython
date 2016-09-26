@@ -253,7 +253,7 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
 
             finally:
                 if gd is not None:
-                    gd.proc.terminate()
+                    gd.proc.kill()
 
                 import gc
                 gc.collect()
