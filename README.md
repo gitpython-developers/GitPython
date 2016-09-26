@@ -61,9 +61,17 @@ as they are kept alive solely by their users, or not.
 
 ### RUNNING TESTS
 
-*Important*: Right after cloning this repository, please be sure to have executed the `./init-tests-after-clone.sh` script in the repository root. Otherwise you will encounter test failures.
+*Important*: Right after cloning this repository, please be sure to have executed
+the `./init-tests-after-clone.sh` script in the repository root. Otherwise
+you will encounter test failures.
 
-The easiest way to run test is by using [tox](https://pypi.python.org/pypi/tox) a wrapper around virtualenv. It will take care of setting up environnements with the proper dependencies installed and execute test commands. To install it simply:
+On *Windows*, make sure you have `git-daemon` in your PATH.  For MINGW-git, the `git-daemon.exe`
+exists in `Git\mingw64\libexec\git-core\`; CYGWIN has no daemon, but should get along fine
+with MINGW's.
+
+The easiest way to run tests is by using [tox](https://pypi.python.org/pypi/tox)
+a wrapper around virtualenv. It will take care of setting up environnements with the proper
+dependencies installed and execute test commands. To install it simply:
 
     pip install tox
 

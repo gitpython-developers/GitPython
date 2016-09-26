@@ -4,6 +4,7 @@ environment:
     matrix:
       - PYTHON: "C:\\Python27"
         PYTHON_VERSION: "2.7"
+        GIT_PATH: "C:\\Program Files\\Git\\mingw64\\libexec\\git-core"
       - PYTHON: "C:\\Miniconda"
         PYTHON_VERSION: "2.7"
         IS_CONDA: "yes"
@@ -12,12 +13,14 @@ environment:
       - PYTHON: "C:\\Miniconda3-x64"
         PYTHON_VERSION: "3.4"
         IS_CONDA: "yes"
+        GIT_PATH: "C:\\Program Files\\Git\\mingw64\\libexec\\git-core"
       - PYTHON: "C:\\Python34"
         PYTHON_VERSION: "3.4"
         GIT_PATH: "C:\\cygwin64\\bin"
 
       - PYTHON: "C:\\Python35-x64"
         PYTHON_VERSION: "3.5"
+        GIT_PATH: "C:\\Program Files\\Git\\mingw64\\libexec\\git-core"
       - PYTHON: "C:\\Python35-x64"
         PYTHON_VERSION: "3.5"
         GIT_PATH: "C:\\cygwin64\\bin"
@@ -29,8 +32,7 @@ install:
     #
     - |
         uname -a
-        where git
-        where python pip
+        where git git-daemon python pip
         python --version
         python -c "import struct; print(struct.calcsize('P') * 8)"
 

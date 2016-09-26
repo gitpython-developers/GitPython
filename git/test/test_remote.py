@@ -26,8 +26,7 @@ from git import (
     GitCommandError
 )
 from git.util import IterableList
-from git.compat import string_types, is_win
-from unittest import skipIf
+from git.compat import string_types
 import tempfile
 import shutil
 import os
@@ -100,7 +99,6 @@ class TestRemoteProgress(RemoteProgress):
         assert self._num_progress_messages
 
 
-@skipIf(is_win(), "git-daemon proc stuck on Appveyor!")
 class TestRemote(TestBase):
 
     def tearDown(self):

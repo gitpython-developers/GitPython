@@ -140,6 +140,28 @@ def with_rw_repo(working_tree_ref, bare=False):
     return argument_passer
 
 
+def launch_git_daemon(temp_dir, ip, port):
+    if is_win():
+        ## On MINGW-git, daemon exists in .\Git\mingw64\libexec\git-core\,
+        #  but if invoked as 'git daemon', it detaches from parent `git` cmd,
+        #  and then CANNOT DIE!
+        #  So, invoke it as a single command.
+        ## Cygwin-git has no daemon.
+        #
+        daemon_cmd = ['git-daemon', temp_dir,
+                      '--enable=receive-pack',
+                      '--listen=%s' % ip,
+                      '--port=%s' % port]
+        gd = Git().execute(daemon_cmd, as_process=True)
+    else:
+        gd = Git().daemon(temp_dir,
+                          enable='receive-pack',
+                          listen=ip,
+                          port=port,
+                          as_process=True)
+    return gd
+
+
 def with_rw_and_rw_remote_repo(working_tree_ref):
     """
     Same as with_rw_repo, but also provides a writable remote repository from which the
@@ -167,6 +189,7 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
     assert isinstance(working_tree_ref, string_types), "Decorator requires ref name for working tree checkout"
 
     def argument_passer(func):
+
         def remote_repo_creator(self):
             remote_repo_dir = _mktemp("remote_repo_%s" % func.__name__)
             repo_dir = _mktemp("remote_clone_non_bare_repo")
@@ -202,9 +225,7 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
             d_remote.config_writer.set('url', remote_repo_url)
 
             temp_dir = osp(_mktemp())
-            # On MINGW-git, daemon exists, in Cygwin-git, this will fail.
-            gd = Git().daemon(temp_dir, enable='receive-pack', listen='127.0.0.1', port=GIT_DAEMON_PORT,
-                              as_process=True)
+            gd = launch_git_daemon(temp_dir, '127.0.0.1', GIT_DAEMON_PORT)
             try:
                 # yes, I know ... fortunately, this is always going to work if sleep time is just large enough
                 time.sleep(0.5)
@@ -223,8 +244,10 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
                                 rw_repo.git_dir, e)
                     if is_win():
                         msg = textwrap.dedent("""
-                        MINGW yet has problems with paths, CYGWIN additionally is missing `git-daemon`
-                        needed to run this test.  Anyhow, try starting `git-daemon` manually:""")
+                        MINGW yet has problems with paths, and `git-daemon.exe` must be in PATH
+                        (look into .\Git\mingw64\libexec\git-core\);
+                        CYGWIN has no daemon, but if one exists, it gets along fine (has also paths problems)
+                        Anyhow, alternatively try starting `git-daemon` manually:""")
                     else:
                         msg = "Please try starting `git-daemon` manually:"
 
@@ -233,7 +256,8 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
                     You can also run the daemon on a different port by passing --port=<port>"
                     and setting the environment variable GIT_PYTHON_TEST_GIT_DAEMON_PORT to <port>
                     """ % temp_dir)
-                    raise AssertionError(msg)
+                    from nose import SkipTest
+                    raise SkipTest(msg) if is_win else AssertionError(msg)
                     # END make assertion
                 # END catch ls remote error
 
