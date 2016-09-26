@@ -70,9 +70,10 @@ class TestDiff(TestBase):
         self.failUnlessRaises(GitCommandError, r.git.cherry_pick, 'master')
 
         # Now do the actual testing - this should just work
-        assert len(r.index.diff(None)) == 2
+        self.assertEqual(len(r.index.diff(None)), 2)
 
-        assert len(r.index.diff(None, create_patch=True)) == 0, "This should work, but doesn't right now ... it's OK"
+        self.assertEqual(len(r.index.diff(None, create_patch=True)), 0,
+                         "This should work, but doesn't right now ... it's OK")
 
     def test_list_from_string_new_mode(self):
         output = StringProcessAdapter(fixture('diff_new_mode'))
@@ -100,41 +101,43 @@ class TestDiff(TestBase):
 
         output = StringProcessAdapter(fixture('diff_rename_raw'))
         diffs = Diff._index_from_raw_format(self.rorepo, output.stdout)
-        assert len(diffs) == 1
+        self.assertEqual(len(diffs), 1)
         diff = diffs[0]
-        assert diff.renamed_file
-        assert diff.renamed
-        assert diff.rename_from == 'this'
-        assert diff.rename_to == 'that'
-        assert len(list(diffs.iter_change_type('R'))) == 1
+        self.assertIsNotNone(diff.renamed_file)
+        self.assertIsNotNone(diff.renamed)
+        self.assertEqual(diff.rename_from, 'this')
+        self.assertEqual(diff.rename_to, 'that')
+        self.assertEqual(len(list(diffs.iter_change_type('R'))), 1)
 
     def test_diff_of_modified_files_not_added_to_the_index(self):
         output = StringProcessAdapter(fixture('diff_abbrev-40_full-index_M_raw_no-color'))
         diffs = Diff._index_from_raw_format(self.rorepo, output.stdout)
 
-        assert len(diffs) == 1, 'one modification'
-        assert len(list(diffs.iter_change_type('M'))) == 1, 'one modification'
-        assert diffs[0].change_type == 'M'
-        assert diffs[0].b_blob is None
+        self.assertEqual(len(diffs), 1, 'one modification')
+        self.assertEqual(len(list(diffs.iter_change_type('M'))), 1, 'one modification')
+        self.assertEqual(diffs[0].change_type, 'M')
+        self.assertIsNone(diffs[0].b_blob,)
 
     def test_binary_diff(self):
         for method, file_name in ((Diff._index_from_patch_format, 'diff_patch_binary'),
                                   (Diff._index_from_raw_format, 'diff_raw_binary')):
             res = method(None, StringProcessAdapter(fixture(file_name)).stdout)
-            assert len(res) == 1
-            assert len(list(res.iter_change_type('M'))) == 1
+            self.assertEqual(len(res), 1)
+            self.assertEqual(len(list(res.iter_change_type('M'))), 1)
             if res[0].diff:
-                assert res[0].diff == b"Binary files a/rps and b/rps differ\n", "in patch mode, we get a diff text"
-                assert str(res[0]), "This call should just work"
+                self.assertEqual(res[0].diff,
+                                 b"Binary files a/rps and b/rps differ\n",
+                                 "in patch mode, we get a diff text")
+                self.assertIsNotNone(str(res[0]), "This call should just work")
         # end for each method to test
 
     def test_diff_index(self):
         output = StringProcessAdapter(fixture('diff_index_patch'))
         res = Diff._index_from_patch_format(None, output.stdout)
-        assert len(res) == 6
+        self.assertEqual(len(res), 6)
         for dr in res:
-            assert dr.diff.startswith(b'@@')
-            assert str(dr), "Diff to string conversion should be possible"
+            self.assertTrue(dr.diff.startswith(b'@@'), dr)
+            self.assertIsNotNone(str(dr), "Diff to string conversion should be possible")
         # end for each diff
 
         dr = res[3]
@@ -143,24 +146,24 @@ class TestDiff(TestBase):
     def test_diff_index_raw_format(self):
         output = StringProcessAdapter(fixture('diff_index_raw'))
         res = Diff._index_from_raw_format(None, output.stdout)
-        assert res[0].deleted_file
-        assert res[0].b_path is None
+        self.assertIsNotNone(res[0].deleted_file)
+        self.assertIsNone(res[0].b_path,)
 
     def test_diff_initial_commit(self):
         initial_commit = self.rorepo.commit('33ebe7acec14b25c5f84f35a664803fcab2f7781')
 
         # Without creating a patch...
         diff_index = initial_commit.diff(NULL_TREE)
-        assert diff_index[0].b_path == 'CHANGES'
-        assert diff_index[0].new_file
-        assert diff_index[0].diff == ''
+        self.assertEqual(diff_index[0].b_path, 'CHANGES')
+        self.assertIsNotNone(diff_index[0].new_file)
+        self.assertEqual(diff_index[0].diff, '')
 
         # ...and with creating a patch
         diff_index = initial_commit.diff(NULL_TREE, create_patch=True)
-        assert diff_index[0].a_path is None, repr(diff_index[0].a_path)
-        assert diff_index[0].b_path == 'CHANGES', repr(diff_index[0].b_path)
-        assert diff_index[0].new_file
-        assert diff_index[0].diff == fixture('diff_initial')
+        self.assertIsNone(diff_index[0].a_path, repr(diff_index[0].a_path))
+        self.assertEqual(diff_index[0].b_path, 'CHANGES', repr(diff_index[0].b_path))
+        self.assertIsNotNone(diff_index[0].new_file)
+        self.assertEqual(diff_index[0].diff, fixture('diff_initial'))
 
     def test_diff_unsafe_paths(self):
         output = StringProcessAdapter(fixture('diff_patch_unsafe_paths'))
@@ -206,8 +209,8 @@ class TestDiff(TestBase):
     def test_diff_with_spaces(self):
         data = StringProcessAdapter(fixture('diff_file_with_spaces'))
         diff_index = Diff._index_from_patch_format(self.rorepo, data.stdout)
-        assert diff_index[0].a_path is None, repr(diff_index[0].a_path)
-        assert diff_index[0].b_path == u'file with spaces', repr(diff_index[0].b_path)
+        self.assertIsNone(diff_index[0].a_path, repr(diff_index[0].a_path))
+        self.assertEqual(diff_index[0].b_path, u'file with spaces', repr(diff_index[0].b_path))
 
     def test_diff_interface(self):
         # test a few variations of the main diff routine
@@ -236,12 +239,12 @@ class TestDiff(TestBase):
                             diff_set = set()
                             diff_set.add(diff_index[0])
                             diff_set.add(diff_index[0])
-                            assert len(diff_set) == 1
-                            assert diff_index[0] == diff_index[0]
-                            assert not (diff_index[0] != diff_index[0])
+                            self.assertEqual(len(diff_set), 1)
+                            self.assertEqual(diff_index[0], diff_index[0])
+                            self.assertFalse(diff_index[0] != diff_index[0])
 
                             for dr in diff_index:
-                                assert str(dr), "Diff to string conversion should be possible"
+                                self.assertIsNotNone(str(dr), "Diff to string conversion should be possible")
                         # END diff index checking
                     # END for each patch option
                 # END for each path option
@@ -252,11 +255,11 @@ class TestDiff(TestBase):
         # can iterate in the diff index - if not this indicates its not working correctly
         # or our test does not span the whole range of possibilities
         for key, value in assertion_map.items():
-            assert value, "Did not find diff for %s" % key
+            self.assertIsNotNone(value, "Did not find diff for %s" % key)
         # END for each iteration type
 
         # test path not existing in the index - should be ignored
         c = self.rorepo.head.commit
         cp = c.parents[0]
         diff_index = c.diff(cp, ["does/not/exist"])
-        assert len(diff_index) == 0
+        self.assertEqual(len(diff_index), 0)

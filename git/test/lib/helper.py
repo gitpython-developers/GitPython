@@ -219,7 +219,7 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
                 # Of course we expect it to work here already, but maybe there are timing constraints
                 # on some platforms ?
                 if gd is not None:
-                    os.kill(gd.proc.pid, 15)
+                    gd.proc.terminate()
                 log.warning('git-ls-remote failed due to: %s(%s)', type(e), e)
                 if os.name == 'nt':
                     msg = "git-daemon needs to run this test, but windows does not have one. "
@@ -246,9 +246,8 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
                     repo_dir = remote_repo_dir = None
                     raise
             finally:
-                # gd.proc.kill() ... no idea why that doesn't work
                 if gd is not None:
-                    os.kill(gd.proc.pid, 15)
+                    gd.proc.terminate()
 
                 os.chdir(prev_cwd)
                 rw_repo.git.clear_cache()
