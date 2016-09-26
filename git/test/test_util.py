@@ -27,6 +27,7 @@ from git.cmd import dashify
 from git.compat import string_types
 
 import time
+import sys
 
 
 class TestIterableMember(object):
@@ -90,7 +91,11 @@ class TestUtils(TestBase):
         wait_lock = BlockingLockFile(my_file, 0.05, wait_time)
         self.failUnlessRaises(IOError, wait_lock._obtain_lock)
         elapsed = time.time() - start
-        assert elapsed <= wait_time + 0.02, elapsed  # some extra time it may cost
+        # More extra time costs, but...
+        extra_time = 0.2
+        if sys.platform == 'win32':
+            extra_time *= 4
+        self.assertLess(elapsed, wait_time + 0.02)
 
     def test_user_id(self):
         assert '@' in get_user_id()

@@ -239,6 +239,8 @@ class TestGit(TestBase):
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE,
                                 shell=False,
+                                universal_newlines=True,
+                                creationflags=Git.CREATE_NO_WINDOW if sys.platform == 'win32' else 0,
                                 )
 
         handle_process_output(proc, counter_stdout, counter_stderr, lambda proc: proc.wait())

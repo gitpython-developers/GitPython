@@ -12,9 +12,11 @@ from stat import (
 
 from io import BytesIO
 import os
+import sys
 import subprocess
 
 from git.util import IndexFileSHA1Writer
+from git.cmd import Git
 from git.exc import (
     UnmergedEntriesError,
     HookExecutionError
@@ -74,7 +76,9 @@ def run_commit_hook(name, index):
                            stdout=subprocess.PIPE,
                            stderr=subprocess.PIPE,
                            cwd=index.repo.working_dir,
-                           close_fds=(os.name == 'posix'))
+                           close_fds=(os.name == 'posix'),
+                           universal_newlines=True,
+                           creationflags=Git.CREATE_NO_WINDOW if sys.platform == 'win32' else 0,)
     stdout, stderr = cmd.communicate()
     cmd.stdout.close()
     cmd.stderr.close()

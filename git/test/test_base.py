@@ -7,6 +7,7 @@
 import os
 import sys
 import tempfile
+from unittest import skipIf
 
 import git.objects.base as base
 from git.test.lib import (
@@ -116,6 +117,8 @@ class TestBase(TestBase):
         assert rw_remote_repo.config_reader("repository").getboolean("core", "bare")
         assert os.path.isdir(os.path.join(rw_repo.working_tree_dir, 'lib'))
 
+    @skipIf(sys.version_info < (3, ) and os.name == 'nt',
+            "Unicode woes, see https://github.com/gitpython-developers/GitPython/pull/519")
     @with_rw_repo('0.1.6')
     def test_add_unicode(self, rw_repo):
         filename = u"שלום.txt"
