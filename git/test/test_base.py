@@ -24,6 +24,7 @@ from git import (
 )
 from git.objects.util import get_object_type_by_name
 from gitdb.util import hex_to_bin
+from git.compat import is_win
 
 
 class TestBase(TestBase):
@@ -117,7 +118,7 @@ class TestBase(TestBase):
         assert rw_remote_repo.config_reader("repository").getboolean("core", "bare")
         assert os.path.isdir(os.path.join(rw_repo.working_tree_dir, 'lib'))
 
-    @skipIf(sys.version_info < (3, ) and os.name == 'nt',
+    @skipIf(sys.version_info < (3,) and is_win(),
             "Unicode woes, see https://github.com/gitpython-developers/GitPython/pull/519")
     @with_rw_repo('0.1.6')
     def test_add_unicode(self, rw_repo):
@@ -134,7 +135,7 @@ class TestBase(TestBase):
 
         open(file_path, "wb").write(b'something')
 
-        if os.name == 'nt':
+        if is_win():
             # on windows, there is no way this works, see images on
             # https://github.com/gitpython-developers/GitPython/issues/147#issuecomment-68881897
             # Therefore, it must be added using the python implementation

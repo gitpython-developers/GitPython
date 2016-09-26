@@ -26,7 +26,7 @@ from git import (
 )
 from gitdb.test.lib import with_rw_directory
 
-from git.compat import PY3
+from git.compat import PY3, is_darwin
 
 try:
     from unittest import mock
@@ -214,7 +214,7 @@ class TestGit(TestBase):
                 try:
                     remote.fetch()
                 except GitCommandError as err:
-                    if sys.version_info[0] < 3 and sys.platform == 'darwin':
+                    if sys.version_info[0] < 3 and is_darwin():
                         assert 'ssh-origin' in str(err)
                         assert err.status == 128
                     else:

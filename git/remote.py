@@ -6,7 +6,6 @@
 
 # Module implementing a remote object allowing easy access to git remotes
 import re
-import os
 
 from .config import (
     SectionConstraint,
@@ -32,7 +31,7 @@ from git.util import (
 )
 from git.cmd import handle_process_output
 from gitdb.util import join
-from git.compat import (defenc, force_text)
+from git.compat import (defenc, force_text, is_win)
 import logging
 
 log = logging.getLogger('git.remote')
@@ -113,7 +112,7 @@ class PushInfo(object):
         self._remote = remote
         self._old_commit_sha = old_commit
         self.summary = summary
-        
+
     @property
     def old_commit(self):
         return self._old_commit_sha and self._remote.repo.commit(self._old_commit_sha) or None
@@ -377,7 +376,7 @@ class Remote(LazyMixin, Iterable):
         self.repo = repo
         self.name = name
 
-        if os.name == 'nt':
+        if is_win():
             # some oddity: on windows, python 2.5, it for some reason does not realize
             # that it has the config_writer property, but instead calls __getattr__
             # which will not yield the expected results. 'pinging' the members
@@ -635,7 +634,7 @@ class Remote(LazyMixin, Iterable):
         # end
         if progress.error_lines():
             stderr_text = '\n'.join(progress.error_lines())
-            
+
         finalize_process(proc, stderr=stderr_text)
 
         # read head information
@@ -657,7 +656,7 @@ class Remote(LazyMixin, Iterable):
                 fetch_info_lines = fetch_info_lines[:l_fhi]
             # end truncate correct list
         # end sanity check + sanitization
-        
+
         output.extend(FetchInfo._from_line(self.repo, err_line, fetch_line)
                       for err_line, fetch_line in zip(fetch_info_lines, fetch_head_info))
         return output
@@ -769,17 +768,17 @@ class Remote(LazyMixin, Iterable):
         :param refspec: see 'fetch' method
         :param progress:
             Can take one of many value types:
-            
+
             * None to discard progress information
             * A function (callable) that is called with the progress infomation.
-            
+
               Signature: ``progress(op_code, cur_count, max_count=None, message='')``.
-              
+
              `Click here <http://goo.gl/NPa7st>`_ for a description of all arguments
               given to the function.
             * An instance of a class derived from ``git.RemoteProgress`` that
               overrides the ``update()`` function.
-              
+
         :note: No further progress information is returned after push returns.
         :param kwargs: Additional arguments to be passed to git-push
         :return:

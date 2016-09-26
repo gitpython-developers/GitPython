@@ -13,7 +13,7 @@ import io
 import logging
 
 from git import Repo, Remote, GitCommandError, Git
-from git.compat import string_types
+from git.compat import string_types, is_win
 
 osp = os.path.dirname
 
@@ -73,7 +73,7 @@ def _mktemp(*args):
     prefixing /private/ will lead to incorrect paths on OSX."""
     tdir = tempfile.mktemp(*args)
     # See :note: above to learn why this is comented out.
-    # if sys.platform == 'darwin':
+    # if is_darwin():
     #     tdir = '/private' + tdir
     return tdir
 
@@ -83,7 +83,7 @@ def _rmtree_onerror(osremove, fullpath, exec_info):
     Handle the case on windows that read-only files cannot be deleted by
     os.remove by setting it to mode 777, then retry deletion.
     """
-    if os.name != 'nt' or osremove is not os.remove:
+    if is_win() or osremove is not os.remove:
         raise
 
     os.chmod(fullpath, 0o777)
@@ -221,7 +221,7 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
                 if gd is not None:
                     gd.proc.terminate()
                 log.warning('git-ls-remote failed due to: %s(%s)', type(e), e)
-                if os.name == 'nt':
+                if is_win():
                     msg = "git-daemon needs to run this test, but windows does not have one. "
                     msg += 'Otherwise, run: git-daemon "%s"' % temp_dir
                     raise AssertionError(msg)

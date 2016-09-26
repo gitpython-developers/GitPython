@@ -43,7 +43,8 @@ from gitdb.typ import str_tree_type
 from git.compat import (
     defenc,
     force_text,
-    force_bytes
+    force_bytes,
+    is_posix,
 )
 
 S_IFGITLINK = S_IFLNK | S_IFDIR     # a submodule
@@ -75,7 +76,7 @@ def run_commit_hook(name, index):
                            stdout=subprocess.PIPE,
                            stderr=subprocess.PIPE,
                            cwd=index.repo.working_dir,
-                           close_fds=(os.name == 'posix'),
+                           close_fds=(is_posix()),
                            universal_newlines=True,
                            creationflags=PROC_CREATIONFLAGS,)
     stdout, stderr = cmd.communicate()

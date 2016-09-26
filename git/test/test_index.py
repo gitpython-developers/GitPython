@@ -27,7 +27,7 @@ from git import (
     GitCommandError,
     CheckoutError,
 )
-from git.compat import string_types
+from git.compat import string_types, is_win
 from gitdb.util import hex_to_bin
 import os
 import sys
@@ -577,7 +577,7 @@ class TestIndex(TestBase):
         assert len(entries) == 1 and entries[0].hexsha != null_hex_sha
 
         # add symlink
-        if sys.platform != "win32":
+        if not is_win():
             for target in ('/etc/nonexisting', '/etc/passwd', '/etc'):
                 basename = "my_real_symlink"
 
@@ -630,7 +630,7 @@ class TestIndex(TestBase):
         index.checkout(fake_symlink_path)
 
         # on windows we will never get symlinks
-        if os.name == 'nt':
+        if is_win():
             # simlinks should contain the link as text ( which is what a
             # symlink actually is )
             open(fake_symlink_path, 'rb').read() == link_target
@@ -711,7 +711,7 @@ class TestIndex(TestBase):
             assert fkey not in index.entries
 
         index.add(files, write=True)
-        if os.name != 'nt':
+        if is_win():
             hp = hook_path('pre-commit', index.repo.git_dir)
             hpd = os.path.dirname(hp)
             if not os.path.isdir(hpd):

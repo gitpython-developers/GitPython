@@ -7,6 +7,7 @@
 """utilities to help provide compatibility with python 3"""
 # flake8: noqa
 
+import os
 import sys
 
 from gitdb.utils.compat import (
@@ -79,3 +80,16 @@ def with_metaclass(meta, *bases):
     # end metaclass
     return metaclass(meta.__name__ + 'Helper', None, {})
     # end handle py2
+
+
+def is_win():
+    return os.name == 'nt'
+
+
+def is_posix():
+    return os.name == 'posix'
+
+
+def is_darwin():
+    return os.name == 'darwin'
+

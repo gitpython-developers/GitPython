@@ -40,6 +40,8 @@ from git.compat import (
     # just to satisfy flake8 on py3
     unicode,
     safe_decode,
+    is_posix,
+    is_win,
 )
 
 execute_kwargs = ('istream', 'with_keep_cwd', 'with_extended_output',
@@ -50,9 +52,9 @@ execute_kwargs = ('istream', 'with_keep_cwd', 'with_extended_output',
 log = logging.getLogger('git.cmd')
 log.addHandler(logging.NullHandler())
 
-__all__ = ('Git', )
+__all__ = ('Git',)
 
-if sys.platform != 'win32':
+if is_win():
     WindowsError = OSError
 
 if PY3:
@@ -236,7 +238,7 @@ CREATE_NO_WINDOW = 0x08000000
 ## CREATE_NEW_PROCESS_GROUP is needed to allow killing it afterwards,
 # seehttps://docs.python.org/3/library/subprocess.html#subprocess.Popen.send_signal
 PROC_CREATIONFLAGS = (CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP
-                      if sys.platform == 'win32'
+                      if is_win()
                       else 0)
 
 
@@ -628,7 +630,7 @@ class Git(LazyMixin):
         env["LC_ALL"] = "C"
         env.update(self._environment)
 
-        if sys.platform == 'win32':
+        if is_win():
             cmd_not_found_exception = WindowsError
             if kill_after_timeout:
                 raise GitCommandError('"kill_after_timeout" feature is not supported on Windows.')
@@ -648,7 +650,7 @@ class Git(LazyMixin):
                          stderr=PIPE,
                          stdout=PIPE if with_stdout else open(os.devnull, 'wb'),
                          shell=self.USE_SHELL,
-                         close_fds=(os.name == 'posix'),  # unsupported on windows
+                         close_fds=(is_posix()),  # unsupported on windows
                          universal_newlines=universal_newlines,
                          creationflags=PROC_CREATIONFLAGS,
                          **subprocess_kwargs
@@ -688,7 +690,7 @@ class Git(LazyMixin):
 
         if kill_after_timeout:
             kill_check = threading.Event()
-            watchdog = threading.Timer(kill_after_timeout, _kill_process, args=(proc.pid, ))
+            watchdog = threading.Timer(kill_after_timeout, _kill_process, args=(proc.pid,))
 
         # Wait for the process to return
         status = 0
@@ -932,7 +934,7 @@ class Git(LazyMixin):
             return call
         # END utility to recreate call after changes
 
-        if sys.platform == 'win32':
+        if is_win():
             try:
                 try:
                     return self.execute(make_call(), **_kwargs)

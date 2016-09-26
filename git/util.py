@@ -6,7 +6,6 @@
 
 import os
 import re
-import sys
 import time
 import stat
 import shutil
@@ -26,7 +25,7 @@ from .compat import (
 
 # Most of these are unused here, but are for use by git-python modules so these
 # don't see gitdb all the time. Flake of course doesn't like it.
-from gitdb.util import (  # NOQA
+from gitdb.util import (# NOQA
     make_sha,
     LockedFD,
     file_contents_ro,
@@ -34,6 +33,7 @@ from gitdb.util import (  # NOQA
     to_hex_sha,
     to_bin_sha
 )
+from git.compat import is_win
 
 __all__ = ("stream_copy", "join_path", "to_native_path_windows", "to_native_path_linux",
            "join_path_native", "Stats", "IndexFileSHA1Writer", "Iterable", "IterableList",
@@ -106,7 +106,7 @@ def join_path(a, *p):
     return path
 
 
-if sys.platform.startswith('win'):
+if is_win():
     def to_native_path_windows(path):
         return path.replace('/', '\\')
 
@@ -587,7 +587,7 @@ class LockFile(object):
         try:
             # on bloody windows, the file needs write permissions to be removable.
             # Why ...
-            if os.name == 'nt':
+            if is_win():
                 os.chmod(lfp, 0o777)
             # END handle win32
             os.remove(lfp)

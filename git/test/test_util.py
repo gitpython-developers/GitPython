@@ -24,10 +24,9 @@ from git.objects.util import (
     parse_date,
 )
 from git.cmd import dashify
-from git.compat import string_types
+from git.compat import string_types, is_win
 
 import time
-import sys
 
 
 class TestIterableMember(object):
@@ -93,7 +92,7 @@ class TestUtils(TestBase):
         elapsed = time.time() - start
         # More extra time costs, but...
         extra_time = 0.2
-        if sys.platform == 'win32':
+        if is_win():
             extra_time *= 4
         self.assertLess(elapsed, wait_time + 0.02)
 

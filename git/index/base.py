@@ -46,7 +46,8 @@ from git.compat import (
     string_types,
     force_bytes,
     defenc,
-    mviter
+    mviter,
+    is_win
 )
 
 from git.util import (
@@ -136,7 +137,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             # which happens during read-tree.
             # In this case, we will just read the memory in directly.
             # Its insanely bad ... I am disappointed !
-            allow_mmap = (os.name != 'nt' or sys.version_info[1] > 5)
+            allow_mmap = (is_win() or sys.version_info[1] > 5)
             stream = file_contents_ro(fd, stream=True, allow_mmap=allow_mmap)
 
             try:
@@ -1059,7 +1060,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
                 # END for each possible ending
             # END for each line
             if unknown_lines:
-                raise GitCommandError(("git-checkout-index", ), 128, stderr)
+                raise GitCommandError(("git-checkout-index",), 128, stderr)
             if failed_files:
                 valid_files = list(set(iter_checked_out_files) - set(failed_files))
                 raise CheckoutError(
