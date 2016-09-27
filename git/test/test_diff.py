@@ -79,7 +79,7 @@ class TestDiff(TestBase):
 
     def test_list_from_string_new_mode(self):
         output = StringProcessAdapter(fixture('diff_new_mode'))
-        diffs = Diff._index_from_patch_format(self.rorepo, output.stdout)
+        diffs = Diff._index_from_patch_format(self.rorepo, output)
         self._assert_diff_format(diffs)
 
         assert_equal(1, len(diffs))
@@ -87,7 +87,7 @@ class TestDiff(TestBase):
 
     def test_diff_with_rename(self):
         output = StringProcessAdapter(fixture('diff_rename'))
-        diffs = Diff._index_from_patch_format(self.rorepo, output.stdout)
+        diffs = Diff._index_from_patch_format(self.rorepo, output)
         self._assert_diff_format(diffs)
 
         assert_equal(1, len(diffs))
@@ -102,7 +102,7 @@ class TestDiff(TestBase):
         assert isinstance(str(diff), str)
 
         output = StringProcessAdapter(fixture('diff_rename_raw'))
-        diffs = Diff._index_from_raw_format(self.rorepo, output.stdout)
+        diffs = Diff._index_from_raw_format(self.rorepo, output)
         self.assertEqual(len(diffs), 1)
         diff = diffs[0]
         self.assertIsNotNone(diff.renamed_file)
@@ -113,7 +113,7 @@ class TestDiff(TestBase):
 
     def test_diff_of_modified_files_not_added_to_the_index(self):
         output = StringProcessAdapter(fixture('diff_abbrev-40_full-index_M_raw_no-color'))
-        diffs = Diff._index_from_raw_format(self.rorepo, output.stdout)
+        diffs = Diff._index_from_raw_format(self.rorepo, output)
 
         self.assertEqual(len(diffs), 1, 'one modification')
         self.assertEqual(len(list(diffs.iter_change_type('M'))), 1, 'one modification')
@@ -126,7 +126,7 @@ class TestDiff(TestBase):
     )
     def test_binary_diff(self, case):
         method, file_name = case
-        res = method(None, StringProcessAdapter(fixture(file_name)).stdout)
+        res = method(None, StringProcessAdapter(fixture(file_name)))
         self.assertEqual(len(res), 1)
         self.assertEqual(len(list(res.iter_change_type('M'))), 1)
         if res[0].diff:
@@ -137,7 +137,7 @@ class TestDiff(TestBase):
 
     def test_diff_index(self):
         output = StringProcessAdapter(fixture('diff_index_patch'))
-        res = Diff._index_from_patch_format(None, output.stdout)
+        res = Diff._index_from_patch_format(None, output)
         self.assertEqual(len(res), 6)
         for dr in res:
             self.assertTrue(dr.diff.startswith(b'@@'), dr)
@@ -149,7 +149,7 @@ class TestDiff(TestBase):
 
     def test_diff_index_raw_format(self):
         output = StringProcessAdapter(fixture('diff_index_raw'))
-        res = Diff._index_from_raw_format(None, output.stdout)
+        res = Diff._index_from_raw_format(None, output)
         self.assertIsNotNone(res[0].deleted_file)
         self.assertIsNone(res[0].b_path,)
 
@@ -171,7 +171,7 @@ class TestDiff(TestBase):
 
     def test_diff_unsafe_paths(self):
         output = StringProcessAdapter(fixture('diff_patch_unsafe_paths'))
-        res = Diff._index_from_patch_format(None, output.stdout)
+        res = Diff._index_from_patch_format(None, output)
 
         # The "Additions"
         self.assertEqual(res[0].b_path, u'path/ starting with a space')
@@ -207,12 +207,12 @@ class TestDiff(TestBase):
 
         for fixture_name in fixtures:
             diff_proc = StringProcessAdapter(fixture(fixture_name))
-            Diff._index_from_patch_format(self.rorepo, diff_proc.stdout)
+            Diff._index_from_patch_format(self.rorepo, diff_proc)
         # END for each fixture
 
     def test_diff_with_spaces(self):
         data = StringProcessAdapter(fixture('diff_file_with_spaces'))
-        diff_index = Diff._index_from_patch_format(self.rorepo, data.stdout)
+        diff_index = Diff._index_from_patch_format(self.rorepo, data)
         self.assertIsNone(diff_index[0].a_path, repr(diff_index[0].a_path))
         self.assertEqual(diff_index[0].b_path, u'file with spaces', repr(diff_index[0].b_path))
 
