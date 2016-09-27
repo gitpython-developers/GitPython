@@ -35,7 +35,7 @@ install:
     #
     - |
         uname -a
-        where git git-daemon python pip
+        where git git-daemon python pip pip3 pip34
         python --version
         python -c "import struct; print(struct.calcsize('P') * 8)"
 
