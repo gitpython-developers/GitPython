@@ -1,29 +1,32 @@
 # CI on Windows via appveyor
 environment:
+    GIT_DAEMON_PATH:   "C:\\Program Files\\Git\\mingw64\\libexec\\git-core"
+    CYGWIN_GIT_PATH:   "C:\\cygwin\\bin;%GIT_DAEMON_PATH%"
+    CYGWIN64_GIT_PATH: "C:\\cygwin64\\bin;%GIT_DAEMON_PATH%"
 
     matrix:
       - PYTHON: "C:\\Python27"
         PYTHON_VERSION: "2.7"
-        GIT_PATH: "C:\\Program Files\\Git\\mingw64\\libexec\\git-core"
+        GIT_PATH: "%GIT_DAEMON_PATH%"
       - PYTHON: "C:\\Miniconda"
         PYTHON_VERSION: "2.7"
         IS_CONDA: "yes"
-        GIT_PATH: "C:\\cygwin\\bin"
+        GIT_PATH: "%CYGWIN_GIT_PATH%"
 
       - PYTHON: "C:\\Miniconda3-x64"
         PYTHON_VERSION: "3.4"
         IS_CONDA: "yes"
-        GIT_PATH: "C:\\Program Files\\Git\\mingw64\\libexec\\git-core"
+        GIT_PATH: "%GIT_DAEMON_PATH%"
       - PYTHON: "C:\\Python34"
         PYTHON_VERSION: "3.4"
-        GIT_PATH: "C:\\cygwin64\\bin"
+        GIT_PATH: "%CYGWIN64_GIT_PATH%"
 
       - PYTHON: "C:\\Python35-x64"
         PYTHON_VERSION: "3.5"
-        GIT_PATH: "C:\\Program Files\\Git\\mingw64\\libexec\\git-core"
+        GIT_PATH: "%GIT_DAEMON_PATH%"
       - PYTHON: "C:\\Python35-x64"
         PYTHON_VERSION: "3.5"
-        GIT_PATH: "C:\\cygwin64\\bin"
+        GIT_PATH: "%CYGWIN64_GIT_PATH%"
 
 install:
     - set PATH=%PYTHON%;%PYTHON%\Scripts;%GIT_PATH%;%PATH%
