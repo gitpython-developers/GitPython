@@ -45,10 +45,10 @@ from git.compat import (
 )
 import io
 
-execute_kwargs = ('istream', 'with_keep_cwd', 'with_extended_output',
-                  'with_exceptions', 'as_process', 'stdout_as_string',
-                  'output_stream', 'with_stdout', 'kill_after_timeout',
-                  'universal_newlines')
+execute_kwargs = set(('istream', 'with_keep_cwd', 'with_extended_output',
+                      'with_exceptions', 'as_process', 'stdout_as_string',
+                      'output_stream', 'with_stdout', 'kill_after_timeout',
+                      'universal_newlines'))
 
 log = logging.getLogger('git.cmd')
 log.addHandler(logging.NullHandler())
@@ -275,7 +275,6 @@ class Git(LazyMixin):
     max_chunk_size = io.DEFAULT_BUFFER_SIZE
 
     git_exec_name = "git"           # default that should work on linux and windows
-    git_exec_name_win = "git.cmd"   # alternate command name, windows only
 
     # Enables debugging of GitPython's git commands
     GIT_PYTHON_TRACE = os.environ.get("GIT_PYTHON_TRACE", False)
@@ -778,10 +777,7 @@ class Git(LazyMixin):
         for key, value in kwargs.items():
             # set value if it is None
             if value is not None:
-                if key in self._environment:
-                    old_env[key] = self._environment[key]
-                else:
-                    old_env[key] = None
+                old_env[key] = self._environment.get(key)
                 self._environment[key] = value
             # remove key from environment if its value is None
             elif key in self._environment:
@@ -897,12 +893,8 @@ class Git(LazyMixin):
         :return: Same as ``execute``"""
         # Handle optional arguments prior to calling transform_kwargs
         # otherwise these'll end up in args, which is bad.
-        _kwargs = dict()
-        for kwarg in execute_kwargs:
-            try:
-                _kwargs[kwarg] = kwargs.pop(kwarg)
-            except KeyError:
-                pass
+        _kwargs = {k: v for k, v in kwargs.items() if k in execute_kwargs}
+        kwargs = {k: v for k, v in kwargs.items() if k not in execute_kwargs}
 
         insert_after_this_arg = kwargs.pop('insert_kwargs_after', None)
 
@@ -922,48 +914,17 @@ class Git(LazyMixin):
             args = ext_args[:index + 1] + opt_args + ext_args[index + 1:]
         # end handle kwargs
 
-        def make_call():
-            call = [self.GIT_PYTHON_GIT_EXECUTABLE]
+        call = [self.GIT_PYTHON_GIT_EXECUTABLE]
 
-            # add the git options, the reset to empty
-            # to avoid side_effects
-            call.extend(self._git_options)
-            self._git_options = ()
+        # add the git options, the reset to empty
+        # to avoid side_effects
+        call.extend(self._git_options)
+        self._git_options = ()
 
-            call.extend([dashify(method)])
-            call.extend(args)
-            return call
-        # END utility to recreate call after changes
+        call.append(dashify(method))
+        call.extend(args)
 
-        if is_win():
-            try:
-                try:
-                    return self.execute(make_call(), **_kwargs)
-                except WindowsError:
-                    # did we switch to git.cmd already, or was it changed from default ? permanently fail
-                    if self.GIT_PYTHON_GIT_EXECUTABLE != self.git_exec_name:
-                        raise
-                    # END handle overridden variable
-                    type(self).GIT_PYTHON_GIT_EXECUTABLE = self.git_exec_name_win
-
-                    try:
-                        return self.execute(make_call(), **_kwargs)
-                    finally:
-                        import warnings
-                        msg = "WARNING: Automatically switched to use git.cmd as git executable"
-                        msg += ", which reduces performance by ~70%."
-                        msg += "It is recommended to put git.exe into the PATH or to "
-                        msg += "set the %s " % self._git_exec_env_var
-                        msg += "environment variable to the executable's location"
-                        warnings.warn(msg)
-                    # END print of warning
-                # END catch first failure
-            except WindowsError:
-                raise WindowsError("The system cannot find or execute the file at %r" % self.GIT_PYTHON_GIT_EXECUTABLE)
-            # END provide better error message
-        else:
-            return self.execute(make_call(), **_kwargs)
-        # END handle windows default installation
+        return self.execute(call, **_kwargs)
 
     def _parse_object_header(self, header_line):
         """
