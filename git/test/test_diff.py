@@ -24,8 +24,10 @@ from git import (
     DiffIndex,
     NULL_TREE,
 )
+import ddt
 
 
+@ddt.ddt
 class TestDiff(TestBase):
 
     def tearDown(self):
@@ -118,18 +120,20 @@ class TestDiff(TestBase):
         self.assertEqual(diffs[0].change_type, 'M')
         self.assertIsNone(diffs[0].b_blob,)
 
-    def test_binary_diff(self):
-        for method, file_name in ((Diff._index_from_patch_format, 'diff_patch_binary'),
-                                  (Diff._index_from_raw_format, 'diff_raw_binary')):
-            res = method(None, StringProcessAdapter(fixture(file_name)).stdout)
-            self.assertEqual(len(res), 1)
-            self.assertEqual(len(list(res.iter_change_type('M'))), 1)
-            if res[0].diff:
-                self.assertEqual(res[0].diff,
-                                 b"Binary files a/rps and b/rps differ\n",
-                                 "in patch mode, we get a diff text")
-                self.assertIsNotNone(str(res[0]), "This call should just work")
-        # end for each method to test
+    @ddt.data(
+        (Diff._index_from_patch_format, 'diff_patch_binary'),
+        (Diff._index_from_raw_format, 'diff_raw_binary')
+    )
+    def test_binary_diff(self, case):
+        method, file_name = case
+        res = method(None, StringProcessAdapter(fixture(file_name)).stdout)
+        self.assertEqual(len(res), 1)
+        self.assertEqual(len(list(res.iter_change_type('M'))), 1)
+        if res[0].diff:
+            self.assertEqual(res[0].diff,
+                             b"Binary files a/rps and b/rps differ\n",
+                             "in patch mode, we get a diff text")
+            self.assertIsNotNone(str(res[0]), "This call should just work")
 
     def test_diff_index(self):
         output = StringProcessAdapter(fixture('diff_index_patch'))

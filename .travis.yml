@@ -16,7 +16,7 @@ git:
 install:
   - git submodule update --init --recursive
   - git fetch --tags
-  - pip install coveralls flake8 sphinx
+  - pip install coveralls flake8 ddt sphinx
 
   # generate some reflog as git-python tests need it (in master)
   - ./init-tests-after-clone.sh

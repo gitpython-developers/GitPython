@@ -68,7 +68,7 @@ def _stamp_version(filename):
         print("WARNING: Couldn't find version line in file %s" % filename, file=sys.stderr)
 
 install_requires = ['gitdb >= 0.6.4']
-test_requires = ['node']
+test_requires = ['node', 'ddt']
 if sys.version_info[:2] < (2, 7):
     install_requires.append('ordereddict')
     test_requires.append('mock')
