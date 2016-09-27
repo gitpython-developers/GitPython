@@ -11,7 +11,6 @@ import os
 import sys
 
 from gitdb.utils.compat import (
-    PY3,
     xrange,
     MAXSIZE,
     izip,
@@ -24,7 +23,9 @@ from gitdb.utils.encoding import (
     force_text
 )
 
+PY3 = sys.version_info[0] >= 3
 defenc = sys.getdefaultencoding()
+
 if PY3:
     import io
     FileType = io.IOBase
@@ -74,13 +75,8 @@ def with_metaclass(meta, *bases):
             # we set the __metaclass__ attribute explicitly
             if not PY3 and '___metaclass__' not in d:
                 d['__metaclass__'] = meta
-            # end
             return meta(name, bases, d)
-        # end
-    # end metaclass
     return metaclass(meta.__name__ + 'Helper', None, {})
-    # end handle py2
-
 
 def is_win():
     return os.name == 'nt'
@@ -93,3 +89,16 @@ def is_posix():
 def is_darwin():
     return os.name == 'darwin'
 
+
+## From https://docs.python.org/3.3/howto/pyporting.html
+class UnicodeMixin(object):
+
+    """Mixin class to handle defining the proper __str__/__unicode__
+    methods in Python 2 or 3."""
+
+    if sys.version_info[0] >= 3: # Python 3
+        def __str__(self):
+            return self.__unicode__()
+    else:  # Python 2
+        def __str__(self):
+            return self.__unicode__().encode('utf8')
