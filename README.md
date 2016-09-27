@@ -1,20 +1,28 @@
 ## GitPython
 
-GitPython is a python library used to interact with git repositories, high-level like git-porcelain, or low-level like git-plumbing.
+GitPython is a python library used to interact with git repositories, high-level like git-porcelain, 
+or low-level like git-plumbing.
 
-It provides abstractions of git objects for easy access of repository data, and additionally allows you to access the git repository more directly using either a pure python implementation, or the faster, but more resource intensive git command implementation.
+It provides abstractions of git objects for easy access of repository data, and additionally 
+allows you to access the git repository more directly using either a pure python implementation, 
+or the faster, but more resource intensive *git command* implementation.
 
-The object database implementation is optimized for handling large quantities of objects and large datasets, which is achieved by using low-level structures and data streaming.
+The object database implementation is optimized for handling large quantities of objects and large datasets, 
+which is achieved by using low-level structures and data streaming.
 
 
 ### REQUIREMENTS
 
-GitPython needs the `git` executable to be installed on the system and available in your `PATH` for most operations. If it is not in your `PATH`, you can help GitPython find it by setting the `GIT_PYTHON_GIT_EXECUTABLE=<path/to/git>` environment variable.
+GitPython needs the `git` executable to be installed on the system and available 
+in your `PATH` for most operations. 
+If it is not in your `PATH`, you can help GitPython find it by setting 
+the `GIT_PYTHON_GIT_EXECUTABLE=<path/to/git>` environment variable.
 
 * Git (1.7.x or newer)
 * Python 2.7 to 3.5, while python 2.6 is supported on a *best-effort basis*.
 
-The list of dependencies are listed in `./requirements.txt` and `./test-requirements.txt`. The installer takes care of installing them for you.
+The list of dependencies are listed in `./requirements.txt` and `./test-requirements.txt`. 
+The installer takes care of installing them for you.
 
 ### INSTALL
 
@@ -92,7 +100,8 @@ Please have a look at the [contributions file][contributing].
 * [Questions and Answers](http://stackexchange.com/filters/167317/gitpython)
  * Please post on stackoverflow and use the `gitpython` tag
 * [Issue Tracker](https://github.com/gitpython-developers/GitPython/issues)
-  * Post reproducible bugs and feature requests as a new issue. Please be sure to provide the following information if posting bugs:
+  * Post reproducible bugs and feature requests as a new issue. 
+    Please be sure to provide the following information if posting bugs:
     * GitPython version (e.g. `import git; git.__version__`)
     * Python version (e.g. `python --version`)
     * The encountered stack-trace, if applicable
@@ -121,7 +130,8 @@ New BSD License.  See the LICENSE file.
 [![Stories in Ready](https://badge.waffle.io/gitpython-developers/GitPython.png?label=ready&title=Ready)](https://waffle.io/gitpython-developers/GitPython)
 [![Throughput Graph](https://graphs.waffle.io/gitpython-developers/GitPython/throughput.svg)](https://waffle.io/gitpython-developers/GitPython/metrics/throughput)
 
-Now that there seems to be a massive user base, this should be motivation enough to let git-python return to a proper state, which means
+Now that there seems to be a massive user base, this should be motivation enough to let git-python 
+return to a proper state, which means
 
 * no open pull requests
 * no open issues describing bugs
