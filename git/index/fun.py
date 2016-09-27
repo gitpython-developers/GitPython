@@ -14,8 +14,8 @@ from io import BytesIO
 import os
 import subprocess
 
-from git.util import IndexFileSHA1Writer
-from git.cmd import PROC_CREATIONFLAGS
+from git.util import IndexFileSHA1Writer, finalize_process
+from git.cmd import PROC_CREATIONFLAGS, handle_process_output
 from git.exc import (
     UnmergedEntriesError,
     HookExecutionError
@@ -71,21 +71,26 @@ def run_commit_hook(name, index):
     env = os.environ.copy()
     env['GIT_INDEX_FILE'] = index.path
     env['GIT_EDITOR'] = ':'
-    cmd = subprocess.Popen(hp,
-                           env=env,
-                           stdout=subprocess.PIPE,
-                           stderr=subprocess.PIPE,
-                           cwd=index.repo.working_dir,
-                           close_fds=is_posix,
-                           creationflags=PROC_CREATIONFLAGS,)
-    stdout, stderr = cmd.communicate()
-    cmd.stdout.close()
-    cmd.stderr.close()
-
-    if cmd.returncode != 0:
-        stdout = force_text(stdout, defenc)
-        stderr = force_text(stderr, defenc)
-        raise HookExecutionError(hp, cmd.returncode, stdout, stderr)
+    try:
+        cmd = subprocess.Popen(hp,
+                               env=env,
+                               stdout=subprocess.PIPE,
+                               stderr=subprocess.PIPE,
+                               cwd=index.repo.working_dir,
+                               close_fds=is_posix,
+                               creationflags=PROC_CREATIONFLAGS,)
+    except Exception as ex:
+        raise HookExecutionError(hp, ex)
+    else:
+        stdout = []
+        stderr = []
+        handle_process_output(cmd, stdout.append, stderr.append, finalize_process)
+        stdout = ''.join(stdout)
+        stderr = ''.join(stderr)
+        if cmd.returncode != 0:
+            stdout = force_text(stdout, defenc)
+            stderr = force_text(stderr, defenc)
+            raise HookExecutionError(hp, cmd.returncode, stdout, stderr)
     # end handle return code
 
 

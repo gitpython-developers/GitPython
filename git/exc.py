@@ -37,13 +37,9 @@ class GitCommandError(UnicodeMixin, Exception):
         self.command = command
 
     def __unicode__(self):
-        ret = u"'%s' returned with exit code %s" % \
-              (u' '.join(safe_decode(i) for i in self.command), self.status)
-        if self.stderr:
-            ret += u"\nstderr: '%s'" % safe_decode(self.stderr)
-        if self.stdout:
-            ret += u"\nstdout: '%s'" % safe_decode(self.stdout)
-        return ret
+        cmdline = u' '.join(safe_decode(i) for i in self.command)
+        return (u"'%s' returned with exit code %s\n  stdout: '%s'\n  stderr: '%s'"
+                % (cmdline, self.status, safe_decode(self.stdout), safe_decode(self.stderr)))
 
 
 class CheckoutError(Exception):
@@ -80,19 +76,20 @@ class UnmergedEntriesError(CacheError):
     entries in the cache"""
 
 
-class HookExecutionError(Exception):
+class HookExecutionError(UnicodeMixin, Exception):
     """Thrown if a hook exits with a non-zero exit code. It provides access to the exit code and the string returned
     via standard output"""
 
-    def __init__(self, command, status, stdout, stderr):
+    def __init__(self, command, status, stdout=None, stderr=None):
         self.command = command
         self.status = status
         self.stdout = stdout
         self.stderr = stderr
 
-    def __str__(self):
-        return ("'%s' hook returned with exit code %i\nstdout: '%s'\nstderr: '%s'"
-                % (self.command, self.status, self.stdout, self.stderr))
+    def __unicode__(self):
+        cmdline = u' '.join(safe_decode(i) for i in self.command)
+        return (u"'%s' hook failed with %r\n  stdout: '%s'\n  stderr: '%s'"
+                % (cmdline, self.status, safe_decode(self.stdout), safe_decode(self.stderr)))
 
 
 class RepositoryDirtyError(Exception):

@@ -62,14 +62,12 @@ def rmtree(path):
 
     :note: we use shutil rmtree but adjust its behaviour to see whether files that
         couldn't be deleted are read-only. Windows will not remove them in that case"""
+
     def onerror(func, path, exc_info):
-        if not os.access(path, os.W_OK):
-            # Is the error an access error ?
-            os.chmod(path, stat.S_IWUSR)
-            func(path)
-        else:
-            raise FileExistsError("Cannot delete '%s'", path)
-    # END end onerror
+        # Is the error an access error ?
+        os.chmod(path, stat.S_IWUSR)
+        func(path)  # Will scream if still not possible to delete.
+
     return shutil.rmtree(path, False, onerror)
 
 
@@ -151,6 +149,7 @@ def get_user_id():
 
 def finalize_process(proc, **kwargs):
     """Wait for the process (clone, fetch, pull or push) and handle its errors accordingly"""
+    ## TODO: No close proc-streams??
     proc.wait(**kwargs)
 
 #} END utilities

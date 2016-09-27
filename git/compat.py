@@ -62,7 +62,8 @@ def safe_decode(s):
         return s
     elif isinstance(s, bytes):
         return s.decode(defenc, 'replace')
-    raise TypeError('Expected bytes or text, but got %r' % (s,))
+    elif s is not None:
+        raise TypeError('Expected bytes or text, but got %r' % (s,))
 
 
 def with_metaclass(meta, *bases):
