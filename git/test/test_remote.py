@@ -25,10 +25,9 @@ from git import (
     Remote,
     GitCommandError
 )
-from git.util import IterableList
+from git.util import IterableList, rmtree
 from git.compat import string_types
 import tempfile
-import shutil
 import os
 import random
 
@@ -285,7 +284,7 @@ class TestRemote(TestBase):
             # and only provides progress information to ttys
             res = fetch_and_test(other_origin)
         finally:
-            shutil.rmtree(other_repo_dir)
+            rmtree(other_repo_dir)
         # END test and cleanup
 
     def _assert_push_and_pull(self, remote, rw_repo, remote_repo):

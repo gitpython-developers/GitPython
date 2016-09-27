@@ -15,7 +15,7 @@ from git.test.lib import (
 
 )
 
-from gitdb.test.lib import with_rw_directory
+from git.test.lib import with_rw_directory
 
 from git import (
     Repo,

@@ -68,7 +68,7 @@ def rmtree(path):
             os.chmod(path, stat.S_IWUSR)
             func(path)
         else:
-            raise
+            raise FileExistsError("Cannot delete '%s'", path)
     # END end onerror
     return shutil.rmtree(path, False, onerror)
 

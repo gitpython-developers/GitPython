@@ -11,7 +11,7 @@ from git.test.lib import (
     fixture,
     with_rw_repo
 )
-from git.util import Actor
+from git.util import Actor, rmtree
 from git.exc import (
     HookExecutionError,
     InvalidGitRepositoryError
@@ -32,7 +32,6 @@ from gitdb.util import hex_to_bin
 import os
 import sys
 import tempfile
-import shutil
 from stat import (
     S_ISLNK,
     ST_MODE
@@ -46,7 +45,7 @@ from git.index.typ import (
     IndexEntry
 )
 from git.index.fun import hook_path
-from gitdb.test.lib import with_rw_directory
+from git.test.lib import with_rw_directory
 
 
 class TestIndex(TestBase):
@@ -387,7 +386,7 @@ class TestIndex(TestBase):
         assert not open(test_file, 'rb').read().endswith(append_data)
 
         # checkout directory
-        shutil.rmtree(os.path.join(rw_repo.working_tree_dir, "lib"))
+        rmtree(os.path.join(rw_repo.working_tree_dir, "lib"))
         rval = index.checkout('lib')
         assert len(list(rval)) > 1
 
@@ -719,7 +718,7 @@ class TestIndex(TestBase):
             with open(hp, "wt") as fp:
                 fp.write("#!/usr/bin/env sh\necho stdout; echo stderr 1>&2; exit 1")
             # end
-            os.chmod(hp, 0o544)
+            os.chmod(hp, 0o744)
             try:
                 index.commit("This should fail")
             except HookExecutionError as err:

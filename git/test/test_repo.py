@@ -34,18 +34,17 @@ from git import (
     GitCommandError
 )
 from git.repo.fun import touch
-from git.util import join_path_native
+from git.util import join_path_native, rmtree
 from git.exc import (
     BadObject,
 )
 from gitdb.util import bin_to_hex
 from git.compat import string_types
-from gitdb.test.lib import with_rw_directory
+from git.test.lib import with_rw_directory
 
 import os
 import sys
 import tempfile
-import shutil
 import itertools
 from io import BytesIO
 
@@ -200,7 +199,7 @@ class TestRepo(TestBase):
                 self._assert_empty_repo(rc)
 
                 try:
-                    shutil.rmtree(clone_path)
+                    rmtree(clone_path)
                 except OSError:
                     # when relative paths are used, the clone may actually be inside
                     # of the parent directory
@@ -211,9 +210,9 @@ class TestRepo(TestBase):
                 rc = Repo.clone_from(r.git_dir, clone_path)
                 self._assert_empty_repo(rc)
 
-                shutil.rmtree(git_dir_abs)
+                rmtree(git_dir_abs)
                 try:
-                    shutil.rmtree(clone_path)
+                    rmtree(clone_path)
                 except OSError:
                     # when relative paths are used, the clone may actually be inside
                     # of the parent directory
@@ -231,7 +230,7 @@ class TestRepo(TestBase):
             self._assert_empty_repo(r)
         finally:
             try:
-                shutil.rmtree(del_dir_abs)
+                rmtree(del_dir_abs)
             except OSError:
                 pass
             os.chdir(prev_cwd)

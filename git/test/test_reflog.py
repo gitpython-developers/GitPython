@@ -7,11 +7,10 @@ from git.refs import (
     RefLogEntry,
     RefLog
 )
-from git.util import Actor
+from git.util import Actor, rmtree
 from gitdb.util import hex_to_bin
 
 import tempfile
-import shutil
 import os
 
 
@@ -104,4 +103,4 @@ class TestRefLog(TestBase):
         # END for each reflog
 
         # finally remove our temporary data
-        shutil.rmtree(tdir)
+        rmtree(tdir)

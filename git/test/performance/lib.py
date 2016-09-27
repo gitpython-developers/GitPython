@@ -4,7 +4,6 @@ from git.test.lib import (
     TestBase
 )
 from gitdb.test.lib import skip_on_travis_ci
-import shutil
 import tempfile
 import logging
 
@@ -16,6 +15,7 @@ from git.db import (
 from git import (
     Repo
 )
+from git.util import rmtree
 
 #{ Invvariants
 k_env_git_repo = "GIT_PYTHON_TEST_GIT_REPO_BASE"
@@ -86,7 +86,7 @@ class TestBigRepoRW(TestBigRepoR):
     def tearDown(self):
         super(TestBigRepoRW, self).tearDown()
         if self.gitrwrepo is not None:
-            shutil.rmtree(self.gitrwrepo.working_dir)
+            rmtree(self.gitrwrepo.working_dir)
             self.gitrwrepo.git.clear_cache()
         self.gitrwrepo = None
         self.puregitrwrepo.git.clear_cache()

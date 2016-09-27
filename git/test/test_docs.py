@@ -7,7 +7,7 @@
 import os
 
 from git.test.lib import TestBase
-from gitdb.test.lib import with_rw_directory
+from git.test.lib.helper import with_rw_directory
 
 
 class Tutorials(TestBase):
@@ -210,7 +210,7 @@ class Tutorials(TestBase):
         master = head.reference     # retrieve the reference the head points to
         master.commit               # from here you use it as any other reference
         # ![3-test_references_and_objects]
-
+#
         # [4-test_references_and_objects]
         log = master.log()
         log[0]                      # first (i.e. oldest) reflog entry
@@ -447,6 +447,8 @@ class Tutorials(TestBase):
         git.branch('-D', 'another-new-one')             # pass strings for full control over argument order
         git.for_each_ref()                              # '-' becomes '_' when calling it
         # ![31-test_references_and_objects]
+
+        repo.git.clear_cache()
 
     def test_submodules(self):
         # [1-test_submodules]

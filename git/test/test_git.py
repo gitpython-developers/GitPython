@@ -24,7 +24,7 @@ from git import (
     Repo,
     cmd
 )
-from gitdb.test.lib import with_rw_directory
+from git.test.lib import with_rw_directory
 
 from git.compat import PY3, is_darwin
 
@@ -174,7 +174,7 @@ class TestGit(TestBase):
 
     def test_env_vars_passed_to_git(self):
         editor = 'non_existant_editor'
-        with mock.patch.dict('os.environ', {'GIT_EDITOR': editor}):
+        with mock.patch.dict('os.environ', {'GIT_EDITOR': editor}):  # @UndefinedVariable
             self.assertEqual(self.git.var("GIT_EDITOR"), editor)
 
     @with_rw_directory
@@ -203,7 +203,7 @@ class TestGit(TestBase):
         stream.write("#!/usr/bin/env sh\n" +
                      "echo FOO\n")
         stream.close()
-        os.chmod(path, 0o555)
+        os.chmod(path, 0o777)
 
         rw_repo = Repo.init(os.path.join(rw_dir, 'repo'))
         remote = rw_repo.create_remote('ssh-origin', "ssh://git@server/foo")
@@ -220,9 +220,6 @@ class TestGit(TestBase):
                         self.assertEqual(err.status, 128)
                     else:
                         self.assertIn('FOO', str(err))
-                # end
-            # end
-        # end if select.poll exists
 
     def test_handle_process_output(self):
         from git.cmd import handle_process_output

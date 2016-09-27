@@ -1013,6 +1013,10 @@ class Git(LazyMixin):
         Currently persistent commands will be interrupted.
 
         :return: self"""
+        for cmd in (self.cat_file_all, self.cat_file_header):
+            if cmd:
+                cmd.__del__()
+
         self.cat_file_all = None
         self.cat_file_header = None
         return self

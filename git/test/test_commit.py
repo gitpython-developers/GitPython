@@ -19,7 +19,7 @@ from git import (
     Actor,
 )
 from gitdb import IStream
-from gitdb.test.lib import with_rw_directory
+from git.test.lib import with_rw_directory
 from git.compat import (
     string_types,
     text_type

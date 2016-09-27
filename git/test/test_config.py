@@ -9,7 +9,7 @@ from git.test.lib import (
     fixture_path,
     assert_equal,
 )
-from gitdb.test.lib import with_rw_directory
+from git.test.lib import with_rw_directory
 from git import (
     GitConfigParser
 )

@@ -4,15 +4,16 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 from __future__ import print_function
+
 import os
 from unittest import TestCase
 import time
 import tempfile
-import shutil
 import io
 import logging
 
 from git import Repo, Remote, GitCommandError, Git
+from git.util import rmtree
 from git.compat import string_types, is_win
 import textwrap
 
@@ -23,7 +24,8 @@ GIT_DAEMON_PORT = os.environ.get("GIT_PYTHON_TEST_GIT_DAEMON_PORT", "9418")
 
 __all__ = (
     'fixture_path', 'fixture', 'absolute_project_path', 'StringProcessAdapter',
-    'with_rw_repo', 'with_rw_and_rw_remote_repo', 'TestBase', 'TestCase', 'GIT_REPO', 'GIT_DAEMON_PORT'
+    'with_rw_directory', 'with_rw_repo', 'with_rw_and_rw_remote_repo', 'TestBase', 'TestCase',
+    'GIT_REPO', 'GIT_DAEMON_PORT'
 )
 
 log = logging.getLogger('git.util')
@@ -79,16 +81,31 @@ def _mktemp(*args):
     return tdir
 
 
-def _rmtree_onerror(osremove, fullpath, exec_info):
-    """
-    Handle the case on windows that read-only files cannot be deleted by
-    os.remove by setting it to mode 777, then retry deletion.
-    """
-    if is_win or osremove is not os.remove:
-        raise
+def with_rw_directory(func):
+    """Create a temporary directory which can be written to, remove it if the
+    test succeeds, but leave it otherwise to aid additional debugging"""
 
-    os.chmod(fullpath, 0o777)
-    os.remove(fullpath)
+    def wrapper(self):
+        path = tempfile.mktemp(prefix=func.__name__)
+        os.mkdir(path)
+        keep = False
+        try:
+            try:
+                return func(self, path)
+            except Exception:
+                log.info.write("Test %s.%s failed, output is at %r\n",
+                               type(self).__name__, func.__name__, path)
+                keep = True
+                raise
+        finally:
+            # Need to collect here to be sure all handles have been closed. It appears
+            # a windows-only issue. In fact things should be deleted, as well as
+            # memory maps closed, once objects go out of scope. For some reason
+            # though this is not the case here unless we collect explicitly.
+            import gc
+            gc.collect()
+            if not keep:
+                rmtree(path)
 
 
 def with_rw_repo(working_tree_ref, bare=False):
@@ -129,8 +146,11 @@ def with_rw_repo(working_tree_ref, bare=False):
             finally:
                 os.chdir(prev_cwd)
                 rw_repo.git.clear_cache()
+                rw_repo = None
+                import gc
+                gc.collect()
                 if repo_dir is not None:
-                    shutil.rmtree(repo_dir, onerror=_rmtree_onerror)
+                    rmtree(repo_dir)
                 # END rm test repo if possible
             # END cleanup
         # END rw repo creator
@@ -279,14 +299,15 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
                 if gd is not None:
                     gd.proc.kill()
 
-                import gc
-                gc.collect()
                 rw_repo.git.clear_cache()
                 rw_remote_repo.git.clear_cache()
+                rw_repo = rw_remote_repo = None
+                import gc
+                gc.collect()
                 if repo_dir:
-                    shutil.rmtree(repo_dir, onerror=_rmtree_onerror)
+                    rmtree(repo_dir)
                 if remote_repo_dir:
-                    shutil.rmtree(remote_repo_dir, onerror=_rmtree_onerror)
+                    rmtree(remote_repo_dir)
 
                 if gd is not None:
                     gd.proc.wait()

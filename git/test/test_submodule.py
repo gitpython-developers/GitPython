@@ -9,7 +9,7 @@ from git.test.lib import (
     TestBase,
     with_rw_repo
 )
-from gitdb.test.lib import with_rw_directory
+from git.test.lib import with_rw_directory
 from git.exc import (
     InvalidGitRepositoryError,
     RepositoryDirtyError
