@@ -76,7 +76,7 @@ def run_commit_hook(name, index):
                            stdout=subprocess.PIPE,
                            stderr=subprocess.PIPE,
                            cwd=index.repo.working_dir,
-                           close_fds=(is_posix()),
+                           close_fds=(is_posix),
                            creationflags=PROC_CREATIONFLAGS,)
     stdout, stderr = cmd.communicate()
     cmd.stdout.close()

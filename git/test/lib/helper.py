@@ -74,7 +74,7 @@ def _mktemp(*args):
     prefixing /private/ will lead to incorrect paths on OSX."""
     tdir = tempfile.mktemp(*args)
     # See :note: above to learn why this is comented out.
-    # if is_darwin():
+    # if is_darwin:
     #     tdir = '/private' + tdir
     return tdir
 
@@ -84,7 +84,7 @@ def _rmtree_onerror(osremove, fullpath, exec_info):
     Handle the case on windows that read-only files cannot be deleted by
     os.remove by setting it to mode 777, then retry deletion.
     """
-    if is_win() or osremove is not os.remove:
+    if is_win or osremove is not os.remove:
         raise
 
     os.chmod(fullpath, 0o777)
@@ -141,7 +141,7 @@ def with_rw_repo(working_tree_ref, bare=False):
 
 
 def launch_git_daemon(temp_dir, ip, port):
-    if is_win():
+    if is_win:
         ## On MINGW-git, daemon exists in .\Git\mingw64\libexec\git-core\,
         #  but if invoked as 'git daemon', it detaches from parent `git` cmd,
         #  and then CANNOT DIE!
@@ -242,7 +242,7 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
                         gd.proc.terminate()
                     log.warning('git(%s) ls-remote failed due to:%s',
                                 rw_repo.git_dir, e)
-                    if is_win():
+                    if is_win:
                         msg = textwrap.dedent("""
                         MINGW yet has problems with paths, and `git-daemon.exe` must be in PATH
                         (look into .\Git\mingw64\libexec\git-core\);

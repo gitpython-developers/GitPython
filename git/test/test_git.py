@@ -85,7 +85,7 @@ class TestGit(TestBase):
 
         # order is undefined
         res = self.git.transform_kwargs(**{'s': True, 't': True})
-        assert ['-s', '-t'] == res or ['-t', '-s'] == res
+        self.assertEqual(set(['-s', '-t']), set(res))
 
     def test_it_executes_git_to_shell_and_returns_result(self):
         assert_match('^git version [\d\.]{2}.*$', self.git.execute(["git", "version"]))
@@ -117,7 +117,7 @@ class TestGit(TestBase):
         g.stdin.write(b"b2339455342180c7cc1e9bba3e9f181f7baa5167\n")
         g.stdin.flush()
         obj_info_two = g.stdout.readline()
-        assert obj_info == obj_info_two
+        self.assertEqual(obj_info, obj_info_two)
 
         # read data - have to read it in one large chunk
         size = int(obj_info.split()[2])
@@ -127,18 +127,19 @@ class TestGit(TestBase):
         # now we should be able to read a new object
         g.stdin.write(b"b2339455342180c7cc1e9bba3e9f181f7baa5167\n")
         g.stdin.flush()
-        assert g.stdout.readline() == obj_info
+        self.assertEqual(g.stdout.readline(), obj_info)
 
         # same can be achived using the respective command functions
         hexsha, typename, size = self.git.get_object_header(hexsha)
         hexsha, typename_two, size_two, data = self.git.get_object_data(hexsha)
-        assert typename == typename_two and size == size_two
+        self.assertEqual(typename, typename_two)
+        self.assertEqual(size, size_two)
 
     def test_version(self):
         v = self.git.version_info
-        assert isinstance(v, tuple)
+        self.assertIsInstance(v, tuple)
         for n in v:
-            assert isinstance(n, int)
+            self.assertIsInstance(n, int)
         # END verify number types
 
     def test_cmd_override(self):
@@ -174,28 +175,28 @@ class TestGit(TestBase):
     def test_env_vars_passed_to_git(self):
         editor = 'non_existant_editor'
         with mock.patch.dict('os.environ', {'GIT_EDITOR': editor}):
-            assert self.git.var("GIT_EDITOR") == editor
+            self.assertEqual(self.git.var("GIT_EDITOR"), editor)
 
     @with_rw_directory
     def test_environment(self, rw_dir):
         # sanity check
-        assert self.git.environment() == {}
+        self.assertEqual(self.git.environment(), {})
 
         # make sure the context manager works and cleans up after itself
         with self.git.custom_environment(PWD='/tmp'):
-            assert self.git.environment() == {'PWD': '/tmp'}
+            self.assertEqual(self.git.environment(), {'PWD': '/tmp'})
 
-        assert self.git.environment() == {}
+        self.assertEqual(self.git.environment(), {})
 
         old_env = self.git.update_environment(VARKEY='VARVALUE')
         # The returned dict can be used to revert the change, hence why it has
         # an entry with value 'None'.
-        assert old_env == {'VARKEY': None}
-        assert self.git.environment() == {'VARKEY': 'VARVALUE'}
+        self.assertEqual(old_env, {'VARKEY': None})
+        self.assertEqual(self.git.environment(), {'VARKEY': 'VARVALUE'})
 
         new_env = self.git.update_environment(**old_env)
-        assert new_env == {'VARKEY': 'VARVALUE'}
-        assert self.git.environment() == {}
+        self.assertEqual(new_env, {'VARKEY': 'VARVALUE'})
+        self.assertEqual(self.git.environment(), {})
 
         path = os.path.join(rw_dir, 'failing-script.sh')
         stream = open(path, 'wt')
@@ -214,11 +215,11 @@ class TestGit(TestBase):
                 try:
                     remote.fetch()
                 except GitCommandError as err:
-                    if sys.version_info[0] < 3 and is_darwin():
-                        assert 'ssh-origin' in str(err)
-                        assert err.status == 128
+                    if sys.version_info[0] < 3 and is_darwin:
+                        self.assertIn('ssh-orig, ' in str(err))
+                        self.assertEqual(err.status, 128)
                     else:
-                        assert 'FOO' in str(err)
+                        self.assertIn('FOO', str(err))
                 # end
             # end
         # end if select.poll exists

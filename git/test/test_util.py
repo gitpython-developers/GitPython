@@ -92,7 +92,7 @@ class TestUtils(TestBase):
         elapsed = time.time() - start
         # More extra time costs, but...
         extra_time = 0.2
-        if is_win():
+        if is_win:
             extra_time *= 4
         self.assertLess(elapsed, wait_time + 0.02)
 

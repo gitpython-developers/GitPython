@@ -370,7 +370,7 @@ class Repo(object):
     def _get_config_path(self, config_level):
         # we do not support an absolute path of the gitconfig on windows ,
         # use the global config instead
-        if is_win() and config_level == "system":
+        if is_win and config_level == "system":
             config_level = "global"
 
         if config_level == "system":
@@ -884,7 +884,7 @@ class Repo(object):
         prev_cwd = None
         prev_path = None
         odbt = kwargs.pop('odbt', odb_default_type)
-        if is_win():
+        if is_win:
             if '~' in path:
                 raise OSError("Git cannot handle the ~ character in path %r correctly" % path)
 

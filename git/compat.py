@@ -24,6 +24,9 @@ from gitdb.utils.encoding import (
 )
 
 PY3 = sys.version_info[0] >= 3
+is_win = (os.name == 'nt')
+is_posix = (os.name == 'posix')
+is_darwin = (os.name == 'darwin')
 defenc = sys.getdefaultencoding()
 
 if PY3:
@@ -77,17 +80,6 @@ def with_metaclass(meta, *bases):
                 d['__metaclass__'] = meta
             return meta(name, bases, d)
     return metaclass(meta.__name__ + 'Helper', None, {})
-
-def is_win():
-    return os.name == 'nt'
-
-
-def is_posix():
-    return os.name == 'posix'
-
-
-def is_darwin():
-    return os.name == 'darwin'
 
 
 ## From https://docs.python.org/3.3/howto/pyporting.html

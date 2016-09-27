@@ -137,7 +137,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             # which happens during read-tree.
             # In this case, we will just read the memory in directly.
             # Its insanely bad ... I am disappointed !
-            allow_mmap = (is_win() or sys.version_info[1] > 5)
+            allow_mmap = (is_win or sys.version_info[1] > 5)
             stream = file_contents_ro(fd, stream=True, allow_mmap=allow_mmap)
 
             try:

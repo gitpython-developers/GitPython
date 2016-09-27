@@ -106,7 +106,7 @@ def join_path(a, *p):
     return path
 
 
-if is_win():
+if is_win:
     def to_native_path_windows(path):
         return path.replace('/', '\\')
 
@@ -587,7 +587,7 @@ class LockFile(object):
         try:
             # on bloody windows, the file needs write permissions to be removable.
             # Why ...
-            if is_win():
+            if is_win:
                 os.chmod(lfp, 0o777)
             # END handle win32
             os.remove(lfp)

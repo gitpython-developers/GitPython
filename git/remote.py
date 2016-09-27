@@ -376,7 +376,7 @@ class Remote(LazyMixin, Iterable):
         self.repo = repo
         self.name = name
 
-        if is_win():
+        if is_win:
             # some oddity: on windows, python 2.5, it for some reason does not realize
             # that it has the config_writer property, but instead calls __getattr__
             # which will not yield the expected results. 'pinging' the members

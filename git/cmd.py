@@ -55,7 +55,7 @@ log.addHandler(logging.NullHandler())
 
 __all__ = ('Git',)
 
-if is_win():
+if is_win:
     WindowsError = OSError
 
 if PY3:
@@ -239,7 +239,7 @@ CREATE_NO_WINDOW = 0x08000000
 ## CREATE_NEW_PROCESS_GROUP is needed to allow killing it afterwards,
 # seehttps://docs.python.org/3/library/subprocess.html#subprocess.Popen.send_signal
 PROC_CREATIONFLAGS = (CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP
-                      if is_win()
+                      if is_win
                       else 0)
 
 
@@ -630,7 +630,7 @@ class Git(LazyMixin):
         env["LC_ALL"] = "C"
         env.update(self._environment)
 
-        if is_win():
+        if is_win:
             cmd_not_found_exception = WindowsError
             if kill_after_timeout:
                 raise GitCommandError('"kill_after_timeout" feature is not supported on Windows.')
@@ -650,13 +650,13 @@ class Git(LazyMixin):
                          stderr=PIPE,
                          stdout=PIPE if with_stdout else open(os.devnull, 'wb'),
                          shell=self.USE_SHELL,
-                         close_fds=(is_posix()),  # unsupported on windows
+                         close_fds=(is_posix),  # unsupported on windows
                          universal_newlines=universal_newlines,
                          creationflags=PROC_CREATIONFLAGS,
                          **subprocess_kwargs
                          )
         except cmd_not_found_exception as err:
-            raise GitCommandNotFound(str(err))
+            raise GitCommandNotFound('%s: %s' % (command[0], err))
 
         if as_process:
             return self.AutoInterrupt(proc, command)
