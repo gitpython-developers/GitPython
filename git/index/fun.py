@@ -41,10 +41,13 @@ from .util import (
 from gitdb.base import IStream
 from gitdb.typ import str_tree_type
 from git.compat import (
+    PY3,
     defenc,
     force_text,
     force_bytes,
     is_posix,
+    safe_encode,
+    safe_decode,
 )
 
 S_IFGITLINK = S_IFLNK | S_IFDIR     # a submodule
@@ -69,7 +72,7 @@ def run_commit_hook(name, index):
         return
 
     env = os.environ.copy()
-    env['GIT_INDEX_FILE'] = index.path
+    env['GIT_INDEX_FILE'] = safe_decode(index.path) if PY3 else safe_encode(index.path)
     env['GIT_EDITOR'] = ':'
     try:
         cmd = subprocess.Popen(hp,

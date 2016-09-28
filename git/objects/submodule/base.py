@@ -848,6 +848,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 
                 # finally delete our own submodule
                 if not dry_run:
+                    self._clear_cache()
                     wtd = mod.working_tree_dir
                     del(mod)        # release file-handles (windows)
                     rmtree(wtd)
@@ -855,6 +856,7 @@ class Submodule(util.IndexObject, Iterable, Traversable):
             # END handle force
 
             if not dry_run and os.path.isdir(git_dir):
+                self._clear_cache()
                 rmtree(git_dir)
             # end handle separate bare repository
         # END handle module deletion

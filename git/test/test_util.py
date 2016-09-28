@@ -90,10 +90,11 @@ class TestUtils(TestBase):
         wait_lock = BlockingLockFile(my_file, 0.05, wait_time)
         self.failUnlessRaises(IOError, wait_lock._obtain_lock)
         elapsed = time.time() - start
-        extra_time = 0.2
+        extra_time = 0.02
         if is_win:
+            # for Appveyor
             extra_time *= 6  # NOTE: Indeterministic failures here...
-        self.assertLess(elapsed, wait_time + 0.02)
+        self.assertLess(elapsed, wait_time + extra_time)
 
     def test_user_id(self):
         assert '@' in get_user_id()

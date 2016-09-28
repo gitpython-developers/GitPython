@@ -5,31 +5,35 @@ environment:
     CYGWIN64_GIT_PATH: "C:\\cygwin64\\bin;%GIT_DAEMON_PATH%"
 
     matrix:
+        ## MINGW
+        #
       - PYTHON: "C:\\Python27"
         PYTHON_VERSION: "2.7"
         GIT_PATH: "%GIT_DAEMON_PATH%"
-      - PYTHON: "C:\\Miniconda-x64"
-        PYTHON_VERSION: "2.7"
-        IS_CONDA: "yes"
-        GIT_PATH: "%CYGWIN_GIT_PATH%"
-
       - PYTHON: "C:\\Python34-x64"
         PYTHON_VERSION: "3.4"
         GIT_PATH: "%GIT_DAEMON_PATH%"
-      - PYTHON: "C:\\Python34-x64"
-        PYTHON_VERSION: "3.4"
-        GIT_PATH: "%CYGWIN_GIT_PATH%"
-
       - PYTHON: "C:\\Python35-x64"
         PYTHON_VERSION: "3.5"
         GIT_PATH: "%GIT_DAEMON_PATH%"
-      - PYTHON: "C:\\Python35-x64"
-        PYTHON_VERSION: "3.5"
-        GIT_PATH: "%CYGWIN64_GIT_PATH%"
       - PYTHON: "C:\\Miniconda35-x64"
         PYTHON_VERSION: "3.5"
         IS_CONDA: "yes"
         GIT_PATH: "%GIT_DAEMON_PATH%"
+
+        ## Cygwin
+        #
+      - PYTHON: "C:\\Miniconda-x64"
+        PYTHON_VERSION: "2.7"
+        IS_CONDA: "yes"
+        GIT_PATH: "%CYGWIN_GIT_PATH%"
+      - PYTHON: "C:\\Python34-x64"
+        PYTHON_VERSION: "3.4"
+        GIT_PATH: "%CYGWIN_GIT_PATH%"
+      - PYTHON: "C:\\Python35-x64"
+        PYTHON_VERSION: "3.5"
+        GIT_PATH: "%CYGWIN64_GIT_PATH%"
+
 
 install:
     - set PATH=%PYTHON%;%PYTHON%\Scripts;%GIT_PATH%;%PATH%
@@ -44,9 +48,9 @@ install:
 
     - IF "%IS_CONDA%"=="yes" (
         conda info -a &
-        conda install --yes --quiet  pip 
+        conda install --yes --quiet  pip
       )
-    - pip install  nose ddt wheel coveralls 
+    - pip install  nose ddt wheel coveralls
     -   IF "%PYTHON_VERSION%"=="2.7" (
             pip install mock
         )
@@ -73,7 +77,7 @@ install:
 build: false
 
 test_script:
-    - nosetests -v
+    - nosetests
 
 #on_success:
 #    - IF "%PYTHON_VERSION%"=="3.4" (coveralls)

@@ -66,6 +66,16 @@ def safe_decode(s):
         raise TypeError('Expected bytes or text, but got %r' % (s,))
 
 
+def safe_encode(s):
+    """Safely decodes a binary string to unicode"""
+    if isinstance(s, unicode):
+        return s.encode(defenc)
+    elif isinstance(s, bytes):
+        return s
+    elif s is not None:
+        raise TypeError('Expected bytes or text, but got %r' % (s,))
+
+
 def with_metaclass(meta, *bases):
     """copied from https://github.com/Byron/bcore/blob/master/src/python/butility/future.py#L15"""
     class metaclass(meta):
