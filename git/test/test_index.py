@@ -731,9 +731,9 @@ class TestIndex(TestBase):
             except HookExecutionError as err:
                 if is_win:
                     self.assertIsInstance(err.status, OSError)
-                    self.assertEqual(err.command, hp)
-                    self.assertIsNone(err.stdout)
-                    self.assertIsNone(err.stderr)
+                    self.assertEqual(err.command, [hp])
+                    self.assertEqual(err.stdout, '')
+                    self.assertEqual(err.stderr, '')
                     assert str(err)
                 else:
                     self.assertEqual(err.status, 1)
