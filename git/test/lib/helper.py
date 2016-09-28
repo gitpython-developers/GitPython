@@ -258,8 +258,10 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
                     # We assume in good faith that we didn't start the daemon - but make sure we kill it anyway
                     # Of course we expect it to work here already, but maybe there are timing constraints
                     # on some platforms ?
-                    if gd is not None:
+                    try:
                         gd.proc.terminate()
+                    except Exception as ex:
+                        log.debug("Ignoring %r while terminating proc after %r.", ex, e)
                     log.warning('git(%s) ls-remote failed due to:%s',
                                 rw_repo.git_dir, e)
                     if is_win:
@@ -296,8 +298,10 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
                     os.chdir(prev_cwd)
 
             finally:
-                if gd is not None:
+                try:
                     gd.proc.kill()
+                except:
+                    pass ## Either it has died (and we're here), or it won't die, again here...
 
                 rw_repo.git.clear_cache()
                 rw_remote_repo.git.clear_cache()
