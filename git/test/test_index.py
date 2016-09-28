@@ -730,7 +730,7 @@ class TestIndex(TestBase):
                 index.commit("This should fail")
             except HookExecutionError as err:
                 if is_win:
-                    self.assertIsInstance(err.status, WindowsError)
+                    self.assertIsInstance(err.status, OSError)
                     self.assertEqual(err.command, hp)
                     self.assertIsNone(err.stdout)
                     self.assertIsNone(err.stderr)

@@ -6,7 +6,7 @@
 """ Module containing all exceptions thrown througout the git package, """
 
 from gitdb.exc import *     # NOQA
-from git.compat import UnicodeMixin, safe_decode
+from git.compat import UnicodeMixin, safe_decode, string_types
 
 
 class InvalidGitRepositoryError(Exception):
@@ -21,25 +21,56 @@ class NoSuchPathError(OSError):
     """ Thrown if a path could not be access by the system. """
 
 
-class GitCommandNotFound(Exception):
+class CommandError(UnicodeMixin, Exception):
+    """Base class for exceptions thrown at every stage of `Popen()` execution.
+
+    :param command:
+        A non-empty list of argv comprising the command-line.
+    """
+
+    #: A unicode print-format with 2 `%s for `<cmdline>` and the rest,
+    #:  e.g.
+    #:     u"'%s' failed%s"
+    _msg = u"Cmd('%s') failed%s"
+
+    def __init__(self, command, status=None, stderr=None, stdout=None):
+        assert isinstance(command, (tuple, list)), command
+        self.command = command
+        self.status = status
+        if status:
+            if isinstance(status, Exception):
+                status = u"%s('%s')" % (type(status).__name__, safe_decode(str(status)))
+            else:
+                try:
+                    status = u'exit code(%s)' % int(status)
+                except:
+                    s = safe_decode(str(status))
+                    status = u"'%s'" % s if isinstance(status, string_types) else s
+
+        self._cmd = safe_decode(command[0])
+        self._cmdline = u' '.join(safe_decode(i) for i in command)
+        self._cause = status and u" due to: %s" % status or "!"
+        self.stdout = stdout and u"\n  stdout: '%s'" % safe_decode(stdout) or ''
+        self.stderr = stderr and u"\n  stderr: '%s'" % safe_decode(stderr) or ''
+
+    def __unicode__(self):
+        return (self._msg + "\n  cmdline: %s%s%s") % (
+            self._cmd, self._cause, self._cmdline, self.stdout, self.stderr)
+
+
+class GitCommandNotFound(CommandError):
     """Thrown if we cannot find the `git` executable in the PATH or at the path given by
     the GIT_PYTHON_GIT_EXECUTABLE environment variable"""
-    pass
+    def __init__(self, command, cause):
+        super(GitCommandNotFound, self).__init__(command, cause)
+        self._msg = u"Cmd('%s') not found%s"
 
 
-class GitCommandError(UnicodeMixin, Exception):
+class GitCommandError(CommandError):
     """ Thrown if execution of the git command fails with non-zero status code. """
 
     def __init__(self, command, status, stderr=None, stdout=None):
-        self.stderr = stderr
-        self.stdout = stdout
-        self.status = status
-        self.command = command
-
-    def __unicode__(self):
-        cmdline = u' '.join(safe_decode(i) for i in self.command)
-        return (u"'%s' returned with exit code %s\n  stdout: '%s'\n  stderr: '%s'"
-                % (cmdline, self.status, safe_decode(self.stdout), safe_decode(self.stderr)))
+        super(GitCommandError, self).__init__(command, status, stderr, stdout)
 
 
 class CheckoutError(Exception):
@@ -76,20 +107,13 @@ class UnmergedEntriesError(CacheError):
     entries in the cache"""
 
 
-class HookExecutionError(UnicodeMixin, Exception):
+class HookExecutionError(CommandError):
     """Thrown if a hook exits with a non-zero exit code. It provides access to the exit code and the string returned
     via standard output"""
 
-    def __init__(self, command, status, stdout=None, stderr=None):
-        self.command = command
-        self.status = status
-        self.stdout = stdout
-        self.stderr = stderr
-
-    def __unicode__(self):
-        cmdline = u' '.join(safe_decode(i) for i in self.command)
-        return (u"'%s' hook failed with %r\n  stdout: '%s'\n  stderr: '%s'"
-                % (cmdline, self.status, safe_decode(self.stdout), safe_decode(self.stderr)))
+    def __init__(self, command, status, stderr=None, stdout=None):
+        super(HookExecutionError, self).__init__(command, status, stderr, stdout)
+        self._msg = u"Hook('%s') failed%s"
 
 
 class RepositoryDirtyError(Exception):

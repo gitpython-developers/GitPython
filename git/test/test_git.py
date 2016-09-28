@@ -27,6 +27,7 @@ from git import (
 from git.test.lib import with_rw_directory
 
 from git.compat import PY3, is_darwin
+from git.util import finalize_process
 
 try:
     from unittest import mock
@@ -233,7 +234,8 @@ class TestGit(TestBase):
         def counter_stderr(line):
             count[2] += 1
 
-        proc = subprocess.Popen([sys.executable, fixture_path('cat_file.py'), str(fixture_path('issue-301_stderr'))],
+        cmdline = [sys.executable, fixture_path('cat_file.py'), str(fixture_path('issue-301_stderr'))]
+        proc = subprocess.Popen(cmdline,
                                 stdin=None,
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE,
@@ -241,7 +243,7 @@ class TestGit(TestBase):
                                 creationflags=cmd.PROC_CREATIONFLAGS,
                                 )
 
-        handle_process_output(proc, counter_stdout, counter_stderr, lambda proc: proc.wait())
+        handle_process_output(proc, counter_stdout, counter_stderr, finalize_process)
 
         self.assertEqual(count[1], line_count)
         self.assertEqual(count[2], line_count)

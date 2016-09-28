@@ -681,8 +681,7 @@ class Remote(LazyMixin, Iterable):
         # END for each line
 
         try:
-            handle_process_output(proc, stdout_handler, progress_handler, finalize_process,
-                                  decode_stdout=False, decode_stderr=False)
+            handle_process_output(proc, stdout_handler, progress_handler, finalize_process, decode_streams=False)
         except Exception:
             if len(output) == 0:
                 raise

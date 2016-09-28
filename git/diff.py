@@ -407,7 +407,7 @@ class Diff(object):
 
         ## FIXME: Here SLURPING raw, need to re-phrase header-regexes linewise.
         text = []
-        handle_process_output(proc, text.append, None, finalize_process, decode_stdout=False)
+        handle_process_output(proc, text.append, None, finalize_process, decode_streams=False)
 
         # for now, we have to bake the stream
         text = b''.join(text)
@@ -499,6 +499,6 @@ class Diff(object):
                         new_file, deleted_file, rename_from, rename_to, '', change_type)
             index.append(diff)
 
-        handle_process_output(proc, handle_diff_line, None, finalize_process, decode_stdout=False)
+        handle_process_output(proc, handle_diff_line, None, finalize_process, decode_streams=False)
 
         return index

@@ -1091,6 +1091,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             kwargs['as_process'] = True
             kwargs['istream'] = subprocess.PIPE
             proc = self.repo.git.checkout_index(args, **kwargs)
+            # FIXME: Reading from GIL!
             make_exc = lambda: GitCommandError(("git-checkout-index",) + tuple(args), 128, proc.stderr.read())
             checked_out_files = list()
 

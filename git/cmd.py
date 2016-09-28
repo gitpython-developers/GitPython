@@ -45,6 +45,7 @@ from git.compat import (
 )
 import io
 from _io import UnsupportedOperation
+from git.exc import CommandError
 
 execute_kwargs = set(('istream', 'with_keep_cwd', 'with_extended_output',
                       'with_exceptions', 'as_process', 'stdout_as_string',
@@ -55,9 +56,6 @@ log = logging.getLogger('git.cmd')
 log.addHandler(logging.NullHandler())
 
 __all__ = ('Git',)
-
-if is_win:
-    WindowsError = OSError  # @ReservedAssignment
 
 if PY3:
     _bchr = bchr
@@ -73,17 +71,23 @@ else:
 # Documentation
 ## @{
 
-def handle_process_output(process, stdout_handler, stderr_handler, finalizer,
-                          decode_stdout=True, decode_stderr=True):
+def handle_process_output(process, stdout_handler, stderr_handler, finalizer, decode_streams=True):
     """Registers for notifications to lean that process output is ready to read, and dispatches lines to
     the respective line handlers. We are able to handle carriage returns in case progress is sent by that
     mean. For performance reasons, we only apply this to stderr.
     This function returns once the finalizer returns
+
     :return: result of finalizer
     :param process: subprocess.Popen instance
     :param stdout_handler: f(stdout_line_string), or None
     :param stderr_hanlder: f(stderr_line_string), or None
-    :param finalizer: f(proc) - wait for proc to finish"""
+    :param finalizer: f(proc) - wait for proc to finish
+    :param decode_streams:
+        Assume stdout/stderr streams are binary and decode them vefore pushing \
+        their contents to handlers.
+        Set it to False if `universal_newline == True` (then streams are in text-mode)
+        or if decoding must happen later (i.e. for Diffs).
+    """
 
     def _parse_lines_from_buffer(buf):
         line = b''
@@ -156,18 +160,29 @@ def handle_process_output(process, stdout_handler, stderr_handler, finalizer,
         # Oh ... probably we are on windows. or TC mockap provided for streams.
         # Anyhow, select.select() can only handle sockets, we have files
         # The only reliable way to do this now is to use threads and wait for both to finish
-        def _handle_lines(fd, handler, decode):
-            for line in fd:
-                if handler:
-                    if decode:
-                        line = line.decode(defenc)
-                    handler(line)
+        def pump_stream(cmdline, name, stream, is_decode, handler):
+            try:
+                for line in stream:
+                    if handler:
+                        if is_decode:
+                            line = line.decode(defenc)
+                        handler(line)
+            except Exception as ex:
+                log.error("Pumping %r of cmd(%s) failed due to: %r", name, cmdline, ex)
+                raise CommandError(['<%s-pump>' % name] + cmdline, ex)
+            finally:
+                stream.close()
 
+        cmdline = getattr(process, 'args', '')  # PY3+ only
+        if not isinstance(cmdline, (tuple, list)):
+            cmdline = cmdline.split()
         threads = []
-        for fd, handler, decode in zip((process.stdout, process.stderr),
-                                       (stdout_handler, stderr_handler),
-                                       (decode_stdout, decode_stderr),):
-            t = threading.Thread(target=_handle_lines, args=(fd, handler, decode))
+        for name, stream, handler in (
+            ('stdout', process.stdout, stdout_handler),
+            ('stderr', process.stderr, stderr_handler),
+        ):
+            t = threading.Thread(target=pump_stream,
+                                 args=(cmdline, name, stream, decode_streams, handler))
             t.setDaemon(True)
             t.start()
             threads.append(t)
@@ -177,8 +192,8 @@ def handle_process_output(process, stdout_handler, stderr_handler, finalizer,
     else:
             # poll is preferred, as select is limited to file handles up to 1024 ... . This could otherwise be
             # an issue for us, as it matters how many handles our own process has
-            fdmap = {outfn: (stdout_handler, [b''], decode_stdout),
-                     errfn: (stderr_handler, [b''], decode_stderr)}
+            fdmap = {outfn: (stdout_handler, [b''], decode_streams),
+                     errfn: (stderr_handler, [b''], decode_streams)}
 
             READ_ONLY = select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLERR  # @UndefinedVariable
             CLOSED = select.POLLHUP | select.POLLERR                                      # @UndefinedVariable
@@ -334,7 +349,8 @@ class Git(LazyMixin):
             try:
                 proc.terminate()
                 proc.wait()    # ensure process goes away
-            except (OSError, WindowsError):
+            except OSError as ex:
+                log.info("Ignored error after process has dies: %r", ex)
                 pass  # ignore error when process already died
             except AttributeError:
                 # try windows
@@ -638,12 +654,12 @@ class Git(LazyMixin):
         env.update(self._environment)
 
         if is_win:
-            cmd_not_found_exception = WindowsError
+            cmd_not_found_exception = OSError
             if kill_after_timeout:
-                raise GitCommandError('"kill_after_timeout" feature is not supported on Windows.')
+                raise GitCommandError(command, '"kill_after_timeout" feature is not supported on Windows.')
         else:
             if sys.version_info[0] > 2:
-                cmd_not_found_exception = FileNotFoundError  # NOQA # this is defined, but flake8 doesn't know
+                cmd_not_found_exception = FileNotFoundError  # NOQA # exists, flake8 unknown @UndefinedVariable
             else:
                 cmd_not_found_exception = OSError
         # end handle
@@ -663,7 +679,7 @@ class Git(LazyMixin):
                          **subprocess_kwargs
                          )
         except cmd_not_found_exception as err:
-            raise GitCommandNotFound('%s: %s' % (command[0], err))
+            raise GitCommandNotFound(command, err)
 
         if as_process:
             return self.AutoInterrupt(proc, command)
