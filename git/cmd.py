@@ -88,18 +88,26 @@ def handle_process_output(process, stdout_handler, stderr_handler, finalizer, de
         Set it to False if `universal_newline == True` (then streams are in text-mode)
         or if decoding must happen later (i.e. for Diffs).
     """
+    if decode_streams:
+        ZERO = b''
+        LF = b'\n'
+        CR = b'\r'
+    else:
+        ZERO = u''
+        LF = u'\n'
+        CR = u'\r'
 
     def _parse_lines_from_buffer(buf):
-        line = b''
+        line = ZERO
         bi = 0
         lb = len(buf)
         while bi < lb:
-            char = _bchr(buf[bi])
+            char = buf[bi]
             bi += 1
 
-            if char in (b'\r', b'\n') and line:
-                yield bi, line + b'\n'
-                line = b''
+            if char in (LF, CR) and line:
+                yield bi, line + LF
+                line = ZERO
             else:
                 line += char
             # END process parsed line
@@ -107,7 +115,7 @@ def handle_process_output(process, stdout_handler, stderr_handler, finalizer, de
     # end
 
     def _read_lines_from_fno(fno, last_buf_list):
-        buf = os.read(fno, mmap.PAGESIZE)
+        buf = fno.read(mmap.PAGESIZE)
         buf = last_buf_list[0] + buf
 
         bi = 0
@@ -192,8 +200,8 @@ def handle_process_output(process, stdout_handler, stderr_handler, finalizer, de
     else:
             # poll is preferred, as select is limited to file handles up to 1024 ... . This could otherwise be
             # an issue for us, as it matters how many handles our own process has
-            fdmap = {outfn: (stdout_handler, [b''], decode_streams),
-                     errfn: (stderr_handler, [b''], decode_streams)}
+            fdmap = {outfn: (process.stdout, stdout_handler, [ZERO], decode_streams),
+                     errfn: (process.stderr, stderr_handler, [ZERO], decode_streams)}
 
             READ_ONLY = select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLERR  # @UndefinedVariable
             CLOSED = select.POLLHUP | select.POLLERR                                      # @UndefinedVariable
@@ -217,7 +225,7 @@ def handle_process_output(process, stdout_handler, stderr_handler, finalizer, de
                     if result & CLOSED:
                         closed_streams.add(fd)
                     else:
-                        _dispatch_lines(fd, *fdmap[fd])
+                        _dispatch_lines(*fdmap[fd])
                     # end handle closed stream
                 # end for each poll-result tuple
 
@@ -227,8 +235,8 @@ def handle_process_output(process, stdout_handler, stderr_handler, finalizer, de
             # end endless loop
 
             # Depelete all remaining buffers
-            for fno, (handler, buf_list, decode) in fdmap.items():
-                _deplete_buffer(fno, handler, buf_list, decode)
+            for fno, args in fdmap.items():
+                _deplete_buffer(*args)
             # end for each file handle
 
             for fno in fdmap.keys():

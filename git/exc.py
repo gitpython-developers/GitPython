@@ -34,7 +34,8 @@ class CommandError(UnicodeMixin, Exception):
     _msg = u"Cmd('%s') failed%s"
 
     def __init__(self, command, status=None, stderr=None, stdout=None):
-        assert isinstance(command, (tuple, list)), command
+        if not isinstance(command, (tuple, list)):
+            command = command.split()
         self.command = command
         self.status = status
         if status:

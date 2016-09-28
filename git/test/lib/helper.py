@@ -301,7 +301,8 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
                 try:
                     gd.proc.kill()
                 except:
-                    pass ## Either it has died (and we're here), or it won't die, again here...
+                    ## Either it has died (and we're here), or it won't die, again here...
+                    pass
 
                 rw_repo.git.clear_cache()
                 rw_remote_repo.git.clear_cache()
