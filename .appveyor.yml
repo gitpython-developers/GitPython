@@ -77,7 +77,7 @@ install:
 build: false
 
 test_script:
-    - nosetests
+    - nosetests -vvvs --logging-level=DEBUG
 
 #on_success:
 #    - IF "%PYTHON_VERSION%"=="3.4" (coveralls)

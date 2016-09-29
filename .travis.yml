@@ -31,7 +31,7 @@ script:
   # Make sure we limit open handles to see if we are leaking them
   - ulimit -n 96
   - ulimit -n
-  - nosetests -v --with-coverage
+  - nosetests -vvvs --with-coverage --logging-level=DEBUG
   - if [ "$TRAVIS_PYTHON_VERSION" == '3.4' ]; then flake8; fi
   - if [ "$TRAVIS_PYTHON_VERSION" == '3.5' ]; then cd doc && make html; fi
   -

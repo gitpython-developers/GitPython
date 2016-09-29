@@ -535,6 +535,7 @@ class Git(LazyMixin):
                 cmd_not_found_exception = OSError
         # end handle
 
+        log.debug("Popen(%s, cwd=%s, universal_newlines=%s", command, cwd, universal_newlines)
         try:
             proc = Popen(command,
                          env=env,
