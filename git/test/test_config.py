@@ -12,8 +12,7 @@ from git import (
     GitConfigParser
 )
 from git.compat import (
-    string_types,
-    is_win,)
+    string_types)
 from git.config import cp
 from git.test.lib import (
     TestCase,
@@ -22,6 +21,7 @@ from git.test.lib import (
 from git.test.lib import with_rw_directory
 
 import os.path as osp
+from git.util import rmfile
 
 
 _tc_lock_fpaths = osp.join(osp.dirname(__file__), 'fixtures/*.lock')
@@ -29,9 +29,7 @@ _tc_lock_fpaths = osp.join(osp.dirname(__file__), 'fixtures/*.lock')
 
 def _rm_lock_files():
     for lfp in glob.glob(_tc_lock_fpaths):
-        if is_win and osp.isfile(lfp):
-            os.chmod(lfp, 0o777)
-        os.remove(lfp)
+        rmfile(lfp)
 
 
 class TestBase(TestCase):

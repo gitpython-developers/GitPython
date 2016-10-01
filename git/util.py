@@ -5,28 +5,17 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 from __future__ import unicode_literals
 
-import os
-import re
-import time
-import stat
-import shutil
-import platform
 import getpass
 import logging
+import os
+import platform
+import re
+import shutil
+import stat
+import time
 
-# NOTE:  Some of the unused imports might be used/imported by others.
-# Handle once test-cases are back up and running.
-from .exc import InvalidGitRepositoryError
-
-from .compat import (
-    MAXSIZE,
-    defenc,
-    PY3
-)
-
-# Most of these are unused here, but are for use by git-python modules so these
-# don't see gitdb all the time. Flake of course doesn't like it.
-from gitdb.util import (# NOQA
+from git.compat import is_win
+from gitdb.util import (  # NOQA
     make_sha,
     LockedFD,
     file_contents_ro,
@@ -34,8 +23,21 @@ from gitdb.util import (# NOQA
     to_hex_sha,
     to_bin_sha
 )
-from git.compat import is_win
 
+import os.path as osp
+
+from .compat import (
+    MAXSIZE,
+    defenc,
+    PY3
+)
+from .exc import InvalidGitRepositoryError
+
+
+# NOTE:  Some of the unused imports might be used/imported by others.
+# Handle once test-cases are back up and running.
+# Most of these are unused here, but are for use by git-python modules so these
+# don't see gitdb all the time. Flake of course doesn't like it.
 __all__ = ("stream_copy", "join_path", "to_native_path_windows", "to_native_path_linux",
            "join_path_native", "Stats", "IndexFileSHA1Writer", "Iterable", "IterableList",
            "BlockingLockFile", "LockFile", 'Actor', 'get_user_id', 'assure_directory_exists',
@@ -70,6 +72,14 @@ def rmtree(path):
         func(path)  # Will scream if still not possible to delete.
 
     return shutil.rmtree(path, False, onerror)
+
+
+def rmfile(path):
+    """Ensure file deleted also on *Windows* where read-only files need special treatment."""
+    if osp.isfile(path):
+        if is_win:
+            os.chmod(path, 0o777)
+        os.remove(path)
 
 
 def stream_copy(source, destination, chunk_size=512 * 1024):
@@ -585,12 +595,7 @@ class LockFile(object):
         # instead of failing, to make it more usable.
         lfp = self._lock_file_path()
         try:
-            # on bloody windows, the file needs write permissions to be removable.
-            # Why ...
-            if is_win:
-                os.chmod(lfp, 0o777)
-            # END handle win32
-            os.remove(lfp)
+            rmfile(lfp)
         except OSError:
             pass
         self._owns_lock = False
