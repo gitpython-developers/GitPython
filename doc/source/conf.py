@@ -50,7 +50,8 @@ copyright = u'Copyright (C) 2008, 2009 Michael Trier and contributors, 2010-2015
 # built documents.
 #
 # The short X.Y version.
-VERSION = open(os.path.join(os.path.dirname(__file__),"..", "..", 'VERSION')).readline().strip()
+with open(os.path.join(os.path.dirname(__file__),"..", "..", 'VERSION')) as fd:
+    VERSION = fd.readline().strip()
 version = VERSION
 # The full version, including alpha/beta/rc tags.
 release = VERSION

@@ -16,7 +16,7 @@ git:
 install:
   - git submodule update --init --recursive
   - git fetch --tags
-  - pip install coveralls flake8 sphinx
+  - pip install coveralls flake8 ddt sphinx
 
   # generate some reflog as git-python tests need it (in master)
   - ./init-tests-after-clone.sh
@@ -31,8 +31,9 @@ script:
   # Make sure we limit open handles to see if we are leaking them
   - ulimit -n 96
   - ulimit -n
-  - nosetests -v --with-coverage
-  - flake8
-  - cd doc && make html
+  - nosetests --with-coverage
+  - if [ "$TRAVIS_PYTHON_VERSION" == '3.4' ]; then flake8; fi
+  - if [ "$TRAVIS_PYTHON_VERSION" == '3.5' ]; then cd doc && make html; fi
+  -
 after_success:
   - coveralls

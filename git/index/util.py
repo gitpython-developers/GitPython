@@ -2,6 +2,7 @@
 import struct
 import tempfile
 import os
+from git.compat import is_win
 
 __all__ = ('TemporaryFileSwap', 'post_clear_cache', 'default_index', 'git_working_dir')
 
@@ -29,7 +30,7 @@ class TemporaryFileSwap(object):
 
     def __del__(self):
         if os.path.isfile(self.tmp_file_path):
-            if os.name == 'nt' and os.path.exists(self.file_path):
+            if is_win and os.path.exists(self.file_path):
                 os.remove(self.file_path)
             os.rename(self.tmp_file_path, self.file_path)
         # END temp file exists

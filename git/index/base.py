@@ -46,7 +46,8 @@ from git.compat import (
     string_types,
     force_bytes,
     defenc,
-    mviter
+    mviter,
+    is_win
 )
 
 from git.util import (
@@ -136,7 +137,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             # which happens during read-tree.
             # In this case, we will just read the memory in directly.
             # Its insanely bad ... I am disappointed !
-            allow_mmap = (os.name != 'nt' or sys.version_info[1] > 5)
+            allow_mmap = (is_win or sys.version_info[1] > 5)
             stream = file_contents_ro(fd, stream=True, allow_mmap=allow_mmap)
 
             try:
@@ -213,8 +214,8 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         self.entries
         lfd = LockedFD(file_path or self._file_path)
         stream = lfd.open(write=True, stream=True)
-        ok = False
 
+        ok = False
         try:
             self._serialize(stream, ignore_extension_data)
             ok = True
@@ -601,14 +602,13 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         stream = None
         if S_ISLNK(st.st_mode):
             # in PY3, readlink is string, but we need bytes. In PY2, it's just OS encoded bytes, we assume UTF-8
-            stream = BytesIO(force_bytes(os.readlink(filepath), encoding=defenc))
+            open_stream = lambda: BytesIO(force_bytes(os.readlink(filepath), encoding=defenc))
         else:
-            stream = open(filepath, 'rb')
-        # END handle stream
-        fprogress(filepath, False, filepath)
-        istream = self.repo.odb.store(IStream(Blob.type, st.st_size, stream))
-        fprogress(filepath, True, filepath)
-        stream.close()
+            open_stream = lambda: open(filepath, 'rb')
+        with open_stream() as stream:
+            fprogress(filepath, False, filepath)
+            istream = self.repo.odb.store(IStream(Blob.type, st.st_size, stream))
+            fprogress(filepath, True, filepath)
         return BaseIndexEntry((stat_mode_to_index_mode(st.st_mode),
                                istream.binsha, 0, to_native_path_linux(filepath)))
 
@@ -1059,7 +1059,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
                 # END for each possible ending
             # END for each line
             if unknown_lines:
-                raise GitCommandError(("git-checkout-index", ), 128, stderr)
+                raise GitCommandError(("git-checkout-index",), 128, stderr)
             if failed_files:
                 valid_files = list(set(iter_checked_out_files) - set(failed_files))
                 raise CheckoutError(
@@ -1090,6 +1090,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             kwargs['as_process'] = True
             kwargs['istream'] = subprocess.PIPE
             proc = self.repo.git.checkout_index(args, **kwargs)
+            # FIXME: Reading from GIL!
             make_exc = lambda: GitCommandError(("git-checkout-index",) + tuple(args), 128, proc.stderr.read())
             checked_out_files = list()
 

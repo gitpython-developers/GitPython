@@ -1,20 +1,28 @@
 ## GitPython
 
-GitPython is a python library used to interact with git repositories, high-level like git-porcelain, or low-level like git-plumbing.
+GitPython is a python library used to interact with git repositories, high-level like git-porcelain, 
+or low-level like git-plumbing.
 
-It provides abstractions of git objects for easy access of repository data, and additionally allows you to access the git repository more directly using either a pure python implementation, or the faster, but more resource intensive git command implementation.
+It provides abstractions of git objects for easy access of repository data, and additionally 
+allows you to access the git repository more directly using either a pure python implementation, 
+or the faster, but more resource intensive *git command* implementation.
 
-The object database implementation is optimized for handling large quantities of objects and large datasets, which is achieved by using low-level structures and data streaming.
+The object database implementation is optimized for handling large quantities of objects and large datasets, 
+which is achieved by using low-level structures and data streaming.
 
 
 ### REQUIREMENTS
 
-GitPython needs the `git` executable to be installed on the system and available in your `PATH` for most operations. If it is not in your `PATH`, you can help GitPython find it by setting the `GIT_PYTHON_GIT_EXECUTABLE=<path/to/git>` environment variable.
+GitPython needs the `git` executable to be installed on the system and available 
+in your `PATH` for most operations. 
+If it is not in your `PATH`, you can help GitPython find it by setting 
+the `GIT_PYTHON_GIT_EXECUTABLE=<path/to/git>` environment variable.
 
 * Git (1.7.x or newer)
 * Python 2.7 to 3.5, while python 2.6 is supported on a *best-effort basis*.
 
-The list of dependencies are listed in `./requirements.txt` and `./test-requirements.txt`. The installer takes care of installing them for you.
+The list of dependencies are listed in `./requirements.txt` and `./test-requirements.txt`. 
+The installer takes care of installing them for you.
 
 ### INSTALL
 
@@ -31,7 +39,7 @@ Both commands will install the required package dependencies.
 A distribution package can be obtained for manual installation at:
 
     http://pypi.python.org/pypi/GitPython
-    
+
 If you like to clone from source, you can do it like so:
 
 ```bash
@@ -45,7 +53,7 @@ git submodule update --init --recursive
 #### Leakage of System Resources
 
 GitPython is not suited for long-running processes (like daemons) as it tends to
-leak system resources. It was written in a time where destructors (as implemented 
+leak system resources. It was written in a time where destructors (as implemented
 in the `__del__` method) still ran deterministically.
 
 In case you still want to use it in such a context, you will want to search the
@@ -61,17 +69,25 @@ as they are kept alive solely by their users, or not.
 
 ### RUNNING TESTS
 
-*Important*: Right after cloning this repository, please be sure to have executed the `init-tests-after-clone.sh` script in the repository root. Otherwise you will encounter test failures.
+*Important*: Right after cloning this repository, please be sure to have executed
+the `./init-tests-after-clone.sh` script in the repository root. Otherwise
+you will encounter test failures.
 
-The easiest way to run test is by using [tox](https://pypi.python.org/pypi/tox) a wrapper around virtualenv. It will take care of setting up environnements with the proper dependencies installed and execute test commands. To install it simply:
+On *Windows*, make sure you have `git-daemon` in your PATH.  For MINGW-git, the `git-daemon.exe`
+exists in `Git\mingw64\libexec\git-core\`; CYGWIN has no daemon, but should get along fine
+with MINGW's.
+
+The easiest way to run tests is by using [tox](https://pypi.python.org/pypi/tox)
+a wrapper around virtualenv. It will take care of setting up environnements with the proper
+dependencies installed and execute test commands. To install it simply:
 
     pip install tox
 
 Then run:
 
     tox
-    
-    
+
+
 For more fine-grained control, you can use `nose`.
 
 ### Contributions
@@ -84,7 +100,8 @@ Please have a look at the [contributions file][contributing].
 * [Questions and Answers](http://stackexchange.com/filters/167317/gitpython)
  * Please post on stackoverflow and use the `gitpython` tag
 * [Issue Tracker](https://github.com/gitpython-developers/GitPython/issues)
-  * Post reproducible bugs and feature requests as a new issue. Please be sure to provide the following information if posting bugs:
+  * Post reproducible bugs and feature requests as a new issue. 
+    Please be sure to provide the following information if posting bugs:
     * GitPython version (e.g. `import git; git.__version__`)
     * Python version (e.g. `python --version`)
     * The encountered stack-trace, if applicable
@@ -100,7 +117,7 @@ Please have a look at the [contributions file][contributing].
 * Finally, set the upcoming version in the `VERSION` file, usually be
   incrementing the patch level, and possibly by appending `-dev`. Probably you
   want to `git push` once more.
-  
+
 ### LICENSE
 
 New BSD License.  See the LICENSE file.
@@ -113,7 +130,8 @@ New BSD License.  See the LICENSE file.
 [![Stories in Ready](https://badge.waffle.io/gitpython-developers/GitPython.png?label=ready&title=Ready)](https://waffle.io/gitpython-developers/GitPython)
 [![Throughput Graph](https://graphs.waffle.io/gitpython-developers/GitPython/throughput.svg)](https://waffle.io/gitpython-developers/GitPython/metrics/throughput)
 
-Now that there seems to be a massive user base, this should be motivation enough to let git-python return to a proper state, which means
+Now that there seems to be a massive user base, this should be motivation enough to let git-python 
+return to a proper state, which means
 
 * no open pull requests
 * no open issues describing bugs

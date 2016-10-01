@@ -17,6 +17,10 @@ from git.test.test_commit import assert_commit_serialization
 
 class TestPerformance(TestBigRepoRW):
 
+    def tearDown(self):
+        import gc
+        gc.collect()
+
     # ref with about 100 commits in its history
     ref_100 = '0.1.6'
 

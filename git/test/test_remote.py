@@ -25,10 +25,9 @@ from git import (
     Remote,
     GitCommandError
 )
-from git.util import IterableList
+from git.util import IterableList, rmtree
 from git.compat import string_types
 import tempfile
-import shutil
 import os
 import random
 
@@ -101,9 +100,13 @@ class TestRemoteProgress(RemoteProgress):
 
 class TestRemote(TestBase):
 
+    def tearDown(self):
+        import gc
+        gc.collect()
+
     def _print_fetchhead(self, repo):
-        fp = open(os.path.join(repo.git_dir, "FETCH_HEAD"))
-        fp.close()
+        with open(os.path.join(repo.git_dir, "FETCH_HEAD")):
+            pass
 
     def _do_test_fetch_result(self, results, remote):
         # self._print_fetchhead(remote.repo)
@@ -281,7 +284,7 @@ class TestRemote(TestBase):
             # and only provides progress information to ttys
             res = fetch_and_test(other_origin)
         finally:
-            shutil.rmtree(other_repo_dir)
+            rmtree(other_repo_dir)
         # END test and cleanup
 
     def _assert_push_and_pull(self, remote, rw_repo, remote_repo):
@@ -403,7 +406,7 @@ class TestRemote(TestBase):
 
             # OPTIONS
             # cannot use 'fetch' key anymore as it is now a method
-            for opt in ("url", ):
+            for opt in ("url",):
                 val = getattr(remote, opt)
                 reader = remote.config_reader
                 assert reader.get(opt) == val

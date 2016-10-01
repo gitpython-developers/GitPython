@@ -9,7 +9,7 @@ from git.test.lib import (
     TestBase,
     with_rw_repo
 )
-from gitdb.test.lib import with_rw_directory
+from git.test.lib import with_rw_directory
 from git.exc import (
     InvalidGitRepositoryError,
     RepositoryDirtyError
@@ -17,7 +17,7 @@ from git.exc import (
 from git.objects.submodule.base import Submodule
 from git.objects.submodule.root import RootModule, RootUpdateProgress
 from git.util import to_native_path_linux, join_path_native
-from git.compat import string_types
+from git.compat import string_types, is_win
 from git.repo.fun import (
     find_git_dir,
     touch
@@ -26,7 +26,7 @@ from git.repo.fun import (
 # Change the configuration if possible to prevent the underlying memory manager
 # to keep file handles open. On windows we get problems as they are not properly
 # closed due to mmap bugs on windows (as it appears)
-if sys.platform == 'win32':
+if is_win:
     try:
         import smmap.util
         smmap.util.MapRegion._test_read_into_memory = True
@@ -48,6 +48,10 @@ prog = TestRootProgress()
 
 
 class TestSubmodule(TestBase):
+
+    def tearDown(self):
+        import gc
+        gc.collect()
 
     k_subm_current = "c15a6e1923a14bc760851913858a3942a4193cdb"
     k_subm_changed = "394ed7006ee5dc8bddfd132b64001d5dfc0ffdd3"
@@ -305,7 +309,8 @@ class TestSubmodule(TestBase):
 
             # but ... we have untracked files in the child submodule
             fn = join_path_native(csm.module().working_tree_dir, "newfile")
-            open(fn, 'w').write("hi")
+            with open(fn, 'w') as fd:
+                fd.write("hi")
             self.failUnlessRaises(InvalidGitRepositoryError, sm.remove)
 
             # forcibly delete the child repository

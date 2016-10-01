@@ -24,7 +24,7 @@ from git.objects.util import (
     parse_date,
 )
 from git.cmd import dashify
-from git.compat import string_types
+from git.compat import string_types, is_win
 
 import time
 
@@ -90,7 +90,11 @@ class TestUtils(TestBase):
         wait_lock = BlockingLockFile(my_file, 0.05, wait_time)
         self.failUnlessRaises(IOError, wait_lock._obtain_lock)
         elapsed = time.time() - start
-        assert elapsed <= wait_time + 0.02  # some extra time it may cost
+        extra_time = 0.02
+        if is_win:
+            # for Appveyor
+            extra_time *= 6  # NOTE: Indeterministic failures here...
+        self.assertLess(elapsed, wait_time + extra_time)
 
     def test_user_id(self):
         assert '@' in get_user_id()

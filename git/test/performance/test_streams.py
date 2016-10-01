@@ -87,6 +87,9 @@ class TestObjDBPerformance(TestBigRepoR):
                   % (size_kib, desc, cs_kib, elapsed_readchunks, size_kib / elapsed_readchunks), file=sys.stderr)
 
             # del db file so git has something to do
+            ostream = None
+            import gc
+            gc.collect()
             os.remove(db_file)
 
             # VS. CGIT

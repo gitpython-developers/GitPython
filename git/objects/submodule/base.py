@@ -29,7 +29,8 @@ from git.exc import (
 )
 from git.compat import (
     string_types,
-    defenc
+    defenc,
+    is_win,
 )
 
 import stat
@@ -289,14 +290,16 @@ class Submodule(util.IndexObject, Iterable, Traversable):
         """
         git_file = os.path.join(working_tree_dir, '.git')
         rela_path = os.path.relpath(module_abspath, start=working_tree_dir)
-        fp = open(git_file, 'wb')
-        fp.write(("gitdir: %s" % rela_path).encode(defenc))
-        fp.close()
+        if is_win:
+            if os.path.isfile(git_file):
+                os.remove(git_file)
+        with open(git_file, 'wb') as fp:
+            fp.write(("gitdir: %s" % rela_path).encode(defenc))
 
-        writer = GitConfigParser(os.path.join(module_abspath, 'config'), read_only=False, merge_includes=False)
-        writer.set_value('core', 'worktree',
-                         to_native_path_linux(os.path.relpath(working_tree_dir, start=module_abspath)))
-        writer.release()
+        with GitConfigParser(os.path.join(module_abspath, 'config'),
+                             read_only=False, merge_includes=False) as writer:
+            writer.set_value('core', 'worktree',
+                             to_native_path_linux(os.path.relpath(working_tree_dir, start=module_abspath)))
 
     #{ Edit Interface
 
@@ -848,13 +851,17 @@ class Submodule(util.IndexObject, Iterable, Traversable):
 
                 # finally delete our own submodule
                 if not dry_run:
+                    self._clear_cache()
                     wtd = mod.working_tree_dir
                     del(mod)        # release file-handles (windows)
+                    import gc
+                    gc.collect()
                     rmtree(wtd)
                 # END delete tree if possible
             # END handle force
 
             if not dry_run and os.path.isdir(git_dir):
+                self._clear_cache()
                 rmtree(git_dir)
             # end handle separate bare repository
         # END handle module deletion

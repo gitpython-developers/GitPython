@@ -7,15 +7,15 @@
 """utilities to help provide compatibility with python 3"""
 # flake8: noqa
 
+import locale
+import os
 import sys
 
 from gitdb.utils.compat import (
-    PY3,
     xrange,
     MAXSIZE,
     izip,
 )
-
 from gitdb.utils.encoding import (
     string_types,
     text_type,
@@ -23,7 +23,13 @@ from gitdb.utils.encoding import (
     force_text
 )
 
+
+PY3 = sys.version_info[0] >= 3
+is_win = (os.name == 'nt')
+is_posix = (os.name == 'posix')
+is_darwin = (os.name == 'darwin')
 defenc = sys.getdefaultencoding()
+
 if PY3:
     import io
     FileType = io.IOBase
@@ -57,7 +63,28 @@ def safe_decode(s):
         return s
     elif isinstance(s, bytes):
         return s.decode(defenc, 'replace')
-    raise TypeError('Expected bytes or text, but got %r' % (s,))
+    elif s is not None:
+        raise TypeError('Expected bytes or text, but got %r' % (s,))
+
+
+def safe_encode(s):
+    """Safely decodes a binary string to unicode"""
+    if isinstance(s, unicode):
+        return s.encode(defenc)
+    elif isinstance(s, bytes):
+        return s
+    elif s is not None:
+        raise TypeError('Expected bytes or text, but got %r' % (s,))
+
+
+def win_encode(s):
+    """Encode unicodes for process arguments on Windows."""
+    if isinstance(s, unicode):
+        return s.encode(locale.getpreferredencoding(False))
+    elif isinstance(s, bytes):
+        return s
+    elif s is not None:
+        raise TypeError('Expected bytes or text, but got %r' % (s,))
 
 
 def with_metaclass(meta, *bases):
@@ -73,9 +100,19 @@ def with_metaclass(meta, *bases):
             # we set the __metaclass__ attribute explicitly
             if not PY3 and '___metaclass__' not in d:
                 d['__metaclass__'] = meta
-            # end
             return meta(name, bases, d)
-        # end
-    # end metaclass
     return metaclass(meta.__name__ + 'Helper', None, {})
-    # end handle py2
+
+
+## From https://docs.python.org/3.3/howto/pyporting.html
+class UnicodeMixin(object):
+
+    """Mixin class to handle defining the proper __str__/__unicode__
+    methods in Python 2 or 3."""
+
+    if PY3:
+        def __str__(self):
+            return self.__unicode__()
+    else:  # Python 2
+        def __str__(self):
+            return self.__unicode__().encode(defenc)

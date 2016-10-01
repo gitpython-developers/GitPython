@@ -3,30 +3,18 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
+from __future__ import unicode_literals
 
-import os
-import re
-import sys
-import time
-import stat
-import shutil
-import platform
 import getpass
-import threading
 import logging
+import os
+import platform
+import re
+import shutil
+import stat
+import time
 
-# NOTE:  Some of the unused imports might be used/imported by others.
-# Handle once test-cases are back up and running.
-from .exc import InvalidGitRepositoryError
-
-from .compat import (
-    MAXSIZE,
-    defenc,
-    PY3
-)
-
-# Most of these are unused here, but are for use by git-python modules so these
-# don't see gitdb all the time. Flake of course doesn't like it.
+from git.compat import is_win
 from gitdb.util import (  # NOQA
     make_sha,
     LockedFD,
@@ -36,10 +24,24 @@ from gitdb.util import (  # NOQA
     to_bin_sha
 )
 
+import os.path as osp
+
+from .compat import (
+    MAXSIZE,
+    defenc,
+    PY3
+)
+from .exc import InvalidGitRepositoryError
+
+
+# NOTE:  Some of the unused imports might be used/imported by others.
+# Handle once test-cases are back up and running.
+# Most of these are unused here, but are for use by git-python modules so these
+# don't see gitdb all the time. Flake of course doesn't like it.
 __all__ = ("stream_copy", "join_path", "to_native_path_windows", "to_native_path_linux",
            "join_path_native", "Stats", "IndexFileSHA1Writer", "Iterable", "IterableList",
            "BlockingLockFile", "LockFile", 'Actor', 'get_user_id', 'assure_directory_exists',
-           'RemoteProgress', 'CallableRemoteProgress', 'rmtree', 'WaitGroup', 'unbare_repo')
+           'RemoteProgress', 'CallableRemoteProgress', 'rmtree', 'unbare_repo')
 
 #{ Utility Methods
 
@@ -63,15 +65,21 @@ def rmtree(path):
 
     :note: we use shutil rmtree but adjust its behaviour to see whether files that
         couldn't be deleted are read-only. Windows will not remove them in that case"""
+
     def onerror(func, path, exc_info):
-        if not os.access(path, os.W_OK):
-            # Is the error an access error ?
-            os.chmod(path, stat.S_IWUSR)
-            func(path)
-        else:
-            raise
-    # END end onerror
+        # Is the error an access error ?
+        os.chmod(path, stat.S_IWUSR)
+        func(path)  # Will scream if still not possible to delete.
+
     return shutil.rmtree(path, False, onerror)
+
+
+def rmfile(path):
+    """Ensure file deleted also on *Windows* where read-only files need special treatment."""
+    if osp.isfile(path):
+        if is_win:
+            os.chmod(path, 0o777)
+        os.remove(path)
 
 
 def stream_copy(source, destination, chunk_size=512 * 1024):
@@ -107,7 +115,7 @@ def join_path(a, *p):
     return path
 
 
-if sys.platform.startswith('win'):
+if is_win:
     def to_native_path_windows(path):
         return path.replace('/', '\\')
 
@@ -152,6 +160,7 @@ def get_user_id():
 
 def finalize_process(proc, **kwargs):
     """Wait for the process (clone, fetch, pull or push) and handle its errors accordingly"""
+    ## TODO: No close proc-streams??
     proc.wait(**kwargs)
 
 #} END utilities
@@ -324,12 +333,12 @@ class RemoteProgress(object):
 
         You may read the contents of the current line in self._cur_line"""
         pass
-        
+
 
 class CallableRemoteProgress(RemoteProgress):
     """An implementation forwarding updates to any callable"""
     __slots__ = ('_callable')
-    
+
     def __init__(self, fn):
         self._callable = fn
         super(CallableRemoteProgress, self).__init__()
@@ -565,7 +574,10 @@ class LockFile(object):
                           (self._file_path, lock_file))
 
         try:
-            fd = os.open(lock_file, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0)
+            flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+            if is_win:
+                flags |= os.O_SHORT_LIVED
+            fd = os.open(lock_file, flags, 0)
             os.close(fd)
         except OSError as e:
             raise IOError(str(e))
@@ -586,12 +598,7 @@ class LockFile(object):
         # instead of failing, to make it more usable.
         lfp = self._lock_file_path()
         try:
-            # on bloody windows, the file needs write permissions to be removable.
-            # Why ...
-            if os.name == 'nt':
-                os.chmod(lfp, 0o777)
-            # END handle win32
-            os.remove(lfp)
+            rmfile(lfp)
         except OSError:
             pass
         self._owns_lock = False
@@ -752,35 +759,6 @@ class Iterable(object):
         raise NotImplementedError("To be implemented by Subclass")
 
 #} END classes
-
-
-class WaitGroup(object):
-    """WaitGroup is like Go sync.WaitGroup.
-
-    Without all the useful corner cases.
-    By Peter Teichman, taken from https://gist.github.com/pteichman/84b92ae7cef0ab98f5a8
-    """
-    def __init__(self):
-        self.count = 0
-        self.cv = threading.Condition()
-
-    def add(self, n):
-        self.cv.acquire()
-        self.count += n
-        self.cv.release()
-
-    def done(self):
-        self.cv.acquire()
-        self.count -= 1
-        if self.count == 0:
-            self.cv.notify_all()
-        self.cv.release()
-
-    def wait(self, stderr=b''):
-        self.cv.acquire()
-        while self.count > 0:
-            self.cv.wait()
-        self.cv.release()
 
 
 class NullHandler(logging.Handler):
