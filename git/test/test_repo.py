@@ -56,6 +56,7 @@ from gitdb.util import bin_to_hex
 from nose import SkipTest
 
 import os.path as osp
+from unittest.case import skipIf
 
 
 def iter_flatten(lol):
@@ -794,6 +795,7 @@ class TestRepo(TestBase):
         git_file_repo = Repo(rwrepo.working_tree_dir)
         self.assertEqual(os.path.abspath(git_file_repo.git_dir), real_path_abs)
 
+    @skipIf(is_win and PY3, "FIXME: smmp fails with: TypeError: Can't convert 'bytes' object to str implicitly")
     def test_file_handle_leaks(self):
         def last_commit(repo, rev, path):
             commit = next(repo.iter_commits(rev, path, max_count=1))

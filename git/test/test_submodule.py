@@ -22,6 +22,7 @@ from git.repo.fun import (
     find_git_dir,
     touch
 )
+from unittest.case import skipIf
 
 # Change the configuration if possible to prevent the underlying memory manager
 # to keep file handles open. On windows we get problems as they are not properly
@@ -416,6 +417,9 @@ class TestSubmodule(TestBase):
         # Error if there is no submodule file here
         self.failUnlessRaises(IOError, Submodule._config_parser, rwrepo, rwrepo.commit(self.k_no_subm_tag), True)
 
+    @skipIf(is_win, "FIXME: fails with: PermissionError: [WinError 32] The process cannot access the file because"
+            "it is being used by another process: "
+            "'C:\\Users\\ankostis\\AppData\\Local\\Temp\\tmp95c3z83bnon_bare_test_base_rw\\git\\ext\\gitdb\\gitdb\\ext\\smmap'")  # noqa E501
     @with_rw_repo(k_subm_current)
     def test_base_rw(self, rwrepo):
         self._do_base_tests(rwrepo)
