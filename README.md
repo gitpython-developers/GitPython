@@ -118,4 +118,4 @@ Now that there seems to be a massive user base, this should be motivation enough
 * no open pull requests
 * no open issues describing bugs
 
-[contributing]: https://github.com/gitpython-developers/GitPython/blob/master/README.md
+[contributing]: https://github.com/gitpython-developers/GitPython/blob/master/CONTRIBUTING.md
