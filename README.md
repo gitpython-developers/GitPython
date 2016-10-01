@@ -136,4 +136,4 @@ return to a proper state, which means
 * no open pull requests
 * no open issues describing bugs
 
-[contributing]: https://github.com/gitpython-developers/GitPython/blob/master/README.md
+[contributing]: https://github.com/gitpython-developers/GitPython/blob/master/CONTRIBUTING.md

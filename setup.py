@@ -9,6 +9,8 @@ except ImportError:
 
 from distutils.command.build_py import build_py as _build_py
 from setuptools.command.sdist import sdist as _sdist
+import pkg_resources
+import logging
 import os
 import sys
 from os import path
@@ -68,10 +70,26 @@ def _stamp_version(filename):
         print("WARNING: Couldn't find version line in file %s" % filename, file=sys.stderr)
 
 install_requires = ['gitdb >= 0.6.4']
-test_requires = ['node', 'ddt']
+extras_require = {
+    ':python_version == "2.6"': ['ordereddict'],
+}
+test_requires = ['ddt']
 if sys.version_info[:2] < (2, 7):
-    install_requires.append('ordereddict')
     test_requires.append('mock')
+
+try:
+    if 'bdist_wheel' not in sys.argv:
+        for key, value in extras_require.items():
+            if key.startswith(':') and pkg_resources.evaluate_marker(key[1:]):
+                install_requires.extend(value)
+except Exception:
+    logging.getLogger(__name__).exception(
+        'Something went wrong calculating platform specific dependencies, so '
+        "you're getting them all!"
+    )
+    for key, value in extras_require.items():
+        if key.startswith(':'):
+            install_requires.extend(value)
 # end
 
 setup(
