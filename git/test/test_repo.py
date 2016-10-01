@@ -781,14 +781,16 @@ class TestRepo(TestBase):
         real_path_abs = os.path.abspath(join_path_native(rwrepo.working_tree_dir, '.real'))
         os.rename(rwrepo.git_dir, real_path_abs)
         git_file_path = join_path_native(rwrepo.working_tree_dir, '.git')
-        open(git_file_path, 'wb').write(fixture('git_file'))
+        with open(git_file_path, 'wb') as fp:
+            fp.write(fixture('git_file'))
 
         # Create a repo and make sure it's pointing to the relocated .git directory.
         git_file_repo = Repo(rwrepo.working_tree_dir)
         self.assertEqual(os.path.abspath(git_file_repo.git_dir), real_path_abs)
 
         # Test using an absolute gitdir path in the .git file.
-        open(git_file_path, 'wb').write(('gitdir: %s\n' % real_path_abs).encode('ascii'))
+        with open(git_file_path, 'wb') as fp:
+            fp.write(('gitdir: %s\n' % real_path_abs).encode('ascii'))
         git_file_repo = Repo(rwrepo.working_tree_dir)
         self.assertEqual(os.path.abspath(git_file_repo.git_dir), real_path_abs)
 

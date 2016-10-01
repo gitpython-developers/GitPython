@@ -15,9 +15,8 @@ import os
 import sys
 from os import path
 
-v = open(path.join(path.dirname(__file__), 'VERSION'))
-VERSION = v.readline().strip()
-v.close()
+with open(path.join(path.dirname(__file__), 'VERSION')) as v:
+    VERSION = v.readline().strip()
 
 with open('requirements.txt') as reqs_file:
     requirements = reqs_file.read().splitlines()
@@ -50,22 +49,18 @@ class sdist(_sdist):
 def _stamp_version(filename):
     found, out = False, list()
     try:
-        f = open(filename, 'r')
+        with open(filename, 'r') as f:
+            for line in f:
+                if '__version__ =' in line:
+                    line = line.replace("'git'", "'%s'" % VERSION)
+                    found = True
+                out.append(line)
     except (IOError, OSError):
         print("Couldn't find file %s to stamp version" % filename, file=sys.stderr)
-        return
-    # END handle error, usually happens during binary builds
-    for line in f:
-        if '__version__ =' in line:
-            line = line.replace("'git'", "'%s'" % VERSION)
-            found = True
-        out.append(line)
-    f.close()
 
     if found:
-        f = open(filename, 'w')
-        f.writelines(out)
-        f.close()
+        with open(filename, 'w') as f:
+            f.writelines(out)
     else:
         print("WARNING: Couldn't find version line in file %s" % filename, file=sys.stderr)
 
@@ -109,8 +104,7 @@ setup(
     install_requires=install_requires,
     test_requirements=test_requires + install_requires,
     zip_safe=False,
-    long_description="""\
-GitPython is a python library used to interact with Git repositories""",
+    long_description="""GitPython is a python library used to interact with Git repositories""",
     classifiers=[
         # Picked from
         #   http://pypi.python.org/pypi?:action=list_classifiers

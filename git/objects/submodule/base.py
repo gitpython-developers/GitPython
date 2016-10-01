@@ -854,6 +854,8 @@ class Submodule(util.IndexObject, Iterable, Traversable):
                     self._clear_cache()
                     wtd = mod.working_tree_dir
                     del(mod)        # release file-handles (windows)
+                    import gc
+                    gc.collect()
                     rmtree(wtd)
                 # END delete tree if possible
             # END handle force

@@ -39,7 +39,8 @@ def fixture_path(name):
 
 
 def fixture(name):
-    return open(fixture_path(name), 'rb').read()
+    with open(fixture_path(name), 'rb') as fd:
+        return fd.read()
 
 
 def absolute_project_path():
@@ -373,7 +374,6 @@ class TestBase(TestCase):
         """
         repo = repo or self.rorepo
         abs_path = os.path.join(repo.working_tree_dir, rela_path)
-        fp = open(abs_path, "w")
-        fp.write(data)
-        fp.close()
+        with open(abs_path, "w") as fp:
+            fp.write(data)
         return abs_path

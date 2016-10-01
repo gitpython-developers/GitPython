@@ -313,14 +313,16 @@ class TestCommit(TestBase):
 
     def test_invalid_commit(self):
         cmt = self.rorepo.commit()
-        cmt._deserialize(open(fixture_path('commit_invalid_data'), 'rb'))
+        with open(fixture_path('commit_invalid_data'), 'rb') as fd:
+            cmt._deserialize(fd)
 
         self.assertEqual(cmt.author.name, u'E.Azer Ko�o�o�oculu', cmt.author.name)
         self.assertEqual(cmt.author.email, 'azer@kodfabrik.com', cmt.author.email)
 
     def test_gpgsig(self):
         cmt = self.rorepo.commit()
-        cmt._deserialize(open(fixture_path('commit_with_gpgsig'), 'rb'))
+        with open(fixture_path('commit_with_gpgsig'), 'rb') as fd:
+            cmt._deserialize(fd)
 
         fixture_sig = """-----BEGIN PGP SIGNATURE-----
 Version: GnuPG v1.4.11 (GNU/Linux)

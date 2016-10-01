@@ -93,10 +93,9 @@ class TestGit(TestBase):
 
     def test_it_accepts_stdin(self):
         filename = fixture_path("cat_file_blob")
-        fh = open(filename, 'r')
-        assert_equal("70c379b63ffa0795fdbfbc128e5a2818397b7ef8",
-                     self.git.hash_object(istream=fh, stdin=True))
-        fh.close()
+        with open(filename, 'r') as fh:
+            assert_equal("70c379b63ffa0795fdbfbc128e5a2818397b7ef8",
+                         self.git.hash_object(istream=fh, stdin=True))
 
     @patch.object(Git, 'execute')
     def test_it_ignores_false_kwargs(self, git):
@@ -200,10 +199,9 @@ class TestGit(TestBase):
         self.assertEqual(self.git.environment(), {})
 
         path = os.path.join(rw_dir, 'failing-script.sh')
-        stream = open(path, 'wt')
-        stream.write("#!/usr/bin/env sh\n" +
-                     "echo FOO\n")
-        stream.close()
+        with open(path, 'wt') as stream:
+            stream.write("#!/usr/bin/env sh\n"
+                         "echo FOO\n")
         os.chmod(path, 0o777)
 
         rw_repo = Repo.init(os.path.join(rw_dir, 'repo'))

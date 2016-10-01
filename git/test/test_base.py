@@ -77,13 +77,11 @@ class TestBase(TestBase):
             assert data
 
             tmpfilename = tempfile.mktemp(suffix='test-stream')
-            tmpfile = open(tmpfilename, 'wb+')
-            assert item == item.stream_data(tmpfile)
-            tmpfile.seek(0)
-            assert tmpfile.read() == data
-            tmpfile.close()
+            with open(tmpfilename, 'wb+') as tmpfile:
+                assert item == item.stream_data(tmpfile)
+                tmpfile.seek(0)
+                assert tmpfile.read() == data
             os.remove(tmpfilename)
-            # END stream to file directly
         # END for each object type to create
 
         # each has a unique sha
@@ -133,7 +131,8 @@ class TestBase(TestBase):
             from nose import SkipTest
             raise SkipTest("Environment doesn't support unicode filenames")
 
-        open(file_path, "wb").write(b'something')
+        with open(file_path, "wb") as fp:
+            fp.write(b'something')
 
         if is_win:
             # on windows, there is no way this works, see images on

@@ -53,7 +53,8 @@ class Tutorials(TestBase):
         # ![5-test_init_repo_object]
 
         # [6-test_init_repo_object]
-        repo.archive(open(join(rw_dir, 'repo.tar'), 'wb'))
+        with open(join(rw_dir, 'repo.tar'), 'wb') as fp:
+            repo.archive(fp)
         # ![6-test_init_repo_object]
 
         # repository paths

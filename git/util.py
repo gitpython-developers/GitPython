@@ -576,7 +576,7 @@ class LockFile(object):
         try:
             flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
             if is_win:
-                flags |= getattr(os, 'O_SHORT_LIVED')
+                flags |= os.O_SHORT_LIVED
             fd = os.open(lock_file, flags, 0)
             os.close(fd)
         except OSError as e:

@@ -105,8 +105,8 @@ class TestRemote(TestBase):
         gc.collect()
 
     def _print_fetchhead(self, repo):
-        fp = open(os.path.join(repo.git_dir, "FETCH_HEAD"))
-        fp.close()
+        with open(os.path.join(repo.git_dir, "FETCH_HEAD")):
+            pass
 
     def _do_test_fetch_result(self, results, remote):
         # self._print_fetchhead(remote.repo)

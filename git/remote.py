@@ -638,9 +638,8 @@ class Remote(LazyMixin, Iterable):
         finalize_process(proc, stderr=stderr_text)
 
         # read head information
-        fp = open(join(self.repo.git_dir, 'FETCH_HEAD'), 'rb')
-        fetch_head_info = [l.decode(defenc) for l in fp.readlines()]
-        fp.close()
+        with open(join(self.repo.git_dir, 'FETCH_HEAD'), 'rb') as fp:
+            fetch_head_info = [l.decode(defenc) for l in fp.readlines()]
 
         l_fil = len(fetch_info_lines)
         l_fhi = len(fetch_head_info)
