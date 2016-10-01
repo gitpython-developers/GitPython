@@ -309,7 +309,8 @@ class TestSubmodule(TestBase):
 
             # but ... we have untracked files in the child submodule
             fn = join_path_native(csm.module().working_tree_dir, "newfile")
-            open(fn, 'w').write("hi")
+            with open(fn, 'w') as fd:
+                fd.write("hi")
             self.failUnlessRaises(InvalidGitRepositoryError, sm.remove)
 
             # forcibly delete the child repository

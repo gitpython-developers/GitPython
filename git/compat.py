@@ -7,6 +7,7 @@
 """utilities to help provide compatibility with python 3"""
 # flake8: noqa
 
+import locale
 import os
 import sys
 
@@ -15,13 +16,13 @@ from gitdb.utils.compat import (
     MAXSIZE,
     izip,
 )
-
 from gitdb.utils.encoding import (
     string_types,
     text_type,
     force_bytes,
     force_text
 )
+
 
 PY3 = sys.version_info[0] >= 3
 is_win = (os.name == 'nt')
@@ -70,6 +71,16 @@ def safe_encode(s):
     """Safely decodes a binary string to unicode"""
     if isinstance(s, unicode):
         return s.encode(defenc)
+    elif isinstance(s, bytes):
+        return s
+    elif s is not None:
+        raise TypeError('Expected bytes or text, but got %r' % (s,))
+
+
+def win_encode(s):
+    """Encode unicodes for process arguments on Windows."""
+    if isinstance(s, unicode):
+        return s.encode(locale.getpreferredencoding(False))
     elif isinstance(s, bytes):
         return s
     elif s is not None:

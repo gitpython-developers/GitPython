@@ -45,7 +45,7 @@ from .util import (
 execute_kwargs = set(('istream', 'with_keep_cwd', 'with_extended_output',
                       'with_exceptions', 'as_process', 'stdout_as_string',
                       'output_stream', 'with_stdout', 'kill_after_timeout',
-                      'universal_newlines'))
+                      'universal_newlines', 'shell'))
 
 log = logging.getLogger('git.cmd')
 log.addHandler(logging.NullHandler())
@@ -176,8 +176,8 @@ class Git(LazyMixin):
     GIT_PYTHON_GIT_EXECUTABLE = os.environ.get(_git_exec_env_var, git_exec_name)
 
     # If True, a shell will be used when executing git commands.
-    # This should only be desirable on windows, see https://github.com/gitpython-developers/GitPython/pull/126
-    # for more information
+    # This should only be desirable on Windows, see https://github.com/gitpython-developers/GitPython/pull/126
+    # and check `git/test_repo.py:TestRepo.test_untracked_files()` TC for an example where it is required.
     # Override this value using `Git.USE_SHELL = True`
     USE_SHELL = False
 
@@ -422,6 +422,7 @@ class Git(LazyMixin):
                 kill_after_timeout=None,
                 with_stdout=True,
                 universal_newlines=False,
+                shell=None,
                 **subprocess_kwargs
                 ):
         """Handles executing the command on the shell and consumes and returns
@@ -479,6 +480,9 @@ class Git(LazyMixin):
         :param universal_newlines:
             if True, pipes will be opened as text, and lines are split at
             all known line endings.
+        :param shell:
+            Whether to invoke commands through a shell (see `Popen(..., shell=True)`).
+            It overrides :attr:`USE_SHELL` if it is not `None`.
         :param kill_after_timeout:
             To specify a timeout in seconds for the git command, after which the process
             should be killed. This will have no effect if as_process is set to True. It is
@@ -544,7 +548,7 @@ class Git(LazyMixin):
                          stdin=istream,
                          stderr=PIPE,
                          stdout=PIPE if with_stdout else open(os.devnull, 'wb'),
-                         shell=self.USE_SHELL,
+                         shell=shell is not None and shell or self.USE_SHELL,
                          close_fds=(is_posix),  # unsupported on windows
                          universal_newlines=universal_newlines,
                          creationflags=PROC_CREATIONFLAGS,

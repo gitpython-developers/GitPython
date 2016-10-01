@@ -29,7 +29,8 @@ from git.exc import (
 )
 from git.compat import (
     string_types,
-    defenc
+    defenc,
+    is_win,
 )
 
 import stat
@@ -289,14 +290,16 @@ class Submodule(util.IndexObject, Iterable, Traversable):
         """
         git_file = os.path.join(working_tree_dir, '.git')
         rela_path = os.path.relpath(module_abspath, start=working_tree_dir)
-        fp = open(git_file, 'wb')
-        fp.write(("gitdir: %s" % rela_path).encode(defenc))
-        fp.close()
+        if is_win:
+            if os.path.isfile(git_file):
+                os.remove(git_file)
+        with open(git_file, 'wb') as fp:
+            fp.write(("gitdir: %s" % rela_path).encode(defenc))
 
-        writer = GitConfigParser(os.path.join(module_abspath, 'config'), read_only=False, merge_includes=False)
-        writer.set_value('core', 'worktree',
-                         to_native_path_linux(os.path.relpath(working_tree_dir, start=module_abspath)))
-        writer.release()
+        with GitConfigParser(os.path.join(module_abspath, 'config'),
+                             read_only=False, merge_includes=False) as writer:
+            writer.set_value('core', 'worktree',
+                             to_native_path_linux(os.path.relpath(working_tree_dir, start=module_abspath)))
 
     #{ Edit Interface
 

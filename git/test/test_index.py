@@ -113,9 +113,8 @@ class TestIndex(TestBase):
         # write the data - it must match the original
         tmpfile = tempfile.mktemp()
         index_merge.write(tmpfile)
-        fp = open(tmpfile, 'rb')
-        self.assertEqual(fp.read(), fixture("index_merge"))
-        fp.close()
+        with open(tmpfile, 'rb') as fp:
+            self.assertEqual(fp.read(), fixture("index_merge"))
         os.remove(tmpfile)
 
     def _cmp_tree_index(self, tree, index):
@@ -329,22 +328,19 @@ class TestIndex(TestBase):
         # reset the working copy as well to current head,to pull 'back' as well
         new_data = b"will be reverted"
         file_path = os.path.join(rw_repo.working_tree_dir, "CHANGES")
-        fp = open(file_path, "wb")
-        fp.write(new_data)
-        fp.close()
+        with open(file_path, "wb") as fp:
+            fp.write(new_data)
         index.reset(rev_head_parent, working_tree=True)
         assert not index.diff(None)
         self.assertEqual(cur_branch, rw_repo.active_branch)
         self.assertEqual(cur_commit, rw_repo.head.commit)
-        fp = open(file_path, 'rb')
-        try:
+        with open(file_path, 'rb') as fp:
             assert fp.read() != new_data
-        finally:
-            fp.close()
 
         # test full checkout
         test_file = os.path.join(rw_repo.working_tree_dir, "CHANGES")
-        open(test_file, 'ab').write(b"some data")
+        with open(test_file, 'ab') as fd:
+            fd.write(b"some data")
         rval = index.checkout(None, force=True, fprogress=self._fprogress)
         assert 'CHANGES' in list(rval)
         self._assert_fprogress([None])
@@ -369,9 +365,8 @@ class TestIndex(TestBase):
 
         # checkout file with modifications
         append_data = b"hello"
-        fp = open(test_file, "ab")
-        fp.write(append_data)
-        fp.close()
+        with open(test_file, "ab") as fp:
+            fp.write(append_data)
         try:
             index.checkout(test_file)
         except CheckoutError as e:
@@ -380,7 +375,9 @@ class TestIndex(TestBase):
             self.assertEqual(len(e.failed_files), len(e.failed_reasons))
             self.assertIsInstance(e.failed_reasons[0], string_types)
             self.assertEqual(len(e.valid_files), 0)
-            assert open(test_file, 'rb').read().endswith(append_data)
+            with open(test_file, 'rb') as fd:
+                s = fd.read()
+            self.assertTrue(s.endswith(append_data), s)
         else:
             raise AssertionError("Exception CheckoutError not thrown")
 
@@ -639,9 +636,10 @@ class TestIndex(TestBase):
         if is_win:
             # simlinks should contain the link as text ( which is what a
             # symlink actually is )
-            open(fake_symlink_path, 'rb').read() == link_target
+            with open(fake_symlink_path, 'rt') as fd:
+                self.assertEqual(fd.read(), link_target)
         else:
-            assert S_ISLNK(os.lstat(fake_symlink_path)[ST_MODE])
+            self.assertTrue(S_ISLNK(os.lstat(fake_symlink_path)[ST_MODE]))
 
         # TEST RENAMING
         def assert_mv_rval(rval):
@@ -691,7 +689,8 @@ class TestIndex(TestBase):
 
             for fid in range(3):
                 fname = 'newfile%i' % fid
-                open(fname, 'wb').write(b"abcd")
+                with open(fname, 'wb') as fd:
+                    fd.write(b"abcd")
                 yield Blob(rw_repo, Blob.NULL_BIN_SHA, 0o100644, fname)
             # END for each new file
         # END path producer

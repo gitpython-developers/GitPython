@@ -899,12 +899,8 @@ class Repo(object):
         try:
             proc = git.clone(url, path, with_extended_output=True, as_process=True,
                              v=True, **add_progress(kwargs, git, progress))
-            if progress:
-                handle_process_output(proc, None, progress.new_message_handler(), finalize_process)
-            else:
-                (stdout, stderr) = proc.communicate()
-                finalize_process(proc, stderr=stderr)
-            # end handle progress
+            progress_handler = progress and progress.new_message_handler() or None
+            handle_process_output(proc, None, progress_handler, finalize_process)
         finally:
             if prev_cwd is not None:
                 os.chdir(prev_cwd)
