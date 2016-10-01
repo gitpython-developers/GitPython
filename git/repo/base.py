@@ -210,11 +210,13 @@ class Repo(object):
     # Description property
     def _get_description(self):
         filename = join(self.git_dir, 'description')
-        return open(filename, 'rb').read().rstrip().decode(defenc)
+        with open(filename, 'rb') as fp:
+            return fp.read().rstrip().decode(defenc)
 
     def _set_description(self, descr):
         filename = join(self.git_dir, 'description')
-        open(filename, 'wb').write((descr + '\n').encode(defenc))
+        with open(filename, 'wb') as fp:
+            fp.write((descr + '\n').encode(defenc))
 
     description = property(_get_description, _set_description,
                            doc="the project's description")
@@ -548,11 +550,8 @@ class Repo(object):
         alternates_path = join(self.git_dir, 'objects', 'info', 'alternates')
 
         if os.path.exists(alternates_path):
-            try:
-                f = open(alternates_path, 'rb')
+            with open(alternates_path, 'rb') as f:
                 alts = f.read().decode(defenc)
-            finally:
-                f.close()
             return alts.strip().splitlines()
         else:
             return list()
@@ -573,13 +572,8 @@ class Repo(object):
             if isfile(alternates_path):
                 os.remove(alternates_path)
         else:
-            try:
-                f = open(alternates_path, 'wb')
+            with open(alternates_path, 'wb') as f:
                 f.write("\n".join(alts).encode(defenc))
-            finally:
-                f.close()
-            # END file handling
-        # END alts handling
 
     alternates = property(_get_alternates, _set_alternates,
                           doc="Retrieve a list of alternates paths or set a list paths to be used as alternates")

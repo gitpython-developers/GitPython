@@ -4,18 +4,14 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
+import glob
+from io import BytesIO
+import itertools
+import os
 import pickle
+import sys
+import tempfile
 
-from git.test.lib import (
-    patch,
-    TestBase,
-    with_rw_repo,
-    fixture,
-    assert_false,
-    assert_equal,
-    assert_true,
-    raises
-)
 from git import (
     InvalidGitRepositoryError,
     Repo,
@@ -33,22 +29,27 @@ from git import (
     BadName,
     GitCommandError
 )
-from git.repo.fun import touch
-from git.util import join_path_native, rmtree
+from git.compat import string_types
 from git.exc import (
     BadObject,
 )
-from gitdb.util import bin_to_hex
-from git.compat import string_types
+from git.repo.fun import touch
+from git.test.lib import (
+    patch,
+    TestBase,
+    with_rw_repo,
+    fixture,
+    assert_false,
+    assert_equal,
+    assert_true,
+    raises
+)
 from git.test.lib import with_rw_directory
-
-import os
-import sys
-import tempfile
-import itertools
-from io import BytesIO
-
+from git.util import join_path_native, rmtree, rmfile
+from gitdb.util import bin_to_hex
 from nose import SkipTest
+
+import os.path as osp
 
 
 def iter_flatten(lol):
@@ -61,9 +62,23 @@ def flatten(lol):
     return list(iter_flatten(lol))
 
 
+_tc_lock_fpaths = osp.join(osp.dirname(__file__), '../../.git/*.lock')
+
+
+def _rm_lock_files():
+    for lfp in glob.glob(_tc_lock_fpaths):
+        rmfile(lfp)
+
+
 class TestRepo(TestBase):
 
+    def setUp(self):
+        _rm_lock_files()
+
     def tearDown(self):
+        for lfp in glob.glob(_tc_lock_fpaths):
+            if osp.isfile(lfp):
+                raise AssertionError('Previous TC left hanging git-lock file: %s', lfp)
         import gc
         gc.collect()
 
@@ -309,10 +324,9 @@ class TestRepo(TestBase):
 
     def test_archive(self):
         tmpfile = tempfile.mktemp(suffix='archive-test')
-        stream = open(tmpfile, 'wb')
-        self.rorepo.archive(stream, '0.1.6', path='doc')
-        assert stream.tell()
-        stream.close()
+        with open(tmpfile, 'wb') as stream:
+            self.rorepo.archive(stream, '0.1.6', path='doc')
+            assert stream.tell()
         os.remove(tmpfile)
 
     @patch.object(Git, '_call_process')
@@ -401,9 +415,8 @@ class TestRepo(TestBase):
 
             num_recently_untracked = 0
             for fpath in files:
-                fd = open(fpath, "wb")
-                fd.close()
-            # END for each filename
+                with open(fpath, "wb"):
+                    pass
             untracked_files = rwrepo.untracked_files
             num_recently_untracked = len(untracked_files)
 
@@ -426,19 +439,16 @@ class TestRepo(TestBase):
     def test_config_writer(self):
         for config_level in self.rorepo.config_level:
             try:
-                writer = self.rorepo.config_writer(config_level)
-                assert not writer.read_only
-                writer.release()
+                with self.rorepo.config_writer(config_level) as writer:
+                    self.assertFalse(writer.read_only)
             except IOError:
                 # its okay not to get a writer for some configuration files if we
                 # have no permissions
                 pass
-        # END for each config level
 
     def test_config_level_paths(self):
         for config_level in self.rorepo.config_level:
             assert self.rorepo._get_config_path(config_level)
-        # end for each config level
 
     def test_creation_deletion(self):
         # just a very quick test to assure it generally works. There are
@@ -448,8 +458,8 @@ class TestRepo(TestBase):
 
         tag = self.rorepo.create_tag("new_tag", "HEAD~2")
         self.rorepo.delete_tag(tag)
-        writer = self.rorepo.config_writer()
-        writer.release()
+        with self.rorepo.config_writer():
+            pass
         remote = self.rorepo.create_remote("new_remote", "git@server:repo.git")
         self.rorepo.delete_remote(remote)
 

@@ -11,8 +11,7 @@ import os
 from git import (
     GitConfigParser
 )
-from git.compat import (
-    string_types)
+from git.compat import string_types
 from git.config import cp
 from git.test.lib import (
     TestCase,
