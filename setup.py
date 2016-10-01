@@ -9,6 +9,8 @@ except ImportError:
 
 from distutils.command.build_py import build_py as _build_py
 from setuptools.command.sdist import sdist as _sdist
+import pkg_resources
+import logging
 import os
 import sys
 from os import path
