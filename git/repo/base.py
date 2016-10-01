@@ -62,7 +62,10 @@ from git.compat import (
 import os
 import sys
 import re
+import logging
 from collections import namedtuple
+
+log = logging.getLogger(__name__)
 
 DefaultDBType = GitCmdObjectDB
 if sys.version_info[:2] < (2, 5):     # python 2.4 compatiblity
@@ -871,46 +874,15 @@ class Repo(object):
         if progress is not None:
             progress = to_progress_instance(progress)
 
-        # special handling for windows for path at which the clone should be
-        # created.
-        # tilde '~' will be expanded to the HOME no matter where the ~ occours. Hence
-        # we at least give a proper error instead of letting git fail
-        prev_cwd = None
-        prev_path = None
         odbt = kwargs.pop('odbt', odb_default_type)
-        if is_win:
-            if '~' in path:
-                raise OSError("Git cannot handle the ~ character in path %r correctly" % path)
-
-            # on windows, git will think paths like c: are relative and prepend the
-            # current working dir ( before it fails ). We temporarily adjust the working
-            # dir to make this actually work
-            match = re.match("(\w:[/\\\])(.*)", path)
-            if match:
-                prev_cwd = os.getcwd()
-                prev_path = path
-                drive, rest_of_path = match.groups()
-                os.chdir(drive)
-                path = rest_of_path
-                kwargs['with_keep_cwd'] = True
-            # END cwd preparation
-        # END windows handling
-
-        try:
-            proc = git.clone(url, path, with_extended_output=True, as_process=True,
-                             v=True, **add_progress(kwargs, git, progress))
-            if progress:
-                handle_process_output(proc, None, progress.new_message_handler(), finalize_process)
-            else:
-                (stdout, stderr) = proc.communicate()  # FIXME: Will block of outputs are big!
-                finalize_process(proc, stderr=stderr)
-            # end handle progress
-        finally:
-            if prev_cwd is not None:
-                os.chdir(prev_cwd)
-                path = prev_path
-            # END reset previous working dir
-        # END bad windows handling
+        proc = git.clone(url, path, with_extended_output=True, as_process=True,
+                         v=True, **add_progress(kwargs, git, progress))
+        if progress:
+            handle_process_output(proc, None, progress.new_message_handler(), finalize_process)
+        else:
+            (stdout, stderr) = proc.communicate()  # FIXME: Will block of outputs are big!
+            log.debug("Cmd(%s)'s unused stdout: %s", getattr(proc, 'args', ''), stdout)
+            finalize_process(proc, stderr=stderr)
 
         # our git command could have a different working dir than our actual
         # environment, hence we prepend its working dir if required
@@ -922,7 +894,7 @@ class Repo(object):
         # that contains the remote from which we were clones, git stops liking it
         # as it will escape the backslashes. Hence we undo the escaping just to be
         # sure
-        repo = cls(os.path.abspath(path), odbt=odbt)
+        repo = cls(path, odbt=odbt)
         if repo.remotes:
             with repo.remotes[0].config_writer as writer:
                 writer.set_value('url', repo.remotes[0].url.replace("\\\\", "\\").replace("\\", "/"))

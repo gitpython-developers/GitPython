@@ -42,12 +42,12 @@ from .util import (
 )
 
 
-execute_kwargs = set(('istream', 'with_keep_cwd', 'with_extended_output',
+execute_kwargs = set(('istream', 'with_extended_output',
                       'with_exceptions', 'as_process', 'stdout_as_string',
                       'output_stream', 'with_stdout', 'kill_after_timeout',
                       'universal_newlines', 'shell'))
 
-log = logging.getLogger('git.cmd')
+log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
 
 __all__ = ('Git',)
@@ -413,7 +413,6 @@ class Git(LazyMixin):
 
     def execute(self, command,
                 istream=None,
-                with_keep_cwd=False,
                 with_extended_output=False,
                 with_exceptions=True,
                 as_process=False,
@@ -435,11 +434,6 @@ class Git(LazyMixin):
 
         :param istream:
             Standard input filehandle passed to subprocess.Popen.
-
-        :param with_keep_cwd:
-            Whether to use the current working directory from os.getcwd().
-            The cmd otherwise uses its own working_dir that it has been initialized
-            with if possible.
 
         :param with_extended_output:
             Whether to return a (status, stdout, stderr) tuple.
@@ -513,10 +507,7 @@ class Git(LazyMixin):
             log.info(' '.join(command))
 
         # Allow the user to have the command executed in their working dir.
-        if with_keep_cwd or self._working_dir is None:
-            cwd = os.getcwd()
-        else:
-            cwd = self._working_dir
+        cwd = self._working_dir or os.getcwd()
 
         # Start the process
         env = os.environ.copy()
