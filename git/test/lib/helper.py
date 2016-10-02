@@ -94,8 +94,8 @@ def with_rw_directory(func):
             try:
                 return func(self, path)
             except Exception:
-                log.info.write("Test %s.%s failed, output is at %r\n",
-                               type(self).__name__, func.__name__, path)
+                log.info("Test %s.%s failed, output is at %r\n",
+                         type(self).__name__, func.__name__, path)
                 keep = True
                 raise
         finally:
