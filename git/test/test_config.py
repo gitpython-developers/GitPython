@@ -60,7 +60,8 @@ class TestBase(TestCase):
                 self.assertEqual(file_obj.getvalue(), self._to_memcache(fixture_path(filename)).getvalue())
 
                 # creating an additional config writer must fail due to exclusive access
-                self.failUnlessRaises(IOError, GitConfigParser, file_obj, read_only=False)
+                with self.assertRaises(IOError):
+                    GitConfigParser(file_obj, read_only=False)
 
                 # should still have a lock and be able to make changes
                 assert w_config._lock._has_lock()
@@ -91,18 +92,21 @@ class TestBase(TestCase):
     @with_rw_directory
     def test_lock_reentry(self, rw_dir):
         fpl = os.path.join(rw_dir, 'l')
-        with GitConfigParser(fpl, read_only=False) as gcp:
-            gcp.set_value('include', 'some_value', 'a')
+        gcp = GitConfigParser(fpl, read_only=False)
+        with gcp as cw:
+            cw.set_value('include', 'some_value', 'a')
         # entering again locks the file again...
         with gcp as cw:
             cw.set_value('include', 'some_other_value', 'b')
             # ...so creating an additional config writer must fail due to exclusive access
-            self.failUnlessRaises(IOError, GitConfigParser, fpl, read_only=False)
+            with self.assertRaises(IOError):
+                GitConfigParser(fpl, read_only=False)
         # but work when the lock is removed
         with GitConfigParser(fpl, read_only=False):
             assert os.path.exists(fpl)
             # reentering with an existing lock must fail due to exclusive access
-            self.failUnlessRaises(IOError, gcp.__enter__)
+            with self.assertRaises(IOError):
+                gcp.__enter__()
 
     def test_multi_line_config(self):
         file_obj = self._to_memcache(fixture_path("git_config_with_comments"))
@@ -144,10 +148,13 @@ class TestBase(TestCase):
                 assert "\n" not in val
 
                 # writing must fail
-                self.failUnlessRaises(IOError, r_config.set, section, option, None)
-                self.failUnlessRaises(IOError, r_config.remove_option, section, option)
+                with self.assertRaises(IOError):
+                    r_config.set(section, option, None)
+                with self.assertRaises(IOError):
+                    r_config.remove_option(section, option)
             # END for each option
-            self.failUnlessRaises(IOError, r_config.remove_section, section)
+            with self.assertRaises(IOError):
+                r_config.remove_section(section)
         # END for each section
         assert num_sections and num_options
         assert r_config._is_initialized is True
@@ -157,7 +164,8 @@ class TestBase(TestCase):
         assert r_config.get_value("doesnt", "exist", default) == default
 
         # it raises if there is no default though
-        self.failUnlessRaises(cp.NoSectionError, r_config.get_value, "doesnt", "exist")
+        with self.assertRaises(cp.NoSectionError):
+            r_config.get_value("doesnt", "exist")
 
     @with_rw_directory
     def test_config_include(self, rw_dir):
@@ -206,7 +214,8 @@ class TestBase(TestCase):
             write_test_value(cw, tv)
 
         with GitConfigParser(fpa, read_only=True) as cr:
-            self.failUnlessRaises(cp.NoSectionError, check_test_value, cr, tv)
+            with self.assertRaises(cp.NoSectionError):
+                check_test_value(cr, tv)
 
         # But can make it skip includes alltogether, and thus allow write-backs
         with GitConfigParser(fpa, read_only=False, merge_includes=False) as cw:
@@ -218,8 +227,10 @@ class TestBase(TestCase):
     def test_rename(self):
         file_obj = self._to_memcache(fixture_path('git_config'))
         with GitConfigParser(file_obj, read_only=False, merge_includes=False) as cw:
-            self.failUnlessRaises(ValueError, cw.rename_section, "doesntexist", "foo")
-            self.failUnlessRaises(ValueError, cw.rename_section, "core", "include")
+            with self.assertRaises(ValueError):
+                cw.rename_section("doesntexist", "foo")
+            with self.assertRaises(ValueError):
+                cw.rename_section("core", "include")
 
             nn = "bee"
             assert cw.rename_section('core', nn) is cw
@@ -237,4 +248,5 @@ class TestBase(TestCase):
 
         assert cr.get_value('core', 'filemode'), "Should read keys with values"
 
-        self.failUnlessRaises(cp.NoOptionError, cr.get_value, 'color', 'ui')
+        with self.assertRaises(cp.NoOptionError):
+            cr.get_value('color', 'ui')
