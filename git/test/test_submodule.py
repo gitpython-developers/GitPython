@@ -317,8 +317,8 @@ class TestSubmodule(TestBase):
             # forcibly delete the child repository
             prev_count = len(sm.children())
             self.failUnlessRaises(ValueError, csm.remove, force=True)
-            # We removed sm, which removed all submodules. Howver, the instance we have
-            # still points to the commit prior to that, where it still existed
+            # We removed sm, which removed all submodules. However, the instance we
+            # have still points to the commit prior to that, where it still existed
             csm.set_parent_commit(csm.repo.commit(), check=False)
             assert not csm.exists()
             assert not csm.module_exists()
@@ -800,6 +800,31 @@ class TestSubmodule(TestBase):
             assert_exists(sm, value=dry_run)
             assert os.path.isdir(sm_module_path) == dry_run
         # end for each dry-run mode
+
+    @with_rw_directory
+    def test_remove_norefs(self, rwdir):
+        parent = git.Repo.init(os.path.join(rwdir, 'parent'))
+        sm_name = 'mymodules/myname'
+        sm = parent.create_submodule(sm_name, sm_name, url=self._small_repo_url())
+        parent.index.commit("Added submodule")
+
+        # Adding a remote without fetching so would have no references
+        sm.repo.create_remote('special', 'git@server-shouldnotmatter:repo.git')
+        assert sm.rename(sm_name) is sm and sm.name == sm_name
+        assert not sm.repo.is_dirty(index=True, working_tree=False, untracked_files=False)
+
+        new_path = 'renamed/myname'
+        assert sm.move(new_path).name == new_path
+
+        new_sm_name = "shortname"
+        assert sm.rename(new_sm_name) is sm
+        assert sm.repo.is_dirty(index=True, working_tree=False, untracked_files=False)
+        assert sm.exists()
+
+        sm_mod = sm.module()
+        if os.path.isfile(os.path.join(sm_mod.working_tree_dir, '.git')) == sm._need_gitfile_submodules(parent.git):
+            assert sm_mod.git_dir.endswith(join_path_native('.git', 'modules', new_sm_name))
+        # end
 
     @with_rw_directory
     def test_rename(self, rwdir):

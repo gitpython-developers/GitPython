@@ -107,6 +107,8 @@ def with_rw_directory(func):
             gc.collect()
             if not keep:
                 rmtree(path)
+    wrapper.__name__ = func.__name__
+    return wrapper
 
 
 def with_rw_repo(working_tree_ref, bare=False):
