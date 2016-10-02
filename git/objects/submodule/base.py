@@ -398,24 +398,20 @@ class Submodule(IndexObject, Iterable, Traversable):
         # otherwise there is a '-' character in front of the submodule listing
         #  a38efa84daef914e4de58d1905a500d8d14aaf45 mymodule (v0.9.0-1-ga38efa8)
         # -a38efa84daef914e4de58d1905a500d8d14aaf45 submodules/intermediate/one
-        writer = sm.repo.config_writer()
-        writer.set_value(sm_section(name), 'url', url)
-        writer.release()
+        with sm.repo.config_writer() as writer:
+            writer.set_value(sm_section(name), 'url', url)
 
         # update configuration and index
         index = sm.repo.index
-        writer = sm.config_writer(index=index, write=False)
-        writer.set_value('url', url)
-        writer.set_value('path', path)
+        with sm.config_writer(index=index, write=False) as writer:
+            writer.set_value('url', url)
+            writer.set_value('path', path)
 
-        sm._url = url
-        if not branch_is_default:
-            # store full path
-            writer.set_value(cls.k_head_option, br.path)
-            sm._branch_path = br.path
-        # END handle path
-        writer.release()
-        del(writer)
+            sm._url = url
+            if not branch_is_default:
+                # store full path
+                writer.set_value(cls.k_head_option, br.path)
+                sm._branch_path = br.path
 
         # we deliberatly assume that our head matches our index !
         sm.binsha = mrepo.head.commit.binsha
@@ -542,9 +538,8 @@ class Submodule(IndexObject, Iterable, Traversable):
                     # the default implementation will be offended and not update the repository
                     # Maybe this is a good way to assure it doesn't get into our way, but
                     # we want to stay backwards compatible too ... . Its so redundant !
-                    writer = self.repo.config_writer()
-                    writer.set_value(sm_section(self.name), 'url', self.url)
-                    writer.release()
+                    with self.repo.config_writer() as writer:
+                        writer.set_value(sm_section(self.name), 'url', self.url)
                 # END handle dry_run
             # END handle initalization
 
@@ -731,11 +726,9 @@ class Submodule(IndexObject, Iterable, Traversable):
                 # END handle submodule doesn't exist
 
                 # update configuration
-                writer = self.config_writer(index=index)        # auto-write
-                writer.set_value('path', module_checkout_path)
-                self.path = module_checkout_path
-                writer.release()
-                del(writer)
+                with self.config_writer(index=index) as writer:        # auto-write
+                    writer.set_value('path', module_checkout_path)
+                    self.path = module_checkout_path
             # END handle configuration flag
         except Exception:
             if renamed_module:
@@ -898,13 +891,11 @@ class Submodule(IndexObject, Iterable, Traversable):
 
             # now git config - need the config intact, otherwise we can't query
             # information anymore
-            writer = self.repo.config_writer()
-            writer.remove_section(sm_section(self.name))
-            writer.release()
+            with self.repo.config_writer() as writer:
+                writer.remove_section(sm_section(self.name))
 
-            writer = self.config_writer()
-            writer.remove_section()
-            writer.release()
+            with self.config_writer() as writer:
+                writer.remove_section()
         # END delete configuration
 
         return self
@@ -995,18 +986,15 @@ class Submodule(IndexObject, Iterable, Traversable):
             return self
 
         # .git/config
-        pw = self.repo.config_writer()
-        # As we ourselves didn't write anything about submodules into the parent .git/config, we will not require
-        # it to exist, and just ignore missing entries
-        if pw.has_section(sm_section(self.name)):
-            pw.rename_section(sm_section(self.name), sm_section(new_name))
-        # end
-        pw.release()
+        with self.repo.config_writer() as pw:
+            # As we ourselves didn't write anything about submodules into the parent .git/config,
+            # we will not require it to exist, and just ignore missing entries.
+            if pw.has_section(sm_section(self.name)):
+                pw.rename_section(sm_section(self.name), sm_section(new_name))
 
         # .gitmodules
-        cw = self.config_writer(write=True).config
-        cw.rename_section(sm_section(self.name), sm_section(new_name))
-        cw.release()
+        with self.config_writer(write=True) as cw:
+            cw.config.rename_section(sm_section(self.name), sm_section(new_name))
 
         self._name = new_name
 

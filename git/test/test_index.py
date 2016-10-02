@@ -412,10 +412,9 @@ class TestIndex(TestBase):
 
         uname = u"Thomas Müller"
         umail = "sd@company.com"
-        writer = rw_repo.config_writer()
-        writer.set_value("user", "name", uname)
-        writer.set_value("user", "email", umail)
-        writer.release()
+        with rw_repo.config_writer() as writer:
+            writer.set_value("user", "name", uname)
+            writer.set_value("user", "email", umail)
         self.assertEqual(writer.get_value("user", "name"), uname)
 
         # remove all of the files, provide a wild mix of paths, BaseIndexEntries,

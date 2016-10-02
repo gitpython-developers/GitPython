@@ -267,7 +267,8 @@ class TestRemote(TestBase):
 
         # put origin to git-url
         other_origin = other_repo.remotes.origin
-        other_origin.config_writer.set("url", remote_repo_url)
+        with other_origin.config_writer as cw:
+            cw.set("url", remote_repo_url)
         # it automatically creates alternates as remote_repo is shared as well.
         # It will use the transport though and ignore alternates when fetching
         # assert not other_repo.alternates  # this would fail
@@ -416,13 +417,12 @@ class TestRemote(TestBase):
                 self.failUnlessRaises(IOError, reader.set, opt, "test")
 
                 # change value
-                writer = remote.config_writer
-                new_val = "myval"
-                writer.set(opt, new_val)
-                assert writer.get(opt) == new_val
-                writer.set(opt, val)
-                assert writer.get(opt) == val
-                del(writer)
+                with remote.config_writer as writer:
+                    new_val = "myval"
+                    writer.set(opt, new_val)
+                    assert writer.get(opt) == new_val
+                    writer.set(opt, val)
+                    assert writer.get(opt) == val
                 assert getattr(remote, opt) == val
             # END for each default option key
 

@@ -39,8 +39,8 @@ class Tutorials(TestBase):
 
         # [3-test_init_repo_object]
         repo.config_reader()             # get a config reader for read-only access
-        cw = repo.config_writer()        # get a config writer to change configuration
-        cw.release()                     # call release() to be sure changes are written and locks are released
+        with repo.config_writer():       # get a config writer to change configuration
+            pass                         # call release() to be sure changes are written and locks are released
         # ![3-test_init_repo_object]
 
         # [4-test_init_repo_object]
@@ -398,9 +398,8 @@ class Tutorials(TestBase):
 
         # [26-test_references_and_objects]
         assert origin.url == repo.remotes.origin.url
-        cw = origin.config_writer
-        cw.set("pushurl", "other_url")
-        cw.release()
+        with origin.config_writer as cw:
+            cw.set("pushurl", "other_url")
 
         # Please note that in python 2, writing origin.config_writer.set(...) is totally safe.
         # In py3 __del__ calls can be delayed, thus not writing changes in time.

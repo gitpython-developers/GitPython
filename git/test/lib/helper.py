@@ -237,16 +237,13 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
             rw_remote_repo.daemon_export = True
 
             # this thing is just annoying !
-            crw = rw_remote_repo.config_writer()
-            section = "daemon"
-            try:
-                crw.add_section(section)
-            except Exception:
-                pass
-            crw.set(section, "receivepack", True)
-            # release lock
-            crw.release()
-            del(crw)
+            with rw_remote_repo.config_writer() as crw:
+                section = "daemon"
+                try:
+                    crw.add_section(section)
+                except Exception:
+                    pass
+                crw.set(section, "receivepack", True)
 
             # initialize the remote - first do it as local remote and pull, then
             # we change the url to point to the daemon. The daemon should be started
@@ -255,7 +252,8 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
             d_remote.fetch()
             remote_repo_url = "git://localhost:%s%s" % (GIT_DAEMON_PORT, remote_repo_dir)
 
-            d_remote.config_writer.set('url', remote_repo_url)
+            with d_remote.config_writer as cw:
+                cw.set('url', remote_repo_url)
 
             temp_dir = osp(_mktemp())
             gd = launch_git_daemon(temp_dir, '127.0.0.1', GIT_DAEMON_PORT)

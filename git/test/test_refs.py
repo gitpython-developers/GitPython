@@ -101,15 +101,13 @@ class TestRefs(TestBase):
             assert prev_object == cur_object        # represent the same git object
             assert prev_object is not cur_object    # but are different instances
 
-            writer = head.config_writer()
-            tv = "testopt"
-            writer.set_value(tv, 1)
-            assert writer.get_value(tv) == 1
-            writer.release()
+            with head.config_writer() as writer:
+                tv = "testopt"
+                writer.set_value(tv, 1)
+                assert writer.get_value(tv) == 1
             assert head.config_reader().get_value(tv) == 1
-            writer = head.config_writer()
-            writer.remove_option(tv)
-            writer.release()
+            with head.config_writer() as writer:
+                writer.remove_option(tv)
 
             # after the clone, we might still have a tracking branch setup
             head.set_tracking_branch(None)
@@ -175,7 +173,7 @@ class TestRefs(TestBase):
 
     def test_orig_head(self):
         assert type(self.rorepo.head.orig_head()) == SymbolicReference
-        
+
     @with_rw_repo('0.1.6')
     def test_head_checkout_detached_head(self, rw_repo):
         res = rw_repo.remotes.origin.refs.master.checkout()
