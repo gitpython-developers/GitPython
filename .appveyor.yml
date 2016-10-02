@@ -78,7 +78,7 @@ install:
 build: false
 
 test_script:
-    - nosetests --with-coverage
+    - nosetests -v --with-coverage
 
 #on_success:
 #    - IF "%PYTHON_VERSION%"=="3.4" (coveralls)

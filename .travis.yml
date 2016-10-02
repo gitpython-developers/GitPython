@@ -29,9 +29,9 @@ install:
   - cat git/test/fixtures/.gitconfig >> ~/.gitconfig
 script:
   # Make sure we limit open handles to see if we are leaking them
-  - ulimit -n 96
+  - ulimit -n 100
   - ulimit -n
-  - nosetests --with-coverage
+  - nosetests -v --with-coverage
   - if [ "$TRAVIS_PYTHON_VERSION" == '3.4' ]; then flake8; fi
   - if [ "$TRAVIS_PYTHON_VERSION" == '3.5' ]; then cd doc && make html; fi
   -
