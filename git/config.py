@@ -479,20 +479,15 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
         is_file_lock = isinstance(fp, string_types + (FileType, ))
         if is_file_lock:
             self._lock._obtain_lock()
-        try:
-            if not hasattr(fp, "seek"):
-                with open(self._file_or_files, "wb") as fp:
-                    self._write(fp)
-            else:
-                fp.seek(0)
-                # make sure we do not overwrite into an existing file
-                if hasattr(fp, 'truncate'):
-                    fp.truncate()
+        if not hasattr(fp, "seek"):
+            with open(self._file_or_files, "wb") as fp:
                 self._write(fp)
-        finally:
-            # we release the lock - it will not vanish automatically in PY3.5+
-            if is_file_lock:
-                self._lock._release_lock()
+        else:
+            fp.seek(0)
+            # make sure we do not overwrite into an existing file
+            if hasattr(fp, 'truncate'):
+                fp.truncate()
+            self._write(fp)
 
     def _assure_writable(self, method_name):
         if self.read_only:
