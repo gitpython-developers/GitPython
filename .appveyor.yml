@@ -38,9 +38,10 @@ environment:
 install:
     - set PATH=%PYTHON%;%PYTHON%\Scripts;%GIT_PATH%;%PATH%
 
-    ## Print architecture, python & git used for debugging.
+    ## Print configuration for debugging.
     #
     - |
+        echo %PATH%
         uname -a
         where git git-daemon python pip pip3 pip34
         python --version
