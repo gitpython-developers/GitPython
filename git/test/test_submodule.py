@@ -806,25 +806,18 @@ class TestSubmodule(TestBase):
         parent = git.Repo.init(os.path.join(rwdir, 'parent'))
         sm_name = 'mymodules/myname'
         sm = parent.create_submodule(sm_name, sm_name, url=self._small_repo_url())
-        parent.index.commit("Added submodule")
-
-        # Adding a remote without fetching so would have no references
-        sm.repo.create_remote('special', 'git@server-shouldnotmatter:repo.git')
-        assert sm.rename(sm_name) is sm and sm.name == sm_name
-        assert not sm.repo.is_dirty(index=True, working_tree=False, untracked_files=False)
-
-        new_path = 'renamed/myname'
-        assert sm.move(new_path).name == new_path
-
-        new_sm_name = "shortname"
-        assert sm.rename(new_sm_name) is sm
-        assert sm.repo.is_dirty(index=True, working_tree=False, untracked_files=False)
         assert sm.exists()
 
-        sm_mod = sm.module()
-        if os.path.isfile(os.path.join(sm_mod.working_tree_dir, '.git')) == sm._need_gitfile_submodules(parent.git):
-            assert sm_mod.git_dir.endswith(join_path_native('.git', 'modules', new_sm_name))
-        # end
+        parent.index.commit("Added submodule")
+
+        assert sm.repo is parent  # yoh was surprised since expected sm repo!!
+        # so created a new instance for submodule
+        smrepo = git.Repo(os.path.join(rwdir, 'parent', sm.path))
+        # Adding a remote without fetching so would have no references
+        smrepo.create_remote('special', 'git@server-shouldnotmatter:repo.git')
+        # And we should be able to remove it just fine
+        sm.remove()
+        assert not sm.exists()
 
     @with_rw_directory
     def test_rename(self, rwdir):
