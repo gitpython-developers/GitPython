@@ -317,8 +317,8 @@ class TestSubmodule(TestBase):
             # forcibly delete the child repository
             prev_count = len(sm.children())
             self.failUnlessRaises(ValueError, csm.remove, force=True)
-            # We removed sm, which removed all submodules. Howver, the instance we have
-            # still points to the commit prior to that, where it still existed
+            # We removed sm, which removed all submodules. However, the instance we
+            # have still points to the commit prior to that, where it still existed
             csm.set_parent_commit(csm.repo.commit(), check=False)
             assert not csm.exists()
             assert not csm.module_exists()
@@ -800,6 +800,24 @@ class TestSubmodule(TestBase):
             assert_exists(sm, value=dry_run)
             assert os.path.isdir(sm_module_path) == dry_run
         # end for each dry-run mode
+
+    @with_rw_directory
+    def test_remove_norefs(self, rwdir):
+        parent = git.Repo.init(os.path.join(rwdir, 'parent'))
+        sm_name = 'mymodules/myname'
+        sm = parent.create_submodule(sm_name, sm_name, url=self._small_repo_url())
+        assert sm.exists()
+
+        parent.index.commit("Added submodule")
+
+        assert sm.repo is parent  # yoh was surprised since expected sm repo!!
+        # so created a new instance for submodule
+        smrepo = git.Repo(os.path.join(rwdir, 'parent', sm.path))
+        # Adding a remote without fetching so would have no references
+        smrepo.create_remote('special', 'git@server-shouldnotmatter:repo.git')
+        # And we should be able to remove it just fine
+        sm.remove()
+        assert not sm.exists()
 
     @with_rw_directory
     def test_rename(self, rwdir):
