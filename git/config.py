@@ -17,6 +17,8 @@ import logging
 import abc
 import os
 
+from functools import wraps
+
 from git.odict import OrderedDict
 from git.util import LockFile
 from git.compat import (
@@ -67,11 +69,11 @@ class MetaParserBuilder(abc.ABCMeta):
 def needs_values(func):
     """Returns method assuring we read values (on demand) before we try to access them"""
 
+    @wraps(func)
     def assure_data_present(self, *args, **kwargs):
         self.read()
         return func(self, *args, **kwargs)
     # END wrapper method
-    assure_data_present.__name__ = func.__name__
     return assure_data_present
 
 
