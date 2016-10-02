@@ -111,6 +111,8 @@ def with_rw_directory(func):
             if not keep:
                 rmtree(path)
 
+    return wrapper
+
 
 def with_rw_repo(working_tree_ref, bare=False):
     """
