@@ -14,6 +14,8 @@ import shutil
 import stat
 import time
 
+from functools import wraps
+
 from git.compat import is_win
 from gitdb.util import (  # NOQA
     make_sha,
@@ -50,13 +52,13 @@ def unbare_repo(func):
     """Methods with this decorator raise InvalidGitRepositoryError if they
     encounter a bare repository"""
 
+    @wraps(func)
     def wrapper(self, *args, **kwargs):
         if self.repo.bare:
             raise InvalidGitRepositoryError("Method '%s' cannot operate on bare repositories" % func.__name__)
         # END bare method
         return func(self, *args, **kwargs)
     # END wrapper
-    wrapper.__name__ = func.__name__
     return wrapper
 
 

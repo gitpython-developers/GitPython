@@ -12,6 +12,8 @@ import tempfile
 import io
 import logging
 
+from functools import wraps
+
 from git import Repo, Remote, GitCommandError, Git
 from git.util import rmtree
 from git.compat import string_types, is_win
@@ -86,6 +88,7 @@ def with_rw_directory(func):
     """Create a temporary directory which can be written to, remove it if the
     test succeeds, but leave it otherwise to aid additional debugging"""
 
+    @wraps(func)
     def wrapper(self):
         path = tempfile.mktemp(prefix=func.__name__)
         os.mkdir(path)
@@ -122,6 +125,7 @@ def with_rw_repo(working_tree_ref, bare=False):
     assert isinstance(working_tree_ref, string_types), "Decorator requires ref name for working tree checkout"
 
     def argument_passer(func):
+        @wraps(func)
         def repo_creator(self):
             prefix = 'non_'
             if bare:
@@ -155,7 +159,6 @@ def with_rw_repo(working_tree_ref, bare=False):
                 # END rm test repo if possible
             # END cleanup
         # END rw repo creator
-        repo_creator.__name__ = func.__name__
         return repo_creator
     # END argument passer
     return argument_passer
@@ -211,6 +214,7 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
 
     def argument_passer(func):
 
+        @wraps(func)
         def remote_repo_creator(self):
             remote_repo_dir = _mktemp("remote_repo_%s" % func.__name__)
             repo_dir = _mktemp("remote_clone_non_bare_repo")
@@ -319,10 +323,9 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
                     gd.proc.wait()
             # END cleanup
         # END bare repo creator
-        remote_repo_creator.__name__ = func.__name__
         return remote_repo_creator
         # END remote repo creator
-    # END argument parsser
+    # END argument parser
 
     return argument_passer
 
