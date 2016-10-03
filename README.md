@@ -1,27 +1,27 @@
 ## GitPython
 
-GitPython is a python library used to interact with git repositories, high-level like git-porcelain, 
+GitPython is a python library used to interact with git repositories, high-level like git-porcelain,
 or low-level like git-plumbing.
 
-It provides abstractions of git objects for easy access of repository data, and additionally 
-allows you to access the git repository more directly using either a pure python implementation, 
+It provides abstractions of git objects for easy access of repository data, and additionally
+allows you to access the git repository more directly using either a pure python implementation,
 or the faster, but more resource intensive *git command* implementation.
 
-The object database implementation is optimized for handling large quantities of objects and large datasets, 
+The object database implementation is optimized for handling large quantities of objects and large datasets,
 which is achieved by using low-level structures and data streaming.
 
 
 ### REQUIREMENTS
 
-GitPython needs the `git` executable to be installed on the system and available 
-in your `PATH` for most operations. 
-If it is not in your `PATH`, you can help GitPython find it by setting 
+GitPython needs the `git` executable to be installed on the system and available
+in your `PATH` for most operations.
+If it is not in your `PATH`, you can help GitPython find it by setting
 the `GIT_PYTHON_GIT_EXECUTABLE=<path/to/git>` environment variable.
 
 * Git (1.7.x or newer)
 * Python 2.7 to 3.5, while python 2.6 is supported on a *best-effort basis*.
 
-The list of dependencies are listed in `./requirements.txt` and `./test-requirements.txt`. 
+The list of dependencies are listed in `./requirements.txt` and `./test-requirements.txt`.
 The installer takes care of installing them for you.
 
 ### INSTALL
@@ -62,10 +62,15 @@ codebase for `__del__` implementations and call these yourself when you see fit.
 Another way assure proper cleanup of resources is to factor out GitPython into a
 separate process which can be dropped periodically.
 
-#### Best-effort for Python 2.6 and Windows support
+#### Windows support
 
-This means that support for these platforms is likely to worsen over time
-as they are kept alive solely by their users, or not.
+For *Windows*, we do regularly test it on [Appveyor CI](https://www.appveyor.com/)
+but not all test-cases pass - you may help improve them by exploring
+[Issue #525](https://github.com/gitpython-developers/GitPython/issues/525).
+
+#### Python 2.6
+
+Python 2.6 is supported on best-effort basis; which means that it is likely to deteriorate over time.
 
 ### RUNNING TESTS
 
@@ -100,7 +105,7 @@ Please have a look at the [contributions file][contributing].
 * [Questions and Answers](http://stackexchange.com/filters/167317/gitpython)
  * Please post on stackoverflow and use the `gitpython` tag
 * [Issue Tracker](https://github.com/gitpython-developers/GitPython/issues)
-  * Post reproducible bugs and feature requests as a new issue. 
+  * Post reproducible bugs and feature requests as a new issue.
     Please be sure to provide the following information if posting bugs:
     * GitPython version (e.g. `import git; git.__version__`)
     * Python version (e.g. `python --version`)
@@ -131,7 +136,7 @@ New BSD License.  See the LICENSE file.
 [![Stories in Ready](https://badge.waffle.io/gitpython-developers/GitPython.png?label=ready&title=Ready)](https://waffle.io/gitpython-developers/GitPython)
 [![Throughput Graph](https://graphs.waffle.io/gitpython-developers/GitPython/throughput.svg)](https://waffle.io/gitpython-developers/GitPython/metrics/throughput)
 
-Now that there seems to be a massive user base, this should be motivation enough to let git-python 
+Now that there seems to be a massive user base, this should be motivation enough to let git-python
 return to a proper state, which means
 
 * no open pull requests
