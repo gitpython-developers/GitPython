@@ -418,10 +418,10 @@ class TestSubmodule(TestBase):
         # Error if there is no submodule file here
         self.failUnlessRaises(IOError, Submodule._config_parser, rwrepo, rwrepo.commit(self.k_no_subm_tag), True)
 
-    @skipIf(HIDE_WINDOWS_KNOWN_ERRORS and is_win,
-            "FIXME: fails with: PermissionError: [WinError 32] The process cannot access the file because"
-            "it is being used by another process: "
-            "'C:\\Users\\ankostis\\AppData\\Local\\Temp\\tmp95c3z83bnon_bare_test_base_rw\\git\\ext\\gitdb\\gitdb\\ext\\smmap'")  # noqa E501
+    # @skipIf(HIDE_WINDOWS_KNOWN_ERRORS,
+    #         "FIXME: fails with: PermissionError: [WinError 32] The process cannot access the file because"
+    #         "it is being used by another process: "
+    #         "'C:\\Users\\ankostis\\AppData\\Local\\Temp\\tmp95c3z83bnon_bare_test_base_rw\\git\\ext\\gitdb\\gitdb\\ext\\smmap'")  # noqa E501
     @with_rw_repo(k_subm_current)
     def test_base_rw(self, rwrepo):
         self._do_base_tests(rwrepo)
@@ -430,7 +430,7 @@ class TestSubmodule(TestBase):
     def test_base_bare(self, rwrepo):
         self._do_base_tests(rwrepo)
 
-    @skipIf(HIDE_WINDOWS_KNOWN_ERRORS and is_win and sys.version_info[:2] == (3, 5), """
+    @skipIf(HIDE_WINDOWS_KNOWN_ERRORS and sys.version_info[:2] == (3, 5), """
         File "C:\projects\gitpython\git\cmd.py", line 559, in execute
         raise GitCommandNotFound(command, err)
         git.exc.GitCommandNotFound: Cmd('git') not found due to: OSError('[WinError 6] The handle is invalid')
@@ -733,9 +733,9 @@ class TestSubmodule(TestBase):
         assert commit_sm.binsha == sm_too.binsha
         assert sm_too.binsha != sm.binsha
 
-    @skipIf(HIDE_WINDOWS_KNOWN_ERRORS and is_win,
-            "FIXME: helper.wrapper fails with: PermissionError: [WinError 5] Access is denied: "
-            "'C:\\Users\\appveyor\\AppData\\Local\\Temp\\1\\test_work_tree_unsupportedryfa60di\\master_repo\\.git\\objects\\pack\\pack-bc9e0787aef9f69e1591ef38ea0a6f566ec66fe3.idx")  # noqa E501
+    # @skipIf(HIDE_WINDOWS_KNOWN_ERRORS,
+    #         "FIXME: helper.wrapper fails with: PermissionError: [WinError 5] Access is denied: "
+    #         "'C:\\Users\\appveyor\\AppData\\Local\\Temp\\1\\test_work_tree_unsupportedryfa60di\\master_repo\\.git\\objects\\pack\\pack-bc9e0787aef9f69e1591ef38ea0a6f566ec66fe3.idx")  # noqa E501
     @with_rw_directory
     def test_git_submodule_compatibility(self, rwdir):
         parent = git.Repo.init(os.path.join(rwdir, 'parent'))

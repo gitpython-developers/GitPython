@@ -14,7 +14,6 @@ import logging
 
 from functools import wraps
 
-from git import Repo, Remote, GitCommandError, Git
 from git.util import rmtree
 from git.compat import string_types, is_win
 import textwrap
@@ -35,7 +34,7 @@ log = logging.getLogger('git.util')
 #: We need an easy way to see if Appveyor TCs start failing,
 #: so the errors marked with this var are considered "acknowledged" ones, awaiting remedy,
 #: till then, we wish to hide them.
-HIDE_WINDOWS_KNOWN_ERRORS = bool(os.environ.get('HIDE_WINDOWS_KNOWN_ERRORS', True))
+HIDE_WINDOWS_KNOWN_ERRORS = is_win and os.environ.get('HIDE_WINDOWS_KNOWN_ERRORS', True)
 
 #{ Routines
 
@@ -172,6 +171,7 @@ def with_rw_repo(working_tree_ref, bare=False):
 
 
 def launch_git_daemon(temp_dir, ip, port):
+    from git import Git
     if is_win:
         ## On MINGW-git, daemon exists in .\Git\mingw64\libexec\git-core\,
         #  but if invoked as 'git daemon', it detaches from parent `git` cmd,
@@ -217,6 +217,7 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
     See working dir info in with_rw_repo
     :note: We attempt to launch our own invocation of git-daemon, which will be shutdown at the end of the test.
     """
+    from git import Remote, GitCommandError
     assert isinstance(working_tree_ref, string_types), "Decorator requires ref name for working tree checkout"
 
     def argument_passer(func):
@@ -368,6 +369,7 @@ class TestBase(TestCase):
         Dynamically add a read-only repository to our actual type. This way
         each test type has its own repository
         """
+        from git import Repo
         import gc
         gc.collect()
         cls.rorepo = Repo(GIT_REPO)

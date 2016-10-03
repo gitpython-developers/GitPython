@@ -823,7 +823,7 @@ class TestIndex(TestBase):
             asserted = True
         assert asserted, "Adding using a filename is not correctly asserted."
 
-    @skipIf(HIDE_WINDOWS_KNOWN_ERRORS and is_win and sys.version_info[:2] == (2, 7), r"""
+    @skipIf(HIDE_WINDOWS_KNOWN_ERRORS and sys.version_info[:2] == (2, 7), r"""
         FIXME:  File "C:\projects\gitpython\git\util.py", line 125, in to_native_path_linux
         return path.replace('\\', '/')
         UnicodeDecodeError: 'ascii' codec can't decode byte 0xc3 in position 0: ordinal not in range(128)""")

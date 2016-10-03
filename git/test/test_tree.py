@@ -13,14 +13,13 @@ from git import (
     Tree,
     Blob
 )
-from git.compat import is_win
 from git.test.lib.helper import HIDE_WINDOWS_KNOWN_ERRORS
 from git.test.lib import TestBase
 
 
 class TestTree(TestBase):
 
-    @skipIf(HIDE_WINDOWS_KNOWN_ERRORS and is_win and sys.version_info[:2] == (3, 5), """
+    @skipIf(HIDE_WINDOWS_KNOWN_ERRORS and sys.version_info[:2] == (3, 5), """
         File "C:\projects\gitpython\git\cmd.py", line 559, in execute
         raise GitCommandNotFound(command, err)
         git.exc.GitCommandNotFound: Cmd('git') not found due to: OSError('[WinError 6] The handle is invalid')
@@ -53,7 +52,7 @@ class TestTree(TestBase):
             testtree._deserialize(stream)
         # END for each item in tree
 
-    @skipIf(HIDE_WINDOWS_KNOWN_ERRORS and is_win and sys.version_info[:2] == (3, 5), """
+    @skipIf(HIDE_WINDOWS_KNOWN_ERRORS and sys.version_info[:2] == (3, 5), """
         File "C:\projects\gitpython\git\cmd.py", line 559, in execute
         raise GitCommandNotFound(command, err)
         git.exc.GitCommandNotFound: Cmd('git') not found due to: OSError('[WinError 6] The handle is invalid')

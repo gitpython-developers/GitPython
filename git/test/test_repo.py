@@ -797,7 +797,7 @@ class TestRepo(TestBase):
         git_file_repo = Repo(rwrepo.working_tree_dir)
         self.assertEqual(os.path.abspath(git_file_repo.git_dir), real_path_abs)
 
-    @skipIf(HIDE_WINDOWS_KNOWN_ERRORS and is_win and PY3,
+    @skipIf(HIDE_WINDOWS_KNOWN_ERRORS and PY3,
             "FIXME: smmp fails with: TypeError: Can't convert 'bytes' object to str implicitly")
     def test_file_handle_leaks(self):
         def last_commit(repo, rev, path):
@@ -897,9 +897,9 @@ class TestRepo(TestBase):
         for i, j in itertools.permutations([c1, 'ffffff', ''], r=2):
             self.assertRaises(GitCommandError, repo.is_ancestor, i, j)
 
-    @skipIf(HIDE_WINDOWS_KNOWN_ERRORS and is_win,
-            "FIXME: helper.wrapper fails with: PermissionError: [WinError 5] Access is denied: "
-            "'C:\\Users\\appveyor\\AppData\\Local\\Temp\\1\\test_work_tree_unsupportedryfa60di\\master_repo\\.git\\objects\\pack\\pack-bc9e0787aef9f69e1591ef38ea0a6f566ec66fe3.idx")  # noqa E501
+    # @skipIf(HIDE_WINDOWS_KNOWN_ERRORS,
+    #         "FIXME: helper.wrapper fails with: PermissionError: [WinError 5] Access is denied: "
+    #         "'C:\\Users\\appveyor\\AppData\\Local\\Temp\\1\\test_work_tree_unsupportedryfa60di\\master_repo\\.git\\objects\\pack\\pack-bc9e0787aef9f69e1591ef38ea0a6f566ec66fe3.idx")  # noqa E501
     @with_rw_directory
     def test_work_tree_unsupported(self, rw_dir):
         git = Git(rw_dir)

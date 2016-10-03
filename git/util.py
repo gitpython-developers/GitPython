@@ -34,6 +34,7 @@ from .compat import (
     PY3
 )
 from .exc import InvalidGitRepositoryError
+from unittest.case import SkipTest
 
 
 # NOTE:  Some of the unused imports might be used/imported by others.
@@ -71,7 +72,15 @@ def rmtree(path):
     def onerror(func, path, exc_info):
         # Is the error an access error ?
         os.chmod(path, stat.S_IWUSR)
-        func(path)  # Will scream if still not possible to delete.
+
+        try:
+            func(path)  # Will scream if still not possible to delete.
+        except Exception as ex:
+            from git.test.lib.helper import HIDE_WINDOWS_KNOWN_ERRORS
+            if HIDE_WINDOWS_KNOWN_ERRORS:
+                raise SkipTest("FIXME: fails with: PermissionError\n  %s", ex)
+            else:
+                raise
 
     return shutil.rmtree(path, False, onerror)
 
