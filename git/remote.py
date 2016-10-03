@@ -176,7 +176,7 @@ class PushInfo(object):
             split_token = "..."
             if control_character == " ":
                 split_token = ".."
-            old_sha, new_sha = summary.split(' ')[0].split(split_token)
+            old_sha, new_sha = summary.split(' ')[0].split(split_token)  # @UnusedVariable
             # have to use constructor here as the sha usually is abbreviated
             old_commit = old_sha
         # END message handling
@@ -262,7 +262,7 @@ class FetchInfo(object):
         # parse lines
         control_character, operation, local_remote_ref, remote_local_ref, note = match.groups()
         try:
-            new_hex_sha, fetch_operation, fetch_note = fetch_line.split("\t")
+            new_hex_sha, fetch_operation, fetch_note = fetch_line.split("\t")  # @UnusedVariable
             ref_type_name, fetch_note = fetch_note.split(' ', 1)
         except ValueError:  # unpack error
             raise ValueError("Failed to parse FETCH_HEAD line: %r" % fetch_line)
@@ -625,8 +625,8 @@ class Remote(LazyMixin, Iterable):
             for pline in progress_handler(line):
                 # END handle special messages
                 for cmd in cmds:
-                    if len(line) > 1 and line[0] == ' ' and line[1] == cmd:
-                        fetch_info_lines.append(line)
+                    if len(pline) > 1 and pline[0] == ' ' and pline[1] == cmd:
+                        fetch_info_lines.append(pline)
                         continue
                     # end find command code
                 # end for each comand code we know

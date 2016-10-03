@@ -7,7 +7,7 @@ from gitdb.util import (
     bin_to_hex,
     hex_to_bin
 )
-from gitdb.db import GitDB
+from gitdb.db import GitDB  # @UnusedImport
 from gitdb.db import LooseObjectDB
 
 from .exc import (
@@ -54,7 +54,7 @@ class GitCmdObjectDB(LooseObjectDB):
         :note: currently we only raise BadObject as git does not communicate
             AmbiguousObjects separately"""
         try:
-            hexsha, typename, size = self._git.get_object_header(partial_hexsha)
+            hexsha, typename, size = self._git.get_object_header(partial_hexsha)  # @UnusedVariable
             return hex_to_bin(hexsha)
         except (GitCommandError, ValueError):
             raise BadObject(partial_hexsha)

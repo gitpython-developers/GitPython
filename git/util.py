@@ -17,13 +17,13 @@ import time
 from functools import wraps
 
 from git.compat import is_win
-from gitdb.util import (  # NOQA
+from gitdb.util import (    # NOQA
     make_sha,
-    LockedFD,
-    file_contents_ro,
-    LazyMixin,
-    to_hex_sha,
-    to_bin_sha
+    LockedFD,               # @UnusedImport
+    file_contents_ro,       # @UnusedImport
+    LazyMixin,              # @UnusedImport
+    to_hex_sha,             # @UnusedImport
+    to_bin_sha              # @UnusedImport
 )
 
 import os.path as osp
@@ -251,7 +251,7 @@ class RemoteProgress(object):
             # END could not get match
 
             op_code = 0
-            remote, op_name, percent, cur_count, max_count, message = match.groups()
+            remote, op_name, percent, cur_count, max_count, message = match.groups()  # @UnusedVariable
 
             # get operation id
             if op_name == "Counting objects":

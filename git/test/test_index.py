@@ -58,7 +58,7 @@ class TestIndex(TestBase):
 
     def _assert_fprogress(self, entries):
         self.assertEqual(len(entries), len(self._fprogress_map))
-        for path, call_count in self._fprogress_map.items():
+        for path, call_count in self._fprogress_map.items():  # @UnusedVariable
             self.assertEqual(call_count, 2)
         # END for each item in progress map
         self._reset_progress()
@@ -188,7 +188,7 @@ class TestIndex(TestBase):
 
         # test BlobFilter
         prefix = 'lib/git'
-        for stage, blob in base_index.iter_blobs(BlobFilter([prefix])):
+        for stage, blob in base_index.iter_blobs(BlobFilter([prefix])):  # @UnusedVariable
             assert blob.path.startswith(prefix)
 
         # writing a tree should fail with an unmerged index

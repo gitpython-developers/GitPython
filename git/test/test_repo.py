@@ -809,7 +809,7 @@ class TestRepo(TestBase):
         # And we expect to set max handles to a low value, like 64
         # You should set ulimit -n X, see .travis.yml
         # The loops below would easily create 500 handles if these would leak (4 pipes + multiple mapped files)
-        for i in range(64):
+        for _ in range(64):
             for repo_type in (GitCmdObjectDB, GitDB):
                 repo = Repo(self.rorepo.working_tree_dir, odbt=repo_type)
                 last_commit(repo, 'master', 'git/test/test_base.py')

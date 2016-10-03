@@ -29,13 +29,13 @@ _cmd_argvs = (
     ('θνιψοδε', 'κι', 'αλλα', 'non-unicode', 'args'),
 )
 _causes_n_substrings = (
-    (None,                      None),                          # noqa: E241
-    (7,                         "exit code(7)"),                           # noqa: E241
-    ('Some string',             "'Some string'"),               # noqa: E241
-    ('παλιο string',            "'παλιο string'"),              # noqa: E241
-    (Exception("An exc."),      "Exception('An exc.')"),        # noqa: E241
-    (Exception("Κακια exc."),   "Exception('Κακια exc.')"),     # noqa: E241
-    (object(),                  "<object object at "),         # noqa: E241
+    (None,                      None),                          # noqa: E241 @IgnorePep8
+    (7,                         "exit code(7)"),                # noqa: E241 @IgnorePep8
+    ('Some string',             "'Some string'"),               # noqa: E241 @IgnorePep8
+    ('παλιο string',            "'παλιο string'"),              # noqa: E241 @IgnorePep8
+    (Exception("An exc."),      "Exception('An exc.')"),        # noqa: E241 @IgnorePep8
+    (Exception("Κακια exc."),   "Exception('Κακια exc.')"),     # noqa: E241 @IgnorePep8
+    (object(),                  "<object object at "),          # noqa: E241 @IgnorePep8
 )
 
 _streams_n_substrings = (None, 'steram', 'ομορφο stream', )

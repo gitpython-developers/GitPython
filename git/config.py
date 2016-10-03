@@ -40,7 +40,7 @@ log.addHandler(logging.NullHandler())
 class MetaParserBuilder(abc.ABCMeta):
 
     """Utlity class wrapping base-class methods into decorators that assure read-only properties"""
-    def __new__(metacls, name, bases, clsdict):
+    def __new__(cls, name, bases, clsdict):
         """
         Equip all base-class methods with a needs_values decorator, and all non-const methods
         with a set_dirty_and_flush_changes decorator in addition to that."""
@@ -62,7 +62,7 @@ class MetaParserBuilder(abc.ABCMeta):
             # END for each base
         # END if mutating methods configuration is set
 
-        new_type = super(MetaParserBuilder, metacls).__new__(metacls, name, bases, clsdict)
+        new_type = super(MetaParserBuilder, cls).__new__(cls, name, bases, clsdict)
         return new_type
 
 

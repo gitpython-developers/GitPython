@@ -218,7 +218,7 @@ class SymbolicReference(object):
 
         return self
 
-    def set_object(self, object, logmsg=None):
+    def set_object(self, object, logmsg=None):  # @ReservedAssignment
         """Set the object we point to, possibly dereference our symbolic reference first.
         If the reference does not exist, it will be created
 
@@ -229,7 +229,7 @@ class SymbolicReference(object):
         :note: plain SymbolicReferences may not actually point to objects by convention
         :return: self"""
         if isinstance(object, SymbolicReference):
-            object = object.object
+            object = object.object  # @ReservedAssignment
         # END resolve references
 
         is_detached = True
@@ -595,7 +595,7 @@ class SymbolicReference(object):
         # END for each directory to walk
 
         # read packed refs
-        for sha, rela_path in cls._iter_packed_refs(repo):
+        for sha, rela_path in cls._iter_packed_refs(repo):  # @UnusedVariable
             if rela_path.startswith(common_path):
                 rela_paths.add(rela_path)
             # END relative path matches common path

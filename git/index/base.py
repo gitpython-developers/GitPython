@@ -170,7 +170,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
     def _deserialize(self, stream):
         """Initialize this instance with index values read from the given stream"""
-        self.version, self.entries, self._extension_data, conten_sha = read_cache(stream)
+        self.version, self.entries, self._extension_data, conten_sha = read_cache(stream)  # @UnusedVariable
         return self
 
     def _entries_sorted(self):
@@ -404,7 +404,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
                     continue
             # END glob handling
             try:
-                for root, dirs, files in os.walk(abs_path, onerror=raise_exc):
+                for root, dirs, files in os.walk(abs_path, onerror=raise_exc):  # @UnusedVariable
                     for rela_file in files:
                         # add relative paths only
                         yield os.path.join(root.replace(rs, ''), rela_file)
@@ -599,7 +599,6 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         """Store file at filepath in the database and return the base index entry
         Needs the git_working_dir decorator active ! This must be assured in the calling code"""
         st = os.lstat(filepath)     # handles non-symlinks as well
-        stream = None
         if S_ISLNK(st.st_mode):
             # in PY3, readlink is string, but we need bytes. In PY2, it's just OS encoded bytes, we assume UTF-8
             open_stream = lambda: BytesIO(force_bytes(os.readlink(filepath), encoding=defenc))
@@ -1102,11 +1101,11 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
                 try:
                     self.entries[(co_path, 0)]
                 except KeyError:
-                    dir = co_path
-                    if not dir.endswith('/'):
-                        dir += '/'
+                    folder = co_path
+                    if not folder.endswith('/'):
+                        folder += '/'
                     for entry in mviter(self.entries):
-                        if entry.path.startswith(dir):
+                        if entry.path.startswith(folder):
                             p = entry.path
                             self._write_path_to_stdin(proc, p, p, make_exc,
                                                       fprogress, read_from_stdout=False)

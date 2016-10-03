@@ -264,7 +264,7 @@ def write_tree_from_cache(entries, odb, sl, si=0):
 
             # enter recursion
             # ci - 1 as we want to count our current item as well
-            sha, tree_entry_list = write_tree_from_cache(entries, odb, slice(ci - 1, xi), rbound + 1)
+            sha, tree_entry_list = write_tree_from_cache(entries, odb, slice(ci - 1, xi), rbound + 1)  # @UnusedVariable
             tree_items_append((sha, S_IFDIR, base))
 
             # skip ahead

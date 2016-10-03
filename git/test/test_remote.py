@@ -90,7 +90,7 @@ class TestRemoteProgress(RemoteProgress):
         assert self._stages_per_op
 
         # must have seen all stages
-        for op, stages in self._stages_per_op.items():
+        for op, stages in self._stages_per_op.items():  # @UnusedVariable
             assert stages & self.STAGE_MASK == self.STAGE_MASK
         # END for each op/stage
 
@@ -331,7 +331,7 @@ class TestRemote(TestBase):
         # push new tags
         progress = TestRemoteProgress()
         to_be_updated = "my_tag.1.0RV"
-        new_tag = TagReference.create(rw_repo, to_be_updated)
+        new_tag = TagReference.create(rw_repo, to_be_updated)  # @UnusedVariable
         other_tag = TagReference.create(rw_repo, "my_obj_tag.2.1aRV", message="my message")
         res = remote.push(progress=progress, tags=True)
         assert res[-1].flags & PushInfo.NEW_TAG
@@ -432,7 +432,7 @@ class TestRemote(TestBase):
             assert remote.rename(other_name) == remote
             assert prev_name != remote.name
             # multiple times
-            for time in range(2):
+            for _ in range(2):
                 assert remote.rename(prev_name).name == prev_name
             # END for each rename ( back to prev_name )
 

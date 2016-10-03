@@ -30,7 +30,7 @@ from git.util import to_native_path_linux, join_path_native
 # closed due to mmap bugs on windows (as it appears)
 if is_win:
     try:
-        import smmap.util
+        import smmap.util  # @UnusedImport
         smmap.util.MapRegion._test_read_into_memory = True
     except ImportError:
         sys.stderr.write("The submodule tests will fail as some files cannot be removed due to open file handles.\n")
@@ -98,7 +98,7 @@ class TestSubmodule(TestBase):
 
         # force it to reread its information
         del(smold._url)
-        smold.url == sm.url
+        smold.url == sm.url  # @NoEffect
 
         # test config_reader/writer methods
         sm.config_reader()
@@ -225,7 +225,7 @@ class TestSubmodule(TestBase):
             assert csm.module_exists()
 
             # tracking branch once again
-            csm.module().head.ref.tracking_branch() is not None
+            csm.module().head.ref.tracking_branch() is not None  # @NoEffect
 
             # this flushed in a sub-submodule
             assert len(list(rwrepo.iter_submodules())) == 2

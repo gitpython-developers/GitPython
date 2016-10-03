@@ -70,7 +70,8 @@ class Tutorials(TestBase):
         # heads, tags and references
         # heads are branches in git-speak
         # [8-test_init_repo_object]
-        self.assertEqual(repo.head.ref, repo.heads.master)                  # head is a sym-ref pointing to master
+        self.assertEqual(repo.head.ref, repo.heads.master,  # head is a sym-ref pointing to master
+                         "It's ok if TC not running from `master`.")
         self.assertEqual(repo.tags['0.3.5'], repo.tag('refs/tags/0.3.5'))   # you can access tags in various ways too
         self.assertEqual(repo.refs.master, repo.heads['master'])            # .refs provides all refs, ie heads ...
 
@@ -242,9 +243,9 @@ class Tutorials(TestBase):
         # [8-test_references_and_objects]
         hc = repo.head.commit
         hct = hc.tree
-        hc != hct
-        hc != repo.tags[0]
-        hc == repo.head.reference.commit
+        hc != hct                           # @NoEffect
+        hc != repo.tags[0]                  # @NoEffect
+        hc == repo.head.reference.commit    # @NoEffect
         # ![8-test_references_and_objects]
 
         # [9-test_references_and_objects]
@@ -347,7 +348,7 @@ class Tutorials(TestBase):
         # The index contains all blobs in a flat list
         assert len(list(index.iter_blobs())) == len([o for o in repo.head.commit.tree.traverse() if o.type == 'blob'])
         # Access blob objects
-        for (path, stage), entry in index.entries.items():
+        for (path, stage), entry in index.entries.items():  # @UnusedVariable
             pass
         new_file_path = os.path.join(repo.working_tree_dir, 'new-file-name')
         open(new_file_path, 'w').close()

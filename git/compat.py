@@ -13,14 +13,14 @@ import sys
 
 from gitdb.utils.compat import (
     xrange,
-    MAXSIZE,
-    izip,
+    MAXSIZE,    # @UnusedImport
+    izip,       # @UnusedImport
 )
 from gitdb.utils.encoding import (
-    string_types,
-    text_type,
-    force_bytes,
-    force_text
+    string_types,    # @UnusedImport
+    text_type,       # @UnusedImport
+    force_bytes,     # @UnusedImport
+    force_text       # @UnusedImport
 )
 
 
@@ -33,17 +33,21 @@ defenc = sys.getdefaultencoding()
 if PY3:
     import io
     FileType = io.IOBase
+
     def byte_ord(b):
         return b
+
     def bchr(n):
         return bytes([n])
+
     def mviter(d):
         return d.values()
-    range = xrange
+
+    range = xrange  # @ReservedAssignment
     unicode = str
     binary_type = bytes
 else:
-    FileType = file
+    FileType = file  # @UndefinedVariable on PY3
     # usually, this is just ascii, which might not enough for our encoding needs
     # Unless it's set specifically, we override it to be utf-8
     if defenc == 'ascii':
@@ -52,7 +56,8 @@ else:
     bchr = chr
     unicode = unicode
     binary_type = str
-    range = xrange
+    range = xrange  # @ReservedAssignment
+
     def mviter(d):
         return d.itervalues()
 

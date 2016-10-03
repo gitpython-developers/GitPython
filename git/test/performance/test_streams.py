@@ -120,7 +120,7 @@ class TestObjDBPerformance(TestBigRepoR):
 
             # read all
             st = time()
-            s, t, size, data = rwrepo.git.get_object_data(gitsha)
+            hexsha, typename, size, data = rwrepo.git.get_object_data(gitsha)  # @UnusedVariable
             gelapsed_readall = time() - st
             print("Read %i KiB of %s data at once using git-cat-file in %f s ( %f Read KiB / s)"
                   % (size_kib, desc, gelapsed_readall, size_kib / gelapsed_readall), file=sys.stderr)
@@ -131,7 +131,7 @@ class TestObjDBPerformance(TestBigRepoR):
 
             # read chunks
             st = time()
-            s, t, size, stream = rwrepo.git.stream_object_data(gitsha)
+            hexsha, typename, size, stream = rwrepo.git.stream_object_data(gitsha)  # @UnusedVariable
             while True:
                 data = stream.read(cs)
                 if len(data) < cs:

@@ -5,7 +5,7 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 """ Module containing all exceptions thrown througout the git package, """
 
-from gitdb.exc import *     # NOQA
+from gitdb.exc import *     # NOQA @UnusedWildImport
 from git.compat import UnicodeMixin, safe_decode, string_types
 
 

@@ -121,7 +121,7 @@ class TestGit(TestBase):
 
         # read data - have to read it in one large chunk
         size = int(obj_info.split()[2])
-        data = g.stdout.read(size)
+        g.stdout.read(size)
         g.stdout.read(1)
 
         # now we should be able to read a new object
@@ -131,7 +131,7 @@ class TestGit(TestBase):
 
         # same can be achived using the respective command functions
         hexsha, typename, size = self.git.get_object_header(hexsha)
-        hexsha, typename_two, size_two, data = self.git.get_object_data(hexsha)
+        hexsha, typename_two, size_two, data = self.git.get_object_data(hexsha)  # @UnusedVariable
         self.assertEqual(typename, typename_two)
         self.assertEqual(size, size_two)
 

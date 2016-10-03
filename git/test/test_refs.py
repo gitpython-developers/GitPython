@@ -282,7 +282,7 @@ class TestRefs(TestBase):
 
         # tag ref
         tag_name = "5.0.2"
-        light_tag = TagReference.create(rw_repo, tag_name)
+        TagReference.create(rw_repo, tag_name)
         self.failUnlessRaises(GitCommandError, TagReference.create, rw_repo, tag_name)
         light_tag = TagReference.create(rw_repo, tag_name, "HEAD~1", force=True)
         assert isinstance(light_tag, TagReference)
@@ -442,7 +442,7 @@ class TestRefs(TestBase):
 
         self.failUnlessRaises(OSError, SymbolicReference.create, rw_repo, symref_path, cur_head.reference.commit)
         # it works if the new ref points to the same reference
-        SymbolicReference.create(rw_repo, symref.path, symref.reference).path == symref.path
+        SymbolicReference.create(rw_repo, symref.path, symref.reference).path == symref.path  # @NoEffect
         SymbolicReference.delete(rw_repo, symref)
         # would raise if the symref wouldn't have been deletedpbl
         symref = SymbolicReference.create(rw_repo, symref_path, cur_head.reference)

@@ -140,7 +140,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
     def _set_cache_(self, attr):
         if attr in Commit.__slots__:
             # read the data in a chunk, its faster - then provide a file wrapper
-            binsha, typename, self.size, stream = self.repo.odb.stream(self.binsha)
+            binsha, typename, self.size, stream = self.repo.odb.stream(self.binsha)  # @UnusedVariable
             self._deserialize(BytesIO(stream.read()))
         else:
             super(Commit, self)._set_cache_(attr)
@@ -267,7 +267,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
             hexsha = line.strip()
             if len(hexsha) > 40:
                 # split additional information, as returned by bisect for instance
-                hexsha, rest = line.split(None, 1)
+                hexsha, _ = line.split(None, 1)
             # END handle extra info
 
             assert len(hexsha) == 40, "Invalid line: %s" % hexsha

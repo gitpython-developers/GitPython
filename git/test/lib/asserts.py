@@ -8,18 +8,18 @@ import re
 import stat
 
 from nose.tools import (
-    assert_equal,
-    assert_not_equal,
-    assert_raises,
-    raises,
-    assert_true,
-    assert_false
+    assert_equal,       # @UnusedImport
+    assert_not_equal,   # @UnusedImport
+    assert_raises,      # @UnusedImport
+    raises,             # @UnusedImport
+    assert_true,        # @UnusedImport
+    assert_false        # @UnusedImport
 )
 
 try:
     from unittest.mock import patch
 except ImportError:
-    from mock import patch
+    from mock import patch  # @NoMove @UnusedImport
 
 __all__ = ['assert_instance_of', 'assert_not_instance_of',
            'assert_none', 'assert_not_none',

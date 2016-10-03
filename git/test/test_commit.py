@@ -123,7 +123,7 @@ class TestCommit(TestBase):
         check_entries(stats.total)
         assert "files" in stats.total
 
-        for filepath, d in stats.files.items():
+        for filepath, d in stats.files.items():  # @UnusedVariable
             check_entries(d)
         # END for each stated file
 
