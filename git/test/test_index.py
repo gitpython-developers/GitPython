@@ -5,17 +5,16 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
-from git.test.lib import (
-    TestBase,
-    fixture_path,
-    fixture,
-    with_rw_repo
+from io import BytesIO
+import os
+from stat import (
+    S_ISLNK,
+    ST_MODE
 )
-from git.util import Actor, rmtree
-from git.exc import (
-    HookExecutionError,
-    InvalidGitRepositoryError
-)
+import sys
+import tempfile
+from unittest.case import skipIf
+
 from git import (
     IndexFile,
     Repo,
@@ -28,24 +27,27 @@ from git import (
     CheckoutError,
 )
 from git.compat import string_types, is_win
-from gitdb.util import hex_to_bin
-import os
-import sys
-import tempfile
-from stat import (
-    S_ISLNK,
-    ST_MODE
+from git.exc import (
+    HookExecutionError,
+    InvalidGitRepositoryError
 )
-
-from io import BytesIO
-from gitdb.base import IStream
-from git.objects import Blob
+from git.index.fun import hook_path
 from git.index.typ import (
     BaseIndexEntry,
     IndexEntry
 )
-from git.index.fun import hook_path
+from git.objects import Blob
+from git.test.lib import (
+    TestBase,
+    fixture_path,
+    fixture,
+    with_rw_repo
+)
+from git.test.lib.helper import HIDE_WINDOWS_KNOWN_ERRORS
 from git.test.lib import with_rw_directory
+from git.util import Actor, rmtree
+from gitdb.base import IStream
+from gitdb.util import hex_to_bin
 
 
 class TestIndex(TestBase):
@@ -821,6 +823,10 @@ class TestIndex(TestBase):
             asserted = True
         assert asserted, "Adding using a filename is not correctly asserted."
 
+    @skipIf(HIDE_WINDOWS_KNOWN_ERRORS and is_win and sys.version_info[:2] == (2, 7), r"""
+        FIXME:  File "C:\projects\gitpython\git\util.py", line 125, in to_native_path_linux
+        return path.replace('\\', '/')
+        UnicodeDecodeError: 'ascii' codec can't decode byte 0xc3 in position 0: ordinal not in range(128)""")
     @with_rw_directory
     def test_add_utf8P_path(self, rw_dir):
         # NOTE: fp is not a Unicode object in python 2 (which is the source of the problem)

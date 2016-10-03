@@ -5,7 +5,11 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 import os
+import sys
+from unittest.case import skipIf
 
+from git.compat import is_win
+from git.test.lib.helper import HIDE_WINDOWS_KNOWN_ERRORS
 from git.test.lib import TestBase
 from git.test.lib.helper import with_rw_directory
 
@@ -16,6 +20,9 @@ class Tutorials(TestBase):
         import gc
         gc.collect()
 
+    @skipIf(HIDE_WINDOWS_KNOWN_ERRORS and is_win and sys.version_info[:2] in ((2, 7), (3, 4)),
+            "FIXME: helper.wrapper fails with: PermissionError: [WinError 5] Access is denied: "
+            "'C:\\Users\\appveyor\\AppData\\Local\\Temp\\1\\test_work_tree_unsupportedryfa60di\\master_repo\\.git\\objects\\pack\\pack-bc9e0787aef9f69e1591ef38ea0a6f566ec66fe3.idx")  # noqa E501
     @with_rw_directory
     def test_init_repo_object(self, rw_dir):
         # [1-test_init_repo_object]

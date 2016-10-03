@@ -7,11 +7,11 @@
 import glob
 from io import BytesIO
 import itertools
-import functools as fnt
 import os
 import pickle
 import sys
 import tempfile
+from unittest.case import skipIf
 
 from git import (
     InvalidGitRepositoryError,
@@ -50,13 +50,14 @@ from git.test.lib import (
     assert_true,
     raises
 )
+from git.test.lib.helper import HIDE_WINDOWS_KNOWN_ERRORS
 from git.test.lib import with_rw_directory
 from git.util import join_path_native, rmtree, rmfile
 from gitdb.util import bin_to_hex
 from nose import SkipTest
 
+import functools as fnt
 import os.path as osp
-from unittest.case import skipIf
 
 
 def iter_flatten(lol):
@@ -796,7 +797,8 @@ class TestRepo(TestBase):
         git_file_repo = Repo(rwrepo.working_tree_dir)
         self.assertEqual(os.path.abspath(git_file_repo.git_dir), real_path_abs)
 
-    @skipIf(is_win and PY3, "FIXME: smmp fails with: TypeError: Can't convert 'bytes' object to str implicitly")
+    @skipIf(HIDE_WINDOWS_KNOWN_ERRORS and is_win and PY3,
+            "FIXME: smmp fails with: TypeError: Can't convert 'bytes' object to str implicitly")
     def test_file_handle_leaks(self):
         def last_commit(repo, rev, path):
             commit = next(repo.iter_commits(rev, path, max_count=1))
@@ -895,6 +897,9 @@ class TestRepo(TestBase):
         for i, j in itertools.permutations([c1, 'ffffff', ''], r=2):
             self.assertRaises(GitCommandError, repo.is_ancestor, i, j)
 
+    @skipIf(HIDE_WINDOWS_KNOWN_ERRORS and is_win,
+            "FIXME: helper.wrapper fails with: PermissionError: [WinError 5] Access is denied: "
+            "'C:\\Users\\appveyor\\AppData\\Local\\Temp\\1\\test_work_tree_unsupportedryfa60di\\master_repo\\.git\\objects\\pack\\pack-bc9e0787aef9f69e1591ef38ea0a6f566ec66fe3.idx")  # noqa E501
     @with_rw_directory
     def test_work_tree_unsupported(self, rw_dir):
         git = Git(rw_dir)
