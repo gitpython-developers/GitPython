@@ -486,7 +486,7 @@ class TestRepo(TestBase):
 
     @with_rw_directory
     def test_tilde_and_env_vars_in_repo_path(self, rw_dir):
-        ph = os.environ['HOME']
+        ph = os.environ.get('HOME')
         try:
             os.environ['HOME'] = rw_dir
             Repo.init(os.path.join('~', 'test.git'), bare=True)
@@ -494,8 +494,9 @@ class TestRepo(TestBase):
             os.environ['FOO'] = rw_dir
             Repo.init(os.path.join('$FOO', 'test.git'), bare=True)
         finally:
-            os.environ['HOME'] = ph
-            del os.environ['FOO']
+            if ph:
+                os.environ['HOME'] = ph
+                del os.environ['FOO']
         # end assure HOME gets reset to what it was
 
     def test_git_cmd(self):
