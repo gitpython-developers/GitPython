@@ -186,14 +186,18 @@ class Git(LazyMixin):
     # Override this value using `Git.USE_SHELL = True`
     USE_SHELL = False
 
-    class AutoInterrupt(object):
+    @classmethod
+    def polish_url(cls, url):
+        return url.replace("\\\\", "\\").replace("\\", "/")
 
+    class AutoInterrupt(object):
         """Kill/Interrupt the stored process instance once this instance goes out of scope. It is
         used to prevent processes piling up in case iterators stop reading.
         Besides all attributes are wired through to the contained process object.
 
         The wait method was overridden to perform automatic status code checking
         and possibly raise."""
+
         __slots__ = ("proc", "args")
 
         def __init__(self, proc, args):

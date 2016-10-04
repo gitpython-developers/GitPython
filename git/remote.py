@@ -29,7 +29,7 @@ from git.util import (
     join_path,
     finalize_process
 )
-from git.cmd import handle_process_output
+from git.cmd import handle_process_output, Git
 from gitdb.util import join
 from git.compat import (defenc, force_text, is_win)
 import logging
@@ -570,7 +570,7 @@ class Remote(LazyMixin, Iterable):
         :raise GitCommandError: in case an origin with that name already exists"""
         scmd = 'add'
         kwargs['insert_kwargs_after'] = scmd
-        repo.git.remote(scmd, name, url, **kwargs)
+        repo.git.remote(scmd, name, Git.polish_url(url), **kwargs)
         return cls(repo, name)
 
     # add is an alias

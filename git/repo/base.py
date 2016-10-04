@@ -897,7 +897,7 @@ class Repo(object):
         repo = cls(path, odbt=odbt)
         if repo.remotes:
             with repo.remotes[0].config_writer as writer:
-                writer.set_value('url', repo.remotes[0].url.replace("\\\\", "\\").replace("\\", "/"))
+                writer.set_value('url', Git.polish_url(repo.remotes[0].url))
         # END handle remote repo
         return repo
 

@@ -472,12 +472,16 @@ class TestRepo(TestBase):
         head = self.rorepo.create_head("new_head", "HEAD~1")
         self.rorepo.delete_head(head)
 
-        tag = self.rorepo.create_tag("new_tag", "HEAD~2")
-        self.rorepo.delete_tag(tag)
+        try:
+            tag = self.rorepo.create_tag("new_tag", "HEAD~2")
+        finally:
+            self.rorepo.delete_tag(tag)
         with self.rorepo.config_writer():
             pass
-        remote = self.rorepo.create_remote("new_remote", "git@server:repo.git")
-        self.rorepo.delete_remote(remote)
+        try:
+            remote = self.rorepo.create_remote("new_remote", "git@server:repo.git")
+        finally:
+            self.rorepo.delete_remote(remote)
 
     def test_comparison_and_hash(self):
         # this is only a preliminary test, more testing done in test_index

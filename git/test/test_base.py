@@ -110,17 +110,6 @@ class TestBase(TestBase):
         assert not rw_repo.config_reader("repository").getboolean("core", "bare")
         assert os.path.isdir(os.path.join(rw_repo.working_tree_dir, 'lib'))
 
-    # @skipIf(HIDE_WINDOWS_KNOWN_ERRORS, """
-    # FIXME: helper.wrapper fails with:
-    #     PermissionError: [WinError 5] Access is denied:
-    #     'C:\\Users\\appveyor\\AppData\\Local\\Temp\\1\\test_work_tree_unsupportedryfa60di\\
-    #     master_repo\\.git\\objects\\pack\\pack-bc9e0787aef9f69e1591ef38ea0a6f566ec66fe3.idx'
-    # AND
-    # FIXME: git-daemon failing with:
-    #     git.exc.GitCommandError: Cmd('git') failed due to: exit code(128)
-    #       cmdline: git ls-remote daemon_origin
-    #       stderr: 'fatal: bad config line 15 in file .git/config'
-    # """)
     @with_rw_and_rw_remote_repo('0.1.6')
     def test_with_rw_remote_and_rw_repo(self, rw_repo, rw_remote_repo):
         assert not rw_repo.config_reader("repository").getboolean("core", "bare")

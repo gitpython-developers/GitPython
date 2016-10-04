@@ -28,8 +28,11 @@ from git import (
 from git.util import IterableList, rmtree
 from git.compat import string_types
 import tempfile
-import os
+import os.path as osp
 import random
+from unittest.case import skipIf
+from git.util import HIDE_WINDOWS_KNOWN_ERRORS
+from git.cmd import Git
 
 # assure we have repeatable results
 random.seed(0)
@@ -105,7 +108,7 @@ class TestRemote(TestBase):
         gc.collect()
 
     def _print_fetchhead(self, repo):
-        with open(os.path.join(repo.git_dir, "FETCH_HEAD")):
+        with open(osp.join(repo.git_dir, "FETCH_HEAD")):
             pass
 
     def _do_test_fetch_result(self, results, remote):
@@ -156,7 +159,7 @@ class TestRemote(TestBase):
         # Create a file with a random name and random data and commit it to  repo.
         # Return the commited absolute file path
         index = repo.index
-        new_file = self._make_file(os.path.basename(tempfile.mktemp()), str(random.random()), repo)
+        new_file = self._make_file(osp.basename(tempfile.mktemp()), str(random.random()), repo)
         index.add([new_file])
         index.commit("Committing %s" % new_file)
         return new_file
@@ -263,7 +266,8 @@ class TestRemote(TestBase):
         # must clone with a local path for the repo implementation not to freak out
         # as it wants local paths only ( which I can understand )
         other_repo = remote_repo.clone(other_repo_dir, shared=False)
-        remote_repo_url = "git://localhost:%s%s" % (GIT_DAEMON_PORT, remote_repo.git_dir)
+        remote_repo_url = osp.basename(remote_repo.git_dir)  # git-daemon runs with appropriate `--base-path`.
+        remote_repo_url = Git.polish_url("git://localhost:%s/%s" % (GIT_DAEMON_PORT, remote_repo_url))
 
         # put origin to git-url
         other_origin = other_repo.remotes.origin
@@ -384,12 +388,7 @@ class TestRemote(TestBase):
         TagReference.delete(rw_repo, new_tag, other_tag)
         remote.push(":%s" % other_tag.path)
 
-    # @skipIf(HIDE_WINDOWS_KNOWN_ERRORS, """
-    # FIXME: git-daemon failing with:
-    #     git.exc.GitCommandError: Cmd('git') failed due to: exit code(128)
-    #       cmdline: git ls-remote daemon_origin
-    #       stderr: 'fatal: bad config line 15 in file .git/config'
-    # """)
+    @skipIf(HIDE_WINDOWS_KNOWN_ERRORS, "FIXME: Freezes!")
     @with_rw_and_rw_remote_repo('0.1.6')
     def test_base(self, rw_repo, remote_repo):
         num_remotes = 0
