@@ -384,6 +384,12 @@ class TestRemote(TestBase):
         TagReference.delete(rw_repo, new_tag, other_tag)
         remote.push(":%s" % other_tag.path)
 
+    # @skipIf(HIDE_WINDOWS_KNOWN_ERRORS, """
+    # FIXME: git-daemon failing with:
+    #     git.exc.GitCommandError: Cmd('git') failed due to: exit code(128)
+    #       cmdline: git ls-remote daemon_origin
+    #       stderr: 'fatal: bad config line 15 in file .git/config'
+    # """)
     @with_rw_and_rw_remote_repo('0.1.6')
     def test_base(self, rw_repo, remote_repo):
         num_remotes = 0
