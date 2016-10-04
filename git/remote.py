@@ -625,8 +625,8 @@ class Remote(LazyMixin, Iterable):
             for pline in progress_handler(line):
                 # END handle special messages
                 for cmd in cmds:
-                    if len(pline) > 1 and pline[0] == ' ' and pline[1] == cmd:
-                        fetch_info_lines.append(pline)
+                    if len(line) > 1 and line[0] == ' ' and line[1] == cmd:
+                        fetch_info_lines.append(line)
                         continue
                     # end find command code
                 # end for each comand code we know

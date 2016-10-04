@@ -909,6 +909,9 @@ class TestRepo(TestBase):
         rw_master = self.rorepo.clone(join_path_native(rw_dir, 'master_repo'))
         rw_master.git.checkout('HEAD~10')
         worktree_path = join_path_native(rw_dir, 'worktree_repo')
-        rw_master.git.worktree('add', worktree_path, 'master')
+        try:
+            rw_master.git.worktree('add', worktree_path, 'master')
+        except Exception as ex:
+            raise AssertionError(ex, "It's ok if TC not running from `master`.")
 
         self.failUnlessRaises(InvalidGitRepositoryError, Repo, worktree_path)
