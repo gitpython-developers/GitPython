@@ -993,8 +993,8 @@ class Submodule(IndexObject, Iterable, Traversable):
                 pw.rename_section(sm_section(self.name), sm_section(new_name))
 
         # .gitmodules
-        with self.config_writer(write=True) as cw:
-            cw.config.rename_section(sm_section(self.name), sm_section(new_name))
+        with self.config_writer(write=True).config as cw:
+            cw.rename_section(sm_section(self.name), sm_section(new_name))
 
         self._name = new_name
 
