@@ -616,9 +616,8 @@ class LockFile(object):
 
         # if someone removed our file beforhand, lets just flag this issue
         # instead of failing, to make it more usable.
-        lfp = self._lock_file_path()
         try:
-            rmfile(lfp)
+            rmfile(lock_file)
         except OSError:
             pass
         self._owns_lock = False
