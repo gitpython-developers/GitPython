@@ -101,15 +101,13 @@ class TestRefs(TestBase):
             assert prev_object == cur_object        # represent the same git object
             assert prev_object is not cur_object    # but are different instances
 
-            writer = head.config_writer()
-            tv = "testopt"
-            writer.set_value(tv, 1)
-            assert writer.get_value(tv) == 1
-            writer.release()
+            with head.config_writer() as writer:
+                tv = "testopt"
+                writer.set_value(tv, 1)
+                assert writer.get_value(tv) == 1
             assert head.config_reader().get_value(tv) == 1
-            writer = head.config_writer()
-            writer.remove_option(tv)
-            writer.release()
+            with head.config_writer() as writer:
+                writer.remove_option(tv)
 
             # after the clone, we might still have a tracking branch setup
             head.set_tracking_branch(None)
@@ -175,7 +173,7 @@ class TestRefs(TestBase):
 
     def test_orig_head(self):
         assert type(self.rorepo.head.orig_head()) == SymbolicReference
-        
+
     @with_rw_repo('0.1.6')
     def test_head_checkout_detached_head(self, rw_repo):
         res = rw_repo.remotes.origin.refs.master.checkout()
@@ -282,7 +280,7 @@ class TestRefs(TestBase):
 
         # tag ref
         tag_name = "5.0.2"
-        light_tag = TagReference.create(rw_repo, tag_name)
+        TagReference.create(rw_repo, tag_name)
         self.failUnlessRaises(GitCommandError, TagReference.create, rw_repo, tag_name)
         light_tag = TagReference.create(rw_repo, tag_name, "HEAD~1", force=True)
         assert isinstance(light_tag, TagReference)
@@ -442,7 +440,7 @@ class TestRefs(TestBase):
 
         self.failUnlessRaises(OSError, SymbolicReference.create, rw_repo, symref_path, cur_head.reference.commit)
         # it works if the new ref points to the same reference
-        SymbolicReference.create(rw_repo, symref.path, symref.reference).path == symref.path
+        SymbolicReference.create(rw_repo, symref.path, symref.reference).path == symref.path  # @NoEffect
         SymbolicReference.delete(rw_repo, symref)
         # would raise if the symref wouldn't have been deletedpbl
         symref = SymbolicReference.create(rw_repo, symref_path, cur_head.reference)

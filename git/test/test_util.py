@@ -25,21 +25,25 @@ from git.objects.util import (
     parse_date,
 )
 from git.cmd import dashify
-from git.compat import string_types
+from git.compat import string_types, is_win
 
 import time
+import ddt
 
 
 class TestIterableMember(object):
 
     """A member of an iterable list"""
-    __slots__ = ("name", "prefix_name")
+    __slots__ = "name"
 
     def __init__(self, name):
         self.name = name
-        self.prefix_name = name
+
+    def __repr__(self):
+        return "TestIterableMember(%r)" % self.name
 
 
+@ddt.ddt
 class TestUtils(TestBase):
 
     def setup(self):
@@ -92,23 +96,28 @@ class TestUtils(TestBase):
         wait_lock = BlockingLockFile(my_file, 0.05, wait_time)
         self.failUnlessRaises(IOError, wait_lock._obtain_lock)
         elapsed = time.time() - start
-        assert elapsed <= wait_time + 0.02  # some extra time it may cost
+        extra_time = 0.02
+        if is_win:
+            # for Appveyor
+            extra_time *= 6  # NOTE: Indeterministic failures here...
+        self.assertLess(elapsed, wait_time + extra_time)
 
     def test_user_id(self):
-        assert '@' in get_user_id()
+        self.assertIn('@', get_user_id())
 
     def test_parse_date(self):
         # test all supported formats
         def assert_rval(rval, veri_time, offset=0):
-            assert len(rval) == 2
-            assert isinstance(rval[0], int) and isinstance(rval[1], int)
-            assert rval[0] == veri_time
-            assert rval[1] == offset
+            self.assertEqual(len(rval), 2)
+            self.assertIsInstance(rval[0], int)
+            self.assertIsInstance(rval[1], int)
+            self.assertEqual(rval[0], veri_time)
+            self.assertEqual(rval[1], offset)
 
             # now that we are here, test our conversion functions as well
             utctz = altz_to_utctz_str(offset)
-            assert isinstance(utctz, string_types)
-            assert utctz_to_altz(verify_utctz(utctz)) == offset
+            self.assertIsInstance(utctz, string_types)
+            self.assertEqual(utctz_to_altz(verify_utctz(utctz)), offset)
         # END assert rval utility
 
         rfc = ("Thu, 07 Apr 2005 22:13:11 +0000", 0)
@@ -129,53 +138,56 @@ class TestUtils(TestBase):
 
     def test_actor(self):
         for cr in (None, self.rorepo.config_reader()):
-            assert isinstance(Actor.committer(cr), Actor)
-            assert isinstance(Actor.author(cr), Actor)
+            self.assertIsInstance(Actor.committer(cr), Actor)
+            self.assertIsInstance(Actor.author(cr), Actor)
         # END assure config reader is handled
 
-    def test_iterable_list(self):
-        for args in (('name',), ('name', 'prefix_')):
-            l = IterableList('name')
+    @ddt.data(('name', ''), ('name', 'prefix_'))
+    def test_iterable_list(self, case):
+        name, prefix = case
+        l = IterableList(name, prefix)
 
-            m1 = TestIterableMember('one')
-            m2 = TestIterableMember('two')
+        name1 = "one"
+        name2 = "two"
+        m1 = TestIterableMember(prefix + name1)
+        m2 = TestIterableMember(prefix + name2)
 
-            l.extend((m1, m2))
+        l.extend((m1, m2))
 
-            assert len(l) == 2
+        self.assertEqual(len(l), 2)
 
-            # contains works with name and identity
-            assert m1.name in l
-            assert m2.name in l
-            assert m2 in l
-            assert m2 in l
-            assert 'invalid' not in l
+        # contains works with name and identity
+        self.assertIn(name1, l)
+        self.assertIn(name2, l)
+        self.assertIn(m2, l)
+        self.assertIn(m2, l)
+        self.assertNotIn('invalid', l)
 
-            # with string index
-            assert l[m1.name] is m1
-            assert l[m2.name] is m2
+        # with string index
+        self.assertIs(l[name1], m1)
+        self.assertIs(l[name2], m2)
 
-            # with int index
-            assert l[0] is m1
-            assert l[1] is m2
+        # with int index
+        self.assertIs(l[0], m1)
+        self.assertIs(l[1], m2)
 
-            # with getattr
-            assert l.one is m1
-            assert l.two is m2
+        # with getattr
+        self.assertIs(l.one, m1)
+        self.assertIs(l.two, m2)
 
-            # test exceptions
-            self.failUnlessRaises(AttributeError, getattr, l, 'something')
-            self.failUnlessRaises(IndexError, l.__getitem__, 'something')
+        # test exceptions
+        self.failUnlessRaises(AttributeError, getattr, l, 'something')
+        self.failUnlessRaises(IndexError, l.__getitem__, 'something')
 
-            # delete by name and index
-            self.failUnlessRaises(IndexError, l.__delitem__, 'something')
-            del(l[m2.name])
-            assert len(l) == 1
-            assert m2.name not in l and m1.name in l
-            del(l[0])
-            assert m1.name not in l
-            assert len(l) == 0
+        # delete by name and index
+        self.failUnlessRaises(IndexError, l.__delitem__, 'something')
+        del(l[name2])
+        self.assertEqual(len(l), 1)
+        self.assertNotIn(name2, l)
+        self.assertIn(name1, l)
+        del(l[0])
+        self.assertNotIn(name1, l)
+        self.assertEqual(len(l), 0)
 
-            self.failUnlessRaises(IndexError, l.__delitem__, 0)
-            self.failUnlessRaises(IndexError, l.__delitem__, 'something')
-        # END for each possible mode
+        self.failUnlessRaises(IndexError, l.__delitem__, 0)
+        self.failUnlessRaises(IndexError, l.__delitem__, 'something')

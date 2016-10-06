@@ -134,9 +134,8 @@ class SymbolicReference(object):
         point to, or None"""
         tokens = None
         try:
-            fp = open(join(repo.git_dir, ref_path), 'rt')
-            value = fp.read().rstrip()
-            fp.close()
+            with open(join(repo.git_dir, ref_path), 'rt') as fp:
+                value = fp.read().rstrip()
             # Don't only split on spaces, but on whitespace, which allows to parse lines like
             # 60b64ef992065e2600bfef6187a97f92398a9144                branch 'master' of git-server:/path/to/repo
             tokens = value.split()
@@ -219,7 +218,7 @@ class SymbolicReference(object):
 
         return self
 
-    def set_object(self, object, logmsg=None):
+    def set_object(self, object, logmsg=None):  # @ReservedAssignment
         """Set the object we point to, possibly dereference our symbolic reference first.
         If the reference does not exist, it will be created
 
@@ -230,7 +229,7 @@ class SymbolicReference(object):
         :note: plain SymbolicReferences may not actually point to objects by convention
         :return: self"""
         if isinstance(object, SymbolicReference):
-            object = object.object
+            object = object.object  # @ReservedAssignment
         # END resolve references
 
         is_detached = True
@@ -313,13 +312,17 @@ class SymbolicReference(object):
 
         lfd = LockedFD(fpath)
         fd = lfd.open(write=True, stream=True)
-        fd.write(write_value.encode('ascii') + b'\n')
-        lfd.commit()
-
+        ok = True
+        try:
+            fd.write(write_value.encode('ascii') + b'\n')
+            lfd.commit()
+            ok = True
+        finally:
+            if not ok:
+                lfd.rollback()
         # Adjust the reflog
         if logmsg is not None:
             self.log_append(oldbinsha, logmsg)
-        # END handle reflog
 
         return self
 
@@ -422,40 +425,36 @@ class SymbolicReference(object):
             # check packed refs
             pack_file_path = cls._get_packed_refs_path(repo)
             try:
-                reader = open(pack_file_path, 'rb')
-            except (OSError, IOError):
-                pass  # it didnt exist at all
-            else:
-                new_lines = list()
-                made_change = False
-                dropped_last_line = False
-                for line in reader:
-                    # keep line if it is a comment or if the ref to delete is not
-                    # in the line
-                    # If we deleted the last line and this one is a tag-reference object,
-                    # we drop it as well
-                    line = line.decode(defenc)
-                    if (line.startswith('#') or full_ref_path not in line) and \
-                            (not dropped_last_line or dropped_last_line and not line.startswith('^')):
-                        new_lines.append(line)
-                        dropped_last_line = False
-                        continue
-                    # END skip comments and lines without our path
+                with open(pack_file_path, 'rb') as reader:
+                    new_lines = list()
+                    made_change = False
+                    dropped_last_line = False
+                    for line in reader:
+                        # keep line if it is a comment or if the ref to delete is not
+                        # in the line
+                        # If we deleted the last line and this one is a tag-reference object,
+                        # we drop it as well
+                        line = line.decode(defenc)
+                        if (line.startswith('#') or full_ref_path not in line) and \
+                                (not dropped_last_line or dropped_last_line and not line.startswith('^')):
+                            new_lines.append(line)
+                            dropped_last_line = False
+                            continue
+                        # END skip comments and lines without our path
 
-                    # drop this line
-                    made_change = True
-                    dropped_last_line = True
-                # END for each line in packed refs
-                reader.close()
+                        # drop this line
+                        made_change = True
+                        dropped_last_line = True
 
                 # write the new lines
                 if made_change:
                     # write-binary is required, otherwise windows will
                     # open the file in text mode and change LF to CRLF !
-                    open(pack_file_path, 'wb').writelines(l.encode(defenc) for l in new_lines)
-                # END write out file
-            # END open exception handling
-        # END handle deletion
+                    with open(pack_file_path, 'wb') as fd:
+                        fd.writelines(l.encode(defenc) for l in new_lines)
+
+            except (OSError, IOError):
+                pass  # it didnt exist at all
 
         # delete the reflog
         reflog_path = RefLog.path(cls(repo, full_ref_path))
@@ -484,7 +483,8 @@ class SymbolicReference(object):
                 target_data = target.path
             if not resolve:
                 target_data = "ref: " + target_data
-            existing_data = open(abs_ref_path, 'rb').read().decode(defenc).strip()
+            with open(abs_ref_path, 'rb') as fd:
+                existing_data = fd.read().decode(defenc).strip()
             if existing_data != target_data:
                 raise OSError("Reference at %r does already exist, pointing to %r, requested was %r" %
                               (full_ref_path, existing_data, target_data))
@@ -549,7 +549,11 @@ class SymbolicReference(object):
         if isfile(new_abs_path):
             if not force:
                 # if they point to the same file, its not an error
-                if open(new_abs_path, 'rb').read().strip() != open(cur_abs_path, 'rb').read().strip():
+                with open(new_abs_path, 'rb') as fd1:
+                    f1 = fd1.read().strip()
+                with open(cur_abs_path, 'rb') as fd2:
+                    f2 = fd2.read().strip()
+                if f1 != f2:
                     raise OSError("File at path %r already exists" % new_abs_path)
                 # else: we could remove ourselves and use the otherone, but
                 # but clarity we just continue as usual
@@ -591,7 +595,7 @@ class SymbolicReference(object):
         # END for each directory to walk
 
         # read packed refs
-        for sha, rela_path in cls._iter_packed_refs(repo):
+        for sha, rela_path in cls._iter_packed_refs(repo):  # @UnusedVariable
             if rela_path.startswith(common_path):
                 rela_paths.add(rela_path)
             # END relative path matches common path

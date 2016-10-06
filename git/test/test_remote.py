@@ -25,10 +25,9 @@ from git import (
     Remote,
     GitCommandError
 )
-from git.util import IterableList
+from git.util import IterableList, rmtree
 from git.compat import string_types
 import tempfile
-import shutil
 import os
 import random
 
@@ -91,7 +90,7 @@ class TestRemoteProgress(RemoteProgress):
         assert self._stages_per_op
 
         # must have seen all stages
-        for op, stages in self._stages_per_op.items():
+        for op, stages in self._stages_per_op.items():  # @UnusedVariable
             assert stages & self.STAGE_MASK == self.STAGE_MASK
         # END for each op/stage
 
@@ -101,9 +100,13 @@ class TestRemoteProgress(RemoteProgress):
 
 class TestRemote(TestBase):
 
+    def tearDown(self):
+        import gc
+        gc.collect()
+
     def _print_fetchhead(self, repo):
-        fp = open(os.path.join(repo.git_dir, "FETCH_HEAD"))
-        fp.close()
+        with open(os.path.join(repo.git_dir, "FETCH_HEAD")):
+            pass
 
     def _do_test_fetch_result(self, results, remote):
         # self._print_fetchhead(remote.repo)
@@ -264,7 +267,8 @@ class TestRemote(TestBase):
 
         # put origin to git-url
         other_origin = other_repo.remotes.origin
-        other_origin.config_writer.set("url", remote_repo_url)
+        with other_origin.config_writer as cw:
+            cw.set("url", remote_repo_url)
         # it automatically creates alternates as remote_repo is shared as well.
         # It will use the transport though and ignore alternates when fetching
         # assert not other_repo.alternates  # this would fail
@@ -281,7 +285,7 @@ class TestRemote(TestBase):
             # and only provides progress information to ttys
             res = fetch_and_test(other_origin)
         finally:
-            shutil.rmtree(other_repo_dir)
+            rmtree(other_repo_dir)
         # END test and cleanup
 
     def _assert_push_and_pull(self, remote, rw_repo, remote_repo):
@@ -328,7 +332,7 @@ class TestRemote(TestBase):
         # push new tags
         progress = TestRemoteProgress()
         to_be_updated = "my_tag.1.0RV"
-        new_tag = TagReference.create(rw_repo, to_be_updated)
+        new_tag = TagReference.create(rw_repo, to_be_updated)  # @UnusedVariable
         other_tag = TagReference.create(rw_repo, "my_obj_tag.2.1aRV", message="my message")
         res = remote.push(progress=progress, tags=True)
         assert res[-1].flags & PushInfo.NEW_TAG
@@ -403,7 +407,7 @@ class TestRemote(TestBase):
 
             # OPTIONS
             # cannot use 'fetch' key anymore as it is now a method
-            for opt in ("url", ):
+            for opt in ("url",):
                 val = getattr(remote, opt)
                 reader = remote.config_reader
                 assert reader.get(opt) == val
@@ -413,13 +417,12 @@ class TestRemote(TestBase):
                 self.failUnlessRaises(IOError, reader.set, opt, "test")
 
                 # change value
-                writer = remote.config_writer
-                new_val = "myval"
-                writer.set(opt, new_val)
-                assert writer.get(opt) == new_val
-                writer.set(opt, val)
-                assert writer.get(opt) == val
-                del(writer)
+                with remote.config_writer as writer:
+                    new_val = "myval"
+                    writer.set(opt, new_val)
+                    assert writer.get(opt) == new_val
+                    writer.set(opt, val)
+                    assert writer.get(opt) == val
                 assert getattr(remote, opt) == val
             # END for each default option key
 
@@ -429,7 +432,7 @@ class TestRemote(TestBase):
             assert remote.rename(other_name) == remote
             assert prev_name != remote.name
             # multiple times
-            for time in range(2):
+            for _ in range(2):
                 assert remote.rename(prev_name).name == prev_name
             # END for each rename ( back to prev_name )
 

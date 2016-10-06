@@ -25,8 +25,8 @@ __all__ = ('rev_parse', 'is_git_dir', 'touch', 'find_git_dir', 'name_to_object',
 
 
 def touch(filename):
-    fp = open(filename, "ab")
-    fp.close()
+    with open(filename, "ab"):
+        pass
     return filename
 
 
@@ -284,7 +284,7 @@ def rev_parse(repo, rev):
         try:
             if token == "~":
                 obj = to_commit(obj)
-                for item in xrange(num):
+                for _ in xrange(num):
                     obj = obj.parents[0]
                 # END for each history item to walk
             elif token == "^":

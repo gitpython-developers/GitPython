@@ -50,7 +50,7 @@ class Reference(SymbolicReference, LazyMixin, Iterable):
 
     #{ Interface
 
-    def set_object(self, object, logmsg=None):
+    def set_object(self, object, logmsg=None):  # @ReservedAssignment
         """Special version which checks if the head-log needs an update as well
         :return: self"""
         oldbinsha = None

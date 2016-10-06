@@ -3,6 +3,10 @@ import struct
 import tempfile
 import os
 
+from functools import wraps
+
+from git.compat import is_win
+
 __all__ = ('TemporaryFileSwap', 'post_clear_cache', 'default_index', 'git_working_dir')
 
 #{ Aliases
@@ -29,7 +33,7 @@ class TemporaryFileSwap(object):
 
     def __del__(self):
         if os.path.isfile(self.tmp_file_path):
-            if os.name == 'nt' and os.path.exists(self.file_path):
+            if is_win and os.path.exists(self.file_path):
                 os.remove(self.file_path)
             os.rename(self.tmp_file_path, self.file_path)
         # END temp file exists
@@ -47,13 +51,13 @@ def post_clear_cache(func):
         natively which in fact is possible, but probably not feasible performance wise.
     """
 
+    @wraps(func)
     def post_clear_cache_if_not_raised(self, *args, **kwargs):
         rval = func(self, *args, **kwargs)
         self._delete_entries_cache()
         return rval
-
     # END wrapper method
-    post_clear_cache_if_not_raised.__name__ = func.__name__
+
     return post_clear_cache_if_not_raised
 
 
@@ -62,6 +66,7 @@ def default_index(func):
     repository index. This is as we rely on git commands that operate
     on that index only. """
 
+    @wraps(func)
     def check_default_index(self, *args, **kwargs):
         if self._file_path != self._index_path():
             raise AssertionError(
@@ -69,7 +74,6 @@ def default_index(func):
         return func(self, *args, **kwargs)
     # END wrpaper method
 
-    check_default_index.__name__ = func.__name__
     return check_default_index
 
 
@@ -77,6 +81,7 @@ def git_working_dir(func):
     """Decorator which changes the current working dir to the one of the git
     repository in order to assure relative paths are handled correctly"""
 
+    @wraps(func)
     def set_git_working_dir(self, *args, **kwargs):
         cur_wd = os.getcwd()
         os.chdir(self.repo.working_tree_dir)
@@ -87,7 +92,6 @@ def git_working_dir(func):
         # END handle working dir
     # END wrapper
 
-    set_git_working_dir.__name__ = func.__name__
     return set_git_working_dir
 
 #} END decorators

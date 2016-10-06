@@ -3,44 +3,49 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
+from __future__ import unicode_literals
 
 from fcntl import flock, LOCK_UN, LOCK_EX, LOCK_NB
-import os
-import re
-import sys
-import time
-import stat
-import shutil
-import platform
 import getpass
-import threading
 import logging
+import os
+import platform
+import re
+import shutil
+import stat
+import time
 
-# NOTE:  Some of the unused imports might be used/imported by others.
-# Handle once test-cases are back up and running.
-from .exc import InvalidGitRepositoryError
+from functools import wraps
+
+from git.compat import is_win
+from gitdb.util import (    # NOQA
+    make_sha,
+    LockedFD,               # @UnusedImport
+    file_contents_ro,       # @UnusedImport
+    LazyMixin,              # @UnusedImport
+    to_hex_sha,             # @UnusedImport
+    to_bin_sha              # @UnusedImport
+)
+
+import os.path as osp
 
 from .compat import (
     MAXSIZE,
     defenc,
     PY3
 )
+from .exc import InvalidGitRepositoryError
+from unittest.case import SkipTest
 
+
+# NOTE:  Some of the unused imports might be used/imported by others.
+# Handle once test-cases are back up and running.
 # Most of these are unused here, but are for use by git-python modules so these
 # don't see gitdb all the time. Flake of course doesn't like it.
-from gitdb.util import (  # NOQA
-    make_sha,
-    LockedFD,
-    file_contents_ro,
-    LazyMixin,
-    to_hex_sha,
-    to_bin_sha
-)
-
 __all__ = ("stream_copy", "join_path", "to_native_path_windows", "to_native_path_linux",
            "join_path_native", "Stats", "IndexFileSHA1Writer", "Iterable", "IterableList",
            "BlockingLockFile", "LockFile", 'Actor', 'get_user_id', 'assure_directory_exists',
-           'RemoteProgress', 'CallableRemoteProgress', 'rmtree', 'WaitGroup', 'unbare_repo')
+           'RemoteProgress', 'CallableRemoteProgress', 'rmtree', 'unbare_repo')
 
 #{ Utility Methods
 
@@ -49,13 +54,13 @@ def unbare_repo(func):
     """Methods with this decorator raise InvalidGitRepositoryError if they
     encounter a bare repository"""
 
+    @wraps(func)
     def wrapper(self, *args, **kwargs):
         if self.repo.bare:
             raise InvalidGitRepositoryError("Method '%s' cannot operate on bare repositories" % func.__name__)
         # END bare method
         return func(self, *args, **kwargs)
     # END wrapper
-    wrapper.__name__ = func.__name__
     return wrapper
 
 
@@ -64,15 +69,29 @@ def rmtree(path):
 
     :note: we use shutil rmtree but adjust its behaviour to see whether files that
         couldn't be deleted are read-only. Windows will not remove them in that case"""
+
     def onerror(func, path, exc_info):
-        if not os.access(path, os.W_OK):
-            # Is the error an access error ?
-            os.chmod(path, stat.S_IWUSR)
-            func(path)
-        else:
-            raise
-    # END end onerror
+        # Is the error an access error ?
+        os.chmod(path, stat.S_IWUSR)
+
+        try:
+            func(path)  # Will scream if still not possible to delete.
+        except Exception as ex:
+            from git.test.lib.helper import HIDE_WINDOWS_KNOWN_ERRORS
+            if HIDE_WINDOWS_KNOWN_ERRORS:
+                raise SkipTest("FIXME: fails with: PermissionError\n  %s", ex)
+            else:
+                raise
+
     return shutil.rmtree(path, False, onerror)
+
+
+def rmfile(path):
+    """Ensure file deleted also on *Windows* where read-only files need special treatment."""
+    if osp.isfile(path):
+        if is_win:
+            os.chmod(path, 0o777)
+        os.remove(path)
 
 
 def stream_copy(source, destination, chunk_size=512 * 1024):
@@ -108,7 +127,7 @@ def join_path(a, *p):
     return path
 
 
-if sys.platform.startswith('win'):
+if is_win:
     def to_native_path_windows(path):
         return path.replace('/', '\\')
 
@@ -153,6 +172,7 @@ def get_user_id():
 
 def finalize_process(proc, **kwargs):
     """Wait for the process (clone, fetch, pull or push) and handle its errors accordingly"""
+    ## TODO: No close proc-streams??
     proc.wait(**kwargs)
 
 #} END utilities
@@ -232,7 +252,7 @@ class RemoteProgress(object):
             # END could not get match
 
             op_code = 0
-            remote, op_name, percent, cur_count, max_count, message = match.groups()
+            remote, op_name, percent, cur_count, max_count, message = match.groups()  # @UnusedVariable
 
             # get operation id
             if op_name == "Counting objects":
@@ -566,7 +586,10 @@ class LockFile(object):
 
         # Create file and lock
         try:
-            fd = os.open(lock_file, os.O_CREAT, 0)
+            flags = os.O_CREAT
+            if is_win:
+                flags |= os.O_SHORT_LIVED
+            fd = os.open(lock_file, flags, 0)
         except OSError as e:
             raise IOError(str(e))
 
@@ -590,8 +613,14 @@ class LockFile(object):
 
         flock(fd, LOCK_UN)
         os.close(fd)
-        os.remove(lock_file)
 
+        # if someone removed our file beforhand, lets just flag this issue
+        # instead of failing, to make it more usable.
+        lfp = self._lock_file_path()
+        try:
+            rmfile(lfp)
+        except OSError:
+            pass
         self._owns_lock = False
         self._file_descriptor = None
 
@@ -751,35 +780,6 @@ class Iterable(object):
         raise NotImplementedError("To be implemented by Subclass")
 
 #} END classes
-
-
-class WaitGroup(object):
-    """WaitGroup is like Go sync.WaitGroup.
-
-    Without all the useful corner cases.
-    By Peter Teichman, taken from https://gist.github.com/pteichman/84b92ae7cef0ab98f5a8
-    """
-    def __init__(self):
-        self.count = 0
-        self.cv = threading.Condition()
-
-    def add(self, n):
-        self.cv.acquire()
-        self.count += n
-        self.cv.release()
-
-    def done(self):
-        self.cv.acquire()
-        self.count -= 1
-        if self.count == 0:
-            self.cv.notify_all()
-        self.cv.release()
-
-    def wait(self, stderr=b''):
-        self.cv.acquire()
-        while self.count > 0:
-            self.cv.wait()
-        self.cv.release()
 
 
 class NullHandler(logging.Handler):

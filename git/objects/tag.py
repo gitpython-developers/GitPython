@@ -21,7 +21,7 @@ class TagObject(base.Object):
     type = "tag"
     __slots__ = ("object", "tag", "tagger", "tagged_date", "tagger_tz_offset", "message")
 
-    def __init__(self, repo, binsha, object=None, tag=None,
+    def __init__(self, repo, binsha, object=None, tag=None,  # @ReservedAssignment
                  tagger=None, tagged_date=None, tagger_tz_offset=None, message=None):
         """Initialize a tag object with additional data
 
@@ -55,8 +55,8 @@ class TagObject(base.Object):
             ostream = self.repo.odb.stream(self.binsha)
             lines = ostream.read().decode(defenc).splitlines()
 
-            obj, hexsha = lines[0].split(" ")       # object <hexsha>
-            type_token, type_name = lines[1].split(" ")  # type <type_name>
+            obj, hexsha = lines[0].split(" ")       # object <hexsha> @UnusedVariable
+            type_token, type_name = lines[1].split(" ")  # type <type_name> @UnusedVariable
             self.object = \
                 get_object_type_by_name(type_name.encode('ascii'))(self.repo, hex_to_bin(hexsha))
 

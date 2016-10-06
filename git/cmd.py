@@ -4,64 +4,53 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
-import os
-import os.path
-import sys
-import select
-import logging
-import threading
-import errno
-import mmap
-
-from git.odict import OrderedDict
 from contextlib import contextmanager
+import io
+import logging
+import os
 import signal
 from subprocess import (
     call,
     Popen,
     PIPE
 )
+import subprocess
+import sys
+import threading
 
-
-from .util import (
-    LazyMixin,
-    stream_copy,
-    WaitGroup
-)
-from .exc import (
-    GitCommandError,
-    GitCommandNotFound
-)
 from git.compat import (
     string_types,
     defenc,
     force_bytes,
     PY3,
-    bchr,
     # just to satisfy flake8 on py3
     unicode,
     safe_decode,
+    is_posix,
+    is_win,
+)
+from git.exc import CommandError
+from git.odict import OrderedDict
+
+from .exc import (
+    GitCommandError,
+    GitCommandNotFound
+)
+from .util import (
+    LazyMixin,
+    stream_copy,
 )
 
-execute_kwargs = ('istream', 'with_keep_cwd', 'with_extended_output',
-                  'with_exceptions', 'as_process', 'stdout_as_string',
-                  'output_stream', 'with_stdout', 'kill_after_timeout',
-                  'universal_newlines')
+
+execute_kwargs = set(('istream', 'with_keep_cwd', 'with_extended_output',
+                      'with_exceptions', 'as_process', 'stdout_as_string',
+                      'output_stream', 'with_stdout', 'kill_after_timeout',
+                      'universal_newlines', 'shell'))
 
 log = logging.getLogger('git.cmd')
 log.addHandler(logging.NullHandler())
 
-__all__ = ('Git', )
-
-if sys.platform != 'win32':
-    WindowsError = OSError
-
-if PY3:
-    _bchr = bchr
-else:
-    def _bchr(c):
-        return c
-# get custom byte character handling
+__all__ = ('Git',)
 
 
 # ==============================================================================
@@ -70,154 +59,63 @@ else:
 # Documentation
 ## @{
 
-def handle_process_output(process, stdout_handler, stderr_handler, finalizer):
+def handle_process_output(process, stdout_handler, stderr_handler, finalizer, decode_streams=True):
     """Registers for notifications to lean that process output is ready to read, and dispatches lines to
-    the respective line handlers. We are able to handle carriage returns in case progress is sent by that
-    mean. For performance reasons, we only apply this to stderr.
+    the respective line handlers.
     This function returns once the finalizer returns
+
     :return: result of finalizer
     :param process: subprocess.Popen instance
     :param stdout_handler: f(stdout_line_string), or None
     :param stderr_hanlder: f(stderr_line_string), or None
-    :param finalizer: f(proc) - wait for proc to finish"""
-    fdmap = {process.stdout.fileno(): (stdout_handler, [b'']),
-             process.stderr.fileno(): (stderr_handler, [b''])}
+    :param finalizer: f(proc) - wait for proc to finish
+    :param decode_streams:
+        Assume stdout/stderr streams are binary and decode them vefore pushing \
+        their contents to handlers.
+        Set it to False if `universal_newline == True` (then streams are in text-mode)
+        or if decoding must happen later (i.e. for Diffs).
+    """
+    # Use 2 "pupm" threads and wait for both to finish.
+    def pump_stream(cmdline, name, stream, is_decode, handler):
+        try:
+            for line in stream:
+                if handler:
+                    if is_decode:
+                        line = line.decode(defenc)
+                    handler(line)
+        except Exception as ex:
+            log.error("Pumping %r of cmd(%s) failed due to: %r", name, cmdline, ex)
+            raise CommandError(['<%s-pump>' % name] + cmdline, ex)
+        finally:
+            stream.close()
 
-    def _parse_lines_from_buffer(buf):
-        line = b''
-        bi = 0
-        lb = len(buf)
-        while bi < lb:
-            char = _bchr(buf[bi])
-            bi += 1
+    cmdline = getattr(process, 'args', '')  # PY3+ only
+    if not isinstance(cmdline, (tuple, list)):
+        cmdline = cmdline.split()
+    threads = []
+    for name, stream, handler in (
+        ('stdout', process.stdout, stdout_handler),
+        ('stderr', process.stderr, stderr_handler),
+    ):
+        t = threading.Thread(target=pump_stream,
+                             args=(cmdline, name, stream, decode_streams, handler))
+        t.setDaemon(True)
+        t.start()
+        threads.append(t)
 
-            if char in (b'\r', b'\n') and line:
-                yield bi, line
-                line = b''
-            else:
-                line += char
-            # END process parsed line
-        # END while file is not done reading
-    # end
-
-    def _read_lines_from_fno(fno, last_buf_list):
-        buf = os.read(fno, mmap.PAGESIZE)
-        buf = last_buf_list[0] + buf
-
-        bi = 0
-        for bi, line in _parse_lines_from_buffer(buf):
-            yield line
-        # for each line to parse from the buffer
-
-        # keep remainder
-        last_buf_list[0] = buf[bi:]
-
-    def _dispatch_single_line(line, handler):
-        line = line.decode(defenc)
-        if line and handler:
-            handler(line)
-        # end dispatch helper
-    # end single line helper
-
-    def _dispatch_lines(fno, handler, buf_list):
-        lc = 0
-        for line in _read_lines_from_fno(fno, buf_list):
-            _dispatch_single_line(line, handler)
-            lc += 1
-        # for each line
-        return lc
-    # end
-
-    def _deplete_buffer(fno, handler, buf_list, wg=None):
-        lc = 0
-        while True:
-            line_count = _dispatch_lines(fno, handler, buf_list)
-            lc += line_count
-            if line_count == 0:
-                break
-        # end deplete buffer
-
-        if buf_list[0]:
-            _dispatch_single_line(buf_list[0], handler)
-            lc += 1
-        # end
-
-        if wg:
-            wg.done()
-
-        return lc
-    # end
-
-    if hasattr(select, 'poll'):
-        # poll is preferred, as select is limited to file handles up to 1024 ... . This could otherwise be
-        # an issue for us, as it matters how many handles our own process has
-        poll = select.poll()
-        READ_ONLY = select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLERR
-        CLOSED = select.POLLHUP | select.POLLERR
-
-        poll.register(process.stdout, READ_ONLY)
-        poll.register(process.stderr, READ_ONLY)
-
-        closed_streams = set()
-        while True:
-            # no timeout
-
-            try:
-                poll_result = poll.poll()
-            except select.error as e:
-                if e.args[0] == errno.EINTR:
-                    continue
-                raise
-            # end handle poll exception
-
-            for fd, result in poll_result:
-                if result & CLOSED:
-                    closed_streams.add(fd)
-                else:
-                    _dispatch_lines(fd, *fdmap[fd])
-                # end handle closed stream
-            # end for each poll-result tuple
-
-            if len(closed_streams) == len(fdmap):
-                break
-            # end its all done
-        # end endless loop
-
-        # Depelete all remaining buffers
-        for fno, (handler, buf_list) in fdmap.items():
-            _deplete_buffer(fno, handler, buf_list)
-        # end for each file handle
-
-        for fno in fdmap.keys():
-            poll.unregister(fno)
-        # end don't forget to unregister !
-    else:
-        # Oh ... probably we are on windows. select.select() can only handle sockets, we have files
-        # The only reliable way to do this now is to use threads and wait for both to finish
-        # Since the finalizer is expected to wait, we don't have to introduce our own wait primitive
-        # NO: It's not enough unfortunately, and we will have to sync the threads
-        wg = WaitGroup()
-        for fno, (handler, buf_list) in fdmap.items():
-            wg.add(1)
-            t = threading.Thread(target=lambda: _deplete_buffer(fno, handler, buf_list, wg))
-            t.start()
-        # end
-        # NOTE: Just joining threads can possibly fail as there is a gap between .start() and when it's
-        # actually started, which could make the wait() call to just return because the thread is not yet
-        # active
-        wg.wait()
-    # end
+    for t in threads:
+        t.join()
 
     return finalizer(process)
 
 
 def dashify(string):
     return string.replace('_', '-')
-    
+
 
 def slots_to_dict(self, exclude=()):
     return dict((s, getattr(self, s)) for s in self.__slots__ if s not in exclude)
-    
+
 
 def dict_to_slots_and__excluded_are_none(self, d, excluded=()):
     for k, v in d.items():
@@ -226,6 +124,15 @@ def dict_to_slots_and__excluded_are_none(self, d, excluded=()):
         setattr(self, k, None)
 
 ## -- End Utilities -- @}
+
+# value of Windows process creation flag taken from MSDN
+CREATE_NO_WINDOW = 0x08000000
+
+## CREATE_NEW_PROCESS_GROUP is needed to allow killing it afterwards,
+# seehttps://docs.python.org/3/library/subprocess.html#subprocess.Popen.send_signal
+PROC_CREATIONFLAGS = (CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP
+                      if is_win
+                      else 0)
 
 
 class Git(LazyMixin):
@@ -246,35 +153,31 @@ class Git(LazyMixin):
     """
     __slots__ = ("_working_dir", "cat_file_all", "cat_file_header", "_version_info",
                  "_git_options", "_environment")
-                 
+
     _excluded_ = ('cat_file_all', 'cat_file_header', '_version_info')
-    
+
     def __getstate__(self):
         return slots_to_dict(self, exclude=self._excluded_)
-        
+
     def __setstate__(self, d):
         dict_to_slots_and__excluded_are_none(self, d, excluded=self._excluded_)
-        
+
     # CONFIGURATION
     # The size in bytes read from stdout when copying git's output to another stream
-    max_chunk_size = 1024 * 64
+    max_chunk_size = io.DEFAULT_BUFFER_SIZE
 
     git_exec_name = "git"           # default that should work on linux and windows
-    git_exec_name_win = "git.cmd"   # alternate command name, windows only
 
     # Enables debugging of GitPython's git commands
     GIT_PYTHON_TRACE = os.environ.get("GIT_PYTHON_TRACE", False)
 
-    # value of Windows process creation flag taken from MSDN
-    CREATE_NO_WINDOW = 0x08000000
-    
     # Provide the full path to the git executable. Otherwise it assumes git is in the path
     _git_exec_env_var = "GIT_PYTHON_GIT_EXECUTABLE"
     GIT_PYTHON_GIT_EXECUTABLE = os.environ.get(_git_exec_env_var, git_exec_name)
 
     # If True, a shell will be used when executing git commands.
-    # This should only be desirable on windows, see https://github.com/gitpython-developers/GitPython/pull/126
-    # for more information
+    # This should only be desirable on Windows, see https://github.com/gitpython-developers/GitPython/pull/126
+    # and check `git/test_repo.py:TestRepo.test_untracked_files()` TC for an example where it is required.
     # Override this value using `Git.USE_SHELL = True`
     USE_SHELL = False
 
@@ -315,9 +218,10 @@ class Git(LazyMixin):
 
             # try to kill it
             try:
-                os.kill(proc.pid, 2)   # interrupt signal
+                proc.terminate()
                 proc.wait()    # ensure process goes away
-            except (OSError, WindowsError):
+            except OSError as ex:
+                log.info("Ignored error after process has dies: %r", ex)
                 pass  # ignore error when process already died
             except AttributeError:
                 # try windows
@@ -339,7 +243,7 @@ class Git(LazyMixin):
             if stderr is None:
                 stderr = b''
             stderr = force_bytes(stderr)
-            
+
             status = self.proc.wait()
 
             def read_all_from_possibly_closed_stream(stream):
@@ -447,6 +351,7 @@ class Git(LazyMixin):
             line = self.readline()
             if not line:
                 raise StopIteration
+
             return line
 
         def __del__(self):
@@ -517,6 +422,7 @@ class Git(LazyMixin):
                 kill_after_timeout=None,
                 with_stdout=True,
                 universal_newlines=False,
+                shell=None,
                 **subprocess_kwargs
                 ):
         """Handles executing the command on the shell and consumes and returns
@@ -574,6 +480,9 @@ class Git(LazyMixin):
         :param universal_newlines:
             if True, pipes will be opened as text, and lines are split at
             all known line endings.
+        :param shell:
+            Whether to invoke commands through a shell (see `Popen(..., shell=True)`).
+            It overrides :attr:`USE_SHELL` if it is not `None`.
         :param kill_after_timeout:
             To specify a timeout in seconds for the git command, after which the process
             should be killed. This will have no effect if as_process is set to True. It is
@@ -619,18 +528,19 @@ class Git(LazyMixin):
         env["LC_ALL"] = "C"
         env.update(self._environment)
 
-        if sys.platform == 'win32':
-            cmd_not_found_exception = WindowsError
+        if is_win:
+            cmd_not_found_exception = OSError
             if kill_after_timeout:
-                raise GitCommandError('"kill_after_timeout" feature is not supported on Windows.')
+                raise GitCommandError(command, '"kill_after_timeout" feature is not supported on Windows.')
         else:
             if sys.version_info[0] > 2:
-                cmd_not_found_exception = FileNotFoundError  # NOQA # this is defined, but flake8 doesn't know
+                cmd_not_found_exception = FileNotFoundError  # NOQA # exists, flake8 unknown @UndefinedVariable
             else:
                 cmd_not_found_exception = OSError
         # end handle
 
-        creationflags = self.CREATE_NO_WINDOW if sys.platform == 'win32' else 0
+        log.debug("Popen(%s, cwd=%s, universal_newlines=%s, shell=%s)",
+                  command, cwd, universal_newlines, shell)
         try:
             proc = Popen(command,
                          env=env,
@@ -639,21 +549,22 @@ class Git(LazyMixin):
                          stdin=istream,
                          stderr=PIPE,
                          stdout=PIPE if with_stdout else open(os.devnull, 'wb'),
-                         shell=self.USE_SHELL,
-                         close_fds=(os.name == 'posix'),  # unsupported on windows
+                         shell=shell is not None and shell or self.USE_SHELL,
+                         close_fds=(is_posix),  # unsupported on windows
                          universal_newlines=universal_newlines,
-                         creationflags=creationflags,
+                         creationflags=PROC_CREATIONFLAGS,
                          **subprocess_kwargs
                          )
         except cmd_not_found_exception as err:
-            raise GitCommandNotFound(str(err))
+            raise GitCommandNotFound(command, err)
 
         if as_process:
             return self.AutoInterrupt(proc, command)
 
         def _kill_process(pid):
             """ Callback method to kill a process. """
-            p = Popen(['ps', '--ppid', str(pid)], stdout=PIPE, creationflags=creationflags)
+            p = Popen(['ps', '--ppid', str(pid)], stdout=PIPE,
+                      creationflags=PROC_CREATIONFLAGS)
             child_pids = []
             for line in p.stdout:
                 if len(line.split()) > 0:
@@ -679,7 +590,7 @@ class Git(LazyMixin):
 
         if kill_after_timeout:
             kill_check = threading.Event()
-            watchdog = threading.Timer(kill_after_timeout, _kill_process, args=(proc.pid, ))
+            watchdog = threading.Timer(kill_after_timeout, _kill_process, args=(proc.pid,))
 
         # Wait for the process to return
         status = 0
@@ -766,10 +677,7 @@ class Git(LazyMixin):
         for key, value in kwargs.items():
             # set value if it is None
             if value is not None:
-                if key in self._environment:
-                    old_env[key] = self._environment[key]
-                else:
-                    old_env[key] = None
+                old_env[key] = self._environment.get(key)
                 self._environment[key] = value
             # remove key from environment if its value is None
             elif key in self._environment:
@@ -885,12 +793,8 @@ class Git(LazyMixin):
         :return: Same as ``execute``"""
         # Handle optional arguments prior to calling transform_kwargs
         # otherwise these'll end up in args, which is bad.
-        _kwargs = dict()
-        for kwarg in execute_kwargs:
-            try:
-                _kwargs[kwarg] = kwargs.pop(kwarg)
-            except KeyError:
-                pass
+        _kwargs = {k: v for k, v in kwargs.items() if k in execute_kwargs}
+        kwargs = {k: v for k, v in kwargs.items() if k not in execute_kwargs}
 
         insert_after_this_arg = kwargs.pop('insert_kwargs_after', None)
 
@@ -910,48 +814,17 @@ class Git(LazyMixin):
             args = ext_args[:index + 1] + opt_args + ext_args[index + 1:]
         # end handle kwargs
 
-        def make_call():
-            call = [self.GIT_PYTHON_GIT_EXECUTABLE]
+        call = [self.GIT_PYTHON_GIT_EXECUTABLE]
 
-            # add the git options, the reset to empty
-            # to avoid side_effects
-            call.extend(self._git_options)
-            self._git_options = ()
+        # add the git options, the reset to empty
+        # to avoid side_effects
+        call.extend(self._git_options)
+        self._git_options = ()
 
-            call.extend([dashify(method)])
-            call.extend(args)
-            return call
-        # END utility to recreate call after changes
+        call.append(dashify(method))
+        call.extend(args)
 
-        if sys.platform == 'win32':
-            try:
-                try:
-                    return self.execute(make_call(), **_kwargs)
-                except WindowsError:
-                    # did we switch to git.cmd already, or was it changed from default ? permanently fail
-                    if self.GIT_PYTHON_GIT_EXECUTABLE != self.git_exec_name:
-                        raise
-                    # END handle overridden variable
-                    type(self).GIT_PYTHON_GIT_EXECUTABLE = self.git_exec_name_win
-
-                    try:
-                        return self.execute(make_call(), **_kwargs)
-                    finally:
-                        import warnings
-                        msg = "WARNING: Automatically switched to use git.cmd as git executable"
-                        msg += ", which reduces performance by ~70%."
-                        msg += "It is recommended to put git.exe into the PATH or to "
-                        msg += "set the %s " % self._git_exec_env_var
-                        msg += "environment variable to the executable's location"
-                        warnings.warn(msg)
-                    # END print of warning
-                # END catch first failure
-            except WindowsError:
-                raise WindowsError("The system cannot find or execute the file at %r" % self.GIT_PYTHON_GIT_EXECUTABLE)
-            # END provide better error message
-        else:
-            return self.execute(make_call(), **_kwargs)
-        # END handle windows default installation
+        return self.execute(call, **_kwargs)
 
     def _parse_object_header(self, header_line):
         """
@@ -1040,6 +913,10 @@ class Git(LazyMixin):
         Currently persistent commands will be interrupted.
 
         :return: self"""
+        for cmd in (self.cat_file_all, self.cat_file_header):
+            if cmd:
+                cmd.__del__()
+
         self.cat_file_all = None
         self.cat_file_header = None
         return self

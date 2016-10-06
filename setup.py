@@ -9,13 +9,14 @@ except ImportError:
 
 from distutils.command.build_py import build_py as _build_py
 from setuptools.command.sdist import sdist as _sdist
+import pkg_resources
+import logging
 import os
 import sys
 from os import path
 
-v = open(path.join(path.dirname(__file__), 'VERSION'))
-VERSION = v.readline().strip()
-v.close()
+with open(path.join(path.dirname(__file__), 'VERSION')) as v:
+    VERSION = v.readline().strip()
 
 with open('requirements.txt') as reqs_file:
     requirements = reqs_file.read().splitlines()
@@ -48,28 +49,42 @@ class sdist(_sdist):
 def _stamp_version(filename):
     found, out = False, list()
     try:
-        f = open(filename, 'r')
+        with open(filename, 'r') as f:
+            for line in f:
+                if '__version__ =' in line:
+                    line = line.replace("'git'", "'%s'" % VERSION)
+                    found = True
+                out.append(line)
     except (IOError, OSError):
         print("Couldn't find file %s to stamp version" % filename, file=sys.stderr)
-        return
-    # END handle error, usually happens during binary builds
-    for line in f:
-        if '__version__ =' in line:
-            line = line.replace("'git'", "'%s'" % VERSION)
-            found = True
-        out.append(line)
-    f.close()
 
     if found:
-        f = open(filename, 'w')
-        f.writelines(out)
-        f.close()
+        with open(filename, 'w') as f:
+            f.writelines(out)
     else:
         print("WARNING: Couldn't find version line in file %s" % filename, file=sys.stderr)
 
 install_requires = ['gitdb >= 0.6.4']
+extras_require = {
+    ':python_version == "2.6"': ['ordereddict'],
+}
+test_requires = ['ddt']
 if sys.version_info[:2] < (2, 7):
-    install_requires.append('ordereddict')
+    test_requires.append('mock')
+
+try:
+    if 'bdist_wheel' not in sys.argv:
+        for key, value in extras_require.items():
+            if key.startswith(':') and pkg_resources.evaluate_marker(key[1:]):
+                install_requires.extend(value)
+except Exception:
+    logging.getLogger(__name__).exception(
+        'Something went wrong calculating platform specific dependencies, so '
+        "you're getting them all!"
+    )
+    for key, value in extras_require.items():
+        if key.startswith(':'):
+            install_requires.extend(value)
 # end
 
 setup(
@@ -87,10 +102,9 @@ setup(
     license="BSD License",
     requires=['gitdb (>=0.6.4)'],
     install_requires=install_requires,
-    test_requirements=['mock', 'nose'] + install_requires,
+    test_requirements=test_requires + install_requires,
     zip_safe=False,
-    long_description="""\
-GitPython is a python library used to interact with Git repositories""",
+    long_description="""GitPython is a python library used to interact with Git repositories""",
     classifiers=[
         # Picked from
         #   http://pypi.python.org/pypi?:action=list_classifiers

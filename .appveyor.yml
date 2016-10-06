@@ -1,0 +1,84 @@
+# CI on Windows via appveyor
+environment:
+    GIT_DAEMON_PATH:   "C:\\Program Files\\Git\\mingw64\\libexec\\git-core"
+    CYGWIN_GIT_PATH:   "C:\\cygwin\\bin;%GIT_DAEMON_PATH%"
+    CYGWIN64_GIT_PATH: "C:\\cygwin64\\bin;%GIT_DAEMON_PATH%"
+
+    matrix:
+        ## MINGW
+        #
+      - PYTHON: "C:\\Python27"
+        PYTHON_VERSION: "2.7"
+        GIT_PATH: "%GIT_DAEMON_PATH%"
+      - PYTHON: "C:\\Python34-x64"
+        PYTHON_VERSION: "3.4"
+        GIT_PATH: "%GIT_DAEMON_PATH%"
+      - PYTHON: "C:\\Python35-x64"
+        PYTHON_VERSION: "3.5"
+        GIT_PATH: "%GIT_DAEMON_PATH%"
+      - PYTHON: "C:\\Miniconda35-x64"
+        PYTHON_VERSION: "3.5"
+        IS_CONDA: "yes"
+        GIT_PATH: "%GIT_DAEMON_PATH%"
+
+      #   ## Cygwin
+      #   #
+      # - PYTHON: "C:\\Miniconda-x64"
+      #   PYTHON_VERSION: "2.7"
+      #   IS_CONDA: "yes"
+      #   GIT_PATH: "%CYGWIN_GIT_PATH%"
+      # - PYTHON: "C:\\Python34-x64"
+      #   PYTHON_VERSION: "3.4"
+      #   GIT_PATH: "%CYGWIN_GIT_PATH%"
+      # - PYTHON: "C:\\Python35-x64"
+      #   PYTHON_VERSION: "3.5"
+      #   GIT_PATH: "%CYGWIN64_GIT_PATH%"
+
+
+install:
+    - set PATH=%PYTHON%;%PYTHON%\Scripts;%GIT_PATH%;%PATH%
+
+    ## Print configuration for debugging.
+    #
+    - |
+        echo %PATH%
+        uname -a
+        where git git-daemon python pip pip3 pip34
+        python --version
+        python -c "import struct; print(struct.calcsize('P') * 8)"
+
+    - IF "%IS_CONDA%"=="yes" (
+        conda info -a &
+        conda install --yes --quiet  pip
+      )
+    - pip install  nose ddt wheel coveralls
+    -   IF "%PYTHON_VERSION%"=="2.7" (
+            pip install mock
+        )
+
+    ## Copied from `init-tests-after-clone.sh`.
+    #
+    - |
+        git submodule update --init --recursive
+        git fetch --tags
+        git tag __testing_point__
+        git checkout master || git checkout -b master
+        git reset --hard HEAD~1
+        git reset --hard HEAD~1
+        git reset --hard HEAD~1
+        git reset --hard __testing_point__
+
+    ## For commits performed with the default user.
+    - |
+        git config --global user.email "travis@ci.com"
+        git config --global user.name "Travis Runner"
+
+    - pip install -e .
+
+build: false
+
+test_script:
+    - nosetests -v --with-coverage
+
+#on_success:
+#    - IF "%PYTHON_VERSION%"=="3.4" (coveralls)

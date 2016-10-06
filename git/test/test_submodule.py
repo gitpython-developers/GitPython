@@ -1,34 +1,36 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
-import sys
 import os
+import sys
+from unittest.case import skipIf
 
 import git
-
-from git.test.lib import (
-    TestBase,
-    with_rw_repo
-)
-from gitdb.test.lib import with_rw_directory
+from git.compat import string_types, is_win
 from git.exc import (
     InvalidGitRepositoryError,
     RepositoryDirtyError
 )
 from git.objects.submodule.base import Submodule
 from git.objects.submodule.root import RootModule, RootUpdateProgress
-from git.util import to_native_path_linux, join_path_native
-from git.compat import string_types
 from git.repo.fun import (
     find_git_dir,
     touch
 )
+from git.test.lib import (
+    TestBase,
+    with_rw_repo
+)
+from git.test.lib import with_rw_directory
+from git.test.lib.helper import HIDE_WINDOWS_KNOWN_ERRORS
+from git.util import to_native_path_linux, join_path_native
+
 
 # Change the configuration if possible to prevent the underlying memory manager
 # to keep file handles open. On windows we get problems as they are not properly
 # closed due to mmap bugs on windows (as it appears)
-if sys.platform == 'win32':
+if is_win:
     try:
-        import smmap.util
+        import smmap.util  # @UnusedImport
         smmap.util.MapRegion._test_read_into_memory = True
     except ImportError:
         sys.stderr.write("The submodule tests will fail as some files cannot be removed due to open file handles.\n")
@@ -48,6 +50,10 @@ prog = TestRootProgress()
 
 
 class TestSubmodule(TestBase):
+
+    def tearDown(self):
+        import gc
+        gc.collect()
 
     k_subm_current = "c15a6e1923a14bc760851913858a3942a4193cdb"
     k_subm_changed = "394ed7006ee5dc8bddfd132b64001d5dfc0ffdd3"
@@ -92,28 +98,32 @@ class TestSubmodule(TestBase):
 
         # force it to reread its information
         del(smold._url)
-        smold.url == sm.url
+        smold.url == sm.url  # @NoEffect
 
         # test config_reader/writer methods
         sm.config_reader()
         new_smclone_path = None             # keep custom paths for later
         new_csmclone_path = None                #
         if rwrepo.bare:
-            self.failUnlessRaises(InvalidGitRepositoryError, sm.config_writer)
+            with self.assertRaises(InvalidGitRepositoryError):
+                with sm.config_writer() as cw:
+                    pass
         else:
-            writer = sm.config_writer()
-            # for faster checkout, set the url to the local path
-            new_smclone_path = to_native_path_linux(join_path_native(self.rorepo.working_tree_dir, sm.path))
-            writer.set_value('url', new_smclone_path)
-            writer.release()
-            assert sm.config_reader().get_value('url') == new_smclone_path
-            assert sm.url == new_smclone_path
+            with sm.config_writer() as writer:
+                # for faster checkout, set the url to the local path
+                new_smclone_path = to_native_path_linux(join_path_native(self.rorepo.working_tree_dir, sm.path))
+                writer.set_value('url', new_smclone_path)
+                writer.release()
+                assert sm.config_reader().get_value('url') == new_smclone_path
+                assert sm.url == new_smclone_path
         # END handle bare repo
         smold.config_reader()
 
         # cannot get a writer on historical submodules
         if not rwrepo.bare:
-            self.failUnlessRaises(ValueError, smold.config_writer)
+            with self.assertRaises(ValueError):
+                with smold.config_writer():
+                    pass
         # END handle bare repo
 
         # make the old into a new - this doesn't work as the name changed
@@ -204,9 +214,8 @@ class TestSubmodule(TestBase):
 
             # adjust the path of the submodules module to point to the local destination
             new_csmclone_path = to_native_path_linux(join_path_native(self.rorepo.working_tree_dir, sm.path, csm.path))
-            writer = csm.config_writer()
-            writer.set_value('url', new_csmclone_path)
-            writer.release()
+            with csm.config_writer() as writer:
+                writer.set_value('url', new_csmclone_path)
             assert csm.url == new_csmclone_path
 
             # dry-run does nothing
@@ -219,7 +228,7 @@ class TestSubmodule(TestBase):
             assert csm.module_exists()
 
             # tracking branch once again
-            csm.module().head.ref.tracking_branch() is not None
+            csm.module().head.ref.tracking_branch() is not None  # @NoEffect
 
             # this flushed in a sub-submodule
             assert len(list(rwrepo.iter_submodules())) == 2
@@ -268,9 +277,8 @@ class TestSubmodule(TestBase):
             # module() is supposed to point to gitdb, which has a child-submodule whose URL is still pointing
             # to github. To save time, we will change it to
             csm.set_parent_commit(csm.repo.head.commit)
-            cw = csm.config_writer()
-            cw.set_value('url', self._small_repo_url())
-            cw.release()
+            with csm.config_writer() as cw:
+                cw.set_value('url', self._small_repo_url())
             csm.repo.index.commit("adjusted URL to point to local source, instead of the internet")
 
             # We have modified the configuration, hence the index is dirty, and the
@@ -278,12 +286,10 @@ class TestSubmodule(TestBase):
             # NOTE: As we did  a few updates in the meanwhile, the indices were reset
             # Hence we create some changes
             csm.set_parent_commit(csm.repo.head.commit)
-            writer = sm.config_writer()
-            writer.set_value("somekey", "somevalue")
-            writer.release()
-            writer = csm.config_writer()
-            writer.set_value("okey", "ovalue")
-            writer.release()
+            with sm.config_writer() as writer:
+                writer.set_value("somekey", "somevalue")
+            with csm.config_writer() as writer:
+                writer.set_value("okey", "ovalue")
             self.failUnlessRaises(InvalidGitRepositoryError, sm.remove)
             # if we remove the dirty index, it would work
             sm.module().index.reset()
@@ -305,14 +311,15 @@ class TestSubmodule(TestBase):
 
             # but ... we have untracked files in the child submodule
             fn = join_path_native(csm.module().working_tree_dir, "newfile")
-            open(fn, 'w').write("hi")
+            with open(fn, 'w') as fd:
+                fd.write("hi")
             self.failUnlessRaises(InvalidGitRepositoryError, sm.remove)
 
             # forcibly delete the child repository
             prev_count = len(sm.children())
             self.failUnlessRaises(ValueError, csm.remove, force=True)
-            # We removed sm, which removed all submodules. Howver, the instance we have
-            # still points to the commit prior to that, where it still existed
+            # We removed sm, which removed all submodules. However, the instance we
+            # have still points to the commit prior to that, where it still existed
             csm.set_parent_commit(csm.repo.commit(), check=False)
             assert not csm.exists()
             assert not csm.module_exists()
@@ -411,6 +418,10 @@ class TestSubmodule(TestBase):
         # Error if there is no submodule file here
         self.failUnlessRaises(IOError, Submodule._config_parser, rwrepo, rwrepo.commit(self.k_no_subm_tag), True)
 
+    # @skipIf(HIDE_WINDOWS_KNOWN_ERRORS,
+    #         "FIXME: fails with: PermissionError: [WinError 32] The process cannot access the file because"
+    #         "it is being used by another process: "
+    #         "'C:\\Users\\ankostis\\AppData\\Local\\Temp\\tmp95c3z83bnon_bare_test_base_rw\\git\\ext\\gitdb\\gitdb\\ext\\smmap'")  # noqa E501
     @with_rw_repo(k_subm_current)
     def test_base_rw(self, rwrepo):
         self._do_base_tests(rwrepo)
@@ -419,6 +430,11 @@ class TestSubmodule(TestBase):
     def test_base_bare(self, rwrepo):
         self._do_base_tests(rwrepo)
 
+    @skipIf(HIDE_WINDOWS_KNOWN_ERRORS and sys.version_info[:2] == (3, 5), """
+        File "C:\projects\gitpython\git\cmd.py", line 559, in execute
+        raise GitCommandNotFound(command, err)
+        git.exc.GitCommandNotFound: Cmd('git') not found due to: OSError('[WinError 6] The handle is invalid')
+        cmdline: git clone -n --shared -v C:\projects\gitpython\.git Users\appveyor\AppData\Local\Temp\1\tmplyp6kr_rnon_bare_test_root_module""")  # noqa E501
     @with_rw_repo(k_subm_current, bare=False)
     def test_root_module(self, rwrepo):
         # Can query everything without problems
@@ -436,8 +452,8 @@ class TestSubmodule(TestBase):
 
         assert len(rm.list_items(rm.module())) == 1
         rm.config_reader()
-        w = rm.config_writer()
-        w.release()
+        with rm.config_writer():
+            pass
 
         # deep traversal gitdb / async
         rsmsp = [sm.path for sm in rm.traverse()]
@@ -462,9 +478,8 @@ class TestSubmodule(TestBase):
         assert not sm.module_exists()               # was never updated after rwrepo's clone
 
         # assure we clone from a local source
-        writer = sm.config_writer()
-        writer.set_value('url', to_native_path_linux(join_path_native(self.rorepo.working_tree_dir, sm.path)))
-        writer.release()
+        with sm.config_writer() as writer:
+            writer.set_value('url', to_native_path_linux(join_path_native(self.rorepo.working_tree_dir, sm.path)))
 
         # dry-run does nothing
         sm.update(recursive=False, dry_run=True, progress=prog)
@@ -472,9 +487,8 @@ class TestSubmodule(TestBase):
 
         sm.update(recursive=False)
         assert sm.module_exists()
-        writer = sm.config_writer()
-        writer.set_value('path', fp)    # change path to something with prefix AFTER url change
-        writer.release()
+        with sm.config_writer() as writer:
+            writer.set_value('path', fp)    # change path to something with prefix AFTER url change
 
         # update fails as list_items in such a situations cannot work, as it cannot
         # find the entry at the changed path
@@ -561,9 +575,8 @@ class TestSubmodule(TestBase):
         # repository at the different url
         nsm.set_parent_commit(csmremoved)
         nsmurl = to_native_path_linux(join_path_native(self.rorepo.working_tree_dir, rsmsp[0]))
-        writer = nsm.config_writer()
-        writer.set_value('url', nsmurl)
-        writer.release()
+        with nsm.config_writer() as writer:
+            writer.set_value('url', nsmurl)
         csmpathchange = rwrepo.index.commit("changed url")
         nsm.set_parent_commit(csmpathchange)
 
@@ -593,9 +606,8 @@ class TestSubmodule(TestBase):
         nsmm = nsm.module()
         prev_commit = nsmm.head.commit
         for branch in ("some_virtual_branch", cur_branch.name):
-            writer = nsm.config_writer()
-            writer.set_value(Submodule.k_head_option, git.Head.to_full_path(branch))
-            writer.release()
+            with nsm.config_writer() as writer:
+                writer.set_value(Submodule.k_head_option, git.Head.to_full_path(branch))
             csmbranchchange = rwrepo.index.commit("changed branch to %s" % branch)
             nsm.set_parent_commit(csmbranchchange)
         # END for each branch to change
@@ -623,9 +635,8 @@ class TestSubmodule(TestBase):
         assert nsm.exists() and nsm.module_exists() and len(nsm.children()) >= 1
         # assure we pull locally only
         nsmc = nsm.children()[0]
-        writer = nsmc.config_writer()
-        writer.set_value('url', subrepo_url)
-        writer.release()
+        with nsmc.config_writer() as writer:
+            writer.set_value('url', subrepo_url)
         rm.update(recursive=True, progress=prog, dry_run=True)      # just to run the code
         rm.update(recursive=True, progress=prog)
 
@@ -717,6 +728,9 @@ class TestSubmodule(TestBase):
         assert commit_sm.binsha == sm_too.binsha
         assert sm_too.binsha != sm.binsha
 
+    # @skipIf(HIDE_WINDOWS_KNOWN_ERRORS,
+    #         "FIXME: helper.wrapper fails with: PermissionError: [WinError 5] Access is denied: "
+    #         "'C:\\Users\\appveyor\\AppData\\Local\\Temp\\1\\test_work_tree_unsupportedryfa60di\\master_repo\\.git\\objects\\pack\\pack-bc9e0787aef9f69e1591ef38ea0a6f566ec66fe3.idx")  # noqa E501
     @with_rw_directory
     def test_git_submodule_compatibility(self, rwdir):
         parent = git.Repo.init(os.path.join(rwdir, 'parent'))
@@ -774,8 +788,8 @@ class TestSubmodule(TestBase):
         rsm = parent.submodule_update()
         assert_exists(sm)
         assert_exists(csm)
-        csm_writer = csm.config_writer().set_value('url', 'bar')
-        csm_writer.release()
+        with csm.config_writer().set_value('url', 'bar'):
+            pass
         csm.repo.index.commit("Have to commit submodule change for algorithm to pick it up")
         assert csm.url == 'bar'
 
@@ -791,6 +805,24 @@ class TestSubmodule(TestBase):
             assert_exists(sm, value=dry_run)
             assert os.path.isdir(sm_module_path) == dry_run
         # end for each dry-run mode
+
+    @with_rw_directory
+    def test_remove_norefs(self, rwdir):
+        parent = git.Repo.init(os.path.join(rwdir, 'parent'))
+        sm_name = 'mymodules/myname'
+        sm = parent.create_submodule(sm_name, sm_name, url=self._small_repo_url())
+        assert sm.exists()
+
+        parent.index.commit("Added submodule")
+
+        assert sm.repo is parent  # yoh was surprised since expected sm repo!!
+        # so created a new instance for submodule
+        smrepo = git.Repo(os.path.join(rwdir, 'parent', sm.path))
+        # Adding a remote without fetching so would have no references
+        smrepo.create_remote('special', 'git@server-shouldnotmatter:repo.git')
+        # And we should be able to remove it just fine
+        sm.remove()
+        assert not sm.exists()
 
     @with_rw_directory
     def test_rename(self, rwdir):
@@ -835,9 +867,8 @@ class TestSubmodule(TestBase):
         sm.repo.index.commit("added new file")
 
         # change designated submodule checkout branch to the new upstream feature branch
-        smcw = sm.config_writer()
-        smcw.set_value('branch', sm_fb.name)
-        smcw.release()
+        with sm.config_writer() as smcw:
+            smcw.set_value('branch', sm_fb.name)
         assert sm.repo.is_dirty(index=True, working_tree=False)
         sm.repo.index.commit("changed submodule branch to '%s'" % sm_fb)
 
@@ -861,9 +892,8 @@ class TestSubmodule(TestBase):
         sm_source_repo.index.commit("new file added, to past of '%r'" % sm_fb)
 
         # Change designated submodule checkout branch to a new commit in its own past
-        smcw = sm.config_writer()
-        smcw.set_value('branch', sm_pfb.path)
-        smcw.release()
+        with sm.config_writer() as smcw:
+            smcw.set_value('branch', sm_pfb.path)
         sm.repo.index.commit("changed submodule branch to '%s'" % sm_pfb)
 
         # Test submodule updates - must fail if submodule is dirty

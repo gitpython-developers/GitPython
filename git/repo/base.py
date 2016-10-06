@@ -56,6 +56,7 @@ from git.compat import (
     PY3,
     safe_decode,
     range,
+    is_win,
 )
 
 import os
@@ -71,7 +72,7 @@ if sys.version_info[:2] < (2, 5):     # python 2.4 compatiblity
 BlameEntry = namedtuple('BlameEntry', ['commit', 'linenos', 'orig_path', 'orig_linenos'])
 
 
-__all__ = ('Repo', )
+__all__ = ('Repo',)
 
 
 def _expand_path(p):
@@ -209,11 +210,13 @@ class Repo(object):
     # Description property
     def _get_description(self):
         filename = join(self.git_dir, 'description')
-        return open(filename, 'rb').read().rstrip().decode(defenc)
+        with open(filename, 'rb') as fp:
+            return fp.read().rstrip().decode(defenc)
 
     def _set_description(self, descr):
         filename = join(self.git_dir, 'description')
-        open(filename, 'wb').write((descr + '\n').encode(defenc))
+        with open(filename, 'wb') as fp:
+            fp.write((descr + '\n').encode(defenc))
 
     description = property(_get_description, _set_description,
                            doc="the project's description")
@@ -369,7 +372,7 @@ class Repo(object):
     def _get_config_path(self, config_level):
         # we do not support an absolute path of the gitconfig on windows ,
         # use the global config instead
-        if sys.platform == "win32" and config_level == "system":
+        if is_win and config_level == "system":
             config_level = "global"
 
         if config_level == "system":
@@ -547,11 +550,8 @@ class Repo(object):
         alternates_path = join(self.git_dir, 'objects', 'info', 'alternates')
 
         if os.path.exists(alternates_path):
-            try:
-                f = open(alternates_path, 'rb')
+            with open(alternates_path, 'rb') as f:
                 alts = f.read().decode(defenc)
-            finally:
-                f.close()
             return alts.strip().splitlines()
         else:
             return list()
@@ -572,13 +572,8 @@ class Repo(object):
             if isfile(alternates_path):
                 os.remove(alternates_path)
         else:
-            try:
-                f = open(alternates_path, 'wb')
+            with open(alternates_path, 'wb') as f:
                 f.write("\n".join(alts).encode(defenc))
-            finally:
-                f.close()
-            # END file handling
-        # END alts handling
 
     alternates = property(_get_alternates, _set_alternates,
                           doc="Retrieve a list of alternates paths or set a list paths to be used as alternates")
@@ -883,7 +878,7 @@ class Repo(object):
         prev_cwd = None
         prev_path = None
         odbt = kwargs.pop('odbt', odb_default_type)
-        if os.name == 'nt':
+        if is_win:
             if '~' in path:
                 raise OSError("Git cannot handle the ~ character in path %r correctly" % path)
 
@@ -907,7 +902,7 @@ class Repo(object):
             if progress:
                 handle_process_output(proc, None, progress.new_message_handler(), finalize_process)
             else:
-                (stdout, stderr) = proc.communicate()
+                (stdout, stderr) = proc.communicate()  # FIXME: Will block of outputs are big!
                 finalize_process(proc, stderr=stderr)
             # end handle progress
         finally:
@@ -929,10 +924,8 @@ class Repo(object):
         # sure
         repo = cls(os.path.abspath(path), odbt=odbt)
         if repo.remotes:
-            writer = repo.remotes[0].config_writer
-            writer.set_value('url', repo.remotes[0].url.replace("\\\\", "\\").replace("\\", "/"))
-            # PY3: be sure cleanup is performed and lock is released
-            writer.release()
+            with repo.remotes[0].config_writer as writer:
+                writer.set_value('url', repo.remotes[0].url.replace("\\\\", "\\").replace("\\", "/"))
         # END handle remote repo
         return repo
 

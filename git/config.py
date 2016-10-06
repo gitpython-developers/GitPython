@@ -17,6 +17,8 @@ import logging
 import abc
 import os
 
+from functools import wraps
+
 from git.odict import OrderedDict
 from git.util import LockFile
 from git.compat import (
@@ -38,7 +40,7 @@ log.addHandler(logging.NullHandler())
 class MetaParserBuilder(abc.ABCMeta):
 
     """Utlity class wrapping base-class methods into decorators that assure read-only properties"""
-    def __new__(metacls, name, bases, clsdict):
+    def __new__(cls, name, bases, clsdict):
         """
         Equip all base-class methods with a needs_values decorator, and all non-const methods
         with a set_dirty_and_flush_changes decorator in addition to that."""
@@ -60,18 +62,18 @@ class MetaParserBuilder(abc.ABCMeta):
             # END for each base
         # END if mutating methods configuration is set
 
-        new_type = super(MetaParserBuilder, metacls).__new__(metacls, name, bases, clsdict)
+        new_type = super(MetaParserBuilder, cls).__new__(cls, name, bases, clsdict)
         return new_type
 
 
 def needs_values(func):
     """Returns method assuring we read values (on demand) before we try to access them"""
 
+    @wraps(func)
     def assure_data_present(self, *args, **kwargs):
         self.read()
         return func(self, *args, **kwargs)
     # END wrapper method
-    assure_data_present.__name__ = func.__name__
     return assure_data_present
 
 
@@ -388,23 +390,18 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
         while files_to_read:
             file_path = files_to_read.pop(0)
             fp = file_path
-            close_fp = False
+            file_ok = False
 
-            # assume a path if it is not a file-object
-            if not hasattr(fp, "seek"):
+            if hasattr(fp, "seek"):
+                self._read(fp, fp.name)
+            else:
+                # assume a path if it is not a file-object
                 try:
-                    fp = open(file_path, 'rb')
-                    close_fp = True
+                    with open(file_path, 'rb') as fp:
+                        file_ok = True
+                        self._read(fp, fp.name)
                 except IOError:
                     continue
-            # END fp handling
-
-            try:
-                self._read(fp, fp.name)
-            finally:
-                if close_fp:
-                    fp.close()
-            # END read-handling
 
             # Read includes and append those that we didn't handle yet
             # We expect all paths to be normalized and absolute (and will assure that is the case)
@@ -413,7 +410,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
                     if include_path.startswith('~'):
                         include_path = os.path.expanduser(include_path)
                     if not os.path.isabs(include_path):
-                        if not close_fp:
+                        if not file_ok:
                             continue
                         # end ignore relative paths if we don't know the configuration file path
                         assert os.path.isabs(file_path), "Need absolute paths to be sure our cycle checks will work"
@@ -477,34 +474,20 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
         # end
 
         fp = self._file_or_files
-        close_fp = False
 
         # we have a physical file on disk, so get a lock
-        if isinstance(fp, string_types + (FileType, )):
+        is_file_lock = isinstance(fp, string_types + (FileType, ))
+        if is_file_lock:
             self._lock._obtain_lock()
-        # END get lock for physical files
-
         if not hasattr(fp, "seek"):
-            fp = open(self._file_or_files, "wb")
-            close_fp = True
+            with open(self._file_or_files, "wb") as fp:
+                self._write(fp)
         else:
             fp.seek(0)
             # make sure we do not overwrite into an existing file
             if hasattr(fp, 'truncate'):
                 fp.truncate()
-            # END
-        # END handle stream or file
-
-        # WRITE DATA
-        try:
             self._write(fp)
-        finally:
-            if close_fp:
-                fp.close()
-        # END data writing
-
-        # we do not release the lock - it will be done automatically once the
-        # instance vanishes
 
     def _assure_writable(self, method_name):
         if self.read_only:

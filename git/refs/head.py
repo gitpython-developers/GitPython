@@ -133,18 +133,15 @@ class Head(Reference):
             raise ValueError("Incorrect parameter type: %r" % remote_reference)
         # END handle type
 
-        writer = self.config_writer()
-        if remote_reference is None:
-            writer.remove_option(self.k_config_remote)
-            writer.remove_option(self.k_config_remote_ref)
-            if len(writer.options()) == 0:
-                writer.remove_section()
-            # END handle remove section
-        else:
-            writer.set_value(self.k_config_remote, remote_reference.remote_name)
-            writer.set_value(self.k_config_remote_ref, Head.to_full_path(remote_reference.remote_head))
-        # END handle ref value
-        writer.release()
+        with self.config_writer() as writer:
+            if remote_reference is None:
+                writer.remove_option(self.k_config_remote)
+                writer.remove_option(self.k_config_remote_ref)
+                if len(writer.options()) == 0:
+                    writer.remove_section()
+            else:
+                writer.set_value(self.k_config_remote, remote_reference.remote_name)
+                writer.set_value(self.k_config_remote_ref, Head.to_full_path(remote_reference.remote_head))
 
         return self
 
