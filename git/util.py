@@ -68,7 +68,7 @@ if platform.system() == 'Windows':
             # Unlock file descriptor
             try:
                 win32file.UnlockFileEx(hfile, 0, -0x10000, __overlapped)
-            except pywintypes.error, exc_value:
+            except pywintypes.error as exc_value:
                 # error: (158, 'UnlockFileEx', 'The segment is already unlocked.')
                 # To match the 'posix' implementation, silently ignore this error
                 if exc_value[0] == 158:
@@ -81,7 +81,7 @@ if platform.system() == 'Windows':
             # Lock file
             try:
                 win32file.LockFileEx(hfile, flags, 0, -0x10000, __overlapped)
-            except pywintypes.error, exc_value:
+            except pywintypes.error as exc_value:
                 if exc_value[0] == 33:
                     # error: (33, 'LockFileEx',
                     # 'The process cannot access the file because another process has locked
