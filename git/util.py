@@ -96,8 +96,7 @@ if platform.system() == 'Windows':
 
 
 else:
-    # from fcntl import flock, LOCK_UN, LOCK_EX, LOCK_NB
-    pass
+    from fcntl import flock, LOCK_UN, LOCK_EX, LOCK_NB
 
 
 def unbare_repo(func):
