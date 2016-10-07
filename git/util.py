@@ -5,7 +5,6 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 from __future__ import unicode_literals
 
-from fcntl import flock, LOCK_UN, LOCK_EX, LOCK_NB
 import getpass
 import logging
 import os
@@ -48,6 +47,57 @@ __all__ = ("stream_copy", "join_path", "to_native_path_windows", "to_native_path
            'RemoteProgress', 'CallableRemoteProgress', 'rmtree', 'unbare_repo')
 
 #{ Utility Methods
+
+if platform.system() == 'Windows':
+    # This code is a derivative work of Portalocker http://code.activestate.com/recipes/65203/
+    import win32con
+    import win32file
+    import pywintypes
+
+    LOCK_EX = win32con.LOCKFILE_EXCLUSIVE_LOCK
+    LOCK_SH = 0  # the default
+    LOCK_NB = win32con.LOCKFILE_FAIL_IMMEDIATELY
+    LOCK_UN = 1 << 2
+
+    __overlapped = pywintypes.OVERLAPPED()
+
+    def flock(fd, flags=0):
+        hfile = win32file._get_osfhandle(fd)
+
+        if flags & LOCK_UN != 0:
+            # Unlock file descriptor
+            try:
+                win32file.UnlockFileEx(hfile, 0, -0x10000, __overlapped)
+            except pywintypes.error, exc_value:
+                # error: (158, 'UnlockFileEx', 'The segment is already unlocked.')
+                # To match the 'posix' implementation, silently ignore this error
+                if exc_value[0] == 158:
+                    pass
+                else:
+                    # Q:  Are there exceptions/codes we should be dealing with here?
+                    raise
+
+        elif flags & LOCK_EX != 0:
+            # Lock file
+            try:
+                win32file.LockFileEx(hfile, flags, 0, -0x10000, __overlapped)
+            except pywintypes.error, exc_value:
+                if exc_value[0] == 33:
+                    # error: (33, 'LockFileEx',
+                    # 'The process cannot access the file because another process has locked
+                    # a portion of the file.')
+                    raise IOError(33, exc_value[2])
+                else:
+                    # Q:  Are there exceptions/codes we should be dealing with here?
+                    raise
+
+        else:
+            raise NotImplementedError("Unsupported set of bitflags {}".format(bin(flags)))
+
+
+else:
+    # from fcntl import flock, LOCK_UN, LOCK_EX, LOCK_NB
+    pass
 
 
 def unbare_repo(func):
@@ -620,6 +670,7 @@ class LockFile(object):
             rmfile(lock_file)
         except OSError:
             pass
+
         self._owns_lock = False
         self._file_descriptor = None
 
