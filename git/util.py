@@ -48,6 +48,56 @@ __all__ = ("stream_copy", "join_path", "to_native_path_windows", "to_native_path
 
 #{ Utility Methods
 
+if platform.system() == 'Windows':
+    # This code is a derivative work of Portalocker http://code.activestate.com/recipes/65203/
+    import win32con
+    import win32file
+    import pywintypes
+
+    LOCK_EX = win32con.LOCKFILE_EXCLUSIVE_LOCK
+    LOCK_SH = 0  # the default
+    LOCK_NB = win32con.LOCKFILE_FAIL_IMMEDIATELY
+    LOCK_UN = 1 << 2
+
+    __overlapped = pywintypes.OVERLAPPED()
+
+    def flock(fd, flags=0):
+        hfile = win32file._get_osfhandle(fd)
+
+        if flags & LOCK_UN != 0:
+            # Unlock file descriptor
+            try:
+                win32file.UnlockFileEx(hfile, 0, -0x10000, __overlapped)
+            except pywintypes.error as exc_value:
+                # error: (158, 'UnlockFileEx', 'The segment is already unlocked.')
+                # To match the 'posix' implementation, silently ignore this error
+                if exc_value[0] == 158:
+                    pass
+                else:
+                    # Q:  Are there exceptions/codes we should be dealing with here?
+                    raise
+
+        elif flags & LOCK_EX != 0:
+            # Lock file
+            try:
+                win32file.LockFileEx(hfile, flags, 0, -0x10000, __overlapped)
+            except pywintypes.error as exc_value:
+                if exc_value[0] == 33:
+                    # error: (33, 'LockFileEx',
+                    # 'The process cannot access the file because another process has locked
+                    # a portion of the file.')
+                    raise IOError(33, exc_value[2])
+                else:
+                    # Q:  Are there exceptions/codes we should be dealing with here?
+                    raise
+
+        else:
+            raise NotImplementedError("Unsupported set of bitflags {}".format(bin(flags)))
+
+
+else:
+    from fcntl import flock, LOCK_UN, LOCK_EX, LOCK_NB
+
 
 def unbare_repo(func):
     """Methods with this decorator raise InvalidGitRepositoryError if they
@@ -555,9 +605,10 @@ class LockFile(object):
     As we are a utility class to be derived from, we only use protected methods.
 
     Locks will automatically be released on destruction"""
-    __slots__ = ("_file_path", "_owns_lock")
+    __slots__ = ("_file_path", "_owns_lock", "_file_descriptor")
 
     def __init__(self, file_path):
+        self._file_descriptor = None
         self._file_path = file_path
         self._owns_lock = False
 
@@ -579,20 +630,21 @@ class LockFile(object):
         :raise IOError: if a lock was already present or a lock file could not be written"""
         if self._has_lock():
             return
-        lock_file = self._lock_file_path()
-        if os.path.isfile(lock_file):
-            raise IOError("Lock for file %r did already exist, delete %r in case the lock is illegal" %
-                          (self._file_path, lock_file))
 
+        lock_file = self._lock_file_path()
+
+        # Create file and lock
         try:
-            flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+            flags = os.O_CREAT
             if is_win:
                 flags |= os.O_SHORT_LIVED
             fd = os.open(lock_file, flags, 0)
-            os.close(fd)
         except OSError as e:
             raise IOError(str(e))
 
+        flock(fd, LOCK_EX | LOCK_NB)
+
+        self._file_descriptor = fd
         self._owns_lock = True
 
     def _obtain_lock(self):
@@ -605,14 +657,21 @@ class LockFile(object):
         if not self._has_lock():
             return
 
+        fd = self._file_descriptor
+        lock_file = self._lock_file_path()
+
+        flock(fd, LOCK_UN)
+        os.close(fd)
+
         # if someone removed our file beforhand, lets just flag this issue
         # instead of failing, to make it more usable.
-        lfp = self._lock_file_path()
         try:
-            rmfile(lfp)
+            rmfile(lock_file)
         except OSError:
             pass
+
         self._owns_lock = False
+        self._file_descriptor = None
 
 
 class BlockingLockFile(LockFile):
@@ -647,7 +706,7 @@ class BlockingLockFile(LockFile):
             try:
                 super(BlockingLockFile, self)._obtain_lock()
             except IOError:
-                # synity check: if the directory leading to the lockfile is not
+                # sanity check: if the directory leading to the lockfile is not
                 # readable anymore, raise an execption
                 curtime = time.time()
                 if not os.path.isdir(os.path.dirname(self._lock_file_path())):

@@ -13,6 +13,7 @@ import pkg_resources
 import logging
 import os
 import sys
+import platform
 from os import path
 
 with open(path.join(path.dirname(__file__), 'VERSION')) as v:
@@ -20,6 +21,10 @@ with open(path.join(path.dirname(__file__), 'VERSION')) as v:
 
 with open('requirements.txt') as reqs_file:
     requirements = reqs_file.read().splitlines()
+
+if platform.system() == 'Windows':
+    with open('win32-requirements.txt') as reqs_file:
+        requirements += reqs_file.read().splitlines()
 
 
 class build_py(_build_py):
@@ -65,6 +70,8 @@ def _stamp_version(filename):
         print("WARNING: Couldn't find version line in file %s" % filename, file=sys.stderr)
 
 install_requires = ['gitdb >= 0.6.4']
+if platform.system() == 'Windows':
+    install_requires.append("pypiwin32 >= 219")
 extras_require = {
     ':python_version == "2.6"': ['ordereddict'],
 }
