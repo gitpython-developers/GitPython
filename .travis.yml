@@ -16,7 +16,7 @@ git:
 install:
   - git submodule update --init --recursive
   - git fetch --tags
-  - pip install coveralls flake8 ddt sphinx
+  - pip install codecov flake8 ddt sphinx
 
   # generate some reflog as git-python tests need it (in master)
   - ./init-tests-after-clone.sh
@@ -36,4 +36,4 @@ script:
   - if [ "$TRAVIS_PYTHON_VERSION" == '3.5' ]; then cd doc && make html; fi
   -
 after_success:
-  - coveralls
+  - codecov
