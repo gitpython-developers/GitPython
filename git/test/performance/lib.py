@@ -3,7 +3,6 @@ import os
 from git.test.lib import (
     TestBase
 )
-from gitdb.test.lib import skip_on_travis_ci
 import tempfile
 import logging
 
@@ -43,8 +42,6 @@ class TestBigRepoR(TestBase):
     #} END invariants
 
     def setUp(self):
-        # This will raise on travis, which is what we want to happen early as to prevent us to do any work
-        skip_on_travis_ci(lambda *args: None)(self)
         try:
             super(TestBigRepoR, self).setUp()
         except AttributeError:
