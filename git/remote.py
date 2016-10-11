@@ -33,6 +33,7 @@ from git.cmd import handle_process_output
 from gitdb.util import join
 from git.compat import (defenc, force_text, is_win)
 import logging
+from git.exc import GitCommandError
 
 log = logging.getLogger('git.remote')
 
@@ -494,11 +495,22 @@ class Remote(LazyMixin, Iterable):
 
     @property
     def urls(self):
-        """:return: Iterator yielding all configured URL targets on a remote
-        as strings"""
-        remote_details = self.repo.git.remote("get-url", "--all", self.name)
-        for line in remote_details.split('\n'):
-            yield line
+        """:return: Iterator yielding all configured URL targets on a remote as strings"""
+        try:
+            remote_details = self.repo.git.remote("get-url", "--all", self.name)
+            for line in remote_details.split('\n'):
+                yield line
+        except GitCommandError as ex:
+            ## We are on git < 2.7 (i.e TravisCI as of Oct-2016),
+            #  so `get-utl` command does not exist yet!
+            #    see: https://github.com/gitpython-developers/GitPython/pull/528#issuecomment-252976319
+            #    and: http://stackoverflow.com/a/32991784/548792
+            #
+            if 'Unknown subcommand: get-url' in str(ex):
+                remote_details = self.repo.git.remote("show", self.name)
+                for line in remote_details.split('\n'):
+                    if '  Push  URL:' in line:
+                        yield line.split(': ')[-1]
 
     @property
     def refs(self):
