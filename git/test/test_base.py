@@ -128,7 +128,7 @@ class TestBase(TestBase):
         try:
             file_path.encode(sys.getfilesystemencoding())
         except UnicodeEncodeError:
-            from nose import SkipTest
+            from unittest import SkipTest
             raise SkipTest("Environment doesn't support unicode filenames")
 
         with open(file_path, "wb") as fp:

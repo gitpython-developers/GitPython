@@ -13,7 +13,7 @@ from git import (
     Tree,
     Blob
 )
-from git.test.lib.helper import HIDE_WINDOWS_KNOWN_ERRORS
+from git.util import HIDE_WINDOWS_KNOWN_ERRORS
 from git.test.lib import TestBase
 
 

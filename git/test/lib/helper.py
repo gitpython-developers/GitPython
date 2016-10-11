@@ -31,11 +31,6 @@ __all__ = (
 
 log = logging.getLogger('git.util')
 
-#: We need an easy way to see if Appveyor TCs start failing,
-#: so the errors marked with this var are considered "acknowledged" ones, awaiting remedy,
-#: till then, we wish to hide them.
-HIDE_WINDOWS_KNOWN_ERRORS = is_win and os.environ.get('HIDE_WINDOWS_KNOWN_ERRORS', True)
-
 #{ Routines
 
 
@@ -289,7 +284,7 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
                     You can also run the daemon on a different port by passing --port=<port>"
                     and setting the environment variable GIT_PYTHON_TEST_GIT_DAEMON_PORT to <port>
                     """ % temp_dir)
-                    from nose import SkipTest
+                    from unittest import SkipTest
                     raise SkipTest(msg) if is_win else AssertionError(msg)
                     # END make assertion
                 # END catch ls remote error

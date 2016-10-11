@@ -39,7 +39,7 @@ import os
 import logging
 import uuid
 from unittest.case import SkipTest
-from git.test.lib.helper import HIDE_WINDOWS_KNOWN_ERRORS
+from git.util import HIDE_WINDOWS_KNOWN_ERRORS
 from git.objects.base import IndexObject, Object
 
 __all__ = ["Submodule", "UpdateProgress"]

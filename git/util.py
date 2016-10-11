@@ -17,7 +17,7 @@ import time
 from functools import wraps
 
 from git.compat import is_win
-from gitdb.util import (    # NOQA
+from gitdb.util import (# NOQA
     make_sha,
     LockedFD,               # @UnusedImport
     file_contents_ro,       # @UnusedImport
@@ -44,7 +44,13 @@ from unittest.case import SkipTest
 __all__ = ("stream_copy", "join_path", "to_native_path_windows", "to_native_path_linux",
            "join_path_native", "Stats", "IndexFileSHA1Writer", "Iterable", "IterableList",
            "BlockingLockFile", "LockFile", 'Actor', 'get_user_id', 'assure_directory_exists',
-           'RemoteProgress', 'CallableRemoteProgress', 'rmtree', 'unbare_repo')
+           'RemoteProgress', 'CallableRemoteProgress', 'rmtree', 'unbare_repo',
+           'HIDE_WINDOWS_KNOWN_ERRORS')
+
+#: We need an easy way to see if Appveyor TCs start failing,
+#: so the errors marked with this var are considered "acknowledged" ones, awaiting remedy,
+#: till then, we wish to hide them.
+HIDE_WINDOWS_KNOWN_ERRORS = is_win and os.environ.get('HIDE_WINDOWS_KNOWN_ERRORS', True)
 
 #{ Utility Methods
 
@@ -76,7 +82,6 @@ def rmtree(path):
         try:
             func(path)  # Will scream if still not possible to delete.
         except Exception as ex:
-            from git.test.lib.helper import HIDE_WINDOWS_KNOWN_ERRORS
             if HIDE_WINDOWS_KNOWN_ERRORS:
                 raise SkipTest("FIXME: fails with: PermissionError\n  %s", ex)
             else:

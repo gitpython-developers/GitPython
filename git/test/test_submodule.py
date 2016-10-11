@@ -21,7 +21,7 @@ from git.test.lib import (
     with_rw_repo
 )
 from git.test.lib import with_rw_directory
-from git.test.lib.helper import HIDE_WINDOWS_KNOWN_ERRORS
+from git.util import HIDE_WINDOWS_KNOWN_ERRORS
 from git.util import to_native_path_linux, join_path_native
 
 

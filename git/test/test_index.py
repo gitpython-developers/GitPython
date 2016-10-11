@@ -43,7 +43,7 @@ from git.test.lib import (
     fixture,
     with_rw_repo
 )
-from git.test.lib.helper import HIDE_WINDOWS_KNOWN_ERRORS
+from git.util import HIDE_WINDOWS_KNOWN_ERRORS
 from git.test.lib import with_rw_directory
 from git.util import Actor, rmtree
 from gitdb.base import IStream

@@ -50,11 +50,11 @@ from git.test.lib import (
     assert_true,
     raises
 )
-from git.test.lib.helper import HIDE_WINDOWS_KNOWN_ERRORS
+from git.util import HIDE_WINDOWS_KNOWN_ERRORS
 from git.test.lib import with_rw_directory
 from git.util import join_path_native, rmtree, rmfile
 from gitdb.util import bin_to_hex
-from nose import SkipTest
+from unittest import SkipTest
 
 import functools as fnt
 import os.path as osp

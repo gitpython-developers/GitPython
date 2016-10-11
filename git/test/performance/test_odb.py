@@ -6,7 +6,7 @@ from time import time
 from unittest.case import skipIf
 
 from git.compat import PY3
-from git.test.lib.helper import HIDE_WINDOWS_KNOWN_ERRORS
+from git.util import HIDE_WINDOWS_KNOWN_ERRORS
 
 from .lib import (
     TestBigRepoR
