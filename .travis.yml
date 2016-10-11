@@ -14,6 +14,7 @@ git:
   # as we clone our own repository in the process
   depth: 99999
 install:
+  - python --version; git --version
   - git submodule update --init --recursive
   - git fetch --tags
   - pip install codecov flake8 ddt sphinx
