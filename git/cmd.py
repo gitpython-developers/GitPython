@@ -92,11 +92,16 @@ def handle_process_output(process, stdout_handler, stderr_handler, finalizer, de
     cmdline = getattr(process, 'args', '')  # PY3+ only
     if not isinstance(cmdline, (tuple, list)):
         cmdline = cmdline.split()
+
+    pumps = []
+    if process.stdout:
+        pumps.append(('stdout', process.stdout, stdout_handler))
+    if process.stderr:
+        pumps.append(('stderr', process.stderr, stderr_handler))
+
     threads = []
-    for name, stream, handler in (
-        ('stdout', process.stdout, stdout_handler),
-        ('stderr', process.stderr, stderr_handler),
-    ):
+
+    for name, stream, handler in pumps:
         t = threading.Thread(target=pump_stream,
                              args=(cmdline, name, stream, decode_streams, handler))
         t.setDaemon(True)
