@@ -51,6 +51,7 @@ __all__ = ("stream_copy", "join_path", "to_native_path_windows", "to_native_path
 #: so the errors marked with this var are considered "acknowledged" ones, awaiting remedy,
 #: till then, we wish to hide them.
 HIDE_WINDOWS_KNOWN_ERRORS = is_win and os.environ.get('HIDE_WINDOWS_KNOWN_ERRORS', True)
+HIDE_WINDOWS_FREEZE_ERRORS = is_win and os.environ.get('HIDE_WINDOWS_FREEZE_ERRORS', HIDE_WINDOWS_KNOWN_ERRORS)
 
 #{ Utility Methods
 

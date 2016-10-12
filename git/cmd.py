@@ -539,6 +539,9 @@ class Git(LazyMixin):
                 cmd_not_found_exception = OSError
         # end handle
 
+        stdout_sink = (PIPE
+                       if with_stdout
+                       else getattr(subprocess, 'DEVNULL', open(os.devnull, 'wb')))
         log.debug("Popen(%s, cwd=%s, universal_newlines=%s, shell=%s)",
                   command, cwd, universal_newlines, shell)
         try:
@@ -548,9 +551,9 @@ class Git(LazyMixin):
                          bufsize=-1,
                          stdin=istream,
                          stderr=PIPE,
-                         stdout=PIPE if with_stdout else open(os.devnull, 'wb'),
+                         stdout=stdout_sink,
                          shell=shell is not None and shell or self.USE_SHELL,
-                         close_fds=(is_posix),  # unsupported on windows
+                         close_fds=is_posix,  # unsupported on windows
                          universal_newlines=universal_newlines,
                          creationflags=PROC_CREATIONFLAGS,
                          **subprocess_kwargs
