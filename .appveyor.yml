@@ -52,7 +52,7 @@ install:
         conda info -a &
         conda install --yes --quiet  pip
       )
-    - pip install  nose ddt wheel coveralls
+    - pip install  nose ddt wheel codecov
     -   IF "%PYTHON_VERSION%"=="2.7" (
             pip install mock
         )
@@ -79,7 +79,7 @@ install:
 build: false
 
 test_script:
-    - nosetests -v --with-coverage
+    - IF "%PYTHON_VERSION%"=="3.5" (nosetests -v --with-coverage) ELSE (nosetests -v)
 
-#on_success:
-#    - IF "%PYTHON_VERSION%"=="3.4" (coveralls)
+on_success:
+    - IF "%PYTHON_VERSION%"=="3.5" (codecov)
