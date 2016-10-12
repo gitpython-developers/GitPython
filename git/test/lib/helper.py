@@ -214,7 +214,7 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
     See working dir info in with_rw_repo
     :note: We attempt to launch our own invocation of git-daemon, which will be shutdown at the end of the test.
     """
-    from git import Git, Remote
+    from git import Git, Remote  # To avoid circular deps.
 
     assert isinstance(working_tree_ref, string_types), "Decorator requires ref name for working tree checkout"
 
@@ -250,7 +250,7 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
 
             base_path, rel_repo_dir = osp.split(remote_repo_dir)
 
-            remote_repo_url = "git://localhost:%s/%s" % (GIT_DAEMON_PORT, rel_repo_dir)
+            remote_repo_url = Git.polish_url("git://localhost:%s/%s" % (GIT_DAEMON_PORT, rel_repo_dir))
             with d_remote.config_writer as cw:
                 cw.set('url', remote_repo_url)
 
@@ -342,7 +342,8 @@ class TestBase(TestCase):
 
     def _small_repo_url(self):
         """:return" a path to a small, clonable repository"""
-        return osp.join(self.rorepo.working_tree_dir, 'git/ext/gitdb/gitdb/ext/smmap')
+        from git.cmd import Git
+        return Git.polish_url(osp.join(self.rorepo.working_tree_dir, 'git/ext/gitdb/gitdb/ext/smmap'))
 
     @classmethod
     def setUpClass(cls):

@@ -41,6 +41,7 @@ import uuid
 from unittest.case import SkipTest
 from git.util import HIDE_WINDOWS_KNOWN_ERRORS
 from git.objects.base import IndexObject, Object
+from git.cmd import Git
 
 __all__ = ["Submodule", "UpdateProgress"]
 
@@ -393,6 +394,9 @@ class Submodule(IndexObject, Iterable, Traversable):
             # _clone_repo(cls, repo, url, path, name, **kwargs):
             mrepo = cls._clone_repo(repo, url, path, name, **kwargs)
         # END verify url
+
+        ## See #525 for ensuring git urls in config-files valid under Windows.
+        url = Git.polish_url(url)
 
         # It's important to add the URL to the parent config, to let `git submodule` know.
         # otherwise there is a '-' character in front of the submodule listing
