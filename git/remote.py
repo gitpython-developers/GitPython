@@ -630,25 +630,19 @@ class Remote(LazyMixin, Iterable):
         cmds = set(PushInfo._flag_map.keys()) & set(FetchInfo._flag_map.keys())
 
         progress_handler = progress.new_message_handler()
+        handle_process_output(proc, None, progress_handler, finalizer=None, decode_streams=False)
 
-        stderr_text = None
+        stderr_text = progress.error_lines and '\n'.join(progress.error_lines) or ''
+        proc.wait(stderr=stderr_text)
+        if stderr_text:
+            log.warning("Error lines received while fetching: %s", stderr_text)
 
-        for line in proc.stderr:
+        for line in progress.other_lines:
             line = force_text(line)
-            for pline in progress_handler(line):
-                # END handle special messages
-                for cmd in cmds:
-                    if len(line) > 1 and line[0] == ' ' and line[1] == cmd:
-                        fetch_info_lines.append(line)
-                        continue
-                    # end find command code
-                # end for each comand code we know
-            # end for each line progress didn't handle
-        # end
-        if progress.error_lines():
-            stderr_text = '\n'.join(progress.error_lines())
-
-        finalize_process(proc, stderr=stderr_text)
+            for cmd in cmds:
+                if len(line) > 1 and line[0] == ' ' and line[1] == cmd:
+                    fetch_info_lines.append(line)
+                    continue
 
         # read head information
         with open(join(self.repo.git_dir, 'FETCH_HEAD'), 'rb') as fp:

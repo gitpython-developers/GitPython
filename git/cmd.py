@@ -59,7 +59,8 @@ __all__ = ('Git',)
 # Documentation
 ## @{
 
-def handle_process_output(process, stdout_handler, stderr_handler, finalizer, decode_streams=True):
+def handle_process_output(process, stdout_handler, stderr_handler,
+                          finalizer=None, decode_streams=True):
     """Registers for notifications to lean that process output is ready to read, and dispatches lines to
     the respective line handlers.
     This function returns once the finalizer returns
@@ -108,10 +109,13 @@ def handle_process_output(process, stdout_handler, stderr_handler, finalizer, de
         t.start()
         threads.append(t)
 
+    ## FIXME: Why Join??  Will block if `stdin` needs feeding...
+    #
     for t in threads:
         t.join()
 
-    return finalizer(process)
+    if finalizer:
+        return finalizer(process)
 
 
 def dashify(string):
