@@ -15,7 +15,7 @@ import time
 from unittest import TestCase
 
 from git.compat import string_types, is_win
-from git.util import rmtree, HIDE_WINDOWS_KNOWN_ERRORS
+from git.util import rmtree
 
 import os.path as osp
 
@@ -214,7 +214,7 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
     See working dir info in with_rw_repo
     :note: We attempt to launch our own invocation of git-daemon, which will be shutdown at the end of the test.
     """
-    from git import Git, Remote, GitCommandError
+    from git import Git, Remote
 
     assert isinstance(working_tree_ref, string_types), "Decorator requires ref name for working tree checkout"
 
@@ -273,37 +273,8 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
                 raise AssertionError(ex, msg)
                 # END make assertion
             else:
-                # try to list remotes to diagnoes whether the server is up
-                try:
-                    rw_repo.git.ls_remote(d_remote)
-                except GitCommandError as e:
-                    # We assume in good faith that we didn't start the daemon - but make sure we kill it anyway
-                    # Of course we expect it to work here already, but maybe there are timing constraints
-                    # on some platforms ?
-                    try:
-                        gd.proc.terminate()
-                    except Exception as ex:
-                        log.debug("Ignoring %r while terminating proc after %r.", ex, e)
-                    log.warning('git(%s) ls-remote failed due to:%s',
-                                rw_repo.git_dir, e)
-                    if is_win:
-                        msg = textwrap.dedent("""
-                        MINGW yet has problems with paths, and `git-daemon.exe` must be in PATH
-                        (look into .\Git\mingw64\libexec\git-core\);
-                        CYGWIN has no daemon, but if one exists, it gets along fine (has also paths problems)
-                        Anyhow, alternatively try starting `git-daemon` manually:""")
-                    else:
-                        msg = "Please try starting `git-daemon` manually:"
-
-                    msg += textwrap.dedent("""
-                        git daemon --enable=receive-pack '%s'
-                    You can also run the daemon on a different port by passing --port=<port>"
-                    and setting the environment variable GIT_PYTHON_TEST_GIT_DAEMON_PORT to <port>
-                    """ % base_path)
-                    from unittest import SkipTest
-                    raise SkipTest(msg) if HIDE_WINDOWS_KNOWN_ERRORS else AssertionError(e, msg)
-                    # END make assertion
-                # END catch ls remote error
+                # Try listing remotes, to diagnose whether the daemon is up.
+                rw_repo.git.ls_remote(d_remote)
 
                 # adjust working dir
                 prev_cwd = os.getcwd()
@@ -321,6 +292,7 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
 
             finally:
                 try:
+                    log.debug("Killing git-daemon...")
                     gd.proc.kill()
                 except:
                     ## Either it has died (and we're here), or it won't die, again here...
