@@ -27,7 +27,6 @@ from git.util import (
 )
 from git.util import (
     join_path,
-    finalize_process
 )
 from git.cmd import handle_process_output, Git
 from gitdb.util import join
@@ -681,16 +680,19 @@ class Remote(LazyMixin, Iterable):
             try:
                 output.append(PushInfo._from_line(self, line))
             except ValueError:
-                # if an error happens, additional info is given which we cannot parse
+                # If an error happens, additional info is given which we parse below.
                 pass
-            # END exception handling
-        # END for each line
 
+        handle_process_output(proc, stdout_handler, progress_handler, finalizer=None, decode_streams=False)
+        stderr_text = progress.error_lines and '\n'.join(progress.error_lines) or ''
         try:
-            handle_process_output(proc, stdout_handler, progress_handler, finalize_process, decode_streams=False)
+            proc.wait(stderr=stderr_text)
         except Exception:
-            if len(output) == 0:
+            if not output:
                 raise
+            elif stderr_text:
+                log.warning("Error lines received while fetching: %s", stderr_text)
+
         return output
 
     def _assert_refspec(self):

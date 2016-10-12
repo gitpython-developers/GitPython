@@ -17,7 +17,7 @@ import time
 from functools import wraps
 
 from git.compat import is_win
-from gitdb.util import (# NOQA
+from gitdb.util import (# NOQA @IgnorePep8
     make_sha,
     LockedFD,               # @UnusedImport
     file_contents_ro,       # @UnusedImport

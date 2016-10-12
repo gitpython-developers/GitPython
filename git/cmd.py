@@ -247,7 +247,7 @@ class Git(LazyMixin):
         def __getattr__(self, attr):
             return getattr(self.proc, attr)
 
-        def wait(self, stderr=b''):
+        def wait(self, stderr=b''):  # TODO: Bad choice to mimic `proc.wait()` but with different args.
             """Wait for the process and return its status code.
 
             :param stderr: Previously read value of stderr, in case stderr is already closed.
