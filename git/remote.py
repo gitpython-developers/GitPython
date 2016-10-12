@@ -511,6 +511,8 @@ class Remote(LazyMixin, Iterable):
                 for line in remote_details.split('\n'):
                     if '  Push  URL:' in line:
                         yield line.split(': ')[-1]
+            else:
+                raise ex
 
     @property
     def refs(self):
