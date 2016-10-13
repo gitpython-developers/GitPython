@@ -4,39 +4,11 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
-from git.exc import (
-    InvalidGitRepositoryError,
-    NoSuchPathError,
-    GitCommandError
-)
-from git.cmd import (
-    Git,
-    handle_process_output
-)
-from git.refs import (
-    HEAD,
-    Head,
-    Reference,
-    TagReference,
-)
-from git.objects import (
-    Submodule,
-    RootModule,
-    Commit
-)
-from git.util import (
-    Actor,
-    finalize_process
-)
-from git.index import IndexFile
-from git.config import GitConfigParser
-from git.remote import (
-    Remote,
-    add_progress,
-    to_progress_instance
-)
-
-from git.db import GitCmdObjectDB
+from collections import namedtuple
+import logging
+import os
+import re
+import sys
 
 from gitdb.util import (
     join,
@@ -44,11 +16,9 @@ from gitdb.util import (
     hex_to_bin
 )
 
-from .fun import (
-    rev_parse,
-    is_git_dir,
-    find_git_dir,
-    touch,
+from git.cmd import (
+    Git,
+    handle_process_output
 )
 from git.compat import (
     text_type,
@@ -58,12 +28,17 @@ from git.compat import (
     range,
     is_win,
 )
+from git.config import GitConfigParser
+from git.db import GitCmdObjectDB
+from git.exc import InvalidGitRepositoryError, NoSuchPathError, GitCommandError
+from git.index import IndexFile
+from git.objects import Submodule, RootModule, Commit
+from git.refs import HEAD, Head, Reference, TagReference
+from git.remote import Remote, add_progress, to_progress_instance
+from git.util import Actor, finalize_process
 
-import os
-import sys
-import re
-import logging
-from collections import namedtuple
+from .fun import rev_parse, is_git_dir, find_git_dir, touch
+
 
 log = logging.getLogger(__name__)
 
@@ -875,12 +850,22 @@ class Repo(object):
             progress = to_progress_instance(progress)
 
         odbt = kwargs.pop('odbt', odb_default_type)
-        proc = git.clone(url, path, with_extended_output=True, as_process=True,
+
+        ## A bug win cygwin's Git, when `--bare`
+        #  it prepends the basename of the `url` into the `path::
+        #        git clone --bare  /cygwin/a/foo.git  C:\\Work
+        #  becomes::
+        #        git clone --bare  /cygwin/a/foo.git  /cygwin/a/C:\\Work
+        #
+        clone_path = (Git.polish_url(path)
+                      if Git.is_cygwin() and 'bare' in kwargs
+                      else path)
+        proc = git.clone(Git.polish_url(url), clone_path, with_extended_output=True, as_process=True,
                          v=True, **add_progress(kwargs, git, progress))
         if progress:
             handle_process_output(proc, None, progress.new_message_handler(), finalize_process)
         else:
-            (stdout, stderr) = proc.communicate()  # FIXME: Will block of outputs are big!
+            (stdout, stderr) = proc.communicate()  # FIXME: Will block if outputs are big!
             log.debug("Cmd(%s)'s unused stdout: %s", getattr(proc, 'args', ''), stdout)
             finalize_process(proc, stderr=stderr)
 

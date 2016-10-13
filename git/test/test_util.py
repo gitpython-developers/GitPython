@@ -5,7 +5,19 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
 import tempfile
+import time
+from unittest.case import skipIf
 
+import ddt
+
+from git.cmd import dashify
+from git.compat import string_types, is_win
+from git.objects.util import (
+    altz_to_utctz_str,
+    utctz_to_altz,
+    verify_utctz,
+    parse_date,
+)
 from git.test.lib import (
     TestBase,
     assert_equal
@@ -15,19 +27,9 @@ from git.util import (
     BlockingLockFile,
     get_user_id,
     Actor,
-    IterableList
+    IterableList,
+    cygpath,
 )
-from git.objects.util import (
-    altz_to_utctz_str,
-    utctz_to_altz,
-    verify_utctz,
-    parse_date,
-)
-from git.cmd import dashify
-from git.compat import string_types, is_win
-
-import time
-import ddt
 
 
 class TestIterableMember(object):
@@ -51,6 +53,47 @@ class TestUtils(TestBase):
             "int": 42,
             "array": [42],
         }
+
+    @skipIf(not is_win, "Paths specifically for Windows.")
+    @ddt.data(
+        (r'foo\bar', 'foo/bar'),
+        (r'foo/bar', 'foo/bar'),
+        (r'./bar', 'bar'),
+        (r'.\bar', 'bar'),
+        (r'../bar', '../bar'),
+        (r'..\bar', '../bar'),
+        (r'../bar/.\foo/../chu', '../bar/chu'),
+
+        (r'C:\Users', '/cygdrive/c/Users'),
+        (r'C:\d/e', '/cygdrive/c/d/e'),
+
+        (r'\\?\a:\com', '/cygdrive/a/com'),
+        (r'\\?\a:/com', '/cygdrive/a/com'),
+
+        (r'\\server\C$\Users', '//server/C$/Users'),
+        (r'\\server\C$', '//server/C$'),
+        (r'\\server\BAR/', '//server/BAR/'),
+        (r'\\?\UNC\server\D$\Apps', '//server/D$/Apps'),
+
+        (r'D:/Apps', '/cygdrive/d/Apps'),
+        (r'D:/Apps\fOO', '/cygdrive/d/Apps/fOO'),
+        (r'D:\Apps/123', '/cygdrive/d/Apps/123'),
+    )
+    def test_cygpath_ok(self, case):
+        wpath, cpath = case
+        self.assertEqual(cygpath(wpath), cpath or wpath)
+
+    @skipIf(not is_win, "Paths specifically for Windows.")
+    @ddt.data(
+        (r'C:Relative', None),
+        (r'D:Apps\123', None),
+        (r'D:Apps/123', None),
+        (r'\\?\a:rel', None),
+        (r'\\share\a:rel', None),
+    )
+    def test_cygpath_invalids(self, case):
+        wpath, cpath = case
+        self.assertEqual(cygpath(wpath), cpath or wpath.replace('\\', '/'))
 
     def test_it_should_dashify(self):
         assert_equal('this-is-my-argument', dashify('this_is_my_argument'))

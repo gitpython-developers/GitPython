@@ -32,7 +32,7 @@ __all__ = (
     'GIT_REPO', 'GIT_DAEMON_PORT'
 )
 
-log = logging.getLogger('git.util')
+log = logging.getLogger(__name__)
 
 #{ Routines
 
