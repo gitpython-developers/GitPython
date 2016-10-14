@@ -705,7 +705,7 @@ class TestSubmodule(TestBase):
         fp = osp.join(smm.working_tree_dir, 'empty-file')
         with open(fp, 'w'):
             pass
-        smm.git.add(fp)
+        smm.git.add(Git.polish_url(fp))
         smm.git.commit(m="new file added")
 
         # submodules are retrieved from the current commit's tree, therefore we can't really get a new submodule

@@ -264,6 +264,7 @@ _cygpath_parsers = (
 
 
 def cygpath(path):
+    """Use :meth:`git.cmd.Git.polish_url()` instead, that works on any environment."""
     if not path.startswith(('/cygdrive', '//')):
         for regex, parser, recurse in _cygpath_parsers:
             match = regex.match(path)

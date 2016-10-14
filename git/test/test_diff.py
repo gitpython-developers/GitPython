@@ -25,6 +25,7 @@ from git import (
     NULL_TREE,
 )
 import ddt
+from git.cmd import Git
 
 
 @ddt.ddt
@@ -56,7 +57,7 @@ class TestDiff(TestBase):
         fp = os.path.join(rw_dir, 'hello.txt')
         with open(fp, 'w') as fs:
             fs.write("hello world")
-        r.git.add(fp)
+        r.git.add(Git.polish_url(fp))
         r.git.commit(message="init")
 
         with open(fp, 'w') as fs:
