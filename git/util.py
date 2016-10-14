@@ -222,7 +222,7 @@ def _cygexpath(drive, path):
         #  It's an error, leave it alone just slashes)
         p = path
     else:
-        p = osp.normpath(osp.expandvars(os.path.expanduser(path)))
+        p = path and osp.normpath(osp.expandvars(os.path.expanduser(path)))
         if osp.isabs(p):
             if drive:
                 # Confusing, maybe a remote system should expand vars.
@@ -276,6 +276,18 @@ def cygpath(path):
             path = _cygexpath(None, path)
 
     return path
+
+
+_decygpath_regex = re.compile(r"/cygdrive/(\w)(/.*)?")
+
+
+def decygpath(path):
+    m = _decygpath_regex.match(path)
+    if m:
+        drive, rest_path = m.groups()
+        path = '%s:%s' % (drive.upper(), rest_path or '')
+
+    return path.replace('/', '\\')
 
 
 #: Store boolean flags denoting if a specific Git executable

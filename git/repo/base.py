@@ -35,7 +35,7 @@ from git.index import IndexFile
 from git.objects import Submodule, RootModule, Commit
 from git.refs import HEAD, Head, Reference, TagReference
 from git.remote import Remote, add_progress, to_progress_instance
-from git.util import Actor, finalize_process
+from git.util import Actor, finalize_process, decygpath
 
 from .fun import rev_parse, is_git_dir, find_git_dir, touch
 
@@ -99,6 +99,8 @@ class Repo(object):
                 repo = Repo("~/Development/git-python.git")
                 repo = Repo("$REPOSITORIES/Development/git-python.git")
 
+            In *Cygwin*, path may be a `'cygdrive/...'` prefixed path.
+            
         :param odbt:
             Object DataBase type - a type which is constructed by providing
             the directory containing the database objects, i.e. .git/objects. It will
@@ -111,6 +113,9 @@ class Repo(object):
         :raise InvalidGitRepositoryError:
         :raise NoSuchPathError:
         :return: git.Repo """
+        if path and Git.is_cygwin():
+            path = decygpath(path)
+
         epath = _expand_path(path or os.getcwd())
         self.git = None  # should be set for __del__ not to fail in case we raise
         if not os.path.exists(epath):

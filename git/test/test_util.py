@@ -29,6 +29,34 @@ from git.util import (
     Actor,
     IterableList,
     cygpath,
+    decygpath
+)
+
+
+_norm_cygpath_pairs = (
+    (r'foo\bar', 'foo/bar'),
+    (r'foo/bar', 'foo/bar'),
+
+    (r'C:\Users', '/cygdrive/c/Users'),
+    (r'C:\d/e', '/cygdrive/c/d/e'),
+
+    ('C:\\', '/cygdrive/c/'),
+
+    (r'\\server\C$\Users', '//server/C$/Users'),
+    (r'\\server\C$', '//server/C$'),
+    ('\\\\server\\c$\\', '//server/c$/'),
+    (r'\\server\BAR/', '//server/BAR/'),
+
+    (r'D:/Apps', '/cygdrive/d/Apps'),
+    (r'D:/Apps\fOO', '/cygdrive/d/Apps/fOO'),
+    (r'D:\Apps/123', '/cygdrive/d/Apps/123'),
+)
+
+_unc_cygpath_pairs = (
+    (r'\\?\a:\com', '/cygdrive/a/com'),
+    (r'\\?\a:/com', '/cygdrive/a/com'),
+
+    (r'\\?\UNC\server\D$\Apps', '//server/D$/Apps'),
 )
 
 
@@ -55,45 +83,44 @@ class TestUtils(TestBase):
         }
 
     @skipIf(not is_win, "Paths specifically for Windows.")
+    @ddt.idata(_norm_cygpath_pairs + _unc_cygpath_pairs)
+    def test_cygpath_ok(self, case):
+        wpath, cpath = case
+        cwpath = cygpath(wpath)
+        self.assertEqual(cwpath, cpath, wpath)
+
+    @skipIf(not is_win, "Paths specifically for Windows.")
     @ddt.data(
-        (r'foo\bar', 'foo/bar'),
-        (r'foo/bar', 'foo/bar'),
         (r'./bar', 'bar'),
         (r'.\bar', 'bar'),
         (r'../bar', '../bar'),
         (r'..\bar', '../bar'),
         (r'../bar/.\foo/../chu', '../bar/chu'),
-
-        (r'C:\Users', '/cygdrive/c/Users'),
-        (r'C:\d/e', '/cygdrive/c/d/e'),
-
-        (r'\\?\a:\com', '/cygdrive/a/com'),
-        (r'\\?\a:/com', '/cygdrive/a/com'),
-
-        (r'\\server\C$\Users', '//server/C$/Users'),
-        (r'\\server\C$', '//server/C$'),
-        (r'\\server\BAR/', '//server/BAR/'),
-        (r'\\?\UNC\server\D$\Apps', '//server/D$/Apps'),
-
-        (r'D:/Apps', '/cygdrive/d/Apps'),
-        (r'D:/Apps\fOO', '/cygdrive/d/Apps/fOO'),
-        (r'D:\Apps/123', '/cygdrive/d/Apps/123'),
     )
-    def test_cygpath_ok(self, case):
+    def test_cygpath_norm_ok(self, case):
         wpath, cpath = case
-        self.assertEqual(cygpath(wpath), cpath or wpath)
+        cwpath = cygpath(wpath)
+        self.assertEqual(cwpath, cpath or wpath, wpath)
 
     @skipIf(not is_win, "Paths specifically for Windows.")
     @ddt.data(
-        (r'C:Relative', None),
-        (r'D:Apps\123', None),
-        (r'D:Apps/123', None),
-        (r'\\?\a:rel', None),
-        (r'\\share\a:rel', None),
+        r'C:',
+        r'C:Relative',
+        r'D:Apps\123',
+        r'D:Apps/123',
+        r'\\?\a:rel',
+        r'\\share\a:rel',
     )
-    def test_cygpath_invalids(self, case):
+    def test_cygpath_invalids(self, wpath):
+        cwpath = cygpath(wpath)
+        self.assertEqual(cwpath, wpath.replace('\\', '/'), wpath)
+
+    @skipIf(not is_win, "Paths specifically for Windows.")
+    @ddt.idata(_norm_cygpath_pairs)
+    def test_decygpath(self, case):
         wpath, cpath = case
-        self.assertEqual(cygpath(wpath), cpath or wpath.replace('\\', '/'))
+        wcpath = decygpath(cpath)
+        self.assertEqual(wcpath, wpath.replace('/', '\\'), cpath)
 
     def test_it_should_dashify(self):
         assert_equal('this-is-my-argument', dashify('this_is_my_argument'))

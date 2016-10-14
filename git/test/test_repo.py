@@ -50,7 +50,7 @@ from git.test.lib import (
     assert_true,
     raises
 )
-from git.util import HIDE_WINDOWS_KNOWN_ERRORS
+from git.util import HIDE_WINDOWS_KNOWN_ERRORS, cygpath
 from git.test.lib import with_rw_directory
 from git.util import join_path_native, rmtree, rmfile
 from gitdb.util import bin_to_hex
@@ -913,6 +913,8 @@ class TestRepo(TestBase):
         rw_master = self.rorepo.clone(join_path_native(rw_dir, 'master_repo'))
         rw_master.git.checkout('HEAD~10')
         worktree_path = join_path_native(rw_dir, 'worktree_repo')
+        if Git.is_cygwin():
+            worktree_path = cygpath(worktree_path)
         try:
             rw_master.git.worktree('add', worktree_path, 'master')
         except Exception as ex:
