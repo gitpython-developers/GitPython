@@ -649,10 +649,7 @@ class Git(LazyMixin):
         # END handle debug printing
 
         if with_exceptions and status != 0:
-            if with_extended_output:
-                raise GitCommandError(command, status, stderr_value, stdout_value)
-            else:
-                raise GitCommandError(command, status, stderr_value)
+            raise GitCommandError(command, status, stderr_value, stdout_value)
 
         if isinstance(stdout_value, bytes) and stdout_as_string:  # could also be output_stream
             stdout_value = safe_decode(stdout_value)
