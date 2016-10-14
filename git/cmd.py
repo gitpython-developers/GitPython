@@ -42,12 +42,12 @@ from .util import (
 )
 
 
-execute_kwargs = set(('istream', 'with_keep_cwd', 'with_extended_output',
+execute_kwargs = set(('istream', 'with_extended_output',
                       'with_exceptions', 'as_process', 'stdout_as_string',
                       'output_stream', 'with_stdout', 'kill_after_timeout',
                       'universal_newlines', 'shell'))
 
-log = logging.getLogger('git.cmd')
+log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
 
 __all__ = ('Git',)
@@ -59,7 +59,8 @@ __all__ = ('Git',)
 # Documentation
 ## @{
 
-def handle_process_output(process, stdout_handler, stderr_handler, finalizer, decode_streams=True):
+def handle_process_output(process, stdout_handler, stderr_handler,
+                          finalizer=None, decode_streams=True):
     """Registers for notifications to lean that process output is ready to read, and dispatches lines to
     the respective line handlers.
     This function returns once the finalizer returns
@@ -108,10 +109,13 @@ def handle_process_output(process, stdout_handler, stderr_handler, finalizer, de
         t.start()
         threads.append(t)
 
+    ## FIXME: Why Join??  Will block if `stdin` needs feeding...
+    #
     for t in threads:
         t.join()
 
-    return finalizer(process)
+    if finalizer:
+        return finalizer(process)
 
 
 def dashify(string):
@@ -186,14 +190,18 @@ class Git(LazyMixin):
     # Override this value using `Git.USE_SHELL = True`
     USE_SHELL = False
 
-    class AutoInterrupt(object):
+    @classmethod
+    def polish_url(cls, url):
+        return url.replace("\\\\", "\\").replace("\\", "/")
 
+    class AutoInterrupt(object):
         """Kill/Interrupt the stored process instance once this instance goes out of scope. It is
         used to prevent processes piling up in case iterators stop reading.
         Besides all attributes are wired through to the contained process object.
 
         The wait method was overridden to perform automatic status code checking
         and possibly raise."""
+
         __slots__ = ("proc", "args")
 
         def __init__(self, proc, args):
@@ -239,7 +247,7 @@ class Git(LazyMixin):
         def __getattr__(self, attr):
             return getattr(self.proc, attr)
 
-        def wait(self, stderr=b''):
+        def wait(self, stderr=b''):  # TODO: Bad choice to mimic `proc.wait()` but with different args.
             """Wait for the process and return its status code.
 
             :param stderr: Previously read value of stderr, in case stderr is already closed.
@@ -418,7 +426,6 @@ class Git(LazyMixin):
 
     def execute(self, command,
                 istream=None,
-                with_keep_cwd=False,
                 with_extended_output=False,
                 with_exceptions=True,
                 as_process=False,
@@ -440,11 +447,6 @@ class Git(LazyMixin):
 
         :param istream:
             Standard input filehandle passed to subprocess.Popen.
-
-        :param with_keep_cwd:
-            Whether to use the current working directory from os.getcwd().
-            The cmd otherwise uses its own working_dir that it has been initialized
-            with if possible.
 
         :param with_extended_output:
             Whether to return a (status, stdout, stderr) tuple.
@@ -518,10 +520,7 @@ class Git(LazyMixin):
             log.info(' '.join(command))
 
         # Allow the user to have the command executed in their working dir.
-        if with_keep_cwd or self._working_dir is None:
-            cwd = os.getcwd()
-        else:
-            cwd = self._working_dir
+        cwd = self._working_dir or os.getcwd()
 
         # Start the process
         env = os.environ.copy()
@@ -544,6 +543,9 @@ class Git(LazyMixin):
                 cmd_not_found_exception = OSError
         # end handle
 
+        stdout_sink = (PIPE
+                       if with_stdout
+                       else getattr(subprocess, 'DEVNULL', open(os.devnull, 'wb')))
         log.debug("Popen(%s, cwd=%s, universal_newlines=%s, shell=%s)",
                   command, cwd, universal_newlines, shell)
         try:
@@ -553,9 +555,9 @@ class Git(LazyMixin):
                          bufsize=-1,
                          stdin=istream,
                          stderr=PIPE,
-                         stdout=PIPE if with_stdout else open(os.devnull, 'wb'),
+                         stdout=stdout_sink,
                          shell=shell is not None and shell or self.USE_SHELL,
-                         close_fds=(is_posix),  # unsupported on windows
+                         close_fds=is_posix,  # unsupported on windows
                          universal_newlines=universal_newlines,
                          creationflags=PROC_CREATIONFLAGS,
                          **subprocess_kwargs
@@ -647,10 +649,7 @@ class Git(LazyMixin):
         # END handle debug printing
 
         if with_exceptions and status != 0:
-            if with_extended_output:
-                raise GitCommandError(command, status, stderr_value, stdout_value)
-            else:
-                raise GitCommandError(command, status, stderr_value)
+            raise GitCommandError(command, status, stderr_value, stdout_value)
 
         if isinstance(stdout_value, bytes) and stdout_as_string:  # could also be output_stream
             stdout_value = safe_decode(stdout_value)

@@ -27,9 +27,8 @@ from git.util import (
 )
 from git.util import (
     join_path,
-    finalize_process
 )
-from git.cmd import handle_process_output
+from git.cmd import handle_process_output, Git
 from gitdb.util import join
 from git.compat import (defenc, force_text, is_win)
 import logging
@@ -570,7 +569,7 @@ class Remote(LazyMixin, Iterable):
         :raise GitCommandError: in case an origin with that name already exists"""
         scmd = 'add'
         kwargs['insert_kwargs_after'] = scmd
-        repo.git.remote(scmd, name, url, **kwargs)
+        repo.git.remote(scmd, name, Git.polish_url(url), **kwargs)
         return cls(repo, name)
 
     # add is an alias
@@ -630,25 +629,19 @@ class Remote(LazyMixin, Iterable):
         cmds = set(PushInfo._flag_map.keys()) & set(FetchInfo._flag_map.keys())
 
         progress_handler = progress.new_message_handler()
+        handle_process_output(proc, None, progress_handler, finalizer=None, decode_streams=False)
 
-        stderr_text = None
+        stderr_text = progress.error_lines and '\n'.join(progress.error_lines) or ''
+        proc.wait(stderr=stderr_text)
+        if stderr_text:
+            log.warning("Error lines received while fetching: %s", stderr_text)
 
-        for line in proc.stderr:
+        for line in progress.other_lines:
             line = force_text(line)
-            for pline in progress_handler(line):
-                # END handle special messages
-                for cmd in cmds:
-                    if len(line) > 1 and line[0] == ' ' and line[1] == cmd:
-                        fetch_info_lines.append(line)
-                        continue
-                    # end find command code
-                # end for each comand code we know
-            # end for each line progress didn't handle
-        # end
-        if progress.error_lines():
-            stderr_text = '\n'.join(progress.error_lines())
-
-        finalize_process(proc, stderr=stderr_text)
+            for cmd in cmds:
+                if len(line) > 1 and line[0] == ' ' and line[1] == cmd:
+                    fetch_info_lines.append(line)
+                    continue
 
         # read head information
         with open(join(self.repo.git_dir, 'FETCH_HEAD'), 'rb') as fp:
@@ -687,16 +680,19 @@ class Remote(LazyMixin, Iterable):
             try:
                 output.append(PushInfo._from_line(self, line))
             except ValueError:
-                # if an error happens, additional info is given which we cannot parse
+                # If an error happens, additional info is given which we parse below.
                 pass
-            # END exception handling
-        # END for each line
 
+        handle_process_output(proc, stdout_handler, progress_handler, finalizer=None, decode_streams=False)
+        stderr_text = progress.error_lines and '\n'.join(progress.error_lines) or ''
         try:
-            handle_process_output(proc, stdout_handler, progress_handler, finalize_process, decode_streams=False)
+            proc.wait(stderr=stderr_text)
         except Exception:
-            if len(output) == 0:
+            if not output:
                 raise
+            elif stderr_text:
+                log.warning("Error lines received while fetching: %s", stderr_text)
+
         return output
 
     def _assert_refspec(self):

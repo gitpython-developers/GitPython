@@ -4,14 +4,10 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
-from git.test.lib import (
-    TestBase,
-    with_rw_repo,
-    with_rw_and_rw_remote_repo,
-    fixture,
-    GIT_DAEMON_PORT,
-    assert_raises
-)
+import random
+import tempfile
+from unittest.case import skipIf
+
 from git import (
     RemoteProgress,
     FetchInfo,
@@ -25,11 +21,19 @@ from git import (
     Remote,
     GitCommandError
 )
-from git.util import IterableList, rmtree
+from git.cmd import Git
 from git.compat import string_types
-import tempfile
-import os
-import random
+from git.test.lib import (
+    TestBase,
+    with_rw_repo,
+    with_rw_and_rw_remote_repo,
+    fixture,
+    GIT_DAEMON_PORT,
+    assert_raises
+)
+from git.util import IterableList, rmtree, HIDE_WINDOWS_FREEZE_ERRORS
+import os.path as osp
+
 
 # assure we have repeatable results
 random.seed(0)
@@ -86,7 +90,7 @@ class TestRemoteProgress(RemoteProgress):
             return
 
         # sometimes objects are not compressed which is okay
-        assert len(self._seen_ops) in (2, 3)
+        assert len(self._seen_ops) in (2, 3), len(self._seen_ops)
         assert self._stages_per_op
 
         # must have seen all stages
@@ -105,45 +109,47 @@ class TestRemote(TestBase):
         gc.collect()
 
     def _print_fetchhead(self, repo):
-        with open(os.path.join(repo.git_dir, "FETCH_HEAD")):
+        with open(osp.join(repo.git_dir, "FETCH_HEAD")):
             pass
 
     def _do_test_fetch_result(self, results, remote):
         # self._print_fetchhead(remote.repo)
-        assert len(results) > 0 and isinstance(results[0], FetchInfo)
+        self.assertGreater(len(results), 0)
+        self.assertIsInstance(results[0], FetchInfo)
         for info in results:
-            assert isinstance(info.note, string_types)
+            self.assertIsInstance(info.note, string_types)
             if isinstance(info.ref, Reference):
-                assert info.flags != 0
+                self.assertTrue(info.flags)
             # END reference type flags handling
-            assert isinstance(info.ref, (SymbolicReference, Reference))
+            self.assertIsInstance(info.ref, (SymbolicReference, Reference))
             if info.flags & (info.FORCED_UPDATE | info.FAST_FORWARD):
-                assert isinstance(info.old_commit, Commit)
+                self.assertIsInstance(info.old_commit, Commit)
             else:
-                assert info.old_commit is None
+                self.assertIsNone(info.old_commit)
             # END forced update checking
         # END for each info
 
     def _do_test_push_result(self, results, remote):
-        assert len(results) > 0 and isinstance(results[0], PushInfo)
+        self.assertGreater(len(results), 0)
+        self.assertIsInstance(results[0], PushInfo)
         for info in results:
-            assert info.flags
-            assert isinstance(info.summary, string_types)
+            self.assertTrue(info.flags)
+            self.assertIsInstance(info.summary, string_types)
             if info.old_commit is not None:
-                assert isinstance(info.old_commit, Commit)
+                self.assertIsInstance(info.old_commit, Commit)
             if info.flags & info.ERROR:
                 has_one = False
                 for bitflag in (info.REJECTED, info.REMOTE_REJECTED, info.REMOTE_FAILURE):
                     has_one |= bool(info.flags & bitflag)
                 # END for each bitflag
-                assert has_one
+                self.assertTrue(has_one)
             else:
                 # there must be a remote commit
                 if info.flags & info.DELETED == 0:
-                    assert isinstance(info.local_ref, Reference)
+                    self.assertIsInstance(info.local_ref, Reference)
                 else:
-                    assert info.local_ref is None
-                assert type(info.remote_ref) in (TagReference, RemoteReference)
+                    self.assertIsNone(info.local_ref)
+                self.assertIn(type(info.remote_ref), (TagReference, RemoteReference))
             # END error checking
         # END for each info
 
@@ -156,7 +162,7 @@ class TestRemote(TestBase):
         # Create a file with a random name and random data and commit it to  repo.
         # Return the commited absolute file path
         index = repo.index
-        new_file = self._make_file(os.path.basename(tempfile.mktemp()), str(random.random()), repo)
+        new_file = self._make_file(osp.basename(tempfile.mktemp()), str(random.random()), repo)
         index.add([new_file])
         index.commit("Committing %s" % new_file)
         return new_file
@@ -183,7 +189,7 @@ class TestRemote(TestBase):
         res = fetch_and_test(remote)
         # all up to date
         for info in res:
-            assert info.flags & info.HEAD_UPTODATE
+            self.assertTrue(info.flags & info.HEAD_UPTODATE)
 
         # rewind remote head to trigger rejection
         # index must be false as remote is a bare repo
@@ -193,24 +199,25 @@ class TestRemote(TestBase):
         res = fetch_and_test(remote)
         mkey = "%s/%s" % (remote, 'master')
         master_info = res[mkey]
-        assert master_info.flags & FetchInfo.FORCED_UPDATE and master_info.note is not None
+        self.assertTrue(master_info.flags & FetchInfo.FORCED_UPDATE)
+        self.assertIsNotNone(master_info.note)
 
         # normal fast forward - set head back to previous one
         rhead.commit = remote_commit
         res = fetch_and_test(remote)
-        assert res[mkey].flags & FetchInfo.FAST_FORWARD
+        self.assertTrue(res[mkey].flags & FetchInfo.FAST_FORWARD)
 
         # new remote branch
         new_remote_branch = Head.create(remote_repo, "new_branch")
         res = fetch_and_test(remote)
         new_branch_info = get_info(res, remote, new_remote_branch)
-        assert new_branch_info.flags & FetchInfo.NEW_HEAD
+        self.assertTrue(new_branch_info.flags & FetchInfo.NEW_HEAD)
 
         # remote branch rename ( causes creation of a new one locally )
         new_remote_branch.rename("other_branch_name")
         res = fetch_and_test(remote)
         other_branch_info = get_info(res, remote, new_remote_branch)
-        assert other_branch_info.ref.commit == new_branch_info.ref.commit
+        self.assertEqual(other_branch_info.ref.commit, new_branch_info.ref.commit)
 
         # remove new branch
         Head.delete(new_remote_branch.repo, new_remote_branch)
@@ -220,35 +227,38 @@ class TestRemote(TestBase):
 
         # prune stale tracking branches
         stale_refs = remote.stale_refs
-        assert len(stale_refs) == 2 and isinstance(stale_refs[0], RemoteReference)
+        self.assertEqual(len(stale_refs), 2)
+        self.assertIsInstance(stale_refs[0], RemoteReference)
         RemoteReference.delete(rw_repo, *stale_refs)
 
         # test single branch fetch with refspec including target remote
         res = fetch_and_test(remote, refspec="master:refs/remotes/%s/master" % remote)
-        assert len(res) == 1 and get_info(res, remote, 'master')
+        self.assertEqual(len(res), 1)
+        self.assertTrue(get_info(res, remote, 'master'))
 
         # ... with respec and no target
         res = fetch_and_test(remote, refspec='master')
-        assert len(res) == 1
+        self.assertEqual(len(res), 1)
 
         # ... multiple refspecs ... works, but git command returns with error if one ref is wrong without
         # doing anything. This is new in  later binaries
         # res = fetch_and_test(remote, refspec=['master', 'fred'])
-        # assert len(res) == 1
+        # self.assertEqual(len(res), 1)
 
         # add new tag reference
         rtag = TagReference.create(remote_repo, "1.0-RV_hello.there")
         res = fetch_and_test(remote, tags=True)
         tinfo = res[str(rtag)]
-        assert isinstance(tinfo.ref, TagReference) and tinfo.ref.commit == rtag.commit
-        assert tinfo.flags & tinfo.NEW_TAG
+        self.assertIsInstance(tinfo.ref, TagReference)
+        self.assertEqual(tinfo.ref.commit, rtag.commit)
+        self.assertTrue(tinfo.flags & tinfo.NEW_TAG)
 
         # adjust tag commit
         Reference.set_object(rtag, rhead.commit.parents[0].parents[0])
         res = fetch_and_test(remote, tags=True)
         tinfo = res[str(rtag)]
-        assert tinfo.commit == rtag.commit
-        assert tinfo.flags & tinfo.TAG_UPDATE
+        self.assertEqual(tinfo.commit, rtag.commit)
+        self.assertTrue(tinfo.flags & tinfo.TAG_UPDATE)
 
         # delete remote tag - local one will stay
         TagReference.delete(remote_repo, rtag)
@@ -263,7 +273,8 @@ class TestRemote(TestBase):
         # must clone with a local path for the repo implementation not to freak out
         # as it wants local paths only ( which I can understand )
         other_repo = remote_repo.clone(other_repo_dir, shared=False)
-        remote_repo_url = "git://localhost:%s%s" % (GIT_DAEMON_PORT, remote_repo.git_dir)
+        remote_repo_url = osp.basename(remote_repo.git_dir)  # git-daemon runs with appropriate `--base-path`.
+        remote_repo_url = Git.polish_url("git://localhost:%s/%s" % (GIT_DAEMON_PORT, remote_repo_url))
 
         # put origin to git-url
         other_origin = other_repo.remotes.origin
@@ -309,21 +320,21 @@ class TestRemote(TestBase):
         self._commit_random_file(rw_repo)
         progress = TestRemoteProgress()
         res = remote.push(lhead.reference, progress)
-        assert isinstance(res, IterableList)
+        self.assertIsInstance(res, IterableList)
         self._do_test_push_result(res, remote)
         progress.make_assertion()
 
         # rejected - undo last commit
         lhead.reset("HEAD~1")
         res = remote.push(lhead.reference)
-        assert res[0].flags & PushInfo.ERROR
-        assert res[0].flags & PushInfo.REJECTED
+        self.assertTrue(res[0].flags & PushInfo.ERROR)
+        self.assertTrue(res[0].flags & PushInfo.REJECTED)
         self._do_test_push_result(res, remote)
 
         # force rejected pull
         res = remote.push('+%s' % lhead.reference)
-        assert res[0].flags & PushInfo.ERROR == 0
-        assert res[0].flags & PushInfo.FORCED_UPDATE
+        self.assertEqual(res[0].flags & PushInfo.ERROR, 0)
+        self.assertTrue(res[0].flags & PushInfo.FORCED_UPDATE)
         self._do_test_push_result(res, remote)
 
         # invalid refspec
@@ -335,7 +346,7 @@ class TestRemote(TestBase):
         new_tag = TagReference.create(rw_repo, to_be_updated)  # @UnusedVariable
         other_tag = TagReference.create(rw_repo, "my_obj_tag.2.1aRV", message="my message")
         res = remote.push(progress=progress, tags=True)
-        assert res[-1].flags & PushInfo.NEW_TAG
+        self.assertTrue(res[-1].flags & PushInfo.NEW_TAG)
         progress.make_assertion()
         self._do_test_push_result(res, remote)
 
@@ -344,16 +355,18 @@ class TestRemote(TestBase):
         new_tag = TagReference.create(rw_repo, to_be_updated, ref='HEAD~1', force=True)
         res = remote.push(tags=True)
         self._do_test_push_result(res, remote)
-        assert res[-1].flags & PushInfo.REJECTED and res[-1].flags & PushInfo.ERROR
+        self.assertTrue(res[-1].flags & PushInfo.REJECTED)
+        self.assertTrue(res[-1].flags & PushInfo.ERROR)
 
         # push force this tag
         res = remote.push("+%s" % new_tag.path)
-        assert res[-1].flags & PushInfo.ERROR == 0 and res[-1].flags & PushInfo.FORCED_UPDATE
+        self.assertEqual(res[-1].flags & PushInfo.ERROR, 0)
+        self.assertTrue(res[-1].flags & PushInfo.FORCED_UPDATE)
 
         # delete tag - have to do it using refspec
         res = remote.push(":%s" % new_tag.path)
         self._do_test_push_result(res, remote)
-        assert res[0].flags & PushInfo.DELETED
+        self.assertTrue(res[0].flags & PushInfo.DELETED)
         # Currently progress is not properly transferred, especially not using
         # the git daemon
         # progress.assert_received_message()
@@ -362,8 +375,8 @@ class TestRemote(TestBase):
         new_head = Head.create(rw_repo, "my_new_branch")
         progress = TestRemoteProgress()
         res = remote.push(new_head, progress)
-        assert len(res) > 0
-        assert res[0].flags & PushInfo.NEW_HEAD
+        self.assertGreater(len(res), 0)
+        self.assertTrue(res[0].flags & PushInfo.NEW_HEAD)
         progress.make_assertion()
         self._do_test_push_result(res, remote)
 
@@ -371,7 +384,7 @@ class TestRemote(TestBase):
         res = remote.push(":%s" % new_head.path)
         self._do_test_push_result(res, remote)
         Head.delete(rw_repo, new_head)
-        assert res[-1].flags & PushInfo.DELETED
+        self.assertTrue(res[-1].flags & PushInfo.DELETED)
 
         # --all
         res = remote.push(all=True)
@@ -384,12 +397,7 @@ class TestRemote(TestBase):
         TagReference.delete(rw_repo, new_tag, other_tag)
         remote.push(":%s" % other_tag.path)
 
-    # @skipIf(HIDE_WINDOWS_KNOWN_ERRORS, """
-    # FIXME: git-daemon failing with:
-    #     git.exc.GitCommandError: Cmd('git') failed due to: exit code(128)
-    #       cmdline: git ls-remote daemon_origin
-    #       stderr: 'fatal: bad config line 15 in file .git/config'
-    # """)
+    @skipIf(HIDE_WINDOWS_FREEZE_ERRORS, "FIXME: Freezes!")
     @with_rw_and_rw_remote_repo('0.1.6')
     def test_base(self, rw_repo, remote_repo):
         num_remotes = 0
@@ -398,17 +406,16 @@ class TestRemote(TestBase):
 
         for remote in rw_repo.remotes:
             num_remotes += 1
-            assert remote == remote
-            assert str(remote) != repr(remote)
+            self.assertEqual(remote, remote)
+            self.assertNotEqual(str(remote), repr(remote))
             remote_set.add(remote)
             remote_set.add(remote)  # should already exist
-
             # REFS
             refs = remote.refs
-            assert refs
+            self.assertTrue(refs)
             for ref in refs:
-                assert ref.remote_name == remote.name
-                assert ref.remote_head
+                self.assertEqual(ref.remote_name, remote.name)
+                self.assertTrue(ref.remote_head)
             # END for each ref
 
             # OPTIONS
@@ -435,11 +442,11 @@ class TestRemote(TestBase):
             # RENAME
             other_name = "totally_other_name"
             prev_name = remote.name
-            assert remote.rename(other_name) == remote
-            assert prev_name != remote.name
+            self.assertEqual(remote.rename(other_name), remote)
+            self.assertNotEqual(prev_name, remote.name)
             # multiple times
             for _ in range(2):
-                assert remote.rename(prev_name).name == prev_name
+                self.assertEqual(remote.rename(prev_name).name, prev_name)
             # END for each rename ( back to prev_name )
 
             # PUSH/PULL TESTING
@@ -456,9 +463,9 @@ class TestRemote(TestBase):
             remote.update()
         # END for each remote
 
-        assert ran_fetch_test
-        assert num_remotes
-        assert num_remotes == len(remote_set)
+        self.assertTrue(ran_fetch_test)
+        self.assertTrue(num_remotes)
+        self.assertEqual(num_remotes, len(remote_set))
 
         origin = rw_repo.remote('origin')
         assert origin == rw_repo.remotes.origin
@@ -478,23 +485,23 @@ class TestRemote(TestBase):
                 num_deleted += 1
             # end
         # end for each branch
-        assert num_deleted > 0
-        assert len(rw_repo.remotes.origin.fetch(prune=True)) == 1, "deleted everything but master"
+        self.assertGreater(num_deleted, 0)
+        self.assertEqual(len(rw_repo.remotes.origin.fetch(prune=True)), 1, "deleted everything but master")
 
     @with_rw_repo('HEAD', bare=True)
     def test_creation_and_removal(self, bare_rw_repo):
         new_name = "test_new_one"
         arg_list = (new_name, "git@server:hello.git")
         remote = Remote.create(bare_rw_repo, *arg_list)
-        assert remote.name == "test_new_one"
-        assert remote in bare_rw_repo.remotes
-        assert remote.exists()
+        self.assertEqual(remote.name, "test_new_one")
+        self.assertIn(remote, bare_rw_repo.remotes)
+        self.assertTrue(remote.exists())
 
         # create same one again
         self.failUnlessRaises(GitCommandError, Remote.create, bare_rw_repo, *arg_list)
 
         Remote.remove(bare_rw_repo, new_name)
-        assert remote.exists()      # We still have a cache that doesn't know we were deleted by name
+        self.assertTrue(remote.exists())      # We still have a cache that doesn't know we were deleted by name
         remote._clear_cache()
         assert not remote.exists()  # Cache should be renewed now. This is an issue ...
 
@@ -521,7 +528,7 @@ class TestRemote(TestBase):
                                   remote_info_line_fmt % "local/master",
                                   fetch_info_line_fmt % 'remote-tracking branch')
         assert not fi.ref.is_valid()
-        assert fi.ref.name == "local/master"
+        self.assertEqual(fi.ref.name, "local/master")
 
         # handles non-default refspecs: One can specify a different path in refs/remotes
         # or a special path just in refs/something for instance
@@ -530,16 +537,16 @@ class TestRemote(TestBase):
                                   remote_info_line_fmt % "subdir/tagname",
                                   fetch_info_line_fmt % 'tag')
 
-        assert isinstance(fi.ref, TagReference)
-        assert fi.ref.path.startswith('refs/tags')
+        self.assertIsInstance(fi.ref, TagReference)
+        assert fi.ref.path.startswith('refs/tags'), fi.ref.path
 
         # it could be in a remote direcftory though
         fi = FetchInfo._from_line(self.rorepo,
                                   remote_info_line_fmt % "remotename/tags/tagname",
                                   fetch_info_line_fmt % 'tag')
 
-        assert isinstance(fi.ref, TagReference)
-        assert fi.ref.path.startswith('refs/remotes/')
+        self.assertIsInstance(fi.ref, TagReference)
+        assert fi.ref.path.startswith('refs/remotes/'), fi.ref.path
 
         # it can also be anywhere !
         tag_path = "refs/something/remotename/tags/tagname"
@@ -547,24 +554,24 @@ class TestRemote(TestBase):
                                   remote_info_line_fmt % tag_path,
                                   fetch_info_line_fmt % 'tag')
 
-        assert isinstance(fi.ref, TagReference)
-        assert fi.ref.path == tag_path
+        self.assertIsInstance(fi.ref, TagReference)
+        self.assertEqual(fi.ref.path, tag_path)
 
         # branches default to refs/remotes
         fi = FetchInfo._from_line(self.rorepo,
                                   remote_info_line_fmt % "remotename/branch",
                                   fetch_info_line_fmt % 'branch')
 
-        assert isinstance(fi.ref, RemoteReference)
-        assert fi.ref.remote_name == 'remotename'
+        self.assertIsInstance(fi.ref, RemoteReference)
+        self.assertEqual(fi.ref.remote_name, 'remotename')
 
         # but you can force it anywhere, in which case we only have a references
         fi = FetchInfo._from_line(self.rorepo,
                                   remote_info_line_fmt % "refs/something/branch",
                                   fetch_info_line_fmt % 'branch')
 
-        assert type(fi.ref) is Reference
-        assert fi.ref.path == "refs/something/branch"
+        assert type(fi.ref) is Reference, type(fi.ref)
+        self.assertEqual(fi.ref.path, "refs/something/branch")
 
     def test_uncommon_branch_names(self):
         stderr_lines = fixture('uncommon_branch_prefix_stderr').decode('ascii').splitlines()
@@ -574,10 +581,10 @@ class TestRemote(TestBase):
         # +refs/pull/*:refs/heads/pull/*
         res = [FetchInfo._from_line('ShouldntMatterRepo', stderr, fetch_line)
                for stderr, fetch_line in zip(stderr_lines, fetch_lines)]
-        assert len(res)
-        assert res[0].remote_ref_path == 'refs/pull/1/head'
-        assert res[0].ref.path == 'refs/heads/pull/1/head'
-        assert isinstance(res[0].ref, Head)
+        self.assertGreater(len(res), 0)
+        self.assertEqual(res[0].remote_ref_path, 'refs/pull/1/head')
+        self.assertEqual(res[0].ref.path, 'refs/heads/pull/1/head')
+        self.assertIsInstance(res[0].ref, Head)
 
     @with_rw_repo('HEAD', bare=False)
     def test_multiple_urls(self, rw_repo):
@@ -589,22 +596,22 @@ class TestRemote(TestBase):
         remote = rw_repo.remotes[0]
         # Testing setting a single URL
         remote.set_url(test1)
-        assert list(remote.urls) == [test1]
+        self.assertEqual(list(remote.urls), [test1])
 
         # Testing replacing that single URL
         remote.set_url(test1)
-        assert list(remote.urls) == [test1]
+        self.assertEqual(list(remote.urls), [test1])
         # Testing adding new URLs
         remote.set_url(test2, add=True)
-        assert list(remote.urls) == [test1, test2]
+        self.assertEqual(list(remote.urls), [test1, test2])
         remote.set_url(test3, add=True)
-        assert list(remote.urls) == [test1, test2, test3]
+        self.assertEqual(list(remote.urls), [test1, test2, test3])
         # Testing removing an URL
         remote.set_url(test2, delete=True)
-        assert list(remote.urls) == [test1, test3]
+        self.assertEqual(list(remote.urls), [test1, test3])
         # Testing changing an URL
         remote.set_url(test3, test2)
-        assert list(remote.urls) == [test1, test2]
+        self.assertEqual(list(remote.urls), [test1, test2])
 
         # will raise: fatal: --add --delete doesn't make sense
         assert_raises(GitCommandError, remote.set_url, test2, add=True, delete=True)
@@ -612,13 +619,24 @@ class TestRemote(TestBase):
         # Testing on another remote, with the add/delete URL
         remote = rw_repo.create_remote('another', url=test1)
         remote.add_url(test2)
-        assert list(remote.urls) == [test1, test2]
+        self.assertEqual(list(remote.urls), [test1, test2])
         remote.add_url(test3)
-        assert list(remote.urls) == [test1, test2, test3]
+        self.assertEqual(list(remote.urls), [test1, test2, test3])
         # Testing removing all the URLs
         remote.delete_url(test2)
-        assert list(remote.urls) == [test1, test3]
+        self.assertEqual(list(remote.urls), [test1, test3])
         remote.delete_url(test1)
-        assert list(remote.urls) == [test3]
+        self.assertEqual(list(remote.urls), [test3])
         # will raise fatal: Will not delete all non-push URLs
         assert_raises(GitCommandError, remote.delete_url, test3)
+
+    def test_fetch_error(self):
+        rem = self.rorepo.remote('origin')
+        with self.assertRaisesRegex(GitCommandError, "Couldn't find remote ref __BAD_REF__"):
+            rem.fetch('__BAD_REF__')
+
+    @with_rw_repo('0.1.6', bare=False)
+    def test_push_error(self, repo):
+        rem = repo.remote('origin')
+        with self.assertRaisesRegex(GitCommandError, "src refspec __BAD_REF__ does not match any"):
+            rem.push('__BAD_REF__')

@@ -41,7 +41,7 @@ class TestBase(TestBase):
     def test_base_object(self):
         # test interface of base object classes
         types = (Blob, Tree, Commit, TagObject)
-        assert len(types) == len(self.type_tuples)
+        self.assertEqual(len(types), len(self.type_tuples))
 
         s = set()
         num_objs = 0
@@ -55,12 +55,12 @@ class TestBase(TestBase):
                 item = obj_type(self.rorepo, binsha, 0, path)
             # END handle index objects
             num_objs += 1
-            assert item.hexsha == hexsha
-            assert item.type == typename
+            self.assertEqual(item.hexsha, hexsha)
+            self.assertEqual(item.type, typename)
             assert item.size
-            assert item == item
-            assert not item != item
-            assert str(item) == item.hexsha
+            self.assertEqual(item, item)
+            self.assertNotEqual(not item, item)
+            self.assertEqual(str(item), item.hexsha)
             assert repr(item)
             s.add(item)
 
@@ -78,16 +78,16 @@ class TestBase(TestBase):
 
             tmpfilename = tempfile.mktemp(suffix='test-stream')
             with open(tmpfilename, 'wb+') as tmpfile:
-                assert item == item.stream_data(tmpfile)
+                self.assertEqual(item, item.stream_data(tmpfile))
                 tmpfile.seek(0)
-                assert tmpfile.read() == data
+                self.assertEqual(tmpfile.read(), data)
             os.remove(tmpfilename)
         # END for each object type to create
 
         # each has a unique sha
-        assert len(s) == num_objs
-        assert len(s | s) == num_objs
-        assert num_index_objs == 2
+        self.assertEqual(len(s), num_objs)
+        self.assertEqual(len(s | s), num_objs)
+        self.assertEqual(num_index_objs, 2)
 
     def test_get_object_type_by_name(self):
         for tname in base.Object.TYPES:
@@ -98,7 +98,7 @@ class TestBase(TestBase):
 
     def test_object_resolution(self):
         # objects must be resolved to shas so they compare equal
-        assert self.rorepo.head.reference.object == self.rorepo.active_branch.object
+        self.assertEqual(self.rorepo.head.reference.object, self.rorepo.active_branch.object)
 
     @with_rw_repo('HEAD', bare=True)
     def test_with_bare_rw_repo(self, bare_rw_repo):
@@ -110,17 +110,7 @@ class TestBase(TestBase):
         assert not rw_repo.config_reader("repository").getboolean("core", "bare")
         assert os.path.isdir(os.path.join(rw_repo.working_tree_dir, 'lib'))
 
-    # @skipIf(HIDE_WINDOWS_KNOWN_ERRORS, """
-    # FIXME: helper.wrapper fails with:
-    #     PermissionError: [WinError 5] Access is denied:
-    #     'C:\\Users\\appveyor\\AppData\\Local\\Temp\\1\\test_work_tree_unsupportedryfa60di\\
-    #     master_repo\\.git\\objects\\pack\\pack-bc9e0787aef9f69e1591ef38ea0a6f566ec66fe3.idx'
-    # AND
-    # FIXME: git-daemon failing with:
-    #     git.exc.GitCommandError: Cmd('git') failed due to: exit code(128)
-    #       cmdline: git ls-remote daemon_origin
-    #       stderr: 'fatal: bad config line 15 in file .git/config'
-    # """)
+    #@skipIf(HIDE_WINDOWS_FREEZE_ERRORS, "FIXME: Freezes!  sometimes...")
     @with_rw_and_rw_remote_repo('0.1.6')
     def test_with_rw_remote_and_rw_repo(self, rw_repo, rw_remote_repo):
         assert not rw_repo.config_reader("repository").getboolean("core", "bare")

@@ -5,26 +5,29 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 from __future__ import print_function
 
-import os
-from unittest import TestCase
-import time
-import tempfile
+from functools import wraps
 import io
 import logging
-
-from functools import wraps
-
-from git.util import rmtree
-from git.compat import string_types, is_win
+import os
+import tempfile
 import textwrap
+import time
+from unittest import TestCase
+import unittest
 
-osp = os.path.dirname
+from git.compat import string_types, is_win, PY3
+from git.util import rmtree
 
-GIT_REPO = os.environ.get("GIT_PYTHON_TEST_GIT_REPO_BASE", osp(osp(osp(osp(__file__)))))
-GIT_DAEMON_PORT = os.environ.get("GIT_PYTHON_TEST_GIT_DAEMON_PORT", "9418")
+import os.path as osp
+
+
+ospd = osp.dirname
+
+GIT_REPO = os.environ.get("GIT_PYTHON_TEST_GIT_REPO_BASE", ospd(ospd(ospd(ospd(__file__)))))
+GIT_DAEMON_PORT = os.environ.get("GIT_PYTHON_TEST_GIT_DAEMON_PORT", "19418")
 
 __all__ = (
-    'fixture_path', 'fixture', 'absolute_project_path', 'StringProcessAdapter',
+    'fixture_path', 'fixture', 'StringProcessAdapter',
     'with_rw_directory', 'with_rw_repo', 'with_rw_and_rw_remote_repo', 'TestBase', 'TestCase',
     'GIT_REPO', 'GIT_DAEMON_PORT'
 )
@@ -35,17 +38,12 @@ log = logging.getLogger('git.util')
 
 
 def fixture_path(name):
-    test_dir = osp(osp(__file__))
-    return os.path.join(test_dir, "fixtures", name)
+    return osp.join(ospd(ospd(__file__)), 'fixtures', name)
 
 
 def fixture(name):
     with open(fixture_path(name), 'rb') as fd:
         return fd.read()
-
-
-def absolute_project_path():
-    return os.path.abspath(os.path.join(osp(__file__), "..", ".."))
 
 #} END routines
 
@@ -69,18 +67,6 @@ class StringProcessAdapter(object):
 #} END adapters
 
 #{ Decorators
-
-
-def _mktemp(*args):
-    """Wrapper around default tempfile.mktemp to fix an osx issue
-    :note: the OSX special case was removed as it was unclear why that was needed in the first place. It seems
-    to be just fine without it. However, if we leave this special case, and if TMPDIR is set to something custom,
-    prefixing /private/ will lead to incorrect paths on OSX."""
-    tdir = tempfile.mktemp(*args)
-    # See :note: above to learn why this is comented out.
-    # if is_darwin:
-    #     tdir = '/private' + tdir
-    return tdir
 
 
 def with_rw_directory(func):
@@ -132,7 +118,7 @@ def with_rw_repo(working_tree_ref, bare=False):
             if bare:
                 prefix = ''
             # END handle prefix
-            repo_dir = _mktemp("%sbare_%s" % (prefix, func.__name__))
+            repo_dir = tempfile.mktemp("%sbare_%s" % (prefix, func.__name__))
             rw_repo = self.rorepo.clone(repo_dir, shared=True, bare=bare, n=True)
 
             rw_repo.head.commit = rw_repo.commit(working_tree_ref)
@@ -165,26 +151,31 @@ def with_rw_repo(working_tree_ref, bare=False):
     return argument_passer
 
 
-def launch_git_daemon(temp_dir, ip, port):
+def launch_git_daemon(base_path, ip, port):
     from git import Git
     if is_win:
         ## On MINGW-git, daemon exists in .\Git\mingw64\libexec\git-core\,
         #  but if invoked as 'git daemon', it detaches from parent `git` cmd,
         #  and then CANNOT DIE!
         #  So, invoke it as a single command.
-        ## Cygwin-git has no daemon.
+        ## Cygwin-git has no daemon.  But it can use MINGW's.
         #
-        daemon_cmd = ['git-daemon', temp_dir,
+        daemon_cmd = ['git-daemon',
                       '--enable=receive-pack',
                       '--listen=%s' % ip,
-                      '--port=%s' % port]
+                      '--port=%s' % port,
+                      '--base-path=%s' % base_path,
+                      base_path]
         gd = Git().execute(daemon_cmd, as_process=True)
     else:
-        gd = Git().daemon(temp_dir,
+        gd = Git().daemon(base_path,
                           enable='receive-pack',
                           listen=ip,
                           port=port,
+                          base_path=base_path,
                           as_process=True)
+    # yes, I know ... fortunately, this is always going to work if sleep time is just large enough
+    time.sleep(0.5)
     return gd
 
 
@@ -212,15 +203,16 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
     See working dir info in with_rw_repo
     :note: We attempt to launch our own invocation of git-daemon, which will be shutdown at the end of the test.
     """
-    from git import Remote, GitCommandError
+    from git import Git, Remote  # To avoid circular deps.
+
     assert isinstance(working_tree_ref, string_types), "Decorator requires ref name for working tree checkout"
 
     def argument_passer(func):
 
         @wraps(func)
         def remote_repo_creator(self):
-            remote_repo_dir = _mktemp("remote_repo_%s" % func.__name__)
-            repo_dir = _mktemp("remote_clone_non_bare_repo")
+            remote_repo_dir = tempfile.mktemp("remote_repo_%s" % func.__name__)
+            repo_dir = tempfile.mktemp("remote_clone_non_bare_repo")
 
             rw_remote_repo = self.rorepo.clone(remote_repo_dir, shared=True, bare=True)
             # recursive alternates info ?
@@ -240,54 +232,38 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
                     pass
                 crw.set(section, "receivepack", True)
 
-            # initialize the remote - first do it as local remote and pull, then
-            # we change the url to point to the daemon. The daemon should be started
-            # by the user, not by us
+            # Initialize the remote - first do it as local remote and pull, then
+            # we change the url to point to the daemon.
             d_remote = Remote.create(rw_repo, "daemon_origin", remote_repo_dir)
             d_remote.fetch()
-            remote_repo_url = "git://localhost:%s%s" % (GIT_DAEMON_PORT, remote_repo_dir)
 
+            base_path, rel_repo_dir = osp.split(remote_repo_dir)
+
+            remote_repo_url = Git.polish_url("git://localhost:%s/%s" % (GIT_DAEMON_PORT, rel_repo_dir))
             with d_remote.config_writer as cw:
                 cw.set('url', remote_repo_url)
 
-            temp_dir = osp(_mktemp())
-            gd = launch_git_daemon(temp_dir, '127.0.0.1', GIT_DAEMON_PORT)
             try:
-                # yes, I know ... fortunately, this is always going to work if sleep time is just large enough
-                time.sleep(0.5)
-            # end
-
-                # try to list remotes to diagnoes whether the server is up
-                try:
-                    rw_repo.git.ls_remote(d_remote)
-                except GitCommandError as e:
-                    # We assume in good faith that we didn't start the daemon - but make sure we kill it anyway
-                    # Of course we expect it to work here already, but maybe there are timing constraints
-                    # on some platforms ?
-                    try:
-                        gd.proc.terminate()
-                    except Exception as ex:
-                        log.debug("Ignoring %r while terminating proc after %r.", ex, e)
-                    log.warning('git(%s) ls-remote failed due to:%s',
-                                rw_repo.git_dir, e)
-                    if is_win:
-                        msg = textwrap.dedent("""
-                        MINGW yet has problems with paths, and `git-daemon.exe` must be in PATH
-                        (look into .\Git\mingw64\libexec\git-core\);
-                        CYGWIN has no daemon, but if one exists, it gets along fine (has also paths problems)
-                        Anyhow, alternatively try starting `git-daemon` manually:""")
-                    else:
-                        msg = "Please try starting `git-daemon` manually:"
-
-                    msg += textwrap.dedent("""
-                        git daemon --enable=receive-pack '%s'
-                    You can also run the daemon on a different port by passing --port=<port>"
-                    and setting the environment variable GIT_PYTHON_TEST_GIT_DAEMON_PORT to <port>
-                    """ % temp_dir)
-                    from unittest import SkipTest
-                    raise SkipTest(msg) if is_win else AssertionError(msg)
-                    # END make assertion
-                # END catch ls remote error
+                gd = launch_git_daemon(Git.polish_url(base_path), '127.0.0.1', GIT_DAEMON_PORT)
+            except Exception as ex:
+                if is_win:
+                    msg = textwrap.dedent("""
+                    The `git-daemon.exe` must be in PATH.
+                    For MINGW, look into .\Git\mingw64\libexec\git-core\), but problems with paths might appear.
+                    CYGWIN has no daemon, but if one exists, it gets along fine (has also paths problems)
+                    Anyhow, alternatively try starting `git-daemon` manually:""")
+                else:
+                    msg = "Please try starting `git-daemon` manually:"
+                msg += textwrap.dedent("""
+                    git daemon --enable=receive-pack  --base-path=%s  %s
+                You can also run the daemon on a different port by passing --port=<port>"
+                and setting the environment variable GIT_PYTHON_TEST_GIT_DAEMON_PORT to <port>
+                """ % (base_path, base_path))
+                raise AssertionError(ex, msg)
+                # END make assertion
+            else:
+                # Try listing remotes, to diagnose whether the daemon is up.
+                rw_repo.git.ls_remote(d_remote)
 
                 # adjust working dir
                 prev_cwd = os.getcwd()
@@ -305,6 +281,7 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
 
             finally:
                 try:
+                    log.debug("Killing git-daemon...")
                     gd.proc.kill()
                 except:
                     ## Either it has died (and we're here), or it won't die, again here...
@@ -352,9 +329,13 @@ class TestBase(TestCase):
       of the project history ( to assure tests don't fail for others ).
     """
 
+    if not PY3:
+        assertRaisesRegex = unittest.TestCase.assertRaisesRegexp
+
     def _small_repo_url(self):
         """:return" a path to a small, clonable repository"""
-        return os.path.join(self.rorepo.working_tree_dir, 'git/ext/gitdb/gitdb/ext/smmap')
+        from git.cmd import Git
+        return Git.polish_url(osp.join(self.rorepo.working_tree_dir, 'git/ext/gitdb/gitdb/ext/smmap'))
 
     @classmethod
     def setUpClass(cls):
@@ -378,7 +359,7 @@ class TestBase(TestCase):
         with the given data. Returns absolute path to created file.
         """
         repo = repo or self.rorepo
-        abs_path = os.path.join(repo.working_tree_dir, rela_path)
+        abs_path = osp.join(repo.working_tree_dir, rela_path)
         with open(abs_path, "w") as fp:
             fp.write(data)
         return abs_path

@@ -17,7 +17,7 @@ import time
 from functools import wraps
 
 from git.compat import is_win
-from gitdb.util import (# NOQA
+from gitdb.util import (# NOQA @IgnorePep8
     make_sha,
     LockedFD,               # @UnusedImport
     file_contents_ro,       # @UnusedImport
@@ -51,6 +51,7 @@ __all__ = ("stream_copy", "join_path", "to_native_path_windows", "to_native_path
 #: so the errors marked with this var are considered "acknowledged" ones, awaiting remedy,
 #: till then, we wish to hide them.
 HIDE_WINDOWS_KNOWN_ERRORS = is_win and os.environ.get('HIDE_WINDOWS_KNOWN_ERRORS', True)
+HIDE_WINDOWS_FREEZE_ERRORS = is_win and os.environ.get('HIDE_WINDOWS_FREEZE_ERRORS', HIDE_WINDOWS_KNOWN_ERRORS)
 
 #{ Utility Methods
 
@@ -198,33 +199,34 @@ class RemoteProgress(object):
     DONE_TOKEN = 'done.'
     TOKEN_SEPARATOR = ', '
 
-    __slots__ = ("_cur_line", "_seen_ops", "_error_lines")
+    __slots__ = ('_cur_line',
+                 '_seen_ops',
+                 'error_lines',  # Lines that started with 'error:' or 'fatal:'.
+                 'other_lines')  # Lines not denoting progress (i.e.g. push-infos).
     re_op_absolute = re.compile(r"(remote: )?([\w\s]+):\s+()(\d+)()(.*)")
     re_op_relative = re.compile(r"(remote: )?([\w\s]+):\s+(\d+)% \((\d+)/(\d+)\)(.*)")
 
     def __init__(self):
         self._seen_ops = list()
         self._cur_line = None
-        self._error_lines = []
-
-    def error_lines(self):
-        """Returns all lines that started with error: or fatal:"""
-        return self._error_lines
+        self.error_lines = []
+        self.other_lines = []
 
     def _parse_progress_line(self, line):
         """Parse progress information from the given line as retrieved by git-push
         or git-fetch.
 
-        Lines that seem to contain an error (i.e. start with error: or fatal:) are stored
-        separately and can be queried using `error_lines()`.
+        - Lines that do not contain progress info are stored in :attr:`other_lines`.
+        - Lines that seem to contain an error (i.e. start with error: or fatal:) are stored
+        in :attr:`error_lines`.
 
         :return: list(line, ...) list of lines that could not be processed"""
         # handle
         # Counting objects: 4, done.
         # Compressing objects:  50% (1/2)   \rCompressing objects: 100% (2/2)   \rCompressing objects: 100% (2/2), done.
         self._cur_line = line
-        if len(self._error_lines) > 0 or self._cur_line.startswith(('error:', 'fatal:')):
-            self._error_lines.append(self._cur_line)
+        if len(self.error_lines) > 0 or self._cur_line.startswith(('error:', 'fatal:')):
+            self.error_lines.append(self._cur_line)
             return []
 
         sub_lines = line.split('\r')
@@ -283,6 +285,7 @@ class RemoteProgress(object):
                 self.line_dropped(sline)
                 # Note: Don't add this line to the failed lines, as we have to silently
                 # drop it
+                self.other_lines.extend(failed_lines)
                 return failed_lines
             # END handle op code
 
@@ -308,6 +311,7 @@ class RemoteProgress(object):
                         max_count and float(max_count),
                         message)
         # END for each sub line
+        self.other_lines.extend(failed_lines)
         return failed_lines
 
     def new_message_handler(self):

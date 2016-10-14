@@ -207,18 +207,15 @@ class TestGit(TestBase):
         rw_repo = Repo.init(os.path.join(rw_dir, 'repo'))
         remote = rw_repo.create_remote('ssh-origin', "ssh://git@server/foo")
 
-        # This only works if we are not evaluating git-push/pull output in a thread !
-        import select
-        if hasattr(select, 'poll'):
-            with rw_repo.git.custom_environment(GIT_SSH=path):
-                try:
-                    remote.fetch()
-                except GitCommandError as err:
-                    if sys.version_info[0] < 3 and is_darwin:
-                        self.assertIn('ssh-orig, ' in str(err))
-                        self.assertEqual(err.status, 128)
-                    else:
-                        self.assertIn('FOO', str(err))
+        with rw_repo.git.custom_environment(GIT_SSH=path):
+            try:
+                remote.fetch()
+            except GitCommandError as err:
+                if sys.version_info[0] < 3 and is_darwin:
+                    self.assertIn('ssh-orig, ' in str(err))
+                    self.assertEqual(err.status, 128)
+                else:
+                    self.assertIn('FOO', str(err))
 
     def test_handle_process_output(self):
         from git.cmd import handle_process_output
