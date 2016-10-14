@@ -851,15 +851,18 @@ class Repo(object):
 
         odbt = kwargs.pop('odbt', odb_default_type)
 
-        ## A bug win cygwin's Git, when `--bare`
-        #  it prepends the basename of the `url` into the `path::
-        #        git clone --bare  /cygwin/a/foo.git  C:\\Work
+        ## A bug win cygwin's Git, when `--bare` or `--separate-git-dir`
+        #  it prepends the cwd or(?) the `url` into the `path, so::
+        #        git clone --bare  /cygwin/d/foo.git  C:\\Work
         #  becomes::
-        #        git clone --bare  /cygwin/a/foo.git  /cygwin/a/C:\\Work
+        #        git clone --bare  /cygwin/d/foo.git  /cygwin/d/C:\\Work
         #
         clone_path = (Git.polish_url(path)
-                      if Git.is_cygwin() and 'bare' in kwargs
+                      if Git.is_cygwin() and 'bare'in kwargs
                       else path)
+        sep_dir = kwargs.get('separate_git_dir')
+        if sep_dir:
+            kwargs['separate_git_dir'] = Git.polish_url(sep_dir)
         proc = git.clone(Git.polish_url(url), clone_path, with_extended_output=True, as_process=True,
                          v=True, **add_progress(kwargs, git, progress))
         if progress:
