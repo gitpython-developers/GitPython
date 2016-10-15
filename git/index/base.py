@@ -3,43 +3,14 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
-import tempfile
-import os
-import sys
-import subprocess
 import glob
 from io import BytesIO
-
+import os
 from stat import S_ISLNK
+import subprocess
+import sys
+import tempfile
 
-from .typ import (
-    BaseIndexEntry,
-    IndexEntry,
-)
-
-from .util import (
-    TemporaryFileSwap,
-    post_clear_cache,
-    default_index,
-    git_working_dir
-)
-
-import git.diff as diff
-from git.exc import (
-    GitCommandError,
-    CheckoutError,
-    InvalidGitRepositoryError
-)
-
-from git.objects import (
-    Blob,
-    Submodule,
-    Tree,
-    Object,
-    Commit,
-)
-
-from git.objects.util import Serializable
 from git.compat import (
     izip,
     xrange,
@@ -49,7 +20,19 @@ from git.compat import (
     mviter,
     is_win
 )
-
+from git.exc import (
+    GitCommandError,
+    CheckoutError,
+    InvalidGitRepositoryError
+)
+from git.objects import (
+    Blob,
+    Submodule,
+    Tree,
+    Object,
+    Commit,
+)
+from git.objects.util import Serializable
 from git.util import (
     LazyMixin,
     LockedFD,
@@ -58,6 +41,12 @@ from git.util import (
     to_native_path_linux,
     unbare_repo
 )
+from gitdb.base import IStream
+from gitdb.db import MemoryDB
+from gitdb.util import to_bin_sha
+
+import git.diff as diff
+import os.path as osp
 
 from .fun import (
     entry_key,
@@ -69,10 +58,17 @@ from .fun import (
     S_IFGITLINK,
     run_commit_hook
 )
+from .typ import (
+    BaseIndexEntry,
+    IndexEntry,
+)
+from .util import (
+    TemporaryFileSwap,
+    post_clear_cache,
+    default_index,
+    git_working_dir
+)
 
-from gitdb.base import IStream
-from gitdb.db import MemoryDB
-from gitdb.util import to_bin_sha
 
 __all__ = ('IndexFile', 'CheckoutError')
 
@@ -354,7 +350,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             index.entries       # force it to read the file as we will delete the temp-file
             del(index_handler)  # release as soon as possible
         finally:
-            if os.path.exists(tmp_index):
+            if osp.exists(tmp_index):
                 os.remove(tmp_index)
         # END index merge handling
 
@@ -374,8 +370,8 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         rs = r + os.sep
         for path in paths:
             abs_path = path
-            if not os.path.isabs(abs_path):
-                abs_path = os.path.join(r, path)
+            if not osp.isabs(abs_path):
+                abs_path = osp.join(r, path)
             # END make absolute path
 
             try:
@@ -407,7 +403,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
                 for root, dirs, files in os.walk(abs_path, onerror=raise_exc):  # @UnusedVariable
                     for rela_file in files:
                         # add relative paths only
-                        yield os.path.join(root.replace(rs, ''), rela_file)
+                        yield osp.join(root.replace(rs, ''), rela_file)
                     # END for each file in subdir
                 # END for each subdirectory
             except OSError:
@@ -569,7 +565,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
     def _to_relative_path(self, path):
         """:return: Version of path relative to our git directory or raise ValueError
         if it is not within our git direcotory"""
-        if not os.path.isabs(path):
+        if not osp.isabs(path):
             return path
         if self.repo.bare:
             raise InvalidGitRepositoryError("require non-bare repository")
@@ -617,12 +613,12 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         entries_added = list()
         if path_rewriter:
             for path in paths:
-                if os.path.isabs(path):
+                if osp.isabs(path):
                     abspath = path
                     gitrelative_path = path[len(self.repo.working_tree_dir) + 1:]
                 else:
                     gitrelative_path = path
-                    abspath = os.path.join(self.repo.working_tree_dir, gitrelative_path)
+                    abspath = osp.join(self.repo.working_tree_dir, gitrelative_path)
                 # end obtain relative and absolute paths
 
                 blob = Blob(self.repo, Blob.NULL_BIN_SHA,

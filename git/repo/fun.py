@@ -2,12 +2,14 @@
 import os
 from string import digits
 
+from git.compat import xrange
+from git.exc import WorkTreeRepositoryUnsupported
+from git.objects import Object
+from git.refs import SymbolicReference
 from gitdb.exc import (
     BadObject,
     BadName,
 )
-from git.refs import SymbolicReference
-from git.objects import Object
 from gitdb.util import (
     join,
     isdir,
@@ -16,8 +18,8 @@ from gitdb.util import (
     hex_to_bin,
     bin_to_hex
 )
-from git.exc import WorkTreeRepositoryUnsupported
-from git.compat import xrange
+
+import os.path as osp
 
 
 __all__ = ('rev_parse', 'is_git_dir', 'touch', 'find_git_dir', 'name_to_object', 'short_to_long', 'deref_tag',
@@ -42,7 +44,7 @@ def is_git_dir(d):
         if isdir(join(d, 'objects')) and isdir(join(d, 'refs')):
             headref = join(d, 'HEAD')
             return isfile(headref) or \
-                (os.path.islink(headref) and
+                (osp.islink(headref) and
                  os.readlink(headref).startswith('refs'))
         elif isfile(join(d, 'gitdir')) and isfile(join(d, 'commondir')) and isfile(join(d, 'gitfile')):
             raise WorkTreeRepositoryUnsupported(d)
@@ -62,7 +64,7 @@ def find_git_dir(d):
     else:
         if content.startswith('gitdir: '):
             path = content[8:]
-            if not os.path.isabs(path):
+            if not osp.isabs(path):
                 path = join(dirname(d), path)
             return find_git_dir(path)
     # end handle exception

@@ -3,17 +3,18 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
-from git.test.lib import TestBase
 from git.db import GitCmdObjectDB
-from gitdb.util import bin_to_hex
 from git.exc import BadObject
-import os
+from git.test.lib import TestBase
+from gitdb.util import bin_to_hex
+
+import os.path as osp
 
 
 class TestDB(TestBase):
 
     def test_base(self):
-        gdb = GitCmdObjectDB(os.path.join(self.rorepo.git_dir, 'objects'), self.rorepo.git)
+        gdb = GitCmdObjectDB(osp.join(self.rorepo.git_dir, 'objects'), self.rorepo.git)
 
         # partial to complete - works with everything
         hexsha = bin_to_hex(gdb.partial_to_complete_sha_hex("0.1.6"))

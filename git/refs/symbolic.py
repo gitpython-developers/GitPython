@@ -1,5 +1,9 @@
 import os
 
+from git.compat import (
+    string_types,
+    defenc
+)
 from git.objects import Object, Commit
 from git.util import (
     join_path,
@@ -7,7 +11,6 @@ from git.util import (
     to_native_path_linux,
     assure_directory_exists
 )
-
 from gitdb.exc import (
     BadObject,
     BadName
@@ -22,12 +25,11 @@ from gitdb.util import (
     hex_to_bin,
     LockedFD
 )
-from git.compat import (
-    string_types,
-    defenc
-)
+
+import os.path as osp
 
 from .log import RefLog
+
 
 __all__ = ["SymbolicReference"]
 
@@ -458,7 +460,7 @@ class SymbolicReference(object):
 
         # delete the reflog
         reflog_path = RefLog.path(cls(repo, full_ref_path))
-        if os.path.isfile(reflog_path):
+        if osp.isfile(reflog_path):
             os.remove(reflog_path)
         # END remove reflog
 

@@ -6,7 +6,6 @@
 
 import glob
 import io
-import os
 
 from git import (
     GitConfigParser
@@ -91,7 +90,7 @@ class TestBase(TestCase):
 
     @with_rw_directory
     def test_lock_reentry(self, rw_dir):
-        fpl = os.path.join(rw_dir, 'l')
+        fpl = osp.join(rw_dir, 'l')
         gcp = GitConfigParser(fpl, read_only=False)
         with gcp as cw:
             cw.set_value('include', 'some_value', 'a')
@@ -103,7 +102,7 @@ class TestBase(TestCase):
                 GitConfigParser(fpl, read_only=False)
         # but work when the lock is removed
         with GitConfigParser(fpl, read_only=False):
-            assert os.path.exists(fpl)
+            assert osp.exists(fpl)
             # reentering with an existing lock must fail due to exclusive access
             with self.assertRaises(IOError):
                 gcp.__enter__()
@@ -178,17 +177,17 @@ class TestBase(TestCase):
         # end
 
         # PREPARE CONFIG FILE A
-        fpa = os.path.join(rw_dir, 'a')
+        fpa = osp.join(rw_dir, 'a')
         with GitConfigParser(fpa, read_only=False) as cw:
             write_test_value(cw, 'a')
 
-            fpb = os.path.join(rw_dir, 'b')
-            fpc = os.path.join(rw_dir, 'c')
+            fpb = osp.join(rw_dir, 'b')
+            fpc = osp.join(rw_dir, 'c')
             cw.set_value('include', 'relative_path_b', 'b')
             cw.set_value('include', 'doesntexist', 'foobar')
             cw.set_value('include', 'relative_cycle_a_a', 'a')
             cw.set_value('include', 'absolute_cycle_a_a', fpa)
-        assert os.path.exists(fpa)
+        assert osp.exists(fpa)
 
         # PREPARE CONFIG FILE B
         with GitConfigParser(fpb, read_only=False) as cw:

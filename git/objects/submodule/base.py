@@ -1,21 +1,18 @@
-from .util import (
-    mkhead,
-    sm_name,
-    sm_section,
-    SubmoduleConfigParser,
-    find_first_remote_branch
-)
-from git.objects.util import Traversable
-from io import BytesIO                   # need a dict to set bloody .name field
-from git.util import (
-    Iterable,
-    join_path_native,
-    to_native_path_linux,
-    RemoteProgress,
-    rmtree,
-    unbare_repo
-)
+# need a dict to set bloody .name field
+from io import BytesIO
+import logging
+import os
+import stat
+from unittest.case import SkipTest
+import uuid
 
+import git
+from git.cmd import Git
+from git.compat import (
+    string_types,
+    defenc,
+    is_win,
+)
 from git.config import (
     SectionConstraint,
     GitConfigParser,
@@ -26,22 +23,28 @@ from git.exc import (
     NoSuchPathError,
     RepositoryDirtyError
 )
-from git.compat import (
-    string_types,
-    defenc,
-    is_win,
+from git.objects.base import IndexObject, Object
+from git.objects.util import Traversable
+from git.util import (
+    Iterable,
+    join_path_native,
+    to_native_path_linux,
+    RemoteProgress,
+    rmtree,
+    unbare_repo
+)
+from git.util import HIDE_WINDOWS_KNOWN_ERRORS
+
+import os.path as osp
+
+from .util import (
+    mkhead,
+    sm_name,
+    sm_section,
+    SubmoduleConfigParser,
+    find_first_remote_branch
 )
 
-import stat
-import git
-
-import os
-import logging
-import uuid
-from unittest.case import SkipTest
-from git.util import HIDE_WINDOWS_KNOWN_ERRORS
-from git.objects.base import IndexObject, Object
-from git.cmd import Git
 
 __all__ = ["Submodule", "UpdateProgress"]
 
@@ -120,7 +123,7 @@ class Submodule(IndexObject, Iterable, Traversable):
                 self.path = reader.get_value('path')
             except cp.NoSectionError:
                 raise ValueError("This submodule instance does not exist anymore in '%s' file"
-                                 % os.path.join(self.repo.working_tree_dir, '.gitmodules'))
+                                 % osp.join(self.repo.working_tree_dir, '.gitmodules'))
             # end
             self._url = reader.get_value('url')
             # git-python extension values - optional
@@ -181,7 +184,7 @@ class Submodule(IndexObject, Iterable, Traversable):
         # end hanlde parent_commit
 
         if not repo.bare and parent_matches_head:
-            fp_module = os.path.join(repo.working_tree_dir, cls.k_modules_file)
+            fp_module = osp.join(repo.working_tree_dir, cls.k_modules_file)
         else:
             assert parent_commit is not None, "need valid parent_commit in bare repositories"
             try:
@@ -229,9 +232,9 @@ class Submodule(IndexObject, Iterable, Traversable):
     @classmethod
     def _module_abspath(cls, parent_repo, path, name):
         if cls._need_gitfile_submodules(parent_repo.git):
-            return os.path.join(parent_repo.git_dir, 'modules', name)
+            return osp.join(parent_repo.git_dir, 'modules', name)
         else:
-            return os.path.join(parent_repo.working_tree_dir, path)
+            return osp.join(parent_repo.working_tree_dir, path)
         # end
 
     @classmethod
@@ -246,10 +249,10 @@ class Submodule(IndexObject, Iterable, Traversable):
         module_checkout_path = module_abspath
         if cls._need_gitfile_submodules(repo.git):
             kwargs['separate_git_dir'] = module_abspath
-            module_abspath_dir = os.path.dirname(module_abspath)
-            if not os.path.isdir(module_abspath_dir):
+            module_abspath_dir = osp.dirname(module_abspath)
+            if not osp.isdir(module_abspath_dir):
                 os.makedirs(module_abspath_dir)
-            module_checkout_path = os.path.join(repo.working_tree_dir, path)
+            module_checkout_path = osp.join(repo.working_tree_dir, path)
         # end
 
         clone = git.Repo.clone_from(url, module_checkout_path, **kwargs)
@@ -267,7 +270,7 @@ class Submodule(IndexObject, Iterable, Traversable):
             path = path[:-1]
         # END handle trailing slash
 
-        if os.path.isabs(path):
+        if osp.isabs(path):
             working_tree_linux = to_native_path_linux(parent_repo.working_tree_dir)
             if not path.startswith(working_tree_linux):
                 raise ValueError("Submodule checkout path '%s' needs to be within the parents repository at '%s'"
@@ -291,18 +294,18 @@ class Submodule(IndexObject, Iterable, Traversable):
         :param working_tree_dir: directory to write the .git file into
         :param module_abspath: absolute path to the bare repository
         """
-        git_file = os.path.join(working_tree_dir, '.git')
-        rela_path = os.path.relpath(module_abspath, start=working_tree_dir)
+        git_file = osp.join(working_tree_dir, '.git')
+        rela_path = osp.relpath(module_abspath, start=working_tree_dir)
         if is_win:
-            if os.path.isfile(git_file):
+            if osp.isfile(git_file):
                 os.remove(git_file)
         with open(git_file, 'wb') as fp:
             fp.write(("gitdir: %s" % rela_path).encode(defenc))
 
-        with GitConfigParser(os.path.join(module_abspath, 'config'),
+        with GitConfigParser(osp.join(module_abspath, 'config'),
                              read_only=False, merge_includes=False) as writer:
             writer.set_value('core', 'worktree',
-                             to_native_path_linux(os.path.relpath(working_tree_dir, start=module_abspath)))
+                             to_native_path_linux(osp.relpath(working_tree_dir, start=module_abspath)))
 
     #{ Edit Interface
 
@@ -501,7 +504,7 @@ class Submodule(IndexObject, Iterable, Traversable):
 
                 # there is no git-repository yet - but delete empty paths
                 checkout_module_abspath = self.abspath
-                if not dry_run and os.path.isdir(checkout_module_abspath):
+                if not dry_run and osp.isdir(checkout_module_abspath):
                     try:
                         os.rmdir(checkout_module_abspath)
                     except OSError:
@@ -671,7 +674,7 @@ class Submodule(IndexObject, Iterable, Traversable):
         # END handle no change
 
         module_checkout_abspath = join_path_native(self.repo.working_tree_dir, module_checkout_path)
-        if os.path.isfile(module_checkout_abspath):
+        if osp.isfile(module_checkout_abspath):
             raise ValueError("Cannot move repository onto a file: %s" % module_checkout_abspath)
         # END handle target files
 
@@ -684,12 +687,12 @@ class Submodule(IndexObject, Iterable, Traversable):
 
         # remove existing destination
         if module:
-            if os.path.exists(module_checkout_abspath):
+            if osp.exists(module_checkout_abspath):
                 if len(os.listdir(module_checkout_abspath)):
                     raise ValueError("Destination module directory was not empty")
                 # END handle non-emptiness
 
-                if os.path.islink(module_checkout_abspath):
+                if osp.islink(module_checkout_abspath):
                     os.remove(module_checkout_abspath)
                 else:
                     os.rmdir(module_checkout_abspath)
@@ -704,11 +707,11 @@ class Submodule(IndexObject, Iterable, Traversable):
         # move the module into place if possible
         cur_path = self.abspath
         renamed_module = False
-        if module and os.path.exists(cur_path):
+        if module and osp.exists(cur_path):
             os.renames(cur_path, module_checkout_abspath)
             renamed_module = True
 
-            if os.path.isfile(os.path.join(module_checkout_abspath, '.git')):
+            if osp.isfile(osp.join(module_checkout_abspath, '.git')):
                 module_abspath = self._module_abspath(self.repo, self.path, self.name)
                 self._write_git_file_and_module_config(module_checkout_abspath, module_abspath)
             # end handle git file rewrite
@@ -804,11 +807,11 @@ class Submodule(IndexObject, Iterable, Traversable):
                 # state. Delete the .git folders last, start with the submodules first
                 mp = self.abspath
                 method = None
-                if os.path.islink(mp):
+                if osp.islink(mp):
                     method = os.remove
-                elif os.path.isdir(mp):
+                elif osp.isdir(mp):
                     method = rmtree
-                elif os.path.exists(mp):
+                elif osp.exists(mp):
                     raise AssertionError("Cannot forcibly delete repository as it was neither a link, nor a directory")
                 # END handle brutal deletion
                 if not dry_run:
@@ -865,7 +868,7 @@ class Submodule(IndexObject, Iterable, Traversable):
                 # END delete tree if possible
             # END handle force
 
-            if not dry_run and os.path.isdir(git_dir):
+            if not dry_run and osp.isdir(git_dir):
                 self._clear_cache()
                 try:
                     rmtree(git_dir)

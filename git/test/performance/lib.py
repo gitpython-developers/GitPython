@@ -1,20 +1,22 @@
 """Contains library functions"""
-import os
-from git.test.lib import (
-    TestBase
-)
-import tempfile
 import logging
-
-from git.db import (
-    GitCmdObjectDB,
-    GitDB
-)
+import os
+import tempfile
 
 from git import (
     Repo
 )
+from git.db import (
+    GitCmdObjectDB,
+    GitDB
+)
+from git.test.lib import (
+    TestBase
+)
 from git.util import rmtree
+
+import os.path as osp
+
 
 #{ Invvariants
 k_env_git_repo = "GIT_PYTHON_TEST_GIT_REPO_BASE"
@@ -52,7 +54,7 @@ class TestBigRepoR(TestBase):
             logging.info(
                 ("You can set the %s environment variable to a .git repository of" % k_env_git_repo) +
                 "your choice - defaulting to the gitpython repository")
-            repo_path = os.path.dirname(__file__)
+            repo_path = osp.dirname(__file__)
         # end set some repo path
         self.gitrorepo = Repo(repo_path, odbt=GitCmdObjectDB, search_parent_directories=True)
         self.puregitrorepo = Repo(repo_path, odbt=GitDB, search_parent_directories=True)

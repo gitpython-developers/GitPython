@@ -1,24 +1,25 @@
 """Performance data streaming performance"""
 from __future__ import print_function
 
-from time import time
 import os
-import sys
 import subprocess
+import sys
+from time import time
 
 from git.test.lib import (
     with_rw_repo
 )
-from gitdb.util import bin_to_hex
-from gitdb.test.lib import make_memory_file
-
-from .lib import (
-    TestBigRepoR
-)
-
 from gitdb import (
     LooseObjectDB,
     IStream
+)
+from gitdb.test.lib import make_memory_file
+from gitdb.util import bin_to_hex
+
+import os.path as osp
+
+from .lib import (
+    TestBigRepoR
 )
 
 
@@ -31,7 +32,7 @@ class TestObjDBPerformance(TestBigRepoR):
     def test_large_data_streaming(self, rwrepo):
         # TODO: This part overlaps with the same file in gitdb.test.performance.test_stream
         # It should be shared if possible
-        ldb = LooseObjectDB(os.path.join(rwrepo.git_dir, 'objects'))
+        ldb = LooseObjectDB(osp.join(rwrepo.git_dir, 'objects'))
 
         for randomize in range(2):
             desc = (randomize and 'random ') or ''
@@ -47,7 +48,7 @@ class TestObjDBPerformance(TestBigRepoR):
             elapsed_add = time() - st
             assert ldb.has_object(binsha)
             db_file = ldb.readable_db_object_path(bin_to_hex(binsha))
-            fsize_kib = os.path.getsize(db_file) / 1000
+            fsize_kib = osp.getsize(db_file) / 1000
 
             size_kib = size / 1000
             msg = "Added %i KiB (filesize = %i KiB) of %s data to loose odb in %f s ( %f Write KiB / s)"
@@ -109,7 +110,7 @@ class TestObjDBPerformance(TestBigRepoR):
             assert gitsha == bin_to_hex(binsha)     # we do it the same way, right ?
 
             #  as its the same sha, we reuse our path
-            fsize_kib = os.path.getsize(db_file) / 1000
+            fsize_kib = osp.getsize(db_file) / 1000
             msg = "Added %i KiB (filesize = %i KiB) of %s data to using git-hash-object in %f s ( %f Write KiB / s)"
             msg %= (size_kib, fsize_kib, desc, gelapsed_add, size_kib / gelapsed_add)
             print(msg, file=sys.stderr)

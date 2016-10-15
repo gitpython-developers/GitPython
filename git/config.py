@@ -6,21 +6,13 @@
 """Module containing module parser implementation able to properly read and write
 configuration files"""
 
-import re
-try:
-    import ConfigParser as cp
-except ImportError:
-    # PY3
-    import configparser as cp
+import abc
+from functools import wraps
 import inspect
 import logging
-import abc
 import os
+import re
 
-from functools import wraps
-
-from git.odict import OrderedDict
-from git.util import LockFile
 from git.compat import (
     string_types,
     FileType,
@@ -29,6 +21,18 @@ from git.compat import (
     with_metaclass,
     PY3
 )
+from git.odict import OrderedDict
+from git.util import LockFile
+
+import os.path as osp
+
+
+try:
+    import ConfigParser as cp
+except ImportError:
+    # PY3
+    import configparser as cp
+
 
 __all__ = ('GitConfigParser', 'SectionConstraint')
 
@@ -408,15 +412,15 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
             if self._has_includes():
                 for _, include_path in self.items('include'):
                     if include_path.startswith('~'):
-                        include_path = os.path.expanduser(include_path)
-                    if not os.path.isabs(include_path):
+                        include_path = osp.expanduser(include_path)
+                    if not osp.isabs(include_path):
                         if not file_ok:
                             continue
                         # end ignore relative paths if we don't know the configuration file path
-                        assert os.path.isabs(file_path), "Need absolute paths to be sure our cycle checks will work"
-                        include_path = os.path.join(os.path.dirname(file_path), include_path)
+                        assert osp.isabs(file_path), "Need absolute paths to be sure our cycle checks will work"
+                        include_path = osp.join(osp.dirname(file_path), include_path)
                     # end make include path absolute
-                    include_path = os.path.normpath(include_path)
+                    include_path = osp.normpath(include_path)
                     if include_path in seen or not os.access(include_path, os.R_OK):
                         continue
                     seen.add(include_path)

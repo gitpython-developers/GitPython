@@ -128,7 +128,7 @@ def stream_copy(source, destination, chunk_size=512 * 1024):
 
 
 def join_path(a, *p):
-    """Join path tokens together similar to os.path.join, but always use
+    """Join path tokens together similar to osp.join, but always use
     '/' instead of possibly '\' on windows."""
     path = a
     for b in p:
@@ -206,7 +206,7 @@ def py_where(program, path=None):
     progs = []
     if not path:
         path = os.environ["PATH"]
-    for folder in path.split(osp.pathsep):
+    for folder in path.split(os.pathsep):
         folder = folder.strip('"')
         if folder:
             exe_path = osp.join(folder, program)
@@ -222,7 +222,7 @@ def _cygexpath(drive, path):
         #  It's an error, leave it alone just slashes)
         p = path
     else:
-        p = path and osp.normpath(osp.expandvars(os.path.expanduser(path)))
+        p = path and osp.normpath(osp.expandvars(osp.expanduser(path)))
         if osp.isabs(p):
             if drive:
                 # Confusing, maybe a remote system should expand vars.

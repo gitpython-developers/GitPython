@@ -10,12 +10,6 @@ import os
 import re
 import sys
 
-from gitdb.util import (
-    join,
-    isfile,
-    hex_to_bin
-)
-
 from git.cmd import (
     Git,
     handle_process_output
@@ -36,6 +30,13 @@ from git.objects import Submodule, RootModule, Commit
 from git.refs import HEAD, Head, Reference, TagReference
 from git.remote import Remote, add_progress, to_progress_instance
 from git.util import Actor, finalize_process, decygpath
+from gitdb.util import (
+    join,
+    isfile,
+    hex_to_bin
+)
+
+import os.path as osp
 
 from .fun import rev_parse, is_git_dir, find_git_dir, touch
 
@@ -54,7 +55,7 @@ __all__ = ('Repo',)
 
 
 def _expand_path(p):
-    return os.path.abspath(os.path.expandvars(os.path.expanduser(p)))
+    return osp.abspath(osp.expandvars(osp.expanduser(p)))
 
 
 class Repo(object):
@@ -100,7 +101,7 @@ class Repo(object):
                 repo = Repo("$REPOSITORIES/Development/git-python.git")
 
             In *Cygwin*, path may be a `'cygdrive/...'` prefixed path.
-            
+
         :param odbt:
             Object DataBase type - a type which is constructed by providing
             the directory containing the database objects, i.e. .git/objects. It will
@@ -118,7 +119,7 @@ class Repo(object):
 
         epath = _expand_path(path or os.getcwd())
         self.git = None  # should be set for __del__ not to fail in case we raise
-        if not os.path.exists(epath):
+        if not osp.exists(epath):
             raise NoSuchPathError(epath)
 
         self.working_dir = None
@@ -128,24 +129,24 @@ class Repo(object):
 
         # walk up the path to find the .git dir
         while curpath:
-            # ABOUT os.path.NORMPATH
+            # ABOUT osp.NORMPATH
             # It's important to normalize the paths, as submodules will otherwise initialize their
             # repo instances with paths that depend on path-portions that will not exist after being
             # removed. It's just cleaner.
             if is_git_dir(curpath):
-                self.git_dir = os.path.normpath(curpath)
-                self._working_tree_dir = os.path.dirname(self.git_dir)
+                self.git_dir = osp.normpath(curpath)
+                self._working_tree_dir = osp.dirname(self.git_dir)
                 break
 
             gitpath = find_git_dir(join(curpath, '.git'))
             if gitpath is not None:
-                self.git_dir = os.path.normpath(gitpath)
+                self.git_dir = osp.normpath(gitpath)
                 self._working_tree_dir = curpath
                 break
 
             if not search_parent_directories:
                 break
-            curpath, dummy = os.path.split(curpath)
+            curpath, dummy = osp.split(curpath)
             if not dummy:
                 break
         # END while curpath
@@ -361,12 +362,12 @@ class Repo(object):
         if config_level == "system":
             return "/etc/gitconfig"
         elif config_level == "user":
-            config_home = os.environ.get("XDG_CONFIG_HOME") or os.path.join(os.environ.get("HOME", '~'), ".config")
-            return os.path.normpath(os.path.expanduser(join(config_home, "git", "config")))
+            config_home = os.environ.get("XDG_CONFIG_HOME") or osp.join(os.environ.get("HOME", '~'), ".config")
+            return osp.normpath(osp.expanduser(join(config_home, "git", "config")))
         elif config_level == "global":
-            return os.path.normpath(os.path.expanduser("~/.gitconfig"))
+            return osp.normpath(osp.expanduser("~/.gitconfig"))
         elif config_level == "repository":
-            return os.path.normpath(join(self.git_dir, "config"))
+            return osp.normpath(join(self.git_dir, "config"))
 
         raise ValueError("Invalid configuration level: %r" % config_level)
 
@@ -511,11 +512,11 @@ class Repo(object):
 
     def _get_daemon_export(self):
         filename = join(self.git_dir, self.DAEMON_EXPORT_FILE)
-        return os.path.exists(filename)
+        return osp.exists(filename)
 
     def _set_daemon_export(self, value):
         filename = join(self.git_dir, self.DAEMON_EXPORT_FILE)
-        fileexists = os.path.exists(filename)
+        fileexists = osp.exists(filename)
         if value and not fileexists:
             touch(filename)
         elif not value and fileexists:
@@ -532,7 +533,7 @@ class Repo(object):
         :return: list of strings being pathnames of alternates"""
         alternates_path = join(self.git_dir, 'objects', 'info', 'alternates')
 
-        if os.path.exists(alternates_path):
+        if osp.exists(alternates_path):
             with open(alternates_path, 'rb') as f:
                 alts = f.read().decode(defenc)
             return alts.strip().splitlines()
@@ -841,7 +842,7 @@ class Repo(object):
         :return: ``git.Repo`` (the newly created repo)"""
         if path:
             path = _expand_path(path)
-        if mkdir and path and not os.path.exists(path):
+        if mkdir and path and not osp.exists(path):
             os.makedirs(path, 0o755)
 
         # git command automatically chdir into the directory
@@ -879,7 +880,7 @@ class Repo(object):
 
         # our git command could have a different working dir than our actual
         # environment, hence we prepend its working dir if required
-        if not os.path.isabs(path) and git.working_dir:
+        if not osp.isabs(path) and git.working_dir:
             path = join(git._working_dir, path)
 
         # adjust remotes - there may be operating systems which use backslashes,
@@ -958,7 +959,7 @@ class Repo(object):
         """
         if self.bare:
             return False
-        return os.path.isfile(os.path.join(self.working_tree_dir, '.git'))
+        return osp.isfile(osp.join(self.working_tree_dir, '.git'))
 
     rev_parse = rev_parse
 

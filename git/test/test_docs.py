@@ -9,6 +9,8 @@ import os
 from git.test.lib import TestBase
 from git.test.lib.helper import with_rw_directory
 
+import os.path as osp
+
 
 class Tutorials(TestBase):
 
@@ -23,7 +25,7 @@ class Tutorials(TestBase):
     def test_init_repo_object(self, rw_dir):
         # [1-test_init_repo_object]
         from git import Repo
-        join = os.path.join
+        join = osp.join
 
         # rorepo is a Repo instance pointing to the git-python repository.
         # For all you know, the first argument to Repo is a path to the repository
@@ -62,7 +64,7 @@ class Tutorials(TestBase):
 
         # repository paths
         # [7-test_init_repo_object]
-        assert os.path.isdir(cloned_repo.working_tree_dir)                   # directory with your work files
+        assert osp.isdir(cloned_repo.working_tree_dir)                   # directory with your work files
         assert cloned_repo.git_dir.startswith(cloned_repo.working_tree_dir)  # directory containing the git repository
         assert bare_repo.working_tree_dir is None                            # bare repositories have no working tree
         # ![7-test_init_repo_object]
@@ -146,7 +148,7 @@ class Tutorials(TestBase):
         self.assertEqual(new_branch.checkout(), cloned_repo.active_branch)     # checking out branch adjusts the wtree
         self.assertEqual(new_branch.commit, past.commit)                       # Now the past is checked out
 
-        new_file_path = os.path.join(cloned_repo.working_tree_dir, 'my-new-file')
+        new_file_path = osp.join(cloned_repo.working_tree_dir, 'my-new-file')
         open(new_file_path, 'wb').close()                             # create new file in working tree
         cloned_repo.index.add([new_file_path])                        # add it to the index
         # Commit the changes to deviate masters history
@@ -162,7 +164,7 @@ class Tutorials(TestBase):
         # now new_branch is ahead of master, which probably should be checked out and reset softly.
         # note that all these operations didn't touch the working tree, as we managed it ourselves.
         # This definitely requires you to know what you are doing :) !
-        assert os.path.basename(new_file_path) in new_branch.commit.tree  # new file is now in tree
+        assert osp.basename(new_file_path) in new_branch.commit.tree  # new file is now in tree
         master.commit = new_branch.commit            # let master point to most recent commit
         cloned_repo.head.reference = master          # we adjusted just the reference, not the working tree or index
         # ![13-test_init_repo_object]
@@ -192,7 +194,7 @@ class Tutorials(TestBase):
     def test_references_and_objects(self, rw_dir):
         # [1-test_references_and_objects]
         import git
-        repo = git.Repo.clone_from(self._small_repo_url(), os.path.join(rw_dir, 'repo'), branch='master')
+        repo = git.Repo.clone_from(self._small_repo_url(), osp.join(rw_dir, 'repo'), branch='master')
 
         heads = repo.heads
         master = heads.master       # lists can be accessed by name for convenience
@@ -264,7 +266,7 @@ class Tutorials(TestBase):
 
         # [11-test_references_and_objects]
         hct.blobs[0].data_stream.read()        # stream object to read data from
-        hct.blobs[0].stream_data(open(os.path.join(rw_dir, 'blob_data'), 'wb'))  # write data to given stream
+        hct.blobs[0].stream_data(open(osp.join(rw_dir, 'blob_data'), 'wb'))  # write data to given stream
         # ![11-test_references_and_objects]
 
         # [12-test_references_and_objects]
@@ -350,11 +352,11 @@ class Tutorials(TestBase):
         # Access blob objects
         for (path, stage), entry in index.entries.items():  # @UnusedVariable
             pass
-        new_file_path = os.path.join(repo.working_tree_dir, 'new-file-name')
+        new_file_path = osp.join(repo.working_tree_dir, 'new-file-name')
         open(new_file_path, 'w').close()
         index.add([new_file_path])                                             # add a new file to the index
         index.remove(['LICENSE'])                                              # remove an existing one
-        assert os.path.isfile(os.path.join(repo.working_tree_dir, 'LICENSE'))  # working tree is untouched
+        assert osp.isfile(osp.join(repo.working_tree_dir, 'LICENSE'))  # working tree is untouched
 
         self.assertEqual(index.commit("my commit message").type, 'commit')              # commit changed index
         repo.active_branch.commit = repo.commit('HEAD~1')                      # forget last commit
@@ -373,11 +375,11 @@ class Tutorials(TestBase):
         # merge two trees three-way into memory
         merge_index = IndexFile.from_tree(repo, 'HEAD~10', 'HEAD', repo.merge_base('HEAD~10', 'HEAD'))
         # and persist it
-        merge_index.write(os.path.join(rw_dir, 'merged_index'))
+        merge_index.write(osp.join(rw_dir, 'merged_index'))
         # ![24-test_references_and_objects]
 
         # [25-test_references_and_objects]
-        empty_repo = git.Repo.init(os.path.join(rw_dir, 'empty'))
+        empty_repo = git.Repo.init(osp.join(rw_dir, 'empty'))
         origin = empty_repo.create_remote('origin', repo.remotes.origin.url)
         assert origin.exists()
         assert origin == empty_repo.remotes.origin == empty_repo.remotes['origin']
@@ -480,8 +482,8 @@ class Tutorials(TestBase):
     def test_add_file_and_commit(self, rw_dir):
         import git
 
-        repo_dir = os.path.join(rw_dir, 'my-new-repo')
-        file_name = os.path.join(repo_dir, 'new-file')
+        repo_dir = osp.join(rw_dir, 'my-new-repo')
+        file_name = osp.join(repo_dir, 'new-file')
 
         r = git.Repo.init(repo_dir)
         # This function just creates an empty file ...

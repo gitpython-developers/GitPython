@@ -1,11 +1,13 @@
 """Module containing index utilities"""
+from functools import wraps
+import os
 import struct
 import tempfile
-import os
-
-from functools import wraps
 
 from git.compat import is_win
+
+import os.path as osp
+
 
 __all__ = ('TemporaryFileSwap', 'post_clear_cache', 'default_index', 'git_working_dir')
 
@@ -32,8 +34,8 @@ class TemporaryFileSwap(object):
             pass
 
     def __del__(self):
-        if os.path.isfile(self.tmp_file_path):
-            if is_win and os.path.exists(self.file_path):
+        if osp.isfile(self.tmp_file_path):
+            if is_win and osp.exists(self.file_path):
                 os.remove(self.file_path)
             os.rename(self.tmp_file_path, self.file_path)
         # END temp file exists

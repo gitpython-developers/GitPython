@@ -4,10 +4,8 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
-from git.test.lib import (
-    TestBase,
-    with_rw_repo
-)
+from itertools import chain
+
 from git import (
     Reference,
     Head,
@@ -18,11 +16,15 @@ from git import (
     GitCommandError,
     RefLog
 )
-import git.refs as refs
-from git.util import Actor
 from git.objects.tag import TagObject
-from itertools import chain
-import os
+from git.test.lib import (
+    TestBase,
+    with_rw_repo
+)
+from git.util import Actor
+
+import git.refs as refs
+import os.path as osp
 
 
 class TestRefs(TestBase):
@@ -268,10 +270,10 @@ class TestRefs(TestBase):
             assert tmp_head == new_head and tmp_head.object == new_head.object
 
             logfile = RefLog.path(tmp_head)
-            assert os.path.isfile(logfile)
+            assert osp.isfile(logfile)
             Head.delete(rw_repo, tmp_head)
             # deletion removes the log as well
-            assert not os.path.isfile(logfile)
+            assert not osp.isfile(logfile)
             heads = rw_repo.heads
             assert tmp_head not in heads and new_head not in heads
             # force on deletion testing would be missing here, code looks okay though ;)
@@ -450,12 +452,12 @@ class TestRefs(TestBase):
         symbol_ref_path = "refs/symbol_ref"
         symref = SymbolicReference(rw_repo, symbol_ref_path)
         assert symref.path == symbol_ref_path
-        symbol_ref_abspath = os.path.join(rw_repo.git_dir, symref.path)
+        symbol_ref_abspath = osp.join(rw_repo.git_dir, symref.path)
 
         # set it
         symref.reference = new_head
         assert symref.reference == new_head
-        assert os.path.isfile(symbol_ref_abspath)
+        assert osp.isfile(symbol_ref_abspath)
         assert symref.commit == new_head.commit
 
         for name in ('absname', 'folder/rela_name'):
@@ -507,7 +509,7 @@ class TestRefs(TestBase):
         rw_repo.head.reference = Head.create(rw_repo, "master")
 
         # At least the head should still exist
-        assert os.path.isfile(os.path.join(rw_repo.git_dir, 'HEAD'))
+        assert osp.isfile(osp.join(rw_repo.git_dir, 'HEAD'))
         refs = list(SymbolicReference.iter_items(rw_repo))
         assert len(refs) == 1
 

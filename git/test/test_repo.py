@@ -203,8 +203,8 @@ class TestRepo(TestBase):
         prev_cwd = os.getcwd()
         os.chdir(tempfile.gettempdir())
         git_dir_rela = "repos/foo/bar.git"
-        del_dir_abs = os.path.abspath("repos")
-        git_dir_abs = os.path.abspath(git_dir_rela)
+        del_dir_abs = osp.abspath("repos")
+        git_dir_abs = osp.abspath(git_dir_rela)
         try:
             # with specific path
             for path in (git_dir_rela, git_dir_abs):
@@ -212,7 +212,7 @@ class TestRepo(TestBase):
                 self.assertIsInstance(r, Repo)
                 assert r.bare is True
                 assert not r.has_separate_working_tree()
-                assert os.path.isdir(r.git_dir)
+                assert osp.isdir(r.git_dir)
 
                 self._assert_empty_repo(r)
 
@@ -306,16 +306,16 @@ class TestRepo(TestBase):
     def test_is_dirty_with_path(self, rwrepo):
         assert rwrepo.is_dirty(path="git") is False
 
-        with open(os.path.join(rwrepo.working_dir, "git", "util.py"), "at") as f:
+        with open(osp.join(rwrepo.working_dir, "git", "util.py"), "at") as f:
             f.write("junk")
         assert rwrepo.is_dirty(path="git") is True
         assert rwrepo.is_dirty(path="doc") is False
 
-        rwrepo.git.add(os.path.join("git", "util.py"))
+        rwrepo.git.add(osp.join("git", "util.py"))
         assert rwrepo.is_dirty(index=False, path="git") is False
         assert rwrepo.is_dirty(path="git") is True
 
-        with open(os.path.join(rwrepo.working_dir, "doc", "no-such-file.txt"), "wt") as f:
+        with open(osp.join(rwrepo.working_dir, "doc", "no-such-file.txt"), "wt") as f:
             f.write("junk")
         assert rwrepo.is_dirty(path="doc") is False
         assert rwrepo.is_dirty(untracked_files=True, path="doc") is True
@@ -494,10 +494,10 @@ class TestRepo(TestBase):
         ph = os.environ.get('HOME')
         try:
             os.environ['HOME'] = rw_dir
-            Repo.init(os.path.join('~', 'test.git'), bare=True)
+            Repo.init(osp.join('~', 'test.git'), bare=True)
 
             os.environ['FOO'] = rw_dir
-            Repo.init(os.path.join('$FOO', 'test.git'), bare=True)
+            Repo.init(osp.join('$FOO', 'test.git'), bare=True)
         finally:
             if ph:
                 os.environ['HOME'] = ph
@@ -785,7 +785,7 @@ class TestRepo(TestBase):
     @with_rw_repo('HEAD')
     def test_git_file(self, rwrepo):
         # Move the .git directory to another location and create the .git file.
-        real_path_abs = os.path.abspath(join_path_native(rwrepo.working_tree_dir, '.real'))
+        real_path_abs = osp.abspath(join_path_native(rwrepo.working_tree_dir, '.real'))
         os.rename(rwrepo.git_dir, real_path_abs)
         git_file_path = join_path_native(rwrepo.working_tree_dir, '.git')
         with open(git_file_path, 'wb') as fp:
@@ -793,13 +793,13 @@ class TestRepo(TestBase):
 
         # Create a repo and make sure it's pointing to the relocated .git directory.
         git_file_repo = Repo(rwrepo.working_tree_dir)
-        self.assertEqual(os.path.abspath(git_file_repo.git_dir), real_path_abs)
+        self.assertEqual(osp.abspath(git_file_repo.git_dir), real_path_abs)
 
         # Test using an absolute gitdir path in the .git file.
         with open(git_file_path, 'wb') as fp:
             fp.write(('gitdir: %s\n' % real_path_abs).encode('ascii'))
         git_file_repo = Repo(rwrepo.working_tree_dir)
-        self.assertEqual(os.path.abspath(git_file_repo.git_dir), real_path_abs)
+        self.assertEqual(osp.abspath(git_file_repo.git_dir), real_path_abs)
 
     @skipIf(HIDE_WINDOWS_KNOWN_ERRORS and PY3,
             "FIXME: smmp fails with: TypeError: Can't convert 'bytes' object to str implicitly")
@@ -840,7 +840,7 @@ class TestRepo(TestBase):
         # It's expected to not be able to access a tree
         self.failUnlessRaises(ValueError, r.tree)
 
-        new_file_path = os.path.join(rw_dir, "new_file.ext")
+        new_file_path = osp.join(rw_dir, "new_file.ext")
         touch(new_file_path)
         r.index.add([new_file_path])
         r.index.commit("initial commit\nBAD MESSAGE 1\n")

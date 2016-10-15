@@ -1,6 +1,8 @@
 # Contains standalone functions to accompany the index implementation and make it
 # more versatile
 # NOTE: Autodoc hates it if this is a docstring
+from io import BytesIO
+import os
 from stat import (
     S_IFDIR,
     S_IFLNK,
@@ -9,37 +11,9 @@ from stat import (
     S_IFMT,
     S_IFREG,
 )
-
-from io import BytesIO
-import os
 import subprocess
 
-from git.util import IndexFileSHA1Writer, finalize_process
 from git.cmd import PROC_CREATIONFLAGS, handle_process_output
-from git.exc import (
-    UnmergedEntriesError,
-    HookExecutionError
-)
-from git.objects.fun import (
-    tree_to_stream,
-    traverse_tree_recursive,
-    traverse_trees_recursive
-)
-
-from .typ import (
-    BaseIndexEntry,
-    IndexEntry,
-    CE_NAMEMASK,
-    CE_STAGESHIFT
-)
-
-from .util import (
-    pack,
-    unpack
-)
-
-from gitdb.base import IStream
-from gitdb.typ import str_tree_type
 from git.compat import (
     PY3,
     defenc,
@@ -49,6 +23,32 @@ from git.compat import (
     safe_encode,
     safe_decode,
 )
+from git.exc import (
+    UnmergedEntriesError,
+    HookExecutionError
+)
+from git.objects.fun import (
+    tree_to_stream,
+    traverse_tree_recursive,
+    traverse_trees_recursive
+)
+from git.util import IndexFileSHA1Writer, finalize_process
+from gitdb.base import IStream
+from gitdb.typ import str_tree_type
+
+import os.path as osp
+
+from .typ import (
+    BaseIndexEntry,
+    IndexEntry,
+    CE_NAMEMASK,
+    CE_STAGESHIFT
+)
+from .util import (
+    pack,
+    unpack
+)
+
 
 S_IFGITLINK = S_IFLNK | S_IFDIR     # a submodule
 CE_NAMEMASK_INV = ~CE_NAMEMASK
@@ -59,7 +59,7 @@ __all__ = ('write_cache', 'read_cache', 'write_tree_from_cache', 'entry_key',
 
 def hook_path(name, git_dir):
     """:return: path to the given named hook in the given git repository directory"""
-    return os.path.join(git_dir, 'hooks', name)
+    return osp.join(git_dir, 'hooks', name)
 
 
 def run_commit_hook(name, index):
