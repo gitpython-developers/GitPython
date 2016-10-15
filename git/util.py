@@ -21,9 +21,12 @@ from gitdb.util import (# NOQA @IgnorePep8
     make_sha,
     LockedFD,               # @UnusedImport
     file_contents_ro,       # @UnusedImport
+    file_contents_ro_filepath,       # @UnusedImport
     LazyMixin,              # @UnusedImport
     to_hex_sha,             # @UnusedImport
-    to_bin_sha              # @UnusedImport
+    to_bin_sha,             # @UnusedImport
+    bin_to_hex,             # @UnusedImport
+    hex_to_bin,             # @UnusedImport
 )
 
 from git.compat import is_win

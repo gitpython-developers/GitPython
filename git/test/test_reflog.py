@@ -10,8 +10,7 @@ from git.test.lib import (
     TestBase,
     fixture_path
 )
-from git.util import Actor, rmtree
-from gitdb.util import hex_to_bin
+from git.util import Actor, rmtree, hex_to_bin
 
 import os.path as osp
 

@@ -39,11 +39,11 @@ from git.util import (
     join_path_native,
     file_contents_ro,
     to_native_path_linux,
-    unbare_repo
+    unbare_repo,
+    to_bin_sha
 )
 from gitdb.base import IStream
 from gitdb.db import MemoryDB
-from gitdb.util import to_bin_sha
 
 import git.diff as diff
 import os.path as osp

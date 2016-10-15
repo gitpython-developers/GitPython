@@ -6,7 +6,7 @@
 from git.db import GitCmdObjectDB
 from git.exc import BadObject
 from git.test.lib import TestBase
-from gitdb.util import bin_to_hex
+from git.util import bin_to_hex
 
 import os.path as osp
 

@@ -45,9 +45,8 @@ from git.test.lib import (
 )
 from git.test.lib import with_rw_directory
 from git.util import Actor, rmtree
-from git.util import HIDE_WINDOWS_KNOWN_ERRORS
+from git.util import HIDE_WINDOWS_KNOWN_ERRORS, hex_to_bin
 from gitdb.base import IStream
-from gitdb.util import hex_to_bin
 
 import os.path as osp
 

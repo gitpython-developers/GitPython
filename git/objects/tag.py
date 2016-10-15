@@ -5,12 +5,9 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 """ Module containing all object based types. """
 from . import base
-from .util import (
-    get_object_type_by_name,
-    parse_actor_and_date
-)
-from gitdb.util import hex_to_bin
-from git.compat import defenc
+from .util import get_object_type_by_name, parse_actor_and_date
+from ..util import hex_to_bin
+from ..compat import defenc
 
 __all__ = ("TagObject", )
 

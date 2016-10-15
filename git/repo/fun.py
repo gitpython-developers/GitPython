@@ -6,17 +6,10 @@ from git.compat import xrange
 from git.exc import WorkTreeRepositoryUnsupported
 from git.objects import Object
 from git.refs import SymbolicReference
+from git.util import hex_to_bin, bin_to_hex
 from gitdb.exc import (
     BadObject,
     BadName,
-)
-from gitdb.util import (
-    join,
-    isdir,
-    isfile,
-    dirname,
-    hex_to_bin,
-    bin_to_hex
 )
 
 import os.path as osp
@@ -40,13 +33,15 @@ def is_git_dir(d):
             but at least clearly indicates that we don't support it.
             There is the unlikely danger to throw if we see directories which just look like a worktree dir,
             but are none."""
-    if isdir(d):
-        if isdir(join(d, 'objects')) and isdir(join(d, 'refs')):
-            headref = join(d, 'HEAD')
-            return isfile(headref) or \
+    if osp.isdir(d):
+        if osp.isdir(osp.join(d, 'objects')) and osp.isdir(osp.join(d, 'refs')):
+            headref = osp.join(d, 'HEAD')
+            return osp.isfile(headref) or \
                 (osp.islink(headref) and
                  os.readlink(headref).startswith('refs'))
-        elif isfile(join(d, 'gitdir')) and isfile(join(d, 'commondir')) and isfile(join(d, 'gitfile')):
+        elif (osp.isfile(osp.join(d, 'gitdir')) and
+              osp.isfile(osp.join(d, 'commondir')) and
+              osp.isfile(osp.join(d, 'gitfile'))):
             raise WorkTreeRepositoryUnsupported(d)
     return False
 
@@ -65,7 +60,7 @@ def find_git_dir(d):
         if content.startswith('gitdir: '):
             path = content[8:]
             if not osp.isabs(path):
-                path = join(dirname(d), path)
+                path = osp.join(osp.dirname(d), path)
             return find_git_dir(path)
     # end handle exception
     return None

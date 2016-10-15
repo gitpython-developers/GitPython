@@ -23,7 +23,7 @@ from git.test.lib import (
     with_rw_repo,
     with_rw_and_rw_remote_repo
 )
-from gitdb.util import hex_to_bin
+from git.util import hex_to_bin
 
 import git.objects.base as base
 import os.path as osp

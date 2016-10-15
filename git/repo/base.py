@@ -29,12 +29,7 @@ from git.index import IndexFile
 from git.objects import Submodule, RootModule, Commit
 from git.refs import HEAD, Head, Reference, TagReference
 from git.remote import Remote, add_progress, to_progress_instance
-from git.util import Actor, finalize_process, decygpath
-from gitdb.util import (
-    join,
-    isfile,
-    hex_to_bin
-)
+from git.util import Actor, finalize_process, decygpath, hex_to_bin
 
 import os.path as osp
 
@@ -138,7 +133,7 @@ class Repo(object):
                 self._working_tree_dir = osp.dirname(self.git_dir)
                 break
 
-            gitpath = find_git_dir(join(curpath, '.git'))
+            gitpath = find_git_dir(osp.join(curpath, '.git'))
             if gitpath is not None:
                 self.git_dir = osp.normpath(gitpath)
                 self._working_tree_dir = curpath
@@ -171,7 +166,7 @@ class Repo(object):
         self.git = self.GitCommandWrapperType(self.working_dir)
 
         # special handling, in special times
-        args = [join(self.git_dir, 'objects')]
+        args = [osp.join(self.git_dir, 'objects')]
         if issubclass(odbt, GitCmdObjectDB):
             args.append(self.git)
         self.odb = odbt(*args)
@@ -193,12 +188,12 @@ class Repo(object):
 
     # Description property
     def _get_description(self):
-        filename = join(self.git_dir, 'description')
+        filename = osp.join(self.git_dir, 'description')
         with open(filename, 'rb') as fp:
             return fp.read().rstrip().decode(defenc)
 
     def _set_description(self, descr):
-        filename = join(self.git_dir, 'description')
+        filename = osp.join(self.git_dir, 'description')
         with open(filename, 'wb') as fp:
             fp.write((descr + '\n').encode(defenc))
 
@@ -363,11 +358,11 @@ class Repo(object):
             return "/etc/gitconfig"
         elif config_level == "user":
             config_home = os.environ.get("XDG_CONFIG_HOME") or osp.join(os.environ.get("HOME", '~'), ".config")
-            return osp.normpath(osp.expanduser(join(config_home, "git", "config")))
+            return osp.normpath(osp.expanduser(osp.join(config_home, "git", "config")))
         elif config_level == "global":
             return osp.normpath(osp.expanduser("~/.gitconfig"))
         elif config_level == "repository":
-            return osp.normpath(join(self.git_dir, "config"))
+            return osp.normpath(osp.join(self.git_dir, "config"))
 
         raise ValueError("Invalid configuration level: %r" % config_level)
 
@@ -511,11 +506,11 @@ class Repo(object):
         return True
 
     def _get_daemon_export(self):
-        filename = join(self.git_dir, self.DAEMON_EXPORT_FILE)
+        filename = osp.join(self.git_dir, self.DAEMON_EXPORT_FILE)
         return osp.exists(filename)
 
     def _set_daemon_export(self, value):
-        filename = join(self.git_dir, self.DAEMON_EXPORT_FILE)
+        filename = osp.join(self.git_dir, self.DAEMON_EXPORT_FILE)
         fileexists = osp.exists(filename)
         if value and not fileexists:
             touch(filename)
@@ -531,7 +526,7 @@ class Repo(object):
         """The list of alternates for this repo from which objects can be retrieved
 
         :return: list of strings being pathnames of alternates"""
-        alternates_path = join(self.git_dir, 'objects', 'info', 'alternates')
+        alternates_path = osp.join(self.git_dir, 'objects', 'info', 'alternates')
 
         if osp.exists(alternates_path):
             with open(alternates_path, 'rb') as f:
@@ -551,9 +546,9 @@ class Repo(object):
         :note:
             The method does not check for the existance of the paths in alts
             as the caller is responsible."""
-        alternates_path = join(self.git_dir, 'objects', 'info', 'alternates')
+        alternates_path = osp.join(self.git_dir, 'objects', 'info', 'alternates')
         if not alts:
-            if isfile(alternates_path):
+            if osp.isfile(alternates_path):
                 os.remove(alternates_path)
         else:
             with open(alternates_path, 'wb') as f:
@@ -582,7 +577,7 @@ class Repo(object):
             default_args.append(path)
         if index:
             # diff index against HEAD
-            if isfile(self.index.path) and \
+            if osp.isfile(self.index.path) and \
                     len(self.git.diff('--cached', *default_args)):
                 return True
         # END index handling
@@ -881,7 +876,7 @@ class Repo(object):
         # our git command could have a different working dir than our actual
         # environment, hence we prepend its working dir if required
         if not osp.isabs(path) and git.working_dir:
-            path = join(git._working_dir, path)
+            path = osp.join(git._working_dir, path)
 
         # adjust remotes - there may be operating systems which use backslashes,
         # These might be given as initial paths, but when handling the config file

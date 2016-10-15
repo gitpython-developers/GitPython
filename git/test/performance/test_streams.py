@@ -9,12 +9,12 @@ from time import time
 from git.test.lib import (
     with_rw_repo
 )
+from git.util import bin_to_hex
 from gitdb import (
     LooseObjectDB,
     IStream
 )
 from gitdb.test.lib import make_memory_file
-from gitdb.util import bin_to_hex
 
 import os.path as osp
 

@@ -1,22 +1,4 @@
-from git.test.lib import (
-    TestBase,
-    with_rw_repo
-)
-from git.objects.fun import (
-    traverse_tree_recursive,
-    traverse_trees_recursive,
-    tree_to_stream,
-    tree_entries_from_data
-)
-
-from git.index.fun import (
-    aggressive_tree_merge
-)
-
-from gitdb.util import bin_to_hex
-from gitdb.base import IStream
-from gitdb.typ import str_tree_type
-
+from io import BytesIO
 from stat import (
     S_IFDIR,
     S_IFREG,
@@ -24,7 +6,22 @@ from stat import (
 )
 
 from git.index import IndexFile
-from io import BytesIO
+from git.index.fun import (
+    aggressive_tree_merge
+)
+from git.objects.fun import (
+    traverse_tree_recursive,
+    traverse_trees_recursive,
+    tree_to_stream,
+    tree_entries_from_data
+)
+from git.test.lib import (
+    TestBase,
+    with_rw_repo
+)
+from git.util import bin_to_hex
+from gitdb.base import IStream
+from gitdb.typ import str_tree_type
 
 
 class TestFun(TestBase):

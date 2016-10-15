@@ -52,8 +52,7 @@ from git.test.lib import (
 )
 from git.util import HIDE_WINDOWS_KNOWN_ERRORS, cygpath
 from git.test.lib import with_rw_directory
-from git.util import join_path_native, rmtree, rmfile
-from gitdb.util import bin_to_hex
+from git.util import join_path_native, rmtree, rmfile, bin_to_hex
 from unittest import SkipTest
 
 import functools as fnt

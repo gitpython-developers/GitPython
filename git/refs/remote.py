@@ -1,9 +1,10 @@
+import os
+
 from git.util import join_path
-from gitdb.util import join
+
+import os.path as osp
 
 from .head import Head
-
-import os
 
 
 __all__ = ["RemoteReference"]
@@ -36,7 +37,7 @@ class RemoteReference(Head):
         # and delete remainders manually
         for ref in refs:
             try:
-                os.remove(join(repo.git_dir, ref.path))
+                os.remove(osp.join(repo.git_dir, ref.path))
             except OSError:
                 pass
         # END for each ref
