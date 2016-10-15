@@ -1,3 +1,2 @@
 gitdb>=0.6.4
-ddt
-mock
+ddt>=1.1.1

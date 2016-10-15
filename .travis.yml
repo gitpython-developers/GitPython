@@ -1,14 +1,10 @@
 language: python
 python:
-  - "2.6"
   - "2.7"
   - "3.3"
   - "3.4"
   - "3.5"
   # - "pypy" - won't work as smmap doesn't work (see gitdb/.travis.yml for details)
-matrix:
-  allow_failures:
-    - python: "2.6"
 git:
   # a higher depth is needed for most of the tests - must be high enough to not actually be shallow
   # as we clone our own repository in the process
@@ -17,7 +13,8 @@ install:
   - python --version; git --version
   - git submodule update --init --recursive
   - git fetch --tags
-  - pip install codecov flake8 ddt sphinx
+  - pip install -r test-requirements.txt
+  - pip install codecov sphinx
 
   # generate some reflog as git-python tests need it (in master)
   - ./init-tests-after-clone.sh

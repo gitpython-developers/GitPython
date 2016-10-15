@@ -68,7 +68,7 @@ install_requires = ['gitdb >= 0.6.4']
 extras_require = {
     ':python_version == "2.6"': ['ordereddict'],
 }
-test_requires = ['ddt']
+test_requires = ['ddt>=1.1.1']
 if sys.version_info[:2] < (2, 7):
     test_requires.append('mock')
 

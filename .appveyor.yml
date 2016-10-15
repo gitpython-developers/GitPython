@@ -51,10 +51,8 @@ install:
         conda info -a &
         conda install --yes --quiet  pip
       )
-    - pip install  nose ddt wheel codecov
-    -   IF "%PYTHON_VERSION%" == "2.7" (
-            pip install mock
-        )
+    - pip install -r test-requirements.txt
+    - pip install codecov
 
     ## Copied from `init-tests-after-clone.sh`.
     #

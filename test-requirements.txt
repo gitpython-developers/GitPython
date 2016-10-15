@@ -3,4 +3,4 @@
 coverage
 flake8
 nose
-mock
+mock; python_version<='2.7'

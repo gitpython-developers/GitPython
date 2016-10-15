@@ -900,9 +900,6 @@ class TestRepo(TestBase):
         for i, j in itertools.permutations([c1, 'ffffff', ''], r=2):
             self.assertRaises(GitCommandError, repo.is_ancestor, i, j)
 
-    # @skipIf(HIDE_WINDOWS_KNOWN_ERRORS,
-    #         "FIXME: helper.wrapper fails with: PermissionError: [WinError 5] Access is denied: "
-    #         "'C:\\Users\\appveyor\\AppData\\Local\\Temp\\1\\test_work_tree_unsupportedryfa60di\\master_repo\\.git\\objects\\pack\\pack-bc9e0787aef9f69e1591ef38ea0a6f566ec66fe3.idx")  # noqa E501
     @with_rw_directory
     def test_work_tree_unsupported(self, rw_dir):
         git = Git(rw_dir)
