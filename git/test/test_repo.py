@@ -310,7 +310,7 @@ class TestRepo(TestBase):
         assert rwrepo.is_dirty(path="git") is True
         assert rwrepo.is_dirty(path="doc") is False
 
-        rwrepo.git.add(osp.join("git", "util.py"))
+        rwrepo.git.add(Git.polish_url(osp.join("git", "util.py")))
         assert rwrepo.is_dirty(index=False, path="git") is False
         assert rwrepo.is_dirty(path="git") is True
 

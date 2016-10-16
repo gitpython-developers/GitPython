@@ -109,7 +109,7 @@ class Repo(object):
         :raise InvalidGitRepositoryError:
         :raise NoSuchPathError:
         :return: git.Repo """
-        if path and Git.is_cygwin():
+        if Git.is_cygwin():
             path = decygpath(path)
 
         epath = _expand_path(path or os.getcwd())
