@@ -2,6 +2,7 @@
 from stat import S_ISDIR
 from git.compat import (
     byte_ord,
+    safe_decode,
     defenc,
     xrange,
     text_type,
@@ -76,7 +77,7 @@ def tree_entries_from_data(data):
         # default encoding for strings in git is utf8
         # Only use the respective unicode object if the byte stream was encoded
         name = data[ns:i]
-        name = name.decode(defenc, 'surrogateescape')
+        name = safe_decode(name)
 
         # byte is NULL, get next 20
         i += 1

@@ -308,6 +308,6 @@ def register_surrogateescape():
 
 
 try:
-    "hello".decode(defenc, "surrogateescape")
+    b"100644 \x9f\0aaa".decode(defenc, "surrogateescape")
 except:
     register_surrogateescape()
