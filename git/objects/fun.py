@@ -76,11 +76,7 @@ def tree_entries_from_data(data):
         # default encoding for strings in git is utf8
         # Only use the respective unicode object if the byte stream was encoded
         name = data[ns:i]
-        try:
-            name = name.decode(defenc)
-        except UnicodeDecodeError:
-            pass
-        # END handle encoding
+        name = name.decode(defenc, 'surrogateescape')
 
         # byte is NULL, get next 20
         i += 1
