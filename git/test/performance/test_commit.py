@@ -52,7 +52,7 @@ class TestPerformance(TestBigRepoRW):
             # END for each object
         # END for each commit
         elapsed_time = time() - st
-        print("Traversed %i Trees and a total of %i unchached objects in %s [s] ( %f objs/s )"
+        print("Traversed %i Trees and a total of %i uncached objects in %s [s] ( %f objs/s )"
               % (nc, no, elapsed_time, no / elapsed_time), file=sys.stderr)
 
     def test_commit_traversal(self):
