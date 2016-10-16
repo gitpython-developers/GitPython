@@ -77,7 +77,7 @@ build: false
 
 test_script:
     -   IF "%IS_CYGWIN%" == "yes" (
-            nosetests -v || echo "Ignoring failures." & EXIT /B 0
+            nosetests -v
         ) ELSE (
             IF "%PYTHON_VERSION%" == "3.5" (
                 nosetests -v --with-coverage

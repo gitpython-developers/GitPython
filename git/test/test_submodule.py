@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 import os
@@ -6,24 +7,34 @@ from unittest.case import skipIf
 
 import git
 from git.cmd import Git
-from git.compat import string_types, is_win
+from git.compat import (
+    string_types,
+    is_win,
+)
 from git.exc import (
     InvalidGitRepositoryError,
     RepositoryDirtyError
 )
 from git.objects.submodule.base import Submodule
-from git.objects.submodule.root import RootModule, RootUpdateProgress
+from git.objects.submodule.root import (
+    RootModule,
+    RootUpdateProgress,
+)
 from git.repo.fun import (
     find_git_dir,
-    touch
+    touch,
 )
 from git.test.lib import (
     TestBase,
-    with_rw_repo
+    with_rw_repo,
 )
 from git.test.lib import with_rw_directory
-from git.util import HIDE_WINDOWS_KNOWN_ERRORS
-from git.util import to_native_path_linux, join_path_native
+from git.util import (
+    to_native_path_linux,
+    join_path_native,
+    HIDE_WINDOWS_KNOWN_ERRORS,
+)
+
 import os.path as osp
 
 
@@ -673,6 +684,13 @@ class TestSubmodule(TestBase):
                                   url=empty_repo_dir, no_checkout=checkout_mode and True or False)
         # end for each checkout mode
 
+    @skipIf(HIDE_WINDOWS_KNOWN_ERRORS and Git.is_cygwin(),
+            """FIXME: ile "C:\projects\gitpython\git\cmd.py", line 671, in execute
+                raise GitCommandError(command, status, stderr_value, stdout_value)
+            GitCommandError: Cmd('git') failed due to: exit code(128)
+              cmdline: git add 1__Xava verbXXten 1_test _myfile 1_test_other_file 1_XXava-----verbXXten
+              stderr: 'fatal: pathspec '"1__çava verböten"' did not match any files'
+                """)
     @with_rw_directory
     def test_git_submodules_and_add_sm_with_new_commit(self, rwdir):
         parent = git.Repo.init(osp.join(rwdir, 'parent'))

@@ -411,6 +411,14 @@ class TestRepo(TestBase):
         self.assertEqual(len(res), 1)
         self.assertEqual(len(res[0][1]), 83, "Unexpected amount of parsed blame lines")
 
+    @skipIf(HIDE_WINDOWS_KNOWN_ERRORS and Git.is_cygwin(),
+            """FIXME: File "C:\projects\gitpython\git\cmd.py", line 671, in execute
+                    raise GitCommandError(command, status, stderr_value, stdout_value)
+                GitCommandError: Cmd('git') failed due to: exit code(128)
+                  cmdline: git add 1__��ava verb��ten 1_test _myfile 1_test_other_file
+                          1_��ava-----verb��ten
+                  stderr: 'fatal: pathspec '"1__çava verböten"' did not match any files'
+                """)
     @with_rw_repo('HEAD', bare=False)
     def test_untracked_files(self, rwrepo):
         for run, (repo_add, is_invoking_git) in enumerate((

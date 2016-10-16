@@ -26,7 +26,7 @@ from git import (
     GitCommandError,
     CheckoutError,
 )
-from git.compat import string_types, is_win
+from git.compat import string_types, is_win, PY3
 from git.exc import (
     HookExecutionError,
     InvalidGitRepositoryError
@@ -49,6 +49,7 @@ from git.util import HIDE_WINDOWS_KNOWN_ERRORS, hex_to_bin
 from gitdb.base import IStream
 
 import os.path as osp
+from git.cmd import Git
 
 
 class TestIndex(TestBase):
@@ -405,6 +406,12 @@ class TestIndex(TestBase):
         return existing
     # END num existing helper
 
+    @skipIf(HIDE_WINDOWS_KNOWN_ERRORS and Git.is_cygwin(),
+            """FIXME: File "C:\projects\gitpython\git\test\test_index.py", line 642, in test_index_mutation
+                self.assertEqual(fd.read(), link_target)
+                AssertionError: '!<symlink>\xff\xfe/\x00e\x00t\x00c\x00/\x00t\x00h\x00a\x00t\x00\x00\x00'
+                != '/etc/that'
+                """)
     @with_rw_repo('0.1.6')
     def test_index_mutation(self, rw_repo):
         index = rw_repo.index
@@ -823,7 +830,7 @@ class TestIndex(TestBase):
             asserted = True
         assert asserted, "Adding using a filename is not correctly asserted."
 
-    @skipIf(HIDE_WINDOWS_KNOWN_ERRORS and sys.version_info[:2] == (2, 7), r"""
+    @skipIf(HIDE_WINDOWS_KNOWN_ERRORS and not PY3, r"""
         FIXME:  File "C:\projects\gitpython\git\util.py", line 125, in to_native_path_linux
         return path.replace('\\', '/')
         UnicodeDecodeError: 'ascii' codec can't decode byte 0xc3 in position 0: ordinal not in range(128)""")
