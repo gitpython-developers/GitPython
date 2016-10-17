@@ -181,9 +181,6 @@ def git_daemon_launched(base_path, ip, port):
                               as_process=True)
         # yes, I know ... fortunately, this is always going to work if sleep time is just large enough
         time.sleep(0.5 * (1 + is_win))
-
-        yield
-
     except Exception as ex:
         msg = textwrap.dedent("""
         Launching git-daemon failed due to: %s
@@ -203,8 +200,10 @@ def git_daemon_launched(base_path, ip, port):
               CYGWIN has no daemon, but if one exists, it gets along fine (but has also paths problems).""")
         log.warning(msg, ex, ip, port, base_path, base_path, exc_info=1)
 
-        yield
+        yield  # OK, assume daemon started manually.
 
+    else:
+        yield  # Yield outside try, to avoid catching
     finally:
         if gd:
             try:
