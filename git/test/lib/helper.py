@@ -119,7 +119,7 @@ def with_rw_repo(working_tree_ref, bare=False):
             if bare:
                 prefix = ''
             # END handle prefix
-            repo_dir = tempfile.mktemp("%sbare_%s" % (prefix, func.__name__))
+            repo_dir = tempfile.mktemp(prefix="%sbare_%s" % (prefix, func.__name__))
             rw_repo = self.rorepo.clone(repo_dir, shared=True, bare=bare, n=True)
 
             rw_repo.head.commit = rw_repo.commit(working_tree_ref)
@@ -248,7 +248,7 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
         @wraps(func)
         def remote_repo_creator(self):
             rw_daemon_repo_dir = tempfile.mktemp(prefix="daemon_repo-%s-" % func.__name__)
-            rw_repo_dir = tempfile.mktemp("daemon_cloned_repo-%s-" % func.__name__)
+            rw_repo_dir = tempfile.mktemp(prefix="daemon_cloned_repo-%s-" % func.__name__)
 
             rw_daemon_repo = self.rorepo.clone(rw_daemon_repo_dir, shared=True, bare=True)
             # recursive alternates info ?
