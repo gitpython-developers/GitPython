@@ -415,7 +415,7 @@ class Git(LazyMixin):
         """
 
         self._persistent_git_options = self.transform_kwargs(
-                split_single_char_options=True, **kwargs)
+            split_single_char_options=True, **kwargs)
 
     def _set_cache_(self, attr):
         if attr == '_version_info':

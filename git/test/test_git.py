@@ -160,6 +160,20 @@ class TestGit(TestBase):
         git_command_version = self.git.version()
         self.assertEquals(git_version, git_command_version)
 
+    def test_persistent_options(self):
+        git_command_version = self.git.version()
+        # analog to test_options_are_passed_to_git
+        self.git.set_persistent_git_options(version=True)
+        git_version = self.git.NoOp()
+        self.assertEquals(git_version, git_command_version)
+        # subsequent calls keep this option:
+        git_version_2 = self.git.NoOp()
+        self.assertEquals(git_version_2, git_command_version)
+
+        # reset to empty:
+        self.git.set_persistent_git_options()
+        self.assertRaises(GitCommandError,  self.git.NoOp)
+
     def test_single_char_git_options_are_passed_to_git(self):
         input_value = 'TestValue'
         output_value = self.git(c='user.name=%s' % input_value).config('--get', 'user.name')
