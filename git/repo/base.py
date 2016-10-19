@@ -47,7 +47,7 @@ from gitdb.util import (
 from .fun import (
     rev_parse,
     is_git_dir,
-    find_git_dir,
+    find_submodule_git_dir,
     touch,
 )
 from git.compat import (
@@ -79,7 +79,7 @@ __all__ = ('Repo',)
 
 
 def _expand_path(p):
-    return os.path.abspath(os.path.expandvars(os.path.expanduser(p)))
+    return os.path.normpath(os.path.abspath(os.path.expandvars(os.path.expanduser(p))))
 
 
 class Repo(object):
@@ -97,6 +97,11 @@ class Repo(object):
 
     'git_dir' is the .git repository directory, which is always set."""
     DAEMON_EXPORT_FILE = 'git-daemon-export-ok'
+
+    git = None  # Must exist, or  __del__  will fail in case we raise on `__init__()`
+    working_dir = None
+    _working_tree_dir = None
+    git_dir = None
 
     # precompiled regex
     re_whitespace = re.compile(r'\s+')
@@ -138,15 +143,10 @@ class Repo(object):
         :raise InvalidGitRepositoryError:
         :raise NoSuchPathError:
         :return: git.Repo """
-        self.git = None  # should be set for __del__ not to fail in case we raise
         epath = os.getenv('GIT_DIR')
         epath = _expand_path(epath or path or os.getcwd())
         if not os.path.exists(epath):
             raise NoSuchPathError(epath)
-
-        self.working_dir = None
-        self._working_tree_dir = None
-        self.git_dir = None
 
         ## Walk up the path to find the `.git` dir.
         #
@@ -157,20 +157,20 @@ class Repo(object):
             # repo instances with paths that depend on path-portions that will not exist after being
             # removed. It's just cleaner.
             if is_git_dir(curpath):
-                self.git_dir = os.path.normpath(curpath)
+                self.git_dir = curpath
                 self._working_tree_dir = os.path.dirname(self.git_dir)
                 break
 
-            gitpath = find_git_dir(join(curpath, '.git'))
-            if gitpath is not None:
-                self.git_dir = os.path.normpath(gitpath)
+            sm_gitpath = find_submodule_git_dir(join(curpath, '.git'))
+            if sm_gitpath is not None:
+                self.git_dir = os.path.normpath(sm_gitpath)
                 self._working_tree_dir = curpath
                 break
 
             if not search_parent_directories:
                 break
-            curpath, dummy = os.path.split(curpath)
-            if not dummy:
+            curpath, tail = os.path.split(curpath)
+            if not tail:
                 break
         # END while curpath
 

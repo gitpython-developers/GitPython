@@ -14,7 +14,7 @@ from git.exc import (
 from git.objects.submodule.base import Submodule
 from git.objects.submodule.root import RootModule, RootUpdateProgress
 from git.repo.fun import (
-    find_git_dir,
+    find_submodule_git_dir,
     touch
 )
 from git.test.lib import (
@@ -757,7 +757,7 @@ class TestSubmodule(TestBase):
         else:
             assert osp.isfile(module_repo_path)
             assert sm.module().has_separate_working_tree()
-            assert find_git_dir(module_repo_path) is not None, "module pointed to by .git file must be valid"
+            assert find_submodule_git_dir(module_repo_path) is not None, "module pointed to by .git file must be valid"
         # end verify submodule 'style'
 
         # test move
