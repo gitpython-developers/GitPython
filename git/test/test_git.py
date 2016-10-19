@@ -172,7 +172,7 @@ class TestGit(TestBase):
 
         # reset to empty:
         self.git.set_persistent_git_options()
-        self.assertRaises(GitCommandError,  self.git.NoOp)
+        self.assertRaises(GitCommandError, self.git.NoOp)
 
     def test_single_char_git_options_are_passed_to_git(self):
         input_value = 'TestValue'
