@@ -161,7 +161,7 @@ class Git(LazyMixin):
         Set its value to 'full' to see details about the returned values.
     """
     __slots__ = ("_working_dir", "cat_file_all", "cat_file_header", "_version_info",
-                 "_git_options", "_environment")
+                 "_git_options", "_persistent_git_options", "_environment")
 
     _excluded_ = ('cat_file_all', 'cat_file_header', '_version_info')
 
@@ -386,6 +386,7 @@ class Git(LazyMixin):
         super(Git, self).__init__()
         self._working_dir = working_dir
         self._git_options = ()
+        self._persistent_git_options = []
 
         # Extra environment variables to pass to git commands
         self._environment = {}
@@ -401,6 +402,20 @@ class Git(LazyMixin):
         if name[0] == '_':
             return LazyMixin.__getattr__(self, name)
         return lambda *args, **kwargs: self._call_process(name, *args, **kwargs)
+
+    def set_persistent_git_options(self, **kwargs):
+        """Specify command line options to the git executable
+        for subsequent subcommand calls
+
+        :param kwargs:
+            is a dict of keyword arguments.
+            these arguments are passed as in _call_process
+            but will be passed to the git command rather than
+            the subcommand.
+        """
+
+        self._persistent_git_options = self.transform_kwargs(
+            split_single_char_options=True, **kwargs)
 
     def _set_cache_(self, attr):
         if attr == '_version_info':
@@ -820,7 +835,10 @@ class Git(LazyMixin):
 
         call = [self.GIT_PYTHON_GIT_EXECUTABLE]
 
-        # add the git options, the reset to empty
+        # add persistent git options
+        call.extend(self._persistent_git_options)
+
+        # add the git options, then reset to empty
         # to avoid side_effects
         call.extend(self._git_options)
         self._git_options = ()
