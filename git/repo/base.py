@@ -124,6 +124,8 @@ class Repo(object):
                 repo = Repo("~/Development/git-python.git")
                 repo = Repo("$REPOSITORIES/Development/git-python.git")
 
+            if `None, current-directory is used.
+            The :envvar:`GIT_DIR` if set and not empty takes precendance over this parameter.
         :param odbt:
             Object DataBase type - a type which is constructed by providing
             the directory containing the database objects, i.e. .git/objects. It will
@@ -136,17 +138,19 @@ class Repo(object):
         :raise InvalidGitRepositoryError:
         :raise NoSuchPathError:
         :return: git.Repo """
-        epath = _expand_path(path or os.getcwd())
         self.git = None  # should be set for __del__ not to fail in case we raise
+        epath = os.getenv('GIT_DIR')
+        epath = _expand_path(epath or path or os.getcwd())
         if not os.path.exists(epath):
             raise NoSuchPathError(epath)
 
         self.working_dir = None
         self._working_tree_dir = None
         self.git_dir = None
-        curpath = os.getenv('GIT_DIR', epath)
 
-        # walk up the path to find the .git dir
+        ## Walk up the path to find the `.git` dir.
+        #
+        curpath = epath
         while curpath:
             # ABOUT os.path.NORMPATH
             # It's important to normalize the paths, as submodules will otherwise initialize their
