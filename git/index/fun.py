@@ -355,7 +355,7 @@ def aggressive_tree_merge(odb, tree_shas):
                         out_append(_tree_entry_to_baseindexentry(theirs, 3))
                     # END theirs changed
                     # else:
-                    #   theirs didnt change
+                    #   theirs didn't change
                     #   pass
                 # END handle theirs
             # END handle ours

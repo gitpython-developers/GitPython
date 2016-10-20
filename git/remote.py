@@ -273,7 +273,7 @@ class FetchInfo(object):
             flags |= cls._flag_map[control_character]
         except KeyError:
             raise ValueError("Control character %r unknown as parsed from line %r" % (control_character, line))
-        # END control char exception hanlding
+        # END control char exception handling
 
         # parse operation string for more info - makes no sense for symbolic refs, but we parse it anyway
         old_commit = None
@@ -535,7 +535,7 @@ class Remote(LazyMixin, Iterable):
             The IterableList is prefixed, hence the 'origin' must be omitted. See
             'refs' property for an example.
 
-            To make things more complicated, it can be possble for the list to include
+            To make things more complicated, it can be possible for the list to include
             other kinds of references, for example, tag references, if these are stale
             as well. This is a fix for the issue described here:
             https://github.com/gitpython-developers/GitPython/issues/260
@@ -554,7 +554,7 @@ class Remote(LazyMixin, Iterable):
             else:
                 fqhn = "%s/%s" % (RemoteReference._common_path_default, ref_name)
                 out_refs.append(RemoteReference(self.repo, fqhn))
-            # end special case handlin
+            # end special case handling
         # END for each line
         return out_refs
 
@@ -778,7 +778,7 @@ class Remote(LazyMixin, Iterable):
             Can take one of many value types:
 
             * None to discard progress information
-            * A function (callable) that is called with the progress infomation.
+            * A function (callable) that is called with the progress information.
 
               Signature: ``progress(op_code, cur_count, max_count=None, message='')``.
 
@@ -823,7 +823,7 @@ class Remote(LazyMixin, Iterable):
         :return: GitConfigParser compatible object able to write options for this remote.
         :note:
             You can only own one writer at a time - delete it to release the
-            configuration file and make it useable by others.
+            configuration file and make it usable by others.
 
             To assure consistent results, you should only query options through the
             writer. Once you are done writing, you are free to use the config reader

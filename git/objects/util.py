@@ -270,7 +270,7 @@ class Traversable(object):
     def traverse(self, predicate=lambda i, d: True,
                  prune=lambda i, d: False, depth=-1, branch_first=True,
                  visit_once=True, ignore_self=1, as_edge=False):
-        """:return: iterator yieling of items found when traversing self
+        """:return: iterator yielding of items found when traversing self
 
         :param predicate: f(i,d) returns False if item i at depth d should not be included in the result
 
@@ -282,7 +282,7 @@ class Traversable(object):
             define at which level the iteration should not go deeper
             if -1, there is no limit
             if 0, you would effectively only get self, the root of the iteration
-            i.e. if 1, you would only get the first level of predessessors/successors
+            i.e. if 1, you would only get the first level of predecessors/successors
 
         :param branch_first:
             if True, items will be returned branch first, otherwise depth first
@@ -298,7 +298,7 @@ class Traversable(object):
 
         :param as_edge:
             if True, return a pair of items, first being the source, second the
-            destinatination, i.e. tuple(src, dest) with the edge spanning from
+            destination, i.e. tuple(src, dest) with the edge spanning from
             source to destination"""
         visited = set()
         stack = Deque()
@@ -348,7 +348,7 @@ class Serializable(object):
 
     def _serialize(self, stream):
         """Serialize the data of this object into the given data stream
-        :note: a serialized object would ``_deserialize`` into the same objet
+        :note: a serialized object would ``_deserialize`` into the same object
         :param stream: a file-like object
         :return: self"""
         raise NotImplementedError("To be implemented in subclass")

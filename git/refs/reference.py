@@ -20,7 +20,7 @@ def require_remote_ref_path(func):
     # END wrapper
     wrapper.__name__ = func.__name__
     return wrapper
-#}END utilites
+#}END utilities
 
 
 class Reference(SymbolicReference, LazyMixin, Iterable):

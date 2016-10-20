@@ -216,8 +216,7 @@ class Head(Reference):
         else:
             return self.repo.active_branch
 
-    #{ Configruation
-
+    #{ Configuration
     def _config_parser(self, read_only):
         if read_only:
             parser = self.repo.config_reader()
@@ -235,7 +234,7 @@ class Head(Reference):
 
     def config_writer(self):
         """
-        :return: A configuration writer instance with read-and write acccess
+        :return: A configuration writer instance with read-and write access
             to options of this head"""
         return self._config_parser(read_only=False)
 

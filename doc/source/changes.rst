@@ -185,11 +185,11 @@ It follows the `semantic version scheme <http://semver.org>`_, and thus will not
 
 0.3.3
 =====
-* When fetching, pulling or pushing, and an error occours, it will not be reported on stdout anymore. However, if there is a fatal error, it will still result in a GitCommandError to be thrown. This goes hand in hand with improved fetch result parsing.
+* When fetching, pulling or pushing, and an error occurs, it will not be reported on stdout anymore. However, if there is a fatal error, it will still result in a GitCommandError to be thrown. This goes hand in hand with improved fetch result parsing.
 * Code Cleanup (in preparation for python 3 support)
 
   * Applied autopep8 and cleaned up code
-  * Using python logging module instead of print statments to signal certain kinds of errors
+  * Using python logging module instead of print statements to signal certain kinds of errors
 
 0.3.2.1
 =======
@@ -268,7 +268,7 @@ It follows the `semantic version scheme <http://semver.org>`_, and thus will not
 * Head Type changes
 
  * config_reader() & config_writer() methods added for access to head specific options.
- * tracking_branch() & set_tracking_branch() methods addded for easy configuration of tracking branches.
+ * tracking_branch() & set_tracking_branch() methods added for easy configuration of tracking branches.
 
 
 0.3.0 Beta 2
@@ -300,13 +300,13 @@ General
 0.2 Beta 2
 ===========
  * Commit objects now carry the 'encoding' information of their message. It wasn't parsed previously, and defaults to UTF-8
- * Commit.create_from_tree now uses a pure-python implementation, mimicing git-commit-tree
+ * Commit.create_from_tree now uses a pure-python implementation, mimicking git-commit-tree
 
 0.2
 =====
 General
 -------
-* file mode in Tree, Blob and Diff objects now is an int compatible to definintiions
+* file mode in Tree, Blob and Diff objects now is an int compatible to definitions
   in the stat module, allowing you to query whether individual user, group and other
   read, write and execute bits are set.
 * Adjusted class hierarchy to generally allow comparison and hash for Objects and Refs
@@ -320,12 +320,12 @@ General
   may change without prior notice.
 * Renamed all find_all methods to list_items - this method is part of the Iterable interface
   that also provides a more efficients and more responsive iter_items method
-* All dates, like authored_date and committer_date, are stored as seconds since epoc
+* All dates, like authored_date and committer_date, are stored as seconds since epoch
   to consume less memory - they can be converted using time.gmtime in a more suitable
   presentation format if needed.
 * Named method parameters changed on a wide scale to unify their use. Now git specific
   terms are used everywhere, such as "Reference" ( ref ) and "Revision" ( rev ).
-  Prevously multiple terms where used making it harder to know which type was allowed
+  Previously multiple terms where used making it harder to know which type was allowed
   or not.
 * Unified diff interface to allow easy diffing between trees, trees and index, trees
   and working tree, index and working tree, trees and index. This closely follows
@@ -355,7 +355,7 @@ Blob
 GitCommand
 -----------
 * git.subcommand call scheme now prunes out None from the argument list, allowing
-  to be called more confortably as None can never be a valid to the git command
+  to be called more comfortably as None can never be a valid to the git command
   if converted to a string.
 * Renamed 'git_dir' attribute to 'working_dir' which is exactly how it is used
 
@@ -382,19 +382,19 @@ Diff
 Diffing
 -------
 * Commit and Tree objects now support diffing natively with a common interface to
-  compare agains other Commits or Trees, against the working tree or against the index.
+  compare against other Commits or Trees, against the working tree or against the index.
 
 Index
 -----
 * A new Index class allows to read and write index files directly, and to perform
   simple two and three way merges based on an arbitrary index.
 
-Referernces
+References
 ------------
 * References are object that point to a Commit
 * SymbolicReference are a pointer to a Reference Object, which itself points to a specific
   Commit
-* They will dynmically retrieve their object at the time of query to assure the information
+* They will dynamically retrieve their object at the time of query to assure the information
   is actual. Recently objects would be cached, hence ref object not be safely kept
   persistent.
 
@@ -403,7 +403,7 @@ Repo
 * Moved blame method from Blob to repo as it appeared to belong there much more.
 * active_branch method now returns a Head object instead of a string with the name
   of the active branch.
-* tree method now requires a Ref instance as input and defaults to the active_branche
+* tree method now requires a Ref instance as input and defaults to the active_branch
   instead of master
 * is_dirty now takes additional arguments allowing fine-grained control about what is
   considered dirty
@@ -479,7 +479,7 @@ General
 * Removed ambiguity between paths and treeishs. When calling commands that
   accept treeish and path arguments and there is a path with the same name as
   a treeish git cowardly refuses to pick one and asks for the command to use
-  the unambiguous syntax where '--' seperates the treeish from the paths.
+  the unambiguous syntax where '--' separates the treeish from the paths.
 
 * ``Repo.commits``, ``Repo.commits_between``, ``Repo.commits_since``,
   ``Repo.commit_count``, ``Repo.commit``, ``Commit.count`` and
@@ -627,7 +627,7 @@ Tree
 ----
 * Corrected problem with ``Tree.__div__`` not working with zero length files.
   Removed ``__len__`` override and replaced with size instead. Also made size
-  cach properly. This is a breaking change.
+  cache properly. This is a breaking change.
 
 0.1.1
 =====

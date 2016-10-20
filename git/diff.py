@@ -91,11 +91,11 @@ class Diffable(object):
 
         :param paths:
             is a list of paths or a single path to limit the diff to.
-            It will only include at least one of the givne path or paths.
+            It will only include at least one of the given path or paths.
 
         :param create_patch:
             If True, the returned Diff contains a detailed patch that if applied
-            makes the self to other. Patches are somwhat costly as blobs have to be read
+            makes the self to other. Patches are somewhat costly as blobs have to be read
             and diffed.
 
         :param kwargs:
@@ -106,7 +106,7 @@ class Diffable(object):
 
         :note:
             On a bare repository, 'other' needs to be provided as Index or as
-            as Tree/Commit, or a git command error will occour"""
+            as Tree/Commit, or a git command error will occur"""
         args = list()
         args.append("--abbrev=40")        # we need full shas
         args.append("--full-index")       # get full index paths, not only filenames
@@ -172,7 +172,7 @@ class DiffIndex(list):
     def iter_change_type(self, change_type):
         """
         :return:
-            iterator yieling Diff instances that match the given change_type
+            iterator yielding Diff instances that match the given change_type
 
         :param change_type:
             Member of DiffIndex.change_type, namely:
@@ -347,7 +347,7 @@ class Diff(object):
             msg += '\n---'
         # END diff info
 
-        # Python2 sillyness: have to assure we convert our likely to be unicode object to a string with the
+        # Python2 silliness: have to assure we convert our likely to be unicode object to a string with the
         # right encoding. Otherwise it tries to convert it using ascii, which may fail ungracefully
         res = h + msg
         if not PY3:
@@ -427,7 +427,7 @@ class Diff(object):
             b_path = cls._pick_best_path(b_path, rename_to, b_path_fallback)
 
             # Our only means to find the actual text is to see what has not been matched by our regex,
-            # and then retro-actively assin it to our index
+            # and then retro-actively assign it to our index
             if previous_header is not None:
                 index[-1].diff = text[previous_header.end():header.start()]
             # end assign actual diff
@@ -480,7 +480,7 @@ class Diff(object):
             rename_from = None
             rename_to = None
 
-            # NOTE: We cannot conclude from the existance of a blob to change type
+            # NOTE: We cannot conclude from the existence of a blob to change type
             # as diffs with the working do not have blobs yet
             if change_type == 'D':
                 b_blob_id = None
