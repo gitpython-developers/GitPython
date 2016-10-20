@@ -16,7 +16,7 @@ from git import (
 )
 from git.util import rmtree
 
-#{ Invvariants
+#{ Invariants
 k_env_git_repo = "GIT_PYTHON_TEST_GIT_REPO_BASE"
 
 #} END invariants

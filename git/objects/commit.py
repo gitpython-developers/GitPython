@@ -163,7 +163,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
         """Count the number of commits reachable from this commit
 
         :param paths:
-            is an optinal path or a list of paths restricting the return value
+            is an optional path or a list of paths restricting the return value
             to commits actually containing the paths
 
         :param kwargs:
@@ -192,7 +192,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
         :param repo: is the Repo
         :param rev: revision specifier, see git-rev-parse for viable options
         :param paths:
-            is an optinal path or list of paths, if set only Commits that include the path
+            is an optional path or list of paths, if set only Commits that include the path
             or paths will be considered
         :param kwargs:
             optional keyword arguments to git rev-list where

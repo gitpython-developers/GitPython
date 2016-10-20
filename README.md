@@ -83,7 +83,7 @@ exists in `Git\mingw64\libexec\git-core\`; CYGWIN has no daemon, but should get 
 with MINGW's.
 
 The easiest way to run tests is by using [tox](https://pypi.python.org/pypi/tox)
-a wrapper around virtualenv. It will take care of setting up environnements with the proper
+a wrapper around virtualenv. It will take care of setting up environments with the proper
 dependencies installed and execute test commands. To install it simply:
 
     pip install tox

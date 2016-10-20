@@ -68,10 +68,10 @@ def handle_process_output(process, stdout_handler, stderr_handler,
     :return: result of finalizer
     :param process: subprocess.Popen instance
     :param stdout_handler: f(stdout_line_string), or None
-    :param stderr_hanlder: f(stderr_line_string), or None
+    :param stderr_handler: f(stderr_line_string), or None
     :param finalizer: f(proc) - wait for proc to finish
     :param decode_streams:
-        Assume stdout/stderr streams are binary and decode them vefore pushing \
+        Assume stdout/stderr streams are binary and decode them before pushing \
         their contents to handlers.
         Set it to False if `universal_newline == True` (then streams are in text-mode)
         or if decoding must happen later (i.e. for Diffs).
@@ -419,7 +419,7 @@ class Git(LazyMixin):
 
     def _set_cache_(self, attr):
         if attr == '_version_info':
-            # We only use the first 4 numbers, as everthing else could be strings in fact (on windows)
+            # We only use the first 4 numbers, as everything else could be strings in fact (on windows)
             version_numbers = self._call_process('version').split(' ')[2]
             self._version_info = tuple(int(n) for n in version_numbers.split('.')[:4] if n.isdigit())
         else:
