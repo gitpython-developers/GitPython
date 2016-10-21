@@ -3,7 +3,10 @@ from io import BytesIO
 import logging
 import os
 import stat
-from unittest.case import SkipTest
+try:
+    from unittest import SkipTest
+except ImportError:
+    from unittest2 import SkipTest
 import uuid
 
 import git

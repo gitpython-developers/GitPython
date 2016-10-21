@@ -7,7 +7,10 @@
 import os
 import sys
 import tempfile
-from unittest import skipIf
+try:
+    from unittest import SkipTest, skipIf
+except ImportError:
+    from unittest2 import SkipTest, skipIf
 
 from git import (
     Blob,
@@ -131,7 +134,6 @@ class TestBase(TestBase):
         try:
             file_path.encode(sys.getfilesystemencoding())
         except UnicodeEncodeError:
-            from unittest import SkipTest
             raise SkipTest("Environment doesn't support unicode filenames")
 
         with open(file_path, "wb") as fp:

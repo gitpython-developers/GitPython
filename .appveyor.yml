@@ -7,6 +7,9 @@ environment:
     matrix:
         ## MINGW
         #
+      - PYTHON: "C:\\Python26"
+        PYTHON_VERSION: "2.6"
+        GIT_PATH: "%GIT_DAEMON_PATH%"
       - PYTHON: "C:\\Python27"
         PYTHON_VERSION: "2.7"
         GIT_PATH: "%GIT_DAEMON_PATH%"
