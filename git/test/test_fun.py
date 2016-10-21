@@ -1,6 +1,9 @@
 from io import BytesIO
 from stat import S_IFDIR, S_IFREG, S_IFLNK
-from unittest.case import skipIf
+try:
+    from unittest import skipIf
+except ImportError:
+    from unittest2 import skipIf
 
 from git.compat import PY3
 from git.index import IndexFile

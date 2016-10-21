@@ -11,7 +11,10 @@ import os
 import pickle
 import sys
 import tempfile
-from unittest.case import skipIf
+try:
+    from unittest import skipIf, SkipTest
+except ImportError:
+    from unittest2 import skipIf, SkipTest
 
 from git import (
     InvalidGitRepositoryError,
@@ -53,7 +56,6 @@ from git.test.lib import (
 from git.util import HIDE_WINDOWS_KNOWN_ERRORS, cygpath
 from git.test.lib import with_rw_directory
 from git.util import join_path_native, rmtree, rmfile, bin_to_hex
-from unittest import SkipTest
 
 import functools as fnt
 import os.path as osp

@@ -6,7 +6,11 @@
 
 import tempfile
 import time
-from unittest.case import skipIf
+try:
+    from unittest import skipIf
+except ImportError:
+    from unittest2 import skipIf
+
 
 import ddt
 
