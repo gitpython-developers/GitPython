@@ -808,8 +808,6 @@ class TestRepo(TestBase):
         git_file_repo = Repo(rwrepo.working_tree_dir)
         self.assertEqual(osp.abspath(git_file_repo.git_dir), real_path_abs)
 
-    @skipIf(HIDE_WINDOWS_KNOWN_ERRORS and PY3,
-            "FIXME: smmp fails with: TypeError: Can't convert 'bytes' object to str implicitly")
     def test_file_handle_leaks(self):
         def last_commit(repo, rev, path):
             commit = next(repo.iter_commits(rev, path, max_count=1))

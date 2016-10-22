@@ -7,7 +7,7 @@ from unittest.case import skipIf
 
 import git
 from git.cmd import Git
-from git.compat import string_types, is_win
+from git.compat import string_types
 from git.exc import (
     InvalidGitRepositoryError,
     RepositoryDirtyError
@@ -26,20 +26,6 @@ from git.test.lib import with_rw_directory
 from git.util import HIDE_WINDOWS_KNOWN_ERRORS
 from git.util import to_native_path_linux, join_path_native
 import os.path as osp
-
-
-# Change the configuration if possible to prevent the underlying memory manager
-# to keep file handles open. On windows we get problems as they are not properly
-# closed due to mmap bugs on windows (as it appears)
-if is_win:
-    try:
-        import smmap.util  # @UnusedImport
-        smmap.util.MapRegion._test_read_into_memory = True
-    except ImportError:
-        sys.stderr.write("The submodule tests will fail as some files cannot be removed due to open file handles.\n")
-        sys.stderr.write(
-            "The latest version of gitdb uses a memory map manager which can be configured to work around this problem")
-# END handle windows platform
 
 
 class TestRootProgress(RootUpdateProgress):
