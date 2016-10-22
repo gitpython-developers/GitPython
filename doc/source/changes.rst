@@ -2,6 +2,24 @@
 Changelog
 =========
 
+2.1.0 - Much better windows support!
+====================================
+
+Special thanks to @ankostis, who made this release possible (nearly) single-handedly.
+GitPython is run by its users, and their PRs make all the difference, they keep
+GitPython relevant. Thank you all so much for contributing !
+
+Notable fixes
+-------------
+
+* The `GIT_DIR` environment variable does not override the `path` argument when
+  initializing a `Repo` object anymore. However, if said `path` unset, `GIT_DIR`
+  will be used to fill the void.
+  
+All issues and PRs can be viewed in all detail when following this URL:
+https://github.com/gitpython-developers/GitPython/issues?q=is%3Aclosed+milestone%3A%22v2.1.0+-+proper+windows+support%22
+
+
 2.0.9 - Bugfixes
 =============================
 
