@@ -227,8 +227,8 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
     and should be an inetd service that serves tempdir.gettempdir() and all
     directories in it.
 
-    The following scetch demonstrates this::
-     rorepo ---<bare clone>---> rw_daemon_repo ---<clone>---> rw_repo
+    The following sketch demonstrates this::
+     rorepo ---<bare clone>---> rw_remote_repo ---<clone>---> rw_repo
 
     The test case needs to support the following signature::
         def case(self, rw_repo, rw_daemon_repo)

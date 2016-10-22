@@ -140,7 +140,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
                 self._deserialize(stream)
             finally:
                 lfd.rollback()
-                # The handles will be closed on desctruction
+                # The handles will be closed on destruction
             # END read from default index on demand
         else:
             super(IndexFile, self)._set_cache_(attr)
@@ -876,7 +876,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
     def move(self, items, skip_errors=False, **kwargs):
         """Rename/move the items, whereas the last item is considered the destination of
         the move operation. If the destination is a file, the first item ( of two )
-        must be a file as well. If the destination is a directory, it may be preceeded
+        must be a file as well. If the destination is a directory, it may be preceded
         by one or more directories or files.
 
         The working tree will be affected in non-bare repositories.
@@ -886,7 +886,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             for reference.
         :param skip_errors:
             If True, errors such as ones resulting from missing source files will
-            be skpped.
+            be skipped.
         :param kwargs:
             Additional arguments you would like to pass to git-mv, such as dry_run
             or force.
@@ -895,7 +895,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             A list of pairs, containing the source file moved as well as its
             actual destination. Relative to the repository root.
 
-        :raise ValueErorr: If only one item was given
+        :raise ValueError: If only one item was given
             GitCommandError: If git could not handle your request"""
         args = list()
         if skip_errors:
@@ -991,7 +991,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             prior and after a file has been checked out
 
         :param kwargs:
-            Additional arguments to be pasesd to git-checkout-index
+            Additional arguments to be passed to git-checkout-index
 
         :return:
             iterable yielding paths to files which have been checked out and are
@@ -1219,7 +1219,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             cur_val = kwargs.get('R', False)
             kwargs['R'] = not cur_val
             return other.diff(self.Index, paths, create_patch, **kwargs)
-        # END diff against other item handlin
+        # END diff against other item handling
 
         # if other is not None here, something is wrong
         if other is not None:

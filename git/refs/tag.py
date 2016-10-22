@@ -9,7 +9,7 @@ class TagReference(Reference):
     ,a tag object or any other object. In the latter case additional information,
     like the signature or the tag-creator, is available.
 
-    This tag object will always point to a commit object, but may carray additional
+    This tag object will always point to a commit object, but may carry additional
     information in a tag object::
 
      tagref = TagReference.list_items(repo)[0]

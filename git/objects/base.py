@@ -126,7 +126,7 @@ class IndexObject(Object):
     SubModule objects"""
     __slots__ = ("path", "mode")
 
-    # for compatability with iterable lists
+    # for compatibility with iterable lists
     _id_attribute_ = 'path'
 
     def __init__(self, repo, binsha, mode=None, path=None):
@@ -136,7 +136,7 @@ class IndexObject(Object):
         :param binsha: 20 byte sha1
         :param mode:
             is the stat compatible file mode as int, use the stat module
-            to evaluate the infomration
+            to evaluate the information
         :param path:
             is the path to the file in the file system, relative to the git repository root, i.e.
             file.ext or folder/other.ext
@@ -164,7 +164,7 @@ class IndexObject(Object):
                 % (attr, type(self).__name__))
         else:
             super(IndexObject, self)._set_cache_(attr)
-        # END hanlde slot attribute
+        # END handle slot attribute
 
     @property
     def name(self):

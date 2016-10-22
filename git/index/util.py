@@ -74,7 +74,7 @@ def default_index(func):
             raise AssertionError(
                 "Cannot call %r on indices that do not represent the default git index" % func.__name__)
         return func(self, *args, **kwargs)
-    # END wrpaper method
+    # END wrapper method
 
     return check_default_index
 

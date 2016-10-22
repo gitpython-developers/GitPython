@@ -92,7 +92,7 @@ Getting Started
 API Reference
 =============
 
-An organized section of the GitPthon API is at :ref:`api_reference_toplevel`.
+An organized section of the GitPython API is at :ref:`api_reference_toplevel`.
 
 .. _source-code-label:
 

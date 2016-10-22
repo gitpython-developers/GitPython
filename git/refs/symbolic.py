@@ -105,7 +105,7 @@ class SymbolicReference(object):
             return
         # END no packed-refs file handling
         # NOTE: Had try-finally block around here to close the fp,
-        # but some python version woudn't allow yields within that.
+        # but some python version wouldn't allow yields within that.
         # I believe files are closing themselves on destruction, so it is
         # alright.
 
@@ -137,7 +137,7 @@ class SymbolicReference(object):
         except (OSError, IOError):
             # Probably we are just packed, find our entry in the packed refs file
             # NOTE: We are not a symbolic ref if we are in a packed file, as these
-            # are excluded explictly
+            # are excluded explicitly
             for sha, path in cls._iter_packed_refs(repo):
                 if path != ref_path:
                     continue
@@ -258,7 +258,7 @@ class SymbolicReference(object):
         symbolic one.
 
         :param ref: SymbolicReference instance, Object instance or refspec string
-            Only if the ref is a SymbolicRef instance, we will point to it. Everthing
+            Only if the ref is a SymbolicRef instance, we will point to it. Everything
             else is dereferenced to obtain the actual object.
         :param logmsg: If set to a string, the message will be used in the reflog.
             Otherwise, a reflog entry is not written for the changed reference.
@@ -448,7 +448,7 @@ class SymbolicReference(object):
                         fd.writelines(l.encode(defenc) for l in new_lines)
 
             except (OSError, IOError):
-                pass  # it didnt exist at all
+                pass  # it didn't exist at all
 
         # delete the reflog
         reflog_path = RefLog.path(cls(repo, full_ref_path))
@@ -619,7 +619,7 @@ class SymbolicReference(object):
             git.SymbolicReference[], each of them is guaranteed to be a symbolic
             ref which is not detached and pointing to a valid ref
 
-            List is lexigraphically sorted
+            List is lexicographically sorted
             The returned objects represent actual subclasses, such as Head or TagReference"""
         return (r for r in cls._iter_items(repo, common_path) if r.__class__ == SymbolicReference or not r.is_detached)
 

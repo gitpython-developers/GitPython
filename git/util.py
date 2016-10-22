@@ -387,7 +387,7 @@ class RemoteProgress(object):
         sub_lines = line.split('\r')
         failed_lines = list()
         for sline in sub_lines:
-            # find esacpe characters and cut them away - regex will not work with
+            # find escape characters and cut them away - regex will not work with
             # them as they are non-ascii. As git might expect a tty, it will send them
             last_valid_index = None
             for i, c in enumerate(reversed(sline)):
@@ -682,7 +682,7 @@ class IndexFileSHA1Writer(object):
 
     """Wrapper around a file-like object that remembers the SHA1 of
     the data written to it. It will write a sha when the stream is closed
-    or if the asked for explicitly usign write_sha.
+    or if the asked for explicitly using write_sha.
 
     Only useful to the indexfile
 
@@ -812,7 +812,7 @@ class BlockingLockFile(LockFile):
                 super(BlockingLockFile, self)._obtain_lock()
             except IOError:
                 # synity check: if the directory leading to the lockfile is not
-                # readable anymore, raise an execption
+                # readable anymore, raise an exception
                 curtime = time.time()
                 if not osp.isdir(osp.dirname(self._lock_file_path())):
                     msg = "Directory containing the lockfile %r was not readable anymore after waiting %g seconds" % (
@@ -856,7 +856,7 @@ class IterableList(list):
         self._prefix = prefix
 
     def __contains__(self, attr):
-        # first try identy match for performance
+        # first try identity match for performance
         rval = list.__contains__(self, attr)
         if rval:
             return rval

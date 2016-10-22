@@ -14,11 +14,10 @@ from git.test.lib import (
     TestBase
 )
 from git.util import rmtree
-
 import os.path as osp
 
+#{ Invariants
 
-#{ Invvariants
 k_env_git_repo = "GIT_PYTHON_TEST_GIT_REPO_BASE"
 
 #} END invariants

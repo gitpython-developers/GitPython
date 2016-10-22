@@ -253,8 +253,8 @@ def rev_parse(repo, rev):
 
             # empty output types don't require any specific type, its just about dereferencing tags
             if output_type and obj.type != output_type:
-                raise ValueError("Could not accomodate requested object type %r, got %s" % (output_type, obj.type))
-            # END verify ouput type
+                raise ValueError("Could not accommodate requested object type %r, got %s" % (output_type, obj.type))
+            # END verify output type
 
             start = end + 1                   # skip brace
             parsed_to = start
@@ -283,7 +283,7 @@ def rev_parse(repo, rev):
         # END number parsing only if non-blob mode
 
         parsed_to = start
-        # handle hiererarchy walk
+        # handle hierarchy walk
         try:
             if token == "~":
                 obj = to_commit(obj)

@@ -198,7 +198,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
             configuration files have been included
         :param merge_includes: if True, we will read files mentioned in [include] sections and merge their
             contents into ours. This makes it impossible to write back an individual configuration file.
-            Thus, if you want to modify a single conifguration file, turn this off to leave the original
+            Thus, if you want to modify a single configuration file, turn this off to leave the original
             dataset unaltered when reading it."""
         cp.RawConfigParser.__init__(self, dict_type=OrderedDict)
 
@@ -275,7 +275,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
         """A direct copy of the py2.4 version of the super class's _read method
         to assure it uses ordered dicts. Had to change one line to make it work.
 
-        Future versions have this fixed, but in fact its quite embarassing for the
+        Future versions have this fixed, but in fact its quite embarrassing for the
         guys not to have done it right in the first place !
 
         Removed big comments to make it more compact.
@@ -472,7 +472,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
         # end assert multiple files
 
         if self._has_includes():
-            log.debug("Skipping write-back of confiuration file as include files were merged in." +
+            log.debug("Skipping write-back of configuration file as include files were merged in." +
                       "Set merge_includes=False to prevent this.")
             return
         # end

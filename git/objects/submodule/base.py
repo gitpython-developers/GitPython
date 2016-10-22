@@ -72,7 +72,7 @@ UPDWKTREE = UpdateProgress.UPDWKTREE
 
 # IndexObject comes via util module, its a 'hacky' fix thanks to pythons import
 # mechanism which cause plenty of trouble of the only reason for packages and
-# modules is refactoring - subpackages shoudn't depend on parent packages
+# modules is refactoring - subpackages shouldn't depend on parent packages
 class Submodule(IndexObject, Iterable, Traversable):
 
     """Implements access to a git submodule. They are special in that their sha
@@ -140,7 +140,7 @@ class Submodule(IndexObject, Iterable, Traversable):
             return type(self).list_items(item.module())
         except InvalidGitRepositoryError:
             return list()
-        # END handle intermeditate items
+        # END handle intermediate items
 
     @classmethod
     def _need_gitfile_submodules(cls, git):
@@ -181,7 +181,7 @@ class Submodule(IndexObject, Iterable, Traversable):
             except ValueError:
                 # We are most likely in an empty repository, so the HEAD doesn't point to a valid ref
                 pass
-        # end hanlde parent_commit
+        # end handle parent_commit
 
         if not repo.bare and parent_matches_head:
             fp_module = osp.join(repo.working_tree_dir, cls.k_modules_file)
@@ -224,7 +224,7 @@ class Submodule(IndexObject, Iterable, Traversable):
             pc = self.parent_commit
         except ValueError:
             pc = None
-        # end hande empty parent repository
+        # end handle empty parent repository
         parser = self._config_parser(self.repo, pc, read_only)
         parser.set_submodule(self)
         return SectionConstraint(parser, sm_section(self.name))
@@ -943,7 +943,7 @@ class Submodule(IndexObject, Iterable, Traversable):
         # END handle checking mode
 
         # update our sha, it could have changed
-        # If check is False, we might see a parent-commit that doens't even contain the submodule anymore.
+        # If check is False, we might see a parent-commit that doesn't even contain the submodule anymore.
         # in that case, mark our sha as being NULL
         try:
             self.binsha = pctree[self.path].binsha
