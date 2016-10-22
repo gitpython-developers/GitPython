@@ -1,17 +1,18 @@
-from git.test.lib import (
-    TestBase,
-    fixture_path
-)
+import os
+import tempfile
+
 from git.objects import IndexObject
 from git.refs import (
     RefLogEntry,
     RefLog
 )
-from git.util import Actor, rmtree
-from gitdb.util import hex_to_bin
+from git.test.lib import (
+    TestBase,
+    fixture_path
+)
+from git.util import Actor, rmtree, hex_to_bin
 
-import tempfile
-import os
+import os.path as osp
 
 
 class TestRefLog(TestBase):
@@ -42,7 +43,7 @@ class TestRefLog(TestBase):
         os.mkdir(tdir)
 
         rlp_master_ro = RefLog.path(self.rorepo.head)
-        assert os.path.isfile(rlp_master_ro)
+        assert osp.isfile(rlp_master_ro)
 
         # simple read
         reflog = RefLog.from_file(rlp_master_ro)
@@ -70,7 +71,7 @@ class TestRefLog(TestBase):
         cr = self.rorepo.config_reader()
         for rlp in (rlp_head, rlp_master):
             reflog = RefLog.from_file(rlp)
-            tfile = os.path.join(tdir, os.path.basename(rlp))
+            tfile = osp.join(tdir, osp.basename(rlp))
             reflog.to_file(tfile)
             assert reflog.write() is reflog
 

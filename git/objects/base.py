@@ -3,14 +3,13 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
-from .util import get_object_type_by_name
-from git.util import LazyMixin, join_path_native, stream_copy
-from gitdb.util import (
-    bin_to_hex,
-    basename
-)
+from git.util import LazyMixin, join_path_native, stream_copy, bin_to_hex
 
 import gitdb.typ as dbtyp
+import os.path as osp
+
+from .util import get_object_type_by_name
+
 
 _assertion_msg_format = "Created object %r whose python type %r disagrees with the acutal git object type %r"
 
@@ -170,7 +169,7 @@ class IndexObject(Object):
     @property
     def name(self):
         """:return: Name portion of the path, effectively being the basename"""
-        return basename(self.path)
+        return osp.basename(self.path)
 
     @property
     def abspath(self):

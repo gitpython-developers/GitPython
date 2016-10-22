@@ -4,8 +4,15 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
-import os
-
+import ddt
+from git import (
+    Repo,
+    GitCommandError,
+    Diff,
+    DiffIndex,
+    NULL_TREE,
+)
+from git.cmd import Git
 from git.test.lib import (
     TestBase,
     StringProcessAdapter,
@@ -14,17 +21,9 @@ from git.test.lib import (
     assert_true,
 
 )
-
 from git.test.lib import with_rw_directory
 
-from git import (
-    Repo,
-    GitCommandError,
-    Diff,
-    DiffIndex,
-    NULL_TREE,
-)
-import ddt
+import os.path as osp
 
 
 @ddt.ddt
@@ -53,10 +52,10 @@ class TestDiff(TestBase):
     def test_diff_with_staged_file(self, rw_dir):
         # SETUP INDEX WITH MULTIPLE STAGES
         r = Repo.init(rw_dir)
-        fp = os.path.join(rw_dir, 'hello.txt')
+        fp = osp.join(rw_dir, 'hello.txt')
         with open(fp, 'w') as fs:
             fs.write("hello world")
-        r.git.add(fp)
+        r.git.add(Git.polish_url(fp))
         r.git.commit(message="init")
 
         with open(fp, 'w') as fs:

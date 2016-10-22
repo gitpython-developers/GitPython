@@ -1,31 +1,29 @@
-from git.util import (
-    Actor,
-    LockedFD,
-    LockFile,
-    assure_directory_exists,
-    to_native_path,
-)
+import re
+import time
 
-from gitdb.util import (
-    bin_to_hex,
-    join,
-    file_contents_ro_filepath,
-)
-
-from git.objects.util import (
-    parse_date,
-    Serializable,
-    altz_to_utctz_str,
-)
 from git.compat import (
     PY3,
     xrange,
     string_types,
     defenc
 )
+from git.objects.util import (
+    parse_date,
+    Serializable,
+    altz_to_utctz_str,
+)
+from git.util import (
+    Actor,
+    LockedFD,
+    LockFile,
+    assure_directory_exists,
+    to_native_path,
+    bin_to_hex,
+    file_contents_ro_filepath
+)
 
-import time
-import re
+import os.path as osp
+
 
 __all__ = ["RefLog", "RefLogEntry"]
 
@@ -185,7 +183,7 @@ class RefLog(list, Serializable):
             instance would be found. The path is not guaranteed to point to a valid
             file though.
         :param ref: SymbolicReference instance"""
-        return join(ref.repo.git_dir, "logs", to_native_path(ref.path))
+        return osp.join(ref.repo.git_dir, "logs", to_native_path(ref.path))
 
     @classmethod
     def iter_entries(cls, stream):

@@ -1,6 +1,11 @@
-from git.test.lib import (
-    TestBase,
-    with_rw_repo
+from io import BytesIO
+from stat import S_IFDIR, S_IFREG, S_IFLNK
+from unittest.case import skipIf
+
+from git.compat import PY3
+from git.index import IndexFile
+from git.index.fun import (
+    aggressive_tree_merge
 )
 from git.objects.fun import (
     traverse_tree_recursive,
@@ -8,25 +13,13 @@ from git.objects.fun import (
     tree_to_stream,
     tree_entries_from_data
 )
-
-from git.index.fun import (
-    aggressive_tree_merge
+from git.test.lib import (
+    TestBase,
+    with_rw_repo
 )
-
-from gitdb.util import bin_to_hex
+from git.util import bin_to_hex
 from gitdb.base import IStream
 from gitdb.typ import str_tree_type
-from git.compat import PY3
-
-from unittest.case import skipIf
-from stat import (
-    S_IFDIR,
-    S_IFREG,
-    S_IFLNK
-)
-
-from git.index import IndexFile
-from io import BytesIO
 
 
 class TestFun(TestBase):
@@ -262,7 +255,7 @@ class TestFun(TestBase):
     def test_tree_entries_from_data_with_failing_name_decode_py2(self):
         r = tree_entries_from_data(b'100644 \x9f\0aaa')
         assert r == [('aaa', 33188, u'\udc9f')], r
-        
+
     @skipIf(not PY3, 'odd types returned ... maybe figure it out one day')
     def test_tree_entries_from_data_with_failing_name_decode_py3(self):
         r = tree_entries_from_data(b'100644 \x9f\0aaa')

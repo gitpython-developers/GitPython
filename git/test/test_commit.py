@@ -6,6 +6,23 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 from __future__ import print_function
 
+from datetime import datetime
+from io import BytesIO
+import re
+import sys
+import time
+
+from git import (
+    Commit,
+    Actor,
+)
+from git import Repo
+from git.compat import (
+    string_types,
+    text_type
+)
+from git.objects.util import tzoffset, utc
+from git.repo.fun import touch
 from git.test.lib import (
     TestBase,
     assert_equal,
@@ -14,26 +31,11 @@ from git.test.lib import (
     fixture_path,
     StringProcessAdapter
 )
-from git import (
-    Commit,
-    Actor,
-)
-from gitdb import IStream
 from git.test.lib import with_rw_directory
-from git.compat import (
-    string_types,
-    text_type
-)
-from git import Repo
-from git.repo.fun import touch
+from gitdb import IStream
 
-from io import BytesIO
-import time
-import sys
-import re
-import os
-from datetime import datetime
-from git.objects.util import tzoffset, utc
+import os.path as osp
+
 
 try:
     from unittest.mock import Mock
@@ -232,8 +234,8 @@ class TestCommit(TestBase):
 
     @with_rw_directory
     def test_ambiguous_arg_iteration(self, rw_dir):
-        rw_repo = Repo.init(os.path.join(rw_dir, 'test_ambiguous_arg'))
-        path = os.path.join(rw_repo.working_tree_dir, 'master')
+        rw_repo = Repo.init(osp.join(rw_dir, 'test_ambiguous_arg'))
+        path = osp.join(rw_repo.working_tree_dir, 'master')
         touch(path)
         rw_repo.index.add([path])
         rw_repo.index.commit('initial commit')

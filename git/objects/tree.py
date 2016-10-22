@@ -5,7 +5,7 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 from git.util import join_path
 import git.diff as diff
-from gitdb.util import to_bin_sha
+from git.util import to_bin_sha
 
 from . import util
 from .base import IndexObject
@@ -18,7 +18,7 @@ from .fun import (
     tree_to_stream
 )
 
-from gitdb.utils.compat import PY3
+from git.compat import PY3
 
 if PY3:
     cmp = lambda a, b: (a > b) - (a < b)

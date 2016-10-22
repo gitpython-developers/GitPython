@@ -1,33 +1,27 @@
 import os
 
+from git.compat import (
+    string_types,
+    defenc
+)
 from git.objects import Object, Commit
 from git.util import (
     join_path,
     join_path_native,
     to_native_path_linux,
-    assure_directory_exists
+    assure_directory_exists,
+    hex_to_bin,
+    LockedFD
 )
-
 from gitdb.exc import (
     BadObject,
     BadName
 )
-from gitdb.util import (
-    join,
-    dirname,
-    isdir,
-    exists,
-    isfile,
-    rename,
-    hex_to_bin,
-    LockedFD
-)
-from git.compat import (
-    string_types,
-    defenc
-)
+
+import os.path as osp
 
 from .log import RefLog
+
 
 __all__ = ["SymbolicReference"]
 
@@ -81,7 +75,7 @@ class SymbolicReference(object):
 
     @classmethod
     def _get_packed_refs_path(cls, repo):
-        return join(repo.git_dir, 'packed-refs')
+        return osp.join(repo.git_dir, 'packed-refs')
 
     @classmethod
     def _iter_packed_refs(cls, repo):
@@ -134,7 +128,7 @@ class SymbolicReference(object):
         point to, or None"""
         tokens = None
         try:
-            with open(join(repo.git_dir, ref_path), 'rt') as fp:
+            with open(osp.join(repo.git_dir, ref_path), 'rt') as fp:
                 value = fp.read().rstrip()
             # Don't only split on spaces, but on whitespace, which allows to parse lines like
             # 60b64ef992065e2600bfef6187a97f92398a9144                branch 'master' of git-server:/path/to/repo
@@ -418,8 +412,8 @@ class SymbolicReference(object):
             or just "myreference", hence 'refs/' is implied.
             Alternatively the symbolic reference to be deleted"""
         full_ref_path = cls.to_full_path(path)
-        abs_path = join(repo.git_dir, full_ref_path)
-        if exists(abs_path):
+        abs_path = osp.join(repo.git_dir, full_ref_path)
+        if osp.exists(abs_path):
             os.remove(abs_path)
         else:
             # check packed refs
@@ -458,7 +452,7 @@ class SymbolicReference(object):
 
         # delete the reflog
         reflog_path = RefLog.path(cls(repo, full_ref_path))
-        if os.path.isfile(reflog_path):
+        if osp.isfile(reflog_path):
             os.remove(reflog_path)
         # END remove reflog
 
@@ -470,14 +464,14 @@ class SymbolicReference(object):
         corresponding object and a detached symbolic reference will be created
         instead"""
         full_ref_path = cls.to_full_path(path)
-        abs_ref_path = join(repo.git_dir, full_ref_path)
+        abs_ref_path = osp.join(repo.git_dir, full_ref_path)
 
         # figure out target data
         target = reference
         if resolve:
             target = repo.rev_parse(str(reference))
 
-        if not force and isfile(abs_ref_path):
+        if not force and osp.isfile(abs_ref_path):
             target_data = str(target)
             if isinstance(target, SymbolicReference):
                 target_data = target.path
@@ -544,9 +538,9 @@ class SymbolicReference(object):
         if self.path == new_path:
             return self
 
-        new_abs_path = join(self.repo.git_dir, new_path)
-        cur_abs_path = join(self.repo.git_dir, self.path)
-        if isfile(new_abs_path):
+        new_abs_path = osp.join(self.repo.git_dir, new_path)
+        cur_abs_path = osp.join(self.repo.git_dir, self.path)
+        if osp.isfile(new_abs_path):
             if not force:
                 # if they point to the same file, its not an error
                 with open(new_abs_path, 'rb') as fd1:
@@ -561,12 +555,12 @@ class SymbolicReference(object):
             os.remove(new_abs_path)
         # END handle existing target file
 
-        dname = dirname(new_abs_path)
-        if not isdir(dname):
+        dname = osp.dirname(new_abs_path)
+        if not osp.isdir(dname):
             os.makedirs(dname)
         # END create directory
 
-        rename(cur_abs_path, new_abs_path)
+        os.rename(cur_abs_path, new_abs_path)
         self.path = new_path
 
         return self

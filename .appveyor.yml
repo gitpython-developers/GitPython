@@ -21,18 +21,17 @@ environment:
         IS_CONDA: "yes"
         GIT_PATH: "%GIT_DAEMON_PATH%"
 
-      #   ## Cygwin
-      #   #
-      # - PYTHON: "C:\\Miniconda-x64"
-      #   PYTHON_VERSION: "2.7"
-      #   IS_CONDA: "yes"
-      #   GIT_PATH: "%CYGWIN_GIT_PATH%"
-      # - PYTHON: "C:\\Python34-x64"
-      #   PYTHON_VERSION: "3.4"
-      #   GIT_PATH: "%CYGWIN_GIT_PATH%"
-      # - PYTHON: "C:\\Python35-x64"
-      #   PYTHON_VERSION: "3.5"
-      #   GIT_PATH: "%CYGWIN64_GIT_PATH%"
+        ## Cygwin
+        #
+      - PYTHON: "C:\\Miniconda-x64"
+        PYTHON_VERSION: "2.7"
+        IS_CONDA: "yes"
+        IS_CYGWIN: "yes"
+        GIT_PATH: "%CYGWIN_GIT_PATH%"
+      - PYTHON: "C:\\Python35-x64"
+        PYTHON_VERSION: "3.5"
+        GIT_PATH: "%CYGWIN64_GIT_PATH%"
+        IS_CYGWIN: "yes"
 
 
 install:
@@ -48,14 +47,12 @@ install:
         python --version
         python -c "import struct; print(struct.calcsize('P') * 8)"
 
-    - IF "%IS_CONDA%"=="yes" (
+    - IF "%IS_CONDA%" == "yes" (
         conda info -a &
         conda install --yes --quiet  pip
       )
-    - pip install  nose ddt wheel codecov
-    -   IF "%PYTHON_VERSION%"=="2.7" (
-            pip install mock
-        )
+    - pip install -r test-requirements.txt
+    - pip install codecov
 
     ## Copied from `init-tests-after-clone.sh`.
     #
@@ -79,7 +76,15 @@ install:
 build: false
 
 test_script:
-    - IF "%PYTHON_VERSION%"=="3.5" (nosetests -v --with-coverage) ELSE (nosetests -v)
+    -   IF "%IS_CYGWIN%" == "yes" (
+            nosetests -v
+        ) ELSE (
+            IF "%PYTHON_VERSION%" == "3.5" (
+                nosetests -v --with-coverage
+            ) ELSE (
+                nosetests -v
+            )
+        )
 
 on_success:
-    - IF "%PYTHON_VERSION%"=="3.5" (codecov)
+    - IF "%PYTHON_VERSION%" == "3.5" IF NOT "%IS_CYGWIN%" == "yes" (codecov)

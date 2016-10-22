@@ -31,6 +31,7 @@ from git.compat import (
 )
 from git.exc import CommandError
 from git.odict import OrderedDict
+from git.util import is_cygwin_git, cygpath
 
 from .exc import (
     GitCommandError,
@@ -191,8 +192,26 @@ class Git(LazyMixin):
     USE_SHELL = False
 
     @classmethod
-    def polish_url(cls, url):
-        return url.replace("\\\\", "\\").replace("\\", "/")
+    def is_cygwin(cls):
+        return is_cygwin_git(cls.GIT_PYTHON_GIT_EXECUTABLE)
+
+    @classmethod
+    def polish_url(cls, url, is_cygwin=None):
+        if is_cygwin is None:
+            is_cygwin = cls.is_cygwin()
+
+        if is_cygwin:
+            url = cygpath(url)
+        else:
+            """Remove any backslahes from urls to be written in config files.
+
+            Windows might create config-files containing paths with backslashed,
+            but git stops liking them as it will escape the backslashes.
+            Hence we undo the escaping just to be sure.
+            """
+            url = url.replace("\\\\", "\\").replace("\\", "/")
+
+        return url
 
     class AutoInterrupt(object):
         """Kill/Interrupt the stored process instance once this instance goes out of scope. It is

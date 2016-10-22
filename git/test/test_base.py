@@ -9,22 +9,24 @@ import sys
 import tempfile
 from unittest import skipIf
 
-import git.objects.base as base
-from git.test.lib import (
-    TestBase,
-    assert_raises,
-    with_rw_repo,
-    with_rw_and_rw_remote_repo
-)
 from git import (
     Blob,
     Tree,
     Commit,
     TagObject
 )
-from git.objects.util import get_object_type_by_name
-from gitdb.util import hex_to_bin
 from git.compat import is_win
+from git.objects.util import get_object_type_by_name
+from git.test.lib import (
+    TestBase,
+    assert_raises,
+    with_rw_repo,
+    with_rw_and_rw_remote_repo
+)
+from git.util import hex_to_bin
+
+import git.objects.base as base
+import os.path as osp
 
 
 class TestBase(TestBase):
@@ -103,19 +105,19 @@ class TestBase(TestBase):
     @with_rw_repo('HEAD', bare=True)
     def test_with_bare_rw_repo(self, bare_rw_repo):
         assert bare_rw_repo.config_reader("repository").getboolean("core", "bare")
-        assert os.path.isfile(os.path.join(bare_rw_repo.git_dir, 'HEAD'))
+        assert osp.isfile(osp.join(bare_rw_repo.git_dir, 'HEAD'))
 
     @with_rw_repo('0.1.6')
     def test_with_rw_repo(self, rw_repo):
         assert not rw_repo.config_reader("repository").getboolean("core", "bare")
-        assert os.path.isdir(os.path.join(rw_repo.working_tree_dir, 'lib'))
+        assert osp.isdir(osp.join(rw_repo.working_tree_dir, 'lib'))
 
     #@skipIf(HIDE_WINDOWS_FREEZE_ERRORS, "FIXME: Freezes!  sometimes...")
     @with_rw_and_rw_remote_repo('0.1.6')
     def test_with_rw_remote_and_rw_repo(self, rw_repo, rw_remote_repo):
         assert not rw_repo.config_reader("repository").getboolean("core", "bare")
         assert rw_remote_repo.config_reader("repository").getboolean("core", "bare")
-        assert os.path.isdir(os.path.join(rw_repo.working_tree_dir, 'lib'))
+        assert osp.isdir(osp.join(rw_repo.working_tree_dir, 'lib'))
 
     @skipIf(sys.version_info < (3,) and is_win,
             "Unicode woes, see https://github.com/gitpython-developers/GitPython/pull/519")
@@ -123,7 +125,7 @@ class TestBase(TestBase):
     def test_add_unicode(self, rw_repo):
         filename = u"שלום.txt"
 
-        file_path = os.path.join(rw_repo.working_dir, filename)
+        file_path = osp.join(rw_repo.working_dir, filename)
 
         # verify first that we could encode file name in this environment
         try:

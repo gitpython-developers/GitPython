@@ -5,7 +5,24 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
 # Module implementing a remote object allowing easy access to git remotes
+import logging
 import re
+
+from git.cmd import handle_process_output, Git
+from git.compat import (defenc, force_text, is_win)
+from git.exc import GitCommandError
+from git.util import (
+    LazyMixin,
+    Iterable,
+    IterableList,
+    RemoteProgress,
+    CallableRemoteProgress
+)
+from git.util import (
+    join_path,
+)
+
+import os.path as osp
 
 from .config import (
     SectionConstraint,
@@ -18,21 +35,7 @@ from .refs import (
     SymbolicReference,
     TagReference
 )
-from git.util import (
-    LazyMixin,
-    Iterable,
-    IterableList,
-    RemoteProgress,
-    CallableRemoteProgress
-)
-from git.util import (
-    join_path,
-)
-from git.cmd import handle_process_output, Git
-from gitdb.util import join
-from git.compat import (defenc, force_text, is_win)
-import logging
-from git.exc import GitCommandError
+
 
 log = logging.getLogger('git.remote')
 
@@ -644,7 +647,7 @@ class Remote(LazyMixin, Iterable):
                     continue
 
         # read head information
-        with open(join(self.repo.git_dir, 'FETCH_HEAD'), 'rb') as fp:
+        with open(osp.join(self.repo.git_dir, 'FETCH_HEAD'), 'rb') as fp:
             fetch_head_info = [l.decode(defenc) for l in fp.readlines()]
 
         l_fil = len(fetch_info_lines)

@@ -5,9 +5,17 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 import os
-import sys
 import subprocess
+import sys
 
+from git import (
+    Git,
+    GitCommandError,
+    GitCommandNotFound,
+    Repo,
+    cmd
+)
+from git.compat import PY3, is_darwin
 from git.test.lib import (
     TestBase,
     patch,
@@ -17,17 +25,11 @@ from git.test.lib import (
     assert_match,
     fixture_path
 )
-from git import (
-    Git,
-    GitCommandError,
-    GitCommandNotFound,
-    Repo,
-    cmd
-)
 from git.test.lib import with_rw_directory
-
-from git.compat import PY3, is_darwin
 from git.util import finalize_process
+
+import os.path as osp
+
 
 try:
     from unittest import mock
@@ -147,7 +149,7 @@ class TestGit(TestBase):
         exc = GitCommandNotFound
         try:
             # set it to something that doens't exist, assure it raises
-            type(self.git).GIT_PYTHON_GIT_EXECUTABLE = os.path.join(
+            type(self.git).GIT_PYTHON_GIT_EXECUTABLE = osp.join(
                 "some", "path", "which", "doesn't", "exist", "gitbinary")
             self.failUnlessRaises(exc, self.git.version)
         finally:
@@ -212,13 +214,13 @@ class TestGit(TestBase):
         self.assertEqual(new_env, {'VARKEY': 'VARVALUE'})
         self.assertEqual(self.git.environment(), {})
 
-        path = os.path.join(rw_dir, 'failing-script.sh')
+        path = osp.join(rw_dir, 'failing-script.sh')
         with open(path, 'wt') as stream:
             stream.write("#!/usr/bin/env sh\n"
                          "echo FOO\n")
         os.chmod(path, 0o777)
 
-        rw_repo = Repo.init(os.path.join(rw_dir, 'repo'))
+        rw_repo = Repo.init(osp.join(rw_dir, 'repo'))
         remote = rw_repo.create_remote('ssh-origin', "ssh://git@server/foo")
 
         with rw_repo.git.custom_environment(GIT_SSH=path):

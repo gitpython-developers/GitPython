@@ -5,18 +5,17 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 import re
 
-from gitdb.util import hex_to_bin
+from git.cmd import handle_process_output
+from git.compat import (
+    defenc,
+    PY3
+)
+from git.util import finalize_process, hex_to_bin
 
 from .compat import binary_type
 from .objects.blob import Blob
 from .objects.util import mode_str_to_int
 
-from git.compat import (
-    defenc,
-    PY3
-)
-from git.cmd import handle_process_output
-from git.util import finalize_process
 
 __all__ = ('Diffable', 'DiffIndex', 'Diff', 'NULL_TREE')
 

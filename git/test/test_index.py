@@ -26,7 +26,7 @@ from git import (
     GitCommandError,
     CheckoutError,
 )
-from git.compat import string_types, is_win
+from git.compat import string_types, is_win, PY3
 from git.exc import (
     HookExecutionError,
     InvalidGitRepositoryError
@@ -43,11 +43,13 @@ from git.test.lib import (
     fixture,
     with_rw_repo
 )
-from git.util import HIDE_WINDOWS_KNOWN_ERRORS
 from git.test.lib import with_rw_directory
 from git.util import Actor, rmtree
+from git.util import HIDE_WINDOWS_KNOWN_ERRORS, hex_to_bin
 from gitdb.base import IStream
-from gitdb.util import hex_to_bin
+
+import os.path as osp
+from git.cmd import Git
 
 
 class TestIndex(TestBase):
@@ -85,7 +87,7 @@ class TestIndex(TestBase):
     def _assert_entries(self, entries):
         for entry in entries:
             assert isinstance(entry, BaseIndexEntry)
-            assert not os.path.isabs(entry.path)
+            assert not osp.isabs(entry.path)
             assert "\\" not in entry.path
         # END for each entry
 
@@ -329,7 +331,7 @@ class TestIndex(TestBase):
 
         # reset the working copy as well to current head,to pull 'back' as well
         new_data = b"will be reverted"
-        file_path = os.path.join(rw_repo.working_tree_dir, "CHANGES")
+        file_path = osp.join(rw_repo.working_tree_dir, "CHANGES")
         with open(file_path, "wb") as fp:
             fp.write(new_data)
         index.reset(rev_head_parent, working_tree=True)
@@ -340,26 +342,26 @@ class TestIndex(TestBase):
             assert fp.read() != new_data
 
         # test full checkout
-        test_file = os.path.join(rw_repo.working_tree_dir, "CHANGES")
+        test_file = osp.join(rw_repo.working_tree_dir, "CHANGES")
         with open(test_file, 'ab') as fd:
             fd.write(b"some data")
         rval = index.checkout(None, force=True, fprogress=self._fprogress)
         assert 'CHANGES' in list(rval)
         self._assert_fprogress([None])
-        assert os.path.isfile(test_file)
+        assert osp.isfile(test_file)
 
         os.remove(test_file)
         rval = index.checkout(None, force=False, fprogress=self._fprogress)
         assert 'CHANGES' in list(rval)
         self._assert_fprogress([None])
-        assert os.path.isfile(test_file)
+        assert osp.isfile(test_file)
 
         # individual file
         os.remove(test_file)
         rval = index.checkout(test_file, fprogress=self._fprogress)
         self.assertEqual(list(rval)[0], 'CHANGES')
         self._assert_fprogress([test_file])
-        assert os.path.exists(test_file)
+        assert osp.exists(test_file)
 
         # checking out non-existing file throws
         self.failUnlessRaises(CheckoutError, index.checkout, "doesnt_exist_ever.txt.that")
@@ -373,7 +375,7 @@ class TestIndex(TestBase):
             index.checkout(test_file)
         except CheckoutError as e:
             self.assertEqual(len(e.failed_files), 1)
-            self.assertEqual(e.failed_files[0], os.path.basename(test_file))
+            self.assertEqual(e.failed_files[0], osp.basename(test_file))
             self.assertEqual(len(e.failed_files), len(e.failed_reasons))
             self.assertIsInstance(e.failed_reasons[0], string_types)
             self.assertEqual(len(e.valid_files), 0)
@@ -388,7 +390,7 @@ class TestIndex(TestBase):
         assert not open(test_file, 'rb').read().endswith(append_data)
 
         # checkout directory
-        rmtree(os.path.join(rw_repo.working_tree_dir, "lib"))
+        rmtree(osp.join(rw_repo.working_tree_dir, "lib"))
         rval = index.checkout('lib')
         assert len(list(rval)) > 1
 
@@ -399,11 +401,17 @@ class TestIndex(TestBase):
         existing = 0
         basedir = repo.working_tree_dir
         for f in files:
-            existing += os.path.isfile(os.path.join(basedir, f))
+            existing += osp.isfile(osp.join(basedir, f))
         # END for each deleted file
         return existing
     # END num existing helper
 
+    @skipIf(HIDE_WINDOWS_KNOWN_ERRORS and Git.is_cygwin(),
+            """FIXME: File "C:\projects\gitpython\git\test\test_index.py", line 642, in test_index_mutation
+                self.assertEqual(fd.read(), link_target)
+                AssertionError: '!<symlink>\xff\xfe/\x00e\x00t\x00c\x00/\x00t\x00h\x00a\x00t\x00\x00\x00'
+                != '/etc/that'
+                """)
     @with_rw_repo('0.1.6')
     def test_index_mutation(self, rw_repo):
         index = rw_repo.index
@@ -458,7 +466,7 @@ class TestIndex(TestBase):
         self.failUnlessRaises(TypeError, index.remove, [1])
 
         # absolute path
-        deleted_files = index.remove([os.path.join(rw_repo.working_tree_dir, "lib")], r=True)
+        deleted_files = index.remove([osp.join(rw_repo.working_tree_dir, "lib")], r=True)
         assert len(deleted_files) > 1
         self.failUnlessRaises(ValueError, index.remove, ["/doesnt/exists"])
 
@@ -525,9 +533,9 @@ class TestIndex(TestBase):
         # re-add all files in lib
         # get the lib folder back on disk, but get an index without it
         index.reset(new_commit.parents[0], working_tree=True).reset(new_commit, working_tree=False)
-        lib_file_path = os.path.join("lib", "git", "__init__.py")
+        lib_file_path = osp.join("lib", "git", "__init__.py")
         assert (lib_file_path, 0) not in index.entries
-        assert os.path.isfile(os.path.join(rw_repo.working_tree_dir, lib_file_path))
+        assert osp.isfile(osp.join(rw_repo.working_tree_dir, lib_file_path))
 
         # directory
         entries = index.add(['lib'], fprogress=self._fprogress_add)
@@ -536,14 +544,14 @@ class TestIndex(TestBase):
         assert len(entries) > 1
 
         # glob
-        entries = index.reset(new_commit).add([os.path.join('lib', 'git', '*.py')], fprogress=self._fprogress_add)
+        entries = index.reset(new_commit).add([osp.join('lib', 'git', '*.py')], fprogress=self._fprogress_add)
         self._assert_entries(entries)
         self._assert_fprogress(entries)
         self.assertEqual(len(entries), 14)
 
         # same file
         entries = index.reset(new_commit).add(
-            [os.path.join(rw_repo.working_tree_dir, 'lib', 'git', 'head.py')] * 2, fprogress=self._fprogress_add)
+            [osp.join(rw_repo.working_tree_dir, 'lib', 'git', 'head.py')] * 2, fprogress=self._fprogress_add)
         self._assert_entries(entries)
         self.assertEqual(entries[0].mode & 0o644, 0o644)
         # would fail, test is too primitive to handle this case
@@ -583,7 +591,7 @@ class TestIndex(TestBase):
             for target in ('/etc/nonexisting', '/etc/passwd', '/etc'):
                 basename = "my_real_symlink"
 
-                link_file = os.path.join(rw_repo.working_tree_dir, basename)
+                link_file = osp.join(rw_repo.working_tree_dir, basename)
                 os.symlink(target, link_file)
                 entries = index.reset(new_commit).add([link_file], fprogress=self._fprogress_add)
                 self._assert_entries(entries)
@@ -645,7 +653,7 @@ class TestIndex(TestBase):
         # TEST RENAMING
         def assert_mv_rval(rval):
             for source, dest in rval:
-                assert not os.path.exists(source) and os.path.exists(dest)
+                assert not osp.exists(source) and osp.exists(dest)
             # END for each renamed item
         # END move assertion utility
 
@@ -661,7 +669,7 @@ class TestIndex(TestBase):
         paths = ['LICENSE', 'VERSION', 'doc']
         rval = index.move(paths, dry_run=True)
         self.assertEqual(len(rval), 2)
-        assert os.path.exists(paths[0])
+        assert osp.exists(paths[0])
 
         # again, no dry run
         rval = index.move(paths)
@@ -719,8 +727,8 @@ class TestIndex(TestBase):
         index.add(files, write=True)
         if is_win:
             hp = hook_path('pre-commit', index.repo.git_dir)
-            hpd = os.path.dirname(hp)
-            if not os.path.isdir(hpd):
+            hpd = osp.dirname(hp)
+            if not osp.isdir(hpd):
                 os.mkdir(hpd)
             with open(hp, "wt") as fp:
                 fp.write("#!/usr/bin/env sh\necho stdout; echo stderr 1>&2; exit 1")
@@ -766,7 +774,7 @@ class TestIndex(TestBase):
         for fkey in keys:
             assert fkey in index.entries
         for absfile in absfiles:
-            assert os.path.isfile(absfile)
+            assert osp.isfile(absfile)
 
     @with_rw_repo('HEAD')
     def test_compare_write_tree(self, rw_repo):
@@ -815,21 +823,21 @@ class TestIndex(TestBase):
 
         # Adding using a path should still require a non-bare repository.
         asserted = False
-        path = os.path.join('git', 'test', 'test_index.py')
+        path = osp.join('git', 'test', 'test_index.py')
         try:
             rw_bare_repo.index.add([path])
         except InvalidGitRepositoryError:
             asserted = True
         assert asserted, "Adding using a filename is not correctly asserted."
 
-    @skipIf(HIDE_WINDOWS_KNOWN_ERRORS and sys.version_info[:2] == (2, 7), r"""
+    @skipIf(HIDE_WINDOWS_KNOWN_ERRORS and not PY3, r"""
         FIXME:  File "C:\projects\gitpython\git\util.py", line 125, in to_native_path_linux
         return path.replace('\\', '/')
         UnicodeDecodeError: 'ascii' codec can't decode byte 0xc3 in position 0: ordinal not in range(128)""")
     @with_rw_directory
     def test_add_utf8P_path(self, rw_dir):
         # NOTE: fp is not a Unicode object in python 2 (which is the source of the problem)
-        fp = os.path.join(rw_dir, 'ø.txt')
+        fp = osp.join(rw_dir, 'ø.txt')
         with open(fp, 'wb') as fs:
             fs.write(u'content of ø'.encode('utf-8'))
 
@@ -840,7 +848,7 @@ class TestIndex(TestBase):
     @with_rw_directory
     def test_add_a_file_with_wildcard_chars(self, rw_dir):
         # see issue #407
-        fp = os.path.join(rw_dir, '[.exe')
+        fp = osp.join(rw_dir, '[.exe')
         with open(fp, "wb") as f:
             f.write(b'something')
 

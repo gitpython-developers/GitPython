@@ -5,7 +5,6 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
 from io import BytesIO
-import os
 import sys
 from unittest.case import skipIf
 
@@ -13,8 +12,10 @@ from git import (
     Tree,
     Blob
 )
-from git.util import HIDE_WINDOWS_KNOWN_ERRORS
 from git.test.lib import TestBase
+from git.util import HIDE_WINDOWS_KNOWN_ERRORS
+
+import os.path as osp
 
 
 class TestTree(TestBase):
@@ -90,12 +91,12 @@ class TestTree(TestBase):
         assert len(set(b for b in root if isinstance(b, Blob)) | set(root.blobs)) == len(root.blobs)
         subitem = trees[0][0]
         assert "/" in subitem.path
-        assert subitem.name == os.path.basename(subitem.path)
+        assert subitem.name == osp.basename(subitem.path)
 
         # assure that at some point the traversed paths have a slash in them
         found_slash = False
         for item in root.traverse():
-            assert os.path.isabs(item.abspath)
+            assert osp.isabs(item.abspath)
             if '/' in item.path:
                 found_slash = True
             # END check for slash
