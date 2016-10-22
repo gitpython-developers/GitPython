@@ -9,7 +9,6 @@ import git
 from git.cmd import Git
 from git.compat import (
     string_types,
-    is_win,
 )
 from git.exc import (
     InvalidGitRepositoryError,
