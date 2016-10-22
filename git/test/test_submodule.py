@@ -7,34 +7,24 @@ from unittest.case import skipIf
 
 import git
 from git.cmd import Git
-from git.compat import (
-    string_types,
-    is_win,
-)
+from git.compat import string_types, is_win
 from git.exc import (
     InvalidGitRepositoryError,
     RepositoryDirtyError
 )
 from git.objects.submodule.base import Submodule
-from git.objects.submodule.root import (
-    RootModule,
-    RootUpdateProgress,
-)
+from git.objects.submodule.root import RootModule, RootUpdateProgress
 from git.repo.fun import (
-    find_git_dir,
-    touch,
+    find_submodule_git_dir,
+    touch
 )
 from git.test.lib import (
     TestBase,
-    with_rw_repo,
+    with_rw_repo
 )
 from git.test.lib import with_rw_directory
-from git.util import (
-    to_native_path_linux,
-    join_path_native,
-    HIDE_WINDOWS_KNOWN_ERRORS,
-)
-
+from git.util import HIDE_WINDOWS_KNOWN_ERRORS
+from git.util import to_native_path_linux, join_path_native
 import os.path as osp
 
 
@@ -775,7 +765,7 @@ class TestSubmodule(TestBase):
         else:
             assert osp.isfile(module_repo_path)
             assert sm.module().has_separate_working_tree()
-            assert find_git_dir(module_repo_path) is not None, "module pointed to by .git file must be valid"
+            assert find_submodule_git_dir(module_repo_path) is not None, "module pointed to by .git file must be valid"
         # end verify submodule 'style'
 
         # test move

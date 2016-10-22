@@ -16,7 +16,7 @@ import os.path as osp
 from git.cmd import Git
 
 
-__all__ = ('rev_parse', 'is_git_dir', 'touch', 'find_git_dir', 'name_to_object', 'short_to_long', 'deref_tag',
+__all__ = ('rev_parse', 'is_git_dir', 'touch', 'find_submodule_git_dir', 'name_to_object', 'short_to_long', 'deref_tag',
            'to_commit')
 
 
@@ -47,7 +47,8 @@ def is_git_dir(d):
     return False
 
 
-def find_git_dir(d):
+def find_submodule_git_dir(d):
+    """Search for a submodule repo."""
     if is_git_dir(d):
         return d
 
@@ -60,12 +61,13 @@ def find_git_dir(d):
     else:
         if content.startswith('gitdir: '):
             path = content[8:]
+
             if Git.is_cygwin():
                 ## Cygwin creates submodules prefixed with `/cygdrive/...` suffixes.
                 path = decygpath(path)
             if not osp.isabs(path):
                 path = osp.join(osp.dirname(d), path)
-            return find_git_dir(path)
+            return find_submodule_git_dir(path)
     # end handle exception
     return None
 

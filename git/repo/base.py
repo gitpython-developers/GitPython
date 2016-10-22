@@ -30,10 +30,9 @@ from git.objects import Submodule, RootModule, Commit
 from git.refs import HEAD, Head, Reference, TagReference
 from git.remote import Remote, add_progress, to_progress_instance
 from git.util import Actor, finalize_process, decygpath, hex_to_bin
-
 import os.path as osp
 
-from .fun import rev_parse, is_git_dir, find_git_dir, touch
+from .fun import rev_parse, is_git_dir, find_submodule_git_dir, touch
 
 
 log = logging.getLogger(__name__)
@@ -50,7 +49,7 @@ __all__ = ('Repo',)
 
 
 def _expand_path(p):
-    return osp.abspath(osp.expandvars(osp.expanduser(p)))
+    return osp.normpath(osp.abspath(osp.expandvars(osp.expanduser(p))))
 
 
 class Repo(object):
@@ -68,6 +67,11 @@ class Repo(object):
 
     'git_dir' is the .git repository directory, which is always set."""
     DAEMON_EXPORT_FILE = 'git-daemon-export-ok'
+
+    git = None  # Must exist, or  __del__  will fail in case we raise on `__init__()`
+    working_dir = None
+    _working_tree_dir = None
+    git_dir = None
 
     # precompiled regex
     re_whitespace = re.compile(r'\s+')
@@ -95,8 +99,9 @@ class Repo(object):
                 repo = Repo("~/Development/git-python.git")
                 repo = Repo("$REPOSITORIES/Development/git-python.git")
 
-            In *Cygwin*, path may be a `'cygdrive/...'` prefixed path.
-
+            - In *Cygwin*, path may be a `'cygdrive/...'` prefixed path.
+            - If it evaluates to false, :envvar:`GIT_DIR` is used, and if this also evals to false,
+              the current-directory is used.
         :param odbt:
             Object DataBase type - a type which is constructed by providing
             the directory containing the database objects, i.e. .git/objects. It will
@@ -109,40 +114,41 @@ class Repo(object):
         :raise InvalidGitRepositoryError:
         :raise NoSuchPathError:
         :return: git.Repo """
+        epath = path or os.getenv('GIT_DIR')
+        if not epath:
+            epath = os.getcwd()
         if Git.is_cygwin():
-            path = decygpath(path)
-
-        epath = _expand_path(path or os.getcwd())
-        self.git = None  # should be set for __del__ not to fail in case we raise
-        if not osp.exists(epath):
+            epath = decygpath(epath)
+        epath = _expand_path(epath or path or os.getcwd())
+        if not os.path.exists(epath):
             raise NoSuchPathError(epath)
 
-        self.working_dir = None
-        self._working_tree_dir = None
-        self.git_dir = None
-        curpath = os.getenv('GIT_DIR', epath)
-
-        # walk up the path to find the .git dir
+        ## Walk up the path to find the `.git` dir.
+        #
+        curpath = epath
         while curpath:
             # ABOUT osp.NORMPATH
             # It's important to normalize the paths, as submodules will otherwise initialize their
             # repo instances with paths that depend on path-portions that will not exist after being
             # removed. It's just cleaner.
             if is_git_dir(curpath):
-                self.git_dir = osp.normpath(curpath)
-                self._working_tree_dir = osp.dirname(self.git_dir)
+                self.git_dir = curpath
+                self._working_tree_dir = os.path.dirname(self.git_dir)
                 break
 
-            gitpath = find_git_dir(osp.join(curpath, '.git'))
-            if gitpath is not None:
-                self.git_dir = osp.normpath(gitpath)
+            sm_gitpath = find_submodule_git_dir(osp.join(curpath, '.git'))
+            if sm_gitpath is not None:
+                self.git_dir = osp.normpath(sm_gitpath)
+            sm_gitpath = find_submodule_git_dir(osp.join(curpath, '.git'))
+            if sm_gitpath is not None:
+                self.git_dir = _expand_path(sm_gitpath)
                 self._working_tree_dir = curpath
                 break
 
             if not search_parent_directories:
                 break
-            curpath, dummy = osp.split(curpath)
-            if not dummy:
+            curpath, tail = osp.split(curpath)
+            if not tail:
                 break
         # END while curpath
 
