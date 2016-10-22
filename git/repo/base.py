@@ -100,8 +100,8 @@ class Repo(object):
                 repo = Repo("$REPOSITORIES/Development/git-python.git")
 
             - In *Cygwin*, path may be a `'cygdrive/...'` prefixed path.
-            - If `None, current-directory is used.
-            - The :envvar:`GIT_DIR` if set and not empty takes precendance over this parameter.
+            - If it evaluates to false, :envvar:`GIT_DIR` is used, and if this also evals to false,
+              the current-directory is used.
         :param odbt:
             Object DataBase type - a type which is constructed by providing
             the directory containing the database objects, i.e. .git/objects. It will
@@ -114,7 +114,9 @@ class Repo(object):
         :raise InvalidGitRepositoryError:
         :raise NoSuchPathError:
         :return: git.Repo """
-        epath = os.getenv('GIT_DIR') or path or os.getcwd()
+        epath = path or os.getenv('GIT_DIR')
+        if not epath:
+            epath = os.getcwd()
         if Git.is_cygwin():
             epath = decygpath(epath)
         epath = _expand_path(epath or path or os.getcwd())
