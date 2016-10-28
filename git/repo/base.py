@@ -33,6 +33,8 @@ from git.util import Actor, finalize_process, decygpath, hex_to_bin
 import os.path as osp
 
 from .fun import rev_parse, is_git_dir, find_submodule_git_dir, touch
+import gc
+import gitdb
 
 
 log = logging.getLogger(__name__)
@@ -177,9 +179,21 @@ class Repo(object):
             args.append(self.git)
         self.odb = odbt(*args)
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
+
     def __del__(self):
+        self.close()
+
+    def close(self):
         if self.git:
             self.git.clear_cache()
+            gc.collect()
+            gitdb.util.mman.collect()
+            gc.collect()
 
     def __eq__(self, rhs):
         if isinstance(rhs, Repo):
