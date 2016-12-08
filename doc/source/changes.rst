@@ -2,6 +2,13 @@
 Changelog
 =========
 
+2.1.1 - Bugfixes
+====================================
+
+All issues and PRs can be viewed in all detail when following this URL:
+https://github.com/gitpython-developers/GitPython/issues?q=is%3Aclosed+milestone%3A%22v2.1.1+-+Bugfixes%22
+
+
 2.1.0 - Much better windows support!
 ====================================
 
