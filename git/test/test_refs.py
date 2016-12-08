@@ -120,7 +120,6 @@ class TestRefs(TestBase):
             head.set_tracking_branch(None)
             assert head.tracking_branch() is None
             
-            
             special_name = 'feature#123'
             special_name_remote_ref = SymbolicReference.create(rwrepo, 'refs/remotes/origin/%s' % special_name)
             gp_tracking_branch = rwrepo.create_head('gp_tracking#123')
