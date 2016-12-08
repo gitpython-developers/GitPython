@@ -875,7 +875,7 @@ class Repo(object):
         if progress:
             handle_process_output(proc, None, progress.new_message_handler(), finalize_process)
         else:
-            (stdout, stderr) = proc.communicate()  # FIXME: Will block if outputs are big!
+            (stdout, stderr) = proc.communicate()
             log.debug("Cmd(%s)'s unused stdout: %s", getattr(proc, 'args', ''), stdout)
             finalize_process(proc, stderr=stderr)
 
