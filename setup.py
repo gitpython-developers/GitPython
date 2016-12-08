@@ -64,6 +64,7 @@ def _stamp_version(filename):
     else:
         print("WARNING: Couldn't find version line in file %s" % filename, file=sys.stderr)
 
+
 install_requires = ['gitdb2 >= 2.0.0']
 extras_require = {
     ':python_version == "2.6"': ['ordereddict'],
