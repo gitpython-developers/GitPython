@@ -8,6 +8,12 @@ from .reference import Reference
 __all__ = ["HEAD", "Head"]
 
 
+def strip_quotes(string):
+    if string.startswith('"') and string.endswith('"'):
+        return string[1:-1]
+    return string
+    
+
 class HEAD(SymbolicReference):
 
     """Special case of a Symbolic Reference as it represents the repository's
@@ -152,7 +158,7 @@ class Head(Reference):
         from .remote import RemoteReference
         reader = self.config_reader()
         if reader.has_option(self.k_config_remote) and reader.has_option(self.k_config_remote_ref):
-            ref = Head(self.repo, Head.to_full_path(reader.get_value(self.k_config_remote_ref)))
+            ref = Head(self.repo, Head.to_full_path(strip_quotes(reader.get_value(self.k_config_remote_ref))))
             remote_refpath = RemoteReference.to_full_path(join_path(reader.get_value(self.k_config_remote), ref.name))
             return RemoteReference(self.repo, remote_refpath)
         # END handle have tracking branch
