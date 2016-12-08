@@ -13,7 +13,10 @@ from stat import (
 )
 import sys
 import tempfile
-from unittest.case import skipIf
+try:
+    from unittest import skipIf
+except ImportError:
+    from unittest2 import skipIf
 
 from git import (
     IndexFile,
@@ -149,8 +152,9 @@ class TestIndex(TestBase):
         except Exception as ex:
             msg_py3 = "required argument is not an integer"
             msg_py2 = "cannot convert argument to integer"
-            ## msg_py26 ="unsupported operand type(s) for &: 'str' and 'long'"
-            assert msg_py2 in str(ex) or msg_py3 in str(ex), str(ex)
+            msg_py26 = "unsupported operand type(s) for &: 'str' and 'long'"
+            assert msg_py2 in str(ex) or msg_py3 in str(ex) or \
+                msg_py26 in str(ex), str(ex)
 
         ## 2nd time should not fail due to stray lock file
         try:

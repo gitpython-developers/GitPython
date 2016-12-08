@@ -6,7 +6,10 @@
 
 from io import BytesIO
 import sys
-from unittest.case import skipIf
+try:
+    from unittest import skipIf
+except ImportError:
+    from unittest2 import skipIf
 
 from git import (
     Tree,

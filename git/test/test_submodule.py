@@ -3,7 +3,10 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 import os
 import sys
-from unittest.case import skipIf
+try:
+    from unittest import skipIf
+except ImportError:
+    from unittest2 import skipIf
 
 import git
 from git.cmd import Git
