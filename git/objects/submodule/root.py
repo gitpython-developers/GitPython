@@ -17,13 +17,13 @@ log.addHandler(logging.NullHandler())
 
 
 class RootUpdateProgress(UpdateProgress):
-
     """Utility class which adds more opcodes to the UpdateProgress"""
     REMOVE, PATHCHANGE, BRANCHCHANGE, URLCHANGE = [
         1 << x for x in range(UpdateProgress._num_op_codes, UpdateProgress._num_op_codes + 4)]
     _num_op_codes = UpdateProgress._num_op_codes + 4
 
     __slots__ = tuple()
+
 
 BEGIN = RootUpdateProgress.BEGIN
 END = RootUpdateProgress.END
