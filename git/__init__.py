@@ -49,7 +49,8 @@ from git.util import (                  # @NoMove @IgnorePep8
     LockFile,
     BlockingLockFile,
     Stats,
-    Actor
+    Actor,
+    rmtree,
 )
 
 #} END imports
