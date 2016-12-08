@@ -3,19 +3,21 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
-from __future__ import unicode_literals
-
 import contextlib
 from functools import wraps
 import getpass
 import logging
 import os
 import platform
+import subprocess
 import re
 import shutil
 import stat
 import time
-from unittest.case import SkipTest
+try:
+    from unittest import SkipTest
+except ImportError:
+    from unittest2 import SkipTest
 
 from gitdb.util import (# NOQA @IgnorePep8
     make_sha,
@@ -303,7 +305,7 @@ def is_cygwin_git(git_executable):
     if not is_win:
         return False
 
-    from subprocess import check_output
+    #from subprocess import check_output
 
     is_cygwin = _is_cygwin_cache.get(git_executable)
     if is_cygwin is None:
@@ -316,8 +318,11 @@ def is_cygwin_git(git_executable):
 
             ## Just a name given, not a real path.
             uname_cmd = osp.join(git_dir, 'uname')
-            uname = check_output(uname_cmd, universal_newlines=True)
-            is_cygwin = 'CYGWIN' in uname
+            process = subprocess.Popen([uname_cmd], stdout=subprocess.PIPE,
+                                       universal_newlines=True)
+            uname_out, _ = process.communicate()
+            #retcode = process.poll()
+            is_cygwin = 'CYGWIN' in uname_out
         except Exception as ex:
             log.debug('Failed checking if running in CYGWIN due to: %r', ex)
         _is_cygwin_cache[git_executable] = is_cygwin
@@ -939,6 +944,7 @@ class Iterable(object):
 class NullHandler(logging.Handler):
     def emit(self, record):
         pass
+
 
 # In Python 2.6, there is no NullHandler yet. Let's monkey-patch it for a workaround.
 if not hasattr(logging, 'NullHandler'):

@@ -135,13 +135,14 @@ def dict_to_slots_and__excluded_are_none(self, d, excluded=()):
 
 ## -- End Utilities -- @}
 
+
 # value of Windows process creation flag taken from MSDN
 CREATE_NO_WINDOW = 0x08000000
 
 ## CREATE_NEW_PROCESS_GROUP is needed to allow killing it afterwards,
-# seehttps://docs.python.org/3/library/subprocess.html#subprocess.Popen.send_signal
+# see https://docs.python.org/3/library/subprocess.html#subprocess.Popen.send_signal
 PROC_CREATIONFLAGS = (CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP
-                      if is_win
+                      if is_win and sys.version_info >= (2, 7)
                       else 0)
 
 
@@ -245,7 +246,7 @@ class Git(LazyMixin):
                 return
 
             # can be that nothing really exists anymore ...
-            if os is None or os.kill is None:
+            if os is None or getattr(os, 'kill', None) is None:
                 return
 
             # try to kill it
@@ -831,8 +832,12 @@ class Git(LazyMixin):
         :return: Same as ``execute``"""
         # Handle optional arguments prior to calling transform_kwargs
         # otherwise these'll end up in args, which is bad.
-        _kwargs = {k: v for k, v in kwargs.items() if k in execute_kwargs}
-        kwargs = {k: v for k, v in kwargs.items() if k not in execute_kwargs}
+        _kwargs = dict()
+        for kwarg in execute_kwargs:
+            try:
+                _kwargs[kwarg] = kwargs.pop(kwarg)
+            except KeyError:
+                pass
 
         insert_after_this_arg = kwargs.pop('insert_kwargs_after', None)
 

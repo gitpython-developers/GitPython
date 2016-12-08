@@ -7,20 +7,24 @@ from __future__ import print_function
 
 import contextlib
 from functools import wraps
+import sys
 import io
 import logging
 import os
 import tempfile
 import textwrap
 import time
-from unittest import TestCase
-import unittest
 
-from git.compat import string_types, is_win, PY3
+from git.compat import string_types, is_win
 from git.util import rmtree, cwd
 
 import os.path as osp
+if sys.version_info[0:2] == (2, 6):
+    import unittest2 as unittest
+else:
+    import unittest
 
+TestCase = unittest.TestCase
 
 ospd = osp.dirname
 
@@ -335,8 +339,11 @@ class TestBase(TestCase):
       of the project history ( to assure tests don't fail for others ).
     """
 
-    if not PY3:
-        assertRaisesRegex = unittest.TestCase.assertRaisesRegexp
+    # On py26, unittest2 has assertRaisesRegex
+    # On py3, unittest has assertRaisesRegex
+    # On py27, we use unittest, which names it differently:
+    if sys.version_info[0:2] == (2, 7):
+        assertRaisesRegex = TestCase.assertRaisesRegexp
 
     def _small_repo_url(self):
         """:return" a path to a small, clonable repository"""
