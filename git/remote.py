@@ -468,7 +468,7 @@ class Remote(LazyMixin, Iterable):
         scmd = 'set-url'
         kwargs['insert_kwargs_after'] = scmd
         if old_url:
-            self.repo.git.remote(scmd, self.name, old_url, new_url, **kwargs)
+            self.repo.git.remote(scmd, self.name, new_url, old_url, **kwargs)
         else:
             self.repo.git.remote(scmd, self.name, new_url, **kwargs)
         return self
