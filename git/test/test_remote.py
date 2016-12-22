@@ -613,7 +613,7 @@ class TestRemote(TestBase):
         remote.set_url(test2, delete=True)
         self.assertEqual(list(remote.urls), [test1, test3])
         # Testing changing an URL
-        remote.set_url(test3, test2)
+        remote.set_url(test2, test3)
         self.assertEqual(list(remote.urls), [test1, test2])
 
         # will raise: fatal: --add --delete doesn't make sense
