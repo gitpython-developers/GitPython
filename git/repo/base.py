@@ -459,7 +459,7 @@ class Repo(object):
         :note: to receive only commits between two named revisions, use the
             "revA...revB" revision specifier
 
-        :return ``git.Commit[]``"""
+        :return: ``git.Commit[]``"""
         if rev is None:
             rev = self.head.commit
 
