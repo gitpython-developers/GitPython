@@ -52,6 +52,14 @@ __all__ = ("stream_copy", "join_path", "to_native_path_windows", "to_native_path
            'RemoteProgress', 'CallableRemoteProgress', 'rmtree', 'unbare_repo',
            'HIDE_WINDOWS_KNOWN_ERRORS')
 
+
+if not hasattr(logging, 'NullHandler'):
+    class NullHandler(logging.Handler):
+        def emit(self, record):
+            pass
+
+    logging.NullHandler = NullHandler
+
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
 
