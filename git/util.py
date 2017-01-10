@@ -53,7 +53,9 @@ __all__ = ("stream_copy", "join_path", "to_native_path_windows", "to_native_path
            'HIDE_WINDOWS_KNOWN_ERRORS')
 
 
-if not hasattr(logging, 'NullHandler'):
+try:  # Python 2.7+
+    import logging.NullHandler
+except ImportError:
     class NullHandler(logging.Handler):
         def emit(self, record):
             pass
