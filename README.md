@@ -32,7 +32,7 @@ If you have downloaded the source code:
 
 or if you want to obtain a copy from the Pypi repository:
 
-    pip install gitpython
+    pip install GitPython
 
 Both commands will install the required package dependencies.
 
