@@ -261,7 +261,12 @@ class Git(LazyMixin):
                 # for some reason, providing None for stdout/stderr still prints something. This is why
                 # we simply use the shell and redirect to nul. Its slower than CreateProcess, question
                 # is whether we really want to see all these messages. Its annoying no matter what.
-                call(("TASKKILL /F /T /PID %s 2>nul 1>nul" % str(proc.pid)), shell=True)
+                try:
+                    call(("TASKKILL /F /T /PID %s 2>nul 1>nul" % str(proc.pid)), shell=True)
+                except:
+                    pass
+            except:
+                pass
             # END exception handling
 
         def __getattr__(self, attr):
