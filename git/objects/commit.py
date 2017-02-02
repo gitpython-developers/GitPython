@@ -93,7 +93,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
             is the committed DateTime - use time.gmtime() to convert it into a
             different format
         :param committer_tz_offset: int_seconds_west_of_utc
-            is the timezone that the authored_date is in
+            is the timezone that the committed_date is in
         :param message: string
             is the commit message
         :param encoding: string
