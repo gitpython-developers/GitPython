@@ -581,7 +581,7 @@ class Git(LazyMixin):
 
         stdout_sink = (PIPE
                        if with_stdout
-                       else getattr(subprocess, 'DEVNULL', open(os.devnull, 'wb')))
+                       else getattr(subprocess, 'DEVNULL', None) or open(os.devnull, 'wb'))
         log.debug("Popen(%s, cwd=%s, universal_newlines=%s, shell=%s)",
                   command, cwd, universal_newlines, shell)
         try:
