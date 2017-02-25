@@ -933,7 +933,6 @@ class TestRepo(TestBase):
         # move .git directory to a subdirectory
         # set GIT_DIR and GIT_WORK_TREE appropriately
         # check that repo.working_tree_dir == rw_dir
-        git = Git(rw_dir)
         self.rorepo.clone(join_path_native(rw_dir, 'master_repo'))
 
         repo_dir = join_path_native(rw_dir, 'master_repo')
@@ -953,4 +952,3 @@ class TestRepo(TestBase):
             self.assertEqual(r.working_dir, repo_dir)
         finally:
             os.environ = oldenv
-
