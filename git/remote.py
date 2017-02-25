@@ -706,8 +706,8 @@ class Remote(LazyMixin, Iterable):
             if config.get_value('fetch', default=unset) is unset:
                 msg = "Remote '%s' has no refspec set.\n"
                 msg += "You can set it as follows:"
-                msg += " 'git config --add \"remote.%s.fetch +refs/heads/*:refs/heads/*\"'." % (self.name, self.name)
-                raise AssertionError(msg)
+                msg += " 'git config --add \"remote.%s.fetch +refs/heads/*:refs/heads/*\"'."
+                raise AssertionError(msg % (self.name, self.name))
         finally:
             config.release()
 
