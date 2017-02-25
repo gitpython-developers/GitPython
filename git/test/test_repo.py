@@ -925,3 +925,32 @@ class TestRepo(TestBase):
             raise AssertionError(ex, "It's ok if TC not running from `master`.")
 
         self.failUnlessRaises(InvalidGitRepositoryError, Repo, worktree_path)
+
+    @with_rw_directory
+    def test_git_work_tree_env(self, rw_dir):
+        """Check that we yield to GIT_WORK_TREE"""
+        # clone a repo
+        # move .git directory to a subdirectory
+        # set GIT_DIR and GIT_WORK_TREE appropriately
+        # check that repo.working_tree_dir == rw_dir
+        git = Git(rw_dir)
+        self.rorepo.clone(join_path_native(rw_dir, 'master_repo'))
+
+        repo_dir = join_path_native(rw_dir, 'master_repo')
+        old_git_dir = join_path_native(repo_dir, '.git')
+        new_subdir = join_path_native(repo_dir, 'gitdir')
+        new_git_dir = join_path_native(new_subdir, 'git')
+        os.mkdir(new_subdir)
+        os.rename(old_git_dir, new_git_dir)
+
+        oldenv = os.environ.copy()
+        os.environ['GIT_DIR'] = new_git_dir
+        os.environ['GIT_WORK_TREE'] = repo_dir
+
+        try:
+            r = Repo()
+            self.assertEqual(r.working_tree_dir, repo_dir)
+            self.assertEqual(r.working_dir, repo_dir)
+        finally:
+            os.environ = oldenv
+

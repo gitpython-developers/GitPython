@@ -135,7 +135,7 @@ class Repo(object):
             # removed. It's just cleaner.
             if is_git_dir(curpath):
                 self.git_dir = curpath
-                self._working_tree_dir = os.path.dirname(self.git_dir)
+                self._working_tree_dir = os.getenv('GIT_WORK_TREE', os.path.dirname(self.git_dir))
                 break
 
             sm_gitpath = find_submodule_git_dir(osp.join(curpath, '.git'))
