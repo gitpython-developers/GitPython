@@ -254,14 +254,15 @@ class Git(LazyMixin):
                 proc.terminate()
                 proc.wait()    # ensure process goes away
             except OSError as ex:
-                log.info("Ignored error after process has dies: %r", ex)
+                log.info("Ignored error after process had died: %r", ex)
                 pass  # ignore error when process already died
             except AttributeError:
                 # try windows
                 # for some reason, providing None for stdout/stderr still prints something. This is why
                 # we simply use the shell and redirect to nul. Its slower than CreateProcess, question
                 # is whether we really want to see all these messages. Its annoying no matter what.
-                call(("TASKKILL /F /T /PID %s 2>nul 1>nul" % str(proc.pid)), shell=True)
+                if is_win:
+                    call(("TASKKILL /F /T /PID %s 2>nul 1>nul" % str(proc.pid)), shell=True)
             # END exception handling
 
         def __getattr__(self, attr):
