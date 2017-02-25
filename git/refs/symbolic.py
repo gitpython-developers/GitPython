@@ -574,7 +574,7 @@ class SymbolicReference(object):
         # walk loose refs
         # Currently we do not follow links
         for root, dirs, files in os.walk(join_path_native(repo.git_dir, common_path)):
-            if 'refs/' not in root:  # skip non-refs subfolders
+            if 'refs' not in root.split(os.sep):  # skip non-refs subfolders
                 refs_id = [d for d in dirs if d == 'refs']
                 if refs_id:
                     dirs[0:] = ['refs']
