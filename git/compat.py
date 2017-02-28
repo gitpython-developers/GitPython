@@ -204,7 +204,7 @@ def replace_surrogate_encode(mystring):
         # The following magic comes from Py3.3's Python/codecs.c file:
         if not 0xD800 <= code <= 0xDCFF:
             # Not a surrogate. Fail with the original exception.
-            raise exc
+            raise NotASurrogateError
         # mybytes = [0xe0 | (code >> 12),
         #            0x80 | ((code >> 6) & 0x3f),
         #            0x80 | (code & 0x3f)]
