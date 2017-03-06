@@ -713,11 +713,14 @@ class Repo(object):
                            committed_date=int(props[b'committer-time']))
                 commits[hexsha] = c
             else:
-                # Discard the next line (it's a filename end tag)
-                line = next(stream)
-                tag, value = line.split(b' ', 1)
-                assert tag == b'filename', 'Unexpected git blame output'
-                orig_filename = value
+                # Discard all lines until we find "filename" which is
+                # guaranteed to be the last line
+                while True:
+                    line = next(stream)
+                    tag, value = line.split(b' ', 1)
+                    if tag == b'filename':
+                        orig_filename = value
+                        break
 
             yield BlameEntry(commits[hexsha],
                              range(lineno, lineno + num_lines),
