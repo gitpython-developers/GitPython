@@ -716,7 +716,7 @@ class Repo(object):
                 # Discard all lines until we find "filename" which is
                 # guaranteed to be the last line
                 while True:
-                    line = next(stream)
+                    line = next(stream)  # will fail if we reach the EOF unexpectedly
                     tag, value = line.split(b' ', 1)
                     if tag == b'filename':
                         orig_filename = value
