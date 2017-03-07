@@ -387,24 +387,26 @@ class TestRepo(TestBase):
 
     @patch.object(Git, '_call_process')
     def test_blame_incremental(self, git):
-        git.return_value = fixture('blame_incremental')
-        blame_output = self.rorepo.blame_incremental('9debf6b0aafb6f7781ea9d1383c86939a1aacde3', 'AUTHORS')
-        blame_output = list(blame_output)
-        self.assertEqual(len(blame_output), 5)
+        # loop over two fixtures, create a test fixture for 2.11.1+ syntax
+        for git_fixture in ('blame_incremental', 'blame_incremental_2.11.1_plus'):
+            git.return_value = fixture(git_fixture)
+            blame_output = self.rorepo.blame_incremental('9debf6b0aafb6f7781ea9d1383c86939a1aacde3', 'AUTHORS')
+            blame_output = list(blame_output)
+            self.assertEqual(len(blame_output), 5)
 
-        # Check all outputted line numbers
-        ranges = flatten([entry.linenos for entry in blame_output])
-        self.assertEqual(ranges, flatten([range(2, 3), range(14, 15), range(1, 2), range(3, 14), range(15, 17)]))
+            # Check all outputted line numbers
+            ranges = flatten([entry.linenos for entry in blame_output])
+            self.assertEqual(ranges, flatten([range(2, 3), range(14, 15), range(1, 2), range(3, 14), range(15, 17)]))
 
-        commits = [entry.commit.hexsha[:7] for entry in blame_output]
-        self.assertEqual(commits, ['82b8902', '82b8902', 'c76852d', 'c76852d', 'c76852d'])
+            commits = [entry.commit.hexsha[:7] for entry in blame_output]
+            self.assertEqual(commits, ['82b8902', '82b8902', 'c76852d', 'c76852d', 'c76852d'])
 
-        # Original filenames
-        self.assertSequenceEqual([entry.orig_path for entry in blame_output], [u'AUTHORS'] * len(blame_output))
+            # Original filenames
+            self.assertSequenceEqual([entry.orig_path for entry in blame_output], [u'AUTHORS'] * len(blame_output))
 
-        # Original line numbers
-        orig_ranges = flatten([entry.orig_linenos for entry in blame_output])
-        self.assertEqual(orig_ranges, flatten([range(2, 3), range(14, 15), range(1, 2), range(2, 13), range(13, 15)]))   # noqa E501
+            # Original line numbers
+            orig_ranges = flatten([entry.orig_linenos for entry in blame_output])
+            self.assertEqual(orig_ranges, flatten([range(2, 3), range(14, 15), range(1, 2), range(2, 13), range(13, 15)]))   # noqa E501
 
     @patch.object(Git, '_call_process')
     def test_blame_complex_revision(self, git):
