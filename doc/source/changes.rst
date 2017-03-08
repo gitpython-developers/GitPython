@@ -2,6 +2,13 @@
 Changelog
 =========
 
+2.1.2 - Bugfixes
+====================================
+
+All issues and PRs can be viewed in all detail when following this URL:
+https://github.com/gitpython-developers/GitPython/milestone/21?closed=1
+
+
 2.1.1 - Bugfixes
 ====================================
 
