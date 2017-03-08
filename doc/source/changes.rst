@@ -2,7 +2,7 @@
 Changelog
 =========
 
-2.1.2 - Bugfixes
+2.1.3 - Bugfixes
 ====================================
 
 All issues and PRs can be viewed in all detail when following this URL:
