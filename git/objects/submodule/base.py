@@ -92,7 +92,7 @@ class Submodule(IndexObject, Iterable, Traversable):
     k_head_default = 'master'
     k_default_mode = stat.S_IFDIR | stat.S_IFLNK        # submodules are directories with link-status
 
-    # this is a bogus type for base class compatability
+    # this is a bogus type for base class compatibility
     type = 'submodule'
 
     __slots__ = ('_parent_commit', '_url', '_branch_path', '_name', '__weakref__')
@@ -423,7 +423,7 @@ class Submodule(IndexObject, Iterable, Traversable):
                 writer.set_value(cls.k_head_option, br.path)
                 sm._branch_path = br.path
 
-        # we deliberatly assume that our head matches our index !
+        # we deliberately assume that our head matches our index !
         sm.binsha = mrepo.head.commit.binsha
         index.add([sm], write=True)
 
@@ -551,7 +551,7 @@ class Submodule(IndexObject, Iterable, Traversable):
                     with self.repo.config_writer() as writer:
                         writer.set_value(sm_section(self.name), 'url', self.url)
                 # END handle dry_run
-            # END handle initalization
+            # END handle initialization
 
             # DETERMINE SHAS TO CHECKOUT
             ############################

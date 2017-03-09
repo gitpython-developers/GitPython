@@ -433,7 +433,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         try:
             proc.stdin.write(("%s\n" % filepath).encode(defenc))
         except IOError:
-            # pipe broke, usually because some error happend
+            # pipe broke, usually because some error happened
             raise fmakeexc()
         # END write exception handling
         proc.stdin.flush()
@@ -846,7 +846,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
         :param working_tree:
             If True, the entry will also be removed from the working tree, physically
-            removing the respective file. This may fail if there are uncommited changes
+            removing the respective file. This may fail if there are uncommitted changes
             in it.
 
         :param kwargs:

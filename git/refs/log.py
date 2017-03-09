@@ -133,7 +133,7 @@ class RefLog(list, Serializable):
     of the head in question. Custom query methods allow to retrieve log entries
     by date or by other criteria.
 
-    Reflog entries are orded, the first added entry is first in the list, the last
+    Reflog entries are ordered, the first added entry is first in the list, the last
     entry, i.e. the last change of the head or reference, is last in the list."""
 
     __slots__ = ('_path', )
@@ -209,7 +209,7 @@ class RefLog(list, Serializable):
         """:return: RefLogEntry at the given index
         :param filepath: full path to the index file from which to read the entry
         :param index: python list compatible index, i.e. it may be negative to
-            specifiy an entry counted from the end of the list
+            specify an entry counted from the end of the list
 
         :raise IndexError: If the entry didn't exist
 

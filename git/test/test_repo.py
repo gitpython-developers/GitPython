@@ -96,7 +96,7 @@ class TestRepo(TestBase):
         Repo(tempfile.gettempdir())
 
     @raises(NoSuchPathError)
-    def test_new_should_raise_on_non_existant_path(self):
+    def test_new_should_raise_on_non_existent_path(self):
         Repo("repos/foobar")
 
     @with_rw_repo('0.3.2.1')

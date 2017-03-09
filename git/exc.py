@@ -118,7 +118,7 @@ class HookExecutionError(CommandError):
 
 
 class RepositoryDirtyError(Exception):
-    """Thrown whenever an operation on a repository fails as it has uncommited changes that would be overwritten"""
+    """Thrown whenever an operation on a repository fails as it has uncommitted changes that would be overwritten"""
 
     def __init__(self, repo, message):
         self.repo = repo

@@ -131,7 +131,7 @@ class TestGit(TestBase):
         g.stdin.flush()
         self.assertEqual(g.stdout.readline(), obj_info)
 
-        # same can be achived using the respective command functions
+        # same can be achieved using the respective command functions
         hexsha, typename, size = self.git.get_object_header(hexsha)
         hexsha, typename_two, size_two, data = self.git.get_object_data(hexsha)  # @UnusedVariable
         self.assertEqual(typename, typename_two)
@@ -189,7 +189,7 @@ class TestGit(TestBase):
         self.failUnlessRaises(ValueError, self.git.remote, 'add', insert_kwargs_after='foo')
 
     def test_env_vars_passed_to_git(self):
-        editor = 'non_existant_editor'
+        editor = 'non_existent_editor'
         with mock.patch.dict('os.environ', {'GIT_EDITOR': editor}):  # @UndefinedVariable
             self.assertEqual(self.git.var("GIT_EDITOR"), editor)
 

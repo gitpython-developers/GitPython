@@ -168,7 +168,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
 
         :param kwargs:
             Additional options to be passed to git-rev-list. They must not alter
-            the ouput style of the command, or parsing will yield incorrect results
+            the output style of the command, or parsing will yield incorrect results
         :return: int defining the number of reachable commits"""
         # yes, it makes a difference whether empty paths are given or not in our case
         # as the empty paths version will ignore merge commits for some reason.

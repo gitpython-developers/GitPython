@@ -227,7 +227,7 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
     Same as with_rw_repo, but also provides a writable remote repository from which the
     rw_repo has been forked as well as a handle for a git-daemon that may be started to
     run the remote_repo.
-    The remote repository was cloned as bare repository from the rorepo, wheras
+    The remote repository was cloned as bare repository from the rorepo, whereas
     the rw repo has a working tree and was cloned from the remote repository.
 
     remote_repo has two remotes: origin and daemon_origin. One uses a local url,

@@ -540,7 +540,7 @@ class Git(LazyMixin):
             * str(output) if extended_output = False (Default)
             * tuple(int(status), str(stdout), str(stderr)) if extended_output = True
 
-            if ouput_stream is True, the stdout value will be your output stream:
+            if output_stream is True, the stdout value will be your output stream:
             * output_stream if extended_output = False
             * tuple(int(status), output_stream, str(stderr)) if extended_output = True
 
