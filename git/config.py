@@ -169,7 +169,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
     # They must be compatible to the LockFile interface.
     # A suitable alternative would be the BlockingLockFile
     t_lock = LockFile
-    re_comment = re.compile('^\s*[#;]')
+    re_comment = re.compile(r'^\s*[#;]')
 
     #} END configuration
 

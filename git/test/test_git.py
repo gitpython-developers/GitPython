@@ -91,7 +91,7 @@ class TestGit(TestBase):
         self.assertEqual(set(['-s', '-t']), set(res))
 
     def test_it_executes_git_to_shell_and_returns_result(self):
-        assert_match('^git version [\d\.]{2}.*$', self.git.execute(["git", "version"]))
+        assert_match(r'^git version [\d\.]{2}.*$', self.git.execute(["git", "version"]))
 
     def test_it_accepts_stdin(self):
         filename = fixture_path("cat_file_blob")

@@ -24,7 +24,7 @@ import os.path as osp
 class TestTree(TestBase):
 
     @skipIf(HIDE_WINDOWS_KNOWN_ERRORS and sys.version_info[:2] == (3, 5), """
-        File "C:\projects\gitpython\git\cmd.py", line 559, in execute
+        File "C:\\projects\\gitpython\\git\\cmd.py", line 559, in execute
         raise GitCommandNotFound(command, err)
         git.exc.GitCommandNotFound: Cmd('git') not found due to: OSError('[WinError 6] The handle is invalid')
         cmdline: git cat-file --batch-check""")
@@ -57,7 +57,7 @@ class TestTree(TestBase):
         # END for each item in tree
 
     @skipIf(HIDE_WINDOWS_KNOWN_ERRORS and sys.version_info[:2] == (3, 5), """
-        File "C:\projects\gitpython\git\cmd.py", line 559, in execute
+        File "C:\\projects\\gitpython\\git\\cmd.py", line 559, in execute
         raise GitCommandNotFound(command, err)
         git.exc.GitCommandNotFound: Cmd('git') not found due to: OSError('[WinError 6] The handle is invalid')
         cmdline: git cat-file --batch-check""")

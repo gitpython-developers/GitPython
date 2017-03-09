@@ -423,10 +423,10 @@ class TestSubmodule(TestBase):
         self._do_base_tests(rwrepo)
 
     @skipIf(HIDE_WINDOWS_KNOWN_ERRORS and sys.version_info[:2] == (3, 5), """
-        File "C:\projects\gitpython\git\cmd.py", line 559, in execute
+        File "C:\\projects\\gitpython\\git\\cmd.py", line 559, in execute
         raise GitCommandNotFound(command, err)
         git.exc.GitCommandNotFound: Cmd('git') not found due to: OSError('[WinError 6] The handle is invalid')
-        cmdline: git clone -n --shared -v C:\projects\gitpython\.git Users\appveyor\AppData\Local\Temp\1\tmplyp6kr_rnon_bare_test_root_module""")  # noqa E501
+        cmdline: git clone -n --shared -v C:\\projects\\gitpython\\.git Users\\appveyor\\AppData\\Local\\Temp\\1\\tmplyp6kr_rnon_bare_test_root_module""")  # noqa E501
     @with_rw_repo(k_subm_current, bare=False)
     def test_root_module(self, rwrepo):
         # Can query everything without problems
@@ -664,7 +664,7 @@ class TestSubmodule(TestBase):
         # end for each checkout mode
 
     @skipIf(HIDE_WINDOWS_KNOWN_ERRORS and Git.is_cygwin(),
-            """FIXME: ile "C:\projects\gitpython\git\cmd.py", line 671, in execute
+            """FIXME: ile "C:\\projects\\gitpython\\git\\cmd.py", line 671, in execute
                 raise GitCommandError(command, status, stderr_value, stdout_value)
             GitCommandError: Cmd('git') failed due to: exit code(128)
               cmdline: git add 1__Xava verbXXten 1_test _myfile 1_test_other_file 1_XXava-----verbXXten

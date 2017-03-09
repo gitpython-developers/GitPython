@@ -416,7 +416,7 @@ class TestRepo(TestBase):
         self.assertEqual(len(res[0][1]), 83, "Unexpected amount of parsed blame lines")
 
     @skipIf(HIDE_WINDOWS_KNOWN_ERRORS and Git.is_cygwin(),
-            """FIXME: File "C:\projects\gitpython\git\cmd.py", line 671, in execute
+            """FIXME: File "C:\\projects\\gitpython\\git\\cmd.py", line 671, in execute
                     raise GitCommandError(command, status, stderr_value, stdout_value)
                 GitCommandError: Cmd('git') failed due to: exit code(128)
                   cmdline: git add 1__��ava verb��ten 1_test _myfile 1_test_other_file

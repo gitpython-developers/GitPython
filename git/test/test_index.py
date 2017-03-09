@@ -411,7 +411,7 @@ class TestIndex(TestBase):
     # END num existing helper
 
     @skipIf(HIDE_WINDOWS_KNOWN_ERRORS and Git.is_cygwin(),
-            """FIXME: File "C:\projects\gitpython\git\test\test_index.py", line 642, in test_index_mutation
+            """FIXME: File "C:\\projects\\gitpython\\git\\test\\test_index.py", line 642, in test_index_mutation
                 self.assertEqual(fd.read(), link_target)
                 AssertionError: '!<symlink>\xff\xfe/\x00e\x00t\x00c\x00/\x00t\x00h\x00a\x00t\x00\x00\x00'
                 != '/etc/that'
