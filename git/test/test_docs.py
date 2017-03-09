@@ -433,7 +433,7 @@ class Tutorials(TestBase):
         # reset the index and working tree to match the pointed-to commit
         repo.head.reset(index=True, working_tree=True)
 
-        # To detach your head, you have to point to a commit directy
+        # To detach your head, you have to point to a commit directly
         repo.head.reference = repo.commit('HEAD~5')
         assert repo.head.is_detached
         # now our head points 15 commits into the past, whereas the working tree

@@ -212,9 +212,9 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
         self._is_initialized = False
         self._merge_includes = merge_includes
         self._lock = None
-        self._aquire_lock()
+        self._acquire_lock()
 
-    def _aquire_lock(self):
+    def _acquire_lock(self):
         if not self._read_only:
             if not self._lock:
                 if isinstance(self._file_or_files, (tuple, list)):
@@ -239,7 +239,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
         self.release()
 
     def __enter__(self):
-        self._aquire_lock()
+        self._acquire_lock()
         return self
 
     def __exit__(self, exception_type, exception_value, traceback):

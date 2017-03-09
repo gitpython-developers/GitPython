@@ -163,7 +163,7 @@ class TestRemote(TestBase):
 
     def _commit_random_file(self, repo):
         # Create a file with a random name and random data and commit it to  repo.
-        # Return the commited absolute file path
+        # Return the committed absolute file path
         index = repo.index
         new_file = self._make_file(osp.basename(tempfile.mktemp()), str(random.random()), repo)
         index.add([new_file])
