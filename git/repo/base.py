@@ -882,7 +882,7 @@ class Repo(object):
         #        git clone --bare  /cygwin/d/foo.git  /cygwin/d/C:\\Work
         #
         clone_path = (Git.polish_url(path)
-                      if Git.is_cygwin() and 'bare'in kwargs
+                      if Git.is_cygwin() and 'bare' in kwargs
                       else path)
         sep_dir = kwargs.get('separate_git_dir')
         if sep_dir:
