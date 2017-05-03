@@ -212,10 +212,15 @@ class FetchInfo(object):
 
     _flag_map = {'!': ERROR,
                  '+': FORCED_UPDATE,
-                 '-': TAG_UPDATE,
                  '*': 0,
                  '=': HEAD_UPTODATE,
                  ' ': FAST_FORWARD}
+
+    v = Git().version_info[:2]
+    if v >= (2, 10):
+        _flag_map['t'] = TAG_UPDATE
+    else:
+        _flag_map['-'] = TAG_UPDATE
 
     def __init__(self, ref, flags, note='', old_commit=None, remote_ref_path=None):
         """
@@ -629,7 +634,7 @@ class Remote(LazyMixin, Iterable):
         fetch_info_lines = list()
         # Basically we want all fetch info lines which appear to be in regular form, and thus have a
         # command character. Everything else we ignore,
-        cmds = set(PushInfo._flag_map.keys()) & set(FetchInfo._flag_map.keys())
+        cmds = set(FetchInfo._flag_map.keys())
 
         progress_handler = progress.new_message_handler()
         handle_process_output(proc, None, progress_handler, finalizer=None, decode_streams=False)
