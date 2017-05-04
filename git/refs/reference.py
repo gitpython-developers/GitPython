@@ -94,10 +94,10 @@ class Reference(SymbolicReference, LazyMixin, Iterable):
         return '/'.join(tokens[2:])
 
     @classmethod
-    def iter_items(cls, repo, common_path=None):
+    def iter_items(cls, repo, common_path=None, with_destination=False):
         """Equivalent to SymbolicReference.iter_items, but will return non-detached
         references as well."""
-        return cls._iter_items(repo, common_path)
+        return cls._iter_items(repo, common_path, with_destination)
 
     #}END interface
 

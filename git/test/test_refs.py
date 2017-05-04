@@ -92,6 +92,13 @@ class TestRefs(TestBase):
         assert len(s) == ref_count
         assert len(s | s) == ref_count
 
+    @with_rw_repo('HEAD')
+    def test_iter_item_with_destination(self, rwrepo):
+        for ref, dest in Reference.iter_items(rwrepo, None, True):
+            if not dest.startswith('ref:'):
+                assert len(dest) == 40
+                assert ref.commit == rwrepo.commit(dest)
+
     @with_rw_repo('HEAD', bare=False)
     def test_heads(self, rwrepo):
         for head in rwrepo.heads:

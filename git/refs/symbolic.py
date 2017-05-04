@@ -566,10 +566,11 @@ class SymbolicReference(object):
         return self
 
     @classmethod
-    def _iter_items(cls, repo, common_path=None):
+    def _iter_items(cls, repo, common_path=None, with_destination=False):
         if common_path is None:
             common_path = cls._common_path_default
         rela_paths = set()
+        rela_paths_dest = {}
 
         # walk loose refs
         # Currently we do not follow links
@@ -584,21 +585,31 @@ class SymbolicReference(object):
                 if f == 'packed-refs':
                     continue
                 abs_path = to_native_path_linux(join_path(root, f))
-                rela_paths.add(abs_path.replace(to_native_path_linux(repo.git_dir) + '/', ""))
+                rela_path = abs_path.replace(to_native_path_linux(repo.git_dir) + '/', "")
+                rela_paths.add(rela_path)
+                if with_destination:
+                    with open(abs_path, 'r') as fp:
+                        dest = fp.read().strip('\n')
+                        rela_paths_dest[rela_path] = dest
             # END for each file in root directory
         # END for each directory to walk
 
         # read packed refs
-        for sha, rela_path in cls._iter_packed_refs(repo):  # @UnusedVariable
+        for dest, rela_path in cls._iter_packed_refs(repo):  # @UnusedVariable
             if rela_path.startswith(common_path):
                 rela_paths.add(rela_path)
+                if with_destination and rela_path not in rela_paths_dest:
+                    rela_paths_dest[rela_path] = dest
             # END relative path matches common path
         # END packed refs reading
 
         # return paths in sorted order
         for path in sorted(rela_paths):
             try:
-                yield cls.from_path(repo, path)
+                if with_destination:
+                    yield cls.from_path(repo, path), rela_paths_dest[path] if path in rela_paths_dest else None
+                else:
+                    yield cls.from_path(repo, path)
             except ValueError:
                 continue
         # END for each sorted relative refpath
