@@ -410,6 +410,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
             # Read includes and append those that we didn't handle yet
             # We expect all paths to be normalized and absolute (and will assure that is the case)
             if self._has_includes():
+                include_paths = []
                 for _, include_path in self.items('include'):
                     if include_path.startswith('~'):
                         include_path = osp.expanduser(include_path)
@@ -424,8 +425,11 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
                     if include_path in seen or not os.access(include_path, os.R_OK):
                         continue
                     seen.add(include_path)
-                    files_to_read.insert(0, include_path)
+                    include_paths.append(include_path)
                     num_read_include_files += 1
+                include_paths.reverse()
+                for include_path in include_paths:
+                    files_to_read.insert(0, include_path)
                 # each include path in configuration file
             # end handle includes
         # END for each file object to read
