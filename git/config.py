@@ -549,7 +549,13 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
         return valuestr
 
     def _value_to_string(self, value):
-        if isinstance(value, (int, float, bool)):
+        # git expects bool to be lower case true or false
+        if isinstance(value, bool):
+            if value:
+                return 'true'
+            else:
+                return 'false'
+        if isinstance(value, (int, float)):
             return str(value)
         return force_text(value)
 
