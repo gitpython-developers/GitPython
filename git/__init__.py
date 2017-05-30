@@ -15,24 +15,6 @@ import os.path as osp
 __version__ = 'git'
 
 
-#{ Initialization
-def _init_externals():
-    """Initialize external projects by putting them into the path"""
-    if __version__ == 'git':
-        sys.path.insert(0, osp.join(osp.dirname(__file__), 'ext', 'gitdb'))
-
-    try:
-        import gitdb
-    except ImportError:
-        raise ImportError("'gitdb' could not be found in your PYTHONPATH")
-    # END verify import
-
-#} END initialization
-
-#################
-_init_externals()
-#################
-
 #{ Imports
 
 from git.config import GitConfigParser  # @NoMove @IgnorePep8
