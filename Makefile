@@ -15,4 +15,4 @@ release: clean
 force_release: clean
 	git push --tags
 	python setup.py sdist bdist_wheel
-	twine upload dist/*
+	twine upload -s -i byronimo@gmail.com dist/*
