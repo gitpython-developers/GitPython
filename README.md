@@ -123,6 +123,59 @@ Please have a look at the [contributions file][contributing].
   incrementing the patch level, and possibly by appending `-dev`. Probably you
   want to `git push` once more.
 
+### How to verify a release
+
+Please only use releases from `pypi` as you can verify the respective source 
+tarballs.
+
+This script shows how to verify the tarball was indeed created by the authors of
+this project:
+
+```
+curl https://pypi.python.org/packages/7e/13/2a556eb97dcf498c915e5e04bb82bf74e07bb8b7337ca2be49bfd9fb6313/GitPython-2.1.5-py2.py3-none-any.whl\#md5\=d3ecb26cb22753f4414f75f721f6f626z  > gitpython.whl
+curl https://pypi.python.org/packages/7e/13/2a556eb97dcf498c915e5e04bb82bf74e07bb8b7337ca2be49bfd9fb6313/GitPython-2.1.5-py2.py3-none-any.whl.asc > gitpython-signature.asc
+gpg --verify gitpython-signature.asc gitpython.whl
+```
+
+which outputs
+
+```
+gpg: Signature made Sat Jun 10 20:22:49 2017 CEST using RSA key ID 3B07188F
+gpg: Good signature from "Sebastian Thiel (In Rust I trust!) <byronimo@gmail.com>" [unknown]
+gpg: WARNING: This key is not certified with a trusted signature!
+gpg:          There is no indication that the signature belongs to the owner.
+Primary key fingerprint: 4477 ADC5 977D 7C60 D2A7  E378 9FEE 1C6A 3B07 188F
+```
+
+You can verify that the keyid indeed matches the release-signature key provided in this
+repository by looking at the keys details:
+
+```
+gpg --list-packets ./release-verification-key.asc
+```
+
+You can verify that the commit adding it was also signed by it using:
+
+```
+git show --show-signature  ./release-verification-key.asc
+```
+
+If you would like to trust it permanently, you can import and sign it:
+
+```
+gpg --import ./release-verification-key.asc
+gpg --edit-key 9FEE1C6A3B07188F
+> sign
+> save
+```
+
+Afterwards verifying the tarball will yield the following:
+```
+$ gpg --verify gitpython-signature.asc gitpython.whl
+gpg: Signature made Sat Jun 10 20:22:49 2017 CEST using RSA key ID 3B07188F
+gpg: Good signature from "Sebastian Thiel (In Rust I trust!) <byronimo@gmail.com>" [ultimate]
+```
+
 ### LICENSE
 
 New BSD License.  See the LICENSE file.
