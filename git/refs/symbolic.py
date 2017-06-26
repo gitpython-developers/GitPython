@@ -75,7 +75,12 @@ class SymbolicReference(object):
 
     @classmethod
     def _get_packed_refs_path(cls, repo):
-        return osp.join(repo.git_dir, 'packed-refs')
+        try:
+            commondir = open(osp.join(repo.git_dir, 'commondir'), 'rt').readlines()[0].strip()
+        except (OSError, IOError):
+            commondir = '.'
+        repodir = osp.join(repo.git_dir, commondir)
+        return osp.join(repodir, 'packed-refs')
 
     @classmethod
     def _iter_packed_refs(cls, repo):
@@ -122,13 +127,13 @@ class SymbolicReference(object):
         # END recursive dereferencing
 
     @classmethod
-    def _get_ref_info(cls, repo, ref_path):
+    def _get_ref_info_helper(cls, repo, repodir, ref_path):
         """Return: (str(sha), str(target_ref_path)) if available, the sha the file at
         rela_path points to, or None. target_ref_path is the reference we
         point to, or None"""
         tokens = None
         try:
-            with open(osp.join(repo.git_dir, ref_path), 'rt') as fp:
+            with open(osp.join(repodir, ref_path), 'rt') as fp:
                 value = fp.read().rstrip()
             # Don't only split on spaces, but on whitespace, which allows to parse lines like
             # 60b64ef992065e2600bfef6187a97f92398a9144                branch 'master' of git-server:/path/to/repo
@@ -158,6 +163,22 @@ class SymbolicReference(object):
             return (tokens[0], None)
 
         raise ValueError("Failed to parse reference information from %r" % ref_path)
+
+    @classmethod
+    def _get_ref_info(cls, repo, ref_path):
+        """Return: (str(sha), str(target_ref_path)) if available, the sha the file at
+        rela_path points to, or None. target_ref_path is the reference we
+        point to, or None"""
+        try:
+            return cls._get_ref_info_helper(repo, repo.git_dir, ref_path)
+        except ValueError:
+            try:
+                commondir = open(osp.join(repo.git_dir, 'commondir'), 'rt').readlines()[0].strip()
+            except (OSError, IOError):
+                commondir = '.'
+
+            repodir = osp.join(repo.git_dir, commondir)
+            return cls._get_ref_info_helper(repo, repodir, ref_path)
 
     def _get_object(self):
         """

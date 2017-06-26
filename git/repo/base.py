@@ -32,7 +32,7 @@ from git.remote import Remote, add_progress, to_progress_instance
 from git.util import Actor, finalize_process, decygpath, hex_to_bin
 import os.path as osp
 
-from .fun import rev_parse, is_git_dir, find_submodule_git_dir, touch
+from .fun import rev_parse, is_git_dir, find_submodule_git_dir, touch, find_worktree_git_dir
 import gc
 import gitdb
 
@@ -138,10 +138,15 @@ class Repo(object):
                 self._working_tree_dir = os.getenv('GIT_WORK_TREE', os.path.dirname(self.git_dir))
                 break
 
-            sm_gitpath = find_submodule_git_dir(osp.join(curpath, '.git'))
+            dotgit = osp.join(curpath, '.git')
+            sm_gitpath = find_submodule_git_dir(dotgit)
             if sm_gitpath is not None:
                 self.git_dir = osp.normpath(sm_gitpath)
-            sm_gitpath = find_submodule_git_dir(osp.join(curpath, '.git'))
+
+            sm_gitpath = find_submodule_git_dir(dotgit)
+            if sm_gitpath is None:
+                sm_gitpath = find_worktree_git_dir(dotgit)
+
             if sm_gitpath is not None:
                 self.git_dir = _expand_path(sm_gitpath)
                 self._working_tree_dir = curpath

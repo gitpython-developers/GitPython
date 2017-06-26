@@ -1,10 +1,14 @@
 from io import BytesIO
 from stat import S_IFDIR, S_IFREG, S_IFLNK
-try:
-    from unittest import skipIf
-except ImportError:
-    from unittest2 import skipIf
+from os import stat
+import os.path as osp
 
+try:
+    from unittest import skipIf, SkipTest
+except ImportError:
+    from unittest2 import skipIf, SkipTest
+
+from git import Git
 from git.compat import PY3
 from git.index import IndexFile
 from git.index.fun import (
@@ -14,13 +18,18 @@ from git.objects.fun import (
     traverse_tree_recursive,
     traverse_trees_recursive,
     tree_to_stream,
-    tree_entries_from_data
+    tree_entries_from_data,
+)
+from git.repo.fun import (
+    find_worktree_git_dir
 )
 from git.test.lib import (
+    assert_true,
     TestBase,
-    with_rw_repo
+    with_rw_repo,
+    with_rw_directory
 )
-from git.util import bin_to_hex
+from git.util import bin_to_hex, cygpath, join_path_native
 from gitdb.base import IStream
 from gitdb.typ import str_tree_type
 
@@ -253,6 +262,29 @@ class TestFun(TestBase):
             entries = traverse_tree_recursive(odb, commit.tree.binsha, '')
             assert entries
         # END for each commit
+
+    @with_rw_directory
+    def test_linked_worktree_traversal(self, rw_dir):
+        """Check that we can identify a linked worktree based on a .git file"""
+        git = Git(rw_dir)
+        if git.version_info[:3] < (2, 5, 1):
+            raise SkipTest("worktree feature unsupported")
+
+        rw_master = self.rorepo.clone(join_path_native(rw_dir, 'master_repo'))
+        branch = rw_master.create_head('aaaaaaaa')
+        worktree_path = join_path_native(rw_dir, 'worktree_repo')
+        if Git.is_cygwin():
+            worktree_path = cygpath(worktree_path)
+        rw_master.git.worktree('add', worktree_path, branch.name)
+
+        dotgit = osp.join(worktree_path, ".git")
+        statbuf = stat(dotgit)
+        assert_true(statbuf.st_mode & S_IFREG)
+
+        gitdir = find_worktree_git_dir(dotgit)
+        self.assertIsNotNone(gitdir)
+        statbuf = stat(gitdir)
+        assert_true(statbuf.st_mode & S_IFDIR)
 
     @skipIf(PY3, 'odd types returned ... maybe figure it out one day')
     def test_tree_entries_from_data_with_failing_name_decode_py2(self):
