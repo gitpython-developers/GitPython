@@ -22,6 +22,7 @@ from git import (
     NoSuchPathError,
     Head,
     Commit,
+    Object,
     Tree,
     IndexFile,
     Git,
@@ -911,22 +912,28 @@ class TestRepo(TestBase):
             self.assertRaises(GitCommandError, repo.is_ancestor, i, j)
 
     @with_rw_directory
-    def test_work_tree_unsupported(self, rw_dir):
+    def test_git_work_tree_dotgit(self, rw_dir):
+        """Check that we find .git as a worktree file and find the worktree
+        based on it."""
         git = Git(rw_dir)
         if git.version_info[:3] < (2, 5, 1):
             raise SkipTest("worktree feature unsupported")
 
         rw_master = self.rorepo.clone(join_path_native(rw_dir, 'master_repo'))
-        rw_master.git.checkout('HEAD~10')
+        branch = rw_master.create_head('aaaaaaaa')
         worktree_path = join_path_native(rw_dir, 'worktree_repo')
         if Git.is_cygwin():
             worktree_path = cygpath(worktree_path)
-        try:
-            rw_master.git.worktree('add', worktree_path, 'master')
-        except Exception as ex:
-            raise AssertionError(ex, "It's ok if TC not running from `master`.")
+        rw_master.git.worktree('add', worktree_path, branch.name)
 
-        self.failUnlessRaises(InvalidGitRepositoryError, Repo, worktree_path)
+        # this ensures that we can read the repo's gitdir correctly
+        repo = Repo(worktree_path)
+        self.assertIsInstance(repo, Repo)
+
+        # this ensures we're able to actually read the refs in the tree, which
+        # means we can read commondir correctly.
+        commit = repo.head.commit
+        self.assertIsInstance(commit, Object)
 
     @with_rw_directory
     def test_git_work_tree_env(self, rw_dir):
