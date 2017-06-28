@@ -698,6 +698,9 @@ class TestSubmodule(TestBase):
 
         parent.index.commit("moved submodules")
 
+        with sm.config_writer() as writer:
+            writer.set_value('user.email', 'example@example.com')
+            writer.set_value('user.name', 'me')
         smm = sm.module()
         fp = osp.join(smm.working_tree_dir, 'empty-file')
         with open(fp, 'w'):
