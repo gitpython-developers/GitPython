@@ -663,7 +663,7 @@ class TestSubmodule(TestBase):
                                   url=empty_repo_dir, no_checkout=checkout_mode and True or False)
         # end for each checkout mode
 
-    @skipIf(HIDE_WINDOWS_KNOWN_ERRORS and Git.is_cygwin(),
+    @skipIf(HIDE_WINDOWS_KNOWN_ERRORS,
             """FIXME: ile "C:\\projects\\gitpython\\git\\cmd.py", line 671, in execute
                 raise GitCommandError(command, status, stderr_value, stdout_value)
             GitCommandError: Cmd('git') failed due to: exit code(128)
