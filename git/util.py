@@ -4,7 +4,7 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 import contextlib
-from functools import wraps
+from functools import wraps, lru_cache
 import getpass
 import logging
 import os
@@ -286,6 +286,7 @@ _cygpath_parsers = (
 )
 
 
+@lru_cache()
 def cygpath(path):
     """Use :meth:`git.cmd.Git.polish_url()` instead, that works on any environment."""
     for regex, parser, recurse in _cygpath_parsers:
