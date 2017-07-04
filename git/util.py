@@ -221,7 +221,25 @@ def py_where(program, path=None):
     return progs
 
 
-def _cygexpath(drive, path):
+def _cygpath(winpath):
+    """Invokes `cygpath` cmd to parse Windoews paths."""
+    import subprocess as sbp
+
+    cmd = ['cygpath', winpath]
+    try:
+        cygpath = sbp.check_output(cmd, universal_newlines=True)
+        cygpath = cygpath and cygpath[:-1]
+    except Exception as ex:
+        log.warning("`cygpath.exe` failed on '%s' due to: %s"
+                    "  Using winpath as it is.",
+                    winpath, ex)
+    else:
+        winpath = cygpath
+
+    return winpath
+
+
+def _cyg_regex_path(drive, path):
     if osp.isabs(path) and not drive:
         ## Invoked from `cygpath()` directly with `D:Apps\123`?
         #  It's an error, leave it alone just slashes)
@@ -235,7 +253,7 @@ def _cygexpath(drive, path):
             else:
                 p = cygpath(p)
         elif drive:
-            p = '/cygdrive/%s/%s' % (drive.lower(), p)
+            return _cygpath('%s:\\%s' % (drive, p))
 
     return p.replace('\\', '/')
 
@@ -249,12 +267,12 @@ _cygpath_parsers = (
      ),
 
     (re.compile(r"\\\\\?\\(\w):[/\\](.*)"),
-     _cygexpath,
+     _cyg_regex_path,
      False
      ),
 
     (re.compile(r"(\w):[/\\](.*)"),
-     _cygexpath,
+     _cyg_regex_path,
      False
      ),
 
@@ -270,16 +288,15 @@ _cygpath_parsers = (
 
 def cygpath(path):
     """Use :meth:`git.cmd.Git.polish_url()` instead, that works on any environment."""
-    if not path.startswith(('/cygdrive', '//')):
-        for regex, parser, recurse in _cygpath_parsers:
-            match = regex.match(path)
-            if match:
-                path = parser(*match.groups())
-                if recurse:
-                    path = cygpath(path)
-                break
-        else:
-            path = _cygexpath(None, path)
+    for regex, parser, recurse in _cygpath_parsers:
+        match = regex.match(path)
+        if match:
+            path = parser(*match.groups())
+            if recurse:
+                path = cygpath(path)
+            break
+    else:
+        path = _cyg_regex_path(None, path)
 
     return path
 
