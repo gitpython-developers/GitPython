@@ -6,6 +6,10 @@ Changelog
 ====================================
 
 * support for worktrees
+* fix(cygwin): use ``cygpath.exe`` to convert *Windows* paths and respect
+  different mount-points (e.g. *MSYS2* which is a *Cygwin* clone mounts drives
+  under root).
+
 
 2.1.3 - Bugfixes
 ====================================
@@ -34,7 +38,7 @@ Notable fixes
 * The `GIT_DIR` environment variable does not override the `path` argument when
   initializing a `Repo` object anymore. However, if said `path` unset, `GIT_DIR`
   will be used to fill the void.
-  
+
 All issues and PRs can be viewed in all detail when following this URL:
 https://github.com/gitpython-developers/GitPython/issues?q=is%3Aclosed+milestone%3A%22v2.1.0+-+proper+windows+support%22
 
@@ -63,7 +67,7 @@ https://github.com/gitpython-developers/GitPython/issues?q=is%3Aclosed+milestone
 2.0.7 - New Features
 ====================
 
-* `IndexFile.commit(...,skip_hooks=False)` added. This parameter emulates the 
+* `IndexFile.commit(...,skip_hooks=False)` added. This parameter emulates the
    behaviour of `--no-verify` on the command-line.
 
 2.0.6 - Fixes and Features
@@ -103,7 +107,7 @@ https://github.com/gitpython-developers/GitPython/issues?q=is%3Aclosed+milestone
   commit messages contained ``\r`` characters
 * Fix: progress handler exceptions are not caught anymore, which would usually just hide bugs
   previously.
-* Fix: The `Git.execute` method will now redirect `stdout` to `devnull` if `with_stdout` is false, 
+* Fix: The `Git.execute` method will now redirect `stdout` to `devnull` if `with_stdout` is false,
   which is the intended behaviour based on the parameter's documentation.
 
 2.0.2 - Fixes
