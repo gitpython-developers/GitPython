@@ -225,14 +225,17 @@ def py_where(program, path=None):
     return progs
 
 
-def _cygpath(winpath):
+def _cygpath(winpath, inverse=False):
     """Invokes `cygpath` cmd to parse Windoews paths."""
     import subprocess as sbp
 
     cmd = ['cygpath', winpath]
+    if inverse:
+        cmd.insert(1, '-w')
     try:
         cygpath = sbp.check_output(cmd, universal_newlines=True)
-        cygpath = cygpath and cygpath[:-1]
+        if cygpath and cygpath[-1] == '\n':
+            cygpath = cygpath[:-1]
     except Exception as ex:
         log.warning("`cygpath.exe` failed on '%s' due to: %s"
                     "  Using winpath as it is.",
@@ -290,7 +293,7 @@ _cygpath_parsers = (
 )
 
 
-@lru_cache(500)  # Sice arg required only for py3.2 backport `repoze.lru` lib.
+@lru_cache(500)  # Size arg required only for py3.2 backport `repoze.lru` lib.
 def cygpath(path):
     """Use :meth:`git.cmd.Git.polish_url()` instead, that works on any environment."""
     for regex, parser, recurse in _cygpath_parsers:
@@ -309,13 +312,15 @@ def cygpath(path):
 _decygpath_regex = re.compile(r"/cygdrive/(\w)(/.*)?")
 
 
+@lru_cache(500)  # Size arg required only for py3.2 backport `repoze.lru` lib.
 def decygpath(path):
-    m = _decygpath_regex.match(path)
-    if m:
-        drive, rest_path = m.groups()
-        path = '%s:%s' % (drive.upper(), rest_path or '')
+    if path:
+        winpath = _cygpath(path, inverse=True)
+        if path[-1] in '/\\' and winpath[-1] not in '/\\':
+            winpath += '\\'
+        path = winpath
 
-    return path.replace('/', '\\')
+    return path
 
 
 #: Store boolean flags denoting if a specific Git executable
@@ -323,6 +328,7 @@ def decygpath(path):
 _is_cygwin_cache = {}
 
 
+@lru_cache(50)  # Size arg required only for py3.2 backport `repoze.lru` lib.
 def is_cygwin_git(git_executable):
     if not is_win:
         return False
