@@ -4,7 +4,7 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 import contextlib
-from functools import wraps, lru_cache
+from functools import wraps
 import getpass
 import logging
 import os
@@ -18,6 +18,10 @@ try:
     from unittest import SkipTest
 except ImportError:
     from unittest2 import SkipTest
+try:
+    from functools import lru_cache
+except ImportError:
+    from repoze.lru import lru_cache
 
 from gitdb.util import (# NOQA @IgnorePep8
     make_sha,
@@ -286,7 +290,7 @@ _cygpath_parsers = (
 )
 
 
-@lru_cache()
+@lru_cache(500)  # Sice arg required only for py3.2 backport `repoze.lru` lib.
 def cygpath(path):
     """Use :meth:`git.cmd.Git.polish_url()` instead, that works on any environment."""
     for regex, parser, recurse in _cygpath_parsers:

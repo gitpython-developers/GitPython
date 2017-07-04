@@ -1,3 +1,5 @@
 gitdb>=0.6.4
 ddt>=1.1.1
+ordereddict; python_version < '2.7'
+repoze.lru; python_version < '3.2'
 unittest2; python_version < '2.7'

@@ -68,6 +68,7 @@ def _stamp_version(filename):
 install_requires = ['gitdb2 >= 2.0.0']
 extras_require = {
     ':python_version == "2.6"': ['ordereddict'],
+    ':python_version < "3.2"': ['repoze.lru'],
 }
 test_requires = ['ddt>=1.1.1']
 if sys.version_info[:2] < (2, 7):
