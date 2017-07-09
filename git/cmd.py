@@ -190,28 +190,26 @@ class Git(LazyMixin):
     USE_SHELL = False
 
     # Provide the full path to the git executable. Otherwise it assumes git is in the path
+    _git_exec_env_var = "GIT_PYTHON_GIT_EXECUTABLE"
+    GIT_PYTHON_GIT_EXECUTABLE = None
+    # note that the git executable is actually found during the setup step in
+    # the top level __init__
+
     @classmethod
     def refresh(cls, path=None):
-        """Convenience method for refreshing the git executable path."""
-        cls.setup(path=path)
-
-    @classmethod
-    def setup(cls, path=None):
-        """Convenience method for setting the git executable path."""
+        """This gets called by the setup function (see the top level __init__).
+        """
+        # discern which path to refresh with
         if path is not None:
-            # use the path the user gave
-            os.environ[cls._git_exec_env_var] = path
-        elif cls._git_exec_env_var in os.environ:
-            # fall back to the environment variable that's already set
-            pass
+            new_git = os.path.abspath(path)
         else:
-            # hope that git can be found on the user's $PATH
-            pass
+            new_git = os.environ.get(cls._git_exec_env_var, cls.git_exec_name)
 
+        # keep track of the old and new git executable path
         old_git = cls.GIT_PYTHON_GIT_EXECUTABLE
-        new_git = os.environ.get(cls._git_exec_env_var, cls.git_exec_name)
         cls.GIT_PYTHON_GIT_EXECUTABLE = new_git
 
+        # test if the new git executable path is valid
         has_git = False
         try:
             cls().version()
@@ -219,12 +217,13 @@ class Git(LazyMixin):
         except GitCommandNotFound:
             pass
 
+        # warn or raise exception if test failed
         if not has_git:
             err = dedent("""\
                 Bad git executable. The git executable must be specified in one of the following ways:
                     (1) be included in your $PATH, or
                     (2) be set via $GIT_PYTHON_GIT_EXECUTABLE, or
-                    (3) explicitly call git.cmd.setup with the full path.
+                    (3) explicitly set via git.setup (or git.refresh).
                 """)
 
             if old_git is None:
@@ -232,19 +231,19 @@ class Git(LazyMixin):
                 # None) we only warn the user and simply set the default
                 # executable
                 cls.GIT_PYTHON_GIT_EXECUTABLE = cls.git_exec_name
-                print("WARNING: %s" % err)
+                print(dedent("""\
+                    WARNING: %s
+                    All git commands will error until this is rectified.
+                    """) % err)
             else:
                 # after the first setup (when GIT_PYTHON_GIT_EXECUTABLE
                 # is no longer None) we raise an exception and reset the
                 # GIT_PYTHON_GIT_EXECUTABLE to whatever the value was
                 # previously
-                cls.GIT_PYTHON_GIT_EXECUTABLE = old_name
+                cls.GIT_PYTHON_GIT_EXECUTABLE = old_git
                 raise GitCommandNotFound("git", err)
 
-    _git_exec_env_var = "GIT_PYTHON_GIT_EXECUTABLE"
-    # immediately set with the default value ("git")
-    GIT_PYTHON_GIT_EXECUTABLE = None
-    # see the setup performed below
+        return has_git
 
     @classmethod
     def is_cygwin(cls):
@@ -1024,16 +1023,3 @@ class Git(LazyMixin):
         self.cat_file_all = None
         self.cat_file_header = None
         return self
-
-
-
-# this is where the git executable is setup
-def setup(path=None):
-    Git.setup(path=path)
-
-
-def refresh(path=None):
-    Git.refresh(path=path)
-
-
-setup()

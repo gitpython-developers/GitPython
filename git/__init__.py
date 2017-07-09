@@ -57,3 +57,20 @@ from git.util import (                  # @NoMove @IgnorePep8
 
 __all__ = [name for name, obj in locals().items()
            if not (name.startswith('_') or inspect.ismodule(obj))]
+
+#{ Initialize git executable path
+def setup(path=None):
+    """Convenience method for setting the git executable path."""
+    if not Git.refresh(path=path):
+        return
+    if not FetchInfo.refresh():
+        return
+
+def refresh(path=None):
+    """Convenience method for refreshing the git executable path."""
+    setup(path=path)
+#} END initialize git executable path
+
+#################
+setup()
+#################
