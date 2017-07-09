@@ -17,6 +17,7 @@ from subprocess import (
 import subprocess
 import sys
 import threading
+from textwrap import dedent
 
 from git.compat import (
     string_types,
@@ -182,15 +183,68 @@ class Git(LazyMixin):
     # Enables debugging of GitPython's git commands
     GIT_PYTHON_TRACE = os.environ.get("GIT_PYTHON_TRACE", False)
 
-    # Provide the full path to the git executable. Otherwise it assumes git is in the path
-    _git_exec_env_var = "GIT_PYTHON_GIT_EXECUTABLE"
-    GIT_PYTHON_GIT_EXECUTABLE = os.environ.get(_git_exec_env_var, git_exec_name)
-
     # If True, a shell will be used when executing git commands.
     # This should only be desirable on Windows, see https://github.com/gitpython-developers/GitPython/pull/126
     # and check `git/test_repo.py:TestRepo.test_untracked_files()` TC for an example where it is required.
     # Override this value using `Git.USE_SHELL = True`
     USE_SHELL = False
+
+    # Provide the full path to the git executable. Otherwise it assumes git is in the path
+    @classmethod
+    def refresh(cls, path=None):
+        """Convenience method for refreshing the git executable path."""
+        cls.setup(path=path)
+
+    @classmethod
+    def setup(cls, path=None):
+        """Convenience method for setting the git executable path."""
+        if path is not None:
+            # use the path the user gave
+            os.environ[cls._git_exec_env_var] = path
+        elif cls._git_exec_env_var in os.environ:
+            # fall back to the environment variable that's already set
+            pass
+        else:
+            # hope that git can be found on the user's $PATH
+            pass
+
+        old_git = cls.GIT_PYTHON_GIT_EXECUTABLE
+        new_git = os.environ.get(cls._git_exec_env_var, cls.git_exec_name)
+        cls.GIT_PYTHON_GIT_EXECUTABLE = new_git
+
+        has_git = False
+        try:
+            cls().version()
+            has_git = True
+        except GitCommandNotFound:
+            pass
+
+        if not has_git:
+            err = dedent("""\
+                Bad git executable. The git executable must be specified in one of the following ways:
+                    (1) be included in your $PATH, or
+                    (2) be set via $GIT_PYTHON_GIT_EXECUTABLE, or
+                    (3) explicitly call git.cmd.setup with the full path.
+                """)
+
+            if old_git is None:
+                # on the first setup (when GIT_PYTHON_GIT_EXECUTABLE is
+                # None) we only warn the user and simply set the default
+                # executable
+                cls.GIT_PYTHON_GIT_EXECUTABLE = cls.git_exec_name
+                print("WARNING: %s" % err)
+            else:
+                # after the first setup (when GIT_PYTHON_GIT_EXECUTABLE
+                # is no longer None) we raise an exception and reset the
+                # GIT_PYTHON_GIT_EXECUTABLE to whatever the value was
+                # previously
+                cls.GIT_PYTHON_GIT_EXECUTABLE = old_name
+                raise GitCommandNotFound("git", err)
+
+    _git_exec_env_var = "GIT_PYTHON_GIT_EXECUTABLE"
+    # immediately set with the default value ("git")
+    GIT_PYTHON_GIT_EXECUTABLE = None
+    # see the setup performed below
 
     @classmethod
     def is_cygwin(cls):
@@ -828,13 +882,13 @@ class Git(LazyMixin):
             - "command options" to be converted by :meth:`transform_kwargs()`;
             - the `'insert_kwargs_after'` key which its value must match one of ``*args``,
               and any cmd-options will be appended after the matched arg.
-        
+
         Examples::
-        
+
             git.rev_list('master', max_count=10, header=True)
-        
+
         turns into::
-        
+
            git rev-list max-count 10 --header master
 
         :return: Same as ``execute``"""
@@ -970,3 +1024,16 @@ class Git(LazyMixin):
         self.cat_file_all = None
         self.cat_file_header = None
         return self
+
+
+
+# this is where the git executable is setup
+def setup(path=None):
+    Git.setup(path=path)
+
+
+def refresh(path=None):
+    Git.refresh(path=path)
+
+
+setup()
