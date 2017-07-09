@@ -231,10 +231,19 @@ class Git(LazyMixin):
                 # None) we only warn the user and simply set the default
                 # executable
                 cls.GIT_PYTHON_GIT_EXECUTABLE = cls.git_exec_name
-                print(dedent("""\
-                    WARNING: %s
-                    All git commands will error until this is rectified.
-                    """) % err)
+
+                # test if the user didn't want a warning
+                nowarn = os.environ.get("GIT_PYTHON_NOWARN", "false")
+                nowarn = nowarn.lower() in ["t", "true", "y", "yes"]
+
+                if not nowarn:
+                    print(dedent("""\
+                        WARNING: %s
+                        All git commands will error until this is rectified.
+
+                        This initial warning can be silenced in the future by setting the environment variable:
+                        export GIT_PYTHON_NOWARN=true
+                        """) % err)
             else:
                 # after the first setup (when GIT_PYTHON_GIT_EXECUTABLE
                 # is no longer None) we raise an exception and reset the
