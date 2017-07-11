@@ -350,7 +350,7 @@ def is_cygwin_git(git_executable):
                                        universal_newlines=True)
             uname_out, _ = process.communicate()
             #retcode = process.poll()
-            is_cygwin = 'CYGWIN' in uname_out
+            is_cygwin = 'CYGWIN' in uname_out or 'MSYS' in uname_out
         except Exception as ex:
             log.debug('Failed checking if running in CYGWIN due to: %r', ex)
         _is_cygwin_cache[git_executable] = is_cygwin
