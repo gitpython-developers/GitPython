@@ -1,21 +1,21 @@
 """Package with general repository related functions"""
+import codecs
 import os
+import os.path as osp
 import stat
 from string import digits
 
-from git.compat import xrange
-from git.exc import WorkTreeRepositoryUnsupported
-from git.objects import Object
-from git.refs import SymbolicReference
-from git.util import hex_to_bin, bin_to_hex, decygpath
 from gitdb.exc import (
     BadObject,
     BadName,
 )
 
-import os.path as osp
 from git.cmd import Git
-
+from git.compat import xrange
+from git.exc import WorkTreeRepositoryUnsupported
+from git.objects import Object
+from git.refs import SymbolicReference
+from git.util import hex_to_bin, bin_to_hex, decygpath
 
 __all__ = ('rev_parse', 'is_git_dir', 'touch', 'find_submodule_git_dir', 'name_to_object', 'short_to_long', 'deref_tag',
            'to_commit', 'find_worktree_git_dir')
@@ -58,7 +58,7 @@ def find_worktree_git_dir(dotgit):
         return None
 
     try:
-        lines = open(dotgit, 'r', encoding="utf-8").readlines()
+        lines = codecs.open(dotgit, 'r', encoding="utf-8").readlines()
         for key, value in [line.strip().split(': ') for line in lines]:
             if key == 'gitdir':
                 return value
@@ -73,7 +73,7 @@ def find_submodule_git_dir(d):
         return d
 
     try:
-        with open(d, encoding="utf-8") as fp:
+        with codecs.open(d, encoding="utf-8") as fp:
             content = fp.read().rstrip()
     except (IOError, OSError):
         # it's probably not a file

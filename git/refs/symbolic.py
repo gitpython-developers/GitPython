@@ -1,5 +1,5 @@
 import os
-
+import codecs
 from git.compat import (
     string_types,
     defenc
@@ -76,7 +76,7 @@ class SymbolicReference(object):
     @classmethod
     def _get_packed_refs_path(cls, repo):
         try:
-            commondir = open(osp.join(repo.git_dir, 'commondir'), 'rt', encoding="utf-8").readlines()[0].strip()
+            commondir = codecs.open(osp.join(repo.git_dir, 'commondir'), 'rt', encoding="utf-8").readlines()[0].strip()
         except (OSError, IOError):
             commondir = '.'
         repodir = osp.join(repo.git_dir, commondir)
@@ -87,7 +87,7 @@ class SymbolicReference(object):
         """Returns an iterator yielding pairs of sha1/path pairs (as bytes) for the corresponding refs.
         :note: The packed refs file will be kept open as long as we iterate"""
         try:
-            with open(cls._get_packed_refs_path(repo), 'rt', encoding="utf-8") as fp:
+            with codecs.open(cls._get_packed_refs_path(repo), 'rt', encoding="utf-8") as fp:
                 for line in fp:
                     line = line.strip()
                     if not line:
@@ -133,7 +133,7 @@ class SymbolicReference(object):
         point to, or None"""
         tokens = None
         try:
-            with open(osp.join(repodir, ref_path), 'rt', encoding="utf-8") as fp:
+            with codecs.open(osp.join(repodir, ref_path), 'rt', encoding="utf-8") as fp:
                 value = fp.read().rstrip()
             # Don't only split on spaces, but on whitespace, which allows to parse lines like
             # 60b64ef992065e2600bfef6187a97f92398a9144                branch 'master' of git-server:/path/to/repo
@@ -173,7 +173,7 @@ class SymbolicReference(object):
             return cls._get_ref_info_helper(repo, repo.git_dir, ref_path)
         except ValueError:
             try:
-                commondir = open(osp.join(repo.git_dir, 'commondir'), 'rt', encoding="utf-8").readlines()[0].strip()
+                commondir = codecs.open(osp.join(repo.git_dir, 'commondir'), 'rt', encoding="utf-8").readlines()[0].strip()
             except (OSError, IOError):
                 commondir = '.'
 
