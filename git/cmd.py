@@ -192,12 +192,12 @@ class Git(LazyMixin):
     # Provide the full path to the git executable. Otherwise it assumes git is in the path
     _git_exec_env_var = "GIT_PYTHON_GIT_EXECUTABLE"
     GIT_PYTHON_GIT_EXECUTABLE = None
-    # note that the git executable is actually found during the setup step in
+    # note that the git executable is actually found during the refresh step in
     # the top level __init__
 
     @classmethod
     def refresh(cls, path=None):
-        """This gets called by the setup function (see the top level __init__).
+        """This gets called by the refresh function (see the top level __init__).
         """
         # discern which path to refresh with
         if path is not None:
@@ -223,11 +223,11 @@ class Git(LazyMixin):
                 Bad git executable. The git executable must be specified in one of the following ways:
                     (1) be included in your $PATH, or
                     (2) be set via $GIT_PYTHON_GIT_EXECUTABLE, or
-                    (3) explicitly set via git.setup (or git.refresh).
+                    (3) explicitly set via git.refresh.
                 """)
 
             if old_git is None:
-                # on the first setup (when GIT_PYTHON_GIT_EXECUTABLE is
+                # on the first refresh (when GIT_PYTHON_GIT_EXECUTABLE is
                 # None) we only warn the user and simply set the default
                 # executable
                 cls.GIT_PYTHON_GIT_EXECUTABLE = cls.git_exec_name
@@ -267,7 +267,7 @@ class Git(LazyMixin):
                     raise ImportError(err)
 
             else:
-                # after the first setup (when GIT_PYTHON_GIT_EXECUTABLE
+                # after the first refresh (when GIT_PYTHON_GIT_EXECUTABLE
                 # is no longer None) we raise an exception and reset the
                 # GIT_PYTHON_GIT_EXECUTABLE to whatever the value was
                 # previously
