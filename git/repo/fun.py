@@ -58,7 +58,7 @@ def find_worktree_git_dir(dotgit):
         return None
 
     try:
-        lines = open(dotgit, 'r').readlines()
+        lines = open(dotgit, 'r', encoding="utf-8").readlines()
         for key, value in [line.strip().split(': ') for line in lines]:
             if key == 'gitdir':
                 return value
@@ -73,7 +73,7 @@ def find_submodule_git_dir(d):
         return d
 
     try:
-        with open(d) as fp:
+        with open(d, encoding="utf-8") as fp:
             content = fp.read().rstrip()
     except (IOError, OSError):
         # it's probably not a file
