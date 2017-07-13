@@ -232,11 +232,20 @@ class Git(LazyMixin):
                 # executable
                 cls.GIT_PYTHON_GIT_EXECUTABLE = cls.git_exec_name
 
-                # test if the user didn't want a warning
-                nowarn = os.environ.get("GIT_PYTHON_NOWARN", "false")
-                nowarn = nowarn.lower() in ["t", "true", "y", "yes"]
+                # determine what the user wanted to happen
+                # we expect GIT_PYTHON_INITERR to either be unset or be one of
+                # the following values:
+                #   q|quiet|s|silence
+                #   w|warn|warning
+                #   r|raise|e|error
+                initerr_quiet = ["q", "quiet", "s", "silence"]
+                initerr_warn = ["w", "warn", "warning"]
+                initerr_raise = ["r", "raise", "e", "error"]
 
-                if not nowarn:
+                initerr = os.environ.get("GIT_PYTHON_INITERR", "warn").lower()
+                if initerr in initerr_quiet:
+                    pass
+                elif initerr in initerr_warn:
                     print(dedent("""\
                         WARNING: %s
                         All git commands will error until this is rectified.
@@ -244,6 +253,19 @@ class Git(LazyMixin):
                         This initial warning can be silenced in the future by setting the environment variable:
                         export GIT_PYTHON_NOWARN=true
                         """) % err)
+                elif initerr in initerr_raise:
+                    raise ImportError(err)
+                else:
+                    err = dedent("""\
+                        GIT_PYTHON_INITERR environment variable has been set but it has been set with an invalid value.
+
+                        Use only the following values:
+                            (1) q|quiet|s|silence: for no warning or exception
+                            (2) w|warn|warning: for a printed warning
+                            (3) r|raise|e|error: for a raised exception
+                        """)
+                    raise ImportError(err)
+
             else:
                 # after the first setup (when GIT_PYTHON_GIT_EXECUTABLE
                 # is no longer None) we raise an exception and reset the
