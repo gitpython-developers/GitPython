@@ -226,52 +226,61 @@ class Git(LazyMixin):
                     (3) explicitly set via git.refresh.
                 """)
 
+            # revert to whatever the old_git was
+            cls.GIT_PYTHON_GIT_EXECUTABLE = old_git
+
             if old_git is None:
                 # on the first refresh (when GIT_PYTHON_GIT_EXECUTABLE is
-                # None) we only warn the user and simply set the default
-                # executable
-                cls.GIT_PYTHON_GIT_EXECUTABLE = cls.git_exec_name
+                # None) we only are quiet, warn, or error depending on the
+                # GIT_PYTHON_REFRESH value
 
-                # determine what the user wanted to happen
-                # we expect GIT_PYTHON_INITERR to either be unset or be one of
-                # the following values:
-                #   q|quiet|s|silence
-                #   w|warn|warning
-                #   r|raise|e|error
-                initerr_quiet = ["q", "quiet", "s", "silence"]
-                initerr_warn = ["w", "warn", "warning"]
-                initerr_raise = ["r", "raise", "e", "error"]
+                # determine what the user wants to happen during the initial
+                # refresh we expect GIT_PYTHON_REFRESH to either be unset or
+                # be one of the following values:
+                #   0|q|quiet|s|silence
+                #   1|w|warn|warning
+                #   2|r|raise|e|error
 
-                initerr = os.environ.get("GIT_PYTHON_INITERR", "warn").lower()
-                if initerr in initerr_quiet:
+                mode = os.environ.get("GIT_PYTHON_REFRESH", "raise").lower()
+
+                quiet = ["0", "q", "quiet", "s", "silence", "n", "none"]
+                warn = ["1", "w", "warn", "warning"]
+                error = ["2", "e", "error", "r", "raise"]
+
+                if mode in quiet:
                     pass
-                elif initerr in initerr_warn:
+                elif mode in warn:
                     print(dedent("""\
                         WARNING: %s
                         All git commands will error until this is rectified.
 
                         This initial warning can be silenced in the future by setting the environment variable:
-                        export GIT_PYTHON_NOWARN=true
+                        export GIT_PYTHON_REFRESH=quiet
                         """) % err)
-                elif initerr in initerr_raise:
+                elif mode in error:
                     raise ImportError(err)
                 else:
                     err = dedent("""\
-                        GIT_PYTHON_INITERR environment variable has been set but it has been set with an invalid value.
+                        GIT_PYTHON_REFRESH environment variable has been set but it has been set with an invalid value.
 
                         Use only the following values:
-                            (1) q|quiet|s|silence: for no warning or exception
-                            (2) w|warn|warning: for a printed warning
-                            (3) r|raise|e|error: for a raised exception
-                        """)
+                            (1) {quiet}: for no warning or exception
+                            (2) {warn}: for a printed warning
+                            (3) {error}: for a raised exception
+                        """).format(
+                        quiet="|".join(quiet),
+                        warn="|".join(warn),
+                        error="|".join(error))
                     raise ImportError(err)
 
+                # we get here if this was the init refresh and the refresh mode
+                # was not error, go ahead and set the GIT_PYTHON_GIT_EXECUTABLE
+                # such that we discern the difference between a first import
+                # and a second import
+                cls.GIT_PYTHON_GIT_EXECUTABLE = cls.git_exec_name
             else:
                 # after the first refresh (when GIT_PYTHON_GIT_EXECUTABLE
-                # is no longer None) we raise an exception and reset the
-                # GIT_PYTHON_GIT_EXECUTABLE to whatever the value was
-                # previously
-                cls.GIT_PYTHON_GIT_EXECUTABLE = old_git
+                # is no longer None) we raise an exception
                 raise GitCommandNotFound("git", err)
 
         return has_git
