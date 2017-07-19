@@ -105,6 +105,21 @@ class TestGit(TestBase):
         self.git.version(pass_this_kwarg=False)
         assert_true("pass_this_kwarg" not in git.call_args[1])
 
+    def test_it_accepts_environment_variables(self):
+        filename = fixture_path("ls_tree_empty")
+        with open(filename, 'r') as fh:
+            tree = self.git.mktree(istream=fh)
+            env = {
+                'GIT_AUTHOR_NAME': 'Author Name',
+                'GIT_AUTHOR_EMAIL': 'author@example.com',
+                'GIT_AUTHOR_DATE': '1400000000+0000',
+                'GIT_COMMITTER_NAME': 'Committer Name',
+                'GIT_COMMITTER_EMAIL': 'committer@example.com',
+                'GIT_COMMITTER_DATE': '1500000000+0000',
+            }
+            commit = self.git.commit_tree(tree, m='message', env=env)
+            assert_equal(commit, '4cfd6b0314682d5a58f80be39850bad1640e9241')
+
     def test_persistent_cat_file_command(self):
         # read header only
         import subprocess as sp
