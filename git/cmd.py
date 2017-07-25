@@ -191,13 +191,15 @@ class Git(LazyMixin):
 
     # Provide the full path to the git executable. Otherwise it assumes git is in the path
     _git_exec_env_var = "GIT_PYTHON_GIT_EXECUTABLE"
+    _refresh_env_var = "GIT_PYTHON_REFRESH"
     GIT_PYTHON_GIT_EXECUTABLE = None
     # note that the git executable is actually found during the refresh step in
     # the top level __init__
 
     @classmethod
     def refresh(cls, path=None):
-        """This gets called by the refresh function (see the top level __init__).
+        """This gets called by the refresh function (see the top level
+        __init__).
         """
         # discern which path to refresh with
         if path is not None:
@@ -214,17 +216,21 @@ class Git(LazyMixin):
         try:
             cls().version()
             has_git = True
-        except GitCommandNotFound:
+        except (GitCommandNotFound, PermissionError):
+            # - a GitCommandNotFound error is spawned by ourselves
+            # - a PermissionError is spawned if the git executable provided
+            #   cannot be executed for whatever reason
             pass
 
         # warn or raise exception if test failed
         if not has_git:
             err = dedent("""\
-                Bad git executable. The git executable must be specified in one of the following ways:
-                    (1) be included in your $PATH, or
-                    (2) be set via $GIT_PYTHON_GIT_EXECUTABLE, or
-                    (3) explicitly set via git.refresh.
-                """)
+                Bad git executable.
+                The git executable must be specified in one of the following ways:
+                    - be included in your $PATH
+                    - be set via $%s
+                    - explicitly set via git.refresh()
+                """) % cls._git_exec_env_var
 
             # revert to whatever the old_git was
             cls.GIT_PYTHON_GIT_EXECUTABLE = old_git
@@ -241,36 +247,53 @@ class Git(LazyMixin):
                 #   1|w|warn|warning
                 #   2|r|raise|e|error
 
-                mode = os.environ.get("GIT_PYTHON_REFRESH", "raise").lower()
+                mode = os.environ.get(cls._refresh_env_var, "raise").lower()
 
-                quiet = ["0", "q", "quiet", "s", "silence", "n", "none"]
-                warn = ["1", "w", "warn", "warning"]
-                error = ["2", "e", "error", "r", "raise"]
+                quiet = ["quiet", "q", "silence", "s", "none", "n", "0"]
+                warn = ["warn", "w", "warning", "1"]
+                error = ["error", "e", "raise", "r", "2"]
 
                 if mode in quiet:
                     pass
-                elif mode in warn:
-                    print(dedent("""\
-                        WARNING: %s
+                elif mode in warn or mode in error:
+                    err = dedent("""\
+                        %s
                         All git commands will error until this is rectified.
 
-                        This initial warning can be silenced in the future by setting the environment variable:
-                        export GIT_PYTHON_REFRESH=quiet
-                        """) % err)
-                elif mode in error:
-                    raise ImportError(err)
+                        This initial warning can be silenced or aggravated in the future by setting the
+                        $%s environment variable. Use one of the following values:
+                            - %s: for no warning or exception
+                            - %s: for a printed warning
+                            - %s: for a raised exception
+
+                        Example:
+                            export %s=%s
+                        """) % (
+                        err,
+                        cls._refresh_env_var,
+                        "|".join(quiet),
+                        "|".join(warn),
+                        "|".join(error),
+                        cls._refresh_env_var,
+                        quiet[0])
+
+                    if mode in warn:
+                        print("WARNING: %s" % err)
+                    else:
+                        raise ImportError(err)
                 else:
                     err = dedent("""\
-                        GIT_PYTHON_REFRESH environment variable has been set but it has been set with an invalid value.
+                        %s environment variable has been set but it has been set with an invalid value.
 
                         Use only the following values:
-                            (1) {quiet}: for no warning or exception
-                            (2) {warn}: for a printed warning
-                            (3) {error}: for a raised exception
-                        """).format(
-                        quiet="|".join(quiet),
-                        warn="|".join(warn),
-                        error="|".join(error))
+                            - %s: for no warning or exception
+                            - %s: for a printed warning
+                            - %s: for a raised exception
+                        """) % (
+                        cls._refresh_env_var,
+                        "|".join(quiet),
+                        "|".join(warn),
+                        "|".join(error))
                     raise ImportError(err)
 
                 # we get here if this was the init refresh and the refresh mode

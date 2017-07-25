@@ -221,7 +221,8 @@ class FetchInfo(object):
 
     @classmethod
     def refresh(cls):
-        """This gets called by the setup function (see the top level __init__).
+        """This gets called by the refresh function (see the top level
+        __init__).
         """
         # clear the old values in _flag_map
         try:
