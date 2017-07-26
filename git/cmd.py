@@ -203,7 +203,8 @@ class Git(LazyMixin):
         """
         # discern which path to refresh with
         if path is not None:
-            new_git = os.path.abspath(path)
+            new_git = os.path.expanduser(path)
+            new_git = os.path.abspath(new_git)
         else:
             new_git = os.environ.get(cls._git_exec_env_var, cls.git_exec_name)
 
@@ -212,14 +213,23 @@ class Git(LazyMixin):
         cls.GIT_PYTHON_GIT_EXECUTABLE = new_git
 
         # test if the new git executable path is valid
+
+        if sys.version_info < (3,):
+            # - a GitCommandNotFound error is spawned by ourselves
+            # - a OSError is spawned if the git executable provided
+            #   cannot be executed for whatever reason
+            exceptions = (GitCommandNotFound, OSError)
+        else:
+            # - a GitCommandNotFound error is spawned by ourselves
+            # - a PermissionError is spawned if the git executable provided
+            #   cannot be executed for whatever reason
+            exceptions = (GitCommandNotFound, PermissionError)
+
         has_git = False
         try:
             cls().version()
             has_git = True
-        except (GitCommandNotFound, PermissionError):
-            # - a GitCommandNotFound error is spawned by ourselves
-            # - a PermissionError is spawned if the git executable provided
-            #   cannot be executed for whatever reason
+        except exceptions:
             pass
 
         # warn or raise exception if test failed
