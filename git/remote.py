@@ -208,7 +208,7 @@ class FetchInfo(object):
     NEW_TAG, NEW_HEAD, HEAD_UPTODATE, TAG_UPDATE, REJECTED, FORCED_UPDATE, \
         FAST_FORWARD, ERROR = [1 << x for x in range(8)]
 
-    re_fetch_result = re.compile(r'^\s*(.) (\[?[\w\s\.$@]+\]?)\s+(.+) -> ([^\s]+)(    \(.*\)?$)?')
+    _re_fetch_result = re.compile(r'^\s*(.) (\[?[\w\s\.$@]+\]?)\s+(.+) -> ([^\s]+)(    \(.*\)?$)?')
 
     _flag_map = {'!': ERROR,
                  '+': FORCED_UPDATE,
@@ -263,7 +263,7 @@ class FetchInfo(object):
 
         fetch line is the corresponding line from FETCH_HEAD, like
         acb0fa8b94ef421ad60c8507b634759a472cd56c    not-for-merge   branch '0.1.7RC' of /tmp/tmpya0vairemote_repo"""
-        match = cls.re_fetch_result.match(line)
+        match = cls._re_fetch_result.match(line)
         if match is None:
             raise ValueError("Failed to parse line: %r" % line)
 
