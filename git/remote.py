@@ -652,7 +652,7 @@ class Remote(LazyMixin, Iterable):
                     continue
 
         # read head information
-        with open(osp.join(self.repo.git_dir, 'FETCH_HEAD'), 'rb') as fp:
+        with open(osp.join(self.repo.common_dir, 'FETCH_HEAD'), 'rb') as fp:
             fetch_head_info = [l.decode(defenc) for l in fp.readlines()]
 
         l_fil = len(fetch_info_lines)
