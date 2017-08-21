@@ -51,11 +51,11 @@ BlameEntry = namedtuple('BlameEntry', ['commit', 'linenos', 'orig_path', 'orig_l
 __all__ = ('Repo',)
 
 
-def _expand_path(p, unsafe=True):
-    if unsafe:
-        return osp.normpath(osp.abspath(osp.expandvars(osp.expanduser(p))))
-    else:
-        return osp.normpath(osp.abspath(osp.expanduser(p)))
+def _expand_path(p, expand_vars=True):
+    p = osp.expanduser(p)
+    if expand_vars:
+        p = osp.expandvars(p)
+    return osp.normpath(osp.abspath(p))
 
 
 class Repo(object):
@@ -94,7 +94,7 @@ class Repo(object):
     # Subclasses may easily bring in their own custom types by placing a constructor or type here
     GitCommandWrapperType = Git
 
-    def __init__(self, path=None, odbt=DefaultDBType, search_parent_directories=False, unsafe=True):
+    def __init__(self, path=None, odbt=DefaultDBType, search_parent_directories=False, expand_vars=True):
         """Create a new Repo instance
 
         :param path:
@@ -120,15 +120,17 @@ class Repo(object):
         :raise InvalidGitRepositoryError:
         :raise NoSuchPathError:
         :return: git.Repo """
+
         epath = path or os.getenv('GIT_DIR')
         if not epath:
             epath = os.getcwd()
         if Git.is_cygwin():
             epath = decygpath(epath)
-        if unsafe and ("%" in epath or "$" in epath):
-            warnings.warn("The use of environment variables in paths is deprecated"
-                        + "\nfor security reasons and may be removed in the future!!")
-        epath = _expand_path(epath or path or os.getcwd(), unsafe)
+        epath = epath or path or os.getcwd()
+        if expand_vars and ("%" in epath or "$" in epath):
+            warnings.warn("The use of environment variables in paths is deprecated" +
+                          "\nfor security reasons and may be removed in the future!!")
+        epath = _expand_path(epath, expand_vars)
         if not os.path.exists(epath):
             raise NoSuchPathError(epath)
 
@@ -155,7 +157,7 @@ class Repo(object):
                 sm_gitpath = find_worktree_git_dir(dotgit)
 
             if sm_gitpath is not None:
-                self.git_dir = _expand_path(sm_gitpath, unsafe)
+                self.git_dir = _expand_path(sm_gitpath, expand_vars)
                 self._working_tree_dir = curpath
                 break
 
@@ -851,7 +853,7 @@ class Repo(object):
         return blames
 
     @classmethod
-    def init(cls, path=None, mkdir=True, odbt=DefaultDBType, **kwargs):
+    def init(cls, path=None, mkdir=True, odbt=DefaultDBType, expand_vars=True, **kwargs):
         """Initialize a git repository at the given path if specified
 
         :param path:
@@ -869,7 +871,7 @@ class Repo(object):
             the directory containing the database objects, i.e. .git/objects.
             It will be used to access all object data
 
-        :param unsafe:
+        :param expand_vars:
             if specified, environment variables will not be escaped. This
             can lead to information disclosure, allowing attackers to
             access the contents of environment variables
@@ -879,7 +881,7 @@ class Repo(object):
 
         :return: ``git.Repo`` (the newly created repo)"""
         if path:
-            path = _expand_path(path, unsafe)
+            path = _expand_path(path, expand_vars)
         if mkdir and path and not osp.exists(path):
             os.makedirs(path, 0o755)
 
