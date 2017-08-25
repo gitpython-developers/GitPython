@@ -29,7 +29,7 @@ from git.index import IndexFile
 from git.objects import Submodule, RootModule, Commit
 from git.refs import HEAD, Head, Reference, TagReference
 from git.remote import Remote, add_progress, to_progress_instance
-from git.util import Actor, finalize_process, decygpath, hex_to_bin
+from git.util import Actor, finalize_process, decygpath, hex_to_bin, expand_path
 import os.path as osp
 
 from .fun import rev_parse, is_git_dir, find_submodule_git_dir, touch, find_worktree_git_dir
@@ -48,10 +48,6 @@ BlameEntry = namedtuple('BlameEntry', ['commit', 'linenos', 'orig_path', 'orig_l
 
 
 __all__ = ('Repo',)
-
-
-def _expand_path(p):
-    return osp.normpath(osp.abspath(osp.expandvars(osp.expanduser(p))))
 
 
 class Repo(object):
@@ -121,7 +117,7 @@ class Repo(object):
             epath = os.getcwd()
         if Git.is_cygwin():
             epath = decygpath(epath)
-        epath = _expand_path(epath or path or os.getcwd())
+        epath = expand_path(epath or path or os.getcwd())
         if not os.path.exists(epath):
             raise NoSuchPathError(epath)
 
@@ -148,7 +144,7 @@ class Repo(object):
                 sm_gitpath = find_worktree_git_dir(dotgit)
 
             if sm_gitpath is not None:
-                self.git_dir = _expand_path(sm_gitpath)
+                self.git_dir = expand_path(sm_gitpath)
                 self._working_tree_dir = curpath
                 break
 
@@ -867,7 +863,7 @@ class Repo(object):
 
         :return: ``git.Repo`` (the newly created repo)"""
         if path:
-            path = _expand_path(path)
+            path = expand_path(path)
         if mkdir and path and not osp.exists(path):
             os.makedirs(path, 0o755)
 

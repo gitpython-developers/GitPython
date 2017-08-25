@@ -340,6 +340,13 @@ def finalize_process(proc, **kwargs):
     ## TODO: No close proc-streams??
     proc.wait(**kwargs)
 
+
+def expand_path(p):
+    try:
+        return osp.normpath(osp.abspath(osp.expandvars(osp.expanduser(p))))
+    except:
+        return None
+
 #} END utilities
 
 #{ Classes
