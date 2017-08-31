@@ -38,6 +38,7 @@ from .refs import (
 
 
 log = logging.getLogger('git.remote')
+log.addHandler(logging.NullHandler())
 
 
 __all__ = ('RemoteProgress', 'PushInfo', 'FetchInfo', 'Remote')
