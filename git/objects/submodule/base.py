@@ -123,12 +123,12 @@ class Submodule(IndexObject, Iterable, Traversable):
             reader = self.config_reader()
             # default submodule values
             try:
-                self.path = reader.get_value('path')
+                self.path = reader.get('path')
             except cp.NoSectionError:
                 raise ValueError("This submodule instance does not exist anymore in '%s' file"
                                  % osp.join(self.repo.working_tree_dir, '.gitmodules'))
             # end
-            self._url = reader.get_value('url')
+            self._url = reader.get('url')
             # git-python extension values - optional
             self._branch_path = reader.get_value(self.k_head_option, git.Head.to_full_path(self.k_head_default))
         elif attr == '_name':
@@ -1168,11 +1168,11 @@ class Submodule(IndexObject, Iterable, Traversable):
 
         for sms in parser.sections():
             n = sm_name(sms)
-            p = parser.get_value(sms, 'path')
-            u = parser.get_value(sms, 'url')
+            p = parser.get(sms, 'path')
+            u = parser.get(sms, 'url')
             b = cls.k_head_default
             if parser.has_option(sms, cls.k_head_option):
-                b = str(parser.get_value(sms, cls.k_head_option))
+                b = str(parser.get(sms, cls.k_head_option))
             # END handle optional information
 
             # get the binsha
