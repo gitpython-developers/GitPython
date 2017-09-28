@@ -35,23 +35,26 @@ _init_externals()
 
 #{ Imports
 
-from git.config import GitConfigParser  # @NoMove @IgnorePep8
-from git.objects import *               # @NoMove @IgnorePep8
-from git.refs import *                  # @NoMove @IgnorePep8
-from git.diff import *                  # @NoMove @IgnorePep8
-from git.exc import *                   # @NoMove @IgnorePep8
-from git.db import *                    # @NoMove @IgnorePep8
-from git.cmd import Git                 # @NoMove @IgnorePep8
-from git.repo import Repo               # @NoMove @IgnorePep8
-from git.remote import *                # @NoMove @IgnorePep8
-from git.index import *                 # @NoMove @IgnorePep8
-from git.util import (                  # @NoMove @IgnorePep8
-    LockFile,
-    BlockingLockFile,
-    Stats,
-    Actor,
-    rmtree,
-)
+from git.exc import *                       # @NoMove @IgnorePep8
+try:
+    from git.config import GitConfigParser  # @NoMove @IgnorePep8
+    from git.objects import *               # @NoMove @IgnorePep8
+    from git.refs import *                  # @NoMove @IgnorePep8
+    from git.diff import *                  # @NoMove @IgnorePep8
+    from git.db import *                    # @NoMove @IgnorePep8
+    from git.cmd import Git                 # @NoMove @IgnorePep8
+    from git.repo import Repo               # @NoMove @IgnorePep8
+    from git.remote import *                # @NoMove @IgnorePep8
+    from git.index import *                 # @NoMove @IgnorePep8
+    from git.util import (                  # @NoMove @IgnorePep8
+        LockFile,
+        BlockingLockFile,
+        Stats,
+        Actor,
+        rmtree,
+    )
+except GitError as exc:
+    raise ImportError('%s: %s' % (exc.__class__.__name__, exc))
 
 #} END imports
 
