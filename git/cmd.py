@@ -32,7 +32,7 @@ from git.compat import (
 )
 from git.exc import CommandError
 from git.odict import OrderedDict
-from git.util import is_cygwin_git, cygpath
+from git.util import is_cygwin_git, cygpath, expand_path
 
 from .exc import (
     GitCommandError,
@@ -531,7 +531,7 @@ class Git(LazyMixin):
            It is meant to be the working tree directory if available, or the
            .git directory in case of bare repositories."""
         super(Git, self).__init__()
-        self._working_dir = working_dir
+        self._working_dir = expand_path(working_dir)
         self._git_options = ()
         self._persistent_git_options = []
 
