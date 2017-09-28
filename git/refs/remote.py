@@ -37,6 +37,10 @@ class RemoteReference(Head):
         # and delete remainders manually
         for ref in refs:
             try:
+                os.remove(osp.join(repo.common_dir, ref.path))
+            except OSError:
+                pass
+            try:
                 os.remove(osp.join(repo.git_dir, ref.path))
             except OSError:
                 pass

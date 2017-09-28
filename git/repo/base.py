@@ -9,6 +9,7 @@ import logging
 import os
 import re
 import sys
+import warnings
 
 from git.cmd import (
     Git,
@@ -29,7 +30,7 @@ from git.index import IndexFile
 from git.objects import Submodule, RootModule, Commit
 from git.refs import HEAD, Head, Reference, TagReference
 from git.remote import Remote, add_progress, to_progress_instance
-from git.util import Actor, finalize_process, decygpath, hex_to_bin
+from git.util import Actor, finalize_process, decygpath, hex_to_bin, expand_path
 import os.path as osp
 
 from .fun import rev_parse, is_git_dir, find_submodule_git_dir, touch, find_worktree_git_dir
@@ -48,10 +49,6 @@ BlameEntry = namedtuple('BlameEntry', ['commit', 'linenos', 'orig_path', 'orig_l
 
 
 __all__ = ('Repo',)
-
-
-def _expand_path(p):
-    return osp.normpath(osp.abspath(osp.expandvars(osp.expanduser(p))))
 
 
 class Repo(object):
@@ -74,6 +71,7 @@ class Repo(object):
     working_dir = None
     _working_tree_dir = None
     git_dir = None
+    _common_dir = None
 
     # precompiled regex
     re_whitespace = re.compile(r'\s+')
@@ -90,7 +88,7 @@ class Repo(object):
     # Subclasses may easily bring in their own custom types by placing a constructor or type here
     GitCommandWrapperType = Git
 
-    def __init__(self, path=None, odbt=DefaultDBType, search_parent_directories=False):
+    def __init__(self, path=None, odbt=DefaultDBType, search_parent_directories=False, expand_vars=True):
         """Create a new Repo instance
 
         :param path:
@@ -116,12 +114,18 @@ class Repo(object):
         :raise InvalidGitRepositoryError:
         :raise NoSuchPathError:
         :return: git.Repo """
+
         epath = path or os.getenv('GIT_DIR')
         if not epath:
             epath = os.getcwd()
         if Git.is_cygwin():
             epath = decygpath(epath)
-        epath = _expand_path(epath or path or os.getcwd())
+
+        epath = epath or path or os.getcwd()
+        if expand_vars and ("%" in epath or "$" in epath):
+            warnings.warn("The use of environment variables in paths is deprecated" +
+                          "\nfor security reasons and may be removed in the future!!")
+        epath = expand_path(epath, expand_vars)
         if not os.path.exists(epath):
             raise NoSuchPathError(epath)
 
@@ -148,7 +152,7 @@ class Repo(object):
                 sm_gitpath = find_worktree_git_dir(dotgit)
 
             if sm_gitpath is not None:
-                self.git_dir = _expand_path(sm_gitpath)
+                self.git_dir = expand_path(sm_gitpath, expand_vars)
                 self._working_tree_dir = curpath
                 break
 
@@ -169,17 +173,23 @@ class Repo(object):
             # lets not assume the option exists, although it should
             pass
 
+        try:
+            common_dir = open(osp.join(self.git_dir, 'commondir'), 'rt').readlines()[0].strip()
+            self._common_dir = osp.join(self.git_dir, common_dir)
+        except (OSError, IOError):
+            self._common_dir = None
+
         # adjust the wd in case we are actually bare - we didn't know that
         # in the first place
         if self._bare:
             self._working_tree_dir = None
         # END working dir handling
 
-        self.working_dir = self._working_tree_dir or self.git_dir
+        self.working_dir = self._working_tree_dir or self.common_dir
         self.git = self.GitCommandWrapperType(self.working_dir)
 
         # special handling, in special times
-        args = [osp.join(self.git_dir, 'objects')]
+        args = [osp.join(self.common_dir, 'objects')]
         if issubclass(odbt, GitCmdObjectDB):
             args.append(self.git)
         self.odb = odbt(*args)
@@ -235,6 +245,13 @@ class Repo(object):
         """:return: The working tree directory of our git repository. If this is a bare repository, None is returned.
         """
         return self._working_tree_dir
+
+    @property
+    def common_dir(self):
+        """:return: The git dir that holds everything except possibly HEAD,
+        FETCH_HEAD, ORIG_HEAD, COMMIT_EDITMSG, index, and logs/ .
+        """
+        return self._common_dir or self.git_dir
 
     @property
     def bare(self):
@@ -574,7 +591,7 @@ class Repo(object):
         :note:
             The method does not check for the existence of the paths in alts
             as the caller is responsible."""
-        alternates_path = osp.join(self.git_dir, 'objects', 'info', 'alternates')
+        alternates_path = osp.join(self.common_dir, 'objects', 'info', 'alternates')
         if not alts:
             if osp.isfile(alternates_path):
                 os.remove(alternates_path)
@@ -844,7 +861,7 @@ class Repo(object):
         return blames
 
     @classmethod
-    def init(cls, path=None, mkdir=True, odbt=DefaultDBType, **kwargs):
+    def init(cls, path=None, mkdir=True, odbt=DefaultDBType, expand_vars=True, **kwargs):
         """Initialize a git repository at the given path if specified
 
         :param path:
@@ -862,12 +879,17 @@ class Repo(object):
             the directory containing the database objects, i.e. .git/objects.
             It will be used to access all object data
 
+        :param expand_vars:
+            if specified, environment variables will not be escaped. This
+            can lead to information disclosure, allowing attackers to
+            access the contents of environment variables
+
         :parm kwargs:
             keyword arguments serving as additional options to the git-init command
 
         :return: ``git.Repo`` (the newly created repo)"""
         if path:
-            path = _expand_path(path)
+            path = expand_path(path, expand_vars)
         if mkdir and path and not osp.exists(path):
             os.makedirs(path, 0o755)
 
@@ -932,7 +954,7 @@ class Repo(object):
             * All remaining keyword arguments are given to the git-clone command
 
         :return: ``git.Repo`` (the newly cloned repo)"""
-        return self._clone(self.git, self.git_dir, path, type(self.odb), progress, **kwargs)
+        return self._clone(self.git, self.common_dir, path, type(self.odb), progress, **kwargs)
 
     @classmethod
     def clone_from(cls, url, to_path, progress=None, env=None, **kwargs):

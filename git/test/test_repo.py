@@ -935,6 +935,8 @@ class TestRepo(TestBase):
         commit = repo.head.commit
         self.assertIsInstance(commit, Object)
 
+        self.assertIsInstance(repo.heads['aaaaaaaa'], Head)
+
     @with_rw_directory
     def test_git_work_tree_env(self, rw_dir):
         """Check that we yield to GIT_WORK_TREE"""
