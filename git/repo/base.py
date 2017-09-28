@@ -71,6 +71,7 @@ class Repo(object):
     working_dir = None
     _working_tree_dir = None
     git_dir = None
+    _common_dir = None
 
     # precompiled regex
     re_whitespace = re.compile(r'\s+')
@@ -172,17 +173,23 @@ class Repo(object):
             # lets not assume the option exists, although it should
             pass
 
+        try:
+            common_dir = open(osp.join(self.git_dir, 'commondir'), 'rt').readlines()[0].strip()
+            self._common_dir = osp.join(self.git_dir, common_dir)
+        except (OSError, IOError):
+            self._common_dir = None
+
         # adjust the wd in case we are actually bare - we didn't know that
         # in the first place
         if self._bare:
             self._working_tree_dir = None
         # END working dir handling
 
-        self.working_dir = self._working_tree_dir or self.git_dir
+        self.working_dir = self._working_tree_dir or self.common_dir
         self.git = self.GitCommandWrapperType(self.working_dir)
 
         # special handling, in special times
-        args = [osp.join(self.git_dir, 'objects')]
+        args = [osp.join(self.common_dir, 'objects')]
         if issubclass(odbt, GitCmdObjectDB):
             args.append(self.git)
         self.odb = odbt(*args)
@@ -238,6 +245,13 @@ class Repo(object):
         """:return: The working tree directory of our git repository. If this is a bare repository, None is returned.
         """
         return self._working_tree_dir
+
+    @property
+    def common_dir(self):
+        """:return: The git dir that holds everything except possibly HEAD,
+        FETCH_HEAD, ORIG_HEAD, COMMIT_EDITMSG, index, and logs/ .
+        """
+        return self._common_dir or self.git_dir
 
     @property
     def bare(self):
@@ -577,7 +591,7 @@ class Repo(object):
         :note:
             The method does not check for the existence of the paths in alts
             as the caller is responsible."""
-        alternates_path = osp.join(self.git_dir, 'objects', 'info', 'alternates')
+        alternates_path = osp.join(self.common_dir, 'objects', 'info', 'alternates')
         if not alts:
             if osp.isfile(alternates_path):
                 os.remove(alternates_path)
@@ -940,7 +954,7 @@ class Repo(object):
             * All remaining keyword arguments are given to the git-clone command
 
         :return: ``git.Repo`` (the newly cloned repo)"""
-        return self._clone(self.git, self.git_dir, path, type(self.odb), progress, **kwargs)
+        return self._clone(self.git, self.common_dir, path, type(self.odb), progress, **kwargs)
 
     @classmethod
     def clone_from(cls, url, to_path, progress=None, env=None, **kwargs):
