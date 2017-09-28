@@ -47,7 +47,7 @@ from .util import (
 execute_kwargs = set(('istream', 'with_extended_output',
                       'with_exceptions', 'as_process', 'stdout_as_string',
                       'output_stream', 'with_stdout', 'kill_after_timeout',
-                      'universal_newlines', 'shell'))
+                      'universal_newlines', 'shell', 'env'))
 
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
@@ -597,6 +597,7 @@ class Git(LazyMixin):
                 with_stdout=True,
                 universal_newlines=False,
                 shell=None,
+                env=None,
                 **subprocess_kwargs
                 ):
         """Handles executing the command on the shell and consumes and returns
@@ -639,6 +640,9 @@ class Git(LazyMixin):
             if False, the commands standard output will be bytes. Otherwise, it will be
             decoded into a string using the default encoding (usually utf-8).
             The latter can fail, if the output contains binary data.
+
+        :param env:
+            A dictionary of environment variables to be passed to `subprocess.Popen`.
 
         :param subprocess_kwargs:
             Keyword arguments to be passed to subprocess.Popen. Please note that
@@ -685,6 +689,7 @@ class Git(LazyMixin):
         cwd = self._working_dir or os.getcwd()
 
         # Start the process
+        inline_env = env
         env = os.environ.copy()
         # Attempt to force all output to plain ascii english, which is what some parsing code
         # may expect.
@@ -693,6 +698,8 @@ class Git(LazyMixin):
         env["LANGUAGE"] = "C"
         env["LC_ALL"] = "C"
         env.update(self._environment)
+        if inline_env is not None:
+            env.update(inline_env)
 
         if is_win:
             cmd_not_found_exception = OSError
