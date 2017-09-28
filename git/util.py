@@ -341,9 +341,12 @@ def finalize_process(proc, **kwargs):
     proc.wait(**kwargs)
 
 
-def expand_path(p):
+def expand_path(p, expand_vars=True):
     try:
-        return osp.normpath(osp.abspath(osp.expandvars(osp.expanduser(p))))
+        p = osp.expanduser(p)
+        if expand_vars:
+            p = osp.expandvars(p)
+        return osp.normpath(osp.abspath(p))
     except:
         return None
 
