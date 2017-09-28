@@ -60,3 +60,24 @@ except GitError as exc:
 
 __all__ = [name for name, obj in locals().items()
            if not (name.startswith('_') or inspect.ismodule(obj))]
+
+
+#{ Initialize git executable path
+GIT_OK = None
+
+def refresh(path=None):
+    """Convenience method for setting the git executable path."""
+    global GIT_OK
+    GIT_OK = False
+
+    if not Git.refresh(path=path):
+        return
+    if not FetchInfo.refresh():
+        return
+
+    GIT_OK = True
+#} END initialize git executable path
+
+#################
+refresh()
+#################

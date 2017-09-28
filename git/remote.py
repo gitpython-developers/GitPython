@@ -211,17 +211,38 @@ class FetchInfo(object):
 
     _re_fetch_result = re.compile(r'^\s*(.) (\[?[\w\s\.$@]+\]?)\s+(.+) -> ([^\s]+)(    \(.*\)?$)?')
 
-    _flag_map = {'!': ERROR,
-                 '+': FORCED_UPDATE,
-                 '*': 0,
-                 '=': HEAD_UPTODATE,
-                 ' ': FAST_FORWARD}
+    _flag_map = {
+        '!': ERROR,
+        '+': FORCED_UPDATE,
+        '*': 0,
+        '=': HEAD_UPTODATE,
+        ' ': FAST_FORWARD,
+        '-': TAG_UPDATE,
+    }
 
-    v = Git().version_info[:2]
-    if v >= (2, 10):
-        _flag_map['t'] = TAG_UPDATE
-    else:
-        _flag_map['-'] = TAG_UPDATE
+    @classmethod
+    def refresh(cls):
+        """This gets called by the refresh function (see the top level
+        __init__).
+        """
+        # clear the old values in _flag_map
+        try:
+            del cls._flag_map["t"]
+        except KeyError:
+            pass
+
+        try:
+            del cls._flag_map["-"]
+        except KeyError:
+            pass
+
+        # set the value given the git version
+        if Git().version_info[:2] >= (2, 10):
+            cls._flag_map["t"] = cls.TAG_UPDATE
+        else:
+            cls._flag_map["-"] = cls.TAG_UPDATE
+
+        return True
 
     def __init__(self, ref, flags, note='', old_commit=None, remote_ref_path=None):
         """
