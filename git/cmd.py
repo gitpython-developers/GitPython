@@ -17,6 +17,7 @@ from subprocess import (
 import subprocess
 import sys
 import threading
+from textwrap import dedent
 
 from git.compat import (
     string_types,
@@ -182,15 +183,140 @@ class Git(LazyMixin):
     # Enables debugging of GitPython's git commands
     GIT_PYTHON_TRACE = os.environ.get("GIT_PYTHON_TRACE", False)
 
-    # Provide the full path to the git executable. Otherwise it assumes git is in the path
-    _git_exec_env_var = "GIT_PYTHON_GIT_EXECUTABLE"
-    GIT_PYTHON_GIT_EXECUTABLE = os.environ.get(_git_exec_env_var, git_exec_name)
-
     # If True, a shell will be used when executing git commands.
     # This should only be desirable on Windows, see https://github.com/gitpython-developers/GitPython/pull/126
     # and check `git/test_repo.py:TestRepo.test_untracked_files()` TC for an example where it is required.
     # Override this value using `Git.USE_SHELL = True`
     USE_SHELL = False
+
+    # Provide the full path to the git executable. Otherwise it assumes git is in the path
+    _git_exec_env_var = "GIT_PYTHON_GIT_EXECUTABLE"
+    _refresh_env_var = "GIT_PYTHON_REFRESH"
+    GIT_PYTHON_GIT_EXECUTABLE = None
+    # note that the git executable is actually found during the refresh step in
+    # the top level __init__
+
+    @classmethod
+    def refresh(cls, path=None):
+        """This gets called by the refresh function (see the top level
+        __init__).
+        """
+        # discern which path to refresh with
+        if path is not None:
+            new_git = os.path.expanduser(path)
+            new_git = os.path.abspath(new_git)
+        else:
+            new_git = os.environ.get(cls._git_exec_env_var, cls.git_exec_name)
+
+        # keep track of the old and new git executable path
+        old_git = cls.GIT_PYTHON_GIT_EXECUTABLE
+        cls.GIT_PYTHON_GIT_EXECUTABLE = new_git
+
+        # test if the new git executable path is valid
+
+        if sys.version_info < (3,):
+            # - a GitCommandNotFound error is spawned by ourselves
+            # - a OSError is spawned if the git executable provided
+            #   cannot be executed for whatever reason
+            exceptions = (GitCommandNotFound, OSError)
+        else:
+            # - a GitCommandNotFound error is spawned by ourselves
+            # - a PermissionError is spawned if the git executable provided
+            #   cannot be executed for whatever reason
+            exceptions = (GitCommandNotFound, PermissionError)
+
+        has_git = False
+        try:
+            cls().version()
+            has_git = True
+        except exceptions:
+            pass
+
+        # warn or raise exception if test failed
+        if not has_git:
+            err = dedent("""\
+                Bad git executable.
+                The git executable must be specified in one of the following ways:
+                    - be included in your $PATH
+                    - be set via $%s
+                    - explicitly set via git.refresh()
+                """) % cls._git_exec_env_var
+
+            # revert to whatever the old_git was
+            cls.GIT_PYTHON_GIT_EXECUTABLE = old_git
+
+            if old_git is None:
+                # on the first refresh (when GIT_PYTHON_GIT_EXECUTABLE is
+                # None) we only are quiet, warn, or error depending on the
+                # GIT_PYTHON_REFRESH value
+
+                # determine what the user wants to happen during the initial
+                # refresh we expect GIT_PYTHON_REFRESH to either be unset or
+                # be one of the following values:
+                #   0|q|quiet|s|silence
+                #   1|w|warn|warning
+                #   2|r|raise|e|error
+
+                mode = os.environ.get(cls._refresh_env_var, "raise").lower()
+
+                quiet = ["quiet", "q", "silence", "s", "none", "n", "0"]
+                warn = ["warn", "w", "warning", "1"]
+                error = ["error", "e", "raise", "r", "2"]
+
+                if mode in quiet:
+                    pass
+                elif mode in warn or mode in error:
+                    err = dedent("""\
+                        %s
+                        All git commands will error until this is rectified.
+
+                        This initial warning can be silenced or aggravated in the future by setting the
+                        $%s environment variable. Use one of the following values:
+                            - %s: for no warning or exception
+                            - %s: for a printed warning
+                            - %s: for a raised exception
+
+                        Example:
+                            export %s=%s
+                        """) % (
+                        err,
+                        cls._refresh_env_var,
+                        "|".join(quiet),
+                        "|".join(warn),
+                        "|".join(error),
+                        cls._refresh_env_var,
+                        quiet[0])
+
+                    if mode in warn:
+                        print("WARNING: %s" % err)
+                    else:
+                        raise ImportError(err)
+                else:
+                    err = dedent("""\
+                        %s environment variable has been set but it has been set with an invalid value.
+
+                        Use only the following values:
+                            - %s: for no warning or exception
+                            - %s: for a printed warning
+                            - %s: for a raised exception
+                        """) % (
+                        cls._refresh_env_var,
+                        "|".join(quiet),
+                        "|".join(warn),
+                        "|".join(error))
+                    raise ImportError(err)
+
+                # we get here if this was the init refresh and the refresh mode
+                # was not error, go ahead and set the GIT_PYTHON_GIT_EXECUTABLE
+                # such that we discern the difference between a first import
+                # and a second import
+                cls.GIT_PYTHON_GIT_EXECUTABLE = cls.git_exec_name
+            else:
+                # after the first refresh (when GIT_PYTHON_GIT_EXECUTABLE
+                # is no longer None) we raise an exception
+                raise GitCommandNotFound("git", err)
+
+        return has_git
 
     @classmethod
     def is_cygwin(cls):
@@ -835,13 +961,13 @@ class Git(LazyMixin):
             - "command options" to be converted by :meth:`transform_kwargs()`;
             - the `'insert_kwargs_after'` key which its value must match one of ``*args``,
               and any cmd-options will be appended after the matched arg.
-        
+
         Examples::
-        
+
             git.rev_list('master', max_count=10, header=True)
-        
+
         turns into::
-        
+
            git rev-list max-count 10 --header master
 
         :return: Same as ``execute``"""

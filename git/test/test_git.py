@@ -10,6 +10,7 @@ import sys
 
 from git import (
     Git,
+    refresh,
     GitCommandError,
     GitCommandNotFound,
     Repo,
@@ -170,6 +171,14 @@ class TestGit(TestBase):
         finally:
             type(self.git).GIT_PYTHON_GIT_EXECUTABLE = prev_cmd
         # END undo adjustment
+
+    def test_refresh(self):
+        # test a bad git path refresh
+        self.assertRaises(GitCommandNotFound, refresh, "yada")
+
+        # test a good path refresh
+        path = os.popen("which git").read().strip()
+        refresh(path)
 
     def test_options_are_passed_to_git(self):
         # This work because any command after git --version is ignored
