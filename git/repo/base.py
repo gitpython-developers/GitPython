@@ -931,12 +931,16 @@ class Repo(object):
         if not osp.isabs(path) and git.working_dir:
             path = osp.join(git._working_dir, path)
 
+        repo = cls(path, odbt=odbt)
+
+        # retain env values that were passed to _clone()
+        repo.git.update_environment(**git.environment())
+
         # adjust remotes - there may be operating systems which use backslashes,
         # These might be given as initial paths, but when handling the config file
         # that contains the remote from which we were clones, git stops liking it
         # as it will escape the backslashes. Hence we undo the escaping just to be
         # sure
-        repo = cls(path, odbt=odbt)
         if repo.remotes:
             with repo.remotes[0].config_writer as writer:
                 writer.set_value('url', Git.polish_url(repo.remotes[0].url))

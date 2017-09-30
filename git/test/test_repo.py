@@ -201,6 +201,15 @@ class TestRepo(TestBase):
             pass
         # END test repos with working tree
 
+    @with_rw_directory
+    def test_clone_from_keeps_env(self, rw_dir):
+        original_repo = Repo.init(osp.join(rw_dir, "repo"))
+        environment = {"entry1": "value", "another_entry": "10"}
+
+        cloned = Repo.clone_from(original_repo.git_dir, osp.join(rw_dir, "clone"), env=environment)
+
+        assert_equal(environment, cloned.git.environment())
+
     def test_init(self):
         prev_cwd = os.getcwd()
         os.chdir(tempfile.gettempdir())
