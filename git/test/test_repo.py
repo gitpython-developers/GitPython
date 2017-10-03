@@ -5,6 +5,7 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 import glob
+import io
 from io import BytesIO
 import itertools
 import os
@@ -219,6 +220,22 @@ class TestRepo(TestBase):
         original_repo = Repo.init(osp.join(rw_dir, "repo"))
 
         Repo.clone_from(original_repo.git_dir, pathlib.Path(rw_dir) / "clone_pathlib")
+
+    @with_rw_repo('HEAD')
+    def test_max_chunk_size(self, repo):
+        class TestOutputStream(object):
+            def __init__(self, max_chunk_size):
+                self.max_chunk_size = max_chunk_size
+
+            def write(self, b):
+                assert_true(len(b) <= self.max_chunk_size)
+
+        for chunk_size in [16, 128, 1024]:
+            repo.git.status(output_stream=TestOutputStream(chunk_size), max_chunk_size=chunk_size)
+
+        repo.git.log(n=100, output_stream=TestOutputStream(io.DEFAULT_BUFFER_SIZE), max_chunk_size=None)
+        repo.git.log(n=100, output_stream=TestOutputStream(io.DEFAULT_BUFFER_SIZE), max_chunk_size=-10)
+        repo.git.log(n=100, output_stream=TestOutputStream(io.DEFAULT_BUFFER_SIZE))
 
     def test_init(self):
         prev_cwd = os.getcwd()

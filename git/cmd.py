@@ -44,10 +44,10 @@ from .util import (
 )
 
 
-execute_kwargs = {'istream', 'with_extended_output', 'with_exceptions',
-                  'as_process', 'stdout_as_string', 'output_stream',
-                  'with_stdout', 'kill_after_timeout', 'universal_newlines',
-                  'shell', 'env'}
+execute_kwargs = {'istream', 'with_extended_output',
+                  'with_exceptions', 'as_process', 'stdout_as_string',
+                  'output_stream', 'with_stdout', 'kill_after_timeout',
+                  'universal_newlines', 'shell', 'env', 'max_chunk_size'}
 
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
@@ -174,8 +174,6 @@ class Git(LazyMixin):
         dict_to_slots_and__excluded_are_none(self, d, excluded=self._excluded_)
 
     # CONFIGURATION
-    # The size in bytes read from stdout when copying git's output to another stream
-    max_chunk_size = io.DEFAULT_BUFFER_SIZE
 
     git_exec_name = "git"           # default that should work on linux and windows
 
@@ -597,6 +595,7 @@ class Git(LazyMixin):
                 universal_newlines=False,
                 shell=None,
                 env=None,
+                max_chunk_size=io.DEFAULT_BUFFER_SIZE,
                 **subprocess_kwargs
                 ):
         """Handles executing the command on the shell and consumes and returns
@@ -642,6 +641,11 @@ class Git(LazyMixin):
 
         :param env:
             A dictionary of environment variables to be passed to `subprocess.Popen`.
+            
+        :param max_chunk_size:
+            Maximum number of bytes in one chunk of data passed to the output_stream in
+            one invocation of write() method. If the given number is not positive then
+            the default value is used.
 
         :param subprocess_kwargs:
             Keyword arguments to be passed to subprocess.Popen. Please note that
@@ -788,7 +792,8 @@ class Git(LazyMixin):
                     stderr_value = stderr_value[:-1]
                 status = proc.returncode
             else:
-                stream_copy(proc.stdout, output_stream, self.max_chunk_size)
+                max_chunk_size = max_chunk_size if max_chunk_size and max_chunk_size > 0 else io.DEFAULT_BUFFER_SIZE
+                stream_copy(proc.stdout, output_stream, max_chunk_size)
                 stdout_value = output_stream
                 stderr_value = proc.stderr.read()
                 # strip trailing "\n"
