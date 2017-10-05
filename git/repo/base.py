@@ -900,8 +900,10 @@ class Repo(object):
 
     @classmethod
     def _clone(cls, git, url, path, odb_default_type, progress, **kwargs):
+        as_process = False
         if progress is not None:
             progress = to_progress_instance(progress)
+            as_process = True
 
         odbt = kwargs.pop('odbt', odb_default_type)
 
@@ -917,14 +919,10 @@ class Repo(object):
         sep_dir = kwargs.get('separate_git_dir')
         if sep_dir:
             kwargs['separate_git_dir'] = Git.polish_url(sep_dir)
-        proc = git.clone(Git.polish_url(url), clone_path, with_extended_output=True, as_process=True,
-                         v=True, **add_progress(kwargs, git, progress))
+        proc = git.clone(Git.polish_url(url), clone_path, with_extended_output=True,
+                         as_process=as_process, v=True, **add_progress(kwargs, git, progress))
         if progress:
             handle_process_output(proc, None, progress.new_message_handler(), finalize_process)
-        else:
-            (stdout, stderr) = proc.communicate()
-            log.debug("Cmd(%s)'s unused stdout: %s", getattr(proc, 'args', ''), stdout)
-            finalize_process(proc, stderr=stderr)
 
         # our git command could have a different working dir than our actual
         # environment, hence we prepend its working dir if required
