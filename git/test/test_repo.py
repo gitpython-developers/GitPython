@@ -16,6 +16,11 @@ try:
 except ImportError:
     from unittest2 import skipIf, SkipTest
 
+try:
+    import pathlib
+except ImportError:
+    pathlib = None
+
 from git import (
     InvalidGitRepositoryError,
     Repo,
@@ -209,6 +214,15 @@ class TestRepo(TestBase):
         cloned = Repo.clone_from(original_repo.git_dir, osp.join(rw_dir, "clone"), env=environment)
 
         assert_equal(environment, cloned.git.environment())
+
+    @with_rw_directory
+    def test_clone_from_pathlib(self, rw_dir):
+        if pathlib is None:  # pythons bellow 3.4 don't have pathlib
+            raise SkipTest("pathlib was introduced in 3.4")
+
+        original_repo = Repo.init(osp.join(rw_dir, "repo"))
+
+        Repo.clone_from(original_repo.git_dir, pathlib.Path(rw_dir) / "clone_pathlib")
 
     def test_init(self):
         prev_cwd = os.getcwd()
