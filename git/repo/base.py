@@ -209,9 +209,17 @@ class Repo(object):
     def close(self):
         if self.git:
             self.git.clear_cache()
-            gc.collect()
+            # Tempfiles objects on Windows are holding references to
+            # open files until they are collected by the garbage
+            # collector, thus preventing deletion.
+            # TODO: Find these references and ensure they are closed
+            # and deleted synchronously rather than forcing a gc
+            # collection.
+            if is_win:
+                gc.collect()
             gitdb.util.mman.collect()
-            gc.collect()
+            if is_win:
+                gc.collect()
 
     def __eq__(self, rhs):
         if isinstance(rhs, Repo):
