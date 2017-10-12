@@ -1,5 +1,11 @@
 import os
+import os.path as osp
 import codecs
+from gitdb.exc import (
+    BadObject,
+    BadName
+)
+
 from git.compat import (
     string_types,
     defenc
@@ -13,21 +19,20 @@ from git.util import (
     hex_to_bin,
     LockedFD
 )
-from gitdb.exc import (
-    BadObject,
-    BadName
-)
-
-import os.path as osp
-
 from .log import RefLog
-
 
 __all__ = ["SymbolicReference"]
 
 
-class SymbolicReference(object):
+def _git_dir(repo, path):
+    """ Find the git dir that's appropriate for the path"""
+    name = "%s" % (path,)
+    if name in ['HEAD', 'ORIG_HEAD', 'FETCH_HEAD', 'index', 'logs']:
+        return repo.git_dir
+    return repo.common_dir
 
+
+class SymbolicReference(object):
     """Represents a special case of a reference such that this reference is symbolic.
     It does not point to a specific commit, but to another Head, which itself
     specifies a commit.
@@ -71,23 +76,18 @@ class SymbolicReference(object):
 
     @property
     def abspath(self):
-        return join_path_native(self.repo.git_dir, self.path)
+        return join_path_native(_git_dir(self.repo, self.path), self.path)
 
     @classmethod
     def _get_packed_refs_path(cls, repo):
-        try:
-            commondir = codecs.open(osp.join(repo.git_dir, 'commondir'), 'r', encoding="utf-8").readlines()[0].strip()
-        except (OSError, IOError):
-            commondir = '.'
-        repodir = osp.join(repo.git_dir, commondir)
-        return osp.join(repodir, 'packed-refs')
+        return osp.join(repo.common_dir, 'packed-refs')
 
     @classmethod
     def _iter_packed_refs(cls, repo):
         """Returns an iterator yielding pairs of sha1/path pairs (as bytes) for the corresponding refs.
         :note: The packed refs file will be kept open as long as we iterate"""
         try:
-            with codecs.open(cls._get_packed_refs_path(repo), 'r', encoding="utf-8") as fp:
+            with codecs.open(cls._get_packed_refs_path(repo), 'rt', encoding="utf-8") as fp:
                 for line in fp:
                     line = line.strip()
                     if not line:
@@ -105,14 +105,14 @@ class SymbolicReference(object):
                         continue
 
                     yield tuple(line.split(' ', 1))
-                # END for each line
+                    # END for each line
         except (OSError, IOError):
             return
-        # END no packed-refs file handling
-        # NOTE: Had try-finally block around here to close the fp,
-        # but some python version wouldn't allow yields within that.
-        # I believe files are closing themselves on destruction, so it is
-        # alright.
+            # END no packed-refs file handling
+            # NOTE: Had try-finally block around here to close the fp,
+            # but some python version wouldn't allow yields within that.
+            # I believe files are closing themselves on destruction, so it is
+            # alright.
 
     @classmethod
     def dereference_recursive(cls, repo, ref_path):
@@ -124,21 +124,22 @@ class SymbolicReference(object):
             hexsha, ref_path = cls._get_ref_info(repo, ref_path)
             if hexsha is not None:
                 return hexsha
-        # END recursive dereferencing
+                # END recursive dereferencing
 
     @classmethod
-    def _get_ref_info_helper(cls, repo, repodir, ref_path):
+    def _get_ref_info_helper(cls, repo, ref_path):
         """Return: (str(sha), str(target_ref_path)) if available, the sha the file at
         rela_path points to, or None. target_ref_path is the reference we
         point to, or None"""
         tokens = None
+        repodir = _git_dir(repo, ref_path)
         try:
-            with codecs.open(osp.join(repodir, ref_path), 'r', encoding="utf-8") as fp:
+            with codecs.open(osp.join(repodir, ref_path), 'rt', encoding="utf-8") as fp:
                 value = fp.read().rstrip()
             # Don't only split on spaces, but on whitespace, which allows to parse lines like
             # 60b64ef992065e2600bfef6187a97f92398a9144                branch 'master' of git-server:/path/to/repo
             tokens = value.split()
-            assert(len(tokens) != 0)
+            assert (len(tokens) != 0)
         except (OSError, IOError):
             # Probably we are just packed, find our entry in the packed refs file
             # NOTE: We are not a symbolic ref if we are in a packed file, as these
@@ -149,7 +150,7 @@ class SymbolicReference(object):
                 # sha will be used
                 tokens = sha, path
                 break
-            # END for each packed ref
+                # END for each packed ref
         # END handle packed refs
         if tokens is None:
             raise ValueError("Reference at %r does not exist" % ref_path)
@@ -169,16 +170,7 @@ class SymbolicReference(object):
         """Return: (str(sha), str(target_ref_path)) if available, the sha the file at
         rela_path points to, or None. target_ref_path is the reference we
         point to, or None"""
-        try:
-            return cls._get_ref_info_helper(repo, repo.git_dir, ref_path)
-        except ValueError:
-            try:
-                commondir = codecs.open(osp.join(repo.git_dir, 'commondir'), 'r', encoding="utf-8").readlines()[0].strip()
-            except (OSError, IOError):
-                commondir = '.'
-
-            repodir = osp.join(repo.git_dir, commondir)
-            return cls._get_ref_info_helper(repo, repodir, ref_path)
+        return cls._get_ref_info_helper(repo, ref_path)
 
     def _get_object(self):
         """
@@ -221,7 +213,7 @@ class SymbolicReference(object):
                 invalid_type = self.repo.rev_parse(commit).type != Commit.type
             except (BadObject, BadName):
                 raise ValueError("Invalid object: %s" % commit)
-            # END handle exception
+                # END handle exception
         # END verify type
 
         if invalid_type:
@@ -299,11 +291,11 @@ class SymbolicReference(object):
             write_value = ref.hexsha
         elif isinstance(ref, string_types):
             try:
-                obj = self.repo.rev_parse(ref + "^{}")    # optionally deref tags
+                obj = self.repo.rev_parse(ref + "^{}")  # optionally deref tags
                 write_value = obj.hexsha
             except (BadObject, BadName):
                 raise ValueError("Could not extract object from %s" % ref)
-            # END end try string
+                # END end try string
         else:
             raise ValueError("Unrecognized Value: %r" % ref)
         # END try commit attribute
@@ -319,7 +311,7 @@ class SymbolicReference(object):
                 oldbinsha = self.commit.binsha
             except ValueError:
                 oldbinsha = Commit.NULL_BIN_SHA
-            # END handle non-existing
+                # END handle non-existing
         # END retrieve old hexsha
 
         fpath = self.abspath
@@ -433,7 +425,7 @@ class SymbolicReference(object):
             or just "myreference", hence 'refs/' is implied.
             Alternatively the symbolic reference to be deleted"""
         full_ref_path = cls.to_full_path(path)
-        abs_path = osp.join(repo.git_dir, full_ref_path)
+        abs_path = osp.join(repo.common_dir, full_ref_path)
         if osp.exists(abs_path):
             os.remove(abs_path)
         else:
@@ -475,7 +467,7 @@ class SymbolicReference(object):
         reflog_path = RefLog.path(cls(repo, full_ref_path))
         if osp.isfile(reflog_path):
             os.remove(reflog_path)
-        # END remove reflog
+            # END remove reflog
 
     @classmethod
     def _create(cls, repo, path, resolve, reference, force, logmsg=None):
@@ -484,8 +476,9 @@ class SymbolicReference(object):
         a proper symbolic reference. Otherwise it will be resolved to the
         corresponding object and a detached symbolic reference will be created
         instead"""
+        git_dir = _git_dir(repo, path)
         full_ref_path = cls.to_full_path(path)
-        abs_ref_path = osp.join(repo.git_dir, full_ref_path)
+        abs_ref_path = osp.join(git_dir, full_ref_path)
 
         # figure out target data
         target = reference
@@ -559,8 +552,8 @@ class SymbolicReference(object):
         if self.path == new_path:
             return self
 
-        new_abs_path = osp.join(self.repo.git_dir, new_path)
-        cur_abs_path = osp.join(self.repo.git_dir, self.path)
+        new_abs_path = osp.join(_git_dir(self.repo, new_path), new_path)
+        cur_abs_path = osp.join(_git_dir(self.repo, self.path), self.path)
         if osp.isfile(new_abs_path):
             if not force:
                 # if they point to the same file, its not an error
@@ -570,8 +563,8 @@ class SymbolicReference(object):
                     f2 = fd2.read().strip()
                 if f1 != f2:
                     raise OSError("File at path %r already exists" % new_abs_path)
-                # else: we could remove ourselves and use the otherone, but
-                # but clarity we just continue as usual
+                    # else: we could remove ourselves and use the otherone, but
+                    # but clarity we just continue as usual
             # END not force handling
             os.remove(new_abs_path)
         # END handle existing target file
@@ -594,7 +587,7 @@ class SymbolicReference(object):
 
         # walk loose refs
         # Currently we do not follow links
-        for root, dirs, files in os.walk(join_path_native(repo.git_dir, common_path)):
+        for root, dirs, files in os.walk(join_path_native(repo.common_dir, common_path)):
             if 'refs' not in root.split(os.sep):  # skip non-refs subfolders
                 refs_id = [d for d in dirs if d == 'refs']
                 if refs_id:
@@ -605,15 +598,15 @@ class SymbolicReference(object):
                 if f == 'packed-refs':
                     continue
                 abs_path = to_native_path_linux(join_path(root, f))
-                rela_paths.add(abs_path.replace(to_native_path_linux(repo.git_dir) + '/', ""))
-            # END for each file in root directory
+                rela_paths.add(abs_path.replace(to_native_path_linux(repo.common_dir) + '/', ""))
+                # END for each file in root directory
         # END for each directory to walk
 
         # read packed refs
         for sha, rela_path in cls._iter_packed_refs(repo):  # @UnusedVariable
             if rela_path.startswith(common_path):
                 rela_paths.add(rela_path)
-            # END relative path matches common path
+                # END relative path matches common path
         # END packed refs reading
 
         # return paths in sorted order
@@ -622,7 +615,7 @@ class SymbolicReference(object):
                 yield cls.from_path(repo, path)
             except ValueError:
                 continue
-        # END for each sorted relative refpath
+                # END for each sorted relative refpath
 
     @classmethod
     def iter_items(cls, repo, common_path=None):
@@ -666,7 +659,7 @@ class SymbolicReference(object):
                 return instance
             except ValueError:
                 pass
-            # END exception handling
+                # END exception handling
         # END for each type to try
         raise ValueError("Could not find reference type suitable to handle path %r" % path)
 

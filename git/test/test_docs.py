@@ -289,9 +289,9 @@ class Tutorials(TestBase):
         assert len(headcommit.hexsha) == 40
         assert len(headcommit.parents) > 0
         assert headcommit.tree.type == 'tree'
-        assert headcommit.author.name == 'Sebastian Thiel'
+        assert len(headcommit.author.name) != 0
         assert isinstance(headcommit.authored_date, int)
-        assert headcommit.committer.name == 'Sebastian Thiel'
+        assert len(headcommit.committer.name) != 0
         assert isinstance(headcommit.committed_date, int)
         assert headcommit.message != ''
         # ![14-test_references_and_objects]
