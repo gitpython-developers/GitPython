@@ -52,6 +52,7 @@ def add_progress(kwargs, git, progress):
     given, we do not request any progress
     :return: possibly altered kwargs"""
     if progress is not None:
+        kwargs['universal_newlines'] = True
         v = git.version_info[:2]
         if v >= (1, 7):
             kwargs['progress'] = True
