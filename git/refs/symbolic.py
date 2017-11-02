@@ -96,7 +96,15 @@ class SymbolicReference(object):
                     if not line:
                         continue
                     if line.startswith('#'):
-                        if line.startswith('# pack-refs with:') and not line.endswith('peeled'):
+                        # "# pack-refs with: peeled fully-peeled sorted"
+                        # the git source code shows "peeled",
+                        # "fully-peeled" and "sorted" as the keywords
+                        # that can go on this line, as per comments in git file
+                        # refs/packed-backend.c
+                        # I looked at master on 2017-10-11,
+                        # commit 111ef79afe, after tag v2.15.0-rc1
+                        # from repo https://github.com/git/git.git
+                        if line.startswith('# pack-refs with:') and 'peeled' not in line:
                             raise TypeError("PackingType of packed-Refs not understood: %r" % line)
                         # END abort if we do not understand the packing scheme
                         continue
