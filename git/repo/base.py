@@ -905,6 +905,10 @@ class Repo(object):
 
         odbt = kwargs.pop('odbt', odb_default_type)
 
+        # when pathlib.Path or other classbased path is passed
+        if not isinstance(path, str):
+            path = str(path)
+
         ## A bug win cygwin's Git, when `--bare` or `--separate-git-dir`
         #  it prepends the cwd or(?) the `url` into the `path, so::
         #        git clone --bare  /cygwin/d/foo.git  C:\\Work
