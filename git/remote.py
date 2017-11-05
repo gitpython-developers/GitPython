@@ -536,10 +536,18 @@ class Remote(LazyMixin, Iterable):
             #    and: http://stackoverflow.com/a/32991784/548792
             #
             if 'Unknown subcommand: get-url' in str(ex):
-                remote_details = self.repo.git.remote("show", self.name)
-                for line in remote_details.split('\n'):
-                    if '  Push  URL:' in line:
-                        yield line.split(': ')[-1]
+                try:
+                    remote_details = self.repo.git.remote("show", self.name)
+                    for line in remote_details.split('\n'):
+                        if '  Push  URL:' in line:
+                            yield line.split(': ')[-1]
+                except GitCommandError as ex:
+                    if 'correct access rights' in str(ex):
+                        # If ssh is not setup to access this repository, see issue 694                                                                                            
+                        result = Git().execute(['git','config','--get','remote.%s.url' % self.name])
+                        yield result
+                    else:
+                        raise ex
             else:
                 raise ex
 
