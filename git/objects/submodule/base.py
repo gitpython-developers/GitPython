@@ -278,7 +278,7 @@ class Submodule(IndexObject, Iterable, Traversable):
             if not path.startswith(working_tree_linux):
                 raise ValueError("Submodule checkout path '%s' needs to be within the parents repository at '%s'"
                                  % (working_tree_linux, path))
-            path = path[len(working_tree_linux) + 1:]
+            path = path[len(working_tree_linux.rstrip('/')) + 1:]
             if not path:
                 raise ValueError("Absolute submodule path '%s' didn't yield a valid relative path" % path)
             # end verify converted relative path makes sense
