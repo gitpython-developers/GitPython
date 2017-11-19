@@ -10,7 +10,7 @@ except ImportError:
 
 import git
 from git.cmd import Git
-from git.compat import string_types
+from git.compat import string_types, is_win
 from git.exc import (
     InvalidGitRepositoryError,
     RepositoryDirtyError
@@ -911,3 +911,13 @@ class TestSubmodule(TestBase):
         parent_repo.submodule_update(to_latest_revision=True, force_reset=True)
         assert sm_mod.commit() == sm_pfb.commit, "Now head should have been reset"
         assert sm_mod.head.ref.name == sm_pfb.name
+
+    @skipIf(not is_win, "Specifically for Windows.")
+    def test_to_relative_path_with_super_at_root_drive(self):
+        class Repo(object):
+            working_tree_dir = 'D:\\'
+        super_repo = Repo()
+        submodule_path = 'D:\\submodule_path'
+        relative_path = Submodule._to_relative_path(super_repo, submodule_path)
+        msg = '_to_relative_path should be "submodule_path" but was "%s"' % relative_path
+        assert relative_path == 'submodule_path', msg
