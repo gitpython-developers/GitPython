@@ -948,6 +948,11 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         :return: Commit object representing the new commit"""
         if not skip_hooks:
             run_commit_hook('pre-commit', self)
+
+            self._write_commit_editmsg(message)
+            run_commit_hook('commit-msg', self, self._commit_editmsg_filepath())
+            message = self._read_commit_editmsg()
+            self._remove_commit_editmsg()
         tree = self.write_tree()
         rval = Commit.create_from_tree(self.repo, tree, message, parent_commits,
                                        head, author=author, committer=committer,
@@ -955,6 +960,20 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         if not skip_hooks:
             run_commit_hook('post-commit', self)
         return rval
+    
+    def _write_commit_editmsg(self, message):
+        with open(self._commit_editmsg_filepath(), "wb") as commit_editmsg_file:
+            commit_editmsg_file.write(message.encode(defenc))
+
+    def _remove_commit_editmsg(self):
+        os.remove(self._commit_editmsg_filepath())
+
+    def _read_commit_editmsg(self):
+        with open(self._commit_editmsg_filepath(), "rb") as commit_editmsg_file:
+            return commit_editmsg_file.read().decode(defenc)
+
+    def _commit_editmsg_filepath(self):
+        return osp.join(self.repo.common_dir, "COMMIT_EDITMSG")
 
     @classmethod
     def _flush_stdin_and_wait(cls, proc, ignore_stdout=False):
