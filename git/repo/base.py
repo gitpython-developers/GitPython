@@ -930,9 +930,9 @@ class Repo(object):
         if sep_dir:
             kwargs['separate_git_dir'] = Git.polish_url(sep_dir)
         proc = git.clone(Git.polish_url(url), clone_path, with_extended_output=True, as_process=True,
-                         v=True, **add_progress(kwargs, git, progress))
+                         v=True, universal_newlines=True, **add_progress(kwargs, git, progress))
         if progress:
-            handle_process_output(proc, None, progress.new_message_handler(), finalize_process)
+            handle_process_output(proc, None, progress.new_message_handler(), finalize_process, decode_streams=False)
         else:
             (stdout, stderr) = proc.communicate()
             log.debug("Cmd(%s)'s unused stdout: %s", getattr(proc, 'args', ''), stdout)
