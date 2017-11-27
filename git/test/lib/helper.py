@@ -29,6 +29,8 @@ else:
     import unittest
 
 TestCase = unittest.TestCase
+SkipTest = unittest.SkipTest
+skipIf = unittest.skipIf
 
 ospd = osp.dirname
 
@@ -37,7 +39,9 @@ GIT_DAEMON_PORT = os.environ.get("GIT_PYTHON_TEST_GIT_DAEMON_PORT", "19418")
 
 __all__ = (
     'fixture_path', 'fixture', 'StringProcessAdapter',
-    'with_rw_directory', 'with_rw_repo', 'with_rw_and_rw_remote_repo', 'TestBase', 'TestCase',
+    'with_rw_directory', 'with_rw_repo', 'with_rw_and_rw_remote_repo',
+    'TestBase', 'TestCase',
+    'SkipTest', 'skipIf',
     'GIT_REPO', 'GIT_DAEMON_PORT'
 )
 
