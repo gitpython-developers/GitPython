@@ -1,5 +1,6 @@
 """Package with general repository related functions"""
 import os
+import stat
 from string import digits
 
 from git.compat import xrange
@@ -17,7 +18,7 @@ from git.cmd import Git
 
 
 __all__ = ('rev_parse', 'is_git_dir', 'touch', 'find_submodule_git_dir', 'name_to_object', 'short_to_long', 'deref_tag',
-           'to_commit')
+           'to_commit', 'find_worktree_git_dir')
 
 
 def touch(filename):
@@ -45,6 +46,25 @@ def is_git_dir(d):
               osp.isfile(osp.join(d, 'gitfile'))):
             raise WorkTreeRepositoryUnsupported(d)
     return False
+
+
+def find_worktree_git_dir(dotgit):
+    """Search for a gitdir for this worktree."""
+    try:
+        statbuf = os.stat(dotgit)
+    except OSError:
+        return None
+    if not stat.S_ISREG(statbuf.st_mode):
+        return None
+
+    try:
+        lines = open(dotgit, 'r').readlines()
+        for key, value in [line.strip().split(': ') for line in lines]:
+            if key == 'gitdir':
+                return value
+    except ValueError:
+        pass
+    return None
 
 
 def find_submodule_git_dir(d):

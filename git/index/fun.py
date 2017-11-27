@@ -62,10 +62,11 @@ def hook_path(name, git_dir):
     return osp.join(git_dir, 'hooks', name)
 
 
-def run_commit_hook(name, index):
+def run_commit_hook(name, index, *args):
     """Run the commit hook of the given name. Silently ignores hooks that do not exist.
     :param name: name of hook, like 'pre-commit'
     :param index: IndexFile instance
+    :param args: arguments passed to hook file
     :raises HookExecutionError: """
     hp = hook_path(name, index.repo.git_dir)
     if not os.access(hp, os.X_OK):
@@ -75,7 +76,7 @@ def run_commit_hook(name, index):
     env['GIT_INDEX_FILE'] = safe_decode(index.path) if PY3 else safe_encode(index.path)
     env['GIT_EDITOR'] = ':'
     try:
-        cmd = subprocess.Popen(hp,
+        cmd = subprocess.Popen([hp] + list(args),
                                env=env,
                                stdout=subprocess.PIPE,
                                stderr=subprocess.PIPE,
@@ -93,7 +94,7 @@ def run_commit_hook(name, index):
         if cmd.returncode != 0:
             stdout = force_text(stdout, defenc)
             stderr = force_text(stderr, defenc)
-            raise HookExecutionError(hp, cmd.returncode, stdout, stderr)
+            raise HookExecutionError(hp, cmd.returncode, stderr, stdout)
     # end handle return code
 
 

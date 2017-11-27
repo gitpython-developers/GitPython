@@ -216,7 +216,7 @@ class TestBase(TestCase):
             with self.assertRaises(cp.NoSectionError):
                 check_test_value(cr, tv)
 
-        # But can make it skip includes alltogether, and thus allow write-backs
+        # But can make it skip includes altogether, and thus allow write-backs
         with GitConfigParser(fpa, read_only=False, merge_includes=False) as cw:
             write_test_value(cw, tv)
 

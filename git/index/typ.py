@@ -51,7 +51,7 @@ class BlobFilter(object):
 class BaseIndexEntry(tuple):
 
     """Small Brother of an index entry which can be created to describe changes
-    done to the index in which case plenty of additional information is not requried.
+    done to the index in which case plenty of additional information is not required.
 
     As the first 4 data members match exactly to the IndexEntry type, methods
     expecting a BaseIndexEntry can also handle full IndexEntries even if they

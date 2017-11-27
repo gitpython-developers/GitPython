@@ -411,7 +411,7 @@ class TestIndex(TestBase):
     # END num existing helper
 
     @skipIf(HIDE_WINDOWS_KNOWN_ERRORS and Git.is_cygwin(),
-            """FIXME: File "C:\projects\gitpython\git\test\test_index.py", line 642, in test_index_mutation
+            """FIXME: File "C:\\projects\\gitpython\\git\\test\\test_index.py", line 642, in test_index_mutation
                 self.assertEqual(fd.read(), link_target)
                 AssertionError: '!<symlink>\xff\xfe/\x00e\x00t\x00c\x00/\x00t\x00h\x00a\x00t\x00\x00\x00'
                 != '/etc/that'
@@ -729,35 +729,6 @@ class TestIndex(TestBase):
             assert fkey not in index.entries
 
         index.add(files, write=True)
-        if is_win:
-            hp = hook_path('pre-commit', index.repo.git_dir)
-            hpd = osp.dirname(hp)
-            if not osp.isdir(hpd):
-                os.mkdir(hpd)
-            with open(hp, "wt") as fp:
-                fp.write("#!/usr/bin/env sh\necho stdout; echo stderr 1>&2; exit 1")
-            # end
-            os.chmod(hp, 0o744)
-            try:
-                index.commit("This should fail")
-            except HookExecutionError as err:
-                if is_win:
-                    self.assertIsInstance(err.status, OSError)
-                    self.assertEqual(err.command, [hp])
-                    self.assertEqual(err.stdout, '')
-                    self.assertEqual(err.stderr, '')
-                    assert str(err)
-                else:
-                    self.assertEqual(err.status, 1)
-                    self.assertEqual(err.command, hp)
-                    self.assertEqual(err.stdout, 'stdout\n')
-                    self.assertEqual(err.stderr, 'stderr\n')
-                    assert str(err)
-            else:
-                raise AssertionError("Should have cought a HookExecutionError")
-            # end exception handling
-            os.remove(hp)
-        # end hook testing
         nc = index.commit("2 files committed", head=False)
 
         for fkey in keys:
@@ -859,3 +830,88 @@ class TestIndex(TestBase):
         r = Repo.init(rw_dir)
         r.index.add([fp])
         r.index.commit('Added [.exe')
+
+    @with_rw_repo('HEAD', bare=True)
+    def test_pre_commit_hook_success(self, rw_repo):
+        index = rw_repo.index
+        hp = hook_path('pre-commit', index.repo.git_dir)
+        hpd = osp.dirname(hp)
+        if not osp.isdir(hpd):
+            os.mkdir(hpd)
+        with open(hp, "wt") as fp:
+            fp.write("#!/usr/bin/env sh\nexit 0")
+        os.chmod(hp, 0o744)
+        index.commit("This should not fail")
+
+    @with_rw_repo('HEAD', bare=True)
+    def test_pre_commit_hook_fail(self, rw_repo):
+        index = rw_repo.index
+        hp = hook_path('pre-commit', index.repo.git_dir)
+        hpd = osp.dirname(hp)
+        if not osp.isdir(hpd):
+            os.mkdir(hpd)
+        with open(hp, "wt") as fp:
+            fp.write("#!/usr/bin/env sh\necho stdout; echo stderr 1>&2; exit 1")
+        os.chmod(hp, 0o744)
+        try:
+            index.commit("This should fail")
+        except HookExecutionError as err:
+            if is_win:
+                self.assertIsInstance(err.status, OSError)
+                self.assertEqual(err.command, [hp])
+                self.assertEqual(err.stdout, '')
+                self.assertEqual(err.stderr, '')
+                assert str(err)
+            else:
+                self.assertEqual(err.status, 1)
+                self.assertEqual(err.command, [hp])
+                self.assertEqual(err.stdout, "\n  stdout: 'stdout\n'")
+                self.assertEqual(err.stderr, "\n  stderr: 'stderr\n'")
+                assert str(err)
+        else:
+            raise AssertionError("Should have cought a HookExecutionError")
+
+    @with_rw_repo('HEAD', bare=True)
+    def test_commit_msg_hook_success(self, rw_repo):
+        index = rw_repo.index
+        commit_message = u"commit default head by Frèderic Çaufl€"
+        from_hook_message = u"from commit-msg"
+
+        hp = hook_path('commit-msg', index.repo.git_dir)
+        hpd = osp.dirname(hp)
+        if not osp.isdir(hpd):
+            os.mkdir(hpd)
+        with open(hp, "wt") as fp:
+            fp.write('#!/usr/bin/env sh\necho -n " {}" >> "$1"'.format(from_hook_message))
+        os.chmod(hp, 0o744)
+
+        new_commit = index.commit(commit_message)
+        self.assertEqual(new_commit.message, u"{} {}".format(commit_message, from_hook_message))
+
+    @with_rw_repo('HEAD', bare=True)
+    def test_commit_msg_hook_fail(self, rw_repo):
+        index = rw_repo.index
+        hp = hook_path('commit-msg', index.repo.git_dir)
+        hpd = osp.dirname(hp)
+        if not osp.isdir(hpd):
+            os.mkdir(hpd)
+        with open(hp, "wt") as fp:
+            fp.write("#!/usr/bin/env sh\necho stdout; echo stderr 1>&2; exit 1")
+        os.chmod(hp, 0o744)
+        try:
+            index.commit("This should fail")
+        except HookExecutionError as err:
+            if is_win:
+                self.assertIsInstance(err.status, OSError)
+                self.assertEqual(err.command, [hp])
+                self.assertEqual(err.stdout, '')
+                self.assertEqual(err.stderr, '')
+                assert str(err)
+            else:
+                self.assertEqual(err.status, 1)
+                self.assertEqual(err.command, [hp])
+                self.assertEqual(err.stdout, "\n  stdout: 'stdout\n'")
+                self.assertEqual(err.stderr, "\n  stderr: 'stderr\n'")
+                assert str(err)
+        else:
+            raise AssertionError("Should have cought a HookExecutionError")

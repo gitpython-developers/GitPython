@@ -9,6 +9,7 @@ import logging
 import os
 import re
 import sys
+import warnings
 
 from git.cmd import (
     Git,
@@ -29,16 +30,18 @@ from git.index import IndexFile
 from git.objects import Submodule, RootModule, Commit
 from git.refs import HEAD, Head, Reference, TagReference
 from git.remote import Remote, add_progress, to_progress_instance
-from git.util import Actor, finalize_process, decygpath, hex_to_bin
+from git.util import Actor, finalize_process, decygpath, hex_to_bin, expand_path
 import os.path as osp
 
-from .fun import rev_parse, is_git_dir, find_submodule_git_dir, touch
+from .fun import rev_parse, is_git_dir, find_submodule_git_dir, touch, find_worktree_git_dir
+import gc
+import gitdb
 
 
 log = logging.getLogger(__name__)
 
 DefaultDBType = GitCmdObjectDB
-if sys.version_info[:2] < (2, 5):     # python 2.4 compatiblity
+if sys.version_info[:2] < (2, 5):     # python 2.4 compatibility
     DefaultDBType = GitCmdObjectDB
 # END handle python 2.4
 
@@ -46,10 +49,6 @@ BlameEntry = namedtuple('BlameEntry', ['commit', 'linenos', 'orig_path', 'orig_l
 
 
 __all__ = ('Repo',)
-
-
-def _expand_path(p):
-    return osp.normpath(osp.abspath(osp.expandvars(osp.expanduser(p))))
 
 
 class Repo(object):
@@ -72,6 +71,7 @@ class Repo(object):
     working_dir = None
     _working_tree_dir = None
     git_dir = None
+    _common_dir = None
 
     # precompiled regex
     re_whitespace = re.compile(r'\s+')
@@ -88,7 +88,7 @@ class Repo(object):
     # Subclasses may easily bring in their own custom types by placing a constructor or type here
     GitCommandWrapperType = Git
 
-    def __init__(self, path=None, odbt=DefaultDBType, search_parent_directories=False):
+    def __init__(self, path=None, odbt=DefaultDBType, search_parent_directories=False, expand_vars=True):
         """Create a new Repo instance
 
         :param path:
@@ -114,12 +114,18 @@ class Repo(object):
         :raise InvalidGitRepositoryError:
         :raise NoSuchPathError:
         :return: git.Repo """
+
         epath = path or os.getenv('GIT_DIR')
         if not epath:
             epath = os.getcwd()
         if Git.is_cygwin():
             epath = decygpath(epath)
-        epath = _expand_path(epath or path or os.getcwd())
+
+        epath = epath or path or os.getcwd()
+        if expand_vars and ("%" in epath or "$" in epath):
+            warnings.warn("The use of environment variables in paths is deprecated" +
+                          "\nfor security reasons and may be removed in the future!!")
+        epath = expand_path(epath, expand_vars)
         if not os.path.exists(epath):
             raise NoSuchPathError(epath)
 
@@ -133,15 +139,20 @@ class Repo(object):
             # removed. It's just cleaner.
             if is_git_dir(curpath):
                 self.git_dir = curpath
-                self._working_tree_dir = os.path.dirname(self.git_dir)
+                self._working_tree_dir = os.getenv('GIT_WORK_TREE', os.path.dirname(self.git_dir))
                 break
 
-            sm_gitpath = find_submodule_git_dir(osp.join(curpath, '.git'))
+            dotgit = osp.join(curpath, '.git')
+            sm_gitpath = find_submodule_git_dir(dotgit)
             if sm_gitpath is not None:
                 self.git_dir = osp.normpath(sm_gitpath)
-            sm_gitpath = find_submodule_git_dir(osp.join(curpath, '.git'))
+
+            sm_gitpath = find_submodule_git_dir(dotgit)
+            if sm_gitpath is None:
+                sm_gitpath = find_worktree_git_dir(dotgit)
+
             if sm_gitpath is not None:
-                self.git_dir = _expand_path(sm_gitpath)
+                self.git_dir = expand_path(sm_gitpath, expand_vars)
                 self._working_tree_dir = curpath
                 break
 
@@ -162,24 +173,53 @@ class Repo(object):
             # lets not assume the option exists, although it should
             pass
 
+        try:
+            common_dir = open(osp.join(self.git_dir, 'commondir'), 'rt').readlines()[0].strip()
+            self._common_dir = osp.join(self.git_dir, common_dir)
+        except (OSError, IOError):
+            self._common_dir = None
+
         # adjust the wd in case we are actually bare - we didn't know that
         # in the first place
         if self._bare:
             self._working_tree_dir = None
         # END working dir handling
 
-        self.working_dir = self._working_tree_dir or self.git_dir
+        self.working_dir = self._working_tree_dir or self.common_dir
         self.git = self.GitCommandWrapperType(self.working_dir)
 
         # special handling, in special times
-        args = [osp.join(self.git_dir, 'objects')]
+        args = [osp.join(self.common_dir, 'objects')]
         if issubclass(odbt, GitCmdObjectDB):
             args.append(self.git)
         self.odb = odbt(*args)
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
+
     def __del__(self):
+        try:
+            self.close()
+        except:
+            pass
+
+    def close(self):
         if self.git:
             self.git.clear_cache()
+            # Tempfiles objects on Windows are holding references to
+            # open files until they are collected by the garbage
+            # collector, thus preventing deletion.
+            # TODO: Find these references and ensure they are closed
+            # and deleted synchronously rather than forcing a gc
+            # collection.
+            if is_win:
+                gc.collect()
+            gitdb.util.mman.collect()
+            if is_win:
+                gc.collect()
 
     def __eq__(self, rhs):
         if isinstance(rhs, Repo):
@@ -213,6 +253,13 @@ class Repo(object):
         """:return: The working tree directory of our git repository. If this is a bare repository, None is returned.
         """
         return self._working_tree_dir
+
+    @property
+    def common_dir(self):
+        """:return: The git dir that holds everything except possibly HEAD,
+        FETCH_HEAD, ORIG_HEAD, COMMIT_EDITMSG, index, and logs/ .
+        """
+        return self._common_dir or self.git_dir
 
     @property
     def bare(self):
@@ -404,7 +451,7 @@ class Repo(object):
 
         :param config_level:
             One of the following values
-            system = sytem wide configuration file
+            system = system wide configuration file
             global = user level configuration file
             repository = configuration file for this repostory only"""
         return GitConfigParser(self._get_config_path(config_level), read_only=False)
@@ -459,7 +506,7 @@ class Repo(object):
         :note: to receive only commits between two named revisions, use the
             "revA...revB" revision specifier
 
-        :return ``git.Commit[]``"""
+        :return: ``git.Commit[]``"""
         if rev is None:
             rev = self.head.commit
 
@@ -550,9 +597,9 @@ class Repo(object):
 
         :raise NoSuchPathError:
         :note:
-            The method does not check for the existance of the paths in alts
+            The method does not check for the existence of the paths in alts
             as the caller is responsible."""
-        alternates_path = osp.join(self.git_dir, 'objects', 'info', 'alternates')
+        alternates_path = osp.join(self.common_dir, 'objects', 'info', 'alternates')
         if not alts:
             if osp.isfile(alternates_path):
                 os.remove(alternates_path)
@@ -615,7 +662,7 @@ class Repo(object):
         return self._get_untracked_files()
 
     def _get_untracked_files(self, *args, **kwargs):
-        # make sure we get all files, no only untracked directores
+        # make sure we get all files, not only untracked directories
         proc = self.git.status(*args,
                                porcelain=True,
                                untracked_files=True,
@@ -667,7 +714,7 @@ class Repo(object):
 
         stream = (line for line in data.split(b'\n') if line)
         while True:
-            line = next(stream)  # when exhausted, casues a StopIteration, terminating this function
+            line = next(stream)  # when exhausted, causes a StopIteration, terminating this function
             hexsha, orig_lineno, lineno, num_lines = line.split()
             lineno = int(lineno)
             num_lines = int(num_lines)
@@ -699,11 +746,14 @@ class Repo(object):
                            committed_date=int(props[b'committer-time']))
                 commits[hexsha] = c
             else:
-                # Discard the next line (it's a filename end tag)
-                line = next(stream)
-                tag, value = line.split(b' ', 1)
-                assert tag == b'filename', 'Unexpected git blame output'
-                orig_filename = value
+                # Discard all lines until we find "filename" which is
+                # guaranteed to be the last line
+                while True:
+                    line = next(stream)  # will fail if we reach the EOF unexpectedly
+                    tag, value = line.split(b' ', 1)
+                    if tag == b'filename':
+                        orig_filename = value
+                        break
 
             yield BlameEntry(commits[hexsha],
                              range(lineno, lineno + num_lines),
@@ -819,7 +869,7 @@ class Repo(object):
         return blames
 
     @classmethod
-    def init(cls, path=None, mkdir=True, odbt=DefaultDBType, **kwargs):
+    def init(cls, path=None, mkdir=True, odbt=DefaultDBType, expand_vars=True, **kwargs):
         """Initialize a git repository at the given path if specified
 
         :param path:
@@ -837,12 +887,17 @@ class Repo(object):
             the directory containing the database objects, i.e. .git/objects.
             It will be used to access all object data
 
+        :param expand_vars:
+            if specified, environment variables will not be escaped. This
+            can lead to information disclosure, allowing attackers to
+            access the contents of environment variables
+
         :parm kwargs:
             keyword arguments serving as additional options to the git-init command
 
         :return: ``git.Repo`` (the newly created repo)"""
         if path:
-            path = _expand_path(path)
+            path = expand_path(path, expand_vars)
         if mkdir and path and not osp.exists(path):
             os.makedirs(path, 0o755)
 
@@ -858,6 +913,10 @@ class Repo(object):
 
         odbt = kwargs.pop('odbt', odb_default_type)
 
+        # when pathlib.Path or other classbased path is passed
+        if not isinstance(path, str):
+            path = str(path)
+
         ## A bug win cygwin's Git, when `--bare` or `--separate-git-dir`
         #  it prepends the cwd or(?) the `url` into the `path, so::
         #        git clone --bare  /cygwin/d/foo.git  C:\\Work
@@ -865,15 +924,15 @@ class Repo(object):
         #        git clone --bare  /cygwin/d/foo.git  /cygwin/d/C:\\Work
         #
         clone_path = (Git.polish_url(path)
-                      if Git.is_cygwin() and 'bare'in kwargs
+                      if Git.is_cygwin() and 'bare' in kwargs
                       else path)
         sep_dir = kwargs.get('separate_git_dir')
         if sep_dir:
             kwargs['separate_git_dir'] = Git.polish_url(sep_dir)
         proc = git.clone(Git.polish_url(url), clone_path, with_extended_output=True, as_process=True,
-                         v=True, **add_progress(kwargs, git, progress))
+                         v=True, universal_newlines=True, **add_progress(kwargs, git, progress))
         if progress:
-            handle_process_output(proc, None, progress.new_message_handler(), finalize_process)
+            handle_process_output(proc, None, progress.new_message_handler(), finalize_process, decode_streams=False)
         else:
             (stdout, stderr) = proc.communicate()
             log.debug("Cmd(%s)'s unused stdout: %s", getattr(proc, 'args', ''), stdout)
@@ -884,12 +943,16 @@ class Repo(object):
         if not osp.isabs(path) and git.working_dir:
             path = osp.join(git._working_dir, path)
 
+        repo = cls(path, odbt=odbt)
+
+        # retain env values that were passed to _clone()
+        repo.git.update_environment(**git.environment())
+
         # adjust remotes - there may be operating systems which use backslashes,
         # These might be given as initial paths, but when handling the config file
         # that contains the remote from which we were clones, git stops liking it
         # as it will escape the backslashes. Hence we undo the escaping just to be
         # sure
-        repo = cls(path, odbt=odbt)
         if repo.remotes:
             with repo.remotes[0].config_writer as writer:
                 writer.set_value('url', Git.polish_url(repo.remotes[0].url))
@@ -907,7 +970,7 @@ class Repo(object):
             * All remaining keyword arguments are given to the git-clone command
 
         :return: ``git.Repo`` (the newly cloned repo)"""
-        return self._clone(self.git, self.git_dir, path, type(self.odb), progress, **kwargs)
+        return self._clone(self.git, self.common_dir, path, type(self.odb), progress, **kwargs)
 
     @classmethod
     def clone_from(cls, url, to_path, progress=None, env=None, **kwargs):
@@ -935,7 +998,7 @@ class Repo(object):
             * Use the 'format' argument to define the kind of format. Use
               specialized ostreams to write any format supported by python.
             * You may specify the special **path** keyword, which may either be a repository-relative
-              path to a directory or file to place into the archive, or a list or tuple of multipe paths.
+              path to a directory or file to place into the archive, or a list or tuple of multiple paths.
 
         :raise GitCommandError: in case something went wrong
         :return: self"""
@@ -955,7 +1018,7 @@ class Repo(object):
     def has_separate_working_tree(self):
         """
         :return: True if our git_dir is not at the root of our working_tree_dir, but a .git file with a
-            platform agnositic symbolic link. Our git_dir will be whereever the .git file points to
+            platform agnositic symbolic link. Our git_dir will be wherever the .git file points to
         :note: bare repositories will always return False here
         """
         if self.bare:

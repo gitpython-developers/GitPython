@@ -163,7 +163,7 @@ class TestRemote(TestBase):
 
     def _commit_random_file(self, repo):
         # Create a file with a random name and random data and commit it to  repo.
-        # Return the commited absolute file path
+        # Return the committed absolute file path
         index = repo.index
         new_file = self._make_file(osp.basename(tempfile.mktemp()), str(random.random()), repo)
         index.add([new_file])
@@ -613,7 +613,7 @@ class TestRemote(TestBase):
         remote.set_url(test2, delete=True)
         self.assertEqual(list(remote.urls), [test1, test3])
         # Testing changing an URL
-        remote.set_url(test3, test2)
+        remote.set_url(test2, test3)
         self.assertEqual(list(remote.urls), [test1, test2])
 
         # will raise: fatal: --add --delete doesn't make sense

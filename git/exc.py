@@ -9,7 +9,11 @@ from gitdb.exc import *     # NOQA @UnusedWildImport
 from git.compat import UnicodeMixin, safe_decode, string_types
 
 
-class InvalidGitRepositoryError(Exception):
+class GitError(Exception):
+    """ Base class for all package exceptions """
+
+
+class InvalidGitRepositoryError(GitError):
     """ Thrown if the given repository appears to have an invalid format.  """
 
 
@@ -17,11 +21,11 @@ class WorkTreeRepositoryUnsupported(InvalidGitRepositoryError):
     """ Thrown to indicate we can't handle work tree repositories """
 
 
-class NoSuchPathError(OSError):
+class NoSuchPathError(GitError, OSError):
     """ Thrown if a path could not be access by the system. """
 
 
-class CommandError(UnicodeMixin, Exception):
+class CommandError(UnicodeMixin, GitError):
     """Base class for exceptions thrown at every stage of `Popen()` execution.
 
     :param command:
@@ -74,7 +78,7 @@ class GitCommandError(CommandError):
         super(GitCommandError, self).__init__(command, status, stderr, stdout)
 
 
-class CheckoutError(Exception):
+class CheckoutError(GitError):
     """Thrown if a file could not be checked out from the index as it contained
     changes.
 
@@ -98,7 +102,7 @@ class CheckoutError(Exception):
         return Exception.__str__(self) + ":%s" % self.failed_files
 
 
-class CacheError(Exception):
+class CacheError(GitError):
 
     """Base for all errors related to the git index, which is called cache internally"""
 
@@ -117,8 +121,8 @@ class HookExecutionError(CommandError):
         self._msg = u"Hook('%s') failed%s"
 
 
-class RepositoryDirtyError(Exception):
-    """Thrown whenever an operation on a repository fails as it has uncommited changes that would be overwritten"""
+class RepositoryDirtyError(GitError):
+    """Thrown whenever an operation on a repository fails as it has uncommitted changes that would be overwritten"""
 
     def __init__(self, repo, message):
         self.repo = repo

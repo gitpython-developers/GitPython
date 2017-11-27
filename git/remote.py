@@ -38,6 +38,7 @@ from .refs import (
 
 
 log = logging.getLogger('git.remote')
+log.addHandler(logging.NullHandler())
 
 
 __all__ = ('RemoteProgress', 'PushInfo', 'FetchInfo', 'Remote')
@@ -208,14 +209,40 @@ class FetchInfo(object):
     NEW_TAG, NEW_HEAD, HEAD_UPTODATE, TAG_UPDATE, REJECTED, FORCED_UPDATE, \
         FAST_FORWARD, ERROR = [1 << x for x in range(8)]
 
-    re_fetch_result = re.compile('^\s*(.) (\[?[\w\s\.$@]+\]?)\s+(.+) -> ([^\s]+)(    \(.*\)?$)?')
+    _re_fetch_result = re.compile(r'^\s*(.) (\[?[\w\s\.$@]+\]?)\s+(.+) -> ([^\s]+)(    \(.*\)?$)?')
 
-    _flag_map = {'!': ERROR,
-                 '+': FORCED_UPDATE,
-                 '-': TAG_UPDATE,
-                 '*': 0,
-                 '=': HEAD_UPTODATE,
-                 ' ': FAST_FORWARD}
+    _flag_map = {
+        '!': ERROR,
+        '+': FORCED_UPDATE,
+        '*': 0,
+        '=': HEAD_UPTODATE,
+        ' ': FAST_FORWARD,
+        '-': TAG_UPDATE,
+    }
+
+    @classmethod
+    def refresh(cls):
+        """This gets called by the refresh function (see the top level
+        __init__).
+        """
+        # clear the old values in _flag_map
+        try:
+            del cls._flag_map["t"]
+        except KeyError:
+            pass
+
+        try:
+            del cls._flag_map["-"]
+        except KeyError:
+            pass
+
+        # set the value given the git version
+        if Git().version_info[:2] >= (2, 10):
+            cls._flag_map["t"] = cls.TAG_UPDATE
+        else:
+            cls._flag_map["-"] = cls.TAG_UPDATE
+
+        return True
 
     def __init__(self, ref, flags, note='', old_commit=None, remote_ref_path=None):
         """
@@ -258,7 +285,7 @@ class FetchInfo(object):
 
         fetch line is the corresponding line from FETCH_HEAD, like
         acb0fa8b94ef421ad60c8507b634759a472cd56c    not-for-merge   branch '0.1.7RC' of /tmp/tmpya0vairemote_repo"""
-        match = cls.re_fetch_result.match(line)
+        match = cls._re_fetch_result.match(line)
         if match is None:
             raise ValueError("Failed to parse line: %r" % line)
 
@@ -391,7 +418,7 @@ class Remote(LazyMixin, Iterable):
 
     def __getattr__(self, attr):
         """Allows to call this instance like
-        remote.special( \*args, \*\*kwargs) to call git-remote special self.name"""
+        remote.special( \\*args, \\*\\*kwargs) to call git-remote special self.name"""
         if attr == "_config_reader":
             return super(Remote, self).__getattr__(attr)
 
@@ -468,7 +495,7 @@ class Remote(LazyMixin, Iterable):
         scmd = 'set-url'
         kwargs['insert_kwargs_after'] = scmd
         if old_url:
-            self.repo.git.remote(scmd, self.name, old_url, new_url, **kwargs)
+            self.repo.git.remote(scmd, self.name, new_url, old_url, **kwargs)
         else:
             self.repo.git.remote(scmd, self.name, new_url, **kwargs)
         return self
@@ -509,10 +536,18 @@ class Remote(LazyMixin, Iterable):
             #    and: http://stackoverflow.com/a/32991784/548792
             #
             if 'Unknown subcommand: get-url' in str(ex):
-                remote_details = self.repo.git.remote("show", self.name)
-                for line in remote_details.split('\n'):
-                    if '  Push  URL:' in line:
-                        yield line.split(': ')[-1]
+                try:
+                    remote_details = self.repo.git.remote("show", self.name)
+                    for line in remote_details.split('\n'):
+                        if '  Push  URL:' in line:
+                            yield line.split(': ')[-1]
+                except GitCommandError as ex:
+                    if any([msg in str(ex) for msg in ['correct access rights','cannot run ssh']]):
+                        # If ssh is not setup to access this repository, see issue 694                                                                                            
+                        result = Git().execute(['git','config','--get','remote.%s.url' % self.name])
+                        yield result
+                    else:
+                        raise ex
             else:
                 raise ex
 
@@ -629,7 +664,7 @@ class Remote(LazyMixin, Iterable):
         fetch_info_lines = list()
         # Basically we want all fetch info lines which appear to be in regular form, and thus have a
         # command character. Everything else we ignore,
-        cmds = set(PushInfo._flag_map.keys()) & set(FetchInfo._flag_map.keys())
+        cmds = set(FetchInfo._flag_map.keys())
 
         progress_handler = progress.new_message_handler()
         handle_process_output(proc, None, progress_handler, finalizer=None, decode_streams=False)
@@ -647,7 +682,7 @@ class Remote(LazyMixin, Iterable):
                     continue
 
         # read head information
-        with open(osp.join(self.repo.git_dir, 'FETCH_HEAD'), 'rb') as fp:
+        with open(osp.join(self.repo.common_dir, 'FETCH_HEAD'), 'rb') as fp:
             fetch_head_info = [l.decode(defenc) for l in fp.readlines()]
 
         l_fil = len(fetch_info_lines)
@@ -706,8 +741,8 @@ class Remote(LazyMixin, Iterable):
             if config.get_value('fetch', default=unset) is unset:
                 msg = "Remote '%s' has no refspec set.\n"
                 msg += "You can set it as follows:"
-                msg += " 'git config --add \"remote.%s.fetch +refs/heads/*:refs/heads/*\"'." % (self.name, self.name)
-                raise AssertionError(msg)
+                msg += " 'git config --add \"remote.%s.fetch +refs/heads/*:refs/heads/*\"'."
+                raise AssertionError(msg % (self.name, self.name))
         finally:
             config.release()
 

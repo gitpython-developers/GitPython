@@ -152,7 +152,7 @@ class IndexObject(Object):
     def __hash__(self):
         """
         :return:
-            Hash of our path as index items are uniquely identifyable by path, not
+            Hash of our path as index items are uniquely identifiable by path, not
             by their data !"""
         return hash(self.path)
 

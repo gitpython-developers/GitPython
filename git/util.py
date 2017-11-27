@@ -340,6 +340,16 @@ def finalize_process(proc, **kwargs):
     ## TODO: No close proc-streams??
     proc.wait(**kwargs)
 
+
+def expand_path(p, expand_vars=True):
+    try:
+        p = osp.expanduser(p)
+        if expand_vars:
+            p = osp.expandvars(p)
+        return osp.normpath(osp.abspath(p))
+    except:
+        return None
+
 #} END utilities
 
 #{ Classes
@@ -809,7 +819,7 @@ class BlockingLockFile(LockFile):
     def _obtain_lock(self):
         """This method blocks until it obtained the lock, or raises IOError if
         it ran out of time or if the parent directory was not available anymore.
-        If this method returns, you are guranteed to own the lock"""
+        If this method returns, you are guaranteed to own the lock"""
         starttime = time.time()
         maxtime = starttime + float(self._max_block_time)
         while True:

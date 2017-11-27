@@ -2,6 +2,25 @@
 Changelog
 =========
 
+2.1.6 - Bugfixes
+====================================
+
+* support for worktrees
+
+2.1.3 - Bugfixes
+====================================
+
+All issues and PRs can be viewed in all detail when following this URL:
+https://github.com/gitpython-developers/GitPython/milestone/21?closed=1
+
+
+2.1.1 - Bugfixes
+====================================
+
+All issues and PRs can be viewed in all detail when following this URL:
+https://github.com/gitpython-developers/GitPython/issues?q=is%3Aclosed+milestone%3A%22v2.1.1+-+Bugfixes%22
+
+
 2.1.0 - Much better windows support!
 ====================================
 
@@ -128,7 +147,7 @@ Please note that due to breaking changes, we have to increase the major version.
 1.0.2 - Fixes
 =============
 
-* IMPORTANT: Changed default object database of `Repo` objects to `GitComdObjectDB`. The pure-python implementation
+* IMPORTANT: Changed default object database of `Repo` objects to `GitCmdObjectDB`. The pure-python implementation
   used previously usually fails to release its resources (i.e. file handles), which can lead to problems when working
   with large repositories.
 * CRITICAL: fixed incorrect `Commit` object serialization when authored or commit date had timezones which were not

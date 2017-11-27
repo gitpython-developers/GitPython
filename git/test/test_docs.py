@@ -289,9 +289,9 @@ class Tutorials(TestBase):
         assert len(headcommit.hexsha) == 40
         assert len(headcommit.parents) > 0
         assert headcommit.tree.type == 'tree'
-        assert headcommit.author.name == 'Sebastian Thiel'
+        assert len(headcommit.author.name) != 0
         assert isinstance(headcommit.authored_date, int)
-        assert headcommit.committer.name == 'Sebastian Thiel'
+        assert len(headcommit.committer.name) != 0
         assert isinstance(headcommit.committed_date, int)
         assert headcommit.message != ''
         # ![14-test_references_and_objects]
@@ -433,7 +433,7 @@ class Tutorials(TestBase):
         # reset the index and working tree to match the pointed-to commit
         repo.head.reset(index=True, working_tree=True)
 
-        # To detach your head, you have to point to a commit directy
+        # To detach your head, you have to point to a commit directly
         repo.head.reference = repo.commit('HEAD~5')
         assert repo.head.is_detached
         # now our head points 15 commits into the past, whereas the working tree

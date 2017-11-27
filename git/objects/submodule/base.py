@@ -92,7 +92,7 @@ class Submodule(IndexObject, Iterable, Traversable):
     k_head_default = 'master'
     k_default_mode = stat.S_IFDIR | stat.S_IFLNK        # submodules are directories with link-status
 
-    # this is a bogus type for base class compatability
+    # this is a bogus type for base class compatibility
     type = 'submodule'
 
     __slots__ = ('_parent_commit', '_url', '_branch_path', '_name', '__weakref__')
@@ -123,12 +123,12 @@ class Submodule(IndexObject, Iterable, Traversable):
             reader = self.config_reader()
             # default submodule values
             try:
-                self.path = reader.get_value('path')
+                self.path = reader.get('path')
             except cp.NoSectionError:
                 raise ValueError("This submodule instance does not exist anymore in '%s' file"
                                  % osp.join(self.repo.working_tree_dir, '.gitmodules'))
             # end
-            self._url = reader.get_value('url')
+            self._url = reader.get('url')
             # git-python extension values - optional
             self._branch_path = reader.get_value(self.k_head_option, git.Head.to_full_path(self.k_head_default))
         elif attr == '_name':
@@ -278,7 +278,7 @@ class Submodule(IndexObject, Iterable, Traversable):
             if not path.startswith(working_tree_linux):
                 raise ValueError("Submodule checkout path '%s' needs to be within the parents repository at '%s'"
                                  % (working_tree_linux, path))
-            path = path[len(working_tree_linux) + 1:]
+            path = path[len(working_tree_linux.rstrip('/')) + 1:]
             if not path:
                 raise ValueError("Absolute submodule path '%s' didn't yield a valid relative path" % path)
             # end verify converted relative path makes sense
@@ -358,7 +358,9 @@ class Submodule(IndexObject, Iterable, Traversable):
         if sm.exists():
             # reretrieve submodule from tree
             try:
-                return repo.head.commit.tree[path]
+                sm = repo.head.commit.tree[path]
+                sm._name = name
+                return sm
             except KeyError:
                 # could only be in index
                 index = repo.index
@@ -423,7 +425,7 @@ class Submodule(IndexObject, Iterable, Traversable):
                 writer.set_value(cls.k_head_option, br.path)
                 sm._branch_path = br.path
 
-        # we deliberatly assume that our head matches our index !
+        # we deliberately assume that our head matches our index !
         sm.binsha = mrepo.head.commit.binsha
         index.add([sm], write=True)
 
@@ -551,7 +553,7 @@ class Submodule(IndexObject, Iterable, Traversable):
                     with self.repo.config_writer() as writer:
                         writer.set_value(sm_section(self.name), 'url', self.url)
                 # END handle dry_run
-            # END handle initalization
+            # END handle initialization
 
             # DETERMINE SHAS TO CHECKOUT
             ############################
@@ -1168,11 +1170,11 @@ class Submodule(IndexObject, Iterable, Traversable):
 
         for sms in parser.sections():
             n = sm_name(sms)
-            p = parser.get_value(sms, 'path')
-            u = parser.get_value(sms, 'url')
+            p = parser.get(sms, 'path')
+            u = parser.get(sms, 'url')
             b = cls.k_head_default
             if parser.has_option(sms, cls.k_head_option):
-                b = str(parser.get_value(sms, cls.k_head_option))
+                b = str(parser.get(sms, cls.k_head_option))
             # END handle optional information
 
             # get the binsha

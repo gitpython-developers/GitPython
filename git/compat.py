@@ -177,7 +177,7 @@ def surrogateescape_handler(exc):
             # exception anyway after this function is called, even though I think
             # it's doing what it should. It seems that the strict encoder is called
             # to encode the unicode string that this function returns ...
-            decoded = replace_surrogate_encode(mystring)
+            decoded = replace_surrogate_encode(mystring, exc)
         else:
             raise exc
     except NotASurrogateError:
@@ -189,7 +189,7 @@ class NotASurrogateError(Exception):
     pass
 
 
-def replace_surrogate_encode(mystring):
+def replace_surrogate_encode(mystring, exc):
     """
     Returns a (unicode) string, not the more logical bytes, because the codecs
     register_error functionality expects this.

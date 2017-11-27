@@ -7,18 +7,22 @@ from __future__ import print_function
 
 import contextlib
 from functools import wraps
-import sys
+import gc
 import io
 import logging
 import os
+import sys
 import tempfile
 import textwrap
 import time
 
 from git.compat import string_types, is_win
 from git.util import rmtree, cwd
+import gitdb
 
 import os.path as osp
+
+
 if sys.version_info[0:2] == (2, 6):
     import unittest2 as unittest
 else:
@@ -96,7 +100,6 @@ def with_rw_directory(func):
             # a windows-only issue. In fact things should be deleted, as well as
             # memory maps closed, once objects go out of scope. For some reason
             # though this is not the case here unless we collect explicitly.
-            import gc
             gc.collect()
             if not keep:
                 rmtree(path)
@@ -144,9 +147,10 @@ def with_rw_repo(working_tree_ref, bare=False):
                 os.chdir(prev_cwd)
                 rw_repo.git.clear_cache()
                 rw_repo = None
-                import gc
-                gc.collect()
                 if repo_dir is not None:
+                    gc.collect()
+                    gitdb.util.mman.collect()
+                    gc.collect()
                     rmtree(repo_dir)
                 # END rm test repo if possible
             # END cleanup
@@ -196,7 +200,7 @@ def git_daemon_launched(base_path, ip, port):
           and setting the environment variable GIT_PYTHON_TEST_GIT_DAEMON_PORT to <port>
         """)
         if is_win:
-            msg += textwrap.dedent("""
+            msg += textwrap.dedent(r"""
 
             On Windows,
               the `git-daemon.exe` must be in PATH.
@@ -223,7 +227,7 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
     Same as with_rw_repo, but also provides a writable remote repository from which the
     rw_repo has been forked as well as a handle for a git-daemon that may be started to
     run the remote_repo.
-    The remote repository was cloned as bare repository from the rorepo, wheras
+    The remote repository was cloned as bare repository from the rorepo, whereas
     the rw repo has a working tree and was cloned from the remote repository.
 
     remote_repo has two remotes: origin and daemon_origin. One uses a local url,
@@ -303,7 +307,8 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
                 rw_daemon_repo.git.clear_cache()
                 del rw_repo
                 del rw_daemon_repo
-                import gc
+                gc.collect()
+                gitdb.util.mman.collect()
                 gc.collect()
                 if rw_repo_dir:
                     rmtree(rw_repo_dir)
@@ -357,7 +362,6 @@ class TestBase(TestCase):
         each test type has its own repository
         """
         from git import Repo
-        import gc
         gc.collect()
         cls.rorepo = Repo(GIT_REPO)
 

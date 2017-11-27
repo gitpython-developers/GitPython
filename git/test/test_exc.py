@@ -10,10 +10,17 @@ import re
 
 import ddt
 from git.exc import (
+    InvalidGitRepositoryError,
+    WorkTreeRepositoryUnsupported,
+    NoSuchPathError,
     CommandError,
     GitCommandNotFound,
     GitCommandError,
+    CheckoutError,
+    CacheError,
+    UnmergedEntriesError,
     HookExecutionError,
+    RepositoryDirtyError,
 )
 from git.test.lib import TestBase
 
@@ -43,6 +50,26 @@ _streams_n_substrings = (None, 'steram', 'ομορφο stream', )
 
 @ddt.ddt
 class TExc(TestBase):
+
+    def test_ExceptionsHaveBaseClass(self):
+        from git.exc import GitError
+        self.assertIsInstance(GitError(), Exception)
+        
+        exception_classes = [
+            InvalidGitRepositoryError,
+            WorkTreeRepositoryUnsupported,
+            NoSuchPathError,
+            CommandError,
+            GitCommandNotFound,
+            GitCommandError,
+            CheckoutError,
+            CacheError,
+            UnmergedEntriesError,
+            HookExecutionError,
+            RepositoryDirtyError,
+        ]
+        for ex_class in exception_classes:
+            self.assertTrue(issubclass(ex_class, GitError))
 
     @ddt.data(*list(itt.product(_cmd_argvs, _causes_n_substrings, _streams_n_substrings)))
     def test_CommandError_unicode(self, case):

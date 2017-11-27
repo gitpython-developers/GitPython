@@ -26,6 +26,14 @@ from .log import RefLog
 __all__ = ["SymbolicReference"]
 
 
+def _git_dir(repo, path):
+    """ Find the git dir that's appropriate for the path"""
+    name = "%s" % (path,)
+    if name in ['HEAD', 'ORIG_HEAD', 'FETCH_HEAD', 'index', 'logs']:
+        return repo.git_dir
+    return repo.common_dir
+
+
 class SymbolicReference(object):
 
     """Represents a special case of a reference such that this reference is symbolic.
@@ -71,11 +79,11 @@ class SymbolicReference(object):
 
     @property
     def abspath(self):
-        return join_path_native(self.repo.git_dir, self.path)
+        return join_path_native(_git_dir(self.repo, self.path), self.path)
 
     @classmethod
     def _get_packed_refs_path(cls, repo):
-        return osp.join(repo.git_dir, 'packed-refs')
+        return osp.join(repo.common_dir, 'packed-refs')
 
     @classmethod
     def _iter_packed_refs(cls, repo):
@@ -88,7 +96,15 @@ class SymbolicReference(object):
                     if not line:
                         continue
                     if line.startswith('#'):
-                        if line.startswith('# pack-refs with:') and not line.endswith('peeled'):
+                        # "# pack-refs with: peeled fully-peeled sorted"
+                        # the git source code shows "peeled",
+                        # "fully-peeled" and "sorted" as the keywords
+                        # that can go on this line, as per comments in git file
+                        # refs/packed-backend.c
+                        # I looked at master on 2017-10-11,
+                        # commit 111ef79afe, after tag v2.15.0-rc1
+                        # from repo https://github.com/git/git.git
+                        if line.startswith('# pack-refs with:') and 'peeled' not in line:
                             raise TypeError("PackingType of packed-Refs not understood: %r" % line)
                         # END abort if we do not understand the packing scheme
                         continue
@@ -122,13 +138,14 @@ class SymbolicReference(object):
         # END recursive dereferencing
 
     @classmethod
-    def _get_ref_info(cls, repo, ref_path):
+    def _get_ref_info_helper(cls, repo, ref_path):
         """Return: (str(sha), str(target_ref_path)) if available, the sha the file at
         rela_path points to, or None. target_ref_path is the reference we
         point to, or None"""
         tokens = None
+        repodir = _git_dir(repo, ref_path)
         try:
-            with open(osp.join(repo.git_dir, ref_path), 'rt') as fp:
+            with open(osp.join(repodir, ref_path), 'rt') as fp:
                 value = fp.read().rstrip()
             # Don't only split on spaces, but on whitespace, which allows to parse lines like
             # 60b64ef992065e2600bfef6187a97f92398a9144                branch 'master' of git-server:/path/to/repo
@@ -158,6 +175,13 @@ class SymbolicReference(object):
             return (tokens[0], None)
 
         raise ValueError("Failed to parse reference information from %r" % ref_path)
+
+    @classmethod
+    def _get_ref_info(cls, repo, ref_path):
+        """Return: (str(sha), str(target_ref_path)) if available, the sha the file at
+        rela_path points to, or None. target_ref_path is the reference we
+        point to, or None"""
+        return cls._get_ref_info_helper(repo, ref_path)
 
     def _get_object(self):
         """
@@ -412,7 +436,7 @@ class SymbolicReference(object):
             or just "myreference", hence 'refs/' is implied.
             Alternatively the symbolic reference to be deleted"""
         full_ref_path = cls.to_full_path(path)
-        abs_path = osp.join(repo.git_dir, full_ref_path)
+        abs_path = osp.join(repo.common_dir, full_ref_path)
         if osp.exists(abs_path):
             os.remove(abs_path)
         else:
@@ -463,8 +487,9 @@ class SymbolicReference(object):
         a proper symbolic reference. Otherwise it will be resolved to the
         corresponding object and a detached symbolic reference will be created
         instead"""
+        git_dir = _git_dir(repo, path)
         full_ref_path = cls.to_full_path(path)
-        abs_ref_path = osp.join(repo.git_dir, full_ref_path)
+        abs_ref_path = osp.join(git_dir, full_ref_path)
 
         # figure out target data
         target = reference
@@ -538,8 +563,8 @@ class SymbolicReference(object):
         if self.path == new_path:
             return self
 
-        new_abs_path = osp.join(self.repo.git_dir, new_path)
-        cur_abs_path = osp.join(self.repo.git_dir, self.path)
+        new_abs_path = osp.join(_git_dir(self.repo, new_path), new_path)
+        cur_abs_path = osp.join(_git_dir(self.repo, self.path), self.path)
         if osp.isfile(new_abs_path):
             if not force:
                 # if they point to the same file, its not an error
@@ -573,8 +598,8 @@ class SymbolicReference(object):
 
         # walk loose refs
         # Currently we do not follow links
-        for root, dirs, files in os.walk(join_path_native(repo.git_dir, common_path)):
-            if 'refs/' not in root:  # skip non-refs subfolders
+        for root, dirs, files in os.walk(join_path_native(repo.common_dir, common_path)):
+            if 'refs' not in root.split(os.sep):  # skip non-refs subfolders
                 refs_id = [d for d in dirs if d == 'refs']
                 if refs_id:
                     dirs[0:] = ['refs']
@@ -584,7 +609,7 @@ class SymbolicReference(object):
                 if f == 'packed-refs':
                     continue
                 abs_path = to_native_path_linux(join_path(root, f))
-                rela_paths.add(abs_path.replace(to_native_path_linux(repo.git_dir) + '/', ""))
+                rela_paths.add(abs_path.replace(to_native_path_linux(repo.common_dir) + '/', ""))
             # END for each file in root directory
         # END for each directory to walk
 

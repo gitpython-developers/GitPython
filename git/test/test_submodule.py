@@ -10,7 +10,7 @@ except ImportError:
 
 import git
 from git.cmd import Git
-from git.compat import string_types
+from git.compat import string_types, is_win
 from git.exc import (
     InvalidGitRepositoryError,
     RepositoryDirtyError
@@ -423,10 +423,10 @@ class TestSubmodule(TestBase):
         self._do_base_tests(rwrepo)
 
     @skipIf(HIDE_WINDOWS_KNOWN_ERRORS and sys.version_info[:2] == (3, 5), """
-        File "C:\projects\gitpython\git\cmd.py", line 559, in execute
+        File "C:\\projects\\gitpython\\git\\cmd.py", line 559, in execute
         raise GitCommandNotFound(command, err)
         git.exc.GitCommandNotFound: Cmd('git') not found due to: OSError('[WinError 6] The handle is invalid')
-        cmdline: git clone -n --shared -v C:\projects\gitpython\.git Users\appveyor\AppData\Local\Temp\1\tmplyp6kr_rnon_bare_test_root_module""")  # noqa E501
+        cmdline: git clone -n --shared -v C:\\projects\\gitpython\\.git Users\\appveyor\\AppData\\Local\\Temp\\1\\tmplyp6kr_rnon_bare_test_root_module""")  # noqa E501
     @with_rw_repo(k_subm_current, bare=False)
     def test_root_module(self, rwrepo):
         # Can query everything without problems
@@ -663,12 +663,13 @@ class TestSubmodule(TestBase):
                                   url=empty_repo_dir, no_checkout=checkout_mode and True or False)
         # end for each checkout mode
 
-    @skipIf(HIDE_WINDOWS_KNOWN_ERRORS and Git.is_cygwin(),
-            """FIXME: ile "C:\projects\gitpython\git\cmd.py", line 671, in execute
+    @skipIf(HIDE_WINDOWS_KNOWN_ERRORS,
+            """FIXME on cygwin: File "C:\\projects\\gitpython\\git\\cmd.py", line 671, in execute
                 raise GitCommandError(command, status, stderr_value, stdout_value)
             GitCommandError: Cmd('git') failed due to: exit code(128)
               cmdline: git add 1__Xava verbXXten 1_test _myfile 1_test_other_file 1_XXava-----verbXXten
               stderr: 'fatal: pathspec '"1__çava verböten"' did not match any files'
+             FIXME on appveyor: see https://ci.appveyor.com/project/Byron/gitpython/build/1.0.185
                 """)
     @with_rw_directory
     def test_git_submodules_and_add_sm_with_new_commit(self, rwdir):
@@ -698,6 +699,9 @@ class TestSubmodule(TestBase):
 
         parent.index.commit("moved submodules")
 
+        with sm.config_writer() as writer:
+            writer.set_value('user.email', 'example@example.com')
+            writer.set_value('user.name', 'me')
         smm = sm.module()
         fp = osp.join(smm.working_tree_dir, 'empty-file')
         with open(fp, 'w'):
@@ -907,3 +911,13 @@ class TestSubmodule(TestBase):
         parent_repo.submodule_update(to_latest_revision=True, force_reset=True)
         assert sm_mod.commit() == sm_pfb.commit, "Now head should have been reset"
         assert sm_mod.head.ref.name == sm_pfb.name
+
+    @skipIf(not is_win, "Specifically for Windows.")
+    def test_to_relative_path_with_super_at_root_drive(self):
+        class Repo(object):
+            working_tree_dir = 'D:\\'
+        super_repo = Repo()
+        submodule_path = 'D:\\submodule_path'
+        relative_path = Submodule._to_relative_path(super_repo, submodule_path)
+        msg = '_to_relative_path should be "submodule_path" but was "%s"' % relative_path
+        assert relative_path == 'submodule_path', msg
