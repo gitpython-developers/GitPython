@@ -180,7 +180,7 @@ class TestGit(TestBase):
 
         # test a good path refresh
         which_cmd = "where" if is_win else "which"
-        path = os.popen("{0} git".format(which_cmd)).read().strip()
+        path = os.popen("{0} git".format(which_cmd)).read().strip().split('\n')[0]
         refresh(path)
 
     def test_options_are_passed_to_git(self):
