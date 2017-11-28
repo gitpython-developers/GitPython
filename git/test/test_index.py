@@ -54,9 +54,7 @@ from gitdb.base import IStream
 import os.path as osp
 from git.cmd import Git
 
-HOOKS_SHEBANG = \
-    "!C:/Program\ Files/Git/usr/bin/sh.exe\n" if is_win \
-    else "#!/usr/bin/env sh\n"
+HOOKS_SHEBANG = "#!/usr/bin/env sh\n"
 
 
 def _make_hook(git_dir, name, content, make_exec=True):
