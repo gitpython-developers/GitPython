@@ -54,6 +54,23 @@ from gitdb.base import IStream
 import os.path as osp
 from git.cmd import Git
 
+HOOKS_SHEBANG = \
+    "!C:/Program\ Files/Git/usr/bin/sh.exe\n" if is_win \
+    else "#!/usr/bin/env sh\n"
+
+
+def _make_hook(git_dir, name, content, make_exec=True):
+    """A helper to create a hook"""
+    hp = hook_path(name, git_dir)
+    hpd = osp.dirname(hp)
+    if not osp.isdir(hpd):
+        os.mkdir(hpd)
+    with open(hp, "wt") as fp:
+        fp.write(HOOKS_SHEBANG + content)
+    if make_exec:
+        os.chmod(hp, 0o744)
+    return hp
+
 
 class TestIndex(TestBase):
 
@@ -834,25 +851,21 @@ class TestIndex(TestBase):
     @with_rw_repo('HEAD', bare=True)
     def test_pre_commit_hook_success(self, rw_repo):
         index = rw_repo.index
-        hp = hook_path('pre-commit', index.repo.git_dir)
-        hpd = osp.dirname(hp)
-        if not osp.isdir(hpd):
-            os.mkdir(hpd)
-        with open(hp, "wt") as fp:
-            fp.write("#!/usr/bin/env sh\nexit 0")
-        os.chmod(hp, 0o744)
+        _make_hook(
+            index.repo.git_dir,
+            'pre-commit',
+            "exit 0"
+        )
         index.commit("This should not fail")
 
     @with_rw_repo('HEAD', bare=True)
     def test_pre_commit_hook_fail(self, rw_repo):
         index = rw_repo.index
-        hp = hook_path('pre-commit', index.repo.git_dir)
-        hpd = osp.dirname(hp)
-        if not osp.isdir(hpd):
-            os.mkdir(hpd)
-        with open(hp, "wt") as fp:
-            fp.write("#!/usr/bin/env sh\necho stdout; echo stderr 1>&2; exit 1")
-        os.chmod(hp, 0o744)
+        hp = _make_hook(
+            index.repo.git_dir,
+            'pre-commit',
+            "echo stdout; echo stderr 1>&2; exit 1"
+        )
         try:
             index.commit("This should fail")
         except HookExecutionError as err:
@@ -869,35 +882,29 @@ class TestIndex(TestBase):
                 self.assertEqual(err.stderr, "\n  stderr: 'stderr\n'")
                 assert str(err)
         else:
-            raise AssertionError("Should have cought a HookExecutionError")
+            raise AssertionError("Should have caught a HookExecutionError")
 
     @with_rw_repo('HEAD', bare=True)
     def test_commit_msg_hook_success(self, rw_repo):
-        index = rw_repo.index
         commit_message = u"commit default head by Frèderic Çaufl€"
         from_hook_message = u"from commit-msg"
-
-        hp = hook_path('commit-msg', index.repo.git_dir)
-        hpd = osp.dirname(hp)
-        if not osp.isdir(hpd):
-            os.mkdir(hpd)
-        with open(hp, "wt") as fp:
-            fp.write('#!/usr/bin/env sh\necho -n " {0}" >> "$1"'.format(from_hook_message))
-        os.chmod(hp, 0o744)
-
+        index = rw_repo.index
+        _make_hook(
+            index.repo.git_dir,
+            'commit-msg',
+            'echo -n " {0}" >> "$1"'.format(from_hook_message)
+        )
         new_commit = index.commit(commit_message)
         self.assertEqual(new_commit.message, u"{0} {1}".format(commit_message, from_hook_message))
 
     @with_rw_repo('HEAD', bare=True)
     def test_commit_msg_hook_fail(self, rw_repo):
         index = rw_repo.index
-        hp = hook_path('commit-msg', index.repo.git_dir)
-        hpd = osp.dirname(hp)
-        if not osp.isdir(hpd):
-            os.mkdir(hpd)
-        with open(hp, "wt") as fp:
-            fp.write("#!/usr/bin/env sh\necho stdout; echo stderr 1>&2; exit 1")
-        os.chmod(hp, 0o744)
+        hp = _make_hook(
+            index.repo.git_dir,
+            'commit-msg',
+            "echo stdout; echo stderr 1>&2; exit 1"
+        )
         try:
             index.commit("This should fail")
         except HookExecutionError as err:
