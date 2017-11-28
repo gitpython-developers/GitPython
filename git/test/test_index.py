@@ -57,7 +57,7 @@ from git.cmd import Git
 HOOKS_SHEBANG = "#!/usr/bin/env sh\n"
 
 
-@skipIf(is_win, "TODO: fix hooks execution on Windows: #703")
+@skipIf(HIDE_WINDOWS_KNOWN_ERRORS, "TODO: fix hooks execution on Windows: #703")
 def _make_hook(git_dir, name, content, make_exec=True):
     """A helper to create a hook"""
     hp = hook_path(name, git_dir)
