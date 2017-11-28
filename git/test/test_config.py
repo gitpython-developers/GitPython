@@ -90,7 +90,7 @@ class TestBase(TestCase):
         # END for each filename
 
     def test_includes_order(self):
-        with GitConfigParser(map(fixture_path, ("git_config", "git_config_global"))) as r_config:
+        with GitConfigParser(list(map(fixture_path, ("git_config", "git_config_global")))) as r_config:
             r_config.read()                 # enforce reading
             # Simple inclusions, again checking them taking precedence
             assert r_config.get_value('sec', 'var0') == "value0_included"
