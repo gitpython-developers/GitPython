@@ -190,7 +190,7 @@ def assure_directory_exists(path, is_file=False):
 def _get_exe_extensions():
     try:
         winprog_exts = tuple(p.upper() for p in os.environ['PATHEXT'].split(os.pathsep))
-    except:
+    except Exception:
         winprog_exts = ('.BAT', 'COM', '.EXE')
 
     return winprog_exts
@@ -200,7 +200,7 @@ def py_where(program, path=None):
     # From: http://stackoverflow.com/a/377028/548792
     try:
         winprog_exts = tuple(p.upper() for p in os.environ['PATHEXT'].split(os.pathsep))
-    except:
+    except Exception:
         winprog_exts = is_win and ('.BAT', 'COM', '.EXE') or ()
 
     def is_exec(fpath):
@@ -347,7 +347,7 @@ def expand_path(p, expand_vars=True):
         if expand_vars:
             p = osp.expandvars(p)
         return osp.normpath(osp.abspath(p))
-    except:
+    except Exception:
         return None
 
 #} END utilities
