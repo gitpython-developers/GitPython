@@ -19,7 +19,7 @@ If it is not in your `PATH`, you can help GitPython find it by setting
 the `GIT_PYTHON_GIT_EXECUTABLE=<path/to/git>` environment variable.
 
 * Git (1.7.x or newer)
-* Python 2.7 to 3.5, while python 2.6 is supported on a *best-effort basis*.
+* Python 2.7 to 3.6, while python 2.6 is supported on a *best-effort basis*.
 
 The list of dependencies are listed in `./requirements.txt` and `./test-requirements.txt`.
 The installer takes care of installing them for you.
@@ -125,7 +125,7 @@ Please have a look at the [contributions file][contributing].
 
 ### How to verify a release
 
-Please only use releases from `pypi` as you can verify the respective source 
+Please only use releases from `pypi` as you can verify the respective source
 tarballs.
 
 This script shows how to verify the tarball was indeed created by the authors of
