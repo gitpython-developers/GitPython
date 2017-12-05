@@ -217,49 +217,49 @@ class TestUtils(TestBase):
     @ddt.data(('name', ''), ('name', 'prefix_'))
     def test_iterable_list(self, case):
         name, prefix = case
-        l = IterableList(name, prefix)
+        iter_list = IterableList(name, prefix)
 
         name1 = "one"
         name2 = "two"
         m1 = TestIterableMember(prefix + name1)
         m2 = TestIterableMember(prefix + name2)
 
-        l.extend((m1, m2))
+        iter_list.extend((m1, m2))
 
-        self.assertEqual(len(l), 2)
+        self.assertEqual(len(iter_list), 2)
 
         # contains works with name and identity
-        self.assertIn(name1, l)
-        self.assertIn(name2, l)
-        self.assertIn(m2, l)
-        self.assertIn(m2, l)
-        self.assertNotIn('invalid', l)
+        self.assertIn(name1, iter_list)
+        self.assertIn(name2, iter_list)
+        self.assertIn(m2, iter_list)
+        self.assertIn(m2, iter_list)
+        self.assertNotIn('invalid', iter_list)
 
         # with string index
-        self.assertIs(l[name1], m1)
-        self.assertIs(l[name2], m2)
+        self.assertIs(iter_list[name1], m1)
+        self.assertIs(iter_list[name2], m2)
 
         # with int index
-        self.assertIs(l[0], m1)
-        self.assertIs(l[1], m2)
+        self.assertIs(iter_list[0], m1)
+        self.assertIs(iter_list[1], m2)
 
         # with getattr
-        self.assertIs(l.one, m1)
-        self.assertIs(l.two, m2)
+        self.assertIs(iter_list.one, m1)
+        self.assertIs(iter_list.two, m2)
 
         # test exceptions
-        self.failUnlessRaises(AttributeError, getattr, l, 'something')
-        self.failUnlessRaises(IndexError, l.__getitem__, 'something')
+        self.failUnlessRaises(AttributeError, getattr, iter_list, 'something')
+        self.failUnlessRaises(IndexError, iter_list.__getitem__, 'something')
 
         # delete by name and index
-        self.failUnlessRaises(IndexError, l.__delitem__, 'something')
-        del(l[name2])
-        self.assertEqual(len(l), 1)
-        self.assertNotIn(name2, l)
-        self.assertIn(name1, l)
-        del(l[0])
-        self.assertNotIn(name1, l)
-        self.assertEqual(len(l), 0)
+        self.failUnlessRaises(IndexError, iter_list.__delitem__, 'something')
+        del(iter_list[name2])
+        self.assertEqual(len(iter_list), 1)
+        self.assertNotIn(name2, iter_list)
+        self.assertIn(name1, iter_list)
+        del(iter_list[0])
+        self.assertNotIn(name1, iter_list)
+        self.assertEqual(len(iter_list), 0)
 
-        self.failUnlessRaises(IndexError, l.__delitem__, 0)
-        self.failUnlessRaises(IndexError, l.__delitem__, 'something')
+        self.failUnlessRaises(IndexError, iter_list.__delitem__, 0)
+        self.failUnlessRaises(IndexError, iter_list.__delitem__, 'something')

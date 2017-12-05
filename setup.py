@@ -101,6 +101,7 @@ setup(
     package_data={'git.test': ['fixtures/*']},
     package_dir={'git': 'git'},
     license="BSD License",
+    python_requires='>=2.6, !=3.0.*, !=3.1.*, !=3.2.*',
     requires=['gitdb2 (>=2.0.0)'],
     install_requires=install_requires,
     test_requirements=test_requires + install_requires,
