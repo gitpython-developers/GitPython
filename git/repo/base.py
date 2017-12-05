@@ -8,7 +8,6 @@ from collections import namedtuple
 import logging
 import os
 import re
-import sys
 import warnings
 
 from git.cmd import (
@@ -39,11 +38,6 @@ import gitdb
 
 
 log = logging.getLogger(__name__)
-
-DefaultDBType = GitCmdObjectDB
-if sys.version_info[:2] < (2, 5):     # python 2.4 compatibility
-    DefaultDBType = GitCmdObjectDB
-# END handle python 2.4
 
 BlameEntry = namedtuple('BlameEntry', ['commit', 'linenos', 'orig_path', 'orig_linenos'])
 
@@ -88,7 +82,7 @@ class Repo(object):
     # Subclasses may easily bring in their own custom types by placing a constructor or type here
     GitCommandWrapperType = Git
 
-    def __init__(self, path=None, odbt=DefaultDBType, search_parent_directories=False, expand_vars=True):
+    def __init__(self, path=None, odbt=GitCmdObjectDB, search_parent_directories=False, expand_vars=True):
         """Create a new Repo instance
 
         :param path:
@@ -869,7 +863,7 @@ class Repo(object):
         return blames
 
     @classmethod
-    def init(cls, path=None, mkdir=True, odbt=DefaultDBType, expand_vars=True, **kwargs):
+    def init(cls, path=None, mkdir=True, odbt=GitCmdObjectDB, expand_vars=True, **kwargs):
         """Initialize a git repository at the given path if specified
 
         :param path:
