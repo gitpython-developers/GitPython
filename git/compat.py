@@ -309,5 +309,5 @@ def register_surrogateescape():
 
 try:
     b"100644 \x9f\0aaa".decode(defenc, "surrogateescape")
-except:
+except Exception:
     register_surrogateescape()

@@ -313,16 +313,16 @@ class Diff(object):
             h %= self.b_blob.path
 
         msg = ''
-        l = None    # temp line
+        temp_line = None
         ll = 0      # line length
         for b, n in zip((self.a_blob, self.b_blob), ('lhs', 'rhs')):
             if b:
-                l = "\n%s: %o | %s" % (n, b.mode, b.hexsha)
+                temp_line = "\n%s: %o | %s" % (n, b.mode, b.hexsha)
             else:
-                l = "\n%s: None" % n
+                temp_line = "\n%s: None" % n
             # END if blob is not None
-            ll = max(len(l), ll)
-            msg += l
+            ll = max(len(temp_line), ll)
+            msg += temp_line
         # END for each blob
 
         # add headline
