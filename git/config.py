@@ -302,9 +302,15 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
         while True:
             # we assume to read binary !
             line = fp.readline().decode(defenc)
+
+            # Remove UTF-8 ByteOrderMark (BOM)
+            if lineno == 0:
+                line = line.replace('\ufeff', '')
             if not line:
                 break
-            lineno = lineno + 1
+
+            lineno += 1
+
             # comment or blank line?
             if line.strip() == '' or self.re_comment.match(line):
                 continue
