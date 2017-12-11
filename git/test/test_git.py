@@ -37,6 +37,8 @@ try:
 except ImportError:
     import mock
 
+from git.compat import is_win
+
 
 class TestGit(TestBase):
 
@@ -177,7 +179,8 @@ class TestGit(TestBase):
         self.assertRaises(GitCommandNotFound, refresh, "yada")
 
         # test a good path refresh
-        path = os.popen("which git").read().strip()
+        which_cmd = "where" if is_win else "which"
+        path = os.popen("{0} git".format(which_cmd)).read().strip().split('\n')[0]
         refresh(path)
 
     def test_options_are_passed_to_git(self):
