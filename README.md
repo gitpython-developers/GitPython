@@ -117,7 +117,7 @@ Please have a look at the [contributions file][contributing].
 * Update/verify the version in the `VERSION` file
 * Update/verify that the changelog has been updated
 * Commit everything
-* Run `git tag <version>` to tag the version in Git
+* Run `git tag -s <version>` to tag the version in Git
 * Run `make release`
 * Finally, set the upcoming version in the `VERSION` file, usually be
   incrementing the patch level, and possibly by appending `-dev`. Probably you

@@ -2,7 +2,16 @@
 Changelog
 =========
 
-2.1.6 - Bugfixes
+2.1.8 - bugfixes
+====================================
+
+See the following for (most) details:
+https://github.com/gitpython-developers/GitPython/milestone/23?closed=1
+
+or run have a look at the difference between tags v2.1.7 and v2.1.8:
+https://github.com/gitpython-developers/GitPython/compare/2.1.7...2.1.8
+
+2.1.6 - bugfixes
 ====================================
 
 * support for worktrees
