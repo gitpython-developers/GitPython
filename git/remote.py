@@ -542,9 +542,11 @@ class Remote(LazyMixin, Iterable):
                         if '  Push  URL:' in line:
                             yield line.split(': ')[-1]
                 except GitCommandError as ex:
-                    if any([msg in str(ex) for msg in ['correct access rights','cannot run ssh']]):
-                        # If ssh is not setup to access this repository, see issue 694                                                                                            
-                        result = Git().execute(['git','config','--get','remote.%s.url' % self.name])
+                    if any([msg in str(ex) for msg in ['correct access rights', 'cannot run ssh']]):
+                        # If ssh is not setup to access this repository, see issue 694
+                        result = Git().execute(
+                            ['git', 'config', '--get', 'remote.%s.url' % self.name]
+                        )
                         yield result
                     else:
                         raise ex

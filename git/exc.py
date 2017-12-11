@@ -48,7 +48,7 @@ class CommandError(UnicodeMixin, GitError):
             else:
                 try:
                     status = u'exit code(%s)' % int(status)
-                except:
+                except (ValueError, TypeError):
                     s = safe_decode(str(status))
                     status = u"'%s'" % s if isinstance(status, string_types) else s
 

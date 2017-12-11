@@ -46,7 +46,7 @@ install:
         echo %PATH%
         uname -a
         git --version
-        where git git-daemon python pip pip3 pip34
+        where git git-daemon python pip pip3 pip34 sh
         python --version
         python -c "import struct; print(struct.calcsize('P') * 8)"
 
@@ -91,3 +91,11 @@ test_script:
 
 on_success:
     - IF "%PYTHON_VERSION%" == "3.5" IF NOT "%IS_CYGWIN%" == "yes" (codecov)
+
+# Enable this to be able to login to the build worker. You can use the
+# `remmina` program in Ubuntu, use the login information that the line below
+# prints into the log.
+#on_finish:
+#    - |
+#        echo "Running on_finish to establish connection back to the instance"
+#    - ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))

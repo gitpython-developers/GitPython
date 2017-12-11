@@ -139,7 +139,7 @@ def with_rw_repo(working_tree_ref, bare=False):
             try:
                 try:
                     return func(self, rw_repo)
-                except:
+                except:  # noqa E722
                     log.info("Keeping repo after failure: %s", repo_dir)
                     repo_dir = None
                     raise
@@ -227,7 +227,7 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
     Same as with_rw_repo, but also provides a writable remote repository from which the
     rw_repo has been forked as well as a handle for a git-daemon that may be started to
     run the remote_repo.
-    The remote repository was cloned as bare repository from the rorepo, whereas
+    The remote repository was cloned as bare repository from the ro repo, whereas
     the rw repo has a working tree and was cloned from the remote repository.
 
     remote_repo has two remotes: origin and daemon_origin. One uses a local url,
@@ -296,7 +296,7 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
                     with cwd(rw_repo.working_dir):
                         try:
                             return func(self, rw_repo, rw_daemon_repo)
-                        except:
+                        except:  # noqa E722
                             log.info("Keeping repos after failure: \n  rw_repo_dir: %s \n  rw_daemon_repo_dir: %s",
                                      rw_repo_dir, rw_daemon_repo_dir)
                             rw_repo_dir = rw_daemon_repo_dir = None
