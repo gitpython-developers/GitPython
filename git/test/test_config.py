@@ -15,6 +15,7 @@ from git.config import cp
 from git.test.lib import (
     TestCase,
     fixture_path,
+    SkipTest,
 )
 from git.test.lib import with_rw_directory
 
@@ -87,6 +88,21 @@ class TestBase(TestCase):
                 assert r_config.has_option(sname, oname)
                 assert r_config.get(sname, oname) == val
         # END for each filename
+
+    def test_includes_order(self):
+        with GitConfigParser(list(map(fixture_path, ("git_config", "git_config_global")))) as r_config:
+            r_config.read()                 # enforce reading
+            # Simple inclusions, again checking them taking precedence
+            assert r_config.get_value('sec', 'var0') == "value0_included"
+            # This one should take the git_config_global value since included
+            # values must be considered as soon as they get them
+            assert r_config.get_value('diff', 'tool') == "meld"
+            try:
+                assert r_config.get_value('sec', 'var1') == "value1_main"
+            except AssertionError:
+                raise SkipTest(
+                    'Known failure -- included values are not in effect right away'
+                )
 
     @with_rw_directory
     def test_lock_reentry(self, rw_dir):
