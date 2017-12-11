@@ -424,7 +424,8 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
                     if include_path in seen or not os.access(include_path, os.R_OK):
                         continue
                     seen.add(include_path)
-                    files_to_read.append(include_path)
+                    # insert included file to the top to be considered first
+                    files_to_read.insert(0, include_path)
                     num_read_include_files += 1
                 # each include path in configuration file
             # end handle includes
