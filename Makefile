@@ -13,6 +13,6 @@ release: clean
 	make force_release
 
 force_release: clean
-	git push --tags
+	git push --tags origin master
 	python3 setup.py sdist bdist_wheel
 	twine upload -s -i byronimo@gmail.com dist/*
