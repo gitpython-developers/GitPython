@@ -132,19 +132,18 @@ This script shows how to verify the tarball was indeed created by the authors of
 this project:
 
 ```
-curl https://pypi.python.org/packages/7e/13/2a556eb97dcf498c915e5e04bb82bf74e07bb8b7337ca2be49bfd9fb6313/GitPython-2.1.5-py2.py3-none-any.whl\#md5\=d3ecb26cb22753f4414f75f721f6f626z  > gitpython.whl
-curl https://pypi.python.org/packages/7e/13/2a556eb97dcf498c915e5e04bb82bf74e07bb8b7337ca2be49bfd9fb6313/GitPython-2.1.5-py2.py3-none-any.whl.asc > gitpython-signature.asc
+curl https://pypi.python.org/packages/5b/38/0433c06feebbfbb51d644129dbe334031c33d55af0524326266f847ae907/GitPython-2.1.8-py2.py3-none-any.whl#md5=6b73ae86ee2dbab6da8652b2d875013a  > gitpython.whl
+curl https://pypi.python.org/packages/5b/38/0433c06feebbfbb51d644129dbe334031c33d55af0524326266f847ae907/GitPython-2.1.8-py2.py3-none-any.whl.asc > gitpython-signature.asc
 gpg --verify gitpython-signature.asc gitpython.whl
 ```
 
 which outputs
 
 ```
-gpg: Signature made Sat Jun 10 20:22:49 2017 CEST using RSA key ID 3B07188F
-gpg: Good signature from "Sebastian Thiel (In Rust I trust!) <byronimo@gmail.com>" [unknown]
-gpg: WARNING: This key is not certified with a trusted signature!
-gpg:          There is no indication that the signature belongs to the owner.
-Primary key fingerprint: 4477 ADC5 977D 7C60 D2A7  E378 9FEE 1C6A 3B07 188F
+gpg: Signature made Mon Dec 11 17:34:17 2017 CET
+gpg:                using RSA key C3BC52BD76E2C23BAC6EC06A665F99FA9D99966C
+gpg:                issuer "byronimo@gmail.com"
+gpg: Good signature from "Sebastian Thiel (I do trust in Rust!) <byronimo@gmail.com>" [ultimate]
 ```
 
 You can verify that the keyid indeed matches the release-signature key provided in this
@@ -164,16 +163,10 @@ If you would like to trust it permanently, you can import and sign it:
 
 ```
 gpg --import ./release-verification-key.asc
-gpg --edit-key 9FEE1C6A3B07188F
+gpg --edit-key 88710E60
+
 > sign
 > save
-```
-
-Afterwards verifying the tarball will yield the following:
-```
-$ gpg --verify gitpython-signature.asc gitpython.whl
-gpg: Signature made Sat Jun 10 20:22:49 2017 CEST using RSA key ID 3B07188F
-gpg: Good signature from "Sebastian Thiel (In Rust I trust!) <byronimo@gmail.com>" [ultimate]
 ```
 
 ### LICENSE
