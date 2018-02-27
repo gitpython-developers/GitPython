@@ -251,11 +251,11 @@ class Diff(object):
 
     __slots__ = ("a_blob", "b_blob", "a_mode", "b_mode", "a_rawpath", "b_rawpath",
                  "new_file", "deleted_file", "raw_rename_from", "raw_rename_to",
-                 "diff", "change_type")
+                 "diff", "change_type", "score")
 
     def __init__(self, repo, a_rawpath, b_rawpath, a_blob_id, b_blob_id, a_mode,
                  b_mode, new_file, deleted_file, raw_rename_from,
-                 raw_rename_to, diff, change_type):
+                 raw_rename_to, diff, change_type, score):
 
         self.a_mode = a_mode
         self.b_mode = b_mode
@@ -291,6 +291,7 @@ class Diff(object):
 
         self.diff = diff
         self.change_type = change_type
+        self.score = score
 
     def __eq__(self, other):
         for name in self.__slots__:
@@ -445,7 +446,7 @@ class Diff(object):
                               new_file, deleted_file,
                               rename_from,
                               rename_to,
-                              None, None))
+                              None, None, None))
 
             previous_header = header
         # end for each header we parse
@@ -470,7 +471,13 @@ class Diff(object):
                 return
 
             meta, _, path = line[1:].partition('\t')
-            old_mode, new_mode, a_blob_id, b_blob_id, change_type = meta.split(None, 4)
+            old_mode, new_mode, a_blob_id, b_blob_id, _change_type = meta.split(None, 4)
+            # Change type can be R100
+            # R: status letter
+            # 100: score (in case of copy and rename)
+            change_type = _change_type[0]
+            score_str = ''.join(_change_type[1:])
+            score = int(score_str) if score_str.isdigit() else None
             path = path.strip()
             a_path = path.encode(defenc)
             b_path = path.encode(defenc)
@@ -487,7 +494,7 @@ class Diff(object):
             elif change_type == 'A':
                 a_blob_id = None
                 new_file = True
-            elif change_type[0] == 'R':     # parses RXXX, where XXX is a confidence value
+            elif change_type == 'R':
                 a_path, b_path = path.split('\t', 1)
                 a_path = a_path.encode(defenc)
                 b_path = b_path.encode(defenc)
@@ -495,7 +502,8 @@ class Diff(object):
             # END add/remove handling
 
             diff = Diff(repo, a_path, b_path, a_blob_id, b_blob_id, old_mode, new_mode,
-                        new_file, deleted_file, rename_from, rename_to, '', change_type)
+                        new_file, deleted_file, rename_from, rename_to, '',
+                        change_type, score)
             index.append(diff)
 
         handle_process_output(proc, handle_diff_line, None, finalize_process, decode_streams=False)

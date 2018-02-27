@@ -108,6 +108,8 @@ class TestDiff(TestBase):
         self.assertIsNotNone(diff.renamed)
         self.assertEqual(diff.rename_from, 'this')
         self.assertEqual(diff.rename_to, 'that')
+        self.assertEqual(diff.change_type, 'R')
+        self.assertEqual(diff.score, 100)
         self.assertEqual(len(list(diffs.iter_change_type('R'))), 1)
 
     def test_diff_of_modified_files_not_added_to_the_index(self):
