@@ -485,15 +485,15 @@ class Repo(object):
     def iter_commits(self, rev=None, paths='', **kwargs):
         """A list of Commit objects representing the history of a given ref/commit
 
-        :parm rev:
+        :param rev:
             revision specifier, see git-rev-parse for viable options.
             If None, the active branch will be used.
 
-        :parm paths:
+        :param paths:
             is an optional path or a list of paths to limit the returned commits to
             Commits that do not contain that path or the paths will not be returned.
 
-        :parm kwargs:
+        :param kwargs:
             Arguments to be passed to git-rev-list - common ones are
             max_count and skip
 
@@ -585,7 +585,7 @@ class Repo(object):
     def _set_alternates(self, alts):
         """Sets the alternates
 
-        :parm alts:
+        :param alts:
             is the array of string paths representing the alternates at which
             git should look for objects, i.e. /home/user/repo/.git/objects
 
@@ -695,7 +695,7 @@ class Repo(object):
         Unlike .blame(), this does not return the actual file's contents, only
         a stream of BlameEntry tuples.
 
-        :parm rev: revision specifier, see git-rev-parse for viable options.
+        :param rev: revision specifier, see git-rev-parse for viable options.
         :return: lazy iterator of BlameEntry tuples, where the commit
                  indicates the commit to blame for the line, and range
                  indicates a span of line numbers in the resulting file.
@@ -757,7 +757,7 @@ class Repo(object):
     def blame(self, rev, file, incremental=False, **kwargs):
         """The blame information for the given file at the given revision.
 
-        :parm rev: revision specifier, see git-rev-parse for viable options.
+        :param rev: revision specifier, see git-rev-parse for viable options.
         :return:
             list: [git.Commit, list: [<line>]]
             A list of tuples associating a Commit object with a list of lines that
@@ -871,7 +871,7 @@ class Repo(object):
             or None in which case the repository will be created in the current
             working directory
 
-        :parm mkdir:
+        :param mkdir:
             if specified will create the repository directory if it doesn't
             already exists. Creates the directory with a mode=0755.
             Only effective if a path is explicitly given
@@ -886,7 +886,7 @@ class Repo(object):
             can lead to information disclosure, allowing attackers to
             access the contents of environment variables
 
-        :parm kwargs:
+        :param kwargs:
             keyword arguments serving as additional options to the git-init command
 
         :return: ``git.Repo`` (the newly created repo)"""
@@ -984,10 +984,10 @@ class Repo(object):
     def archive(self, ostream, treeish=None, prefix=None, **kwargs):
         """Archive the tree at the given revision.
 
-        :parm ostream: file compatible stream object to which the archive will be written as bytes
-        :parm treeish: is the treeish name/id, defaults to active branch
-        :parm prefix: is the optional prefix to prepend to each filename in the archive
-        :parm kwargs: Additional arguments passed to git-archive
+        :param ostream: file compatible stream object to which the archive will be written as bytes
+        :param treeish: is the treeish name/id, defaults to active branch
+        :param prefix: is the optional prefix to prepend to each filename in the archive
+        :param kwargs: Additional arguments passed to git-archive
 
             * Use the 'format' argument to define the kind of format. Use
               specialized ostreams to write any format supported by python.
