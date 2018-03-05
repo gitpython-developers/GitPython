@@ -802,11 +802,11 @@ class BlockingLockFile(LockFile):
     def __init__(self, file_path, check_interval_s=0.3, max_block_time_s=MAXSIZE):
         """Configure the instance
 
-        :parm check_interval_s:
+        :param check_interval_s:
             Period of time to sleep until the lock is checked the next time.
             By default, it waits a nearly unlimited time
 
-        :parm max_block_time_s: Maximum amount of seconds we may lock"""
+        :param max_block_time_s: Maximum amount of seconds we may lock"""
         super(BlockingLockFile, self).__init__(file_path)
         self._check_interval = check_interval_s
         self._max_block_time = max_block_time_s
