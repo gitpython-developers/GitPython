@@ -8,7 +8,6 @@ from io import BytesIO
 import os
 from stat import S_ISLNK
 import subprocess
-import sys
 import tempfile
 
 from git.compat import (
@@ -18,7 +17,6 @@ from git.compat import (
     force_bytes,
     defenc,
     mviter,
-    is_win
 )
 from git.exc import (
     GitCommandError,
@@ -128,13 +126,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
                     lfd.rollback()
             # END exception handling
 
-            # Here it comes: on windows in python 2.5, memory maps aren't closed properly
-            # Hence we are in trouble if we try to delete a file that is memory mapped,
-            # which happens during read-tree.
-            # In this case, we will just read the memory in directly.
-            # Its insanely bad ... I am disappointed !
-            allow_mmap = (is_win or sys.version_info[1] > 5)
-            stream = file_contents_ro(fd, stream=True, allow_mmap=allow_mmap)
+            stream = file_contents_ro(fd, stream=True, allow_mmap=True)
 
             try:
                 self._deserialize(stream)
