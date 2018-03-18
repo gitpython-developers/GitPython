@@ -28,11 +28,11 @@ class TestObjDBPerformance(TestBigRepoR):
             # GET TREES
             # walk all trees of all commits
             st = time()
-            blobs_per_commit = list()
+            blobs_per_commit = []
             nt = 0
             for commit in commits:
                 tree = commit.tree
-                blobs = list()
+                blobs = []
                 for item in tree.traverse():
                     nt += 1
                     if item.type == 'blob':

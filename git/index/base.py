@@ -121,7 +121,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
                 ok = True
             except OSError:
                 # in new repositories, there may be no index, which means we are empty
-                self.entries = dict()
+                self.entries = {}
                 return
             finally:
                 if not ok:
@@ -324,7 +324,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         if len(treeish) == 0 or len(treeish) > 3:
             raise ValueError("Please specify between 1 and 3 treeish, got %i" % len(treeish))
 
-        arg_list = list()
+        arg_list = []
         # ignore that working tree and index possibly are out of date
         if len(treeish) > 1:
             # drop unmerged entries when reading our index and merging
@@ -471,9 +471,9 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             are at stage 3 will not have a stage 3 entry.
         """
         is_unmerged_blob = lambda t: t[0] != 0
-        path_map = dict()
+        path_map = {}
         for stage, blob in self.iter_blobs(is_unmerged_blob):
-            path_map.setdefault(blob.path, list()).append((stage, blob))
+            path_map.setdefault(blob.path, []).append((stage, blob))
         # END for each unmerged blob
         for l in mviter(path_map):
             l.sort()
@@ -576,8 +576,8 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
     def _preprocess_add_items(self, items):
         """ Split the items into two lists of path strings and BaseEntries. """
-        paths = list()
-        entries = list()
+        paths = []
+        entries = []
 
         for item in items:
             if isinstance(item, string_types):
@@ -610,7 +610,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
     @unbare_repo
     @git_working_dir
     def _entries_for_paths(self, paths, path_rewriter, fprogress, entries):
-        entries_added = list()
+        entries_added = []
         if path_rewriter:
             for path in paths:
                 if osp.isabs(path):
@@ -742,7 +742,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         # automatically
         # paths can be git-added, for everything else we use git-update-index
         paths, entries = self._preprocess_add_items(items)
-        entries_added = list()
+        entries_added = []
         # This code needs a working tree, therefore we try not to run it unless required.
         # That way, we are OK on a bare repository as well.
         # If there are no paths, the rewriter has nothing to do either
@@ -809,7 +809,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
     def _items_to_rela_paths(self, items):
         """Returns a list of repo-relative paths from the given items which
         may be absolute or relative paths, entries or blobs"""
-        paths = list()
+        paths = []
         for item in items:
             if isinstance(item, (BaseIndexEntry, (Blob, Submodule))):
                 paths.append(self._to_relative_path(item.path))
@@ -858,7 +858,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             been removed effectively.
             This is interesting to know in case you have provided a directory or
             globs. Paths are relative to the repository. """
-        args = list()
+        args = []
         if not working_tree:
             args.append("--cached")
         args.append("--")
@@ -897,7 +897,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
         :raise ValueError: If only one item was given
             GitCommandError: If git could not handle your request"""
-        args = list()
+        args = []
         if skip_errors:
             args.append('-k')
 
@@ -910,7 +910,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
         # first execute rename in dryrun so the command tells us what it actually does
         # ( for later output )
-        out = list()
+        out = []
         mvlines = self.repo.git.mv(args, paths, **kwargs).splitlines()
 
         # parse result - first 0:n/2 lines are 'checking ', the remaining ones
@@ -1041,9 +1041,9 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             # line contents:
             stderr = stderr.decode(defenc)
             # git-checkout-index: this already exists
-            failed_files = list()
-            failed_reasons = list()
-            unknown_lines = list()
+            failed_files = []
+            failed_reasons = []
+            unknown_lines = []
             endings = (' already exists', ' is not in the cache', ' does not exist at stage', ' is unmerged')
             for line in stderr.splitlines():
                 if not line.startswith("git checkout-index: ") and not line.startswith("git-checkout-index: "):
@@ -1106,7 +1106,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             proc = self.repo.git.checkout_index(args, **kwargs)
             # FIXME: Reading from GIL!
             make_exc = lambda: GitCommandError(("git-checkout-index",) + tuple(args), 128, proc.stderr.read())
-            checked_out_files = list()
+            checked_out_files = []
 
             for path in paths:
                 co_path = to_native_path_linux(self._to_relative_path(path))

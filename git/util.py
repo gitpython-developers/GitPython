@@ -369,7 +369,7 @@ class RemoteProgress(object):
     re_op_relative = re.compile(r"(remote: )?([\w\s]+):\s+(\d+)% \((\d+)/(\d+)\)(.*)")
 
     def __init__(self):
-        self._seen_ops = list()
+        self._seen_ops = []
         self._cur_line = None
         self.error_lines = []
         self.other_lines = []
@@ -392,7 +392,7 @@ class RemoteProgress(object):
             return []
 
         sub_lines = line.split('\r')
-        failed_lines = list()
+        failed_lines = []
         for sline in sub_lines:
             # find escape characters and cut them away - regex will not work with
             # them as they are non-ascii. As git might expect a tty, it will send them
@@ -670,7 +670,7 @@ class Stats(object):
         """Create a Stat object from output retrieved by git-diff.
 
         :return: git.Stat"""
-        hsh = {'total': {'insertions': 0, 'deletions': 0, 'lines': 0, 'files': 0}, 'files': dict()}
+        hsh = {'total': {'insertions': 0, 'deletions': 0, 'lines': 0, 'files': 0}, 'files': {}}
         for line in text.splitlines():
             (raw_insertions, raw_deletions, filename) = line.split("\t")
             insertions = raw_insertions != '-' and int(raw_insertions) or 0
@@ -917,7 +917,7 @@ class Iterable(object):
 
     """Defines an interface for iterable items which is to assure a uniform
     way to retrieve and iterate items within the git repository"""
-    __slots__ = tuple()
+    __slots__ = ()
     _id_attribute_ = "attribute that most suitably identifies your instance"
 
     @classmethod

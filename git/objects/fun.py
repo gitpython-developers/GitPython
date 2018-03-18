@@ -50,7 +50,7 @@ def tree_entries_from_data(data):
     space_ord = ord(' ')
     len_data = len(data)
     i = 0
-    out = list()
+    out = []
     while i < len_data:
         mode = 0
 
@@ -132,18 +132,18 @@ def traverse_trees_recursive(odb, tree_shas, path_prefix):
     :param path_prefix: a prefix to be added to the returned paths on this level,
         set it '' for the first iteration
     :note: The ordering of the returned items will be partially lost"""
-    trees_data = list()
+    trees_data = []
     nt = len(tree_shas)
     for tree_sha in tree_shas:
         if tree_sha is None:
-            data = list()
+            data = []
         else:
             data = tree_entries_from_data(odb.stream(tree_sha).read())
         # END handle muted trees
         trees_data.append(data)
     # END for each sha to get data for
 
-    out = list()
+    out = []
     out_append = out.append
 
     # find all matching entries and recursively process them together if the match
@@ -193,7 +193,7 @@ def traverse_tree_recursive(odb, tree_sha, path_prefix):
         * [1] mode as int
         * [2] path relative to the repository
     :param path_prefix: prefix to prepend to the front of all returned paths"""
-    entries = list()
+    entries = []
     data = tree_entries_from_data(odb.stream(tree_sha).read())
 
     # unpacking/packing is faster than accessing individual items

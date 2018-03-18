@@ -45,7 +45,7 @@ class sdist(_sdist):
 
 
 def _stamp_version(filename):
-    found, out = False, list()
+    found, out = False, []
     try:
         with open(filename, 'r') as f:
             for line in f:

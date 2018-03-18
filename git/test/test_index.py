@@ -97,7 +97,7 @@ class TestIndex(TestBase):
 
     def _reset_progress(self):
         # maps paths to the count of calls
-        self._fprogress_map = dict()
+        self._fprogress_map = {}
 
     def _assert_entries(self, entries):
         for entry in entries:
@@ -141,7 +141,7 @@ class TestIndex(TestBase):
         if isinstance(tree, str):
             tree = self.rorepo.commit(tree).tree
 
-        blist = list()
+        blist = []
         for blob in tree.traverse(predicate=lambda e, d: e.type == "blob", branch_first=False):
             assert (blob.path, 0) in index.entries
             blist.append(blob)
@@ -527,7 +527,7 @@ class TestIndex(TestBase):
 
         # same index, no parents
         commit_message = "index without parents"
-        commit_no_parents = index.commit(commit_message, parent_commits=list(), head=True)
+        commit_no_parents = index.commit(commit_message, parent_commits=[], head=True)
         self.assertEqual(commit_no_parents.message, commit_message)
         self.assertEqual(len(commit_no_parents.parents), 0)
         self.assertEqual(cur_head.commit, commit_no_parents)

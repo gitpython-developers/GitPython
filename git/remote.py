@@ -663,7 +663,7 @@ class Remote(LazyMixin, Iterable):
         # lines which are no progress are fetch info lines
         # this also waits for the command to finish
         # Skip some progress lines that don't provide relevant information
-        fetch_info_lines = list()
+        fetch_info_lines = []
         # Basically we want all fetch info lines which appear to be in regular form, and thus have a
         # command character. Everything else we ignore,
         cmds = set(FetchInfo._flag_map.keys())

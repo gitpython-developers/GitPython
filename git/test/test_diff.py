@@ -217,7 +217,7 @@ class TestDiff(TestBase):
 
     def test_diff_interface(self):
         # test a few variations of the main diff routine
-        assertion_map = dict()
+        assertion_map = {}
         for i, commit in enumerate(self.rorepo.iter_commits('0.1.6', max_count=2)):
             diff_item = commit
             if i % 2 == 0:

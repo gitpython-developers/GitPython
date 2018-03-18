@@ -32,7 +32,7 @@ class RefLogEntry(tuple):
 
     """Named tuple allowing easy access to the revlog data fields"""
     _re_hexsha_only = re.compile('^[0-9A-Fa-f]{40}$')
-    __slots__ = tuple()
+    __slots__ = ()
 
     def __repr__(self):
         """Representation of ourselves in git reflog format"""

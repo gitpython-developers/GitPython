@@ -61,7 +61,7 @@ class TestTree(TestBase):
     def test_traverse(self):
         root = self.rorepo.tree('0.1.6')
         num_recursive = 0
-        all_items = list()
+        all_items = []
         for obj in root.traverse():
             if "/" in obj.path:
                 num_recursive += 1

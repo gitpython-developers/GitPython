@@ -45,7 +45,7 @@ class TestRefs(TestBase):
         TagReference(self.rorepo, "refs/invalid/tag", check_path=False)
 
     def test_tag_base(self):
-        tag_object_refs = list()
+        tag_object_refs = []
         for tag in self.rorepo.tags:
             assert "refs/tags" in tag.path
             assert tag.name

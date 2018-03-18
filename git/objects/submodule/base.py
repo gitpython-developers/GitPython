@@ -60,7 +60,7 @@ class UpdateProgress(RemoteProgress):
     CLONE, FETCH, UPDWKTREE = [1 << x for x in range(RemoteProgress._num_op_codes, RemoteProgress._num_op_codes + 3)]
     _num_op_codes = RemoteProgress._num_op_codes + 3
 
-    __slots__ = tuple()
+    __slots__ = ()
 
 
 BEGIN = UpdateProgress.BEGIN
@@ -139,7 +139,7 @@ class Submodule(IndexObject, Iterable, Traversable):
         try:
             return type(self).list_items(item.module())
         except InvalidGitRepositoryError:
-            return list()
+            return []
         # END handle intermediate items
 
     @classmethod

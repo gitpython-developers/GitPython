@@ -20,7 +20,7 @@ class Blob(base.IndexObject):
     file_mode = 0o100644
     link_mode = 0o120000
 
-    __slots__ = tuple()
+    __slots__ = ()
 
     @property
     def mime_type(self):

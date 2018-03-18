@@ -22,7 +22,7 @@ class RootUpdateProgress(UpdateProgress):
         1 << x for x in range(UpdateProgress._num_op_codes, UpdateProgress._num_op_codes + 4)]
     _num_op_codes = UpdateProgress._num_op_codes + 4
 
-    __slots__ = tuple()
+    __slots__ = ()
 
 
 BEGIN = RootUpdateProgress.BEGIN
@@ -38,7 +38,7 @@ class RootModule(Submodule):
     """A (virtual) Root of all submodules in the given repository. It can be used
     to more easily traverse all submodules of the master repository"""
 
-    __slots__ = tuple()
+    __slots__ = ()
 
     k_root_name = '__ROOT__'
 

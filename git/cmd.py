@@ -485,10 +485,10 @@ class Git(LazyMixin):
 
         def readlines(self, size=-1):
             if self._nbr == self._size:
-                return list()
+                return []
 
             # leave all additional logic to our readline method, we just check the size
-            out = list()
+            out = []
             nbr = 0
             while True:
                 line = self.readline()
@@ -894,7 +894,7 @@ class Git(LazyMixin):
 
     def transform_kwargs(self, split_single_char_options=True, **kwargs):
         """Transforms Python style kwargs into git command line options."""
-        args = list()
+        args = []
         kwargs = OrderedDict(sorted(kwargs.items(), key=lambda x: x[0]))
         for k, v in kwargs.items():
             if isinstance(v, (list, tuple)):
@@ -913,7 +913,7 @@ class Git(LazyMixin):
                 return [arg_list.encode(defenc)]
             return [str(arg_list)]
 
-        outlist = list()
+        outlist = []
         for arg in arg_list:
             if isinstance(arg_list, (list, tuple)):
                 outlist.extend(cls.__unpack_args(arg))
