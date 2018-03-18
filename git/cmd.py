@@ -125,7 +125,7 @@ def dashify(string):
 
 
 def slots_to_dict(self, exclude=()):
-    return dict((s, getattr(self, s)) for s in self.__slots__ if s not in exclude)
+    return {s: getattr(self, s) for s in self.__slots__ if s not in exclude}
 
 
 def dict_to_slots_and__excluded_are_none(self, d, excluded=()):
@@ -972,8 +972,8 @@ class Git(LazyMixin):
         :return: Same as ``execute``"""
         # Handle optional arguments prior to calling transform_kwargs
         # otherwise these'll end up in args, which is bad.
-        exec_kwargs = dict((k, v) for k, v in kwargs.items() if k in execute_kwargs)
-        opts_kwargs = dict((k, v) for k, v in kwargs.items() if k not in execute_kwargs)
+        exec_kwargs = {k: v for k, v in kwargs.items() if k in execute_kwargs}
+        opts_kwargs = {k: v for k, v in kwargs.items() if k not in execute_kwargs}
 
         insert_after_this_arg = opts_kwargs.pop('insert_kwargs_after', None)
 
