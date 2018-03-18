@@ -91,7 +91,7 @@ class TestGit(TestBase):
 
         # order is undefined
         res = self.git.transform_kwargs(**{'s': True, 't': True})
-        self.assertEqual(set(['-s', '-t']), set(res))
+        self.assertEqual({'-s', '-t'}, set(res))
 
     def test_it_executes_git_to_shell_and_returns_result(self):
         assert_match(r'^git version [\d\.]{2}.*$', self.git.execute(["git", "version"]))

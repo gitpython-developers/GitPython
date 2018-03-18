@@ -515,7 +515,7 @@ class TestRepo(TestBase):
         # this is only a preliminary test, more testing done in test_index
         self.assertEqual(self.rorepo, self.rorepo)
         self.assertFalse(self.rorepo != self.rorepo)
-        self.assertEqual(len(set((self.rorepo, self.rorepo))), 1)
+        self.assertEqual(len({self.rorepo, self.rorepo}), 1)
 
     @with_rw_directory
     def test_tilde_and_env_vars_in_repo_path(self, rw_dir):

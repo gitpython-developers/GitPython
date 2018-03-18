@@ -44,10 +44,10 @@ from .util import (
 )
 
 
-execute_kwargs = set(('istream', 'with_extended_output',
-                      'with_exceptions', 'as_process', 'stdout_as_string',
-                      'output_stream', 'with_stdout', 'kill_after_timeout',
-                      'universal_newlines', 'shell', 'env'))
+execute_kwargs = {'istream', 'with_extended_output', 'with_exceptions',
+                  'as_process', 'stdout_as_string', 'output_stream',
+                  'with_stdout', 'kill_after_timeout', 'universal_newlines',
+                  'shell', 'env'}
 
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())

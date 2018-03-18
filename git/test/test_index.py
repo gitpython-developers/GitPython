@@ -226,7 +226,7 @@ class TestIndex(TestBase):
     def test_index_merge_tree(self, rw_repo):
         # A bit out of place, but we need a different repo for this:
         self.assertNotEqual(self.rorepo, rw_repo)
-        self.assertEqual(len(set((self.rorepo, self.rorepo, rw_repo, rw_repo))), 2)
+        self.assertEqual(len({self.rorepo, self.rorepo, rw_repo, rw_repo}), 2)
 
         # SINGLE TREE MERGE
         # current index is at the (virtual) cur_commit
