@@ -79,7 +79,7 @@ class TestTree(TestBase):
         # only choose trees
         trees_only = lambda i, d: i.type == "tree"
         trees = list(root.traverse(predicate=trees_only))
-        assert len(trees) == len(list(i for i in root.traverse() if trees_only(i, 0)))
+        assert len(trees) == len([i for i in root.traverse() if trees_only(i, 0)])
 
         # test prune
         lib_folder = lambda t, d: t.path == "lib"

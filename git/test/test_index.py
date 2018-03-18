@@ -127,7 +127,7 @@ class TestIndex(TestBase):
         # test stage
         index_merge = IndexFile(self.rorepo, fixture_path("index_merge"))
         self.assertEqual(len(index_merge.entries), 106)
-        assert len(list(e for e in index_merge.entries.values() if e.stage != 0))
+        assert len([e for e in index_merge.entries.values() if e.stage != 0])
 
         # write the data - it must match the original
         tmpfile = tempfile.mktemp()
@@ -190,7 +190,7 @@ class TestIndex(TestBase):
 
         # merge three trees - here we have a merge conflict
         three_way_index = IndexFile.from_tree(rw_repo, common_ancestor_sha, cur_sha, other_sha)
-        assert len(list(e for e in three_way_index.entries.values() if e.stage != 0))
+        assert len([e for e in three_way_index.entries.values() if e.stage != 0])
 
         # ITERATE BLOBS
         merge_required = lambda t: t[0] != 0
