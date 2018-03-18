@@ -88,7 +88,7 @@ class TestTree(TestBase):
 
         # trees and blobs
         assert len(set(trees) | set(root.trees)) == len(trees)
-        assert len(set(b for b in root if isinstance(b, Blob)) | set(root.blobs)) == len(root.blobs)
+        assert len({b for b in root if isinstance(b, Blob)} | set(root.blobs)) == len(root.blobs)
         subitem = trees[0][0]
         assert "/" in subitem.path
         assert subitem.name == osp.basename(subitem.path)

@@ -211,7 +211,7 @@ class TestFun(TestBase):
     def _assert_tree_entries(self, entries, num_trees):
         for entry in entries:
             assert len(entry) == num_trees
-            paths = set(e[2] for e in entry if e)
+            paths = {e[2] for e in entry if e}
 
             # only one path per set of entries
             assert len(paths) == 1

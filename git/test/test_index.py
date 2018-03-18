@@ -147,8 +147,8 @@ class TestIndex(TestBase):
             blist.append(blob)
         # END for each blob in tree
         if len(blist) != len(index.entries):
-            iset = set(k[0] for k in index.entries.keys())
-            bset = set(b.path for b in blist)
+            iset = {k[0] for k in index.entries.keys()}
+            bset = {b.path for b in blist}
             raise AssertionError("CMP Failed: Missing entries in index: %s, missing in tree: %s" %
                                  (bset - iset, iset - bset))
         # END assertion message
