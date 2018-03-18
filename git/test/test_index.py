@@ -882,10 +882,10 @@ class TestIndex(TestBase):
         _make_hook(
             index.repo.git_dir,
             'commit-msg',
-            'echo -n " {0}" >> "$1"'.format(from_hook_message)
+            'echo -n " {}" >> "$1"'.format(from_hook_message)
         )
         new_commit = index.commit(commit_message)
-        self.assertEqual(new_commit.message, u"{0} {1}".format(commit_message, from_hook_message))
+        self.assertEqual(new_commit.message, u"{} {}".format(commit_message, from_hook_message))
 
     @with_rw_repo('HEAD', bare=True)
     def test_commit_msg_hook_fail(self, rw_repo):
