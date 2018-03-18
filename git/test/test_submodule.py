@@ -264,7 +264,7 @@ class TestSubmodule(TestBase):
             self.failUnlessRaises(ValueError, csm.remove, module=False, configuration=False)
 
             # module() is supposed to point to gitdb, which has a child-submodule whose URL is still pointing
-            # to github. To save time, we will change it to
+            # to GitHub. To save time, we will change it to
             csm.set_parent_commit(csm.repo.head.commit)
             with csm.config_writer() as cw:
                 cw.set_value('url', self._small_repo_url())

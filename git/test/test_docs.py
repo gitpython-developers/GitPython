@@ -173,7 +173,7 @@ class Tutorials(TestBase):
 
         # [14-test_init_repo_object]
         # create a new submodule and check it out on the spot, setup to track master branch of `bare_repo`
-        # As our GitPython repository has submodules already that point to github, make sure we don't
+        # As our GitPython repository has submodules already that point to GitHub, make sure we don't
         # interact with them
         for sm in cloned_repo.submodules:
             assert not sm.remove().exists()                   # after removal, the sm doesn't exist anymore

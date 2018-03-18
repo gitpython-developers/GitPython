@@ -161,13 +161,13 @@ Please note that due to breaking changes, we have to increase the major version.
   with large repositories.
 * CRITICAL: fixed incorrect `Commit` object serialization when authored or commit date had timezones which were not
   divisiblej by 3600 seconds. This would happen if the timezone was something like `+0530` for instance.
-* A list of all additional fixes can be found `on github <https://github.com/gitpython-developers/GitPython/issues?q=milestone%3A%22v1.0.2+-+Fixes%22+is%3Aclosed>`_
+* A list of all additional fixes can be found `on GitHub <https://github.com/gitpython-developers/GitPython/issues?q=milestone%3A%22v1.0.2+-+Fixes%22+is%3Aclosed>`_
 * CRITICAL: `Tree.cache` was removed without replacement. It is technically impossible to change individual trees and expect their serialization results to be consistent with what *git* expects. Instead, use the `IndexFile` facilities to adjust the content of the staging area, and write it out to the respective tree objects using `IndexFile.write_tree()` instead.
 
 1.0.1 - Fixes
 =============
 
-* A list of all issues can be found `on github <https://github.com/gitpython-developers/GitPython/issues?q=milestone%3A%22v1.0.1+-+Fixes%22+is%3Aclosed>`_
+* A list of all issues can be found `on GitHub <https://github.com/gitpython-developers/GitPython/issues?q=milestone%3A%22v1.0.1+-+Fixes%22+is%3Aclosed>`_
 
 1.0.0 - Notes
 =============
@@ -191,7 +191,7 @@ It follows the `semantic version scheme <http://semver.org>`_, and thus will not
 
   - Those who support **GUI on windows** will now have to set `git.Git.USE_SHELL = True` to get the previous behaviour.
 
-* A list of all issues can be found `on github <https://github.com/gitpython-developers/GitPython/issues?q=milestone%3A%22v0.3.7+-+Fixes%22+is%3Aclosed>`_
+* A list of all issues can be found `on GitHub <https://github.com/gitpython-developers/GitPython/issues?q=milestone%3A%22v0.3.7+-+Fixes%22+is%3Aclosed>`_
 
 
 0.3.6 - Features
@@ -207,11 +207,11 @@ It follows the `semantic version scheme <http://semver.org>`_, and thus will not
   * Repo.working_tree_dir now returns None if it is bare. Previously it raised AssertionError.
   * IndexFile.add() previously raised AssertionError when paths where used with bare repository, now it raises InvalidGitRepositoryError
 
-* Added `Repo.merge_base()` implementation. See the `respective issue on github <https://github.com/gitpython-developers/GitPython/issues/169>`_
+* Added `Repo.merge_base()` implementation. See the `respective issue on GitHub <https://github.com/gitpython-developers/GitPython/issues/169>`_
 * `[include]` sections in git configuration files are now respected
 * Added `GitConfigParser.rename_section()`
 * Added `Submodule.rename()`
-* A list of all issues can be found `on github <https://github.com/gitpython-developers/GitPython/issues?q=milestone%3A%22v0.3.6+-+Features%22+>`_
+* A list of all issues can be found `on GitHub <https://github.com/gitpython-developers/GitPython/issues?q=milestone%3A%22v0.3.6+-+Features%22+>`_
 
 0.3.5 - Bugfixes
 ================
