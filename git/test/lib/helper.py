@@ -15,6 +15,7 @@ import sys
 import tempfile
 import textwrap
 import time
+import unittest
 
 from git.compat import string_types, is_win
 from git.util import rmtree, cwd
@@ -22,11 +23,6 @@ import gitdb
 
 import os.path as osp
 
-
-if sys.version_info[0:2] == (2, 6):
-    import unittest2 as unittest
-else:
-    import unittest
 
 TestCase = unittest.TestCase
 SkipTest = unittest.SkipTest
@@ -348,7 +344,6 @@ class TestBase(TestCase):
       of the project history ( to assure tests don't fail for others ).
     """
 
-    # On py26, unittest2 has assertRaisesRegex
     # On py3, unittest has assertRaisesRegex
     # On py27, we use unittest, which names it differently:
     if sys.version_info[0:2] == (2, 7):

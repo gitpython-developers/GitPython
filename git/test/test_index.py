@@ -11,12 +11,8 @@ from stat import (
     S_ISLNK,
     ST_MODE
 )
-import sys
 import tempfile
-try:
-    from unittest import skipIf
-except ImportError:
-    from unittest2 import skipIf
+from unittest import skipIf
 
 from git import (
     IndexFile,
@@ -168,9 +164,7 @@ class TestIndex(TestBase):
         except Exception as ex:
             msg_py3 = "required argument is not an integer"
             msg_py2 = "cannot convert argument to integer"
-            msg_py26 = "unsupported operand type(s) for &: 'str' and 'long'"
-            assert msg_py2 in str(ex) or msg_py3 in str(ex) or \
-                msg_py26 in str(ex), str(ex)
+            assert msg_py2 in str(ex) or msg_py3 in str(ex)
 
         ## 2nd time should not fail due to stray lock file
         try:
@@ -180,9 +174,6 @@ class TestIndex(TestBase):
 
     @with_rw_repo('0.1.6')
     def test_index_file_from_tree(self, rw_repo):
-        if sys.version_info < (2, 7):
-            ## Skipped, not `assertRaisesRegexp` in py2.6
-            return
         common_ancestor_sha = "5117c9c8a4d3af19a9958677e45cda9269de1541"
         cur_sha = "4b43ca7ff72d5f535134241e7c797ddc9c7a3573"
         other_sha = "39f85c4358b7346fee22169da9cad93901ea9eb9"

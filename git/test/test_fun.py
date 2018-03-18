@@ -2,11 +2,7 @@ from io import BytesIO
 from stat import S_IFDIR, S_IFREG, S_IFLNK
 from os import stat
 import os.path as osp
-
-try:
-    from unittest import skipIf, SkipTest
-except ImportError:
-    from unittest2 import skipIf, SkipTest
+from unittest import skipIf, SkipTest
 
 from git import Git
 from git.compat import PY3

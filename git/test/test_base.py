@@ -7,10 +7,7 @@
 import os
 import sys
 import tempfile
-try:
-    from unittest import SkipTest, skipIf
-except ImportError:
-    from unittest2 import SkipTest, skipIf
+from unittest import SkipTest, skipIf
 
 from git import (
     Blob,

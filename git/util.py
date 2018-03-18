@@ -14,10 +14,7 @@ import re
 import shutil
 import stat
 import time
-try:
-    from unittest import SkipTest
-except ImportError:
-    from unittest2 import SkipTest
+from unittest import SkipTest
 
 from gitdb.util import (# NOQA @IgnorePep8
     make_sha,

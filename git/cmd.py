@@ -17,6 +17,7 @@ from subprocess import (
 import subprocess
 import sys
 import threading
+from collections import OrderedDict
 from textwrap import dedent
 
 from git.compat import (
@@ -31,7 +32,6 @@ from git.compat import (
     is_win,
 )
 from git.exc import CommandError
-from git.odict import OrderedDict
 from git.util import is_cygwin_git, cygpath, expand_path
 
 from .exc import (
@@ -143,8 +143,7 @@ CREATE_NO_WINDOW = 0x08000000
 ## CREATE_NEW_PROCESS_GROUP is needed to allow killing it afterwards,
 # see https://docs.python.org/3/library/subprocess.html#subprocess.Popen.send_signal
 PROC_CREATIONFLAGS = (CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP
-                      if is_win and sys.version_info >= (2, 7)
-                      else 0)
+                      if is_win else 0)
 
 
 class Git(LazyMixin):

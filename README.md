@@ -19,7 +19,7 @@ If it is not in your `PATH`, you can help GitPython find it by setting
 the `GIT_PYTHON_GIT_EXECUTABLE=<path/to/git>` environment variable.
 
 * Git (1.7.x or newer)
-* Python 2.7 to 3.6, while python 2.6 is supported on a *best-effort basis*.
+* Python 2.7 to 3.6.
 
 The list of dependencies are listed in `./requirements.txt` and `./test-requirements.txt`.
 The installer takes care of installing them for you.
@@ -67,10 +67,6 @@ separate process which can be dropped periodically.
 For *Windows*, we do regularly test it on [Appveyor CI](https://www.appveyor.com/)
 but not all test-cases pass - you may help improve them by exploring
 [Issue #525](https://github.com/gitpython-developers/GitPython/issues/525).
-
-#### Python 2.6
-
-Python 2.6 is supported on best-effort basis; which means that it is likely to deteriorate over time.
 
 ### RUNNING TESTS
 

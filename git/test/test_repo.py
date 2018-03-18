@@ -9,12 +9,8 @@ from io import BytesIO
 import itertools
 import os
 import pickle
-import sys
 import tempfile
-try:
-    from unittest import skipIf, SkipTest
-except ImportError:
-    from unittest2 import skipIf, SkipTest
+from unittest import skipIf, SkipTest
 
 try:
     import pathlib
@@ -364,9 +360,6 @@ class TestRepo(TestBase):
 
     @patch.object(Git, '_call_process')
     def test_should_display_blame_information(self, git):
-        if sys.version_info < (2, 7):
-            ## Skipped, not `assertRaisesRegexp` in py2.6
-            return
         git.return_value = fixture('blame')
         b = self.rorepo.blame('master', 'lib/git.py')
         assert_equal(13, len(b))
@@ -792,8 +785,6 @@ class TestRepo(TestBase):
 
     def test_repo_odbtype(self):
         target_type = GitCmdObjectDB
-        if sys.version_info[:2] < (2, 5):
-            target_type = GitCmdObjectDB
         self.assertIsInstance(self.rorepo.odb, target_type)
 
     def test_submodules(self):
