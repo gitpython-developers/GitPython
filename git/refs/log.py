@@ -32,7 +32,7 @@ class RefLogEntry(tuple):
 
     """Named tuple allowing easy access to the revlog data fields"""
     _re_hexsha_only = re.compile('^[0-9A-Fa-f]{40}$')
-    __slots__ = tuple()
+    __slots__ = ()
 
     def __repr__(self):
         """Representation of ourselves in git reflog format"""
@@ -48,13 +48,13 @@ class RefLogEntry(tuple):
         """:return: a string suitable to be placed in a reflog file"""
         act = self.actor
         time = self.time
-        return u"{0} {1} {2} <{3}> {4!s} {5}\t{6}\n".format(self.oldhexsha,
-                                                            self.newhexsha,
-                                                            act.name,
-                                                            act.email,
-                                                            time[0],
-                                                            altz_to_utctz_str(time[1]),
-                                                            self.message)
+        return u"{} {} {} <{}> {!s} {}\t{}\n".format(self.oldhexsha,
+                                                     self.newhexsha,
+                                                     act.name,
+                                                     act.email,
+                                                     time[0],
+                                                     altz_to_utctz_str(time[1]),
+                                                     self.message)
 
     @property
     def oldhexsha(self):

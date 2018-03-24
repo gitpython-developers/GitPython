@@ -11,12 +11,8 @@ from stat import (
     S_ISLNK,
     ST_MODE
 )
-import sys
 import tempfile
-try:
-    from unittest import skipIf
-except ImportError:
-    from unittest2 import skipIf
+from unittest import skipIf
 
 from git import (
     IndexFile,
@@ -101,7 +97,7 @@ class TestIndex(TestBase):
 
     def _reset_progress(self):
         # maps paths to the count of calls
-        self._fprogress_map = dict()
+        self._fprogress_map = {}
 
     def _assert_entries(self, entries):
         for entry in entries:
@@ -131,7 +127,7 @@ class TestIndex(TestBase):
         # test stage
         index_merge = IndexFile(self.rorepo, fixture_path("index_merge"))
         self.assertEqual(len(index_merge.entries), 106)
-        assert len(list(e for e in index_merge.entries.values() if e.stage != 0))
+        assert len([e for e in index_merge.entries.values() if e.stage != 0])
 
         # write the data - it must match the original
         tmpfile = tempfile.mktemp()
@@ -145,14 +141,14 @@ class TestIndex(TestBase):
         if isinstance(tree, str):
             tree = self.rorepo.commit(tree).tree
 
-        blist = list()
+        blist = []
         for blob in tree.traverse(predicate=lambda e, d: e.type == "blob", branch_first=False):
             assert (blob.path, 0) in index.entries
             blist.append(blob)
         # END for each blob in tree
         if len(blist) != len(index.entries):
-            iset = set(k[0] for k in index.entries.keys())
-            bset = set(b.path for b in blist)
+            iset = {k[0] for k in index.entries.keys()}
+            bset = {b.path for b in blist}
             raise AssertionError("CMP Failed: Missing entries in index: %s, missing in tree: %s" %
                                  (bset - iset, iset - bset))
         # END assertion message
@@ -168,9 +164,7 @@ class TestIndex(TestBase):
         except Exception as ex:
             msg_py3 = "required argument is not an integer"
             msg_py2 = "cannot convert argument to integer"
-            msg_py26 = "unsupported operand type(s) for &: 'str' and 'long'"
-            assert msg_py2 in str(ex) or msg_py3 in str(ex) or \
-                msg_py26 in str(ex), str(ex)
+            assert msg_py2 in str(ex) or msg_py3 in str(ex)
 
         ## 2nd time should not fail due to stray lock file
         try:
@@ -180,9 +174,6 @@ class TestIndex(TestBase):
 
     @with_rw_repo('0.1.6')
     def test_index_file_from_tree(self, rw_repo):
-        if sys.version_info < (2, 7):
-            ## Skipped, not `assertRaisesRegexp` in py2.6
-            return
         common_ancestor_sha = "5117c9c8a4d3af19a9958677e45cda9269de1541"
         cur_sha = "4b43ca7ff72d5f535134241e7c797ddc9c7a3573"
         other_sha = "39f85c4358b7346fee22169da9cad93901ea9eb9"
@@ -199,7 +190,7 @@ class TestIndex(TestBase):
 
         # merge three trees - here we have a merge conflict
         three_way_index = IndexFile.from_tree(rw_repo, common_ancestor_sha, cur_sha, other_sha)
-        assert len(list(e for e in three_way_index.entries.values() if e.stage != 0))
+        assert len([e for e in three_way_index.entries.values() if e.stage != 0])
 
         # ITERATE BLOBS
         merge_required = lambda t: t[0] != 0
@@ -235,7 +226,7 @@ class TestIndex(TestBase):
     def test_index_merge_tree(self, rw_repo):
         # A bit out of place, but we need a different repo for this:
         self.assertNotEqual(self.rorepo, rw_repo)
-        self.assertEqual(len(set((self.rorepo, self.rorepo, rw_repo, rw_repo))), 2)
+        self.assertEqual(len({self.rorepo, self.rorepo, rw_repo, rw_repo}), 2)
 
         # SINGLE TREE MERGE
         # current index is at the (virtual) cur_commit
@@ -536,7 +527,7 @@ class TestIndex(TestBase):
 
         # same index, no parents
         commit_message = "index without parents"
-        commit_no_parents = index.commit(commit_message, parent_commits=list(), head=True)
+        commit_no_parents = index.commit(commit_message, parent_commits=[], head=True)
         self.assertEqual(commit_no_parents.message, commit_message)
         self.assertEqual(len(commit_no_parents.parents), 0)
         self.assertEqual(cur_head.commit, commit_no_parents)
@@ -891,10 +882,10 @@ class TestIndex(TestBase):
         _make_hook(
             index.repo.git_dir,
             'commit-msg',
-            'echo -n " {0}" >> "$1"'.format(from_hook_message)
+            'echo -n " {}" >> "$1"'.format(from_hook_message)
         )
         new_commit = index.commit(commit_message)
-        self.assertEqual(new_commit.message, u"{0} {1}".format(commit_message, from_hook_message))
+        self.assertEqual(new_commit.message, u"{} {}".format(commit_message, from_hook_message))
 
     @with_rw_repo('HEAD', bare=True)
     def test_commit_msg_hook_fail(self, rw_repo):

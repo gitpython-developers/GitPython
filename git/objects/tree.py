@@ -189,7 +189,7 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
     def _get_intermediate_items(cls, index_object):
         if index_object.type == "tree":
             return tuple(index_object._iter_convert_to_object(index_object._cache))
-        return tuple()
+        return ()
 
     def _set_cache_(self, attr):
         if attr == "_cache":

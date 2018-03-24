@@ -6,10 +6,7 @@
 
 from io import BytesIO
 import sys
-try:
-    from unittest import skipIf
-except ImportError:
-    from unittest2 import skipIf
+from unittest import skipIf
 
 from git import (
     Tree,
@@ -64,7 +61,7 @@ class TestTree(TestBase):
     def test_traverse(self):
         root = self.rorepo.tree('0.1.6')
         num_recursive = 0
-        all_items = list()
+        all_items = []
         for obj in root.traverse():
             if "/" in obj.path:
                 num_recursive += 1
@@ -82,7 +79,7 @@ class TestTree(TestBase):
         # only choose trees
         trees_only = lambda i, d: i.type == "tree"
         trees = list(root.traverse(predicate=trees_only))
-        assert len(trees) == len(list(i for i in root.traverse() if trees_only(i, 0)))
+        assert len(trees) == len([i for i in root.traverse() if trees_only(i, 0)])
 
         # test prune
         lib_folder = lambda t, d: t.path == "lib"
@@ -91,7 +88,7 @@ class TestTree(TestBase):
 
         # trees and blobs
         assert len(set(trees) | set(root.trees)) == len(trees)
-        assert len(set(b for b in root if isinstance(b, Blob)) | set(root.blobs)) == len(root.blobs)
+        assert len({b for b in root if isinstance(b, Blob)} | set(root.blobs)) == len(root.blobs)
         subitem = trees[0][0]
         assert "/" in subitem.path
         assert subitem.name == osp.basename(subitem.path)

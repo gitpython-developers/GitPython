@@ -27,7 +27,7 @@ class Reference(SymbolicReference, LazyMixin, Iterable):
 
     """Represents a named reference to any object. Subclasses may apply restrictions though,
     i.e. Heads can only point to commits."""
-    __slots__ = tuple()
+    __slots__ = ()
     _points_to_commits_only = False
     _resolve_ref_on_create = True
     _common_path_default = "refs"

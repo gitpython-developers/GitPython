@@ -12,6 +12,7 @@ import inspect
 import logging
 import os
 import re
+from collections import OrderedDict
 
 from git.compat import (
     string_types,
@@ -21,7 +22,6 @@ from git.compat import (
     with_metaclass,
     PY3
 )
-from git.odict import OrderedDict
 from git.util import LockFile
 
 import os.path as osp

@@ -9,8 +9,6 @@ except ImportError:
 
 from distutils.command.build_py import build_py as _build_py
 from setuptools.command.sdist import sdist as _sdist
-import pkg_resources
-import logging
 import os
 import sys
 from os import path
@@ -47,7 +45,7 @@ class sdist(_sdist):
 
 
 def _stamp_version(filename):
-    found, out = False, list()
+    found, out = False, []
     try:
         with open(filename, 'r') as f:
             for line in f:
@@ -66,26 +64,7 @@ def _stamp_version(filename):
 
 
 install_requires = ['gitdb2 >= 2.0.0']
-extras_require = {
-    ':python_version == "2.6"': ['ordereddict'],
-}
 test_requires = ['ddt>=1.1.1']
-if sys.version_info[:2] < (2, 7):
-    test_requires.append('mock')
-
-try:
-    if 'bdist_wheel' not in sys.argv:
-        for key, value in extras_require.items():
-            if key.startswith(':') and pkg_resources.evaluate_marker(key[1:]):
-                install_requires.extend(value)
-except Exception:
-    logging.getLogger(__name__).exception(
-        'Something went wrong calculating platform specific dependencies, so '
-        "you're getting them all!"
-    )
-    for key, value in extras_require.items():
-        if key.startswith(':'):
-            install_requires.extend(value)
 # end
 
 setup(
@@ -101,7 +80,7 @@ setup(
     package_data={'git.test': ['fixtures/*']},
     package_dir={'git': 'git'},
     license="BSD License",
-    python_requires='>=2.6, !=3.0.*, !=3.1.*, !=3.2.*',
+    python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*',
     requires=['gitdb2 (>=2.0.0)'],
     install_requires=install_requires,
     test_requirements=test_requires + install_requires,
@@ -126,10 +105,8 @@ setup(
         "Operating System :: MacOS :: MacOS X",
         "Programming Language :: Python",
         "Programming Language :: Python :: 2",
-        "Programming Language :: Python :: 2.6",
         "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.3",
         "Programming Language :: Python :: 3.4",
         "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",

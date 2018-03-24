@@ -6,10 +6,7 @@
 
 import random
 import tempfile
-try:
-    from unittest import skipIf
-except ImportError:
-    from unittest2 import skipIf
+from unittest import skipIf
 
 from git import (
     RemoteProgress,
@@ -47,8 +44,8 @@ class TestRemoteProgress(RemoteProgress):
 
     def __init__(self):
         super(TestRemoteProgress, self).__init__()
-        self._seen_lines = list()
-        self._stages_per_op = dict()
+        self._seen_lines = []
+        self._stages_per_op = {}
         self._num_progress_messages = 0
 
     def _parse_progress_line(self, line):

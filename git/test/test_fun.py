@@ -2,11 +2,7 @@ from io import BytesIO
 from stat import S_IFDIR, S_IFREG, S_IFLNK
 from os import stat
 import os.path as osp
-
-try:
-    from unittest import skipIf, SkipTest
-except ImportError:
-    from unittest2 import skipIf, SkipTest
+from unittest import skipIf, SkipTest
 
 from git import Git
 from git.compat import PY3
@@ -215,7 +211,7 @@ class TestFun(TestBase):
     def _assert_tree_entries(self, entries, num_trees):
         for entry in entries:
             assert len(entry) == num_trees
-            paths = set(e[2] for e in entry if e)
+            paths = {e[2] for e in entry if e}
 
             # only one path per set of entries
             assert len(paths) == 1

@@ -316,7 +316,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
                 parent_commits = [repo.head.commit]
             except ValueError:
                 # empty repositories have no head commit
-                parent_commits = list()
+                parent_commits = []
             # END handle parent commits
         else:
             for p in parent_commits:
@@ -450,7 +450,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
         readline = stream.readline
         self.tree = Tree(self.repo, hex_to_bin(readline().split()[1]), Tree.tree_id << 12, '')
 
-        self.parents = list()
+        self.parents = []
         next_line = None
         while True:
             parent_line = readline()

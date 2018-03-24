@@ -187,7 +187,7 @@ def read_cache(stream):
     * content_sha is a 20 byte sha on all cache file contents"""
     version, num_entries = read_header(stream)
     count = 0
-    entries = dict()
+    entries = {}
 
     read = stream.read
     tell = stream.tell
@@ -236,7 +236,7 @@ def write_tree_from_cache(entries, odb, sl, si=0):
     :param sl: slice indicating the range we should process on the entries list
     :return: tuple(binsha, list(tree_entry, ...)) a tuple of a sha and a list of
         tree entries being a tuple of hexsha, mode, name"""
-    tree_items = list()
+    tree_items = []
     tree_items_append = tree_items.append
     ci = sl.start
     end = sl.stop
@@ -295,7 +295,7 @@ def aggressive_tree_merge(odb, tree_shas):
     :param tree_shas: 1, 2 or 3 trees as identified by their binary 20 byte shas
         If 1 or two, the entries will effectively correspond to the last given tree
         If 3 are given, a 3 way merge is performed"""
-    out = list()
+    out = []
     out_append = out.append
 
     # one and two way is the same for us, as we don't have to handle an existing

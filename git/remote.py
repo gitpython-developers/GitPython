@@ -542,7 +542,7 @@ class Remote(LazyMixin, Iterable):
                         if '  Push  URL:' in line:
                             yield line.split(': ')[-1]
                 except GitCommandError as ex:
-                    if any([msg in str(ex) for msg in ['correct access rights', 'cannot run ssh']]):
+                    if any(msg in str(ex) for msg in ['correct access rights', 'cannot run ssh']):
                         # If ssh is not setup to access this repository, see issue 694
                         result = Git().execute(
                             ['git', 'config', '--get', 'remote.%s.url' % self.name]
@@ -663,7 +663,7 @@ class Remote(LazyMixin, Iterable):
         # lines which are no progress are fetch info lines
         # this also waits for the command to finish
         # Skip some progress lines that don't provide relevant information
-        fetch_info_lines = list()
+        fetch_info_lines = []
         # Basically we want all fetch info lines which appear to be in regular form, and thus have a
         # command character. Everything else we ignore,
         cmds = set(FetchInfo._flag_map.keys())

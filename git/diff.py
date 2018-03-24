@@ -61,7 +61,7 @@ class Diffable(object):
     :note:
         Subclasses require a repo member as it is the case for Object instances, for practical
         reasons we do not derive from Object."""
-    __slots__ = tuple()
+    __slots__ = ()
 
     # standin indicating you want to diff against the index
     class Index(object):
@@ -106,7 +106,7 @@ class Diffable(object):
         :note:
             On a bare repository, 'other' needs to be provided as Index or as
             as Tree/Commit, or a git command error will occur"""
-        args = list()
+        args = []
         args.append("--abbrev=40")        # we need full shas
         args.append("--full-index")       # get full index paths, not only filenames
 

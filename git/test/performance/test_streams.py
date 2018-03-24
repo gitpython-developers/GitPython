@@ -69,7 +69,7 @@ class TestObjDBPerformance(TestBigRepoR):
 
             # reading in chunks of 1 MiB
             cs = 512 * 1000
-            chunks = list()
+            chunks = []
             st = time()
             ostream = ldb.stream(binsha)
             while True:

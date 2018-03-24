@@ -20,7 +20,7 @@ class HEAD(SymbolicReference):
     HEAD reference."""
     _HEAD_NAME = 'HEAD'
     _ORIG_HEAD_NAME = 'ORIG_HEAD'
-    __slots__ = tuple()
+    __slots__ = ()
 
     def __init__(self, repo, path=_HEAD_NAME):
         if path != self._HEAD_NAME:

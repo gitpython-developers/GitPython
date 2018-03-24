@@ -519,7 +519,7 @@ class Repo(object):
             raise ValueError("Please specify at least two revs, got only %i" % len(rev))
         # end handle input
 
-        res = list()
+        res = []
         try:
             lines = self.git.merge_base(*rev, **kwargs).splitlines()
         except GitCommandError as err:
@@ -580,7 +580,7 @@ class Repo(object):
                 alts = f.read().decode(defenc)
             return alts.strip().splitlines()
         else:
-            return list()
+            return []
 
     def _set_alternates(self, alts):
         """Sets the alternates
@@ -664,7 +664,7 @@ class Repo(object):
                                **kwargs)
         # Untracked files preffix in porcelain mode
         prefix = "?? "
-        untracked_files = list()
+        untracked_files = []
         for line in proc.stdout:
             line = line.decode(defenc)
             if not line.startswith(prefix):
@@ -704,7 +704,7 @@ class Repo(object):
         should get a continuous range spanning all line numbers in the file.
         """
         data = self.git.blame(rev, '--', file, p=True, incremental=True, stdout_as_string=False, **kwargs)
-        commits = dict()
+        commits = {}
 
         stream = (line for line in data.split(b'\n') if line)
         while True:
@@ -716,7 +716,7 @@ class Repo(object):
             if hexsha not in commits:
                 # Now read the next few lines and build up a dict of properties
                 # for this commit
-                props = dict()
+                props = {}
                 while True:
                     line = next(stream)
                     if line == b'boundary':
@@ -767,8 +767,8 @@ class Repo(object):
             return self.blame_incremental(rev, file, **kwargs)
 
         data = self.git.blame(rev, '--', file, p=True, stdout_as_string=False, **kwargs)
-        commits = dict()
-        blames = list()
+        commits = {}
+        blames = []
         info = None
 
         keepends = True
@@ -1001,7 +1001,7 @@ class Repo(object):
         if prefix and 'prefix' not in kwargs:
             kwargs['prefix'] = prefix
         kwargs['output_stream'] = ostream
-        path = kwargs.pop('path', list())
+        path = kwargs.pop('path', [])
         if not isinstance(path, (tuple, list)):
             path = [path]
         # end assure paths is list

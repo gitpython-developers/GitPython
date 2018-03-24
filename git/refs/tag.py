@@ -17,7 +17,7 @@ class TagReference(Reference):
      if tagref.tag is not None:
         print(tagref.tag.message)"""
 
-    __slots__ = tuple()
+    __slots__ = ()
     _common_path_default = "refs/tags"
 
     @property

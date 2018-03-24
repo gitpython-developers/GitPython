@@ -444,7 +444,7 @@ class SymbolicReference(object):
             pack_file_path = cls._get_packed_refs_path(repo)
             try:
                 with open(pack_file_path, 'rb') as reader:
-                    new_lines = list()
+                    new_lines = []
                     made_change = False
                     dropped_last_line = False
                     for line in reader:
