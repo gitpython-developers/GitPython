@@ -2,11 +2,21 @@
 Changelog
 =========
 
+2.1.9 - Dropping support for Python 2.6
+=======================================
+
+see the following for (most) details:
+https://github.com/gitpython-developers/gitpython/milestone/24?closed=1
+
+or run have a look at the difference between tags v2.1.8 and v2.1.9:
+https://github.com/gitpython-developers/GitPython/compare/2.1.8...2.1.9
+
+
 2.1.8 - bugfixes
 ====================================
 
-See the following for (most) details:
-https://github.com/gitpython-developers/GitPython/milestone/23?closed=1
+see the following for (most) details:
+https://github.com/gitpython-developers/gitpython/milestone/23?closed=1
 
 or run have a look at the difference between tags v2.1.7 and v2.1.8:
 https://github.com/gitpython-developers/GitPython/compare/2.1.7...2.1.8
