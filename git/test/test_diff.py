@@ -266,3 +266,17 @@ class TestDiff(TestBase):
         cp = c.parents[0]
         diff_index = c.diff(cp, ["does/not/exist"])
         self.assertEqual(len(diff_index), 0)
+
+    def test_diff_tree_empty_other(self):
+        initial_commit = self.rorepo.commit('9066712dca21ef35c534e068f2cc4fefdccf1ea3')
+
+        # Test that we can use an empty string as other in a diff.
+        # It should do a diff-tree without the second tree-ish param
+        diff_index = initial_commit.diff('')
+        self.assertEqual(len(diff_index), 16)
+        self.assertEqual(diff_index[0].change_type, 'M')
+        self.assertTrue(diff_index[12].deleted_file)
+        self.assertTrue(diff_index[14].renamed)
+        self.assertEqual(diff_index[14].rename_from, 'test/asserts.py')
+        self.assertEqual(diff_index[14].rename_to, 'test/testlib/asserts.py')
+        self.assertEqual(diff_index[15].change_type, 'A')

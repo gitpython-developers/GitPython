@@ -82,6 +82,7 @@ class Diffable(object):
         :param other:
             Is the item to compare us with.
             If None, we will be compared to the working tree.
+            If empty string, it will be compared to it's parent with diff-tree.
             If Treeish, it will be compared against the respective tree
             If Index ( type ), it will be compared against the index.
             If git.NULL_TREE, it will compare against the empty tree.
@@ -132,7 +133,8 @@ class Diffable(object):
             diff_cmd = self.repo.git.diff_tree
         elif other is not None:
             args.insert(0, '-r')  # recursive diff-tree
-            args.insert(0, other)
+            if other != '':
+                args.insert(0, other)
             diff_cmd = self.repo.git.diff_tree
 
         args.insert(0, self)
