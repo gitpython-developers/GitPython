@@ -81,7 +81,7 @@ class Diffable(object):
 
         :param other:
             Is the item to compare us with.
-            If None, we will be compared to the working tree.
+            If None, it will be compared to the working tree.
             If empty string, it will be compared to it's parent with diff-tree.
             If Treeish, it will be compared against the respective tree
             If Index ( type ), it will be compared against the index.
