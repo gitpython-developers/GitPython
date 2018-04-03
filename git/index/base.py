@@ -561,10 +561,9 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             return path
         if self.repo.bare:
             raise InvalidGitRepositoryError("require non-bare repository")
-        relative_path = path.replace(self.repo.working_tree_dir + os.sep, "")
-        if relative_path == path:
+        if not path.startswith(self.repo.working_tree_dir):
             raise ValueError("Absolute path %r is not in git repository at %r" % (path, self.repo.working_tree_dir))
-        return relative_path
+        return os.path.relpath(path, self.repo.working_tree_dir)
 
     def _preprocess_add_items(self, items):
         """ Split the items into two lists of path strings and BaseEntries. """

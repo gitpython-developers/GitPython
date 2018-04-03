@@ -838,6 +838,21 @@ class TestIndex(TestBase):
         r.index.add([fp])
         r.index.commit('Added [.exe')
 
+    def test__to_relative_path_at_root(self):
+        root = osp.abspath(os.sep)
+
+        class Mocked(object):
+            bare = False
+            git_dir = root
+            working_tree_dir = root
+
+        repo = Mocked()
+        path = os.path.join(root, 'file')
+        index = IndexFile(repo)
+
+        rel = index._to_relative_path(path)
+        self.assertEqual(rel, os.path.relpath(path, root))
+
     @with_rw_repo('HEAD', bare=True)
     def test_pre_commit_hook_success(self, rw_repo):
         index = rw_repo.index
