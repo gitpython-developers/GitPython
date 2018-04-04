@@ -121,8 +121,11 @@ utc = tzoffset(0, 'UTC')
 def from_timestamp(timestamp, tz_offset):
     """Converts a timestamp + tz_offset into an aware datetime instance."""
     utc_dt = datetime.fromtimestamp(timestamp, utc)
-    local_dt = utc_dt.astimezone(tzoffset(tz_offset))
-    return local_dt
+    try:
+        local_dt = utc_dt.astimezone(tzoffset(tz_offset))
+        return local_dt
+    except ValueError:
+        return utc_dt
 
 
 def parse_date(string_date):
