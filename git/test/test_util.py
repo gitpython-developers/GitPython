@@ -7,7 +7,7 @@
 import tempfile
 import time
 from unittest import skipIf
-
+from datetime import datetime
 
 import ddt
 
@@ -18,7 +18,8 @@ from git.objects.util import (
     utctz_to_altz,
     verify_utctz,
     parse_date,
-)
+    tzoffset,
+    from_timestamp)
 from git.test.lib import (
     TestBase,
     assert_equal
@@ -260,3 +261,16 @@ class TestUtils(TestBase):
 
         self.failUnlessRaises(IndexError, ilist.__delitem__, 0)
         self.failUnlessRaises(IndexError, ilist.__delitem__, 'something')
+
+    def test_from_timestamp(self):
+        # Correct offset: UTC+2, should return datetime + tzoffset(+2)
+        altz = utctz_to_altz('+0200')
+        self.assertEqual(datetime.fromtimestamp(1522827734, tzoffset(altz)), from_timestamp(1522827734, altz))
+
+        # Wrong offset: UTC+58, should return datetime + tzoffset(UTC)
+        altz = utctz_to_altz('+5800')
+        self.assertEqual(datetime.fromtimestamp(1522827734, tzoffset(0)), from_timestamp(1522827734, altz))
+
+        # Wrong offset: UTC-9000, should return datetime + tzoffset(UTC)
+        altz = utctz_to_altz('-9000')
+        self.assertEqual(datetime.fromtimestamp(1522827734, tzoffset(0)), from_timestamp(1522827734, altz))
