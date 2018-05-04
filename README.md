@@ -165,6 +165,20 @@ gpg --edit-key 88710E60
 > save
 ```
 
+### Projects using GitPython
+
+* [PyDriller](https://github.com/ishepard/pydriller)
+* [Kivy Designer](https://github.com/kivy/kivy-designer)
+* [Prowl](https://github.com/nettitude/Prowl)
+* [Python Taint](https://github.com/python-security/pyt)
+* [Buster](https://github.com/axitkhurana/buster)
+* [git-ftp](https://github.com/ezyang/git-ftp)
+* [Git-Pandas](https://github.com/wdm0006/git-pandas)
+* [PyGitUp](https://github.com/msiemens/PyGitUp)
+* [PyJFuzz](https://github.com/mseclab/PyJFuzz)
+* [Loki](https://github.com/Neo23x0/Loki)
+* [Omniwallet](https://github.com/OmniLayer/omniwallet)
+
 ### LICENSE
 
 New BSD License.  See the LICENSE file.
