@@ -112,6 +112,33 @@ class TestDiff(TestBase):
         self.assertEqual(diff.score, 100)
         self.assertEqual(len(list(diffs.iter_change_type('R'))), 1)
 
+    def test_diff_with_change_in_type(self):
+        output = StringProcessAdapter(fixture('diff_change_in_type'))
+        diffs = Diff._index_from_patch_format(self.rorepo, output)
+        self._assert_diff_format(diffs)
+        assert_equal(2, len(diffs))
+
+        diff = diffs[0]
+        self.assertIsNotNone(diff.deleted_file)
+        assert_equal(diff.a_path, 'this')
+        assert_equal(diff.b_path, 'this')
+        assert isinstance(str(diff), str)
+
+        diff = diffs[1]
+        assert_equal(diff.a_path, None)
+        assert_equal(diff.b_path, 'this')
+        self.assertIsNotNone(diff.new_file)
+        assert isinstance(str(diff), str)
+
+        output = StringProcessAdapter(fixture('diff_change_in_type_raw'))
+        diffs = Diff._index_from_raw_format(self.rorepo, output)
+        self.assertEqual(len(diffs), 1)
+        diff = diffs[0]
+        self.assertEqual(diff.rename_from, None)
+        self.assertEqual(diff.rename_to, None)
+        self.assertEqual(diff.change_type, 'T')
+        self.assertEqual(len(list(diffs.iter_change_type('T'))), 1)
+
     def test_diff_of_modified_files_not_added_to_the_index(self):
         output = StringProcessAdapter(fixture('diff_abbrev-40_full-index_M_raw_no-color'))
         diffs = Diff._index_from_raw_format(self.rorepo, output)
