@@ -165,8 +165,9 @@ class DiffIndex(list):
     # A = Added
     # D = Deleted
     # R = Renamed
-    # M = modified
-    change_type = ("A", "D", "R", "M")
+    # M = Modified
+    # T = Changed in the type
+    change_type = ("A", "D", "R", "M", "T")
 
     def iter_change_type(self, change_type):
         """
@@ -179,7 +180,9 @@ class DiffIndex(list):
             * 'A' for added paths
             * 'D' for deleted paths
             * 'R' for renamed paths
-            * 'M' for paths with modified data"""
+            * 'M' for paths with modified data
+            * 'T' for changed in the type paths
+         """
         if change_type not in self.change_type:
             raise ValueError("Invalid change type: %s" % change_type)
 
@@ -499,6 +502,9 @@ class Diff(object):
                 a_path = a_path.encode(defenc)
                 b_path = b_path.encode(defenc)
                 rename_from, rename_to = a_path, b_path
+            elif change_type == 'T':
+                # Nothing to do
+                pass
             # END add/remove handling
 
             diff = Diff(repo, a_path, b_path, a_blob_id, b_blob_id, old_mode, new_mode,
