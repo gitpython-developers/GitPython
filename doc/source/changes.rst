@@ -2,6 +2,15 @@
 Changelog
 =========
 
+2.1.10 - Bugfixes
+=================
+
+see the following for (most) details:
+https://github.com/gitpython-developers/gitpython/milestone/25?closed=1
+
+or run have a look at the difference between tags v2.1.9 and v2.1.10:
+https://github.com/gitpython-developers/GitPython/compare/2.1.9...2.1.10
+
 2.1.9 - Dropping support for Python 2.6
 =======================================
 
