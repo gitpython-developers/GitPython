@@ -79,5 +79,8 @@ def refresh(path=None):
 #} END initialize git executable path
 
 #################
-refresh()
+try:
+    refresh()
+except Exception as exc:
+    raise ImportError('Failed to initialize: {0}'.format(exc))
 #################
