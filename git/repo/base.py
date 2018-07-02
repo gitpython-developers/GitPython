@@ -424,8 +424,7 @@ class Repo(object):
         :param config_level:
             For possible values, see config_writer method
             If None, all applicable levels will be used. Specify a level in case
-            you know which exact file you whish to read to prevent reading multiple files for
-            instance
+            you know which file you wish to read to prevent reading multiple files.
         :note: On windows, system configuration cannot currently be read as the path is
             unknown, instead the global path will be used."""
         files = None
