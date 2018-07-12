@@ -36,6 +36,11 @@ from .fun import rev_parse, is_git_dir, find_submodule_git_dir, touch, find_work
 import gc
 import gitdb
 
+try:
+    import pathlib
+except ImportError:
+    pathlib = None
+
 
 log = logging.getLogger(__name__)
 
@@ -116,6 +121,8 @@ class Repo(object):
             epath = decygpath(epath)
 
         epath = epath or path or os.getcwd()
+        if not isinstance(epath, str):
+            epath = str(epath)
         if expand_vars and ("%" in epath or "$" in epath):
             warnings.warn("The use of environment variables in paths is deprecated" +
                           "\nfor security reasons and may be removed in the future!!")
