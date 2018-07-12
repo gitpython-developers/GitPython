@@ -110,6 +110,14 @@ class TestRepo(TestBase):
         assert not rw_repo.git.working_dir.endswith('.git')
         self.assertEqual(r_from_gitdir.git.working_dir, rw_repo.git.working_dir)
 
+    @with_rw_repo('0.3.2.1')
+    def test_repo_creation_pathlib(self, rw_repo):
+        if pathlib is None:  # pythons bellow 3.4 don't have pathlib
+            raise SkipTest("pathlib was introduced in 3.4")
+
+        r_from_gitdir = Repo(pathlib.Path(rw_repo.git_dir))
+        self.assertEqual(r_from_gitdir.git_dir, rw_repo.git_dir)
+
     def test_description(self):
         txt = "Test repository"
         self.rorepo.description = txt
