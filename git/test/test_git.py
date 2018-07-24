@@ -7,6 +7,7 @@
 import os
 import subprocess
 import sys
+from tempfile import TemporaryFile
 
 from git import (
     Git,
@@ -107,6 +108,11 @@ class TestGit(TestBase):
         # this_should_not_be_ignored=False implies it *should* be ignored
         self.git.version(pass_this_kwarg=False)
         assert_true("pass_this_kwarg" not in git.call_args[1])
+
+    @raises(GitCommandError)
+    def test_it_raises_proper_exception_with_output_stream(self):
+        tmp_file = TemporaryFile()
+        self.git.checkout('non-existent-branch', output_stream=tmp_file)
 
     def test_it_accepts_environment_variables(self):
         filename = fixture_path("ls_tree_empty")
