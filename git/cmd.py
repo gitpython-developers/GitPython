@@ -794,7 +794,7 @@ class Git(LazyMixin):
             else:
                 max_chunk_size = max_chunk_size if max_chunk_size and max_chunk_size > 0 else io.DEFAULT_BUFFER_SIZE
                 stream_copy(proc.stdout, output_stream, max_chunk_size)
-                stdout_value = output_stream
+                stdout_value = proc.stdout.read()
                 stderr_value = proc.stderr.read()
                 # strip trailing "\n"
                 if stderr_value.endswith(b"\n"):
