@@ -81,13 +81,15 @@ class TestGit(TestBase):
     def test_it_transforms_kwargs_into_git_command_arguments(self):
         assert_equal(["-s"], self.git.transform_kwargs(**{'s': True}))
         assert_equal(["-s", "5"], self.git.transform_kwargs(**{'s': 5}))
+        assert_equal([], self.git.transform_kwargs(**{'s': None}))
 
         assert_equal(["--max-count"], self.git.transform_kwargs(**{'max_count': True}))
         assert_equal(["--max-count=5"], self.git.transform_kwargs(**{'max_count': 5}))
+        assert_equal([], self.git.transform_kwargs(**{'max_count': None}))
 
         # Multiple args are supported by using lists/tuples
         assert_equal(["-L", "1-3", "-L", "12-18"], self.git.transform_kwargs(**{'L': ('1-3', '12-18')}))
-        assert_equal(["-C", "-C"], self.git.transform_kwargs(**{'C': [True, True]}))
+        assert_equal(["-C", "-C"], self.git.transform_kwargs(**{'C': [True, True, None, False]}))
 
         # order is undefined
         res = self.git.transform_kwargs(**{'s': True, 't': True})
