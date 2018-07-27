@@ -885,7 +885,7 @@ class Git(LazyMixin):
         if len(name) == 1:
             if value is True:
                 return ["-%s" % name]
-            elif type(value) is not bool:
+            elif value not in (False, None):
                 if split_single_char_options:
                     return ["-%s" % name, "%s" % value]
                 else:
@@ -893,7 +893,7 @@ class Git(LazyMixin):
         else:
             if value is True:
                 return ["--%s" % dashify(name)]
-            elif type(value) is not bool:
+            elif value not in (False, None):
                 return ["--%s=%s" % (dashify(name), value)]
         return []
 
