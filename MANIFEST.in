@@ -5,7 +5,13 @@ include AUTHORS
 include README
 include requirements.txt
 
+include .gitattributes
+include .gitignore
+include .gitmodules
+
+recursive-include .git *
 recursive-include doc *
+recursive-include etc *
 
 graft git/test/fixtures
 graft git/test/performance
