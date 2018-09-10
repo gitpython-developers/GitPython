@@ -1160,7 +1160,7 @@ class Submodule(IndexObject, Iterable, Traversable):
         try:
             parser = cls._config_parser(repo, pc, read_only=True)
         except IOError:
-            raise StopIteration
+            return
         # END handle empty iterator
 
         rt = pc.tree                                # root tree
