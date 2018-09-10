@@ -19,7 +19,7 @@ If it is not in your `PATH`, you can help GitPython find it by setting
 the `GIT_PYTHON_GIT_EXECUTABLE=<path/to/git>` environment variable.
 
 * Git (1.7.x or newer)
-* Python 2.7 to 3.6.
+* Python 2.7 to 3.7.
 
 The list of dependencies are listed in `./requirements.txt` and `./test-requirements.txt`.
 The installer takes care of installing them for you.
