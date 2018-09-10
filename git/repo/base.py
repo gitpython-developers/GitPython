@@ -714,7 +714,10 @@ class Repo(object):
 
         stream = (line for line in data.split(b'\n') if line)
         while True:
-            line = next(stream)  # when exhausted, causes a StopIteration, terminating this function
+            try:
+                line = next(stream)  # when exhausted, causes a StopIteration, terminating this function
+            except StopIteration:
+                return
             hexsha, orig_lineno, lineno, num_lines = line.split()
             lineno = int(lineno)
             num_lines = int(num_lines)
@@ -724,7 +727,10 @@ class Repo(object):
                 # for this commit
                 props = {}
                 while True:
-                    line = next(stream)
+                    try:
+                        line = next(stream)
+                    except StopIteration:
+                        return
                     if line == b'boundary':
                         # "boundary" indicates a root commit and occurs
                         # instead of the "previous" tag
@@ -749,7 +755,10 @@ class Repo(object):
                 # Discard all lines until we find "filename" which is
                 # guaranteed to be the last line
                 while True:
-                    line = next(stream)  # will fail if we reach the EOF unexpectedly
+                    try:
+                        line = next(stream)  # will fail if we reach the EOF unexpectedly
+                    except StopIteration:
+                        return
                     tag, value = line.split(b' ', 1)
                     if tag == b'filename':
                         orig_filename = value
