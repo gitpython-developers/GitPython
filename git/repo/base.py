@@ -416,7 +416,7 @@ class Repo(object):
         elif config_level == "global":
             return osp.normpath(osp.expanduser("~/.gitconfig"))
         elif config_level == "repository":
-            return osp.normpath(osp.join(self.git_dir, "config"))
+            return osp.normpath(osp.join(self._common_dir or self.git_dir, "config"))
 
         raise ValueError("Invalid configuration level: %r" % config_level)
 
