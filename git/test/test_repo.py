@@ -974,6 +974,11 @@ class TestRepo(TestBase):
         commit = repo.head.commit
         self.assertIsInstance(commit, Object)
 
+        # this ensures we can read the remotes, which confirms we're reading
+        # the config correctly.
+        origin = repo.remotes.origin
+        self.assertIsInstance(origin, Remote)
+
         self.assertIsInstance(repo.heads['aaaaaaaa'], Head)
 
     @with_rw_directory
