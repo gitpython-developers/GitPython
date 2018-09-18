@@ -377,13 +377,13 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
                     continue
             # end check symlink
 
-            # if abs_path exists, yield it, otherwise resolve globs if possible
+            # if abs_path exists, yield it
             if os.path.exists(abs_path):
                 # even if the path contains special characters like ?*[ (glob)
-                # if it exists, we take it as such and do not try to resolve globs
+                # if it exists, we take it
                 yield abs_path
-            # otherwise resolve globs if possible
-            elif '?' in path or '*' in path or '[' in path:
+            # resolve globs if possible
+            if '?' in path or '*' in path or '[' in path:
                 resolved_paths = glob.glob(abs_path)
                 # not abs_path in resolved_paths:
                 #   a glob() resolving to the same path we are feeding it with
