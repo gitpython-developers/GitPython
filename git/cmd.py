@@ -78,17 +78,19 @@ def handle_process_output(process, stdout_handler, stderr_handler,
         Set it to False if `universal_newline == True` (then streams are in text-mode)
         or if decoding must happen later (i.e. for Diffs).
     """
+    pumped_lines = {'stdout': [], 'stderr': []}
     # Use 2 "pupm" threads and wait for both to finish.
     def pump_stream(cmdline, name, stream, is_decode, handler):
         try:
             for line in stream:
+                if is_decode:
+                    line = line.decode(defenc)
+                pumped_lines[name].append(line)
                 if handler:
-                    if is_decode:
-                        line = line.decode(defenc)
                     handler(line)
         except Exception as ex:
             log.error("Pumping %r of cmd(%s) failed due to: %r", name, cmdline, ex)
-            raise CommandError(['<%s-pump>' % name] + cmdline, ex)
+            raise CommandError(['<%s-pump>' % name] + cmdline, ex, **pumped_lines)
         finally:
             stream.close()
 
@@ -104,20 +106,29 @@ def handle_process_output(process, stdout_handler, stderr_handler,
 
     threads = []
 
-    for name, stream, handler in pumps:
-        t = threading.Thread(target=pump_stream,
-                             args=(cmdline, name, stream, decode_streams, handler))
-        t.setDaemon(True)
-        t.start()
-        threads.append(t)
+    try:
+        for name, stream, handler in pumps:
+            t = threading.Thread(target=pump_stream,
+                                 args=(cmdline, name, stream, decode_streams, handler))
+            t.setDaemon(True)
+            t.start()
+            threads.append(t)
 
-    ## FIXME: Why Join??  Will block if `stdin` needs feeding...
-    #
-    for t in threads:
-        t.join()
+        ## FIXME: Why Join??  Will block if `stdin` needs feeding...
+        #
+        for t in threads:
+            t.join()
 
-    if finalizer:
-        return finalizer(process)
+        if finalizer:
+            return finalizer(process)
+    except Exception as e:
+        for outname, out in pumped_lines.items():
+            if out and hasattr(e, outname):
+                eout = getattr(e, outname)
+                if not eout:
+                    setattr(e, outname, safe_decode(os.linesep.join(out)))
+        raise
+
 
 
 def dashify(string):
