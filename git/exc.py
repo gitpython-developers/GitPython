@@ -55,12 +55,16 @@ class CommandError(UnicodeMixin, GitError):
         self._cmd = safe_decode(command[0])
         self._cmdline = u' '.join(safe_decode(i) for i in command)
         self._cause = status and u" due to: %s" % status or "!"
-        self.stdout = stdout and u"\n  stdout: '%s'" % safe_decode(stdout) or ''
-        self.stderr = stderr and u"\n  stderr: '%s'" % safe_decode(stderr) or ''
+        self.stdout = stdout and safe_decode(stdout) or ''
+        self.stderr = stderr and safe_decode(stderr) or ''
 
     def __unicode__(self):
         return (self._msg + "\n  cmdline: %s%s%s") % (
-            self._cmd, self._cause, self._cmdline, self.stdout, self.stderr)
+            self._cmd, self._cause,
+            self._cmdline,
+            u"\n  stdout: '%s'" % self.stdout if self.stdout else '',
+            u"\n  stderr: '%s'" % self.stderr if self.stderr else ''
+        )
 
 
 class GitCommandNotFound(CommandError):
