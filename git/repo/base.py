@@ -140,7 +140,20 @@ class Repo(object):
             # removed. It's just cleaner.
             if is_git_dir(curpath):
                 self.git_dir = curpath
-                self._working_tree_dir = os.getenv('GIT_WORK_TREE', os.path.dirname(self.git_dir))
+                # from man git-config : core.worktree
+                # Set the path to the root of the working tree. If GIT_COMMON_DIR environment
+                # variable is set, core.worktree is ignored and not used for determining the
+                # root of working tree. This can be overridden by the GIT_WORK_TREE environment
+                # variable. The value can be an absolute path or relative to the path to the .git
+                # directory, which is either specified by GIT_DIR, or automatically discovered.
+                # If GIT_DIR is specified but none of GIT_WORK_TREE and core.worktree is specified,
+                # the current working directory is regarded as the top level of your working tree.
+                self._working_tree_dir = os.path.dirname(self.git_dir)
+                if os.environ.get('GIT_COMMON_DIR') is None:
+                    gitconf = self.config_reader("repository")
+                    if gitconf.has_option('core', 'worktree'):
+                        self._working_tree_dir = gitconf.get('core', 'worktree')
+                self._working_tree_dir = os.getenv('GIT_WORK_TREE', self._working_tree_dir)
                 break
 
             dotgit = osp.join(curpath, '.git')
