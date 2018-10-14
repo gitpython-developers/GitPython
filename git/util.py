@@ -386,7 +386,7 @@ class RemoteProgress(object):
         # handle
         # Counting objects: 4, done.
         # Compressing objects:  50% (1/2)   \rCompressing objects: 100% (2/2)   \rCompressing objects: 100% (2/2), done.
-        self._cur_line = line
+        self._cur_line = line = line.decode('utf-8') if isinstance(line, bytes) else line
         if len(self.error_lines) > 0 or self._cur_line.startswith(('error:', 'fatal:')):
             self.error_lines.append(self._cur_line)
             return []
