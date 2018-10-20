@@ -178,6 +178,7 @@ gpg --edit-key 88710E60
 * [PyJFuzz](https://github.com/mseclab/PyJFuzz)
 * [Loki](https://github.com/Neo23x0/Loki)
 * [Omniwallet](https://github.com/OmniLayer/omniwallet)
+* [GitViper](https://github.com/BeayemX/GitViper)
 
 ### LICENSE
 
