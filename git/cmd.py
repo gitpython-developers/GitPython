@@ -78,7 +78,7 @@ def handle_process_output(process, stdout_handler, stderr_handler,
         Set it to False if `universal_newline == True` (then streams are in text-mode)
         or if decoding must happen later (i.e. for Diffs).
     """
-    # Use 2 "pupm" threads and wait for both to finish.
+    # Use 2 "pump" threads and wait for both to finish.
     def pump_stream(cmdline, name, stream, is_decode, handler):
         try:
             for line in stream:
