@@ -104,7 +104,7 @@ Initialize all submodules to obtain the required dependencies with::
     $ cd git-python
     $ git submodule update --init --recursive
 
-Finally verify the installation by running the `nose powered <http://code.google.com/p/python-nose/>`_ unit tests::
+Finally verify the installation by running the `nose powered <https://github.com/nose-devs/nose>`_ unit tests::
 
     $ nosetests
 
