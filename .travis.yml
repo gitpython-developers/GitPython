@@ -40,7 +40,7 @@ script:
   - ulimit -n 128
   - ulimit -n
   - nosetests -v --with-coverage
-  - if [ "$TRAVIS_PYTHON_VERSION" == '3.4' ]; then flake8; fi
+  - if [ "$TRAVIS_PYTHON_VERSION" == '3.4' ]; then flake8 --ignore=W293,E265,E266,W503,W504,E731; fi
   - if [ "$TRAVIS_PYTHON_VERSION" == '3.5' ]; then cd doc && make html; fi
   -
 after_success:
