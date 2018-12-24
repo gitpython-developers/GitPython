@@ -2,6 +2,7 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 import os
+import shutil
 import sys
 from unittest import skipIf
 
@@ -659,6 +660,24 @@ class TestSubmodule(TestBase):
             self.failUnlessRaises(ValueError, parent.create_submodule, name, name,
                                   url=empty_repo_dir, no_checkout=checkout_mode and True or False)
         # end for each checkout mode
+
+    @with_rw_directory
+    def test_list_only_valid_submodules(self, rwdir):
+        repo_path = osp.join(rwdir, 'parent')
+        repo = git.Repo.init(repo_path)
+        repo.git.submodule('add', self._small_repo_url(), 'module')
+        repo.index.commit("add submodule")
+
+        assert len(repo.submodules) == 1
+
+        # Delete the directory from submodule
+        submodule_path = osp.join(repo_path, 'module')
+        shutil.rmtree(submodule_path)
+        repo.git.add([submodule_path])
+        repo.index.commit("remove submodule")
+
+        repo = git.Repo(repo_path)
+        assert len(repo.submodules) == 0
 
     @skipIf(HIDE_WINDOWS_KNOWN_ERRORS,
             """FIXME on cygwin: File "C:\\projects\\gitpython\\git\\cmd.py", line 671, in execute
