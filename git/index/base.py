@@ -377,8 +377,8 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
                     continue
             # end check symlink
 
-            # if abs_path exists, yield it
-            if os.path.exists(abs_path):
+            # if abs_path exists and is a file, yield it
+            if os.path.exists(abs_path) and os.path.isfile(abs_path):
                 # even if the path contains special characters like ?*[ (glob)
                 # if it exists, we take it
                 yield abs_path
