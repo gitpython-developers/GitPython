@@ -9,10 +9,8 @@ matrix:
   include:
     - python: 3.7
       dist: xenial
-      sudo: required
     - python: "nightly"
       dist: xenial
-      sudo: required
   allow_failures:
     - python: "nightly"
 git:
