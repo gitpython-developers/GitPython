@@ -220,7 +220,8 @@ class Git(LazyMixin):
             # - a GitCommandNotFound error is spawned by ourselves
             # - a PermissionError is spawned if the git executable provided
             #   cannot be executed for whatever reason
-            exceptions = (GitCommandNotFound, PermissionError)
+            exceptions = (GitCommandNotFound, PermissionError)  # noqa
+            #                           (silence erroneous flake8 F821)
 
         has_git = False
         try:

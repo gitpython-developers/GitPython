@@ -2,7 +2,7 @@ all:
 	@grep -Ee '^[a-z].*:' Makefile | cut -d: -f1 | grep -vF all
 
 clean:
-	rm -rf build/ dist/
+	rm -rf build/ dist/ .eggs/ .tox/
 
 release: clean
 	# Check if latest tag is the current head we're releasing
