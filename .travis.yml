@@ -5,7 +5,7 @@ python:
   - "3.5"
   - "3.6"
   # - "pypy" - won't work as smmap doesn't work (see gitdb/.travis.yml for details)
-matrix:
+matrix: 
   include:
     - python: 3.7
       dist: xenial
