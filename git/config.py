@@ -523,7 +523,8 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
 
             rv[k].extend(v)
 
-        return rv.items()
+        # For consistency with items(), return a list, even in Python 3
+        return list(rv.items())
 
     @needs_values
     def write(self):
