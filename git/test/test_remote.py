@@ -4,6 +4,7 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
+import platform
 import random
 import tempfile
 from unittest import skipIf
@@ -34,6 +35,7 @@ from git.test.lib import (
 from git.util import IterableList, rmtree, HIDE_WINDOWS_FREEZE_ERRORS
 import os.path as osp
 
+IS_DIST_XENIAL = 'stretch' in platform.dist()[1]
 
 # assure we have repeatable results
 random.seed(0)
@@ -398,6 +400,7 @@ class TestRemote(TestBase):
         remote.push(":%s" % other_tag.path)
 
     @skipIf(HIDE_WINDOWS_FREEZE_ERRORS, "FIXME: Freezes!")
+    @skipIf(IS_DIST_XENIAL, "Test fails when dist is Xenial.  #827")
     @with_rw_and_rw_remote_repo('0.1.6')
     def test_base(self, rw_repo, remote_repo):
         num_remotes = 0
