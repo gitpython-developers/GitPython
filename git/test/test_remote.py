@@ -35,7 +35,8 @@ from git.test.lib import (
 from git.util import IterableList, rmtree, HIDE_WINDOWS_FREEZE_ERRORS
 import os.path as osp
 
-IS_DIST_XENIAL = 'stretch' in platform.dist()[1]
+uname_version = platform.uname().version
+IS_DIST_XENIAL = '-Ubuntu' in uname_version and '16.04' in uname_version
 
 # assure we have repeatable results
 random.seed(0)
