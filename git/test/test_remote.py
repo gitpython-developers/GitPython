@@ -35,7 +35,7 @@ from git.test.lib import (
 from git.util import IterableList, rmtree, HIDE_WINDOWS_FREEZE_ERRORS
 import os.path as osp
 
-uname_version = platform.uname().version
+uname_version = platform.uname()[3]  # platform.uname().version on Py3
 IS_DIST_XENIAL = '-Ubuntu' in uname_version and '16.04' in uname_version
 
 # assure we have repeatable results
