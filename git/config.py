@@ -176,11 +176,19 @@ class _OMD(OrderedDict):
         prior = super(_OMD, self).__getitem__(key)
         prior[-1] = value
 
+    def get(self, key, default=None):
+        return super(_OMD, self).get(key, [default])[-1]
+
     def getall(self, key):
         return super(_OMD, self).__getitem__(key)
 
+    def items(self):
+        """List of (key, last value for key)."""
+        return [(k, self[k]) for k in self]
+
     def items_all(self):
-        return [(k, self.get(k)) for k in self]
+        """List of (key, list of values for key)."""
+        return [(k, self.getall(k)) for k in self]
 
 
 class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, object)):
@@ -481,14 +489,9 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
         git compatible format"""
         def write_section(name, section_dict):
             fp.write(("[%s]\n" % name).encode(defenc))
-            for (key, value) in section_dict.items_all():
+            for (key, values) in section_dict.items_all():
                 if key == "__name__":
                     continue
-                elif isinstance(value, list):
-                    values = value
-                else:
-                    # self._defaults isn't a multidict
-                    values = [value]
 
                 for v in values:
                     fp.write(("\t%s = %s\n" % (key, self._value_to_string(v).replace('\n', '\n\t'))).encode(defenc))
@@ -506,25 +509,19 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
 
     def items_all(self, section_name):
         """:return: list((option, [values...]), ...) pairs of all items in the given section"""
-        rv = OrderedDict()
-        for k, v in self._defaults:
-            rv[k] = [v]
+        rv = _OMD(self._defaults)
 
-        for k, v in self._sections[section_name].items_all():
+        for k, vs in self._sections[section_name].items_all():
             if k == '__name__':
                 continue
 
-            if k not in rv:
-                rv[k] = v
+            if k in rv and rv.getall(k) == vs:
                 continue
 
-            if rv[k] == v:
-                continue
+            for v in vs:
+                rv.add(k, v)
 
-            rv[k].extend(v)
-
-        # For consistency with items(), return a list, even in Python 3
-        return list(rv.items())
+        return rv.items_all()
 
     @needs_values
     def write(self):

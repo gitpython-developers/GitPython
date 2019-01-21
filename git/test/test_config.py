@@ -11,7 +11,7 @@ from git import (
     GitConfigParser
 )
 from git.compat import string_types
-from git.config import cp
+from git.config import _OMD, cp
 from git.test.lib import (
     TestCase,
     fixture_path,
@@ -362,3 +362,13 @@ class TestBase(TestCase):
             self.assertEqual(cr.items_all('section1'),
                              [('option1', ['value1a', 'value1b', 'value1c']),
                               ('other_option1', ['other_value1'])])
+
+    def test_setlast(self):
+        # Test directly, not covered by higher-level tests.
+        omd = _OMD()
+        omd.setlast('key', 'value1')
+        self.assertEqual(omd['key'], 'value1')
+        self.assertEqual(omd.getall('key'), ['value1'])
+        omd.setlast('key', 'value2')
+        self.assertEqual(omd['key'], 'value2')
+        self.assertEqual(omd.getall('key'), ['value2'])
