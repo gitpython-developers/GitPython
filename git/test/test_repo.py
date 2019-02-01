@@ -229,6 +229,22 @@ class TestRepo(TestBase):
 
         Repo.clone_from(original_repo.git_dir, pathlib.Path(rw_dir) / "clone_pathlib")
 
+    @with_rw_directory
+    def test_clone_from_pathlib_withConfig(self, rw_dir):
+        if pathlib is None:  # pythons bellow 3.4 don't have pathlib
+            raise SkipTest("pathlib was introduced in 3.4")
+
+        original_repo = Repo.init(osp.join(rw_dir, "repo"))
+
+        cloned = Repo.clone_from(original_repo.git_dir, pathlib.Path(rw_dir) / "clone_pathlib_withConfig",
+                                 multi_options=["--recurse-submodules=repo",
+                                                "--config core.filemode=false",
+                                                "--config submodule.repo.update=checkout"])
+
+        assert_equal(cloned.config_reader().get_value('submodule', 'active'), 'repo')
+        assert_equal(cloned.config_reader().get_value('core', 'filemode'), False)
+        assert_equal(cloned.config_reader().get_value('submodule "repo"', 'update'), 'checkout')
+
     @with_rw_repo('HEAD')
     def test_max_chunk_size(self, repo):
         class TestOutputStream(object):

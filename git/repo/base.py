@@ -931,7 +931,7 @@ class Repo(object):
         return cls(path, odbt=odbt)
 
     @classmethod
-    def _clone(cls, git, url, path, odb_default_type, progress, **kwargs):
+    def _clone(cls, git, url, path, odb_default_type, progress, multi_options=None, **kwargs):
         if progress is not None:
             progress = to_progress_instance(progress)
 
@@ -953,7 +953,10 @@ class Repo(object):
         sep_dir = kwargs.get('separate_git_dir')
         if sep_dir:
             kwargs['separate_git_dir'] = Git.polish_url(sep_dir)
-        proc = git.clone(Git.polish_url(url), clone_path, with_extended_output=True, as_process=True,
+        multi = None
+        if multi_options:
+            multi = ' '.join(multi_options).split(' ')
+        proc = git.clone(multi, Git.polish_url(url), clone_path, with_extended_output=True, as_process=True,
                          v=True, universal_newlines=True, **add_progress(kwargs, git, progress))
         if progress:
             handle_process_output(proc, None, progress.new_message_handler(), finalize_process, decode_streams=False)
@@ -983,33 +986,38 @@ class Repo(object):
         # END handle remote repo
         return repo
 
-    def clone(self, path, progress=None, **kwargs):
+    def clone(self, path, progress=None, multi_options=None, **kwargs):
         """Create a clone from this repository.
 
         :param path: is the full path of the new repo (traditionally ends with ./<name>.git).
         :param progress: See 'git.remote.Remote.push'.
+        :param multi_options: A list of Clone options that can be provided multiple times.  One
+            option per list item which is passed exactly as specified to clone.
+            For example ['--config core.filemode=false', '--config core.ignorecase',
+                         '--recurse-submodule=repo1_path', '--recurse-submodule=repo2_path']
         :param kwargs:
             * odbt = ObjectDatabase Type, allowing to determine the object database
               implementation used by the returned Repo instance
             * All remaining keyword arguments are given to the git-clone command
 
         :return: ``git.Repo`` (the newly cloned repo)"""
-        return self._clone(self.git, self.common_dir, path, type(self.odb), progress, **kwargs)
+        return self._clone(self.git, self.common_dir, path, type(self.odb), progress, multi_options, **kwargs)
 
     @classmethod
-    def clone_from(cls, url, to_path, progress=None, env=None, **kwargs):
+    def clone_from(cls, url, to_path, progress=None, env=None, multi_options=None, **kwargs):
         """Create a clone from the given URL
 
         :param url: valid git url, see http://www.kernel.org/pub/software/scm/git/docs/git-clone.html#URLS
         :param to_path: Path to which the repository should be cloned to
         :param progress: See 'git.remote.Remote.push'.
         :param env: Optional dictionary containing the desired environment variables.
+        :param mutli_options: See ``clone`` method
         :param kwargs: see the ``clone`` method
         :return: Repo instance pointing to the cloned directory"""
         git = Git(os.getcwd())
         if env is not None:
             git.update_environment(**env)
-        return cls._clone(git, url, to_path, GitCmdObjectDB, progress, **kwargs)
+        return cls._clone(git, url, to_path, GitCmdObjectDB, progress, multi_options, **kwargs)
 
     def archive(self, ostream, treeish=None, prefix=None, **kwargs):
         """Archive the tree at the given revision.
