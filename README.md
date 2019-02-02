@@ -192,7 +192,9 @@ New BSD License.  See the LICENSE file.
 [![Code Climate](https://codeclimate.com/github/gitpython-developers/GitPython/badges/gpa.svg)](https://codeclimate.com/github/gitpython-developers/GitPython)
 [![Documentation Status](https://readthedocs.org/projects/gitpython/badge/?version=stable)](https://readthedocs.org/projects/gitpython/?badge=stable)
 [![Stories in Ready](https://badge.waffle.io/gitpython-developers/GitPython.png?label=ready&title=Ready)](https://waffle.io/gitpython-developers/GitPython)
+[![Packaging status](https://repology.org/badge/tiny-repos/python:gitpython.svg)](https://repology.org/metapackage/python:gitpython/versions)
 [![Throughput Graph](https://graphs.waffle.io/gitpython-developers/GitPython/throughput.svg)](https://waffle.io/gitpython-developers/GitPython/metrics/throughput)
+
 
 Now that there seems to be a massive user base, this should be motivation enough to let git-python
 return to a proper state, which means
