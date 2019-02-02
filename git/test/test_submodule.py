@@ -480,9 +480,8 @@ class TestSubmodule(TestBase):
         with sm.config_writer() as writer:
             writer.set_value('path', fp)    # change path to something with prefix AFTER url change
 
-        # update fails as list_items in such a situations cannot work, as it cannot
-        # find the entry at the changed path
-        self.failUnlessRaises(InvalidGitRepositoryError, rm.update, recursive=False)
+        # update doesn't fail, because list_items ignores the wrong path in such situations.
+        rm.update(recursive=False)
 
         # move it properly - doesn't work as it its path currently points to an indexentry
         # which doesn't exist ( move it to some path, it doesn't matter here )
