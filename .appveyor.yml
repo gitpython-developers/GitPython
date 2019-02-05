@@ -5,8 +5,6 @@ environment:
     CYGWIN64_GIT_PATH: "C:\\cygwin64\\bin;%GIT_DAEMON_PATH%"
 
     matrix:
-        ## MINGW
-        #
       - PYTHON: "C:\\Python27"
         PYTHON_VERSION: "2.7"
         GIT_PATH: "%GIT_DAEMON_PATH%"
@@ -25,21 +23,24 @@ environment:
       - PYTHON: "C:\\Miniconda35-x64"
         PYTHON_VERSION: "3.5"
         IS_CONDA: "yes"
+        MAYFAIL: "yes"
         GIT_PATH: "%GIT_DAEMON_PATH%"
-
         ## Cygwin
-        #
       - PYTHON: "C:\\Miniconda-x64"
         PYTHON_VERSION: "2.7"
         IS_CONDA: "yes"
         IS_CYGWIN: "yes"
+        MAYFAIL: "yes"
         GIT_PATH: "%CYGWIN_GIT_PATH%"
       - PYTHON: "C:\\Python35-x64"
         PYTHON_VERSION: "3.5"
-        GIT_PATH: "%CYGWIN64_GIT_PATH%"
         IS_CYGWIN: "yes"
+        MAYFAIL: "yes"
+        GIT_PATH: "%CYGWIN64_GIT_PATH%"
 
-
+matrix:
+    allow_failures:
+        - MAYFAIL: "yes"
 install:
     - set PATH=%PYTHON%;%PYTHON%\Scripts;%GIT_PATH%;%PATH%
 

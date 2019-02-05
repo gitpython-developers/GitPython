@@ -715,8 +715,11 @@ class Git(LazyMixin):
         stdout_sink = (PIPE
                        if with_stdout
                        else getattr(subprocess, 'DEVNULL', None) or open(os.devnull, 'wb'))
-        log.debug("Popen(%s, cwd=%s, universal_newlines=%s, shell=%s)",
-                  command, cwd, universal_newlines, shell)
+        istream_ok = "None"
+        if istream:
+            istream_ok = "<valid stream>"
+        log.debug("Popen(%s, cwd=%s, universal_newlines=%s, shell=%s, istream=%s)",
+                  command, cwd, universal_newlines, shell, istream_ok)
         try:
             proc = Popen(command,
                          env=env,
