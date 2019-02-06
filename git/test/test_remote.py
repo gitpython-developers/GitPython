@@ -253,9 +253,15 @@ class TestRemote(TestBase):
         self.assertEqual(tinfo.ref.commit, rtag.commit)
         self.assertTrue(tinfo.flags & tinfo.NEW_TAG)
 
-        # adjust tag commit
+        # adjust the local tag commit
         Reference.set_object(rtag, rhead.commit.parents[0].parents[0])
-        res = fetch_and_test(remote, tags=True)
+
+        # as of git 2.20 one cannot clobber local tags that have changed without
+        # specifying --force, and the test assumes you can clobber, so...
+        force = None
+        if rw_repo.git.version_info[:2] >= (2, 20):
+            force = True
+        res = fetch_and_test(remote, tags=True, force=force)
         tinfo = res[str(rtag)]
         self.assertEqual(tinfo.commit, rtag.commit)
         self.assertTrue(tinfo.flags & tinfo.TAG_UPDATE)
