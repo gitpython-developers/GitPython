@@ -448,7 +448,7 @@ class Remote(LazyMixin, Iterable):
         return '<git.%s "%s">' % (self.__class__.__name__, self.name)
 
     def __eq__(self, other):
-        return self.name == other.name
+        return isinstance(other, type(self)) and self.name == other.name
 
     def __ne__(self, other):
         return not (self == other)
