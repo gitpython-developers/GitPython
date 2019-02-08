@@ -569,16 +569,23 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         """ Split the items into two lists of path strings and BaseEntries. """
         paths = []
         entries = []
-
-        for item in items:
-            if isinstance(item, string_types):
-                paths.append(self._to_relative_path(item))
-            elif isinstance(item, (Blob, Submodule)):
-                entries.append(BaseIndexEntry.from_blob(item))
-            elif isinstance(item, BaseIndexEntry):
-                entries.append(item)
-            else:
-                raise TypeError("Invalid Type: %r" % item)
+        
+        if isinstance(items, string_types):
+            paths.append(self._to_relative_path(items))
+        elif isinstance(items, (Blob, Submodule)):
+            entries.append(BaseIndexEntry.from_blob(items))
+        elif isinstance(items, BaseIndexEntry):
+            entries.append(items)
+        else:            
+            for item in items:
+                if isinstance(item, string_types):
+                    paths.append(self._to_relative_path(item))
+                elif isinstance(item, (Blob, Submodule)):
+                    entries.append(BaseIndexEntry.from_blob(item))
+                elif isinstance(item, BaseIndexEntry):
+                    entries.append(item)
+                else:
+                    raise TypeError("Invalid Type: %r" % item)
         # END for each item
         return (paths, entries)
 
@@ -801,13 +808,18 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         """Returns a list of repo-relative paths from the given items which
         may be absolute or relative paths, entries or blobs"""
         paths = []
-        for item in items:
-            if isinstance(item, (BaseIndexEntry, (Blob, Submodule))):
-                paths.append(self._to_relative_path(item.path))
-            elif isinstance(item, string_types):
-                paths.append(self._to_relative_path(item))
-            else:
-                raise TypeError("Invalid item type: %r" % item)
+        if isinstance(items, (BaseIndexEntry, (Blob, Submodule))):
+            paths.append(self._to_relative_path(items.path))
+        elif isinstance(items, string_types):
+            paths.append(self._to_relative_path(items))
+        else:
+            for item in items:
+                if isinstance(item, (BaseIndexEntry, (Blob, Submodule))):
+                    paths.append(self._to_relative_path(item.path))
+                elif isinstance(item, string_types):
+                    paths.append(self._to_relative_path(item))
+                else:
+                    raise TypeError("Invalid item type: %r" % item)
         # END for each item
         return paths
 

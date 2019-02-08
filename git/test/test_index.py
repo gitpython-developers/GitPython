@@ -772,7 +772,14 @@ class TestIndex(TestBase):
             orig_tree = commit.tree
             self.assertEqual(index.write_tree(), orig_tree)
         # END for each commit
-
+    
+    @with_rw_repo('HEAD', bare=False)
+    def test_index_single_addremove(self, rw_repo):
+        path = osp.join('git', 'test', 'test_index.py')
+        self._assert_entries(rw_repo.index.add(path))
+        deleted_files = rw_repo.index.remove(path)
+        assert deleted_files
+        
     def test_index_new(self):
         B = self.rorepo.tree("6d9b1f4f9fa8c9f030e3207e7deacc5d5f8bba4e")
         H = self.rorepo.tree("25dca42bac17d511b7e2ebdd9d1d679e7626db5f")
