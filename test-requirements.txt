@@ -3,4 +3,5 @@
 coverage
 flake8
 nose
+git+https://github.com/moshe/pytest-tomato.git@debug#subdirectory=tomato-lib
 mock; python_version=='2.7'
