@@ -208,7 +208,14 @@ def rev_parse(repo, rev):
                 ref = repo.head.ref
             else:
                 if token == '@':
-                    ref = name_to_object(repo, rev[:start], return_ref=True)
+                    try:
+                        ref = name_to_object(repo, rev[:start], return_ref=True)
+                    except BadObject:
+                        # If this doesn't result in an object we most likely
+                        # encounter a reference containing the '@' character.
+                        # In this case we just to continue the search.
+                        start += 1
+                        continue
                 else:
                     obj = name_to_object(repo, rev[:start])
                 # END handle token

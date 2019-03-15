@@ -701,6 +701,10 @@ class TestRepo(TestBase):
         ahead = rwrepo.create_head('aaaaaaaa')
         assert(rwrepo.rev_parse(str(ahead)) == ahead.commit)
 
+        # verify @ in branch names are possible
+        bhead = rwrepo.create_head('aaa@aaa')
+        assert (rwrepo.rev_parse(str(bhead)) == bhead.commit)
+
     def test_rev_parse(self):
         rev_parse = self.rorepo.rev_parse
 
