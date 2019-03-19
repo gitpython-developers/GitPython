@@ -81,7 +81,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
         :param tree: Tree
             Tree object
         :param author: Actor
-            is the author string ( will be implicitly converted into an Actor object )
+            is the author Actor object
         :param authored_date: int_seconds_since_epoch
             is the authored DateTime - use time.gmtime() to convert it into a
             different format
