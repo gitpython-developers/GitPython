@@ -97,6 +97,7 @@ class Repo(object):
                 repo = Repo("/Users/mtrier/Development/git-python.git")
                 repo = Repo("~/Development/git-python.git")
                 repo = Repo("$REPOSITORIES/Development/git-python.git")
+                repo = Repo("C:\\Users\\mtrier\\Development\\git-python\\.git")
 
             - In *Cygwin*, path may be a `'cygdrive/...'` prefixed path.
             - If it evaluates to false, :envvar:`GIT_DIR` is used, and if this also evals to false,
