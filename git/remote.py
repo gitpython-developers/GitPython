@@ -544,10 +544,9 @@ class Remote(LazyMixin, Iterable):
                 except GitCommandError as ex:
                     if any(msg in str(ex) for msg in ['correct access rights', 'cannot run ssh']):
                         # If ssh is not setup to access this repository, see issue 694
-                        result = Git().execute(
-                            ['git', 'config', '--get', 'remote.%s.url' % self.name]
-                        )
-                        yield result
+                        remote_details = self.repo.git.config('--get-all', 'remote.%s.url' % self.name)
+                        for line in remote_details.split('\n'):
+                            yield line
                     else:
                         raise ex
             else:
