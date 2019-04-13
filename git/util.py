@@ -864,9 +864,12 @@ class IterableList(list):
 
     def __contains__(self, attr):
         # first try identity match for performance
-        rval = list.__contains__(self, attr)
-        if rval:
-            return rval
+        try:
+            rval = list.__contains__(self, attr)
+            if rval:
+                return rval
+        except (AttributeError, TypeError):
+            pass
         # END handle match
 
         # otherwise make a full name search
