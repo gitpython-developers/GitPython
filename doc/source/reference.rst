@@ -3,6 +3,13 @@
 API Reference
 =============
 
+Version
+-------
+
+.. py:data:: git.__version__
+
+   Current GitPython version.
+
 Objects.Base
 ------------
 
