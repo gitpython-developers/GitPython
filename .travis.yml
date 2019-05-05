@@ -22,7 +22,8 @@ install:
   - git submodule update --init --recursive
   - git fetch --tags
   - pip install -r test-requirements.txt
-  - pip install codecov sphinx
+  - pip install -r doc/requirements.txt
+  - pip install codecov
 
   # generate some reflog as git-python tests need it (in master)
   - ./init-tests-after-clone.sh
