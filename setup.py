@@ -80,7 +80,7 @@ setup(
     package_dir={'git': 'git'},
     license="BSD License",
     python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*',
-    requires=requirements,
+    install_requires=requirements,
     tests_require=requirements + test_requirements,
     zip_safe=False,
     long_description="""GitPython is a python library used to interact with Git repositories""",
