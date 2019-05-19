@@ -7,6 +7,7 @@ from .util import (
 )
 from git.exc import InvalidGitRepositoryError
 import git
+import os
 
 import logging
 
@@ -197,7 +198,13 @@ class RootModule(Submodule):
 
                             if not dry_run:
                                 assert nn not in [r.name for r in rmts]
-                                smr = smm.create_remote(nn, sm.url)
+                                
+                                # Handle relative urls
+                                remoteUrl = sm.url
+                                if sm.url.startswith('..'):
+                                    remoteUrl = os.path.join(repo.remotes.origin.url, sm.url)
+                                # END handle relative url check
+                                smr = smm.create_remote(nn, remoteUrl)
                                 smr.fetch(progress=progress)
 
                                 # If we have a tracking branch, it should be available
