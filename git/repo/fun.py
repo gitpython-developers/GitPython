@@ -86,7 +86,7 @@ def find_submodule_git_dir(d):
                 ## Cygwin creates submodules prefixed with `/cygdrive/...` suffixes.
                 path = decygpath(path)
             if not osp.isabs(path):
-                path = osp.join(osp.dirname(d), path)
+                path = osp.normpath(osp.join(osp.dirname(d), path))
             return find_submodule_git_dir(path)
     # end handle exception
     return None
