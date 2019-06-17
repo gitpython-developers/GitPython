@@ -559,11 +559,11 @@ class Repo(object):
         return res
 
     def is_ancestor(self, ancestor_rev, rev):
-        """Check if a commit  is an ancestor of another
+        """Check if a commit is an ancestor of another
 
         :param ancestor_rev: Rev which should be an ancestor
         :param rev: Rev to test against ancestor_rev
-        :return: ``True``, ancestor_rev is an accestor to rev.
+        :return: ``True``, ancestor_rev is an ancestor to rev.
         """
         try:
             self.git.merge_base(ancestor_rev, rev, is_ancestor=True)
