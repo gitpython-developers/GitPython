@@ -2,8 +2,10 @@ include VERSION
 include LICENSE
 include CHANGES
 include AUTHORS
-include README
+include CONTRIBUTING.md
+include README.md
 include requirements.txt
+include test-requirements.txt
 
 recursive-include doc *
 

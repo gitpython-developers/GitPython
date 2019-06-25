@@ -1,6 +1,6 @@
--r requirements.txt
-
+ddt>=1.1.1
 coverage
 flake8
 nose
+tox
 mock; python_version=='2.7'

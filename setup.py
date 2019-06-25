@@ -19,6 +19,9 @@ with open(path.join(path.dirname(__file__), 'VERSION')) as v:
 with open('requirements.txt') as reqs_file:
     requirements = reqs_file.read().splitlines()
 
+with open('test-requirements.txt') as reqs_file:
+    test_requirements = reqs_file.read().splitlines()
+
 
 class build_py(_build_py):
 
@@ -63,10 +66,6 @@ def _stamp_version(filename):
         print("WARNING: Couldn't find version line in file %s" % filename, file=sys.stderr)
 
 
-install_requires = ['gitdb2 >= 2.0.0']
-test_requires = ['ddt>=1.1.1']
-# end
-
 setup(
     name="GitPython",
     cmdclass={'build_py': build_py, 'sdist': sdist},
@@ -81,9 +80,8 @@ setup(
     package_dir={'git': 'git'},
     license="BSD License",
     python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*',
-    requires=['gitdb2 (>=2.0.0)'],
-    install_requires=install_requires,
-    test_requirements=test_requires + install_requires,
+    install_requires=requirements,
+    tests_require=requirements + test_requirements,
     zip_safe=False,
     long_description="""GitPython is a python library used to interact with Git repositories""",
     classifiers=[
@@ -110,6 +108,6 @@ setup(
         "Programming Language :: Python :: 3.4",
         "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
-        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.7"
     ]
 )

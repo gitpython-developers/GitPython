@@ -9,12 +9,11 @@ matrix:
   include:
     - python: 3.7
       dist: xenial
-      sudo: required
     - python: "nightly"
       dist: xenial
-      sudo: required
   allow_failures:
     - python: "nightly"
+      dist: xenial
 git:
   # a higher depth is needed for most of the tests - must be high enough to not actually be shallow
   # as we clone our own repository in the process
@@ -40,8 +39,7 @@ script:
   - ulimit -n 128
   - ulimit -n
   - nosetests -v --with-coverage
-  - if [ "$TRAVIS_PYTHON_VERSION" == '3.4' ]; then flake8 --ignore=W293,E265,E266,W503,W504,E731; fi
   - if [ "$TRAVIS_PYTHON_VERSION" == '3.5' ]; then cd doc && make html; fi
-  -
+  - if [ "$TRAVIS_PYTHON_VERSION" == '3.6' ]; then flake8 --ignore=W293,E265,E266,W503,W504,E731; fi
 after_success:
   - codecov

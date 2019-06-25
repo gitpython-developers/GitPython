@@ -43,6 +43,10 @@ from .util import (
     stream_copy,
 )
 
+try:
+    PermissionError
+except NameError:  # Python < 3.3
+    PermissionError = OSError
 
 execute_kwargs = {'istream', 'with_extended_output',
                   'with_exceptions', 'as_process', 'stdout_as_string',
@@ -211,22 +215,15 @@ class Git(LazyMixin):
 
         # test if the new git executable path is valid
 
-        if sys.version_info < (3,):
-            # - a GitCommandNotFound error is spawned by ourselves
-            # - a OSError is spawned if the git executable provided
-            #   cannot be executed for whatever reason
-            exceptions = (GitCommandNotFound, OSError)
-        else:
-            # - a GitCommandNotFound error is spawned by ourselves
-            # - a PermissionError is spawned if the git executable provided
-            #   cannot be executed for whatever reason
-            exceptions = (GitCommandNotFound, PermissionError)
-
+        # - a GitCommandNotFound error is spawned by ourselves
+        # - a PermissionError is spawned if the git executable provided
+        #   cannot be executed for whatever reason
+        
         has_git = False
         try:
             cls().version()
             has_git = True
-        except exceptions:
+        except (GitCommandNotFound, PermissionError):
             pass
 
         # warn or raise exception if test failed
@@ -718,8 +715,11 @@ class Git(LazyMixin):
         stdout_sink = (PIPE
                        if with_stdout
                        else getattr(subprocess, 'DEVNULL', None) or open(os.devnull, 'wb'))
-        log.debug("Popen(%s, cwd=%s, universal_newlines=%s, shell=%s)",
-                  command, cwd, universal_newlines, shell)
+        istream_ok = "None"
+        if istream:
+            istream_ok = "<valid stream>"
+        log.debug("Popen(%s, cwd=%s, universal_newlines=%s, shell=%s, istream=%s)",
+                  command, cwd, universal_newlines, shell, istream_ok)
         try:
             proc = Popen(command,
                          env=env,
