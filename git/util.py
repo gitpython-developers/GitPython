@@ -534,8 +534,8 @@ class Actor(object):
     can be committers and authors or anything with a name and an email as
     mentioned in the git log entries."""
     # PRECOMPILED REGEX
-    name_only_regex = re.compile(r'<(.+)>')
-    name_email_regex = re.compile(r'(.*) <(.+?)>')
+    name_only_regex = re.compile(r'<(.*)>')
+    name_email_regex = re.compile(r'(.*) <(.*?)>')
 
     # ENVIRONMENT VARIABLES
     # read when creating new commits

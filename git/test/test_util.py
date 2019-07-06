@@ -212,6 +212,11 @@ class TestUtils(TestBase):
             self.assertIsInstance(Actor.author(cr), Actor)
         # END assure config reader is handled
 
+    def test_actor_from_string(self):
+        self.assertEqual(Actor._from_string("name"), Actor("name", None))
+        self.assertEqual(Actor._from_string("name <>"), Actor("name", ""))
+        self.assertEqual(Actor._from_string("name last another <some-very-long-email@example.com>"), Actor("name last another", "some-very-long-email@example.com"))
+
     @ddt.data(('name', ''), ('name', 'prefix_'))
     def test_iterable_list(self, case):
         name, prefix = case
