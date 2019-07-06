@@ -146,6 +146,51 @@ class SectionConstraint(object):
         self._config.__exit__(exception_type, exception_value, traceback)
 
 
+class _OMD(OrderedDict):
+    """Ordered multi-dict."""
+
+    def __setitem__(self, key, value):
+        super(_OMD, self).__setitem__(key, [value])
+
+    def add(self, key, value):
+        if key not in self:
+            super(_OMD, self).__setitem__(key, [value])
+            return
+
+        super(_OMD, self).__getitem__(key).append(value)
+
+    def setall(self, key, values):
+        super(_OMD, self).__setitem__(key, values)
+
+    def __getitem__(self, key):
+        return super(_OMD, self).__getitem__(key)[-1]
+
+    def getlast(self, key):
+        return super(_OMD, self).__getitem__(key)[-1]
+
+    def setlast(self, key, value):
+        if key not in self:
+            super(_OMD, self).__setitem__(key, [value])
+            return
+
+        prior = super(_OMD, self).__getitem__(key)
+        prior[-1] = value
+
+    def get(self, key, default=None):
+        return super(_OMD, self).get(key, [default])[-1]
+
+    def getall(self, key):
+        return super(_OMD, self).__getitem__(key)
+
+    def items(self):
+        """List of (key, last value for key)."""
+        return [(k, self[k]) for k in self]
+
+    def items_all(self):
+        """List of (key, list of values for key)."""
+        return [(k, self.getall(k)) for k in self]
+
+
 class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, object)):
 
     """Implements specifics required to read git style configuration files.
@@ -200,7 +245,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
             contents into ours. This makes it impossible to write back an individual configuration file.
             Thus, if you want to modify a single configuration file, turn this off to leave the original
             dataset unaltered when reading it."""
-        cp.RawConfigParser.__init__(self, dict_type=OrderedDict)
+        cp.RawConfigParser.__init__(self, dict_type=_OMD)
 
         # Used in python 3, needs to stay in sync with sections for underlying implementation to work
         if not hasattr(self, '_proxies'):
@@ -348,7 +393,8 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
                         is_multi_line = True
                         optval = string_decode(optval[1:])
                     # end handle multi-line
-                    cursect[optname] = optval
+                    # preserves multiple values for duplicate optnames
+                    cursect.add(optname, optval)
                 else:
                     # check if it's an option with no value - it's just ignored by git
                     if not self.OPTVALUEONLY.match(line):
@@ -362,7 +408,8 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
                     is_multi_line = False
                     line = line[:-1]
                 # end handle quotations
-                cursect[optname] += string_decode(line)
+                optval = cursect.getlast(optname)
+                cursect.setlast(optname, optval + string_decode(line))
             # END parse section or option
         # END while reading
 
@@ -442,9 +489,12 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
         git compatible format"""
         def write_section(name, section_dict):
             fp.write(("[%s]\n" % name).encode(defenc))
-            for (key, value) in section_dict.items():
-                if key != "__name__":
-                    fp.write(("\t%s = %s\n" % (key, self._value_to_string(value).replace('\n', '\n\t'))).encode(defenc))
+            for (key, values) in section_dict.items_all():
+                if key == "__name__":
+                    continue
+
+                for v in values:
+                    fp.write(("\t%s = %s\n" % (key, self._value_to_string(v).replace('\n', '\n\t'))).encode(defenc))
                 # END if key is not __name__
         # END section writing
 
@@ -456,6 +506,22 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
     def items(self, section_name):
         """:return: list((option, value), ...) pairs of all items in the given section"""
         return [(k, v) for k, v in super(GitConfigParser, self).items(section_name) if k != '__name__']
+
+    def items_all(self, section_name):
+        """:return: list((option, [values...]), ...) pairs of all items in the given section"""
+        rv = _OMD(self._defaults)
+
+        for k, vs in self._sections[section_name].items_all():
+            if k == '__name__':
+                continue
+
+            if k in rv and rv.getall(k) == vs:
+                continue
+
+            for v in vs:
+                rv.add(k, v)
+
+        return rv.items_all()
 
     @needs_values
     def write(self):
@@ -508,7 +574,11 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
         return self._read_only
 
     def get_value(self, section, option, default=None):
-        """
+        """Get an option's value.
+
+        If multiple values are specified for this option in the section, the
+        last one specified is returned.
+
         :param default:
             If not None, the given default value will be returned in case
             the option did not exist
@@ -523,6 +593,31 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
                 return default
             raise
 
+        return self._string_to_value(valuestr)
+
+    def get_values(self, section, option, default=None):
+        """Get an option's values.
+
+        If multiple values are specified for this option in the section, all are
+        returned.
+
+        :param default:
+            If not None, a list containing the given default value will be
+            returned in case the option did not exist
+        :return: a list of properly typed values, either int, float or string
+
+        :raise TypeError: in case the value could not be understood
+            Otherwise the exceptions known to the ConfigParser will be raised."""
+        try:
+            lst = self._sections[section].getall(option)
+        except Exception:
+            if default is not None:
+                return [default]
+            raise
+
+        return [self._string_to_value(valuestr) for valuestr in lst]
+
+    def _string_to_value(self, valuestr):
         types = (int, float)
         for numtype in types:
             try:
@@ -545,7 +640,9 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
             return True
 
         if not isinstance(valuestr, string_types):
-            raise TypeError("Invalid value type: only int, long, float and str are allowed", valuestr)
+            raise TypeError(
+                "Invalid value type: only int, long, float and str are allowed",
+                valuestr)
 
         return valuestr
 
@@ -572,6 +669,25 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
         self.set(section, option, self._value_to_string(value))
         return self
 
+    @needs_values
+    @set_dirty_and_flush_changes
+    def add_value(self, section, option, value):
+        """Adds a value for the given option in section.
+        It will create the section if required, and will not throw as opposed to the default
+        ConfigParser 'set' method. The value becomes the new value of the option as returned
+        by 'get_value', and appends to the list of values returned by 'get_values`'.
+
+        :param section: Name of the section in which the option resides or should reside
+        :param option: Name of the option
+
+        :param value: Value to add to option. It must be a string or convertible
+            to a string
+        :return: this instance"""
+        if not self.has_section(section):
+            self.add_section(section)
+        self._sections[section].add(option, self._value_to_string(value))
+        return self
+
     def rename_section(self, section, new_name):
         """rename the given section to new_name
         :raise ValueError: if section doesn't exit
@@ -584,8 +700,9 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
             raise ValueError("Destination section '%s' already exists" % new_name)
 
         super(GitConfigParser, self).add_section(new_name)
-        for k, v in self.items(section):
-            self.set(new_name, k, self._value_to_string(v))
+        new_section = self._sections[new_name]
+        for k, vs in self.items_all(section):
+            new_section.setall(k, vs)
         # end for each value to copy
 
         # This call writes back the changes, which is why we don't have the respective decorator

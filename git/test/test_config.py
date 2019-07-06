@@ -11,7 +11,7 @@ from git import (
     GitConfigParser
 )
 from git.compat import string_types
-from git.config import cp
+from git.config import _OMD, cp
 from git.test.lib import (
     TestCase,
     fixture_path,
@@ -265,3 +265,110 @@ class TestBase(TestCase):
 
         with self.assertRaises(cp.NoOptionError):
             cr.get_value('color', 'ui')
+
+    def test_multiple_values(self):
+        file_obj = self._to_memcache(fixture_path('git_config_multiple'))
+        with GitConfigParser(file_obj, read_only=False) as cw:
+            self.assertEqual(cw.get('section0', 'option0'), 'value0')
+            self.assertEqual(cw.get_values('section0', 'option0'), ['value0'])
+            self.assertEqual(cw.items('section0'), [('option0', 'value0')])
+
+            # Where there are multiple values, "get" returns the last.
+            self.assertEqual(cw.get('section1', 'option1'), 'value1b')
+            self.assertEqual(cw.get_values('section1', 'option1'),
+                             ['value1a', 'value1b'])
+            self.assertEqual(cw.items('section1'),
+                             [('option1', 'value1b'),
+                              ('other_option1', 'other_value1')])
+            self.assertEqual(cw.items_all('section1'),
+                             [('option1', ['value1a', 'value1b']),
+                              ('other_option1', ['other_value1'])])
+            with self.assertRaises(KeyError):
+                cw.get_values('section1', 'missing')
+
+            self.assertEqual(cw.get_values('section1', 'missing', 1), [1])
+            self.assertEqual(cw.get_values('section1', 'missing', 's'), ['s'])
+
+    def test_multiple_values_rename(self):
+        file_obj = self._to_memcache(fixture_path('git_config_multiple'))
+        with GitConfigParser(file_obj, read_only=False) as cw:
+            cw.rename_section('section1', 'section2')
+            cw.write()
+            file_obj.seek(0)
+            cr = GitConfigParser(file_obj, read_only=True)
+            self.assertEqual(cr.get_value('section2', 'option1'), 'value1b')
+            self.assertEqual(cr.get_values('section2', 'option1'),
+                             ['value1a', 'value1b'])
+            self.assertEqual(cr.items('section2'),
+                             [('option1', 'value1b'),
+                              ('other_option1', 'other_value1')])
+            self.assertEqual(cr.items_all('section2'),
+                             [('option1', ['value1a', 'value1b']),
+                              ('other_option1', ['other_value1'])])
+
+    def test_multiple_to_single(self):
+        file_obj = self._to_memcache(fixture_path('git_config_multiple'))
+        with GitConfigParser(file_obj, read_only=False) as cw:
+            cw.set_value('section1', 'option1', 'value1c')
+
+            cw.write()
+            file_obj.seek(0)
+            cr = GitConfigParser(file_obj, read_only=True)
+            self.assertEqual(cr.get_value('section1', 'option1'), 'value1c')
+            self.assertEqual(cr.get_values('section1', 'option1'), ['value1c'])
+            self.assertEqual(cr.items('section1'),
+                             [('option1', 'value1c'),
+                              ('other_option1', 'other_value1')])
+            self.assertEqual(cr.items_all('section1'),
+                             [('option1', ['value1c']),
+                              ('other_option1', ['other_value1'])])
+
+    def test_single_to_multiple(self):
+        file_obj = self._to_memcache(fixture_path('git_config_multiple'))
+        with GitConfigParser(file_obj, read_only=False) as cw:
+            cw.add_value('section1', 'other_option1', 'other_value1a')
+
+            cw.write()
+            file_obj.seek(0)
+            cr = GitConfigParser(file_obj, read_only=True)
+            self.assertEqual(cr.get_value('section1', 'option1'), 'value1b')
+            self.assertEqual(cr.get_values('section1', 'option1'),
+                             ['value1a', 'value1b'])
+            self.assertEqual(cr.get_value('section1', 'other_option1'),
+                             'other_value1a')
+            self.assertEqual(cr.get_values('section1', 'other_option1'),
+                             ['other_value1', 'other_value1a'])
+            self.assertEqual(cr.items('section1'),
+                             [('option1', 'value1b'),
+                              ('other_option1', 'other_value1a')])
+            self.assertEqual(
+                cr.items_all('section1'),
+                [('option1', ['value1a', 'value1b']),
+                 ('other_option1', ['other_value1', 'other_value1a'])])
+
+    def test_add_to_multiple(self):
+        file_obj = self._to_memcache(fixture_path('git_config_multiple'))
+        with GitConfigParser(file_obj, read_only=False) as cw:
+            cw.add_value('section1', 'option1', 'value1c')
+            cw.write()
+            file_obj.seek(0)
+            cr = GitConfigParser(file_obj, read_only=True)
+            self.assertEqual(cr.get_value('section1', 'option1'), 'value1c')
+            self.assertEqual(cr.get_values('section1', 'option1'),
+                             ['value1a', 'value1b', 'value1c'])
+            self.assertEqual(cr.items('section1'),
+                             [('option1', 'value1c'),
+                              ('other_option1', 'other_value1')])
+            self.assertEqual(cr.items_all('section1'),
+                             [('option1', ['value1a', 'value1b', 'value1c']),
+                              ('other_option1', ['other_value1'])])
+
+    def test_setlast(self):
+        # Test directly, not covered by higher-level tests.
+        omd = _OMD()
+        omd.setlast('key', 'value1')
+        self.assertEqual(omd['key'], 'value1')
+        self.assertEqual(omd.getall('key'), ['value1'])
+        omd.setlast('key', 'value2')
+        self.assertEqual(omd['key'], 'value2')
+        self.assertEqual(omd.getall('key'), ['value2'])
