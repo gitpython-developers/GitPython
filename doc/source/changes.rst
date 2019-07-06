@@ -2,6 +2,17 @@
 Changelog
 =========
 
+2.1.12 - Bugfixes and Features
+==============================
+
+* Multi-value support and interface improvements for Git configuration. Thanks to A. Jesse Jiryu Davis.
+
+see the following for (most) details:
+https://github.com/gitpython-developers/gitpython/milestone/27?closed=1
+
+or run have a look at the difference between tags v2.1.11 and v2.1.12:
+https://github.com/gitpython-developers/GitPython/compare/2.1.11...2.1.12
+
 2.1.11 - Bugfixes
 =================
 
