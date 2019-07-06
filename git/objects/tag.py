@@ -59,8 +59,9 @@ class TagObject(base.Object):
 
             self.tag = lines[2][4:]  # tag <tag name>
 
-            tagger_info = lines[3]  # tagger <actor> <date>
-            self.tagger, self.tagged_date, self.tagger_tz_offset = parse_actor_and_date(tagger_info)
+            if len(lines) > 3:
+                tagger_info = lines[3]  # tagger <actor> <date>
+                self.tagger, self.tagged_date, self.tagger_tz_offset = parse_actor_and_date(tagger_info)
 
             # line 4 empty - it could mark the beginning of the next header
             # in case there really is no message, it would not exist. Otherwise
