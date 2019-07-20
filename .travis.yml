@@ -22,6 +22,7 @@ install:
   - python --version; git --version
   - git submodule update --init --recursive
   - git fetch --tags
+  - pip install -r requirements.txt
   - pip install -r test-requirements.txt
   - pip install codecov sphinx
 
