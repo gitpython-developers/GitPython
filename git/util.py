@@ -390,21 +390,6 @@ class RemoteProgress(object):
         if len(self.error_lines) > 0 or self._cur_line.startswith(('error:', 'fatal:')):
             self.error_lines.append(self._cur_line)
             return []
-        elif 'up to date' in self._cur_line:
-            # Checking this way instead of startswith, because debugging for
-            # startswith(' = [up to date]') is going to be a major pain if just
-            # a single space or bracket changes.
-
-            # Strip the initial ' = [up to date]' from the line
-            message_string = line.split('date]', 1)[-1]
-
-            # Trim whitespace
-            message_string = ' '.join(message_string.split())
-
-            self.update(0,
-                        1,
-                        1,
-                        message_string)
 
         sub_lines = line.split('\r')
         failed_lines = []
