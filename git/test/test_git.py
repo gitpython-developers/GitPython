@@ -86,6 +86,7 @@ class TestGit(TestBase):
 
         assert_equal(["--max-count"], self.git.transform_kwargs(**{'max_count': True}))
         assert_equal(["--max-count=5"], self.git.transform_kwargs(**{'max_count': 5}))
+        assert_equal(["--max-count=0"], self.git.transform_kwargs(**{'max_count': 0}))
         assert_equal([], self.git.transform_kwargs(**{'max_count': None}))
 
         # Multiple args are supported by using lists/tuples
