@@ -893,7 +893,7 @@ class Git(LazyMixin):
         else:
             if value is True:
                 return ["--%s" % dashify(name)]
-            elif value not in (False, None):
+            elif value is not False and value is not None:
                 return ["--%s=%s" % (dashify(name), value)]
         return []
 
