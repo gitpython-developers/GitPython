@@ -13,7 +13,7 @@ The object database implementation is optimized for handling large quantities of
 Requirements
 ============
 
-* `Python`_ 3.0 or newer
+* `Python`_ 2.7 or newer
 * `Git`_ 1.7.0 or newer
     It should also work with older versions, but it may be that some operations
     involving remotes will not work as expected.
