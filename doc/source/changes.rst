@@ -2,6 +2,12 @@
 Changelog
 =========
 
+2.1.13 - Bring back Python 2.7 support
+======================================
+
+My apologies for any inconvenience this may have caused. Following semver, backward incompatible changes
+will be introduced in a minor version.
+
 2.1.12 - Bugfixes and Features
 ==============================
 
