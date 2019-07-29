@@ -2,6 +2,22 @@
 Changelog
 =========
 
+3.0.0 - Remove Python 2 support
+===============================
+
+Motivation for this is a patch which improves unicode handling when dealing with filesystem paths.
+Python 2 compatibility was introduced to deal with differences, and I thought it would be a good idea
+to 'just' drop support right now, mere 5 months away from the official maintenance stop of python 2.7.
+
+The underlying motivation clearly is my anger when thinking python and unicode, which was a hassle from the
+start, at least in a codebase as old as GitPython, which totally doesn't handle encodings correctly in many cases.
+
+Having migrated to using `Rust` exclusively for tooling, I still see that correct handling of encodings isn't entirely
+trivial, but at least `Rust` makes clear what has to be done at compile time, allowing to write software that is pretty
+much guaranteed to work once it compiles.
+
+Again, my apologies if removing Python 2 support caused inconveniences, please see release 2.1.13 which returns it.
+
 2.1.13 - Bring back Python 2.7 support
 ======================================
 
