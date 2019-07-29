@@ -30,7 +30,10 @@ PY3 = sys.version_info[0] >= 3
 is_win = (os.name == 'nt')
 is_posix = (os.name == 'posix')
 is_darwin = (os.name == 'darwin')
-defenc = sys.getdefaultencoding()
+if hasattr(sys, 'getfilesystemencoding'):
+    defenc = sys.getfilesystemencoding()
+if defenc is None:
+    defenc = sys.getdefaultencoding()
 
 if PY3:
     import io
