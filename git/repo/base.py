@@ -1065,11 +1065,11 @@ class Repo(object):
 
     def currently_rebasing_on(self):
         """
-        :return: The hash of the commit which is currently being replayed while rebasing.
+        :return: The commit which is currently being replayed while rebasing.
 
         None if we are not currently rebasing.
         """
         rebase_head_file = osp.join(self.git_dir, "REBASE_HEAD")
         if not osp.isfile(rebase_head_file):
             return None
-        return open(rebase_head_file, "rt").readline().strip()
+        return self.commit(open(rebase_head_file, "rt").readline().strip())
