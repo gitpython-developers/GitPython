@@ -1062,7 +1062,7 @@ class Repo(object):
     def __repr__(self):
         return '<git.Repo "%s">' % self.git_dir
 
-    def currentlyRebasingOn(self):
+    def currently_rebasing_on(self):
         """
         :return: The hash of the commit which is currently being replayed while rebasing.
 
