@@ -106,7 +106,7 @@ class Tutorials(TestBase):
         # [11-test_init_repo_object]
         assert now.commit.message != past.commit.message
         # You can read objects directly through binary streams, no working tree required
-        assert (now.commit.tree / 'VERSION').data_stream.read().decode('ascii').startswith('2')
+        assert (now.commit.tree / 'VERSION').data_stream.read().decode('ascii').startswith('3')
 
         # You can traverse trees as well to handle all contained files of a particular commit
         file_count = 0
