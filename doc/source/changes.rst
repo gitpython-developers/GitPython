@@ -18,6 +18,12 @@ much guaranteed to work once it compiles.
 
 Again, my apologies if removing Python 2 support caused inconveniences, please see release 2.1.13 which returns it.
 
+see the following for (most) details:
+https://github.com/gitpython-developers/gitpython/milestone/27?closed=1
+
+or run have a look at the difference between tags v2.1.12 and v3.0.0:
+https://github.com/gitpython-developers/GitPython/compare/2.1.12...3.0.0.
+
 2.1.13 - Bring back Python 2.7 support
 ======================================
 
@@ -28,9 +34,6 @@ will be introduced in a minor version.
 ==============================
 
 * Multi-value support and interface improvements for Git configuration. Thanks to A. Jesse Jiryu Davis.
-
-see the following for (most) details:
-https://github.com/gitpython-developers/gitpython/milestone/27?closed=1
 
 or run have a look at the difference between tags v2.1.11 and v2.1.12:
 https://github.com/gitpython-developers/GitPython/compare/2.1.11...2.1.12
