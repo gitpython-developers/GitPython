@@ -1023,3 +1023,25 @@ class TestRepo(TestBase):
             self.assertEqual(r.working_dir, repo_dir)
         finally:
             os.environ = oldenv
+
+    @with_rw_directory
+    def test_rebasing(self, rw_dir):
+        r = Repo.init(rw_dir)
+        fp = osp.join(rw_dir, 'hello.txt')
+        r.git.commit("--allow-empty", message="init",)
+        with open(fp, 'w') as fs:
+            fs.write("hello world")
+        r.git.add(Git.polish_url(fp))
+        r.git.commit(message="English")
+        self.assertEqual(r.currently_rebasing_on(), None)
+        r.git.checkout("HEAD^1")
+        with open(fp, 'w') as fs:
+            fs.write("Hola Mundo")
+        r.git.add(Git.polish_url(fp))
+        r.git.commit(message="Spanish")
+        commitSpanish = r.commit()
+        try:
+            r.git.rebase("master")
+        except GitCommandError:
+            pass
+        self.assertEqual(r.currently_rebasing_on(), commitSpanish)
