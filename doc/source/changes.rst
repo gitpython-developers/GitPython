@@ -2,6 +2,12 @@
 Changelog
 =========
 
+3.0.1 - Bugfixes and performance improvements
+=============================================
+
+* Fix a `performance regression <https://github.com/gitpython-developers/GitPython/issues/906>`_ which could make certain workloads 50% slower
+* Add `currently_rebasing_on` method on `Repo`, see `the PR <https://github.com/gitpython-developers/GitPython/pull/903/files#diff-c276fc3c4df38382ec884e59657b869dR1065>`_
+
 3.0.0 - Remove Python 2 support
 ===============================
 
