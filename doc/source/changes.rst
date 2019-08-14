@@ -2,6 +2,11 @@
 Changelog
 =========
 
+2.1.14 - Bugfixes
+=================
+
+Fix an issue with `transforming kwargs <https://github.com/gitpython-developers/GitPython/pull/899>`_ passed to the `git` command.
+
 2.1.13 - Bring back Python 2.7 support
 ======================================
 
