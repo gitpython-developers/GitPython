@@ -67,7 +67,7 @@ class Repo(object):
     'git_dir' is the .git repository directory, which is always set."""
     DAEMON_EXPORT_FILE = 'git-daemon-export-ok'
 
-    _git = None  # Must exist, or  __del__  will fail in case we raise on `__init__()`
+    git = None  # Must exist, or  __del__  will fail in case we raise on `__init__()`
     working_dir = None
     _working_tree_dir = None
     git_dir = None
@@ -203,41 +203,13 @@ class Repo(object):
         # END working dir handling
 
         self.working_dir = self._working_tree_dir or self.common_dir
+        self.git = self.GitCommandWrapperType(self.working_dir)
 
         # special handling, in special times
         args = [osp.join(self.common_dir, 'objects')]
         if issubclass(odbt, GitCmdObjectDB):
             args.append(self.git)
         self.odb = odbt(*args)
-
-    def _get_git(self):
-        working_dir = self._working_tree_dir or self.common_dir
-        if self._git:
-            if self._git._working_dir != expand_path(working_dir):
-                self.close()
-                self._git = None
-
-        if not self._git:
-            self._git = self.GitCommandWrapperType(working_dir)
-        return self._git
-
-    def _del_git(self):
-        if self._git:
-            self._git.clear_cache()
-            self._git = None
-            # Tempfiles objects on Windows are holding references to
-            # open files until they are collected by the garbage
-            # collector, thus preventing deletion.
-            # TODO: Find these references and ensure they are closed
-            # and deleted synchronously rather than forcing a gc
-            # collection.
-            if is_win:
-                gc.collect()
-            gitdb.util.mman.collect()
-            if is_win:
-                gc.collect()
-
-    git = property(fget=_get_git, fdel=_del_git)
 
     def __enter__(self):
         return self
@@ -252,7 +224,19 @@ class Repo(object):
             pass
 
     def close(self):
-        del self.git
+        if self.git:
+            self.git.clear_cache()
+            # Tempfiles objects on Windows are holding references to
+            # open files until they are collected by the garbage
+            # collector, thus preventing deletion.
+            # TODO: Find these references and ensure they are closed
+            # and deleted synchronously rather than forcing a gc
+            # collection.
+            if is_win:
+                gc.collect()
+            gitdb.util.mman.collect()
+            if is_win:
+                gc.collect()
 
     def __eq__(self, rhs):
         if isinstance(rhs, Repo):
@@ -448,15 +432,7 @@ class Repo(object):
         elif config_level == "global":
             return osp.normpath(osp.expanduser("~/.gitconfig"))
         elif config_level == "repository":
-            try:
-                config_path = self.git.rev_parse("config", git_path=True)
-            except GitCommandError:
-                return osp.normpath(osp.join(self._common_dir or self.git_dir, "config"))
-            else:
-                if self.git._working_dir:
-                    return osp.normpath(osp.join(self.git._working_dir, config_path))
-                else:
-                    return config_path
+            return osp.normpath(osp.join(self._common_dir or self.git_dir, "config"))
 
         raise ValueError("Invalid configuration level: %r" % config_level)
 

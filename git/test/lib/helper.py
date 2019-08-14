@@ -366,7 +366,8 @@ class TestBase(TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        del cls.rorepo.git
+        cls.rorepo.git.clear_cache()
+        cls.rorepo.git = None
 
     def _make_file(self, rela_path, data, repo=None):
         """
