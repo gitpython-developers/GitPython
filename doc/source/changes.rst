@@ -2,6 +2,11 @@
 Changelog
 =========
 
+3.0.2 - Bugfixes
+=============================================
+
+* fixes an issue with installation
+
 3.0.1 - Bugfixes and performance improvements
 =============================================
 
