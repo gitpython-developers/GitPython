@@ -38,7 +38,7 @@ class TestBase(TestCase):
     def tearDown(self):
         for lfp in glob.glob(_tc_lock_fpaths):
             if osp.isfile(lfp):
-                raise AssertionError('Previous TC left hanging git-lock file: %s', lfp)
+                raise AssertionError('Previous TC left hanging git-lock file: {}'.format(lfp))
 
     def _to_memcache(self, file_path):
         with open(file_path, "rb") as fp:
