@@ -134,15 +134,18 @@ class TestGit(TestBase):
 
     def test_persistent_cat_file_command(self):
         # read header only
-        import subprocess as sp
         hexsha = "b2339455342180c7cc1e9bba3e9f181f7baa5167"
-        g = self.git.cat_file(batch_check=True, istream=sp.PIPE, as_process=True)
+        g = self.git.cat_file(
+            batch_check=True, istream=subprocess.PIPE, as_process=True
+        )
         g.stdin.write(b"b2339455342180c7cc1e9bba3e9f181f7baa5167\n")
         g.stdin.flush()
         obj_info = g.stdout.readline()
 
         # read header + data
-        g = self.git.cat_file(batch=True, istream=sp.PIPE, as_process=True)
+        g = self.git.cat_file(
+            batch=True, istream=subprocess.PIPE, as_process=True
+        )
         g.stdin.write(b"b2339455342180c7cc1e9bba3e9f181f7baa5167\n")
         g.stdin.flush()
         obj_info_two = g.stdout.readline()
@@ -160,7 +163,7 @@ class TestGit(TestBase):
 
         # same can be achieved using the respective command functions
         hexsha, typename, size = self.git.get_object_header(hexsha)
-        hexsha, typename_two, size_two, data = self.git.get_object_data(hexsha)  # @UnusedVariable
+        hexsha, typename_two, size_two, _ = self.git.get_object_data(hexsha)
         self.assertEqual(typename, typename_two)
         self.assertEqual(size, size_two)
 
@@ -264,7 +267,7 @@ class TestGit(TestBase):
                 remote.fetch()
             except GitCommandError as err:
                 if sys.version_info[0] < 3 and is_darwin:
-                    self.assertIn('ssh-orig, ' in str(err))
+                    self.assertIn('ssh-orig', str(err))
                     self.assertEqual(err.status, 128)
                 else:
                     self.assertIn('FOO', str(err))

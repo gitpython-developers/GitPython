@@ -864,9 +864,8 @@ class Submodule(IndexObject, Iterable, Traversable):
                         rmtree(wtd)
                     except Exception as ex:
                         if HIDE_WINDOWS_KNOWN_ERRORS:
-                            raise SkipTest("FIXME: fails with: PermissionError\n  %s", ex)
-                        else:
-                            raise
+                            raise SkipTest("FIXME: fails with: PermissionError\n  {}".format(ex))
+                        raise
                 # END delete tree if possible
             # END handle force
 
