@@ -484,7 +484,8 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
         buf = enc.strip()
         while buf:
             if buf[0:10] == b"encoding ":
-                self.encoding = buf[buf.find(' ') + 1:].decode('ascii')
+                self.encoding = buf[buf.find(' ') + 1:].decode(
+                    self.encoding, 'ignore')
             elif buf[0:7] == b"gpgsig ":
                 sig = buf[buf.find(b' ') + 1:] + b"\n"
                 is_next_header = False
@@ -498,7 +499,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
                         break
                     sig += sigbuf[1:]
                 # end read all signature
-                self.gpgsig = sig.rstrip(b"\n").decode('ascii')
+                self.gpgsig = sig.rstrip(b"\n").decode(self.encoding, 'ignore')
                 if is_next_header:
                     continue
             buf = readline().strip()
