@@ -364,6 +364,7 @@ class RemoteProgress(object):
                  '_seen_ops',
                  'error_lines',  # Lines that started with 'error:' or 'fatal:'.
                  'other_lines')  # Lines not denoting progress (i.e.g. push-infos).
+    re_ansi_escape = re.compile(r'\x1B[@-_][0-?]*[ -/]*[@-~]')
     re_op_absolute = re.compile(r"(remote: )?([\w\s]+):\s+()(\d+)()(.*)")
     re_op_relative = re.compile(r"(remote: )?([\w\s]+):\s+(\d+)% \((\d+)/(\d+)\)(.*)")
 
@@ -392,17 +393,8 @@ class RemoteProgress(object):
 
         # find escape characters and cut them away - regex will not work with
         # them as they are non-ascii. As git might expect a tty, it will send them
-        last_valid_index = None
-        for i, c in enumerate(reversed(line)):
-            if ord(c) < 32:
-                # its a slice index
-                last_valid_index = -i - 1
-            # END character was non-ascii
-        # END for each character in line
-        if last_valid_index is not None:
-            line = line[:last_valid_index]
-        # END cut away invalid part
-        line = line.rstrip()
+        line = self.re_ansi_escape.sub('', line)
+        line.strip()
 
         cur_count, max_count = None, None
         match = self.re_op_relative.match(line)
