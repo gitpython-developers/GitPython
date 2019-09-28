@@ -385,6 +385,14 @@ class TestRemote(TestBase):
         progress.make_assertion()
         self._do_test_push_result(res, remote)
 
+        # rejected stale delete
+        force_with_lease = "%s:0000000000000000000000000000000000000000" % new_head.path
+        res = remote.push(":%s" % new_head.path, force_with_lease=force_with_lease)
+        self.assertTrue(res[0].flags & PushInfo.ERROR)
+        self.assertTrue(res[0].flags & PushInfo.REJECTED)
+        self.assertIsNone(res[0].local_ref)
+        self._do_test_push_result(res, remote)
+
         # delete new branch on the remote end and locally
         res = remote.push(":%s" % new_head.path)
         self._do_test_push_result(res, remote)

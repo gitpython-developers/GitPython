@@ -156,7 +156,10 @@ class PushInfo(object):
         if flags & cls.DELETED:
             from_ref = None
         else:
-            from_ref = Reference.from_path(remote.repo, from_ref_string)
+            if from_ref_string == "(delete)":
+                from_ref = None
+            else:
+                from_ref = Reference.from_path(remote.repo, from_ref_string)
 
         # commit handling, could be message or commit info
         old_commit = None
