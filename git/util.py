@@ -379,101 +379,94 @@ class RemoteProgress(object):
 
         - Lines that do not contain progress info are stored in :attr:`other_lines`.
         - Lines that seem to contain an error (i.e. start with error: or fatal:) are stored
-        in :attr:`error_lines`.
-
-        :return: list(line, ...) list of lines that could not be processed"""
+        in :attr:`error_lines`."""
         # handle
         # Counting objects: 4, done.
-        # Compressing objects:  50% (1/2)   \rCompressing objects: 100% (2/2)   \rCompressing objects: 100% (2/2), done.
+        # Compressing objects:  50% (1/2)
+        # Compressing objects: 100% (2/2)
+        # Compressing objects: 100% (2/2), done.
         self._cur_line = line = line.decode('utf-8') if isinstance(line, bytes) else line
         if len(self.error_lines) > 0 or self._cur_line.startswith(('error:', 'fatal:')):
             self.error_lines.append(self._cur_line)
-            return []
+            return
 
-        sub_lines = line.split('\r')
-        failed_lines = []
-        for sline in sub_lines:
-            # find escape characters and cut them away - regex will not work with
-            # them as they are non-ascii. As git might expect a tty, it will send them
-            last_valid_index = None
-            for i, c in enumerate(reversed(sline)):
-                if ord(c) < 32:
-                    # its a slice index
-                    last_valid_index = -i - 1
-                # END character was non-ascii
-            # END for each character in sline
-            if last_valid_index is not None:
-                sline = sline[:last_valid_index]
-            # END cut away invalid part
-            sline = sline.rstrip()
+        # find escape characters and cut them away - regex will not work with
+        # them as they are non-ascii. As git might expect a tty, it will send them
+        last_valid_index = None
+        for i, c in enumerate(reversed(line)):
+            if ord(c) < 32:
+                # its a slice index
+                last_valid_index = -i - 1
+            # END character was non-ascii
+        # END for each character in line
+        if last_valid_index is not None:
+            line = line[:last_valid_index]
+        # END cut away invalid part
+        line = line.rstrip()
 
-            cur_count, max_count = None, None
-            match = self.re_op_relative.match(sline)
-            if match is None:
-                match = self.re_op_absolute.match(sline)
+        cur_count, max_count = None, None
+        match = self.re_op_relative.match(line)
+        if match is None:
+            match = self.re_op_absolute.match(line)
 
-            if not match:
-                self.line_dropped(sline)
-                failed_lines.append(sline)
-                continue
-            # END could not get match
+        if not match:
+            self.line_dropped(line)
+            self.other_lines.append(line)
+            return
+        # END could not get match
 
-            op_code = 0
-            remote, op_name, percent, cur_count, max_count, message = match.groups()  # @UnusedVariable
+        op_code = 0
+        remote, op_name, percent, cur_count, max_count, message = match.groups()  # @UnusedVariable
 
-            # get operation id
-            if op_name == "Counting objects":
-                op_code |= self.COUNTING
-            elif op_name == "Compressing objects":
-                op_code |= self.COMPRESSING
-            elif op_name == "Writing objects":
-                op_code |= self.WRITING
-            elif op_name == 'Receiving objects':
-                op_code |= self.RECEIVING
-            elif op_name == 'Resolving deltas':
-                op_code |= self.RESOLVING
-            elif op_name == 'Finding sources':
-                op_code |= self.FINDING_SOURCES
-            elif op_name == 'Checking out files':
-                op_code |= self.CHECKING_OUT
-            else:
-                # Note: On windows it can happen that partial lines are sent
-                # Hence we get something like "CompreReceiving objects", which is
-                # a blend of "Compressing objects" and "Receiving objects".
-                # This can't really be prevented, so we drop the line verbosely
-                # to make sure we get informed in case the process spits out new
-                # commands at some point.
-                self.line_dropped(sline)
-                # Note: Don't add this line to the failed lines, as we have to silently
-                # drop it
-                self.other_lines.extend(failed_lines)
-                return failed_lines
-            # END handle op code
+        # get operation id
+        if op_name == "Counting objects":
+            op_code |= self.COUNTING
+        elif op_name == "Compressing objects":
+            op_code |= self.COMPRESSING
+        elif op_name == "Writing objects":
+            op_code |= self.WRITING
+        elif op_name == 'Receiving objects':
+            op_code |= self.RECEIVING
+        elif op_name == 'Resolving deltas':
+            op_code |= self.RESOLVING
+        elif op_name == 'Finding sources':
+            op_code |= self.FINDING_SOURCES
+        elif op_name == 'Checking out files':
+            op_code |= self.CHECKING_OUT
+        else:
+            # Note: On windows it can happen that partial lines are sent
+            # Hence we get something like "CompreReceiving objects", which is
+            # a blend of "Compressing objects" and "Receiving objects".
+            # This can't really be prevented, so we drop the line verbosely
+            # to make sure we get informed in case the process spits out new
+            # commands at some point.
+            self.line_dropped(line)
+            # Note: Don't add this line to the other lines, as we have to silently
+            # drop it
+            return
+        # END handle op code
 
-            # figure out stage
-            if op_code not in self._seen_ops:
-                self._seen_ops.append(op_code)
-                op_code |= self.BEGIN
-            # END begin opcode
+        # figure out stage
+        if op_code not in self._seen_ops:
+            self._seen_ops.append(op_code)
+            op_code |= self.BEGIN
+        # END begin opcode
 
-            if message is None:
-                message = ''
-            # END message handling
+        if message is None:
+            message = ''
+        # END message handling
 
-            message = message.strip()
-            if message.endswith(self.DONE_TOKEN):
-                op_code |= self.END
-                message = message[:-len(self.DONE_TOKEN)]
-            # END end message handling
-            message = message.strip(self.TOKEN_SEPARATOR)
+        message = message.strip()
+        if message.endswith(self.DONE_TOKEN):
+            op_code |= self.END
+            message = message[:-len(self.DONE_TOKEN)]
+        # END end message handling
+        message = message.strip(self.TOKEN_SEPARATOR)
 
-            self.update(op_code,
-                        cur_count and float(cur_count),
-                        max_count and float(max_count),
-                        message)
-        # END for each sub line
-        self.other_lines.extend(failed_lines)
-        return failed_lines
+        self.update(op_code,
+                    cur_count and float(cur_count),
+                    max_count and float(max_count),
+                    message)
 
     def new_message_handler(self):
         """
