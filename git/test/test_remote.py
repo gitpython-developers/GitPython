@@ -53,7 +53,6 @@ class TestRemoteProgress(RemoteProgress):
         # Keep it for debugging
         self._seen_lines.append(line)
         rval = super(TestRemoteProgress, self)._parse_progress_line(line)
-        assert len(line) > 1, "line %r too short" % line
         return rval
 
     def line_dropped(self, line):
