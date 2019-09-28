@@ -897,7 +897,7 @@ class TestIndex(TestBase):
         _make_hook(
             index.repo.git_dir,
             'commit-msg',
-            'echo -n " {}" >> "$1"'.format(from_hook_message)
+            'printf " {}" >> "$1"'.format(from_hook_message)
         )
         new_commit = index.commit(commit_message)
         self.assertEqual(new_commit.message, u"{} {}".format(commit_message, from_hook_message))
