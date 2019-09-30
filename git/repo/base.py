@@ -1012,6 +1012,11 @@ class Repo(object):
         :param to_path: Path to which the repository should be cloned to
         :param progress: See 'git.remote.Remote.push'.
         :param env: Optional dictionary containing the desired environment variables.
+            Note: Provided variables will be used to update the execution
+            environment for `git`. If some variable is not specified in `env`
+            and is defined in `os.environ`, value from `os.environ` will be used.
+            If you want to unset some variable, consider providing empty string
+            as its value.
         :param multi_options: See ``clone`` method
         :param kwargs: see the ``clone`` method
         :return: Repo instance pointing to the cloned directory"""
