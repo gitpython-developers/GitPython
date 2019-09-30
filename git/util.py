@@ -394,7 +394,6 @@ class RemoteProgress(object):
         # find escape characters and cut them away - regex will not work with
         # them as they are non-ascii. As git might expect a tty, it will send them
         line = self.re_ansi_escape.sub('', line)
-        line = line.rstrip()
 
         cur_count, max_count = None, None
         match = self.re_op_relative.match(line)

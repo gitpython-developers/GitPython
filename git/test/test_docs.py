@@ -104,7 +104,7 @@ class Tutorials(TestBase):
 
         # Object handling
         # [11-test_init_repo_object]
-        assert now.commit.message != past.commit.message
+        assert now.commit.message != past.commit.message, now.commit.message
         # You can read objects directly through binary streams, no working tree required
         assert (now.commit.tree / 'VERSION').data_stream.read().decode('ascii').startswith('3')
 
