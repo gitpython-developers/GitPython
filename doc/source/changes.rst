@@ -2,6 +2,12 @@
 Changelog
 =========
 
+3.0.3 - Bugfixes
+=============================================
+
+see the following for (most) details:
+https://github.com/gitpython-developers/gitpython/milestone/30?closed=1
+
 3.0.2 - Bugfixes
 =============================================
 
