@@ -569,10 +569,8 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         """ Split the items into two lists of path strings and BaseEntries. """
         paths = []
         entries = []
-        # check if is iterable, else put in list
-        try:
-            test_item = iter(items)
-        except TypeError:
+        # if it is a string put in list
+        if isinstance(items, str):
             items = [items]
 
         for item in items:
@@ -806,10 +804,8 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         """Returns a list of repo-relative paths from the given items which
         may be absolute or relative paths, entries or blobs"""
         paths = []
-        # check if is iterable, else put in list
-        try:
-            test_item = iter(items)
-        except TypeError:
+        # if string put in list
+        if isinstance(items, str):
             items = [items]
 
         for item in items:
