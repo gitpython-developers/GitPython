@@ -775,9 +775,11 @@ class TestIndex(TestBase):
     
     @with_rw_repo('HEAD', bare=False)
     def test_index_single_addremove(self, rw_repo):
-        path = osp.join('git', 'test', 'test_index.py')
-        self._assert_entries(rw_repo.index.add(path))
-        deleted_files = rw_repo.index.remove(path)
+        fp = osp.join(rw_repo.working_dir, 'testfile.txt')
+        with open(fp, 'w') as fs:
+            fs.write(u'content of testfile')
+        self._assert_entries(rw_repo.index.add(fp))
+        deleted_files = rw_repo.index.remove(fp)
         assert deleted_files
         
     def test_index_new(self):

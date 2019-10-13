@@ -15,3 +15,5 @@ nbproject
 /*egg-info
 /.tox
 /.vscode/
+.idea/
+.cache/
