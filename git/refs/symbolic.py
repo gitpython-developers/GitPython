@@ -614,7 +614,7 @@ class SymbolicReference(object):
         # END for each directory to walk
 
         # read packed refs
-        for sha, rela_path in cls._iter_packed_refs(repo):  # @UnusedVariable
+        for _sha, rela_path in cls._iter_packed_refs(repo):
             if rela_path.startswith(common_path):
                 rela_paths.add(rela_path)
             # END relative path matches common path
