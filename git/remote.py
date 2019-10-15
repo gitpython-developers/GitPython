@@ -75,8 +75,7 @@ def to_progress_instance(progress):
         return RemoteProgress()
 
     # assume its the old API with an instance of RemoteProgress.
-    else:
-        return progress
+    return progress
 
 
 class PushInfo(object):
