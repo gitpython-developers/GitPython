@@ -339,8 +339,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
 
             if PY3:
                 return v.encode(defenc).decode('unicode_escape')
-            else:
-                return v.decode('string_escape')
+            return v.decode('string_escape')
             # end
         # end
 
