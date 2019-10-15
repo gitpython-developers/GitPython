@@ -219,8 +219,7 @@ class Head(Reference):
         self.repo.git.checkout(self, **kwargs)
         if self.repo.head.is_detached:
             return self.repo.head
-        else:
-            return self.repo.active_branch
+        return self.repo.active_branch
 
     #{ Configuration
     def _config_parser(self, read_only):
