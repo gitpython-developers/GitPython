@@ -478,8 +478,7 @@ class Repo(object):
         :return: ``git.Commit``"""
         if rev is None:
             return self.head.commit
-        else:
-            return self.rev_parse(text_type(rev) + "^0")
+        return self.rev_parse(text_type(rev) + "^0")
 
     def iter_trees(self, *args, **kwargs):
         """:return: Iterator yielding Tree objects
@@ -501,8 +500,7 @@ class Repo(object):
             operations might have unexpected results."""
         if rev is None:
             return self.head.commit.tree
-        else:
-            return self.rev_parse(text_type(rev) + "^{tree}")
+        return self.rev_parse(text_type(rev) + "^{tree}")
 
     def iter_commits(self, rev=None, paths='', **kwargs):
         """A list of Commit objects representing the history of a given ref/commit
@@ -601,8 +599,7 @@ class Repo(object):
             with open(alternates_path, 'rb') as f:
                 alts = f.read().decode(defenc)
             return alts.strip().splitlines()
-        else:
-            return []
+        return []
 
     def _set_alternates(self, alts):
         """Sets the alternates
