@@ -183,7 +183,7 @@ class PushInfo(object):
             split_token = "..."
             if control_character == " ":
                 split_token = ".."
-            old_sha, _new_sha = summary.split(' ')[0].split(split_token)  
+            old_sha, _new_sha = summary.split(' ')[0].split(split_token)
             # have to use constructor here as the sha usually is abbreviated
             old_commit = old_sha
         # END message handling
