@@ -156,7 +156,7 @@ def traverse_trees_recursive(odb, tree_shas, path_prefix):
             # END skip already done items
             entries = [None for _ in range(nt)]
             entries[ti] = item
-            _sha, mode, name = item                         
+            _sha, mode, name = item
             is_dir = S_ISDIR(mode)                          # type mode bits
 
             # find this item in all other tree data items
