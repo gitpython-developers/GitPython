@@ -158,7 +158,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
     def _deserialize(self, stream):
         """Initialize this instance with index values read from the given stream"""
-        self.version, self.entries, self._extension_data, conten_sha = read_cache(stream)  # @UnusedVariable
+        self.version, self.entries, self._extension_data, _conten_sha = read_cache(stream)  
         return self
 
     def _entries_sorted(self):
@@ -392,7 +392,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
                     continue
             # END glob handling
             try:
-                for root, dirs, files in os.walk(abs_path, onerror=raise_exc):  # @UnusedVariable
+                for root, _dirs, files in os.walk(abs_path, onerror=raise_exc):  
                     for rela_file in files:
                         # add relative paths only
                         yield osp.join(root.replace(rs, ''), rela_file)
