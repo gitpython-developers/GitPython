@@ -174,8 +174,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
         # as the empty paths version will ignore merge commits for some reason.
         if paths:
             return len(self.repo.git.rev_list(self.hexsha, '--', paths, **kwargs).splitlines())
-        else:
-            return len(self.repo.git.rev_list(self.hexsha, **kwargs).splitlines())
+        return len(self.repo.git.rev_list(self.hexsha, **kwargs).splitlines())
 
     @property
     def name_rev(self):
