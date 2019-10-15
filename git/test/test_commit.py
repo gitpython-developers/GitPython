@@ -125,7 +125,7 @@ class TestCommit(TestBase):
         check_entries(stats.total)
         assert "files" in stats.total
 
-        for _filepath, d in stats.files.items(): 
+        for _filepath, d in stats.files.items():
             check_entries(d)
         # END for each stated file
 
