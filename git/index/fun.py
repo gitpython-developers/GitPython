@@ -173,8 +173,7 @@ def entry_key(*entry):
     :param entry: One instance of type BaseIndexEntry or the path and the stage"""
     if len(entry) == 1:
         return (entry[0].path, entry[0].stage)
-    else:
-        return tuple(entry)
+    return tuple(entry)
     # END handle entry
 
 
