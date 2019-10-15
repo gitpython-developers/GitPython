@@ -375,7 +375,6 @@ class Git(LazyMixin):
                 proc.wait()    # ensure process goes away
             except OSError as ex:
                 log.info("Ignored error after process had died: %r", ex)
-                pass  # ignore error when process already died
             except AttributeError:
                 # try windows
                 # for some reason, providing None for stdout/stderr still prints something. This is why
