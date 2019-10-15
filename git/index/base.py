@@ -392,7 +392,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
                     continue
             # END glob handling
             try:
-                for root, _dirs, files in os.walk(abs_path, onerror=raise_exc):  
+                for root, _dirs, files in os.walk(abs_path, onerror=raise_exc):
                     for rela_file in files:
                         # add relative paths only
                         yield osp.join(root.replace(rs, ''), rela_file)
