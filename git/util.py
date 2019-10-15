@@ -416,7 +416,7 @@ class RemoteProgress(object):
         # END could not get match
 
         op_code = 0
-        remote, op_name, percent, cur_count, max_count, message = match.groups()  # @UnusedVariable
+        _remote, op_name, _percent, cur_count, max_count, message = match.groups()  
 
         # get operation id
         if op_name == "Counting objects":
