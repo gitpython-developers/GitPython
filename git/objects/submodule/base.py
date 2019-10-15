@@ -233,8 +233,7 @@ class Submodule(IndexObject, Iterable, Traversable):
     def _module_abspath(cls, parent_repo, path, name):
         if cls._need_gitfile_submodules(parent_repo.git):
             return osp.join(parent_repo.git_dir, 'modules', name)
-        else:
-            return osp.join(parent_repo.working_tree_dir, path)
+        return osp.join(parent_repo.working_tree_dir, path)
         # end
 
     @classmethod
