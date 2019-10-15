@@ -577,9 +577,8 @@ class Actor(object):
             m = cls.name_only_regex.search(string)
             if m:
                 return Actor(m.group(1), None)
-            else:
-                # assume best and use the whole string as name
-                return Actor(string, None)
+            # assume best and use the whole string as name
+            return Actor(string, None)
             # END special case name
         # END handle name/email matching
 
