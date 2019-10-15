@@ -295,7 +295,7 @@ class FetchInfo(object):
         # parse lines
         control_character, operation, local_remote_ref, remote_local_ref, note = match.groups()
         try:
-            new_hex_sha, fetch_operation, fetch_note = fetch_line.split("\t")  # @UnusedVariable
+            _new_hex_sha, _fetch_operation, fetch_note = fetch_line.split("\t") 
             ref_type_name, fetch_note = fetch_note.split(' ', 1)
         except ValueError:  # unpack error
             raise ValueError("Failed to parse FETCH_HEAD line: %r" % fetch_line)
