@@ -349,7 +349,7 @@ class Tutorials(TestBase):
         # The index contains all blobs in a flat list
         assert len(list(index.iter_blobs())) == len([o for o in repo.head.commit.tree.traverse() if o.type == 'blob'])
         # Access blob objects
-        for (path, stage), entry in index.entries.items():  # @UnusedVariable
+        for (path, _stage), entry in index.entries.items():  
             pass
         new_file_path = os.path.join(repo.working_tree_dir, 'new-file-name')
         open(new_file_path, 'w').close()
