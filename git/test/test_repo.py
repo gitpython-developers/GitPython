@@ -737,7 +737,6 @@ class TestRepo(TestBase):
                 except (BadName, BadObject):
                     print("failed on %s" % path_section)
                     # is fine, in case we have something like 112, which belongs to remotes/rname/merge-requests/112
-                    pass
                 # END exception handling
             # END for each token
             if ref_no == 3 - 1:
