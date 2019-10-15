@@ -39,10 +39,9 @@ class RefLogEntry(tuple):
         res = self.format()
         if PY3:
             return res
-        else:
-            # repr must return a string, which it will auto-encode from unicode using the default encoding.
-            # This usually fails, so we encode ourselves
-            return res.encode(defenc)
+        # repr must return a string, which it will auto-encode from unicode using the default encoding.
+        # This usually fails, so we encode ourselves
+        return res.encode(defenc)
 
     def format(self):
         """:return: a string suitable to be placed in a reflog file"""
