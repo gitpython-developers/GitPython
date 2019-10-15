@@ -52,8 +52,8 @@ class TagObject(base.Object):
             ostream = self.repo.odb.stream(self.binsha)
             lines = ostream.read().decode(defenc).splitlines()
 
-            _obj, hexsha = lines[0].split(" ")      
-            _type_token, type_name = lines[1].split(" ")  
+            _obj, hexsha = lines[0].split(" ")
+            _type_token, type_name = lines[1].split(" ")
             self.object = \
                 get_object_type_by_name(type_name.encode('ascii'))(self.repo, hex_to_bin(hexsha))
 
