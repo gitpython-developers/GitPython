@@ -145,14 +145,12 @@ FS_ERRORS = 'surrogateescape'
 def u(text):
     if PY3:
         return text
-    else:
-        return text.decode('unicode_escape')
+    return text.decode('unicode_escape')
 
 def b(data):
     if PY3:
         return data.encode('latin1')
-    else:
-        return data
+    return data
 
 if PY3:
     _unichr = chr
@@ -282,8 +280,7 @@ def encodefilename(fn):
                 ch_utf8 = ch.encode('utf-8')
                 encoded.append(ch_utf8)
         return bytes().join(encoded)
-    else:
-        return fn.encode(FS_ENCODING, FS_ERRORS)
+    return fn.encode(FS_ENCODING, FS_ERRORS)
 
 def decodefilename(fn):
     return fn.decode(FS_ENCODING, FS_ERRORS)
