@@ -51,7 +51,7 @@ class GitCmdObjectDB(LooseObjectDB):
         :note: currently we only raise BadObject as git does not communicate
             AmbiguousObjects separately"""
         try:
-            hexsha, typename, size = self._git.get_object_header(partial_hexsha)  # @UnusedVariable
+            hexsha, _typename, _size = self._git.get_object_header(partial_hexsha)
             return hex_to_bin(hexsha)
         except (GitCommandError, ValueError):
             raise BadObject(partial_hexsha)
