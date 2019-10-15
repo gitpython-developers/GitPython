@@ -132,7 +132,7 @@ class TestObjDBPerformance(TestBigRepoR):
 
             # read chunks
             st = time()
-            hexsha, typename, size, stream = rwrepo.git.stream_object_data(gitsha)  # @UnusedVariable
+            _hexsha, _typename, size, stream = rwrepo.git.stream_object_data(gitsha)  
             while True:
                 data = stream.read(cs)
                 if len(data) < cs:
