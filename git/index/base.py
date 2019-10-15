@@ -158,7 +158,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
     def _deserialize(self, stream):
         """Initialize this instance with index values read from the given stream"""
-        self.version, self.entries, self._extension_data, _conten_sha = read_cache(stream)  
+        self.version, self.entries, self._extension_data, _conten_sha = read_cache(stream)
         return self
 
     def _entries_sorted(self):
