@@ -330,8 +330,7 @@ class Git(LazyMixin):
             but git stops liking them as it will escape the backslashes.
             Hence we undo the escaping just to be sure.
             """
-            if url.startswith('$HOME/'):
-                url = url.replace('$HOME/', '~/')
+            url = os.path.expandvars(url)
             if url.startswith('~'):
                 url = os.path.expanduser(url)
             url = url.replace("\\\\", "\\").replace("\\", "/")
