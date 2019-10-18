@@ -120,7 +120,6 @@ class TestDiff(TestBase):
         assert_equal(1, len(diffs))
 
         diff = diffs[0]
-        print(diff)
         assert_true(diff.copied_file)
         assert isinstance(str(diff), str)
 
