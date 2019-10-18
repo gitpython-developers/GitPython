@@ -247,7 +247,7 @@ class Diff(object):
                                 (?:^deleted[ ]file[ ]mode[ ](?P<deleted_file_mode>.+)(?:\n|$))?
                                 (?:^similarity[ ]index[ ]\d+%\n
                                    ^copy[ ]from[ ].*\n
-                                   ^copy[ ]to[ ](?P<copied_file_mode>.*)(?:\n|$))?
+                                   ^copy[ ]to[ ](?P<copied_file_name>.*)(?:\n|$))?
                                 (?:^index[ ](?P<a_blob_id>[0-9A-Fa-f]+)
                                     \.\.(?P<b_blob_id>[0-9A-Fa-f]+)[ ]?(?P<b_mode>.+)?(?:\n|$))?
                                 (?:^---[ ](?P<a_path>[^\t\n\r\f\v]*)[\t\r\f\v]*(?:\n|$))?
@@ -427,12 +427,12 @@ class Diff(object):
             a_path_fallback, b_path_fallback, \
                 old_mode, new_mode, \
                 rename_from, rename_to, \
-                new_file_mode, deleted_file_mode, copied_file_mode, \
+                new_file_mode, deleted_file_mode, copied_file_name, \
                 a_blob_id, b_blob_id, b_mode, \
                 a_path, b_path = header.groups()
 
             new_file, deleted_file, copied_file = \
-                    bool(new_file_mode), bool(deleted_file_mode), bool(copied_file_mode)
+                    bool(new_file_mode), bool(deleted_file_mode), bool(copied_file_name)
 
             a_path = cls._pick_best_path(a_path, rename_from, a_path_fallback)
             b_path = cls._pick_best_path(b_path, rename_to, b_path_fallback)
