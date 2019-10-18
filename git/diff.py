@@ -258,7 +258,7 @@ class Diff(object):
     NULL_BIN_SHA = b"\0" * 20
 
     __slots__ = ("a_blob", "b_blob", "a_mode", "b_mode", "a_rawpath", "b_rawpath",
-                 "new_file", "deleted_file", "copied_file", "raw_rename_from", 
+                 "new_file", "deleted_file", "copied_file", "raw_rename_from",
                  "raw_rename_to", "diff", "change_type", "score")
 
     def __init__(self, repo, a_rawpath, b_rawpath, a_blob_id, b_blob_id, a_mode,
@@ -432,7 +432,7 @@ class Diff(object):
                 a_path, b_path = header.groups()
 
             new_file, deleted_file, copied_file = \
-                    bool(new_file_mode), bool(deleted_file_mode), bool(copied_file_name)
+                bool(new_file_mode), bool(deleted_file_mode), bool(copied_file_name)
 
             a_path = cls._pick_best_path(a_path, rename_from, a_path_fallback)
             b_path = cls._pick_best_path(b_path, rename_to, b_path_fallback)
