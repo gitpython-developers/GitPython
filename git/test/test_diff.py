@@ -112,6 +112,27 @@ class TestDiff(TestBase):
         self.assertEqual(diff.score, 100)
         self.assertEqual(len(list(diffs.iter_change_type('R'))), 1)
 
+    def test_diff_with_copied_file(self):
+        output = StringProcessAdapter(fixture('diff_copied_mode'))
+        diffs = Diff._index_from_patch_format(self.rorepo, output)
+        self._assert_diff_format(diffs)
+
+        assert_equal(1, len(diffs))
+
+        diff = diffs[0]
+        print(diff)
+        assert_true(diff.copied_file)
+        assert isinstance(str(diff), str)
+
+        output = StringProcessAdapter(fixture('diff_copied_mode_raw'))
+        diffs = Diff._index_from_raw_format(self.rorepo, output)
+        self.assertEqual(len(diffs), 1)
+        diff = diffs[0]
+        self.assertEqual(diff.change_type, 'C')
+        self.assertEqual(diff.score, 100)
+        self.assertEqual(len(list(diffs.iter_change_type('C'))), 1)
+
+
     def test_diff_with_change_in_type(self):
         output = StringProcessAdapter(fixture('diff_change_in_type'))
         diffs = Diff._index_from_patch_format(self.rorepo, output)
