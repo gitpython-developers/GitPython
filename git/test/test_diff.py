@@ -121,6 +121,8 @@ class TestDiff(TestBase):
 
         diff = diffs[0]
         assert_true(diff.copied_file)
+        assert_true(diff.a_path, u'test1.txt')
+        assert_true(diff.b_path, u'test2.txt')
         assert isinstance(str(diff), str)
 
         output = StringProcessAdapter(fixture('diff_copied_mode_raw'))
@@ -129,8 +131,9 @@ class TestDiff(TestBase):
         diff = diffs[0]
         self.assertEqual(diff.change_type, 'C')
         self.assertEqual(diff.score, 100)
+        self.assertEqual(diff.a_path, u'test1.txt')
+        self.assertEqual(diff.b_path, u'test2.txt')
         self.assertEqual(len(list(diffs.iter_change_type('C'))), 1)
-
 
     def test_diff_with_change_in_type(self):
         output = StringProcessAdapter(fixture('diff_change_in_type'))
