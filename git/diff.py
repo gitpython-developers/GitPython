@@ -167,7 +167,7 @@ class DiffIndex(list):
     # R = Renamed
     # M = Modified
     # T = Changed in the type
-    change_type = ("A", "D", "R", "M", "T")
+    change_type = ("A", "C", "D", "R", "M", "T")
 
     def iter_change_type(self, change_type):
         """
@@ -245,7 +245,9 @@ class Diff(object):
                                    ^rename[ ]to[ ](?P<rename_to>.*)(?:\n|$))?
                                 (?:^new[ ]file[ ]mode[ ](?P<new_file_mode>.+)(?:\n|$))?
                                 (?:^deleted[ ]file[ ]mode[ ](?P<deleted_file_mode>.+)(?:\n|$))?
-                                (?:^copied[ ]file[ ]mode[ ](?P<copied_file_mode>.+)(?:\n|$))?
+                                (?:^similarity[ ]index[ ]\d+%\n
+                                   ^copy[ ]from[ ].*\n
+                                   ^copy[ ]to[ ](?P<copied_file_mode>.*)(?:\n|$))?
                                 (?:^index[ ](?P<a_blob_id>[0-9A-Fa-f]+)
                                     \.\.(?P<b_blob_id>[0-9A-Fa-f]+)[ ]?(?P<b_mode>.+)?(?:\n|$))?
                                 (?:^---[ ](?P<a_path>[^\t\n\r\f\v]*)[\t\r\f\v]*(?:\n|$))?
