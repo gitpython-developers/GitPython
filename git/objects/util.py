@@ -105,6 +105,9 @@ class tzoffset(tzinfo):
         self._offset = timedelta(seconds=-secs_west_of_utc)
         self._name = name or 'fixed'
 
+    def __reduce__(self):
+        return tzoffset, (-self._offset.total_seconds(), self._name)
+
     def utcoffset(self, dt):
         return self._offset
 
