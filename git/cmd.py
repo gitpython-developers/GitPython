@@ -67,7 +67,7 @@ __all__ = ('Git',)
 
 def handle_process_output(process, stdout_handler, stderr_handler,
                           finalizer=None, decode_streams=True):
-    """Registers for notifications to lean that process output is ready to read, and dispatches lines to
+    """Registers for notifications to learn that process output is ready to read, and dispatches lines to
     the respective line handlers.
     This function returns once the finalizer returns
 
