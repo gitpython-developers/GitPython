@@ -278,6 +278,14 @@ class Diff(object):
         if self.b_mode:
             self.b_mode = mode_str_to_int(self.b_mode)
 
+        # Determine whether this diff references a submodule, if it does then
+        # we need to overwrite "repo" to the corresponding submodule's repo instead
+        if repo and a_rawpath:
+            for submodule in repo.submodules:
+                if submodule.path == a_rawpath.decode("utf-8"):
+                    repo = submodule.module()
+                    break
+
         if a_blob_id is None or a_blob_id == self.NULL_HEX_SHA:
             self.a_blob = None
         else:
