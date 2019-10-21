@@ -237,7 +237,7 @@ class Diff(object):
     # precompiled regex
     re_header = re.compile(br"""
                                 ^diff[ ]--git
-                                    [ ](?P<a_path_fallback>"?a/.+?"?)[ ](?P<b_path_fallback>"?b/.+?"?)\n
+                                    [ ](?P<a_path_fallback>"?[ab]/.+?"?)[ ](?P<b_path_fallback>"?[ab]/.+?"?)\n
                                 (?:^old[ ]mode[ ](?P<old_mode>\d+)\n
                                    ^new[ ]mode[ ](?P<new_mode>\d+)(?:\n|$))?
                                 (?:^similarity[ ]index[ ]\d+%\n
