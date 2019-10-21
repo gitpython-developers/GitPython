@@ -68,7 +68,12 @@ class TestDiff(TestBase):
 
         with open(fp, 'w') as fs:
             fs.write("Hola Mundo")
-        r.git.commit(all=True, message="change on master")
+        r.git.add(Git.polish_url(fp))
+        self.assertEqual(len(r.index.diff("HEAD", create_patch=True)), 1,
+                         "create_patch should generate patch of diff to HEAD")
+        r.git.commit(message="change on master")
+        self.assertEqual(len(r.index.diff("HEAD", create_patch=True)), 0,
+                         "create_patch should generate no patch, already on HEAD")
 
         r.git.checkout('HEAD~1', b='topic')
         with open(fp, 'w') as fs:
