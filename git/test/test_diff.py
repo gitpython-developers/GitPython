@@ -280,23 +280,23 @@ class TestDiff(TestBase):
         """Test that diff is able to correctly diff commits that cover submodule changes"""
         # Init a temp git repo that will be referenced as a submodule
         sub = Repo.init(self.submodule_dir)
-        with open(f"{self.submodule_dir}/subfile", "w") as sub_subfile:
+        with open(self.submodule_dir + "/subfile", "w") as sub_subfile:
             sub_subfile.write("")
         sub.index.add(["subfile"])
         sub.index.commit("first commit")
 
         # Init a temp git repo that will incorporate the submodule
         repo = Repo.init(self.repo_dir)
-        with open(f"{self.repo_dir}/test", "w") as foo_test:
+        with open(self.repo_dir + "/test", "w") as foo_test:
             foo_test.write("")
         repo.index.add(['test'])
-        Submodule.add(repo, "subtest", "sub", url=f"file://{self.submodule_dir}")
+        Submodule.add(repo, "subtest", "sub", url="file://" + self.submodule_dir)
         repo.index.commit("first commit")
         repo.create_tag('1')
 
         # Add a commit to the submodule
         submodule = repo.submodule('subtest')
-        with open(f"{self.repo_dir}/sub/subfile", "w") as foo_sub_subfile:
+        with open(self.repo_dir + "/sub/subfile", "w") as foo_sub_subfile:
             foo_sub_subfile.write("blub")
         submodule.module().index.add(["subfile"])
         submodule.module().index.commit("changed subfile")
