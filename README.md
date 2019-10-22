@@ -110,12 +110,13 @@ Please have a look at the [contributions file][contributing].
 
 ### How to make a new release
 
-* Update/verify the version in the `VERSION` file
-* Update/verify that the changelog has been updated
+* Update/verify the **version** in the `VERSION` file
+* Update/verify that the `doc/source/changes.rst` changelog file was updated
 * Commit everything
 * Run `git tag -s <version>` to tag the version in Git
 * Run `make release`
-* Finally, set the upcoming version in the `VERSION` file, usually be
+* Close the milestone mentioned in the _changelog_ and create a new one. _Do not reuse milestones by renaming them_.
+* set the upcoming version in the `VERSION` file, usually be
   incrementing the patch level, and possibly by appending `-dev`. Probably you
   want to `git push` once more.
 
