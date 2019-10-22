@@ -84,7 +84,7 @@ class RefLogEntry(tuple):
         return self[4]
 
     @classmethod
-    def new(self, oldhexsha, newhexsha, actor, time, tz_offset, message):
+    def new(cls, oldhexsha, newhexsha, actor, time, tz_offset, message):
         """:return: New instance of a RefLogEntry"""
         if not isinstance(actor, Actor):
             raise ValueError("Need actor instance, got %s" % actor)
