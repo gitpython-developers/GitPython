@@ -365,8 +365,11 @@ class Git(LazyMixin):
                 proc.stderr.close()
 
             # did the process finish already so we have a return code ?
-            if proc.poll() is not None:
-                return
+            try:
+                if proc.poll() is not None:
+                    return
+            except OSError as ex:
+                log.info("Ignored error after process had died: %r", ex)
 
             # can be that nothing really exists anymore ...
             if os is None or getattr(os, 'kill', None) is None:
