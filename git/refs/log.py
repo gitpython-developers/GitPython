@@ -217,23 +217,24 @@ class RefLog(list, Serializable):
             the index is negative
         """
         fp = open(filepath, 'rb')
-        if index < 0:
-            return RefLogEntry.from_line(fp.readlines()[index].strip())
-        else:
-            # read until index is reached
-            for i in xrange(index + 1):
-                line = fp.readline()
-                if not line:
-                    break
-                # END abort on eof
-            # END handle runup
+        with open(filepath, 'rb') as fp:
+            if index < 0:
+                return RefLogEntry.from_line(fp.readlines()[index].strip())
+            else:
+                # read until index is reached
+                for i in xrange(index + 1):
+                    line = fp.readline()
+                    if not line:
+                        break
+                    # END abort on eof
+                # END handle runup
 
-            if i != index or not line: # skipcq:PYL-W0631
-                raise IndexError
-            # END handle exception
+                if i != index or not line: # skipcq:PYL-W0631
+                    raise IndexError
+                # END handle exception
 
-            return RefLogEntry.from_line(line.strip())
-        # END handle index
+                return RefLogEntry.from_line(line.strip())
+            # END handle index
 
     def to_file(self, filepath):
         """Write the contents of the reflog instance to a file at the given filepath.
