@@ -497,6 +497,7 @@ class Git(LazyMixin):
             # END readline loop
             return out
 
+        # skipcq: PYL-E0301
         def __iter__(self):
             return self
 
