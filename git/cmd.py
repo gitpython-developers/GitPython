@@ -67,7 +67,7 @@ __all__ = ('Git',)
 
 def handle_process_output(process, stdout_handler, stderr_handler,
                           finalizer=None, decode_streams=True):
-    """Registers for notifications to lean that process output is ready to read, and dispatches lines to
+    """Registers for notifications to learn that process output is ready to read, and dispatches lines to
     the respective line handlers.
     This function returns once the finalizer returns
 
@@ -330,6 +330,9 @@ class Git(LazyMixin):
             but git stops liking them as it will escape the backslashes.
             Hence we undo the escaping just to be sure.
             """
+            url = os.path.expandvars(url)
+            if url.startswith('~'):
+                url = os.path.expanduser(url)
             url = url.replace("\\\\", "\\").replace("\\", "/")
 
         return url
@@ -362,8 +365,11 @@ class Git(LazyMixin):
                 proc.stderr.close()
 
             # did the process finish already so we have a return code ?
-            if proc.poll() is not None:
-                return
+            try:
+                if proc.poll() is not None:
+                    return
+            except OSError as ex:
+                log.info("Ignored error after process had died: %r", ex)
 
             # can be that nothing really exists anymore ...
             if os is None or getattr(os, 'kill', None) is None:
