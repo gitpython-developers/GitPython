@@ -846,7 +846,7 @@ class Submodule(IndexObject, Iterable, Traversable):
                     # have to manually delete references as python's scoping is
                     # not existing, they could keep handles open ( on windows this is a problem )
                     if len(rrefs):
-                        del(rref) # skipcq:PYL-W0631
+                        del(rref)  # skipcq: PYL-W0631
                     # END handle remotes
                     del(rrefs)
                     del(remote)

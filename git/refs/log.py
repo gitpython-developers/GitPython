@@ -46,13 +46,13 @@ class RefLogEntry(tuple):
     def format(self):
         """:return: a string suitable to be placed in a reflog file"""
         act = self.actor
-        time = self.time
+        time_ = self.time_
         return u"{} {} {} <{}> {!s} {}\t{}\n".format(self.oldhexsha,
                                                      self.newhexsha,
                                                      act.name,
                                                      act.email,
-                                                     time[0],
-                                                     altz_to_utctz_str(time[1]),
+                                                     time_[0],
+                                                     altz_to_utctz_str(time_[1]),
                                                      self.message)
 
     @property
@@ -71,7 +71,7 @@ class RefLogEntry(tuple):
         return self[2]
 
     @property
-    def time(self):
+    def time_(self):
         """time as tuple:
 
         * [0] = int(time)
@@ -84,12 +84,12 @@ class RefLogEntry(tuple):
         return self[4]
 
     @classmethod
-    def new(cls, oldhexsha, newhexsha, actor, time, tz_offset, message):
+    def new(cls, oldhexsha, newhexsha, actor, time_, tz_offset, message):
         """:return: New instance of a RefLogEntry"""
         if not isinstance(actor, Actor):
             raise ValueError("Need actor instance, got %s" % actor)
         # END check types
-        return RefLogEntry((oldhexsha, newhexsha, actor, (time, tz_offset), message))
+        return RefLogEntry((oldhexsha, newhexsha, actor, (time_, tz_offset), message))
 
     @classmethod
     def from_line(cls, line):
@@ -121,9 +121,9 @@ class RefLogEntry(tuple):
         # END handle missing end brace
 
         actor = Actor._from_string(info[82:email_end + 1])
-        time, tz_offset = parse_date(info[email_end + 2:])
+        time_, tz_offset = parse_date(info[email_end + 2:])
 
-        return RefLogEntry((oldhexsha, newhexsha, actor, (time, tz_offset), msg))
+        return RefLogEntry((oldhexsha, newhexsha, actor, (time_, tz_offset), msg))
 
 
 class RefLog(list, Serializable):
@@ -220,21 +220,20 @@ class RefLog(list, Serializable):
         with open(filepath, 'rb') as fp:
             if index < 0:
                 return RefLogEntry.from_line(fp.readlines()[index].strip())
-            else:
-                # read until index is reached
-                for i in xrange(index + 1):
-                    line = fp.readline()
-                    if not line:
-                        break
-                    # END abort on eof
-                # END handle runup
+            # read until index is reached
+            for i in xrange(index + 1):
+                line = fp.readline()
+                if not line:
+                    break
+                # END abort on eof
+            # END handle runup
 
-                if i != index or not line: # skipcq:PYL-W0631
-                    raise IndexError
-                # END handle exception
+            if i != index or not line:  # skipcq:PYL-W0631
+                raise IndexError
+            # END handle exception
 
-                return RefLogEntry.from_line(line.strip())
-            # END handle index
+            return RefLogEntry.from_line(line.strip())
+        # END handle index
 
     def to_file(self, filepath):
         """Write the contents of the reflog instance to a file at the given filepath.
