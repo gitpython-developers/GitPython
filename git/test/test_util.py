@@ -4,6 +4,7 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
+import pickle
 import tempfile
 import time
 from unittest import skipIf
@@ -280,3 +281,9 @@ class TestUtils(TestBase):
         # Wrong offset: UTC-9000, should return datetime + tzoffset(UTC)
         altz = utctz_to_altz('-9000')
         self.assertEqual(datetime.fromtimestamp(1522827734, tzoffset(0)), from_timestamp(1522827734, altz))
+
+    def test_pickle_tzoffset(self):
+        t1 = tzoffset(555)
+        t2 = pickle.loads(pickle.dumps(t1))
+        self.assertEqual(t1._offset, t2._offset)
+        self.assertEqual(t1._name, t2._name)

@@ -5,12 +5,15 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 import ddt
+import shutil
+import tempfile
 from git import (
     Repo,
     GitCommandError,
     Diff,
     DiffIndex,
     NULL_TREE,
+    Submodule,
 )
 from git.cmd import Git
 from git.test.lib import (
@@ -19,7 +22,6 @@ from git.test.lib import (
     fixture,
     assert_equal,
     assert_true,
-
 )
 from git.test.lib import with_rw_directory
 
@@ -29,9 +31,15 @@ import os.path as osp
 @ddt.ddt
 class TestDiff(TestBase):
 
+    def setUp(self):
+        self.repo_dir = tempfile.mkdtemp()
+        self.submodule_dir = tempfile.mkdtemp()
+
     def tearDown(self):
         import gc
         gc.collect()
+        shutil.rmtree(self.repo_dir)
+        shutil.rmtree(self.submodule_dir)
 
     def _assert_diff_format(self, diffs):
         # verify that the format of the diff is sane
@@ -60,7 +68,12 @@ class TestDiff(TestBase):
 
         with open(fp, 'w') as fs:
             fs.write("Hola Mundo")
-        r.git.commit(all=True, message="change on master")
+        r.git.add(Git.polish_url(fp))
+        self.assertEqual(len(r.index.diff("HEAD", create_patch=True)), 1,
+                         "create_patch should generate patch of diff to HEAD")
+        r.git.commit(message="change on master")
+        self.assertEqual(len(r.index.diff("HEAD", create_patch=True)), 0,
+                         "create_patch should generate no patch, already on HEAD")
 
         r.git.checkout('HEAD~1', b='topic')
         with open(fp, 'w') as fs:
@@ -68,7 +81,8 @@ class TestDiff(TestBase):
         r.git.commit(all=True, message="change on topic branch")
 
         # there must be a merge-conflict
-        self.failUnlessRaises(GitCommandError, r.git.cherry_pick, 'master')
+        with self.assertRaises(GitCommandError):
+            r.git.cherry_pick('master')
 
         # Now do the actual testing - this should just work
         self.assertEqual(len(r.index.diff(None)), 2)
@@ -111,6 +125,29 @@ class TestDiff(TestBase):
         self.assertEqual(diff.change_type, 'R')
         self.assertEqual(diff.score, 100)
         self.assertEqual(len(list(diffs.iter_change_type('R'))), 1)
+
+    def test_diff_with_copied_file(self):
+        output = StringProcessAdapter(fixture('diff_copied_mode'))
+        diffs = Diff._index_from_patch_format(self.rorepo, output)
+        self._assert_diff_format(diffs)
+
+        assert_equal(1, len(diffs))
+
+        diff = diffs[0]
+        assert_true(diff.copied_file)
+        assert_true(diff.a_path, u'test1.txt')
+        assert_true(diff.b_path, u'test2.txt')
+        assert isinstance(str(diff), str)
+
+        output = StringProcessAdapter(fixture('diff_copied_mode_raw'))
+        diffs = Diff._index_from_raw_format(self.rorepo, output)
+        self.assertEqual(len(diffs), 1)
+        diff = diffs[0]
+        self.assertEqual(diff.change_type, 'C')
+        self.assertEqual(diff.score, 100)
+        self.assertEqual(diff.a_path, u'test1.txt')
+        self.assertEqual(diff.b_path, u'test2.txt')
+        self.assertEqual(len(list(diffs.iter_change_type('C'))), 1)
 
     def test_diff_with_change_in_type(self):
         output = StringProcessAdapter(fixture('diff_change_in_type'))
@@ -243,6 +280,43 @@ class TestDiff(TestBase):
         diff_index = Diff._index_from_patch_format(self.rorepo, data)
         self.assertIsNone(diff_index[0].a_path, repr(diff_index[0].a_path))
         self.assertEqual(diff_index[0].b_path, u'file with spaces', repr(diff_index[0].b_path))
+
+    def test_diff_submodule(self):
+        """Test that diff is able to correctly diff commits that cover submodule changes"""
+        # Init a temp git repo that will be referenced as a submodule
+        sub = Repo.init(self.submodule_dir)
+        with open(self.submodule_dir + "/subfile", "w") as sub_subfile:
+            sub_subfile.write("")
+        sub.index.add(["subfile"])
+        sub.index.commit("first commit")
+
+        # Init a temp git repo that will incorporate the submodule
+        repo = Repo.init(self.repo_dir)
+        with open(self.repo_dir + "/test", "w") as foo_test:
+            foo_test.write("")
+        repo.index.add(['test'])
+        Submodule.add(repo, "subtest", "sub", url="file://" + self.submodule_dir)
+        repo.index.commit("first commit")
+        repo.create_tag('1')
+
+        # Add a commit to the submodule
+        submodule = repo.submodule('subtest')
+        with open(self.repo_dir + "/sub/subfile", "w") as foo_sub_subfile:
+            foo_sub_subfile.write("blub")
+        submodule.module().index.add(["subfile"])
+        submodule.module().index.commit("changed subfile")
+        submodule.binsha = submodule.module().head.commit.binsha
+
+        # Commit submodule updates in parent repo
+        repo.index.add([submodule])
+        repo.index.commit("submodule changed")
+        repo.create_tag('2')
+
+        diff = repo.commit('1').diff(repo.commit('2'))[0]
+        # If diff is unable to find the commit hashes (looks in wrong repo) the *_blob.size
+        # property will be a string containing exception text, an int indicates success
+        self.assertIsInstance(diff.a_blob.size, int)
+        self.assertIsInstance(diff.b_blob.size, int)
 
     def test_diff_interface(self):
         # test a few variations of the main diff routine
