@@ -228,7 +228,7 @@ class RefLog(list, Serializable):
                 # END abort on eof
             # END handle runup
 
-            if i != index or not line:
+            if i != index or not line: # skipcq:PYL-W0631
                 raise IndexError
             # END handle exception
 
