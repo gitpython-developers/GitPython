@@ -20,7 +20,8 @@ from git.compat import (
     defenc,
     force_text,
     with_metaclass,
-    PY3
+    PY3,
+    is_win,
 )
 from git.util import LockFile
 
@@ -39,6 +40,10 @@ __all__ = ('GitConfigParser', 'SectionConstraint')
 
 log = logging.getLogger('git.config')
 log.addHandler(logging.NullHandler())
+
+# invariants
+# represents the configuration level of a configuration file
+CONFIG_LEVELS = ("system", "user", "global", "repository")
 
 
 class MetaParserBuilder(abc.ABCMeta):
@@ -191,6 +196,26 @@ class _OMD(OrderedDict):
         return [(k, self.getall(k)) for k in self]
 
 
+def get_config_path(config_level):
+
+    # we do not support an absolute path of the gitconfig on windows ,
+    # use the global config instead
+    if is_win and config_level == "system":
+        config_level = "global"
+
+    if config_level == "system":
+        return "/etc/gitconfig"
+    elif config_level == "user":
+        config_home = os.environ.get("XDG_CONFIG_HOME") or osp.join(os.environ.get("HOME", '~'), ".config")
+        return osp.normpath(osp.expanduser(osp.join(config_home, "git", "config")))
+    elif config_level == "global":
+        return osp.normpath(osp.expanduser("~/.gitconfig"))
+    elif config_level == "repository":
+        raise ValueError("repository configuration level not allowed")
+
+    ValueError("Invalid configuration level: %r" % config_level)
+
+
 class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, object)):
 
     """Implements specifics required to read git style configuration files.
@@ -229,7 +254,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
     # list of RawConfigParser methods able to change the instance
     _mutating_methods_ = ("add_section", "remove_section", "remove_option", "set")
 
-    def __init__(self, file_or_files, read_only=True, merge_includes=True):
+    def __init__(self, file_or_files=None, read_only=True, merge_includes=True, config_level=None):
         """Initialize a configuration reader to read the given file_or_files and to
         possibly allow changes to it by setting read_only False
 
@@ -251,7 +276,17 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
         if not hasattr(self, '_proxies'):
             self._proxies = self._dict()
 
-        self._file_or_files = file_or_files
+        if file_or_files is not None:
+            self._file_or_files = file_or_files
+        else:
+            if config_level is None:
+                if read_only:
+                    self._file_or_files = [get_config_path(f) for f in CONFIG_LEVELS[:-1]]
+                else:
+                    raise ValueError("No configuration level or configuration files specified")
+            else:
+                self._file_or_files = [get_config_path(config_level)]
+
         self._read_only = read_only
         self._dirty = False
         self._is_initialized = False
