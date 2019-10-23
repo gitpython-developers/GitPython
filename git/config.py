@@ -213,7 +213,7 @@ def get_config_path(config_level):
     elif config_level == "repository":
         raise ValueError("No repo to get repository configuration from. Use Repo._get_config_path")
 
-    ValueError("Invalid configuration level: %r" % config_level)
+    raise ValueError("Invalid configuration level: %r" % config_level)
 
 
 class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, object)):
