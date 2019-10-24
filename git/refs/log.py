@@ -46,13 +46,13 @@ class RefLogEntry(tuple):
     def format(self):
         """:return: a string suitable to be placed in a reflog file"""
         act = self.actor
-        time_ = self.time_
+        time = self.time
         return u"{} {} {} <{}> {!s} {}\t{}\n".format(self.oldhexsha,
                                                      self.newhexsha,
                                                      act.name,
                                                      act.email,
-                                                     time_[0],
-                                                     altz_to_utctz_str(time_[1]),
+                                                     time[0],
+                                                     altz_to_utctz_str(time[1]),
                                                      self.message)
 
     @property
@@ -71,7 +71,7 @@ class RefLogEntry(tuple):
         return self[2]
 
     @property
-    def time_(self):
+    def time(self):
         """time as tuple:
 
         * [0] = int(time)
@@ -83,14 +83,16 @@ class RefLogEntry(tuple):
         """Message describing the operation that acted on the reference"""
         return self[4]
 
+    # skipcq: PYL-W0621
     @classmethod
-    def new(cls, oldhexsha, newhexsha, actor, time_, tz_offset, message):
+    def new(cls, oldhexsha, newhexsha, actor, time, tz_offset, message):
         """:return: New instance of a RefLogEntry"""
         if not isinstance(actor, Actor):
             raise ValueError("Need actor instance, got %s" % actor)
         # END check types
-        return RefLogEntry((oldhexsha, newhexsha, actor, (time_, tz_offset), message))
+        return RefLogEntry((oldhexsha, newhexsha, actor, (time, tz_offset), message))
 
+    # skipcq: PYL-W0621
     @classmethod
     def from_line(cls, line):
         """:return: New RefLogEntry instance from the given revlog line.
@@ -121,9 +123,9 @@ class RefLogEntry(tuple):
         # END handle missing end brace
 
         actor = Actor._from_string(info[82:email_end + 1])
-        time_, tz_offset = parse_date(info[email_end + 2:])
+        time, tz_offset = parse_date(info[email_end + 2:])
 
-        return RefLogEntry((oldhexsha, newhexsha, actor, (time_, tz_offset), msg))
+        return RefLogEntry((oldhexsha, newhexsha, actor, (time, tz_offset), msg))
 
 
 class RefLog(list, Serializable):
