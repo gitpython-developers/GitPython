@@ -281,7 +281,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
         else:
             if config_level is None:
                 if read_only:
-                    self._file_or_files = [get_config_path(f) for f in CONFIG_LEVELS[:-1]]
+                    self._file_or_files = [get_config_path(f) for f in CONFIG_LEVELS if f != 'repository']
                 else:
                     raise ValueError("No configuration level or configuration files specified")
             else:
