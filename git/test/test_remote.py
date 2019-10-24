@@ -31,7 +31,7 @@ from git.test.lib import (
     GIT_DAEMON_PORT,
     assert_raises
 )
-from git.util import IterableList, rmtree, HIDE_WINDOWS_FREEZE_ERRORS
+from git.util import rmtree, HIDE_WINDOWS_FREEZE_ERRORS
 import os.path as osp
 
 
