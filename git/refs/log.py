@@ -83,16 +83,14 @@ class RefLogEntry(tuple):
         """Message describing the operation that acted on the reference"""
         return self[4]
 
-    # skipcq: PYL-W0621
     @classmethod
-    def new(cls, oldhexsha, newhexsha, actor, time, tz_offset, message):
+    def new(cls, oldhexsha, newhexsha, actor, time, tz_offset, message):  # skipcq: PYL-W0621
         """:return: New instance of a RefLogEntry"""
         if not isinstance(actor, Actor):
             raise ValueError("Need actor instance, got %s" % actor)
         # END check types
         return RefLogEntry((oldhexsha, newhexsha, actor, (time, tz_offset), message))
 
-    # skipcq: PYL-W0621
     @classmethod
     def from_line(cls, line):
         """:return: New RefLogEntry instance from the given revlog line.
@@ -123,7 +121,7 @@ class RefLogEntry(tuple):
         # END handle missing end brace
 
         actor = Actor._from_string(info[82:email_end + 1])
-        time, tz_offset = parse_date(info[email_end + 2:])
+        time, tz_offset = parse_date(info[email_end + 2:])   # skipcq: PYL-W0621
 
         return RefLogEntry((oldhexsha, newhexsha, actor, (time, tz_offset), msg))
 
