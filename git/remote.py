@@ -717,7 +717,7 @@ class Remote(LazyMixin, Iterable):
         # read the lines manually as it will use carriage returns between the messages
         # to override the previous one. This is why we read the bytes manually
         progress_handler = progress.new_message_handler()
-        output = IterableList('name')
+        output = []
 
         def stdout_handler(line):
             try:
@@ -833,7 +833,7 @@ class Remote(LazyMixin, Iterable):
         :note: No further progress information is returned after push returns.
         :param kwargs: Additional arguments to be passed to git-push
         :return:
-            IterableList(PushInfo, ...) iterable list of PushInfo instances, each
+            list(PushInfo, ...) list of PushInfo instances, each
             one informing about an individual head which had been updated on the remote
             side.
             If the push contains rejected heads, these will have the PushInfo.ERROR bit set

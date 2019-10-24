@@ -325,7 +325,7 @@ class TestRemote(TestBase):
         self._commit_random_file(rw_repo)
         progress = TestRemoteProgress()
         res = remote.push(lhead.reference, progress)
-        self.assertIsInstance(res, IterableList)
+        self.assertIsInstance(res, list)
         self._do_test_push_result(res, remote)
         progress.make_assertion()
 
