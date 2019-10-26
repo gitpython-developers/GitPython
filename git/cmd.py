@@ -401,7 +401,7 @@ class Git(LazyMixin):
             :raise GitCommandError: if the return status is not 0"""
             if stderr is None:
                 stderr = b''
-            stderr = force_bytes(stderr)
+            stderr = force_bytes(data=stderr, encoding='utf-8')
 
             status = self.proc.wait()
 
