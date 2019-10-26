@@ -283,7 +283,8 @@ class Diff(object):
         if repo and a_rawpath:
             for submodule in repo.submodules:
                 if submodule.path == a_rawpath.decode("utf-8"):
-                    repo = submodule.module()
+                    if submodule.module_exists():
+                        repo = submodule.module()
                     break
 
         if a_blob_id is None or a_blob_id == self.NULL_HEX_SHA:
