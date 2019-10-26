@@ -245,6 +245,20 @@ class TestRepo(TestBase):
         assert_equal(cloned.config_reader().get_value('core', 'filemode'), False)
         assert_equal(cloned.config_reader().get_value('submodule "repo"', 'update'), 'checkout')
 
+    def test_clone_from_with_path_contains_unicode(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            unicode_dir_name = '\u0394'
+            path_with_unicode = os.path.join(tmpdir, unicode_dir_name)
+            os.makedirs(path_with_unicode)
+
+            try:
+                Repo.clone_from(
+                    url=self._small_repo_url(),
+                    to_path=path_with_unicode,
+                )
+            except UnicodeEncodeError:
+                self.fail('Raised UnicodeEncodeError')
+
     @with_rw_repo('HEAD')
     def test_max_chunk_size(self, repo):
         class TestOutputStream(object):
