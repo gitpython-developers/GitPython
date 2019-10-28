@@ -216,7 +216,6 @@ class RefLog(list, Serializable):
             all other lines. Nonetheless, the whole file has to be read if
             the index is negative
         """
-        fp = open(filepath, 'rb')
         with open(filepath, 'rb') as fp:
             if index < 0:
                 return RefLogEntry.from_line(fp.readlines()[index].strip())
