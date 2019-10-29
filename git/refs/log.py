@@ -84,7 +84,7 @@ class RefLogEntry(tuple):
         return self[4]
 
     @classmethod
-    def new(self, oldhexsha, newhexsha, actor, time, tz_offset, message):
+    def new(cls, oldhexsha, newhexsha, actor, time, tz_offset, message):  # skipcq: PYL-W0621
         """:return: New instance of a RefLogEntry"""
         if not isinstance(actor, Actor):
             raise ValueError("Need actor instance, got %s" % actor)
@@ -121,7 +121,7 @@ class RefLogEntry(tuple):
         # END handle missing end brace
 
         actor = Actor._from_string(info[82:email_end + 1])
-        time, tz_offset = parse_date(info[email_end + 2:])
+        time, tz_offset = parse_date(info[email_end + 2:])   # skipcq: PYL-W0621
 
         return RefLogEntry((oldhexsha, newhexsha, actor, (time, tz_offset), msg))
 
@@ -216,10 +216,9 @@ class RefLog(list, Serializable):
             all other lines. Nonetheless, the whole file has to be read if
             the index is negative
         """
-        fp = open(filepath, 'rb')
-        if index < 0:
-            return RefLogEntry.from_line(fp.readlines()[index].strip())
-        else:
+        with open(filepath, 'rb') as fp:
+            if index < 0:
+                return RefLogEntry.from_line(fp.readlines()[index].strip())
             # read until index is reached
             for i in xrange(index + 1):
                 line = fp.readline()
@@ -228,7 +227,7 @@ class RefLog(list, Serializable):
                 # END abort on eof
             # END handle runup
 
-            if i != index or not line:
+            if i != index or not line:  # skipcq:PYL-W0631
                 raise IndexError
             # END handle exception
 

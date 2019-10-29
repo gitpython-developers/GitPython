@@ -432,13 +432,14 @@ class Diff(object):
         text = b''.join(text)
         index = DiffIndex()
         previous_header = None
-        for header in cls.re_header.finditer(text):
+        header = None
+        for _header in cls.re_header.finditer(text):
             a_path_fallback, b_path_fallback, \
                 old_mode, new_mode, \
                 rename_from, rename_to, \
                 new_file_mode, deleted_file_mode, copied_file_name, \
                 a_blob_id, b_blob_id, b_mode, \
-                a_path, b_path = header.groups()
+                a_path, b_path = _header.groups()
 
             new_file, deleted_file, copied_file = \
                 bool(new_file_mode), bool(deleted_file_mode), bool(copied_file_name)
@@ -449,7 +450,7 @@ class Diff(object):
             # Our only means to find the actual text is to see what has not been matched by our regex,
             # and then retro-actively assign it to our index
             if previous_header is not None:
-                index[-1].diff = text[previous_header.end():header.start()]
+                index[-1].diff = text[previous_header.end():_header.start()]
             # end assign actual diff
 
             # Make sure the mode is set if the path is set. Otherwise the resulting blob is invalid
@@ -468,7 +469,8 @@ class Diff(object):
                               rename_to,
                               None, None, None))
 
-            previous_header = header
+            previous_header = _header
+            header = _header
         # end for each header we parse
         if index:
             index[-1].diff = text[header.end():]

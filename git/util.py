@@ -133,7 +133,7 @@ def join_path(a, *p):
     '/' instead of possibly '\' on windows."""
     path = a
     for b in p:
-        if len(b) == 0:
+        if not b:
             continue
         if b.startswith('/'):
             path += b[1:]
@@ -386,7 +386,7 @@ class RemoteProgress(object):
         # Compressing objects: 100% (2/2)
         # Compressing objects: 100% (2/2), done.
         self._cur_line = line = line.decode('utf-8') if isinstance(line, bytes) else line
-        if len(self.error_lines) > 0 or self._cur_line.startswith(('error:', 'fatal:')):
+        if self.error_lines or self._cur_line.startswith(('error:', 'fatal:')):
             self.error_lines.append(self._cur_line)
             return
 
