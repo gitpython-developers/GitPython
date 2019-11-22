@@ -77,6 +77,7 @@ class Repo(object):
     re_whitespace = re.compile(r'\s+')
     re_hexsha_only = re.compile('^[0-9A-Fa-f]{40}$')
     re_hexsha_shortened = re.compile('^[0-9A-Fa-f]{4,40}$')
+    re_envvars = re.compile(r'(\$(\{\s?)?[a-zA-Z_]\w*(\}\s?)?|%\s?[a-zA-Z_]\w*\s?%)')
     re_author_committer_start = re.compile(r'^(author|committer)')
     re_tab_full_line = re.compile(r'^\t(.*)$')
 
@@ -125,7 +126,7 @@ class Repo(object):
         epath = epath or path or os.getcwd()
         if not isinstance(epath, str):
             epath = str(epath)
-        if expand_vars and ("%" in epath or "$" in epath):
+        if expand_vars and re.search(self.re_envvars, epath):
             warnings.warn("The use of environment variables in paths is deprecated" +
                           "\nfor security reasons and may be removed in the future!!")
         epath = expand_path(epath, expand_vars)
