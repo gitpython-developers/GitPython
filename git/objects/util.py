@@ -148,6 +148,8 @@ def parse_date(string_date):
     try:
         if string_date.count(' ') == 1 and string_date.rfind(':') == -1:
             timestamp, offset = string_date.split()
+            if timestamp.startswith('@'):
+                timestamp = timestamp[1:]
             timestamp = int(timestamp)
             return timestamp, utctz_to_altz(verify_utctz(offset))
         else:

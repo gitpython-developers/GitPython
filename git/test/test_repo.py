@@ -221,6 +221,12 @@ class TestRepo(TestBase):
         assert_equal(environment, cloned.git.environment())
 
     @with_rw_directory
+    def test_date_format(self, rw_dir):
+        repo = Repo.init(osp.join(rw_dir, "repo"))
+        # @-timestamp is the format used by git commit hooks
+        repo.index.commit("Commit messages", commit_date="@1400000000 +0000")
+
+    @with_rw_directory
     def test_clone_from_pathlib(self, rw_dir):
         if pathlib is None:  # pythons bellow 3.4 don't have pathlib
             raise SkipTest("pathlib was introduced in 3.4")
