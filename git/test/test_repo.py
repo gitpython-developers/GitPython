@@ -362,7 +362,7 @@ class TestRepo(TestBase):
         self.rorepo.alternates = cur_alternates
 
     def test_repr(self):
-        assert repr(self.rorepo).startswith('<git.Repo ')
+        assert repr(self.rorepo).startswith('<git.repo.base.Repo ')
 
     def test_is_dirty_with_bare_repository(self):
         orig_value = self.rorepo._bare
