@@ -1057,7 +1057,8 @@ class Repo(object):
     rev_parse = rev_parse
 
     def __repr__(self):
-        return '<git.Repo "%s">' % self.git_dir
+        clazz = self.__class__
+        return '<%s.%s %r>' % (clazz.__module__, clazz.__name__, self.git_dir)
 
     def currently_rebasing_on(self):
         """
