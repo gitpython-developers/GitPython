@@ -6,7 +6,10 @@
 #
 
 FROM ubuntu:xenial
-MAINTAINER James E. King III <jking@apache.org>
+
+# Metadata
+LABEL maintainer="jking@apache.org"
+
 ENV CONTAINER_USER=user
 ENV DEBIAN_FRONTEND noninteractive
 
