@@ -9,6 +9,7 @@ FROM ubuntu:xenial
 
 # Metadata
 LABEL maintainer="jking@apache.org"
+LABEL description="CI enviroment for testing GitPython"A
 
 ENV CONTAINER_USER=user
 ENV DEBIAN_FRONTEND noninteractive
