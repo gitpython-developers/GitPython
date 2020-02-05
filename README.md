@@ -64,9 +64,7 @@ separate process which can be dropped periodically.
 
 #### Windows support
 
-For *Windows*, we do regularly test it on [Appveyor CI](https://www.appveyor.com/)
-but not all test-cases pass - you may help improve them by exploring
-[Issue #525](https://github.com/gitpython-developers/GitPython/issues/525).
+See [Issue #525](https://github.com/gitpython-developers/GitPython/issues/525).
 
 ### RUNNING TESTS
 
@@ -190,7 +188,6 @@ New BSD License.  See the LICENSE file.
 
 [![codecov](https://codecov.io/gh/gitpython-developers/GitPython/branch/master/graph/badge.svg)](https://codecov.io/gh/gitpython-developers/GitPython)
 [![Build Status](https://travis-ci.org/gitpython-developers/GitPython.svg)](https://travis-ci.org/gitpython-developers/GitPython)
-[![Build status](https://ci.appveyor.com/api/projects/status/0f3pi3c00hajlrsd/branch/master?svg=true&passingText=windows%20OK&failingText=windows%20failed)](https://ci.appveyor.com/project/Byron/gitpython/branch/master)
 [![Code Climate](https://codeclimate.com/github/gitpython-developers/GitPython/badges/gpa.svg)](https://codeclimate.com/github/gitpython-developers/GitPython)
 [![Documentation Status](https://readthedocs.org/projects/gitpython/badge/?version=stable)](https://readthedocs.org/projects/gitpython/?badge=stable)
 [![Stories in Ready](https://badge.waffle.io/gitpython-developers/GitPython.png?label=ready&title=Ready)](https://waffle.io/gitpython-developers/GitPython)
