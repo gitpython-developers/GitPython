@@ -117,11 +117,6 @@ def b(data):
         return data.encode('latin1')
     return data
 
-if PY3:
-    bytes_chr = lambda code: bytes((code,))
-else:
-    bytes_chr = chr
-
 def surrogateescape_handler(exc):
     """
     Pure Python implementation of the PEP 383: the "surrogateescape" error
@@ -216,9 +211,9 @@ def encodefilename(fn):
         for index, ch in enumerate(fn):
             code = ord(ch)
             if code < 128:
-                ch = bytes_chr(code)
+                ch = bytes((code,))
             elif 0xDC80 <= code <= 0xDCFF:
-                ch = bytes_chr(code - 0xDC00)
+                ch = bytes((code - 0xDC00,))
             else:
                 raise UnicodeEncodeError(FS_ENCODING,
                     fn, index, index+1,
@@ -233,7 +228,7 @@ def encodefilename(fn):
             code = ord(ch)
             if 0xD800 <= code <= 0xDFFF:
                 if 0xDC80 <= code <= 0xDCFF:
-                    ch = bytes_chr(code - 0xDC00)
+                    ch = bytes((code - 0xDC00,))
                     encoded.append(ch)
                 else:
                     raise UnicodeEncodeError(
