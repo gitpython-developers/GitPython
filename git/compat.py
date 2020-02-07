@@ -12,9 +12,6 @@ import os
 import sys
 
 
-from gitdb.utils.compat import (
-    izip,       # @UnusedImport
-)
 from gitdb.utils.encoding import (
     string_types,    # @UnusedImport
     text_type,       # @UnusedImport
