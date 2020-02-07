@@ -36,10 +36,6 @@ from git import (
     BadName,
     GitCommandError
 )
-from git.compat import (
-    is_win,
-    win_encode,
-)
 from git.exc import (
     BadObject,
 )

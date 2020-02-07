@@ -32,7 +32,6 @@ from gitdb.util import (# NOQA @IgnorePep8
 from git.compat import is_win
 import os.path as osp
 
-from .compat import defenc
 from .exc import InvalidGitRepositoryError
 
 
