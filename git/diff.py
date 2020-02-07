@@ -12,7 +12,6 @@ from git.compat import (
 )
 from git.util import finalize_process, hex_to_bin
 
-from .compat import binary_type
 from .objects.blob import Blob
 from .objects.util import mode_str_to_int
 
@@ -268,8 +267,8 @@ class Diff(object):
         self.a_mode = a_mode
         self.b_mode = b_mode
 
-        assert a_rawpath is None or isinstance(a_rawpath, binary_type)
-        assert b_rawpath is None or isinstance(b_rawpath, binary_type)
+        assert a_rawpath is None or isinstance(a_rawpath, bytes)
+        assert b_rawpath is None or isinstance(b_rawpath, bytes)
         self.a_rawpath = a_rawpath
         self.b_rawpath = b_rawpath
 
@@ -302,8 +301,8 @@ class Diff(object):
         self.copied_file = copied_file
 
         # be clear and use None instead of empty strings
-        assert raw_rename_from is None or isinstance(raw_rename_from, binary_type)
-        assert raw_rename_to is None or isinstance(raw_rename_to, binary_type)
+        assert raw_rename_from is None or isinstance(raw_rename_from, bytes)
+        assert raw_rename_to is None or isinstance(raw_rename_to, bytes)
         self.raw_rename_from = raw_rename_from or None
         self.raw_rename_to = raw_rename_to or None
 
