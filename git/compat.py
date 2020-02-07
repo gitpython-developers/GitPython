@@ -13,7 +13,6 @@ import sys
 
 
 from gitdb.utils.compat import (
-    MAXSIZE,    # @UnusedImport
     izip,       # @UnusedImport
 )
 from gitdb.utils.encoding import (

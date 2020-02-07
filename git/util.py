@@ -13,6 +13,7 @@ import subprocess
 import re
 import shutil
 import stat
+from sys import maxsize
 import time
 from unittest import SkipTest
 
@@ -31,10 +32,7 @@ from gitdb.util import (# NOQA @IgnorePep8
 from git.compat import is_win
 import os.path as osp
 
-from .compat import (
-    MAXSIZE,
-    defenc
-)
+from .compat import defenc
 from .exc import InvalidGitRepositoryError
 
 
@@ -783,7 +781,7 @@ class BlockingLockFile(LockFile):
         can never be obtained."""
     __slots__ = ("_check_interval", "_max_block_time")
 
-    def __init__(self, file_path, check_interval_s=0.3, max_block_time_s=MAXSIZE):
+    def __init__(self, file_path, check_interval_s=0.3, max_block_time_s=maxsize):
         """Configure the instance
 
         :param check_interval_s:
