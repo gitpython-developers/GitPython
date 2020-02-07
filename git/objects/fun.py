@@ -1,7 +1,6 @@
 """Module with functions which are supposed to be as fast as possible"""
 from stat import S_ISDIR
 from git.compat import (
-    byte_ord,
     safe_decode,
     defenc,
     xrange,
@@ -27,7 +26,7 @@ def tree_to_stream(entries, write):
         # END for each 8 octal value
 
         # git slices away the first octal if its zero
-        if byte_ord(mode_str[0]) == ord_zero:
+        if mode_str[0] == ord_zero:
             mode_str = mode_str[1:]
         # END save a byte
 
@@ -57,10 +56,10 @@ def tree_entries_from_data(data):
         # read mode
         # Some git versions truncate the leading 0, some don't
         # The type will be extracted from the mode later
-        while byte_ord(data[i]) != space_ord:
+        while data[i] != space_ord:
             # move existing mode integer up one level being 3 bits
             # and add the actual ordinal value of the character
-            mode = (mode << 3) + (byte_ord(data[i]) - ord_zero)
+            mode = (mode << 3) + (data[i] - ord_zero)
             i += 1
         # END while reading mode
 
@@ -70,7 +69,7 @@ def tree_entries_from_data(data):
         # parse name, it is NULL separated
 
         ns = i
-        while byte_ord(data[i]) != 0:
+        while data[i] != 0:
             i += 1
         # END while not reached NULL
 
