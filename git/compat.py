@@ -33,9 +33,6 @@ is_darwin = (os.name == 'darwin')
 defenc = sys.getfilesystemencoding()
 
 if PY3:
-    def bchr(n):
-        return bytes([n])
-
     def mviter(d):
         return d.values()
 
@@ -45,7 +42,6 @@ if PY3:
 else:
     if defenc == 'ascii':
         defenc = 'utf-8'
-    bchr = chr
     unicode = unicode
     binary_type = str
     range = xrange  # @ReservedAssignment

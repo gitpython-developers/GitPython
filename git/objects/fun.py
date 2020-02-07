@@ -4,8 +4,7 @@ from git.compat import (
     safe_decode,
     defenc,
     xrange,
-    text_type,
-    bchr
+    text_type
 )
 
 __all__ = ('tree_to_stream', 'tree_entries_from_data', 'traverse_trees_recursive',
@@ -22,7 +21,7 @@ def tree_to_stream(entries, write):
     for binsha, mode, name in entries:
         mode_str = b''
         for i in xrange(6):
-            mode_str = bchr(((mode >> (i * 3)) & bit_mask) + ord_zero) + mode_str
+            mode_str = bytes([((mode >> (i * 3)) & bit_mask) + ord_zero]) + mode_str
         # END for each 8 octal value
 
         # git slices away the first octal if its zero
