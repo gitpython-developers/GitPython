@@ -6,10 +6,7 @@
 import re
 
 from git.cmd import handle_process_output
-from git.compat import (
-    defenc,
-    PY3
-)
+from git.compat import defenc
 from git.util import finalize_process, hex_to_bin
 
 from .objects.blob import Blob
@@ -27,10 +24,7 @@ _octal_byte_re = re.compile(b'\\\\([0-9]{3})')
 def _octal_repl(matchobj):
     value = matchobj.group(1)
     value = int(value, 8)
-    if PY3:
-        value = bytes(bytearray((value,)))
-    else:
-        value = chr(value)
+    value = bytes(bytearray((value,)))
     return value
 
 
@@ -369,8 +363,6 @@ class Diff(object):
         # Python2 silliness: have to assure we convert our likely to be unicode object to a string with the
         # right encoding. Otherwise it tries to convert it using ascii, which may fail ungracefully
         res = h + msg
-        if not PY3:
-            res = res.encode(defenc)
         # end
         return res
 

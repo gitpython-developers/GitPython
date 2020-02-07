@@ -18,10 +18,7 @@ from .fun import (
     tree_to_stream
 )
 
-from git.compat import PY3
-
-if PY3:
-    cmp = lambda a, b: (a > b) - (a < b)
+cmp = lambda a, b: (a > b) - (a < b)
 
 __all__ = ("TreeModifier", "Tree")
 

@@ -33,8 +33,7 @@ import os.path as osp
 
 from .compat import (
     MAXSIZE,
-    defenc,
-    PY3
+    defenc
 )
 from .exc import InvalidGitRepositoryError
 
@@ -592,9 +591,6 @@ class Actor(object):
                                           ('email', env_email, cls.conf_email, default_email)):
             try:
                 val = os.environ[evar]
-                if not PY3:
-                    val = val.decode(defenc)
-                # end assure we don't get 'invalid strings'
                 setattr(actor, attr, val)
             except KeyError:
                 if config_reader is not None:

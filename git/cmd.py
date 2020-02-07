@@ -24,7 +24,6 @@ from git.compat import (
     string_types,
     defenc,
     force_bytes,
-    PY3,
     safe_decode,
     is_posix,
     is_win,
@@ -916,18 +915,12 @@ class Git(LazyMixin):
     @classmethod
     def __unpack_args(cls, arg_list):
         if not isinstance(arg_list, (list, tuple)):
-            # This is just required for unicode conversion, as subprocess can't handle it
-            # However, in any other case, passing strings (usually utf-8 encoded) is totally fine
-            if not PY3 and isinstance(arg_list, str):
-                return [arg_list.encode(defenc)]
             return [str(arg_list)]
 
         outlist = []
         for arg in arg_list:
             if isinstance(arg_list, (list, tuple)):
                 outlist.extend(cls.__unpack_args(arg))
-            elif not PY3 and isinstance(arg_list, str):
-                outlist.append(arg_list.encode(defenc))
             # END recursion
             else:
                 outlist.append(str(arg))

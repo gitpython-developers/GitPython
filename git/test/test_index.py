@@ -25,7 +25,7 @@ from git import (
     GitCommandError,
     CheckoutError,
 )
-from git.compat import string_types, is_win, PY3
+from git.compat import string_types, is_win
 from git.exc import (
     HookExecutionError,
     InvalidGitRepositoryError
@@ -821,10 +821,6 @@ class TestIndex(TestBase):
             asserted = True
         assert asserted, "Adding using a filename is not correctly asserted."
 
-    @skipIf(HIDE_WINDOWS_KNOWN_ERRORS and not PY3, r"""
-        FIXME:  File "C:\projects\gitpython\git\util.py", line 125, in to_native_path_linux
-        return path.replace('\\', '/')
-        UnicodeDecodeError: 'ascii' codec can't decode byte 0xc3 in position 0: ordinal not in range(128)""")
     @with_rw_directory
     def test_add_utf8P_path(self, rw_dir):
         # NOTE: fp is not a Unicode object in python 2 (which is the source of the problem)

@@ -70,9 +70,5 @@ def with_metaclass(meta, *bases):
         def __new__(cls, name, nbases, d):
             if nbases is None:
                 return type.__new__(cls, name, (), d)
-            # There may be clients who rely on this attribute to be set to a reasonable value, which is why
-            # we set the __metaclass__ attribute explicitly
-            if not PY3 and '___metaclass__' not in d:
-                d['__metaclass__'] = meta
             return meta(name, bases, d)
     return metaclass(meta.__name__ + 'Helper', None, {})

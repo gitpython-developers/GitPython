@@ -15,7 +15,6 @@ import subprocess
 
 from git.cmd import PROC_CREATIONFLAGS, handle_process_output
 from git.compat import (
-    PY3,
     defenc,
     force_text,
     force_bytes,
@@ -73,7 +72,7 @@ def run_commit_hook(name, index, *args):
         return
 
     env = os.environ.copy()
-    env['GIT_INDEX_FILE'] = safe_decode(index.path) if PY3 else safe_encode(index.path)
+    env['GIT_INDEX_FILE'] = safe_decode(index.path)
     env['GIT_EDITOR'] = ':'
     try:
         cmd = subprocess.Popen([hp] + list(args),
