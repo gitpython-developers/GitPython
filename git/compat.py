@@ -32,18 +32,16 @@ is_darwin = (os.name == 'darwin')
 defenc = sys.getfilesystemencoding()
 
 if PY3:
-    unicode = str
     binary_type = bytes
 else:
     if defenc == 'ascii':
         defenc = 'utf-8'
-    unicode = unicode
     binary_type = str
 
 
 def safe_decode(s):
     """Safely decodes a binary string to unicode"""
-    if isinstance(s, unicode):
+    if isinstance(s, str):
         return s
     elif isinstance(s, bytes):
         return s.decode(defenc, 'surrogateescape')
@@ -53,7 +51,7 @@ def safe_decode(s):
 
 def safe_encode(s):
     """Safely decodes a binary string to unicode"""
-    if isinstance(s, unicode):
+    if isinstance(s, str):
         return s.encode(defenc)
     elif isinstance(s, bytes):
         return s
@@ -63,7 +61,7 @@ def safe_encode(s):
 
 def win_encode(s):
     """Encode unicodes for process arguments on Windows."""
-    if isinstance(s, unicode):
+    if isinstance(s, str):
         return s.encode(locale.getpreferredencoding(False))
     elif isinstance(s, bytes):
         return s
