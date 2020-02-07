@@ -16,7 +16,6 @@ from git.compat import (
     string_types,
     force_bytes,
     defenc,
-    mviter,
 )
 from git.exc import (
     GitCommandError,
@@ -442,7 +441,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             Function(t) returning True if tuple(stage, Blob) should be yielded by the
             iterator. A default filter, the BlobFilter, allows you to yield blobs
             only if they match a given list of paths. """
-        for entry in mviter(self.entries):
+        for entry in self.entries.values():
             blob = entry.to_blob(self.repo)
             blob.size = entry.size
             output = (entry.stage, blob)
@@ -467,7 +466,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         for stage, blob in self.iter_blobs(is_unmerged_blob):
             path_map.setdefault(blob.path, []).append((stage, blob))
         # END for each unmerged blob
-        for l in mviter(path_map):
+        for l in path_map.values():
             l.sort()
         return path_map
 
@@ -1086,7 +1085,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             proc = self.repo.git.checkout_index(*args, **kwargs)
             proc.wait()
             fprogress(None, True, None)
-            rval_iter = (e.path for e in mviter(self.entries))
+            rval_iter = (e.path for e in self.entries.values())
             handle_stderr(proc, rval_iter)
             return rval_iter
         else:
@@ -1117,7 +1116,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
                     folder = co_path
                     if not folder.endswith('/'):
                         folder += '/'
-                    for entry in mviter(self.entries):
+                    for entry in self.entries.values():
                         if entry.path.startswith(folder):
                             p = entry.path
                             self._write_path_to_stdin(proc, p, p, make_exc,
