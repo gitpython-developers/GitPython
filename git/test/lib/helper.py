@@ -11,7 +11,6 @@ import gc
 import io
 import logging
 import os
-import sys
 import tempfile
 import textwrap
 import time
@@ -343,11 +342,6 @@ class TestBase(TestCase):
       shas for your objects, be sure you choose some that are part of the immutable portion
       of the project history ( to assure tests don't fail for others ).
     """
-
-    # On py3, unittest has assertRaisesRegex
-    # On py27, we use unittest, which names it differently:
-    if sys.version_info[0:2] == (2, 7):
-        assertRaisesRegex = TestCase.assertRaisesRegexp
 
     def _small_repo_url(self):
         """:return" a path to a small, clonable repository"""
