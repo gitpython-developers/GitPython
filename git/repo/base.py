@@ -17,7 +17,6 @@ from git.cmd import (
 from git.compat import (
     text_type,
     defenc,
-    PY3,
     safe_decode,
     is_win,
 )
@@ -691,11 +690,8 @@ class Repo(object):
             # Special characters are escaped
             if filename[0] == filename[-1] == '"':
                 filename = filename[1:-1]
-                if PY3:
-                    # WHATEVER ... it's a mess, but works for me
-                    filename = filename.encode('ascii').decode('unicode_escape').encode('latin1').decode(defenc)
-                else:
-                    filename = filename.decode('string_escape').decode(defenc)
+                # WHATEVER ... it's a mess, but works for me
+                filename = filename.encode('ascii').decode('unicode_escape').encode('latin1').decode(defenc)
             untracked_files.append(filename)
         finalize_process(proc)
         return untracked_files

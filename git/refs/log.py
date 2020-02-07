@@ -2,7 +2,6 @@ import re
 import time
 
 from git.compat import (
-    PY3,
     string_types,
     defenc
 )
@@ -35,12 +34,7 @@ class RefLogEntry(tuple):
 
     def __repr__(self):
         """Representation of ourselves in git reflog format"""
-        res = self.format()
-        if PY3:
-            return res
-        # repr must return a string, which it will auto-encode from unicode using the default encoding.
-        # This usually fails, so we encode ourselves
-        return res.encode(defenc)
+        return self.format()
 
     def format(self):
         """:return: a string suitable to be placed in a reflog file"""

@@ -20,7 +20,6 @@ from git.compat import (
     defenc,
     force_text,
     with_metaclass,
-    PY3,
     is_win,
 )
 from git.util import LockFile
@@ -372,9 +371,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
                 v = v[:-1]
             # end cut trailing escapes to prevent decode error
 
-            if PY3:
-                return v.encode(defenc).decode('unicode_escape')
-            return v.decode('string_escape')
+            return v.encode(defenc).decode('unicode_escape')
             # end
         # end
 

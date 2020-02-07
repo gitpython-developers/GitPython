@@ -17,7 +17,7 @@ from git import (
     Repo,
     cmd
 )
-from git.compat import PY3, is_darwin
+from git.compat import is_darwin
 from git.test.lib import (
     TestBase,
     patch,
@@ -61,18 +61,12 @@ class TestGit(TestBase):
 
     def test_call_unpack_args_unicode(self):
         args = Git._Git__unpack_args(u'Unicode€™')
-        if PY3:
-            mangled_value = 'Unicode\u20ac\u2122'
-        else:
-            mangled_value = 'Unicode\xe2\x82\xac\xe2\x84\xa2'
+        mangled_value = 'Unicode\u20ac\u2122'
         assert_equal(args, [mangled_value])
 
     def test_call_unpack_args(self):
         args = Git._Git__unpack_args(['git', 'log', '--', u'Unicode€™'])
-        if PY3:
-            mangled_value = 'Unicode\u20ac\u2122'
-        else:
-            mangled_value = 'Unicode\xe2\x82\xac\xe2\x84\xa2'
+        mangled_value = 'Unicode\u20ac\u2122'
         assert_equal(args, ['git', 'log', '--', mangled_value])
 
     @raises(GitCommandError)

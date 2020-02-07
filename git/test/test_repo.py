@@ -37,7 +37,6 @@ from git import (
     GitCommandError
 )
 from git.compat import (
-    PY3,
     is_win,
     string_types,
     win_encode,
@@ -526,11 +525,6 @@ class TestRepo(TestBase):
                 num_test_untracked += join_path_native(base, utfile) in files
             self.assertEqual(len(files), num_test_untracked)
 
-            if is_win and not PY3 and is_invoking_git:
-                ## On Windows, shell needed when passing unicode cmd-args.
-                #
-                repo_add = fnt.partial(repo_add, shell=True)
-                untracked_files = [win_encode(f) for f in untracked_files]
             repo_add(untracked_files)
             self.assertEqual(len(rwrepo.untracked_files), (num_recently_untracked - len(files)))
         # end for each run

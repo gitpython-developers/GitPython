@@ -287,7 +287,6 @@ class TestFun(TestBase):
         r = tree_entries_from_data(b'100644 \x9f\0aaa')
         assert r == [('aaa', 33188, u'\udc9f')], r
 
-    @skipIf(not PY3, 'odd types returned ... maybe figure it out one day')
     def test_tree_entries_from_data_with_failing_name_decode_py3(self):
         r = tree_entries_from_data(b'100644 \x9f\0aaa')
         assert r == [(b'aaa', 33188, '\udc9f')], r
