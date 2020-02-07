@@ -19,7 +19,6 @@ from git.compat import (
     force_text,
     force_bytes,
     is_posix,
-    safe_encode,
     safe_decode,
 )
 from git.exc import (
