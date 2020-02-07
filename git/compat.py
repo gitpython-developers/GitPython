@@ -118,10 +118,8 @@ def b(data):
     return data
 
 if PY3:
-    _unichr = chr
     bytes_chr = lambda code: bytes((code,))
 else:
-    _unichr = unichr
     bytes_chr = chr
 
 def surrogateescape_handler(exc):
@@ -176,9 +174,9 @@ def replace_surrogate_encode(mystring, exc):
         #            0x80 | (code & 0x3f)]
         # Is this a good idea?
         if 0xDC00 <= code <= 0xDC7F:
-            decoded.append(_unichr(code - 0xDC00))
+            decoded.append(chr(code - 0xDC00))
         elif code <= 0xDCFF:
-            decoded.append(_unichr(code - 0xDC00))
+            decoded.append(chr(code - 0xDC00))
         else:
             raise NotASurrogateError
     return str().join(decoded)
@@ -197,9 +195,9 @@ def replace_surrogate_decode(mybytes):
         else:
             code = ord(ch)
         if 0x80 <= code <= 0xFF:
-            decoded.append(_unichr(0xDC00 + code))
+            decoded.append(chr(0xDC00 + code))
         elif code <= 0x7F:
-            decoded.append(_unichr(code))
+            decoded.append(chr(code))
         else:
             # # It may be a bad byte
             # # Try swallowing it.
