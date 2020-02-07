@@ -31,11 +31,6 @@ is_posix = (os.name == 'posix')
 is_darwin = (os.name == 'darwin')
 defenc = sys.getfilesystemencoding()
 
-if PY3:
-    binary_type = bytes
-else:
-    binary_type = str
-
 
 def safe_decode(s):
     """Safely decodes a binary string to unicode"""
