@@ -9,7 +9,6 @@ import uuid
 import git
 from git.cmd import Git
 from git.compat import (
-    string_types,
     defenc,
     is_win,
 )
@@ -110,7 +109,7 @@ class Submodule(IndexObject, Iterable, Traversable):
         if url is not None:
             self._url = url
         if branch_path is not None:
-            assert isinstance(branch_path, string_types)
+            assert isinstance(branch_path, str)
             self._branch_path = branch_path
         if name is not None:
             self._name = name

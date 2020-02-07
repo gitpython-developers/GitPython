@@ -1,10 +1,7 @@
 import re
 import time
 
-from git.compat import (
-    string_types,
-    defenc
-)
+from git.compat import defenc
 from git.objects.util import (
     parse_date,
     Serializable,
@@ -185,7 +182,7 @@ class RefLog(list, Serializable):
         :param stream: file-like object containing the revlog in its native format
             or basestring instance pointing to a file to read"""
         new_entry = RefLogEntry.from_line
-        if isinstance(stream, string_types):
+        if isinstance(stream, str):
             stream = file_contents_ro_filepath(stream)
         # END handle stream type
         while True:

@@ -6,7 +6,7 @@
 """ Module containing all exceptions thrown throughout the git package, """
 
 from gitdb.exc import *     # NOQA @UnusedWildImport skipcq: PYL-W0401, PYL-W0614
-from git.compat import safe_decode, string_types
+from git.compat import safe_decode
 
 
 class GitError(Exception):
@@ -50,7 +50,7 @@ class CommandError(GitError):
                     status = u'exit code(%s)' % int(status)
                 except (ValueError, TypeError):
                     s = safe_decode(str(status))
-                    status = u"'%s'" % s if isinstance(status, string_types) else s
+                    status = u"'%s'" % s if isinstance(status, str) else s
 
         self._cmd = safe_decode(command[0])
         self._cmdline = u' '.join(safe_decode(i) for i in command)

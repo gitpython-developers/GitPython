@@ -17,7 +17,7 @@ import textwrap
 import time
 import unittest
 
-from git.compat import string_types, is_win
+from git.compat import is_win
 from git.util import rmtree, cwd
 import gitdb
 
@@ -117,7 +117,7 @@ def with_rw_repo(working_tree_ref, bare=False):
     To make working with relative paths easier, the cwd will be set to the working
     dir of the repository.
     """
-    assert isinstance(working_tree_ref, string_types), "Decorator requires ref name for working tree checkout"
+    assert isinstance(working_tree_ref, str), "Decorator requires ref name for working tree checkout"
 
     def argument_passer(func):
         @wraps(func)
@@ -248,7 +248,7 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
     """
     from git import Git, Remote  # To avoid circular deps.
 
-    assert isinstance(working_tree_ref, string_types), "Decorator requires ref name for working tree checkout"
+    assert isinstance(working_tree_ref, str), "Decorator requires ref name for working tree checkout"
 
     def argument_passer(func):
 

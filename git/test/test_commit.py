@@ -17,10 +17,7 @@ from git import (
     Actor,
 )
 from git import Repo
-from git.compat import (
-    string_types,
-    text_type
-)
+from git.compat import text_type
 from git.objects.util import tzoffset, utc
 from git.repo.fun import touch
 from git.test.lib import (
@@ -276,7 +273,7 @@ class TestCommit(TestBase):
 
     def test_name_rev(self):
         name_rev = self.rorepo.head.commit.name_rev
-        assert isinstance(name_rev, string_types)
+        assert isinstance(name_rev, str)
 
     @with_rw_repo('HEAD', bare=True)
     def test_serialization(self, rwrepo):

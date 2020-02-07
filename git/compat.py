@@ -13,7 +13,6 @@ import sys
 
 
 from gitdb.utils.encoding import (
-    string_types,    # @UnusedImport
     text_type,       # @UnusedImport
     force_bytes,     # @UnusedImport
     force_text       # @UnusedImport

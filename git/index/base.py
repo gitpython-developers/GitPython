@@ -11,7 +11,6 @@ import subprocess
 import tempfile
 
 from git.compat import (
-    string_types,
     force_bytes,
     defenc,
 )
@@ -571,7 +570,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             items = [items]
 
         for item in items:
-            if isinstance(item, string_types):
+            if isinstance(item, str):
                 paths.append(self._to_relative_path(item))
             elif isinstance(item, (Blob, Submodule)):
                 entries.append(BaseIndexEntry.from_blob(item))
@@ -808,7 +807,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         for item in items:
             if isinstance(item, (BaseIndexEntry, (Blob, Submodule))):
                 paths.append(self._to_relative_path(item.path))
-            elif isinstance(item, string_types):
+            elif isinstance(item, str):
                 paths.append(self._to_relative_path(item))
             else:
                 raise TypeError("Invalid item type: %r" % item)
@@ -1087,7 +1086,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             handle_stderr(proc, rval_iter)
             return rval_iter
         else:
-            if isinstance(paths, string_types):
+            if isinstance(paths, str):
                 paths = [paths]
 
             # make sure we have our entries loaded before we start checkout_index
@@ -1224,7 +1223,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         # index against anything but None is a reverse diff with the respective
         # item. Handle existing -R flags properly. Transform strings to the object
         # so that we can call diff on it
-        if isinstance(other, string_types):
+        if isinstance(other, str):
             other = self.repo.rev_parse(other)
         # END object conversion
 

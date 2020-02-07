@@ -38,7 +38,6 @@ from git import (
 )
 from git.compat import (
     is_win,
-    string_types,
     win_encode,
 )
 from git.exc import (
@@ -441,7 +440,7 @@ class TestRepo(TestBase):
         # test the 'lines per commit' entries
         tlist = b[0][1]
         assert_true(tlist)
-        assert_true(isinstance(tlist[0], string_types))
+        assert_true(isinstance(tlist[0], str))
         assert_true(len(tlist) < sum(len(t) for t in tlist))               # test for single-char bug
 
         # BINARY BLAME

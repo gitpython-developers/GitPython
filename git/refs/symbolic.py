@@ -1,9 +1,6 @@
 import os
 
-from git.compat import (
-    string_types,
-    defenc
-)
+from git.compat import defenc
 from git.objects import Object, Commit
 from git.util import (
     join_path,
@@ -300,7 +297,7 @@ class SymbolicReference(object):
         elif isinstance(ref, Object):
             obj = ref
             write_value = ref.hexsha
-        elif isinstance(ref, string_types):
+        elif isinstance(ref, str):
             try:
                 obj = self.repo.rev_parse(ref + "^{}")    # optionally deref tags
                 write_value = obj.hexsha
