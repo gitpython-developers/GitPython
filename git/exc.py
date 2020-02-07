@@ -6,7 +6,7 @@
 """ Module containing all exceptions thrown throughout the git package, """
 
 from gitdb.exc import *     # NOQA @UnusedWildImport skipcq: PYL-W0401, PYL-W0614
-from git.compat import UnicodeMixin, safe_decode, string_types
+from git.compat import safe_decode, string_types
 
 
 class GitError(Exception):
@@ -25,7 +25,7 @@ class NoSuchPathError(GitError, OSError):
     """ Thrown if a path could not be access by the system. """
 
 
-class CommandError(UnicodeMixin, GitError):
+class CommandError(GitError):
     """Base class for exceptions thrown at every stage of `Popen()` execution.
 
     :param command:
@@ -58,7 +58,7 @@ class CommandError(UnicodeMixin, GitError):
         self.stdout = stdout and u"\n  stdout: '%s'" % safe_decode(stdout) or ''
         self.stderr = stderr and u"\n  stderr: '%s'" % safe_decode(stderr) or ''
 
-    def __unicode__(self):
+    def __str__(self):
         return (self._msg + "\n  cmdline: %s%s%s") % (
             self._cmd, self._cause, self._cmdline, self.stdout, self.stderr)
 
