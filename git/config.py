@@ -25,12 +25,7 @@ from git.util import LockFile
 
 import os.path as osp
 
-
-try:
-    import ConfigParser as cp
-except ImportError:
-    # PY3
-    import configparser as cp
+import configparser as cp
 
 
 __all__ = ('GitConfigParser', 'SectionConstraint')
