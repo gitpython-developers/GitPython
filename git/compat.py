@@ -33,7 +33,6 @@ is_darwin = (os.name == 'darwin')
 defenc = sys.getfilesystemencoding()
 
 if PY3:
-    range = xrange  # @ReservedAssignment
     unicode = str
     binary_type = bytes
 else:
@@ -41,7 +40,6 @@ else:
         defenc = 'utf-8'
     unicode = unicode
     binary_type = str
-    range = xrange  # @ReservedAssignment
 
 
 def safe_decode(s):

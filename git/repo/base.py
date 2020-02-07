@@ -19,7 +19,6 @@ from git.compat import (
     defenc,
     PY3,
     safe_decode,
-    range,
     is_win,
 )
 from git.config import GitConfigParser
