@@ -34,8 +34,6 @@ defenc = sys.getfilesystemencoding()
 if PY3:
     binary_type = bytes
 else:
-    if defenc == 'ascii':
-        defenc = 'utf-8'
     binary_type = str
 
 
