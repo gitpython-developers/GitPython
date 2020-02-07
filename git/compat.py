@@ -24,7 +24,6 @@ from gitdb.utils.encoding import (
 )
 
 
-PY3 = sys.version_info[0] >= 3
 is_win = (os.name == 'nt')
 is_posix = (os.name == 'posix')
 is_darwin = (os.name == 'darwin')
