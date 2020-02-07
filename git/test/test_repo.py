@@ -496,10 +496,7 @@ class TestRepo(TestBase):
                 """)
     @with_rw_repo('HEAD', bare=False)
     def test_untracked_files(self, rwrepo):
-        for run, (repo_add, is_invoking_git) in enumerate((
-                (rwrepo.index.add, False),
-                (rwrepo.git.add, True),
-        )):
+        for run, repo_add in enumerate((rwrepo.index.add, rwrepo.git.add)):
             base = rwrepo.working_tree_dir
             files = (join_path_native(base, u"%i_test _myfile" % run),
                      join_path_native(base, "%i_test_other_file" % run),
