@@ -78,7 +78,7 @@ setup(
     py_modules=['git.' + f[:-3] for f in os.listdir('./git') if f.endswith('.py')],
     package_data={'git.test': ['fixtures/*']},
     package_dir={'git': 'git'},
-    python_requires='>=3.0, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*',
+    python_requires='>=3.4',
     install_requires=requirements,
     tests_require=requirements + test_requirements,
     zip_safe=False,
