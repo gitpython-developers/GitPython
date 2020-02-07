@@ -33,9 +33,6 @@ is_darwin = (os.name == 'darwin')
 defenc = sys.getfilesystemencoding()
 
 if PY3:
-    import io
-    FileType = io.IOBase
-
     def byte_ord(b):
         return b
 
@@ -49,9 +46,6 @@ if PY3:
     unicode = str
     binary_type = bytes
 else:
-    FileType = file  # @UndefinedVariable on PY3
-    # usually, this is just ascii, which might not enough for our encoding needs
-    # Unless it's set specifically, we override it to be utf-8
     if defenc == 'ascii':
         defenc = 'utf-8'
     byte_ord = ord

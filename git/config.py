@@ -9,6 +9,7 @@ configuration files"""
 import abc
 from functools import wraps
 import inspect
+from io import IOBase
 import logging
 import os
 import re
@@ -16,7 +17,6 @@ from collections import OrderedDict
 
 from git.compat import (
     string_types,
-    FileType,
     defenc,
     force_text,
     with_metaclass,
@@ -581,7 +581,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
         fp = self._file_or_files
 
         # we have a physical file on disk, so get a lock
-        is_file_lock = isinstance(fp, string_types + (FileType, ))
+        is_file_lock = isinstance(fp, string_types + (IOBase, ))
         if is_file_lock:
             self._lock._obtain_lock()
         if not hasattr(fp, "seek"):
