@@ -39,11 +39,6 @@ from .util import (
     stream_copy,
 )
 
-try:
-    PermissionError
-except NameError:  # Python < 3.3
-    PermissionError = OSError
-
 execute_kwargs = {'istream', 'with_extended_output',
                   'with_exceptions', 'as_process', 'stdout_as_string',
                   'output_stream', 'with_stdout', 'kill_after_timeout',
