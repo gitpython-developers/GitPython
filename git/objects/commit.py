@@ -24,7 +24,6 @@ from .util import (
     parse_actor_and_date,
     from_timestamp,
 )
-from git.compat import text_type
 
 from time import (
     time,
@@ -436,7 +435,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
         write(b"\n")
 
         # write plain bytes, be sure its encoded according to our encoding
-        if isinstance(self.message, text_type):
+        if isinstance(self.message, str):
             write(self.message.encode(self.encoding))
         else:
             write(self.message)

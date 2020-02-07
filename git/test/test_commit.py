@@ -17,7 +17,6 @@ from git import (
     Actor,
 )
 from git import Repo
-from git.compat import text_type
 from git.objects.util import tzoffset, utc
 from git.repo.fun import touch
 from git.test.lib import (
@@ -142,7 +141,7 @@ class TestCommit(TestBase):
         self.assertEqual(len(name), 9)
         special = Actor._from_string(u"%s <something@this.com>" % name)
         self.assertEqual(special.name, name)
-        assert isinstance(special.name, text_type)
+        assert isinstance(special.name, str)
 
     def test_traversal(self):
         start = self.rorepo.commit("a4d06724202afccd2b5c54f81bcf2bf26dea7fff")
@@ -286,8 +285,8 @@ class TestCommit(TestBase):
         # create a commit with unicode in the message, and the author's name
         # Verify its serialization and deserialization
         cmt = self.rorepo.commit('0.1.6')
-        assert isinstance(cmt.message, text_type)     # it automatically decodes it as such
-        assert isinstance(cmt.author.name, text_type)  # same here
+        assert isinstance(cmt.message, str)     # it automatically decodes it as such
+        assert isinstance(cmt.author.name, str)  # same here
 
         cmt.message = u"üäêèß"
         self.assertEqual(len(cmt.message), 5)

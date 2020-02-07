@@ -2,8 +2,7 @@
 from stat import S_ISDIR
 from git.compat import (
     safe_decode,
-    defenc,
-    text_type
+    defenc
 )
 
 __all__ = ('tree_to_stream', 'tree_entries_from_data', 'traverse_trees_recursive',
@@ -33,7 +32,7 @@ def tree_to_stream(entries, write):
         # hence we must convert to an utf8 string for it to work properly.
         # According to my tests, this is exactly what git does, that is it just
         # takes the input literally, which appears to be utf8 on linux.
-        if isinstance(name, text_type):
+        if isinstance(name, str):
             name = name.encode(defenc)
         write(b''.join((mode_str, b' ', name, b'\0', binsha)))
     # END for each item

@@ -15,7 +15,6 @@ from git.cmd import (
     handle_process_output
 )
 from git.compat import (
-    text_type,
     defenc,
     safe_decode,
     is_win,
@@ -476,7 +475,7 @@ class Repo(object):
         :return: ``git.Commit``"""
         if rev is None:
             return self.head.commit
-        return self.rev_parse(text_type(rev) + "^0")
+        return self.rev_parse(str(rev) + "^0")
 
     def iter_trees(self, *args, **kwargs):
         """:return: Iterator yielding Tree objects
@@ -498,7 +497,7 @@ class Repo(object):
             operations might have unexpected results."""
         if rev is None:
             return self.head.commit.tree
-        return self.rev_parse(text_type(rev) + "^{tree}")
+        return self.rev_parse(str(rev) + "^{tree}")
 
     def iter_commits(self, rev=None, paths='', **kwargs):
         """A list of Commit objects representing the history of a given ref/commit
