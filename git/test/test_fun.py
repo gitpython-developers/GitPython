@@ -2,7 +2,7 @@ from io import BytesIO
 from stat import S_IFDIR, S_IFREG, S_IFLNK
 from os import stat
 import os.path as osp
-from unittest import skipIf, SkipTest
+from unittest import SkipTest
 
 from git import Git
 from git.index import IndexFile

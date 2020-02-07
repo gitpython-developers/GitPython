@@ -54,7 +54,6 @@ from git.util import HIDE_WINDOWS_KNOWN_ERRORS, cygpath
 from git.test.lib import with_rw_directory
 from git.util import join_path_native, rmtree, rmfile, bin_to_hex
 
-import functools as fnt
 import os.path as osp
 
 
