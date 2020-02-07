@@ -11,7 +11,6 @@ import subprocess
 import tempfile
 
 from git.compat import (
-    izip,
     string_types,
     force_bytes,
     defenc,
@@ -270,8 +269,8 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
         inst = cls(repo)
         # convert to entries dict
-        entries = dict(izip(((e.path, e.stage) for e in base_entries),
-                            (IndexEntry.from_base(e) for e in base_entries)))
+        entries = dict(zip(((e.path, e.stage) for e in base_entries),
+                           (IndexEntry.from_base(e) for e in base_entries)))
 
         inst.entries = entries
         return inst
