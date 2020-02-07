@@ -11,7 +11,6 @@ import sys
 from .lib import TestBigRepoRW
 from git import Commit
 from gitdb import IStream
-from git.compat import xrange
 from git.test.test_commit import assert_commit_serialization
 
 
@@ -90,7 +89,7 @@ class TestPerformance(TestBigRepoRW):
 
         nc = 5000
         st = time()
-        for i in xrange(nc):
+        for i in range(nc):
             cm = Commit(rwrepo, Commit.NULL_BIN_SHA, hc.tree,
                         hc.author, hc.authored_date, hc.author_tz_offset,
                         hc.committer, hc.committed_date, hc.committer_tz_offset,

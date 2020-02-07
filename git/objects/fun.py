@@ -3,7 +3,6 @@ from stat import S_ISDIR
 from git.compat import (
     safe_decode,
     defenc,
-    xrange,
     text_type
 )
 
@@ -20,7 +19,7 @@ def tree_to_stream(entries, write):
 
     for binsha, mode, name in entries:
         mode_str = b''
-        for i in xrange(6):
+        for i in range(6):
             mode_str = bytes([((mode >> (i * 3)) & bit_mask) + ord_zero]) + mode_str
         # END for each 8 octal value
 

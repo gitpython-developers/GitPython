@@ -3,7 +3,6 @@ import time
 
 from git.compat import (
     PY3,
-    xrange,
     string_types,
     defenc
 )
@@ -220,7 +219,7 @@ class RefLog(list, Serializable):
             if index < 0:
                 return RefLogEntry.from_line(fp.readlines()[index].strip())
             # read until index is reached
-            for i in xrange(index + 1):
+            for i in range(index + 1):
                 line = fp.readline()
                 if not line:
                     break

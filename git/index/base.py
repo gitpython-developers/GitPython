@@ -12,7 +12,6 @@ import tempfile
 
 from git.compat import (
     izip,
-    xrange,
     string_types,
     force_bytes,
     defenc,
@@ -912,7 +911,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
         # parse result - first 0:n/2 lines are 'checking ', the remaining ones
         # are the 'renaming' ones which we parse
-        for ln in xrange(int(len(mvlines) / 2), len(mvlines)):
+        for ln in range(int(len(mvlines) / 2), len(mvlines)):
             tokens = mvlines[ln].split(' to ')
             assert len(tokens) == 2, "Too many tokens in %s" % mvlines[ln]
 

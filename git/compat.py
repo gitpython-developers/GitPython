@@ -14,7 +14,6 @@ import codecs
 
 
 from gitdb.utils.compat import (
-    xrange,
     MAXSIZE,    # @UnusedImport
     izip,       # @UnusedImport
 )
