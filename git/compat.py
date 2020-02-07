@@ -76,17 +76,3 @@ def with_metaclass(meta, *bases):
                 d['__metaclass__'] = meta
             return meta(name, bases, d)
     return metaclass(meta.__name__ + 'Helper', None, {})
-
-
-## From https://docs.python.org/3.3/howto/pyporting.html
-class UnicodeMixin(object):
-
-    """Mixin class to handle defining the proper __str__/__unicode__
-    methods in Python 2 or 3."""
-
-    if PY3:
-        def __str__(self):
-            return self.__unicode__()
-    else:  # Python 2
-        def __str__(self):
-            return self.__unicode__().encode(defenc)
