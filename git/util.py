@@ -933,8 +933,3 @@ class Iterable(object):
 class NullHandler(logging.Handler):
     def emit(self, record):
         pass
-
-
-# In Python 2.6, there is no NullHandler yet. Let's monkey-patch it for a workaround.
-if not hasattr(logging, 'NullHandler'):
-    logging.NullHandler = NullHandler
