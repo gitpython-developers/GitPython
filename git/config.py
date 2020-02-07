@@ -16,7 +16,6 @@ import re
 from collections import OrderedDict
 
 from git.compat import (
-    string_types,
     defenc,
     force_text,
     with_metaclass,
@@ -302,7 +301,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
                 # END single file check
 
                 file_or_files = self._file_or_files
-                if not isinstance(self._file_or_files, string_types):
+                if not isinstance(self._file_or_files, str):
                     file_or_files = self._file_or_files.name
                 # END get filename from handle/stream
                 # initialize lock base - we want to write
@@ -578,7 +577,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
         fp = self._file_or_files
 
         # we have a physical file on disk, so get a lock
-        is_file_lock = isinstance(fp, string_types + (IOBase, ))
+        is_file_lock = isinstance(fp, (str, IOBase))
         if is_file_lock:
             self._lock._obtain_lock()
         if not hasattr(fp, "seek"):
@@ -670,7 +669,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
         if vl == 'true':
             return True
 
-        if not isinstance(valuestr, string_types):
+        if not isinstance(valuestr, str):
             raise TypeError(
                 "Invalid value type: only int, long, float and str are allowed",
                 valuestr)

@@ -22,7 +22,6 @@ from git import (
     GitCommandError
 )
 from git.cmd import Git
-from git.compat import string_types
 from git.test.lib import (
     TestBase,
     with_rw_repo,
@@ -116,7 +115,7 @@ class TestRemote(TestBase):
         self.assertGreater(len(results), 0)
         self.assertIsInstance(results[0], FetchInfo)
         for info in results:
-            self.assertIsInstance(info.note, string_types)
+            self.assertIsInstance(info.note, str)
             if isinstance(info.ref, Reference):
                 self.assertTrue(info.flags)
             # END reference type flags handling
@@ -133,7 +132,7 @@ class TestRemote(TestBase):
         self.assertIsInstance(results[0], PushInfo)
         for info in results:
             self.assertTrue(info.flags)
-            self.assertIsInstance(info.summary, string_types)
+            self.assertIsInstance(info.summary, str)
             if info.old_commit is not None:
                 self.assertIsInstance(info.old_commit, Commit)
             if info.flags & info.ERROR:

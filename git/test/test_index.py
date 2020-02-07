@@ -25,7 +25,7 @@ from git import (
     GitCommandError,
     CheckoutError,
 )
-from git.compat import string_types, is_win
+from git.compat import is_win
 from git.exc import (
     HookExecutionError,
     InvalidGitRepositoryError
@@ -388,7 +388,7 @@ class TestIndex(TestBase):
             self.assertEqual(len(e.failed_files), 1)
             self.assertEqual(e.failed_files[0], osp.basename(test_file))
             self.assertEqual(len(e.failed_files), len(e.failed_reasons))
-            self.assertIsInstance(e.failed_reasons[0], string_types)
+            self.assertIsInstance(e.failed_reasons[0], str)
             self.assertEqual(len(e.valid_files), 0)
             with open(test_file, 'rb') as fd:
                 s = fd.read()

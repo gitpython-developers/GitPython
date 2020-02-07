@@ -8,7 +8,7 @@ from unittest import skipIf
 
 import git
 from git.cmd import Git
-from git.compat import string_types, is_win
+from git.compat import is_win
 from git.exc import (
     InvalidGitRepositoryError,
     RepositoryDirtyError
@@ -79,7 +79,7 @@ class TestSubmodule(TestBase):
         self.failUnlessRaises(InvalidGitRepositoryError, getattr, sm, 'branch')
 
         # branch_path works, as its just a string
-        assert isinstance(sm.branch_path, string_types)
+        assert isinstance(sm.branch_path, str)
 
         # some commits earlier we still have a submodule, but its at a different commit
         smold = next(Submodule.iter_items(rwrepo, self.k_subm_changed))

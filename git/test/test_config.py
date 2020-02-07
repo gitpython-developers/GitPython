@@ -10,7 +10,6 @@ import io
 from git import (
     GitConfigParser
 )
-from git.compat import string_types
 from git.config import _OMD, cp
 from git.test.lib import (
     TestCase,
@@ -157,7 +156,7 @@ class TestBase(TestCase):
                 num_options += 1
                 val = r_config.get(section, option)
                 val_typed = r_config.get_value(section, option)
-                assert isinstance(val_typed, (bool, int, float, ) + string_types)
+                assert isinstance(val_typed, (bool, int, float, str))
                 assert val
                 assert "\n" not in option
                 assert "\n" not in val

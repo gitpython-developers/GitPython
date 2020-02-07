@@ -21,7 +21,6 @@ from collections import OrderedDict
 from textwrap import dedent
 
 from git.compat import (
-    string_types,
     defenc,
     force_bytes,
     safe_decode,
@@ -1038,7 +1037,7 @@ class Git(LazyMixin):
         if isinstance(ref, bytes):
             # Assume 40 bytes hexsha - bin-to-ascii for some reason returns bytes, not text
             refstr = ref.decode('ascii')
-        elif not isinstance(ref, string_types):
+        elif not isinstance(ref, str):
             refstr = str(ref)               # could be ref-object
 
         if not refstr.endswith("\n"):

@@ -13,7 +13,7 @@ from datetime import datetime
 import ddt
 
 from git.cmd import dashify
-from git.compat import string_types, is_win
+from git.compat import is_win
 from git.objects.util import (
     altz_to_utctz_str,
     utctz_to_altz,
@@ -187,7 +187,7 @@ class TestUtils(TestBase):
 
             # now that we are here, test our conversion functions as well
             utctz = altz_to_utctz_str(offset)
-            self.assertIsInstance(utctz, string_types)
+            self.assertIsInstance(utctz, str)
             self.assertEqual(utctz_to_altz(verify_utctz(utctz)), offset)
         # END assert rval utility
 
