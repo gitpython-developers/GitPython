@@ -2,6 +2,19 @@
 Changelog
 =========
 
+3.0.6 - Bugfixes
+=============================================
+
+* removes python 2 compatibility shims, making GitPython a pure Python 3 library
+  with all of the python related legacy removed.
+* Have a look at the PR, it is a good read on the mistakes made in the course of this,
+  https://github.com/gitpython-developers/GitPython/pull/979 , please help the maintainers
+  if you can to prevent accidents like these in future.
+
+see the following for details:
+https://github.com/gitpython-developers/gitpython/milestone/33?closed=1
+
+
 3.0.5 - Bugfixes
 =============================================
 
