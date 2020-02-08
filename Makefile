@@ -17,7 +17,7 @@ release: clean
 force_release: clean
 	git push --tags origin master
 	python3 setup.py sdist bdist_wheel
-	twine upload -i byronimo@gmail.com dist/*
+	twine upload --sign-with 763629FEC8788FC35128B5F6EE029D1E5EB40300 dist/*
 
 docker-build:
 	docker build --quiet -t gitpython:xenial -f Dockerfile .
