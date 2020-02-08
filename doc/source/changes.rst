@@ -2,8 +2,8 @@
 Changelog
 =========
 
-3.0.6 - Bugfixes
-=============================================
+3.0.7 - Bugfixes
+=================================================
 
 * removes python 2 compatibility shims, making GitPython a pure Python 3 library
   with all of the python related legacy removed.
@@ -14,6 +14,13 @@ Changelog
 see the following for details:
 https://github.com/gitpython-developers/gitpython/milestone/33?closed=1
 
+
+3.0.6 - Bugfixes - unsigned/partial - do not use
+=================================================
+
+There was an issue with my setup, so things managed to slip to pypi without a signature.
+
+Use 3.0.7 instead.
 
 3.0.5 - Bugfixes
 =============================================
