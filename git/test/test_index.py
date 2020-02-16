@@ -595,7 +595,7 @@ class TestIndex(TestBase):
         self._assert_entries(entries)
         self._assert_fprogress(entries)
         self.assertEqual(len(entries), 1)
-        self.assertNotEquals(entries[0].hexsha, null_hex_sha)
+        self.assertNotEqual(entries[0].hexsha, null_hex_sha)
 
         # add symlink
         if not is_win:
