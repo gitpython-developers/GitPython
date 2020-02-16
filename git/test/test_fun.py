@@ -70,7 +70,7 @@ class TestFun(TestBase):
         self._assert_index_entries(aggressive_tree_merge(odb, trees), trees)
 
         # too many trees
-        self.failUnlessRaises(ValueError, aggressive_tree_merge, odb, trees * 2)
+        self.assertRaises(ValueError, aggressive_tree_merge, odb, trees * 2)
 
     def mktree(self, odb, entries):
         """create a tree from the given tree entries and safe it to the database"""

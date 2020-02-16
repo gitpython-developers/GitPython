@@ -143,13 +143,13 @@ class TestUtils(TestBase):
         # concurrent access
         other_lock_file = LockFile(my_file)
         assert not other_lock_file._has_lock()
-        self.failUnlessRaises(IOError, other_lock_file._obtain_lock_or_raise)
+        self.assertRaises(IOError, other_lock_file._obtain_lock_or_raise)
 
         lock_file._release_lock()
         assert not lock_file._has_lock()
 
         other_lock_file._obtain_lock_or_raise()
-        self.failUnlessRaises(IOError, lock_file._obtain_lock_or_raise)
+        self.assertRaises(IOError, lock_file._obtain_lock_or_raise)
 
         # auto-release on destruction
         del(other_lock_file)
@@ -165,7 +165,7 @@ class TestUtils(TestBase):
         start = time.time()
         wait_time = 0.1
         wait_lock = BlockingLockFile(my_file, 0.05, wait_time)
-        self.failUnlessRaises(IOError, wait_lock._obtain_lock)
+        self.assertRaises(IOError, wait_lock._obtain_lock)
         elapsed = time.time() - start
         extra_time = 0.02
         if is_win:
@@ -203,9 +203,9 @@ class TestUtils(TestBase):
         # END for each date type
 
         # and failure
-        self.failUnlessRaises(ValueError, parse_date, 'invalid format')
-        self.failUnlessRaises(ValueError, parse_date, '123456789 -02000')
-        self.failUnlessRaises(ValueError, parse_date, ' 123456789 -0200')
+        self.assertRaises(ValueError, parse_date, 'invalid format')
+        self.assertRaises(ValueError, parse_date, '123456789 -02000')
+        self.assertRaises(ValueError, parse_date, ' 123456789 -0200')
 
     def test_actor(self):
         for cr in (None, self.rorepo.config_reader()):
@@ -253,11 +253,11 @@ class TestUtils(TestBase):
         self.assertIs(ilist.two, m2)
 
         # test exceptions
-        self.failUnlessRaises(AttributeError, getattr, ilist, 'something')
-        self.failUnlessRaises(IndexError, ilist.__getitem__, 'something')
+        self.assertRaises(AttributeError, getattr, ilist, 'something')
+        self.assertRaises(IndexError, ilist.__getitem__, 'something')
 
         # delete by name and index
-        self.failUnlessRaises(IndexError, ilist.__delitem__, 'something')
+        self.assertRaises(IndexError, ilist.__delitem__, 'something')
         del(ilist[name2])
         self.assertEqual(len(ilist), 1)
         self.assertNotIn(name2, ilist)
@@ -266,8 +266,8 @@ class TestUtils(TestBase):
         self.assertNotIn(name1, ilist)
         self.assertEqual(len(ilist), 0)
 
-        self.failUnlessRaises(IndexError, ilist.__delitem__, 0)
-        self.failUnlessRaises(IndexError, ilist.__delitem__, 'something')
+        self.assertRaises(IndexError, ilist.__delitem__, 0)
+        self.assertRaises(IndexError, ilist.__delitem__, 'something')
 
     def test_from_timestamp(self):
         # Correct offset: UTC+2, should return datetime + tzoffset(+2)

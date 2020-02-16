@@ -175,7 +175,7 @@ class TestGit(TestBase):
             # set it to something that doens't exist, assure it raises
             type(self.git).GIT_PYTHON_GIT_EXECUTABLE = osp.join(
                 "some", "path", "which", "doesn't", "exist", "gitbinary")
-            self.failUnlessRaises(exc, self.git.version)
+            self.assertRaises(exc, self.git.version)
         finally:
             type(self.git).GIT_PYTHON_GIT_EXECUTABLE = prev_cmd
         # END undo adjustment
@@ -219,7 +219,7 @@ class TestGit(TestBase):
 
     def test_insert_after_kwarg_raises(self):
         # This isn't a complete add command, which doesn't matter here
-        self.failUnlessRaises(ValueError, self.git.remote, 'add', insert_kwargs_after='foo')
+        self.assertRaises(ValueError, self.git.remote, 'add', insert_kwargs_after='foo')
 
     def test_env_vars_passed_to_git(self):
         editor = 'non_existent_editor'

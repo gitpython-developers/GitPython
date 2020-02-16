@@ -331,7 +331,7 @@ class TestBase(TestCase):
 
     - Utility functions provided by the TestCase base of the unittest method such as::
         self.fail("todo")
-        self.failUnlessRaises(...)
+        self.assertRaises(...)
 
     - Class level repository which is considered read-only as it is shared among
       all test cases in your type.

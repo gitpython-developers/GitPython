@@ -129,7 +129,7 @@ class TestRepo(TestBase):
         self.assertEqual(self.rorepo.tree(tree), tree)
 
         # try from invalid revision that does not exist
-        self.failUnlessRaises(BadName, self.rorepo.tree, 'hello world')
+        self.assertRaises(BadName, self.rorepo.tree, 'hello world')
 
     def test_pickleable(self):
         pickle.loads(pickle.dumps(self.rorepo))
@@ -755,8 +755,8 @@ class TestRepo(TestBase):
         commit = rev_parse(first_rev)
         self.assertEqual(len(commit.parents), 0)
         self.assertEqual(commit.hexsha, first_rev)
-        self.failUnlessRaises(BadName, rev_parse, first_rev + "~")
-        self.failUnlessRaises(BadName, rev_parse, first_rev + "^")
+        self.assertRaises(BadName, rev_parse, first_rev + "~")
+        self.assertRaises(BadName, rev_parse, first_rev + "^")
 
         # short SHA1
         commit2 = rev_parse(first_rev[:20])
@@ -784,17 +784,17 @@ class TestRepo(TestBase):
         # END for each binsha in repo
 
         # missing closing brace commit^{tree
-        self.failUnlessRaises(ValueError, rev_parse, '0.1.4^{tree')
+        self.assertRaises(ValueError, rev_parse, '0.1.4^{tree')
 
         # missing starting brace
-        self.failUnlessRaises(ValueError, rev_parse, '0.1.4^tree}')
+        self.assertRaises(ValueError, rev_parse, '0.1.4^tree}')
 
         # REVLOG
         #######
         head = self.rorepo.head
 
         # need to specify a ref when using the @ syntax
-        self.failUnlessRaises(BadObject, rev_parse, "%s@{0}" % head.commit.hexsha)
+        self.assertRaises(BadObject, rev_parse, "%s@{0}" % head.commit.hexsha)
 
         # uses HEAD.ref by default
         self.assertEqual(rev_parse('@{0}'), head.commit)
@@ -807,10 +807,10 @@ class TestRepo(TestBase):
         # END operate on non-detached head
 
         # position doesn't exist
-        self.failUnlessRaises(IndexError, rev_parse, '@{10000}')
+        self.assertRaises(IndexError, rev_parse, '@{10000}')
 
         # currently, nothing more is supported
-        self.failUnlessRaises(NotImplementedError, rev_parse, "@{1 week ago}")
+        self.assertRaises(NotImplementedError, rev_parse, "@{1 week ago}")
 
         # the last position
         assert rev_parse('@{1}') != head.commit
@@ -824,13 +824,13 @@ class TestRepo(TestBase):
         self.assertGreaterEqual(len(list(self.rorepo.iter_submodules())), 2)
 
         self.assertIsInstance(self.rorepo.submodule("gitdb"), Submodule)
-        self.failUnlessRaises(ValueError, self.rorepo.submodule, "doesn't exist")
+        self.assertRaises(ValueError, self.rorepo.submodule, "doesn't exist")
 
     @with_rw_repo('HEAD', bare=False)
     def test_submodule_update(self, rwrepo):
         # fails in bare mode
         rwrepo._bare = True
-        self.failUnlessRaises(InvalidGitRepositoryError, rwrepo.submodule_update)
+        self.assertRaises(InvalidGitRepositoryError, rwrepo.submodule_update)
         rwrepo._bare = False
 
         # test create submodule
@@ -877,7 +877,7 @@ class TestRepo(TestBase):
         # end for each iteration
 
     def test_remote_method(self):
-        self.failUnlessRaises(ValueError, self.rorepo.remote, 'foo-blue')
+        self.assertRaises(ValueError, self.rorepo.remote, 'foo-blue')
         self.assertIsInstance(self.rorepo.remote(name='origin'), Remote)
 
     @with_rw_directory
@@ -885,16 +885,16 @@ class TestRepo(TestBase):
         """Assure we can handle empty repositories"""
         r = Repo.init(rw_dir, mkdir=False)
         # It's ok not to be able to iterate a commit, as there is none
-        self.failUnlessRaises(ValueError, r.iter_commits)
+        self.assertRaises(ValueError, r.iter_commits)
         self.assertEqual(r.active_branch.name, 'master')
         assert not r.active_branch.is_valid(), "Branch is yet to be born"
 
         # actually, when trying to create a new branch without a commit, git itself fails
         # We should, however, not fail ungracefully
-        self.failUnlessRaises(BadName, r.create_head, 'foo')
-        self.failUnlessRaises(BadName, r.create_head, 'master')
+        self.assertRaises(BadName, r.create_head, 'foo')
+        self.assertRaises(BadName, r.create_head, 'master')
         # It's expected to not be able to access a tree
-        self.failUnlessRaises(ValueError, r.tree)
+        self.assertRaises(ValueError, r.tree)
 
         new_file_path = osp.join(rw_dir, "new_file.ext")
         touch(new_file_path)
@@ -921,8 +921,8 @@ class TestRepo(TestBase):
         c1 = 'f6aa8d1'
         c2 = repo.commit('d46e3fe')
         c3 = '763ef75'
-        self.failUnlessRaises(ValueError, repo.merge_base)
-        self.failUnlessRaises(ValueError, repo.merge_base, 'foo')
+        self.assertRaises(ValueError, repo.merge_base)
+        self.assertRaises(ValueError, repo.merge_base, 'foo')
 
         # two commit merge-base
         res = repo.merge_base(c1, c2)
@@ -938,7 +938,7 @@ class TestRepo(TestBase):
         # end for each keyword signalling all merge-bases to be returned
 
         # Test for no merge base - can't do as we have
-        self.failUnlessRaises(GitCommandError, repo.merge_base, c1, 'ffffff')
+        self.assertRaises(GitCommandError, repo.merge_base, c1, 'ffffff')
 
     def test_is_ancestor(self):
         git = self.rorepo.git

@@ -152,8 +152,8 @@ class TestRemote(TestBase):
         # END for each info
 
     def _do_test_fetch_info(self, repo):
-        self.failUnlessRaises(ValueError, FetchInfo._from_line, repo, "nonsense", '')
-        self.failUnlessRaises(
+        self.assertRaises(ValueError, FetchInfo._from_line, repo, "nonsense", '')
+        self.assertRaises(
             ValueError, FetchInfo._from_line, repo, "? [up to date]      0.1.7RC    -> origin/0.1.7RC", '')
 
     def _commit_random_file(self, repo):
@@ -221,7 +221,7 @@ class TestRemote(TestBase):
         Head.delete(new_remote_branch.repo, new_remote_branch)
         res = fetch_and_test(remote)
         # deleted remote will not be fetched
-        self.failUnlessRaises(IndexError, get_info, res, remote, new_remote_branch)
+        self.assertRaises(IndexError, get_info, res, remote, new_remote_branch)
 
         # prune stale tracking branches
         stale_refs = remote.stale_refs
@@ -267,7 +267,7 @@ class TestRemote(TestBase):
         # delete remote tag - local one will stay
         TagReference.delete(remote_repo, rtag)
         res = fetch_and_test(remote, tags=True)
-        self.failUnlessRaises(IndexError, get_info, res, remote, str(rtag))
+        self.assertRaises(IndexError, get_info, res, remote, str(rtag))
 
         # provoke to receive actual objects to see what kind of output we have to
         # expect. For that we need a remote transport protocol
@@ -318,7 +318,7 @@ class TestRemote(TestBase):
 
         # push without spec should fail ( without further configuration )
         # well, works nicely
-        # self.failUnlessRaises(GitCommandError, remote.push)
+        # self.assertRaises(GitCommandError, remote.push)
 
         # simple file push
         self._commit_random_file(rw_repo)
@@ -342,7 +342,7 @@ class TestRemote(TestBase):
         self._do_test_push_result(res, remote)
 
         # invalid refspec
-        self.failUnlessRaises(GitCommandError, remote.push, "hellothere")
+        self.assertRaises(GitCommandError, remote.push, "hellothere")
 
         # push new tags
         progress = TestRemoteProgress()
@@ -439,7 +439,7 @@ class TestRemote(TestBase):
                 assert reader.get_value(opt, None) == val
 
                 # unable to write with a reader
-                self.failUnlessRaises(IOError, reader.set, opt, "test")
+                self.assertRaises(IOError, reader.set, opt, "test")
 
                 # change value
                 with remote.config_writer as writer:
@@ -510,7 +510,7 @@ class TestRemote(TestBase):
         self.assertTrue(remote.exists())
 
         # create same one again
-        self.failUnlessRaises(GitCommandError, Remote.create, bare_rw_repo, *arg_list)
+        self.assertRaises(GitCommandError, Remote.create, bare_rw_repo, *arg_list)
 
         Remote.remove(bare_rw_repo, new_name)
         self.assertTrue(remote.exists())      # We still have a cache that doesn't know we were deleted by name
@@ -532,9 +532,9 @@ class TestRemote(TestBase):
         fetch_info_line_fmt += "git://github.com/gitpython-developers/GitPython"
         remote_info_line_fmt = "* [new branch]      nomatter     -> %s"
 
-        self.failUnlessRaises(ValueError, FetchInfo._from_line, self.rorepo,
-                              remote_info_line_fmt % "refs/something/branch",
-                              "269c498e56feb93e408ed4558c8138d750de8893\t\t/Users/ben/test/foo\n")
+        self.assertRaises(ValueError, FetchInfo._from_line, self.rorepo,
+                          remote_info_line_fmt % "refs/something/branch",
+                          "269c498e56feb93e408ed4558c8138d750de8893\t\t/Users/ben/test/foo\n")
 
         fi = FetchInfo._from_line(self.rorepo,
                                   remote_info_line_fmt % "local/master",

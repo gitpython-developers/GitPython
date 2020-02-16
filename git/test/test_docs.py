@@ -232,7 +232,7 @@ class Tutorials(TestBase):
         # [6-test_references_and_objects]
         new_tag = repo.create_tag('my_new_tag', message='my message')
         # You cannot change the commit a tag points to. Tags need to be re-created
-        self.failUnlessRaises(AttributeError, setattr, new_tag, 'commit', repo.commit('HEAD~1'))
+        self.assertRaises(AttributeError, setattr, new_tag, 'commit', repo.commit('HEAD~1'))
         repo.delete_tag(new_tag)
         # ![6-test_references_and_objects]
 
@@ -441,7 +441,7 @@ class Tutorials(TestBase):
 
         # [30-test_references_and_objects]
         # checkout the branch using git-checkout. It will fail as the working tree appears dirty
-        self.failUnlessRaises(git.GitCommandError, repo.heads.master.checkout)
+        self.assertRaises(git.GitCommandError, repo.heads.master.checkout)
         repo.heads.past_branch.checkout()
         # ![30-test_references_and_objects]
 

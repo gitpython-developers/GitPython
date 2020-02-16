@@ -205,7 +205,7 @@ class TestIndex(TestBase):
             assert blob.path.startswith(prefix)
 
         # writing a tree should fail with an unmerged index
-        self.failUnlessRaises(UnmergedEntriesError, three_way_index.write_tree)
+        self.assertRaises(UnmergedEntriesError, three_way_index.write_tree)
 
         # removed unmerged entries
         unmerged_blob_map = three_way_index.unmerged_blobs()
@@ -265,13 +265,13 @@ class TestIndex(TestBase):
         # a three way merge would result in a conflict and fails as the command will
         # not overwrite any entries in our index and hence leave them unmerged. This is
         # mainly a protection feature as the current index is not yet in a tree
-        self.failUnlessRaises(GitCommandError, index.merge_tree, next_commit, base=parent_commit)
+        self.assertRaises(GitCommandError, index.merge_tree, next_commit, base=parent_commit)
 
         # the only way to get the merged entries is to safe the current index away into a tree,
         # which is like a temporary commit for us. This fails as well as the NULL sha deos not
         # have a corresponding object
         # NOTE: missing_ok is not a kwarg anymore, missing_ok is always true
-        # self.failUnlessRaises(GitCommandError, index.write_tree)
+        # self.assertRaises(GitCommandError, index.write_tree)
 
         # if missing objects are okay, this would work though ( they are always okay now )
         # As we can't read back the tree with NULL_SHA, we rather set it to something else
@@ -326,7 +326,7 @@ class TestIndex(TestBase):
         assert wdiff != odiff
 
         # against something unusual
-        self.failUnlessRaises(ValueError, index.diff, int)
+        self.assertRaises(ValueError, index.diff, int)
 
         # adjust the index to match an old revision
         cur_branch = rw_repo.active_branch
@@ -375,8 +375,8 @@ class TestIndex(TestBase):
         assert osp.exists(test_file)
 
         # checking out non-existing file throws
-        self.failUnlessRaises(CheckoutError, index.checkout, "doesnt_exist_ever.txt.that")
-        self.failUnlessRaises(CheckoutError, index.checkout, paths=["doesnt/exist"])
+        self.assertRaises(CheckoutError, index.checkout, "doesnt_exist_ever.txt.that")
+        self.assertRaises(CheckoutError, index.checkout, paths=["doesnt/exist"])
 
         # checkout file with modifications
         append_data = b"hello"
@@ -474,12 +474,12 @@ class TestIndex(TestBase):
         self.assertEqual(self._count_existing(rw_repo, deleted_files), len(deleted_files))
 
         # invalid type
-        self.failUnlessRaises(TypeError, index.remove, [1])
+        self.assertRaises(TypeError, index.remove, [1])
 
         # absolute path
         deleted_files = index.remove([osp.join(rw_repo.working_tree_dir, "lib")], r=True)
         assert len(deleted_files) > 1
-        self.failUnlessRaises(ValueError, index.remove, ["/doesnt/exists"])
+        self.assertRaises(ValueError, index.remove, ["/doesnt/exists"])
 
         # TEST COMMITTING
         # commit changed index
@@ -571,7 +571,7 @@ class TestIndex(TestBase):
         self.assertEqual(len(entries), 2)
 
         # missing path
-        self.failUnlessRaises(OSError, index.reset(new_commit).add, ['doesnt/exist/must/raise'])
+        self.assertRaises(OSError, index.reset(new_commit).add, ['doesnt/exist/must/raise'])
 
         # blob from older revision overrides current index revision
         old_blob = new_commit.parents[0].tree.blobs[0]
@@ -584,7 +584,7 @@ class TestIndex(TestBase):
         # mode 0 not allowed
         null_hex_sha = Diff.NULL_HEX_SHA
         null_bin_sha = b"\0" * 20
-        self.failUnlessRaises(ValueError, index.reset(
+        self.assertRaises(ValueError, index.reset(
             new_commit).add, [BaseIndexEntry((0, null_bin_sha, 0, "doesntmatter"))])
 
         # add new file
@@ -668,10 +668,10 @@ class TestIndex(TestBase):
             # END for each renamed item
         # END move assertion utility
 
-        self.failUnlessRaises(ValueError, index.move, ['just_one_path'])
+        self.assertRaises(ValueError, index.move, ['just_one_path'])
         # file onto existing file
         files = ['AUTHORS', 'LICENSE']
-        self.failUnlessRaises(GitCommandError, index.move, files)
+        self.assertRaises(GitCommandError, index.move, files)
 
         # again, with force
         assert_mv_rval(index.move(files, f=True))

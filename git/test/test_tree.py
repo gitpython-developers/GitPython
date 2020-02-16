@@ -34,7 +34,7 @@ class TestTree(TestBase):
             # END skip non-trees
             tree = item
             # trees have no dict
-            self.failUnlessRaises(AttributeError, setattr, tree, 'someattr', 1)
+            self.assertRaises(AttributeError, setattr, tree, 'someattr', 1)
 
             orig_data = tree.data_stream.read()
             orig_cache = tree._cache

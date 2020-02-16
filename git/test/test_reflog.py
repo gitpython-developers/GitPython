@@ -23,7 +23,7 @@ class TestRefLog(TestBase):
         actor = Actor('name', 'email')
         msg = "message"
 
-        self.failUnlessRaises(ValueError, RefLogEntry.new, nullhexsha, hexsha, 'noactor', 0, 0, "")
+        self.assertRaises(ValueError, RefLogEntry.new, nullhexsha, hexsha, 'noactor', 0, 0, "")
         e = RefLogEntry.new(nullhexsha, hexsha, actor, 0, 1, msg)
 
         assert e.oldhexsha == nullhexsha
@@ -59,11 +59,11 @@ class TestRefLog(TestBase):
         # TODO: Try multiple corrupted ones !
         pp = 'reflog_invalid_'
         for suffix in ('oldsha', 'newsha', 'email', 'date', 'sep'):
-            self.failUnlessRaises(ValueError, RefLog.from_file, fixture_path(pp + suffix))
+            self.assertRaises(ValueError, RefLog.from_file, fixture_path(pp + suffix))
         # END for each invalid file
 
         # cannot write an uninitialized reflog
-        self.failUnlessRaises(ValueError, RefLog().write)
+        self.assertRaises(ValueError, RefLog().write)
 
         # test serialize and deserialize - results must match exactly
         binsha = hex_to_bin(('f' * 40).encode('ascii'))
@@ -91,7 +91,7 @@ class TestRefLog(TestBase):
 
             # index entry
             # raises on invalid index
-            self.failUnlessRaises(IndexError, RefLog.entry_at, rlp, 10000)
+            self.assertRaises(IndexError, RefLog.entry_at, rlp, 10000)
 
             # indices can be positive ...
             assert isinstance(RefLog.entry_at(rlp, 0), RefLogEntry)

@@ -40,7 +40,7 @@ class TestRefs(TestBase):
         # END for each type
 
         # invalid path
-        self.failUnlessRaises(ValueError, TagReference, self.rorepo, "refs/invalid/tag")
+        self.assertRaises(ValueError, TagReference, self.rorepo, "refs/invalid/tag")
         # works without path check
         TagReference(self.rorepo, "refs/invalid/tag", check_path=False)
 
@@ -54,7 +54,7 @@ class TestRefs(TestBase):
                 tag_object_refs.append(tag)
                 tagobj = tag.tag
                 # have no dict
-                self.failUnlessRaises(AttributeError, setattr, tagobj, 'someattr', 1)
+                self.assertRaises(AttributeError, setattr, tagobj, 'someattr', 1)
                 assert isinstance(tagobj, TagObject)
                 assert tagobj.tag == tag.name
                 assert isinstance(tagobj.tagger, Actor)
@@ -63,7 +63,7 @@ class TestRefs(TestBase):
                 assert tagobj.message
                 assert tag.object == tagobj
                 # can't assign the object
-                self.failUnlessRaises(AttributeError, setattr, tag, 'object', tagobj)
+                self.assertRaises(AttributeError, setattr, tag, 'object', tagobj)
             # END if we have a tag object
         # END for tag in repo-tags
         assert tag_object_refs
@@ -201,7 +201,7 @@ class TestRefs(TestBase):
         cur_head.reset(new_head_commit, index=True)  # index only
         assert cur_head.reference.commit == new_head_commit
 
-        self.failUnlessRaises(ValueError, cur_head.reset, new_head_commit, index=False, working_tree=True)
+        self.assertRaises(ValueError, cur_head.reset, new_head_commit, index=False, working_tree=True)
         new_head_commit = new_head_commit.parents[0]
         cur_head.reset(new_head_commit, index=True, working_tree=True)  # index + wt
         assert cur_head.reference.commit == new_head_commit
@@ -211,7 +211,7 @@ class TestRefs(TestBase):
         cur_head.reset(cur_head, paths="test")
         cur_head.reset(new_head_commit, paths="lib")
         # hard resets with paths don't work, its all or nothing
-        self.failUnlessRaises(GitCommandError, cur_head.reset, new_head_commit, working_tree=True, paths="lib")
+        self.assertRaises(GitCommandError, cur_head.reset, new_head_commit, working_tree=True, paths="lib")
 
         # we can do a mixed reset, and then checkout from the index though
         cur_head.reset(new_head_commit)
@@ -235,7 +235,7 @@ class TestRefs(TestBase):
         cur_head.reference = curhead_commit
         assert cur_head.commit == curhead_commit
         assert cur_head.is_detached
-        self.failUnlessRaises(TypeError, getattr, cur_head, "reference")
+        self.assertRaises(TypeError, getattr, cur_head, "reference")
 
         # tags are references, hence we can point to them
         some_tag = rw_repo.tags[0]
@@ -248,7 +248,7 @@ class TestRefs(TestBase):
         cur_head.reference = active_head
 
         # type check
-        self.failUnlessRaises(ValueError, setattr, cur_head, "reference", "that")
+        self.assertRaises(ValueError, setattr, cur_head, "reference", "that")
 
         # head handling
         commit = 'HEAD'
@@ -263,7 +263,7 @@ class TestRefs(TestBase):
             Head.create(rw_repo, new_name, new_head.commit)
 
             # its not fine with a different value
-            self.failUnlessRaises(OSError, Head.create, rw_repo, new_name, new_head.commit.parents[0])
+            self.assertRaises(OSError, Head.create, rw_repo, new_name, new_head.commit.parents[0])
 
             # force it
             new_head = Head.create(rw_repo, new_name, actual_commit, force=True)
@@ -276,7 +276,7 @@ class TestRefs(TestBase):
 
             # rename with force
             tmp_head = Head.create(rw_repo, "tmphead")
-            self.failUnlessRaises(GitCommandError, tmp_head.rename, new_head)
+            self.assertRaises(GitCommandError, tmp_head.rename, new_head)
             tmp_head.rename(new_head, force=True)
             assert tmp_head == new_head and tmp_head.object == new_head.object
 
@@ -289,12 +289,12 @@ class TestRefs(TestBase):
             assert tmp_head not in heads and new_head not in heads
             # force on deletion testing would be missing here, code looks okay though ;)
         # END for each new head name
-        self.failUnlessRaises(TypeError, RemoteReference.create, rw_repo, "some_name")
+        self.assertRaises(TypeError, RemoteReference.create, rw_repo, "some_name")
 
         # tag ref
         tag_name = "5.0.2"
         TagReference.create(rw_repo, tag_name)
-        self.failUnlessRaises(GitCommandError, TagReference.create, rw_repo, tag_name)
+        self.assertRaises(GitCommandError, TagReference.create, rw_repo, tag_name)
         light_tag = TagReference.create(rw_repo, tag_name, "HEAD~1", force=True)
         assert isinstance(light_tag, TagReference)
         assert light_tag.name == tag_name
@@ -354,13 +354,13 @@ class TestRefs(TestBase):
 
         # setting a non-commit as commit fails, but succeeds as object
         head_tree = head.commit.tree
-        self.failUnlessRaises(ValueError, setattr, head, 'commit', head_tree)
+        self.assertRaises(ValueError, setattr, head, 'commit', head_tree)
         assert head.commit == old_commit        # and the ref did not change
         # we allow heds to point to any object
         head.object = head_tree
         assert head.object == head_tree
         # cannot query tree as commit
-        self.failUnlessRaises(TypeError, getattr, head, 'commit')
+        self.assertRaises(TypeError, getattr, head, 'commit')
 
         # set the commit directly using the head. This would never detach the head
         assert not cur_head.is_detached
@@ -397,7 +397,7 @@ class TestRefs(TestBase):
 
         # create a new branch that is likely to touch the file we changed
         far_away_head = rw_repo.create_head("far_head", 'HEAD~100')
-        self.failUnlessRaises(GitCommandError, far_away_head.checkout)
+        self.assertRaises(GitCommandError, far_away_head.checkout)
         assert active_branch == active_branch.checkout(force=True)
         assert rw_repo.head.reference != far_away_head
 
@@ -408,7 +408,7 @@ class TestRefs(TestBase):
         assert ref.path == full_ref
         assert ref.object == rw_repo.head.commit
 
-        self.failUnlessRaises(OSError, Reference.create, rw_repo, full_ref, 'HEAD~20')
+        self.assertRaises(OSError, Reference.create, rw_repo, full_ref, 'HEAD~20')
         # it works if it is at the same spot though and points to the same reference
         assert Reference.create(rw_repo, full_ref, 'HEAD').path == full_ref
         Reference.delete(rw_repo, full_ref)
@@ -434,11 +434,11 @@ class TestRefs(TestBase):
         # END for each name type
 
         # References that don't exist trigger an error if we want to access them
-        self.failUnlessRaises(ValueError, getattr, Reference(rw_repo, "refs/doesntexist"), 'commit')
+        self.assertRaises(ValueError, getattr, Reference(rw_repo, "refs/doesntexist"), 'commit')
 
         # exists, fail unless we force
         ex_ref_path = far_away_head.path
-        self.failUnlessRaises(OSError, ref.rename, ex_ref_path)
+        self.assertRaises(OSError, ref.rename, ex_ref_path)
         # if it points to the same commit it works
         far_away_head.commit = ref.commit
         ref.rename(ex_ref_path)
@@ -451,7 +451,7 @@ class TestRefs(TestBase):
         assert symref.path == symref_path
         assert symref.reference == cur_head.reference
 
-        self.failUnlessRaises(OSError, SymbolicReference.create, rw_repo, symref_path, cur_head.reference.commit)
+        self.assertRaises(OSError, SymbolicReference.create, rw_repo, symref_path, cur_head.reference.commit)
         # it works if the new ref points to the same reference
         SymbolicReference.create(rw_repo, symref.path, symref.reference).path == symref.path  # @NoEffect
         SymbolicReference.delete(rw_repo, symref)
@@ -541,7 +541,7 @@ class TestRefs(TestBase):
             # if the assignment raises, the ref doesn't exist
             Reference.delete(ref.repo, ref.path)
             assert not ref.is_valid()
-            self.failUnlessRaises(ValueError, setattr, ref, 'commit', "nonsense")
+            self.assertRaises(ValueError, setattr, ref, 'commit', "nonsense")
             assert not ref.is_valid()
 
             # I am sure I had my reason to make it a class method at first, but
@@ -555,7 +555,7 @@ class TestRefs(TestBase):
 
             Reference.delete(ref.repo, ref.path)
             assert not ref.is_valid()
-            self.failUnlessRaises(ValueError, setattr, ref, 'object', "nonsense")
+            self.assertRaises(ValueError, setattr, ref, 'object', "nonsense")
             assert not ref.is_valid()
 
         # END for each path

@@ -24,4 +24,4 @@ class TestDB(TestBase):
 
         # fails with BadObject
         for invalid_rev in ("0000", "bad/ref", "super bad"):
-            self.failUnlessRaises(BadObject, gdb.partial_to_complete_sha_hex, invalid_rev)
+            self.assertRaises(BadObject, gdb.partial_to_complete_sha_hex, invalid_rev)

@@ -96,7 +96,7 @@ class TestCommit(TestBase):
 
         commit = self.rorepo.commit('2454ae89983a4496a445ce347d7a41c0bb0ea7ae')
         # commits have no dict
-        self.failUnlessRaises(AttributeError, setattr, commit, 'someattr', 1)
+        self.assertRaises(AttributeError, setattr, commit, 'someattr', 1)
         commit.author  # bake
 
         assert_equal("Sebastian Thiel", commit.author.name)
@@ -180,7 +180,7 @@ class TestCommit(TestBase):
         self.assertEqual(next(start.traverse(branch_first=1, predicate=lambda i, d: i == p1)), p1)
 
         # traversal should stop when the beginning is reached
-        self.failUnlessRaises(StopIteration, next, first.traverse())
+        self.assertRaises(StopIteration, next, first.traverse())
 
         # parents of the first commit should be empty ( as the only parent has a null
         # sha )
@@ -206,7 +206,7 @@ class TestCommit(TestBase):
 
     def test_iter_items(self):
         # pretty not allowed
-        self.failUnlessRaises(ValueError, Commit.iter_items, self.rorepo, 'master', pretty="raw")
+        self.assertRaises(ValueError, Commit.iter_items, self.rorepo, 'master', pretty="raw")
 
     def test_rev_list_bisect_all(self):
         """
