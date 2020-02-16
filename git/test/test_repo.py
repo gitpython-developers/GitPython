@@ -417,7 +417,7 @@ class TestRepo(TestBase):
         assert_equal('Tom Preston-Werner', c.committer.name)
         assert_equal('tom@mojombo.com', c.committer.email)
         assert_equal(1191997100, c.committed_date)
-        self.assertRaisesRegexp(ValueError, "634396b2f541a9f2d58b00be1a07f0c358b999b3 missing", lambda: c.message)
+        self.assertRaisesRegex(ValueError, "634396b2f541a9f2d58b00be1a07f0c358b999b3 missing", lambda: c.message)
 
         # test the 'lines per commit' entries
         tlist = b[0][1]
