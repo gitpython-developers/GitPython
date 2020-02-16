@@ -2,6 +2,11 @@
 Changelog
 =========
 
+2.1.15 - Bugfixes
+=================
+
+Fix requirements.txt formatting and version lock gitdb2 to <3 for Python 2 compatibility.
+
 2.1.14 - Bugfixes
 =================
 
