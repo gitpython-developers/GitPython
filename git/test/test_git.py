@@ -25,7 +25,6 @@ from git.test.lib import (
     raises,
     assert_equal,
     assert_true,
-    assert_match,
     fixture_path
 )
 from git.test.lib import with_rw_directory
@@ -87,7 +86,7 @@ class TestGit(TestBase):
         self.assertEqual({'-s', '-t'}, set(res))
 
     def test_it_executes_git_to_shell_and_returns_result(self):
-        assert_match(r'^git version [\d\.]{2}.*$', self.git.execute(["git", "version"]))
+        self.assertRegex(self.git.execute(["git", "version"]), r'^git version [\d\.]{2}.*$')
 
     def test_it_accepts_stdin(self):
         filename = fixture_path("cat_file_blob")
