@@ -22,7 +22,6 @@ from git.compat import is_darwin
 from git.test.lib import (
     TestBase,
     patch,
-    assert_true,
     fixture_path
 )
 from git.test.lib import with_rw_directory
@@ -48,7 +47,7 @@ class TestGit(TestBase):
     def test_call_process_calls_execute(self, git):
         git.return_value = ''
         self.git.version()
-        assert_true(git.called)
+        self.assertTrue(git.called)
         self.assertEqual(git.call_args, ((['git', 'version'],), {}))
 
     def test_call_unpack_args_unicode(self):
@@ -95,7 +94,7 @@ class TestGit(TestBase):
     def test_it_ignores_false_kwargs(self, git):
         # this_should_not_be_ignored=False implies it *should* be ignored
         self.git.version(pass_this_kwarg=False)
-        assert_true("pass_this_kwarg" not in git.call_args[1])
+        self.assertTrue("pass_this_kwarg" not in git.call_args[1])
 
     def test_it_raises_proper_exception_with_output_stream(self):
         tmp_file = TemporaryFile()

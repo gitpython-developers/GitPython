@@ -19,7 +19,6 @@ from git.repo.fun import (
     find_worktree_git_dir
 )
 from git.test.lib import (
-    assert_true,
     TestBase,
     with_rw_repo,
     with_rw_directory
@@ -274,12 +273,12 @@ class TestFun(TestBase):
 
         dotgit = osp.join(worktree_path, ".git")
         statbuf = stat(dotgit)
-        assert_true(statbuf.st_mode & S_IFREG)
+        self.assertTrue(statbuf.st_mode & S_IFREG)
 
         gitdir = find_worktree_git_dir(dotgit)
         self.assertIsNotNone(gitdir)
         statbuf = stat(gitdir)
-        assert_true(statbuf.st_mode & S_IFDIR)
+        self.assertTrue(statbuf.st_mode & S_IFDIR)
 
     def test_tree_entries_from_data_with_failing_name_decode_py3(self):
         r = tree_entries_from_data(b'100644 \x9f\0aaa')

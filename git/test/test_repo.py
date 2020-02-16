@@ -41,8 +41,7 @@ from git.test.lib import (
     TestBase,
     with_rw_repo,
     fixture,
-    assert_false,
-    assert_true
+    assert_false
 )
 from git.util import HIDE_WINDOWS_KNOWN_ERRORS, cygpath
 from git.test.lib import with_rw_directory
@@ -243,12 +242,12 @@ class TestRepo(TestBase):
 
     @with_rw_repo('HEAD')
     def test_max_chunk_size(self, repo):
-        class TestOutputStream(object):
+        class TestOutputStream(TestBase):
             def __init__(self, max_chunk_size):
                 self.max_chunk_size = max_chunk_size
 
             def write(self, b):
-                assert_true(len(b) <= self.max_chunk_size)
+                self.assertTrue(len(b) <= self.max_chunk_size)
 
         for chunk_size in [16, 128, 1024]:
             repo.git.status(output_stream=TestOutputStream(chunk_size), max_chunk_size=chunk_size)
@@ -404,7 +403,7 @@ class TestRepo(TestBase):
         # self.assertEqual(25, reduce(lambda acc, x: acc + len(x[-1]), b))
         self.assertEqual(hash(b[0][0]), hash(b[9][0]))
         c = b[0][0]
-        assert_true(git.called)
+        self.assertTrue(git.called)
 
         self.assertEqual('634396b2f541a9f2d58b00be1a07f0c358b999b3', c.hexsha)
         self.assertEqual('Tom Preston-Werner', c.author.name)
@@ -417,9 +416,9 @@ class TestRepo(TestBase):
 
         # test the 'lines per commit' entries
         tlist = b[0][1]
-        assert_true(tlist)
-        assert_true(isinstance(tlist[0], str))
-        assert_true(len(tlist) < sum(len(t) for t in tlist))               # test for single-char bug
+        self.assertTrue(tlist)
+        self.assertTrue(isinstance(tlist[0], str))
+        self.assertTrue(len(tlist) < sum(len(t) for t in tlist))               # test for single-char bug
 
         # BINARY BLAME
         git.return_value = fixture('blame_binary')

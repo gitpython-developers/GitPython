@@ -20,7 +20,6 @@ from git.test.lib import (
     TestBase,
     StringProcessAdapter,
     fixture,
-    assert_true,
 )
 from git.test.lib import with_rw_directory
 
@@ -105,8 +104,8 @@ class TestDiff(TestBase):
         self.assertEqual(1, len(diffs))
 
         diff = diffs[0]
-        assert_true(diff.renamed_file)
-        assert_true(diff.renamed)
+        self.assertTrue(diff.renamed_file)
+        self.assertTrue(diff.renamed)
         self.assertEqual(diff.rename_from, u'Jérôme')
         self.assertEqual(diff.rename_to, u'müller')
         self.assertEqual(diff.raw_rename_from, b'J\xc3\xa9r\xc3\xb4me')
@@ -133,9 +132,9 @@ class TestDiff(TestBase):
         self.assertEqual(1, len(diffs))
 
         diff = diffs[0]
-        assert_true(diff.copied_file)
-        assert_true(diff.a_path, u'test1.txt')
-        assert_true(diff.b_path, u'test2.txt')
+        self.assertTrue(diff.copied_file)
+        self.assertTrue(diff.a_path, u'test1.txt')
+        self.assertTrue(diff.b_path, u'test2.txt')
         assert isinstance(str(diff), str)
 
         output = StringProcessAdapter(fixture('diff_copied_mode_raw'))
