@@ -8,6 +8,7 @@ import os
 import subprocess
 import sys
 from tempfile import TemporaryFile
+from unittest import mock
 
 from git import (
     Git,
@@ -31,12 +32,6 @@ from git.test.lib import with_rw_directory
 from git.util import finalize_process
 
 import os.path as osp
-
-
-try:
-    from unittest import mock
-except ImportError:
-    import mock
 
 from git.compat import is_win
 

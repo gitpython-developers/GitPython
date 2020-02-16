@@ -11,6 +11,7 @@ from io import BytesIO
 import re
 import sys
 import time
+from unittest.mock import Mock
 
 from git import (
     Commit,
@@ -31,12 +32,6 @@ from git.test.lib import with_rw_directory
 from gitdb import IStream
 
 import os.path as osp
-
-
-try:
-    from unittest.mock import Mock
-except ImportError:
-    from mock import Mock
 
 
 def assert_commit_serialization(rwrepo, commit_id, print_performance_info=False):

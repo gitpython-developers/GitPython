@@ -6,6 +6,7 @@
 
 import re
 import stat
+from unittest.mock import patch
 
 from nose.tools import (
     assert_equal,       # @UnusedImport
@@ -15,11 +16,6 @@ from nose.tools import (
     assert_true,        # @UnusedImport
     assert_false        # @UnusedImport
 )
-
-try:
-    from unittest.mock import patch
-except ImportError:
-    from mock import patch  # @NoMove @UnusedImport
 
 __all__ = ['assert_instance_of', 'assert_not_instance_of',
            'assert_none', 'assert_not_none',
