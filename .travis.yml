@@ -3,16 +3,12 @@ python:
   - "3.4"
   - "3.5"
   - "3.6"
+  - "3.7"
+  - "nightly"
   # - "pypy" - won't work as smmap doesn't work (see gitdb/.travis.yml for details)
 matrix:
-  include:
-    - python: 3.7
-      dist: xenial
-    - python: "nightly"
-      dist: xenial
   allow_failures:
     - python: "nightly"
-      dist: xenial
 git:
   # a higher depth is needed for most of the tests - must be high enough to not actually be shallow
   # as we clone our own repository in the process
