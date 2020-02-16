@@ -42,8 +42,7 @@ from git.test.lib import (
     with_rw_repo,
     fixture,
     assert_false,
-    assert_true,
-    raises
+    assert_true
 )
 from git.util import HIDE_WINDOWS_KNOWN_ERRORS, cygpath
 from git.test.lib import with_rw_directory
@@ -82,13 +81,11 @@ class TestRepo(TestBase):
         import gc
         gc.collect()
 
-    @raises(InvalidGitRepositoryError)
     def test_new_should_raise_on_invalid_repo_location(self):
-        Repo(tempfile.gettempdir())
+        self.assertRaises(InvalidGitRepositoryError, Repo, tempfile.gettempdir())
 
-    @raises(NoSuchPathError)
     def test_new_should_raise_on_non_existent_path(self):
-        Repo("repos/foobar")
+        self.assertRaises(NoSuchPathError, Repo, "repos/foobar")
 
     @with_rw_repo('0.3.2.1')
     def test_repo_creation_from_different_paths(self, rw_repo):

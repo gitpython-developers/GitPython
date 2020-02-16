@@ -22,7 +22,6 @@ from git.compat import is_darwin
 from git.test.lib import (
     TestBase,
     patch,
-    raises,
     assert_true,
     fixture_path
 )
@@ -62,9 +61,8 @@ class TestGit(TestBase):
         mangled_value = 'Unicode\u20ac\u2122'
         self.assertEqual(args, ['git', 'log', '--', mangled_value])
 
-    @raises(GitCommandError)
     def test_it_raises_errors(self):
-        self.git.this_does_not_exist()
+        self.assertRaises(GitCommandError, self.git.this_does_not_exist)
 
     def test_it_transforms_kwargs_into_git_command_arguments(self):
         self.assertEqual(["-s"], self.git.transform_kwargs(**{'s': True}))
@@ -99,10 +97,9 @@ class TestGit(TestBase):
         self.git.version(pass_this_kwarg=False)
         assert_true("pass_this_kwarg" not in git.call_args[1])
 
-    @raises(GitCommandError)
     def test_it_raises_proper_exception_with_output_stream(self):
         tmp_file = TemporaryFile()
-        self.git.checkout('non-existent-branch', output_stream=tmp_file)
+        self.assertRaises(GitCommandError, self.git.checkout, 'non-existent-branch', output_stream=tmp_file)
 
     def test_it_accepts_environment_variables(self):
         filename = fixture_path("ls_tree_empty")
