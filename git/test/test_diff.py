@@ -20,7 +20,6 @@ from git.test.lib import (
     TestBase,
     StringProcessAdapter,
     fixture,
-    assert_equal,
     assert_true,
 )
 from git.test.lib import with_rw_directory
@@ -95,23 +94,23 @@ class TestDiff(TestBase):
         diffs = Diff._index_from_patch_format(self.rorepo, output)
         self._assert_diff_format(diffs)
 
-        assert_equal(1, len(diffs))
-        assert_equal(8, len(diffs[0].diff.splitlines()))
+        self.assertEqual(1, len(diffs))
+        self.assertEqual(8, len(diffs[0].diff.splitlines()))
 
     def test_diff_with_rename(self):
         output = StringProcessAdapter(fixture('diff_rename'))
         diffs = Diff._index_from_patch_format(self.rorepo, output)
         self._assert_diff_format(diffs)
 
-        assert_equal(1, len(diffs))
+        self.assertEqual(1, len(diffs))
 
         diff = diffs[0]
         assert_true(diff.renamed_file)
         assert_true(diff.renamed)
-        assert_equal(diff.rename_from, u'Jérôme')
-        assert_equal(diff.rename_to, u'müller')
-        assert_equal(diff.raw_rename_from, b'J\xc3\xa9r\xc3\xb4me')
-        assert_equal(diff.raw_rename_to, b'm\xc3\xbcller')
+        self.assertEqual(diff.rename_from, u'Jérôme')
+        self.assertEqual(diff.rename_to, u'müller')
+        self.assertEqual(diff.raw_rename_from, b'J\xc3\xa9r\xc3\xb4me')
+        self.assertEqual(diff.raw_rename_to, b'm\xc3\xbcller')
         assert isinstance(str(diff), str)
 
         output = StringProcessAdapter(fixture('diff_rename_raw'))
@@ -131,7 +130,7 @@ class TestDiff(TestBase):
         diffs = Diff._index_from_patch_format(self.rorepo, output)
         self._assert_diff_format(diffs)
 
-        assert_equal(1, len(diffs))
+        self.assertEqual(1, len(diffs))
 
         diff = diffs[0]
         assert_true(diff.copied_file)
@@ -153,17 +152,17 @@ class TestDiff(TestBase):
         output = StringProcessAdapter(fixture('diff_change_in_type'))
         diffs = Diff._index_from_patch_format(self.rorepo, output)
         self._assert_diff_format(diffs)
-        assert_equal(2, len(diffs))
+        self.assertEqual(2, len(diffs))
 
         diff = diffs[0]
         self.assertIsNotNone(diff.deleted_file)
-        assert_equal(diff.a_path, 'this')
-        assert_equal(diff.b_path, 'this')
+        self.assertEqual(diff.a_path, 'this')
+        self.assertEqual(diff.b_path, 'this')
         assert isinstance(str(diff), str)
 
         diff = diffs[1]
-        assert_equal(diff.a_path, None)
-        assert_equal(diff.b_path, 'this')
+        self.assertEqual(diff.a_path, None)
+        self.assertEqual(diff.b_path, 'this')
         self.assertIsNotNone(diff.new_file)
         assert isinstance(str(diff), str)
 

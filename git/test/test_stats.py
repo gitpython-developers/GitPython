@@ -6,8 +6,7 @@
 
 from git.test.lib import (
     TestBase,
-    fixture,
-    assert_equal
+    fixture
 )
 from git import Stats
 from git.compat import defenc
@@ -19,13 +18,13 @@ class TestStats(TestBase):
         output = fixture('diff_numstat').decode(defenc)
         stats = Stats._list_from_string(self.rorepo, output)
 
-        assert_equal(2, stats.total['files'])
-        assert_equal(52, stats.total['lines'])
-        assert_equal(29, stats.total['insertions'])
-        assert_equal(23, stats.total['deletions'])
+        self.assertEqual(2, stats.total['files'])
+        self.assertEqual(52, stats.total['lines'])
+        self.assertEqual(29, stats.total['insertions'])
+        self.assertEqual(23, stats.total['deletions'])
 
-        assert_equal(29, stats.files["a.txt"]['insertions'])
-        assert_equal(18, stats.files["a.txt"]['deletions'])
+        self.assertEqual(29, stats.files["a.txt"]['insertions'])
+        self.assertEqual(18, stats.files["a.txt"]['deletions'])
 
-        assert_equal(0, stats.files["b.txt"]['insertions'])
-        assert_equal(5, stats.files["b.txt"]['deletions'])
+        self.assertEqual(0, stats.files["b.txt"]['insertions'])
+        self.assertEqual(5, stats.files["b.txt"]['deletions'])

@@ -42,7 +42,6 @@ from git.test.lib import (
     with_rw_repo,
     fixture,
     assert_false,
-    assert_equal,
     assert_true,
     raises
 )
@@ -107,11 +106,11 @@ class TestRepo(TestBase):
     def test_description(self):
         txt = "Test repository"
         self.rorepo.description = txt
-        assert_equal(self.rorepo.description, txt)
+        self.assertEqual(self.rorepo.description, txt)
 
     def test_heads_should_return_array_of_head_objects(self):
         for head in self.rorepo.heads:
-            assert_equal(Head, head.__class__)
+            self.assertEqual(Head, head.__class__)
 
     def test_heads_should_populate_head_data(self):
         for head in self.rorepo.heads:
@@ -145,18 +144,18 @@ class TestRepo(TestBase):
         self.assertEqual(len(commits), mc)
 
         c = commits[0]
-        assert_equal('9a4b1d4d11eee3c5362a4152216376e634bd14cf', c.hexsha)
-        assert_equal(["c76852d0bff115720af3f27acdb084c59361e5f6"], [p.hexsha for p in c.parents])
-        assert_equal("ce41fc29549042f1aa09cc03174896cf23f112e3", c.tree.hexsha)
-        assert_equal("Michael Trier", c.author.name)
-        assert_equal("mtrier@gmail.com", c.author.email)
-        assert_equal(1232829715, c.authored_date)
-        assert_equal(5 * 3600, c.author_tz_offset)
-        assert_equal("Michael Trier", c.committer.name)
-        assert_equal("mtrier@gmail.com", c.committer.email)
-        assert_equal(1232829715, c.committed_date)
-        assert_equal(5 * 3600, c.committer_tz_offset)
-        assert_equal("Bumped version 0.1.6\n", c.message)
+        self.assertEqual('9a4b1d4d11eee3c5362a4152216376e634bd14cf', c.hexsha)
+        self.assertEqual(["c76852d0bff115720af3f27acdb084c59361e5f6"], [p.hexsha for p in c.parents])
+        self.assertEqual("ce41fc29549042f1aa09cc03174896cf23f112e3", c.tree.hexsha)
+        self.assertEqual("Michael Trier", c.author.name)
+        self.assertEqual("mtrier@gmail.com", c.author.email)
+        self.assertEqual(1232829715, c.authored_date)
+        self.assertEqual(5 * 3600, c.author_tz_offset)
+        self.assertEqual("Michael Trier", c.committer.name)
+        self.assertEqual("mtrier@gmail.com", c.committer.email)
+        self.assertEqual(1232829715, c.committed_date)
+        self.assertEqual(5 * 3600, c.committer_tz_offset)
+        self.assertEqual("Bumped version 0.1.6\n", c.message)
 
         c = commits[1]
         self.assertIsInstance(c.parents, tuple)
@@ -204,7 +203,7 @@ class TestRepo(TestBase):
 
         cloned = Repo.clone_from(original_repo.git_dir, osp.join(rw_dir, "clone"), env=environment)
 
-        assert_equal(environment, cloned.git.environment())
+        self.assertEqual(environment, cloned.git.environment())
 
     @with_rw_directory
     def test_date_format(self, rw_dir):
@@ -227,9 +226,9 @@ class TestRepo(TestBase):
                                                 "--config core.filemode=false",
                                                 "--config submodule.repo.update=checkout"])
 
-        assert_equal(cloned.config_reader().get_value('submodule', 'active'), 'repo')
-        assert_equal(cloned.config_reader().get_value('core', 'filemode'), False)
-        assert_equal(cloned.config_reader().get_value('submodule "repo"', 'update'), 'checkout')
+        self.assertEqual(cloned.config_reader().get_value('submodule', 'active'), 'repo')
+        self.assertEqual(cloned.config_reader().get_value('core', 'filemode'), False)
+        self.assertEqual(cloned.config_reader().get_value('submodule "repo"', 'update'), 'checkout')
 
     def test_clone_from_with_path_contains_unicode(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -403,20 +402,20 @@ class TestRepo(TestBase):
     def test_should_display_blame_information(self, git):
         git.return_value = fixture('blame')
         b = self.rorepo.blame('master', 'lib/git.py')
-        assert_equal(13, len(b))
-        assert_equal(2, len(b[0]))
-        # assert_equal(25, reduce(lambda acc, x: acc + len(x[-1]), b))
-        assert_equal(hash(b[0][0]), hash(b[9][0]))
+        self.assertEqual(13, len(b))
+        self.assertEqual(2, len(b[0]))
+        # self.assertEqual(25, reduce(lambda acc, x: acc + len(x[-1]), b))
+        self.assertEqual(hash(b[0][0]), hash(b[9][0]))
         c = b[0][0]
         assert_true(git.called)
 
-        assert_equal('634396b2f541a9f2d58b00be1a07f0c358b999b3', c.hexsha)
-        assert_equal('Tom Preston-Werner', c.author.name)
-        assert_equal('tom@mojombo.com', c.author.email)
-        assert_equal(1191997100, c.authored_date)
-        assert_equal('Tom Preston-Werner', c.committer.name)
-        assert_equal('tom@mojombo.com', c.committer.email)
-        assert_equal(1191997100, c.committed_date)
+        self.assertEqual('634396b2f541a9f2d58b00be1a07f0c358b999b3', c.hexsha)
+        self.assertEqual('Tom Preston-Werner', c.author.name)
+        self.assertEqual('tom@mojombo.com', c.author.email)
+        self.assertEqual(1191997100, c.authored_date)
+        self.assertEqual('Tom Preston-Werner', c.committer.name)
+        self.assertEqual('tom@mojombo.com', c.committer.email)
+        self.assertEqual(1191997100, c.committed_date)
         self.assertRaisesRegex(ValueError, "634396b2f541a9f2d58b00be1a07f0c358b999b3 missing", lambda: c.message)
 
         # test the 'lines per commit' entries

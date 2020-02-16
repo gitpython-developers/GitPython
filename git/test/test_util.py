@@ -21,10 +21,7 @@ from git.objects.util import (
     parse_date,
     tzoffset,
     from_timestamp)
-from git.test.lib import (
-    TestBase,
-    assert_equal
-)
+from git.test.lib import TestBase
 from git.util import (
     LockFile,
     BlockingLockFile,
@@ -126,8 +123,8 @@ class TestUtils(TestBase):
         self.assertEqual(wcpath, wpath.replace('/', '\\'), cpath)
 
     def test_it_should_dashify(self):
-        assert_equal('this-is-my-argument', dashify('this_is_my_argument'))
-        assert_equal('foo', dashify('foo'))
+        self.assertEqual('this-is-my-argument', dashify('this_is_my_argument'))
+        self.assertEqual('foo', dashify('foo'))
 
     def test_lock_file(self):
         my_file = tempfile.mktemp()

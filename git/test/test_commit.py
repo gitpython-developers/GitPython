@@ -22,7 +22,6 @@ from git.objects.util import tzoffset, utc
 from git.repo.fun import touch
 from git.test.lib import (
     TestBase,
-    assert_equal,
     assert_not_equal,
     with_rw_repo,
     fixture_path,
@@ -34,58 +33,60 @@ from gitdb import IStream
 import os.path as osp
 
 
-def assert_commit_serialization(rwrepo, commit_id, print_performance_info=False):
-    """traverse all commits in the history of commit identified by commit_id and check
-    if the serialization works.
-    :param print_performance_info: if True, we will show how fast we are"""
-    ns = 0      # num serializations
-    nds = 0     # num deserializations
+class TestCommitSerialization(TestBase):
 
-    st = time.time()
-    for cm in rwrepo.commit(commit_id).traverse():
-        nds += 1
+    def assert_commit_serialization(self, rwrepo, commit_id, print_performance_info=False):
+        """traverse all commits in the history of commit identified by commit_id and check
+        if the serialization works.
+        :param print_performance_info: if True, we will show how fast we are"""
+        ns = 0      # num serializations
+        nds = 0     # num deserializations
 
-        # assert that we deserialize commits correctly, hence we get the same
-        # sha on serialization
-        stream = BytesIO()
-        cm._serialize(stream)
-        ns += 1
-        streamlen = stream.tell()
-        stream.seek(0)
+        st = time.time()
+        for cm in rwrepo.commit(commit_id).traverse():
+            nds += 1
 
-        istream = rwrepo.odb.store(IStream(Commit.type, streamlen, stream))
-        assert_equal(istream.hexsha, cm.hexsha.encode('ascii'))
+            # assert that we deserialize commits correctly, hence we get the same
+            # sha on serialization
+            stream = BytesIO()
+            cm._serialize(stream)
+            ns += 1
+            streamlen = stream.tell()
+            stream.seek(0)
 
-        nc = Commit(rwrepo, Commit.NULL_BIN_SHA, cm.tree,
-                    cm.author, cm.authored_date, cm.author_tz_offset,
-                    cm.committer, cm.committed_date, cm.committer_tz_offset,
-                    cm.message, cm.parents, cm.encoding)
+            istream = rwrepo.odb.store(IStream(Commit.type, streamlen, stream))
+            self.assertEqual(istream.hexsha, cm.hexsha.encode('ascii'))
 
-        assert_equal(nc.parents, cm.parents)
-        stream = BytesIO()
-        nc._serialize(stream)
-        ns += 1
-        streamlen = stream.tell()
-        stream.seek(0)
+            nc = Commit(rwrepo, Commit.NULL_BIN_SHA, cm.tree,
+                        cm.author, cm.authored_date, cm.author_tz_offset,
+                        cm.committer, cm.committed_date, cm.committer_tz_offset,
+                        cm.message, cm.parents, cm.encoding)
 
-        # reuse istream
-        istream.size = streamlen
-        istream.stream = stream
-        istream.binsha = None
-        nc.binsha = rwrepo.odb.store(istream).binsha
+            self.assertEqual(nc.parents, cm.parents)
+            stream = BytesIO()
+            nc._serialize(stream)
+            ns += 1
+            streamlen = stream.tell()
+            stream.seek(0)
 
-        # if it worked, we have exactly the same contents !
-        assert_equal(nc.hexsha, cm.hexsha)
-    # END check commits
-    elapsed = time.time() - st
+            # reuse istream
+            istream.size = streamlen
+            istream.stream = stream
+            istream.binsha = None
+            nc.binsha = rwrepo.odb.store(istream).binsha
 
-    if print_performance_info:
-        print("Serialized %i and deserialized %i commits in %f s ( (%f, %f) commits / s"
-              % (ns, nds, elapsed, ns / elapsed, nds / elapsed), file=sys.stderr)
-    # END handle performance info
+            # if it worked, we have exactly the same contents !
+            self.assertEqual(nc.hexsha, cm.hexsha)
+        # END check commits
+        elapsed = time.time() - st
+
+        if print_performance_info:
+            print("Serialized %i and deserialized %i commits in %f s ( (%f, %f) commits / s"
+                  % (ns, nds, elapsed, ns / elapsed, nds / elapsed), file=sys.stderr)
+        # END handle performance info
 
 
-class TestCommit(TestBase):
+class TestCommit(TestCommitSerialization):
 
     def test_bake(self):
 
@@ -94,8 +95,8 @@ class TestCommit(TestBase):
         self.assertRaises(AttributeError, setattr, commit, 'someattr', 1)
         commit.author  # bake
 
-        assert_equal("Sebastian Thiel", commit.author.name)
-        assert_equal("byronimo@gmail.com", commit.author.email)
+        self.assertEqual("Sebastian Thiel", commit.author.name)
+        self.assertEqual("byronimo@gmail.com", commit.author.email)
         self.assertEqual(commit.author, commit.committer)
         assert isinstance(commit.authored_date, int) and isinstance(commit.committed_date, int)
         assert isinstance(commit.author_tz_offset, int) and isinstance(commit.committer_tz_offset, int)
@@ -220,7 +221,7 @@ class TestCommit(TestBase):
             '933d23bf95a5bd1624fbcdf328d904e1fa173474'
         )
         for sha1, commit in zip(expected_ids, commits):
-            assert_equal(sha1, commit.hexsha)
+            self.assertEqual(sha1, commit.hexsha)
 
     @with_rw_directory
     def test_ambiguous_arg_iteration(self, rw_dir):
@@ -242,17 +243,17 @@ class TestCommit(TestBase):
 
     def test_str(self):
         commit = Commit(self.rorepo, Commit.NULL_BIN_SHA)
-        assert_equal(Commit.NULL_HEX_SHA, str(commit))
+        self.assertEqual(Commit.NULL_HEX_SHA, str(commit))
 
     def test_repr(self):
         commit = Commit(self.rorepo, Commit.NULL_BIN_SHA)
-        assert_equal('<git.Commit "%s">' % Commit.NULL_HEX_SHA, repr(commit))
+        self.assertEqual('<git.Commit "%s">' % Commit.NULL_HEX_SHA, repr(commit))
 
     def test_equality(self):
         commit1 = Commit(self.rorepo, Commit.NULL_BIN_SHA)
         commit2 = Commit(self.rorepo, Commit.NULL_BIN_SHA)
         commit3 = Commit(self.rorepo, "\1" * 20)
-        assert_equal(commit1, commit2)
+        self.assertEqual(commit1, commit2)
         assert_not_equal(commit2, commit3)
 
     def test_iter_parents(self):
@@ -272,7 +273,7 @@ class TestCommit(TestBase):
     @with_rw_repo('HEAD', bare=True)
     def test_serialization(self, rwrepo):
         # create all commits of our repo
-        assert_commit_serialization(rwrepo, '0.1.6')
+        self.assert_commit_serialization(rwrepo, '0.1.6')
 
     def test_serialization_unicode_support(self):
         self.assertEqual(Commit.default_encoding.lower(), 'utf-8')

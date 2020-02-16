@@ -23,7 +23,6 @@ from git.test.lib import (
     TestBase,
     patch,
     raises,
-    assert_equal,
     assert_true,
     fixture_path
 )
@@ -51,35 +50,35 @@ class TestGit(TestBase):
         git.return_value = ''
         self.git.version()
         assert_true(git.called)
-        assert_equal(git.call_args, ((['git', 'version'],), {}))
+        self.assertEqual(git.call_args, ((['git', 'version'],), {}))
 
     def test_call_unpack_args_unicode(self):
         args = Git._Git__unpack_args(u'Unicode€™')
         mangled_value = 'Unicode\u20ac\u2122'
-        assert_equal(args, [mangled_value])
+        self.assertEqual(args, [mangled_value])
 
     def test_call_unpack_args(self):
         args = Git._Git__unpack_args(['git', 'log', '--', u'Unicode€™'])
         mangled_value = 'Unicode\u20ac\u2122'
-        assert_equal(args, ['git', 'log', '--', mangled_value])
+        self.assertEqual(args, ['git', 'log', '--', mangled_value])
 
     @raises(GitCommandError)
     def test_it_raises_errors(self):
         self.git.this_does_not_exist()
 
     def test_it_transforms_kwargs_into_git_command_arguments(self):
-        assert_equal(["-s"], self.git.transform_kwargs(**{'s': True}))
-        assert_equal(["-s", "5"], self.git.transform_kwargs(**{'s': 5}))
-        assert_equal([], self.git.transform_kwargs(**{'s': None}))
+        self.assertEqual(["-s"], self.git.transform_kwargs(**{'s': True}))
+        self.assertEqual(["-s", "5"], self.git.transform_kwargs(**{'s': 5}))
+        self.assertEqual([], self.git.transform_kwargs(**{'s': None}))
 
-        assert_equal(["--max-count"], self.git.transform_kwargs(**{'max_count': True}))
-        assert_equal(["--max-count=5"], self.git.transform_kwargs(**{'max_count': 5}))
-        assert_equal(["--max-count=0"], self.git.transform_kwargs(**{'max_count': 0}))
-        assert_equal([], self.git.transform_kwargs(**{'max_count': None}))
+        self.assertEqual(["--max-count"], self.git.transform_kwargs(**{'max_count': True}))
+        self.assertEqual(["--max-count=5"], self.git.transform_kwargs(**{'max_count': 5}))
+        self.assertEqual(["--max-count=0"], self.git.transform_kwargs(**{'max_count': 0}))
+        self.assertEqual([], self.git.transform_kwargs(**{'max_count': None}))
 
         # Multiple args are supported by using lists/tuples
-        assert_equal(["-L", "1-3", "-L", "12-18"], self.git.transform_kwargs(**{'L': ('1-3', '12-18')}))
-        assert_equal(["-C", "-C"], self.git.transform_kwargs(**{'C': [True, True, None, False]}))
+        self.assertEqual(["-L", "1-3", "-L", "12-18"], self.git.transform_kwargs(**{'L': ('1-3', '12-18')}))
+        self.assertEqual(["-C", "-C"], self.git.transform_kwargs(**{'C': [True, True, None, False]}))
 
         # order is undefined
         res = self.git.transform_kwargs(**{'s': True, 't': True})
@@ -91,8 +90,8 @@ class TestGit(TestBase):
     def test_it_accepts_stdin(self):
         filename = fixture_path("cat_file_blob")
         with open(filename, 'r') as fh:
-            assert_equal("70c379b63ffa0795fdbfbc128e5a2818397b7ef8",
-                         self.git.hash_object(istream=fh, stdin=True))
+            self.assertEqual("70c379b63ffa0795fdbfbc128e5a2818397b7ef8",
+                             self.git.hash_object(istream=fh, stdin=True))
 
     @patch.object(Git, 'execute')
     def test_it_ignores_false_kwargs(self, git):
@@ -118,7 +117,7 @@ class TestGit(TestBase):
                 'GIT_COMMITTER_DATE': '1500000000+0000',
             }
             commit = self.git.commit_tree(tree, m='message', env=env)
-            assert_equal(commit, '4cfd6b0314682d5a58f80be39850bad1640e9241')
+            self.assertEqual(commit, '4cfd6b0314682d5a58f80be39850bad1640e9241')
 
     def test_persistent_cat_file_command(self):
         # read header only

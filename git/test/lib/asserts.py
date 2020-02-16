@@ -7,7 +7,6 @@
 from unittest.mock import patch
 
 from nose.tools import (
-    assert_equal,       # @UnusedImport
     assert_not_equal,   # @UnusedImport
     assert_raises,      # @UnusedImport
     raises,             # @UnusedImport
@@ -15,5 +14,5 @@ from nose.tools import (
     assert_false        # @UnusedImport
 )
 
-__all__ = ['assert_equal', 'assert_not_equal', 'assert_raises', 'patch', 'raises',
+__all__ = ['assert_not_equal', 'assert_raises', 'patch', 'raises',
            'assert_true', 'assert_false']

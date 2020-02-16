@@ -11,10 +11,10 @@ import sys
 from .lib import TestBigRepoRW
 from git import Commit
 from gitdb import IStream
-from git.test.test_commit import assert_commit_serialization
+from git.test.test_commit import TestCommitSerialization
 
 
-class TestPerformance(TestBigRepoRW):
+class TestPerformance(TestBigRepoRW, TestCommitSerialization):
 
     def tearDown(self):
         import gc
@@ -79,7 +79,7 @@ class TestPerformance(TestBigRepoRW):
               % (nc, elapsed_time, nc / elapsed_time), file=sys.stderr)
 
     def test_commit_serialization(self):
-        assert_commit_serialization(self.gitrwrepo, '58c78e6', True)
+        self.assert_commit_serialization(self.gitrwrepo, '58c78e6', True)
 
         rwrepo = self.gitrwrepo
         make_object = rwrepo.odb.store
