@@ -19,12 +19,10 @@ Requirements
     involving remotes will not work as expected.
 * `GitDB`_ - a pure python git database implementation
 * `Python Nose`_ - used for running the tests
-* `Mock by Michael Foord`_ used for tests. Requires version 0.5
 
 .. _Python: https://www.python.org
 .. _Git: https://git-scm.com/
 .. _Python Nose: https://nose.readthedocs.io/en/latest/
-.. _Mock by Michael Foord: http://www.voidspace.org.uk/python/mock.html
 .. _GitDB: https://pypi.python.org/pypi/gitdb
 
 Installing GitPython
