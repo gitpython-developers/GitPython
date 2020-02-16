@@ -4,6 +4,7 @@ python:
   - "3.5"
   - "3.6"
   - "3.7"
+  - "3.8"
   - "nightly"
   # - "pypy" - won't work as smmap doesn't work (see gitdb/.travis.yml for details)
 matrix:
