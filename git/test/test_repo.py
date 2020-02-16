@@ -40,8 +40,7 @@ from git.test.lib import (
     patch,
     TestBase,
     with_rw_repo,
-    fixture,
-    assert_false
+    fixture
 )
 from git.util import HIDE_WINDOWS_KNOWN_ERRORS, cygpath
 from git.test.lib import with_rw_directory
@@ -342,7 +341,7 @@ class TestRepo(TestBase):
     def test_is_dirty_with_bare_repository(self):
         orig_value = self.rorepo._bare
         self.rorepo._bare = True
-        assert_false(self.rorepo.is_dirty())
+        self.assertFalse(self.rorepo.is_dirty())
         self.rorepo._bare = orig_value
 
     def test_is_dirty(self):
