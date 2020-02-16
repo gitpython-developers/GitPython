@@ -27,8 +27,7 @@ from git.test.lib import (
     with_rw_repo,
     with_rw_and_rw_remote_repo,
     fixture,
-    GIT_DAEMON_PORT,
-    assert_raises
+    GIT_DAEMON_PORT
 )
 from git.util import rmtree, HIDE_WINDOWS_FREEZE_ERRORS
 import os.path as osp
@@ -626,7 +625,7 @@ class TestRemote(TestBase):
         self.assertEqual(list(remote.urls), [test1, test2])
 
         # will raise: fatal: --add --delete doesn't make sense
-        assert_raises(GitCommandError, remote.set_url, test2, add=True, delete=True)
+        self.assertRaises(GitCommandError, remote.set_url, test2, add=True, delete=True)
 
         # Testing on another remote, with the add/delete URL
         remote = rw_repo.create_remote('another', url=test1)
@@ -640,7 +639,7 @@ class TestRemote(TestBase):
         remote.delete_url(test1)
         self.assertEqual(list(remote.urls), [test3])
         # will raise fatal: Will not delete all non-push URLs
-        assert_raises(GitCommandError, remote.delete_url, test3)
+        self.assertRaises(GitCommandError, remote.delete_url, test3)
 
     def test_fetch_error(self):
         rem = self.rorepo.remote('origin')
