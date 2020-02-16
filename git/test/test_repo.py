@@ -9,14 +9,10 @@ import io
 from io import BytesIO
 import itertools
 import os
+import pathlib
 import pickle
 import tempfile
 from unittest import skipIf, SkipTest
-
-try:
-    import pathlib
-except ImportError:
-    pathlib = None
 
 from git import (
     InvalidGitRepositoryError,
@@ -105,9 +101,6 @@ class TestRepo(TestBase):
 
     @with_rw_repo('0.3.2.1')
     def test_repo_creation_pathlib(self, rw_repo):
-        if pathlib is None:  # pythons bellow 3.4 don't have pathlib
-            raise SkipTest("pathlib was introduced in 3.4")
-
         r_from_gitdir = Repo(pathlib.Path(rw_repo.git_dir))
         self.assertEqual(r_from_gitdir.git_dir, rw_repo.git_dir)
 
@@ -221,18 +214,12 @@ class TestRepo(TestBase):
 
     @with_rw_directory
     def test_clone_from_pathlib(self, rw_dir):
-        if pathlib is None:  # pythons bellow 3.4 don't have pathlib
-            raise SkipTest("pathlib was introduced in 3.4")
-
         original_repo = Repo.init(osp.join(rw_dir, "repo"))
 
         Repo.clone_from(original_repo.git_dir, pathlib.Path(rw_dir) / "clone_pathlib")
 
     @with_rw_directory
     def test_clone_from_pathlib_withConfig(self, rw_dir):
-        if pathlib is None:  # pythons bellow 3.4 don't have pathlib
-            raise SkipTest("pathlib was introduced in 3.4")
-
         original_repo = Repo.init(osp.join(rw_dir, "repo"))
 
         cloned = Repo.clone_from(original_repo.git_dir, pathlib.Path(rw_dir) / "clone_pathlib_withConfig",
