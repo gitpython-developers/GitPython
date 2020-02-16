@@ -265,7 +265,7 @@ class RootModule(Submodule):
                                     # this way, it will be checked out in the next step
                                     # This will change the submodule relative to us, so
                                     # the user will be able to commit the change easily
-                                    log.warn("Current sha %s was not contained in the tracking\
+                                    log.warning("Current sha %s was not contained in the tracking\
              branch at the new remote, setting it the the remote's tracking branch", sm.hexsha)
                                     sm.binsha = rref.commit.binsha
                                 # END reset binsha

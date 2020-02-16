@@ -538,7 +538,7 @@ class Submodule(IndexObject, Iterable, Traversable):
                         mrepo.head.set_reference(local_branch, logmsg="submodule: attaching head to %s" % local_branch)
                         mrepo.head.ref.set_tracking_branch(remote_branch)
                     except (IndexError, InvalidGitRepositoryError):
-                        log.warn("Failed to checkout tracking branch %s", self.branch_path)
+                        log.warning("Failed to checkout tracking branch %s", self.branch_path)
                     # END handle tracking branch
 
                     # NOTE: Have to write the repo config file as well, otherwise
