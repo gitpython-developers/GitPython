@@ -92,7 +92,7 @@ class TExc(TestBase):
             if subs is not None:
                 # Substrings (must) already contain opening `'`.
                 subs = "(?<!')%s(?!')" % re.escape(subs)
-                self.assertRegexpMatches(s, subs)
+                self.assertRegex(s, subs)
 
         if not stream:
             c = cls(argv, cause)
