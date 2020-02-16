@@ -193,17 +193,17 @@ class TestGit(TestBase):
         # This work because any command after git --version is ignored
         git_version = self.git(version=True).NoOp()
         git_command_version = self.git.version()
-        self.assertEquals(git_version, git_command_version)
+        self.assertEqual(git_version, git_command_version)
 
     def test_persistent_options(self):
         git_command_version = self.git.version()
         # analog to test_options_are_passed_to_git
         self.git.set_persistent_git_options(version=True)
         git_version = self.git.NoOp()
-        self.assertEquals(git_version, git_command_version)
+        self.assertEqual(git_version, git_command_version)
         # subsequent calls keep this option:
         git_version_2 = self.git.NoOp()
-        self.assertEquals(git_version_2, git_command_version)
+        self.assertEqual(git_version_2, git_command_version)
 
         # reset to empty:
         self.git.set_persistent_git_options()
@@ -212,7 +212,7 @@ class TestGit(TestBase):
     def test_single_char_git_options_are_passed_to_git(self):
         input_value = 'TestValue'
         output_value = self.git(c='user.name=%s' % input_value).config('--get', 'user.name')
-        self.assertEquals(input_value, output_value)
+        self.assertEqual(input_value, output_value)
 
     def test_change_to_transform_kwargs_does_not_break_command_options(self):
         self.git.log(n=1)
