@@ -12,7 +12,7 @@ import os
 import pathlib
 import pickle
 import tempfile
-from unittest import skipIf, SkipTest
+from unittest import mock, skipIf, SkipTest
 
 from git import (
     InvalidGitRepositoryError,
@@ -37,7 +37,6 @@ from git.exc import (
 )
 from git.repo.fun import touch
 from git.test.lib import (
-    patch,
     TestBase,
     with_rw_repo,
     fixture
@@ -393,7 +392,7 @@ class TestRepo(TestBase):
             assert stream.tell()
         os.remove(tmpfile)
 
-    @patch.object(Git, '_call_process')
+    @mock.patch.object(Git, '_call_process')
     def test_should_display_blame_information(self, git):
         git.return_value = fixture('blame')
         b = self.rorepo.blame('master', 'lib/git.py')
@@ -437,7 +436,7 @@ class TestRepo(TestBase):
         assert c, "Should have executed at least one blame command"
         assert nml, "There should at least be one blame commit that contains multiple lines"
 
-    @patch.object(Git, '_call_process')
+    @mock.patch.object(Git, '_call_process')
     def test_blame_incremental(self, git):
         # loop over two fixtures, create a test fixture for 2.11.1+ syntax
         for git_fixture in ('blame_incremental', 'blame_incremental_2.11.1_plus'):
@@ -460,7 +459,7 @@ class TestRepo(TestBase):
             orig_ranges = flatten([entry.orig_linenos for entry in blame_output])
             self.assertEqual(orig_ranges, flatten([range(2, 3), range(14, 15), range(1, 2), range(2, 13), range(13, 15)]))   # noqa E501
 
-    @patch.object(Git, '_call_process')
+    @mock.patch.object(Git, '_call_process')
     def test_blame_complex_revision(self, git):
         git.return_value = fixture('blame_complex_revision')
         res = self.rorepo.blame("HEAD~10..HEAD", "README.md")

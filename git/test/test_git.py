@@ -21,7 +21,6 @@ from git import (
 from git.compat import is_darwin
 from git.test.lib import (
     TestBase,
-    patch,
     fixture_path
 )
 from git.test.lib import with_rw_directory
@@ -43,7 +42,7 @@ class TestGit(TestBase):
         import gc
         gc.collect()
 
-    @patch.object(Git, 'execute')
+    @mock.patch.object(Git, 'execute')
     def test_call_process_calls_execute(self, git):
         git.return_value = ''
         self.git.version()
@@ -90,7 +89,7 @@ class TestGit(TestBase):
             self.assertEqual("70c379b63ffa0795fdbfbc128e5a2818397b7ef8",
                              self.git.hash_object(istream=fh, stdin=True))
 
-    @patch.object(Git, 'execute')
+    @mock.patch.object(Git, 'execute')
     def test_it_ignores_false_kwargs(self, git):
         # this_should_not_be_ignored=False implies it *should* be ignored
         self.git.version(pass_this_kwarg=False)
