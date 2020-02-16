@@ -22,7 +22,6 @@ from git.objects.util import tzoffset, utc
 from git.repo.fun import touch
 from git.test.lib import (
     TestBase,
-    assert_not_equal,
     with_rw_repo,
     fixture_path,
     StringProcessAdapter
@@ -254,7 +253,7 @@ class TestCommit(TestCommitSerialization):
         commit2 = Commit(self.rorepo, Commit.NULL_BIN_SHA)
         commit3 = Commit(self.rorepo, "\1" * 20)
         self.assertEqual(commit1, commit2)
-        assert_not_equal(commit2, commit3)
+        self.assertNotEqual(commit2, commit3)
 
     def test_iter_parents(self):
         # should return all but ourselves, even if skip is defined
