@@ -2,6 +2,11 @@
 Changelog
 =========
 
+Unreleased
+==========
+
+* Restricted GitDB (gitdb2) version requirement to < 4
+
 3.0.8
 =====
 
