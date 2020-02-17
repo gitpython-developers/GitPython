@@ -2,13 +2,21 @@
 Changelog
 =========
 
-3.0.8 - Bugfixes
-=================================================
+3.0.8
+=====
 
-* depende on a pure Python3 version of GitDB 
+* Added support for Python 3.8
+* Bumped GitDB (gitdb2) version requirement to > 3
 
-see the following for details:
-https://github.com/gitpython-developers/gitpython/milestone/33?closed=1
+Bugfixes
+--------
+
+* Fixed Repo.__repr__ when subclassed 
+  (`#968 <https://github.com/gitpython-developers/GitPython/pull/968>`_)
+* Removed compatibility shims for Python < 3.4 and old mock library
+* Replaced usage of deprecated unittest aliases and Logger.warn
+* Removed old, no longer used assert methods
+* Replaced usage of nose assert methods with unittest
 
 3.0.7 - Bugfixes
 =================================================
