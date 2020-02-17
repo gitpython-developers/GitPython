@@ -23,25 +23,30 @@ Bugfixes
 * Removed old, no longer used assert methods
 * Replaced usage of nose assert methods with unittest
 
-3.0.7 - Bugfixes
-=================================================
+3.0.7
+=====
 
-* removes python 2 compatibility shims, making GitPython a pure Python 3 library
-  with all of the python related legacy removed.
-* Have a look at the PR, it is a good read on the mistakes made in the course of this,
-  https://github.com/gitpython-developers/GitPython/pull/979 , please help the maintainers
-  if you can to prevent accidents like these in future.
+Properly signed re-release of v3.0.6 with new signature
+(See `#980 <https://github.com/gitpython-developers/GitPython/issues/980>`_)
 
-see the following for details:
-https://github.com/gitpython-developers/gitpython/milestone/33?closed=1
+3.0.6
+=====
 
+| Note: There was an issue that caused this version to be released to PyPI without a signature
+| See the changelog for v3.0.7 and `#980 <https://github.com/gitpython-developers/GitPython/issues/980>`_
 
-3.0.6 - Bugfixes - unsigned/partial - do not use
-=================================================
+Bugfixes
+--------
 
-There was an issue with my setup, so things managed to slip to pypi without a signature.
-
-Use 3.0.7 instead.
+* Fixed warning for usage of environment variables for paths containing ``$`` or ``%``
+  (`#832 <https://github.com/gitpython-developers/GitPython/issues/832>`_, 
+  `#961 <https://github.com/gitpython-developers/GitPython/pull/961>`_)
+* Added support for parsing Git internal date format (@<unix timestamp> <timezone offset>)
+  (`#965 <https://github.com/gitpython-developers/GitPython/pull/965>`_)
+* Removed Python 2 and < 3.3 compatibility shims
+  (`#979 <https://github.com/gitpython-developers/GitPython/pull/965>`_)
+* Fixed GitDB (gitdb2) requirement version specifier formatting in requirements.txt
+  (`#979 <https://github.com/gitpython-developers/GitPython/pull/965>`_)
 
 3.0.5 - Bugfixes
 =============================================
