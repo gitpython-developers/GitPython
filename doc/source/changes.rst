@@ -2,6 +2,14 @@
 Changelog
 =========
 
+3.0.8 - Bugfixes
+=================================================
+
+* depende on a pure Python3 version of GitDB 
+
+see the following for details:
+https://github.com/gitpython-developers/gitpython/milestone/33?closed=1
+
 3.0.7 - Bugfixes
 =================================================
 
