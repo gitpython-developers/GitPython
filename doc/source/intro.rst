@@ -18,11 +18,9 @@ Requirements
     It should also work with older versions, but it may be that some operations
     involving remotes will not work as expected.
 * `GitDB`_ - a pure python git database implementation
-* `Python Nose`_ - used for running the tests
 
 .. _Python: https://www.python.org
 .. _Git: https://git-scm.com/
-.. _Python Nose: https://nose.readthedocs.io/en/latest/
 .. _GitDB: https://pypi.python.org/pypi/gitdb
 
 Installing GitPython
@@ -102,9 +100,9 @@ Initialize all submodules to obtain the required dependencies with::
     $ cd git-python
     $ git submodule update --init --recursive
 
-Finally verify the installation by running the `nose powered <https://github.com/nose-devs/nose>`_ unit tests::
+Finally verify the installation by running unit tests::
 
-    $ nosetests
+    $ python -m unittest
 
 Questions and Answers
 =====================

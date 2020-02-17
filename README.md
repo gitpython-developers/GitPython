@@ -87,7 +87,7 @@ Then run:
     tox
 
 
-For more fine-grained control, you can use `nose`.
+For more fine-grained control, you can use `unittest`.
 
 ### Contributions
 
