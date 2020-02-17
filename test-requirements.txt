@@ -1,5 +1,4 @@
 ddt>=1.1.1
 coverage
 flake8
-nose
 tox
