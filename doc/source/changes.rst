@@ -8,6 +8,12 @@ Unreleased
 * Restricted GitDB (gitdb2) version requirement to < 4
 * Removed old nose library from test requirements
 
+Bugfixes
+--------
+
+* Changed to use UTF-8 instead of default encoding when getting information about a symbolic reference
+  (`#774 <https://github.com/gitpython-developers/GitPython/issues/774>`_)
+
 3.0.8
 =====
 

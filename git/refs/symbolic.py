@@ -142,7 +142,7 @@ class SymbolicReference(object):
         tokens = None
         repodir = _git_dir(repo, ref_path)
         try:
-            with open(osp.join(repodir, ref_path), 'rt') as fp:
+            with open(osp.join(repodir, ref_path), 'rt', encoding='UTF-8') as fp:
                 value = fp.read().rstrip()
             # Don't only split on spaces, but on whitespace, which allows to parse lines like
             # 60b64ef992065e2600bfef6187a97f92398a9144                branch 'master' of git-server:/path/to/repo
