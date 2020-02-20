@@ -13,6 +13,8 @@ Bugfixes
 
 * Changed to use UTF-8 instead of default encoding when getting information about a symbolic reference
   (`#774 <https://github.com/gitpython-developers/GitPython/issues/774>`_)
+* Fixed decoding of tag object message so as to replace invalid bytes
+  (`#943 <https://github.com/gitpython-developers/GitPython/issues/943>`_)
 
 3.0.8
 =====

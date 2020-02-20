@@ -50,7 +50,7 @@ class TagObject(base.Object):
         """Cache all our attributes at once"""
         if attr in TagObject.__slots__:
             ostream = self.repo.odb.stream(self.binsha)
-            lines = ostream.read().decode(defenc).splitlines()
+            lines = ostream.read().decode(defenc, 'replace').splitlines()
 
             _obj, hexsha = lines[0].split(" ")
             _type_token, type_name = lines[1].split(" ")
