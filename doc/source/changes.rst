@@ -115,6 +115,20 @@ https://github.com/gitpython-developers/gitpython/milestone/27?closed=1
 or run have a look at the difference between tags v2.1.12 and v3.0.0:
 https://github.com/gitpython-developers/GitPython/compare/2.1.12...3.0.0.
 
+2.1.15
+======
+
+* Fixed GitDB (gitdb2) requirement version specifier formatting in requirements.txt
+  (Backported from `#979 <https://github.com/gitpython-developers/GitPython/pull/979>`_)
+* Restricted GitDB (gitdb2) version requirement to < 3
+  (`#897 <https://github.com/gitpython-developers/GitPython/issues/897>`_)
+
+2.1.14
+======
+
+* Fixed handling of 0 when transforming kwargs into Git command arguments
+  (Backported from `#899 <https://github.com/gitpython-developers/GitPython/pull/899>`_)
+
 2.1.13 - Bring back Python 2.7 support
 ======================================
 
