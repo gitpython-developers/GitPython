@@ -471,8 +471,10 @@ class Repo(object):
 
     def commit(self, rev=None):
         """The Commit object for the specified revision
+
         :param rev: revision specifier, see git-rev-parse for viable options.
-        :return: ``git.Commit``"""
+        :return: ``git.Commit``
+        """
         if rev is None:
             return self.head.commit
         return self.rev_parse(str(rev) + "^0")
