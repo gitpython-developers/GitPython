@@ -59,9 +59,9 @@ Bugfixes
 * Added support for parsing Git internal date format (@<unix timestamp> <timezone offset>)
   (`#965 <https://github.com/gitpython-developers/GitPython/pull/965>`_)
 * Removed Python 2 and < 3.3 compatibility shims
-  (`#979 <https://github.com/gitpython-developers/GitPython/pull/965>`_)
+  (`#979 <https://github.com/gitpython-developers/GitPython/pull/979>`_)
 * Fixed GitDB (gitdb2) requirement version specifier formatting in requirements.txt
-  (`#979 <https://github.com/gitpython-developers/GitPython/pull/965>`_)
+  (`#979 <https://github.com/gitpython-developers/GitPython/pull/979>`_)
 
 3.0.5 - Bugfixes
 =============================================
