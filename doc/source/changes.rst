@@ -2,8 +2,8 @@
 Changelog
 =========
 
-Unreleased
-==========
+3.0.9
+=====
 
 * Restricted GitDB (gitdb2) version requirement to < 4
 * Removed old nose library from test requirements
