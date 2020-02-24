@@ -2,6 +2,12 @@
 Changelog
 =========
 
+3.1.0
+=====
+
+* Switched back to using gitdb package as requirement
+  (`gitdb#59 <https://github.com/gitpython-developers/gitdb/issues/59>`_)
+
 3.0.9
 =====
 
