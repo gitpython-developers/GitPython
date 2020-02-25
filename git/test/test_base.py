@@ -122,7 +122,7 @@ class TestBase(TestBase):
             "Unicode woes, see https://github.com/gitpython-developers/GitPython/pull/519")
     @with_rw_repo('0.1.6')
     def test_add_unicode(self, rw_repo):
-        filename = u"שלום.txt"
+        filename = "שלום.txt"
 
         file_path = osp.join(rw_repo.working_dir, filename)
 

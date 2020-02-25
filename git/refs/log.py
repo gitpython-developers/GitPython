@@ -37,13 +37,13 @@ class RefLogEntry(tuple):
         """:return: a string suitable to be placed in a reflog file"""
         act = self.actor
         time = self.time
-        return u"{} {} {} <{}> {!s} {}\t{}\n".format(self.oldhexsha,
-                                                     self.newhexsha,
-                                                     act.name,
-                                                     act.email,
-                                                     time[0],
-                                                     altz_to_utctz_str(time[1]),
-                                                     self.message)
+        return "{} {} {} <{}> {!s} {}\t{}\n".format(self.oldhexsha,
+                                                    self.newhexsha,
+                                                    act.name,
+                                                    act.email,
+                                                    time[0],
+                                                    altz_to_utctz_str(time[1]),
+                                                    self.message)
 
     @property
     def oldhexsha(self):

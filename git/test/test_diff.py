@@ -106,8 +106,8 @@ class TestDiff(TestBase):
         diff = diffs[0]
         self.assertTrue(diff.renamed_file)
         self.assertTrue(diff.renamed)
-        self.assertEqual(diff.rename_from, u'Jérôme')
-        self.assertEqual(diff.rename_to, u'müller')
+        self.assertEqual(diff.rename_from, 'Jérôme')
+        self.assertEqual(diff.rename_to, 'müller')
         self.assertEqual(diff.raw_rename_from, b'J\xc3\xa9r\xc3\xb4me')
         self.assertEqual(diff.raw_rename_to, b'm\xc3\xbcller')
         assert isinstance(str(diff), str)
@@ -133,8 +133,8 @@ class TestDiff(TestBase):
 
         diff = diffs[0]
         self.assertTrue(diff.copied_file)
-        self.assertTrue(diff.a_path, u'test1.txt')
-        self.assertTrue(diff.b_path, u'test2.txt')
+        self.assertTrue(diff.a_path, 'test1.txt')
+        self.assertTrue(diff.b_path, 'test2.txt')
         assert isinstance(str(diff), str)
 
         output = StringProcessAdapter(fixture('diff_copied_mode_raw'))
@@ -143,8 +143,8 @@ class TestDiff(TestBase):
         diff = diffs[0]
         self.assertEqual(diff.change_type, 'C')
         self.assertEqual(diff.score, 100)
-        self.assertEqual(diff.a_path, u'test1.txt')
-        self.assertEqual(diff.b_path, u'test2.txt')
+        self.assertEqual(diff.a_path, 'test1.txt')
+        self.assertEqual(diff.b_path, 'test2.txt')
         self.assertEqual(len(list(diffs.iter_change_type('C'))), 1)
 
     def test_diff_with_change_in_type(self):
@@ -237,29 +237,29 @@ class TestDiff(TestBase):
         res = Diff._index_from_patch_format(None, output)
 
         # The "Additions"
-        self.assertEqual(res[0].b_path, u'path/ starting with a space')
-        self.assertEqual(res[1].b_path, u'path/"with-quotes"')
-        self.assertEqual(res[2].b_path, u"path/'with-single-quotes'")
-        self.assertEqual(res[3].b_path, u'path/ending in a space ')
-        self.assertEqual(res[4].b_path, u'path/with\ttab')
-        self.assertEqual(res[5].b_path, u'path/with\nnewline')
-        self.assertEqual(res[6].b_path, u'path/with spaces')
-        self.assertEqual(res[7].b_path, u'path/with-question-mark?')
-        self.assertEqual(res[8].b_path, u'path/¯\\_(ツ)_|¯')
-        self.assertEqual(res[9].b_path, u'path/💩.txt')
+        self.assertEqual(res[0].b_path, 'path/ starting with a space')
+        self.assertEqual(res[1].b_path, 'path/"with-quotes"')
+        self.assertEqual(res[2].b_path, "path/'with-single-quotes'")
+        self.assertEqual(res[3].b_path, 'path/ending in a space ')
+        self.assertEqual(res[4].b_path, 'path/with\ttab')
+        self.assertEqual(res[5].b_path, 'path/with\nnewline')
+        self.assertEqual(res[6].b_path, 'path/with spaces')
+        self.assertEqual(res[7].b_path, 'path/with-question-mark?')
+        self.assertEqual(res[8].b_path, 'path/¯\\_(ツ)_|¯')
+        self.assertEqual(res[9].b_path, 'path/💩.txt')
         self.assertEqual(res[9].b_rawpath, b'path/\xf0\x9f\x92\xa9.txt')
-        self.assertEqual(res[10].b_path, u'path/�-invalid-unicode-path.txt')
+        self.assertEqual(res[10].b_path, 'path/�-invalid-unicode-path.txt')
         self.assertEqual(res[10].b_rawpath, b'path/\x80-invalid-unicode-path.txt')
 
         # The "Moves"
         # NOTE: The path prefixes a/ and b/ here are legit!  We're actually
         # verifying that it's not "a/a/" that shows up, see the fixture data.
-        self.assertEqual(res[11].a_path, u'a/with spaces')       # NOTE: path a/ here legit!
-        self.assertEqual(res[11].b_path, u'b/with some spaces')  # NOTE: path b/ here legit!
-        self.assertEqual(res[12].a_path, u'a/ending in a space ')
-        self.assertEqual(res[12].b_path, u'b/ending with space ')
-        self.assertEqual(res[13].a_path, u'a/"with-quotes"')
-        self.assertEqual(res[13].b_path, u'b/"with even more quotes"')
+        self.assertEqual(res[11].a_path, 'a/with spaces')       # NOTE: path a/ here legit!
+        self.assertEqual(res[11].b_path, 'b/with some spaces')  # NOTE: path b/ here legit!
+        self.assertEqual(res[12].a_path, 'a/ending in a space ')
+        self.assertEqual(res[12].b_path, 'b/ending with space ')
+        self.assertEqual(res[13].a_path, 'a/"with-quotes"')
+        self.assertEqual(res[13].b_path, 'b/"with even more quotes"')
 
     def test_diff_patch_format(self):
         # test all of the 'old' format diffs for completness - it should at least
@@ -277,7 +277,7 @@ class TestDiff(TestBase):
         data = StringProcessAdapter(fixture('diff_file_with_spaces'))
         diff_index = Diff._index_from_patch_format(self.rorepo, data)
         self.assertIsNone(diff_index[0].a_path, repr(diff_index[0].a_path))
-        self.assertEqual(diff_index[0].b_path, u'file with spaces', repr(diff_index[0].b_path))
+        self.assertEqual(diff_index[0].b_path, 'file with spaces', repr(diff_index[0].b_path))
 
     def test_diff_submodule(self):
         """Test that diff is able to correctly diff commits that cover submodule changes"""

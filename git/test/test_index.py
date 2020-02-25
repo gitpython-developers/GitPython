@@ -429,7 +429,7 @@ class TestIndex(TestBase):
         num_entries = len(index.entries)
         cur_head = rw_repo.head
 
-        uname = u"Thomas Müller"
+        uname = "Thomas Müller"
         umail = "sd@company.com"
         with rw_repo.config_writer() as writer:
             writer.set_value("user", "name", uname)
@@ -484,7 +484,7 @@ class TestIndex(TestBase):
         # TEST COMMITTING
         # commit changed index
         cur_commit = cur_head.commit
-        commit_message = u"commit default head by Frèderic Çaufl€"
+        commit_message = "commit default head by Frèderic Çaufl€"
 
         new_commit = index.commit(commit_message, head=False)
         assert cur_commit != new_commit
@@ -500,13 +500,13 @@ class TestIndex(TestBase):
         # commit with other actor
         cur_commit = cur_head.commit
 
-        my_author = Actor(u"Frèderic Çaufl€", "author@example.com")
-        my_committer = Actor(u"Committing Frèderic Çaufl€", "committer@example.com")
+        my_author = Actor("Frèderic Çaufl€", "author@example.com")
+        my_committer = Actor("Committing Frèderic Çaufl€", "committer@example.com")
         commit_actor = index.commit(commit_message, author=my_author, committer=my_committer)
         assert cur_commit != commit_actor
-        self.assertEqual(commit_actor.author.name, u"Frèderic Çaufl€")
+        self.assertEqual(commit_actor.author.name, "Frèderic Çaufl€")
         self.assertEqual(commit_actor.author.email, "author@example.com")
-        self.assertEqual(commit_actor.committer.name, u"Committing Frèderic Çaufl€")
+        self.assertEqual(commit_actor.committer.name, "Committing Frèderic Çaufl€")
         self.assertEqual(commit_actor.committer.email, "committer@example.com")
         self.assertEqual(commit_actor.message, commit_message)
         self.assertEqual(commit_actor.parents[0], cur_commit)
@@ -516,7 +516,7 @@ class TestIndex(TestBase):
 
         # commit with author_date and commit_date
         cur_commit = cur_head.commit
-        commit_message = u"commit with dates by Avinash Sajjanshetty"
+        commit_message = "commit with dates by Avinash Sajjanshetty"
 
         new_commit = index.commit(commit_message, author_date="2006-04-07T22:13:13", commit_date="2005-04-07T22:13:13")
         assert cur_commit != new_commit
@@ -777,7 +777,7 @@ class TestIndex(TestBase):
     def test_index_single_addremove(self, rw_repo):
         fp = osp.join(rw_repo.working_dir, 'testfile.txt')
         with open(fp, 'w') as fs:
-            fs.write(u'content of testfile')
+            fs.write('content of testfile')
         self._assert_entries(rw_repo.index.add(fp))
         deleted_files = rw_repo.index.remove(fp)
         assert deleted_files
@@ -826,7 +826,7 @@ class TestIndex(TestBase):
         # NOTE: fp is not a Unicode object in python 2 (which is the source of the problem)
         fp = osp.join(rw_dir, 'ø.txt')
         with open(fp, 'wb') as fs:
-            fs.write(u'content of ø'.encode('utf-8'))
+            fs.write('content of ø'.encode('utf-8'))
 
         r = Repo.init(rw_dir)
         r.index.add([fp])
@@ -896,8 +896,8 @@ class TestIndex(TestBase):
 
     @with_rw_repo('HEAD', bare=True)
     def test_commit_msg_hook_success(self, rw_repo):
-        commit_message = u"commit default head by Frèderic Çaufl€"
-        from_hook_message = u"from commit-msg"
+        commit_message = "commit default head by Frèderic Çaufl€"
+        from_hook_message = "from commit-msg"
         index = rw_repo.index
         _make_hook(
             index.repo.git_dir,
@@ -905,7 +905,7 @@ class TestIndex(TestBase):
             'printf " {}" >> "$1"'.format(from_hook_message)
         )
         new_commit = index.commit(commit_message)
-        self.assertEqual(new_commit.message, u"{} {}".format(commit_message, from_hook_message))
+        self.assertEqual(new_commit.message, "{} {}".format(commit_message, from_hook_message))
 
     @with_rw_repo('HEAD', bare=True)
     def test_commit_msg_hook_fail(self, rw_repo):

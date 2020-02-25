@@ -453,7 +453,7 @@ class TestRepo(TestBase):
             self.assertEqual(commits, ['82b8902', '82b8902', 'c76852d', 'c76852d', 'c76852d'])
 
             # Original filenames
-            self.assertSequenceEqual([entry.orig_path for entry in blame_output], [u'AUTHORS'] * len(blame_output))
+            self.assertSequenceEqual([entry.orig_path for entry in blame_output], ['AUTHORS'] * len(blame_output))
 
             # Original line numbers
             orig_ranges = flatten([entry.orig_linenos for entry in blame_output])
@@ -478,10 +478,10 @@ class TestRepo(TestBase):
     def test_untracked_files(self, rwrepo):
         for run, repo_add in enumerate((rwrepo.index.add, rwrepo.git.add)):
             base = rwrepo.working_tree_dir
-            files = (join_path_native(base, u"%i_test _myfile" % run),
+            files = (join_path_native(base, "%i_test _myfile" % run),
                      join_path_native(base, "%i_test_other_file" % run),
-                     join_path_native(base, u"%i__çava verböten" % run),
-                     join_path_native(base, u"%i_çava-----verböten" % run))
+                     join_path_native(base, "%i__çava verböten" % run),
+                     join_path_native(base, "%i_çava-----verböten" % run))
 
             num_recently_untracked = 0
             for fpath in files:

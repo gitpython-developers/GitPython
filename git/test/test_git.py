@@ -50,12 +50,12 @@ class TestGit(TestBase):
         self.assertEqual(git.call_args, ((['git', 'version'],), {}))
 
     def test_call_unpack_args_unicode(self):
-        args = Git._Git__unpack_args(u'Unicode€™')
+        args = Git._Git__unpack_args('Unicode€™')
         mangled_value = 'Unicode\u20ac\u2122'
         self.assertEqual(args, [mangled_value])
 
     def test_call_unpack_args(self):
-        args = Git._Git__unpack_args(['git', 'log', '--', u'Unicode€™'])
+        args = Git._Git__unpack_args(['git', 'log', '--', 'Unicode€™'])
         mangled_value = 'Unicode\u20ac\u2122'
         self.assertEqual(args, ['git', 'log', '--', mangled_value])
 

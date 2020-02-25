@@ -132,9 +132,9 @@ class TestCommit(TestCommitSerialization):
 
     def test_unicode_actor(self):
         # assure we can parse unicode actors correctly
-        name = u"Üäöß ÄußÉ"
+        name = "Üäöß ÄußÉ"
         self.assertEqual(len(name), 9)
-        special = Actor._from_string(u"%s <something@this.com>" % name)
+        special = Actor._from_string("%s <something@this.com>" % name)
         self.assertEqual(special.name, name)
         assert isinstance(special.name, str)
 
@@ -283,10 +283,10 @@ class TestCommit(TestCommitSerialization):
         assert isinstance(cmt.message, str)     # it automatically decodes it as such
         assert isinstance(cmt.author.name, str)  # same here
 
-        cmt.message = u"üäêèß"
+        cmt.message = "üäêèß"
         self.assertEqual(len(cmt.message), 5)
 
-        cmt.author.name = u"äüß"
+        cmt.author.name = "äüß"
         self.assertEqual(len(cmt.author.name), 3)
 
         cstream = BytesIO()
@@ -308,7 +308,7 @@ class TestCommit(TestCommitSerialization):
         with open(fixture_path('commit_invalid_data'), 'rb') as fd:
             cmt._deserialize(fd)
 
-        self.assertEqual(cmt.author.name, u'E.Azer Ko�o�o�oculu', cmt.author.name)
+        self.assertEqual(cmt.author.name, 'E.Azer Ko�o�o�oculu', cmt.author.name)
         self.assertEqual(cmt.author.email, 'azer@kodfabrik.com', cmt.author.email)
 
     def test_gpgsig(self):
