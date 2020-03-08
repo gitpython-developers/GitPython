@@ -373,8 +373,8 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
                     continue
             # end check symlink
 
-            # resolve globs if possible
-            if '?' in path or '*' in path or '[' in path:
+            # if the path is not already pointing to an existing file, resolve globs if possible
+            if not os.path.exists(path) and ('?' in path or '*' in path or '[' in path):
                 resolved_paths = glob.glob(abs_path)
                 # not abs_path in resolved_paths:
                 #   a glob() resolving to the same path we are feeding it with
