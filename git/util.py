@@ -174,7 +174,7 @@ def assure_directory_exists(path, is_file=False):
         path = osp.dirname(path)
     # END handle file
     if not osp.isdir(path):
-        os.makedirs(path)
+        os.makedirs(path, exist_ok=True)
         return True
     return False
 
