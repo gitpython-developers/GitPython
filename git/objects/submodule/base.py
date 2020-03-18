@@ -20,7 +20,8 @@ from git.config import (
 from git.exc import (
     InvalidGitRepositoryError,
     NoSuchPathError,
-    RepositoryDirtyError
+    RepositoryDirtyError,
+    BadName
 )
 from git.objects.base import IndexObject, Object
 from git.objects.util import Traversable
@@ -1153,10 +1154,10 @@ class Submodule(IndexObject, Iterable, Traversable):
     @classmethod
     def iter_items(cls, repo, parent_commit='HEAD'):
         """:return: iterator yielding Submodule instances available in the given repository"""
-        pc = repo.commit(parent_commit)         # parent commit instance
         try:
+            pc = repo.commit(parent_commit)         # parent commit instance
             parser = cls._config_parser(repo, pc, read_only=True)
-        except IOError:
+        except (IOError, BadName):
             return
         # END handle empty iterator
 
