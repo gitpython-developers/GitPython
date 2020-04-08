@@ -751,7 +751,7 @@ class Remote(LazyMixin, Iterable):
         finally:
             config.release()
 
-    def fetch(self, refspec=None, progress=None, **kwargs):
+    def fetch(self, refspec=None, progress=None, verbose=True, **kwargs):
         """Fetch the latest changes for this remote
 
         :param refspec:
@@ -770,6 +770,7 @@ class Remote(LazyMixin, Iterable):
             underlying git-fetch does) - supplying a list rather than a string
             for 'refspec' will make use of this facility.
         :param progress: See 'push' method
+        :param verbose: Boolean for verbose output
         :param kwargs: Additional arguments to be passed to git-fetch
         :return:
             IterableList(FetchInfo, ...) list of FetchInfo instances providing detailed
@@ -788,7 +789,7 @@ class Remote(LazyMixin, Iterable):
             args = [refspec]
 
         proc = self.repo.git.fetch(self, *args, as_process=True, with_stdout=False,
-                                   universal_newlines=True, v=True, **kwargs)
+                                   universal_newlines=True, v=verbose, **kwargs)
         res = self._get_fetch_info_from_stderr(proc, progress)
         if hasattr(self.repo.odb, 'update_cache'):
             self.repo.odb.update_cache()
