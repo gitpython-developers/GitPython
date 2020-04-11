@@ -320,7 +320,7 @@ class Tutorials(TestBase):
         self.assertEqual(tree['smmap'], tree / 'smmap')          # access by index and by sub-path
         for entry in tree:                                         # intuitive iteration of tree members
             print(entry)
-        blob = tree.trees[9].blobs[0]                              # let's get a blob in a sub-tree
+        blob = tree.trees[1].blobs[0]                              # let's get a blob in a sub-tree
         assert blob.name
         assert len(blob.path) < len(blob.abspath)
         self.assertEqual(tree.trees[0].name + '/' + blob.name, blob.path)   # this is how relative blob path generated
