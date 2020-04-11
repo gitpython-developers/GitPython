@@ -27,6 +27,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies and prepare tests
       run: |
+        set -x
         python -m pip install --upgrade pip
         python --version; git --version
         git submodule update --init --recursive
@@ -42,6 +43,7 @@ jobs:
         cat git/test/fixtures/.gitconfig >> ~/.gitconfig
     - name: Lint with flake8
       run: |
+        set -x
         pip install flake8
         # stop the build if there are Python syntax errors or undefined names
         flake8 --ignore=W293,E265,E266,W503,W504,E731 --count  --show-source --statistics
@@ -54,9 +56,11 @@ jobs:
         coverage report
     - name: Documentation
       run: |
+        set -x
         pip install -r doc/requirements.txt
         make -C doc html
     - name: Test with pytest
       run: |
+        set -x
         pip install pytest
         pytest
