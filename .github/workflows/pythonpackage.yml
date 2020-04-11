@@ -47,6 +47,11 @@ jobs:
         pip install flake8
         # stop the build if there are Python syntax errors or undefined names
         flake8 --ignore=W293,E265,E266,W503,W504,E731 --count  --show-source --statistics
+    - name: Test with nose
+      run: |
+        set -x
+        pip install nose
+        nosetests -v --with-coverage
     - name: Coverage
       run: |
         pip install codecov
@@ -59,8 +64,3 @@ jobs:
         set -x
         pip install -r doc/requirements.txt
         make -C doc html
-    - name: Test with nose
-      run: |
-        set -x
-        pip install nose
-        nosetests -v --with-coverage
