@@ -1,3 +1,4 @@
+# UNUSED, only for reference. If windows testing is needed, please add that to github actions
 # CI on Windows via appveyor
 environment:
     GIT_DAEMON_PATH:   "C:\\Program Files\\Git\\mingw64\\libexec\\git-core"
