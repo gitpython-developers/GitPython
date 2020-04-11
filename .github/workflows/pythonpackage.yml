@@ -59,8 +59,8 @@ jobs:
         set -x
         pip install -r doc/requirements.txt
         make -C doc html
-    - name: Test with pytest
+    - name: Test with nose
       run: |
         set -x
-        pip install pytest
-        pytest
+        pip install nosetest
+        nosetests -v --with-coverage
