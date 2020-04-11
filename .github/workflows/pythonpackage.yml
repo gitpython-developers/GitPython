@@ -52,19 +52,8 @@ jobs:
         set -x
         pip install nose
         nosetests -v --with-coverage
-    - name: Coverage
-      run: |
-        pip install codecov
-        ulimit -n 128
-        ulimit -n
-        coverage run --omit="git/test/*" -m unittest --buffer
-        coverage report
     - name: Documentation
       run: |
         set -x
         pip install -r doc/requirements.txt
         make -C doc html
-    - name: Codecov upload
-      run: |
-        codecov
-
