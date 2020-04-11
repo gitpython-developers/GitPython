@@ -2,6 +2,15 @@
 Changelog
 =========
 
+3.1.1
+=====
+
+* support for PyOxidizer, which previously failed due to usage of `__file__`.
+
+See the following for details:
+https://github.com/gitpython-developers/gitpython/milestone/36?closed=1
+
+
 3.1.0
 =====
 
