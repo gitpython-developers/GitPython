@@ -187,15 +187,16 @@ New BSD License.  See the LICENSE file.
 ### DEVELOPMENT STATUS
 
 [![codecov](https://codecov.io/gh/gitpython-developers/GitPython/branch/master/graph/badge.svg)](https://codecov.io/gh/gitpython-developers/GitPython)
-[![Build Status](https://travis-ci.org/gitpython-developers/GitPython.svg)](https://travis-ci.org/gitpython-developers/GitPython)
+![Python package](https://github.com/gitpython-developers/GitPython/workflows/Python%20package/badge.svg)
 [![Documentation Status](https://readthedocs.org/projects/gitpython/badge/?version=stable)](https://readthedocs.org/projects/gitpython/?badge=stable)
 [![Packaging status](https://repology.org/badge/tiny-repos/python:gitpython.svg)](https://repology.org/metapackage/python:gitpython/versions)
 
+This project is in **maintenance mode**, which means that
 
-Now that there seems to be a massive user base, this should be motivation enough to let git-python
-return to a proper state, which means
+* …there will be no feature development, unless these are contributed
+* …there will be no bug fixes, unless they are relevant to the safety of users, or contributed
+* …issues will be responded to with waiting times of up to a month
 
-* no open pull requests
-* no open issues describing bugs
+The project is open to contributions of all kinds, as well as new maintainers.
 
 [contributing]: https://github.com/gitpython-developers/GitPython/blob/master/CONTRIBUTING.md
