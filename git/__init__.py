@@ -18,7 +18,7 @@ __version__ = 'git'
 #{ Initialization
 def _init_externals():
     """Initialize external projects by putting them into the path"""
-    if __version__ == 'git':
+    if __version__ == 'git' and 'PYOXIDIZER' not in os.environ:
         sys.path.insert(0, osp.join(osp.dirname(__file__), 'ext', 'gitdb'))
 
     try:
