@@ -35,7 +35,8 @@ def is_git_dir(d):
             There is the unlikely danger to throw if we see directories which just look like a worktree dir,
             but are none."""
     if osp.isdir(d):
-        if osp.isdir(osp.join(d, 'objects')) and osp.isdir(osp.join(d, 'refs')):
+        if (osp.isdir(osp.join(d, 'objects')) or os.environ.has_key('GIT_OBJECT_DIRECTORY')) \
+           and osp.isdir(osp.join(d, 'refs')):
             headref = osp.join(d, 'HEAD')
             return osp.isfile(headref) or \
                 (osp.islink(headref) and
