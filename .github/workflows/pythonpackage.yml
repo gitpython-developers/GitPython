@@ -62,4 +62,5 @@ jobs:
     - name: Test with nose
       run: |
         set -x
+        pip install nosetests
         nosetests -v --with-coverage
