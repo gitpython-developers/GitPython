@@ -498,7 +498,7 @@ class Git(LazyMixin):
         def __iter__(self):
             return self
 
-        def next(self):
+        def __next__(self):
             line = self.readline()
             if not line:
                 raise StopIteration
