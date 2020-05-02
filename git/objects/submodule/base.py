@@ -309,7 +309,7 @@ class Submodule(IndexObject, Iterable, Traversable):
     #{ Edit Interface
 
     @classmethod
-    def add(cls, repo, name, path, url=None, branch=None, no_checkout=False):
+    def add(cls, repo, name, path, url=None, branch=None, no_checkout=False, depth=None):
         """Add a new submodule to the given repository. This will alter the index
         as well as the .gitmodules file, but will not create a new commit.
         If the submodule already exists, no matter if the configuration differs
@@ -334,6 +334,8 @@ class Submodule(IndexObject, Iterable, Traversable):
             Examples are 'master' or 'feature/new'
         :param no_checkout: if True, and if the repository has to be cloned manually,
             no checkout will be performed
+        :param depth: Create a shallow clone with a history truncated to the
+            specified number of commits.
         :return: The newly created submodule instance
         :note: works atomically, such that no change will be done if the repository
             update fails for instance"""
@@ -394,6 +396,12 @@ class Submodule(IndexObject, Iterable, Traversable):
             if not branch_is_default:
                 kwargs['b'] = br.name
             # END setup checkout-branch
+
+            if depth:
+                if isinstance(depth, int):
+                    kwargs['depth'] = depth
+                else:
+                    raise ValueError("depth should be an integer")
 
             # _clone_repo(cls, repo, url, path, name, **kwargs):
             mrepo = cls._clone_repo(repo, url, path, name, **kwargs)
