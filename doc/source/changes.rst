@@ -2,6 +2,15 @@
 Changelog
 =========
 
+3.1.2
+=====
+
+* Re-release of 3.1.1, with known signature
+
+See the following for details:
+https://github.com/gitpython-developers/gitpython/milestone/37?closed=1
+
+
 3.1.1
 =====
 
