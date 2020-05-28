@@ -466,7 +466,7 @@ class SymbolicReference(object):
                     # write-binary is required, otherwise windows will
                     # open the file in text mode and change LF to CRLF !
                     with open(pack_file_path, 'wb') as fd:
-                        fd.writelines(l.encode(defenc) for l in new_lines)
+                        fd.writelines(line.encode(defenc) for line in new_lines)
 
             except (OSError, IOError):
                 pass  # it didn't exist at all

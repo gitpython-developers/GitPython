@@ -212,7 +212,7 @@ class TestIndex(TestBase):
         assert unmerged_blob_map
 
         # pick the first blob at the first stage we find and use it as resolved version
-        three_way_index.resolve_blobs(l[0][1] for l in unmerged_blob_map.values())
+        three_way_index.resolve_blobs(line[0][1] for line in unmerged_blob_map.values())
         tree = three_way_index.write_tree()
         assert isinstance(tree, Tree)
         num_blobs = 0

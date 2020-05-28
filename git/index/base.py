@@ -463,8 +463,8 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         for stage, blob in self.iter_blobs(is_unmerged_blob):
             path_map.setdefault(blob.path, []).append((stage, blob))
         # END for each unmerged blob
-        for l in path_map.values():
-            l.sort()
+        for line in path_map.values():
+            line.sort()
         return path_map
 
     @classmethod

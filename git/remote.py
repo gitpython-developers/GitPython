@@ -686,7 +686,7 @@ class Remote(LazyMixin, Iterable):
 
         # read head information
         with open(osp.join(self.repo.common_dir, 'FETCH_HEAD'), 'rb') as fp:
-            fetch_head_info = [l.decode(defenc) for l in fp.readlines()]
+            fetch_head_info = [line.decode(defenc) for line in fp.readlines()]
 
         l_fil = len(fetch_info_lines)
         l_fhi = len(fetch_head_info)
