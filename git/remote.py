@@ -840,7 +840,7 @@ class Remote(LazyMixin, Iterable):
             If the push contains rejected heads, these will have the PushInfo.ERROR bit set
             in their flags.
             If the operation fails completely, the length of the returned IterableList will
-            be null."""
+            be 0."""
         kwargs = add_progress(kwargs, self.repo.git, progress)
         proc = self.repo.git.push(self, refspec, porcelain=True, as_process=True,
                                   universal_newlines=True, **kwargs)
