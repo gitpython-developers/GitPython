@@ -705,8 +705,12 @@ class Remote(LazyMixin, Iterable):
             # end truncate correct list
         # end sanity check + sanitization
 
-        output.extend(FetchInfo._from_line(self.repo, err_line, fetch_line)
-                      for err_line, fetch_line in zip(fetch_info_lines, fetch_head_info))
+        for err_line, fetch_line in zip(fetch_info_lines, fetch_head_info):
+            try:
+                output.append(FetchInfo._from_line(self.repo, err_line, fetch_line))
+            except ValueError as exc:
+                log.debug("Caught error while parsing line: %s", exc)
+                log.warning("Git informed while fetching: %s", err_line.strip())
         return output
 
     def _get_push_info(self, proc, progress):
