@@ -83,7 +83,7 @@ def handle_process_output(process, stdout_handler, stderr_handler,
                     handler(line)
         except Exception as ex:
             log.error("Pumping %r of cmd(%s) failed due to: %r", name, cmdline, ex)
-            raise CommandError(['<%s-pump>' % name] + cmdline, ex)
+            raise CommandError(['<%s-pump>' % name] + cmdline, ex) from ex
         finally:
             stream.close()
 
@@ -732,7 +732,7 @@ class Git(LazyMixin):
                          **subprocess_kwargs
                          )
         except cmd_not_found_exception as err:
-            raise GitCommandNotFound(command, err)
+            raise GitCommandNotFound(command, err) from err
 
         if as_process:
             return self.AutoInterrupt(proc, command)
@@ -982,9 +982,9 @@ class Git(LazyMixin):
         else:
             try:
                 index = ext_args.index(insert_after_this_arg)
-            except ValueError:
+            except ValueError as err:
                 raise ValueError("Couldn't find argument '%s' in args %s to insert cmd options after"
-                                 % (insert_after_this_arg, str(ext_args)))
+                                 % (insert_after_this_arg, str(ext_args))) from err
             # end handle error
             args = ext_args[:index + 1] + opt_args + ext_args[index + 1:]
         # end handle opts_kwargs
