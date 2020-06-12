@@ -146,8 +146,8 @@ class PushInfo(object):
         # control character handling
         try:
             flags |= cls._flag_map[control_character]
-        except KeyError:
-            raise ValueError("Control character %r unknown as parsed from line %r" % (control_character, line))
+        except KeyError as e:
+            raise ValueError("Control character %r unknown as parsed from line %r" % (control_character, line)) from e
         # END handle control character
 
         # from_to handling
@@ -296,15 +296,15 @@ class FetchInfo(object):
         try:
             _new_hex_sha, _fetch_operation, fetch_note = fetch_line.split("\t")
             ref_type_name, fetch_note = fetch_note.split(' ', 1)
-        except ValueError:  # unpack error
-            raise ValueError("Failed to parse FETCH_HEAD line: %r" % fetch_line)
+        except ValueError as e:  # unpack error
+            raise ValueError("Failed to parse FETCH_HEAD line: %r" % fetch_line) from e
 
         # parse flags from control_character
         flags = 0
         try:
             flags |= cls._flag_map[control_character]
-        except KeyError:
-            raise ValueError("Control character %r unknown as parsed from line %r" % (control_character, line))
+        except KeyError as e:
+            raise ValueError("Control character %r unknown as parsed from line %r" % (control_character, line)) from e
         # END control char exception handling
 
         # parse operation string for more info - makes no sense for symbolic refs, but we parse it anyway

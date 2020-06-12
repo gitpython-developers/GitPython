@@ -251,16 +251,16 @@ def rev_parse(repo, rev):
                 try:
                     # transform reversed index into the format of our revlog
                     revlog_index = -(int(output_type) + 1)
-                except ValueError:
+                except ValueError as e:
                     # TODO: Try to parse the other date options, using parse_date
                     # maybe
-                    raise NotImplementedError("Support for additional @{...} modes not implemented")
+                    raise NotImplementedError("Support for additional @{...} modes not implemented") from e
                 # END handle revlog index
 
                 try:
                     entry = ref.log_entry(revlog_index)
-                except IndexError:
-                    raise IndexError("Invalid revlog index: %i" % revlog_index)
+                except IndexError as e:
+                    raise IndexError("Invalid revlog index: %i" % revlog_index) from e
                 # END handle index out of bound
 
                 obj = Object.new_from_sha(repo, hex_to_bin(entry.newhexsha))
@@ -324,8 +324,10 @@ def rev_parse(repo, rev):
             else:
                 raise ValueError("Invalid token: %r" % token)
             # END end handle tag
-        except (IndexError, AttributeError):
-            raise BadName("Invalid revision spec '%s' - not enough parent commits to reach '%s%i'" % (rev, token, num))
+        except (IndexError, AttributeError) as e:
+            raise BadName(
+                "Invalid revision spec '%s' - not enough "
+                "parent commits to reach '%s%i'" % (rev, token, num)) from e
         # END exception handling
     # END parse loop
 

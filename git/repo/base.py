@@ -341,8 +341,8 @@ class Repo(object):
         :raise ValueError: If no such submodule exists"""
         try:
             return self.submodules[name]
-        except IndexError:
-            raise ValueError("Didn't find submodule named %r" % name)
+        except IndexError as e:
+            raise ValueError("Didn't find submodule named %r" % name) from e
         # END exception handling
 
     def create_submodule(self, *args, **kwargs):

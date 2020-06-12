@@ -219,8 +219,8 @@ class SymbolicReference(object):
         else:
             try:
                 invalid_type = self.repo.rev_parse(commit).type != Commit.type
-            except (BadObject, BadName):
-                raise ValueError("Invalid object: %s" % commit)
+            except (BadObject, BadName) as e:
+                raise ValueError("Invalid object: %s" % commit) from e
             # END handle exception
         # END verify type
 
@@ -301,8 +301,8 @@ class SymbolicReference(object):
             try:
                 obj = self.repo.rev_parse(ref + "^{}")    # optionally deref tags
                 write_value = obj.hexsha
-            except (BadObject, BadName):
-                raise ValueError("Could not extract object from %s" % ref)
+            except (BadObject, BadName) as e:
+                raise ValueError("Could not extract object from %s" % ref) from e
             # END end try string
         else:
             raise ValueError("Unrecognized Value: %r" % ref)
