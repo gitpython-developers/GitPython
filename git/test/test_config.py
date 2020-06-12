@@ -98,10 +98,10 @@ class TestBase(TestCase):
             assert r_config.get_value('diff', 'tool') == "meld"
             try:
                 assert r_config.get_value('sec', 'var1') == "value1_main"
-            except AssertionError:
+            except AssertionError as e:
                 raise SkipTest(
                     'Known failure -- included values are not in effect right away'
-                )
+                ) from e
 
     @with_rw_directory
     def test_lock_reentry(self, rw_dir):

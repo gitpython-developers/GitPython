@@ -129,8 +129,8 @@ class TestBase(TestBase):
         # verify first that we could encode file name in this environment
         try:
             file_path.encode(sys.getfilesystemencoding())
-        except UnicodeEncodeError:
-            raise SkipTest("Environment doesn't support unicode filenames")
+        except UnicodeEncodeError as e:
+            raise SkipTest("Environment doesn't support unicode filenames") from e
 
         with open(file_path, "wb") as fp:
             fp.write(b'something')

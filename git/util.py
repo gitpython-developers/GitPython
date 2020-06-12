@@ -94,7 +94,7 @@ def rmtree(path):
             func(path)  # Will scream if still not possible to delete.
         except Exception as ex:
             if HIDE_WINDOWS_KNOWN_ERRORS:
-                raise SkipTest("FIXME: fails with: PermissionError\n  {}".format(ex))
+                raise SkipTest("FIXME: fails with: PermissionError\n  {}".format(ex)) from ex
             raise
 
     return shutil.rmtree(path, False, onerror)
@@ -746,7 +746,7 @@ class LockFile(object):
             fd = os.open(lock_file, flags, 0)
             os.close(fd)
         except OSError as e:
-            raise IOError(str(e))
+            raise IOError(str(e)) from e
 
         self._owns_lock = True
 
@@ -801,19 +801,19 @@ class BlockingLockFile(LockFile):
         while True:
             try:
                 super(BlockingLockFile, self)._obtain_lock()
-            except IOError:
+            except IOError as e:
                 # synity check: if the directory leading to the lockfile is not
                 # readable anymore, raise an exception
                 curtime = time.time()
                 if not osp.isdir(osp.dirname(self._lock_file_path())):
                     msg = "Directory containing the lockfile %r was not readable anymore after waiting %g seconds" % (
                         self._lock_file_path(), curtime - starttime)
-                    raise IOError(msg)
+                    raise IOError(msg) from e
                 # END handle missing directory
 
                 if curtime >= maxtime:
                     msg = "Waited %g seconds for lock at %r" % (maxtime - starttime, self._lock_file_path())
-                    raise IOError(msg)
+                    raise IOError(msg) from e
                 # END abort if we wait too long
                 time.sleep(self._check_interval)
             else:
@@ -878,8 +878,8 @@ class IterableList(list):
 
         try:
             return getattr(self, index)
-        except AttributeError:
-            raise IndexError("No item found with id %r" % (self._prefix + index))
+        except AttributeError as e:
+            raise IndexError("No item found with id %r" % (self._prefix + index)) from e
         # END handle getattr
 
     def __delitem__(self, index):
