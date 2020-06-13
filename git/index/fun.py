@@ -82,7 +82,7 @@ def run_commit_hook(name, index, *args):
                                close_fds=is_posix,
                                creationflags=PROC_CREATIONFLAGS,)
     except Exception as ex:
-        raise HookExecutionError(hp, ex)
+        raise HookExecutionError(hp, ex) from ex
     else:
         stdout = []
         stderr = []

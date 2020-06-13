@@ -23,8 +23,8 @@ def _init_externals():
 
     try:
         import gitdb
-    except ImportError:
-        raise ImportError("'gitdb' could not be found in your PYTHONPATH")
+    except ImportError as e:
+        raise ImportError("'gitdb' could not be found in your PYTHONPATH") from e
     # END verify import
 
 #} END initialization
@@ -54,7 +54,7 @@ try:
         rmtree,
     )
 except GitError as exc:
-    raise ImportError('%s: %s' % (exc.__class__.__name__, exc))
+    raise ImportError('%s: %s' % (exc.__class__.__name__, exc)) from exc
 
 #} END imports
 
@@ -82,5 +82,5 @@ def refresh(path=None):
 try:
     refresh()
 except Exception as exc:
-    raise ImportError('Failed to initialize: {0}'.format(exc))
+    raise ImportError('Failed to initialize: {0}'.format(exc)) from exc
 #################

@@ -53,8 +53,8 @@ class GitCmdObjectDB(LooseObjectDB):
         try:
             hexsha, _typename, _size = self._git.get_object_header(partial_hexsha)
             return hex_to_bin(hexsha)
-        except (GitCommandError, ValueError):
-            raise BadObject(partial_hexsha)
+        except (GitCommandError, ValueError) as e:
+            raise BadObject(partial_hexsha) from e
         # END handle exceptions
 
     #} END interface
