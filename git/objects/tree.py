@@ -203,8 +203,8 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
             path = join_path(self.path, name)
             try:
                 yield self._map_id_to_type[mode >> 12](self.repo, binsha, mode, path)
-            except KeyError:
-                raise TypeError("Unknown mode %o found in tree data for path '%s'" % (mode, path))
+            except KeyError as e:
+                raise TypeError("Unknown mode %o found in tree data for path '%s'" % (mode, path)) from e
         # END for each item
 
     def join(self, file):

@@ -121,9 +121,9 @@ class Submodule(IndexObject, Iterable, Traversable):
             # default submodule values
             try:
                 self.path = reader.get('path')
-            except cp.NoSectionError:
+            except cp.NoSectionError as e:
                 raise ValueError("This submodule instance does not exist anymore in '%s' file"
-                                 % osp.join(self.repo.working_tree_dir, '.gitmodules'))
+                                 % osp.join(self.repo.working_tree_dir, '.gitmodules')) from e
             # end
             self._url = reader.get('url')
             # git-python extension values - optional
@@ -189,9 +189,9 @@ class Submodule(IndexObject, Iterable, Traversable):
             assert parent_commit is not None, "need valid parent_commit in bare repositories"
             try:
                 fp_module = cls._sio_modules(parent_commit)
-            except KeyError:
+            except KeyError as e:
                 raise IOError("Could not find %s file in the tree of parent commit %s" %
-                              (cls.k_modules_file, parent_commit))
+                              (cls.k_modules_file, parent_commit)) from e
             # END handle exceptions
         # END handle non-bare working tree
 
@@ -516,9 +516,9 @@ class Submodule(IndexObject, Iterable, Traversable):
                 if not dry_run and osp.isdir(checkout_module_abspath):
                     try:
                         os.rmdir(checkout_module_abspath)
-                    except OSError:
+                    except OSError as e:
                         raise OSError("Module directory at %r does already exist and is non-empty"
-                                      % checkout_module_abspath)
+                                      % checkout_module_abspath) from e
                     # END handle OSError
                 # END handle directory removal
 
@@ -737,8 +737,8 @@ class Submodule(IndexObject, Iterable, Traversable):
                     del(index.entries[ekey])
                     nentry = git.IndexEntry(entry[:3] + (module_checkout_path,) + entry[4:])
                     index.entries[tekey] = nentry
-                except KeyError:
-                    raise InvalidGitRepositoryError("Submodule's entry at %r did not exist" % (self.path))
+                except KeyError as e:
+                    raise InvalidGitRepositoryError("Submodule's entry at %r did not exist" % (self.path)) from e
                 # END handle submodule doesn't exist
 
                 # update configuration
@@ -871,7 +871,7 @@ class Submodule(IndexObject, Iterable, Traversable):
                         rmtree(wtd)
                     except Exception as ex:
                         if HIDE_WINDOWS_KNOWN_ERRORS:
-                            raise SkipTest("FIXME: fails with: PermissionError\n  {}".format(ex))
+                            raise SkipTest("FIXME: fails with: PermissionError\n  {}".format(ex)) from ex
                         raise
                 # END delete tree if possible
             # END handle force
@@ -882,7 +882,7 @@ class Submodule(IndexObject, Iterable, Traversable):
                     rmtree(git_dir)
                 except Exception as ex:
                     if HIDE_WINDOWS_KNOWN_ERRORS:
-                        raise SkipTest("FIXME: fails with: PermissionError\n  %s", ex)
+                        raise SkipTest("FIXME: fails with: PermissionError\n  %s", ex) from ex
                     else:
                         raise
             # end handle separate bare repository
@@ -1046,8 +1046,8 @@ class Submodule(IndexObject, Iterable, Traversable):
             if repo != self.repo:
                 return repo
             # END handle repo uninitialized
-        except (InvalidGitRepositoryError, NoSuchPathError):
-            raise InvalidGitRepositoryError("No valid repository at %s" % module_checkout_abspath)
+        except (InvalidGitRepositoryError, NoSuchPathError) as e:
+            raise InvalidGitRepositoryError("No valid repository at %s" % module_checkout_abspath) from e
         else:
             raise InvalidGitRepositoryError("Repository at %r was not yet checked out" % module_checkout_abspath)
         # END handle exceptions

@@ -203,8 +203,8 @@ def parse_date(string_date):
             # still here ? fail
             raise ValueError("no format matched")
         # END handle format
-    except Exception:
-        raise ValueError("Unsupported date format: %s" % string_date)
+    except Exception as e:
+        raise ValueError("Unsupported date format: %s" % string_date) from e
     # END handle exceptions
 
 

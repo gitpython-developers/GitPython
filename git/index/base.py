@@ -420,9 +420,9 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         rval = None
         try:
             proc.stdin.write(("%s\n" % filepath).encode(defenc))
-        except IOError:
+        except IOError as e:
             # pipe broke, usually because some error happened
-            raise fmakeexc()
+            raise fmakeexc() from e
         # END write exception handling
         proc.stdin.flush()
         if read_from_stdout:
@@ -954,7 +954,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         if not skip_hooks:
             run_commit_hook('post-commit', self)
         return rval
-    
+
     def _write_commit_editmsg(self, message):
         with open(self._commit_editmsg_filepath(), "wb") as commit_editmsg_file:
             commit_editmsg_file.write(message.encode(defenc))
