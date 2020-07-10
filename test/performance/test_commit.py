@@ -11,7 +11,7 @@ import sys
 from .lib import TestBigRepoRW
 from git import Commit
 from gitdb import IStream
-from git.test.test_commit import TestCommitSerialization
+from test.test_commit import TestCommitSerialization
 
 
 class TestPerformance(TestBigRepoRW, TestCommitSerialization):

@@ -19,11 +19,11 @@ from git.repo.fun import (
     find_submodule_git_dir,
     touch
 )
-from git.test.lib import (
+from test.lib import (
     TestBase,
     with_rw_repo
 )
-from git.test.lib import with_rw_directory
+from test.lib import with_rw_directory
 from git.util import HIDE_WINDOWS_KNOWN_ERRORS
 from git.util import to_native_path_linux, join_path_native
 import os.path as osp
