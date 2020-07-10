@@ -17,7 +17,7 @@ from git import (
 )
 from git.compat import is_win
 from git.objects.util import get_object_type_by_name
-from git.test.lib import (
+from test.lib import (
     TestBase,
     with_rw_repo,
     with_rw_and_rw_remote_repo
