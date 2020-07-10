@@ -6,8 +6,8 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 import os
 
-from git.test.lib import TestBase
-from git.test.lib.helper import with_rw_directory
+from test.lib import TestBase
+from test.lib.helper import with_rw_directory
 
 import os.path
 

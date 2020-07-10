@@ -22,7 +22,7 @@ from git.exc import (
     HookExecutionError,
     RepositoryDirtyError,
 )
-from git.test.lib import TestBase
+from test.lib import TestBase
 
 import itertools as itt
 
