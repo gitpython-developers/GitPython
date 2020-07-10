@@ -5,11 +5,8 @@ include AUTHORS
 include CONTRIBUTING.md
 include README.md
 include requirements.txt
-include test-requirements.txt
 
 recursive-include doc *
-
-graft git/test/fixtures
-graft git/test/performance
+recursive-exclude test *
 
 global-exclude __pycache__ *.pyc
