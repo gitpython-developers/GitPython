@@ -2,6 +2,12 @@
 Changelog
 =========
 
+3.1.5
+=====
+
+* rollback: package size was reduced significantly not placing tests into the package anymore.
+  See https://github.com/gitpython-developers/GitPython/issues/1030
+
 3.1.4
 =====
 
