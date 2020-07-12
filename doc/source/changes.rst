@@ -2,6 +2,15 @@
 Changelog
 =========
 
+3.1.4
+=====
+
+* all exceptions now keep track of their cause
+* package size was reduced significantly not placing tests into the package anymore.
+
+See the following for details:
+https://github.com/gitpython-developers/gitpython/milestone/39?closed=1* 
+
 3.1.3
 =====
 
