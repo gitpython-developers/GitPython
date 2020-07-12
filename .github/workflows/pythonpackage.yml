@@ -40,7 +40,7 @@ jobs:
         git config --global user.name "Travis Runner"
         # If we rewrite the user's config by accident, we will mess it up
         # and cause subsequent tests to fail
-        cat test/fixtures/.gitconfig >> ~/.gitconfig
+        cat git/test/fixtures/.gitconfig >> ~/.gitconfig
     - name: Lint with flake8
       run: |
         set -x

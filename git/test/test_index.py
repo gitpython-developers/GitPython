@@ -36,13 +36,13 @@ from git.index.typ import (
     IndexEntry
 )
 from git.objects import Blob
-from test.lib import (
+from git.test.lib import (
     TestBase,
     fixture_path,
     fixture,
     with_rw_repo
 )
-from test.lib import with_rw_directory
+from git.test.lib import with_rw_directory
 from git.util import Actor, rmtree
 from git.util import HIDE_WINDOWS_KNOWN_ERRORS, hex_to_bin
 from gitdb.base import IStream

@@ -18,7 +18,7 @@ from git.objects.fun import (
 from git.repo.fun import (
     find_worktree_git_dir
 )
-from test.lib import (
+from git.test.lib import (
     TestBase,
     with_rw_repo,
     with_rw_directory

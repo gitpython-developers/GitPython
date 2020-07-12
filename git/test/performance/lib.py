@@ -10,7 +10,7 @@ from git.db import (
     GitCmdObjectDB,
     GitDB
 )
-from test.lib import (
+from git.test.lib import (
     TestBase
 )
 from git.util import rmtree

@@ -4,7 +4,7 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
-from test.lib import TestBase
+from git.test.lib import TestBase
 from git import Blob
 
 

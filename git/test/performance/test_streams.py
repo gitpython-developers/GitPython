@@ -6,7 +6,7 @@ import subprocess
 import sys
 from time import time
 
-from test.lib import (
+from git.test.lib import (
     with_rw_repo
 )
 from git.util import bin_to_hex

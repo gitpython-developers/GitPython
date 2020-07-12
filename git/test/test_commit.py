@@ -20,13 +20,13 @@ from git import (
 from git import Repo
 from git.objects.util import tzoffset, utc
 from git.repo.fun import touch
-from test.lib import (
+from git.test.lib import (
     TestBase,
     with_rw_repo,
     fixture_path,
     StringProcessAdapter
 )
-from test.lib import with_rw_directory
+from git.test.lib import with_rw_directory
 from gitdb import IStream
 
 import os.path as osp

@@ -12,7 +12,7 @@ from git import (
     Tree,
     Blob
 )
-from test.lib import TestBase
+from git.test.lib import TestBase
 from git.util import HIDE_WINDOWS_KNOWN_ERRORS
 
 import os.path as osp

@@ -11,12 +11,12 @@ from git import (
     GitConfigParser
 )
 from git.config import _OMD, cp
-from test.lib import (
+from git.test.lib import (
     TestCase,
     fixture_path,
     SkipTest,
 )
-from test.lib import with_rw_directory
+from git.test.lib import with_rw_directory
 
 import os.path as osp
 from git.util import rmfile

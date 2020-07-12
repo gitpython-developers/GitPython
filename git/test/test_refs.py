@@ -17,7 +17,7 @@ from git import (
     RefLog
 )
 from git.objects.tag import TagObject
-from test.lib import (
+from git.test.lib import (
     TestBase,
     with_rw_repo
 )

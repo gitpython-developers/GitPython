@@ -1,2 +1,2 @@
-test/fixtures/* eol=lf
+git/test/fixtures/* eol=lf
 init-tests-after-clone.sh

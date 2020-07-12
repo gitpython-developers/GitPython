@@ -22,7 +22,7 @@ from git import (
     GitCommandError
 )
 from git.cmd import Git
-from test.lib import (
+from git.test.lib import (
     TestBase,
     with_rw_repo,
     with_rw_and_rw_remote_repo,

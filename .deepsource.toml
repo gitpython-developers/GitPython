@@ -1,7 +1,7 @@
 version = 1
 
 test_patterns = [
-  'test/**/test_*.py'
+  'git/test/**/test_*.py'
 ]
 
 exclude_patterns = [

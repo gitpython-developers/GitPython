@@ -6,7 +6,7 @@ from git.refs import (
     RefLogEntry,
     RefLog
 )
-from test.lib import (
+from git.test.lib import (
     TestBase,
     fixture_path
 )

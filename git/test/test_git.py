@@ -19,11 +19,11 @@ from git import (
     cmd
 )
 from git.compat import is_darwin
-from test.lib import (
+from git.test.lib import (
     TestBase,
     fixture_path
 )
-from test.lib import with_rw_directory
+from git.test.lib import with_rw_directory
 from git.util import finalize_process
 
 import os.path as osp

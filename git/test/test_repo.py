@@ -36,13 +36,13 @@ from git.exc import (
     BadObject,
 )
 from git.repo.fun import touch
-from test.lib import (
+from git.test.lib import (
     TestBase,
     with_rw_repo,
     fixture
 )
 from git.util import HIDE_WINDOWS_KNOWN_ERRORS, cygpath
-from test.lib import with_rw_directory
+from git.test.lib import with_rw_directory
 from git.util import join_path_native, rmtree, rmfile, bin_to_hex
 
 import os.path as osp
@@ -865,7 +865,7 @@ class TestRepo(TestBase):
         for _ in range(64):
             for repo_type in (GitCmdObjectDB, GitDB):
                 repo = Repo(self.rorepo.working_tree_dir, odbt=repo_type)
-                last_commit(repo, 'master', 'test/test_base.py')
+                last_commit(repo, 'master', 'git/test/test_base.py')
             # end for each repository type
         # end for each iteration
 
