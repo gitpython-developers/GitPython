@@ -2,6 +2,11 @@
 Changelog
 =========
 
+3.1.6
+=====
+
+* Greatly reduced package size, see https://github.com/gitpython-developers/GitPython/pull/1031
+
 3.1.5
 =====
 
