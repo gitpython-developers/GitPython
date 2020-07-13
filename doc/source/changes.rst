@@ -139,9 +139,9 @@ https://github.com/gitpython-developers/gitpython/milestone/30?closed=1
 3.0.1 - Bugfixes and performance improvements
 =============================================
 
-* Fix a `performance regression <https://github.com/gitpython-developers/GitPython/issues/906>`_ which could make certain workloads 50% slower
-* Add `currently_rebasing_on` method on `Repo`, see `the PR <https://github.com/gitpython-developers/GitPython/pull/903/files#diff-c276fc3c4df38382ec884e59657b869dR1065>`_
-* Fix incorrect `requirements.txt` which could lead to broken installations, see this `issue <https://github.com/gitpython-developers/GitPython/issues/908>`_ for details.
+* Fix a `performance regression <https://github.com/gitpython-developers/GitPython/issues/906>`__ which could make certain workloads 50% slower
+* Add `currently_rebasing_on` method on `Repo`, see `the PR <https://github.com/gitpython-developers/GitPython/pull/903/files#diff-c276fc3c4df38382ec884e59657b869dR1065>`__
+* Fix incorrect `requirements.txt` which could lead to broken installations, see this `issue <https://github.com/gitpython-developers/GitPython/issues/908>`__ for details.
 
 3.0.0 - Remove Python 2 support
 ===============================
@@ -276,6 +276,7 @@ https://github.com/gitpython-developers/GitPython/issues?q=is%3Aclosed+milestone
   the `HEAD` reference instead.
 
 * `DiffIndex.iter_change_type(...)` produces better results when diffing
+
 2.0.8 - Features and Bugfixes
 =============================
 
@@ -304,7 +305,7 @@ https://github.com/gitpython-developers/GitPython/issues?q=is%3Aclosed+milestone
   unicode path counterparts.
 * Fix: TypeError about passing keyword argument to string decode() on
   Python 2.6.
-* Feature: `setUrl API on Remotes <https://github.com/gitpython-developers/GitPython/pull/446#issuecomment-224670539>`_
+* Feature: `setUrl API on Remotes <https://github.com/gitpython-developers/GitPython/pull/446#issuecomment-224670539>`__
 
 2.0.5 - Fixes
 =============
@@ -380,13 +381,13 @@ Please note that due to breaking changes, we have to increase the major version.
   with large repositories.
 * CRITICAL: fixed incorrect `Commit` object serialization when authored or commit date had timezones which were not
   divisiblej by 3600 seconds. This would happen if the timezone was something like `+0530` for instance.
-* A list of all additional fixes can be found `on GitHub <https://github.com/gitpython-developers/GitPython/issues?q=milestone%3A%22v1.0.2+-+Fixes%22+is%3Aclosed>`_
+* A list of all additional fixes can be found `on GitHub <https://github.com/gitpython-developers/GitPython/issues?q=milestone%3A%22v1.0.2+-+Fixes%22+is%3Aclosed>`__
 * CRITICAL: `Tree.cache` was removed without replacement. It is technically impossible to change individual trees and expect their serialization results to be consistent with what *git* expects. Instead, use the `IndexFile` facilities to adjust the content of the staging area, and write it out to the respective tree objects using `IndexFile.write_tree()` instead.
 
 1.0.1 - Fixes
 =============
 
-* A list of all issues can be found `on GitHub <https://github.com/gitpython-developers/GitPython/issues?q=milestone%3A%22v1.0.1+-+Fixes%22+is%3Aclosed>`_
+* A list of all issues can be found `on GitHub <https://github.com/gitpython-developers/GitPython/issues?q=milestone%3A%22v1.0.1+-+Fixes%22+is%3Aclosed>`__
 
 1.0.0 - Notes
 =============
@@ -403,14 +404,14 @@ It follows the `semantic version scheme <http://semver.org>`_, and thus will not
 * If the git command executed during `Remote.push(...)|fetch(...)` returns with an non-zero exit code and GitPython didn't
   obtain any head-information, the corresponding `GitCommandError` will be raised. This may break previous code which expected
   these operations to never raise. However, that behavious is undesirable as it would effectively hide the fact that there
-  was an error. See `this issue <https://github.com/gitpython-developers/GitPython/issues/271>`_ for more information.
+  was an error. See `this issue <https://github.com/gitpython-developers/GitPython/issues/271>`__ for more information.
 
 * If the git executable can't be found in the PATH or at the path provided by `GIT_PYTHON_GIT_EXECUTABLE`, this is made
   obvious by throwing `GitCommandNotFound`, both on unix and on windows.
 
   - Those who support **GUI on windows** will now have to set `git.Git.USE_SHELL = True` to get the previous behaviour.
 
-* A list of all issues can be found `on GitHub <https://github.com/gitpython-developers/GitPython/issues?q=milestone%3A%22v0.3.7+-+Fixes%22+is%3Aclosed>`_
+* A list of all issues can be found `on GitHub <https://github.com/gitpython-developers/GitPython/issues?q=milestone%3A%22v0.3.7+-+Fixes%22+is%3Aclosed>`__
 
 
 0.3.6 - Features
@@ -426,11 +427,11 @@ It follows the `semantic version scheme <http://semver.org>`_, and thus will not
   * Repo.working_tree_dir now returns None if it is bare. Previously it raised AssertionError.
   * IndexFile.add() previously raised AssertionError when paths where used with bare repository, now it raises InvalidGitRepositoryError
 
-* Added `Repo.merge_base()` implementation. See the `respective issue on GitHub <https://github.com/gitpython-developers/GitPython/issues/169>`_
+* Added `Repo.merge_base()` implementation. See the `respective issue on GitHub <https://github.com/gitpython-developers/GitPython/issues/169>`__
 * `[include]` sections in git configuration files are now respected
 * Added `GitConfigParser.rename_section()`
 * Added `Submodule.rename()`
-* A list of all issues can be found `on GitHub <https://github.com/gitpython-developers/GitPython/issues?q=milestone%3A%22v0.3.6+-+Features%22+>`_
+* A list of all issues can be found `on GitHub <https://github.com/gitpython-developers/GitPython/issues?q=milestone%3A%22v0.3.6+-+Features%22+>`__
 
 0.3.5 - Bugfixes
 ================

@@ -965,7 +965,7 @@ class Submodule(IndexObject, Iterable, Traversable):
     @unbare_repo
     def config_writer(self, index=None, write=True):
         """:return: a config writer instance allowing you to read and write the data
-        belonging to this submodule into the .gitmodules file.
+            belonging to this submodule into the .gitmodules file.
 
         :param index: if not None, an IndexFile instance which should be written.
             defaults to the index of the Submodule's parent repository.

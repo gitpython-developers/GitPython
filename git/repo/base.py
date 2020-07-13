@@ -270,9 +270,9 @@ class Repo(object):
 
     @property
     def common_dir(self):
-        """:return: The git dir that holds everything except possibly HEAD,
-        FETCH_HEAD, ORIG_HEAD, COMMIT_EDITMSG, index, and logs/ .
         """
+        :return: The git dir that holds everything except possibly HEAD,
+            FETCH_HEAD, ORIG_HEAD, COMMIT_EDITMSG, index, and logs/."""
         return self._common_dir or self.git_dir
 
     @property
@@ -988,7 +988,7 @@ class Repo(object):
         :param multi_options: A list of Clone options that can be provided multiple times.  One
             option per list item which is passed exactly as specified to clone.
             For example ['--config core.filemode=false', '--config core.ignorecase',
-                         '--recurse-submodule=repo1_path', '--recurse-submodule=repo2_path']
+            '--recurse-submodule=repo1_path', '--recurse-submodule=repo2_path']
         :param kwargs:
             * odbt = ObjectDatabase Type, allowing to determine the object database
               implementation used by the returned Repo instance

@@ -827,10 +827,8 @@ class Remote(LazyMixin, Iterable):
 
             * None to discard progress information
             * A function (callable) that is called with the progress information.
-
               Signature: ``progress(op_code, cur_count, max_count=None, message='')``.
-
-             `Click here <http://goo.gl/NPa7st>`_ for a description of all arguments
+              `Click here <http://goo.gl/NPa7st>`__ for a description of all arguments
               given to the function.
             * An instance of a class derived from ``git.RemoteProgress`` that
               overrides the ``update()`` function.

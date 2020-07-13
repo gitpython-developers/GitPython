@@ -39,11 +39,11 @@ from .exc import InvalidGitRepositoryError
 # Handle once test-cases are back up and running.
 # Most of these are unused here, but are for use by git-python modules so these
 # don't see gitdb all the time. Flake of course doesn't like it.
-__all__ = ("stream_copy", "join_path", "to_native_path_windows", "to_native_path_linux",
+__all__ = ["stream_copy", "join_path", "to_native_path_linux",
            "join_path_native", "Stats", "IndexFileSHA1Writer", "Iterable", "IterableList",
            "BlockingLockFile", "LockFile", 'Actor', 'get_user_id', 'assure_directory_exists',
            'RemoteProgress', 'CallableRemoteProgress', 'rmtree', 'unbare_repo',
-           'HIDE_WINDOWS_KNOWN_ERRORS')
+           'HIDE_WINDOWS_KNOWN_ERRORS']
 
 log = logging.getLogger(__name__)
 
@@ -148,6 +148,7 @@ if is_win:
     def to_native_path_linux(path):
         return path.replace('\\', '/')
 
+    __all__.append("to_native_path_windows")
     to_native_path = to_native_path_windows
 else:
     # no need for any work on linux
