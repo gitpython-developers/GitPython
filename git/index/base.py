@@ -219,7 +219,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         """Merge the given rhs treeish into the current index, possibly taking
         a common base treeish into account.
 
-        As opposed to the from_tree_ method, this allows you to use an already
+        As opposed to the :func:`IndexFile.from_tree` method, this allows you to use an already
         existing tree as the left side of the merge
 
         :param rhs:
@@ -830,7 +830,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
                 to a path relative to the git repository directory containing
                 the working tree
 
-                The path string may include globs, such as *.c.
+                The path string may include globs, such as \\*.c.
 
             - Blob Object
                 Only the path portion is used in this case.
@@ -998,7 +998,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             If False, these will trigger a CheckoutError.
 
         :param fprogress:
-            see Index.add_ for signature and explanation.
+            see :func:`IndexFile.add` for signature and explanation.
             The provided progress information will contain None as path and item if no
             explicit paths are given. Otherwise progress information will be send
             prior and after a file has been checked out
@@ -1010,7 +1010,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             iterable yielding paths to files which have been checked out and are
             guaranteed to match the version stored in the index
 
-        :raise CheckoutError:
+        :raise exc.CheckoutError:
             If at least one file failed to be checked out. This is a summary,
             hence it will checkout as many files as it can anyway.
             If one of files or directories do not exist in the index
