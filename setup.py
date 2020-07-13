@@ -9,6 +9,7 @@ except ImportError:
 
 from distutils.command.build_py import build_py as _build_py
 from setuptools.command.sdist import sdist as _sdist
+import fnmatch
 import os
 import sys
 from os import path
@@ -66,6 +67,24 @@ def _stamp_version(filename):
         print("WARNING: Couldn't find version line in file %s" % filename, file=sys.stderr)
 
 
+def build_py_modules(basedir, excludes=[]):
+    # create list of py_modules from tree
+    res = set()
+    _prefix = os.path.basename(basedir)
+    for root, _, files in os.walk(basedir):
+        for f in files:
+            _f, _ext = os.path.splitext(f)
+            if _ext not in [".py"]:
+                continue
+            _f = os.path.join(root, _f)
+            _f = os.path.relpath(_f, basedir)
+            _f = "{}.{}".format(_prefix, _f.replace(os.sep, "."))
+            if any(fnmatch.fnmatch(_f, x) for x in excludes):
+                continue
+            res.add(_f)
+    return list(res)
+
+
 setup(
     name="GitPython",
     cmdclass={'build_py': build_py, 'sdist': sdist},
@@ -74,9 +93,9 @@ setup(
     author="Sebastian Thiel, Michael Trier",
     author_email="byronimo@gmail.com, mtrier@gmail.com",
     url="https://github.com/gitpython-developers/GitPython",
-    packages=find_packages('.'),
-    py_modules=['git.' + f[:-3] for f in os.listdir('./git') if f.endswith('.py')],
-    package_data={'git.test': ['fixtures/*']},
+    packages=find_packages(exclude=("test.*")),
+    include_package_data=True,
+    py_modules=build_py_modules("./git", excludes=["git.ext.*"]),
     package_dir={'git': 'git'},
     python_requires='>=3.4',
     install_requires=requirements,

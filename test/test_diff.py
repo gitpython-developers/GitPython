@@ -16,12 +16,12 @@ from git import (
     Submodule,
 )
 from git.cmd import Git
-from git.test.lib import (
+from test.lib import (
     TestBase,
     StringProcessAdapter,
     fixture,
 )
-from git.test.lib import with_rw_directory
+from test.lib import with_rw_directory
 
 import os.path as osp
 

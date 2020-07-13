@@ -29,7 +29,7 @@ skipIf = unittest.skipIf
 
 ospd = osp.dirname
 
-GIT_REPO = os.environ.get("GIT_PYTHON_TEST_GIT_REPO_BASE", ospd(ospd(ospd(ospd(__file__)))))
+GIT_REPO = os.environ.get("GIT_PYTHON_TEST_GIT_REPO_BASE", ospd(ospd(ospd(__file__))))
 GIT_DAEMON_PORT = os.environ.get("GIT_PYTHON_TEST_GIT_DAEMON_PORT", "19418")
 
 __all__ = (

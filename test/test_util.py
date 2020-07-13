@@ -21,7 +21,7 @@ from git.objects.util import (
     parse_date,
     tzoffset,
     from_timestamp)
-from git.test.lib import TestBase
+from test.lib import TestBase
 from git.util import (
     LockFile,
     BlockingLockFile,
