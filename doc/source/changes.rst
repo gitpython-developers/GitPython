@@ -2,6 +2,12 @@
 Changelog
 =========
 
+
+3.1.7
+=====
+
+* Fix tutorial examples, which disappeared in 3.1.6 due to a missed path change.
+
 3.1.6
 =====
 
