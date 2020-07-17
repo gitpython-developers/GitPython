@@ -445,12 +445,14 @@ class SymbolicReference(object):
                     made_change = False
                     dropped_last_line = False
                     for line in reader:
+                        line = line.decode(defenc)
+                        _, _, line_ref = line.partition(' ')
+                        line_ref = line_ref.strip()
                         # keep line if it is a comment or if the ref to delete is not
                         # in the line
                         # If we deleted the last line and this one is a tag-reference object,
                         # we drop it as well
-                        line = line.decode(defenc)
-                        if (line.startswith('#') or full_ref_path not in line) and \
+                        if (line.startswith('#') or full_ref_path != line_ref) and \
                                 (not dropped_last_line or dropped_last_line and not line.startswith('^')):
                             new_lines.append(line)
                             dropped_last_line = False
