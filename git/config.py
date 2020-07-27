@@ -419,6 +419,8 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
                         optval = string_decode(optval[1:])
                     # end handle multi-line
                     # preserves multiple values for duplicate optnames
+                    # fix for extra back slashes so windows UNC paths are not mangled
+                    optval = optval.replace('\\\\', '\\')
                     cursect.add(optname, optval)
                 else:
                     # check if it's an option with no value - it's just ignored by git
