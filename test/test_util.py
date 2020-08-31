@@ -174,6 +174,10 @@ class TestUtils(TestBase):
         self.assertIn('@', get_user_id())
 
     def test_parse_date(self):
+        # parse_date(from_timestamp()) must return the tuple unchanged
+        for timestamp, offset in (1522827734, -7200), (1522827734, 0), (1522827734, +3600):
+            self.assertEqual(parse_date(from_timestamp(timestamp, offset)), (timestamp, offset))
+
         # test all supported formats
         def assert_rval(rval, veri_time, offset=0):
             self.assertEqual(len(rval), 2)
@@ -200,6 +204,7 @@ class TestUtils(TestBase):
         # END for each date type
 
         # and failure
+        self.assertRaises(ValueError, parse_date, datetime.now())  # non-aware datetime
         self.assertRaises(ValueError, parse_date, 'invalid format')
         self.assertRaises(ValueError, parse_date, '123456789 -02000')
         self.assertRaises(ValueError, parse_date, ' 123456789 -0200')
