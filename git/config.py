@@ -38,6 +38,9 @@ log.addHandler(logging.NullHandler())
 # represents the configuration level of a configuration file
 CONFIG_LEVELS = ("system", "user", "global", "repository")
 
+# Section pattern to detect conditional includes.
+# https://git-scm.com/docs/git-config#_conditional_includes
+CONDITIONAL_INCLUDE_REGEXP = re.compile(r"(?<=includeIf )\"(gitdir|gitdir/i|onbranch):(.+)\"")
 
 class MetaParserBuilder(abc.ABCMeta):
 
