@@ -1,3 +1,18 @@
+## [Gitoxide](https://github.com/Byron/gitoxide): A peek into the future…
+
+I started working on GitPython in 2009, back in the days when Python was 'my thing' and I had great plans with it.
+Of course, back in the days, I didn't really know what I was doing and this shows in many places. Somewhat similar to
+Python this happens to be 'good enough', but at the same time is deeply flawed and broken beyond repair.
+
+By now, GitPython is widely used and I am sure there is a good reason for that, it's something to be proud of and happy about.
+The community is maintaining the software and is keeping it relevant for which I am absolutely grateful. For the time to come I am happy to continue maintaining GitPython, remaining hopeful that one day it won't be needed anymore.
+
+More than 15 years after my first meeting with 'git' I am still in excited about it, and am happy to finally have the tools and
+probably the skills to scratch that itch of mine: implement `git` in a way that makes tool creation a piece of cake for most.
+
+If you like the idea and want to learn more, please head over to [gitoxide](https://github.com/Byron/gitoxide), an
+implementation of 'git' in [Rust](https://www.rust-lang.org).
+
 ## GitPython
 
 GitPython is a python library used to interact with git repositories, high-level like git-porcelain,
