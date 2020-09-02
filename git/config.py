@@ -446,7 +446,10 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
             raise e
 
     def _has_includes(self):
-        return self._merge_includes and self.has_section('include')
+        return self._merge_includes and any(
+            section == 'include' or section.startswith('includeIf ')
+            for section in self.sections()
+        )
 
     def read(self):
         """Reads the data stored in the files we have been initialized with. It will
