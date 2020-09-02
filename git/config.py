@@ -13,6 +13,8 @@ from io import IOBase
 import logging
 import os
 import re
+import glob
+import fnmatch
 from collections import OrderedDict
 
 from git.compat import (
@@ -455,6 +457,39 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
             for section in self.sections()
         )
 
+    def _included_paths(self):
+        """Return all paths that must be included to configuration.
+        """
+        paths = []
+
+        for section in self.sections():
+            if section == "include":
+                paths += self.items(section)
+
+            match = CONDITIONAL_INCLUDE_REGEXP.search(section)
+            if match is not None and self._repo is not None:
+                keyword = match.group(1)
+                value = match.group(2).strip()
+
+                if keyword in ["gitdir", "gitdir/i"]:
+                    value = osp.expanduser(value)
+                    flags = [re.IGNORECASE] if keyword == "gitdir/i" else []
+                    regexp = re.compile(fnmatch.translate(value), *flags)
+
+                    if any(
+                        regexp.match(path) is not None
+                        and self._repo.git_dir.startswith(path)
+                        for path in glob.glob(value)
+                    ):
+                        paths += self.items(section)
+
+
+                elif keyword == "onbranch":
+                    if value == self._repo.active_branch.name:
+                        paths += self.items(section)
+
+        return paths
+
     def read(self):
         """Reads the data stored in the files we have been initialized with. It will
         ignore files that cannot be read, possibly leaving an empty configuration
@@ -492,7 +527,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
             # Read includes and append those that we didn't handle yet
             # We expect all paths to be normalized and absolute (and will assure that is the case)
             if self._has_includes():
-                for _, include_path in self.items('include'):
+                for _, include_path in self._included_paths():
                     if include_path.startswith('~'):
                         include_path = osp.expanduser(include_path)
                     if not osp.isabs(include_path):
