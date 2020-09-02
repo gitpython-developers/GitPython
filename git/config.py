@@ -250,7 +250,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
     # list of RawConfigParser methods able to change the instance
     _mutating_methods_ = ("add_section", "remove_section", "remove_option", "set")
 
-    def __init__(self, file_or_files=None, read_only=True, merge_includes=True, config_level=None):
+    def __init__(self, file_or_files=None, read_only=True, merge_includes=True, config_level=None, repo=None):
         """Initialize a configuration reader to read the given file_or_files and to
         possibly allow changes to it by setting read_only False
 
@@ -265,7 +265,10 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
         :param merge_includes: if True, we will read files mentioned in [include] sections and merge their
             contents into ours. This makes it impossible to write back an individual configuration file.
             Thus, if you want to modify a single configuration file, turn this off to leave the original
-            dataset unaltered when reading it."""
+            dataset unaltered when reading it.
+        :param repo: Reference to repository to use if [includeIf] sections are found in configuration files.
+
+        """
         cp.RawConfigParser.__init__(self, dict_type=_OMD)
 
         # Used in python 3, needs to stay in sync with sections for underlying implementation to work
@@ -287,6 +290,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
         self._dirty = False
         self._is_initialized = False
         self._merge_includes = merge_includes
+        self._repo = repo
         self._lock = None
         self._acquire_lock()
 
