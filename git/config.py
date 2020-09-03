@@ -493,7 +493,13 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
                     paths += self.items(section)
 
             elif keyword == "onbranch":
-                if fnmatch.fnmatchcase(self._repo.active_branch.name, value):
+                try:
+                    branch_name = self._repo.active_branch.name
+                except TypeError:
+                    # Ignore section if active branch cannot be retrieved.
+                    continue
+
+                if fnmatch.fnmatchcase(branch_name, value):
                     paths += self.items(section)
 
         return paths

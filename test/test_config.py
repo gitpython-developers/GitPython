@@ -345,6 +345,23 @@ class TestBase(TestCase):
             assert config._has_includes()
             assert config._included_paths() == [("path", path2)]
 
+    @with_rw_directory
+    def test_conditional_includes_from_branch_name_error(self, rw_dir):
+        # Initiate mocked repository to raise an error if HEAD is detached.
+        repo = mock.Mock()
+        type(repo).active_branch = mock.PropertyMock(side_effect=TypeError)
+
+        # Initiate config file.
+        path1 = osp.join(rw_dir, "config1")
+
+        # Ensure that config is ignored when active branch cannot be found.
+        with open(path1, "w") as stream:
+            stream.write("[includeIf \"onbranch:foo\"]\n    path=/path\n")
+
+        with GitConfigParser(path1, repo=repo) as config:
+            assert not config._has_includes()
+            assert config._included_paths() == []
+
     def test_rename(self):
         file_obj = self._to_memcache(fixture_path('git_config'))
         with GitConfigParser(file_obj, read_only=False, merge_includes=False) as cw:
