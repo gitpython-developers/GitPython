@@ -13,7 +13,6 @@ from io import IOBase
 import logging
 import os
 import re
-import glob
 import fnmatch
 from collections import OrderedDict
 
@@ -452,10 +451,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
             raise e
 
     def _has_includes(self):
-        return self._merge_includes and any(
-            section == 'include' or section.startswith('includeIf ')
-            for section in self.sections()
-        )
+        return self._merge_includes and len(self._included_paths())
 
     def _included_paths(self):
         """Return all paths that must be included to configuration.
@@ -471,21 +467,26 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
                 keyword = match.group(1)
                 value = match.group(2).strip()
 
-                if keyword in ["gitdir", "gitdir/i"]:
+                if keyword == "gitdir":
                     value = osp.expanduser(value)
-                    flags = [re.IGNORECASE] if keyword == "gitdir/i" else []
-                    regexp = re.compile(fnmatch.translate(value), *flags)
-
-                    if any(
-                        regexp.match(path) is not None
-                        and self._repo.git_dir.startswith(path)
-                        for path in glob.glob(value)
-                    ):
+                    if fnmatch.fnmatchcase(self._repo.git_dir, value):
                         paths += self.items(section)
 
+                elif keyword == "gitdir/i":
+                    value = osp.expanduser(value)
+
+                    # Ensure that glob is always case insensitive.
+                    value = re.sub(
+                        r"[a-zA-Z]",
+                        lambda m: f"[{m.group().lower()}{m.group().upper()}]",
+                        value
+                    )
+
+                    if fnmatch.fnmatchcase(self._repo.git_dir, value):
+                        paths += self.items(section)
 
                 elif keyword == "onbranch":
-                    if value == self._repo.active_branch.name:
+                    if fnmatch.fnmatchcase(self._repo.active_branch.name, value):
                         paths += self.items(section)
 
         return paths
