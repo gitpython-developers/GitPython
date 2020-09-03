@@ -6,6 +6,8 @@
 
 import glob
 import io
+import os
+from unittest import mock
 
 from git import (
     GitConfigParser
@@ -237,6 +239,103 @@ class TestBase(TestCase):
 
         with GitConfigParser(fpa, read_only=True) as cr:
             check_test_value(cr, tv)
+
+    @with_rw_directory
+    def test_conditional_includes_from_git_dir(self, rw_dir):
+        # Initiate repository path
+        git_dir = osp.join(rw_dir, "target1", "repo1")
+        os.makedirs(git_dir)
+
+        # Initiate mocked repository
+        repo = mock.Mock(git_dir=git_dir)
+
+        # Initiate config files.
+        path1 = osp.join(rw_dir, "config1")
+        path2 = osp.join(rw_dir, "config2")
+        template = "[includeIf \"{}:{}\"]\n    path={}\n"
+
+        with open(path1, "w") as stream:
+            stream.write(template.format("gitdir", git_dir, path2))
+
+        # Ensure that config is ignored if no repo is set.
+        with GitConfigParser(path1) as config:
+            assert not config._has_includes()
+            assert config._included_paths() == []
+
+        # Ensure that config is included if path is matching git_dir.
+        with GitConfigParser(path1, repo=repo) as config:
+            assert config._has_includes()
+            assert config._included_paths() == [("path", path2)]
+
+        # Ensure that config is ignored if case is incorrect.
+        with open(path1, "w") as stream:
+            stream.write(template.format("gitdir", git_dir.upper(), path2))
+
+        with GitConfigParser(path1, repo=repo) as config:
+            assert not config._has_includes()
+            assert config._included_paths() == []
+
+        # Ensure that config is included if case is ignored.
+        with open(path1, "w") as stream:
+            stream.write(template.format("gitdir/i", git_dir.upper(), path2))
+
+        with GitConfigParser(path1, repo=repo) as config:
+            assert config._has_includes()
+            assert config._included_paths() == [("path", path2)]
+
+        # Ensure that config is included with path using glob pattern.
+        with open(path1, "w") as stream:
+            stream.write(template.format("gitdir", "**/repo1", path2))
+
+        with GitConfigParser(path1, repo=repo) as config:
+            assert config._has_includes()
+            assert config._included_paths() == [("path", path2)]
+
+        # Ensure that config is ignored if path is not matching git_dir.
+        with open(path1, "w") as stream:
+            stream.write(template.format("gitdir", "incorrect", path2))
+
+        with GitConfigParser(path1, repo=repo) as config:
+            assert not config._has_includes()
+            assert config._included_paths() == []
+
+    @with_rw_directory
+    def test_conditional_includes_from_branch_name(self, rw_dir):
+        # Initiate mocked branch
+        branch = mock.Mock()
+        type(branch).name = mock.PropertyMock(return_value="/foo/branch")
+
+        # Initiate mocked repository
+        repo = mock.Mock(active_branch=branch)
+
+        # Initiate config files.
+        path1 = osp.join(rw_dir, "config1")
+        path2 = osp.join(rw_dir, "config2")
+        template = "[includeIf \"onbranch:{}\"]\n    path={}\n"
+
+        # Ensure that config is included is branch is correct.
+        with open(path1, "w") as stream:
+            stream.write(template.format("/foo/branch", path2))
+
+        with GitConfigParser(path1, repo=repo) as config:
+            assert config._has_includes()
+            assert config._included_paths() == [("path", path2)]
+
+        # Ensure that config is included is branch is incorrect.
+        with open(path1, "w") as stream:
+            stream.write(template.format("incorrect", path2))
+
+        with GitConfigParser(path1, repo=repo) as config:
+            assert not config._has_includes()
+            assert config._included_paths() == []
+
+        # Ensure that config is included with branch using glob pattern.
+        with open(path1, "w") as stream:
+            stream.write(template.format("/foo/**", path2))
+
+        with GitConfigParser(path1, repo=repo) as config:
+            assert config._has_includes()
+            assert config._included_paths() == [("path", path2)]
 
     def test_rename(self):
         file_obj = self._to_memcache(fixture_path('git_config'))
