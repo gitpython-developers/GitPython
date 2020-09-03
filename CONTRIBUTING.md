@@ -1,7 +1,10 @@
 ### How to contribute
 
-* [fork this project](https://github.com/gitpython-developers/GitPython/fork) on GitHub
-* For setting up the environment to run the self tests, look at `.travis.yml`.
-* Add yourself to AUTHORS and write your patch. **Write a test that fails unless your patch is present.**
-* Initiate a pull request
+The following is a short step-by-step rundown of what one typically would do to contribute.
+
+* [fork this project](https://github.com/gitpython-developers/GitPython/fork) on GitHub.
+* For setting up the environment to run the self tests, please look at `.travis.yml`.
+* Please try to **write a test that fails unless the contribution is present.**
+* Feel free to add yourself to AUTHORS file. 
+* Create a pull request.
 
