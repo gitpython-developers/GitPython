@@ -464,35 +464,37 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
                 paths += self.items(section)
 
             match = CONDITIONAL_INCLUDE_REGEXP.search(section)
-            if match is not None and self._repo is not None:
-                keyword = match.group(1)
-                value = match.group(2).strip()
+            if match is None or self._repo is None:
+                continue
 
-                if keyword in ["gitdir", "gitdir/i"]:
-                    value = osp.expanduser(value)
+            keyword = match.group(1)
+            value = match.group(2).strip()
 
-                    if not any(value.startswith(s) for s in ["./", "/"]):
-                        value = "**/" + value
-                    if value.endswith("/"):
-                        value += "**"
+            if keyword in ["gitdir", "gitdir/i"]:
+                value = osp.expanduser(value)
 
-                    # Ensure that glob is always case insensitive if required.
-                    if keyword.endswith("/i"):
-                        value = re.sub(
-                            r"[a-zA-Z]",
-                            lambda m: "[{}{}]".format(
-                                m.group().lower(),
-                                m.group().upper()
-                            ),
-                            value
-                        )
+                if not any(value.startswith(s) for s in ["./", "/"]):
+                    value = "**/" + value
+                if value.endswith("/"):
+                    value += "**"
 
-                    if fnmatch.fnmatchcase(self._repo.git_dir, value):
-                        paths += self.items(section)
+                # Ensure that glob is always case insensitive if required.
+                if keyword.endswith("/i"):
+                    value = re.sub(
+                        r"[a-zA-Z]",
+                        lambda m: "[{}{}]".format(
+                            m.group().lower(),
+                            m.group().upper()
+                        ),
+                        value
+                    )
 
-                elif keyword == "onbranch":
-                    if fnmatch.fnmatchcase(self._repo.active_branch.name, value):
-                        paths += self.items(section)
+                if fnmatch.fnmatchcase(self._repo.git_dir, value):
+                    paths += self.items(section)
+
+            elif keyword == "onbranch":
+                if fnmatch.fnmatchcase(self._repo.active_branch.name, value):
+                    paths += self.items(section)
 
         return paths
 
