@@ -467,20 +467,24 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
                 keyword = match.group(1)
                 value = match.group(2).strip()
 
-                if keyword == "gitdir":
-                    value = osp.expanduser(value)
-                    if fnmatch.fnmatchcase(self._repo.git_dir, value):
-                        paths += self.items(section)
-
-                elif keyword == "gitdir/i":
+                if keyword in ["gitdir", "gitdir/i"]:
                     value = osp.expanduser(value)
 
-                    # Ensure that glob is always case insensitive.
-                    value = re.sub(
-                        r"[a-zA-Z]",
-                        lambda m: f"[{m.group().lower()}{m.group().upper()}]",
-                        value
-                    )
+                    if not any(value.startswith(s) for s in ["./", "/"]):
+                        value = "**/" + value
+                    if value.endswith("/"):
+                        value += "**"
+
+                    # Ensure that glob is always case insensitive if required.
+                    if keyword.endswith("/i"):
+                        value = re.sub(
+                            r"[a-zA-Z]",
+                            lambda m: "[{}{}]".format(
+                                m.group().lower(),
+                                m.group().upper()
+                            ),
+                            value
+                        )
 
                     if fnmatch.fnmatchcase(self._repo.git_dir, value):
                         paths += self.items(section)

@@ -299,6 +299,14 @@ class TestBase(TestCase):
             assert not config._has_includes()
             assert config._included_paths() == []
 
+        # Ensure that config is included if path in hierarchy.
+        with open(path1, "w") as stream:
+            stream.write(template.format("gitdir", "target1/", path2))
+
+        with GitConfigParser(path1, repo=repo) as config:
+            assert config._has_includes()
+            assert config._included_paths() == [("path", path2)]
+
     @with_rw_directory
     def test_conditional_includes_from_branch_name(self, rw_dir):
         # Initiate mocked branch
