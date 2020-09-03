@@ -43,6 +43,7 @@ CONFIG_LEVELS = ("system", "user", "global", "repository")
 # https://git-scm.com/docs/git-config#_conditional_includes
 CONDITIONAL_INCLUDE_REGEXP = re.compile(r"(?<=includeIf )\"(gitdir|gitdir/i|onbranch):(.+)\"")
 
+
 class MetaParserBuilder(abc.ABCMeta):
 
     """Utlity class wrapping base-class methods into decorators that assure read-only properties"""
