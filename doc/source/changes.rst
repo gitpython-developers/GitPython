@@ -2,6 +2,16 @@
 Changelog
 =========
 
+3.1.8
+=====
+
+* support for 'includeIf' in git configuration files
+* tests are now excluded from the package, making it conisderably smaller
+
+
+See the following for more details:
+https://github.com/gitpython-developers/gitpython/milestone/40?closed=1* 
+
 
 3.1.7
 =====
