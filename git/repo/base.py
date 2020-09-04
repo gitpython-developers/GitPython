@@ -452,7 +452,7 @@ class Repo(object):
             files = [self._get_config_path(f) for f in self.config_level]
         else:
             files = [self._get_config_path(config_level)]
-        return GitConfigParser(files, read_only=True)
+        return GitConfigParser(files, read_only=True, repo=self)
 
     def config_writer(self, config_level="repository"):
         """
@@ -467,7 +467,7 @@ class Repo(object):
             system = system wide configuration file
             global = user level configuration file
             repository = configuration file for this repostory only"""
-        return GitConfigParser(self._get_config_path(config_level), read_only=False)
+        return GitConfigParser(self._get_config_path(config_level), read_only=False, repo=self)
 
     def commit(self, rev=None):
         """The Commit object for the specified revision

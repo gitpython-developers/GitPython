@@ -13,6 +13,7 @@ from io import IOBase
 import logging
 import os
 import re
+import fnmatch
 from collections import OrderedDict
 
 from git.compat import (
@@ -37,6 +38,10 @@ log.addHandler(logging.NullHandler())
 # invariants
 # represents the configuration level of a configuration file
 CONFIG_LEVELS = ("system", "user", "global", "repository")
+
+# Section pattern to detect conditional includes.
+# https://git-scm.com/docs/git-config#_conditional_includes
+CONDITIONAL_INCLUDE_REGEXP = re.compile(r"(?<=includeIf )\"(gitdir|gitdir/i|onbranch):(.+)\"")
 
 
 class MetaParserBuilder(abc.ABCMeta):
@@ -247,7 +252,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
     # list of RawConfigParser methods able to change the instance
     _mutating_methods_ = ("add_section", "remove_section", "remove_option", "set")
 
-    def __init__(self, file_or_files=None, read_only=True, merge_includes=True, config_level=None):
+    def __init__(self, file_or_files=None, read_only=True, merge_includes=True, config_level=None, repo=None):
         """Initialize a configuration reader to read the given file_or_files and to
         possibly allow changes to it by setting read_only False
 
@@ -262,7 +267,10 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
         :param merge_includes: if True, we will read files mentioned in [include] sections and merge their
             contents into ours. This makes it impossible to write back an individual configuration file.
             Thus, if you want to modify a single configuration file, turn this off to leave the original
-            dataset unaltered when reading it."""
+            dataset unaltered when reading it.
+        :param repo: Reference to repository to use if [includeIf] sections are found in configuration files.
+
+        """
         cp.RawConfigParser.__init__(self, dict_type=_OMD)
 
         # Used in python 3, needs to stay in sync with sections for underlying implementation to work
@@ -284,6 +292,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
         self._dirty = False
         self._is_initialized = False
         self._merge_includes = merge_includes
+        self._repo = repo
         self._lock = None
         self._acquire_lock()
 
@@ -443,7 +452,57 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
             raise e
 
     def _has_includes(self):
-        return self._merge_includes and self.has_section('include')
+        return self._merge_includes and len(self._included_paths())
+
+    def _included_paths(self):
+        """Return all paths that must be included to configuration.
+        """
+        paths = []
+
+        for section in self.sections():
+            if section == "include":
+                paths += self.items(section)
+
+            match = CONDITIONAL_INCLUDE_REGEXP.search(section)
+            if match is None or self._repo is None:
+                continue
+
+            keyword = match.group(1)
+            value = match.group(2).strip()
+
+            if keyword in ["gitdir", "gitdir/i"]:
+                value = osp.expanduser(value)
+
+                if not any(value.startswith(s) for s in ["./", "/"]):
+                    value = "**/" + value
+                if value.endswith("/"):
+                    value += "**"
+
+                # Ensure that glob is always case insensitive if required.
+                if keyword.endswith("/i"):
+                    value = re.sub(
+                        r"[a-zA-Z]",
+                        lambda m: "[{}{}]".format(
+                            m.group().lower(),
+                            m.group().upper()
+                        ),
+                        value
+                    )
+
+                if fnmatch.fnmatchcase(self._repo.git_dir, value):
+                    paths += self.items(section)
+
+            elif keyword == "onbranch":
+                try:
+                    branch_name = self._repo.active_branch.name
+                except TypeError:
+                    # Ignore section if active branch cannot be retrieved.
+                    continue
+
+                if fnmatch.fnmatchcase(branch_name, value):
+                    paths += self.items(section)
+
+        return paths
 
     def read(self):
         """Reads the data stored in the files we have been initialized with. It will
@@ -482,7 +541,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
             # Read includes and append those that we didn't handle yet
             # We expect all paths to be normalized and absolute (and will assure that is the case)
             if self._has_includes():
-                for _, include_path in self.items('include'):
+                for _, include_path in self._included_paths():
                     if include_path.startswith('~'):
                         include_path = osp.expanduser(include_path)
                     if not osp.isabs(include_path):
