@@ -142,18 +142,18 @@ This script shows how to verify the tarball was indeed created by the authors of
 this project:
 
 ```
-curl https://pypi.python.org/packages/5b/38/0433c06feebbfbb51d644129dbe334031c33d55af0524326266f847ae907/GitPython-2.1.8-py2.py3-none-any.whl#md5=6b73ae86ee2dbab6da8652b2d875013a  > gitpython.whl
-curl https://pypi.python.org/packages/5b/38/0433c06feebbfbb51d644129dbe334031c33d55af0524326266f847ae907/GitPython-2.1.8-py2.py3-none-any.whl.asc > gitpython-signature.asc
+curl https://files.pythonhosted.org/packages/09/bc/ae32e07e89cc25b9e5c793d19a1e5454d30a8e37d95040991160f942519e/GitPython-3.1.8-py3-none-any.whl > gitpython.whl
+curl https://files.pythonhosted.org/packages/09/bc/ae32e07e89cc25b9e5c793d19a1e5454d30a8e37d95040991160f942519e/GitPython-3.1.8-py3-none-any.whl.asc >  gitpython-signature.asc
 gpg --verify gitpython-signature.asc gitpython.whl
 ```
 
 which outputs
 
 ```
-gpg: Signature made Mon Dec 11 17:34:17 2017 CET
-gpg:                using RSA key C3BC52BD76E2C23BAC6EC06A665F99FA9D99966C
-gpg:                issuer "byronimo@gmail.com"
-gpg: Good signature from "Sebastian Thiel (I do trust in Rust!) <byronimo@gmail.com>" [ultimate]
+gpg: Signature made Fr  4 Sep 10:04:50 2020 CST
+gpg:                using RSA key 27C50E7F590947D7273A741E85194C08421980C9
+gpg: Good signature from "Sebastian Thiel (YubiKey USB-C) <byronimo@gmail.com>" [ultimate]
+gpg:                 aka "Sebastian Thiel (In Rust I trust) <sebastian.thiel@icloud.com>" [ultimate]
 ```
 
 You can verify that the keyid indeed matches the release-signature key provided in this
@@ -173,7 +173,7 @@ If you would like to trust it permanently, you can import and sign it:
 
 ```
 gpg --import ./release-verification-key.asc
-gpg --edit-key 88710E60
+gpg --edit-key 4C08421980C9
 
 > sign
 > save
