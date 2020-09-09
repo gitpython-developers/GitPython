@@ -155,7 +155,7 @@ class Tutorials(TestBase):
 
         # prepare a merge
         master = cloned_repo.heads.master                         # right-hand side is ahead of us, in the future
-        merge_base = cloned_repo.merge_base(new_branch, master)   # allwos for a three-way merge
+        merge_base = cloned_repo.merge_base(new_branch, master)   # allows for a three-way merge
         cloned_repo.index.merge_tree(master, base=merge_base)     # write the merge result into index
         cloned_repo.index.commit("Merged past and now into future ;)",
                                  parent_commits=(new_branch.commit, master.commit))
