@@ -357,6 +357,20 @@ class TestRepo(TestBase):
         assert self.rorepo.is_dirty() is False
         self.rorepo._bare = orig_val
 
+    def test_is_dirty_pathspec(self):
+        self.rorepo._bare = False
+        for index in (0, 1):
+            for working_tree in (0, 1):
+                for untracked_files in (0, 1):
+                    assert self.rorepo.is_dirty(index, working_tree, untracked_files, path=':!foo') in (True, False)
+                # END untracked files
+            # END working tree
+        # END index
+        orig_val = self.rorepo._bare
+        self.rorepo._bare = True
+        assert self.rorepo.is_dirty() is False
+        self.rorepo._bare = orig_val
+
     @with_rw_repo('HEAD')
     def test_is_dirty_with_path(self, rwrepo):
         assert rwrepo.is_dirty(path="git") is False
