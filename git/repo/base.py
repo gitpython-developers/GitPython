@@ -639,7 +639,7 @@ class Repo(object):
         if not submodules:
             default_args.append('--ignore-submodules')
         if path:
-            default_args.append(path)
+            default_args.extend(["--", path])
         if index:
             # diff index against HEAD
             if osp.isfile(self.index.path) and \
