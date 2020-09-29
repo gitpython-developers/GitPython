@@ -702,7 +702,7 @@ class Repo(object):
         Doing so using the "git check-ignore" method.
 
         :param paths: List of paths to check whether they are ignored or not
-        :return: sublist of those paths which are ignored
+        :return: subset of those paths which are ignored
         """
         try:
             proc = self.git.check_ignore(*paths)
