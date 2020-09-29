@@ -2,6 +2,7 @@
 *.swp
 *~
 .venv/
+venv/
 /*.egg-info
 /lib/GitPython.egg-info
 cover/
