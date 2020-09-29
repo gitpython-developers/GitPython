@@ -697,12 +697,12 @@ class Repo(object):
         finalize_process(proc)
         return untracked_files
 
-    def get_ignored(self, *paths):
+    def ignored(self, *paths):
         """Checks if paths are ignored via .gitignore
         Doing so using the "git check-ignore" method.
 
         :param paths: List of paths to check whether they are ignored or not
-        :return: sublist of ignored paths
+        :return: sublist of those paths which are ignored
         """
         try:
             proc = self.git.check_ignore(*paths)
