@@ -2,6 +2,13 @@
 Changelog
 =========
 
+3.1.9
+=====
+
+See the following for details:
+https://github.com/gitpython-developers/gitpython/milestone/41?closed=1* 
+
+
 3.1.8
 =====
 
