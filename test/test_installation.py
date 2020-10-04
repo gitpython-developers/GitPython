@@ -28,8 +28,10 @@ class TestInstallation(TestBase):
         self.assertEqual(0, result.returncode, msg=result.stderr or result.stdout or "Can't build - setup.py failed")
         result = subprocess.run([self.python, '-c', 'import git'], stdout=subprocess.PIPE, cwd=self.sources)
         self.assertEqual(0, result.returncode, msg=result.stderr or result.stdout or "Selftest failed")
-        result = subprocess.run([self.python, '-c', 'import sys;import git; print(sys.path)'], stdout=subprocess.PIPE, cwd=self.sources)
-        syspath = result.stdout.decode('utf-8').splitlines()[0] 
+        result = subprocess.run([self.python, '-c', 'import sys;import git; print(sys.path)'],
+                                stdout=subprocess.PIPE, cwd=self.sources)
+        syspath = result.stdout.decode('utf-8').splitlines()[0]
         syspath = ast.literal_eval(syspath)
-        self.assertEqual('', syspath[0], msg='Failed to follow the conventions for https://docs.python.org/3/library/sys.html#sys.path')
+        self.assertEqual('', syspath[0],
+                         msg='Failed to follow the conventions for https://docs.python.org/3/library/sys.html#sys.path')
         self.assertTrue(syspath[1].endswith('gitdb'), msg='Failed to add gitdb to sys.path')
