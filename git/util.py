@@ -582,8 +582,16 @@ class Actor(object):
     @classmethod
     def _main_actor(cls, env_name, env_email, config_reader=None):
         actor = Actor('', '')
-        default_email = get_user_id()
-        default_name = default_email.split('@')[0]
+        user_id = None  # We use this to avoid multiple calls to getpass.getuser()
+
+        def default_email():
+            nonlocal user_id
+            if not user_id:
+                user_id = get_user_id()
+            return user_id
+
+        def default_name():
+            default_email().split('@')[0]
 
         for attr, evar, cvar, default in (('name', env_name, cls.conf_name, default_name),
                                           ('email', env_email, cls.conf_email, default_email)):
@@ -592,10 +600,10 @@ class Actor(object):
                 setattr(actor, attr, val)
             except KeyError:
                 if config_reader is not None:
-                    setattr(actor, attr, config_reader.get_value('user', cvar, default))
+                    setattr(actor, attr, config_reader.get_value('user', cvar, default()))
                 # END config-reader handling
                 if not getattr(actor, attr):
-                    setattr(actor, attr, default)
+                    setattr(actor, attr, default())
             # END handle name
         # END for each item to retrieve
         return actor

@@ -4,10 +4,11 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
+import os
 import pickle
 import tempfile
 import time
-from unittest import skipIf
+from unittest import mock, skipIf
 from datetime import datetime
 
 import ddt
@@ -214,6 +215,28 @@ class TestUtils(TestBase):
             self.assertIsInstance(Actor.committer(cr), Actor)
             self.assertIsInstance(Actor.author(cr), Actor)
         # END assure config reader is handled
+
+    @mock.patch("getpass.getuser")
+    def test_actor_get_uid_laziness_not_called(self, mock_get_uid):
+        env = {
+            "GIT_AUTHOR_NAME": "John Doe",
+            "GIT_AUTHOR_EMAIL": "jdoe@example.com",
+            "GIT_COMMITTER_NAME": "Jane Doe",
+            "GIT_COMMITTER_EMAIL": "jane@example.com",
+        }
+        os.environ.update(env)
+        for cr in (None, self.rorepo.config_reader()):
+            Actor.committer(cr)
+            Actor.author(cr)
+        self.assertFalse(mock_get_uid.called)
+
+    @mock.patch("getpass.getuser")
+    def test_actor_get_uid_laziness_called(self, mock_get_uid):
+        for cr in (None, self.rorepo.config_reader()):
+            Actor.committer(cr)
+            Actor.author(cr)
+        self.assertTrue(mock_get_uid.called)
+        self.assertEqual(mock_get_uid.call_count, 4)
 
     def test_actor_from_string(self):
         self.assertEqual(Actor._from_string("name"), Actor("name", None))
