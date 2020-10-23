@@ -2,6 +2,14 @@
 Changelog
 =========
 
+3.1.11
+======
+
+Fixes regression of 3.1.10.
+
+See the following for details:
+https://github.com/gitpython-developers/gitpython/milestone/43?closed=1* 
+
 3.1.10
 ======
 
