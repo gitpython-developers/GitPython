@@ -591,7 +591,7 @@ class Actor(object):
             return user_id
 
         def default_name():
-            default_email().split('@')[0]
+            return default_email().split('@')[0]
 
         for attr, evar, cvar, default in (('name', env_name, cls.conf_name, default_name),
                                           ('email', env_email, cls.conf_email, default_email)):
