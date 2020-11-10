@@ -275,7 +275,7 @@ class Diff(object):
         # we need to overwrite "repo" to the corresponding submodule's repo instead
         if repo and a_rawpath:
             for submodule in repo.submodules:
-                if submodule.path == a_rawpath.decode("utf-8"):
+                if submodule.path == a_rawpath.decode(defenc, 'replace'):
                     if submodule.module_exists():
                         repo = submodule.module()
                     break
