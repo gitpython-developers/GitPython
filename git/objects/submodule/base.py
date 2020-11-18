@@ -309,7 +309,7 @@ class Submodule(IndexObject, Iterable, Traversable):
     #{ Edit Interface
 
     @classmethod
-    def add(cls, repo, name, path, url=None, branch=None, no_checkout=False, depth=None):
+    def add(cls, repo, name, path, url=None, branch=None, no_checkout=False, depth=None, env=None):
         """Add a new submodule to the given repository. This will alter the index
         as well as the .gitmodules file, but will not create a new commit.
         If the submodule already exists, no matter if the configuration differs
@@ -336,6 +336,12 @@ class Submodule(IndexObject, Iterable, Traversable):
             no checkout will be performed
         :param depth: Create a shallow clone with a history truncated to the
             specified number of commits.
+        :param env: Optional dictionary containing the desired environment variables.
+            Note: Provided variables will be used to update the execution
+            environment for `git`. If some variable is not specified in `env`
+            and is defined in `os.environ`, value from `os.environ` will be used.
+            If you want to unset some variable, consider providing empty string
+            as its value.
         :return: The newly created submodule instance
         :note: works atomically, such that no change will be done if the repository
             update fails for instance"""
@@ -404,7 +410,7 @@ class Submodule(IndexObject, Iterable, Traversable):
                     raise ValueError("depth should be an integer")
 
             # _clone_repo(cls, repo, url, path, name, **kwargs):
-            mrepo = cls._clone_repo(repo, url, path, name, **kwargs)
+            mrepo = cls._clone_repo(repo, url, path, name, env=env, **kwargs)
         # END verify url
 
         ## See #525 for ensuring git urls in config-files valid under Windows.
@@ -436,7 +442,7 @@ class Submodule(IndexObject, Iterable, Traversable):
         return sm
 
     def update(self, recursive=False, init=True, to_latest_revision=False, progress=None, dry_run=False,
-               force=False, keep_going=False):
+               force=False, keep_going=False, env=None):
         """Update the repository of this submodule to point to the checkout
         we point at with the binsha of this instance.
 
@@ -461,6 +467,12 @@ class Submodule(IndexObject, Iterable, Traversable):
             Unless dry_run is set as well, keep_going could cause subsequent/inherited errors you wouldn't see
             otherwise.
             In conjunction with dry_run, it can be useful to anticipate all errors when updating submodules
+        :param env: Optional dictionary containing the desired environment variables.
+            Note: Provided variables will be used to update the execution
+            environment for `git`. If some variable is not specified in `env`
+            and is defined in `os.environ`, value from `os.environ` will be used.
+            If you want to unset some variable, consider providing empty string
+            as its value.
         :note: does nothing in bare repositories
         :note: method is definitely not atomic if recurisve is True
         :return: self"""
@@ -527,7 +539,7 @@ class Submodule(IndexObject, Iterable, Traversable):
                 progress.update(BEGIN | CLONE, 0, 1, prefix + "Cloning url '%s' to '%s' in submodule %r" %
                                 (self.url, checkout_module_abspath, self.name))
                 if not dry_run:
-                    mrepo = self._clone_repo(self.repo, self.url, self.path, self.name, n=True)
+                    mrepo = self._clone_repo(self.repo, self.url, self.path, self.name, n=True, env=env)
                 # END handle dry-run
                 progress.update(END | CLONE, 0, 1, prefix + "Done cloning to %s" % checkout_module_abspath)
 
