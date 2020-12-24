@@ -466,7 +466,7 @@ class Repo(object):
             One of the following values
             system = system wide configuration file
             global = user level configuration file
-            repository = configuration file for this repostory only"""
+            repository = configuration file for this repository only"""
         return GitConfigParser(self._get_config_path(config_level), read_only=False, repo=self)
 
     def commit(self, rev=None):
