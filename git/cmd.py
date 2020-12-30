@@ -772,6 +772,7 @@ class Git(LazyMixin):
         status = 0
         stdout_value = b''
         stderr_value = b''
+        newline = "\n" if universal_newlines else b"\n"
         try:
             if output_stream is None:
                 if kill_after_timeout:
@@ -783,9 +784,9 @@ class Git(LazyMixin):
                         stderr_value = ('Timeout: the command "%s" did not complete in %d '
                                         'secs.' % (" ".join(command), kill_after_timeout)).encode(defenc)
                 # strip trailing "\n"
-                if stdout_value.endswith(b"\n"):
+                if stdout_value.endswith(newline):
                     stdout_value = stdout_value[:-1]
-                if stderr_value.endswith(b"\n"):
+                if stderr_value.endswith(newline):
                     stderr_value = stderr_value[:-1]
                 status = proc.returncode
             else:
@@ -794,7 +795,7 @@ class Git(LazyMixin):
                 stdout_value = proc.stdout.read()
                 stderr_value = proc.stderr.read()
                 # strip trailing "\n"
-                if stderr_value.endswith(b"\n"):
+                if stderr_value.endswith(newline):
                     stderr_value = stderr_value[:-1]
                 status = proc.wait()
             # END stdout handling
