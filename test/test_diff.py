@@ -26,6 +26,10 @@ from test.lib import with_rw_directory
 import os.path as osp
 
 
+def to_raw(input):
+    return input.replace(b'\t', b'\x00')
+
+
 @ddt.ddt
 class TestDiff(TestBase):
 
@@ -112,7 +116,7 @@ class TestDiff(TestBase):
         self.assertEqual(diff.raw_rename_to, b'm\xc3\xbcller')
         assert isinstance(str(diff), str)
 
-        output = StringProcessAdapter(fixture('diff_rename_raw'))
+        output = StringProcessAdapter(to_raw(fixture('diff_rename_raw')))
         diffs = Diff._index_from_raw_format(self.rorepo, output)
         self.assertEqual(len(diffs), 1)
         diff = diffs[0]
@@ -137,7 +141,7 @@ class TestDiff(TestBase):
         self.assertTrue(diff.b_path, 'test2.txt')
         assert isinstance(str(diff), str)
 
-        output = StringProcessAdapter(fixture('diff_copied_mode_raw'))
+        output = StringProcessAdapter(to_raw(fixture('diff_copied_mode_raw')))
         diffs = Diff._index_from_raw_format(self.rorepo, output)
         self.assertEqual(len(diffs), 1)
         diff = diffs[0]
@@ -165,7 +169,7 @@ class TestDiff(TestBase):
         self.assertIsNotNone(diff.new_file)
         assert isinstance(str(diff), str)
 
-        output = StringProcessAdapter(fixture('diff_change_in_type_raw'))
+        output = StringProcessAdapter(to_raw(fixture('diff_change_in_type_raw')))
         diffs = Diff._index_from_raw_format(self.rorepo, output)
         self.assertEqual(len(diffs), 1)
         diff = diffs[0]
@@ -175,7 +179,7 @@ class TestDiff(TestBase):
         self.assertEqual(len(list(diffs.iter_change_type('T'))), 1)
 
     def test_diff_of_modified_files_not_added_to_the_index(self):
-        output = StringProcessAdapter(fixture('diff_abbrev-40_full-index_M_raw_no-color'))
+        output = StringProcessAdapter(to_raw(fixture('diff_abbrev-40_full-index_M_raw_no-color')))
         diffs = Diff._index_from_raw_format(self.rorepo, output)
 
         self.assertEqual(len(diffs), 1, 'one modification')
