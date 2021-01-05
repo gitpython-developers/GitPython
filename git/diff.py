@@ -108,6 +108,7 @@ class Diffable(object):
             args.append("-p")
         else:
             args.append("--raw")
+            args.append("-z")
 
         # in any way, assure we don't see colored output,
         # fixes https://github.com/gitpython-developers/GitPython/issues/172
@@ -483,7 +484,7 @@ class Diff(object):
             if not line.startswith(":"):
                 return
 
-            meta, _, path = line[1:].partition('\t')
+            meta, _, path = line[1:].partition('\x00')
             old_mode, new_mode, a_blob_id, b_blob_id, _change_type = meta.split(None, 4)
             # Change type can be R100
             # R: status letter
