@@ -511,11 +511,11 @@ class Diff(object):
                 new_file = True
             elif change_type == 'C':
                 copied_file = True
-                a_path, b_path = path.split('\t', 1)
+                a_path, b_path = path.split('\x00', 1)
                 a_path = a_path.encode(defenc)
                 b_path = b_path.encode(defenc)
             elif change_type == 'R':
-                a_path, b_path = path.split('\t', 1)
+                a_path, b_path = path.split('\x00', 1)
                 a_path = a_path.encode(defenc)
                 b_path = b_path.encode(defenc)
                 rename_from, rename_to = a_path, b_path
