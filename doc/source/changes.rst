@@ -2,26 +2,32 @@
 Changelog
 =========
 
+3.1.12
+======
+
+See the following for details:
+https://github.com/gitpython-developers/gitpython/milestone/44?closed=1 
+
 3.1.11
 ======
 
 Fixes regression of 3.1.10.
 
 See the following for details:
-https://github.com/gitpython-developers/gitpython/milestone/43?closed=1* 
+https://github.com/gitpython-developers/gitpython/milestone/43?closed=1 
 
 3.1.10
 ======
 
 See the following for details:
-https://github.com/gitpython-developers/gitpython/milestone/42?closed=1* 
+https://github.com/gitpython-developers/gitpython/milestone/42?closed=1 
 
 
 3.1.9
 =====
 
 See the following for details:
-https://github.com/gitpython-developers/gitpython/milestone/41?closed=1* 
+https://github.com/gitpython-developers/gitpython/milestone/41?closed=1 
 
 
 3.1.8
@@ -32,7 +38,7 @@ https://github.com/gitpython-developers/gitpython/milestone/41?closed=1*
 
 
 See the following for more details:
-https://github.com/gitpython-developers/gitpython/milestone/40?closed=1* 
+https://github.com/gitpython-developers/gitpython/milestone/40?closed=1 
 
 
 3.1.7
@@ -58,13 +64,13 @@ https://github.com/gitpython-developers/gitpython/milestone/40?closed=1*
 * package size was reduced significantly not placing tests into the package anymore.
 
 See the following for details:
-https://github.com/gitpython-developers/gitpython/milestone/39?closed=1* 
+https://github.com/gitpython-developers/gitpython/milestone/39?closed=1 
 
 3.1.3
 =====
 
 See the following for details:
-https://github.com/gitpython-developers/gitpython/milestone/38?closed=1* 
+https://github.com/gitpython-developers/gitpython/milestone/38?closed=1 
 
 3.1.2
 =====
