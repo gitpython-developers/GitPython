@@ -1028,6 +1028,9 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         if force:
             args.append("--force")
 
+        failed_files = []
+        failed_reasons = []
+        unknown_lines = []
         def handle_stderr(proc, iter_checked_out_files):
             stderr = proc.stderr.read()
             if not stderr:
@@ -1035,9 +1038,6 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             # line contents:
             stderr = stderr.decode(defenc)
             # git-checkout-index: this already exists
-            failed_files = []
-            failed_reasons = []
-            unknown_lines = []
             endings = (' already exists', ' is not in the cache', ' does not exist at stage', ' is unmerged')
             for line in stderr.splitlines():
                 if not line.startswith("git checkout-index: ") and not line.startswith("git-checkout-index: "):
@@ -1130,7 +1130,13 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
                     checked_out_files.append(co_path)
                 # END path is a file
             # END for each path
-            self._flush_stdin_and_wait(proc, ignore_stdout=True)
+            try:
+                self._flush_stdin_and_wait(proc, ignore_stdout=True)
+            except GitCommandError:
+                # Without parsing stdout we don't know what failed.
+                raise CheckoutError(
+                    "Some files could not be checked out from the index, probably because they didn't exist.",
+                    failed_files, [], failed_reasons)
 
             handle_stderr(proc, checked_out_files)
             return checked_out_files
