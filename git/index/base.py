@@ -1031,6 +1031,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         failed_files = []
         failed_reasons = []
         unknown_lines = []
+
         def handle_stderr(proc, iter_checked_out_files):
             stderr = proc.stderr.read()
             if not stderr:
