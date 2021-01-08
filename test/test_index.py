@@ -385,14 +385,16 @@ class TestIndex(TestBase):
         try:
             index.checkout(test_file)
         except CheckoutError as e:
-            self.assertEqual(len(e.failed_files), 1)
-            self.assertEqual(e.failed_files[0], osp.basename(test_file))
-            self.assertEqual(len(e.failed_files), len(e.failed_reasons))
-            self.assertIsInstance(e.failed_reasons[0], str)
-            self.assertEqual(len(e.valid_files), 0)
-            with open(test_file, 'rb') as fd:
-                s = fd.read()
-            self.assertTrue(s.endswith(append_data), s)
+            # detailed exceptions are only possible in older git versions
+            if rw_repo.git._version_info < (2, 29):
+                self.assertEqual(len(e.failed_files), 1)
+                self.assertEqual(e.failed_files[0], osp.basename(test_file))
+                self.assertEqual(len(e.failed_files), len(e.failed_reasons))
+                self.assertIsInstance(e.failed_reasons[0], str)
+                self.assertEqual(len(e.valid_files), 0)
+                with open(test_file, 'rb') as fd:
+                    s = fd.read()
+                self.assertTrue(s.endswith(append_data), s)
         else:
             raise AssertionError("Exception CheckoutError not thrown")
 
