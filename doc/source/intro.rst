@@ -32,7 +32,7 @@ installed, just run the following from the command-line:
 
 .. sourcecode:: none
 
-    # pip install gitpython
+    # pip install GitPython
 
 This command will download the latest version of GitPython from the
 `Python Package Index <http://pypi.python.org/pypi/GitPython>`_ and install it
