@@ -92,6 +92,7 @@ setup(
     description="Python Git Library",
     author="Sebastian Thiel, Michael Trier",
     author_email="byronimo@gmail.com, mtrier@gmail.com",
+    license="BSD",
     url="https://github.com/gitpython-developers/GitPython",
     packages=find_packages(exclude=("test.*")),
     include_package_data=True,
