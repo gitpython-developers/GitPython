@@ -22,8 +22,6 @@ from git.util import (
     join_path,
 )
 
-import os.path as osp
-
 from .config import (
     SectionConstraint,
     cp,
@@ -685,7 +683,8 @@ class Remote(LazyMixin, Iterable):
                     continue
 
         # read head information
-        with open(osp.join(self.repo.common_dir, 'FETCH_HEAD'), 'rb') as fp:
+        fetch_head = SymbolicReference(self.repo, "FETCH_HEAD")
+        with open(fetch_head.abspath, 'rb') as fp:
             fetch_head_info = [line.decode(defenc) for line in fp.readlines()]
 
         l_fil = len(fetch_info_lines)
