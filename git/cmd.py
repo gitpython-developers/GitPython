@@ -785,7 +785,9 @@ class Git(LazyMixin):
                     watchdog.cancel()
                     if kill_check.isSet():
                         stderr_value = ('Timeout: the command "%s" did not complete in %d '
-                                        'secs.' % (" ".join(command), kill_after_timeout)).encode(defenc)
+                                        'secs.' % (" ".join(command), kill_after_timeout))
+                        if not universal_newlines:
+                            stderr_value = stderr_value.encode(defenc)
                 # strip trailing "\n"
                 if stdout_value.endswith(newline):
                     stdout_value = stdout_value[:-1]
