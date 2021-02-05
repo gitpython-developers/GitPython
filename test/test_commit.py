@@ -199,6 +199,13 @@ class TestCommit(TestCommitSerialization):
         less_ltd_commits = list(Commit.iter_items(self.rorepo, 'master', paths=('CHANGES', 'AUTHORS')))
         assert len(ltd_commits) < len(less_ltd_commits)
 
+        class Child(Commit):
+            def __init__(self, *args, **kwargs):
+                super(Child, self).__init__(*args, **kwargs)
+
+        child_commits = list(Child.iter_items(self.rorepo, 'master', paths=('CHANGES', 'AUTHORS')))
+        assert type(child_commits[0]) == Child
+
     def test_iter_items(self):
         # pretty not allowed
         self.assertRaises(ValueError, Commit.iter_items, self.rorepo, 'master', pretty="raw")

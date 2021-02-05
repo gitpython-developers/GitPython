@@ -269,7 +269,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
             # END handle extra info
 
             assert len(hexsha) == 40, "Invalid line: %s" % hexsha
-            yield Commit(repo, hex_to_bin(hexsha))
+            yield cls(repo, hex_to_bin(hexsha))
         # END for each line in stream
         # TODO: Review this - it seems process handling got a bit out of control
         # due to many developers trying to fix the open file handles issue
