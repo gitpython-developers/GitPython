@@ -1,12 +1,12 @@
 =========
 Changelog
+=========
 
 3.1.12
 ======
 
 See the following for details:
 https://github.com/gitpython-developers/gitpython/milestone/45?closed=1 
-=========
 
 3.1.12
 ======
