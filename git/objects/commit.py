@@ -136,6 +136,41 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
     def _get_intermediate_items(cls, commit):
         return commit.parents
 
+    @classmethod
+    def _calculate_sha_(cls, repo, commit):
+        '''Calculate the sha of a commit.
+
+        :param repo: Repo object the commit should be part of
+        :param commit: Commit object for which to generate the sha
+        '''
+
+        stream = BytesIO()
+        commit._serialize(stream)
+        streamlen = stream.tell()
+        stream.seek(0)
+
+        istream = repo.odb.store(IStream(cls.type, streamlen, stream))
+        return istream.binsha
+
+    def replace(self, **kwargs):
+        '''Create new commit object from existing commit object.
+
+        Any values provided as keyword arguments will replace the
+        corresponding attribute in the new object.
+        '''
+
+        attrs = {k: getattr(self, k) for k in self.__slots__}
+
+        for attrname in kwargs:
+            if attrname not in self.__slots__:
+                raise ValueError('invalid attribute name')
+
+        attrs.update(kwargs)
+        new_commit = self.__class__(self.repo, self.NULL_BIN_SHA, **attrs)
+        new_commit.binsha = self._calculate_sha_(self.repo, new_commit)
+
+        return new_commit
+
     def _set_cache_(self, attr):
         if attr in Commit.__slots__:
             # read the data in a chunk, its faster - then provide a file wrapper
@@ -375,13 +410,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
                          committer, committer_time, committer_offset,
                          message, parent_commits, conf_encoding)
 
-        stream = BytesIO()
-        new_commit._serialize(stream)
-        streamlen = stream.tell()
-        stream.seek(0)
-
-        istream = repo.odb.store(IStream(cls.type, streamlen, stream))
-        new_commit.binsha = istream.binsha
+        new_commit.binsha = cls._calculate_sha_(repo, new_commit)
 
         if head:
             # need late import here, importing git at the very beginning throws
