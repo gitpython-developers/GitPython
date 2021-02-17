@@ -101,6 +101,26 @@ class TestCommit(TestCommitSerialization):
         assert isinstance(commit.author_tz_offset, int) and isinstance(commit.committer_tz_offset, int)
         self.assertEqual(commit.message, "Added missing information to docstrings of commit and stats module\n")
 
+    def test_replace_no_changes(self):
+        old_commit = self.rorepo.commit('2454ae89983a4496a445ce347d7a41c0bb0ea7ae')
+        new_commit = old_commit.replace()
+
+        for attr in old_commit.__slots__:
+            assert getattr(new_commit, attr) == getattr(old_commit, attr)
+
+    def test_replace_new_sha(self):
+        commit = self.rorepo.commit('2454ae89983a4496a445ce347d7a41c0bb0ea7ae')
+        new_commit = commit.replace(message='Added replace method')
+
+        assert new_commit.hexsha == 'fc84cbecac1bd4ba4deaac07c1044889edd536e6'
+        assert new_commit.message == 'Added replace method'
+
+    def test_replace_invalid_attribute(self):
+        commit = self.rorepo.commit('2454ae89983a4496a445ce347d7a41c0bb0ea7ae')
+
+        with self.assertRaises(ValueError):
+            commit.replace(badattr='This will never work')
+
     def test_stats(self):
         commit = self.rorepo.commit('33ebe7acec14b25c5f84f35a664803fcab2f7781')
         stats = commit.stats
