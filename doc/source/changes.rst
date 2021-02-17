@@ -2,7 +2,13 @@
 Changelog
 =========
 
-3.1.12
+3.1.??
+======
+
+* git.Commit objects now have a ``replace`` method that will return a
+  copy of the commit with modified attributes.
+
+3.1.13
 ======
 
 See the following for details:
