@@ -1,0 +1,18 @@
+PermissionError: [WinError 32] The process cannot access the file because it is being used by another process: 
+'C:\\Users\\yobmod\\AppData\\Local\\Temp\\non_bare_test_root_modulebicpd1jd\\git\\ext\\gitdb' -> 
+'C:\\Users\\yobmod\\AppData\\Local\\Temp\\non_bare_test_root_modulebicpd1jd\\path\\prefix\\git\\ext\\gitdb'
+
+======================================================================
+FAIL: test_conditional_includes_from_git_dir (test.test_config.TestBase)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "c:\dev\gitpython\test\lib\helper.py", line 91, in wrapper
+    return func(self, path)
+  File "c:\dev\gitpython\test\test_config.py", line 267, in test_conditional_includes_from_git_dir
+    assert config._has_includes()
+AssertionError
+
+----------------------------------------------------------------------
+Ran 409 tests in 118.716s
+
+FAILED (failures=1, errors=10, skipped=14)
