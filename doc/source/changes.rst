@@ -7,6 +7,7 @@ Changelog
 
 * git.Commit objects now have a ``replace`` method that will return a
   copy of the commit with modified attributes.
+* Add python 3.9 support
 
 3.1.13
 ======
