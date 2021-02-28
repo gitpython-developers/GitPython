@@ -1,4 +1,5 @@
 """Package with general repository related functions"""
+from git.refs.tag import Tag
 import os
 import stat
 from string import digits
@@ -15,18 +16,27 @@ from gitdb.exc import (
 import os.path as osp
 from git.cmd import Git
 
+# Typing ----------------------------------------------------------------------
+
+from .base import Repo
+from git.db import GitCmdObjectDB
+from git.objects import Commit, TagObject, Blob, Tree
+from typing import AnyStr, Union, Optional, cast
+from git.types import PathLike
+
+# ----------------------------------------------------------------------------
 
 __all__ = ('rev_parse', 'is_git_dir', 'touch', 'find_submodule_git_dir', 'name_to_object', 'short_to_long', 'deref_tag',
            'to_commit', 'find_worktree_git_dir')
 
 
-def touch(filename):
+def touch(filename: str) -> str:
     with open(filename, "ab"):
         pass
     return filename
 
 
-def is_git_dir(d):
+def is_git_dir(d: PathLike) -> bool:
     """ This is taken from the git setup.c:is_git_directory
     function.
 
@@ -48,7 +58,7 @@ def is_git_dir(d):
     return False
 
 
-def find_worktree_git_dir(dotgit):
+def find_worktree_git_dir(dotgit: PathLike) -> Optional[str]:
     """Search for a gitdir for this worktree."""
     try:
         statbuf = os.stat(dotgit)
@@ -67,7 +77,7 @@ def find_worktree_git_dir(dotgit):
     return None
 
 
-def find_submodule_git_dir(d):
+def find_submodule_git_dir(d: PathLike) -> Optional[PathLike]:
     """Search for a submodule repo."""
     if is_git_dir(d):
         return d
@@ -75,7 +85,7 @@ def find_submodule_git_dir(d):
     try:
         with open(d) as fp:
             content = fp.read().rstrip()
-    except (IOError, OSError):
+    except IOError:
         # it's probably not a file
         pass
     else:
@@ -92,7 +102,7 @@ def find_submodule_git_dir(d):
     return None
 
 
-def short_to_long(odb, hexsha):
+def short_to_long(odb: GitCmdObjectDB, hexsha: AnyStr) -> Optional[bytes]:
     """:return: long hexadecimal sha1 from the given less-than-40 byte hexsha
         or None if no candidate could be found.
     :param hexsha: hexsha with less than 40 byte"""
@@ -103,14 +113,15 @@ def short_to_long(odb, hexsha):
     # END exception handling
 
 
-def name_to_object(repo, name, return_ref=False):
+def name_to_object(repo: Repo, name: str, return_ref: bool = False,
+                   ) -> Union[SymbolicReference, Commit, TagObject, Blob, Tree]:
     """
     :return: object specified by the given name, hexshas ( short and long )
         as well as references are supported
     :param return_ref: if name specifies a reference, we will return the reference
         instead of the object. Otherwise it will raise BadObject or BadName
     """
-    hexsha = None
+    hexsha = None  # type: Union[None, str, bytes]
 
     # is it a hexsha ? Try the most common ones, which is 7 to 40
     if repo.re_hexsha_shortened.match(name):
@@ -150,7 +161,7 @@ def name_to_object(repo, name, return_ref=False):
     return Object.new_from_sha(repo, hex_to_bin(hexsha))
 
 
-def deref_tag(tag):
+def deref_tag(tag: Tag) -> TagObject:
     """Recursively dereference a tag and return the resulting object"""
     while True:
         try:
@@ -161,7 +172,7 @@ def deref_tag(tag):
     return tag
 
 
-def to_commit(obj):
+def to_commit(obj: Object) -> Union[Commit, TagObject]:
     """Convert the given object to a commit if possible and return it"""
     if obj.type == 'tag':
         obj = deref_tag(obj)
@@ -172,7 +183,7 @@ def to_commit(obj):
     return obj
 
 
-def rev_parse(repo, rev):
+def rev_parse(repo: Repo, rev: str) -> Union[Commit, Tag, Tree, Blob]:
     """
     :return: Object at the given revision, either Commit, Tag, Tree or Blob
     :param rev: git-rev-parse compatible revision specification as string, please see
@@ -188,7 +199,7 @@ def rev_parse(repo, rev):
         raise NotImplementedError("commit by message search ( regex )")
     # END handle search
 
-    obj = None
+    obj = cast(Object, None)   # not ideal. Should use guards
     ref = None
     output_type = "commit"
     start = 0
@@ -238,7 +249,7 @@ def rev_parse(repo, rev):
                     pass    # error raised later
                 # END exception handling
             elif output_type in ('', 'blob'):
-                if obj.type == 'tag':
+                if obj and obj.type == 'tag':
                     obj = deref_tag(obj)
                 else:
                     # cannot do anything for non-tags
