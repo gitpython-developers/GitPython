@@ -513,7 +513,7 @@ class SymbolicReference(object):
         return ref
 
     @classmethod
-    def create(cls, repo, path, reference='HEAD', force=False, logmsg=None):
+    def create(cls, repo, path, reference='HEAD', force=False, logmsg=None, **kwargs):
         """Create a new symbolic reference, hence a reference pointing to another reference.
 
         :param repo:

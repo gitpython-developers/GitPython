@@ -15,7 +15,15 @@ import shutil
 import stat
 from sys import maxsize
 import time
+from typing import Any, AnyStr, Callable, Dict, Generator, List, NoReturn, Optional, Pattern, Sequence, Tuple, Union, cast
 from unittest import SkipTest
+
+import typing_extensions
+from .types import PathLike, TBD
+from pathlib import Path
+
+from typing_extensions import Literal
+
 
 from gitdb.util import (# NOQA @IgnorePep8
     make_sha,
@@ -29,7 +37,7 @@ from gitdb.util import (# NOQA @IgnorePep8
     hex_to_bin,             # @UnusedImport
 )
 
-from git.compat import is_win
+from .compat import is_win
 import os.path as osp
 
 from .exc import InvalidGitRepositoryError
@@ -47,6 +55,9 @@ __all__ = ["stream_copy", "join_path", "to_native_path_linux",
 
 log = logging.getLogger(__name__)
 
+# types############################################################
+
+
 #: We need an easy way to see if Appveyor TCs start failing,
 #: so the errors marked with this var are considered "acknowledged" ones, awaiting remedy,
 #: till then, we wish to hide them.
@@ -56,22 +67,23 @@ HIDE_WINDOWS_FREEZE_ERRORS = is_win and os.environ.get('HIDE_WINDOWS_FREEZE_ERRO
 #{ Utility Methods
 
 
-def unbare_repo(func):
+def unbare_repo(func: Callable) -> Callable:
     """Methods with this decorator raise InvalidGitRepositoryError if they
     encounter a bare repository"""
 
     @wraps(func)
-    def wrapper(self, *args, **kwargs):
+    def wrapper(self, *args: Any, **kwargs: Any) -> Callable:
         if self.repo.bare:
             raise InvalidGitRepositoryError("Method '%s' cannot operate on bare repositories" % func.__name__)
         # END bare method
         return func(self, *args, **kwargs)
     # END wrapper
+
     return wrapper
 
 
 @contextlib.contextmanager
-def cwd(new_dir):
+def cwd(new_dir: PathLike) -> Generator[PathLike, None, None]:
     old_dir = os.getcwd()
     os.chdir(new_dir)
     try:
@@ -80,7 +92,7 @@ def cwd(new_dir):
         os.chdir(old_dir)
 
 
-def rmtree(path):
+def rmtree(path: PathLike) -> None:
     """Remove the given recursively.
 
     :note: we use shutil rmtree but adjust its behaviour to see whether files that
@@ -100,7 +112,7 @@ def rmtree(path):
     return shutil.rmtree(path, False, onerror)
 
 
-def rmfile(path):
+def rmfile(path: PathLike) -> None:
     """Ensure file deleted also on *Windows* where read-only files need special treatment."""
     if osp.isfile(path):
         if is_win:
@@ -108,7 +120,7 @@ def rmfile(path):
         os.remove(path)
 
 
-def stream_copy(source, destination, chunk_size=512 * 1024):
+def stream_copy(source, destination, chunk_size: int = 512 * 1024) -> int:
     """Copy all data from the source stream into the destination stream in chunks
     of size chunk_size
 
@@ -165,7 +177,7 @@ def join_path_native(a, *p):
     return to_native_path(join_path(a, *p))
 
 
-def assure_directory_exists(path, is_file=False):
+def assure_directory_exists(path: PathLike, is_file: bool = False) -> bool:
     """Assure that the directory pointed to by path exists.
 
     :param is_file: If True, path is assumed to be a file and handled correctly.
@@ -180,18 +192,18 @@ def assure_directory_exists(path, is_file=False):
     return False
 
 
-def _get_exe_extensions():
+def _get_exe_extensions() -> Sequence[str]:
     PATHEXT = os.environ.get('PATHEXT', None)
-    return tuple(p.upper() for p in PATHEXT.split(os.pathsep)) \
-        if PATHEXT \
-        else (('.BAT', 'COM', '.EXE') if is_win else ())
+    return tuple(p.upper() for p in PATHEXT.split(os.pathsep)) if PATHEXT \
+        else ('.BAT', 'COM', '.EXE') if is_win \
+        else ('')
 
 
-def py_where(program, path=None):
+def py_where(program, path: Optional[PathLike]=None) -> List[str]:
     # From: http://stackoverflow.com/a/377028/548792
     winprog_exts = _get_exe_extensions()
 
-    def is_exec(fpath):
+    def is_exec(fpath: str) -> bool:
         return osp.isfile(fpath) and os.access(fpath, os.X_OK) and (
             os.name != 'nt' or not winprog_exts or any(fpath.upper().endswith(ext)
                                                        for ext in winprog_exts))
@@ -199,7 +211,7 @@ def py_where(program, path=None):
     progs = []
     if not path:
         path = os.environ["PATH"]
-    for folder in path.split(os.pathsep):
+    for folder in str(path).split(os.pathsep):
         folder = folder.strip('"')
         if folder:
             exe_path = osp.join(folder, program)
@@ -209,11 +221,11 @@ def py_where(program, path=None):
     return progs
 
 
-def _cygexpath(drive, path):
+def _cygexpath(drive: Optional[str], path: PathLike) -> str:
     if osp.isabs(path) and not drive:
         ## Invoked from `cygpath()` directly with `D:Apps\123`?
         #  It's an error, leave it alone just slashes)
-        p = path
+        p = path  # convert to str if AnyPath given
     else:
         p = path and osp.normpath(osp.expandvars(osp.expanduser(path)))
         if osp.isabs(p):
@@ -224,8 +236,8 @@ def _cygexpath(drive, path):
                 p = cygpath(p)
         elif drive:
             p = '/cygdrive/%s/%s' % (drive.lower(), p)
-
-    return p.replace('\\', '/')
+    p_str = str(p)  # ensure it is a str and not AnyPath
+    return p_str.replace('\\', '/')
 
 
 _cygpath_parsers = (
@@ -237,27 +249,31 @@ _cygpath_parsers = (
      ),
 
     (re.compile(r"\\\\\?\\(\w):[/\\](.*)"),
-     _cygexpath,
+    (_cygexpath),
      False
      ),
 
     (re.compile(r"(\w):[/\\](.*)"),
-     _cygexpath,
+     (_cygexpath),
      False
      ),
 
     (re.compile(r"file:(.*)", re.I),
      (lambda rest_path: rest_path),
-     True),
+     True
+     ),
 
     (re.compile(r"(\w{2,}:.*)"),  # remote URL, do nothing
      (lambda url: url),
-     False),
-)
+     False
+     ),
+)  # type: Tuple[Tuple[Pattern[str], Callable, bool], ...]
 
 
-def cygpath(path):
+
+def cygpath(path: PathLike) -> PathLike:
     """Use :meth:`git.cmd.Git.polish_url()` instead, that works on any environment."""
+    path = str(path)  # ensure is str and not AnyPath
     if not path.startswith(('/cygdrive', '//')):
         for regex, parser, recurse in _cygpath_parsers:
             match = regex.match(path)
@@ -275,7 +291,8 @@ def cygpath(path):
 _decygpath_regex = re.compile(r"/cygdrive/(\w)(/.*)?")
 
 
-def decygpath(path):
+def decygpath(path: PathLike) -> str:
+    path = str(Path)
     m = _decygpath_regex.match(path)
     if m:
         drive, rest_path = m.groups()
@@ -286,16 +303,16 @@ def decygpath(path):
 
 #: Store boolean flags denoting if a specific Git executable
 #: is from a Cygwin installation (since `cache_lru()` unsupported on PY2).
-_is_cygwin_cache = {}
+_is_cygwin_cache = {}  # type: Dict[str, Optional[bool]]
 
 
-def is_cygwin_git(git_executable):
+def is_cygwin_git(git_executable) -> bool:
     if not is_win:
         return False
 
     #from subprocess import check_output
 
-    is_cygwin = _is_cygwin_cache.get(git_executable)
+    is_cygwin = _is_cygwin_cache.get(git_executable)  # type: Optional[bool]
     if is_cygwin is None:
         is_cygwin = False
         try:
@@ -318,18 +335,18 @@ def is_cygwin_git(git_executable):
     return is_cygwin
 
 
-def get_user_id():
+def get_user_id() -> str:
     """:return: string identifying the currently active system user as name@node"""
     return "%s@%s" % (getpass.getuser(), platform.node())
 
 
-def finalize_process(proc, **kwargs):
+def finalize_process(proc: TBD, **kwargs: Any) -> None:
     """Wait for the process (clone, fetch, pull or push) and handle its errors accordingly"""
     ## TODO: No close proc-streams??
     proc.wait(**kwargs)
 
 
-def expand_path(p, expand_vars=True):
+def expand_path(p: PathLike, expand_vars: bool=True) -> Optional[PathLike]:
     try:
         p = osp.expanduser(p)
         if expand_vars:
@@ -364,13 +381,13 @@ class RemoteProgress(object):
     re_op_absolute = re.compile(r"(remote: )?([\w\s]+):\s+()(\d+)()(.*)")
     re_op_relative = re.compile(r"(remote: )?([\w\s]+):\s+(\d+)% \((\d+)/(\d+)\)(.*)")
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._seen_ops = []
-        self._cur_line = None
+        self._cur_line = None  # type: Optional[str]
         self.error_lines = []
         self.other_lines = []
 
-    def _parse_progress_line(self, line):
+    def _parse_progress_line(self, line: AnyStr) -> None:
         """Parse progress information from the given line as retrieved by git-push
         or git-fetch.
 
@@ -382,7 +399,12 @@ class RemoteProgress(object):
         # Compressing objects:  50% (1/2)
         # Compressing objects: 100% (2/2)
         # Compressing objects: 100% (2/2), done.
-        self._cur_line = line = line.decode('utf-8') if isinstance(line, bytes) else line
+        if isinstance(line, bytes):   # mypy argues about ternary assignment
+            line_str = line.decode('utf-8')
+        else:
+            line_str = line
+        self._cur_line = line_str
+        
         if self.error_lines or self._cur_line.startswith(('error:', 'fatal:')):
             self.error_lines.append(self._cur_line)
             return
@@ -390,25 +412,25 @@ class RemoteProgress(object):
         # find escape characters and cut them away - regex will not work with
         # them as they are non-ascii. As git might expect a tty, it will send them
         last_valid_index = None
-        for i, c in enumerate(reversed(line)):
+        for i, c in enumerate(reversed(line_str)):
             if ord(c) < 32:
                 # its a slice index
                 last_valid_index = -i - 1
             # END character was non-ascii
         # END for each character in line
         if last_valid_index is not None:
-            line = line[:last_valid_index]
+            line_str = line_str[:last_valid_index]
         # END cut away invalid part
-        line = line.rstrip()
+        line_str = line_str.rstrip()
 
         cur_count, max_count = None, None
-        match = self.re_op_relative.match(line)
+        match = self.re_op_relative.match(line_str)
         if match is None:
-            match = self.re_op_absolute.match(line)
+            match = self.re_op_absolute.match(line_str)
 
         if not match:
-            self.line_dropped(line)
-            self.other_lines.append(line)
+            self.line_dropped(line_str)
+            self.other_lines.append(line_str)
             return
         # END could not get match
 
@@ -437,7 +459,7 @@ class RemoteProgress(object):
             # This can't really be prevented, so we drop the line verbosely
             # to make sure we get informed in case the process spits out new
             # commands at some point.
-            self.line_dropped(line)
+            self.line_dropped(line_str)
             # Note: Don't add this line to the other lines, as we have to silently
             # drop it
             return
@@ -465,7 +487,7 @@ class RemoteProgress(object):
                     max_count and float(max_count),
                     message)
 
-    def new_message_handler(self):
+    def new_message_handler(self) -> Callable[[str], None]:
         """
         :return:
             a progress handler suitable for handle_process_output(), passing lines on to this Progress
@@ -510,7 +532,7 @@ class CallableRemoteProgress(RemoteProgress):
     """An implementation forwarding updates to any callable"""
     __slots__ = ('_callable')
 
-    def __init__(self, fn):
+    def __init__(self, fn: Callable) -> None:
         self._callable = fn
         super(CallableRemoteProgress, self).__init__()
 
@@ -539,27 +561,27 @@ class Actor(object):
 
     __slots__ = ('name', 'email')
 
-    def __init__(self, name, email):
+    def __init__(self, name: Optional[str], email: Optional[str]) -> None:
         self.name = name
         self.email = email
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return self.name == other.name and self.email == other.email
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not (self == other)
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash((self.name, self.email))
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '<git.Actor "%s <%s>">' % (self.name, self.email)
 
     @classmethod
-    def _from_string(cls, string):
+    def _from_string(cls, string: str) -> 'Actor':
         """Create an Actor from a string.
         :param string: is the string, which is expected to be in regular git format
 
@@ -580,17 +602,17 @@ class Actor(object):
         # END handle name/email matching
 
     @classmethod
-    def _main_actor(cls, env_name, env_email, config_reader=None):
+    def _main_actor(cls, env_name: str, env_email: str, config_reader: Optional[TBD]=None) -> 'Actor':
         actor = Actor('', '')
         user_id = None  # We use this to avoid multiple calls to getpass.getuser()
 
-        def default_email():
+        def default_email() -> str:
             nonlocal user_id
             if not user_id:
                 user_id = get_user_id()
             return user_id
 
-        def default_name():
+        def default_name() -> str:
             return default_email().split('@')[0]
 
         for attr, evar, cvar, default in (('name', env_name, cls.conf_name, default_name),
@@ -609,7 +631,7 @@ class Actor(object):
         return actor
 
     @classmethod
-    def committer(cls, config_reader=None):
+    def committer(cls, config_reader: Optional[TBD] = None) -> 'Actor':
         """
         :return: Actor instance corresponding to the configured committer. It behaves
             similar to the git implementation, such that the environment will override
@@ -620,7 +642,7 @@ class Actor(object):
         return cls._main_actor(cls.env_committer_name, cls.env_committer_email, config_reader)
 
     @classmethod
-    def author(cls, config_reader=None):
+    def author(cls, config_reader: Optional[TBD] = None):
         """Same as committer(), but defines the main author. It may be specified in the environment,
         but defaults to the committer"""
         return cls._main_actor(cls.env_author_name, cls.env_author_email, config_reader)
@@ -654,16 +676,18 @@ class Stats(object):
      files = number of changed files as int"""
     __slots__ = ("total", "files")
 
-    def __init__(self, total, files):
+    def __init__(self, total: Dict[str, Dict[str, int]], files: Dict[str, Dict[str, int]]):
         self.total = total
         self.files = files
 
     @classmethod
-    def _list_from_string(cls, repo, text):
+    def _list_from_string(cls, repo, text: str) -> 'Stats':
         """Create a Stat object from output retrieved by git-diff.
 
         :return: git.Stat"""
-        hsh = {'total': {'insertions': 0, 'deletions': 0, 'lines': 0, 'files': 0}, 'files': {}}
+        hsh = {'total': {'insertions': 0, 'deletions': 0, 'lines': 0, 'files': 0}, 
+               'files': {}
+               }  # type: Dict[str, Dict[str, TBD]]   ## need typeddict or refactor for mypy
         for line in text.splitlines():
             (raw_insertions, raw_deletions, filename) = line.split("\t")
             insertions = raw_insertions != '-' and int(raw_insertions) or 0
@@ -689,7 +713,7 @@ class IndexFileSHA1Writer(object):
     :note: Based on the dulwich project"""
     __slots__ = ("f", "sha1")
 
-    def __init__(self, f):
+    def __init__(self, f) -> None:
         self.f = f
         self.sha1 = make_sha(b"")
 
@@ -697,12 +721,12 @@ class IndexFileSHA1Writer(object):
         self.sha1.update(data)
         return self.f.write(data)
 
-    def write_sha(self):
+    def write_sha(self) -> bytes:
         sha = self.sha1.digest()
         self.f.write(sha)
         return sha
 
-    def close(self):
+    def close(self) -> bytes:
         sha = self.write_sha()
         self.f.close()
         return sha
@@ -721,23 +745,23 @@ class LockFile(object):
     Locks will automatically be released on destruction"""
     __slots__ = ("_file_path", "_owns_lock")
 
-    def __init__(self, file_path):
+    def __init__(self, file_path: PathLike) -> None:
         self._file_path = file_path
         self._owns_lock = False
 
-    def __del__(self):
+    def __del__(self) -> None:
         self._release_lock()
 
-    def _lock_file_path(self):
+    def _lock_file_path(self) -> str:
         """:return: Path to lockfile"""
         return "%s.lock" % (self._file_path)
 
-    def _has_lock(self):
+    def _has_lock(self) -> bool:
         """:return: True if we have a lock and if the lockfile still exists
         :raise AssertionError: if our lock-file does not exist"""
         return self._owns_lock
 
-    def _obtain_lock_or_raise(self):
+    def _obtain_lock_or_raise(self) -> None:
         """Create a lock file as flag for other instances, mark our instance as lock-holder
 
         :raise IOError: if a lock was already present or a lock file could not be written"""
@@ -759,12 +783,12 @@ class LockFile(object):
 
         self._owns_lock = True
 
-    def _obtain_lock(self):
+    def _obtain_lock(self) -> None:
         """The default implementation will raise if a lock cannot be obtained.
         Subclasses may override this method to provide a different implementation"""
         return self._obtain_lock_or_raise()
 
-    def _release_lock(self):
+    def _release_lock(self) -> None:
         """Release our lock if we have one"""
         if not self._has_lock():
             return
@@ -789,7 +813,7 @@ class BlockingLockFile(LockFile):
         can never be obtained."""
     __slots__ = ("_check_interval", "_max_block_time")
 
-    def __init__(self, file_path, check_interval_s=0.3, max_block_time_s=maxsize):
+    def __init__(self, file_path: PathLike, check_interval_s: float=0.3, max_block_time_s: int=maxsize) -> None:
         """Configure the instance
 
         :param check_interval_s:
@@ -801,7 +825,7 @@ class BlockingLockFile(LockFile):
         self._check_interval = check_interval_s
         self._max_block_time = max_block_time_s
 
-    def _obtain_lock(self):
+    def _obtain_lock(self) -> None:
         """This method blocks until it obtained the lock, or raises IOError if
         it ran out of time or if the parent directory was not available anymore.
         If this method returns, you are guaranteed to own the lock"""
@@ -851,11 +875,11 @@ class IterableList(list):
     def __new__(cls, id_attr, prefix=''):
         return super(IterableList, cls).__new__(cls)
 
-    def __init__(self, id_attr, prefix=''):
+    def __init__(self, id_attr: str, prefix: str='') -> None:
         self._id_attr = id_attr
         self._prefix = prefix
 
-    def __contains__(self, attr):
+    def __contains__(self, attr: object) -> bool:
         # first try identity match for performance
         try:
             rval = list.__contains__(self, attr)
@@ -867,13 +891,13 @@ class IterableList(list):
 
         # otherwise make a full name search
         try:
-            getattr(self, attr)
+            getattr(self, cast(str, attr))  # use cast to silence mypy
             return True
         except (AttributeError, TypeError):
             return False
         # END handle membership
 
-    def __getattr__(self, attr):
+    def __getattr__(self, attr: str) -> object:
         attr = self._prefix + attr
         for item in self:
             if getattr(item, self._id_attr) == attr:
@@ -881,20 +905,22 @@ class IterableList(list):
         # END for each item
         return list.__getattribute__(self, attr)
 
-    def __getitem__(self, index):
+    def __getitem__(self, index: Union[int, slice, str]) -> Any:
         if isinstance(index, int):
             return list.__getitem__(self, index)
 
+        assert not isinstance(index, slice)
         try:
             return getattr(self, index)
         except AttributeError as e:
             raise IndexError("No item found with id %r" % (self._prefix + index)) from e
         # END handle getattr
 
-    def __delitem__(self, index):
-        delindex = index
+    def __delitem__(self, index: Union[int, str, slice]) -> None:
+
         if not isinstance(index, int):
             delindex = -1
+            assert not isinstance(index, slice)
             name = self._prefix + index
             for i, item in enumerate(self):
                 if getattr(item, self._id_attr) == name:
@@ -917,7 +943,7 @@ class Iterable(object):
     _id_attribute_ = "attribute that most suitably identifies your instance"
 
     @classmethod
-    def list_items(cls, repo, *args, **kwargs):
+    def list_items(cls, repo, *args, **kwargs) -> 'IterableList':
         """
         Find all items of this type - subclasses can specify args and kwargs differently.
         If no args are given, subclasses are obliged to return all items if no additional
@@ -931,7 +957,7 @@ class Iterable(object):
         return out_list
 
     @classmethod
-    def iter_items(cls, repo, *args, **kwargs):
+    def iter_items(cls, repo, *args, **kwargs) -> NoReturn:
         """For more information about the arguments, see list_items
         :return:  iterator yielding Items"""
         raise NotImplementedError("To be implemented by Subclass")
@@ -940,5 +966,5 @@ class Iterable(object):
 
 
 class NullHandler(logging.Handler):
-    def emit(self, record):
+    def emit(self, record) -> None:
         pass

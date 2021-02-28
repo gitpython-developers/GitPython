@@ -10,6 +10,7 @@
 import locale
 import os
 import sys
+from typing import AnyStr, Optional, Type
 
 
 from gitdb.utils.encoding import (
@@ -18,33 +19,38 @@ from gitdb.utils.encoding import (
 )
 
 
-is_win = (os.name == 'nt')
+is_win = (os.name == 'nt')  # type: bool
 is_posix = (os.name == 'posix')
 is_darwin = (os.name == 'darwin')
 defenc = sys.getfilesystemencoding()
 
 
-def safe_decode(s):
+def safe_decode(s: Optional[AnyStr]) -> Optional[str]:
     """Safely decodes a binary string to unicode"""
     if isinstance(s, str):
         return s
     elif isinstance(s, bytes):
         return s.decode(defenc, 'surrogateescape')
-    elif s is not None:
+    elif s is None:
+        return None
+    else:
         raise TypeError('Expected bytes or text, but got %r' % (s,))
 
 
-def safe_encode(s):
-    """Safely decodes a binary string to unicode"""
+
+def safe_encode(s: Optional[AnyStr]) -> Optional[bytes]:
+    """Safely encodes a binary string to unicode"""
     if isinstance(s, str):
         return s.encode(defenc)
     elif isinstance(s, bytes):
         return s
-    elif s is not None:
+    elif s is None:
+        return None
+    else:
         raise TypeError('Expected bytes or text, but got %r' % (s,))
 
 
-def win_encode(s):
+def win_encode(s: Optional[AnyStr]) -> Optional[bytes]:
     """Encode unicodes for process arguments on Windows."""
     if isinstance(s, str):
         return s.encode(locale.getpreferredencoding(False))
@@ -52,6 +58,7 @@ def win_encode(s):
         return s
     elif s is not None:
         raise TypeError('Expected bytes or text, but got %r' % (s,))
+    return None
 
 
 def with_metaclass(meta, *bases):

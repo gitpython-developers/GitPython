@@ -19,6 +19,7 @@ import sys
 import threading
 from collections import OrderedDict
 from textwrap import dedent
+from typing import Any, Dict, List, Optional
 
 from git.compat import (
     defenc,
@@ -38,6 +39,8 @@ from .util import (
     LazyMixin,
     stream_copy,
 )
+
+from .types import PathLike
 
 execute_kwargs = {'istream', 'with_extended_output',
                   'with_exceptions', 'as_process', 'stdout_as_string',
@@ -516,7 +519,7 @@ class Git(LazyMixin):
                 self._stream.read(bytes_left + 1)
             # END handle incomplete read
 
-    def __init__(self, working_dir=None):
+    def __init__(self, working_dir: Optional[PathLike]=None) -> None:
         """Initialize this instance with:
 
         :param working_dir:
@@ -525,12 +528,12 @@ class Git(LazyMixin):
            It is meant to be the working tree directory if available, or the
            .git directory in case of bare repositories."""
         super(Git, self).__init__()
-        self._working_dir = expand_path(working_dir)
+        self._working_dir = expand_path(working_dir) if working_dir is not None else None
         self._git_options = ()
-        self._persistent_git_options = []
+        self._persistent_git_options = []  # type: List[str]
 
         # Extra environment variables to pass to git commands
-        self._environment = {}
+        self._environment = {}  # type: Dict[str, Any]
 
         # cached command slots
         self.cat_file_header = None
@@ -544,7 +547,7 @@ class Git(LazyMixin):
             return LazyMixin.__getattr__(self, name)
         return lambda *args, **kwargs: self._call_process(name, *args, **kwargs)
 
-    def set_persistent_git_options(self, **kwargs):
+    def set_persistent_git_options(self, **kwargs) -> None:
         """Specify command line options to the git executable
         for subsequent subcommand calls
 

@@ -16,6 +16,8 @@ import re
 import fnmatch
 from collections import OrderedDict
 
+from typing_extensions import Literal
+
 from git.compat import (
     defenc,
     force_text,
@@ -194,7 +196,7 @@ class _OMD(OrderedDict):
         return [(k, self.getall(k)) for k in self]
 
 
-def get_config_path(config_level):
+def get_config_path(config_level: Literal['system','global','user','repository']) -> str:
 
     # we do not support an absolute path of the gitconfig on windows ,
     # use the global config instead
