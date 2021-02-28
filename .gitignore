@@ -20,4 +20,4 @@ nbproject
 .cache/
 .mypy_cache/
 .pytest_cache/
-monkeytype.*
+monkeytype.sqlite3
