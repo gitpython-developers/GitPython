@@ -19,6 +19,7 @@ import sys
 import threading
 from collections import OrderedDict
 from textwrap import dedent
+from typing import Any, Callable, Optional, Type
 
 from git.compat import (
     defenc,
@@ -57,7 +58,7 @@ __all__ = ('Git',)
 ## @{
 
 def handle_process_output(process, stdout_handler, stderr_handler,
-                          finalizer=None, decode_streams=True):
+                          finalizer=None, decode_streams: bool=True) -> Optional[Any]:
     """Registers for notifications to learn that process output is ready to read, and dispatches lines to
     the respective line handlers.
     This function returns once the finalizer returns
@@ -113,9 +114,11 @@ def handle_process_output(process, stdout_handler, stderr_handler,
 
     if finalizer:
         return finalizer(process)
+    else:
+        return None
 
 
-def dashify(string):
+def dashify(string: str) -> str:
     return string.replace('_', '-')
 
 
@@ -304,11 +307,11 @@ class Git(LazyMixin):
         return has_git
 
     @classmethod
-    def is_cygwin(cls):
+    def is_cygwin(cls) -> bool:
         return is_cygwin_git(cls.GIT_PYTHON_GIT_EXECUTABLE)
 
     @classmethod
-    def polish_url(cls, url, is_cygwin=None):
+    def polish_url(cls, url, is_cygwin: Optional[bool]=None):
         if is_cygwin is None:
             is_cygwin = cls.is_cygwin()
 
