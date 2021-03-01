@@ -34,6 +34,9 @@ from .refs import (
     TagReference
 )
 
+# typing-------------------------------------------------------
+
+from git.repo.Base import Repo
 
 log = logging.getLogger('git.remote')
 log.addHandler(logging.NullHandler())
@@ -403,7 +406,7 @@ class Remote(LazyMixin, Iterable):
 
         :param repo: The repository we are a remote of
         :param name: the name of the remote, i.e. 'origin'"""
-        self.repo = repo
+        self.repo = repo  # type: 'Repo'
         self.name = name
 
         if is_win:

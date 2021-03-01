@@ -8,15 +8,18 @@
 import inspect
 import os
 import sys
-
 import os.path as osp
 
+from typing import Optional
+from git.types import PathLike
 
 __version__ = 'git'
 
 
+
+
 #{ Initialization
-def _init_externals():
+def _init_externals() -> None:
     """Initialize external projects by putting them into the path"""
     if __version__ == 'git' and 'PYOXIDIZER' not in os.environ:
         sys.path.insert(1, osp.join(osp.dirname(__file__), 'ext', 'gitdb'))
@@ -65,7 +68,7 @@ __all__ = [name for name, obj in locals().items()
 #{ Initialize git executable path
 GIT_OK = None
 
-def refresh(path=None):
+def refresh(path:Optional[PathLike]=None) -> None:
     """Convenience method for setting the git executable path."""
     global GIT_OK
     GIT_OK = False
