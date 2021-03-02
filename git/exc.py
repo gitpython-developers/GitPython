@@ -12,9 +12,10 @@ from git.compat import safe_decode
 
 from git.repo.base import Repo
 from git.types import PathLike
-from typing import IO, List, Optional, Sequence, Tuple, Union
+from typing import IO, List, Optional, Tuple, Union
 
 # ------------------------------------------------------------------
+
 
 class GitError(Exception):
     """ Base class for all package exceptions """
@@ -44,7 +45,7 @@ class CommandError(GitError):
     #:     "'%s' failed%s"
     _msg = "Cmd('%s') failed%s"
 
-    def __init__(self, command: Union[List[str], Tuple[str, ...], str], 
+    def __init__(self, command: Union[List[str], Tuple[str, ...], str],
                  status: Union[str, None, Exception] = None,
                  stderr: Optional[IO[str]] = None, stdout: Optional[IO[str]] = None) -> None:
         if not isinstance(command, (tuple, list)):
@@ -84,7 +85,7 @@ class GitCommandNotFound(CommandError):
 class GitCommandError(CommandError):
     """ Thrown if execution of the git command fails with non-zero status code. """
 
-    def __init__(self, command: Union[List[str], Tuple[str, ...], str], 
+    def __init__(self, command: Union[List[str], Tuple[str, ...], str],
                  status: Union[str, None, Exception] = None,
                  stderr: Optional[IO[str]] = None,
                  stdout: Optional[IO[str]] = None,
@@ -106,7 +107,9 @@ class CheckoutError(GitError):
     were checked out successfully and hence match the version stored in the
     index"""
 
-    def __init__(self, message: str, failed_files: List[PathLike], valid_files: List[PathLike], failed_reasons: List[str]) -> None:
+    def __init__(self, message: str, failed_files: List[PathLike], valid_files: List[PathLike],
+                 failed_reasons: List[str]) -> None:
+
         Exception.__init__(self, message)
         self.failed_files = failed_files
         self.failed_reasons = failed_reasons

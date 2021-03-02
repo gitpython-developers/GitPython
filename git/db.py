@@ -1,4 +1,5 @@
 """Module with our own gitdb implementation - it uses the git command"""
+from typing import AnyStr
 from git.util import bin_to_hex, hex_to_bin
 from gitdb.base import (
     OInfo,
@@ -13,7 +14,7 @@ from .exc import GitCommandError
 # typing-------------------------------------------------
 
 from .cmd import Git
-from .types import PathLike, TBD
+from .types import PathLike
 
 # --------------------------------------------------------
 
@@ -48,7 +49,7 @@ class GitCmdObjectDB(LooseObjectDB):
 
     # { Interface
 
-    def partial_to_complete_sha_hex(self, partial_hexsha: str) -> bytes:
+    def partial_to_complete_sha_hex(self, partial_hexsha: AnyStr) -> bytes:
         """:return: Full binary 20 byte sha from the given partial hexsha
         :raise AmbiguousObjectName:
         :raise BadObject:

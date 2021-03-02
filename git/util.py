@@ -4,7 +4,6 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 from git.remote import Remote
-from _typeshed import ReadableBuffer
 import contextlib
 from functools import wraps
 import getpass
@@ -19,11 +18,13 @@ from sys import maxsize
 import time
 from unittest import SkipTest
 
-from typing import (Any, AnyStr, BinaryIO, Callable, Dict, Generator, IO, List, NoReturn, Optional, Pattern,
-                    Sequence, TextIO, Tuple, Union, cast)
-from typing_extensions import Literal
+# typing ---------------------------------------------------------
+from typing import (Any, AnyStr, BinaryIO, Callable, Dict, Generator, IO, List,
+                    NoReturn, Optional, Pattern, Sequence, Tuple, Union, cast)
 from git.repo.base import Repo
 from .types import PathLike, TBD
+
+# ---------------------------------------------------------------------
 
 
 from gitdb.util import (  # NOQA @IgnorePep8

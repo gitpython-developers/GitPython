@@ -10,13 +10,14 @@
 import locale
 import os
 import sys
-from typing import AnyStr, Optional, Type
-
 
 from gitdb.utils.encoding import (
     force_bytes,     # @UnusedImport
     force_text       # @UnusedImport
 )
+
+from typing import Any, AnyStr, Dict, Optional, Type
+from git.types import TBD
 
 
 is_win = (os.name == 'nt')  # type: bool
@@ -61,14 +62,17 @@ def win_encode(s: Optional[AnyStr]) -> Optional[bytes]:
     return None
 
 
-def with_metaclass(meta, *bases):
+def with_metaclass(meta: Type[Any], *bases: Any) -> 'metaclass':  # type: ignore ## mypy cannot understand dynamic class creation
     """copied from https://github.com/Byron/bcore/blob/master/src/python/butility/future.py#L15"""
-    class metaclass(meta):
+    
+    class metaclass(meta):  # type: ignore
         __call__ = type.__call__
-        __init__ = type.__init__
+        __init__ = type.__init__    # type: ignore
 
-        def __new__(cls, name, nbases, d):
+        def __new__(cls, name: str, nbases: Optional[int], d: Dict[str, Any]) -> TBD:
             if nbases is None:
                 return type.__new__(cls, name, (), d)
             return meta(name, bases, d)
+
     return metaclass(meta.__name__ + 'Helper', None, {})
+
