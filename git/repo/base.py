@@ -228,12 +228,19 @@ class Repo(object):
         self.git = self.GitCommandWrapperType(self.working_dir)
 
         # special handling, in special times
+        args = [osp.join(self.common_dir, 'objects')]
+        if issubclass(odbt, GitCmdObjectDB):
+            args.append(self.git)
+        self.odb = odbt(*args)
+        """
+        # This is broken for some reason
         git_object_path = osp.join(self.common_dir, 'objects')
         if issubclass(odbt, GitCmdObjectDB):
             git_object = self.git
         else:
             git_object = None
-        self.odb = odbt(git_object_path, git_object)
+        self.odb = odbt(git_object_path, git_object) if git_object else odbt(git_object_path)
+        """
 
     def __enter__(self) -> 'Repo':
         return self
