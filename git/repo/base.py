@@ -567,7 +567,7 @@ class Repo(object):
 
         return Commit.iter_items(self, rev, paths, **kwargs)
 
-    def merge_base(self, *rev: TBD, **kwargs: Any,
+    def merge_base(self, *rev: TBD, **kwargs: Any
                    ) -> List[Union[SymbolicReference, Commit, 'TagObject', 'Blob', 'Tree', None]]:
         """Find the closest common ancestor for the given revision (e.g. Commits, Tags, References, etc)
 

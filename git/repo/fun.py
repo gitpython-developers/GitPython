@@ -114,7 +114,7 @@ def short_to_long(odb: 'GitCmdObjectDB', hexsha: AnyStr) -> Optional[bytes]:
     # END exception handling
 
 
-def name_to_object(repo: 'Repo', name: str, return_ref: bool = False,
+def name_to_object(repo: 'Repo', name: str, return_ref: bool = False
                    ) -> Union[SymbolicReference, 'Commit', 'TagObject', 'Blob', 'Tree']:
     """
     :return: object specified by the given name, hexshas ( short and long )
