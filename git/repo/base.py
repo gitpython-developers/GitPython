@@ -510,7 +510,7 @@ class Repo(object):
             repository = configuration file for this repository only"""
         return GitConfigParser(self._get_config_path(config_level), read_only=False, repo=self)
 
-    def commit(self, rev: Optional[TBD] = None,) -> Union[SymbolicReference, Commit, 'TagObject', 'Blob', 'Tree', None]:
+    def commit(self, rev: Optional[TBD] = None) -> Union[SymbolicReference, Commit, 'TagObject', 'Blob', 'Tree', None]:
         """The Commit object for the specified revision
 
         :param rev: revision specifier, see git-rev-parse for viable options.
@@ -543,7 +543,7 @@ class Repo(object):
         return self.rev_parse(str(rev) + "^{tree}")
 
     def iter_commits(self, rev: Optional[TBD] = None, paths: Union[PathLike, List[PathLike]] = '',
-                     **kwargs: Any,) -> Iterator[Commit]:
+                     **kwargs: Any) -> Iterator[Commit]:
         """A list of Commit objects representing the history of a given ref/commit
 
         :param rev:
@@ -951,7 +951,7 @@ class Repo(object):
 
     @classmethod
     def init(cls, path: PathLike = None, mkdir: bool = True, odbt: Type[GitCmdObjectDB] = GitCmdObjectDB,
-             expand_vars: bool = True, **kwargs: Any,) -> 'Repo':
+             expand_vars: bool = True, **kwargs: Any) -> 'Repo':
         """Initialize a git repository at the given path if specified
 
         :param path:
