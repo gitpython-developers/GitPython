@@ -4,3 +4,4 @@ flake8
 tox
 virtualenv
 nose
+typing-extensions>=3.7.4.0

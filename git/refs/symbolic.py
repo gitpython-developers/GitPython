@@ -87,7 +87,7 @@ class SymbolicReference(object):
         """Returns an iterator yielding pairs of sha1/path pairs (as bytes) for the corresponding refs.
         :note: The packed refs file will be kept open as long as we iterate"""
         try:
-            with open(cls._get_packed_refs_path(repo), 'rt') as fp:
+            with open(cls._get_packed_refs_path(repo), 'rt', encoding='UTF-8') as fp:
                 for line in fp:
                     line = line.strip()
                     if not line:
@@ -513,7 +513,7 @@ class SymbolicReference(object):
         return ref
 
     @classmethod
-    def create(cls, repo, path, reference='HEAD', force=False, logmsg=None):
+    def create(cls, repo, path, reference='HEAD', force=False, logmsg=None, **kwargs):
         """Create a new symbolic reference, hence a reference pointing to another reference.
 
         :param repo:
