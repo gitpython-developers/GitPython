@@ -991,7 +991,7 @@ class Repo(object):
     @classmethod
     def _clone(cls, git: 'Git', url: PathLike, path: PathLike, odb_default_type: Type[GitCmdObjectDB],
                progress: Optional[Callable],
-               multi_options: Optional[List[str]] = None, **kwargs: Any,
+               multi_options: Optional[List[str]] = None, **kwargs: Any
                ) -> 'Repo':
         if progress is not None:
             progress_checked = to_progress_instance(progress)
