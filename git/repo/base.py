@@ -231,6 +231,8 @@ class Repo(object):
         git_object_path = osp.join(self.common_dir, 'objects')
         if issubclass(odbt, GitCmdObjectDB):
             git_object = self.git
+        else:
+            git_object = None
         self.odb = odbt(git_object_path, git_object)
 
     def __enter__(self) -> 'Repo':
