@@ -29,6 +29,7 @@ from git.refs import HEAD, Head, Reference, TagReference
 from git.remote import Remote, add_progress, to_progress_instance
 from git.util import Actor, IterableList, finalize_process, decygpath, hex_to_bin, expand_path
 import os.path as osp
+# from collections import namedtuple
 
 from .fun import rev_parse, is_git_dir, find_submodule_git_dir, touch, find_worktree_git_dir
 import gc
@@ -49,14 +50,19 @@ Lit_config_levels = Literal['system', 'global', 'user', 'repository']
 
 
 # --------------------------------------------------------------------------
-
-
+BlameEntry = NamedTuple('BlameEntry', [
+    ('commit', Dict[str, TBD]),
+    ('linenos', range),
+    ('orig_path', Optional[str]),
+    ('orig_linenos', range)]
+)
+"""
 class BlameEntry(NamedTuple):
     commit: Dict[str, TBD]  # Any == 'Commit' type?
     linenos: range
     orig_path: Optional[str]
     orig_linenos: range
-
+"""
 
 log = logging.getLogger(__name__)
 
