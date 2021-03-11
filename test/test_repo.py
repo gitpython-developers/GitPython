@@ -238,6 +238,17 @@ class TestRepo(TestBase):
             except UnicodeEncodeError:
                 self.fail('Raised UnicodeEncodeError')
 
+    @with_rw_directory
+    def test_leaking_password_in_clone_logs(self, rw_dir):
+        """Check that the password is not printed on the logs"""
+        password = "fakepassword1234"
+        try:
+            Repo.clone_from(
+                url=f"https://fakeuser:{password}@fakerepo.example.com/testrepo",
+                to_path=rw_dir)
+        except GitCommandError as err:
+            assert password not in str(err)
+
     @with_rw_repo('HEAD')
     def test_max_chunk_size(self, repo):
         class TestOutputStream(TestBase):

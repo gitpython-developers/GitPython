@@ -969,7 +969,13 @@ class Repo(object):
             handle_process_output(proc, None, progress.new_message_handler(), finalize_process, decode_streams=False)
         else:
             (stdout, stderr) = proc.communicate()
-            log.debug("Cmd(%s)'s unused stdout: %s", getattr(proc, 'args', ''), stdout)
+            cmdline = getattr(proc, 'args', '')
+            uri = cmdline[-2]
+            if "://" in uri and "@" in uri:
+                cred = uri.split("://")[1].split("@")[0].split(":")
+                if len(cred) == 2:
+                    cmdline[-2] = uri.replace(cred[1], "******")
+            log.debug("Cmd(%s)'s unused stdout: %s", cmdline, stdout)
             finalize_process(proc, stderr=stderr)
 
         # our git command could have a different working dir than our actual
