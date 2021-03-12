@@ -244,7 +244,7 @@ class TestRepo(TestBase):
         password = "fakepassword1234"
         try:
             Repo.clone_from(
-                url=f"https://fakeuser:{password}@fakerepo.example.com/testrepo",
+                url="https://fakeuser:{}@fakerepo.example.com/testrepo".format(password),
                 to_path=rw_dir)
         except GitCommandError as err:
             assert password not in str(err)
