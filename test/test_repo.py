@@ -244,10 +244,11 @@ class TestRepo(TestBase):
         password = "fakepassword1234"
         try:
             Repo.clone_from(
-                url="https://fakeuser:{}@fakerepo.example.com/testrepo".format(password),
+                url="https://fakeuser:{}@fakerepo.example.com/testrepo".format(
+                    password),
                 to_path=rw_dir)
         except GitCommandError as err:
-            assert password not in str(err)
+            assert password not in str(err), "The error message '%s' should not contain the password" % err
 
     @with_rw_repo('HEAD')
     def test_max_chunk_size(self, repo):
