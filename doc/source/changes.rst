@@ -3,7 +3,7 @@ Changelog
 =========
 
 3.1.15 (UNRELEASED)
-======
+===================
 
 * add deprectation warning for python 3.5
 
