@@ -30,7 +30,8 @@ from git.util import (
     Actor,
     IterableList,
     cygpath,
-    decygpath
+    decygpath,
+    remove_password_if_present,
 )
 
 
@@ -322,3 +323,17 @@ class TestUtils(TestBase):
         t2 = pickle.loads(pickle.dumps(t1))
         self.assertEqual(t1._offset, t2._offset)
         self.assertEqual(t1._name, t2._name)
+
+    def test_remove_password_from_command_line(self):
+        """Check that the password is not printed on the logs"""
+        password = "fakepassword1234"
+        url_with_pass = "https://fakeuser:{}@fakerepo.example.com/testrepo".format(password)
+        url_without_pass = "https://fakerepo.example.com/testrepo"
+
+        cmd_1 = ["git", "clone", "-v", url_with_pass]
+        cmd_2 = ["git", "clone", "-v", url_without_pass]
+        cmd_3 = ["no", "url", "in", "this", "one"]
+
+        assert password not in remove_password_if_present(cmd_1)
+        assert cmd_2 == remove_password_if_present(cmd_2)
+        assert cmd_3 == remove_password_if_present(cmd_3)

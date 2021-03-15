@@ -82,8 +82,8 @@ def handle_process_output(process, stdout_handler, stderr_handler,
                         line = line.decode(defenc)
                     handler(line)
         except Exception as ex:
-            log.error("Pumping %r of cmd(%s) failed due to: %r", name, cmdline, ex)
-            raise CommandError(['<%s-pump>' % name] + cmdline, ex) from ex
+            log.error("Pumping %r of cmd(%s) failed due to: %r", name, remove_password_if_present(cmdline), ex)
+            raise CommandError(['<%s-pump>' % name] + remove_password_if_present(cmdline), ex) from ex
         finally:
             stream.close()
 
