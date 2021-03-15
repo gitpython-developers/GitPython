@@ -9,6 +9,7 @@ import logging
 import os
 import re
 import warnings
+from urllib.parse import urlsplit, urlunsplit
 
 from git.cmd import (
     Git,
@@ -971,10 +972,15 @@ class Repo(object):
             (stdout, stderr) = proc.communicate()
             cmdline = getattr(proc, 'args', '')
             uri = cmdline[-2]
-            if "://" in uri and "@" in uri:
-                cred = uri.split("://")[1].split("@")[0].split(":")
-                if len(cred) == 2:
-                    cmdline[-2] = uri.replace(cred[1], "******")
+            try:
+                url = urlsplit(uri)
+                # Remove password from the URL if present
+                if url.password:
+                    edited_url = url._replace(
+                        netloc=url.netloc.replace(url.password, "****"))
+                    cmdline[-2] = urlunsplit(edited_url)
+            except ValueError:
+                log.debug("Unable to parse the URL %s", url)
             log.debug("Cmd(%s)'s unused stdout: %s", cmdline, stdout)
             finalize_process(proc, stderr=stderr)
 
