@@ -28,7 +28,7 @@ from git.compat import (
     is_win,
 )
 from git.exc import CommandError
-from git.util import is_cygwin_git, cygpath, expand_path
+from git.util import is_cygwin_git, cygpath, expand_path, remove_password_if_present
 
 from .exc import (
     GitCommandError,
@@ -682,8 +682,10 @@ class Git(LazyMixin):
         :note:
            If you add additional keyword arguments to the signature of this method,
            you must update the execute_kwargs tuple housed in this module."""
+        # Remove password for the command if present
+        redacted_command = remove_password_if_present(command)
         if self.GIT_PYTHON_TRACE and (self.GIT_PYTHON_TRACE != 'full' or as_process):
-            log.info(' '.join(command))
+            log.info(' '.join(redacted_command))
 
         # Allow the user to have the command executed in their working dir.
         cwd = self._working_dir or os.getcwd()

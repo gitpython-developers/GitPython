@@ -9,7 +9,6 @@ import logging
 import os
 import re
 import warnings
-from urllib.parse import urlsplit, urlunsplit
 
 from git.cmd import (
     Git,
@@ -27,7 +26,7 @@ from git.index import IndexFile
 from git.objects import Submodule, RootModule, Commit
 from git.refs import HEAD, Head, Reference, TagReference
 from git.remote import Remote, add_progress, to_progress_instance
-from git.util import Actor, finalize_process, decygpath, hex_to_bin, expand_path
+from git.util import Actor, finalize_process, decygpath, hex_to_bin, expand_path, remove_password_if_present
 import os.path as osp
 
 from .fun import rev_parse, is_git_dir, find_submodule_git_dir, touch, find_worktree_git_dir
@@ -971,16 +970,8 @@ class Repo(object):
         else:
             (stdout, stderr) = proc.communicate()
             cmdline = getattr(proc, 'args', '')
-            uri = cmdline[-2]
-            try:
-                url = urlsplit(uri)
-                # Remove password from the URL if present
-                if url.password:
-                    edited_url = url._replace(
-                        netloc=url.netloc.replace(url.password, "****"))
-                    cmdline[-2] = urlunsplit(edited_url)
-            except ValueError:
-                log.debug("Unable to parse the URL %s", url)
+            cmdline = remove_password_if_present(cmdline)
+
             log.debug("Cmd(%s)'s unused stdout: %s", cmdline, stdout)
             finalize_process(proc, stderr=stderr)
 

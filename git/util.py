@@ -16,6 +16,7 @@ import stat
 from sys import maxsize
 import time
 from unittest import SkipTest
+from urllib.parse import urlsplit, urlunsplit
 
 from gitdb.util import (# NOQA @IgnorePep8
     make_sha,
@@ -337,6 +338,33 @@ def expand_path(p, expand_vars=True):
         return osp.normpath(osp.abspath(p))
     except Exception:
         return None
+
+
+def remove_password_if_present(cmdline):
+    """
+    Parse any command line argument and if on of the element is an URL with a
+    password, replace it by stars.  If nothing found just returns a copy of the
+    command line as-is.
+
+    This should be used for every log line that print a command line.
+    """
+    redacted_cmdline = []
+    for to_parse in cmdline:
+        try:
+            url = urlsplit(to_parse)
+            # Remove password from the URL if present
+            if url.password is None:
+                raise ValueError()
+
+            edited_url = url._replace(
+                netloc=url.netloc.replace(url.password, "*****"))
+            redacted_cmdline.append(urlunsplit(edited_url))
+        except ValueError:
+            redacted_cmdline.append(to_parse)
+            # This is not a valid URL
+            pass
+    return redacted_cmdline
+
 
 #} END utilities
 
