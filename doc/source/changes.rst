@@ -2,7 +2,12 @@
 Changelog
 =========
 
-3.1.??
+3.1.15 (UNRELEASED)
+===================
+
+* add deprectation warning for python 3.5
+
+3.1.14
 ======
 
 * git.Commit objects now have a ``replace`` method that will return a
