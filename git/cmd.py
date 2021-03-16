@@ -405,7 +405,7 @@ class Git(LazyMixin):
             if status != 0:
                 errstr = read_all_from_possibly_closed_stream(self.proc.stderr)
                 log.debug('AutoInterrupt wait stderr: %r' % (errstr,))
-                raise GitCommandError(self.args, status, errstr)
+                raise GitCommandError(remove_password_if_present(self.args), status, errstr)
             # END status handling
             return status
     # END auto interrupt
@@ -638,7 +638,7 @@ class Git(LazyMixin):
 
         :param env:
             A dictionary of environment variables to be passed to `subprocess.Popen`.
-            
+
         :param max_chunk_size:
             Maximum number of bytes in one chunk of data passed to the output_stream in
             one invocation of write() method. If the given number is not positive then
@@ -706,7 +706,7 @@ class Git(LazyMixin):
         if is_win:
             cmd_not_found_exception = OSError
             if kill_after_timeout:
-                raise GitCommandError(command, '"kill_after_timeout" feature is not supported on Windows.')
+                raise GitCommandError(redacted_command, '"kill_after_timeout" feature is not supported on Windows.')
         else:
             if sys.version_info[0] > 2:
                 cmd_not_found_exception = FileNotFoundError  # NOQA # exists, flake8 unknown @UndefinedVariable
@@ -721,7 +721,7 @@ class Git(LazyMixin):
         if istream:
             istream_ok = "<valid stream>"
         log.debug("Popen(%s, cwd=%s, universal_newlines=%s, shell=%s, istream=%s)",
-                  command, cwd, universal_newlines, shell, istream_ok)
+                  redacted_command, cwd, universal_newlines, shell, istream_ok)
         try:
             proc = Popen(command,
                          env=env,
@@ -737,7 +737,7 @@ class Git(LazyMixin):
                          **subprocess_kwargs
                          )
         except cmd_not_found_exception as err:
-            raise GitCommandNotFound(command, err) from err
+            raise GitCommandNotFound(redacted_command, err) from err
 
         if as_process:
             return self.AutoInterrupt(proc, command)
@@ -787,7 +787,7 @@ class Git(LazyMixin):
                     watchdog.cancel()
                     if kill_check.isSet():
                         stderr_value = ('Timeout: the command "%s" did not complete in %d '
-                                        'secs.' % (" ".join(command), kill_after_timeout))
+                                        'secs.' % (" ".join(redacted_command), kill_after_timeout))
                         if not universal_newlines:
                             stderr_value = stderr_value.encode(defenc)
                 # strip trailing "\n"
@@ -811,7 +811,7 @@ class Git(LazyMixin):
             proc.stderr.close()
 
         if self.GIT_PYTHON_TRACE == 'full':
-            cmdstr = " ".join(command)
+            cmdstr = " ".join(redacted_command)
 
             def as_text(stdout_value):
                 return not output_stream and safe_decode(stdout_value) or '<OUTPUT_STREAM>'
@@ -827,7 +827,7 @@ class Git(LazyMixin):
         # END handle debug printing
 
         if with_exceptions and status != 0:
-            raise GitCommandError(command, status, stderr_value, stdout_value)
+            raise GitCommandError(redacted_command, status, stderr_value, stdout_value)
 
         if isinstance(stdout_value, bytes) and stdout_as_string:  # could also be output_stream
             stdout_value = safe_decode(stdout_value)

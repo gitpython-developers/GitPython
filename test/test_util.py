@@ -325,7 +325,6 @@ class TestUtils(TestBase):
         self.assertEqual(t1._name, t2._name)
 
     def test_remove_password_from_command_line(self):
-        """Check that the password is not printed on the logs"""
         password = "fakepassword1234"
         url_with_pass = "https://fakeuser:{}@fakerepo.example.com/testrepo".format(password)
         url_without_pass = "https://fakerepo.example.com/testrepo"
@@ -334,6 +333,10 @@ class TestUtils(TestBase):
         cmd_2 = ["git", "clone", "-v", url_without_pass]
         cmd_3 = ["no", "url", "in", "this", "one"]
 
-        assert password not in remove_password_if_present(cmd_1)
+        redacted_cmd_1 = remove_password_if_present(cmd_1)
+        assert password not in " ".join(redacted_cmd_1)
+        # Check that we use a copy
+        assert cmd_1 is not redacted_cmd_1
+        assert password in " ".join(cmd_1)
         assert cmd_2 == remove_password_if_present(cmd_2)
         assert cmd_3 == remove_password_if_present(cmd_3)

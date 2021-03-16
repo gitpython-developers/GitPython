@@ -349,7 +349,9 @@ def remove_password_if_present(cmdline):
 
     This should be used for every log line that print a command line.
     """
+    new_cmdline = []
     for index, to_parse in enumerate(cmdline):
+        new_cmdline.append(to_parse)
         try:
             url = urlsplit(to_parse)
             # Remove password from the URL if present
@@ -358,11 +360,11 @@ def remove_password_if_present(cmdline):
 
             edited_url = url._replace(
                 netloc=url.netloc.replace(url.password, "*****"))
-            cmdline[index] = urlunsplit(edited_url)
+            new_cmdline[index] = urlunsplit(edited_url)
         except ValueError:
             # This is not a valid URL
             pass
-    return cmdline
+    return new_cmdline
 
 
 #} END utilities
