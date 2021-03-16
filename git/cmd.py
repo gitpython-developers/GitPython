@@ -210,7 +210,7 @@ class Git(LazyMixin):
         # - a GitCommandNotFound error is spawned by ourselves
         # - a PermissionError is spawned if the git executable provided
         #   cannot be executed for whatever reason
-        
+
         has_git = False
         try:
             cls().version()
@@ -498,7 +498,7 @@ class Git(LazyMixin):
         # skipcq: PYL-E0301
         def __iter__(self):
             return self
-        
+
         def __next__(self):
             return self.next()
 
@@ -639,7 +639,7 @@ class Git(LazyMixin):
 
         :param env:
             A dictionary of environment variables to be passed to `subprocess.Popen`.
-            
+
         :param max_chunk_size:
             Maximum number of bytes in one chunk of data passed to the output_stream in
             one invocation of write() method. If the given number is not positive then

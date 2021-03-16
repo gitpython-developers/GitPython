@@ -36,18 +36,9 @@ import gitdb
 
 from git.types import TBD, PathLike
 from typing_extensions import Literal
-from typing import (Any,
-                    BinaryIO,
-                    Callable,
-                    Dict,
-                    Iterator,
-                    List,
-                    Mapping,
-                    Optional,
-                    TextIO,
-                    Tuple,
-                    Type,
-                    Union,
+from typing import (Any, BinaryIO, Callable, Dict,
+                    Iterator, List, Mapping, Optional,
+                    TextIO, Tuple, Type, Union,
                     NamedTuple, cast, TYPE_CHECKING)
 
 if TYPE_CHECKING:  # only needed for types
@@ -231,10 +222,11 @@ class Repo(object):
         self.git = self.GitCommandWrapperType(self.working_dir)
 
         # special handling, in special times
-        args = [osp.join(self.common_dir, 'objects')]
+        rootpath = osp.join(self.common_dir, 'objects')
         if issubclass(odbt, GitCmdObjectDB):
-            args.append(self.git)
-        self.odb = odbt(*args)
+            self.odb = odbt(rootpath, self.git)
+        else:
+            self.odb = odbt(rootpath)
 
     def __enter__(self) -> 'Repo':
         return self
@@ -514,7 +506,7 @@ class Repo(object):
         return GitConfigParser(self._get_config_path(config_level), read_only=False, repo=self)
 
     def commit(self, rev: Optional[TBD] = None
-               ) -> Union['SymbolicReference', Commit, 'TagObject', 'Blob', 'Tree', None]:
+               ) -> Union['SymbolicReference', Commit, 'TagObject', 'Blob', 'Tree']:
         """The Commit object for the specified revision
 
         :param rev: revision specifier, see git-rev-parse for viable options.

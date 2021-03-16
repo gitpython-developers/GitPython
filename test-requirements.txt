@@ -4,4 +4,5 @@ flake8
 tox
 virtualenv
 nose
+gitdb>=4.0.1,<5
 typing-extensions>=3.7.4.0
