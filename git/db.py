@@ -23,8 +23,6 @@ if TYPE_CHECKING:
 
 __all__ = ('GitCmdObjectDB', 'GitDB')
 
-# class GitCmdObjectDB(CompoundDB, ObjectDBW):
-
 
 class GitCmdObjectDB(LooseObjectDB):
 
