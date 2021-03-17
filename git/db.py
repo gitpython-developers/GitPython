@@ -7,11 +7,19 @@ from gitdb.base import (
 from gitdb.db import GitDB  # @UnusedImport
 from gitdb.db import LooseObjectDB
 
-from .exc import (
-    GitCommandError,
-    BadObject
-)
+from gitdb.exc import BadObject
+from git.exc import GitCommandError
 
+# typing-------------------------------------------------
+
+from typing import TYPE_CHECKING, AnyStr
+from git.types import PathLike
+
+if TYPE_CHECKING:
+    from git.cmd import Git
+    
+
+# --------------------------------------------------------
 
 __all__ = ('GitCmdObjectDB', 'GitDB')
 
@@ -28,23 +36,23 @@ class GitCmdObjectDB(LooseObjectDB):
         have packs and the other implementations
     """
 
-    def __init__(self, root_path, git):
+    def __init__(self, root_path: PathLike, git: 'Git') -> None:
         """Initialize this instance with the root and a git command"""
         super(GitCmdObjectDB, self).__init__(root_path)
         self._git = git
 
-    def info(self, sha):
+    def info(self, sha: bytes) -> OInfo:
         hexsha, typename, size = self._git.get_object_header(bin_to_hex(sha))
         return OInfo(hex_to_bin(hexsha), typename, size)
 
-    def stream(self, sha):
+    def stream(self, sha: bytes) -> OStream:
         """For now, all lookup is done by git itself"""
         hexsha, typename, size, stream = self._git.stream_object_data(bin_to_hex(sha))
         return OStream(hex_to_bin(hexsha), typename, size, stream)
 
     # { Interface
 
-    def partial_to_complete_sha_hex(self, partial_hexsha):
+    def partial_to_complete_sha_hex(self, partial_hexsha: AnyStr) -> bytes:
         """:return: Full binary 20 byte sha from the given partial hexsha
         :raise AmbiguousObjectName:
         :raise BadObject:

@@ -36,18 +36,9 @@ import gitdb
 
 from git.types import TBD, PathLike
 from typing_extensions import Literal
-from typing import (Any,
-                    BinaryIO,
-                    Callable,
-                    Dict,
-                    Iterator,
-                    List,
-                    Mapping,
-                    Optional,
-                    TextIO,
-                    Tuple,
-                    Type,
-                    Union,
+from typing import (Any, BinaryIO, Callable, Dict,
+                    Iterator, List, Mapping, Optional,
+                    TextIO, Tuple, Type, Union,
                     NamedTuple, cast, TYPE_CHECKING)
 
 if TYPE_CHECKING:  # only needed for types
@@ -231,10 +222,11 @@ class Repo(object):
         self.git = self.GitCommandWrapperType(self.working_dir)
 
         # special handling, in special times
-        args = [osp.join(self.common_dir, 'objects')]
+        rootpath = osp.join(self.common_dir, 'objects')
         if issubclass(odbt, GitCmdObjectDB):
-            args.append(self.git)
-        self.odb = odbt(*args)
+            self.odb = odbt(rootpath, self.git)
+        else:
+            self.odb = odbt(rootpath)
 
     def __enter__(self) -> 'Repo':
         return self
@@ -276,13 +268,14 @@ class Repo(object):
 
     # Description property
     def _get_description(self) -> str:
-        filename = osp.join(self.git_dir, 'description') if self.git_dir else ""
+        if self.git_dir:
+            filename = osp.join(self.git_dir, 'description')
         with open(filename, 'rb') as fp:
             return fp.read().rstrip().decode(defenc)
 
     def _set_description(self, descr: str) -> None:
-
-        filename = osp.join(self.git_dir, 'description') if self.git_dir else ""
+        if self.git_dir:
+            filename = osp.join(self.git_dir, 'description')
         with open(filename, 'wb') as fp:
             fp.write((descr + '\n').encode(defenc))
 
@@ -422,7 +415,7 @@ class Repo(object):
         :return: newly created Head Reference"""
         return Head.create(self, path, commit, force, logmsg)
 
-    def delete_head(self, *heads: HEAD, **kwargs: Any) -> None:
+    def delete_head(self, *heads: 'SymbolicReference', **kwargs: Any) -> None:
         """Delete the given heads
 
         :param kwargs: Additional keyword arguments to be passed to git-branch"""
@@ -468,12 +461,11 @@ class Repo(object):
         elif config_level == "global":
             return osp.normpath(osp.expanduser("~/.gitconfig"))
         elif config_level == "repository":
-            if self._common_dir:
-                return osp.normpath(osp.join(self._common_dir, "config"))
-            elif self.git_dir:
-                return osp.normpath(osp.join(self.git_dir, "config"))
-            else:
+            repo_dir = self._common_dir or self.git_dir
+            if not repo_dir:
                 raise NotADirectoryError
+            else:
+                return osp.normpath(osp.join(repo_dir, "config"))
 
         raise ValueError("Invalid configuration level: %r" % config_level)
 
@@ -514,7 +506,7 @@ class Repo(object):
         return GitConfigParser(self._get_config_path(config_level), read_only=False, repo=self)
 
     def commit(self, rev: Optional[TBD] = None
-               ) -> Union['SymbolicReference', Commit, 'TagObject', 'Blob', 'Tree', None]:
+               ) -> Union['SymbolicReference', Commit, 'TagObject', 'Blob', 'Tree']:
         """The Commit object for the specified revision
 
         :param rev: revision specifier, see git-rev-parse for viable options.
@@ -619,11 +611,13 @@ class Repo(object):
         return True
 
     def _get_daemon_export(self) -> bool:
-        filename = osp.join(self.git_dir, self.DAEMON_EXPORT_FILE) if self.git_dir else ""
+        if self.git_dir:
+            filename = osp.join(self.git_dir, self.DAEMON_EXPORT_FILE)
         return osp.exists(filename)
 
     def _set_daemon_export(self, value: object) -> None:
-        filename = osp.join(self.git_dir, self.DAEMON_EXPORT_FILE) if self.git_dir else ""
+        if self.git_dir:
+            filename = osp.join(self.git_dir, self.DAEMON_EXPORT_FILE)
         fileexists = osp.exists(filename)
         if value and not fileexists:
             touch(filename)
@@ -639,7 +633,8 @@ class Repo(object):
         """The list of alternates for this repo from which objects can be retrieved
 
         :return: list of strings being pathnames of alternates"""
-        alternates_path = osp.join(self.git_dir, 'objects', 'info', 'alternates') if self.git_dir else ""
+        if self.git_dir:
+            alternates_path = osp.join(self.git_dir, 'objects', 'info', 'alternates')
 
         if osp.exists(alternates_path):
             with open(alternates_path, 'rb') as f:
@@ -1142,7 +1137,8 @@ class Repo(object):
 
         None if we are not currently rebasing.
         """
-        rebase_head_file = osp.join(self.git_dir, "REBASE_HEAD") if self.git_dir else ""
+        if self.git_dir:
+            rebase_head_file = osp.join(self.git_dir, "REBASE_HEAD")
         if not osp.isfile(rebase_head_file):
             return None
         return self.commit(open(rebase_head_file, "rt").readline().strip())
