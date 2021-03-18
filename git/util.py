@@ -356,14 +356,14 @@ def remove_password_if_present(cmdline):
             url = urlsplit(to_parse)
             # Remove password from the URL if present
             if url.password is None:
-                raise ValueError()
+                continue
 
             edited_url = url._replace(
                 netloc=url.netloc.replace(url.password, "*****"))
             new_cmdline[index] = urlunsplit(edited_url)
         except ValueError:
             # This is not a valid URL
-            pass
+            continue
     return new_cmdline
 
 
