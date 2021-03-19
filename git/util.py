@@ -17,6 +17,7 @@ import stat
 from sys import maxsize
 import time
 from unittest import SkipTest
+from urllib.parse import urlsplit, urlunsplit
 
 # typing ---------------------------------------------------------
 
@@ -361,6 +362,34 @@ def expand_path(p: PathLike, expand_vars: bool = True) -> Optional[PathLike]:
         return osp.normpath(osp.abspath(p))
     except Exception:
         return None
+
+
+def remove_password_if_present(cmdline):
+    """
+    Parse any command line argument and if on of the element is an URL with a
+    password, replace it by stars (in-place).
+
+    If nothing found just returns the command line as-is.
+
+    This should be used for every log line that print a command line.
+    """
+    new_cmdline = []
+    for index, to_parse in enumerate(cmdline):
+        new_cmdline.append(to_parse)
+        try:
+            url = urlsplit(to_parse)
+            # Remove password from the URL if present
+            if url.password is None:
+                continue
+
+            edited_url = url._replace(
+                netloc=url.netloc.replace(url.password, "*****"))
+            new_cmdline[index] = urlunsplit(edited_url)
+        except ValueError:
+            # This is not a valid URL
+            continue
+    return new_cmdline
+
 
 #} END utilities
 

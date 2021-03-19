@@ -25,7 +25,7 @@ from git.index import IndexFile
 from git.objects import Submodule, RootModule, Commit
 from git.refs import HEAD, Head, Reference, TagReference
 from git.remote import Remote, add_progress, to_progress_instance
-from git.util import Actor, finalize_process, decygpath, hex_to_bin, expand_path
+from git.util import Actor, finalize_process, decygpath, hex_to_bin, expand_path, remove_password_if_present
 import os.path as osp
 
 from .fun import rev_parse, is_git_dir, find_submodule_git_dir, touch, find_worktree_git_dir
@@ -1018,7 +1018,10 @@ class Repo(object):
                                   finalize_process, decode_streams=False)
         else:
             (stdout, stderr) = proc.communicate()
-            log.debug("Cmd(%s)'s unused stdout: %s", getattr(proc, 'args', ''), stdout)
+            cmdline = getattr(proc, 'args', '')
+            cmdline = remove_password_if_present(cmdline)
+
+            log.debug("Cmd(%s)'s unused stdout: %s", cmdline, stdout)
             finalize_process(proc, stderr=stderr)
 
         # our git command could have a different working dir than our actual
