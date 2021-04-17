@@ -103,7 +103,7 @@ def handle_process_output(process, stdout_handler, stderr_handler,
     for name, stream, handler in pumps:
         t = threading.Thread(target=pump_stream,
                              args=(cmdline, name, stream, decode_streams, handler))
-        t.setDaemon(True)
+        t.daemon = True
         t.start()
         threads.append(t)
 
