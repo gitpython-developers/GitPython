@@ -34,8 +34,8 @@ import gitdb
 
 # typing ------------------------------------------------------
 
+from git.compat.typing import Literal
 from git.types import TBD, PathLike
-from typing_extensions import Literal
 from typing import (Any, BinaryIO, Callable, Dict,
                     Iterator, List, Mapping, Optional,
                     TextIO, Tuple, Type, Union,
