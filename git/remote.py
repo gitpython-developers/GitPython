@@ -414,7 +414,6 @@ class Remote(LazyMixin, Iterable):
         self.repo = repo  # type: 'Repo'
         self.name = name
 
-
     def __getattr__(self, attr):
         """Allows to call this instance like
         remote.special( \\*args, \\*\\*kwargs) to call git-remote special self.name"""
