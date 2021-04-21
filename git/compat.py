@@ -18,7 +18,7 @@ from gitdb.utils.encoding import (
 
 # typing --------------------------------------------------------------------
 
-from typing import Any, AnyStr, Dict, Optional, Type
+from typing import IO, Any, AnyStr, Dict, Optional, Type, Union
 from git.types import TBD
 
 # ---------------------------------------------------------------------------
@@ -30,7 +30,7 @@ is_darwin = (os.name == 'darwin')
 defenc = sys.getfilesystemencoding()
 
 
-def safe_decode(s: Optional[AnyStr]) -> Optional[str]:
+def safe_decode(s: Union[IO[str], AnyStr, None]) -> Optional[str]:
     """Safely decodes a binary string to unicode"""
     if isinstance(s, str):
         return s

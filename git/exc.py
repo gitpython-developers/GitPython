@@ -65,10 +65,12 @@ class CommandError(GitError):
                     status = "'%s'" % s if isinstance(status, str) else s
 
         self._cmd = safe_decode(command[0])
-        self._cmdline = ' '.join(str(safe_decode(i)) for i in command)
+        self._cmdline = ' '.join(safe_decode(i) for i in command)
         self._cause = status and " due to: %s" % status or "!"
-        self.stdout = stdout and "\n  stdout: '%s'" % safe_decode(str(stdout)) or ''
-        self.stderr = stderr and "\n  stderr: '%s'" % safe_decode(str(stderr)) or ''
+        stdout_decode = safe_decode(stdout)
+        stderr_decode = safe_decode(stderr)
+        self.stdout = stdout_decode and "\n  stdout: '%s'" % stdout_decode or ''
+        self.stderr = stderr_decode and "\n  stderr: '%s'" % stderr_decode or ''
 
     def __str__(self) -> str:
         return (self._msg + "\n  cmdline: %s%s%s") % (
