@@ -2,10 +2,13 @@
 Changelog
 =========
 
-3.1.15 (UNRELEASED)
-===================
+3.1.15 
+======
 
 * add deprectation warning for python 3.5
+
+See the following for details:
+https://github.com/gitpython-developers/gitpython/milestone/47?closed=1 
 
 3.1.14
 ======
@@ -14,6 +17,9 @@ Changelog
   copy of the commit with modified attributes.
 * Add python 3.9 support
 * Drop python 3.4 support
+
+See the following for details:
+https://github.com/gitpython-developers/gitpython/milestone/46?closed=1 
 
 3.1.13
 ======
