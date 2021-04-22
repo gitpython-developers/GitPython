@@ -988,8 +988,6 @@ class Repo(object):
     def _clone(cls, git: 'Git', url: PathLike, path: PathLike, odb_default_type: Type[GitCmdObjectDB],
                progress: Optional[Callable], multi_options: Optional[List[str]] = None, **kwargs: Any
                ) -> 'Repo':
-        progress_checked = to_progress_instance(progress)
-
         odbt = kwargs.pop('odbt', odb_default_type)
 
         # when pathlib.Path or other classbased path is passed
@@ -1012,9 +1010,9 @@ class Repo(object):
         if multi_options:
             multi = ' '.join(multi_options).split(' ')
         proc = git.clone(multi, Git.polish_url(url), clone_path, with_extended_output=True, as_process=True,
-                         v=True, universal_newlines=True, **add_progress(kwargs, git, progress_checked))
-        if progress_checked:
-            handle_process_output(proc, None, progress_checked.new_message_handler(),
+                         v=True, universal_newlines=True, **add_progress(kwargs, git, progress))
+        if progress:
+            handle_process_output(proc, None, to_progress_instance(progress).new_message_handler(),
                                   finalize_process, decode_streams=False)
         else:
             (stdout, stderr) = proc.communicate()
