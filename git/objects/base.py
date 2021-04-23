@@ -7,6 +7,7 @@ from git.util import LazyMixin, join_path_native, stream_copy, bin_to_hex
 
 import gitdb.typ as dbtyp
 import os.path as osp
+from typing import Optional  # noqa: F401 unused import
 
 from .util import get_object_type_by_name
 
@@ -24,7 +25,7 @@ class Object(LazyMixin):
 
     TYPES = (dbtyp.str_blob_type, dbtyp.str_tree_type, dbtyp.str_commit_type, dbtyp.str_tag_type)
     __slots__ = ("repo", "binsha", "size")
-    type = None         # to be set by subclass
+    type = None  # type: Optional[str] # to be set by subclass
 
     def __init__(self, repo, binsha):
         """Initialize an object by identifying it by its binary sha.
