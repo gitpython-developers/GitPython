@@ -216,7 +216,7 @@ def get_config_path(config_level: Literal['system', 'global', 'user', 'repositor
     raise ValueError("Invalid configuration level: %r" % config_level)
 
 
-class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, object)):
+class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, object)):  # type: ignore ## mypy does not understand dynamic class creation # noqa: E501
 
     """Implements specifics required to read git style configuration files.
 

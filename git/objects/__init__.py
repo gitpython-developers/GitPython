@@ -16,8 +16,8 @@ from .tag import *
 from .tree import *
 # Fix import dependency - add IndexObject to the util module, so that it can be
 # imported by the submodule.base
-smutil.IndexObject = IndexObject
-smutil.Object = Object
+smutil.IndexObject = IndexObject  # type: ignore[attr-defined]
+smutil.Object = Object  # type: ignore[attr-defined]
 del(smutil)
 
 # must come after submodule was made available

@@ -103,7 +103,7 @@ class Reference(SymbolicReference, LazyMixin, Iterable):
 
     #{ Remote Interface
 
-    @property
+    @property  # type: ignore ## mypy cannot deal with properties with an extra decorator (2021-04-21)
     @require_remote_ref_path
     def remote_name(self):
         """
@@ -114,7 +114,7 @@ class Reference(SymbolicReference, LazyMixin, Iterable):
         # /refs/remotes/<remote name>/<branch_name>
         return tokens[2]
 
-    @property
+    @property  # type: ignore ## mypy cannot deal with properties with an extra decorator (2021-04-21)
     @require_remote_ref_path
     def remote_head(self):
         """:return: Name of the remote head itself, i.e. master.
