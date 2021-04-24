@@ -16,14 +16,13 @@ import re
 import fnmatch
 from collections import OrderedDict
 
-from typing_extensions import Literal
-
 from git.compat import (
     defenc,
     force_text,
     with_metaclass,
     is_win,
 )
+from git.compat.typing import Literal
 from git.util import LockFile
 
 import os.path as osp

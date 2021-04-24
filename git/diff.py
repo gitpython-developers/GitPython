@@ -16,7 +16,7 @@ from .objects.util import mode_str_to_int
 # typing ------------------------------------------------------------------
 
 from typing import Any, Iterator, List, Match, Optional, Tuple, Type, Union, TYPE_CHECKING
-from typing_extensions import Final, Literal
+from git.compat.typing import Final, Literal
 from git.types import TBD
 
 if TYPE_CHECKING:
