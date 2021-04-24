@@ -8,6 +8,6 @@
 import sys
 
 if sys.version_info[:2] >= (3, 8):
-    from typing import Final, Literal
+    from typing import Final, Literal  # noqa: F401
 else:
-    from typing_extensions import Final, Literal
+    from typing_extensions import Final, Literal  # noqa: F401
