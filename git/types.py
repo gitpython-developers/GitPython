@@ -6,6 +6,11 @@ import os
 import sys
 from typing import Union, Any
 
+if sys.version_info[:2] >= (3, 8):
+    from typing import Final, Literal  # noqa: F401
+else:
+    from typing_extensions import Final, Literal  # noqa: F401
+
 
 TBD = Any
 
