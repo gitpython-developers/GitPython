@@ -36,7 +36,7 @@ from .refs import (
 
 # typing-------------------------------------------------------
 
-from typing import Any, Optional, Set, TYPE_CHECKING, Union
+from typing import Any, Callable, Optional, Set, TYPE_CHECKING, Union
 
 from git.types import PathLike, Literal
 
@@ -55,7 +55,7 @@ __all__ = ('RemoteProgress', 'PushInfo', 'FetchInfo', 'Remote')
 #{ Utilities
 
 
-def add_progress(kwargs: Any, git: Git, progress: RemoteProgress) -> Any:
+def add_progress(kwargs: Any, git: Git, progress: Optional[Callable[..., Any]]) -> Any:
     """Add the --progress flag to the given kwargs dict if supported by the
     git command. If the actual progress in the given progress instance is not
     given, we do not request any progress
@@ -71,7 +71,7 @@ def add_progress(kwargs: Any, git: Git, progress: RemoteProgress) -> Any:
 #} END utilities
 
 
-def to_progress_instance(progress: Optional[RemoteProgress]) -> Union[RemoteProgress, CallableRemoteProgress]:
+def to_progress_instance(progress: Callable[..., Any]) -> Union[RemoteProgress, CallableRemoteProgress]:
     """Given the 'progress' return a suitable object derived from
     RemoteProgress().
     """
