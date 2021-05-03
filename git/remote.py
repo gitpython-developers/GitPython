@@ -36,14 +36,18 @@ from .refs import (
 
 # typing-------------------------------------------------------
 
-from typing import Any, Callable, Optional, TYPE_CHECKING, Union, overload
+from typing import Any, Callable, Dict, Optional, TYPE_CHECKING, Union, cast, overload
 
 from git.types import PathLike, Literal
 
 if TYPE_CHECKING:
     from git.repo.base import Repo
     from git.objects.commit import Commit
+    from git.objects.blob import Blob
+    from git.objects.tree import Tree
+    from git.objects.tag import TagObject
 
+flagKeyLiteral = Literal[' ', '!', '+', '-', '*', '=', 't']
 # -------------------------------------------------------------
 
 log = logging.getLogger('git.remote')
@@ -131,7 +135,7 @@ class PushInfo(object):
                  '=': UP_TO_DATE,
                  '!': ERROR}
 
-    def __init__(self, flags: int, local_ref: Union[SymbolicReference, None], remote_ref_string: str, remote,
+    def __init__(self, flags: int, local_ref: Union[SymbolicReference, None], remote_ref_string: str, remote: 'Remote',
                  old_commit: Optional[str] = None, summary: str = '') -> None:
         """ Initialize a new instance
             local_ref: HEAD | Head | RemoteReference | TagReference | Reference | SymbolicReference | None """
@@ -143,7 +147,7 @@ class PushInfo(object):
         self.summary = summary
 
     @property
-    def old_commit(self) -> Optional[bool]:
+    def old_commit(self) -> Union[str, SymbolicReference, 'Commit', 'TagObject', 'Blob', 'Tree', None]:
         return self._old_commit_sha and self._remote.repo.commit(self._old_commit_sha) or None
 
     @property
@@ -246,7 +250,7 @@ class FetchInfo(object):
         '=': HEAD_UPTODATE,
         ' ': FAST_FORWARD,
         '-': TAG_UPDATE,
-    }
+    }  # type: Dict[flagKeyLiteral, int]
 
     @classmethod
     def refresh(cls) -> Literal[True]:
@@ -297,7 +301,7 @@ class FetchInfo(object):
         return self.ref.commit
 
     @classmethod
-    def _from_line(cls, repo, line, fetch_line):
+    def _from_line(cls, repo: Repo, line: str, fetch_line) -> 'FetchInfo':
         """Parse information from the given line as returned by git-fetch -v
         and return a new FetchInfo object representing this information.
 
@@ -319,7 +323,9 @@ class FetchInfo(object):
             raise ValueError("Failed to parse line: %r" % line)
 
         # parse lines
-        control_character, operation, local_remote_ref, remote_local_ref, note = match.groups()
+        control_character, operation, local_remote_ref, remote_local_ref_str, note = match.groups()
+        control_character = cast(flagKeyLiteral, control_character)  # can do this neater once 3.5 dropped
+
         try:
             _new_hex_sha, _fetch_operation, fetch_note = fetch_line.split("\t")
             ref_type_name, fetch_note = fetch_note.split(' ', 1)
@@ -359,7 +365,7 @@ class FetchInfo(object):
         # the fetch result is stored in FETCH_HEAD which destroys the rule we usually
         # have. In that case we use a symbolic reference which is detached
         ref_type = None
-        if remote_local_ref == "FETCH_HEAD":
+        if remote_local_ref_str == "FETCH_HEAD":
             ref_type = SymbolicReference
         elif ref_type_name == "tag" or is_tag_operation:
             # the ref_type_name can be branch, whereas we are still seeing a tag operation. It happens during
@@ -387,21 +393,21 @@ class FetchInfo(object):
             # by the 'ref/' prefix. Otherwise even a tag could be in refs/remotes, which is when it will have the
             # 'tags/' subdirectory in its path.
             # We don't want to test for actual existence, but try to figure everything out analytically.
-            ref_path = None
-            remote_local_ref = remote_local_ref.strip()
-            if remote_local_ref.startswith(Reference._common_path_default + "/"):
+            ref_path = None  # type: Optional[PathLike]
+            remote_local_ref_str = remote_local_ref_str.strip()
+            if remote_local_ref_str.startswith(Reference._common_path_default + "/"):
                 # always use actual type if we get absolute paths
                 # Will always be the case if something is fetched outside of refs/remotes (if its not a tag)
-                ref_path = remote_local_ref
+                ref_path = remote_local_ref_str
                 if ref_type is not TagReference and not \
-                   remote_local_ref.startswith(RemoteReference._common_path_default + "/"):
+                   remote_local_ref_str.startswith(RemoteReference._common_path_default + "/"):
                     ref_type = Reference
                 # END downgrade remote reference
-            elif ref_type is TagReference and 'tags/' in remote_local_ref:
+            elif ref_type is TagReference and 'tags/' in remote_local_ref_str:
                 # even though its a tag, it is located in refs/remotes
-                ref_path = join_path(RemoteReference._common_path_default, remote_local_ref)
+                ref_path = join_path(RemoteReference._common_path_default, remote_local_ref_str)
             else:
-                ref_path = join_path(ref_type._common_path_default, remote_local_ref)
+                ref_path = join_path(ref_type._common_path_default, remote_local_ref_str)
             # END obtain refpath
 
             # even though the path could be within the git conventions, we make
