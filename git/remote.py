@@ -301,7 +301,7 @@ class FetchInfo(object):
         return self.ref.commit
 
     @classmethod
-    def _from_line(cls, repo: Repo, line: str, fetch_line) -> 'FetchInfo':
+    def _from_line(cls, repo: 'Repo', line: str, fetch_line: str) -> 'FetchInfo':
         """Parse information from the given line as returned by git-fetch -v
         and return a new FetchInfo object representing this information.
 
