@@ -115,8 +115,8 @@ class PushInfo(object):
                  '=': UP_TO_DATE,
                  '!': ERROR}
 
-    def __init__(self, flags, local_ref, remote_ref_string, remote, old_commit=None,
-                 summary=''):
+    def __init__(self, flags: Set[int], local_ref: SymbolicReference, remote_ref_string: str, remote,
+                 old_commit: Optional[bytes] = None, summary: str = '') -> None:
         """ Initialize a new instance """
         self.flags = flags
         self.local_ref = local_ref
@@ -126,11 +126,11 @@ class PushInfo(object):
         self.summary = summary
 
     @property
-    def old_commit(self):
+    def old_commit(self) -> Optional[bool]:
         return self._old_commit_sha and self._remote.repo.commit(self._old_commit_sha) or None
 
     @property
-    def remote_ref(self):
+    def remote_ref(self) -> Union[RemoteReference, TagReference]:
         """
         :return:
             Remote Reference or TagReference in the local repository corresponding
