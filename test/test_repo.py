@@ -238,6 +238,21 @@ class TestRepo(TestBase):
             except UnicodeEncodeError:
                 self.fail('Raised UnicodeEncodeError')
 
+    @with_rw_directory
+    def test_leaking_password_in_clone_logs(self, rw_dir):
+        password = "fakepassword1234"
+        try:
+            Repo.clone_from(
+                url="https://fakeuser:{}@fakerepo.example.com/testrepo".format(
+                    password),
+                to_path=rw_dir)
+        except GitCommandError as err:
+            assert password not in str(err), "The error message '%s' should not contain the password" % err
+        # Working example from a blank private project
+        Repo.clone_from(
+            url="https://gitlab+deploy-token-392045:mLWhVus7bjLsy8xj8q2V@gitlab.com/mercierm/test_git_python",
+            to_path=rw_dir)
+
     @with_rw_repo('HEAD')
     def test_max_chunk_size(self, repo):
         class TestOutputStream(TestBase):

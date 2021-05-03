@@ -19,7 +19,7 @@ import sys
 import threading
 from collections import OrderedDict
 from textwrap import dedent
-from typing import Any, Dict, List, Optional
+import warnings
 
 from git.compat import (
     defenc,
@@ -29,7 +29,7 @@ from git.compat import (
     is_win,
 )
 from git.exc import CommandError
-from git.util import is_cygwin_git, cygpath, expand_path
+from git.util import is_cygwin_git, cygpath, expand_path, remove_password_if_present
 
 from .exc import (
     GitCommandError,
@@ -39,8 +39,6 @@ from .util import (
     LazyMixin,
     stream_copy,
 )
-
-from .types import PathLike
 
 execute_kwargs = {'istream', 'with_extended_output',
                   'with_exceptions', 'as_process', 'stdout_as_string',
@@ -85,8 +83,8 @@ def handle_process_output(process, stdout_handler, stderr_handler,
                         line = line.decode(defenc)
                     handler(line)
         except Exception as ex:
-            log.error("Pumping %r of cmd(%s) failed due to: %r", name, cmdline, ex)
-            raise CommandError(['<%s-pump>' % name] + cmdline, ex) from ex
+            log.error("Pumping %r of cmd(%s) failed due to: %r", name, remove_password_if_present(cmdline), ex)
+            raise CommandError(['<%s-pump>' % name] + remove_password_if_present(cmdline), ex) from ex
         finally:
             stream.close()
 
@@ -105,7 +103,7 @@ def handle_process_output(process, stdout_handler, stderr_handler,
     for name, stream, handler in pumps:
         t = threading.Thread(target=pump_stream,
                              args=(cmdline, name, stream, decode_streams, handler))
-        t.setDaemon(True)
+        t.daemon = True
         t.start()
         threads.append(t)
 
@@ -140,7 +138,7 @@ CREATE_NO_WINDOW = 0x08000000
 
 ## CREATE_NEW_PROCESS_GROUP is needed to allow killing it afterwards,
 # see https://docs.python.org/3/library/subprocess.html#subprocess.Popen.send_signal
-PROC_CREATIONFLAGS = (CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP
+PROC_CREATIONFLAGS = (CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP  # type: ignore[attr-defined]
                       if is_win else 0)
 
 
@@ -212,7 +210,7 @@ class Git(LazyMixin):
         # - a GitCommandNotFound error is spawned by ourselves
         # - a PermissionError is spawned if the git executable provided
         #   cannot be executed for whatever reason
-        
+
         has_git = False
         try:
             cls().version()
@@ -408,7 +406,7 @@ class Git(LazyMixin):
             if status != 0:
                 errstr = read_all_from_possibly_closed_stream(self.proc.stderr)
                 log.debug('AutoInterrupt wait stderr: %r' % (errstr,))
-                raise GitCommandError(self.args, status, errstr)
+                raise GitCommandError(remove_password_if_present(self.args), status, errstr)
             # END status handling
             return status
     # END auto interrupt
@@ -500,7 +498,7 @@ class Git(LazyMixin):
         # skipcq: PYL-E0301
         def __iter__(self):
             return self
-        
+
         def __next__(self):
             return self.next()
 
@@ -519,7 +517,7 @@ class Git(LazyMixin):
                 self._stream.read(bytes_left + 1)
             # END handle incomplete read
 
-    def __init__(self, working_dir: Optional[PathLike]=None) -> None:
+    def __init__(self, working_dir=None):
         """Initialize this instance with:
 
         :param working_dir:
@@ -528,12 +526,12 @@ class Git(LazyMixin):
            It is meant to be the working tree directory if available, or the
            .git directory in case of bare repositories."""
         super(Git, self).__init__()
-        self._working_dir = expand_path(working_dir) if working_dir is not None else None
+        self._working_dir = expand_path(working_dir)
         self._git_options = ()
-        self._persistent_git_options = []  # type: List[str]
+        self._persistent_git_options = []
 
         # Extra environment variables to pass to git commands
-        self._environment = {}  # type: Dict[str, Any]
+        self._environment = {}
 
         # cached command slots
         self.cat_file_header = None
@@ -547,7 +545,7 @@ class Git(LazyMixin):
             return LazyMixin.__getattr__(self, name)
         return lambda *args, **kwargs: self._call_process(name, *args, **kwargs)
 
-    def set_persistent_git_options(self, **kwargs) -> None:
+    def set_persistent_git_options(self, **kwargs):
         """Specify command line options to the git executable
         for subsequent subcommand calls
 
@@ -641,7 +639,7 @@ class Git(LazyMixin):
 
         :param env:
             A dictionary of environment variables to be passed to `subprocess.Popen`.
-            
+
         :param max_chunk_size:
             Maximum number of bytes in one chunk of data passed to the output_stream in
             one invocation of write() method. If the given number is not positive then
@@ -685,8 +683,10 @@ class Git(LazyMixin):
         :note:
            If you add additional keyword arguments to the signature of this method,
            you must update the execute_kwargs tuple housed in this module."""
+        # Remove password for the command if present
+        redacted_command = remove_password_if_present(command)
         if self.GIT_PYTHON_TRACE and (self.GIT_PYTHON_TRACE != 'full' or as_process):
-            log.info(' '.join(command))
+            log.info(' '.join(redacted_command))
 
         # Allow the user to have the command executed in their working dir.
         cwd = self._working_dir or os.getcwd()
@@ -707,7 +707,7 @@ class Git(LazyMixin):
         if is_win:
             cmd_not_found_exception = OSError
             if kill_after_timeout:
-                raise GitCommandError(command, '"kill_after_timeout" feature is not supported on Windows.')
+                raise GitCommandError(redacted_command, '"kill_after_timeout" feature is not supported on Windows.')
         else:
             if sys.version_info[0] > 2:
                 cmd_not_found_exception = FileNotFoundError  # NOQA # exists, flake8 unknown @UndefinedVariable
@@ -722,7 +722,7 @@ class Git(LazyMixin):
         if istream:
             istream_ok = "<valid stream>"
         log.debug("Popen(%s, cwd=%s, universal_newlines=%s, shell=%s, istream=%s)",
-                  command, cwd, universal_newlines, shell, istream_ok)
+                  redacted_command, cwd, universal_newlines, shell, istream_ok)
         try:
             proc = Popen(command,
                          env=env,
@@ -738,7 +738,7 @@ class Git(LazyMixin):
                          **subprocess_kwargs
                          )
         except cmd_not_found_exception as err:
-            raise GitCommandNotFound(command, err) from err
+            raise GitCommandNotFound(redacted_command, err) from err
 
         if as_process:
             return self.AutoInterrupt(proc, command)
@@ -788,7 +788,7 @@ class Git(LazyMixin):
                     watchdog.cancel()
                     if kill_check.isSet():
                         stderr_value = ('Timeout: the command "%s" did not complete in %d '
-                                        'secs.' % (" ".join(command), kill_after_timeout))
+                                        'secs.' % (" ".join(redacted_command), kill_after_timeout))
                         if not universal_newlines:
                             stderr_value = stderr_value.encode(defenc)
                 # strip trailing "\n"
@@ -812,7 +812,7 @@ class Git(LazyMixin):
             proc.stderr.close()
 
         if self.GIT_PYTHON_TRACE == 'full':
-            cmdstr = " ".join(command)
+            cmdstr = " ".join(redacted_command)
 
             def as_text(stdout_value):
                 return not output_stream and safe_decode(stdout_value) or '<OUTPUT_STREAM>'
@@ -828,7 +828,7 @@ class Git(LazyMixin):
         # END handle debug printing
 
         if with_exceptions and status != 0:
-            raise GitCommandError(command, status, stderr_value, stdout_value)
+            raise GitCommandError(redacted_command, status, stderr_value, stdout_value)
 
         if isinstance(stdout_value, bytes) and stdout_as_string:  # could also be output_stream
             stdout_value = safe_decode(stdout_value)
@@ -905,8 +905,14 @@ class Git(LazyMixin):
 
     def transform_kwargs(self, split_single_char_options=True, **kwargs):
         """Transforms Python style kwargs into git command line options."""
+        # Python 3.6 preserves the order of kwargs and thus has a stable
+        # order. For older versions sort the kwargs by the key to get a stable
+        # order.
+        if sys.version_info[:2] < (3, 6):
+            kwargs = OrderedDict(sorted(kwargs.items(), key=lambda x: x[0]))
+            warnings.warn("Python 3.5 support is deprecated and will be removed 2021-09-05.\n" +
+                          "It does not preserve the order for key-word arguments and enforce lexical sorting instead.")
         args = []
-        kwargs = OrderedDict(sorted(kwargs.items(), key=lambda x: x[0]))
         for k, v in kwargs.items():
             if isinstance(v, (list, tuple)):
                 for value in v:

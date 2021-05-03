@@ -16,8 +16,21 @@ from gitdb.utils.encoding import (
     force_text       # @UnusedImport
 )
 
-from typing import Any, AnyStr, Dict, Optional, Type
+# typing --------------------------------------------------------------------
+
+from typing import (
+    Any,
+    AnyStr,
+    Dict,
+    IO,
+    Optional,
+    Type,
+    Union,
+    overload,
+)
 from git.types import TBD
+
+# ---------------------------------------------------------------------------
 
 
 is_win = (os.name == 'nt')  # type: bool
@@ -26,7 +39,13 @@ is_darwin = (os.name == 'darwin')
 defenc = sys.getfilesystemencoding()
 
 
-def safe_decode(s: Optional[AnyStr]) -> Optional[str]:
+@overload
+def safe_decode(s: None) -> None: ...
+
+@overload
+def safe_decode(s: Union[IO[str], AnyStr]) -> str: ...
+
+def safe_decode(s: Union[IO[str], AnyStr, None]) -> Optional[str]:
     """Safely decodes a binary string to unicode"""
     if isinstance(s, str):
         return s
@@ -38,6 +57,11 @@ def safe_decode(s: Optional[AnyStr]) -> Optional[str]:
         raise TypeError('Expected bytes or text, but got %r' % (s,))
 
 
+@overload
+def safe_encode(s: None) -> None: ...
+
+@overload
+def safe_encode(s: AnyStr) -> bytes: ...
 
 def safe_encode(s: Optional[AnyStr]) -> Optional[bytes]:
     """Safely encodes a binary string to unicode"""
@@ -51,6 +75,12 @@ def safe_encode(s: Optional[AnyStr]) -> Optional[bytes]:
         raise TypeError('Expected bytes or text, but got %r' % (s,))
 
 
+@overload
+def win_encode(s: None) -> None: ...
+
+@overload
+def win_encode(s: AnyStr) -> bytes: ...
+
 def win_encode(s: Optional[AnyStr]) -> Optional[bytes]:
     """Encode unicodes for process arguments on Windows."""
     if isinstance(s, str):
@@ -62,9 +92,9 @@ def win_encode(s: Optional[AnyStr]) -> Optional[bytes]:
     return None
 
 
-def with_metaclass(meta: Type[Any], *bases: Any) -> 'metaclass':  # type: ignore ## mypy cannot understand dynamic class creation
+def with_metaclass(meta: Type[Any], *bases: Any) -> 'metaclass': # type: ignore ## mypy cannot understand dynamic class creation
     """copied from https://github.com/Byron/bcore/blob/master/src/python/butility/future.py#L15"""
-    
+
     class metaclass(meta):  # type: ignore
         __call__ = type.__call__
         __init__ = type.__init__    # type: ignore
@@ -75,4 +105,3 @@ def with_metaclass(meta: Type[Any], *bases: Any) -> 'metaclass':  # type: ignore
             return meta(name, bases, d)
 
     return metaclass(meta.__name__ + 'Helper', None, {})
-

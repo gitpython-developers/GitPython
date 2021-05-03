@@ -7,6 +7,7 @@
 import ddt
 import shutil
 import tempfile
+import unittest
 from git import (
     Repo,
     GitCommandError,
@@ -219,6 +220,12 @@ class TestDiff(TestBase):
         res = Diff._index_from_raw_format(None, output)
         self.assertIsNotNone(res[0].deleted_file)
         self.assertIsNone(res[0].b_path,)
+
+    @unittest.skip("This currently fails and would need someone to improve diff parsing")
+    def test_diff_file_with_colon(self):
+        output = fixture('diff_file_with_colon')
+        res = []
+        Diff._handle_diff_line(output, None, res)
 
     def test_diff_initial_commit(self):
         initial_commit = self.rorepo.commit('33ebe7acec14b25c5f84f35a664803fcab2f7781')

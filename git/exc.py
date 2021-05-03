@@ -5,14 +5,17 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 """ Module containing all exceptions thrown throughout the git package, """
 
+from gitdb.exc import BadName  # NOQA @UnusedWildImport skipcq: PYL-W0401, PYL-W0614
 from gitdb.exc import *     # NOQA @UnusedWildImport skipcq: PYL-W0401, PYL-W0614
 from git.compat import safe_decode
 
 # typing ----------------------------------------------------
 
-from git.repo.base import Repo
+from typing import IO, List, Optional, Tuple, Union, TYPE_CHECKING
 from git.types import PathLike
-from typing import IO, List, Optional, Tuple, Union
+
+if TYPE_CHECKING:
+    from git.repo.base import Repo
 
 # ------------------------------------------------------------------
 
@@ -63,10 +66,12 @@ class CommandError(GitError):
                     status = "'%s'" % s if isinstance(status, str) else s
 
         self._cmd = safe_decode(command[0])
-        self._cmdline = ' '.join(str(safe_decode(i)) for i in command)
+        self._cmdline = ' '.join(safe_decode(i) for i in command)
         self._cause = status and " due to: %s" % status or "!"
-        self.stdout = stdout and "\n  stdout: '%s'" % safe_decode(str(stdout)) or ''
-        self.stderr = stderr and "\n  stderr: '%s'" % safe_decode(str(stderr)) or ''
+        stdout_decode = safe_decode(stdout)
+        stderr_decode = safe_decode(stderr)
+        self.stdout = stdout_decode and "\n  stdout: '%s'" % stdout_decode or ''
+        self.stderr = stderr_decode and "\n  stderr: '%s'" % stderr_decode or ''
 
     def __str__(self) -> str:
         return (self._msg + "\n  cmdline: %s%s%s") % (
@@ -142,7 +147,7 @@ class HookExecutionError(CommandError):
 class RepositoryDirtyError(GitError):
     """Thrown whenever an operation on a repository fails as it has uncommitted changes that would be overwritten"""
 
-    def __init__(self, repo: Repo, message: str) -> None:
+    def __init__(self, repo: 'Repo', message: str) -> None:
         self.repo = repo
         self.message = message
 

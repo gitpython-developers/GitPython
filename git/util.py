@@ -3,7 +3,7 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
-from git.remote import Remote
+
 import contextlib
 from functools import wraps
 import getpass
@@ -17,11 +17,15 @@ import stat
 from sys import maxsize
 import time
 from unittest import SkipTest
+from urllib.parse import urlsplit, urlunsplit
 
 # typing ---------------------------------------------------------
+
 from typing import (Any, AnyStr, BinaryIO, Callable, Dict, Generator, IO, List,
-                    NoReturn, Optional, Pattern, Sequence, Tuple, Union, cast)
-from git.repo.base import Repo
+                    NoReturn, Optional, Pattern, Sequence, Tuple, Union, cast, TYPE_CHECKING)
+if TYPE_CHECKING:
+    from git.remote import Remote
+    from git.repo.base import Repo
 from .types import PathLike, TBD
 
 # ---------------------------------------------------------------------
@@ -74,7 +78,7 @@ def unbare_repo(func: Callable) -> Callable:
     encounter a bare repository"""
 
     @wraps(func)
-    def wrapper(self: Remote, *args: Any, **kwargs: Any) -> TBD:
+    def wrapper(self: 'Remote', *args: Any, **kwargs: Any) -> TBD:
         if self.repo.bare:
             raise InvalidGitRepositoryError("Method '%s' cannot operate on bare repositories" % func.__name__)
         # END bare method
@@ -358,6 +362,34 @@ def expand_path(p: PathLike, expand_vars: bool = True) -> Optional[PathLike]:
         return osp.normpath(osp.abspath(p))
     except Exception:
         return None
+
+
+def remove_password_if_present(cmdline):
+    """
+    Parse any command line argument and if on of the element is an URL with a
+    password, replace it by stars (in-place).
+
+    If nothing found just returns the command line as-is.
+
+    This should be used for every log line that print a command line.
+    """
+    new_cmdline = []
+    for index, to_parse in enumerate(cmdline):
+        new_cmdline.append(to_parse)
+        try:
+            url = urlsplit(to_parse)
+            # Remove password from the URL if present
+            if url.password is None:
+                continue
+
+            edited_url = url._replace(
+                netloc=url.netloc.replace(url.password, "*****"))
+            new_cmdline[index] = urlunsplit(edited_url)
+        except ValueError:
+            # This is not a valid URL
+            continue
+    return new_cmdline
+
 
 #} END utilities
 
@@ -686,7 +718,7 @@ class Stats(object):
         self.files = files
 
     @classmethod
-    def _list_from_string(cls, repo: Repo, text: str) -> 'Stats':
+    def _list_from_string(cls, repo: 'Repo', text: str) -> 'Stats':
         """Create a Stat object from output retrieved by git-diff.
 
         :return: git.Stat"""
@@ -924,6 +956,7 @@ class IterableList(list):
 
     def __delitem__(self, index: Union[int, str, slice]) -> None:
 
+        delindex = cast(int, index)
         if not isinstance(index, int):
             delindex = -1
             assert not isinstance(index, slice)
@@ -949,7 +982,7 @@ class Iterable(object):
     _id_attribute_ = "attribute that most suitably identifies your instance"
 
     @classmethod
-    def list_items(cls, repo: Repo, *args: Any, **kwargs: Any) -> 'IterableList':
+    def list_items(cls, repo: 'Repo', *args: Any, **kwargs: Any) -> 'IterableList':
         """
         Find all items of this type - subclasses can specify args and kwargs differently.
         If no args are given, subclasses are obliged to return all items if no additional
@@ -963,7 +996,7 @@ class Iterable(object):
         return out_list
 
     @classmethod
-    def iter_items(cls, repo: Repo, *args: Any, **kwargs: Any) -> NoReturn:
+    def iter_items(cls, repo: 'Repo', *args: Any, **kwargs: Any) -> NoReturn:
         """For more information about the arguments, see list_items
         :return:  iterator yielding Items"""
         raise NotImplementedError("To be implemented by Subclass")

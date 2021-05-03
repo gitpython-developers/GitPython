@@ -18,11 +18,12 @@ from git.cmd import Git
 
 # Typing ----------------------------------------------------------------------
 
-from .base import Repo
-from git.db import GitCmdObjectDB
-from git.objects import Commit, TagObject, Blob, Tree
-from typing import AnyStr, Union, Optional, cast
+from typing import AnyStr, Union, Optional, cast, TYPE_CHECKING
 from git.types import PathLike
+if TYPE_CHECKING:
+    from .base import Repo
+    from git.db import GitCmdObjectDB
+    from git.objects import Commit, TagObject, Blob, Tree
 
 # ----------------------------------------------------------------------------
 
@@ -102,7 +103,7 @@ def find_submodule_git_dir(d: PathLike) -> Optional[PathLike]:
     return None
 
 
-def short_to_long(odb: GitCmdObjectDB, hexsha: AnyStr) -> Optional[bytes]:
+def short_to_long(odb: 'GitCmdObjectDB', hexsha: AnyStr) -> Optional[bytes]:
     """:return: long hexadecimal sha1 from the given less-than-40 byte hexsha
         or None if no candidate could be found.
     :param hexsha: hexsha with less than 40 byte"""
@@ -113,8 +114,8 @@ def short_to_long(odb: GitCmdObjectDB, hexsha: AnyStr) -> Optional[bytes]:
     # END exception handling
 
 
-def name_to_object(repo: Repo, name: str, return_ref: bool = False,
-                   ) -> Union[SymbolicReference, Commit, TagObject, Blob, Tree]:
+def name_to_object(repo: 'Repo', name: str, return_ref: bool = False
+                   ) -> Union[SymbolicReference, 'Commit', 'TagObject', 'Blob', 'Tree']:
     """
     :return: object specified by the given name, hexshas ( short and long )
         as well as references are supported
@@ -161,7 +162,7 @@ def name_to_object(repo: Repo, name: str, return_ref: bool = False,
     return Object.new_from_sha(repo, hex_to_bin(hexsha))
 
 
-def deref_tag(tag: Tag) -> TagObject:
+def deref_tag(tag: Tag) -> 'TagObject':
     """Recursively dereference a tag and return the resulting object"""
     while True:
         try:
@@ -172,7 +173,7 @@ def deref_tag(tag: Tag) -> TagObject:
     return tag
 
 
-def to_commit(obj: Object) -> Union[Commit, TagObject]:
+def to_commit(obj: Object) -> Union['Commit', 'TagObject']:
     """Convert the given object to a commit if possible and return it"""
     if obj.type == 'tag':
         obj = deref_tag(obj)
@@ -183,7 +184,7 @@ def to_commit(obj: Object) -> Union[Commit, TagObject]:
     return obj
 
 
-def rev_parse(repo: Repo, rev: str) -> Union[Commit, Tag, Tree, Blob]:
+def rev_parse(repo: 'Repo', rev: str) -> Union['Commit', 'Tag', 'Tree', 'Blob']:
     """
     :return: Object at the given revision, either Commit, Tag, Tree or Blob
     :param rev: git-rev-parse compatible revision specification as string, please see

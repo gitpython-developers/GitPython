@@ -16,14 +16,13 @@ import re
 import fnmatch
 from collections import OrderedDict
 
-from typing_extensions import Literal
-
 from git.compat import (
     defenc,
     force_text,
     with_metaclass,
     is_win,
 )
+from git.compat.typing import Literal
 from git.util import LockFile
 
 import os.path as osp
@@ -196,7 +195,7 @@ class _OMD(OrderedDict):
         return [(k, self.getall(k)) for k in self]
 
 
-def get_config_path(config_level: Literal['system','global','user','repository']) -> str:
+def get_config_path(config_level: Literal['system', 'global', 'user', 'repository']) -> str:
 
     # we do not support an absolute path of the gitconfig on windows ,
     # use the global config instead
@@ -216,7 +215,7 @@ def get_config_path(config_level: Literal['system','global','user','repository']
     raise ValueError("Invalid configuration level: %r" % config_level)
 
 
-class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, object)):
+class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, object)):  # type: ignore ## mypy does not understand dynamic class creation # noqa: E501
 
     """Implements specifics required to read git style configuration files.
 

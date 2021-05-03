@@ -5,6 +5,7 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 # flake8: noqa
 #@PydevCodeAnalysisIgnore
+from git.exc import *                       # @NoMove @IgnorePep8
 import inspect
 import os
 import sys
@@ -14,8 +15,6 @@ from typing import Optional
 from git.types import PathLike
 
 __version__ = 'git'
-
-
 
 
 #{ Initialization
@@ -32,13 +31,13 @@ def _init_externals() -> None:
 
 #} END initialization
 
+
 #################
 _init_externals()
 #################
 
 #{ Imports
 
-from git.exc import *                       # @NoMove @IgnorePep8
 try:
     from git.config import GitConfigParser  # @NoMove @IgnorePep8
     from git.objects import *               # @NoMove @IgnorePep8
@@ -68,7 +67,8 @@ __all__ = [name for name, obj in locals().items()
 #{ Initialize git executable path
 GIT_OK = None
 
-def refresh(path:Optional[PathLike]=None) -> None:
+
+def refresh(path: Optional[PathLike] = None) -> None:
     """Convenience method for setting the git executable path."""
     global GIT_OK
     GIT_OK = False
@@ -80,6 +80,7 @@ def refresh(path:Optional[PathLike]=None) -> None:
 
     GIT_OK = True
 #} END initialize git executable path
+
 
 #################
 try:

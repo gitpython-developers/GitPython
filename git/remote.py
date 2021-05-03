@@ -9,7 +9,7 @@ import logging
 import re
 
 from git.cmd import handle_process_output, Git
-from git.compat import (defenc, force_text, is_win)
+from git.compat import (defenc, force_text)
 from git.exc import GitCommandError
 from git.util import (
     LazyMixin,
@@ -36,7 +36,15 @@ from .refs import (
 
 # typing-------------------------------------------------------
 
-from git.repo.Base import Repo
+from typing import Any, Optional, Set, TYPE_CHECKING, Union
+
+from git.types import PathLike
+
+if TYPE_CHECKING:
+    from git.repo.base import Repo
+    from git.objects.commit import Commit
+
+# -------------------------------------------------------------
 
 log = logging.getLogger('git.remote')
 log.addHandler(logging.NullHandler())
@@ -47,7 +55,7 @@ __all__ = ('RemoteProgress', 'PushInfo', 'FetchInfo', 'Remote')
 #{ Utilities
 
 
-def add_progress(kwargs, git, progress):
+def add_progress(kwargs: Any, git: Git, progress: RemoteProgress) -> Any:
     """Add the --progress flag to the given kwargs dict if supported by the
     git command. If the actual progress in the given progress instance is not
     given, we do not request any progress
@@ -63,7 +71,7 @@ def add_progress(kwargs, git, progress):
 #} END utilities
 
 
-def to_progress_instance(progress):
+def to_progress_instance(progress: Optional[RemoteProgress]) -> Union[RemoteProgress, CallableRemoteProgress]:
     """Given the 'progress' return a suitable object derived from
     RemoteProgress().
     """
@@ -224,7 +232,7 @@ class FetchInfo(object):
     }
 
     @classmethod
-    def refresh(cls):
+    def refresh(cls) -> bool:
         """This gets called by the refresh function (see the top level
         __init__).
         """
@@ -247,7 +255,8 @@ class FetchInfo(object):
 
         return True
 
-    def __init__(self, ref, flags, note='', old_commit=None, remote_ref_path=None):
+    def __init__(self, ref: SymbolicReference, flags: Set[int], note: str = '', old_commit: Optional[Commit] = None,
+                 remote_ref_path: Optional[PathLike] = None):
         """
         Initialize a new instance
         """
@@ -257,16 +266,16 @@ class FetchInfo(object):
         self.old_commit = old_commit
         self.remote_ref_path = remote_ref_path
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
     @property
-    def name(self):
+    def name(self) -> str:
         """:return: Name of our remote ref"""
         return self.ref.name
 
     @property
-    def commit(self):
+    def commit(self) -> 'Commit':
         """:return: Commit of our remote ref"""
         return self.ref.commit
 
@@ -408,16 +417,6 @@ class Remote(LazyMixin, Iterable):
         :param name: the name of the remote, i.e. 'origin'"""
         self.repo = repo  # type: 'Repo'
         self.name = name
-
-        if is_win:
-            # some oddity: on windows, python 2.5, it for some reason does not realize
-            # that it has the config_writer property, but instead calls __getattr__
-            # which will not yield the expected results. 'pinging' the members
-            # with a dir call creates the config_writer property that we require
-            # ... bugs like these make me wonder whether python really wants to be used
-            # for production. It doesn't happen on linux though.
-            dir(self)
-        # END windows special handling
 
     def __getattr__(self, attr):
         """Allows to call this instance like

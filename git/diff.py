@@ -15,11 +15,14 @@ from .objects.util import mode_str_to_int
 
 # typing ------------------------------------------------------------------
 
-from .objects.tree import Tree
-from git.repo.base import Repo
-from typing_extensions import Final, Literal
+from typing import Any, Iterator, List, Match, Optional, Tuple, Type, Union, TYPE_CHECKING
+from git.compat.typing import Final, Literal
 from git.types import TBD
-from typing import Any, Iterator, List, Match, Optional, Tuple, Type, Union
+
+if TYPE_CHECKING:
+    from .objects.tree import Tree
+    from git.repo.base import Repo
+
 Lit_change_type = Literal['A', 'D', 'M', 'R', 'T']
 
 # ------------------------------------------------------------------------
@@ -27,7 +30,7 @@ Lit_change_type = Literal['A', 'D', 'M', 'R', 'T']
 __all__ = ('Diffable', 'DiffIndex', 'Diff', 'NULL_TREE')
 
 # Special object to compare against the empty tree in diffs
-NULL_TREE: Final[object] = object()
+NULL_TREE = object()  # type: Final[object]
 
 _octal_byte_re = re.compile(b'\\\\([0-9]{3})')
 
@@ -79,7 +82,7 @@ class Diffable(object):
             Subclasses can use it to alter the behaviour of the superclass"""
         return args
 
-    def diff(self, other: Union[Type[Index], Type[Tree], object, None, str] = Index,
+    def diff(self, other: Union[Type[Index], Type['Tree'], object, None, str] = Index,
              paths: Union[str, List[str], Tuple[str, ...], None] = None,
              create_patch: bool = False, **kwargs: Any) -> 'DiffIndex':
         """Creates diffs between two items being trees, trees and index or an
@@ -271,7 +274,7 @@ class Diff(object):
                  "new_file", "deleted_file", "copied_file", "raw_rename_from",
                  "raw_rename_to", "diff", "change_type", "score")
 
-    def __init__(self, repo: Repo,
+    def __init__(self, repo: 'Repo',
                  a_rawpath: Optional[bytes], b_rawpath: Optional[bytes],
                  a_blob_id: Union[str, bytes, None], b_blob_id: Union[str, bytes, None],
                  a_mode: Union[bytes, str, None], b_mode: Union[bytes, str, None],
@@ -425,7 +428,7 @@ class Diff(object):
         return None
 
     @classmethod
-    def _index_from_patch_format(cls, repo: Repo, proc: TBD) -> DiffIndex:
+    def _index_from_patch_format(cls, repo: 'Repo', proc: TBD) -> DiffIndex:
         """Create a new DiffIndex from the given text which must be in patch format
         :param repo: is the repository we are operating on - it is required
         :param stream: result of 'git diff' as a stream (supporting file protocol)
@@ -487,6 +490,58 @@ class Diff(object):
 
         return index
 
+    @staticmethod
+    def _handle_diff_line(lines_bytes: bytes, repo: 'Repo', index: TBD) -> None:
+        lines = lines_bytes.decode(defenc)
+
+        for line in lines.split(':')[1:]:
+            meta, _, path = line.partition('\x00')
+            path = path.rstrip('\x00')
+            a_blob_id, b_blob_id = None, None  # Type: Optional[str]
+            old_mode, new_mode, a_blob_id, b_blob_id, _change_type = meta.split(None, 4)
+            # Change type can be R100
+            # R: status letter
+            # 100: score (in case of copy and rename)
+            change_type = _change_type[0]
+            score_str = ''.join(_change_type[1:])
+            score = int(score_str) if score_str.isdigit() else None
+            path = path.strip()
+            a_path = path.encode(defenc)
+            b_path = path.encode(defenc)
+            deleted_file = False
+            new_file = False
+            copied_file = False
+            rename_from = None
+            rename_to = None
+
+            # NOTE: We cannot conclude from the existence of a blob to change type
+            # as diffs with the working do not have blobs yet
+            if change_type == 'D':
+                b_blob_id = None  # Optional[str]
+                deleted_file = True
+            elif change_type == 'A':
+                a_blob_id = None
+                new_file = True
+            elif change_type == 'C':
+                copied_file = True
+                a_path_str, b_path_str = path.split('\x00', 1)
+                a_path = a_path_str.encode(defenc)
+                b_path = b_path_str.encode(defenc)
+            elif change_type == 'R':
+                a_path_str, b_path_str = path.split('\x00', 1)
+                a_path = a_path_str.encode(defenc)
+                b_path = b_path_str.encode(defenc)
+                rename_from, rename_to = a_path, b_path
+            elif change_type == 'T':
+                # Nothing to do
+                pass
+            # END add/remove handling
+
+            diff = Diff(repo, a_path, b_path, a_blob_id, b_blob_id, old_mode, new_mode,
+                        new_file, deleted_file, copied_file, rename_from, rename_to,
+                        '', change_type, score)
+            index.append(diff)
+
     @classmethod
     def _index_from_raw_format(cls, repo: 'Repo', proc: TBD) -> DiffIndex:
         """Create a new DiffIndex from the given stream which must be in raw format.
@@ -495,58 +550,7 @@ class Diff(object):
         # :100644 100644 687099101... 37c5e30c8... M    .gitignore
 
         index = DiffIndex()
-
-        def handle_diff_line(lines_bytes: bytes) -> None:
-            lines = lines_bytes.decode(defenc)
-
-            for line in lines.split(':')[1:]:
-                meta, _, path = line.partition('\x00')
-                path = path.rstrip('\x00')
-                a_blob_id, b_blob_id = None, None  # Type: Optional[str]
-                old_mode, new_mode, a_blob_id, b_blob_id, _change_type = meta.split(None, 4)
-                # Change type can be R100
-                # R: status letter
-                # 100: score (in case of copy and rename)
-                change_type = _change_type[0]
-                score_str = ''.join(_change_type[1:])
-                score = int(score_str) if score_str.isdigit() else None
-                path = path.strip()
-                a_path = path.encode(defenc)
-                b_path = path.encode(defenc)
-                deleted_file = False
-                new_file = False
-                copied_file = False
-                rename_from = None
-                rename_to = None
-
-                # NOTE: We cannot conclude from the existence of a blob to change type
-                # as diffs with the working do not have blobs yet
-                if change_type == 'D':
-                    b_blob_id = None  # Optional[str]
-                    deleted_file = True
-                elif change_type == 'A':
-                    a_blob_id = None
-                    new_file = True
-                elif change_type == 'C':
-                    copied_file = True
-                    a_path_str, b_path_str = path.split('\x00', 1)
-                    a_path = a_path_str.encode(defenc)
-                    b_path = b_path_str.encode(defenc)
-                elif change_type == 'R':
-                    a_path_str, b_path_str = path.split('\x00', 1)
-                    a_path = a_path_str.encode(defenc)
-                    b_path = b_path_str.encode(defenc)
-                    rename_from, rename_to = a_path, b_path
-                elif change_type == 'T':
-                    # Nothing to do
-                    pass
-                # END add/remove handling
-
-                diff = Diff(repo, a_path, b_path, a_blob_id, b_blob_id, old_mode, new_mode,
-                            new_file, deleted_file, copied_file, rename_from, rename_to,
-                            '', change_type, score)
-                index.append(diff)
-
-        handle_process_output(proc, handle_diff_line, None, finalize_process, decode_streams=False)
+        handle_process_output(proc, lambda bytes: cls._handle_diff_line(
+            bytes, repo, index), None, finalize_process, decode_streams=False)
 
         return index

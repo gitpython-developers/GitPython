@@ -4,11 +4,6 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
-
-from git.objects.tag import TagObject
-from git.objects.blob import Blob
-from git.objects.tree import Tree
-from git.refs.symbolic import SymbolicReference
 import logging
 import os
 import re
@@ -30,36 +25,42 @@ from git.index import IndexFile
 from git.objects import Submodule, RootModule, Commit
 from git.refs import HEAD, Head, Reference, TagReference
 from git.remote import Remote, add_progress, to_progress_instance
-from git.util import Actor, IterableList, finalize_process, decygpath, hex_to_bin, expand_path
+from git.util import Actor, finalize_process, decygpath, hex_to_bin, expand_path, remove_password_if_present
 import os.path as osp
 
 from .fun import rev_parse, is_git_dir, find_submodule_git_dir, touch, find_worktree_git_dir
 import gc
 import gitdb
 
-# Typing -------------------------------------------------------------------
+# typing ------------------------------------------------------
 
-from typing import (Any, BinaryIO, Callable, Dict, Iterator, List, Mapping, Optional,
-                    TextIO, Tuple, Type, Union, NamedTuple, cast,)
-from typing_extensions import Literal
-from git.types import PathLike, TBD
+from git.compat.typing import Literal
+from git.types import TBD, PathLike
+from typing import (Any, BinaryIO, Callable, Dict,
+                    Iterator, List, Mapping, Optional,
+                    TextIO, Tuple, Type, Union,
+                    NamedTuple, cast, TYPE_CHECKING)
+
+if TYPE_CHECKING:  # only needed for types
+    from git.util import IterableList
+    from git.refs.symbolic import SymbolicReference
+    from git.objects import TagObject, Blob, Tree  # NOQA: F401
 
 Lit_config_levels = Literal['system', 'global', 'user', 'repository']
 
-
-# --------------------------------------------------------------------------
-
-
-class BlameEntry(NamedTuple):
-    commit: Dict[str, TBD]  # Any == 'Commit' type?
-    linenos: range
-    orig_path: Optional[str]
-    orig_linenos: range
-
+# -----------------------------------------------------------
 
 log = logging.getLogger(__name__)
 
 __all__ = ('Repo',)
+
+
+BlameEntry = NamedTuple('BlameEntry', [
+    ('commit', Dict[str, TBD]),
+    ('linenos', range),
+    ('orig_path', Optional[str]),
+    ('orig_linenos', range)]
+)
 
 
 class Repo(object):
@@ -221,10 +222,11 @@ class Repo(object):
         self.git = self.GitCommandWrapperType(self.working_dir)
 
         # special handling, in special times
-        args = [osp.join(self.common_dir, 'objects')]  # type: List[Union[str, Git]]
+        rootpath = osp.join(self.common_dir, 'objects')
         if issubclass(odbt, GitCmdObjectDB):
-            args.append(self.git)
-        self.odb = odbt(*args)
+            self.odb = odbt(rootpath, self.git)
+        else:
+            self.odb = odbt(rootpath)
 
     def __enter__(self) -> 'Repo':
         return self
@@ -266,13 +268,14 @@ class Repo(object):
 
     # Description property
     def _get_description(self) -> str:
-        filename = osp.join(self.git_dir, 'description') if self.git_dir else ""
+        if self.git_dir:
+            filename = osp.join(self.git_dir, 'description')
         with open(filename, 'rb') as fp:
             return fp.read().rstrip().decode(defenc)
 
     def _set_description(self, descr: str) -> None:
-
-        filename = osp.join(self.git_dir, 'description') if self.git_dir else ""
+        if self.git_dir:
+            filename = osp.join(self.git_dir, 'description')
         with open(filename, 'wb') as fp:
             fp.write((descr + '\n').encode(defenc))
 
@@ -306,7 +309,7 @@ class Repo(object):
         return self._bare
 
     @property
-    def heads(self) -> IterableList:
+    def heads(self) -> 'IterableList':
         """A list of ``Head`` objects representing the branch heads in
         this repo
 
@@ -314,7 +317,7 @@ class Repo(object):
         return Head.list_items(self)
 
     @property
-    def references(self) -> IterableList:
+    def references(self) -> 'IterableList':
         """A list of Reference objects representing tags, heads and remote references.
 
         :return: IterableList(Reference, ...)"""
@@ -327,19 +330,19 @@ class Repo(object):
     branches = heads
 
     @property
-    def index(self) -> IndexFile:
+    def index(self) -> 'IndexFile':
         """:return: IndexFile representing this repository's index.
         :note: This property can be expensive, as the returned ``IndexFile`` will be
          reinitialized. It's recommended to re-use the object."""
         return IndexFile(self)
 
     @property
-    def head(self) -> HEAD:
+    def head(self) -> 'HEAD':
         """:return: HEAD Object pointing to the current head reference"""
         return HEAD(self, 'HEAD')
 
     @property
-    def remotes(self) -> IterableList:
+    def remotes(self) -> 'IterableList':
         """A list of Remote objects allowing to access and manipulate remotes
         :return: ``git.IterableList(Remote, ...)``"""
         return Remote.list_items(self)
@@ -355,13 +358,13 @@ class Repo(object):
     #{ Submodules
 
     @property
-    def submodules(self) -> IterableList:
+    def submodules(self) -> 'IterableList':
         """
         :return: git.IterableList(Submodule, ...) of direct submodules
             available from the current head"""
         return Submodule.list_items(self)
 
-    def submodule(self, name: str) -> IterableList:
+    def submodule(self, name: str) -> 'IterableList':
         """ :return: Submodule with the given name
         :raise ValueError: If no such submodule exists"""
         try:
@@ -393,7 +396,7 @@ class Repo(object):
     #}END submodules
 
     @property
-    def tags(self) -> IterableList:
+    def tags(self) -> 'IterableList':
         """A list of ``Tag`` objects that are available in this repo
         :return: ``git.IterableList(TagReference, ...)`` """
         return TagReference.list_items(self)
@@ -405,14 +408,14 @@ class Repo(object):
 
     def create_head(self, path: PathLike, commit: str = 'HEAD',
                     force: bool = False, logmsg: Optional[str] = None
-                    ) -> SymbolicReference:
+                    ) -> 'SymbolicReference':
         """Create a new head within the repository.
         For more documentation, please see the Head.create method.
 
         :return: newly created Head Reference"""
         return Head.create(self, path, commit, force, logmsg)
 
-    def delete_head(self, *heads: HEAD, **kwargs: Any) -> None:
+    def delete_head(self, *heads: 'SymbolicReference', **kwargs: Any) -> None:
         """Delete the given heads
 
         :param kwargs: Additional keyword arguments to be passed to git-branch"""
@@ -458,12 +461,11 @@ class Repo(object):
         elif config_level == "global":
             return osp.normpath(osp.expanduser("~/.gitconfig"))
         elif config_level == "repository":
-            if self._common_dir:
-                return osp.normpath(osp.join(self._common_dir, "config"))
-            elif self.git_dir:
-                return osp.normpath(osp.join(self.git_dir, "config"))
-            else:
+            repo_dir = self._common_dir or self.git_dir
+            if not repo_dir:
                 raise NotADirectoryError
+            else:
+                return osp.normpath(osp.join(repo_dir, "config"))
 
         raise ValueError("Invalid configuration level: %r" % config_level)
 
@@ -503,7 +505,8 @@ class Repo(object):
             repository = configuration file for this repository only"""
         return GitConfigParser(self._get_config_path(config_level), read_only=False, repo=self)
 
-    def commit(self, rev: Optional[TBD] = None,) -> Union[SymbolicReference, Commit, TagObject, Blob, Tree, None]:
+    def commit(self, rev: Optional[TBD] = None
+               ) -> Union['SymbolicReference', Commit, 'TagObject', 'Blob', 'Tree']:
         """The Commit object for the specified revision
 
         :param rev: revision specifier, see git-rev-parse for viable options.
@@ -536,7 +539,7 @@ class Repo(object):
         return self.rev_parse(str(rev) + "^{tree}")
 
     def iter_commits(self, rev: Optional[TBD] = None, paths: Union[PathLike, List[PathLike]] = '',
-                     **kwargs: Any,) -> Iterator[Commit]:
+                     **kwargs: Any) -> Iterator[Commit]:
         """A list of Commit objects representing the history of a given ref/commit
 
         :param rev:
@@ -560,8 +563,8 @@ class Repo(object):
 
         return Commit.iter_items(self, rev, paths, **kwargs)
 
-    def merge_base(self, *rev: TBD, **kwargs: Any,
-                   ) -> List[Union[SymbolicReference, Commit, TagObject, Blob, Tree, None]]:
+    def merge_base(self, *rev: TBD, **kwargs: Any
+                   ) -> List[Union['SymbolicReference', Commit, 'TagObject', 'Blob', 'Tree', None]]:
         """Find the closest common ancestor for the given revision (e.g. Commits, Tags, References, etc)
 
         :param rev: At least two revs to find the common ancestor for.
@@ -574,7 +577,7 @@ class Repo(object):
             raise ValueError("Please specify at least two revs, got only %i" % len(rev))
         # end handle input
 
-        res = []  # type: List[Union[SymbolicReference, Commit, TagObject, Blob, Tree, None]]
+        res = []  # type: List[Union['SymbolicReference', Commit, 'TagObject', 'Blob', 'Tree', None]]
         try:
             lines = self.git.merge_base(*rev, **kwargs).splitlines()  # List[str]
         except GitCommandError as err:
@@ -608,11 +611,13 @@ class Repo(object):
         return True
 
     def _get_daemon_export(self) -> bool:
-        filename = osp.join(self.git_dir, self.DAEMON_EXPORT_FILE) if self.git_dir else ""
+        if self.git_dir:
+            filename = osp.join(self.git_dir, self.DAEMON_EXPORT_FILE)
         return osp.exists(filename)
 
     def _set_daemon_export(self, value: object) -> None:
-        filename = osp.join(self.git_dir, self.DAEMON_EXPORT_FILE) if self.git_dir else ""
+        if self.git_dir:
+            filename = osp.join(self.git_dir, self.DAEMON_EXPORT_FILE)
         fileexists = osp.exists(filename)
         if value and not fileexists:
             touch(filename)
@@ -628,7 +633,8 @@ class Repo(object):
         """The list of alternates for this repo from which objects can be retrieved
 
         :return: list of strings being pathnames of alternates"""
-        alternates_path = osp.join(self.git_dir, 'objects', 'info', 'alternates') if self.git_dir else ""
+        if self.git_dir:
+            alternates_path = osp.join(self.git_dir, 'objects', 'info', 'alternates')
 
         if osp.exists(alternates_path):
             with open(alternates_path, 'rb') as f:
@@ -768,7 +774,7 @@ class Repo(object):
         should get a continuous range spanning all line numbers in the file.
         """
         data = self.git.blame(rev, '--', file, p=True, incremental=True, stdout_as_string=False, **kwargs)
-        commits = {}
+        commits = {}  # type: Dict[str, TBD]
 
         stream = (line for line in data.split(b'\n') if line)
         while True:
@@ -776,10 +782,11 @@ class Repo(object):
                 line = next(stream)  # when exhausted, causes a StopIteration, terminating this function
             except StopIteration:
                 return
-            hexsha, orig_lineno, lineno, num_lines = line.split()
-            lineno = int(lineno)
-            num_lines = int(num_lines)
-            orig_lineno = int(orig_lineno)
+            split_line = line.split()  # type: Tuple[str, str, str, str]
+            hexsha, orig_lineno_str, lineno_str, num_lines_str = split_line
+            lineno = int(lineno_str)
+            num_lines = int(num_lines_str)
+            orig_lineno = int(orig_lineno_str)
             if hexsha not in commits:
                 # Now read the next few lines and build up a dict of properties
                 # for this commit
@@ -871,12 +878,10 @@ class Repo(object):
                 digits = parts[-1].split(" ")
                 if len(digits) == 3:
                     info = {'id': firstpart}
-                    blames.append([None, [""]])
-                elif not info or info['id'] != firstpart:
+                    blames.append([None, []])
+                elif info['id'] != firstpart:
                     info = {'id': firstpart}
-                    commits_firstpart = commits.get(firstpart)
-                    blames.append([commits_firstpart, []])
-
+                    blames.append([commits.get(firstpart), []])
                 # END blame data initialization
             else:
                 m = self.re_author_committer_start.search(firstpart)
@@ -933,8 +938,6 @@ class Repo(object):
                             blames[-1][0] = c
                             if blames[-1][1] is not None:
                                 blames[-1][1].append(line)
-                            else:
-                                blames[-1][1] = [line]
                             info = {'id': sha}
                         # END if we collected commit info
                     # END distinguish filename,summary,rest
@@ -944,7 +947,7 @@ class Repo(object):
 
     @classmethod
     def init(cls, path: PathLike = None, mkdir: bool = True, odbt: Type[GitCmdObjectDB] = GitCmdObjectDB,
-             expand_vars: bool = True, **kwargs: Any,) -> 'Repo':
+             expand_vars: bool = True, **kwargs: Any) -> 'Repo':
         """Initialize a git repository at the given path if specified
 
         :param path:
@@ -983,12 +986,8 @@ class Repo(object):
 
     @classmethod
     def _clone(cls, git: 'Git', url: PathLike, path: PathLike, odb_default_type: Type[GitCmdObjectDB],
-               progress: Optional[Callable],
-               multi_options: Optional[List[str]] = None, **kwargs: Any,
+               progress: Optional[Callable], multi_options: Optional[List[str]] = None, **kwargs: Any
                ) -> 'Repo':
-        if progress is not None:
-            progress_checked = to_progress_instance(progress)
-
         odbt = kwargs.pop('odbt', odb_default_type)
 
         # when pathlib.Path or other classbased path is passed
@@ -1011,13 +1010,16 @@ class Repo(object):
         if multi_options:
             multi = ' '.join(multi_options).split(' ')
         proc = git.clone(multi, Git.polish_url(url), clone_path, with_extended_output=True, as_process=True,
-                         v=True, universal_newlines=True, **add_progress(kwargs, git, progress_checked))
-        if progress_checked:
-            handle_process_output(proc, None, progress_checked.new_message_handler(),
+                         v=True, universal_newlines=True, **add_progress(kwargs, git, progress))
+        if progress:
+            handle_process_output(proc, None, to_progress_instance(progress).new_message_handler(),
                                   finalize_process, decode_streams=False)
         else:
             (stdout, stderr) = proc.communicate()
-            log.debug("Cmd(%s)'s unused stdout: %s", getattr(proc, 'args', ''), stdout)
+            cmdline = getattr(proc, 'args', '')
+            cmdline = remove_password_if_present(cmdline)
+
+            log.debug("Cmd(%s)'s unused stdout: %s", cmdline, stdout)
             finalize_process(proc, stderr=stderr)
 
         # our git command could have a different working dir than our actual
@@ -1130,13 +1132,14 @@ class Repo(object):
         clazz = self.__class__
         return '<%s.%s %r>' % (clazz.__module__, clazz.__name__, self.git_dir)
 
-    def currently_rebasing_on(self) -> Union[SymbolicReference, Commit, TagObject, Blob, Tree, None]:
+    def currently_rebasing_on(self) -> Union['SymbolicReference', Commit, 'TagObject', 'Blob', 'Tree', None]:
         """
         :return: The commit which is currently being replayed while rebasing.
 
         None if we are not currently rebasing.
         """
-        rebase_head_file = osp.join(self.git_dir, "REBASE_HEAD") if self.git_dir else ""
+        if self.git_dir:
+            rebase_head_file = osp.join(self.git_dir, "REBASE_HEAD")
         if not osp.isfile(rebase_head_file):
             return None
         return self.commit(open(rebase_head_file, "rt").readline().strip())

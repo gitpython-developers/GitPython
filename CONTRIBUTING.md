@@ -5,6 +5,7 @@ The following is a short step-by-step rundown of what one typically would do to 
 * [fork this project](https://github.com/gitpython-developers/GitPython/fork) on GitHub.
 * For setting up the environment to run the self tests, please look at `.travis.yml`.
 * Please try to **write a test that fails unless the contribution is present.**
-* Feel free to add yourself to AUTHORS file. 
+* Try to avoid massive commits and prefer to take small steps, with one commit for each.
+* Feel free to add yourself to AUTHORS file.
 * Create a pull request.
 
