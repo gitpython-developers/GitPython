@@ -36,7 +36,7 @@ from .refs import (
 
 # typing-------------------------------------------------------
 
-from typing import Any, Callable, Optional, TYPE_CHECKING, Union
+from typing import Any, Callable, Optional, TYPE_CHECKING, Union, overload
 
 from git.types import PathLike, Literal
 
@@ -71,7 +71,23 @@ def add_progress(kwargs: Any, git: Git, progress: Optional[Callable[..., Any]]) 
 #} END utilities
 
 
-def to_progress_instance(progress: Callable[..., Any]) -> Union[RemoteProgress, CallableRemoteProgress]:
+@overload
+def to_progress_instance(progress: None) -> RemoteProgress:
+    ...
+
+
+@overload
+def to_progress_instance(progress: Callable[..., Any]) -> CallableRemoteProgress:
+    ...
+
+
+@overload
+def to_progress_instance(progress: RemoteProgress) -> RemoteProgress:
+    ...
+
+
+def to_progress_instance(progress: Union[Callable[..., Any], RemoteProgress, None]
+                         ) -> Union[RemoteProgress, CallableRemoteProgress]:
     """Given the 'progress' return a suitable object derived from
     RemoteProgress().
     """
