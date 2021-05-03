@@ -36,7 +36,7 @@ from .refs import (
 
 # typing-------------------------------------------------------
 
-from typing import Any, Callable, Optional, Set, TYPE_CHECKING, Union
+from typing import Any, Callable, Optional, TYPE_CHECKING, Union
 
 from git.types import PathLike, Literal
 
@@ -115,7 +115,7 @@ class PushInfo(object):
                  '=': UP_TO_DATE,
                  '!': ERROR}
 
-    def __init__(self, flags: Set[int], local_ref: SymbolicReference, remote_ref_string: str, remote,
+    def __init__(self, flags: int, local_ref: SymbolicReference, remote_ref_string: str, remote,
                  old_commit: Optional[bytes] = None, summary: str = '') -> None:
         """ Initialize a new instance """
         self.flags = flags
@@ -255,8 +255,8 @@ class FetchInfo(object):
 
         return True
 
-    def __init__(self, ref: SymbolicReference, flags: Set[int], note: str = '', old_commit: Optional['Commit'] = None,
-                 remote_ref_path: Optional[PathLike] = None):
+    def __init__(self, ref: SymbolicReference, flags: int, note: str = '', old_commit: Optional['Commit'] = None,
+                 remote_ref_path: Optional[PathLike] = None) -> None:
         """
         Initialize a new instance
         """
