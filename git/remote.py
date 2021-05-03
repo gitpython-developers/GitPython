@@ -131,9 +131,10 @@ class PushInfo(object):
                  '=': UP_TO_DATE,
                  '!': ERROR}
 
-    def __init__(self, flags: int, local_ref: SymbolicReference, remote_ref_string: str, remote,
-                 old_commit: Optional[bytes] = None, summary: str = '') -> None:
-        """ Initialize a new instance """
+    def __init__(self, flags: int, local_ref: Union[SymbolicReference, None], remote_ref_string: str, remote,
+                 old_commit: Optional[str] = None, summary: str = '') -> None:
+        """ Initialize a new instance
+            local_ref: HEAD | Head | RemoteReference | TagReference | Reference | SymbolicReference | None """
         self.flags = flags
         self.local_ref = local_ref
         self.remote_ref_string = remote_ref_string
@@ -162,7 +163,7 @@ class PushInfo(object):
         # END
 
     @classmethod
-    def _from_line(cls, remote, line):
+    def _from_line(cls, remote, line: str) -> 'PushInfo':
         """Create a new PushInfo instance as parsed from line which is expected to be like
             refs/heads/master:refs/heads/master 05d2687..1d0568e as bytes"""
         control_character, from_to, summary = line.split('\t', 3)
@@ -178,7 +179,7 @@ class PushInfo(object):
         # from_to handling
         from_ref_string, to_ref_string = from_to.split(':')
         if flags & cls.DELETED:
-            from_ref = None
+            from_ref = None  # type: Union[SymbolicReference, None]
         else:
             if from_ref_string == "(delete)":
                 from_ref = None
@@ -186,7 +187,7 @@ class PushInfo(object):
                 from_ref = Reference.from_path(remote.repo, from_ref_string)
 
         # commit handling, could be message or commit info
-        old_commit = None
+        old_commit = None    # type: Optional[str]
         if summary.startswith('['):
             if "[rejected]" in summary:
                 flags |= cls.REJECTED
