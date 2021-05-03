@@ -255,7 +255,7 @@ class FetchInfo(object):
 
         return True
 
-    def __init__(self, ref: SymbolicReference, flags: Set[int], note: str = '', old_commit: Optional[Commit] = None,
+    def __init__(self, ref: SymbolicReference, flags: Set[int], note: str = '', old_commit: Optional['Commit'] = None,
                  remote_ref_path: Optional[PathLike] = None):
         """
         Initialize a new instance
