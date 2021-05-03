@@ -38,7 +38,7 @@ from .refs import (
 
 from typing import Any, Optional, Set, TYPE_CHECKING, Union
 
-from git.types import PathLike
+from git.types import PathLike, Literal
 
 if TYPE_CHECKING:
     from git.repo.base import Repo
@@ -232,7 +232,7 @@ class FetchInfo(object):
     }
 
     @classmethod
-    def refresh(cls) -> bool:
+    def refresh(cls) -> Literal[True]:
         """This gets called by the refresh function (see the top level
         __init__).
         """
