@@ -330,10 +330,11 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
                         "Write-ConfigParsers can operate on a single file only, multiple files have been passed")
                 # END single file check
 
-                if not isinstance(self._file_or_files, (str, Path)):  # cannot narrow by os._pathlike until 3.5 dropped
-                    file_or_files = cast(IO, self._file_or_files).name  # type: PathLike
-                else:
+                if isinstance(self._file_or_files, (str, Path)):  # cannot narrow by os._pathlike until 3.5 dropped
                     file_or_files = self._file_or_files
+                else:
+                    file_or_files = cast(IO, self._file_or_files).name
+
                 # END get filename from handle/stream
                 # initialize lock base - we want to write
                 self._lock = self.t_lock(file_or_files)
@@ -342,12 +343,12 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
             self._lock._obtain_lock()
         # END read-only check
 
-    def __del__(self):
+    def __del__(self) -> None:
         """Write pending changes if required and release locks"""
         # NOTE: only consistent in PY2
         self.release()
 
-    def __enter__(self):
+    def __enter__(self) -> 'GitConfigParser':
         self._acquire_lock()
         return self
 
@@ -377,11 +378,11 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
             if self._lock is not None:
                 self._lock._release_lock()
 
-    def optionxform(self, optionstr):
+    def optionxform(self, optionstr: str) -> str:
         """Do not transform options in any way when writing"""
         return optionstr
 
-    def _read(self, fp, fpname):
+    def _read(self, fp: IO[bytes], fpname: str) -> None:
         """A direct copy of the py2.4 version of the super class's _read method
         to assure it uses ordered dicts. Had to change one line to make it work.
 
@@ -397,7 +398,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
         is_multi_line = False
         e = None                                  # None, or an exception
 
-        def string_decode(v):
+        def string_decode(v: str) -> str:
             if v[-1] == '\\':
                 v = v[:-1]
             # end cut trailing escapes to prevent decode error
@@ -479,11 +480,12 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
         if e:
             raise e
 
-    def _has_includes(self):
+    def _has_includes(self) -> Union[bool, int]:
         return self._merge_includes and len(self._included_paths())
 
-    def _included_paths(self):
-        """Return all paths that must be included to configuration.
+    def _included_paths(self) -> List[Tuple[str, str]]:
+        """Return List all paths that must be included to configuration
+        as Tuples of (option, value).
         """
         paths = []
 
@@ -516,9 +518,9 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
                         ),
                         value
                     )
-
-                if fnmatch.fnmatchcase(self._repo.git_dir, value):
-                    paths += self.items(section)
+                if self._repo.git_dir:
+                    if fnmatch.fnmatchcase(str(self._repo.git_dir), value):
+                        paths += self.items(section)
 
             elif keyword == "onbranch":
                 try:
