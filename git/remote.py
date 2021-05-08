@@ -433,7 +433,7 @@ class Remote(LazyMixin, Iterable):
     __slots__ = ("repo", "name", "_config_reader")
     _id_attribute_ = "name"
 
-    def __init__(self, repo, name):
+    def __init__(self, repo: 'Repo', name: str) -> None:
         """Initialize a remote instance
 
         :param repo: The repository we are a remote of
@@ -441,7 +441,7 @@ class Remote(LazyMixin, Iterable):
         self.repo = repo  # type: 'Repo'
         self.name = name
 
-    def __getattr__(self, attr):
+    def __getattr__(self, attr: str) -> Any:
         """Allows to call this instance like
         remote.special( \\*args, \\*\\*kwargs) to call git-remote special self.name"""
         if attr == "_config_reader":
@@ -481,7 +481,7 @@ class Remote(LazyMixin, Iterable):
     def __hash__(self):
         return hash(self.name)
 
-    def exists(self):
+    def exists(self) -> bool:
         """
         :return: True if this is a valid, existing remote.
             Valid remotes have an entry in the repository's configuration"""
