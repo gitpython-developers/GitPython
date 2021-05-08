@@ -29,14 +29,16 @@ import os.path as osp
 
 import configparser as cp
 
+from pathlib import Path
+
 # typing-------------------------------------------------------
 
-from typing import Any, Callable, List, Mapping, TYPE_CHECKING, Tuple, Union, overload
+from typing import Any, Callable, IO, List, Dict, Sequence, TYPE_CHECKING, Tuple, Union, cast, overload
 
-from git.types import Literal, Lit_config_levels, TBD
+from git.types import Literal, Lit_config_levels, PathLike, TBD
 
 if TYPE_CHECKING:
-    pass
+    from git.repo.base import Repo
 
 # -------------------------------------------------------------
 
@@ -59,7 +61,7 @@ CONDITIONAL_INCLUDE_REGEXP = re.compile(r"(?<=includeIf )\"(gitdir|gitdir/i|onbr
 class MetaParserBuilder(abc.ABCMeta):
 
     """Utlity class wrapping base-class methods into decorators that assure read-only properties"""
-    def __new__(cls, name: str, bases: TBD, clsdict: Mapping[str, Any]) -> TBD:
+    def __new__(cls, name: str, bases: TBD, clsdict: Dict[str, Any]) -> TBD:
         """
         Equip all base-class methods with a needs_values decorator, and all non-const methods
         with a set_dirty_and_flush_changes decorator in addition to that."""
@@ -124,7 +126,7 @@ class SectionConstraint(object):
     _valid_attrs_ = ("get_value", "set_value", "get", "set", "getint", "getfloat", "getboolean", "has_option",
                      "remove_section", "remove_option", "options")
 
-    def __init__(self, config: cp.ConfigParser, section: str) -> None:
+    def __init__(self, config: 'GitConfigParser', section: str) -> None:
         self._config = config
         self._section_name = section
 
@@ -145,7 +147,7 @@ class SectionConstraint(object):
         return getattr(self._config, method)(self._section_name, *args, **kwargs)
 
     @property
-    def config(self) -> cp.ConfigParser:
+    def config(self) -> 'GitConfigParser':
         """return: Configparser instance we constrain"""
         return self._config
 
@@ -204,7 +206,7 @@ class _OMD(OrderedDict):
     def getall(self, key: str) -> Any:
         return super(_OMD, self).__getitem__(key)
 
-    def items(self) -> List[Tuple[str, Any]]:
+    def items(self) -> List[Tuple[str, Any]]:  # type: ignore  ## mypy doesn't like overwriting supertype signitures
         """List of (key, last value for key)."""
         return [(k, self[k]) for k in self]
 
@@ -271,7 +273,10 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
     # list of RawConfigParser methods able to change the instance
     _mutating_methods_ = ("add_section", "remove_section", "remove_option", "set")
 
-    def __init__(self, file_or_files=None, read_only=True, merge_includes=True, config_level=None, repo=None):
+    def __init__(self, file_or_files: Union[None, PathLike, IO, Sequence[Union[PathLike, IO]]] = None,
+                 read_only: bool = True, merge_includes: bool = True,
+                 config_level: Union[Lit_config_levels, None] = None,
+                 repo: Union['Repo', None] = None) -> None:
         """Initialize a configuration reader to read the given file_or_files and to
         possibly allow changes to it by setting read_only False
 
@@ -297,11 +302,13 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
             self._proxies = self._dict()
 
         if file_or_files is not None:
-            self._file_or_files = file_or_files
+            self._file_or_files = file_or_files  # type: Union[PathLike, IO, Sequence[Union[PathLike, IO]]]
         else:
             if config_level is None:
                 if read_only:
-                    self._file_or_files = [get_config_path(f) for f in CONFIG_LEVELS if f != 'repository']
+                    self._file_or_files = [get_config_path(f)  # type: ignore
+                                           for f in CONFIG_LEVELS    # Can type f properly when 3.5 dropped
+                                           if f != 'repository']
                 else:
                     raise ValueError("No configuration level or configuration files specified")
             else:
@@ -312,20 +319,21 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
         self._is_initialized = False
         self._merge_includes = merge_includes
         self._repo = repo
-        self._lock = None
+        self._lock = None  # type: Union['LockFile', None]
         self._acquire_lock()
 
-    def _acquire_lock(self):
+    def _acquire_lock(self) -> None:
         if not self._read_only:
             if not self._lock:
-                if isinstance(self._file_or_files, (tuple, list)):
+                if isinstance(self._file_or_files, (tuple, list, Sequence)):
                     raise ValueError(
                         "Write-ConfigParsers can operate on a single file only, multiple files have been passed")
                 # END single file check
 
-                file_or_files = self._file_or_files
-                if not isinstance(self._file_or_files, str):
-                    file_or_files = self._file_or_files.name
+                if not isinstance(self._file_or_files, (str, Path)):  # cannot narrow by os._pathlike until 3.5 dropped
+                    file_or_files = cast(IO, self._file_or_files).name  # type: PathLike
+                else:
+                    file_or_files = self._file_or_files
                 # END get filename from handle/stream
                 # initialize lock base - we want to write
                 self._lock = self.t_lock(file_or_files)
@@ -366,7 +374,8 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
                 # Usually when shutting down the interpreter, don'y know how to fix this
                 pass
         finally:
-            self._lock._release_lock()
+            if self._lock is not None:
+                self._lock._release_lock()
 
     def optionxform(self, optionstr):
         """Do not transform options in any way when writing"""
