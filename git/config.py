@@ -124,40 +124,40 @@ class SectionConstraint(object):
     _valid_attrs_ = ("get_value", "set_value", "get", "set", "getint", "getfloat", "getboolean", "has_option",
                      "remove_section", "remove_option", "options")
 
-    def __init__(self, config, section):
+    def __init__(self, config: cp.ConfigParser, section: str) -> None:
         self._config = config
         self._section_name = section
 
-    def __del__(self):
+    def __del__(self) -> None:
         # Yes, for some reason, we have to call it explicitly for it to work in PY3 !
         # Apparently __del__ doesn't get call anymore if refcount becomes 0
         # Ridiculous ... .
         self._config.release()
 
-    def __getattr__(self, attr):
+    def __getattr__(self, attr: str) -> Any:
         if attr in self._valid_attrs_:
             return lambda *args, **kwargs: self._call_config(attr, *args, **kwargs)
         return super(SectionConstraint, self).__getattribute__(attr)
 
-    def _call_config(self, method, *args, **kwargs):
+    def _call_config(self, method: str, *args: Any, **kwargs: Any) -> Any:
         """Call the configuration at the given method which must take a section name
         as first argument"""
         return getattr(self._config, method)(self._section_name, *args, **kwargs)
 
     @property
-    def config(self):
+    def config(self) -> cp.ConfigParser:
         """return: Configparser instance we constrain"""
         return self._config
 
-    def release(self):
+    def release(self) -> None:
         """Equivalent to GitConfigParser.release(), which is called on our underlying parser instance"""
         return self._config.release()
 
-    def __enter__(self):
+    def __enter__(self) -> 'SectionConstraint':
         self._config.__enter__()
         return self
 
-    def __exit__(self, exception_type, exception_value, traceback):
+    def __exit__(self, exception_type: str, exception_value: str, traceback: str) -> None:
         self._config.__exit__(exception_type, exception_value, traceback)
 
 
@@ -336,10 +336,10 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
         self._acquire_lock()
         return self
 
-    def __exit__(self, exception_type, exception_value, traceback):
+    def __exit__(self, exception_type, exception_value, traceback) -> None:
         self.release()
 
-    def release(self):
+    def release(self) -> None:
         """Flush changes and release the configuration write lock. This instance must not be used anymore afterwards.
         In Python 3, it's required to explicitly release locks and flush changes, as __del__ is not called
         deterministically anymore."""
