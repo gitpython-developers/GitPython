@@ -31,7 +31,7 @@ import configparser as cp
 
 # typing-------------------------------------------------------
 
-from typing import Any, Callable, Mapping, TYPE_CHECKING, Tuple
+from typing import Any, Callable, List, Mapping, TYPE_CHECKING, Tuple, Union, overload
 
 from git.types import Literal, Lit_config_levels, TBD
 
@@ -164,26 +164,25 @@ class SectionConstraint(object):
 class _OMD(OrderedDict):
     """Ordered multi-dict."""
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: str, value: Any) -> None:
         super(_OMD, self).__setitem__(key, [value])
 
-    def add(self, key, value):
+    def add(self, key: str, value: Any) -> None:
         if key not in self:
             super(_OMD, self).__setitem__(key, [value])
-            return
-
+            return None
         super(_OMD, self).__getitem__(key).append(value)
 
-    def setall(self, key, values):
+    def setall(self, key: str, values: Any) -> None:
         super(_OMD, self).__setitem__(key, values)
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str) -> Any:
         return super(_OMD, self).__getitem__(key)[-1]
 
-    def getlast(self, key):
+    def getlast(self, key: str) -> Any:
         return super(_OMD, self).__getitem__(key)[-1]
 
-    def setlast(self, key, value):
+    def setlast(self, key: str, value: Any) -> None:
         if key not in self:
             super(_OMD, self).__setitem__(key, [value])
             return
@@ -191,17 +190,25 @@ class _OMD(OrderedDict):
         prior = super(_OMD, self).__getitem__(key)
         prior[-1] = value
 
-    def get(self, key, default=None):
+    @overload
+    def get(self, key: str, default: None = ...) -> None:
+        ...
+
+    @overload
+    def get(self, key: str, default: Any = ...) -> Any:
+        ...
+
+    def get(self, key: str, default: Union[Any, None] = None) -> Union[Any, None]:
         return super(_OMD, self).get(key, [default])[-1]
 
-    def getall(self, key):
+    def getall(self, key: str) -> Any:
         return super(_OMD, self).__getitem__(key)
 
-    def items(self):
+    def items(self) -> List[Tuple[str, Any]]:
         """List of (key, last value for key)."""
         return [(k, self[k]) for k in self]
 
-    def items_all(self):
+    def items_all(self) -> List[Tuple[str, List[Any]]]:
         """List of (key, list of values for key)."""
         return [(k, self.getall(k)) for k in self]
 
