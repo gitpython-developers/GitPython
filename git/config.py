@@ -31,9 +31,9 @@ import configparser as cp
 
 # typing-------------------------------------------------------
 
-from typing import TYPE_CHECKING, Tuple
+from typing import Any, Callable, Mapping, TYPE_CHECKING, Tuple
 
-from git.types import Literal
+from git.types import Literal, Lit_config_levels, TBD
 
 if TYPE_CHECKING:
     pass
@@ -59,7 +59,7 @@ CONDITIONAL_INCLUDE_REGEXP = re.compile(r"(?<=includeIf )\"(gitdir|gitdir/i|onbr
 class MetaParserBuilder(abc.ABCMeta):
 
     """Utlity class wrapping base-class methods into decorators that assure read-only properties"""
-    def __new__(cls, name, bases, clsdict):
+    def __new__(cls, name: str, bases: TBD, clsdict: Mapping[str, Any]) -> TBD:
         """
         Equip all base-class methods with a needs_values decorator, and all non-const methods
         with a set_dirty_and_flush_changes decorator in addition to that."""
@@ -85,23 +85,23 @@ class MetaParserBuilder(abc.ABCMeta):
         return new_type
 
 
-def needs_values(func):
+def needs_values(func: Callable) -> Callable:
     """Returns method assuring we read values (on demand) before we try to access them"""
 
     @wraps(func)
-    def assure_data_present(self, *args, **kwargs):
+    def assure_data_present(self, *args: Any, **kwargs: Any) -> Any:
         self.read()
         return func(self, *args, **kwargs)
     # END wrapper method
     return assure_data_present
 
 
-def set_dirty_and_flush_changes(non_const_func):
+def set_dirty_and_flush_changes(non_const_func: Callable) -> Callable:
     """Return method that checks whether given non constant function may be called.
     If so, the instance will be set dirty.
     Additionally, we flush the changes right to disk"""
 
-    def flush_changes(self, *args, **kwargs):
+    def flush_changes(self, *args: Any, **kwargs: Any) -> Any:
         rval = non_const_func(self, *args, **kwargs)
         self._dirty = True
         self.write()
@@ -206,7 +206,7 @@ class _OMD(OrderedDict):
         return [(k, self.getall(k)) for k in self]
 
 
-def get_config_path(config_level: Literal['system', 'global', 'user', 'repository']) -> str:
+def get_config_path(config_level: Lit_config_levels) -> str:
 
     # we do not support an absolute path of the gitconfig on windows ,
     # use the global config instead

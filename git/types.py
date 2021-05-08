@@ -12,8 +12,6 @@ else:
     from typing_extensions import Final, Literal  # noqa: F401
 
 
-TBD = Any
-
 if sys.version_info[:2] < (3, 6):
     # os.PathLike (PEP-519) only got introduced with Python 3.6
     PathLike = str
@@ -23,3 +21,7 @@ elif sys.version_info[:2] < (3, 9):
 elif sys.version_info[:2] >= (3, 9):
     # os.PathLike only becomes subscriptable from Python 3.9 onwards
     PathLike = Union[str, os.PathLike[str]]
+
+TBD = Any
+
+Lit_config_levels = Literal['system', 'global', 'user', 'repository']
