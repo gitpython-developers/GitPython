@@ -9,7 +9,7 @@ configuration files"""
 import abc
 from functools import wraps
 import inspect
-from io import IOBase
+from io import BufferedReader, IOBase
 import logging
 import os
 import re
@@ -325,7 +325,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
     def _acquire_lock(self) -> None:
         if not self._read_only:
             if not self._lock:
-                if isinstance(self._file_or_files, (tuple, list, Sequence)):
+                if isinstance(self._file_or_files, (tuple, list)):
                     raise ValueError(
                         "Write-ConfigParsers can operate on a single file only, multiple files have been passed")
                 # END single file check
@@ -382,7 +382,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
         """Do not transform options in any way when writing"""
         return optionstr
 
-    def _read(self, fp: IO[bytes], fpname: str) -> None:
+    def _read(self, fp: Union[BufferedReader, IO[bytes]], fpname: str) -> None:
         """A direct copy of the py2.4 version of the super class's _read method
         to assure it uses ordered dicts. Had to change one line to make it work.
 
@@ -534,33 +534,38 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
 
         return paths
 
-    def read(self):
+    def read(self) -> None:
         """Reads the data stored in the files we have been initialized with. It will
         ignore files that cannot be read, possibly leaving an empty configuration
 
         :return: Nothing
         :raise IOError: if a file cannot be handled"""
         if self._is_initialized:
-            return
+            return None
         self._is_initialized = True
 
-        if not isinstance(self._file_or_files, (tuple, list)):
-            files_to_read = [self._file_or_files]
+        files_to_read = [""]  # type: List[Union[PathLike, IO]]  ## just for types until 3.5 dropped
+        if isinstance(self._file_or_files, (str)):  # replace with PathLike once 3.5 dropped
+            files_to_read = [self._file_or_files]                               # for str, as str is a type of Sequence
+        elif not isinstance(self._file_or_files, (tuple, list, Sequence)):
+            files_to_read = [self._file_or_files]                               # for IO or Path
         else:
-            files_to_read = list(self._file_or_files)
+            files_to_read = list(self._file_or_files)                           # for lists or tuples
         # end assure we have a copy of the paths to handle
 
         seen = set(files_to_read)
         num_read_include_files = 0
         while files_to_read:
             file_path = files_to_read.pop(0)
-            fp = file_path
             file_ok = False
 
-            if hasattr(fp, "seek"):
-                self._read(fp, fp.name)
+            if hasattr(file_path, "seek"):
+                # must be a file objectfile-object
+                file_path = cast(IO[bytes], file_path)  # replace with assert to narrow type, once sure
+                self._read(file_path, file_path.name)
             else:
                 # assume a path if it is not a file-object
+                file_path = cast(PathLike, file_path)
                 try:
                     with open(file_path, 'rb') as fp:
                         file_ok = True
@@ -578,6 +583,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
                         if not file_ok:
                             continue
                         # end ignore relative paths if we don't know the configuration file path
+                        file_path = cast(PathLike, file_path)
                         assert osp.isabs(file_path), "Need absolute paths to be sure our cycle checks will work"
                         include_path = osp.join(osp.dirname(file_path), include_path)
                     # end make include path absolute
