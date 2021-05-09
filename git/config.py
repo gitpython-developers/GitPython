@@ -604,7 +604,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
             self._merge_includes = False
         # end
 
-    def _write(self, fp):
+    def _write(self, fp: IO) -> None:
         """Write an .ini-format representation of the configuration state in
         git compatible format"""
         def write_section(name, section_dict):
@@ -623,11 +623,11 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
         for name, value in self._sections.items():
             write_section(name, value)
 
-    def items(self, section_name):
+    def items(self, section_name: str) -> List[Tuple[str, str]]:
         """:return: list((option, value), ...) pairs of all items in the given section"""
         return [(k, v) for k, v in super(GitConfigParser, self).items(section_name) if k != '__name__']
 
-    def items_all(self, section_name):
+    def items_all(self, section_name: str) -> List[Tuple[str, List[str]]]:
         """:return: list((option, [values...]), ...) pairs of all items in the given section"""
         rv = _OMD(self._defaults)
 
@@ -644,7 +644,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
         return rv.items_all()
 
     @needs_values
-    def write(self):
+    def write(self) -> None:
         """Write changes to our file, if there are changes at all
 
         :raise IOError: if this is a read-only writer instance or if we could not obtain
@@ -661,19 +661,21 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
         if self._has_includes():
             log.debug("Skipping write-back of configuration file as include files were merged in." +
                       "Set merge_includes=False to prevent this.")
-            return
+            return None
         # end
 
         fp = self._file_or_files
 
         # we have a physical file on disk, so get a lock
         is_file_lock = isinstance(fp, (str, IOBase))
-        if is_file_lock:
+        if is_file_lock and self._lock is not None:  # else raise Error?
             self._lock._obtain_lock()
         if not hasattr(fp, "seek"):
-            with open(self._file_or_files, "wb") as fp:
-                self._write(fp)
+            self._file_or_files = cast(PathLike, self._file_or_files)
+            with open(self._file_or_files, "wb") as fp_open:
+                self._write(fp_open)
         else:
+            fp = cast(IO, fp)
             fp.seek(0)
             # make sure we do not overwrite into an existing file
             if hasattr(fp, 'truncate'):
