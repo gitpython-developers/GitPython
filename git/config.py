@@ -667,12 +667,13 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
         fp = self._file_or_files
 
         # we have a physical file on disk, so get a lock
-        is_file_lock = isinstance(fp, (str, IOBase))
+        is_file_lock = isinstance(fp, (str, IOBase))  # can't use Pathlike until 3.5 dropped
         if is_file_lock and self._lock is not None:  # else raise Error?
             self._lock._obtain_lock()
+
         if not hasattr(fp, "seek"):
-            self._file_or_files = cast(PathLike, self._file_or_files)
-            with open(self._file_or_files, "wb") as fp_open:
+            fp = cast(PathLike, fp)
+            with open(fp, "wb") as fp_open:
                 self._write(fp_open)
         else:
             fp = cast(IO, fp)
@@ -682,20 +683,22 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
                 fp.truncate()
             self._write(fp)
 
-    def _assure_writable(self, method_name):
+    def _assure_writable(self, method_name: str) -> None:
         if self.read_only:
             raise IOError("Cannot execute non-constant method %s.%s" % (self, method_name))
 
-    def add_section(self, section):
+    def add_section(self, section: str) -> None:
         """Assures added options will stay in order"""
         return super(GitConfigParser, self).add_section(section)
 
     @property
-    def read_only(self):
+    def read_only(self) -> bool:
         """:return: True if this instance may change the configuration file"""
         return self._read_only
 
-    def get_value(self, section, option, default=None):
+    def get_value(self, section: str, option: str, default: Union[int, float, str, bool, None] = None
+                  ) -> Union[int, float, str, bool]:
+        # can default or return type include bool?
         """Get an option's value.
 
         If multiple values are specified for this option in the section, the
@@ -717,7 +720,8 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
 
         return self._string_to_value(valuestr)
 
-    def get_values(self, section, option, default=None):
+    def get_values(self, section: str, option: str, default: Union[int, float, str, bool, None] = None
+                   ) -> List[Union[int, float, str, bool]]:
         """Get an option's values.
 
         If multiple values are specified for this option in the section, all are
@@ -739,16 +743,14 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
 
         return [self._string_to_value(valuestr) for valuestr in lst]
 
-    def _string_to_value(self, valuestr):
+    def _string_to_value(self, valuestr: str) -> Union[int, float, str, bool]:
         types = (int, float)
         for numtype in types:
             try:
                 val = numtype(valuestr)
-
                 # truncated value ?
                 if val != float(valuestr):
                     continue
-
                 return val
             except (ValueError, TypeError):
                 continue
@@ -768,14 +770,14 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
 
         return valuestr
 
-    def _value_to_string(self, value):
+    def _value_to_string(self, value: Union[str, bytes, int, float, bool]) -> str:
         if isinstance(value, (int, float, bool)):
             return str(value)
         return force_text(value)
 
     @needs_values
     @set_dirty_and_flush_changes
-    def set_value(self, section, option, value):
+    def set_value(self, section: str, option: str, value: Union[str, bytes, int, float, bool]) -> 'GitConfigParser':
         """Sets the given option in section to the given value.
         It will create the section if required, and will not throw as opposed to the default
         ConfigParser 'set' method.
@@ -793,7 +795,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
 
     @needs_values
     @set_dirty_and_flush_changes
-    def add_value(self, section, option, value):
+    def add_value(self, section: str, option: str, value: Union[str, bytes, int, float, bool]) -> 'GitConfigParser':
         """Adds a value for the given option in section.
         It will create the section if required, and will not throw as opposed to the default
         ConfigParser 'set' method. The value becomes the new value of the option as returned
@@ -810,7 +812,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
         self._sections[section].add(option, self._value_to_string(value))
         return self
 
-    def rename_section(self, section, new_name):
+    def rename_section(self, section: str, new_name: str) -> 'GitConfigParser':
         """rename the given section to new_name
         :raise ValueError: if section doesn't exit
         :raise ValueError: if a section with new_name does already exist
