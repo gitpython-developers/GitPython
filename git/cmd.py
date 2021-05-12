@@ -42,12 +42,12 @@ from .util import (
 
 # typing ---------------------------------------------------------------------------
 
-from typing import TYPE_CHECKING
+from typing import Any, BinaryIO, Callable, Dict, Mapping, Sequence, TYPE_CHECKING, Union
 
-from git.types import TBD
+from git.types import PathLike, TBD
 
 if TYPE_CHECKING:
-   pass
+    pass
 
 
 # ---------------------------------------------------------------------------------
@@ -69,8 +69,11 @@ __all__ = ('Git',)
 # Documentation
 ## @{
 
-def handle_process_output(process, stdout_handler, stderr_handler,
-                          finalizer=None, decode_streams=True):
+def handle_process_output(process: subprocess.Popen,
+                          stdout_handler: Union[None, Callable[[str], None]],
+                          stderr_handler: Union[None, Callable[[str], None]],
+                          finalizer: Union[None, Callable[[subprocess.Popen], TBD]] = None,
+                          decode_streams: bool = True) -> Union[None, TBD]:   # TBD is whatever finalizer returns
     """Registers for notifications to learn that process output is ready to read, and dispatches lines to
     the respective line handlers.
     This function returns once the finalizer returns
@@ -87,13 +90,14 @@ def handle_process_output(process, stdout_handler, stderr_handler,
         or if decoding must happen later (i.e. for Diffs).
     """
     # Use 2 "pump" threads and wait for both to finish.
-    def pump_stream(cmdline, name, stream, is_decode, handler):
+    def pump_stream(cmdline: str, name: str, stream: BinaryIO, is_decode: bool,
+                    handler: Union[None, Callable[[str], None]]) -> None:
         try:
             for line in stream:
                 if handler:
                     if is_decode:
-                        line = line.decode(defenc)
-                    handler(line)
+                        line_str = line.decode(defenc)
+                    handler(line_str)
         except Exception as ex:
             log.error("Pumping %r of cmd(%s) failed due to: %r", name, remove_password_if_present(cmdline), ex)
             raise CommandError(['<%s-pump>' % name] + remove_password_if_present(cmdline), ex) from ex
@@ -126,17 +130,20 @@ def handle_process_output(process, stdout_handler, stderr_handler,
 
     if finalizer:
         return finalizer(process)
+    else:
+        return None
 
 
-def dashify(string):
+def dashify(string: str) -> str:
     return string.replace('_', '-')
 
 
-def slots_to_dict(self, exclude=()):
+def slots_to_dict(self, exclude: Sequence[str] = ()) -> Dict[str, Any]:
+    # annotate self.__slots__ as Tuple[str, ...] once 3.5 dropped
     return {s: getattr(self, s) for s in self.__slots__ if s not in exclude}
 
 
-def dict_to_slots_and__excluded_are_none(self, d, excluded=()):
+def dict_to_slots_and__excluded_are_none(self, d: Mapping[str, Any], excluded: Sequence[str] = ()) -> None:
     for k, v in d.items():
         setattr(self, k, v)
     for k in excluded:
@@ -175,10 +182,10 @@ class Git(LazyMixin):
 
     _excluded_ = ('cat_file_all', 'cat_file_header', '_version_info')
 
-    def __getstate__(self):
+    def __getstate__(self) -> Dict[str, Any]:
         return slots_to_dict(self, exclude=self._excluded_)
 
-    def __setstate__(self, d):
+    def __setstate__(self, d) -> None:
         dict_to_slots_and__excluded_are_none(self, d, excluded=self._excluded_)
 
     # CONFIGURATION
@@ -202,7 +209,7 @@ class Git(LazyMixin):
     # the top level __init__
 
     @classmethod
-    def refresh(cls, path=None):
+    def refresh(cls, path: Union[None, PathLike] = None) -> bool:
         """This gets called by the refresh function (see the top level
         __init__).
         """
@@ -317,11 +324,11 @@ class Git(LazyMixin):
         return has_git
 
     @classmethod
-    def is_cygwin(cls):
+    def is_cygwin(cls) -> bool:
         return is_cygwin_git(cls.GIT_PYTHON_GIT_EXECUTABLE)
 
     @classmethod
-    def polish_url(cls, url, is_cygwin=None):
+    def polish_url(cls, url: str, is_cygwin: Union[None, bool] = None) -> str:
         if is_cygwin is None:
             is_cygwin = cls.is_cygwin()
 
@@ -338,7 +345,6 @@ class Git(LazyMixin):
             if url.startswith('~'):
                 url = os.path.expanduser(url)
             url = url.replace("\\\\", "\\").replace("\\", "/")
-
         return url
 
     class AutoInterrupt(object):

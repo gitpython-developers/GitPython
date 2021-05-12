@@ -22,11 +22,13 @@ from urllib.parse import urlsplit, urlunsplit
 # typing ---------------------------------------------------------
 
 from typing import (Any, AnyStr, BinaryIO, Callable, Dict, Generator, IO, Iterator, List,
-                    Optional, Pattern, Sequence, Tuple, Union, cast, TYPE_CHECKING)
+                    Optional, Pattern, Sequence, Tuple, Union, cast, TYPE_CHECKING, overload)
+
+
 if TYPE_CHECKING:
     from git.remote import Remote
     from git.repo.base import Repo
-from .types import PathLike, TBD
+from .types import PathLike, TBD, Literal
 
 # ---------------------------------------------------------------------
 
@@ -279,9 +281,20 @@ _cygpath_parsers = (
 )  # type: Tuple[Tuple[Pattern[str], Callable, bool], ...]
 
 
+@overload
+def cygpath(path: str) -> str:
+    ...
+
+
+@overload
+def cygpath(path: PathLike) -> PathLike:
+    ...
+
+
 def cygpath(path: PathLike) -> PathLike:
     """Use :meth:`git.cmd.Git.polish_url()` instead, that works on any environment."""
-    path = str(path)  # ensure is str and not AnyPath
+    path = str(path)  # ensure is str and not AnyPath.
+    #Fix to use Paths when 3.5 dropped. or to be just str if only for urls?
     if not path.startswith(('/cygdrive', '//')):
         for regex, parser, recurse in _cygpath_parsers:
             match = regex.match(path)
@@ -314,9 +327,22 @@ def decygpath(path: PathLike) -> str:
 _is_cygwin_cache = {}  # type: Dict[str, Optional[bool]]
 
 
+@overload
+def is_cygwin_git(git_executable: None) -> Literal[False]:
+    ...
+
+
+@overload
 def is_cygwin_git(git_executable: PathLike) -> bool:
+    ...
+
+
+def is_cygwin_git(git_executable: Union[None, PathLike]) -> bool:
     if not is_win:
         return False
+
+    if git_executable is None:
+        return False  # or raise error?
 
     #from subprocess import check_output
     git_executable = str(git_executable)
