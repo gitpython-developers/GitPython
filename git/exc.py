@@ -91,7 +91,7 @@ class GitCommandError(CommandError):
     """ Thrown if execution of the git command fails with non-zero status code. """
 
     def __init__(self, command: Union[List[str], Tuple[str, ...], str],
-                 status: Union[str, None, Exception] = None,
+                 status: Union[str, int, None, Exception] = None,
                  stderr: Optional[IO[str]] = None,
                  stdout: Optional[IO[str]] = None,
                  ) -> None:

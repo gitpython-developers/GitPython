@@ -357,11 +357,11 @@ class Git(LazyMixin):
 
         __slots__ = ("proc", "args")
 
-        def __init__(self, proc, args):
+        def __init__(self, proc: Union[None, subprocess.Popen], args: Any) -> None:
             self.proc = proc
             self.args = args
 
-        def __del__(self):
+        def __del__(self) -> None:
             if self.proc is None:
                 return
 
@@ -377,13 +377,13 @@ class Git(LazyMixin):
             # did the process finish already so we have a return code ?
             try:
                 if proc.poll() is not None:
-                    return
+                    return None
             except OSError as ex:
                 log.info("Ignored error after process had died: %r", ex)
 
             # can be that nothing really exists anymore ...
             if os is None or getattr(os, 'kill', None) is None:
-                return
+                return None
 
             # try to kill it
             try:
@@ -400,10 +400,11 @@ class Git(LazyMixin):
                     call(("TASKKILL /F /T /PID %s 2>nul 1>nul" % str(proc.pid)), shell=True)
             # END exception handling
 
-        def __getattr__(self, attr):
+        def __getattr__(self, attr: str) -> Any:
             return getattr(self.proc, attr)
 
-        def wait(self, stderr=b''):  # TODO: Bad choice to mimic `proc.wait()` but with different args.
+        # TODO: Bad choice to mimic `proc.wait()` but with different args.
+        def wait(self, stderr: Union[None, bytes] = b'') -> int:
             """Wait for the process and return its status code.
 
             :param stderr: Previously read value of stderr, in case stderr is already closed.
@@ -413,20 +414,22 @@ class Git(LazyMixin):
                 stderr = b''
             stderr = force_bytes(data=stderr, encoding='utf-8')
 
-            status = self.proc.wait()
+            if self.proc is not None:
+                status = self.proc.wait()
 
-            def read_all_from_possibly_closed_stream(stream):
-                try:
-                    return stderr + force_bytes(stream.read())
-                except ValueError:
-                    return stderr or b''
+                def read_all_from_possibly_closed_stream(stream):
+                    try:
+                        return stderr + force_bytes(stream.read())
+                    except ValueError:
+                        return stderr or b''
 
-            if status != 0:
-                errstr = read_all_from_possibly_closed_stream(self.proc.stderr)
-                log.debug('AutoInterrupt wait stderr: %r' % (errstr,))
-                raise GitCommandError(remove_password_if_present(self.args), status, errstr)
+                if status != 0:
+                    errstr = read_all_from_possibly_closed_stream(self.proc.stderr)
+                    log.debug('AutoInterrupt wait stderr: %r' % (errstr,))
+                    raise GitCommandError(remove_password_if_present(self.args), status, errstr)
             # END status handling
             return status
+
     # END auto interrupt
 
     class CatFileContentStream(object):
