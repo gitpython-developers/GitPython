@@ -42,7 +42,7 @@ from .util import (
 
 # typing ---------------------------------------------------------------------------
 
-from typing import Any, BinaryIO, Callable, Dict, Mapping, Sequence, TYPE_CHECKING, Union
+from typing import Any, BinaryIO, Callable, Dict, List, Mapping, Sequence, TYPE_CHECKING, Union
 
 from git.types import PathLike, TBD
 
@@ -443,7 +443,7 @@ class Git(LazyMixin):
 
         __slots__ = ('_stream', '_nbr', '_size')
 
-        def __init__(self, size, stream):
+        def __init__(self, size: int, stream: BinaryIO) -> None:
             self._stream = stream
             self._size = size
             self._nbr = 0           # num bytes read
@@ -454,7 +454,7 @@ class Git(LazyMixin):
                 stream.read(1)
             # END handle empty streams
 
-        def read(self, size=-1):
+        def read(self, size: int = -1) -> bytes:
             bytes_left = self._size - self._nbr
             if bytes_left == 0:
                 return b''
@@ -474,7 +474,7 @@ class Git(LazyMixin):
             # END finish reading
             return data
 
-        def readline(self, size=-1):
+        def readline(self, size: int = -1) -> bytes:
             if self._nbr == self._size:
                 return b''
 
@@ -496,7 +496,7 @@ class Git(LazyMixin):
 
             return data
 
-        def readlines(self, size=-1):
+        def readlines(self, size: int = -1) -> List[bytes]:
             if self._nbr == self._size:
                 return []
 
@@ -517,20 +517,20 @@ class Git(LazyMixin):
             return out
 
         # skipcq: PYL-E0301
-        def __iter__(self):
+        def __iter__(self) -> 'Git.CatFileContentStream':
             return self
 
-        def __next__(self):
+        def __next__(self) -> bytes:
             return self.next()
 
-        def next(self):
+        def next(self) -> bytes:
             line = self.readline()
             if not line:
                 raise StopIteration
 
             return line
 
-        def __del__(self):
+        def __del__(self) -> None:
             bytes_left = self._size - self._nbr
             if bytes_left:
                 # read and discard - seeking is impossible within a stream
@@ -538,7 +538,7 @@ class Git(LazyMixin):
                 self._stream.read(bytes_left + 1)
             # END handle incomplete read
 
-    def __init__(self, working_dir=None):
+    def __init__(self, working_dir: Union[None, PathLike]=None):
         """Initialize this instance with:
 
         :param working_dir:
