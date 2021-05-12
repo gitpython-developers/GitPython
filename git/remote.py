@@ -16,7 +16,7 @@ from git.util import (
     Iterable,
     IterableList,
     RemoteProgress,
-    CallableRemoteProgress
+    CallableRemoteProgress,
 )
 from git.util import (
     join_path,
@@ -36,9 +36,9 @@ from .refs import (
 
 # typing-------------------------------------------------------
 
-from typing import Any, Callable, Dict, Optional, TYPE_CHECKING, Union, cast, overload
+from typing import Any, Callable, Dict, Iterator, List, Optional, Sequence, TYPE_CHECKING, Union, cast, overload
 
-from git.types import PathLike, Literal
+from git.types import PathLike, Literal, TBD
 
 if TYPE_CHECKING:
     from git.repo.base import Repo
@@ -59,7 +59,7 @@ __all__ = ('RemoteProgress', 'PushInfo', 'FetchInfo', 'Remote')
 #{ Utilities
 
 
-def add_progress(kwargs: Any, git: Git, progress: Optional[Callable[..., Any]]) -> Any:
+def add_progress(kwargs: Any, git: Git, progress: Union[Callable[..., Any], None]) -> Any:
     """Add the --progress flag to the given kwargs dict if supported by the
     git command. If the actual progress in the given progress instance is not
     given, we do not request any progress
@@ -167,7 +167,7 @@ class PushInfo(object):
         # END
 
     @classmethod
-    def _from_line(cls, remote, line: str) -> 'PushInfo':
+    def _from_line(cls, remote: 'Remote', line: str) -> 'PushInfo':
         """Create a new PushInfo instance as parsed from line which is expected to be like
             refs/heads/master:refs/heads/master 05d2687..1d0568e as bytes"""
         control_character, from_to, summary = line.split('\t', 3)
@@ -276,7 +276,8 @@ class FetchInfo(object):
 
         return True
 
-    def __init__(self, ref: SymbolicReference, flags: int, note: str = '', old_commit: Optional['Commit'] = None,
+    def __init__(self, ref: SymbolicReference, flags: int, note: str = '',
+                 old_commit: Union['Commit', TagReference, 'Tree', 'Blob', None] = None,
                  remote_ref_path: Optional[PathLike] = None) -> None:
         """
         Initialize a new instance
@@ -341,7 +342,7 @@ class FetchInfo(object):
         # END control char exception handling
 
         # parse operation string for more info - makes no sense for symbolic refs, but we parse it anyway
-        old_commit = None
+        old_commit = None  # type: Union[Commit, TagReference, Tree, Blob, None]
         is_tag_operation = False
         if 'rejected' in operation:
             flags |= cls.REJECTED
@@ -433,7 +434,7 @@ class Remote(LazyMixin, Iterable):
     __slots__ = ("repo", "name", "_config_reader")
     _id_attribute_ = "name"
 
-    def __init__(self, repo, name):
+    def __init__(self, repo: 'Repo', name: str) -> None:
         """Initialize a remote instance
 
         :param repo: The repository we are a remote of
@@ -441,7 +442,7 @@ class Remote(LazyMixin, Iterable):
         self.repo = repo  # type: 'Repo'
         self.name = name
 
-    def __getattr__(self, attr):
+    def __getattr__(self, attr: str) -> Any:
         """Allows to call this instance like
         remote.special( \\*args, \\*\\*kwargs) to call git-remote special self.name"""
         if attr == "_config_reader":
@@ -455,10 +456,10 @@ class Remote(LazyMixin, Iterable):
             return super(Remote, self).__getattr__(attr)
         # END handle exception
 
-    def _config_section_name(self):
+    def _config_section_name(self) -> str:
         return 'remote "%s"' % self.name
 
-    def _set_cache_(self, attr):
+    def _set_cache_(self, attr: str) -> Any:
         if attr == "_config_reader":
             # NOTE: This is cached as __getattr__ is overridden to return remote config values implicitly, such as
             # in print(r.pushurl)
@@ -466,22 +467,22 @@ class Remote(LazyMixin, Iterable):
         else:
             super(Remote, self)._set_cache_(attr)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '<git.%s "%s">' % (self.__class__.__name__, self.name)
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         return isinstance(other, type(self)) and self.name == other.name
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         return not (self == other)
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(self.name)
 
-    def exists(self):
+    def exists(self) -> bool:
         """
         :return: True if this is a valid, existing remote.
             Valid remotes have an entry in the repository's configuration"""
@@ -496,7 +497,7 @@ class Remote(LazyMixin, Iterable):
         # end
 
     @classmethod
-    def iter_items(cls, repo):
+    def iter_items(cls, repo: 'Repo', *args: Any, **kwargs: Any) -> Iterator['Remote']:
         """:return: Iterator yielding Remote objects of the given repository"""
         for section in repo.config_reader("repository").sections():
             if not section.startswith('remote '):
@@ -508,7 +509,7 @@ class Remote(LazyMixin, Iterable):
             yield Remote(repo, section[lbound + 1:rbound])
         # END for each configuration section
 
-    def set_url(self, new_url, old_url=None, **kwargs):
+    def set_url(self, new_url: str, old_url: Optional[str] = None, **kwargs: Any) -> 'Remote':
         """Configure URLs on current remote (cf command git remote set_url)
 
         This command manages URLs on the remote.
@@ -525,7 +526,7 @@ class Remote(LazyMixin, Iterable):
             self.repo.git.remote(scmd, self.name, new_url, **kwargs)
         return self
 
-    def add_url(self, url, **kwargs):
+    def add_url(self, url: str, **kwargs: Any) -> 'Remote':
         """Adds a new url on current remote (special case of git remote set_url)
 
         This command adds new URLs to a given remote, making it possible to have
@@ -536,7 +537,7 @@ class Remote(LazyMixin, Iterable):
         """
         return self.set_url(url, add=True)
 
-    def delete_url(self, url, **kwargs):
+    def delete_url(self, url: str, **kwargs: Any) -> 'Remote':
         """Deletes a new url on current remote (special case of git remote set_url)
 
         This command deletes new URLs to a given remote, making it possible to have
@@ -548,10 +549,11 @@ class Remote(LazyMixin, Iterable):
         return self.set_url(url, delete=True)
 
     @property
-    def urls(self):
+    def urls(self) -> Iterator[str]:
         """:return: Iterator yielding all configured URL targets on a remote as strings"""
         try:
-            remote_details = self.repo.git.remote("get-url", "--all", self.name)
+            # can replace cast with type assert?
+            remote_details = cast(str, self.repo.git.remote("get-url", "--all", self.name))
             for line in remote_details.split('\n'):
                 yield line
         except GitCommandError as ex:
@@ -562,23 +564,23 @@ class Remote(LazyMixin, Iterable):
             #
             if 'Unknown subcommand: get-url' in str(ex):
                 try:
-                    remote_details = self.repo.git.remote("show", self.name)
+                    remote_details = cast(str, self.repo.git.remote("show", self.name))
                     for line in remote_details.split('\n'):
                         if '  Push  URL:' in line:
                             yield line.split(': ')[-1]
-                except GitCommandError as ex:
-                    if any(msg in str(ex) for msg in ['correct access rights', 'cannot run ssh']):
+                except GitCommandError as _ex:
+                    if any(msg in str(_ex) for msg in ['correct access rights', 'cannot run ssh']):
                         # If ssh is not setup to access this repository, see issue 694
-                        remote_details = self.repo.git.config('--get-all', 'remote.%s.url' % self.name)
+                        remote_details = cast(str, self.repo.git.config('--get-all', 'remote.%s.url' % self.name))
                         for line in remote_details.split('\n'):
                             yield line
                     else:
-                        raise ex
+                        raise _ex
             else:
                 raise ex
 
     @property
-    def refs(self):
+    def refs(self) -> IterableList:
         """
         :return:
             IterableList of RemoteReference objects. It is prefixed, allowing
@@ -589,7 +591,7 @@ class Remote(LazyMixin, Iterable):
         return out_refs
 
     @property
-    def stale_refs(self):
+    def stale_refs(self) -> IterableList:
         """
         :return:
             IterableList RemoteReference objects that do not have a corresponding
@@ -623,7 +625,7 @@ class Remote(LazyMixin, Iterable):
         return out_refs
 
     @classmethod
-    def create(cls, repo, name, url, **kwargs):
+    def create(cls, repo: 'Repo', name: str, url: str, **kwargs: Any) -> 'Remote':
         """Create a new remote to the given repository
         :param repo: Repository instance that is to receive the new remote
         :param name: Desired name of the remote
@@ -640,7 +642,7 @@ class Remote(LazyMixin, Iterable):
     add = create
 
     @classmethod
-    def remove(cls, repo, name):
+    def remove(cls, repo: 'Repo', name: str) -> str:
         """Remove the remote with the given name
         :return: the passed remote name to remove
         """
@@ -652,7 +654,7 @@ class Remote(LazyMixin, Iterable):
     # alias
     rm = remove
 
-    def rename(self, new_name):
+    def rename(self, new_name: str) -> 'Remote':
         """Rename self to the given new_name
         :return: self """
         if self.name == new_name:
@@ -664,7 +666,7 @@ class Remote(LazyMixin, Iterable):
 
         return self
 
-    def update(self, **kwargs):
+    def update(self, **kwargs: Any) -> 'Remote':
         """Fetch all changes for this remote, including new branches which will
         be forced in ( in case your local remote branch is not part the new remote branches
         ancestry anymore ).
@@ -678,7 +680,8 @@ class Remote(LazyMixin, Iterable):
         self.repo.git.remote(scmd, self.name, **kwargs)
         return self
 
-    def _get_fetch_info_from_stderr(self, proc, progress):
+    def _get_fetch_info_from_stderr(self, proc: TBD,
+                                    progress: Union[Callable[..., Any], RemoteProgress, None]) -> IterableList:
         progress = to_progress_instance(progress)
 
         # skip first line as it is some remote info we are not interested in
@@ -737,7 +740,8 @@ class Remote(LazyMixin, Iterable):
                 log.warning("Git informed while fetching: %s", err_line.strip())
         return output
 
-    def _get_push_info(self, proc, progress):
+    def _get_push_info(self, proc: TBD,
+                       progress: Union[Callable[..., Any], RemoteProgress, None]) -> IterableList:
         progress = to_progress_instance(progress)
 
         # read progress information from stderr
@@ -745,9 +749,9 @@ class Remote(LazyMixin, Iterable):
         # read the lines manually as it will use carriage returns between the messages
         # to override the previous one. This is why we read the bytes manually
         progress_handler = progress.new_message_handler()
-        output = []
+        output = IterableList('push_infos')
 
-        def stdout_handler(line):
+        def stdout_handler(line: str) -> None:
             try:
                 output.append(PushInfo._from_line(self, line))
             except ValueError:
@@ -766,7 +770,7 @@ class Remote(LazyMixin, Iterable):
 
         return output
 
-    def _assert_refspec(self):
+    def _assert_refspec(self) -> None:
         """Turns out we can't deal with remotes if the refspec is missing"""
         config = self.config_reader
         unset = 'placeholder'
@@ -779,7 +783,9 @@ class Remote(LazyMixin, Iterable):
         finally:
             config.release()
 
-    def fetch(self, refspec=None, progress=None, verbose=True, **kwargs):
+    def fetch(self, refspec: Union[str, List[str], None] = None,
+              progress: Union[Callable[..., Any], None] = None,
+              verbose: bool = True, **kwargs: Any) -> IterableList:
         """Fetch the latest changes for this remote
 
         :param refspec:
@@ -810,9 +816,10 @@ class Remote(LazyMixin, Iterable):
         if refspec is None:
             # No argument refspec, then ensure the repo's config has a fetch refspec.
             self._assert_refspec()
+
         kwargs = add_progress(kwargs, self.repo.git, progress)
         if isinstance(refspec, list):
-            args = refspec
+            args = refspec  # type: Sequence[Optional[str]]  # should need this - check logic for passing None through
         else:
             args = [refspec]
 
@@ -823,7 +830,9 @@ class Remote(LazyMixin, Iterable):
             self.repo.odb.update_cache()
         return res
 
-    def pull(self, refspec=None, progress=None, **kwargs):
+    def pull(self, refspec: Union[str, List[str], None] = None,
+             progress: Union[Callable[..., Any], None] = None,
+             **kwargs: Any) -> IterableList:
         """Pull changes from the given branch, being the same as a fetch followed
         by a merge of branch with your local branch.
 
@@ -842,7 +851,9 @@ class Remote(LazyMixin, Iterable):
             self.repo.odb.update_cache()
         return res
 
-    def push(self, refspec=None, progress=None, **kwargs):
+    def push(self, refspec: Union[str, List[str], None] = None,
+             progress: Union[Callable[..., Any], None] = None,
+             **kwargs: Any) -> IterableList:
         """Push changes from source branch in refspec to target branch in refspec.
 
         :param refspec: see 'fetch' method
@@ -873,14 +884,14 @@ class Remote(LazyMixin, Iterable):
         return self._get_push_info(proc, progress)
 
     @property
-    def config_reader(self):
+    def config_reader(self) -> SectionConstraint:
         """
         :return:
             GitConfigParser compatible object able to read options for only our remote.
             Hence you may simple type config.get("pushurl") to obtain the information"""
         return self._config_reader
 
-    def _clear_cache(self):
+    def _clear_cache(self) -> None:
         try:
             del(self._config_reader)
         except AttributeError:
@@ -888,7 +899,7 @@ class Remote(LazyMixin, Iterable):
         # END handle exception
 
     @property
-    def config_writer(self):
+    def config_writer(self) -> SectionConstraint:
         """
         :return: GitConfigParser compatible object able to write options for this remote.
         :note:

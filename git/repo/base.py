@@ -34,8 +34,7 @@ import gitdb
 
 # typing ------------------------------------------------------
 
-from git.compat.typing import Literal
-from git.types import TBD, PathLike
+from git.types import TBD, PathLike, Literal
 from typing import (Any, BinaryIO, Callable, Dict,
                     Iterator, List, Mapping, Optional,
                     TextIO, Tuple, Type, Union,
@@ -434,7 +433,7 @@ class Repo(object):
         """Delete the given tag references"""
         return TagReference.delete(self, *tags)
 
-    def create_remote(self, name: str, url: PathLike, **kwargs: Any) -> Remote:
+    def create_remote(self, name: str, url: str, **kwargs: Any) -> Remote:
         """Create a new remote.
 
         For more information, please see the documentation of the Remote.create
@@ -443,7 +442,7 @@ class Repo(object):
         :return: Remote reference"""
         return Remote.create(self, name, url, **kwargs)
 
-    def delete_remote(self, remote: 'Remote') -> Type['Remote']:
+    def delete_remote(self, remote: 'Remote') -> str:
         """Delete the given remote."""
         return Remote.remove(self, remote)
 

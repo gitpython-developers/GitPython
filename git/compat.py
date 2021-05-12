@@ -24,6 +24,7 @@ from typing import (
     Dict,
     IO,
     Optional,
+    Tuple,
     Type,
     Union,
     overload,
@@ -92,16 +93,16 @@ def win_encode(s: Optional[AnyStr]) -> Optional[bytes]:
     return None
 
 
-def with_metaclass(meta: Type[Any], *bases: Any) -> 'metaclass': # type: ignore ## mypy cannot understand dynamic class creation
+def with_metaclass(meta: Type[Any], *bases: Any) -> TBD: # type: ignore ## mypy cannot understand dynamic class creation
     """copied from https://github.com/Byron/bcore/blob/master/src/python/butility/future.py#L15"""
 
     class metaclass(meta):  # type: ignore
         __call__ = type.__call__
         __init__ = type.__init__    # type: ignore
 
-        def __new__(cls, name: str, nbases: Optional[int], d: Dict[str, Any]) -> TBD:
+        def __new__(cls, name: str, nbases: Optional[Tuple[int, ...]], d: Dict[str, Any]) -> TBD:
             if nbases is None:
                 return type.__new__(cls, name, (), d)
             return meta(name, bases, d)
 
-    return metaclass(meta.__name__ + 'Helper', None, {})
+    return metaclass(meta.__name__ + 'Helper', None, {}) # type: ignore

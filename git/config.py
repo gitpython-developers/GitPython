@@ -22,13 +22,23 @@ from git.compat import (
     with_metaclass,
     is_win,
 )
-from git.compat.typing import Literal
+
 from git.util import LockFile
 
 import os.path as osp
 
 import configparser as cp
 
+# typing-------------------------------------------------------
+
+from typing import TYPE_CHECKING, Tuple
+
+from git.types import Literal
+
+if TYPE_CHECKING:
+    pass
+
+# -------------------------------------------------------------
 
 __all__ = ('GitConfigParser', 'SectionConstraint')
 
@@ -38,7 +48,8 @@ log.addHandler(logging.NullHandler())
 
 # invariants
 # represents the configuration level of a configuration file
-CONFIG_LEVELS = ("system", "user", "global", "repository")
+CONFIG_LEVELS = ("system", "user", "global", "repository"
+                 )  # type: Tuple[Literal['system'], Literal['user'], Literal['global'], Literal['repository']]
 
 # Section pattern to detect conditional includes.
 # https://git-scm.com/docs/git-config#_conditional_includes

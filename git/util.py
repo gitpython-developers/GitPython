@@ -21,8 +21,8 @@ from urllib.parse import urlsplit, urlunsplit
 
 # typing ---------------------------------------------------------
 
-from typing import (Any, AnyStr, BinaryIO, Callable, Dict, Generator, IO, List,
-                    NoReturn, Optional, Pattern, Sequence, Tuple, Union, cast, TYPE_CHECKING)
+from typing import (Any, AnyStr, BinaryIO, Callable, Dict, Generator, IO, Iterator, List,
+                    Optional, Pattern, Sequence, Tuple, Union, cast, TYPE_CHECKING)
 if TYPE_CHECKING:
     from git.remote import Remote
     from git.repo.base import Repo
@@ -996,7 +996,8 @@ class Iterable(object):
         return out_list
 
     @classmethod
-    def iter_items(cls, repo: 'Repo', *args: Any, **kwargs: Any) -> NoReturn:
+    def iter_items(cls, repo: 'Repo', *args: Any, **kwargs: Any) -> Iterator[TBD]:
+        # return typed to be compatible with subtypes e.g. Remote
         """For more information about the arguments, see list_items
         :return:  iterator yielding Items"""
         raise NotImplementedError("To be implemented by Subclass")
