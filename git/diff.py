@@ -22,6 +22,8 @@ if TYPE_CHECKING:
     from .objects.tree import Tree
     from git.repo.base import Repo
 
+    from subprocess import Popen
+
 Lit_change_type = Literal['A', 'D', 'M', 'R', 'T']
 
 # ------------------------------------------------------------------------
@@ -490,7 +492,7 @@ class Diff(object):
         return index
 
     @staticmethod
-    def _handle_diff_line(lines_bytes: bytes, repo: 'Repo', index: TBD) -> None:
+    def _handle_diff_line(lines_bytes: bytes, repo: 'Repo', index: DiffIndex) -> None:
         lines = lines_bytes.decode(defenc)
 
         for line in lines.split(':')[1:]:
@@ -542,14 +544,14 @@ class Diff(object):
             index.append(diff)
 
     @classmethod
-    def _index_from_raw_format(cls, repo: 'Repo', proc: TBD) -> DiffIndex:
+    def _index_from_raw_format(cls, repo: 'Repo', proc: 'Popen') -> 'DiffIndex':
         """Create a new DiffIndex from the given stream which must be in raw format.
         :return: git.DiffIndex"""
         # handles
         # :100644 100644 687099101... 37c5e30c8... M    .gitignore
 
         index = DiffIndex()
-        handle_process_output(proc, lambda bytes: cls._handle_diff_line(
-            bytes, repo, index), None, finalize_process, decode_streams=False)
+        handle_process_output(proc, lambda byt: cls._handle_diff_line(byt, repo, index),
+                              None, finalize_process, decode_streams=False)
 
         return index

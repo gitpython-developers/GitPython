@@ -44,9 +44,9 @@ defenc = sys.getfilesystemencoding()
 def safe_decode(s: None) -> None: ...
 
 @overload
-def safe_decode(s: Union[IO[str], AnyStr]) -> str: ...
+def safe_decode(s: AnyStr) -> str: ...
 
-def safe_decode(s: Union[IO[str], AnyStr, None]) -> Optional[str]:
+def safe_decode(s: Union[AnyStr, None]) -> Optional[str]:
     """Safely decodes a binary string to unicode"""
     if isinstance(s, str):
         return s
