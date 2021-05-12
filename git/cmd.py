@@ -40,6 +40,18 @@ from .util import (
     stream_copy,
 )
 
+# typing ---------------------------------------------------------------------------
+
+from typing import TYPE_CHECKING
+
+from git.types import TBD
+
+if TYPE_CHECKING:
+   pass
+
+
+# ---------------------------------------------------------------------------------
+
 execute_kwargs = {'istream', 'with_extended_output',
                   'with_exceptions', 'as_process', 'stdout_as_string',
                   'output_stream', 'with_stdout', 'kill_after_timeout',
