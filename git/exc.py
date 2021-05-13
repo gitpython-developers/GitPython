@@ -11,7 +11,7 @@ from git.compat import safe_decode
 
 # typing ----------------------------------------------------
 
-from typing import IO, List, Optional, Tuple, Union, TYPE_CHECKING
+from typing import List, Optional, Tuple, Union, TYPE_CHECKING
 from git.types import PathLike
 
 if TYPE_CHECKING:
@@ -49,8 +49,9 @@ class CommandError(GitError):
     _msg = "Cmd('%s') failed%s"
 
     def __init__(self, command: Union[List[str], Tuple[str, ...], str],
-                 status: Union[str, None, Exception] = None,
-                 stderr: Optional[IO[str]] = None, stdout: Optional[IO[str]] = None) -> None:
+                 status: Union[str, int, None, Exception] = None,
+                 stderr: Union[bytes, str, None] = None,
+                 stdout: Union[bytes, str, None] = None) -> None:
         if not isinstance(command, (tuple, list)):
             command = command.split()
         self.command = command
@@ -91,9 +92,9 @@ class GitCommandError(CommandError):
     """ Thrown if execution of the git command fails with non-zero status code. """
 
     def __init__(self, command: Union[List[str], Tuple[str, ...], str],
-                 status: Union[str, None, Exception] = None,
-                 stderr: Optional[IO[str]] = None,
-                 stdout: Optional[IO[str]] = None,
+                 status: Union[str, int, None, Exception] = None,
+                 stderr: Union[bytes, str, None] = None,
+                 stdout: Union[bytes, str, None] = None,
                  ) -> None:
         super(GitCommandError, self).__init__(command, status, stderr, stdout)
 
@@ -139,7 +140,7 @@ class HookExecutionError(CommandError):
     via standard output"""
 
     def __init__(self, command: Union[List[str], Tuple[str, ...], str], status: Optional[str],
-                 stderr: Optional[IO[str]] = None, stdout: Optional[IO[str]] = None) -> None:
+                 stderr: Optional[str] = None, stdout: Optional[str] = None) -> None:
         super(HookExecutionError, self).__init__(command, status, stderr, stdout)
         self._msg = "Hook('%s') failed%s"
 

@@ -40,6 +40,20 @@ from .util import (
     stream_copy,
 )
 
+# typing ---------------------------------------------------------------------------
+
+from typing import (Any, AnyStr, BinaryIO, Callable, Dict, IO, List, Mapping,
+                    Sequence, TYPE_CHECKING, TextIO, Tuple, Union, cast, overload)
+
+from git.types import PathLike, Literal, TBD
+
+if TYPE_CHECKING:
+    from git.repo.base import Repo
+    from git.diff import DiffIndex
+
+
+# ---------------------------------------------------------------------------------
+
 execute_kwargs = {'istream', 'with_extended_output',
                   'with_exceptions', 'as_process', 'stdout_as_string',
                   'output_stream', 'with_stdout', 'kill_after_timeout',
@@ -57,8 +71,17 @@ __all__ = ('Git',)
 # Documentation
 ## @{
 
-def handle_process_output(process, stdout_handler, stderr_handler,
-                          finalizer=None, decode_streams=True):
+def handle_process_output(process: subprocess.Popen,
+                          stdout_handler: Union[None,
+                                                Callable[[AnyStr], None],
+                                                Callable[[List[AnyStr]], None],
+                                                Callable[[bytes, 'Repo', 'DiffIndex'], None]],
+                          stderr_handler: Union[None,
+                                                Callable[[AnyStr], None],
+                                                Callable[[List[AnyStr]], None]],
+                          finalizer: Union[None,
+                                           Callable[[subprocess.Popen], None]] = None,
+                          decode_streams: bool = True) -> None:
     """Registers for notifications to learn that process output is ready to read, and dispatches lines to
     the respective line handlers.
     This function returns once the finalizer returns
@@ -75,13 +98,17 @@ def handle_process_output(process, stdout_handler, stderr_handler,
         or if decoding must happen later (i.e. for Diffs).
     """
     # Use 2 "pump" threads and wait for both to finish.
-    def pump_stream(cmdline, name, stream, is_decode, handler):
+    def pump_stream(cmdline: str, name: str, stream: Union[BinaryIO, TextIO], is_decode: bool,
+                    handler: Union[None, Callable[[Union[bytes, str]], None]]) -> None:
         try:
             for line in stream:
                 if handler:
                     if is_decode:
-                        line = line.decode(defenc)
-                    handler(line)
+                        assert isinstance(line, bytes)
+                        line_str = line.decode(defenc)
+                        handler(line_str)
+                    else:
+                        handler(line)
         except Exception as ex:
             log.error("Pumping %r of cmd(%s) failed due to: %r", name, remove_password_if_present(cmdline), ex)
             raise CommandError(['<%s-pump>' % name] + remove_password_if_present(cmdline), ex) from ex
@@ -114,17 +141,20 @@ def handle_process_output(process, stdout_handler, stderr_handler,
 
     if finalizer:
         return finalizer(process)
+    else:
+        return None
 
 
-def dashify(string):
+def dashify(string: str) -> str:
     return string.replace('_', '-')
 
 
-def slots_to_dict(self, exclude=()):
+def slots_to_dict(self, exclude: Sequence[str] = ()) -> Dict[str, Any]:
+    # annotate self.__slots__ as Tuple[str, ...] once 3.5 dropped
     return {s: getattr(self, s) for s in self.__slots__ if s not in exclude}
 
 
-def dict_to_slots_and__excluded_are_none(self, d, excluded=()):
+def dict_to_slots_and__excluded_are_none(self, d: Mapping[str, Any], excluded: Sequence[str] = ()) -> None:
     for k, v in d.items():
         setattr(self, k, v)
     for k in excluded:
@@ -163,10 +193,10 @@ class Git(LazyMixin):
 
     _excluded_ = ('cat_file_all', 'cat_file_header', '_version_info')
 
-    def __getstate__(self):
+    def __getstate__(self) -> Dict[str, Any]:
         return slots_to_dict(self, exclude=self._excluded_)
 
-    def __setstate__(self, d):
+    def __setstate__(self, d) -> None:
         dict_to_slots_and__excluded_are_none(self, d, excluded=self._excluded_)
 
     # CONFIGURATION
@@ -190,7 +220,7 @@ class Git(LazyMixin):
     # the top level __init__
 
     @classmethod
-    def refresh(cls, path=None):
+    def refresh(cls, path: Union[None, PathLike] = None) -> bool:
         """This gets called by the refresh function (see the top level
         __init__).
         """
@@ -305,11 +335,21 @@ class Git(LazyMixin):
         return has_git
 
     @classmethod
-    def is_cygwin(cls):
+    def is_cygwin(cls) -> bool:
         return is_cygwin_git(cls.GIT_PYTHON_GIT_EXECUTABLE)
 
+    @overload
     @classmethod
-    def polish_url(cls, url, is_cygwin=None):
+    def polish_url(cls, url: str, is_cygwin: Literal[False] = ...) -> str:
+        ...
+
+    @overload
+    @classmethod
+    def polish_url(cls, url: PathLike, is_cygwin: Union[None, bool] = None) -> str:
+        ...
+
+    @classmethod
+    def polish_url(cls, url: PathLike, is_cygwin: Union[None, bool] = None) -> PathLike:
         if is_cygwin is None:
             is_cygwin = cls.is_cygwin()
 
@@ -326,7 +366,6 @@ class Git(LazyMixin):
             if url.startswith('~'):
                 url = os.path.expanduser(url)
             url = url.replace("\\\\", "\\").replace("\\", "/")
-
         return url
 
     class AutoInterrupt(object):
@@ -339,11 +378,11 @@ class Git(LazyMixin):
 
         __slots__ = ("proc", "args")
 
-        def __init__(self, proc, args):
+        def __init__(self, proc: Union[None, subprocess.Popen], args: Any) -> None:
             self.proc = proc
             self.args = args
 
-        def __del__(self):
+        def __del__(self) -> None:
             if self.proc is None:
                 return
 
@@ -359,13 +398,13 @@ class Git(LazyMixin):
             # did the process finish already so we have a return code ?
             try:
                 if proc.poll() is not None:
-                    return
+                    return None
             except OSError as ex:
                 log.info("Ignored error after process had died: %r", ex)
 
             # can be that nothing really exists anymore ...
             if os is None or getattr(os, 'kill', None) is None:
-                return
+                return None
 
             # try to kill it
             try:
@@ -382,10 +421,11 @@ class Git(LazyMixin):
                     call(("TASKKILL /F /T /PID %s 2>nul 1>nul" % str(proc.pid)), shell=True)
             # END exception handling
 
-        def __getattr__(self, attr):
+        def __getattr__(self, attr: str) -> Any:
             return getattr(self.proc, attr)
 
-        def wait(self, stderr=b''):  # TODO: Bad choice to mimic `proc.wait()` but with different args.
+        # TODO: Bad choice to mimic `proc.wait()` but with different args.
+        def wait(self, stderr: Union[None, bytes] = b'') -> int:
             """Wait for the process and return its status code.
 
             :param stderr: Previously read value of stderr, in case stderr is already closed.
@@ -395,20 +435,22 @@ class Git(LazyMixin):
                 stderr = b''
             stderr = force_bytes(data=stderr, encoding='utf-8')
 
-            status = self.proc.wait()
+            if self.proc is not None:
+                status = self.proc.wait()
 
-            def read_all_from_possibly_closed_stream(stream):
-                try:
-                    return stderr + force_bytes(stream.read())
-                except ValueError:
-                    return stderr or b''
+                def read_all_from_possibly_closed_stream(stream):
+                    try:
+                        return stderr + force_bytes(stream.read())
+                    except ValueError:
+                        return stderr or b''
 
-            if status != 0:
-                errstr = read_all_from_possibly_closed_stream(self.proc.stderr)
-                log.debug('AutoInterrupt wait stderr: %r' % (errstr,))
-                raise GitCommandError(remove_password_if_present(self.args), status, errstr)
+                if status != 0:
+                    errstr = read_all_from_possibly_closed_stream(self.proc.stderr)
+                    log.debug('AutoInterrupt wait stderr: %r' % (errstr,))
+                    raise GitCommandError(remove_password_if_present(self.args), status, errstr)
             # END status handling
             return status
+
     # END auto interrupt
 
     class CatFileContentStream(object):
@@ -422,7 +464,7 @@ class Git(LazyMixin):
 
         __slots__ = ('_stream', '_nbr', '_size')
 
-        def __init__(self, size, stream):
+        def __init__(self, size: int, stream: IO[bytes]) -> None:
             self._stream = stream
             self._size = size
             self._nbr = 0           # num bytes read
@@ -433,7 +475,7 @@ class Git(LazyMixin):
                 stream.read(1)
             # END handle empty streams
 
-        def read(self, size=-1):
+        def read(self, size: int = -1) -> bytes:
             bytes_left = self._size - self._nbr
             if bytes_left == 0:
                 return b''
@@ -453,7 +495,7 @@ class Git(LazyMixin):
             # END finish reading
             return data
 
-        def readline(self, size=-1):
+        def readline(self, size: int = -1) -> bytes:
             if self._nbr == self._size:
                 return b''
 
@@ -475,7 +517,7 @@ class Git(LazyMixin):
 
             return data
 
-        def readlines(self, size=-1):
+        def readlines(self, size: int = -1) -> List[bytes]:
             if self._nbr == self._size:
                 return []
 
@@ -496,20 +538,20 @@ class Git(LazyMixin):
             return out
 
         # skipcq: PYL-E0301
-        def __iter__(self):
+        def __iter__(self) -> 'Git.CatFileContentStream':
             return self
 
-        def __next__(self):
+        def __next__(self) -> bytes:
             return self.next()
 
-        def next(self):
+        def next(self) -> bytes:
             line = self.readline()
             if not line:
                 raise StopIteration
 
             return line
 
-        def __del__(self):
+        def __del__(self) -> None:
             bytes_left = self._size - self._nbr
             if bytes_left:
                 # read and discard - seeking is impossible within a stream
@@ -517,7 +559,7 @@ class Git(LazyMixin):
                 self._stream.read(bytes_left + 1)
             # END handle incomplete read
 
-    def __init__(self, working_dir=None):
+    def __init__(self, working_dir: Union[None, PathLike] = None):
         """Initialize this instance with:
 
         :param working_dir:
@@ -527,17 +569,17 @@ class Git(LazyMixin):
            .git directory in case of bare repositories."""
         super(Git, self).__init__()
         self._working_dir = expand_path(working_dir)
-        self._git_options = ()
-        self._persistent_git_options = []
+        self._git_options = ()  # type: Union[List[str], Tuple[str, ...]]
+        self._persistent_git_options = []  # type: List[str]
 
         # Extra environment variables to pass to git commands
-        self._environment = {}
+        self._environment = {}  # type: Dict[str, str]
 
         # cached command slots
         self.cat_file_header = None
         self.cat_file_all = None
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> Any:
         """A convenience method as it allows to call the command as if it was
         an object.
         :return: Callable object that will execute call _call_process with your arguments."""
@@ -545,7 +587,7 @@ class Git(LazyMixin):
             return LazyMixin.__getattr__(self, name)
         return lambda *args, **kwargs: self._call_process(name, *args, **kwargs)
 
-    def set_persistent_git_options(self, **kwargs):
+    def set_persistent_git_options(self, **kwargs: Any) -> None:
         """Specify command line options to the git executable
         for subsequent subcommand calls
 
@@ -559,43 +601,94 @@ class Git(LazyMixin):
         self._persistent_git_options = self.transform_kwargs(
             split_single_char_options=True, **kwargs)
 
-    def _set_cache_(self, attr):
+    def _set_cache_(self, attr: str) -> None:
         if attr == '_version_info':
             # We only use the first 4 numbers, as everything else could be strings in fact (on windows)
-            version_numbers = self._call_process('version').split(' ')[2]
-            self._version_info = tuple(int(n) for n in version_numbers.split('.')[:4] if n.isdigit())
+            process_version = self._call_process('version')  # should be as default *args and **kwargs used
+            version_numbers = process_version.split(' ')[2]
+
+            self._version_info = tuple(
+                int(n) for n in version_numbers.split('.')[:4] if n.isdigit()
+            )  # type: Tuple[int, int, int, int]  # type: ignore
         else:
             super(Git, self)._set_cache_(attr)
         # END handle version info
 
     @property
-    def working_dir(self):
+    def working_dir(self) -> Union[None, str]:
         """:return: Git directory we are working on"""
         return self._working_dir
 
     @property
-    def version_info(self):
+    def version_info(self) -> Tuple[int, int, int, int]:
         """
         :return: tuple(int, int, int, int) tuple with integers representing the major, minor
             and additional version numbers as parsed from git version.
             This value is generated on demand and is cached"""
         return self._version_info
 
-    def execute(self, command,
-                istream=None,
-                with_extended_output=False,
-                with_exceptions=True,
-                as_process=False,
-                output_stream=None,
-                stdout_as_string=True,
-                kill_after_timeout=None,
-                with_stdout=True,
-                universal_newlines=False,
-                shell=None,
-                env=None,
-                max_chunk_size=io.DEFAULT_BUFFER_SIZE,
-                **subprocess_kwargs
-                ):
+    @overload
+    def execute(self,
+                command: Union[str, Sequence[Any]],
+                *,
+                as_process: Literal[True]
+                ) -> 'AutoInterrupt':
+        ...
+
+    @overload
+    def execute(self,
+                command: Union[str, Sequence[Any]],
+                *,
+                as_process: Literal[False] = False,
+                stdout_as_string: Literal[True]
+                ) -> Union[str, Tuple[int, str, str]]:
+        ...
+
+    @overload
+    def execute(self,
+                command: Union[str, Sequence[Any]],
+                *,
+                as_process: Literal[False] = False,
+                stdout_as_string: Literal[False] = False
+                ) -> Union[bytes, Tuple[int, bytes, str]]:
+        ...
+
+    @overload
+    def execute(self,
+                command: Union[str, Sequence[Any]],
+                *,
+                with_extended_output: Literal[False],
+                as_process: Literal[False],
+                stdout_as_string: Literal[True]
+                ) -> str:
+        ...
+
+    @overload
+    def execute(self,
+                command: Union[str, Sequence[Any]],
+                *,
+                with_extended_output: Literal[False],
+                as_process: Literal[False],
+                stdout_as_string: Literal[False]
+                ) -> bytes:
+        ...
+
+    def execute(self,
+                command: Union[str, Sequence[Any]],
+                istream: Union[None, BinaryIO] = None,
+                with_extended_output: bool = False,
+                with_exceptions: bool = True,
+                as_process: bool = False,
+                output_stream: Union[None, BinaryIO] = None,
+                stdout_as_string: bool = True,
+                kill_after_timeout: Union[None, int] = None,
+                with_stdout: bool = True,
+                universal_newlines: bool = False,
+                shell: Union[None, bool] = None,
+                env: Union[None, Mapping[str, str]] = None,
+                max_chunk_size: int = io.DEFAULT_BUFFER_SIZE,
+                **subprocess_kwargs: Any
+                ) -> Union[str, bytes, Tuple[int, Union[str, bytes], str], AutoInterrupt]:
         """Handles executing the command on the shell and consumes and returns
         the returned information (stdout)
 
@@ -737,22 +830,28 @@ class Git(LazyMixin):
                          creationflags=PROC_CREATIONFLAGS,
                          **subprocess_kwargs
                          )
+
         except cmd_not_found_exception as err:
             raise GitCommandNotFound(redacted_command, err) from err
+        else:
+            proc = cast(Popen, proc)
+            proc.stdout = cast(BinaryIO, proc.stdout)
+            proc.stderr = cast(BinaryIO, proc.stderr)
 
         if as_process:
             return self.AutoInterrupt(proc, command)
 
-        def _kill_process(pid):
+        def _kill_process(pid: int) -> None:
             """ Callback method to kill a process. """
             p = Popen(['ps', '--ppid', str(pid)], stdout=PIPE,
                       creationflags=PROC_CREATIONFLAGS)
             child_pids = []
-            for line in p.stdout:
-                if len(line.split()) > 0:
-                    local_pid = (line.split())[0]
-                    if local_pid.isdigit():
-                        child_pids.append(int(local_pid))
+            if p.stdout is not None:
+                for line in p.stdout:
+                    if len(line.split()) > 0:
+                        local_pid = (line.split())[0]
+                        if local_pid.isdigit():
+                            child_pids.append(int(local_pid))
             try:
                 # Windows does not have SIGKILL, so use SIGTERM instead
                 sig = getattr(signal, 'SIGKILL', signal.SIGTERM)
@@ -776,8 +875,8 @@ class Git(LazyMixin):
 
         # Wait for the process to return
         status = 0
-        stdout_value = b''
-        stderr_value = b''
+        stdout_value = b''  # type: Union[str, bytes]
+        stderr_value = b''  # type: Union[str, bytes]
         newline = "\n" if universal_newlines else b"\n"
         try:
             if output_stream is None:
@@ -786,16 +885,17 @@ class Git(LazyMixin):
                 stdout_value, stderr_value = proc.communicate()
                 if kill_after_timeout:
                     watchdog.cancel()
-                    if kill_check.isSet():
+                    if kill_check.is_set():
                         stderr_value = ('Timeout: the command "%s" did not complete in %d '
                                         'secs.' % (" ".join(redacted_command), kill_after_timeout))
                         if not universal_newlines:
                             stderr_value = stderr_value.encode(defenc)
                 # strip trailing "\n"
-                if stdout_value.endswith(newline):
+                if stdout_value.endswith(newline):  # type: ignore
                     stdout_value = stdout_value[:-1]
-                if stderr_value.endswith(newline):
+                if stderr_value.endswith(newline):  # type: ignore
                     stderr_value = stderr_value[:-1]
+
                 status = proc.returncode
             else:
                 max_chunk_size = max_chunk_size if max_chunk_size and max_chunk_size > 0 else io.DEFAULT_BUFFER_SIZE
@@ -803,7 +903,7 @@ class Git(LazyMixin):
                 stdout_value = proc.stdout.read()
                 stderr_value = proc.stderr.read()
                 # strip trailing "\n"
-                if stderr_value.endswith(newline):
+                if stderr_value.endswith(newline):   # type: ignore
                     stderr_value = stderr_value[:-1]
                 status = proc.wait()
             # END stdout handling
@@ -887,7 +987,7 @@ class Git(LazyMixin):
         finally:
             self.update_environment(**old_env)
 
-    def transform_kwarg(self, name, value, split_single_char_options):
+    def transform_kwarg(self, name: str, value: Any, split_single_char_options: bool) -> List[str]:
         if len(name) == 1:
             if value is True:
                 return ["-%s" % name]
@@ -903,7 +1003,7 @@ class Git(LazyMixin):
                 return ["--%s=%s" % (dashify(name), value)]
         return []
 
-    def transform_kwargs(self, split_single_char_options=True, **kwargs):
+    def transform_kwargs(self, split_single_char_options: bool = True, **kwargs: Any) -> List[str]:
         """Transforms Python style kwargs into git command line options."""
         # Python 3.6 preserves the order of kwargs and thus has a stable
         # order. For older versions sort the kwargs by the key to get a stable
@@ -922,7 +1022,7 @@ class Git(LazyMixin):
         return args
 
     @classmethod
-    def __unpack_args(cls, arg_list):
+    def __unpack_args(cls, arg_list: Sequence[str]) -> List[str]:
         if not isinstance(arg_list, (list, tuple)):
             return [str(arg_list)]
 
@@ -936,7 +1036,7 @@ class Git(LazyMixin):
         # END for each arg
         return outlist
 
-    def __call__(self, **kwargs):
+    def __call__(self, **kwargs: Any) -> 'Git':
         """Specify command line options to the git executable
         for a subcommand call
 
@@ -952,7 +1052,18 @@ class Git(LazyMixin):
             split_single_char_options=True, **kwargs)
         return self
 
-    def _call_process(self, method, *args, **kwargs):
+    @overload
+    def _call_process(self, method: str, *args: None, **kwargs: None
+                      ) -> str:
+        ...  # if no args given, execute called with all defaults
+
+    @overload
+    def _call_process(self, method: str, *args: Any, **kwargs: Any
+                      ) -> Union[str, bytes, Tuple[int, Union[str, bytes], str], 'Git.AutoInterrupt']:
+        ...
+
+    def _call_process(self, method: str, *args: Any, **kwargs: Any
+                      ) -> Union[str, bytes, Tuple[int, Union[str, bytes], str], 'Git.AutoInterrupt']:
         """Run the given git command with the specified arguments and return
         the result as a String
 
@@ -980,7 +1091,9 @@ class Git(LazyMixin):
 
            git rev-list max-count 10 --header master
 
-        :return: Same as ``execute``"""
+        :return: Same as ``execute``
+                 if no args given used execute default (esp. as_process = False, stdout_as_string = True)
+                 and return str """
         # Handle optional arguments prior to calling transform_kwargs
         # otherwise these'll end up in args, which is bad.
         exec_kwargs = {k: v for k, v in kwargs.items() if k in execute_kwargs}
@@ -989,11 +1102,12 @@ class Git(LazyMixin):
         insert_after_this_arg = opts_kwargs.pop('insert_kwargs_after', None)
 
         # Prepare the argument list
+
         opt_args = self.transform_kwargs(**opts_kwargs)
         ext_args = self.__unpack_args([a for a in args if a is not None])
 
         if insert_after_this_arg is None:
-            args = opt_args + ext_args
+            args_list = opt_args + ext_args
         else:
             try:
                 index = ext_args.index(insert_after_this_arg)
@@ -1001,7 +1115,7 @@ class Git(LazyMixin):
                 raise ValueError("Couldn't find argument '%s' in args %s to insert cmd options after"
                                  % (insert_after_this_arg, str(ext_args))) from err
             # end handle error
-            args = ext_args[:index + 1] + opt_args + ext_args[index + 1:]
+            args_list = ext_args[:index + 1] + opt_args + ext_args[index + 1:]
         # end handle opts_kwargs
 
         call = [self.GIT_PYTHON_GIT_EXECUTABLE]
@@ -1015,11 +1129,11 @@ class Git(LazyMixin):
         self._git_options = ()
 
         call.append(dashify(method))
-        call.extend(args)
+        call.extend(args_list)
 
         return self.execute(call, **exec_kwargs)
 
-    def _parse_object_header(self, header_line):
+    def _parse_object_header(self, header_line: str) -> Tuple[str, str, int]:
         """
         :param header_line:
             <hex_sha> type_string size_as_int
@@ -1041,20 +1155,22 @@ class Git(LazyMixin):
             raise ValueError("Failed to parse header: %r" % header_line)
         return (tokens[0], tokens[1], int(tokens[2]))
 
-    def _prepare_ref(self, ref):
+    def _prepare_ref(self, ref: AnyStr) -> bytes:
         # required for command to separate refs on stdin, as bytes
-        refstr = ref
         if isinstance(ref, bytes):
             # Assume 40 bytes hexsha - bin-to-ascii for some reason returns bytes, not text
-            refstr = ref.decode('ascii')
+            refstr = ref.decode('ascii')  # type: str
         elif not isinstance(ref, str):
             refstr = str(ref)               # could be ref-object
+        else:
+            refstr = ref
 
         if not refstr.endswith("\n"):
             refstr += "\n"
         return refstr.encode(defenc)
 
-    def _get_persistent_cmd(self, attr_name, cmd_name, *args, **kwargs):
+    def _get_persistent_cmd(self, attr_name: str, cmd_name: str, *args: Any, **kwargs: Any
+                            ) -> Union['Git.AutoInterrupt', TBD]:
         cur_val = getattr(self, attr_name)
         if cur_val is not None:
             return cur_val
@@ -1066,12 +1182,12 @@ class Git(LazyMixin):
         setattr(self, attr_name, cmd)
         return cmd
 
-    def __get_object_header(self, cmd, ref):
+    def __get_object_header(self, cmd, ref: AnyStr) -> Tuple[str, str, int]:
         cmd.stdin.write(self._prepare_ref(ref))
         cmd.stdin.flush()
         return self._parse_object_header(cmd.stdout.readline())
 
-    def get_object_header(self, ref):
+    def get_object_header(self, ref: AnyStr) -> Tuple[str, str, int]:
         """ Use this method to quickly examine the type and size of the object behind
         the given ref.
 
@@ -1082,7 +1198,7 @@ class Git(LazyMixin):
         cmd = self._get_persistent_cmd("cat_file_header", "cat_file", batch_check=True)
         return self.__get_object_header(cmd, ref)
 
-    def get_object_data(self, ref):
+    def get_object_data(self, ref: AnyStr) -> Tuple[str, str, int, bytes]:
         """ As get_object_header, but returns object data as well
         :return: (hexsha, type_string, size_as_int,data_string)
         :note: not threadsafe"""
@@ -1091,7 +1207,7 @@ class Git(LazyMixin):
         del(stream)
         return (hexsha, typename, size, data)
 
-    def stream_object_data(self, ref):
+    def stream_object_data(self, ref: AnyStr) -> Tuple[str, str, int, 'Git.CatFileContentStream']:
         """ As get_object_header, but returns the data as a stream
 
         :return: (hexsha, type_string, size_as_int, stream)
@@ -1100,7 +1216,7 @@ class Git(LazyMixin):
         hexsha, typename, size = self.__get_object_header(cmd, ref)
         return (hexsha, typename, size, self.CatFileContentStream(size, cmd.stdout))
 
-    def clear_cache(self):
+    def clear_cache(self) -> 'Git':
         """Clear all kinds of internal caches to release resources.
 
         Currently persistent commands will be interrupted.

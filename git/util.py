@@ -22,11 +22,13 @@ from urllib.parse import urlsplit, urlunsplit
 # typing ---------------------------------------------------------
 
 from typing import (Any, AnyStr, BinaryIO, Callable, Dict, Generator, IO, Iterator, List,
-                    Optional, Pattern, Sequence, Tuple, Union, cast, TYPE_CHECKING)
+                    Optional, Pattern, Sequence, Tuple, Union, cast, TYPE_CHECKING, overload)
+
+
 if TYPE_CHECKING:
     from git.remote import Remote
     from git.repo.base import Repo
-from .types import PathLike, TBD
+from .types import PathLike, TBD, Literal
 
 # ---------------------------------------------------------------------
 
@@ -281,7 +283,8 @@ _cygpath_parsers = (
 
 def cygpath(path: PathLike) -> PathLike:
     """Use :meth:`git.cmd.Git.polish_url()` instead, that works on any environment."""
-    path = str(path)  # ensure is str and not AnyPath
+    path = str(path)  # ensure is str and not AnyPath.
+    #Fix to use Paths when 3.5 dropped. or to be just str if only for urls?
     if not path.startswith(('/cygdrive', '//')):
         for regex, parser, recurse in _cygpath_parsers:
             match = regex.match(path)
@@ -314,11 +317,23 @@ def decygpath(path: PathLike) -> str:
 _is_cygwin_cache = {}  # type: Dict[str, Optional[bool]]
 
 
+@overload
+def is_cygwin_git(git_executable: None) -> Literal[False]:
+    ...
+
+
+@overload
 def is_cygwin_git(git_executable: PathLike) -> bool:
+    ...
+
+
+def is_cygwin_git(git_executable: Union[None, PathLike]) -> bool:
     if not is_win:
         return False
 
-    #from subprocess import check_output
+    if git_executable is None:
+        return False
+
     git_executable = str(git_executable)
     is_cygwin = _is_cygwin_cache.get(git_executable)  # type: Optional[bool]
     if is_cygwin is None:
@@ -348,18 +363,31 @@ def get_user_id() -> str:
     return "%s@%s" % (getpass.getuser(), platform.node())
 
 
-def finalize_process(proc: TBD, **kwargs: Any) -> None:
+def finalize_process(proc: subprocess.Popen, **kwargs: Any) -> None:
     """Wait for the process (clone, fetch, pull or push) and handle its errors accordingly"""
     ## TODO: No close proc-streams??
     proc.wait(**kwargs)
 
 
-def expand_path(p: PathLike, expand_vars: bool = True) -> Optional[PathLike]:
+@overload
+def expand_path(p: None, expand_vars: bool = ...) -> None:
+    ...
+
+
+@overload
+def expand_path(p: PathLike, expand_vars: bool = ...) -> str:
+    ...
+
+
+def expand_path(p: Union[None, PathLike], expand_vars: bool = True) -> Optional[str]:
     try:
-        p = osp.expanduser(p)
-        if expand_vars:
-            p = osp.expandvars(p)
-        return osp.normpath(osp.abspath(p))
+        if p is not None:
+            p_out = osp.expanduser(p)
+            if expand_vars:
+                p_out = osp.expandvars(p_out)
+            return osp.normpath(osp.abspath(p_out))
+        else:
+            return None
     except Exception:
         return None
 

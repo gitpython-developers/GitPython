@@ -43,10 +43,12 @@ defenc = sys.getfilesystemencoding()
 @overload
 def safe_decode(s: None) -> None: ...
 
-@overload
-def safe_decode(s: Union[IO[str], AnyStr]) -> str: ...
 
-def safe_decode(s: Union[IO[str], AnyStr, None]) -> Optional[str]:
+@overload
+def safe_decode(s: AnyStr) -> str: ...
+
+
+def safe_decode(s: Union[AnyStr, None]) -> Optional[str]:
     """Safely decodes a binary string to unicode"""
     if isinstance(s, str):
         return s
@@ -61,8 +63,10 @@ def safe_decode(s: Union[IO[str], AnyStr, None]) -> Optional[str]:
 @overload
 def safe_encode(s: None) -> None: ...
 
+
 @overload
 def safe_encode(s: AnyStr) -> bytes: ...
+
 
 def safe_encode(s: Optional[AnyStr]) -> Optional[bytes]:
     """Safely encodes a binary string to unicode"""
@@ -79,8 +83,10 @@ def safe_encode(s: Optional[AnyStr]) -> Optional[bytes]:
 @overload
 def win_encode(s: None) -> None: ...
 
+
 @overload
 def win_encode(s: AnyStr) -> bytes: ...
+
 
 def win_encode(s: Optional[AnyStr]) -> Optional[bytes]:
     """Encode unicodes for process arguments on Windows."""
@@ -93,7 +99,8 @@ def win_encode(s: Optional[AnyStr]) -> Optional[bytes]:
     return None
 
 
-def with_metaclass(meta: Type[Any], *bases: Any) -> TBD: # type: ignore ## mypy cannot understand dynamic class creation
+# type: ignore ## mypy cannot understand dynamic class creation
+def with_metaclass(meta: Type[Any], *bases: Any) -> TBD:
     """copied from https://github.com/Byron/bcore/blob/master/src/python/butility/future.py#L15"""
 
     class metaclass(meta):  # type: ignore
@@ -105,4 +112,4 @@ def with_metaclass(meta: Type[Any], *bases: Any) -> TBD: # type: ignore ## mypy 
                 return type.__new__(cls, name, (), d)
             return meta(name, bases, d)
 
-    return metaclass(meta.__name__ + 'Helper', None, {}) # type: ignore
+    return metaclass(meta.__name__ + 'Helper', None, {})  # type: ignore

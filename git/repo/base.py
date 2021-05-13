@@ -34,7 +34,7 @@ import gitdb
 
 # typing ------------------------------------------------------
 
-from git.types import TBD, PathLike, Literal
+from git.types import TBD, PathLike, Lit_config_levels
 from typing import (Any, BinaryIO, Callable, Dict,
                     Iterator, List, Mapping, Optional,
                     TextIO, Tuple, Type, Union,
@@ -45,7 +45,6 @@ if TYPE_CHECKING:  # only needed for types
     from git.refs.symbolic import SymbolicReference
     from git.objects import TagObject, Blob, Tree  # NOQA: F401
 
-Lit_config_levels = Literal['system', 'global', 'user', 'repository']
 
 # -----------------------------------------------------------
 
