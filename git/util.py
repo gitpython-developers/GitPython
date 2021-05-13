@@ -332,9 +332,8 @@ def is_cygwin_git(git_executable: Union[None, PathLike]) -> bool:
         return False
 
     if git_executable is None:
-        return False  # or raise error?
+        return False
 
-    #from subprocess import check_output
     git_executable = str(git_executable)
     is_cygwin = _is_cygwin_cache.get(git_executable)  # type: Optional[bool]
     if is_cygwin is None:
