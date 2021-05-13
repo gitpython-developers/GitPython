@@ -43,7 +43,7 @@ from .util import (
 # typing ---------------------------------------------------------------------------
 
 from typing import (Any, AnyStr, BinaryIO, Callable, Dict, IO, List, Mapping,
-                    Sequence, TYPE_CHECKING, Tuple, Union, cast, overload)
+                    Sequence, TYPE_CHECKING, TextIO, Tuple, Union, cast, overload)
 
 from git.types import PathLike, Literal, TBD
 
@@ -98,14 +98,17 @@ def handle_process_output(process: subprocess.Popen,
         or if decoding must happen later (i.e. for Diffs).
     """
     # Use 2 "pump" threads and wait for both to finish.
-    def pump_stream(cmdline: str, name: str, stream: BinaryIO, is_decode: bool,
-                    handler: Union[None, Callable[[str], None]]) -> None:
+    def pump_stream(cmdline: str, name: str, stream: Union[BinaryIO, TextIO], is_decode: bool,
+                    handler: Union[None, Callable[[Union[bytes, str]], None]]) -> None:
         try:
             for line in stream:
                 if handler:
                     if is_decode:
+                        assert isinstance(line, bytes)
                         line_str = line.decode(defenc)
-                    handler(line_str)
+                        handler(line_str)
+                    else:
+                        handler(line)
         except Exception as ex:
             log.error("Pumping %r of cmd(%s) failed due to: %r", name, remove_password_if_present(cmdline), ex)
             raise CommandError(['<%s-pump>' % name] + remove_password_if_present(cmdline), ex) from ex
@@ -337,12 +340,12 @@ class Git(LazyMixin):
 
     @overload
     @classmethod
-    def polish_url(cls, url: str, is_cygwin: Union[None, bool] = None) -> str:
+    def polish_url(cls, url: str, is_cygwin: Literal[False] = ...) -> str:
         ...
 
     @overload
     @classmethod
-    def polish_url(cls, url: PathLike, is_cygwin: Union[None, bool] = None) -> PathLike:
+    def polish_url(cls, url: PathLike, is_cygwin: Union[None, bool] = None) -> str:
         ...
 
     @classmethod
@@ -628,8 +631,8 @@ class Git(LazyMixin):
     def execute(self,
                 command: Union[str, Sequence[Any]],
                 *,
-                as_process: Literal[True],
-                ) -> AutoInterrupt:
+                as_process: Literal[True]
+                ) -> 'AutoInterrupt':
         ...
 
     @overload
@@ -637,7 +640,7 @@ class Git(LazyMixin):
                 command: Union[str, Sequence[Any]],
                 *,
                 as_process: Literal[False] = False,
-                stdout_as_string: Literal[True],
+                stdout_as_string: Literal[True]
                 ) -> Union[str, Tuple[int, str, str]]:
         ...
 
@@ -646,7 +649,7 @@ class Git(LazyMixin):
                 command: Union[str, Sequence[Any]],
                 *,
                 as_process: Literal[False] = False,
-                stdout_as_string: Literal[False] = False,
+                stdout_as_string: Literal[False] = False
                 ) -> Union[bytes, Tuple[int, bytes, str]]:
         ...
 
@@ -656,8 +659,7 @@ class Git(LazyMixin):
                 *,
                 with_extended_output: Literal[False],
                 as_process: Literal[False],
-                stdout_as_string: Literal[True],
-
+                stdout_as_string: Literal[True]
                 ) -> str:
         ...
 
@@ -667,8 +669,7 @@ class Git(LazyMixin):
                 *,
                 with_extended_output: Literal[False],
                 as_process: Literal[False],
-                stdout_as_string: Literal[False],
-
+                stdout_as_string: Literal[False]
                 ) -> bytes:
         ...
 
@@ -829,16 +830,13 @@ class Git(LazyMixin):
                          creationflags=PROC_CREATIONFLAGS,
                          **subprocess_kwargs
                          )
-            proc = cast(Popen[bytes], proc)
 
-            proc.stdout = cast(BinaryIO, proc.stdout)
         except cmd_not_found_exception as err:
             raise GitCommandNotFound(redacted_command, err) from err
         else:
-            assert isinstance(proc.stdout, BinaryIO)
-            assert isinstance(proc.stderr, BinaryIO)
-            # proc.stdout = cast(BinaryIO, proc.stdout)
-            # proc.stderr = cast(BinaryIO, proc.stderr)
+            proc = cast(Popen, proc)
+            proc.stdout = cast(BinaryIO, proc.stdout)
+            proc.stderr = cast(BinaryIO, proc.stderr)
 
         if as_process:
             return self.AutoInterrupt(proc, command)
@@ -1164,6 +1162,8 @@ class Git(LazyMixin):
             refstr = ref.decode('ascii')  # type: str
         elif not isinstance(ref, str):
             refstr = str(ref)               # could be ref-object
+        else:
+            refstr = ref
 
         if not refstr.endswith("\n"):
             refstr += "\n"

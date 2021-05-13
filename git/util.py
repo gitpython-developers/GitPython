@@ -281,16 +281,6 @@ _cygpath_parsers = (
 )  # type: Tuple[Tuple[Pattern[str], Callable, bool], ...]
 
 
-@overload
-def cygpath(path: str) -> str:
-    ...
-
-
-@overload
-def cygpath(path: PathLike) -> PathLike:
-    ...
-
-
 def cygpath(path: PathLike) -> PathLike:
     """Use :meth:`git.cmd.Git.polish_url()` instead, that works on any environment."""
     path = str(path)  # ensure is str and not AnyPath.
