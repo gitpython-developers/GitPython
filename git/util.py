@@ -381,13 +381,10 @@ def expand_path(p: PathLike, expand_vars: bool = ...) -> str:
 
 def expand_path(p: Union[None, PathLike], expand_vars: bool = True) -> Optional[str]:
     try:
-        if p is not None:
-            p_out = osp.expanduser(p)
-            if expand_vars:
-                p_out = osp.expandvars(p_out)
-            return osp.normpath(osp.abspath(p_out))
-        else:
-            return None
+        p = osp.expanduser(p)  # type: ignore
+        if expand_vars:
+            p = osp.expandvars(p)    # type: ignore
+        return osp.normpath(osp.abspath(p))    # type: ignore
     except Exception:
         return None
 
