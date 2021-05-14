@@ -2,8 +2,18 @@
 Changelog
 =========
 
-3.1.16
+3.1.17
 ======
+
+* Fix issues from 3.1.16 (see https://github.com/gitpython-developers/GitPython/issues/1238)
+* Fix issues from 3.1.15 (see https://github.com/gitpython-developers/GitPython/issues/1223)
+* Add more static typing information
+
+See the following for details:
+https://github.com/gitpython-developers/gitpython/milestone/49?closed=1 
+
+3.1.16 (YANKED)
+===============
 
 * Fix issues from 3.1.15 (see https://github.com/gitpython-developers/GitPython/issues/1223)
 * Add more static typing information
@@ -11,8 +21,8 @@ Changelog
 See the following for details:
 https://github.com/gitpython-developers/gitpython/milestone/48?closed=1 
 
-3.1.15  (YANKED)
-================
+3.1.15 (YANKED)
+===============
 
 * add deprectation warning for python 3.5
 
