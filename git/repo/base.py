@@ -80,8 +80,8 @@ class Repo(object):
     git = cast('Git', None)  # Must exist, or  __del__  will fail in case we raise on `__init__()`
     working_dir = None    # type: Optional[PathLike]
     _working_tree_dir = None  # type: Optional[PathLike]
-    git_dir = None  # type: Optional[PathLike]
-    _common_dir = None  # type: Optional[PathLike]
+    git_dir = ""  # type: PathLike
+    _common_dir = ""  # type: PathLike
 
     # precompiled regex
     re_whitespace = re.compile(r'\s+')
@@ -208,7 +208,7 @@ class Repo(object):
             common_dir = open(osp.join(self.git_dir, 'commondir'), 'rt').readlines()[0].strip()
             self._common_dir = osp.join(self.git_dir, common_dir)
         except OSError:
-            self._common_dir = None
+            self._common_dir = ""
 
         # adjust the wd in case we are actually bare - we didn't know that
         # in the first place

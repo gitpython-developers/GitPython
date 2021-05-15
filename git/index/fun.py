@@ -1,6 +1,7 @@
 # Contains standalone functions to accompany the index implementation and make it
 # more versatile
 # NOTE: Autodoc hates it if this is a docstring
+from git.types import PathLike, TBD
 from io import BytesIO
 import os
 from stat import (
@@ -12,6 +13,7 @@ from stat import (
     S_IFREG,
 )
 import subprocess
+from typing import List, Tuple, Union, cast
 
 from git.cmd import PROC_CREATIONFLAGS, handle_process_output
 from git.compat import (
@@ -166,11 +168,12 @@ def read_header(stream):
     return version, num_entries
 
 
-def entry_key(*entry):
+def entry_key(entry: Union[Tuple[BaseIndexEntry], Tuple[PathLike, TBD]]):
     """:return: Key suitable to be used for the index.entries dictionary
     :param entry: One instance of type BaseIndexEntry or the path and the stage"""
     if len(entry) == 1:
-        return (entry[0].path, entry[0].stage)
+        entry_first = cast(BaseIndexEntry, entry[0])  # type: BaseIndexEntry
+        return (entry_first.path, entry_first.stage)
     return tuple(entry)
     # END handle entry
 
@@ -283,7 +286,7 @@ def _tree_entry_to_baseindexentry(tree_entry, stage):
     return BaseIndexEntry((tree_entry[1], tree_entry[0], stage << CE_STAGESHIFT, tree_entry[2]))
 
 
-def aggressive_tree_merge(odb, tree_shas):
+def aggressive_tree_merge(odb, tree_shas) -> List[BaseIndexEntry]:
     """
     :return: list of BaseIndexEntries representing the aggressive merge of the given
         trees. All valid entries are on stage 0, whereas the conflicting ones are left
@@ -292,7 +295,7 @@ def aggressive_tree_merge(odb, tree_shas):
     :param tree_shas: 1, 2 or 3 trees as identified by their binary 20 byte shas
         If 1 or two, the entries will effectively correspond to the last given tree
         If 3 are given, a 3 way merge is performed"""
-    out = []
+    out = []  # type: List[BaseIndexEntry]
     out_append = out.append
 
     # one and two way is the same for us, as we don't have to handle an existing
