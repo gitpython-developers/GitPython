@@ -13,7 +13,7 @@ from stat import (
     S_IFREG,
 )
 import subprocess
-from typing import List, Tuple, Union, cast
+from typing import List, Tuple, cast
 
 from git.cmd import PROC_CREATIONFLAGS, handle_process_output
 from git.compat import (
@@ -168,13 +168,15 @@ def read_header(stream):
     return version, num_entries
 
 
-def entry_key(*entry: Union[Tuple[BaseIndexEntry], Tuple[PathLike, int]]):
+def entry_key(*entry) -> Tuple[PathLike, int]:
     """:return: Key suitable to be used for the index.entries dictionary
     :param entry: One instance of type BaseIndexEntry or the path and the stage"""
-    if len(*entry) == 1:
+    if len(entry) == 1:
         entry_first = cast(BaseIndexEntry, entry[0])  # type: BaseIndexEntry
         return (entry_first.path, entry_first.stage)
-    return tuple(*entry)
+    else:
+        entry = cast(Tuple[PathLike, int], tuple(entry))
+        return entry
     # END handle entry
 
 
