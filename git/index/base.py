@@ -490,8 +490,8 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         return path_map
 
     @classmethod
-    def entry_key(cls, entry: Union[Tuple[BaseIndexEntry], Tuple[PathLike, StageType]]) -> Tuple[PathLike, StageType]:
-        return entry_key(entry)
+    def entry_key(cls, *entry: Union[Tuple[BaseIndexEntry], Tuple[PathLike, StageType]]) -> Tuple[PathLike, StageType]:
+        return entry_key(*entry)
 
     def resolve_blobs(self, iter_blobs: Iterator[Blob]) -> 'IndexFile':
         """Resolve the blobs given in blob iterator. This will effectively remove the

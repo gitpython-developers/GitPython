@@ -1,7 +1,7 @@
 # Contains standalone functions to accompany the index implementation and make it
 # more versatile
 # NOTE: Autodoc hates it if this is a docstring
-from git.types import PathLike, TBD
+from git.types import PathLike
 from io import BytesIO
 import os
 from stat import (
@@ -168,13 +168,13 @@ def read_header(stream):
     return version, num_entries
 
 
-def entry_key(entry: Union[Tuple[BaseIndexEntry], Tuple[PathLike, TBD]]):
+def entry_key(*entry: Union[Tuple[BaseIndexEntry], Tuple[PathLike, int]]):
     """:return: Key suitable to be used for the index.entries dictionary
     :param entry: One instance of type BaseIndexEntry or the path and the stage"""
-    if len(entry) == 1:
+    if len(*entry) == 1:
         entry_first = cast(BaseIndexEntry, entry[0])  # type: BaseIndexEntry
         return (entry_first.path, entry_first.stage)
-    return tuple(entry)
+    return tuple(*entry)
     # END handle entry
 
 
