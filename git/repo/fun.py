@@ -18,7 +18,7 @@ from git.cmd import Git
 
 # Typing ----------------------------------------------------------------------
 
-from typing import AnyStr, Union, Optional, cast, TYPE_CHECKING
+from typing import Union, Optional, cast, TYPE_CHECKING
 from git.types import PathLike
 if TYPE_CHECKING:
     from .base import Repo
@@ -103,7 +103,7 @@ def find_submodule_git_dir(d: PathLike) -> Optional[PathLike]:
     return None
 
 
-def short_to_long(odb: 'GitCmdObjectDB', hexsha: AnyStr) -> Optional[bytes]:
+def short_to_long(odb: 'GitCmdObjectDB', hexsha: str) -> Optional[bytes]:
     """:return: long hexadecimal sha1 from the given less-than-40 byte hexsha
         or None if no candidate could be found.
     :param hexsha: hexsha with less than 40 byte"""

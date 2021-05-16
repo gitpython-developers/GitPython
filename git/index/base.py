@@ -272,7 +272,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         return self
 
     @classmethod
-    def new(cls, repo: 'Repo', *tree_sha: bytes) -> 'IndexFile':
+    def new(cls, repo: 'Repo', *tree_sha: Union[str, Tree]) -> 'IndexFile':
         """ Merge the given treeish revisions into a new index which is returned.
         This method behaves like git-read-tree --aggressive when doing the merge.
 

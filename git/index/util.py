@@ -11,12 +11,9 @@ import os.path as osp
 
 # typing ----------------------------------------------------------------------
 
-from typing import (Any, Callable, List, Sequence, TYPE_CHECKING, Tuple, cast)
+from typing import (Any, Callable)
 
 from git.types import PathLike
-
-if TYPE_CHECKING:
-    from git.repo import Repo
 
 # ---------------------------------------------------------------------------------
 

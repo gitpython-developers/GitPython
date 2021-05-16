@@ -97,8 +97,8 @@ class RefLogEntry(tuple):
                              " Got %s" % repr(line))
         # END handle first split
 
-        oldhexsha = info[:40]
-        newhexsha = info[41:81]
+        oldhexsha = info[:40]  # type: str
+        newhexsha = info[41:81]   # type: str
         for hexsha in (oldhexsha, newhexsha):
             if not cls._re_hexsha_only.match(hexsha):
                 raise ValueError("Invalid hexsha: %r" % (hexsha,))

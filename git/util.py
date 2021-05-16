@@ -24,6 +24,7 @@ from urllib.parse import urlsplit, urlunsplit
 from typing import (Any, AnyStr, BinaryIO, Callable, Dict, Generator, IO, Iterator, List,
                     Optional, Pattern, Sequence, Tuple, Union, cast, TYPE_CHECKING, overload)
 
+import pathlib
 
 if TYPE_CHECKING:
     from git.remote import Remote
@@ -379,7 +380,9 @@ def expand_path(p: PathLike, expand_vars: bool = ...) -> str:
     ...
 
 
-def expand_path(p: Union[None, PathLike], expand_vars: bool = True) -> Optional[str]:
+def expand_path(p: Union[None, PathLike], expand_vars: bool = True) -> Optional[PathLike]:
+    if isinstance(p, pathlib.Path):
+        return p.resolve()
     try:
         p = osp.expanduser(p)  # type: ignore
         if expand_vars:

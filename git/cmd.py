@@ -615,7 +615,7 @@ class Git(LazyMixin):
         # END handle version info
 
     @property
-    def working_dir(self) -> Union[None, str]:
+    def working_dir(self) -> Union[None, PathLike]:
         """:return: Git directory we are working on"""
         return self._working_dir
 
@@ -1187,7 +1187,7 @@ class Git(LazyMixin):
         cmd.stdin.flush()
         return self._parse_object_header(cmd.stdout.readline())
 
-    def get_object_header(self, ref: AnyStr) -> Tuple[str, str, int]:
+    def get_object_header(self, ref: str) -> Tuple[str, str, int]:
         """ Use this method to quickly examine the type and size of the object behind
         the given ref.
 
@@ -1198,7 +1198,7 @@ class Git(LazyMixin):
         cmd = self._get_persistent_cmd("cat_file_header", "cat_file", batch_check=True)
         return self.__get_object_header(cmd, ref)
 
-    def get_object_data(self, ref: AnyStr) -> Tuple[str, str, int, bytes]:
+    def get_object_data(self, ref: str) -> Tuple[str, str, int, bytes]:
         """ As get_object_header, but returns object data as well
         :return: (hexsha, type_string, size_as_int,data_string)
         :note: not threadsafe"""
@@ -1207,7 +1207,7 @@ class Git(LazyMixin):
         del(stream)
         return (hexsha, typename, size, data)
 
-    def stream_object_data(self, ref: AnyStr) -> Tuple[str, str, int, 'Git.CatFileContentStream']:
+    def stream_object_data(self, ref: str) -> Tuple[str, str, int, 'Git.CatFileContentStream']:
         """ As get_object_header, but returns the data as a stream
 
         :return: (hexsha, type_string, size_as_int, stream)
