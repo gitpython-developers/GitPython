@@ -11,7 +11,7 @@ from git.compat import safe_decode
 
 # typing ----------------------------------------------------
 
-from typing import List, Optional, Tuple, Union, TYPE_CHECKING
+from typing import List, Optional, Sequence, Tuple, Union, TYPE_CHECKING
 from git.types import PathLike
 
 if TYPE_CHECKING:
@@ -113,7 +113,7 @@ class CheckoutError(GitError):
     were checked out successfully and hence match the version stored in the
     index"""
 
-    def __init__(self, message: str, failed_files: List[PathLike], valid_files: List[PathLike],
+    def __init__(self, message: str, failed_files: Sequence[PathLike], valid_files: List[PathLike],
                  failed_reasons: List[str]) -> None:
 
         Exception.__init__(self, message)

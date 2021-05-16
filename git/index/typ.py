@@ -8,6 +8,8 @@ from .util import (
 )
 from git.objects import Blob
 
+from git.types import PathLike
+
 
 __all__ = ('BlobFilter', 'BaseIndexEntry', 'IndexEntry')
 
@@ -79,7 +81,7 @@ class BaseIndexEntry(tuple):
         return b2a_hex(self[1]).decode('ascii')
 
     @property
-    def stage(self):
+    def stage(self) -> int:
         """Stage of the entry, either:
 
             * 0 = default stage
@@ -92,7 +94,7 @@ class BaseIndexEntry(tuple):
         return (self[2] & CE_STAGEMASK) >> CE_STAGESHIFT
 
     @property
-    def path(self):
+    def path(self) -> PathLike:
         """:return: our path relative to the repository working tree root"""
         return self[3]
 
