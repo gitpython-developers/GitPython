@@ -66,7 +66,7 @@ from .util import (
 
 # typing -----------------------------------------------------------------------------
 
-from typing import (Any, Callable, Dict, IO, Iterable, Iterator, List,
+from typing import (Any, BinaryIO, Callable, Dict, IO, Iterable, Iterator, List,
                     Sequence, TYPE_CHECKING, Tuple, Union)
 
 from git.types import PathLike, TBD
@@ -567,7 +567,8 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         root_tree._cache = tree_items
         return root_tree
 
-    def _process_diff_args(self, args: Any) -> List[Any]:
+    def _process_diff_args(self, args: List[Union[str, diff.Diffable, object]]
+                           ) -> List[Union[str, diff.Diffable, object]]:
         try:
             args.pop(args.index(self))
         except IndexError:
@@ -607,13 +608,14 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         # END for each item
         return paths, entries
 
-    def _store_path(self, filepath, fprogress):
+    def _store_path(self, filepath: PathLike, fprogress: Callable) -> BaseIndexEntry:
         """Store file at filepath in the database and return the base index entry
         Needs the git_working_dir decorator active ! This must be assured in the calling code"""
         st = os.lstat(filepath)     # handles non-symlinks as well
         if S_ISLNK(st.st_mode):
             # in PY3, readlink is string, but we need bytes. In PY2, it's just OS encoded bytes, we assume UTF-8
-            open_stream = lambda: BytesIO(force_bytes(os.readlink(filepath), encoding=defenc))
+            open_stream = lambda: BytesIO(force_bytes(os.readlink(filepath),
+                                                      encoding=defenc))  # type: Callable[[], BinaryIO]
         else:
             open_stream = lambda: open(filepath, 'rb')
         with open_stream() as stream:
@@ -625,16 +627,18 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
     @unbare_repo
     @git_working_dir
-    def _entries_for_paths(self, paths, path_rewriter, fprogress, entries):
-        entries_added = []
+    def _entries_for_paths(self, paths: List[str], path_rewriter: Callable, fprogress: Callable,
+                           entries: List[BaseIndexEntry]) -> List[BaseIndexEntry]:
+        entries_added = []  # type: List[BaseIndexEntry]
         if path_rewriter:
             for path in paths:
                 if osp.isabs(path):
                     abspath = path
-                    gitrelative_path = path[len(self.repo.working_tree_dir) + 1:]
+                    gitrelative_path = path[len(str(self.repo.working_tree_dir)) + 1:]
                 else:
                     gitrelative_path = path
-                    abspath = osp.join(self.repo.working_tree_dir, gitrelative_path)
+                    if self.repo.working_tree_dir:
+                        abspath = osp.join(self.repo.working_tree_dir, gitrelative_path)
                 # end obtain relative and absolute paths
 
                 blob = Blob(self.repo, Blob.NULL_BIN_SHA,
