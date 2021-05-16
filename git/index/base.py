@@ -79,6 +79,8 @@ if TYPE_CHECKING:
 StageType = int
 Treeish = Union[Tree, Commit, str, bytes]
 
+# ------------------------------------------------------------------------------------
+
 
 __all__ = ('IndexFile', 'CheckoutError')
 
@@ -287,8 +289,9 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
         inst = cls(repo)
         # convert to entries dict
-        entries = dict(zip(((e.path, e.stage) for e in base_entries),
-                           (IndexEntry.from_base(e) for e in base_entries)))
+        entries = dict(zip(
+            ((e.path, e.stage) for e in base_entries),
+            (IndexEntry.from_base(e) for e in base_entries)))  # type: Dict[Tuple[PathLike, int], IndexEntry]
 
         inst.entries = entries
         return inst
