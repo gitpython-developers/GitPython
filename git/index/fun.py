@@ -96,15 +96,16 @@ def run_commit_hook(name: str, index: 'IndexFile', *args: str) -> None:
     except Exception as ex:
         raise HookExecutionError(hp, ex) from ex
     else:
-        stdout_list = []  # type: List[str]
-        stderr_list = []  # type: List[str]
+        stdout_list = []  # type:  List[str]
+        stderr_list = []  # type:  List[str]
         handle_process_output(cmd, stdout_list.append, stderr_list.append, finalize_process)
-        stdout_str = ''.join(stderr_list)
-        stderr_str = ''.join(stderr_list)
+        stdout = ''.join(stdout_list)
+        stderr = ''.join(stderr_list)
         if cmd.returncode != 0:
-            stdout = force_text(stdout_str, defenc)
-            stderr = force_text(stderr_str, defenc)
+            stdout = force_text(stdout, defenc)
+            stderr = force_text(stderr, defenc)
             raise HookExecutionError(hp, cmd.returncode, stderr, stdout)
+    # end handle return code
     # end handle return code
 
 
