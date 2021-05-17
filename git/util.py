@@ -377,6 +377,7 @@ def expand_path(p: None, expand_vars: bool = ...) -> None:
 
 @overload
 def expand_path(p: PathLike, expand_vars: bool = ...) -> str:
+    # improve these overloads when 3.5 dropped
     ...
 
 

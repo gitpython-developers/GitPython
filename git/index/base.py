@@ -285,7 +285,8 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             New IndexFile instance. Its path will be undefined.
             If you intend to write such a merged Index, supply an alternate file_path
             to its 'write' method."""
-        base_entries = aggressive_tree_merge(repo.odb, [to_bin_sha(str(t)) for t in tree_sha])
+        tree_sha_bytes = [to_bin_sha(str(t)) for t in tree_sha]  # List[bytes]
+        base_entries = aggressive_tree_merge(repo.odb, tree_sha_bytes)
 
         inst = cls(repo)
         # convert to entries dict
@@ -1023,7 +1024,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
     @default_index
     def checkout(self, paths: Union[None, Iterable[PathLike]] = None, force: bool = False,
                  fprogress: Callable = lambda *args: None, **kwargs: Any
-                 ) -> Union[None, Iterator[PathLike], List[PathLike]]:
+                 ) -> Union[None, Iterator[PathLike], Sequence[PathLike]]:
         """Checkout the given paths or all files from the version known to the index into
         the working tree.
 

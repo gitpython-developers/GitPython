@@ -36,7 +36,7 @@ import gitdb
 
 from git.types import TBD, PathLike, Lit_config_levels
 from typing import (Any, BinaryIO, Callable, Dict,
-                    Iterator, List, Mapping, Optional,
+                    Iterator, List, Mapping, Optional, Sequence,
                     TextIO, Tuple, Type, Union,
                     NamedTuple, cast, TYPE_CHECKING)
 
@@ -536,7 +536,7 @@ class Repo(object):
             return self.head.commit.tree
         return self.rev_parse(str(rev) + "^{tree}")
 
-    def iter_commits(self, rev: Optional[TBD] = None, paths: Union[PathLike, List[PathLike]] = '',
+    def iter_commits(self, rev: Optional[TBD] = None, paths: Union[PathLike, Sequence[PathLike]] = '',
                      **kwargs: Any) -> Iterator[Commit]:
         """A list of Commit objects representing the history of a given ref/commit
 
