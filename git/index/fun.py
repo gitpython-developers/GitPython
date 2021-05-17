@@ -72,7 +72,7 @@ def hook_path(name: str, git_dir: PathLike) -> str:
     return osp.join(git_dir, 'hooks', name)
 
 
-def run_commit_hook(name: str, index: IndexFile, *args: str) -> None:
+def run_commit_hook(name: str, index: 'IndexFile', *args: str) -> None:
     """Run the commit hook of the given name. Silently ignores hooks that do not exist.
     :param name: name of hook, like 'pre-commit'
     :param index: IndexFile instance
