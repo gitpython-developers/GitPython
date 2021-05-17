@@ -477,10 +477,10 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
     def unmerged_blobs(self) -> Dict[PathLike, List[Tuple[StageType, Blob]]]:
         """
         :return:
-            Iterator yielding dict(path : list( tuple( stage, Blob, ...))), being
+            Dict(path : list( tuple( stage, Blob, ...))), being
             a dictionary associating a path in the index with a list containing
             sorted stage/blob pairs
-            ##### Does it return iterator? or just the Dict?
+
 
         :note:
             Blobs that have been removed in one side simply do not exist in the
