@@ -17,6 +17,15 @@ import time
 import calendar
 from datetime import datetime, timedelta, tzinfo
 
+
+from typing import TYPE_CHECKING, Union
+
+if TYPE_CHECKING:
+    from .commit import Commit
+    from .blob import Blob
+    from .tag import TagObject
+    from .tree import Tree
+
 __all__ = ('get_object_type_by_name', 'parse_date', 'parse_actor_and_date',
            'ProcessStreamAdapter', 'Traversable', 'altz_to_utctz_str', 'utctz_to_altz',
            'verify_utctz', 'Actor', 'tzoffset', 'utc')
@@ -26,7 +35,7 @@ ZERO = timedelta(0)
 #{ Functions
 
 
-def mode_str_to_int(modestr):
+def mode_str_to_int(modestr: str) -> int:
     """
     :param modestr: string like 755 or 644 or 100644 - only the last 6 chars will be used
     :return:
@@ -41,7 +50,7 @@ def mode_str_to_int(modestr):
     return mode
 
 
-def get_object_type_by_name(object_type_name):
+def get_object_type_by_name(object_type_name: str) -> Union['Commit', 'TagObject', 'Tree', 'Blob']:
     """
     :return: type suitable to handle the given object type name.
         Use the type to create new instances.
@@ -65,7 +74,7 @@ def get_object_type_by_name(object_type_name):
         raise ValueError("Cannot handle unknown object type: %s" % object_type_name)
 
 
-def utctz_to_altz(utctz):
+def utctz_to_altz(utctz: str) -> int:
     """we convert utctz to the timezone in seconds, it is the format time.altzone
     returns. Git stores it as UTC timezone which has the opposite sign as well,
     which explains the -1 * ( that was made explicit here )
@@ -73,7 +82,7 @@ def utctz_to_altz(utctz):
     return -1 * int(float(utctz) / 100 * 3600)
 
 
-def altz_to_utctz_str(altz):
+def altz_to_utctz_str(altz: int) -> str:
     """As above, but inverses the operation, returning a string that can be used
     in commit objects"""
     utci = -1 * int((float(altz) / 3600) * 100)
@@ -83,7 +92,7 @@ def altz_to_utctz_str(altz):
     return prefix + utcs
 
 
-def verify_utctz(offset):
+def verify_utctz(offset: str) -> str:
     """:raise ValueError: if offset is incorrect
     :return: offset"""
     fmt_exc = ValueError("Invalid timezone offset format: %s" % offset)
@@ -101,6 +110,7 @@ def verify_utctz(offset):
 
 
 class tzoffset(tzinfo):
+    
     def __init__(self, secs_west_of_utc, name=None):
         self._offset = timedelta(seconds=-secs_west_of_utc)
         self._name = name or 'fixed'

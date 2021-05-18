@@ -24,7 +24,7 @@ class Blob(base.IndexObject):
     __slots__ = ()
 
     @property
-    def mime_type(self) -> Union[None, Tuple[Union[None, str], Union[None, str]]]:
+    def mime_type(self) -> Union[None, str, Tuple[Union[None, str], Union[None, str]]]:
         """
         :return: String describing the mime type of this file (based on the filename)
         :note: Defaults to 'text/plain' in case the actual file type is unknown. """
