@@ -11,7 +11,7 @@ from git.compat import safe_decode
 
 # typing ----------------------------------------------------
 
-from typing import List, Optional, Tuple, Union, TYPE_CHECKING
+from typing import List, Sequence, Tuple, Union, TYPE_CHECKING
 from git.types import PathLike
 
 if TYPE_CHECKING:
@@ -113,7 +113,7 @@ class CheckoutError(GitError):
     were checked out successfully and hence match the version stored in the
     index"""
 
-    def __init__(self, message: str, failed_files: List[PathLike], valid_files: List[PathLike],
+    def __init__(self, message: str, failed_files: Sequence[PathLike], valid_files: Sequence[PathLike],
                  failed_reasons: List[str]) -> None:
 
         Exception.__init__(self, message)
@@ -139,8 +139,11 @@ class HookExecutionError(CommandError):
     """Thrown if a hook exits with a non-zero exit code. It provides access to the exit code and the string returned
     via standard output"""
 
-    def __init__(self, command: Union[List[str], Tuple[str, ...], str], status: Optional[str],
-                 stderr: Optional[str] = None, stdout: Optional[str] = None) -> None:
+    def __init__(self, command: Union[List[str], Tuple[str, ...], str],
+                 status: Union[str, int, None, Exception],
+                 stderr: Union[bytes, str, None] = None,
+                 stdout: Union[bytes, str, None] = None) -> None:
+
         super(HookExecutionError, self).__init__(command, status, stderr, stdout)
         self._msg = "Hook('%s') failed%s"
 

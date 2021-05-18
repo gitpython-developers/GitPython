@@ -16,7 +16,7 @@ from .objects.util import mode_str_to_int
 # typing ------------------------------------------------------------------
 
 from typing import Any, Iterator, List, Match, Optional, Tuple, Type, Union, TYPE_CHECKING
-from git.types import TBD, Final, Literal
+from git.types import PathLike, TBD, Final, Literal
 
 if TYPE_CHECKING:
     from .objects.tree import Tree
@@ -84,7 +84,7 @@ class Diffable(object):
         return args
 
     def diff(self, other: Union[Type[Index], Type['Tree'], object, None, str] = Index,
-             paths: Union[str, List[str], Tuple[str, ...], None] = None,
+             paths: Union[PathLike, List[PathLike], Tuple[PathLike, ...], None] = None,
              create_patch: bool = False, **kwargs: Any) -> 'DiffIndex':
         """Creates diffs between two items being trees, trees and index or an
         index and the working tree. It will detect renames automatically.

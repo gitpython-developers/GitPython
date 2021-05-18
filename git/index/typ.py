@@ -9,6 +9,17 @@ from .util import (
 from git.objects import Blob
 
 
+# typing ----------------------------------------------------------------------
+
+from typing import (List, Sequence, TYPE_CHECKING, Tuple, cast)
+
+from git.types import PathLike
+
+if TYPE_CHECKING:
+    from git.repo import Repo
+
+# ---------------------------------------------------------------------------------
+
 __all__ = ('BlobFilter', 'BaseIndexEntry', 'IndexEntry')
 
 #{ Invariants
@@ -31,7 +42,7 @@ class BlobFilter(object):
     """
     __slots__ = 'paths'
 
-    def __init__(self, paths):
+    def __init__(self, paths: Sequence[PathLike]) -> None:
         """
         :param paths:
             tuple or list of paths which are either pointing to directories or
@@ -39,7 +50,7 @@ class BlobFilter(object):
         """
         self.paths = paths
 
-    def __call__(self, stage_blob):
+    def __call__(self, stage_blob: Blob) -> bool:
         path = stage_blob[1].path
         for p in self.paths:
             if path.startswith(p):
@@ -57,29 +68,29 @@ class BaseIndexEntry(tuple):
     expecting a BaseIndexEntry can also handle full IndexEntries even if they
     use numeric indices for performance reasons. """
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "%o %s %i\t%s" % (self.mode, self.hexsha, self.stage, self.path)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "(%o, %s, %i, %s)" % (self.mode, self.hexsha, self.stage, self.path)
 
     @property
-    def mode(self):
+    def mode(self) -> int:
         """ File Mode, compatible to stat module constants """
         return self[0]
 
     @property
-    def binsha(self):
+    def binsha(self) -> bytes:
         """binary sha of the blob """
         return self[1]
 
     @property
-    def hexsha(self):
+    def hexsha(self) -> str:
         """hex version of our sha"""
         return b2a_hex(self[1]).decode('ascii')
 
     @property
-    def stage(self):
+    def stage(self) -> int:
         """Stage of the entry, either:
 
             * 0 = default stage
@@ -92,21 +103,21 @@ class BaseIndexEntry(tuple):
         return (self[2] & CE_STAGEMASK) >> CE_STAGESHIFT
 
     @property
-    def path(self):
+    def path(self) -> str:
         """:return: our path relative to the repository working tree root"""
         return self[3]
 
     @property
-    def flags(self):
+    def flags(self) -> List[str]:
         """:return: flags stored with this entry"""
         return self[2]
 
     @classmethod
-    def from_blob(cls, blob, stage=0):
+    def from_blob(cls, blob: Blob, stage: int = 0) -> 'BaseIndexEntry':
         """:return: Fully equipped BaseIndexEntry at the given stage"""
         return cls((blob.mode, blob.binsha, stage << CE_STAGESHIFT, blob.path))
 
-    def to_blob(self, repo):
+    def to_blob(self, repo: 'Repo') -> Blob:
         """:return: Blob using the information of this index entry"""
         return Blob(repo, self.binsha, self.mode, self.path)
 
@@ -120,40 +131,40 @@ class IndexEntry(BaseIndexEntry):
 
     See the properties for a mapping between names and tuple indices. """
     @property
-    def ctime(self):
+    def ctime(self) -> Tuple[int, int]:
         """
         :return:
             Tuple(int_time_seconds_since_epoch, int_nano_seconds) of the
             file's creation time"""
-        return unpack(">LL", self[4])
+        return cast(Tuple[int, int], unpack(">LL", self[4]))
 
     @property
-    def mtime(self):
+    def mtime(self) -> Tuple[int, int]:
         """See ctime property, but returns modification time """
-        return unpack(">LL", self[5])
+        return cast(Tuple[int, int], unpack(">LL", self[5]))
 
     @property
-    def dev(self):
+    def dev(self) -> int:
         """ Device ID """
         return self[6]
 
     @property
-    def inode(self):
+    def inode(self) -> int:
         """ Inode ID """
         return self[7]
 
     @property
-    def uid(self):
+    def uid(self) -> int:
         """ User ID """
         return self[8]
 
     @property
-    def gid(self):
+    def gid(self) -> int:
         """ Group ID """
         return self[9]
 
     @property
-    def size(self):
+    def size(self) -> int:
         """:return: Uncompressed size of the blob """
         return self[10]
 
@@ -169,7 +180,7 @@ class IndexEntry(BaseIndexEntry):
         return IndexEntry((base.mode, base.binsha, base.flags, base.path, time, time, 0, 0, 0, 0, 0))
 
     @classmethod
-    def from_blob(cls, blob, stage=0):
+    def from_blob(cls, blob: Blob, stage: int = 0) -> 'IndexEntry':
         """:return: Minimal entry resembling the given blob object"""
         time = pack(">LL", 0, 0)
         return IndexEntry((blob.mode, blob.binsha, stage << CE_STAGESHIFT, blob.path,

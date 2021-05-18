@@ -3,6 +3,7 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
+from git.refs.reference import Reference
 import glob
 from io import BytesIO
 import os
@@ -63,6 +64,23 @@ from .util import (
     git_working_dir
 )
 
+# typing -----------------------------------------------------------------------------
+
+from typing import (Any, BinaryIO, Callable, Dict, IO, Iterable, Iterator, List,
+                    Sequence, TYPE_CHECKING, Tuple, Union)
+
+from git.types import PathLike, TBD
+
+if TYPE_CHECKING:
+    from subprocess import Popen
+    from git.repo import Repo
+
+
+StageType = int
+Treeish = Union[Tree, Commit, str, bytes]
+
+# ------------------------------------------------------------------------------------
+
 
 __all__ = ('IndexFile', 'CheckoutError')
 
@@ -93,7 +111,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
     _VERSION = 2            # latest version we support
     S_IFGITLINK = S_IFGITLINK  # a submodule
 
-    def __init__(self, repo, file_path=None):
+    def __init__(self, repo: 'Repo', file_path: PathLike = None) -> None:
         """Initialize this Index instance, optionally from the given ``file_path``.
         If no file_path is given, we will be created from the current index file.
 
@@ -102,9 +120,9 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         self.repo = repo
         self.version = self._VERSION
         self._extension_data = b''
-        self._file_path = file_path or self._index_path()
+        self._file_path = file_path or self._index_path()  # type: PathLike
 
-    def _set_cache_(self, attr):
+    def _set_cache_(self, attr: str) -> None:
         if attr == "entries":
             # read the current index
             # try memory map for speed
@@ -115,8 +133,8 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
                 ok = True
             except OSError:
                 # in new repositories, there may be no index, which means we are empty
-                self.entries = {}
-                return
+                self.entries = {}  # type: Dict[Tuple[PathLike, StageType], IndexEntry]
+                return None
             finally:
                 if not ok:
                     lfd.rollback()
@@ -133,15 +151,18 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         else:
             super(IndexFile, self)._set_cache_(attr)
 
-    def _index_path(self):
-        return join_path_native(self.repo.git_dir, "index")
+    def _index_path(self) -> PathLike:
+        if self.repo.git_dir:
+            return join_path_native(self.repo.git_dir, "index")
+        else:
+            raise GitCommandError("No git directory given to join index path")
 
     @property
-    def path(self):
+    def path(self) -> PathLike:
         """ :return: Path to the index file we are representing """
         return self._file_path
 
-    def _delete_entries_cache(self):
+    def _delete_entries_cache(self) -> None:
         """Safely clear the entries cache so it can be recreated"""
         try:
             del(self.entries)
@@ -152,18 +173,18 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
     #{ Serializable Interface
 
-    def _deserialize(self, stream):
+    def _deserialize(self, stream: IO) -> 'IndexFile':
         """Initialize this instance with index values read from the given stream"""
         self.version, self.entries, self._extension_data, _conten_sha = read_cache(stream)
         return self
 
-    def _entries_sorted(self):
+    def _entries_sorted(self) -> List[TBD]:
         """:return: list of entries, in a sorted fashion, first by path, then by stage"""
         return sorted(self.entries.values(), key=lambda e: (e.path, e.stage))
 
-    def _serialize(self, stream, ignore_extension_data=False):
+    def _serialize(self, stream: IO, ignore_extension_data: bool = False) -> 'IndexFile':
         entries = self._entries_sorted()
-        extension_data = self._extension_data
+        extension_data = self._extension_data    # type: Union[None, bytes]
         if ignore_extension_data:
             extension_data = None
         write_cache(entries, stream, extension_data)
@@ -171,7 +192,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
     #} END serializable interface
 
-    def write(self, file_path=None, ignore_extension_data=False):
+    def write(self, file_path: Union[None, PathLike] = None, ignore_extension_data: bool = False) -> None:
         """Write the current state to our file path or to the given one
 
         :param file_path:
@@ -191,7 +212,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             Alternatively, use IndexFile.write_tree() to handle this case
             automatically
 
-        :return: self"""
+        :return: self  # does it? or returns None?"""
         # make sure we have our entries read before getting a write lock
         # else it would be done when streaming. This can happen
         # if one doesn't change the index, but writes it right away
@@ -215,7 +236,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
     @post_clear_cache
     @default_index
-    def merge_tree(self, rhs, base=None):
+    def merge_tree(self, rhs: Treeish, base: Union[None, Treeish] = None) -> 'IndexFile':
         """Merge the given rhs treeish into the current index, possibly taking
         a common base treeish into account.
 
@@ -242,7 +263,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         # -i : ignore working tree status
         # --aggressive : handle more merge cases
         # -m : do an actual merge
-        args = ["--aggressive", "-i", "-m"]
+        args = ["--aggressive", "-i", "-m"]  # type: List[Union[Treeish, str]]
         if base is not None:
             args.append(base)
         args.append(rhs)
@@ -251,7 +272,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         return self
 
     @classmethod
-    def new(cls, repo, *tree_sha):
+    def new(cls, repo: 'Repo', *tree_sha: Union[str, Tree]) -> 'IndexFile':
         """ Merge the given treeish revisions into a new index which is returned.
         This method behaves like git-read-tree --aggressive when doing the merge.
 
@@ -264,18 +285,20 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             New IndexFile instance. Its path will be undefined.
             If you intend to write such a merged Index, supply an alternate file_path
             to its 'write' method."""
-        base_entries = aggressive_tree_merge(repo.odb, [to_bin_sha(str(t)) for t in tree_sha])
+        tree_sha_bytes = [to_bin_sha(str(t)) for t in tree_sha]  # List[bytes]
+        base_entries = aggressive_tree_merge(repo.odb, tree_sha_bytes)
 
         inst = cls(repo)
         # convert to entries dict
-        entries = dict(zip(((e.path, e.stage) for e in base_entries),
-                           (IndexEntry.from_base(e) for e in base_entries)))
+        entries = dict(zip(
+            ((e.path, e.stage) for e in base_entries),
+            (IndexEntry.from_base(e) for e in base_entries)))  # type: Dict[Tuple[PathLike, int], IndexEntry]
 
         inst.entries = entries
         return inst
 
     @classmethod
-    def from_tree(cls, repo, *treeish, **kwargs):
+    def from_tree(cls, repo: 'Repo', *treeish: Treeish, **kwargs: Any) -> 'IndexFile':
         """Merge the given treeish revisions into a new index which is returned.
         The original index will remain unaltered
 
@@ -312,7 +335,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         if len(treeish) == 0 or len(treeish) > 3:
             raise ValueError("Please specify between 1 and 3 treeish, got %i" % len(treeish))
 
-        arg_list = []
+        arg_list = []  # type: List[Union[Treeish, str]]
         # ignore that working tree and index possibly are out of date
         if len(treeish) > 1:
             # drop unmerged entries when reading our index and merging
@@ -331,7 +354,8 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         # as it considers existing entries. moving it essentially clears the index.
         # Unfortunately there is no 'soft' way to do it.
         # The TemporaryFileSwap assure the original file get put back
-        index_handler = TemporaryFileSwap(join_path_native(repo.git_dir, 'index'))
+        if repo.git_dir:
+            index_handler = TemporaryFileSwap(join_path_native(repo.git_dir, 'index'))
         try:
             repo.git.read_tree(*arg_list, **kwargs)
             index = cls(repo, tmp_index)
@@ -346,7 +370,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
     # UTILITIES
     @unbare_repo
-    def _iter_expand_paths(self, paths):
+    def _iter_expand_paths(self, paths: Sequence[PathLike]) -> Iterator[PathLike]:
         """Expand the directories in list of paths to the corresponding paths accordingly,
 
         Note: git will add items multiple times even if a glob overlapped
@@ -354,10 +378,10 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         times - we respect that and do not prune"""
         def raise_exc(e):
             raise e
-        r = self.repo.working_tree_dir
+        r = str(self.repo.working_tree_dir)
         rs = r + os.sep
         for path in paths:
-            abs_path = path
+            abs_path = str(path)
             if not osp.isabs(abs_path):
                 abs_path = osp.join(r, path)
             # END make absolute path
@@ -374,7 +398,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             # end check symlink
 
             # if the path is not already pointing to an existing file, resolve globs if possible
-            if not os.path.exists(path) and ('?' in path or '*' in path or '[' in path):
+            if not os.path.exists(abs_path) and ('?' in abs_path or '*' in abs_path or '[' in abs_path):
                 resolved_paths = glob.glob(abs_path)
                 # not abs_path in resolved_paths:
                 #   a glob() resolving to the same path we are feeding it with
@@ -396,12 +420,12 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
                 # END for each subdirectory
             except OSError:
                 # was a file or something that could not be iterated
-                yield path.replace(rs, '')
+                yield abs_path.replace(rs, '')
             # END path exception handling
         # END for each path
 
-    def _write_path_to_stdin(self, proc, filepath, item, fmakeexc, fprogress,
-                             read_from_stdout=True):
+    def _write_path_to_stdin(self, proc: 'Popen', filepath: PathLike, item, fmakeexc, fprogress,
+                             read_from_stdout: bool = True) -> Union[None, str]:
         """Write path to proc.stdin and make sure it processes the item, including progress.
 
         :return: stdout string
@@ -417,20 +441,24 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             we will close stdin to break the pipe."""
 
         fprogress(filepath, False, item)
-        rval = None
-        try:
-            proc.stdin.write(("%s\n" % filepath).encode(defenc))
-        except IOError as e:
-            # pipe broke, usually because some error happened
-            raise fmakeexc() from e
-        # END write exception handling
-        proc.stdin.flush()
-        if read_from_stdout:
+        rval = None  # type: Union[None, str]
+
+        if proc.stdin is not None:
+            try:
+                proc.stdin.write(("%s\n" % filepath).encode(defenc))
+            except IOError as e:
+                # pipe broke, usually because some error happened
+                raise fmakeexc() from e
+            # END write exception handling
+            proc.stdin.flush()
+
+        if read_from_stdout and proc.stdout is not None:
             rval = proc.stdout.readline().strip()
         fprogress(filepath, True, item)
         return rval
 
-    def iter_blobs(self, predicate=lambda t: True):
+    def iter_blobs(self, predicate: Callable[[Tuple[StageType, Blob]], bool] = lambda t: True
+                   ) -> Iterator[Tuple[StageType, Blob]]:
         """
         :return: Iterator yielding tuples of Blob objects and stages, tuple(stage, Blob)
 
@@ -446,12 +474,13 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
                 yield output
         # END for each entry
 
-    def unmerged_blobs(self):
+    def unmerged_blobs(self) -> Dict[PathLike, List[Tuple[StageType, Blob]]]:
         """
         :return:
-            Iterator yielding dict(path : list( tuple( stage, Blob, ...))), being
+            Dict(path : list( tuple( stage, Blob, ...))), being
             a dictionary associating a path in the index with a list containing
             sorted stage/blob pairs
+
 
         :note:
             Blobs that have been removed in one side simply do not exist in the
@@ -459,7 +488,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             are at stage 3 will not have a stage 3 entry.
         """
         is_unmerged_blob = lambda t: t[0] != 0
-        path_map = {}
+        path_map = {}  # type: Dict[PathLike, List[Tuple[TBD, Blob]]]
         for stage, blob in self.iter_blobs(is_unmerged_blob):
             path_map.setdefault(blob.path, []).append((stage, blob))
         # END for each unmerged blob
@@ -468,10 +497,10 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         return path_map
 
     @classmethod
-    def entry_key(cls, *entry):
+    def entry_key(cls, *entry: Union[BaseIndexEntry, PathLike, StageType]) -> Tuple[PathLike, StageType]:
         return entry_key(*entry)
 
-    def resolve_blobs(self, iter_blobs):
+    def resolve_blobs(self, iter_blobs: Iterator[Blob]) -> 'IndexFile':
         """Resolve the blobs given in blob iterator. This will effectively remove the
         index entries of the respective path at all non-null stages and add the given
         blob as new stage null blob.
@@ -489,7 +518,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         for blob in iter_blobs:
             stage_null_key = (blob.path, 0)
             if stage_null_key in self.entries:
-                raise ValueError("Path %r already exists at stage 0" % blob.path)
+                raise ValueError("Path %r already exists at stage 0" % str(blob.path))
             # END assert blob is not stage 0 already
 
             # delete all possible stages
@@ -506,7 +535,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
         return self
 
-    def update(self):
+    def update(self) -> 'IndexFile':
         """Reread the contents of our index file, discarding all cached information
         we might have.
 
@@ -517,7 +546,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         # allows to lazily reread on demand
         return self
 
-    def write_tree(self):
+    def write_tree(self) -> Tree:
         """Writes this index to a corresponding Tree object into the repository's
         object database and return it.
 
@@ -542,7 +571,8 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         root_tree._cache = tree_items
         return root_tree
 
-    def _process_diff_args(self, args):
+    def _process_diff_args(self, args: List[Union[str, diff.Diffable, object]]
+                           ) -> List[Union[str, diff.Diffable, object]]:
         try:
             args.pop(args.index(self))
         except IndexError:
@@ -550,18 +580,19 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         # END remove self
         return args
 
-    def _to_relative_path(self, path):
+    def _to_relative_path(self, path: PathLike) -> PathLike:
         """:return: Version of path relative to our git directory or raise ValueError
         if it is not within our git direcotory"""
         if not osp.isabs(path):
             return path
         if self.repo.bare:
             raise InvalidGitRepositoryError("require non-bare repository")
-        if not path.startswith(self.repo.working_tree_dir):
+        if not str(path).startswith(str(self.repo.working_tree_dir)):
             raise ValueError("Absolute path %r is not in git repository at %r" % (path, self.repo.working_tree_dir))
         return os.path.relpath(path, self.repo.working_tree_dir)
 
-    def _preprocess_add_items(self, items):
+    def _preprocess_add_items(self, items: Sequence[Union[PathLike, Blob, BaseIndexEntry, Submodule]]
+                              ) -> Tuple[List[PathLike], List[BaseIndexEntry]]:
         """ Split the items into two lists of path strings and BaseEntries. """
         paths = []
         entries = []
@@ -581,13 +612,14 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         # END for each item
         return paths, entries
 
-    def _store_path(self, filepath, fprogress):
+    def _store_path(self, filepath: PathLike, fprogress: Callable) -> BaseIndexEntry:
         """Store file at filepath in the database and return the base index entry
         Needs the git_working_dir decorator active ! This must be assured in the calling code"""
         st = os.lstat(filepath)     # handles non-symlinks as well
         if S_ISLNK(st.st_mode):
             # in PY3, readlink is string, but we need bytes. In PY2, it's just OS encoded bytes, we assume UTF-8
-            open_stream = lambda: BytesIO(force_bytes(os.readlink(filepath), encoding=defenc))
+            open_stream = lambda: BytesIO(force_bytes(os.readlink(filepath),
+                                                      encoding=defenc))  # type: Callable[[], BinaryIO]
         else:
             open_stream = lambda: open(filepath, 'rb')
         with open_stream() as stream:
@@ -599,16 +631,18 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
     @unbare_repo
     @git_working_dir
-    def _entries_for_paths(self, paths, path_rewriter, fprogress, entries):
-        entries_added = []
+    def _entries_for_paths(self, paths: List[str], path_rewriter: Callable, fprogress: Callable,
+                           entries: List[BaseIndexEntry]) -> List[BaseIndexEntry]:
+        entries_added = []  # type: List[BaseIndexEntry]
         if path_rewriter:
             for path in paths:
                 if osp.isabs(path):
                     abspath = path
-                    gitrelative_path = path[len(self.repo.working_tree_dir) + 1:]
+                    gitrelative_path = path[len(str(self.repo.working_tree_dir)) + 1:]
                 else:
                     gitrelative_path = path
-                    abspath = osp.join(self.repo.working_tree_dir, gitrelative_path)
+                    if self.repo.working_tree_dir:
+                        abspath = osp.join(self.repo.working_tree_dir, gitrelative_path)
                 # end obtain relative and absolute paths
 
                 blob = Blob(self.repo, Blob.NULL_BIN_SHA,
@@ -628,8 +662,9 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         # END path handling
         return entries_added
 
-    def add(self, items, force=True, fprogress=lambda *args: None, path_rewriter=None,
-            write=True, write_extension_data=False):
+    def add(self, items: Sequence[Union[PathLike, Blob, BaseIndexEntry, Submodule]], force: bool = True,
+            fprogress: Callable = lambda *args: None, path_rewriter: Callable = None,
+            write: bool = True, write_extension_data: bool = False) -> List[BaseIndexEntry]:
         """Add files from the working tree, specific blobs or BaseIndexEntries
         to the index.
 
@@ -816,7 +851,8 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
     @post_clear_cache
     @default_index
-    def remove(self, items, working_tree=False, **kwargs):
+    def remove(self, items: Sequence[Union[PathLike, Blob, BaseIndexEntry, Submodule]], working_tree: bool = False,
+               **kwargs: Any) -> List[str]:
         """Remove the given items from the index and optionally from
         the working tree as well.
 
@@ -867,7 +903,8 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
     @post_clear_cache
     @default_index
-    def move(self, items, skip_errors=False, **kwargs):
+    def move(self, items: Sequence[Union[PathLike, Blob, BaseIndexEntry, Submodule]], skip_errors: bool = False,
+             **kwargs: Any) -> List[Tuple[str, str]]:
         """Rename/move the items, whereas the last item is considered the destination of
         the move operation. If the destination is a file, the first item ( of two )
         must be a file as well. If the destination is a directory, it may be preceded
@@ -929,9 +966,9 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
         return out
 
-    def commit(self, message, parent_commits=None, head=True, author=None,
-               committer=None, author_date=None, commit_date=None,
-               skip_hooks=False):
+    def commit(self, message: str, parent_commits=None, head: bool = True, author: str = None,
+               committer: str = None, author_date: str = None, commit_date: str = None,
+               skip_hooks: bool = False) -> Commit:
         """Commit the current default index file, creating a commit object.
         For more information on the arguments, see tree.commit.
 
@@ -955,33 +992,39 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             run_commit_hook('post-commit', self)
         return rval
 
-    def _write_commit_editmsg(self, message):
+    def _write_commit_editmsg(self, message: str) -> None:
         with open(self._commit_editmsg_filepath(), "wb") as commit_editmsg_file:
             commit_editmsg_file.write(message.encode(defenc))
 
-    def _remove_commit_editmsg(self):
+    def _remove_commit_editmsg(self) -> None:
         os.remove(self._commit_editmsg_filepath())
 
-    def _read_commit_editmsg(self):
+    def _read_commit_editmsg(self) -> str:
         with open(self._commit_editmsg_filepath(), "rb") as commit_editmsg_file:
             return commit_editmsg_file.read().decode(defenc)
 
-    def _commit_editmsg_filepath(self):
+    def _commit_editmsg_filepath(self) -> str:
         return osp.join(self.repo.common_dir, "COMMIT_EDITMSG")
 
-    @classmethod
-    def _flush_stdin_and_wait(cls, proc, ignore_stdout=False):
-        proc.stdin.flush()
-        proc.stdin.close()
-        stdout = ''
-        if not ignore_stdout:
+    def _flush_stdin_and_wait(cls, proc: 'Popen[bytes]', ignore_stdout: bool = False) -> bytes:
+        stdin_IO = proc.stdin
+        if stdin_IO:
+            stdin_IO.flush()
+            stdin_IO.close()
+
+        stdout = b''
+        if not ignore_stdout and proc.stdout:
             stdout = proc.stdout.read()
-        proc.stdout.close()
-        proc.wait()
+
+        if proc.stdout:
+            proc.stdout.close()
+            proc.wait()
         return stdout
 
     @default_index
-    def checkout(self, paths=None, force=False, fprogress=lambda *args: None, **kwargs):
+    def checkout(self, paths: Union[None, Iterable[PathLike]] = None, force: bool = False,
+                 fprogress: Callable = lambda *args: None, **kwargs: Any
+                 ) -> Union[None, Iterator[PathLike], Sequence[PathLike]]:
         """Checkout the given paths or all files from the version known to the index into
         the working tree.
 
@@ -1032,12 +1075,15 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         failed_reasons = []
         unknown_lines = []
 
-        def handle_stderr(proc, iter_checked_out_files):
-            stderr = proc.stderr.read()
-            if not stderr:
-                return
+        def handle_stderr(proc: 'Popen[bytes]', iter_checked_out_files: Iterable[PathLike]) -> None:
+
+            stderr_IO = proc.stderr
+            if not stderr_IO:
+                return None  # return early if stderr empty
+            else:
+                stderr_bytes = stderr_IO.read()
             # line contents:
-            stderr = stderr.decode(defenc)
+            stderr = stderr_bytes.decode(defenc)
             # git-checkout-index: this already exists
             endings = (' already exists', ' is not in the cache', ' does not exist at stage', ' is unmerged')
             for line in stderr.splitlines():
@@ -1101,7 +1147,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             proc = self.repo.git.checkout_index(args, **kwargs)
             # FIXME: Reading from GIL!
             make_exc = lambda: GitCommandError(("git-checkout-index",) + tuple(args), 128, proc.stderr.read())
-            checked_out_files = []
+            checked_out_files = []  # type: List[PathLike]
 
             for path in paths:
                 co_path = to_native_path_linux(self._to_relative_path(path))
@@ -1111,11 +1157,11 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
                 try:
                     self.entries[(co_path, 0)]
                 except KeyError:
-                    folder = co_path
+                    folder = str(co_path)
                     if not folder.endswith('/'):
                         folder += '/'
                     for entry in self.entries.values():
-                        if entry.path.startswith(folder):
+                        if str(entry.path).startswith(folder):
                             p = entry.path
                             self._write_path_to_stdin(proc, p, p, make_exc,
                                                       fprogress, read_from_stdout=False)
@@ -1145,7 +1191,9 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         assert "Should not reach this point"
 
     @default_index
-    def reset(self, commit='HEAD', working_tree=False, paths=None, head=False, **kwargs):
+    def reset(self, commit: Union[Commit, Reference, str] = 'HEAD', working_tree: bool = False,
+              paths: Union[None, Iterable[PathLike]] = None,
+              head: bool = False, **kwargs: Any) -> 'IndexFile':
         """Reset the index to reflect the tree at the given commit. This will not
         adjust our HEAD reference as opposed to HEAD.reset by default.
 
@@ -1213,10 +1261,12 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         return self
 
     @default_index
-    def diff(self, other=diff.Diffable.Index, paths=None, create_patch=False, **kwargs):
+    def diff(self, other: Union[diff.Diffable.Index, 'IndexFile.Index', Treeish, None, object] = diff.Diffable.Index,
+             paths: Union[str, List[PathLike], Tuple[PathLike, ...]] = None, create_patch: bool = False, **kwargs: Any
+             ) -> diff.DiffIndex:
         """Diff this index against the working copy or a Tree or Commit object
 
-        For a documentation of the parameters and return values, see
+        For a documentation of the parameters and return values, see,
         Diffable.diff
 
         :note:
@@ -1234,7 +1284,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             other = self.repo.rev_parse(other)
         # END object conversion
 
-        if isinstance(other, Object):
+        if isinstance(other, Object):  # for Tree or Commit
             # invert the existing R flag
             cur_val = kwargs.get('R', False)
             kwargs['R'] = not cur_val

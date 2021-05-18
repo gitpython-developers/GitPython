@@ -12,7 +12,7 @@ from git.exc import GitCommandError
 
 # typing-------------------------------------------------
 
-from typing import TYPE_CHECKING, AnyStr
+from typing import TYPE_CHECKING
 from git.types import PathLike
 
 if TYPE_CHECKING:
@@ -39,18 +39,18 @@ class GitCmdObjectDB(LooseObjectDB):
         super(GitCmdObjectDB, self).__init__(root_path)
         self._git = git
 
-    def info(self, sha: bytes) -> OInfo:
-        hexsha, typename, size = self._git.get_object_header(bin_to_hex(sha))
+    def info(self, binsha: bytes) -> OInfo:
+        hexsha, typename, size = self._git.get_object_header(bin_to_hex(binsha))
         return OInfo(hex_to_bin(hexsha), typename, size)
 
-    def stream(self, sha: bytes) -> OStream:
+    def stream(self, binsha: bytes) -> OStream:
         """For now, all lookup is done by git itself"""
-        hexsha, typename, size, stream = self._git.stream_object_data(bin_to_hex(sha))
+        hexsha, typename, size, stream = self._git.stream_object_data(bin_to_hex(binsha))
         return OStream(hex_to_bin(hexsha), typename, size, stream)
 
     # { Interface
 
-    def partial_to_complete_sha_hex(self, partial_hexsha: AnyStr) -> bytes:
+    def partial_to_complete_sha_hex(self, partial_hexsha: str) -> bytes:
         """:return: Full binary 20 byte sha from the given partial hexsha
         :raise AmbiguousObjectName:
         :raise BadObject:

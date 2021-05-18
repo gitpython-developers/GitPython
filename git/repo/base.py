@@ -36,7 +36,7 @@ import gitdb
 
 from git.types import TBD, PathLike, Lit_config_levels
 from typing import (Any, BinaryIO, Callable, Dict,
-                    Iterator, List, Mapping, Optional,
+                    Iterator, List, Mapping, Optional, Sequence,
                     TextIO, Tuple, Type, Union,
                     NamedTuple, cast, TYPE_CHECKING)
 
@@ -80,8 +80,8 @@ class Repo(object):
     git = cast('Git', None)  # Must exist, or  __del__  will fail in case we raise on `__init__()`
     working_dir = None    # type: Optional[PathLike]
     _working_tree_dir = None  # type: Optional[PathLike]
-    git_dir = None  # type: Optional[PathLike]
-    _common_dir = None  # type: Optional[PathLike]
+    git_dir = ""  # type: PathLike
+    _common_dir = ""  # type: PathLike
 
     # precompiled regex
     re_whitespace = re.compile(r'\s+')
@@ -208,7 +208,7 @@ class Repo(object):
             common_dir = open(osp.join(self.git_dir, 'commondir'), 'rt').readlines()[0].strip()
             self._common_dir = osp.join(self.git_dir, common_dir)
         except OSError:
-            self._common_dir = None
+            self._common_dir = ""
 
         # adjust the wd in case we are actually bare - we didn't know that
         # in the first place
@@ -536,7 +536,7 @@ class Repo(object):
             return self.head.commit.tree
         return self.rev_parse(str(rev) + "^{tree}")
 
-    def iter_commits(self, rev: Optional[TBD] = None, paths: Union[PathLike, List[PathLike]] = '',
+    def iter_commits(self, rev: Optional[TBD] = None, paths: Union[PathLike, Sequence[PathLike]] = '',
                      **kwargs: Any) -> Iterator[Commit]:
         """A list of Commit objects representing the history of a given ref/commit
 

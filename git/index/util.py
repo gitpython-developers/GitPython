@@ -9,6 +9,15 @@ from git.compat import is_win
 import os.path as osp
 
 
+# typing ----------------------------------------------------------------------
+
+from typing import (Any, Callable)
+
+from git.types import PathLike
+
+# ---------------------------------------------------------------------------------
+
+
 __all__ = ('TemporaryFileSwap', 'post_clear_cache', 'default_index', 'git_working_dir')
 
 #{ Aliases
@@ -24,16 +33,16 @@ class TemporaryFileSwap(object):
     and moving it back on to where on object deletion."""
     __slots__ = ("file_path", "tmp_file_path")
 
-    def __init__(self, file_path):
+    def __init__(self, file_path: PathLike) -> None:
         self.file_path = file_path
-        self.tmp_file_path = self.file_path + tempfile.mktemp('', '', '')
+        self.tmp_file_path = str(self.file_path) + tempfile.mktemp('', '', '')
         # it may be that the source does not exist
         try:
             os.rename(self.file_path, self.tmp_file_path)
         except OSError:
             pass
 
-    def __del__(self):
+    def __del__(self) -> None:
         if osp.isfile(self.tmp_file_path):
             if is_win and osp.exists(self.file_path):
                 os.remove(self.file_path)
@@ -43,7 +52,7 @@ class TemporaryFileSwap(object):
 
 #{ Decorators
 
-def post_clear_cache(func):
+def post_clear_cache(func: Callable[..., Any]) -> Callable[..., Any]:
     """Decorator for functions that alter the index using the git command. This would
     invalidate our possibly existing entries dictionary which is why it must be
     deleted to allow it to be lazily reread later.
@@ -54,7 +63,7 @@ def post_clear_cache(func):
     """
 
     @wraps(func)
-    def post_clear_cache_if_not_raised(self, *args, **kwargs):
+    def post_clear_cache_if_not_raised(self, *args: Any, **kwargs: Any) -> Any:
         rval = func(self, *args, **kwargs)
         self._delete_entries_cache()
         return rval
@@ -63,13 +72,13 @@ def post_clear_cache(func):
     return post_clear_cache_if_not_raised
 
 
-def default_index(func):
+def default_index(func: Callable[..., Any]) -> Callable[..., Any]:
     """Decorator assuring the wrapped method may only run if we are the default
     repository index. This is as we rely on git commands that operate
     on that index only. """
 
     @wraps(func)
-    def check_default_index(self, *args, **kwargs):
+    def check_default_index(self, *args: Any, **kwargs: Any) -> Any:
         if self._file_path != self._index_path():
             raise AssertionError(
                 "Cannot call %r on indices that do not represent the default git index" % func.__name__)
@@ -79,12 +88,12 @@ def default_index(func):
     return check_default_index
 
 
-def git_working_dir(func):
+def git_working_dir(func: Callable[..., Any]) -> Callable[..., None]:
     """Decorator which changes the current working dir to the one of the git
     repository in order to assure relative paths are handled correctly"""
 
     @wraps(func)
-    def set_git_working_dir(self, *args, **kwargs):
+    def set_git_working_dir(self, *args: Any, **kwargs: Any) -> None:
         cur_wd = os.getcwd()
         os.chdir(self.repo.working_tree_dir)
         try:
