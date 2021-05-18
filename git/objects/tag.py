@@ -9,6 +9,12 @@ from .util import get_object_type_by_name, parse_actor_and_date
 from ..util import hex_to_bin
 from ..compat import defenc
 
+from typing import List, TYPE_CHECKING, Union
+
+if TYPE_CHECKING:
+    from git.repo import Repo
+    from git.util import Actor
+
 __all__ = ("TagObject", )
 
 
@@ -18,8 +24,10 @@ class TagObject(base.Object):
     type = "tag"
     __slots__ = ("object", "tag", "tagger", "tagged_date", "tagger_tz_offset", "message")
 
-    def __init__(self, repo, binsha, object=None, tag=None,  # @ReservedAssignment
-                 tagger=None, tagged_date=None, tagger_tz_offset=None, message=None):
+    def __init__(self, repo: 'Repo', binsha: bytes, object: Union[None, base.Object] = None,
+                 tag: Union[None, str] = None, tagger: Union[None, Actor] = None, tagged_date: Union[int, None] = None,
+                 tagger_tz_offset: Union[int, None] = None, message: Union[str, None] = None
+                 ) -> None:   # @ReservedAssignment
         """Initialize a tag object with additional data
 
         :param repo: repository this object is located in
@@ -46,11 +54,11 @@ class TagObject(base.Object):
         if message is not None:
             self.message = message
 
-    def _set_cache_(self, attr):
+    def _set_cache_(self, attr: str) -> None:
         """Cache all our attributes at once"""
         if attr in TagObject.__slots__:
             ostream = self.repo.odb.stream(self.binsha)
-            lines = ostream.read().decode(defenc, 'replace').splitlines()
+            lines = ostream.read().decode(defenc, 'replace').splitlines()  # type: List[str]
 
             _obj, hexsha = lines[0].split(" ")
             _type_token, type_name = lines[1].split(" ")
