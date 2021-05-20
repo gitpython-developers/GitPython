@@ -17,14 +17,15 @@ import time
 import calendar
 from datetime import datetime, timedelta, tzinfo
 
-
-from typing import TYPE_CHECKING, Union
+# typing ------------------------------------------------------------
+from typing import Literal, TYPE_CHECKING, Tuple, Union
 
 if TYPE_CHECKING:
     from .commit import Commit
     from .blob import Blob
     from .tag import TagObject
     from .tree import Tree
+    from subprocess import Popen
 
 __all__ = ('get_object_type_by_name', 'parse_date', 'parse_actor_and_date',
            'ProcessStreamAdapter', 'Traversable', 'altz_to_utctz_str', 'utctz_to_altz',
@@ -111,27 +112,27 @@ def verify_utctz(offset: str) -> str:
 
 class tzoffset(tzinfo):
     
-    def __init__(self, secs_west_of_utc, name=None):
+    def __init__(self, secs_west_of_utc: float, name: Union[None, str] = None) -> None:
         self._offset = timedelta(seconds=-secs_west_of_utc)
         self._name = name or 'fixed'
 
-    def __reduce__(self):
+    def __reduce__(self) -> Tuple['tzoffset', Tuple[float, str]]:
         return tzoffset, (-self._offset.total_seconds(), self._name)
 
-    def utcoffset(self, dt):
+    def utcoffset(self, dt) -> timedelta:
         return self._offset
 
-    def tzname(self, dt):
+    def tzname(self, dt) -> str:
         return self._name
 
-    def dst(self, dt):
+    def dst(self, dt) -> timedelta:
         return ZERO
 
 
 utc = tzoffset(0, 'UTC')
 
 
-def from_timestamp(timestamp, tz_offset):
+def from_timestamp(timestamp, tz_offset: float) -> datetime:
     """Converts a timestamp + tz_offset into an aware datetime instance."""
     utc_dt = datetime.fromtimestamp(timestamp, utc)
     try:
@@ -141,7 +142,7 @@ def from_timestamp(timestamp, tz_offset):
         return utc_dt
 
 
-def parse_date(string_date):
+def parse_date(string_date: str) -> Tuple[int, int]:
     """
     Parse the given date as one of the following
 
@@ -228,7 +229,7 @@ _re_actor_epoch = re.compile(r'^.+? (.*) (\d+) ([+-]\d+).*$')
 _re_only_actor = re.compile(r'^.+? (.*)$')
 
 
-def parse_actor_and_date(line):
+def parse_actor_and_date(line: str) -> Tuple[Actor, int, int]:
     """Parse out the actor (author or committer) info from a line like::
 
         author Tom Preston-Werner <tom@mojombo.com> 1191999972 -0700
@@ -257,7 +258,7 @@ class ProcessStreamAdapter(object):
     it if the instance goes out of scope."""
     __slots__ = ("_proc", "_stream")
 
-    def __init__(self, process, stream_name):
+    def __init__(self, process: Popen, stream_name: str):
         self._proc = process
         self._stream = getattr(process, stream_name)
 
