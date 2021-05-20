@@ -27,6 +27,8 @@ if TYPE_CHECKING:
     from .tree import Tree
     from subprocess import Popen
 
+# --------------------------------------------------------------------
+
 __all__ = ('get_object_type_by_name', 'parse_date', 'parse_actor_and_date',
            'ProcessStreamAdapter', 'Traversable', 'altz_to_utctz_str', 'utctz_to_altz',
            'verify_utctz', 'Actor', 'tzoffset', 'utc')

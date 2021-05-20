@@ -30,5 +30,5 @@ class Blob(base.IndexObject):
         :note: Defaults to 'text/plain' in case the actual file type is unknown. """
         guesses = None
         if self.path:
-            guesses = guess_type(self.path)
+            guesses = guess_type(str(self.path))
         return guesses and guesses[0] or self.DEFAULT_MIME_TYPE
