@@ -129,6 +129,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
             self.message = message
         if parents is not None:
             self.parents = parents
+            self.parents_list = list(parents)
         if encoding is not None:
             self.encoding = encoding
         if gpgsig is not None:
