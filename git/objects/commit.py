@@ -129,7 +129,6 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
             self.message = message
         if parents is not None:
             self.parents = parents
-            self.parents_list = list(parents)
         if encoding is not None:
             self.encoding = encoding
         if gpgsig is not None:
@@ -480,7 +479,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
         readline = stream.readline
         self.tree = Tree(self.repo, hex_to_bin(readline().split()[1]), Tree.tree_id << 12, '')
 
-        self.parents_list = []  # List['Commit']
+        self.parents = []
         next_line = None
         while True:
             parent_line = readline()
@@ -488,9 +487,9 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
                 next_line = parent_line
                 break
             # END abort reading parents
-            self.parents_list.append(type(self)(self.repo, hex_to_bin(parent_line.split()[-1].decode('ascii'))))
+            self.parents.append(type(self)(self.repo, hex_to_bin(parent_line.split()[-1].decode('ascii'))))
         # END for each parent line
-        self.parents = tuple(self.parents_list)  # type: Tuple['Commit', ...]
+        self.parents = tuple(self.parents)
 
         # we don't know actual author encoding before we have parsed it, so keep the lines around
         author_line = next_line
