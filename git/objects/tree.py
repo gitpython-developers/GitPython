@@ -3,6 +3,7 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
+from typing import Iterable, Iterator, Tuple, Union, cast
 from git.util import join_path
 import git.diff as diff
 from git.util import to_bin_sha
@@ -182,8 +183,10 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
         super(Tree, self).__init__(repo, binsha, mode, path)
 
     @classmethod
-    def _get_intermediate_items(cls, index_object):
+    def _get_intermediate_items(cls, index_object: 'Tree',    # type: ignore
+                                ) -> Tuple['Tree', ...]:
         if index_object.type == "tree":
+            index_object = cast('Tree', index_object)
             return tuple(index_object._iter_convert_to_object(index_object._cache))
         return ()
 
@@ -196,7 +199,8 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
             super(Tree, self)._set_cache_(attr)
         # END handle attribute
 
-    def _iter_convert_to_object(self, iterable):
+    def _iter_convert_to_object(self, iterable: Iterable[Tuple[bytes, int, str]]
+                                ) -> Iterator[Union[Blob, 'Tree', Submodule]]:
         """Iterable yields tuples of (binsha, mode, name), which will be converted
         to the respective object representation"""
         for binsha, mode, name in iterable:

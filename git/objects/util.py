@@ -4,6 +4,8 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 """Module for general utility functions"""
+
+
 from git.util import (
     IterableList,
     Actor
@@ -18,9 +20,10 @@ import calendar
 from datetime import datetime, timedelta, tzinfo
 
 # typing ------------------------------------------------------------
-from typing import Any, IO, TYPE_CHECKING, Tuple, Type, Union, cast
+from typing import Any, Callable, IO, Iterator, Sequence, TYPE_CHECKING, Tuple, Type, Union, cast, overload
 
 if TYPE_CHECKING:
+    from .submodule.base import Submodule
     from .commit import Commit
     from .blob import Blob
     from .tag import TagObject
@@ -115,7 +118,7 @@ def verify_utctz(offset: str) -> str:
 
 
 class tzoffset(tzinfo):
-    
+
     def __init__(self, secs_west_of_utc: float, name: Union[None, str] = None) -> None:
         self._offset = timedelta(seconds=-secs_west_of_utc)
         self._name = name or 'fixed'
@@ -275,29 +278,61 @@ class Traversable(object):
     """Simple interface to perform depth-first or breadth-first traversals
     into one direction.
     Subclasses only need to implement one function.
-    Instances of the Subclass must be hashable"""
+    Instances of the Subclass must be hashable
+
+    Defined subclasses = [Commit, Tree, SubModule]
+    """
     __slots__ = ()
 
+    @overload
     @classmethod
-    def _get_intermediate_items(cls, item):
+    def _get_intermediate_items(cls, item: 'Commit') -> Tuple['Commit', ...]:
+        ...
+
+    @overload
+    @classmethod
+    def _get_intermediate_items(cls, item: 'Submodule') -> Tuple['Submodule', ...]:
+        ...
+
+    @overload
+    @classmethod
+    def _get_intermediate_items(cls, item: 'Tree') -> Tuple['Tree', ...]:
+        ...
+
+    @overload
+    @classmethod
+    def _get_intermediate_items(cls, item: 'Traversable') -> Tuple['Traversable', ...]:
+        ...
+
+    @classmethod
+    def _get_intermediate_items(cls, item: 'Traversable'
+                                ) -> Sequence['Traversable']:
         """
         Returns:
-            List of items connected to the given item.
+            Tuple of items connected to the given item.
             Must be implemented in subclass
+
+        class Commit::     (cls, Commit) -> Tuple[Commit, ...]
+        class Submodule::  (cls, Submodule) -> Iterablelist[Submodule]
+        class Tree::       (cls, Tree) -> Tuple[Tree, ...]
         """
         raise NotImplementedError("To be implemented in subclass")
 
-    def list_traverse(self, *args, **kwargs):
+    def list_traverse(self, *args: Any, **kwargs: Any) -> IterableList:
         """
         :return: IterableList with the results of the traversal as produced by
             traverse()"""
-        out = IterableList(self._id_attribute_)
+        out = IterableList(self._id_attribute_)  # type: ignore[attr-defined]  # defined in sublcasses
         out.extend(self.traverse(*args, **kwargs))
         return out
 
-    def traverse(self, predicate=lambda i, d: True,
-                 prune=lambda i, d: False, depth=-1, branch_first=True,
-                 visit_once=True, ignore_self=1, as_edge=False):
+    def traverse(self,
+                 predicate: Callable[[object, int], bool] = lambda i, d: True,
+                 prune: Callable[[object, int], bool] = lambda i, d: False,
+                 depth: int = -1,
+                 branch_first: bool = True,
+                 visit_once: bool = True, ignore_self: int = 1, as_edge: bool = False
+                 ) -> Union[Iterator['Traversable'], Iterator[Tuple['Traversable', 'Traversable']]]:
         """:return: iterator yielding of items found when traversing self
 
         :param predicate: f(i,d) returns False if item i at depth d should not be included in the result
@@ -329,13 +364,16 @@ class Traversable(object):
             destination, i.e. tuple(src, dest) with the edge spanning from
             source to destination"""
         visited = set()
-        stack = Deque()
+        stack = Deque()  # type: Deque[Tuple[int, Traversable, Union[Traversable, None]]]
         stack.append((0, self, None))       # self is always depth level 0
 
-        def addToStack(stack, item, branch_first, depth):
+        def addToStack(stack: Deque[Tuple[int, 'Traversable', Union['Traversable', None]]],
+                       item: 'Traversable',
+                       branch_first: bool,
+                       depth) -> None:
             lst = self._get_intermediate_items(item)
             if not lst:
-                return
+                return None
             if branch_first:
                 stack.extendleft((depth, i, item) for i in lst)
             else:

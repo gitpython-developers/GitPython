@@ -4,6 +4,7 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
+from typing import Tuple, Union
 from gitdb import IStream
 from git.util import (
     hex_to_bin,
@@ -70,7 +71,8 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
 
     def __init__(self, repo, binsha, tree=None, author=None, authored_date=None, author_tz_offset=None,
                  committer=None, committed_date=None, committer_tz_offset=None,
-                 message=None, parents=None, encoding=None, gpgsig=None):
+                 message=None, parents: Union[Tuple['Commit', ...], None] = None,
+                 encoding=None, gpgsig=None):
         """Instantiate a new Commit. All keyword arguments taking None as default will
         be implicitly set on first query.
 
@@ -133,7 +135,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
             self.gpgsig = gpgsig
 
     @classmethod
-    def _get_intermediate_items(cls, commit):
+    def _get_intermediate_items(cls, commit: 'Commit') -> Tuple['Commit', ...]:  # type: ignore
         return commit.parents
 
     @classmethod
@@ -477,7 +479,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
         readline = stream.readline
         self.tree = Tree(self.repo, hex_to_bin(readline().split()[1]), Tree.tree_id << 12, '')
 
-        self.parents = []
+        self.parents_list = []  # List['Commit']
         next_line = None
         while True:
             parent_line = readline()
@@ -485,9 +487,9 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
                 next_line = parent_line
                 break
             # END abort reading parents
-            self.parents.append(type(self)(self.repo, hex_to_bin(parent_line.split()[-1].decode('ascii'))))
+            self.parents_list.append(type(self)(self.repo, hex_to_bin(parent_line.split()[-1].decode('ascii'))))
         # END for each parent line
-        self.parents = tuple(self.parents)
+        self.parents = tuple(self.parents_list)  # type: Tuple['Commit', ...]
 
         # we don't know actual author encoding before we have parsed it, so keep the lines around
         author_line = next_line
