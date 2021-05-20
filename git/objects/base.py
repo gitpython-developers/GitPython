@@ -89,7 +89,7 @@ class Object(LazyMixin):
         """Retrieve object information"""
         if attr == "size":
             oinfo = self.repo.odb.info(self.binsha)
-            self.size = oinfo.size
+            self.size = oinfo.size  # type:  int
             # assert oinfo.type == self.type, _assertion_msg_format % (self.binsha, oinfo.type, self.type)
         else:
             super(Object, self)._set_cache_(attr)

@@ -14,6 +14,9 @@ from typing import List, TYPE_CHECKING, Union
 if TYPE_CHECKING:
     from git.repo import Repo
     from git.util import Actor
+    from .commit import Commit
+    from .blob import Blob
+    from .tree import Tree
 
 __all__ = ("TagObject", )
 
@@ -42,7 +45,7 @@ class TagObject(base.Object):
             authored_date is in, in a format similar to time.altzone"""
         super(TagObject, self).__init__(repo, binsha)
         if object is not None:
-            self.object = object
+            self.object = object    # type: Union['Commit', 'Blob', 'Tree', 'TagObject']
         if tag is not None:
             self.tag = tag
         if tagger is not None:
@@ -62,8 +65,9 @@ class TagObject(base.Object):
 
             _obj, hexsha = lines[0].split(" ")
             _type_token, type_name = lines[1].split(" ")
+            object_type = get_object_type_by_name(type_name.encode('ascii'))
             self.object = \
-                get_object_type_by_name(type_name.encode('ascii'))(self.repo, hex_to_bin(hexsha))
+                object_type(self.repo, hex_to_bin(hexsha))
 
             self.tag = lines[2][4:]  # tag <tag name>
 

@@ -18,7 +18,7 @@ import calendar
 from datetime import datetime, timedelta, tzinfo
 
 # typing ------------------------------------------------------------
-from typing import Literal, TYPE_CHECKING, Tuple, Union
+from typing import Literal, TYPE_CHECKING, Tuple, Type, Union, cast
 
 if TYPE_CHECKING:
     from .commit import Commit
@@ -36,7 +36,7 @@ ZERO = timedelta(0)
 #{ Functions
 
 
-def mode_str_to_int(modestr: str) -> int:
+def mode_str_to_int(modestr: Union[bytes, str]) -> int:
     """
     :param modestr: string like 755 or 644 or 100644 - only the last 6 chars will be used
     :return:
@@ -46,12 +46,14 @@ def mode_str_to_int(modestr: str) -> int:
         for example."""
     mode = 0
     for iteration, char in enumerate(reversed(modestr[-6:])):
+        char = cast(Union[str, int], char)
         mode += int(char) << iteration * 3
     # END for each char
     return mode
 
 
-def get_object_type_by_name(object_type_name: str) -> Union['Commit', 'TagObject', 'Tree', 'Blob']:
+def get_object_type_by_name(object_type_name: bytes
+                            ) -> Union[Type['Commit'], Type['TagObject'], Type['Tree'], Type['Blob']]:
     """
     :return: type suitable to handle the given object type name.
         Use the type to create new instances.
@@ -72,7 +74,7 @@ def get_object_type_by_name(object_type_name: str) -> Union['Commit', 'TagObject
         from . import tree
         return tree.Tree
     else:
-        raise ValueError("Cannot handle unknown object type: %s" % object_type_name)
+        raise ValueError("Cannot handle unknown object type: %s" % object_type_name.decode())
 
 
 def utctz_to_altz(utctz: str) -> int:
@@ -116,7 +118,7 @@ class tzoffset(tzinfo):
         self._offset = timedelta(seconds=-secs_west_of_utc)
         self._name = name or 'fixed'
 
-    def __reduce__(self) -> Tuple['tzoffset', Tuple[float, str]]:
+    def __reduce__(self) -> Tuple[Type['tzoffset'], Tuple[float, str]]:
         return tzoffset, (-self._offset.total_seconds(), self._name)
 
     def utcoffset(self, dt) -> timedelta:
@@ -163,18 +165,18 @@ def parse_date(string_date: str) -> Tuple[int, int]:
     # git time
     try:
         if string_date.count(' ') == 1 and string_date.rfind(':') == -1:
-            timestamp, offset = string_date.split()
+            timestamp, offset_str = string_date.split()
             if timestamp.startswith('@'):
                 timestamp = timestamp[1:]
-            timestamp = int(timestamp)
-            return timestamp, utctz_to_altz(verify_utctz(offset))
+            timestamp_int = int(timestamp)
+            return timestamp_int, utctz_to_altz(verify_utctz(offset_str))
         else:
-            offset = "+0000"                    # local time by default
+            offset_str = "+0000"                    # local time by default
             if string_date[-5] in '-+':
-                offset = verify_utctz(string_date[-5:])
+                offset_str = verify_utctz(string_date[-5:])
                 string_date = string_date[:-6]  # skip space as well
             # END split timezone info
-            offset = utctz_to_altz(offset)
+            offset = utctz_to_altz(offset_str)
 
             # now figure out the date and time portion - split time
             date_formats = []
@@ -235,7 +237,7 @@ def parse_actor_and_date(line: str) -> Tuple[Actor, int, int]:
         author Tom Preston-Werner <tom@mojombo.com> 1191999972 -0700
 
     :return: [Actor, int_seconds_since_epoch, int_timezone_offset]"""
-    actor, epoch, offset = '', 0, 0
+    actor, epoch, offset = '', '0', '0'
     m = _re_actor_epoch.search(line)
     if m:
         actor, epoch, offset = m.groups()
