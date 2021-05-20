@@ -12,7 +12,7 @@ from git.util import (
 )
 
 import re
-from collections import deque as Deque
+from collections import deque
 
 from string import digits
 import time
@@ -20,7 +20,7 @@ import calendar
 from datetime import datetime, timedelta, tzinfo
 
 # typing ------------------------------------------------------------
-from typing import Any, Callable, IO, Iterator, Sequence, TYPE_CHECKING, Tuple, Type, Union, cast, overload
+from typing import Any, Callable, Deque, IO, Iterator, Sequence, TYPE_CHECKING, Tuple, Type, Union, cast, overload
 
 if TYPE_CHECKING:
     from .submodule.base import Submodule
@@ -364,7 +364,7 @@ class Traversable(object):
             destination, i.e. tuple(src, dest) with the edge spanning from
             source to destination"""
         visited = set()
-        stack = Deque()  # type: Deque[Tuple[int, Traversable, Union[Traversable, None]]]
+        stack = deque()  # type: Deque[Tuple[int, Traversable, Union[Traversable, None]]]
         stack.append((0, self, None))       # self is always depth level 0
 
         def addToStack(stack: Deque[Tuple[int, 'Traversable', Union['Traversable', None]]],
