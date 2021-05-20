@@ -27,9 +27,13 @@ class TagObject(base.Object):
     type = "tag"
     __slots__ = ("object", "tag", "tagger", "tagged_date", "tagger_tz_offset", "message")
 
-    def __init__(self, repo: 'Repo', binsha: bytes, object: Union[None, base.Object] = None,
-                 tag: Union[None, str] = None, tagger: Union[None, Actor] = None, tagged_date: Union[int, None] = None,
-                 tagger_tz_offset: Union[int, None] = None, message: Union[str, None] = None
+    def __init__(self, repo: 'Repo', binsha: bytes,
+                 object: Union[None, base.Object] = None,
+                 tag: Union[None, str] = None,
+                 tagger: Union[None, 'Actor'] = None,
+                 tagged_date: Union[int, None] = None,
+                 tagger_tz_offset: Union[int, None] = None,
+                 message: Union[str, None] = None
                  ) -> None:   # @ReservedAssignment
         """Initialize a tag object with additional data
 
