@@ -19,10 +19,10 @@ import calendar
 from datetime import datetime, timedelta, tzinfo
 
 # typing ------------------------------------------------------------
-from typing import (Any, Callable, Deque, IO, Iterator, Sequence, TYPE_CHECKING, Tuple, Type, Union, cast, overload)
+from typing import (Any, Callable, Deque, Iterator, Sequence, TYPE_CHECKING, Tuple, Type, Union, cast, overload)
 
 if TYPE_CHECKING:
-    from io import BytesIO
+    from io import BytesIO, StringIO
     from .submodule.base import Submodule
     from .commit import Commit
     from .blob import Blob
@@ -267,7 +267,7 @@ class ProcessStreamAdapter(object):
 
     def __init__(self, process: 'Popen', stream_name: str) -> None:
         self._proc = process
-        self._stream = getattr(process, stream_name)  # type: IO[str]  ## guess
+        self._stream = getattr(process, stream_name)  # type: StringIO  ## guess
 
     def __getattr__(self, attr: str) -> Any:
         return getattr(self._stream, attr)
