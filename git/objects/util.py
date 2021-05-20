@@ -18,7 +18,7 @@ import calendar
 from datetime import datetime, timedelta, tzinfo
 
 # typing ------------------------------------------------------------
-from typing import Literal, TYPE_CHECKING, Tuple, Type, Union, cast
+from typing import TYPE_CHECKING, Tuple, Type, Union, cast
 
 if TYPE_CHECKING:
     from .commit import Commit
