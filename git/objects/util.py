@@ -18,7 +18,7 @@ import calendar
 from datetime import datetime, timedelta, tzinfo
 
 # typing ------------------------------------------------------------
-from typing import TYPE_CHECKING, Tuple, Type, Union, cast
+from typing import Any, IO, TYPE_CHECKING, Tuple, Type, Union, cast
 
 if TYPE_CHECKING:
     from .commit import Commit
@@ -262,11 +262,11 @@ class ProcessStreamAdapter(object):
     it if the instance goes out of scope."""
     __slots__ = ("_proc", "_stream")
 
-    def __init__(self, process: 'Popen', stream_name: str):
+    def __init__(self, process: 'Popen', stream_name: str) -> None:
         self._proc = process
-        self._stream = getattr(process, stream_name)
+        self._stream = getattr(process, stream_name)  # type: IO[str]  ## guess
 
-    def __getattr__(self, attr):
+    def __getattr__(self, attr: str) -> Any:
         return getattr(self._stream, attr)
 
 
