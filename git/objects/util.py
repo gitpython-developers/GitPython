@@ -5,7 +5,6 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 """Module for general utility functions"""
 
-
 from git.util import (
     IterableList,
     Actor
@@ -20,9 +19,10 @@ import calendar
 from datetime import datetime, timedelta, tzinfo
 
 # typing ------------------------------------------------------------
-from typing import Any, Callable, Deque, IO, Iterator, Sequence, TYPE_CHECKING, Tuple, Type, Union, cast, overload
+from typing import (Any, Callable, Deque, IO, Iterator, Sequence, TYPE_CHECKING, Tuple, Type, Union, cast, overload)
 
 if TYPE_CHECKING:
+    from io import BytesIO
     from .submodule.base import Submodule
     from .commit import Commit
     from .blob import Blob
@@ -412,14 +412,14 @@ class Serializable(object):
     """Defines methods to serialize and deserialize objects from and into a data stream"""
     __slots__ = ()
 
-    def _serialize(self, stream):
+    def _serialize(self, stream: 'BytesIO') -> 'Serializable':
         """Serialize the data of this object into the given data stream
         :note: a serialized object would ``_deserialize`` into the same object
         :param stream: a file-like object
         :return: self"""
         raise NotImplementedError("To be implemented in subclass")
 
-    def _deserialize(self, stream):
+    def _deserialize(self, stream: 'BytesIO') -> 'Serializable':
         """Deserialize all information regarding this object from the stream
         :param stream: a file-like object
         :return: self"""

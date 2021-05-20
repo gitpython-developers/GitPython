@@ -3,7 +3,6 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
-from typing import Iterable, Iterator, Tuple, Union, cast
 from git.util import join_path
 import git.diff as diff
 from git.util import to_bin_sha
@@ -17,6 +16,17 @@ from .fun import (
     tree_entries_from_data,
     tree_to_stream
 )
+
+
+# typing -------------------------------------------------
+
+from typing import Iterable, Iterator, Tuple, Union, cast, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from io import BytesIO
+
+#--------------------------------------------------------
+
 
 cmp = lambda a, b: (a > b) - (a < b)
 
@@ -321,7 +331,7 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
     def __reversed__(self):
         return reversed(self._iter_convert_to_object(self._cache))
 
-    def _serialize(self, stream):
+    def _serialize(self, stream: 'BytesIO') -> 'Tree':
         """Serialize this tree into the stream. Please note that we will assume
         our tree data to be in a sorted state. If this is not the case, serialization
         will not generate a correct tree representation as these are assumed to be sorted
@@ -329,7 +339,7 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
         tree_to_stream(self._cache, stream.write)
         return self
 
-    def _deserialize(self, stream):
+    def _deserialize(self, stream: 'BytesIO') -> 'Tree':
         self._cache = tree_entries_from_data(stream.read())
         return self
 
