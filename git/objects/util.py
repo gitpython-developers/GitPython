@@ -262,7 +262,7 @@ class ProcessStreamAdapter(object):
     it if the instance goes out of scope."""
     __slots__ = ("_proc", "_stream")
 
-    def __init__(self, process: Popen, stream_name: str):
+    def __init__(self, process: 'Popen', stream_name: str):
         self._proc = process
         self._stream = getattr(process, stream_name)
 
