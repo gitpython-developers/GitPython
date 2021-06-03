@@ -422,7 +422,8 @@ class TestRepo(TestBase):
                 self.rorepo.tag(tag)
             except ValueError as valueError:
                 value_errors.append(valueError.args[0])
-        raise ValueError('. '.join(value_errors))
+        if value_errors:
+            raise ValueError('. '.join(value_errors))
 
     def test_archive(self):
         tmpfile = tempfile.mktemp(suffix='archive-test')
