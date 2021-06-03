@@ -612,7 +612,7 @@ class Remote(LazyMixin, Iterable):
             # * [would prune] origin/new_branch
             token = " * [would prune] "
             if not line.startswith(token):
-                raise ValueError("Could not parse git-remote prune result: %r" % line)
+                continue
             ref_name = line.replace(token, "")
             # sometimes, paths start with a full ref name, like refs/tags/foo, see #260
             if ref_name.startswith(Reference._common_path_default + '/'):
