@@ -414,6 +414,16 @@ class TestRepo(TestBase):
     def test_tag(self):
         assert self.rorepo.tag('refs/tags/0.1.5').commit
 
+    def test_tag_to_full_tag_path(self):
+        tags = ['0.1.5', 'tags/0.1.5', 'refs/tags/0.1.5']
+        value_errors = []
+        for tag in tags:
+            try:
+                self.rorepo.tag(tag)
+            except ValueError as valueError:
+                value_errors.append(valueError.args[0])
+        raise ValueError('. '.join(value_errors))
+
     def test_archive(self):
         tmpfile = tempfile.mktemp(suffix='archive-test')
         with open(tmpfile, 'wb') as stream:
@@ -445,7 +455,7 @@ class TestRepo(TestBase):
         tlist = b[0][1]
         self.assertTrue(tlist)
         self.assertTrue(isinstance(tlist[0], str))
-        self.assertTrue(len(tlist) < sum(len(t) for t in tlist))               # test for single-char bug
+        self.assertTrue(len(tlist) < sum(len(t) for t in tlist))  # test for single-char bug
 
         # BINARY BLAME
         git.return_value = fixture('blame_binary')
@@ -454,7 +464,7 @@ class TestRepo(TestBase):
 
     def test_blame_real(self):
         c = 0
-        nml = 0   # amount of multi-lines per blame
+        nml = 0  # amount of multi-lines per blame
         for item in self.rorepo.head.commit.tree.traverse(
                 predicate=lambda i, d: i.type == 'blob' and i.path.endswith('.py')):
             c += 1
@@ -486,7 +496,8 @@ class TestRepo(TestBase):
 
             # Original line numbers
             orig_ranges = flatten([entry.orig_linenos for entry in blame_output])
-            self.assertEqual(orig_ranges, flatten([range(2, 3), range(14, 15), range(1, 2), range(2, 13), range(13, 15)]))   # noqa E501
+            self.assertEqual(orig_ranges, flatten(
+                [range(2, 3), range(14, 15), range(1, 2), range(2, 13), range(13, 15)]))  # noqa E501
 
     @mock.patch.object(Git, '_call_process')
     def test_blame_complex_revision(self, git):
@@ -530,9 +541,9 @@ class TestRepo(TestBase):
         # end for each run
 
     def test_config_reader(self):
-        reader = self.rorepo.config_reader()                # all config files
+        reader = self.rorepo.config_reader()  # all config files
         assert reader.read_only
-        reader = self.rorepo.config_reader("repository")    # single config file
+        reader = self.rorepo.config_reader("repository")  # single config file
         assert reader.read_only
 
     def test_config_writer(self):
@@ -729,7 +740,7 @@ class TestRepo(TestBase):
     def test_rw_rev_parse(self, rwrepo):
         # verify it does not confuse branches with hexsha ids
         ahead = rwrepo.create_head('aaaaaaaa')
-        assert(rwrepo.rev_parse(str(ahead)) == ahead.commit)
+        assert (rwrepo.rev_parse(str(ahead)) == ahead.commit)
 
     def test_rev_parse(self):
         rev_parse = self.rorepo.rev_parse
@@ -1041,7 +1052,7 @@ class TestRepo(TestBase):
     def test_rebasing(self, rw_dir):
         r = Repo.init(rw_dir)
         fp = osp.join(rw_dir, 'hello.txt')
-        r.git.commit("--allow-empty", message="init",)
+        r.git.commit("--allow-empty", message="init", )
         with open(fp, 'w') as fs:
             fs.write("hello world")
         r.git.add(Git.polish_url(fp))
