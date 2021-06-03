@@ -406,7 +406,7 @@ class Repo(object):
         return TagReference(self, full_path)
 
     @staticmethod
-    def _to_full_tag_path(path: PathLike):
+    def _to_full_tag_path(path):
         if path.startswith(TagReference._common_path_default + '/'):
             return path
         if path.startswith(TagReference._common_default + '/'):
