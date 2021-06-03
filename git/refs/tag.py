@@ -18,7 +18,8 @@ class TagReference(Reference):
         print(tagref.tag.message)"""
 
     __slots__ = ()
-    _common_path_default = "refs/tags"
+    _common_default = "tags"
+    _common_path_default = Reference._common_path_default + "/" + _common_default
 
     @property
     def commit(self):
