@@ -414,7 +414,6 @@ class Repo(object):
         else:
             return TagReference._common_path_default + '/' + path
 
-
     def create_head(self, path: PathLike, commit: str = 'HEAD',
                     force: bool = False, logmsg: Optional[str] = None
                     ) -> 'SymbolicReference':
