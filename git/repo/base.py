@@ -402,7 +402,18 @@ class Repo(object):
     def tag(self, path: PathLike) -> TagReference:
         """:return: TagReference Object, reference pointing to a Commit or Tag
         :param path: path to the tag reference, i.e. 0.1.5 or tags/0.1.5 """
-        return TagReference(self, path)
+        full_path = self._to_full_tag_path(path)
+        return TagReference(self, full_path)
+
+    @staticmethod
+    def _to_full_tag_path(path: PathLike):
+        if path.startswith(TagReference._common_path_default + '/'):
+            return path
+        if path.startswith(TagReference._common_default + '/'):
+            return Reference._common_path_default + '/' + path
+        else:
+            return TagReference._common_path_default + '/' + path
+
 
     def create_head(self, path: PathLike, commit: str = 'HEAD',
                     force: bool = False, logmsg: Optional[str] = None
