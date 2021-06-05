@@ -3,11 +3,13 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
-
+import binascii
 import logging
 import os
 import re
 import warnings
+
+from gitdb.exc import BadObject
 
 from git.cmd import (
     Git,
@@ -617,6 +619,23 @@ class Repo(object):
                 return False
             raise
         return True
+
+    def is_valid_object(self, sha: str, object_type: Union['blob', 'commit', 'tree', 'tag'] = None) -> bool:
+        try:
+            complete_sha = self.odb.partial_to_complete_sha_hex(sha)
+            object_info = self.odb.info(complete_sha)
+            if object_type:
+                if object_info.type == object_type.encode():
+                    return True
+                else:
+                    log.debug(f"Commit hash points to an object of type '{object_info.type.decode()}'. "
+                              f"Requested were objects of type '{object_type}'")
+                    return False
+            else:
+                return True
+        except BadObject as e:
+            log.debug("Commit hash is invalid.")
+            return False
 
     def _get_daemon_export(self) -> bool:
         if self.git_dir:
