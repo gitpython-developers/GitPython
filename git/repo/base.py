@@ -620,7 +620,7 @@ class Repo(object):
             raise
         return True
 
-    def is_valid_object(self, sha: str, object_type: Union['blob', 'commit', 'tree', 'tag'] = None) -> bool:
+    def is_valid_object(self, sha: str, object_type: str = None) -> bool:
         try:
             complete_sha = self.odb.partial_to_complete_sha_hex(sha)
             object_info = self.odb.info(complete_sha)
