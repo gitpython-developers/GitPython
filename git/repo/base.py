@@ -633,7 +633,7 @@ class Repo(object):
                     return False
             else:
                 return True
-        except BadObject as e:
+        except BadObject:
             log.debug("Commit hash is invalid.")
             return False
 
