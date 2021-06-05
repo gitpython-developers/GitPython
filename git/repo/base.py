@@ -627,8 +627,8 @@ class Repo(object):
                 if object_info.type == object_type.encode():
                     return True
                 else:
-                    log.debug(f"Commit hash points to an object of type '{object_info.type.decode()}'. "
-                              f"Requested were objects of type '{object_type}'")
+                    log.debug("Commit hash points to an object of type '%s'. Requested were objects of type '%s'",
+                              object_info.type.decode(), object_type)
                     return False
             else:
                 return True
