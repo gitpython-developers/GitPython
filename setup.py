@@ -99,7 +99,7 @@ setup(
     include_package_data=True,
     py_modules=build_py_modules("./git", excludes=["git.ext.*"]),
     package_dir={'git': 'git'},
-    python_requires='>=3.6',
+    python_requires='>=3.5',
     install_requires=requirements,
     tests_require=requirements + test_requirements,
     zip_safe=False,
@@ -127,6 +127,6 @@ setup(
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
-        "Programming Language :: Python :: 3.9"
+         "Programming Language :: Python :: 3.9"
     ]
 )

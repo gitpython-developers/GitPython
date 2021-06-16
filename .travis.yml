@@ -1,6 +1,8 @@
 # UNUSED, only for reference. If adjustments are needed, please see github actions
 language: python
 python:
+  - "3.4"
+  - "3.5"
   - "3.6"
   - "3.7"
   - "3.8"
@@ -36,7 +38,7 @@ script:
   - ulimit -n
   - coverage run --omit="test/*" -m unittest --buffer
   - coverage report
-  - if [ "$TRAVIS_PYTHON_VERSION" == '3.6' ]; then cd doc && make html; fi
+  - if [ "$TRAVIS_PYTHON_VERSION" == '3.5' ]; then cd doc && make html; fi
   - if [ "$TRAVIS_PYTHON_VERSION" == '3.6' ]; then flake8 --ignore=W293,E265,E266,W503,W504,E731; fi
 after_success:
   - codecov
