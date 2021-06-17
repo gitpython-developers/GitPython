@@ -6,29 +6,12 @@ environment:
     CYGWIN64_GIT_PATH: "C:\\cygwin64\\bin;%GIT_DAEMON_PATH%"
 
     matrix:
-      - PYTHON: "C:\\Python34-x64"
-        PYTHON_VERSION: "3.4"
-        GIT_PATH: "%GIT_DAEMON_PATH%"
-      - PYTHON: "C:\\Python35-x64"
-        PYTHON_VERSION: "3.5"
-        GIT_PATH: "%GIT_DAEMON_PATH%"
       - PYTHON: "C:\\Python36-x64"
         PYTHON_VERSION: "3.6"
         GIT_PATH: "%GIT_DAEMON_PATH%"
       - PYTHON: "C:\\Python37-x64"
         PYTHON_VERSION: "3.7"
         GIT_PATH: "%GIT_DAEMON_PATH%"
-      - PYTHON: "C:\\Miniconda35-x64"
-        PYTHON_VERSION: "3.5"
-        IS_CONDA: "yes"
-        MAYFAIL: "yes"
-        GIT_PATH: "%GIT_DAEMON_PATH%"
-        ## Cygwin
-      - PYTHON: "C:\\Python35-x64"
-        PYTHON_VERSION: "3.5"
-        IS_CYGWIN: "yes"
-        MAYFAIL: "yes"
-        GIT_PATH: "%CYGWIN64_GIT_PATH%"
 
 matrix:
     allow_failures:
@@ -76,18 +59,10 @@ install:
 build: false
 
 test_script:
-    -   IF "%IS_CYGWIN%" == "yes" (
-            nosetests -v
-        ) ELSE (
-            IF "%PYTHON_VERSION%" == "3.5" (
-                nosetests -v --with-coverage
-            ) ELSE (
-                nosetests -v
-            )
-        )
+    -   nosetests -v
 
 on_success:
-    - IF "%PYTHON_VERSION%" == "3.5" IF NOT "%IS_CYGWIN%" == "yes" (codecov)
+    - IF "%PYTHON_VERSION%" == "3.6" IF NOT "%IS_CYGWIN%" == "yes" (codecov)
 
 # Enable this to be able to login to the build worker. You can use the
 # `remmina` program in Ubuntu, use the login information that the line below
