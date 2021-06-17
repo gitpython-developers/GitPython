@@ -7,15 +7,12 @@ import sys
 from typing import Union, Any
 
 if sys.version_info[:2] >= (3, 8):
-    from typing import Final, Literal  # noqa: F401
+    from typing import Final, Literal, SupportsIndex  # noqa: F401
 else:
-    from typing_extensions import Final, Literal  # noqa: F401
+    from typing_extensions import Final, Literal, SupportsIndex  # noqa: F401
 
 
-if sys.version_info[:2] < (3, 6):
-    # os.PathLike (PEP-519) only got introduced with Python 3.6
-    PathLike = str
-elif sys.version_info[:2] < (3, 9):
+if sys.version_info[:2] < (3, 9):
     # Python >= 3.6, < 3.9
     PathLike = Union[str, os.PathLike]
 elif sys.version_info[:2] >= (3, 9):
