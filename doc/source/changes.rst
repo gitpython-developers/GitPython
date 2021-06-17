@@ -2,6 +2,14 @@
 Changelog
 =========
 
+3.1.18
+======
+
+* drop support for python 3.5 to reduce maintenance burden on typing. Lower patch levels of python 3.5 would break, too.
+
+See the following for details:
+https://github.com/gitpython-developers/gitpython/milestone/50?closed=1 
+
 3.1.17
 ======
 

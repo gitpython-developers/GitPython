@@ -470,7 +470,7 @@ class RemoteProgress(object):
             line_str = line
         self._cur_line = line_str
 
-        if self.error_lines or self._cur_line.startswith(('error:', 'fatal:')):
+        if self._cur_line.startswith(('error:', 'fatal:')):
             self.error_lines.append(self._cur_line)
             return
 

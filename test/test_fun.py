@@ -1,5 +1,5 @@
 from io import BytesIO
-from stat import S_IFDIR, S_IFREG, S_IFLNK
+from stat import S_IFDIR, S_IFREG, S_IFLNK, S_IXUSR
 from os import stat
 import os.path as osp
 from unittest import SkipTest
@@ -7,7 +7,8 @@ from unittest import SkipTest
 from git import Git
 from git.index import IndexFile
 from git.index.fun import (
-    aggressive_tree_merge
+    aggressive_tree_merge,
+    stat_mode_to_index_mode,
 )
 from git.objects.fun import (
     traverse_tree_recursive,
@@ -205,6 +206,16 @@ class TestFun(TestBase):
             # as one is deleted, there are only 2 entries
             assert_entries(aggressive_tree_merge(odb, trees), 2, True)
         # END handle ours, theirs
+
+    def test_stat_mode_to_index_mode(self):
+        modes = (
+            0o600, 0o611, 0o640, 0o641, 0o644, 0o650, 0o651,
+            0o700, 0o711, 0o740, 0o744, 0o750, 0o751, 0o755,
+        )
+        for mode in modes:
+            expected_mode = S_IFREG | (mode & S_IXUSR and 0o755 or 0o644)
+            assert stat_mode_to_index_mode(mode) == expected_mode
+        # END for each mode
 
     def _assert_tree_entries(self, entries, num_trees):
         for entry in entries:

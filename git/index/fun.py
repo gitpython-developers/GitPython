@@ -11,6 +11,7 @@ from stat import (
     S_ISDIR,
     S_IFMT,
     S_IFREG,
+    S_IXUSR,
 )
 import subprocess
 
@@ -115,7 +116,7 @@ def stat_mode_to_index_mode(mode: int) -> int:
         return S_IFLNK
     if S_ISDIR(mode) or S_IFMT(mode) == S_IFGITLINK:    # submodules
         return S_IFGITLINK
-    return S_IFREG | 0o644 | (mode & 0o111)       # blobs with or without executable bit
+    return S_IFREG | (mode & S_IXUSR and 0o755 or 0o644)  # blobs with or without executable bit
 
 
 def write_cache(entries: Sequence[Union[BaseIndexEntry, 'IndexEntry']], stream: IO[bytes],
