@@ -971,7 +971,7 @@ class IterableList(list):
         # END for each item
         return list.__getattribute__(self, attr)
 
-    def __getitem__(self, index: Union[int, slice, str]) -> Any:
+    def __getitem__(self, index: Union[int, slice, str]) -> Any:   # type: ignore
         if isinstance(index, int):
             return list.__getitem__(self, index)
         elif isinstance(index, slice):
@@ -983,7 +983,7 @@ class IterableList(list):
                 raise IndexError("No item found with id %r" % (self._prefix + index)) from e
         # END handle getattr
 
-    def __delitem__(self, index: Union[int, str, slice]) -> None:
+    def __delitem__(self, index: Union[int, str, slice]) -> None:      # type: ignore
 
         delindex = cast(int, index)
         if not isinstance(index, int):
