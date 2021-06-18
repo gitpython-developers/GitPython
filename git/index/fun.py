@@ -109,7 +109,7 @@ def run_commit_hook(name: str, index: 'IndexFile', *args: str) -> None:
     # end handle return code
 
 
-def stat_mode_to_index_mode(mode):
+def stat_mode_to_index_mode(mode: int) -> int:
     """Convert the given mode from a stat call to the corresponding index mode
     and return it"""
     if S_ISLNK(mode):   # symlinks

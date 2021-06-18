@@ -16,7 +16,7 @@ from .objects.util import mode_str_to_int
 # typing ------------------------------------------------------------------
 
 from typing import Any, Iterator, List, Match, Optional, Tuple, Type, Union, TYPE_CHECKING
-from git.types import PathLike, TBD, Final, Literal
+from git.types import PathLike, TBD, Literal
 
 if TYPE_CHECKING:
     from .objects.tree import Tree
@@ -31,7 +31,7 @@ Lit_change_type = Literal['A', 'D', 'M', 'R', 'T']
 __all__ = ('Diffable', 'DiffIndex', 'Diff', 'NULL_TREE')
 
 # Special object to compare against the empty tree in diffs
-NULL_TREE = object()  # type: Final[object]
+NULL_TREE = object()
 
 _octal_byte_re = re.compile(b'\\\\([0-9]{3})')
 

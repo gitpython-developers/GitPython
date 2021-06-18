@@ -3,16 +3,34 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
+
+from git.exc import WorkTreeRepositoryUnsupported
 from git.util import LazyMixin, join_path_native, stream_copy, bin_to_hex
 
 import gitdb.typ as dbtyp
 import os.path as osp
-from typing import Optional  # noqa: F401 unused import
 
 from .util import get_object_type_by_name
 
 
-_assertion_msg_format = "Created object %r whose python type %r disagrees with the acutal git object type %r"
+# typing ------------------------------------------------------------------
+
+from typing import Any, TYPE_CHECKING, Optional, Union
+
+from git.types import PathLike
+
+if TYPE_CHECKING:
+    from git.repo import Repo
+    from gitdb.base import OStream
+    from .tree import Tree
+    from .blob import Blob
+    from .tag import TagObject
+    from .commit import Commit
+
+# --------------------------------------------------------------------------
+
+
+_assertion_msg_format = "Created object %r whose python type %r disagrees with the acutual git object type %r"
 
 __all__ = ("Object", "IndexObject")
 
@@ -27,7 +45,7 @@ class Object(LazyMixin):
     __slots__ = ("repo", "binsha", "size")
     type = None  # type: Optional[str] # to be set by subclass
 
-    def __init__(self, repo, binsha):
+    def __init__(self, repo: 'Repo', binsha: bytes):
         """Initialize an object by identifying it by its binary sha.
         All keyword arguments will be set on demand if None.
 
@@ -40,7 +58,7 @@ class Object(LazyMixin):
         assert len(binsha) == 20, "Require 20 byte binary sha, got %r, len = %i" % (binsha, len(binsha))
 
     @classmethod
-    def new(cls, repo, id):  # @ReservedAssignment
+    def new(cls, repo: 'Repo', id):  # @ReservedAssignment
         """
         :return: New Object instance of a type appropriate to the object type behind
             id. The id of the newly created object will be a binsha even though
@@ -53,7 +71,7 @@ class Object(LazyMixin):
         return repo.rev_parse(str(id))
 
     @classmethod
-    def new_from_sha(cls, repo, sha1):
+    def new_from_sha(cls, repo: 'Repo', sha1: bytes) -> Union['Commit', 'TagObject', 'Tree', 'Blob']:
         """
         :return: new object instance of a type appropriate to represent the given
             binary sha1
@@ -67,52 +85,52 @@ class Object(LazyMixin):
         inst.size = oinfo.size
         return inst
 
-    def _set_cache_(self, attr):
+    def _set_cache_(self, attr: str) -> None:
         """Retrieve object information"""
         if attr == "size":
             oinfo = self.repo.odb.info(self.binsha)
-            self.size = oinfo.size
+            self.size = oinfo.size  # type:  int
             # assert oinfo.type == self.type, _assertion_msg_format % (self.binsha, oinfo.type, self.type)
         else:
             super(Object, self)._set_cache_(attr)
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         """:return: True if the objects have the same SHA1"""
         if not hasattr(other, 'binsha'):
             return False
         return self.binsha == other.binsha
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         """:return: True if the objects do not have the same SHA1 """
         if not hasattr(other, 'binsha'):
             return True
         return self.binsha != other.binsha
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         """:return: Hash of our id allowing objects to be used in dicts and sets"""
         return hash(self.binsha)
 
-    def __str__(self):
+    def __str__(self) -> str:
         """:return: string of our SHA1 as understood by all git commands"""
         return self.hexsha
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """:return: string with pythonic representation of our object"""
         return '<git.%s "%s">' % (self.__class__.__name__, self.hexsha)
 
     @property
-    def hexsha(self):
+    def hexsha(self) -> str:
         """:return: 40 byte hex version of our 20 byte binary sha"""
         # b2a_hex produces bytes
         return bin_to_hex(self.binsha).decode('ascii')
 
     @property
-    def data_stream(self):
+    def data_stream(self) -> 'OStream':
         """ :return:  File Object compatible stream to the uncompressed raw data of the object
         :note: returned streams must be read in order"""
         return self.repo.odb.stream(self.binsha)
 
-    def stream_data(self, ostream):
+    def stream_data(self, ostream: 'OStream') -> 'Object':
         """Writes our data directly to the given output stream
         :param ostream: File object compatible stream object.
         :return: self"""
@@ -130,7 +148,9 @@ class IndexObject(Object):
     # for compatibility with iterable lists
     _id_attribute_ = 'path'
 
-    def __init__(self, repo, binsha, mode=None, path=None):
+    def __init__(self,
+                 repo: 'Repo', binsha: bytes, mode: Union[None, int] = None, path: Union[None, PathLike] = None
+                 ) -> None:
         """Initialize a newly instanced IndexObject
 
         :param repo: is the Repo we are located in
@@ -150,14 +170,14 @@ class IndexObject(Object):
         if path is not None:
             self.path = path
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         """
         :return:
             Hash of our path as index items are uniquely identifiable by path, not
             by their data !"""
         return hash(self.path)
 
-    def _set_cache_(self, attr):
+    def _set_cache_(self, attr: str) -> None:
         if attr in IndexObject.__slots__:
             # they cannot be retrieved lateron ( not without searching for them )
             raise AttributeError(
@@ -168,16 +188,19 @@ class IndexObject(Object):
         # END handle slot attribute
 
     @property
-    def name(self):
+    def name(self) -> str:
         """:return: Name portion of the path, effectively being the basename"""
         return osp.basename(self.path)
 
     @property
-    def abspath(self):
+    def abspath(self) -> PathLike:
         """
         :return:
             Absolute path to this index object in the file system ( as opposed to the
             .path field which is a path relative to the git repository ).
 
             The returned path will be native to the system and contains '\' on windows. """
-        return join_path_native(self.repo.working_tree_dir, self.path)
+        if self.repo.working_tree_dir is not None:
+            return join_path_native(self.repo.working_tree_dir, self.path)
+        else:
+            raise WorkTreeRepositoryUnsupported("Working_tree_dir was None or empty")

@@ -148,7 +148,6 @@ def dashify(string: str) -> str:
 
 
 def slots_to_dict(self, exclude: Sequence[str] = ()) -> Dict[str, Any]:
-    # annotate self.__slots__ as Tuple[str, ...] once 3.5 dropped
     return {s: getattr(self, s) for s in self.__slots__ if s not in exclude}
 
 
@@ -460,7 +459,7 @@ class Git(LazyMixin):
         If not all data is read to the end of the objects's lifetime, we read the
         rest to assure the underlying stream continues to work"""
 
-        __slots__ = ('_stream', '_nbr', '_size')
+        __slots__: Tuple[str, ...] = ('_stream', '_nbr', '_size')
 
         def __init__(self, size: int, stream: IO[bytes]) -> None:
             self._stream = stream

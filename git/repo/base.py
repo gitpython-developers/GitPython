@@ -530,7 +530,7 @@ class Repo(object):
         :note: Takes all arguments known to iter_commits method"""
         return (c.tree for c in self.iter_commits(*args, **kwargs))
 
-    def tree(self, rev: Union['Commit', 'Tree', None] = None) -> 'Tree':
+    def tree(self, rev: Union['Commit', 'Tree', str, None] = None) -> 'Tree':
         """The Tree object for the given treeish revision
         Examples::
 
