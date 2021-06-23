@@ -10,7 +10,7 @@ GitPython Tutorial
 
 GitPython provides object model access to your git repository. This tutorial is composed of multiple sections, most of which explains a real-life usecase.
 
-All code presented here originated from `test_docs.py <https://github.com/gitpython-developers/GitPython/blob/master/test/test_docs.py>`_ to assure correctness. Knowing this should also allow you to more easily run the code for your own testing purposes, all you need is a developer installation of git-python.
+All code presented here originated from `test_docs.py <https://github.com/gitpython-developers/GitPython/blob/main/test/test_docs.py>`_ to assure correctness. Knowing this should also allow you to more easily run the code for your own testing purposes, all you need is a developer installation of git-python.
 
 Meet the Repo type
 ******************
