@@ -422,7 +422,7 @@ class TestRepo(TestBase):
                 self.rorepo.tag(tag)
             except ValueError as valueError:
                 value_errors.append(valueError.args[0])
-        raise ValueError('. '.join(value_errors))
+        self.assertEqual(value_errors, [])
 
     def test_archive(self):
         tmpfile = tempfile.mktemp(suffix='archive-test')
@@ -988,6 +988,34 @@ class TestRepo(TestBase):
         self.assertFalse(repo.is_ancestor("master", c1))
         for i, j in itertools.permutations([c1, 'ffffff', ''], r=2):
             self.assertRaises(GitCommandError, repo.is_ancestor, i, j)
+
+    def test_is_valid_object(self):
+        repo = self.rorepo
+        commit_sha = 'f6aa8d1'
+        blob_sha = '1fbe3e4375'
+        tree_sha = '960b40fe36'
+        tag_sha = '42c2f60c43'
+
+        # Check for valid objects
+        self.assertTrue(repo.is_valid_object(commit_sha))
+        self.assertTrue(repo.is_valid_object(blob_sha))
+        self.assertTrue(repo.is_valid_object(tree_sha))
+        self.assertTrue(repo.is_valid_object(tag_sha))
+
+        # Check for valid objects of specific type
+        self.assertTrue(repo.is_valid_object(commit_sha, 'commit'))
+        self.assertTrue(repo.is_valid_object(blob_sha, 'blob'))
+        self.assertTrue(repo.is_valid_object(tree_sha, 'tree'))
+        self.assertTrue(repo.is_valid_object(tag_sha, 'tag'))
+
+        # Check for invalid objects
+        self.assertFalse(repo.is_valid_object(b'1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a', 'blob'))
+
+        # Check for invalid objects of specific type
+        self.assertFalse(repo.is_valid_object(commit_sha, 'blob'))
+        self.assertFalse(repo.is_valid_object(blob_sha, 'commit'))
+        self.assertFalse(repo.is_valid_object(tree_sha, 'commit'))
+        self.assertFalse(repo.is_valid_object(tag_sha, 'commit'))
 
     @with_rw_directory
     def test_git_work_tree_dotgit(self, rw_dir):

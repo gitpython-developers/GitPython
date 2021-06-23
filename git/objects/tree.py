@@ -17,6 +17,17 @@ from .fun import (
     tree_to_stream
 )
 
+
+# typing -------------------------------------------------
+
+from typing import Iterable, Iterator, Tuple, Union, cast, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from io import BytesIO
+
+#--------------------------------------------------------
+
+
 cmp = lambda a, b: (a > b) - (a < b)
 
 __all__ = ("TreeModifier", "Tree")
@@ -182,8 +193,10 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
         super(Tree, self).__init__(repo, binsha, mode, path)
 
     @classmethod
-    def _get_intermediate_items(cls, index_object):
+    def _get_intermediate_items(cls, index_object: 'Tree',    # type: ignore
+                                ) -> Tuple['Tree', ...]:
         if index_object.type == "tree":
+            index_object = cast('Tree', index_object)
             return tuple(index_object._iter_convert_to_object(index_object._cache))
         return ()
 
@@ -196,7 +209,8 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
             super(Tree, self)._set_cache_(attr)
         # END handle attribute
 
-    def _iter_convert_to_object(self, iterable):
+    def _iter_convert_to_object(self, iterable: Iterable[Tuple[bytes, int, str]]
+                                ) -> Iterator[Union[Blob, 'Tree', Submodule]]:
         """Iterable yields tuples of (binsha, mode, name), which will be converted
         to the respective object representation"""
         for binsha, mode, name in iterable:
@@ -317,7 +331,7 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
     def __reversed__(self):
         return reversed(self._iter_convert_to_object(self._cache))
 
-    def _serialize(self, stream):
+    def _serialize(self, stream: 'BytesIO') -> 'Tree':
         """Serialize this tree into the stream. Please note that we will assume
         our tree data to be in a sorted state. If this is not the case, serialization
         will not generate a correct tree representation as these are assumed to be sorted
@@ -325,7 +339,7 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
         tree_to_stream(self._cache, stream.write)
         return self
 
-    def _deserialize(self, stream):
+    def _deserialize(self, stream: 'BytesIO') -> 'Tree':
         self._cache = tree_entries_from_data(stream.read())
         return self
 

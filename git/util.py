@@ -29,7 +29,7 @@ import pathlib
 if TYPE_CHECKING:
     from git.remote import Remote
     from git.repo.base import Repo
-from .types import PathLike, TBD, Literal
+from .types import PathLike, TBD, Literal, SupportsIndex
 
 # ---------------------------------------------------------------------
 
@@ -971,7 +971,10 @@ class IterableList(list):
         # END for each item
         return list.__getattribute__(self, attr)
 
-    def __getitem__(self, index: Union[int, slice, str]) -> Any:
+    def __getitem__(self, index: Union[SupportsIndex, int, slice, str]) -> Any:
+
+        assert isinstance(index, (int, str, slice)), "Index of IterableList should be an int or str"
+
         if isinstance(index, int):
             return list.__getitem__(self, index)
         elif isinstance(index, slice):
@@ -983,12 +986,13 @@ class IterableList(list):
                 raise IndexError("No item found with id %r" % (self._prefix + index)) from e
         # END handle getattr
 
-    def __delitem__(self, index: Union[int, str, slice]) -> None:
+    def __delitem__(self, index: Union[SupportsIndex, int, slice, str]) -> Any:
+
+        assert isinstance(index, (int, str)), "Index of IterableList should be an int or str"
 
         delindex = cast(int, index)
         if not isinstance(index, int):
             delindex = -1
-            assert not isinstance(index, slice)
             name = self._prefix + index
             for i, item in enumerate(self):
                 if getattr(item, self._id_attr) == name:

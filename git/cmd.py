@@ -17,9 +17,7 @@ from subprocess import (
 import subprocess
 import sys
 import threading
-from collections import OrderedDict
 from textwrap import dedent
-import warnings
 
 from git.compat import (
     defenc,
@@ -150,7 +148,6 @@ def dashify(string: str) -> str:
 
 
 def slots_to_dict(self, exclude: Sequence[str] = ()) -> Dict[str, Any]:
-    # annotate self.__slots__ as Tuple[str, ...] once 3.5 dropped
     return {s: getattr(self, s) for s in self.__slots__ if s not in exclude}
 
 
@@ -462,7 +459,7 @@ class Git(LazyMixin):
         If not all data is read to the end of the objects's lifetime, we read the
         rest to assure the underlying stream continues to work"""
 
-        __slots__ = ('_stream', '_nbr', '_size')
+        __slots__: Tuple[str, ...] = ('_stream', '_nbr', '_size')
 
         def __init__(self, size: int, stream: IO[bytes]) -> None:
             self._stream = stream
@@ -1005,13 +1002,6 @@ class Git(LazyMixin):
 
     def transform_kwargs(self, split_single_char_options: bool = True, **kwargs: Any) -> List[str]:
         """Transforms Python style kwargs into git command line options."""
-        # Python 3.6 preserves the order of kwargs and thus has a stable
-        # order. For older versions sort the kwargs by the key to get a stable
-        # order.
-        if sys.version_info[:2] < (3, 6):
-            kwargs = OrderedDict(sorted(kwargs.items(), key=lambda x: x[0]))
-            warnings.warn("Python 3.5 support is deprecated and will be removed 2021-09-05.\n" +
-                          "It does not preserve the order for key-word arguments and enforce lexical sorting instead.")
         args = []
         for k, v in kwargs.items():
             if isinstance(v, (list, tuple)):

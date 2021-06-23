@@ -3,6 +3,7 @@ from io import BytesIO
 import logging
 import os
 import stat
+from typing import List
 from unittest import SkipTest
 import uuid
 
@@ -134,10 +135,11 @@ class Submodule(IndexObject, Iterable, Traversable):
             super(Submodule, self)._set_cache_(attr)
         # END handle attribute name
 
-    def _get_intermediate_items(self, item):
+    @classmethod
+    def _get_intermediate_items(cls, item: 'Submodule') -> List['Submodule']:  # type: ignore
         """:return: all the submodules of our module repository"""
         try:
-            return type(self).list_items(item.module())
+            return cls.list_items(item.module())
         except InvalidGitRepositoryError:
             return []
         # END handle intermediate items

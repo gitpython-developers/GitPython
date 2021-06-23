@@ -3,11 +3,12 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
-
 import logging
 import os
 import re
 import warnings
+
+from gitdb.exc import BadObject
 
 from git.cmd import (
     Git,
@@ -529,7 +530,7 @@ class Repo(object):
         :note: Takes all arguments known to iter_commits method"""
         return (c.tree for c in self.iter_commits(*args, **kwargs))
 
-    def tree(self, rev: Union['Commit', 'Tree', None] = None) -> 'Tree':
+    def tree(self, rev: Union['Commit', 'Tree', str, None] = None) -> 'Tree':
         """The Tree object for the given treeish revision
         Examples::
 
@@ -617,6 +618,23 @@ class Repo(object):
                 return False
             raise
         return True
+
+    def is_valid_object(self, sha: str, object_type: str = None) -> bool:
+        try:
+            complete_sha = self.odb.partial_to_complete_sha_hex(sha)
+            object_info = self.odb.info(complete_sha)
+            if object_type:
+                if object_info.type == object_type.encode():
+                    return True
+                else:
+                    log.debug("Commit hash points to an object of type '%s'. Requested were objects of type '%s'",
+                              object_info.type.decode(), object_type)
+                    return False
+            else:
+                return True
+        except BadObject:
+            log.debug("Commit hash is invalid.")
+            return False
 
     def _get_daemon_export(self) -> bool:
         if self.git_dir:

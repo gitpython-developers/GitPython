@@ -36,6 +36,11 @@ import os
 from io import BytesIO
 import logging
 
+from typing import List, Tuple, Union, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from git.repo import Repo
+
 log = logging.getLogger('git.objects.commit')
 log.addHandler(logging.NullHandler())
 
@@ -70,7 +75,8 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
 
     def __init__(self, repo, binsha, tree=None, author=None, authored_date=None, author_tz_offset=None,
                  committer=None, committed_date=None, committer_tz_offset=None,
-                 message=None, parents=None, encoding=None, gpgsig=None):
+                 message=None, parents: Union[Tuple['Commit', ...], List['Commit'], None] = None,
+                 encoding=None, gpgsig=None):
         """Instantiate a new Commit. All keyword arguments taking None as default will
         be implicitly set on first query.
 
@@ -133,11 +139,11 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
             self.gpgsig = gpgsig
 
     @classmethod
-    def _get_intermediate_items(cls, commit):
-        return commit.parents
+    def _get_intermediate_items(cls, commit: 'Commit') -> Tuple['Commit', ...]:  # type: ignore  ## cos overriding super
+        return tuple(commit.parents)
 
     @classmethod
-    def _calculate_sha_(cls, repo, commit):
+    def _calculate_sha_(cls, repo: 'Repo', commit: 'Commit') -> bytes:
         '''Calculate the sha of a commit.
 
         :param repo: Repo object the commit should be part of
@@ -430,7 +436,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
 
     #{ Serializable Implementation
 
-    def _serialize(self, stream):
+    def _serialize(self, stream: BytesIO) -> 'Commit':
         write = stream.write
         write(("tree %s\n" % self.tree).encode('ascii'))
         for p in self.parents:
@@ -471,7 +477,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
         # END handle encoding
         return self
 
-    def _deserialize(self, stream):
+    def _deserialize(self, stream: BytesIO) -> 'Commit':
         """:param from_rev_list: if true, the stream format is coming from the rev-list command
         Otherwise it is assumed to be a plain data stream from our object"""
         readline = stream.readline
@@ -511,7 +517,7 @@ class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
         buf = enc.strip()
         while buf:
             if buf[0:10] == b"encoding ":
-                self.encoding = buf[buf.find(' ') + 1:].decode(
+                self.encoding = buf[buf.find(b' ') + 1:].decode(
                     self.encoding, 'ignore')
             elif buf[0:7] == b"gpgsig ":
                 sig = buf[buf.find(b' ') + 1:] + b"\n"
