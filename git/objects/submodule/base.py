@@ -390,7 +390,7 @@ class Submodule(IndexObject, Iterable, Traversable):
         mrepo = None
         if url is None:
             if not has_module:
-                raise ValueError("A URL was not given and existing repository did not exsit at %s" % path)
+                raise ValueError("A URL was not given and existing repository did not exist at %s" % path)
             # END check url
             mrepo = sm.module()
             urls = [r.url for r in mrepo.remotes]
