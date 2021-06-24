@@ -284,28 +284,6 @@ class Traversable(object):
     """
     __slots__ = ()
 
-    """
-    @overload
-    @classmethod
-    def _get_intermediate_items(cls, item: 'Commit') -> Tuple['Commit', ...]:
-        ...
-
-    @overload
-    @classmethod
-    def _get_intermediate_items(cls, item: 'Submodule') -> Tuple['Submodule', ...]:
-        ...
-
-    @overload
-    @classmethod
-    def _get_intermediate_items(cls, item: 'Tree') -> Tuple['Tree', ...]:
-        ...
-
-    @overload
-    @classmethod
-    def _get_intermediate_items(cls, item: 'Traversable') -> Tuple['Traversable', ...]:
-        ...
-    """
-
     @classmethod
     def _get_intermediate_items(cls, item):
         """
