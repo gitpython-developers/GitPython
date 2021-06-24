@@ -31,7 +31,8 @@ from git.util import (
     to_native_path_linux,
     RemoteProgress,
     rmtree,
-    unbare_repo
+    unbare_repo,
+    IterableList
 )
 from git.util import HIDE_WINDOWS_KNOWN_ERRORS
 
@@ -48,10 +49,6 @@ from .util import (
 
 # typing ----------------------------------------------------------------------
 
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from git.util import IterableList
 
 # -----------------------------------------------------------------------------
 
