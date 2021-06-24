@@ -18,6 +18,7 @@ from sys import maxsize
 import time
 from unittest import SkipTest
 from urllib.parse import urlsplit, urlunsplit
+import warnings
 
 # typing ---------------------------------------------------------
 
@@ -1013,15 +1014,52 @@ class IterableList(List[T]):
         list.__delitem__(self, delindex)
 
 
+class IterableClassWatcher(type):
+    def __init__(cls, name, bases, clsdict):
+        for base in bases:
+            if type(base) == cls:
+                warnings.warn("GitPython Iterable is deprecated due to naming clash. Use IterableObj instead",
+                              DeprecationWarning)
+        super(IterableClassWatcher, cls).__init__(name, bases, clsdict)
+
+
 class Iterable(object):
 
     """Defines an interface for iterable items which is to assure a uniform
     way to retrieve and iterate items within the git repository"""
     __slots__ = ()
     _id_attribute_ = "attribute that most suitably identifies your instance"
+    __metaclass__ = IterableClassWatcher
 
     @classmethod
-    def list_items(cls, repo: 'Repo', *args: Any, **kwargs: Any) -> IterableList['IterableObj']:
+    def list_items(cls, repo, *args, **kwargs):
+        """
+        Find all items of this type - subclasses can specify args and kwargs differently.
+        If no args are given, subclasses are obliged to return all items if no additional
+        arguments arg given.
+
+        :note: Favor the iter_items method as it will
+        :return:list(Item,...) list of item instances"""
+        out_list = IterableList(cls._id_attribute_)
+        out_list.extend(cls.iter_items(repo, *args, **kwargs))
+        return out_list
+
+    @classmethod
+    def iter_items(cls, repo: 'Repo', *args: Any, **kwargs: Any):
+        # return typed to be compatible with subtypes e.g. Remote
+        """For more information about the arguments, see list_items
+        :return:  iterator yielding Items"""
+        raise NotImplementedError("To be implemented by Subclass")
+
+
+class IterableObj():
+    """Defines an interface for iterable items which is to assure a uniform
+    way to retrieve and iterate items within the git repository"""
+    __slots__ = ()
+    _id_attribute_ = "attribute that most suitably identifies your instance"
+
+    @classmethod
+    def list_items(cls, repo: 'Repo', *args: Any, **kwargs: Any) -> IterableList[T]:
         """
         Find all items of this type - subclasses can specify args and kwargs differently.
         If no args are given, subclasses are obliged to return all items if no additional
@@ -1042,10 +1080,6 @@ class Iterable(object):
         raise NotImplementedError("To be implemented by Subclass")
 
 #} END classes
-
-
-class IterableObj(Iterable):
-    pass
 
 
 class NullHandler(logging.Handler):
