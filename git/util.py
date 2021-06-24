@@ -672,7 +672,7 @@ class Actor(object):
 
     @classmethod
     def _main_actor(cls, env_name: str, env_email: str,
-                    config_reader: Union[None, GitConfigParser, SectionConstraint] = None) -> 'Actor':
+                    config_reader: Union[None, 'GitConfigParser', 'SectionConstraint'] = None) -> 'Actor':
         actor = Actor('', '')
         user_id = None  # We use this to avoid multiple calls to getpass.getuser()
 
@@ -701,7 +701,7 @@ class Actor(object):
         return actor
 
     @classmethod
-    def committer(cls, config_reader: Union[None, GitConfigParser, SectionConstraint] = None) -> 'Actor':
+    def committer(cls, config_reader: Union[None, 'GitConfigParser', 'SectionConstraint'] = None) -> 'Actor':
         """
         :return: Actor instance corresponding to the configured committer. It behaves
             similar to the git implementation, such that the environment will override
@@ -748,7 +748,7 @@ class Stats(object):
 
     from git.types import Total_TD, Files_TD
 
-    def __init__(self, total: Total_TD, files: Dict[str, Files_TD]):
+    def __init__(self, total: Total_TD, files: Dict[PathLike, Files_TD]):
         self.total = total
         self.files = files
 

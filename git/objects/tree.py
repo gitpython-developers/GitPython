@@ -20,7 +20,7 @@ from .fun import (
 
 # typing -------------------------------------------------
 
-from typing import Callable, Dict, Iterable, Iterator, List, Tuple, Type, Union, cast, TYPE_CHECKING
+from typing import Callable, Dict, Generic, Iterable, Iterator, List, Tuple, Type, TypeVar, Union, cast, TYPE_CHECKING
 
 from git.types import PathLike
 
@@ -31,13 +31,16 @@ if TYPE_CHECKING:
 #--------------------------------------------------------
 
 
-cmp: Callable[[int, int], int] = lambda a, b: (a > b) - (a < b)
+cmp: Callable[[str, str], int] = lambda a, b: (a > b) - (a < b)
 
 __all__ = ("TreeModifier", "Tree")
 
+T_Tree_cache = TypeVar('T_Tree_cache', bound=Union[Tuple[bytes, int, str]])
 
-def git_cmp(t1: 'Tree', t2: 'Tree') -> int:
+
+def git_cmp(t1: T_Tree_cache, t2: T_Tree_cache) -> int:
     a, b = t1[2], t2[2]
+    assert isinstance(a, str) and isinstance(b, str)  # Need as mypy 9.0 cannot unpack TypeVar properly
     len_a, len_b = len(a), len(b)
     min_len = min(len_a, len_b)
     min_cmp = cmp(a[:min_len], b[:min_len])
@@ -48,7 +51,8 @@ def git_cmp(t1: 'Tree', t2: 'Tree') -> int:
     return len_a - len_b
 
 
-def merge_sort(a: List[int], cmp: Callable[[int, int], int]) -> None:
+def merge_sort(a: List[T_Tree_cache],
+               cmp: Callable[[T_Tree_cache, T_Tree_cache], int]) -> None:
     if len(a) < 2:
         return None
 
@@ -83,7 +87,7 @@ def merge_sort(a: List[int], cmp: Callable[[int, int], int]) -> None:
         k = k + 1
 
 
-class TreeModifier(object):
+class TreeModifier(Generic[T_Tree_cache], object):
 
     """A utility class providing methods to alter the underlying cache in a list-like fashion.
 
@@ -91,10 +95,10 @@ class TreeModifier(object):
     the cache of a tree, will be sorted. Assuring it will be in a serializable state"""
     __slots__ = '_cache'
 
-    def __init__(self, cache):
+    def __init__(self, cache: List[T_Tree_cache]) -> None:
         self._cache = cache
 
-    def _index_by_name(self, name):
+    def _index_by_name(self, name: str) -> int:
         """:return: index of an item with name, or -1 if not found"""
         for i, t in enumerate(self._cache):
             if t[2] == name:
@@ -104,7 +108,7 @@ class TreeModifier(object):
         return -1
 
     #{ Interface
-    def set_done(self):
+    def set_done(self) -> 'TreeModifier':
         """Call this method once you are done modifying the tree information.
         It may be called several times, but be aware that each call will cause
         a sort operation
@@ -114,7 +118,7 @@ class TreeModifier(object):
     #} END interface
 
     #{ Mutators
-    def add(self, sha, mode, name, force=False):
+    def add(self, sha: bytes, mode: int, name: str, force: bool = False) -> 'TreeModifier':
         """Add the given item to the tree. If an item with the given name already
         exists, nothing will be done, but a ValueError will be raised if the
         sha and mode of the existing item do not match the one you add, unless
@@ -132,7 +136,7 @@ class TreeModifier(object):
 
         sha = to_bin_sha(sha)
         index = self._index_by_name(name)
-        item = (sha, mode, name)
+        item: T_Tree_cache = (sha, mode, name)  # type: ignore  ## use Typeguard from typing-extensions 3.10.0
         if index == -1:
             self._cache.append(item)
         else:
@@ -195,7 +199,7 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
     def __init__(self, repo: 'Repo', binsha: bytes, mode: int = tree_id << 12, path: Union[PathLike, None] = None):
         super(Tree, self).__init__(repo, binsha, mode, path)
 
-    @classmethod
+    @ classmethod
     def _get_intermediate_items(cls, index_object: 'Tree',    # type: ignore
                                 ) -> Union[Tuple['Tree', ...], Tuple[()]]:
         if index_object.type == "tree":
@@ -261,17 +265,17 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
         """For PY3 only"""
         return self.join(file)
 
-    @property
+    @ property
     def trees(self) -> List['Tree']:
         """:return: list(Tree, ...) list of trees directly below this tree"""
         return [i for i in self if i.type == "tree"]
 
-    @property
+    @ property
     def blobs(self) -> List['Blob']:
         """:return: list(Blob, ...) list of blobs directly below this tree"""
         return [i for i in self if i.type == "blob"]
 
-    @property
+    @ property
     def cache(self) -> TreeModifier:
         """
         :return: An object allowing to modify the internal cache. This can be used

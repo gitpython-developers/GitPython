@@ -39,4 +39,4 @@ class Total_TD(TypedDict):
 
 class HSH_TD(TypedDict):
     total: Total_TD
-    files: Dict[str, Files_TD]
+    files: Dict[PathLike, Files_TD]
