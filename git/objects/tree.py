@@ -136,7 +136,9 @@ class TreeModifier(Generic[T_Tree_cache], object):
 
         sha = to_bin_sha(sha)
         index = self._index_by_name(name)
-        item: T_Tree_cache = (sha, mode, name)  # type: ignore  ## use Typeguard from typing-extensions 3.10.0
+
+        assert isinstance(sha, bytes) and isinstance(mode, int) and isinstance(name, str)
+        item = cast(T_Tree_cache, (sha, mode, name))   # use Typeguard from typing-extensions 3.10.0
         if index == -1:
             self._cache.append(item)
         else:
@@ -151,14 +153,17 @@ class TreeModifier(Generic[T_Tree_cache], object):
         # END handle name exists
         return self
 
-    def add_unchecked(self, binsha, mode, name):
+    def add_unchecked(self, binsha: bytes, mode: int, name: str) -> None:
         """Add the given item to the tree, its correctness is assumed, which
         puts the caller into responsibility to assure the input is correct.
         For more information on the parameters, see ``add``
         :param binsha: 20 byte binary sha"""
-        self._cache.append((binsha, mode, name))
+        assert isinstance(binsha, bytes) and isinstance(mode, int) and isinstance(name, str)
+        tree_cache = cast(T_Tree_cache, (binsha, mode, name))
 
-    def __delitem__(self, name):
+        self._cache.append(tree_cache)
+
+    def __delitem__(self, name: str) -> None:
         """Deletes an item with the given name if it exists"""
         index = self._index_by_name(name)
         if index > -1:
