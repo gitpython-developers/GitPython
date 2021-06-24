@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     from git.repo.base import Repo
     from git.config import GitConfigParser, SectionConstraint
 
-from .types import PathLike, TBD, Literal, SupportsIndex
+from .types import PathLike, Literal, SupportsIndex, HSH_TD, Files_TD
 
 # ---------------------------------------------------------------------
 
@@ -746,7 +746,9 @@ class Stats(object):
      files = number of changed files as int"""
     __slots__ = ("total", "files")
 
-    def __init__(self, total: Dict[str, Dict[str, int]], files: Dict[str, Dict[str, int]]):
+    from git.types import Total_TD, Files_TD
+
+    def __init__(self, total: Total_TD, files: Dict[str, Files_TD]):
         self.total = total
         self.files = files
 
@@ -756,13 +758,12 @@ class Stats(object):
 
         :return: git.Stat"""
 
-        # hsh: Dict[str, Dict[str, Union[int, Dict[str, int]]]]
-        hsh: Dict[str, Dict[str, TBD]] = {'total': {'insertions': 0,
-                                                    'deletions': 0,
-                                                    'lines': 0,
-                                                    'files': 0},
-                                          'files': {}
-                                          }   # need typeddict?
+        hsh: HSH_TD = {'total': {'insertions': 0,
+                                 'deletions': 0,
+                                 'lines': 0,
+                                 'files': 0},
+                       'files': {}
+                       }
         for line in text.splitlines():
             (raw_insertions, raw_deletions, filename) = line.split("\t")
             insertions = raw_insertions != '-' and int(raw_insertions) or 0
@@ -771,9 +772,9 @@ class Stats(object):
             hsh['total']['deletions'] += deletions
             hsh['total']['lines'] += insertions + deletions
             hsh['total']['files'] += 1
-            files_dict = {'insertions': insertions,
-                          'deletions': deletions,
-                          'lines': insertions + deletions}
+            files_dict: Files_TD = {'insertions': insertions,
+                                    'deletions': deletions,
+                                    'lines': insertions + deletions}
             hsh['files'][filename.strip()] = files_dict
         return Stats(hsh['total'], hsh['files'])
 
