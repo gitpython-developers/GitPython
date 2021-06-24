@@ -712,7 +712,7 @@ class Actor(object):
         return cls._main_actor(cls.env_committer_name, cls.env_committer_email, config_reader)
 
     @classmethod
-    def author(cls, config_reader: Union[None, GitConfigParser, SectionConstraint] = None) -> 'Actor':
+    def author(cls, config_reader: Union[None, 'GitConfigParser', 'SectionConstraint'] = None) -> 'Actor':
         """Same as committer(), but defines the main author. It may be specified in the environment,
         but defaults to the committer"""
         return cls._main_actor(cls.env_author_name, cls.env_author_email, config_reader)
