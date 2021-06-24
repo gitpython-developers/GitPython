@@ -1158,7 +1158,7 @@ class Submodule(IndexObject, IterableObj, Traversable):
         """
         return self._name
 
-    def config_reader(self):
+    def config_reader(self) -> SectionConstraint:
         """
         :return: ConfigReader instance which allows you to qurey the configuration values
             of this submodule, as provided by the .gitmodules file

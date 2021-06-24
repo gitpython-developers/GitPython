@@ -30,6 +30,8 @@ import pathlib
 if TYPE_CHECKING:
     from git.remote import Remote
     from git.repo.base import Repo
+    from git.config import GitConfigParser, SectionConstraint
+
 from .types import PathLike, TBD, Literal, SupportsIndex
 
 # ---------------------------------------------------------------------
@@ -82,7 +84,7 @@ def unbare_repo(func: Callable) -> Callable:
     encounter a bare repository"""
 
     @wraps(func)
-    def wrapper(self: 'Remote', *args: Any, **kwargs: Any) -> TBD:
+    def wrapper(self: 'Remote', *args: Any, **kwargs: Any) -> Callable:
         if self.repo.bare:
             raise InvalidGitRepositoryError("Method '%s' cannot operate on bare repositories" % func.__name__)
         # END bare method
@@ -108,7 +110,7 @@ def rmtree(path: PathLike) -> None:
     :note: we use shutil rmtree but adjust its behaviour to see whether files that
         couldn't be deleted are read-only. Windows will not remove them in that case"""
 
-    def onerror(func: Callable, path: PathLike, exc_info: TBD) -> None:
+    def onerror(func: Callable, path: PathLike, exc_info: str) -> None:
         # Is the error an access error ?
         os.chmod(path, stat.S_IWUSR)
 
@@ -448,7 +450,7 @@ class RemoteProgress(object):
     re_op_relative = re.compile(r"(remote: )?([\w\s]+):\s+(\d+)% \((\d+)/(\d+)\)(.*)")
 
     def __init__(self) -> None:
-        self._seen_ops = []    # type: List[TBD]
+        self._seen_ops = []    # type: List[int]
         self._cur_line = None  # type: Optional[str]
         self.error_lines = []  # type: List[str]
         self.other_lines = []  # type: List[str]
@@ -669,7 +671,8 @@ class Actor(object):
         # END handle name/email matching
 
     @classmethod
-    def _main_actor(cls, env_name: str, env_email: str, config_reader: Optional[TBD] = None) -> 'Actor':
+    def _main_actor(cls, env_name: str, env_email: str,
+                    config_reader: Union[None, GitConfigParser, SectionConstraint] = None) -> 'Actor':
         actor = Actor('', '')
         user_id = None  # We use this to avoid multiple calls to getpass.getuser()
 
@@ -698,7 +701,7 @@ class Actor(object):
         return actor
 
     @classmethod
-    def committer(cls, config_reader: Optional[TBD] = None) -> 'Actor':
+    def committer(cls, config_reader: Union[None, GitConfigParser, SectionConstraint] = None) -> 'Actor':
         """
         :return: Actor instance corresponding to the configured committer. It behaves
             similar to the git implementation, such that the environment will override
@@ -709,7 +712,7 @@ class Actor(object):
         return cls._main_actor(cls.env_committer_name, cls.env_committer_email, config_reader)
 
     @classmethod
-    def author(cls, config_reader: Optional[TBD] = None) -> 'Actor':
+    def author(cls, config_reader: Union[None, GitConfigParser, SectionConstraint] = None) -> 'Actor':
         """Same as committer(), but defines the main author. It may be specified in the environment,
         but defaults to the committer"""
         return cls._main_actor(cls.env_author_name, cls.env_author_email, config_reader)
@@ -752,9 +755,14 @@ class Stats(object):
         """Create a Stat object from output retrieved by git-diff.
 
         :return: git.Stat"""
-        hsh = {'total': {'insertions': 0, 'deletions': 0, 'lines': 0, 'files': 0},
-               'files': {}
-               }  # type: Dict[str, Dict[str, TBD]]   ## need typeddict or refactor for mypy
+
+        # hsh: Dict[str, Dict[str, Union[int, Dict[str, int]]]]
+        hsh: Dict[str, Dict[str, TBD]] = {'total': {'insertions': 0,
+                                                    'deletions': 0,
+                                                    'lines': 0,
+                                                    'files': 0},
+                                          'files': {}
+                                          }   # need typeddict?
         for line in text.splitlines():
             (raw_insertions, raw_deletions, filename) = line.split("\t")
             insertions = raw_insertions != '-' and int(raw_insertions) or 0
@@ -763,9 +771,10 @@ class Stats(object):
             hsh['total']['deletions'] += deletions
             hsh['total']['lines'] += insertions + deletions
             hsh['total']['files'] += 1
-            hsh['files'][filename.strip()] = {'insertions': insertions,
-                                              'deletions': deletions,
-                                              'lines': insertions + deletions}
+            files_dict = {'insertions': insertions,
+                          'deletions': deletions,
+                          'lines': insertions + deletions}
+            hsh['files'][filename.strip()] = files_dict
         return Stats(hsh['total'], hsh['files'])
 
 
@@ -1077,7 +1086,7 @@ class IterableObj():
         return out_list
 
     @classmethod
-    def iter_items(cls, repo: 'Repo', *args: Any, **kwargs: Any) -> Iterator:
+    def iter_items(cls, repo: 'Repo', *args: Any, **kwargs: Any) -> Iterator[T]:
         # return typed to be compatible with subtypes e.g. Remote
         """For more information about the arguments, see list_items
         :return:  iterator yielding Items"""
