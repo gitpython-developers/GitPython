@@ -1036,11 +1036,13 @@ class Iterable(object):
     @classmethod
     def list_items(cls, repo, *args, **kwargs):
         """
+        Deprecaated, use IterableObj instead.
         Find all items of this type - subclasses can specify args and kwargs differently.
         If no args are given, subclasses are obliged to return all items if no additional
         arguments arg given.
 
         :note: Favor the iter_items method as it will
+
         :return:list(Item,...) list of item instances"""
         out_list = IterableList(cls._id_attribute_)
         out_list.extend(cls.iter_items(repo, *args, **kwargs))
