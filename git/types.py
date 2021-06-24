@@ -11,6 +11,11 @@ if sys.version_info[:2] >= (3, 8):
 else:
     from typing_extensions import Final, Literal, SupportsIndex, TypedDict  # noqa: F401
 
+if sys.version_info[:2] >= (3, 10):
+    from typing import TypeGuard  # noqa: F401
+else:
+    from typing_extensions import TypeGuard  # noqa: F401
+
 
 if sys.version_info[:2] < (3, 9):
     # Python >= 3.6, < 3.9
