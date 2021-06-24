@@ -293,7 +293,7 @@ def write_tree_from_cache(entries: List[IndexEntry], odb, sl: slice, si: int = 0
     # finally create the tree
     sio = BytesIO()
     tree_to_stream(tree_items, sio.write)  # converts bytes of each item[0] to str
-    tree_items_stringified = cast(List[Tuple[str, int, str]], tree_items)  # type: List[Tuple[str, int, str]]
+    tree_items_stringified = cast(List[Tuple[str, int, str]], tree_items)
     sio.seek(0)
 
     istream = odb.store(IStream(str_tree_type, len(sio.getvalue()), sio))

@@ -7,6 +7,7 @@ import logging
 import os
 import re
 import warnings
+from gitdb.db.loose import LooseObjectDB
 
 from gitdb.exc import BadObject
 
@@ -100,7 +101,7 @@ class Repo(object):
     # Subclasses may easily bring in their own custom types by placing a constructor or type here
     GitCommandWrapperType = Git
 
-    def __init__(self, path: Optional[PathLike] = None, odbt: Type[GitCmdObjectDB] = GitCmdObjectDB,
+    def __init__(self, path: Optional[PathLike] = None, odbt: Type[LooseObjectDB] = GitCmdObjectDB,
                  search_parent_directories: bool = False, expand_vars: bool = True) -> None:
         """Create a new Repo instance
 
