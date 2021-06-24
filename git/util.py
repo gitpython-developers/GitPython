@@ -1017,10 +1017,12 @@ class IterableList(List[T]):
 class IterableClassWatcher(type):
     def __init__(cls, name, bases, clsdict):
         for base in bases:
-            if type(base) == cls:
-                warnings.warn("GitPython Iterable is deprecated due to naming clash. Use IterableObj instead",
-                              DeprecationWarning)
-        super(IterableClassWatcher, cls).__init__(name, bases, clsdict)
+            if type(base) == IterableClassWatcher:
+                warnings.warn(f"GitPython Iterable subclassed by {name}. "
+                              "Iterable is deprecated due to naming clash, "
+                              "Use IterableObj instead \n",
+                              DeprecationWarning,
+                              stacklevel=2)
 
 
 class Iterable(object):
