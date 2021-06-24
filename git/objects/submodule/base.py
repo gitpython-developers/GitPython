@@ -3,7 +3,6 @@ from io import BytesIO
 import logging
 import os
 import stat
-from typing import List
 from unittest import SkipTest
 import uuid
 
@@ -27,7 +26,7 @@ from git.exc import (
 from git.objects.base import IndexObject, Object
 from git.objects.util import Traversable
 from git.util import (
-    Iterable,
+    IterableObj,
     join_path_native,
     to_native_path_linux,
     RemoteProgress,
@@ -46,6 +45,15 @@ from .util import (
     find_first_remote_branch
 )
 
+
+# typing ----------------------------------------------------------------------
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from git.util import IterableList
+
+# -----------------------------------------------------------------------------
 
 __all__ = ["Submodule", "UpdateProgress"]
 
@@ -74,7 +82,7 @@ UPDWKTREE = UpdateProgress.UPDWKTREE
 # IndexObject comes via util module, its a 'hacky' fix thanks to pythons import
 # mechanism which cause plenty of trouble of the only reason for packages and
 # modules is refactoring - subpackages shouldn't depend on parent packages
-class Submodule(IndexObject, Iterable, Traversable):
+class Submodule(IndexObject, IterableObj, Traversable):
 
     """Implements access to a git submodule. They are special in that their sha
     represents a commit in the submodule's repository which is to be checked out
@@ -136,12 +144,12 @@ class Submodule(IndexObject, Iterable, Traversable):
         # END handle attribute name
 
     @classmethod
-    def _get_intermediate_items(cls, item: 'Submodule') -> List['Submodule']:  # type: ignore
+    def _get_intermediate_items(cls, item: 'Submodule') -> IterableList['Submodule']:
         """:return: all the submodules of our module repository"""
         try:
             return cls.list_items(item.module())
         except InvalidGitRepositoryError:
-            return []
+            return IterableList('')
         # END handle intermediate items
 
     @classmethod
@@ -1163,7 +1171,7 @@ class Submodule(IndexObject, Iterable, Traversable):
         :raise IOError: If the .gitmodules file/blob could not be read"""
         return self._config_parser_constrained(read_only=True)
 
-    def children(self):
+    def children(self) -> IterableList['Submodule']:
         """
         :return: IterableList(Submodule, ...) an iterable list of submodules instances
             which are children of this submodule or 0 if the submodule is not checked out"""

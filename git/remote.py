@@ -13,7 +13,7 @@ from git.compat import (defenc, force_text)
 from git.exc import GitCommandError
 from git.util import (
     LazyMixin,
-    Iterable,
+    IterableObj,
     IterableList,
     RemoteProgress,
     CallableRemoteProgress,
@@ -107,7 +107,7 @@ def to_progress_instance(progress: Union[Callable[..., Any], RemoteProgress, Non
     return progress
 
 
-class PushInfo(object):
+class PushInfo(IterableObj, object):
     """
     Carries information about the result of a push operation of a single head::
 
@@ -220,7 +220,7 @@ class PushInfo(object):
         return PushInfo(flags, from_ref, to_ref_string, remote, old_commit, summary)
 
 
-class FetchInfo(object):
+class FetchInfo(IterableObj, object):
 
     """
     Carries information about the results of a fetch operation of a single head::
@@ -421,7 +421,7 @@ class FetchInfo(object):
         return cls(remote_local_ref, flags, note, old_commit, local_remote_ref)
 
 
-class Remote(LazyMixin, Iterable):
+class Remote(LazyMixin, IterableObj):
 
     """Provides easy read and write access to a git remote.
 
@@ -580,18 +580,18 @@ class Remote(LazyMixin, Iterable):
                 raise ex
 
     @property
-    def refs(self) -> IterableList:
+    def refs(self) -> IterableList[RemoteReference]:
         """
         :return:
             IterableList of RemoteReference objects. It is prefixed, allowing
             you to omit the remote path portion, i.e.::
             remote.refs.master # yields RemoteReference('/refs/remotes/origin/master')"""
-        out_refs = IterableList(RemoteReference._id_attribute_, "%s/" % self.name)
+        out_refs: IterableList[RemoteReference] = IterableList(RemoteReference._id_attribute_, "%s/" % self.name)
         out_refs.extend(RemoteReference.list_items(self.repo, remote=self.name))
         return out_refs
 
     @property
-    def stale_refs(self) -> IterableList:
+    def stale_refs(self) -> IterableList[Reference]:
         """
         :return:
             IterableList RemoteReference objects that do not have a corresponding
@@ -606,7 +606,7 @@ class Remote(LazyMixin, Iterable):
             as well. This is a fix for the issue described here:
             https://github.com/gitpython-developers/GitPython/issues/260
             """
-        out_refs = IterableList(RemoteReference._id_attribute_, "%s/" % self.name)
+        out_refs: IterableList[RemoteReference] = IterableList(RemoteReference._id_attribute_, "%s/" % self.name)
         for line in self.repo.git.remote("prune", "--dry-run", self).splitlines()[2:]:
             # expecting
             # * [would prune] origin/new_branch
@@ -681,11 +681,12 @@ class Remote(LazyMixin, Iterable):
         return self
 
     def _get_fetch_info_from_stderr(self, proc: TBD,
-                                    progress: Union[Callable[..., Any], RemoteProgress, None]) -> IterableList:
+                                    progress: Union[Callable[..., Any], RemoteProgress, None]
+                                    ) -> IterableList['FetchInfo']:
         progress = to_progress_instance(progress)
 
         # skip first line as it is some remote info we are not interested in
-        output = IterableList('name')
+        output: IterableList['FetchInfo'] = IterableList('name')
 
         # lines which are no progress are fetch info lines
         # this also waits for the command to finish
@@ -741,7 +742,7 @@ class Remote(LazyMixin, Iterable):
         return output
 
     def _get_push_info(self, proc: TBD,
-                       progress: Union[Callable[..., Any], RemoteProgress, None]) -> IterableList:
+                       progress: Union[Callable[..., Any], RemoteProgress, None]) -> IterableList[PushInfo]:
         progress = to_progress_instance(progress)
 
         # read progress information from stderr
@@ -749,7 +750,7 @@ class Remote(LazyMixin, Iterable):
         # read the lines manually as it will use carriage returns between the messages
         # to override the previous one. This is why we read the bytes manually
         progress_handler = progress.new_message_handler()
-        output = IterableList('push_infos')
+        output: IterableList[PushInfo] = IterableList('push_infos')
 
         def stdout_handler(line: str) -> None:
             try:
@@ -785,7 +786,7 @@ class Remote(LazyMixin, Iterable):
 
     def fetch(self, refspec: Union[str, List[str], None] = None,
               progress: Union[Callable[..., Any], None] = None,
-              verbose: bool = True, **kwargs: Any) -> IterableList:
+              verbose: bool = True, **kwargs: Any) -> IterableList[FetchInfo]:
         """Fetch the latest changes for this remote
 
         :param refspec:
@@ -832,7 +833,7 @@ class Remote(LazyMixin, Iterable):
 
     def pull(self, refspec: Union[str, List[str], None] = None,
              progress: Union[Callable[..., Any], None] = None,
-             **kwargs: Any) -> IterableList:
+             **kwargs: Any) -> IterableList[FetchInfo]:
         """Pull changes from the given branch, being the same as a fetch followed
         by a merge of branch with your local branch.
 
@@ -853,7 +854,7 @@ class Remote(LazyMixin, Iterable):
 
     def push(self, refspec: Union[str, List[str], None] = None,
              progress: Union[Callable[..., Any], None] = None,
-             **kwargs: Any) -> IterableList:
+             **kwargs: Any) -> IterableList[PushInfo]:
         """Push changes from source branch in refspec to target branch in refspec.
 
         :param refspec: see 'fetch' method

@@ -22,7 +22,7 @@ from urllib.parse import urlsplit, urlunsplit
 # typing ---------------------------------------------------------
 
 from typing import (Any, AnyStr, BinaryIO, Callable, Dict, Generator, IO, Iterator, List,
-                    Optional, Pattern, Sequence, Tuple, Union, cast, TYPE_CHECKING, overload)
+                    Optional, Pattern, Sequence, Tuple, TypeVar, Union, cast, TYPE_CHECKING, overload)
 
 import pathlib
 
@@ -920,7 +920,10 @@ class BlockingLockFile(LockFile):
         # END endless loop
 
 
-class IterableList(list):
+T = TypeVar('T', bound='IterableObj')
+
+
+class IterableList(List[T]):
 
     """
     List of iterable objects allowing to query an object by id or by named index::
@@ -930,6 +933,9 @@ class IterableList(list):
      heads['master']
      heads[0]
 
+    Iterable parent objects = [Commit, SubModule, Reference, FetchInfo, PushInfo]
+    Iterable via inheritance = [Head, TagReference, RemoteReference]
+    ]
     It requires an id_attribute name to be set which will be queried from its
     contained items to have a means for comparison.
 
@@ -938,7 +944,7 @@ class IterableList(list):
     can be left out."""
     __slots__ = ('_id_attr', '_prefix')
 
-    def __new__(cls, id_attr: str, prefix: str = '') -> 'IterableList':
+    def __new__(cls, id_attr: str, prefix: str = '') -> 'IterableList[IterableObj]':
         return super(IterableList, cls).__new__(cls)
 
     def __init__(self, id_attr: str, prefix: str = '') -> None:
@@ -1015,7 +1021,7 @@ class Iterable(object):
     _id_attribute_ = "attribute that most suitably identifies your instance"
 
     @classmethod
-    def list_items(cls, repo: 'Repo', *args: Any, **kwargs: Any) -> 'IterableList':
+    def list_items(cls, repo: 'Repo', *args: Any, **kwargs: Any) -> IterableList['IterableObj']:
         """
         Find all items of this type - subclasses can specify args and kwargs differently.
         If no args are given, subclasses are obliged to return all items if no additional
@@ -1024,18 +1030,22 @@ class Iterable(object):
         :note: Favor the iter_items method as it will
 
         :return:list(Item,...) list of item instances"""
-        out_list = IterableList(cls._id_attribute_)
+        out_list: IterableList = IterableList(cls._id_attribute_)
         out_list.extend(cls.iter_items(repo, *args, **kwargs))
         return out_list
 
     @classmethod
-    def iter_items(cls, repo: 'Repo', *args: Any, **kwargs: Any) -> Iterator[TBD]:
+    def iter_items(cls, repo: 'Repo', *args: Any, **kwargs: Any) -> Iterator:
         # return typed to be compatible with subtypes e.g. Remote
         """For more information about the arguments, see list_items
         :return:  iterator yielding Items"""
         raise NotImplementedError("To be implemented by Subclass")
 
 #} END classes
+
+
+class IterableObj(Iterable):
+    pass
 
 
 class NullHandler(logging.Handler):

@@ -309,7 +309,7 @@ class Repo(object):
         return self._bare
 
     @property
-    def heads(self) -> 'IterableList':
+    def heads(self) -> 'IterableList[Head]':
         """A list of ``Head`` objects representing the branch heads in
         this repo
 
@@ -317,7 +317,7 @@ class Repo(object):
         return Head.list_items(self)
 
     @property
-    def references(self) -> 'IterableList':
+    def references(self) -> 'IterableList[Reference]':
         """A list of Reference objects representing tags, heads and remote references.
 
         :return: IterableList(Reference, ...)"""
@@ -342,7 +342,7 @@ class Repo(object):
         return HEAD(self, 'HEAD')
 
     @property
-    def remotes(self) -> 'IterableList':
+    def remotes(self) -> 'IterableList[Remote]':
         """A list of Remote objects allowing to access and manipulate remotes
         :return: ``git.IterableList(Remote, ...)``"""
         return Remote.list_items(self)
@@ -358,13 +358,13 @@ class Repo(object):
     #{ Submodules
 
     @property
-    def submodules(self) -> 'IterableList':
+    def submodules(self) -> 'IterableList[Submodule]':
         """
         :return: git.IterableList(Submodule, ...) of direct submodules
             available from the current head"""
         return Submodule.list_items(self)
 
-    def submodule(self, name: str) -> 'IterableList':
+    def submodule(self, name: str) -> 'Submodule':
         """ :return: Submodule with the given name
         :raise ValueError: If no such submodule exists"""
         try:
@@ -396,7 +396,7 @@ class Repo(object):
     #}END submodules
 
     @property
-    def tags(self) -> 'IterableList':
+    def tags(self) -> 'IterableList[TagReference]':
         """A list of ``Tag`` objects that are available in this repo
         :return: ``git.IterableList(TagReference, ...)`` """
         return TagReference.list_items(self)
