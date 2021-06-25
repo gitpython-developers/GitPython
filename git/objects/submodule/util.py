@@ -4,6 +4,11 @@ from git.config import GitConfigParser
 from io import BytesIO
 import weakref
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .base import Submodule
+
 __all__ = ('sm_section', 'sm_name', 'mkhead', 'find_first_remote_branch',
            'SubmoduleConfigParser')
 
@@ -60,7 +65,7 @@ class SubmoduleConfigParser(GitConfigParser):
         super(SubmoduleConfigParser, self).__init__(*args, **kwargs)
 
     #{ Interface
-    def set_submodule(self, submodule):
+    def set_submodule(self, submodule: 'Submodule') -> None:
         """Set this instance's submodule. It must be called before
         the first write operation begins"""
         self._smref = weakref.ref(submodule)
