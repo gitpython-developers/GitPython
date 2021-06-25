@@ -53,7 +53,7 @@ from .util import (
 
 from typing import (Dict, IO, List, Sequence, TYPE_CHECKING, Tuple, Type, Union, cast)
 
-from git.types import PathLike
+from git.types import PathLike, TypeGuard
 
 if TYPE_CHECKING:
     from .base import IndexFile
@@ -185,11 +185,17 @@ def read_header(stream: IO[bytes]) -> Tuple[int, int]:
 def entry_key(*entry: Union[BaseIndexEntry, PathLike, int]) -> Tuple[PathLike, int]:
     """:return: Key suitable to be used for the index.entries dictionary
     :param entry: One instance of type BaseIndexEntry or the path and the stage"""
+
+    def is_entry_tuple(entry: Tuple) -> TypeGuard[Tuple[PathLike, int]]:
+        return isinstance(entry, tuple) and len(entry) == 2
+        
     if len(entry) == 1:
-        entry_first = cast(BaseIndexEntry, entry[0])  # type: BaseIndexEntry
+        entry_first = entry[0]
+        assert isinstance(entry_first, BaseIndexEntry)
         return (entry_first.path, entry_first.stage)
     else:
-        entry = cast(Tuple[PathLike, int], tuple(entry))
+        # entry = tuple(entry)
+        assert is_entry_tuple(entry)
         return entry
     # END handle entry
 
