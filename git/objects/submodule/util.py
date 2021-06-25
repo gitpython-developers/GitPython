@@ -65,7 +65,7 @@ class SubmoduleConfigParser(GitConfigParser):
         the first write operation begins"""
         self._smref = weakref.ref(submodule)
 
-    def flush_to_index(self):
+    def flush_to_index(self) -> None:
         """Flush changes in our configuration file to the index"""
         assert self._smref is not None
         # should always have a file here
