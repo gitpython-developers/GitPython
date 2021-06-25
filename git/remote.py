@@ -36,7 +36,7 @@ from .refs import (
 
 # typing-------------------------------------------------------
 
-from typing import Any, Callable, Dict, Iterator, List, Optional, Sequence, TYPE_CHECKING, Union, cast, overload
+from typing import Any, Callable, Dict, Iterator, List, Optional, Sequence, TYPE_CHECKING, Union, overload
 
 from git.types import PathLike, Literal, TBD, TypeGuard
 
@@ -559,8 +559,8 @@ class Remote(LazyMixin, IterableObj):
     def urls(self) -> Iterator[str]:
         """:return: Iterator yielding all configured URL targets on a remote as strings"""
         try:
-            # can replace cast with type assert?
-            remote_details = cast(str, self.repo.git.remote("get-url", "--all", self.name))
+            remote_details = self.repo.git.remote("get-url", "--all", self.name)
+            assert isinstance(remote_details, str)
             for line in remote_details.split('\n'):
                 yield line
         except GitCommandError as ex:
@@ -571,14 +571,16 @@ class Remote(LazyMixin, IterableObj):
             #
             if 'Unknown subcommand: get-url' in str(ex):
                 try:
-                    remote_details = cast(str, self.repo.git.remote("show", self.name))
+                    remote_details = self.repo.git.remote("show", self.name)
+                    assert isinstance(remote_details, str)
                     for line in remote_details.split('\n'):
                         if '  Push  URL:' in line:
                             yield line.split(': ')[-1]
                 except GitCommandError as _ex:
                     if any(msg in str(_ex) for msg in ['correct access rights', 'cannot run ssh']):
                         # If ssh is not setup to access this repository, see issue 694
-                        remote_details = cast(str, self.repo.git.config('--get-all', 'remote.%s.url' % self.name))
+                        remote_details = self.repo.git.config('--get-all', 'remote.%s.url' % self.name)
+                        assert isinstance(remote_details, str)
                         for line in remote_details.split('\n'):
                             yield line
                     else:
