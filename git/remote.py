@@ -38,7 +38,7 @@ from .refs import (
 
 from typing import Any, Callable, Dict, Iterator, List, Optional, Sequence, TYPE_CHECKING, Union, cast, overload
 
-from git.types import PathLike, Literal, TBD
+from git.types import PathLike, Literal, TBD, TypeGuard
 
 if TYPE_CHECKING:
     from git.repo.base import Repo
@@ -48,7 +48,14 @@ if TYPE_CHECKING:
     from git.objects.tag import TagObject
 
 flagKeyLiteral = Literal[' ', '!', '+', '-', '*', '=', 't']
+
+
+def is_flagKeyLiteral(inp: str) -> TypeGuard[flagKeyLiteral]:
+    return inp in [' ', '!', '+', '-', '=', '*', 't']
+
+
 # -------------------------------------------------------------
+
 
 log = logging.getLogger('git.remote')
 log.addHandler(logging.NullHandler())
@@ -325,7 +332,7 @@ class FetchInfo(IterableObj, object):
 
         # parse lines
         control_character, operation, local_remote_ref, remote_local_ref_str, note = match.groups()
-        control_character = cast(flagKeyLiteral, control_character)  # can do this neater once 3.5 dropped
+        assert is_flagKeyLiteral(control_character)
 
         try:
             _new_hex_sha, _fetch_operation, fetch_note = fetch_line.split("\t")
