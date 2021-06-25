@@ -19,7 +19,7 @@ import calendar
 from datetime import datetime, timedelta, tzinfo
 
 # typing ------------------------------------------------------------
-from typing import (Any, Callable, Deque, Iterator, typevar, TYPE_CHECKING, Tuple, Type, Union, cast)
+from typing import (Any, Callable, Deque, Iterator, TypeVar, TYPE_CHECKING, Tuple, Type, Union, cast)
 
 if TYPE_CHECKING:
     from io import BytesIO, StringIO
