@@ -19,7 +19,7 @@ import calendar
 from datetime import datetime, timedelta, tzinfo
 
 # typing ------------------------------------------------------------
-from typing import (Any, Callable, Deque, Iterator, TYPE_CHECKING, Tuple, Type, Union, cast)
+from typing import (Any, Callable, Deque, Iterator, typevar, TYPE_CHECKING, Tuple, Type, Union, cast)
 
 if TYPE_CHECKING:
     from io import BytesIO, StringIO
@@ -29,6 +29,8 @@ if TYPE_CHECKING:
     from .tag import TagObject
     from .tree import Tree
     from subprocess import Popen
+    
+T_Iterableobj = typevar('T_Iterableobj', bound=T_Iterableobj)
 
 # --------------------------------------------------------------------
 
