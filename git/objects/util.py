@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     from .tree import Tree
     from subprocess import Popen
     
-T_Iterableobj = typevar('T_Iterableobj', bound=T_Iterableobj)
+T_Iterableobj = typevar('T_Iterableobj')
 
 # --------------------------------------------------------------------
 
