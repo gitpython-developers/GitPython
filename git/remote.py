@@ -332,7 +332,7 @@ class FetchInfo(IterableObj, object):
 
         # parse lines
         control_character, operation, local_remote_ref, remote_local_ref_str, note = match.groups()
-        assert is_flagKeyLiteral(control_character)
+        assert is_flagKeyLiteral(control_character), f"{control_character}"
 
         try:
             _new_hex_sha, _fetch_operation, fetch_note = fetch_line.split("\t")
