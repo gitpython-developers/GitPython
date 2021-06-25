@@ -47,11 +47,11 @@ if TYPE_CHECKING:
     from git.objects.tree import Tree
     from git.objects.tag import TagObject
 
-flagKeyLiteral = Literal[' ', '!', '+', '-', '*', '=', 't']
+flagKeyLiteral = Literal[' ', '!', '+', '-', '*', '=', 't', '?']
 
 
 def is_flagKeyLiteral(inp: str) -> TypeGuard[flagKeyLiteral]:
-    return inp in [' ', '!', '+', '-', '=', '*', 't']
+    return inp in [' ', '!', '+', '-', '=', '*', 't', '?']
 
 
 # -------------------------------------------------------------
