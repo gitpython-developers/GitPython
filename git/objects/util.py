@@ -19,16 +19,18 @@ import calendar
 from datetime import datetime, timedelta, tzinfo
 
 # typing ------------------------------------------------------------
-from typing import (Any, Callable, Deque, Iterator, Sequence, TYPE_CHECKING, Tuple, Type, Union, cast, overload)
+from typing import (Any, Callable, Deque, Iterator, TypeVar, TYPE_CHECKING, Tuple, Type, Union, cast)
 
 if TYPE_CHECKING:
     from io import BytesIO, StringIO
-    from .submodule.base import Submodule
+    from .submodule.base import Submodule  # noqa: F401
     from .commit import Commit
     from .blob import Blob
     from .tag import TagObject
     from .tree import Tree
     from subprocess import Popen
+    
+T_Iterableobj = TypeVar('T_Iterableobj')
 
 # --------------------------------------------------------------------
 
@@ -284,29 +286,8 @@ class Traversable(object):
     """
     __slots__ = ()
 
-    @overload
     @classmethod
-    def _get_intermediate_items(cls, item: 'Commit') -> Tuple['Commit', ...]:
-        ...
-
-    @overload
-    @classmethod
-    def _get_intermediate_items(cls, item: 'Submodule') -> Tuple['Submodule', ...]:
-        ...
-
-    @overload
-    @classmethod
-    def _get_intermediate_items(cls, item: 'Tree') -> Tuple['Tree', ...]:
-        ...
-
-    @overload
-    @classmethod
-    def _get_intermediate_items(cls, item: 'Traversable') -> Tuple['Traversable', ...]:
-        ...
-
-    @classmethod
-    def _get_intermediate_items(cls, item: 'Traversable'
-                                ) -> Sequence['Traversable']:
+    def _get_intermediate_items(cls, item):
         """
         Returns:
             Tuple of items connected to the given item.
@@ -322,7 +303,7 @@ class Traversable(object):
         """
         :return: IterableList with the results of the traversal as produced by
             traverse()"""
-        out = IterableList(self._id_attribute_)  # type: ignore[attr-defined]  # defined in sublcasses
+        out: IterableList = IterableList(self._id_attribute_)  # type: ignore[attr-defined]  # defined in sublcasses
         out.extend(self.traverse(*args, **kwargs))
         return out
 

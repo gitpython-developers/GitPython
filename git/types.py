@@ -4,12 +4,17 @@
 
 import os
 import sys
-from typing import Union, Any
+from typing import Dict, Union, Any
 
 if sys.version_info[:2] >= (3, 8):
-    from typing import Final, Literal, SupportsIndex  # noqa: F401
+    from typing import Final, Literal, SupportsIndex, TypedDict  # noqa: F401
 else:
-    from typing_extensions import Final, Literal, SupportsIndex  # noqa: F401
+    from typing_extensions import Final, Literal, SupportsIndex, TypedDict  # noqa: F401
+
+if sys.version_info[:2] >= (3, 10):
+    from typing import TypeGuard  # noqa: F401
+else:
+    from typing_extensions import TypeGuard  # noqa: F401
 
 
 if sys.version_info[:2] < (3, 9):
@@ -22,3 +27,21 @@ elif sys.version_info[:2] >= (3, 9):
 TBD = Any
 
 Lit_config_levels = Literal['system', 'global', 'user', 'repository']
+
+
+class Files_TD(TypedDict):
+    insertions: int
+    deletions: int
+    lines: int
+
+
+class Total_TD(TypedDict):
+    insertions: int
+    deletions: int
+    lines: int
+    files: int
+
+
+class HSH_TD(TypedDict):
+    total: Total_TD
+    files: Dict[PathLike, Files_TD]

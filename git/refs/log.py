@@ -82,23 +82,23 @@ class RefLogEntry(tuple):
         return RefLogEntry((oldhexsha, newhexsha, actor, (time, tz_offset), message))
 
     @classmethod
-    def from_line(cls, line):
+    def from_line(cls, line: bytes) -> 'RefLogEntry':
         """:return: New RefLogEntry instance from the given revlog line.
         :param line: line bytes without trailing newline
         :raise ValueError: If line could not be parsed"""
-        line = line.decode(defenc)
-        fields = line.split('\t', 1)
+        line_str = line.decode(defenc)
+        fields = line_str.split('\t', 1)
         if len(fields) == 1:
             info, msg = fields[0], None
         elif len(fields) == 2:
             info, msg = fields
         else:
             raise ValueError("Line must have up to two TAB-separated fields."
-                             " Got %s" % repr(line))
+                             " Got %s" % repr(line_str))
         # END handle first split
 
-        oldhexsha = info[:40]  # type: str
-        newhexsha = info[41:81]   # type: str
+        oldhexsha = info[:40]
+        newhexsha = info[41:81]
         for hexsha in (oldhexsha, newhexsha):
             if not cls._re_hexsha_only.match(hexsha):
                 raise ValueError("Invalid hexsha: %r" % (hexsha,))

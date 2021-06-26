@@ -568,7 +568,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         # note: additional deserialization could be saved if write_tree_from_cache
         # would return sorted tree entries
         root_tree = Tree(self.repo, binsha, path='')
-        root_tree._cache = tree_items
+        root_tree._cache = tree_items  # type: ignore
         return root_tree
 
     def _process_diff_args(self, args: List[Union[str, diff.Diffable, object]]

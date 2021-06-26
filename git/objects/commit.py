@@ -8,7 +8,7 @@ from gitdb import IStream
 from git.util import (
     hex_to_bin,
     Actor,
-    Iterable,
+    IterableObj,
     Stats,
     finalize_process
 )
@@ -47,7 +47,7 @@ log.addHandler(logging.NullHandler())
 __all__ = ('Commit', )
 
 
-class Commit(base.Object, Iterable, Diffable, Traversable, Serializable):
+class Commit(base.Object, IterableObj, Diffable, Traversable, Serializable):
 
     """Wraps a git Commit object.
 
