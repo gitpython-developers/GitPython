@@ -50,9 +50,9 @@ from .util import (
 
 # typing ----------------------------------------------------------------------
 from typing import Dict, TYPE_CHECKING, Tuple
-from typing import Any, Callable, Iterator, Union, cast
+from typing import Any, Callable, Iterator, Union, cast, overload
 
-from git.types import Commit_ish, PathLike
+from git.types import Commit_ish, PathLike, Literal
 
 if TYPE_CHECKING:
     from git.repo import Repo
@@ -167,6 +167,42 @@ class Submodule(IndexObject, TraversableIterableObj):
             return IterableList('')
         # END handle intermediate items
 
+    @overload                     # type: ignore
+    def traverse(self,
+                 predicate: Callable[[Union['TraversedObj', 'TraversedTup'], int], bool],
+                 prune: Callable[[Union['TraversedObj', 'TraversedTup'], int], bool],
+                 depth: int,
+                 branch_first: bool,
+                 visit_once: bool,
+                 ignore_self: Literal[True],
+                 as_edge: Literal[False],  # No Tuple
+                 ) -> Iterator['Submodule']:
+        ...
+
+    @overload
+    def traverse(self,
+                 predicate: Callable[[Union['TraversedObj', 'TraversedTup'], int], bool],
+                 prune: Callable[[Union['TraversedObj', 'TraversedTup'], int], bool],
+                 depth: int,
+                 branch_first: bool,
+                 visit_once: bool,
+                 ignore_self: Literal[False],
+                 as_edge: Literal[True],
+                 ) -> Iterator[Tuple[Union[None, 'Submodule'], 'Submodule']]:
+        ...
+
+    @overload
+    def traverse(self,
+                 predicate: Callable[[Union['TraversedObj', 'TraversedTup'], int], bool],
+                 prune: Callable[[Union['TraversedObj', 'TraversedTup'], int], bool],
+                 depth: int,
+                 branch_first: bool,
+                 visit_once: bool,
+                 ignore_self: Literal[True],
+                 as_edge: Literal[True],
+                 ) -> Iterator[Tuple['Submodule', 'Submodule']]:
+        ...
+
     def traverse(self,
                  predicate: Callable[[Union['TraversedObj', 'TraversedTup'], int], bool] = lambda i, d: True,
                  prune: Callable[[Union['TraversedObj', 'TraversedTup'], int], bool] = lambda i, d: False,
@@ -175,7 +211,7 @@ class Submodule(IndexObject, TraversableIterableObj):
                  visit_once: bool = True,
                  ignore_self: int = 1,
                  as_edge: bool = False
-                 ) -> Union[Iterator['Submodule'], Iterator[Tuple['Submodule', 'Submodule']]]:
+                 ) -> Union[Iterator['Submodule'], Iterator[Tuple[Union[None, 'Submodule'], 'Submodule']]]:
         """For documentation, see util.Traversable._traverse()"""
 
         # """
