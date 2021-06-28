@@ -37,9 +37,9 @@ import logging
 
 # typing ------------------------------------------------------------------
 
-from typing import Any, Callable, Iterator, List, Sequence, Tuple, Union, TYPE_CHECKING, cast
+from typing import Any, Callable, Iterator, List, Sequence, Tuple, Union, TYPE_CHECKING, cast, overload
 
-from git.types import PathLike
+from git.types import PathLike, Literal
 
 if TYPE_CHECKING:
     from git.repo import Repo
@@ -286,6 +286,42 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
 
         return self.iter_items(self.repo, self, paths, **kwargs)
 
+    @overload                     # type: ignore
+    def traverse(self,
+                 predicate: Callable[[Union['TraversedObj', 'TraversedTup'], int], bool],
+                 prune: Callable[[Union['TraversedObj', 'TraversedTup'], int], bool],
+                 depth: int,
+                 branch_first: bool,
+                 visit_once: bool,
+                 ignore_self: Literal[True],
+                 as_edge: Literal[False],  # No Tuple
+                 ) -> Iterator['Commit']:
+        ...
+
+    @overload
+    def traverse(self,
+                 predicate: Callable[[Union['TraversedObj', 'TraversedTup'], int], bool],
+                 prune: Callable[[Union['TraversedObj', 'TraversedTup'], int], bool],
+                 depth: int,
+                 branch_first: bool,
+                 visit_once: bool,
+                 ignore_self: Literal[False],
+                 as_edge: Literal[True],
+                 ) -> Iterator[Tuple[Union[None, 'Commit'], 'Commit']]:
+        ...
+
+    @overload
+    def traverse(self,
+                 predicate: Callable[[Union['TraversedObj', 'TraversedTup'], int], bool],
+                 prune: Callable[[Union['TraversedObj', 'TraversedTup'], int], bool],
+                 depth: int,
+                 branch_first: bool,
+                 visit_once: bool,
+                 ignore_self: Literal[True],
+                 as_edge: Literal[True],
+                 ) -> Iterator[Tuple['Commit', 'Commit']]:
+        ...
+
     def traverse(self,
                  predicate: Callable[[Union['TraversedObj', 'TraversedTup'], int], bool] = lambda i, d: True,
                  prune: Callable[[Union['TraversedObj', 'TraversedTup'], int], bool] = lambda i, d: False,
@@ -295,7 +331,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
                  ignore_self: int = 1,
                  as_edge: bool = False
                  ) -> Union[Iterator['Commit'],
-                            Iterator[Tuple['Commit', 'Commit']]]:
+                            Iterator[Tuple[Union[None, 'Commit'], 'Commit']]]:
         """For documentation, see util.Traversable._traverse()"""
 
         """
@@ -315,7 +351,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         return ret_tup[0]
         """
         return cast(Union[Iterator['Commit'],
-                          Iterator[Tuple['Commit', 'Commit']]],
+                          Iterator[Tuple[Union[None, 'Commit'], 'Commit']]],
                     super(Commit, self).traverse(
                         predicate, prune, depth, branch_first, visit_once, ignore_self, as_edge
         ))
