@@ -304,7 +304,7 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
                  branch_first: bool,
                  visit_once: bool,
                  ignore_self: Literal[True],
-                 as_edge: bool
+                 as_edge: Literal[False],  # No Tuple
                  ) -> Iterator[Union['Tree', 'Blob', 'Submodule']]:
         ...
 
@@ -316,7 +316,19 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
                  branch_first: bool,
                  visit_once: bool,
                  ignore_self: Literal[False],
-                 as_edge: bool
+                 as_edge: Literal[True],
+                 ) -> Iterator[Tuple[Union[None, 'Tree', 'Submodule'], Union['Tree', 'Blob', 'Submodule']]]:
+        ...
+
+    @overload
+    def traverse(self,
+                 predicate: Callable[[Union['TraversedObj', 'TraversedTup'], int], bool],
+                 prune: Callable[[Union['TraversedObj', 'TraversedTup'], int], bool],
+                 depth: int,
+                 branch_first: bool,
+                 visit_once: bool,
+                 ignore_self: Literal[True],
+                 as_edge: Literal[True],
                  ) -> Iterator[Tuple[Union['Tree', 'Submodule'], Union['Tree', 'Blob', 'Submodule']]]:
         ...
 
@@ -329,7 +341,7 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
                  ignore_self: int = 1,
                  as_edge: bool = False
                  ) -> Union[Iterator[Union['Tree', 'Blob', 'Submodule']],
-                            Iterator[Tuple[Union['Tree', 'Submodule'], Union['Tree', 'Blob', 'Submodule']]]]:
+                            Iterator[Tuple[Union['Tree', 'Submodule', None], Union['Tree', 'Blob', 'Submodule']]]]:
         """For documentation, see util.Traversable._traverse()
         Trees are set to visit_once = False to gain more performance in the traversal"""
 
@@ -343,7 +355,8 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
         # ret_tup = itertools.tee(ret, 2)
         # assert is_tree_traversed(ret_tup), f"Type is {[type(x) for x in list(ret_tup[0])]}"
         # return ret_tup[0]"""
-        return cast(Iterator[Union['Tree', 'Blob', 'Submodule']],
+        return cast(Union[Iterator[Union['Tree', 'Blob', 'Submodule']],
+                          Iterator[Tuple[Union['Tree', 'Submodule', None], Union['Tree', 'Blob', 'Submodule']]]],
                     super(Tree, self).traverse(predicate, prune, depth,
                                                branch_first, visit_once, ignore_self))
 
