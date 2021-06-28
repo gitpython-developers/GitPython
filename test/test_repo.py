@@ -422,7 +422,7 @@ class TestRepo(TestBase):
                 self.rorepo.tag(tag)
             except ValueError as valueError:
                 value_errors.append(valueError.args[0])
-        raise ValueError('. '.join(value_errors))
+        self.assertEqual(value_errors, [])
 
     def test_archive(self):
         tmpfile = tempfile.mktemp(suffix='archive-test')
@@ -455,7 +455,7 @@ class TestRepo(TestBase):
         tlist = b[0][1]
         self.assertTrue(tlist)
         self.assertTrue(isinstance(tlist[0], str))
-        self.assertTrue(len(tlist) < sum(len(t) for t in tlist))  # test for single-char bug
+        self.assertTrue(len(tlist) < sum(len(t) for t in tlist))               # test for single-char bug
 
         # BINARY BLAME
         git.return_value = fixture('blame_binary')
@@ -464,7 +464,7 @@ class TestRepo(TestBase):
 
     def test_blame_real(self):
         c = 0
-        nml = 0  # amount of multi-lines per blame
+        nml = 0   # amount of multi-lines per blame
         for item in self.rorepo.head.commit.tree.traverse(
                 predicate=lambda i, d: i.type == 'blob' and i.path.endswith('.py')):
             c += 1
@@ -496,8 +496,7 @@ class TestRepo(TestBase):
 
             # Original line numbers
             orig_ranges = flatten([entry.orig_linenos for entry in blame_output])
-            self.assertEqual(orig_ranges, flatten(
-                [range(2, 3), range(14, 15), range(1, 2), range(2, 13), range(13, 15)]))  # noqa E501
+            self.assertEqual(orig_ranges, flatten([range(2, 3), range(14, 15), range(1, 2), range(2, 13), range(13, 15)]))   # noqa E501
 
     @mock.patch.object(Git, '_call_process')
     def test_blame_complex_revision(self, git):
@@ -541,9 +540,9 @@ class TestRepo(TestBase):
         # end for each run
 
     def test_config_reader(self):
-        reader = self.rorepo.config_reader()  # all config files
+        reader = self.rorepo.config_reader()                # all config files
         assert reader.read_only
-        reader = self.rorepo.config_reader("repository")  # single config file
+        reader = self.rorepo.config_reader("repository")    # single config file
         assert reader.read_only
 
     def test_config_writer(self):
@@ -740,7 +739,7 @@ class TestRepo(TestBase):
     def test_rw_rev_parse(self, rwrepo):
         # verify it does not confuse branches with hexsha ids
         ahead = rwrepo.create_head('aaaaaaaa')
-        assert (rwrepo.rev_parse(str(ahead)) == ahead.commit)
+        assert(rwrepo.rev_parse(str(ahead)) == ahead.commit)
 
     def test_rev_parse(self):
         rev_parse = self.rorepo.rev_parse
@@ -990,6 +989,34 @@ class TestRepo(TestBase):
         for i, j in itertools.permutations([c1, 'ffffff', ''], r=2):
             self.assertRaises(GitCommandError, repo.is_ancestor, i, j)
 
+    def test_is_valid_object(self):
+        repo = self.rorepo
+        commit_sha = 'f6aa8d1'
+        blob_sha = '1fbe3e4375'
+        tree_sha = '960b40fe36'
+        tag_sha = '42c2f60c43'
+
+        # Check for valid objects
+        self.assertTrue(repo.is_valid_object(commit_sha))
+        self.assertTrue(repo.is_valid_object(blob_sha))
+        self.assertTrue(repo.is_valid_object(tree_sha))
+        self.assertTrue(repo.is_valid_object(tag_sha))
+
+        # Check for valid objects of specific type
+        self.assertTrue(repo.is_valid_object(commit_sha, 'commit'))
+        self.assertTrue(repo.is_valid_object(blob_sha, 'blob'))
+        self.assertTrue(repo.is_valid_object(tree_sha, 'tree'))
+        self.assertTrue(repo.is_valid_object(tag_sha, 'tag'))
+
+        # Check for invalid objects
+        self.assertFalse(repo.is_valid_object(b'1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a', 'blob'))
+
+        # Check for invalid objects of specific type
+        self.assertFalse(repo.is_valid_object(commit_sha, 'blob'))
+        self.assertFalse(repo.is_valid_object(blob_sha, 'commit'))
+        self.assertFalse(repo.is_valid_object(tree_sha, 'commit'))
+        self.assertFalse(repo.is_valid_object(tag_sha, 'commit'))
+
     @with_rw_directory
     def test_git_work_tree_dotgit(self, rw_dir):
         """Check that we find .git as a worktree file and find the worktree
@@ -1052,7 +1079,7 @@ class TestRepo(TestBase):
     def test_rebasing(self, rw_dir):
         r = Repo.init(rw_dir)
         fp = osp.join(rw_dir, 'hello.txt')
-        r.git.commit("--allow-empty", message="init", )
+        r.git.commit("--allow-empty", message="init",)
         with open(fp, 'w') as fs:
             fs.write("hello world")
         r.git.add(Git.polish_url(fp))

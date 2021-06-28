@@ -1,6 +1,6 @@
 from git.util import (
     LazyMixin,
-    Iterable,
+    IterableObj,
 )
 from .symbolic import SymbolicReference
 
@@ -23,7 +23,7 @@ def require_remote_ref_path(func):
 #}END utilities
 
 
-class Reference(SymbolicReference, LazyMixin, Iterable):
+class Reference(SymbolicReference, LazyMixin, IterableObj):
 
     """Represents a named reference to any object. Subclasses may apply restrictions though,
     i.e. Heads can only point to commits."""

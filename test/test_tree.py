@@ -8,7 +8,7 @@ from io import BytesIO
 import sys
 from unittest import skipIf
 
-from git import (
+from git.objects import (
     Tree,
     Blob
 )

@@ -3,11 +3,13 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
-
 import logging
 import os
 import re
 import warnings
+from gitdb.db.loose import LooseObjectDB
+
+from gitdb.exc import BadObject
 
 from git.cmd import (
     Git,
@@ -34,7 +36,7 @@ import gitdb
 
 # typing ------------------------------------------------------
 
-from git.types import TBD, PathLike, Lit_config_levels
+from git.types import TBD, PathLike, Lit_config_levels, Commit_ish, Tree_ish
 from typing import (Any, BinaryIO, Callable, Dict,
                     Iterator, List, Mapping, Optional, Sequence,
                     TextIO, Tuple, Type, Union,
@@ -43,7 +45,7 @@ from typing import (Any, BinaryIO, Callable, Dict,
 if TYPE_CHECKING:  # only needed for types
     from git.util import IterableList
     from git.refs.symbolic import SymbolicReference
-    from git.objects import TagObject, Blob, Tree  # NOQA: F401
+    from git.objects import Tree
 
 
 # -----------------------------------------------------------
@@ -99,7 +101,7 @@ class Repo(object):
     # Subclasses may easily bring in their own custom types by placing a constructor or type here
     GitCommandWrapperType = Git
 
-    def __init__(self, path: Optional[PathLike] = None, odbt: Type[GitCmdObjectDB] = GitCmdObjectDB,
+    def __init__(self, path: Optional[PathLike] = None, odbt: Type[LooseObjectDB] = GitCmdObjectDB,
                  search_parent_directories: bool = False, expand_vars: bool = True) -> None:
         """Create a new Repo instance
 
@@ -307,7 +309,7 @@ class Repo(object):
         return self._bare
 
     @property
-    def heads(self) -> 'IterableList':
+    def heads(self) -> 'IterableList[Head]':
         """A list of ``Head`` objects representing the branch heads in
         this repo
 
@@ -315,7 +317,7 @@ class Repo(object):
         return Head.list_items(self)
 
     @property
-    def references(self) -> 'IterableList':
+    def references(self) -> 'IterableList[Reference]':
         """A list of Reference objects representing tags, heads and remote references.
 
         :return: IterableList(Reference, ...)"""
@@ -340,7 +342,7 @@ class Repo(object):
         return HEAD(self, 'HEAD')
 
     @property
-    def remotes(self) -> 'IterableList':
+    def remotes(self) -> 'IterableList[Remote]':
         """A list of Remote objects allowing to access and manipulate remotes
         :return: ``git.IterableList(Remote, ...)``"""
         return Remote.list_items(self)
@@ -356,13 +358,13 @@ class Repo(object):
     #{ Submodules
 
     @property
-    def submodules(self) -> 'IterableList':
+    def submodules(self) -> 'IterableList[Submodule]':
         """
         :return: git.IterableList(Submodule, ...) of direct submodules
             available from the current head"""
         return Submodule.list_items(self)
 
-    def submodule(self, name: str) -> 'IterableList':
+    def submodule(self, name: str) -> 'Submodule':
         """ :return: Submodule with the given name
         :raise ValueError: If no such submodule exists"""
         try:
@@ -394,7 +396,7 @@ class Repo(object):
     #}END submodules
 
     @property
-    def tags(self) -> 'IterableList':
+    def tags(self) -> 'IterableList[TagReference]':
         """A list of ``Tag`` objects that are available in this repo
         :return: ``git.IterableList(TagReference, ...)`` """
         return TagReference.list_items(self)
@@ -402,7 +404,17 @@ class Repo(object):
     def tag(self, path: PathLike) -> TagReference:
         """:return: TagReference Object, reference pointing to a Commit or Tag
         :param path: path to the tag reference, i.e. 0.1.5 or tags/0.1.5 """
-        return TagReference(self, path)
+        full_path = self._to_full_tag_path(path)
+        return TagReference(self, full_path)
+
+    @staticmethod
+    def _to_full_tag_path(path):
+        if path.startswith(TagReference._common_path_default + '/'):
+            return path
+        if path.startswith(TagReference._common_default + '/'):
+            return Reference._common_path_default + '/' + path
+        else:
+            return TagReference._common_path_default + '/' + path
 
     def create_head(self, path: PathLike, commit: str = 'HEAD',
                     force: bool = False, logmsg: Optional[str] = None
@@ -503,8 +515,8 @@ class Repo(object):
             repository = configuration file for this repository only"""
         return GitConfigParser(self._get_config_path(config_level), read_only=False, repo=self)
 
-    def commit(self, rev: Optional[TBD] = None
-               ) -> Union['SymbolicReference', Commit, 'TagObject', 'Blob', 'Tree']:
+    def commit(self, rev: Optional[str] = None
+               ) -> Commit:
         """The Commit object for the specified revision
 
         :param rev: revision specifier, see git-rev-parse for viable options.
@@ -519,7 +531,7 @@ class Repo(object):
         :note: Takes all arguments known to iter_commits method"""
         return (c.tree for c in self.iter_commits(*args, **kwargs))
 
-    def tree(self, rev: Union['Commit', 'Tree', None] = None) -> 'Tree':
+    def tree(self, rev: Union[Tree_ish, str, None] = None) -> 'Tree':
         """The Tree object for the given treeish revision
         Examples::
 
@@ -562,7 +574,7 @@ class Repo(object):
         return Commit.iter_items(self, rev, paths, **kwargs)
 
     def merge_base(self, *rev: TBD, **kwargs: Any
-                   ) -> List[Union['SymbolicReference', Commit, 'TagObject', 'Blob', 'Tree', None]]:
+                   ) -> List[Union['SymbolicReference', Commit_ish, None]]:
         """Find the closest common ancestor for the given revision (e.g. Commits, Tags, References, etc)
 
         :param rev: At least two revs to find the common ancestor for.
@@ -575,7 +587,7 @@ class Repo(object):
             raise ValueError("Please specify at least two revs, got only %i" % len(rev))
         # end handle input
 
-        res = []  # type: List[Union['SymbolicReference', Commit, 'TagObject', 'Blob', 'Tree', None]]
+        res = []  # type: List[Union['SymbolicReference', Commit_ish, None]]
         try:
             lines = self.git.merge_base(*rev, **kwargs).splitlines()  # List[str]
         except GitCommandError as err:
@@ -607,6 +619,23 @@ class Repo(object):
                 return False
             raise
         return True
+
+    def is_valid_object(self, sha: str, object_type: str = None) -> bool:
+        try:
+            complete_sha = self.odb.partial_to_complete_sha_hex(sha)
+            object_info = self.odb.info(complete_sha)
+            if object_type:
+                if object_info.type == object_type.encode():
+                    return True
+                else:
+                    log.debug("Commit hash points to an object of type '%s'. Requested were objects of type '%s'",
+                              object_info.type.decode(), object_type)
+                    return False
+            else:
+                return True
+        except BadObject:
+            log.debug("Commit hash is invalid.")
+            return False
 
     def _get_daemon_export(self) -> bool:
         if self.git_dir:
@@ -1130,7 +1159,7 @@ class Repo(object):
         clazz = self.__class__
         return '<%s.%s %r>' % (clazz.__module__, clazz.__name__, self.git_dir)
 
-    def currently_rebasing_on(self) -> Union['SymbolicReference', Commit, 'TagObject', 'Blob', 'Tree', None]:
+    def currently_rebasing_on(self) -> Union['SymbolicReference', Commit_ish, None]:
         """
         :return: The commit which is currently being replayed while rebasing.
 

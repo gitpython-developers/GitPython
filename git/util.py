@@ -4,6 +4,9 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
+from .exc import InvalidGitRepositoryError
+import os.path as osp
+from .compat import is_win
 import contextlib
 from functools import wraps
 import getpass
@@ -18,19 +21,27 @@ from sys import maxsize
 import time
 from unittest import SkipTest
 from urllib.parse import urlsplit, urlunsplit
+import warnings
+
+# from git.objects.util import Traversable
 
 # typing ---------------------------------------------------------
 
-from typing import (Any, AnyStr, BinaryIO, Callable, Dict, Generator, IO, Iterator, List,
-                    Optional, Pattern, Sequence, Tuple, Union, cast, TYPE_CHECKING, overload)
+from typing import (Any, AnyStr, BinaryIO, Callable, Dict, Generator, IO, Iterable as typIter, Iterator, List,
+                    Optional, Pattern, Sequence, Tuple, TypeVar, Union, cast, TYPE_CHECKING, overload)
 
 import pathlib
 
 if TYPE_CHECKING:
     from git.remote import Remote
     from git.repo.base import Repo
-from .types import PathLike, TBD, Literal
+    from git.config import GitConfigParser, SectionConstraint
 
+from .types import PathLike, Literal, SupportsIndex, HSH_TD, Total_TD, Files_TD
+
+T_IterableObj = TypeVar('T_IterableObj', bound=Union['IterableObj', typIter], covariant=True)
+
+# So IterableList[Head] is subtype of IterableList[IterableObj]
 # ---------------------------------------------------------------------
 
 
@@ -45,11 +56,6 @@ from gitdb.util import (  # NOQA @IgnorePep8
     bin_to_hex,             # @UnusedImport
     hex_to_bin,             # @UnusedImport
 )
-
-from .compat import is_win
-import os.path as osp
-
-from .exc import InvalidGitRepositoryError
 
 
 # NOTE:  Some of the unused imports might be used/imported by others.
@@ -81,7 +87,7 @@ def unbare_repo(func: Callable) -> Callable:
     encounter a bare repository"""
 
     @wraps(func)
-    def wrapper(self: 'Remote', *args: Any, **kwargs: Any) -> TBD:
+    def wrapper(self: 'Remote', *args: Any, **kwargs: Any) -> Callable:
         if self.repo.bare:
             raise InvalidGitRepositoryError("Method '%s' cannot operate on bare repositories" % func.__name__)
         # END bare method
@@ -107,7 +113,7 @@ def rmtree(path: PathLike) -> None:
     :note: we use shutil rmtree but adjust its behaviour to see whether files that
         couldn't be deleted are read-only. Windows will not remove them in that case"""
 
-    def onerror(func: Callable, path: PathLike, exc_info: TBD) -> None:
+    def onerror(func: Callable, path: PathLike, exc_info: str) -> None:
         # Is the error an access error ?
         os.chmod(path, stat.S_IWUSR)
 
@@ -178,6 +184,7 @@ else:
     # no need for any work on linux
     def to_native_path_linux(path: PathLike) -> PathLike:
         return path
+
     to_native_path = to_native_path_linux
 
 
@@ -430,7 +437,7 @@ class RemoteProgress(object):
     Handler providing an interface to parse progress information emitted by git-push
     and git-fetch and to dispatch callbacks allowing subclasses to react to the progress.
     """
-    _num_op_codes = 9
+    _num_op_codes: int = 9
     BEGIN, END, COUNTING, COMPRESSING, WRITING, RECEIVING, RESOLVING, FINDING_SOURCES, CHECKING_OUT = \
         [1 << x for x in range(_num_op_codes)]
     STAGE_MASK = BEGIN | END
@@ -447,7 +454,7 @@ class RemoteProgress(object):
     re_op_relative = re.compile(r"(remote: )?([\w\s]+):\s+(\d+)% \((\d+)/(\d+)\)(.*)")
 
     def __init__(self) -> None:
-        self._seen_ops = []    # type: List[TBD]
+        self._seen_ops = []    # type: List[int]
         self._cur_line = None  # type: Optional[str]
         self.error_lines = []  # type: List[str]
         self.other_lines = []  # type: List[str]
@@ -668,7 +675,8 @@ class Actor(object):
         # END handle name/email matching
 
     @classmethod
-    def _main_actor(cls, env_name: str, env_email: str, config_reader: Optional[TBD] = None) -> 'Actor':
+    def _main_actor(cls, env_name: str, env_email: str,
+                    config_reader: Union[None, 'GitConfigParser', 'SectionConstraint'] = None) -> 'Actor':
         actor = Actor('', '')
         user_id = None  # We use this to avoid multiple calls to getpass.getuser()
 
@@ -697,7 +705,7 @@ class Actor(object):
         return actor
 
     @classmethod
-    def committer(cls, config_reader: Optional[TBD] = None) -> 'Actor':
+    def committer(cls, config_reader: Union[None, 'GitConfigParser', 'SectionConstraint'] = None) -> 'Actor':
         """
         :return: Actor instance corresponding to the configured committer. It behaves
             similar to the git implementation, such that the environment will override
@@ -708,7 +716,7 @@ class Actor(object):
         return cls._main_actor(cls.env_committer_name, cls.env_committer_email, config_reader)
 
     @classmethod
-    def author(cls, config_reader: Optional[TBD] = None) -> 'Actor':
+    def author(cls, config_reader: Union[None, 'GitConfigParser', 'SectionConstraint'] = None) -> 'Actor':
         """Same as committer(), but defines the main author. It may be specified in the environment,
         but defaults to the committer"""
         return cls._main_actor(cls.env_author_name, cls.env_author_email, config_reader)
@@ -742,7 +750,7 @@ class Stats(object):
      files = number of changed files as int"""
     __slots__ = ("total", "files")
 
-    def __init__(self, total: Dict[str, Dict[str, int]], files: Dict[str, Dict[str, int]]):
+    def __init__(self, total: Total_TD, files: Dict[PathLike, Files_TD]):
         self.total = total
         self.files = files
 
@@ -751,9 +759,13 @@ class Stats(object):
         """Create a Stat object from output retrieved by git-diff.
 
         :return: git.Stat"""
-        hsh = {'total': {'insertions': 0, 'deletions': 0, 'lines': 0, 'files': 0},
-               'files': {}
-               }  # type: Dict[str, Dict[str, TBD]]   ## need typeddict or refactor for mypy
+
+        hsh: HSH_TD = {'total': {'insertions': 0,
+                                 'deletions': 0,
+                                 'lines': 0,
+                                 'files': 0},
+                       'files': {}
+                       }
         for line in text.splitlines():
             (raw_insertions, raw_deletions, filename) = line.split("\t")
             insertions = raw_insertions != '-' and int(raw_insertions) or 0
@@ -762,9 +774,10 @@ class Stats(object):
             hsh['total']['deletions'] += deletions
             hsh['total']['lines'] += insertions + deletions
             hsh['total']['files'] += 1
-            hsh['files'][filename.strip()] = {'insertions': insertions,
-                                              'deletions': deletions,
-                                              'lines': insertions + deletions}
+            files_dict: Files_TD = {'insertions': insertions,
+                                    'deletions': deletions,
+                                    'lines': insertions + deletions}
+            hsh['files'][filename.strip()] = files_dict
         return Stats(hsh['total'], hsh['files'])
 
 
@@ -920,7 +933,7 @@ class BlockingLockFile(LockFile):
         # END endless loop
 
 
-class IterableList(list):
+class IterableList(List[T_IterableObj]):
 
     """
     List of iterable objects allowing to query an object by id or by named index::
@@ -930,6 +943,9 @@ class IterableList(list):
      heads['master']
      heads[0]
 
+    Iterable parent objects = [Commit, SubModule, Reference, FetchInfo, PushInfo]
+    Iterable via inheritance = [Head, TagReference, RemoteReference]
+    ]
     It requires an id_attribute name to be set which will be queried from its
     contained items to have a means for comparison.
 
@@ -938,7 +954,7 @@ class IterableList(list):
     can be left out."""
     __slots__ = ('_id_attr', '_prefix')
 
-    def __new__(cls, id_attr: str, prefix: str = '') -> 'IterableList':
+    def __new__(cls, id_attr: str, prefix: str = '') -> 'IterableList[IterableObj]':
         return super(IterableList, cls).__new__(cls)
 
     def __init__(self, id_attr: str, prefix: str = '') -> None:
@@ -971,7 +987,10 @@ class IterableList(list):
         # END for each item
         return list.__getattribute__(self, attr)
 
-    def __getitem__(self, index: Union[int, slice, str]) -> Any:
+    def __getitem__(self, index: Union[SupportsIndex, int, slice, str]) -> Any:
+
+        assert isinstance(index, (int, str, slice)), "Index of IterableList should be an int or str"
+
         if isinstance(index, int):
             return list.__getitem__(self, index)
         elif isinstance(index, slice):
@@ -983,12 +1002,13 @@ class IterableList(list):
                 raise IndexError("No item found with id %r" % (self._prefix + index)) from e
         # END handle getattr
 
-    def __delitem__(self, index: Union[int, str, slice]) -> None:
+    def __delitem__(self, index: Union[SupportsIndex, int, slice, str]) -> Any:
+
+        assert isinstance(index, (int, str)), "Index of IterableList should be an int or str"
 
         delindex = cast(int, index)
         if not isinstance(index, int):
             delindex = -1
-            assert not isinstance(index, slice)
             name = self._prefix + index
             for i, item in enumerate(self):
                 if getattr(item, self._id_attr) == name:
@@ -1003,16 +1023,29 @@ class IterableList(list):
         list.__delitem__(self, delindex)
 
 
+class IterableClassWatcher(type):
+    def __init__(cls, name, bases, clsdict):
+        for base in bases:
+            if type(base) == IterableClassWatcher:
+                warnings.warn(f"GitPython Iterable subclassed by {name}. "
+                              "Iterable is deprecated due to naming clash, "
+                              "Use IterableObj instead \n",
+                              DeprecationWarning,
+                              stacklevel=2)
+
+
 class Iterable(object):
 
     """Defines an interface for iterable items which is to assure a uniform
     way to retrieve and iterate items within the git repository"""
     __slots__ = ()
     _id_attribute_ = "attribute that most suitably identifies your instance"
+    __metaclass__ = IterableClassWatcher
 
     @classmethod
-    def list_items(cls, repo: 'Repo', *args: Any, **kwargs: Any) -> 'IterableList':
+    def list_items(cls, repo, *args, **kwargs):
         """
+        Deprecated, use IterableObj instead.
         Find all items of this type - subclasses can specify args and kwargs differently.
         If no args are given, subclasses are obliged to return all items if no additional
         arguments arg given.
@@ -1025,7 +1058,39 @@ class Iterable(object):
         return out_list
 
     @classmethod
-    def iter_items(cls, repo: 'Repo', *args: Any, **kwargs: Any) -> Iterator[TBD]:
+    def iter_items(cls, repo: 'Repo', *args: Any, **kwargs: Any):
+        # return typed to be compatible with subtypes e.g. Remote
+        """For more information about the arguments, see list_items
+        :return:  iterator yielding Items"""
+        raise NotImplementedError("To be implemented by Subclass")
+
+
+class IterableObj():
+    """Defines an interface for iterable items which is to assure a uniform
+    way to retrieve and iterate items within the git repository
+
+    Subclasses = [Submodule, Commit, Reference, PushInfo, FetchInfo, Remote]"""
+
+    __slots__ = ()
+    _id_attribute_ = "attribute that most suitably identifies your instance"
+
+    @classmethod
+    def list_items(cls, repo: 'Repo', *args: Any, **kwargs: Any) -> IterableList[T_IterableObj]:
+        """
+        Find all items of this type - subclasses can specify args and kwargs differently.
+        If no args are given, subclasses are obliged to return all items if no additional
+        arguments arg given.
+
+        :note: Favor the iter_items method as it will
+
+        :return:list(Item,...) list of item instances"""
+        out_list: IterableList = IterableList(cls._id_attribute_)
+        out_list.extend(cls.iter_items(repo, *args, **kwargs))
+        return out_list
+
+    @classmethod
+    def iter_items(cls, repo: 'Repo', *args: Any, **kwargs: Any
+                   ) -> Iterator[T_IterableObj]:
         # return typed to be compatible with subtypes e.g. Remote
         """For more information about the arguments, see list_items
         :return:  iterator yielding Items"""

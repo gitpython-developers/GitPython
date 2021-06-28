@@ -1,9 +1,18 @@
 """Module with functions which are supposed to be as fast as possible"""
 from stat import S_ISDIR
+
 from git.compat import (
     safe_decode,
     defenc
 )
+
+# typing ----------------------------------------------
+
+from typing import List, Tuple
+
+
+# ---------------------------------------------------
+
 
 __all__ = ('tree_to_stream', 'tree_entries_from_data', 'traverse_trees_recursive',
            'traverse_tree_recursive')
@@ -38,7 +47,7 @@ def tree_to_stream(entries, write):
     # END for each item
 
 
-def tree_entries_from_data(data):
+def tree_entries_from_data(data: bytes) -> List[Tuple[bytes, int, str]]:
     """Reads the binary representation of a tree and returns tuples of Tree items
     :param data: data block with tree data (as bytes)
     :return: list(tuple(binsha, mode, tree_relative_path), ...)"""
@@ -72,8 +81,8 @@ def tree_entries_from_data(data):
 
         # default encoding for strings in git is utf8
         # Only use the respective unicode object if the byte stream was encoded
-        name = data[ns:i]
-        name = safe_decode(name)
+        name_bytes = data[ns:i]
+        name = safe_decode(name_bytes)
 
         # byte is NULL, get next 20
         i += 1

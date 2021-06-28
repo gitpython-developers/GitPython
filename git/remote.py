@@ -13,7 +13,7 @@ from git.compat import (defenc, force_text)
 from git.exc import GitCommandError
 from git.util import (
     LazyMixin,
-    Iterable,
+    IterableObj,
     IterableList,
     RemoteProgress,
     CallableRemoteProgress,
@@ -36,19 +36,24 @@ from .refs import (
 
 # typing-------------------------------------------------------
 
-from typing import Any, Callable, Dict, Iterator, List, Optional, Sequence, TYPE_CHECKING, Union, cast, overload
+from typing import Any, Callable, Dict, Iterator, List, Optional, Sequence, TYPE_CHECKING, Union, overload
 
-from git.types import PathLike, Literal, TBD
+from git.types import PathLike, Literal, TBD, TypeGuard, Commit_ish
 
 if TYPE_CHECKING:
     from git.repo.base import Repo
-    from git.objects.commit import Commit
-    from git.objects.blob import Blob
-    from git.objects.tree import Tree
-    from git.objects.tag import TagObject
+    # from git.objects.commit import Commit
+    # from git.objects import Blob, Tree, TagObject
 
-flagKeyLiteral = Literal[' ', '!', '+', '-', '*', '=', 't']
+flagKeyLiteral = Literal[' ', '!', '+', '-', '*', '=', 't', '?']
+
+
+def is_flagKeyLiteral(inp: str) -> TypeGuard[flagKeyLiteral]:
+    return inp in [' ', '!', '+', '-', '=', '*', 't', '?']
+
+
 # -------------------------------------------------------------
+
 
 log = logging.getLogger('git.remote')
 log.addHandler(logging.NullHandler())
@@ -107,7 +112,7 @@ def to_progress_instance(progress: Union[Callable[..., Any], RemoteProgress, Non
     return progress
 
 
-class PushInfo(object):
+class PushInfo(IterableObj, object):
     """
     Carries information about the result of a push operation of a single head::
 
@@ -147,7 +152,7 @@ class PushInfo(object):
         self.summary = summary
 
     @property
-    def old_commit(self) -> Union[str, SymbolicReference, 'Commit', 'TagObject', 'Blob', 'Tree', None]:
+    def old_commit(self) -> Union[str, SymbolicReference, 'Commit_ish', None]:
         return self._old_commit_sha and self._remote.repo.commit(self._old_commit_sha) or None
 
     @property
@@ -220,7 +225,7 @@ class PushInfo(object):
         return PushInfo(flags, from_ref, to_ref_string, remote, old_commit, summary)
 
 
-class FetchInfo(object):
+class FetchInfo(IterableObj, object):
 
     """
     Carries information about the results of a fetch operation of a single head::
@@ -277,7 +282,7 @@ class FetchInfo(object):
         return True
 
     def __init__(self, ref: SymbolicReference, flags: int, note: str = '',
-                 old_commit: Union['Commit', TagReference, 'Tree', 'Blob', None] = None,
+                 old_commit: Union[Commit_ish, None] = None,
                  remote_ref_path: Optional[PathLike] = None) -> None:
         """
         Initialize a new instance
@@ -297,7 +302,7 @@ class FetchInfo(object):
         return self.ref.name
 
     @property
-    def commit(self) -> 'Commit':
+    def commit(self) -> Commit_ish:
         """:return: Commit of our remote ref"""
         return self.ref.commit
 
@@ -325,7 +330,7 @@ class FetchInfo(object):
 
         # parse lines
         control_character, operation, local_remote_ref, remote_local_ref_str, note = match.groups()
-        control_character = cast(flagKeyLiteral, control_character)  # can do this neater once 3.5 dropped
+        assert is_flagKeyLiteral(control_character), f"{control_character}"
 
         try:
             _new_hex_sha, _fetch_operation, fetch_note = fetch_line.split("\t")
@@ -342,7 +347,7 @@ class FetchInfo(object):
         # END control char exception handling
 
         # parse operation string for more info - makes no sense for symbolic refs, but we parse it anyway
-        old_commit = None  # type: Union[Commit, TagReference, Tree, Blob, None]
+        old_commit = None  # type: Union[Commit_ish, None]
         is_tag_operation = False
         if 'rejected' in operation:
             flags |= cls.REJECTED
@@ -421,7 +426,7 @@ class FetchInfo(object):
         return cls(remote_local_ref, flags, note, old_commit, local_remote_ref)
 
 
-class Remote(LazyMixin, Iterable):
+class Remote(LazyMixin, IterableObj):
 
     """Provides easy read and write access to a git remote.
 
@@ -552,8 +557,8 @@ class Remote(LazyMixin, Iterable):
     def urls(self) -> Iterator[str]:
         """:return: Iterator yielding all configured URL targets on a remote as strings"""
         try:
-            # can replace cast with type assert?
-            remote_details = cast(str, self.repo.git.remote("get-url", "--all", self.name))
+            remote_details = self.repo.git.remote("get-url", "--all", self.name)
+            assert isinstance(remote_details, str)
             for line in remote_details.split('\n'):
                 yield line
         except GitCommandError as ex:
@@ -564,14 +569,16 @@ class Remote(LazyMixin, Iterable):
             #
             if 'Unknown subcommand: get-url' in str(ex):
                 try:
-                    remote_details = cast(str, self.repo.git.remote("show", self.name))
+                    remote_details = self.repo.git.remote("show", self.name)
+                    assert isinstance(remote_details, str)
                     for line in remote_details.split('\n'):
                         if '  Push  URL:' in line:
                             yield line.split(': ')[-1]
                 except GitCommandError as _ex:
                     if any(msg in str(_ex) for msg in ['correct access rights', 'cannot run ssh']):
                         # If ssh is not setup to access this repository, see issue 694
-                        remote_details = cast(str, self.repo.git.config('--get-all', 'remote.%s.url' % self.name))
+                        remote_details = self.repo.git.config('--get-all', 'remote.%s.url' % self.name)
+                        assert isinstance(remote_details, str)
                         for line in remote_details.split('\n'):
                             yield line
                     else:
@@ -580,18 +587,18 @@ class Remote(LazyMixin, Iterable):
                 raise ex
 
     @property
-    def refs(self) -> IterableList:
+    def refs(self) -> IterableList[RemoteReference]:
         """
         :return:
             IterableList of RemoteReference objects. It is prefixed, allowing
             you to omit the remote path portion, i.e.::
             remote.refs.master # yields RemoteReference('/refs/remotes/origin/master')"""
-        out_refs = IterableList(RemoteReference._id_attribute_, "%s/" % self.name)
+        out_refs: IterableList[RemoteReference] = IterableList(RemoteReference._id_attribute_, "%s/" % self.name)
         out_refs.extend(RemoteReference.list_items(self.repo, remote=self.name))
         return out_refs
 
     @property
-    def stale_refs(self) -> IterableList:
+    def stale_refs(self) -> IterableList[Reference]:
         """
         :return:
             IterableList RemoteReference objects that do not have a corresponding
@@ -606,7 +613,7 @@ class Remote(LazyMixin, Iterable):
             as well. This is a fix for the issue described here:
             https://github.com/gitpython-developers/GitPython/issues/260
             """
-        out_refs = IterableList(RemoteReference._id_attribute_, "%s/" % self.name)
+        out_refs: IterableList[RemoteReference] = IterableList(RemoteReference._id_attribute_, "%s/" % self.name)
         for line in self.repo.git.remote("prune", "--dry-run", self).splitlines()[2:]:
             # expecting
             # * [would prune] origin/new_branch
@@ -681,11 +688,12 @@ class Remote(LazyMixin, Iterable):
         return self
 
     def _get_fetch_info_from_stderr(self, proc: TBD,
-                                    progress: Union[Callable[..., Any], RemoteProgress, None]) -> IterableList:
+                                    progress: Union[Callable[..., Any], RemoteProgress, None]
+                                    ) -> IterableList['FetchInfo']:
         progress = to_progress_instance(progress)
 
         # skip first line as it is some remote info we are not interested in
-        output = IterableList('name')
+        output: IterableList['FetchInfo'] = IterableList('name')
 
         # lines which are no progress are fetch info lines
         # this also waits for the command to finish
@@ -741,7 +749,7 @@ class Remote(LazyMixin, Iterable):
         return output
 
     def _get_push_info(self, proc: TBD,
-                       progress: Union[Callable[..., Any], RemoteProgress, None]) -> IterableList:
+                       progress: Union[Callable[..., Any], RemoteProgress, None]) -> IterableList[PushInfo]:
         progress = to_progress_instance(progress)
 
         # read progress information from stderr
@@ -749,7 +757,7 @@ class Remote(LazyMixin, Iterable):
         # read the lines manually as it will use carriage returns between the messages
         # to override the previous one. This is why we read the bytes manually
         progress_handler = progress.new_message_handler()
-        output = IterableList('push_infos')
+        output: IterableList[PushInfo] = IterableList('push_infos')
 
         def stdout_handler(line: str) -> None:
             try:
@@ -785,7 +793,7 @@ class Remote(LazyMixin, Iterable):
 
     def fetch(self, refspec: Union[str, List[str], None] = None,
               progress: Union[Callable[..., Any], None] = None,
-              verbose: bool = True, **kwargs: Any) -> IterableList:
+              verbose: bool = True, **kwargs: Any) -> IterableList[FetchInfo]:
         """Fetch the latest changes for this remote
 
         :param refspec:
@@ -832,7 +840,7 @@ class Remote(LazyMixin, Iterable):
 
     def pull(self, refspec: Union[str, List[str], None] = None,
              progress: Union[Callable[..., Any], None] = None,
-             **kwargs: Any) -> IterableList:
+             **kwargs: Any) -> IterableList[FetchInfo]:
         """Pull changes from the given branch, being the same as a fetch followed
         by a merge of branch with your local branch.
 
@@ -853,7 +861,7 @@ class Remote(LazyMixin, Iterable):
 
     def push(self, refspec: Union[str, List[str], None] = None,
              progress: Union[Callable[..., Any], None] = None,
-             **kwargs: Any) -> IterableList:
+             **kwargs: Any) -> IterableList[PushInfo]:
         """Push changes from source branch in refspec to target branch in refspec.
 
         :param refspec: see 'fetch' method
