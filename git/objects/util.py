@@ -35,9 +35,9 @@ if TYPE_CHECKING:
     from .tree import Tree
     from subprocess import Popen
 
-# T_Traversable = TypeVar('T_Traversable', bound='Traversable')
 TraversedObj = Union['Traversable', 'Blob']
-TraversedTup = Tuple[Union['Traversable', None], TraversedObj]  # return tuple is on_edge.
+TraversedTup = Tuple[Union['Traversable', None], 'Traversable']  # return tuple is on_edge.
+T_Traversable = TypeVar('T_Traversable', bound='Traversable')
 T_TraversedObj = TypeVar('T_TraversedObj', bound=TraversedObj)
 # --------------------------------------------------------------------
 
@@ -328,9 +328,8 @@ class Traversable(object):
     def traverse(self,
                  predicate: Callable[[Union[TraversedObj, TraversedTup], int], bool] = lambda i, d: True,
                  prune: Callable[[Union[TraversedObj, TraversedTup], int], bool] = lambda i, d: False,
-                 depth: int = -1,
-                 branch_first: bool = True,
-                 visit_once: bool = True, ignore_self: int = 1, as_edge: bool = False
+                 depth: int = -1, branch_first: bool = True, visit_once: bool = True,
+                 ignore_self: int = 1, as_edge: bool = False
                  ) -> Union[Iterator[T_TraversedObj], Iterator[TraversedTup]]:
         """:return: iterator yielding of items found when traversing self
         :param predicate: f(i,d) returns False if item i at depth d should not be included in the result
