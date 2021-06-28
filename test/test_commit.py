@@ -183,8 +183,8 @@ class TestCommit(TestCommitSerialization):
         stoptraverse = self.rorepo.commit("254d04aa3180eb8b8daf7b7ff25f010cd69b4e7d").traverse(as_edge=True)
         stoptraverse_list = list(stoptraverse)
         [self.assertIsInstance(item, (tuple)) for item in stoptraverse_list]
-        [self.assertIsInstance(src, (Commit)) for src, item in stoptraverse_list if isinstance(item, tuple)]
-        [self.assertIsInstance(item, (Commit)) for src, item in stoptraverse_list if isinstance(item, tuple)]
+        [self.assertIsInstance(src, (Commit)) for src, item in stoptraverse_list]
+        [self.assertIsInstance(item, (Commit)) for src, item in stoptraverse_list]
 
         stoptraverse = self.rorepo.commit("254d04aa3180eb8b8daf7b7ff25f010cd69b4e7d").traverse(as_edge=True)
         self.assertEqual(len(next(stoptraverse)), 2)
