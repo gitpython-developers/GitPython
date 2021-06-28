@@ -37,7 +37,7 @@ if TYPE_CHECKING:
 
 # T_Traversable = TypeVar('T_Traversable', bound='Traversable')
 TraversedObj = Union['Traversable', 'Blob']
-TraversedTup = Tuple[Union['Traversable', None], TraversedObj]  # return tuple is on_edge. src is Non for first item.
+TraversedTup = Tuple[Union['Traversable', None], TraversedObj]  # return tuple is on_edge.
 T_TraversedObj = TypeVar('T_TraversedObj', bound=TraversedObj)
 # --------------------------------------------------------------------
 
