@@ -1072,7 +1072,7 @@ class IterableObj():
     Subclasses = [Submodule, Commit, Reference, PushInfo, FetchInfo, Remote]"""
 
     __slots__ = ()
-    _id_attribute_ = "attribute that most suitably identifies your instance"
+    _id_attribute_: str
 
     @classmethod
     def list_items(cls, repo: 'Repo', *args: Any, **kwargs: Any) -> IterableList[T_IterableObj]:

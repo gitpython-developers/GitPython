@@ -22,7 +22,11 @@ from git.types import PathLike, Commit_ish
 if TYPE_CHECKING:
     from git.repo import Repo
     from gitdb.base import OStream
-    # from .tree import Tree, Blob, Commit, TagObject
+    from .tree import Tree
+    from .blob import Blob
+    from .submodule.base import Submodule
+
+IndexObjUnion = Union['Tree', 'Blob', 'Submodule']
 
 # --------------------------------------------------------------------------
 

@@ -30,12 +30,14 @@ if TYPE_CHECKING:
     from .commit import Commit
     from .blob import Blob
     from .tag import TagObject
-    from .tree import Tree
+    from .tree import Tree, TraversedTreeTup
     from subprocess import Popen
 
               
 T_TIobj = TypeVar('T_TIobj', bound='TraversableIterableObj')   # for TraversableIterableObj.traverse()
-TraversedTup = Tuple[Union['Traversable', None], Union['Traversable', 'Blob']]   # for Traversable.traverse()
+
+TraversedTup = Union[Tuple[Union['Traversable', None], 'Traversable'],  # for commit, submodule
+                     TraversedTreeTup]                                   # for tree.traverse()
 
 # --------------------------------------------------------------------
 
