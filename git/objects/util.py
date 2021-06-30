@@ -37,7 +37,7 @@ if TYPE_CHECKING:
 T_TIobj = TypeVar('T_TIobj', bound='TraversableIterableObj')   # for TraversableIterableObj.traverse()
 
 TraversedTup = Union[Tuple[Union['Traversable', None], 'Traversable'],  # for commit, submodule
-                     TraversedTreeTup]                                   # for tree.traverse()
+                     'TraversedTreeTup']                                   # for tree.traverse()
 
 # --------------------------------------------------------------------
 
