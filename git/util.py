@@ -27,7 +27,7 @@ import warnings
 
 # typing ---------------------------------------------------------
 
-from typing import (Any, AnyStr, BinaryIO, Callable, Dict, Generator, IO, Iterable as typIter, Iterator, List,
+from typing import (Any, AnyStr, BinaryIO, Callable, Dict, Generator, IO, Iterator, List,
                     Optional, Pattern, Sequence, Tuple, TypeVar, Union, cast, TYPE_CHECKING, overload)
 
 import pathlib
@@ -37,9 +37,10 @@ if TYPE_CHECKING:
     from git.repo.base import Repo
     from git.config import GitConfigParser, SectionConstraint
 
-from .types import PathLike, Literal, SupportsIndex, HSH_TD, Total_TD, Files_TD
+from .types import (Literal, Protocol, SupportsIndex,                    # because behind py version guards
+                    PathLike, HSH_TD, Total_TD, Files_TD)                # aliases
 
-T_IterableObj = TypeVar('T_IterableObj', bound=Union['IterableObj', typIter], covariant=True)
+T_IterableObj = TypeVar('T_IterableObj', bound='IterableObj', covariant=True)
 
 # So IterableList[Head] is subtype of IterableList[IterableObj]
 # ---------------------------------------------------------------------
@@ -1065,7 +1066,7 @@ class Iterable(object):
         raise NotImplementedError("To be implemented by Subclass")
 
 
-class IterableObj():
+class IterableObj(Protocol):
     """Defines an interface for iterable items which is to assure a uniform
     way to retrieve and iterate items within the git repository
 

@@ -6,6 +6,11 @@ import os
 import sys
 from typing import Dict, Union, Any, TYPE_CHECKING
 
+if sys.version_info[:2] >= (3, 7):
+    from typing import Protocol  # noqa: F401
+else:
+    from typing_extensions import Protocol  # noqa: F401
+
 if sys.version_info[:2] >= (3, 8):
     from typing import Final, Literal, SupportsIndex, TypedDict  # noqa: F401
 else:
@@ -18,7 +23,6 @@ else:
 
 
 if sys.version_info[:2] < (3, 9):
-    # Python >= 3.6, < 3.9
     PathLike = Union[str, os.PathLike]
 elif sys.version_info[:2] >= (3, 9):
     # os.PathLike only becomes subscriptable from Python 3.9 onwards

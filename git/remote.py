@@ -128,6 +128,7 @@ class PushInfo(IterableObj, object):
         info.summary    # summary line providing human readable english text about the push
         """
     __slots__ = ('local_ref', 'remote_ref_string', 'flags', '_old_commit_sha', '_remote', 'summary')
+    _id_attribute_ = 'pushinfo'
 
     NEW_TAG, NEW_HEAD, NO_MATCH, REJECTED, REMOTE_REJECTED, REMOTE_FAILURE, DELETED, \
         FORCED_UPDATE, FAST_FORWARD, UP_TO_DATE, ERROR = [1 << x for x in range(11)]
@@ -242,6 +243,7 @@ class FetchInfo(IterableObj, object):
      info.remote_ref_path # The path from which we fetched on the remote. It's the remote's version of our info.ref
     """
     __slots__ = ('ref', 'old_commit', 'flags', 'note', 'remote_ref_path')
+    _id_attribute_ = 'fetchinfo'
 
     NEW_TAG, NEW_HEAD, HEAD_UPTODATE, TAG_UPDATE, REJECTED, FORCED_UPDATE, \
         FAST_FORWARD, ERROR = [1 << x for x in range(8)]
