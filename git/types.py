@@ -6,15 +6,11 @@ import os
 import sys
 from typing import Dict, Union, Any, TYPE_CHECKING
 
-if sys.version_info[:2] >= (3, 7):
-    from typing import Protocol  # noqa: F401
-else:
-    from typing_extensions import Protocol  # noqa: F401
 
 if sys.version_info[:2] >= (3, 8):
-    from typing import Final, Literal, SupportsIndex, TypedDict  # noqa: F401
+    from typing import Final, Literal, SupportsIndex, TypedDict,  Protocol  # noqa: F401
 else:
-    from typing_extensions import Final, Literal, SupportsIndex, TypedDict  # noqa: F401
+    from typing_extensions import Final, Literal, SupportsIndex, TypedDict, Protocol  # noqa: F401
 
 if sys.version_info[:2] >= (3, 10):
     from typing import TypeGuard  # noqa: F401
