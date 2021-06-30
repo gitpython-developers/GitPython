@@ -8,7 +8,7 @@ from typing import Dict, Union, Any, TYPE_CHECKING
 
 
 if sys.version_info[:2] >= (3, 8):
-    from typing import Final, Literal, SupportsIndex, TypedDict,  Protocol  # noqa: F401
+    from typing import Final, Literal, SupportsIndex, TypedDict, Protocol  # noqa: F401
 else:
     from typing_extensions import Final, Literal, SupportsIndex, TypedDict, Protocol  # noqa: F401
 
