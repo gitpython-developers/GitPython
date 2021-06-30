@@ -4,10 +4,12 @@ from git.config import GitConfigParser
 from io import BytesIO
 import weakref
 
-from typing import TYPE_CHECKING
+
+from typing import Any, TYPE_CHECKING, Union
 
 if TYPE_CHECKING:
     from .base import Submodule
+    from weakref import ReferenceType
 
 __all__ = ('sm_section', 'sm_name', 'mkhead', 'find_first_remote_branch',
            'SubmoduleConfigParser')
@@ -58,8 +60,8 @@ class SubmoduleConfigParser(GitConfigParser):
     Please note that no mutating method will work in bare mode
     """
 
-    def __init__(self, *args, **kwargs):
-        self._smref = None
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        self._smref: Union['ReferenceType[Submodule]', None] = None
         self._index = None
         self._auto_write = True
         super(SubmoduleConfigParser, self).__init__(*args, **kwargs)
@@ -89,7 +91,7 @@ class SubmoduleConfigParser(GitConfigParser):
     #} END interface
 
     #{ Overridden Methods
-    def write(self):
+    def write(self) -> None:
         rval = super(SubmoduleConfigParser, self).write()
         self.flush_to_index()
         return rval

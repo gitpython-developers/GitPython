@@ -38,14 +38,12 @@ from .refs import (
 
 from typing import Any, Callable, Dict, Iterator, List, Optional, Sequence, TYPE_CHECKING, Union, overload
 
-from git.types import PathLike, Literal, TBD, TypeGuard
+from git.types import PathLike, Literal, TBD, TypeGuard, Commit_ish
 
 if TYPE_CHECKING:
     from git.repo.base import Repo
-    from git.objects.commit import Commit
-    from git.objects.blob import Blob
-    from git.objects.tree import Tree
-    from git.objects.tag import TagObject
+    # from git.objects.commit import Commit
+    # from git.objects import Blob, Tree, TagObject
 
 flagKeyLiteral = Literal[' ', '!', '+', '-', '*', '=', 't', '?']
 
@@ -154,7 +152,7 @@ class PushInfo(IterableObj, object):
         self.summary = summary
 
     @property
-    def old_commit(self) -> Union[str, SymbolicReference, 'Commit', 'TagObject', 'Blob', 'Tree', None]:
+    def old_commit(self) -> Union[str, SymbolicReference, 'Commit_ish', None]:
         return self._old_commit_sha and self._remote.repo.commit(self._old_commit_sha) or None
 
     @property
@@ -284,7 +282,7 @@ class FetchInfo(IterableObj, object):
         return True
 
     def __init__(self, ref: SymbolicReference, flags: int, note: str = '',
-                 old_commit: Union['Commit', TagReference, 'Tree', 'Blob', None] = None,
+                 old_commit: Union[Commit_ish, None] = None,
                  remote_ref_path: Optional[PathLike] = None) -> None:
         """
         Initialize a new instance
@@ -304,7 +302,7 @@ class FetchInfo(IterableObj, object):
         return self.ref.name
 
     @property
-    def commit(self) -> 'Commit':
+    def commit(self) -> Commit_ish:
         """:return: Commit of our remote ref"""
         return self.ref.commit
 
@@ -349,7 +347,7 @@ class FetchInfo(IterableObj, object):
         # END control char exception handling
 
         # parse operation string for more info - makes no sense for symbolic refs, but we parse it anyway
-        old_commit = None  # type: Union[Commit, TagReference, Tree, Blob, None]
+        old_commit = None  # type: Union[Commit_ish, None]
         is_tag_operation = False
         if 'rejected' in operation:
             flags |= cls.REJECTED

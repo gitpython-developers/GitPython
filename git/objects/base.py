@@ -17,15 +17,12 @@ from .util import get_object_type_by_name
 
 from typing import Any, TYPE_CHECKING, Optional, Union
 
-from git.types import PathLike
+from git.types import PathLike, Commit_ish
 
 if TYPE_CHECKING:
     from git.repo import Repo
     from gitdb.base import OStream
-    from .tree import Tree
-    from .blob import Blob
-    from .tag import TagObject
-    from .commit import Commit
+    # from .tree import Tree, Blob, Commit, TagObject
 
 # --------------------------------------------------------------------------
 
@@ -71,7 +68,7 @@ class Object(LazyMixin):
         return repo.rev_parse(str(id))
 
     @classmethod
-    def new_from_sha(cls, repo: 'Repo', sha1: bytes) -> Union['Commit', 'TagObject', 'Tree', 'Blob']:
+    def new_from_sha(cls, repo: 'Repo', sha1: bytes) -> Commit_ish:
         """
         :return: new object instance of a type appropriate to represent the given
             binary sha1

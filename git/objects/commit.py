@@ -3,12 +3,10 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
-
 from gitdb import IStream
 from git.util import (
     hex_to_bin,
     Actor,
-    IterableObj,
     Stats,
     finalize_process
 )
@@ -17,8 +15,8 @@ from git.diff import Diffable
 from .tree import Tree
 from . import base
 from .util import (
-    Traversable,
     Serializable,
+    TraversableIterableObj,
     parse_date,
     altz_to_utctz_str,
     parse_actor_and_date,
@@ -36,10 +34,17 @@ import os
 from io import BytesIO
 import logging
 
-from typing import List, Tuple, Union, TYPE_CHECKING
+
+# typing ------------------------------------------------------------------
+
+from typing import Any, Iterator, List, Sequence, Tuple, Union, TYPE_CHECKING
+
+from git.types import PathLike
 
 if TYPE_CHECKING:
     from git.repo import Repo
+
+# ------------------------------------------------------------------------
 
 log = logging.getLogger('git.objects.commit')
 log.addHandler(logging.NullHandler())
@@ -47,7 +52,7 @@ log.addHandler(logging.NullHandler())
 __all__ = ('Commit', )
 
 
-class Commit(base.Object, IterableObj, Diffable, Traversable, Serializable):
+class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
 
     """Wraps a git Commit object.
 
@@ -73,7 +78,8 @@ class Commit(base.Object, IterableObj, Diffable, Traversable, Serializable):
                  "message", "parents", "encoding", "gpgsig")
     _id_attribute_ = "hexsha"
 
-    def __init__(self, repo, binsha, tree=None, author=None, authored_date=None, author_tz_offset=None,
+    def __init__(self, repo, binsha, tree=None, author: Union[Actor, None] = None,
+                 authored_date=None, author_tz_offset=None,
                  committer=None, committed_date=None, committer_tz_offset=None,
                  message=None, parents: Union[Tuple['Commit', ...], List['Commit'], None] = None,
                  encoding=None, gpgsig=None):
@@ -139,7 +145,7 @@ class Commit(base.Object, IterableObj, Diffable, Traversable, Serializable):
             self.gpgsig = gpgsig
 
     @classmethod
-    def _get_intermediate_items(cls, commit: 'Commit') -> Tuple['Commit', ...]:  # type: ignore  ## cos overriding super
+    def _get_intermediate_items(cls, commit: 'Commit') -> Tuple['Commit', ...]:
         return tuple(commit.parents)
 
     @classmethod
@@ -225,7 +231,9 @@ class Commit(base.Object, IterableObj, Diffable, Traversable, Serializable):
         return self.repo.git.name_rev(self)
 
     @classmethod
-    def iter_items(cls, repo, rev, paths='', **kwargs):
+    def iter_items(cls, repo: 'Repo', rev,                                          # type: ignore
+                   paths: Union[PathLike, Sequence[PathLike]] = '', **kwargs: Any
+                   ) -> Iterator['Commit']:
         """Find all commits matching the given criteria.
 
         :param repo: is the Repo
@@ -245,15 +253,23 @@ class Commit(base.Object, IterableObj, Diffable, Traversable, Serializable):
 
         # use -- in any case, to prevent possibility of ambiguous arguments
         # see https://github.com/gitpython-developers/GitPython/issues/264
-        args = ['--']
+
+        args_list: List[Union[PathLike, Sequence[PathLike]]] = ['--']
+
         if paths:
-            args.extend((paths, ))
+            paths_tup: Tuple[PathLike, ...]
+            if isinstance(paths, (str, os.PathLike)):
+                paths_tup = (paths, )
+            else:
+                paths_tup = tuple(paths)
+
+            args_list.extend(paths_tup)
         # END if paths
 
-        proc = repo.git.rev_list(rev, args, as_process=True, **kwargs)
+        proc = repo.git.rev_list(rev, args_list, as_process=True, **kwargs)
         return cls._iter_from_process_or_stream(repo, proc)
 
-    def iter_parents(self, paths='', **kwargs):
+    def iter_parents(self, paths: Union[PathLike, Sequence[PathLike]] = '', **kwargs) -> Iterator['Commit']:
         """Iterate _all_ parents of this commit.
 
         :param paths:
@@ -269,7 +285,7 @@ class Commit(base.Object, IterableObj, Diffable, Traversable, Serializable):
 
         return self.iter_items(self.repo, self, paths, **kwargs)
 
-    @property
+    @ property
     def stats(self):
         """Create a git stat from changes between this commit and its first parent
         or from all changes done if this is the very first commit.
@@ -286,7 +302,7 @@ class Commit(base.Object, IterableObj, Diffable, Traversable, Serializable):
             text = self.repo.git.diff(self.parents[0].hexsha, self.hexsha, '--', numstat=True)
         return Stats._list_from_string(self.repo, text)
 
-    @classmethod
+    @ classmethod
     def _iter_from_process_or_stream(cls, repo, proc_or_stream):
         """Parse out commit information into a list of Commit objects
         We expect one-line per commit, and parse the actual commit information directly
@@ -317,7 +333,7 @@ class Commit(base.Object, IterableObj, Diffable, Traversable, Serializable):
         if hasattr(proc_or_stream, 'wait'):
             finalize_process(proc_or_stream)
 
-    @classmethod
+    @ classmethod
     def create_from_tree(cls, repo, tree, message, parent_commits=None, head=False, author=None, committer=None,
                          author_date=None, commit_date=None):
         """Commit the given tree, creating a commit object.

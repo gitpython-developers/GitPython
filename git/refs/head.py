@@ -5,6 +5,9 @@ from git.exc import GitCommandError
 from .symbolic import SymbolicReference
 from .reference import Reference
 
+from typing import Union
+from git.types import Commit_ish
+
 __all__ = ["HEAD", "Head"]
 
 
@@ -12,7 +15,7 @@ def strip_quotes(string):
     if string.startswith('"') and string.endswith('"'):
         return string[1:-1]
     return string
-    
+
 
 class HEAD(SymbolicReference):
 
@@ -33,7 +36,7 @@ class HEAD(SymbolicReference):
             to contain the previous value of HEAD"""
         return SymbolicReference(self.repo, self._ORIG_HEAD_NAME)
 
-    def reset(self, commit='HEAD', index=True, working_tree=False,
+    def reset(self, commit: Union[Commit_ish, SymbolicReference, str] = 'HEAD', index=True, working_tree=False,
               paths=None, **kwargs):
         """Reset our HEAD to the given commit optionally synchronizing
         the index and working tree. The reference we refer to will be set to
@@ -60,6 +63,7 @@ class HEAD(SymbolicReference):
             Additional arguments passed to git-reset.
 
         :return: self"""
+        mode: Union[str, None]
         mode = "--soft"
         if index:
             mode = "--mixed"
