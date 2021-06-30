@@ -95,7 +95,7 @@ setup(
     license="BSD",
     url="https://github.com/gitpython-developers/GitPython",
     packages=find_packages(exclude=("test.*")),
-    package_data={'git': ['**/*.pyi', 'py.typed']},
+    # package_data={'git': ['**/*.pyi', 'py.typed']},
     include_package_data=True,
     py_modules=build_py_modules("./git", excludes=["git.ext.*"]),
     package_dir={'git': 'git'},
