@@ -49,18 +49,14 @@ from .util import (
 
 
 # typing ----------------------------------------------------------------------
-from typing import Dict, TYPE_CHECKING, Tuple
-from typing import Any, Callable, Iterator, Union, cast, overload
+from typing import Dict, TYPE_CHECKING
+from typing import Any, Iterator, Union
 
-from git.types import Commit_ish, PathLike, Literal
+from git.types import Commit_ish, PathLike
 
 if TYPE_CHECKING:
     from git.repo import Repo
-    # from git.objects.util import TraversedObj, TraversedTup
-    # from git.objects.blob import Blob, TagObject, Tree, Commit  # inc. in Commit_ish
-    # from git.refs import SymbolicReference
 
-TraversedSubModuleTup = Tuple[Union['Submodule', None], 'Submodule']
 
 # -----------------------------------------------------------------------------
 
@@ -168,69 +164,6 @@ class Submodule(IndexObject, TraversableIterableObj):
         except InvalidGitRepositoryError:
             return IterableList('')
         # END handle intermediate items
-
-    @overload                     # type: ignore
-    def traverse(self,
-                 predicate: Callable[[Union['Submodule', TraversedSubModuleTup], int], bool],
-                 prune: Callable[[Union['Submodule', TraversedSubModuleTup], int], bool],
-                 depth: int,
-                 branch_first: bool,
-                 visit_once: bool,
-                 ignore_self: Literal[True],
-                 as_edge: Literal[False],
-                 ) -> Iterator['Submodule']:
-        ...
-
-    @overload
-    def traverse(self,
-                 predicate: Callable[[Union['Submodule', TraversedSubModuleTup], int], bool],
-                 prune: Callable[[Union['Submodule', TraversedSubModuleTup], int], bool],
-                 depth: int,
-                 branch_first: bool,
-                 visit_once: bool,
-                 ignore_self: Literal[False],
-                 as_edge: Literal[True],
-                 ) -> Iterator[Tuple[Union[None, 'Submodule'], 'Submodule']]:
-        ...
-
-    @overload
-    def traverse(self,
-                 predicate: Callable[[Union['Submodule', TraversedSubModuleTup], int], bool],
-                 prune: Callable[[Union['Submodule', TraversedSubModuleTup], int], bool],
-                 depth: int,
-                 branch_first: bool,
-                 visit_once: bool,
-                 ignore_self: Literal[True],
-                 as_edge: Literal[True],
-                 ) -> Iterator[Tuple['Submodule', 'Submodule']]:
-        ...
-
-    def traverse(self,
-                 predicate: Callable[[Union['Submodule', TraversedSubModuleTup], int], bool] = lambda i, d: True,
-                 prune: Callable[[Union['Submodule', TraversedSubModuleTup], int], bool] = lambda i, d: False,
-                 depth: int = -1,
-                 branch_first: bool = True,
-                 visit_once: bool = True,
-                 ignore_self: int = 1,
-                 as_edge: bool = False
-                 ) -> Union[Iterator['Submodule'], Iterator[TraversedSubModuleTup]]:
-        """For documentation, see util.Traversable._traverse()"""
-
-        # """ For typechecking instead of cast
-        # import itertools
-        # from git.types import TypeGuard
-
-        # def is_commit_traversed(inp: Tuple) -> TypeGuard[Tuple[Iterator['Submodule']]]:
-        #     return all(isinstance(inner, Submodule) for inner in inp[1])
-
-        # ret = super(Submodule, self).traverse(predicate, prune, depth, branch_first, visit_once, ignore_self, as_edge)
-        # ret_tup = itertools.tee(ret, 2)
-        # assert is_commit_traversed(ret_tup), f"{[type(x) for x in list(ret_tup[0])]}"
-        # return ret_tup[0]  # type: ignore """"
-        return cast(Union[Iterator['Submodule'], Iterator['TraversedSubModuleTup']],
-                    super(Submodule, self).
-                    traverse(predicate, prune, depth, branch_first, visit_once, ignore_self, as_edge)  # type:ignore
-                    )
 
     @classmethod
     def _need_gitfile_submodules(cls, git: Git) -> bool:

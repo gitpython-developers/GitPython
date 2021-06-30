@@ -13,7 +13,6 @@ from git.util import (
 
 import re
 from collections import deque
-from abc import ABCMeta
 
 from string import digits
 import time
@@ -21,24 +20,23 @@ import calendar
 from datetime import datetime, timedelta, tzinfo
 
 # typing ------------------------------------------------------------
-from typing import (Any, Callable, Deque, Iterator, NamedTuple, Sequence,
+from typing import (Any, Callable, Deque, Iterator, NamedTuple, overload, Sequence,
                     TYPE_CHECKING, Tuple, Type, TypeVar, Union, cast)
 
-# from git.types import TBD, TypeGuard
+from git.types import Literal
 
 if TYPE_CHECKING:
     from io import BytesIO, StringIO
-    from .submodule.base import Submodule  # noqa: F401
     from .commit import Commit
     from .blob import Blob
     from .tag import TagObject
     from .tree import Tree
     from subprocess import Popen
 
-TraversedObj = Union['Traversable', 'Blob']
-TraversedTup = Tuple[Union['Traversable', None], 'Traversable']  # return tuple is on_edge.
-T_Traversable = TypeVar('T_Traversable', bound='Traversable')
-T_TraversedObj = TypeVar('T_TraversedObj', bound=TraversedObj)
+              
+T_TIobj = TypeVar('T_TIobj', bound='TraversableIterableObj')   # for TraversableIterableObj.traverse()
+TraversedTup = Tuple[Union['Traversable', None], Union['Traversable', 'Blob']]   # for Traversable.traverse()
+
 # --------------------------------------------------------------------
 
 __all__ = ('get_object_type_by_name', 'parse_date', 'parse_actor_and_date',
@@ -308,29 +306,31 @@ class Traversable(object):
 
     def list_traverse(self, *args: Any, **kwargs: Any
                       ) -> Union[IterableList['TraversableIterableObj'],
-                                 IterableList[Tuple['TraversableIterableObj', 'TraversableIterableObj']]]:
+                                 IterableList[Tuple[Union[None, 'TraversableIterableObj'], 'TraversableIterableObj']]]:
         """
         :return: IterableList with the results of the traversal as produced by
             traverse()
             List objects must be IterableObj and Traversable e.g. Commit, Submodule"""
+
         out: Union[IterableList['TraversableIterableObj'],
-                   IterableList[Tuple['TraversableIterableObj', 'TraversableIterableObj']]]
+                   IterableList[Tuple[Union[None, 'TraversableIterableObj'], 'TraversableIterableObj']]]
 
         # def is_TraversableIterableObj(inp: Union['Traversable', IterableObj]) -> TypeGuard['TraversableIterableObj']:
         #     return isinstance(self, TraversableIterableObj)
-
         # assert is_TraversableIterableObj(self), f"{type(self)}"
+
         self = cast('TraversableIterableObj', self)
         out = IterableList(self._id_attribute_)
         out.extend(self.traverse(*args, **kwargs))  # type: ignore
         return out
 
     def traverse(self,
-                 predicate: Callable[[Union[TraversedObj, TraversedTup], int], bool] = lambda i, d: True,
-                 prune: Callable[[Union[TraversedObj, TraversedTup], int], bool] = lambda i, d: False,
+                 predicate: Callable[[Union['Traversable', TraversedTup], int], bool] = lambda i, d: True,
+                 prune: Callable[[Union['Traversable', TraversedTup], int], bool] = lambda i, d: False,
                  depth: int = -1, branch_first: bool = True, visit_once: bool = True,
                  ignore_self: int = 1, as_edge: bool = False
-                 ) -> Union[Iterator[T_TraversedObj], Iterator[TraversedTup]]:
+                 ) -> Union[Iterator[Union['Traversable', 'Blob']],
+                            Iterator[TraversedTup]]:
         """:return: iterator yielding of items found when traversing self
         :param predicate: f(i,d) returns False if item i at depth d should not be included in the result
 
@@ -373,7 +373,7 @@ class Traversable(object):
            ignore_self=False is_edge=False -> Iterator[Tuple[src, item]]"""
         class TraverseNT(NamedTuple):
             depth: int
-            item: TraversedObj
+            item: 'Traversable'
             src: Union['Traversable', None]
 
         visited = set()
@@ -403,7 +403,7 @@ class Traversable(object):
             if visit_once:
                 visited.add(item)
 
-            rval: Union[TraversedObj, TraversedTup]
+            rval: Union['Traversable', Tuple[Union[None, 'Traversable'], 'Traversable']]
             if as_edge:     # if as_edge return (src, item) unless rrc is None (e.g. for first item)
                 rval = (src, item)
             else:
@@ -444,5 +444,71 @@ class Serializable(object):
         raise NotImplementedError("To be implemented in subclass")
 
 
-class TraversableIterableObj(Traversable, IterableObj, metaclass=ABCMeta):
+class TraversableIterableObj(Traversable, IterableObj):
     __slots__ = ()
+
+    TIobj_tuple = Tuple[Union[T_TIobj, None], T_TIobj]
+
+    @overload                     # type: ignore
+    def traverse(self: T_TIobj,
+                 predicate: Callable[[Union[T_TIobj, Tuple[Union[T_TIobj, None], T_TIobj]], int], bool],
+                 prune: Callable[[Union[T_TIobj, Tuple[Union[T_TIobj, None], T_TIobj]], int], bool],
+                 depth: int, branch_first: bool, visit_once: bool,
+                 ignore_self: Literal[True],
+                 as_edge: Literal[False],
+                 ) -> Iterator[T_TIobj]:
+        ...
+
+    @overload
+    def traverse(self: T_TIobj,
+                 predicate: Callable[[Union[T_TIobj, Tuple[Union[T_TIobj, None], T_TIobj]], int], bool],
+                 prune: Callable[[Union[T_TIobj, Tuple[Union[T_TIobj, None], T_TIobj]], int], bool],
+                 depth: int, branch_first: bool, visit_once: bool,
+                 ignore_self: Literal[False],
+                 as_edge: Literal[True],
+                 ) -> Iterator[Tuple[Union[T_TIobj, None], T_TIobj]]:
+        ...
+
+    @overload
+    def traverse(self: T_TIobj,
+                 predicate: Callable[[Union[T_TIobj, TIobj_tuple], int], bool],
+                 prune: Callable[[Union[T_TIobj, TIobj_tuple], int], bool],
+                 depth: int, branch_first: bool, visit_once: bool,
+                 ignore_self: Literal[True],
+                 as_edge: Literal[True],
+                 ) -> Iterator[Tuple[T_TIobj, T_TIobj]]:
+        ...
+
+    def traverse(self: T_TIobj,
+                 predicate: Callable[[Union[T_TIobj, Tuple[Union[T_TIobj, None], T_TIobj]], int],
+                                     bool] = lambda i, d: True,
+                 prune: Callable[[Union[T_TIobj, Tuple[Union[T_TIobj, None], T_TIobj]], int],
+                                 bool] = lambda i, d: False,
+                 depth: int = -1, branch_first: bool = True, visit_once: bool = True,
+                 ignore_self: int = 1, as_edge: bool = False
+                 ) -> Union[Iterator[T_TIobj],
+                            Iterator[Tuple[T_TIobj, T_TIobj]],
+                            Iterator[Tuple[Union[T_TIobj, None], T_TIobj]]]:
+        """For documentation, see util.Traversable._traverse()"""
+
+        """
+        # To typecheck instead of using cast.
+        import itertools
+        from git.types import TypeGuard
+        def is_commit_traversed(inp: Tuple) -> TypeGuard[Tuple[Iterator[Tuple['Commit', 'Commit']]]]:
+            for x in inp[1]:
+                if not isinstance(x, tuple) and len(x) != 2:
+                    if all(isinstance(inner, Commit) for inner in x):
+                        continue
+            return True
+
+        ret = super(Commit, self).traverse(predicate, prune, depth, branch_first, visit_once, ignore_self, as_edge)
+        ret_tup = itertools.tee(ret, 2)
+        assert is_commit_traversed(ret_tup), f"{[type(x) for x in list(ret_tup[0])]}"
+        return ret_tup[0]
+        """
+        return cast(Union[Iterator[T_TIobj],
+                          Iterator[Tuple[Union[None, T_TIobj], T_TIobj]]],
+                    super(TraversableIterableObj, self).traverse(
+                        predicate, prune, depth, branch_first, visit_once, ignore_self, as_edge  # type: ignore
+        ))

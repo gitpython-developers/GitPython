@@ -22,13 +22,13 @@ from .fun import (
 # typing -------------------------------------------------
 
 from typing import (Callable, Dict, Generic, Iterable, Iterator, List,
-                    Tuple, Type, TypeVar, Union, cast, TYPE_CHECKING, overload)
+                    Tuple, Type, TypeVar, Union, cast, TYPE_CHECKING)
 
-from git.types import PathLike, TypeGuard, Literal
+from git.types import PathLike, TypeGuard
 
 if TYPE_CHECKING:
     from git.repo import Repo
-    from git.objects.util import TraversedObj, TraversedTup
+    from git.objects.util import TraversedTup
     from io import BytesIO
 
 T_Tree_cache = TypeVar('T_Tree_cache', bound=Union[Tuple[bytes, int, str]])
@@ -296,45 +296,10 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
             See the ``TreeModifier`` for more information on how to alter the cache"""
         return TreeModifier(self._cache)
 
-    @overload                     # type: ignore
     def traverse(self,
-                 predicate: Callable[[Union['TraversedObj', 'TraversedTup'], int], bool],
-                 prune: Callable[[Union['TraversedObj', 'TraversedTup'], int], bool],
-                 depth: int,
-                 branch_first: bool,
-                 visit_once: bool,
-                 ignore_self: Literal[True],
-                 as_edge: Literal[False],  # No Tuple
-                 ) -> Iterator[Union['Tree', 'Blob', 'Submodule']]:
-        ...
-
-    @overload
-    def traverse(self,
-                 predicate: Callable[[Union['TraversedObj', 'TraversedTup'], int], bool],
-                 prune: Callable[[Union['TraversedObj', 'TraversedTup'], int], bool],
-                 depth: int,
-                 branch_first: bool,
-                 visit_once: bool,
-                 ignore_self: Literal[False],
-                 as_edge: Literal[True],
-                 ) -> Iterator[Tuple[Union[None, 'Tree', 'Submodule'], Union['Tree', 'Blob', 'Submodule']]]:
-        ...
-
-    @overload
-    def traverse(self,
-                 predicate: Callable[[Union['TraversedObj', 'TraversedTup'], int], bool],
-                 prune: Callable[[Union['TraversedObj', 'TraversedTup'], int], bool],
-                 depth: int,
-                 branch_first: bool,
-                 visit_once: bool,
-                 ignore_self: Literal[True],
-                 as_edge: Literal[True],
-                 ) -> Iterator[Tuple[Union['Tree', 'Submodule'], Union['Tree', 'Blob', 'Submodule']]]:
-        ...
-
-    def traverse(self,
-                 predicate: Callable[[Union['TraversedObj', 'TraversedTup'], int], bool] = lambda i, d: True,
-                 prune: Callable[[Union['TraversedObj', 'TraversedTup'], int], bool] = lambda i, d: False,
+                 predicate: Callable[[Union['Tree', 'Submodule', 'Blob',
+                                            'TraversedTup'], int], bool] = lambda i, d: True,
+                 prune: Callable[[Union['Tree', 'Submodule', 'Blob', 'TraversedTup'], int], bool] = lambda i, d: False,
                  depth: int = -1,
                  branch_first: bool = True,
                  visit_once: bool = False,
@@ -357,7 +322,7 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
         # return ret_tup[0]"""
         return cast(Union[Iterator[Union['Tree', 'Blob', 'Submodule']],
                           Iterator[Tuple[Union['Tree', 'Submodule', None], Union['Tree', 'Blob', 'Submodule']]]],
-                    super(Tree, self).traverse(predicate, prune, depth,
+                    super(Tree, self).traverse(predicate, prune, depth,     # type: ignore
                                                branch_first, visit_once, ignore_self))
 
     # List protocol
