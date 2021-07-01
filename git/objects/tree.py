@@ -3,12 +3,13 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
+
 from git.util import join_path
 import git.diff as diff
 from git.util import to_bin_sha
 
 from . import util
-from .base import IndexObject
+from .base import IndexObject, IndexObjUnion
 from .blob import Blob
 from .submodule.base import Submodule
 
@@ -20,13 +21,18 @@ from .fun import (
 
 # typing -------------------------------------------------
 
-from typing import Callable, Dict, Generic, Iterable, Iterator, List, Tuple, Type, TypeVar, Union, cast, TYPE_CHECKING
+from typing import (Callable, Dict, Generic, Iterable, Iterator, List,
+                    Tuple, Type, TypeVar, Union, cast, TYPE_CHECKING)
 
-from git.types import PathLike
+from git.types import PathLike, TypeGuard
 
 if TYPE_CHECKING:
     from git.repo import Repo
     from io import BytesIO
+
+T_Tree_cache = TypeVar('T_Tree_cache', bound=Tuple[bytes, int, str])
+TraversedTreeTup = Union[Tuple[Union['Tree', None], IndexObjUnion,
+                         Tuple['Submodule', 'Submodule']]]
 
 #--------------------------------------------------------
 
@@ -34,8 +40,6 @@ if TYPE_CHECKING:
 cmp: Callable[[str, str], int] = lambda a, b: (a > b) - (a < b)
 
 __all__ = ("TreeModifier", "Tree")
-
-T_Tree_cache = TypeVar('T_Tree_cache', bound=Union[Tuple[bytes, int, str]])
 
 
 def git_cmp(t1: T_Tree_cache, t2: T_Tree_cache) -> int:
@@ -137,8 +141,12 @@ class TreeModifier(Generic[T_Tree_cache], object):
         sha = to_bin_sha(sha)
         index = self._index_by_name(name)
 
-        assert isinstance(sha, bytes) and isinstance(mode, int) and isinstance(name, str)
-        item = cast(T_Tree_cache, (sha, mode, name))   # use Typeguard from typing-extensions 3.10.0
+        def is_tree_cache(inp: Tuple[bytes, int, str]) -> TypeGuard[T_Tree_cache]:
+            return isinstance(inp[0], bytes) and isinstance(inp[1], int) and isinstance([inp], str)
+
+        item = (sha, mode, name)
+        assert is_tree_cache(item)
+
         if index == -1:
             self._cache.append(item)
         else:
@@ -194,7 +202,7 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
     symlink_id = 0o12
     tree_id = 0o04
 
-    _map_id_to_type: Dict[int, Union[Type[Submodule], Type[Blob], Type['Tree']]] = {
+    _map_id_to_type: Dict[int, Type[IndexObjUnion]] = {
         commit_id: Submodule,
         blob_id: Blob,
         symlink_id: Blob
@@ -205,7 +213,7 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
         super(Tree, self).__init__(repo, binsha, mode, path)
 
     @ classmethod
-    def _get_intermediate_items(cls, index_object: 'Tree',    # type: ignore
+    def _get_intermediate_items(cls, index_object: 'Tree',
                                 ) -> Union[Tuple['Tree', ...], Tuple[()]]:
         if index_object.type == "tree":
             index_object = cast('Tree', index_object)
@@ -222,7 +230,7 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
         # END handle attribute
 
     def _iter_convert_to_object(self, iterable: Iterable[Tuple[bytes, int, str]]
-                                ) -> Iterator[Union[Blob, 'Tree', Submodule]]:
+                                ) -> Iterator[IndexObjUnion]:
         """Iterable yields tuples of (binsha, mode, name), which will be converted
         to the respective object representation"""
         for binsha, mode, name in iterable:
@@ -233,7 +241,7 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
                 raise TypeError("Unknown mode %o found in tree data for path '%s'" % (mode, path)) from e
         # END for each item
 
-    def join(self, file: str) -> Union[Blob, 'Tree', Submodule]:
+    def join(self, file: str) -> IndexObjUnion:
         """Find the named object in this tree's contents
         :return: ``git.Blob`` or ``git.Tree`` or ``git.Submodule``
 
@@ -266,7 +274,7 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
             raise KeyError(msg % file)
         # END handle long paths
 
-    def __truediv__(self, file: str) -> Union['Tree', Blob, Submodule]:
+    def __truediv__(self, file: str) -> IndexObjUnion:
         """For PY3 only"""
         return self.join(file)
 
@@ -289,24 +297,45 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
             See the ``TreeModifier`` for more information on how to alter the cache"""
         return TreeModifier(self._cache)
 
-    def traverse(self, predicate=lambda i, d: True,
-                 prune=lambda i, d: False, depth=-1, branch_first=True,
-                 visit_once=False, ignore_self=1):
-        """For documentation, see util.Traversable.traverse
+    def traverse(self,      # type: ignore  # overrides super()
+                 predicate: Callable[[Union[IndexObjUnion, TraversedTreeTup], int], bool] = lambda i, d: True,
+                 prune: Callable[[Union[IndexObjUnion, TraversedTreeTup], int], bool] = lambda i, d: False,
+                 depth: int = -1,
+                 branch_first: bool = True,
+                 visit_once: bool = False,
+                 ignore_self: int = 1,
+                 as_edge: bool = False
+                 ) -> Union[Iterator[IndexObjUnion],
+                            Iterator[TraversedTreeTup]]:
+        """For documentation, see util.Traversable._traverse()
         Trees are set to visit_once = False to gain more performance in the traversal"""
-        return super(Tree, self).traverse(predicate, prune, depth, branch_first, visit_once, ignore_self)
+
+        # """
+        # # To typecheck instead of using cast.
+        # import itertools
+        # def is_tree_traversed(inp: Tuple) -> TypeGuard[Tuple[Iterator[Union['Tree', 'Blob', 'Submodule']]]]:
+        #     return all(isinstance(x, (Blob, Tree, Submodule)) for x in inp[1])
+
+        # ret = super(Tree, self).traverse(predicate, prune, depth, branch_first, visit_once, ignore_self)
+        # ret_tup = itertools.tee(ret, 2)
+        # assert is_tree_traversed(ret_tup), f"Type is {[type(x) for x in list(ret_tup[0])]}"
+        # return ret_tup[0]"""
+        return cast(Union[Iterator[IndexObjUnion], Iterator[TraversedTreeTup]],
+                    super(Tree, self).traverse(predicate, prune, depth,  # type: ignore
+                                               branch_first, visit_once, ignore_self))
 
     # List protocol
-    def __getslice__(self, i: int, j: int) -> List[Union[Blob, 'Tree', Submodule]]:
+
+    def __getslice__(self, i: int, j: int) -> List[IndexObjUnion]:
         return list(self._iter_convert_to_object(self._cache[i:j]))
 
-    def __iter__(self) -> Iterator[Union[Blob, 'Tree', Submodule]]:
+    def __iter__(self) -> Iterator[IndexObjUnion]:
         return self._iter_convert_to_object(self._cache)
 
     def __len__(self) -> int:
         return len(self._cache)
 
-    def __getitem__(self, item: Union[str, int, slice]) -> Union[Blob, 'Tree', Submodule]:
+    def __getitem__(self, item: Union[str, int, slice]) -> IndexObjUnion:
         if isinstance(item, int):
             info = self._cache[item]
             return self._map_id_to_type[info[1] >> 12](self.repo, info[0], info[1], join_path(self.path, info[2]))
@@ -318,7 +347,7 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
 
         raise TypeError("Invalid index type: %r" % item)
 
-    def __contains__(self, item: Union[IndexObject, PathLike]) -> bool:
+    def __contains__(self, item: Union[IndexObjUnion, PathLike]) -> bool:
         if isinstance(item, IndexObject):
             for info in self._cache:
                 if item.binsha == info[0]:

@@ -4,6 +4,9 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
+from .exc import InvalidGitRepositoryError
+import os.path as osp
+from .compat import is_win
 import contextlib
 from functools import wraps
 import getpass
@@ -20,6 +23,8 @@ from unittest import SkipTest
 from urllib.parse import urlsplit, urlunsplit
 import warnings
 
+# from git.objects.util import Traversable
+
 # typing ---------------------------------------------------------
 
 from typing import (Any, AnyStr, BinaryIO, Callable, Dict, Generator, IO, Iterator, List,
@@ -32,7 +37,11 @@ if TYPE_CHECKING:
     from git.repo.base import Repo
     from git.config import GitConfigParser, SectionConstraint
 
-from .types import PathLike, Literal, SupportsIndex, HSH_TD, Files_TD
+from .types import (Literal, Protocol, SupportsIndex,                    # because behind py version guards
+                    PathLike, HSH_TD, Total_TD, Files_TD)                # aliases
+
+T_IterableObj = TypeVar('T_IterableObj', bound='IterableObj', covariant=True)
+# So IterableList[Head] is subtype of IterableList[IterableObj]
 
 # ---------------------------------------------------------------------
 
@@ -48,11 +57,6 @@ from gitdb.util import (  # NOQA @IgnorePep8
     bin_to_hex,             # @UnusedImport
     hex_to_bin,             # @UnusedImport
 )
-
-from .compat import is_win
-import os.path as osp
-
-from .exc import InvalidGitRepositoryError
 
 
 # NOTE:  Some of the unused imports might be used/imported by others.
@@ -171,7 +175,7 @@ if is_win:
         path = str(path)
         return path.replace('/', '\\')
 
-    def to_native_path_linux(path: PathLike) -> PathLike:
+    def to_native_path_linux(path: PathLike) -> str:
         path = str(path)
         return path.replace('\\', '/')
 
@@ -179,8 +183,9 @@ if is_win:
     to_native_path = to_native_path_windows
 else:
     # no need for any work on linux
-    def to_native_path_linux(path: PathLike) -> PathLike:
-        return path
+    def to_native_path_linux(path: PathLike) -> str:
+        return str(path)
+
     to_native_path = to_native_path_linux
 
 
@@ -236,7 +241,7 @@ def py_where(program: str, path: Optional[PathLike] = None) -> List[str]:
     return progs
 
 
-def _cygexpath(drive: Optional[str], path: PathLike) -> str:
+def _cygexpath(drive: Optional[str], path: str) -> str:
     if osp.isabs(path) and not drive:
         ## Invoked from `cygpath()` directly with `D:Apps\123`?
         #  It's an error, leave it alone just slashes)
@@ -285,7 +290,7 @@ _cygpath_parsers = (
 )  # type: Tuple[Tuple[Pattern[str], Callable, bool], ...]
 
 
-def cygpath(path: PathLike) -> PathLike:
+def cygpath(path: str) -> str:
     """Use :meth:`git.cmd.Git.polish_url()` instead, that works on any environment."""
     path = str(path)  # ensure is str and not AnyPath.
     #Fix to use Paths when 3.5 dropped. or to be just str if only for urls?
@@ -433,7 +438,7 @@ class RemoteProgress(object):
     Handler providing an interface to parse progress information emitted by git-push
     and git-fetch and to dispatch callbacks allowing subclasses to react to the progress.
     """
-    _num_op_codes = 9
+    _num_op_codes: int = 9
     BEGIN, END, COUNTING, COMPRESSING, WRITING, RECEIVING, RESOLVING, FINDING_SOURCES, CHECKING_OUT = \
         [1 << x for x in range(_num_op_codes)]
     STAGE_MASK = BEGIN | END
@@ -746,8 +751,6 @@ class Stats(object):
      files = number of changed files as int"""
     __slots__ = ("total", "files")
 
-    from git.types import Total_TD, Files_TD
-
     def __init__(self, total: Total_TD, files: Dict[PathLike, Files_TD]):
         self.total = total
         self.files = files
@@ -931,10 +934,7 @@ class BlockingLockFile(LockFile):
         # END endless loop
 
 
-T = TypeVar('T', bound='IterableObj')
-
-
-class IterableList(List[T]):
+class IterableList(List[T_IterableObj]):
 
     """
     List of iterable objects allowing to query an object by id or by named index::
@@ -1046,7 +1046,7 @@ class Iterable(object):
     @classmethod
     def list_items(cls, repo, *args, **kwargs):
         """
-        Deprecaated, use IterableObj instead.
+        Deprecated, use IterableObj instead.
         Find all items of this type - subclasses can specify args and kwargs differently.
         If no args are given, subclasses are obliged to return all items if no additional
         arguments arg given.
@@ -1066,14 +1066,17 @@ class Iterable(object):
         raise NotImplementedError("To be implemented by Subclass")
 
 
-class IterableObj():
+class IterableObj(Protocol):
     """Defines an interface for iterable items which is to assure a uniform
-    way to retrieve and iterate items within the git repository"""
+    way to retrieve and iterate items within the git repository
+
+    Subclasses = [Submodule, Commit, Reference, PushInfo, FetchInfo, Remote]"""
+
     __slots__ = ()
-    _id_attribute_ = "attribute that most suitably identifies your instance"
+    _id_attribute_: str
 
     @classmethod
-    def list_items(cls, repo: 'Repo', *args: Any, **kwargs: Any) -> IterableList[T]:
+    def list_items(cls, repo: 'Repo', *args: Any, **kwargs: Any) -> IterableList[T_IterableObj]:
         """
         Find all items of this type - subclasses can specify args and kwargs differently.
         If no args are given, subclasses are obliged to return all items if no additional
@@ -1087,7 +1090,8 @@ class IterableObj():
         return out_list
 
     @classmethod
-    def iter_items(cls, repo: 'Repo', *args: Any, **kwargs: Any) -> Iterator[T]:
+    def iter_items(cls, repo: 'Repo', *args: Any, **kwargs: Any
+                   ) -> Iterator[T_IterableObj]:
         # return typed to be compatible with subtypes e.g. Remote
         """For more information about the arguments, see list_items
         :return:  iterator yielding Items"""

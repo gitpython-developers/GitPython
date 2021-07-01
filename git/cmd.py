@@ -342,11 +342,11 @@ class Git(LazyMixin):
 
     @overload
     @classmethod
-    def polish_url(cls, url: PathLike, is_cygwin: Union[None, bool] = None) -> str:
+    def polish_url(cls, url: str, is_cygwin: Union[None, bool] = None) -> str:
         ...
 
     @classmethod
-    def polish_url(cls, url: PathLike, is_cygwin: Union[None, bool] = None) -> PathLike:
+    def polish_url(cls, url: str, is_cygwin: Union[None, bool] = None) -> PathLike:
         if is_cygwin is None:
             is_cygwin = cls.is_cygwin()
 

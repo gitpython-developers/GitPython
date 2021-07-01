@@ -4,12 +4,13 @@
 
 import os
 import sys
-from typing import Dict, Union, Any
+from typing import Dict, Union, Any, TYPE_CHECKING
+
 
 if sys.version_info[:2] >= (3, 8):
-    from typing import Final, Literal, SupportsIndex, TypedDict  # noqa: F401
+    from typing import Final, Literal, SupportsIndex, TypedDict, Protocol  # noqa: F401
 else:
-    from typing_extensions import Final, Literal, SupportsIndex, TypedDict  # noqa: F401
+    from typing_extensions import Final, Literal, SupportsIndex, TypedDict, Protocol  # noqa: F401
 
 if sys.version_info[:2] >= (3, 10):
     from typing import TypeGuard  # noqa: F401
@@ -18,13 +19,19 @@ else:
 
 
 if sys.version_info[:2] < (3, 9):
-    # Python >= 3.6, < 3.9
     PathLike = Union[str, os.PathLike]
 elif sys.version_info[:2] >= (3, 9):
     # os.PathLike only becomes subscriptable from Python 3.9 onwards
     PathLike = Union[str, 'os.PathLike[str]']  # forward ref as pylance complains unless editing with py3.9+
 
+if TYPE_CHECKING:
+    from git.objects import Commit, Tree, TagObject, Blob
+    # from git.refs import SymbolicReference
+
 TBD = Any
+
+Tree_ish = Union['Commit', 'Tree']
+Commit_ish = Union['Commit', 'TagObject', 'Blob', 'Tree']
 
 Lit_config_levels = Literal['system', 'global', 'user', 'repository']
 

@@ -3,7 +3,7 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
-from git.refs.reference import Reference
+
 import glob
 from io import BytesIO
 import os
@@ -74,6 +74,8 @@ from git.types import PathLike, TBD
 if TYPE_CHECKING:
     from subprocess import Popen
     from git.repo import Repo
+    from git.refs.reference import Reference
+    from git.util import Actor
 
 
 StageType = int
@@ -966,8 +968,8 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
         return out
 
-    def commit(self, message: str, parent_commits=None, head: bool = True, author: str = None,
-               committer: str = None, author_date: str = None, commit_date: str = None,
+    def commit(self, message: str, parent_commits=None, head: bool = True, author: Union[None, 'Actor'] = None,
+               committer: Union[None, 'Actor'] = None, author_date: str = None, commit_date: str = None,
                skip_hooks: bool = False) -> Commit:
         """Commit the current default index file, creating a commit object.
         For more information on the arguments, see tree.commit.
@@ -1191,7 +1193,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         assert "Should not reach this point"
 
     @default_index
-    def reset(self, commit: Union[Commit, Reference, str] = 'HEAD', working_tree: bool = False,
+    def reset(self, commit: Union[Commit, 'Reference', str] = 'HEAD', working_tree: bool = False,
               paths: Union[None, Iterable[PathLike]] = None,
               head: bool = False, **kwargs: Any) -> 'IndexFile':
         """Reset the index to reflect the tree at the given commit. This will not

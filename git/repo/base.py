@@ -36,7 +36,7 @@ import gitdb
 
 # typing ------------------------------------------------------
 
-from git.types import TBD, PathLike, Lit_config_levels
+from git.types import TBD, PathLike, Lit_config_levels, Commit_ish, Tree_ish
 from typing import (Any, BinaryIO, Callable, Dict,
                     Iterator, List, Mapping, Optional, Sequence,
                     TextIO, Tuple, Type, Union,
@@ -45,7 +45,7 @@ from typing import (Any, BinaryIO, Callable, Dict,
 if TYPE_CHECKING:  # only needed for types
     from git.util import IterableList
     from git.refs.symbolic import SymbolicReference
-    from git.objects import TagObject, Blob, Tree  # NOQA: F401
+    from git.objects import Tree
 
 
 # -----------------------------------------------------------
@@ -515,8 +515,8 @@ class Repo(object):
             repository = configuration file for this repository only"""
         return GitConfigParser(self._get_config_path(config_level), read_only=False, repo=self)
 
-    def commit(self, rev: Optional[TBD] = None
-               ) -> Union['SymbolicReference', Commit, 'TagObject', 'Blob', 'Tree']:
+    def commit(self, rev: Optional[str] = None
+               ) -> Commit:
         """The Commit object for the specified revision
 
         :param rev: revision specifier, see git-rev-parse for viable options.
@@ -531,7 +531,7 @@ class Repo(object):
         :note: Takes all arguments known to iter_commits method"""
         return (c.tree for c in self.iter_commits(*args, **kwargs))
 
-    def tree(self, rev: Union['Commit', 'Tree', str, None] = None) -> 'Tree':
+    def tree(self, rev: Union[Tree_ish, str, None] = None) -> 'Tree':
         """The Tree object for the given treeish revision
         Examples::
 
@@ -574,7 +574,7 @@ class Repo(object):
         return Commit.iter_items(self, rev, paths, **kwargs)
 
     def merge_base(self, *rev: TBD, **kwargs: Any
-                   ) -> List[Union['SymbolicReference', Commit, 'TagObject', 'Blob', 'Tree', None]]:
+                   ) -> List[Union['SymbolicReference', Commit_ish, None]]:
         """Find the closest common ancestor for the given revision (e.g. Commits, Tags, References, etc)
 
         :param rev: At least two revs to find the common ancestor for.
@@ -587,7 +587,7 @@ class Repo(object):
             raise ValueError("Please specify at least two revs, got only %i" % len(rev))
         # end handle input
 
-        res = []  # type: List[Union['SymbolicReference', Commit, 'TagObject', 'Blob', 'Tree', None]]
+        res = []  # type: List[Union['SymbolicReference', Commit_ish, None]]
         try:
             lines = self.git.merge_base(*rev, **kwargs).splitlines()  # List[str]
         except GitCommandError as err:
@@ -1036,7 +1036,7 @@ class Repo(object):
         multi = None
         if multi_options:
             multi = ' '.join(multi_options).split(' ')
-        proc = git.clone(multi, Git.polish_url(url), clone_path, with_extended_output=True, as_process=True,
+        proc = git.clone(multi, Git.polish_url(str(url)), clone_path, with_extended_output=True, as_process=True,
                          v=True, universal_newlines=True, **add_progress(kwargs, git, progress))
         if progress:
             handle_process_output(proc, None, to_progress_instance(progress).new_message_handler(),
@@ -1159,7 +1159,7 @@ class Repo(object):
         clazz = self.__class__
         return '<%s.%s %r>' % (clazz.__module__, clazz.__name__, self.git_dir)
 
-    def currently_rebasing_on(self) -> Union['SymbolicReference', Commit, 'TagObject', 'Blob', 'Tree', None]:
+    def currently_rebasing_on(self) -> Union['SymbolicReference', Commit_ish, None]:
         """
         :return: The commit which is currently being replayed while rebasing.
 

@@ -29,8 +29,6 @@ import os.path as osp
 
 import configparser as cp
 
-from pathlib import Path
-
 # typing-------------------------------------------------------
 
 from typing import Any, Callable, IO, List, Dict, Sequence, TYPE_CHECKING, Tuple, Union, cast, overload
@@ -330,7 +328,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
                         "Write-ConfigParsers can operate on a single file only, multiple files have been passed")
                 # END single file check
 
-                if isinstance(self._file_or_files, (str, Path)):  # cannot narrow by os._pathlike until 3.5 dropped
+                if isinstance(self._file_or_files, (str, os.PathLike)):
                     file_or_files = self._file_or_files
                 else:
                     file_or_files = cast(IO, self._file_or_files).name
@@ -695,6 +693,16 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
     def read_only(self) -> bool:
         """:return: True if this instance may change the configuration file"""
         return self._read_only
+
+    @overload
+    def get_value(self, section: str, option: str, default: str
+                  ) -> str:
+        ...
+
+    @overload
+    def get_value(self, section: str, option: str, default: float
+                  ) -> float:
+        ...
 
     def get_value(self, section: str, option: str, default: Union[int, float, str, bool, None] = None
                   ) -> Union[int, float, str, bool]:

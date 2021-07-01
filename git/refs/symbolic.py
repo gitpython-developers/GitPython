@@ -1,7 +1,8 @@
 import os
 
 from git.compat import defenc
-from git.objects import Object, Commit
+from git.objects import Object
+from git.objects.commit import Commit
 from git.util import (
     join_path,
     join_path_native,
@@ -18,7 +19,6 @@ from gitdb.exc import (
 import os.path as osp
 
 from .log import RefLog
-
 
 __all__ = ["SymbolicReference"]
 
