@@ -9,6 +9,7 @@ from unittest import skipIf
 import git
 from git.cmd import Git
 from git.compat import is_win
+from git.config import GitConfigParser, cp
 from git.exc import (
     InvalidGitRepositoryError,
     RepositoryDirtyError
@@ -945,3 +946,68 @@ class TestSubmodule(TestBase):
         sm_depth = 1
         sm = parent.create_submodule(sm_name, sm_name, url=self._small_repo_url(), depth=sm_depth)
         self.assertEqual(len(list(sm.module().iter_commits())), sm_depth)
+
+    @with_rw_directory
+    def test_update_clone_multi_options_argument(self, rwdir):
+        #Arrange
+        parent = git.Repo.init(osp.join(rwdir, 'parent'))
+        sm_name = 'foo'
+        sm_url = self._small_repo_url()
+        sm_branch = 'refs/heads/master'
+        sm_hexsha = git.Repo(self._small_repo_url()).head.commit.hexsha
+        sm = Submodule(parent, bytes.fromhex(sm_hexsha), name=sm_name, path=sm_name, url=sm_url,
+                       branch_path=sm_branch)
+
+        #Act
+        sm.update(init=True, clone_multi_options=['--config core.eol=true'])
+
+        #Assert
+        sm_config = GitConfigParser(file_or_files=osp.join(parent.git_dir, 'modules', sm_name, 'config'))
+        self.assertTrue(sm_config.get_value('core', 'eol'))
+
+    @with_rw_directory
+    def test_update_no_clone_multi_options_argument(self, rwdir):
+        #Arrange
+        parent = git.Repo.init(osp.join(rwdir, 'parent'))
+        sm_name = 'foo'
+        sm_url = self._small_repo_url()
+        sm_branch = 'refs/heads/master'
+        sm_hexsha = git.Repo(self._small_repo_url()).head.commit.hexsha
+        sm = Submodule(parent, bytes.fromhex(sm_hexsha), name=sm_name, path=sm_name, url=sm_url,
+                       branch_path=sm_branch)
+
+        #Act
+        sm.update(init=True)
+
+        #Assert
+        sm_config = GitConfigParser(file_or_files=osp.join(parent.git_dir, 'modules', sm_name, 'config'))
+        with self.assertRaises(cp.NoOptionError):
+            sm_config.get_value('core', 'eol')
+
+    @with_rw_directory
+    def test_add_clone_multi_options_argument(self, rwdir):
+        #Arrange
+        parent = git.Repo.init(osp.join(rwdir, 'parent'))
+        sm_name = 'foo'
+
+        #Act
+        Submodule.add(parent, sm_name, sm_name, url=self._small_repo_url(),
+                      clone_multi_options=['--config core.eol=true'])
+
+        #Assert
+        sm_config = GitConfigParser(file_or_files=osp.join(parent.git_dir, 'modules', sm_name, 'config'))
+        self.assertTrue(sm_config.get_value('core', 'eol'))
+
+    @with_rw_directory
+    def test_add_no_clone_multi_options_argument(self, rwdir):
+        #Arrange
+        parent = git.Repo.init(osp.join(rwdir, 'parent'))
+        sm_name = 'foo'
+
+        #Act
+        Submodule.add(parent, sm_name, sm_name, url=self._small_repo_url())
+
+        #Assert
+        sm_config = GitConfigParser(file_or_files=osp.join(parent.git_dir, 'modules', sm_name, 'config'))
+        with self.assertRaises(cp.NoOptionError):
+            sm_config.get_value('core', 'eol')
