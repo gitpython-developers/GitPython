@@ -87,7 +87,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
                  committer: Union[Actor, None] = None,
                  committed_date: Union[int, None] = None,
                  committer_tz_offset: Union[None, float] = None,
-                 message: Union[str, None] = None,
+                 message: Union[str, bytes, None] = None,
                  parents: Union[Sequence['Commit'], None] = None,
                  encoding: Union[str, None] = None,
                  gpgsig: Union[str, None] = None) -> None:
@@ -209,9 +209,12 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         return from_timestamp(self.committed_date, self.committer_tz_offset)
 
     @property
-    def summary(self) -> str:
+    def summary(self) -> Union[str, bytes]:
         """:return: First line of the commit message"""
-        return self.message.split('\n', 1)[0]
+        if isinstance(self.message, str):
+            return self.message.split('\n', 1)[0]
+        else:
+            return self.message.split(b'\n', 1)[0]
 
     def count(self, paths: Union[PathLike, Sequence[PathLike]] = '', **kwargs: Any) -> int:
         """Count the number of commits reachable from this commit
@@ -590,12 +593,12 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
 
         # a stream from our data simply gives us the plain message
         # The end of our message stream is marked with a newline that we strip
-        self.message_bytes = stream.read()
+        self.message = stream.read()
         try:
-            self.message = self.message_bytes.decode(self.encoding, 'replace')
+            self.message = self.message.decode(self.encoding, 'replace')
         except UnicodeDecodeError:
             log.error("Failed to decode message '%s' using encoding %s",
-                      self.message_bytes, self.encoding, exc_info=True)
+                      self.message, self.encoding, exc_info=True)
         # END exception handling
 
         return self
