@@ -694,6 +694,16 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
         """:return: True if this instance may change the configuration file"""
         return self._read_only
 
+    @overload
+    def get_value(self, section: str, option: str, default: str
+                  ) -> str:
+        ...
+
+    @overload
+    def get_value(self, section: str, option: str, default: float
+                  ) -> float:
+        ...
+
     def get_value(self, section: str, option: str, default: Union[int, float, str, bool, None] = None
                   ) -> Union[int, float, str, bool]:
         # can default or return type include bool?

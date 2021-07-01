@@ -1036,7 +1036,7 @@ class Repo(object):
         multi = None
         if multi_options:
             multi = ' '.join(multi_options).split(' ')
-        proc = git.clone(multi, Git.polish_url(url), clone_path, with_extended_output=True, as_process=True,
+        proc = git.clone(multi, Git.polish_url(str(url)), clone_path, with_extended_output=True, as_process=True,
                          v=True, universal_newlines=True, **add_progress(kwargs, git, progress))
         if progress:
             handle_process_output(proc, None, to_progress_instance(progress).new_message_handler(),

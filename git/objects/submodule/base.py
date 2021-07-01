@@ -380,8 +380,8 @@ class Submodule(IndexObject, TraversableIterableObj):
 
         # assure we never put backslashes into the url, as some operating systems
         # like it ...
-        # if url is not None:
-        #     url = to_native_path_linux(url)   to_native_path_linux does nothing??
+        if url is not None:
+            url = to_native_path_linux(url)
         # END assure url correctness
 
         # INSTANTIATE INTERMEDIATE SM
@@ -993,7 +993,7 @@ class Submodule(IndexObject, TraversableIterableObj):
         # If check is False, we might see a parent-commit that doesn't even contain the submodule anymore.
         # in that case, mark our sha as being NULL
         try:
-            self.binsha = pctree[self.path].binsha
+            self.binsha = pctree[str(self.path)].binsha
         except KeyError:
             self.binsha = self.NULL_BIN_SHA
         # end

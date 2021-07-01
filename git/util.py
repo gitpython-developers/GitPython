@@ -41,8 +41,8 @@ from .types import (Literal, Protocol, SupportsIndex,                    # becau
                     PathLike, HSH_TD, Total_TD, Files_TD)                # aliases
 
 T_IterableObj = TypeVar('T_IterableObj', bound='IterableObj', covariant=True)
-
 # So IterableList[Head] is subtype of IterableList[IterableObj]
+
 # ---------------------------------------------------------------------
 
 
@@ -175,7 +175,7 @@ if is_win:
         path = str(path)
         return path.replace('/', '\\')
 
-    def to_native_path_linux(path: PathLike) -> PathLike:
+    def to_native_path_linux(path: PathLike) -> str:
         path = str(path)
         return path.replace('\\', '/')
 
@@ -183,8 +183,8 @@ if is_win:
     to_native_path = to_native_path_windows
 else:
     # no need for any work on linux
-    def to_native_path_linux(path: PathLike) -> PathLike:
-        return path
+    def to_native_path_linux(path: PathLike) -> str:
+        return str(path)
 
     to_native_path = to_native_path_linux
 
@@ -241,7 +241,7 @@ def py_where(program: str, path: Optional[PathLike] = None) -> List[str]:
     return progs
 
 
-def _cygexpath(drive: Optional[str], path: PathLike) -> str:
+def _cygexpath(drive: Optional[str], path: str) -> str:
     if osp.isabs(path) and not drive:
         ## Invoked from `cygpath()` directly with `D:Apps\123`?
         #  It's an error, leave it alone just slashes)
@@ -290,7 +290,7 @@ _cygpath_parsers = (
 )  # type: Tuple[Tuple[Pattern[str], Callable, bool], ...]
 
 
-def cygpath(path: PathLike) -> PathLike:
+def cygpath(path: str) -> str:
     """Use :meth:`git.cmd.Git.polish_url()` instead, that works on any environment."""
     path = str(path)  # ensure is str and not AnyPath.
     #Fix to use Paths when 3.5 dropped. or to be just str if only for urls?

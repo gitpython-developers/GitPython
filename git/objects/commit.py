@@ -3,6 +3,8 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
+import datetime
+from subprocess import Popen
 from gitdb import IStream
 from git.util import (
     hex_to_bin,
@@ -37,9 +39,9 @@ import logging
 
 # typing ------------------------------------------------------------------
 
-from typing import Any, Iterator, List, Sequence, Tuple, Union, TYPE_CHECKING
+from typing import Any, IO, Iterator, List, Sequence, Tuple, Union, TYPE_CHECKING
 
-from git.types import PathLike
+from git.types import PathLike, TypeGuard
 
 if TYPE_CHECKING:
     from git.repo import Repo
@@ -78,11 +80,17 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
                  "message", "parents", "encoding", "gpgsig")
     _id_attribute_ = "hexsha"
 
-    def __init__(self, repo, binsha, tree=None, author: Union[Actor, None] = None,
-                 authored_date=None, author_tz_offset=None,
-                 committer=None, committed_date=None, committer_tz_offset=None,
-                 message=None, parents: Union[Tuple['Commit', ...], List['Commit'], None] = None,
-                 encoding=None, gpgsig=None):
+    def __init__(self, repo: 'Repo', binsha: bytes, tree: 'Tree' = None,
+                 author: Union[Actor, None] = None,
+                 authored_date: Union[int, None] = None,
+                 author_tz_offset: Union[None, float] = None,
+                 committer: Union[Actor, None] = None,
+                 committed_date: Union[int, None] = None,
+                 committer_tz_offset: Union[None, float] = None,
+                 message: Union[str, None] = None,
+                 parents: Union[Sequence['Commit'], None] = None,
+                 encoding: Union[str, None] = None,
+                 gpgsig: Union[str, None] = None) -> None:
         """Instantiate a new Commit. All keyword arguments taking None as default will
         be implicitly set on first query.
 
@@ -164,7 +172,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         istream = repo.odb.store(IStream(cls.type, streamlen, stream))
         return istream.binsha
 
-    def replace(self, **kwargs):
+    def replace(self, **kwargs: Any) -> 'Commit':
         '''Create new commit object from existing commit object.
 
         Any values provided as keyword arguments will replace the
@@ -183,7 +191,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
 
         return new_commit
 
-    def _set_cache_(self, attr):
+    def _set_cache_(self, attr: str) -> None:
         if attr in Commit.__slots__:
             # read the data in a chunk, its faster - then provide a file wrapper
             _binsha, _typename, self.size, stream = self.repo.odb.stream(self.binsha)
@@ -193,19 +201,19 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         # END handle attrs
 
     @property
-    def authored_datetime(self):
+    def authored_datetime(self) -> 'datetime.datetime':
         return from_timestamp(self.authored_date, self.author_tz_offset)
 
     @property
-    def committed_datetime(self):
+    def committed_datetime(self) -> 'datetime.datetime':
         return from_timestamp(self.committed_date, self.committer_tz_offset)
 
     @property
-    def summary(self):
+    def summary(self) -> str:
         """:return: First line of the commit message"""
         return self.message.split('\n', 1)[0]
 
-    def count(self, paths='', **kwargs):
+    def count(self, paths: Union[PathLike, Sequence[PathLike]] = '', **kwargs: Any) -> int:
         """Count the number of commits reachable from this commit
 
         :param paths:
@@ -223,7 +231,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         return len(self.repo.git.rev_list(self.hexsha, **kwargs).splitlines())
 
     @property
-    def name_rev(self):
+    def name_rev(self) -> str:
         """
         :return:
             String describing the commits hex sha based on the closest Reference.
@@ -231,7 +239,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         return self.repo.git.name_rev(self)
 
     @classmethod
-    def iter_items(cls, repo: 'Repo', rev,                                          # type: ignore
+    def iter_items(cls, repo: 'Repo', rev: str,                                          # type: ignore
                    paths: Union[PathLike, Sequence[PathLike]] = '', **kwargs: Any
                    ) -> Iterator['Commit']:
         """Find all commits matching the given criteria.
@@ -254,7 +262,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         # use -- in any case, to prevent possibility of ambiguous arguments
         # see https://github.com/gitpython-developers/GitPython/issues/264
 
-        args_list: List[Union[PathLike, Sequence[PathLike]]] = ['--']
+        args_list: List[PathLike] = ['--']
 
         if paths:
             paths_tup: Tuple[PathLike, ...]
@@ -286,7 +294,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         return self.iter_items(self.repo, self, paths, **kwargs)
 
     @ property
-    def stats(self):
+    def stats(self) -> Stats:
         """Create a git stat from changes between this commit and its first parent
         or from all changes done if this is the very first commit.
 
@@ -303,16 +311,25 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         return Stats._list_from_string(self.repo, text)
 
     @ classmethod
-    def _iter_from_process_or_stream(cls, repo, proc_or_stream):
+    def _iter_from_process_or_stream(cls, repo: 'Repo', proc_or_stream: Union[Popen, IO]) -> Iterator['Commit']:
         """Parse out commit information into a list of Commit objects
         We expect one-line per commit, and parse the actual commit information directly
         from our lighting fast object database
 
         :param proc: git-rev-list process instance - one sha per line
         :return: iterator returning Commit objects"""
-        stream = proc_or_stream
-        if not hasattr(stream, 'readline'):
-            stream = proc_or_stream.stdout
+
+        def is_proc(inp) -> TypeGuard[Popen]:
+            return hasattr(proc_or_stream, 'wait') and not hasattr(proc_or_stream, 'readline')
+
+        def is_stream(inp) -> TypeGuard[IO]:
+            return hasattr(proc_or_stream, 'readline')
+
+        if is_proc(proc_or_stream):
+            if proc_or_stream.stdout is not None:
+                stream = proc_or_stream.stdout
+        elif is_stream(proc_or_stream):
+            stream = proc_or_stream
 
         readline = stream.readline
         while True:
@@ -330,19 +347,21 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         # END for each line in stream
         # TODO: Review this - it seems process handling got a bit out of control
         # due to many developers trying to fix the open file handles issue
-        if hasattr(proc_or_stream, 'wait'):
+        if is_proc(proc_or_stream):
             finalize_process(proc_or_stream)
 
     @ classmethod
-    def create_from_tree(cls, repo, tree, message, parent_commits=None, head=False, author=None, committer=None,
-                         author_date=None, commit_date=None):
+    def create_from_tree(cls, repo: 'Repo', tree: Union['Tree', str], message: str,
+                         parent_commits: Union[None, List['Commit']] = None, head: bool = False,
+                         author: Union[None, Actor] = None, committer: Union[None, Actor] = None,
+                         author_date: Union[None, str] = None, commit_date: Union[None, str] = None):
         """Commit the given tree, creating a commit object.
 
         :param repo: Repo object the commit should be part of
         :param tree: Tree object or hex or bin sha
             the tree of the new commit
         :param message: Commit message. It may be an empty string if no message is provided.
-            It will be converted to a string in any case.
+            It will be converted to a string , in any case.
         :param parent_commits:
             Optional Commit objects to use as parents for the new commit.
             If empty list, the commit will have no parents at all and become
@@ -476,7 +495,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
             write(("encoding %s\n" % self.encoding).encode('ascii'))
 
         try:
-            if self.__getattribute__('gpgsig') is not None:
+            if self.__getattribute__('gpgsig'):
                 write(b"gpgsig")
                 for sigline in self.gpgsig.rstrip("\n").split("\n"):
                     write((" " + sigline + "\n").encode('ascii'))
@@ -526,7 +545,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         # now we can have the encoding line, or an empty line followed by the optional
         # message.
         self.encoding = self.default_encoding
-        self.gpgsig = None
+        self.gpgsig = ""
 
         # read headers
         enc = next_line
@@ -555,7 +574,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         # decode the authors name
 
         try:
-            self.author, self.authored_date, self.author_tz_offset = \
+            (self.author, self.authored_date, self.author_tz_offset) = \
                 parse_actor_and_date(author_line.decode(self.encoding, 'replace'))
         except UnicodeDecodeError:
             log.error("Failed to decode author line '%s' using encoding %s", author_line, self.encoding,
@@ -571,11 +590,12 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
 
         # a stream from our data simply gives us the plain message
         # The end of our message stream is marked with a newline that we strip
-        self.message = stream.read()
+        self.message_bytes = stream.read()
         try:
-            self.message = self.message.decode(self.encoding, 'replace')
+            self.message = self.message_bytes.decode(self.encoding, 'replace')
         except UnicodeDecodeError:
-            log.error("Failed to decode message '%s' using encoding %s", self.message, self.encoding, exc_info=True)
+            log.error("Failed to decode message '%s' using encoding %s",
+                      self.message_bytes, self.encoding, exc_info=True)
         # END exception handling
 
         return self

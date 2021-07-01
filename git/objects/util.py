@@ -99,7 +99,7 @@ def utctz_to_altz(utctz: str) -> int:
     return -1 * int(float(utctz) / 100 * 3600)
 
 
-def altz_to_utctz_str(altz: int) -> str:
+def altz_to_utctz_str(altz: float) -> str:
     """As above, but inverses the operation, returning a string that can be used
     in commit objects"""
     utci = -1 * int((float(altz) / 3600) * 100)
@@ -323,8 +323,8 @@ class Traversable(object):
         return out
 
     def traverse(self,
-                 predicate: Callable[[Union['Traversable', TraversedTup], int], bool] = lambda i, d: True,
-                 prune: Callable[[Union['Traversable', TraversedTup], int], bool] = lambda i, d: False,
+                 predicate: Callable[[Union['Traversable', 'Blob', TraversedTup], int], bool] = lambda i, d: True,
+                 prune: Callable[[Union['Traversable', 'Blob', TraversedTup], int], bool] = lambda i, d: False,
                  depth: int = -1, branch_first: bool = True, visit_once: bool = True,
                  ignore_self: int = 1, as_edge: bool = False
                  ) -> Union[Iterator[Union['Traversable', 'Blob']],
@@ -371,7 +371,7 @@ class Traversable(object):
            ignore_self=False is_edge=False -> Iterator[Tuple[src, item]]"""
         class TraverseNT(NamedTuple):
             depth: int
-            item: 'Traversable'
+            item: Union['Traversable', 'Blob']
             src: Union['Traversable', None]
 
         visited = set()
@@ -401,7 +401,7 @@ class Traversable(object):
             if visit_once:
                 visited.add(item)
 
-            rval: Union['Traversable', Tuple[Union[None, 'Traversable'], 'Traversable']]
+            rval: Union[TraversedTup, 'Traversable', 'Blob']
             if as_edge:     # if as_edge return (src, item) unless rrc is None (e.g. for first item)
                 rval = (src, item)
             else:
@@ -478,15 +478,15 @@ class TraversableIterableObj(Traversable, IterableObj):
         ...
 
     def traverse(self: T_TIobj,
-                 predicate: Callable[[Union[T_TIobj, Tuple[Union[T_TIobj, None], T_TIobj]], int],
+                 predicate: Callable[[Union[T_TIobj, TIobj_tuple], int],
                                      bool] = lambda i, d: True,
-                 prune: Callable[[Union[T_TIobj, Tuple[Union[T_TIobj, None], T_TIobj]], int],
+                 prune: Callable[[Union[T_TIobj, TIobj_tuple], int],
                                  bool] = lambda i, d: False,
                  depth: int = -1, branch_first: bool = True, visit_once: bool = True,
                  ignore_self: int = 1, as_edge: bool = False
                  ) -> Union[Iterator[T_TIobj],
                             Iterator[Tuple[T_TIobj, T_TIobj]],
-                            Iterator[Tuple[Union[T_TIobj, None], T_TIobj]]]:
+                            Iterator[TIobj_tuple]]:
         """For documentation, see util.Traversable._traverse()"""
 
         """

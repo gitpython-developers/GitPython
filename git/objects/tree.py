@@ -321,7 +321,7 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
         # assert is_tree_traversed(ret_tup), f"Type is {[type(x) for x in list(ret_tup[0])]}"
         # return ret_tup[0]"""
         return cast(Union[Iterator[IndexObjUnion], Iterator[TraversedTreeTup]],
-                    super(Tree, self).traverse(predicate, prune, depth,     # type: ignore
+                    super(Tree, self).traverse(predicate, prune, depth,  # type: ignore
                                                branch_first, visit_once, ignore_self))
 
     # List protocol
