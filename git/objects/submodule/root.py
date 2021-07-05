@@ -12,10 +12,13 @@ import logging
 
 # typing -------------------------------------------------------------------
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Union
+
+from git.types import Commit_ish
 
 if TYPE_CHECKING:
     from git.repo import Repo
+    from git.util import IterableList
 
 # ----------------------------------------------------------------------------
 
@@ -70,9 +73,11 @@ class RootModule(Submodule):
 
     #{ Interface
 
-    def update(self, previous_commit=None, recursive=True, force_remove=False, init=True,
-               to_latest_revision=False, progress=None, dry_run=False, force_reset=False,
-               keep_going=False):
+    def update(self, previous_commit: Union[Commit_ish, None] = None,                    # type: ignore[override]
+               recursive: bool = True, force_remove: bool = False, init: bool = True,
+               to_latest_revision: bool = False, progress: Union[None, 'RootUpdateProgress'] = None,
+               dry_run: bool = False, force_reset: bool = False, keep_going: bool = False
+               ) -> 'RootModule':
         """Update the submodules of this repository to the current HEAD commit.
         This method behaves smartly by determining changes of the path of a submodules
         repository, next to changes to the to-be-checked-out commit or the branch to be
@@ -137,8 +142,8 @@ class RootModule(Submodule):
                 previous_commit = repo.commit(previous_commit)   # obtain commit object
             # END handle previous commit
 
-            psms = self.list_items(repo, parent_commit=previous_commit)
-            sms = self.list_items(repo)
+            psms: 'IterableList[Submodule]' = self.list_items(repo, parent_commit=previous_commit)
+            sms: 'IterableList[Submodule]' = self.list_items(repo)
             spsms = set(psms)
             ssms = set(sms)
 
@@ -171,8 +176,8 @@ class RootModule(Submodule):
             csms = (spsms & ssms)
             len_csms = len(csms)
             for i, csm in enumerate(csms):
-                psm = psms[csm.name]
-                sm = sms[csm.name]
+                psm: 'Submodule' = psms[csm.name]
+                sm: 'Submodule' = sms[csm.name]
 
                 # PATH CHANGES
                 ##############
