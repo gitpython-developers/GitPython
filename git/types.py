@@ -46,8 +46,12 @@ class ConfigLevels_NT(NamedTuple):
     repository: Literal['repository']
 
 
-# Typing this as specific literals breaks for mypy
 ConfigLevels_Tup = Tuple[Lit_config_levels, Lit_config_levels, Lit_config_levels, Lit_config_levels]
+# Typing this as specific literals breaks for mypy
+
+
+def is_config_level(inp: str) -> TypeGuard[Lit_config_levels]:
+    return inp in Lit_config_levels.__args__  # type: ignore  # mypy lies about __args__
 
 
 def assert_never(inp: NoReturn, exc: Union[Exception, None] = None) -> NoReturn:
