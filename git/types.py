@@ -36,8 +36,6 @@ Commit_ish = Union['Commit', 'TagObject', 'Blob', 'Tree']
 
 Lit_config_levels = Literal['system', 'global', 'user', 'repository']
 
-T = TypeVar('T', bound=Literal['system', 'global', 'user', 'repository'], covariant=True)
-
 
 class ConfigLevels_NT(NamedTuple):
     """NamedTuple of allowed CONFIG_LEVELS"""

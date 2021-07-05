@@ -7,8 +7,6 @@ import stat
 from unittest import SkipTest
 import uuid
 
-from git import IndexFile
-
 import git
 from git.cmd import Git
 from git.compat import (
@@ -58,6 +56,7 @@ from git.types import Commit_ish, PathLike
 
 if TYPE_CHECKING:
     from git.repo import Repo
+    from git.index import IndexFile
 
 
 # -----------------------------------------------------------------------------
@@ -1012,7 +1011,7 @@ class Submodule(IndexObject, TraversableIterableObj):
         return self
 
     @unbare_repo
-    def config_writer(self, index: Union[IndexFile, None] = None, write: bool = True) -> SectionConstraint:
+    def config_writer(self, index: Union['IndexFile', None] = None, write: bool = True) -> SectionConstraint:
         """:return: a config writer instance allowing you to read and write the data
             belonging to this submodule into the .gitmodules file.
 
