@@ -5,11 +5,18 @@ from io import BytesIO
 import weakref
 
 
+# typing -----------------------------------------------------------------------
+
 from typing import Any, TYPE_CHECKING, Union
+
+from git.types import PathLike
 
 if TYPE_CHECKING:
     from .base import Submodule
     from weakref import ReferenceType
+    from git.repo import Repo
+    from git.refs import Head
+
 
 __all__ = ('sm_section', 'sm_name', 'mkhead', 'find_first_remote_branch',
            'SubmoduleConfigParser')
@@ -28,7 +35,7 @@ def sm_name(section):
     return section[11:-1]
 
 
-def mkhead(repo, path):
+def mkhead(repo: 'Repo', path: PathLike) -> 'Head':
     """:return: New branch/head instance"""
     return git.Head(repo, git.Head.to_full_path(path))
 

@@ -36,13 +36,15 @@ import gitdb
 
 # typing ------------------------------------------------------
 
-from git.types import TBD, PathLike, Lit_config_levels, Commit_ish, Tree_ish
+from git.types import ConfigLevels_NT, TBD, PathLike, Lit_config_levels, Commit_ish, Tree_ish
 from typing import (Any, BinaryIO, Callable, Dict,
                     Iterator, List, Mapping, Optional, Sequence,
                     TextIO, Tuple, Type, Union,
                     NamedTuple, cast, TYPE_CHECKING)
 
-if TYPE_CHECKING:  # only needed for types
+from git.types import ConfigLevels_Tup
+
+if TYPE_CHECKING:
     from git.util import IterableList
     from git.refs.symbolic import SymbolicReference
     from git.objects import Tree
@@ -55,12 +57,11 @@ log = logging.getLogger(__name__)
 __all__ = ('Repo',)
 
 
-BlameEntry = NamedTuple('BlameEntry', [
-    ('commit', Dict[str, TBD]),
-    ('linenos', range),
-    ('orig_path', Optional[str]),
-    ('orig_linenos', range)]
-)
+class BlameEntry(NamedTuple):
+    commit: Dict[str, TBD]
+    linenos: range
+    orig_path: Optional[str]
+    orig_linenos: range
 
 
 class Repo(object):
@@ -95,7 +96,7 @@ class Repo(object):
 
     # invariants
     # represents the configuration level of a configuration file
-    config_level = ("system", "user", "global", "repository")  # type: Tuple[Lit_config_levels, ...]
+    config_level: ConfigLevels_Tup = ConfigLevels_NT("system", "user", "global", "repository")
 
     # Subclass configuration
     # Subclasses may easily bring in their own custom types by placing a constructor or type here

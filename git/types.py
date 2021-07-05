@@ -4,7 +4,8 @@
 
 import os
 import sys
-from typing import Dict, Union, Any, TYPE_CHECKING
+from typing import (Callable, Dict, NoReturn, Tuple, Union, Any, Iterator,       # noqa: F401
+                    NamedTuple, TYPE_CHECKING, get_args, TypeVar)       # noqa: F401
 
 
 if sys.version_info[:2] >= (3, 8):
@@ -34,6 +35,32 @@ Tree_ish = Union['Commit', 'Tree']
 Commit_ish = Union['Commit', 'TagObject', 'Blob', 'Tree']
 
 Lit_config_levels = Literal['system', 'global', 'user', 'repository']
+
+T = TypeVar('T', bound=Literal['system', 'global', 'user', 'repository'], covariant=True)
+
+
+class ConfigLevels_NT(NamedTuple):
+    """NamedTuple of allowed CONFIG_LEVELS"""
+    # works for pylance, but not mypy
+    system: Literal['system']
+    user: Literal['user']
+    global_: Literal['global']
+    repository: Literal['repository']
+
+
+ConfigLevels_Tup = Tuple[Lit_config_levels, Lit_config_levels, Lit_config_levels, Lit_config_levels]
+# Typing this as specific literals breaks for mypy
+
+
+def is_config_level(inp: str) -> TypeGuard[Lit_config_levels]:
+    return inp in get_args(Lit_config_levels)
+
+
+def assert_never(inp: NoReturn, exc: Union[Exception, None] = None) -> NoReturn:
+    if exc is None:
+        assert False, f"An unhandled Literal ({inp}) in an if else chain was found"
+    else:
+        raise exc
 
 
 class Files_TD(TypedDict):

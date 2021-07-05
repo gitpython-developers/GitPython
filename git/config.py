@@ -31,9 +31,10 @@ import configparser as cp
 
 # typing-------------------------------------------------------
 
-from typing import Any, Callable, IO, List, Dict, Sequence, TYPE_CHECKING, Tuple, Union, cast, overload
+from typing import (Any, Callable, IO, List, Dict, Sequence,
+                    TYPE_CHECKING, Tuple, Union, cast, overload)
 
-from git.types import Literal, Lit_config_levels, PathLike, TBD
+from git.types import Lit_config_levels, ConfigLevels_Tup, ConfigLevels_NT, PathLike, TBD, assert_never
 
 if TYPE_CHECKING:
     from git.repo.base import Repo
@@ -48,8 +49,9 @@ log.addHandler(logging.NullHandler())
 
 # invariants
 # represents the configuration level of a configuration file
-CONFIG_LEVELS = ("system", "user", "global", "repository"
-                 )  # type: Tuple[Literal['system'], Literal['user'], Literal['global'], Literal['repository']]
+
+
+CONFIG_LEVELS: ConfigLevels_Tup = ConfigLevels_NT("system", "user", "global", "repository")
 
 # Section pattern to detect conditional includes.
 # https://git-scm.com/docs/git-config#_conditional_includes
@@ -229,8 +231,9 @@ def get_config_path(config_level: Lit_config_levels) -> str:
         return osp.normpath(osp.expanduser("~/.gitconfig"))
     elif config_level == "repository":
         raise ValueError("No repo to get repository configuration from. Use Repo._get_config_path")
-
-    raise ValueError("Invalid configuration level: %r" % config_level)
+    else:
+        # Should not reach here. Will raise ValueError if does. Static typing will warn about extra and missing elifs
+        assert_never(config_level, ValueError("Invalid configuration level: %r" % config_level))
 
 
 class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, object)):  # type: ignore ## mypy does not understand dynamic class creation # noqa: E501
@@ -300,12 +303,12 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
             self._proxies = self._dict()
 
         if file_or_files is not None:
-            self._file_or_files = file_or_files  # type: Union[PathLike, IO, Sequence[Union[PathLike, IO]]]
+            self._file_or_files: Union[PathLike, IO, Sequence[Union[PathLike, IO]]] = file_or_files
         else:
             if config_level is None:
                 if read_only:
-                    self._file_or_files = [get_config_path(f)  # type: ignore
-                                           for f in CONFIG_LEVELS    # Can type f properly when 3.5 dropped
+                    self._file_or_files = [get_config_path(f)
+                                           for f in CONFIG_LEVELS
                                            if f != 'repository']
                 else:
                     raise ValueError("No configuration level or configuration files specified")
@@ -323,15 +326,13 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
     def _acquire_lock(self) -> None:
         if not self._read_only:
             if not self._lock:
-                if isinstance(self._file_or_files, (tuple, list)):
-                    raise ValueError(
-                        "Write-ConfigParsers can operate on a single file only, multiple files have been passed")
-                # END single file check
-
                 if isinstance(self._file_or_files, (str, os.PathLike)):
                     file_or_files = self._file_or_files
+                elif isinstance(self._file_or_files, (tuple, list, Sequence)):
+                    raise ValueError(
+                        "Write-ConfigParsers can operate on a single file only, multiple files have been passed")
                 else:
-                    file_or_files = cast(IO, self._file_or_files).name
+                    file_or_files = self._file_or_files.name
 
                 # END get filename from handle/stream
                 # initialize lock base - we want to write

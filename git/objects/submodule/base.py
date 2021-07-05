@@ -7,6 +7,8 @@ import stat
 from unittest import SkipTest
 import uuid
 
+from git import IndexFile
+
 import git
 from git.cmd import Git
 from git.compat import (
@@ -49,7 +51,7 @@ from .util import (
 
 
 # typing ----------------------------------------------------------------------
-from typing import Dict, TYPE_CHECKING
+from typing import Callable, Dict, TYPE_CHECKING
 from typing import Any, Iterator, Union
 
 from git.types import Commit_ish, PathLike
@@ -131,14 +133,14 @@ class Submodule(IndexObject, TraversableIterableObj):
         if url is not None:
             self._url = url
         if branch_path is not None:
-            assert isinstance(branch_path, str)
+            # assert isinstance(branch_path, str)
             self._branch_path = branch_path
         if name is not None:
             self._name = name
 
     def _set_cache_(self, attr: str) -> None:
         if attr in ('path', '_url', '_branch_path'):
-            reader = self.config_reader()
+            reader: SectionConstraint = self.config_reader()
             # default submodule values
             try:
                 self.path = reader.get('path')
@@ -807,7 +809,8 @@ class Submodule(IndexObject, TraversableIterableObj):
         return self
 
     @unbare_repo
-    def remove(self, module=True, force=False, configuration=True, dry_run=False):
+    def remove(self, module: bool = True, force: bool = False,
+               configuration: bool = True, dry_run: bool = False) -> 'Submodule':
         """Remove this submodule from the repository. This will remove our entry
         from the .gitmodules file and the entry in the .git / config file.
 
@@ -861,7 +864,7 @@ class Submodule(IndexObject, TraversableIterableObj):
                 # TODO: If we run into permission problems, we have a highly inconsistent
                 # state. Delete the .git folders last, start with the submodules first
                 mp = self.abspath
-                method = None
+                method: Union[None, Callable[[PathLike], None]] = None
                 if osp.islink(mp):
                     method = os.remove
                 elif osp.isdir(mp):
@@ -928,7 +931,7 @@ class Submodule(IndexObject, TraversableIterableObj):
                     rmtree(git_dir)
                 except Exception as ex:
                     if HIDE_WINDOWS_KNOWN_ERRORS:
-                        raise SkipTest("FIXME: fails with: PermissionError\n  %s", ex) from ex
+                        raise SkipTest(f"FIXME: fails with: PermissionError\n  {ex}") from ex
                     else:
                         raise
             # end handle separate bare repository
@@ -961,7 +964,7 @@ class Submodule(IndexObject, TraversableIterableObj):
 
         return self
 
-    def set_parent_commit(self, commit: Union[Commit_ish, None], check=True):
+    def set_parent_commit(self, commit: Union[Commit_ish, None], check: bool = True) -> 'Submodule':
         """Set this instance to use the given commit whose tree is supposed to
         contain the .gitmodules blob.
 
@@ -1009,7 +1012,7 @@ class Submodule(IndexObject, TraversableIterableObj):
         return self
 
     @unbare_repo
-    def config_writer(self, index=None, write=True):
+    def config_writer(self, index: Union[IndexFile, None] = None, write: bool = True) -> SectionConstraint:
         """:return: a config writer instance allowing you to read and write the data
             belonging to this submodule into the .gitmodules file.
 
@@ -1030,7 +1033,7 @@ class Submodule(IndexObject, TraversableIterableObj):
         return writer
 
     @unbare_repo
-    def rename(self, new_name):
+    def rename(self, new_name: str) -> 'Submodule':
         """Rename this submodule
         :note: This method takes care of renaming the submodule in various places, such as
 
@@ -1081,7 +1084,7 @@ class Submodule(IndexObject, TraversableIterableObj):
     #{ Query Interface
 
     @unbare_repo
-    def module(self):
+    def module(self) -> 'Repo':
         """:return: Repo instance initialized from the repository at our submodule path
         :raise InvalidGitRepositoryError: if a repository was not available. This could
             also mean that it was not yet initialized"""
@@ -1098,7 +1101,7 @@ class Submodule(IndexObject, TraversableIterableObj):
             raise InvalidGitRepositoryError("Repository at %r was not yet checked out" % module_checkout_abspath)
         # END handle exceptions
 
-    def module_exists(self):
+    def module_exists(self) -> bool:
         """:return: True if our module exists and is a valid git repository. See module() method"""
         try:
             self.module()
@@ -1107,7 +1110,7 @@ class Submodule(IndexObject, TraversableIterableObj):
             return False
         # END handle exception
 
-    def exists(self):
+    def exists(self) -> bool:
         """
         :return: True if the submodule exists, False otherwise. Please note that
             a submodule may exist ( in the .gitmodules file) even though its module
