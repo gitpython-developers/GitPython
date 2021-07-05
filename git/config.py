@@ -34,7 +34,7 @@ import configparser as cp
 from typing import (Any, Callable, IO, List, Dict, Sequence,
                     TYPE_CHECKING, Tuple, Union, cast, overload)
 
-from git.types import Lit_config_levels, ConfigLevels_Tup, ConfigLevels_NT, PathLike, TBD, assert_never
+from git.types import Lit_config_levels, ConfigLevels_Tup, PathLike, TBD, assert_never
 
 if TYPE_CHECKING:
     from git.repo.base import Repo
@@ -51,7 +51,7 @@ log.addHandler(logging.NullHandler())
 # represents the configuration level of a configuration file
 
 
-CONFIG_LEVELS: ConfigLevels_Tup = ConfigLevels_NT("system", "user", "global", "repository")
+CONFIG_LEVELS: ConfigLevels_Tup = ("system", "user", "global", "repository")
 
 # Section pattern to detect conditional includes.
 # https://git-scm.com/docs/git-config#_conditional_includes

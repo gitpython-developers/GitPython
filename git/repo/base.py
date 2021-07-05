@@ -36,7 +36,7 @@ import gitdb
 
 # typing ------------------------------------------------------
 
-from git.types import ConfigLevels_NT, TBD, PathLike, Lit_config_levels, Commit_ish, Tree_ish
+from git.types import TBD, PathLike, Lit_config_levels, Commit_ish, Tree_ish
 from typing import (Any, BinaryIO, Callable, Dict,
                     Iterator, List, Mapping, Optional, Sequence,
                     TextIO, Tuple, Type, Union,
@@ -58,7 +58,7 @@ __all__ = ('Repo',)
 
 
 class BlameEntry(NamedTuple):
-    commit: Dict[str, TBD]
+    commit: Dict[str, 'Commit']
     linenos: range
     orig_path: Optional[str]
     orig_linenos: range
@@ -96,7 +96,7 @@ class Repo(object):
 
     # invariants
     # represents the configuration level of a configuration file
-    config_level: ConfigLevels_Tup = ConfigLevels_NT("system", "user", "global", "repository")
+    config_level: ConfigLevels_Tup = ("system", "user", "global", "repository")
 
     # Subclass configuration
     # Subclasses may easily bring in their own custom types by placing a constructor or type here
@@ -802,7 +802,7 @@ class Repo(object):
         should get a continuous range spanning all line numbers in the file.
         """
         data = self.git.blame(rev, '--', file, p=True, incremental=True, stdout_as_string=False, **kwargs)
-        commits = {}  # type: Dict[str, TBD]
+        commits: Dict[str, Commit] = {}
 
         stream = (line for line in data.split(b'\n') if line)
         while True:
