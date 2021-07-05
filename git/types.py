@@ -11,7 +11,7 @@ from typing import (Callable, Dict, NoReturn, Tuple, Union, Any, Iterator,      
 if sys.version_info[:2] >= (3, 8):
     from typing import Final, Literal, SupportsIndex, TypedDict, Protocol, get_args  # noqa: F401
 else:
-    from typing_extensions import Final, Literal, SupportsIndex, TypedDict, Protocol, get_args  # noqa: F401
+    from typing_extensions import Final, Literal, SupportsIndex, TypedDict, Protocol  # noqa: F401
 
 if sys.version_info[:2] >= (3, 10):
     from typing import TypeGuard  # noqa: F401
@@ -51,7 +51,10 @@ ConfigLevels_Tup = Tuple[Lit_config_levels, Lit_config_levels, Lit_config_levels
 
 
 def is_config_level(inp: str) -> TypeGuard[Lit_config_levels]:
-    return inp in get_args(Lit_config_levels)
+    try:
+        return inp in get_args(Lit_config_levels)
+    except NameError:  # get_args added in py 3.8
+        return True
 
 
 def assert_never(inp: NoReturn, exc: Union[Exception, None] = None) -> NoReturn:
