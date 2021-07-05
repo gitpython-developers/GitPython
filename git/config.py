@@ -275,7 +275,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
     # list of RawConfigParser methods able to change the instance
     _mutating_methods_ = ("add_section", "remove_section", "remove_option", "set")
 
-    def __init__(self, file_or_files: Union[None, PathLike, BytesIO, Sequence[Union[PathLike, BytesIO]]] = None,
+    def __init__(self, file_or_files: Union[None, PathLike, 'BytesIO', Sequence[Union[PathLike, 'BytesIO']]] = None,
                  read_only: bool = True, merge_includes: bool = True,
                  config_level: Union[Lit_config_levels, None] = None,
                  repo: Union['Repo', None] = None) -> None:
@@ -667,7 +667,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
         fp = self._file_or_files
 
         # we have a physical file on disk, so get a lock
-        is_file_lock = isinstance(fp, (str, IOBase))  # can't use Pathlike until 3.5 dropped
+        is_file_lock = isinstance(fp, (str, os.PathLike, IOBase))  # can't use Pathlike until 3.5 dropped
         if is_file_lock and self._lock is not None:  # else raise Error?
             self._lock._obtain_lock()
 
@@ -676,7 +676,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
             with open(fp, "wb") as fp_open:
                 self._write(fp_open)
         else:
-            fp = cast(BytesIO, fp)
+            fp = cast('BytesIO', fp)
             fp.seek(0)
             # make sure we do not overwrite into an existing file
             if hasattr(fp, 'truncate'):

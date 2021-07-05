@@ -392,7 +392,7 @@ class Submodule(IndexObject, TraversableIterableObj):
         if sm.exists():
             # reretrieve submodule from tree
             try:
-                sm = repo.head.commit.tree[path]
+                sm = repo.head.commit.tree[str(path)]
                 sm._name = name
                 return sm
             except KeyError:

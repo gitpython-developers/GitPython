@@ -10,6 +10,15 @@ import git
 
 import logging
 
+# typing -------------------------------------------------------------------
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from git.repo import Repo
+
+# ----------------------------------------------------------------------------
+
 __all__ = ["RootModule", "RootUpdateProgress"]
 
 log = logging.getLogger('git.objects.submodule.root')
@@ -42,7 +51,7 @@ class RootModule(Submodule):
 
     k_root_name = '__ROOT__'
 
-    def __init__(self, repo):
+    def __init__(self, repo: 'Repo'):
         # repo, binsha, mode=None, path=None, name = None, parent_commit=None, url=None, ref=None)
         super(RootModule, self).__init__(
             repo,
@@ -55,7 +64,7 @@ class RootModule(Submodule):
             branch_path=git.Head.to_full_path(self.k_head_default)
         )
 
-    def _clear_cache(self):
+    def _clear_cache(self) -> None:
         """May not do anything"""
         pass
 
@@ -343,7 +352,7 @@ class RootModule(Submodule):
 
         return self
 
-    def module(self):
+    def module(self) -> 'Repo':
         """:return: the actual repository containing the submodules"""
         return self.repo
     #} END interface
