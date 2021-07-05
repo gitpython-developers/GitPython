@@ -38,6 +38,7 @@ from git.types import Lit_config_levels, ConfigLevels_Tup, PathLike, TBD, assert
 
 if TYPE_CHECKING:
     from git.repo.base import Repo
+    from io import BytesIO
 
 # -------------------------------------------------------------
 
@@ -274,7 +275,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
     # list of RawConfigParser methods able to change the instance
     _mutating_methods_ = ("add_section", "remove_section", "remove_option", "set")
 
-    def __init__(self, file_or_files: Union[None, PathLike, IO, Sequence[Union[PathLike, IO]]] = None,
+    def __init__(self, file_or_files: Union[None, PathLike, BytesIO, Sequence[Union[PathLike, BytesIO]]] = None,
                  read_only: bool = True, merge_includes: bool = True,
                  config_level: Union[Lit_config_levels, None] = None,
                  repo: Union['Repo', None] = None) -> None:
@@ -303,7 +304,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
             self._proxies = self._dict()
 
         if file_or_files is not None:
-            self._file_or_files: Union[PathLike, IO, Sequence[Union[PathLike, IO]]] = file_or_files
+            self._file_or_files: Union[PathLike, 'BytesIO', Sequence[Union[PathLike, 'BytesIO']]] = file_or_files
         else:
             if config_level is None:
                 if read_only:
@@ -650,7 +651,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
             a file lock"""
         self._assure_writable("write")
         if not self._dirty:
-            return
+            return None
 
         if isinstance(self._file_or_files, (list, tuple)):
             raise AssertionError("Cannot write back if there is not exactly a single file to write to, have %i files"
@@ -675,7 +676,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
             with open(fp, "wb") as fp_open:
                 self._write(fp_open)
         else:
-            fp = cast(IO, fp)
+            fp = cast(BytesIO, fp)
             fp.seek(0)
             # make sure we do not overwrite into an existing file
             if hasattr(fp, 'truncate'):

@@ -7,7 +7,7 @@ import weakref
 
 # typing -----------------------------------------------------------------------
 
-from typing import Any, TYPE_CHECKING, Union
+from typing import Any, Sequence, TYPE_CHECKING, Union
 
 from git.types import PathLike
 
@@ -16,6 +16,8 @@ if TYPE_CHECKING:
     from weakref import ReferenceType
     from git.repo import Repo
     from git.refs import Head
+    from git import Remote
+    from git.refs import RemoteReference
 
 
 __all__ = ('sm_section', 'sm_name', 'mkhead', 'find_first_remote_branch',
@@ -24,12 +26,12 @@ __all__ = ('sm_section', 'sm_name', 'mkhead', 'find_first_remote_branch',
 #{ Utilities
 
 
-def sm_section(name):
+def sm_section(name: str) -> str:
     """:return: section title used in .gitmodules configuration file"""
-    return 'submodule "%s"' % name
+    return f'submodule {name}'
 
 
-def sm_name(section):
+def sm_name(section: str) -> str:
     """:return: name of the submodule as parsed from the section name"""
     section = section.strip()
     return section[11:-1]
@@ -40,7 +42,7 @@ def mkhead(repo: 'Repo', path: PathLike) -> 'Head':
     return git.Head(repo, git.Head.to_full_path(path))
 
 
-def find_first_remote_branch(remotes, branch_name):
+def find_first_remote_branch(remotes: Sequence['Remote'], branch_name: str) -> 'RemoteReference':
     """Find the remote branch matching the name of the given branch or raise InvalidGitRepositoryError"""
     for remote in remotes:
         try:
@@ -99,7 +101,7 @@ class SubmoduleConfigParser(GitConfigParser):
 
     #{ Overridden Methods
     def write(self) -> None:
-        rval = super(SubmoduleConfigParser, self).write()
+        rval: None = super(SubmoduleConfigParser, self).write()
         self.flush_to_index()
         return rval
     # END overridden methods
