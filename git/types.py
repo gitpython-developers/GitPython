@@ -5,13 +5,13 @@
 import os
 import sys
 from typing import (Callable, Dict, NoReturn, Tuple, Union, Any, Iterator,       # noqa: F401
-                    NamedTuple, TYPE_CHECKING, get_args, TypeVar)       # noqa: F401
+                    NamedTuple, TYPE_CHECKING, TypeVar)       # noqa: F401
 
 
 if sys.version_info[:2] >= (3, 8):
-    from typing import Final, Literal, SupportsIndex, TypedDict, Protocol  # noqa: F401
+    from typing import Final, Literal, SupportsIndex, TypedDict, Protocol, get_args  # noqa: F401
 else:
-    from typing_extensions import Final, Literal, SupportsIndex, TypedDict, Protocol  # noqa: F401
+    from typing_extensions import Final, Literal, SupportsIndex, TypedDict, Protocol, get_args  # noqa: F401
 
 if sys.version_info[:2] >= (3, 10):
     from typing import TypeGuard  # noqa: F401
