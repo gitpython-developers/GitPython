@@ -21,3 +21,4 @@ nbproject
 .mypy_cache/
 .pytest_cache/
 monkeytype.sqlite3
+output.txt
