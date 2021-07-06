@@ -22,6 +22,7 @@ from git.exc import (
 )
 from git.objects import (
     Blob,
+    Submodule,
     Tree,
     Object,
     Commit,
@@ -75,7 +76,6 @@ if TYPE_CHECKING:
     from git.repo import Repo
     from git.refs.reference import Reference
     from git.util import Actor
-    from git.objects import Submodule
 
 
 StageType = int
