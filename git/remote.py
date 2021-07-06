@@ -42,6 +42,7 @@ from git.types import PathLike, Literal, TBD, TypeGuard, Commit_ish
 
 if TYPE_CHECKING:
     from git.repo.base import Repo
+    from git.objects.submodule.base import UpdateProgress
     # from git.objects.commit import Commit
     # from git.objects import Blob, Tree, TagObject
 
@@ -64,7 +65,9 @@ __all__ = ('RemoteProgress', 'PushInfo', 'FetchInfo', 'Remote')
 #{ Utilities
 
 
-def add_progress(kwargs: Any, git: Git, progress: Union[Callable[..., Any], None]) -> Any:
+def add_progress(kwargs: Any, git: Git,
+                 progress: Union[RemoteProgress, 'UpdateProgress', Callable[..., RemoteProgress], None]
+                 ) -> Any:
     """Add the --progress flag to the given kwargs dict if supported by the
     git command. If the actual progress in the given progress instance is not
     given, we do not request any progress
@@ -794,7 +797,7 @@ class Remote(LazyMixin, IterableObj):
             config.release()
 
     def fetch(self, refspec: Union[str, List[str], None] = None,
-              progress: Union[Callable[..., Any], None] = None,
+              progress: Union[RemoteProgress, None, 'UpdateProgress'] = None,
               verbose: bool = True, **kwargs: Any) -> IterableList[FetchInfo]:
         """Fetch the latest changes for this remote
 
@@ -841,7 +844,7 @@ class Remote(LazyMixin, IterableObj):
         return res
 
     def pull(self, refspec: Union[str, List[str], None] = None,
-             progress: Union[Callable[..., Any], None] = None,
+             progress: Union[RemoteProgress, 'UpdateProgress', None] = None,
              **kwargs: Any) -> IterableList[FetchInfo]:
         """Pull changes from the given branch, being the same as a fetch followed
         by a merge of branch with your local branch.
@@ -862,7 +865,7 @@ class Remote(LazyMixin, IterableObj):
         return res
 
     def push(self, refspec: Union[str, List[str], None] = None,
-             progress: Union[Callable[..., Any], None] = None,
+             progress: Union[RemoteProgress, 'UpdateProgress', Callable[..., RemoteProgress], None] = None,
              **kwargs: Any) -> IterableList[PushInfo]:
         """Push changes from source branch in refspec to target branch in refspec.
 

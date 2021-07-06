@@ -48,6 +48,8 @@ if TYPE_CHECKING:
     from git.util import IterableList
     from git.refs.symbolic import SymbolicReference
     from git.objects import Tree
+    from git.objects.submodule.base import UpdateProgress
+    from git.remote import RemoteProgress
 
 
 # -----------------------------------------------------------
@@ -575,7 +577,7 @@ class Repo(object):
         return Commit.iter_items(self, rev, paths, **kwargs)
 
     def merge_base(self, *rev: TBD, **kwargs: Any
-                   ) -> List[Union['SymbolicReference', Commit_ish, None]]:
+                   ) -> List[Union[Commit_ish, None]]:
         """Find the closest common ancestor for the given revision (e.g. Commits, Tags, References, etc)
 
         :param rev: At least two revs to find the common ancestor for.
@@ -588,7 +590,7 @@ class Repo(object):
             raise ValueError("Please specify at least two revs, got only %i" % len(rev))
         # end handle input
 
-        res = []  # type: List[Union['SymbolicReference', Commit_ish, None]]
+        res = []  # type: List[Union[Commit_ish, None]]
         try:
             lines = self.git.merge_base(*rev, **kwargs).splitlines()  # List[str]
         except GitCommandError as err:
@@ -1014,7 +1016,8 @@ class Repo(object):
 
     @classmethod
     def _clone(cls, git: 'Git', url: PathLike, path: PathLike, odb_default_type: Type[GitCmdObjectDB],
-               progress: Optional[Callable], multi_options: Optional[List[str]] = None, **kwargs: Any
+               progress: Union['RemoteProgress', 'UpdateProgress', Callable[..., 'RemoteProgress'], None],
+               multi_options: Optional[List[str]] = None, **kwargs: Any
                ) -> 'Repo':
         odbt = kwargs.pop('odbt', odb_default_type)
 

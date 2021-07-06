@@ -82,13 +82,15 @@ HIDE_WINDOWS_FREEZE_ERRORS = is_win and os.environ.get('HIDE_WINDOWS_FREEZE_ERRO
 
 #{ Utility Methods
 
+T = TypeVar('T')
 
-def unbare_repo(func: Callable) -> Callable:
+
+def unbare_repo(func: Callable[..., T]) -> Callable[..., T]:
     """Methods with this decorator raise InvalidGitRepositoryError if they
     encounter a bare repository"""
 
     @wraps(func)
-    def wrapper(self: 'Remote', *args: Any, **kwargs: Any) -> Callable:
+    def wrapper(self: 'Remote', *args: Any, **kwargs: Any) -> T:
         if self.repo.bare:
             raise InvalidGitRepositoryError("Method '%s' cannot operate on bare repositories" % func.__name__)
         # END bare method
