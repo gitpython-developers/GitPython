@@ -75,7 +75,7 @@ if TYPE_CHECKING:
     from git.repo import Repo
     from git.refs.reference import Reference
     from git.util import Actor
-    from git.objects.submodule.base import Submodule
+    from git.objects import Submodule
 
 
 StageType = int
