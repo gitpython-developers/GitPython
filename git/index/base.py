@@ -22,7 +22,6 @@ from git.exc import (
 )
 from git.objects import (
     Blob,
-    Submodule,
     Tree,
     Object,
     Commit,
@@ -76,6 +75,7 @@ if TYPE_CHECKING:
     from git.repo import Repo
     from git.refs.reference import Reference
     from git.util import Actor
+    from git.objects.submodule.base import Submodule
 
 
 StageType = int
@@ -842,7 +842,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             items = [items]
 
         for item in items:
-            if isinstance(item, (BaseIndexEntry, (Blob, Submodule))):
+            if isinstance(item, (BaseIndexEntry, (Blob, 'Submodule'))):
                 paths.append(self._to_relative_path(item.path))
             elif isinstance(item, str):
                 paths.append(self._to_relative_path(item))
@@ -853,7 +853,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
     @post_clear_cache
     @default_index
-    def remove(self, items: Sequence[Union[PathLike, Blob, BaseIndexEntry, Submodule]], working_tree: bool = False,
+    def remove(self, items: Sequence[Union[PathLike, Blob, BaseIndexEntry, 'Submodule']], working_tree: bool = False,
                **kwargs: Any) -> List[str]:
         """Remove the given items from the index and optionally from
         the working tree as well.
@@ -905,7 +905,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
     @post_clear_cache
     @default_index
-    def move(self, items: Sequence[Union[PathLike, Blob, BaseIndexEntry, Submodule]], skip_errors: bool = False,
+    def move(self, items: Sequence[Union[PathLike, Blob, BaseIndexEntry, 'Submodule']], skip_errors: bool = False,
              **kwargs: Any) -> List[Tuple[str, str]]:
         """Rename/move the items, whereas the last item is considered the destination of
         the move operation. If the destination is a file, the first item ( of two )
