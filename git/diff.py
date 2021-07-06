@@ -24,11 +24,11 @@ if TYPE_CHECKING:
 
     from subprocess import Popen
 
-Lit_change_type = Literal['A', 'D', 'M', 'R', 'T']
+Lit_change_type = Literal['A', 'C', 'D', 'M', 'R', 'T']
 
 
 def is_change_type(inp: str) -> TypeGuard[Lit_change_type]:
-    return inp in ('A', 'D', 'M', 'R', 'T')
+    return inp in ('A', 'D', 'C', 'M', 'R', 'T')
 
 # ------------------------------------------------------------------------
 
