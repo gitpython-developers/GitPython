@@ -833,12 +833,13 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
         return entries_added
 
-    def _items_to_rela_paths(self, items):
+    def _items_to_rela_paths(self, items: Union[PathLike, Sequence[Union[PathLike, BaseIndexEntry, Blob, Submodule]]]
+                             ) -> List[PathLike]:
         """Returns a list of repo-relative paths from the given items which
         may be absolute or relative paths, entries or blobs"""
         paths = []
         # if string put in list
-        if isinstance(items, str):
+        if isinstance(items, (str, os.PathLike)):
             items = [items]
 
         for item in items:
@@ -851,8 +852,8 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         # END for each item
         return paths
 
-    @post_clear_cache
-    @default_index
+    @ post_clear_cache
+    @ default_index
     def remove(self, items: Sequence[Union[PathLike, Blob, BaseIndexEntry, 'Submodule']], working_tree: bool = False,
                **kwargs: Any) -> List[str]:
         """Remove the given items from the index and optionally from
@@ -903,8 +904,8 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         # rm 'path'
         return [p[4:-1] for p in removed_paths]
 
-    @post_clear_cache
-    @default_index
+    @ post_clear_cache
+    @ default_index
     def move(self, items: Sequence[Union[PathLike, Blob, BaseIndexEntry, 'Submodule']], skip_errors: bool = False,
              **kwargs: Any) -> List[Tuple[str, str]]:
         """Rename/move the items, whereas the last item is considered the destination of
@@ -1023,7 +1024,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             proc.wait()
         return stdout
 
-    @default_index
+    @ default_index
     def checkout(self, paths: Union[None, Iterable[PathLike]] = None, force: bool = False,
                  fprogress: Callable = lambda *args: None, **kwargs: Any
                  ) -> Union[None, Iterator[PathLike], Sequence[PathLike]]:
@@ -1192,7 +1193,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         # END paths handling
         assert "Should not reach this point"
 
-    @default_index
+    @ default_index
     def reset(self, commit: Union[Commit, 'Reference', str] = 'HEAD', working_tree: bool = False,
               paths: Union[None, Iterable[PathLike]] = None,
               head: bool = False, **kwargs: Any) -> 'IndexFile':
@@ -1262,7 +1263,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
         return self
 
-    @default_index
+    @ default_index
     def diff(self, other: Union[diff.Diffable.Index, 'IndexFile.Index', Treeish, None, object] = diff.Diffable.Index,
              paths: Union[str, List[PathLike], Tuple[PathLike, ...]] = None, create_patch: bool = False, **kwargs: Any
              ) -> diff.DiffIndex:
