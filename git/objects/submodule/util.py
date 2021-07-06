@@ -28,7 +28,7 @@ __all__ = ('sm_section', 'sm_name', 'mkhead', 'find_first_remote_branch',
 
 def sm_section(name: str) -> str:
     """:return: section title used in .gitmodules configuration file"""
-    return f'submodule {name}'
+    return f'submodule "{name}"'
 
 
 def sm_name(section: str) -> str:
