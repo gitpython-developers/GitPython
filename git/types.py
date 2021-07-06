@@ -80,7 +80,7 @@ class HSH_TD(TypedDict):
     files: Dict[PathLike, Files_TD]
 
 
-@runtime_checkable
+# @runtime_checkable
 class RepoLike(Protocol):
     """Protocol class to allow structural type-checking of Repo
     e.g. when cannot import due to circular imports"""

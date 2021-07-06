@@ -927,7 +927,7 @@ class Submodule(IndexObject, TraversableIterableObj):
                     import gc
                     gc.collect()
                     try:
-                        rmtree(wtd)  # type: ignore   ## str()?
+                        rmtree(str(wtd))
                     except Exception as ex:
                         if HIDE_WINDOWS_KNOWN_ERRORS:
                             raise SkipTest("FIXME: fails with: PermissionError\n  {}".format(ex)) from ex
