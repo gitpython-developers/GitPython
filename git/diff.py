@@ -16,7 +16,7 @@ from .objects.util import mode_str_to_int
 # typing ------------------------------------------------------------------
 
 from typing import Any, Iterator, List, Match, Optional, Tuple, Type, Union, TYPE_CHECKING, cast
-from git.types import PathLike, TBD, Literal
+from git.types import PathLike, TBD, Literal, TypeGuard
 
 if TYPE_CHECKING:
     from .objects.tree import Tree
@@ -26,7 +26,12 @@ if TYPE_CHECKING:
 
 Lit_change_type = Literal['A', 'D', 'C', 'M', 'R', 'T']
 
+
+def is_change_type(inp: str) -> TypeGuard[Lit_change_type]:
+    return inp in ['A', 'D', 'C', 'M', 'R', 'T']
+
 # ------------------------------------------------------------------------
+
 
 __all__ = ('Diffable', 'DiffIndex', 'Diff', 'NULL_TREE')
 
@@ -202,6 +207,7 @@ class DiffIndex(list):
 
         for diff in self:
             diff = cast('Diff', diff)
+
             if diff.change_type == change_type:
                 yield diff
             elif change_type == "A" and diff.new_file:
@@ -505,7 +511,8 @@ class Diff(object):
             # Change type can be R100
             # R: status letter
             # 100: score (in case of copy and rename)
-            change_type: Lit_change_type = _change_type[0]  # type: ignore
+            assert is_change_type(_change_type[0])
+            change_type: Lit_change_type = _change_type[0]
             score_str = ''.join(_change_type[1:])
             score = int(score_str) if score_str.isdigit() else None
             path = path.strip()
