@@ -335,7 +335,7 @@ class Submodule(IndexObject, TraversableIterableObj):
 
     @classmethod
     def add(cls, repo: 'Repo', name: str, path: PathLike, url: Union[str, None] = None,
-            branch=None, no_checkout: bool = False, depth=None, env=None
+            branch=None, no_checkout: bool = False, depth=None, env=None, clone_multi_options=None
             ) -> 'Submodule':
         """Add a new submodule to the given repository. This will alter the index
         as well as the .gitmodules file, but will not create a new commit.
@@ -369,6 +369,8 @@ class Submodule(IndexObject, TraversableIterableObj):
             and is defined in `os.environ`, value from `os.environ` will be used.
             If you want to unset some variable, consider providing empty string
             as its value.
+        :param clone_multi_options: A list of Clone options. Please see ``git.repo.base.Repo.clone``
+            for details.
         :return: The newly created submodule instance
         :note: works atomically, such that no change will be done if the repository
             update fails for instance"""
@@ -381,7 +383,7 @@ class Submodule(IndexObject, TraversableIterableObj):
         # assure we never put backslashes into the url, as some operating systems
         # like it ...
         if url is not None:
-            url = to_native_path_linux(url)  # to_native_path_linux does nothing??
+            url = to_native_path_linux(url)
         # END assure url correctness
 
         # INSTANTIATE INTERMEDIATE SM
@@ -389,7 +391,7 @@ class Submodule(IndexObject, TraversableIterableObj):
         if sm.exists():
             # reretrieve submodule from tree
             try:
-                sm = repo.head.commit.tree[path]  # type: ignore
+                sm = repo.head.commit.tree[path]
                 sm._name = name
                 return sm
             except KeyError:
@@ -435,6 +437,8 @@ class Submodule(IndexObject, TraversableIterableObj):
                     kwargs['depth'] = depth
                 else:
                     raise ValueError("depth should be an integer")
+            if clone_multi_options:
+                kwargs['multi_options'] = clone_multi_options
 
             # _clone_repo(cls, repo, url, path, name, **kwargs):
             mrepo = cls._clone_repo(repo, url, path, name, env=env, **kwargs)
@@ -469,7 +473,7 @@ class Submodule(IndexObject, TraversableIterableObj):
         return sm
 
     def update(self, recursive=False, init=True, to_latest_revision=False, progress=None, dry_run=False,
-               force=False, keep_going=False, env=None):
+               force=False, keep_going=False, env=None, clone_multi_options=None):
         """Update the repository of this submodule to point to the checkout
         we point at with the binsha of this instance.
 
@@ -500,6 +504,8 @@ class Submodule(IndexObject, TraversableIterableObj):
             and is defined in `os.environ`, value from `os.environ` will be used.
             If you want to unset some variable, consider providing empty string
             as its value.
+        :param clone_multi_options:  list of Clone options. Please see ``git.repo.base.Repo.clone``
+            for details. Only take effect with `init` option.
         :note: does nothing in bare repositories
         :note: method is definitely not atomic if recurisve is True
         :return: self"""
@@ -566,7 +572,8 @@ class Submodule(IndexObject, TraversableIterableObj):
                 progress.update(BEGIN | CLONE, 0, 1, prefix + "Cloning url '%s' to '%s' in submodule %r" %
                                 (self.url, checkout_module_abspath, self.name))
                 if not dry_run:
-                    mrepo = self._clone_repo(self.repo, self.url, self.path, self.name, n=True, env=env)
+                    mrepo = self._clone_repo(self.repo, self.url, self.path, self.name, n=True, env=env,
+                                             multi_options=clone_multi_options)
                 # END handle dry-run
                 progress.update(END | CLONE, 0, 1, prefix + "Done cloning to %s" % checkout_module_abspath)
 
@@ -993,7 +1000,7 @@ class Submodule(IndexObject, TraversableIterableObj):
         # If check is False, we might see a parent-commit that doesn't even contain the submodule anymore.
         # in that case, mark our sha as being NULL
         try:
-            self.binsha = pctree[self.path].binsha  # type: ignore
+            self.binsha = pctree[str(self.path)].binsha
         except KeyError:
             self.binsha = self.NULL_BIN_SHA
         # end
