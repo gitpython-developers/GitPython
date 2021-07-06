@@ -47,16 +47,16 @@ from .util import (
     find_first_remote_branch
 )
 
-from git.repo import Repo
 
 # typing ----------------------------------------------------------------------
-from typing import Callable, Dict, Mapping, Sequence, TYPE_CHECKING
+from typing import Callable, Dict, Mapping, Sequence, TYPE_CHECKING, cast
 from typing import Any, Iterator, Union
 
 from git.types import Commit_ish, PathLike, TBD
 
 if TYPE_CHECKING:
     from git.index import IndexFile
+    from git.repo import Repo
 
 
 # -----------------------------------------------------------------------------
@@ -589,7 +589,7 @@ class Submodule(IndexObject, TraversableIterableObj):
                 if not dry_run:
                     # see whether we have a valid branch to checkout
                     try:
-                        assert isinstance(mrepo, Repo)
+                        mrepo = cast('Repo', mrepo)
                         # find  a remote which has our branch - we try to be flexible
                         remote_branch = find_first_remote_branch(mrepo.remotes, self.branch_name)
                         local_branch = mkhead(mrepo, self.branch_path)
