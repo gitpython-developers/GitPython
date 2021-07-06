@@ -842,7 +842,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             items = [items]
 
         for item in items:
-            if isinstance(item, (BaseIndexEntry, (Blob, 'Submodule'))):
+            if isinstance(item, (BaseIndexEntry, (Blob, Submodule))):
                 paths.append(self._to_relative_path(item.path))
             elif isinstance(item, str):
                 paths.append(self._to_relative_path(item))
