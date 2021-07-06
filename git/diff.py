@@ -16,7 +16,7 @@ from .objects.util import mode_str_to_int
 # typing ------------------------------------------------------------------
 
 from typing import Any, Iterator, List, Match, Optional, Tuple, Type, Union, TYPE_CHECKING
-from git.types import PathLike, TBD, Literal
+from git.types import PathLike, TBD, Literal, TypeGuard
 
 if TYPE_CHECKING:
     from .objects.tree import Tree
@@ -200,7 +200,8 @@ class DiffIndex(list):
         if change_type not in self.change_type:
             raise ValueError("Invalid change type: %s" % change_type)
 
-        for diff in self:   # type: 'Diff'
+        # diff: 'Diff'
+        for diff in self:
             if diff.change_type == change_type:
                 yield diff
             elif change_type == "A" and diff.new_file:
@@ -281,7 +282,8 @@ class Diff(object):
                  a_mode: Union[bytes, str, None], b_mode: Union[bytes, str, None],
                  new_file: bool, deleted_file: bool, copied_file: bool,
                  raw_rename_from: Optional[bytes], raw_rename_to: Optional[bytes],
-                 diff: Union[str, bytes, None], change_type: Optional[str], score: Optional[int]) -> None:
+                 diff: Union[str, bytes, None], change_type: Union[Lit_change_type, None],
+                 score: Optional[int]) -> None:
 
         assert a_rawpath is None or isinstance(a_rawpath, bytes)
         assert b_rawpath is None or isinstance(b_rawpath, bytes)
@@ -498,12 +500,18 @@ class Diff(object):
         for line in lines.split(':')[1:]:
             meta, _, path = line.partition('\x00')
             path = path.rstrip('\x00')
-            a_blob_id, b_blob_id = None, None  # Type: Optional[str]
+            a_blob_id: Union[str, None]
+            b_blob_id: Union[str, None]
             old_mode, new_mode, a_blob_id, b_blob_id, _change_type = meta.split(None, 4)
             # Change type can be R100
             # R: status letter
             # 100: score (in case of copy and rename)
-            change_type = _change_type[0]
+
+            def is_change_type(inp: str) -> TypeGuard[Lit_change_type]:
+                return inp in Lit_change_type.__args__  # type: ignore
+
+            assert is_change_type(_change_type[0])
+            change_type: Lit_change_type = _change_type[0]
             score_str = ''.join(_change_type[1:])
             score = int(score_str) if score_str.isdigit() else None
             path = path.strip()
@@ -518,7 +526,7 @@ class Diff(object):
             # NOTE: We cannot conclude from the existence of a blob to change type
             # as diffs with the working do not have blobs yet
             if change_type == 'D':
-                b_blob_id = None  # Optional[str]
+                b_blob_id = None
                 deleted_file = True
             elif change_type == 'A':
                 a_blob_id = None
