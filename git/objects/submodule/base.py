@@ -1015,7 +1015,7 @@ class Submodule(IndexObject, TraversableIterableObj):
         # If check is False, we might see a parent-commit that doesn't even contain the submodule anymore.
         # in that case, mark our sha as being NULL
         try:
-            self.binsha = pctree[self.path].binsha      # type: ignore  # str()?
+            self.binsha = pctree[str(self.path)].binsha
         except KeyError:
             self.binsha = self.NULL_BIN_SHA
         # end
@@ -1080,7 +1080,7 @@ class Submodule(IndexObject, TraversableIterableObj):
             destination_module_abspath = self._module_abspath(self.repo, self.path, new_name)
             source_dir = mod.git_dir
             # Let's be sure the submodule name is not so obviously tied to a directory
-            if destination_module_abspath.startswith(str(mod.git_dir)):     # type: ignore  # str()?
+            if str(destination_module_abspath).startswith(str(mod.git_dir)):
                 tmp_dir = self._module_abspath(self.repo, self.path, str(uuid.uuid4()))
                 os.renames(source_dir, tmp_dir)
                 source_dir = tmp_dir
