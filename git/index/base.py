@@ -410,7 +410,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
                 #   whose name contains wildcard characters.
                 if abs_path not in resolved_paths:
                     for f in self._iter_expand_paths(glob.glob(abs_path)):
-                        yield f.replace(rs, '')
+                        yield str(f).replace(rs, '')
                     continue
             # END glob handling
             try:
@@ -635,7 +635,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
     @git_working_dir
     def _entries_for_paths(self, paths: List[str], path_rewriter: Callable, fprogress: Callable,
                            entries: List[BaseIndexEntry]) -> List[BaseIndexEntry]:
-        entries_added = []  # type: List[BaseIndexEntry]
+        entries_added: List[BaseIndexEntry] = []
         if path_rewriter:
             for path in paths:
                 if osp.isabs(path):
@@ -769,7 +769,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         # automatically
         # paths can be git-added, for everything else we use git-update-index
         paths, entries = self._preprocess_add_items(items)
-        entries_added = []
+        entries_added: List[BaseIndexEntry] = []
         # This code needs a working tree, therefore we try not to run it unless required.
         # That way, we are OK on a bare repository as well.
         # If there are no paths, the rewriter has nothing to do either

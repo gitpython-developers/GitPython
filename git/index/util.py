@@ -13,7 +13,7 @@ import os.path as osp
 
 from typing import (Any, Callable)
 
-from git.types import PathLike
+from git.types import PathLike, _T
 
 # ---------------------------------------------------------------------------------
 
@@ -88,12 +88,12 @@ def default_index(func: Callable[..., Any]) -> Callable[..., Any]:
     return check_default_index
 
 
-def git_working_dir(func: Callable[..., Any]) -> Callable[..., None]:
+def git_working_dir(func: Callable[..., _T]) -> Callable[..., _T]:
     """Decorator which changes the current working dir to the one of the git
     repository in order to assure relative paths are handled correctly"""
 
     @wraps(func)
-    def set_git_working_dir(self, *args: Any, **kwargs: Any) -> None:
+    def set_git_working_dir(self, *args: Any, **kwargs: Any) -> _T:
         cur_wd = os.getcwd()
         os.chdir(self.repo.working_tree_dir)
         try:

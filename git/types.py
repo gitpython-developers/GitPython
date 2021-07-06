@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     # from git.refs import SymbolicReference
 
 TBD = Any
+_T = TypeVar('_T')
 
 Tree_ish = Union['Commit', 'Tree']
 Commit_ish = Union['Commit', 'TagObject', 'Blob', 'Tree']
