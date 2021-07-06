@@ -5,7 +5,7 @@
 import os
 import sys
 from typing import (Callable, Dict, NoReturn, Tuple, Union, Any, Iterator,       # noqa: F401
-                    NamedTuple, TYPE_CHECKING, TypeVar, runtime_checkable)       # noqa: F401
+                    NamedTuple, TYPE_CHECKING, TypeVar)       # noqa: F401
 
 
 if sys.version_info[:2] >= (3, 8):

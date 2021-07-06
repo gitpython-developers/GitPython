@@ -142,7 +142,7 @@ class Submodule(IndexObject, TraversableIterableObj):
             reader: SectionConstraint = self.config_reader()
             # default submodule values
             try:
-                self.path = reader.get('path')
+                self.path: PathLike = reader.get('path')
             except cp.NoSectionError as e:
                 if self.repo.working_tree_dir is not None:
                     raise ValueError("This submodule instance does not exist anymore in '%s' file"
