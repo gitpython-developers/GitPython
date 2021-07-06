@@ -593,7 +593,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             raise ValueError("Absolute path %r is not in git repository at %r" % (path, self.repo.working_tree_dir))
         return os.path.relpath(path, self.repo.working_tree_dir)
 
-    def _preprocess_add_items(self, items: Sequence[Union[PathLike, Blob, BaseIndexEntry, Submodule]]
+    def _preprocess_add_items(self, items: Sequence[Union[PathLike, Blob, BaseIndexEntry, 'Submodule']]
                               ) -> Tuple[List[PathLike], List[BaseIndexEntry]]:
         """ Split the items into two lists of path strings and BaseEntries. """
         paths = []
@@ -664,7 +664,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         # END path handling
         return entries_added
 
-    def add(self, items: Sequence[Union[PathLike, Blob, BaseIndexEntry, Submodule]], force: bool = True,
+    def add(self, items: Sequence[Union[PathLike, Blob, BaseIndexEntry, 'Submodule']], force: bool = True,
             fprogress: Callable = lambda *args: None, path_rewriter: Callable = None,
             write: bool = True, write_extension_data: bool = False) -> List[BaseIndexEntry]:
         """Add files from the working tree, specific blobs or BaseIndexEntries
