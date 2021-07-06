@@ -52,7 +52,7 @@ class TemporaryFileSwap(object):
 
 #{ Decorators
 
-def post_clear_cache(func: Callable[..., Any]) -> Callable[..., Any]:
+def post_clear_cache(func: Callable[..., _T]) -> Callable[..., _T]:
     """Decorator for functions that alter the index using the git command. This would
     invalidate our possibly existing entries dictionary which is why it must be
     deleted to allow it to be lazily reread later.
@@ -63,7 +63,7 @@ def post_clear_cache(func: Callable[..., Any]) -> Callable[..., Any]:
     """
 
     @wraps(func)
-    def post_clear_cache_if_not_raised(self, *args: Any, **kwargs: Any) -> Any:
+    def post_clear_cache_if_not_raised(self, *args: Any, **kwargs: Any) -> _T:
         rval = func(self, *args, **kwargs)
         self._delete_entries_cache()
         return rval
@@ -72,13 +72,13 @@ def post_clear_cache(func: Callable[..., Any]) -> Callable[..., Any]:
     return post_clear_cache_if_not_raised
 
 
-def default_index(func: Callable[..., Any]) -> Callable[..., Any]:
+def default_index(func: Callable[..., _T]) -> Callable[..., _T]:
     """Decorator assuring the wrapped method may only run if we are the default
     repository index. This is as we rely on git commands that operate
     on that index only. """
 
     @wraps(func)
-    def check_default_index(self, *args: Any, **kwargs: Any) -> Any:
+    def check_default_index(self, *args: Any, **kwargs: Any) -> _T:
         if self._file_path != self._index_path():
             raise AssertionError(
                 "Cannot call %r on indices that do not represent the default git index" % func.__name__)

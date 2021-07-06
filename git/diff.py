@@ -15,12 +15,13 @@ from .objects.util import mode_str_to_int
 
 # typing ------------------------------------------------------------------
 
-from typing import Any, Iterator, List, Match, Optional, Tuple, Type, Union, TYPE_CHECKING, cast
+from typing import Any, Iterator, List, Match, Optional, Tuple, Type, TypeVar, Union, TYPE_CHECKING
 from git.types import PathLike, TBD, Literal, TypeGuard
 
 if TYPE_CHECKING:
     from .objects.tree import Tree
     from git.repo.base import Repo
+    from git.objects.base import IndexObject
 
     from subprocess import Popen
 
@@ -175,7 +176,10 @@ class Diffable(object):
         return index
 
 
-class DiffIndex(list):
+T_Diff = TypeVar('T_Diff', bound='Diff')
+
+
+class DiffIndex(List[T_Diff]):
 
     """Implements an Index for diffs, allowing a list of Diffs to be queried by
     the diff properties.
@@ -189,7 +193,7 @@ class DiffIndex(list):
     # T = Changed in the type
     change_type = ("A", "C", "D", "R", "M", "T")
 
-    def iter_change_type(self, change_type: Lit_change_type) -> Iterator['Diff']:
+    def iter_change_type(self, change_type: Lit_change_type) -> Iterator[T_Diff]:
         """
         :return:
             iterator yielding Diff instances that match the given change_type
@@ -207,8 +211,6 @@ class DiffIndex(list):
             raise ValueError("Invalid change type: %s" % change_type)
 
         for diff in self:
-            diff = cast('Diff', diff)
-
             if diff.change_type == change_type:
                 yield diff
             elif change_type == "A" and diff.new_file:
@@ -289,7 +291,7 @@ class Diff(object):
                  a_mode: Union[bytes, str, None], b_mode: Union[bytes, str, None],
                  new_file: bool, deleted_file: bool, copied_file: bool,
                  raw_rename_from: Optional[bytes], raw_rename_to: Optional[bytes],
-                 diff: Union[str, bytes, None], change_type: Optional[str], score: Optional[int]) -> None:
+                 diff: Union[str, bytes, None], change_type: Optional[Lit_change_type], score: Optional[int]) -> None:
 
         assert a_rawpath is None or isinstance(a_rawpath, bytes)
         assert b_rawpath is None or isinstance(b_rawpath, bytes)
@@ -308,19 +310,21 @@ class Diff(object):
                         repo = submodule.module()
                     break
 
+        self.a_blob: Union['IndexObject', None]
         if a_blob_id is None or a_blob_id == self.NULL_HEX_SHA:
             self.a_blob = None
         else:
             self.a_blob = Blob(repo, hex_to_bin(a_blob_id), mode=self.a_mode, path=self.a_path)
 
+        self.b_blob: Union['IndexObject', None]
         if b_blob_id is None or b_blob_id == self.NULL_HEX_SHA:
             self.b_blob = None
         else:
             self.b_blob = Blob(repo, hex_to_bin(b_blob_id), mode=self.b_mode, path=self.b_path)
 
-        self.new_file = new_file
-        self.deleted_file = deleted_file
-        self.copied_file = copied_file
+        self.new_file: bool = new_file
+        self.deleted_file: bool = deleted_file
+        self.copied_file: bool = copied_file
 
         # be clear and use None instead of empty strings
         assert raw_rename_from is None or isinstance(raw_rename_from, bytes)
@@ -329,7 +333,7 @@ class Diff(object):
         self.raw_rename_to = raw_rename_to or None
 
         self.diff = diff
-        self.change_type = change_type
+        self.change_type: Union[Lit_change_type, None] = change_type
         self.score = score
 
     def __eq__(self, other: object) -> bool:
@@ -449,7 +453,7 @@ class Diff(object):
 
         # for now, we have to bake the stream
         text = b''.join(text_list)
-        index = DiffIndex()
+        index: 'DiffIndex' = DiffIndex()
         previous_header = None
         header = None
         a_path, b_path = None, None  # for mypy
@@ -560,7 +564,7 @@ class Diff(object):
         # handles
         # :100644 100644 687099101... 37c5e30c8... M    .gitignore
 
-        index = DiffIndex()
+        index: 'DiffIndex' = DiffIndex()
         handle_process_output(proc, lambda byt: cls._handle_diff_line(byt, repo, index),
                               None, finalize_process, decode_streams=False)
 
