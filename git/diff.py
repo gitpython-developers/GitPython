@@ -26,7 +26,12 @@ if TYPE_CHECKING:
 
 Lit_change_type = Literal['A', 'D', 'M', 'R', 'T']
 
+
+def is_change_type(inp: str) -> TypeGuard[Lit_change_type]:
+    return inp in Lit_change_type.__args__  # type: ignore
+
 # ------------------------------------------------------------------------
+
 
 __all__ = ('Diffable', 'DiffIndex', 'Diff', 'NULL_TREE')
 
@@ -503,12 +508,9 @@ class Diff(object):
             a_blob_id: Union[str, None]
             b_blob_id: Union[str, None]
             old_mode, new_mode, a_blob_id, b_blob_id, _change_type = meta.split(None, 4)
-            # Change type can be R100
+            # _Change_type can be R100
             # R: status letter
             # 100: score (in case of copy and rename)
-
-            def is_change_type(inp: str) -> TypeGuard[Lit_change_type]:
-                return inp in Lit_change_type.__args__  # type: ignore
 
             assert is_change_type(_change_type[0])
             change_type: Lit_change_type = _change_type[0]

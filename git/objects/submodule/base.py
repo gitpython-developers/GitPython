@@ -47,6 +47,7 @@ from .util import (
     find_first_remote_branch
 )
 
+from git.repo import Repo
 
 # typing ----------------------------------------------------------------------
 from typing import Callable, Dict, Mapping, Sequence, TYPE_CHECKING
@@ -55,7 +56,6 @@ from typing import Any, Iterator, Union
 from git.types import Commit_ish, PathLike, TBD
 
 if TYPE_CHECKING:
-    from git.repo import Repo
     from git.index import IndexFile
 
 
