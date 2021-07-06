@@ -5,7 +5,7 @@
 import os
 import sys
 from typing import (Callable, Dict, NoReturn, Tuple, Union, Any, Iterator,       # noqa: F401
-                    NamedTuple, TYPE_CHECKING, TypeVar)       # noqa: F401
+                    NamedTuple, TYPE_CHECKING, TypeVar, runtime_checkable)       # noqa: F401
 
 
 if sys.version_info[:2] >= (3, 8):
@@ -78,3 +78,11 @@ class Total_TD(TypedDict):
 class HSH_TD(TypedDict):
     total: Total_TD
     files: Dict[PathLike, Files_TD]
+
+
+@runtime_checkable
+class RepoLike(Protocol):
+    """Protocol class to allow structural type-checking of Repo
+    e.g. when cannot import due to circular imports"""
+
+    def remotes(self): ...          # NOQA: E704

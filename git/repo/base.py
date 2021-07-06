@@ -1016,7 +1016,7 @@ class Repo(object):
 
     @classmethod
     def _clone(cls, git: 'Git', url: PathLike, path: PathLike, odb_default_type: Type[GitCmdObjectDB],
-               progress: Union['RemoteProgress', 'UpdateProgress', Callable[..., 'RemoteProgress'], None],
+               progress: Union['RemoteProgress', 'UpdateProgress', Callable[..., 'RemoteProgress'], None] = None,
                multi_options: Optional[List[str]] = None, **kwargs: Any
                ) -> 'Repo':
         odbt = kwargs.pop('odbt', odb_default_type)

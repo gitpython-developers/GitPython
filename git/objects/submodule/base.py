@@ -474,8 +474,8 @@ class Submodule(IndexObject, TraversableIterableObj):
                 sm._branch_path = br.path
 
         # we deliberately assume that our head matches our index !
-        if mrepo is not None:
-            sm.binsha = mrepo.head.commit.binsha
+        mrepo = cast('Repo', mrepo)
+        sm.binsha = mrepo.head.commit.binsha
         index.add([sm], write=True)
 
         return sm
@@ -652,7 +652,7 @@ class Submodule(IndexObject, TraversableIterableObj):
                 may_reset = True
                 if mrepo.head.commit.binsha != self.NULL_BIN_SHA:
                     base_commit = mrepo.merge_base(mrepo.head.commit, hexsha)
-                    if len(base_commit) == 0 or (base_commit[0] is not None and base_commit[0].hexsha == hexsha):
+                    if len(base_commit) == 0 or base_commit[0].hexsha == hexsha:  # type: ignore
                         if force:
                             msg = "Will force checkout or reset on local branch that is possibly in the future of"
                             msg += "the commit it will be checked out to, effectively 'forgetting' new commits"
@@ -927,7 +927,7 @@ class Submodule(IndexObject, TraversableIterableObj):
                     import gc
                     gc.collect()
                     try:
-                        rmtree(str(wtd))
+                        rmtree(wtd)  # type: ignore   ## str()?
                     except Exception as ex:
                         if HIDE_WINDOWS_KNOWN_ERRORS:
                             raise SkipTest("FIXME: fails with: PermissionError\n  {}".format(ex)) from ex
@@ -1015,7 +1015,7 @@ class Submodule(IndexObject, TraversableIterableObj):
         # If check is False, we might see a parent-commit that doesn't even contain the submodule anymore.
         # in that case, mark our sha as being NULL
         try:
-            self.binsha = pctree[str(self.path)].binsha
+            self.binsha = pctree[self.path].binsha      # type: ignore  # str()?
         except KeyError:
             self.binsha = self.NULL_BIN_SHA
         # end
@@ -1080,7 +1080,7 @@ class Submodule(IndexObject, TraversableIterableObj):
             destination_module_abspath = self._module_abspath(self.repo, self.path, new_name)
             source_dir = mod.git_dir
             # Let's be sure the submodule name is not so obviously tied to a directory
-            if str(destination_module_abspath).startswith(str(mod.git_dir)):
+            if destination_module_abspath.startswith(str(mod.git_dir)):     # type: ignore  # str()?
                 tmp_dir = self._module_abspath(self.repo, self.path, str(uuid.uuid4()))
                 os.renames(source_dir, tmp_dir)
                 source_dir = tmp_dir

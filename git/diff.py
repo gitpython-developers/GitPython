@@ -512,7 +512,7 @@ class Diff(object):
             # R: status letter
             # 100: score (in case of copy and rename)
 
-            assert is_change_type(_change_type[0])
+            assert is_change_type(_change_type[0]), "Unexpected _change_type recieved in Diff"
             change_type: Lit_change_type = _change_type[0]
             score_str = ''.join(_change_type[1:])
             score = int(score_str) if score_str.isdigit() else None
