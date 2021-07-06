@@ -418,7 +418,7 @@ class Submodule(IndexObject, TraversableIterableObj):
             # END check url
         # END verify urls match
 
-        # mrepo: Union[Repo, None] = None
+        mrepo: Union[Repo, None] = None
 
         if url is None:
             if not has_module:
@@ -474,7 +474,8 @@ class Submodule(IndexObject, TraversableIterableObj):
                 sm._branch_path = br.path
 
         # we deliberately assume that our head matches our index !
-        sm.binsha = mrepo.head.commit.binsha
+        if mrepo is not None:
+            sm.binsha = mrepo.head.commit.binsha
         index.add([sm], write=True)
 
         return sm
@@ -589,8 +590,8 @@ class Submodule(IndexObject, TraversableIterableObj):
                 if not dry_run:
                     # see whether we have a valid branch to checkout
                     try:
-                        # assert isinstance(mrepo, Repo)  # cant do this cos of circular import
-                        mrepo = cast('Repo', mrepo)  # Try TypeGuard wirh hasattr?
+                        # assert isinstance(mrepo, Repo)    # cant do this cos of circular import
+                        mrepo = cast('Repo', mrepo)         # Try TypeGuard wirh hasattr, or has_remotes&_head protocol?
                         # find  a remote which has our branch - we try to be flexible
                         remote_branch = find_first_remote_branch(mrepo.remotes, self.branch_name)
                         local_branch = mkhead(mrepo, self.branch_path)

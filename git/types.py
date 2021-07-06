@@ -57,7 +57,7 @@ ConfigLevels_Tup = Tuple[Lit_config_levels, Lit_config_levels, Lit_config_levels
 
 def assert_never(inp: NoReturn, exc: Union[Exception, None] = None) -> NoReturn:
     if exc is None:
-        assert False, f"An unhandled Literal ({inp}) in an if else chain was found"
+        assert False, f"An unhandled Literal ({inp}) in an if/else chain was found"
     else:
         raise exc
 
