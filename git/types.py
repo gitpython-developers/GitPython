@@ -38,6 +38,10 @@ Commit_ish = Union['Commit', 'TagObject', 'Blob', 'Tree']
 Lit_config_levels = Literal['system', 'global', 'user', 'repository']
 
 
+def is_config_level(inp: str) -> TypeGuard[Lit_config_levels]:
+    return inp in ('system', 'global', 'user', 'repository')
+
+
 class ConfigLevels_NT(NamedTuple):
     """NamedTuple of allowed CONFIG_LEVELS"""
     # works for pylance, but not mypy
@@ -49,10 +53,6 @@ class ConfigLevels_NT(NamedTuple):
 
 ConfigLevels_Tup = Tuple[Lit_config_levels, Lit_config_levels, Lit_config_levels, Lit_config_levels]
 # Typing this as specific literals breaks for mypy
-
-
-def is_config_level(inp: str) -> TypeGuard[Lit_config_levels]:
-    return inp in Lit_config_levels.__args__  # type: ignore  # mypy lies about __args__
 
 
 def assert_never(inp: NoReturn, exc: Union[Exception, None] = None) -> NoReturn:

@@ -28,7 +28,7 @@ Lit_change_type = Literal['A', 'D', 'M', 'R', 'T']
 
 
 def is_change_type(inp: str) -> TypeGuard[Lit_change_type]:
-    return inp in Lit_change_type.__args__  # type: ignore
+    return inp in ('A', 'D', 'M', 'R', 'T')
 
 # ------------------------------------------------------------------------
 
