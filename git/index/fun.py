@@ -195,7 +195,6 @@ def entry_key(*entry: Union[BaseIndexEntry, PathLike, int]) -> Tuple[PathLike, i
         assert isinstance(entry_first, BaseIndexEntry)
         return (entry_first.path, entry_first.stage)
     else:
-        # entry = tuple(entry)
         assert is_entry_key_tup(entry)
         return entry
     # END handle entry

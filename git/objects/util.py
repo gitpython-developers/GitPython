@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     from .tree import Tree, TraversedTreeTup
     from subprocess import Popen
 
-              
+
 T_TIobj = TypeVar('T_TIobj', bound='TraversableIterableObj')   # for TraversableIterableObj.traverse()
 
 TraversedTup = Union[Tuple[Union['Traversable', None], 'Traversable'],  # for commit, submodule
@@ -314,9 +314,9 @@ class Traversable(object):
 
         def is_TraversableIterableObj(inp: 'Traversable') -> TypeGuard['TraversableIterableObj']:
             # return isinstance(self, TraversableIterableObj)
-            # Can it be anythin else?
-            return isinstance(self, Traversable)
-        
+            # Can it be anything else? Check this
+            return isinstance(self, TraversableIterableObj)
+
         assert is_TraversableIterableObj(self), f"{type(self)}"
         out: IterableList['TraversableIterableObj'] = IterableList(self._id_attribute_)
         out.extend(self.traverse(*args, **kwargs))
@@ -364,7 +364,7 @@ class Traversable(object):
             Submodule -> Iterator[Submodule, Tuple[Submodule, Submodule]]
             Tree -> Iterator[Union[Blob, Tree, Submodule,
                                     Tuple[Union[Submodule, Tree], Union[Blob, Tree, Submodule]]]
-                                           
+
            ignore_self=True is_edge=True -> Iterator[item]
            ignore_self=True is_edge=False --> Iterator[item]
            ignore_self=False is_edge=True -> Iterator[item] | Iterator[Tuple[src, item]]
