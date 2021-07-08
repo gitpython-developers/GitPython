@@ -1,7 +1,6 @@
 """Module with functions which are supposed to be as fast as possible"""
 from stat import S_ISDIR
 
-from git import GitCmdObjectDB
 
 from git.compat import (
     safe_decode,
@@ -14,6 +13,7 @@ from typing import Callable, List, Sequence, Tuple, TYPE_CHECKING, Union, overlo
 
 if TYPE_CHECKING:
     from _typeshed import ReadableBuffer
+    from git import GitCmdObjectDB
 
 EntryTup = Tuple[bytes, int, str]  # same as TreeCacheTup in tree.py
 
@@ -143,7 +143,7 @@ def _to_full_path(item: Union[EntryTup, None], path_prefix: str) -> Union[EntryT
     return (item[0], item[1], path_prefix + item[2])
 
 
-def traverse_trees_recursive(odb: GitCmdObjectDB, tree_shas: Sequence[Union[bytes, None]],
+def traverse_trees_recursive(odb: 'GitCmdObjectDB', tree_shas: Sequence[Union[bytes, None]],
                              path_prefix: str) -> List[Union[EntryTup, None]]:
     """
     :return: list with entries according to the given binary tree-shas.
@@ -216,7 +216,7 @@ def traverse_trees_recursive(odb: GitCmdObjectDB, tree_shas: Sequence[Union[byte
     return out
 
 
-def traverse_tree_recursive(odb: GitCmdObjectDB, tree_sha: bytes, path_prefix: str) -> List[Tuple[bytes, int, str]]:
+def traverse_tree_recursive(odb: 'GitCmdObjectDB', tree_sha: bytes, path_prefix: str) -> List[Tuple[bytes, int, str]]:
     """
     :return: list of entries of the tree pointed to by the binary tree_sha. An entry
         has the following format:
