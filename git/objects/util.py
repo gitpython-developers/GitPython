@@ -23,7 +23,7 @@ from datetime import datetime, timedelta, tzinfo
 from typing import (Any, Callable, Deque, Iterator, NamedTuple, overload, Sequence,
                     TYPE_CHECKING, Tuple, Type, TypeVar, Union, cast)
 
-from git.types import Literal, TypeGuard
+from git.types import Literal
 
 if TYPE_CHECKING:
     from io import BytesIO, StringIO
@@ -306,23 +306,19 @@ class Traversable(object):
         """
         raise NotImplementedError("To be implemented in subclass")
 
-    def list_traverse(self, *args: Any, **kwargs: Any) -> IterableList['TraversableIterableObj']:
+    def list_traverse(self, *args: Any, **kwargs: Any) -> IterableList:
         """
         :return: IterableList with the results of the traversal as produced by
             traverse()
-            List objects must be IterableObj and Traversable e.g. Commit, Submodule"""
+        """
+        if isinstance(self, TraversableIterableObj):
+            id = self._id_attribute_
+        else:       # Tree
+            id = ""
 
-        def is_TraversableIterableObj(inp: 'Traversable') -> TypeGuard['TraversableIterableObj']:
-            # return isinstance(self, TraversableIterableObj)
-            # Can it be anything else? Check this
-            return isinstance(self, TraversableIterableObj)
-
-        if is_TraversableIterableObj(self):
-            out: IterableList['TraversableIterableObj'] = IterableList(self._id_attribute_)
-            out.extend(self.traverse(*args, **kwargs))
-            return out
-        else:
-            return IterableList("")  # Its a Tree, which doesnt have _id_attribute_
+        out: IterableList = IterableList(id)
+        out.extend(self.traverse(*args, **kwargs))
+        return out
 
     def traverse(self,
                  predicate: Callable[[Union['Traversable', 'Blob', TraversedTup], int], bool] = lambda i, d: True,
@@ -449,7 +445,7 @@ class TraversableIterableObj(Traversable, IterableObj):
 
     TIobj_tuple = Tuple[Union[T_TIobj, None], T_TIobj]
 
-    @overload                     # type: ignore
+    @ overload                     # type: ignore
     def traverse(self: T_TIobj,
                  predicate: Callable[[Union[T_TIobj, Tuple[Union[T_TIobj, None], T_TIobj]], int], bool],
                  prune: Callable[[Union[T_TIobj, Tuple[Union[T_TIobj, None], T_TIobj]], int], bool],
@@ -459,7 +455,7 @@ class TraversableIterableObj(Traversable, IterableObj):
                  ) -> Iterator[T_TIobj]:
         ...
 
-    @overload
+    @ overload
     def traverse(self: T_TIobj,
                  predicate: Callable[[Union[T_TIobj, Tuple[Union[T_TIobj, None], T_TIobj]], int], bool],
                  prune: Callable[[Union[T_TIobj, Tuple[Union[T_TIobj, None], T_TIobj]], int], bool],
@@ -469,7 +465,7 @@ class TraversableIterableObj(Traversable, IterableObj):
                  ) -> Iterator[Tuple[Union[T_TIobj, None], T_TIobj]]:
         ...
 
-    @overload
+    @ overload
     def traverse(self: T_TIobj,
                  predicate: Callable[[Union[T_TIobj, TIobj_tuple], int], bool],
                  prune: Callable[[Union[T_TIobj, TIobj_tuple], int], bool],

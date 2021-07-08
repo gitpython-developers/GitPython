@@ -36,11 +36,13 @@ if TYPE_CHECKING:
     from git.remote import Remote
     from git.repo.base import Repo
     from git.config import GitConfigParser, SectionConstraint
+    from git.objects.base import IndexObject
 
-from .types import (Literal, Protocol, SupportsIndex,                    # because behind py version guards
+
+from .types import (Literal, SupportsIndex,                    # because behind py version guards
                     PathLike, HSH_TD, Total_TD, Files_TD)                # aliases
 
-T_IterableObj = TypeVar('T_IterableObj', bound='IterableObj', covariant=True)
+T_IterableObj = TypeVar('T_IterableObj', bound=Union['IterableObj', 'IndexObject'], covariant=True)
 # So IterableList[Head] is subtype of IterableList[IterableObj]
 
 # ---------------------------------------------------------------------
@@ -1068,7 +1070,7 @@ class Iterable(object):
         raise NotImplementedError("To be implemented by Subclass")
 
 
-class IterableObj(Protocol):
+class IterableObj():
     """Defines an interface for iterable items which is to assure a uniform
     way to retrieve and iterate items within the git repository
 
