@@ -61,7 +61,7 @@ if TYPE_CHECKING:
 
 
 def is_three_entry_list(inp) -> TypeGuard[List['EntryTupOrNone']]:
-    return isinstance(inp, list) and len(inp) == 3
+    return isinstance(inp, (tuple, list)) and len(inp) == 3
 
 # ------------------------------------------------------------------------------------
 
@@ -339,10 +339,9 @@ def aggressive_tree_merge(odb, tree_shas: Sequence[bytes]) -> List[BaseIndexEntr
         raise ValueError("Cannot handle %i trees at once" % len(tree_shas))
 
     # three trees
-    for three_entries in traverse_trees_recursive(odb, tree_shas, ''):
-
-        assert is_three_entry_list(three_entries)
-        base, ours, theirs = three_entries
+    for entryo in traverse_trees_recursive(odb, tree_shas, ''):
+        assert is_three_entry_list(entryo), f"{type(entryo)=} and {len(entryo)=}"  # type:ignore
+        base, ours, theirs = entryo
         if base is not None:
             # base version exists
             if ours is not None:

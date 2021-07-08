@@ -102,13 +102,13 @@ def tree_entries_from_data(data: bytes) -> List[EntryTup]:
     return out
 
 
-def _find_by_name(tree_data: Sequence[Union[EntryTup, None]], name: str, is_dir: bool, start_at: int
-                  ) -> Union[EntryTup, None]:
+def _find_by_name(tree_data: Sequence[EntryTupOrNone], name: str, is_dir: bool, start_at: int
+                  ) -> EntryTupOrNone:
     """return data entry matching the given name and tree mode
     or None.
     Before the item is returned, the respective data item is set
     None in the tree_data list to mark it done"""
-    tree_data_list: List[Union[EntryTup, None]] = list(tree_data)
+    tree_data_list: List[EntryTupOrNone] = list(tree_data)
     try:
         item = tree_data_list[start_at]
         if item and item[2] == name and S_ISDIR(item[1]) == is_dir:
@@ -136,7 +136,7 @@ def _to_full_path(item: EntryTup, path_prefix: str) -> EntryTup:
     ...
 
 
-def _to_full_path(item: Union[EntryTup, None], path_prefix: str) -> Union[EntryTup, None]:
+def _to_full_path(item: EntryTupOrNone, path_prefix: str) -> EntryTupOrNone:
     """Rebuild entry with given path prefix"""
     if not item:
         return item
@@ -144,7 +144,7 @@ def _to_full_path(item: Union[EntryTup, None], path_prefix: str) -> Union[EntryT
 
 
 def traverse_trees_recursive(odb: 'GitCmdObjectDB', tree_shas: Sequence[Union[bytes, None]],
-                             path_prefix: str) -> List[Union[EntryTup, None]]:
+                             path_prefix: str) -> List[EntryTupOrNone]:
     """
     :return: list with entries according to the given binary tree-shas.
         The result is encoded in a list
@@ -159,11 +159,11 @@ def traverse_trees_recursive(odb: 'GitCmdObjectDB', tree_shas: Sequence[Union[by
     :param path_prefix: a prefix to be added to the returned paths on this level,
         set it '' for the first iteration
     :note: The ordering of the returned items will be partially lost"""
-    trees_data: List[List[Union[EntryTup, None]]] = []
+    trees_data: List[List[EntryTupOrNone]] = []
     nt = len(tree_shas)
     for tree_sha in tree_shas:
         if tree_sha is None:
-            data: List[Union[EntryTup, None]] = []
+            data: List[EntryTupOrNone] = []
         else:
             data = list(tree_entries_from_data(odb.stream(tree_sha).read()))  # make new list for typing as invariant
         # END handle muted trees
@@ -181,7 +181,7 @@ def traverse_trees_recursive(odb: 'GitCmdObjectDB', tree_shas: Sequence[Union[by
             if not item:
                 continue
             # END skip already done items
-            entries: List[Union[EntryTup, None]]
+            entries: List[EntryTupOrNone]
             entries = [None for _ in range(nt)]
             entries[ti] = item
             _sha, mode, name = item
@@ -196,8 +196,6 @@ def traverse_trees_recursive(odb: 'GitCmdObjectDB', tree_shas: Sequence[Union[by
                 entries[tio] = _find_by_name(td, name, is_dir, ii)
 
             # END for each other item data
-#Revealed type is "builtins.list[Union[Tuple[builtins.bytes, builtins.int, builtins.str], None]]"## #
-#Revealed type is "builtins.list[Union[Tuple[builtins.bytes, builtins.int, builtins.str], None]]"
             # if we are a directory, enter recursion
             if is_dir:
                 out.extend(traverse_trees_recursive(
