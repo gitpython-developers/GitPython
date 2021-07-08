@@ -144,7 +144,7 @@ def _to_full_path(item: EntryTupOrNone, path_prefix: str) -> EntryTupOrNone:
 
 
 def traverse_trees_recursive(odb: 'GitCmdObjectDB', tree_shas: Sequence[Union[bytes, None]],
-                             path_prefix: str) -> List[tuple[EntryTupOrNone, ...]]:
+                             path_prefix: str) -> List[Tuple[EntryTupOrNone, ...]]:
     """
     :return: list of list with entries according to the given binary tree-shas.
         The result is encoded in a list
@@ -165,7 +165,8 @@ def traverse_trees_recursive(odb: 'GitCmdObjectDB', tree_shas: Sequence[Union[by
         if tree_sha is None:
             data: List[EntryTupOrNone] = []
         else:
-            data = list(tree_entries_from_data(odb.stream(tree_sha).read()))  # make new list for typing as invariant
+            # make new list for typing as list invariant
+            data = [x for x in tree_entries_from_data(odb.stream(tree_sha).read())]
         # END handle muted trees
         trees_data.append(data)
     # END for each sha to get data for
