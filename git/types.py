@@ -39,20 +39,11 @@ Lit_config_levels = Literal['system', 'global', 'user', 'repository']
 
 
 def is_config_level(inp: str) -> TypeGuard[Lit_config_levels]:
-    return inp in ('system', 'global', 'user', 'repository')
+    # return inp in get_args(Lit_config_level)  # only py >= 3.8
+    return inp in ("system", "user", "global", "repository")
 
 
-class ConfigLevels_NT(NamedTuple):
-    """NamedTuple of allowed CONFIG_LEVELS"""
-    # works for pylance, but not mypy
-    system: Literal['system']
-    user: Literal['user']
-    global_: Literal['global']
-    repository: Literal['repository']
-
-
-ConfigLevels_Tup = Tuple[Lit_config_levels, Lit_config_levels, Lit_config_levels, Lit_config_levels]
-# Typing this as specific literals breaks for mypy
+ConfigLevels_Tup = Tuple[Literal['system'], Literal['user'], Literal['global'], Literal['repository']]
 
 
 def assert_never(inp: NoReturn, exc: Union[Exception, None] = None) -> NoReturn:

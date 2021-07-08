@@ -115,7 +115,7 @@ class Submodule(IndexObject, TraversableIterableObj):
                  path: Union[PathLike, None] = None,
                  name: Union[str, None] = None,
                  parent_commit: Union[Commit_ish, None] = None,
-                 url: str = None,
+                 url: Union[str, None] = None,
                  branch_path: Union[PathLike, None] = None
                  ) -> None:
         """Initialize this instance with its attributes. We only document the ones
@@ -339,7 +339,7 @@ class Submodule(IndexObject, TraversableIterableObj):
     @classmethod
     def add(cls, repo: 'Repo', name: str, path: PathLike, url: Union[str, None] = None,
             branch: Union[str, None] = None, no_checkout: bool = False, depth: Union[int, None] = None,
-            env: Mapping[str, str] = None, clone_multi_options: Union[Sequence[TBD], None] = None
+            env: Union[Mapping[str, str], None] = None, clone_multi_options: Union[Sequence[TBD], None] = None
             ) -> 'Submodule':
         """Add a new submodule to the given repository. This will alter the index
         as well as the .gitmodules file, but will not create a new commit.
@@ -481,7 +481,7 @@ class Submodule(IndexObject, TraversableIterableObj):
 
     def update(self, recursive: bool = False, init: bool = True, to_latest_revision: bool = False,
                progress: Union['UpdateProgress', None] = None, dry_run: bool = False,
-               force: bool = False, keep_going: bool = False, env: Mapping[str, str] = None,
+               force: bool = False, keep_going: bool = False, env: Union[Mapping[str, str], None] = None,
                clone_multi_options: Union[Sequence[TBD], None] = None):
         """Update the repository of this submodule to point to the checkout
         we point at with the binsha of this instance.

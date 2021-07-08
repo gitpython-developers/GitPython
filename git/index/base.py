@@ -113,7 +113,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
     _VERSION = 2            # latest version we support
     S_IFGITLINK = S_IFGITLINK  # a submodule
 
-    def __init__(self, repo: 'Repo', file_path: PathLike = None) -> None:
+    def __init__(self, repo: 'Repo', file_path: Union[PathLike, None] = None) -> None:
         """Initialize this Index instance, optionally from the given ``file_path``.
         If no file_path is given, we will be created from the current index file.
 
@@ -665,7 +665,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         return entries_added
 
     def add(self, items: Sequence[Union[PathLike, Blob, BaseIndexEntry, 'Submodule']], force: bool = True,
-            fprogress: Callable = lambda *args: None, path_rewriter: Callable = None,
+            fprogress: Callable = lambda *args: None, path_rewriter: Union[Callable[..., PathLike], None] = None,
             write: bool = True, write_extension_data: bool = False) -> List[BaseIndexEntry]:
         """Add files from the working tree, specific blobs or BaseIndexEntries
         to the index.
@@ -970,7 +970,8 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         return out
 
     def commit(self, message: str, parent_commits=None, head: bool = True, author: Union[None, 'Actor'] = None,
-               committer: Union[None, 'Actor'] = None, author_date: str = None, commit_date: str = None,
+               committer: Union[None, 'Actor'] = None, author_date: Union[str, None] = None,
+               commit_date: Union[str, None] = None,
                skip_hooks: bool = False) -> Commit:
         """Commit the current default index file, creating a commit object.
         For more information on the arguments, see tree.commit.
@@ -1265,7 +1266,8 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
     @ default_index
     def diff(self, other: Union[diff.Diffable.Index, 'IndexFile.Index', Treeish, None, object] = diff.Diffable.Index,
-             paths: Union[str, List[PathLike], Tuple[PathLike, ...]] = None, create_patch: bool = False, **kwargs: Any
+             paths: Union[str, List[PathLike], Tuple[PathLike, ...], None] = None,
+             create_patch: bool = False, **kwargs: Any
              ) -> diff.DiffIndex:
         """Diff this index against the working copy or a Tree or Commit object
 

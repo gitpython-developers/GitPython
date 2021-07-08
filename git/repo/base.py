@@ -36,7 +36,7 @@ import gitdb
 
 # typing ------------------------------------------------------
 
-from git.types import TBD, PathLike, Lit_config_levels, Commit_ish, Tree_ish
+from git.types import TBD, PathLike, Lit_config_levels, Commit_ish, Tree_ish, is_config_level
 from typing import (Any, BinaryIO, Callable, Dict,
                     Iterator, List, Mapping, Optional, Sequence,
                     TextIO, Tuple, Type, Union,
@@ -498,7 +498,7 @@ class Repo(object):
             unknown, instead the global path will be used."""
         files = None
         if config_level is None:
-            files = [self._get_config_path(f) for f in self.config_level]
+            files = [self._get_config_path(f) for f in self.config_level if is_config_level(f)]
         else:
             files = [self._get_config_path(config_level)]
         return GitConfigParser(files, read_only=True, repo=self)
@@ -623,7 +623,7 @@ class Repo(object):
             raise
         return True
 
-    def is_valid_object(self, sha: str, object_type: str = None) -> bool:
+    def is_valid_object(self, sha: str, object_type: Union[str, None] = None) -> bool:
         try:
             complete_sha = self.odb.partial_to_complete_sha_hex(sha)
             object_info = self.odb.info(complete_sha)
@@ -976,7 +976,7 @@ class Repo(object):
         return blames
 
     @classmethod
-    def init(cls, path: PathLike = None, mkdir: bool = True, odbt: Type[GitCmdObjectDB] = GitCmdObjectDB,
+    def init(cls, path: Union[PathLike, None] = None, mkdir: bool = True, odbt: Type[GitCmdObjectDB] = GitCmdObjectDB,
              expand_vars: bool = True, **kwargs: Any) -> 'Repo':
         """Initialize a git repository at the given path if specified
 

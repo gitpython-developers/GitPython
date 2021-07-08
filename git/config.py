@@ -34,7 +34,7 @@ import configparser as cp
 from typing import (Any, Callable, IO, List, Dict, Sequence,
                     TYPE_CHECKING, Tuple, Union, cast, overload)
 
-from git.types import Lit_config_levels, ConfigLevels_Tup, PathLike, TBD, assert_never
+from git.types import Lit_config_levels, ConfigLevels_Tup, PathLike, TBD, assert_never, is_config_level
 
 if TYPE_CHECKING:
     from git.repo.base import Repo
@@ -53,6 +53,7 @@ log.addHandler(logging.NullHandler())
 
 
 CONFIG_LEVELS: ConfigLevels_Tup = ("system", "user", "global", "repository")
+
 
 # Section pattern to detect conditional includes.
 # https://git-scm.com/docs/git-config#_conditional_includes
@@ -310,7 +311,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
                 if read_only:
                     self._file_or_files = [get_config_path(f)
                                            for f in CONFIG_LEVELS
-                                           if f != 'repository']
+                                           if is_config_level(f) and f != 'repository']
                 else:
                     raise ValueError("No configuration level or configuration files specified")
             else:

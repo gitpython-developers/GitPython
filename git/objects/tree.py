@@ -216,7 +216,6 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
     def _get_intermediate_items(cls, index_object: 'Tree',
                                 ) -> Union[Tuple['Tree', ...], Tuple[()]]:
         if index_object.type == "tree":
-            index_object = cast('Tree', index_object)
             return tuple(index_object._iter_convert_to_object(index_object._cache))
         return ()
 
