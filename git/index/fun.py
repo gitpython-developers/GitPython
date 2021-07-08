@@ -388,8 +388,9 @@ def aggressive_tree_merge(odb, tree_shas: Sequence[bytes]) -> List[BaseIndexEntr
             # all three can't be None
             if ours is None:
                 # added in their branch
-                out.append(_tree_entry_to_baseindexentry(theirs, 0))  # type: ignore
-            elif theirs is None:  # ours is not None, theirs is None
+                assert theirs is not None
+                out.append(_tree_entry_to_baseindexentry(theirs, 0))
+            elif theirs is None:
                 # added in our branch
                 out.append(_tree_entry_to_baseindexentry(ours, 0))
             else:

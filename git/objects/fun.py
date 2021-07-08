@@ -9,7 +9,7 @@ from git.compat import (
 
 # typing ----------------------------------------------
 
-from typing import Callable, List, Sequence, Tuple, TYPE_CHECKING, Union, overload
+from typing import Callable, List, MutableSequence, Sequence, Tuple, TYPE_CHECKING, Union, overload
 
 if TYPE_CHECKING:
     from _typeshed import ReadableBuffer
@@ -102,24 +102,24 @@ def tree_entries_from_data(data: bytes) -> List[EntryTup]:
     return out
 
 
-def _find_by_name(tree_data: List[EntryTupOrNone], name: str, is_dir: bool, start_at: int
+def _find_by_name(tree_data: MutableSequence[EntryTupOrNone], name: str, is_dir: bool, start_at: int
                   ) -> EntryTupOrNone:
     """return data entry matching the given name and tree mode
     or None.
     Before the item is returned, the respective data item is set
     None in the tree_data list to mark it done"""
-    tree_data_list: List[EntryTupOrNone] = tree_data
+
     try:
-        item = tree_data_list[start_at]
+        item = tree_data[start_at]
         if item and item[2] == name and S_ISDIR(item[1]) == is_dir:
-            tree_data_list[start_at] = None
+            tree_data[start_at] = None
             return item
     except IndexError:
         pass
     # END exception handling
-    for index, item in enumerate(tree_data_list):
+    for index, item in enumerate(tree_data):
         if item and item[2] == name and S_ISDIR(item[1]) == is_dir:
-            tree_data_list[index] = None
+            tree_data[index] = None
             return item
         # END if item matches
     # END for each item
