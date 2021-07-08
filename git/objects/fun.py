@@ -102,13 +102,13 @@ def tree_entries_from_data(data: bytes) -> List[EntryTup]:
     return out
 
 
-def _find_by_name(tree_data: Sequence[EntryTupOrNone], name: str, is_dir: bool, start_at: int
+def _find_by_name(tree_data: List[EntryTupOrNone], name: str, is_dir: bool, start_at: int
                   ) -> EntryTupOrNone:
     """return data entry matching the given name and tree mode
     or None.
     Before the item is returned, the respective data item is set
     None in the tree_data list to mark it done"""
-    tree_data_list: List[EntryTupOrNone] = list(tree_data)
+    tree_data_list: List[EntryTupOrNone] = tree_data
     try:
         item = tree_data_list[start_at]
         if item and item[2] == name and S_ISDIR(item[1]) == is_dir:
@@ -160,6 +160,7 @@ def traverse_trees_recursive(odb: 'GitCmdObjectDB', tree_shas: Sequence[Union[by
         set it '' for the first iteration
     :note: The ordering of the returned items will be partially lost"""
     trees_data: List[List[EntryTupOrNone]] = []
+
     nt = len(tree_shas)
     for tree_sha in tree_shas:
         if tree_sha is None:
@@ -193,8 +194,7 @@ def traverse_trees_recursive(odb: 'GitCmdObjectDB', tree_shas: Sequence[Union[by
             # ti+nt, not ti+1+nt
             for tio in range(ti + 1, ti + nt):
                 tio = tio % nt
-                td = trees_data[tio]
-                entries[tio] = _find_by_name(td, name, is_dir, ii)
+                entries[tio] = _find_by_name(trees_data[tio], name, is_dir, ii)
 
             # END for each other item data
             # if we are a directory, enter recursion

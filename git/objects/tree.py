@@ -44,7 +44,7 @@ __all__ = ("TreeModifier", "Tree")
 
 def git_cmp(t1: TreeCacheTup, t2: TreeCacheTup) -> int:
     a, b = t1[2], t2[2]
-    assert isinstance(a, str) and isinstance(b, str)  # Need as mypy 9.0 cannot unpack TypeVar properly
+    # assert isinstance(a, str) and isinstance(b, str)
     len_a, len_b = len(a), len(b)
     min_len = min(len_a, len_b)
     min_cmp = cmp(a[:min_len], b[:min_len])
