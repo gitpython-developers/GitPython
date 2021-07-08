@@ -317,10 +317,12 @@ class Traversable(object):
             # Can it be anything else? Check this
             return isinstance(self, TraversableIterableObj)
 
-        assert is_TraversableIterableObj(self), f"{type(self)}"
-        out: IterableList['TraversableIterableObj'] = IterableList(self._id_attribute_)
-        out.extend(self.traverse(*args, **kwargs))
-        return out
+        if is_TraversableIterableObj(self):
+            out: IterableList['TraversableIterableObj'] = IterableList(self._id_attribute_)
+            out.extend(self.traverse(*args, **kwargs))
+            return out
+        else:
+            return IterableList("")  # Its a Tree, which doesnt have _id_attribute_
 
     def traverse(self,
                  predicate: Callable[[Union['Traversable', 'Blob', TraversedTup], int], bool] = lambda i, d: True,
