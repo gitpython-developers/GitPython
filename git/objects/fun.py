@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from git import GitCmdObjectDB
 
 EntryTup = Tuple[bytes, int, str]  # same as TreeCacheTup in tree.py
-
+EntryTupOrNone = Union[EntryTup, None]
 
 # ---------------------------------------------------
 

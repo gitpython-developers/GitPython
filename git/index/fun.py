@@ -57,7 +57,11 @@ from git.types import PathLike, TypeGuard
 
 if TYPE_CHECKING:
     from .base import IndexFile
-    from git.objects.fun import EntryTup
+    from git.objects.fun import EntryTupOrNone
+
+
+def is_three_entry_list(inp) -> TypeGuard[List['EntryTupOrNone']]:
+    return isinstance(inp, list) and len(inp) == 3
 
 # ------------------------------------------------------------------------------------
 
@@ -333,11 +337,6 @@ def aggressive_tree_merge(odb, tree_shas: Sequence[bytes]) -> List[BaseIndexEntr
 
     if len(tree_shas) > 3:
         raise ValueError("Cannot handle %i trees at once" % len(tree_shas))
-
-    EntryTupOrNone = Union[EntryTup, None]
-
-    def is_three_entry_list(inp) -> TypeGuard[List[EntryTupOrNone]]:
-        return isinstance(inp, list) and len(inp) == 3
 
     # three trees
     for three_entries in traverse_trees_recursive(odb, tree_shas, ''):
