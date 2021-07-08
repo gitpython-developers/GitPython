@@ -144,9 +144,9 @@ def _to_full_path(item: EntryTupOrNone, path_prefix: str) -> EntryTupOrNone:
 
 
 def traverse_trees_recursive(odb: 'GitCmdObjectDB', tree_shas: Sequence[Union[bytes, None]],
-                             path_prefix: str) -> List[EntryTupOrNone]:
+                             path_prefix: str) -> List[List[EntryTupOrNone]]:
     """
-    :return: list with entries according to the given binary tree-shas.
+    :return: list of list with entries according to the given binary tree-shas.
         The result is encoded in a list
         of n tuple|None per blob/commit, (n == len(tree_shas)), where
         * [0] == 20 byte sha
@@ -170,7 +170,7 @@ def traverse_trees_recursive(odb: 'GitCmdObjectDB', tree_shas: Sequence[Union[by
         trees_data.append(data)
     # END for each sha to get data for
 
-    out = []
+    out: List[List[EntryTupOrNone]] = []
 
     # find all matching entries and recursively process them together if the match
     # is a tree. If the match is a non-tree item, put it into the result.
@@ -201,7 +201,7 @@ def traverse_trees_recursive(odb: 'GitCmdObjectDB', tree_shas: Sequence[Union[by
                 out.extend(traverse_trees_recursive(
                     odb, [((ei and ei[0]) or None) for ei in entries], path_prefix + name + '/'))
             else:
-                out.extend([_to_full_path(e, path_prefix) for e in entries])
+                out.append([_to_full_path(e, path_prefix) for e in entries])
 
             # END handle recursion
             # finally mark it done

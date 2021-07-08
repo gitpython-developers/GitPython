@@ -13,7 +13,6 @@ from stat import (
     S_IFREG,
     S_IXUSR,
 )
-
 import subprocess
 
 from git.cmd import PROC_CREATIONFLAGS, handle_process_output
@@ -58,11 +57,7 @@ from git.types import PathLike, TypeGuard
 
 if TYPE_CHECKING:
     from .base import IndexFile
-    from git.objects.fun import EntryTupOrNone
-
-
-def is_three_entry_list(inp) -> TypeGuard[List['EntryTupOrNone']]:
-    return isinstance(inp, (tuple, list)) and len(inp) == 3
+    # from git.objects.fun import EntryTupOrNone
 
 # ------------------------------------------------------------------------------------
 
@@ -192,8 +187,8 @@ def entry_key(*entry: Union[BaseIndexEntry, PathLike, int]) -> Tuple[PathLike, i
     """:return: Key suitable to be used for the index.entries dictionary
     :param entry: One instance of type BaseIndexEntry or the path and the stage"""
 
-    def is_entry_tuple(entry: Tuple) -> TypeGuard[Tuple[PathLike, int]]:
-        return isinstance(entry, tuple) and len(entry) == 2
+    def is_entry_key_tup(entry_key: Tuple) -> TypeGuard[Tuple[PathLike, int]]:
+        return isinstance(entry_key, tuple) and len(entry_key) == 2
 
     if len(entry) == 1:
         entry_first = entry[0]
@@ -201,7 +196,7 @@ def entry_key(*entry: Union[BaseIndexEntry, PathLike, int]) -> Tuple[PathLike, i
         return (entry_first.path, entry_first.stage)
     else:
         # entry = tuple(entry)
-        assert is_entry_tuple(entry)
+        assert is_entry_key_tup(entry)
         return entry
     # END handle entry
 
@@ -340,79 +335,74 @@ def aggressive_tree_merge(odb, tree_shas: Sequence[bytes]) -> List[BaseIndexEntr
         raise ValueError("Cannot handle %i trees at once" % len(tree_shas))
 
     # three trees
-    entries = traverse_trees_recursive(odb, tree_shas, '')
-    base = entries[0]
-    ours = entries[1]
-    theirs = entries[2]
-    assert is_three_entry_list(entries), f"{type(entries)=} and {len(entries)=}"  # type:ignore
-
-    if base is not None:
-        # base version exists
-        if ours is not None:
-            # ours exists
-            if theirs is not None:
-                # it exists in all branches, if it was changed in both
-                # its a conflict, otherwise we take the changed version
-                # This should be the most common branch, so it comes first
-                if(base[0] != ours[0] and base[0] != theirs[0] and ours[0] != theirs[0]) or \
-                        (base[1] != ours[1] and base[1] != theirs[1] and ours[1] != theirs[1]):
-                    # changed by both
-                    out.append(_tree_entry_to_baseindexentry(base, 1))
-                    out.append(_tree_entry_to_baseindexentry(ours, 2))
-                    out.append(_tree_entry_to_baseindexentry(theirs, 3))
-                elif base[0] != ours[0] or base[1] != ours[1]:
-                    # only we changed it
-                    out.append(_tree_entry_to_baseindexentry(ours, 0))
+    for base, ours, theirs in traverse_trees_recursive(odb, tree_shas, ''):
+        if base is not None:
+            # base version exists
+            if ours is not None:
+                # ours exists
+                if theirs is not None:
+                    # it exists in all branches, if it was changed in both
+                    # its a conflict, otherwise we take the changed version
+                    # This should be the most common branch, so it comes first
+                    if(base[0] != ours[0] and base[0] != theirs[0] and ours[0] != theirs[0]) or \
+                            (base[1] != ours[1] and base[1] != theirs[1] and ours[1] != theirs[1]):
+                        # changed by both
+                        out.append(_tree_entry_to_baseindexentry(base, 1))
+                        out.append(_tree_entry_to_baseindexentry(ours, 2))
+                        out.append(_tree_entry_to_baseindexentry(theirs, 3))
+                    elif base[0] != ours[0] or base[1] != ours[1]:
+                        # only we changed it
+                        out.append(_tree_entry_to_baseindexentry(ours, 0))
+                    else:
+                        # either nobody changed it, or they did. In either
+                        # case, use theirs
+                        out.append(_tree_entry_to_baseindexentry(theirs, 0))
+                    # END handle modification
                 else:
-                    # either nobody changed it, or they did. In either
-                    # case, use theirs
-                    out.append(_tree_entry_to_baseindexentry(theirs, 0))
-                # END handle modification
-            else:
 
-                if ours[0] != base[0] or ours[1] != base[1]:
-                    # they deleted it, we changed it, conflict
-                    out.append(_tree_entry_to_baseindexentry(base, 1))
-                    out.append(_tree_entry_to_baseindexentry(ours, 2))
-                # else:
-                #   we didn't change it, ignore
-                #   pass
-                # END handle our change
-            # END handle theirs
+                    if ours[0] != base[0] or ours[1] != base[1]:
+                        # they deleted it, we changed it, conflict
+                        out.append(_tree_entry_to_baseindexentry(base, 1))
+                        out.append(_tree_entry_to_baseindexentry(ours, 2))
+                    # else:
+                    #   we didn't change it, ignore
+                    #   pass
+                    # END handle our change
+                # END handle theirs
+            else:
+                if theirs is None:
+                    # deleted in both, its fine - its out
+                    pass
+                else:
+                    if theirs[0] != base[0] or theirs[1] != base[1]:
+                        # deleted in ours, changed theirs, conflict
+                        out.append(_tree_entry_to_baseindexentry(base, 1))
+                        out.append(_tree_entry_to_baseindexentry(theirs, 3))
+                    # END theirs changed
+                    # else:
+                    #   theirs didn't change
+                    #   pass
+                # END handle theirs
+            # END handle ours
         else:
-            if theirs is None:
-                # deleted in both, its fine - its out
-                pass
-            else:
-                if theirs[0] != base[0] or theirs[1] != base[1]:
-                    # deleted in ours, changed theirs, conflict
-                    out.append(_tree_entry_to_baseindexentry(base, 1))
-                    out.append(_tree_entry_to_baseindexentry(theirs, 3))
-                # END theirs changed
-                # else:
-                #   theirs didn't change
-                #   pass
-            # END handle theirs
-        # END handle ours
-    else:
-        # all three can't be None
-        if ours is None and theirs is not None:
-            # added in their branch
-            out.append(_tree_entry_to_baseindexentry(theirs, 0))
-        elif theirs is None and ours is not None:
-            # added in our branch
-            out.append(_tree_entry_to_baseindexentry(ours, 0))
-        elif ours is not None and theirs is not None:
-            # both have it, except for the base, see whether it changed
-            if ours[0] != theirs[0] or ours[1] != theirs[1]:
-                out.append(_tree_entry_to_baseindexentry(ours, 2))
-                out.append(_tree_entry_to_baseindexentry(theirs, 3))
-            else:
-                # it was added the same in both
+            # all three can't be None
+            if ours is None and theirs is not None:
+                # added in their branch
+                out.append(_tree_entry_to_baseindexentry(theirs, 0))
+            elif theirs is None and ours is not None:
+                # added in our branch
                 out.append(_tree_entry_to_baseindexentry(ours, 0))
-            # END handle two items
-        # END handle heads
-    # END handle base exists
-# END for each entries tuple
+            elif ours is not None and theirs is not None:
+                # both have it, except for the base, see whether it changed
+                if ours[0] != theirs[0] or ours[1] != theirs[1]:
+                    out.append(_tree_entry_to_baseindexentry(ours, 2))
+                    out.append(_tree_entry_to_baseindexentry(theirs, 3))
+                else:
+                    # it was added the same in both
+                    out.append(_tree_entry_to_baseindexentry(ours, 0))
+                # END handle two items
+            # END handle heads
+        # END handle base exists
+    # END for each entries tuple
 
     return out
