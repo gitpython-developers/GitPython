@@ -57,6 +57,7 @@ from git.types import PathLike, TypeGuard
 
 if TYPE_CHECKING:
     from .base import IndexFile
+    from git.objects.fun import EntryTup
 
 # ------------------------------------------------------------------------------------
 
@@ -188,7 +189,7 @@ def entry_key(*entry: Union[BaseIndexEntry, PathLike, int]) -> Tuple[PathLike, i
 
     def is_entry_tuple(entry: Tuple) -> TypeGuard[Tuple[PathLike, int]]:
         return isinstance(entry, tuple) and len(entry) == 2
-        
+
     if len(entry) == 1:
         entry_first = entry[0]
         assert isinstance(entry_first, BaseIndexEntry)
@@ -259,8 +260,8 @@ def write_tree_from_cache(entries: List[IndexEntry], odb, sl: slice, si: int = 0
     :param sl: slice indicating the range we should process on the entries list
     :return: tuple(binsha, list(tree_entry, ...)) a tuple of a sha and a list of
         tree entries being a tuple of hexsha, mode, name"""
-    tree_items = []  # type: List[Tuple[Union[bytes, str], int, str]]
-    tree_items_append = tree_items.append
+    tree_items: List[Tuple[bytes, int, str]] = []
+
     ci = sl.start
     end = sl.stop
     while ci < end:
@@ -272,7 +273,7 @@ def write_tree_from_cache(entries: List[IndexEntry], odb, sl: slice, si: int = 0
         rbound = entry.path.find('/', si)
         if rbound == -1:
             # its not a tree
-            tree_items_append((entry.binsha, entry.mode, entry.path[si:]))
+            tree_items.append((entry.binsha, entry.mode, entry.path[si:]))
         else:
             # find common base range
             base = entry.path[si:rbound]
@@ -289,7 +290,7 @@ def write_tree_from_cache(entries: List[IndexEntry], odb, sl: slice, si: int = 0
             # enter recursion
             # ci - 1 as we want to count our current item as well
             sha, _tree_entry_list = write_tree_from_cache(entries, odb, slice(ci - 1, xi), rbound + 1)
-            tree_items_append((sha, S_IFDIR, base))
+            tree_items.append((sha, S_IFDIR, base))
 
             # skip ahead
             ci = xi
@@ -306,7 +307,7 @@ def write_tree_from_cache(entries: List[IndexEntry], odb, sl: slice, si: int = 0
     return (istream.binsha, tree_items_stringified)
 
 
-def _tree_entry_to_baseindexentry(tree_entry: Tuple[str, int, str], stage: int) -> BaseIndexEntry:
+def _tree_entry_to_baseindexentry(tree_entry: Tuple[bytes, int, str], stage: int) -> BaseIndexEntry:
     return BaseIndexEntry((tree_entry[1], tree_entry[0], stage << CE_STAGESHIFT, tree_entry[2]))
 
 
@@ -319,14 +320,13 @@ def aggressive_tree_merge(odb, tree_shas: Sequence[bytes]) -> List[BaseIndexEntr
     :param tree_shas: 1, 2 or 3 trees as identified by their binary 20 byte shas
         If 1 or two, the entries will effectively correspond to the last given tree
         If 3 are given, a 3 way merge is performed"""
-    out = []  # type: List[BaseIndexEntry]
-    out_append = out.append
+    out: List[BaseIndexEntry] = []
 
     # one and two way is the same for us, as we don't have to handle an existing
     # index, instrea
     if len(tree_shas) in (1, 2):
         for entry in traverse_tree_recursive(odb, tree_shas[-1], ''):
-            out_append(_tree_entry_to_baseindexentry(entry, 0))
+            out.append(_tree_entry_to_baseindexentry(entry, 0))
         # END for each entry
         return out
     # END handle single tree
@@ -334,8 +334,16 @@ def aggressive_tree_merge(odb, tree_shas: Sequence[bytes]) -> List[BaseIndexEntr
     if len(tree_shas) > 3:
         raise ValueError("Cannot handle %i trees at once" % len(tree_shas))
 
+    EntryTupOrNone = Union[EntryTup, None]
+
+    def is_three_entry_list(inp) -> TypeGuard[List[EntryTupOrNone]]:
+        return isinstance(inp, list) and len(inp) == 3
+
     # three trees
-    for base, ours, theirs in traverse_trees_recursive(odb, tree_shas, ''):
+    for three_entries in traverse_trees_recursive(odb, tree_shas, ''):
+
+        assert is_three_entry_list(three_entries)
+        base, ours, theirs = three_entries
         if base is not None:
             # base version exists
             if ours is not None:
@@ -347,23 +355,23 @@ def aggressive_tree_merge(odb, tree_shas: Sequence[bytes]) -> List[BaseIndexEntr
                     if(base[0] != ours[0] and base[0] != theirs[0] and ours[0] != theirs[0]) or \
                             (base[1] != ours[1] and base[1] != theirs[1] and ours[1] != theirs[1]):
                         # changed by both
-                        out_append(_tree_entry_to_baseindexentry(base, 1))
-                        out_append(_tree_entry_to_baseindexentry(ours, 2))
-                        out_append(_tree_entry_to_baseindexentry(theirs, 3))
+                        out.append(_tree_entry_to_baseindexentry(base, 1))
+                        out.append(_tree_entry_to_baseindexentry(ours, 2))
+                        out.append(_tree_entry_to_baseindexentry(theirs, 3))
                     elif base[0] != ours[0] or base[1] != ours[1]:
                         # only we changed it
-                        out_append(_tree_entry_to_baseindexentry(ours, 0))
+                        out.append(_tree_entry_to_baseindexentry(ours, 0))
                     else:
                         # either nobody changed it, or they did. In either
                         # case, use theirs
-                        out_append(_tree_entry_to_baseindexentry(theirs, 0))
+                        out.append(_tree_entry_to_baseindexentry(theirs, 0))
                     # END handle modification
                 else:
 
                     if ours[0] != base[0] or ours[1] != base[1]:
                         # they deleted it, we changed it, conflict
-                        out_append(_tree_entry_to_baseindexentry(base, 1))
-                        out_append(_tree_entry_to_baseindexentry(ours, 2))
+                        out.append(_tree_entry_to_baseindexentry(base, 1))
+                        out.append(_tree_entry_to_baseindexentry(ours, 2))
                     # else:
                     #   we didn't change it, ignore
                     #   pass
@@ -376,8 +384,8 @@ def aggressive_tree_merge(odb, tree_shas: Sequence[bytes]) -> List[BaseIndexEntr
                 else:
                     if theirs[0] != base[0] or theirs[1] != base[1]:
                         # deleted in ours, changed theirs, conflict
-                        out_append(_tree_entry_to_baseindexentry(base, 1))
-                        out_append(_tree_entry_to_baseindexentry(theirs, 3))
+                        out.append(_tree_entry_to_baseindexentry(base, 1))
+                        out.append(_tree_entry_to_baseindexentry(theirs, 3))
                     # END theirs changed
                     # else:
                     #   theirs didn't change
@@ -386,20 +394,20 @@ def aggressive_tree_merge(odb, tree_shas: Sequence[bytes]) -> List[BaseIndexEntr
             # END handle ours
         else:
             # all three can't be None
-            if ours is None:
+            if ours is None and theirs is not None:
                 # added in their branch
-                out_append(_tree_entry_to_baseindexentry(theirs, 0))
-            elif theirs is None:
+                out.append(_tree_entry_to_baseindexentry(theirs, 0))
+            elif theirs is None and ours is not None:
                 # added in our branch
-                out_append(_tree_entry_to_baseindexentry(ours, 0))
-            else:
+                out.append(_tree_entry_to_baseindexentry(ours, 0))
+            elif ours is not None and theirs is not None:
                 # both have it, except for the base, see whether it changed
                 if ours[0] != theirs[0] or ours[1] != theirs[1]:
-                    out_append(_tree_entry_to_baseindexentry(ours, 2))
-                    out_append(_tree_entry_to_baseindexentry(theirs, 3))
+                    out.append(_tree_entry_to_baseindexentry(ours, 2))
+                    out.append(_tree_entry_to_baseindexentry(theirs, 3))
                 else:
                     # it was added the same in both
-                    out_append(_tree_entry_to_baseindexentry(ours, 0))
+                    out.append(_tree_entry_to_baseindexentry(ours, 0))
                 # END handle two items
             # END handle heads
         # END handle base exists

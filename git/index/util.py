@@ -11,9 +11,12 @@ import os.path as osp
 
 # typing ----------------------------------------------------------------------
 
-from typing import (Any, Callable)
+from typing import (Any, Callable, TYPE_CHECKING)
 
 from git.types import PathLike, _T
+
+if TYPE_CHECKING:
+    from git.index import IndexFile
 
 # ---------------------------------------------------------------------------------
 
@@ -63,7 +66,7 @@ def post_clear_cache(func: Callable[..., _T]) -> Callable[..., _T]:
     """
 
     @wraps(func)
-    def post_clear_cache_if_not_raised(self, *args: Any, **kwargs: Any) -> _T:
+    def post_clear_cache_if_not_raised(self: 'IndexFile', *args: Any, **kwargs: Any) -> _T:
         rval = func(self, *args, **kwargs)
         self._delete_entries_cache()
         return rval
@@ -78,7 +81,7 @@ def default_index(func: Callable[..., _T]) -> Callable[..., _T]:
     on that index only. """
 
     @wraps(func)
-    def check_default_index(self, *args: Any, **kwargs: Any) -> _T:
+    def check_default_index(self: 'IndexFile', *args: Any, **kwargs: Any) -> _T:
         if self._file_path != self._index_path():
             raise AssertionError(
                 "Cannot call %r on indices that do not represent the default git index" % func.__name__)
@@ -93,9 +96,9 @@ def git_working_dir(func: Callable[..., _T]) -> Callable[..., _T]:
     repository in order to assure relative paths are handled correctly"""
 
     @wraps(func)
-    def set_git_working_dir(self, *args: Any, **kwargs: Any) -> _T:
+    def set_git_working_dir(self: 'IndexFile', *args: Any, **kwargs: Any) -> _T:
         cur_wd = os.getcwd()
-        os.chdir(self.repo.working_tree_dir)
+        os.chdir(str(self.repo.working_tree_dir))
         try:
             return func(self, *args, **kwargs)
         finally:

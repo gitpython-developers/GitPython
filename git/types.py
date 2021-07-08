@@ -7,6 +7,8 @@ import sys
 from typing import (Callable, Dict, NoReturn, Tuple, Union, Any, Iterator,       # noqa: F401
                     NamedTuple, TYPE_CHECKING, TypeVar)       # noqa: F401
 
+if TYPE_CHECKING:
+    from git.repo import Repo
 
 if sys.version_info[:2] >= (3, 8):
     from typing import Final, Literal, SupportsIndex, TypedDict, Protocol  # noqa: F401
@@ -71,9 +73,5 @@ class HSH_TD(TypedDict):
     files: Dict[PathLike, Files_TD]
 
 
-# @runtime_checkable
-class RepoLike(Protocol):
-    """Protocol class to allow structural type-checking of Repo
-    e.g. when cannot import due to circular imports"""
-
-    def remotes(self): ...          # NOQA: E704
+class Has_Repo(Protocol):
+    repo: 'Repo'

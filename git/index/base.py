@@ -18,6 +18,7 @@ from git.compat import (
 from git.exc import (
     GitCommandError,
     CheckoutError,
+    GitError,
     InvalidGitRepositoryError
 )
 from git.objects import (
@@ -66,10 +67,10 @@ from .util import (
 
 # typing -----------------------------------------------------------------------------
 
-from typing import (Any, BinaryIO, Callable, Dict, IO, Iterable, Iterator, List,
+from typing import (Any, BinaryIO, Callable, Dict, IO, Iterable, Iterator, List, NoReturn,
                     Sequence, TYPE_CHECKING, Tuple, Union)
 
-from git.types import PathLike, TBD
+from git.types import Commit_ish, PathLike, TBD
 
 if TYPE_CHECKING:
     from subprocess import Popen
@@ -372,13 +373,13 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
     # UTILITIES
     @unbare_repo
-    def _iter_expand_paths(self, paths: Sequence[PathLike]) -> Iterator[PathLike]:
+    def _iter_expand_paths(self: 'IndexFile', paths: Sequence[PathLike]) -> Iterator[PathLike]:
         """Expand the directories in list of paths to the corresponding paths accordingly,
 
         Note: git will add items multiple times even if a glob overlapped
         with manually specified paths or if paths where specified multiple
         times - we respect that and do not prune"""
-        def raise_exc(e):
+        def raise_exc(e: Exception) -> NoReturn:
             raise e
         r = str(self.repo.working_tree_dir)
         rs = r + os.sep
@@ -426,7 +427,8 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             # END path exception handling
         # END for each path
 
-    def _write_path_to_stdin(self, proc: 'Popen', filepath: PathLike, item, fmakeexc, fprogress,
+    def _write_path_to_stdin(self, proc: 'Popen', filepath: PathLike, item: TBD, fmakeexc: Callable[..., GitError],
+                             fprogress: Callable[[PathLike, bool, TBD], None],
                              read_from_stdout: bool = True) -> Union[None, str]:
         """Write path to proc.stdin and make sure it processes the item, including progress.
 
@@ -498,7 +500,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             line.sort()
         return path_map
 
-    @classmethod
+    @ classmethod
     def entry_key(cls, *entry: Union[BaseIndexEntry, PathLike, StageType]) -> Tuple[PathLike, StageType]:
         return entry_key(*entry)
 
@@ -631,8 +633,8 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         return BaseIndexEntry((stat_mode_to_index_mode(st.st_mode),
                                istream.binsha, 0, to_native_path_linux(filepath)))
 
-    @unbare_repo
-    @git_working_dir
+    @ unbare_repo
+    @ git_working_dir
     def _entries_for_paths(self, paths: List[str], path_rewriter: Callable, fprogress: Callable,
                            entries: List[BaseIndexEntry]) -> List[BaseIndexEntry]:
         entries_added: List[BaseIndexEntry] = []
@@ -788,8 +790,8 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
             # create objects if required, otherwise go with the existing shas
             null_entries_indices = [i for i, e in enumerate(entries) if e.binsha == Object.NULL_BIN_SHA]
             if null_entries_indices:
-                @git_working_dir
-                def handle_null_entries(self):
+                @ git_working_dir
+                def handle_null_entries(self: 'IndexFile') -> None:
                     for ei in null_entries_indices:
                         null_entry = entries[ei]
                         new_entry = self._store_path(null_entry.path, fprogress)
@@ -969,8 +971,13 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
 
         return out
 
-    def commit(self, message: str, parent_commits=None, head: bool = True, author: Union[None, 'Actor'] = None,
-               committer: Union[None, 'Actor'] = None, author_date: Union[str, None] = None,
+    def commit(self,
+               message: str,
+               parent_commits: Union[Commit_ish, None] = None,
+               head: bool = True,
+               author: Union[None, 'Actor'] = None,
+               committer: Union[None, 'Actor'] = None,
+               author_date: Union[str, None] = None,
                commit_date: Union[str, None] = None,
                skip_hooks: bool = False) -> Commit:
         """Commit the current default index file, creating a commit object.
