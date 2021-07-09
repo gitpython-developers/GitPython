@@ -57,6 +57,7 @@ from git.types import PathLike, TypeGuard
 
 if TYPE_CHECKING:
     from .base import IndexFile
+    from objects.tree import TreeCacheTup
     # from git.objects.fun import EntryTupOrNone
 
 # ------------------------------------------------------------------------------------
@@ -249,7 +250,7 @@ def read_cache(stream: IO[bytes]) -> Tuple[int, Dict[Tuple[PathLike, int], 'Inde
 
 
 def write_tree_from_cache(entries: List[IndexEntry], odb, sl: slice, si: int = 0
-                          ) -> Tuple[bytes, List[Tuple[bytes, int, str]]]:
+                          ) -> Tuple[bytes, List[TreeCacheTup]]:
     """Create a tree from the given sorted list of entries and put the respective
     trees into the given object database
 
@@ -259,7 +260,7 @@ def write_tree_from_cache(entries: List[IndexEntry], odb, sl: slice, si: int = 0
     :param sl: slice indicating the range we should process on the entries list
     :return: tuple(binsha, list(tree_entry, ...)) a tuple of a sha and a list of
         tree entries being a tuple of hexsha, mode, name"""
-    tree_items: List[Tuple[bytes, int, str]] = []
+    tree_items: List[TreeCacheTup] = []
 
     ci = sl.start
     end = sl.stop
@@ -305,7 +306,7 @@ def write_tree_from_cache(entries: List[IndexEntry], odb, sl: slice, si: int = 0
     return (istream.binsha, tree_items)
 
 
-def _tree_entry_to_baseindexentry(tree_entry: Tuple[bytes, int, str], stage: int) -> BaseIndexEntry:
+def _tree_entry_to_baseindexentry(tree_entry: TreeCacheTup, stage: int) -> BaseIndexEntry:
     return BaseIndexEntry((tree_entry[1], tree_entry[0], stage << CE_STAGESHIFT, tree_entry[2]))
 
 

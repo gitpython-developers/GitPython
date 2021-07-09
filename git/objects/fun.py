@@ -215,7 +215,7 @@ def traverse_trees_recursive(odb: 'GitCmdObjectDB', tree_shas: Sequence[Union[by
     return out
 
 
-def traverse_tree_recursive(odb: 'GitCmdObjectDB', tree_sha: bytes, path_prefix: str) -> List[Tuple[bytes, int, str]]:
+def traverse_tree_recursive(odb: 'GitCmdObjectDB', tree_sha: bytes, path_prefix: str) -> List[EntryTup]:
     """
     :return: list of entries of the tree pointed to by the binary tree_sha. An entry
         has the following format:

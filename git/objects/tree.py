@@ -31,8 +31,13 @@ if TYPE_CHECKING:
     from io import BytesIO
 
 TreeCacheTup = Tuple[bytes, int, str]
+
 TraversedTreeTup = Union[Tuple[Union['Tree', None], IndexObjUnion,
                          Tuple['Submodule', 'Submodule']]]
+
+
+def is_tree_cache(inp: Tuple[bytes, int, str]) -> TypeGuard[TreeCacheTup]:
+    return isinstance(inp[0], bytes) and isinstance(inp[1], int) and isinstance([inp], str)
 
 #--------------------------------------------------------
 
@@ -141,11 +146,8 @@ class TreeModifier(object):
         sha = to_bin_sha(sha)
         index = self._index_by_name(name)
 
-        def is_tree_cache(inp: Tuple[bytes, int, str]) -> TypeGuard[TreeCacheTup]:
-            return isinstance(inp[0], bytes) and isinstance(inp[1], int) and isinstance([inp], str)
-
         item = (sha, mode, name)
-        assert is_tree_cache(item)
+        # assert is_tree_cache(item)
 
         if index == -1:
             self._cache.append(item)
@@ -223,12 +225,12 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
         if attr == "_cache":
             # Set the data when we need it
             ostream = self.repo.odb.stream(self.binsha)
-            self._cache: List[Tuple[bytes, int, str]] = tree_entries_from_data(ostream.read())
+            self._cache: List[TreeCacheTup] = tree_entries_from_data(ostream.read())
         else:
             super(Tree, self)._set_cache_(attr)
         # END handle attribute
 
-    def _iter_convert_to_object(self, iterable: Iterable[Tuple[bytes, int, str]]
+    def _iter_convert_to_object(self, iterable: Iterable[TreeCacheTup]
                                 ) -> Iterator[IndexObjUnion]:
         """Iterable yields tuples of (binsha, mode, name), which will be converted
         to the respective object representation"""
