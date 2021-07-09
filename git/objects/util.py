@@ -35,6 +35,12 @@ if TYPE_CHECKING:
     from .submodule.base import Submodule
 
 
+class TraverseNT(NamedTuple):
+    depth: int
+    item: Union['Traversable', 'Blob']
+    src: Union['Traversable', None]
+
+
 T_TIobj = TypeVar('T_TIobj', bound='TraversableIterableObj')   # for TraversableIterableObj.traverse()
 
 TraversedTup = Union[Tuple[Union['Traversable', None], 'Traversable'],  # for commit, submodule
@@ -379,10 +385,6 @@ class Traversable(object):
            ignore_self=True is_edge=False --> Iterator[item]
            ignore_self=False is_edge=True -> Iterator[item] | Iterator[Tuple[src, item]]
            ignore_self=False is_edge=False -> Iterator[Tuple[src, item]]"""
-        class TraverseNT(NamedTuple):
-            depth: int
-            item: Union['Traversable', 'Blob']
-            src: Union['Traversable', None]
 
         visited = set()
         stack = deque()  # type: Deque[TraverseNT]

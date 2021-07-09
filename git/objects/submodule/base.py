@@ -425,6 +425,7 @@ class Submodule(IndexObject, TraversableIterableObj):
                 raise ValueError("A URL was not given and a repository did not exist at %s" % path)
             # END check url
             mrepo = sm.module()
+            assert isinstance(mrepo, Repo)
             urls = [r.url for r in mrepo.remotes]
             if not urls:
                 raise ValueError("Didn't find any remote url in repository at %s" % sm.abspath)

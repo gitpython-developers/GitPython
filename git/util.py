@@ -36,13 +36,14 @@ if TYPE_CHECKING:
     from git.remote import Remote
     from git.repo.base import Repo
     from git.config import GitConfigParser, SectionConstraint
-    from git.objects.base import IndexObject
+    # from git.objects.base import IndexObject
 
 
 from .types import (Literal, SupportsIndex,                    # because behind py version guards
-                    PathLike, HSH_TD, Total_TD, Files_TD)                # aliases
+                    PathLike, HSH_TD, Total_TD, Files_TD,       # aliases
+                    Has_id_attribute)
 
-T_IterableObj = TypeVar('T_IterableObj', bound=Union['IterableObj', 'IndexObject'], covariant=True)
+T_IterableObj = TypeVar('T_IterableObj', bound=Union['IterableObj', 'Has_id_attribute'], covariant=True)
 # So IterableList[Head] is subtype of IterableList[IterableObj]
 
 # ---------------------------------------------------------------------
@@ -82,7 +83,7 @@ log = logging.getLogger(__name__)
 HIDE_WINDOWS_KNOWN_ERRORS = is_win and os.environ.get('HIDE_WINDOWS_KNOWN_ERRORS', True)
 HIDE_WINDOWS_FREEZE_ERRORS = is_win and os.environ.get('HIDE_WINDOWS_FREEZE_ERRORS', True)
 
-#{ Utility Methods
+# { Utility Methods
 
 T = TypeVar('T')
 
@@ -247,7 +248,7 @@ def py_where(program: str, path: Optional[PathLike] = None) -> List[str]:
 
 def _cygexpath(drive: Optional[str], path: str) -> str:
     if osp.isabs(path) and not drive:
-        ## Invoked from `cygpath()` directly with `D:Apps\123`?
+        # Invoked from `cygpath()` directly with `D:Apps\123`?
         #  It's an error, leave it alone just slashes)
         p = path  # convert to str if AnyPath given
     else:
@@ -265,8 +266,8 @@ def _cygexpath(drive: Optional[str], path: str) -> str:
 
 
 _cygpath_parsers = (
-    ## See: https://msdn.microsoft.com/en-us/library/windows/desktop/aa365247(v=vs.85).aspx
-    ## and: https://www.cygwin.com/cygwin-ug-net/using.html#unc-paths
+    # See: https://msdn.microsoft.com/en-us/library/windows/desktop/aa365247(v=vs.85).aspx
+    # and: https://www.cygwin.com/cygwin-ug-net/using.html#unc-paths
     (re.compile(r"\\\\\?\\UNC\\([^\\]+)\\([^\\]+)(?:\\(.*))?"),
      (lambda server, share, rest_path: '//%s/%s/%s' % (server, share, rest_path.replace('\\', '/'))),
      False
@@ -297,7 +298,7 @@ _cygpath_parsers = (
 def cygpath(path: str) -> str:
     """Use :meth:`git.cmd.Git.polish_url()` instead, that works on any environment."""
     path = str(path)  # ensure is str and not AnyPath.
-    #Fix to use Paths when 3.5 dropped. or to be just str if only for urls?
+    # Fix to use Paths when 3.5 dropped. or to be just str if only for urls?
     if not path.startswith(('/cygdrive', '//')):
         for regex, parser, recurse in _cygpath_parsers:
             match = regex.match(path)
@@ -357,7 +358,7 @@ def is_cygwin_git(git_executable: Union[None, PathLike]) -> bool:
                 res = py_where(git_executable)
                 git_dir = osp.dirname(res[0]) if res else ""
 
-            ## Just a name given, not a real path.
+            # Just a name given, not a real path.
             uname_cmd = osp.join(git_dir, 'uname')
             process = subprocess.Popen([uname_cmd], stdout=subprocess.PIPE,
                                        universal_newlines=True)
@@ -378,7 +379,7 @@ def get_user_id() -> str:
 
 def finalize_process(proc: subprocess.Popen, **kwargs: Any) -> None:
     """Wait for the process (clone, fetch, pull or push) and handle its errors accordingly"""
-    ## TODO: No close proc-streams??
+    # TODO: No close proc-streams??
     proc.wait(**kwargs)
 
 
@@ -432,9 +433,9 @@ def remove_password_if_present(cmdline):
     return new_cmdline
 
 
-#} END utilities
+# } END utilities
 
-#{ Classes
+# { Classes
 
 
 class RemoteProgress(object):
@@ -984,7 +985,7 @@ class IterableList(List[T_IterableObj]):
             return False
         # END handle membership
 
-    def __getattr__(self, attr: str) -> Any:
+    def __getattr__(self, attr: str) -> T_IterableObj:
         attr = self._prefix + attr
         for item in self:
             if getattr(item, self._id_attr) == attr:
@@ -992,7 +993,7 @@ class IterableList(List[T_IterableObj]):
         # END for each item
         return list.__getattribute__(self, attr)
 
-    def __getitem__(self, index: Union[SupportsIndex, int, slice, str]) -> Any:
+    def __getitem__(self, index: Union[SupportsIndex, int, slice, str]) -> 'T_IterableObj':  # type: ignore
 
         assert isinstance(index, (int, str, slice)), "Index of IterableList should be an int or str"
 
@@ -1007,7 +1008,7 @@ class IterableList(List[T_IterableObj]):
                 raise IndexError("No item found with id %r" % (self._prefix + index)) from e
         # END handle getattr
 
-    def __delitem__(self, index: Union[SupportsIndex, int, slice, str]) -> Any:
+    def __delitem__(self, index: Union[SupportsIndex, int, slice, str]) -> None:
 
         assert isinstance(index, (int, str)), "Index of IterableList should be an int or str"
 
@@ -1101,7 +1102,7 @@ class IterableObj():
         :return:  iterator yielding Items"""
         raise NotImplementedError("To be implemented by Subclass")
 
-#} END classes
+# } END classes
 
 
 class NullHandler(logging.Handler):
