@@ -449,8 +449,9 @@ class Remote(LazyMixin, IterableObj):
 
         :param repo: The repository we are a remote of
         :param name: the name of the remote, i.e. 'origin'"""
-        self.repo = repo  # type: 'Repo'
+        self.repo = repo
         self.name = name
+        self.url: str
 
     def __getattr__(self, attr: str) -> Any:
         """Allows to call this instance like
@@ -558,15 +559,7 @@ class Remote(LazyMixin, IterableObj):
         """
         return self.set_url(url, delete=True)
 
-    @property
-    def url(self) -> Union[str, List[str]]:
-        url_list = list(self.urls)
-        if len(url_list) == 1:
-            return url_list[0]
-        else:
-            return url_list
-
-    @property
+    @ property
     def urls(self) -> Iterator[str]:
         """:return: Iterator yielding all configured URL targets on a remote as strings"""
         try:
@@ -599,7 +592,7 @@ class Remote(LazyMixin, IterableObj):
             else:
                 raise ex
 
-    @property
+    @ property
     def refs(self) -> IterableList[RemoteReference]:
         """
         :return:
@@ -610,7 +603,7 @@ class Remote(LazyMixin, IterableObj):
         out_refs.extend(RemoteReference.list_items(self.repo, remote=self.name))
         return out_refs
 
-    @property
+    @ property
     def stale_refs(self) -> IterableList[Reference]:
         """
         :return:
@@ -644,7 +637,7 @@ class Remote(LazyMixin, IterableObj):
         # END for each line
         return out_refs
 
-    @classmethod
+    @ classmethod
     def create(cls, repo: 'Repo', name: str, url: str, **kwargs: Any) -> 'Remote':
         """Create a new remote to the given repository
         :param repo: Repository instance that is to receive the new remote
@@ -661,7 +654,7 @@ class Remote(LazyMixin, IterableObj):
     # add is an alias
     add = create
 
-    @classmethod
+    @ classmethod
     def remove(cls, repo: 'Repo', name: str) -> str:
         """Remove the remote with the given name
         :return: the passed remote name to remove
