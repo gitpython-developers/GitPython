@@ -572,7 +572,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         # note: additional deserialization could be saved if write_tree_from_cache
         # would return sorted tree entries
         root_tree = Tree(self.repo, binsha, path='')
-        root_tree._cache = tree_items  # type: ignore
+        root_tree._cache = tree_items  # type: ignore  # should this be encoded to [bytes, int, str]?
         return root_tree
 
     def _process_diff_args(self,              # type: ignore[override]

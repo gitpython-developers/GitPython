@@ -249,7 +249,7 @@ def read_cache(stream: IO[bytes]) -> Tuple[int, Dict[Tuple[PathLike, int], 'Inde
 
 
 def write_tree_from_cache(entries: List[IndexEntry], odb, sl: slice, si: int = 0
-                          ) -> Tuple[bytes, List[Tuple[str, int, str]]]:
+                          ) -> Tuple[bytes, List[Tuple[bytes, int, str]]]:
     """Create a tree from the given sorted list of entries and put the respective
     trees into the given object database
 
@@ -298,12 +298,11 @@ def write_tree_from_cache(entries: List[IndexEntry], odb, sl: slice, si: int = 0
 
     # finally create the tree
     sio = BytesIO()
-    tree_to_stream(tree_items, sio.write)  # converts bytes of each item[0] to str
-    tree_items_stringified = cast(List[Tuple[str, int, str]], tree_items)
+    tree_to_stream(tree_items, sio.write)  # writes to stream as bytes, but doesnt change tree_items
     sio.seek(0)
 
     istream = odb.store(IStream(str_tree_type, len(sio.getvalue()), sio))
-    return (istream.binsha, tree_items_stringified)
+    return (istream.binsha, tree_items)
 
 
 def _tree_entry_to_baseindexentry(tree_entry: Tuple[bytes, int, str], stage: int) -> BaseIndexEntry:
