@@ -41,7 +41,7 @@ from git.util import (
 from gitdb.base import IStream
 from gitdb.db import MemoryDB
 
-import git.diff as diff
+import git.diff as git_diff
 import os.path as osp
 
 from .fun import (
@@ -88,7 +88,7 @@ Treeish = Union[Tree, Commit, str, bytes]
 __all__ = ('IndexFile', 'CheckoutError')
 
 
-class IndexFile(LazyMixin, diff.Diffable, Serializable):
+class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
 
     """
     Implements an Index that can be manipulated using a native implementation in
@@ -575,8 +575,8 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         root_tree._cache = tree_items  # type: ignore
         return root_tree
 
-    def _process_diff_args(self, args: List[Union[str, diff.Diffable, object]]
-                           ) -> List[Union[str, diff.Diffable, object]]:
+    def _process_diff_args(self, args: List[Union[str, git_diff.Diffable, object]]
+                           ) -> List[Union[str, git_diff.Diffable, object]]:
         try:
             args.pop(args.index(self))
         except IndexError:
@@ -1272,10 +1272,11 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         return self
 
     @ default_index
-    def diff(self, other: Union[diff.Diffable.Index, 'IndexFile.Index', Treeish, None, object] = diff.Diffable.Index,
+    def diff(self,
+             other: Union[git_diff.Diffable.Index, 'IndexFile.Index', Treeish, None, object] = git_diff.Diffable.Index,
              paths: Union[str, List[PathLike], Tuple[PathLike, ...], None] = None,
              create_patch: bool = False, **kwargs: Any
-             ) -> diff.DiffIndex:
+             ) -> git_diff.DiffIndex:
         """Diff this index against the working copy or a Tree or Commit object
 
         For a documentation of the parameters and return values, see,
@@ -1287,7 +1288,7 @@ class IndexFile(LazyMixin, diff.Diffable, Serializable):
         """
         # index against index is always empty
         if other is self.Index:
-            return diff.DiffIndex()
+            return git_diff.DiffIndex()
 
         # index against anything but None is a reverse diff with the respective
         # item. Handle existing -R flags properly. Transform strings to the object

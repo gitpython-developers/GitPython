@@ -212,19 +212,19 @@ class DiffIndex(List[T_Diff]):
         if change_type not in self.change_type:
             raise ValueError("Invalid change type: %s" % change_type)
 
-        for diff in self:
-            if diff.change_type == change_type:
-                yield diff
-            elif change_type == "A" and diff.new_file:
-                yield diff
-            elif change_type == "D" and diff.deleted_file:
-                yield diff
-            elif change_type == "C" and diff.copied_file:
-                yield diff
-            elif change_type == "R" and diff.renamed:
-                yield diff
-            elif change_type == "M" and diff.a_blob and diff.b_blob and diff.a_blob != diff.b_blob:
-                yield diff
+        for diffidx in self:
+            if diffidx.change_type == change_type:
+                yield diffidx
+            elif change_type == "A" and diffidx.new_file:
+                yield diffidx
+            elif change_type == "D" and diffidx.deleted_file:
+                yield diffidx
+            elif change_type == "C" and diffidx.copied_file:
+                yield diffidx
+            elif change_type == "R" and diffidx.renamed:
+                yield diffidx
+            elif change_type == "M" and diffidx.a_blob and diffidx.b_blob and diffidx.a_blob != diffidx.b_blob:
+                yield diffidx
         # END for each diff
 
 

@@ -469,7 +469,7 @@ class Remote(LazyMixin, IterableObj):
     def _config_section_name(self) -> str:
         return 'remote "%s"' % self.name
 
-    def _set_cache_(self, attr: str) -> Any:
+    def _set_cache_(self, attr: str) -> None:
         if attr == "_config_reader":
             # NOTE: This is cached as __getattr__ is overridden to return remote config values implicitly, such as
             # in print(r.pushurl)

@@ -5,7 +5,7 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
 from git.util import IterableList, join_path
-import git.diff as diff
+import git.diff as git_diff
 from git.util import to_bin_sha
 
 from . import util
@@ -180,7 +180,7 @@ class TreeModifier(object):
     #} END mutators
 
 
-class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
+class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
 
     """Tree objects represent an ordered list of Blobs and other Trees.
 
