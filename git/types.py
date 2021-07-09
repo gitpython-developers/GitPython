@@ -11,9 +11,9 @@ if TYPE_CHECKING:
     from git.repo import Repo
 
 if sys.version_info[:2] >= (3, 8):
-    from typing import Final, Literal, SupportsIndex, TypedDict, Protocol  # noqa: F401
+    from typing import Final, Literal, SupportsIndex, TypedDict, Protocol, runtime_checkable  # noqa: F401
 else:
-    from typing_extensions import Final, Literal, SupportsIndex, TypedDict, Protocol  # noqa: F401
+    from typing_extensions import Final, Literal, SupportsIndex, TypedDict, Protocol, runtime_checkable  # noqa: F401
 
 if sys.version_info[:2] >= (3, 10):
     from typing import TypeGuard  # noqa: F401
@@ -73,5 +73,11 @@ class HSH_TD(TypedDict):
     files: Dict[PathLike, Files_TD]
 
 
+@runtime_checkable
 class Has_Repo(Protocol):
     repo: 'Repo'
+
+
+@runtime_checkable
+class Has_id_attribute(Protocol):
+    _id_attribute_: str

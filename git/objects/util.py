@@ -19,13 +19,11 @@ import time
 import calendar
 from datetime import datetime, timedelta, tzinfo
 
-from git.objects.base import IndexObject  # just for an isinstance check
-
 # typing ------------------------------------------------------------
 from typing import (Any, Callable, Deque, Iterator, NamedTuple, overload, Sequence,
                     TYPE_CHECKING, Tuple, Type, TypeVar, Union, cast)
 
-from git.types import Literal
+from git.types import Has_id_attribute, Literal
 
 if TYPE_CHECKING:
     from io import BytesIO, StringIO
@@ -319,7 +317,7 @@ class Traversable(object):
         """
         # Commit and Submodule have id.__attribute__ as IterableObj
         # Tree has id.__attribute__ inherited from IndexObject
-        if isinstance(self, (TraversableIterableObj, IndexObject)):
+        if isinstance(self, (TraversableIterableObj, Has_id_attribute)):
             id = self._id_attribute_
         else:
             id = ""     # shouldn't reach here, unless Traversable subclass created with no _id_attribute_

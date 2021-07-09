@@ -323,7 +323,7 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
                     super(Tree, self).traverse(predicate, prune, depth,  # type: ignore
                                                branch_first, visit_once, ignore_self))
 
-    def list_traverse(self, *args: Any, **kwargs: Any) -> IterableList[Union['Tree', 'Submodule', 'Blob']]:
+    def list_traverse(self, *args: Any, **kwargs: Any) -> IterableList[IndexObjUnion]:
         return super(Tree, self).list_traverse(* args, **kwargs)
 
     # List protocol
