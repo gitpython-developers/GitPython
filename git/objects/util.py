@@ -328,6 +328,7 @@ class Traversable(object):
         # Union[IterableList['Commit'], IterableList['Submodule'], IterableList[Union['Submodule', 'Tree', 'Blob']]]
 
         # NOTE: if is_edge=True, self.traverse returns a Tuple, so should be prevented or flattened?
+        kwargs['as_edge'] = False
         out.extend(self.traverse(*args, **kwargs))  # type: ignore
         return out
 
