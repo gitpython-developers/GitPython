@@ -1271,10 +1271,10 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
 
         return self
 
-    @ default_index
+    # @ default_index, breaks typing for some reason, copied into function
     def diff(self,
              other: Union[git_diff.Diffable.Index, 'IndexFile.Index', Treeish, None, object] = git_diff.Diffable.Index,
-             paths: Union[str, List[PathLike], Tuple[PathLike, ...], None] = None,
+             paths: Union[PathLike, List[PathLike], Tuple[PathLike, ...], None] = None,
              create_patch: bool = False, **kwargs: Any
              ) -> git_diff.DiffIndex:
         """Diff this index against the working copy or a Tree or Commit object
@@ -1286,6 +1286,11 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             Will only work with indices that represent the default git index as
             they have not been initialized with a stream.
         """
+
+        # only run if we are the default repository index
+        if self._file_path != self._index_path():
+            raise AssertionError(
+                "Cannot call %r on indices that do not represent the default git index" % self.diff())
         # index against index is always empty
         if other is self.Index:
             return git_diff.DiffIndex()
