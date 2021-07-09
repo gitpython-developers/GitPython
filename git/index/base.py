@@ -68,7 +68,7 @@ from .util import (
 # typing -----------------------------------------------------------------------------
 
 from typing import (Any, BinaryIO, Callable, Dict, IO, Iterable, Iterator, List, NoReturn,
-                    Sequence, TYPE_CHECKING, Tuple, Union)
+                    Sequence, TYPE_CHECKING, Tuple, Type, Union)
 
 from git.types import Commit_ish, PathLike, TBD
 
@@ -575,8 +575,8 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         root_tree._cache = tree_items  # type: ignore
         return root_tree
 
-    def _process_diff_args(self, args: List[Union[str, git_diff.Diffable, object]]
-                           ) -> List[Union[str, git_diff.Diffable, object]]:
+    def _process_diff_args(self, args: List[Union[PathLike, 'git_diff.Diffable', Type['git_diff.Diffable.Index']]]
+                           ) -> List[Union[PathLike, 'git_diff.Diffable', Type['git_diff.Diffable.Index']]]:
         try:
             args.pop(args.index(self))
         except IndexError:

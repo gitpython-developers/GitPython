@@ -16,13 +16,12 @@ from .objects.util import mode_str_to_int
 # typing ------------------------------------------------------------------
 
 from typing import Any, Iterator, List, Match, Optional, Tuple, Type, TypeVar, Union, TYPE_CHECKING
-from git.types import Has_Repo, PathLike, TBD, Literal, TypeGuard
+from git.types import PathLike, TBD, Literal, TypeGuard
 
 if TYPE_CHECKING:
     from .objects.tree import Tree
     from git.repo.base import Repo
     from git.objects.base import IndexObject
-
     from subprocess import Popen
 
 Lit_change_type = Literal['A', 'D', 'C', 'M', 'R', 'T', 'U']
@@ -82,7 +81,8 @@ class Diffable(object):
     class Index(object):
         pass
 
-    def _process_diff_args(self, args: List[Union[str, 'Diffable', object]]) -> List[Union[str, 'Diffable', object]]:
+    def _process_diff_args(self, args: List[Union[PathLike, 'Diffable', Type['Diffable.Index']]]
+                           ) -> List[Union[PathLike, 'Diffable', Type['Diffable.Index']]]:
         """
         :return:
             possibly altered version of the given args list.
@@ -90,7 +90,7 @@ class Diffable(object):
             Subclasses can use it to alter the behaviour of the superclass"""
         return args
 
-    def diff(self, other: Union[Type[Index], Type['Tree'], object, None, str] = Index,
+    def diff(self, other: Union[Type['Index'], 'Tree', None, str] = Index,
              paths: Union[PathLike, List[PathLike], Tuple[PathLike, ...], None] = None,
              create_patch: bool = False, **kwargs: Any) -> 'DiffIndex':
         """Creates diffs between two items being trees, trees and index or an
@@ -123,7 +123,7 @@ class Diffable(object):
         :note:
             On a bare repository, 'other' needs to be provided as Index or as
             as Tree/Commit, or a git command error will occur"""
-        args = []  # type: List[Union[str, Diffable, object]]
+        args: List[Union[PathLike, Diffable, Type['Diffable.Index']]] = []
         args.append("--abbrev=40")        # we need full shas
         args.append("--full-index")       # get full index paths, not only filenames
 
@@ -141,7 +141,7 @@ class Diffable(object):
         if paths is not None and not isinstance(paths, (tuple, list)):
             paths = [paths]
 
-        if isinstance(self, Has_Repo):
+        if hasattr(self, 'Has_Repo'):
             self.repo: Repo = self.repo
         else:
             raise AttributeError("No repo member found, cannot create DiffIndex")
@@ -400,36 +400,36 @@ class Diff(object):
         # end
         return res
 
-    @property
+    @ property
     def a_path(self) -> Optional[str]:
         return self.a_rawpath.decode(defenc, 'replace') if self.a_rawpath else None
 
-    @property
+    @ property
     def b_path(self) -> Optional[str]:
         return self.b_rawpath.decode(defenc, 'replace') if self.b_rawpath else None
 
-    @property
+    @ property
     def rename_from(self) -> Optional[str]:
         return self.raw_rename_from.decode(defenc, 'replace') if self.raw_rename_from else None
 
-    @property
+    @ property
     def rename_to(self) -> Optional[str]:
         return self.raw_rename_to.decode(defenc, 'replace') if self.raw_rename_to else None
 
-    @property
+    @ property
     def renamed(self) -> bool:
         """:returns: True if the blob of our diff has been renamed
         :note: This property is deprecated, please use ``renamed_file`` instead.
         """
         return self.renamed_file
 
-    @property
+    @ property
     def renamed_file(self) -> bool:
         """:returns: True if the blob of our diff has been renamed
         """
         return self.rename_from != self.rename_to
 
-    @classmethod
+    @ classmethod
     def _pick_best_path(cls, path_match: bytes, rename_match: bytes, path_fallback_match: bytes) -> Optional[bytes]:
         if path_match:
             return decode_path(path_match)
@@ -442,7 +442,7 @@ class Diff(object):
 
         return None
 
-    @classmethod
+    @ classmethod
     def _index_from_patch_format(cls, repo: 'Repo', proc: TBD) -> DiffIndex:
         """Create a new DiffIndex from the given text which must be in patch format
         :param repo: is the repository we are operating on - it is required
@@ -505,7 +505,7 @@ class Diff(object):
 
         return index
 
-    @staticmethod
+    @ staticmethod
     def _handle_diff_line(lines_bytes: bytes, repo: 'Repo', index: DiffIndex) -> None:
         lines = lines_bytes.decode(defenc)
 
@@ -559,7 +559,7 @@ class Diff(object):
                         '', change_type, score)
             index.append(diff)
 
-    @classmethod
+    @ classmethod
     def _index_from_raw_format(cls, repo: 'Repo', proc: 'Popen') -> 'DiffIndex':
         """Create a new DiffIndex from the given stream which must be in raw format.
         :return: git.DiffIndex"""
