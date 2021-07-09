@@ -19,6 +19,8 @@ import time
 import calendar
 from datetime import datetime, timedelta, tzinfo
 
+from git.objects.base import IndexObject  # just for an isinstance check
+
 # typing ------------------------------------------------------------
 from typing import (Any, Callable, Deque, Iterator, NamedTuple, overload, Sequence,
                     TYPE_CHECKING, Tuple, Type, TypeVar, Union, cast)
@@ -317,7 +319,7 @@ class Traversable(object):
         """
         # Commit and Submodule have id.__attribute__ as IterableObj
         # Tree has id.__attribute__ inherited from IndexObject
-        if isinstance(self, (TraversableIterableObj, Tree)):
+        if isinstance(self, (TraversableIterableObj, IndexObject)):
             id = self._id_attribute_
         else:
             id = ""     # shouldn't reach here, unless Traversable subclass created with no _id_attribute_
@@ -455,6 +457,9 @@ class TraversableIterableObj(Traversable, IterableObj):
     __slots__ = ()
 
     TIobj_tuple = Tuple[Union[T_TIobj, None], T_TIobj]
+
+    def list_traverse(self: T_TIobj, *args: Any, **kwargs: Any) -> IterableList[T_TIobj]:  # type: ignore[override]
+        return super(TraversableIterableObj, self).list_traverse(* args, **kwargs)
 
     @ overload                     # type: ignore
     def traverse(self: T_TIobj,

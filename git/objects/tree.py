@@ -4,7 +4,7 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
-from git.util import join_path
+from git.util import IterableList, join_path
 import git.diff as diff
 from git.util import to_bin_sha
 
@@ -21,7 +21,7 @@ from .fun import (
 
 # typing -------------------------------------------------
 
-from typing import (Callable, Dict, Iterable, Iterator, List,
+from typing import (Any, Callable, Dict, Iterable, Iterator, List,
                     Tuple, Type, Union, cast, TYPE_CHECKING)
 
 from git.types import PathLike, TypeGuard
@@ -322,6 +322,9 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
         return cast(Union[Iterator[IndexObjUnion], Iterator[TraversedTreeTup]],
                     super(Tree, self).traverse(predicate, prune, depth,  # type: ignore
                                                branch_first, visit_once, ignore_self))
+
+    def list_traverse(self, *args: Any, **kwargs: Any) -> IterableList[Union['Tree', 'Submodule', 'Blob']]:
+        return super(Tree, self).list_traverse(* args, **kwargs)
 
     # List protocol
 
