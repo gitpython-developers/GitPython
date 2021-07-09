@@ -20,6 +20,7 @@ from git.types import PathLike, TBD, Literal, TypeGuard
 
 if TYPE_CHECKING:
     from .objects.tree import Tree
+    from .objects import Commit
     from git.repo.base import Repo
     from git.objects.base import IndexObject
     from subprocess import Popen
@@ -90,7 +91,7 @@ class Diffable(object):
             Subclasses can use it to alter the behaviour of the superclass"""
         return args
 
-    def diff(self, other: Union[Type['Index'], 'Tree', None, str] = Index,
+    def diff(self, other: Union[Type['Index'], 'Tree', 'Commit', None, str] = Index,  # object for git.NULL_TREE
              paths: Union[PathLike, List[PathLike], Tuple[PathLike, ...], None] = None,
              create_patch: bool = False, **kwargs: Any) -> 'DiffIndex':
         """Creates diffs between two items being trees, trees and index or an

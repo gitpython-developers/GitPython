@@ -1273,7 +1273,8 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
 
     # @ default_index, breaks typing for some reason, copied into function
     def diff(self,
-             other: Union[git_diff.Diffable.Index, 'IndexFile.Index', Treeish, None, object] = git_diff.Diffable.Index,
+             other: Union[Type['git_diff.Diffable.Index'], 'IndexFile.Index',
+                          'Tree', 'Commit', str, None] = git_diff.Diffable.Index,
              paths: Union[PathLike, List[PathLike], Tuple[PathLike, ...], None] = None,
              create_patch: bool = False, **kwargs: Any
              ) -> git_diff.DiffIndex:
