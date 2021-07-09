@@ -559,6 +559,14 @@ class Remote(LazyMixin, IterableObj):
         return self.set_url(url, delete=True)
 
     @property
+    def url(self) -> Union[str, List[str]]:
+        url_list = list(self.urls)
+        if len(url_list) == 1:
+            return url_list[0]
+        else:
+            return url_list
+
+    @property
     def urls(self) -> Iterator[str]:
         """:return: Iterator yielding all configured URL targets on a remote as strings"""
         try:

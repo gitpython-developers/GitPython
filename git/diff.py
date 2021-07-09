@@ -143,8 +143,6 @@ class Diffable(object):
 
         if hasattr(self, 'Has_Repo'):
             self.repo: Repo = self.repo
-        else:
-            raise AttributeError("No repo member found, cannot create DiffIndex")
 
         diff_cmd = self.repo.git.diff
         if other is self.Index:
