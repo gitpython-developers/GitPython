@@ -32,6 +32,7 @@ if TYPE_CHECKING:
     from .tag import TagObject
     from .tree import Tree, TraversedTreeTup
     from subprocess import Popen
+    from .submodule.base import Submodule
 
 
 T_TIobj = TypeVar('T_TIobj', bound='TraversableIterableObj')   # for TraversableIterableObj.traverse()
@@ -306,18 +307,28 @@ class Traversable(object):
         """
         raise NotImplementedError("To be implemented in subclass")
 
-    def list_traverse(self, *args: Any, **kwargs: Any) -> IterableList:
+    def list_traverse(self, *args: Any, **kwargs: Any) -> IterableList[Union['Commit', 'Submodule', 'Tree', 'Blob']]:
         """
         :return: IterableList with the results of the traversal as produced by
             traverse()
+            Commit -> IterableList['Commit']
+            Submodule ->  IterableList['Submodule']
+            Tree -> IterableList[Union['Submodule', 'Tree', 'Blob']]
         """
-        if isinstance(self, TraversableIterableObj):
+        # Commit and Submodule have id.__attribute__ as IterableObj
+        # Tree has id.__attribute__ inherited from IndexObject
+        if isinstance(self, (TraversableIterableObj, Tree)):
             id = self._id_attribute_
-        else:       # Tree
-            id = ""
+        else:
+            id = ""     # shouldn't reach here, unless Traversable subclass created with no _id_attribute_
+            # could add _id_attribute_ to Traversable, or make all Traversable also Iterable?
 
-        out: IterableList = IterableList(id)
-        out.extend(self.traverse(*args, **kwargs))
+        out: IterableList[Union['Commit', 'Submodule', 'Tree', 'Blob']] = IterableList(id)
+        # overloads in subclasses (mypy does't allow typing self: subclass)
+        # Union[IterableList['Commit'], IterableList['Submodule'], IterableList[Union['Submodule', 'Tree', 'Blob']]]
+
+        # NOTE: if is_edge=True, self.traverse returns a Tuple, so should be prevented or flattened?
+        out.extend(self.traverse(*args, **kwargs))  # type: ignore
         return out
 
     def traverse(self,
