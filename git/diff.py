@@ -16,7 +16,7 @@ from .objects.util import mode_str_to_int
 # typing ------------------------------------------------------------------
 
 from typing import Any, Iterator, List, Match, Optional, Tuple, Type, TypeVar, Union, TYPE_CHECKING
-from git.types import PathLike, TBD, Literal, TypeGuard
+from git.types import Has_Repo, PathLike, TBD, Literal, TypeGuard
 
 if TYPE_CHECKING:
     from .objects.tree import Tree
@@ -141,8 +141,10 @@ class Diffable(object):
         if paths is not None and not isinstance(paths, (tuple, list)):
             paths = [paths]
 
-        if hasattr(self, 'repo'):  # else raise Error?
-            self.repo = self.repo  # type: 'Repo'
+        if isinstance(self, Has_Repo):
+            self.repo: Repo = self.repo
+        else:
+            raise AttributeError("No repo member found, cannot create DiffIndex")
 
         diff_cmd = self.repo.git.diff
         if other is self.Index:

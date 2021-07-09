@@ -234,8 +234,8 @@ def get_config_path(config_level: Lit_config_levels) -> str:
     elif config_level == "repository":
         raise ValueError("No repo to get repository configuration from. Use Repo._get_config_path")
     else:
-        # Should not reach here. Will raise ValueError if does. Static typing will warn about extra and missing elifs
-        assert_never(config_level, ValueError("Invalid configuration level: %r" % config_level))
+        # Should not reach here. Will raise ValueError if does. Static typing will warn missing elifs
+        assert_never(config_level, ValueError(f"Invalid configuration level: {config_level!r}"))
 
 
 class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, object)):  # type: ignore ## mypy does not understand dynamic class creation # noqa: E501
