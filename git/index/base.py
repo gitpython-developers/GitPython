@@ -575,8 +575,9 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         root_tree._cache = tree_items  # type: ignore
         return root_tree
 
-    def _process_diff_args(self, args: List[Union[PathLike, 'git_diff.Diffable', Type['git_diff.Diffable.Index']]]
-                           ) -> List[Union[PathLike, 'git_diff.Diffable', Type['git_diff.Diffable.Index']]]:
+    def _process_diff_args(self,              # type: ignore[override]
+                           args: List[Union[str, 'git_diff.Diffable', Type['git_diff.Diffable.Index']]]
+                           ) -> List[Union[str, 'git_diff.Diffable', Type['git_diff.Diffable.Index']]]:
         try:
             args.pop(args.index(self))
         except IndexError:
@@ -1272,9 +1273,8 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         return self
 
     # @ default_index, breaks typing for some reason, copied into function
-    def diff(self,
-             other: Union[Type['git_diff.Diffable.Index'], 'IndexFile.Index',
-                          'Tree', 'Commit', str, None] = git_diff.Diffable.Index,
+    def diff(self,      # type: ignore[override]
+             other: Union[Type['git_diff.Diffable.Index'], 'Tree', 'Commit', str, None] = git_diff.Diffable.Index,
              paths: Union[PathLike, List[PathLike], Tuple[PathLike, ...], None] = None,
              create_patch: bool = False, **kwargs: Any
              ) -> git_diff.DiffIndex:

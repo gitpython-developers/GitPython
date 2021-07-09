@@ -82,8 +82,8 @@ class Diffable(object):
     class Index(object):
         pass
 
-    def _process_diff_args(self, args: List[Union[PathLike, 'Diffable', Type['Diffable.Index']]]
-                           ) -> List[Union[PathLike, 'Diffable', Type['Diffable.Index']]]:
+    def _process_diff_args(self, args: List[Union[str, 'Diffable', Type['Diffable.Index'], object]]
+                           ) -> List[Union[str, 'Diffable', Type['Diffable.Index'], object]]:
         """
         :return:
             possibly altered version of the given args list.
@@ -91,7 +91,7 @@ class Diffable(object):
             Subclasses can use it to alter the behaviour of the superclass"""
         return args
 
-    def diff(self, other: Union[Type['Index'], 'Tree', 'Commit', None, str] = Index,  # object for git.NULL_TREE
+    def diff(self, other: Union[Type['Index'], 'Tree', 'Commit', None, str, object] = Index,
              paths: Union[PathLike, List[PathLike], Tuple[PathLike, ...], None] = None,
              create_patch: bool = False, **kwargs: Any) -> 'DiffIndex':
         """Creates diffs between two items being trees, trees and index or an
@@ -124,7 +124,7 @@ class Diffable(object):
         :note:
             On a bare repository, 'other' needs to be provided as Index or as
             as Tree/Commit, or a git command error will occur"""
-        args: List[Union[PathLike, Diffable, Type['Diffable.Index']]] = []
+        args: List[Union[PathLike, Diffable, Type['Diffable.Index'], object]] = []
         args.append("--abbrev=40")        # we need full shas
         args.append("--full-index")       # get full index paths, not only filenames
 
