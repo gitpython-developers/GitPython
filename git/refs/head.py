@@ -5,8 +5,12 @@ from git.exc import GitCommandError
 from .symbolic import SymbolicReference
 from .reference import Reference
 
-from typing import Union
+from typing import Union, TYPE_CHECKING
+
 from git.types import Commit_ish
+
+if TYPE_CHECKING:
+    from git.repo import Repo
 
 __all__ = ["HEAD", "Head"]
 
@@ -25,12 +29,13 @@ class HEAD(SymbolicReference):
     _ORIG_HEAD_NAME = 'ORIG_HEAD'
     __slots__ = ()
 
-    def __init__(self, repo, path=_HEAD_NAME):
+    def __init__(self, repo: 'Repo', path=_HEAD_NAME):
         if path != self._HEAD_NAME:
             raise ValueError("HEAD instance must point to %r, got %r" % (self._HEAD_NAME, path))
         super(HEAD, self).__init__(repo, path)
+        self.commit: 'Commit_ish'
 
-    def orig_head(self):
+    def orig_head(self) -> 'SymbolicReference':
         """
         :return: SymbolicReference pointing at the ORIG_HEAD, which is maintained
             to contain the previous value of HEAD"""

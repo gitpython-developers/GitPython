@@ -4,8 +4,8 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
-from git.util import join_path
-import git.diff as diff
+from git.util import IterableList, join_path
+import git.diff as git_diff
 from git.util import to_bin_sha
 
 from . import util
@@ -21,8 +21,8 @@ from .fun import (
 
 # typing -------------------------------------------------
 
-from typing import (Callable, Dict, Generic, Iterable, Iterator, List,
-                    Tuple, Type, TypeVar, Union, cast, TYPE_CHECKING)
+from typing import (Any, Callable, Dict, Iterable, Iterator, List,
+                    Tuple, Type, Union, cast, TYPE_CHECKING)
 
 from git.types import PathLike, TypeGuard
 
@@ -30,9 +30,14 @@ if TYPE_CHECKING:
     from git.repo import Repo
     from io import BytesIO
 
-T_Tree_cache = TypeVar('T_Tree_cache', bound=Tuple[bytes, int, str])
+TreeCacheTup = Tuple[bytes, int, str]
+
 TraversedTreeTup = Union[Tuple[Union['Tree', None], IndexObjUnion,
                          Tuple['Submodule', 'Submodule']]]
+
+
+def is_tree_cache(inp: Tuple[bytes, int, str]) -> TypeGuard[TreeCacheTup]:
+    return isinstance(inp[0], bytes) and isinstance(inp[1], int) and isinstance([inp], str)
 
 #--------------------------------------------------------
 
@@ -42,9 +47,9 @@ cmp: Callable[[str, str], int] = lambda a, b: (a > b) - (a < b)
 __all__ = ("TreeModifier", "Tree")
 
 
-def git_cmp(t1: T_Tree_cache, t2: T_Tree_cache) -> int:
+def git_cmp(t1: TreeCacheTup, t2: TreeCacheTup) -> int:
     a, b = t1[2], t2[2]
-    assert isinstance(a, str) and isinstance(b, str)  # Need as mypy 9.0 cannot unpack TypeVar properly
+    # assert isinstance(a, str) and isinstance(b, str)
     len_a, len_b = len(a), len(b)
     min_len = min(len_a, len_b)
     min_cmp = cmp(a[:min_len], b[:min_len])
@@ -55,8 +60,8 @@ def git_cmp(t1: T_Tree_cache, t2: T_Tree_cache) -> int:
     return len_a - len_b
 
 
-def merge_sort(a: List[T_Tree_cache],
-               cmp: Callable[[T_Tree_cache, T_Tree_cache], int]) -> None:
+def merge_sort(a: List[TreeCacheTup],
+               cmp: Callable[[TreeCacheTup, TreeCacheTup], int]) -> None:
     if len(a) < 2:
         return None
 
@@ -91,7 +96,7 @@ def merge_sort(a: List[T_Tree_cache],
         k = k + 1
 
 
-class TreeModifier(Generic[T_Tree_cache], object):
+class TreeModifier(object):
 
     """A utility class providing methods to alter the underlying cache in a list-like fashion.
 
@@ -99,7 +104,7 @@ class TreeModifier(Generic[T_Tree_cache], object):
     the cache of a tree, will be sorted. Assuring it will be in a serializable state"""
     __slots__ = '_cache'
 
-    def __init__(self, cache: List[T_Tree_cache]) -> None:
+    def __init__(self, cache: List[TreeCacheTup]) -> None:
         self._cache = cache
 
     def _index_by_name(self, name: str) -> int:
@@ -141,11 +146,8 @@ class TreeModifier(Generic[T_Tree_cache], object):
         sha = to_bin_sha(sha)
         index = self._index_by_name(name)
 
-        def is_tree_cache(inp: Tuple[bytes, int, str]) -> TypeGuard[T_Tree_cache]:
-            return isinstance(inp[0], bytes) and isinstance(inp[1], int) and isinstance([inp], str)
-
         item = (sha, mode, name)
-        assert is_tree_cache(item)
+        # assert is_tree_cache(item)
 
         if index == -1:
             self._cache.append(item)
@@ -167,7 +169,7 @@ class TreeModifier(Generic[T_Tree_cache], object):
         For more information on the parameters, see ``add``
         :param binsha: 20 byte binary sha"""
         assert isinstance(binsha, bytes) and isinstance(mode, int) and isinstance(name, str)
-        tree_cache = cast(T_Tree_cache, (binsha, mode, name))
+        tree_cache = (binsha, mode, name)
 
         self._cache.append(tree_cache)
 
@@ -180,7 +182,7 @@ class TreeModifier(Generic[T_Tree_cache], object):
     #} END mutators
 
 
-class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
+class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
 
     """Tree objects represent an ordered list of Blobs and other Trees.
 
@@ -216,7 +218,6 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
     def _get_intermediate_items(cls, index_object: 'Tree',
                                 ) -> Union[Tuple['Tree', ...], Tuple[()]]:
         if index_object.type == "tree":
-            index_object = cast('Tree', index_object)
             return tuple(index_object._iter_convert_to_object(index_object._cache))
         return ()
 
@@ -224,12 +225,12 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
         if attr == "_cache":
             # Set the data when we need it
             ostream = self.repo.odb.stream(self.binsha)
-            self._cache: List[Tuple[bytes, int, str]] = tree_entries_from_data(ostream.read())
+            self._cache: List[TreeCacheTup] = tree_entries_from_data(ostream.read())
         else:
             super(Tree, self)._set_cache_(attr)
         # END handle attribute
 
-    def _iter_convert_to_object(self, iterable: Iterable[Tuple[bytes, int, str]]
+    def _iter_convert_to_object(self, iterable: Iterable[TreeCacheTup]
                                 ) -> Iterator[IndexObjUnion]:
         """Iterable yields tuples of (binsha, mode, name), which will be converted
         to the respective object representation"""
@@ -323,6 +324,14 @@ class Tree(IndexObject, diff.Diffable, util.Traversable, util.Serializable):
         return cast(Union[Iterator[IndexObjUnion], Iterator[TraversedTreeTup]],
                     super(Tree, self).traverse(predicate, prune, depth,  # type: ignore
                                                branch_first, visit_once, ignore_self))
+
+    def list_traverse(self, *args: Any, **kwargs: Any) -> IterableList[IndexObjUnion]:
+        """
+        :return: IterableList with the results of the traversal as produced by
+            traverse()
+            Tree -> IterableList[Union['Submodule', 'Tree', 'Blob']]
+        """
+        return super(Tree, self).list_traverse(* args, **kwargs)
 
     # List protocol
 

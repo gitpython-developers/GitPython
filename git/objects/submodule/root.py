@@ -10,6 +10,18 @@ import git
 
 import logging
 
+# typing -------------------------------------------------------------------
+
+from typing import TYPE_CHECKING, Union
+
+from git.types import Commit_ish
+
+if TYPE_CHECKING:
+    from git.repo import Repo
+    from git.util import IterableList
+
+# ----------------------------------------------------------------------------
+
 __all__ = ["RootModule", "RootUpdateProgress"]
 
 log = logging.getLogger('git.objects.submodule.root')
@@ -42,7 +54,7 @@ class RootModule(Submodule):
 
     k_root_name = '__ROOT__'
 
-    def __init__(self, repo):
+    def __init__(self, repo: 'Repo'):
         # repo, binsha, mode=None, path=None, name = None, parent_commit=None, url=None, ref=None)
         super(RootModule, self).__init__(
             repo,
@@ -55,15 +67,17 @@ class RootModule(Submodule):
             branch_path=git.Head.to_full_path(self.k_head_default)
         )
 
-    def _clear_cache(self):
+    def _clear_cache(self) -> None:
         """May not do anything"""
         pass
 
     #{ Interface
 
-    def update(self, previous_commit=None, recursive=True, force_remove=False, init=True,
-               to_latest_revision=False, progress=None, dry_run=False, force_reset=False,
-               keep_going=False):
+    def update(self, previous_commit: Union[Commit_ish, None] = None,                    # type: ignore[override]
+               recursive: bool = True, force_remove: bool = False, init: bool = True,
+               to_latest_revision: bool = False, progress: Union[None, 'RootUpdateProgress'] = None,
+               dry_run: bool = False, force_reset: bool = False, keep_going: bool = False
+               ) -> 'RootModule':
         """Update the submodules of this repository to the current HEAD commit.
         This method behaves smartly by determining changes of the path of a submodules
         repository, next to changes to the to-be-checked-out commit or the branch to be
@@ -128,8 +142,8 @@ class RootModule(Submodule):
                 previous_commit = repo.commit(previous_commit)   # obtain commit object
             # END handle previous commit
 
-            psms = self.list_items(repo, parent_commit=previous_commit)
-            sms = self.list_items(repo)
+            psms: 'IterableList[Submodule]' = self.list_items(repo, parent_commit=previous_commit)
+            sms: 'IterableList[Submodule]' = self.list_items(repo)
             spsms = set(psms)
             ssms = set(sms)
 
@@ -162,8 +176,8 @@ class RootModule(Submodule):
             csms = (spsms & ssms)
             len_csms = len(csms)
             for i, csm in enumerate(csms):
-                psm = psms[csm.name]
-                sm = sms[csm.name]
+                psm: 'Submodule' = psms[csm.name]
+                sm: 'Submodule' = sms[csm.name]
 
                 # PATH CHANGES
                 ##############
@@ -343,7 +357,7 @@ class RootModule(Submodule):
 
         return self
 
-    def module(self):
+    def module(self) -> 'Repo':
         """:return: the actual repository containing the submodules"""
         return self.repo
     #} END interface

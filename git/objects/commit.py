@@ -80,7 +80,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
                  "message", "parents", "encoding", "gpgsig")
     _id_attribute_ = "hexsha"
 
-    def __init__(self, repo: 'Repo', binsha: bytes, tree: 'Tree' = None,
+    def __init__(self, repo: 'Repo', binsha: bytes, tree: Union['Tree', None] = None,
                  author: Union[Actor, None] = None,
                  authored_date: Union[int, None] = None,
                  author_tz_offset: Union[None, float] = None,

@@ -36,16 +36,20 @@ import gitdb
 
 # typing ------------------------------------------------------
 
-from git.types import TBD, PathLike, Lit_config_levels, Commit_ish, Tree_ish
+from git.types import TBD, PathLike, Lit_config_levels, Commit_ish, Tree_ish, is_config_level
 from typing import (Any, BinaryIO, Callable, Dict,
                     Iterator, List, Mapping, Optional, Sequence,
                     TextIO, Tuple, Type, Union,
                     NamedTuple, cast, TYPE_CHECKING)
 
-if TYPE_CHECKING:  # only needed for types
+from git.types import ConfigLevels_Tup
+
+if TYPE_CHECKING:
     from git.util import IterableList
     from git.refs.symbolic import SymbolicReference
     from git.objects import Tree
+    from git.objects.submodule.base import UpdateProgress
+    from git.remote import RemoteProgress
 
 
 # -----------------------------------------------------------
@@ -55,12 +59,11 @@ log = logging.getLogger(__name__)
 __all__ = ('Repo',)
 
 
-BlameEntry = NamedTuple('BlameEntry', [
-    ('commit', Dict[str, TBD]),
-    ('linenos', range),
-    ('orig_path', Optional[str]),
-    ('orig_linenos', range)]
-)
+class BlameEntry(NamedTuple):
+    commit: Dict[str, 'Commit']
+    linenos: range
+    orig_path: Optional[str]
+    orig_linenos: range
 
 
 class Repo(object):
@@ -95,7 +98,7 @@ class Repo(object):
 
     # invariants
     # represents the configuration level of a configuration file
-    config_level = ("system", "user", "global", "repository")  # type: Tuple[Lit_config_levels, ...]
+    config_level: ConfigLevels_Tup = ("system", "user", "global", "repository")
 
     # Subclass configuration
     # Subclasses may easily bring in their own custom types by placing a constructor or type here
@@ -495,7 +498,7 @@ class Repo(object):
             unknown, instead the global path will be used."""
         files = None
         if config_level is None:
-            files = [self._get_config_path(f) for f in self.config_level]
+            files = [self._get_config_path(f) for f in self.config_level if is_config_level(f)]
         else:
             files = [self._get_config_path(config_level)]
         return GitConfigParser(files, read_only=True, repo=self)
@@ -574,7 +577,7 @@ class Repo(object):
         return Commit.iter_items(self, rev, paths, **kwargs)
 
     def merge_base(self, *rev: TBD, **kwargs: Any
-                   ) -> List[Union['SymbolicReference', Commit_ish, None]]:
+                   ) -> List[Union[Commit_ish, None]]:
         """Find the closest common ancestor for the given revision (e.g. Commits, Tags, References, etc)
 
         :param rev: At least two revs to find the common ancestor for.
@@ -587,7 +590,7 @@ class Repo(object):
             raise ValueError("Please specify at least two revs, got only %i" % len(rev))
         # end handle input
 
-        res = []  # type: List[Union['SymbolicReference', Commit_ish, None]]
+        res = []  # type: List[Union[Commit_ish, None]]
         try:
             lines = self.git.merge_base(*rev, **kwargs).splitlines()  # List[str]
         except GitCommandError as err:
@@ -620,7 +623,7 @@ class Repo(object):
             raise
         return True
 
-    def is_valid_object(self, sha: str, object_type: str = None) -> bool:
+    def is_valid_object(self, sha: str, object_type: Union[str, None] = None) -> bool:
         try:
             complete_sha = self.odb.partial_to_complete_sha_hex(sha)
             object_info = self.odb.info(complete_sha)
@@ -801,7 +804,7 @@ class Repo(object):
         should get a continuous range spanning all line numbers in the file.
         """
         data = self.git.blame(rev, '--', file, p=True, incremental=True, stdout_as_string=False, **kwargs)
-        commits = {}  # type: Dict[str, TBD]
+        commits: Dict[str, Commit] = {}
 
         stream = (line for line in data.split(b'\n') if line)
         while True:
@@ -973,7 +976,7 @@ class Repo(object):
         return blames
 
     @classmethod
-    def init(cls, path: PathLike = None, mkdir: bool = True, odbt: Type[GitCmdObjectDB] = GitCmdObjectDB,
+    def init(cls, path: Union[PathLike, None] = None, mkdir: bool = True, odbt: Type[GitCmdObjectDB] = GitCmdObjectDB,
              expand_vars: bool = True, **kwargs: Any) -> 'Repo':
         """Initialize a git repository at the given path if specified
 
@@ -1013,7 +1016,8 @@ class Repo(object):
 
     @classmethod
     def _clone(cls, git: 'Git', url: PathLike, path: PathLike, odb_default_type: Type[GitCmdObjectDB],
-               progress: Optional[Callable], multi_options: Optional[List[str]] = None, **kwargs: Any
+               progress: Union['RemoteProgress', 'UpdateProgress', Callable[..., 'RemoteProgress'], None] = None,
+               multi_options: Optional[List[str]] = None, **kwargs: Any
                ) -> 'Repo':
         odbt = kwargs.pop('odbt', odb_default_type)
 

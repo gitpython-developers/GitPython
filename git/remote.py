@@ -42,6 +42,7 @@ from git.types import PathLike, Literal, TBD, TypeGuard, Commit_ish
 
 if TYPE_CHECKING:
     from git.repo.base import Repo
+    from git.objects.submodule.base import UpdateProgress
     # from git.objects.commit import Commit
     # from git.objects import Blob, Tree, TagObject
 
@@ -64,7 +65,9 @@ __all__ = ('RemoteProgress', 'PushInfo', 'FetchInfo', 'Remote')
 #{ Utilities
 
 
-def add_progress(kwargs: Any, git: Git, progress: Union[Callable[..., Any], None]) -> Any:
+def add_progress(kwargs: Any, git: Git,
+                 progress: Union[RemoteProgress, 'UpdateProgress', Callable[..., RemoteProgress], None]
+                 ) -> Any:
     """Add the --progress flag to the given kwargs dict if supported by the
     git command. If the actual progress in the given progress instance is not
     given, we do not request any progress
@@ -446,8 +449,9 @@ class Remote(LazyMixin, IterableObj):
 
         :param repo: The repository we are a remote of
         :param name: the name of the remote, i.e. 'origin'"""
-        self.repo = repo  # type: 'Repo'
+        self.repo = repo
         self.name = name
+        self.url: str
 
     def __getattr__(self, attr: str) -> Any:
         """Allows to call this instance like
@@ -466,7 +470,7 @@ class Remote(LazyMixin, IterableObj):
     def _config_section_name(self) -> str:
         return 'remote "%s"' % self.name
 
-    def _set_cache_(self, attr: str) -> Any:
+    def _set_cache_(self, attr: str) -> None:
         if attr == "_config_reader":
             # NOTE: This is cached as __getattr__ is overridden to return remote config values implicitly, such as
             # in print(r.pushurl)
@@ -555,7 +559,7 @@ class Remote(LazyMixin, IterableObj):
         """
         return self.set_url(url, delete=True)
 
-    @property
+    @ property
     def urls(self) -> Iterator[str]:
         """:return: Iterator yielding all configured URL targets on a remote as strings"""
         try:
@@ -588,7 +592,7 @@ class Remote(LazyMixin, IterableObj):
             else:
                 raise ex
 
-    @property
+    @ property
     def refs(self) -> IterableList[RemoteReference]:
         """
         :return:
@@ -599,7 +603,7 @@ class Remote(LazyMixin, IterableObj):
         out_refs.extend(RemoteReference.list_items(self.repo, remote=self.name))
         return out_refs
 
-    @property
+    @ property
     def stale_refs(self) -> IterableList[Reference]:
         """
         :return:
@@ -633,7 +637,7 @@ class Remote(LazyMixin, IterableObj):
         # END for each line
         return out_refs
 
-    @classmethod
+    @ classmethod
     def create(cls, repo: 'Repo', name: str, url: str, **kwargs: Any) -> 'Remote':
         """Create a new remote to the given repository
         :param repo: Repository instance that is to receive the new remote
@@ -650,7 +654,7 @@ class Remote(LazyMixin, IterableObj):
     # add is an alias
     add = create
 
-    @classmethod
+    @ classmethod
     def remove(cls, repo: 'Repo', name: str) -> str:
         """Remove the remote with the given name
         :return: the passed remote name to remove
@@ -794,7 +798,7 @@ class Remote(LazyMixin, IterableObj):
             config.release()
 
     def fetch(self, refspec: Union[str, List[str], None] = None,
-              progress: Union[Callable[..., Any], None] = None,
+              progress: Union[RemoteProgress, None, 'UpdateProgress'] = None,
               verbose: bool = True, **kwargs: Any) -> IterableList[FetchInfo]:
         """Fetch the latest changes for this remote
 
@@ -841,7 +845,7 @@ class Remote(LazyMixin, IterableObj):
         return res
 
     def pull(self, refspec: Union[str, List[str], None] = None,
-             progress: Union[Callable[..., Any], None] = None,
+             progress: Union[RemoteProgress, 'UpdateProgress', None] = None,
              **kwargs: Any) -> IterableList[FetchInfo]:
         """Pull changes from the given branch, being the same as a fetch followed
         by a merge of branch with your local branch.
@@ -862,7 +866,7 @@ class Remote(LazyMixin, IterableObj):
         return res
 
     def push(self, refspec: Union[str, List[str], None] = None,
-             progress: Union[Callable[..., Any], None] = None,
+             progress: Union[RemoteProgress, 'UpdateProgress', Callable[..., RemoteProgress], None] = None,
              **kwargs: Any) -> IterableList[PushInfo]:
         """Push changes from source branch in refspec to target branch in refspec.
 

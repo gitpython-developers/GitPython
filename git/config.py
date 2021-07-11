@@ -31,12 +31,14 @@ import configparser as cp
 
 # typing-------------------------------------------------------
 
-from typing import Any, Callable, IO, List, Dict, Sequence, TYPE_CHECKING, Tuple, Union, cast, overload
+from typing import (Any, Callable, IO, List, Dict, Sequence,
+                    TYPE_CHECKING, Tuple, Union, cast, overload)
 
-from git.types import Literal, Lit_config_levels, PathLike, TBD
+from git.types import Lit_config_levels, ConfigLevels_Tup, PathLike, TBD, assert_never, is_config_level
 
 if TYPE_CHECKING:
     from git.repo.base import Repo
+    from io import BytesIO
 
 # -------------------------------------------------------------
 
@@ -48,8 +50,10 @@ log.addHandler(logging.NullHandler())
 
 # invariants
 # represents the configuration level of a configuration file
-CONFIG_LEVELS = ("system", "user", "global", "repository"
-                 )  # type: Tuple[Literal['system'], Literal['user'], Literal['global'], Literal['repository']]
+
+
+CONFIG_LEVELS: ConfigLevels_Tup = ("system", "user", "global", "repository")
+
 
 # Section pattern to detect conditional includes.
 # https://git-scm.com/docs/git-config#_conditional_includes
@@ -229,8 +233,9 @@ def get_config_path(config_level: Lit_config_levels) -> str:
         return osp.normpath(osp.expanduser("~/.gitconfig"))
     elif config_level == "repository":
         raise ValueError("No repo to get repository configuration from. Use Repo._get_config_path")
-
-    raise ValueError("Invalid configuration level: %r" % config_level)
+    else:
+        # Should not reach here. Will raise ValueError if does. Static typing will warn missing elifs
+        assert_never(config_level, ValueError(f"Invalid configuration level: {config_level!r}"))
 
 
 class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, object)):  # type: ignore ## mypy does not understand dynamic class creation # noqa: E501
@@ -271,7 +276,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
     # list of RawConfigParser methods able to change the instance
     _mutating_methods_ = ("add_section", "remove_section", "remove_option", "set")
 
-    def __init__(self, file_or_files: Union[None, PathLike, IO, Sequence[Union[PathLike, IO]]] = None,
+    def __init__(self, file_or_files: Union[None, PathLike, 'BytesIO', Sequence[Union[PathLike, 'BytesIO']]] = None,
                  read_only: bool = True, merge_includes: bool = True,
                  config_level: Union[Lit_config_levels, None] = None,
                  repo: Union['Repo', None] = None) -> None:
@@ -300,13 +305,13 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
             self._proxies = self._dict()
 
         if file_or_files is not None:
-            self._file_or_files = file_or_files  # type: Union[PathLike, IO, Sequence[Union[PathLike, IO]]]
+            self._file_or_files: Union[PathLike, 'BytesIO', Sequence[Union[PathLike, 'BytesIO']]] = file_or_files
         else:
             if config_level is None:
                 if read_only:
-                    self._file_or_files = [get_config_path(f)  # type: ignore
-                                           for f in CONFIG_LEVELS    # Can type f properly when 3.5 dropped
-                                           if f != 'repository']
+                    self._file_or_files = [get_config_path(f)
+                                           for f in CONFIG_LEVELS
+                                           if is_config_level(f) and f != 'repository']
                 else:
                     raise ValueError("No configuration level or configuration files specified")
             else:
@@ -323,15 +328,13 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
     def _acquire_lock(self) -> None:
         if not self._read_only:
             if not self._lock:
-                if isinstance(self._file_or_files, (tuple, list)):
-                    raise ValueError(
-                        "Write-ConfigParsers can operate on a single file only, multiple files have been passed")
-                # END single file check
-
                 if isinstance(self._file_or_files, (str, os.PathLike)):
                     file_or_files = self._file_or_files
+                elif isinstance(self._file_or_files, (tuple, list, Sequence)):
+                    raise ValueError(
+                        "Write-ConfigParsers can operate on a single file only, multiple files have been passed")
                 else:
-                    file_or_files = cast(IO, self._file_or_files).name
+                    file_or_files = self._file_or_files.name
 
                 # END get filename from handle/stream
                 # initialize lock base - we want to write
@@ -649,7 +652,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
             a file lock"""
         self._assure_writable("write")
         if not self._dirty:
-            return
+            return None
 
         if isinstance(self._file_or_files, (list, tuple)):
             raise AssertionError("Cannot write back if there is not exactly a single file to write to, have %i files"
@@ -665,7 +668,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
         fp = self._file_or_files
 
         # we have a physical file on disk, so get a lock
-        is_file_lock = isinstance(fp, (str, IOBase))  # can't use Pathlike until 3.5 dropped
+        is_file_lock = isinstance(fp, (str, os.PathLike, IOBase))  # can't use Pathlike until 3.5 dropped
         if is_file_lock and self._lock is not None:  # else raise Error?
             self._lock._obtain_lock()
 
@@ -674,7 +677,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
             with open(fp, "wb") as fp_open:
                 self._write(fp_open)
         else:
-            fp = cast(IO, fp)
+            fp = cast('BytesIO', fp)
             fp.seek(0)
             # make sure we do not overwrite into an existing file
             if hasattr(fp, 'truncate'):

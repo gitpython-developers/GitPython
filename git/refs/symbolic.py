@@ -1,3 +1,4 @@
+from git.types import PathLike
 import os
 
 from git.compat import defenc
@@ -408,7 +409,7 @@ class SymbolicReference(object):
         return RefLog.entry_at(RefLog.path(self), index)
 
     @classmethod
-    def to_full_path(cls, path):
+    def to_full_path(cls, path) -> PathLike:
         """
         :return: string with a full repository-relative path which can be used to initialize
             a Reference instance, for instance by using ``Reference.from_path``"""
