@@ -29,6 +29,12 @@ jobs:
       run: |
         set -x
         python -m pip install --upgrade pip setuptools wheel
+1 conflicting file
+pythonpackage.yml
+.github/workflows/pythonpackage.yml
+.github/workflows/pythonpackage.yml
+1 conflict
+
         python --version; git --version
         git submodule update --init --recursive
         git fetch --tags
@@ -55,7 +61,7 @@ jobs:
         set -x
         pip install mypy
         mypy -p git
-
+        
     - name: Documentation
       run: |
         set -x
