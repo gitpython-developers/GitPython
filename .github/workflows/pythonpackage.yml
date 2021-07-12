@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8, 3.9]
+        python-version: [3.6, 3.7, 3.8, 3.9, "3.10.0-beta.3"]
 
     steps:
     - uses: actions/checkout@v2
@@ -62,7 +62,7 @@ jobs:
         pip install -r requirements-dev.txt
         pytest --cov --cov-report=term
         # pytest settings in tox.ini[pytest]
-      continue-on-error: true
+      continue-on-error: false
 
     - name: Documentation
       run: |
@@ -75,5 +75,6 @@ jobs:
         # set -x
         # pip install nose
         # nosetests -v --with-coverage
+      # continue-on-error: false
 
 
