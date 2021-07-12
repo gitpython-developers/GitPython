@@ -62,12 +62,6 @@ pythonpackage.yml
         pip install mypy
         mypy -p git
         
-    - name: Documentation
-      run: |
-        set -x
-        pip install -r doc/requirements.txt
-        make -C doc html
-
     - name: Test with pytest
       run: |
         set -x
@@ -75,3 +69,11 @@ pythonpackage.yml
         pytest
         # pytest settings in tox.ini[pytest]
       continue-on-error: true
+        
+    - name: Documentation
+      run: |
+        set -x
+        pip install -r doc/requirements.txt
+        make -C doc html
+
+
