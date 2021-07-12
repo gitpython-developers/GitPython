@@ -29,12 +29,6 @@ jobs:
       run: |
         set -x
         python -m pip install --upgrade pip setuptools wheel
-1 conflicting file
-pythonpackage.yml
-.github/workflows/pythonpackage.yml
-.github/workflows/pythonpackage.yml
-1 conflict
-
         python --version; git --version
         git submodule update --init --recursive
         git fetch --tags
@@ -61,19 +55,25 @@ pythonpackage.yml
         set -x
         pip install mypy
         mypy -p git
-        
+
     - name: Test with pytest
       run: |
         set -x
         pip install -r requirements-dev.txt
-        pytest
+        pytest --cov --cov-report=term
         # pytest settings in tox.ini[pytest]
       continue-on-error: true
-        
+
     - name: Documentation
       run: |
         set -x
         pip install -r doc/requirements.txt
         make -C doc html
+
+    # - name: Test with nose
+      # run: |
+        # set -x
+        # pip install nose
+        # nosetests -v --with-coverage
 
 
