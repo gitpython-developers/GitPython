@@ -1,13 +1,12 @@
 #!/usr/bin/env python
-from __future__ import print_function
 try:
     from setuptools import setup, find_packages
 except ImportError:
-    from ez_setup import use_setuptools
+    from ez_setup import use_setuptools  # type: ignore[Pylance]
     use_setuptools()
     from setuptools import setup, find_packages
 
-from distutils.command.build_py import build_py as _build_py
+from setuptools.command.build_py import build_py as _build_py
 from setuptools.command.sdist import sdist as _sdist
 import fnmatch
 import os
@@ -95,7 +94,6 @@ setup(
     license="BSD",
     url="https://github.com/gitpython-developers/GitPython",
     packages=find_packages(exclude=("test.*")),
-    # package_data={'git': ['**/*.pyi', 'py.typed']},
     include_package_data=True,
     py_modules=build_py_modules("./git", excludes=["git.ext.*"]),
     package_dir={'git': 'git'},
