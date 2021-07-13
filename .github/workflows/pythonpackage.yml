@@ -69,12 +69,3 @@ jobs:
         set -x
         pip install -r doc/requirements.txt
         make -C doc html
-
-    # - name: Test with nose
-      # run: |
-        # set -x
-        # pip install nose
-        # nosetests -v --with-coverage
-      # continue-on-error: false
-
-
