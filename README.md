@@ -30,6 +30,17 @@ The object database implementation is optimized for handling large quantities of
 which is achieved by using low-level structures and data streaming.
 
 
+### DEVELOPMENT STATUS
+
+This project is in **maintenance mode**, which means that
+
+* …there will be no feature development, unless these are contributed
+* …there will be no bug fixes, unless they are relevant to the safety of users, or contributed
+* …issues will be responded to with waiting times of up to a month
+
+The project is open to contributions of all kinds, as well as new maintainers.
+
+
 ### REQUIREMENTS
 
 GitPython needs the `git` executable to be installed on the system and available
@@ -202,19 +213,5 @@ gpg --edit-key 4C08421980C9
 ### LICENSE
 
 New BSD License.  See the LICENSE file.
-
-### DEVELOPMENT STATUS
-
-![Python package](https://github.com/gitpython-developers/GitPython/workflows/Python%20package/badge.svg)
-[![Documentation Status](https://readthedocs.org/projects/gitpython/badge/?version=stable)](https://readthedocs.org/projects/gitpython/?badge=stable)
-[![Packaging status](https://repology.org/badge/tiny-repos/python:gitpython.svg)](https://repology.org/metapackage/python:gitpython/versions)
-
-This project is in **maintenance mode**, which means that
-
-* …there will be no feature development, unless these are contributed
-* …there will be no bug fixes, unless they are relevant to the safety of users, or contributed
-* …issues will be responded to with waiting times of up to a month
-
-The project is open to contributions of all kinds, as well as new maintainers.
 
 [contributing]: https://github.com/gitpython-developers/GitPython/blob/master/CONTRIBUTING.md
