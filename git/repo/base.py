@@ -426,7 +426,7 @@ class Repo(object):
         For more documentation, please see the Head.create method.
 
         :return: newly created Head Reference"""
-        return Head.create(self, path, commit, force, logmsg)
+        return Head.create(self, path, commit, logmsg, force)
 
     def delete_head(self, *heads: 'SymbolicReference', **kwargs: Any) -> None:
         """Delete the given heads
@@ -518,7 +518,7 @@ class Repo(object):
             repository = configuration file for this repository only"""
         return GitConfigParser(self._get_config_path(config_level), read_only=False, repo=self)
 
-    def commit(self, rev: Optional[str] = None
+    def commit(self, rev: Union[str, Commit_ish, None] = None
                ) -> Commit:
         """The Commit object for the specified revision
 
@@ -551,7 +551,8 @@ class Repo(object):
             return self.head.commit.tree
         return self.rev_parse(str(rev) + "^{tree}")
 
-    def iter_commits(self, rev: Optional[TBD] = None, paths: Union[PathLike, Sequence[PathLike]] = '',
+    def iter_commits(self, rev: Union[str, Commit, 'SymbolicReference', None] = None,
+                     paths: Union[PathLike, Sequence[PathLike]] = '',
                      **kwargs: Any) -> Iterator[Commit]:
         """A list of Commit objects representing the history of a given ref/commit
 
