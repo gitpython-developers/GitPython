@@ -298,7 +298,7 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
             See the ``TreeModifier`` for more information on how to alter the cache"""
         return TreeModifier(self._cache)
 
-    def traverse(self,      # type: ignore  # overrides super()
+    def traverse(self,      # type: ignore[override]
                  predicate: Callable[[Union[IndexObjUnion, TraversedTreeTup], int], bool] = lambda i, d: True,
                  prune: Callable[[Union[IndexObjUnion, TraversedTreeTup], int], bool] = lambda i, d: False,
                  depth: int = -1,

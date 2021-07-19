@@ -99,8 +99,8 @@ def run_commit_hook(name: str, index: 'IndexFile', *args: str) -> None:
     except Exception as ex:
         raise HookExecutionError(hp, ex) from ex
     else:
-        stdout_list = []  # type:  List[str]
-        stderr_list = []  # type:  List[str]
+        stdout_list: List[str] = []
+        stderr_list: List[str] = []
         handle_process_output(cmd, stdout_list.append, stderr_list.append, finalize_process)
         stdout = ''.join(stdout_list)
         stderr = ''.join(stderr_list)
@@ -151,8 +151,8 @@ def write_cache(entries: Sequence[Union[BaseIndexEntry, 'IndexEntry']], stream: 
         beginoffset = tell()
         write(entry[4])         # ctime
         write(entry[5])         # mtime
-        path_str = entry[3]  # type: str
-        path = force_bytes(path_str, encoding=defenc)
+        path_str: str = entry[3]
+        path: bytes = force_bytes(path_str, encoding=defenc)
         plen = len(path) & CE_NAMEMASK      # path length
         assert plen == len(path), "Path %s too long to fit into index" % entry[3]
         flags = plen | (entry[2] & CE_NAMEMASK_INV)     # clear possible previous values
@@ -210,7 +210,7 @@ def read_cache(stream: IO[bytes]) -> Tuple[int, Dict[Tuple[PathLike, int], 'Inde
     * content_sha is a 20 byte sha on all cache file contents"""
     version, num_entries = read_header(stream)
     count = 0
-    entries = {}  # type: Dict[Tuple[PathLike, int], 'IndexEntry']
+    entries: Dict[Tuple[PathLike, int], 'IndexEntry'] = {}
 
     read = stream.read
     tell = stream.tell

@@ -475,7 +475,8 @@ class Submodule(IndexObject, TraversableIterableObj):
                 sm._branch_path = br.path
 
         # we deliberately assume that our head matches our index !
-        sm.binsha = mrepo.head.commit.binsha  # type: ignore
+        if mrepo:
+            sm.binsha = mrepo.head.commit.binsha
         index.add([sm], write=True)
 
         return sm

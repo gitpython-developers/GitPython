@@ -565,11 +565,11 @@ class Git(LazyMixin):
            .git directory in case of bare repositories."""
         super(Git, self).__init__()
         self._working_dir = expand_path(working_dir)
-        self._git_options = ()  # type: Union[List[str], Tuple[str, ...]]
-        self._persistent_git_options = []  # type: List[str]
+        self._git_options: Union[List[str], Tuple[str, ...]] = ()
+        self._persistent_git_options: List[str] = []
 
         # Extra environment variables to pass to git commands
-        self._environment = {}  # type: Dict[str, str]
+        self._environment: Dict[str, str] = {}
 
         # cached command slots
         self.cat_file_header = None
@@ -603,9 +603,9 @@ class Git(LazyMixin):
             process_version = self._call_process('version')  # should be as default *args and **kwargs used
             version_numbers = process_version.split(' ')[2]
 
-            self._version_info = tuple(
+            self._version_info: Tuple[int, int, int, int] = tuple(
                 int(n) for n in version_numbers.split('.')[:4] if n.isdigit()
-            )  # type: Tuple[int, int, int, int]  # type: ignore
+            )  # type: ignore  # use typeguard here
         else:
             super(Git, self)._set_cache_(attr)
         # END handle version info
@@ -868,8 +868,8 @@ class Git(LazyMixin):
 
         # Wait for the process to return
         status = 0
-        stdout_value = b''  # type: Union[str, bytes]
-        stderr_value = b''  # type: Union[str, bytes]
+        stdout_value: Union[str, bytes] = b''
+        stderr_value: Union[str, bytes] = b''
         newline = "\n" if universal_newlines else b"\n"
         try:
             if output_stream is None:
@@ -1145,7 +1145,7 @@ class Git(LazyMixin):
         # required for command to separate refs on stdin, as bytes
         if isinstance(ref, bytes):
             # Assume 40 bytes hexsha - bin-to-ascii for some reason returns bytes, not text
-            refstr = ref.decode('ascii')  # type: str
+            refstr: str = ref.decode('ascii')
         elif not isinstance(ref, str):
             refstr = str(ref)               # could be ref-object
         else:

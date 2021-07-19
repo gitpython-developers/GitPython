@@ -193,7 +193,7 @@ class PushInfo(IterableObj, object):
         # from_to handling
         from_ref_string, to_ref_string = from_to.split(':')
         if flags & cls.DELETED:
-            from_ref = None  # type: Union[SymbolicReference, None]
+            from_ref: Union[SymbolicReference, None] = None
         else:
             if from_ref_string == "(delete)":
                 from_ref = None
@@ -201,7 +201,7 @@ class PushInfo(IterableObj, object):
                 from_ref = Reference.from_path(remote.repo, from_ref_string)
 
         # commit handling, could be message or commit info
-        old_commit = None    # type: Optional[str]
+        old_commit: Optional[str] = None
         if summary.startswith('['):
             if "[rejected]" in summary:
                 flags |= cls.REJECTED
@@ -259,14 +259,14 @@ class FetchInfo(IterableObj, object):
 
     _re_fetch_result = re.compile(r'^\s*(.) (\[?[\w\s\.$@]+\]?)\s+(.+) -> ([^\s]+)(    \(.*\)?$)?')
 
-    _flag_map = {
+    _flag_map: Dict[flagKeyLiteral, int] = {
         '!': ERROR,
         '+': FORCED_UPDATE,
         '*': 0,
         '=': HEAD_UPTODATE,
         ' ': FAST_FORWARD,
         '-': TAG_UPDATE,
-    }  # type: Dict[flagKeyLiteral, int]
+    }
 
     @ classmethod
     def refresh(cls) -> Literal[True]:
@@ -359,7 +359,7 @@ class FetchInfo(IterableObj, object):
         # END control char exception handling
 
         # parse operation string for more info - makes no sense for symbolic refs, but we parse it anyway
-        old_commit = None  # type: Union[Commit_ish, None]
+        old_commit: Union[Commit_ish, None] = None
         is_tag_operation = False
         if 'rejected' in operation:
             flags |= cls.REJECTED
@@ -846,7 +846,7 @@ class Remote(LazyMixin, IterableObj):
 
         kwargs = add_progress(kwargs, self.repo.git, progress)
         if isinstance(refspec, list):
-            args = refspec  # type: Sequence[Optional[str]]  # should need this - check logic for passing None through
+            args: Sequence[Optional[str]] = refspec
         else:
             args = [refspec]
 

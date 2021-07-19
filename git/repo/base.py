@@ -83,10 +83,10 @@ class Repo(object):
     DAEMON_EXPORT_FILE = 'git-daemon-export-ok'
 
     git = cast('Git', None)  # Must exist, or  __del__  will fail in case we raise on `__init__()`
-    working_dir = None    # type: Optional[PathLike]
-    _working_tree_dir = None  # type: Optional[PathLike]
-    git_dir = ""  # type: PathLike
-    _common_dir = ""  # type: PathLike
+    working_dir: Optional[PathLike] = None
+    _working_tree_dir: Optional[PathLike] = None
+    git_dir: PathLike = ""
+    _common_dir: PathLike = ""
 
     # precompiled regex
     re_whitespace = re.compile(r'\s+')
@@ -221,7 +221,7 @@ class Repo(object):
             self._working_tree_dir = None
         # END working dir handling
 
-        self.working_dir = self._working_tree_dir or self.common_dir  # type: Optional[PathLike]
+        self.working_dir: Optional[PathLike] = self._working_tree_dir or self.common_dir
         self.git = self.GitCommandWrapperType(self.working_dir)
 
         # special handling, in special times
@@ -591,7 +591,7 @@ class Repo(object):
             raise ValueError("Please specify at least two revs, got only %i" % len(rev))
         # end handle input
 
-        res = []  # type: List[Union[Commit_ish, None]]
+        res: List[Union[Commit_ish, None]] = []
         try:
             lines = self.git.merge_base(*rev, **kwargs).splitlines()  # List[str]
         except GitCommandError as err:
@@ -813,7 +813,7 @@ class Repo(object):
                 line = next(stream)  # when exhausted, causes a StopIteration, terminating this function
             except StopIteration:
                 return
-            split_line = line.split()  # type: Tuple[str, str, str, str]
+            split_line: Tuple[str, str, str, str] = line.split()
             hexsha, orig_lineno_str, lineno_str, num_lines_str = split_line
             lineno = int(lineno_str)
             num_lines = int(num_lines_str)
@@ -879,10 +879,10 @@ class Repo(object):
             return self.blame_incremental(rev, file, **kwargs)
 
         data = self.git.blame(rev, '--', file, p=True, stdout_as_string=False, **kwargs)
-        commits = {}  # type: Dict[str, Any]
-        blames = []  # type: List[List[Union[Optional['Commit'], List[str]]]]
+        commits: Dict[str, TBD] = {}
+        blames: List[List[Union[Optional['Commit'], List[str]]]] = []
 
-        info = {}  # type: Dict[str, Any]  # use Any until TypedDict available
+        info: Dict[str, TBD] = {}  # use Any until TypedDict available
 
         keepends = True
         for line in data.splitlines(keepends):

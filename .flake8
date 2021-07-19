@@ -19,7 +19,7 @@ enable-extensions = TC, TC2  # only needed for extensions not enabled by default
 ignore = E265,E266,E731,E704,
          W293, W504,
          ANN0 ANN1 ANN2,
-         TC0, TC1, TC2
+         # TC0, TC1, TC2
          # B,
          A,
          D,

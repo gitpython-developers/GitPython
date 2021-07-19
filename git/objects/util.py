@@ -285,7 +285,7 @@ class ProcessStreamAdapter(object):
 
     def __init__(self, process: 'Popen', stream_name: str) -> None:
         self._proc = process
-        self._stream = getattr(process, stream_name)  # type: StringIO  ## guess
+        self._stream: StringIO = getattr(process, stream_name)  # guessed type
 
     def __getattr__(self, attr: str) -> Any:
         return getattr(self._stream, attr)
@@ -356,7 +356,7 @@ class Traversable(Protocol):
             return out_list
 
     @ abstractmethod
-    def traverse(self, *args: Any, **kwargs) -> Any:
+    def traverse(self, *args: Any, **kwargs: Any) -> Any:
         """ """
         warnings.warn("traverse() method should only be called from subclasses."
                       "Calling from Traversable abstract class will raise NotImplementedError in 3.1.20"
@@ -414,7 +414,7 @@ class Traversable(Protocol):
            ignore_self=False is_edge=False -> Iterator[Tuple[src, item]]"""
 
         visited = set()
-        stack = deque()  # type: Deque[TraverseNT]
+        stack: Deque[TraverseNT] = deque()
         stack.append(TraverseNT(0, self, None))       # self is always depth level 0
 
         def addToStack(stack: Deque[TraverseNT],

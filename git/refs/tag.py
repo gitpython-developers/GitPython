@@ -35,7 +35,7 @@ class TagReference(Reference):
     _common_path_default = Reference._common_path_default + "/" + _common_default
 
     @property
-    def commit(self) -> 'Commit':  # type: ignore[override]  # LazyMixin has unrelated
+    def commit(self) -> 'Commit':  # type: ignore[override]  # LazyMixin has unrelated comit method
         """:return: Commit object the tag ref points to
 
         :raise ValueError: if the tag points to a tree or blob"""

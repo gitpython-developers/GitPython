@@ -123,7 +123,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         self.repo = repo
         self.version = self._VERSION
         self._extension_data = b''
-        self._file_path = file_path or self._index_path()  # type: PathLike
+        self._file_path: PathLike = file_path or self._index_path()
 
     def _set_cache_(self, attr: str) -> None:
         if attr == "entries":
@@ -136,7 +136,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
                 ok = True
             except OSError:
                 # in new repositories, there may be no index, which means we are empty
-                self.entries = {}  # type: Dict[Tuple[PathLike, StageType], IndexEntry]
+                self.entries: Dict[Tuple[PathLike, StageType], IndexEntry] = {}
                 return None
             finally:
                 if not ok:
@@ -266,7 +266,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         # -i : ignore working tree status
         # --aggressive : handle more merge cases
         # -m : do an actual merge
-        args = ["--aggressive", "-i", "-m"]  # type: List[Union[Treeish, str]]
+        args: List[Union[Treeish, str]] = ["--aggressive", "-i", "-m"]
         if base is not None:
             args.append(base)
         args.append(rhs)
@@ -288,14 +288,14 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             New IndexFile instance. Its path will be undefined.
             If you intend to write such a merged Index, supply an alternate file_path
             to its 'write' method."""
-        tree_sha_bytes = [to_bin_sha(str(t)) for t in tree_sha]  # List[bytes]
+        tree_sha_bytes: List[bytes] = [to_bin_sha(str(t)) for t in tree_sha]
         base_entries = aggressive_tree_merge(repo.odb, tree_sha_bytes)
 
         inst = cls(repo)
         # convert to entries dict
-        entries = dict(zip(
+        entries: Dict[Tuple[PathLike, int], IndexEntry] = dict(zip(
             ((e.path, e.stage) for e in base_entries),
-            (IndexEntry.from_base(e) for e in base_entries)))  # type: Dict[Tuple[PathLike, int], IndexEntry]
+            (IndexEntry.from_base(e) for e in base_entries)))
 
         inst.entries = entries
         return inst
@@ -338,7 +338,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         if len(treeish) == 0 or len(treeish) > 3:
             raise ValueError("Please specify between 1 and 3 treeish, got %i" % len(treeish))
 
-        arg_list = []  # type: List[Union[Treeish, str]]
+        arg_list: List[Union[Treeish, str]] = []
         # ignore that working tree and index possibly are out of date
         if len(treeish) > 1:
             # drop unmerged entries when reading our index and merging
@@ -445,7 +445,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             we will close stdin to break the pipe."""
 
         fprogress(filepath, False, item)
-        rval = None  # type: Union[None, str]
+        rval: Union[None, str] = None
 
         if proc.stdin is not None:
             try:
@@ -492,7 +492,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             are at stage 3 will not have a stage 3 entry.
         """
         is_unmerged_blob = lambda t: t[0] != 0
-        path_map = {}  # type: Dict[PathLike, List[Tuple[TBD, Blob]]]
+        path_map: Dict[PathLike, List[Tuple[TBD, Blob]]] = {}
         for stage, blob in self.iter_blobs(is_unmerged_blob):
             path_map.setdefault(blob.path, []).append((stage, blob))
         # END for each unmerged blob
@@ -624,8 +624,8 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         st = os.lstat(filepath)     # handles non-symlinks as well
         if S_ISLNK(st.st_mode):
             # in PY3, readlink is string, but we need bytes. In PY2, it's just OS encoded bytes, we assume UTF-8
-            open_stream = lambda: BytesIO(force_bytes(os.readlink(filepath),
-                                                      encoding=defenc))  # type: Callable[[], BinaryIO]
+            open_stream: Callable[[], BinaryIO] = lambda: BytesIO(force_bytes(os.readlink(filepath),
+                                                                              encoding=defenc))
         else:
             open_stream = lambda: open(filepath, 'rb')
         with open_stream() as stream:
@@ -1160,7 +1160,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             proc = self.repo.git.checkout_index(args, **kwargs)
             # FIXME: Reading from GIL!
             make_exc = lambda: GitCommandError(("git-checkout-index",) + tuple(args), 128, proc.stderr.read())
-            checked_out_files = []  # type: List[PathLike]
+            checked_out_files: List[PathLike] = []
 
             for path in paths:
                 co_path = to_native_path_linux(self._to_relative_path(path))

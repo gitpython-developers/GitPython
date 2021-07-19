@@ -34,7 +34,7 @@ from git.types import TBD
 # ---------------------------------------------------------------------------
 
 
-is_win = (os.name == 'nt')  # type: bool
+is_win: bool = (os.name == 'nt')
 is_posix = (os.name == 'posix')
 is_darwin = (os.name == 'darwin')
 defenc = sys.getfilesystemencoding()

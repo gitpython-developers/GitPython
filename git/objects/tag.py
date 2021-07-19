@@ -51,7 +51,7 @@ class TagObject(base.Object):
             authored_date is in, in a format similar to time.altzone"""
         super(TagObject, self).__init__(repo, binsha)
         if object is not None:
-            self.object = object    # type: Union['Commit', 'Blob', 'Tree', 'TagObject']
+            self.object: Union['Commit', 'Blob', 'Tree', 'TagObject'] = object
         if tag is not None:
             self.tag = tag
         if tagger is not None:
@@ -67,7 +67,7 @@ class TagObject(base.Object):
         """Cache all our attributes at once"""
         if attr in TagObject.__slots__:
             ostream = self.repo.odb.stream(self.binsha)
-            lines = ostream.read().decode(defenc, 'replace').splitlines()  # type: List[str]
+            lines: List[str] = ostream.read().decode(defenc, 'replace').splitlines()
 
             _obj, hexsha = lines[0].split(" ")
             _type_token, type_name = lines[1].split(" ")

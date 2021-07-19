@@ -1,5 +1,4 @@
 """Package with general repository related functions"""
-from git.refs.tag import Tag
 import os
 import stat
 from string import digits
@@ -19,11 +18,13 @@ from git.cmd import Git
 # Typing ----------------------------------------------------------------------
 
 from typing import Union, Optional, cast, TYPE_CHECKING
-from git.types import PathLike
+
 if TYPE_CHECKING:
+    from git.types import PathLike
     from .base import Repo
     from git.db import GitCmdObjectDB
     from git.objects import Commit, TagObject, Blob, Tree
+    from git.refs.tag import Tag
 
 # ----------------------------------------------------------------------------
 
@@ -122,7 +123,7 @@ def name_to_object(repo: 'Repo', name: str, return_ref: bool = False
     :param return_ref: if name specifies a reference, we will return the reference
         instead of the object. Otherwise it will raise BadObject or BadName
     """
-    hexsha = None  # type: Union[None, str, bytes]
+    hexsha: Union[None, str, bytes] = None
 
     # is it a hexsha ? Try the most common ones, which is 7 to 40
     if repo.re_hexsha_shortened.match(name):
@@ -162,7 +163,7 @@ def name_to_object(repo: 'Repo', name: str, return_ref: bool = False
     return Object.new_from_sha(repo, hex_to_bin(hexsha))
 
 
-def deref_tag(tag: Tag) -> 'TagObject':
+def deref_tag(tag: 'Tag') -> 'TagObject':
     """Recursively dereference a tag and return the resulting object"""
     while True:
         try:

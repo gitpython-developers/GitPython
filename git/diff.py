@@ -351,13 +351,13 @@ class Diff(object):
         return hash(tuple(getattr(self, n) for n in self.__slots__))
 
     def __str__(self) -> str:
-        h = "%s"  # type: str
+        h: str = "%s"
         if self.a_blob:
             h %= self.a_blob.path
         elif self.b_blob:
             h %= self.b_blob.path
 
-        msg = ''  # type: str
+        msg: str = ''
         line = None          # temp line
         line_length = 0      # line length
         for b, n in zip((self.a_blob, self.b_blob), ('lhs', 'rhs')):
@@ -449,7 +449,7 @@ class Diff(object):
         :return: git.DiffIndex """
 
         ## FIXME: Here SLURPING raw, need to re-phrase header-regexes linewise.
-        text_list = []  # type: List[bytes]
+        text_list: List[bytes] = []
         handle_process_output(proc, text_list.append, None, finalize_process, decode_streams=False)
 
         # for now, we have to bake the stream

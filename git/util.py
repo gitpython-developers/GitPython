@@ -267,7 +267,7 @@ def _cygexpath(drive: Optional[str], path: str) -> str:
     return p_str.replace('\\', '/')
 
 
-_cygpath_parsers = (
+_cygpath_parsers: Tuple[Tuple[Pattern[str], Callable, bool], ...] = (
     # See: https://msdn.microsoft.com/en-us/library/windows/desktop/aa365247(v=vs.85).aspx
     # and: https://www.cygwin.com/cygwin-ug-net/using.html#unc-paths
     (re.compile(r"\\\\\?\\UNC\\([^\\]+)\\([^\\]+)(?:\\(.*))?"),
@@ -294,7 +294,7 @@ _cygpath_parsers = (
      (lambda url: url),
      False
      ),
-)  # type: Tuple[Tuple[Pattern[str], Callable, bool], ...]
+)
 
 
 def cygpath(path: str) -> str:
@@ -330,7 +330,7 @@ def decygpath(path: PathLike) -> str:
 
 #: Store boolean flags denoting if a specific Git executable
 #: is from a Cygwin installation (since `cache_lru()` unsupported on PY2).
-_is_cygwin_cache = {}  # type: Dict[str, Optional[bool]]
+_is_cygwin_cache: Dict[str, Optional[bool]] = {}
 
 
 @overload
@@ -462,10 +462,10 @@ class RemoteProgress(object):
     re_op_relative = re.compile(r"(remote: )?([\w\s]+):\s+(\d+)% \((\d+)/(\d+)\)(.*)")
 
     def __init__(self) -> None:
-        self._seen_ops = []    # type: List[int]
-        self._cur_line = None  # type: Optional[str]
-        self.error_lines = []  # type: List[str]
-        self.other_lines = []  # type: List[str]
+        self._seen_ops: List[int] = []
+        self._cur_line: Optional[str] = None
+        self.error_lines: List[str] = []
+        self.other_lines: List[str] = []
 
     def _parse_progress_line(self, line: AnyStr) -> None:
         """Parse progress information from the given line as retrieved by git-push
