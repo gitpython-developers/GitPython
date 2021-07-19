@@ -56,7 +56,7 @@ def _stamp_version(filename):
                     line = line.replace("'git'", "'%s'" % VERSION)
                     found = True
                 out.append(line)
-    except (IOError, OSError):
+    except OSError:
         print("Couldn't find file %s to stamp version" % filename, file=sys.stderr)
 
     if found:
@@ -66,7 +66,7 @@ def _stamp_version(filename):
         print("WARNING: Couldn't find version line in file %s" % filename, file=sys.stderr)
 
 
-def build_py_modules(basedir, excludes=[]):
+def build_py_modules(basedir, excludes=()):
     # create list of py_modules from tree
     res = set()
     _prefix = os.path.basename(basedir)
