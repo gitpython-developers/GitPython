@@ -5,12 +5,18 @@ from git.exc import GitCommandError
 from .symbolic import SymbolicReference
 from .reference import Reference
 
-from typing import Union, TYPE_CHECKING
+# typinng ---------------------------------------------------
 
-from git.types import Commit_ish
+from typing import Any, Sequence, Union, TYPE_CHECKING
+
+from git.types import PathLike, Commit_ish
 
 if TYPE_CHECKING:
     from git.repo import Repo
+    from git.objects import Commit
+    from git.refs import RemoteReference
+
+# -------------------------------------------------------------------
 
 __all__ = ["HEAD", "Head"]
 
@@ -29,20 +35,21 @@ class HEAD(SymbolicReference):
     _ORIG_HEAD_NAME = 'ORIG_HEAD'
     __slots__ = ()
 
-    def __init__(self, repo: 'Repo', path=_HEAD_NAME):
+    def __init__(self, repo: 'Repo', path: PathLike = _HEAD_NAME):
         if path != self._HEAD_NAME:
             raise ValueError("HEAD instance must point to %r, got %r" % (self._HEAD_NAME, path))
         super(HEAD, self).__init__(repo, path)
-        self.commit: 'Commit_ish'
+        self.commit: 'Commit'
 
-    def orig_head(self) -> 'SymbolicReference':
+    def orig_head(self) -> SymbolicReference:
         """
         :return: SymbolicReference pointing at the ORIG_HEAD, which is maintained
             to contain the previous value of HEAD"""
         return SymbolicReference(self.repo, self._ORIG_HEAD_NAME)
 
-    def reset(self, commit: Union[Commit_ish, SymbolicReference, str] = 'HEAD', index=True, working_tree=False,
-              paths=None, **kwargs):
+    def reset(self, commit: Union[Commit_ish, SymbolicReference, str] = 'HEAD',
+              index: bool = True, working_tree: bool = False,
+              paths: Union[PathLike, Sequence[PathLike], None] = None, **kwargs: Any) -> 'HEAD':
         """Reset our HEAD to the given commit optionally synchronizing
         the index and working tree. The reference we refer to will be set to
         commit as well.
@@ -122,7 +129,7 @@ class Head(Reference):
     k_config_remote_ref = "merge"           # branch to merge from remote
 
     @classmethod
-    def delete(cls, repo, *heads, **kwargs):
+    def delete(cls, repo: 'Repo', *heads: 'Head', **kwargs: Any):
         """Delete the given heads
 
         :param force:
@@ -135,7 +142,7 @@ class Head(Reference):
             flag = "-D"
         repo.git.branch(flag, *heads)
 
-    def set_tracking_branch(self, remote_reference):
+    def set_tracking_branch(self, remote_reference: 'RemoteReference') -> 'Head':
         """
         Configure this branch to track the given remote reference. This will alter
             this branch's configuration accordingly.
@@ -160,7 +167,7 @@ class Head(Reference):
 
         return self
 
-    def tracking_branch(self):
+    def tracking_branch(self) -> Union['RemoteReference', None]:
         """
         :return: The remote_reference we are tracking, or None if we are
             not a tracking branch"""
@@ -175,7 +182,7 @@ class Head(Reference):
         # we are not a tracking branch
         return None
 
-    def rename(self, new_path, force=False):
+    def rename(self, new_path: PathLike, force: bool = False) -> 'Head':
         """Rename self to a new path
 
         :param new_path:
@@ -196,7 +203,7 @@ class Head(Reference):
         self.path = "%s/%s" % (self._common_path_default, new_path)
         return self
 
-    def checkout(self, force=False, **kwargs):
+    def checkout(self, force: bool = False, **kwargs: Any):
         """Checkout this head by setting the HEAD to this reference, by updating the index
         to reflect the tree we point to and by updating the working tree to reflect
         the latest index.
@@ -231,7 +238,7 @@ class Head(Reference):
         return self.repo.active_branch
 
     #{ Configuration
-    def _config_parser(self, read_only):
+    def _config_parser(self, read_only: bool) -> SectionConstraint:
         if read_only:
             parser = self.repo.config_reader()
         else:
@@ -240,13 +247,13 @@ class Head(Reference):
 
         return SectionConstraint(parser, 'branch "%s"' % self.name)
 
-    def config_reader(self):
+    def config_reader(self) -> SectionConstraint:
         """
         :return: A configuration parser instance constrained to only read
             this instance's values"""
         return self._config_parser(read_only=True)
 
-    def config_writer(self):
+    def config_writer(self) -> SectionConstraint:
         """
         :return: A configuration writer instance with read-and write access
             to options of this head"""
