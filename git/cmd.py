@@ -603,19 +603,19 @@ class Git(LazyMixin):
             process_version = self._call_process('version')  # should be as default *args and **kwargs used
             version_numbers = process_version.split(' ')[2]
 
-            self._version_info: Tuple[int, int, int, int] = tuple(
-                int(n) for n in version_numbers.split('.')[:4] if n.isdigit()
-            )  # type: ignore  # use typeguard here
+            self._version_info = cast(Tuple[int, int, int, int],
+                                      tuple(int(n) for n in version_numbers.split('.')[:4] if n.isdigit())
+                                      )
         else:
             super(Git, self)._set_cache_(attr)
         # END handle version info
 
-    @property
+    @ property
     def working_dir(self) -> Union[None, PathLike]:
         """:return: Git directory we are working on"""
         return self._working_dir
 
-    @property
+    @ property
     def version_info(self) -> Tuple[int, int, int, int]:
         """
         :return: tuple(int, int, int, int) tuple with integers representing the major, minor
@@ -623,7 +623,7 @@ class Git(LazyMixin):
             This value is generated on demand and is cached"""
         return self._version_info
 
-    @overload
+    @ overload
     def execute(self,
                 command: Union[str, Sequence[Any]],
                 *,
@@ -631,7 +631,7 @@ class Git(LazyMixin):
                 ) -> 'AutoInterrupt':
         ...
 
-    @overload
+    @ overload
     def execute(self,
                 command: Union[str, Sequence[Any]],
                 *,
@@ -640,7 +640,7 @@ class Git(LazyMixin):
                 ) -> Union[str, Tuple[int, str, str]]:
         ...
 
-    @overload
+    @ overload
     def execute(self,
                 command: Union[str, Sequence[Any]],
                 *,
@@ -649,7 +649,7 @@ class Git(LazyMixin):
                 ) -> Union[bytes, Tuple[int, bytes, str]]:
         ...
 
-    @overload
+    @ overload
     def execute(self,
                 command: Union[str, Sequence[Any]],
                 *,
@@ -659,7 +659,7 @@ class Git(LazyMixin):
                 ) -> str:
         ...
 
-    @overload
+    @ overload
     def execute(self,
                 command: Union[str, Sequence[Any]],
                 *,
