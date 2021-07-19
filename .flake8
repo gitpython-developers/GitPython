@@ -1,5 +1,7 @@
 [flake8]
-#show-source = True
+show-source = True
+count= True
+statistics = True
 # E265 = comment blocks like @{ section, which it can't handle
 # E266 = too many leading '#' for block comment
 # E731 = do not assign a lambda expression, use a def
