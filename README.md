@@ -115,8 +115,9 @@ To typecheck, run: `mypy -p git`
 
 To test, run: `pytest`
 
-Configuration for flake8 is in the root/.flake8 file.
-Configurations for mypy, pytest and coverage.py are in root/pyproject.toml.
+Configuration for flake8 is in the ./.flake8 file.
+
+Configurations for mypy, pytest and coverage.py are in ./pyproject.toml.
 
 The same linting and testing will also be performed against different supported python versions 
 upon submitting a pull request (or on each push if you have a fork with a "main" branch and actions enabled).
