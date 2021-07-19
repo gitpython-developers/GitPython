@@ -143,7 +143,7 @@ class Diffable(object):
             paths = [paths]
 
         if hasattr(self, 'Has_Repo'):
-            self.repo: Repo = self.repo
+            self.repo: 'Repo' = self.repo
 
         diff_cmd = self.repo.git.diff
         if other is self.Index:

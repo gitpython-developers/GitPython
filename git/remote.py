@@ -36,9 +36,10 @@ from .refs import (
 
 # typing-------------------------------------------------------
 
-from typing import Any, Callable, Dict, Iterator, List, Optional, Sequence, TYPE_CHECKING, Union, overload
+from typing import (Any, Callable, Dict, Iterator, List, NoReturn, Optional, Sequence,  # NOQA[TC002]
+                    TYPE_CHECKING, Type, Union, overload)
 
-from git.types import PathLike, Literal, TBD, TypeGuard, Commit_ish
+from git.types import PathLike, Literal, TBD, TypeGuard, Commit_ish     # NOQA[TC002]
 
 if TYPE_CHECKING:
     from git.repo.base import Repo
@@ -83,17 +84,17 @@ def add_progress(kwargs: Any, git: Git,
 #} END utilities
 
 
-@overload
+@ overload
 def to_progress_instance(progress: None) -> RemoteProgress:
     ...
 
 
-@overload
+@ overload
 def to_progress_instance(progress: Callable[..., Any]) -> CallableRemoteProgress:
     ...
 
 
-@overload
+@ overload
 def to_progress_instance(progress: RemoteProgress) -> RemoteProgress:
     ...
 
@@ -155,11 +156,11 @@ class PushInfo(IterableObj, object):
         self._old_commit_sha = old_commit
         self.summary = summary
 
-    @property
-    def old_commit(self) -> Union[str, SymbolicReference, 'Commit_ish', None]:
+    @ property
+    def old_commit(self) -> Union[str, SymbolicReference, Commit_ish, None]:
         return self._old_commit_sha and self._remote.repo.commit(self._old_commit_sha) or None
 
-    @property
+    @ property
     def remote_ref(self) -> Union[RemoteReference, TagReference]:
         """
         :return:
@@ -175,7 +176,7 @@ class PushInfo(IterableObj, object):
             raise ValueError("Could not handle remote ref: %r" % self.remote_ref_string)
         # END
 
-    @classmethod
+    @ classmethod
     def _from_line(cls, remote: 'Remote', line: str) -> 'PushInfo':
         """Create a new PushInfo instance as parsed from line which is expected to be like
             refs/heads/master:refs/heads/master 05d2687..1d0568e as bytes"""
@@ -228,6 +229,11 @@ class PushInfo(IterableObj, object):
 
         return PushInfo(flags, from_ref, to_ref_string, remote, old_commit, summary)
 
+    @ classmethod
+    def iter_items(cls, repo: 'Repo', *args: Any, **kwargs: Any
+                   ) -> NoReturn:  # -> Iterator['PushInfo']:
+        raise NotImplementedError
+
 
 class FetchInfo(IterableObj, object):
 
@@ -262,7 +268,7 @@ class FetchInfo(IterableObj, object):
         '-': TAG_UPDATE,
     }  # type: Dict[flagKeyLiteral, int]
 
-    @classmethod
+    @ classmethod
     def refresh(cls) -> Literal[True]:
         """This gets called by the refresh function (see the top level
         __init__).
@@ -301,25 +307,25 @@ class FetchInfo(IterableObj, object):
     def __str__(self) -> str:
         return self.name
 
-    @property
+    @ property
     def name(self) -> str:
         """:return: Name of our remote ref"""
         return self.ref.name
 
-    @property
+    @ property
     def commit(self) -> Commit_ish:
         """:return: Commit of our remote ref"""
         return self.ref.commit
 
-    @classmethod
+    @ classmethod
     def _from_line(cls, repo: 'Repo', line: str, fetch_line: str) -> 'FetchInfo':
         """Parse information from the given line as returned by git-fetch -v
         and return a new FetchInfo object representing this information.
 
-        We can handle a line as follows
-        "%c %-*s %-*s -> %s%s"
+        We can handle a line as follows:
+        "%c %-\\*s %-\\*s -> %s%s"
 
-        Where c is either ' ', !, +, -, *, or =
+        Where c is either ' ', !, +, -, \\*, or =
         ! means error
         + means success forcing update
         - means a tag was updated
@@ -334,6 +340,7 @@ class FetchInfo(IterableObj, object):
             raise ValueError("Failed to parse line: %r" % line)
 
         # parse lines
+        remote_local_ref_str: str
         control_character, operation, local_remote_ref, remote_local_ref_str, note = match.groups()
         assert is_flagKeyLiteral(control_character), f"{control_character}"
 
@@ -375,7 +382,7 @@ class FetchInfo(IterableObj, object):
         # If we do not specify a target branch like master:refs/remotes/origin/master,
         # the fetch result is stored in FETCH_HEAD which destroys the rule we usually
         # have. In that case we use a symbolic reference which is detached
-        ref_type = None
+        ref_type: Optional[Type[SymbolicReference]] = None
         if remote_local_ref_str == "FETCH_HEAD":
             ref_type = SymbolicReference
         elif ref_type_name == "tag" or is_tag_operation:
@@ -404,14 +411,15 @@ class FetchInfo(IterableObj, object):
             # by the 'ref/' prefix. Otherwise even a tag could be in refs/remotes, which is when it will have the
             # 'tags/' subdirectory in its path.
             # We don't want to test for actual existence, but try to figure everything out analytically.
-            ref_path = None  # type: Optional[PathLike]
+            ref_path: Optional[PathLike] = None
             remote_local_ref_str = remote_local_ref_str.strip()
+
             if remote_local_ref_str.startswith(Reference._common_path_default + "/"):
                 # always use actual type if we get absolute paths
                 # Will always be the case if something is fetched outside of refs/remotes (if its not a tag)
                 ref_path = remote_local_ref_str
                 if ref_type is not TagReference and not \
-                   remote_local_ref_str.startswith(RemoteReference._common_path_default + "/"):
+                        remote_local_ref_str.startswith(RemoteReference._common_path_default + "/"):
                     ref_type = Reference
                 # END downgrade remote reference
             elif ref_type is TagReference and 'tags/' in remote_local_ref_str:
@@ -429,6 +437,11 @@ class FetchInfo(IterableObj, object):
         note = (note and note.strip()) or ''
 
         return cls(remote_local_ref, flags, note, old_commit, local_remote_ref)
+
+    @ classmethod
+    def iter_items(cls, repo: 'Repo', *args: Any, **kwargs: Any
+                   ) -> NoReturn:  # -> Iterator['FetchInfo']:
+        raise NotImplementedError
 
 
 class Remote(LazyMixin, IterableObj):
@@ -507,7 +520,7 @@ class Remote(LazyMixin, IterableObj):
             return False
         # end
 
-    @classmethod
+    @ classmethod
     def iter_items(cls, repo: 'Repo', *args: Any, **kwargs: Any) -> Iterator['Remote']:
         """:return: Iterator yielding Remote objects of the given repository"""
         for section in repo.config_reader("repository").sections():
@@ -897,7 +910,7 @@ class Remote(LazyMixin, IterableObj):
                                   universal_newlines=True, **kwargs)
         return self._get_push_info(proc, progress)
 
-    @property
+    @ property
     def config_reader(self) -> SectionConstraint:
         """
         :return:
@@ -912,7 +925,7 @@ class Remote(LazyMixin, IterableObj):
             pass
         # END handle exception
 
-    @property
+    @ property
     def config_writer(self) -> SectionConstraint:
         """
         :return: GitConfigParser compatible object able to write options for this remote.

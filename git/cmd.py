@@ -15,7 +15,6 @@ from subprocess import (
     PIPE
 )
 import subprocess
-import sys
 import threading
 from textwrap import dedent
 
@@ -539,7 +538,7 @@ class Git(LazyMixin):
             return self
 
         def __next__(self) -> bytes:
-            return self.next()
+            return next(self)
 
         def next(self) -> bytes:
             line = self.readline()
@@ -799,10 +798,7 @@ class Git(LazyMixin):
             if kill_after_timeout:
                 raise GitCommandError(redacted_command, '"kill_after_timeout" feature is not supported on Windows.')
         else:
-            if sys.version_info[0] > 2:
-                cmd_not_found_exception = FileNotFoundError  # NOQA # exists, flake8 unknown @UndefinedVariable
-            else:
-                cmd_not_found_exception = OSError
+            cmd_not_found_exception = FileNotFoundError  # NOQA # exists, flake8 unknown @UndefinedVariable
         # end handle
 
         stdout_sink = (PIPE
@@ -1070,8 +1066,8 @@ class Git(LazyMixin):
             It contains key-values for the following:
             - the :meth:`execute()` kwds, as listed in :var:`execute_kwargs`;
             - "command options" to be converted by :meth:`transform_kwargs()`;
-            - the `'insert_kwargs_after'` key which its value must match one of ``*args``,
-              and any cmd-options will be appended after the matched arg.
+            - the `'insert_kwargs_after'` key which its value must match one of ``*args``
+            and any cmd-options will be appended after the matched arg.
 
         Examples::
 

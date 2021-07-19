@@ -238,7 +238,7 @@ def get_config_path(config_level: Lit_config_levels) -> str:
         assert_never(config_level, ValueError(f"Invalid configuration level: {config_level!r}"))
 
 
-class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, object)):  # type: ignore ## mypy does not understand dynamic class creation # noqa: E501
+class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser)):  # type: ignore ## mypy does not understand dynamic class creation # noqa: E501
 
     """Implements specifics required to read git style configuration files.
 
