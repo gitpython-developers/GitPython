@@ -7,9 +7,6 @@ import sys
 from typing import (Callable, Dict, NoReturn, Sequence, Tuple, Union, Any, Iterator,       # noqa: F401
                     NamedTuple, TYPE_CHECKING, TypeVar)       # noqa: F401
 
-if TYPE_CHECKING:
-    from git.repo import Repo
-
 if sys.version_info[:2] >= (3, 8):
     from typing import Final, Literal, SupportsIndex, TypedDict, Protocol, runtime_checkable  # noqa: F401
 else:
@@ -28,6 +25,7 @@ elif sys.version_info[:2] >= (3, 9):
     PathLike = Union[str, 'os.PathLike[str]']  # forward ref as pylance complains unless editing with py3.9+
 
 if TYPE_CHECKING:
+    from git.repo import Repo
     from git.objects import Commit, Tree, TagObject, Blob
     # from git.refs import SymbolicReference
 
@@ -36,6 +34,7 @@ _T = TypeVar('_T')
 
 Tree_ish = Union['Commit', 'Tree']
 Commit_ish = Union['Commit', 'TagObject', 'Blob', 'Tree']
+Lit_commit_ish = Literal['commit', 'tag', 'blob', 'tree']
 
 # Config_levels ---------------------------------------------------------
 

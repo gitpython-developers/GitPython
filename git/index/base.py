@@ -572,7 +572,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         # note: additional deserialization could be saved if write_tree_from_cache
         # would return sorted tree entries
         root_tree = Tree(self.repo, binsha, path='')
-        root_tree._cache = tree_items  # type: ignore  # should this be encoded to [bytes, int, str]?
+        root_tree._cache = tree_items
         return root_tree
 
     def _process_diff_args(self,              # type: ignore[override]
@@ -586,8 +586,9 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         return args
 
     def _to_relative_path(self, path: PathLike) -> PathLike:
-        """:return: Version of path relative to our git directory or raise ValueError
-        if it is not within our git direcotory"""
+        """
+        :return: Version of path relative to our git directory or raise ValueError
+            if it is not within our git direcotory"""
         if not osp.isabs(path):
             return path
         if self.repo.bare:
