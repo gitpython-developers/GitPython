@@ -19,6 +19,7 @@ from git.cmd import Git
 
 from typing import Union, Optional, cast, TYPE_CHECKING
 
+
 if TYPE_CHECKING:
     from git.types import PathLike
     from .base import Repo
@@ -38,7 +39,7 @@ def touch(filename: str) -> str:
     return filename
 
 
-def is_git_dir(d: PathLike) -> bool:
+def is_git_dir(d: 'PathLike') -> bool:
     """ This is taken from the git setup.c:is_git_directory
     function.
 
@@ -60,7 +61,7 @@ def is_git_dir(d: PathLike) -> bool:
     return False
 
 
-def find_worktree_git_dir(dotgit: PathLike) -> Optional[str]:
+def find_worktree_git_dir(dotgit: 'PathLike') -> Optional[str]:
     """Search for a gitdir for this worktree."""
     try:
         statbuf = os.stat(dotgit)
@@ -79,7 +80,7 @@ def find_worktree_git_dir(dotgit: PathLike) -> Optional[str]:
     return None
 
 
-def find_submodule_git_dir(d: PathLike) -> Optional[PathLike]:
+def find_submodule_git_dir(d: 'PathLike') -> Optional['PathLike']:
     """Search for a submodule repo."""
     if is_git_dir(d):
         return d
