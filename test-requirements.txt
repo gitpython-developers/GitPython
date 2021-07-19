@@ -1,5 +1,5 @@
 ddt>=1.1.1
-coverage
+mypy
 flake8
 virtualenv
 pytest
