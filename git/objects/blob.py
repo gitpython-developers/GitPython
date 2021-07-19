@@ -6,6 +6,8 @@
 from mimetypes import guess_type
 from . import base
 
+from git.types import Literal
+
 __all__ = ('Blob', )
 
 
@@ -13,7 +15,7 @@ class Blob(base.IndexObject):
 
     """A Blob encapsulates a git blob object"""
     DEFAULT_MIME_TYPE = "text/plain"
-    type = "blob"
+    type: Literal['blob'] = "blob"
 
     # valid blob modes
     executable_mode = 0o100755

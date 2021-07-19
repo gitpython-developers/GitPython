@@ -106,19 +106,21 @@ On *Windows*, make sure you have `git-daemon` in your PATH.  For MINGW-git, the 
 exists in `Git\mingw64\libexec\git-core\`; CYGWIN has no daemon, but should get along fine
 with MINGW's.
 
-Ensure testing libraries are installed. In the root directory, run: `pip install test-requirements.txt` 
-Then,
+Ensure testing libraries are installed. 
+In the root directory, run: `pip install -r test-requirements.txt` 
 
-To lint, run `flake8`
-To typecheck, run `mypy -p git` 
-To test, `pytest`
+To lint, run: `flake8`
 
-Configuration for flake8 is in root/.flake8 file.
-Configuration for mypy, pytest, coverage is in root/pyproject.toml.
+To typecheck, run: `mypy -p git` 
+
+To test, run: `pytest`
+
+Configuration for flake8 is in the ./.flake8 file.
+
+Configurations for mypy, pytest and coverage.py are in ./pyproject.toml.
 
 The same linting and testing will also be performed against different supported python versions 
-upon submitting a pull request (or on each push if you have a fork with a "main" branch).
-
+upon submitting a pull request (or on each push if you have a fork with a "main" branch and actions enabled).
 
 
 ### Contributions

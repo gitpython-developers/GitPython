@@ -3,8 +3,6 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
-from __future__ import print_function
-
 import contextlib
 from functools import wraps
 import gc
@@ -336,7 +334,7 @@ class TestBase(TestCase):
     - Class level repository which is considered read-only as it is shared among
       all test cases in your type.
       Access it using::
-       self.rorepo  # 'ro' stands for read-only
+      self.rorepo  # 'ro' stands for read-only
 
       The rorepo is in fact your current project's git repo. If you refer to specific
       shas for your objects, be sure you choose some that are part of the immutable portion

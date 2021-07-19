@@ -4,6 +4,7 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
+from abc import abstractmethod
 from .exc import InvalidGitRepositoryError
 import os.path as osp
 from .compat import is_win
@@ -28,7 +29,8 @@ import warnings
 # typing ---------------------------------------------------------
 
 from typing import (Any, AnyStr, BinaryIO, Callable, Dict, Generator, IO, Iterator, List,
-                    Optional, Pattern, Sequence, Tuple, TypeVar, Union, cast, TYPE_CHECKING, overload)
+                    Optional, Pattern, Sequence, Tuple, TypeVar, Union, cast,
+                    TYPE_CHECKING, overload, )
 
 import pathlib
 
@@ -39,8 +41,8 @@ if TYPE_CHECKING:
     # from git.objects.base import IndexObject
 
 
-from .types import (Literal, SupportsIndex,                    # because behind py version guards
-                    PathLike, HSH_TD, Total_TD, Files_TD,       # aliases
+from .types import (Literal, SupportsIndex, Protocol, runtime_checkable,              # because behind py version guards
+                    PathLike, HSH_TD, Total_TD, Files_TD,                            # aliases
                     Has_id_attribute)
 
 T_IterableObj = TypeVar('T_IterableObj', bound=Union['IterableObj', 'Has_id_attribute'], covariant=True)
@@ -265,7 +267,7 @@ def _cygexpath(drive: Optional[str], path: str) -> str:
     return p_str.replace('\\', '/')
 
 
-_cygpath_parsers = (
+_cygpath_parsers: Tuple[Tuple[Pattern[str], Callable, bool], ...] = (
     # See: https://msdn.microsoft.com/en-us/library/windows/desktop/aa365247(v=vs.85).aspx
     # and: https://www.cygwin.com/cygwin-ug-net/using.html#unc-paths
     (re.compile(r"\\\\\?\\UNC\\([^\\]+)\\([^\\]+)(?:\\(.*))?"),
@@ -292,7 +294,7 @@ _cygpath_parsers = (
      (lambda url: url),
      False
      ),
-)  # type: Tuple[Tuple[Pattern[str], Callable, bool], ...]
+)
 
 
 def cygpath(path: str) -> str:
@@ -328,7 +330,7 @@ def decygpath(path: PathLike) -> str:
 
 #: Store boolean flags denoting if a specific Git executable
 #: is from a Cygwin installation (since `cache_lru()` unsupported on PY2).
-_is_cygwin_cache = {}  # type: Dict[str, Optional[bool]]
+_is_cygwin_cache: Dict[str, Optional[bool]] = {}
 
 
 @overload
@@ -460,10 +462,10 @@ class RemoteProgress(object):
     re_op_relative = re.compile(r"(remote: )?([\w\s]+):\s+(\d+)% \((\d+)/(\d+)\)(.*)")
 
     def __init__(self) -> None:
-        self._seen_ops = []    # type: List[int]
-        self._cur_line = None  # type: Optional[str]
-        self.error_lines = []  # type: List[str]
-        self.other_lines = []  # type: List[str]
+        self._seen_ops: List[int] = []
+        self._cur_line: Optional[str] = None
+        self.error_lines: List[str] = []
+        self.other_lines: List[str] = []
 
     def _parse_progress_line(self, line: AnyStr) -> None:
         """Parse progress information from the given line as retrieved by git-push
@@ -471,7 +473,7 @@ class RemoteProgress(object):
 
         - Lines that do not contain progress info are stored in :attr:`other_lines`.
         - Lines that seem to contain an error (i.e. start with error: or fatal:) are stored
-        in :attr:`error_lines`."""
+            in :attr:`error_lines`."""
         # handle
         # Counting objects: 4, done.
         # Compressing objects:  50% (1/2)
@@ -993,7 +995,7 @@ class IterableList(List[T_IterableObj]):
         # END for each item
         return list.__getattribute__(self, attr)
 
-    def __getitem__(self, index: Union[SupportsIndex, int, slice, str]) -> 'T_IterableObj':  # type: ignore
+    def __getitem__(self, index: Union[SupportsIndex, int, slice, str]) -> T_IterableObj:  # type: ignore
 
         assert isinstance(index, (int, str, slice)), "Index of IterableList should be an int or str"
 
@@ -1030,23 +1032,24 @@ class IterableList(List[T_IterableObj]):
 
 
 class IterableClassWatcher(type):
+    """ Metaclass that watches """
     def __init__(cls, name, bases, clsdict):
         for base in bases:
             if type(base) == IterableClassWatcher:
                 warnings.warn(f"GitPython Iterable subclassed by {name}. "
-                              "Iterable is deprecated due to naming clash, "
+                              "Iterable is deprecated due to naming clash since v3.1.18"
+                              " and will be removed in 3.1.20, "
                               "Use IterableObj instead \n",
                               DeprecationWarning,
                               stacklevel=2)
 
 
-class Iterable(object):
+class Iterable(metaclass=IterableClassWatcher):
 
     """Defines an interface for iterable items which is to assure a uniform
     way to retrieve and iterate items within the git repository"""
     __slots__ = ()
     _id_attribute_ = "attribute that most suitably identifies your instance"
-    __metaclass__ = IterableClassWatcher
 
     @classmethod
     def list_items(cls, repo, *args, **kwargs):
@@ -1064,14 +1067,15 @@ class Iterable(object):
         return out_list
 
     @classmethod
-    def iter_items(cls, repo: 'Repo', *args: Any, **kwargs: Any):
+    def iter_items(cls, repo: 'Repo', *args: Any, **kwargs: Any) -> Any:
         # return typed to be compatible with subtypes e.g. Remote
         """For more information about the arguments, see list_items
         :return:  iterator yielding Items"""
         raise NotImplementedError("To be implemented by Subclass")
 
 
-class IterableObj():
+@runtime_checkable
+class IterableObj(Protocol):
     """Defines an interface for iterable items which is to assure a uniform
     way to retrieve and iterate items within the git repository
 
@@ -1095,11 +1099,12 @@ class IterableObj():
         return out_list
 
     @classmethod
+    @abstractmethod
     def iter_items(cls, repo: 'Repo', *args: Any, **kwargs: Any
-                   ) -> Iterator[T_IterableObj]:
+                   ) -> Iterator[T_IterableObj]:  # Iterator[T_IterableObj]:
         # return typed to be compatible with subtypes e.g. Remote
         """For more information about the arguments, see list_items
-        :return:  iterator yielding Items"""
+            :return:  iterator yielding Items"""
         raise NotImplementedError("To be implemented by Subclass")
 
 # } END classes

@@ -2,7 +2,18 @@ from git.util import (
     LazyMixin,
     IterableObj,
 )
-from .symbolic import SymbolicReference
+from .symbolic import SymbolicReference, T_References
+
+
+# typing ------------------------------------------------------------------
+
+from typing import Any, Callable, Iterator, List, Match, Optional, Tuple, Type, TypeVar, Union, TYPE_CHECKING  # NOQA
+from git.types import Commit_ish, PathLike, TBD, Literal, TypeGuard, _T                                  # NOQA
+
+if TYPE_CHECKING:
+    from git.repo import Repo
+
+# ------------------------------------------------------------------------------
 
 
 __all__ = ["Reference"]
@@ -10,10 +21,10 @@ __all__ = ["Reference"]
 #{ Utilities
 
 
-def require_remote_ref_path(func):
+def require_remote_ref_path(func: Callable[..., _T]) -> Callable[..., _T]:
     """A decorator raising a TypeError if we are not a valid remote, based on the path"""
 
-    def wrapper(self, *args):
+    def wrapper(self: T_References, *args: Any) -> _T:
         if not self.is_remote():
             raise ValueError("ref path does not point to a remote reference: %s" % self.path)
         return func(self, *args)
@@ -32,7 +43,7 @@ class Reference(SymbolicReference, LazyMixin, IterableObj):
     _resolve_ref_on_create = True
     _common_path_default = "refs"
 
-    def __init__(self, repo, path, check_path=True):
+    def __init__(self, repo: 'Repo', path: PathLike, check_path: bool = True) -> None:
         """Initialize this instance
         :param repo: Our parent repository
 
@@ -41,16 +52,17 @@ class Reference(SymbolicReference, LazyMixin, IterableObj):
             refs/heads/master
         :param check_path: if False, you can provide any path. Otherwise the path must start with the
             default path prefix of this type."""
-        if check_path and not path.startswith(self._common_path_default + '/'):
-            raise ValueError("Cannot instantiate %r from path %s" % (self.__class__.__name__, path))
+        if check_path and not str(path).startswith(self._common_path_default + '/'):
+            raise ValueError(f"Cannot instantiate {self.__class__.__name__!r} from path {path}")
+        self.path: str  # SymbolicReference converts to string atm
         super(Reference, self).__init__(repo, path)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
     #{ Interface
 
-    def set_object(self, object, logmsg=None):  # @ReservedAssignment
+    def set_object(self, object: Commit_ish, logmsg: Union[str, None] = None) -> 'Reference':  # @ReservedAssignment
         """Special version which checks if the head-log needs an update as well
         :return: self"""
         oldbinsha = None
@@ -84,7 +96,7 @@ class Reference(SymbolicReference, LazyMixin, IterableObj):
     # NOTE: Don't have to overwrite properties as the will only work without a the log
 
     @property
-    def name(self):
+    def name(self) -> str:
         """:return: (shortest) Name of this reference - it may contain path components"""
         # first two path tokens are can be removed as they are
         # refs/heads or refs/tags or refs/remotes
@@ -94,7 +106,8 @@ class Reference(SymbolicReference, LazyMixin, IterableObj):
         return '/'.join(tokens[2:])
 
     @classmethod
-    def iter_items(cls, repo, common_path=None):
+    def iter_items(cls: Type[T_References], repo: 'Repo', common_path: Union[PathLike, None] = None,
+                   *args: Any, **kwargs: Any) -> Iterator[T_References]:
         """Equivalent to SymbolicReference.iter_items, but will return non-detached
         references as well."""
         return cls._iter_items(repo, common_path)
@@ -105,7 +118,7 @@ class Reference(SymbolicReference, LazyMixin, IterableObj):
 
     @property  # type: ignore ## mypy cannot deal with properties with an extra decorator (2021-04-21)
     @require_remote_ref_path
-    def remote_name(self):
+    def remote_name(self) -> str:
         """
         :return:
             Name of the remote we are a reference of, such as 'origin' for a reference
@@ -116,7 +129,7 @@ class Reference(SymbolicReference, LazyMixin, IterableObj):
 
     @property  # type: ignore ## mypy cannot deal with properties with an extra decorator (2021-04-21)
     @require_remote_ref_path
-    def remote_head(self):
+    def remote_head(self) -> str:
         """:return: Name of the remote head itself, i.e. master.
         :note: The returned name is usually not qualified enough to uniquely identify
             a branch"""

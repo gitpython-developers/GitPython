@@ -208,7 +208,7 @@ class _OMD(OrderedDict):
     def getall(self, key: str) -> Any:
         return super(_OMD, self).__getitem__(key)
 
-    def items(self) -> List[Tuple[str, Any]]:  # type: ignore  ## mypy doesn't like overwriting supertype signitures
+    def items(self) -> List[Tuple[str, Any]]:  # type: ignore[override]
         """List of (key, last value for key)."""
         return [(k, self[k]) for k in self]
 
@@ -238,7 +238,7 @@ def get_config_path(config_level: Lit_config_levels) -> str:
         assert_never(config_level, ValueError(f"Invalid configuration level: {config_level!r}"))
 
 
-class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, object)):  # type: ignore ## mypy does not understand dynamic class creation # noqa: E501
+class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser)):  # type: ignore ## mypy does not understand dynamic class creation # noqa: E501
 
     """Implements specifics required to read git style configuration files.
 
@@ -322,7 +322,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
         self._is_initialized = False
         self._merge_includes = merge_includes
         self._repo = repo
-        self._lock = None  # type: Union['LockFile', None]
+        self._lock: Union['LockFile', None] = None
         self._acquire_lock()
 
     def _acquire_lock(self) -> None:
@@ -545,13 +545,15 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser, obje
             return None
         self._is_initialized = True
 
-        files_to_read = [""]  # type: List[Union[PathLike, IO]]  ## just for types until 3.5 dropped
-        if isinstance(self._file_or_files, (str)):  # replace with PathLike once 3.5 dropped
-            files_to_read = [self._file_or_files]                               # for str, as str is a type of Sequence
+        files_to_read: List[Union[PathLike, IO]] = [""]
+        if isinstance(self._file_or_files, (str, os.PathLike)):
+            # for str or Path, as str is a type of Sequence
+            files_to_read = [self._file_or_files]
         elif not isinstance(self._file_or_files, (tuple, list, Sequence)):
-            files_to_read = [self._file_or_files]                               # for IO or Path
-        else:
-            files_to_read = list(self._file_or_files)                           # for lists or tuples
+            # could merge with above isinstance once runtime type known
+            files_to_read = [self._file_or_files]
+        else:    # for lists or tuples
+            files_to_read = list(self._file_or_files)
         # end assure we have a copy of the paths to handle
 
         seen = set(files_to_read)

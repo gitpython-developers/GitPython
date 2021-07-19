@@ -119,14 +119,14 @@ class TestRefs(TestBase):
             assert head.tracking_branch() == remote_ref
             head.set_tracking_branch(None)
             assert head.tracking_branch() is None
-            
+
             special_name = 'feature#123'
             special_name_remote_ref = SymbolicReference.create(rwrepo, 'refs/remotes/origin/%s' % special_name)
             gp_tracking_branch = rwrepo.create_head('gp_tracking#123')
             special_name_remote_ref = rwrepo.remotes[0].refs[special_name]  # get correct type
             gp_tracking_branch.set_tracking_branch(special_name_remote_ref)
             assert gp_tracking_branch.tracking_branch().path == special_name_remote_ref.path
-            
+
             git_tracking_branch = rwrepo.create_head('git_tracking#123')
             rwrepo.git.branch('-u', special_name_remote_ref.name, git_tracking_branch.name)
             assert git_tracking_branch.tracking_branch().name == special_name_remote_ref.name

@@ -347,7 +347,7 @@ class TestRemote(TestBase):
         progress = TestRemoteProgress()
         to_be_updated = "my_tag.1.0RV"
         new_tag = TagReference.create(rw_repo, to_be_updated)  # @UnusedVariable
-        other_tag = TagReference.create(rw_repo, "my_obj_tag.2.1aRV", message="my message")
+        other_tag = TagReference.create(rw_repo, "my_obj_tag.2.1aRV", logmsg="my message")
         res = remote.push(progress=progress, tags=True)
         self.assertTrue(res[-1].flags & PushInfo.NEW_TAG)
         progress.make_assertion()
@@ -355,7 +355,7 @@ class TestRemote(TestBase):
 
         # update push new tags
         # Rejection is default
-        new_tag = TagReference.create(rw_repo, to_be_updated, ref='HEAD~1', force=True)
+        new_tag = TagReference.create(rw_repo, to_be_updated, reference='HEAD~1', force=True)
         res = remote.push(tags=True)
         self._do_test_push_result(res, remote)
         self.assertTrue(res[-1].flags & PushInfo.REJECTED)

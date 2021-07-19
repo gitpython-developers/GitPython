@@ -24,7 +24,7 @@ from .fun import (
 from typing import (Any, Callable, Dict, Iterable, Iterator, List,
                     Tuple, Type, Union, cast, TYPE_CHECKING)
 
-from git.types import PathLike, TypeGuard
+from git.types import PathLike, TypeGuard, Literal
 
 if TYPE_CHECKING:
     from git.repo import Repo
@@ -195,7 +195,7 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
         blob = tree[0]
     """
 
-    type = "tree"
+    type: Literal['tree'] = "tree"
     __slots__ = "_cache"
 
     # actual integer ids for comparison
@@ -285,7 +285,7 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
         return [i for i in self if i.type == "tree"]
 
     @ property
-    def blobs(self) -> List['Blob']:
+    def blobs(self) -> List[Blob]:
         """:return: list(Blob, ...) list of blobs directly below this tree"""
         return [i for i in self if i.type == "blob"]
 
@@ -298,7 +298,7 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
             See the ``TreeModifier`` for more information on how to alter the cache"""
         return TreeModifier(self._cache)
 
-    def traverse(self,      # type: ignore  # overrides super()
+    def traverse(self,      # type: ignore[override]
                  predicate: Callable[[Union[IndexObjUnion, TraversedTreeTup], int], bool] = lambda i, d: True,
                  prune: Callable[[Union[IndexObjUnion, TraversedTreeTup], int], bool] = lambda i, d: False,
                  depth: int = -1,
@@ -322,8 +322,8 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
         # assert is_tree_traversed(ret_tup), f"Type is {[type(x) for x in list(ret_tup[0])]}"
         # return ret_tup[0]"""
         return cast(Union[Iterator[IndexObjUnion], Iterator[TraversedTreeTup]],
-                    super(Tree, self).traverse(predicate, prune, depth,  # type: ignore
-                                               branch_first, visit_once, ignore_self))
+                    super(Tree, self)._traverse(predicate, prune, depth,  # type: ignore
+                                                branch_first, visit_once, ignore_self))
 
     def list_traverse(self, *args: Any, **kwargs: Any) -> IterableList[IndexObjUnion]:
         """
@@ -331,7 +331,7 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
             traverse()
             Tree -> IterableList[Union['Submodule', 'Tree', 'Blob']]
         """
-        return super(Tree, self).list_traverse(* args, **kwargs)
+        return super(Tree, self)._list_traverse(* args, **kwargs)
 
     # List protocol
 

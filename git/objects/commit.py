@@ -41,10 +41,11 @@ import logging
 
 from typing import Any, IO, Iterator, List, Sequence, Tuple, Union, TYPE_CHECKING
 
-from git.types import PathLike, TypeGuard
+from git.types import PathLike, TypeGuard, Literal
 
 if TYPE_CHECKING:
     from git.repo import Repo
+    from git.refs import SymbolicReference
 
 # ------------------------------------------------------------------------
 
@@ -73,14 +74,14 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
     default_encoding = "UTF-8"
 
     # object configuration
-    type = "commit"
+    type: Literal['commit'] = "commit"
     __slots__ = ("tree",
                  "author", "authored_date", "author_tz_offset",
                  "committer", "committed_date", "committer_tz_offset",
                  "message", "parents", "encoding", "gpgsig")
     _id_attribute_ = "hexsha"
 
-    def __init__(self, repo: 'Repo', binsha: bytes, tree: Union['Tree', None] = None,
+    def __init__(self, repo: 'Repo', binsha: bytes, tree: Union[Tree, None] = None,
                  author: Union[Actor, None] = None,
                  authored_date: Union[int, None] = None,
                  author_tz_offset: Union[None, float] = None,
@@ -201,11 +202,11 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         # END handle attrs
 
     @property
-    def authored_datetime(self) -> 'datetime.datetime':
+    def authored_datetime(self) -> datetime.datetime:
         return from_timestamp(self.authored_date, self.author_tz_offset)
 
     @property
-    def committed_datetime(self) -> 'datetime.datetime':
+    def committed_datetime(self) -> datetime.datetime:
         return from_timestamp(self.committed_date, self.committer_tz_offset)
 
     @property
@@ -242,7 +243,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         return self.repo.git.name_rev(self)
 
     @classmethod
-    def iter_items(cls, repo: 'Repo', rev: str,                                          # type: ignore
+    def iter_items(cls, repo: 'Repo', rev: Union[str, 'Commit', 'SymbolicReference'],        # type: ignore
                    paths: Union[PathLike, Sequence[PathLike]] = '', **kwargs: Any
                    ) -> Iterator['Commit']:
         """Find all commits matching the given criteria.
@@ -354,7 +355,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
             finalize_process(proc_or_stream)
 
     @ classmethod
-    def create_from_tree(cls, repo: 'Repo', tree: Union['Tree', str], message: str,
+    def create_from_tree(cls, repo: 'Repo', tree: Union[Tree, str], message: str,
                          parent_commits: Union[None, List['Commit']] = None, head: bool = False,
                          author: Union[None, Actor] = None, committer: Union[None, Actor] = None,
                          author_date: Union[None, str] = None, commit_date: Union[None, str] = None):
@@ -516,8 +517,10 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         return self
 
     def _deserialize(self, stream: BytesIO) -> 'Commit':
-        """:param from_rev_list: if true, the stream format is coming from the rev-list command
-        Otherwise it is assumed to be a plain data stream from our object"""
+        """
+        :param from_rev_list: if true, the stream format is coming from the rev-list command
+            Otherwise it is assumed to be a plain data stream from our object
+        """
         readline = stream.readline
         self.tree = Tree(self.repo, hex_to_bin(readline().split()[1]), Tree.tree_id << 12, '')
 

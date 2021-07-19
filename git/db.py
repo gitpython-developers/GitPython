@@ -17,7 +17,7 @@ from git.types import PathLike
 
 if TYPE_CHECKING:
     from git.cmd import Git
-    
+
 
 # --------------------------------------------------------
 

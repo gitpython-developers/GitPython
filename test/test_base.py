@@ -9,7 +9,7 @@ import sys
 import tempfile
 from unittest import SkipTest, skipIf
 
-from git import (
+from git.objects import (
     Blob,
     Tree,
     Commit,
@@ -18,17 +18,17 @@ from git import (
 from git.compat import is_win
 from git.objects.util import get_object_type_by_name
 from test.lib import (
-    TestBase,
+    TestBase as _TestBase,
     with_rw_repo,
     with_rw_and_rw_remote_repo
 )
-from git.util import hex_to_bin
+from git.util import hex_to_bin, HIDE_WINDOWS_FREEZE_ERRORS
 
 import git.objects.base as base
 import os.path as osp
 
 
-class TestBase(TestBase):
+class TestBase(_TestBase):
 
     def tearDown(self):
         import gc
@@ -111,15 +111,13 @@ class TestBase(TestBase):
         assert not rw_repo.config_reader("repository").getboolean("core", "bare")
         assert osp.isdir(osp.join(rw_repo.working_tree_dir, 'lib'))
 
-    #@skipIf(HIDE_WINDOWS_FREEZE_ERRORS, "FIXME: Freezes!  sometimes...")
+    @skipIf(HIDE_WINDOWS_FREEZE_ERRORS, "FIXME: Freezes!  sometimes...")
     @with_rw_and_rw_remote_repo('0.1.6')
     def test_with_rw_remote_and_rw_repo(self, rw_repo, rw_remote_repo):
         assert not rw_repo.config_reader("repository").getboolean("core", "bare")
         assert rw_remote_repo.config_reader("repository").getboolean("core", "bare")
         assert osp.isdir(osp.join(rw_repo.working_tree_dir, 'lib'))
 
-    @skipIf(sys.version_info < (3,) and is_win,
-            "Unicode woes, see https://github.com/gitpython-developers/GitPython/pull/519")
     @with_rw_repo('0.1.6')
     def test_add_unicode(self, rw_repo):
         filename = "שלום.txt"

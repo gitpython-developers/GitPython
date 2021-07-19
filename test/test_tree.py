@@ -5,7 +5,6 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
 from io import BytesIO
-import sys
 from unittest import skipIf
 
 from git.objects import (
@@ -20,7 +19,7 @@ import os.path as osp
 
 class TestTree(TestBase):
 
-    @skipIf(HIDE_WINDOWS_KNOWN_ERRORS and sys.version_info[:2] == (3, 5), """
+    @skipIf(HIDE_WINDOWS_KNOWN_ERRORS, """
         File "C:\\projects\\gitpython\\git\\cmd.py", line 559, in execute
         raise GitCommandNotFound(command, err)
         git.exc.GitCommandNotFound: Cmd('git') not found due to: OSError('[WinError 6] The handle is invalid')
@@ -53,7 +52,7 @@ class TestTree(TestBase):
             testtree._deserialize(stream)
         # END for each item in tree
 
-    @skipIf(HIDE_WINDOWS_KNOWN_ERRORS and sys.version_info[:2] == (3, 5), """
+    @skipIf(HIDE_WINDOWS_KNOWN_ERRORS, """
         File "C:\\projects\\gitpython\\git\\cmd.py", line 559, in execute
         raise GitCommandNotFound(command, err)
         git.exc.GitCommandNotFound: Cmd('git') not found due to: OSError('[WinError 6] The handle is invalid')

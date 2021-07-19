@@ -4,8 +4,6 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
-from __future__ import print_function
-
 from datetime import datetime
 from io import BytesIO
 import re
@@ -265,7 +263,7 @@ class TestCommit(TestCommitSerialization):
     @with_rw_directory
     def test_ambiguous_arg_iteration(self, rw_dir):
         rw_repo = Repo.init(osp.join(rw_dir, 'test_ambiguous_arg'))
-        path = osp.join(rw_repo.working_tree_dir, 'master')
+        path = osp.join(str(rw_repo.working_tree_dir), 'master')
         touch(path)
         rw_repo.index.add([path])
         rw_repo.index.commit('initial commit')

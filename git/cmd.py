@@ -15,7 +15,6 @@ from subprocess import (
     PIPE
 )
 import subprocess
-import sys
 import threading
 from textwrap import dedent
 
@@ -539,7 +538,7 @@ class Git(LazyMixin):
             return self
 
         def __next__(self) -> bytes:
-            return self.next()
+            return next(self)
 
         def next(self) -> bytes:
             line = self.readline()
@@ -566,11 +565,11 @@ class Git(LazyMixin):
            .git directory in case of bare repositories."""
         super(Git, self).__init__()
         self._working_dir = expand_path(working_dir)
-        self._git_options = ()  # type: Union[List[str], Tuple[str, ...]]
-        self._persistent_git_options = []  # type: List[str]
+        self._git_options: Union[List[str], Tuple[str, ...]] = ()
+        self._persistent_git_options: List[str] = []
 
         # Extra environment variables to pass to git commands
-        self._environment = {}  # type: Dict[str, str]
+        self._environment: Dict[str, str] = {}
 
         # cached command slots
         self.cat_file_header = None
@@ -604,19 +603,19 @@ class Git(LazyMixin):
             process_version = self._call_process('version')  # should be as default *args and **kwargs used
             version_numbers = process_version.split(' ')[2]
 
-            self._version_info = tuple(
-                int(n) for n in version_numbers.split('.')[:4] if n.isdigit()
-            )  # type: Tuple[int, int, int, int]  # type: ignore
+            self._version_info = cast(Tuple[int, int, int, int],
+                                      tuple(int(n) for n in version_numbers.split('.')[:4] if n.isdigit())
+                                      )
         else:
             super(Git, self)._set_cache_(attr)
         # END handle version info
 
-    @property
+    @ property
     def working_dir(self) -> Union[None, PathLike]:
         """:return: Git directory we are working on"""
         return self._working_dir
 
-    @property
+    @ property
     def version_info(self) -> Tuple[int, int, int, int]:
         """
         :return: tuple(int, int, int, int) tuple with integers representing the major, minor
@@ -624,7 +623,7 @@ class Git(LazyMixin):
             This value is generated on demand and is cached"""
         return self._version_info
 
-    @overload
+    @ overload
     def execute(self,
                 command: Union[str, Sequence[Any]],
                 *,
@@ -632,7 +631,7 @@ class Git(LazyMixin):
                 ) -> 'AutoInterrupt':
         ...
 
-    @overload
+    @ overload
     def execute(self,
                 command: Union[str, Sequence[Any]],
                 *,
@@ -641,7 +640,7 @@ class Git(LazyMixin):
                 ) -> Union[str, Tuple[int, str, str]]:
         ...
 
-    @overload
+    @ overload
     def execute(self,
                 command: Union[str, Sequence[Any]],
                 *,
@@ -650,7 +649,7 @@ class Git(LazyMixin):
                 ) -> Union[bytes, Tuple[int, bytes, str]]:
         ...
 
-    @overload
+    @ overload
     def execute(self,
                 command: Union[str, Sequence[Any]],
                 *,
@@ -660,7 +659,7 @@ class Git(LazyMixin):
                 ) -> str:
         ...
 
-    @overload
+    @ overload
     def execute(self,
                 command: Union[str, Sequence[Any]],
                 *,
@@ -799,10 +798,7 @@ class Git(LazyMixin):
             if kill_after_timeout:
                 raise GitCommandError(redacted_command, '"kill_after_timeout" feature is not supported on Windows.')
         else:
-            if sys.version_info[0] > 2:
-                cmd_not_found_exception = FileNotFoundError  # NOQA # exists, flake8 unknown @UndefinedVariable
-            else:
-                cmd_not_found_exception = OSError
+            cmd_not_found_exception = FileNotFoundError  # NOQA # exists, flake8 unknown @UndefinedVariable
         # end handle
 
         stdout_sink = (PIPE
@@ -872,8 +868,8 @@ class Git(LazyMixin):
 
         # Wait for the process to return
         status = 0
-        stdout_value = b''  # type: Union[str, bytes]
-        stderr_value = b''  # type: Union[str, bytes]
+        stdout_value: Union[str, bytes] = b''
+        stderr_value: Union[str, bytes] = b''
         newline = "\n" if universal_newlines else b"\n"
         try:
             if output_stream is None:
@@ -1070,8 +1066,8 @@ class Git(LazyMixin):
             It contains key-values for the following:
             - the :meth:`execute()` kwds, as listed in :var:`execute_kwargs`;
             - "command options" to be converted by :meth:`transform_kwargs()`;
-            - the `'insert_kwargs_after'` key which its value must match one of ``*args``,
-              and any cmd-options will be appended after the matched arg.
+            - the `'insert_kwargs_after'` key which its value must match one of ``*args``
+            and any cmd-options will be appended after the matched arg.
 
         Examples::
 
@@ -1149,7 +1145,7 @@ class Git(LazyMixin):
         # required for command to separate refs on stdin, as bytes
         if isinstance(ref, bytes):
             # Assume 40 bytes hexsha - bin-to-ascii for some reason returns bytes, not text
-            refstr = ref.decode('ascii')  # type: str
+            refstr: str = ref.decode('ascii')
         elif not isinstance(ref, str):
             refstr = str(ref)               # could be ref-object
         else:

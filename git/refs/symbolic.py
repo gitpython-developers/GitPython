@@ -21,6 +21,19 @@ import os.path as osp
 
 from .log import RefLog
 
+# typing ------------------------------------------------------------------
+
+from typing import Any, Iterator, List, Match, Optional, Tuple, Type, TypeVar, Union, TYPE_CHECKING  # NOQA
+from git.types import Commit_ish, PathLike, TBD, Literal, TypeGuard                                               # NOQA
+
+if TYPE_CHECKING:
+    from git.repo import Repo
+
+T_References = TypeVar('T_References', bound='SymbolicReference')
+
+# ------------------------------------------------------------------------------
+
+
 __all__ = ["SymbolicReference"]
 
 
@@ -46,11 +59,11 @@ class SymbolicReference(object):
     _remote_common_path_default = "refs/remotes"
     _id_attribute_ = "name"
 
-    def __init__(self, repo, path, check_path=None):
+    def __init__(self, repo: 'Repo', path: PathLike, check_path: bool = False):
         self.repo = repo
-        self.path = path
+        self.path = str(path)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.path
 
     def __repr__(self):
@@ -115,8 +128,8 @@ class SymbolicReference(object):
 
                     yield tuple(line.split(' ', 1))
                 # END for each line
-        except (OSError, IOError):
-            return
+        except OSError:
+            return None
         # END no packed-refs file handling
         # NOTE: Had try-finally block around here to close the fp,
         # but some python version wouldn't allow yields within that.
@@ -149,7 +162,7 @@ class SymbolicReference(object):
             # 60b64ef992065e2600bfef6187a97f92398a9144                branch 'master' of git-server:/path/to/repo
             tokens = value.split()
             assert(len(tokens) != 0)
-        except (OSError, IOError):
+        except OSError:
             # Probably we are just packed, find our entry in the packed refs file
             # NOTE: We are not a symbolic ref if we are in a packed file, as these
             # are excluded explicitly
@@ -205,7 +218,7 @@ class SymbolicReference(object):
         # END handle type
         return obj
 
-    def set_commit(self, commit, logmsg=None):
+    def set_commit(self, commit: Union[Commit, 'SymbolicReference', str], logmsg=None):
         """As set_object, but restricts the type of object to be a Commit
 
         :raise ValueError: If commit is not a Commit object or doesn't point to
@@ -344,7 +357,7 @@ class SymbolicReference(object):
 
     # aliased reference
     reference = property(_get_reference, set_reference, doc="Returns the Reference we point to")
-    ref = reference
+    ref: Union[Commit_ish] = reference     # type: ignore  # Union[str, Commit_ish, SymbolicReference]
 
     def is_valid(self):
         """
@@ -471,7 +484,7 @@ class SymbolicReference(object):
                     with open(pack_file_path, 'wb') as fd:
                         fd.writelines(line.encode(defenc) for line in new_lines)
 
-            except (OSError, IOError):
+            except OSError:
                 pass  # it didn't exist at all
 
         # delete the reflog
@@ -514,8 +527,9 @@ class SymbolicReference(object):
         return ref
 
     @classmethod
-    def create(cls, repo, path, reference='HEAD', force=False, logmsg=None, **kwargs):
-        """Create a new symbolic reference, hence a reference pointing to another reference.
+    def create(cls, repo: 'Repo', path: PathLike, reference: Union[Commit_ish, str] = 'HEAD',
+               logmsg: Union[str, None] = None, force: bool = False, **kwargs: Any):
+        """Create a new symbolic reference, hence a reference pointing , to another reference.
 
         :param repo:
             Repository to create the reference in
@@ -591,7 +605,8 @@ class SymbolicReference(object):
         return self
 
     @classmethod
-    def _iter_items(cls, repo, common_path=None):
+    def _iter_items(cls: Type[T_References], repo: 'Repo', common_path: Union[PathLike, None] = None
+                    ) -> Iterator[T_References]:
         if common_path is None:
             common_path = cls._common_path_default
         rela_paths = set()
@@ -629,7 +644,8 @@ class SymbolicReference(object):
         # END for each sorted relative refpath
 
     @classmethod
-    def iter_items(cls, repo, common_path=None):
+    # type: ignore[override]
+    def iter_items(cls, repo: 'Repo', common_path: Union[PathLike, None] = None, *args, **kwargs):
         """Find all refs in the repository
 
         :param repo: is the Repo
