@@ -1,7 +1,0 @@
-[run]
-source = git
-
-; to make nosetests happy
-[report]
-include = */git/*
-omit = */git/ext/*

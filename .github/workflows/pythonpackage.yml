@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8, 3.9, "3.10.0-beta.3"]
+        python-version: [3.6, 3.7, 3.8, 3.9, "3.10.0-beta.4"]
 
     steps:
     - uses: actions/checkout@v2
@@ -46,22 +46,17 @@ jobs:
     - name: Lint with flake8
       run: |
         set -x
-        pip install flake8
-        # stop the build if there are Python syntax errors or undefined names
-        flake8 --ignore=W293,E265,E266,W503,W504,E704,E731 --count  --show-source --statistics
+        flake8
 
     - name: Check types with mypy
       run: |
         set -x
-        pip install mypy
         mypy -p git
 
     - name: Test with pytest
       run: |
         set -x
-        pip install -r requirements-dev.txt
-        pytest --cov --cov-report=term
-        # pytest settings in tox.ini[pytest]
+        pytest
       continue-on-error: false
 
     - name: Documentation
