@@ -167,7 +167,7 @@ def traverse_trees_recursive(odb: 'GitCmdObjectDB', tree_shas: Sequence[Union[by
             data: List[EntryTupOrNone] = []
         else:
             # make new list for typing as list invariant
-            data = [x for x in tree_entries_from_data(odb.stream(tree_sha).read())]
+            data = list(tree_entries_from_data(odb.stream(tree_sha).read()))
         # END handle muted trees
         trees_data.append(data)
     # END for each sha to get data for

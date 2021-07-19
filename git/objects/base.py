@@ -15,9 +15,9 @@ from .util import get_object_type_by_name
 
 # typing ------------------------------------------------------------------
 
-from typing import Any, TYPE_CHECKING, Optional, Union
+from typing import Any, TYPE_CHECKING, Union
 
-from git.types import PathLike, Commit_ish
+from git.types import PathLike, Commit_ish, Lit_commit_ish
 
 if TYPE_CHECKING:
     from git.repo import Repo
@@ -44,7 +44,7 @@ class Object(LazyMixin):
 
     TYPES = (dbtyp.str_blob_type, dbtyp.str_tree_type, dbtyp.str_commit_type, dbtyp.str_tag_type)
     __slots__ = ("repo", "binsha", "size")
-    type = None  # type: Optional[str] # to be set by subclass
+    type: Union[Lit_commit_ish, None] = None
 
     def __init__(self, repo: 'Repo', binsha: bytes):
         """Initialize an object by identifying it by its binary sha.

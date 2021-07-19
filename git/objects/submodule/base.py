@@ -52,7 +52,7 @@ from .util import (
 from typing import Callable, Dict, Mapping, Sequence, TYPE_CHECKING, cast
 from typing import Any, Iterator, Union
 
-from git.types import Commit_ish, PathLike, TBD
+from git.types import Commit_ish, Literal, PathLike, TBD
 
 if TYPE_CHECKING:
     from git.index import IndexFile
@@ -105,7 +105,7 @@ class Submodule(IndexObject, TraversableIterableObj):
     k_default_mode = stat.S_IFDIR | stat.S_IFLNK        # submodules are directories with link-status
 
     # this is a bogus type for base class compatibility
-    type = 'submodule'
+    type: Literal['submodule'] = 'submodule'  # type: ignore
 
     __slots__ = ('_parent_commit', '_url', '_branch_path', '_name', '__weakref__')
     _cache_attrs = ('path', '_url', '_branch_path')

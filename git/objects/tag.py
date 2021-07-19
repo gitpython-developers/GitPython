@@ -11,6 +11,8 @@ from ..compat import defenc
 
 from typing import List, TYPE_CHECKING, Union
 
+from git.types import Literal
+
 if TYPE_CHECKING:
     from git.repo import Repo
     from git.util import Actor
@@ -24,7 +26,7 @@ __all__ = ("TagObject", )
 class TagObject(base.Object):
 
     """Non-Lightweight tag carrying additional information about an object we are pointing to."""
-    type = "tag"
+    type: Literal['tag'] = "tag"
     __slots__ = ("object", "tag", "tagger", "tagged_date", "tagger_tz_offset", "message")
 
     def __init__(self, repo: 'Repo', binsha: bytes,
