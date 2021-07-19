@@ -18,7 +18,6 @@ from git import (
     Repo,
     cmd
 )
-from git.compat import is_darwin
 from test.lib import (
     TestBase,
     fixture_path
@@ -248,11 +247,7 @@ class TestGit(TestBase):
             try:
                 remote.fetch()
             except GitCommandError as err:
-                if sys.version_info[0] < 3 and is_darwin:
-                    self.assertIn('ssh-orig', str(err))
-                    self.assertEqual(err.status, 128)
-                else:
-                    self.assertIn('FOO', str(err))
+                self.assertIn('FOO', str(err))
 
     def test_handle_process_output(self):
         from git.cmd import handle_process_output

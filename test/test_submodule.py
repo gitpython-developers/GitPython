@@ -3,7 +3,6 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 import os
 import shutil
-import sys
 from unittest import skipIf
 
 import git
@@ -421,7 +420,7 @@ class TestSubmodule(TestBase):
     def test_base_bare(self, rwrepo):
         self._do_base_tests(rwrepo)
 
-    @skipIf(HIDE_WINDOWS_KNOWN_ERRORS and sys.version_info[:2] == (3, 5), """
+    @skipIf(HIDE_WINDOWS_KNOWN_ERRORS, """
         File "C:\\projects\\gitpython\\git\\cmd.py", line 559, in execute
         raise GitCommandNotFound(command, err)
         git.exc.GitCommandNotFound: Cmd('git') not found due to: OSError('[WinError 6] The handle is invalid')
