@@ -5,6 +5,8 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 """Module for general utility functions"""
 
+from abc import abstractmethod
+import warnings
 from git.util import (
     IterableList,
     IterableObj,
@@ -23,7 +25,7 @@ from datetime import datetime, timedelta, tzinfo
 from typing import (Any, Callable, Deque, Iterator, NamedTuple, overload, Sequence,
                     TYPE_CHECKING, Tuple, Type, TypeVar, Union, cast)
 
-from git.types import Has_id_attribute, Literal
+from git.types import Has_id_attribute, Literal, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
     from io import BytesIO, StringIO
@@ -289,7 +291,8 @@ class ProcessStreamAdapter(object):
         return getattr(self._stream, attr)
 
 
-class Traversable(object):
+@runtime_checkable
+class Traversable(Protocol):
 
     """Simple interface to perform depth-first or breadth-first traversals
     into one direction.
@@ -301,6 +304,7 @@ class Traversable(object):
     __slots__ = ()
 
     @classmethod
+    @abstractmethod
     def _get_intermediate_items(cls, item) -> Sequence['Traversable']:
         """
         Returns:
@@ -313,7 +317,18 @@ class Traversable(object):
         """
         raise NotImplementedError("To be implemented in subclass")
 
-    def list_traverse(self, *args: Any, **kwargs: Any) -> IterableList[Union['Commit', 'Submodule', 'Tree', 'Blob']]:
+    @abstractmethod
+    def list_traverse(self, *args: Any, **kwargs: Any) -> Any:
+        """ """
+        warnings.warn("list_traverse() method should only be called from subclasses."
+                      "Calling from Traversable abstract class will raise NotImplementedError in 3.1.20"
+                      "Builtin sublclasses are 'Submodule', 'Tree' and 'Commit",
+                      DeprecationWarning,
+                      stacklevel=2)
+        return self._list_traverse(*args, **kwargs)
+
+    def _list_traverse(self, as_edge=False, *args: Any, **kwargs: Any
+                       ) -> IterableList[Union['Commit', 'Submodule', 'Tree', 'Blob']]:
         """
         :return: IterableList with the results of the traversal as produced by
             traverse()
@@ -329,22 +344,34 @@ class Traversable(object):
             id = ""     # shouldn't reach here, unless Traversable subclass created with no _id_attribute_
             # could add _id_attribute_ to Traversable, or make all Traversable also Iterable?
 
-        out: IterableList[Union['Commit', 'Submodule', 'Tree', 'Blob']] = IterableList(id)
-        # overloads in subclasses (mypy does't allow typing self: subclass)
-        # Union[IterableList['Commit'], IterableList['Submodule'], IterableList[Union['Submodule', 'Tree', 'Blob']]]
+        if not as_edge:
+            out: IterableList[Union['Commit', 'Submodule', 'Tree', 'Blob']] = IterableList(id)
+            out.extend(self.traverse(as_edge=as_edge, *args, **kwargs))  # type: ignore
+            return out
+            # overloads in subclasses (mypy does't allow typing self: subclass)
+            # Union[IterableList['Commit'], IterableList['Submodule'], IterableList[Union['Submodule', 'Tree', 'Blob']]]
+        else:
+            # Raise deprecationwarning, doesn't make sense to use this
+            out_list: IterableList = IterableList(self.traverse(*args, **kwargs))
+            return out_list
 
-        # NOTE: if is_edge=True, self.traverse returns a Tuple, so should be prevented or flattened?
-        kwargs['as_edge'] = False
-        out.extend(self.traverse(*args, **kwargs))  # type: ignore
-        return out
+    @ abstractmethod
+    def traverse(self, *args: Any, **kwargs) -> Any:
+        """ """
+        warnings.warn("traverse() method should only be called from subclasses."
+                      "Calling from Traversable abstract class will raise NotImplementedError in 3.1.20"
+                      "Builtin sublclasses are 'Submodule', 'Tree' and 'Commit",
+                      DeprecationWarning,
+                      stacklevel=2)
+        return self._traverse(*args, **kwargs)
 
-    def traverse(self,
-                 predicate: Callable[[Union['Traversable', 'Blob', TraversedTup], int], bool] = lambda i, d: True,
-                 prune: Callable[[Union['Traversable', 'Blob', TraversedTup], int], bool] = lambda i, d: False,
-                 depth: int = -1, branch_first: bool = True, visit_once: bool = True,
-                 ignore_self: int = 1, as_edge: bool = False
-                 ) -> Union[Iterator[Union['Traversable', 'Blob']],
-                            Iterator[TraversedTup]]:
+    def _traverse(self,
+                  predicate: Callable[[Union['Traversable', 'Blob', TraversedTup], int], bool] = lambda i, d: True,
+                  prune: Callable[[Union['Traversable', 'Blob', TraversedTup], int], bool] = lambda i, d: False,
+                  depth: int = -1, branch_first: bool = True, visit_once: bool = True,
+                  ignore_self: int = 1, as_edge: bool = False
+                  ) -> Union[Iterator[Union['Traversable', 'Blob']],
+                             Iterator[TraversedTup]]:
         """:return: iterator yielding of items found when traversing self
         :param predicate: f(i,d) returns False if item i at depth d should not be included in the result
 
@@ -435,11 +462,13 @@ class Traversable(object):
         # END for each item on work stack
 
 
-class Serializable(object):
+@ runtime_checkable
+class Serializable(Protocol):
 
     """Defines methods to serialize and deserialize objects from and into a data stream"""
     __slots__ = ()
 
+    # @abstractmethod
     def _serialize(self, stream: 'BytesIO') -> 'Serializable':
         """Serialize the data of this object into the given data stream
         :note: a serialized object would ``_deserialize`` into the same object
@@ -447,6 +476,7 @@ class Serializable(object):
         :return: self"""
         raise NotImplementedError("To be implemented in subclass")
 
+    # @abstractmethod
     def _deserialize(self, stream: 'BytesIO') -> 'Serializable':
         """Deserialize all information regarding this object from the stream
         :param stream: a file-like object
@@ -454,13 +484,13 @@ class Serializable(object):
         raise NotImplementedError("To be implemented in subclass")
 
 
-class TraversableIterableObj(Traversable, IterableObj):
+class TraversableIterableObj(IterableObj, Traversable):
     __slots__ = ()
 
     TIobj_tuple = Tuple[Union[T_TIobj, None], T_TIobj]
 
-    def list_traverse(self: T_TIobj, *args: Any, **kwargs: Any) -> IterableList[T_TIobj]:  # type: ignore[override]
-        return super(TraversableIterableObj, self).list_traverse(* args, **kwargs)
+    def list_traverse(self: T_TIobj, *args: Any, **kwargs: Any) -> IterableList[T_TIobj]:
+        return super(TraversableIterableObj, self)._list_traverse(* args, **kwargs)
 
     @ overload                     # type: ignore
     def traverse(self: T_TIobj,
@@ -522,6 +552,6 @@ class TraversableIterableObj(Traversable, IterableObj):
         """
         return cast(Union[Iterator[T_TIobj],
                           Iterator[Tuple[Union[None, T_TIobj], T_TIobj]]],
-                    super(TraversableIterableObj, self).traverse(
+                    super(TraversableIterableObj, self)._traverse(
                         predicate, prune, depth, branch_first, visit_once, ignore_self, as_edge  # type: ignore
         ))
