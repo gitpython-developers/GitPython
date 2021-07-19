@@ -106,18 +106,20 @@ On *Windows*, make sure you have `git-daemon` in your PATH.  For MINGW-git, the 
 exists in `Git\mingw64\libexec\git-core\`; CYGWIN has no daemon, but should get along fine
 with MINGW's.
 
-The easiest way to run tests is by using [tox](https://pypi.python.org/pypi/tox)
-a wrapper around virtualenv. It will take care of setting up environments with the proper
-dependencies installed and execute test commands. To install it simply:
+Ensure testing libraries are installed. In the root directory, run: `pip install test-requirements.txt` 
+Then,
 
-    pip install tox
+To lint, run `flake8`
+To typecheck, run `mypy -p git` 
+To test, `pytest`
 
-Then run:
+Configuration for flake8 is in root/.flake8 file.
+Configuration for mypy, pytest, coverage is in root/pyproject.toml.
 
-    tox
+The same linting and testing will also be performed against different supported python versions 
+upon submitting a pull request (or on each push if you have a fork with a "main" branch).
 
 
-For more fine-grained control, you can use `unittest`.
 
 ### Contributions
 
