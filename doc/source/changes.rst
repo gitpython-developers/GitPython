@@ -2,6 +2,15 @@
 Changelog
 =========
 
+3.1.19
+======
+
+* This is the second typed release with a lot of improvements under the hood. 
+  * Tracking issue: https://github.com/gitpython-developers/GitPython/issues/1095
+  
+See the following for details:
+https://github.com/gitpython-developers/gitpython/milestone/51?closed=1 
+
 3.1.18
 ======
 
