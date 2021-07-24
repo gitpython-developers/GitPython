@@ -1,11 +1,4 @@
-#!/usr/bin/env python
-try:
-    from setuptools import setup, find_packages
-except ImportError:
-    from ez_setup import use_setuptools  # type: ignore[Pylance]
-    use_setuptools()
-    from setuptools import setup, find_packages
-
+from setuptools import setup, find_packages
 from setuptools.command.build_py import build_py as _build_py
 from setuptools.command.sdist import sdist as _sdist
 import fnmatch
