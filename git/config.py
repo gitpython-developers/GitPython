@@ -7,7 +7,6 @@
 configuration files"""
 
 import abc
-from typing import OrderedDict
 from functools import wraps
 import inspect
 from io import BufferedReader, IOBase
@@ -34,7 +33,7 @@ import configparser as cp
 from typing import (Any, Callable, Generic, IO, List, Dict, Sequence,
                     TYPE_CHECKING, Tuple, TypeVar, Union, cast, overload)
 
-from git.types import Lit_config_levels, ConfigLevels_Tup, PathLike, TBD, assert_never, _T
+from git.types import Lit_config_levels, ConfigLevels_Tup, OrderedDict, PathLike, TBD, assert_never, _T
 
 if TYPE_CHECKING:
     from git.repo.base import Repo
