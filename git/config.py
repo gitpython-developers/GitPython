@@ -6,6 +6,7 @@
 """Module containing module parser implementation able to properly read and write
 configuration files"""
 
+import sys
 import abc
 from functools import wraps
 import inspect
@@ -33,13 +34,21 @@ import configparser as cp
 from typing import (Any, Callable, Generic, IO, List, Dict, Sequence,
                     TYPE_CHECKING, Tuple, TypeVar, Union, cast, overload)
 
-from git.types import Lit_config_levels, ConfigLevels_Tup, OrderedDict, PathLike, TBD, assert_never, _T
+from git.types import Lit_config_levels, ConfigLevels_Tup, PathLike, TBD, assert_never, _T
 
 if TYPE_CHECKING:
     from git.repo.base import Repo
     from io import BytesIO
 
 T_ConfigParser = TypeVar('T_ConfigParser', bound='GitConfigParser')
+
+if sys.version_info[:2] < (3, 7):
+    from collections import OrderedDict
+    OrderedDict_OMD = OrderedDict
+else:
+    from typing import OrderedDict
+    OrderedDict_OMD = OrderedDict[str, List[_T]]
+
 # -------------------------------------------------------------
 
 __all__ = ('GitConfigParser', 'SectionConstraint')
@@ -164,7 +173,7 @@ class SectionConstraint(Generic[T_ConfigParser]):
         self._config.__exit__(exception_type, exception_value, traceback)
 
 
-class _OMD(OrderedDict[str, List[_T]]):
+class _OMD(OrderedDict_OMD):
     """Ordered multi-dict."""
 
     def __setitem__(self, key: str, value: _T) -> None:  # type: ignore[override]
@@ -617,6 +626,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser)):  #
 
         if self._defaults:
             write_section(cp.DEFAULTSECT, self._defaults)
+        value: TBD
         for name, value in self._sections.items():
             write_section(name, value)
 

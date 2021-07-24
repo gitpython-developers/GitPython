@@ -8,10 +8,10 @@ from typing import (Callable, Dict, NoReturn, Sequence, Tuple, Union, Any, Itera
                     NamedTuple, TYPE_CHECKING, TypeVar)       # noqa: F401
 
 if sys.version_info[:2] >= (3, 8):
-    from typing import Final, Literal, SupportsIndex, TypedDict, Protocol, runtime_checkable, OrderedDict  # noqa: F401
+    from typing import Final, Literal, SupportsIndex, TypedDict, Protocol, runtime_checkable  # noqa: F401
 else:
     from typing_extensions import (Final, Literal, SupportsIndex,                           # noqa: F401
-                                   TypedDict, Protocol, runtime_checkable, OrderedDict)  # noqa: F401
+                                   TypedDict, Protocol, runtime_checkable)  # noqa: F401
 
 # if sys.version_info[:2] >= (3, 10):
 #     from typing import TypeGuard  # noqa: F401
