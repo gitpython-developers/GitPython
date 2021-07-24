@@ -97,3 +97,19 @@ def win_encode(s: Optional[AnyStr]) -> Optional[bytes]:
     elif s is not None:
         raise TypeError('Expected bytes or text, but got %r' % (s,))
     return None
+
+
+# type: ignore ## mypy cannot understand dynamic class creation
+def with_metaclass(meta: Type[Any], *bases: Any) -> TBD:
+    """copied from https://github.com/Byron/bcore/blob/master/src/python/butility/future.py#L15"""
+
+    class metaclass(meta):  # type: ignore
+        __call__ = type.__call__
+        __init__ = type.__init__    # type: ignore
+
+        def __new__(cls, name: str, nbases: Optional[Tuple[int, ...]], d: Dict[str, Any]) -> TBD:
+            if nbases is None:
+                return type.__new__(cls, name, (), d)
+            return meta(name, bases, d)
+
+    return metaclass(meta.__name__ + 'Helper', None, {})  # type: ignore

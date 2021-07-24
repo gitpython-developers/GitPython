@@ -19,6 +19,7 @@ from git.compat import (
     defenc,
     force_text,
     is_win,
+    with_metaclass,
 )
 
 from git.util import LockFile
@@ -228,7 +229,7 @@ def get_config_path(config_level: Lit_config_levels) -> str:
         assert_never(config_level, ValueError(f"Invalid configuration level: {config_level!r}"))
 
 
-class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
+class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser)):  # type: ignore ## mypy does not understand dynamic class creation # noqa: E501
 
     """Implements specifics required to read git style configuration files.
 
