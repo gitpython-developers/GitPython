@@ -82,7 +82,8 @@ class BaseIndexEntry(BaseIndexEntryHelper):
 
     As the first 4 data members match exactly to the IndexEntry type, methods
     expecting a BaseIndexEntry can also handle full IndexEntries even if they
-    use numeric indices for performance reasons. """
+    use numeric indices for performance reasons.
+    """
 
     def __new__(cls, inp_tuple: Union[Tuple[int, bytes, int, PathLike],
                                       Tuple[int, bytes, int, PathLike, bytes, bytes, int, int, int, int, int]]

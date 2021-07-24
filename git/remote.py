@@ -23,6 +23,7 @@ from git.util import (
 )
 
 from .config import (
+    GitConfigParser,
     SectionConstraint,
     cp,
 )
@@ -911,7 +912,7 @@ class Remote(LazyMixin, IterableObj):
         return self._get_push_info(proc, progress)
 
     @ property
-    def config_reader(self) -> SectionConstraint:
+    def config_reader(self) -> SectionConstraint[GitConfigParser]:
         """
         :return:
             GitConfigParser compatible object able to read options for only our remote.

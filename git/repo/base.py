@@ -482,7 +482,8 @@ class Repo(object):
 
         raise ValueError("Invalid configuration level: %r" % config_level)
 
-    def config_reader(self, config_level: Optional[Lit_config_levels] = None) -> GitConfigParser:
+    def config_reader(self, config_level: Optional[Lit_config_levels] = None
+                      ) -> GitConfigParser:
         """
         :return:
             GitConfigParser allowing to read the full git configuration, but not to write it
@@ -504,7 +505,8 @@ class Repo(object):
             files = [self._get_config_path(config_level)]
         return GitConfigParser(files, read_only=True, repo=self)
 
-    def config_writer(self, config_level: Lit_config_levels = "repository") -> GitConfigParser:
+    def config_writer(self, config_level: Lit_config_levels = "repository"
+                      ) -> GitConfigParser:
         """
         :return:
             GitConfigParser allowing to write values of the specified configuration file level.
