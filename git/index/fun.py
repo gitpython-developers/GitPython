@@ -53,7 +53,7 @@ from .util import (
 
 from typing import (Dict, IO, List, Sequence, TYPE_CHECKING, Tuple, Type, Union, cast)
 
-from git.types import PathLike, TypeGuard
+from git.types import PathLike
 
 if TYPE_CHECKING:
     from .base import IndexFile
@@ -188,15 +188,16 @@ def entry_key(*entry: Union[BaseIndexEntry, PathLike, int]) -> Tuple[PathLike, i
     """:return: Key suitable to be used for the index.entries dictionary
     :param entry: One instance of type BaseIndexEntry or the path and the stage"""
 
-    def is_entry_key_tup(entry_key: Tuple) -> TypeGuard[Tuple[PathLike, int]]:
-        return isinstance(entry_key, tuple) and len(entry_key) == 2
+    # def is_entry_key_tup(entry_key: Tuple) -> TypeGuard[Tuple[PathLike, int]]:
+    #     return isinstance(entry_key, tuple) and len(entry_key) == 2
 
     if len(entry) == 1:
         entry_first = entry[0]
         assert isinstance(entry_first, BaseIndexEntry)
         return (entry_first.path, entry_first.stage)
     else:
-        assert is_entry_key_tup(entry)
+        # assert is_entry_key_tup(entry)
+        entry = cast(Tuple[PathLike, int], entry)
         return entry
     # END handle entry
 
@@ -244,7 +245,7 @@ def read_cache(stream: IO[bytes]) -> Tuple[int, Dict[Tuple[PathLike, int], 'Inde
     content_sha = extension_data[-20:]
 
     # truncate the sha in the end as we will dynamically create it anyway
-    extension_data = extension_data[:-20]
+    extension_data = extension_data[: -20]
 
     return (version, entries, extension_data, content_sha)
 

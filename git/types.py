@@ -12,10 +12,10 @@ if sys.version_info[:2] >= (3, 8):
 else:
     from typing_extensions import Final, Literal, SupportsIndex, TypedDict, Protocol, runtime_checkable  # noqa: F401
 
-if sys.version_info[:2] >= (3, 10):
-    from typing import TypeGuard  # noqa: F401
-else:
-    from typing_extensions import TypeGuard  # noqa: F401
+# if sys.version_info[:2] >= (3, 10):
+#     from typing import TypeGuard  # noqa: F401
+# else:
+#     from typing_extensions import TypeGuard  # noqa: F401
 
 
 if sys.version_info[:2] < (3, 9):
@@ -41,9 +41,9 @@ Lit_commit_ish = Literal['commit', 'tag', 'blob', 'tree']
 Lit_config_levels = Literal['system', 'global', 'user', 'repository']
 
 
-def is_config_level(inp: str) -> TypeGuard[Lit_config_levels]:
-    # return inp in get_args(Lit_config_level)  # only py >= 3.8
-    return inp in ("system", "user", "global", "repository")
+# def is_config_level(inp: str) -> TypeGuard[Lit_config_levels]:
+#     # return inp in get_args(Lit_config_level)  # only py >= 3.8
+#     return inp in ("system", "user", "global", "repository")
 
 
 ConfigLevels_Tup = Tuple[Literal['system'], Literal['user'], Literal['global'], Literal['repository']]

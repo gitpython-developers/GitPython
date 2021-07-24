@@ -34,7 +34,7 @@ import configparser as cp
 from typing import (Any, Callable, IO, List, Dict, Sequence,
                     TYPE_CHECKING, Tuple, Union, cast, overload)
 
-from git.types import Lit_config_levels, ConfigLevels_Tup, PathLike, TBD, assert_never, is_config_level
+from git.types import Lit_config_levels, ConfigLevels_Tup, PathLike, TBD, assert_never
 
 if TYPE_CHECKING:
     from git.repo.base import Repo
@@ -309,9 +309,9 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser)):  #
         else:
             if config_level is None:
                 if read_only:
-                    self._file_or_files = [get_config_path(f)
+                    self._file_or_files = [get_config_path(cast(Lit_config_levels, f))
                                            for f in CONFIG_LEVELS
-                                           if is_config_level(f) and f != 'repository']
+                                           if f != 'repository']
                 else:
                     raise ValueError("No configuration level or configuration files specified")
             else:

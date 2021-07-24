@@ -8,7 +8,7 @@ from .symbolic import SymbolicReference, T_References
 # typing ------------------------------------------------------------------
 
 from typing import Any, Callable, Iterator, List, Match, Optional, Tuple, Type, TypeVar, Union, TYPE_CHECKING  # NOQA
-from git.types import Commit_ish, PathLike, TBD, Literal, TypeGuard, _T                                  # NOQA
+from git.types import Commit_ish, PathLike, TBD, Literal, _T                                  # NOQA
 
 if TYPE_CHECKING:
     from git.repo import Repo

@@ -24,7 +24,7 @@ from .fun import (
 from typing import (Any, Callable, Dict, Iterable, Iterator, List,
                     Tuple, Type, Union, cast, TYPE_CHECKING)
 
-from git.types import PathLike, TypeGuard, Literal
+from git.types import PathLike, Literal
 
 if TYPE_CHECKING:
     from git.repo import Repo
@@ -36,8 +36,8 @@ TraversedTreeTup = Union[Tuple[Union['Tree', None], IndexObjUnion,
                          Tuple['Submodule', 'Submodule']]]
 
 
-def is_tree_cache(inp: Tuple[bytes, int, str]) -> TypeGuard[TreeCacheTup]:
-    return isinstance(inp[0], bytes) and isinstance(inp[1], int) and isinstance([inp], str)
+# def is_tree_cache(inp: Tuple[bytes, int, str]) -> TypeGuard[TreeCacheTup]:
+#     return isinstance(inp[0], bytes) and isinstance(inp[1], int) and isinstance([inp], str)
 
 #--------------------------------------------------------
 

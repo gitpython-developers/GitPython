@@ -37,9 +37,9 @@ from .refs import (
 # typing-------------------------------------------------------
 
 from typing import (Any, Callable, Dict, Iterator, List, NoReturn, Optional, Sequence,  # NOQA[TC002]
-                    TYPE_CHECKING, Type, Union, overload)
+                    TYPE_CHECKING, Type, Union, cast, overload)
 
-from git.types import PathLike, Literal, TBD, TypeGuard, Commit_ish     # NOQA[TC002]
+from git.types import PathLike, Literal, TBD, Commit_ish     # NOQA[TC002]
 
 if TYPE_CHECKING:
     from git.repo.base import Repo
@@ -50,8 +50,8 @@ if TYPE_CHECKING:
 flagKeyLiteral = Literal[' ', '!', '+', '-', '*', '=', 't', '?']
 
 
-def is_flagKeyLiteral(inp: str) -> TypeGuard[flagKeyLiteral]:
-    return inp in [' ', '!', '+', '-', '=', '*', 't', '?']
+# def is_flagKeyLiteral(inp: str) -> TypeGuard[flagKeyLiteral]:
+#     return inp in [' ', '!', '+', '-', '=', '*', 't', '?']
 
 
 # -------------------------------------------------------------
@@ -342,8 +342,8 @@ class FetchInfo(IterableObj, object):
         # parse lines
         remote_local_ref_str: str
         control_character, operation, local_remote_ref, remote_local_ref_str, note = match.groups()
-        assert is_flagKeyLiteral(control_character), f"{control_character}"
-
+        # assert is_flagKeyLiteral(control_character), f"{control_character}"
+        control_character = cast(flagKeyLiteral, control_character)
         try:
             _new_hex_sha, _fetch_operation, fetch_note = fetch_line.split("\t")
             ref_type_name, fetch_note = fetch_note.split(' ', 1)
