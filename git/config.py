@@ -7,6 +7,7 @@
 configuration files"""
 
 import abc
+from typing import OrderedDict
 from functools import wraps
 import inspect
 from io import BufferedReader, IOBase
@@ -164,7 +165,7 @@ class SectionConstraint(Generic[T_ConfigParser]):
         self._config.__exit__(exception_type, exception_value, traceback)
 
 
-class _OMD(Dict[str, List[_T]]):
+class _OMD(OrderedDict[str, List[_T]]):
     """Ordered multi-dict."""
 
     def __setitem__(self, key: str, value: _T) -> None:  # type: ignore[override]
