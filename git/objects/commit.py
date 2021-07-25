@@ -39,9 +39,9 @@ import logging
 
 # typing ------------------------------------------------------------------
 
-from typing import Any, IO, Iterator, List, Sequence, Tuple, Union, TYPE_CHECKING
+from typing import Any, IO, Iterator, List, Sequence, Tuple, Union, TYPE_CHECKING, cast
 
-from git.types import PathLike, TypeGuard, Literal
+from git.types import PathLike, Literal
 
 if TYPE_CHECKING:
     from git.repo import Repo
@@ -323,16 +323,18 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         :param proc: git-rev-list process instance - one sha per line
         :return: iterator returning Commit objects"""
 
-        def is_proc(inp) -> TypeGuard[Popen]:
-            return hasattr(proc_or_stream, 'wait') and not hasattr(proc_or_stream, 'readline')
+        # def is_proc(inp) -> TypeGuard[Popen]:
+        #     return hasattr(proc_or_stream, 'wait') and not hasattr(proc_or_stream, 'readline')
 
-        def is_stream(inp) -> TypeGuard[IO]:
-            return hasattr(proc_or_stream, 'readline')
+        # def is_stream(inp) -> TypeGuard[IO]:
+        #     return hasattr(proc_or_stream, 'readline')
 
-        if is_proc(proc_or_stream):
+        if hasattr(proc_or_stream, 'wait'):
+            proc_or_stream = cast(Popen, proc_or_stream)
             if proc_or_stream.stdout is not None:
                 stream = proc_or_stream.stdout
-        elif is_stream(proc_or_stream):
+        elif hasattr(proc_or_stream, 'readline'):
+            proc_or_stream = cast(IO, proc_or_stream)
             stream = proc_or_stream
 
         readline = stream.readline
@@ -351,7 +353,8 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         # END for each line in stream
         # TODO: Review this - it seems process handling got a bit out of control
         # due to many developers trying to fix the open file handles issue
-        if is_proc(proc_or_stream):
+        if hasattr(proc_or_stream, 'wait'):
+            proc_or_stream = cast(Popen, proc_or_stream)
             finalize_process(proc_or_stream)
 
     @ classmethod

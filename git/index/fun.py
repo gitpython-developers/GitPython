@@ -53,10 +53,11 @@ from .util import (
 
 from typing import (Dict, IO, List, Sequence, TYPE_CHECKING, Tuple, Type, Union, cast)
 
-from git.types import PathLike, TypeGuard
+from git.types import PathLike
 
 if TYPE_CHECKING:
     from .base import IndexFile
+    from git.db import GitCmdObjectDB
     from git.objects.tree import TreeCacheTup
     # from git.objects.fun import EntryTupOrNone
 
@@ -149,15 +150,15 @@ def write_cache(entries: Sequence[Union[BaseIndexEntry, 'IndexEntry']], stream: 
     # body
     for entry in entries:
         beginoffset = tell()
-        write(entry[4])         # ctime
-        write(entry[5])         # mtime
-        path_str: str = entry[3]
+        write(entry.ctime_bytes)         # ctime
+        write(entry.mtime_bytes)         # mtime
+        path_str = str(entry.path)
         path: bytes = force_bytes(path_str, encoding=defenc)
         plen = len(path) & CE_NAMEMASK      # path length
-        assert plen == len(path), "Path %s too long to fit into index" % entry[3]
-        flags = plen | (entry[2] & CE_NAMEMASK_INV)     # clear possible previous values
-        write(pack(">LLLLLL20sH", entry[6], entry[7], entry[0],
-                   entry[8], entry[9], entry[10], entry[1], flags))
+        assert plen == len(path), "Path %s too long to fit into index" % entry.path
+        flags = plen | (entry.flags & CE_NAMEMASK_INV)     # clear possible previous values
+        write(pack(">LLLLLL20sH", entry.dev, entry.inode, entry.mode,
+                   entry.uid, entry.gid, entry.size, entry.binsha, flags))
         write(path)
         real_size = ((tell() - beginoffset + 8) & ~7)
         write(b"\0" * ((beginoffset + real_size) - tell()))
@@ -188,15 +189,16 @@ def entry_key(*entry: Union[BaseIndexEntry, PathLike, int]) -> Tuple[PathLike, i
     """:return: Key suitable to be used for the index.entries dictionary
     :param entry: One instance of type BaseIndexEntry or the path and the stage"""
 
-    def is_entry_key_tup(entry_key: Tuple) -> TypeGuard[Tuple[PathLike, int]]:
-        return isinstance(entry_key, tuple) and len(entry_key) == 2
+    # def is_entry_key_tup(entry_key: Tuple) -> TypeGuard[Tuple[PathLike, int]]:
+    #     return isinstance(entry_key, tuple) and len(entry_key) == 2
 
     if len(entry) == 1:
         entry_first = entry[0]
         assert isinstance(entry_first, BaseIndexEntry)
         return (entry_first.path, entry_first.stage)
     else:
-        assert is_entry_key_tup(entry)
+        # assert is_entry_key_tup(entry)
+        entry = cast(Tuple[PathLike, int], entry)
         return entry
     # END handle entry
 
@@ -244,7 +246,7 @@ def read_cache(stream: IO[bytes]) -> Tuple[int, Dict[Tuple[PathLike, int], 'Inde
     content_sha = extension_data[-20:]
 
     # truncate the sha in the end as we will dynamically create it anyway
-    extension_data = extension_data[:-20]
+    extension_data = extension_data[: -20]
 
     return (version, entries, extension_data, content_sha)
 
@@ -310,7 +312,7 @@ def _tree_entry_to_baseindexentry(tree_entry: 'TreeCacheTup', stage: int) -> Bas
     return BaseIndexEntry((tree_entry[1], tree_entry[0], stage << CE_STAGESHIFT, tree_entry[2]))
 
 
-def aggressive_tree_merge(odb, tree_shas: Sequence[bytes]) -> List[BaseIndexEntry]:
+def aggressive_tree_merge(odb: 'GitCmdObjectDB', tree_shas: Sequence[bytes]) -> List[BaseIndexEntry]:
     """
     :return: list of BaseIndexEntries representing the aggressive merge of the given
         trees. All valid entries are on stage 0, whereas the conflicting ones are left

@@ -15,8 +15,8 @@ from .objects.util import mode_str_to_int
 
 # typing ------------------------------------------------------------------
 
-from typing import Any, Iterator, List, Match, Optional, Tuple, Type, TypeVar, Union, TYPE_CHECKING
-from git.types import PathLike, TBD, Literal, TypeGuard
+from typing import Any, Iterator, List, Match, Optional, Tuple, Type, TypeVar, Union, TYPE_CHECKING, cast
+from git.types import PathLike, TBD, Literal
 
 if TYPE_CHECKING:
     from .objects.tree import Tree
@@ -28,9 +28,9 @@ if TYPE_CHECKING:
 Lit_change_type = Literal['A', 'D', 'C', 'M', 'R', 'T', 'U']
 
 
-def is_change_type(inp: str) -> TypeGuard[Lit_change_type]:
-    # return True
-    return inp in ['A', 'D', 'C', 'M', 'R', 'T', 'U']
+# def is_change_type(inp: str) -> TypeGuard[Lit_change_type]:
+#     # return True
+#     return inp in ['A', 'D', 'C', 'M', 'R', 'T', 'U']
 
 # ------------------------------------------------------------------------
 
@@ -517,8 +517,8 @@ class Diff(object):
             # Change type can be R100
             # R: status letter
             # 100: score (in case of copy and rename)
-            assert is_change_type(_change_type[0]), f"Unexpected value for change_type received: {_change_type[0]}"
-            change_type: Lit_change_type = _change_type[0]
+            # assert is_change_type(_change_type[0]), f"Unexpected value for change_type received: {_change_type[0]}"
+            change_type: Lit_change_type = cast(Lit_change_type, _change_type[0])
             score_str = ''.join(_change_type[1:])
             score = int(score_str) if score_str.isdigit() else None
             path = path.strip()

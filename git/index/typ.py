@@ -11,7 +11,7 @@ from git.objects import Blob
 
 # typing ----------------------------------------------------------------------
 
-from typing import (List, Sequence, TYPE_CHECKING, Tuple, cast)
+from typing import (NamedTuple, Sequence, TYPE_CHECKING, Tuple, Union, cast)
 
 from git.types import PathLike
 
@@ -59,14 +59,37 @@ class BlobFilter(object):
         return False
 
 
-class BaseIndexEntry(tuple):
+class BaseIndexEntryHelper(NamedTuple):
+    """Typed namedtuple to provide named attribute access for BaseIndexEntry.
+    Needed to allow overriding __new__ in child class to preserve backwards compat."""
+    mode: int
+    binsha: bytes
+    flags: int
+    path: PathLike
+    ctime_bytes: bytes = pack(">LL", 0, 0)
+    mtime_bytes: bytes = pack(">LL", 0, 0)
+    dev: int = 0
+    inode: int = 0
+    uid: int = 0
+    gid: int = 0
+    size: int = 0
+
+
+class BaseIndexEntry(BaseIndexEntryHelper):
 
     """Small Brother of an index entry which can be created to describe changes
     done to the index in which case plenty of additional information is not required.
 
     As the first 4 data members match exactly to the IndexEntry type, methods
     expecting a BaseIndexEntry can also handle full IndexEntries even if they
-    use numeric indices for performance reasons. """
+    use numeric indices for performance reasons.
+    """
+
+    def __new__(cls, inp_tuple: Union[Tuple[int, bytes, int, PathLike],
+                                      Tuple[int, bytes, int, PathLike, bytes, bytes, int, int, int, int, int]]
+                ) -> 'BaseIndexEntry':
+        """Override __new__ to allow construction from a tuple for backwards compatibility """
+        return super().__new__(cls, *inp_tuple)
 
     def __str__(self) -> str:
         return "%o %s %i\t%s" % (self.mode, self.hexsha, self.stage, self.path)
@@ -75,19 +98,9 @@ class BaseIndexEntry(tuple):
         return "(%o, %s, %i, %s)" % (self.mode, self.hexsha, self.stage, self.path)
 
     @property
-    def mode(self) -> int:
-        """ File Mode, compatible to stat module constants """
-        return self[0]
-
-    @property
-    def binsha(self) -> bytes:
-        """binary sha of the blob """
-        return self[1]
-
-    @property
     def hexsha(self) -> str:
         """hex version of our sha"""
-        return b2a_hex(self[1]).decode('ascii')
+        return b2a_hex(self.binsha).decode('ascii')
 
     @property
     def stage(self) -> int:
@@ -100,17 +113,7 @@ class BaseIndexEntry(tuple):
 
         :note: For more information, see http://www.kernel.org/pub/software/scm/git/docs/git-read-tree.html
         """
-        return (self[2] & CE_STAGEMASK) >> CE_STAGESHIFT
-
-    @property
-    def path(self) -> str:
-        """:return: our path relative to the repository working tree root"""
-        return self[3]
-
-    @property
-    def flags(self) -> List[str]:
-        """:return: flags stored with this entry"""
-        return self[2]
+        return (self.flags & CE_STAGEMASK) >> CE_STAGESHIFT
 
     @classmethod
     def from_blob(cls, blob: Blob, stage: int = 0) -> 'BaseIndexEntry':
@@ -136,40 +139,15 @@ class IndexEntry(BaseIndexEntry):
         :return:
             Tuple(int_time_seconds_since_epoch, int_nano_seconds) of the
             file's creation time"""
-        return cast(Tuple[int, int], unpack(">LL", self[4]))
+        return cast(Tuple[int, int], unpack(">LL", self.ctime_bytes))
 
     @property
     def mtime(self) -> Tuple[int, int]:
         """See ctime property, but returns modification time """
-        return cast(Tuple[int, int], unpack(">LL", self[5]))
-
-    @property
-    def dev(self) -> int:
-        """ Device ID """
-        return self[6]
-
-    @property
-    def inode(self) -> int:
-        """ Inode ID """
-        return self[7]
-
-    @property
-    def uid(self) -> int:
-        """ User ID """
-        return self[8]
-
-    @property
-    def gid(self) -> int:
-        """ Group ID """
-        return self[9]
-
-    @property
-    def size(self) -> int:
-        """:return: Uncompressed size of the blob """
-        return self[10]
+        return cast(Tuple[int, int], unpack(">LL", self.mtime_bytes))
 
     @classmethod
-    def from_base(cls, base):
+    def from_base(cls, base: 'BaseIndexEntry') -> 'IndexEntry':
         """
         :return:
             Minimal entry as created from the given BaseIndexEntry instance.

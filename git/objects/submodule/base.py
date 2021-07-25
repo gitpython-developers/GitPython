@@ -965,13 +965,12 @@ class Submodule(IndexObject, TraversableIterableObj):
 
             # now git config - need the config intact, otherwise we can't query
             # information anymore
-            writer: Union[GitConfigParser, SectionConstraint]
 
-            with self.repo.config_writer() as writer:
-                writer.remove_section(sm_section(self.name))
+            with self.repo.config_writer() as gcp_writer:
+                gcp_writer.remove_section(sm_section(self.name))
 
-            with self.config_writer() as writer:
-                writer.remove_section()
+            with self.config_writer() as sc_writer:
+                sc_writer.remove_section()
         # END delete configuration
 
         return self
@@ -1024,7 +1023,8 @@ class Submodule(IndexObject, TraversableIterableObj):
         return self
 
     @unbare_repo
-    def config_writer(self, index: Union['IndexFile', None] = None, write: bool = True) -> SectionConstraint:
+    def config_writer(self, index: Union['IndexFile', None] = None, write: bool = True
+                      ) -> SectionConstraint['SubmoduleConfigParser']:
         """:return: a config writer instance allowing you to read and write the data
             belonging to this submodule into the .gitmodules file.
 
@@ -1201,7 +1201,7 @@ class Submodule(IndexObject, TraversableIterableObj):
         """
         return self._name
 
-    def config_reader(self) -> SectionConstraint:
+    def config_reader(self) -> SectionConstraint[SubmoduleConfigParser]:
         """
         :return: ConfigReader instance which allows you to qurey the configuration values
             of this submodule, as provided by the .gitmodules file

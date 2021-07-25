@@ -6,6 +6,7 @@
 """Module containing module parser implementation able to properly read and write
 configuration files"""
 
+import sys
 import abc
 from functools import wraps
 import inspect
@@ -14,12 +15,10 @@ import logging
 import os
 import re
 import fnmatch
-from collections import OrderedDict
 
 from git.compat import (
     defenc,
     force_text,
-    with_metaclass,
     is_win,
 )
 
@@ -31,14 +30,23 @@ import configparser as cp
 
 # typing-------------------------------------------------------
 
-from typing import (Any, Callable, IO, List, Dict, Sequence,
-                    TYPE_CHECKING, Tuple, Union, cast, overload)
+from typing import (Any, Callable, Generic, IO, List, Dict, Sequence,
+                    TYPE_CHECKING, Tuple, TypeVar, Union, cast, overload)
 
-from git.types import Lit_config_levels, ConfigLevels_Tup, PathLike, TBD, assert_never, is_config_level
+from git.types import Lit_config_levels, ConfigLevels_Tup, PathLike, TBD, assert_never, _T
 
 if TYPE_CHECKING:
     from git.repo.base import Repo
     from io import BytesIO
+
+T_ConfigParser = TypeVar('T_ConfigParser', bound='GitConfigParser')
+
+if sys.version_info[:2] < (3, 7):
+    from collections import OrderedDict
+    OrderedDict_OMD = OrderedDict
+else:
+    from typing import OrderedDict
+    OrderedDict_OMD = OrderedDict[str, List[_T]]
 
 # -------------------------------------------------------------
 
@@ -61,7 +69,6 @@ CONDITIONAL_INCLUDE_REGEXP = re.compile(r"(?<=includeIf )\"(gitdir|gitdir/i|onbr
 
 
 class MetaParserBuilder(abc.ABCMeta):
-
     """Utlity class wrapping base-class methods into decorators that assure read-only properties"""
     def __new__(cls, name: str, bases: TBD, clsdict: Dict[str, Any]) -> TBD:
         """
@@ -115,7 +122,7 @@ def set_dirty_and_flush_changes(non_const_func: Callable) -> Callable:
     return flush_changes
 
 
-class SectionConstraint(object):
+class SectionConstraint(Generic[T_ConfigParser]):
 
     """Constrains a ConfigParser to only option commands which are constrained to
     always use the section we have been initialized with.
@@ -128,7 +135,7 @@ class SectionConstraint(object):
     _valid_attrs_ = ("get_value", "set_value", "get", "set", "getint", "getfloat", "getboolean", "has_option",
                      "remove_section", "remove_option", "options")
 
-    def __init__(self, config: 'GitConfigParser', section: str) -> None:
+    def __init__(self, config: T_ConfigParser, section: str) -> None:
         self._config = config
         self._section_name = section
 
@@ -149,7 +156,7 @@ class SectionConstraint(object):
         return getattr(self._config, method)(self._section_name, *args, **kwargs)
 
     @property
-    def config(self) -> 'GitConfigParser':
+    def config(self) -> T_ConfigParser:
         """return: Configparser instance we constrain"""
         return self._config
 
@@ -157,7 +164,7 @@ class SectionConstraint(object):
         """Equivalent to GitConfigParser.release(), which is called on our underlying parser instance"""
         return self._config.release()
 
-    def __enter__(self) -> 'SectionConstraint':
+    def __enter__(self) -> 'SectionConstraint[T_ConfigParser]':
         self._config.__enter__()
         return self
 
@@ -165,10 +172,10 @@ class SectionConstraint(object):
         self._config.__exit__(exception_type, exception_value, traceback)
 
 
-class _OMD(OrderedDict):
+class _OMD(OrderedDict_OMD):
     """Ordered multi-dict."""
 
-    def __setitem__(self, key: str, value: Any) -> None:
+    def __setitem__(self, key: str, value: _T) -> None:  # type: ignore[override]
         super(_OMD, self).__setitem__(key, [value])
 
     def add(self, key: str, value: Any) -> None:
@@ -177,7 +184,7 @@ class _OMD(OrderedDict):
             return None
         super(_OMD, self).__getitem__(key).append(value)
 
-    def setall(self, key: str, values: Any) -> None:
+    def setall(self, key: str, values: List[_T]) -> None:
         super(_OMD, self).__setitem__(key, values)
 
     def __getitem__(self, key: str) -> Any:
@@ -194,25 +201,17 @@ class _OMD(OrderedDict):
         prior = super(_OMD, self).__getitem__(key)
         prior[-1] = value
 
-    @overload
-    def get(self, key: str, default: None = ...) -> None:
-        ...
+    def get(self, key: str, default: Union[_T, None] = None) -> Union[_T, None]:  # type: ignore
+        return super(_OMD, self).get(key, [default])[-1]          # type: ignore
 
-    @overload
-    def get(self, key: str, default: Any = ...) -> Any:
-        ...
-
-    def get(self, key: str, default: Union[Any, None] = None) -> Union[Any, None]:
-        return super(_OMD, self).get(key, [default])[-1]
-
-    def getall(self, key: str) -> Any:
+    def getall(self, key: str) -> List[_T]:
         return super(_OMD, self).__getitem__(key)
 
-    def items(self) -> List[Tuple[str, Any]]:  # type: ignore[override]
+    def items(self) -> List[Tuple[str, _T]]:  # type: ignore[override]
         """List of (key, last value for key)."""
         return [(k, self[k]) for k in self]
 
-    def items_all(self) -> List[Tuple[str, List[Any]]]:
+    def items_all(self) -> List[Tuple[str, List[_T]]]:
         """List of (key, list of values for key)."""
         return [(k, self.getall(k)) for k in self]
 
@@ -238,7 +237,7 @@ def get_config_path(config_level: Lit_config_levels) -> str:
         assert_never(config_level, ValueError(f"Invalid configuration level: {config_level!r}"))
 
 
-class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser)):  # type: ignore ## mypy does not understand dynamic class creation # noqa: E501
+class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
 
     """Implements specifics required to read git style configuration files.
 
@@ -298,7 +297,10 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser)):  #
         :param repo: Reference to repository to use if [includeIf] sections are found in configuration files.
 
         """
-        cp.RawConfigParser.__init__(self, dict_type=_OMD)
+        cp.RawConfigParser.__init__(self, dict_type=_OMD)  # type: ignore[arg-type]
+        self._dict: Callable[..., _OMD]  # type: ignore[assignment]   # mypy/typeshed bug
+        self._defaults: _OMD              # type: ignore[assignment]  # mypy/typeshed bug
+        self._sections: _OMD              # type: ignore[assignment]  # mypy/typeshed bug
 
         # Used in python 3, needs to stay in sync with sections for underlying implementation to work
         if not hasattr(self, '_proxies'):
@@ -309,9 +311,9 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser)):  #
         else:
             if config_level is None:
                 if read_only:
-                    self._file_or_files = [get_config_path(f)
+                    self._file_or_files = [get_config_path(cast(Lit_config_levels, f))
                                            for f in CONFIG_LEVELS
-                                           if is_config_level(f) and f != 'repository']
+                                           if f != 'repository']
                 else:
                     raise ValueError("No configuration level or configuration files specified")
             else:
@@ -424,7 +426,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser)):  #
             # is it a section header?
             mo = self.SECTCRE.match(line.strip())
             if not is_multi_line and mo:
-                sectname = mo.group('header').strip()
+                sectname: str = mo.group('header').strip()
                 if sectname in self._sections:
                     cursect = self._sections[sectname]
                 elif sectname == cp.DEFAULTSECT:
@@ -535,7 +537,7 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser)):  #
 
         return paths
 
-    def read(self) -> None:
+    def read(self) -> None:  # type: ignore[override]
         """Reads the data stored in the files we have been initialized with. It will
         ignore files that cannot be read, possibly leaving an empty configuration
 
@@ -623,10 +625,11 @@ class GitConfigParser(with_metaclass(MetaParserBuilder, cp.RawConfigParser)):  #
 
         if self._defaults:
             write_section(cp.DEFAULTSECT, self._defaults)
+        value: TBD
         for name, value in self._sections.items():
             write_section(name, value)
 
-    def items(self, section_name: str) -> List[Tuple[str, str]]:
+    def items(self, section_name: str) -> List[Tuple[str, str]]:    # type: ignore[override]
         """:return: list((option, value), ...) pairs of all items in the given section"""
         return [(k, v) for k, v in super(GitConfigParser, self).items(section_name) if k != '__name__']
 

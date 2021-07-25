@@ -36,7 +36,7 @@ import gitdb
 
 # typing ------------------------------------------------------
 
-from git.types import TBD, PathLike, Lit_config_levels, Commit_ish, Tree_ish, is_config_level
+from git.types import TBD, PathLike, Lit_config_levels, Commit_ish, Tree_ish
 from typing import (Any, BinaryIO, Callable, Dict,
                     Iterator, List, Mapping, Optional, Sequence,
                     TextIO, Tuple, Type, Union,
@@ -482,7 +482,8 @@ class Repo(object):
 
         raise ValueError("Invalid configuration level: %r" % config_level)
 
-    def config_reader(self, config_level: Optional[Lit_config_levels] = None) -> GitConfigParser:
+    def config_reader(self, config_level: Optional[Lit_config_levels] = None
+                      ) -> GitConfigParser:
         """
         :return:
             GitConfigParser allowing to read the full git configuration, but not to write it
@@ -498,12 +499,14 @@ class Repo(object):
             unknown, instead the global path will be used."""
         files = None
         if config_level is None:
-            files = [self._get_config_path(f) for f in self.config_level if is_config_level(f)]
+            files = [self._get_config_path(cast(Lit_config_levels, f))
+                     for f in self.config_level if cast(Lit_config_levels, f)]
         else:
             files = [self._get_config_path(config_level)]
         return GitConfigParser(files, read_only=True, repo=self)
 
-    def config_writer(self, config_level: Lit_config_levels = "repository") -> GitConfigParser:
+    def config_writer(self, config_level: Lit_config_levels = "repository"
+                      ) -> GitConfigParser:
         """
         :return:
             GitConfigParser allowing to write values of the specified configuration file level.
