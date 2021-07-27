@@ -218,11 +218,13 @@ class TestRepo(TestBase):
         cloned = Repo.clone_from(original_repo.git_dir, pathlib.Path(rw_dir) / "clone_pathlib_withConfig",
                                  multi_options=["--recurse-submodules=repo",
                                                 "--config core.filemode=false",
-                                                "--config submodule.repo.update=checkout"])
+                                                "--config submodule.repo.update=checkout",
+                                                "--config filter.lfs.clean='git-lfs clean -- %f'"])
 
         self.assertEqual(cloned.config_reader().get_value('submodule', 'active'), 'repo')
         self.assertEqual(cloned.config_reader().get_value('core', 'filemode'), False)
         self.assertEqual(cloned.config_reader().get_value('submodule "repo"', 'update'), 'checkout')
+        self.assertEqual(cloned.config_reader().get_value('filter "lfs"', 'clean'), 'git-lfs clean -- %f')
 
     def test_clone_from_with_path_contains_unicode(self):
         with tempfile.TemporaryDirectory() as tmpdir:
