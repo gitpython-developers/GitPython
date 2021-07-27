@@ -6,6 +6,7 @@
 import logging
 import os
 import re
+import shlex
 import warnings
 from gitdb.db.loose import LooseObjectDB
 
@@ -1043,7 +1044,7 @@ class Repo(object):
             kwargs['separate_git_dir'] = Git.polish_url(sep_dir)
         multi = None
         if multi_options:
-            multi = ' '.join(multi_options).split(' ')
+            multi = shlex.split(' '.join(multi_options))
         proc = git.clone(multi, Git.polish_url(str(url)), clone_path, with_extended_output=True, as_process=True,
                          v=True, universal_newlines=True, **add_progress(kwargs, git, progress))
         if progress:
