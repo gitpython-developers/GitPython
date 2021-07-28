@@ -4,6 +4,7 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
+from git.repo.base import Repo
 from itertools import chain
 
 from git import (
@@ -125,11 +126,15 @@ class TestRefs(TestBase):
             gp_tracking_branch = rwrepo.create_head('gp_tracking#123')
             special_name_remote_ref = rwrepo.remotes[0].refs[special_name]  # get correct type
             gp_tracking_branch.set_tracking_branch(special_name_remote_ref)
-            assert gp_tracking_branch.tracking_branch().path == special_name_remote_ref.path
+            TBranch = gp_tracking_branch.tracking_branch()
+            if TBranch is not None:
+                assert TBranch.path == special_name_remote_ref.path
 
             git_tracking_branch = rwrepo.create_head('git_tracking#123')
             rwrepo.git.branch('-u', special_name_remote_ref.name, git_tracking_branch.name)
-            assert git_tracking_branch.tracking_branch().name == special_name_remote_ref.name
+            TBranch = gp_tracking_branch.tracking_branch()
+            if TBranch is not None:
+                assert TBranch.name == special_name_remote_ref.name
         # END for each head
 
         # verify REFLOG gets altered

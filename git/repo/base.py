@@ -422,7 +422,7 @@ class Repo(object):
 
     def create_head(self, path: PathLike, commit: str = 'HEAD',
                     force: bool = False, logmsg: Optional[str] = None
-                    ) -> 'SymbolicReference':
+                    ) -> 'Head':
         """Create a new head within the repository.
         For more documentation, please see the Head.create method.
 
@@ -788,9 +788,8 @@ class Repo(object):
         return proc.replace("\\\\", "\\").replace('"', "").split("\n")
 
     @property
-    def active_branch(self) -> 'SymbolicReference':
+    def active_branch(self) -> 'HEAD':
         """The name of the currently active branch.
-
         :return: Head to the active branch"""
         return self.head.reference
 

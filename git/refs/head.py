@@ -142,7 +142,7 @@ class Head(Reference):
             flag = "-D"
         repo.git.branch(flag, *heads)
 
-    def set_tracking_branch(self, remote_reference: 'RemoteReference') -> 'Head':
+    def set_tracking_branch(self, remote_reference: Union['RemoteReference', None]) -> 'Head':
         """
         Configure this branch to track the given remote reference. This will alter
             this branch's configuration accordingly.

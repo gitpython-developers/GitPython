@@ -28,6 +28,7 @@ from git.types import Commit_ish, PathLike, TBD, Literal                        
 
 if TYPE_CHECKING:
     from git.repo import Repo
+    from git.refs import Reference
 
 T_References = TypeVar('T_References', bound='SymbolicReference')
 
@@ -356,8 +357,9 @@ class SymbolicReference(object):
         return self
 
     # aliased reference
-    reference = property(_get_reference, set_reference, doc="Returns the Reference we point to")
-    ref: Union[Commit_ish] = reference     # type: ignore  # Union[str, Commit_ish, SymbolicReference]
+    reference: Union[Commit_ish, 'Reference'] = property(                 # type: ignore
+        _get_reference, set_reference, doc="Returns the Reference we point to")
+    ref = reference
 
     def is_valid(self):
         """
