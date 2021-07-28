@@ -788,9 +788,10 @@ class Repo(object):
         return proc.replace("\\\\", "\\").replace('"', "").split("\n")
 
     @property
-    def active_branch(self) -> 'HEAD':
+    def active_branch(self) -> Head:
         """The name of the currently active branch.
         :return: Head to the active branch"""
+        # reveal_type(self.head.reference)  # => Reference
         return self.head.reference
 
     def blame_incremental(self, rev: TBD, file: TBD, **kwargs: Any) -> Optional[Iterator['BlameEntry']]:

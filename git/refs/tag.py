@@ -4,13 +4,14 @@ __all__ = ["TagReference", "Tag"]
 
 # typing ------------------------------------------------------------------
 
-from typing import Any, Union, TYPE_CHECKING
+from typing import Any, Type, Union, TYPE_CHECKING
 from git.types import Commit_ish, PathLike
 
 if TYPE_CHECKING:
     from git.repo import Repo
     from git.objects import Commit
     from git.objects import TagObject
+    from git.refs import SymbolicReference
 
 
 # ------------------------------------------------------------------------------
@@ -68,7 +69,8 @@ class TagReference(Reference):
         return Reference._get_object(self)
 
     @classmethod
-    def create(cls, repo: 'Repo', path: PathLike, reference: Union[Commit_ish, str] = 'HEAD',
+    def create(cls: Type['TagReference'], repo: 'Repo', path: PathLike,
+               reference: Union[Commit_ish, str, 'SymbolicReference'] = 'HEAD',
                logmsg: Union[str, None] = None,
                force: bool = False, **kwargs: Any) -> 'TagReference':
         """Create a new tag reference.
