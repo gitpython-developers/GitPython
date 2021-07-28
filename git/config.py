@@ -43,12 +43,8 @@ T_ConfigParser = TypeVar('T_ConfigParser', bound='GitConfigParser')
 
 if sys.version_info[:3] < (3, 7, 2):
     # typing.Ordereddict not added until py 3.7.2
-    from collections import OrderedDict
-    OrderedDict_OMD = OrderedDict
-elif sys.version_info[:2] >= (3, 10):
-    # then deprecated from 3.10 as collections.OrderedDict was made generic
-    from collections import OrderedDict
-    OrderedDict_OMD = OrderedDict[str, List[_T]]
+    from collections import OrderedDict     # type: ignore  # until 3.6 dropped
+    OrderedDict_OMD = OrderedDict           # type: ignore  # until 3.6 dropped
 else:
     from typing import OrderedDict                   # type: ignore  # until 3.6 dropped
     OrderedDict_OMD = OrderedDict[str, List[_T]]  # type: ignore[assignment, misc]
