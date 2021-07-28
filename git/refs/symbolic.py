@@ -358,11 +358,11 @@ class SymbolicReference(object):
         return self
 
     # aliased reference
-    reference: Union[Commit_ish, 'Reference'] = property(                 # type: ignore
+    reference: Union[Commit_ish, 'Head', 'Reference'] = property(                 # type: ignore
         _get_reference, set_reference, doc="Returns the Reference we point to")
     ref = reference
 
-    def is_valid(self):
+    def is_valid(self) -> bool:
         """
         :return:
             True if the reference is valid, hence it can be read and points to
@@ -531,7 +531,7 @@ class SymbolicReference(object):
         return ref
 
     @classmethod
-    def create(cls, repo: 'Repo', path: PathLike, reference: Union[Commit_ish, str] = 'HEAD',
+    def create(cls, repo: 'Repo', path: PathLike, reference: Union[Commit_ish, str] = 'SymbolicReference',
                logmsg: Union[str, None] = None, force: bool = False, **kwargs: Any):
         """Create a new symbolic reference, hence a reference pointing , to another reference.
 
