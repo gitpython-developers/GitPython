@@ -41,7 +41,7 @@ if TYPE_CHECKING:
 
 T_ConfigParser = TypeVar('T_ConfigParser', bound='GitConfigParser')
 
-if sys.version_info[:3] < (3, 7, 2):
+if sys.version_info[:2] < (3, 7):
     from collections import OrderedDict
     OrderedDict_OMD = OrderedDict
 else:
