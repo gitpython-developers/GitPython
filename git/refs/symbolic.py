@@ -147,7 +147,7 @@ class SymbolicReference(object):
         # END recursive dereferencing
 
     @classmethod
-    def _get_ref_info_helper(cls, repo: Repo, ref_path: PathLike):
+    def _get_ref_info_helper(cls, repo: 'Repo', ref_path: PathLike):
         """Return: (str(sha), str(target_ref_path)) if available, the sha the file at
         rela_path points to, or None. target_ref_path is the reference we
         point to, or None"""
