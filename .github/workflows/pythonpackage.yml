@@ -28,7 +28,8 @@ jobs:
     - name: Install dependencies and prepare tests
       run: |
         set -x
-        python -m pip install --upgrade pip setuptools wheel
+        python -m pip install pip==21.1.3
+        python -m pip install --upgrade setuptools wheel
         python --version; git --version
         git submodule update --init --recursive
         git fetch --tags
