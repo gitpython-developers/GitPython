@@ -98,7 +98,9 @@ class TagReference(Reference):
             Additional keyword arguments to be passed to git-tag
 
         :return: A new TagReference"""
-        args = (path, reference)
+        if 'ref' in kwargs and kwargs['ref']:
+            reference = kwargs['ref']
+
         if logmsg:
             kwargs['m'] = logmsg
         elif 'message' in kwargs and kwargs['message']:
@@ -106,6 +108,8 @@ class TagReference(Reference):
 
         if force:
             kwargs['f'] = True
+
+        args = (path, reference)
 
         repo.git.tag(*args, **kwargs)
         return TagReference(repo, "%s/%s" % (cls._common_path_default, path))
