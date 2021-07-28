@@ -111,7 +111,7 @@ class TagReference(Reference):
         return TagReference(repo, "%s/%s" % (cls._common_path_default, path))
 
     @classmethod
-    def delete(cls, repo: 'Repo', *tags: 'TagReference') -> None:
+    def delete(cls, repo: 'Repo', *tags: 'TagReference') -> None:  # type: ignore[override]
         """Delete the given existing tag or tags"""
         repo.git.tag("-d", *tags)
 
