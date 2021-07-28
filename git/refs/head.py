@@ -1,4 +1,4 @@
-from git.config import SectionConstraint
+from git.config import GitConfigParser, SectionConstraint
 from git.util import join_path
 from git.exc import GitCommandError
 
@@ -203,7 +203,7 @@ class Head(Reference):
         self.path = "%s/%s" % (self._common_path_default, new_path)
         return self
 
-    def checkout(self, force: bool = False, **kwargs: Any):
+    def checkout(self, force: bool = False, **kwargs: Any) -> Union['HEAD', 'Head']:
         """Checkout this head by setting the HEAD to this reference, by updating the index
         to reflect the tree we point to and by updating the working tree to reflect
         the latest index.
@@ -235,10 +235,11 @@ class Head(Reference):
         self.repo.git.checkout(self, **kwargs)
         if self.repo.head.is_detached:
             return self.repo.head
-        return self.repo.active_branch
+        else:
+            return self.repo.active_branch
 
     #{ Configuration
-    def _config_parser(self, read_only: bool) -> SectionConstraint:
+    def _config_parser(self, read_only: bool) -> SectionConstraint[GitConfigParser]:
         if read_only:
             parser = self.repo.config_reader()
         else:
@@ -247,13 +248,13 @@ class Head(Reference):
 
         return SectionConstraint(parser, 'branch "%s"' % self.name)
 
-    def config_reader(self) -> SectionConstraint:
+    def config_reader(self) -> SectionConstraint[GitConfigParser]:
         """
         :return: A configuration parser instance constrained to only read
             this instance's values"""
         return self._config_parser(read_only=True)
 
-    def config_writer(self) -> SectionConstraint:
+    def config_writer(self) -> SectionConstraint[GitConfigParser]:
         """
         :return: A configuration writer instance with read-and write access
             to options of this head"""

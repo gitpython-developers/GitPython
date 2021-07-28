@@ -70,7 +70,7 @@ class TagReference(Reference):
 
     @classmethod
     def create(cls: Type['TagReference'], repo: 'Repo', path: PathLike,
-               reference: Union[Commit_ish, str, 'SymbolicReference'] = 'HEAD',
+               reference: Union[str, 'SymbolicReference'] = 'HEAD',
                logmsg: Union[str, None] = None,
                force: bool = False, **kwargs: Any) -> 'TagReference':
         """Create a new tag reference.
@@ -80,7 +80,7 @@ class TagReference(Reference):
             The prefix refs/tags is implied
 
         :param ref:
-            A reference to the object you want to tag. It can be a commit, tree or
+            A reference to the Object you want to tag. The Object can be a commit, tree or
             blob.
 
         :param logmsg:
