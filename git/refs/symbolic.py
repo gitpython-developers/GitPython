@@ -25,7 +25,7 @@ from git.types import Commit_ish, PathLike, TBD, Literal                        
 
 if TYPE_CHECKING:
     from git.repo import Repo
-    from git.refs import Reference
+    from git.refs import Reference, Head, HEAD, TagReference, RemoteReference
 
 T_References = TypeVar('T_References', bound='SymbolicReference')
 
@@ -141,13 +141,13 @@ class SymbolicReference(object):
             intermediate references as required
         :param repo: the repository containing the reference at ref_path"""
         while True:
-            hexsha, ref_path = cls._get_ref_info(repo, ref_path)
+            hexsha, _ref_path_out = cls._get_ref_info(repo, ref_path)
             if hexsha is not None:
                 return hexsha
         # END recursive dereferencing
 
     @classmethod
-    def _get_ref_info_helper(cls, repo: 'Repo', ref_path: PathLike):
+    def _get_ref_info_helper(cls, repo: 'Repo', ref_path: PathLike) -> Union[Tuple[str, None], Tuple[None, PathLike]]:
         """Return: (str(sha), str(target_ref_path)) if available, the sha the file at
         rela_path points to, or None. target_ref_path is the reference we
         point to, or None"""
@@ -186,13 +186,14 @@ class SymbolicReference(object):
         raise ValueError("Failed to parse reference information from %r" % ref_path)
 
     @classmethod
-    def _get_ref_info(cls, repo: 'Repo', ref_path: PathLike):
+    def _get_ref_info(cls, repo: 'Repo', ref_path: PathLike
+                      ) -> Union[Tuple[str, None], Tuple[None, PathLike]]:
         """Return: (str(sha), str(target_ref_path)) if available, the sha the file at
         rela_path points to, or None. target_ref_path is the reference we
         point to, or None"""
         return cls._get_ref_info_helper(repo, ref_path)
 
-    def _get_object(self):
+    def _get_object(self) -> Commit_ish:
         """
         :return:
             The object our ref currently refers to. Refs can be cached, they will
@@ -201,7 +202,7 @@ class SymbolicReference(object):
         # Our path will be resolved to the hexsha which will be used accordingly
         return Object.new_from_sha(self.repo, hex_to_bin(self.dereference_recursive(self.repo, self.path)))
 
-    def _get_commit(self):
+    def _get_commit(self) -> 'Commit':
         """
         :return:
             Commit object we point to, works for detached and non-detached
@@ -216,7 +217,8 @@ class SymbolicReference(object):
         # END handle type
         return obj
 
-    def set_commit(self, commit: Union[Commit, 'SymbolicReference', str], logmsg=None):
+    def set_commit(self, commit: Union[Commit, 'SymbolicReference', str],
+                   logmsg: Union[str, None] = None) -> None:
         """As set_object, but restricts the type of object to be a Commit
 
         :raise ValueError: If commit is not a Commit object or doesn't point to
@@ -243,7 +245,8 @@ class SymbolicReference(object):
         # we leave strings to the rev-parse method below
         self.set_object(commit, logmsg)
 
-        return self
+        # return self
+        return None
 
     def set_object(self, object, logmsg=None):  # @ReservedAssignment
         """Set the object we point to, possibly dereference our symbolic reference first.
@@ -275,7 +278,8 @@ class SymbolicReference(object):
     commit = property(_get_commit, set_commit, doc="Query or set commits directly")
     object = property(_get_object, set_object, doc="Return the object our ref currently refers to")
 
-    def _get_reference(self):
+    def _get_reference(self
+                       ) -> Union['HEAD', 'Head', 'RemoteReference', 'TagReference', 'Reference', 'SymbolicReference']:
         """:return: Reference Object we point to
         :raise TypeError: If this symbolic reference is detached, hence it doesn't point
             to a reference, but to a commit"""
