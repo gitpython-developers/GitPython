@@ -422,7 +422,7 @@ class Repo(object):
 
     def create_head(self, path: PathLike, commit: str = 'HEAD',
                     force: bool = False, logmsg: Optional[str] = None
-                    ) -> 'SymbolicReference':
+                    ) -> Head:
         """Create a new head within the repository.
         For more documentation, please see the Head.create method.
 
