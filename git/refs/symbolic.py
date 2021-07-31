@@ -1,5 +1,5 @@
 import os
-
+import os.path as osp
 from git.compat import defenc
 from git.objects import Object
 from git.objects.commit import Commit
@@ -373,19 +373,7 @@ class SymbolicReference(object):
     def reference(self, ref: Union[str, Commit_ish, 'SymbolicReference'], logmsg: Union[str, None] = None
                   ) -> 'SymbolicReference':
         return self.set_reference(ref=ref, logmsg=logmsg)
-
-    def is_valid(self) -> bool:
-        """
-        :return:
-            True if the reference is valid, hence it can be read and points to
-            a valid object or reference."""
-        try:
-            self.object
-        except (OSError, ValueError):
-            return False
-        else:
-            return True
-
+    
     @ property
     def is_detached(self):
         """
