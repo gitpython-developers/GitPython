@@ -678,7 +678,7 @@ class SymbolicReference(object):
 
         # Names like HEAD are inserted after the refs module is imported - we have an import dependency
         # cycle and don't want to import these names in-function
-        from . import HEAD, Head, RemoteReference, TagReference, Reference
+        from . import HEAD, Head, RemoteReference, TagReference, Reference      # NOQA
         for ref_type in (HEAD, Head, RemoteReference, TagReference, Reference, SymbolicReference):
             try:
                 instance = ref_type(repo, path)
