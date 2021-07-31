@@ -136,23 +136,23 @@ class SymbolicReference(object):
         # alright.
 
     @classmethod
-    def dereference_recursive(cls, repo, ref_path):
+    def dereference_recursive(cls, repo: 'Repo', ref_path: PathLike) -> str:
         """
         :return: hexsha stored in the reference at the given ref_path, recursively dereferencing all
             intermediate references as required
         :param repo: the repository containing the reference at ref_path"""
         while True:
-            hexsha, ref_path = cls._get_ref_info(repo, ref_path)
+            hexsha, _ref_path = cls._get_ref_info(repo, ref_path)
             if hexsha is not None:
                 return hexsha
         # END recursive dereferencing
 
     @classmethod
-    def _get_ref_info_helper(cls, repo, ref_path):
+    def _get_ref_info_helper(cls, repo: 'Repo', ref_path: PathLike) -> Union[Tuple[str, None], Tuple[None, str]]:
         """Return: (str(sha), str(target_ref_path)) if available, the sha the file at
         rela_path points to, or None. target_ref_path is the reference we
         point to, or None"""
-        tokens = None
+        tokens: Union[Tuple[str, str], List[str], None] = None
         repodir = _git_dir(repo, ref_path)
         try:
             with open(os.path.join(repodir, ref_path), 'rt', encoding='UTF-8') as fp:
@@ -169,7 +169,7 @@ class SymbolicReference(object):
                 if path != ref_path:
                     continue
                 # sha will be used
-                tokens = sha, path
+                tokens = (sha, path)
                 break
             # END for each packed ref
         # END handle packed refs
@@ -186,8 +186,8 @@ class SymbolicReference(object):
 
         raise ValueError("Failed to parse reference information from %r" % ref_path)
 
-    @classmethod
-    def _get_ref_info(cls, repo, ref_path):
+    @ classmethod
+    def _get_ref_info(cls, repo: 'Repo', ref_path: PathLike) -> Union[Tuple[str, None], Tuple[None, str]]:
         """Return: (str(sha), str(target_ref_path)) if available, the sha the file at
         rela_path points to, or None. target_ref_path is the reference we
         point to, or None"""
@@ -370,7 +370,7 @@ class SymbolicReference(object):
         else:
             return True
 
-    @property
+    @ property
     def is_detached(self):
         """
         :return:
@@ -420,7 +420,7 @@ class SymbolicReference(object):
             In that case, it will be faster than the ``log()`` method"""
         return RefLog.entry_at(RefLog.path(self), index)
 
-    @classmethod
+    @ classmethod
     def to_full_path(cls, path) -> PathLike:
         """
         :return: string with a full repository-relative path which can be used to initialize
@@ -434,7 +434,7 @@ class SymbolicReference(object):
             full_ref_path = '%s/%s' % (cls._common_path_default, path)
         return full_ref_path
 
-    @classmethod
+    @ classmethod
     def delete(cls, repo, path):
         """Delete the reference at the given path
 
@@ -492,7 +492,7 @@ class SymbolicReference(object):
             os.remove(reflog_path)
         # END remove reflog
 
-    @classmethod
+    @ classmethod
     def _create(cls, repo, path, resolve, reference, force, logmsg=None):
         """internal method used to create a new symbolic reference.
         If resolve is False, the reference will be taken as is, creating
