@@ -102,7 +102,7 @@ def needs_values(func: Callable[..., _T]) -> Callable[..., _T]:
     """Returns method assuring we read values (on demand) before we try to access them"""
 
     @wraps(func)
-    def assure_data_present(self: GitConfigParser, *args: Any, **kwargs: Any) -> _T:
+    def assure_data_present(self: 'GitConfigParser', *args: Any, **kwargs: Any) -> _T:
         self.read()
         return func(self, *args, **kwargs)
     # END wrapper method
@@ -114,7 +114,7 @@ def set_dirty_and_flush_changes(non_const_func: Callable[..., _T]) -> Callable[.
     If so, the instance will be set dirty.
     Additionally, we flush the changes right to disk"""
 
-    def flush_changes(self: GitConfigParser, *args: Any, **kwargs: Any) -> _T:
+    def flush_changes(self: 'GitConfigParser', *args: Any, **kwargs: Any) -> _T:
         rval = non_const_func(self, *args, **kwargs)
         self._dirty = True
         self.write()
