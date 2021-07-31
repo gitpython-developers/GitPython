@@ -27,6 +27,10 @@ from git.types import Commit_ish, PathLike, TBD, Literal                        
 if TYPE_CHECKING:
     from git.repo import Repo
     from git.refs import Head, TagReference, Reference
+    from .log import RefLogEntry
+    from git.config import GitConfigParser
+    from git.objects.commit import Actor
+
 
 T_References = TypeVar('T_References', bound='SymbolicReference')
 
@@ -391,7 +395,8 @@ class SymbolicReference(object):
             instead of calling this method repeatedly. It should be considered read-only."""
         return RefLog.from_file(RefLog.path(self))
 
-    def log_append(self, oldbinsha, message, newbinsha=None):
+    def log_append(self, oldbinsha: bytes, message: Union[str, None],
+                   newbinsha: Union[bytes, None] = None) -> 'RefLogEntry':
         """Append a logentry to the logfile of this ref
 
         :param oldbinsha: binary sha this ref used to point to
@@ -403,15 +408,19 @@ class SymbolicReference(object):
         # correct to allow overriding the committer on a per-commit level.
         # See https://github.com/gitpython-developers/GitPython/pull/146
         try:
-            committer_or_reader = self.commit.committer
+            committer_or_reader: Union['Actor', 'GitConfigParser'] = self.commit.committer
         except ValueError:
             committer_or_reader = self.repo.config_reader()
         # end handle newly cloned repositories
-        return RefLog.append_entry(committer_or_reader, RefLog.path(self), oldbinsha,
-                                   (newbinsha is None and self.commit.binsha) or newbinsha,
-                                   message)
+        if newbinsha is None:
+            newbinsha = self.commit.binsha
 
-    def log_entry(self, index):
+        if message is None:
+            message = ''
+
+        return RefLog.append_entry(committer_or_reader, RefLog.path(self), oldbinsha, newbinsha, message)
+
+    def log_entry(self, index: int) -> 'RefLogEntry':
         """:return: RefLogEntry at the given index
         :param index: python list compatible positive or negative index
 
