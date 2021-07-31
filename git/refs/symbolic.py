@@ -274,7 +274,7 @@ class SymbolicReference(object):
         # set the commit on our reference
         return self._get_reference().set_object(object, logmsg)
 
-    commit = property(_get_commit, set_commit, doc="Query or set commits directly")
+    commit: 'Commit' = property(_get_commit, set_commit, doc="Query or set commits directly")  # type: ignore
     object = property(_get_object, set_object, doc="Return the object our ref currently refers to")
 
     def _get_reference(self):
@@ -286,7 +286,8 @@ class SymbolicReference(object):
             raise TypeError("%s is a detached symbolic reference as it points to %r" % (self, sha))
         return self.from_path(self.repo, target_ref_path)
 
-    def set_reference(self, ref, logmsg=None):
+    def set_reference(self, ref: Union['SymbolicReference', Commit_ish, str],
+                      logmsg: Union[str, None] = None) -> 'SymbolicReference':
         """Set ourselves to the given ref. It will stay a symbol if the ref is a Reference.
         Otherwise an Object, given as Object instance or refspec, is assumed and if valid,
         will be set which effectively detaches the refererence if it was a purely
@@ -327,7 +328,7 @@ class SymbolicReference(object):
             raise TypeError("Require commit, got %r" % obj)
         # END verify type
 
-        oldbinsha = None
+        oldbinsha = b''
         if logmsg is not None:
             try:
                 oldbinsha = self.commit.binsha
@@ -356,8 +357,8 @@ class SymbolicReference(object):
         return self
 
     # aliased reference
-    reference = property(_get_reference, set_reference, doc="Returns the Reference we point to")
-    ref: Union[Commit_ish] = reference     # type: ignore  # Union[str, Commit_ish, SymbolicReference]
+    reference = property(_get_reference, set_reference, doc="Returns the Reference we point to")  # type: ignore
+    ref: Union['Reference', 'Head'] = reference     # type: ignore
 
     def is_valid(self):
         """
