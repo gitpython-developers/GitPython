@@ -360,9 +360,9 @@ class SymbolicReference(object):
 
     # aliased reference
     reference = property(_get_reference, set_reference, doc="Returns the Reference we point to")
-    ref: Union[Commit_ish] = reference     # type: ignore  # Union[str, Commit_ish, SymbolicReference]
+    ref: Union['Reference'] = reference     # type: ignore
 
-    def is_valid(self):
+    def is_valid(self) -> bool:
         """
         :return:
             True if the reference is valid, hence it can be read and points to
@@ -375,7 +375,7 @@ class SymbolicReference(object):
             return True
 
     @property
-    def is_detached(self):
+    def is_detached(self) -> bool:
         """
         :return:
             True if we are a detached reference, hence we point to a specific commit
@@ -386,7 +386,7 @@ class SymbolicReference(object):
         except TypeError:
             return True
 
-    def log(self):
+    def log(self) -> 'RefLog':
         """
         :return: RefLog for this reference. Its last entry reflects the latest change
             applied to this reference
