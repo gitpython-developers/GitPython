@@ -251,7 +251,7 @@ def read_cache(stream: IO[bytes]) -> Tuple[int, Dict[Tuple[PathLike, int], 'Inde
     return (version, entries, extension_data, content_sha)
 
 
-def write_tree_from_cache(entries: List[IndexEntry], odb, sl: slice, si: int = 0
+def write_tree_from_cache(entries: List[IndexEntry], odb: 'GitCmdObjectDB', sl: slice, si: int = 0
                           ) -> Tuple[bytes, List['TreeCacheTup']]:
     """Create a tree from the given sorted list of entries and put the respective
     trees into the given object database

@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 __all__ = ["HEAD", "Head"]
 
 
-def strip_quotes(string):
+def strip_quotes(string: str) -> str:
     if string.startswith('"') and string.endswith('"'):
         return string[1:-1]
     return string
@@ -129,14 +129,13 @@ class Head(Reference):
     k_config_remote_ref = "merge"           # branch to merge from remote
 
     @classmethod
-    def delete(cls, repo: 'Repo', *heads: 'Head', **kwargs: Any):
+    def delete(cls, repo: 'Repo', *heads: 'Head', force: bool = False, **kwargs: Any) -> None:
         """Delete the given heads
 
         :param force:
             If True, the heads will be deleted even if they are not yet merged into
             the main development stream.
             Default False"""
-        force = kwargs.get("force", False)
         flag = "-d"
         if force:
             flag = "-D"

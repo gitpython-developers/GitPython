@@ -408,7 +408,7 @@ def expand_path(p: Union[None, PathLike], expand_vars: bool = True) -> Optional[
         return None
 
 
-def remove_password_if_present(cmdline):
+def remove_password_if_present(cmdline: Sequence[str]) -> List[str]:
     """
     Parse any command line argument and if on of the element is an URL with a
     password, replace it by stars (in-place).
@@ -1033,7 +1033,7 @@ class IterableList(List[T_IterableObj]):
 
 class IterableClassWatcher(type):
     """ Metaclass that watches """
-    def __init__(cls, name, bases, clsdict):
+    def __init__(cls, name: str, bases: List, clsdict: Dict) -> None:
         for base in bases:
             if type(base) == IterableClassWatcher:
                 warnings.warn(f"GitPython Iterable subclassed by {name}. "
@@ -1052,7 +1052,7 @@ class Iterable(metaclass=IterableClassWatcher):
     _id_attribute_ = "attribute that most suitably identifies your instance"
 
     @classmethod
-    def list_items(cls, repo, *args, **kwargs):
+    def list_items(cls, repo: 'Repo', *args: Any, **kwargs: Any) -> Any:
         """
         Deprecated, use IterableObj instead.
         Find all items of this type - subclasses can specify args and kwargs differently.
@@ -1062,7 +1062,7 @@ class Iterable(metaclass=IterableClassWatcher):
         :note: Favor the iter_items method as it will
 
         :return:list(Item,...) list of item instances"""
-        out_list = IterableList(cls._id_attribute_)
+        out_list: Any = IterableList(cls._id_attribute_)
         out_list.extend(cls.iter_items(repo, *args, **kwargs))
         return out_list
 

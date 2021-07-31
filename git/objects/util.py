@@ -144,20 +144,20 @@ class tzoffset(tzinfo):
     def __reduce__(self) -> Tuple[Type['tzoffset'], Tuple[float, str]]:
         return tzoffset, (-self._offset.total_seconds(), self._name)
 
-    def utcoffset(self, dt) -> timedelta:
+    def utcoffset(self, dt: Union[datetime, None]) -> timedelta:
         return self._offset
 
-    def tzname(self, dt) -> str:
+    def tzname(self, dt: Union[datetime, None]) -> str:
         return self._name
 
-    def dst(self, dt) -> timedelta:
+    def dst(self, dt: Union[datetime, None]) -> timedelta:
         return ZERO
 
 
 utc = tzoffset(0, 'UTC')
 
 
-def from_timestamp(timestamp, tz_offset: float) -> datetime:
+def from_timestamp(timestamp: float, tz_offset: float) -> datetime:
     """Converts a timestamp + tz_offset into an aware datetime instance."""
     utc_dt = datetime.fromtimestamp(timestamp, utc)
     try:
@@ -305,7 +305,7 @@ class Traversable(Protocol):
 
     @classmethod
     @abstractmethod
-    def _get_intermediate_items(cls, item) -> Sequence['Traversable']:
+    def _get_intermediate_items(cls, item: Any) -> Sequence['Traversable']:
         """
         Returns:
             Tuple of items connected to the given item.
@@ -327,7 +327,7 @@ class Traversable(Protocol):
                       stacklevel=2)
         return self._list_traverse(*args, **kwargs)
 
-    def _list_traverse(self, as_edge=False, *args: Any, **kwargs: Any
+    def _list_traverse(self, as_edge: bool = False, *args: Any, **kwargs: Any
                        ) -> IterableList[Union['Commit', 'Submodule', 'Tree', 'Blob']]:
         """
         :return: IterableList with the results of the traversal as produced by

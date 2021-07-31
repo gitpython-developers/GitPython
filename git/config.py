@@ -40,6 +40,7 @@ if TYPE_CHECKING:
     from io import BytesIO
 
 T_ConfigParser = TypeVar('T_ConfigParser', bound='GitConfigParser')
+T_OMD_value = TypeVar('T_OMD_value', str, bytes, int, float, bool)
 
 if sys.version_info[:3] < (3, 7, 2):
     # typing.Ordereddict not added until py 3.7.2
@@ -47,7 +48,7 @@ if sys.version_info[:3] < (3, 7, 2):
     OrderedDict_OMD = OrderedDict           # type: ignore  # until 3.6 dropped
 else:
     from typing import OrderedDict                   # type: ignore  # until 3.6 dropped
-    OrderedDict_OMD = OrderedDict[str, List[_T]]  # type: ignore[assignment, misc]
+    OrderedDict_OMD = OrderedDict[str, List[T_OMD_value]]  # type: ignore[assignment, misc]
 
 # -------------------------------------------------------------
 
@@ -97,23 +98,23 @@ class MetaParserBuilder(abc.ABCMeta):
         return new_type
 
 
-def needs_values(func: Callable) -> Callable:
+def needs_values(func: Callable[..., _T]) -> Callable[..., _T]:
     """Returns method assuring we read values (on demand) before we try to access them"""
 
     @wraps(func)
-    def assure_data_present(self, *args: Any, **kwargs: Any) -> Any:
+    def assure_data_present(self: 'GitConfigParser', *args: Any, **kwargs: Any) -> _T:
         self.read()
         return func(self, *args, **kwargs)
     # END wrapper method
     return assure_data_present
 
 
-def set_dirty_and_flush_changes(non_const_func: Callable) -> Callable:
+def set_dirty_and_flush_changes(non_const_func: Callable[..., _T]) -> Callable[..., _T]:
     """Return method that checks whether given non constant function may be called.
     If so, the instance will be set dirty.
     Additionally, we flush the changes right to disk"""
 
-    def flush_changes(self, *args: Any, **kwargs: Any) -> Any:
+    def flush_changes(self: 'GitConfigParser', *args: Any, **kwargs: Any) -> _T:
         rval = non_const_func(self, *args, **kwargs)
         self._dirty = True
         self.write()
@@ -356,7 +357,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
         self._acquire_lock()
         return self
 
-    def __exit__(self, exception_type, exception_value, traceback) -> None:
+    def __exit__(self, *args: Any) -> None:
         self.release()
 
     def release(self) -> None:
@@ -613,12 +614,15 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
     def _write(self, fp: IO) -> None:
         """Write an .ini-format representation of the configuration state in
         git compatible format"""
-        def write_section(name, section_dict):
+        def write_section(name: str, section_dict: _OMD) -> None:
             fp.write(("[%s]\n" % name).encode(defenc))
+
+            values: Sequence[Union[str, bytes, int, float, bool]]
             for (key, values) in section_dict.items_all():
                 if key == "__name__":
                     continue
 
+                v: Union[str, bytes, int, float, bool]
                 for v in values:
                     fp.write(("\t%s = %s\n" % (key, self._value_to_string(v).replace('\n', '\n\t'))).encode(defenc))
                 # END if key is not __name__

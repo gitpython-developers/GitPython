@@ -7,7 +7,7 @@ from .symbolic import SymbolicReference, T_References
 
 # typing ------------------------------------------------------------------
 
-from typing import Any, Callable, Iterator, List, Match, Optional, Tuple, Type, TypeVar, Union, TYPE_CHECKING  # NOQA
+from typing import Any, Callable, Iterator, Type, Union, TYPE_CHECKING  # NOQA
 from git.types import Commit_ish, PathLike, TBD, Literal, _T                                  # NOQA
 
 if TYPE_CHECKING:
@@ -63,8 +63,8 @@ class Reference(SymbolicReference, LazyMixin, IterableObj):
     #{ Interface
 
     # @ReservedAssignment
-    def set_object(self, object: Union[Commit_ish, 'SymbolicReference'], logmsg: Union[str, None] = None
-                   ) -> 'SymbolicReference':
+    def set_object(self, object: Union[Commit_ish, 'SymbolicReference', str], logmsg: Union[str, None] = None
+                   ) -> 'Reference':
         """Special version which checks if the head-log needs an update as well
         :return: self"""
         oldbinsha = None

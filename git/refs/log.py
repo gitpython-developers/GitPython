@@ -157,7 +157,7 @@ class RefLog(List[RefLogEntry], Serializable):
             self._read_from_file()
         # END handle filepath
 
-    def _read_from_file(self):
+    def _read_from_file(self) -> None:
         try:
             fmap = file_contents_ro_filepath(
                 self._path, stream=True, allow_mmap=True)
