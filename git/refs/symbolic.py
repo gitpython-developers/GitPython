@@ -16,7 +16,7 @@ from gitdb.exc import (
     BadName
 )
 
-from .log import RefLog, RefLogEntry
+from .log import RefLog
 
 # typing ------------------------------------------------------------------
 
@@ -25,6 +25,7 @@ from git.types import Commit_ish, PathLike, TBD, Literal                        
 
 if TYPE_CHECKING:
     from git.repo import Repo
+    from .log import RefLogEntry                        # NOQA
     from git.refs import Reference, Head, TagReference, RemoteReference         # NOQA
     from git.config import GitConfigParser              # NOQA
     from git.objects.commit import Actor                # NOQA
