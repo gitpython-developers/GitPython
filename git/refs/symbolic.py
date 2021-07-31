@@ -26,6 +26,7 @@ from git.types import Commit_ish, PathLike, TBD, Literal                        
 
 if TYPE_CHECKING:
     from git.repo import Repo
+    from git.refs import Head, TagReference, Reference
 
 T_References = TypeVar('T_References', bound='SymbolicReference')
 
@@ -59,10 +60,10 @@ class SymbolicReference(object):
 
     def __init__(self, repo: 'Repo', path: PathLike, check_path: bool = False):
         self.repo = repo
-        self.path = str(path)
+        self.path = path
 
     def __str__(self) -> str:
-        return self.path
+        return str(self.path)
 
     def __repr__(self):
         return '<git.%s "%s">' % (self.__class__.__name__, self.path)
@@ -84,7 +85,7 @@ class SymbolicReference(object):
         :return:
             In case of symbolic references, the shortest assumable name
             is the path itself."""
-        return self.path
+        return str(self.path)
 
     @property
     def abspath(self) -> PathLike:
@@ -557,7 +558,7 @@ class SymbolicReference(object):
         :note: This does not alter the current HEAD, index or Working Tree"""
         return cls._create(repo, path, cls._resolve_ref_on_create, reference, force, logmsg)
 
-    def rename(self, new_path, force=False):
+    def rename(self, new_path: PathLike, force: bool = False) -> 'SymbolicReference':
         """Rename self to a new path
 
         :param new_path:
@@ -577,7 +578,7 @@ class SymbolicReference(object):
 
         new_abs_path = os.path.join(_git_dir(self.repo, new_path), new_path)
         cur_abs_path = os.path.join(_git_dir(self.repo, self.path), self.path)
-        if os.path.path.isfile(new_abs_path):
+        if os.path.isfile(new_abs_path):
             if not force:
                 # if they point to the same file, its not an error
                 with open(new_abs_path, 'rb') as fd1:
@@ -663,7 +664,7 @@ class SymbolicReference(object):
         return (r for r in cls._iter_items(repo, common_path) if r.__class__ == SymbolicReference or not r.is_detached)
 
     @classmethod
-    def from_path(cls, repo, path):
+    def from_path(cls, repo: 'Repo', path: PathLike) -> Union['Head', 'TagReference', 'Reference']:
         """
         :param path: full .git-directory-relative path name to the Reference to instantiate
         :note: use to_full_path() if you only have a partial path of a known Reference Type
