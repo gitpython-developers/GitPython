@@ -1,4 +1,3 @@
-from git.types import PathLike
 import os
 
 from git.compat import defenc
@@ -17,17 +16,18 @@ from gitdb.exc import (
     BadName
 )
 
-import os.path as osp
-
-from .log import RefLog
+from .log import RefLog, RefLogEntry
 
 # typing ------------------------------------------------------------------
 
-from typing import Any, Iterator, List, Match, Optional, Tuple, Type, TypeVar, Union, TYPE_CHECKING  # NOQA
+from typing import Any, Iterator, List, Match, Optional, Tuple, Type, TypeVar, Union, TYPE_CHECKING, cast  # NOQA
 from git.types import Commit_ish, PathLike, TBD, Literal                                               # NOQA
 
 if TYPE_CHECKING:
     from git.repo import Repo
+    from git.refs import Reference, Head, TagReference, RemoteReference
+    from git.config import GitConfigParser
+    from git.objects.commit import Actor
 
 T_References = TypeVar('T_References', bound='SymbolicReference')
 
