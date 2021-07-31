@@ -9,7 +9,7 @@ __all__ = ["RemoteReference"]
 
 # typing ------------------------------------------------------------------
 
-from typing import Any, NoReturn, Union, TYPE_CHECKING
+from typing import Any, Iterator, NoReturn, Union, TYPE_CHECKING
 from git.types import PathLike
 
 
@@ -28,7 +28,7 @@ class RemoteReference(Head):
     @classmethod
     def iter_items(cls, repo: 'Repo', common_path: Union[PathLike, None] = None,
                    remote: Union['Remote', None] = None, *args: Any, **kwargs: Any
-                   ) -> 'RemoteReference':
+                   ) -> Iterator['RemoteReference']:
         """Iterate remote references, and if given, constrain them to the given remote"""
         common_path = common_path or cls._common_path_default
         if remote is not None:

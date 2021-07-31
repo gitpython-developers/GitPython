@@ -28,8 +28,6 @@ jobs:
     - name: Install dependencies and prepare tests
       run: |
         set -x
-        sudo rm -rf "/usr/local/share/boost"
-        sudo rm -rf "$AGENT_TOOLSDIRECTORY"
 
         python -m pip install --upgrade pip setuptools wheel
         python --version; git --version
