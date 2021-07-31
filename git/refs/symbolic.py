@@ -36,7 +36,7 @@ T_References = TypeVar('T_References', bound='SymbolicReference')
 __all__ = ["SymbolicReference"]
 
 
-def _git_dir(repo: 'Repo', path: Union[PathLike, None]) -> PathLike:
+def _git_dir(repo: 'Repo', path: PathLike) -> PathLike:
     """ Find the git dir that's appropriate for the path"""
     name = f"{path}"
     if name in ['HEAD', 'ORIG_HEAD', 'FETCH_HEAD', 'index', 'logs']:
@@ -136,27 +136,26 @@ class SymbolicReference(object):
         # alright.
 
     @classmethod
-    def dereference_recursive(cls, repo: 'Repo', ref_path: Union[None, PathLike]) -> str:
+    def dereference_recursive(cls, repo: 'Repo', ref_path: PathLike) -> str:
         """
         :return: hexsha stored in the reference at the given ref_path, recursively dereferencing all
             intermediate references as required
         :param repo: the repository containing the reference at ref_path"""
-        while True:  # loop that overwrites ref_path each loop
+        while True:
             hexsha, ref_path = cls._get_ref_info(repo, ref_path)
             if hexsha is not None:
                 return hexsha
         # END recursive dereferencing
 
     @classmethod
-    def _get_ref_info_helper(cls, repo: 'Repo', ref_path: Union[PathLike, None]
-                             ) -> Union[Tuple[str, None], Tuple[None, str]]:
+    def _get_ref_info_helper(cls, repo: 'Repo', ref_path: PathLike):
         """Return: (str(sha), str(target_ref_path)) if available, the sha the file at
         rela_path points to, or None. target_ref_path is the reference we
         point to, or None"""
         tokens: Union[None, List[str], Tuple[str, str]] = None
         repodir = _git_dir(repo, ref_path)
         try:
-            with open(os.path.join(repodir, cast(str, ref_path)), 'rt', encoding='UTF-8') as fp:
+            with open(os.path.join(repodir, ref_path), 'rt', encoding='UTF-8') as fp:
                 value = fp.read().rstrip()
             # Don't only split on spaces, but on whitespace, which allows to parse lines like
             # 60b64ef992065e2600bfef6187a97f92398a9144                branch 'master' of git-server:/path/to/repo
@@ -188,7 +187,7 @@ class SymbolicReference(object):
         raise ValueError("Failed to parse reference information from %r" % ref_path)
 
     @classmethod
-    def _get_ref_info(cls, repo: 'Repo', ref_path: Union[PathLike, None]) -> Union[Tuple[str, None], Tuple[None, str]]:
+    def _get_ref_info(cls, repo, ref_path):
         """Return: (str(sha), str(target_ref_path)) if available, the sha the file at
         rela_path points to, or None. target_ref_path is the reference we
         point to, or None"""
