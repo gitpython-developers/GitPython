@@ -412,13 +412,14 @@ class Repo(object):
         return TagReference(self, full_path)
 
     @staticmethod
-    def _to_full_tag_path(path):
-        if path.startswith(TagReference._common_path_default + '/'):
-            return path
-        if path.startswith(TagReference._common_default + '/'):
-            return Reference._common_path_default + '/' + path
+    def _to_full_tag_path(path: PathLike) -> str:
+        path_str = str(path)
+        if path_str.startswith(TagReference._common_path_default + '/'):
+            return path_str
+        if path_str.startswith(TagReference._common_default + '/'):
+            return Reference._common_path_default + '/' + path_str
         else:
-            return TagReference._common_path_default + '/' + path
+            return TagReference._common_path_default + '/' + path_str
 
     def create_head(self, path: PathLike, commit: str = 'HEAD',
                     force: bool = False, logmsg: Optional[str] = None
