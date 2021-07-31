@@ -68,7 +68,7 @@ __all__ = ('Git',)
 # Documentation
 ## @{
 
-def handle_process_output(process: subprocess.Popen,
+def handle_process_output(process: Union[subprocess.Popen, 'Git.AutoInterrupt'],
                           stdout_handler: Union[None,
                                                 Callable[[AnyStr], None],
                                                 Callable[[List[AnyStr]], None],
@@ -77,7 +77,7 @@ def handle_process_output(process: subprocess.Popen,
                                                 Callable[[AnyStr], None],
                                                 Callable[[List[AnyStr]], None]],
                           finalizer: Union[None,
-                                           Callable[[subprocess.Popen], None]] = None,
+                                           Callable[[Union[subprocess.Popen, 'Git.AutoInterrupt']], None]] = None,
                           decode_streams: bool = True) -> None:
     """Registers for notifications to learn that process output is ready to read, and dispatches lines to
     the respective line handlers.

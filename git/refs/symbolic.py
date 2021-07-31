@@ -21,8 +21,8 @@ from .log import RefLog
 
 # typing ------------------------------------------------------------------
 
-from typing import Any, Iterator, List, Match, Optional, Tuple, Type, TypeVar, Union, TYPE_CHECKING, cast  # NOQA
-from git.types import Commit_ish, PathLike, TBD, Literal                                               # NOQA
+from typing import Any, Iterator, List, Tuple, Type, TypeVar, Union, TYPE_CHECKING, cast  # NOQA
+from git.types import Commit_ish, PathLike                                             # NOQA
 
 if TYPE_CHECKING:
     from git.repo import Repo

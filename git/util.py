@@ -38,6 +38,7 @@ if TYPE_CHECKING:
     from git.remote import Remote
     from git.repo.base import Repo
     from git.config import GitConfigParser, SectionConstraint
+    from git import Git
     # from git.objects.base import IndexObject
 
 
@@ -379,7 +380,7 @@ def get_user_id() -> str:
     return "%s@%s" % (getpass.getuser(), platform.node())
 
 
-def finalize_process(proc: subprocess.Popen, **kwargs: Any) -> None:
+def finalize_process(proc: Union[subprocess.Popen, 'Git.AutoInterrupt'], **kwargs: Any) -> None:
     """Wait for the process (clone, fetch, pull or push) and handle its errors accordingly"""
     # TODO: No close proc-streams??
     proc.wait(**kwargs)
@@ -1033,7 +1034,7 @@ class IterableList(List[T_IterableObj]):
 
 class IterableClassWatcher(type):
     """ Metaclass that watches """
-    def __init__(cls, name: str, bases: List, clsdict: Dict) -> None:
+    def __init__(cls, name: str, bases: Tuple, clsdict: Dict) -> None:
         for base in bases:
             if type(base) == IterableClassWatcher:
                 warnings.warn(f"GitPython Iterable subclassed by {name}. "
