@@ -57,6 +57,7 @@ from git.types import Commit_ish, Literal, PathLike, TBD
 if TYPE_CHECKING:
     from git.index import IndexFile
     from git.repo import Repo
+    from git.refs import Head
 
 
 # -----------------------------------------------------------------------------
@@ -265,7 +266,7 @@ class Submodule(IndexObject, TraversableIterableObj):
         # end
 
     @classmethod
-    def _clone_repo(cls, repo, url, path, name, **kwargs):
+    def _clone_repo(cls, repo: 'Repo', url: str, path: PathLike, name: str, **kwargs: Any) -> 'Repo':
         """:return: Repo instance of newly cloned repository
         :param repo: our parent repository
         :param url: url to clone from
@@ -279,7 +280,7 @@ class Submodule(IndexObject, TraversableIterableObj):
             module_abspath_dir = osp.dirname(module_abspath)
             if not osp.isdir(module_abspath_dir):
                 os.makedirs(module_abspath_dir)
-            module_checkout_path = osp.join(repo.working_tree_dir, path)
+            module_checkout_path = osp.join(str(repo.working_tree_dir), path)
         # end
 
         clone = git.Repo.clone_from(url, module_checkout_path, **kwargs)
@@ -484,7 +485,7 @@ class Submodule(IndexObject, TraversableIterableObj):
     def update(self, recursive: bool = False, init: bool = True, to_latest_revision: bool = False,
                progress: Union['UpdateProgress', None] = None, dry_run: bool = False,
                force: bool = False, keep_going: bool = False, env: Union[Mapping[str, str], None] = None,
-               clone_multi_options: Union[Sequence[TBD], None] = None):
+               clone_multi_options: Union[Sequence[TBD], None] = None) -> 'Submodule':
         """Update the repository of this submodule to point to the checkout
         we point at with the binsha of this instance.
 
@@ -712,7 +713,7 @@ class Submodule(IndexObject, TraversableIterableObj):
         return self
 
     @unbare_repo
-    def move(self, module_path, configuration=True, module=True):
+    def move(self, module_path: PathLike, configuration: bool = True, module: bool = True) -> 'Submodule':
         """Move the submodule to a another module path. This involves physically moving
         the repository at our current path, changing the configuration, as well as
         adjusting our index entry accordingly.
@@ -742,7 +743,7 @@ class Submodule(IndexObject, TraversableIterableObj):
             return self
         # END handle no change
 
-        module_checkout_abspath = join_path_native(self.repo.working_tree_dir, module_checkout_path)
+        module_checkout_abspath = join_path_native(str(self.repo.working_tree_dir), module_checkout_path)
         if osp.isfile(module_checkout_abspath):
             raise ValueError("Cannot move repository onto a file: %s" % module_checkout_abspath)
         # END handle target files
@@ -1160,7 +1161,7 @@ class Submodule(IndexObject, TraversableIterableObj):
         # END handle object state consistency
 
     @property
-    def branch(self):
+    def branch(self) -> 'Head':
         """:return: The branch instance that we are to checkout
         :raise InvalidGitRepositoryError: if our module is not yet checked out"""
         return mkhead(self.module(), self._branch_path)
