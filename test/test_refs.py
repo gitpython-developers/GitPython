@@ -125,15 +125,15 @@ class TestRefs(TestBase):
             gp_tracking_branch = rwrepo.create_head('gp_tracking#123')
             special_name_remote_ref = rwrepo.remotes[0].refs[special_name]  # get correct type
             gp_tracking_branch.set_tracking_branch(special_name_remote_ref)
-            TBranch = gp_tracking_branch.tracking_branch()
-            if TBranch is not None:
-                assert TBranch.path == special_name_remote_ref.path
+            #TBranch = gp_tracking_branch.tracking_branch()
+            #if TBranch is not None:
+            assert gp_tracking_branch.tracking_branch().path == special_name_remote_ref.path
 
             git_tracking_branch = rwrepo.create_head('git_tracking#123')
             rwrepo.git.branch('-u', special_name_remote_ref.name, git_tracking_branch.name)
-            TBranch = gp_tracking_branch.tracking_branch()
-            if TBranch is not None:
-                assert TBranch.name == special_name_remote_ref.name
+            #TBranch = gp_tracking_branch.tracking_branch()
+            #if TBranch is not None:
+            assert gp_tracking_branch.tracking_branch().name == special_name_remote_ref.name
         # END for each head
 
         # verify REFLOG gets altered
@@ -457,7 +457,7 @@ class TestRefs(TestBase):
 
         self.assertRaises(OSError, SymbolicReference.create, rw_repo, symref_path, cur_head.reference.commit)
         # it works if the new ref points to the same reference
-        SymbolicReference.create(rw_repo, symref.path, symref.reference).path == symref.path  # @NoEffect
+        assert SymbolicReference.create(rw_repo, symref.path, symref.reference).path == symref.path  # @NoEffect
         SymbolicReference.delete(rw_repo, symref)
         # would raise if the symref wouldn't have been deletedpbl
         symref = SymbolicReference.create(rw_repo, symref_path, cur_head.reference)
