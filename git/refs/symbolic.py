@@ -526,8 +526,9 @@ class SymbolicReference(object):
         return ref
 
     @classmethod
-    def create(cls, repo: 'Repo', path: PathLike, reference: Union[Commit_ish, str] = 'HEAD',
-               logmsg: Union[str, None] = None, force: bool = False, **kwargs: Any):
+    def create(cls: Type[T_References], repo: 'Repo', path: PathLike,
+               reference: Union['SymbolicReference', str] = 'HEAD',
+               logmsg: Union[str, None] = None, force: bool = False, **kwargs: Any) -> T_References:
         """Create a new symbolic reference, hence a reference pointing , to another reference.
 
         :param repo:
@@ -689,6 +690,6 @@ class SymbolicReference(object):
         # END for each type to try
         raise ValueError("Could not find reference type suitable to handle path %r" % path)
 
-    def is_remote(self):
+    def is_remote(self) -> bool:
         """:return: True if this symbolic reference points to a remote branch"""
-        return self.path.startswith(self._remote_common_path_default + "/")
+        return str(self.path).startswith(self._remote_common_path_default + "/")
