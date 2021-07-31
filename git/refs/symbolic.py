@@ -421,7 +421,7 @@ class SymbolicReference(object):
         return RefLog.entry_at(RefLog.path(self), index)
 
     @classmethod
-    def to_full_path(cls, path) -> PathLike:
+    def to_full_path(cls, path: Union[PathLike, 'SymbolicReference']) -> PathLike:
         """
         :return: string with a full repository-relative path which can be used to initialize
             a Reference instance, for instance by using ``Reference.from_path``"""
@@ -430,12 +430,12 @@ class SymbolicReference(object):
         full_ref_path = path
         if not cls._common_path_default:
             return full_ref_path
-        if not path.startswith(cls._common_path_default + "/"):
+        if not str(path).startswith(cls._common_path_default + "/"):
             full_ref_path = '%s/%s' % (cls._common_path_default, path)
         return full_ref_path
 
     @classmethod
-    def delete(cls, repo, path):
+    def delete(cls, repo: 'Repo', path: PathLike) -> None:
         """Delete the reference at the given path
 
         :param repo:
@@ -457,8 +457,8 @@ class SymbolicReference(object):
                     new_lines = []
                     made_change = False
                     dropped_last_line = False
-                    for line in reader:
-                        line = line.decode(defenc)
+                    for line_bytes in reader:
+                        line = line_bytes.decode(defenc)
                         _, _, line_ref = line.partition(' ')
                         line_ref = line_ref.strip()
                         # keep line if it is a comment or if the ref to delete is not
