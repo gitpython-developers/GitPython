@@ -4,13 +4,14 @@ __all__ = ["TagReference", "Tag"]
 
 # typing ------------------------------------------------------------------
 
-from typing import Any, Union, TYPE_CHECKING
+from typing import Any, Type, Union, TYPE_CHECKING
 from git.types import Commit_ish, PathLike
 
 if TYPE_CHECKING:
     from git.repo import Repo
     from git.objects import Commit
     from git.objects import TagObject
+    from git.refs import SymbolicReference
 
 
 # ------------------------------------------------------------------------------
@@ -68,7 +69,8 @@ class TagReference(Reference):
         return Reference._get_object(self)
 
     @classmethod
-    def create(cls, repo: 'Repo', path: PathLike, reference: Union[Commit_ish, str] = 'HEAD',
+    def create(cls: Type['TagReference'], repo: 'Repo', path: PathLike,
+               reference: Union[str, 'SymbolicReference'] = 'HEAD',
                logmsg: Union[str, None] = None,
                force: bool = False, **kwargs: Any) -> 'TagReference':
         """Create a new tag reference.
@@ -78,7 +80,7 @@ class TagReference(Reference):
             The prefix refs/tags is implied
 
         :param ref:
-            A reference to the object you want to tag. It can be a commit, tree or
+            A reference to the Object you want to tag. The Object can be a commit, tree or
             blob.
 
         :param logmsg:
@@ -98,7 +100,9 @@ class TagReference(Reference):
             Additional keyword arguments to be passed to git-tag
 
         :return: A new TagReference"""
-        args = (path, reference)
+        if 'ref' in kwargs and kwargs['ref']:
+            reference = kwargs['ref']
+
         if logmsg:
             kwargs['m'] = logmsg
         elif 'message' in kwargs and kwargs['message']:
@@ -107,11 +111,13 @@ class TagReference(Reference):
         if force:
             kwargs['f'] = True
 
+        args = (path, reference)
+
         repo.git.tag(*args, **kwargs)
         return TagReference(repo, "%s/%s" % (cls._common_path_default, path))
 
     @classmethod
-    def delete(cls, repo: 'Repo', *tags: 'TagReference') -> None:
+    def delete(cls, repo: 'Repo', *tags: 'TagReference') -> None:  # type: ignore[override]
         """Delete the given existing tag or tags"""
         repo.git.tag("-d", *tags)
 
