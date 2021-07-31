@@ -65,6 +65,7 @@ class SymbolicReference(object):
     def __init__(self, repo: 'Repo', path: PathLike, check_path: bool = False):
         self.repo = repo
         self.path = path
+        self.ref = self.reference
 
     def __str__(self) -> str:
         return str(self.path)
@@ -282,7 +283,7 @@ class SymbolicReference(object):
     commit = property(_get_commit, set_commit, doc="Query or set commits directly")       # type: ignore
     object = property(_get_object, set_object, doc="Return the object our ref currently refers to")  # type: ignore
 
-    def _get_reference(self) -> 'SymbolicReference':
+    def _get_reference(self) -> 'Reference':
         """:return: Reference Object we point to
         :raise TypeError: If this symbolic reference is detached, hence it doesn't point
             to a reference, but to a commit"""
@@ -362,8 +363,15 @@ class SymbolicReference(object):
         return self
 
     # aliased reference
-    reference = property(_get_reference, set_reference, doc="Returns the Reference we point to")  # type: ignore
-    ref: Union['Reference'] = reference             # type: ignore
+    # reference = property(_get_reference, set_reference, doc="Returns the Reference we point to")  # type: ignore
+
+    @property
+    def reference(self) -> 'Reference':
+        return self._get_reference()
+
+    @reference.setter
+    def reference(self, *args, **kwargs):
+        return self.set_reference(*args, **kwargs)
 
     def is_valid(self) -> bool:
         """
