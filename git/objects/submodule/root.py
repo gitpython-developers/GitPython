@@ -2,9 +2,7 @@ from .base import (
     Submodule,
     UpdateProgress
 )
-from .util import (
-    find_first_remote_branch
-)
+from .util import find_first_remote_branch
 from git.exc import InvalidGitRepositoryError
 import git
 
