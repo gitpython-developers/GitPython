@@ -146,13 +146,13 @@ class SymbolicReference(object):
             intermediate references as required
         :param repo: the repository containing the reference at ref_path"""
         while True:
-            hexsha, ref_path = cls._get_ref_info(repo, ref_path)
+            hexsha, ref_path = cls._get_ref_info(repo, ref_path)  # type: ignore
             if hexsha is not None:
                 return hexsha
         # END recursive dereferencing
 
     @classmethod
-    def _get_ref_info_helper(cls, repo: 'Repo', ref_path: PathLike):
+    def _get_ref_info_helper(cls, repo: 'Repo', ref_path: PathLike) -> Union[Tuple[str, None], Tuple[None, str]]:
         """Return: (str(sha), str(target_ref_path)) if available, the sha the file at
         rela_path points to, or None. target_ref_path is the reference we
         point to, or None"""
@@ -191,13 +191,13 @@ class SymbolicReference(object):
         raise ValueError("Failed to parse reference information from %r" % ref_path)
 
     @classmethod
-    def _get_ref_info(cls, repo, ref_path):
+    def _get_ref_info(cls, repo: 'Repo', ref_path: PathLike) -> Union[Tuple[str, None], Tuple[None, str]]:
         """Return: (str(sha), str(target_ref_path)) if available, the sha the file at
         rela_path points to, or None. target_ref_path is the reference we
         point to, or None"""
         return cls._get_ref_info_helper(repo, ref_path)
 
-    def _get_object(self):
+    def _get_object(self) -> Commit_ish:
         """
         :return:
             The object our ref currently refers to. Refs can be cached, they will
@@ -206,7 +206,7 @@ class SymbolicReference(object):
         # Our path will be resolved to the hexsha which will be used accordingly
         return Object.new_from_sha(self.repo, hex_to_bin(self.dereference_recursive(self.repo, self.path)))
 
-    def _get_commit(self):
+    def _get_commit(self) -> 'Commit':
         """
         :return:
             Commit object we point to, works for detached and non-detached
