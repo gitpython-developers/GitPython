@@ -282,6 +282,7 @@ class SymbolicReference(object):
 
     commit = cast('Commit', property(_get_commit, set_commit, doc="Query or set commits directly"))
     object = property(_get_object, set_object, doc="Return the object our ref currently refers to")  # type: ignore
+    # reference = property(_get_reference, set_reference, doc="Return the object our ref currently refers to")
 
     def _get_reference(self
                        ) -> Union['Head', 'RemoteReference', 'TagReference', 'Reference']:
@@ -363,21 +364,30 @@ class SymbolicReference(object):
 
         return self
 
-    reference: Union['Head', 'RemoteReference', 'TagReference', 'Reference'] = property(  # type: ignore
-        _get_reference, set_reference,
-        doc="Reference Object we point to")
+    reference: Union['Head', 'RemoteReference', 'TagReference', 'Reference']
+    reference = property(_get_reference, set_reference, doc="Reference Object we point to")    # type: ignore
     ref = reference
-    
-    """
-    @ property
-    def reference(self) -> Union['Head', 'RemoteReference', 'TagReference', 'Reference']:
-        return self._get_reference()
+    # @ property
+    # def reference(self) -> Union['Head', 'RemoteReference', 'TagReference', 'Reference']:
+    #     return self._get_reference()
 
-    @ reference.setter
-    def reference(self, ref: Union[str, Commit_ish, 'SymbolicReference'], logmsg: Union[str, None] = None
-                  ) -> 'SymbolicReference':
-        return self.set_reference(ref=ref, logmsg=logmsg)
-    
+    # @ reference.setter
+    # def reference(self, ref: Union[str, Commit_ish, 'SymbolicReference'], logmsg: Union[str, None] = None
+    #               ) -> 'SymbolicReference':
+    #     return self.set_reference(ref=ref, logmsg=logmsg)
+
+    def is_valid(self) -> bool:
+        """
+        :return:
+            True if the reference is valid, hence it can be read and points to
+            a valid object or reference."""
+        try:
+            self.object
+        except (OSError, ValueError):
+            return False
+        else:
+            return True
+
     @ property
     def is_detached(self):
         """
@@ -389,7 +399,6 @@ class SymbolicReference(object):
             return False
         except TypeError:
             return True
-    """
 
     def log(self) -> 'RefLog':
         """
