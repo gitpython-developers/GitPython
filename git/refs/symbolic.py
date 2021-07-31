@@ -136,7 +136,7 @@ class SymbolicReference(object):
         # alright.
 
     @classmethod
-    def dereference_recursive(cls, repo, ref_path):
+    def dereference_recursive(cls, repo: 'Repo', ref_path: PathLike) -> str:
         """
         :return: hexsha stored in the reference at the given ref_path, recursively dereferencing all
             intermediate references as required
