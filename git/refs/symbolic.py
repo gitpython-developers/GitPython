@@ -148,11 +148,11 @@ class SymbolicReference(object):
         # END recursive dereferencing
 
     @classmethod
-    def _get_ref_info_helper(cls, repo, ref_path):
+    def _get_ref_info_helper(cls, repo: 'Repo', ref_path: PathLike) -> Union[Tuple[str, None], Tuple[None, str]]:
         """Return: (str(sha), str(target_ref_path)) if available, the sha the file at
         rela_path points to, or None. target_ref_path is the reference we
         point to, or None"""
-        tokens = None
+        tokens: Union[None, List[str], Tuple[str, str]] = None
         repodir = _git_dir(repo, ref_path)
         try:
             with open(os.path.join(repodir, ref_path), 'rt', encoding='UTF-8') as fp:
