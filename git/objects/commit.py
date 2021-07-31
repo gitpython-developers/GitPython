@@ -282,7 +282,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         proc = repo.git.rev_list(rev, args_list, as_process=True, **kwargs)
         return cls._iter_from_process_or_stream(repo, proc)
 
-    def iter_parents(self, paths: Union[PathLike, Sequence[PathLike]] = '', **kwargs) -> Iterator['Commit']:
+    def iter_parents(self, paths: Union[PathLike, Sequence[PathLike]] = '', **kwargs: Any) -> Iterator['Commit']:
         """Iterate _all_ parents of this commit.
 
         :param paths:
@@ -362,7 +362,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
     def create_from_tree(cls, repo: 'Repo', tree: Union[Tree, str], message: str,
                          parent_commits: Union[None, List['Commit']] = None, head: bool = False,
                          author: Union[None, Actor] = None, committer: Union[None, Actor] = None,
-                         author_date: Union[None, str] = None, commit_date: Union[None, str] = None):
+                         author_date: Union[None, str] = None, commit_date: Union[None, str] = None) -> 'Commit':
         """Commit the given tree, creating a commit object.
 
         :param repo: Repo object the commit should be part of
@@ -403,7 +403,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         else:
             for p in parent_commits:
                 if not isinstance(p, cls):
-                    raise ValueError("Parent commit '%r' must be of type %s" % (p, cls))
+                    raise ValueError(f"Parent commit '{p!r}' must be of type {cls}")
             # end check parent commit types
         # END if parent commits are unset
 
