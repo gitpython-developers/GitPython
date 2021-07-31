@@ -493,7 +493,9 @@ class SymbolicReference(object):
         # END remove reflog
 
     @classmethod
-    def _create(cls, repo, path, resolve, reference, force, logmsg=None):
+    def _create(cls: Type[T_References], repo: 'Repo', path: PathLike, resolve: bool,
+                reference: Union['SymbolicReference', str], force: bool,
+                logmsg: Union[str, None] = None) -> T_References:
         """internal method used to create a new symbolic reference.
         If resolve is False, the reference will be taken as is, creating
         a proper symbolic reference. Otherwise it will be resolved to the
@@ -511,7 +513,7 @@ class SymbolicReference(object):
         if not force and os.path.isfile(abs_ref_path):
             target_data = str(target)
             if isinstance(target, SymbolicReference):
-                target_data = target.path
+                target_data = str(target.path)
             if not resolve:
                 target_data = "ref: " + target_data
             with open(abs_ref_path, 'rb') as fd:
