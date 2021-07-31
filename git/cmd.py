@@ -39,10 +39,10 @@ from .util import (
 
 # typing ---------------------------------------------------------------------------
 
-from typing import (Any, AnyStr, BinaryIO, Callable, Dict, IO, List, Mapping,
+from typing import (Any, AnyStr, BinaryIO, Callable, Dict, IO, Iterator, List, Mapping,
                     Sequence, TYPE_CHECKING, TextIO, Tuple, Union, cast, overload)
 
-from git.types import PathLike, Literal, TBD
+from git.types import PathLike, Literal
 
 if TYPE_CHECKING:
     from git.repo.base import Repo
@@ -146,11 +146,11 @@ def dashify(string: str) -> str:
     return string.replace('_', '-')
 
 
-def slots_to_dict(self, exclude: Sequence[str] = ()) -> Dict[str, Any]:
+def slots_to_dict(self: object, exclude: Sequence[str] = ()) -> Dict[str, Any]:
     return {s: getattr(self, s) for s in self.__slots__ if s not in exclude}
 
 
-def dict_to_slots_and__excluded_are_none(self, d: Mapping[str, Any], excluded: Sequence[str] = ()) -> None:
+def dict_to_slots_and__excluded_are_none(self: object, d: Mapping[str, Any], excluded: Sequence[str] = ()) -> None:
     for k, v in d.items():
         setattr(self, k, v)
     for k in excluded:
@@ -192,7 +192,7 @@ class Git(LazyMixin):
     def __getstate__(self) -> Dict[str, Any]:
         return slots_to_dict(self, exclude=self._excluded_)
 
-    def __setstate__(self, d) -> None:
+    def __setstate__(self, d: Dict[str, Any]) -> None:
         dict_to_slots_and__excluded_are_none(self, d, excluded=self._excluded_)
 
     # CONFIGURATION
@@ -434,10 +434,13 @@ class Git(LazyMixin):
             if self.proc is not None:
                 status = self.proc.wait()
 
-                def read_all_from_possibly_closed_stream(stream):
-                    try:
-                        return stderr + force_bytes(stream.read())
-                    except ValueError:
+                def read_all_from_possibly_closed_stream(stream: Union[IO[bytes], None]) -> bytes:
+                    if stream:
+                        try:
+                            return stderr + force_bytes(stream.read())
+                        except ValueError:
+                            return stderr or b''
+                    else:
                         return stderr or b''
 
                 if status != 0:
@@ -907,7 +910,7 @@ class Git(LazyMixin):
         if self.GIT_PYTHON_TRACE == 'full':
             cmdstr = " ".join(redacted_command)
 
-            def as_text(stdout_value):
+            def as_text(stdout_value: Union[bytes, str]) -> str:
                 return not output_stream and safe_decode(stdout_value) or '<OUTPUT_STREAM>'
             # end
 
@@ -932,10 +935,10 @@ class Git(LazyMixin):
         else:
             return stdout_value
 
-    def environment(self):
+    def environment(self) -> Dict[str, str]:
         return self._environment
 
-    def update_environment(self, **kwargs):
+    def update_environment(self, **kwargs: Any) -> Dict[str, Union[str, None]]:
         """
         Set environment variables for future git invocations. Return all changed
         values in a format that can be passed back into this function to revert
@@ -962,7 +965,7 @@ class Git(LazyMixin):
         return old_env
 
     @contextmanager
-    def custom_environment(self, **kwargs):
+    def custom_environment(self, **kwargs: Any) -> Iterator[None]:
         """
         A context manager around the above ``update_environment`` method to restore the
         environment back to its previous state after operation.
@@ -1042,6 +1045,13 @@ class Git(LazyMixin):
     def _call_process(self, method: str, *args: None, **kwargs: None
                       ) -> str:
         ...  # if no args given, execute called with all defaults
+
+    @overload
+    def _call_process(self, method: str,
+                      istream: int,
+                      as_process: Literal[True],
+                      *args: Any, **kwargs: Any
+                      ) -> 'Git.AutoInterrupt': ...
 
     @overload
     def _call_process(self, method: str, *args: Any, **kwargs: Any
@@ -1156,7 +1166,7 @@ class Git(LazyMixin):
         return refstr.encode(defenc)
 
     def _get_persistent_cmd(self, attr_name: str, cmd_name: str, *args: Any, **kwargs: Any
-                            ) -> Union['Git.AutoInterrupt', TBD]:
+                            ) -> 'Git.AutoInterrupt':
         cur_val = getattr(self, attr_name)
         if cur_val is not None:
             return cur_val
@@ -1166,12 +1176,16 @@ class Git(LazyMixin):
 
         cmd = self._call_process(cmd_name, *args, **options)
         setattr(self, attr_name, cmd)
+        cmd = cast('Git.AutoInterrupt', cmd)
         return cmd
 
-    def __get_object_header(self, cmd, ref: AnyStr) -> Tuple[str, str, int]:
-        cmd.stdin.write(self._prepare_ref(ref))
-        cmd.stdin.flush()
-        return self._parse_object_header(cmd.stdout.readline())
+    def __get_object_header(self, cmd: 'Git.AutoInterrupt', ref: AnyStr) -> Tuple[str, str, int]:
+        if cmd.stdin and cmd.stdout:
+            cmd.stdin.write(self._prepare_ref(ref))
+            cmd.stdin.flush()
+            return self._parse_object_header(cmd.stdout.readline())
+        else:
+            raise ValueError("cmd stdin was empty")
 
     def get_object_header(self, ref: str) -> Tuple[str, str, int]:
         """ Use this method to quickly examine the type and size of the object behind
@@ -1200,7 +1214,8 @@ class Git(LazyMixin):
         :note: This method is not threadsafe, you need one independent Command instance per thread to be safe !"""
         cmd = self._get_persistent_cmd("cat_file_all", "cat_file", batch=True)
         hexsha, typename, size = self.__get_object_header(cmd, ref)
-        return (hexsha, typename, size, self.CatFileContentStream(size, cmd.stdout))
+        cmd_stdout = cmd.stdout if cmd.stdout is not None else io.BytesIO()
+        return (hexsha, typename, size, self.CatFileContentStream(size, cmd_stdout))
 
     def clear_cache(self) -> 'Git':
         """Clear all kinds of internal caches to release resources.
