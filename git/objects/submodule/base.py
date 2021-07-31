@@ -563,6 +563,7 @@ class Submodule(IndexObject, TraversableIterableObj):
                     progress.update(op, i, len_rmts, prefix + "Done fetching remote of submodule %r" % self.name)
                 # END fetch new data
             except InvalidGitRepositoryError:
+                mrepo = None
                 if not init:
                     return self
                 # END early abort if init is not allowed
@@ -603,7 +604,7 @@ class Submodule(IndexObject, TraversableIterableObj):
 
                         # make sure HEAD is not detached
                         mrepo.head.set_reference(local_branch, logmsg="submodule: attaching head to %s" % local_branch)
-                        mrepo.head.ref.set_tracking_branch(remote_branch)
+                        mrepo.head.reference.set_tracking_branch(remote_branch)
                     except (IndexError, InvalidGitRepositoryError):
                         log.warning("Failed to checkout tracking branch %s", self.branch_path)
                     # END handle tracking branch
@@ -629,13 +630,14 @@ class Submodule(IndexObject, TraversableIterableObj):
             if mrepo is not None and to_latest_revision:
                 msg_base = "Cannot update to latest revision in repository at %r as " % mrepo.working_dir
                 if not is_detached:
-                    rref = mrepo.head.ref.tracking_branch()
+                    rref = mrepo.head.reference.tracking_branch()
                     if rref is not None:
                         rcommit = rref.commit
                         binsha = rcommit.binsha
                         hexsha = rcommit.hexsha
                     else:
-                        log.error("%s a tracking branch was not set for local branch '%s'", msg_base, mrepo.head.ref)
+                        log.error("%s a tracking branch was not set for local branch '%s'",
+                                  msg_base, mrepo.head.reference)
                     # END handle remote ref
                 else:
                     log.error("%s there was no local tracking branch", msg_base)
