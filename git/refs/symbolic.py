@@ -61,7 +61,6 @@ class SymbolicReference(object):
     def __init__(self, repo: 'Repo', path: PathLike, check_path: bool = False) -> None:
         self.repo = repo
         self.path = str(path)
-        self.ref = self._get_reference
 
     def __str__(self) -> str:
         return self.path
@@ -283,7 +282,6 @@ class SymbolicReference(object):
 
     commit = cast('Commit', property(_get_commit, set_commit, doc="Query or set commits directly"))
     object = property(_get_object, set_object, doc="Return the object our ref currently refers to")  # type: ignore
-    # reference = property(_get_reference, set_reference, doc="Return the object our ref currently refers to")
 
     def _get_reference(self
                        ) -> Union['Head', 'RemoteReference', 'TagReference', 'Reference']:
@@ -365,6 +363,12 @@ class SymbolicReference(object):
 
         return self
 
+    reference: Union['Head', 'RemoteReference', 'TagReference', 'Reference'] = property(  # type: ignore
+        _get_reference, set_reference,
+        doc="Reference Object we point to")
+    ref = reference
+    
+    """
     @ property
     def reference(self) -> Union['Head', 'RemoteReference', 'TagReference', 'Reference']:
         return self._get_reference()
@@ -385,6 +389,7 @@ class SymbolicReference(object):
             return False
         except TypeError:
             return True
+    """
 
     def log(self) -> 'RefLog':
         """
