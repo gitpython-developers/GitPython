@@ -221,7 +221,8 @@ class SymbolicReference(object):
         # END handle type
         return obj
 
-    def set_commit(self, commit: Union[Commit, 'SymbolicReference', str], logmsg=None):
+    def set_commit(self, commit: Union[Commit, 'SymbolicReference', str], logmsg: Union[str, None] = None
+                   ) -> 'SymbolicReference':
         """As set_object, but restricts the type of object to be a Commit
 
         :raise ValueError: If commit is not a Commit object or doesn't point to
@@ -250,7 +251,8 @@ class SymbolicReference(object):
 
         return self
 
-    def set_object(self, object, logmsg=None):  # @ReservedAssignment
+    def set_object(self, object: Union[Commit_ish, 'SymbolicReference', str], logmsg: Union[str, None] = None
+                   ) -> 'SymbolicReference':
         """Set the object we point to, possibly dereference our symbolic reference first.
         If the reference does not exist, it will be created
 
@@ -277,10 +279,10 @@ class SymbolicReference(object):
         # set the commit on our reference
         return self._get_reference().set_object(object, logmsg)
 
-    commit = property(_get_commit, set_commit, doc="Query or set commits directly")
-    object = property(_get_object, set_object, doc="Return the object our ref currently refers to")
+    commit = property(_get_commit, set_commit, doc="Query or set commits directly")       # type: ignore
+    object = property(_get_object, set_object, doc="Return the object our ref currently refers to")  # type: ignore
 
-    def _get_reference(self):
+    def _get_reference(self) -> 'SymbolicReference':
         """:return: Reference Object we point to
         :raise TypeError: If this symbolic reference is detached, hence it doesn't point
             to a reference, but to a commit"""
@@ -290,7 +292,7 @@ class SymbolicReference(object):
         return self.from_path(self.repo, target_ref_path)
 
     def set_reference(self, ref: Union[Commit_ish, 'SymbolicReference', str],
-                      logmsg: Union[str, None] = None) -> Union[Commit_ish, 'SymbolicReference']:
+                      logmsg: Union[str, None] = None) -> 'SymbolicReference':
         """Set ourselves to the given ref. It will stay a symbol if the ref is a Reference.
         Otherwise an Object, given as Object instance or refspec, is assumed and if valid,
         will be set which effectively detaches the refererence if it was a purely
