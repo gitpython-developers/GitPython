@@ -283,7 +283,7 @@ class SymbolicReference(object):
 
     commit = cast('Commit', property(_get_commit, set_commit, doc="Query or set commits directly"))
     object = property(_get_object, set_object, doc="Return the object our ref currently refers to")  # type: ignore
-    # reference = property(_get_reference, set_reference, doc="Return the object our ref currently refers to")  # type: ignore
+    # reference = property(_get_reference, set_reference, doc="Return the object our ref currently refers to")
 
     def _get_reference(self
                        ) -> Union['Head', 'RemoteReference', 'TagReference', 'Reference']:
