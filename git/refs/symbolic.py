@@ -642,8 +642,8 @@ class SymbolicReference(object):
         # END for each sorted relative refpath
 
     @classmethod
-    # type: ignore[override]
-    def iter_items(cls, repo: 'Repo', common_path: Union[PathLike, None] = None, *args, **kwargs):
+    def iter_items(cls: Type[T_References], repo: 'Repo', common_path: Union[PathLike, None] = None,
+                   *args: Any, **kwargs: Any) -> Iterator[T_References]:
         """Find all refs in the repository
 
         :param repo: is the Repo
