@@ -422,14 +422,14 @@ class Repo(object):
 
     def create_head(self, path: PathLike, commit: str = 'HEAD',
                     force: bool = False, logmsg: Optional[str] = None
-                    ) -> Head:
+                    ) -> 'Head':
         """Create a new head within the repository.
         For more documentation, please see the Head.create method.
 
         :return: newly created Head Reference"""
         return Head.create(self, path, commit, logmsg, force)
 
-    def delete_head(self, *heads: 'SymbolicReference', **kwargs: Any) -> None:
+    def delete_head(self, *heads: 'Head', **kwargs: Any) -> None:
         """Delete the given heads
 
         :param kwargs: Additional keyword arguments to be passed to git-branch"""
@@ -788,10 +788,10 @@ class Repo(object):
         return proc.replace("\\\\", "\\").replace('"', "").split("\n")
 
     @property
-    def active_branch(self) -> 'SymbolicReference':
+    def active_branch(self) -> Head:
         """The name of the currently active branch.
-
         :return: Head to the active branch"""
+        # reveal_type(self.head.reference)  # => Reference
         return self.head.reference
 
     def blame_incremental(self, rev: TBD, file: TBD, **kwargs: Any) -> Optional[Iterator['BlameEntry']]:
