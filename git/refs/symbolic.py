@@ -36,9 +36,9 @@ T_References = TypeVar('T_References', bound='SymbolicReference')
 __all__ = ["SymbolicReference"]
 
 
-def _git_dir(repo, path):
+def _git_dir(repo: 'Repo', path: PathLike) -> PathLike:
     """ Find the git dir that's appropriate for the path"""
-    name = "%s" % (path,)
+    name = f"{path}"
     if name in ['HEAD', 'ORIG_HEAD', 'FETCH_HEAD', 'index', 'logs']:
         return repo.git_dir
     return repo.common_dir
@@ -65,18 +65,18 @@ class SymbolicReference(object):
     def __str__(self) -> str:
         return str(self.path)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '<git.%s "%s">' % (self.__class__.__name__, self.path)
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         if hasattr(other, 'path'):
             return self.path == other.path
         return False
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not (self == other)
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(self.path)
 
     @property
