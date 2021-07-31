@@ -25,9 +25,9 @@ from git.types import Commit_ish, PathLike, TBD, Literal                        
 
 if TYPE_CHECKING:
     from git.repo import Repo
-    from git.refs import Reference, Head, TagReference, RemoteReference
-    from git.config import GitConfigParser
-    from git.objects.commit import Actor
+    from git.refs import Reference, Head, TagReference, RemoteReference         # NOQA
+    from git.config import GitConfigParser              # NOQA
+    from git.objects.commit import Actor                # NOQA
 
 T_References = TypeVar('T_References', bound='SymbolicReference')
 
@@ -37,9 +37,9 @@ T_References = TypeVar('T_References', bound='SymbolicReference')
 __all__ = ["SymbolicReference"]
 
 
-def _git_dir(repo, path):
+def _git_dir(repo: 'Repo', path: PathLike) -> PathLike:
     """ Find the git dir that's appropriate for the path"""
-    name = "%s" % (path,)
+    name = f"{path}"
     if name in ['HEAD', 'ORIG_HEAD', 'FETCH_HEAD', 'index', 'logs']:
         return repo.git_dir
     return repo.common_dir
@@ -59,34 +59,35 @@ class SymbolicReference(object):
     _remote_common_path_default = "refs/remotes"
     _id_attribute_ = "name"
 
-    def __init__(self, repo: 'Repo', path: PathLike, check_path: bool = False):
+    def __init__(self, repo: 'Repo', path: PathLike, check_path: bool = False) -> None:
         self.repo = repo
         self.path = str(path)
+        self.ref = self._get_reference()
 
     def __str__(self) -> str:
         return self.path
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '<git.%s "%s">' % (self.__class__.__name__, self.path)
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         if hasattr(other, 'path'):
             return self.path == other.path
         return False
 
-    def __ne__(self, other):
+    def __ne__(self, other) -> bool:
         return not (self == other)
 
     def __hash__(self):
         return hash(self.path)
 
     @property
-    def name(self):
+    def name(self) -> str:
         """
         :return:
             In case of symbolic references, the shortest assumable name
             is the path itself."""
-        return self.path
+        return str(self.path)
 
     @property
     def abspath(self):
