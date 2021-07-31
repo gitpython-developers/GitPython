@@ -37,10 +37,10 @@ from .refs import (
 
 # typing-------------------------------------------------------
 
-from typing import (Any, Callable, Dict, Iterator, List, NoReturn, Optional, Sequence,  # NOQA[TC002]
+from typing import (Any, Callable, Dict, Iterator, List, NoReturn, Optional, Sequence,
                     TYPE_CHECKING, Type, Union, cast, overload)
 
-from git.types import PathLike, Literal, TBD, Commit_ish     # NOQA[TC002]
+from git.types import PathLike, Literal, Commit_ish
 
 if TYPE_CHECKING:
     from git.repo.base import Repo
@@ -49,7 +49,6 @@ if TYPE_CHECKING:
     # from git.objects import Blob, Tree, TagObject
 
 flagKeyLiteral = Literal[' ', '!', '+', '-', '*', '=', 't', '?']
-
 
 # def is_flagKeyLiteral(inp: str) -> TypeGuard[flagKeyLiteral]:
 #     return inp in [' ', '!', '+', '-', '=', '*', 't', '?']
@@ -707,9 +706,10 @@ class Remote(LazyMixin, IterableObj):
         self.repo.git.remote(scmd, self.name, **kwargs)
         return self
 
-    def _get_fetch_info_from_stderr(self, proc: TBD,
+    def _get_fetch_info_from_stderr(self, proc: 'Git.AutoInterrupt',
                                     progress: Union[Callable[..., Any], RemoteProgress, None]
                                     ) -> IterableList['FetchInfo']:
+
         progress = to_progress_instance(progress)
 
         # skip first line as it is some remote info we are not interested in
@@ -768,7 +768,7 @@ class Remote(LazyMixin, IterableObj):
                 log.warning("Git informed while fetching: %s", err_line.strip())
         return output
 
-    def _get_push_info(self, proc: TBD,
+    def _get_push_info(self, proc: 'Git.AutoInterrupt',
                        progress: Union[Callable[..., Any], RemoteProgress, None]) -> IterableList[PushInfo]:
         progress = to_progress_instance(progress)
 

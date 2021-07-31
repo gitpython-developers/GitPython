@@ -33,7 +33,7 @@ import configparser as cp
 from typing import (Any, Callable, Generic, IO, List, Dict, Sequence,
                     TYPE_CHECKING, Tuple, TypeVar, Union, cast, overload)
 
-from git.types import Lit_config_levels, ConfigLevels_Tup, PathLike, TBD, assert_never, _T
+from git.types import Lit_config_levels, ConfigLevels_Tup, PathLike, assert_never, _T
 
 if TYPE_CHECKING:
     from git.repo.base import Repo
@@ -72,7 +72,7 @@ CONDITIONAL_INCLUDE_REGEXP = re.compile(r"(?<=includeIf )\"(gitdir|gitdir/i|onbr
 
 class MetaParserBuilder(abc.ABCMeta):
     """Utlity class wrapping base-class methods into decorators that assure read-only properties"""
-    def __new__(cls, name: str, bases: TBD, clsdict: Dict[str, Any]) -> TBD:
+    def __new__(cls, name: str, bases: Tuple, clsdict: Dict[str, Any]) -> 'MetaParserBuilder':
         """
         Equip all base-class methods with a needs_values decorator, and all non-const methods
         with a set_dirty_and_flush_changes decorator in addition to that."""
@@ -617,12 +617,12 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
         def write_section(name: str, section_dict: _OMD) -> None:
             fp.write(("[%s]\n" % name).encode(defenc))
 
-            values: Sequence[Union[str, bytes, int, float, bool]]
+            values: Sequence[str]  # runtime only gets str in tests, but should be whatever _OMD stores
+            v: str
             for (key, values) in section_dict.items_all():
                 if key == "__name__":
                     continue
 
-                v: Union[str, bytes, int, float, bool]
                 for v in values:
                     fp.write(("\t%s = %s\n" % (key, self._value_to_string(v).replace('\n', '\n\t'))).encode(defenc))
                 # END if key is not __name__
@@ -630,7 +630,8 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
 
         if self._defaults:
             write_section(cp.DEFAULTSECT, self._defaults)
-        value: TBD
+        value: _OMD
+
         for name, value in self._sections.items():
             write_section(name, value)
 

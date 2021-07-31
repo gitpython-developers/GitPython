@@ -421,15 +421,15 @@ class Git(LazyMixin):
             return getattr(self.proc, attr)
 
         # TODO: Bad choice to mimic `proc.wait()` but with different args.
-        def wait(self, stderr: Union[None, bytes] = b'') -> int:
+        def wait(self, stderr: Union[None, str, bytes] = b'') -> int:
             """Wait for the process and return its status code.
 
             :param stderr: Previously read value of stderr, in case stderr is already closed.
             :warn: may deadlock if output or error pipes are used and not handled separately.
             :raise GitCommandError: if the return status is not 0"""
             if stderr is None:
-                stderr = b''
-            stderr = force_bytes(data=stderr, encoding='utf-8')
+                stderr_b = b''
+            stderr_b = force_bytes(data=stderr, encoding='utf-8')
 
             if self.proc is not None:
                 status = self.proc.wait()
@@ -437,11 +437,11 @@ class Git(LazyMixin):
                 def read_all_from_possibly_closed_stream(stream: Union[IO[bytes], None]) -> bytes:
                     if stream:
                         try:
-                            return stderr + force_bytes(stream.read())
+                            return stderr_b + force_bytes(stream.read())
                         except ValueError:
-                            return stderr or b''
+                            return stderr_b or b''
                     else:
-                        return stderr or b''
+                        return stderr_b or b''
 
                 if status != 0:
                     errstr = read_all_from_possibly_closed_stream(self.proc.stderr)

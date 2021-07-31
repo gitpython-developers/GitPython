@@ -235,7 +235,7 @@ class Repo(object):
     def __enter__(self) -> 'Repo':
         return self
 
-    def __exit__(self, exc_type: TBD, exc_value: TBD, traceback: TBD) -> None:
+    def __exit__(self, *args: Any) -> None:
         self.close()
 
     def __del__(self) -> None:
@@ -445,7 +445,7 @@ class Repo(object):
         :return: TagReference object """
         return TagReference.create(self, path, ref, message, force, **kwargs)
 
-    def delete_tag(self, *tags: TBD) -> None:
+    def delete_tag(self, *tags: TagReference) -> None:
         """Delete the given tag references"""
         return TagReference.delete(self, *tags)
 
@@ -795,7 +795,7 @@ class Repo(object):
         # reveal_type(self.head.reference)  # => Reference
         return self.head.reference
 
-    def blame_incremental(self, rev: TBD, file: TBD, **kwargs: Any) -> Optional[Iterator['BlameEntry']]:
+    def blame_incremental(self, rev: Union[str, HEAD], file: str, **kwargs: Any) -> Iterator['BlameEntry']:
         """Iterator for blame information for the given file at the given revision.
 
         Unlike .blame(), this does not return the actual file's contents, only
@@ -809,6 +809,7 @@ class Repo(object):
         If you combine all line number ranges outputted by this command, you
         should get a continuous range spanning all line numbers in the file.
         """
+
         data = self.git.blame(rev, '--', file, p=True, incremental=True, stdout_as_string=False, **kwargs)
         commits: Dict[str, Commit] = {}
 
@@ -870,7 +871,7 @@ class Repo(object):
                              safe_decode(orig_filename),
                              range(orig_lineno, orig_lineno + num_lines))
 
-    def blame(self, rev: TBD, file: TBD, incremental: bool = False, **kwargs: Any
+    def blame(self, rev: Union[str, HEAD], file: str, incremental: bool = False, **kwargs: Any
               ) -> Union[List[List[Union[Optional['Commit'], List[str]]]], Optional[Iterator[BlameEntry]]]:
         """The blame information for the given file at the given revision.
 
