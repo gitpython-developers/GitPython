@@ -457,7 +457,7 @@ class TestRefs(TestBase):
 
         self.assertRaises(OSError, SymbolicReference.create, rw_repo, symref_path, cur_head.reference.commit)
         # it works if the new ref points to the same reference
-        assert SymbolicReference.create(rw_repo, symref.path, symref.reference).path == symref.path  # @NoEffect
+        SymbolicReference.create(rw_repo, symref.path, symref.reference).path == symref.path  # @NoEffect
         SymbolicReference.delete(rw_repo, symref)
         # would raise if the symref wouldn't have been deletedpbl
         symref = SymbolicReference.create(rw_repo, symref_path, cur_head.reference)
