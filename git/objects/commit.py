@@ -128,6 +128,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
             as what time.altzone returns. The sign is inverted compared to git's
             UTC timezone."""
         super(Commit, self).__init__(repo, binsha)
+        self.binsha = binsha
         if tree is not None:
             assert isinstance(tree, Tree), "Tree needs to be a Tree instance, was %s" % type(tree)
         if tree is not None:
