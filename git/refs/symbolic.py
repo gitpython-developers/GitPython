@@ -1,5 +1,5 @@
 import os
-
+import os.path as osp
 from git.compat import defenc
 from git.objects import Object
 from git.objects.commit import Commit
