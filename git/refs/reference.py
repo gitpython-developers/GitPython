@@ -62,7 +62,9 @@ class Reference(SymbolicReference, LazyMixin, IterableObj):
 
     #{ Interface
 
-    def set_object(self, object: Commit_ish, logmsg: Union[str, None] = None) -> 'Reference':  # @ReservedAssignment
+    # @ReservedAssignment
+    def set_object(self, object: Union[Commit_ish, 'SymbolicReference'], logmsg: Union[str, None] = None
+                   ) -> 'SymbolicReference':
         """Special version which checks if the head-log needs an update as well
         :return: self"""
         oldbinsha = None
