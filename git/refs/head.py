@@ -40,7 +40,6 @@ class HEAD(SymbolicReference):
             raise ValueError("HEAD instance must point to %r, got %r" % (self._HEAD_NAME, path))
         super(HEAD, self).__init__(repo, path)
         self.commit: 'Commit'
-        self.ref: 'Head'
 
     def orig_head(self) -> SymbolicReference:
         """

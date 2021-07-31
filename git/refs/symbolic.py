@@ -26,7 +26,7 @@ from git.types import Commit_ish, PathLike, TBD, Literal                        
 
 if TYPE_CHECKING:
     from git.repo import Repo
-    from git.refs import Head, TagReference, Reference
+    from git.refs import Head, TagReference, RemoteReference, Reference
     from .log import RefLogEntry
     from git.config import GitConfigParser
     from git.objects.commit import Actor
@@ -65,7 +65,6 @@ class SymbolicReference(object):
     def __init__(self, repo: 'Repo', path: PathLike, check_path: bool = False):
         self.repo = repo
         self.path = path
-        self.ref = self.reference
 
     def __str__(self) -> str:
         return str(self.path)
@@ -363,15 +362,8 @@ class SymbolicReference(object):
         return self
 
     # aliased reference
-    # reference = property(_get_reference, set_reference, doc="Returns the Reference we point to")  # type: ignore
-
-    @property
-    def reference(self) -> 'Reference':
-        return self._get_reference()
-
-    @reference.setter
-    def reference(self, *args, **kwargs):
-        return self.set_reference(*args, **kwargs)
+    reference = property(_get_reference, set_reference, doc="Returns the Reference we point to")  # type: ignore
+    ref: Union['Head', 'TagReference', 'RemoteReference', 'Reference'] = reference             # type: ignore
 
     def is_valid(self) -> bool:
         """
