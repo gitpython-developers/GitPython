@@ -1148,7 +1148,7 @@ class Repo(object):
         return cls._clone(git, url, to_path, GitCmdObjectDB, progress, multi_options, **kwargs)
 
     def archive(self, ostream: Union[TextIO, BinaryIO], treeish: Optional[str] = None,
-                prefix: Optional[str] = None, **kwargs: Any) -> 'Repo':
+                prefix: Optional[str] = None, **kwargs: Any) -> Repo:
         """Archive the tree at the given revision.
 
         :param ostream: file compatible stream object to which the archive will be written as bytes
@@ -1195,7 +1195,7 @@ class Repo(object):
         clazz = self.__class__
         return '<%s.%s %r>' % (clazz.__module__, clazz.__name__, self.git_dir)
 
-    def currently_rebasing_on(self) -> Union['SymbolicReference', Commit_ish, None]:
+    def currently_rebasing_on(self) -> Commit | None:
         """
         :return: The commit which is currently being replayed while rebasing.
 
