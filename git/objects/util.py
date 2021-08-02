@@ -181,11 +181,13 @@ def parse_date(string_date: Union[str, datetime]) -> Tuple[int, int]:
     :raise ValueError: If the format could not be understood
     :note: Date can also be YYYY.MM.DD, MM/DD/YYYY and DD.MM.YYYY.
     """
-    if isinstance(string_date, datetime) and string_date.tzinfo:
-        offset = -int(string_date.utcoffset().total_seconds())  # type: ignore[union-attr]
+    if isinstance(string_date, datetime):
+        if string_date.tzinfo:
+            utcoffset = string_date.utcoffset()
+            offset = -int(utcoffset.total_seconds()) if utcoffset else 0
         return int(string_date.astimezone(utc).timestamp()), offset
     else:
-        assert isinstance(string_date, str)  # for mypy
+        assert isinstance(string_date, str), f"string_date={string_date}, type={type(string_date)}"  # for mypy
 
     # git time
     try:
