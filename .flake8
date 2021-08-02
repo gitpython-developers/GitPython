@@ -31,3 +31,5 @@ exclude = .tox,.venv,build,dist,doc,git/ext/,test
 
 rst-roles =  # for flake8-RST-docstrings
     attr,class,func,meth,mod,obj,ref,term,var  # used by sphinx
+
+min-python-version = 3.7.0
