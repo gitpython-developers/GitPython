@@ -795,7 +795,7 @@ class Repo(object):
         # reveal_type(self.head.reference)  # => Reference
         return self.head.reference
 
-    def blame_incremental(self, rev: Union[str, HEAD], file: str, **kwargs: Any) -> Iterator['BlameEntry']:
+    def blame_incremental(self, rev: str | HEAD, file: str, **kwargs: Any) -> Iterator['BlameEntry']:
         """Iterator for blame information for the given file at the given revision.
 
         Unlike .blame(), this does not return the actual file's contents, only
