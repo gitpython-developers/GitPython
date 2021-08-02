@@ -51,7 +51,7 @@ def tree_to_stream(entries: Sequence[EntryTup], write: Callable[['ReadableBuffer
         if isinstance(name, str):
             name_bytes = name.encode(defenc)
         else:
-            name_bytes = name
+            name_bytes = name  # type: ignore[unreachable]  # check runtime types - is always str?
         write(b''.join((mode_str, b' ', name_bytes, b'\0', binsha)))
     # END for each item
 

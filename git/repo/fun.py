@@ -1,4 +1,6 @@
 """Package with general repository related functions"""
+from git.refs.reference import Reference
+from git.types import Commit_ish
 import os
 import stat
 from string import digits
@@ -202,7 +204,7 @@ def rev_parse(repo: 'Repo', rev: str) -> Union['Commit', 'Tag', 'Tree', 'Blob']:
         raise NotImplementedError("commit by message search ( regex )")
     # END handle search
 
-    obj = cast(Object, None)   # not ideal. Should use guards
+    obj: Union[Commit_ish, Reference, None] = None
     ref = None
     output_type = "commit"
     start = 0
@@ -222,14 +224,16 @@ def rev_parse(repo: 'Repo', rev: str) -> Union['Commit', 'Tag', 'Tree', 'Blob']:
                 ref = repo.head.ref
             else:
                 if token == '@':
-                    ref = name_to_object(repo, rev[:start], return_ref=True)
+                    ref = cast(Reference, name_to_object(repo, rev[:start], return_ref=True))
                 else:
-                    obj = name_to_object(repo, rev[:start])
+                    obj = cast(Commit_ish, name_to_object(repo, rev[:start]))
                 # END handle token
             # END handle refname
+        else:
+            assert obj is not None
 
             if ref is not None:
-                obj = ref.commit
+                obj = cast(Commit, ref.commit)
             # END handle ref
         # END initialize obj on first token
 
@@ -247,11 +251,13 @@ def rev_parse(repo: 'Repo', rev: str) -> Union['Commit', 'Tag', 'Tree', 'Blob']:
                 pass  # default
             elif output_type == 'tree':
                 try:
+                    obj = cast(Object, obj)
                     obj = to_commit(obj).tree
                 except (AttributeError, ValueError):
                     pass    # error raised later
                 # END exception handling
             elif output_type in ('', 'blob'):
+                obj = cast(TagObject, obj)
                 if obj and obj.type == 'tag':
                     obj = deref_tag(obj)
                 else:
@@ -280,13 +286,13 @@ def rev_parse(repo: 'Repo', rev: str) -> Union['Commit', 'Tag', 'Tree', 'Blob']:
                 obj = Object.new_from_sha(repo, hex_to_bin(entry.newhexsha))
 
                 # make it pass the following checks
-                output_type = None
+                output_type = ''
             else:
                 raise ValueError("Invalid output type: %s ( in %s )" % (output_type, rev))
             # END handle output type
 
             # empty output types don't require any specific type, its just about dereferencing tags
-            if output_type and obj.type != output_type:
+            if output_type and obj and obj.type != output_type:
                 raise ValueError("Could not accommodate requested object type %r, got %s" % (output_type, obj.type))
             # END verify output type
 
@@ -319,6 +325,7 @@ def rev_parse(repo: 'Repo', rev: str) -> Union['Commit', 'Tag', 'Tree', 'Blob']:
         parsed_to = start
         # handle hierarchy walk
         try:
+            obj = cast(Commit_ish, obj)
             if token == "~":
                 obj = to_commit(obj)
                 for _ in range(num):
@@ -347,7 +354,7 @@ def rev_parse(repo: 'Repo', rev: str) -> Union['Commit', 'Tag', 'Tree', 'Blob']:
 
     # still no obj ? Its probably a simple name
     if obj is None:
-        obj = name_to_object(repo, rev)
+        obj = cast(Commit_ish, name_to_object(repo, rev))
         parsed_to = lr
     # END handle simple name
 

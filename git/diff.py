@@ -456,8 +456,8 @@ class Diff(object):
         # for now, we have to bake the stream
         text = b''.join(text_list)
         index: 'DiffIndex' = DiffIndex()
-        previous_header = None
-        header = None
+        previous_header: Union[Match[bytes], None] = None
+        header: Union[Match[bytes], None] = None
         a_path, b_path = None, None  # for mypy
         a_mode, b_mode = None, None  # for mypy
         for _header in cls.re_header.finditer(text):

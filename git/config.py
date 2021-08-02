@@ -236,7 +236,8 @@ def get_config_path(config_level: Lit_config_levels) -> str:
         raise ValueError("No repo to get repository configuration from. Use Repo._get_config_path")
     else:
         # Should not reach here. Will raise ValueError if does. Static typing will warn missing elifs
-        assert_never(config_level, ValueError(f"Invalid configuration level: {config_level!r}"))
+        assert_never(config_level,                    # type: ignore[unreachable]
+                     ValueError(f"Invalid configuration level: {config_level!r}"))
 
 
 class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):

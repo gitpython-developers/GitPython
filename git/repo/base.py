@@ -200,7 +200,6 @@ class Repo(object):
         # END while curpath
 
         if self.git_dir is None:
-            self.git_dir = cast(PathLike, self.git_dir)
             raise InvalidGitRepositoryError(epath)
 
         self._bare = False

@@ -167,7 +167,7 @@ def from_timestamp(timestamp: float, tz_offset: float) -> datetime:
         return utc_dt
 
 
-def parse_date(string_date: str) -> Tuple[int, int]:
+def parse_date(string_date: Union[str, datetime]) -> Tuple[int, int]:
     """
     Parse the given date as one of the following
 
@@ -182,8 +182,10 @@ def parse_date(string_date: str) -> Tuple[int, int]:
     :note: Date can also be YYYY.MM.DD, MM/DD/YYYY and DD.MM.YYYY.
     """
     if isinstance(string_date, datetime) and string_date.tzinfo:
-        offset = -int(string_date.utcoffset().total_seconds())
+        offset = -int(string_date.utcoffset().total_seconds())  # type: ignore[union-attr]
         return int(string_date.astimezone(utc).timestamp()), offset
+    else:
+        assert isinstance(string_date, str)  # for mypy
 
     # git time
     try:
@@ -338,7 +340,7 @@ class Traversable(Protocol):
         """
         # Commit and Submodule have id.__attribute__ as IterableObj
         # Tree has id.__attribute__ inherited from IndexObject
-        if isinstance(self, (TraversableIterableObj, Has_id_attribute)):
+        if isinstance(self, Has_id_attribute):
             id = self._id_attribute_
         else:
             id = ""     # shouldn't reach here, unless Traversable subclass created with no _id_attribute_

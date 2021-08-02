@@ -42,7 +42,7 @@ from .util import (
 from typing import (Any, AnyStr, BinaryIO, Callable, Dict, IO, Iterator, List, Mapping,
                     Sequence, TYPE_CHECKING, TextIO, Tuple, Union, cast, overload)
 
-from git.types import PathLike, Literal
+from git.types import PathLike, Literal, TBD
 
 if TYPE_CHECKING:
     from git.repo.base import Repo
@@ -575,8 +575,8 @@ class Git(LazyMixin):
         self._environment: Dict[str, str] = {}
 
         # cached command slots
-        self.cat_file_header = None
-        self.cat_file_all = None
+        self.cat_file_header: Union[None, TBD] = None
+        self.cat_file_all: Union[None, TBD] = None
 
     def __getattr__(self, name: str) -> Any:
         """A convenience method as it allows to call the command as if it was
@@ -1012,8 +1012,6 @@ class Git(LazyMixin):
 
     @classmethod
     def __unpack_args(cls, arg_list: Sequence[str]) -> List[str]:
-        if not isinstance(arg_list, (list, tuple)):
-            return [str(arg_list)]
 
         outlist = []
         for arg in arg_list:

@@ -24,7 +24,7 @@ no_implicit_optional = true
 warn_redundant_casts = true
 implicit_reexport = true
 warn_unused_ignores = true
-# warn_unreachable = True
+warn_unreachable = true
 show_error_codes = true
 
 # TODO: remove when 'gitdb' is fully annotated

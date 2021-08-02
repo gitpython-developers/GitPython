@@ -1202,7 +1202,6 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             handle_stderr(proc, checked_out_files)
             return checked_out_files
         # END paths handling
-        assert "Should not reach this point"
 
     @ default_index
     def reset(self, commit: Union[Commit, 'Reference', str] = 'HEAD', working_tree: bool = False,

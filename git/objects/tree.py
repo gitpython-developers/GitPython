@@ -215,7 +215,7 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
         super(Tree, self).__init__(repo, binsha, mode, path)
 
     @ classmethod
-    def _get_intermediate_items(cls, index_object: 'Tree',
+    def _get_intermediate_items(cls, index_object: IndexObjUnion,
                                 ) -> Union[Tuple['Tree', ...], Tuple[()]]:
         if index_object.type == "tree":
             return tuple(index_object._iter_convert_to_object(index_object._cache))
