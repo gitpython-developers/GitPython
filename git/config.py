@@ -44,10 +44,10 @@ T_OMD_value = TypeVar('T_OMD_value', str, bytes, int, float, bool)
 
 if sys.version_info[:3] < (3, 7, 2):
     # typing.Ordereddict not added until py 3.7.2
-    from collections import OrderedDict     # type: ignore  # until 3.6 dropped
-    OrderedDict_OMD = OrderedDict           # type: ignore  # until 3.6 dropped
+    from collections import OrderedDict
+    OrderedDict_OMD = OrderedDict
 else:
-    from typing import OrderedDict                   # type: ignore  # until 3.6 dropped
+    from typing import OrderedDict
     OrderedDict_OMD = OrderedDict[str, List[T_OMD_value]]  # type: ignore[assignment, misc]
 
 # -------------------------------------------------------------
@@ -177,7 +177,7 @@ class SectionConstraint(Generic[T_ConfigParser]):
 class _OMD(OrderedDict_OMD):
     """Ordered multi-dict."""
 
-    def __setitem__(self, key: str, value: _T) -> None:  # type: ignore[override]
+    def __setitem__(self, key: str, value: _T) -> None:
         super(_OMD, self).__setitem__(key, [value])
 
     def add(self, key: str, value: Any) -> None:
@@ -203,8 +203,8 @@ class _OMD(OrderedDict_OMD):
         prior = super(_OMD, self).__getitem__(key)
         prior[-1] = value
 
-    def get(self, key: str, default: Union[_T, None] = None) -> Union[_T, None]:  # type: ignore
-        return super(_OMD, self).get(key, [default])[-1]          # type: ignore
+    def get(self, key: str, default: Union[_T, None] = None) -> Union[_T, None]:
+        return super(_OMD, self).get(key, [default])[-1]
 
     def getall(self, key: str) -> List[_T]:
         return super(_OMD, self).__getitem__(key)
@@ -299,9 +299,9 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
         :param repo: Reference to repository to use if [includeIf] sections are found in configuration files.
 
         """
-        cp.RawConfigParser.__init__(self, dict_type=_OMD)  # type: ignore[arg-type]
+        cp.RawConfigParser.__init__(self, dict_type=_OMD)
         self._dict: Callable[..., _OMD]  # type: ignore[assignment]   # mypy/typeshed bug
-        self._defaults: _OMD              # type: ignore[assignment]  # mypy/typeshed bug
+        self._defaults: _OMD
         self._sections: _OMD              # type: ignore[assignment]  # mypy/typeshed bug
 
         # Used in python 3, needs to stay in sync with sections for underlying implementation to work
