@@ -42,10 +42,10 @@ import gitdb
 from git.types import TBD, PathLike, Lit_config_levels, Commit_ish, Tree_ish, assert_never
 from typing import (Any, BinaryIO, Callable, Dict,
                     Iterator, List, Mapping, Optional, Sequence,
-                    TextIO, Tuple, Type, TypedDict, Union,
+                    TextIO, Tuple, Type, Union,
                     NamedTuple, cast, TYPE_CHECKING)
 
-from git.types import ConfigLevels_Tup
+from git.types import ConfigLevels_Tup, TypedDict
 
 if TYPE_CHECKING:
     from git.util import IterableList
@@ -984,11 +984,10 @@ class Repo(object):
                             c = commits.get(sha)
                             if c is None:
                                 c = Commit(self, hex_to_bin(sha),
-                                           author=Actor._from_string(info.author + ' ' + info.author_email),
+                                           author=Actor._from_string(f"{info.author} {info.author_email}"),
                                            authored_date=info.author_date,
-                                           committer=Actor._from_string(
-                                    info.committer + ' ' + info.committer_email),
-                                    committed_date=info.committer_date)
+                                           committer=Actor._from_string(f"{info.committer} {info.committer_email}"),
+                                           committed_date=info.committer_date)
                                 commits[sha] = c
                             blames[-1][0] = c
                             # END if commit objects needs initial creation
