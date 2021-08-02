@@ -38,7 +38,7 @@ import gitdb
 
 # typing ------------------------------------------------------
 
-from git.types import TBD, PathLike, Lit_config_levels, Commit_ish, Tree_ish
+from git.types import TBD, PathLike, Lit_config_levels, Commit_ish, Tree_ish, assert_never
 from typing import (Any, BinaryIO, Callable, Dict,
                     Iterator, List, Mapping, Optional, Sequence,
                     TextIO, Tuple, Type, Union,
@@ -481,10 +481,12 @@ class Repo(object):
                 raise NotADirectoryError
             else:
                 return osp.normpath(osp.join(repo_dir, "config"))
+        else:
 
-        raise ValueError("Invalid configuration level: %r" % config_level)
+            assert_never(config_level,                                                  # type:ignore[unreachable]
+                         ValueError(f"Invalid configuration level: {config_level!r}"))
 
-    def config_reader(self, config_level: Optional[Lit_config_levels] = None
+    def config_reader(self, config_level: Optional[Lit_config_levels] = None,
                       ) -> GitConfigParser:
         """
         :return:
