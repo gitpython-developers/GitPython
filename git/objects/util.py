@@ -181,16 +181,15 @@ def parse_date(string_date: Union[str, datetime]) -> Tuple[int, int]:
     :raise ValueError: If the format could not be understood
     :note: Date can also be YYYY.MM.DD, MM/DD/YYYY and DD.MM.YYYY.
     """
-    if isinstance(string_date, datetime) and string_date.tzinfo:
-        utcoffset = string_date.utcoffset()
-        offset = -int(utcoffset.total_seconds()) if utcoffset else 0
-        return int(string_date.astimezone(utc).timestamp()), offset
+    if isinstance(string_date, datetime):
+        if string_date.tzinfo:
+            utcoffset = cast(timedelta, string_date.utcoffset())  # typeguard, if tzinfoand is not None
+            offset = -int(utcoffset.total_seconds())
+            return int(string_date.astimezone(utc).timestamp()), offset
+        else:
+            raise ValueError(f"Unsupported date format or type: {string_date}" % string_date)
 
     else:
-        assert isinstance(string_date, str), f"string_date={string_date}, type={type(string_date)}"  # for mypy
-
-    # git time
-    try:
         if string_date.count(' ') == 1 and string_date.rfind(':') == -1:
             timestamp, offset_str = string_date.split()
             if timestamp.startswith('@'):
@@ -244,13 +243,9 @@ def parse_date(string_date: Union[str, datetime]) -> Tuple[int, int]:
                     continue
                 # END exception handling
             # END for each fmt
-
             # still here ? fail
             raise ValueError("no format matched")
         # END handle format
-    except Exception as e:
-        raise ValueError("Unsupported date format: %s" % string_date) from e
-    # END handle exceptions
 
 
 # precompiled regex
