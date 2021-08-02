@@ -985,22 +985,21 @@ class Repo(object):
                                 commits[sha] = c
                             blames[-1][0] = c
                             # END if commit objects needs initial creation
-                            if not is_binary:
-                                if line_str and line_str[0] == '\t':
-                                    line_str = line_str[1:]
-                            else:
-                                pass
-                                # NOTE: We are actually parsing lines out of binary data, which can lead to the
-                                # binary being split up along the newline separator. We will append this to the
-                                # blame we are currently looking at, even though it should be concatenated with
-                                # the last line we have seen.
 
                             if blames[-1][1] is not None:
-                                blames[-1][1].append(line_str)
+                                if not is_binary:
+                                    if line_str and line_str[0] == '\t':
+                                        line_str = line_str[1:]
+                                    blames[-1][1].append(line_str)
+                                else:
+                                    blames[-1][1].append(line_bytes)
+                                    # NOTE: We are actually parsing lines out of binary data, which can lead to the
+                                    # binary being split up along the newline separator. We will append this to the
+                                    # blame we are currently looking at, even though it should be concatenated with
+                                    # the last line we have seen.
                             info = {'id': sha}
                             # end handle line contents
 
-                            info = {'id': sha}
                         # END if we collected commit info
                     # END distinguish filename,summary,rest
                 # END distinguish author|committer vs filename,summary,rest
