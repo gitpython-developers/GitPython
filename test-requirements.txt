@@ -4,6 +4,7 @@ mypy
 flake8
 flake8-bugbear
 flake8-comprehensions
+flake8-typing-imports
 
 virtualenv
 
