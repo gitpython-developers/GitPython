@@ -187,9 +187,10 @@ def parse_date(string_date: Union[str, datetime]) -> Tuple[int, int]:
             offset = -int(utcoffset.total_seconds())
             return int(string_date.astimezone(utc).timestamp()), offset
         else:
-            raise ValueError(f"Unsupported date format or type: {string_date}" % string_date)
+            raise ValueError(f"string_date datetime object without tzinfo, {string_date}")
 
-    else:
+    # git time
+    try:
         if string_date.count(' ') == 1 and string_date.rfind(':') == -1:
             timestamp, offset_str = string_date.split()
             if timestamp.startswith('@'):
@@ -243,9 +244,13 @@ def parse_date(string_date: Union[str, datetime]) -> Tuple[int, int]:
                     continue
                 # END exception handling
             # END for each fmt
+
             # still here ? fail
             raise ValueError("no format matched")
         # END handle format
+    except Exception as e:
+        raise ValueError(f"Unsupported date format or type: {string_date}" % string_date) from e
+    # END handle exceptions
 
 
 # precompiled regex
