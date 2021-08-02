@@ -285,7 +285,7 @@ class SymbolicReference(object):
     commit = property(_get_commit, set_commit, doc="Query or set commits directly")       # type: ignore
     object = property(_get_object, set_object, doc="Return the object our ref currently refers to")  # type: ignore
 
-    def _get_reference(self) -> 'Reference':
+    def _get_reference(self) -> 'SymbolicReference':
         """:return: Reference Object we point to
         :raise TypeError: If this symbolic reference is detached, hence it doesn't point
             to a reference, but to a commit"""
@@ -683,7 +683,7 @@ class SymbolicReference(object):
         return (r for r in cls._iter_items(repo, common_path) if r.__class__ == SymbolicReference or not r.is_detached)
 
     @classmethod
-    def from_path(cls, repo: 'Repo', path: PathLike) -> Union['Head', 'TagReference', 'Reference']:
+    def from_path(cls: Type[T_References], repo: 'Repo', path: PathLike) -> T_References:
         """
         :param path: full .git-directory-relative path name to the Reference to instantiate
         :note: use to_full_path() if you only have a partial path of a known Reference Type
@@ -698,12 +698,13 @@ class SymbolicReference(object):
         from . import HEAD, Head, RemoteReference, TagReference, Reference
         for ref_type in (HEAD, Head, RemoteReference, TagReference, Reference, SymbolicReference):
             try:
+                instance: T_References
                 instance = ref_type(repo, path)
                 if instance.__class__ == SymbolicReference and instance.is_detached:
                     raise ValueError("SymbolRef was detached, we drop it")
                 else:
-                    assert isinstance(instance, Reference), "instance should be Reference or subtype"
                     return instance
+
             except ValueError:
                 pass
             # END exception handling

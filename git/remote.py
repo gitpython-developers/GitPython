@@ -632,7 +632,7 @@ class Remote(LazyMixin, IterableObj):
             as well. This is a fix for the issue described here:
             https://github.com/gitpython-developers/GitPython/issues/260
             """
-        out_refs: IterableList[RemoteReference] = IterableList(RemoteReference._id_attribute_, "%s/" % self.name)
+        out_refs: IterableList[Reference] = IterableList(RemoteReference._id_attribute_, "%s/" % self.name)
         for line in self.repo.git.remote("prune", "--dry-run", self).splitlines()[2:]:
             # expecting
             # * [would prune] origin/new_branch
@@ -642,7 +642,7 @@ class Remote(LazyMixin, IterableObj):
             ref_name = line.replace(token, "")
             # sometimes, paths start with a full ref name, like refs/tags/foo, see #260
             if ref_name.startswith(Reference._common_path_default + '/'):
-                out_refs.append(SymbolicReference.from_path(self.repo, ref_name))
+                out_refs.append(Reference.from_path(self.repo, ref_name))
             else:
                 fqhn = "%s/%s" % (RemoteReference._common_path_default, ref_name)
                 out_refs.append(RemoteReference(self.repo, fqhn))
