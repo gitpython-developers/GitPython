@@ -403,8 +403,8 @@ def expand_path(p: Union[None, PathLike], expand_vars: bool = True) -> Optional[
     try:
         p = osp.expanduser(p)  # type: ignore
         if expand_vars:
-            p = osp.expandvars(p)
-        return osp.normpath(osp.abspath(p))
+            p = osp.expandvars(p)    # type: ignore
+        return osp.normpath(osp.abspath(p))  # type: ignore
     except Exception:
         return None
 

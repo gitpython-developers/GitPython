@@ -1,3 +1,4 @@
+from typing import Sequence
 from setuptools import setup, find_packages
 from setuptools.command.build_py import build_py as _build_py
 from setuptools.command.sdist import sdist as _sdist
@@ -18,7 +19,7 @@ with open('test-requirements.txt') as reqs_file:
 
 class build_py(_build_py):
 
-    def run(self):
+    def run(self) -> None:
         init = path.join(self.build_lib, 'git', '__init__.py')
         if path.exists(init):
             os.unlink(init)
@@ -29,7 +30,7 @@ class build_py(_build_py):
 
 class sdist(_sdist):
 
-    def make_release_tree(self, base_dir, files):
+    def make_release_tree(self, base_dir: str, files: Sequence) -> None:
         _sdist.make_release_tree(self, base_dir, files)
         orig = path.join('git', '__init__.py')
         assert path.exists(orig), orig
@@ -40,7 +41,7 @@ class sdist(_sdist):
         _stamp_version(dest)
 
 
-def _stamp_version(filename):
+def _stamp_version(filename: str) -> None:
     found, out = False, []
     try:
         with open(filename, 'r') as f:
@@ -59,7 +60,7 @@ def _stamp_version(filename):
         print("WARNING: Couldn't find version line in file %s" % filename, file=sys.stderr)
 
 
-def build_py_modules(basedir, excludes=()):
+def build_py_modules(basedir: str, excludes: Sequence = ()) -> Sequence:
     # create list of py_modules from tree
     res = set()
     _prefix = os.path.basename(basedir)
@@ -90,7 +91,7 @@ setup(
     include_package_data=True,
     py_modules=build_py_modules("./git", excludes=["git.ext.*"]),
     package_dir={'git': 'git'},
-    python_requires='>=3.6',
+    python_requires='>=3.7',
     install_requires=requirements,
     tests_require=requirements + test_requirements,
     zip_safe=False,
@@ -114,9 +115,9 @@ setup(
         "Operating System :: MacOS :: MacOS X",
         "Programming Language :: Python",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9"
+        "Programming Language :: Python :: 3.10"
     ]
 )
