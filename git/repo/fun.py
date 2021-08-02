@@ -233,7 +233,7 @@ def rev_parse(repo: 'Repo', rev: str) -> Union['Commit', 'Tag', 'Tree', 'Blob']:
             assert obj is not None
 
             if ref is not None:
-                obj = cast(Commit, ref.commit)
+                obj = cast('Commit', ref.commit)
             # END handle ref
         # END initialize obj on first token
 
@@ -347,8 +347,8 @@ def rev_parse(repo: 'Repo', rev: str) -> Union['Commit', 'Tag', 'Tree', 'Blob']:
             # END end handle tag
         except (IndexError, AttributeError) as e:
             raise BadName(
-                "Invalid revision spec '%s' - not enough "
-                "parent commits to reach '%s%i'" % (rev, token, num)) from e
+                f"Invalid revision spec '{rev}' - not enough "
+                f"parent commits to reach '{token}{int(num)}'") from e
         # END exception handling
     # END parse loop
 
