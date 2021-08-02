@@ -42,10 +42,10 @@ import gitdb
 from git.types import TBD, PathLike, Lit_config_levels, Commit_ish, Tree_ish, assert_never
 from typing import (Any, BinaryIO, Callable, Dict,
                     Iterator, List, Mapping, Optional, Sequence,
-                    TextIO, Tuple, Type, TypedDict, Union,
+                    TextIO, Tuple, Type, Union,
                     NamedTuple, cast, TYPE_CHECKING)
 
-from git.types import ConfigLevels_Tup
+from git.types import ConfigLevels_Tup, TypedDict
 
 if TYPE_CHECKING:
     from git.util import IterableList
