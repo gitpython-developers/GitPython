@@ -909,7 +909,7 @@ class Repo(object):
                 line_str = line_bytes.rstrip().decode(defenc)
             except UnicodeDecodeError:
                 firstpart = ''
-                parts = ['']
+                parts = []
                 is_binary = True
             else:
                 # As we don't have an idea when the binary data ends, as it could contain multiple newlines
@@ -983,20 +983,21 @@ class Repo(object):
                                     info['committer'] + ' ' + info['committer_email']),
                                     committed_date=info['committer_date'])
                                 commits[sha] = c
-                                blames[-1][0] = c
+                            blames[-1][0] = c
                             # END if commit objects needs initial creation
-                            if blames[-1][1] is not None:
-                                if not is_binary:
-                                    if line_str and line_str[0] == '\t':
-                                        line_str = line_str[1:]
+                            if not is_binary:
+                                if line_str and line_str[0] == '\t':
+                                    line_str = line_str[1:]
+                            else:
+                                pass
+                                # NOTE: We are actually parsing lines out of binary data, which can lead to the
+                                # binary being split up along the newline separator. We will append this to the
+                                # blame we are currently looking at, even though it should be concatenated with
+                                # the last line we have seen.
 
-                                    blames[-1][1].append(line_str)
-                                else:
-                                    # NOTE: We are actually parsing lines out of binary data, which can lead to the
-                                    # binary being split up along the newline separator. We will append this to the
-                                    # blame we are currently looking at, even though it should be concatenated with
-                                    # the last line we have seen.
-                                    blames[-1][1].append(line_bytes)
+                            if blames[-1][1] is not None:
+                                blames[-1][1].append(line_str)
+                            info = {'id': sha}
                             # end handle line contents
 
                             info = {'id': sha}
