@@ -24,22 +24,20 @@ or low-level like git-plumbing.
 
 It provides abstractions of git objects for easy access of repository data, and additionally
 allows you to access the git repository more directly using either a pure python implementation,
-or the faster, but more resource intensive *git command* implementation.
+or the faster, but more resource intensive _git command_ implementation.
 
 The object database implementation is optimized for handling large quantities of objects and large datasets,
 which is achieved by using low-level structures and data streaming.
-
 
 ### DEVELOPMENT STATUS
 
 This project is in **maintenance mode**, which means that
 
-* …there will be no feature development, unless these are contributed
-* …there will be no bug fixes, unless they are relevant to the safety of users, or contributed
-* …issues will be responded to with waiting times of up to a month
+- …there will be no feature development, unless these are contributed
+- …there will be no bug fixes, unless they are relevant to the safety of users, or contributed
+- …issues will be responded to with waiting times of up to a month
 
 The project is open to contributions of all kinds, as well as new maintainers.
-
 
 ### REQUIREMENTS
 
@@ -48,8 +46,8 @@ in your `PATH` for most operations.
 If it is not in your `PATH`, you can help GitPython find it by setting
 the `GIT_PYTHON_GIT_EXECUTABLE=<path/to/git>` environment variable.
 
-* Git (1.7.x or newer)
-* Python >= 3.6
+- Git (1.7.x or newer)
+- Python >= 3.7
 
 The list of dependencies are listed in `./requirements.txt` and `./test-requirements.txt`.
 The installer takes care of installing them for you.
@@ -98,20 +96,20 @@ See [Issue #525](https://github.com/gitpython-developers/GitPython/issues/525).
 
 ### RUNNING TESTS
 
-*Important*: Right after cloning this repository, please be sure to have executed
+_Important_: Right after cloning this repository, please be sure to have executed
 the `./init-tests-after-clone.sh` script in the repository root. Otherwise
 you will encounter test failures.
 
-On *Windows*, make sure you have `git-daemon` in your PATH.  For MINGW-git, the `git-daemon.exe`
+On _Windows_, make sure you have `git-daemon` in your PATH. For MINGW-git, the `git-daemon.exe`
 exists in `Git\mingw64\libexec\git-core\`; CYGWIN has no daemon, but should get along fine
 with MINGW's.
 
-Ensure testing libraries are installed. 
-In the root directory, run: `pip install -r test-requirements.txt` 
+Ensure testing libraries are installed.
+In the root directory, run: `pip install -r test-requirements.txt`
 
 To lint, run: `flake8`
 
-To typecheck, run: `mypy -p git` 
+To typecheck, run: `mypy -p git`
 
 To test, run: `pytest`
 
@@ -119,9 +117,8 @@ Configuration for flake8 is in the ./.flake8 file.
 
 Configurations for mypy, pytest and coverage.py are in ./pyproject.toml.
 
-The same linting and testing will also be performed against different supported python versions 
+The same linting and testing will also be performed against different supported python versions
 upon submitting a pull request (or on each push if you have a fork with a "main" branch and actions enabled).
-
 
 ### Contributions
 
@@ -129,26 +126,26 @@ Please have a look at the [contributions file][contributing].
 
 ### INFRASTRUCTURE
 
-* [User Documentation](http://gitpython.readthedocs.org)
-* [Questions and Answers](http://stackexchange.com/filters/167317/gitpython)
- * Please post on stackoverflow and use the `gitpython` tag
-* [Issue Tracker](https://github.com/gitpython-developers/GitPython/issues)
-  * Post reproducible bugs and feature requests as a new issue.
+- [User Documentation](http://gitpython.readthedocs.org)
+- [Questions and Answers](http://stackexchange.com/filters/167317/gitpython)
+- Please post on stackoverflow and use the `gitpython` tag
+- [Issue Tracker](https://github.com/gitpython-developers/GitPython/issues)
+  - Post reproducible bugs and feature requests as a new issue.
     Please be sure to provide the following information if posting bugs:
-    * GitPython version (e.g. `import git; git.__version__`)
-    * Python version (e.g. `python --version`)
-    * The encountered stack-trace, if applicable
-    * Enough information to allow reproducing the issue
+    - GitPython version (e.g. `import git; git.__version__`)
+    - Python version (e.g. `python --version`)
+    - The encountered stack-trace, if applicable
+    - Enough information to allow reproducing the issue
 
 ### How to make a new release
 
-* Update/verify the **version** in the `VERSION` file
-* Update/verify that the `doc/source/changes.rst` changelog file was updated
-* Commit everything
-* Run `git tag -s <version>` to tag the version in Git
-* Run `make release`
-* Close the milestone mentioned in the _changelog_ and create a new one. _Do not reuse milestones by renaming them_.
-* set the upcoming version in the `VERSION` file, usually be
+- Update/verify the **version** in the `VERSION` file
+- Update/verify that the `doc/source/changes.rst` changelog file was updated
+- Commit everything
+- Run `git tag -s <version>` to tag the version in Git
+- Run `make release`
+- Close the milestone mentioned in the _changelog_ and create a new one. _Do not reuse milestones by renaming them_.
+- set the upcoming version in the `VERSION` file, usually be
   incrementing the patch level, and possibly by appending `-dev`. Probably you
   want to `git push` once more.
 
@@ -200,22 +197,22 @@ gpg --edit-key 4C08421980C9
 
 ### Projects using GitPython
 
-* [PyDriller](https://github.com/ishepard/pydriller)
-* [Kivy Designer](https://github.com/kivy/kivy-designer)
-* [Prowl](https://github.com/nettitude/Prowl)
-* [Python Taint](https://github.com/python-security/pyt)
-* [Buster](https://github.com/axitkhurana/buster)
-* [git-ftp](https://github.com/ezyang/git-ftp)
-* [Git-Pandas](https://github.com/wdm0006/git-pandas)
-* [PyGitUp](https://github.com/msiemens/PyGitUp)
-* [PyJFuzz](https://github.com/mseclab/PyJFuzz)
-* [Loki](https://github.com/Neo23x0/Loki)
-* [Omniwallet](https://github.com/OmniLayer/omniwallet)
-* [GitViper](https://github.com/BeayemX/GitViper)
-* [Git Gud](https://github.com/bthayer2365/git-gud)
+- [PyDriller](https://github.com/ishepard/pydriller)
+- [Kivy Designer](https://github.com/kivy/kivy-designer)
+- [Prowl](https://github.com/nettitude/Prowl)
+- [Python Taint](https://github.com/python-security/pyt)
+- [Buster](https://github.com/axitkhurana/buster)
+- [git-ftp](https://github.com/ezyang/git-ftp)
+- [Git-Pandas](https://github.com/wdm0006/git-pandas)
+- [PyGitUp](https://github.com/msiemens/PyGitUp)
+- [PyJFuzz](https://github.com/mseclab/PyJFuzz)
+- [Loki](https://github.com/Neo23x0/Loki)
+- [Omniwallet](https://github.com/OmniLayer/omniwallet)
+- [GitViper](https://github.com/BeayemX/GitViper)
+- [Git Gud](https://github.com/bthayer2365/git-gud)
 
 ### LICENSE
 
-New BSD License.  See the LICENSE file.
+New BSD License. See the LICENSE file.
 
 [contributing]: https://github.com/gitpython-developers/GitPython/blob/master/CONTRIBUTING.md

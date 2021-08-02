@@ -1014,13 +1014,12 @@ class Git(LazyMixin):
     def __unpack_args(cls, arg_list: Sequence[str]) -> List[str]:
 
         outlist = []
-        for arg in arg_list:
-            if isinstance(arg_list, (list, tuple)):
+        if isinstance(arg_list, (list, tuple)):
+            for arg in arg_list:
                 outlist.extend(cls.__unpack_args(arg))
-            # END recursion
-            else:
-                outlist.append(str(arg))
-        # END for each arg
+        else:
+            outlist.append(str(arg_list))
+
         return outlist
 
     def __call__(self, **kwargs: Any) -> 'Git':
