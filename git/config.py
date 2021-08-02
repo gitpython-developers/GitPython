@@ -301,9 +301,9 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
 
         """
         cp.RawConfigParser.__init__(self, dict_type=_OMD)
-        self._dict: Callable[..., _OMD]  # type: ignore[assignment]   # mypy/typeshed bug
+        self._dict: Callable[..., _OMD]  # type: ignore   # mypy/typeshed bug?
         self._defaults: _OMD
-        self._sections: _OMD              # type: ignore[assignment]  # mypy/typeshed bug
+        self._sections: _OMD              # type: ignore  # mypy/typeshed bug?
 
         # Used in python 3, needs to stay in sync with sections for underlying implementation to work
         if not hasattr(self, '_proxies'):
