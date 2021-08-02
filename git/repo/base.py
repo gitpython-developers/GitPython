@@ -7,7 +7,6 @@ from __future__ import annotations
 import logging
 import os
 import re
-from dataclasses import dataclass
 import shlex
 import warnings
 from gitdb.db.loose import LooseObjectDB
@@ -902,21 +901,7 @@ class Repo(object):
             committer_email: str
             committer_date: int
 
-        @dataclass
-        class InfoDC(Dict[str, Union[str, int]]):
-            sha: str = ''
-            id: str = ''
-            filename: str = ''
-            summary: str = ''
-            author: str = ''
-            author_email: str = ''
-            author_date: int = 0
-            committer: str = ''
-            committer_email: str = ''
-            committer_date: int = 0
-
-        # info: InfoTD = {}
-        info = InfoDC()
+        info: InfoTD = {}
 
         keepends = True
         for line_bytes in data.splitlines(keepends):
@@ -943,10 +928,10 @@ class Repo(object):
                 # another line of blame with the same data
                 digits = parts[-1].split(" ")
                 if len(digits) == 3:
-                    info.id = firstpart
+                    info = {'id': firstpart}
                     blames.append([None, []])
-                elif info.id != firstpart:
-                    info.id = firstpart
+                elif info['id'] != firstpart:
+                    info = {'id': firstpart}
                     blames.append([commits.get(firstpart), []])
                 # END blame data initialization
             else:
@@ -962,12 +947,20 @@ class Repo(object):
                     # committer-time 1192271832
                     # committer-tz -0700  - IGNORED BY US
                     role = m.group(0)
-                    if firstpart.endswith('-mail'):
-                        info[f"{role}_email"] = parts[-1]
-                    elif firstpart.endswith('-time'):
-                        info[f"{role}_date"] = int(parts[-1])
-                    elif role == firstpart:
-                        info[role] = parts[-1]
+                    if role == 'author':
+                        if firstpart.endswith('-mail'):
+                            info["author_email"] = parts[-1]
+                        elif firstpart.endswith('-time'):
+                            info["author_date"] = int(parts[-1])
+                        elif role == firstpart:
+                            info["author"] = parts[-1]
+                    elif role == 'committer':
+                        if firstpart.endswith('-mail'):
+                            info["committer_email"] = parts[-1]
+                        elif firstpart.endswith('-time'):
+                            info["committer_date"] = int(parts[-1])
+                        elif role == firstpart:
+                            info["committer"] = parts[-1]
                     # END distinguish mail,time,name
                 else:
                     # handle
@@ -980,34 +973,33 @@ class Repo(object):
                         info['summary'] = parts[-1]
                     elif firstpart == '':
                         if info:
-                            sha = info.id
+                            sha = info['id']
                             c = commits.get(sha)
                             if c is None:
                                 c = Commit(self, hex_to_bin(sha),
-                                           author=Actor._from_string(info.author + ' ' + info.author_email),
-                                           authored_date=info.author_date,
+                                           author=Actor._from_string(info['author'] + ' ' + info['author_email']),
+                                           authored_date=info['author_date'],
                                            committer=Actor._from_string(
-                                    info.committer + ' ' + info.committer_email),
-                                    committed_date=info.committer_date)
+                                    info['committer'] + ' ' + info['committer_email']),
+                                    committed_date=info['committer_date'])
                                 commits[sha] = c
                                 blames[-1][0] = c
                             # END if commit objects needs initial creation
-                            if not is_binary:
-                                if line_str and line_str[0] == '\t':
-                                    line_str = line_str[1:]
-                                line_AnyStr: str | bytes = line_str
-                            else:
-                                line_AnyStr = line_bytes
-                                # NOTE: We are actually parsing lines out of binary data, which can lead to the
-                                # binary being split up along the newline separator. We will append this to the
-                                # blame we are currently looking at, even though it should be concatenated with
-                                # the last line we have seen.
-
-                            # end handle line contents
                             if blames[-1][1] is not None:
-                                blames[-1][1].append(line_AnyStr)
+                                if not is_binary:
+                                    if line_str and line_str[0] == '\t':
+                                        line_str = line_str[1:]
 
-                            info.id = sha
+                                    blames[-1][1].append(line_str)
+                                else:
+                                    # NOTE: We are actually parsing lines out of binary data, which can lead to the
+                                    # binary being split up along the newline separator. We will append this to the
+                                    # blame we are currently looking at, even though it should be concatenated with
+                                    # the last line we have seen.
+                                    blames[-1][1].append(line_bytes)
+                            # end handle line contents
+
+                            info = {'id': sha}
                         # END if we collected commit info
                     # END distinguish filename,summary,rest
                 # END distinguish author|committer vs filename,summary,rest
