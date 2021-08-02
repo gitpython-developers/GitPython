@@ -811,8 +811,8 @@ class Repo(object):
         should get a continuous range spanning all line numbers in the file.
         """
 
-        data = self.git.blame(rev, '--', file, p=True, incremental=True, stdout_as_string=False, **kwargs)
-        commits: Dict[str, Commit] = {}
+        data: bytes = self.git.blame(rev, '--', file, p=True, incremental=True, stdout_as_string=False, **kwargs)
+        commits: Dict[bytes, Commit] = {}
 
         stream = (line for line in data.split(b'\n') if line)
         while True:
@@ -820,15 +820,15 @@ class Repo(object):
                 line = next(stream)  # when exhausted, causes a StopIteration, terminating this function
             except StopIteration:
                 return
-            split_line: Tuple[str, str, str, str] = line.split()
-            hexsha, orig_lineno_str, lineno_str, num_lines_str = split_line
-            lineno = int(lineno_str)
-            num_lines = int(num_lines_str)
-            orig_lineno = int(orig_lineno_str)
+            split_line = line.split()
+            hexsha, orig_lineno_b, lineno_b, num_lines_b = split_line
+            lineno = int(lineno_b)
+            num_lines = int(num_lines_b)
+            orig_lineno = int(orig_lineno_b)
             if hexsha not in commits:
                 # Now read the next few lines and build up a dict of properties
                 # for this commit
-                props = {}
+                props: Dict[bytes, bytes] = {}
                 while True:
                     try:
                         line = next(stream)
@@ -1126,7 +1126,7 @@ class Repo(object):
 
     @ classmethod
     def clone_from(cls, url: PathLike, to_path: PathLike, progress: Optional[Callable] = None,
-                   env: Optional[Mapping[str, Any]] = None,
+                   env: Optional[Mapping[str, str]] = None,
                    multi_options: Optional[List[str]] = None, **kwargs: Any) -> 'Repo':
         """Create a clone from the given URL
 
