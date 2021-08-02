@@ -72,12 +72,13 @@ class SymbolicReference(object):
     def __repr__(self) -> str:
         return '<git.%s "%s">' % (self.__class__.__name__, self.path)
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         if hasattr(other, 'path'):
+            other = cast(SymbolicReference, other)
             return self.path == other.path
         return False
 
-    def __ne__(self, other: Any) -> bool:
+    def __ne__(self, other: object) -> bool:
         return not (self == other)
 
     def __hash__(self) -> int:
@@ -364,8 +365,9 @@ class SymbolicReference(object):
         return self
 
     # aliased reference
+    reference: Union['Head', 'TagReference', 'RemoteReference', 'Reference']
     reference = property(_get_reference, set_reference, doc="Returns the Reference we point to")  # type: ignore
-    ref: Union['Head', 'TagReference', 'RemoteReference', 'Reference'] = reference             # type: ignore
+    ref = reference
 
     def is_valid(self) -> bool:
         """
@@ -699,7 +701,9 @@ class SymbolicReference(object):
                 instance = ref_type(repo, path)
                 if instance.__class__ == SymbolicReference and instance.is_detached:
                     raise ValueError("SymbolRef was detached, we drop it")
-                return instance
+                else:
+                    assert isinstance(instance, Reference), "instance should be Reference or subtype"
+                    return instance
             except ValueError:
                 pass
             # END exception handling

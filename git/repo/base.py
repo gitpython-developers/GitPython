@@ -3,6 +3,7 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
+from __future__ import annotations
 import logging
 import os
 import re
@@ -384,13 +385,13 @@ class Repo(object):
         :return: created submodules"""
         return Submodule.add(self, *args, **kwargs)
 
-    def iter_submodules(self, *args: Any, **kwargs: Any) -> Iterator:
+    def iter_submodules(self, *args: Any, **kwargs: Any) -> Iterator[Submodule]:
         """An iterator yielding Submodule instances, see Traversable interface
         for a description of args and kwargs
         :return: Iterator"""
         return RootModule(self).traverse(*args, **kwargs)
 
-    def submodule_update(self, *args: Any, **kwargs: Any) -> Iterator:
+    def submodule_update(self, *args: Any, **kwargs: Any) -> Iterator[Submodule]:
         """Update the submodules, keeping the repository consistent as it will
         take the previous state into consideration. For more information, please
         see the documentation of RootModule.update"""
@@ -774,7 +775,7 @@ class Repo(object):
         finalize_process(proc)
         return untracked_files
 
-    def ignored(self, *paths: PathLike) -> List[PathLike]:
+    def ignored(self, *paths: PathLike) -> List[str]:
         """Checks if paths are ignored via .gitignore
         Doing so using the "git check-ignore" method.
 
@@ -782,7 +783,7 @@ class Repo(object):
         :return: subset of those paths which are ignored
         """
         try:
-            proc = self.git.check_ignore(*paths)
+            proc: str = self.git.check_ignore(*paths)
         except GitCommandError:
             return []
         return proc.replace("\\\\", "\\").replace('"', "").split("\n")

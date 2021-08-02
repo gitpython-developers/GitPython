@@ -187,9 +187,7 @@ def parse_date(string_date: Union[str, datetime]) -> Tuple[int, int]:
             offset = -int(utcoffset.total_seconds())
             return int(string_date.astimezone(utc).timestamp()), offset
         else:
-            # should just return timestamp, 0?
-            return int(string_date.astimezone(utc).timestamp()), 0
-            # raise ValueError(f"string_date datetime object without tzinfo, {string_date}")
+            raise ValueError(f"string_date datetime object without tzinfo, {string_date}")
 
     # git time
     try:
