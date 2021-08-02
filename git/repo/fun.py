@@ -1,6 +1,5 @@
 """Package with general repository related functions"""
-from git.refs.reference import Reference
-from git.types import Commit_ish
+from __future__ import annotations
 import os
 import stat
 from string import digits
@@ -20,12 +19,13 @@ from git.cmd import Git
 # Typing ----------------------------------------------------------------------
 
 from typing import Union, Optional, cast, TYPE_CHECKING
-
+from git.types import Commit_ish
 
 if TYPE_CHECKING:
     from git.types import PathLike
     from .base import Repo
     from git.db import GitCmdObjectDB
+    from git.refs.reference import Reference
     from git.objects import Commit, TagObject, Blob, Tree
     from git.refs.tag import Tag
 
@@ -204,7 +204,7 @@ def rev_parse(repo: 'Repo', rev: str) -> Union['Commit', 'Tag', 'Tree', 'Blob']:
         raise NotImplementedError("commit by message search ( regex )")
     # END handle search
 
-    obj: Union[Commit_ish, Reference, None] = None
+    obj: Union[Commit_ish, 'Reference', None] = None
     ref = None
     output_type = "commit"
     start = 0
@@ -224,7 +224,7 @@ def rev_parse(repo: 'Repo', rev: str) -> Union['Commit', 'Tag', 'Tree', 'Blob']:
                 ref = repo.head.ref
             else:
                 if token == '@':
-                    ref = cast(Reference, name_to_object(repo, rev[:start], return_ref=True))
+                    ref = cast('Reference', name_to_object(repo, rev[:start], return_ref=True))
                 else:
                     obj = cast(Commit_ish, name_to_object(repo, rev[:start]))
                 # END handle token
@@ -251,13 +251,13 @@ def rev_parse(repo: 'Repo', rev: str) -> Union['Commit', 'Tag', 'Tree', 'Blob']:
                 pass  # default
             elif output_type == 'tree':
                 try:
-                    obj = cast(Object, obj)
+                    obj = cast(Commit_ish, obj)
                     obj = to_commit(obj).tree
                 except (AttributeError, ValueError):
                     pass    # error raised later
                 # END exception handling
             elif output_type in ('', 'blob'):
-                obj = cast(TagObject, obj)
+                obj = cast('TagObject', obj)
                 if obj and obj.type == 'tag':
                     obj = deref_tag(obj)
                 else:
