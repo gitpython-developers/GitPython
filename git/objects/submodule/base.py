@@ -379,6 +379,7 @@ class Submodule(IndexObject, TraversableIterableObj):
         :return: The newly created submodule instance
         :note: works atomically, such that no change will be done if the repository
             update fails for instance"""
+
         if repo.bare:
             raise InvalidGitRepositoryError("Cannot add submodules to bare repositories")
         # END handle bare repos
@@ -434,7 +435,7 @@ class Submodule(IndexObject, TraversableIterableObj):
             url = urls[0]
         else:
             # clone new repo
-            kwargs: Dict[str, Union[bool, int, Sequence[TBD]]] = {'n': no_checkout}
+            kwargs: Dict[str, Union[bool, int, str, Sequence[TBD]]] = {'n': no_checkout}
             if not branch_is_default:
                 kwargs['b'] = br.name
             # END setup checkout-branch

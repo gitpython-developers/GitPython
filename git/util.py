@@ -38,6 +38,7 @@ if TYPE_CHECKING:
     from git.remote import Remote
     from git.repo.base import Repo
     from git.config import GitConfigParser, SectionConstraint
+    from git import Git
     # from git.objects.base import IndexObject
 
 
@@ -69,7 +70,7 @@ from gitdb.util import (  # NOQA @IgnorePep8
 # Most of these are unused here, but are for use by git-python modules so these
 # don't see gitdb all the time. Flake of course doesn't like it.
 __all__ = ["stream_copy", "join_path", "to_native_path_linux",
-           "join_path_native", "Stats", "IndexFileSHA1Writer", "Iterable", "IterableList",
+           "join_path_native", "Stats", "IndexFileSHA1Writer", "IterableObj", "IterableList",
            "BlockingLockFile", "LockFile", 'Actor', 'get_user_id', 'assure_directory_exists',
            'RemoteProgress', 'CallableRemoteProgress', 'rmtree', 'unbare_repo',
            'HIDE_WINDOWS_KNOWN_ERRORS']
@@ -379,7 +380,7 @@ def get_user_id() -> str:
     return "%s@%s" % (getpass.getuser(), platform.node())
 
 
-def finalize_process(proc: subprocess.Popen, **kwargs: Any) -> None:
+def finalize_process(proc: Union[subprocess.Popen, 'Git.AutoInterrupt'], **kwargs: Any) -> None:
     """Wait for the process (clone, fetch, pull or push) and handle its errors accordingly"""
     # TODO: No close proc-streams??
     proc.wait(**kwargs)
@@ -403,7 +404,7 @@ def expand_path(p: Union[None, PathLike], expand_vars: bool = True) -> Optional[
         p = osp.expanduser(p)  # type: ignore
         if expand_vars:
             p = osp.expandvars(p)    # type: ignore
-        return osp.normpath(osp.abspath(p))    # type: ignore
+        return osp.normpath(osp.abspath(p))  # type: ignore
     except Exception:
         return None
 
@@ -1033,7 +1034,7 @@ class IterableList(List[T_IterableObj]):
 
 class IterableClassWatcher(type):
     """ Metaclass that watches """
-    def __init__(cls, name: str, bases: List, clsdict: Dict) -> None:
+    def __init__(cls, name: str, bases: Tuple, clsdict: Dict) -> None:
         for base in bases:
             if type(base) == IterableClassWatcher:
                 warnings.warn(f"GitPython Iterable subclassed by {name}. "

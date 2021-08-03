@@ -70,7 +70,7 @@ from .util import (
 from typing import (Any, BinaryIO, Callable, Dict, IO, Iterable, Iterator, List, NoReturn,
                     Sequence, TYPE_CHECKING, Tuple, Type, Union)
 
-from git.types import Commit_ish, PathLike, TBD
+from git.types import Commit_ish, PathLike
 
 if TYPE_CHECKING:
     from subprocess import Popen
@@ -181,7 +181,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         self.version, self.entries, self._extension_data, _conten_sha = read_cache(stream)
         return self
 
-    def _entries_sorted(self) -> List[TBD]:
+    def _entries_sorted(self) -> List[IndexEntry]:
         """:return: list of entries, in a sorted fashion, first by path, then by stage"""
         return sorted(self.entries.values(), key=lambda e: (e.path, e.stage))
 
@@ -427,8 +427,8 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             # END path exception handling
         # END for each path
 
-    def _write_path_to_stdin(self, proc: 'Popen', filepath: PathLike, item: TBD, fmakeexc: Callable[..., GitError],
-                             fprogress: Callable[[PathLike, bool, TBD], None],
+    def _write_path_to_stdin(self, proc: 'Popen', filepath: PathLike, item: PathLike, fmakeexc: Callable[..., GitError],
+                             fprogress: Callable[[PathLike, bool, PathLike], None],
                              read_from_stdout: bool = True) -> Union[None, str]:
         """Write path to proc.stdin and make sure it processes the item, including progress.
 
@@ -492,12 +492,13 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             are at stage 3 will not have a stage 3 entry.
         """
         is_unmerged_blob = lambda t: t[0] != 0
-        path_map: Dict[PathLike, List[Tuple[TBD, Blob]]] = {}
+        path_map: Dict[PathLike, List[Tuple[StageType, Blob]]] = {}
         for stage, blob in self.iter_blobs(is_unmerged_blob):
             path_map.setdefault(blob.path, []).append((stage, blob))
         # END for each unmerged blob
         for line in path_map.values():
             line.sort()
+
         return path_map
 
     @ classmethod
@@ -1201,7 +1202,6 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             handle_stderr(proc, checked_out_files)
             return checked_out_files
         # END paths handling
-        assert "Should not reach this point"
 
     @ default_index
     def reset(self, commit: Union[Commit, 'Reference', str] = 'HEAD', working_tree: bool = False,

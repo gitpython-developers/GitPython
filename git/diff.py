@@ -16,7 +16,7 @@ from .objects.util import mode_str_to_int
 # typing ------------------------------------------------------------------
 
 from typing import Any, Iterator, List, Match, Optional, Tuple, Type, TypeVar, Union, TYPE_CHECKING, cast
-from git.types import PathLike, TBD, Literal
+from git.types import PathLike, Literal
 
 if TYPE_CHECKING:
     from .objects.tree import Tree
@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     from git.repo.base import Repo
     from git.objects.base import IndexObject
     from subprocess import Popen
+    from git import Git
 
 Lit_change_type = Literal['A', 'D', 'C', 'M', 'R', 'T', 'U']
 
@@ -442,7 +443,7 @@ class Diff(object):
         return None
 
     @ classmethod
-    def _index_from_patch_format(cls, repo: 'Repo', proc: TBD) -> DiffIndex:
+    def _index_from_patch_format(cls, repo: 'Repo', proc: Union['Popen', 'Git.AutoInterrupt']) -> DiffIndex:
         """Create a new DiffIndex from the given text which must be in patch format
         :param repo: is the repository we are operating on - it is required
         :param stream: result of 'git diff' as a stream (supporting file protocol)
@@ -455,8 +456,8 @@ class Diff(object):
         # for now, we have to bake the stream
         text = b''.join(text_list)
         index: 'DiffIndex' = DiffIndex()
-        previous_header = None
-        header = None
+        previous_header: Union[Match[bytes], None] = None
+        header: Union[Match[bytes], None] = None
         a_path, b_path = None, None  # for mypy
         a_mode, b_mode = None, None  # for mypy
         for _header in cls.re_header.finditer(text):
