@@ -238,16 +238,16 @@ class TestUtils(TestBase):
     @mock.patch("getpass.getuser")
     def test_actor_get_uid_laziness_called(self, mock_get_uid):
         mock_get_uid.return_value = "user"
-        for cr in (None, self.rorepo.config_reader()):
-            committer = Actor.committer(cr)
-            author = Actor.author(cr)
-            if cr is None:  # otherwise, use value from config_reader
-                self.assertEqual(committer.name, 'user')
-                self.assertTrue(committer.email.startswith('user@'))
-                self.assertEqual(author.name, 'user')
-                self.assertTrue(committer.email.startswith('user@'))
+        committer = Actor.committer(None)
+        author = Actor.author(None)
+        # We can't test with `self.rorepo.config_reader()` here, as the uuid laziness
+        # depends on whether the user running the test has their user.name config set.
+        self.assertEqual(committer.name, 'user')
+        self.assertTrue(committer.email.startswith('user@'))
+        self.assertEqual(author.name, 'user')
+        self.assertTrue(committer.email.startswith('user@'))
         self.assertTrue(mock_get_uid.called)
-        self.assertEqual(mock_get_uid.call_count, 4)
+        self.assertEqual(mock_get_uid.call_count, 2)
 
     def test_actor_from_string(self):
         self.assertEqual(Actor._from_string("name"), Actor("name", None))
