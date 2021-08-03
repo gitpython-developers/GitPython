@@ -708,12 +708,12 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
         return self._read_only
 
     @overload
-    def get_value(self, section: str, option: str, default: Optional[str]
+    def get_value(self, section: str, option: str, default: Optional[str] = None
                   ) -> str:
         ...
 
     @overload
-    def get_value(self, section: str, option: str, default: Optional[float]
+    def get_value(self, section: str, option: str, default: Optional[float] = None
                   ) -> float:
         ...
 
