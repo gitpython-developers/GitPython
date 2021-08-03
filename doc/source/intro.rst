@@ -13,15 +13,17 @@ The object database implementation is optimized for handling large quantities of
 Requirements
 ============
 
-* `Python`_ >= 3.6
+* `Python`_ >= 3.7
 * `Git`_ 1.7.0 or newer
     It should also work with older versions, but it may be that some operations
     involving remotes will not work as expected.
 * `GitDB`_ - a pure python git database implementation
+* `typing_extensions`_ >= 3.7.3.4 (if python < 3.10)
 
 .. _Python: https://www.python.org
 .. _Git: https://git-scm.com/
 .. _GitDB: https://pypi.python.org/pypi/gitdb
+.. _typing_extensions: https://pypi.org/project/typing-extensions/
 
 Installing GitPython
 ====================
@@ -60,7 +62,7 @@ Leakage of System Resources
 ---------------------------
 
 GitPython is not suited for long-running processes (like daemons) as it tends to
-leak system resources. It was written in a time where destructors (as implemented 
+leak system resources. It was written in a time where destructors (as implemented
 in the `__del__` method) still ran deterministically.
 
 In case you still want to use it in such a context, you will want to search the

@@ -42,7 +42,7 @@ from .util import (
 from typing import (Any, AnyStr, BinaryIO, Callable, Dict, IO, Iterator, List, Mapping,
                     Sequence, TYPE_CHECKING, TextIO, Tuple, Union, cast, overload)
 
-from git.types import PathLike, Literal
+from git.types import PathLike, Literal, TBD
 
 if TYPE_CHECKING:
     from git.repo.base import Repo
@@ -68,7 +68,7 @@ __all__ = ('Git',)
 # Documentation
 ## @{
 
-def handle_process_output(process: subprocess.Popen,
+def handle_process_output(process: Union[subprocess.Popen, 'Git.AutoInterrupt'],
                           stdout_handler: Union[None,
                                                 Callable[[AnyStr], None],
                                                 Callable[[List[AnyStr]], None],
@@ -77,7 +77,7 @@ def handle_process_output(process: subprocess.Popen,
                                                 Callable[[AnyStr], None],
                                                 Callable[[List[AnyStr]], None]],
                           finalizer: Union[None,
-                                           Callable[[subprocess.Popen], None]] = None,
+                                           Callable[[Union[subprocess.Popen, 'Git.AutoInterrupt']], None]] = None,
                           decode_streams: bool = True) -> None:
     """Registers for notifications to learn that process output is ready to read, and dispatches lines to
     the respective line handlers.
@@ -165,7 +165,7 @@ CREATE_NO_WINDOW = 0x08000000
 ## CREATE_NEW_PROCESS_GROUP is needed to allow killing it afterwards,
 # see https://docs.python.org/3/library/subprocess.html#subprocess.Popen.send_signal
 PROC_CREATIONFLAGS = (CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP  # type: ignore[attr-defined]
-                      if is_win else 0)
+                      if is_win else 0)                                       # mypy error if not windows
 
 
 class Git(LazyMixin):
@@ -421,15 +421,15 @@ class Git(LazyMixin):
             return getattr(self.proc, attr)
 
         # TODO: Bad choice to mimic `proc.wait()` but with different args.
-        def wait(self, stderr: Union[None, bytes] = b'') -> int:
+        def wait(self, stderr: Union[None, str, bytes] = b'') -> int:
             """Wait for the process and return its status code.
 
             :param stderr: Previously read value of stderr, in case stderr is already closed.
             :warn: may deadlock if output or error pipes are used and not handled separately.
             :raise GitCommandError: if the return status is not 0"""
             if stderr is None:
-                stderr = b''
-            stderr = force_bytes(data=stderr, encoding='utf-8')
+                stderr_b = b''
+            stderr_b = force_bytes(data=stderr, encoding='utf-8')
 
             if self.proc is not None:
                 status = self.proc.wait()
@@ -437,11 +437,11 @@ class Git(LazyMixin):
                 def read_all_from_possibly_closed_stream(stream: Union[IO[bytes], None]) -> bytes:
                     if stream:
                         try:
-                            return stderr + force_bytes(stream.read())
+                            return stderr_b + force_bytes(stream.read())
                         except ValueError:
-                            return stderr or b''
+                            return stderr_b or b''
                     else:
-                        return stderr or b''
+                        return stderr_b or b''
 
                 if status != 0:
                     errstr = read_all_from_possibly_closed_stream(self.proc.stderr)
@@ -575,8 +575,8 @@ class Git(LazyMixin):
         self._environment: Dict[str, str] = {}
 
         # cached command slots
-        self.cat_file_header = None
-        self.cat_file_all = None
+        self.cat_file_header: Union[None, TBD] = None
+        self.cat_file_all: Union[None, TBD] = None
 
     def __getattr__(self, name: str) -> Any:
         """A convenience method as it allows to call the command as if it was
@@ -1012,17 +1012,14 @@ class Git(LazyMixin):
 
     @classmethod
     def __unpack_args(cls, arg_list: Sequence[str]) -> List[str]:
-        if not isinstance(arg_list, (list, tuple)):
-            return [str(arg_list)]
 
         outlist = []
-        for arg in arg_list:
-            if isinstance(arg_list, (list, tuple)):
+        if isinstance(arg_list, (list, tuple)):
+            for arg in arg_list:
                 outlist.extend(cls.__unpack_args(arg))
-            # END recursion
-            else:
-                outlist.append(str(arg))
-        # END for each arg
+        else:
+            outlist.append(str(arg_list))
+
         return outlist
 
     def __call__(self, **kwargs: Any) -> 'Git':

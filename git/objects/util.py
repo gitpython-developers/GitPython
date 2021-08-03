@@ -167,7 +167,7 @@ def from_timestamp(timestamp: float, tz_offset: float) -> datetime:
         return utc_dt
 
 
-def parse_date(string_date: str) -> Tuple[int, int]:
+def parse_date(string_date: Union[str, datetime]) -> Tuple[int, int]:
     """
     Parse the given date as one of the following
 
@@ -181,9 +181,13 @@ def parse_date(string_date: str) -> Tuple[int, int]:
     :raise ValueError: If the format could not be understood
     :note: Date can also be YYYY.MM.DD, MM/DD/YYYY and DD.MM.YYYY.
     """
-    if isinstance(string_date, datetime) and string_date.tzinfo:
-        offset = -int(string_date.utcoffset().total_seconds())
-        return int(string_date.astimezone(utc).timestamp()), offset
+    if isinstance(string_date, datetime):
+        if string_date.tzinfo:
+            utcoffset = cast(timedelta, string_date.utcoffset())  # typeguard, if tzinfoand is not None
+            offset = -int(utcoffset.total_seconds())
+            return int(string_date.astimezone(utc).timestamp()), offset
+        else:
+            raise ValueError(f"string_date datetime object without tzinfo, {string_date}")
 
     # git time
     try:
@@ -245,7 +249,7 @@ def parse_date(string_date: str) -> Tuple[int, int]:
             raise ValueError("no format matched")
         # END handle format
     except Exception as e:
-        raise ValueError("Unsupported date format: %s" % string_date) from e
+        raise ValueError(f"Unsupported date format or type: {string_date}, type={type(string_date)}") from e
     # END handle exceptions
 
 
@@ -338,7 +342,7 @@ class Traversable(Protocol):
         """
         # Commit and Submodule have id.__attribute__ as IterableObj
         # Tree has id.__attribute__ inherited from IndexObject
-        if isinstance(self, (TraversableIterableObj, Has_id_attribute)):
+        if isinstance(self, Has_id_attribute):
             id = self._id_attribute_
         else:
             id = ""     # shouldn't reach here, unless Traversable subclass created with no _id_attribute_
@@ -346,7 +350,7 @@ class Traversable(Protocol):
 
         if not as_edge:
             out: IterableList[Union['Commit', 'Submodule', 'Tree', 'Blob']] = IterableList(id)
-            out.extend(self.traverse(as_edge=as_edge, *args, **kwargs))  # type: ignore
+            out.extend(self.traverse(as_edge=as_edge, *args, **kwargs))
             return out
             # overloads in subclasses (mypy does't allow typing self: subclass)
             # Union[IterableList['Commit'], IterableList['Submodule'], IterableList[Union['Submodule', 'Tree', 'Blob']]]
