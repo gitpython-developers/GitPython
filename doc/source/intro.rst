@@ -18,7 +18,7 @@ Requirements
     It should also work with older versions, but it may be that some operations
     involving remotes will not work as expected.
 * `GitDB`_ - a pure python git database implementation
-* `typing_extensions`_ >= 3.10.0
+* `typing_extensions`_ >= 3.7.3.4 (if python < 3.10)
 
 .. _Python: https://www.python.org
 .. _Git: https://git-scm.com/
