@@ -217,8 +217,23 @@ class TestUtils(TestBase):
             self.assertIsInstance(Actor.author(cr), Actor)
         # END assure config reader is handled
 
+    @with_rw_repo('HEAD')
     @mock.patch("getpass.getuser")
-    def test_actor_get_uid_laziness_not_called(self, mock_get_uid):
+    def test_actor_get_uid_laziness_not_called(self, rwrepo, mock_get_uid):
+        with rwrepo.config_writer() as cw:
+            cw.set_value("user", "name", "John Config Doe")
+            cw.set_value("user", "email", "jcdoe@example.com")
+        
+        cr = rwrepo.config_reader()
+        committer = Actor.committer(cr)
+        author = Actor.author(cr)
+        
+        self.assertEqual(committer.name, 'John Config Doe')
+        self.assertEqual(committer.email, 'jcdoe@example.com')
+        self.assertEqual(author.name, 'John Config Doe')
+        self.assertEqual(author.email, 'jcdoe@example.com')
+        self.assertFalse(mock_get_uid.called)
+            
         env = {
             "GIT_AUTHOR_NAME": "John Doe",
             "GIT_AUTHOR_EMAIL": "jdoe@example.com",
@@ -226,7 +241,7 @@ class TestUtils(TestBase):
             "GIT_COMMITTER_EMAIL": "jane@example.com",
         }
         os.environ.update(env)
-        for cr in (None, self.rorepo.config_reader()):
+        for cr in (None, rwrepo.config_reader()):
             committer = Actor.committer(cr)
             author = Actor.author(cr)
             self.assertEqual(committer.name, 'Jane Doe')
@@ -241,7 +256,7 @@ class TestUtils(TestBase):
         committer = Actor.committer(None)
         author = Actor.author(None)
         # We can't test with `self.rorepo.config_reader()` here, as the uuid laziness
-        # depends on whether the user running the test has their user.name config set.
+        # depends on whether the user running the test has their global user.name config set.
         self.assertEqual(committer.name, 'user')
         self.assertTrue(committer.email.startswith('user@'))
         self.assertEqual(author.name, 'user')
