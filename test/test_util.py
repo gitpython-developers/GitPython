@@ -22,7 +22,10 @@ from git.objects.util import (
     parse_date,
     tzoffset,
     from_timestamp)
-from test.lib import TestBase
+from test.lib import (
+    TestBase,
+    with_rw_repo,
+)
 from git.util import (
     LockFile,
     BlockingLockFile,
