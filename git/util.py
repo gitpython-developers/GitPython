@@ -705,7 +705,11 @@ class Actor(object):
                 setattr(actor, attr, val)
             except KeyError:
                 if config_reader is not None:
-                    setattr(actor, attr, config_reader.get_value('user', cvar, default()))
+                    try:
+                        val = config_reader.get('user', cvar)
+                    except Exception:
+                        val = default()
+                    setattr(actor, attr, val)
                 # END config-reader handling
                 if not getattr(actor, attr):
                     setattr(actor, attr, default())
