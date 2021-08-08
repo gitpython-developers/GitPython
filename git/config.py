@@ -31,7 +31,7 @@ import configparser as cp
 # typing-------------------------------------------------------
 
 from typing import (Any, Callable, Generic, IO, List, Dict, Sequence,
-                    TYPE_CHECKING, Tuple, TypeVar, Union, cast, overload)
+                    TYPE_CHECKING, Tuple, TypeVar, Union, cast)
 
 from git.types import Lit_config_levels, ConfigLevels_Tup, PathLike, assert_never, _T
 
@@ -708,15 +708,6 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
     def read_only(self) -> bool:
         """:return: True if this instance may change the configuration file"""
         return self._read_only
-
-    @overload
-    def get_value(self, section: str, option: str, default: None = None) -> Union[int, float, str, bool]: ...
-
-    @overload
-    def get_value(self, section: str, option: str, default: str) -> str: ...
-
-    @overload
-    def get_value(self, section: str, option: str, default: float) -> float: ...
 
     def get_value(self, section: str, option: str, default: Union[int, float, str, bool, None] = None
                   ) -> Union[int, float, str, bool]:

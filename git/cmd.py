@@ -109,18 +109,16 @@ def handle_process_output(process: 'Git.AutoInterrupt' | Popen,
                     else:
                         handler(line)
         except Exception as ex:
-            log.error(f"Pumping {name!r} of cmd({remove_password_if_present(cmdline)})} failed due to: {ex!r}")
+            log.error(f"Pumping {name!r} of cmd({remove_password_if_present(cmdline)}) failed due to: {ex!r}")
             raise CommandError([f'<{name}-pump>'] + remove_password_if_present(cmdline), ex) from ex
         finally:
             stream.close()
 
-
-
     if hasattr(process, 'proc'):
         process = cast('Git.AutoInterrupt', process)
         cmdline: str | Tuple[str, ...] | List[str] = getattr(process.proc, 'args', '')
-        p_stdout = process.proc.stdout
-        p_stderr = process.proc.stderr
+        p_stdout = process.proc.stdout if process.proc else None
+        p_stderr = process.proc.stderr if process.proc else None
     else:
         process = cast(Popen, process)
         cmdline = getattr(process, 'args', '')
