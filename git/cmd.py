@@ -3,7 +3,7 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
-
+from __future__ import annotations
 from contextlib import contextmanager
 import io
 import logging
@@ -68,7 +68,7 @@ __all__ = ('Git',)
 # Documentation
 ## @{
 
-def handle_process_output(process: Union[subprocess.Popen, 'Git.AutoInterrupt'],
+def handle_process_output(process: 'Git.AutoInterrupt' | Popen,
                           stdout_handler: Union[None,
                                                 Callable[[AnyStr], None],
                                                 Callable[[List[AnyStr]], None],
@@ -78,7 +78,8 @@ def handle_process_output(process: Union[subprocess.Popen, 'Git.AutoInterrupt'],
                                                 Callable[[List[AnyStr]], None]],
                           finalizer: Union[None,
                                            Callable[[Union[subprocess.Popen, 'Git.AutoInterrupt']], None]] = None,
-                          decode_streams: bool = True) -> None:
+                          decode_streams: bool = True,
+                          timeout: float = 10.0) -> None:
     """Registers for notifications to learn that process output is ready to read, and dispatches lines to
     the respective line handlers.
     This function returns once the finalizer returns
@@ -93,9 +94,10 @@ def handle_process_output(process: Union[subprocess.Popen, 'Git.AutoInterrupt'],
         their contents to handlers.
         Set it to False if `universal_newline == True` (then streams are in text-mode)
         or if decoding must happen later (i.e. for Diffs).
+    :param timeout: float, timeout to pass to t.join() in case it hangs. Default = 10.0 seconds
     """
     # Use 2 "pump" threads and wait for both to finish.
-    def pump_stream(cmdline: str, name: str, stream: Union[BinaryIO, TextIO], is_decode: bool,
+    def pump_stream(cmdline: List[str], name: str, stream: Union[BinaryIO, TextIO], is_decode: bool,
                     handler: Union[None, Callable[[Union[bytes, str]], None]]) -> None:
         try:
             for line in stream:
@@ -107,22 +109,34 @@ def handle_process_output(process: Union[subprocess.Popen, 'Git.AutoInterrupt'],
                     else:
                         handler(line)
         except Exception as ex:
-            log.error("Pumping %r of cmd(%s) failed due to: %r", name, remove_password_if_present(cmdline), ex)
-            raise CommandError(['<%s-pump>' % name] + remove_password_if_present(cmdline), ex) from ex
+            log.error(f"Pumping {name!r} of cmd({remove_password_if_present(cmdline)})} failed due to: {ex!r}")
+            raise CommandError([f'<{name}-pump>'] + remove_password_if_present(cmdline), ex) from ex
         finally:
             stream.close()
 
-    cmdline = getattr(process, 'args', '')  # PY3+ only
+
+
+    if hasattr(process, 'proc'):
+        process = cast('Git.AutoInterrupt', process)
+        cmdline: str | Tuple[str, ...] | List[str] = getattr(process.proc, 'args', '')
+        p_stdout = process.proc.stdout
+        p_stderr = process.proc.stderr
+    else:
+        process = cast(Popen, process)
+        cmdline = getattr(process, 'args', '')
+        p_stdout = process.stdout
+        p_stderr = process.stderr
+
     if not isinstance(cmdline, (tuple, list)):
         cmdline = cmdline.split()
 
-    pumps = []
-    if process.stdout:
-        pumps.append(('stdout', process.stdout, stdout_handler))
-    if process.stderr:
-        pumps.append(('stderr', process.stderr, stderr_handler))
+    pumps: List[Tuple[str, IO, Callable[..., None] | None]] = []
+    if p_stdout:
+        pumps.append(('stdout', p_stdout, stdout_handler))
+    if p_stderr:
+        pumps.append(('stderr', p_stderr, stderr_handler))
 
-    threads = []
+    threads: List[threading.Thread] = []
 
     for name, stream, handler in pumps:
         t = threading.Thread(target=pump_stream,
@@ -134,7 +148,7 @@ def handle_process_output(process: Union[subprocess.Popen, 'Git.AutoInterrupt'],
     ## FIXME: Why Join??  Will block if `stdin` needs feeding...
     #
     for t in threads:
-        t.join()
+        t.join(timeout=timeout)
 
     if finalizer:
         return finalizer(process)

@@ -12,3 +12,6 @@ flake8-type-checking;python_version>="3.8"      # checks for TYPE_CHECKING only 
 # pytest-flake8
 pytest-icdiff
 # pytest-profiling
+
+
+tox
