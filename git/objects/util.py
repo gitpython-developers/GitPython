@@ -22,10 +22,10 @@ import calendar
 from datetime import datetime, timedelta, tzinfo
 
 # typing ------------------------------------------------------------
-from typing import (Any, Callable, Deque, Iterator, NamedTuple, overload, Sequence,
+from typing import (Any, Callable, Deque, Iterator, Generic, NamedTuple, overload, Sequence,
                     TYPE_CHECKING, Tuple, Type, TypeVar, Union, cast)
 
-from git.types import Has_id_attribute, Literal, Protocol, runtime_checkable
+from git.types import Has_id_attribute, Literal
 
 if TYPE_CHECKING:
     from io import BytesIO, StringIO
@@ -35,6 +35,12 @@ if TYPE_CHECKING:
     from .tree import Tree, TraversedTreeTup
     from subprocess import Popen
     from .submodule.base import Submodule
+    from git.types import Protocol, runtime_checkable
+else:
+    Protocol = Generic
+
+    def runtime_checkable(f):
+        return f
 
 
 class TraverseNT(NamedTuple):
