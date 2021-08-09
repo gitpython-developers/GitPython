@@ -5,7 +5,7 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 """Module for general utility functions"""
 
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 import warnings
 from git.util import (
     IterableList,
@@ -22,10 +22,10 @@ import calendar
 from datetime import datetime, timedelta, tzinfo
 
 # typing ------------------------------------------------------------
-from typing import (Any, Callable, Deque, Iterator, Generic, NamedTuple, overload, Sequence,
+from typing import (Any, Callable, Deque, Iterator, Generic, NamedTuple, overload, Sequence,  # NOQA: F401
                     TYPE_CHECKING, Tuple, Type, TypeVar, Union, cast)
 
-from git.types import Has_id_attribute, Literal, _T
+from git.types import Has_id_attribute, Literal, _T             # NOQA: F401
 
 if TYPE_CHECKING:
     from io import BytesIO, StringIO
@@ -37,7 +37,8 @@ if TYPE_CHECKING:
     from .submodule.base import Submodule
     from git.types import Protocol, runtime_checkable
 else:
-    Protocol = Generic[_T]
+    # Protocol = Generic[_T]  # NNeeded for typing bug #572?
+    Protocol = ABC
 
     def runtime_checkable(f):
         return f
