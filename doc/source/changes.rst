@@ -9,7 +9,7 @@ Changelog
 
 * General:
   - Remove python 3.6 support
-  - Remove distutils inline with deprecation in standard library.
+  - Remove distutils ahead of deprecation in standard library.
   - Update sphinx to 4.1.12 and use autodoc-typehints.
 
 * Typing:
@@ -17,6 +17,7 @@ Changelog
   - Ensure py.typed is collected.
   - Increase mypy strictness with disallow_untyped_defs, warn_redundant_casts, warn_unreachable.
   - Use typing.NamedTuple and typing.OrderedDict now 3.6 dropped.
+  - Make Protocol classes ABCs at runtime due to new bug in 3.10.0-rc1
   - Remove use of typing.TypeGuard until later release, to allow dependant libs time to update.
   - Tracking issue: https://github.com/gitpython-developers/GitPython/issues/1095
 
@@ -30,7 +31,7 @@ https://github.com/gitpython-developers/gitpython/milestone/52?closed=1
 
 
 3.1.20 (YANKED)
-======
+===============
 
 * This is the second typed release with a lot of improvements under the hood.
   * Tracking issue: https://github.com/gitpython-developers/GitPython/issues/1095
