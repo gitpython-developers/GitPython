@@ -147,6 +147,8 @@ def handle_process_output(process: 'Git.AutoInterrupt' | Popen,
     #
     for t in threads:
         t.join(timeout=timeout)
+        if t.is_alive():
+            raise RuntimeError(f"Thread join() timed out in cmd.handle_process_output(). Timeout={timeout} seconds")
 
     if finalizer:
         return finalizer(process)
