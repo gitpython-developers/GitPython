@@ -37,7 +37,7 @@ if TYPE_CHECKING:
     from .submodule.base import Submodule
     from git.types import Protocol, runtime_checkable
 else:
-    Protocol = Generic
+    Protocol = Generic[Any]
 
     def runtime_checkable(f):
         return f
