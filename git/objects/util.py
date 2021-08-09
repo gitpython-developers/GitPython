@@ -25,7 +25,7 @@ from datetime import datetime, timedelta, tzinfo
 from typing import (Any, Callable, Deque, Iterator, Generic, NamedTuple, overload, Sequence,
                     TYPE_CHECKING, Tuple, Type, TypeVar, Union, cast)
 
-from git.types import Has_id_attribute, Literal
+from git.types import Has_id_attribute, Literal, _T
 
 if TYPE_CHECKING:
     from io import BytesIO, StringIO
@@ -37,7 +37,7 @@ if TYPE_CHECKING:
     from .submodule.base import Submodule
     from git.types import Protocol, runtime_checkable
 else:
-    Protocol = Generic[Any]
+    Protocol = Generic[_T]
 
     def runtime_checkable(f):
         return f
