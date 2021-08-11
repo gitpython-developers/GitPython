@@ -781,7 +781,10 @@ class Git(LazyMixin):
             log.info(' '.join(redacted_command))
 
         # Allow the user to have the command executed in their working dir.
-        cwd = self._working_dir or os.getcwd()
+        try:
+            cwd = self._working_dir or os.getcwd()  # type: Union[None, str]
+        except FileNotFoundError:
+            cwd = None
 
         # Start the process
         inline_env = env
