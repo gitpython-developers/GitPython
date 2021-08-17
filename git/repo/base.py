@@ -1042,7 +1042,7 @@ class Repo(object):
             os.makedirs(path, 0o755)
 
         # git command automatically chdir into the directory
-        git = Git(path)
+        git = cls.GitCommandWrapperType(path)
         git.init(**kwargs)
         return cls(path, odbt=odbt)
 
@@ -1142,7 +1142,7 @@ class Repo(object):
         :param multi_options: See ``clone`` method
         :param kwargs: see the ``clone`` method
         :return: Repo instance pointing to the cloned directory"""
-        git = Git(os.getcwd())
+        git = cls.GitCommandWrapperType(os.getcwd())
         if env is not None:
             git.update_environment(**env)
         return cls._clone(git, url, to_path, GitCmdObjectDB, progress, multi_options, **kwargs)
