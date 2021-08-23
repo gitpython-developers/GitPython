@@ -751,8 +751,8 @@ class Remote(LazyMixin, IterableObj):
             msg += "Will ignore extra progress lines or fetch head lines."
             msg %= (l_fil, l_fhi)
             log.debug(msg)
-            log.debug("info lines: " + str(fetch_info_lines))
-            log.debug("head info : " + str(fetch_head_info))
+            log.debug(b"info lines: " + str(fetch_info_lines).encode("UTF-8"))
+            log.debug(b"head info: " + str(fetch_head_info).encode("UTF-8"))
             if l_fil < l_fhi:
                 fetch_head_info = fetch_head_info[:l_fil]
             else:
