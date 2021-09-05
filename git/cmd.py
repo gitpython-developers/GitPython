@@ -783,6 +783,8 @@ class Git(LazyMixin):
         # Allow the user to have the command executed in their working dir.
         try:
             cwd = self._working_dir or os.getcwd()  # type: Union[None, str]
+            if not os.access(str(cwd), os.X_OK):
+                cwd = None
         except FileNotFoundError:
             cwd = None
 
