@@ -8,22 +8,37 @@ Changelog
 * This is the second typed release with a lot of improvements under the hood.
 
 * General:
+
   - Remove python 3.6 support
+  
   - Remove distutils ahead of deprecation in standard library.
+  
   - Update sphinx to 4.1.12 and use autodoc-typehints.
+  
+  - Include README as long_description on PiPI
 
 * Typing:
+
   - Add types to ALL functions.
+  
   - Ensure py.typed is collected.
+  
   - Increase mypy strictness with disallow_untyped_defs, warn_redundant_casts, warn_unreachable.
+  
   - Use typing.NamedTuple and typing.OrderedDict now 3.6 dropped.
-  - Make Protocol classes ABCs at runtime due to new bug in 3.10.0-rc1
+  
+  - Make Protocol classes ABCs at runtime due to new behaviour/bug in 3.9.7 & 3.10.0-rc1
+  
   - Remove use of typing.TypeGuard until later release, to allow dependant libs time to update.
+  
   - Tracking issue: https://github.com/gitpython-developers/GitPython/issues/1095
 
 * Runtime improvements:
+
   - Add clone_multi_options support to submodule.add()
+  
   - Delay calling get_user_id() unless essential, to support sand-boxed environments.
+  
   - Add timeout to handle_process_output(), in case thread.join() hangs.
 
 See the following for details:
