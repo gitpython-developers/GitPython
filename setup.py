@@ -5,9 +5,8 @@ from setuptools.command.sdist import sdist as _sdist
 import fnmatch
 import os
 import sys
-from os import path
 
-with open(path.join(path.dirname(__file__), 'VERSION')) as v:
+with open(os.path.join(os.path.dirname(__file__), 'VERSION')) as v:
     VERSION = v.readline().strip()
 
 with open('requirements.txt') as reqs_file:
@@ -16,12 +15,15 @@ with open('requirements.txt') as reqs_file:
 with open('test-requirements.txt') as reqs_file:
     test_requirements = reqs_file.read().splitlines()
 
+with open('README.md') as rm_file:
+    long_description = rm_file.read()
+
 
 class build_py(_build_py):
 
     def run(self) -> None:
-        init = path.join(self.build_lib, 'git', '__init__.py')
-        if path.exists(init):
+        init = os.path.join(self.build_lib, 'git', '__init__.py')
+        if os.path.exists(init):
             os.unlink(init)
         _build_py.run(self)
         _stamp_version(init)
@@ -32,10 +34,10 @@ class sdist(_sdist):
 
     def make_release_tree(self, base_dir: str, files: Sequence) -> None:
         _sdist.make_release_tree(self, base_dir, files)
-        orig = path.join('git', '__init__.py')
-        assert path.exists(orig), orig
-        dest = path.join(base_dir, orig)
-        if hasattr(os, 'link') and path.exists(dest):
+        orig = os.path.join('git', '__init__.py')
+        assert os.path.exists(orig), orig
+        dest = os.path.join(base_dir, orig)
+        if hasattr(os, 'link') and os.path.exists(dest):
             os.unlink(dest)
         self.copy_file(orig, dest)
         _stamp_version(dest)
@@ -82,7 +84,7 @@ setup(
     name="GitPython",
     cmdclass={'build_py': build_py, 'sdist': sdist},
     version=VERSION,
-    description="Python Git Library",
+    description="""GitPython is a python library used to interact with Git repositories""",
     author="Sebastian Thiel, Michael Trier",
     author_email="byronimo@gmail.com, mtrier@gmail.com",
     license="BSD",
@@ -96,6 +98,7 @@ setup(
     tests_require=requirements + test_requirements,
     zip_safe=False,
     long_description="""GitPython is a python library used to interact with Git repositories""",
+    long_description_content_type="text/markdown",
     classifiers=[
         # Picked from
         #   http://pypi.python.org/pypi?:action=list_classifiers
