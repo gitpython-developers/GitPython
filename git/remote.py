@@ -22,12 +22,12 @@ from git.util import (
     join_path,
 )
 
-from .config import (
+from git.config import (
     GitConfigParser,
     SectionConstraint,
     cp,
 )
-from .refs import (
+from git.refs import (
     Head,
     Reference,
     RemoteReference,

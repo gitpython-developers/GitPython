@@ -2,24 +2,52 @@
 Changelog
 =========
 
-3.1.20
+3.1.21
 ======
 
-* This is the second typed release with a lot of improvements under the hood. 
-  * Tracking issue: https://github.com/gitpython-developers/GitPython/issues/1095
-  
+* This is the second typed release with a lot of improvements under the hood.
+
+* General:
+  - Remove python 3.6 support
+  - Remove distutils ahead of deprecation in standard library.
+  - Update sphinx to 4.1.12 and use autodoc-typehints.
+
+* Typing:
+  - Add types to ALL functions.
+  - Ensure py.typed is collected.
+  - Increase mypy strictness with disallow_untyped_defs, warn_redundant_casts, warn_unreachable.
+  - Use typing.NamedTuple and typing.OrderedDict now 3.6 dropped.
+  - Make Protocol classes ABCs at runtime due to new bug in 3.10.0-rc1
+  - Remove use of typing.TypeGuard until later release, to allow dependant libs time to update.
+  - Tracking issue: https://github.com/gitpython-developers/GitPython/issues/1095
+
+* Runtime improvements:
+  - Add clone_multi_options support to submodule.add()
+  - Delay calling get_user_id() unless essential, to support sand-boxed environments.
+  - Add timeout to handle_process_output(), in case thread.join() hangs.
+
 See the following for details:
-https://github.com/gitpython-developers/gitpython/milestone/52?closed=1 
+https://github.com/gitpython-developers/gitpython/milestone/52?closed=1
+
+
+3.1.20 (YANKED)
+===============
+
+* This is the second typed release with a lot of improvements under the hood.
+  * Tracking issue: https://github.com/gitpython-developers/GitPython/issues/1095
+
+See the following for details:
+https://github.com/gitpython-developers/gitpython/milestone/52?closed=1
 
 
 3.1.19 (YANKED)
 ===============
 
-* This is the second typed release with a lot of improvements under the hood. 
+* This is the second typed release with a lot of improvements under the hood.
   * Tracking issue: https://github.com/gitpython-developers/GitPython/issues/1095
-  
+
 See the following for details:
-https://github.com/gitpython-developers/gitpython/milestone/51?closed=1 
+https://github.com/gitpython-developers/gitpython/milestone/51?closed=1
 
 3.1.18
 ======
@@ -27,7 +55,7 @@ https://github.com/gitpython-developers/gitpython/milestone/51?closed=1
 * drop support for python 3.5 to reduce maintenance burden on typing. Lower patch levels of python 3.5 would break, too.
 
 See the following for details:
-https://github.com/gitpython-developers/gitpython/milestone/50?closed=1 
+https://github.com/gitpython-developers/gitpython/milestone/50?closed=1
 
 3.1.17
 ======
@@ -37,7 +65,7 @@ https://github.com/gitpython-developers/gitpython/milestone/50?closed=1
 * Add more static typing information
 
 See the following for details:
-https://github.com/gitpython-developers/gitpython/milestone/49?closed=1 
+https://github.com/gitpython-developers/gitpython/milestone/49?closed=1
 
 3.1.16 (YANKED)
 ===============
@@ -46,7 +74,7 @@ https://github.com/gitpython-developers/gitpython/milestone/49?closed=1
 * Add more static typing information
 
 See the following for details:
-https://github.com/gitpython-developers/gitpython/milestone/48?closed=1 
+https://github.com/gitpython-developers/gitpython/milestone/48?closed=1
 
 3.1.15 (YANKED)
 ===============
@@ -54,7 +82,7 @@ https://github.com/gitpython-developers/gitpython/milestone/48?closed=1
 * add deprectation warning for python 3.5
 
 See the following for details:
-https://github.com/gitpython-developers/gitpython/milestone/47?closed=1 
+https://github.com/gitpython-developers/gitpython/milestone/47?closed=1
 
 3.1.14
 ======
@@ -65,19 +93,19 @@ https://github.com/gitpython-developers/gitpython/milestone/47?closed=1
 * Drop python 3.4 support
 
 See the following for details:
-https://github.com/gitpython-developers/gitpython/milestone/46?closed=1 
+https://github.com/gitpython-developers/gitpython/milestone/46?closed=1
 
 3.1.13
 ======
 
 See the following for details:
-https://github.com/gitpython-developers/gitpython/milestone/45?closed=1 
+https://github.com/gitpython-developers/gitpython/milestone/45?closed=1
 
 3.1.12
 ======
 
 See the following for details:
-https://github.com/gitpython-developers/gitpython/milestone/44?closed=1 
+https://github.com/gitpython-developers/gitpython/milestone/44?closed=1
 
 3.1.11
 ======
@@ -85,20 +113,20 @@ https://github.com/gitpython-developers/gitpython/milestone/44?closed=1
 Fixes regression of 3.1.10.
 
 See the following for details:
-https://github.com/gitpython-developers/gitpython/milestone/43?closed=1 
+https://github.com/gitpython-developers/gitpython/milestone/43?closed=1
 
 3.1.10
 ======
 
 See the following for details:
-https://github.com/gitpython-developers/gitpython/milestone/42?closed=1 
+https://github.com/gitpython-developers/gitpython/milestone/42?closed=1
 
 
 3.1.9
 =====
 
 See the following for details:
-https://github.com/gitpython-developers/gitpython/milestone/41?closed=1 
+https://github.com/gitpython-developers/gitpython/milestone/41?closed=1
 
 
 3.1.8
@@ -109,7 +137,7 @@ https://github.com/gitpython-developers/gitpython/milestone/41?closed=1
 
 
 See the following for more details:
-https://github.com/gitpython-developers/gitpython/milestone/40?closed=1 
+https://github.com/gitpython-developers/gitpython/milestone/40?closed=1
 
 
 3.1.7
@@ -135,13 +163,13 @@ https://github.com/gitpython-developers/gitpython/milestone/40?closed=1
 * package size was reduced significantly not placing tests into the package anymore.
 
 See the following for details:
-https://github.com/gitpython-developers/gitpython/milestone/39?closed=1 
+https://github.com/gitpython-developers/gitpython/milestone/39?closed=1
 
 3.1.3
 =====
 
 See the following for details:
-https://github.com/gitpython-developers/gitpython/milestone/38?closed=1 
+https://github.com/gitpython-developers/gitpython/milestone/38?closed=1
 
 3.1.2
 =====
@@ -190,7 +218,7 @@ Bugfixes
 Bugfixes
 --------
 
-* Fixed Repo.__repr__ when subclassed 
+* Fixed Repo.__repr__ when subclassed
   (`#968 <https://github.com/gitpython-developers/GitPython/pull/968>`_)
 * Removed compatibility shims for Python < 3.4 and old mock library
 * Replaced usage of deprecated unittest aliases and Logger.warn
@@ -213,7 +241,7 @@ Bugfixes
 --------
 
 * Fixed warning for usage of environment variables for paths containing ``$`` or ``%``
-  (`#832 <https://github.com/gitpython-developers/GitPython/issues/832>`_, 
+  (`#832 <https://github.com/gitpython-developers/GitPython/issues/832>`_,
   `#961 <https://github.com/gitpython-developers/GitPython/pull/961>`_)
 * Added support for parsing Git internal date format (@<unix timestamp> <timezone offset>)
   (`#965 <https://github.com/gitpython-developers/GitPython/pull/965>`_)
@@ -371,7 +399,7 @@ Notable fixes
 * The `GIT_DIR` environment variable does not override the `path` argument when
   initializing a `Repo` object anymore. However, if said `path` unset, `GIT_DIR`
   will be used to fill the void.
-  
+
 All issues and PRs can be viewed in all detail when following this URL:
 https://github.com/gitpython-developers/GitPython/issues?q=is%3Aclosed+milestone%3A%22v2.1.0+-+proper+windows+support%22
 
@@ -401,7 +429,7 @@ https://github.com/gitpython-developers/GitPython/issues?q=is%3Aclosed+milestone
 2.0.7 - New Features
 ====================
 
-* `IndexFile.commit(...,skip_hooks=False)` added. This parameter emulates the 
+* `IndexFile.commit(...,skip_hooks=False)` added. This parameter emulates the
    behaviour of `--no-verify` on the command-line.
 
 2.0.6 - Fixes and Features
@@ -441,7 +469,7 @@ https://github.com/gitpython-developers/GitPython/issues?q=is%3Aclosed+milestone
   commit messages contained ``\r`` characters
 * Fix: progress handler exceptions are not caught anymore, which would usually just hide bugs
   previously.
-* Fix: The `Git.execute` method will now redirect `stdout` to `devnull` if `with_stdout` is false, 
+* Fix: The `Git.execute` method will now redirect `stdout` to `devnull` if `with_stdout` is false,
   which is the intended behaviour based on the parameter's documentation.
 
 2.0.2 - Fixes

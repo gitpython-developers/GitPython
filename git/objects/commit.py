@@ -446,6 +446,8 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         # assume utf8 encoding
         enc_section, enc_option = cls.conf_encoding.split('.')
         conf_encoding = cr.get_value(enc_section, enc_option, cls.default_encoding)
+        if not isinstance(conf_encoding, str):
+            raise TypeError("conf_encoding could not be coerced to str")
 
         # if the tree is no object, make sure we create one - otherwise
         # the created commit object is invalid
