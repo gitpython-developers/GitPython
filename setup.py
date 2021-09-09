@@ -16,6 +16,8 @@ with open('requirements.txt') as reqs_file:
 with open('test-requirements.txt') as reqs_file:
     test_requirements = reqs_file.read().splitlines()
 
+with open('README.md') as rm_file:
+    long_description = rm_file.read()
 
 class build_py(_build_py):
 
@@ -82,7 +84,7 @@ setup(
     name="GitPython",
     cmdclass={'build_py': build_py, 'sdist': sdist},
     version=VERSION,
-    description="Python Git Library",
+    description="""GitPython is a python library used to interact with Git repositories""",
     author="Sebastian Thiel, Michael Trier",
     author_email="byronimo@gmail.com, mtrier@gmail.com",
     license="BSD",
@@ -96,6 +98,7 @@ setup(
     tests_require=requirements + test_requirements,
     zip_safe=False,
     long_description="""GitPython is a python library used to interact with Git repositories""",
+    long_description_content_type="text/markdown",
     classifiers=[
         # Picked from
         #   http://pypi.python.org/pypi?:action=list_classifiers
