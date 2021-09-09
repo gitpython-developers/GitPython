@@ -15,7 +15,10 @@ Changelog
   
   - Update sphinx to 4.1.12 and use autodoc-typehints.
   
-  - Include README as long_description on PiPI
+  - Include README as long_description on PyPI
+  
+  - Test against earliest and latest minor version available on Github Actions (e.g. 3.9.0 and 3.9.7)
+  
 
 * Typing:
 
