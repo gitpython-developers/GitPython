@@ -406,7 +406,7 @@ class TestRemote(TestBase):
         # cleanup - delete created tags and branches as we are in an innerloop on
         # the same repository
         TagReference.delete(rw_repo, new_tag, other_tag)
-        remote.push(":%s" % other_tag.path)
+        remote.push(":%s" % other_tag.path, timeout=10.0)
 
     @skipIf(HIDE_WINDOWS_FREEZE_ERRORS, "FIXME: Freezes!")
     @with_rw_and_rw_remote_repo('0.1.6')
