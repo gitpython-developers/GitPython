@@ -94,7 +94,7 @@ def handle_process_output(process: 'Git.AutoInterrupt' | Popen,
         their contents to handlers.
         Set it to False if `universal_newline == True` (then streams are in text-mode)
         or if decoding must happen later (i.e. for Diffs).
-    :param timeout: float, timeout to pass to t.join() in case it hangs. Default = 10.0 seconds
+    :param timeout: float, or None timeout to pass to t.join() in case it hangs. Default = None.
     """
     # Use 2 "pump" threads and wait for both to finish.
     def pump_stream(cmdline: List[str], name: str, stream: Union[BinaryIO, TextIO], is_decode: bool,
