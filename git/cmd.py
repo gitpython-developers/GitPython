@@ -79,7 +79,7 @@ def handle_process_output(process: 'Git.AutoInterrupt' | Popen,
                           finalizer: Union[None,
                                            Callable[[Union[subprocess.Popen, 'Git.AutoInterrupt']], None]] = None,
                           decode_streams: bool = True,
-                          timeout: float = 60.0) -> None:
+                          timeout: Union[None, float] = None) -> None:
     """Registers for notifications to learn that process output is ready to read, and dispatches lines to
     the respective line handlers.
     This function returns once the finalizer returns

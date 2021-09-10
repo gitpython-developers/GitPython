@@ -708,7 +708,7 @@ class Remote(LazyMixin, IterableObj):
 
     def _get_fetch_info_from_stderr(self, proc: 'Git.AutoInterrupt',
                                     progress: Union[Callable[..., Any], RemoteProgress, None],
-                                    timeout: float = 60.0
+                                    timeout: Union[None, float] = None,
                                     ) -> IterableList['FetchInfo']:
 
         progress = to_progress_instance(progress)
@@ -772,7 +772,7 @@ class Remote(LazyMixin, IterableObj):
 
     def _get_push_info(self, proc: 'Git.AutoInterrupt',
                        progress: Union[Callable[..., Any], RemoteProgress, None],
-                       timeout: float = 60.0) -> IterableList[PushInfo]:
+                       timeout: Union[None, float] = None) -> IterableList[PushInfo]:
         progress = to_progress_instance(progress)
 
         # read progress information from stderr
@@ -817,7 +817,7 @@ class Remote(LazyMixin, IterableObj):
 
     def fetch(self, refspec: Union[str, List[str], None] = None,
               progress: Union[RemoteProgress, None, 'UpdateProgress'] = None,
-              verbose: bool = True, timeout: float = 60.0,
+              verbose: bool = True, timeout: Union[None, float] = None,
               **kwargs: Any) -> IterableList[FetchInfo]:
         """Fetch the latest changes for this remote
 
@@ -865,7 +865,7 @@ class Remote(LazyMixin, IterableObj):
 
     def pull(self, refspec: Union[str, List[str], None] = None,
              progress: Union[RemoteProgress, 'UpdateProgress', None] = None,
-             timeout: float = 60.0,
+             timeout: Union[None, float] = None,
              **kwargs: Any) -> IterableList[FetchInfo]:
         """Pull changes from the given branch, being the same as a fetch followed
         by a merge of branch with your local branch.
@@ -887,7 +887,7 @@ class Remote(LazyMixin, IterableObj):
 
     def push(self, refspec: Union[str, List[str], None] = None,
              progress: Union[RemoteProgress, 'UpdateProgress', Callable[..., RemoteProgress], None] = None,
-             timeout: float = 60.0, **kwargs: Any) -> IterableList[PushInfo]:
+             timeout: Union[None, float] = None, **kwargs: Any) -> IterableList[PushInfo]:
         """Push changes from source branch in refspec to target branch in refspec.
 
         :param refspec: see 'fetch' method
