@@ -164,7 +164,7 @@ class TestRemote(TestBase):
         index.commit("Committing %s" % new_file)
         return new_file
 
-    def _do_test_fetch(self, remote, rw_repo, remote_repo):
+    def _do_test_fetch(self, remote, rw_repo, remote_repo, **kwargs):
         # specialized fetch testing to de-clutter the main test
         self._do_test_fetch_info(rw_repo)
 
@@ -183,7 +183,7 @@ class TestRemote(TestBase):
         # put remote head to master as it is guaranteed to exist
         remote_repo.head.reference = remote_repo.heads.master
 
-        res = fetch_and_test(remote)
+        res = fetch_and_test(remote, **kwargs)
         # all up to date
         for info in res:
             self.assertTrue(info.flags & info.HEAD_UPTODATE)
