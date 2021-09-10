@@ -401,7 +401,7 @@ class TestRemote(TestBase):
         res = remote.push(all=True)
         self._do_test_push_result(res, remote)
 
-        remote.pull('master')
+        remote.pull('master', timeout=10.0)
 
         # cleanup - delete created tags and branches as we are in an innerloop on
         # the same repository
@@ -467,7 +467,7 @@ class TestRemote(TestBase):
             # Only for remotes - local cases are the same or less complicated
             # as additional progress information will never be emitted
             if remote.name == "daemon_origin":
-                self._do_test_fetch(remote, rw_repo, remote_repo)
+                self._do_test_fetch(remote, rw_repo, remote_repo, timeout=10.0)
                 ran_fetch_test = True
             # END fetch test
 
