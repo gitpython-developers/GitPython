@@ -707,7 +707,8 @@ class Remote(LazyMixin, IterableObj):
         return self
 
     def _get_fetch_info_from_stderr(self, proc: 'Git.AutoInterrupt',
-                                    progress: Union[Callable[..., Any], RemoteProgress, None]
+                                    progress: Union[Callable[..., Any], RemoteProgress, None],
+                                    timeout: float = 60.0
                                     ) -> IterableList['FetchInfo']:
 
         progress = to_progress_instance(progress)
@@ -724,7 +725,8 @@ class Remote(LazyMixin, IterableObj):
         cmds = set(FetchInfo._flag_map.keys())
 
         progress_handler = progress.new_message_handler()
-        handle_process_output(proc, None, progress_handler, finalizer=None, decode_streams=False)
+        handle_process_output(proc, None, progress_handler, finalizer=None, decode_streams=False,
+                              timeout=timeout)
 
         stderr_text = progress.error_lines and '\n'.join(progress.error_lines) or ''
         proc.wait(stderr=stderr_text)
@@ -769,7 +771,8 @@ class Remote(LazyMixin, IterableObj):
         return output
 
     def _get_push_info(self, proc: 'Git.AutoInterrupt',
-                       progress: Union[Callable[..., Any], RemoteProgress, None]) -> IterableList[PushInfo]:
+                       progress: Union[Callable[..., Any], RemoteProgress, None],
+                       timeout: float = 60.0) -> IterableList[PushInfo]:
         progress = to_progress_instance(progress)
 
         # read progress information from stderr
@@ -786,7 +789,8 @@ class Remote(LazyMixin, IterableObj):
                 # If an error happens, additional info is given which we parse below.
                 pass
 
-        handle_process_output(proc, stdout_handler, progress_handler, finalizer=None, decode_streams=False)
+        handle_process_output(proc, stdout_handler, progress_handler, finalizer=None, decode_streams=False,
+                              timeout=timeout)
         stderr_text = progress.error_lines and '\n'.join(progress.error_lines) or ''
         try:
             proc.wait(stderr=stderr_text)
@@ -813,7 +817,8 @@ class Remote(LazyMixin, IterableObj):
 
     def fetch(self, refspec: Union[str, List[str], None] = None,
               progress: Union[RemoteProgress, None, 'UpdateProgress'] = None,
-              verbose: bool = True, **kwargs: Any) -> IterableList[FetchInfo]:
+              verbose: bool = True, timeout: float = 60.0,
+              **kwargs: Any) -> IterableList[FetchInfo]:
         """Fetch the latest changes for this remote
 
         :param refspec:
@@ -853,13 +858,14 @@ class Remote(LazyMixin, IterableObj):
 
         proc = self.repo.git.fetch(self, *args, as_process=True, with_stdout=False,
                                    universal_newlines=True, v=verbose, **kwargs)
-        res = self._get_fetch_info_from_stderr(proc, progress)
+        res = self._get_fetch_info_from_stderr(proc, progress, timeout=timeout)
         if hasattr(self.repo.odb, 'update_cache'):
             self.repo.odb.update_cache()
         return res
 
     def pull(self, refspec: Union[str, List[str], None] = None,
              progress: Union[RemoteProgress, 'UpdateProgress', None] = None,
+             timeout: float = 60.0,
              **kwargs: Any) -> IterableList[FetchInfo]:
         """Pull changes from the given branch, being the same as a fetch followed
         by a merge of branch with your local branch.
@@ -874,14 +880,14 @@ class Remote(LazyMixin, IterableObj):
         kwargs = add_progress(kwargs, self.repo.git, progress)
         proc = self.repo.git.pull(self, refspec, with_stdout=False, as_process=True,
                                   universal_newlines=True, v=True, **kwargs)
-        res = self._get_fetch_info_from_stderr(proc, progress)
+        res = self._get_fetch_info_from_stderr(proc, progress, timeout=timeout)
         if hasattr(self.repo.odb, 'update_cache'):
             self.repo.odb.update_cache()
         return res
 
     def push(self, refspec: Union[str, List[str], None] = None,
              progress: Union[RemoteProgress, 'UpdateProgress', Callable[..., RemoteProgress], None] = None,
-             **kwargs: Any) -> IterableList[PushInfo]:
+             timeout: float = 60.0, **kwargs: Any) -> IterableList[PushInfo]:
         """Push changes from source branch in refspec to target branch in refspec.
 
         :param refspec: see 'fetch' method
@@ -909,7 +915,7 @@ class Remote(LazyMixin, IterableObj):
         kwargs = add_progress(kwargs, self.repo.git, progress)
         proc = self.repo.git.push(self, refspec, porcelain=True, as_process=True,
                                   universal_newlines=True, **kwargs)
-        return self._get_push_info(proc, progress)
+        return self._get_push_info(proc, progress, timeout=timeout)
 
     @ property
     def config_reader(self) -> SectionConstraint[GitConfigParser]:
