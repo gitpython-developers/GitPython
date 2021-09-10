@@ -2,7 +2,7 @@
 Changelog
 =========
 
-3.1.21
+31.23
 ======
 
 * This is the second typed release with a lot of improvements under the hood.
