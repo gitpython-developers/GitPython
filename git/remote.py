@@ -708,7 +708,7 @@ class Remote(LazyMixin, IterableObj):
 
     def _get_fetch_info_from_stderr(self, proc: 'Git.AutoInterrupt',
                                     progress: Union[Callable[..., Any], RemoteProgress, None],
-                                    timeout: Union[None, float] = None,
+                                    kill_after_timeout: Union[None, float] = None,
                                     ) -> IterableList['FetchInfo']:
 
         progress = to_progress_instance(progress)
@@ -726,7 +726,7 @@ class Remote(LazyMixin, IterableObj):
 
         progress_handler = progress.new_message_handler()
         handle_process_output(proc, None, progress_handler, finalizer=None, decode_streams=False,
-                              timeout=timeout)
+                              kill_after_timeout=kill_after_timeout)
 
         stderr_text = progress.error_lines and '\n'.join(progress.error_lines) or ''
         proc.wait(stderr=stderr_text)
@@ -772,7 +772,7 @@ class Remote(LazyMixin, IterableObj):
 
     def _get_push_info(self, proc: 'Git.AutoInterrupt',
                        progress: Union[Callable[..., Any], RemoteProgress, None],
-                       timeout: Union[None, float] = None) -> IterableList[PushInfo]:
+                       kill_after_timeout: Union[None, float] = None) -> IterableList[PushInfo]:
         progress = to_progress_instance(progress)
 
         # read progress information from stderr
@@ -790,7 +790,7 @@ class Remote(LazyMixin, IterableObj):
                 pass
 
         handle_process_output(proc, stdout_handler, progress_handler, finalizer=None, decode_streams=False,
-                              timeout=timeout)
+                              kill_after_timeout=kill_after_timeout)
         stderr_text = progress.error_lines and '\n'.join(progress.error_lines) or ''
         try:
             proc.wait(stderr=stderr_text)
@@ -817,7 +817,8 @@ class Remote(LazyMixin, IterableObj):
 
     def fetch(self, refspec: Union[str, List[str], None] = None,
               progress: Union[RemoteProgress, None, 'UpdateProgress'] = None,
-              verbose: bool = True, timeout: Union[None, float] = None,
+              verbose: bool = True,
+              kill_after_timeout: Union[None, float] = None,
               **kwargs: Any) -> IterableList[FetchInfo]:
         """Fetch the latest changes for this remote
 
@@ -838,6 +839,9 @@ class Remote(LazyMixin, IterableObj):
             for 'refspec' will make use of this facility.
         :param progress: See 'push' method
         :param verbose: Boolean for verbose output
+        :param kill_after_timeout:
+            To specify a timeout in seconds for the git command, after which the process
+            should be killed. It is set to None by default.
         :param kwargs: Additional arguments to be passed to git-fetch
         :return:
             IterableList(FetchInfo, ...) list of FetchInfo instances providing detailed
@@ -858,20 +862,22 @@ class Remote(LazyMixin, IterableObj):
 
         proc = self.repo.git.fetch(self, *args, as_process=True, with_stdout=False,
                                    universal_newlines=True, v=verbose, **kwargs)
-        res = self._get_fetch_info_from_stderr(proc, progress, timeout=timeout)
+        res = self._get_fetch_info_from_stderr(proc, progress,
+                                               kill_after_timeout=kill_after_timeout)
         if hasattr(self.repo.odb, 'update_cache'):
             self.repo.odb.update_cache()
         return res
 
     def pull(self, refspec: Union[str, List[str], None] = None,
              progress: Union[RemoteProgress, 'UpdateProgress', None] = None,
-             timeout: Union[None, float] = None,
+             kill_after_timeout: Union[None, float] = None,
              **kwargs: Any) -> IterableList[FetchInfo]:
         """Pull changes from the given branch, being the same as a fetch followed
         by a merge of branch with your local branch.
 
         :param refspec: see 'fetch' method
         :param progress: see 'push' method
+        :param kill_after_timeout: see 'fetch' method
         :param kwargs: Additional arguments to be passed to git-pull
         :return: Please see 'fetch' method """
         if refspec is None:
@@ -880,14 +886,16 @@ class Remote(LazyMixin, IterableObj):
         kwargs = add_progress(kwargs, self.repo.git, progress)
         proc = self.repo.git.pull(self, refspec, with_stdout=False, as_process=True,
                                   universal_newlines=True, v=True, **kwargs)
-        res = self._get_fetch_info_from_stderr(proc, progress, timeout=timeout)
+        res = self._get_fetch_info_from_stderr(proc, progress,
+                                               kill_after_timeout=kill_after_timeout)
         if hasattr(self.repo.odb, 'update_cache'):
             self.repo.odb.update_cache()
         return res
 
     def push(self, refspec: Union[str, List[str], None] = None,
              progress: Union[RemoteProgress, 'UpdateProgress', Callable[..., RemoteProgress], None] = None,
-             timeout: Union[None, float] = None, **kwargs: Any) -> IterableList[PushInfo]:
+             kill_after_timeout: Union[None, float] = None,
+             **kwargs: Any) -> IterableList[PushInfo]:
         """Push changes from source branch in refspec to target branch in refspec.
 
         :param refspec: see 'fetch' method
@@ -903,6 +911,9 @@ class Remote(LazyMixin, IterableObj):
               overrides the ``update()`` function.
 
         :note: No further progress information is returned after push returns.
+        :param kill_after_timeout:
+            To specify a timeout in seconds for the git command, after which the process
+            should be killed. It is set to None by default.
         :param kwargs: Additional arguments to be passed to git-push
         :return:
             list(PushInfo, ...) list of PushInfo instances, each
@@ -914,8 +925,11 @@ class Remote(LazyMixin, IterableObj):
             be 0."""
         kwargs = add_progress(kwargs, self.repo.git, progress)
         proc = self.repo.git.push(self, refspec, porcelain=True, as_process=True,
-                                  universal_newlines=True, **kwargs)
-        return self._get_push_info(proc, progress, timeout=timeout)
+                                  universal_newlines=True,
+                                  kill_after_timeout=kill_after_timeout,
+                                  **kwargs)
+        return self._get_push_info(proc, progress,
+                                   kill_after_timeout=kill_after_timeout)
 
     @ property
     def config_reader(self) -> SectionConstraint[GitConfigParser]:
