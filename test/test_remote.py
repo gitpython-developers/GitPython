@@ -661,7 +661,7 @@ class TestTimeouts(TestBase):
         for function in ["pull", "fetch"]: #"can't get push to reliably timeout
             f = getattr(repo.remotes.origin, function)
             assert f is not None  # Make sure these functions exist
-
-            with self.assertRaisesRegex(GitCommandError,
-                                        "kill_after_timeout=0.01 s"):
+            _ = f() # Make sure the function runs
+            with pytest.raises(GitCommandError,
+                               match="kill_after_timeout=0.01 s"):
                 f(kill_after_timeout=0.01)
