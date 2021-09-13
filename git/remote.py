@@ -795,6 +795,8 @@ class Remote(LazyMixin, IterableObj):
         try:
             proc.wait(stderr=stderr_text)
         except Exception:
+            # This is different than fetch (which fails if there is any std_err
+            # even if there is an output)
             if not output:
                 raise
             elif stderr_text:
