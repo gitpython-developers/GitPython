@@ -79,7 +79,7 @@ def handle_process_output(process: 'Git.AutoInterrupt' | Popen,
                           finalizer: Union[None,
                                            Callable[[Union[subprocess.Popen, 'Git.AutoInterrupt']], None]] = None,
                           decode_streams: bool = True,
-                          timeout: Union[None, float] = None) -> None:
+                          kill_after_timeout: Union[None, float] = None) -> None:
     """Registers for notifications to learn that process output is ready to read, and dispatches lines to
     the respective line handlers.
     This function returns once the finalizer returns
@@ -94,7 +94,10 @@ def handle_process_output(process: 'Git.AutoInterrupt' | Popen,
         their contents to handlers.
         Set it to False if `universal_newline == True` (then streams are in text-mode)
         or if decoding must happen later (i.e. for Diffs).
-    :param timeout: float, or None timeout to pass to t.join() in case it hangs. Default = None.
+    :param kill_after_timeout:
+        float or None, Default = None
+        To specify a timeout in seconds for the git command, after which the process
+        should be killed.
     """
     # Use 2 "pump" threads and wait for both to finish.
     def pump_stream(cmdline: List[str], name: str, stream: Union[BinaryIO, TextIO], is_decode: bool,
@@ -108,9 +111,12 @@ def handle_process_output(process: 'Git.AutoInterrupt' | Popen,
                         handler(line_str)
                     else:
                         handler(line)
+
         except Exception as ex:
             log.error(f"Pumping {name!r} of cmd({remove_password_if_present(cmdline)}) failed due to: {ex!r}")
-            raise CommandError([f'<{name}-pump>'] + remove_password_if_present(cmdline), ex) from ex
+            if "I/O operation on closed file" not in str(ex):
+                # Only reraise if the error was not due to the stream closing
+                raise CommandError([f'<{name}-pump>'] + remove_password_if_present(cmdline), ex) from ex
         finally:
             stream.close()
 
@@ -146,9 +152,16 @@ def handle_process_output(process: 'Git.AutoInterrupt' | Popen,
     ## FIXME: Why Join??  Will block if `stdin` needs feeding...
     #
     for t in threads:
-        t.join(timeout=timeout)
+        t.join(timeout=kill_after_timeout)
         if t.is_alive():
-            raise RuntimeError(f"Thread join() timed out in cmd.handle_process_output(). Timeout={timeout} seconds")
+            if hasattr(process, 'proc'):  # Assume it is a Git.AutoInterrupt:
+                process._terminate()
+            else:  # Don't want to deal with the other case
+                raise RuntimeError(f"Thread join() timed out in cmd.handle_process_output()."
+                                   " kill_after_timeout={kill_after_timeout} seconds")
+            if stderr_handler:
+                stderr_handler("error: process killed because it timed out."
+                               f" kill_after_timeout={kill_after_timeout} seconds")
 
     if finalizer:
         return finalizer(process)
@@ -386,13 +399,15 @@ class Git(LazyMixin):
         The wait method was overridden to perform automatic status code checking
         and possibly raise."""
 
-        __slots__ = ("proc", "args")
+        __slots__ = ("proc", "args", "status")
 
         def __init__(self, proc: Union[None, subprocess.Popen], args: Any) -> None:
             self.proc = proc
             self.args = args
+            self.status = None
 
-        def __del__(self) -> None:
+        def _terminate(self) -> None:
+            """Terminate the underlying process"""
             if self.proc is None:
                 return
 
@@ -408,6 +423,7 @@ class Git(LazyMixin):
             # did the process finish already so we have a return code ?
             try:
                 if proc.poll() is not None:
+                    self.status = proc.poll()
                     return None
             except OSError as ex:
                 log.info("Ignored error after process had died: %r", ex)
@@ -419,7 +435,7 @@ class Git(LazyMixin):
             # try to kill it
             try:
                 proc.terminate()
-                proc.wait()    # ensure process goes away
+                self.status = proc.wait()    # ensure process goes away
             except OSError as ex:
                 log.info("Ignored error after process had died: %r", ex)
             except AttributeError:
@@ -430,6 +446,11 @@ class Git(LazyMixin):
                 if is_win:
                     call(("TASKKILL /F /T /PID %s 2>nul 1>nul" % str(proc.pid)), shell=True)
             # END exception handling
+
+
+
+        def __del__(self) -> None:
+            self._terminate()
 
         def __getattr__(self, attr: str) -> Any:
             return getattr(self.proc, attr)
@@ -447,21 +468,26 @@ class Git(LazyMixin):
 
             if self.proc is not None:
                 status = self.proc.wait()
+                p_stderr = self.proc.stderr
+            else: #Assume the underlying proc was killed earlier or never existed
+                status = self.status
+                p_stderr = None
 
-                def read_all_from_possibly_closed_stream(stream: Union[IO[bytes], None]) -> bytes:
-                    if stream:
-                        try:
-                            return stderr_b + force_bytes(stream.read())
-                        except ValueError:
-                            return stderr_b or b''
-                    else:
+            def read_all_from_possibly_closed_stream(stream: Union[IO[bytes], None]) -> bytes:
+                if stream:
+                    try:
+                        return stderr_b + force_bytes(stream.read())
+                    except ValueError:
                         return stderr_b or b''
+                else:
+                    return stderr_b or b''
 
-                if status != 0:
-                    errstr = read_all_from_possibly_closed_stream(self.proc.stderr)
-                    log.debug('AutoInterrupt wait stderr: %r' % (errstr,))
-                    raise GitCommandError(remove_password_if_present(self.args), status, errstr)
             # END status handling
+
+            if status != 0:
+                errstr = read_all_from_possibly_closed_stream(p_stderr)
+                log.debug('AutoInterrupt wait stderr: %r' % (errstr,))
+                raise GitCommandError(remove_password_if_present(self.args), status, errstr)
             return status
 
     # END auto interrupt
@@ -694,7 +720,7 @@ class Git(LazyMixin):
                 as_process: bool = False,
                 output_stream: Union[None, BinaryIO] = None,
                 stdout_as_string: bool = True,
-                kill_after_timeout: Union[None, int] = None,
+                kill_after_timeout: Union[None, float] = None,
                 with_stdout: bool = True,
                 universal_newlines: bool = False,
                 shell: Union[None, bool] = None,
