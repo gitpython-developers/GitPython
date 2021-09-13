@@ -6,6 +6,7 @@
 
 import random
 import tempfile
+import pytest
 from unittest import skipIf
 
 from git import (
@@ -401,12 +402,12 @@ class TestRemote(TestBase):
         res = remote.push(all=True)
         self._do_test_push_result(res, remote)
 
-        remote.pull('master', timeout=10.0)
+        remote.pull('master', kill_after_timeout=10.0)
 
         # cleanup - delete created tags and branches as we are in an innerloop on
         # the same repository
         TagReference.delete(rw_repo, new_tag, other_tag)
-        remote.push(":%s" % other_tag.path, timeout=10.0)
+        remote.push(":%s" % other_tag.path, kill_after_timeout=10.0)
 
     @skipIf(HIDE_WINDOWS_FREEZE_ERRORS, "FIXME: Freezes!")
     @with_rw_and_rw_remote_repo('0.1.6')
@@ -467,7 +468,8 @@ class TestRemote(TestBase):
             # Only for remotes - local cases are the same or less complicated
             # as additional progress information will never be emitted
             if remote.name == "daemon_origin":
-                self._do_test_fetch(remote, rw_repo, remote_repo, timeout=10.0)
+                self._do_test_fetch(remote, rw_repo, remote_repo,
+                                    kill_after_timeout=10.0)
                 ran_fetch_test = True
             # END fetch test
 
@@ -651,3 +653,15 @@ class TestRemote(TestBase):
         rem = repo.remote('origin')
         with self.assertRaisesRegex(GitCommandError, "src refspec __BAD_REF__ does not match any"):
             rem.push('__BAD_REF__')
+
+
+class TestTimeouts(TestBase):
+    @with_rw_repo('HEAD', bare=False)
+    def test_timeout_funcs(self, repo):
+        for function in ["pull", "fetch"]: #"can't get push to reliably timeout
+            f = getattr(repo.remotes.origin, function)
+            assert f is not None  # Make sure these functions exist
+
+            with self.assertRaisesRegex(GitCommandError,
+                                        "kill_after_timeout=0.01 s"):
+                f(kill_after_timeout=0.01)
