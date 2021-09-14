@@ -168,7 +168,7 @@ def handle_process_output(process: 'Git.AutoInterrupt' | Popen,
                     error_str = cast(str, error_str)
                     error_str = error_str.encode()
                 # We ignore typing on the next line because mypy does not like
-                # the way we infered that stderr takes str of bytes
+                # the way we inferred that stderr takes str or bytes
                 stderr_handler(error_str)  # type: ignore
 
     if finalizer:
