@@ -658,7 +658,7 @@ class TestRemote(TestBase):
 class TestTimeouts(TestBase):
     @with_rw_repo('HEAD', bare=False)
     def test_timeout_funcs(self, repo):
-        for function in ["pull"]: #"can't get fetch and push to reliably timeout
+        for function in ["pull"]:  # can't get fetch and push to reliably timeout
             f = getattr(repo.remotes.origin, function)
             assert f is not None  # Make sure these functions exist
             _ = f() # Make sure the function runs
