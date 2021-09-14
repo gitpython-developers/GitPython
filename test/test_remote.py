@@ -663,5 +663,5 @@ class TestTimeouts(TestBase):
             assert f is not None  # Make sure these functions exist
             _ = f() # Make sure the function runs
             with pytest.raises(GitCommandError,
-                               match="kill_after_timeout=0 s"):
-                f(kill_after_timeout=0)
+                               match="kill_after_timeout=0.001 s"):
+                f(kill_after_timeout=0.001)
