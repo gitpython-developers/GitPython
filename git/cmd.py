@@ -154,14 +154,22 @@ def handle_process_output(process: 'Git.AutoInterrupt' | Popen,
     for t in threads:
         t.join(timeout=kill_after_timeout)
         if t.is_alive():
-            if hasattr(process, 'proc'):  # Assume it is a Git.AutoInterrupt:
+            if isinstance(process, Git.AutoInterrupt):
                 process._terminate()
             else:  # Don't want to deal with the other case
-                raise RuntimeError(f"Thread join() timed out in cmd.handle_process_output()."
-                                   " kill_after_timeout={kill_after_timeout} seconds")
+                raise RuntimeError("Thread join() timed out in cmd.handle_process_output()."
+                                   f" kill_after_timeout={kill_after_timeout} seconds")
             if stderr_handler:
-                stderr_handler("error: process killed because it timed out."
-                               f" kill_after_timeout={kill_after_timeout} seconds")
+                error_str: Union[str, bytes] = (
+                    "error: process killed because it timed out."
+                    f" kill_after_timeout={kill_after_timeout} seconds")
+                if not decode_streams and isinstance(p_stderr, BinaryIO):
+                    #  Assume stderr_handler needs binary input
+                    error_str = cast(str, error_str)
+                    error_str = error_str.encode()
+                # We ignore typing on the next line because mypy does not like
+                # the way we infered that stderr takes str of bytes
+                stderr_handler(error_str)  # type: ignore
 
     if finalizer:
         return finalizer(process)
@@ -404,7 +412,7 @@ class Git(LazyMixin):
         def __init__(self, proc: Union[None, subprocess.Popen], args: Any) -> None:
             self.proc = proc
             self.args = args
-            self.status = None
+            self.status: Union[int, None] = None
 
         def _terminate(self) -> None:
             """Terminate the underlying process"""
@@ -447,8 +455,6 @@ class Git(LazyMixin):
                     call(("TASKKILL /F /T /PID %s 2>nul 1>nul" % str(proc.pid)), shell=True)
             # END exception handling
 
-
-
         def __del__(self) -> None:
             self._terminate()
 
@@ -465,11 +471,11 @@ class Git(LazyMixin):
             if stderr is None:
                 stderr_b = b''
             stderr_b = force_bytes(data=stderr, encoding='utf-8')
-
+            status: Union[int, None]
             if self.proc is not None:
                 status = self.proc.wait()
                 p_stderr = self.proc.stderr
-            else: #Assume the underlying proc was killed earlier or never existed
+            else:  # Assume the underlying proc was killed earlier or never existed
                 status = self.status
                 p_stderr = None
 
