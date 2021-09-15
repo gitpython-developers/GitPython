@@ -40,7 +40,7 @@ from .util import (
 # typing ---------------------------------------------------------------------------
 
 from typing import (Any, AnyStr, BinaryIO, Callable, Dict, IO, Iterator, List, Mapping,
-                    Sequence, TYPE_CHECKING, TextIO, Tuple, Union, cast, overload)
+                    Optional, Sequence, TYPE_CHECKING, TextIO, Tuple, Union, cast, overload)
 
 from git.types import PathLike, Literal, TBD
 
@@ -79,7 +79,7 @@ def handle_process_output(process: 'Git.AutoInterrupt' | Popen,
                           finalizer: Union[None,
                                            Callable[[Union[subprocess.Popen, 'Git.AutoInterrupt']], None]] = None,
                           decode_streams: bool = True,
-                          timeout: float = 10.0) -> None:
+                          timeout: Optional[float] = 10.0) -> None:
     """Registers for notifications to learn that process output is ready to read, and dispatches lines to
     the respective line handlers.
     This function returns once the finalizer returns
@@ -94,7 +94,7 @@ def handle_process_output(process: 'Git.AutoInterrupt' | Popen,
         their contents to handlers.
         Set it to False if `universal_newline == True` (then streams are in text-mode)
         or if decoding must happen later (i.e. for Diffs).
-    :param timeout: float, timeout to pass to t.join() in case it hangs. Default = 10.0 seconds
+    :param timeout: Optional[float], timeout to pass to t.join() in case it hangs. Default = 10.0 seconds, `None` means no timeout
     """
     # Use 2 "pump" threads and wait for both to finish.
     def pump_stream(cmdline: List[str], name: str, stream: Union[BinaryIO, TextIO], is_decode: bool,
