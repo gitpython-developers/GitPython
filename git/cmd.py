@@ -409,6 +409,10 @@ class Git(LazyMixin):
 
         __slots__ = ("proc", "args", "status")
 
+        # If this is non-zero it will override any status code during
+        # _terminate, used to prevent race conditions in testing
+        _status_code_if_terminate: int = 0
+
         def __init__(self, proc: Union[None, subprocess.Popen], args: Any) -> None:
             self.proc = proc
             self.args = args
@@ -427,11 +431,10 @@ class Git(LazyMixin):
                 proc.stdout.close()
             if proc.stderr:
                 proc.stderr.close()
-
             # did the process finish already so we have a return code ?
             try:
                 if proc.poll() is not None:
-                    self.status = proc.poll()
+                    self.status = self._status_code_if_terminate or proc.poll()
                     return None
             except OSError as ex:
                 log.info("Ignored error after process had died: %r", ex)
@@ -443,7 +446,9 @@ class Git(LazyMixin):
             # try to kill it
             try:
                 proc.terminate()
-                self.status = proc.wait()    # ensure process goes away
+                status = proc.wait()  # ensure process goes away
+
+                self.status = self._status_code_if_terminate or status
             except OSError as ex:
                 log.info("Ignored error after process had died: %r", ex)
             except AttributeError:
@@ -849,7 +854,7 @@ class Git(LazyMixin):
 
         if is_win:
             cmd_not_found_exception = OSError
-            if kill_after_timeout:
+            if kill_after_timeout is not None:
                 raise GitCommandError(redacted_command, '"kill_after_timeout" feature is not supported on Windows.')
         else:
             cmd_not_found_exception = FileNotFoundError  # NOQA # exists, flake8 unknown @UndefinedVariable
@@ -916,7 +921,7 @@ class Git(LazyMixin):
             return
         # end
 
-        if kill_after_timeout:
+        if kill_after_timeout is not None:
             kill_check = threading.Event()
             watchdog = threading.Timer(kill_after_timeout, _kill_process, args=(proc.pid,))
 
@@ -927,10 +932,10 @@ class Git(LazyMixin):
         newline = "\n" if universal_newlines else b"\n"
         try:
             if output_stream is None:
-                if kill_after_timeout:
+                if kill_after_timeout is not None:
                     watchdog.start()
                 stdout_value, stderr_value = proc.communicate()
-                if kill_after_timeout:
+                if kill_after_timeout is not None:
                     watchdog.cancel()
                     if kill_check.is_set():
                         stderr_value = ('Timeout: the command "%s" did not complete in %d '

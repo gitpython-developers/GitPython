@@ -658,10 +658,16 @@ class TestRemote(TestBase):
 class TestTimeouts(TestBase):
     @with_rw_repo('HEAD', bare=False)
     def test_timeout_funcs(self, repo):
-        for function in ["pull"]:  # can't get fetch and push to reliably timeout
+        # Force error code to prevent a race condition if the python thread is
+        # slow
+        default = Git.AutoInterrupt._status_code_if_terminate
+        Git.AutoInterrupt._status_code_if_terminate = -15
+        for function in ["pull", "fetch"]:  # can't get push to timeout
             f = getattr(repo.remotes.origin, function)
             assert f is not None  # Make sure these functions exist
-            _ = f() # Make sure the function runs
+            _ = f()  # Make sure the function runs
             with pytest.raises(GitCommandError,
-                               match="kill_after_timeout=0.001 s"):
-                f(kill_after_timeout=0.001)
+                               match="kill_after_timeout=0 s"):
+                f(kill_after_timeout=0)
+
+        Git.AutoInterrupt._status_code_if_terminate = default
