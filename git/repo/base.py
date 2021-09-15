@@ -1076,7 +1076,7 @@ class Repo(object):
                          v=True, universal_newlines=True, **add_progress(kwargs, git, progress))
         if progress:
             handle_process_output(proc, None, to_progress_instance(progress).new_message_handler(),
-                                  finalize_process, decode_streams=False)
+                                  finalize_process, decode_streams=False, **{k:v for k,v in kwargs.items() if k == "timeout"})
         else:
             (stdout, stderr) = proc.communicate()
             cmdline = getattr(proc, 'args', '')
