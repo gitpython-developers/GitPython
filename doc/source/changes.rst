@@ -2,8 +2,18 @@
 Changelog
 =========
 
-3.1.23
+
+3.1.24
 ======
+
+* Newly added timeout flag is not be enabled by default, and was renamed to kill_after_timeout
+
+See the following for details:
+https://github.com/gitpython-developers/gitpython/milestone/54?closed=1
+https://github.com/gitpython-developers/gitpython/milestone/53?closed=1
+
+3.1.23 (YANKED)
+===============
 
 * This is the second typed release with a lot of improvements under the hood.
 
@@ -45,7 +55,7 @@ Changelog
   - Add timeout to handle_process_output(), in case thread.join() hangs.
 
 See the following for details:
-https://github.com/gitpython-developers/gitpython/milestone/52?closed=1
+https://github.com/gitpython-developers/gitpython/milestone/53?closed=1
 
 
 3.1.20 (YANKED)
