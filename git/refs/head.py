@@ -129,7 +129,7 @@ class Head(Reference):
     k_config_remote_ref = "merge"           # branch to merge from remote
 
     @classmethod
-    def delete(cls, repo: 'Repo', *heads: 'Head', force: bool = False, **kwargs: Any) -> None:
+    def delete(cls, repo: 'Repo', *heads: 'Union[Head, str]', force: bool = False, **kwargs: Any) -> None:
         """Delete the given heads
 
         :param force:

@@ -665,7 +665,9 @@ class Remote(LazyMixin, IterableObj):
         return cls(repo, name)
 
     # add is an alias
-    add = create
+    @ classmethod
+    def add(cls, repo: 'Repo', name: str, url: str, **kwargs: Any) -> 'Remote':
+        return cls.create(repo, name, url, **kwargs)
 
     @ classmethod
     def remove(cls, repo: 'Repo', name: str) -> str:

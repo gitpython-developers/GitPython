@@ -429,7 +429,7 @@ class Repo(object):
         :return: newly created Head Reference"""
         return Head.create(self, path, commit, logmsg, force)
 
-    def delete_head(self, *heads: 'Head', **kwargs: Any) -> None:
+    def delete_head(self, *heads: 'Union[str, Head]', **kwargs: Any) -> None:
         """Delete the given heads
 
         :param kwargs: Additional keyword arguments to be passed to git-branch"""
