@@ -37,8 +37,13 @@ class RemoteReference(Head):
         # super is Reference
         return super(RemoteReference, cls).iter_items(repo, common_path)
 
+    # The Head implementation of delete also accepts strs, but this
+    # implementation does not.  mypy doesn't have a way of representing
+    # tightening the types of arguments in subclasses and recommends Any or
+    # "type: ignore".  (See https://github.com/python/typing/issues/241)
     @ classmethod
-    def delete(cls, repo: 'Repo', *refs: 'RemoteReference', **kwargs: Any) -> None:
+    def delete(cls, repo: 'Repo', *refs: 'RemoteReference',  # type: ignore
+               **kwargs: Any) -> None:
         """Delete the given remote references
 
         :note:
