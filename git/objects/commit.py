@@ -4,6 +4,7 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 import datetime
+import re
 from subprocess import Popen
 from gitdb import IStream
 from git.util import (
@@ -39,7 +40,7 @@ import logging
 
 # typing ------------------------------------------------------------------
 
-from typing import Any, IO, Iterator, List, Sequence, Tuple, Union, TYPE_CHECKING, cast
+from typing import Any, IO, Iterator, List, Sequence, Tuple, Union, TYPE_CHECKING, cast, Dict
 
 from git.types import PathLike, Literal
 
@@ -314,6 +315,44 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         else:
             text = self.repo.git.diff(self.parents[0].hexsha, self.hexsha, '--', numstat=True)
         return Stats._list_from_string(self.repo, text)
+
+    @property
+    def trailers(self) -> Dict:
+        """Get the trailers of the message as dictionary
+
+        Git messages can contain trailer information that are similar to RFC 822
+        e-mail headers (see: https://git-scm.com/docs/git-interpret-trailers).
+        
+        The trailer is thereby the last paragraph (seperated by a empty line
+        from the subject/body). This trailer paragraph must contain a ``:`` as
+        seperator for key and value in every line.
+
+        Valid message with trailer:
+
+        .. code-block::
+
+            Subject line
+
+            some body information
+
+            another information
+
+            key1: value1
+            key2: value2
+
+        :return: Dictionary containing whitespace stripped trailer information
+        """
+        d: Dict[str, str] = {}
+        match = re.search(r".+^\s*$\n([\w\n\s:]+?)\s*\Z", str(self.message), re.MULTILINE | re.DOTALL)
+        if match is None:
+            return d
+        last_paragraph = match.group(1)
+        if not all(':' in line for line in last_paragraph.split('\n')):
+            return d
+        for line in last_paragraph.split('\n'):
+            key, value = line.split(':', 1)
+            d[key.strip()] = value.strip()
+        return d
 
     @ classmethod
     def _iter_from_process_or_stream(cls, repo: 'Repo', proc_or_stream: Union[Popen, IO]) -> Iterator['Commit']:
