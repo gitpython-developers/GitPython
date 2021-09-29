@@ -4,6 +4,7 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
+import copy
 from datetime import datetime
 from io import BytesIO
 import re
@@ -429,3 +430,48 @@ JzJMZDRLQLFvnzqZuCjE
                          datetime(2009, 10, 8, 20, 22, 51, tzinfo=tzoffset(-7200)))
         self.assertEqual(commit.committed_datetime,
                          datetime(2009, 10, 8, 18, 22, 51, tzinfo=utc), commit.committed_datetime)
+
+    def test_trailers(self):
+        KEY_1 = "Hello"
+        VALUE_1 = "World"
+        KEY_2 = "Key"
+        VALUE_2 = "Value"
+
+        # Check if KEY 1 & 2 with Value 1 & 2 is extracted from multiple msg variations
+        msgs = []
+        msgs.append(f"Subject\n\n{KEY_1}: {VALUE_1}\n{KEY_2}: {VALUE_2}\n")
+        msgs.append(f"Subject\n  \nSome body of a function\n \n{KEY_1}: {VALUE_1}\n{KEY_2}: {VALUE_2}\n")
+        msgs.append(f"Subject\n  \nSome body of a function\n\nnon-key: non-value\n\n{KEY_1}: {VALUE_1}\n{KEY_2}: {VALUE_2}\n")
+        msgs.append(f"Subject\n  \nSome multiline\n body of a function\n\nnon-key: non-value\n\n{KEY_1}: {VALUE_1}\n{KEY_2}: {VALUE_2}\n")
+
+        for msg in msgs:
+            commit = self.rorepo.commit('master')
+            commit = copy.copy(commit)
+            commit.message = msg
+            assert KEY_1 in commit.trailers.keys()
+            assert KEY_2 in commit.trailers.keys()
+            assert commit.trailers[KEY_1] == VALUE_1
+            assert commit.trailers[KEY_2] == VALUE_2
+
+        # Check that trailer stays empty for multiple msg combinations
+        msgs = []
+        msgs.append(f"Subject\n")
+        msgs.append(f"Subject\n\nBody with some\nText\n")
+        msgs.append(f"Subject\n\nBody with\nText\n\nContinuation but\n doesn't contain colon\n")
+        msgs.append(f"Subject\n\nBody with\nText\n\nContinuation but\n only contains one :\n")
+        msgs.append(f"Subject\n\nBody with\nText\n\nKey: Value\nLine without colon\n")
+        msgs.append(f"Subject\n\nBody with\nText\n\nLine without colon\nKey: Value\n")
+
+        for msg in msgs:
+            commit = self.rorepo.commit('master')
+            commit = copy.copy(commit)
+            commit.message = msg
+            assert len(commit.trailers.keys()) == 0
+
+        # check that only the last key value paragraph is evaluated
+        commit = self.rorepo.commit('master')
+        commit = copy.copy(commit)
+        commit.message = f"Subject\n\nMultiline\nBody\n\n{KEY_1}: {VALUE_1}\n\n{KEY_2}: {VALUE_2}\n"
+        assert KEY_1 not in commit.trailers.keys()
+        assert KEY_2 in commit.trailers.keys()
+        assert commit.trailers[KEY_2] == VALUE_2
