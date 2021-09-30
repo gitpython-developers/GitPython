@@ -4,8 +4,7 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 import datetime
-import re
-from subprocess import Popen
+from subprocess import Popen, PIPE
 from gitdb import IStream
 from git.util import (
     hex_to_bin,
@@ -14,6 +13,7 @@ from git.util import (
     finalize_process
 )
 from git.diff import Diffable
+from git.cmd import Git
 
 from .tree import Tree
 from . import base
@@ -322,10 +322,10 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
 
         Git messages can contain trailer information that are similar to RFC 822
         e-mail headers (see: https://git-scm.com/docs/git-interpret-trailers).
-        
-        The trailer is thereby the last paragraph (seperated by a empty line
-        from the subject/body). This trailer paragraph must contain a ``:`` as
-        seperator for key and value in every line.
+
+        This funcions calls ``git interpret-trailers --parse`` onto the message
+        to extract the trailer information. The key value pairs are stripped of
+        leading and trailing whitespaces before they get saved into a dictionary.
 
         Valid message with trailer:
 
@@ -338,20 +338,29 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
             another information
 
             key1: value1
-            key2: value2
+            key2 :    value 2 with inner spaces
+
+        dictionary will look like this:
+        .. code-block::
+
+            {
+                "key1": "value1",
+                "key2": "value 2 with inner spaces"
+            }
 
         :return: Dictionary containing whitespace stripped trailer information
+
         """
-        d: Dict[str, str] = {}
-        match = re.search(r".+^\s*$\n([\w\n\s:]+?)\s*\Z", str(self.message), re.MULTILINE | re.DOTALL)
-        if match is None:
-            return d
-        last_paragraph = match.group(1)
-        if not all(':' in line for line in last_paragraph.split('\n')):
-            return d
-        for line in last_paragraph.split('\n'):
-            key, value = line.split(':', 1)
-            d[key.strip()] = value.strip()
+        d = {}
+        cmd = ['git', 'interpret-trailers', '--parse']
+        proc: Git.AutoInterrupt = self.repo.git.execute(cmd, as_process=True, istream=PIPE)  # type: ignore
+        trailer: str = proc.communicate(str(self.message).encode())[0].decode()
+        if trailer.endswith('\n'):
+            trailer = trailer[0:-1]
+        if trailer != '':
+            for line in trailer.split('\n'):
+                key, value = line.split(':', 1)
+                d[key.strip()] = value.strip()
         return d
 
     @ classmethod
