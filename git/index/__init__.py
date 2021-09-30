@@ -1,4 +1,4 @@
 """Initialize the index package"""
 # flake8: noqa
-from .base import *
-from .typ import *
+from .base import IndexFile
+from .typ import IndexEntry, BlobFilter
