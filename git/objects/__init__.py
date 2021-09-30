@@ -4,14 +4,14 @@ Import all submodules main classes into the package space
 # flake8: noqa
 import inspect
 
-from .base import *
-from .blob import *
-from .commit import *
+from .base import Object, IndexObject
+from .blob import Blob
+from .commit import Commit
 from .submodule import util as smutil
-from .submodule.base import *
-from .submodule.root import *
-from .tag import *
-from .tree import *
+from .submodule.base import Submodule, UpdateProgress
+from .submodule.root import RootModule, RootUpdateProgress
+from .tag import TagObject
+from .tree import Tree
 # Fix import dependency - add IndexObject to the util module, so that it can be
 # imported by the submodule.base
 smutil.IndexObject = IndexObject  # type: ignore[attr-defined]
