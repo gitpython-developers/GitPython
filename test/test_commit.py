@@ -435,14 +435,14 @@ JzJMZDRLQLFvnzqZuCjE
         KEY_1 = "Hello"
         VALUE_1 = "World"
         KEY_2 = "Key"
-        VALUE_2 = "Value"
+        VALUE_2 = "Value with inner spaces"
 
         # Check if KEY 1 & 2 with Value 1 & 2 is extracted from multiple msg variations
         msgs = []
         msgs.append(f"Subject\n\n{KEY_1}: {VALUE_1}\n{KEY_2}: {VALUE_2}\n")
         msgs.append(f"Subject\n  \nSome body of a function\n \n{KEY_1}: {VALUE_1}\n{KEY_2}: {VALUE_2}\n")
         msgs.append(f"Subject\n  \nSome body of a function\n\nnon-key: non-value\n\n{KEY_1}: {VALUE_1}\n{KEY_2}: {VALUE_2}\n")
-        msgs.append(f"Subject\n  \nSome multiline\n body of a function\n\nnon-key: non-value\n\n{KEY_1}: {VALUE_1}\n{KEY_2}: {VALUE_2}\n")
+        msgs.append(f"Subject\n  \nSome multiline\n body of a function\n\nnon-key: non-value\n\n{KEY_1}: {VALUE_1}\n{KEY_2} :      {VALUE_2}\n")
 
         for msg in msgs:
             commit = self.rorepo.commit('master')
