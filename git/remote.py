@@ -794,15 +794,7 @@ class Remote(LazyMixin, IterableObj):
         handle_process_output(proc, stdout_handler, progress_handler, finalizer=None, decode_streams=False,
                               kill_after_timeout=kill_after_timeout)
         stderr_text = progress.error_lines and '\n'.join(progress.error_lines) or ''
-        try:
-            proc.wait(stderr=stderr_text)
-        except Exception:
-            # This is different than fetch (which fails if there is any std_err
-            # even if there is an output)
-            if not output:
-                raise
-            elif stderr_text:
-                log.warning("Error lines received while fetching: %s", stderr_text)
+        proc.wait(stderr=stderr_text)
 
         return output
 

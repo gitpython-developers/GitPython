@@ -330,10 +330,8 @@ class TestRemote(TestBase):
 
         # rejected - undo last commit
         lhead.reset("HEAD~1")
-        res = remote.push(lhead.reference)
-        self.assertTrue(res[0].flags & PushInfo.ERROR)
-        self.assertTrue(res[0].flags & PushInfo.REJECTED)
-        self._do_test_push_result(res, remote)
+        with self.assertRaises(GitCommandError):
+            remote.push(lhead.reference)
 
         # force rejected pull
         res = remote.push('+%s' % lhead.reference)
@@ -356,11 +354,9 @@ class TestRemote(TestBase):
 
         # update push new tags
         # Rejection is default
-        new_tag = TagReference.create(rw_repo, to_be_updated, reference='HEAD~1', force=True)
-        res = remote.push(tags=True)
-        self._do_test_push_result(res, remote)
-        self.assertTrue(res[-1].flags & PushInfo.REJECTED)
-        self.assertTrue(res[-1].flags & PushInfo.ERROR)
+        new_tag = TagReference.create(rw_repo, to_be_updated, ref='HEAD~1', force=True)
+        with self.assertRaises(GitCommandError):
+            remote.push(tags=True)
 
         # push force this tag
         res = remote.push("+%s" % new_tag.path)
@@ -386,11 +382,8 @@ class TestRemote(TestBase):
 
         # rejected stale delete
         force_with_lease = "%s:0000000000000000000000000000000000000000" % new_head.path
-        res = remote.push(":%s" % new_head.path, force_with_lease=force_with_lease)
-        self.assertTrue(res[0].flags & PushInfo.ERROR)
-        self.assertTrue(res[0].flags & PushInfo.REJECTED)
-        self.assertIsNone(res[0].local_ref)
-        self._do_test_push_result(res, remote)
+        with self.assertRaises(GitCommandError):
+            remote.push(":%s" % new_head.path, force_with_lease=force_with_lease)
 
         # delete new branch on the remote end and locally
         res = remote.push(":%s" % new_head.path)
