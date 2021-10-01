@@ -354,7 +354,7 @@ class TestRemote(TestBase):
 
         # update push new tags
         # Rejection is default
-        new_tag = TagReference.create(rw_repo, to_be_updated, ref='HEAD~1', force=True)
+        new_tag = TagReference.create(rw_repo, to_be_updated, reference='HEAD~1', force=True)
         with self.assertRaises(GitCommandError):
             remote.push(tags=True)
 
