@@ -5,7 +5,7 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 # flake8: noqa
 #@PydevCodeAnalysisIgnore
-from git.exc import GitError, GitCommandError, GitCommandNotFound, UnmergedEntriesError, CheckoutError, InvalidGitRepositoryError, NoSuchPathError, BadName                       # @NoMove @IgnorePep8
+from git.exc import *                       # @NoMove @IgnorePep8
 import inspect
 import os
 import sys
@@ -39,16 +39,16 @@ _init_externals()
 #{ Imports
 
 try:
-    from git.config import GitConfigParser                                                         # @NoMove @IgnorePep8
-    from git.objects import Blob, Commit, Object, Submodule, Tree                                  # @NoMove @IgnorePep8
-    from git.refs import Head, Reference, RefLog, RemoteReference, SymbolicReference, TagReference # @NoMove @IgnorePep8
-    from git.diff import Diff, DiffIndex, NULL_TREE                                                # @NoMove @IgnorePep8
-    from git.db import GitCmdObjectDB, GitDB                                                       # @NoMove @IgnorePep8
-    from git.cmd import Git                                                                        # @NoMove @IgnorePep8
-    from git.repo import Repo                                                                      # @NoMove @IgnorePep8
-    from git.remote import FetchInfo, PushInfo, Remote, RemoteProgress                             # @NoMove @IgnorePep8
-    from git.index import BlobFilter, IndexEntry, IndexFile                                        # @NoMove @IgnorePep8
-    from git.util import (                                                                         # @NoMove @IgnorePep8
+    from git.config import GitConfigParser  # @NoMove @IgnorePep8
+    from git.objects import *               # @NoMove @IgnorePep8
+    from git.refs import *                  # @NoMove @IgnorePep8
+    from git.diff import *                  # @NoMove @IgnorePep8
+    from git.db import *                    # @NoMove @IgnorePep8
+    from git.cmd import Git                 # @NoMove @IgnorePep8
+    from git.repo import Repo               # @NoMove @IgnorePep8
+    from git.remote import *                # @NoMove @IgnorePep8
+    from git.index import *                 # @NoMove @IgnorePep8
+    from git.util import (                  # @NoMove @IgnorePep8
         LockFile,
         BlockingLockFile,
         Stats,
