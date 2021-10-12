@@ -116,6 +116,22 @@ def to_progress_instance(progress: Union[Callable[..., Any], RemoteProgress, Non
     return progress
 
 
+class PushInfoList(IterableList):
+    def __new__(cls) -> 'IterableList[IterableObj]':
+        return super(IterableList, cls).__new__(cls, 'push_infos')
+
+    def __init__(self) -> None:
+        super().__init__('push_infos')
+        self.exception = None
+
+    def raise_on_error(self):
+        """
+        Raise an exception if any ref failed to push.
+        """
+        if self.exception:
+            raise self.exception
+
+
 class PushInfo(IterableObj, object):
     """
     Carries information about the result of a push operation of a single head::
@@ -774,7 +790,7 @@ class Remote(LazyMixin, IterableObj):
 
     def _get_push_info(self, proc: 'Git.AutoInterrupt',
                        progress: Union[Callable[..., Any], RemoteProgress, None],
-                       kill_after_timeout: Union[None, float] = None) -> IterableList[PushInfo]:
+                       kill_after_timeout: Union[None, float] = None) -> PushInfoList:
         progress = to_progress_instance(progress)
 
         # read progress information from stderr
@@ -782,7 +798,7 @@ class Remote(LazyMixin, IterableObj):
         # read the lines manually as it will use carriage returns between the messages
         # to override the previous one. This is why we read the bytes manually
         progress_handler = progress.new_message_handler()
-        output: IterableList[PushInfo] = IterableList('push_infos')
+        output: PushInfoList = PushInfoList()
 
         def stdout_handler(line: str) -> None:
             try:
@@ -796,13 +812,14 @@ class Remote(LazyMixin, IterableObj):
         stderr_text = progress.error_lines and '\n'.join(progress.error_lines) or ''
         try:
             proc.wait(stderr=stderr_text)
-        except Exception:
+        except Exception as e:
             # This is different than fetch (which fails if there is any std_err
             # even if there is an output)
             if not output:
                 raise
             elif stderr_text:
                 log.warning("Error lines received while fetching: %s", stderr_text)
+                output.exception = e
 
         return output
 
