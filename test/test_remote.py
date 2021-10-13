@@ -30,7 +30,7 @@ from test.lib import (
     fixture,
     GIT_DAEMON_PORT
 )
-from git.util import rmtree, HIDE_WINDOWS_FREEZE_ERRORS
+from git.util import rmtree, HIDE_WINDOWS_FREEZE_ERRORS, IterableList
 import os.path as osp
 
 
@@ -128,6 +128,9 @@ class TestRemote(TestBase):
         # END for each info
 
     def _do_test_push_result(self, results, remote):
+        self.assertIsInstance(results, list)
+        self.assertIsInstance(results, IterableList)
+
         self.assertGreater(len(results), 0)
         self.assertIsInstance(results[0], PushInfo)
         for info in results:
