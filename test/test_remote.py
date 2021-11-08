@@ -154,6 +154,12 @@ class TestRemote(TestBase):
             # END error checking
         # END for each info
 
+        if any([info.flags & info.ERROR for info in results]):
+            self.assertRaises(GitCommandError, results.raise_if_error)
+        else:
+            # No errors, so this should do nothing
+            results.raise_if_error()
+
     def _do_test_fetch_info(self, repo):
         self.assertRaises(ValueError, FetchInfo._from_line, repo, "nonsense", '')
         self.assertRaises(
