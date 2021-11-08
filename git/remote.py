@@ -122,14 +122,14 @@ class PushInfoList(IterableList):
 
     def __init__(self) -> None:
         super().__init__('push_infos')
-        self.exception = None
+        self.error = None
 
-    def raise_on_error(self):
+    def raise_if_error(self):
         """
         Raise an exception if any ref failed to push.
         """
-        if self.exception:
-            raise self.exception
+        if self.error:
+            raise self.error
 
 
 class PushInfo(IterableObj, object):
@@ -819,7 +819,7 @@ class Remote(LazyMixin, IterableObj):
                 raise
             elif stderr_text:
                 log.warning("Error lines received while fetching: %s", stderr_text)
-                output.exception = e
+                output.error = e
 
         return output
 
