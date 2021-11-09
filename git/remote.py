@@ -123,7 +123,7 @@ class PushInfoList(IterableList):
 
     def __init__(self) -> None:
         super().__init__('push_infos')
-        self.error = None
+        self.error: Optional[Exception] = None
 
     def raise_if_error(self) -> None:
         """
