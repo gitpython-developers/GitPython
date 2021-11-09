@@ -117,14 +117,15 @@ def to_progress_instance(progress: Union[Callable[..., Any], RemoteProgress, Non
 
 
 class PushInfoList(IterableList):
-    def __new__(cls) -> 'IterableList[IterableObj]':
-        return super(IterableList, cls).__new__(cls, 'push_infos')
+    def __new__(cls) -> 'PushInfoList':
+        base = super().__new__(cls, 'push_infos')
+        return cast(PushInfoList, base)
 
     def __init__(self) -> None:
         super().__init__('push_infos')
         self.error = None
 
-    def raise_if_error(self):
+    def raise_if_error(self) -> None:
         """
         Raise an exception if any ref failed to push.
         """
