@@ -219,6 +219,9 @@ class Repo(object):
         # in the first place
         if self._bare:
             self._working_tree_dir = None
+
+        if not self._bare and self._working_tree_dir is None:
+            log.warning('No tree found. Is this a git repository?')
         # END working dir handling
 
         self.working_dir: Optional[PathLike] = self._working_tree_dir or self.common_dir
