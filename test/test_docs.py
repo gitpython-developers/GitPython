@@ -393,7 +393,8 @@ class Tutorials(TestBase):
         origin.rename('new_origin')
         # push and pull behaves similarly to `git push|pull`
         origin.pull()
-        origin.push()
+        origin.push()  # attempt push, ignore errors
+        origin.push().raise_if_error()  # push and raise error if it fails
         # assert not empty_repo.delete_remote(origin).exists()     # create and delete remotes
         # ![25-test_references_and_objects]
 
