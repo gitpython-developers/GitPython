@@ -1,6 +1,3 @@
-# TODO Temporary until Sphinx 4.3.0 released with Python 3.10 support:
-# https://github.com/sphinx-doc/sphinx/pull/9712
-sphinx==4.1.2;python_version<="3.9"
-git+git://github.com/sphinx-doc/sphinx@f13ad80#egg=sphinx;python_version>="3.10"
+sphinx==4.3.0
 sphinx_rtd_theme
 sphinx-autodoc-typehints
