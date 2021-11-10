@@ -116,23 +116,6 @@ def to_progress_instance(progress: Union[Callable[..., Any], RemoteProgress, Non
     return progress
 
 
-class PushInfoList(IterableList):
-    def __new__(cls) -> 'PushInfoList':
-        base = super().__new__(cls, 'push_infos')
-        return cast(PushInfoList, base)
-
-    def __init__(self) -> None:
-        super().__init__('push_infos')
-        self.error: Optional[Exception] = None
-
-    def raise_if_error(self) -> None:
-        """
-        Raise an exception if any ref failed to push.
-        """
-        if self.error:
-            raise self.error
-
-
 class PushInfo(IterableObj, object):
     """
     Carries information about the result of a push operation of a single head::
@@ -250,6 +233,22 @@ class PushInfo(IterableObj, object):
     def iter_items(cls, repo: 'Repo', *args: Any, **kwargs: Any
                    ) -> NoReturn:  # -> Iterator['PushInfo']:
         raise NotImplementedError
+
+
+class PushInfoList(IterableList[PushInfo]):
+    def __new__(cls) -> 'PushInfoList':
+        return cast(PushInfoList, IterableList.__new__(cls, 'push_infos'))
+
+    def __init__(self) -> None:
+        super().__init__('push_infos')
+        self.error: Optional[Exception] = None
+
+    def raise_if_error(self) -> None:
+        """
+        Raise an exception if any ref failed to push.
+        """
+        if self.error:
+            raise self.error
 
 
 class FetchInfo(IterableObj, object):
