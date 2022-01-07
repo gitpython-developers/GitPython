@@ -127,30 +127,17 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
 
     def _set_cache_(self, attr: str) -> None:
         if attr == "entries":
-            # read the current index
-            # try memory map for speed
-            lfd = LockedFD(self._file_path)
-            ok = False
             try:
-                fd = lfd.open(write=False, stream=False)
-                ok = True
+                fd = os.open(self._file_path, os.O_RDONLY)
             except OSError:
                 # in new repositories, there may be no index, which means we are empty
                 self.entries: Dict[Tuple[PathLike, StageType], IndexEntry] = {}
                 return None
-            finally:
-                if not ok:
-                    lfd.rollback()
             # END exception handling
 
             stream = file_contents_ro(fd, stream=True, allow_mmap=True)
 
-            try:
-                self._deserialize(stream)
-            finally:
-                lfd.rollback()
-                # The handles will be closed on destruction
-            # END read from default index on demand
+            self._deserialize(stream)
         else:
             super(IndexFile, self)._set_cache_(attr)
 
