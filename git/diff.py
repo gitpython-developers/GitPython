@@ -509,9 +509,9 @@ class Diff(object):
     def _handle_diff_line(lines_bytes: bytes, repo: 'Repo', index: DiffIndex) -> None:
         lines = lines_bytes.decode(defenc)
 
-        it = iter(lines.split('\x00'))
-        for meta, path in zip(it, it):
-            meta = meta[1:]
+        for line in lines.split(':')[1:]:
+            meta, _, path = line.partition('\x00')
+            path = path.rstrip('\x00')
             a_blob_id: Optional[str]
             b_blob_id: Optional[str]
             old_mode, new_mode, a_blob_id, b_blob_id, _change_type = meta.split(None, 4)
