@@ -99,8 +99,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         :param binsha: 20 byte sha1
         :param parents: tuple( Commit, ... )
             is a tuple of commit ids or actual Commits
-        :param tree: Tree
-            Tree object
+        :param tree: Tree object
         :param author: Actor
             is the author Actor object
         :param authored_date: int_seconds_since_epoch
@@ -341,6 +340,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
             key2 :    value 2 with inner spaces
 
         dictionary will look like this:
+
         .. code-block::
 
             {
