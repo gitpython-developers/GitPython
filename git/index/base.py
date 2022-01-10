@@ -138,6 +138,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             stream = file_contents_ro(fd, stream=True, allow_mmap=True)
 
             self._deserialize(stream)
+            os.close(fd)
         else:
             super(IndexFile, self)._set_cache_(attr)
 
