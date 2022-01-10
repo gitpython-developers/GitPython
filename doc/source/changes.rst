@@ -1,6 +1,16 @@
 =========
 Changelog
-=========
+
+3.1.26
+======
+
+- Fixes a leaked file descriptor when reading the index, which would cause make writing a previously
+  read index on windows impossible.
+  See https://github.com/gitpython-developers/GitPython/issues/1395 for details.
+
+See the following for all changes.
+https://github.com/gitpython-developers/gitpython/milestone/56?closed=1
+
 
 3.1.25
 ======
