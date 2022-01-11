@@ -20,7 +20,6 @@ import shutil
 import stat
 from sys import maxsize
 import time
-from unittest import SkipTest
 from urllib.parse import urlsplit, urlunsplit
 import warnings
 
@@ -130,6 +129,7 @@ def rmtree(path: PathLike) -> None:
             func(path)  # Will scream if still not possible to delete.
         except Exception as ex:
             if HIDE_WINDOWS_KNOWN_ERRORS:
+                from unittest import SkipTest
                 raise SkipTest("FIXME: fails with: PermissionError\n  {}".format(ex)) from ex
             raise
 
