@@ -3,8 +3,6 @@ from io import BytesIO
 import logging
 import os
 import stat
-
-from unittest import SkipTest
 import uuid
 
 import git
@@ -934,6 +932,7 @@ class Submodule(IndexObject, TraversableIterableObj):
                         rmtree(str(wtd))
                     except Exception as ex:
                         if HIDE_WINDOWS_KNOWN_ERRORS:
+                            from unittest import SkipTest
                             raise SkipTest("FIXME: fails with: PermissionError\n  {}".format(ex)) from ex
                         raise
                 # END delete tree if possible
@@ -945,6 +944,7 @@ class Submodule(IndexObject, TraversableIterableObj):
                     rmtree(git_dir)
                 except Exception as ex:
                     if HIDE_WINDOWS_KNOWN_ERRORS:
+                        from unittest import SkipTest
                         raise SkipTest(f"FIXME: fails with: PermissionError\n  {ex}") from ex
                     else:
                         raise
