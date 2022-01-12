@@ -2,6 +2,14 @@
 Changelog
 =========
 
+3.1.27
+======
+
+- Reduced startup time due to optimized imports.
+
+See the following for all changes.
+https://github.com/gitpython-developers/gitpython/milestone/57?closed=1
+
 3.1.26
 ======
 
