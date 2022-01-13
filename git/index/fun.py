@@ -3,6 +3,7 @@
 # NOTE: Autodoc hates it if this is a docstring
 
 from io import BytesIO
+from pathlib import Path
 import os
 from stat import (
     S_IFDIR,
@@ -21,6 +22,7 @@ from git.compat import (
     force_text,
     force_bytes,
     is_posix,
+    is_win,
     safe_decode,
 )
 from git.exc import (
@@ -76,6 +78,10 @@ def hook_path(name: str, git_dir: PathLike) -> str:
     return osp.join(git_dir, 'hooks', name)
 
 
+def _has_file_extension(path):
+    return osp.splitext(path)[1]
+
+
 def run_commit_hook(name: str, index: 'IndexFile', *args: str) -> None:
     """Run the commit hook of the given name. Silently ignores hooks that do not exist.
     :param name: name of hook, like 'pre-commit'
@@ -89,8 +95,15 @@ def run_commit_hook(name: str, index: 'IndexFile', *args: str) -> None:
     env = os.environ.copy()
     env['GIT_INDEX_FILE'] = safe_decode(str(index.path))
     env['GIT_EDITOR'] = ':'
+    cmd = [hp]
     try:
-        cmd = subprocess.Popen([hp] + list(args),
+        if is_win and not _has_file_extension(hp):
+            # Windows only uses extensions to determine how to open files
+            # (doesn't understand shebangs). Try using bash to run the hook.
+            relative_hp = Path(hp).relative_to(index.repo.working_dir).as_posix()
+            cmd = ["bash.exe", relative_hp]
+        
+        cmd = subprocess.Popen(cmd + list(args),
                                env=env,
                                stdout=subprocess.PIPE,
                                stderr=subprocess.PIPE,

@@ -13,6 +13,7 @@ from stat import (
 )
 import tempfile
 from unittest import skipIf
+import shutil
 
 from git import (
     IndexFile,
@@ -52,8 +53,9 @@ from git.cmd import Git
 
 HOOKS_SHEBANG = "#!/usr/bin/env sh\n"
 
+is_win_without_bash = is_win and not shutil.which('bash.exe')
 
-@skipIf(HIDE_WINDOWS_KNOWN_ERRORS, "TODO: fix hooks execution on Windows: #703")
+
 def _make_hook(git_dir, name, content, make_exec=True):
     """A helper to create a hook"""
     hp = hook_path(name, git_dir)
@@ -881,7 +883,7 @@ class TestIndex(TestBase):
         try:
             index.commit("This should fail")
         except HookExecutionError as err:
-            if is_win:
+            if is_win_without_bash:
                 self.assertIsInstance(err.status, OSError)
                 self.assertEqual(err.command, [hp])
                 self.assertEqual(err.stdout, '')
@@ -896,6 +898,7 @@ class TestIndex(TestBase):
         else:
             raise AssertionError("Should have caught a HookExecutionError")
 
+    @skipIf(HIDE_WINDOWS_KNOWN_ERRORS, "TODO: fix hooks execution on Windows: #703")
     @with_rw_repo('HEAD', bare=True)
     def test_commit_msg_hook_success(self, rw_repo):
         commit_message = "commit default head by Frèderic Çaufl€"
@@ -920,7 +923,7 @@ class TestIndex(TestBase):
         try:
             index.commit("This should fail")
         except HookExecutionError as err:
-            if is_win:
+            if is_win_without_bash:
                 self.assertIsInstance(err.status, OSError)
                 self.assertEqual(err.command, [hp])
                 self.assertEqual(err.stdout, '')
