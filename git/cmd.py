@@ -12,7 +12,8 @@ import signal
 from subprocess import (
     call,
     Popen,
-    PIPE
+    PIPE,
+    DEVNULL
 )
 import subprocess
 import threading
@@ -873,7 +874,7 @@ class Git(LazyMixin):
                          env=env,
                          cwd=cwd,
                          bufsize=-1,
-                         stdin=istream,
+                         stdin=istream or DEVNULL,
                          stderr=PIPE,
                          stdout=stdout_sink,
                          shell=shell is not None and shell or self.USE_SHELL,
