@@ -974,7 +974,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
                commit_date: Union[str, None] = None,
                skip_hooks: bool = False) -> Commit:
         """Commit the current default index file, creating a commit object.
-        For more information on the arguments, see tree.commit.
+        For more information on the arguments, see Commit.create_from_tree().
 
         :note: If you have manually altered the .entries member of this instance,
                don't forget to write() your changes to disk beforehand.
