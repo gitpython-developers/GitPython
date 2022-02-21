@@ -149,7 +149,12 @@ Please have a look at the [contributions file][contributing].
   incrementing the patch level, and possibly by appending `-dev`. Probably you
   want to `git push` once more.
 
-### How to verify a release
+### How to verify a release (DEPRECATED)
+
+Note that what follows is deprecated and future releases won't be signed anymore.
+More details about how it came to that can be found [in this issue](https://github.com/gitpython-developers/gitdb/issues/77).
+
+----
 
 Please only use releases from `pypi` as you can verify the respective source
 tarballs.
