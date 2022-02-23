@@ -567,8 +567,8 @@ class Repo(object):
             If None, the active branch will be used.
 
         :param paths:
-            is an optional path or a list of paths to limit the returned commits to
-            Commits that do not contain that path or the paths will not be returned.
+            is an optional path or a list of paths; if set only commits that include the path
+            or paths will be returned
 
         :param kwargs:
             Arguments to be passed to git-rev-list - common ones are
