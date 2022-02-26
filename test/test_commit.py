@@ -149,6 +149,81 @@ class TestCommit(TestCommitSerialization):
         self.assertEqual(commit.committer_tz_offset, 14400, commit.committer_tz_offset)
         self.assertEqual(commit.message, "initial project\n")
 
+    def test_patch_with_parent(self):
+        expected_path_result = """diff --git a/doc/source/tutorial.rst b/doc/source/tutorial.rst
+index bc386e7c..fcbc18bf 100644
+--- a/doc/source/tutorial.rst
++++ b/doc/source/tutorial.rst
+@@ -66,7 +66,7 @@ Archive the repository contents to a tar file.
+ Advanced Repo Usage
+ ===================
+ 
+-And of course, there is much more you can do with this type, most of the following will be explained in greater detail in specific tutorials. Don't worry if you don't understand some of these examples right away, as they may require a thorough understanding of gits inner workings.
++And of course, there is much more you can do with this type, most of the following will be explained in greater detail in specific tutorials. Don't worry if you don't understand some of these examples right away, as they may require a thorough understanding of git's inner workings.
+ 
+ Query relevant repository paths ...
+ 
+@@ -363,7 +363,7 @@ Handling Remotes
+     :start-after: # [25-test_references_and_objects]
+     :end-before: # ![25-test_references_and_objects]
+ 
+-You can easily access configuration information for a remote by accessing options as if they where attributes. The modification of remote configuration is more explicit though.
++You can easily access configuration information for a remote by accessing options as if they were attributes. The modification of remote configuration is more explicit though.
+ 
+ .. literalinclude:: ../../test/test_docs.py
+     :language: python
+@@ -391,7 +391,7 @@ Here's an example executable that can be used in place of the `ssh_executable` a
+     ID_RSA=/var/lib/openshift/5562b947ecdd5ce939000038/app-deployments/id_rsa
+     exec /usr/bin/ssh -o StrictHostKeyChecking=no -i $ID_RSA "$@"
+ 
+-Please note that the script must be executable (i.e. `chomd +x script.sh`). `StrictHostKeyChecking=no` is used to avoid prompts asking to save the hosts key to `~/.ssh/known_hosts`, which happens in case you run this as daemon.
++Please note that the script must be executable (i.e. `chmod +x script.sh`). `StrictHostKeyChecking=no` is used to avoid prompts asking to save the hosts key to `~/.ssh/known_hosts`, which happens in case you run this as daemon.
+ 
+ You might also have a look at `Git.update_environment(...)` in case you want to setup a changed environment more permanently.
+ 
+@@ -509,14 +509,14 @@ The type of the database determines certain performance characteristics, such as
+ 
+ GitDB
+ =====
+-The GitDB is a pure-python implementation of the git object database. It is the default database to use in GitPython 0.3. Its uses less memory when handling huge files, but will be 2 to 5 times slower when extracting large quantities small of objects from densely packed repositories::
++The GitDB is a pure-python implementation of the git object database. It is the default database to use in GitPython 0.3. It uses less memory when handling huge files, but will be 2 to 5 times slower when extracting large quantities of small objects from densely packed repositories::
+ 
+     repo = Repo("path/to/repo", odbt=GitDB)
+ 
+ 
+ GitCmdObjectDB
+ ==============
+-The git command database uses persistent git-cat-file instances to read repository information. These operate very fast under all conditions, but will consume additional memory for the process itself. When extracting large files, memory usage will be much higher than the one of the ``GitDB``::
++The git command database uses persistent git-cat-file instances to read repository information. These operate very fast under all conditions, but will consume additional memory for the process itself. When extracting large files, memory usage will be much higher than ``GitDB``::
+ 
+     repo = Repo("path/to/repo", odbt=GitCmdObjectDB)
+ """
+        commit = self.rorepo.commit('c0740570b31f0f0fe499bf4fc5abbf89feb1757d')
+        patch = commit.patch
+        self.assertEqual(patch[:200], expected_path_result[:200])
+        self.assertEqual(patch[200:400], expected_path_result[200:400])
+        self.assertEqual(patch[400:600], expected_path_result[400:600])
+
+    def test_patch_with_no_parent(self):
+        expected_path_result = """diff --git a/.flake8 b/.flake8
+new file mode 100644
+index 00000000..c55fe35d
+--- /dev/null
++++ b/.flake8
+@@ -0,0 +1,35 @@
++[flake8]
++show-source = True
++count= True
++statistics = True
++# E265 = comment blocks like @{ section, which it can't handle
++# E266 = too many leading '#' for block comment
++# E731 = do not assign a lambda expression, use a def
++# W293 = Blank line contains whitespace
++# W504"""
+        commit = self.rorepo.commit('33ebe7acec14b25c5f84f35a664803fcab2f7781')
+        patch = commit.patch
+        self.assertEqual(patch[:200], expected_path_result[:200])
+
     def test_unicode_actor(self):
         # assure we can parse unicode actors correctly
         name = "Üäöß ÄußÉ"

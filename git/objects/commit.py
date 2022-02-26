@@ -316,6 +316,18 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         return Stats._list_from_string(self.repo, text)
 
     @property
+    def patch(self) -> str:
+        """Get a git patch from changes between this commit and its first parent
+        or from all changes done if this is the very first commit.
+
+        :return: String"""
+        if not self.parents:
+            text = self.repo.git.diff(self.hexsha)
+        else:
+            text = self.repo.git.diff(self.parents[0].hexsha, self.hexsha, '--', numstat=False)
+        return text
+
+    @property
     def trailers(self) -> Dict:
         """Get the trailers of the message as dictionary
 
