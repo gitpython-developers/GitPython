@@ -352,7 +352,7 @@ class SymbolicReference(object):
         fd = lfd.open(write=True, stream=True)
         ok = True
         try:
-            fd.write(write_value.encode('ascii') + b'\n')
+            fd.write(write_value.encode('utf-8') + b'\n')
             lfd.commit()
             ok = True
         finally:
