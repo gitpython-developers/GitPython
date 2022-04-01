@@ -420,7 +420,8 @@ class Repo(object):
         else:
             return TagReference._common_path_default + '/' + path_str
 
-    def create_head(self, path: PathLike, commit: str = 'HEAD',
+    def create_head(self, path: PathLike,
+                    commit: Union['SymbolicReference', 'str'] = 'HEAD',
                     force: bool = False, logmsg: Optional[str] = None
                     ) -> 'Head':
         """Create a new head within the repository.
