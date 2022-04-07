@@ -813,7 +813,6 @@ class Git(LazyMixin):
             removed.
         :param strip_newline_in_stdout:
             Whether to strip the trailing `\n` of the command stdout.
-
         :return:
             * str(output) if extended_output = False (Default)
             * tuple(int(status), str(stdout), str(stderr)) if extended_output = True
