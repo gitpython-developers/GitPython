@@ -812,7 +812,7 @@ class Git(LazyMixin):
             render the repository incapable of accepting changes until the lock is manually
             removed.
         :param strip_newline_in_stdout:
-            Whether to strip the trailing '\n' of the command stdout.
+            Whether to strip the trailing `\n` of the command stdout.
 
         :return:
             * str(output) if extended_output = False (Default)
