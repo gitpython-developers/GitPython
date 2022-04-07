@@ -55,7 +55,7 @@ if TYPE_CHECKING:
 execute_kwargs = {'istream', 'with_extended_output',
                   'with_exceptions', 'as_process', 'stdout_as_string',
                   'output_stream', 'with_stdout', 'kill_after_timeout',
-                  'universal_newlines', 'shell', 'env', 'max_chunk_size', 'strip_newline'}
+                  'universal_newlines', 'shell', 'env', 'max_chunk_size', 'strip_newline_in_stdout'}
 
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
@@ -738,7 +738,7 @@ class Git(LazyMixin):
                 shell: Union[None, bool] = None,
                 env: Union[None, Mapping[str, str]] = None,
                 max_chunk_size: int = io.DEFAULT_BUFFER_SIZE,
-                strip_newline: bool = True,
+                strip_newline_in_stdout: bool = True,
                 **subprocess_kwargs: Any
                 ) -> Union[str, bytes, Tuple[int, Union[str, bytes], str], AutoInterrupt]:
         """Handles executing the command on the shell and consumes and returns
@@ -811,8 +811,8 @@ class Git(LazyMixin):
             effects on a repository. For example, stale locks in case of git gc could
             render the repository incapable of accepting changes until the lock is manually
             removed.
-        :param strip_newline:
-            Whether to strip the trailing '\n' of the command output.
+        :param strip_newline_in_stdout:
+            Whether to strip the trailing '\n' of the command stdout.
 
         :return:
             * str(output) if extended_output = False (Default)
@@ -947,7 +947,7 @@ class Git(LazyMixin):
                         if not universal_newlines:
                             stderr_value = stderr_value.encode(defenc)
                 # strip trailing "\n"
-                if stdout_value.endswith(newline) and strip_newline:  # type: ignore
+                if stdout_value.endswith(newline) and strip_newline_in_stdout:  # type: ignore
                     stdout_value = stdout_value[:-1]
                 if stderr_value.endswith(newline):  # type: ignore
                     stderr_value = stderr_value[:-1]

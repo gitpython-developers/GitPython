@@ -1100,11 +1100,11 @@ class TestRepo(TestBase):
         self.assertEqual(r.currently_rebasing_on(), commitSpanish)
 
     @with_rw_directory
-    def test_do_not_strip_newline(self, rw_dir):
+    def test_do_not_strip_newline_in_stdout(self, rw_dir):
         r = Repo.init(rw_dir)
         fp = osp.join(rw_dir, 'hello.txt')
         with open(fp, 'w') as fs:
             fs.write("hello\n")
         r.git.add(Git.polish_url(fp))
         r.git.commit(message="init")
-        self.assertEqual(r.git.show("HEAD:hello.txt", strip_newline=False), 'hello\n')
+        self.assertEqual(r.git.show("HEAD:hello.txt", strip_newline_in_stdout=False), 'hello\n')
