@@ -8,6 +8,7 @@
 from gitdb.exc import BadName  # NOQA @UnusedWildImport skipcq: PYL-W0401, PYL-W0614
 from gitdb.exc import *     # NOQA @UnusedWildImport skipcq: PYL-W0401, PYL-W0614
 from git.compat import safe_decode
+from git.util import remove_password_if_present
 
 # typing ----------------------------------------------------
 
@@ -54,7 +55,7 @@ class CommandError(GitError):
                  stdout: Union[bytes, str, None] = None) -> None:
         if not isinstance(command, (tuple, list)):
             command = command.split()
-        self.command = command
+        self.command = remove_password_if_present(command)
         self.status = status
         if status:
             if isinstance(status, Exception):
@@ -66,8 +67,8 @@ class CommandError(GitError):
                     s = safe_decode(str(status))
                     status = "'%s'" % s if isinstance(status, str) else s
 
-        self._cmd = safe_decode(command[0])
-        self._cmdline = ' '.join(safe_decode(i) for i in command)
+        self._cmd = safe_decode(self.command[0])
+        self._cmdline = ' '.join(safe_decode(i) for i in self.command)
         self._cause = status and " due to: %s" % status or "!"
         stdout_decode = safe_decode(stdout)
         stderr_decode = safe_decode(stderr)

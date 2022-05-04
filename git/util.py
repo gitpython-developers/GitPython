@@ -5,7 +5,6 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
 from abc import abstractmethod
-from .exc import InvalidGitRepositoryError
 import os.path as osp
 from .compat import is_win
 import contextlib
@@ -93,6 +92,8 @@ T = TypeVar('T')
 def unbare_repo(func: Callable[..., T]) -> Callable[..., T]:
     """Methods with this decorator raise InvalidGitRepositoryError if they
     encounter a bare repository"""
+
+    from .exc import InvalidGitRepositoryError
 
     @wraps(func)
     def wrapper(self: 'Remote', *args: Any, **kwargs: Any) -> T:
@@ -412,11 +413,12 @@ def expand_path(p: Union[None, PathLike], expand_vars: bool = True) -> Optional[
 def remove_password_if_present(cmdline: Sequence[str]) -> List[str]:
     """
     Parse any command line argument and if on of the element is an URL with a
-    password, replace it by stars (in-place).
+    username and/or password, replace them by stars (in-place).
 
     If nothing found just returns the command line as-is.
 
-    This should be used for every log line that print a command line.
+    This should be used for every log line that print a command line, as well as
+    exception messages.
     """
     new_cmdline = []
     for index, to_parse in enumerate(cmdline):
@@ -424,12 +426,16 @@ def remove_password_if_present(cmdline: Sequence[str]) -> List[str]:
         try:
             url = urlsplit(to_parse)
             # Remove password from the URL if present
-            if url.password is None:
+            if url.password is None and url.username is None:
                 continue
 
-            edited_url = url._replace(
-                netloc=url.netloc.replace(url.password, "*****"))
-            new_cmdline[index] = urlunsplit(edited_url)
+            if url.password is not None:
+                url = url._replace(
+                    netloc=url.netloc.replace(url.password, "*****"))
+            if url.username is not None:
+                url = url._replace(
+                    netloc=url.netloc.replace(url.username, "*****"))
+            new_cmdline[index] = urlunsplit(url)
         except ValueError:
             # This is not a valid URL
             continue

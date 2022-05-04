@@ -22,6 +22,7 @@ from git.exc import (
     HookExecutionError,
     RepositoryDirtyError,
 )
+from git.util import remove_password_if_present
 from test.lib import TestBase
 
 import itertools as itt
@@ -34,6 +35,7 @@ _cmd_argvs = (
     ('cmd', 'ελληνικα', 'args'),
     ('θνιψοδε', 'κι', 'αλλα', 'strange', 'args'),
     ('θνιψοδε', 'κι', 'αλλα', 'non-unicode', 'args'),
+    ('git', 'clone', '-v', 'https://fakeuser:fakepassword1234@fakerepo.example.com/testrepo'),
 )
 _causes_n_substrings = (
     (None,                      None),                          # noqa: E241 @IgnorePep8
@@ -81,7 +83,7 @@ class TExc(TestBase):
         self.assertIsNotNone(c._msg)
         self.assertIn('  cmdline: ', s)
 
-        for a in argv:
+        for a in remove_password_if_present(argv):
             self.assertIn(a, s)
 
         if not cause:
@@ -137,14 +139,15 @@ class TExc(TestBase):
     @ddt.data(
         (['cmd1'], None),
         (['cmd1'], "some cause"),
-        (['cmd1'], Exception()),
+        (['cmd1', 'https://fakeuser@fakerepo.example.com/testrepo'], Exception()),
     )
     def test_GitCommandError(self, init_args):
         argv, cause = init_args
         c = GitCommandError(argv, cause)
         s = str(c)
 
-        self.assertIn(argv[0], s)
+        for arg in remove_password_if_present(argv):
+            self.assertIn(arg, s)
         if cause:
             self.assertIn(' failed due to: ', s)
             self.assertIn(str(cause), s)
