@@ -343,18 +343,34 @@ class TestUtils(TestBase):
         self.assertEqual(t1._name, t2._name)
 
     def test_remove_password_from_command_line(self):
+        username = "fakeuser"
         password = "fakepassword1234"
-        url_with_pass = "https://fakeuser:{}@fakerepo.example.com/testrepo".format(password)
-        url_without_pass = "https://fakerepo.example.com/testrepo"
+        url_with_user_and_pass = "https://{}:{}@fakerepo.example.com/testrepo".format(username, password)
+        url_with_user = "https://{}@fakerepo.example.com/testrepo".format(username)
+        url_with_pass = "https://:{}@fakerepo.example.com/testrepo".format(password)
+        url_without_user_or_pass = "https://fakerepo.example.com/testrepo"
 
-        cmd_1 = ["git", "clone", "-v", url_with_pass]
-        cmd_2 = ["git", "clone", "-v", url_without_pass]
-        cmd_3 = ["no", "url", "in", "this", "one"]
+        cmd_1 = ["git", "clone", "-v", url_with_user_and_pass]
+        cmd_2 = ["git", "clone", "-v", url_with_user]
+        cmd_3 = ["git", "clone", "-v", url_with_pass]
+        cmd_4 = ["git", "clone", "-v", url_without_user_or_pass]
+        cmd_5 = ["no", "url", "in", "this", "one"]
 
         redacted_cmd_1 = remove_password_if_present(cmd_1)
+        assert username not in " ".join(redacted_cmd_1)
         assert password not in " ".join(redacted_cmd_1)
         # Check that we use a copy
         assert cmd_1 is not redacted_cmd_1
+        assert username in " ".join(cmd_1)
         assert password in " ".join(cmd_1)
-        assert cmd_2 == remove_password_if_present(cmd_2)
-        assert cmd_3 == remove_password_if_present(cmd_3)
+
+        redacted_cmd_2 = remove_password_if_present(cmd_2)
+        assert username not in " ".join(redacted_cmd_2)
+        assert password not in " ".join(redacted_cmd_2)
+
+        redacted_cmd_3 = remove_password_if_present(cmd_3)
+        assert username not in " ".join(redacted_cmd_3)
+        assert password not in " ".join(redacted_cmd_3)
+
+        assert cmd_4 == remove_password_if_present(cmd_4)
+        assert cmd_5 == remove_password_if_present(cmd_5)
