@@ -36,7 +36,7 @@ class TagReference(Reference):
     _common_path_default = Reference._common_path_default + "/" + _common_default
 
     @property
-    def commit(self) -> 'Commit':  # type: ignore[override]  # LazyMixin has unrelated comit method
+    def commit(self) -> 'Commit':  # type: ignore[override]  # LazyMixin has unrelated commit method
         """:return: Commit object the tag ref points to
 
         :raise ValueError: if the tag points to a tree or blob"""
@@ -91,7 +91,7 @@ class TagReference(Reference):
 
         :param message:
             Synonym for :param logmsg:
-            Included for backwards compatability. :param logmsg is used in preference if both given.
+            Included for backwards compatibility. :param logmsg is used in preference if both given.
 
         :param force:
             If True, to force creation of a tag even though that tag already exists.

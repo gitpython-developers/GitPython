@@ -135,7 +135,7 @@ class Tutorials(TestBase):
         for fetch_info in origin.fetch(progress=MyProgressPrinter()):
             print("Updated %s to %s" % (fetch_info.ref, fetch_info.commit))
         # create a local branch at the latest fetched master. We specify the name statically, but you have all
-        # information to do it programatically as well.
+        # information to do it programmatically as well.
         bare_master = bare_repo.create_head('master', origin.refs.master)
         bare_repo.head.set_reference(bare_master)
         assert not bare_repo.delete_remote(origin).exists()

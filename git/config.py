@@ -71,7 +71,7 @@ CONDITIONAL_INCLUDE_REGEXP = re.compile(r"(?<=includeIf )\"(gitdir|gitdir/i|onbr
 
 
 class MetaParserBuilder(abc.ABCMeta):
-    """Utlity class wrapping base-class methods into decorators that assure read-only properties"""
+    """Utility class wrapping base-class methods into decorators that assure read-only properties"""
     def __new__(cls, name: str, bases: Tuple, clsdict: Dict[str, Any]) -> 'MetaParserBuilder':
         """
         Equip all base-class methods with a needs_values decorator, and all non-const methods

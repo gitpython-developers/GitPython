@@ -54,7 +54,7 @@ ConfigLevels_Tup = Tuple[Literal['system'], Literal['user'], Literal['global'], 
 
 def assert_never(inp: NoReturn, raise_error: bool = True, exc: Union[Exception, None] = None) -> None:
     """For use in exhaustive checking of literal or Enum in if/else chain.
-    Should only be reached if all memebers not handled OR attempt to pass non-members through chain.
+    Should only be reached if all members not handled OR attempt to pass non-members through chain.
 
     If all members handled, type is Empty. Otherwise, will cause mypy error.
     If non-members given, should cause mypy error at variable creation.

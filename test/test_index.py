@@ -936,4 +936,4 @@ class TestIndex(TestBase):
                 self.assertEqual(err.stderr, "\n  stderr: 'stderr\n'")
                 assert str(err)
         else:
-            raise AssertionError("Should have cought a HookExecutionError")
+            raise AssertionError("Should have caught a HookExecutionError")

@@ -338,7 +338,7 @@ class RootModule(Submodule):
             sm.update(recursive=False, init=init, to_latest_revision=to_latest_revision,
                       progress=progress, dry_run=dry_run, force=force_reset, keep_going=keep_going)
 
-            # update recursively depth first - question is which inconsitent
+            # update recursively depth first - question is which inconsistent
             # state will be better in case it fails somewhere. Defective branch
             # or defective depth. The RootSubmodule type will never process itself,
             # which was done in the previous expression

@@ -273,7 +273,7 @@ class TestDiff(TestBase):
         self.assertEqual(res[13].b_path, 'b/"with even more quotes"')
 
     def test_diff_patch_format(self):
-        # test all of the 'old' format diffs for completness - it should at least
+        # test all of the 'old' format diffs for completeness - it should at least
         # be able to deal with it
         fixtures = ("diff_2", "diff_2f", "diff_f", "diff_i", "diff_mode_only",
                     "diff_new_mode", "diff_numstat", "diff_p", "diff_rename",

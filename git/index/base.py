@@ -579,7 +579,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
     def _to_relative_path(self, path: PathLike) -> PathLike:
         """
         :return: Version of path relative to our git directory or raise ValueError
-            if it is not within our git direcotory"""
+            if it is not within our git directory"""
         if not osp.isabs(path):
             return path
         if self.repo.bare:
@@ -682,7 +682,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
                 into the object database.
 
                 PathStrings may contain globs, such as 'lib/__init__*' or can be directories
-                like 'lib', the latter ones will add all the files within the dirctory and
+                like 'lib', the latter ones will add all the files within the directory and
                 subdirectories.
 
                 This equals a straight git-add.
@@ -779,7 +779,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
                     "At least one Entry has a null-mode - please use index.remove to remove files for clarity")
             # END null mode should be remove
 
-            # HANLDE ENTRY OBJECT CREATION
+            # HANDLE ENTRY OBJECT CREATION
             # create objects if required, otherwise go with the existing shas
             null_entries_indices = [i for i, e in enumerate(entries) if e.binsha == Object.NULL_BIN_SHA]
             if null_entries_indices:
@@ -813,7 +813,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
                     fprogress(entry.path, False, entry)
                     fprogress(entry.path, True, entry)
                 # END handle progress
-            # END for each enty
+            # END for each entry
             entries_added.extend(entries)
         # END if there are base entries
 

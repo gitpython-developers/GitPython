@@ -266,7 +266,7 @@ def rev_parse(repo: 'Repo', rev: str) -> Union['Commit', 'Tag', 'Tree', 'Blob']:
                 # END handle tag
             elif token == '@':
                 # try single int
-                assert ref is not None, "Requre Reference to access reflog"
+                assert ref is not None, "Require Reference to access reflog"
                 revlog_index = None
                 try:
                     # transform reversed index into the format of our revlog

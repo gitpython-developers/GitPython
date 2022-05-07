@@ -397,7 +397,7 @@ index 1d5251d40fb65ac89184ec662a3e1b04d0c24861..98eeddda5ed2b0e215e21128112393bd
        self.git_dir = git_dir
      end
      
--    # Converstion hash from Ruby style options to git command line
+-    # Conversion hash from Ruby style options to git command line
 -    # style options
 -    TRANSFORM = {:max_count => "--max-count=",
 -                 :skip => "--skip=",

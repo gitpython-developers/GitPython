@@ -175,7 +175,7 @@ class TestBase(TestCase):
         assert num_sections and num_options
         assert r_config._is_initialized is True
 
-        # get value which doesnt exist, with default
+        # get value which doesn't exist, with default
         default = "my default value"
         assert r_config.get_value("doesnt", "exist", default) == default
 

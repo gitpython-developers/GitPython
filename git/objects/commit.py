@@ -322,7 +322,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         Git messages can contain trailer information that are similar to RFC 822
         e-mail headers (see: https://git-scm.com/docs/git-interpret-trailers).
 
-        This funcions calls ``git interpret-trailers --parse`` onto the message
+        This functions calls ``git interpret-trailers --parse`` onto the message
         to extract the trailer information. The key value pairs are stripped of
         leading and trailing whitespaces before they get saved into a dictionary.
 
@@ -461,7 +461,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         # * Environment variables override configuration values
         # * Sensible defaults are set according to the git documentation
 
-        # COMMITER AND AUTHOR INFO
+        # COMMITTER AND AUTHOR INFO
         cr = repo.config_reader()
         env = os.environ
 
