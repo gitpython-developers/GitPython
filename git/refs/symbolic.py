@@ -298,7 +298,7 @@ class SymbolicReference(object):
                       logmsg: Union[str, None] = None) -> 'SymbolicReference':
         """Set ourselves to the given ref. It will stay a symbol if the ref is a Reference.
         Otherwise an Object, given as Object instance or refspec, is assumed and if valid,
-        will be set which effectively detaches the refererence if it was a purely
+        will be set which effectively detaches the reference if it was a purely
         symbolic one.
 
         :param ref: SymbolicReference instance, Object instance or refspec string

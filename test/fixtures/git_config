@@ -28,7 +28,7 @@
 [branch "mainline_performance"]
 	remote = mainline
 	merge = refs/heads/master
-# section with value defined before include to be overriden
+# section with value defined before include to be overridden
 [sec]
     var0 = value0_main
 [include]

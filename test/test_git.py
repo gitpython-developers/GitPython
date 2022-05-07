@@ -159,7 +159,7 @@ class TestGit(TestBase):
         prev_cmd = self.git.GIT_PYTHON_GIT_EXECUTABLE
         exc = GitCommandNotFound
         try:
-            # set it to something that doens't exist, assure it raises
+            # set it to something that doesn't exist, assure it raises
             type(self.git).GIT_PYTHON_GIT_EXECUTABLE = osp.join(
                 "some", "path", "which", "doesn't", "exist", "gitbinary")
             self.assertRaises(exc, self.git.version)

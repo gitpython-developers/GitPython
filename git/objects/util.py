@@ -37,7 +37,7 @@ if TYPE_CHECKING:
     from .submodule.base import Submodule
     from git.types import Protocol, runtime_checkable
 else:
-    # Protocol = Generic[_T]  # NNeeded for typing bug #572?
+    # Protocol = Generic[_T]  # Needed for typing bug #572?
     Protocol = ABC
 
     def runtime_checkable(f):
@@ -359,7 +359,7 @@ class Traversable(Protocol):
             out: IterableList[Union['Commit', 'Submodule', 'Tree', 'Blob']] = IterableList(id)
             out.extend(self.traverse(as_edge=as_edge, *args, **kwargs))
             return out
-            # overloads in subclasses (mypy does't allow typing self: subclass)
+            # overloads in subclasses (mypy doesn't allow typing self: subclass)
             # Union[IterableList['Commit'], IterableList['Submodule'], IterableList[Union['Submodule', 'Tree', 'Blob']]]
         else:
             # Raise deprecationwarning, doesn't make sense to use this

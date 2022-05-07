@@ -314,7 +314,7 @@ def write_tree_from_cache(entries: List[IndexEntry], odb: 'GitCmdObjectDB', sl: 
 
     # finally create the tree
     sio = BytesIO()
-    tree_to_stream(tree_items, sio.write)  # writes to stream as bytes, but doesnt change tree_items
+    tree_to_stream(tree_items, sio.write)  # writes to stream as bytes, but doesn't change tree_items
     sio.seek(0)
 
     istream = odb.store(IStream(str_tree_type, len(sio.getvalue()), sio))

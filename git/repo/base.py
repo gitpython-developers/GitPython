@@ -711,7 +711,7 @@ class Repo(object):
             index or the working copy have changes."""
         if self._bare:
             # Bare repositories with no associated working directory are
-            # always consired to be clean.
+            # always considered to be clean.
             return False
 
         # start from the one which is fastest to evaluate
@@ -760,7 +760,7 @@ class Repo(object):
                                untracked_files=True,
                                as_process=True,
                                **kwargs)
-        # Untracked files preffix in porcelain mode
+        # Untracked files prefix in porcelain mode
         prefix = "?? "
         untracked_files = []
         for line in proc.stdout:

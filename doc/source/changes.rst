@@ -69,7 +69,7 @@ https://github.com/gitpython-developers/gitpython/milestone/53?closed=1
   
   - Make Protocol classes ABCs at runtime due to new behaviour/bug in 3.9.7 & 3.10.0-rc1
   
-  - Remove use of typing.TypeGuard until later release, to allow dependant libs time to update.
+  - Remove use of typing.TypeGuard until later release, to allow dependent libs time to update.
   
   - Tracking issue: https://github.com/gitpython-developers/GitPython/issues/1095
 
@@ -134,7 +134,7 @@ https://github.com/gitpython-developers/gitpython/milestone/48?closed=1
 3.1.15 (YANKED)
 ===============
 
-* add deprectation warning for python 3.5
+* add deprecation warning for python 3.5
 
 See the following for details:
 https://github.com/gitpython-developers/gitpython/milestone/47?closed=1
@@ -595,7 +595,7 @@ It follows the `semantic version scheme <http://semver.org>`_, and thus will not
   - Renamed `ignore_tree_extension_data` keyword argument in `IndexFile.write(...)` to `ignore_extension_data`
 * If the git command executed during `Remote.push(...)|fetch(...)` returns with an non-zero exit code and GitPython didn't
   obtain any head-information, the corresponding `GitCommandError` will be raised. This may break previous code which expected
-  these operations to never raise. However, that behavious is undesirable as it would effectively hide the fact that there
+  these operations to never raise. However, that behaviour is undesirable as it would effectively hide the fact that there
   was an error. See `this issue <https://github.com/gitpython-developers/GitPython/issues/271>`__ for more information.
 
 * If the git executable can't be found in the PATH or at the path provided by `GIT_PYTHON_GIT_EXECUTABLE`, this is made

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [tool.pytest.ini_options]
 python_files = 'test_*.py'
-testpaths = 'test'  # space seperated list of paths from root e.g test tests doc/testing
+testpaths = 'test'  # space separated list of paths from root e.g test tests doc/testing
 addopts = '--cov=git --cov-report=term --maxfail=10 --force-sugar --disable-warnings'
 filterwarnings = 'ignore::DeprecationWarning'
 # --cov   coverage

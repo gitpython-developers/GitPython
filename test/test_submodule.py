@@ -546,7 +546,7 @@ class TestSubmodule(TestBase):
         assert nsm.module().head.commit.hexsha == nsm.hexsha
         nsm.module().index.add([nsm])
         nsm.module().index.commit("added new file")
-        rm.update(recursive=False, dry_run=True, progress=prog)  # would not change head, and thus doens't fail
+        rm.update(recursive=False, dry_run=True, progress=prog)  # would not change head, and thus doesn't fail
         # Everything we can do from now on will trigger the 'future' check, so no is_dirty() check will even run
         # This would only run if our local branch is in the past and we have uncommitted changes
 
@@ -730,7 +730,7 @@ class TestSubmodule(TestBase):
         assert parent.head.commit.tree[sm.path].binsha == sm.binsha
         assert sm_too.binsha == sm.binsha, "cached submodule should point to the same commit as updated one"
 
-        added_bies = parent.index.add([sm])  # addded base-index-entries
+        added_bies = parent.index.add([sm])  # added base-index-entries
         assert len(added_bies) == 1
         parent.index.commit("add same submodule entry")
         commit_sm = parent.head.commit.tree[sm.path]
