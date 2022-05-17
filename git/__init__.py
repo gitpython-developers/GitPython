@@ -3,7 +3,6 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
-# flake8: noqa
 # @PydevCodeAnalysisIgnore
 from git.exc import *  # @NoMove @IgnorePep8
 import inspect

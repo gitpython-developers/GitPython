@@ -44,10 +44,10 @@ jobs:
         # and cause subsequent tests to fail
         cat test/fixtures/.gitconfig >> ~/.gitconfig
 
-    - name: Lint with flake8
+    - name: Lint with Black
       run: |
         set -x
-        flake8
+        black --check .
 
     - name: Check types with mypy
       # With new versions of pypi new issues might arise. This is a problem if there is nobody able to fix them,

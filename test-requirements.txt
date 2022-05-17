@@ -1,10 +1,7 @@
 ddt>=1.1.1, !=1.4.3
 mypy
 
-flake8
-flake8-bugbear
-flake8-comprehensions
-flake8-typing-imports
+black
 
 virtualenv
 
