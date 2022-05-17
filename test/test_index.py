@@ -37,6 +37,8 @@ from gitdb.base import IStream
 import os.path as osp
 from git.cmd import Git
 
+from pathlib import Path
+
 HOOKS_SHEBANG = "#!/usr/bin/env sh\n"
 
 is_win_without_bash = is_win and not shutil.which("bash.exe")
@@ -943,3 +945,12 @@ class TestIndex(TestBase):
                 assert str(err)
         else:
             raise AssertionError("Should have caught a HookExecutionError")
+
+    @with_rw_repo('HEAD')
+    def test_index_add_pathlike(self, rw_repo):
+        git_dir = Path(rw_repo.git_dir)
+
+        file = git_dir / "file.txt"
+        file.touch()
+
+        rw_repo.index.add(file)
