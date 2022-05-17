@@ -617,11 +617,11 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         paths = []
         entries = []
         # if it is a string put in list
-        if isinstance(items, str):
+        if isinstance(items, (str, os.PathLike)):
             items = [items]
 
         for item in items:
-            if isinstance(item, str):
+            if isinstance(item, (str, os.PathLike)):
                 paths.append(self._to_relative_path(item))
             elif isinstance(item, (Blob, Submodule)):
                 entries.append(BaseIndexEntry.from_blob(item))
