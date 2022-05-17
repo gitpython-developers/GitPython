@@ -3,6 +3,13 @@
 
 # libraries for additional local testing/linting - to be added to test-requirements.txt when all pass
 
+flake8-type-checking;python_version>="3.8"      # checks for TYPE_CHECKING only imports
+# flake8-annotations                          # checks for presence of type annotations
+# flake8-rst-docstrings                       # checks docstrings are valid RST
+# flake8-builtins                             # warns about shadowing builtin names
+# flake8-pytest-style
+
+# pytest-flake8
 pytest-icdiff
 # pytest-profiling
 

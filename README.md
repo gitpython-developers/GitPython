@@ -107,13 +107,15 @@ with MINGW's.
 Ensure testing libraries are installed.
 In the root directory, run: `pip install -r test-requirements.txt`
 
+To lint, run: `flake8`
+
 To typecheck, run: `mypy -p git`
 
 To test, run: `pytest`
 
-Configurations for mypy, pytest and coverage.py are in ./pyproject.toml.
+Configuration for flake8 is in the ./.flake8 file.
 
-Run `black` for formatting.
+Configurations for mypy, pytest and coverage.py are in ./pyproject.toml.
 
 The same linting and testing will also be performed against different supported python versions
 upon submitting a pull request (or on each push if you have a fork with a "main" branch and actions enabled).

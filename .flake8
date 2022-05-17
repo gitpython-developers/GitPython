@@ -1,0 +1,35 @@
+[flake8]
+show-source = True
+count= True
+statistics = True
+# E265 = comment blocks like @{ section, which it can't handle
+# E266 = too many leading '#' for block comment
+# E731 = do not assign a lambda expression, use a def
+# W293 = Blank line contains whitespace
+# W504 = Line break after operator
+# E704 = multiple statements in one line  - used for @override
+# TC002 = move third party import to TYPE_CHECKING
+# ANN = flake8-annotations
+# TC, TC2 = flake8-type-checking
+# D = flake8-docstrings
+
+# select = C,E,F,W ANN, TC, TC2  # to enable code. Disabled if not listed, including builtin codes
+enable-extensions = TC, TC2  # only needed for extensions not enabled by default
+
+ignore = E265,E266,E731,E704,
+         W293, W504,
+         ANN0 ANN1 ANN2,
+         TC002,
+         TC0, TC1, TC2
+         # B,
+         A,
+         D,
+         RST, RST3
+max-line-length = 120
+
+exclude = .tox,.venv,build,dist,doc,git/ext/,test
+
+rst-roles =  # for flake8-RST-docstrings
+    attr,class,func,meth,mod,obj,ref,term,var  # used by sphinx
+
+min-python-version = 3.7.0

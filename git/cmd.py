@@ -947,7 +947,7 @@ class Git(LazyMixin):
                 )
         else:
             cmd_not_found_exception = (
-                FileNotFoundError 
+                FileNotFoundError  # NOQA # exists, flake8 unknown @UndefinedVariable
             )
         # end handle
 

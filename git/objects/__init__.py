@@ -1,6 +1,7 @@
 """
 Import all submodules main classes into the package space
 """
+# flake8: noqa
 import inspect
 
 from .base import *
