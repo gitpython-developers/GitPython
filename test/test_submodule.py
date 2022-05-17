@@ -9,20 +9,11 @@ import git
 from git.cmd import Git
 from git.compat import is_win
 from git.config import GitConfigParser, cp
-from git.exc import (
-    InvalidGitRepositoryError,
-    RepositoryDirtyError
-)
+from git.exc import InvalidGitRepositoryError, RepositoryDirtyError
 from git.objects.submodule.base import Submodule
 from git.objects.submodule.root import RootModule, RootUpdateProgress
-from git.repo.fun import (
-    find_submodule_git_dir,
-    touch
-)
-from test.lib import (
-    TestBase,
-    with_rw_repo
-)
+from git.repo.fun import find_submodule_git_dir, touch
+from test.lib import TestBase, with_rw_repo
 from test.lib import with_rw_directory
 from git.util import HIDE_WINDOWS_KNOWN_ERRORS
 from git.util import to_native_path_linux, join_path_native
@@ -32,7 +23,7 @@ import os.path as osp
 class TestRootProgress(RootUpdateProgress):
     """Just prints messages, for now without checking the correctness of the states"""
 
-    def update(self, op, cur_count, max_count, message=''):
+    def update(self, op, cur_count, max_count, message=""):
         print(op, cur_count, max_count, message)
 
 
@@ -40,9 +31,9 @@ prog = TestRootProgress()
 
 
 class TestSubmodule(TestBase):
-
     def tearDown(self):
         import gc
+
         gc.collect()
 
     k_subm_current = "c15a6e1923a14bc760851913858a3942a4193cdb"
@@ -54,7 +45,7 @@ class TestSubmodule(TestBase):
         # manual instantiation
         smm = Submodule(rwrepo, "\0" * 20)
         # name needs to be set in advance
-        self.assertRaises(AttributeError, getattr, smm, 'name')
+        self.assertRaises(AttributeError, getattr, smm, "name")
 
         # iterate - 1 submodule
         sms = Submodule.list_items(rwrepo, self.k_subm_current)
@@ -64,11 +55,13 @@ class TestSubmodule(TestBase):
         # at a different time, there is None
         assert len(Submodule.list_items(rwrepo, self.k_no_subm_tag)) == 0
 
-        assert sm.path == 'git/ext/gitdb'
-        assert sm.path != sm.name                   # in our case, we have ids there, which don't equal the path
-        assert sm.url.endswith('github.com/gitpython-developers/gitdb.git')
-        assert sm.branch_path == 'refs/heads/master'            # the default ...
-        assert sm.branch_name == 'master'
+        assert sm.path == "git/ext/gitdb"
+        assert (
+            sm.path != sm.name
+        )  # in our case, we have ids there, which don't equal the path
+        assert sm.url.endswith("github.com/gitpython-developers/gitdb.git")
+        assert sm.branch_path == "refs/heads/master"  # the default ...
+        assert sm.branch_name == "master"
         assert sm.parent_commit == rwrepo.head.commit
         # size is always 0
         assert sm.size == 0
@@ -76,7 +69,7 @@ class TestSubmodule(TestBase):
         self.assertRaises(InvalidGitRepositoryError, sm.module)
 
         # which is why we can't get the branch either - it points into the module() repository
-        self.assertRaises(InvalidGitRepositoryError, getattr, sm, 'branch')
+        self.assertRaises(InvalidGitRepositoryError, getattr, sm, "branch")
 
         # branch_path works, as its just a string
         assert isinstance(sm.branch_path, str)
@@ -84,16 +77,16 @@ class TestSubmodule(TestBase):
         # some commits earlier we still have a submodule, but its at a different commit
         smold = next(Submodule.iter_items(rwrepo, self.k_subm_changed))
         assert smold.binsha != sm.binsha
-        assert smold != sm                  # the name changed
+        assert smold != sm  # the name changed
 
         # force it to reread its information
-        del(smold._url)
+        del smold._url
         smold.url == sm.url  # @NoEffect
 
         # test config_reader/writer methods
         sm.config_reader()
-        new_smclone_path = None             # keep custom paths for later
-        new_csmclone_path = None                #
+        new_smclone_path = None  # keep custom paths for later
+        new_csmclone_path = None  #
         if rwrepo.bare:
             with self.assertRaises(InvalidGitRepositoryError):
                 with sm.config_writer() as cw:
@@ -101,10 +94,12 @@ class TestSubmodule(TestBase):
         else:
             with sm.config_writer() as writer:
                 # for faster checkout, set the url to the local path
-                new_smclone_path = Git.polish_url(osp.join(self.rorepo.working_tree_dir, sm.path))
-                writer.set_value('url', new_smclone_path)
+                new_smclone_path = Git.polish_url(
+                    osp.join(self.rorepo.working_tree_dir, sm.path)
+                )
+                writer.set_value("url", new_smclone_path)
                 writer.release()
-                assert sm.config_reader().get_value('url') == new_smclone_path
+                assert sm.config_reader().get_value("url") == new_smclone_path
                 assert sm.url == new_smclone_path
         # END handle bare repo
         smold.config_reader()
@@ -134,7 +129,9 @@ class TestSubmodule(TestBase):
         if rwrepo.bare:
             self.assertRaises(InvalidGitRepositoryError, sm.module)
             self.assertRaises(InvalidGitRepositoryError, sm.remove)
-            self.assertRaises(InvalidGitRepositoryError, sm.add, rwrepo, 'here', 'there')
+            self.assertRaises(
+                InvalidGitRepositoryError, sm.add, rwrepo, "here", "there"
+            )
         else:
             # its not checked out in our case
             self.assertRaises(InvalidGitRepositoryError, sm.module)
@@ -152,13 +149,15 @@ class TestSubmodule(TestBase):
             assert sma.path == sm.path
 
             # no url and no module at path fails
-            self.assertRaises(ValueError, Submodule.add, rwrepo, "newsubm", "pathtorepo", url=None)
+            self.assertRaises(
+                ValueError, Submodule.add, rwrepo, "newsubm", "pathtorepo", url=None
+            )
 
             # CONTINUE UPDATE
             #################
 
             # lets update it - its a recursive one too
-            newdir = osp.join(sm.abspath, 'dir')
+            newdir = osp.join(sm.abspath, "dir")
             os.makedirs(newdir)
 
             # update fails if the path already exists non-empty
@@ -170,7 +169,7 @@ class TestSubmodule(TestBase):
             assert not sm.module_exists()
 
             assert sm.update() is sm
-            sm_repopath = sm.path               # cache for later
+            sm_repopath = sm.path  # cache for later
             assert sm.module_exists()
             assert isinstance(sm.module(), git.Repo)
             assert sm.module().working_tree_dir == sm.abspath
@@ -179,7 +178,14 @@ class TestSubmodule(TestBase):
             #####################
             # url must match the one in the existing repository ( if submodule name suggests a new one )
             # or we raise
-            self.assertRaises(ValueError, Submodule.add, rwrepo, "newsubm", sm.path, "git://someurl/repo.git")
+            self.assertRaises(
+                ValueError,
+                Submodule.add,
+                rwrepo,
+                "newsubm",
+                sm.path,
+                "git://someurl/repo.git",
+            )
 
             # CONTINUE UPDATE
             #################
@@ -197,15 +203,17 @@ class TestSubmodule(TestBase):
 
             sm.update(recursive=False)
             assert len(list(rwrepo.iter_submodules())) == 2
-            assert len(sm.children()) == 1          # its not checked out yet
+            assert len(sm.children()) == 1  # its not checked out yet
             csm = sm.children()[0]
             assert not csm.module_exists()
             csm_repopath = csm.path
 
             # adjust the path of the submodules module to point to the local destination
-            new_csmclone_path = Git.polish_url(osp.join(self.rorepo.working_tree_dir, sm.path, csm.path))
+            new_csmclone_path = Git.polish_url(
+                osp.join(self.rorepo.working_tree_dir, sm.path, csm.path)
+            )
             with csm.config_writer() as writer:
-                writer.set_value('url', new_csmclone_path)
+                writer.set_value("url", new_csmclone_path)
             assert csm.url == new_csmclone_path
 
             # dry-run does nothing
@@ -226,26 +234,34 @@ class TestSubmodule(TestBase):
             # reset both heads to the previous version, verify that to_latest_revision works
             smods = (sm.module(), csm.module())
             for repo in smods:
-                repo.head.reset('HEAD~2', working_tree=1)
+                repo.head.reset("HEAD~2", working_tree=1)
             # END for each repo to reset
 
             # dry run does nothing
-            self.assertRaises(RepositoryDirtyError, sm.update, recursive=True, dry_run=True, progress=prog)
+            self.assertRaises(
+                RepositoryDirtyError,
+                sm.update,
+                recursive=True,
+                dry_run=True,
+                progress=prog,
+            )
             sm.update(recursive=True, dry_run=True, progress=prog, force=True)
             for repo in smods:
                 assert repo.head.commit != repo.head.ref.tracking_branch().commit
             # END for each repo to check
 
-            self.assertRaises(RepositoryDirtyError, sm.update, recursive=True, to_latest_revision=True)
+            self.assertRaises(
+                RepositoryDirtyError, sm.update, recursive=True, to_latest_revision=True
+            )
             sm.update(recursive=True, to_latest_revision=True, force=True)
             for repo in smods:
                 assert repo.head.commit == repo.head.ref.tracking_branch().commit
             # END for each repo to check
-            del(smods)
+            del smods
 
             # if the head is detached, it still works ( but warns )
             smref = sm.module().head.ref
-            sm.module().head.ref = 'HEAD~1'
+            sm.module().head.ref = "HEAD~1"
             # if there is no tracking branch, we get a warning as well
             csm_tracking_branch = csm.module().head.ref.tracking_branch()
             csm.module().head.ref.set_tracking_branch(None)
@@ -268,8 +284,10 @@ class TestSubmodule(TestBase):
             # to GitHub. To save time, we will change it to
             csm.set_parent_commit(csm.repo.head.commit)
             with csm.config_writer() as cw:
-                cw.set_value('url', self._small_repo_url())
-            csm.repo.index.commit("adjusted URL to point to local source, instead of the internet")
+                cw.set_value("url", self._small_repo_url())
+            csm.repo.index.commit(
+                "adjusted URL to point to local source, instead of the internet"
+            )
 
             # We have modified the configuration, hence the index is dirty, and the
             # deletion will fail
@@ -301,7 +319,7 @@ class TestSubmodule(TestBase):
 
             # but ... we have untracked files in the child submodule
             fn = join_path_native(csm.module().working_tree_dir, "newfile")
-            with open(fn, 'w') as fd:
+            with open(fn, "w") as fd:
                 fd.write("hi")
             self.assertRaises(InvalidGitRepositoryError, sm.remove)
 
@@ -323,14 +341,14 @@ class TestSubmodule(TestBase):
             sm.remove(configuration=False, force=True)
             assert sm.exists()
             assert not sm.module_exists()
-            assert sm.config_reader().get_value('url')
+            assert sm.config_reader().get_value("url")
 
             # delete the rest
             sm_path = sm.path
             sm.remove()
             assert not sm.exists()
             assert not sm.module_exists()
-            self.assertRaises(ValueError, getattr, sm, 'path')
+            self.assertRaises(ValueError, getattr, sm, "path")
 
             assert len(rwrepo.submodules) == 0
 
@@ -339,20 +357,35 @@ class TestSubmodule(TestBase):
             # add a simple remote repo - trailing slashes are no problem
             smid = "newsub"
             osmid = "othersub"
-            nsm = Submodule.add(rwrepo, smid, sm_repopath, new_smclone_path + "/", None, no_checkout=True)
+            nsm = Submodule.add(
+                rwrepo,
+                smid,
+                sm_repopath,
+                new_smclone_path + "/",
+                None,
+                no_checkout=True,
+            )
             assert nsm.name == smid
             assert nsm.module_exists()
             assert nsm.exists()
             # its not checked out
-            assert not osp.isfile(join_path_native(nsm.module().working_tree_dir, Submodule.k_modules_file))
+            assert not osp.isfile(
+                join_path_native(
+                    nsm.module().working_tree_dir, Submodule.k_modules_file
+                )
+            )
             assert len(rwrepo.submodules) == 1
 
             # add another submodule, but into the root, not as submodule
-            osm = Submodule.add(rwrepo, osmid, csm_repopath, new_csmclone_path, Submodule.k_head_default)
+            osm = Submodule.add(
+                rwrepo, osmid, csm_repopath, new_csmclone_path, Submodule.k_head_default
+            )
             assert osm != nsm
             assert osm.module_exists()
             assert osm.exists()
-            assert osp.isfile(join_path_native(osm.module().working_tree_dir, 'setup.py'))
+            assert osp.isfile(
+                join_path_native(osm.module().working_tree_dir, "setup.py")
+            )
 
             assert len(rwrepo.submodules) == 2
 
@@ -368,7 +401,9 @@ class TestSubmodule(TestBase):
             # MOVE MODULE
             #############
             # invalid input
-            self.assertRaises(ValueError, nsm.move, 'doesntmatter', module=False, configuration=False)
+            self.assertRaises(
+                ValueError, nsm.move, "doesntmatter", module=False, configuration=False
+            )
 
             # renaming to the same path does nothing
             assert nsm.move(sm_path) is nsm
@@ -377,14 +412,14 @@ class TestSubmodule(TestBase):
             nmp = join_path_native("new", "module", "dir") + "/"  # new module path
             pmp = nsm.path
             assert nsm.move(nmp) is nsm
-            nmp = nmp[:-1]          # cut last /
+            nmp = nmp[:-1]  # cut last /
             nmpl = to_native_path_linux(nmp)
             assert nsm.path == nmpl
             assert rwrepo.submodules[0].path == nmpl
 
-            mpath = 'newsubmodule'
+            mpath = "newsubmodule"
             absmpath = join_path_native(rwrepo.working_tree_dir, mpath)
-            open(absmpath, 'w').write('')
+            open(absmpath, "w").write("")
             self.assertRaises(ValueError, nsm.move, mpath)
             os.remove(absmpath)
 
@@ -402,11 +437,19 @@ class TestSubmodule(TestBase):
             for remote in osmod.remotes:
                 remote.remove(osmod, remote.name)
             assert not osm.exists()
-            self.assertRaises(ValueError, Submodule.add, rwrepo, osmid, csm_repopath, url=None)
+            self.assertRaises(
+                ValueError, Submodule.add, rwrepo, osmid, csm_repopath, url=None
+            )
         # END handle bare mode
 
         # Error if there is no submodule file here
-        self.assertRaises(IOError, Submodule._config_parser, rwrepo, rwrepo.commit(self.k_no_subm_tag), True)
+        self.assertRaises(
+            IOError,
+            Submodule._config_parser,
+            rwrepo,
+            rwrepo.commit(self.k_no_subm_tag),
+            True,
+        )
 
     # @skipIf(HIDE_WINDOWS_KNOWN_ERRORS,  ## ACTUALLY skipped by `git.submodule.base#L869`.
     #         "FIXME: fails with: PermissionError: [WinError 32] The process cannot access the file because"
@@ -420,11 +463,14 @@ class TestSubmodule(TestBase):
     def test_base_bare(self, rwrepo):
         self._do_base_tests(rwrepo)
 
-    @skipIf(HIDE_WINDOWS_KNOWN_ERRORS, """
+    @skipIf(
+        HIDE_WINDOWS_KNOWN_ERRORS,
+        """
         File "C:\\projects\\gitpython\\git\\cmd.py", line 559, in execute
         raise GitCommandNotFound(command, err)
         git.exc.GitCommandNotFound: Cmd('git') not found due to: OSError('[WinError 6] The handle is invalid')
-        cmdline: git clone -n --shared -v C:\\projects\\gitpython\\.git Users\\appveyor\\AppData\\Local\\Temp\\1\\tmplyp6kr_rnon_bare_test_root_module""")  # noqa E501
+        cmdline: git clone -n --shared -v C:\\projects\\gitpython\\.git Users\\appveyor\\AppData\\Local\\Temp\\1\\tmplyp6kr_rnon_bare_test_root_module""",
+    )  # noqa E501
     @with_rw_repo(k_subm_current, bare=False)
     def test_root_module(self, rwrepo):
         # Can query everything without problems
@@ -447,10 +493,12 @@ class TestSubmodule(TestBase):
 
         # deep traversal gitdb / async
         rsmsp = [sm.path for sm in rm.traverse()]
-        assert len(rsmsp) >= 2          # gitdb and async [and smmap], async being a child of gitdb
+        assert (
+            len(rsmsp) >= 2
+        )  # gitdb and async [and smmap], async being a child of gitdb
 
         # cannot set the parent commit as root module's path didn't exist
-        self.assertRaises(ValueError, rm.set_parent_commit, 'HEAD')
+        self.assertRaises(ValueError, rm.set_parent_commit, "HEAD")
 
         # TEST UPDATE
         #############
@@ -460,16 +508,18 @@ class TestSubmodule(TestBase):
 
         # modify path without modifying the index entry
         # ( which is what the move method would do properly )
-        #==================================================
+        # ==================================================
         sm = rm.children()[0]
         pp = "path/prefix"
         fp = join_path_native(pp, sm.path)
         prep = sm.path
-        assert not sm.module_exists()               # was never updated after rwrepo's clone
+        assert not sm.module_exists()  # was never updated after rwrepo's clone
 
         # assure we clone from a local source
         with sm.config_writer() as writer:
-            writer.set_value('url', Git.polish_url(osp.join(self.rorepo.working_tree_dir, sm.path)))
+            writer.set_value(
+                "url", Git.polish_url(osp.join(self.rorepo.working_tree_dir, sm.path))
+            )
 
         # dry-run does nothing
         sm.update(recursive=False, dry_run=True, progress=prog)
@@ -478,7 +528,9 @@ class TestSubmodule(TestBase):
         sm.update(recursive=False)
         assert sm.module_exists()
         with sm.config_writer() as writer:
-            writer.set_value('path', fp)    # change path to something with prefix AFTER url change
+            writer.set_value(
+                "path", fp
+            )  # change path to something with prefix AFTER url change
 
         # update doesn't fail, because list_items ignores the wrong path in such situations.
         rm.update(recursive=False)
@@ -488,7 +540,7 @@ class TestSubmodule(TestBase):
         self.assertRaises(InvalidGitRepositoryError, sm.move, pp)
         # reset the path(cache) to where it was, now it works
         sm.path = prep
-        sm.move(fp, module=False)       # leave it at the old location
+        sm.move(fp, module=False)  # leave it at the old location
 
         assert not sm.module_exists()
         cpathchange = rwrepo.index.commit("changed sm path")  # finally we can commit
@@ -499,12 +551,16 @@ class TestSubmodule(TestBase):
         assert sm.module_exists()
 
         # add submodule
-        #================
+        # ================
         nsmn = "newsubmodule"
         nsmp = "submrepo"
-        subrepo_url = Git.polish_url(osp.join(self.rorepo.working_tree_dir, rsmsp[0], rsmsp[1]))
+        subrepo_url = Git.polish_url(
+            osp.join(self.rorepo.working_tree_dir, rsmsp[0], rsmsp[1])
+        )
         nsm = Submodule.add(rwrepo, nsmn, nsmp, url=subrepo_url)
-        csmadded = rwrepo.index.commit("Added submodule").hexsha    # make sure we don't keep the repo reference
+        csmadded = rwrepo.index.commit(
+            "Added submodule"
+        ).hexsha  # make sure we don't keep the repo reference
         nsm.set_parent_commit(csmadded)
         assert nsm.module_exists()
         # in our case, the module should not exist, which happens if we update a parent
@@ -520,11 +576,11 @@ class TestSubmodule(TestBase):
         assert nsm.module_exists()
 
         # remove submodule - the previous one
-        #====================================
+        # ====================================
         sm.set_parent_commit(csmadded)
         smp = sm.abspath
         assert not sm.remove(module=False).exists()
-        assert osp.isdir(smp)           # module still exists
+        assert osp.isdir(smp)  # module still exists
         csmremoved = rwrepo.index.commit("Removed submodule")
 
         # an update will remove the module
@@ -535,37 +591,45 @@ class TestSubmodule(TestBase):
         # when removing submodules, we may get new commits as nested submodules are auto-committing changes
         # to allow deletions without force, as the index would be dirty otherwise.
         # QUESTION: Why does this seem to work in test_git_submodule_compatibility() ?
-        self.assertRaises(InvalidGitRepositoryError, rm.update, recursive=False, force_remove=False)
+        self.assertRaises(
+            InvalidGitRepositoryError, rm.update, recursive=False, force_remove=False
+        )
         rm.update(recursive=False, force_remove=True)
         assert not osp.isdir(smp)
 
         # 'apply work' to the nested submodule and assure this is not removed/altered during updates
         # Need to commit first, otherwise submodule.update wouldn't have a reason to change the head
-        touch(osp.join(nsm.module().working_tree_dir, 'new-file'))
+        touch(osp.join(nsm.module().working_tree_dir, "new-file"))
         # We cannot expect is_dirty to even run as we wouldn't reset a head to the same location
         assert nsm.module().head.commit.hexsha == nsm.hexsha
         nsm.module().index.add([nsm])
         nsm.module().index.commit("added new file")
-        rm.update(recursive=False, dry_run=True, progress=prog)  # would not change head, and thus doesn't fail
+        rm.update(
+            recursive=False, dry_run=True, progress=prog
+        )  # would not change head, and thus doesn't fail
         # Everything we can do from now on will trigger the 'future' check, so no is_dirty() check will even run
         # This would only run if our local branch is in the past and we have uncommitted changes
 
         prev_commit = nsm.module().head.commit
         rm.update(recursive=False, dry_run=False, progress=prog)
-        assert prev_commit == nsm.module().head.commit, "head shouldn't change, as it is in future of remote branch"
+        assert (
+            prev_commit == nsm.module().head.commit
+        ), "head shouldn't change, as it is in future of remote branch"
 
         # this kills the new file
         rm.update(recursive=True, progress=prog, force_reset=True)
-        assert prev_commit != nsm.module().head.commit, "head changed, as the remote url and its commit changed"
+        assert (
+            prev_commit != nsm.module().head.commit
+        ), "head changed, as the remote url and its commit changed"
 
         # change url ...
-        #===============
+        # ===============
         # ... to the first repository, this way we have a fast checkout, and a completely different
         # repository at the different url
         nsm.set_parent_commit(csmremoved)
         nsmurl = Git.polish_url(osp.join(self.rorepo.working_tree_dir, rsmsp[0]))
         with nsm.config_writer() as writer:
-            writer.set_value('url', nsmurl)
+            writer.set_value("url", nsmurl)
         csmpathchange = rwrepo.index.commit("changed url")
         nsm.set_parent_commit(csmpathchange)
 
@@ -579,7 +643,9 @@ class TestSubmodule(TestBase):
         assert nsm.module().remotes.origin.url == nsmurl
         assert prev_commit != nsm.module().head.commit, "Should now point to gitdb"
         assert len(rwrepo.submodules) == 1
-        assert not rwrepo.submodules[0].children()[0].module_exists(), "nested submodule should not be checked out"
+        assert (
+            not rwrepo.submodules[0].children()[0].module_exists()
+        ), "nested submodule should not be checked out"
 
         # add the submodule's changed commit to the index, which is what the
         # user would do
@@ -588,7 +654,7 @@ class TestSubmodule(TestBase):
         rwrepo.index.add([nsm])
 
         # change branch
-        #=================
+        # =================
         # we only have one branch, so we switch to a virtual one, and back
         # to the current one to trigger the difference
         cur_branch = nsm.branch
@@ -603,7 +669,7 @@ class TestSubmodule(TestBase):
 
         # Lets remove our tracking branch to simulate some changes
         nsmmh = nsmm.head
-        assert nsmmh.ref.tracking_branch() is None                  # never set it up until now
+        assert nsmmh.ref.tracking_branch() is None  # never set it up until now
         assert not nsmmh.is_detached
 
         # dry run does nothing
@@ -625,8 +691,8 @@ class TestSubmodule(TestBase):
         # assure we pull locally only
         nsmc = nsm.children()[0]
         with nsmc.config_writer() as writer:
-            writer.set_value('url', subrepo_url)
-        rm.update(recursive=True, progress=prog, dry_run=True)      # just to run the code
+            writer.set_value("url", subrepo_url)
+        rm.update(recursive=True, progress=prog, dry_run=True)  # just to run the code
         rm.update(recursive=True, progress=prog)
 
         # gitdb: has either 1 or 2 submodules depending on the version
@@ -636,41 +702,57 @@ class TestSubmodule(TestBase):
     def test_first_submodule(self, rwrepo):
         assert len(list(rwrepo.iter_submodules())) == 0
 
-        for sm_name, sm_path in (('first', 'submodules/first'),
-                                 ('second', osp.join(rwrepo.working_tree_dir, 'submodules/second'))):
-            sm = rwrepo.create_submodule(sm_name, sm_path, rwrepo.git_dir, no_checkout=True)
+        for sm_name, sm_path in (
+            ("first", "submodules/first"),
+            ("second", osp.join(rwrepo.working_tree_dir, "submodules/second")),
+        ):
+            sm = rwrepo.create_submodule(
+                sm_name, sm_path, rwrepo.git_dir, no_checkout=True
+            )
             assert sm.exists() and sm.module_exists()
             rwrepo.index.commit("Added submodule " + sm_name)
         # end for each submodule path to add
 
-        self.assertRaises(ValueError, rwrepo.create_submodule, 'fail', osp.expanduser('~'))
-        self.assertRaises(ValueError, rwrepo.create_submodule, 'fail-too',
-                          rwrepo.working_tree_dir + osp.sep)
+        self.assertRaises(
+            ValueError, rwrepo.create_submodule, "fail", osp.expanduser("~")
+        )
+        self.assertRaises(
+            ValueError,
+            rwrepo.create_submodule,
+            "fail-too",
+            rwrepo.working_tree_dir + osp.sep,
+        )
 
     @with_rw_directory
     def test_add_empty_repo(self, rwdir):
-        empty_repo_dir = osp.join(rwdir, 'empty-repo')
+        empty_repo_dir = osp.join(rwdir, "empty-repo")
 
-        parent = git.Repo.init(osp.join(rwdir, 'parent'))
+        parent = git.Repo.init(osp.join(rwdir, "parent"))
         git.Repo.init(empty_repo_dir)
 
         for checkout_mode in range(2):
-            name = 'empty' + str(checkout_mode)
-            self.assertRaises(ValueError, parent.create_submodule, name, name,
-                              url=empty_repo_dir, no_checkout=checkout_mode and True or False)
+            name = "empty" + str(checkout_mode)
+            self.assertRaises(
+                ValueError,
+                parent.create_submodule,
+                name,
+                name,
+                url=empty_repo_dir,
+                no_checkout=checkout_mode and True or False,
+            )
         # end for each checkout mode
 
     @with_rw_directory
     def test_list_only_valid_submodules(self, rwdir):
-        repo_path = osp.join(rwdir, 'parent')
+        repo_path = osp.join(rwdir, "parent")
         repo = git.Repo.init(repo_path)
-        repo.git.submodule('add', self._small_repo_url(), 'module')
+        repo.git.submodule("add", self._small_repo_url(), "module")
         repo.index.commit("add submodule")
 
         assert len(repo.submodules) == 1
 
         # Delete the directory from submodule
-        submodule_path = osp.join(repo_path, 'module')
+        submodule_path = osp.join(repo_path, "module")
         shutil.rmtree(submodule_path)
         repo.git.add([submodule_path])
         repo.index.commit("remove submodule")
@@ -678,18 +760,20 @@ class TestSubmodule(TestBase):
         repo = git.Repo(repo_path)
         assert len(repo.submodules) == 0
 
-    @skipIf(HIDE_WINDOWS_KNOWN_ERRORS,
-            """FIXME on cygwin: File "C:\\projects\\gitpython\\git\\cmd.py", line 671, in execute
+    @skipIf(
+        HIDE_WINDOWS_KNOWN_ERRORS,
+        """FIXME on cygwin: File "C:\\projects\\gitpython\\git\\cmd.py", line 671, in execute
                 raise GitCommandError(command, status, stderr_value, stdout_value)
             GitCommandError: Cmd('git') failed due to: exit code(128)
               cmdline: git add 1__Xava verbXXten 1_test _myfile 1_test_other_file 1_XXava-----verbXXten
               stderr: 'fatal: pathspec '"1__çava verböten"' did not match any files'
              FIXME on appveyor: see https://ci.appveyor.com/project/Byron/gitpython/build/1.0.185
-                """)
+                """,
+    )
     @with_rw_directory
     def test_git_submodules_and_add_sm_with_new_commit(self, rwdir):
-        parent = git.Repo.init(osp.join(rwdir, 'parent'))
-        parent.git.submodule('add', self._small_repo_url(), 'module')
+        parent = git.Repo.init(osp.join(rwdir, "parent"))
+        parent.git.submodule("add", self._small_repo_url(), "module")
         parent.index.commit("added submodule")
 
         assert len(parent.submodules) == 1
@@ -697,9 +781,11 @@ class TestSubmodule(TestBase):
 
         assert sm.exists() and sm.module_exists()
 
-        clone = git.Repo.clone_from(self._small_repo_url(),
-                                    osp.join(parent.working_tree_dir, 'existing-subrepository'))
-        sm2 = parent.create_submodule('nongit-file-submodule', clone.working_tree_dir)
+        clone = git.Repo.clone_from(
+            self._small_repo_url(),
+            osp.join(parent.working_tree_dir, "existing-subrepository"),
+        )
+        sm2 = parent.create_submodule("nongit-file-submodule", clone.working_tree_dir)
         assert len(parent.submodules) == 2
 
         for _ in range(2):
@@ -709,26 +795,28 @@ class TestSubmodule(TestBase):
             # end for each init state
         # end for each iteration
 
-        sm.move(sm.path + '_moved')
-        sm2.move(sm2.path + '_moved')
+        sm.move(sm.path + "_moved")
+        sm2.move(sm2.path + "_moved")
 
         parent.index.commit("moved submodules")
 
         with sm.config_writer() as writer:
-            writer.set_value('user.email', 'example@example.com')
-            writer.set_value('user.name', 'me')
+            writer.set_value("user.email", "example@example.com")
+            writer.set_value("user.name", "me")
         smm = sm.module()
-        fp = osp.join(smm.working_tree_dir, 'empty-file')
-        with open(fp, 'w'):
+        fp = osp.join(smm.working_tree_dir, "empty-file")
+        with open(fp, "w"):
             pass
         smm.git.add(Git.polish_url(fp))
         smm.git.commit(m="new file added")
 
         # submodules are retrieved from the current commit's tree, therefore we can't really get a new submodule
         # object pointing to the new submodule commit
-        sm_too = parent.submodules['module_moved']
+        sm_too = parent.submodules["module_moved"]
         assert parent.head.commit.tree[sm.path].binsha == sm.binsha
-        assert sm_too.binsha == sm.binsha, "cached submodule should point to the same commit as updated one"
+        assert (
+            sm_too.binsha == sm.binsha
+        ), "cached submodule should point to the same commit as updated one"
 
         added_bies = parent.index.add([sm])  # added base-index-entries
         assert len(added_bies) == 1
@@ -751,21 +839,24 @@ class TestSubmodule(TestBase):
     #         "'C:\\Users\\appveyor\\AppData\\Local\\Temp\\1\\test_work_tree_unsupportedryfa60di\\master_repo\\.git\\objects\\pack\\pack-bc9e0787aef9f69e1591ef38ea0a6f566ec66fe3.idx")  # noqa E501
     @with_rw_directory
     def test_git_submodule_compatibility(self, rwdir):
-        parent = git.Repo.init(osp.join(rwdir, 'parent'))
-        sm_path = join_path_native('submodules', 'intermediate', 'one')
-        sm = parent.create_submodule('mymodules/myname', sm_path, url=self._small_repo_url())
+        parent = git.Repo.init(osp.join(rwdir, "parent"))
+        sm_path = join_path_native("submodules", "intermediate", "one")
+        sm = parent.create_submodule(
+            "mymodules/myname", sm_path, url=self._small_repo_url()
+        )
         parent.index.commit("added submodule")
 
         def assert_exists(sm, value=True):
             assert sm.exists() == value
             assert sm.module_exists() == value
+
         # end
 
         # As git is backwards compatible itself, it would still recognize what we do here ... unless we really
         # muss it up. That's the only reason why the test is still here ... .
         assert len(parent.git.submodule().splitlines()) == 1
 
-        module_repo_path = osp.join(sm.module().working_tree_dir, '.git')
+        module_repo_path = osp.join(sm.module().working_tree_dir, ".git")
         assert module_repo_path.startswith(osp.join(parent.working_tree_dir, sm_path))
         if not sm._need_gitfile_submodules(parent.git):
             assert osp.isdir(module_repo_path)
@@ -773,17 +864,22 @@ class TestSubmodule(TestBase):
         else:
             assert osp.isfile(module_repo_path)
             assert sm.module().has_separate_working_tree()
-            assert find_submodule_git_dir(module_repo_path) is not None, "module pointed to by .git file must be valid"
+            assert (
+                find_submodule_git_dir(module_repo_path) is not None
+            ), "module pointed to by .git file must be valid"
         # end verify submodule 'style'
 
         # test move
-        new_sm_path = join_path_native('submodules', 'one')
+        new_sm_path = join_path_native("submodules", "one")
         sm.move(new_sm_path)
         assert_exists(sm)
 
         # Add additional submodule level
-        csm = sm.module().create_submodule('nested-submodule', join_path_native('nested-submodule', 'working-tree'),
-                                           url=self._small_repo_url())
+        csm = sm.module().create_submodule(
+            "nested-submodule",
+            join_path_native("nested-submodule", "working-tree"),
+            url=self._small_repo_url(),
+        )
         sm.module().index.commit("added nested submodule")
         sm_head_commit = sm.module().commit()
         assert_exists(csm)
@@ -796,24 +892,36 @@ class TestSubmodule(TestBase):
 
         # rename nested submodule
         # This name would move itself one level deeper - needs special handling internally
-        new_name = csm.name + '/mine'
+        new_name = csm.name + "/mine"
         assert csm.rename(new_name).name == new_name
         assert_exists(csm)
-        assert csm.repo.is_dirty(index=True, working_tree=False), "index must contain changed .gitmodules file"
+        assert csm.repo.is_dirty(
+            index=True, working_tree=False
+        ), "index must contain changed .gitmodules file"
         csm.repo.index.commit("renamed module")
 
         # keep_going evaluation
         rsm = parent.submodule_update()
         assert_exists(sm)
         assert_exists(csm)
-        with csm.config_writer().set_value('url', 'bar'):
+        with csm.config_writer().set_value("url", "bar"):
             pass
-        csm.repo.index.commit("Have to commit submodule change for algorithm to pick it up")
-        assert csm.url == 'bar'
+        csm.repo.index.commit(
+            "Have to commit submodule change for algorithm to pick it up"
+        )
+        assert csm.url == "bar"
 
-        self.assertRaises(Exception, rsm.update, recursive=True, to_latest_revision=True, progress=prog)
+        self.assertRaises(
+            Exception,
+            rsm.update,
+            recursive=True,
+            to_latest_revision=True,
+            progress=prog,
+        )
         assert_exists(csm)
-        rsm.update(recursive=True, to_latest_revision=True, progress=prog, keep_going=True)
+        rsm.update(
+            recursive=True, to_latest_revision=True, progress=prog, keep_going=True
+        )
 
         # remove
         sm_module_path = sm.module().git_dir
@@ -826,8 +934,8 @@ class TestSubmodule(TestBase):
 
     @with_rw_directory
     def test_remove_norefs(self, rwdir):
-        parent = git.Repo.init(osp.join(rwdir, 'parent'))
-        sm_name = 'mymodules/myname'
+        parent = git.Repo.init(osp.join(rwdir, "parent"))
+        sm_name = "mymodules/myname"
         sm = parent.create_submodule(sm_name, sm_name, url=self._small_repo_url())
         assert sm.exists()
 
@@ -835,24 +943,26 @@ class TestSubmodule(TestBase):
 
         assert sm.repo is parent  # yoh was surprised since expected sm repo!!
         # so created a new instance for submodule
-        smrepo = git.Repo(osp.join(rwdir, 'parent', sm.path))
+        smrepo = git.Repo(osp.join(rwdir, "parent", sm.path))
         # Adding a remote without fetching so would have no references
-        smrepo.create_remote('special', 'git@server-shouldnotmatter:repo.git')
+        smrepo.create_remote("special", "git@server-shouldnotmatter:repo.git")
         # And we should be able to remove it just fine
         sm.remove()
         assert not sm.exists()
 
     @with_rw_directory
     def test_rename(self, rwdir):
-        parent = git.Repo.init(osp.join(rwdir, 'parent'))
-        sm_name = 'mymodules/myname'
+        parent = git.Repo.init(osp.join(rwdir, "parent"))
+        sm_name = "mymodules/myname"
         sm = parent.create_submodule(sm_name, sm_name, url=self._small_repo_url())
         parent.index.commit("Added submodule")
 
         assert sm.rename(sm_name) is sm and sm.name == sm_name
-        assert not sm.repo.is_dirty(index=True, working_tree=False, untracked_files=False)
+        assert not sm.repo.is_dirty(
+            index=True, working_tree=False, untracked_files=False
+        )
 
-        new_path = 'renamed/myname'
+        new_path = "renamed/myname"
         assert sm.move(new_path).name == new_path
 
         new_sm_name = "shortname"
@@ -861,8 +971,12 @@ class TestSubmodule(TestBase):
         assert sm.exists()
 
         sm_mod = sm.module()
-        if osp.isfile(osp.join(sm_mod.working_tree_dir, '.git')) == sm._need_gitfile_submodules(parent.git):
-            assert sm_mod.git_dir.endswith(join_path_native('.git', 'modules', new_sm_name))
+        if osp.isfile(
+            osp.join(sm_mod.working_tree_dir, ".git")
+        ) == sm._need_gitfile_submodules(parent.git):
+            assert sm_mod.git_dir.endswith(
+                join_path_native(".git", "modules", new_sm_name)
+            )
         # end
 
     @with_rw_directory
@@ -870,33 +984,41 @@ class TestSubmodule(TestBase):
         # Setup initial sandbox:
         # parent repo has one submodule, which has all the latest changes
         source_url = self._small_repo_url()
-        sm_source_repo = git.Repo.clone_from(source_url, osp.join(rw_dir, 'sm-source'), b='master')
-        parent_repo = git.Repo.init(osp.join(rw_dir, 'parent'))
-        sm = parent_repo.create_submodule('mysubmodule', 'subdir/submodule',
-                                          sm_source_repo.working_tree_dir, branch='master')
-        parent_repo.index.commit('added submodule')
+        sm_source_repo = git.Repo.clone_from(
+            source_url, osp.join(rw_dir, "sm-source"), b="master"
+        )
+        parent_repo = git.Repo.init(osp.join(rw_dir, "parent"))
+        sm = parent_repo.create_submodule(
+            "mysubmodule",
+            "subdir/submodule",
+            sm_source_repo.working_tree_dir,
+            branch="master",
+        )
+        parent_repo.index.commit("added submodule")
         assert sm.exists()
 
         # Create feature branch with one new commit in submodule source
-        sm_fb = sm_source_repo.create_head('feature')
+        sm_fb = sm_source_repo.create_head("feature")
         sm_fb.checkout()
-        new_file = touch(osp.join(sm_source_repo.working_tree_dir, 'new-file'))
+        new_file = touch(osp.join(sm_source_repo.working_tree_dir, "new-file"))
         sm_source_repo.index.add([new_file])
         sm.repo.index.commit("added new file")
 
         # change designated submodule checkout branch to the new upstream feature branch
         with sm.config_writer() as smcw:
-            smcw.set_value('branch', sm_fb.name)
+            smcw.set_value("branch", sm_fb.name)
         assert sm.repo.is_dirty(index=True, working_tree=False)
         sm.repo.index.commit("changed submodule branch to '%s'" % sm_fb)
 
         # verify submodule update with feature branch that leaves currently checked out branch in it's past
         sm_mod = sm.module()
         prev_commit = sm_mod.commit()
-        assert sm_mod.head.ref.name == 'master'
+        assert sm_mod.head.ref.name == "master"
         assert parent_repo.submodule_update()
         assert sm_mod.head.ref.name == sm_fb.name
-        assert sm_mod.commit() == prev_commit, "Without to_latest_revision, we don't change the commit"
+        assert (
+            sm_mod.commit() == prev_commit
+        ), "Without to_latest_revision, we don't change the commit"
 
         assert parent_repo.submodule_update(to_latest_revision=True)
         assert sm_mod.head.ref.name == sm_fb.name
@@ -904,25 +1026,29 @@ class TestSubmodule(TestBase):
 
         # Create new branch which is in our past, and thus seemingly unrelated to the currently checked out one
         # To make it even 'harder', we shall fork and create a new commit
-        sm_pfb = sm_source_repo.create_head('past-feature', commit='HEAD~20')
+        sm_pfb = sm_source_repo.create_head("past-feature", commit="HEAD~20")
         sm_pfb.checkout()
-        sm_source_repo.index.add([touch(osp.join(sm_source_repo.working_tree_dir, 'new-file'))])
+        sm_source_repo.index.add(
+            [touch(osp.join(sm_source_repo.working_tree_dir, "new-file"))]
+        )
         sm_source_repo.index.commit("new file added, to past of '%r'" % sm_fb)
 
         # Change designated submodule checkout branch to a new commit in its own past
         with sm.config_writer() as smcw:
-            smcw.set_value('branch', sm_pfb.path)
+            smcw.set_value("branch", sm_pfb.path)
         sm.repo.index.commit("changed submodule branch to '%s'" % sm_pfb)
 
         # Test submodule updates - must fail if submodule is dirty
-        touch(osp.join(sm_mod.working_tree_dir, 'unstaged file'))
+        touch(osp.join(sm_mod.working_tree_dir, "unstaged file"))
         # This doesn't fail as our own submodule binsha didn't change, and the reset is only triggered if
         # to latest revision is True.
         parent_repo.submodule_update(to_latest_revision=False)
         sm_mod.head.ref.name == sm_pfb.name, "should have been switched to past head"
         sm_mod.commit() == sm_fb.commit, "Head wasn't reset"
 
-        self.assertRaises(RepositoryDirtyError, parent_repo.submodule_update, to_latest_revision=True)
+        self.assertRaises(
+            RepositoryDirtyError, parent_repo.submodule_update, to_latest_revision=True
+        )
         parent_repo.submodule_update(to_latest_revision=True, force_reset=True)
         assert sm_mod.commit() == sm_pfb.commit, "Now head should have been reset"
         assert sm_mod.head.ref.name == sm_pfb.name
@@ -930,83 +1056,116 @@ class TestSubmodule(TestBase):
     @skipIf(not is_win, "Specifically for Windows.")
     def test_to_relative_path_with_super_at_root_drive(self):
         class Repo(object):
-            working_tree_dir = 'D:\\'
-        super_repo = Repo()
-        submodule_path = 'D:\\submodule_path'
-        relative_path = Submodule._to_relative_path(super_repo, submodule_path)
-        msg = '_to_relative_path should be "submodule_path" but was "%s"' % relative_path
-        assert relative_path == 'submodule_path', msg
+            working_tree_dir = "D:\\"
 
-    @skipIf(True, 'for some unknown reason the assertion fails, even though it in fact is working in more common setup')
+        super_repo = Repo()
+        submodule_path = "D:\\submodule_path"
+        relative_path = Submodule._to_relative_path(super_repo, submodule_path)
+        msg = (
+            '_to_relative_path should be "submodule_path" but was "%s"' % relative_path
+        )
+        assert relative_path == "submodule_path", msg
+
+    @skipIf(
+        True,
+        "for some unknown reason the assertion fails, even though it in fact is working in more common setup",
+    )
     @with_rw_directory
     def test_depth(self, rwdir):
-        parent = git.Repo.init(osp.join(rwdir, 'test_depth'))
-        sm_name = 'mymodules/myname'
+        parent = git.Repo.init(osp.join(rwdir, "test_depth"))
+        sm_name = "mymodules/myname"
         sm_depth = 1
-        sm = parent.create_submodule(sm_name, sm_name, url=self._small_repo_url(), depth=sm_depth)
+        sm = parent.create_submodule(
+            sm_name, sm_name, url=self._small_repo_url(), depth=sm_depth
+        )
         self.assertEqual(len(list(sm.module().iter_commits())), sm_depth)
 
     @with_rw_directory
     def test_update_clone_multi_options_argument(self, rwdir):
-        #Arrange
-        parent = git.Repo.init(osp.join(rwdir, 'parent'))
-        sm_name = 'foo'
+        # Arrange
+        parent = git.Repo.init(osp.join(rwdir, "parent"))
+        sm_name = "foo"
         sm_url = self._small_repo_url()
-        sm_branch = 'refs/heads/master'
+        sm_branch = "refs/heads/master"
         sm_hexsha = git.Repo(self._small_repo_url()).head.commit.hexsha
-        sm = Submodule(parent, bytes.fromhex(sm_hexsha), name=sm_name, path=sm_name, url=sm_url,
-                       branch_path=sm_branch)
+        sm = Submodule(
+            parent,
+            bytes.fromhex(sm_hexsha),
+            name=sm_name,
+            path=sm_name,
+            url=sm_url,
+            branch_path=sm_branch,
+        )
 
-        #Act
-        sm.update(init=True, clone_multi_options=['--config core.eol=true'])
+        # Act
+        sm.update(init=True, clone_multi_options=["--config core.eol=true"])
 
-        #Assert
-        sm_config = GitConfigParser(file_or_files=osp.join(parent.git_dir, 'modules', sm_name, 'config'))
-        self.assertTrue(sm_config.get_value('core', 'eol'))
+        # Assert
+        sm_config = GitConfigParser(
+            file_or_files=osp.join(parent.git_dir, "modules", sm_name, "config")
+        )
+        self.assertTrue(sm_config.get_value("core", "eol"))
 
     @with_rw_directory
     def test_update_no_clone_multi_options_argument(self, rwdir):
-        #Arrange
-        parent = git.Repo.init(osp.join(rwdir, 'parent'))
-        sm_name = 'foo'
+        # Arrange
+        parent = git.Repo.init(osp.join(rwdir, "parent"))
+        sm_name = "foo"
         sm_url = self._small_repo_url()
-        sm_branch = 'refs/heads/master'
+        sm_branch = "refs/heads/master"
         sm_hexsha = git.Repo(self._small_repo_url()).head.commit.hexsha
-        sm = Submodule(parent, bytes.fromhex(sm_hexsha), name=sm_name, path=sm_name, url=sm_url,
-                       branch_path=sm_branch)
+        sm = Submodule(
+            parent,
+            bytes.fromhex(sm_hexsha),
+            name=sm_name,
+            path=sm_name,
+            url=sm_url,
+            branch_path=sm_branch,
+        )
 
-        #Act
+        # Act
         sm.update(init=True)
 
-        #Assert
-        sm_config = GitConfigParser(file_or_files=osp.join(parent.git_dir, 'modules', sm_name, 'config'))
+        # Assert
+        sm_config = GitConfigParser(
+            file_or_files=osp.join(parent.git_dir, "modules", sm_name, "config")
+        )
         with self.assertRaises(cp.NoOptionError):
-            sm_config.get_value('core', 'eol')
+            sm_config.get_value("core", "eol")
 
     @with_rw_directory
     def test_add_clone_multi_options_argument(self, rwdir):
-        #Arrange
-        parent = git.Repo.init(osp.join(rwdir, 'parent'))
-        sm_name = 'foo'
+        # Arrange
+        parent = git.Repo.init(osp.join(rwdir, "parent"))
+        sm_name = "foo"
 
-        #Act
-        Submodule.add(parent, sm_name, sm_name, url=self._small_repo_url(),
-                      clone_multi_options=['--config core.eol=true'])
+        # Act
+        Submodule.add(
+            parent,
+            sm_name,
+            sm_name,
+            url=self._small_repo_url(),
+            clone_multi_options=["--config core.eol=true"],
+        )
 
-        #Assert
-        sm_config = GitConfigParser(file_or_files=osp.join(parent.git_dir, 'modules', sm_name, 'config'))
-        self.assertTrue(sm_config.get_value('core', 'eol'))
+        # Assert
+        sm_config = GitConfigParser(
+            file_or_files=osp.join(parent.git_dir, "modules", sm_name, "config")
+        )
+        self.assertTrue(sm_config.get_value("core", "eol"))
 
     @with_rw_directory
     def test_add_no_clone_multi_options_argument(self, rwdir):
-        #Arrange
-        parent = git.Repo.init(osp.join(rwdir, 'parent'))
-        sm_name = 'foo'
+        # Arrange
+        parent = git.Repo.init(osp.join(rwdir, "parent"))
+        sm_name = "foo"
 
-        #Act
+        # Act
         Submodule.add(parent, sm_name, sm_name, url=self._small_repo_url())
 
-        #Assert
-        sm_config = GitConfigParser(file_or_files=osp.join(parent.git_dir, 'modules', sm_name, 'config'))
+        # Assert
+        sm_config = GitConfigParser(
+            file_or_files=osp.join(parent.git_dir, "modules", sm_name, "config")
+        )
         with self.assertRaises(cp.NoOptionError):
-            sm_config.get_value('core', 'eol')
+            sm_config.get_value("core", "eol")

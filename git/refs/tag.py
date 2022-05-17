@@ -36,22 +36,27 @@ class TagReference(Reference):
     _common_path_default = Reference._common_path_default + "/" + _common_default
 
     @property
-    def commit(self) -> 'Commit':  # type: ignore[override]  # LazyMixin has unrelated commit method
+    def commit(self) -> "Commit":  # type: ignore[override]  # LazyMixin has unrelated commit method
         """:return: Commit object the tag ref points to
 
         :raise ValueError: if the tag points to a tree or blob"""
         obj = self.object
-        while obj.type != 'commit':
+        while obj.type != "commit":
             if obj.type == "tag":
                 # it is a tag object which carries the commit as an object - we can point to anything
                 obj = obj.object
             else:
-                raise ValueError(("Cannot resolve commit as tag %s points to a %s object - " +
-                                  "use the `.object` property instead to access it") % (self, obj.type))
+                raise ValueError(
+                    (
+                        "Cannot resolve commit as tag %s points to a %s object - "
+                        + "use the `.object` property instead to access it"
+                    )
+                    % (self, obj.type)
+                )
         return obj
 
     @property
-    def tag(self) -> Union['TagObject', None]:
+    def tag(self) -> Union["TagObject", None]:
         """
         :return: Tag object this tag ref points to or None in case
             we are a light weight tag"""
@@ -69,10 +74,15 @@ class TagReference(Reference):
         return Reference._get_object(self)
 
     @classmethod
-    def create(cls: Type['TagReference'], repo: 'Repo', path: PathLike,
-               reference: Union[str, 'SymbolicReference'] = 'HEAD',
-               logmsg: Union[str, None] = None,
-               force: bool = False, **kwargs: Any) -> 'TagReference':
+    def create(
+        cls: Type["TagReference"],
+        repo: "Repo",
+        path: PathLike,
+        reference: Union[str, "SymbolicReference"] = "HEAD",
+        logmsg: Union[str, None] = None,
+        force: bool = False,
+        **kwargs: Any
+    ) -> "TagReference":
         """Create a new tag reference.
 
         :param path:
@@ -100,16 +110,16 @@ class TagReference(Reference):
             Additional keyword arguments to be passed to git-tag
 
         :return: A new TagReference"""
-        if 'ref' in kwargs and kwargs['ref']:
-            reference = kwargs['ref']
+        if "ref" in kwargs and kwargs["ref"]:
+            reference = kwargs["ref"]
 
         if logmsg:
-            kwargs['m'] = logmsg
-        elif 'message' in kwargs and kwargs['message']:
-            kwargs['m'] = kwargs['message']
+            kwargs["m"] = logmsg
+        elif "message" in kwargs and kwargs["message"]:
+            kwargs["m"] = kwargs["message"]
 
         if force:
-            kwargs['f'] = True
+            kwargs["f"] = True
 
         args = (path, reference)
 
@@ -117,7 +127,7 @@ class TagReference(Reference):
         return TagReference(repo, "%s/%s" % (cls._common_path_default, path))
 
     @classmethod
-    def delete(cls, repo: 'Repo', *tags: 'TagReference') -> None:  # type: ignore[override]
+    def delete(cls, repo: "Repo", *tags: "TagReference") -> None:  # type: ignore[override]
         """Delete the given existing tag or tags"""
         repo.git.tag("-d", *tags)
 

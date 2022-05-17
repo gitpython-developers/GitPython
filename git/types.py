@@ -4,14 +4,38 @@
 
 import os
 import sys
-from typing import (Callable, Dict, NoReturn, Sequence, Tuple, Union, Any, Iterator,       # noqa: F401
-                    NamedTuple, TYPE_CHECKING, TypeVar)       # noqa: F401
+from typing import (
+    Callable,
+    Dict,
+    NoReturn,
+    Sequence,
+    Tuple,
+    Union,
+    Any,
+    Iterator,  # noqa: F401
+    NamedTuple,
+    TYPE_CHECKING,
+    TypeVar,
+)  # noqa: F401
 
 if sys.version_info[:2] >= (3, 8):
-    from typing import Final, Literal, SupportsIndex, TypedDict, Protocol, runtime_checkable  # noqa: F401
+    from typing import (
+        Final,
+        Literal,
+        SupportsIndex,
+        TypedDict,
+        Protocol,
+        runtime_checkable,
+    )  # noqa: F401
 else:
-    from typing_extensions import (Final, Literal, SupportsIndex,                           # noqa: F401
-                                   TypedDict, Protocol, runtime_checkable)  # noqa: F401
+    from typing_extensions import (
+        Final,
+        Literal,
+        SupportsIndex,  # noqa: F401
+        TypedDict,
+        Protocol,
+        runtime_checkable,
+    )  # noqa: F401
 
 # if sys.version_info[:2] >= (3, 10):
 #     from typing import TypeGuard  # noqa: F401
@@ -28,18 +52,19 @@ elif sys.version_info[:2] >= (3, 9):
 if TYPE_CHECKING:
     from git.repo import Repo
     from git.objects import Commit, Tree, TagObject, Blob
+
     # from git.refs import SymbolicReference
 
 TBD = Any
-_T = TypeVar('_T')
+_T = TypeVar("_T")
 
-Tree_ish = Union['Commit', 'Tree']
-Commit_ish = Union['Commit', 'TagObject', 'Blob', 'Tree']
-Lit_commit_ish = Literal['commit', 'tag', 'blob', 'tree']
+Tree_ish = Union["Commit", "Tree"]
+Commit_ish = Union["Commit", "TagObject", "Blob", "Tree"]
+Lit_commit_ish = Literal["commit", "tag", "blob", "tree"]
 
 # Config_levels ---------------------------------------------------------
 
-Lit_config_levels = Literal['system', 'global', 'user', 'repository']
+Lit_config_levels = Literal["system", "global", "user", "repository"]
 
 
 # def is_config_level(inp: str) -> TypeGuard[Lit_config_levels]:
@@ -47,12 +72,16 @@ Lit_config_levels = Literal['system', 'global', 'user', 'repository']
 #     return inp in ("system", "user", "global", "repository")
 
 
-ConfigLevels_Tup = Tuple[Literal['system'], Literal['user'], Literal['global'], Literal['repository']]
+ConfigLevels_Tup = Tuple[
+    Literal["system"], Literal["user"], Literal["global"], Literal["repository"]
+]
 
-#-----------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------------
 
 
-def assert_never(inp: NoReturn, raise_error: bool = True, exc: Union[Exception, None] = None) -> None:
+def assert_never(
+    inp: NoReturn, raise_error: bool = True, exc: Union[Exception, None] = None
+) -> None:
     """For use in exhaustive checking of literal or Enum in if/else chain.
     Should only be reached if all members not handled OR attempt to pass non-members through chain.
 
@@ -63,7 +92,9 @@ def assert_never(inp: NoReturn, raise_error: bool = True, exc: Union[Exception, 
     """
     if raise_error:
         if exc is None:
-            raise ValueError(f"An unhandled Literal ({inp}) in an if/else chain was found")
+            raise ValueError(
+                f"An unhandled Literal ({inp}) in an if/else chain was found"
+            )
         else:
             raise exc
     else:
@@ -90,7 +121,7 @@ class HSH_TD(TypedDict):
 
 @runtime_checkable
 class Has_Repo(Protocol):
-    repo: 'Repo'
+    repo: "Repo"
 
 
 @runtime_checkable

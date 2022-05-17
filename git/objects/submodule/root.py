@@ -1,7 +1,4 @@
-from .base import (
-    Submodule,
-    UpdateProgress
-)
+from .base import Submodule, UpdateProgress
 from .util import find_first_remote_branch
 from git.exc import InvalidGitRepositoryError
 import git
@@ -22,14 +19,17 @@ if TYPE_CHECKING:
 
 __all__ = ["RootModule", "RootUpdateProgress"]
 
-log = logging.getLogger('git.objects.submodule.root')
+log = logging.getLogger("git.objects.submodule.root")
 log.addHandler(logging.NullHandler())
 
 
 class RootUpdateProgress(UpdateProgress):
     """Utility class which adds more opcodes to the UpdateProgress"""
+
     REMOVE, PATHCHANGE, BRANCHCHANGE, URLCHANGE = [
-        1 << x for x in range(UpdateProgress._num_op_codes, UpdateProgress._num_op_codes + 4)]
+        1 << x
+        for x in range(UpdateProgress._num_op_codes, UpdateProgress._num_op_codes + 4)
+    ]
     _num_op_codes = UpdateProgress._num_op_codes + 4
 
     __slots__ = ()
@@ -50,32 +50,39 @@ class RootModule(Submodule):
 
     __slots__ = ()
 
-    k_root_name = '__ROOT__'
+    k_root_name = "__ROOT__"
 
-    def __init__(self, repo: 'Repo'):
+    def __init__(self, repo: "Repo"):
         # repo, binsha, mode=None, path=None, name = None, parent_commit=None, url=None, ref=None)
         super(RootModule, self).__init__(
             repo,
             binsha=self.NULL_BIN_SHA,
             mode=self.k_default_mode,
-            path='',
+            path="",
             name=self.k_root_name,
             parent_commit=repo.head.commit,
-            url='',
-            branch_path=git.Head.to_full_path(self.k_head_default)
+            url="",
+            branch_path=git.Head.to_full_path(self.k_head_default),
         )
 
     def _clear_cache(self) -> None:
         """May not do anything"""
         pass
 
-    #{ Interface
+    # { Interface
 
-    def update(self, previous_commit: Union[Commit_ish, None] = None,                    # type: ignore[override]
-               recursive: bool = True, force_remove: bool = False, init: bool = True,
-               to_latest_revision: bool = False, progress: Union[None, 'RootUpdateProgress'] = None,
-               dry_run: bool = False, force_reset: bool = False, keep_going: bool = False
-               ) -> 'RootModule':
+    def update(
+        self,
+        previous_commit: Union[Commit_ish, None] = None,  # type: ignore[override]
+        recursive: bool = True,
+        force_remove: bool = False,
+        init: bool = True,
+        to_latest_revision: bool = False,
+        progress: Union[None, "RootUpdateProgress"] = None,
+        dry_run: bool = False,
+        force_reset: bool = False,
+        keep_going: bool = False,
+    ) -> "RootModule":
         """Update the submodules of this repository to the current HEAD commit.
         This method behaves smartly by determining changes of the path of a submodules
         repository, next to changes to the to-be-checked-out commit or the branch to be
@@ -109,16 +116,18 @@ class RootModule(Submodule):
             In conjunction with dry_run, it can be useful to anticipate all errors when updating submodules
         :return: self"""
         if self.repo.bare:
-            raise InvalidGitRepositoryError("Cannot update submodules in bare repositories")
+            raise InvalidGitRepositoryError(
+                "Cannot update submodules in bare repositories"
+            )
         # END handle bare
 
         if progress is None:
             progress = RootUpdateProgress()
         # END assure progress is set
 
-        prefix = ''
+        prefix = ""
         if dry_run:
-            prefix = 'DRY-RUN: '
+            prefix = "DRY-RUN: "
 
         repo = self.repo
 
@@ -137,17 +146,19 @@ class RootModule(Submodule):
                     previous_commit = cur_commit
                 # END exception handling
             else:
-                previous_commit = repo.commit(previous_commit)   # obtain commit object
+                previous_commit = repo.commit(previous_commit)  # obtain commit object
             # END handle previous commit
 
-            psms: 'IterableList[Submodule]' = self.list_items(repo, parent_commit=previous_commit)
-            sms: 'IterableList[Submodule]' = self.list_items(repo)
+            psms: "IterableList[Submodule]" = self.list_items(
+                repo, parent_commit=previous_commit
+            )
+            sms: "IterableList[Submodule]" = self.list_items(repo)
             spsms = set(psms)
             ssms = set(sms)
 
             # HANDLE REMOVALS
             ###################
-            rrsm = (spsms - ssms)
+            rrsm = spsms - ssms
             len_rrsm = len(rrsm)
 
             for i, rsm in enumerate(rrsm):
@@ -158,37 +169,58 @@ class RootModule(Submodule):
 
                 # fake it into thinking its at the current commit to allow deletion
                 # of previous module. Trigger the cache to be updated before that
-                progress.update(op, i, len_rrsm, prefix + "Removing submodule %r at %s" % (rsm.name, rsm.abspath))
+                progress.update(
+                    op,
+                    i,
+                    len_rrsm,
+                    prefix + "Removing submodule %r at %s" % (rsm.name, rsm.abspath),
+                )
                 rsm._parent_commit = repo.head.commit
-                rsm.remove(configuration=False, module=True, force=force_remove, dry_run=dry_run)
+                rsm.remove(
+                    configuration=False,
+                    module=True,
+                    force=force_remove,
+                    dry_run=dry_run,
+                )
 
                 if i == len_rrsm - 1:
                     op |= END
                 # END handle end
-                progress.update(op, i, len_rrsm, prefix + "Done removing submodule %r" % rsm.name)
+                progress.update(
+                    op, i, len_rrsm, prefix + "Done removing submodule %r" % rsm.name
+                )
             # END for each removed submodule
 
             # HANDLE PATH RENAMES
             #####################
             # url changes + branch changes
-            csms = (spsms & ssms)
+            csms = spsms & ssms
             len_csms = len(csms)
             for i, csm in enumerate(csms):
-                psm: 'Submodule' = psms[csm.name]
-                sm: 'Submodule' = sms[csm.name]
+                psm: "Submodule" = psms[csm.name]
+                sm: "Submodule" = sms[csm.name]
 
                 # PATH CHANGES
                 ##############
                 if sm.path != psm.path and psm.module_exists():
-                    progress.update(BEGIN | PATHCHANGE, i, len_csms, prefix +
-                                    "Moving repository of submodule %r from %s to %s"
-                                    % (sm.name, psm.abspath, sm.abspath))
+                    progress.update(
+                        BEGIN | PATHCHANGE,
+                        i,
+                        len_csms,
+                        prefix
+                        + "Moving repository of submodule %r from %s to %s"
+                        % (sm.name, psm.abspath, sm.abspath),
+                    )
                     # move the module to the new path
                     if not dry_run:
                         psm.move(sm.path, module=True, configuration=False)
                     # END handle dry_run
                     progress.update(
-                        END | PATHCHANGE, i, len_csms, prefix + "Done moving repository of submodule %r" % sm.name)
+                        END | PATHCHANGE,
+                        i,
+                        len_csms,
+                        prefix + "Done moving repository of submodule %r" % sm.name,
+                    )
                 # END handle path changes
 
                 if sm.module_exists():
@@ -198,14 +230,20 @@ class RootModule(Submodule):
                         # Add the new remote, remove the old one
                         # This way, if the url just changes, the commits will not
                         # have to be re-retrieved
-                        nn = '__new_origin__'
+                        nn = "__new_origin__"
                         smm = sm.module()
                         rmts = smm.remotes
 
                         # don't do anything if we already have the url we search in place
                         if len([r for r in rmts if r.url == sm.url]) == 0:
-                            progress.update(BEGIN | URLCHANGE, i, len_csms, prefix +
-                                            "Changing url of submodule %r from %s to %s" % (sm.name, psm.url, sm.url))
+                            progress.update(
+                                BEGIN | URLCHANGE,
+                                i,
+                                len_csms,
+                                prefix
+                                + "Changing url of submodule %r from %s to %s"
+                                % (sm.name, psm.url, sm.url),
+                            )
 
                             if not dry_run:
                                 assert nn not in [r.name for r in rmts]
@@ -214,7 +252,16 @@ class RootModule(Submodule):
 
                                 # If we have a tracking branch, it should be available
                                 # in the new remote as well.
-                                if len([r for r in smr.refs if r.remote_head == sm.branch_name]) == 0:
+                                if (
+                                    len(
+                                        [
+                                            r
+                                            for r in smr.refs
+                                            if r.remote_head == sm.branch_name
+                                        ]
+                                    )
+                                    == 0
+                                ):
                                     raise ValueError(
                                         "Submodule branch named %r was not available in new submodule remote at %r"
                                         % (sm.branch_name, sm.url)
@@ -242,7 +289,9 @@ class RootModule(Submodule):
                                         # Alternatively we could just generate a unique name and leave all
                                         # existing ones in place
                                         raise InvalidGitRepositoryError(
-                                            "Couldn't find original remote-repo at url %r" % psm.url)
+                                            "Couldn't find original remote-repo at url %r"
+                                            % psm.url
+                                        )
                                     # END handle one single remote
                                 # END handle check we found a remote
 
@@ -277,15 +326,23 @@ class RootModule(Submodule):
                                     # this way, it will be checked out in the next step
                                     # This will change the submodule relative to us, so
                                     # the user will be able to commit the change easily
-                                    log.warning("Current sha %s was not contained in the tracking\
-             branch at the new remote, setting it the the remote's tracking branch", sm.hexsha)
+                                    log.warning(
+                                        "Current sha %s was not contained in the tracking\
+             branch at the new remote, setting it the the remote's tracking branch",
+                                        sm.hexsha,
+                                    )
                                     sm.binsha = rref.commit.binsha
                                 # END reset binsha
 
                                 # NOTE: All checkout is performed by the base implementation of update
                             # END handle dry_run
                             progress.update(
-                                END | URLCHANGE, i, len_csms, prefix + "Done adjusting url of submodule %r" % (sm.name))
+                                END | URLCHANGE,
+                                i,
+                                len_csms,
+                                prefix
+                                + "Done adjusting url of submodule %r" % (sm.name),
+                            )
                         # END skip remote handling if new url already exists in module
                     # END handle url
 
@@ -294,9 +351,14 @@ class RootModule(Submodule):
                     if sm.branch_path != psm.branch_path:
                         # finally, create a new tracking branch which tracks the
                         # new remote branch
-                        progress.update(BEGIN | BRANCHCHANGE, i, len_csms, prefix +
-                                        "Changing branch of submodule %r from %s to %s"
-                                        % (sm.name, psm.branch_path, sm.branch_path))
+                        progress.update(
+                            BEGIN | BRANCHCHANGE,
+                            i,
+                            len_csms,
+                            prefix
+                            + "Changing branch of submodule %r from %s to %s"
+                            % (sm.name, psm.branch_path, sm.branch_path),
+                        )
                         if not dry_run:
                             smm = sm.module()
                             smmr = smm.remotes
@@ -306,13 +368,19 @@ class RootModule(Submodule):
                             # end for each remote
 
                             try:
-                                tbr = git.Head.create(smm, sm.branch_name, logmsg='branch: Created from HEAD')
+                                tbr = git.Head.create(
+                                    smm,
+                                    sm.branch_name,
+                                    logmsg="branch: Created from HEAD",
+                                )
                             except OSError:
                                 # ... or reuse the existing one
                                 tbr = git.Head(smm, sm.branch_path)
                             # END assure tracking branch exists
 
-                            tbr.set_tracking_branch(find_first_remote_branch(smmr, sm.branch_name))
+                            tbr.set_tracking_branch(
+                                find_first_remote_branch(smmr, sm.branch_name)
+                            )
                             # NOTE: All head-resetting is done in the base implementation of update
                             # but we will have to checkout the new branch here. As it still points to the currently
                             # checkout out commit, we don't do any harm.
@@ -321,7 +389,11 @@ class RootModule(Submodule):
                         # END handle dry_run
 
                         progress.update(
-                            END | BRANCHCHANGE, i, len_csms, prefix + "Done changing branch of submodule %r" % sm.name)
+                            END | BRANCHCHANGE,
+                            i,
+                            len_csms,
+                            prefix + "Done changing branch of submodule %r" % sm.name,
+                        )
                     # END handle branch
                 # END handle
             # END for each common submodule
@@ -335,8 +407,15 @@ class RootModule(Submodule):
         ######################################
         for sm in sms:
             # update the submodule using the default method
-            sm.update(recursive=False, init=init, to_latest_revision=to_latest_revision,
-                      progress=progress, dry_run=dry_run, force=force_reset, keep_going=keep_going)
+            sm.update(
+                recursive=False,
+                init=init,
+                to_latest_revision=to_latest_revision,
+                progress=progress,
+                dry_run=dry_run,
+                force=force_reset,
+                keep_going=keep_going,
+            )
 
             # update recursively depth first - question is which inconsistent
             # state will be better in case it fails somewhere. Defective branch
@@ -345,18 +424,27 @@ class RootModule(Submodule):
             if recursive:
                 # the module would exist by now if we are not in dry_run mode
                 if sm.module_exists():
-                    type(self)(sm.module()).update(recursive=True, force_remove=force_remove,
-                                                   init=init, to_latest_revision=to_latest_revision,
-                                                   progress=progress, dry_run=dry_run, force_reset=force_reset,
-                                                   keep_going=keep_going)
+                    type(self)(sm.module()).update(
+                        recursive=True,
+                        force_remove=force_remove,
+                        init=init,
+                        to_latest_revision=to_latest_revision,
+                        progress=progress,
+                        dry_run=dry_run,
+                        force_reset=force_reset,
+                        keep_going=keep_going,
+                    )
                 # END handle dry_run
             # END handle recursive
         # END for each submodule to update
 
         return self
 
-    def module(self) -> 'Repo':
+    def module(self) -> "Repo":
         """:return: the actual repository containing the submodules"""
         return self.repo
-    #} END interface
-#} END classes
+
+    # } END interface
+
+
+# } END classes

@@ -31,8 +31,17 @@ if TYPE_CHECKING:
 
 # ----------------------------------------------------------------------------
 
-__all__ = ('rev_parse', 'is_git_dir', 'touch', 'find_submodule_git_dir', 'name_to_object', 'short_to_long', 'deref_tag',
-           'to_commit', 'find_worktree_git_dir')
+__all__ = (
+    "rev_parse",
+    "is_git_dir",
+    "touch",
+    "find_submodule_git_dir",
+    "name_to_object",
+    "short_to_long",
+    "deref_tag",
+    "to_commit",
+    "find_worktree_git_dir",
+)
 
 
 def touch(filename: str) -> str:
@@ -41,8 +50,8 @@ def touch(filename: str) -> str:
     return filename
 
 
-def is_git_dir(d: 'PathLike') -> bool:
-    """ This is taken from the git setup.c:is_git_directory
+def is_git_dir(d: "PathLike") -> bool:
+    """This is taken from the git setup.c:is_git_directory
     function.
 
     @throws WorkTreeRepositoryUnsupported if it sees a worktree directory. It's quite hacky to do that here,
@@ -50,20 +59,23 @@ def is_git_dir(d: 'PathLike') -> bool:
             There is the unlikely danger to throw if we see directories which just look like a worktree dir,
             but are none."""
     if osp.isdir(d):
-        if (osp.isdir(osp.join(d, 'objects')) or 'GIT_OBJECT_DIRECTORY' in os.environ) \
-           and osp.isdir(osp.join(d, 'refs')):
-            headref = osp.join(d, 'HEAD')
-            return osp.isfile(headref) or \
-                (osp.islink(headref) and
-                 os.readlink(headref).startswith('refs'))
-        elif (osp.isfile(osp.join(d, 'gitdir')) and
-              osp.isfile(osp.join(d, 'commondir')) and
-              osp.isfile(osp.join(d, 'gitfile'))):
+        if (
+            osp.isdir(osp.join(d, "objects")) or "GIT_OBJECT_DIRECTORY" in os.environ
+        ) and osp.isdir(osp.join(d, "refs")):
+            headref = osp.join(d, "HEAD")
+            return osp.isfile(headref) or (
+                osp.islink(headref) and os.readlink(headref).startswith("refs")
+            )
+        elif (
+            osp.isfile(osp.join(d, "gitdir"))
+            and osp.isfile(osp.join(d, "commondir"))
+            and osp.isfile(osp.join(d, "gitfile"))
+        ):
             raise WorkTreeRepositoryUnsupported(d)
     return False
 
 
-def find_worktree_git_dir(dotgit: 'PathLike') -> Optional[str]:
+def find_worktree_git_dir(dotgit: "PathLike") -> Optional[str]:
     """Search for a gitdir for this worktree."""
     try:
         statbuf = os.stat(dotgit)
@@ -73,16 +85,16 @@ def find_worktree_git_dir(dotgit: 'PathLike') -> Optional[str]:
         return None
 
     try:
-        lines = open(dotgit, 'r').readlines()
-        for key, value in [line.strip().split(': ') for line in lines]:
-            if key == 'gitdir':
+        lines = open(dotgit, "r").readlines()
+        for key, value in [line.strip().split(": ") for line in lines]:
+            if key == "gitdir":
                 return value
     except ValueError:
         pass
     return None
 
 
-def find_submodule_git_dir(d: 'PathLike') -> Optional['PathLike']:
+def find_submodule_git_dir(d: "PathLike") -> Optional["PathLike"]:
     """Search for a submodule repo."""
     if is_git_dir(d):
         return d
@@ -94,7 +106,7 @@ def find_submodule_git_dir(d: 'PathLike') -> Optional['PathLike']:
         # it's probably not a file
         pass
     else:
-        if content.startswith('gitdir: '):
+        if content.startswith("gitdir: "):
             path = content[8:]
 
             if Git.is_cygwin():
@@ -107,7 +119,7 @@ def find_submodule_git_dir(d: 'PathLike') -> Optional['PathLike']:
     return None
 
 
-def short_to_long(odb: 'GitCmdObjectDB', hexsha: str) -> Optional[bytes]:
+def short_to_long(odb: "GitCmdObjectDB", hexsha: str) -> Optional[bytes]:
     """:return: long hexadecimal sha1 from the given less-than-40 byte hexsha
         or None if no candidate could be found.
     :param hexsha: hexsha with less than 40 byte"""
@@ -118,8 +130,9 @@ def short_to_long(odb: 'GitCmdObjectDB', hexsha: str) -> Optional[bytes]:
     # END exception handling
 
 
-def name_to_object(repo: 'Repo', name: str, return_ref: bool = False
-                   ) -> Union[SymbolicReference, 'Commit', 'TagObject', 'Blob', 'Tree']:
+def name_to_object(
+    repo: "Repo", name: str, return_ref: bool = False
+) -> Union[SymbolicReference, "Commit", "TagObject", "Blob", "Tree"]:
     """
     :return: object specified by the given name, hexshas ( short and long )
         as well as references are supported
@@ -141,7 +154,14 @@ def name_to_object(repo: 'Repo', name: str, return_ref: bool = False
     # if we couldn't find an object for what seemed to be a short hexsha
     # try to find it as reference anyway, it could be named 'aaa' for instance
     if hexsha is None:
-        for base in ('%s', 'refs/%s', 'refs/tags/%s', 'refs/heads/%s', 'refs/remotes/%s', 'refs/remotes/%s/HEAD'):
+        for base in (
+            "%s",
+            "refs/%s",
+            "refs/tags/%s",
+            "refs/heads/%s",
+            "refs/remotes/%s",
+            "refs/remotes/%s/HEAD",
+        ):
             try:
                 hexsha = SymbolicReference.dereference_recursive(repo, base % name)
                 if return_ref:
@@ -166,7 +186,7 @@ def name_to_object(repo: 'Repo', name: str, return_ref: bool = False
     return Object.new_from_sha(repo, hex_to_bin(hexsha))
 
 
-def deref_tag(tag: 'Tag') -> 'TagObject':
+def deref_tag(tag: "Tag") -> "TagObject":
     """Recursively dereference a tag and return the resulting object"""
     while True:
         try:
@@ -177,9 +197,9 @@ def deref_tag(tag: 'Tag') -> 'TagObject':
     return tag
 
 
-def to_commit(obj: Object) -> Union['Commit', 'TagObject']:
+def to_commit(obj: Object) -> Union["Commit", "TagObject"]:
     """Convert the given object to a commit if possible and return it"""
-    if obj.type == 'tag':
+    if obj.type == "tag":
         obj = deref_tag(obj)
 
     if obj.type != "commit":
@@ -188,7 +208,7 @@ def to_commit(obj: Object) -> Union['Commit', 'TagObject']:
     return obj
 
 
-def rev_parse(repo: 'Repo', rev: str) -> Union['Commit', 'Tag', 'Tree', 'Blob']:
+def rev_parse(repo: "Repo", rev: str) -> Union["Commit", "Tag", "Tree", "Blob"]:
     """
     :return: Object at the given revision, either Commit, Tag, Tree or Blob
     :param rev: git-rev-parse compatible revision specification as string, please see
@@ -199,12 +219,12 @@ def rev_parse(repo: 'Repo', rev: str) -> Union['Commit', 'Tag', 'Tree', 'Blob']:
     :raise IndexError: If invalid reflog index is specified"""
 
     # colon search mode ?
-    if rev.startswith(':/'):
+    if rev.startswith(":/"):
         # colon search mode
         raise NotImplementedError("commit by message search ( regex )")
     # END handle search
 
-    obj: Union[Commit_ish, 'Reference', None] = None
+    obj: Union[Commit_ish, "Reference", None] = None
     ref = None
     output_type = "commit"
     start = 0
@@ -223,8 +243,10 @@ def rev_parse(repo: 'Repo', rev: str) -> Union['Commit', 'Tag', 'Tree', 'Blob']:
             if start == 0:
                 ref = repo.head.ref
             else:
-                if token == '@':
-                    ref = cast('Reference', name_to_object(repo, rev[:start], return_ref=True))
+                if token == "@":
+                    ref = cast(
+                        "Reference", name_to_object(repo, rev[:start], return_ref=True)
+                    )
                 else:
                     obj = cast(Commit_ish, name_to_object(repo, rev[:start]))
                 # END handle token
@@ -233,38 +255,38 @@ def rev_parse(repo: 'Repo', rev: str) -> Union['Commit', 'Tag', 'Tree', 'Blob']:
             assert obj is not None
 
             if ref is not None:
-                obj = cast('Commit', ref.commit)
+                obj = cast("Commit", ref.commit)
             # END handle ref
         # END initialize obj on first token
 
         start += 1
 
         # try to parse {type}
-        if start < lr and rev[start] == '{':
-            end = rev.find('}', start)
+        if start < lr and rev[start] == "{":
+            end = rev.find("}", start)
             if end == -1:
                 raise ValueError("Missing closing brace to define type in %s" % rev)
-            output_type = rev[start + 1:end]  # exclude brace
+            output_type = rev[start + 1 : end]  # exclude brace
 
             # handle type
-            if output_type == 'commit':
+            if output_type == "commit":
                 pass  # default
-            elif output_type == 'tree':
+            elif output_type == "tree":
                 try:
                     obj = cast(Commit_ish, obj)
                     obj = to_commit(obj).tree
                 except (AttributeError, ValueError):
-                    pass    # error raised later
+                    pass  # error raised later
                 # END exception handling
-            elif output_type in ('', 'blob'):
-                obj = cast('TagObject', obj)
-                if obj and obj.type == 'tag':
+            elif output_type in ("", "blob"):
+                obj = cast("TagObject", obj)
+                if obj and obj.type == "tag":
                     obj = deref_tag(obj)
                 else:
                     # cannot do anything for non-tags
                     pass
                 # END handle tag
-            elif token == '@':
+            elif token == "@":
                 # try single int
                 assert ref is not None, "Require Reference to access reflog"
                 revlog_index = None
@@ -274,7 +296,9 @@ def rev_parse(repo: 'Repo', rev: str) -> Union['Commit', 'Tag', 'Tree', 'Blob']:
                 except ValueError as e:
                     # TODO: Try to parse the other date options, using parse_date
                     # maybe
-                    raise NotImplementedError("Support for additional @{...} modes not implemented") from e
+                    raise NotImplementedError(
+                        "Support for additional @{...} modes not implemented"
+                    ) from e
                 # END handle revlog index
 
                 try:
@@ -286,17 +310,22 @@ def rev_parse(repo: 'Repo', rev: str) -> Union['Commit', 'Tag', 'Tree', 'Blob']:
                 obj = Object.new_from_sha(repo, hex_to_bin(entry.newhexsha))
 
                 # make it pass the following checks
-                output_type = ''
+                output_type = ""
             else:
-                raise ValueError("Invalid output type: %s ( in %s )" % (output_type, rev))
+                raise ValueError(
+                    "Invalid output type: %s ( in %s )" % (output_type, rev)
+                )
             # END handle output type
 
             # empty output types don't require any specific type, its just about dereferencing tags
             if output_type and obj and obj.type != output_type:
-                raise ValueError("Could not accommodate requested object type %r, got %s" % (output_type, obj.type))
+                raise ValueError(
+                    "Could not accommodate requested object type %r, got %s"
+                    % (output_type, obj.type)
+                )
             # END verify output type
 
-            start = end + 1                   # skip brace
+            start = end + 1  # skip brace
             parsed_to = start
             continue
         # END parse type
@@ -348,7 +377,8 @@ def rev_parse(repo: 'Repo', rev: str) -> Union['Commit', 'Tag', 'Tree', 'Blob']:
         except (IndexError, AttributeError) as e:
             raise BadName(
                 f"Invalid revision spec '{rev}' - not enough "
-                f"parent commits to reach '{token}{int(num)}'") from e
+                f"parent commits to reach '{token}{int(num)}'"
+            ) from e
         # END exception handling
     # END parse loop
 
@@ -362,6 +392,9 @@ def rev_parse(repo: 'Repo', rev: str) -> Union['Commit', 'Tag', 'Tree', 'Blob']:
         raise ValueError("Revision specifier could not be parsed: %s" % rev)
 
     if parsed_to != lr:
-        raise ValueError("Didn't consume complete rev spec %s, consumed part: %s" % (rev, rev[:parsed_to]))
+        raise ValueError(
+            "Didn't consume complete rev spec %s, consumed part: %s"
+            % (rev, rev[:parsed_to])
+        )
 
     return obj

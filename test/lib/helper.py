@@ -31,29 +31,37 @@ GIT_REPO = os.environ.get("GIT_PYTHON_TEST_GIT_REPO_BASE", ospd(ospd(ospd(__file
 GIT_DAEMON_PORT = os.environ.get("GIT_PYTHON_TEST_GIT_DAEMON_PORT", "19418")
 
 __all__ = (
-    'fixture_path', 'fixture', 'StringProcessAdapter',
-    'with_rw_directory', 'with_rw_repo', 'with_rw_and_rw_remote_repo',
-    'TestBase', 'TestCase',
-    'SkipTest', 'skipIf',
-    'GIT_REPO', 'GIT_DAEMON_PORT'
+    "fixture_path",
+    "fixture",
+    "StringProcessAdapter",
+    "with_rw_directory",
+    "with_rw_repo",
+    "with_rw_and_rw_remote_repo",
+    "TestBase",
+    "TestCase",
+    "SkipTest",
+    "skipIf",
+    "GIT_REPO",
+    "GIT_DAEMON_PORT",
 )
 
 log = logging.getLogger(__name__)
 
-#{ Routines
+# { Routines
 
 
 def fixture_path(name):
-    return osp.join(ospd(ospd(__file__)), 'fixtures', name)
+    return osp.join(ospd(ospd(__file__)), "fixtures", name)
 
 
 def fixture(name):
-    with open(fixture_path(name), 'rb') as fd:
+    with open(fixture_path(name), "rb") as fd:
         return fd.read()
 
-#} END routines
 
-#{ Adapters
+# } END routines
+
+# { Adapters
 
 
 class StringProcessAdapter(object):
@@ -70,9 +78,10 @@ class StringProcessAdapter(object):
 
     poll = wait
 
-#} END adapters
 
-#{ Decorators
+# } END adapters
+
+# { Decorators
 
 
 def with_rw_directory(func):
@@ -88,8 +97,12 @@ def with_rw_directory(func):
             try:
                 return func(self, path)
             except Exception:
-                log.info("Test %s.%s failed, output is at %r\n",
-                         type(self).__name__, func.__name__, path)
+                log.info(
+                    "Test %s.%s failed, output is at %r\n",
+                    type(self).__name__,
+                    func.__name__,
+                    path,
+                )
                 keep = True
                 raise
         finally:
@@ -114,14 +127,16 @@ def with_rw_repo(working_tree_ref, bare=False):
     To make working with relative paths easier, the cwd will be set to the working
     dir of the repository.
     """
-    assert isinstance(working_tree_ref, str), "Decorator requires ref name for working tree checkout"
+    assert isinstance(
+        working_tree_ref, str
+    ), "Decorator requires ref name for working tree checkout"
 
     def argument_passer(func):
         @wraps(func)
         def repo_creator(self):
-            prefix = 'non_'
+            prefix = "non_"
             if bare:
-                prefix = ''
+                prefix = ""
             # END handle prefix
             repo_dir = tempfile.mktemp(prefix="%sbare_%s" % (prefix, func.__name__))
             rw_repo = self.rorepo.clone(repo_dir, shared=True, bare=bare, n=True)
@@ -151,8 +166,10 @@ def with_rw_repo(working_tree_ref, bare=False):
                     rmtree(repo_dir)
                 # END rm test repo if possible
             # END cleanup
+
         # END rw repo creator
         return repo_creator
+
     # END argument passer
     return argument_passer
 
@@ -170,24 +187,29 @@ def git_daemon_launched(base_path, ip, port):
             #  So, invoke it as a single command.
             ## Cygwin-git has no daemon.  But it can use MINGW's.
             #
-            daemon_cmd = ['git-daemon',
-                          '--enable=receive-pack',
-                          '--listen=%s' % ip,
-                          '--port=%s' % port,
-                          '--base-path=%s' % base_path,
-                          base_path]
+            daemon_cmd = [
+                "git-daemon",
+                "--enable=receive-pack",
+                "--listen=%s" % ip,
+                "--port=%s" % port,
+                "--base-path=%s" % base_path,
+                base_path,
+            ]
             gd = Git().execute(daemon_cmd, as_process=True)
         else:
-            gd = Git().daemon(base_path,
-                              enable='receive-pack',
-                              listen=ip,
-                              port=port,
-                              base_path=base_path,
-                              as_process=True)
+            gd = Git().daemon(
+                base_path,
+                enable="receive-pack",
+                listen=ip,
+                port=port,
+                base_path=base_path,
+                as_process=True,
+            )
         # yes, I know ... fortunately, this is always going to work if sleep time is just large enough
         time.sleep(0.5 * (1 + is_win))
     except Exception as ex:
-        msg = textwrap.dedent("""
+        msg = textwrap.dedent(
+            """
         Launching git-daemon failed due to: %s
           Probably test will fail subsequently.
 
@@ -195,14 +217,17 @@ def git_daemon_launched(base_path, ip, port):
                 git daemon --enable=receive-pack  --listen=%s --port=%s --base-path=%s  %s
           You may also run the daemon on a different port by passing --port=<port>"
           and setting the environment variable GIT_PYTHON_TEST_GIT_DAEMON_PORT to <port>
-        """)
+        """
+        )
         if is_win:
-            msg += textwrap.dedent(r"""
+            msg += textwrap.dedent(
+                r"""
 
             On Windows,
               the `git-daemon.exe` must be in PATH.
               For MINGW, look into .\Git\mingw64\libexec\git-core\), but problems with paths might appear.
-              CYGWIN has no daemon, but if one exists, it gets along fine (but has also paths problems).""")
+              CYGWIN has no daemon, but if one exists, it gets along fine (but has also paths problems)."""
+            )
         log.warning(msg, ex, ip, port, base_path, base_path, exc_info=1)
 
         yield  # OK, assume daemon started manually.
@@ -245,16 +270,23 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
     """
     from git import Git, Remote  # To avoid circular deps.
 
-    assert isinstance(working_tree_ref, str), "Decorator requires ref name for working tree checkout"
+    assert isinstance(
+        working_tree_ref, str
+    ), "Decorator requires ref name for working tree checkout"
 
     def argument_passer(func):
-
         @wraps(func)
         def remote_repo_creator(self):
-            rw_daemon_repo_dir = tempfile.mktemp(prefix="daemon_repo-%s-" % func.__name__)
-            rw_repo_dir = tempfile.mktemp(prefix="daemon_cloned_repo-%s-" % func.__name__)
+            rw_daemon_repo_dir = tempfile.mktemp(
+                prefix="daemon_repo-%s-" % func.__name__
+            )
+            rw_repo_dir = tempfile.mktemp(
+                prefix="daemon_cloned_repo-%s-" % func.__name__
+            )
 
-            rw_daemon_repo = self.rorepo.clone(rw_daemon_repo_dir, shared=True, bare=True)
+            rw_daemon_repo = self.rorepo.clone(
+                rw_daemon_repo_dir, shared=True, bare=True
+            )
             # recursive alternates info ?
             rw_repo = rw_daemon_repo.clone(rw_repo_dir, shared=True, bare=False, n=True)
             try:
@@ -280,13 +312,19 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
 
                 base_daemon_path, rel_repo_dir = osp.split(rw_daemon_repo_dir)
 
-                remote_repo_url = Git.polish_url("git://localhost:%s/%s" % (GIT_DAEMON_PORT, rel_repo_dir))
+                remote_repo_url = Git.polish_url(
+                    "git://localhost:%s/%s" % (GIT_DAEMON_PORT, rel_repo_dir)
+                )
                 with d_remote.config_writer as cw:
-                    cw.set('url', remote_repo_url)
+                    cw.set("url", remote_repo_url)
 
-                with git_daemon_launched(Git.polish_url(base_daemon_path, is_cygwin=False),  # No daemon in Cygwin.
-                                         '127.0.0.1',
-                                         GIT_DAEMON_PORT):
+                with git_daemon_launched(
+                    Git.polish_url(
+                        base_daemon_path, is_cygwin=False
+                    ),  # No daemon in Cygwin.
+                    "127.0.0.1",
+                    GIT_DAEMON_PORT,
+                ):
                     # Try listing remotes, to diagnose whether the daemon is up.
                     rw_repo.git.ls_remote(d_remote)
 
@@ -294,8 +332,11 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
                         try:
                             return func(self, rw_repo, rw_daemon_repo)
                         except:  # noqa E722
-                            log.info("Keeping repos after failure: \n  rw_repo_dir: %s \n  rw_daemon_repo_dir: %s",
-                                     rw_repo_dir, rw_daemon_repo_dir)
+                            log.info(
+                                "Keeping repos after failure: \n  rw_repo_dir: %s \n  rw_daemon_repo_dir: %s",
+                                rw_repo_dir,
+                                rw_daemon_repo_dir,
+                            )
                             rw_repo_dir = rw_daemon_repo_dir = None
                             raise
 
@@ -312,14 +353,17 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
                 if rw_daemon_repo_dir:
                     rmtree(rw_daemon_repo_dir)
             # END cleanup
+
         # END bare repo creator
         return remote_repo_creator
         # END remote repo creator
+
     # END argument parser
 
     return argument_passer
 
-#} END decorators
+
+# } END decorators
 
 
 class TestBase(TestCase):
@@ -344,7 +388,10 @@ class TestBase(TestCase):
     def _small_repo_url(self):
         """:return" a path to a small, clonable repository"""
         from git.cmd import Git
-        return Git.polish_url(osp.join(self.rorepo.working_tree_dir, 'git/ext/gitdb/gitdb/ext/smmap'))
+
+        return Git.polish_url(
+            osp.join(self.rorepo.working_tree_dir, "git/ext/gitdb/gitdb/ext/smmap")
+        )
 
     @classmethod
     def setUpClass(cls):
@@ -353,6 +400,7 @@ class TestBase(TestCase):
         each test type has its own repository
         """
         from git import Repo
+
         gc.collect()
         cls.rorepo = Repo(GIT_REPO)
 

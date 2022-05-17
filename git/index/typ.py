@@ -2,16 +2,13 @@
 
 from binascii import b2a_hex
 
-from .util import (
-    pack,
-    unpack
-)
+from .util import pack, unpack
 from git.objects import Blob
 
 
 # typing ----------------------------------------------------------------------
 
-from typing import (NamedTuple, Sequence, TYPE_CHECKING, Tuple, Union, cast)
+from typing import NamedTuple, Sequence, TYPE_CHECKING, Tuple, Union, cast
 
 from git.types import PathLike
 
@@ -20,16 +17,16 @@ if TYPE_CHECKING:
 
 # ---------------------------------------------------------------------------------
 
-__all__ = ('BlobFilter', 'BaseIndexEntry', 'IndexEntry')
+__all__ = ("BlobFilter", "BaseIndexEntry", "IndexEntry")
 
-#{ Invariants
-CE_NAMEMASK = 0x0fff
+# { Invariants
+CE_NAMEMASK = 0x0FFF
 CE_STAGEMASK = 0x3000
 CE_EXTENDED = 0x4000
 CE_VALID = 0x8000
 CE_STAGESHIFT = 12
 
-#} END invariants
+# } END invariants
 
 
 class BlobFilter(object):
@@ -40,7 +37,8 @@ class BlobFilter(object):
 
     The given paths are given relative to the repository.
     """
-    __slots__ = 'paths'
+
+    __slots__ = "paths"
 
     def __init__(self, paths: Sequence[PathLike]) -> None:
         """
@@ -62,6 +60,7 @@ class BlobFilter(object):
 class BaseIndexEntryHelper(NamedTuple):
     """Typed namedtuple to provide named attribute access for BaseIndexEntry.
     Needed to allow overriding __new__ in child class to preserve backwards compat."""
+
     mode: int
     binsha: bytes
     flags: int
@@ -85,10 +84,14 @@ class BaseIndexEntry(BaseIndexEntryHelper):
     use numeric indices for performance reasons.
     """
 
-    def __new__(cls, inp_tuple: Union[Tuple[int, bytes, int, PathLike],
-                                      Tuple[int, bytes, int, PathLike, bytes, bytes, int, int, int, int, int]]
-                ) -> 'BaseIndexEntry':
-        """Override __new__ to allow construction from a tuple for backwards compatibility """
+    def __new__(
+        cls,
+        inp_tuple: Union[
+            Tuple[int, bytes, int, PathLike],
+            Tuple[int, bytes, int, PathLike, bytes, bytes, int, int, int, int, int],
+        ],
+    ) -> "BaseIndexEntry":
+        """Override __new__ to allow construction from a tuple for backwards compatibility"""
         return super().__new__(cls, *inp_tuple)
 
     def __str__(self) -> str:
@@ -100,7 +103,7 @@ class BaseIndexEntry(BaseIndexEntryHelper):
     @property
     def hexsha(self) -> str:
         """hex version of our sha"""
-        return b2a_hex(self.binsha).decode('ascii')
+        return b2a_hex(self.binsha).decode("ascii")
 
     @property
     def stage(self) -> int:
@@ -116,11 +119,11 @@ class BaseIndexEntry(BaseIndexEntryHelper):
         return (self.flags & CE_STAGEMASK) >> CE_STAGESHIFT
 
     @classmethod
-    def from_blob(cls, blob: Blob, stage: int = 0) -> 'BaseIndexEntry':
+    def from_blob(cls, blob: Blob, stage: int = 0) -> "BaseIndexEntry":
         """:return: Fully equipped BaseIndexEntry at the given stage"""
         return cls((blob.mode, blob.binsha, stage << CE_STAGESHIFT, blob.path))
 
-    def to_blob(self, repo: 'Repo') -> Blob:
+    def to_blob(self, repo: "Repo") -> Blob:
         """:return: Blob using the information of this index entry"""
         return Blob(repo, self.binsha, self.mode, self.path)
 
@@ -132,7 +135,8 @@ class IndexEntry(BaseIndexEntry):
     Attributes usully accessed often are cached in the tuple whereas others are
     unpacked on demand.
 
-    See the properties for a mapping between names and tuple indices. """
+    See the properties for a mapping between names and tuple indices."""
+
     @property
     def ctime(self) -> Tuple[int, int]:
         """
@@ -143,11 +147,11 @@ class IndexEntry(BaseIndexEntry):
 
     @property
     def mtime(self) -> Tuple[int, int]:
-        """See ctime property, but returns modification time """
+        """See ctime property, but returns modification time"""
         return cast(Tuple[int, int], unpack(">LL", self.mtime_bytes))
 
     @classmethod
-    def from_base(cls, base: 'BaseIndexEntry') -> 'IndexEntry':
+    def from_base(cls, base: "BaseIndexEntry") -> "IndexEntry":
         """
         :return:
             Minimal entry as created from the given BaseIndexEntry instance.
@@ -155,11 +159,26 @@ class IndexEntry(BaseIndexEntry):
 
         :param base: Instance of type BaseIndexEntry"""
         time = pack(">LL", 0, 0)
-        return IndexEntry((base.mode, base.binsha, base.flags, base.path, time, time, 0, 0, 0, 0, 0))
+        return IndexEntry(
+            (base.mode, base.binsha, base.flags, base.path, time, time, 0, 0, 0, 0, 0)
+        )
 
     @classmethod
-    def from_blob(cls, blob: Blob, stage: int = 0) -> 'IndexEntry':
+    def from_blob(cls, blob: Blob, stage: int = 0) -> "IndexEntry":
         """:return: Minimal entry resembling the given blob object"""
         time = pack(">LL", 0, 0)
-        return IndexEntry((blob.mode, blob.binsha, stage << CE_STAGESHIFT, blob.path,
-                           time, time, 0, 0, 0, 0, blob.size))
+        return IndexEntry(
+            (
+                blob.mode,
+                blob.binsha,
+                stage << CE_STAGESHIFT,
+                blob.path,
+                time,
+                time,
+                0,
+                0,
+                0,
+                0,
+                blob.size,
+            )
+        )

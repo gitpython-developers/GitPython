@@ -7,10 +7,7 @@
 from io import BytesIO
 from unittest import skipIf
 
-from git.objects import (
-    Tree,
-    Blob
-)
+from git.objects import Tree, Blob
 from test.lib import TestBase
 from git.util import HIDE_WINDOWS_KNOWN_ERRORS
 
@@ -18,22 +15,24 @@ import os.path as osp
 
 
 class TestTree(TestBase):
-
-    @skipIf(HIDE_WINDOWS_KNOWN_ERRORS, """
+    @skipIf(
+        HIDE_WINDOWS_KNOWN_ERRORS,
+        """
         File "C:\\projects\\gitpython\\git\\cmd.py", line 559, in execute
         raise GitCommandNotFound(command, err)
         git.exc.GitCommandNotFound: Cmd('git') not found due to: OSError('[WinError 6] The handle is invalid')
-        cmdline: git cat-file --batch-check""")
+        cmdline: git cat-file --batch-check""",
+    )
     def test_serializable(self):
         # tree at the given commit contains a submodule as well
-        roottree = self.rorepo.tree('6c1faef799095f3990e9970bc2cb10aa0221cf9c')
+        roottree = self.rorepo.tree("6c1faef799095f3990e9970bc2cb10aa0221cf9c")
         for item in roottree.traverse(ignore_self=False):
             if item.type != Tree.type:
                 continue
             # END skip non-trees
             tree = item
             # trees have no dict
-            self.assertRaises(AttributeError, setattr, tree, 'someattr', 1)
+            self.assertRaises(AttributeError, setattr, tree, "someattr", 1)
 
             orig_data = tree.data_stream.read()
             orig_cache = tree._cache
@@ -43,22 +42,25 @@ class TestTree(TestBase):
             assert stream.getvalue() == orig_data
 
             stream.seek(0)
-            testtree = Tree(self.rorepo, Tree.NULL_BIN_SHA, 0, '')
+            testtree = Tree(self.rorepo, Tree.NULL_BIN_SHA, 0, "")
             testtree._deserialize(stream)
             assert testtree._cache == orig_cache
 
             # replaces cache, but we make sure of it
-            del(testtree._cache)
+            del testtree._cache
             testtree._deserialize(stream)
         # END for each item in tree
 
-    @skipIf(HIDE_WINDOWS_KNOWN_ERRORS, """
+    @skipIf(
+        HIDE_WINDOWS_KNOWN_ERRORS,
+        """
         File "C:\\projects\\gitpython\\git\\cmd.py", line 559, in execute
         raise GitCommandNotFound(command, err)
         git.exc.GitCommandNotFound: Cmd('git') not found due to: OSError('[WinError 6] The handle is invalid')
-        cmdline: git cat-file --batch-check""")
+        cmdline: git cat-file --batch-check""",
+    )
     def test_traverse(self):
-        root = self.rorepo.tree('0.1.6')
+        root = self.rorepo.tree("0.1.6")
         num_recursive = 0
         all_items = []
         for obj in root.traverse():
@@ -72,7 +74,7 @@ class TestTree(TestBase):
 
         # limit recursion level to 0 - should be same as default iteration
         assert all_items
-        assert 'CHANGES' in root
+        assert "CHANGES" in root
         assert len(list(root)) == len(list(root.traverse(depth=1)))
 
         # only choose trees
@@ -87,7 +89,9 @@ class TestTree(TestBase):
 
         # trees and blobs
         assert len(set(trees) | set(root.trees)) == len(trees)
-        assert len({b for b in root if isinstance(b, Blob)} | set(root.blobs)) == len(root.blobs)
+        assert len({b for b in root if isinstance(b, Blob)} | set(root.blobs)) == len(
+            root.blobs
+        )
         subitem = trees[0][0]
         assert "/" in subitem.path
         assert subitem.name == osp.basename(subitem.path)
@@ -96,7 +100,7 @@ class TestTree(TestBase):
         found_slash = False
         for item in root.traverse():
             assert osp.isabs(item.abspath)
-            if '/' in item.path:
+            if "/" in item.path:
                 found_slash = True
             # END check for slash
 
