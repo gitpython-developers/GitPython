@@ -44,6 +44,11 @@ jobs:
         # and cause subsequent tests to fail
         cat test/fixtures/.gitconfig >> ~/.gitconfig
 
+    - name: Lint with black
+      run: |
+        set -x
+        black --check .
+
     - name: Lint with flake8
       run: |
         set -x
