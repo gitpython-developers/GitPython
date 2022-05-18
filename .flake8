@@ -35,4 +35,4 @@ min-python-version = 3.7.0
 
 # for `black` compatibility
 max-line-length = 120
-extend-ignore = E203
+extend-ignore = E203,W503
