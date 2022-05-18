@@ -39,3 +39,7 @@ source = ["git"]
 [tool.coverage.report]
 include = ["*/git/*"]
 omit = ["*/git/ext/*"]
+
+[tool.black]
+line-length = 120
+target-version = ['py37']

@@ -34,5 +34,5 @@ rst-roles =  # for flake8-RST-docstrings
 min-python-version = 3.7.0
 
 # for `black` compatibility
-max-line-length = 88
+max-line-length = 120
 extend-ignore = E203
