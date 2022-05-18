@@ -40,9 +40,7 @@ if TYPE_CHECKING:
 
 TreeCacheTup = Tuple[bytes, int, str]
 
-TraversedTreeTup = Union[
-    Tuple[Union["Tree", None], IndexObjUnion, Tuple["Submodule", "Submodule"]]
-]
+TraversedTreeTup = Union[Tuple[Union["Tree", None], IndexObjUnion, Tuple["Submodule", "Submodule"]]]
 
 
 # def is_tree_cache(inp: Tuple[bytes, int, str]) -> TypeGuard[TreeCacheTup]:
@@ -69,9 +67,7 @@ def git_cmp(t1: TreeCacheTup, t2: TreeCacheTup) -> int:
     return len_a - len_b
 
 
-def merge_sort(
-    a: List[TreeCacheTup], cmp: Callable[[TreeCacheTup, TreeCacheTup], int]
-) -> None:
+def merge_sort(a: List[TreeCacheTup], cmp: Callable[[TreeCacheTup, TreeCacheTup], int]) -> None:
     if len(a) < 2:
         return None
 
@@ -139,9 +135,7 @@ class TreeModifier(object):
     # } END interface
 
     # { Mutators
-    def add(
-        self, sha: bytes, mode: int, name: str, force: bool = False
-    ) -> "TreeModifier":
+    def add(self, sha: bytes, mode: int, name: str, force: bool = False) -> "TreeModifier":
         """Add the given item to the tree. If an item with the given name already
         exists, nothing will be done, but a ValueError will be raised if the
         sha and mode of the existing item do not match the one you add, unless
@@ -182,11 +176,7 @@ class TreeModifier(object):
         puts the caller into responsibility to assure the input is correct.
         For more information on the parameters, see ``add``
         :param binsha: 20 byte binary sha"""
-        assert (
-            isinstance(binsha, bytes)
-            and isinstance(mode, int)
-            and isinstance(name, str)
-        )
+        assert isinstance(binsha, bytes) and isinstance(mode, int) and isinstance(name, str)
         tree_cache = (binsha, mode, name)
 
         self._cache.append(tree_cache)
@@ -256,9 +246,7 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
             super(Tree, self)._set_cache_(attr)
         # END handle attribute
 
-    def _iter_convert_to_object(
-        self, iterable: Iterable[TreeCacheTup]
-    ) -> Iterator[IndexObjUnion]:
+    def _iter_convert_to_object(self, iterable: Iterable[TreeCacheTup]) -> Iterator[IndexObjUnion]:
         """Iterable yields tuples of (binsha, mode, name), which will be converted
         to the respective object representation"""
         for binsha, mode, name in iterable:
@@ -266,9 +254,7 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
             try:
                 yield self._map_id_to_type[mode >> 12](self.repo, binsha, mode, path)
             except KeyError as e:
-                raise TypeError(
-                    "Unknown mode %o found in tree data for path '%s'" % (mode, path)
-                ) from e
+                raise TypeError("Unknown mode %o found in tree data for path '%s'" % (mode, path)) from e
         # END for each item
 
     def join(self, file: str) -> IndexObjUnion:
@@ -330,12 +316,8 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
 
     def traverse(
         self,  # type: ignore[override]
-        predicate: Callable[
-            [Union[IndexObjUnion, TraversedTreeTup], int], bool
-        ] = lambda i, d: True,
-        prune: Callable[
-            [Union[IndexObjUnion, TraversedTreeTup], int], bool
-        ] = lambda i, d: False,
+        predicate: Callable[[Union[IndexObjUnion, TraversedTreeTup], int], bool] = lambda i, d: True,
+        prune: Callable[[Union[IndexObjUnion, TraversedTreeTup], int], bool] = lambda i, d: False,
         depth: int = -1,
         branch_first: bool = True,
         visit_once: bool = False,
@@ -389,9 +371,7 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
     def __getitem__(self, item: Union[str, int, slice]) -> IndexObjUnion:
         if isinstance(item, int):
             info = self._cache[item]
-            return self._map_id_to_type[info[1] >> 12](
-                self.repo, info[0], info[1], join_path(self.path, info[2])
-            )
+            return self._map_id_to_type[info[1] >> 12](self.repo, info[0], info[1], join_path(self.path, info[2]))
 
         if isinstance(item, str):
             # compatibility

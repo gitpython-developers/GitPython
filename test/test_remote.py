@@ -70,17 +70,11 @@ class TestRemoteProgress(RemoteProgress):
                 assert not message, "should not have message when remote begins writing"
             elif op_code & self.END > 0:
                 assert message
-                assert not message.startswith(", "), (
-                    "Sanitize progress messages: '%s'" % message
-                )
-                assert not message.endswith(", "), (
-                    "Sanitize progress messages: '%s'" % message
-                )
+                assert not message.startswith(", "), "Sanitize progress messages: '%s'" % message
+                assert not message.endswith(", "), "Sanitize progress messages: '%s'" % message
 
         self._stages_per_op.setdefault(op_id, 0)
-        self._stages_per_op[op_id] = self._stages_per_op[op_id] | (
-            op_code & self.STAGE_MASK
-        )
+        self._stages_per_op[op_id] = self._stages_per_op[op_id] | (op_code & self.STAGE_MASK)
 
         if op_code & (self.WRITING | self.END) == (self.WRITING | self.END):
             assert message
@@ -184,9 +178,7 @@ class TestRemote(TestBase):
         # Create a file with a random name and random data and commit it to  repo.
         # Return the committed absolute file path
         index = repo.index
-        new_file = self._make_file(
-            osp.basename(tempfile.mktemp()), str(random.random()), repo
-        )
+        new_file = self._make_file(osp.basename(tempfile.mktemp()), str(random.random()), repo)
         index.add([new_file])
         index.commit("Committing %s" % new_file)
         return new_file
@@ -304,12 +296,8 @@ class TestRemote(TestBase):
         # must clone with a local path for the repo implementation not to freak out
         # as it wants local paths only ( which I can understand )
         other_repo = remote_repo.clone(other_repo_dir, shared=False)
-        remote_repo_url = osp.basename(
-            remote_repo.git_dir
-        )  # git-daemon runs with appropriate `--base-path`.
-        remote_repo_url = Git.polish_url(
-            "git://localhost:%s/%s" % (GIT_DAEMON_PORT, remote_repo_url)
-        )
+        remote_repo_url = osp.basename(remote_repo.git_dir)  # git-daemon runs with appropriate `--base-path`.
+        remote_repo_url = Git.polish_url("git://localhost:%s/%s" % (GIT_DAEMON_PORT, remote_repo_url))
 
         # put origin to git-url
         other_origin = other_repo.remotes.origin
@@ -379,9 +367,7 @@ class TestRemote(TestBase):
         progress = TestRemoteProgress()
         to_be_updated = "my_tag.1.0RV"
         new_tag = TagReference.create(rw_repo, to_be_updated)  # @UnusedVariable
-        other_tag = TagReference.create(
-            rw_repo, "my_obj_tag.2.1aRV", logmsg="my message"
-        )
+        other_tag = TagReference.create(rw_repo, "my_obj_tag.2.1aRV", logmsg="my message")
         res = remote.push(progress=progress, tags=True)
         self.assertTrue(res[-1].flags & PushInfo.NEW_TAG)
         progress.make_assertion()
@@ -389,9 +375,7 @@ class TestRemote(TestBase):
 
         # update push new tags
         # Rejection is default
-        new_tag = TagReference.create(
-            rw_repo, to_be_updated, reference="HEAD~1", force=True
-        )
+        new_tag = TagReference.create(rw_repo, to_be_updated, reference="HEAD~1", force=True)
         res = remote.push(tags=True)
         self._do_test_push_result(res, remote)
         self.assertTrue(res[-1].flags & PushInfo.REJECTED)
@@ -503,9 +487,7 @@ class TestRemote(TestBase):
             # Only for remotes - local cases are the same or less complicated
             # as additional progress information will never be emitted
             if remote.name == "daemon_origin":
-                self._do_test_fetch(
-                    remote, rw_repo, remote_repo, kill_after_timeout=10.0
-                )
+                self._do_test_fetch(remote, rw_repo, remote_repo, kill_after_timeout=10.0)
                 ran_fetch_test = True
             # END fetch test
 
@@ -554,9 +536,7 @@ class TestRemote(TestBase):
         self.assertRaises(GitCommandError, Remote.create, bare_rw_repo, *arg_list)
 
         Remote.remove(bare_rw_repo, new_name)
-        self.assertTrue(
-            remote.exists()
-        )  # We still have a cache that doesn't know we were deleted by name
+        self.assertTrue(remote.exists())  # We still have a cache that doesn't know we were deleted by name
         remote._clear_cache()
         assert not remote.exists()  # Cache should be renewed now. This is an issue ...
 
@@ -571,9 +551,7 @@ class TestRemote(TestBase):
 
     def test_fetch_info(self):
         # assure we can handle remote-tracking branches
-        fetch_info_line_fmt = (
-            "c437ee5deb8d00cf02f03720693e4c802e99f390	not-for-merge	%s '0.3' of "
-        )
+        fetch_info_line_fmt = "c437ee5deb8d00cf02f03720693e4c802e99f390	not-for-merge	%s '0.3' of "
         fetch_info_line_fmt += "git://github.com/gitpython-developers/GitPython"
         remote_info_line_fmt = "* [new branch]      nomatter     -> %s"
 
@@ -617,9 +595,7 @@ class TestRemote(TestBase):
 
         # it can also be anywhere !
         tag_path = "refs/something/remotename/tags/tagname"
-        fi = FetchInfo._from_line(
-            self.rorepo, remote_info_line_fmt % tag_path, fetch_info_line_fmt % "tag"
-        )
+        fi = FetchInfo._from_line(self.rorepo, remote_info_line_fmt % tag_path, fetch_info_line_fmt % "tag")
 
         self.assertIsInstance(fi.ref, TagReference)
         self.assertEqual(fi.ref.path, tag_path)
@@ -645,12 +621,8 @@ class TestRemote(TestBase):
         self.assertEqual(fi.ref.path, "refs/something/branch")
 
     def test_uncommon_branch_names(self):
-        stderr_lines = (
-            fixture("uncommon_branch_prefix_stderr").decode("ascii").splitlines()
-        )
-        fetch_lines = (
-            fixture("uncommon_branch_prefix_FETCH_HEAD").decode("ascii").splitlines()
-        )
+        stderr_lines = fixture("uncommon_branch_prefix_stderr").decode("ascii").splitlines()
+        fetch_lines = fixture("uncommon_branch_prefix_FETCH_HEAD").decode("ascii").splitlines()
 
         # The contents of the files above must be fetched with a custom refspec:
         # +refs/pull/*:refs/heads/pull/*
@@ -709,17 +681,13 @@ class TestRemote(TestBase):
 
     def test_fetch_error(self):
         rem = self.rorepo.remote("origin")
-        with self.assertRaisesRegex(
-            GitCommandError, "[Cc]ouldn't find remote ref __BAD_REF__"
-        ):
+        with self.assertRaisesRegex(GitCommandError, "[Cc]ouldn't find remote ref __BAD_REF__"):
             rem.fetch("__BAD_REF__")
 
     @with_rw_repo("0.1.6", bare=False)
     def test_push_error(self, repo):
         rem = repo.remote("origin")
-        with self.assertRaisesRegex(
-            GitCommandError, "src refspec __BAD_REF__ does not match any"
-        ):
+        with self.assertRaisesRegex(GitCommandError, "src refspec __BAD_REF__ does not match any"):
             rem.push("__BAD_REF__")
 
 

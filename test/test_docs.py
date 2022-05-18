@@ -63,15 +63,9 @@ class Tutorials(TestBase):
 
         # repository paths
         # [7-test_init_repo_object]
-        assert os.path.isdir(
-            cloned_repo.working_tree_dir
-        )  # directory with your work files
-        assert cloned_repo.git_dir.startswith(
-            cloned_repo.working_tree_dir
-        )  # directory containing the git repository
-        assert (
-            bare_repo.working_tree_dir is None
-        )  # bare repositories have no working tree
+        assert os.path.isdir(cloned_repo.working_tree_dir)  # directory with your work files
+        assert cloned_repo.git_dir.startswith(cloned_repo.working_tree_dir)  # directory containing the git repository
+        assert bare_repo.working_tree_dir is None  # bare repositories have no working tree
         # ![7-test_init_repo_object]
 
         # heads, tags and references
@@ -82,35 +76,22 @@ class Tutorials(TestBase):
             repo.heads.master,  # head is a sym-ref pointing to master
             "It's ok if TC not running from `master`.",
         )
-        self.assertEqual(
-            repo.tags["0.3.5"], repo.tag("refs/tags/0.3.5")
-        )  # you can access tags in various ways too
-        self.assertEqual(
-            repo.refs.master, repo.heads["master"]
-        )  # .refs provides all refs, ie heads ...
+        self.assertEqual(repo.tags["0.3.5"], repo.tag("refs/tags/0.3.5"))  # you can access tags in various ways too
+        self.assertEqual(repo.refs.master, repo.heads["master"])  # .refs provides all refs, ie heads ...
 
         if "TRAVIS" not in os.environ:
-            self.assertEqual(
-                repo.refs["origin/master"], repo.remotes.origin.refs.master
-            )  # ... remotes ...
+            self.assertEqual(repo.refs["origin/master"], repo.remotes.origin.refs.master)  # ... remotes ...
         self.assertEqual(repo.refs["0.3.5"], repo.tags["0.3.5"])  # ... and tags
         # ![8-test_init_repo_object]
 
         # create a new head/branch
         # [9-test_init_repo_object]
         new_branch = cloned_repo.create_head("feature")  # create a new branch ...
-        assert (
-            cloned_repo.active_branch != new_branch
-        )  # which wasn't checked out yet ...
-        self.assertEqual(
-            new_branch.commit, cloned_repo.active_branch.commit
-        )  # pointing to the checked-out commit
+        assert cloned_repo.active_branch != new_branch  # which wasn't checked out yet ...
+        self.assertEqual(new_branch.commit, cloned_repo.active_branch.commit)  # pointing to the checked-out commit
         # It's easy to let a branch point to the previous commit, without affecting anything else
         # Each reference provides access to the git object it points to, usually commits
-        assert (
-            new_branch.set_commit("HEAD~1").commit
-            == cloned_repo.active_branch.commit.parents[0]
-        )
+        assert new_branch.set_commit("HEAD~1").commit == cloned_repo.active_branch.commit.parents[0]
         # ![9-test_init_repo_object]
 
         # create a new tag reference
@@ -120,16 +101,10 @@ class Tutorials(TestBase):
             ref=new_branch,
             message="This is a tag-object pointing to %s" % new_branch.name,
         )
-        self.assertEqual(
-            past.commit, new_branch.commit
-        )  # the tag points to the specified commit
-        assert past.tag.message.startswith(
-            "This is"
-        )  # and its object carries the message provided
+        self.assertEqual(past.commit, new_branch.commit)  # the tag points to the specified commit
+        assert past.tag.message.startswith("This is")  # and its object carries the message provided
 
-        now = cloned_repo.create_tag(
-            "now"
-        )  # This is a tag-reference. It may not carry meta-data
+        now = cloned_repo.create_tag("now")  # This is a tag-reference. It may not carry meta-data
         assert now.tag is None
         # ![10-test_init_repo_object]
 
@@ -137,12 +112,7 @@ class Tutorials(TestBase):
         # [11-test_init_repo_object]
         assert now.commit.message != past.commit.message
         # You can read objects directly through binary streams, no working tree required
-        assert (
-            (now.commit.tree / "VERSION")
-            .data_stream.read()
-            .decode("ascii")
-            .startswith("3")
-        )
+        assert (now.commit.tree / "VERSION").data_stream.read().decode("ascii").startswith("3")
 
         # You can traverse trees as well to handle all contained files of a particular commit
         file_count = 0
@@ -151,12 +121,8 @@ class Tutorials(TestBase):
         for item in tree.traverse():
             file_count += item.type == "blob"
             tree_count += item.type == "tree"
-        assert (
-            file_count and tree_count
-        )  # we have accumulated all directories and files
-        self.assertEqual(
-            len(tree.blobs) + len(tree.trees), len(tree)
-        )  # a tree is iterable on its children
+        assert file_count and tree_count  # we have accumulated all directories and files
+        self.assertEqual(len(tree.blobs) + len(tree.trees), len(tree))  # a tree is iterable on its children
         # ![11-test_init_repo_object]
 
         # remotes allow handling push, pull and fetch operations
@@ -175,9 +141,7 @@ class Tutorials(TestBase):
 
         # end
 
-        self.assertEqual(
-            len(cloned_repo.remotes), 1
-        )  # we have been cloned, so should be one remote
+        self.assertEqual(len(cloned_repo.remotes), 1)  # we have been cloned, so should be one remote
         self.assertEqual(len(bare_repo.remotes), 0)  # this one was just initialized
         origin = bare_repo.create_remote("origin", url=cloned_repo.working_tree_dir)
         assert origin.exists()
@@ -193,9 +157,7 @@ class Tutorials(TestBase):
 
         # index
         # [13-test_init_repo_object]
-        self.assertEqual(
-            new_branch.checkout(), cloned_repo.active_branch
-        )  # checking out branch adjusts the wtree
+        self.assertEqual(new_branch.checkout(), cloned_repo.active_branch)  # checking out branch adjusts the wtree
         self.assertEqual(new_branch.commit, past.commit)  # Now the past is checked out
 
         new_file_path = os.path.join(cloned_repo.working_tree_dir, "my-new-file")
@@ -205,15 +167,9 @@ class Tutorials(TestBase):
         cloned_repo.index.commit("Added a new file in the past - for later merege")
 
         # prepare a merge
-        master = (
-            cloned_repo.heads.master
-        )  # right-hand side is ahead of us, in the future
-        merge_base = cloned_repo.merge_base(
-            new_branch, master
-        )  # allows for a three-way merge
-        cloned_repo.index.merge_tree(
-            master, base=merge_base
-        )  # write the merge result into index
+        master = cloned_repo.heads.master  # right-hand side is ahead of us, in the future
+        merge_base = cloned_repo.merge_base(new_branch, master)  # allows for a three-way merge
+        cloned_repo.index.merge_tree(master, base=merge_base)  # write the merge result into index
         cloned_repo.index.commit(
             "Merged past and now into future ;)",
             parent_commits=(new_branch.commit, master.commit),
@@ -222,13 +178,9 @@ class Tutorials(TestBase):
         # now new_branch is ahead of master, which probably should be checked out and reset softly.
         # note that all these operations didn't touch the working tree, as we managed it ourselves.
         # This definitely requires you to know what you are doing :) !
-        assert (
-            os.path.basename(new_file_path) in new_branch.commit.tree
-        )  # new file is now in tree
+        assert os.path.basename(new_file_path) in new_branch.commit.tree  # new file is now in tree
         master.commit = new_branch.commit  # let master point to most recent commit
-        cloned_repo.head.reference = (
-            master  # we adjusted just the reference, not the working tree or index
-        )
+        cloned_repo.head.reference = master  # we adjusted just the reference, not the working tree or index
         # ![13-test_init_repo_object]
 
         # submodules
@@ -238,28 +190,18 @@ class Tutorials(TestBase):
         # As our GitPython repository has submodules already that point to GitHub, make sure we don't
         # interact with them
         for sm in cloned_repo.submodules:
-            assert (
-                not sm.remove().exists()
-            )  # after removal, the sm doesn't exist anymore
-        sm = cloned_repo.create_submodule(
-            "mysubrepo", "path/to/subrepo", url=bare_repo.git_dir, branch="master"
-        )
+            assert not sm.remove().exists()  # after removal, the sm doesn't exist anymore
+        sm = cloned_repo.create_submodule("mysubrepo", "path/to/subrepo", url=bare_repo.git_dir, branch="master")
 
         # .gitmodules was written and added to the index, which is now being committed
         cloned_repo.index.commit("Added submodule")
-        assert (
-            sm.exists() and sm.module_exists()
-        )  # this submodule is defintely available
+        assert sm.exists() and sm.module_exists()  # this submodule is defintely available
         sm.remove(module=True, configuration=False)  # remove the working tree
-        assert (
-            sm.exists() and not sm.module_exists()
-        )  # the submodule itself is still available
+        assert sm.exists() and not sm.module_exists()  # the submodule itself is still available
 
         # update all submodules, non-recursively to save time, this method is very powerful, go have a look
         cloned_repo.submodule_update(recursive=False)
-        assert (
-            sm.module_exists()
-        )  # The submodules working tree was checked out by update
+        assert sm.module_exists()  # The submodules working tree was checked out by update
         # ![14-test_init_repo_object]
 
     @with_rw_directory
@@ -267,9 +209,7 @@ class Tutorials(TestBase):
         # [1-test_references_and_objects]
         import git
 
-        repo = git.Repo.clone_from(
-            self._small_repo_url(), os.path.join(rw_dir, "repo"), branch="master"
-        )
+        repo = git.Repo.clone_from(self._small_repo_url(), os.path.join(rw_dir, "repo"), branch="master")
 
         heads = repo.heads
         master = heads.master  # lists can be accessed by name for convenience
@@ -302,17 +242,13 @@ class Tutorials(TestBase):
         # [5-test_references_and_objects]
         new_branch = repo.create_head("new")  # create a new one
         new_branch.commit = "HEAD~10"  # set branch to another commit without changing index or working trees
-        repo.delete_head(
-            new_branch
-        )  # delete an existing head - only works if it is not checked out
+        repo.delete_head(new_branch)  # delete an existing head - only works if it is not checked out
         # ![5-test_references_and_objects]
 
         # [6-test_references_and_objects]
         new_tag = repo.create_tag("my_new_tag", message="my message")
         # You cannot change the commit a tag points to. Tags need to be re-created
-        self.assertRaises(
-            AttributeError, setattr, new_tag, "commit", repo.commit("HEAD~1")
-        )
+        self.assertRaises(AttributeError, setattr, new_tag, "commit", repo.commit("HEAD~1"))
         repo.delete_tag(new_tag)
         # ![6-test_references_and_objects]
 
@@ -330,9 +266,7 @@ class Tutorials(TestBase):
         # ![8-test_references_and_objects]
 
         # [9-test_references_and_objects]
-        self.assertEqual(
-            hct.type, "tree"
-        )  # preset string type, being a class attribute
+        self.assertEqual(hct.type, "tree")  # preset string type, being a class attribute
         assert hct.size > 0  # size in bytes
         assert len(hct.hexsha) == 40
         assert len(hct.binsha) == 20
@@ -342,16 +276,12 @@ class Tutorials(TestBase):
         self.assertEqual(hct.path, "")  # root tree has no path
         assert hct.trees[0].path != ""  # the first contained item has one though
         self.assertEqual(hct.mode, 0o40000)  # trees have the mode of a linux directory
-        self.assertEqual(
-            hct.blobs[0].mode, 0o100644
-        )  # blobs have specific mode, comparable to a standard linux fs
+        self.assertEqual(hct.blobs[0].mode, 0o100644)  # blobs have specific mode, comparable to a standard linux fs
         # ![10-test_references_and_objects]
 
         # [11-test_references_and_objects]
         hct.blobs[0].data_stream.read()  # stream object to read data from
-        hct.blobs[0].stream_data(
-            open(os.path.join(rw_dir, "blob_data"), "wb")
-        )  # write data to given stream
+        hct.blobs[0].stream_data(open(os.path.join(rw_dir, "blob_data"), "wb"))  # write data to given stream
         # ![11-test_references_and_objects]
 
         # [12-test_references_and_objects]
@@ -364,9 +294,7 @@ class Tutorials(TestBase):
         fifty_first_commits = list(repo.iter_commits("master", max_count=50))
         assert len(fifty_first_commits) == 50
         # this will return commits 21-30 from the commit list as traversed backwards master
-        ten_commits_past_twenty = list(
-            repo.iter_commits("master", max_count=10, skip=20)
-        )
+        ten_commits_past_twenty = list(repo.iter_commits("master", max_count=10, skip=20))
         assert len(ten_commits_past_twenty) == 10
         assert fifty_first_commits[20:30] == ten_commits_past_twenty
         # ![13-test_references_and_objects]
@@ -406,20 +334,14 @@ class Tutorials(TestBase):
         # ![18-test_references_and_objects]
 
         # [19-test_references_and_objects]
-        self.assertEqual(
-            tree["smmap"], tree / "smmap"
-        )  # access by index and by sub-path
+        self.assertEqual(tree["smmap"], tree / "smmap")  # access by index and by sub-path
         for entry in tree:  # intuitive iteration of tree members
             print(entry)
         blob = tree.trees[1].blobs[0]  # let's get a blob in a sub-tree
         assert blob.name
         assert len(blob.path) < len(blob.abspath)
-        self.assertEqual(
-            tree.trees[1].name + "/" + blob.name, blob.path
-        )  # this is how relative blob path generated
-        self.assertEqual(
-            tree[blob.path], blob
-        )  # you can use paths like 'dir/file' in tree
+        self.assertEqual(tree.trees[1].name + "/" + blob.name, blob.path)  # this is how relative blob path generated
+        self.assertEqual(tree[blob.path], blob)  # you can use paths like 'dir/file' in tree
         # ![19-test_references_and_objects]
 
         # [20-test_references_and_objects]
@@ -432,9 +354,7 @@ class Tutorials(TestBase):
         assert repo.tree() == repo.head.commit.tree
         past = repo.commit("HEAD~5")
         assert repo.tree(past) == repo.tree(past.hexsha)
-        self.assertEqual(
-            repo.tree("v0.8.1").type, "tree"
-        )  # yes, you can provide any refspec - works everywhere
+        self.assertEqual(repo.tree("v0.8.1").type, "tree")  # yes, you can provide any refspec - works everywhere
         # ![21-test_references_and_objects]
 
         # [22-test_references_and_objects]
@@ -444,9 +364,7 @@ class Tutorials(TestBase):
         # [23-test_references_and_objects]
         index = repo.index
         # The index contains all blobs in a flat list
-        assert len(list(index.iter_blobs())) == len(
-            [o for o in repo.head.commit.tree.traverse() if o.type == "blob"]
-        )
+        assert len(list(index.iter_blobs())) == len([o for o in repo.head.commit.tree.traverse() if o.type == "blob"])
         # Access blob objects
         for (_path, _stage), entry in index.entries.items():
             pass
@@ -454,13 +372,9 @@ class Tutorials(TestBase):
         open(new_file_path, "w").close()
         index.add([new_file_path])  # add a new file to the index
         index.remove(["LICENSE"])  # remove an existing one
-        assert os.path.isfile(
-            os.path.join(repo.working_tree_dir, "LICENSE")
-        )  # working tree is untouched
+        assert os.path.isfile(os.path.join(repo.working_tree_dir, "LICENSE"))  # working tree is untouched
 
-        self.assertEqual(
-            index.commit("my commit message").type, "commit"
-        )  # commit changed index
+        self.assertEqual(index.commit("my commit message").type, "commit")  # commit changed index
         repo.active_branch.commit = repo.commit("HEAD~1")  # forget last commit
 
         from git import Actor
@@ -477,9 +391,7 @@ class Tutorials(TestBase):
         # loads a tree into a temporary index, which exists just in memory
         IndexFile.from_tree(repo, "HEAD~1")
         # merge two trees three-way into memory
-        merge_index = IndexFile.from_tree(
-            repo, "HEAD~10", "HEAD", repo.merge_base("HEAD~10", "HEAD")
-        )
+        merge_index = IndexFile.from_tree(repo, "HEAD~10", "HEAD", repo.merge_base("HEAD~10", "HEAD"))
         # and persist it
         merge_index.write(os.path.join(rw_dir, "merged_index"))
         # ![24-test_references_and_objects]
@@ -491,17 +403,11 @@ class Tutorials(TestBase):
         assert origin == empty_repo.remotes.origin == empty_repo.remotes["origin"]
         origin.fetch()  # assure we actually have data. fetch() returns useful information
         # Setup a local tracking branch of a remote branch
-        empty_repo.create_head(
-            "master", origin.refs.master
-        )  # create local branch "master" from remote "master"
-        empty_repo.heads.master.set_tracking_branch(
-            origin.refs.master
-        )  # set local "master" to track remote "master
+        empty_repo.create_head("master", origin.refs.master)  # create local branch "master" from remote "master"
+        empty_repo.heads.master.set_tracking_branch(origin.refs.master)  # set local "master" to track remote "master
         empty_repo.heads.master.checkout()  # checkout local "master" to working tree
         # Three above commands in one:
-        empty_repo.create_head("master", origin.refs.master).set_tracking_branch(
-            origin.refs.master
-        ).checkout()
+        empty_repo.create_head("master", origin.refs.master).set_tracking_branch(origin.refs.master).checkout()
         # rename remotes
         origin.rename("new_origin")
         # push and pull behaves similarly to `git push|pull`
@@ -563,9 +469,7 @@ class Tutorials(TestBase):
         git = repo.git
         git.checkout("HEAD", b="my_new_branch")  # create a new branch
         git.branch("another-new-one")
-        git.branch(
-            "-D", "another-new-one"
-        )  # pass strings for full control over argument order
+        git.branch("-D", "another-new-one")  # pass strings for full control over argument order
         git.for_each_ref()  # '-' becomes '_' when calling it
         # ![31-test_references_and_objects]
 
@@ -578,17 +482,11 @@ class Tutorials(TestBase):
 
         assert len(sms) == 1
         sm = sms[0]
-        self.assertEqual(
-            sm.name, "gitdb"
-        )  # git-python has gitdb as single submodule ...
-        self.assertEqual(
-            sm.children()[0].name, "smmap"
-        )  # ... which has smmap as single submodule
+        self.assertEqual(sm.name, "gitdb")  # git-python has gitdb as single submodule ...
+        self.assertEqual(sm.children()[0].name, "smmap")  # ... which has smmap as single submodule
 
         # The module is the repository referenced by the submodule
-        assert (
-            sm.module_exists()
-        )  # the module is available, which doesn't have to be the case.
+        assert sm.module_exists()  # the module is available, which doesn't have to be the case.
         assert sm.module().working_tree_dir.endswith("gitdb")
         # the submodule's absolute path is the module's path
         assert sm.abspath == sm.module().working_tree_dir

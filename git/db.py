@@ -42,9 +42,7 @@ class GitCmdObjectDB(LooseObjectDB):
 
     def stream(self, binsha: bytes) -> OStream:
         """For now, all lookup is done by git itself"""
-        hexsha, typename, size, stream = self._git.stream_object_data(
-            bin_to_hex(binsha)
-        )
+        hexsha, typename, size, stream = self._git.stream_object_data(bin_to_hex(binsha))
         return OStream(hex_to_bin(hexsha), typename, size, stream)
 
     # { Interface

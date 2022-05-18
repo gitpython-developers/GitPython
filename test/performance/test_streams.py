@@ -97,9 +97,7 @@ class TestObjDBPerformance(TestBigRepoR):
             # VS. CGIT
             ##########
             # CGIT ! Can using the cgit programs be faster ?
-            proc = rwrepo.git.hash_object(
-                "-w", "--stdin", as_process=True, istream=subprocess.PIPE
-            )
+            proc = rwrepo.git.hash_object("-w", "--stdin", as_process=True, istream=subprocess.PIPE)
 
             # write file - pump everything in at once to be a fast as possible
             data = stream.getvalue()  # cache it

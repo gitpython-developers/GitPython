@@ -60,9 +60,7 @@ class TraverseNT(NamedTuple):
     src: Union["Traversable", None]
 
 
-T_TIobj = TypeVar(
-    "T_TIobj", bound="TraversableIterableObj"
-)  # for TraversableIterableObj.traverse()
+T_TIobj = TypeVar("T_TIobj", bound="TraversableIterableObj")  # for TraversableIterableObj.traverse()
 
 TraversedTup = Union[
     Tuple[Union["Traversable", None], "Traversable"],  # for commit, submodule
@@ -133,9 +131,7 @@ def get_object_type_by_name(
 
         return tree.Tree
     else:
-        raise ValueError(
-            "Cannot handle unknown object type: %s" % object_type_name.decode()
-        )
+        raise ValueError("Cannot handle unknown object type: %s" % object_type_name.decode())
 
 
 def utctz_to_altz(utctz: str) -> int:
@@ -164,12 +160,7 @@ def verify_utctz(offset: str) -> str:
         raise fmt_exc
     if offset[0] not in "+-":
         raise fmt_exc
-    if (
-        offset[1] not in digits
-        or offset[2] not in digits
-        or offset[3] not in digits
-        or offset[4] not in digits
-    ):
+    if offset[1] not in digits or offset[2] not in digits or offset[3] not in digits or offset[4] not in digits:
         raise fmt_exc
     # END for each char
     return offset
@@ -222,15 +213,11 @@ def parse_date(string_date: Union[str, datetime]) -> Tuple[int, int]:
     """
     if isinstance(string_date, datetime):
         if string_date.tzinfo:
-            utcoffset = cast(
-                timedelta, string_date.utcoffset()
-            )  # typeguard, if tzinfoand is not None
+            utcoffset = cast(timedelta, string_date.utcoffset())  # typeguard, if tzinfoand is not None
             offset = -int(utcoffset.total_seconds())
             return int(string_date.astimezone(utc).timestamp()), offset
         else:
-            raise ValueError(
-                f"string_date datetime object without tzinfo, {string_date}"
-            )
+            raise ValueError(f"string_date datetime object without tzinfo, {string_date}")
 
     # git time
     try:
@@ -302,9 +289,7 @@ def parse_date(string_date: Union[str, datetime]) -> Tuple[int, int]:
             raise ValueError("no format matched")
         # END handle format
     except Exception as e:
-        raise ValueError(
-            f"Unsupported date format or type: {string_date}, type={type(string_date)}"
-        ) from e
+        raise ValueError(f"Unsupported date format or type: {string_date}, type={type(string_date)}") from e
     # END handle exceptions
 
 
@@ -411,9 +396,7 @@ class Traversable(Protocol):
             # could add _id_attribute_ to Traversable, or make all Traversable also Iterable?
 
         if not as_edge:
-            out: IterableList[
-                Union["Commit", "Submodule", "Tree", "Blob"]
-            ] = IterableList(id)
+            out: IterableList[Union["Commit", "Submodule", "Tree", "Blob"]] = IterableList(id)
             out.extend(self.traverse(as_edge=as_edge, *args, **kwargs))
             return out
             # overloads in subclasses (mypy doesn't allow typing self: subclass)
@@ -437,12 +420,8 @@ class Traversable(Protocol):
 
     def _traverse(
         self,
-        predicate: Callable[
-            [Union["Traversable", "Blob", TraversedTup], int], bool
-        ] = lambda i, d: True,
-        prune: Callable[
-            [Union["Traversable", "Blob", TraversedTup], int], bool
-        ] = lambda i, d: False,
+        predicate: Callable[[Union["Traversable", "Blob", TraversedTup], int], bool] = lambda i, d: True,
+        prune: Callable[[Union["Traversable", "Blob", TraversedTup], int], bool] = lambda i, d: False,
         depth: int = -1,
         branch_first: bool = True,
         visit_once: bool = True,
@@ -506,10 +485,7 @@ class Traversable(Protocol):
             if branch_first:
                 stack.extendleft(TraverseNT(depth, i, src_item) for i in lst)
             else:
-                reviter = (
-                    TraverseNT(depth, lst[i], src_item)
-                    for i in range(len(lst) - 1, -1, -1)
-                )
+                reviter = (TraverseNT(depth, lst[i], src_item) for i in range(len(lst) - 1, -1, -1))
                 stack.extend(reviter)
 
         # END addToStack local method
@@ -524,9 +500,7 @@ class Traversable(Protocol):
                 visited.add(item)
 
             rval: Union[TraversedTup, "Traversable", "Blob"]
-            if (
-                as_edge
-            ):  # if as_edge return (src, item) unless rrc is None (e.g. for first item)
+            if as_edge:  # if as_edge return (src, item) unless rrc is None (e.g. for first item)
                 rval = (src, item)
             else:
                 rval = item
@@ -575,9 +549,7 @@ class TraversableIterableObj(IterableObj, Traversable):
 
     TIobj_tuple = Tuple[Union[T_TIobj, None], T_TIobj]
 
-    def list_traverse(
-        self: T_TIobj, *args: Any, **kwargs: Any
-    ) -> IterableList[T_TIobj]:
+    def list_traverse(self: T_TIobj, *args: Any, **kwargs: Any) -> IterableList[T_TIobj]:
         return super(TraversableIterableObj, self)._list_traverse(*args, **kwargs)
 
     @overload  # type: ignore
@@ -587,12 +559,8 @@ class TraversableIterableObj(IterableObj, Traversable):
     @overload
     def traverse(
         self: T_TIobj,
-        predicate: Callable[
-            [Union[T_TIobj, Tuple[Union[T_TIobj, None], T_TIobj]], int], bool
-        ],
-        prune: Callable[
-            [Union[T_TIobj, Tuple[Union[T_TIobj, None], T_TIobj]], int], bool
-        ],
+        predicate: Callable[[Union[T_TIobj, Tuple[Union[T_TIobj, None], T_TIobj]], int], bool],
+        prune: Callable[[Union[T_TIobj, Tuple[Union[T_TIobj, None], T_TIobj]], int], bool],
         depth: int,
         branch_first: bool,
         visit_once: bool,
@@ -604,12 +572,8 @@ class TraversableIterableObj(IterableObj, Traversable):
     @overload
     def traverse(
         self: T_TIobj,
-        predicate: Callable[
-            [Union[T_TIobj, Tuple[Union[T_TIobj, None], T_TIobj]], int], bool
-        ],
-        prune: Callable[
-            [Union[T_TIobj, Tuple[Union[T_TIobj, None], T_TIobj]], int], bool
-        ],
+        predicate: Callable[[Union[T_TIobj, Tuple[Union[T_TIobj, None], T_TIobj]], int], bool],
+        prune: Callable[[Union[T_TIobj, Tuple[Union[T_TIobj, None], T_TIobj]], int], bool],
         depth: int,
         branch_first: bool,
         visit_once: bool,
@@ -633,18 +597,14 @@ class TraversableIterableObj(IterableObj, Traversable):
 
     def traverse(
         self: T_TIobj,
-        predicate: Callable[
-            [Union[T_TIobj, TIobj_tuple], int], bool
-        ] = lambda i, d: True,
+        predicate: Callable[[Union[T_TIobj, TIobj_tuple], int], bool] = lambda i, d: True,
         prune: Callable[[Union[T_TIobj, TIobj_tuple], int], bool] = lambda i, d: False,
         depth: int = -1,
         branch_first: bool = True,
         visit_once: bool = True,
         ignore_self: int = 1,
         as_edge: bool = False,
-    ) -> Union[
-        Iterator[T_TIobj], Iterator[Tuple[T_TIobj, T_TIobj]], Iterator[TIobj_tuple]
-    ]:
+    ) -> Union[Iterator[T_TIobj], Iterator[Tuple[T_TIobj, T_TIobj]], Iterator[TIobj_tuple]]:
         """For documentation, see util.Traversable._traverse()"""
 
         """

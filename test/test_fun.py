@@ -25,10 +25,7 @@ from gitdb.typ import str_tree_type
 
 class TestFun(TestBase):
     def _assert_index_entries(self, entries, trees):
-        index = IndexFile.from_tree(
-            self.rorepo,
-            *[self.rorepo.tree(bin_to_hex(t).decode("ascii")) for t in trees]
-        )
+        index = IndexFile.from_tree(self.rorepo, *[self.rorepo.tree(bin_to_hex(t).decode("ascii")) for t in trees])
         assert entries
         assert len(index.entries) == len(entries)
         for entry in entries:
@@ -191,11 +188,7 @@ class TestFun(TestBase):
             if is_them:
                 trees = [tb, tb, th]
             entries = aggressive_tree_merge(odb, trees)
-            assert (
-                len(entries) == 1
-                and entries[0].binsha == shaa
-                and entries[0].mode == fa[1]
-            )
+            assert len(entries) == 1 and entries[0].binsha == shaa and entries[0].mode == fa[1]
 
             # one side deletes, the other changes = conflict
             fa = mkfile(bfn, shab)
@@ -245,9 +238,7 @@ class TestFun(TestBase):
         H = self.rorepo.tree("29eb123beb1c55e5db4aa652d843adccbd09ae18")  # head tree
         M = self.rorepo.tree("e14e3f143e7260de9581aee27e5a9b2645db72de")  # merge tree
         B = self.rorepo.tree("f606937a7a21237c866efafcad33675e6539c103")  # base tree
-        B_old = self.rorepo.tree(
-            "1f66cfbbce58b4b552b041707a12d437cc5f400a"
-        )  # old base tree
+        B_old = self.rorepo.tree("1f66cfbbce58b4b552b041707a12d437cc5f400a")  # old base tree
 
         # two very different trees
         entries = traverse_trees_recursive(odb, [B_old.binsha, H.binsha], "")
@@ -275,9 +266,7 @@ class TestFun(TestBase):
         max_count = 50
         count = 0
         odb = self.rorepo.odb
-        for commit in self.rorepo.commit(
-            "29eb123beb1c55e5db4aa652d843adccbd09ae18"
-        ).traverse():
+        for commit in self.rorepo.commit("29eb123beb1c55e5db4aa652d843adccbd09ae18").traverse():
             if count >= max_count:
                 break
             count += 1

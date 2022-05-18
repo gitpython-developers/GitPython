@@ -56,15 +56,9 @@ class TestGit(TestBase):
         self.assertEqual(["-s", "5"], self.git.transform_kwargs(**{"s": 5}))
         self.assertEqual([], self.git.transform_kwargs(**{"s": None}))
 
-        self.assertEqual(
-            ["--max-count"], self.git.transform_kwargs(**{"max_count": True})
-        )
-        self.assertEqual(
-            ["--max-count=5"], self.git.transform_kwargs(**{"max_count": 5})
-        )
-        self.assertEqual(
-            ["--max-count=0"], self.git.transform_kwargs(**{"max_count": 0})
-        )
+        self.assertEqual(["--max-count"], self.git.transform_kwargs(**{"max_count": True}))
+        self.assertEqual(["--max-count=5"], self.git.transform_kwargs(**{"max_count": 5}))
+        self.assertEqual(["--max-count=0"], self.git.transform_kwargs(**{"max_count": 0}))
         self.assertEqual([], self.git.transform_kwargs(**{"max_count": None}))
 
         # Multiple args are supported by using lists/tuples
@@ -72,18 +66,14 @@ class TestGit(TestBase):
             ["-L", "1-3", "-L", "12-18"],
             self.git.transform_kwargs(**{"L": ("1-3", "12-18")}),
         )
-        self.assertEqual(
-            ["-C", "-C"], self.git.transform_kwargs(**{"C": [True, True, None, False]})
-        )
+        self.assertEqual(["-C", "-C"], self.git.transform_kwargs(**{"C": [True, True, None, False]}))
 
         # order is undefined
         res = self.git.transform_kwargs(**{"s": True, "t": True})
         self.assertEqual({"-s", "-t"}, set(res))
 
     def test_it_executes_git_to_shell_and_returns_result(self):
-        self.assertRegex(
-            self.git.execute(["git", "version"]), r"^git version [\d\.]{2}.*$"
-        )
+        self.assertRegex(self.git.execute(["git", "version"]), r"^git version [\d\.]{2}.*$")
 
     def test_it_accepts_stdin(self):
         filename = fixture_path("cat_file_blob")
@@ -126,9 +116,7 @@ class TestGit(TestBase):
     def test_persistent_cat_file_command(self):
         # read header only
         hexsha = "b2339455342180c7cc1e9bba3e9f181f7baa5167"
-        g = self.git.cat_file(
-            batch_check=True, istream=subprocess.PIPE, as_process=True
-        )
+        g = self.git.cat_file(batch_check=True, istream=subprocess.PIPE, as_process=True)
         g.stdin.write(b"b2339455342180c7cc1e9bba3e9f181f7baa5167\n")
         g.stdin.flush()
         obj_info = g.stdout.readline()
@@ -207,9 +195,7 @@ class TestGit(TestBase):
 
     def test_single_char_git_options_are_passed_to_git(self):
         input_value = "TestValue"
-        output_value = self.git(c="user.name=%s" % input_value).config(
-            "--get", "user.name"
-        )
+        output_value = self.git(c="user.name=%s" % input_value).config("--get", "user.name")
         self.assertEqual(input_value, output_value)
 
     def test_change_to_transform_kwargs_does_not_break_command_options(self):
@@ -221,9 +207,7 @@ class TestGit(TestBase):
 
     def test_env_vars_passed_to_git(self):
         editor = "non_existent_editor"
-        with mock.patch.dict(
-            "os.environ", {"GIT_EDITOR": editor}
-        ):  # @UndefinedVariable
+        with mock.patch.dict("os.environ", {"GIT_EDITOR": editor}):  # @UndefinedVariable
             self.assertEqual(self.git.var("GIT_EDITOR"), editor)
 
     @with_rw_directory

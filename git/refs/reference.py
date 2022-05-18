@@ -26,9 +26,7 @@ def require_remote_ref_path(func: Callable[..., _T]) -> Callable[..., _T]:
 
     def wrapper(self: T_References, *args: Any) -> _T:
         if not self.is_remote():
-            raise ValueError(
-                "ref path does not point to a remote reference: %s" % self.path
-            )
+            raise ValueError("ref path does not point to a remote reference: %s" % self.path)
         return func(self, *args)
 
     # END wrapper
@@ -59,9 +57,7 @@ class Reference(SymbolicReference, LazyMixin, IterableObj):
         :param check_path: if False, you can provide any path. Otherwise the path must start with the
             default path prefix of this type."""
         if check_path and not str(path).startswith(self._common_path_default + "/"):
-            raise ValueError(
-                f"Cannot instantiate {self.__class__.__name__!r} from path {path}"
-            )
+            raise ValueError(f"Cannot instantiate {self.__class__.__name__!r} from path {path}")
         self.path: str  # SymbolicReference converts to string atm
         super(Reference, self).__init__(repo, path)
 

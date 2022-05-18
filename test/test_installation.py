@@ -41,9 +41,7 @@ class TestInstallation(TestBase):
             result.returncode,
             msg=result.stderr or result.stdout or "Can't build - setup.py failed",
         )
-        result = subprocess.run(
-            [self.python, "-c", "import git"], stdout=subprocess.PIPE, cwd=self.sources
-        )
+        result = subprocess.run([self.python, "-c", "import git"], stdout=subprocess.PIPE, cwd=self.sources)
         self.assertEqual(
             0,
             result.returncode,
@@ -61,6 +59,4 @@ class TestInstallation(TestBase):
             syspath[0],
             msg="Failed to follow the conventions for https://docs.python.org/3/library/sys.html#sys.path",
         )
-        self.assertTrue(
-            syspath[1].endswith("gitdb"), msg="Failed to add gitdb to sys.path"
-        )
+        self.assertTrue(syspath[1].endswith("gitdb"), msg="Failed to add gitdb to sys.path")

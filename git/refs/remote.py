@@ -33,7 +33,7 @@ class RemoteReference(Head):
         common_path: Union[PathLike, None] = None,
         remote: Union["Remote", None] = None,
         *args: Any,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> Iterator["RemoteReference"]:
         """Iterate remote references, and if given, constrain them to the given remote"""
         common_path = common_path or cls._common_path_default
@@ -48,9 +48,7 @@ class RemoteReference(Head):
     # tightening the types of arguments in subclasses and recommends Any or
     # "type: ignore".  (See https://github.com/python/typing/issues/241)
     @classmethod
-    def delete(
-        cls, repo: "Repo", *refs: "RemoteReference", **kwargs: Any  # type: ignore
-    ) -> None:
+    def delete(cls, repo: "Repo", *refs: "RemoteReference", **kwargs: Any) -> None:  # type: ignore
         """Delete the given remote references
 
         :note:

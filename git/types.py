@@ -72,16 +72,12 @@ Lit_config_levels = Literal["system", "global", "user", "repository"]
 #     return inp in ("system", "user", "global", "repository")
 
 
-ConfigLevels_Tup = Tuple[
-    Literal["system"], Literal["user"], Literal["global"], Literal["repository"]
-]
+ConfigLevels_Tup = Tuple[Literal["system"], Literal["user"], Literal["global"], Literal["repository"]]
 
 # -----------------------------------------------------------------------------------
 
 
-def assert_never(
-    inp: NoReturn, raise_error: bool = True, exc: Union[Exception, None] = None
-) -> None:
+def assert_never(inp: NoReturn, raise_error: bool = True, exc: Union[Exception, None] = None) -> None:
     """For use in exhaustive checking of literal or Enum in if/else chain.
     Should only be reached if all members not handled OR attempt to pass non-members through chain.
 
@@ -92,9 +88,7 @@ def assert_never(
     """
     if raise_error:
         if exc is None:
-            raise ValueError(
-                f"An unhandled Literal ({inp}) in an if/else chain was found"
-            )
+            raise ValueError(f"An unhandled Literal ({inp}) in an if/else chain was found")
         else:
             raise exc
     else:

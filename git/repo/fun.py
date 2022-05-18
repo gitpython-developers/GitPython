@@ -59,13 +59,11 @@ def is_git_dir(d: "PathLike") -> bool:
             There is the unlikely danger to throw if we see directories which just look like a worktree dir,
             but are none."""
     if osp.isdir(d):
-        if (
-            osp.isdir(osp.join(d, "objects")) or "GIT_OBJECT_DIRECTORY" in os.environ
-        ) and osp.isdir(osp.join(d, "refs")):
+        if (osp.isdir(osp.join(d, "objects")) or "GIT_OBJECT_DIRECTORY" in os.environ) and osp.isdir(
+            osp.join(d, "refs")
+        ):
             headref = osp.join(d, "HEAD")
-            return osp.isfile(headref) or (
-                osp.islink(headref) and os.readlink(headref).startswith("refs")
-            )
+            return osp.isfile(headref) or (osp.islink(headref) and os.readlink(headref).startswith("refs"))
         elif (
             osp.isfile(osp.join(d, "gitdir"))
             and osp.isfile(osp.join(d, "commondir"))
@@ -244,9 +242,7 @@ def rev_parse(repo: "Repo", rev: str) -> Union["Commit", "Tag", "Tree", "Blob"]:
                 ref = repo.head.ref
             else:
                 if token == "@":
-                    ref = cast(
-                        "Reference", name_to_object(repo, rev[:start], return_ref=True)
-                    )
+                    ref = cast("Reference", name_to_object(repo, rev[:start], return_ref=True))
                 else:
                     obj = cast(Commit_ish, name_to_object(repo, rev[:start]))
                 # END handle token
@@ -296,9 +292,7 @@ def rev_parse(repo: "Repo", rev: str) -> Union["Commit", "Tag", "Tree", "Blob"]:
                 except ValueError as e:
                     # TODO: Try to parse the other date options, using parse_date
                     # maybe
-                    raise NotImplementedError(
-                        "Support for additional @{...} modes not implemented"
-                    ) from e
+                    raise NotImplementedError("Support for additional @{...} modes not implemented") from e
                 # END handle revlog index
 
                 try:
@@ -312,17 +306,12 @@ def rev_parse(repo: "Repo", rev: str) -> Union["Commit", "Tag", "Tree", "Blob"]:
                 # make it pass the following checks
                 output_type = ""
             else:
-                raise ValueError(
-                    "Invalid output type: %s ( in %s )" % (output_type, rev)
-                )
+                raise ValueError("Invalid output type: %s ( in %s )" % (output_type, rev))
             # END handle output type
 
             # empty output types don't require any specific type, its just about dereferencing tags
             if output_type and obj and obj.type != output_type:
-                raise ValueError(
-                    "Could not accommodate requested object type %r, got %s"
-                    % (output_type, obj.type)
-                )
+                raise ValueError("Could not accommodate requested object type %r, got %s" % (output_type, obj.type))
             # END verify output type
 
             start = end + 1  # skip brace
@@ -376,8 +365,7 @@ def rev_parse(repo: "Repo", rev: str) -> Union["Commit", "Tag", "Tree", "Blob"]:
             # END end handle tag
         except (IndexError, AttributeError) as e:
             raise BadName(
-                f"Invalid revision spec '{rev}' - not enough "
-                f"parent commits to reach '{token}{int(num)}'"
+                f"Invalid revision spec '{rev}' - not enough " f"parent commits to reach '{token}{int(num)}'"
             ) from e
         # END exception handling
     # END parse loop
@@ -392,9 +380,6 @@ def rev_parse(repo: "Repo", rev: str) -> Union["Commit", "Tag", "Tree", "Blob"]:
         raise ValueError("Revision specifier could not be parsed: %s" % rev)
 
     if parsed_to != lr:
-        raise ValueError(
-            "Didn't consume complete rev spec %s, consumed part: %s"
-            % (rev, rev[:parsed_to])
-        )
+        raise ValueError("Didn't consume complete rev spec %s, consumed part: %s" % (rev, rev[:parsed_to]))
 
     return obj

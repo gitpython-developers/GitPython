@@ -25,12 +25,8 @@ class TestClone(TestBase):
         try:
             self.rorepo.clone(non_empty_dir)
         except git.GitCommandError as exc:
-            self.assertTrue(
-                exc.stderr, "GitCommandError's 'stderr' is unexpectedly empty"
-            )
-            expr = re.compile(
-                r"(?is).*\bfatal:\s+destination\s+path\b.*\bexists\b.*\bnot\b.*\bempty\s+directory\b"
-            )
+            self.assertTrue(exc.stderr, "GitCommandError's 'stderr' is unexpectedly empty")
+            expr = re.compile(r"(?is).*\bfatal:\s+destination\s+path\b.*\bexists\b.*\bnot\b.*\bempty\s+directory\b")
             self.assertTrue(
                 expr.search(exc.stderr),
                 '"%s" does not match "%s"' % (expr.pattern, exc.stderr),

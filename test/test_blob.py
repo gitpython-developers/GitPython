@@ -18,6 +18,4 @@ class TestBlob(TestBase):
         self.assertEqual("text/plain", blob.mime_type)
 
     def test_nodict(self):
-        self.assertRaises(
-            AttributeError, setattr, self.rorepo.tree()["AUTHORS"], "someattr", 2
-        )
+        self.assertRaises(AttributeError, setattr, self.rorepo.tree()["AUTHORS"], "someattr", 2)

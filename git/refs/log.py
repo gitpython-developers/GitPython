@@ -118,10 +118,7 @@ class RefLogEntry(Tuple[str, str, Actor, Tuple[int, int], str]):
         elif len(fields) == 2:
             info, msg = fields
         else:
-            raise ValueError(
-                "Line must have up to two TAB-separated fields."
-                " Got %s" % repr(line_str)
-            )
+            raise ValueError("Line must have up to two TAB-separated fields." " Got %s" % repr(line_str))
         # END handle first split
 
         oldhexsha = info[:40]
@@ -247,9 +244,7 @@ class RefLog(List[RefLogEntry], Serializable):
             for i in range(index + 1):
                 line = fp.readline()
                 if not line:
-                    raise IndexError(
-                        f"Index file ended at line {i+1}, before given index was reached"
-                    )
+                    raise IndexError(f"Index file ended at line {i+1}, before given index was reached")
                 # END abort on eof
             # END handle runup
 
@@ -304,9 +299,7 @@ class RefLog(List[RefLogEntry], Serializable):
         assure_directory_exists(filepath, is_file=True)
         first_line = message.split("\n")[0]
         if isinstance(config_reader, Actor):
-            committer = (
-                config_reader  # mypy thinks this is Actor | Gitconfigparser, but why?
-            )
+            committer = config_reader  # mypy thinks this is Actor | Gitconfigparser, but why?
         else:
             committer = Actor.committer(config_reader)
         entry = RefLogEntry(
@@ -335,9 +328,7 @@ class RefLog(List[RefLogEntry], Serializable):
         """Write this instance's data to the file we are originating from
         :return: self"""
         if self._path is None:
-            raise ValueError(
-                "Instance was not initialized with a path, use to_file(...) instead"
-            )
+            raise ValueError("Instance was not initialized with a path, use to_file(...) instead")
         # END assert path
         self.to_file(self._path)
         return self

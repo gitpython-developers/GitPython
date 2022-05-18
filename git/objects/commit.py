@@ -144,9 +144,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         super(Commit, self).__init__(repo, binsha)
         self.binsha = binsha
         if tree is not None:
-            assert isinstance(
-                tree, Tree
-            ), "Tree needs to be a Tree instance, was %s" % type(tree)
+            assert isinstance(tree, Tree), "Tree needs to be a Tree instance, was %s" % type(tree)
         if tree is not None:
             self.tree = tree
         if author is not None:
@@ -234,9 +232,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         else:
             return self.message.split(b"\n", 1)[0]
 
-    def count(
-        self, paths: Union[PathLike, Sequence[PathLike]] = "", **kwargs: Any
-    ) -> int:
+    def count(self, paths: Union[PathLike, Sequence[PathLike]] = "", **kwargs: Any) -> int:
         """Count the number of commits reachable from this commit
 
         :param paths:
@@ -250,9 +246,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         # yes, it makes a difference whether empty paths are given or not in our case
         # as the empty paths version will ignore merge commits for some reason.
         if paths:
-            return len(
-                self.repo.git.rev_list(self.hexsha, "--", paths, **kwargs).splitlines()
-            )
+            return len(self.repo.git.rev_list(self.hexsha, "--", paths, **kwargs).splitlines())
         return len(self.repo.git.rev_list(self.hexsha, **kwargs).splitlines())
 
     @property
@@ -285,9 +279,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
             ``since`` all commits since i.e. '1970-01-01'
         :return: iterator yielding Commit items"""
         if "pretty" in kwargs:
-            raise ValueError(
-                "--pretty cannot be used as parsing expects single sha's only"
-            )
+            raise ValueError("--pretty cannot be used as parsing expects single sha's only")
         # END handle pretty
 
         # use -- in any case, to prevent possibility of ambiguous arguments
@@ -308,9 +300,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         proc = repo.git.rev_list(rev, args_list, as_process=True, **kwargs)
         return cls._iter_from_process_or_stream(repo, proc)
 
-    def iter_parents(
-        self, paths: Union[PathLike, Sequence[PathLike]] = "", **kwargs: Any
-    ) -> Iterator["Commit"]:
+    def iter_parents(self, paths: Union[PathLike, Sequence[PathLike]] = "", **kwargs: Any) -> Iterator["Commit"]:
         """Iterate _all_ parents of this commit.
 
         :param paths:
@@ -340,9 +330,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
                 text2 += "%s\t%s\t%s\n" % (insertions, deletions, filename)
             text = text2
         else:
-            text = self.repo.git.diff(
-                self.parents[0].hexsha, self.hexsha, "--", numstat=True
-            )
+            text = self.repo.git.diff(self.parents[0].hexsha, self.hexsha, "--", numstat=True)
         return Stats._list_from_string(self.repo, text)
 
     @property
@@ -394,9 +382,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         return d
 
     @classmethod
-    def _iter_from_process_or_stream(
-        cls, repo: "Repo", proc_or_stream: Union[Popen, IO]
-    ) -> Iterator["Commit"]:
+    def _iter_from_process_or_stream(cls, repo: "Repo", proc_or_stream: Union[Popen, IO]) -> Iterator["Commit"]:
         """Parse out commit information into a list of Commit objects
         We expect one-line per commit, and parse the actual commit information directly
         from our lighting fast object database
@@ -577,9 +563,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
                     new_commit,
                     logmsg="commit (initial): %s" % message,
                 )
-                repo.head.set_reference(
-                    master, logmsg="commit: Switching to %s" % master
-                )
+                repo.head.set_reference(master, logmsg="commit: Switching to %s" % master)
             # END handle empty repositories
         # END advance head handling
 
@@ -652,9 +636,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
             Otherwise it is assumed to be a plain data stream from our object
         """
         readline = stream.readline
-        self.tree = Tree(
-            self.repo, hex_to_bin(readline().split()[1]), Tree.tree_id << 12, ""
-        )
+        self.tree = Tree(self.repo, hex_to_bin(readline().split()[1]), Tree.tree_id << 12, "")
 
         self.parents = []
         next_line = None
@@ -664,11 +646,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
                 next_line = parent_line
                 break
             # END abort reading parents
-            self.parents.append(
-                type(self)(
-                    self.repo, hex_to_bin(parent_line.split()[-1].decode("ascii"))
-                )
-            )
+            self.parents.append(type(self)(self.repo, hex_to_bin(parent_line.split()[-1].decode("ascii"))))
         # END for each parent line
         self.parents = tuple(self.parents)
 
@@ -694,9 +672,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         buf = enc.strip()
         while buf:
             if buf[0:10] == b"encoding ":
-                self.encoding = buf[buf.find(b" ") + 1 :].decode(
-                    self.encoding, "ignore"
-                )
+                self.encoding = buf[buf.find(b" ") + 1 :].decode(self.encoding, "ignore")
             elif buf[0:7] == b"gpgsig ":
                 sig = buf[buf.find(b" ") + 1 :] + b"\n"
                 is_next_header = False

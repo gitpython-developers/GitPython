@@ -57,9 +57,7 @@ def _stamp_version(filename: str) -> None:
         with open(filename, "w") as f:
             f.writelines(out)
     else:
-        print(
-            "WARNING: Couldn't find version line in file %s" % filename, file=sys.stderr
-        )
+        print("WARNING: Couldn't find version line in file %s" % filename, file=sys.stderr)
 
 
 def build_py_modules(basedir: str, excludes: Sequence = ()) -> Sequence:

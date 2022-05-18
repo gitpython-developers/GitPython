@@ -44,9 +44,7 @@ master_doc = "index"
 
 # General information about the project.
 project = "GitPython"
-copyright = (
-    "Copyright (C) 2008, 2009 Michael Trier and contributors, 2010-2015 Sebastian Thiel"
-)
+copyright = "Copyright (C) 2008, 2009 Michael Trier and contributors, 2010-2015 Sebastian Thiel"
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the

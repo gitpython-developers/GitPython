@@ -69,9 +69,7 @@ def post_clear_cache(func: Callable[..., _T]) -> Callable[..., _T]:
     """
 
     @wraps(func)
-    def post_clear_cache_if_not_raised(
-        self: "IndexFile", *args: Any, **kwargs: Any
-    ) -> _T:
+    def post_clear_cache_if_not_raised(self: "IndexFile", *args: Any, **kwargs: Any) -> _T:
         rval = func(self, *args, **kwargs)
         self._delete_entries_cache()
         return rval
@@ -90,8 +88,7 @@ def default_index(func: Callable[..., _T]) -> Callable[..., _T]:
     def check_default_index(self: "IndexFile", *args: Any, **kwargs: Any) -> _T:
         if self._file_path != self._index_path():
             raise AssertionError(
-                "Cannot call %r on indices that do not represent the default git index"
-                % func.__name__
+                "Cannot call %r on indices that do not represent the default git index" % func.__name__
             )
         return func(self, *args, **kwargs)
 

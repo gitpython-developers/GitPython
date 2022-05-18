@@ -16,9 +16,7 @@ class TestRefLog(TestBase):
         actor = Actor("name", "email")
         msg = "message"
 
-        self.assertRaises(
-            ValueError, RefLogEntry.new, nullhexsha, hexsha, "noactor", 0, 0, ""
-        )
+        self.assertRaises(ValueError, RefLogEntry.new, nullhexsha, hexsha, "noactor", 0, 0, "")
         e = RefLogEntry.new(nullhexsha, hexsha, actor, 0, 1, msg)
 
         assert e.oldhexsha == nullhexsha
@@ -78,9 +76,7 @@ class TestRefLog(TestBase):
             assert open(tfile).read() == open(rlp).read()
 
             # append an entry
-            entry = RefLog.append_entry(
-                cr, tfile, IndexObject.NULL_BIN_SHA, binsha, msg
-            )
+            entry = RefLog.append_entry(cr, tfile, IndexObject.NULL_BIN_SHA, binsha, msg)
             assert entry.oldhexsha == IndexObject.NULL_HEX_SHA
             assert entry.newhexsha == "f" * 40
             assert entry.message == msg

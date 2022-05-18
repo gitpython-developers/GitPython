@@ -127,9 +127,7 @@ def with_rw_repo(working_tree_ref, bare=False):
     To make working with relative paths easier, the cwd will be set to the working
     dir of the repository.
     """
-    assert isinstance(
-        working_tree_ref, str
-    ), "Decorator requires ref name for working tree checkout"
+    assert isinstance(working_tree_ref, str), "Decorator requires ref name for working tree checkout"
 
     def argument_passer(func):
         @wraps(func)
@@ -270,23 +268,15 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
     """
     from git import Git, Remote  # To avoid circular deps.
 
-    assert isinstance(
-        working_tree_ref, str
-    ), "Decorator requires ref name for working tree checkout"
+    assert isinstance(working_tree_ref, str), "Decorator requires ref name for working tree checkout"
 
     def argument_passer(func):
         @wraps(func)
         def remote_repo_creator(self):
-            rw_daemon_repo_dir = tempfile.mktemp(
-                prefix="daemon_repo-%s-" % func.__name__
-            )
-            rw_repo_dir = tempfile.mktemp(
-                prefix="daemon_cloned_repo-%s-" % func.__name__
-            )
+            rw_daemon_repo_dir = tempfile.mktemp(prefix="daemon_repo-%s-" % func.__name__)
+            rw_repo_dir = tempfile.mktemp(prefix="daemon_cloned_repo-%s-" % func.__name__)
 
-            rw_daemon_repo = self.rorepo.clone(
-                rw_daemon_repo_dir, shared=True, bare=True
-            )
+            rw_daemon_repo = self.rorepo.clone(rw_daemon_repo_dir, shared=True, bare=True)
             # recursive alternates info ?
             rw_repo = rw_daemon_repo.clone(rw_repo_dir, shared=True, bare=False, n=True)
             try:
@@ -312,16 +302,12 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
 
                 base_daemon_path, rel_repo_dir = osp.split(rw_daemon_repo_dir)
 
-                remote_repo_url = Git.polish_url(
-                    "git://localhost:%s/%s" % (GIT_DAEMON_PORT, rel_repo_dir)
-                )
+                remote_repo_url = Git.polish_url("git://localhost:%s/%s" % (GIT_DAEMON_PORT, rel_repo_dir))
                 with d_remote.config_writer as cw:
                     cw.set("url", remote_repo_url)
 
                 with git_daemon_launched(
-                    Git.polish_url(
-                        base_daemon_path, is_cygwin=False
-                    ),  # No daemon in Cygwin.
+                    Git.polish_url(base_daemon_path, is_cygwin=False),  # No daemon in Cygwin.
                     "127.0.0.1",
                     GIT_DAEMON_PORT,
                 ):
@@ -389,9 +375,7 @@ class TestBase(TestCase):
         """:return" a path to a small, clonable repository"""
         from git.cmd import Git
 
-        return Git.polish_url(
-            osp.join(self.rorepo.working_tree_dir, "git/ext/gitdb/gitdb/ext/smmap")
-        )
+        return Git.polish_url(osp.join(self.rorepo.working_tree_dir, "git/ext/gitdb/gitdb/ext/smmap"))
 
     @classmethod
     def setUpClass(cls):

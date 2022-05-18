@@ -68,13 +68,7 @@ def decode_path(path: bytes, has_ab_prefix: bool = True) -> Optional[bytes]:
         return None
 
     if path.startswith(b'"') and path.endswith(b'"'):
-        path = (
-            path[1:-1]
-            .replace(b"\\n", b"\n")
-            .replace(b"\\t", b"\t")
-            .replace(b'\\"', b'"')
-            .replace(b"\\\\", b"\\")
-        )
+        path = path[1:-1].replace(b"\\n", b"\n").replace(b"\\t", b"\t").replace(b'\\"', b'"').replace(b"\\\\", b"\\")
 
     path = _octal_byte_re.sub(_octal_repl, path)
 
@@ -114,7 +108,7 @@ class Diffable(object):
         other: Union[Type["Index"], "Tree", "Commit", None, str, object] = Index,
         paths: Union[PathLike, List[PathLike], Tuple[PathLike, ...], None] = None,
         create_patch: bool = False,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> "DiffIndex":
         """Creates diffs between two items being trees, trees and index or an
         index and the working tree. It will detect renames automatically.
@@ -190,11 +184,7 @@ class Diffable(object):
         kwargs["as_process"] = True
         proc = diff_cmd(*self._process_diff_args(args), **kwargs)
 
-        diff_method = (
-            Diff._index_from_patch_format
-            if create_patch
-            else Diff._index_from_raw_format
-        )
+        diff_method = Diff._index_from_patch_format if create_patch else Diff._index_from_raw_format
         index = diff_method(self.repo, proc)
 
         proc.wait()
@@ -247,12 +237,7 @@ class DiffIndex(List[T_Diff]):
                 yield diffidx
             elif change_type == "R" and diffidx.renamed:
                 yield diffidx
-            elif (
-                change_type == "M"
-                and diffidx.a_blob
-                and diffidx.b_blob
-                and diffidx.a_blob != diffidx.b_blob
-            ):
+            elif change_type == "M" and diffidx.a_blob and diffidx.b_blob and diffidx.a_blob != diffidx.b_blob:
                 yield diffidx
         # END for each diff
 
@@ -372,17 +357,13 @@ class Diff(object):
         if a_blob_id is None or a_blob_id == self.NULL_HEX_SHA:
             self.a_blob = None
         else:
-            self.a_blob = Blob(
-                repo, hex_to_bin(a_blob_id), mode=self.a_mode, path=self.a_path
-            )
+            self.a_blob = Blob(repo, hex_to_bin(a_blob_id), mode=self.a_mode, path=self.a_path)
 
         self.b_blob: Union["IndexObject", None]
         if b_blob_id is None or b_blob_id == self.NULL_HEX_SHA:
             self.b_blob = None
         else:
-            self.b_blob = Blob(
-                repo, hex_to_bin(b_blob_id), mode=self.b_mode, path=self.b_path
-            )
+            self.b_blob = Blob(repo, hex_to_bin(b_blob_id), mode=self.b_mode, path=self.b_path)
 
         self.new_file: bool = new_file
         self.deleted_file: bool = deleted_file
@@ -447,11 +428,7 @@ class Diff(object):
         if self.diff:
             msg += "\n---"
             try:
-                msg += (
-                    self.diff.decode(defenc)
-                    if isinstance(self.diff, bytes)
-                    else self.diff
-                )
+                msg += self.diff.decode(defenc) if isinstance(self.diff, bytes) else self.diff
             except UnicodeDecodeError:
                 msg += "OMITTED BINARY DATA"
             # end handle encoding
@@ -474,17 +451,11 @@ class Diff(object):
 
     @property
     def rename_from(self) -> Optional[str]:
-        return (
-            self.raw_rename_from.decode(defenc, "replace")
-            if self.raw_rename_from
-            else None
-        )
+        return self.raw_rename_from.decode(defenc, "replace") if self.raw_rename_from else None
 
     @property
     def rename_to(self) -> Optional[str]:
-        return (
-            self.raw_rename_to.decode(defenc, "replace") if self.raw_rename_to else None
-        )
+        return self.raw_rename_to.decode(defenc, "replace") if self.raw_rename_to else None
 
     @property
     def renamed(self) -> bool:
@@ -499,9 +470,7 @@ class Diff(object):
         return self.rename_from != self.rename_to
 
     @classmethod
-    def _pick_best_path(
-        cls, path_match: bytes, rename_match: bytes, path_fallback_match: bytes
-    ) -> Optional[bytes]:
+    def _pick_best_path(cls, path_match: bytes, rename_match: bytes, path_fallback_match: bytes) -> Optional[bytes]:
         if path_match:
             return decode_path(path_match)
 
@@ -514,9 +483,7 @@ class Diff(object):
         return None
 
     @classmethod
-    def _index_from_patch_format(
-        cls, repo: "Repo", proc: Union["Popen", "Git.AutoInterrupt"]
-    ) -> DiffIndex:
+    def _index_from_patch_format(cls, repo: "Repo", proc: Union["Popen", "Git.AutoInterrupt"]) -> DiffIndex:
         """Create a new DiffIndex from the given text which must be in patch format
         :param repo: is the repository we are operating on - it is required
         :param stream: result of 'git diff' as a stream (supporting file protocol)
@@ -524,9 +491,7 @@ class Diff(object):
 
         ## FIXME: Here SLURPING raw, need to re-phrase header-regexes linewise.
         text_list: List[bytes] = []
-        handle_process_output(
-            proc, text_list.append, None, finalize_process, decode_streams=False
-        )
+        handle_process_output(proc, text_list.append, None, finalize_process, decode_streams=False)
 
         # for now, we have to bake the stream
         text = b"".join(text_list)
@@ -570,11 +535,7 @@ class Diff(object):
 
             # Make sure the mode is set if the path is set. Otherwise the resulting blob is invalid
             # We just use the one mode we should have parsed
-            a_mode = (
-                old_mode
-                or deleted_file_mode
-                or (a_path and (b_mode or new_mode or new_file_mode))
-            )
+            a_mode = old_mode or deleted_file_mode or (a_path and (b_mode or new_mode or new_file_mode))
             b_mode = b_mode or new_mode or new_file_mode or (b_path and a_mode)
             index.append(
                 Diff(

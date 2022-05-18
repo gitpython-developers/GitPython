@@ -38,9 +38,7 @@ class HEAD(SymbolicReference):
 
     def __init__(self, repo: "Repo", path: PathLike = _HEAD_NAME):
         if path != self._HEAD_NAME:
-            raise ValueError(
-                "HEAD instance must point to %r, got %r" % (self._HEAD_NAME, path)
-            )
+            raise ValueError("HEAD instance must point to %r, got %r" % (self._HEAD_NAME, path))
         super(HEAD, self).__init__(repo, path)
         self.commit: "Commit"
 
@@ -56,7 +54,7 @@ class HEAD(SymbolicReference):
         index: bool = True,
         working_tree: bool = False,
         paths: Union[PathLike, Sequence[PathLike], None] = None,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> "HEAD":
         """Reset our HEAD to the given commit optionally synchronizing
         the index and working tree. The reference we refer to will be set to
@@ -98,9 +96,7 @@ class HEAD(SymbolicReference):
         if working_tree:
             mode = "--hard"
             if not index:
-                raise ValueError(
-                    "Cannot reset the working tree if the index is not reset as well"
-                )
+                raise ValueError("Cannot reset the working tree if the index is not reset as well")
 
         # END working tree handling
 
@@ -140,13 +136,7 @@ class Head(Reference):
     k_config_remote_ref = "merge"  # branch to merge from remote
 
     @classmethod
-    def delete(
-        cls,
-        repo: "Repo",
-        *heads: "Union[Head, str]",
-        force: bool = False,
-        **kwargs: Any
-    ) -> None:
+    def delete(cls, repo: "Repo", *heads: "Union[Head, str]", force: bool = False, **kwargs: Any) -> None:
         """Delete the given heads
 
         :param force:
@@ -158,9 +148,7 @@ class Head(Reference):
             flag = "-D"
         repo.git.branch(flag, *heads)
 
-    def set_tracking_branch(
-        self, remote_reference: Union["RemoteReference", None]
-    ) -> "Head":
+    def set_tracking_branch(self, remote_reference: Union["RemoteReference", None]) -> "Head":
         """
         Configure this branch to track the given remote reference. This will alter
             this branch's configuration accordingly.
@@ -170,9 +158,7 @@ class Head(Reference):
         :return: self"""
         from .remote import RemoteReference
 
-        if remote_reference is not None and not isinstance(
-            remote_reference, RemoteReference
-        ):
+        if remote_reference is not None and not isinstance(remote_reference, RemoteReference):
             raise ValueError("Incorrect parameter type: %r" % remote_reference)
         # END handle type
 
@@ -198,18 +184,12 @@ class Head(Reference):
         from .remote import RemoteReference
 
         reader = self.config_reader()
-        if reader.has_option(self.k_config_remote) and reader.has_option(
-            self.k_config_remote_ref
-        ):
+        if reader.has_option(self.k_config_remote) and reader.has_option(self.k_config_remote_ref):
             ref = Head(
                 self.repo,
-                Head.to_full_path(
-                    strip_quotes(reader.get_value(self.k_config_remote_ref))
-                ),
+                Head.to_full_path(strip_quotes(reader.get_value(self.k_config_remote_ref))),
             )
-            remote_refpath = RemoteReference.to_full_path(
-                join_path(reader.get_value(self.k_config_remote), ref.name)
-            )
+            remote_refpath = RemoteReference.to_full_path(join_path(reader.get_value(self.k_config_remote), ref.name))
             return RemoteReference(self.repo, remote_refpath)
         # END handle have tracking branch
 

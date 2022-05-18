@@ -115,9 +115,7 @@ class Repo(object):
 
     DAEMON_EXPORT_FILE = "git-daemon-export-ok"
 
-    git = cast(
-        "Git", None
-    )  # Must exist, or  __del__  will fail in case we raise on `__init__()`
+    git = cast("Git", None)  # Must exist, or  __del__  will fail in case we raise on `__init__()`
     working_dir: Optional[PathLike] = None
     _working_tree_dir: Optional[PathLike] = None
     git_dir: PathLike = ""
@@ -251,9 +249,7 @@ class Repo(object):
             pass
 
         try:
-            common_dir = (
-                open(osp.join(self.git_dir, "commondir"), "rt").readlines()[0].strip()
-            )
+            common_dir = open(osp.join(self.git_dir, "commondir"), "rt").readlines()[0].strip()
             self._common_dir = osp.join(self.git_dir, common_dir)
         except OSError:
             self._common_dir = ""
@@ -325,9 +321,7 @@ class Repo(object):
         with open(filename, "wb") as fp:
             fp.write((descr + "\n").encode(defenc))
 
-    description = property(
-        _get_description, _set_description, doc="the project's description"
-    )
+    description = property(_get_description, _set_description, doc="the project's description")
     del _get_description
     del _set_description
 
@@ -522,9 +516,7 @@ class Repo(object):
         if config_level == "system":
             return "/etc/gitconfig"
         elif config_level == "user":
-            config_home = os.environ.get("XDG_CONFIG_HOME") or osp.join(
-                os.environ.get("HOME", "~"), ".config"
-            )
+            config_home = os.environ.get("XDG_CONFIG_HOME") or osp.join(os.environ.get("HOME", "~"), ".config")
             return osp.normpath(osp.expanduser(osp.join(config_home, "git", "config")))
         elif config_level == "global":
             return osp.normpath(osp.expanduser("~/.gitconfig"))
@@ -569,9 +561,7 @@ class Repo(object):
             files = [self._get_config_path(config_level)]
         return GitConfigParser(files, read_only=True, repo=self)
 
-    def config_writer(
-        self, config_level: Lit_config_levels = "repository"
-    ) -> GitConfigParser:
+    def config_writer(self, config_level: Lit_config_levels = "repository") -> GitConfigParser:
         """
         :return:
             GitConfigParser allowing to write values of the specified configuration file level.
@@ -584,9 +574,7 @@ class Repo(object):
             system = system wide configuration file
             global = user level configuration file
             repository = configuration file for this repository only"""
-        return GitConfigParser(
-            self._get_config_path(config_level), read_only=False, repo=self
-        )
+        return GitConfigParser(self._get_config_path(config_level), read_only=False, repo=self)
 
     def commit(self, rev: Union[str, Commit_ish, None] = None) -> Commit:
         """The Commit object for the specified revision
@@ -801,9 +789,7 @@ class Repo(object):
             default_args.extend(["--", str(path)])
         if index:
             # diff index against HEAD
-            if osp.isfile(self.index.path) and len(
-                self.git.diff("--cached", *default_args)
-            ):
+            if osp.isfile(self.index.path) and len(self.git.diff("--cached", *default_args)):
                 return True
         # END index handling
         if working_tree:
@@ -835,9 +821,7 @@ class Repo(object):
 
     def _get_untracked_files(self, *args: Any, **kwargs: Any) -> List[str]:
         # make sure we get all files, not only untracked directories
-        proc = self.git.status(
-            *args, porcelain=True, untracked_files=True, as_process=True, **kwargs
-        )
+        proc = self.git.status(*args, porcelain=True, untracked_files=True, as_process=True, **kwargs)
         # Untracked files prefix in porcelain mode
         prefix = "?? "
         untracked_files = []
@@ -850,12 +834,7 @@ class Repo(object):
             if filename[0] == filename[-1] == '"':
                 filename = filename[1:-1]
                 # WHATEVER ... it's a mess, but works for me
-                filename = (
-                    filename.encode("ascii")
-                    .decode("unicode_escape")
-                    .encode("latin1")
-                    .decode(defenc)
-                )
+                filename = filename.encode("ascii").decode("unicode_escape").encode("latin1").decode(defenc)
             untracked_files.append(filename)
         finalize_process(proc)
         return untracked_files
@@ -880,9 +859,7 @@ class Repo(object):
         # reveal_type(self.head.reference)  # => Reference
         return self.head.reference
 
-    def blame_incremental(
-        self, rev: str | HEAD, file: str, **kwargs: Any
-    ) -> Iterator["BlameEntry"]:
+    def blame_incremental(self, rev: str | HEAD, file: str, **kwargs: Any) -> Iterator["BlameEntry"]:
         """Iterator for blame information for the given file at the given revision.
 
         Unlike .blame(), this does not return the actual file's contents, only
@@ -897,17 +874,13 @@ class Repo(object):
         should get a continuous range spanning all line numbers in the file.
         """
 
-        data: bytes = self.git.blame(
-            rev, "--", file, p=True, incremental=True, stdout_as_string=False, **kwargs
-        )
+        data: bytes = self.git.blame(rev, "--", file, p=True, incremental=True, stdout_as_string=False, **kwargs)
         commits: Dict[bytes, Commit] = {}
 
         stream = (line for line in data.split(b"\n") if line)
         while True:
             try:
-                line = next(
-                    stream
-                )  # when exhausted, causes a StopIteration, terminating this function
+                line = next(stream)  # when exhausted, causes a StopIteration, terminating this function
             except StopIteration:
                 return
             split_line = line.split()
@@ -956,9 +929,7 @@ class Repo(object):
                 # guaranteed to be the last line
                 while True:
                     try:
-                        line = next(
-                            stream
-                        )  # will fail if we reach the EOF unexpectedly
+                        line = next(stream)  # will fail if we reach the EOF unexpectedly
                     except StopIteration:
                         return
                     tag, value = line.split(b" ", 1)
@@ -987,9 +958,7 @@ class Repo(object):
         if incremental:
             return self.blame_incremental(rev, file, **kwargs)
 
-        data: bytes = self.git.blame(
-            rev, "--", file, p=True, stdout_as_string=False, **kwargs
-        )
+        data: bytes = self.git.blame(rev, "--", file, p=True, stdout_as_string=False, **kwargs)
         commits: Dict[str, Commit] = {}
         blames: List[List[Commit | List[str | bytes] | None]] = []
 
@@ -1083,13 +1052,9 @@ class Repo(object):
                                 c = Commit(
                                     self,
                                     hex_to_bin(sha),
-                                    author=Actor._from_string(
-                                        f"{info['author']} {info['author_email']}"
-                                    ),
+                                    author=Actor._from_string(f"{info['author']} {info['author_email']}"),
                                     authored_date=info["author_date"],
-                                    committer=Actor._from_string(
-                                        f"{info['committer']} {info['committer_email']}"
-                                    ),
+                                    committer=Actor._from_string(f"{info['committer']} {info['committer_email']}"),
                                     committed_date=info["committer_date"],
                                 )
                                 commits[sha] = c
@@ -1169,9 +1134,7 @@ class Repo(object):
         url: PathLike,
         path: PathLike,
         odb_default_type: Type[GitCmdObjectDB],
-        progress: Union[
-            "RemoteProgress", "UpdateProgress", Callable[..., "RemoteProgress"], None
-        ] = None,
+        progress: Union["RemoteProgress", "UpdateProgress", Callable[..., "RemoteProgress"], None] = None,
         multi_options: Optional[List[str]] = None,
         **kwargs: Any,
     ) -> "Repo":
@@ -1187,9 +1150,7 @@ class Repo(object):
         #  becomes::
         #        git clone --bare  /cygwin/d/foo.git  /cygwin/d/C:\\Work
         #
-        clone_path = (
-            Git.polish_url(path) if Git.is_cygwin() and "bare" in kwargs else path
-        )
+        clone_path = Git.polish_url(path) if Git.is_cygwin() and "bare" in kwargs else path
         sep_dir = kwargs.get("separate_git_dir")
         if sep_dir:
             kwargs["separate_git_dir"] = Git.polish_url(sep_dir)
@@ -1225,11 +1186,7 @@ class Repo(object):
         # our git command could have a different working dir than our actual
         # environment, hence we prepend its working dir if required
         if not osp.isabs(path):
-            path = (
-                osp.join(git._working_dir, path)
-                if git._working_dir is not None
-                else path
-            )
+            path = osp.join(git._working_dir, path) if git._working_dir is not None else path
 
         repo = cls(path, odbt=odbt)
 
@@ -1305,9 +1262,7 @@ class Repo(object):
         git = cls.GitCommandWrapperType(os.getcwd())
         if env is not None:
             git.update_environment(**env)
-        return cls._clone(
-            git, url, to_path, GitCmdObjectDB, progress, multi_options, **kwargs
-        )
+        return cls._clone(git, url, to_path, GitCmdObjectDB, progress, multi_options, **kwargs)
 
     def archive(
         self,

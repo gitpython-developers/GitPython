@@ -47,9 +47,7 @@ def mkhead(repo: "Repo", path: PathLike) -> "Head":
     return git.Head(repo, git.Head.to_full_path(path))
 
 
-def find_first_remote_branch(
-    remotes: Sequence["Remote"], branch_name: str
-) -> "RemoteReference":
+def find_first_remote_branch(remotes: Sequence["Remote"], branch_name: str) -> "RemoteReference":
     """Find the remote branch matching the name of the given branch or raise InvalidGitRepositoryError"""
     for remote in remotes:
         try:
@@ -58,9 +56,7 @@ def find_first_remote_branch(
             continue
         # END exception handling
     # END for remote
-    raise InvalidGitRepositoryError(
-        "Didn't find remote branch '%r' in any of the given remotes" % branch_name
-    )
+    raise InvalidGitRepositoryError("Didn't find remote branch '%r' in any of the given remotes" % branch_name)
 
 
 # } END utilities

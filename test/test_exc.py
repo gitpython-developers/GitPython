@@ -82,9 +82,7 @@ class TExc(TestBase):
         for ex_class in exception_classes:
             self.assertTrue(issubclass(ex_class, GitError))
 
-    @ddt.data(
-        *list(itt.product(_cmd_argvs, _causes_n_substrings, _streams_n_substrings))
-    )
+    @ddt.data(*list(itt.product(_cmd_argvs, _causes_n_substrings, _streams_n_substrings)))
     def test_CommandError_unicode(self, case):
         argv, (cause, subs), stream = case
         cls = CommandError

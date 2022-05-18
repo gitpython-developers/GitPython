@@ -69,9 +69,7 @@ class TestRepo(TestBase):
     def tearDown(self):
         for lfp in glob.glob(_tc_lock_fpaths):
             if osp.isfile(lfp):
-                raise AssertionError(
-                    "Previous TC left hanging git-lock file: {}".format(lfp)
-                )
+                raise AssertionError("Previous TC left hanging git-lock file: {}".format(lfp))
         import gc
 
         gc.collect()
@@ -137,9 +135,7 @@ class TestRepo(TestBase):
 
         c = commits[0]
         self.assertEqual("9a4b1d4d11eee3c5362a4152216376e634bd14cf", c.hexsha)
-        self.assertEqual(
-            ["c76852d0bff115720af3f27acdb084c59361e5f6"], [p.hexsha for p in c.parents]
-        )
+        self.assertEqual(["c76852d0bff115720af3f27acdb084c59361e5f6"], [p.hexsha for p in c.parents])
         self.assertEqual("ce41fc29549042f1aa09cc03174896cf23f112e3", c.tree.hexsha)
         self.assertEqual("Michael Trier", c.author.name)
         self.assertEqual("mtrier@gmail.com", c.author.email)
@@ -195,9 +191,7 @@ class TestRepo(TestBase):
         original_repo = Repo.init(osp.join(rw_dir, "repo"))
         environment = {"entry1": "value", "another_entry": "10"}
 
-        cloned = Repo.clone_from(
-            original_repo.git_dir, osp.join(rw_dir, "clone"), env=environment
-        )
+        cloned = Repo.clone_from(original_repo.git_dir, osp.join(rw_dir, "clone"), env=environment)
 
         self.assertEqual(environment, cloned.git.environment())
 
@@ -228,13 +222,9 @@ class TestRepo(TestBase):
             ],
         )
 
-        self.assertEqual(
-            cloned.config_reader().get_value("submodule", "active"), "repo"
-        )
+        self.assertEqual(cloned.config_reader().get_value("submodule", "active"), "repo")
         self.assertEqual(cloned.config_reader().get_value("core", "filemode"), False)
-        self.assertEqual(
-            cloned.config_reader().get_value('submodule "repo"', "update"), "checkout"
-        )
+        self.assertEqual(cloned.config_reader().get_value('submodule "repo"', "update"), "checkout")
         self.assertEqual(
             cloned.config_reader().get_value('filter "lfs"', "clean"),
             "git-lfs clean -- %f",
@@ -259,15 +249,11 @@ class TestRepo(TestBase):
         password = "fakepassword1234"
         try:
             Repo.clone_from(
-                url="https://fakeuser:{}@fakerepo.example.com/testrepo".format(
-                    password
-                ),
+                url="https://fakeuser:{}@fakerepo.example.com/testrepo".format(password),
                 to_path=rw_dir,
             )
         except GitCommandError as err:
-            assert password not in str(err), (
-                "The error message '%s' should not contain the password" % err
-            )
+            assert password not in str(err), "The error message '%s' should not contain the password" % err
         # Working example from a blank private project
         Repo.clone_from(
             url="https://gitlab+deploy-token-392045:mLWhVus7bjLsy8xj8q2V@gitlab.com/mercierm/test_git_python",
@@ -284,9 +270,7 @@ class TestRepo(TestBase):
                 self.assertTrue(len(b) <= self.max_chunk_size)
 
         for chunk_size in [16, 128, 1024]:
-            repo.git.status(
-                output_stream=TestOutputStream(chunk_size), max_chunk_size=chunk_size
-            )
+            repo.git.status(output_stream=TestOutputStream(chunk_size), max_chunk_size=chunk_size)
 
         repo.git.log(
             n=100,
@@ -394,9 +378,7 @@ class TestRepo(TestBase):
         for index in (0, 1):
             for working_tree in (0, 1):
                 for untracked_files in (0, 1):
-                    assert self.rorepo.is_dirty(
-                        index, working_tree, untracked_files
-                    ) in (True, False)
+                    assert self.rorepo.is_dirty(index, working_tree, untracked_files) in (True, False)
                 # END untracked files
             # END working tree
         # END index
@@ -410,9 +392,7 @@ class TestRepo(TestBase):
         for index in (0, 1):
             for working_tree in (0, 1):
                 for untracked_files in (0, 1):
-                    assert self.rorepo.is_dirty(
-                        index, working_tree, untracked_files, path=":!foo"
-                    ) in (True, False)
+                    assert self.rorepo.is_dirty(index, working_tree, untracked_files, path=":!foo") in (True, False)
                 # END untracked files
             # END working tree
         # END index
@@ -440,9 +420,7 @@ class TestRepo(TestBase):
         assert rwrepo.is_dirty(untracked_files=True, path="doc") is True
 
     def test_head(self):
-        self.assertEqual(
-            self.rorepo.head.reference.object, self.rorepo.active_branch.object
-        )
+        self.assertEqual(self.rorepo.head.reference.object, self.rorepo.active_branch.object)
 
     def test_index(self):
         index = self.rorepo.index
@@ -496,9 +474,7 @@ class TestRepo(TestBase):
         tlist = b[0][1]
         self.assertTrue(tlist)
         self.assertTrue(isinstance(tlist[0], str))
-        self.assertTrue(
-            len(tlist) < sum(len(t) for t in tlist)
-        )  # test for single-char bug
+        self.assertTrue(len(tlist) < sum(len(t) for t in tlist))  # test for single-char bug
 
         # BINARY BLAME
         git.return_value = fixture("blame_binary")
@@ -517,18 +493,14 @@ class TestRepo(TestBase):
                 nml += int(len(b[1]) > 1)
         # END for each item to traverse
         assert c, "Should have executed at least one blame command"
-        assert (
-            nml
-        ), "There should at least be one blame commit that contains multiple lines"
+        assert nml, "There should at least be one blame commit that contains multiple lines"
 
     @mock.patch.object(Git, "_call_process")
     def test_blame_incremental(self, git):
         # loop over two fixtures, create a test fixture for 2.11.1+ syntax
         for git_fixture in ("blame_incremental", "blame_incremental_2.11.1_plus"):
             git.return_value = fixture(git_fixture)
-            blame_output = self.rorepo.blame_incremental(
-                "9debf6b0aafb6f7781ea9d1383c86939a1aacde3", "AUTHORS"
-            )
+            blame_output = self.rorepo.blame_incremental("9debf6b0aafb6f7781ea9d1383c86939a1aacde3", "AUTHORS")
             blame_output = list(blame_output)
             self.assertEqual(len(blame_output), 5)
 
@@ -548,9 +520,7 @@ class TestRepo(TestBase):
             )
 
             commits = [entry.commit.hexsha[:7] for entry in blame_output]
-            self.assertEqual(
-                commits, ["82b8902", "82b8902", "c76852d", "c76852d", "c76852d"]
-            )
+            self.assertEqual(commits, ["82b8902", "82b8902", "c76852d", "c76852d", "c76852d"])
 
             # Original filenames
             self.assertSequenceEqual(
@@ -615,9 +585,7 @@ class TestRepo(TestBase):
             self.assertEqual(len(files), num_test_untracked)
 
             repo_add(untracked_files)
-            self.assertEqual(
-                len(rwrepo.untracked_files), (num_recently_untracked - len(files))
-            )
+            self.assertEqual(len(rwrepo.untracked_files), (num_recently_untracked - len(files)))
         # end for each run
 
     def test_config_reader(self):
@@ -826,9 +794,7 @@ class TestRepo(TestBase):
         rev_parse = self.rorepo.rev_parse
 
         # try special case: This one failed at some point, make sure its fixed
-        self.assertEqual(
-            rev_parse("33ebe").hexsha, "33ebe7acec14b25c5f84f35a664803fcab2f7781"
-        )
+        self.assertEqual(rev_parse("33ebe").hexsha, "33ebe7acec14b25c5f84f35a664803fcab2f7781")
 
         # start from reference
         num_resolved = 0
@@ -1099,9 +1065,7 @@ class TestRepo(TestBase):
         self.assertTrue(repo.is_valid_object(tag_sha, "tag"))
 
         # Check for invalid objects
-        self.assertFalse(
-            repo.is_valid_object(b"1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a", "blob")
-        )
+        self.assertFalse(repo.is_valid_object(b"1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a", "blob"))
 
         # Check for invalid objects of specific type
         self.assertFalse(repo.is_valid_object(commit_sha, "blob"))
@@ -1200,6 +1164,4 @@ class TestRepo(TestBase):
             fs.write("hello\n")
         r.git.add(Git.polish_url(fp))
         r.git.commit(message="init")
-        self.assertEqual(
-            r.git.show("HEAD:hello.txt", strip_newline_in_stdout=False), "hello\n"
-        )
+        self.assertEqual(r.git.show("HEAD:hello.txt", strip_newline_in_stdout=False), "hello\n")

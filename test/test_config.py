@@ -37,9 +37,7 @@ class TestBase(TestCase):
     def tearDown(self):
         for lfp in glob.glob(_tc_lock_fpaths):
             if osp.isfile(lfp):
-                raise AssertionError(
-                    "Previous TC left hanging git-lock file: {}".format(lfp)
-                )
+                raise AssertionError("Previous TC left hanging git-lock file: {}".format(lfp))
 
     def _to_memcache(self, file_path):
         with open(file_path, "rb") as fp:
@@ -94,9 +92,7 @@ class TestBase(TestCase):
         # END for each filename
 
     def test_includes_order(self):
-        with GitConfigParser(
-            list(map(fixture_path, ("git_config", "git_config_global")))
-        ) as r_config:
+        with GitConfigParser(list(map(fixture_path, ("git_config", "git_config_global")))) as r_config:
             r_config.read()  # enforce reading
             # Simple inclusions, again checking them taking precedence
             assert r_config.get_value("sec", "var0") == "value0_included"
@@ -106,9 +102,7 @@ class TestBase(TestCase):
             try:
                 assert r_config.get_value("sec", "var1") == "value1_main"
             except AssertionError as e:
-                raise SkipTest(
-                    "Known failure -- included values are not in effect right away"
-                ) from e
+                raise SkipTest("Known failure -- included values are not in effect right away") from e
 
     @with_rw_directory
     def test_lock_reentry(self, rw_dir):
@@ -231,9 +225,7 @@ class TestBase(TestCase):
             for tv in ("a", "b", "c"):
                 check_test_value(cr, tv)
             # end for each test to verify
-            assert (
-                len(cr.items("include")) == 8
-            ), "Expected all include sections to be merged"
+            assert len(cr.items("include")) == 8, "Expected all include sections to be merged"
 
         # test writable config writers - assure write-back doesn't involve includes
         with GitConfigParser(fpa, read_only=False, merge_includes=True) as cw:
@@ -399,9 +391,7 @@ class TestBase(TestCase):
         )
 
     def test_empty_config_value(self):
-        cr = GitConfigParser(
-            fixture_path("git_config_with_empty_value"), read_only=True
-        )
+        cr = GitConfigParser(fixture_path("git_config_with_empty_value"), read_only=True)
 
         assert cr.get_value("core", "filemode"), "Should read keys with values"
 
@@ -417,9 +407,7 @@ class TestBase(TestCase):
 
             # Where there are multiple values, "get" returns the last.
             self.assertEqual(cw.get("section1", "option1"), "value1b")
-            self.assertEqual(
-                cw.get_values("section1", "option1"), ["value1a", "value1b"]
-            )
+            self.assertEqual(cw.get_values("section1", "option1"), ["value1a", "value1b"])
             self.assertEqual(
                 cw.items("section1"),
                 [("option1", "value1b"), ("other_option1", "other_value1")],
@@ -445,9 +433,7 @@ class TestBase(TestCase):
             file_obj.seek(0)
             cr = GitConfigParser(file_obj, read_only=True)
             self.assertEqual(cr.get_value("section2", "option1"), "value1b")
-            self.assertEqual(
-                cr.get_values("section2", "option1"), ["value1a", "value1b"]
-            )
+            self.assertEqual(cr.get_values("section2", "option1"), ["value1a", "value1b"])
             self.assertEqual(
                 cr.items("section2"),
                 [("option1", "value1b"), ("other_option1", "other_value1")],
@@ -488,9 +474,7 @@ class TestBase(TestCase):
             file_obj.seek(0)
             cr = GitConfigParser(file_obj, read_only=True)
             self.assertEqual(cr.get_value("section1", "option1"), "value1b")
-            self.assertEqual(
-                cr.get_values("section1", "option1"), ["value1a", "value1b"]
-            )
+            self.assertEqual(cr.get_values("section1", "option1"), ["value1a", "value1b"])
             self.assertEqual(cr.get_value("section1", "other_option1"), "other_value1a")
             self.assertEqual(
                 cr.get_values("section1", "other_option1"),
@@ -516,9 +500,7 @@ class TestBase(TestCase):
             file_obj.seek(0)
             cr = GitConfigParser(file_obj, read_only=True)
             self.assertEqual(cr.get_value("section1", "option1"), "value1c")
-            self.assertEqual(
-                cr.get_values("section1", "option1"), ["value1a", "value1b", "value1c"]
-            )
+            self.assertEqual(cr.get_values("section1", "option1"), ["value1a", "value1b", "value1c"])
             self.assertEqual(
                 cr.items("section1"),
                 [("option1", "value1c"), ("other_option1", "other_value1")],

@@ -117,22 +117,16 @@ class TestRefs(TestBase):
             assert head.tracking_branch() is None
 
             special_name = "feature#123"
-            special_name_remote_ref = SymbolicReference.create(
-                rwrepo, "refs/remotes/origin/%s" % special_name
-            )
+            special_name_remote_ref = SymbolicReference.create(rwrepo, "refs/remotes/origin/%s" % special_name)
             gp_tracking_branch = rwrepo.create_head("gp_tracking#123")
-            special_name_remote_ref = rwrepo.remotes[0].refs[
-                special_name
-            ]  # get correct type
+            special_name_remote_ref = rwrepo.remotes[0].refs[special_name]  # get correct type
             gp_tracking_branch.set_tracking_branch(special_name_remote_ref)
             TBranch = gp_tracking_branch.tracking_branch()
             if TBranch is not None:
                 assert TBranch.path == special_name_remote_ref.path
 
             git_tracking_branch = rwrepo.create_head("git_tracking#123")
-            rwrepo.git.branch(
-                "-u", special_name_remote_ref.name, git_tracking_branch.name
-            )
+            rwrepo.git.branch("-u", special_name_remote_ref.name, git_tracking_branch.name)
             TBranch = gp_tracking_branch.tracking_branch()
             if TBranch is not None:
                 assert TBranch.name == special_name_remote_ref.name
@@ -172,9 +166,7 @@ class TestRefs(TestBase):
         assert len(cur_head.log()) == blog_len + 2
 
         # a new branch has just a single entry
-        other_head = Head.create(
-            rwrepo, "mynewhead", pcommit, logmsg="new head created"
-        )
+        other_head = Head.create(rwrepo, "mynewhead", pcommit, logmsg="new head created")
         log = other_head.log()
         assert len(log) == 1
         assert log[0].oldhexsha == pcommit.NULL_HEX_SHA
@@ -209,9 +201,7 @@ class TestRefs(TestBase):
         cur_head.reset(new_head_commit, index=True)  # index only
         assert cur_head.reference.commit == new_head_commit
 
-        self.assertRaises(
-            ValueError, cur_head.reset, new_head_commit, index=False, working_tree=True
-        )
+        self.assertRaises(ValueError, cur_head.reset, new_head_commit, index=False, working_tree=True)
         new_head_commit = new_head_commit.parents[0]
         cur_head.reset(new_head_commit, index=True, working_tree=True)  # index + wt
         assert cur_head.reference.commit == new_head_commit
@@ -279,9 +269,7 @@ class TestRefs(TestBase):
             Head.create(rw_repo, new_name, new_head.commit)
 
             # its not fine with a different value
-            self.assertRaises(
-                OSError, Head.create, rw_repo, new_name, new_head.commit.parents[0]
-            )
+            self.assertRaises(OSError, Head.create, rw_repo, new_name, new_head.commit.parents[0])
 
             # force it
             new_head = Head.create(rw_repo, new_name, actual_commit, force=True)
@@ -290,9 +278,7 @@ class TestRefs(TestBase):
 
             assert new_head.rename("hello").name == "hello"
             assert new_head.rename("hello/world").name == "hello/world"
-            assert (
-                new_head.rename(old_name).name == old_name and new_head.path == old_path
-            )
+            assert new_head.rename(old_name).name == old_name and new_head.path == old_path
 
             # rename with force
             tmp_head = Head.create(rw_repo, "tmphead")
@@ -454,9 +440,7 @@ class TestRefs(TestBase):
         # END for each name type
 
         # References that don't exist trigger an error if we want to access them
-        self.assertRaises(
-            ValueError, getattr, Reference(rw_repo, "refs/doesntexist"), "commit"
-        )
+        self.assertRaises(ValueError, getattr, Reference(rw_repo, "refs/doesntexist"), "commit")
 
         # exists, fail unless we force
         ex_ref_path = far_away_head.path
@@ -481,10 +465,7 @@ class TestRefs(TestBase):
             cur_head.reference.commit,
         )
         # it works if the new ref points to the same reference
-        assert (
-            SymbolicReference.create(rw_repo, symref.path, symref.reference).path
-            == symref.path
-        )  # @NoEffect
+        assert SymbolicReference.create(rw_repo, symref.path, symref.reference).path == symref.path  # @NoEffect
         SymbolicReference.delete(rw_repo, symref)
         # would raise if the symref wouldn't have been deletedpbl
         symref = SymbolicReference.create(rw_repo, symref_path, cur_head.reference)

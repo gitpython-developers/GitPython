@@ -189,9 +189,7 @@ class TestDiff(TestBase):
         self.assertEqual(len(list(diffs.iter_change_type("T"))), 1)
 
     def test_diff_of_modified_files_not_added_to_the_index(self):
-        output = StringProcessAdapter(
-            to_raw(fixture("diff_abbrev-40_full-index_M_raw_no-color"))
-        )
+        output = StringProcessAdapter(to_raw(fixture("diff_abbrev-40_full-index_M_raw_no-color")))
         diffs = Diff._index_from_raw_format(self.rorepo, output)
 
         self.assertEqual(len(diffs), 1, "one modification")
@@ -224,9 +222,7 @@ class TestDiff(TestBase):
         self.assertEqual(len(res), 6)
         for dr in res:
             self.assertTrue(dr.diff.startswith(b"@@"), dr)
-            self.assertIsNotNone(
-                str(dr), "Diff to string conversion should be possible"
-            )
+            self.assertIsNotNone(str(dr), "Diff to string conversion should be possible")
         # end for each diff
 
         dr = res[3]
@@ -240,9 +236,7 @@ class TestDiff(TestBase):
             res[0].b_path,
         )
 
-    @unittest.skip(
-        "This currently fails and would need someone to improve diff parsing"
-    )
+    @unittest.skip("This currently fails and would need someone to improve diff parsing")
     def test_diff_file_with_colon(self):
         output = fixture("diff_file_with_colon")
         res = []
@@ -287,9 +281,7 @@ class TestDiff(TestBase):
         # NOTE: The path prefixes a/ and b/ here are legit!  We're actually
         # verifying that it's not "a/a/" that shows up, see the fixture data.
         self.assertEqual(res[11].a_path, "a/with spaces")  # NOTE: path a/ here legit!
-        self.assertEqual(
-            res[11].b_path, "b/with some spaces"
-        )  # NOTE: path b/ here legit!
+        self.assertEqual(res[11].b_path, "b/with some spaces")  # NOTE: path b/ here legit!
         self.assertEqual(res[12].a_path, "a/ending in a space ")
         self.assertEqual(res[12].b_path, "b/ending with space ")
         self.assertEqual(res[13].a_path, 'a/"with-quotes"')
@@ -321,9 +313,7 @@ class TestDiff(TestBase):
         data = StringProcessAdapter(fixture("diff_file_with_spaces"))
         diff_index = Diff._index_from_patch_format(self.rorepo, data)
         self.assertIsNone(diff_index[0].a_path, repr(diff_index[0].a_path))
-        self.assertEqual(
-            diff_index[0].b_path, "file with spaces", repr(diff_index[0].b_path)
-        )
+        self.assertEqual(diff_index[0].b_path, "file with spaces", repr(diff_index[0].b_path))
 
     def test_diff_submodule(self):
         """Test that diff is able to correctly diff commits that cover submodule changes"""
@@ -374,9 +364,7 @@ class TestDiff(TestBase):
             for other in (None, NULL_TREE, commit.Index, commit.parents[0]):
                 for paths in (None, "CHANGES", ("CHANGES", "lib")):
                     for create_patch in range(2):
-                        diff_index = diff_item.diff(
-                            other=other, paths=paths, create_patch=create_patch
-                        )
+                        diff_index = diff_item.diff(other=other, paths=paths, create_patch=create_patch)
                         assert isinstance(diff_index, DiffIndex)
 
                         if diff_index:
@@ -384,9 +372,7 @@ class TestDiff(TestBase):
                             for ct in DiffIndex.change_type:
                                 key = "ct_%s" % ct
                                 assertion_map.setdefault(key, 0)
-                                assertion_map[key] = assertion_map[key] + len(
-                                    list(diff_index.iter_change_type(ct))
-                                )
+                                assertion_map[key] = assertion_map[key] + len(list(diff_index.iter_change_type(ct)))
                             # END for each changetype
 
                             # check entries

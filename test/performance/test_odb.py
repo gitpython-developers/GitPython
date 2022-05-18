@@ -63,16 +63,13 @@ class TestObjDBPerformance(TestBigRepoR):
             # END for each bloblist
             elapsed = time() - st
 
-            msg = (
-                "%s: Retrieved %i blob (%i KiB) and their data in %g s ( %f blobs / s, %f KiB / s )"
-                % (
-                    type(repo.odb),
-                    nb,
-                    data_bytes / 1000,
-                    elapsed,
-                    nb / elapsed,
-                    (data_bytes / 1000) / elapsed,
-                )
+            msg = "%s: Retrieved %i blob (%i KiB) and their data in %g s ( %f blobs / s, %f KiB / s )" % (
+                type(repo.odb),
+                nb,
+                data_bytes / 1000,
+                elapsed,
+                nb / elapsed,
+                (data_bytes / 1000) / elapsed,
             )
             print(msg, file=sys.stderr)
             results[2].append(elapsed)

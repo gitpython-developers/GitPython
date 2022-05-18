@@ -35,9 +35,7 @@ __all__ = (
 )
 
 
-def tree_to_stream(
-    entries: Sequence[EntryTup], write: Callable[["ReadableBuffer"], Union[int, None]]
-) -> None:
+def tree_to_stream(entries: Sequence[EntryTup], write: Callable[["ReadableBuffer"], Union[int, None]]) -> None:
     """Write the give list of entries into a stream using its write method
     :param entries: **sorted** list of tuples with (binsha, mode, name)
     :param write: write method which takes a data string"""
@@ -114,9 +112,7 @@ def tree_entries_from_data(data: bytes) -> List[EntryTup]:
     return out
 
 
-def _find_by_name(
-    tree_data: MutableSequence[EntryTupOrNone], name: str, is_dir: bool, start_at: int
-) -> EntryTupOrNone:
+def _find_by_name(tree_data: MutableSequence[EntryTupOrNone], name: str, is_dir: bool, start_at: int) -> EntryTupOrNone:
     """return data entry matching the given name and tree mode
     or None.
     Before the item is returned, the respective data item is set
@@ -234,9 +230,7 @@ def traverse_trees_recursive(
     return out
 
 
-def traverse_tree_recursive(
-    odb: "GitCmdObjectDB", tree_sha: bytes, path_prefix: str
-) -> List[EntryTup]:
+def traverse_tree_recursive(odb: "GitCmdObjectDB", tree_sha: bytes, path_prefix: str) -> List[EntryTup]:
     """
     :return: list of entries of the tree pointed to by the binary tree_sha. An entry
         has the following format:

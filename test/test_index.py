@@ -141,9 +141,7 @@ class TestIndex(TestBase):
             tree = self.rorepo.commit(tree).tree
 
         blist = []
-        for blob in tree.traverse(
-            predicate=lambda e, d: e.type == "blob", branch_first=False
-        ):
+        for blob in tree.traverse(predicate=lambda e, d: e.type == "blob", branch_first=False):
             assert (blob.path, 0) in index.entries
             blist.append(blob)
         # END for each blob in tree
@@ -151,8 +149,7 @@ class TestIndex(TestBase):
             iset = {k[0] for k in index.entries.keys()}
             bset = {b.path for b in blist}
             raise AssertionError(
-                "CMP Failed: Missing entries in index: %s, missing in tree: %s"
-                % (bset - iset, iset - bset)
+                "CMP Failed: Missing entries in index: %s, missing in tree: %s" % (bset - iset, iset - bset)
             )
         # END assertion message
 
@@ -192,9 +189,7 @@ class TestIndex(TestBase):
         self._cmp_tree_index(cur_sha, two_way_index)
 
         # merge three trees - here we have a merge conflict
-        three_way_index = IndexFile.from_tree(
-            rw_repo, common_ancestor_sha, cur_sha, other_sha
-        )
+        three_way_index = IndexFile.from_tree(rw_repo, common_ancestor_sha, cur_sha, other_sha)
         assert len([e for e in three_way_index.entries.values() if e.stage != 0])
 
         # ITERATE BLOBS
@@ -244,18 +239,14 @@ class TestIndex(TestBase):
         assert manifest_entry.binsha != rw_repo.index.entries[manifest_key].binsha
 
         rw_repo.index.reset(rw_repo.head)
-        self.assertEqual(
-            rw_repo.index.entries[manifest_key].binsha, manifest_entry.binsha
-        )
+        self.assertEqual(rw_repo.index.entries[manifest_key].binsha, manifest_entry.binsha)
 
         # FAKE MERGE
         #############
         # Add a change with a NULL sha that should conflict with next_commit. We
         # pretend there was a change, but we do not even bother adding a proper
         # sha for it ( which makes things faster of course )
-        manifest_fake_entry = BaseIndexEntry(
-            (manifest_entry[0], b"\0" * 20, 0, manifest_entry[3])
-        )
+        manifest_fake_entry = BaseIndexEntry((manifest_entry[0], b"\0" * 20, 0, manifest_entry[3]))
         # try write flag
         self._assert_entries(rw_repo.index.add([manifest_fake_entry], write=False))
         # add actually resolves the null-hex-sha for us as a feature, but we can
@@ -274,9 +265,7 @@ class TestIndex(TestBase):
         # a three way merge would result in a conflict and fails as the command will
         # not overwrite any entries in our index and hence leave them unmerged. This is
         # mainly a protection feature as the current index is not yet in a tree
-        self.assertRaises(
-            GitCommandError, index.merge_tree, next_commit, base=parent_commit
-        )
+        self.assertRaises(GitCommandError, index.merge_tree, next_commit, base=parent_commit)
 
         # the only way to get the merged entries is to safe the current index away into a tree,
         # which is like a temporary commit for us. This fails as well as the NULL sha deos not
@@ -286,9 +275,7 @@ class TestIndex(TestBase):
 
         # if missing objects are okay, this would work though ( they are always okay now )
         # As we can't read back the tree with NULL_SHA, we rather set it to something else
-        index.entries[manifest_key] = IndexEntry(
-            manifest_entry[:1] + (hex_to_bin("f" * 40),) + manifest_entry[2:]
-        )
+        index.entries[manifest_key] = IndexEntry(manifest_entry[:1] + (hex_to_bin("f" * 40),) + manifest_entry[2:])
         tree = index.write_tree()
 
         # now make a proper three way merge with unmerged entries
@@ -476,9 +463,7 @@ class TestIndex(TestBase):
         # END mixed iterator
         deleted_files = index.remove(mixed_iterator(), working_tree=False)
         assert deleted_files
-        self.assertEqual(
-            self._count_existing(rw_repo, deleted_files), len(deleted_files)
-        )
+        self.assertEqual(self._count_existing(rw_repo, deleted_files), len(deleted_files))
         self.assertEqual(len(index.entries), 0)
 
         # reset the index to undo our changes
@@ -492,17 +477,13 @@ class TestIndex(TestBase):
 
         # reset everything
         index.reset(working_tree=True)
-        self.assertEqual(
-            self._count_existing(rw_repo, deleted_files), len(deleted_files)
-        )
+        self.assertEqual(self._count_existing(rw_repo, deleted_files), len(deleted_files))
 
         # invalid type
         self.assertRaises(TypeError, index.remove, [1])
 
         # absolute path
-        deleted_files = index.remove(
-            [osp.join(rw_repo.working_tree_dir, "lib")], r=True
-        )
+        deleted_files = index.remove([osp.join(rw_repo.working_tree_dir, "lib")], r=True)
         assert len(deleted_files) > 1
         self.assertRaises(ValueError, index.remove, ["/doesnt/exists"])
 
@@ -527,9 +508,7 @@ class TestIndex(TestBase):
 
         my_author = Actor("Frèderic Çaufl€", "author@example.com")
         my_committer = Actor("Committing Frèderic Çaufl€", "committer@example.com")
-        commit_actor = index.commit(
-            commit_message, author=my_author, committer=my_committer
-        )
+        commit_actor = index.commit(commit_message, author=my_author, committer=my_committer)
         assert cur_commit != commit_actor
         self.assertEqual(commit_actor.author.name, "Frèderic Çaufl€")
         self.assertEqual(commit_actor.author.email, "author@example.com")
@@ -565,9 +544,7 @@ class TestIndex(TestBase):
 
         # same index, multiple parents
         commit_message = "Index with multiple parents\n    commit with another line"
-        commit_multi_parent = index.commit(
-            commit_message, parent_commits=(commit_no_parents, new_commit)
-        )
+        commit_multi_parent = index.commit(commit_message, parent_commits=(commit_no_parents, new_commit))
         self.assertEqual(commit_multi_parent.message, commit_message)
         self.assertEqual(len(commit_multi_parent.parents), 2)
         self.assertEqual(commit_multi_parent.parents[0], commit_no_parents)
@@ -576,9 +553,7 @@ class TestIndex(TestBase):
 
         # re-add all files in lib
         # get the lib folder back on disk, but get an index without it
-        index.reset(new_commit.parents[0], working_tree=True).reset(
-            new_commit, working_tree=False
-        )
+        index.reset(new_commit.parents[0], working_tree=True).reset(new_commit, working_tree=False)
         lib_file_path = osp.join("lib", "git", "__init__.py")
         assert (lib_file_path, 0) not in index.entries
         assert osp.isfile(osp.join(rw_repo.working_tree_dir, lib_file_path))
@@ -590,9 +565,7 @@ class TestIndex(TestBase):
         assert len(entries) > 1
 
         # glob
-        entries = index.reset(new_commit).add(
-            [osp.join("lib", "git", "*.py")], fprogress=self._fprogress_add
-        )
+        entries = index.reset(new_commit).add([osp.join("lib", "git", "*.py")], fprogress=self._fprogress_add)
         self._assert_entries(entries)
         self._assert_fprogress(entries)
         self.assertEqual(len(entries), 14)
@@ -610,9 +583,7 @@ class TestIndex(TestBase):
         self.assertEqual(len(entries), 2)
 
         # missing path
-        self.assertRaises(
-            OSError, index.reset(new_commit).add, ["doesnt/exist/must/raise"]
-        )
+        self.assertRaises(OSError, index.reset(new_commit).add, ["doesnt/exist/must/raise"])
 
         # blob from older revision overrides current index revision
         old_blob = new_commit.parents[0].tree.blobs[0]
@@ -650,16 +621,12 @@ class TestIndex(TestBase):
 
                 link_file = osp.join(rw_repo.working_tree_dir, basename)
                 os.symlink(target, link_file)
-                entries = index.reset(new_commit).add(
-                    [link_file], fprogress=self._fprogress_add
-                )
+                entries = index.reset(new_commit).add([link_file], fprogress=self._fprogress_add)
                 self._assert_entries(entries)
                 self._assert_fprogress(entries)
                 self.assertEqual(len(entries), 1)
                 self.assertTrue(S_ISLNK(entries[0].mode))
-                self.assertTrue(
-                    S_ISLNK(index.entries[index.entry_key("my_real_symlink", 0)].mode)
-                )
+                self.assertTrue(S_ISLNK(index.entries[index.entry_key("my_real_symlink", 0)].mode))
 
                 # we expect only the target to be written
                 self.assertEqual(
@@ -676,9 +643,7 @@ class TestIndex(TestBase):
         link_target = "/etc/that"
         fake_symlink_path = self._make_file(fake_symlink_relapath, link_target, rw_repo)
         fake_entry = BaseIndexEntry((0o120000, null_bin_sha, 0, fake_symlink_relapath))
-        entries = index.reset(new_commit).add(
-            [fake_entry], fprogress=self._fprogress_add
-        )
+        entries = index.reset(new_commit).add([fake_entry], fprogress=self._fprogress_add)
         self._assert_entries(entries)
         self._assert_fprogress(entries)
         assert entries[0].hexsha != null_hex_sha
@@ -686,9 +651,7 @@ class TestIndex(TestBase):
         self.assertTrue(S_ISLNK(entries[0].mode))
 
         # assure this also works with an alternate method
-        full_index_entry = IndexEntry.from_base(
-            BaseIndexEntry((0o120000, entries[0].binsha, 0, entries[0].path))
-        )
+        full_index_entry = IndexEntry.from_base(BaseIndexEntry((0o120000, entries[0].binsha, 0, entries[0].path)))
         entry_key = index.entry_key(full_index_entry)
         index.reset(new_commit)
 
@@ -926,9 +889,7 @@ class TestIndex(TestBase):
     @with_rw_repo("HEAD", bare=True)
     def test_pre_commit_hook_fail(self, rw_repo):
         index = rw_repo.index
-        hp = _make_hook(
-            index.repo.git_dir, "pre-commit", "echo stdout; echo stderr 1>&2; exit 1"
-        )
+        hp = _make_hook(index.repo.git_dir, "pre-commit", "echo stdout; echo stderr 1>&2; exit 1")
         try:
             index.commit("This should fail")
         except HookExecutionError as err:
@@ -959,16 +920,12 @@ class TestIndex(TestBase):
             'printf " {}" >> "$1"'.format(from_hook_message),
         )
         new_commit = index.commit(commit_message)
-        self.assertEqual(
-            new_commit.message, "{} {}".format(commit_message, from_hook_message)
-        )
+        self.assertEqual(new_commit.message, "{} {}".format(commit_message, from_hook_message))
 
     @with_rw_repo("HEAD", bare=True)
     def test_commit_msg_hook_fail(self, rw_repo):
         index = rw_repo.index
-        hp = _make_hook(
-            index.repo.git_dir, "commit-msg", "echo stdout; echo stderr 1>&2; exit 1"
-        )
+        hp = _make_hook(index.repo.git_dir, "commit-msg", "echo stdout; echo stderr 1>&2; exit 1")
         try:
             index.commit("This should fail")
         except HookExecutionError as err:

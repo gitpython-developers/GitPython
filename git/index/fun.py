@@ -115,9 +115,7 @@ def run_commit_hook(name: str, index: "IndexFile", *args: str) -> None:
     else:
         stdout_list: List[str] = []
         stderr_list: List[str] = []
-        handle_process_output(
-            cmd, stdout_list.append, stderr_list.append, finalize_process
-        )
+        handle_process_output(cmd, stdout_list.append, stderr_list.append, finalize_process)
         stdout = "".join(stdout_list)
         stderr = "".join(stderr_list)
         if cmd.returncode != 0:
@@ -134,9 +132,7 @@ def stat_mode_to_index_mode(mode: int) -> int:
         return S_IFLNK
     if S_ISDIR(mode) or S_IFMT(mode) == S_IFGITLINK:  # submodules
         return S_IFGITLINK
-    return S_IFREG | (
-        mode & S_IXUSR and 0o755 or 0o644
-    )  # blobs with or without executable bit
+    return S_IFREG | (mode & S_IXUSR and 0o755 or 0o644)  # blobs with or without executable bit
 
 
 def write_cache(
@@ -253,17 +249,13 @@ def read_cache(
         beginoffset = tell()
         ctime = unpack(">8s", read(8))[0]
         mtime = unpack(">8s", read(8))[0]
-        (dev, ino, mode, uid, gid, size, sha, flags) = unpack(
-            ">LLLLLL20sH", read(20 + 4 * 6 + 2)
-        )
+        (dev, ino, mode, uid, gid, size, sha, flags) = unpack(">LLLLLL20sH", read(20 + 4 * 6 + 2))
         path_size = flags & CE_NAMEMASK
         path = read(path_size).decode(defenc)
 
         real_size = (tell() - beginoffset + 8) & ~7
         read((beginoffset + real_size) - tell())
-        entry = IndexEntry(
-            (mode, sha, flags, path, ctime, mtime, dev, ino, uid, gid, size)
-        )
+        entry = IndexEntry((mode, sha, flags, path, ctime, mtime, dev, ino, uid, gid, size))
         # entry_key would be the method to use, but we safe the effort
         entries[(path, entry.stage)] = entry
         count += 1
@@ -276,10 +268,9 @@ def read_cache(
     # 4 bytes length of chunk
     # repeated 0 - N times
     extension_data = stream.read(~0)
-    assert len(extension_data) > 19, (
-        "Index Footer was not at least a sha on content as it was only %i bytes in size"
-        % len(extension_data)
-    )
+    assert (
+        len(extension_data) > 19
+    ), "Index Footer was not at least a sha on content as it was only %i bytes in size" % len(extension_data)
 
     content_sha = extension_data[-20:]
 
@@ -330,9 +321,7 @@ def write_tree_from_cache(
 
             # enter recursion
             # ci - 1 as we want to count our current item as well
-            sha, _tree_entry_list = write_tree_from_cache(
-                entries, odb, slice(ci - 1, xi), rbound + 1
-            )
+            sha, _tree_entry_list = write_tree_from_cache(entries, odb, slice(ci - 1, xi), rbound + 1)
             tree_items.append((sha, S_IFDIR, base))
 
             # skip ahead
@@ -342,26 +331,18 @@ def write_tree_from_cache(
 
     # finally create the tree
     sio = BytesIO()
-    tree_to_stream(
-        tree_items, sio.write
-    )  # writes to stream as bytes, but doesn't change tree_items
+    tree_to_stream(tree_items, sio.write)  # writes to stream as bytes, but doesn't change tree_items
     sio.seek(0)
 
     istream = odb.store(IStream(str_tree_type, len(sio.getvalue()), sio))
     return (istream.binsha, tree_items)
 
 
-def _tree_entry_to_baseindexentry(
-    tree_entry: "TreeCacheTup", stage: int
-) -> BaseIndexEntry:
-    return BaseIndexEntry(
-        (tree_entry[1], tree_entry[0], stage << CE_STAGESHIFT, tree_entry[2])
-    )
+def _tree_entry_to_baseindexentry(tree_entry: "TreeCacheTup", stage: int) -> BaseIndexEntry:
+    return BaseIndexEntry((tree_entry[1], tree_entry[0], stage << CE_STAGESHIFT, tree_entry[2]))
 
 
-def aggressive_tree_merge(
-    odb: "GitCmdObjectDB", tree_shas: Sequence[bytes]
-) -> List[BaseIndexEntry]:
+def aggressive_tree_merge(odb: "GitCmdObjectDB", tree_shas: Sequence[bytes]) -> List[BaseIndexEntry]:
     """
     :return: list of BaseIndexEntries representing the aggressive merge of the given
         trees. All valid entries are on stage 0, whereas the conflicting ones are left
@@ -394,14 +375,8 @@ def aggressive_tree_merge(
                     # it exists in all branches, if it was changed in both
                     # its a conflict, otherwise we take the changed version
                     # This should be the most common branch, so it comes first
-                    if (
-                        base[0] != ours[0]
-                        and base[0] != theirs[0]
-                        and ours[0] != theirs[0]
-                    ) or (
-                        base[1] != ours[1]
-                        and base[1] != theirs[1]
-                        and ours[1] != theirs[1]
+                    if (base[0] != ours[0] and base[0] != theirs[0] and ours[0] != theirs[0]) or (
+                        base[1] != ours[1] and base[1] != theirs[1] and ours[1] != theirs[1]
                     ):
                         # changed by both
                         out.append(_tree_entry_to_baseindexentry(base, 1))

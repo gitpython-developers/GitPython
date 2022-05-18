@@ -181,9 +181,7 @@ class TestUtils(TestBase):
             (1522827734, 0),
             (1522827734, +3600),
         ):
-            self.assertEqual(
-                parse_date(from_timestamp(timestamp, offset)), (timestamp, offset)
-            )
+            self.assertEqual(parse_date(from_timestamp(timestamp, offset)), (timestamp, offset))
 
         # test all supported formats
         def assert_rval(rval, veri_time, offset=0):
@@ -359,9 +357,7 @@ class TestUtils(TestBase):
     def test_remove_password_from_command_line(self):
         username = "fakeuser"
         password = "fakepassword1234"
-        url_with_user_and_pass = "https://{}:{}@fakerepo.example.com/testrepo".format(
-            username, password
-        )
+        url_with_user_and_pass = "https://{}:{}@fakerepo.example.com/testrepo".format(username, password)
         url_with_user = "https://{}@fakerepo.example.com/testrepo".format(username)
         url_with_pass = "https://:{}@fakerepo.example.com/testrepo".format(password)
         url_without_user_or_pass = "https://fakerepo.example.com/testrepo"

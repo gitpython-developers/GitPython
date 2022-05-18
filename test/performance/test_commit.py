@@ -66,8 +66,7 @@ class TestPerformance(TestBigRepoRW, TestCommitSerialization):
         # END for each traversed commit
         elapsed_time = time() - st
         print(
-            "Traversed %i Commits in %s [s] ( %f commits/s )"
-            % (nc, elapsed_time, nc / elapsed_time),
+            "Traversed %i Commits in %s [s] ( %f commits/s )" % (nc, elapsed_time, nc / elapsed_time),
             file=sys.stderr,
         )
 
@@ -81,8 +80,7 @@ class TestPerformance(TestBigRepoRW, TestCommitSerialization):
         # END for each traversed commit
         elapsed_time = time() - st
         print(
-            "Iterated %i Commits in %s [s] ( %f commits/s )"
-            % (nc, elapsed_time, nc / elapsed_time),
+            "Iterated %i Commits in %s [s] ( %f commits/s )" % (nc, elapsed_time, nc / elapsed_time),
             file=sys.stderr,
         )
 
@@ -123,7 +121,6 @@ class TestPerformance(TestBigRepoRW, TestCommitSerialization):
         elapsed = time() - st
 
         print(
-            "Serialized %i commits to loose objects in %f s ( %f commits / s )"
-            % (nc, elapsed, nc / elapsed),
+            "Serialized %i commits to loose objects in %f s ( %f commits / s )" % (nc, elapsed, nc / elapsed),
             file=sys.stderr,
         )

@@ -27,9 +27,7 @@ import os.path as osp
 
 
 class TestCommitSerialization(TestBase):
-    def assert_commit_serialization(
-        self, rwrepo, commit_id, print_performance_info=False
-    ):
+    def assert_commit_serialization(self, rwrepo, commit_id, print_performance_info=False):
         """traverse all commits in the history of commit identified by commit_id and check
         if the serialization works.
         :param print_performance_info: if True, we will show how fast we are"""
@@ -104,12 +102,8 @@ class TestCommit(TestCommitSerialization):
         self.assertEqual("Sebastian Thiel", commit.author.name)
         self.assertEqual("byronimo@gmail.com", commit.author.email)
         self.assertEqual(commit.author, commit.committer)
-        assert isinstance(commit.authored_date, int) and isinstance(
-            commit.committed_date, int
-        )
-        assert isinstance(commit.author_tz_offset, int) and isinstance(
-            commit.committer_tz_offset, int
-        )
+        assert isinstance(commit.authored_date, int) and isinstance(commit.committed_date, int)
+        assert isinstance(commit.author_tz_offset, int) and isinstance(commit.committer_tz_offset, int)
         self.assertEqual(
             commit.message,
             "Added missing information to docstrings of commit and stats module\n",
@@ -195,14 +189,12 @@ class TestCommit(TestCommitSerialization):
         # at some point, both iterations should stop
         self.assertEqual(list(bfirst)[-1], first)
 
-        stoptraverse = self.rorepo.commit(
-            "254d04aa3180eb8b8daf7b7ff25f010cd69b4e7d"
-        ).traverse(ignore_self=0, as_edge=True)
+        stoptraverse = self.rorepo.commit("254d04aa3180eb8b8daf7b7ff25f010cd69b4e7d").traverse(
+            ignore_self=0, as_edge=True
+        )
         stoptraverse_list = list(stoptraverse)
         for itemtup in stoptraverse_list:
-            self.assertIsInstance(itemtup, (tuple)) and self.assertEqual(
-                len(itemtup), 2
-            )  # as_edge=True -> tuple
+            self.assertIsInstance(itemtup, (tuple)) and self.assertEqual(len(itemtup), 2)  # as_edge=True -> tuple
             src, item = itemtup
             self.assertIsInstance(item, Commit)
             if src:
@@ -210,9 +202,7 @@ class TestCommit(TestCommitSerialization):
             else:
                 self.assertIsNone(src)  # ignore_self=0 -> first is (None, Commit)
 
-        stoptraverse = self.rorepo.commit(
-            "254d04aa3180eb8b8daf7b7ff25f010cd69b4e7d"
-        ).traverse(as_edge=True)
+        stoptraverse = self.rorepo.commit("254d04aa3180eb8b8daf7b7ff25f010cd69b4e7d").traverse(as_edge=True)
         self.assertEqual(len(next(stoptraverse)), 2)
 
         # ignore self
@@ -222,14 +212,10 @@ class TestCommit(TestCommitSerialization):
         self.assertEqual(len(list(start.traverse(ignore_self=False, depth=0))), 1)
 
         # prune
-        self.assertEqual(
-            next(start.traverse(branch_first=1, prune=lambda i, d: i == p0)), p1
-        )
+        self.assertEqual(next(start.traverse(branch_first=1, prune=lambda i, d: i == p0)), p1)
 
         # predicate
-        self.assertEqual(
-            next(start.traverse(branch_first=1, predicate=lambda i, d: i == p1)), p1
-        )
+        self.assertEqual(next(start.traverse(branch_first=1, predicate=lambda i, d: i == p1)), p1)
 
         # traversal should stop when the beginning is reached
         self.assertRaises(StopIteration, next, first.traverse())
@@ -253,25 +239,19 @@ class TestCommit(TestCommitSerialization):
         assert ltd_commits and len(ltd_commits) < len(all_commits)
 
         # show commits of multiple paths, resulting in a union of commits
-        less_ltd_commits = list(
-            Commit.iter_items(self.rorepo, "master", paths=("CHANGES", "AUTHORS"))
-        )
+        less_ltd_commits = list(Commit.iter_items(self.rorepo, "master", paths=("CHANGES", "AUTHORS")))
         assert len(ltd_commits) < len(less_ltd_commits)
 
         class Child(Commit):
             def __init__(self, *args, **kwargs):
                 super(Child, self).__init__(*args, **kwargs)
 
-        child_commits = list(
-            Child.iter_items(self.rorepo, "master", paths=("CHANGES", "AUTHORS"))
-        )
+        child_commits = list(Child.iter_items(self.rorepo, "master", paths=("CHANGES", "AUTHORS")))
         assert type(child_commits[0]) == Child
 
     def test_iter_items(self):
         # pretty not allowed
-        self.assertRaises(
-            ValueError, Commit.iter_items, self.rorepo, "master", pretty="raw"
-        )
+        self.assertRaises(ValueError, Commit.iter_items, self.rorepo, "master", pretty="raw")
 
     def test_rev_list_bisect_all(self):
         """
@@ -284,9 +264,7 @@ class TestCommit(TestCommitSerialization):
             bisect_all=True,
         )
 
-        commits = Commit._iter_from_process_or_stream(
-            self.rorepo, StringProcessAdapter(revs.encode("ascii"))
-        )
+        commits = Commit._iter_from_process_or_stream(self.rorepo, StringProcessAdapter(revs.encode("ascii")))
         expected_ids = (
             "7156cece3c49544abb6bf7a0c218eb36646fad6d",
             "1f66cfbbce58b4b552b041707a12d437cc5f400a",
@@ -312,9 +290,7 @@ class TestCommit(TestCommitSerialization):
         # This doesn't work anymore, as we will either attempt getattr with bytes, or compare 20 byte string
         # with actual 20 byte bytes. This usage makes no sense anyway
         assert isinstance(
-            Commit.list_items(self.rorepo, "0.1.5", max_count=5)[
-                "5117c9c8a4d3af19a9958677e45cda9269de1541"
-            ],
+            Commit.list_items(self.rorepo, "0.1.5", max_count=5)["5117c9c8a4d3af19a9958677e45cda9269de1541"],
             Commit,
         )
 
@@ -434,9 +410,7 @@ JzJMZDRLQLFvnzqZuCjE
         cmt.gpgsig = None
         cstream = BytesIO()
         cmt._serialize(cstream)
-        assert not re.search(
-            r"^gpgsig ", cstream.getvalue().decode("ascii"), re.MULTILINE
-        )
+        assert not re.search(r"^gpgsig ", cstream.getvalue().decode("ascii"), re.MULTILINE)
 
     def assert_gpgsig_deserialization(self, cstream):
         assert "gpgsig" in "precondition: need gpgsig"
@@ -496,9 +470,7 @@ JzJMZDRLQLFvnzqZuCjE
         # Check if KEY 1 & 2 with Value 1 & 2 is extracted from multiple msg variations
         msgs = []
         msgs.append(f"Subject\n\n{KEY_1}: {VALUE_1}\n{KEY_2}: {VALUE_2}\n")
-        msgs.append(
-            f"Subject\n  \nSome body of a function\n \n{KEY_1}: {VALUE_1}\n{KEY_2}: {VALUE_2}\n"
-        )
+        msgs.append(f"Subject\n  \nSome body of a function\n \n{KEY_1}: {VALUE_1}\n{KEY_2}: {VALUE_2}\n")
         msgs.append(
             f"Subject\n  \nSome body of a function\n\nnon-key: non-value\n\n{KEY_1}: {VALUE_1}\n{KEY_2}: {VALUE_2}\n"
         )
@@ -519,12 +491,8 @@ JzJMZDRLQLFvnzqZuCjE
         msgs = []
         msgs.append(f"Subject\n")
         msgs.append(f"Subject\n\nBody with some\nText\n")
-        msgs.append(
-            f"Subject\n\nBody with\nText\n\nContinuation but\n doesn't contain colon\n"
-        )
-        msgs.append(
-            f"Subject\n\nBody with\nText\n\nContinuation but\n only contains one :\n"
-        )
+        msgs.append(f"Subject\n\nBody with\nText\n\nContinuation but\n doesn't contain colon\n")
+        msgs.append(f"Subject\n\nBody with\nText\n\nContinuation but\n only contains one :\n")
         msgs.append(f"Subject\n\nBody with\nText\n\nKey: Value\nLine without colon\n")
         msgs.append(f"Subject\n\nBody with\nText\n\nLine without colon\nKey: Value\n")
 
@@ -537,9 +505,7 @@ JzJMZDRLQLFvnzqZuCjE
         # check that only the last key value paragraph is evaluated
         commit = self.rorepo.commit("master")
         commit = copy.copy(commit)
-        commit.message = (
-            f"Subject\n\nMultiline\nBody\n\n{KEY_1}: {VALUE_1}\n\n{KEY_2}: {VALUE_2}\n"
-        )
+        commit.message = f"Subject\n\nMultiline\nBody\n\n{KEY_1}: {VALUE_1}\n\n{KEY_2}: {VALUE_2}\n"
         assert KEY_1 not in commit.trailers.keys()
         assert KEY_2 in commit.trailers.keys()
         assert commit.trailers[KEY_2] == VALUE_2

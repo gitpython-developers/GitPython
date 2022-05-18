@@ -92,9 +92,7 @@ class GitCommandNotFound(CommandError):
     """Thrown if we cannot find the `git` executable in the PATH or at the path given by
     the GIT_PYTHON_GIT_EXECUTABLE environment variable"""
 
-    def __init__(
-        self, command: Union[List[str], Tuple[str], str], cause: Union[str, Exception]
-    ) -> None:
+    def __init__(self, command: Union[List[str], Tuple[str], str], cause: Union[str, Exception]) -> None:
         super(GitCommandNotFound, self).__init__(command, cause)
         self._msg = "Cmd('%s') not found%s"
 

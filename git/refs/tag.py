@@ -81,7 +81,7 @@ class TagReference(Reference):
         reference: Union[str, "SymbolicReference"] = "HEAD",
         logmsg: Union[str, None] = None,
         force: bool = False,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> "TagReference":
         """Create a new tag reference.
 
