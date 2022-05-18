@@ -10,18 +10,8 @@ import sys
 from tempfile import TemporaryFile
 from unittest import mock
 
-from git import (
-    Git,
-    refresh,
-    GitCommandError,
-    GitCommandNotFound,
-    Repo,
-    cmd
-)
-from test.lib import (
-    TestBase,
-    fixture_path
-)
+from git import Git, refresh, GitCommandError, GitCommandNotFound, Repo, cmd
+from test.lib import TestBase, fixture_path
 from test.lib import with_rw_directory
 from git.util import finalize_process
 
@@ -31,7 +21,6 @@ from git.compat import is_win
 
 
 class TestGit(TestBase):
-
     @classmethod
     def setUpClass(cls):
         super(TestGit, cls).setUpClass()
@@ -39,56 +28,62 @@ class TestGit(TestBase):
 
     def tearDown(self):
         import gc
+
         gc.collect()
 
-    @mock.patch.object(Git, 'execute')
+    @mock.patch.object(Git, "execute")
     def test_call_process_calls_execute(self, git):
-        git.return_value = ''
+        git.return_value = ""
         self.git.version()
         self.assertTrue(git.called)
-        self.assertEqual(git.call_args, ((['git', 'version'],), {}))
+        self.assertEqual(git.call_args, ((["git", "version"],), {}))
 
     def test_call_unpack_args_unicode(self):
-        args = Git._Git__unpack_args('Unicode€™')
-        mangled_value = 'Unicode\u20ac\u2122'
+        args = Git._Git__unpack_args("Unicode€™")
+        mangled_value = "Unicode\u20ac\u2122"
         self.assertEqual(args, [mangled_value])
 
     def test_call_unpack_args(self):
-        args = Git._Git__unpack_args(['git', 'log', '--', 'Unicode€™'])
-        mangled_value = 'Unicode\u20ac\u2122'
-        self.assertEqual(args, ['git', 'log', '--', mangled_value])
+        args = Git._Git__unpack_args(["git", "log", "--", "Unicode€™"])
+        mangled_value = "Unicode\u20ac\u2122"
+        self.assertEqual(args, ["git", "log", "--", mangled_value])
 
     def test_it_raises_errors(self):
         self.assertRaises(GitCommandError, self.git.this_does_not_exist)
 
     def test_it_transforms_kwargs_into_git_command_arguments(self):
-        self.assertEqual(["-s"], self.git.transform_kwargs(**{'s': True}))
-        self.assertEqual(["-s", "5"], self.git.transform_kwargs(**{'s': 5}))
-        self.assertEqual([], self.git.transform_kwargs(**{'s': None}))
+        self.assertEqual(["-s"], self.git.transform_kwargs(**{"s": True}))
+        self.assertEqual(["-s", "5"], self.git.transform_kwargs(**{"s": 5}))
+        self.assertEqual([], self.git.transform_kwargs(**{"s": None}))
 
-        self.assertEqual(["--max-count"], self.git.transform_kwargs(**{'max_count': True}))
-        self.assertEqual(["--max-count=5"], self.git.transform_kwargs(**{'max_count': 5}))
-        self.assertEqual(["--max-count=0"], self.git.transform_kwargs(**{'max_count': 0}))
-        self.assertEqual([], self.git.transform_kwargs(**{'max_count': None}))
+        self.assertEqual(["--max-count"], self.git.transform_kwargs(**{"max_count": True}))
+        self.assertEqual(["--max-count=5"], self.git.transform_kwargs(**{"max_count": 5}))
+        self.assertEqual(["--max-count=0"], self.git.transform_kwargs(**{"max_count": 0}))
+        self.assertEqual([], self.git.transform_kwargs(**{"max_count": None}))
 
         # Multiple args are supported by using lists/tuples
-        self.assertEqual(["-L", "1-3", "-L", "12-18"], self.git.transform_kwargs(**{'L': ('1-3', '12-18')}))
-        self.assertEqual(["-C", "-C"], self.git.transform_kwargs(**{'C': [True, True, None, False]}))
+        self.assertEqual(
+            ["-L", "1-3", "-L", "12-18"],
+            self.git.transform_kwargs(**{"L": ("1-3", "12-18")}),
+        )
+        self.assertEqual(["-C", "-C"], self.git.transform_kwargs(**{"C": [True, True, None, False]}))
 
         # order is undefined
-        res = self.git.transform_kwargs(**{'s': True, 't': True})
-        self.assertEqual({'-s', '-t'}, set(res))
+        res = self.git.transform_kwargs(**{"s": True, "t": True})
+        self.assertEqual({"-s", "-t"}, set(res))
 
     def test_it_executes_git_to_shell_and_returns_result(self):
-        self.assertRegex(self.git.execute(["git", "version"]), r'^git version [\d\.]{2}.*$')
+        self.assertRegex(self.git.execute(["git", "version"]), r"^git version [\d\.]{2}.*$")
 
     def test_it_accepts_stdin(self):
         filename = fixture_path("cat_file_blob")
-        with open(filename, 'r') as fh:
-            self.assertEqual("70c379b63ffa0795fdbfbc128e5a2818397b7ef8",
-                             self.git.hash_object(istream=fh, stdin=True))
+        with open(filename, "r") as fh:
+            self.assertEqual(
+                "70c379b63ffa0795fdbfbc128e5a2818397b7ef8",
+                self.git.hash_object(istream=fh, stdin=True),
+            )
 
-    @mock.patch.object(Git, 'execute')
+    @mock.patch.object(Git, "execute")
     def test_it_ignores_false_kwargs(self, git):
         # this_should_not_be_ignored=False implies it *should* be ignored
         self.git.version(pass_this_kwarg=False)
@@ -96,37 +91,38 @@ class TestGit(TestBase):
 
     def test_it_raises_proper_exception_with_output_stream(self):
         tmp_file = TemporaryFile()
-        self.assertRaises(GitCommandError, self.git.checkout, 'non-existent-branch', output_stream=tmp_file)
+        self.assertRaises(
+            GitCommandError,
+            self.git.checkout,
+            "non-existent-branch",
+            output_stream=tmp_file,
+        )
 
     def test_it_accepts_environment_variables(self):
         filename = fixture_path("ls_tree_empty")
-        with open(filename, 'r') as fh:
+        with open(filename, "r") as fh:
             tree = self.git.mktree(istream=fh)
             env = {
-                'GIT_AUTHOR_NAME': 'Author Name',
-                'GIT_AUTHOR_EMAIL': 'author@example.com',
-                'GIT_AUTHOR_DATE': '1400000000+0000',
-                'GIT_COMMITTER_NAME': 'Committer Name',
-                'GIT_COMMITTER_EMAIL': 'committer@example.com',
-                'GIT_COMMITTER_DATE': '1500000000+0000',
+                "GIT_AUTHOR_NAME": "Author Name",
+                "GIT_AUTHOR_EMAIL": "author@example.com",
+                "GIT_AUTHOR_DATE": "1400000000+0000",
+                "GIT_COMMITTER_NAME": "Committer Name",
+                "GIT_COMMITTER_EMAIL": "committer@example.com",
+                "GIT_COMMITTER_DATE": "1500000000+0000",
             }
-            commit = self.git.commit_tree(tree, m='message', env=env)
-            self.assertEqual(commit, '4cfd6b0314682d5a58f80be39850bad1640e9241')
+            commit = self.git.commit_tree(tree, m="message", env=env)
+            self.assertEqual(commit, "4cfd6b0314682d5a58f80be39850bad1640e9241")
 
     def test_persistent_cat_file_command(self):
         # read header only
         hexsha = "b2339455342180c7cc1e9bba3e9f181f7baa5167"
-        g = self.git.cat_file(
-            batch_check=True, istream=subprocess.PIPE, as_process=True
-        )
+        g = self.git.cat_file(batch_check=True, istream=subprocess.PIPE, as_process=True)
         g.stdin.write(b"b2339455342180c7cc1e9bba3e9f181f7baa5167\n")
         g.stdin.flush()
         obj_info = g.stdout.readline()
 
         # read header + data
-        g = self.git.cat_file(
-            batch=True, istream=subprocess.PIPE, as_process=True
-        )
+        g = self.git.cat_file(batch=True, istream=subprocess.PIPE, as_process=True)
         g.stdin.write(b"b2339455342180c7cc1e9bba3e9f181f7baa5167\n")
         g.stdin.flush()
         obj_info_two = g.stdout.readline()
@@ -161,7 +157,8 @@ class TestGit(TestBase):
         try:
             # set it to something that doesn't exist, assure it raises
             type(self.git).GIT_PYTHON_GIT_EXECUTABLE = osp.join(
-                "some", "path", "which", "doesn't", "exist", "gitbinary")
+                "some", "path", "which", "doesn't", "exist", "gitbinary"
+            )
             self.assertRaises(exc, self.git.version)
         finally:
             type(self.git).GIT_PYTHON_GIT_EXECUTABLE = prev_cmd
@@ -173,7 +170,7 @@ class TestGit(TestBase):
 
         # test a good path refresh
         which_cmd = "where" if is_win else "which"
-        path = os.popen("{0} git".format(which_cmd)).read().strip().split('\n')[0]
+        path = os.popen("{0} git".format(which_cmd)).read().strip().split("\n")[0]
         refresh(path)
 
     def test_options_are_passed_to_git(self):
@@ -197,8 +194,8 @@ class TestGit(TestBase):
         self.assertRaises(GitCommandError, self.git.NoOp)
 
     def test_single_char_git_options_are_passed_to_git(self):
-        input_value = 'TestValue'
-        output_value = self.git(c='user.name=%s' % input_value).config('--get', 'user.name')
+        input_value = "TestValue"
+        output_value = self.git(c="user.name=%s" % input_value).config("--get", "user.name")
         self.assertEqual(input_value, output_value)
 
     def test_change_to_transform_kwargs_does_not_break_command_options(self):
@@ -206,11 +203,11 @@ class TestGit(TestBase):
 
     def test_insert_after_kwarg_raises(self):
         # This isn't a complete add command, which doesn't matter here
-        self.assertRaises(ValueError, self.git.remote, 'add', insert_kwargs_after='foo')
+        self.assertRaises(ValueError, self.git.remote, "add", insert_kwargs_after="foo")
 
     def test_env_vars_passed_to_git(self):
-        editor = 'non_existent_editor'
-        with mock.patch.dict('os.environ', {'GIT_EDITOR': editor}):  # @UndefinedVariable
+        editor = "non_existent_editor"
+        with mock.patch.dict("os.environ", {"GIT_EDITOR": editor}):  # @UndefinedVariable
             self.assertEqual(self.git.var("GIT_EDITOR"), editor)
 
     @with_rw_directory
@@ -219,35 +216,34 @@ class TestGit(TestBase):
         self.assertEqual(self.git.environment(), {})
 
         # make sure the context manager works and cleans up after itself
-        with self.git.custom_environment(PWD='/tmp'):
-            self.assertEqual(self.git.environment(), {'PWD': '/tmp'})
+        with self.git.custom_environment(PWD="/tmp"):
+            self.assertEqual(self.git.environment(), {"PWD": "/tmp"})
 
         self.assertEqual(self.git.environment(), {})
 
-        old_env = self.git.update_environment(VARKEY='VARVALUE')
+        old_env = self.git.update_environment(VARKEY="VARVALUE")
         # The returned dict can be used to revert the change, hence why it has
         # an entry with value 'None'.
-        self.assertEqual(old_env, {'VARKEY': None})
-        self.assertEqual(self.git.environment(), {'VARKEY': 'VARVALUE'})
+        self.assertEqual(old_env, {"VARKEY": None})
+        self.assertEqual(self.git.environment(), {"VARKEY": "VARVALUE"})
 
         new_env = self.git.update_environment(**old_env)
-        self.assertEqual(new_env, {'VARKEY': 'VARVALUE'})
+        self.assertEqual(new_env, {"VARKEY": "VARVALUE"})
         self.assertEqual(self.git.environment(), {})
 
-        path = osp.join(rw_dir, 'failing-script.sh')
-        with open(path, 'wt') as stream:
-            stream.write("#!/usr/bin/env sh\n"
-                         "echo FOO\n")
+        path = osp.join(rw_dir, "failing-script.sh")
+        with open(path, "wt") as stream:
+            stream.write("#!/usr/bin/env sh\n" "echo FOO\n")
         os.chmod(path, 0o777)
 
-        rw_repo = Repo.init(osp.join(rw_dir, 'repo'))
-        remote = rw_repo.create_remote('ssh-origin', "ssh://git@server/foo")
+        rw_repo = Repo.init(osp.join(rw_dir, "repo"))
+        remote = rw_repo.create_remote("ssh-origin", "ssh://git@server/foo")
 
         with rw_repo.git.custom_environment(GIT_SSH=path):
             try:
                 remote.fetch()
             except GitCommandError as err:
-                self.assertIn('FOO', str(err))
+                self.assertIn("FOO", str(err))
 
     def test_handle_process_output(self):
         from git.cmd import handle_process_output
@@ -261,14 +257,19 @@ class TestGit(TestBase):
         def counter_stderr(line):
             count[2] += 1
 
-        cmdline = [sys.executable, fixture_path('cat_file.py'), str(fixture_path('issue-301_stderr'))]
-        proc = subprocess.Popen(cmdline,
-                                stdin=None,
-                                stdout=subprocess.PIPE,
-                                stderr=subprocess.PIPE,
-                                shell=False,
-                                creationflags=cmd.PROC_CREATIONFLAGS,
-                                )
+        cmdline = [
+            sys.executable,
+            fixture_path("cat_file.py"),
+            str(fixture_path("issue-301_stderr")),
+        ]
+        proc = subprocess.Popen(
+            cmdline,
+            stdin=None,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            shell=False,
+            creationflags=cmd.PROC_CREATIONFLAGS,
+        )
 
         handle_process_output(proc, counter_stdout, counter_stderr, finalize_process)
 

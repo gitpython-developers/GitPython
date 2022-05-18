@@ -9,19 +9,10 @@ import sys
 import tempfile
 from unittest import SkipTest, skipIf
 
-from git.objects import (
-    Blob,
-    Tree,
-    Commit,
-    TagObject
-)
+from git.objects import Blob, Tree, Commit, TagObject
 from git.compat import is_win
 from git.objects.util import get_object_type_by_name
-from test.lib import (
-    TestBase as _TestBase,
-    with_rw_repo,
-    with_rw_and_rw_remote_repo
-)
+from test.lib import TestBase as _TestBase, with_rw_repo, with_rw_and_rw_remote_repo
 from git.util import hex_to_bin, HIDE_WINDOWS_FREEZE_ERRORS
 
 import git.objects.base as base
@@ -29,15 +20,17 @@ import os.path as osp
 
 
 class TestBase(_TestBase):
-
     def tearDown(self):
         import gc
+
         gc.collect()
 
-    type_tuples = (("blob", "8741fc1d09d61f02ffd8cded15ff603eff1ec070", "blob.py"),
-                   ("tree", "3a6a5e3eeed3723c09f1ef0399f81ed6b8d82e79", "directory"),
-                   ("commit", "4251bd59fb8e11e40c40548cba38180a9536118c", None),
-                   ("tag", "e56a60e8e9cd333cfba0140a77cd12b0d9398f10", None))
+    type_tuples = (
+        ("blob", "8741fc1d09d61f02ffd8cded15ff603eff1ec070", "blob.py"),
+        ("tree", "3a6a5e3eeed3723c09f1ef0399f81ed6b8d82e79", "directory"),
+        ("commit", "4251bd59fb8e11e40c40548cba38180a9536118c", None),
+        ("tag", "e56a60e8e9cd333cfba0140a77cd12b0d9398f10", None),
+    )
 
     def test_base_object(self):
         # test interface of base object classes
@@ -67,8 +60,8 @@ class TestBase(_TestBase):
 
             if isinstance(item, base.IndexObject):
                 num_index_objs += 1
-                if hasattr(item, 'path'):                        # never runs here
-                    assert not item.path.startswith("/")        # must be relative
+                if hasattr(item, "path"):  # never runs here
+                    assert not item.path.startswith("/")  # must be relative
                     assert isinstance(item.mode, int)
             # END index object check
 
@@ -77,8 +70,8 @@ class TestBase(_TestBase):
             data = data_stream.read()
             assert data
 
-            tmpfilename = tempfile.mktemp(suffix='test-stream')
-            with open(tmpfilename, 'wb+') as tmpfile:
+            tmpfilename = tempfile.mktemp(suffix="test-stream")
+            with open(tmpfilename, "wb+") as tmpfile:
                 self.assertEqual(item, item.stream_data(tmpfile))
                 tmpfile.seek(0)
                 self.assertEqual(tmpfile.read(), data)
@@ -101,24 +94,24 @@ class TestBase(_TestBase):
         # objects must be resolved to shas so they compare equal
         self.assertEqual(self.rorepo.head.reference.object, self.rorepo.active_branch.object)
 
-    @with_rw_repo('HEAD', bare=True)
+    @with_rw_repo("HEAD", bare=True)
     def test_with_bare_rw_repo(self, bare_rw_repo):
         assert bare_rw_repo.config_reader("repository").getboolean("core", "bare")
-        assert osp.isfile(osp.join(bare_rw_repo.git_dir, 'HEAD'))
+        assert osp.isfile(osp.join(bare_rw_repo.git_dir, "HEAD"))
 
-    @with_rw_repo('0.1.6')
+    @with_rw_repo("0.1.6")
     def test_with_rw_repo(self, rw_repo):
         assert not rw_repo.config_reader("repository").getboolean("core", "bare")
-        assert osp.isdir(osp.join(rw_repo.working_tree_dir, 'lib'))
+        assert osp.isdir(osp.join(rw_repo.working_tree_dir, "lib"))
 
     @skipIf(HIDE_WINDOWS_FREEZE_ERRORS, "FIXME: Freezes!  sometimes...")
-    @with_rw_and_rw_remote_repo('0.1.6')
+    @with_rw_and_rw_remote_repo("0.1.6")
     def test_with_rw_remote_and_rw_repo(self, rw_repo, rw_remote_repo):
         assert not rw_repo.config_reader("repository").getboolean("core", "bare")
         assert rw_remote_repo.config_reader("repository").getboolean("core", "bare")
-        assert osp.isdir(osp.join(rw_repo.working_tree_dir, 'lib'))
+        assert osp.isdir(osp.join(rw_repo.working_tree_dir, "lib"))
 
-    @with_rw_repo('0.1.6')
+    @with_rw_repo("0.1.6")
     def test_add_unicode(self, rw_repo):
         filename = "שלום.txt"
 
@@ -131,7 +124,7 @@ class TestBase(_TestBase):
             raise SkipTest("Environment doesn't support unicode filenames") from e
 
         with open(file_path, "wb") as fp:
-            fp.write(b'something')
+            fp.write(b"something")
 
         if is_win:
             # on windows, there is no way this works, see images on
@@ -144,4 +137,4 @@ class TestBase(_TestBase):
             # on posix, we can just add unicode files without problems
             rw_repo.git.add(rw_repo.working_dir)
         # end
-        rw_repo.index.commit('message')
+        rw_repo.index.commit("message")

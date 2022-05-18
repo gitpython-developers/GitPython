@@ -23,12 +23,18 @@ if TYPE_CHECKING:
 class RemoteReference(Head):
 
     """Represents a reference pointing to a remote head."""
+
     _common_path_default = Head._remote_common_path_default
 
     @classmethod
-    def iter_items(cls, repo: 'Repo', common_path: Union[PathLike, None] = None,
-                   remote: Union['Remote', None] = None, *args: Any, **kwargs: Any
-                   ) -> Iterator['RemoteReference']:
+    def iter_items(
+        cls,
+        repo: "Repo",
+        common_path: Union[PathLike, None] = None,
+        remote: Union["Remote", None] = None,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Iterator["RemoteReference"]:
         """Iterate remote references, and if given, constrain them to the given remote"""
         common_path = common_path or cls._common_path_default
         if remote is not None:
@@ -41,9 +47,8 @@ class RemoteReference(Head):
     # implementation does not.  mypy doesn't have a way of representing
     # tightening the types of arguments in subclasses and recommends Any or
     # "type: ignore".  (See https://github.com/python/typing/issues/241)
-    @ classmethod
-    def delete(cls, repo: 'Repo', *refs: 'RemoteReference',  # type: ignore
-               **kwargs: Any) -> None:
+    @classmethod
+    def delete(cls, repo: "Repo", *refs: "RemoteReference", **kwargs: Any) -> None:  # type: ignore
         """Delete the given remote references
 
         :note:
@@ -64,7 +69,7 @@ class RemoteReference(Head):
                 pass
         # END for each ref
 
-    @ classmethod
+    @classmethod
     def create(cls, *args: Any, **kwargs: Any) -> NoReturn:
         """Used to disable this method"""
         raise TypeError("Cannot explicitly create remote references")

@@ -2,14 +2,20 @@
 from stat import S_ISDIR
 
 
-from git.compat import (
-    safe_decode,
-    defenc
-)
+from git.compat import safe_decode, defenc
 
 # typing ----------------------------------------------
 
-from typing import Callable, List, MutableSequence, Sequence, Tuple, TYPE_CHECKING, Union, overload
+from typing import (
+    Callable,
+    List,
+    MutableSequence,
+    Sequence,
+    Tuple,
+    TYPE_CHECKING,
+    Union,
+    overload,
+)
 
 if TYPE_CHECKING:
     from _typeshed import ReadableBuffer
@@ -21,19 +27,23 @@ EntryTupOrNone = Union[EntryTup, None]
 # ---------------------------------------------------
 
 
-__all__ = ('tree_to_stream', 'tree_entries_from_data', 'traverse_trees_recursive',
-           'traverse_tree_recursive')
+__all__ = (
+    "tree_to_stream",
+    "tree_entries_from_data",
+    "traverse_trees_recursive",
+    "traverse_tree_recursive",
+)
 
 
-def tree_to_stream(entries: Sequence[EntryTup], write: Callable[['ReadableBuffer'], Union[int, None]]) -> None:
+def tree_to_stream(entries: Sequence[EntryTup], write: Callable[["ReadableBuffer"], Union[int, None]]) -> None:
     """Write the give list of entries into a stream using its write method
     :param entries: **sorted** list of tuples with (binsha, mode, name)
     :param write: write method which takes a data string"""
-    ord_zero = ord('0')
-    bit_mask = 7            # 3 bits set
+    ord_zero = ord("0")
+    bit_mask = 7  # 3 bits set
 
     for binsha, mode, name in entries:
-        mode_str = b''
+        mode_str = b""
         for i in range(6):
             mode_str = bytes([((mode >> (i * 3)) & bit_mask) + ord_zero]) + mode_str
         # END for each 8 octal value
@@ -52,7 +62,7 @@ def tree_to_stream(entries: Sequence[EntryTup], write: Callable[['ReadableBuffer
             name_bytes = name.encode(defenc)
         else:
             name_bytes = name  # type: ignore[unreachable]  # check runtime types - is always str?
-        write(b''.join((mode_str, b' ', name_bytes, b'\0', binsha)))
+        write(b"".join((mode_str, b" ", name_bytes, b"\0", binsha)))
     # END for each item
 
 
@@ -60,8 +70,8 @@ def tree_entries_from_data(data: bytes) -> List[EntryTup]:
     """Reads the binary representation of a tree and returns tuples of Tree items
     :param data: data block with tree data (as bytes)
     :return: list(tuple(binsha, mode, tree_relative_path), ...)"""
-    ord_zero = ord('0')
-    space_ord = ord(' ')
+    ord_zero = ord("0")
+    space_ord = ord(" ")
     len_data = len(data)
     i = 0
     out = []
@@ -95,15 +105,14 @@ def tree_entries_from_data(data: bytes) -> List[EntryTup]:
 
         # byte is NULL, get next 20
         i += 1
-        sha = data[i:i + 20]
+        sha = data[i : i + 20]
         i = i + 20
         out.append((sha, mode, name))
     # END for each byte in data stream
     return out
 
 
-def _find_by_name(tree_data: MutableSequence[EntryTupOrNone], name: str, is_dir: bool, start_at: int
-                  ) -> EntryTupOrNone:
+def _find_by_name(tree_data: MutableSequence[EntryTupOrNone], name: str, is_dir: bool, start_at: int) -> EntryTupOrNone:
     """return data entry matching the given name and tree mode
     or None.
     Before the item is returned, the respective data item is set
@@ -126,12 +135,12 @@ def _find_by_name(tree_data: MutableSequence[EntryTupOrNone], name: str, is_dir:
     return None
 
 
-@ overload
+@overload
 def _to_full_path(item: None, path_prefix: str) -> None:
     ...
 
 
-@ overload
+@overload
 def _to_full_path(item: EntryTup, path_prefix: str) -> EntryTup:
     ...
 
@@ -143,8 +152,9 @@ def _to_full_path(item: EntryTupOrNone, path_prefix: str) -> EntryTupOrNone:
     return (item[0], item[1], path_prefix + item[2])
 
 
-def traverse_trees_recursive(odb: 'GitCmdObjectDB', tree_shas: Sequence[Union[bytes, None]],
-                             path_prefix: str) -> List[Tuple[EntryTupOrNone, ...]]:
+def traverse_trees_recursive(
+    odb: "GitCmdObjectDB", tree_shas: Sequence[Union[bytes, None]], path_prefix: str
+) -> List[Tuple[EntryTupOrNone, ...]]:
     """
     :return: list of list with entries according to the given binary tree-shas.
         The result is encoded in a list
@@ -187,7 +197,7 @@ def traverse_trees_recursive(odb: 'GitCmdObjectDB', tree_shas: Sequence[Union[by
             entries = [None for _ in range(nt)]
             entries[ti] = item
             _sha, mode, name = item
-            is_dir = S_ISDIR(mode)                          # type mode bits
+            is_dir = S_ISDIR(mode)  # type mode bits
 
             # find this item in all other tree data items
             # wrap around, but stop one before our current index, hence
@@ -199,8 +209,13 @@ def traverse_trees_recursive(odb: 'GitCmdObjectDB', tree_shas: Sequence[Union[by
             # END for each other item data
             # if we are a directory, enter recursion
             if is_dir:
-                out.extend(traverse_trees_recursive(
-                    odb, [((ei and ei[0]) or None) for ei in entries], path_prefix + name + '/'))
+                out.extend(
+                    traverse_trees_recursive(
+                        odb,
+                        [((ei and ei[0]) or None) for ei in entries],
+                        path_prefix + name + "/",
+                    )
+                )
             else:
                 out.append(tuple(_to_full_path(e, path_prefix) for e in entries))
 
@@ -210,12 +225,12 @@ def traverse_trees_recursive(odb: 'GitCmdObjectDB', tree_shas: Sequence[Union[by
         # END for each item
 
         # we are done with one tree, set all its data empty
-        del(tree_data[:])
+        del tree_data[:]
     # END for each tree_data chunk
     return out
 
 
-def traverse_tree_recursive(odb: 'GitCmdObjectDB', tree_sha: bytes, path_prefix: str) -> List[EntryTup]:
+def traverse_tree_recursive(odb: "GitCmdObjectDB", tree_sha: bytes, path_prefix: str) -> List[EntryTup]:
     """
     :return: list of entries of the tree pointed to by the binary tree_sha. An entry
         has the following format:
@@ -229,7 +244,7 @@ def traverse_tree_recursive(odb: 'GitCmdObjectDB', tree_sha: bytes, path_prefix:
     # unpacking/packing is faster than accessing individual items
     for sha, mode, name in data:
         if S_ISDIR(mode):
-            entries.extend(traverse_tree_recursive(odb, sha, path_prefix + name + '/'))
+            entries.extend(traverse_tree_recursive(odb, sha, path_prefix + name + "/"))
         else:
             entries.append((sha, mode, path_prefix + name))
     # END for each item

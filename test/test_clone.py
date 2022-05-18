@@ -17,8 +17,8 @@ class TestClone(TestBase):
     @with_rw_directory
     def test_checkout_in_non_empty_dir(self, rw_dir):
         non_empty_dir = Path(rw_dir)
-        garbage_file = non_empty_dir / 'not-empty'
-        garbage_file.write_text('Garbage!')
+        garbage_file = non_empty_dir / "not-empty"
+        garbage_file.write_text("Garbage!")
 
         # Verify that cloning into the non-empty dir fails while complaining about
         # the target directory not being empty/non-existent
@@ -26,7 +26,10 @@ class TestClone(TestBase):
             self.rorepo.clone(non_empty_dir)
         except git.GitCommandError as exc:
             self.assertTrue(exc.stderr, "GitCommandError's 'stderr' is unexpectedly empty")
-            expr = re.compile(r'(?is).*\bfatal:\s+destination\s+path\b.*\bexists\b.*\bnot\b.*\bempty\s+directory\b')
-            self.assertTrue(expr.search(exc.stderr), '"%s" does not match "%s"' % (expr.pattern, exc.stderr))
+            expr = re.compile(r"(?is).*\bfatal:\s+destination\s+path\b.*\bexists\b.*\bnot\b.*\bempty\s+directory\b")
+            self.assertTrue(
+                expr.search(exc.stderr),
+                '"%s" does not match "%s"' % (expr.pattern, exc.stderr),
+            )
         else:
             self.fail("GitCommandError not raised")

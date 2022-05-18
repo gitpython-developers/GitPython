@@ -1,6 +1,8 @@
 ddt>=1.1.1, !=1.4.3
 mypy
 
+black
+
 flake8
 flake8-bugbear
 flake8-comprehensions

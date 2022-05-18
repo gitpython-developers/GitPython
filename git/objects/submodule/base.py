@@ -11,16 +11,12 @@ from git.compat import (
     defenc,
     is_win,
 )
-from git.config import (
-    SectionConstraint,
-    GitConfigParser,
-    cp
-)
+from git.config import SectionConstraint, GitConfigParser, cp
 from git.exc import (
     InvalidGitRepositoryError,
     NoSuchPathError,
     RepositoryDirtyError,
-    BadName
+    BadName,
 )
 from git.objects.base import IndexObject, Object
 from git.objects.util import TraversableIterableObj
@@ -31,7 +27,7 @@ from git.util import (
     RemoteProgress,
     rmtree,
     unbare_repo,
-    IterableList
+    IterableList,
 )
 from git.util import HIDE_WINDOWS_KNOWN_ERRORS
 
@@ -42,7 +38,7 @@ from .util import (
     sm_name,
     sm_section,
     SubmoduleConfigParser,
-    find_first_remote_branch
+    find_first_remote_branch,
 )
 
 
@@ -63,7 +59,7 @@ if TYPE_CHECKING:
 __all__ = ["Submodule", "UpdateProgress"]
 
 
-log = logging.getLogger('git.objects.submodule.base')
+log = logging.getLogger("git.objects.submodule.base")
 log.addHandler(logging.NullHandler())
 
 
@@ -71,6 +67,7 @@ class UpdateProgress(RemoteProgress):
 
     """Class providing detailed progress information to the caller who should
     derive from it and implement the ``update(...)`` message"""
+
     CLONE, FETCH, UPDWKTREE = [1 << x for x in range(RemoteProgress._num_op_codes, RemoteProgress._num_op_codes + 3)]
     _num_op_codes: int = RemoteProgress._num_op_codes + 3
 
@@ -98,25 +95,28 @@ class Submodule(IndexObject, TraversableIterableObj):
     All methods work in bare and non-bare repositories."""
 
     _id_attribute_ = "name"
-    k_modules_file = '.gitmodules'
-    k_head_option = 'branch'
-    k_head_default = 'master'
-    k_default_mode = stat.S_IFDIR | stat.S_IFLNK        # submodules are directories with link-status
+    k_modules_file = ".gitmodules"
+    k_head_option = "branch"
+    k_head_default = "master"
+    k_default_mode = stat.S_IFDIR | stat.S_IFLNK  # submodules are directories with link-status
 
     # this is a bogus type for base class compatibility
-    type: Literal['submodule'] = 'submodule'  # type: ignore
+    type: Literal["submodule"] = "submodule"  # type: ignore
 
-    __slots__ = ('_parent_commit', '_url', '_branch_path', '_name', '__weakref__')
-    _cache_attrs = ('path', '_url', '_branch_path')
+    __slots__ = ("_parent_commit", "_url", "_branch_path", "_name", "__weakref__")
+    _cache_attrs = ("path", "_url", "_branch_path")
 
-    def __init__(self, repo: 'Repo', binsha: bytes,
-                 mode: Union[int, None] = None,
-                 path: Union[PathLike, None] = None,
-                 name: Union[str, None] = None,
-                 parent_commit: Union[Commit_ish, None] = None,
-                 url: Union[str, None] = None,
-                 branch_path: Union[PathLike, None] = None
-                 ) -> None:
+    def __init__(
+        self,
+        repo: "Repo",
+        binsha: bytes,
+        mode: Union[int, None] = None,
+        path: Union[PathLike, None] = None,
+        name: Union[str, None] = None,
+        parent_commit: Union[Commit_ish, None] = None,
+        url: Union[str, None] = None,
+        branch_path: Union[PathLike, None] = None,
+    ) -> None:
         """Initialize this instance with its attributes. We only document the ones
         that differ from ``IndexObject``
 
@@ -137,32 +137,34 @@ class Submodule(IndexObject, TraversableIterableObj):
             self._name = name
 
     def _set_cache_(self, attr: str) -> None:
-        if attr in ('path', '_url', '_branch_path'):
+        if attr in ("path", "_url", "_branch_path"):
             reader: SectionConstraint = self.config_reader()
             # default submodule values
             try:
-                self.path = reader.get('path')
+                self.path = reader.get("path")
             except cp.NoSectionError as e:
                 if self.repo.working_tree_dir is not None:
-                    raise ValueError("This submodule instance does not exist anymore in '%s' file"
-                                     % osp.join(self.repo.working_tree_dir, '.gitmodules')) from e
+                    raise ValueError(
+                        "This submodule instance does not exist anymore in '%s' file"
+                        % osp.join(self.repo.working_tree_dir, ".gitmodules")
+                    ) from e
             # end
-            self._url = reader.get('url')
+            self._url = reader.get("url")
             # git-python extension values - optional
             self._branch_path = reader.get_value(self.k_head_option, git.Head.to_full_path(self.k_head_default))
-        elif attr == '_name':
+        elif attr == "_name":
             raise AttributeError("Cannot retrieve the name of a submodule if it was not set initially")
         else:
             super(Submodule, self)._set_cache_(attr)
         # END handle attribute name
 
     @classmethod
-    def _get_intermediate_items(cls, item: 'Submodule') -> IterableList['Submodule']:
+    def _get_intermediate_items(cls, item: "Submodule") -> IterableList["Submodule"]:
         """:return: all the submodules of our module repository"""
         try:
             return cls.list_items(item.module())
         except InvalidGitRepositoryError:
-            return IterableList('')
+            return IterableList("")
         # END handle intermediate items
 
     @classmethod
@@ -188,13 +190,18 @@ class Submodule(IndexObject, TraversableIterableObj):
         return self._name
 
     def __repr__(self) -> str:
-        return "git.%s(name=%s, path=%s, url=%s, branch_path=%s)"\
-               % (type(self).__name__, self._name, self.path, self.url, self.branch_path)
+        return "git.%s(name=%s, path=%s, url=%s, branch_path=%s)" % (
+            type(self).__name__,
+            self._name,
+            self.path,
+            self.url,
+            self.branch_path,
+        )
 
     @classmethod
-    def _config_parser(cls, repo: 'Repo',
-                       parent_commit: Union[Commit_ish, None],
-                       read_only: bool) -> SubmoduleConfigParser:
+    def _config_parser(
+        cls, repo: "Repo", parent_commit: Union[Commit_ish, None], read_only: bool
+    ) -> SubmoduleConfigParser:
         """:return: Config Parser constrained to our submodule in read or write mode
         :raise IOError: If the .gitmodules file cannot be found, either locally or in the repository
             at the given parent commit. Otherwise the exception would be delayed until the first
@@ -215,8 +222,9 @@ class Submodule(IndexObject, TraversableIterableObj):
             try:
                 fp_module = cls._sio_modules(parent_commit)
             except KeyError as e:
-                raise IOError("Could not find %s file in the tree of parent commit %s" %
-                              (cls.k_modules_file, parent_commit)) from e
+                raise IOError(
+                    "Could not find %s file in the tree of parent commit %s" % (cls.k_modules_file, parent_commit)
+                ) from e
             # END handle exceptions
         # END handle non-bare working tree
 
@@ -246,7 +254,7 @@ class Submodule(IndexObject, TraversableIterableObj):
     def _config_parser_constrained(self, read_only: bool) -> SectionConstraint:
         """:return: Config Parser constrained to our submodule in read or write mode"""
         try:
-            pc: Union['Commit_ish', None] = self.parent_commit
+            pc: Union["Commit_ish", None] = self.parent_commit
         except ValueError:
             pc = None
         # end handle empty parent repository
@@ -255,16 +263,16 @@ class Submodule(IndexObject, TraversableIterableObj):
         return SectionConstraint(parser, sm_section(self.name))
 
     @classmethod
-    def _module_abspath(cls, parent_repo: 'Repo', path: PathLike, name: str) -> PathLike:
+    def _module_abspath(cls, parent_repo: "Repo", path: PathLike, name: str) -> PathLike:
         if cls._need_gitfile_submodules(parent_repo.git):
-            return osp.join(parent_repo.git_dir, 'modules', name)
+            return osp.join(parent_repo.git_dir, "modules", name)
         if parent_repo.working_tree_dir:
             return osp.join(parent_repo.working_tree_dir, path)
         raise NotADirectoryError()
         # end
 
     @classmethod
-    def _clone_repo(cls, repo: 'Repo', url: str, path: PathLike, name: str, **kwargs: Any) -> 'Repo':
+    def _clone_repo(cls, repo: "Repo", url: str, path: PathLike, name: str, **kwargs: Any) -> "Repo":
         """:return: Repo instance of newly cloned repository
         :param repo: our parent repository
         :param url: url to clone from
@@ -274,7 +282,7 @@ class Submodule(IndexObject, TraversableIterableObj):
         module_abspath = cls._module_abspath(repo, path, name)
         module_checkout_path = module_abspath
         if cls._need_gitfile_submodules(repo.git):
-            kwargs['separate_git_dir'] = module_abspath
+            kwargs["separate_git_dir"] = module_abspath
             module_abspath_dir = osp.dirname(module_abspath)
             if not osp.isdir(module_abspath_dir):
                 os.makedirs(module_abspath_dir)
@@ -288,20 +296,22 @@ class Submodule(IndexObject, TraversableIterableObj):
         return clone
 
     @classmethod
-    def _to_relative_path(cls, parent_repo: 'Repo', path: PathLike) -> PathLike:
+    def _to_relative_path(cls, parent_repo: "Repo", path: PathLike) -> PathLike:
         """:return: a path guaranteed  to be relative to the given parent - repository
         :raise ValueError: if path is not contained in the parent repository's working tree"""
         path = to_native_path_linux(path)
-        if path.endswith('/'):
+        if path.endswith("/"):
             path = path[:-1]
         # END handle trailing slash
 
         if osp.isabs(path) and parent_repo.working_tree_dir:
             working_tree_linux = to_native_path_linux(parent_repo.working_tree_dir)
             if not path.startswith(working_tree_linux):
-                raise ValueError("Submodule checkout path '%s' needs to be within the parents repository at '%s'"
-                                 % (working_tree_linux, path))
-            path = path[len(working_tree_linux.rstrip('/')) + 1:]
+                raise ValueError(
+                    "Submodule checkout path '%s' needs to be within the parents repository at '%s'"
+                    % (working_tree_linux, path)
+                )
+            path = path[len(working_tree_linux.rstrip("/")) + 1 :]
             if not path:
                 raise ValueError("Absolute submodule path '%s' didn't yield a valid relative path" % path)
             # end verify converted relative path makes sense
@@ -320,26 +330,36 @@ class Submodule(IndexObject, TraversableIterableObj):
         :param working_tree_dir: directory to write the .git file into
         :param module_abspath: absolute path to the bare repository
         """
-        git_file = osp.join(working_tree_dir, '.git')
+        git_file = osp.join(working_tree_dir, ".git")
         rela_path = osp.relpath(module_abspath, start=working_tree_dir)
         if is_win:
             if osp.isfile(git_file):
                 os.remove(git_file)
-        with open(git_file, 'wb') as fp:
+        with open(git_file, "wb") as fp:
             fp.write(("gitdir: %s" % rela_path).encode(defenc))
 
-        with GitConfigParser(osp.join(module_abspath, 'config'),
-                             read_only=False, merge_includes=False) as writer:
-            writer.set_value('core', 'worktree',
-                             to_native_path_linux(osp.relpath(working_tree_dir, start=module_abspath)))
+        with GitConfigParser(osp.join(module_abspath, "config"), read_only=False, merge_includes=False) as writer:
+            writer.set_value(
+                "core",
+                "worktree",
+                to_native_path_linux(osp.relpath(working_tree_dir, start=module_abspath)),
+            )
 
-    #{ Edit Interface
+    # { Edit Interface
 
     @classmethod
-    def add(cls, repo: 'Repo', name: str, path: PathLike, url: Union[str, None] = None,
-            branch: Union[str, None] = None, no_checkout: bool = False, depth: Union[int, None] = None,
-            env: Union[Mapping[str, str], None] = None, clone_multi_options: Union[Sequence[TBD], None] = None
-            ) -> 'Submodule':
+    def add(
+        cls,
+        repo: "Repo",
+        name: str,
+        path: PathLike,
+        url: Union[str, None] = None,
+        branch: Union[str, None] = None,
+        no_checkout: bool = False,
+        depth: Union[int, None] = None,
+        env: Union[Mapping[str, str], None] = None,
+        clone_multi_options: Union[Sequence[TBD], None] = None,
+    ) -> "Submodule":
         """Add a new submodule to the given repository. This will alter the index
         as well as the .gitmodules file, but will not create a new commit.
         If the submodule already exists, no matter if the configuration differs
@@ -391,7 +411,14 @@ class Submodule(IndexObject, TraversableIterableObj):
         # END assure url correctness
 
         # INSTANTIATE INTERMEDIATE SM
-        sm = cls(repo, cls.NULL_BIN_SHA, cls.k_default_mode, path, name, url='invalid-temporary')
+        sm = cls(
+            repo,
+            cls.NULL_BIN_SHA,
+            cls.k_default_mode,
+            path,
+            name,
+            url="invalid-temporary",
+        )
         if sm.exists():
             # reretrieve submodule from tree
             try:
@@ -414,7 +441,8 @@ class Submodule(IndexObject, TraversableIterableObj):
         if has_module and url is not None:
             if url not in [r.url for r in sm.module().remotes]:
                 raise ValueError(
-                    "Specified URL '%s' does not match any remote url of the repository at '%s'" % (url, sm.abspath))
+                    "Specified URL '%s' does not match any remote url of the repository at '%s'" % (url, sm.abspath)
+                )
             # END check url
         # END verify urls match
 
@@ -433,18 +461,18 @@ class Submodule(IndexObject, TraversableIterableObj):
             url = urls[0]
         else:
             # clone new repo
-            kwargs: Dict[str, Union[bool, int, str, Sequence[TBD]]] = {'n': no_checkout}
+            kwargs: Dict[str, Union[bool, int, str, Sequence[TBD]]] = {"n": no_checkout}
             if not branch_is_default:
-                kwargs['b'] = br.name
+                kwargs["b"] = br.name
             # END setup checkout-branch
 
             if depth:
                 if isinstance(depth, int):
-                    kwargs['depth'] = depth
+                    kwargs["depth"] = depth
                 else:
                     raise ValueError("depth should be an integer")
             if clone_multi_options:
-                kwargs['multi_options'] = clone_multi_options
+                kwargs["multi_options"] = clone_multi_options
 
             # _clone_repo(cls, repo, url, path, name, **kwargs):
             mrepo = cls._clone_repo(repo, url, path, name, env=env, **kwargs)
@@ -460,13 +488,13 @@ class Submodule(IndexObject, TraversableIterableObj):
         writer: Union[GitConfigParser, SectionConstraint]
 
         with sm.repo.config_writer() as writer:
-            writer.set_value(sm_section(name), 'url', url)
+            writer.set_value(sm_section(name), "url", url)
 
         # update configuration and index
         index = sm.repo.index
         with sm.config_writer(index=index, write=False) as writer:
-            writer.set_value('url', url)
-            writer.set_value('path', path)
+            writer.set_value("url", url)
+            writer.set_value("path", path)
 
             sm._url = url
             if not branch_is_default:
@@ -481,10 +509,18 @@ class Submodule(IndexObject, TraversableIterableObj):
 
         return sm
 
-    def update(self, recursive: bool = False, init: bool = True, to_latest_revision: bool = False,
-               progress: Union['UpdateProgress', None] = None, dry_run: bool = False,
-               force: bool = False, keep_going: bool = False, env: Union[Mapping[str, str], None] = None,
-               clone_multi_options: Union[Sequence[TBD], None] = None) -> 'Submodule':
+    def update(
+        self,
+        recursive: bool = False,
+        init: bool = True,
+        to_latest_revision: bool = False,
+        progress: Union["UpdateProgress", None] = None,
+        dry_run: bool = False,
+        force: bool = False,
+        keep_going: bool = False,
+        env: Union[Mapping[str, str], None] = None,
+        clone_multi_options: Union[Sequence[TBD], None] = None,
+    ) -> "Submodule":
         """Update the repository of this submodule to point to the checkout
         we point at with the binsha of this instance.
 
@@ -527,7 +563,7 @@ class Submodule(IndexObject, TraversableIterableObj):
         if progress is None:
             progress = UpdateProgress()
         # END handle progress
-        prefix = ''
+        prefix = ""
         if dry_run:
             prefix = "DRY-RUN: "
         # END handle prefix
@@ -550,17 +586,26 @@ class Submodule(IndexObject, TraversableIterableObj):
                         op |= BEGIN
                     # END handle start
 
-                    progress.update(op, i, len_rmts, prefix + "Fetching remote %s of submodule %r"
-                                    % (remote, self.name))
-                    #===============================
+                    progress.update(
+                        op,
+                        i,
+                        len_rmts,
+                        prefix + "Fetching remote %s of submodule %r" % (remote, self.name),
+                    )
+                    # ===============================
                     if not dry_run:
                         remote.fetch(progress=progress)
                     # END handle dry-run
-                    #===============================
+                    # ===============================
                     if i == len_rmts - 1:
                         op |= END
                     # END handle end
-                    progress.update(op, i, len_rmts, prefix + "Done fetching remote of submodule %r" % self.name)
+                    progress.update(
+                        op,
+                        i,
+                        len_rmts,
+                        prefix + "Done fetching remote of submodule %r" % self.name,
+                    )
                 # END fetch new data
             except InvalidGitRepositoryError:
                 mrepo = None
@@ -574,25 +619,43 @@ class Submodule(IndexObject, TraversableIterableObj):
                     try:
                         os.rmdir(checkout_module_abspath)
                     except OSError as e:
-                        raise OSError("Module directory at %r does already exist and is non-empty"
-                                      % checkout_module_abspath) from e
+                        raise OSError(
+                            "Module directory at %r does already exist and is non-empty" % checkout_module_abspath
+                        ) from e
                     # END handle OSError
                 # END handle directory removal
 
                 # don't check it out at first - nonetheless it will create a local
                 # branch according to the remote-HEAD if possible
-                progress.update(BEGIN | CLONE, 0, 1, prefix + "Cloning url '%s' to '%s' in submodule %r" %
-                                (self.url, checkout_module_abspath, self.name))
+                progress.update(
+                    BEGIN | CLONE,
+                    0,
+                    1,
+                    prefix
+                    + "Cloning url '%s' to '%s' in submodule %r" % (self.url, checkout_module_abspath, self.name),
+                )
                 if not dry_run:
-                    mrepo = self._clone_repo(self.repo, self.url, self.path, self.name, n=True, env=env,
-                                             multi_options=clone_multi_options)
+                    mrepo = self._clone_repo(
+                        self.repo,
+                        self.url,
+                        self.path,
+                        self.name,
+                        n=True,
+                        env=env,
+                        multi_options=clone_multi_options,
+                    )
                 # END handle dry-run
-                progress.update(END | CLONE, 0, 1, prefix + "Done cloning to %s" % checkout_module_abspath)
+                progress.update(
+                    END | CLONE,
+                    0,
+                    1,
+                    prefix + "Done cloning to %s" % checkout_module_abspath,
+                )
 
                 if not dry_run:
                     # see whether we have a valid branch to checkout
                     try:
-                        mrepo = cast('Repo', mrepo)
+                        mrepo = cast("Repo", mrepo)
                         # find  a remote which has our branch - we try to be flexible
                         remote_branch = find_first_remote_branch(mrepo.remotes, self.branch_name)
                         local_branch = mkhead(mrepo, self.branch_path)
@@ -603,7 +666,10 @@ class Submodule(IndexObject, TraversableIterableObj):
                         # END initial checkout + branch creation
 
                         # make sure HEAD is not detached
-                        mrepo.head.set_reference(local_branch, logmsg="submodule: attaching head to %s" % local_branch)
+                        mrepo.head.set_reference(
+                            local_branch,
+                            logmsg="submodule: attaching head to %s" % local_branch,
+                        )
                         mrepo.head.reference.set_tracking_branch(remote_branch)
                     except (IndexError, InvalidGitRepositoryError):
                         log.warning("Failed to checkout tracking branch %s", self.branch_path)
@@ -614,7 +680,7 @@ class Submodule(IndexObject, TraversableIterableObj):
                     # Maybe this is a good way to assure it doesn't get into our way, but
                     # we want to stay backwards compatible too ... . Its so redundant !
                     with self.repo.config_writer() as writer:
-                        writer.set_value(sm_section(self.name), 'url', self.url)
+                        writer.set_value(sm_section(self.name), "url", self.url)
                 # END handle dry_run
             # END handle initialization
 
@@ -636,8 +702,11 @@ class Submodule(IndexObject, TraversableIterableObj):
                         binsha = rcommit.binsha
                         hexsha = rcommit.hexsha
                     else:
-                        log.error("%s a tracking branch was not set for local branch '%s'",
-                                  msg_base, mrepo.head.reference)
+                        log.error(
+                            "%s a tracking branch was not set for local branch '%s'",
+                            msg_base,
+                            mrepo.head.reference,
+                        )
                     # END handle remote ref
                 else:
                     log.error("%s there was no local tracking branch", msg_base)
@@ -661,7 +730,11 @@ class Submodule(IndexObject, TraversableIterableObj):
                             log.debug(msg)
                         else:
                             msg = "Skipping %s on branch '%s' of submodule repo '%s' as it contains un-pushed commits"
-                            msg %= (is_detached and "checkout" or "reset", mrepo.head, mrepo)
+                            msg %= (
+                                is_detached and "checkout" or "reset",
+                                mrepo.head,
+                                mrepo,
+                            )
                             log.info(msg)
                             may_reset = False
                         # end handle force
@@ -673,9 +746,13 @@ class Submodule(IndexObject, TraversableIterableObj):
                 # end handle empty repo
 
                 # end verify future/past
-                progress.update(BEGIN | UPDWKTREE, 0, 1, prefix +
-                                "Updating working tree at %s for submodule %r to revision %s"
-                                % (self.path, self.name, hexsha))
+                progress.update(
+                    BEGIN | UPDWKTREE,
+                    0,
+                    1,
+                    prefix
+                    + "Updating working tree at %s for submodule %r to revision %s" % (self.path, self.name, hexsha),
+                )
 
                 if not dry_run and may_reset:
                     if is_detached:
@@ -688,8 +765,12 @@ class Submodule(IndexObject, TraversableIterableObj):
                         mrepo.head.reset(hexsha, index=True, working_tree=True)
                     # END handle checkout
                 # if we may reset/checkout
-                progress.update(END | UPDWKTREE, 0, 1, prefix + "Done updating working tree for submodule %r"
-                                % self.name)
+                progress.update(
+                    END | UPDWKTREE,
+                    0,
+                    1,
+                    prefix + "Done updating working tree for submodule %r" % self.name,
+                )
             # END update to new commit only if needed
         except Exception as err:
             if not keep_going:
@@ -703,8 +784,15 @@ class Submodule(IndexObject, TraversableIterableObj):
             # in dry_run mode, the module might not exist
             if mrepo is not None:
                 for submodule in self.iter_items(self.module()):
-                    submodule.update(recursive, init, to_latest_revision, progress=progress, dry_run=dry_run,
-                                     force=force, keep_going=keep_going)
+                    submodule.update(
+                        recursive,
+                        init,
+                        to_latest_revision,
+                        progress=progress,
+                        dry_run=dry_run,
+                        force=force,
+                        keep_going=keep_going,
+                    )
                 # END handle recursive update
             # END handle dry run
         # END for each submodule
@@ -712,7 +800,7 @@ class Submodule(IndexObject, TraversableIterableObj):
         return self
 
     @unbare_repo
-    def move(self, module_path: PathLike, configuration: bool = True, module: bool = True) -> 'Submodule':
+    def move(self, module_path: PathLike, configuration: bool = True, module: bool = True) -> "Submodule":
         """Move the submodule to a another module path. This involves physically moving
         the repository at our current path, changing the configuration, as well as
         adjusting our index entry accordingly.
@@ -780,7 +868,7 @@ class Submodule(IndexObject, TraversableIterableObj):
             os.renames(cur_path, module_checkout_abspath)
             renamed_module = True
 
-            if osp.isfile(osp.join(module_checkout_abspath, '.git')):
+            if osp.isfile(osp.join(module_checkout_abspath, ".git")):
                 module_abspath = self._module_abspath(self.repo, self.path, self.name)
                 self._write_git_file_and_module_config(module_checkout_abspath, module_abspath)
             # end handle git file rewrite
@@ -794,7 +882,7 @@ class Submodule(IndexObject, TraversableIterableObj):
                 try:
                     ekey = index.entry_key(self.path, 0)
                     entry = index.entries[ekey]
-                    del(index.entries[ekey])
+                    del index.entries[ekey]
                     nentry = git.IndexEntry(entry[:3] + (module_checkout_path,) + entry[4:])
                     index.entries[tekey] = nentry
                 except KeyError as e:
@@ -802,8 +890,8 @@ class Submodule(IndexObject, TraversableIterableObj):
                 # END handle submodule doesn't exist
 
                 # update configuration
-                with self.config_writer(index=index) as writer:        # auto-write
-                    writer.set_value('path', module_checkout_path)
+                with self.config_writer(index=index) as writer:  # auto-write
+                    writer.set_value("path", module_checkout_path)
                     self.path = module_checkout_path
             # END handle configuration flag
         except Exception:
@@ -821,8 +909,13 @@ class Submodule(IndexObject, TraversableIterableObj):
         return self
 
     @unbare_repo
-    def remove(self, module: bool = True, force: bool = False,
-               configuration: bool = True, dry_run: bool = False) -> 'Submodule':
+    def remove(
+        self,
+        module: bool = True,
+        force: bool = False,
+        configuration: bool = True,
+        dry_run: bool = False,
+    ) -> "Submodule":
         """Remove this submodule from the repository. This will remove our entry
         from the .gitmodules file and the entry in the .git / config file.
 
@@ -858,7 +951,7 @@ class Submodule(IndexObject, TraversableIterableObj):
         for csm in self.children():
             nc += 1
             csm.remove(module, force, configuration, dry_run)
-            del(csm)
+            del csm
         # end
         if configuration and not dry_run and nc > 0:
             # Assure we don't leave the parent repository in a dirty state, and commit our changes
@@ -893,7 +986,8 @@ class Submodule(IndexObject, TraversableIterableObj):
                 if mod.is_dirty(index=True, working_tree=True, untracked_files=True):
                     raise InvalidGitRepositoryError(
                         "Cannot delete module at %s with any modifications, unless force is specified"
-                        % mod.working_tree_dir)
+                        % mod.working_tree_dir
+                    )
                 # END check for dirt
 
                 # figure out whether we have new commits compared to the remotes
@@ -910,29 +1004,32 @@ class Submodule(IndexObject, TraversableIterableObj):
                     # not a single remote branch contained all our commits
                     if len(rrefs) and num_branches_with_new_commits == len(rrefs):
                         raise InvalidGitRepositoryError(
-                            "Cannot delete module at %s as there are new commits" % mod.working_tree_dir)
+                            "Cannot delete module at %s as there are new commits" % mod.working_tree_dir
+                        )
                     # END handle new commits
                     # have to manually delete references as python's scoping is
                     # not existing, they could keep handles open ( on windows this is a problem )
                     if len(rrefs):
-                        del(rref)  # skipcq: PYL-W0631
+                        del rref  # skipcq: PYL-W0631
                     # END handle remotes
-                    del(rrefs)
-                    del(remote)
+                    del rrefs
+                    del remote
                 # END for each remote
 
                 # finally delete our own submodule
                 if not dry_run:
                     self._clear_cache()
                     wtd = mod.working_tree_dir
-                    del(mod)        # release file-handles (windows)
+                    del mod  # release file-handles (windows)
                     import gc
+
                     gc.collect()
                     try:
                         rmtree(str(wtd))
                     except Exception as ex:
                         if HIDE_WINDOWS_KNOWN_ERRORS:
                             from unittest import SkipTest
+
                             raise SkipTest("FIXME: fails with: PermissionError\n  {}".format(ex)) from ex
                         raise
                 # END delete tree if possible
@@ -945,6 +1042,7 @@ class Submodule(IndexObject, TraversableIterableObj):
                 except Exception as ex:
                     if HIDE_WINDOWS_KNOWN_ERRORS:
                         from unittest import SkipTest
+
                         raise SkipTest(f"FIXME: fails with: PermissionError\n  {ex}") from ex
                     else:
                         raise
@@ -961,7 +1059,7 @@ class Submodule(IndexObject, TraversableIterableObj):
             # first the index-entry
             parent_index = self.repo.index
             try:
-                del(parent_index.entries[parent_index.entry_key(self.path, 0)])
+                del parent_index.entries[parent_index.entry_key(self.path, 0)]
             except KeyError:
                 pass
             # END delete entry
@@ -979,7 +1077,7 @@ class Submodule(IndexObject, TraversableIterableObj):
 
         return self
 
-    def set_parent_commit(self, commit: Union[Commit_ish, None], check: bool = True) -> 'Submodule':
+    def set_parent_commit(self, commit: Union[Commit_ish, None], check: bool = True) -> "Submodule":
         """Set this instance to use the given commit whose tree is supposed to
         contain the .gitmodules blob.
 
@@ -1027,8 +1125,9 @@ class Submodule(IndexObject, TraversableIterableObj):
         return self
 
     @unbare_repo
-    def config_writer(self, index: Union['IndexFile', None] = None, write: bool = True
-                      ) -> SectionConstraint['SubmoduleConfigParser']:
+    def config_writer(
+        self, index: Union["IndexFile", None] = None, write: bool = True
+    ) -> SectionConstraint["SubmoduleConfigParser"]:
         """:return: a config writer instance allowing you to read and write the data
             belonging to this submodule into the .gitmodules file.
 
@@ -1049,7 +1148,7 @@ class Submodule(IndexObject, TraversableIterableObj):
         return writer
 
     @unbare_repo
-    def rename(self, new_name: str) -> 'Submodule':
+    def rename(self, new_name: str) -> "Submodule":
         """Rename this submodule
         :note: This method takes care of renaming the submodule in various places, such as
 
@@ -1096,12 +1195,12 @@ class Submodule(IndexObject, TraversableIterableObj):
 
         return self
 
-    #} END edit interface
+    # } END edit interface
 
-    #{ Query Interface
+    # { Query Interface
 
     @unbare_repo
-    def module(self) -> 'Repo':
+    def module(self) -> "Repo":
         """:return: Repo instance initialized from the repository at our submodule path
         :raise InvalidGitRepositoryError: if a repository was not available. This could
             also mean that it was not yet initialized"""
@@ -1162,7 +1261,7 @@ class Submodule(IndexObject, TraversableIterableObj):
         # END handle object state consistency
 
     @property
-    def branch(self) -> 'Head':
+    def branch(self) -> "Head":
         """:return: The branch instance that we are to checkout
         :raise InvalidGitRepositoryError: if our module is not yet checked out"""
         return mkhead(self.module(), self._branch_path)
@@ -1187,7 +1286,7 @@ class Submodule(IndexObject, TraversableIterableObj):
         return self._url
 
     @property
-    def parent_commit(self) -> 'Commit_ish':
+    def parent_commit(self) -> "Commit_ish":
         """:return: Commit instance with the tree containing the .gitmodules file
         :note: will always point to the current head's commit if it was not set explicitly"""
         if self._parent_commit is None:
@@ -1215,22 +1314,27 @@ class Submodule(IndexObject, TraversableIterableObj):
         :raise IOError: If the .gitmodules file/blob could not be read"""
         return self._config_parser_constrained(read_only=True)
 
-    def children(self) -> IterableList['Submodule']:
+    def children(self) -> IterableList["Submodule"]:
         """
         :return: IterableList(Submodule, ...) an iterable list of submodules instances
             which are children of this submodule or 0 if the submodule is not checked out"""
         return self._get_intermediate_items(self)
 
-    #} END query interface
+    # } END query interface
 
-    #{ Iterable Interface
+    # { Iterable Interface
 
     @classmethod
-    def iter_items(cls, repo: 'Repo', parent_commit: Union[Commit_ish, str] = 'HEAD', *Args: Any, **kwargs: Any
-                   ) -> Iterator['Submodule']:
+    def iter_items(
+        cls,
+        repo: "Repo",
+        parent_commit: Union[Commit_ish, str] = "HEAD",
+        *Args: Any,
+        **kwargs: Any,
+    ) -> Iterator["Submodule"]:
         """:return: iterator yielding Submodule instances available in the given repository"""
         try:
-            pc = repo.commit(parent_commit)         # parent commit instance
+            pc = repo.commit(parent_commit)  # parent commit instance
             parser = cls._config_parser(repo, pc, read_only=True)
         except (IOError, BadName):
             return iter([])
@@ -1238,8 +1342,8 @@ class Submodule(IndexObject, TraversableIterableObj):
 
         for sms in parser.sections():
             n = sm_name(sms)
-            p = parser.get(sms, 'path')
-            u = parser.get(sms, 'url')
+            p = parser.get(sms, "path")
+            u = parser.get(sms, "url")
             b = cls.k_head_default
             if parser.has_option(sms, cls.k_head_option):
                 b = str(parser.get(sms, cls.k_head_option))
@@ -1248,7 +1352,7 @@ class Submodule(IndexObject, TraversableIterableObj):
             # get the binsha
             index = repo.index
             try:
-                rt = pc.tree                                # root tree
+                rt = pc.tree  # root tree
                 sm = rt[p]
             except KeyError:
                 # try the index, maybe it was just added
@@ -1273,4 +1377,4 @@ class Submodule(IndexObject, TraversableIterableObj):
             yield sm
         # END for each section
 
-    #} END iterable interface
+    # } END iterable interface

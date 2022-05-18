@@ -7,10 +7,7 @@
 
 from io import BytesIO
 import os
-from stat import (
-    S_ISLNK,
-    ST_MODE
-)
+from stat import S_ISLNK, ST_MODE
 import tempfile
 from unittest import skipIf
 import shutil
@@ -27,22 +24,11 @@ from git import (
     CheckoutError,
 )
 from git.compat import is_win
-from git.exc import (
-    HookExecutionError,
-    InvalidGitRepositoryError
-)
+from git.exc import HookExecutionError, InvalidGitRepositoryError
 from git.index.fun import hook_path
-from git.index.typ import (
-    BaseIndexEntry,
-    IndexEntry
-)
+from git.index.typ import BaseIndexEntry, IndexEntry
 from git.objects import Blob
-from test.lib import (
-    TestBase,
-    fixture_path,
-    fixture,
-    with_rw_repo
-)
+from test.lib import TestBase, fixture_path, fixture, with_rw_repo
 from test.lib import with_rw_directory
 from git.util import Actor, rmtree
 from git.util import HIDE_WINDOWS_KNOWN_ERRORS, hex_to_bin
@@ -53,7 +39,7 @@ from git.cmd import Git
 
 HOOKS_SHEBANG = "#!/usr/bin/env sh\n"
 
-is_win_without_bash = is_win and not shutil.which('bash.exe')
+is_win_without_bash = is_win and not shutil.which("bash.exe")
 
 
 def _make_hook(git_dir, name, content, make_exec=True):
@@ -70,7 +56,6 @@ def _make_hook(git_dir, name, content, make_exec=True):
 
 
 class TestIndex(TestBase):
-
     def __init__(self, *args):
         super(TestIndex, self).__init__(*args)
         self._reset_progress()
@@ -116,8 +101,20 @@ class TestIndex(TestBase):
 
         # test entry
         entry = next(iter(index.entries.values()))
-        for attr in ("path", "ctime", "mtime", "dev", "inode", "mode", "uid",
-                     "gid", "size", "binsha", "hexsha", "stage"):
+        for attr in (
+            "path",
+            "ctime",
+            "mtime",
+            "dev",
+            "inode",
+            "mode",
+            "uid",
+            "gid",
+            "size",
+            "binsha",
+            "hexsha",
+            "stage",
+        ):
             getattr(entry, attr)
         # END for each method
 
@@ -134,7 +131,7 @@ class TestIndex(TestBase):
         # write the data - it must match the original
         tmpfile = tempfile.mktemp()
         index_merge.write(tmpfile)
-        with open(tmpfile, 'rb') as fp:
+        with open(tmpfile, "rb") as fp:
             self.assertEqual(fp.read(), fixture("index_merge"))
         os.remove(tmpfile)
 
@@ -151,14 +148,15 @@ class TestIndex(TestBase):
         if len(blist) != len(index.entries):
             iset = {k[0] for k in index.entries.keys()}
             bset = {b.path for b in blist}
-            raise AssertionError("CMP Failed: Missing entries in index: %s, missing in tree: %s" %
-                                 (bset - iset, iset - bset))
+            raise AssertionError(
+                "CMP Failed: Missing entries in index: %s, missing in tree: %s" % (bset - iset, iset - bset)
+            )
         # END assertion message
 
-    @with_rw_repo('0.1.6')
+    @with_rw_repo("0.1.6")
     def test_index_lock_handling(self, rw_repo):
         def add_bad_blob():
-            rw_repo.index.add([Blob(rw_repo, b'f' * 20, 'bad-permissions', 'foo')])
+            rw_repo.index.add([Blob(rw_repo, b"f" * 20, "bad-permissions", "foo")])
 
         try:
             ## 1st fail on purpose adding into index.
@@ -174,7 +172,7 @@ class TestIndex(TestBase):
         except Exception as ex:
             assert "index.lock' could not be obtained" not in str(ex)
 
-    @with_rw_repo('0.1.6')
+    @with_rw_repo("0.1.6")
     def test_index_file_from_tree(self, rw_repo):
         common_ancestor_sha = "5117c9c8a4d3af19a9958677e45cda9269de1541"
         cur_sha = "4b43ca7ff72d5f535134241e7c797ddc9c7a3573"
@@ -202,7 +200,7 @@ class TestIndex(TestBase):
         assert isinstance(merge_blobs[0][1], Blob)
 
         # test BlobFilter
-        prefix = 'lib/git'
+        prefix = "lib/git"
         for _stage, blob in base_index.iter_blobs(BlobFilter([prefix])):
             assert blob.path.startswith(prefix)
 
@@ -224,7 +222,7 @@ class TestIndex(TestBase):
         # END for each blob
         self.assertEqual(num_blobs, len(three_way_index.entries))
 
-    @with_rw_repo('0.1.6')
+    @with_rw_repo("0.1.6")
     def test_index_merge_tree(self, rw_repo):
         # A bit out of place, but we need a different repo for this:
         self.assertNotEqual(self.rorepo, rw_repo)
@@ -234,7 +232,7 @@ class TestIndex(TestBase):
         # current index is at the (virtual) cur_commit
         next_commit = "4c39f9da792792d4e73fc3a5effde66576ae128c"
         parent_commit = rw_repo.head.commit.parents[0]
-        manifest_key = IndexFile.entry_key('MANIFEST.in', 0)
+        manifest_key = IndexFile.entry_key("MANIFEST.in", 0)
         manifest_entry = rw_repo.index.entries[manifest_key]
         rw_repo.index.merge_tree(next_commit)
         # only one change should be recorded
@@ -277,7 +275,7 @@ class TestIndex(TestBase):
 
         # if missing objects are okay, this would work though ( they are always okay now )
         # As we can't read back the tree with NULL_SHA, we rather set it to something else
-        index.entries[manifest_key] = IndexEntry(manifest_entry[:1] + (hex_to_bin('f' * 40),) + manifest_entry[2:])
+        index.entries[manifest_key] = IndexEntry(manifest_entry[:1] + (hex_to_bin("f" * 40),) + manifest_entry[2:])
         tree = index.write_tree()
 
         # now make a proper three way merge with unmerged entries
@@ -286,7 +284,7 @@ class TestIndex(TestBase):
         self.assertEqual(len(unmerged_blobs), 1)
         self.assertEqual(list(unmerged_blobs.keys())[0], manifest_key[0])
 
-    @with_rw_repo('0.1.6')
+    @with_rw_repo("0.1.6")
     def test_index_file_diffing(self, rw_repo):
         # default Index instance points to our index
         index = IndexFile(rw_repo)
@@ -302,14 +300,14 @@ class TestIndex(TestBase):
         # resetting the head will leave the index in a different state, and the
         # diff will yield a few changes
         cur_head_commit = rw_repo.head.reference.commit
-        rw_repo.head.reset('HEAD~6', index=True, working_tree=False)
+        rw_repo.head.reset("HEAD~6", index=True, working_tree=False)
 
         # diff against same index is 0
         diff = index.diff()
         self.assertEqual(len(diff), 0)
 
         # against HEAD as string, must be the same as it matches index
-        diff = index.diff('HEAD')
+        diff = index.diff("HEAD")
         self.assertEqual(len(diff), 0)
 
         # against previous head, there must be a difference
@@ -318,9 +316,9 @@ class TestIndex(TestBase):
 
         # we reverse the result
         adiff = index.diff(str(cur_head_commit), R=True)
-        odiff = index.diff(cur_head_commit, R=False)    # now its not reversed anymore
+        odiff = index.diff(cur_head_commit, R=False)  # now its not reversed anymore
         assert adiff != odiff
-        self.assertEqual(odiff, diff)                    # both unreversed diffs against HEAD
+        self.assertEqual(odiff, diff)  # both unreversed diffs against HEAD
 
         # against working copy - its still at cur_commit
         wdiff = index.diff(None)
@@ -333,7 +331,7 @@ class TestIndex(TestBase):
         # adjust the index to match an old revision
         cur_branch = rw_repo.active_branch
         cur_commit = cur_branch.commit
-        rev_head_parent = 'HEAD~1'
+        rev_head_parent = "HEAD~1"
         assert index.reset(rev_head_parent) is index
 
         self.assertEqual(cur_branch, rw_repo.active_branch)
@@ -351,28 +349,28 @@ class TestIndex(TestBase):
         assert not index.diff(None)
         self.assertEqual(cur_branch, rw_repo.active_branch)
         self.assertEqual(cur_commit, rw_repo.head.commit)
-        with open(file_path, 'rb') as fp:
+        with open(file_path, "rb") as fp:
             assert fp.read() != new_data
 
         # test full checkout
         test_file = osp.join(rw_repo.working_tree_dir, "CHANGES")
-        with open(test_file, 'ab') as fd:
+        with open(test_file, "ab") as fd:
             fd.write(b"some data")
         rval = index.checkout(None, force=True, fprogress=self._fprogress)
-        assert 'CHANGES' in list(rval)
+        assert "CHANGES" in list(rval)
         self._assert_fprogress([None])
         assert osp.isfile(test_file)
 
         os.remove(test_file)
         rval = index.checkout(None, force=False, fprogress=self._fprogress)
-        assert 'CHANGES' in list(rval)
+        assert "CHANGES" in list(rval)
         self._assert_fprogress([None])
         assert osp.isfile(test_file)
 
         # individual file
         os.remove(test_file)
         rval = index.checkout(test_file, fprogress=self._fprogress)
-        self.assertEqual(list(rval)[0], 'CHANGES')
+        self.assertEqual(list(rval)[0], "CHANGES")
         self._assert_fprogress([test_file])
         assert osp.exists(test_file)
 
@@ -394,7 +392,7 @@ class TestIndex(TestBase):
                 self.assertEqual(len(e.failed_files), len(e.failed_reasons))
                 self.assertIsInstance(e.failed_reasons[0], str)
                 self.assertEqual(len(e.valid_files), 0)
-                with open(test_file, 'rb') as fd:
+                with open(test_file, "rb") as fd:
                     s = fd.read()
                 self.assertTrue(s.endswith(append_data), s)
         else:
@@ -402,11 +400,11 @@ class TestIndex(TestBase):
 
         # if we force it it should work
         index.checkout(test_file, force=True)
-        assert not open(test_file, 'rb').read().endswith(append_data)
+        assert not open(test_file, "rb").read().endswith(append_data)
 
         # checkout directory
         rmtree(osp.join(rw_repo.working_tree_dir, "lib"))
-        rval = index.checkout('lib')
+        rval = index.checkout("lib")
         assert len(list(rval)) > 1
 
     def _count_existing(self, repo, files):
@@ -419,15 +417,18 @@ class TestIndex(TestBase):
             existing += osp.isfile(osp.join(basedir, f))
         # END for each deleted file
         return existing
+
     # END num existing helper
 
-    @skipIf(HIDE_WINDOWS_KNOWN_ERRORS and Git.is_cygwin(),
-            """FIXME: File "C:\\projects\\gitpython\\git\\test\\test_index.py", line 642, in test_index_mutation
+    @skipIf(
+        HIDE_WINDOWS_KNOWN_ERRORS and Git.is_cygwin(),
+        """FIXME: File "C:\\projects\\gitpython\\git\\test\\test_index.py", line 642, in test_index_mutation
                 self.assertEqual(fd.read(), link_target)
                 AssertionError: '!<symlink>\xff\xfe/\x00e\x00t\x00c\x00/\x00t\x00h\x00a\x00t\x00\x00\x00'
                 != '/etc/that'
-                """)
-    @with_rw_repo('0.1.6')
+                """,
+    )
+    @with_rw_repo("0.1.6")
     def test_index_mutation(self, rw_repo):
         index = rw_repo.index
         num_entries = len(index.entries)
@@ -446,7 +447,7 @@ class TestIndex(TestBase):
             count = 0
             for entry in index.entries.values():
                 type_id = count % 4
-                if type_id == 0:    # path
+                if type_id == 0:  # path
                     yield entry.path
                 elif type_id == 1:  # blob
                     yield Blob(rw_repo, entry.binsha, entry.mode, entry.path)
@@ -458,6 +459,7 @@ class TestIndex(TestBase):
                     raise AssertionError("Invalid Type")
                 count += 1
             # END for each entry
+
         # END mixed iterator
         deleted_files = index.remove(mixed_iterator(), working_tree=False)
         assert deleted_files
@@ -522,7 +524,11 @@ class TestIndex(TestBase):
         cur_commit = cur_head.commit
         commit_message = "commit with dates by Avinash Sajjanshetty"
 
-        new_commit = index.commit(commit_message, author_date="2006-04-07T22:13:13", commit_date="2005-04-07T22:13:13")
+        new_commit = index.commit(
+            commit_message,
+            author_date="2006-04-07T22:13:13",
+            commit_date="2005-04-07T22:13:13",
+        )
         assert cur_commit != new_commit
         print(new_commit.authored_date, new_commit.committed_date)
         self.assertEqual(new_commit.message, commit_message)
@@ -553,20 +559,22 @@ class TestIndex(TestBase):
         assert osp.isfile(osp.join(rw_repo.working_tree_dir, lib_file_path))
 
         # directory
-        entries = index.add(['lib'], fprogress=self._fprogress_add)
+        entries = index.add(["lib"], fprogress=self._fprogress_add)
         self._assert_entries(entries)
         self._assert_fprogress(entries)
         assert len(entries) > 1
 
         # glob
-        entries = index.reset(new_commit).add([osp.join('lib', 'git', '*.py')], fprogress=self._fprogress_add)
+        entries = index.reset(new_commit).add([osp.join("lib", "git", "*.py")], fprogress=self._fprogress_add)
         self._assert_entries(entries)
         self._assert_fprogress(entries)
         self.assertEqual(len(entries), 14)
 
         # same file
         entries = index.reset(new_commit).add(
-            [osp.join(rw_repo.working_tree_dir, 'lib', 'git', 'head.py')] * 2, fprogress=self._fprogress_add)
+            [osp.join(rw_repo.working_tree_dir, "lib", "git", "head.py")] * 2,
+            fprogress=self._fprogress_add,
+        )
         self._assert_entries(entries)
         self.assertEqual(entries[0].mode & 0o644, 0o644)
         # would fail, test is too primitive to handle this case
@@ -575,7 +583,7 @@ class TestIndex(TestBase):
         self.assertEqual(len(entries), 2)
 
         # missing path
-        self.assertRaises(OSError, index.reset(new_commit).add, ['doesnt/exist/must/raise'])
+        self.assertRaises(OSError, index.reset(new_commit).add, ["doesnt/exist/must/raise"])
 
         # blob from older revision overrides current index revision
         old_blob = new_commit.parents[0].tree.blobs[0]
@@ -588,14 +596,19 @@ class TestIndex(TestBase):
         # mode 0 not allowed
         null_hex_sha = Diff.NULL_HEX_SHA
         null_bin_sha = b"\0" * 20
-        self.assertRaises(ValueError, index.reset(
-            new_commit).add, [BaseIndexEntry((0, null_bin_sha, 0, "doesntmatter"))])
+        self.assertRaises(
+            ValueError,
+            index.reset(new_commit).add,
+            [BaseIndexEntry((0, null_bin_sha, 0, "doesntmatter"))],
+        )
 
         # add new file
         new_file_relapath = "my_new_file"
         self._make_file(new_file_relapath, "hello world", rw_repo)
         entries = index.reset(new_commit).add(
-            [BaseIndexEntry((0o10644, null_bin_sha, 0, new_file_relapath))], fprogress=self._fprogress_add)
+            [BaseIndexEntry((0o10644, null_bin_sha, 0, new_file_relapath))],
+            fprogress=self._fprogress_add,
+        )
         self._assert_entries(entries)
         self._assert_fprogress(entries)
         self.assertEqual(len(entries), 1)
@@ -603,7 +616,7 @@ class TestIndex(TestBase):
 
         # add symlink
         if not is_win:
-            for target in ('/etc/nonexisting', '/etc/passwd', '/etc'):
+            for target in ("/etc/nonexisting", "/etc/passwd", "/etc"):
                 basename = "my_real_symlink"
 
                 link_file = osp.join(rw_repo.working_tree_dir, basename)
@@ -616,7 +629,10 @@ class TestIndex(TestBase):
                 self.assertTrue(S_ISLNK(index.entries[index.entry_key("my_real_symlink", 0)].mode))
 
                 # we expect only the target to be written
-                self.assertEqual(index.repo.odb.stream(entries[0].binsha).read().decode('ascii'), target)
+                self.assertEqual(
+                    index.repo.odb.stream(entries[0].binsha).read().decode("ascii"),
+                    target,
+                )
 
                 os.remove(link_file)
             # end for each target
@@ -649,7 +665,7 @@ class TestIndex(TestBase):
         # a tree created from this should contain the symlink
         tree = index.write_tree()
         assert fake_symlink_relapath in tree
-        index.write()                       # flush our changes for the checkout
+        index.write()  # flush our changes for the checkout
 
         # checkout the fakelink, should be a link then
         assert not S_ISLNK(os.stat(fake_symlink_path)[ST_MODE])
@@ -660,7 +676,7 @@ class TestIndex(TestBase):
         if is_win:
             # simlinks should contain the link as text ( which is what a
             # symlink actually is )
-            with open(fake_symlink_path, 'rt') as fd:
+            with open(fake_symlink_path, "rt") as fd:
                 self.assertEqual(fd.read(), link_target)
         else:
             self.assertTrue(S_ISLNK(os.lstat(fake_symlink_path)[ST_MODE]))
@@ -670,18 +686,19 @@ class TestIndex(TestBase):
             for source, dest in rval:
                 assert not osp.exists(source) and osp.exists(dest)
             # END for each renamed item
+
         # END move assertion utility
 
-        self.assertRaises(ValueError, index.move, ['just_one_path'])
+        self.assertRaises(ValueError, index.move, ["just_one_path"])
         # file onto existing file
-        files = ['AUTHORS', 'LICENSE']
+        files = ["AUTHORS", "LICENSE"]
         self.assertRaises(GitCommandError, index.move, files)
 
         # again, with force
         assert_mv_rval(index.move(files, f=True))
 
         # files into directory - dry run
-        paths = ['LICENSE', 'VERSION', 'doc']
+        paths = ["LICENSE", "VERSION", "doc"]
         rval = index.move(paths, dry_run=True)
         self.assertEqual(len(rval), 2)
         assert osp.exists(paths[0])
@@ -691,7 +708,7 @@ class TestIndex(TestBase):
         assert_mv_rval(rval)
 
         # dir into dir
-        rval = index.move(['doc', 'test'])
+        rval = index.move(["doc", "test"])
         assert_mv_rval(rval)
 
         # TEST PATH REWRITING
@@ -702,21 +719,23 @@ class TestIndex(TestBase):
             rval = str(count[0])
             count[0] += 1
             return rval
+
         # END rewriter
 
         def make_paths():
             # two existing ones, one new one
-            yield 'CHANGES'
-            yield 'ez_setup.py'
-            yield index.entries[index.entry_key('README', 0)]
-            yield index.entries[index.entry_key('.gitignore', 0)]
+            yield "CHANGES"
+            yield "ez_setup.py"
+            yield index.entries[index.entry_key("README", 0)]
+            yield index.entries[index.entry_key(".gitignore", 0)]
 
             for fid in range(3):
-                fname = 'newfile%i' % fid
-                with open(fname, 'wb') as fd:
+                fname = "newfile%i" % fid
+                with open(fname, "wb") as fd:
                     fd.write(b"abcd")
                 yield Blob(rw_repo, Blob.NULL_BIN_SHA, 0o100644, fname)
             # END for each new file
+
         # END path producer
         paths = list(make_paths())
         self._assert_entries(index.add(paths, path_rewriter=rewriter))
@@ -762,7 +781,7 @@ class TestIndex(TestBase):
         for absfile in absfiles:
             assert osp.isfile(absfile)
 
-    @with_rw_repo('HEAD')
+    @with_rw_repo("HEAD")
     def test_compare_write_tree(self, rw_repo):
         # write all trees and compare them
         # its important to have a few submodules in there too
@@ -776,16 +795,16 @@ class TestIndex(TestBase):
             orig_tree = commit.tree
             self.assertEqual(index.write_tree(), orig_tree)
         # END for each commit
-    
-    @with_rw_repo('HEAD', bare=False)
+
+    @with_rw_repo("HEAD", bare=False)
     def test_index_single_addremove(self, rw_repo):
-        fp = osp.join(rw_repo.working_dir, 'testfile.txt')
-        with open(fp, 'w') as fs:
-            fs.write('content of testfile')
+        fp = osp.join(rw_repo.working_dir, "testfile.txt")
+        with open(fp, "w") as fs:
+            fs.write("content of testfile")
         self._assert_entries(rw_repo.index.add(fp))
         deleted_files = rw_repo.index.remove(fp)
         assert deleted_files
-        
+
     def test_index_new(self):
         B = self.rorepo.tree("6d9b1f4f9fa8c9f030e3207e7deacc5d5f8bba4e")
         H = self.rorepo.tree("25dca42bac17d511b7e2ebdd9d1d679e7626db5f")
@@ -796,7 +815,7 @@ class TestIndex(TestBase):
             assert isinstance(index, IndexFile)
         # END for each arg tuple
 
-    @with_rw_repo('HEAD', bare=True)
+    @with_rw_repo("HEAD", bare=True)
     def test_index_bare_add(self, rw_bare_repo):
         # Something is wrong after cloning to a bare repo, reading the
         # property rw_bare_repo.working_tree_dir will return '/tmp'
@@ -804,12 +823,11 @@ class TestIndex(TestBase):
         # a quick hack to make this test fail when expected.
         assert rw_bare_repo.working_tree_dir is None
         assert rw_bare_repo.bare
-        contents = b'This is a BytesIO file'
+        contents = b"This is a BytesIO file"
         filesize = len(contents)
         fileobj = BytesIO(contents)
-        filename = 'my-imaginary-file'
-        istream = rw_bare_repo.odb.store(
-            IStream(Blob.type, filesize, fileobj))
+        filename = "my-imaginary-file"
+        istream = rw_bare_repo.odb.store(IStream(Blob.type, filesize, fileobj))
         entry = BaseIndexEntry((0o100644, istream.binsha, 0, filename))
         try:
             rw_bare_repo.index.add([entry])
@@ -818,7 +836,7 @@ class TestIndex(TestBase):
 
         # Adding using a path should still require a non-bare repository.
         asserted = False
-        path = osp.join('git', 'test', 'test_index.py')
+        path = osp.join("git", "test", "test_index.py")
         try:
             rw_bare_repo.index.add([path])
         except InvalidGitRepositoryError:
@@ -828,24 +846,24 @@ class TestIndex(TestBase):
     @with_rw_directory
     def test_add_utf8P_path(self, rw_dir):
         # NOTE: fp is not a Unicode object in python 2 (which is the source of the problem)
-        fp = osp.join(rw_dir, 'ø.txt')
-        with open(fp, 'wb') as fs:
-            fs.write('content of ø'.encode('utf-8'))
+        fp = osp.join(rw_dir, "ø.txt")
+        with open(fp, "wb") as fs:
+            fs.write("content of ø".encode("utf-8"))
 
         r = Repo.init(rw_dir)
         r.index.add([fp])
-        r.index.commit('Added orig and prestable')
+        r.index.commit("Added orig and prestable")
 
     @with_rw_directory
     def test_add_a_file_with_wildcard_chars(self, rw_dir):
         # see issue #407
-        fp = osp.join(rw_dir, '[.exe')
+        fp = osp.join(rw_dir, "[.exe")
         with open(fp, "wb") as f:
-            f.write(b'something')
+            f.write(b"something")
 
         r = Repo.init(rw_dir)
         r.index.add([fp])
-        r.index.commit('Added [.exe')
+        r.index.commit("Added [.exe")
 
     def test__to_relative_path_at_root(self):
         root = osp.abspath(os.sep)
@@ -856,38 +874,30 @@ class TestIndex(TestBase):
             working_tree_dir = root
 
         repo = Mocked()
-        path = os.path.join(root, 'file')
+        path = os.path.join(root, "file")
         index = IndexFile(repo)
 
         rel = index._to_relative_path(path)
         self.assertEqual(rel, os.path.relpath(path, root))
 
-    @with_rw_repo('HEAD', bare=True)
+    @with_rw_repo("HEAD", bare=True)
     def test_pre_commit_hook_success(self, rw_repo):
         index = rw_repo.index
-        _make_hook(
-            index.repo.git_dir,
-            'pre-commit',
-            "exit 0"
-        )
+        _make_hook(index.repo.git_dir, "pre-commit", "exit 0")
         index.commit("This should not fail")
 
-    @with_rw_repo('HEAD', bare=True)
+    @with_rw_repo("HEAD", bare=True)
     def test_pre_commit_hook_fail(self, rw_repo):
         index = rw_repo.index
-        hp = _make_hook(
-            index.repo.git_dir,
-            'pre-commit',
-            "echo stdout; echo stderr 1>&2; exit 1"
-        )
+        hp = _make_hook(index.repo.git_dir, "pre-commit", "echo stdout; echo stderr 1>&2; exit 1")
         try:
             index.commit("This should fail")
         except HookExecutionError as err:
             if is_win_without_bash:
                 self.assertIsInstance(err.status, OSError)
                 self.assertEqual(err.command, [hp])
-                self.assertEqual(err.stdout, '')
-                self.assertEqual(err.stderr, '')
+                self.assertEqual(err.stdout, "")
+                self.assertEqual(err.stderr, "")
                 assert str(err)
             else:
                 self.assertEqual(err.status, 1)
@@ -899,35 +909,31 @@ class TestIndex(TestBase):
             raise AssertionError("Should have caught a HookExecutionError")
 
     @skipIf(HIDE_WINDOWS_KNOWN_ERRORS, "TODO: fix hooks execution on Windows: #703")
-    @with_rw_repo('HEAD', bare=True)
+    @with_rw_repo("HEAD", bare=True)
     def test_commit_msg_hook_success(self, rw_repo):
         commit_message = "commit default head by Frèderic Çaufl€"
         from_hook_message = "from commit-msg"
         index = rw_repo.index
         _make_hook(
             index.repo.git_dir,
-            'commit-msg',
-            'printf " {}" >> "$1"'.format(from_hook_message)
+            "commit-msg",
+            'printf " {}" >> "$1"'.format(from_hook_message),
         )
         new_commit = index.commit(commit_message)
         self.assertEqual(new_commit.message, "{} {}".format(commit_message, from_hook_message))
 
-    @with_rw_repo('HEAD', bare=True)
+    @with_rw_repo("HEAD", bare=True)
     def test_commit_msg_hook_fail(self, rw_repo):
         index = rw_repo.index
-        hp = _make_hook(
-            index.repo.git_dir,
-            'commit-msg',
-            "echo stdout; echo stderr 1>&2; exit 1"
-        )
+        hp = _make_hook(index.repo.git_dir, "commit-msg", "echo stdout; echo stderr 1>&2; exit 1")
         try:
             index.commit("This should fail")
         except HookExecutionError as err:
             if is_win_without_bash:
                 self.assertIsInstance(err.status, OSError)
                 self.assertEqual(err.command, [hp])
-                self.assertEqual(err.stdout, '')
-                self.assertEqual(err.stderr, '')
+                self.assertEqual(err.stdout, "")
+                self.assertEqual(err.stderr, "")
                 assert str(err)
             else:
                 self.assertEqual(err.status, 1)

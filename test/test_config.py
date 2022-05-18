@@ -9,9 +9,7 @@ import io
 import os
 from unittest import mock
 
-from git import (
-    GitConfigParser
-)
+from git import GitConfigParser
 from git.config import _OMD, cp
 from test.lib import (
     TestCase,
@@ -24,7 +22,7 @@ import os.path as osp
 from git.util import rmfile
 
 
-_tc_lock_fpaths = osp.join(osp.dirname(__file__), 'fixtures/*.lock')
+_tc_lock_fpaths = osp.join(osp.dirname(__file__), "fixtures/*.lock")
 
 
 def _rm_lock_files():
@@ -39,7 +37,7 @@ class TestBase(TestCase):
     def tearDown(self):
         for lfp in glob.glob(_tc_lock_fpaths):
             if osp.isfile(lfp):
-                raise AssertionError('Previous TC left hanging git-lock file: {}'.format(lfp))
+                raise AssertionError("Previous TC left hanging git-lock file: {}".format(lfp))
 
     def _to_memcache(self, file_path):
         with open(file_path, "rb") as fp:
@@ -52,13 +50,16 @@ class TestBase(TestCase):
         for filename in ("git_config", "git_config_global"):
             file_obj = self._to_memcache(fixture_path(filename))
             with GitConfigParser(file_obj, read_only=False) as w_config:
-                w_config.read()                 # enforce reading
+                w_config.read()  # enforce reading
                 assert w_config._sections
-                w_config.write()                # enforce writing
+                w_config.write()  # enforce writing
 
                 # we stripped lines when reading, so the results differ
                 assert file_obj.getvalue()
-                self.assertEqual(file_obj.getvalue(), self._to_memcache(fixture_path(filename)).getvalue())
+                self.assertEqual(
+                    file_obj.getvalue(),
+                    self._to_memcache(fixture_path(filename)).getvalue(),
+                )
 
                 # creating an additional config writer must fail due to exclusive access
                 with self.assertRaises(IOError):
@@ -92,28 +93,26 @@ class TestBase(TestCase):
 
     def test_includes_order(self):
         with GitConfigParser(list(map(fixture_path, ("git_config", "git_config_global")))) as r_config:
-            r_config.read()                 # enforce reading
+            r_config.read()  # enforce reading
             # Simple inclusions, again checking them taking precedence
-            assert r_config.get_value('sec', 'var0') == "value0_included"
+            assert r_config.get_value("sec", "var0") == "value0_included"
             # This one should take the git_config_global value since included
             # values must be considered as soon as they get them
-            assert r_config.get_value('diff', 'tool') == "meld"
+            assert r_config.get_value("diff", "tool") == "meld"
             try:
-                assert r_config.get_value('sec', 'var1') == "value1_main"
+                assert r_config.get_value("sec", "var1") == "value1_main"
             except AssertionError as e:
-                raise SkipTest(
-                    'Known failure -- included values are not in effect right away'
-                ) from e
+                raise SkipTest("Known failure -- included values are not in effect right away") from e
 
     @with_rw_directory
     def test_lock_reentry(self, rw_dir):
-        fpl = osp.join(rw_dir, 'l')
+        fpl = osp.join(rw_dir, "l")
         gcp = GitConfigParser(fpl, read_only=False)
         with gcp as cw:
-            cw.set_value('include', 'some_value', 'a')
+            cw.set_value("include", "some_value", "a")
         # entering again locks the file again...
         with gcp as cw:
-            cw.set_value('include', 'some_other_value', 'b')
+            cw.set_value("include", "some_other_value", "b")
             # ...so creating an additional config writer must fail due to exclusive access
             with self.assertRaises(IOError):
                 GitConfigParser(fpl, read_only=False)
@@ -136,10 +135,12 @@ class TestBase(TestCase):
             ev += "		end\n"
             ev += "		File.open(%(%A), %(w)) {|f| f.write(b)}\n"
             ev += "		exit 1 if b.include?(%(<)*%L)'"
-            self.assertEqual(config.get('merge "railsschema"', 'driver'), ev)
-            self.assertEqual(config.get('alias', 'lg'),
-                             "log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr)%Creset'"
-                             " --abbrev-commit --date=relative")
+            self.assertEqual(config.get('merge "railsschema"', "driver"), ev)
+            self.assertEqual(
+                config.get("alias", "lg"),
+                "log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr)%Creset'"
+                " --abbrev-commit --date=relative",
+            )
             self.assertEqual(len(config.sections()), 23)
 
     def test_base(self):
@@ -186,47 +187,49 @@ class TestBase(TestCase):
     @with_rw_directory
     def test_config_include(self, rw_dir):
         def write_test_value(cw, value):
-            cw.set_value(value, 'value', value)
+            cw.set_value(value, "value", value)
+
         # end
 
         def check_test_value(cr, value):
-            assert cr.get_value(value, 'value') == value
+            assert cr.get_value(value, "value") == value
+
         # end
 
         # PREPARE CONFIG FILE A
-        fpa = osp.join(rw_dir, 'a')
+        fpa = osp.join(rw_dir, "a")
         with GitConfigParser(fpa, read_only=False) as cw:
-            write_test_value(cw, 'a')
+            write_test_value(cw, "a")
 
-            fpb = osp.join(rw_dir, 'b')
-            fpc = osp.join(rw_dir, 'c')
-            cw.set_value('include', 'relative_path_b', 'b')
-            cw.set_value('include', 'doesntexist', 'foobar')
-            cw.set_value('include', 'relative_cycle_a_a', 'a')
-            cw.set_value('include', 'absolute_cycle_a_a', fpa)
+            fpb = osp.join(rw_dir, "b")
+            fpc = osp.join(rw_dir, "c")
+            cw.set_value("include", "relative_path_b", "b")
+            cw.set_value("include", "doesntexist", "foobar")
+            cw.set_value("include", "relative_cycle_a_a", "a")
+            cw.set_value("include", "absolute_cycle_a_a", fpa)
         assert osp.exists(fpa)
 
         # PREPARE CONFIG FILE B
         with GitConfigParser(fpb, read_only=False) as cw:
-            write_test_value(cw, 'b')
-            cw.set_value('include', 'relative_cycle_b_a', 'a')
-            cw.set_value('include', 'absolute_cycle_b_a', fpa)
-            cw.set_value('include', 'relative_path_c', 'c')
-            cw.set_value('include', 'absolute_path_c', fpc)
+            write_test_value(cw, "b")
+            cw.set_value("include", "relative_cycle_b_a", "a")
+            cw.set_value("include", "absolute_cycle_b_a", fpa)
+            cw.set_value("include", "relative_path_c", "c")
+            cw.set_value("include", "absolute_path_c", fpc)
 
         # PREPARE CONFIG FILE C
         with GitConfigParser(fpc, read_only=False) as cw:
-            write_test_value(cw, 'c')
+            write_test_value(cw, "c")
 
         with GitConfigParser(fpa, read_only=True) as cr:
-            for tv in ('a', 'b', 'c'):
+            for tv in ("a", "b", "c"):
                 check_test_value(cr, tv)
             # end for each test to verify
-            assert len(cr.items('include')) == 8, "Expected all include sections to be merged"
+            assert len(cr.items("include")) == 8, "Expected all include sections to be merged"
 
         # test writable config writers - assure write-back doesn't involve includes
         with GitConfigParser(fpa, read_only=False, merge_includes=True) as cw:
-            tv = 'x'
+            tv = "x"
             write_test_value(cw, tv)
 
         with GitConfigParser(fpa, read_only=True) as cr:
@@ -252,7 +255,7 @@ class TestBase(TestCase):
         # Initiate config files.
         path1 = osp.join(rw_dir, "config1")
         path2 = osp.join(rw_dir, "config2")
-        template = "[includeIf \"{}:{}\"]\n    path={}\n"
+        template = '[includeIf "{}:{}"]\n    path={}\n'
 
         with open(path1, "w") as stream:
             stream.write(template.format("gitdir", git_dir, path2))
@@ -319,7 +322,7 @@ class TestBase(TestCase):
         # Initiate config files.
         path1 = osp.join(rw_dir, "config1")
         path2 = osp.join(rw_dir, "config2")
-        template = "[includeIf \"onbranch:{}\"]\n    path={}\n"
+        template = '[includeIf "onbranch:{}"]\n    path={}\n'
 
         # Ensure that config is included is branch is correct.
         with open(path1, "w") as stream:
@@ -356,14 +359,14 @@ class TestBase(TestCase):
 
         # Ensure that config is ignored when active branch cannot be found.
         with open(path1, "w") as stream:
-            stream.write("[includeIf \"onbranch:foo\"]\n    path=/path\n")
+            stream.write('[includeIf "onbranch:foo"]\n    path=/path\n')
 
         with GitConfigParser(path1, repo=repo) as config:
             assert not config._has_includes()
             assert config._included_paths() == []
 
     def test_rename(self):
-        file_obj = self._to_memcache(fixture_path('git_config'))
+        file_obj = self._to_memcache(fixture_path("git_config"))
         with GitConfigParser(file_obj, read_only=False, merge_includes=False) as cw:
             with self.assertRaises(ValueError):
                 cw.rename_section("doesntexist", "foo")
@@ -371,127 +374,151 @@ class TestBase(TestCase):
                 cw.rename_section("core", "include")
 
             nn = "bee"
-            assert cw.rename_section('core', nn) is cw
-            assert not cw.has_section('core')
+            assert cw.rename_section("core", nn) is cw
+            assert not cw.has_section("core")
             assert len(cw.items(nn)) == 4
 
     def test_complex_aliases(self):
-        file_obj = self._to_memcache(fixture_path('.gitconfig'))
+        file_obj = self._to_memcache(fixture_path(".gitconfig"))
         with GitConfigParser(file_obj, read_only=False) as w_config:
-            self.assertEqual(w_config.get('alias', 'rbi'), '"!g() { git rebase -i origin/${1:-master} ; } ; g"')
-        self.assertEqual(file_obj.getvalue(), self._to_memcache(fixture_path('.gitconfig')).getvalue())
+            self.assertEqual(
+                w_config.get("alias", "rbi"),
+                '"!g() { git rebase -i origin/${1:-master} ; } ; g"',
+            )
+        self.assertEqual(
+            file_obj.getvalue(),
+            self._to_memcache(fixture_path(".gitconfig")).getvalue(),
+        )
 
     def test_empty_config_value(self):
-        cr = GitConfigParser(fixture_path('git_config_with_empty_value'), read_only=True)
+        cr = GitConfigParser(fixture_path("git_config_with_empty_value"), read_only=True)
 
-        assert cr.get_value('core', 'filemode'), "Should read keys with values"
+        assert cr.get_value("core", "filemode"), "Should read keys with values"
 
         with self.assertRaises(cp.NoOptionError):
-            cr.get_value('color', 'ui')
+            cr.get_value("color", "ui")
 
     def test_multiple_values(self):
-        file_obj = self._to_memcache(fixture_path('git_config_multiple'))
+        file_obj = self._to_memcache(fixture_path("git_config_multiple"))
         with GitConfigParser(file_obj, read_only=False) as cw:
-            self.assertEqual(cw.get('section0', 'option0'), 'value0')
-            self.assertEqual(cw.get_values('section0', 'option0'), ['value0'])
-            self.assertEqual(cw.items('section0'), [('option0', 'value0')])
+            self.assertEqual(cw.get("section0", "option0"), "value0")
+            self.assertEqual(cw.get_values("section0", "option0"), ["value0"])
+            self.assertEqual(cw.items("section0"), [("option0", "value0")])
 
             # Where there are multiple values, "get" returns the last.
-            self.assertEqual(cw.get('section1', 'option1'), 'value1b')
-            self.assertEqual(cw.get_values('section1', 'option1'),
-                             ['value1a', 'value1b'])
-            self.assertEqual(cw.items('section1'),
-                             [('option1', 'value1b'),
-                              ('other_option1', 'other_value1')])
-            self.assertEqual(cw.items_all('section1'),
-                             [('option1', ['value1a', 'value1b']),
-                              ('other_option1', ['other_value1'])])
+            self.assertEqual(cw.get("section1", "option1"), "value1b")
+            self.assertEqual(cw.get_values("section1", "option1"), ["value1a", "value1b"])
+            self.assertEqual(
+                cw.items("section1"),
+                [("option1", "value1b"), ("other_option1", "other_value1")],
+            )
+            self.assertEqual(
+                cw.items_all("section1"),
+                [
+                    ("option1", ["value1a", "value1b"]),
+                    ("other_option1", ["other_value1"]),
+                ],
+            )
             with self.assertRaises(KeyError):
-                cw.get_values('section1', 'missing')
+                cw.get_values("section1", "missing")
 
-            self.assertEqual(cw.get_values('section1', 'missing', 1), [1])
-            self.assertEqual(cw.get_values('section1', 'missing', 's'), ['s'])
+            self.assertEqual(cw.get_values("section1", "missing", 1), [1])
+            self.assertEqual(cw.get_values("section1", "missing", "s"), ["s"])
 
     def test_multiple_values_rename(self):
-        file_obj = self._to_memcache(fixture_path('git_config_multiple'))
+        file_obj = self._to_memcache(fixture_path("git_config_multiple"))
         with GitConfigParser(file_obj, read_only=False) as cw:
-            cw.rename_section('section1', 'section2')
+            cw.rename_section("section1", "section2")
             cw.write()
             file_obj.seek(0)
             cr = GitConfigParser(file_obj, read_only=True)
-            self.assertEqual(cr.get_value('section2', 'option1'), 'value1b')
-            self.assertEqual(cr.get_values('section2', 'option1'),
-                             ['value1a', 'value1b'])
-            self.assertEqual(cr.items('section2'),
-                             [('option1', 'value1b'),
-                              ('other_option1', 'other_value1')])
-            self.assertEqual(cr.items_all('section2'),
-                             [('option1', ['value1a', 'value1b']),
-                              ('other_option1', ['other_value1'])])
+            self.assertEqual(cr.get_value("section2", "option1"), "value1b")
+            self.assertEqual(cr.get_values("section2", "option1"), ["value1a", "value1b"])
+            self.assertEqual(
+                cr.items("section2"),
+                [("option1", "value1b"), ("other_option1", "other_value1")],
+            )
+            self.assertEqual(
+                cr.items_all("section2"),
+                [
+                    ("option1", ["value1a", "value1b"]),
+                    ("other_option1", ["other_value1"]),
+                ],
+            )
 
     def test_multiple_to_single(self):
-        file_obj = self._to_memcache(fixture_path('git_config_multiple'))
+        file_obj = self._to_memcache(fixture_path("git_config_multiple"))
         with GitConfigParser(file_obj, read_only=False) as cw:
-            cw.set_value('section1', 'option1', 'value1c')
+            cw.set_value("section1", "option1", "value1c")
 
             cw.write()
             file_obj.seek(0)
             cr = GitConfigParser(file_obj, read_only=True)
-            self.assertEqual(cr.get_value('section1', 'option1'), 'value1c')
-            self.assertEqual(cr.get_values('section1', 'option1'), ['value1c'])
-            self.assertEqual(cr.items('section1'),
-                             [('option1', 'value1c'),
-                              ('other_option1', 'other_value1')])
-            self.assertEqual(cr.items_all('section1'),
-                             [('option1', ['value1c']),
-                              ('other_option1', ['other_value1'])])
+            self.assertEqual(cr.get_value("section1", "option1"), "value1c")
+            self.assertEqual(cr.get_values("section1", "option1"), ["value1c"])
+            self.assertEqual(
+                cr.items("section1"),
+                [("option1", "value1c"), ("other_option1", "other_value1")],
+            )
+            self.assertEqual(
+                cr.items_all("section1"),
+                [("option1", ["value1c"]), ("other_option1", ["other_value1"])],
+            )
 
     def test_single_to_multiple(self):
-        file_obj = self._to_memcache(fixture_path('git_config_multiple'))
+        file_obj = self._to_memcache(fixture_path("git_config_multiple"))
         with GitConfigParser(file_obj, read_only=False) as cw:
-            cw.add_value('section1', 'other_option1', 'other_value1a')
+            cw.add_value("section1", "other_option1", "other_value1a")
 
             cw.write()
             file_obj.seek(0)
             cr = GitConfigParser(file_obj, read_only=True)
-            self.assertEqual(cr.get_value('section1', 'option1'), 'value1b')
-            self.assertEqual(cr.get_values('section1', 'option1'),
-                             ['value1a', 'value1b'])
-            self.assertEqual(cr.get_value('section1', 'other_option1'),
-                             'other_value1a')
-            self.assertEqual(cr.get_values('section1', 'other_option1'),
-                             ['other_value1', 'other_value1a'])
-            self.assertEqual(cr.items('section1'),
-                             [('option1', 'value1b'),
-                              ('other_option1', 'other_value1a')])
+            self.assertEqual(cr.get_value("section1", "option1"), "value1b")
+            self.assertEqual(cr.get_values("section1", "option1"), ["value1a", "value1b"])
+            self.assertEqual(cr.get_value("section1", "other_option1"), "other_value1a")
             self.assertEqual(
-                cr.items_all('section1'),
-                [('option1', ['value1a', 'value1b']),
-                 ('other_option1', ['other_value1', 'other_value1a'])])
+                cr.get_values("section1", "other_option1"),
+                ["other_value1", "other_value1a"],
+            )
+            self.assertEqual(
+                cr.items("section1"),
+                [("option1", "value1b"), ("other_option1", "other_value1a")],
+            )
+            self.assertEqual(
+                cr.items_all("section1"),
+                [
+                    ("option1", ["value1a", "value1b"]),
+                    ("other_option1", ["other_value1", "other_value1a"]),
+                ],
+            )
 
     def test_add_to_multiple(self):
-        file_obj = self._to_memcache(fixture_path('git_config_multiple'))
+        file_obj = self._to_memcache(fixture_path("git_config_multiple"))
         with GitConfigParser(file_obj, read_only=False) as cw:
-            cw.add_value('section1', 'option1', 'value1c')
+            cw.add_value("section1", "option1", "value1c")
             cw.write()
             file_obj.seek(0)
             cr = GitConfigParser(file_obj, read_only=True)
-            self.assertEqual(cr.get_value('section1', 'option1'), 'value1c')
-            self.assertEqual(cr.get_values('section1', 'option1'),
-                             ['value1a', 'value1b', 'value1c'])
-            self.assertEqual(cr.items('section1'),
-                             [('option1', 'value1c'),
-                              ('other_option1', 'other_value1')])
-            self.assertEqual(cr.items_all('section1'),
-                             [('option1', ['value1a', 'value1b', 'value1c']),
-                              ('other_option1', ['other_value1'])])
+            self.assertEqual(cr.get_value("section1", "option1"), "value1c")
+            self.assertEqual(cr.get_values("section1", "option1"), ["value1a", "value1b", "value1c"])
+            self.assertEqual(
+                cr.items("section1"),
+                [("option1", "value1c"), ("other_option1", "other_value1")],
+            )
+            self.assertEqual(
+                cr.items_all("section1"),
+                [
+                    ("option1", ["value1a", "value1b", "value1c"]),
+                    ("other_option1", ["other_value1"]),
+                ],
+            )
 
     def test_setlast(self):
         # Test directly, not covered by higher-level tests.
         omd = _OMD()
-        omd.setlast('key', 'value1')
-        self.assertEqual(omd['key'], 'value1')
-        self.assertEqual(omd.getall('key'), ['value1'])
-        omd.setlast('key', 'value2')
-        self.assertEqual(omd['key'], 'value2')
-        self.assertEqual(omd.getall('key'), ['value2'])
+        omd.setlast("key", "value1")
+        self.assertEqual(omd["key"], "value1")
+        self.assertEqual(omd.getall("key"), ["value1"])
+        omd.setlast("key", "value2")
+        self.assertEqual(omd["key"], "value2")
+        self.assertEqual(omd.getall("key"), ["value2"])

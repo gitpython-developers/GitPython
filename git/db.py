@@ -1,9 +1,6 @@
 """Module with our own gitdb implementation - it uses the git command"""
 from git.util import bin_to_hex, hex_to_bin
-from gitdb.base import (
-    OInfo,
-    OStream
-)
+from gitdb.base import OInfo, OStream
 from gitdb.db import GitDB  # @UnusedImport
 from gitdb.db import LooseObjectDB
 
@@ -21,7 +18,7 @@ if TYPE_CHECKING:
 
 # --------------------------------------------------------
 
-__all__ = ('GitCmdObjectDB', 'GitDB')
+__all__ = ("GitCmdObjectDB", "GitDB")
 
 
 class GitCmdObjectDB(LooseObjectDB):
@@ -34,7 +31,7 @@ class GitCmdObjectDB(LooseObjectDB):
         have packs and the other implementations
     """
 
-    def __init__(self, root_path: PathLike, git: 'Git') -> None:
+    def __init__(self, root_path: PathLike, git: "Git") -> None:
         """Initialize this instance with the root and a git command"""
         super(GitCmdObjectDB, self).__init__(root_path)
         self._git = git
@@ -63,4 +60,4 @@ class GitCmdObjectDB(LooseObjectDB):
             raise BadObject(partial_hexsha) from e
         # END handle exceptions
 
-    #} END interface
+    # } END interface

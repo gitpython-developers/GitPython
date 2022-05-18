@@ -12,9 +12,8 @@ import os.path as osp
 
 
 class TestDB(TestBase):
-
     def test_base(self):
-        gdb = GitCmdObjectDB(osp.join(self.rorepo.git_dir, 'objects'), self.rorepo.git)
+        gdb = GitCmdObjectDB(osp.join(self.rorepo.git_dir, "objects"), self.rorepo.git)
 
         # partial to complete - works with everything
         hexsha = bin_to_hex(gdb.partial_to_complete_sha_hex("0.1.6"))

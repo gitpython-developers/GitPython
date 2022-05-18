@@ -14,13 +14,10 @@ from git import (
     Commit,
     SymbolicReference,
     GitCommandError,
-    RefLog
+    RefLog,
 )
 from git.objects.tag import TagObject
-from test.lib import (
-    TestBase,
-    with_rw_repo
-)
+from test.lib import TestBase, with_rw_repo
 from git.util import Actor
 
 import git.refs as refs
@@ -28,11 +25,10 @@ import os.path as osp
 
 
 class TestRefs(TestBase):
-
     def test_from_path(self):
         # should be able to create any reference directly
         for ref_type in (Reference, Head, TagReference, RemoteReference):
-            for name in ('rela_name', 'path/rela_name'):
+            for name in ("rela_name", "path/rela_name"):
                 full_path = ref_type.to_full_path(name)
                 instance = ref_type.from_path(self.rorepo, full_path)
                 assert isinstance(instance, ref_type)
@@ -54,7 +50,7 @@ class TestRefs(TestBase):
                 tag_object_refs.append(tag)
                 tagobj = tag.tag
                 # have no dict
-                self.assertRaises(AttributeError, setattr, tagobj, 'someattr', 1)
+                self.assertRaises(AttributeError, setattr, tagobj, "someattr", 1)
                 assert isinstance(tagobj, TagObject)
                 assert tagobj.tag == tag.name
                 assert isinstance(tagobj.tagger, Actor)
@@ -63,18 +59,18 @@ class TestRefs(TestBase):
                 assert tagobj.message
                 assert tag.object == tagobj
                 # can't assign the object
-                self.assertRaises(AttributeError, setattr, tag, 'object', tagobj)
+                self.assertRaises(AttributeError, setattr, tag, "object", tagobj)
             # END if we have a tag object
         # END for tag in repo-tags
         assert tag_object_refs
-        assert isinstance(self.rorepo.tags['0.1.5'], TagReference)
+        assert isinstance(self.rorepo.tags["0.1.5"], TagReference)
 
     def test_tags_author(self):
         tag = self.rorepo.tags[0]
         tagobj = tag.tag
         assert isinstance(tagobj.tagger, Actor)
         tagger_name = tagobj.tagger.name
-        assert tagger_name == 'Michael Trier'
+        assert tagger_name == "Michael Trier"
 
     def test_tags(self):
         # tag refs can point to tag objects or to commits
@@ -92,7 +88,7 @@ class TestRefs(TestBase):
         assert len(s) == ref_count
         assert len(s | s) == ref_count
 
-    @with_rw_repo('HEAD', bare=False)
+    @with_rw_repo("HEAD", bare=False)
     def test_heads(self, rwrepo):
         for head in rwrepo.heads:
             assert head.name
@@ -100,8 +96,8 @@ class TestRefs(TestBase):
             assert "refs/heads" in head.path
             prev_object = head.object
             cur_object = head.object
-            assert prev_object == cur_object        # represent the same git object
-            assert prev_object is not cur_object    # but are different instances
+            assert prev_object == cur_object  # represent the same git object
+            assert prev_object is not cur_object  # but are different instances
 
             with head.config_writer() as writer:
                 tv = "testopt"
@@ -120,17 +116,17 @@ class TestRefs(TestBase):
             head.set_tracking_branch(None)
             assert head.tracking_branch() is None
 
-            special_name = 'feature#123'
-            special_name_remote_ref = SymbolicReference.create(rwrepo, 'refs/remotes/origin/%s' % special_name)
-            gp_tracking_branch = rwrepo.create_head('gp_tracking#123')
+            special_name = "feature#123"
+            special_name_remote_ref = SymbolicReference.create(rwrepo, "refs/remotes/origin/%s" % special_name)
+            gp_tracking_branch = rwrepo.create_head("gp_tracking#123")
             special_name_remote_ref = rwrepo.remotes[0].refs[special_name]  # get correct type
             gp_tracking_branch.set_tracking_branch(special_name_remote_ref)
             TBranch = gp_tracking_branch.tracking_branch()
             if TBranch is not None:
                 assert TBranch.path == special_name_remote_ref.path
 
-            git_tracking_branch = rwrepo.create_head('git_tracking#123')
-            rwrepo.git.branch('-u', special_name_remote_ref.name, git_tracking_branch.name)
+            git_tracking_branch = rwrepo.create_head("git_tracking#123")
+            rwrepo.git.branch("-u", special_name_remote_ref.name, git_tracking_branch.name)
             TBranch = gp_tracking_branch.tracking_branch()
             if TBranch is not None:
                 assert TBranch.name == special_name_remote_ref.name
@@ -143,7 +139,7 @@ class TestRefs(TestBase):
         pcommit = cur_head.commit.parents[0].parents[0]
         hlog_len = len(head.log())
         blog_len = len(cur_head.log())
-        assert head.set_reference(pcommit, 'detached head') is head
+        assert head.set_reference(pcommit, "detached head") is head
         # one new log-entry
         thlog = head.log()
         assert len(thlog) == hlog_len + 1
@@ -154,23 +150,23 @@ class TestRefs(TestBase):
         assert len(cur_head.log()) == blog_len
 
         # head changes once again, cur_head doesn't change
-        head.set_reference(cur_head, 'reattach head')
+        head.set_reference(cur_head, "reattach head")
         assert len(head.log()) == hlog_len + 2
         assert len(cur_head.log()) == blog_len
 
         # adjusting the head-ref also adjust the head, so both reflogs are
         # altered
-        cur_head.set_commit(pcommit, 'changing commit')
+        cur_head.set_commit(pcommit, "changing commit")
         assert len(cur_head.log()) == blog_len + 1
         assert len(head.log()) == hlog_len + 3
 
         # with automatic dereferencing
-        assert head.set_commit(cur_commit, 'change commit once again') is head
+        assert head.set_commit(cur_commit, "change commit once again") is head
         assert len(head.log()) == hlog_len + 4
         assert len(cur_head.log()) == blog_len + 2
 
         # a new branch has just a single entry
-        other_head = Head.create(rwrepo, 'mynewhead', pcommit, logmsg='new head created')
+        other_head = Head.create(rwrepo, "mynewhead", pcommit, logmsg="new head created")
         log = other_head.log()
         assert len(log) == 1
         assert log[0].oldhexsha == pcommit.NULL_HEX_SHA
@@ -183,21 +179,21 @@ class TestRefs(TestBase):
         assert len(types_found) >= 3
 
     def test_is_valid(self):
-        assert not Reference(self.rorepo, 'refs/doesnt/exist').is_valid()
+        assert not Reference(self.rorepo, "refs/doesnt/exist").is_valid()
         assert self.rorepo.head.is_valid()
         assert self.rorepo.head.reference.is_valid()
-        assert not SymbolicReference(self.rorepo, 'hellothere').is_valid()
+        assert not SymbolicReference(self.rorepo, "hellothere").is_valid()
 
     def test_orig_head(self):
         assert type(self.rorepo.head.orig_head()) == SymbolicReference
 
-    @with_rw_repo('0.1.6')
+    @with_rw_repo("0.1.6")
     def test_head_checkout_detached_head(self, rw_repo):
         res = rw_repo.remotes.origin.refs.master.checkout()
         assert isinstance(res, SymbolicReference)
-        assert res.name == 'HEAD'
+        assert res.name == "HEAD"
 
-    @with_rw_repo('0.1.6')
+    @with_rw_repo("0.1.6")
     def test_head_reset(self, rw_repo):
         cur_head = rw_repo.head
         old_head_commit = cur_head.commit
@@ -215,7 +211,13 @@ class TestRefs(TestBase):
         cur_head.reset(cur_head, paths="test")
         cur_head.reset(new_head_commit, paths="lib")
         # hard resets with paths don't work, its all or nothing
-        self.assertRaises(GitCommandError, cur_head.reset, new_head_commit, working_tree=True, paths="lib")
+        self.assertRaises(
+            GitCommandError,
+            cur_head.reset,
+            new_head_commit,
+            working_tree=True,
+            paths="lib",
+        )
 
         # we can do a mixed reset, and then checkout from the index though
         cur_head.reset(new_head_commit)
@@ -255,7 +257,7 @@ class TestRefs(TestBase):
         self.assertRaises(ValueError, setattr, cur_head, "reference", "that")
 
         # head handling
-        commit = 'HEAD'
+        commit = "HEAD"
         prev_head_commit = cur_head.commit
         for count, new_name in enumerate(("my_new_head", "feature/feature1")):
             actual_commit = commit + "^" * count
@@ -330,7 +332,7 @@ class TestRefs(TestBase):
             remote_head_name = "HEAD"
             if remote_head_name in refs:
                 RemoteReference.delete(rw_repo, refs[remote_head_name])
-                del(refs[remote_head_name])
+                del refs[remote_head_name]
             # END handle HEAD deletion
 
             RemoteReference.delete(rw_repo, *refs)
@@ -358,13 +360,13 @@ class TestRefs(TestBase):
 
         # setting a non-commit as commit fails, but succeeds as object
         head_tree = head.commit.tree
-        self.assertRaises(ValueError, setattr, head, 'commit', head_tree)
-        assert head.commit == old_commit        # and the ref did not change
+        self.assertRaises(ValueError, setattr, head, "commit", head_tree)
+        assert head.commit == old_commit  # and the ref did not change
         # we allow heds to point to any object
         head.object = head_tree
         assert head.object == head_tree
         # cannot query tree as commit
-        self.assertRaises(TypeError, getattr, head, 'commit')
+        self.assertRaises(TypeError, getattr, head, "commit")
 
         # set the commit directly using the head. This would never detach the head
         assert not cur_head.is_detached
@@ -396,25 +398,25 @@ class TestRefs(TestBase):
 
         # checkout  with force as we have a changed a file
         # clear file
-        open(new_head.commit.tree.blobs[-1].abspath, 'w').close()
+        open(new_head.commit.tree.blobs[-1].abspath, "w").close()
         assert len(new_head.commit.diff(None))
 
         # create a new branch that is likely to touch the file we changed
-        far_away_head = rw_repo.create_head("far_head", 'HEAD~100')
+        far_away_head = rw_repo.create_head("far_head", "HEAD~100")
         self.assertRaises(GitCommandError, far_away_head.checkout)
         assert active_branch == active_branch.checkout(force=True)
         assert rw_repo.head.reference != far_away_head
 
         # test reference creation
-        partial_ref = 'sub/ref'
-        full_ref = 'refs/%s' % partial_ref
+        partial_ref = "sub/ref"
+        full_ref = "refs/%s" % partial_ref
         ref = Reference.create(rw_repo, partial_ref)
         assert ref.path == full_ref
         assert ref.object == rw_repo.head.commit
 
-        self.assertRaises(OSError, Reference.create, rw_repo, full_ref, 'HEAD~20')
+        self.assertRaises(OSError, Reference.create, rw_repo, full_ref, "HEAD~20")
         # it works if it is at the same spot though and points to the same reference
-        assert Reference.create(rw_repo, full_ref, 'HEAD').path == full_ref
+        assert Reference.create(rw_repo, full_ref, "HEAD").path == full_ref
         Reference.delete(rw_repo, full_ref)
 
         # recreate the reference using a full_ref
@@ -423,13 +425,13 @@ class TestRefs(TestBase):
         assert ref.object == rw_repo.head.commit
 
         # recreate using force
-        ref = Reference.create(rw_repo, partial_ref, 'HEAD~1', force=True)
+        ref = Reference.create(rw_repo, partial_ref, "HEAD~1", force=True)
         assert ref.path == full_ref
         assert ref.object == rw_repo.head.commit.parents[0]
 
         # rename it
         orig_obj = ref.object
-        for name in ('refs/absname', 'rela_name', 'feature/rela_name'):
+        for name in ("refs/absname", "rela_name", "feature/rela_name"):
             ref_new_name = ref.rename(name)
             assert isinstance(ref_new_name, Reference)
             assert name in ref_new_name.path
@@ -438,7 +440,7 @@ class TestRefs(TestBase):
         # END for each name type
 
         # References that don't exist trigger an error if we want to access them
-        self.assertRaises(ValueError, getattr, Reference(rw_repo, "refs/doesntexist"), 'commit')
+        self.assertRaises(ValueError, getattr, Reference(rw_repo, "refs/doesntexist"), "commit")
 
         # exists, fail unless we force
         ex_ref_path = far_away_head.path
@@ -455,7 +457,13 @@ class TestRefs(TestBase):
         assert symref.path == symref_path
         assert symref.reference == cur_head.reference
 
-        self.assertRaises(OSError, SymbolicReference.create, rw_repo, symref_path, cur_head.reference.commit)
+        self.assertRaises(
+            OSError,
+            SymbolicReference.create,
+            rw_repo,
+            symref_path,
+            cur_head.reference.commit,
+        )
         # it works if the new ref points to the same reference
         assert SymbolicReference.create(rw_repo, symref.path, symref.reference).path == symref.path  # @NoEffect
         SymbolicReference.delete(rw_repo, symref)
@@ -475,7 +483,7 @@ class TestRefs(TestBase):
         assert osp.isfile(symbol_ref_abspath)
         assert symref.commit == new_head.commit
 
-        for name in ('absname', 'folder/rela_name'):
+        for name in ("absname", "folder/rela_name"):
             symref_new_name = symref.rename(name)
             assert isinstance(symref_new_name, SymbolicReference)
             assert name in symref_new_name.path
@@ -524,7 +532,7 @@ class TestRefs(TestBase):
         rw_repo.head.reference = Head.create(rw_repo, "master")
 
         # At least the head should still exist
-        assert osp.isfile(osp.join(rw_repo.git_dir, 'HEAD'))
+        assert osp.isfile(osp.join(rw_repo.git_dir, "HEAD"))
         refs = list(SymbolicReference.iter_items(rw_repo))
         assert len(refs) == 1
 
@@ -545,7 +553,7 @@ class TestRefs(TestBase):
             # if the assignment raises, the ref doesn't exist
             Reference.delete(ref.repo, ref.path)
             assert not ref.is_valid()
-            self.assertRaises(ValueError, setattr, ref, 'commit', "nonsense")
+            self.assertRaises(ValueError, setattr, ref, "commit", "nonsense")
             assert not ref.is_valid()
 
             # I am sure I had my reason to make it a class method at first, but
@@ -559,14 +567,14 @@ class TestRefs(TestBase):
 
             Reference.delete(ref.repo, ref.path)
             assert not ref.is_valid()
-            self.assertRaises(ValueError, setattr, ref, 'object', "nonsense")
+            self.assertRaises(ValueError, setattr, ref, "object", "nonsense")
             assert not ref.is_valid()
 
         # END for each path
 
     def test_dereference_recursive(self):
         # for now, just test the HEAD
-        assert SymbolicReference.dereference_recursive(self.rorepo, 'HEAD')
+        assert SymbolicReference.dereference_recursive(self.rorepo, "HEAD")
 
     def test_reflog(self):
         assert isinstance(self.rorepo.heads.master.log(), RefLog)

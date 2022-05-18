@@ -3,27 +3,21 @@ import logging
 import os
 import tempfile
 
-from git import (
-    Repo
-)
-from git.db import (
-    GitCmdObjectDB,
-    GitDB
-)
-from test.lib import (
-    TestBase
-)
+from git import Repo
+from git.db import GitCmdObjectDB, GitDB
+from test.lib import TestBase
 from git.util import rmtree
 import os.path as osp
 
-#{ Invariants
+# { Invariants
 
 k_env_git_repo = "GIT_PYTHON_TEST_GIT_REPO_BASE"
 
-#} END invariants
+# } END invariants
 
 
-#{ Base Classes
+# { Base Classes
+
 
 class TestBigRepoR(TestBase):
 
@@ -39,8 +33,8 @@ class TestBigRepoR(TestBase):
      * As gitrepo, but uses pure python implementation
     """
 
-    #{ Invariants
-    #} END invariants
+    # { Invariants
+    # } END invariants
 
     def setUp(self):
         try:
@@ -51,8 +45,9 @@ class TestBigRepoR(TestBase):
         repo_path = os.environ.get(k_env_git_repo)
         if repo_path is None:
             logging.info(
-                ("You can set the %s environment variable to a .git repository of" % k_env_git_repo) +
-                "your choice - defaulting to the gitpython repository")
+                ("You can set the %s environment variable to a .git repository of" % k_env_git_repo)
+                + "your choice - defaulting to the gitpython repository"
+            )
             repo_path = osp.dirname(__file__)
         # end set some repo path
         self.gitrorepo = Repo(repo_path, odbt=GitCmdObjectDB, search_parent_directories=True)
@@ -91,4 +86,5 @@ class TestBigRepoRW(TestBigRepoR):
         self.puregitrwrepo.git.clear_cache()
         self.puregitrwrepo = None
 
-#} END base classes
+
+# } END base classes

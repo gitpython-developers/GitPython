@@ -13,16 +13,24 @@ from .base import IndexObject, IndexObjUnion
 from .blob import Blob
 from .submodule.base import Submodule
 
-from .fun import (
-    tree_entries_from_data,
-    tree_to_stream
-)
+from .fun import tree_entries_from_data, tree_to_stream
 
 
 # typing -------------------------------------------------
 
-from typing import (Any, Callable, Dict, Iterable, Iterator, List,
-                    Tuple, Type, Union, cast, TYPE_CHECKING)
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    Iterator,
+    List,
+    Tuple,
+    Type,
+    Union,
+    cast,
+    TYPE_CHECKING,
+)
 
 from git.types import PathLike, Literal
 
@@ -32,14 +40,13 @@ if TYPE_CHECKING:
 
 TreeCacheTup = Tuple[bytes, int, str]
 
-TraversedTreeTup = Union[Tuple[Union['Tree', None], IndexObjUnion,
-                         Tuple['Submodule', 'Submodule']]]
+TraversedTreeTup = Union[Tuple[Union["Tree", None], IndexObjUnion, Tuple["Submodule", "Submodule"]]]
 
 
 # def is_tree_cache(inp: Tuple[bytes, int, str]) -> TypeGuard[TreeCacheTup]:
 #     return isinstance(inp[0], bytes) and isinstance(inp[1], int) and isinstance([inp], str)
 
-#--------------------------------------------------------
+# --------------------------------------------------------
 
 
 cmp: Callable[[str, str], int] = lambda a, b: (a > b) - (a < b)
@@ -60,8 +67,7 @@ def git_cmp(t1: TreeCacheTup, t2: TreeCacheTup) -> int:
     return len_a - len_b
 
 
-def merge_sort(a: List[TreeCacheTup],
-               cmp: Callable[[TreeCacheTup, TreeCacheTup], int]) -> None:
+def merge_sort(a: List[TreeCacheTup], cmp: Callable[[TreeCacheTup, TreeCacheTup], int]) -> None:
     if len(a) < 2:
         return None
 
@@ -102,7 +108,8 @@ class TreeModifier(object):
 
     Once all adjustments are complete, the _cache, which really is a reference to
     the cache of a tree, will be sorted. Assuring it will be in a serializable state"""
-    __slots__ = '_cache'
+
+    __slots__ = "_cache"
 
     def __init__(self, cache: List[TreeCacheTup]) -> None:
         self._cache = cache
@@ -116,18 +123,19 @@ class TreeModifier(object):
         # END for each item in cache
         return -1
 
-    #{ Interface
-    def set_done(self) -> 'TreeModifier':
+    # { Interface
+    def set_done(self) -> "TreeModifier":
         """Call this method once you are done modifying the tree information.
         It may be called several times, but be aware that each call will cause
         a sort operation
         :return self:"""
         merge_sort(self._cache, git_cmp)
         return self
-    #} END interface
 
-    #{ Mutators
-    def add(self, sha: bytes, mode: int, name: str, force: bool = False) -> 'TreeModifier':
+    # } END interface
+
+    # { Mutators
+    def add(self, sha: bytes, mode: int, name: str, force: bool = False) -> "TreeModifier":
         """Add the given item to the tree. If an item with the given name already
         exists, nothing will be done, but a ValueError will be raised if the
         sha and mode of the existing item do not match the one you add, unless
@@ -138,7 +146,7 @@ class TreeModifier(object):
         :param force: If True, an item with your name and information will overwrite
             any existing item with the same name, no matter which information it has
         :return: self"""
-        if '/' in name:
+        if "/" in name:
             raise ValueError("Name must not contain '/' characters")
         if (mode >> 12) not in Tree._map_id_to_type:
             raise ValueError("Invalid object type according to mode %o" % mode)
@@ -177,9 +185,9 @@ class TreeModifier(object):
         """Deletes an item with the given name if it exists"""
         index = self._index_by_name(name)
         if index > -1:
-            del(self._cache[index])
+            del self._cache[index]
 
-    #} END mutators
+    # } END mutators
 
 
 class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
@@ -195,11 +203,11 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
         blob = tree[0]
     """
 
-    type: Literal['tree'] = "tree"
+    type: Literal["tree"] = "tree"
     __slots__ = "_cache"
 
     # actual integer ids for comparison
-    commit_id = 0o16     # equals stat.S_IFDIR | stat.S_IFLNK - a directory link
+    commit_id = 0o16  # equals stat.S_IFDIR | stat.S_IFLNK - a directory link
     blob_id = 0o10
     symlink_id = 0o12
     tree_id = 0o04
@@ -211,12 +219,20 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
         # tree id added once Tree is defined
     }
 
-    def __init__(self, repo: 'Repo', binsha: bytes, mode: int = tree_id << 12, path: Union[PathLike, None] = None):
+    def __init__(
+        self,
+        repo: "Repo",
+        binsha: bytes,
+        mode: int = tree_id << 12,
+        path: Union[PathLike, None] = None,
+    ):
         super(Tree, self).__init__(repo, binsha, mode, path)
 
-    @ classmethod
-    def _get_intermediate_items(cls, index_object: IndexObjUnion,
-                                ) -> Union[Tuple['Tree', ...], Tuple[()]]:
+    @classmethod
+    def _get_intermediate_items(
+        cls,
+        index_object: IndexObjUnion,
+    ) -> Union[Tuple["Tree", ...], Tuple[()]]:
         if index_object.type == "tree":
             return tuple(index_object._iter_convert_to_object(index_object._cache))
         return ()
@@ -230,8 +246,7 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
             super(Tree, self)._set_cache_(attr)
         # END handle attribute
 
-    def _iter_convert_to_object(self, iterable: Iterable[TreeCacheTup]
-                                ) -> Iterator[IndexObjUnion]:
+    def _iter_convert_to_object(self, iterable: Iterable[TreeCacheTup]) -> Iterator[IndexObjUnion]:
         """Iterable yields tuples of (binsha, mode, name), which will be converted
         to the respective object representation"""
         for binsha, mode, name in iterable:
@@ -248,13 +263,13 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
 
         :raise KeyError: if given file or tree does not exist in tree"""
         msg = "Blob or Tree named %r not found"
-        if '/' in file:
+        if "/" in file:
             tree = self
             item = self
-            tokens = file.split('/')
+            tokens = file.split("/")
             for i, token in enumerate(tokens):
                 item = tree[token]
-                if item.type == 'tree':
+                if item.type == "tree":
                     tree = item
                 else:
                     # safety assertion - blobs are at the end of the path
@@ -268,9 +283,10 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
             return item
         else:
             for info in self._cache:
-                if info[2] == file:     # [2] == name
-                    return self._map_id_to_type[info[1] >> 12](self.repo, info[0], info[1],
-                                                               join_path(self.path, info[2]))
+                if info[2] == file:  # [2] == name
+                    return self._map_id_to_type[info[1] >> 12](
+                        self.repo, info[0], info[1], join_path(self.path, info[2])
+                    )
             # END for each obj
             raise KeyError(msg % file)
         # END handle long paths
@@ -279,17 +295,17 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
         """For PY3 only"""
         return self.join(file)
 
-    @ property
-    def trees(self) -> List['Tree']:
+    @property
+    def trees(self) -> List["Tree"]:
         """:return: list(Tree, ...) list of trees directly below this tree"""
         return [i for i in self if i.type == "tree"]
 
-    @ property
+    @property
     def blobs(self) -> List[Blob]:
         """:return: list(Blob, ...) list of blobs directly below this tree"""
         return [i for i in self if i.type == "blob"]
 
-    @ property
+    @property
     def cache(self) -> TreeModifier:
         """
         :return: An object allowing to modify the internal cache. This can be used
@@ -298,16 +314,16 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
             See the ``TreeModifier`` for more information on how to alter the cache"""
         return TreeModifier(self._cache)
 
-    def traverse(self,      # type: ignore[override]
-                 predicate: Callable[[Union[IndexObjUnion, TraversedTreeTup], int], bool] = lambda i, d: True,
-                 prune: Callable[[Union[IndexObjUnion, TraversedTreeTup], int], bool] = lambda i, d: False,
-                 depth: int = -1,
-                 branch_first: bool = True,
-                 visit_once: bool = False,
-                 ignore_self: int = 1,
-                 as_edge: bool = False
-                 ) -> Union[Iterator[IndexObjUnion],
-                            Iterator[TraversedTreeTup]]:
+    def traverse(
+        self,  # type: ignore[override]
+        predicate: Callable[[Union[IndexObjUnion, TraversedTreeTup], int], bool] = lambda i, d: True,
+        prune: Callable[[Union[IndexObjUnion, TraversedTreeTup], int], bool] = lambda i, d: False,
+        depth: int = -1,
+        branch_first: bool = True,
+        visit_once: bool = False,
+        ignore_self: int = 1,
+        as_edge: bool = False,
+    ) -> Union[Iterator[IndexObjUnion], Iterator[TraversedTreeTup]]:
         """For documentation, see util.Traversable._traverse()
         Trees are set to visit_once = False to gain more performance in the traversal"""
 
@@ -321,9 +337,17 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
         # ret_tup = itertools.tee(ret, 2)
         # assert is_tree_traversed(ret_tup), f"Type is {[type(x) for x in list(ret_tup[0])]}"
         # return ret_tup[0]"""
-        return cast(Union[Iterator[IndexObjUnion], Iterator[TraversedTreeTup]],
-                    super(Tree, self)._traverse(predicate, prune, depth,  # type: ignore
-                                                branch_first, visit_once, ignore_self))
+        return cast(
+            Union[Iterator[IndexObjUnion], Iterator[TraversedTreeTup]],
+            super(Tree, self)._traverse(
+                predicate,
+                prune,
+                depth,  # type: ignore
+                branch_first,
+                visit_once,
+                ignore_self,
+            ),
+        )
 
     def list_traverse(self, *args: Any, **kwargs: Any) -> IterableList[IndexObjUnion]:
         """
@@ -331,7 +355,7 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
             traverse()
             Tree -> IterableList[Union['Submodule', 'Tree', 'Blob']]
         """
-        return super(Tree, self)._list_traverse(* args, **kwargs)
+        return super(Tree, self)._list_traverse(*args, **kwargs)
 
     # List protocol
 
@@ -378,7 +402,7 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
     def __reversed__(self) -> Iterator[IndexObjUnion]:
         return reversed(self._iter_convert_to_object(self._cache))  # type: ignore
 
-    def _serialize(self, stream: 'BytesIO') -> 'Tree':
+    def _serialize(self, stream: "BytesIO") -> "Tree":
         """Serialize this tree into the stream. Please note that we will assume
         our tree data to be in a sorted state. If this is not the case, serialization
         will not generate a correct tree representation as these are assumed to be sorted
@@ -386,7 +410,7 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
         tree_to_stream(self._cache, stream.write)
         return self
 
-    def _deserialize(self, stream: 'BytesIO') -> 'Tree':
+    def _deserialize(self, stream: "BytesIO") -> "Tree":
         self._cache = tree_entries_from_data(stream.read())
         return self
 
