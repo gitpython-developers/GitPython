@@ -9,7 +9,7 @@ from io import BytesIO
 import os
 from stat import S_ISLNK, ST_MODE
 import tempfile
-from unittest import skipIf
+from unittest import mock, skipIf
 import shutil
 
 from git import (
@@ -24,7 +24,11 @@ from git import (
     CheckoutError,
 )
 from git.compat import is_win
-from git.exc import HookExecutionError, InvalidGitRepositoryError
+from git.exc import (
+    HookExecutionError,
+    InvalidGitRepositoryError
+)
+from git.index.base import _FileStore
 from git.index.fun import hook_path
 from git.index.typ import BaseIndexEntry, IndexEntry
 from git.objects import Blob
@@ -954,3 +958,37 @@ class TestIndex(TestBase):
         file.touch()
 
         rw_repo.index.add(file)
+
+    def test_autocrlf(self):
+        file_store = mock.MagicMock()
+
+        with tempfile.TemporaryDirectory() as d:
+            dummy_file = Path(d) / "dummy.txt"
+
+            with open(dummy_file, "w") as f:
+                f.write("Hello\r\n")
+
+            index = self.rorepo.index
+
+            index._autocrlf(dummy_file, file_store)
+
+            with open(dummy_file, "r") as f:
+                assert f.read() == "Hello\n"
+
+
+def test_filestore(tmp_path): 
+    dummy_file = tmp_path / "dummy.txt"
+
+    content = "Dummy\n"
+
+    with open(dummy_file, "w") as f:
+        f.write(content)
+
+    with _FileStore() as fs: 
+        fs.save(dummy_file)
+
+        with open(dummy_file, "w") as f:
+            f.write(r"Something else\n")
+        
+    with open(dummy_file, "r") as f:
+        assert f.read() == content

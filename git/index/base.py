@@ -38,6 +38,8 @@ from gitdb.db import MemoryDB
 
 import git.diff as git_diff
 import os.path as osp
+from pathlib import Path
+from typing import Optional
 
 from .fun import (
     entry_key,
@@ -87,6 +89,40 @@ StageType = int
 Treeish = Union[Tree, Commit, str, bytes]
 
 # ------------------------------------------------------------------------------------
+
+
+class _FileStore:
+    """An utility class that stores original files somewhere and restores them
+    to the original content at the exit"""
+
+    _dir: PathLike
+
+    def __init__(self, tmp_dir: Optional[PathLike] = None):
+
+        self._file_map: dict[PathLike, PathLike] = {}
+        self._tmp_dir = tempfile.TemporaryDirectory(prefix=str(tmp_dir))
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc, value, tb):
+        for file, store_file in self._file_map.items():
+            with open(store_file, "rb") as rf, open(file, "wb") as wf:
+                for line in rf:
+                    wf.write(line)
+            Path(store_file).unlink()
+        self._dir.rmdir()
+
+    @property
+    def _dir(self) -> Path:
+        return Path(self._tmp_dir.name)
+
+    def save(self, file: PathLike) -> None:
+        store_file = self._dir / tempfile.mktemp()
+        self._file_map[file] = store_file
+        with open(store_file, "wb") as wf, open(file, "rb") as rf:
+            for line in rf:
+                wf.write(line)
 
 
 __all__ = ("IndexFile", "CheckoutError")
@@ -611,7 +647,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         return os.path.relpath(path, self.repo.working_tree_dir)
 
     def _preprocess_add_items(
-        self, items: Sequence[Union[PathLike, Blob, BaseIndexEntry, "Submodule"]]
+        self, items: Sequence[Union[PathLike, Blob, BaseIndexEntry, "Submodule"]], file_store: _FileStore
     ) -> Tuple[List[PathLike], List[BaseIndexEntry]]:
         """Split the items into two lists of path strings and BaseEntries."""
         paths = []
@@ -622,6 +658,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
 
         for item in items:
             if isinstance(item, (str, os.PathLike)):
+                self._autocrlf(item, file_store)
                 paths.append(self._to_relative_path(item))
             elif isinstance(item, (Blob, Submodule)):
                 entries.append(BaseIndexEntry.from_blob(item))
@@ -631,6 +668,30 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
                 raise TypeError("Invalid Type: %r" % item)
         # END for each item
         return paths, entries
+
+    def _autocrlf(self, file: PathLike, file_store: _FileStore) -> None:
+        """If the config option `autocrlf` is True, replace CRLF with LF"""
+
+        reader = self.repo.config_reader()
+
+        autocrlf = reader.get_value("core", "autocrlf", False)
+
+        if not autocrlf:
+            return
+
+        file_store.save(file)
+
+        with tempfile.TemporaryFile("wb+") as tf:
+            with open(file, "rb") as f:
+                for line in f:
+                    line = line.replace(b"\r\n", b"\n")
+                    tf.write(line)
+
+            tf.seek(0)
+
+            with open(file, "wb") as f:
+                for line in tf:
+                    f.write(line)
 
     def _store_path(self, filepath: PathLike, fprogress: Callable) -> BaseIndexEntry:
         """Store file at filepath in the database and return the base index entry
@@ -802,82 +863,79 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             Objects that do not have a null sha will be added even if their paths
             do not exist.
         """
-        # sort the entries into strings and Entries, Blobs are converted to entries
-        # automatically
-        # paths can be git-added, for everything else we use git-update-index
-        paths, entries = self._preprocess_add_items(items)
-        entries_added: List[BaseIndexEntry] = []
-        # This code needs a working tree, therefore we try not to run it unless required.
-        # That way, we are OK on a bare repository as well.
-        # If there are no paths, the rewriter has nothing to do either
-        if paths:
-            entries_added.extend(self._entries_for_paths(paths, path_rewriter, fprogress, entries))
 
-        # HANDLE ENTRIES
-        if entries:
-            null_mode_entries = [e for e in entries if e.mode == 0]
-            if null_mode_entries:
-                raise ValueError(
-                    "At least one Entry has a null-mode - please use index.remove to remove files for clarity"
-                )
-            # END null mode should be remove
+        with _FileStore() as file_store:
+            # sort the entries into strings and Entries, Blobs are converted to entries
+            # automatically
+            # paths can be git-added, for everything else we use git-update-index
+            paths, entries = self._preprocess_add_items(items, file_store)
+            entries_added: List[BaseIndexEntry] = []
+            # This code needs a working tree, therefore we try not to run it unless required.
+            # That way, we are OK on a bare repository as well.
+            # If there are no paths, the rewriter has nothing to do either
+            if paths:
+                entries_added.extend(self._entries_for_paths(paths, path_rewriter, fprogress, entries))
 
-            # HANDLE ENTRY OBJECT CREATION
-            # create objects if required, otherwise go with the existing shas
-            null_entries_indices = [i for i, e in enumerate(entries) if e.binsha == Object.NULL_BIN_SHA]
-            if null_entries_indices:
+            # HANDLE ENTRIES
+            if entries:
+                null_mode_entries = [e for e in entries if e.mode == 0]
+                if null_mode_entries:
+                    raise ValueError(
+                        "At least one Entry has a null-mode - please use index.remove to remove files for clarity"
+                    )
+                # END null mode should be remove
 
-                @git_working_dir
-                def handle_null_entries(self: "IndexFile") -> None:
-                    for ei in null_entries_indices:
-                        null_entry = entries[ei]
-                        new_entry = self._store_path(null_entry.path, fprogress)
+                # HANDLE ENTRY OBJECT CREATION
+                # create objects if required, otherwise go with the existing shas
+                null_entries_indices = [i for i, e in enumerate(entries) if e.binsha == Object.NULL_BIN_SHA]
+                if null_entries_indices:
 
-                        # update null entry
-                        entries[ei] = BaseIndexEntry(
-                            (
-                                null_entry.mode,
-                                new_entry.binsha,
-                                null_entry.stage,
-                                null_entry.path,
+                    @git_working_dir
+                    def handle_null_entries(self: "IndexFile") -> None:
+                        for ei in null_entries_indices:
+                            null_entry = entries[ei]
+                            new_entry = self._store_path(null_entry.path, fprogress)
+
+                            # update null entry
+                            entries[ei] = BaseIndexEntry(
+                                (null_entry.mode, new_entry.binsha, null_entry.stage, null_entry.path)
                             )
-                        )
-                    # END for each entry index
+                        # END for each entry index
 
-                # end closure
-                handle_null_entries(self)
-            # END null_entry handling
+                    # end closure
+                    handle_null_entries(self)
+                # END null_entry handling
 
-            # REWRITE PATHS
-            # If we have to rewrite the entries, do so now, after we have generated
-            # all object sha's
-            if path_rewriter:
-                for i, e in enumerate(entries):
-                    entries[i] = BaseIndexEntry((e.mode, e.binsha, e.stage, path_rewriter(e)))
+                # REWRITE PATHS
+                # If we have to rewrite the entries, do so now, after we have generated
+                # all object sha's
+                if path_rewriter:
+                    for i, e in enumerate(entries):
+                        entries[i] = BaseIndexEntry((e.mode, e.binsha, e.stage, path_rewriter(e)))
+                    # END for each entry
+                # END handle path rewriting
+
+                # just go through the remaining entries and provide progress info
+                for i, entry in enumerate(entries):
+                    progress_sent = i in null_entries_indices
+                    if not progress_sent:
+                        fprogress(entry.path, False, entry)
+                        fprogress(entry.path, True, entry)
+                    # END handle progress
                 # END for each entry
-            # END handle path rewriting
+                entries_added.extend(entries)
+            # END if there are base entries
 
-            # just go through the remaining entries and provide progress info
-            for i, entry in enumerate(entries):
-                progress_sent = i in null_entries_indices
-                if not progress_sent:
-                    fprogress(entry.path, False, entry)
-                    fprogress(entry.path, True, entry)
-                # END handle progress
-            # END for each entry
-            entries_added.extend(entries)
-        # END if there are base entries
+            # FINALIZE
+            # add the new entries to this instance
+            for entry in entries_added:
+                self.entries[(entry.path, 0)] = IndexEntry.from_base(entry)
 
-        # FINALIZE
-        # add the new entries to this instance
-        for entry in entries_added:
-            self.entries[(entry.path, 0)] = IndexEntry.from_base(entry)
+            if write:
+                self.write(ignore_extension_data=not write_extension_data)
+            # END handle write
 
-        if write:
-            self.write(ignore_extension_data=not write_extension_data)
-        # END handle write
-
-        return entries_added
+            return entries_added
 
     def _items_to_rela_paths(
         self,
