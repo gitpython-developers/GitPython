@@ -40,7 +40,7 @@ class TemporaryFileSwap(object):
 
     def __init__(self, file_path: PathLike) -> None:
         self.file_path = file_path
-        self.tmp_file_path = tempfile.mkstemp("", "", dir=str(self.file_path))[1]
+        self.tmp_file_path = tempfile.NamedTemporaryFile(dir=str(self.file_path), delete=False).name
         # it may be that the source does not exist
         try:
             os.rename(self.file_path, self.tmp_file_path)
