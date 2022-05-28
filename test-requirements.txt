@@ -14,3 +14,5 @@ pytest
 pytest-cov
 coverage[toml]
 pytest-sugar
+
+gitdb
