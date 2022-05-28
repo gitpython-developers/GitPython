@@ -351,7 +351,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
 
         # tmp file created in git home directory to be sure renaming
         # works - /tmp/ dirs could be on another device
-        tmp_index = tempfile.NamedTemporaryFile(dir=repo.git_dir, delete=False).name
+        tmp_index = tempfile.NamedTemporaryFile(dir=repo.git_dir, delete=True).name
         arg_list.append("--index-output=%s" % tmp_index)
         arg_list.extend(treeish)
 
