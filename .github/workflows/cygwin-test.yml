@@ -24,6 +24,9 @@ jobs:
     - uses: cygwin/cygwin-install-action@v2
       with:
         packages: python39 python39-pip git
+    - name: Tell git to trust this repo
+      shell: bash.exe -eo pipefail -o igncr "{0}"
+      run: git config --global --add safe.directory $(pwd)
     - name: Install dependencies and prepare tests
       shell: bash.exe -eo pipefail -o igncr "{0}"
       run: |
