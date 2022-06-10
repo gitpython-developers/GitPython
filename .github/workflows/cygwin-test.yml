@@ -26,20 +26,20 @@ jobs:
         packages: python39 python39-pip git
     - name: Tell git to trust this repo
       shell: bash.exe -eo pipefail -o igncr "{0}"
-      run: git config --global --add safe.directory $(pwd)
+      run: /usr/bin/git config --global --add safe.directory $(pwd)
     - name: Install dependencies and prepare tests
       shell: bash.exe -eo pipefail -o igncr "{0}"
       run: |
         set -x
-        python -m pip install --upgrade pip setuptools wheel
-        python --version; git --version
-        git submodule update --init --recursive
-        git fetch --tags
-        pip install -r requirements.txt
-        pip install -r test-requirements.txt
+        /usr/bin/python -m pip install --upgrade pip setuptools wheel
+        /usr/bin/python --version; /usr/bin/git --version
+        /usr/bin/git submodule update --init --recursive
+        /usr/bin/git fetch --tags
+        /usr/bin/python -m pip install -r requirements.txt
+        /usr/bin/python -m pip install -r test-requirements.txt
         TRAVIS=yes ./init-tests-after-clone.sh
-        git config --global user.email "travis@ci.com"
-        git config --global user.name "Travis Runner"
+        /usr/bin/git config --global user.email "travis@ci.com"
+        /usr/bin/git config --global user.name "Travis Runner"
         # If we rewrite the user's config by accident, we will mess it up
         # and cause subsequent tests to fail
         cat test/fixtures/.gitconfig >> ~/.gitconfig
@@ -47,10 +47,10 @@ jobs:
       shell: bash.exe -eo pipefail -o igncr "{0}"
       run: |
         set -x
-        flake8
+        /usr/bin/python flake8
     - name: Test with pytest
       shell: bash.exe -eo pipefail -o igncr "{0}"
       run: |
         set -x
-        pytest
+        /usr/bin/python -m pytest
       continue-on-error: false
