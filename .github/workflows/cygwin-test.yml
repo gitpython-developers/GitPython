@@ -1,0 +1,53 @@
+name: test-cygwin
+
+on:
+  push:
+    branches:
+      main
+  pull_request:
+    branches:
+      main
+
+jobs:
+  build:
+    runs-on: windows-latest
+    env:
+      CHERE_INVOKING: 1
+      SHELLOPTS: igncr
+    
+    steps:
+    - name: Force LF line endings
+      run: git config --global core.autocrlf input
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 9999
+    - uses: cygwin/cygwin-install-action@v2
+      with:
+        packages: python39 python39-pip git
+    - name: Install dependencies and prepare tests
+      shell: bash.exe -eo pipefail -o igncr "{0}"
+      run: |
+        set -x
+        python -m pip install --upgrade pip setuptools wheel
+        python --version; git --version
+        git submodule update --init --recursive
+        git fetch --tags
+        pip install -r requirements.txt
+        pip install -r test-requirements.txt
+        TRAVIS=yes ./init-tests-after-clone.sh
+        git config --global user.email "travis@ci.com"
+        git config --global user.name "Travis Runner"
+        # If we rewrite the user's config by accident, we will mess it up
+        # and cause subsequent tests to fail
+        cat test/fixtures/.gitconfig >> ~/.gitconfig
+    - name: Lint with flake8
+      shell: bash.exe -eo pipefail -o igncr "{0}"
+      run: |
+        set -x
+        flake8
+    - name: Test with pytest
+      shell: bash.exe -eo pipefail -o igncr "{0}"
+      run: |
+        set -x
+        pytest
+      continue-on-error: false
