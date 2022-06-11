@@ -53,6 +53,5 @@ jobs:
     - name: Test with pytest
       shell: bash.exe -eo pipefail -o igncr "{0}"
       run: |
-        set -x
         /usr/bin/python -m pytest
       continue-on-error: false
