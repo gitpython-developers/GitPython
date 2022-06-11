@@ -30,7 +30,6 @@ from git.util import (
     Actor,
     finalize_process,
     cygpath,
-    decygpath,
     hex_to_bin,
     expand_path,
     remove_password_if_present,
