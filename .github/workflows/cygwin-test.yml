@@ -25,7 +25,7 @@ jobs:
         fetch-depth: 9999
     - uses: cygwin/cygwin-install-action@v2
       with:
-        packages: python39 python39-pip git
+        packages: python39 python39-pip python39-virtualenv git
     - name: Tell git to trust this repo
       shell: bash.exe -eo pipefail -o igncr "{0}"
       run: /usr/bin/git config --global --add safe.directory $(pwd)
