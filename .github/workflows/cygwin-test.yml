@@ -14,6 +14,8 @@ jobs:
     env:
       CHERE_INVOKING: 1
       SHELLOPTS: igncr
+      TMP: "/tmp"
+      TEMP: "/tmp"
     
     steps:
     - name: Force LF line endings
