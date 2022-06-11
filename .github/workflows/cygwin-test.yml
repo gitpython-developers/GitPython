@@ -47,7 +47,7 @@ jobs:
       shell: bash.exe -eo pipefail -o igncr "{0}"
       run: |
         set -x
-        /usr/bin/python flake8
+        /usr/bin/python -m flake8
     - name: Test with pytest
       shell: bash.exe -eo pipefail -o igncr "{0}"
       run: |
