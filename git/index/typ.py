@@ -4,6 +4,7 @@ from binascii import b2a_hex
 
 from .util import pack, unpack
 from git.objects import Blob
+from git.index.base import StageType
 
 
 # typing ----------------------------------------------------------------------
@@ -48,10 +49,10 @@ class BlobFilter(object):
         """
         self.paths = paths
 
-    def __call__(self, stage_blob: Blob) -> bool:
-        path = stage_blob[1].path
+    def __call__(self, stage_blob: Tuple[StageType, Blob]) -> bool:
+        path: str = str(stage_blob[1].path)
         for p in self.paths:
-            if path.startswith(p):
+            if path.startswith(str(p)):
                 return True
         # END for each path in filter paths
         return False
