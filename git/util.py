@@ -310,7 +310,7 @@ def _cygexpath(drive: Optional[str], path: str) -> str:
             else:
                 p = cygpath(p)
         elif drive:
-            p = "/cygdrive/%s/%s" % (drive.lower(), p)
+            p = "/proc/cygdrive/%s/%s" % (drive.lower(), p)
     p_str = str(p)  # ensure it is a str and not AnyPath
     return p_str.replace("\\", "/")
 
@@ -334,7 +334,7 @@ def cygpath(path: str) -> str:
     """Use :meth:`git.cmd.Git.polish_url()` instead, that works on any environment."""
     path = str(path)  # ensure is str and not AnyPath.
     # Fix to use Paths when 3.5 dropped. or to be just str if only for urls?
-    if not path.startswith(("/cygdrive", "//")):
+    if not path.startswith(("/cygdrive", "//", "/proc/cygdrive")):
         for regex, parser, recurse in _cygpath_parsers:
             match = regex.match(path)
             if match:
@@ -348,7 +348,7 @@ def cygpath(path: str) -> str:
     return path
 
 
-_decygpath_regex = re.compile(r"/cygdrive/(\w)(/.*)?")
+_decygpath_regex = re.compile(r"(?:/proc)?/cygdrive/(\w)(/.*)?")
 
 
 def decygpath(path: PathLike) -> str:
@@ -377,7 +377,9 @@ def is_cygwin_git(git_executable: PathLike) -> bool:
 
 
 def is_cygwin_git(git_executable: Union[None, PathLike]) -> bool:
-    if not is_win:
+    if is_win:
+        # is_win seems to be true only for Windows-native pythons
+        # cygwin has os.name = posix, I think
         return False
 
     if git_executable is None:

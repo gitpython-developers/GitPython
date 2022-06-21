@@ -3,7 +3,10 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 import os
 import shutil
+import sys
 from unittest import skipIf
+
+import pytest
 
 import git
 from git.cmd import Git
@@ -437,6 +440,11 @@ class TestSubmodule(TestBase):
     def test_base_bare(self, rwrepo):
         self._do_base_tests(rwrepo)
 
+    @pytest.mark.xfail(
+        sys.platform == "cygwin",
+        reason="Cygwin GitPython can't find submodule SHA",
+        raises=ValueError
+    )
     @skipIf(
         HIDE_WINDOWS_KNOWN_ERRORS,
         """

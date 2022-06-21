@@ -1,0 +1,57 @@
+name: test-cygwin
+
+on:
+  push:
+    branches:
+      main
+  pull_request:
+    branches:
+      main
+
+jobs:
+  build:
+    runs-on: windows-latest
+    env:
+      CHERE_INVOKING: 1
+      SHELLOPTS: igncr
+      TMP: "/tmp"
+      TEMP: "/tmp"
+    
+    steps:
+    - name: Force LF line endings
+      run: git config --global core.autocrlf input
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 9999
+    - uses: cygwin/cygwin-install-action@v2
+      with:
+        packages: python39 python39-pip python39-virtualenv git
+    - name: Tell git to trust this repo
+      shell: bash.exe -eo pipefail -o igncr "{0}"
+      run: /usr/bin/git config --global --add safe.directory $(pwd)
+    - name: Install dependencies and prepare tests
+      shell: bash.exe -eo pipefail -o igncr "{0}"
+      run: |
+        set -x
+        /usr/bin/python -m pip install --upgrade pip setuptools wheel
+        /usr/bin/python --version; /usr/bin/git --version
+        /usr/bin/git submodule update --init --recursive
+        /usr/bin/git fetch --tags
+        /usr/bin/python -m pip install -r requirements.txt
+        /usr/bin/python -m pip install -r test-requirements.txt
+        TRAVIS=yes ./init-tests-after-clone.sh
+        /usr/bin/git config --global user.email "travis@ci.com"
+        /usr/bin/git config --global user.name "Travis Runner"
+        # If we rewrite the user's config by accident, we will mess it up
+        # and cause subsequent tests to fail
+        cat test/fixtures/.gitconfig >> ~/.gitconfig
+    - name: Lint with flake8
+      shell: bash.exe -eo pipefail -o igncr "{0}"
+      run: |
+        set -x
+        /usr/bin/python -m flake8
+    - name: Test with pytest
+      shell: bash.exe -eo pipefail -o igncr "{0}"
+      run: |
+        /usr/bin/python -m pytest
+      continue-on-error: false

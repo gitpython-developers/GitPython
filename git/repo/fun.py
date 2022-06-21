@@ -7,7 +7,7 @@ from string import digits
 from git.exc import WorkTreeRepositoryUnsupported
 from git.objects import Object
 from git.refs import SymbolicReference
-from git.util import hex_to_bin, bin_to_hex, decygpath
+from git.util import hex_to_bin, bin_to_hex, cygpath
 from gitdb.exc import (
     BadObject,
     BadName,
@@ -109,7 +109,9 @@ def find_submodule_git_dir(d: "PathLike") -> Optional["PathLike"]:
 
             if Git.is_cygwin():
                 ## Cygwin creates submodules prefixed with `/cygdrive/...` suffixes.
-                path = decygpath(path)
+                # Cygwin git understands Cygwin paths much better than Windows ones
+                # Also the Cygwin tests are assuming Cygwin paths.
+                path = cygpath(path)
             if not osp.isabs(path):
                 path = osp.normpath(osp.join(osp.dirname(d), path))
             return find_submodule_git_dir(path)

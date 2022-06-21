@@ -29,7 +29,7 @@ from git.remote import Remote, add_progress, to_progress_instance
 from git.util import (
     Actor,
     finalize_process,
-    decygpath,
+    cygpath,
     hex_to_bin,
     expand_path,
     remove_password_if_present,
@@ -175,7 +175,10 @@ class Repo(object):
         if not epath:
             epath = os.getcwd()
         if Git.is_cygwin():
-            epath = decygpath(epath)
+            # Given how the tests are written, this seems more likely to catch
+            # Cygwin git used from Windows than Windows git used from Cygwin.
+            # Therefore changing to Cygwin-style paths is the relevant operation.
+            epath = cygpath(epath)
 
         epath = epath or path or os.getcwd()
         if not isinstance(epath, str):
