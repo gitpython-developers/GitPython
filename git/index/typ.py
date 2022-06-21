@@ -4,7 +4,6 @@ from binascii import b2a_hex
 
 from .util import pack, unpack
 from git.objects import Blob
-from git.index.base import StageType
 
 
 # typing ----------------------------------------------------------------------
@@ -16,9 +15,11 @@ from git.types import PathLike
 if TYPE_CHECKING:
     from git.repo import Repo
 
+StageType = int
+
 # ---------------------------------------------------------------------------------
 
-__all__ = ("BlobFilter", "BaseIndexEntry", "IndexEntry")
+__all__ = ("BlobFilter", "BaseIndexEntry", "IndexEntry", "StageType")
 
 # { Invariants
 CE_NAMEMASK = 0x0FFF

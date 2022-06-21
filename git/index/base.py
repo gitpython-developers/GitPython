@@ -52,6 +52,7 @@ from .fun import (
 from .typ import (
     BaseIndexEntry,
     IndexEntry,
+    StageType,
 )
 from .util import TemporaryFileSwap, post_clear_cache, default_index, git_working_dir
 
@@ -83,7 +84,6 @@ if TYPE_CHECKING:
     from git.util import Actor
 
 
-StageType = int
 Treeish = Union[Tree, Commit, str, bytes]
 
 # ------------------------------------------------------------------------------------
