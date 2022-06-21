@@ -89,7 +89,7 @@ Treeish = Union[Tree, Commit, str, bytes]
 # ------------------------------------------------------------------------------------
 
 
-__all__ = ("IndexFile", "CheckoutError")
+__all__ = ("IndexFile", "CheckoutError", "StageType")
 
 
 class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
