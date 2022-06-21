@@ -436,15 +436,15 @@ class TestSubmodule(TestBase):
     def test_base_rw(self, rwrepo):
         self._do_base_tests(rwrepo)
 
+    @with_rw_repo(k_subm_current, bare=True)
+    def test_base_bare(self, rwrepo):
+        self._do_base_tests(rwrepo)
+
     @pytest.mark.xfail(
         sys.platform == "cygwin",
         reason="Cygwin GitPython can't find submodule SHA",
         raises=ValueError
     )
-    @with_rw_repo(k_subm_current, bare=True)
-    def test_base_bare(self, rwrepo):
-        self._do_base_tests(rwrepo)
-
     @skipIf(
         HIDE_WINDOWS_KNOWN_ERRORS,
         """
