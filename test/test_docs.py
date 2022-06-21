@@ -5,6 +5,7 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 import os
+import sys
 
 from test.lib import TestBase
 from test.lib.helper import with_rw_directory
@@ -475,6 +476,11 @@ class Tutorials(TestBase):
 
         repo.git.clear_cache()
 
+    @pytest.mark.xfail(
+        sys.platform == "cygwin",
+        reason="Cygwin GitPython can't find SHA for submodule",
+        raises=ValueError
+    )
     def test_submodules(self):
         # [1-test_submodules]
         repo = self.rorepo
