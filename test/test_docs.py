@@ -7,6 +7,8 @@
 import os
 import sys
 
+import pytest
+
 from test.lib import TestBase
 from test.lib.helper import with_rw_directory
 
