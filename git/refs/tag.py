@@ -113,10 +113,12 @@ class TagReference(Reference):
         if "ref" in kwargs and kwargs["ref"]:
             reference = kwargs["ref"]
 
+        if "message" in kwargs and kwargs["message"]:
+            kwargs["m"] = kwargs["message"]
+            del kwargs["message"]
+
         if logmsg:
             kwargs["m"] = logmsg
-        elif "message" in kwargs and kwargs["message"]:
-            kwargs["m"] = kwargs["message"]
 
         if force:
             kwargs["f"] = True
