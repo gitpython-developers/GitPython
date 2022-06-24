@@ -572,6 +572,23 @@ class TestRefs(TestBase):
 
         # END for each path
 
+    @with_rw_repo("0.1.6")
+    def test_tag_message(self, rw_repo):
+        tag_ref = TagReference.create(rw_repo, "test-message-1", message="test")
+        assert tag_ref.tag.message == "test"
+
+        tag_ref = TagReference.create(rw_repo, "test-message-2", logmsg="test")
+        assert tag_ref.tag.message == "test"
+
+        tag_ref = TagReference.create(
+            rw_repo,
+            "test-message-3",
+            # Logmsg should take precedence over "message".
+            message="test1",
+            logmsg="test2",
+        )
+        assert tag_ref.tag.message == "test2"
+
     def test_dereference_recursive(self):
         # for now, just test the HEAD
         assert SymbolicReference.dereference_recursive(self.rorepo, "HEAD")
