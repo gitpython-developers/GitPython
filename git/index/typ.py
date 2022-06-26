@@ -1,6 +1,7 @@
 """Module with additional types used by the index"""
 
 from binascii import b2a_hex
+from pathlib import Path
 
 from .util import pack, unpack
 from git.objects import Blob
@@ -51,11 +52,12 @@ class BlobFilter(object):
         self.paths = paths
 
     def __call__(self, stage_blob: Tuple[StageType, Blob]) -> bool:
-        path: str = str(stage_blob[1].path)
-        for p in self.paths:
-            if path.startswith(str(p)):
+        blob_pathlike: Pathlike = stage_blob[1].path
+        blob_path: Path = blob_pathlike if isinstance(blob_pathlike, Path) else Path(blob_pathlike)
+        for pathlike in self.paths:
+            path: Path = pathlike if isinstance(pathlike, Path) else Path(pathlike)
+            if path.is_relative_to(blob_path):
                 return True
-        # END for each path in filter paths
         return False
 
 
