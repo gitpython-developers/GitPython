@@ -52,7 +52,7 @@ class BlobFilter(object):
         self.paths = paths
 
     def __call__(self, stage_blob: Tuple[StageType, Blob]) -> bool:
-        blob_pathlike: Pathlike = stage_blob[1].path
+        blob_pathlike: PathLike = stage_blob[1].path
         blob_path: Path = blob_pathlike if isinstance(blob_pathlike, Path) else Path(blob_pathlike)
         for pathlike in self.paths:
             path: Path = pathlike if isinstance(pathlike, Path) else Path(pathlike)
