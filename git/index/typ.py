@@ -56,7 +56,8 @@ class BlobFilter(object):
         blob_path: Path = blob_pathlike if isinstance(blob_pathlike, Path) else Path(blob_pathlike)
         for pathlike in self.paths:
             path: Path = pathlike if isinstance(pathlike, Path) else Path(pathlike)
-            if path.is_relative_to(blob_path):
+            # TODO: Change to use `PosixPath.is_relative_to` once Python 3.8 is no longer supported.
+            if all(map(lambda t: t[0] == t[1], zip(path.parts, blob_path.parts))):
                 return True
         return False
 
