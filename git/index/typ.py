@@ -9,7 +9,7 @@ from git.objects import Blob
 
 # typing ----------------------------------------------------------------------
 
-from typing import NamedTuple, Sequence, TYPE_CHECKING, Tuple, Union, cast
+from typing import NamedTuple, Sequence, TYPE_CHECKING, Tuple, Union, cast, List
 
 from git.types import PathLike
 
@@ -57,7 +57,11 @@ class BlobFilter(object):
         for pathlike in self.paths:
             path: Path = pathlike if isinstance(pathlike, Path) else Path(pathlike)
             # TODO: Change to use `PosixPath.is_relative_to` once Python 3.8 is no longer supported.
-            if all(i == j for i, j in zip(path.parts, blob_path.parts)):
+            filter_parts: List[str] = path.parts
+            blob_parts: List[str] = blob_path.parts
+            if len(filter_parts) > len(blob_parts):
+                continue
+            if all(i == j for i, j in zip(filter_parts, blob_parts)):
                 return True
         return False
 
