@@ -1,6 +1,7 @@
 """Module with additional types used by the index"""
 
 from binascii import b2a_hex
+from pathlib import Path
 
 from .util import pack, unpack
 from git.objects import Blob
@@ -8,16 +9,18 @@ from git.objects import Blob
 
 # typing ----------------------------------------------------------------------
 
-from typing import NamedTuple, Sequence, TYPE_CHECKING, Tuple, Union, cast
+from typing import NamedTuple, Sequence, TYPE_CHECKING, Tuple, Union, cast, List
 
 from git.types import PathLike
 
 if TYPE_CHECKING:
     from git.repo import Repo
 
+StageType = int
+
 # ---------------------------------------------------------------------------------
 
-__all__ = ("BlobFilter", "BaseIndexEntry", "IndexEntry")
+__all__ = ("BlobFilter", "BaseIndexEntry", "IndexEntry", "StageType")
 
 # { Invariants
 CE_NAMEMASK = 0x0FFF
@@ -48,12 +51,18 @@ class BlobFilter(object):
         """
         self.paths = paths
 
-    def __call__(self, stage_blob: Blob) -> bool:
-        path = stage_blob[1].path
-        for p in self.paths:
-            if path.startswith(p):
+    def __call__(self, stage_blob: Tuple[StageType, Blob]) -> bool:
+        blob_pathlike: PathLike = stage_blob[1].path
+        blob_path: Path = blob_pathlike if isinstance(blob_pathlike, Path) else Path(blob_pathlike)
+        for pathlike in self.paths:
+            path: Path = pathlike if isinstance(pathlike, Path) else Path(pathlike)
+            # TODO: Change to use `PosixPath.is_relative_to` once Python 3.8 is no longer supported.
+            filter_parts: List[str] = path.parts
+            blob_parts: List[str] = blob_path.parts
+            if len(filter_parts) > len(blob_parts):
+                continue
+            if all(i == j for i, j in zip(filter_parts, blob_parts)):
                 return True
-        # END for each path in filter paths
         return False
 
 
