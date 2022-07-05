@@ -546,7 +546,7 @@ class Git(LazyMixin):
                 if stream:
                     try:
                         return stderr_b + force_bytes(stream.read())
-                    except ValueError:
+                    except (OSError, ValueError):
                         return stderr_b or b""
                 else:
                     return stderr_b or b""
