@@ -40,7 +40,7 @@ else:
 
 
 if sys.version_info[:2] < (3, 9):
-    PathLike = Union[str, bytes, os.PathLike]
+    PathLike = Union[str, os.PathLike[str]]
 else:
     # os.PathLike only becomes subscriptable from Python 3.9 onwards
     PathLike = Union[str, bytes, os.PathLike[str], os.PathLike[bytes]]
