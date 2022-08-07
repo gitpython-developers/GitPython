@@ -40,10 +40,10 @@ else:
 
 
 if sys.version_info[:2] < (3, 9):
-    PathLike = Union[str, os.PathLike[str]]
+    PathLike = Union[str, os.PathLike]
 else:
     # os.PathLike only becomes subscriptable from Python 3.9 onwards
-    PathLike = Union[str, bytes, os.PathLike[str], os.PathLike[bytes]]
+    PathLike = Union[str, os.PathLike[str]]
 
 if TYPE_CHECKING:
     from git.repo import Repo
