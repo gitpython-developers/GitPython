@@ -6,22 +6,18 @@
 import os
 import sys
 from typing import (
-    Callable,
     Dict,
     NoReturn,
     Sequence,
     Tuple,
     Union,
     Any,
-    Iterator,  # noqa: F401
-    NamedTuple,
     TYPE_CHECKING,
     TypeVar,
 )  # noqa: F401
 
 if sys.version_info[:2] >= (3, 8):
     from typing import (
-        Final,
         Literal,
         SupportsIndex,
         TypedDict,
@@ -30,7 +26,6 @@ if sys.version_info[:2] >= (3, 8):
     )  # noqa: F401
 else:
     from typing_extensions import (
-        Final,
         Literal,
         SupportsIndex,  # noqa: F401
         TypedDict,
@@ -46,9 +41,9 @@ else:
 
 if sys.version_info[:2] < (3, 9):
     PathLike = Union[str, os.PathLike]
-elif sys.version_info[:2] >= (3, 9):
+else:
     # os.PathLike only becomes subscriptable from Python 3.9 onwards
-    PathLike = Union[str, os.PathLike]
+    PathLike = Union[str, os.PathLike[str]]
 
 if TYPE_CHECKING:
     from git.repo import Repo
@@ -92,8 +87,6 @@ def assert_never(inp: NoReturn, raise_error: bool = True, exc: Union[Exception, 
             raise ValueError(f"An unhandled Literal ({inp}) in an if/else chain was found")
         else:
             raise exc
-    else:
-        pass
 
 
 class Files_TD(TypedDict):
