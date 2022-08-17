@@ -266,8 +266,8 @@ class TestSubmodule(TestBase):
             sm.module().head.ref = smref
             csm.module().head.ref.set_tracking_branch(csm_tracking_branch)
 
-            # REMOVAL OF REPOSITOTRY
-            ########################
+            # REMOVAL OF REPOSITORY
+            #######################
             # must delete something
             self.assertRaises(ValueError, csm.remove, module=False, configuration=False)
 

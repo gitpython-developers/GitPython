@@ -96,5 +96,5 @@ index ce0f64f2261bd8de063233108caac1f26742c1fd..4de26f8884fd048ac7f10007f2bf7c7f
 +        assert len(res) == 3
 +
      def test_diff_patch_format(self):
-         # test all of the 'old' format diffs for completness - it should at least
+         # test all of the 'old' format diffs for completeness - it should at least
          # be able to deal with it
