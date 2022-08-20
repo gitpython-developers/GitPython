@@ -859,7 +859,7 @@ class Repo(object):
     def active_branch(self) -> Head:
         """The name of the currently active branch.
 
-        Raises:	TypeError – If HEAD is detached
+        :raises	TypeError: If HEAD is detached
         :return: Head to the active branch"""
         # reveal_type(self.head.reference)  # => Reference
         return self.head.reference
