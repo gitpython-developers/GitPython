@@ -509,3 +509,14 @@ JzJMZDRLQLFvnzqZuCjE
         assert KEY_1 not in commit.trailers.keys()
         assert KEY_2 in commit.trailers.keys()
         assert commit.trailers[KEY_2] == VALUE_2
+
+    def test_commit_co_authors(self):
+        commit = copy.copy(self.rorepo.commit("4251bd5"))
+        commit.message = """Commit message
+
+Co-authored-by: Test User 1 <602352+test@users.noreply.github.com>
+Co-authored-by: test_user_2 <another_user-email@.github.com>"""
+        assert commit.co_authors == [
+            Actor("Test User 1", "602352+test@users.noreply.github.com"),
+            Actor("test_user_2", "another_user-email@.github.com"),
+        ]

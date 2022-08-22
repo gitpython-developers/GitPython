@@ -4,6 +4,7 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 import datetime
+import re
 from subprocess import Popen, PIPE
 from gitdb import IStream
 from git.util import hex_to_bin, Actor, Stats, finalize_process
@@ -738,3 +739,24 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         return self
 
     # } END serializable implementation
+
+    @property
+    def co_authors(self) -> List[Actor]:
+        """
+        Search the commit message for any co-authors of this commit.
+        Details on co-authors: https://github.blog/2018-01-29-commit-together-with-co-authors/
+
+        :return: List of co-authors for this commit (as Actor objects).
+        """
+        co_authors = []
+
+        if self.message:
+            results = re.findall(
+                r"^Co-authored-by: ((?:\w|\-| ){0,38}) <(\S*)>$",
+                self.message,
+                re.MULTILINE,
+            )
+            for author in results:
+                co_authors.append(Actor(*author))
+
+        return co_authors
