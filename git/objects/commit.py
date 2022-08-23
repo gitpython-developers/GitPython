@@ -752,11 +752,11 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
 
         if self.message:
             results = re.findall(
-                r"^Co-authored-by: ((?:\w|\-| ){0,38}) <(\S*)>$",
+                r"^Co-authored-by: ((?:\w|\-| ){0,38} <\S*>)$",
                 self.message,
                 re.MULTILINE,
             )
-            for author in results:
-                co_authors.append(Actor(*author))
+            for author_string in results:
+                co_authors.append(Actor._from_string(author_string))
 
         return co_authors
