@@ -515,8 +515,12 @@ JzJMZDRLQLFvnzqZuCjE
         commit.message = """Commit message
 
 Co-authored-by: Test User 1 <602352+test@users.noreply.github.com>
-Co-authored-by: test_user_2 <another_user-email@.github.com>"""
+Co-authored-by: test_user_2 <another_user-email@github.com>
+Co_authored_by: test_user_x <test@github.com>
+Co-authored-by: test_user_y <poorly formatted email @github.com>
+Co-authored-by: test_user_3 <test_user_3@github.com>"""
         assert commit.co_authors == [
             Actor("Test User 1", "602352+test@users.noreply.github.com"),
-            Actor("test_user_2", "another_user-email@.github.com"),
+            Actor("test_user_2", "another_user-email@github.com"),
+            Actor("test_user_3", "test_user_3@github.com"),
         ]
