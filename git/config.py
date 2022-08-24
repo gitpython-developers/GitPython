@@ -84,7 +84,7 @@ CONFIG_LEVELS: ConfigLevels_Tup = ("system", "user", "global", "repository")
 CONDITIONAL_INCLUDE_REGEXP = re.compile(r"(?<=includeIf )\"(gitdir|gitdir/i|onbranch):(.+)\"")
 
 
-class MetaParserBuilder(abc.ABCMeta):
+class MetaParserBuilder(abc.ABCMeta):  # noqa: B024
     """Utility class wrapping base-class methods into decorators that assure read-only properties"""
 
     def __new__(cls, name: str, bases: Tuple, clsdict: Dict[str, Any]) -> "MetaParserBuilder":
