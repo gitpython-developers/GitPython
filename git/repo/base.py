@@ -950,7 +950,12 @@ class Repo(object):
             )
 
     def blame(
-        self, rev: Union[str, HEAD], file: str, incremental: bool = False, **kwargs: Any
+        self,
+        rev: Union[str, HEAD],
+        file: str,
+        incremental: bool = False,
+        rev_opts: Optional[List[str]] = None,
+        **kwargs: Any
     ) -> List[List[Commit | List[str | bytes] | None]] | Iterator[BlameEntry] | None:
         """The blame information for the given file at the given revision.
 
@@ -962,8 +967,8 @@ class Repo(object):
             of appearance."""
         if incremental:
             return self.blame_incremental(rev, file, **kwargs)
-
-        data: bytes = self.git.blame(rev, "--", file, p=True, stdout_as_string=False, **kwargs)
+        rev_opts = rev_opts or []
+        data: bytes = self.git.blame(rev, *rev_opts, "--", file, p=True, stdout_as_string=False, **kwargs)
         commits: Dict[str, Commit] = {}
         blames: List[List[Commit | List[str | bytes] | None]] = []
 

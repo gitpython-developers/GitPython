@@ -553,6 +553,13 @@ class TestRepo(TestBase):
         self.assertEqual(len(res), 1)
         self.assertEqual(len(res[0][1]), 83, "Unexpected amount of parsed blame lines")
 
+    @mock.patch.object(Git, "_call_process")
+    def test_blame_accepts_rev_opts(self, git):
+        res = self.rorepo.blame("HEAD", "README.md", rev_opts=["-M", "-C", "-C"])
+        expected_args = ['blame', 'HEAD', '-M', '-C', '-C', '--', 'README.md']
+        boilerplate_kwargs = {"p" : True, "stdout_as_string": False}
+        git.assert_called_once_with(*expected_args, **boilerplate_kwargs)
+
     @skipIf(
         HIDE_WINDOWS_KNOWN_ERRORS and Git.is_cygwin(),
         """FIXME: File "C:\\projects\\gitpython\\git\\cmd.py", line 671, in execute
