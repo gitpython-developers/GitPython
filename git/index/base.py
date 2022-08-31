@@ -4,6 +4,7 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
+from ast import Delete
 import glob
 from io import BytesIO
 import os
@@ -351,7 +352,10 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
 
         # tmp file created in git home directory to be sure renaming
         # works - /tmp/ dirs could be on another device
-        tmp_index = tempfile.mktemp("", "", repo.git_dir)
+
+        # OpenRefactory Warning: The method 'tempfile.mktemp' creates temporary file in an insecure way.
+        # use 'NamedTemporaryFile' instead of using 'mktemp' to create temporary file
+        tmp_index = tempfile.NamedTemporaryFile("", "", repo.git_dir).name
         arg_list.append("--index-output=%s" % tmp_index)
         arg_list.extend(treeish)
 

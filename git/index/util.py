@@ -40,7 +40,9 @@ class TemporaryFileSwap(object):
 
     def __init__(self, file_path: PathLike) -> None:
         self.file_path = file_path
-        self.tmp_file_path = str(self.file_path) + tempfile.mktemp("", "", "")
+        # OpenRefactory Warning: The method 'tempfile.mktemp' creates temporary file in an insecure way.
+        # use 'NamedTemporaryFile' instead of using 'mktemp' to create temporary file
+        self.tmp_file_path = str(self.file_path) + tempfile.NamedTemporaryFile("", "", "").name
         # it may be that the source does not exist
         try:
             os.rename(self.file_path, self.tmp_file_path)
