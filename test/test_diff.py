@@ -236,7 +236,6 @@ class TestDiff(TestBase):
             res[0].b_path,
         )
 
-    @unittest.skip("This currently fails and would need someone to improve diff parsing")
     def test_diff_file_with_colon(self):
         output = fixture("diff_file_with_colon")
         res = []
