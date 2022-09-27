@@ -574,6 +574,9 @@ class Diff(object):
         _, _, lines = lines.partition(":")
 
         for line in lines.split("\x00:"):
+            if not line:
+                # The line data is empty, skip
+                continue
             meta, _, path = line.partition("\x00")
             path = path.rstrip("\x00")
             a_blob_id: Optional[str]
