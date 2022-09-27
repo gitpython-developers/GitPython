@@ -240,6 +240,12 @@ class TestDiff(TestBase):
         output = fixture("diff_file_with_colon")
         res = []
         Diff._handle_diff_line(output, None, res)
+        self.assertEqual(len(res), 3)
+
+    def test_empty_diff(self):
+        res = []
+        Diff._handle_diff_line(b"", None, res)
+        self.assertEqual(res, [])
 
     def test_diff_initial_commit(self):
         initial_commit = self.rorepo.commit("33ebe7acec14b25c5f84f35a664803fcab2f7781")
