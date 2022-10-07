@@ -17,4 +17,4 @@ release: clean
 force_release: clean
 	git push --tags origin main
 	python3 setup.py sdist bdist_wheel
-	twine upload 27C50E7F590947D7273A741E85194C08421980C9 dist/*
+	twine upload dist/*
