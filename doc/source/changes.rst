@@ -2,6 +2,14 @@
 Changelog
 =========
 
+3.1.29
+======
+
+- Make the git.__version__ re-appear.
+
+See the following for all changes.
+https://github.com/gitpython-developers/gitpython/milestone/59?closed=1
+
 3.1.28
 ======
 
