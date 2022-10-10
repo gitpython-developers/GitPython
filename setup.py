@@ -47,7 +47,7 @@ def _stamp_version(filename: str) -> None:
         with open(filename, "r") as f:
             for line in f:
                 if "__version__ =" in line:
-                    line = line.replace("'git'", "'%s'" % VERSION)
+                    line = line.replace("\"git\"", "'%s'" % VERSION)
                     found = True
                 out.append(line)
     except OSError:
