@@ -435,8 +435,8 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         head: bool = False,
         author: Union[None, Actor] = None,
         committer: Union[None, Actor] = None,
-        author_date: Union[None, str] = None,
-        commit_date: Union[None, str] = None,
+        author_date: Union[None, str, datetime.datetime] = None,
+        commit_date: Union[None, str, datetime.datetime] = None,
     ) -> "Commit":
         """Commit the given tree, creating a commit object.
 

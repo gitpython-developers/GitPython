@@ -4,6 +4,7 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
+import datetime
 import glob
 from io import BytesIO
 import os
@@ -1032,8 +1033,8 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         head: bool = True,
         author: Union[None, "Actor"] = None,
         committer: Union[None, "Actor"] = None,
-        author_date: Union[str, None] = None,
-        commit_date: Union[str, None] = None,
+        author_date: Union[datetime.datetime, str, None] = None,
+        commit_date: Union[datetime.datetime, str, None] = None,
         skip_hooks: bool = False,
     ) -> Commit:
         """Commit the current default index file, creating a commit object.
