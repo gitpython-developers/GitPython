@@ -975,6 +975,7 @@ class Remote(LazyMixin, IterableObj):
         self,
         refspec: Union[str, List[str], None] = None,
         progress: Union[RemoteProgress, "UpdateProgress", None] = None,
+        verbose: bool = True,
         kill_after_timeout: Union[None, float] = None,
         **kwargs: Any,
     ) -> IterableList[FetchInfo]:
@@ -983,6 +984,7 @@ class Remote(LazyMixin, IterableObj):
 
         :param refspec: see 'fetch' method
         :param progress: see 'push' method
+        :param verbose: Boolean for verbose output
         :param kill_after_timeout: see 'fetch' method
         :param kwargs: Additional arguments to be passed to git-pull
         :return: Please see 'fetch' method"""
@@ -991,7 +993,7 @@ class Remote(LazyMixin, IterableObj):
             self._assert_refspec()
         kwargs = add_progress(kwargs, self.repo.git, progress)
         proc = self.repo.git.pull(
-            self, refspec, with_stdout=False, as_process=True, universal_newlines=True, v=True, **kwargs
+            self, refspec, with_stdout=False, as_process=True, universal_newlines=True, v=verbose, **kwargs
         )
         res = self._get_fetch_info_from_stderr(proc, progress, kill_after_timeout=kill_after_timeout)
         if hasattr(self.repo.odb, "update_cache"):
