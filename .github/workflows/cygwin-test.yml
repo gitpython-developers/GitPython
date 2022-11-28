@@ -23,7 +23,7 @@ jobs:
     - uses: actions/checkout@v3
       with:
         fetch-depth: 9999
-    - uses: cygwin/cygwin-install-action@v2
+    - uses: cygwin/cygwin-install-action@v3
       with:
         packages: python39 python39-pip python39-virtualenv git
     - name: Tell git to trust this repo
