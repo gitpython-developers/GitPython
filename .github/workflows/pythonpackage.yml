@@ -60,6 +60,11 @@ jobs:
         set -x
         mypy -p git
 
+    - name: Tell git to trust this repo
+      run: | 
+          /usr/bin/git config --global --add safe.directory $(pwd)
+          /usr/bin/git config --global protocol.file.allow always
+
     - name: Test with pytest
       run: |
         set -x
