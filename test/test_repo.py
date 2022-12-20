@@ -13,6 +13,7 @@ import pathlib
 import pickle
 import sys
 import tempfile
+import uuid
 from unittest import mock, skipIf, SkipTest
 
 import pytest
@@ -37,6 +38,7 @@ from git import (
 )
 from git.exc import (
     BadObject,
+    UnsafeOptionsUsedError,
 )
 from git.repo.fun import touch
 from test.lib import TestBase, with_rw_repo, fixture
@@ -262,6 +264,40 @@ class TestRepo(TestBase):
             url="https://gitlab+deploy-token-392045:mLWhVus7bjLsy8xj8q2V@gitlab.com/mercierm/test_git_python",
             to_path=rw_dir,
         )
+
+    def test_unsafe_options(self):
+        self.assertFalse(Repo.unsafe_options("github.com/deploy/deploy"))
+
+    def test_unsafe_options_ext_url(self):
+        self.assertTrue(Repo.unsafe_options("ext::ssh"))
+
+    def test_unsafe_options_multi_options_upload_pack(self):
+        self.assertTrue(Repo.unsafe_options("", ["--upload-pack='touch foo'"]))
+
+    def test_unsafe_options_multi_options_config_user(self):
+        self.assertFalse(Repo.unsafe_options("", ["--config user"]))
+
+    def test_unsafe_options_multi_options_config_protocol(self):
+        self.assertTrue(Repo.unsafe_options("", ["--config protocol.foo"]))
+
+    def test_clone_from_forbids_helper_urls_by_default(self):
+        with self.assertRaises(UnsafeOptionsUsedError):
+            Repo.clone_from("ext::sh -c touch% /tmp/foo", "tmp")
+
+    @with_rw_repo("HEAD")
+    def test_clone_from_allow_unsafe(self, repo):
+        bad_filename = pathlib.Path(f'{tempfile.gettempdir()}/{uuid.uuid4()}')
+        bad_url = f'ext::sh -c touch% {bad_filename}'
+        try:
+            repo.clone_from(
+                bad_url, 'tmp',
+                multi_options=["-c protocol.ext.allow=always"],
+                unsafe_protocols=True
+            )
+        except GitCommandError:
+            pass
+        self.assertTrue(bad_filename.is_file())
+        bad_filename.unlink()
 
     @with_rw_repo("HEAD")
     def test_max_chunk_size(self, repo):

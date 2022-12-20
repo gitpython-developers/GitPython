@@ -37,6 +37,10 @@ class NoSuchPathError(GitError, OSError):
     """Thrown if a path could not be access by the system."""
 
 
+class UnsafeOptionsUsedError(GitError):
+    """Thrown if unsafe protocols or options are passed without overridding."""
+
+
 class CommandError(GitError):
     """Base class for exceptions thrown at every stage of `Popen()` execution.
 
