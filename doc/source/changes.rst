@@ -2,6 +2,18 @@
 Changelog
 =========
 
+3.1.30
+======
+
+- Make injections of command-invocations harder or impossible for clone and others.
+  See https://github.com/gitpython-developers/GitPython/pull/1518 for details.
+  Note that this might constitute a breaking change for some users, and if so please
+  let us know and we add an opt-out to this.
+
+See the following for all changes.
+https://github.com/gitpython-developers/gitpython/milestone/60?closed=1
+
+
 3.1.29
 ======
 
