@@ -964,7 +964,7 @@ class Remote(LazyMixin, IterableObj):
             args = [refspec]
 
         proc = self.repo.git.fetch(
-            self, *args, as_process=True, with_stdout=False, universal_newlines=True, v=verbose, **kwargs
+            "--", self, *args, as_process=True, with_stdout=False, universal_newlines=True, v=verbose, **kwargs
         )
         res = self._get_fetch_info_from_stderr(proc, progress, kill_after_timeout=kill_after_timeout)
         if hasattr(self.repo.odb, "update_cache"):
@@ -991,7 +991,7 @@ class Remote(LazyMixin, IterableObj):
             self._assert_refspec()
         kwargs = add_progress(kwargs, self.repo.git, progress)
         proc = self.repo.git.pull(
-            self, refspec, with_stdout=False, as_process=True, universal_newlines=True, v=True, **kwargs
+            "--", self, refspec, with_stdout=False, as_process=True, universal_newlines=True, v=True, **kwargs
         )
         res = self._get_fetch_info_from_stderr(proc, progress, kill_after_timeout=kill_after_timeout)
         if hasattr(self.repo.odb, "update_cache"):
@@ -1034,6 +1034,7 @@ class Remote(LazyMixin, IterableObj):
             be 0."""
         kwargs = add_progress(kwargs, self.repo.git, progress)
         proc = self.repo.git.push(
+            "--",
             self,
             refspec,
             porcelain=True,

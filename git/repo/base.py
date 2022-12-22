@@ -1169,6 +1169,7 @@ class Repo(object):
             multi = shlex.split(" ".join(multi_options))
         proc = git.clone(
             multi,
+            "--",
             Git.polish_url(str(url)),
             clone_path,
             with_extended_output=True,
@@ -1305,7 +1306,7 @@ class Repo(object):
         if not isinstance(path, (tuple, list)):
             path = [path]
         # end assure paths is list
-        self.git.archive(treeish, *path, **kwargs)
+        self.git.archive("--", treeish, *path, **kwargs)
         return self
 
     def has_separate_working_tree(self) -> bool:
