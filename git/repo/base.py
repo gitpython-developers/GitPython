@@ -25,7 +25,6 @@ from git.exc import (
     GitCommandError,
     InvalidGitRepositoryError,
     NoSuchPathError,
-    UnsafeOptionsUsedError,
 )
 from git.index import IndexFile
 from git.objects import Submodule, RootModule, Commit
@@ -133,7 +132,18 @@ class Repo(object):
     re_envvars = re.compile(r"(\$(\{\s?)?[a-zA-Z_]\w*(\}\s?)?|%\s?[a-zA-Z_]\w*\s?%)")
     re_author_committer_start = re.compile(r"^(author|committer)")
     re_tab_full_line = re.compile(r"^\t(.*)$")
-    re_config_protocol_option = re.compile(r"-[-]?c(|onfig)\s+protocol\.", re.I)
+
+    unsafe_git_clone_options = [
+        # This option allows users to execute arbitrary commands.
+        # https://git-scm.com/docs/git-clone#Documentation/git-clone.txt---upload-packltupload-packgt
+        "--upload-pack",
+        "-u",
+        # Users can override configuration variables
+        # like `protocol.allow` or `core.gitProxy` to execute arbitrary commands.
+        # https://git-scm.com/docs/git-clone#Documentation/git-clone.txt---configltkeygtltvaluegt
+        "--config",
+        "-c",
+    ]
 
     # invariants
     # represents the configuration level of a configuration file
@@ -961,7 +971,7 @@ class Repo(object):
         file: str,
         incremental: bool = False,
         rev_opts: Optional[List[str]] = None,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> List[List[Commit | List[str | bytes] | None]] | Iterator[BlameEntry] | None:
         """The blame information for the given file at the given revision.
 
@@ -1152,6 +1162,8 @@ class Repo(object):
         odb_default_type: Type[GitCmdObjectDB],
         progress: Union["RemoteProgress", "UpdateProgress", Callable[..., "RemoteProgress"], None] = None,
         multi_options: Optional[List[str]] = None,
+        allow_unsafe_protocols: bool = False,
+        allow_unsafe_options: bool = False,
         **kwargs: Any,
     ) -> "Repo":
         odbt = kwargs.pop("odbt", odb_default_type)
@@ -1173,6 +1185,12 @@ class Repo(object):
         multi = None
         if multi_options:
             multi = shlex.split(" ".join(multi_options))
+
+        if not allow_unsafe_protocols:
+            Git.check_unsafe_protocols(str(url))
+        if not allow_unsafe_options and multi_options:
+            Git.check_unsafe_options(options=multi_options, unsafe_options=cls.unsafe_git_clone_options)
+
         proc = git.clone(
             multi,
             "--",
@@ -1221,27 +1239,13 @@ class Repo(object):
         # END handle remote repo
         return repo
 
-    @classmethod
-    def unsafe_options(
-        cls,
-        url: str,
-        multi_options: Optional[List[str]] = None,
-    ) -> bool:
-        if "ext::" in url:
-            return True
-        if multi_options is not None:
-            if any(["--upload-pack" in m for m in multi_options]):
-                return True
-            if any([re.match(cls.re_config_protocol_option, m) for m in multi_options]):
-                return True
-        return False
-
     def clone(
         self,
         path: PathLike,
         progress: Optional[Callable] = None,
         multi_options: Optional[List[str]] = None,
-        unsafe_protocols: bool = False,
+        allow_unsafe_protocols: bool = False,
+        allow_unsafe_options: bool = False,
         **kwargs: Any,
     ) -> "Repo":
         """Create a clone from this repository.
@@ -1259,8 +1263,6 @@ class Repo(object):
             * All remaining keyword arguments are given to the git-clone command
 
         :return: ``git.Repo`` (the newly cloned repo)"""
-        if not unsafe_protocols and self.unsafe_options(path, multi_options):
-            raise UnsafeOptionsUsedError(f"{path} requires unsafe_protocols flag")
         return self._clone(
             self.git,
             self.common_dir,
@@ -1268,6 +1270,8 @@ class Repo(object):
             type(self.odb),
             progress,
             multi_options,
+            allow_unsafe_protocols=allow_unsafe_protocols,
+            allow_unsafe_options=allow_unsafe_options,
             **kwargs,
         )
 
@@ -1279,7 +1283,8 @@ class Repo(object):
         progress: Optional[Callable] = None,
         env: Optional[Mapping[str, str]] = None,
         multi_options: Optional[List[str]] = None,
-        unsafe_protocols: bool = False,
+        allow_unsafe_protocols: bool = False,
+        allow_unsafe_options: bool = False,
         **kwargs: Any,
     ) -> "Repo":
         """Create a clone from the given URL
@@ -1300,9 +1305,17 @@ class Repo(object):
         git = cls.GitCommandWrapperType(os.getcwd())
         if env is not None:
             git.update_environment(**env)
-        if not unsafe_protocols and cls.unsafe_options(url, multi_options):
-            raise UnsafeOptionsUsedError(f"{url} requires unsafe_protocols flag")
-        return cls._clone(git, url, to_path, GitCmdObjectDB, progress, multi_options, **kwargs)
+        return cls._clone(
+            git,
+            url,
+            to_path,
+            GitCmdObjectDB,
+            progress,
+            multi_options,
+            allow_unsafe_protocols=allow_unsafe_protocols,
+            allow_unsafe_options=allow_unsafe_options,
+            **kwargs,
+        )
 
     def archive(
         self,

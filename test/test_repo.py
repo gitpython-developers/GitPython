@@ -38,7 +38,8 @@ from git import (
 )
 from git.exc import (
     BadObject,
-    UnsafeOptionsUsedError,
+    UnsafeOptionError,
+    UnsafeProtocolError,
 )
 from git.repo.fun import touch
 from test.lib import TestBase, with_rw_repo, fixture
@@ -281,7 +282,7 @@ class TestRepo(TestBase):
         self.assertTrue(Repo.unsafe_options("", ["--config protocol.foo"]))
 
     def test_clone_from_forbids_helper_urls_by_default(self):
-        with self.assertRaises(UnsafeOptionsUsedError):
+        with self.assertRaises(UnsafeOptionError):
             Repo.clone_from("ext::sh -c touch% /tmp/foo", "tmp")
 
     @with_rw_repo("HEAD")

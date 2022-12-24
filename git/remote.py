@@ -535,6 +535,23 @@ class Remote(LazyMixin, IterableObj):
     __slots__ = ("repo", "name", "_config_reader")
     _id_attribute_ = "name"
 
+    unsafe_git_fetch_options = [
+        # This option allows users to execute arbitrary commands.
+        # https://git-scm.com/docs/git-fetch#Documentation/git-fetch.txt---upload-packltupload-packgt
+        "--upload-pack",
+    ]
+    unsafe_git_pull_options = [
+        # This option allows users to execute arbitrary commands.
+        # https://git-scm.com/docs/git-pull#Documentation/git-pull.txt---upload-packltupload-packgt
+        "--upload-pack"
+    ]
+    unsafe_git_push_options = [
+        # This option allows users to execute arbitrary commands.
+        # https://git-scm.com/docs/git-push#Documentation/git-push.txt---execltgit-receive-packgt
+        "--receive-pack",
+        "--exec",
+    ]
+
     def __init__(self, repo: "Repo", name: str) -> None:
         """Initialize a remote instance
 
@@ -611,7 +628,9 @@ class Remote(LazyMixin, IterableObj):
             yield Remote(repo, section[lbound + 1 : rbound])
         # END for each configuration section
 
-    def set_url(self, new_url: str, old_url: Optional[str] = None, **kwargs: Any) -> "Remote":
+    def set_url(
+        self, new_url: str, old_url: Optional[str] = None, allow_unsafe_protocols: bool = False, **kwargs: Any
+    ) -> "Remote":
         """Configure URLs on current remote (cf command git remote set_url)
 
         This command manages URLs on the remote.
@@ -620,15 +639,17 @@ class Remote(LazyMixin, IterableObj):
         :param old_url: when set, replaces this URL with new_url for the remote
         :return: self
         """
+        if not allow_unsafe_protocols:
+            Git.check_unsafe_protocols(new_url)
         scmd = "set-url"
         kwargs["insert_kwargs_after"] = scmd
         if old_url:
-            self.repo.git.remote(scmd, self.name, new_url, old_url, **kwargs)
+            self.repo.git.remote(scmd, "--", self.name, new_url, old_url, **kwargs)
         else:
-            self.repo.git.remote(scmd, self.name, new_url, **kwargs)
+            self.repo.git.remote(scmd, "--", self.name, new_url, **kwargs)
         return self
 
-    def add_url(self, url: str, **kwargs: Any) -> "Remote":
+    def add_url(self, url: str, allow_unsafe_protocols: bool = False, **kwargs: Any) -> "Remote":
         """Adds a new url on current remote (special case of git remote set_url)
 
         This command adds new URLs to a given remote, making it possible to have
@@ -637,6 +658,8 @@ class Remote(LazyMixin, IterableObj):
         :param url: string being the URL to add as an extra remote URL
         :return: self
         """
+        if not allow_unsafe_protocols:
+            Git.check_unsafe_protocols(url)
         return self.set_url(url, add=True)
 
     def delete_url(self, url: str, **kwargs: Any) -> "Remote":
@@ -729,7 +752,7 @@ class Remote(LazyMixin, IterableObj):
         return out_refs
 
     @classmethod
-    def create(cls, repo: "Repo", name: str, url: str, **kwargs: Any) -> "Remote":
+    def create(cls, repo: "Repo", name: str, url: str, allow_unsafe_protocols: bool = False, **kwargs: Any) -> "Remote":
         """Create a new remote to the given repository
         :param repo: Repository instance that is to receive the new remote
         :param name: Desired name of the remote
@@ -739,7 +762,10 @@ class Remote(LazyMixin, IterableObj):
         :raise GitCommandError: in case an origin with that name already exists"""
         scmd = "add"
         kwargs["insert_kwargs_after"] = scmd
-        repo.git.remote(scmd, name, Git.polish_url(url), **kwargs)
+        url = Git.polish_url(url)
+        if not allow_unsafe_protocols:
+            Git.check_unsafe_protocols(url)
+        repo.git.remote(scmd, "--", name, url, **kwargs)
         return cls(repo, name)
 
     # add is an alias
@@ -921,6 +947,8 @@ class Remote(LazyMixin, IterableObj):
         progress: Union[RemoteProgress, None, "UpdateProgress"] = None,
         verbose: bool = True,
         kill_after_timeout: Union[None, float] = None,
+        allow_unsafe_protocols: bool = False,
+        allow_unsafe_options: bool = False,
         **kwargs: Any,
     ) -> IterableList[FetchInfo]:
         """Fetch the latest changes for this remote
@@ -963,6 +991,14 @@ class Remote(LazyMixin, IterableObj):
         else:
             args = [refspec]
 
+        if not allow_unsafe_protocols:
+            for ref in args:
+                if ref:
+                    Git.check_unsafe_protocols(ref)
+
+        if not allow_unsafe_options:
+            Git.check_unsafe_options(options=list(kwargs.keys()), unsafe_options=self.unsafe_git_fetch_options)
+
         proc = self.repo.git.fetch(
             "--", self, *args, as_process=True, with_stdout=False, universal_newlines=True, v=verbose, **kwargs
         )
@@ -976,6 +1012,8 @@ class Remote(LazyMixin, IterableObj):
         refspec: Union[str, List[str], None] = None,
         progress: Union[RemoteProgress, "UpdateProgress", None] = None,
         kill_after_timeout: Union[None, float] = None,
+        allow_unsafe_protocols: bool = False,
+        allow_unsafe_options: bool = False,
         **kwargs: Any,
     ) -> IterableList[FetchInfo]:
         """Pull changes from the given branch, being the same as a fetch followed
@@ -990,6 +1028,16 @@ class Remote(LazyMixin, IterableObj):
             # No argument refspec, then ensure the repo's config has a fetch refspec.
             self._assert_refspec()
         kwargs = add_progress(kwargs, self.repo.git, progress)
+
+        if not allow_unsafe_protocols and refspec:
+            if isinstance(refspec, str):
+                Git.check_unsafe_protocols(refspec)
+            else:
+                for ref in refspec:
+                    Git.check_unsafe_protocols(ref)
+        if not allow_unsafe_options:
+            Git.check_unsafe_options(options=list(kwargs.keys()), unsafe_options=self.unsafe_git_pull_options)
+
         proc = self.repo.git.pull(
             "--", self, refspec, with_stdout=False, as_process=True, universal_newlines=True, v=True, **kwargs
         )
@@ -1003,6 +1051,8 @@ class Remote(LazyMixin, IterableObj):
         refspec: Union[str, List[str], None] = None,
         progress: Union[RemoteProgress, "UpdateProgress", Callable[..., RemoteProgress], None] = None,
         kill_after_timeout: Union[None, float] = None,
+        allow_unsafe_protocols: bool = False,
+        allow_unsafe_options: bool = False,
         **kwargs: Any,
     ) -> IterableList[PushInfo]:
         """Push changes from source branch in refspec to target branch in refspec.
@@ -1033,6 +1083,17 @@ class Remote(LazyMixin, IterableObj):
             If the operation fails completely, the length of the returned IterableList will
             be 0."""
         kwargs = add_progress(kwargs, self.repo.git, progress)
+
+        if not allow_unsafe_protocols and refspec:
+            if isinstance(refspec, str):
+                Git.check_unsafe_protocols(refspec)
+            else:
+                for ref in refspec:
+                    Git.check_unsafe_protocols(ref)
+
+        if not allow_unsafe_options:
+            Git.check_unsafe_options(options=list(kwargs.keys()), unsafe_options=self.unsafe_git_push_options)
+
         proc = self.repo.git.push(
             "--",
             self,

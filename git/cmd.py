@@ -4,6 +4,7 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 from __future__ import annotations
+import re
 from contextlib import contextmanager
 import io
 import logging
@@ -24,7 +25,7 @@ from git.compat import (
 from git.exc import CommandError
 from git.util import is_cygwin_git, cygpath, expand_path, remove_password_if_present
 
-from .exc import GitCommandError, GitCommandNotFound
+from .exc import GitCommandError, GitCommandNotFound, UnsafeOptionError, UnsafeProtocolError
 from .util import (
     LazyMixin,
     stream_copy,
@@ -262,6 +263,8 @@ class Git(LazyMixin):
 
     _excluded_ = ("cat_file_all", "cat_file_header", "_version_info")
 
+    re_unsafe_protocol = re.compile("(.+)::.+")
+
     def __getstate__(self) -> Dict[str, Any]:
         return slots_to_dict(self, exclude=self._excluded_)
 
@@ -453,6 +456,48 @@ class Git(LazyMixin):
                 url = os.path.expanduser(url)
             url = url.replace("\\\\", "\\").replace("\\", "/")
         return url
+
+    @classmethod
+    def check_unsafe_protocols(cls, url: str) -> None:
+        """
+        Check for unsafe protocols.
+
+        Apart from the usual protocols (http, git, ssh),
+        Git allows "remote helpers" that have the form `<transport>::<address>`,
+        one of these helpers (`ext::`) can be used to invoke any arbitrary command.
+
+        See:
+
+        - https://git-scm.com/docs/gitremote-helpers
+        - https://git-scm.com/docs/git-remote-ext
+        """
+        match = cls.re_unsafe_protocol.match(url)
+        if match:
+            protocol = match.group(1)
+            raise UnsafeProtocolError(
+                f"The `{protocol}::` protocol looks suspicious, use `allow_unsafe_protocols=True` to allow it."
+            )
+
+    @classmethod
+    def check_unsafe_options(cls, options: List[str], unsafe_options: List[str]) -> None:
+        """
+        Check for unsafe options.
+
+        Some options that are passed to `git <command>` can be used to execute
+        arbitrary commands, this are blocked by default.
+        """
+        # Options can be of the form `foo` or `--foo bar` `--foo=bar`,
+        # so we need to check if they start with "--foo" or if they are equal to "foo".
+        bare_options = [
+            option.lstrip("-")
+            for option in unsafe_options
+        ]
+        for option in options:
+            for unsafe_option, bare_option in zip(unsafe_options, bare_options):
+                if option.startswith(unsafe_option) or option == bare_option:
+                    raise UnsafeOptionError(
+                        f"{unsafe_option} is not allowed, use `allow_unsafe_options=True` to allow it."
+                    )
 
     class AutoInterrupt(object):
         """Kill/Interrupt the stored process instance once this instance goes out of scope. It is
