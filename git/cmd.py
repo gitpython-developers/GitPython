@@ -488,12 +488,12 @@ class Git(LazyMixin):
         """
         # Options can be of the form `foo` or `--foo bar` `--foo=bar`,
         # so we need to check if they start with "--foo" or if they are equal to "foo".
-        bare_options = [
+        bare_unsafe_options = [
             option.lstrip("-")
             for option in unsafe_options
         ]
         for option in options:
-            for unsafe_option, bare_option in zip(unsafe_options, bare_options):
+            for unsafe_option, bare_option in zip(unsafe_options, bare_unsafe_options):
                 if option.startswith(unsafe_option) or option == bare_option:
                     raise UnsafeOptionError(
                         f"{unsafe_option} is not allowed, use `allow_unsafe_options=True` to allow it."
@@ -1193,12 +1193,12 @@ class Git(LazyMixin):
         return args
 
     @classmethod
-    def __unpack_args(cls, arg_list: Sequence[str]) -> List[str]:
+    def _unpack_args(cls, arg_list: Sequence[str]) -> List[str]:
 
         outlist = []
         if isinstance(arg_list, (list, tuple)):
             for arg in arg_list:
-                outlist.extend(cls.__unpack_args(arg))
+                outlist.extend(cls._unpack_args(arg))
         else:
             outlist.append(str(arg_list))
 
@@ -1283,7 +1283,7 @@ class Git(LazyMixin):
         # Prepare the argument list
 
         opt_args = self.transform_kwargs(**opts_kwargs)
-        ext_args = self.__unpack_args([a for a in args if a is not None])
+        ext_args = self._unpack_args([a for a in args if a is not None])
 
         if insert_after_this_arg is None:
             args_list = opt_args + ext_args

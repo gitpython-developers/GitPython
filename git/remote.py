@@ -1029,12 +1029,11 @@ class Remote(LazyMixin, IterableObj):
             self._assert_refspec()
         kwargs = add_progress(kwargs, self.repo.git, progress)
 
-        if not allow_unsafe_protocols and refspec:
-            if isinstance(refspec, str):
-                Git.check_unsafe_protocols(refspec)
-            else:
-                for ref in refspec:
-                    Git.check_unsafe_protocols(ref)
+        refspec = Git._unpack_args(refspec or [])
+        if not allow_unsafe_protocols:
+            for ref in refspec:
+                Git.check_unsafe_protocols(ref)
+
         if not allow_unsafe_options:
             Git.check_unsafe_options(options=list(kwargs.keys()), unsafe_options=self.unsafe_git_pull_options)
 
@@ -1084,12 +1083,10 @@ class Remote(LazyMixin, IterableObj):
             be 0."""
         kwargs = add_progress(kwargs, self.repo.git, progress)
 
-        if not allow_unsafe_protocols and refspec:
-            if isinstance(refspec, str):
-                Git.check_unsafe_protocols(refspec)
-            else:
-                for ref in refspec:
-                    Git.check_unsafe_protocols(ref)
+        refspec = Git._unpack_args(refspec or [])
+        if not allow_unsafe_protocols:
+            for ref in refspec:
+                Git.check_unsafe_protocols(ref)
 
         if not allow_unsafe_options:
             Git.check_unsafe_options(options=list(kwargs.keys()), unsafe_options=self.unsafe_git_push_options)
