@@ -13,7 +13,6 @@ import pathlib
 import pickle
 import sys
 import tempfile
-import uuid
 from unittest import mock, skipIf, SkipTest
 
 import pytest
@@ -226,6 +225,7 @@ class TestRepo(TestBase):
                 "--config submodule.repo.update=checkout",
                 "--config filter.lfs.clean='git-lfs clean -- %f'",
             ],
+            allow_unsafe_options=True,
         )
 
         self.assertEqual(cloned.config_reader().get_value("submodule", "active"), "repo")
@@ -266,39 +266,133 @@ class TestRepo(TestBase):
             to_path=rw_dir,
         )
 
-    def test_unsafe_options(self):
-        self.assertFalse(Repo.unsafe_options("github.com/deploy/deploy"))
-
-    def test_unsafe_options_ext_url(self):
-        self.assertTrue(Repo.unsafe_options("ext::ssh"))
-
-    def test_unsafe_options_multi_options_upload_pack(self):
-        self.assertTrue(Repo.unsafe_options("", ["--upload-pack='touch foo'"]))
-
-    def test_unsafe_options_multi_options_config_user(self):
-        self.assertFalse(Repo.unsafe_options("", ["--config user"]))
-
-    def test_unsafe_options_multi_options_config_protocol(self):
-        self.assertTrue(Repo.unsafe_options("", ["--config protocol.foo"]))
-
-    def test_clone_from_forbids_helper_urls_by_default(self):
-        with self.assertRaises(UnsafeOptionError):
-            Repo.clone_from("ext::sh -c touch% /tmp/foo", "tmp")
+    @with_rw_repo("HEAD")
+    def test_clone_unsafe_options(self, rw_repo):
+        tmp_dir = pathlib.Path(tempfile.mkdtemp())
+        tmp_file = tmp_dir / "pwn"
+        unsafe_options = [
+            f"--upload-pack='touch {tmp_file}'",
+            f"-u 'touch {tmp_file}'",
+            "--config=protocol.ext.allow=always",
+            "-c protocol.ext.allow=always",
+        ]
+        for unsafe_option in unsafe_options:
+            with self.assertRaises(UnsafeOptionError):
+                rw_repo.clone(tmp_dir, multi_options=[unsafe_option])
 
     @with_rw_repo("HEAD")
-    def test_clone_from_allow_unsafe(self, repo):
-        bad_filename = pathlib.Path(f'{tempfile.gettempdir()}/{uuid.uuid4()}')
-        bad_url = f'ext::sh -c touch% {bad_filename}'
-        try:
-            repo.clone_from(
-                bad_url, 'tmp',
-                multi_options=["-c protocol.ext.allow=always"],
-                unsafe_protocols=True
-            )
-        except GitCommandError:
-            pass
-        self.assertTrue(bad_filename.is_file())
-        bad_filename.unlink()
+    def test_clone_unsafe_options_allowed(self, rw_repo):
+        tmp_dir = pathlib.Path(tempfile.mkdtemp())
+        tmp_file = tmp_dir / "pwn"
+        unsafe_options = [
+            f"--upload-pack='touch {tmp_file}'",
+            f"-u 'touch {tmp_file}'",
+        ]
+        for i, unsafe_option in enumerate(unsafe_options):
+            destination = tmp_dir / str(i)
+            # The options will be allowed, but the command will fail.
+            with self.assertRaises(GitCommandError):
+                rw_repo.clone(destination, multi_options=[unsafe_option], allow_unsafe_options=True)
+
+        unsafe_options = [
+            "--config=protocol.ext.allow=always",
+            "-c protocol.ext.allow=always",
+        ]
+        for i, unsafe_option in enumerate(unsafe_options):
+            destination = tmp_dir / str(i)
+            assert not destination.exists()
+            rw_repo.clone(destination, multi_options=[unsafe_option], allow_unsafe_options=True)
+            assert destination.exists()
+
+    @with_rw_repo("HEAD")
+    def test_clone_safe_options(self, rw_repo):
+        tmp_dir = pathlib.Path(tempfile.mkdtemp())
+        options = [
+            "--depth=1",
+            "--single-branch",
+            "-q",
+        ]
+        for option in options:
+            destination = tmp_dir / option
+            assert not destination.exists()
+            rw_repo.clone(destination, multi_options=[option])
+            assert destination.exists()
+
+    @with_rw_repo("HEAD")
+    def test_clone_from_unsafe_options(self, rw_repo):
+        tmp_dir = pathlib.Path(tempfile.mkdtemp())
+        tmp_file = tmp_dir / "pwn"
+        unsafe_options = [
+            f"--upload-pack='touch {tmp_file}'",
+            f"-u 'touch {tmp_file}'",
+            "--config=protocol.ext.allow=always",
+            "-c protocol.ext.allow=always",
+        ]
+        for unsafe_option in unsafe_options:
+            with self.assertRaises(UnsafeOptionError):
+                Repo.clone_from(rw_repo.working_dir, tmp_dir, multi_options=[unsafe_option])
+
+    @with_rw_repo("HEAD")
+    def test_clone_from_unsafe_options_allowed(self, rw_repo):
+        tmp_dir = pathlib.Path(tempfile.mkdtemp())
+        tmp_file = tmp_dir / "pwn"
+        unsafe_options = [
+            f"--upload-pack='touch {tmp_file}'",
+            f"-u 'touch {tmp_file}'",
+        ]
+        for i, unsafe_option in enumerate(unsafe_options):
+            destination = tmp_dir / str(i)
+            # The options will be allowed, but the command will fail.
+            with self.assertRaises(GitCommandError):
+                Repo.clone_from(
+                    rw_repo.working_dir, destination, multi_options=[unsafe_option], allow_unsafe_options=True
+                )
+
+        unsafe_options = [
+            "--config=protocol.ext.allow=always",
+            "-c protocol.ext.allow=always",
+        ]
+        for i, unsafe_option in enumerate(unsafe_options):
+            destination = tmp_dir / str(i)
+            assert not destination.exists()
+            Repo.clone_from(rw_repo.working_dir, destination, multi_options=[unsafe_option], allow_unsafe_options=True)
+            assert destination.exists()
+
+    @with_rw_repo("HEAD")
+    def test_clone_from_safe_options(self, rw_repo):
+        tmp_dir = pathlib.Path(tempfile.mkdtemp())
+        options = [
+            "--depth=1",
+            "--single-branch",
+            "-q",
+        ]
+        for option in options:
+            destination = tmp_dir / option
+            assert not destination.exists()
+            Repo.clone_from(rw_repo.common_dir, destination, multi_options=[option])
+            assert destination.exists()
+
+    def test_clone_from_unsafe_procol(self):
+        tmp_dir = pathlib.Path(tempfile.mkdtemp())
+        urls = [
+            "ext::sh -c touch% /tmp/pwn",
+            "fd::17/foo",
+        ]
+        for url in urls:
+            with self.assertRaises(UnsafeProtocolError):
+                Repo.clone_from(url, tmp_dir)
+
+    def test_clone_from_unsafe_procol_allowed(self):
+        tmp_dir = pathlib.Path(tempfile.mkdtemp())
+        urls = [
+            "ext::sh -c touch% /tmp/pwn",
+            "fd::/foo",
+        ]
+        for url in urls:
+            # The URL will be allowed into the command, but the command will
+            # fail since we don't have that protocol enabled in the Git config file.
+            with self.assertRaises(GitCommandError):
+                Repo.clone_from(url, tmp_dir, allow_unsafe_protocols=True)
 
     @with_rw_repo("HEAD")
     def test_max_chunk_size(self, repo):
