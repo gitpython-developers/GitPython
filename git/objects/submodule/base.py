@@ -272,7 +272,16 @@ class Submodule(IndexObject, TraversableIterableObj):
         # end
 
     @classmethod
-    def _clone_repo(cls, repo: "Repo", url: str, path: PathLike, name: str, **kwargs: Any) -> "Repo":
+    def _clone_repo(
+        cls,
+        repo: "Repo",
+        url: str,
+        path: PathLike,
+        name: str,
+        allow_unsafe_options: bool = False,
+        allow_unsafe_protocols: bool = False,
+        **kwargs: Any,
+    ) -> "Repo":
         """:return: Repo instance of newly cloned repository
         :param repo: our parent repository
         :param url: url to clone from
@@ -289,7 +298,13 @@ class Submodule(IndexObject, TraversableIterableObj):
             module_checkout_path = osp.join(str(repo.working_tree_dir), path)
         # end
 
-        clone = git.Repo.clone_from(url, module_checkout_path, **kwargs)
+        clone = git.Repo.clone_from(
+            url,
+            module_checkout_path,
+            allow_unsafe_options=allow_unsafe_options,
+            allow_unsafe_protocols=allow_unsafe_protocols,
+            **kwargs,
+        )
         if cls._need_gitfile_submodules(repo.git):
             cls._write_git_file_and_module_config(module_checkout_path, module_abspath)
         # end
@@ -359,6 +374,8 @@ class Submodule(IndexObject, TraversableIterableObj):
         depth: Union[int, None] = None,
         env: Union[Mapping[str, str], None] = None,
         clone_multi_options: Union[Sequence[TBD], None] = None,
+        allow_unsafe_options: bool = False,
+        allow_unsafe_protocols: bool = False,
     ) -> "Submodule":
         """Add a new submodule to the given repository. This will alter the index
         as well as the .gitmodules file, but will not create a new commit.
@@ -475,7 +492,16 @@ class Submodule(IndexObject, TraversableIterableObj):
                 kwargs["multi_options"] = clone_multi_options
 
             # _clone_repo(cls, repo, url, path, name, **kwargs):
-            mrepo = cls._clone_repo(repo, url, path, name, env=env, **kwargs)
+            mrepo = cls._clone_repo(
+                repo,
+                url,
+                path,
+                name,
+                env=env,
+                allow_unsafe_options=allow_unsafe_options,
+                allow_unsafe_protocols=allow_unsafe_protocols,
+                **kwargs,
+            )
         # END verify url
 
         ## See #525 for ensuring git urls in config-files valid under Windows.
@@ -520,6 +546,8 @@ class Submodule(IndexObject, TraversableIterableObj):
         keep_going: bool = False,
         env: Union[Mapping[str, str], None] = None,
         clone_multi_options: Union[Sequence[TBD], None] = None,
+        allow_unsafe_options: bool = False,
+        allow_unsafe_protocols: bool = False,
     ) -> "Submodule":
         """Update the repository of this submodule to point to the checkout
         we point at with the binsha of this instance.
@@ -643,6 +671,8 @@ class Submodule(IndexObject, TraversableIterableObj):
                         n=True,
                         env=env,
                         multi_options=clone_multi_options,
+                        allow_unsafe_options=allow_unsafe_options,
+                        allow_unsafe_protocols=allow_unsafe_protocols,
                     )
                 # END handle dry-run
                 progress.update(

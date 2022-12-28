@@ -1026,7 +1026,7 @@ class TestSubmodule(TestBase):
         )
 
         # Act
-        sm.update(init=True, clone_multi_options=["--config core.eol=true"])
+        sm.update(init=True, clone_multi_options=["--config core.eol=true"], allow_unsafe_options=True)
 
         # Assert
         sm_config = GitConfigParser(file_or_files=osp.join(parent.git_dir, "modules", sm_name, "config"))
@@ -1070,6 +1070,7 @@ class TestSubmodule(TestBase):
             sm_name,
             url=self._small_repo_url(),
             clone_multi_options=["--config core.eol=true"],
+            allow_unsafe_options=True,
         )
 
         # Assert

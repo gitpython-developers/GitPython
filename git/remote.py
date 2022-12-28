@@ -658,9 +658,7 @@ class Remote(LazyMixin, IterableObj):
         :param url: string being the URL to add as an extra remote URL
         :return: self
         """
-        if not allow_unsafe_protocols:
-            Git.check_unsafe_protocols(url)
-        return self.set_url(url, add=True)
+        return self.set_url(url, add=True, allow_unsafe_protocols=allow_unsafe_protocols)
 
     def delete_url(self, url: str, **kwargs: Any) -> "Remote":
         """Deletes a new url on current remote (special case of git remote set_url)
