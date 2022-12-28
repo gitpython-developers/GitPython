@@ -278,6 +278,10 @@ class PushInfo(IterableObj, object):
 
 
 class PushInfoList(IterableList[PushInfo]):
+    """
+    IterableList of PushInfo objects.
+    """
+
     def __new__(cls) -> "PushInfoList":
         return cast(PushInfoList, IterableList.__new__(cls, "push_infos"))
 
@@ -1004,7 +1008,7 @@ class Remote(LazyMixin, IterableObj):
         progress: Union[RemoteProgress, "UpdateProgress", Callable[..., RemoteProgress], None] = None,
         kill_after_timeout: Union[None, float] = None,
         **kwargs: Any,
-    ) -> IterableList[PushInfo]:
+    ) -> PushInfoList:
         """Push changes from source branch in refspec to target branch in refspec.
 
         :param refspec: see 'fetch' method
@@ -1025,13 +1029,13 @@ class Remote(LazyMixin, IterableObj):
             should be killed. It is set to None by default.
         :param kwargs: Additional arguments to be passed to git-push
         :return:
-            list(PushInfo, ...) list of PushInfo instances, each
-            one informing about an individual head which had been updated on the remote
-            side.
+            A ``PushInfoList`` object, where each list member
+            represents an individual head which had been updated on the remote side.
             If the push contains rejected heads, these will have the PushInfo.ERROR bit set
             in their flags.
-            If the operation fails completely, the length of the returned IterableList will
-            be 0."""
+            If the operation fails completely, the length of the returned PushInfoList will
+            be 0.
+            Call ``.raise_if_error()`` on the returned object to raise on any failure."""
         kwargs = add_progress(kwargs, self.repo.git, progress)
         proc = self.repo.git.push(
             "--",
