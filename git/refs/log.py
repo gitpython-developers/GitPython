@@ -253,6 +253,7 @@ class RefLog(List[RefLogEntry], Serializable):
 
     def to_file(self, filepath: PathLike) -> None:
         """Write the contents of the reflog instance to a file at the given filepath.
+
         :param filepath: path to file, parent directories are assumed to exist"""
         lfd = LockedFD(filepath)
         assure_directory_exists(filepath, is_file=True)
@@ -326,6 +327,7 @@ class RefLog(List[RefLogEntry], Serializable):
 
     def write(self) -> "RefLog":
         """Write this instance's data to the file we are originating from
+
         :return: self"""
         if self._path is None:
             raise ValueError("Instance was not initialized with a path, use to_file(...) instead")

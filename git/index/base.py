@@ -982,12 +982,12 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             Additional arguments you would like to pass to git-mv, such as dry_run
             or force.
 
-        :return:List(tuple(source_path_string, destination_path_string), ...)
+        :return: List(tuple(source_path_string, destination_path_string), ...)
             A list of pairs, containing the source file moved as well as its
             actual destination. Relative to the repository root.
 
         :raise ValueError: If only one item was given
-            GitCommandError: If git could not handle your request"""
+        :raise GitCommandError: If git could not handle your request"""
         args = []
         if skip_errors:
             args.append("-k")

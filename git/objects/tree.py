@@ -128,6 +128,7 @@ class TreeModifier(object):
         """Call this method once you are done modifying the tree information.
         It may be called several times, but be aware that each call will cause
         a sort operation
+
         :return self:"""
         merge_sort(self._cache, git_cmp)
         return self
@@ -175,6 +176,7 @@ class TreeModifier(object):
         """Add the given item to the tree, its correctness is assumed, which
         puts the caller into responsibility to assure the input is correct.
         For more information on the parameters, see ``add``
+
         :param binsha: 20 byte binary sha"""
         assert isinstance(binsha, bytes) and isinstance(mode, int) and isinstance(name, str)
         tree_cache = (binsha, mode, name)
@@ -259,8 +261,8 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
 
     def join(self, file: str) -> IndexObjUnion:
         """Find the named object in this tree's contents
-        :return: ``git.Blob`` or ``git.Tree`` or ``git.Submodule``
 
+        :return: ``git.Blob`` or ``git.Tree`` or ``git.Submodule``
         :raise KeyError: if given file or tree does not exist in tree"""
         msg = "Blob or Tree named %r not found"
         if "/" in file:

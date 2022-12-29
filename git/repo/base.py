@@ -387,6 +387,7 @@ class Repo(object):
     @property
     def remotes(self) -> "IterableList[Remote]":
         """A list of Remote objects allowing to access and manipulate remotes
+
         :return: ``git.IterableList(Remote, ...)``"""
         return Remote.list_items(self)
 
@@ -427,6 +428,7 @@ class Repo(object):
     def iter_submodules(self, *args: Any, **kwargs: Any) -> Iterator[Submodule]:
         """An iterator yielding Submodule instances, see Traversable interface
         for a description of args and kwargs
+
         :return: Iterator"""
         return RootModule(self).traverse(*args, **kwargs)
 
@@ -441,6 +443,7 @@ class Repo(object):
     @property
     def tags(self) -> "IterableList[TagReference]":
         """A list of ``Tag`` objects that are available in this repo
+
         :return: ``git.IterableList(TagReference, ...)``"""
         return TagReference.list_items(self)
 

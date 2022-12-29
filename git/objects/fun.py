@@ -37,6 +37,7 @@ __all__ = (
 
 def tree_to_stream(entries: Sequence[EntryTup], write: Callable[["ReadableBuffer"], Union[int, None]]) -> None:
     """Write the give list of entries into a stream using its write method
+
     :param entries: **sorted** list of tuples with (binsha, mode, name)
     :param write: write method which takes a data string"""
     ord_zero = ord("0")
@@ -68,6 +69,7 @@ def tree_to_stream(entries: Sequence[EntryTup], write: Callable[["ReadableBuffer
 
 def tree_entries_from_data(data: bytes) -> List[EntryTup]:
     """Reads the binary representation of a tree and returns tuples of Tree items
+
     :param data: data block with tree data (as bytes)
     :return: list(tuple(binsha, mode, tree_relative_path), ...)"""
     ord_zero = ord("0")
