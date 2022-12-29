@@ -140,6 +140,7 @@ def utctz_to_altz(utctz: str) -> int:
     """we convert utctz to the timezone in seconds, it is the format time.altzone
     returns. Git stores it as UTC timezone which has the opposite sign as well,
     which explains the -1 * ( that was made explicit here )
+
     :param utctz: git utc timezone string, i.e. +0200"""
     return -1 * int(float(utctz) / 100 * 3600)
 

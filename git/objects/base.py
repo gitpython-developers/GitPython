@@ -143,6 +143,7 @@ class Object(LazyMixin):
 
     def stream_data(self, ostream: "OStream") -> "Object":
         """Writes our data directly to the given output stream
+
         :param ostream: File object compatible stream object.
         :return: self"""
         istream = self.repo.odb.stream(self.binsha)

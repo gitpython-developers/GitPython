@@ -49,8 +49,8 @@ class Reference(SymbolicReference, LazyMixin, IterableObj):
 
     def __init__(self, repo: "Repo", path: PathLike, check_path: bool = True) -> None:
         """Initialize this instance
-        :param repo: Our parent repository
 
+        :param repo: Our parent repository
         :param path:
             Path relative to the .git/ directory pointing to the ref in question, i.e.
             refs/heads/master
@@ -73,6 +73,7 @@ class Reference(SymbolicReference, LazyMixin, IterableObj):
         logmsg: Union[str, None] = None,
     ) -> "Reference":
         """Special version which checks if the head-log needs an update as well
+
         :return: self"""
         oldbinsha = None
         if logmsg is not None:

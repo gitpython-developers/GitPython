@@ -756,6 +756,7 @@ class Remote(LazyMixin, IterableObj):
     @classmethod
     def create(cls, repo: "Repo", name: str, url: str, allow_unsafe_protocols: bool = False, **kwargs: Any) -> "Remote":
         """Create a new remote to the given repository
+
         :param repo: Repository instance that is to receive the new remote
         :param name: Desired name of the remote
         :param url: URL which corresponds to the remote's name
@@ -778,6 +779,7 @@ class Remote(LazyMixin, IterableObj):
     @classmethod
     def remove(cls, repo: "Repo", name: str) -> str:
         """Remove the remote with the given name
+
         :return: the passed remote name to remove
         """
         repo.git.remote("rm", name)
@@ -790,6 +792,7 @@ class Remote(LazyMixin, IterableObj):
 
     def rename(self, new_name: str) -> "Remote":
         """Rename self to the given new_name
+
         :return: self"""
         if self.name == new_name:
             return self
@@ -1021,11 +1024,11 @@ class Remote(LazyMixin, IterableObj):
         """Pull changes from the given branch, being the same as a fetch followed
         by a merge of branch with your local branch.
 
-        :param refspec: see 'fetch' method
-        :param progress: see 'push' method
-        :param kill_after_timeout: see 'fetch' method
+        :param refspec: see :meth:`fetch` method
+        :param progress: see :meth:`push` method
+        :param kill_after_timeout: see :meth:`fetch` method
         :param kwargs: Additional arguments to be passed to git-pull
-        :return: Please see 'fetch' method"""
+        :return: Please see :meth:`fetch` method"""
         if refspec is None:
             # No argument refspec, then ensure the repo's config has a fetch refspec.
             self._assert_refspec()

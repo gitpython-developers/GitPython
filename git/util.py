@@ -131,7 +131,7 @@ T = TypeVar("T")
 
 
 def unbare_repo(func: Callable[..., T]) -> Callable[..., T]:
-    """Methods with this decorator raise InvalidGitRepositoryError if they
+    """Methods with this decorator raise :class:`.exc.InvalidGitRepositoryError` if they
     encounter a bare repository"""
 
     from .exc import InvalidGitRepositoryError
@@ -1152,7 +1152,7 @@ class Iterable(metaclass=IterableClassWatcher):
 
         :note: Favor the iter_items method as it will
 
-        :return:list(Item,...) list of item instances"""
+        :return: list(Item,...) list of item instances"""
         out_list: Any = IterableList(cls._id_attribute_)
         out_list.extend(cls.iter_items(repo, *args, **kwargs))
         return out_list
@@ -1184,7 +1184,7 @@ class IterableObj(Protocol):
 
         :note: Favor the iter_items method as it will
 
-        :return:list(Item,...) list of item instances"""
+        :return: list(Item,...) list of item instances"""
         out_list: IterableList = IterableList(cls._id_attribute_)
         out_list.extend(cls.iter_items(repo, *args, **kwargs))
         return out_list

@@ -735,6 +735,7 @@ class Git(LazyMixin):
     def __getattr__(self, name: str) -> Any:
         """A convenience method as it allows to call the command as if it was
         an object.
+
         :return: Callable object that will execute call _call_process with your arguments."""
         if name[0] == "_":
             return LazyMixin.__getattr__(self, name)
@@ -915,7 +916,7 @@ class Git(LazyMixin):
             render the repository incapable of accepting changes until the lock is manually
             removed.
         :param strip_newline_in_stdout:
-            Whether to strip the trailing `\n` of the command stdout.
+            Whether to strip the trailing ``\\n`` of the command stdout.
         :return:
             * str(output) if extended_output = False (Default)
             * tuple(int(status), str(stdout), str(stderr)) if extended_output = True
@@ -1384,7 +1385,8 @@ class Git(LazyMixin):
 
     def get_object_data(self, ref: str) -> Tuple[str, str, int, bytes]:
         """As get_object_header, but returns object data as well
-        :return: (hexsha, type_string, size_as_int,data_string)
+
+        :return: (hexsha, type_string, size_as_int, data_string)
         :note: not threadsafe"""
         hexsha, typename, size, stream = self.stream_object_data(ref)
         data = stream.read(size)
