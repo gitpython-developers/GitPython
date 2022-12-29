@@ -1101,18 +1101,23 @@ class TestSubmodule(TestBase):
 
     @with_rw_repo("HEAD")
     def test_submodule_add_unsafe_url(self, rw_repo):
+        tmp_dir = Path(tempfile.mkdtemp())
+        tmp_file = tmp_dir / "pwn"
         urls = [
-            "ext::sh -c touch% /tmp/pwn",
+            f"ext::sh -c touch% {tmp_file}",
             "fd::/foo",
         ]
         for url in urls:
             with self.assertRaises(UnsafeProtocolError):
                 Submodule.add(rw_repo, "new", "new", url)
+            assert not tmp_file.exists()
 
     @with_rw_repo("HEAD")
     def test_submodule_add_unsafe_url_allowed(self, rw_repo):
+        tmp_dir = Path(tempfile.mkdtemp())
+        tmp_file = tmp_dir / "pwn"
         urls = [
-            "ext::sh -c touch% /tmp/pwn",
+            f"ext::sh -c touch% {tmp_file}",
             "fd::/foo",
         ]
         for url in urls:
@@ -1120,6 +1125,7 @@ class TestSubmodule(TestBase):
             # fail since we don't have that protocol enabled in the Git config file.
             with self.assertRaises(GitCommandError):
                 Submodule.add(rw_repo, "new", "new", url, allow_unsafe_protocols=True)
+            assert not tmp_file.exists()
 
     @with_rw_repo("HEAD")
     def test_submodule_add_unsafe_options(self, rw_repo):
@@ -1134,6 +1140,7 @@ class TestSubmodule(TestBase):
         for unsafe_option in unsafe_options:
             with self.assertRaises(UnsafeOptionError):
                 Submodule.add(rw_repo, "new", "new", str(tmp_dir), clone_multi_options=[unsafe_option])
+            assert not tmp_file.exists()
 
     @with_rw_repo("HEAD")
     def test_submodule_add_unsafe_options_allowed(self, rw_repo):
@@ -1142,6 +1149,16 @@ class TestSubmodule(TestBase):
         unsafe_options = [
             f"--upload-pack='touch {tmp_file}'",
             f"-u 'touch {tmp_file}'",
+        ]
+        for unsafe_option in unsafe_options:
+            # The options will be allowed, but the command will fail.
+            with self.assertRaises(GitCommandError):
+                Submodule.add(
+                    rw_repo, "new", "new", str(tmp_dir), clone_multi_options=[unsafe_option], allow_unsafe_options=True
+                )
+            assert not tmp_file.exists()
+
+        unsafe_options = [
             "--config=protocol.ext.allow=always",
             "-c protocol.ext.allow=always",
         ]
@@ -1153,19 +1170,24 @@ class TestSubmodule(TestBase):
 
     @with_rw_repo("HEAD")
     def test_submodule_update_unsafe_url(self, rw_repo):
+        tmp_dir = Path(tempfile.mkdtemp())
+        tmp_file = tmp_dir / "pwn"
         urls = [
-            "ext::sh -c touch% /tmp/pwn",
+            f"ext::sh -c touch% {tmp_file}",
             "fd::/foo",
         ]
         for url in urls:
             submodule = Submodule(rw_repo, b"\0" * 20, name="new", path="new", url=url)
             with self.assertRaises(UnsafeProtocolError):
                 submodule.update()
+            assert not tmp_file.exists()
 
     @with_rw_repo("HEAD")
     def test_submodule_update_unsafe_url_allowed(self, rw_repo):
+        tmp_dir = Path(tempfile.mkdtemp())
+        tmp_file = tmp_dir / "pwn"
         urls = [
-            "ext::sh -c touch% /tmp/pwn",
+            f"ext::sh -c touch% {tmp_file}",
             "fd::/foo",
         ]
         for url in urls:
@@ -1174,6 +1196,7 @@ class TestSubmodule(TestBase):
             # fail since we don't have that protocol enabled in the Git config file.
             with self.assertRaises(GitCommandError):
                 submodule.update(allow_unsafe_protocols=True)
+            assert not tmp_file.exists()
 
     @with_rw_repo("HEAD")
     def test_submodule_update_unsafe_options(self, rw_repo):
@@ -1189,6 +1212,7 @@ class TestSubmodule(TestBase):
         for unsafe_option in unsafe_options:
             with self.assertRaises(UnsafeOptionError):
                 submodule.update(clone_multi_options=[unsafe_option])
+            assert not tmp_file.exists()
 
     @with_rw_repo("HEAD")
     def test_submodule_update_unsafe_options_allowed(self, rw_repo):
@@ -1197,6 +1221,15 @@ class TestSubmodule(TestBase):
         unsafe_options = [
             f"--upload-pack='touch {tmp_file}'",
             f"-u 'touch {tmp_file}'",
+        ]
+        submodule = Submodule(rw_repo, b"\0" * 20, name="new", path="new", url=str(tmp_dir))
+        for unsafe_option in unsafe_options:
+            # The options will be allowed, but the command will fail.
+            with self.assertRaises(GitCommandError):
+                submodule.update(clone_multi_options=[unsafe_option], allow_unsafe_options=True)
+            assert not tmp_file.exists()
+
+        unsafe_options = [
             "--config=protocol.ext.allow=always",
             "-c protocol.ext.allow=always",
         ]

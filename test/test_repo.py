@@ -279,6 +279,7 @@ class TestRepo(TestBase):
         for unsafe_option in unsafe_options:
             with self.assertRaises(UnsafeOptionError):
                 rw_repo.clone(tmp_dir, multi_options=[unsafe_option])
+            assert not tmp_file.exists()
 
     @with_rw_repo("HEAD")
     def test_clone_unsafe_options_allowed(self, rw_repo):
@@ -290,9 +291,12 @@ class TestRepo(TestBase):
         ]
         for i, unsafe_option in enumerate(unsafe_options):
             destination = tmp_dir / str(i)
+            assert not tmp_file.exists()
             # The options will be allowed, but the command will fail.
             with self.assertRaises(GitCommandError):
                 rw_repo.clone(destination, multi_options=[unsafe_option], allow_unsafe_options=True)
+            assert tmp_file.exists()
+            tmp_file.unlink()
 
         unsafe_options = [
             "--config=protocol.ext.allow=always",
@@ -331,6 +335,7 @@ class TestRepo(TestBase):
         for unsafe_option in unsafe_options:
             with self.assertRaises(UnsafeOptionError):
                 Repo.clone_from(rw_repo.working_dir, tmp_dir, multi_options=[unsafe_option])
+            assert not tmp_file.exists()
 
     @with_rw_repo("HEAD")
     def test_clone_from_unsafe_options_allowed(self, rw_repo):
@@ -342,11 +347,14 @@ class TestRepo(TestBase):
         ]
         for i, unsafe_option in enumerate(unsafe_options):
             destination = tmp_dir / str(i)
+            assert not tmp_file.exists()
             # The options will be allowed, but the command will fail.
             with self.assertRaises(GitCommandError):
                 Repo.clone_from(
                     rw_repo.working_dir, destination, multi_options=[unsafe_option], allow_unsafe_options=True
                 )
+            assert tmp_file.exists()
+            tmp_file.unlink()
 
         unsafe_options = [
             "--config=protocol.ext.allow=always",
@@ -374,16 +382,19 @@ class TestRepo(TestBase):
 
     def test_clone_from_unsafe_procol(self):
         tmp_dir = pathlib.Path(tempfile.mkdtemp())
+        tmp_file = tmp_dir / "pwn"
         urls = [
-            "ext::sh -c touch% /tmp/pwn",
+            f"ext::sh -c touch% {tmp_file}",
             "fd::17/foo",
         ]
         for url in urls:
             with self.assertRaises(UnsafeProtocolError):
                 Repo.clone_from(url, tmp_dir)
+            assert not tmp_file.exists()
 
     def test_clone_from_unsafe_procol_allowed(self):
         tmp_dir = pathlib.Path(tempfile.mkdtemp())
+        tmp_file = tmp_dir / "pwn"
         urls = [
             "ext::sh -c touch% /tmp/pwn",
             "fd::/foo",
@@ -393,6 +404,7 @@ class TestRepo(TestBase):
             # fail since we don't have that protocol enabled in the Git config file.
             with self.assertRaises(GitCommandError):
                 Repo.clone_from(url, tmp_dir, allow_unsafe_protocols=True)
+            assert not tmp_file.exists()
 
     @with_rw_repo("HEAD")
     def test_max_chunk_size(self, repo):
