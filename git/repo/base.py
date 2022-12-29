@@ -482,7 +482,7 @@ class Repo(object):
     def create_tag(
         self,
         path: PathLike,
-        ref: str = "HEAD",
+        ref: Union[str, 'SymbolicReference'] = "HEAD",
         message: Optional[str] = None,
         force: bool = False,
         **kwargs: Any,
