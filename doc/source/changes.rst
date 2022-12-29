@@ -9,6 +9,11 @@ Changelog
   See https://github.com/gitpython-developers/GitPython/pull/1518 for details.
   Note that this might constitute a breaking change for some users, and if so please
   let us know and we add an opt-out to this.
+- Prohibit insecure options and protocols by default, which is potentially a breaking change,
+  but a necessary fix for https://github.com/gitpython-developers/GitPython/issues/1515.
+  Please take a look at the PR for more information and how to bypass these protections
+  in case they cause breakage: https://github.com/gitpython-developers/GitPython/pull/1521.
+  
 
 See the following for all changes.
 https://github.com/gitpython-developers/gitpython/milestone/60?closed=1
