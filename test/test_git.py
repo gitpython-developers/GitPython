@@ -169,7 +169,7 @@ class TestGit(TestBase):
         self.assertRaises(GitCommandNotFound, refresh, "yada")
 
         # test a good path refresh
-        which_cmd = "where" if is_win else "which"
+        which_cmd = "where" if is_win else "command -v"
         path = os.popen("{0} git".format(which_cmd)).read().strip().split("\n")[0]
         refresh(path)
 
