@@ -694,259 +694,279 @@ class TestRemote(TestBase):
 
     @with_rw_repo("HEAD")
     def test_set_unsafe_url(self, rw_repo):
-        tmp_dir = Path(tempfile.mkdtemp())
-        tmp_file = tmp_dir / "pwn"
-        remote = rw_repo.remote("origin")
-        urls = [
-            f"ext::sh -c touch% {tmp_file}",
-            "fd::17/foo",
-        ]
-        for url in urls:
-            with self.assertRaises(UnsafeProtocolError):
-                remote.set_url(url)
-            assert not tmp_file.exists()
+        with tempfile.TemporaryDirectory() as tdir:
+            tmp_dir = Path(tdir)
+            tmp_file = tmp_dir / "pwn"
+            remote = rw_repo.remote("origin")
+            urls = [
+                f"ext::sh -c touch% {tmp_file}",
+                "fd::17/foo",
+            ]
+            for url in urls:
+                with self.assertRaises(UnsafeProtocolError):
+                    remote.set_url(url)
+                assert not tmp_file.exists()
 
     @with_rw_repo("HEAD")
     def test_set_unsafe_url_allowed(self, rw_repo):
-        tmp_dir = Path(tempfile.mkdtemp())
-        tmp_file = tmp_dir / "pwn"
-        remote = rw_repo.remote("origin")
-        urls = [
-            f"ext::sh -c touch% {tmp_file}",
-            "fd::17/foo",
-        ]
-        for url in urls:
-            remote.set_url(url, allow_unsafe_protocols=True)
-            assert list(remote.urls)[-1] == url
-            assert not tmp_file.exists()
+        with tempfile.TemporaryDirectory() as tdir:
+            tmp_dir = Path(tdir)
+            tmp_file = tmp_dir / "pwn"
+            remote = rw_repo.remote("origin")
+            urls = [
+                f"ext::sh -c touch% {tmp_file}",
+                "fd::17/foo",
+            ]
+            for url in urls:
+                remote.set_url(url, allow_unsafe_protocols=True)
+                assert list(remote.urls)[-1] == url
+                assert not tmp_file.exists()
 
     @with_rw_repo("HEAD")
     def test_add_unsafe_url(self, rw_repo):
-        tmp_dir = Path(tempfile.mkdtemp())
-        tmp_file = tmp_dir / "pwn"
-        remote = rw_repo.remote("origin")
-        urls = [
-            f"ext::sh -c touch% {tmp_file}",
-            "fd::17/foo",
-        ]
-        for url in urls:
-            with self.assertRaises(UnsafeProtocolError):
-                remote.add_url(url)
-            assert not tmp_file.exists()
+        with tempfile.TemporaryDirectory() as tdir:
+            tmp_dir = Path(tdir)
+            tmp_file = tmp_dir / "pwn"
+            remote = rw_repo.remote("origin")
+            urls = [
+                f"ext::sh -c touch% {tmp_file}",
+                "fd::17/foo",
+            ]
+            for url in urls:
+                with self.assertRaises(UnsafeProtocolError):
+                    remote.add_url(url)
+                assert not tmp_file.exists()
 
     @with_rw_repo("HEAD")
     def test_add_unsafe_url_allowed(self, rw_repo):
-        tmp_dir = Path(tempfile.mkdtemp())
-        tmp_file = tmp_dir / "pwn"
-        remote = rw_repo.remote("origin")
-        urls = [
-            f"ext::sh -c touch% {tmp_file}",
-            "fd::17/foo",
-        ]
-        for url in urls:
-            remote.add_url(url, allow_unsafe_protocols=True)
-            assert list(remote.urls)[-1] == url
-            assert not tmp_file.exists()
+        with tempfile.TemporaryDirectory() as tdir:
+            tmp_dir = Path(tdir)
+            tmp_file = tmp_dir / "pwn"
+            remote = rw_repo.remote("origin")
+            urls = [
+                f"ext::sh -c touch% {tmp_file}",
+                "fd::17/foo",
+            ]
+            for url in urls:
+                remote.add_url(url, allow_unsafe_protocols=True)
+                assert list(remote.urls)[-1] == url
+                assert not tmp_file.exists()
 
     @with_rw_repo("HEAD")
     def test_create_remote_unsafe_url(self, rw_repo):
-        tmp_dir = Path(tempfile.mkdtemp())
-        tmp_file = tmp_dir / "pwn"
-        urls = [
-            f"ext::sh -c touch% {tmp_file}",
-            "fd::17/foo",
-        ]
-        for url in urls:
-            with self.assertRaises(UnsafeProtocolError):
-                Remote.create(rw_repo, "origin", url)
-            assert not tmp_file.exists()
+        with tempfile.TemporaryDirectory() as tdir:
+            tmp_dir = Path(tdir)
+            tmp_file = tmp_dir / "pwn"
+            urls = [
+                f"ext::sh -c touch% {tmp_file}",
+                "fd::17/foo",
+            ]
+            for url in urls:
+                with self.assertRaises(UnsafeProtocolError):
+                    Remote.create(rw_repo, "origin", url)
+                assert not tmp_file.exists()
 
     @with_rw_repo("HEAD")
     def test_create_remote_unsafe_url_allowed(self, rw_repo):
-        tmp_dir = Path(tempfile.mkdtemp())
-        tmp_file = tmp_dir / "pwn"
-        urls = [
-            f"ext::sh -c touch% {tmp_file}",
-            "fd::17/foo",
-        ]
-        for i, url in enumerate(urls):
-            remote = Remote.create(rw_repo, f"origin{i}", url, allow_unsafe_protocols=True)
-            assert remote.url == url
-            assert not tmp_file.exists()
+        with tempfile.TemporaryDirectory() as tdir:
+            tmp_dir = Path(tdir)
+            tmp_file = tmp_dir / "pwn"
+            urls = [
+                f"ext::sh -c touch% {tmp_file}",
+                "fd::17/foo",
+            ]
+            for i, url in enumerate(urls):
+                remote = Remote.create(rw_repo, f"origin{i}", url, allow_unsafe_protocols=True)
+                assert remote.url == url
+                assert not tmp_file.exists()
 
     @with_rw_repo("HEAD")
     def test_fetch_unsafe_url(self, rw_repo):
-        tmp_dir = Path(tempfile.mkdtemp())
-        tmp_file = tmp_dir / "pwn"
-        remote = rw_repo.remote("origin")
-        urls = [
-            f"ext::sh -c touch% {tmp_file}",
-            "fd::17/foo",
-        ]
-        for url in urls:
-            with self.assertRaises(UnsafeProtocolError):
-                remote.fetch(url)
-            assert not tmp_file.exists()
+        with tempfile.TemporaryDirectory() as tdir:
+            tmp_dir = Path(tdir)
+            tmp_file = tmp_dir / "pwn"
+            remote = rw_repo.remote("origin")
+            urls = [
+                f"ext::sh -c touch% {tmp_file}",
+                "fd::17/foo",
+            ]
+            for url in urls:
+                with self.assertRaises(UnsafeProtocolError):
+                    remote.fetch(url)
+                assert not tmp_file.exists()
 
     @with_rw_repo("HEAD")
     def test_fetch_unsafe_url_allowed(self, rw_repo):
-        tmp_dir = Path(tempfile.mkdtemp())
-        tmp_file = tmp_dir / "pwn"
-        remote = rw_repo.remote("origin")
-        urls = [
-            f"ext::sh -c touch% {tmp_file}",
-            "fd::17/foo",
-        ]
-        for url in urls:
-            # The URL will be allowed into the command, but the command will
-            # fail since we don't have that protocol enabled in the Git config file.
-            with self.assertRaises(GitCommandError):
-                remote.fetch(url, allow_unsafe_protocols=True)
-            assert not tmp_file.exists()
+        with tempfile.TemporaryDirectory() as tdir:
+            tmp_dir = Path(tdir)
+            tmp_file = tmp_dir / "pwn"
+            remote = rw_repo.remote("origin")
+            urls = [
+                f"ext::sh -c touch% {tmp_file}",
+                "fd::17/foo",
+            ]
+            for url in urls:
+                # The URL will be allowed into the command, but the command will
+                # fail since we don't have that protocol enabled in the Git config file.
+                with self.assertRaises(GitCommandError):
+                    remote.fetch(url, allow_unsafe_protocols=True)
+                assert not tmp_file.exists()
 
     @with_rw_repo("HEAD")
     def test_fetch_unsafe_options(self, rw_repo):
-        remote = rw_repo.remote("origin")
-        tmp_dir = Path(tempfile.mkdtemp())
-        tmp_file = tmp_dir / "pwn"
-        unsafe_options = [{"upload-pack": f"touch {tmp_file}"}]
-        for unsafe_option in unsafe_options:
-            with self.assertRaises(UnsafeOptionError):
-                remote.fetch(**unsafe_option)
-            assert not tmp_file.exists()
+        with tempfile.TemporaryDirectory() as tdir:
+            remote = rw_repo.remote("origin")
+            tmp_dir = Path(tdir)
+            tmp_file = tmp_dir / "pwn"
+            unsafe_options = [{"upload-pack": f"touch {tmp_file}"}]
+            for unsafe_option in unsafe_options:
+                with self.assertRaises(UnsafeOptionError):
+                    remote.fetch(**unsafe_option)
+                assert not tmp_file.exists()
 
     @with_rw_repo("HEAD")
     def test_fetch_unsafe_options_allowed(self, rw_repo):
-        remote = rw_repo.remote("origin")
-        tmp_dir = Path(tempfile.mkdtemp())
-        tmp_file = tmp_dir / "pwn"
-        unsafe_options = [{"upload-pack": f"touch {tmp_file}"}]
-        for unsafe_option in unsafe_options:
-            # The options will be allowed, but the command will fail.
-            assert not tmp_file.exists()
-            with self.assertRaises(GitCommandError):
-                remote.fetch(**unsafe_option, allow_unsafe_options=True)
-            assert tmp_file.exists()
+        with tempfile.TemporaryDirectory() as tdir:
+            remote = rw_repo.remote("origin")
+            tmp_dir = Path(tdir)
+            tmp_file = tmp_dir / "pwn"
+            unsafe_options = [{"upload-pack": f"touch {tmp_file}"}]
+            for unsafe_option in unsafe_options:
+                # The options will be allowed, but the command will fail.
+                assert not tmp_file.exists()
+                with self.assertRaises(GitCommandError):
+                    remote.fetch(**unsafe_option, allow_unsafe_options=True)
+                assert tmp_file.exists()
+                tmp_file.unlink()
 
     @with_rw_repo("HEAD")
     def test_pull_unsafe_url(self, rw_repo):
-        tmp_dir = Path(tempfile.mkdtemp())
-        tmp_file = tmp_dir / "pwn"
-        remote = rw_repo.remote("origin")
-        urls = [
-            f"ext::sh -c touch% {tmp_file}",
-            "fd::17/foo",
-        ]
-        for url in urls:
-            with self.assertRaises(UnsafeProtocolError):
-                remote.pull(url)
-            assert not tmp_file.exists()
+        with tempfile.TemporaryDirectory() as tdir:
+            tmp_dir = Path(tdir)
+            tmp_file = tmp_dir / "pwn"
+            remote = rw_repo.remote("origin")
+            urls = [
+                f"ext::sh -c touch% {tmp_file}",
+                "fd::17/foo",
+            ]
+            for url in urls:
+                with self.assertRaises(UnsafeProtocolError):
+                    remote.pull(url)
+                assert not tmp_file.exists()
 
     @with_rw_repo("HEAD")
     def test_pull_unsafe_url_allowed(self, rw_repo):
-        tmp_dir = Path(tempfile.mkdtemp())
-        tmp_file = tmp_dir / "pwn"
-        remote = rw_repo.remote("origin")
-        urls = [
-            f"ext::sh -c touch% {tmp_file}",
-            "fd::17/foo",
-        ]
-        for url in urls:
-            # The URL will be allowed into the command, but the command will
-            # fail since we don't have that protocol enabled in the Git config file.
-            with self.assertRaises(GitCommandError):
-                remote.pull(url, allow_unsafe_protocols=True)
-            assert not tmp_file.exists()
+        with tempfile.TemporaryDirectory() as tdir:
+            tmp_dir = Path(tdir)
+            tmp_file = tmp_dir / "pwn"
+            remote = rw_repo.remote("origin")
+            urls = [
+                f"ext::sh -c touch% {tmp_file}",
+                "fd::17/foo",
+            ]
+            for url in urls:
+                # The URL will be allowed into the command, but the command will
+                # fail since we don't have that protocol enabled in the Git config file.
+                with self.assertRaises(GitCommandError):
+                    remote.pull(url, allow_unsafe_protocols=True)
+                assert not tmp_file.exists()
 
     @with_rw_repo("HEAD")
     def test_pull_unsafe_options(self, rw_repo):
-        remote = rw_repo.remote("origin")
-        tmp_dir = Path(tempfile.mkdtemp())
-        tmp_file = tmp_dir / "pwn"
-        unsafe_options = [{"upload-pack": f"touch {tmp_file}"}]
-        for unsafe_option in unsafe_options:
-            with self.assertRaises(UnsafeOptionError):
-                remote.pull(**unsafe_option)
-            assert not tmp_file.exists()
+        with tempfile.TemporaryDirectory() as tdir:
+            remote = rw_repo.remote("origin")
+            tmp_dir = Path(tdir)
+            tmp_file = tmp_dir / "pwn"
+            unsafe_options = [{"upload-pack": f"touch {tmp_file}"}]
+            for unsafe_option in unsafe_options:
+                with self.assertRaises(UnsafeOptionError):
+                    remote.pull(**unsafe_option)
+                assert not tmp_file.exists()
 
     @with_rw_repo("HEAD")
     def test_pull_unsafe_options_allowed(self, rw_repo):
-        remote = rw_repo.remote("origin")
-        tmp_dir = Path(tempfile.mkdtemp())
-        tmp_file = tmp_dir / "pwn"
-        unsafe_options = [{"upload-pack": f"touch {tmp_file}"}]
-        for unsafe_option in unsafe_options:
-            # The options will be allowed, but the command will fail.
-            assert not tmp_file.exists()
-            with self.assertRaises(GitCommandError):
-                remote.pull(**unsafe_option, allow_unsafe_options=True)
-            assert tmp_file.exists()
+        with tempfile.TemporaryDirectory() as tdir:
+            remote = rw_repo.remote("origin")
+            tmp_dir = Path(tdir)
+            tmp_file = tmp_dir / "pwn"
+            unsafe_options = [{"upload-pack": f"touch {tmp_file}"}]
+            for unsafe_option in unsafe_options:
+                # The options will be allowed, but the command will fail.
+                assert not tmp_file.exists()
+                with self.assertRaises(GitCommandError):
+                    remote.pull(**unsafe_option, allow_unsafe_options=True)
+                assert tmp_file.exists()
+                tmp_file.unlink()
 
     @with_rw_repo("HEAD")
     def test_push_unsafe_url(self, rw_repo):
-        tmp_dir = Path(tempfile.mkdtemp())
-        tmp_file = tmp_dir / "pwn"
-        remote = rw_repo.remote("origin")
-        urls = [
-            f"ext::sh -c touch% {tmp_file}",
-            "fd::17/foo",
-        ]
-        for url in urls:
-            with self.assertRaises(UnsafeProtocolError):
-                remote.push(url)
-            assert not tmp_file.exists()
+        with tempfile.TemporaryDirectory() as tdir:
+            tmp_dir = Path(tdir)
+            tmp_file = tmp_dir / "pwn"
+            remote = rw_repo.remote("origin")
+            urls = [
+                f"ext::sh -c touch% {tmp_file}",
+                "fd::17/foo",
+            ]
+            for url in urls:
+                with self.assertRaises(UnsafeProtocolError):
+                    remote.push(url)
+                assert not tmp_file.exists()
 
     @with_rw_repo("HEAD")
     def test_push_unsafe_url_allowed(self, rw_repo):
-        tmp_dir = Path(tempfile.mkdtemp())
-        tmp_file = tmp_dir / "pwn"
-        remote = rw_repo.remote("origin")
-        urls = [
-            f"ext::sh -c touch% {tmp_file}",
-            "fd::17/foo",
-        ]
-        for url in urls:
-            # The URL will be allowed into the command, but the command will
-            # fail since we don't have that protocol enabled in the Git config file.
-            with self.assertRaises(GitCommandError):
-                remote.push(url, allow_unsafe_protocols=True)
-            assert not tmp_file.exists()
+        with tempfile.TemporaryDirectory() as tdir:
+            tmp_dir = Path(tdir)
+            tmp_file = tmp_dir / "pwn"
+            remote = rw_repo.remote("origin")
+            urls = [
+                f"ext::sh -c touch% {tmp_file}",
+                "fd::17/foo",
+            ]
+            for url in urls:
+                # The URL will be allowed into the command, but the command will
+                # fail since we don't have that protocol enabled in the Git config file.
+                with self.assertRaises(GitCommandError):
+                    remote.push(url, allow_unsafe_protocols=True)
+                assert not tmp_file.exists()
 
     @with_rw_repo("HEAD")
     def test_push_unsafe_options(self, rw_repo):
-        remote = rw_repo.remote("origin")
-        tmp_dir = Path(tempfile.mkdtemp())
-        tmp_file = tmp_dir / "pwn"
-        unsafe_options = [
-            {
-                "receive-pack": f"touch {tmp_file}",
-                "exec": f"touch {tmp_file}",
-            }
-        ]
-        for unsafe_option in unsafe_options:
-            assert not tmp_file.exists()
-            with self.assertRaises(UnsafeOptionError):
-                remote.push(**unsafe_option)
-            assert not tmp_file.exists()
+        with tempfile.TemporaryDirectory() as tdir:
+            remote = rw_repo.remote("origin")
+            tmp_dir = Path(tdir)
+            tmp_file = tmp_dir / "pwn"
+            unsafe_options = [
+                {
+                    "receive-pack": f"touch {tmp_file}",
+                    "exec": f"touch {tmp_file}",
+                }
+            ]
+            for unsafe_option in unsafe_options:
+                assert not tmp_file.exists()
+                with self.assertRaises(UnsafeOptionError):
+                    remote.push(**unsafe_option)
+                assert not tmp_file.exists()
 
     @with_rw_repo("HEAD")
     def test_push_unsafe_options_allowed(self, rw_repo):
-        remote = rw_repo.remote("origin")
-        tmp_dir = Path(tempfile.mkdtemp())
-        tmp_file = tmp_dir / "pwn"
-        unsafe_options = [
-            {
-                "receive-pack": f"touch {tmp_file}",
-                "exec": f"touch {tmp_file}",
-            }
-        ]
-        for unsafe_option in unsafe_options:
-            # The options will be allowed, but the command will fail.
-            assert not tmp_file.exists()
-            with self.assertRaises(GitCommandError):
-                remote.push(**unsafe_option, allow_unsafe_options=True)
-            assert tmp_file.exists()
-            tmp_file.unlink()
+        with tempfile.TemporaryDirectory() as tdir:
+            remote = rw_repo.remote("origin")
+            tmp_dir = Path(tdir)
+            tmp_file = tmp_dir / "pwn"
+            unsafe_options = [
+                {
+                    "receive-pack": f"touch {tmp_file}",
+                    "exec": f"touch {tmp_file}",
+                }
+            ]
+            for unsafe_option in unsafe_options:
+                # The options will be allowed, but the command will fail.
+                assert not tmp_file.exists()
+                with self.assertRaises(GitCommandError):
+                    remote.push(**unsafe_option, allow_unsafe_options=True)
+                assert tmp_file.exists()
+                tmp_file.unlink()
 
 
 class TestTimeouts(TestBase):

@@ -268,143 +268,151 @@ class TestRepo(TestBase):
 
     @with_rw_repo("HEAD")
     def test_clone_unsafe_options(self, rw_repo):
-        tmp_dir = pathlib.Path(tempfile.mkdtemp())
-        tmp_file = tmp_dir / "pwn"
-        unsafe_options = [
-            f"--upload-pack='touch {tmp_file}'",
-            f"-u 'touch {tmp_file}'",
-            "--config=protocol.ext.allow=always",
-            "-c protocol.ext.allow=always",
-        ]
-        for unsafe_option in unsafe_options:
-            with self.assertRaises(UnsafeOptionError):
-                rw_repo.clone(tmp_dir, multi_options=[unsafe_option])
-            assert not tmp_file.exists()
+        with tempfile.TemporaryDirectory() as tdir:
+            tmp_dir = pathlib.Path(tdir)
+            tmp_file = tmp_dir / "pwn"
+            unsafe_options = [
+                f"--upload-pack='touch {tmp_file}'",
+                f"-u 'touch {tmp_file}'",
+                "--config=protocol.ext.allow=always",
+                "-c protocol.ext.allow=always",
+            ]
+            for unsafe_option in unsafe_options:
+                with self.assertRaises(UnsafeOptionError):
+                    rw_repo.clone(tmp_dir, multi_options=[unsafe_option])
+                assert not tmp_file.exists()
 
     @with_rw_repo("HEAD")
     def test_clone_unsafe_options_allowed(self, rw_repo):
-        tmp_dir = pathlib.Path(tempfile.mkdtemp())
-        tmp_file = tmp_dir / "pwn"
-        unsafe_options = [
-            f"--upload-pack='touch {tmp_file}'",
-            f"-u 'touch {tmp_file}'",
-        ]
-        for i, unsafe_option in enumerate(unsafe_options):
-            destination = tmp_dir / str(i)
-            assert not tmp_file.exists()
-            # The options will be allowed, but the command will fail.
-            with self.assertRaises(GitCommandError):
-                rw_repo.clone(destination, multi_options=[unsafe_option], allow_unsafe_options=True)
-            assert tmp_file.exists()
-            tmp_file.unlink()
+        with tempfile.TemporaryDirectory() as tdir:
+            tmp_dir = pathlib.Path(tdir)
+            tmp_file = tmp_dir / "pwn"
+            unsafe_options = [
+                f"--upload-pack='touch {tmp_file}'",
+                f"-u 'touch {tmp_file}'",
+            ]
+            for i, unsafe_option in enumerate(unsafe_options):
+                destination = tmp_dir / str(i)
+                assert not tmp_file.exists()
+                # The options will be allowed, but the command will fail.
+                with self.assertRaises(GitCommandError):
+                    rw_repo.clone(destination, multi_options=[unsafe_option], allow_unsafe_options=True)
+                assert tmp_file.exists()
+                tmp_file.unlink()
 
-        unsafe_options = [
-            "--config=protocol.ext.allow=always",
-            "-c protocol.ext.allow=always",
-        ]
-        for i, unsafe_option in enumerate(unsafe_options):
-            destination = tmp_dir / str(i)
-            assert not destination.exists()
-            rw_repo.clone(destination, multi_options=[unsafe_option], allow_unsafe_options=True)
-            assert destination.exists()
+            unsafe_options = [
+                "--config=protocol.ext.allow=always",
+                "-c protocol.ext.allow=always",
+            ]
+            for i, unsafe_option in enumerate(unsafe_options):
+                destination = tmp_dir / str(i)
+                assert not destination.exists()
+                rw_repo.clone(destination, multi_options=[unsafe_option], allow_unsafe_options=True)
+                assert destination.exists()
 
     @with_rw_repo("HEAD")
     def test_clone_safe_options(self, rw_repo):
-        tmp_dir = pathlib.Path(tempfile.mkdtemp())
-        options = [
-            "--depth=1",
-            "--single-branch",
-            "-q",
-        ]
-        for option in options:
-            destination = tmp_dir / option
-            assert not destination.exists()
-            rw_repo.clone(destination, multi_options=[option])
-            assert destination.exists()
+        with tempfile.TemporaryDirectory() as tdir:
+            tmp_dir = pathlib.Path(tdir)
+            options = [
+                "--depth=1",
+                "--single-branch",
+                "-q",
+            ]
+            for option in options:
+                destination = tmp_dir / option
+                assert not destination.exists()
+                rw_repo.clone(destination, multi_options=[option])
+                assert destination.exists()
 
     @with_rw_repo("HEAD")
     def test_clone_from_unsafe_options(self, rw_repo):
-        tmp_dir = pathlib.Path(tempfile.mkdtemp())
-        tmp_file = tmp_dir / "pwn"
-        unsafe_options = [
-            f"--upload-pack='touch {tmp_file}'",
-            f"-u 'touch {tmp_file}'",
-            "--config=protocol.ext.allow=always",
-            "-c protocol.ext.allow=always",
-        ]
-        for unsafe_option in unsafe_options:
-            with self.assertRaises(UnsafeOptionError):
-                Repo.clone_from(rw_repo.working_dir, tmp_dir, multi_options=[unsafe_option])
-            assert not tmp_file.exists()
+        with tempfile.TemporaryDirectory() as tdir:
+            tmp_dir = pathlib.Path(tdir)
+            tmp_file = tmp_dir / "pwn"
+            unsafe_options = [
+                f"--upload-pack='touch {tmp_file}'",
+                f"-u 'touch {tmp_file}'",
+                "--config=protocol.ext.allow=always",
+                "-c protocol.ext.allow=always",
+            ]
+            for unsafe_option in unsafe_options:
+                with self.assertRaises(UnsafeOptionError):
+                    Repo.clone_from(rw_repo.working_dir, tmp_dir, multi_options=[unsafe_option])
+                assert not tmp_file.exists()
 
     @with_rw_repo("HEAD")
     def test_clone_from_unsafe_options_allowed(self, rw_repo):
-        tmp_dir = pathlib.Path(tempfile.mkdtemp())
-        tmp_file = tmp_dir / "pwn"
-        unsafe_options = [
-            f"--upload-pack='touch {tmp_file}'",
-            f"-u 'touch {tmp_file}'",
-        ]
-        for i, unsafe_option in enumerate(unsafe_options):
-            destination = tmp_dir / str(i)
-            assert not tmp_file.exists()
-            # The options will be allowed, but the command will fail.
-            with self.assertRaises(GitCommandError):
-                Repo.clone_from(
-                    rw_repo.working_dir, destination, multi_options=[unsafe_option], allow_unsafe_options=True
-                )
-            assert tmp_file.exists()
-            tmp_file.unlink()
+        with tempfile.TemporaryDirectory() as tdir:
+            tmp_dir = pathlib.Path(tdir)
+            tmp_file = tmp_dir / "pwn"
+            unsafe_options = [
+                f"--upload-pack='touch {tmp_file}'",
+                f"-u 'touch {tmp_file}'",
+            ]
+            for i, unsafe_option in enumerate(unsafe_options):
+                destination = tmp_dir / str(i)
+                assert not tmp_file.exists()
+                # The options will be allowed, but the command will fail.
+                with self.assertRaises(GitCommandError):
+                    Repo.clone_from(
+                        rw_repo.working_dir, destination, multi_options=[unsafe_option], allow_unsafe_options=True
+                    )
+                assert tmp_file.exists()
+                tmp_file.unlink()
 
-        unsafe_options = [
-            "--config=protocol.ext.allow=always",
-            "-c protocol.ext.allow=always",
-        ]
-        for i, unsafe_option in enumerate(unsafe_options):
-            destination = tmp_dir / str(i)
-            assert not destination.exists()
-            Repo.clone_from(rw_repo.working_dir, destination, multi_options=[unsafe_option], allow_unsafe_options=True)
-            assert destination.exists()
+            unsafe_options = [
+                "--config=protocol.ext.allow=always",
+                "-c protocol.ext.allow=always",
+            ]
+            for i, unsafe_option in enumerate(unsafe_options):
+                destination = tmp_dir / str(i)
+                assert not destination.exists()
+                Repo.clone_from(rw_repo.working_dir, destination, multi_options=[unsafe_option], allow_unsafe_options=True)
+                assert destination.exists()
 
     @with_rw_repo("HEAD")
     def test_clone_from_safe_options(self, rw_repo):
-        tmp_dir = pathlib.Path(tempfile.mkdtemp())
-        options = [
-            "--depth=1",
-            "--single-branch",
-            "-q",
-        ]
-        for option in options:
-            destination = tmp_dir / option
-            assert not destination.exists()
-            Repo.clone_from(rw_repo.common_dir, destination, multi_options=[option])
-            assert destination.exists()
+        with tempfile.TemporaryDirectory() as tdir:
+            tmp_dir = pathlib.Path(tdir)
+            options = [
+                "--depth=1",
+                "--single-branch",
+                "-q",
+            ]
+            for option in options:
+                destination = tmp_dir / option
+                assert not destination.exists()
+                Repo.clone_from(rw_repo.common_dir, destination, multi_options=[option])
+                assert destination.exists()
 
     def test_clone_from_unsafe_procol(self):
-        tmp_dir = pathlib.Path(tempfile.mkdtemp())
-        tmp_file = tmp_dir / "pwn"
-        urls = [
-            f"ext::sh -c touch% {tmp_file}",
-            "fd::17/foo",
-        ]
-        for url in urls:
-            with self.assertRaises(UnsafeProtocolError):
-                Repo.clone_from(url, tmp_dir)
-            assert not tmp_file.exists()
+        with tempfile.TemporaryDirectory() as tdir:
+            tmp_dir = pathlib.Path(tdir)
+            tmp_file = tmp_dir / "pwn"
+            urls = [
+                f"ext::sh -c touch% {tmp_file}",
+                "fd::17/foo",
+            ]
+            for url in urls:
+                with self.assertRaises(UnsafeProtocolError):
+                    Repo.clone_from(url, tmp_dir)
+                assert not tmp_file.exists()
 
     def test_clone_from_unsafe_procol_allowed(self):
-        tmp_dir = pathlib.Path(tempfile.mkdtemp())
-        tmp_file = tmp_dir / "pwn"
-        urls = [
-            "ext::sh -c touch% /tmp/pwn",
-            "fd::/foo",
-        ]
-        for url in urls:
-            # The URL will be allowed into the command, but the command will
-            # fail since we don't have that protocol enabled in the Git config file.
-            with self.assertRaises(GitCommandError):
-                Repo.clone_from(url, tmp_dir, allow_unsafe_protocols=True)
-            assert not tmp_file.exists()
+        with tempfile.TemporaryDirectory() as tdir:
+            tmp_dir = pathlib.Path(tdir)
+            tmp_file = tmp_dir / "pwn"
+            urls = [
+                "ext::sh -c touch% /tmp/pwn",
+                "fd::/foo",
+            ]
+            for url in urls:
+                # The URL will be allowed into the command, but the command will
+                # fail since we don't have that protocol enabled in the Git config file.
+                with self.assertRaises(GitCommandError):
+                    Repo.clone_from(url, tmp_dir, allow_unsafe_protocols=True)
+                assert not tmp_file.exists()
 
     @with_rw_repo("HEAD")
     def test_max_chunk_size(self, repo):
@@ -1326,26 +1334,28 @@ class TestRepo(TestBase):
 
     @with_rw_repo("HEAD")
     def test_clone_command_injection(self, rw_repo):
-        tmp_dir = pathlib.Path(tempfile.mkdtemp())
-        unexpected_file = tmp_dir / "pwn"
-        assert not unexpected_file.exists()
+        with tempfile.TemporaryDirectory() as tdir:
+            tmp_dir = pathlib.Path(tdir)
+            unexpected_file = tmp_dir / "pwn"
+            assert not unexpected_file.exists()
 
-        payload = f"--upload-pack=touch {unexpected_file}"
-        rw_repo.clone(payload)
+            payload = f"--upload-pack=touch {unexpected_file}"
+            rw_repo.clone(payload)
 
-        assert not unexpected_file.exists()
-        # A repo was cloned with the payload as name
-        assert pathlib.Path(payload).exists()
+            assert not unexpected_file.exists()
+            # A repo was cloned with the payload as name
+            assert pathlib.Path(payload).exists()
 
     @with_rw_repo("HEAD")
     def test_clone_from_command_injection(self, rw_repo):
-        tmp_dir = pathlib.Path(tempfile.mkdtemp())
-        temp_repo = Repo.init(tmp_dir / "repo")
-        unexpected_file = tmp_dir / "pwn"
+        with tempfile.TemporaryDirectory() as tdir:
+            tmp_dir = pathlib.Path(tdir)
+            temp_repo = Repo.init(tmp_dir / "repo")
+            unexpected_file = tmp_dir / "pwn"
 
-        assert not unexpected_file.exists()
-        payload = f"--upload-pack=touch {unexpected_file}"
-        with self.assertRaises(GitCommandError):
-            rw_repo.clone_from(payload, temp_repo.common_dir)
+            assert not unexpected_file.exists()
+            payload = f"--upload-pack=touch {unexpected_file}"
+            with self.assertRaises(GitCommandError):
+                rw_repo.clone_from(payload, temp_repo.common_dir)
 
-        assert not unexpected_file.exists()
+            assert not unexpected_file.exists()
