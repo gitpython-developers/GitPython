@@ -386,7 +386,7 @@ class TestRepo(TestBase):
                 Repo.clone_from(rw_repo.common_dir, destination, multi_options=[option])
                 assert destination.exists()
 
-    def test_clone_from_unsafe_procol(self):
+    def test_clone_from_unsafe_protocol(self):
         with tempfile.TemporaryDirectory() as tdir:
             tmp_dir = pathlib.Path(tdir)
             tmp_file = tmp_dir / "pwn"
@@ -396,23 +396,48 @@ class TestRepo(TestBase):
             ]
             for url in urls:
                 with self.assertRaises(UnsafeProtocolError):
-                    Repo.clone_from(url, tmp_dir)
+                    Repo.clone_from(url, tmp_dir / "repo")
                 assert not tmp_file.exists()
 
-    def test_clone_from_unsafe_procol_allowed(self):
+    def test_clone_from_unsafe_protocol_allowed(self):
         with tempfile.TemporaryDirectory() as tdir:
             tmp_dir = pathlib.Path(tdir)
             tmp_file = tmp_dir / "pwn"
             urls = [
-                "ext::sh -c touch% /tmp/pwn",
+                f"ext::sh -c touch% {tmp_file}",
                 "fd::/foo",
             ]
             for url in urls:
                 # The URL will be allowed into the command, but the command will
                 # fail since we don't have that protocol enabled in the Git config file.
                 with self.assertRaises(GitCommandError):
-                    Repo.clone_from(url, tmp_dir, allow_unsafe_protocols=True)
+                    Repo.clone_from(url, tmp_dir / "repo", allow_unsafe_protocols=True)
                 assert not tmp_file.exists()
+
+    def test_clone_from_unsafe_protocol_allowed_and_enabled(self):
+        with tempfile.TemporaryDirectory() as tdir:
+            tmp_dir = pathlib.Path(tdir)
+            tmp_file = tmp_dir / "pwn"
+            urls = [
+                f"ext::sh -c touch% {tmp_file}",
+            ]
+            allow_ext = [
+                "--config=protocol.ext.allow=always",
+            ]
+            for url in urls:
+                # The URL will be allowed into the command, and the protocol is enabled,
+                # but the command will fail since it can't read from the remote repo.
+                assert not tmp_file.exists()
+                with self.assertRaises(GitCommandError):
+                    Repo.clone_from(
+                        url,
+                        tmp_dir / "repo",
+                        multi_options=allow_ext,
+                        allow_unsafe_protocols=True,
+                        allow_unsafe_options=True,
+                    )
+                assert tmp_file.exists()
+                tmp_file.unlink()
 
     @with_rw_repo("HEAD")
     def test_max_chunk_size(self, repo):
