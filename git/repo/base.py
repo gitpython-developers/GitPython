@@ -1259,7 +1259,8 @@ class Repo(object):
             option per list item which is passed exactly as specified to clone.
             For example ['--config core.filemode=false', '--config core.ignorecase',
             '--recurse-submodule=repo1_path', '--recurse-submodule=repo2_path']
-        :param unsafe_protocols: Allow unsafe protocols to be used, like ext
+        :param allow_unsafe_protocols: Allow unsafe protocols to be used, like ext
+        :param allow_unsafe_options: Allow unsafe options to be used, like --upload-pack
         :param kwargs:
             * odbt = ObjectDatabase Type, allowing to determine the object database
               implementation used by the returned Repo instance
@@ -1302,7 +1303,8 @@ class Repo(object):
             If you want to unset some variable, consider providing empty string
             as its value.
         :param multi_options: See ``clone`` method
-        :param unsafe_protocols: Allow unsafe protocols to be used, like ext
+        :param allow_unsafe_protocols: Allow unsafe protocols to be used, like ext
+        :param allow_unsafe_options: Allow unsafe options to be used, like --upload-pack
         :param kwargs: see the ``clone`` method
         :return: Repo instance pointing to the cloned directory"""
         git = cls.GitCommandWrapperType(os.getcwd())

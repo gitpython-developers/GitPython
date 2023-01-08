@@ -287,7 +287,9 @@ class Submodule(IndexObject, TraversableIterableObj):
         :param url: url to clone from
         :param path: repository - relative path to the submodule checkout location
         :param name: canonical of the submodule
-        :param kwrags: additinoal arguments given to git.clone"""
+        :param allow_unsafe_protocols: Allow unsafe protocols to be used, like ext
+        :param allow_unsafe_options: Allow unsafe options to be used, like --upload-pack
+        :param kwargs: additional arguments given to git.clone"""
         module_abspath = cls._module_abspath(repo, path, name)
         module_checkout_path = module_abspath
         if cls._need_gitfile_submodules(repo.git):
@@ -411,6 +413,8 @@ class Submodule(IndexObject, TraversableIterableObj):
             as its value.
         :param clone_multi_options: A list of Clone options. Please see ``git.repo.base.Repo.clone``
             for details.
+        :param allow_unsafe_protocols: Allow unsafe protocols to be used, like ext
+        :param allow_unsafe_options: Allow unsafe options to be used, like --upload-pack
         :return: The newly created submodule instance
         :note: works atomically, such that no change will be done if the repository
             update fails for instance"""
@@ -581,6 +585,8 @@ class Submodule(IndexObject, TraversableIterableObj):
             as its value.
         :param clone_multi_options:  list of Clone options. Please see ``git.repo.base.Repo.clone``
             for details. Only take effect with `init` option.
+        :param allow_unsafe_protocols: Allow unsafe protocols to be used, like ext
+        :param allow_unsafe_options: Allow unsafe options to be used, like --upload-pack
         :note: does nothing in bare repositories
         :note: method is definitely not atomic if recurisve is True
         :return: self"""

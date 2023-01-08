@@ -641,6 +641,7 @@ class Remote(LazyMixin, IterableObj):
 
         :param new_url: string being the URL to add as an extra remote URL
         :param old_url: when set, replaces this URL with new_url for the remote
+        :param allow_unsafe_protocols: Allow unsafe protocols to be used, like ext
         :return: self
         """
         if not allow_unsafe_protocols:
@@ -660,6 +661,7 @@ class Remote(LazyMixin, IterableObj):
         multiple URLs for a single remote.
 
         :param url: string being the URL to add as an extra remote URL
+        :param allow_unsafe_protocols: Allow unsafe protocols to be used, like ext
         :return: self
         """
         return self.set_url(url, add=True, allow_unsafe_protocols=allow_unsafe_protocols)
@@ -760,6 +762,7 @@ class Remote(LazyMixin, IterableObj):
         :param repo: Repository instance that is to receive the new remote
         :param name: Desired name of the remote
         :param url: URL which corresponds to the remote's name
+        :param allow_unsafe_protocols: Allow unsafe protocols to be used, like ext
         :param kwargs: Additional arguments to be passed to the git-remote add command
         :return: New Remote instance
         :raise GitCommandError: in case an origin with that name already exists"""
@@ -978,6 +981,8 @@ class Remote(LazyMixin, IterableObj):
         :param kill_after_timeout:
             To specify a timeout in seconds for the git command, after which the process
             should be killed. It is set to None by default.
+        :param allow_unsafe_protocols: Allow unsafe protocols to be used, like ext
+        :param allow_unsafe_options: Allow unsafe options to be used, like --upload-pack
         :param kwargs: Additional arguments to be passed to git-fetch
         :return:
             IterableList(FetchInfo, ...) list of FetchInfo instances providing detailed
@@ -1027,6 +1032,8 @@ class Remote(LazyMixin, IterableObj):
         :param refspec: see :meth:`fetch` method
         :param progress: see :meth:`push` method
         :param kill_after_timeout: see :meth:`fetch` method
+        :param allow_unsafe_protocols: Allow unsafe protocols to be used, like ext
+        :param allow_unsafe_options: Allow unsafe options to be used, like --upload-pack
         :param kwargs: Additional arguments to be passed to git-pull
         :return: Please see :meth:`fetch` method"""
         if refspec is None:
@@ -1077,6 +1084,8 @@ class Remote(LazyMixin, IterableObj):
         :param kill_after_timeout:
             To specify a timeout in seconds for the git command, after which the process
             should be killed. It is set to None by default.
+        :param allow_unsafe_protocols: Allow unsafe protocols to be used, like ext
+        :param allow_unsafe_options: Allow unsafe options to be used, like --receive-pack
         :param kwargs: Additional arguments to be passed to git-push
         :return:
             A ``PushInfoList`` object, where each list member
