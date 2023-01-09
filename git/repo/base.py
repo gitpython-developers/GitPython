@@ -9,6 +9,9 @@ import os
 import re
 import shlex
 import warnings
+
+from pathlib import Path
+
 from gitdb.db.loose import LooseObjectDB
 
 from gitdb.exc import BadObject
@@ -268,7 +271,7 @@ class Repo(object):
             pass
 
         try:
-            common_dir = open(osp.join(self.git_dir, "commondir"), "rt").readlines()[0].strip()
+            common_dir = (Path(self.git_dir) / "commondir").read_text().splitlines()[0].strip()
             self._common_dir = osp.join(self.git_dir, common_dir)
         except OSError:
             self._common_dir = ""
@@ -1385,4 +1388,6 @@ class Repo(object):
             rebase_head_file = osp.join(self.git_dir, "REBASE_HEAD")
         if not osp.isfile(rebase_head_file):
             return None
-        return self.commit(open(rebase_head_file, "rt").readline().strip())
+        with open(rebase_head_file, "rt") as f:
+            content = f.readline().strip()
+        return self.commit(content)
