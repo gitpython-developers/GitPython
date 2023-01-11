@@ -324,14 +324,14 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
 
         :return: git.Stats"""
         if not self.parents:
-            text = self.repo.git.diff_tree(self.hexsha, "--", numstat=True, root=True)
+            text = self.repo.git.diff_tree(self.hexsha, "--", numstat=True, no_renames=True, root=True)
             text2 = ""
             for line in text.splitlines()[1:]:
                 (insertions, deletions, filename) = line.split("\t")
                 text2 += "%s\t%s\t%s\n" % (insertions, deletions, filename)
             text = text2
         else:
-            text = self.repo.git.diff(self.parents[0].hexsha, self.hexsha, "--", numstat=True)
+            text = self.repo.git.diff(self.parents[0].hexsha, self.hexsha, "--", numstat=True, no_renames=True)
         return Stats._list_from_string(self.repo, text)
 
     @property
