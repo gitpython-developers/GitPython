@@ -159,6 +159,37 @@ class TestCommit(TestCommitSerialization):
         self.assertEqual(commit.committer_tz_offset, 14400, commit.committer_tz_offset)
         self.assertEqual(commit.message, "initial project\n")
 
+    def test_renames(self):
+        commit = self.rorepo.commit("185d847ec7647fd2642a82d9205fb3d07ea71715")
+        files = commit.stats.files
+
+        # when a file is renamed, the output of git diff is like "dir/{old => new}"
+        # unless we disable rename with --no-renames, which produces two lines
+        # one with the old path deletes and another with the new added
+        self.assertEqual(len(files), 2)
+
+        def check_entries(path, changes):
+            expected = {
+                ".github/workflows/Future.yml" : {
+                    'insertions': 57,
+                    'deletions': 0,
+                    'lines': 57
+                },
+                ".github/workflows/test_pytest.yml" : {
+                    'insertions': 0,
+                    'deletions': 55,
+                    'lines': 55
+                },
+            }
+            assert path in expected
+            assert isinstance(changes, dict)
+            for key in ("insertions", "deletions", "lines"):
+                assert changes[key] == expected[path][key]
+
+        for path, changes in files.items():
+            check_entries(path, changes)
+        # END for each stated file
+
     def test_unicode_actor(self):
         # assure we can parse unicode actors correctly
         name = "Üäöß ÄußÉ"
