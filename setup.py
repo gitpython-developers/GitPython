@@ -44,7 +44,7 @@ class sdist(_sdist):
 def _stamp_version(filename: str) -> None:
     found, out = False, []
     try:
-        with open(filename, "r") as f:
+        with open(filename) as f:
             for line in f:
                 if "__version__ =" in line:
                     line = line.replace("\"git\"", "'%s'" % VERSION)
