@@ -82,7 +82,7 @@ setup(
     name="GitPython",
     cmdclass={"build_py": build_py, "sdist": sdist},
     version=VERSION,
-    description="""GitPython is a python library used to interact with Git repositories""",
+    description="GitPython is a Python library used to interact with Git repositories",
     author="Sebastian Thiel, Michael Trier",
     author_email="byronimo@gmail.com, mtrier@gmail.com",
     license="BSD",
@@ -95,7 +95,7 @@ setup(
     install_requires=requirements,
     tests_require=requirements + test_requirements,
     zip_safe=False,
-    long_description="""GitPython is a python library used to interact with Git repositories""",
+    long_description="""GitPython is a Python library used to interact with Git repositories""",
     long_description_content_type="text/markdown",
     classifiers=[
         # Picked from
