@@ -107,7 +107,7 @@ with MINGW's.
 Ensure testing libraries are installed.
 In the root directory, run: `pip install -r test-requirements.txt`
 
-To lint, run: `flake8`
+To lint, run: `pre-commit run --all-files`
 
 To typecheck, run: `mypy -p git`
 
