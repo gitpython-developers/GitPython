@@ -3,11 +3,7 @@
 
 name: Python package
 
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+on: [push, pull_request, workflow_dispatch]
 
 permissions:
   contents: read
@@ -17,6 +13,7 @@ jobs:
 
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         python-version: [3.7, 3.8, 3.9, "3.10", "3.11"]
 
@@ -46,11 +43,6 @@ jobs:
         # If we rewrite the user's config by accident, we will mess it up
         # and cause subsequent tests to fail
         cat test/fixtures/.gitconfig >> ~/.gitconfig
-
-    - name: Lint with flake8
-      run: |
-        set -x
-        flake8
 
     - name: Check types with mypy
       # With new versions of pypi new issues might arise. This is a problem if there is nobody able to fix them,

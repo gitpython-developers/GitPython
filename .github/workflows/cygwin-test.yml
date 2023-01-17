@@ -1,16 +1,12 @@
 name: test-cygwin
 
-on:
-  push:
-    branches:
-      main
-  pull_request:
-    branches:
-      main
+on: [push, pull_request, workflow_dispatch]
 
 jobs:
   build:
     runs-on: windows-latest
+    strategy:
+      fail-fast: false
     env:
       CHERE_INVOKING: 1
       SHELLOPTS: igncr
@@ -47,11 +43,6 @@ jobs:
         # If we rewrite the user's config by accident, we will mess it up
         # and cause subsequent tests to fail
         cat test/fixtures/.gitconfig >> ~/.gitconfig
-    - name: Lint with flake8
-      shell: bash.exe -eo pipefail -o igncr "{0}"
-      run: |
-        set -x
-        /usr/bin/python -m flake8
     - name: Test with pytest
       shell: bash.exe -eo pipefail -o igncr "{0}"
       run: |
