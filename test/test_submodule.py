@@ -712,7 +712,7 @@ class TestSubmodule(TestBase):
     def test_list_only_valid_submodules(self, rwdir):
         repo_path = osp.join(rwdir, "parent")
         repo = git.Repo.init(repo_path)
-        repo.git.submodule("add", self._small_repo_url(), "module")
+        repo.git.submodule("add", Git.polish_url("https://github.com/gitpython-developers/smmap.git"), "module")
         repo.index.commit("add submodule")
 
         assert len(repo.submodules) == 1
@@ -739,7 +739,7 @@ class TestSubmodule(TestBase):
     @with_rw_directory
     def test_git_submodules_and_add_sm_with_new_commit(self, rwdir):
         parent = git.Repo.init(osp.join(rwdir, "parent"))
-        parent.git.submodule("add", self._small_repo_url(), "module")
+        parent.git.submodule("add", Git.polish_url("https://github.com/gitpython-developers/smmap.git"), "module")
         parent.index.commit("added submodule")
 
         assert len(parent.submodules) == 1
