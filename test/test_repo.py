@@ -1400,3 +1400,14 @@ class TestRepo(TestBase):
             assert temp_repo.ignored(['ignored_file.txt']) == ['ignored_file.txt']
             assert temp_repo.ignored(['included_file.txt', 'ignored_file.txt']) == ['ignored_file.txt']
             assert temp_repo.ignored(['included_file.txt', 'ignored_file.txt', 'included_dir/file.txt', 'ignored_dir/file.txt']) == ['ignored_file.txt', 'ignored_dir/file.txt']
+
+    def test_ignored_raises_error_w_symlink(self):
+        with tempfile.TemporaryDirectory() as tdir:
+            tmp_dir = pathlib.Path(tdir)
+            temp_repo = Repo.init(tmp_dir / "repo")
+
+            os.mkdir(tmp_dir / "target")
+            os.symlink(tmp_dir / "target", tmp_dir / "symlink")
+
+            with pytest.raises(GitCommandError):
+                temp_repo.ignored(tmp_dir / "symlink/file.txt")
