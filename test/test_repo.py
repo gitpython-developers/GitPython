@@ -1384,3 +1384,30 @@ class TestRepo(TestBase):
                 rw_repo.clone_from(payload, temp_repo.common_dir)
 
             assert not unexpected_file.exists()
+
+    def test_ignored_items_reported(self):
+        with tempfile.TemporaryDirectory() as tdir:
+            tmp_dir = pathlib.Path(tdir)
+            temp_repo = Repo.init(tmp_dir / "repo")
+
+            gi = tmp_dir / "repo" / ".gitignore"
+
+            with open(gi, 'w') as file:
+                file.write('ignored_file.txt\n')
+                file.write('ignored_dir/\n')
+
+            assert temp_repo.ignored(['included_file.txt', 'included_dir/file.txt']) == []
+            assert temp_repo.ignored(['ignored_file.txt']) == ['ignored_file.txt']
+            assert temp_repo.ignored(['included_file.txt', 'ignored_file.txt']) == ['ignored_file.txt']
+            assert temp_repo.ignored(['included_file.txt', 'ignored_file.txt', 'included_dir/file.txt', 'ignored_dir/file.txt']) == ['ignored_file.txt', 'ignored_dir/file.txt']
+
+    def test_ignored_raises_error_w_symlink(self):
+        with tempfile.TemporaryDirectory() as tdir:
+            tmp_dir = pathlib.Path(tdir)
+            temp_repo = Repo.init(tmp_dir / "repo")
+
+            os.mkdir(tmp_dir / "target")
+            os.symlink(tmp_dir / "target", tmp_dir / "symlink")
+
+            with pytest.raises(GitCommandError):
+                temp_repo.ignored(tmp_dir / "symlink/file.txt")

@@ -873,8 +873,15 @@ class Repo(object):
         """
         try:
             proc: str = self.git.check_ignore(*paths)
-        except GitCommandError:
-            return []
+        except GitCommandError as err:
+            # If return code is 1, this means none of the items in *paths
+            # are ignored by Git, so return an empty list.  Raise the
+            # exception on all other return codes.
+            if err.status == 1:
+                return []
+            else:
+                raise
+
         return proc.replace("\\\\", "\\").replace('"', "").split("\n")
 
     @property
