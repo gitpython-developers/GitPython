@@ -137,22 +137,25 @@ def get_object_type_by_name(
 
 
 def utctz_to_altz(utctz: str) -> int:
-    """we convert utctz to the timezone in seconds, it is the format time.altzone
-    returns. Git stores it as UTC timezone which has the opposite sign as well,
-    which explains the -1 * ( that was made explicit here )
+    """Convert a git timezone offset into a timezone offset west of
+    UTC in seconds (compatible with time.altzone).
 
-    :param utctz: git utc timezone string, i.e. +0200"""
-    return -1 * int(float(utctz) / 100 * 3600)
+    :param utctz: git utc timezone string, i.e. +0200
+    """
+    int_utctz = int(utctz)
+    seconds = ((abs(int_utctz) // 100) * 3600 + (abs(int_utctz) % 100) * 60)
+    return seconds if int_utctz < 0 else -seconds
 
 
-def altz_to_utctz_str(altz: float) -> str:
-    """As above, but inverses the operation, returning a string that can be used
-    in commit objects"""
-    utci = -1 * int((float(altz) / 3600) * 100)
-    utcs = str(abs(utci))
-    utcs = "0" * (4 - len(utcs)) + utcs
-    prefix = (utci < 0 and "-") or "+"
-    return prefix + utcs
+def altz_to_utctz_str(altz: int) -> str:
+    """Convert a timezone offset west of UTC in seconds into a git timezone offset string
+
+    :param altz: timezone offset in seconds west of UTC
+    """
+    hours = abs(altz) // 3600
+    minutes = (abs(altz) % 3600) // 60
+    sign = "-" if altz >= 60 else "+"
+    return "{}{:02}{:02}".format(sign, hours, minutes)
 
 
 def verify_utctz(offset: str) -> str:

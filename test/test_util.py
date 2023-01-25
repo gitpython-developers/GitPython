@@ -333,6 +333,27 @@ class TestUtils(TestBase):
         self.assertRaises(IndexError, ilist.__delitem__, 0)
         self.assertRaises(IndexError, ilist.__delitem__, "something")
 
+    def test_utctz_to_altz(self):
+        self.assertEqual(utctz_to_altz("+0000"), 0)
+        self.assertEqual(utctz_to_altz("+1400"), -(14 * 3600))
+        self.assertEqual(utctz_to_altz("-1200"), 12 * 3600)
+        self.assertEqual(utctz_to_altz("+0001"), -60)
+        self.assertEqual(utctz_to_altz("+0530"), -(5 * 3600 + 1800))
+        self.assertEqual(utctz_to_altz("-0930"), 9 * 3600 + 1800)
+
+    def test_altz_to_utctz_str(self):
+        self.assertEqual(altz_to_utctz_str(0), "+0000")
+        self.assertEqual(altz_to_utctz_str(-(14 * 3600)), "+1400")
+        self.assertEqual(altz_to_utctz_str(12 * 3600), "-1200")
+        self.assertEqual(altz_to_utctz_str(-60), "+0001")
+        self.assertEqual(altz_to_utctz_str(-(5 * 3600 + 1800)), "+0530")
+        self.assertEqual(altz_to_utctz_str(9 * 3600 + 1800), "-0930")
+
+        self.assertEqual(altz_to_utctz_str(1), "+0000")
+        self.assertEqual(altz_to_utctz_str(59), "+0000")
+        self.assertEqual(altz_to_utctz_str(-1), "+0000")
+        self.assertEqual(altz_to_utctz_str(-59), "+0000")
+
     def test_from_timestamp(self):
         # Correct offset: UTC+2, should return datetime + tzoffset(+2)
         altz = utctz_to_altz("+0200")
