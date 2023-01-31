@@ -145,7 +145,7 @@ class Diffable(object):
         args.append("--full-index")  # get full index paths, not only filenames
 
         # remove default '-M' arg (check for renames) if user is overriding it
-        if not any(x in kwargs for x in ('find_renames', 'no_renames','M')):
+        if not any(x in kwargs for x in ('find_renames', 'no_renames', 'M')):
             args.append("-M")
 
         if create_patch:
