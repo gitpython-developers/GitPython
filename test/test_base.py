@@ -98,6 +98,7 @@ class TestBase(_TestBase):
     def test_with_bare_rw_repo(self, bare_rw_repo):
         assert bare_rw_repo.config_reader("repository").getboolean("core", "bare")
         assert osp.isfile(osp.join(bare_rw_repo.git_dir, "HEAD"))
+        assert osp.isdir(bare_rw_repo.working_dir)
 
     @with_rw_repo("0.1.6")
     def test_with_rw_repo(self, rw_repo):
