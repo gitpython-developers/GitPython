@@ -115,7 +115,7 @@ class Repo(object):
     'working_dir' is the working directory of the git command, which is the working tree
     directory if available or the .git directory in case of bare repositories
 
-    'working_tree_dir' is the working tree directory, but will raise AssertionError
+    'working_tree_dir' is the working tree directory, but will return None
     if we are a bare repository.
 
     'git_dir' is the .git repository directory, which is always set."""
@@ -123,9 +123,9 @@ class Repo(object):
     DAEMON_EXPORT_FILE = "git-daemon-export-ok"
 
     git = cast("Git", None)  # Must exist, or  __del__  will fail in case we raise on `__init__()`
-    working_dir: Optional[PathLike] = None
+    working_dir: PathLike
     _working_tree_dir: Optional[PathLike] = None
-    git_dir: PathLike = ""
+    git_dir: PathLike
     _common_dir: PathLike = ""
 
     # precompiled regex
@@ -215,13 +215,14 @@ class Repo(object):
         ## Walk up the path to find the `.git` dir.
         #
         curpath = epath
+        git_dir = None
         while curpath:
             # ABOUT osp.NORMPATH
             # It's important to normalize the paths, as submodules will otherwise initialize their
             # repo instances with paths that depend on path-portions that will not exist after being
             # removed. It's just cleaner.
             if is_git_dir(curpath):
-                self.git_dir = curpath
+                git_dir = curpath
                 # from man git-config : core.worktree
                 # Set the path to the root of the working tree. If GIT_COMMON_DIR environment
                 # variable is set, core.worktree is ignored and not used for determining the
@@ -230,9 +231,9 @@ class Repo(object):
                 # directory, which is either specified by GIT_DIR, or automatically discovered.
                 # If GIT_DIR is specified but none of GIT_WORK_TREE and core.worktree is specified,
                 # the current working directory is regarded as the top level of your working tree.
-                self._working_tree_dir = os.path.dirname(self.git_dir)
+                self._working_tree_dir = os.path.dirname(git_dir)
                 if os.environ.get("GIT_COMMON_DIR") is None:
-                    gitconf = self.config_reader("repository")
+                    gitconf = self._config_reader("repository", git_dir)
                     if gitconf.has_option("core", "worktree"):
                         self._working_tree_dir = gitconf.get("core", "worktree")
                 if "GIT_WORK_TREE" in os.environ:
@@ -242,14 +243,14 @@ class Repo(object):
             dotgit = osp.join(curpath, ".git")
             sm_gitpath = find_submodule_git_dir(dotgit)
             if sm_gitpath is not None:
-                self.git_dir = osp.normpath(sm_gitpath)
+                git_dir = osp.normpath(sm_gitpath)
 
             sm_gitpath = find_submodule_git_dir(dotgit)
             if sm_gitpath is None:
                 sm_gitpath = find_worktree_git_dir(dotgit)
 
             if sm_gitpath is not None:
-                self.git_dir = expand_path(sm_gitpath, expand_vars)
+                git_dir = expand_path(sm_gitpath, expand_vars)
                 self._working_tree_dir = curpath
                 break
 
@@ -260,8 +261,9 @@ class Repo(object):
                 break
         # END while curpath
 
-        if self.git_dir is None:
+        if git_dir is None:
             raise InvalidGitRepositoryError(epath)
+        self.git_dir = git_dir
 
         self._bare = False
         try:
@@ -282,7 +284,7 @@ class Repo(object):
             self._working_tree_dir = None
         # END working dir handling
 
-        self.working_dir: Optional[PathLike] = self._working_tree_dir or self.common_dir
+        self.working_dir: PathLike = self._working_tree_dir or self.common_dir
         self.git = self.GitCommandWrapperType(self.working_dir)
 
         # special handling, in special times
@@ -320,7 +322,7 @@ class Repo(object):
                 gc.collect()
 
     def __eq__(self, rhs: object) -> bool:
-        if isinstance(rhs, Repo) and self.git_dir:
+        if isinstance(rhs, Repo):
             return self.git_dir == rhs.git_dir
         return False
 
@@ -332,14 +334,12 @@ class Repo(object):
 
     # Description property
     def _get_description(self) -> str:
-        if self.git_dir:
-            filename = osp.join(self.git_dir, "description")
+        filename = osp.join(self.git_dir, "description")
         with open(filename, "rb") as fp:
             return fp.read().rstrip().decode(defenc)
 
     def _set_description(self, descr: str) -> None:
-        if self.git_dir:
-            filename = osp.join(self.git_dir, "description")
+        filename = osp.join(self.git_dir, "description")
         with open(filename, "wb") as fp:
             fp.write((descr + "\n").encode(defenc))
 
@@ -357,13 +357,7 @@ class Repo(object):
         """
         :return: The git dir that holds everything except possibly HEAD,
             FETCH_HEAD, ORIG_HEAD, COMMIT_EDITMSG, index, and logs/."""
-        if self._common_dir:
-            return self._common_dir
-        elif self.git_dir:
-            return self.git_dir
-        else:
-            # or could return ""
-            raise InvalidGitRepositoryError()
+        return self._common_dir or self.git_dir
 
     @property
     def bare(self) -> bool:
@@ -532,7 +526,9 @@ class Repo(object):
         """Delete the given remote."""
         return Remote.remove(self, remote)
 
-    def _get_config_path(self, config_level: Lit_config_levels) -> str:
+    def _get_config_path(self, config_level: Lit_config_levels, git_dir: Optional[PathLike] = None) -> str:
+        if git_dir is None:
+            git_dir = self.git_dir
         # we do not support an absolute path of the gitconfig on windows ,
         # use the global config instead
         if is_win and config_level == "system":
@@ -546,7 +542,7 @@ class Repo(object):
         elif config_level == "global":
             return osp.normpath(osp.expanduser("~/.gitconfig"))
         elif config_level == "repository":
-            repo_dir = self._common_dir or self.git_dir
+            repo_dir = self._common_dir or git_dir
             if not repo_dir:
                 raise NotADirectoryError
             else:
@@ -575,15 +571,21 @@ class Repo(object):
             you know which file you wish to read to prevent reading multiple files.
         :note: On windows, system configuration cannot currently be read as the path is
             unknown, instead the global path will be used."""
-        files = None
+        return self._config_reader(config_level=config_level)
+
+    def _config_reader(
+        self,
+        config_level: Optional[Lit_config_levels] = None,
+        git_dir: Optional[PathLike] = None,
+    ) -> GitConfigParser:
         if config_level is None:
             files = [
-                self._get_config_path(cast(Lit_config_levels, f))
+                self._get_config_path(cast(Lit_config_levels, f), git_dir)
                 for f in self.config_level
                 if cast(Lit_config_levels, f)
             ]
         else:
-            files = [self._get_config_path(config_level)]
+            files = [self._get_config_path(config_level, git_dir)]
         return GitConfigParser(files, read_only=True, repo=self)
 
     def config_writer(self, config_level: Lit_config_levels = "repository") -> GitConfigParser:
