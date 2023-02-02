@@ -411,3 +411,73 @@ class TestDiff(TestBase):
         cp = c.parents[0]
         diff_index = c.diff(cp, ["does/not/exist"])
         self.assertEqual(len(diff_index), 0)
+
+    @with_rw_directory
+    def test_rename_override(self, rw_dir):
+        """Test disabling of diff rename detection""" 
+
+        # create and commit file_a.txt
+        repo = Repo.init(rw_dir)
+        file_a = osp.join(rw_dir, "file_a.txt")
+        with open(file_a, "w", encoding='utf-8') as outfile:
+            outfile.write("hello world\n")
+        repo.git.add(Git.polish_url(file_a))
+        repo.git.commit(message="Added file_a.txt")
+
+        # remove file_a.txt
+        repo.git.rm(Git.polish_url(file_a))
+
+        # create and commit file_b.txt with similarity index of 52
+        file_b = osp.join(rw_dir, "file_b.txt")
+        with open(file_b, "w", encoding='utf-8') as outfile:
+            outfile.write("hello world\nhello world")
+        repo.git.add(Git.polish_url(file_b))
+        repo.git.commit(message="Removed file_a.txt. Added file_b.txt")
+
+        commit_a = repo.commit('HEAD')
+        commit_b = repo.commit('HEAD~1')
+
+        # check default diff command with renamed files enabled
+        diffs = commit_b.diff(commit_a)
+        self.assertEqual(1, len(diffs))
+        diff = diffs[0]
+        self.assertEqual(True, diff.renamed_file)
+        self.assertEqual('file_a.txt', diff.rename_from)
+        self.assertEqual('file_b.txt', diff.rename_to)
+
+        # check diff with rename files disabled
+        diffs = commit_b.diff(commit_a, no_renames=True)
+        self.assertEqual(2, len(diffs))
+
+        # check fileA.txt deleted
+        diff = diffs[0]
+        self.assertEqual(True, diff.deleted_file)
+        self.assertEqual('file_a.txt', diff.a_path)
+
+        # check fileB.txt added
+        diff = diffs[1]
+        self.assertEqual(True, diff.new_file)
+        self.assertEqual('file_b.txt', diff.a_path)
+
+        # check diff with high similarity index
+        diffs = commit_b.diff(commit_a, split_single_char_options=False, M='75%')
+        self.assertEqual(2, len(diffs))
+
+        # check fileA.txt deleted
+        diff = diffs[0]
+        self.assertEqual(True, diff.deleted_file)
+        self.assertEqual('file_a.txt', diff.a_path)
+
+        # check fileB.txt added
+        diff = diffs[1]
+        self.assertEqual(True, diff.new_file)
+        self.assertEqual('file_b.txt', diff.a_path)
+
+        # check diff with low similarity index
+        diffs = commit_b.diff(commit_a, split_single_char_options=False, M='40%')
+        self.assertEqual(1, len(diffs))
+        diff = diffs[0]
+        self.assertEqual(True, diff.renamed_file)
+        self.assertEqual('file_a.txt', diff.rename_from)
+        self.assertEqual('file_b.txt', diff.rename_to)
+

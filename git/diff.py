@@ -144,7 +144,10 @@ class Diffable(object):
         args.append("--abbrev=40")  # we need full shas
         args.append("--full-index")  # get full index paths, not only filenames
 
-        args.append("-M")  # check for renames, in both formats
+        # remove default '-M' arg (check for renames) if user is overriding it
+        if not any(x in kwargs for x in ('find_renames', 'no_renames', 'M')):
+            args.append("-M")
+
         if create_patch:
             args.append("-p")
         else:
