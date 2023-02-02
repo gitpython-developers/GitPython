@@ -115,7 +115,7 @@ class Repo(object):
     'working_dir' is the working directory of the git command, which is the working tree
     directory if available or the .git directory in case of bare repositories
 
-    'working_tree_dir' is the working tree directory, but will raise AssertionError
+    'working_tree_dir' is the working tree directory, but will return None
     if we are a bare repository.
 
     'git_dir' is the .git repository directory, which is always set."""
