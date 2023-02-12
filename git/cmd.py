@@ -695,14 +695,14 @@ class Git(LazyMixin):
             return self
 
         def __next__(self) -> bytes:
-            return next(self)
-
-        def next(self) -> bytes:
             line = self.readline()
             if not line:
                 raise StopIteration
 
             return line
+
+        def next(self) -> bytes:
+            return next(self)
 
         def __del__(self) -> None:
             bytes_left = self._size - self._nbr
