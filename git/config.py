@@ -796,6 +796,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
         :raise TypeError: in case the value could not be understood
             Otherwise the exceptions known to the ConfigParser will be raised."""
         try:
+            self.sections()
             lst = self._sections[section].getall(option)
         except Exception:
             if default is not None:
