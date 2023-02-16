@@ -398,6 +398,17 @@ class TestBase(TestCase):
         with self.assertRaises(cp.NoOptionError):
             cr.get_value("color", "ui")
 
+    def test_get_values_works_without_requiring_any_other_calls_first(self):
+        file_obj = self._to_memcache(fixture_path("git_config_multiple"))
+        cr = GitConfigParser(file_obj, read_only=True)
+        self.assertEqual(cr.get_values("section0", "option0"), ["value0"])
+        file_obj.seek(0)
+        cr = GitConfigParser(file_obj, read_only=True)
+        self.assertEqual(cr.get_values("section1", "option1"), ["value1a", "value1b"])
+        file_obj.seek(0)
+        cr = GitConfigParser(file_obj, read_only=True)
+        self.assertEqual(cr.get_values("section1", "other_option1"), ["other_value1"])
+
     def test_multiple_values(self):
         file_obj = self._to_memcache(fixture_path("git_config_multiple"))
         with GitConfigParser(file_obj, read_only=False) as cw:
