@@ -26,6 +26,7 @@ from time import time, daylight, altzone, timezone, localtime
 import os
 from io import BytesIO
 import logging
+from collections import defaultdict
 
 
 # typing ------------------------------------------------------------------
@@ -335,8 +336,70 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         return Stats._list_from_string(self.repo, text)
 
     @property
-    def trailers(self) -> Dict:
-        """Get the trailers of the message as dictionary
+    def trailers(self) -> Dict[str, str]:
+        """Get the trailers of the message as a dictionary
+
+        Git messages can contain trailer information that are similar to RFC 822
+        e-mail headers (see: https://git-scm.com/docs/git-interpret-trailers).
+
+        WARNING: This function only returns the latest instance of each trailer key
+        and will be deprecated soon. Please see either ``Commit.trailers_list`` or ``Commit.trailers_dict``.
+
+        :return:
+            Dictionary containing whitespace stripped trailer information.
+            Only the latest instance of each trailer key.
+        """
+        return {
+            k: v[0] for k, v in self.trailers_dict.items()
+        }
+
+    @property
+    def trailers_list(self) -> List[str]:
+        """Get the trailers of the message as a list
+
+        Git messages can contain trailer information that are similar to RFC 822
+        e-mail headers (see: https://git-scm.com/docs/git-interpret-trailers).
+
+        This functions calls ``git interpret-trailers --parse`` onto the message
+        to extract the trailer information, returns the raw trailer data as a list.
+
+        Valid message with trailer::
+
+            Subject line
+
+            some body information
+
+            another information
+
+            key1: value1.1
+            key1: value1.2
+            key2 :    value 2 with inner spaces
+
+
+        Returned list will look like this::
+
+            [
+                "key1: value1.1",
+                "key1: value1.2",
+                "key2 :    value 2 with inner spaces",
+            ]
+
+
+        :return:
+            List containing whitespace stripped trailer information.
+        """
+        cmd = ["git", "interpret-trailers", "--parse"]
+        proc: Git.AutoInterrupt = self.repo.git.execute(cmd, as_process=True, istream=PIPE)  # type: ignore
+        trailer: str = proc.communicate(str(self.message).encode())[0].decode()
+        trailer = trailer.strip()
+        if trailer:
+            return [t.strip() for t in trailer.split("\n")]
+
+        return []
+
+    @property
+    def trailers_dict(self) -> Dict[str, List[str]]:
+        """Get the trailers of the message as a dictionary
 
         Git messages can contain trailer information that are similar to RFC 822
         e-mail headers (see: https://git-scm.com/docs/git-interpret-trailers).
@@ -345,9 +408,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         to extract the trailer information. The key value pairs are stripped of
         leading and trailing whitespaces before they get saved into a dictionary.
 
-        Valid message with trailer:
-
-        .. code-block::
+        Valid message with trailer::
 
             Subject line
 
@@ -355,32 +416,28 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
 
             another information
 
-            key1: value1
+            key1: value1.1
+            key1: value1.2
             key2 :    value 2 with inner spaces
 
-        dictionary will look like this:
 
-        .. code-block::
+        Returned dictionary will look like this::
 
             {
-                "key1": "value1",
-                "key2": "value 2 with inner spaces"
+                "key1": ["value1.1", "value1.2"],
+                "key2": ["value 2 with inner spaces"],
             }
 
-        :return: Dictionary containing whitespace stripped trailer information
 
+        :return:
+            Dictionary containing whitespace stripped trailer information.
+            Mapping trailer keys to a list of their corresponding values.
         """
-        d = {}
-        cmd = ["git", "interpret-trailers", "--parse"]
-        proc: Git.AutoInterrupt = self.repo.git.execute(cmd, as_process=True, istream=PIPE)  # type: ignore
-        trailer: str = proc.communicate(str(self.message).encode())[0].decode()
-        if trailer.endswith("\n"):
-            trailer = trailer[0:-1]
-        if trailer != "":
-            for line in trailer.split("\n"):
-                key, value = line.split(":", 1)
-                d[key.strip()] = value.strip()
-        return d
+        d = defaultdict(list)
+        for trailer in self.trailers_list:
+            key, value = trailer.split(":", 1)
+            d[key.strip()].append(value.strip())
+        return dict(d)
 
     @classmethod
     def _iter_from_process_or_stream(cls, repo: "Repo", proc_or_stream: Union[Popen, IO]) -> Iterator["Commit"]:
