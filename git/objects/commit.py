@@ -372,7 +372,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         """
         cmd = ["git", "interpret-trailers", "--parse"]
         proc: Git.AutoInterrupt = self.repo.git.execute(cmd, as_process=True, istream=PIPE)  # type: ignore
-        trailer: str = proc.communicate(str(self.message).encode())[0].decode()
+        trailer: str = proc.communicate(str(self.message).encode())[0].decode("utf8")
         trailer = trailer.strip()
 
         if not trailer:
