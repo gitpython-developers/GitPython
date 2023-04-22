@@ -336,24 +336,6 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         return Stats._list_from_string(self.repo, text)
 
     @property
-    def trailers(self) -> Dict[str, str]:
-        """Get the trailers of the message as a dictionary
-
-        Git messages can contain trailer information that are similar to RFC 822
-        e-mail headers (see: https://git-scm.com/docs/git-interpret-trailers).
-
-        WARNING: This function only returns the latest instance of each trailer key
-        and will be deprecated soon. Please see either ``Commit.trailers_list`` or ``Commit.trailers_dict``.
-
-        :return:
-            Dictionary containing whitespace stripped trailer information.
-            Only the latest instance of each trailer key.
-        """
-        return {
-            k: v[0] for k, v in self.trailers_dict.items()
-        }
-
-    @property
     def trailers_list(self) -> List[str]:
         """Get the trailers of the message as a list
 
