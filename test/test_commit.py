@@ -515,9 +515,9 @@ JzJMZDRLQLFvnzqZuCjE
             commit = copy.copy(self.rorepo.commit("master"))
             commit.message = msg
             assert commit.trailers_list == [
-                f"{KEY_1}: {VALUE_1_1}",
-                f"{KEY_2}: {VALUE_2}",
-                f"{KEY_1}: {VALUE_1_2}",
+                (KEY_1, VALUE_1_1),
+                (KEY_2, VALUE_2),
+                (KEY_1, VALUE_1_2),
             ]
             assert commit.trailers_dict == {
                 KEY_1: [VALUE_1_1, VALUE_1_2],
@@ -543,7 +543,7 @@ JzJMZDRLQLFvnzqZuCjE
         # check that only the last key value paragraph is evaluated
         commit = copy.copy(self.rorepo.commit("master"))
         commit.message = f"Subject\n\nMultiline\nBody\n\n{KEY_1}: {VALUE_1_1}\n\n{KEY_2}: {VALUE_2}\n"
-        assert commit.trailers_list == [f"{KEY_2}: {VALUE_2}"]
+        assert commit.trailers_list == [(KEY_2, VALUE_2)]
         assert commit.trailers_dict == {KEY_2: [VALUE_2]}
 
     def test_commit_co_authors(self):

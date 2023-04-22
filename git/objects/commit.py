@@ -336,7 +336,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         return Stats._list_from_string(self.repo, text)
 
     @property
-    def trailers_list(self) -> List[str]:
+    def trailers_list(self) -> List[Tuple[str, str]]:
         """Get the trailers of the message as a list
 
         Git messages can contain trailer information that are similar to RFC 822
@@ -361,23 +361,29 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         Returned list will look like this::
 
             [
-                "key1: value1.1",
-                "key1: value1.2",
-                "key2 :    value 2 with inner spaces",
+                ("key1", "value1.1"),
+                ("key1", "value1.2"),
+                ("key2", "value 2 with inner spaces"),
             ]
 
 
         :return:
-            List containing whitespace stripped trailer information.
+            List containing key-value tuples of whitespace stripped trailer information.
         """
         cmd = ["git", "interpret-trailers", "--parse"]
         proc: Git.AutoInterrupt = self.repo.git.execute(cmd, as_process=True, istream=PIPE)  # type: ignore
         trailer: str = proc.communicate(str(self.message).encode())[0].decode()
         trailer = trailer.strip()
-        if trailer:
-            return [t.strip() for t in trailer.split("\n")]
 
-        return []
+        if not trailer:
+            return []
+
+        trailer_list = []
+        for t in trailer.split("\n"):
+            key, val = t.split(":", 1)
+            trailer_list.append((key.strip(), val.strip()))
+
+        return trailer_list
 
     @property
     def trailers_dict(self) -> Dict[str, List[str]]:
@@ -416,9 +422,8 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
             Mapping trailer keys to a list of their corresponding values.
         """
         d = defaultdict(list)
-        for trailer in self.trailers_list:
-            key, value = trailer.split(":", 1)
-            d[key.strip()].append(value.strip())
+        for key, val in self.trailers_list:
+            d[key].append(val)
         return dict(d)
 
     @classmethod
