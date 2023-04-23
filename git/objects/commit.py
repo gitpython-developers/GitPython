@@ -336,6 +336,20 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         return Stats._list_from_string(self.repo, text)
 
     @property
+    def trailers(self) -> Dict[str, str]:
+        """Get the trailers of the message as a dictionary
+
+        :note: This property is deprecated, please use either ``Commit.trailers_list`` or ``Commit.trailers_dict``.
+
+        :return:
+            Dictionary containing whitespace stripped trailer information.
+            Only contains the latest instance of each trailer key.
+        """
+        return {
+            k: v[0] for k, v in self.trailers_dict.items()
+        }
+
+    @property
     def trailers_list(self) -> List[Tuple[str, str]]:
         """Get the trailers of the message as a list
 
