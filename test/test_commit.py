@@ -494,52 +494,57 @@ JzJMZDRLQLFvnzqZuCjE
 
     def test_trailers(self):
         KEY_1 = "Hello"
-        VALUE_1 = "World"
+        VALUE_1_1 = "World"
+        VALUE_1_2 = "Another-World"
         KEY_2 = "Key"
         VALUE_2 = "Value with inner spaces"
 
-        # Check if KEY 1 & 2 with Value 1 & 2 is extracted from multiple msg variations
-        msgs = []
-        msgs.append(f"Subject\n\n{KEY_1}: {VALUE_1}\n{KEY_2}: {VALUE_2}\n")
-        msgs.append(f"Subject\n  \nSome body of a function\n \n{KEY_1}: {VALUE_1}\n{KEY_2}: {VALUE_2}\n")
-        msgs.append(
-            f"Subject\n  \nSome body of a function\n\nnon-key: non-value\n\n{KEY_1}: {VALUE_1}\n{KEY_2}: {VALUE_2}\n"
-        )
-        msgs.append(
-            f"Subject\n  \nSome multiline\n body of a function\n\nnon-key: non-value\n\n{KEY_1}: {VALUE_1}\n{KEY_2} :      {VALUE_2}\n"
-        )
+        # Check the following trailer example is extracted from multiple msg variations
+        TRAILER = f"{KEY_1}: {VALUE_1_1}\n{KEY_2}: {VALUE_2}\n{KEY_1}: {VALUE_1_2}"
+        msgs = [
+            f"Subject\n\n{TRAILER}\n",
+            f"Subject\n  \nSome body of a function\n \n{TRAILER}\n",
+            f"Subject\n  \nSome body of a function\n\nnon-key: non-value\n\n{TRAILER}\n",
+            (
+                # check when trailer has inconsistent whitespace
+                f"Subject\n  \nSome multiline\n body of a function\n\nnon-key: non-value\n\n"
+                f"{KEY_1}:{VALUE_1_1}\n{KEY_2} :      {VALUE_2}\n{KEY_1}:    {VALUE_1_2}\n"
+            ),
+        ]
+        for msg in msgs:
+            commit = copy.copy(self.rorepo.commit("master"))
+            commit.message = msg
+            assert commit.trailers_list == [
+                (KEY_1, VALUE_1_1),
+                (KEY_2, VALUE_2),
+                (KEY_1, VALUE_1_2),
+            ]
+            assert commit.trailers_dict == {
+                KEY_1: [VALUE_1_1, VALUE_1_2],
+                KEY_2: [VALUE_2],
+            }
+
+        # check that trailer stays empty for multiple msg combinations
+        msgs = [
+            f"Subject\n",
+            f"Subject\n\nBody with some\nText\n",
+            f"Subject\n\nBody with\nText\n\nContinuation but\n doesn't contain colon\n",
+            f"Subject\n\nBody with\nText\n\nContinuation but\n only contains one :\n",
+            f"Subject\n\nBody with\nText\n\nKey: Value\nLine without colon\n",
+            f"Subject\n\nBody with\nText\n\nLine without colon\nKey: Value\n",
+        ]
 
         for msg in msgs:
-            commit = self.rorepo.commit("master")
-            commit = copy.copy(commit)
+            commit = copy.copy(self.rorepo.commit("master"))
             commit.message = msg
-            assert KEY_1 in commit.trailers.keys()
-            assert KEY_2 in commit.trailers.keys()
-            assert commit.trailers[KEY_1] == VALUE_1
-            assert commit.trailers[KEY_2] == VALUE_2
-
-        # Check that trailer stays empty for multiple msg combinations
-        msgs = []
-        msgs.append(f"Subject\n")
-        msgs.append(f"Subject\n\nBody with some\nText\n")
-        msgs.append(f"Subject\n\nBody with\nText\n\nContinuation but\n doesn't contain colon\n")
-        msgs.append(f"Subject\n\nBody with\nText\n\nContinuation but\n only contains one :\n")
-        msgs.append(f"Subject\n\nBody with\nText\n\nKey: Value\nLine without colon\n")
-        msgs.append(f"Subject\n\nBody with\nText\n\nLine without colon\nKey: Value\n")
-
-        for msg in msgs:
-            commit = self.rorepo.commit("master")
-            commit = copy.copy(commit)
-            commit.message = msg
-            assert len(commit.trailers.keys()) == 0
+            assert commit.trailers_list == []
+            assert commit.trailers_dict == {}
 
         # check that only the last key value paragraph is evaluated
-        commit = self.rorepo.commit("master")
-        commit = copy.copy(commit)
-        commit.message = f"Subject\n\nMultiline\nBody\n\n{KEY_1}: {VALUE_1}\n\n{KEY_2}: {VALUE_2}\n"
-        assert KEY_1 not in commit.trailers.keys()
-        assert KEY_2 in commit.trailers.keys()
-        assert commit.trailers[KEY_2] == VALUE_2
+        commit = copy.copy(self.rorepo.commit("master"))
+        commit.message = f"Subject\n\nMultiline\nBody\n\n{KEY_1}: {VALUE_1_1}\n\n{KEY_2}: {VALUE_2}\n"
+        assert commit.trailers_list == [(KEY_2, VALUE_2)]
+        assert commit.trailers_dict == {KEY_2: [VALUE_2]}
 
     def test_commit_co_authors(self):
         commit = copy.copy(self.rorepo.commit("4251bd5"))
