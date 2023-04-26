@@ -9,10 +9,10 @@ import os.path as osp
 from .compat import is_win
 import contextlib
 from functools import wraps
-import getpass
 import logging
 import os
 import platform
+import pwd
 import subprocess
 import re
 import shutil
@@ -410,7 +410,8 @@ def is_cygwin_git(git_executable: Union[None, PathLike]) -> bool:
 
 def get_user_id() -> str:
     """:return: string identifying the currently active system user as name@node"""
-    return "%s@%s" % (getpass.getuser(), platform.node())
+    user = pwd.getpwuid(os.geteuid()).pw_name
+    return "%s@%s" % (user, platform.node())
 
 
 def finalize_process(proc: Union[subprocess.Popen, "Git.AutoInterrupt"], **kwargs: Any) -> None:
@@ -750,7 +751,7 @@ class Actor(object):
         config_reader: Union[None, "GitConfigParser", "SectionConstraint"] = None,
     ) -> "Actor":
         actor = Actor("", "")
-        user_id = None  # We use this to avoid multiple calls to getpass.getuser()
+        user_id = None  # We use this to avoid multiple calls to resolve the user
 
         def default_email() -> str:
             nonlocal user_id
