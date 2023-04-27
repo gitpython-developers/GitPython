@@ -10,7 +10,6 @@ import io
 import logging
 import os
 import signal
-from subprocess import call, Popen, PIPE, DEVNULL
 import subprocess
 import threading
 from textwrap import dedent
@@ -91,7 +90,7 @@ __all__ = ("Git",)
 
 
 def handle_process_output(
-    process: "Git.AutoInterrupt" | Popen,
+    process: "Git.AutoInterrupt" | subprocess.Popen,
     stdout_handler: Union[
         None,
         Callable[[AnyStr], None],
@@ -154,7 +153,7 @@ def handle_process_output(
         p_stdout = process.proc.stdout if process.proc else None
         p_stderr = process.proc.stderr if process.proc else None
     else:
-        process = cast(Popen, process)
+        process = cast(subprocess.Popen, process)
         cmdline = getattr(process, "args", "")
         p_stdout = process.stdout
         p_stderr = process.stderr
@@ -557,7 +556,7 @@ class Git(LazyMixin):
                 # we simply use the shell and redirect to nul. Its slower than CreateProcess, question
                 # is whether we really want to see all these messages. Its annoying no matter what.
                 if is_win:
-                    call(
+                    subprocess.call(
                         ("TASKKILL /F /T /PID %s 2>nul 1>nul" % str(proc.pid)),
                         shell=True,
                     )
@@ -969,7 +968,7 @@ class Git(LazyMixin):
             cmd_not_found_exception = FileNotFoundError  # NOQA # exists, flake8 unknown @UndefinedVariable
         # end handle
 
-        stdout_sink = PIPE if with_stdout else getattr(subprocess, "DEVNULL", None) or open(os.devnull, "wb")
+        stdout_sink = subprocess.PIPE if with_stdout else getattr(subprocess, "DEVNULL", None) or open(os.devnull, "wb")
         istream_ok = "None"
         if istream:
             istream_ok = "<valid stream>"
@@ -982,13 +981,13 @@ class Git(LazyMixin):
             istream_ok,
         )
         try:
-            proc = Popen(
+            proc = subprocess.Popen(
                 command,
                 env=env,
                 cwd=cwd,
                 bufsize=-1,
-                stdin=istream or DEVNULL,
-                stderr=PIPE,
+                stdin=istream or subprocess.DEVNULL,
+                stderr=subprocess.PIPE,
                 stdout=stdout_sink,
                 shell=shell is not None and shell or self.USE_SHELL,
                 close_fds=is_posix,  # unsupported on windows
@@ -1009,9 +1008,9 @@ class Git(LazyMixin):
 
         def _kill_process(pid: int) -> None:
             """Callback method to kill a process."""
-            p = Popen(
+            p = subprocess.Popen(
                 ["ps", "--ppid", str(pid)],
-                stdout=PIPE,
+                stdout=subprocess.PIPE,
                 creationflags=PROC_CREATIONFLAGS,
             )
             child_pids = []
@@ -1355,7 +1354,7 @@ class Git(LazyMixin):
         if cur_val is not None:
             return cur_val
 
-        options = {"istream": PIPE, "as_process": True}
+        options = {"istream": subprocess.PIPE, "as_process": True}
         options.update(kwargs)
 
         cmd = self._call_process(cmd_name, *args, **options)
