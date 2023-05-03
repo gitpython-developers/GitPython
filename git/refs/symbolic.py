@@ -661,7 +661,8 @@ class SymbolicReference(object):
 
     @classmethod
     def _iter_items(
-        cls: Type[T_References], repo: "Repo", common_path: Union[PathLike, None] = None
+        cls: Type[T_References], repo: "Repo", common_path: Union[PathLike, None] = None,
+        packed_refs: bool = True
     ) -> Iterator[T_References]:
         if common_path is None:
             common_path = cls._common_path_default
@@ -685,10 +686,11 @@ class SymbolicReference(object):
         # END for each directory to walk
 
         # read packed refs
-        for _sha, rela_path in cls._iter_packed_refs(repo):
-            if rela_path.startswith(str(common_path)):
-                rela_paths.add(rela_path)
-            # END relative path matches common path
+        if packed_refs:
+            for _sha, rela_path in cls._iter_packed_refs(repo):
+                if rela_path.startswith(str(common_path)):
+                    rela_paths.add(rela_path)
+                # END relative path matches common path
         # END packed refs reading
 
         # return paths in sorted order
@@ -704,6 +706,7 @@ class SymbolicReference(object):
         cls: Type[T_References],
         repo: "Repo",
         common_path: Union[PathLike, None] = None,
+        packed_refs: bool = True,
         *args: Any,
         **kwargs: Any,
     ) -> Iterator[T_References]:
@@ -723,7 +726,7 @@ class SymbolicReference(object):
 
             List is lexicographically sorted
             The returned objects represent actual subclasses, such as Head or TagReference"""
-        return (r for r in cls._iter_items(repo, common_path) if r.__class__ == SymbolicReference or not r.is_detached)
+        return (r for r in cls._iter_items(repo, common_path, packed_refs) if r.__class__ == SymbolicReference or not r.is_detached)
 
     @classmethod
     def from_path(cls: Type[T_References], repo: "Repo", path: PathLike) -> T_References:
