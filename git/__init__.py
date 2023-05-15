@@ -56,8 +56,8 @@ try:
         Actor,
         rmtree,
     )
-except GitError as exc:
-    raise ImportError("%s: %s" % (exc.__class__.__name__, exc)) from exc
+except GitError as _exc:
+    raise ImportError("%s: %s" % (_exc.__class__.__name__, _exc)) from _exc
 
 # } END imports
 
@@ -87,6 +87,6 @@ def refresh(path: Optional[PathLike] = None) -> None:
 #################
 try:
     refresh()
-except Exception as exc:
-    raise ImportError("Failed to initialize: {0}".format(exc)) from exc
+except Exception as _exc:
+    raise ImportError("Failed to initialize: {0}".format(_exc)) from _exc
 #################
