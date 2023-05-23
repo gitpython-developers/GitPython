@@ -22,12 +22,8 @@ implementation of 'git' in [Rust](https://www.rust-lang.org).
 GitPython is a python library used to interact with git repositories, high-level like git-porcelain,
 or low-level like git-plumbing.
 
-It provides abstractions of git objects for easy access of repository data, and additionally
-allows you to access the git repository more directly using either a pure python implementation,
-or the faster, but more resource intensive _git command_ implementation.
-
-The object database implementation is optimized for handling large quantities of objects and large datasets,
-which is achieved by using low-level structures and data streaming.
+It provides abstractions of git objects for easy access of repository data often backed by calling the `git`
+command-line program.
 
 ### DEVELOPMENT STATUS
 
@@ -41,8 +37,7 @@ The project is open to contributions of all kinds, as well as new maintainers.
 
 ### REQUIREMENTS
 
-GitPython needs the `git` executable to be installed on the system and available
-in your `PATH` for most operations.
+GitPython needs the `git` executable to be installed on the system and available in your `PATH` for most operations.
 If it is not in your `PATH`, you can help GitPython find it by setting
 the `GIT_PYTHON_GIT_EXECUTABLE=<path/to/git>` environment variable.
 
