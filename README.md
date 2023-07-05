@@ -51,17 +51,19 @@ The installer takes care of installing them for you.
 
 If you have downloaded the source code:
 
-    python setup.py install
+```bash
+python setup.py install
+```
 
 or if you want to obtain a copy from the Pypi repository:
 
-    pip install GitPython
+```bash
+pip install GitPython
+```
 
 Both commands will install the required package dependencies.
 
-A distribution package can be obtained for manual installation at:
-
-    http://pypi.python.org/pypi/GitPython
+A distribution package can be obtained for manual installation at: <http://pypi.python.org/pypi/GitPython>.
 
 If you like to clone from source, you can do it like so:
 
@@ -157,7 +159,7 @@ tarballs.
 This script shows how to verify the tarball was indeed created by the authors of
 this project:
 
-```
+```bash
 curl https://files.pythonhosted.org/packages/09/bc/ae32e07e89cc25b9e5c793d19a1e5454d30a8e37d95040991160f942519e/GitPython-3.1.8-py3-none-any.whl > gitpython.whl
 curl https://files.pythonhosted.org/packages/09/bc/ae32e07e89cc25b9e5c793d19a1e5454d30a8e37d95040991160f942519e/GitPython-3.1.8-py3-none-any.whl.asc >  gitpython-signature.asc
 gpg --verify gitpython-signature.asc gitpython.whl
@@ -165,7 +167,7 @@ gpg --verify gitpython-signature.asc gitpython.whl
 
 which outputs
 
-```
+```bash
 gpg: Signature made Fr  4 Sep 10:04:50 2020 CST
 gpg:                using RSA key 27C50E7F590947D7273A741E85194C08421980C9
 gpg: Good signature from "Sebastian Thiel (YubiKey USB-C) <byronimo@gmail.com>" [ultimate]
@@ -175,19 +177,19 @@ gpg:                 aka "Sebastian Thiel (In Rust I trust) <sebastian.thiel@icl
 You can verify that the keyid indeed matches the release-signature key provided in this
 repository by looking at the keys details:
 
-```
+```bash
 gpg --list-packets ./release-verification-key.asc
 ```
 
 You can verify that the commit adding it was also signed by it using:
 
-```
+```bash
 git show --show-signature  ./release-verification-key.asc
 ```
 
 If you would like to trust it permanently, you can import and sign it:
 
-```
+```bash
 gpg --import ./release-verification-key.asc
 gpg --edit-key 4C08421980C9
 
