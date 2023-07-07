@@ -4,6 +4,7 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
+from contextlib import ExitStack
 import datetime
 import glob
 from io import BytesIO
@@ -352,27 +353,22 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
 
         # tmp file created in git home directory to be sure renaming
         # works - /tmp/ dirs could be on another device
-        tmp_index = tempfile.mktemp("", "", repo.git_dir)
-        arg_list.append("--index-output=%s" % tmp_index)
-        arg_list.extend(treeish)
+        with ExitStack() as stack:
+            tmp_index = stack.enter_context(tempfile.NamedTemporaryFile(dir=repo.git_dir))
+            arg_list.append("--index-output=%s" % tmp_index.name)
+            arg_list.extend(treeish)
 
-        # move current index out of the way - otherwise the merge may fail
-        # as it considers existing entries. moving it essentially clears the index.
-        # Unfortunately there is no 'soft' way to do it.
-        # The TemporaryFileSwap assure the original file get put back
-        if repo.git_dir:
-            index_handler = TemporaryFileSwap(join_path_native(repo.git_dir, "index"))
-        try:
+            # move current index out of the way - otherwise the merge may fail
+            # as it considers existing entries. moving it essentially clears the index.
+            # Unfortunately there is no 'soft' way to do it.
+            # The TemporaryFileSwap assure the original file get put back
+
+            stack.enter_context(TemporaryFileSwap(join_path_native(repo.git_dir, "index")))
             repo.git.read_tree(*arg_list, **kwargs)
-            index = cls(repo, tmp_index)
+            index = cls(repo, tmp_index.name)
             index.entries  # force it to read the file as we will delete the temp-file
-            del index_handler  # release as soon as possible
-        finally:
-            if osp.exists(tmp_index):
-                os.remove(tmp_index)
-        # END index merge handling
-
-        return index
+            return index
+            # END index merge handling
 
     # UTILITIES
     @unbare_repo
@@ -1156,7 +1152,6 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         unknown_lines = []
 
         def handle_stderr(proc: "Popen[bytes]", iter_checked_out_files: Iterable[PathLike]) -> None:
-
             stderr_IO = proc.stderr
             if not stderr_IO:
                 return None  # return early if stderr empty
