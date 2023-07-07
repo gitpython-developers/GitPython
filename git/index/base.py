@@ -4,6 +4,7 @@
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
+from contextlib import ExitStack
 import datetime
 import glob
 from io import BytesIO
@@ -360,19 +361,18 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         # as it considers existing entries. moving it essentially clears the index.
         # Unfortunately there is no 'soft' way to do it.
         # The TemporaryFileSwap assure the original file get put back
-        if repo.git_dir:
-            index_handler = TemporaryFileSwap(join_path_native(repo.git_dir, "index"))
         try:
-            repo.git.read_tree(*arg_list, **kwargs)
-            index = cls(repo, tmp_index)
-            index.entries  # force it to read the file as we will delete the temp-file
-            del index_handler  # release as soon as possible
+            with ExitStack() as stack:
+                if repo.git_dir:
+                    stack.enter_context(TemporaryFileSwap(join_path_native(repo.git_dir, "index")))
+                repo.git.read_tree(*arg_list, **kwargs)
+                index = cls(repo, tmp_index)
+                index.entries  # force it to read the file as we will delete the temp-file
+                return index
         finally:
             if osp.exists(tmp_index):
                 os.remove(tmp_index)
         # END index merge handling
-
-        return index
 
     # UTILITIES
     @unbare_repo
@@ -1156,7 +1156,6 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         unknown_lines = []
 
         def handle_stderr(proc: "Popen[bytes]", iter_checked_out_files: Iterable[PathLike]) -> None:
-
             stderr_IO = proc.stderr
             if not stderr_IO:
                 return None  # return early if stderr empty

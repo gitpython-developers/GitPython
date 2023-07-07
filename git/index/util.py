@@ -3,6 +3,7 @@ from functools import wraps
 import os
 import struct
 import tempfile
+from types import TracebackType
 
 from git.compat import is_win
 
@@ -11,7 +12,7 @@ import os.path as osp
 
 # typing ----------------------------------------------------------------------
 
-from typing import Any, Callable, TYPE_CHECKING
+from typing import Any, Callable, TYPE_CHECKING, Optional, Type
 
 from git.types import PathLike, _T
 
@@ -47,12 +48,21 @@ class TemporaryFileSwap(object):
         except OSError:
             pass
 
-    def __del__(self) -> None:
+    def __enter__(self) -> "TemporaryFileSwap":
+        return self
+
+    def __exit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[TracebackType],
+    ) -> bool:
         if osp.isfile(self.tmp_file_path):
             if is_win and osp.exists(self.file_path):
                 os.remove(self.file_path)
             os.rename(self.tmp_file_path, self.file_path)
-        # END temp file exists
+
+        return False
 
 
 # { Decorators
