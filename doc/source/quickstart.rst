@@ -99,41 +99,41 @@ returns list of :class:`Commit <git.objects.commit.Commit>` objects
 
     * Untracked files
 
-        Lets create a new file
+    Lets create a new file
 
-        .. literalinclude:: ../../test/test_quick_doc.py
-            :language: python
-            :dedent: 8
-            :start-after: # [7-test_cloned_repo_object]
-            :end-before: # ![7-test_cloned_repo_object]
+    .. literalinclude:: ../../test/test_quick_doc.py
+        :language: python
+        :dedent: 8
+        :start-after: # [7-test_cloned_repo_object]
+        :end-before: # ![7-test_cloned_repo_object]
 
-        .. literalinclude:: ../../test/test_quick_doc.py
-            :language: python
-            :dedent: 8
-            :start-after: # [8-test_cloned_repo_object]
-            :end-before: # ![8-test_cloned_repo_object]
+    .. literalinclude:: ../../test/test_quick_doc.py
+        :language: python
+        :dedent: 8
+        :start-after: # [8-test_cloned_repo_object]
+        :end-before: # ![8-test_cloned_repo_object]
 
     * Modified files
 
-        .. literalinclude:: ../../test/test_quick_doc.py
-            :language: python
-            :dedent: 8
-            :start-after: # [9-test_cloned_repo_object]
-            :end-before: # ![9-test_cloned_repo_object]
+    .. literalinclude:: ../../test/test_quick_doc.py
+        :language: python
+        :dedent: 8
+        :start-after: # [9-test_cloned_repo_object]
+        :end-before: # ![9-test_cloned_repo_object]
 
-        .. literalinclude:: ../../test/test_quick_doc.py
-            :language: python
-            :dedent: 8
-            :start-after: # [10-test_cloned_repo_object]
-            :end-before: # ![10-test_cloned_repo_object]
+    .. literalinclude:: ../../test/test_quick_doc.py
+        :language: python
+        :dedent: 8
+        :start-after: # [10-test_cloned_repo_object]
+        :end-before: # ![10-test_cloned_repo_object]
 
-        returns a list of :class:`Diff <git.diff.Diff>` objects
+    returns a list of :class:`Diff <git.diff.Diff>` objects
 
-        .. literalinclude:: ../../test/test_quick_doc.py
-            :language: python
-            :dedent: 8
-            :start-after: # [11-test_cloned_repo_object]
-            :end-before: # ![11-test_cloned_repo_object]
+    .. literalinclude:: ../../test/test_quick_doc.py
+        :language: python
+        :dedent: 8
+        :start-after: # [11-test_cloned_repo_object]
+        :end-before: # ![11-test_cloned_repo_object]
 
 
 Trees & Blobs
