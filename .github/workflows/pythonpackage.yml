@@ -32,7 +32,7 @@ jobs:
         python -m pip install --upgrade pip setuptools wheel
         python --version; git --version
         git submodule update --init --recursive
-        git fetch --tags
+        git fetch --tags --force
 
         pip install -r requirements.txt
         pip install -r test-requirements.txt
