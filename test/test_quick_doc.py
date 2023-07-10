@@ -18,16 +18,10 @@ class QuickDoc(TestBase):
         from git import Repo
 
         repo = Repo.init(path_to_dir)  # git init path/to/dir
-        assert repo.__class__ is Repo  # Test to confirm repo was initialized
-        # ![1-test_init_repo_object]
+       # ![1-test_init_repo_object]
 
         # [2-test_init_repo_object]
-        import git
-
-        try:
-            repo = Repo(path_to_dir)
-        except git.NoSuchPathError:
-            assert False, f"No such path {path_to_dir}"
+        repo = Repo(path_to_dir)
         # ![2-test_init_repo_object]
 
     @with_rw_directory

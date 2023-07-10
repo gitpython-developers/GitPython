@@ -38,7 +38,7 @@ Clone from URL
 
 For the rest of this tutorial we will use a clone from https://github.com/LeoDaCoda/GitPython-TestFileSys.git
 
-git clone https://some_repo_url
+$ git clone https://github.com/gitpython-developers/QuickStartTutorialFiles.git
 
 .. literalinclude:: ../../test/test_quick_doc.py
     :language: python
