@@ -120,7 +120,53 @@ class QuickDoc(TestBase):
         # file4.txt
         # ![11-test_cloned_repo_object]
 
+        '''Trees and Blobs'''
 
+        # Latest commit tree
+        # [12-test_cloned_repo_object]
+        tree = repo.tree()
+        # ![12-test_cloned_repo_object]
+
+        # Previous commit tree
+        # [13-test_cloned_repo_object]
+        prev_commits = [c for c in repo.iter_commits('--all', max_count=10)]
+        tree = prev_commits[0].tree
+        # ![13-test_cloned_repo_object]
+
+        # Iterating through tree
+        # [14-test_cloned_repo_object]
+        tree = repo.tree()
+        files_dirs = [fd for fd in tree]
+        files_dirs
+
+        # Output
+        # [<git.Tree "1d1cbc95a765e42bd46561f197eef01281a97ac0">,
+        # <git.Tree "4ca53fd68b9a0eafd463c9681f1a26183a40779b">,
+        # <git.Blob "9d384f1b6903ad992a97f91f720d8709b2b71f84">]
+
+        # ![14-test_cloned_repo_object]
+
+        # [15-test_cloned_repo_object]
+        def print_files_from_git(tree, delim='-', i=0):
+            files_dirs = [fd for fd in tree]
+            for fd in files_dirs:
+                print(f'{delim if i != 0 else ""}| {fd.path}, {fd.type}')
+                if fd.type == "tree":
+                    print_files_from_git(fd, delim * 4, i + 1)
+
+        # ![15-test_cloned_repo_object]
+
+        # Printing text files
+        # [16-test_cloned_repo_object]
+        print_file = 'dir1/file2.txt'
+        tree[print_file]
+
+        # Output <git.Blob "3fab4a2e97ee374d0eccd854f298eee0b06a62fb">
+        # ![16-test_cloned_repo_object]
+
+        # [17-test_cloned_repo_object]
+
+        # ![17-test_cloned_repo_object]
 
 
 

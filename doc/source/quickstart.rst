@@ -136,4 +136,74 @@ returns list of :class:`Commit <git.objects.commit.Commit>` objects
             :end-before: # ![11-test_cloned_repo_object]
 
 
+Trees & Blobs
+**************
 
+Latest Commit Tree
+##################
+
+.. literalinclude:: ../../test/test_quick_doc.py
+        :language: python
+        :dedent: 8
+        :start-after: # [12-test_cloned_repo_object]
+        :end-before: # ![12-test_cloned_repo_object]
+
+Any Commit Tree
+###############
+
+.. literalinclude:: ../../test/test_quick_doc.py
+        :language: python
+        :dedent: 8
+        :start-after: # [13-test_cloned_repo_object]
+        :end-before: # ![13-test_cloned_repo_object]
+
+Display level 1 Contents
+########################
+
+.. literalinclude:: ../../test/test_quick_doc.py
+        :language: python
+        :dedent: 8
+        :start-after: # [14-test_cloned_repo_object]
+        :end-before: # ![14-test_cloned_repo_object]
+
+Recurse through the Tree
+########################
+
+.. literalinclude:: ../../test/test_quick_doc.py
+        :language: python
+        :dedent: 8
+        :start-after: # [15-test_cloned_repo_object]
+        :end-before: # ![15-test_cloned_repo_object]
+
+.. code-block:: python
+
+    print_files_from_git(tree)
+
+.. code-block:: python
+
+    # Output
+    | Downloads, tree
+    ----| Downloads/file3.txt, blob
+    | dir1, tree
+    ----| dir1/file1.txt, blob
+    ----| dir1/file2.txt, blob
+    | file4.txt, blob
+
+
+Print file version
+##################
+
+.. literalinclude:: ../../test/test_quick_doc.py
+        :language: python
+        :dedent: 8
+        :start-after: # [16-test_cloned_repo_object]
+        :end-before: # ![16-test_cloned_repo_object]
+
+.. code-block:: python
+
+    blob = tree[print_file]
+    print(blob.data_stream.read().decode())
+
+    # Output
+    # file 2 version 1
+    # Update version 2
