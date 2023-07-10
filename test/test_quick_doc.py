@@ -136,8 +136,8 @@ class QuickDoc(TestBase):
         # Iterating through tree
         # [14-test_cloned_repo_object]
         tree = repo.tree()
-        files_dirs = [fd for fd in tree]
-        files_dirs
+        files_and_dirs = [entry for entry in tree]
+        files_and_dirs
 
         # Output
         # [<git.Tree "1d1cbc95a765e42bd46561f197eef01281a97ac0">,
@@ -147,12 +147,11 @@ class QuickDoc(TestBase):
         # ![14-test_cloned_repo_object]
 
         # [15-test_cloned_repo_object]
-        def print_files_from_git(tree, delim='-', i=0):
-            files_dirs = [fd for fd in tree]
-            for fd in files_dirs:
-                print(f'{delim if i != 0 else ""}| {fd.path}, {fd.type}')
-                if fd.type == "tree":
-                    print_files_from_git(fd, delim * 4, i + 1)
+        def print_files_from_git(root, delim='-', i=0):
+            for entry in root:
+                print(f'{delim if i != 0 else ""}| {entry.path}, {entry.type}')
+                if entry.type == "tree":
+                    print_files_from_git(entry, delim * 4, i + 1)
 
         # ![15-test_cloned_repo_object]
 
