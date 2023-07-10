@@ -113,7 +113,7 @@ class QuickDoc(TestBase):
 
         # Latest commit tree
         # [12-test_cloned_repo_object]
-        tree = repo.tree()
+        tree = repo.head.commit.tree
         # ![12-test_cloned_repo_object]
 
         # Previous commit tree
