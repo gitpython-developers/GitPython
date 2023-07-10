@@ -175,35 +175,29 @@ Recurse through the Tree
         :start-after: # [15-test_cloned_repo_object]
         :end-before: # ![15-test_cloned_repo_object]
 
-.. code-block:: python
-
-    print_files_from_git(tree)
-
-.. code-block:: python
-
-    # Output
-    | Downloads, tree
-    ----| Downloads/file3.txt, blob
-    | dir1, tree
-    ----| dir1/file1.txt, blob
-    ----| dir1/file2.txt, blob
-    | file4.txt, blob
-
-
-Print file version
-##################
-
 .. literalinclude:: ../../test/test_quick_doc.py
         :language: python
         :dedent: 8
         :start-after: # [16-test_cloned_repo_object]
         :end-before: # ![16-test_cloned_repo_object]
 
-.. code-block:: python
 
-    blob = tree[print_file]
-    print(blob.data_stream.read().decode())
 
-    # Output
-    # file 2 version 1
-    # Update version 2
+
+Printing text files
+####################
+
+.. literalinclude:: ../../test/test_quick_doc.py
+        :language: python
+        :dedent: 8
+        :start-after: # [17-test_cloned_repo_object]
+        :end-before: # ![17-test_cloned_repo_object]
+
+.. literalinclude:: ../../test/test_quick_doc.py
+        :language: python
+        :dedent: 8
+        :start-after: # [18-test_cloned_repo_object]
+        :end-before: # ![18-test_cloned_repo_object]
+
+
+

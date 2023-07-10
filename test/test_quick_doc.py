@@ -156,19 +156,34 @@ class QuickDoc(TestBase):
 
         # ![15-test_cloned_repo_object]
 
-        # Printing text files
         # [16-test_cloned_repo_object]
+        print_files_from_git(tree)
+
+        # Output
+        # | Downloads, tree
+        # ---- | Downloads / file3.txt, blob
+        # | dir1, tree
+        # ---- | dir1 / file1.txt, blob
+        # ---- | dir1 / file2.txt, blob
+        # | file4.txt, blob
+        # # ![16-test_cloned_repo_object]
+
+        # Printing text files
+        # [17-test_cloned_repo_object]
         print_file = 'dir1/file2.txt'
         tree[print_file]
 
         # Output <git.Blob "3fab4a2e97ee374d0eccd854f298eee0b06a62fb">
-        # ![16-test_cloned_repo_object]
-
-        # [17-test_cloned_repo_object]
-
         # ![17-test_cloned_repo_object]
 
+        # [18-test_cloned_repo_object]
+        blob = tree[print_file]
+        print(blob.data_stream.read().decode())
 
+        # Output
+        # file 2 version 1
+        # Update version 2
 
+        # ![18-test_cloned_repo_object]
 
 
