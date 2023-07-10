@@ -282,6 +282,17 @@ class TestRepo(TestBase):
                     rw_repo.clone(tmp_dir, multi_options=[unsafe_option])
                 assert not tmp_file.exists()
 
+            unsafe_options = [
+                {"upload-pack": f"touch {tmp_file}"},
+                {"u": f"touch {tmp_file}"},
+                {"config": "protocol.ext.allow=always"},
+                {"c": "protocol.ext.allow=always"},
+            ]
+            for unsafe_option in unsafe_options:
+                with self.assertRaises(UnsafeOptionError):
+                    rw_repo.clone(tmp_dir, **unsafe_option)
+                assert not tmp_file.exists()
+
     @with_rw_repo("HEAD")
     def test_clone_unsafe_options_allowed(self, rw_repo):
         with tempfile.TemporaryDirectory() as tdir:
@@ -339,6 +350,17 @@ class TestRepo(TestBase):
             for unsafe_option in unsafe_options:
                 with self.assertRaises(UnsafeOptionError):
                     Repo.clone_from(rw_repo.working_dir, tmp_dir, multi_options=[unsafe_option])
+                assert not tmp_file.exists()
+
+            unsafe_options = [
+                {"upload-pack": f"touch {tmp_file}"},
+                {"u": f"touch {tmp_file}"},
+                {"config": "protocol.ext.allow=always"},
+                {"c": "protocol.ext.allow=always"},
+            ]
+            for unsafe_option in unsafe_options:
+                with self.assertRaises(UnsafeOptionError):
+                    Repo.clone_from(rw_repo.working_dir, tmp_dir, **unsafe_option)
                 assert not tmp_file.exists()
 
     @with_rw_repo("HEAD")
