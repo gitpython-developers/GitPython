@@ -12,8 +12,7 @@ class QuickDoc(TestBase):
         gc.collect()
 
     @with_rw_directory
-    def test_init_repo_object(self, rw_dir):
-        path_to_dir = rw_dir
+    def test_init_repo_object(self, path_to_dir):
 
         # [1-test_init_repo_object]
         from git import Repo
@@ -32,19 +31,15 @@ class QuickDoc(TestBase):
         # ![2-test_init_repo_object]
 
     @with_rw_directory
-    def test_cloned_repo_object(self, rw_dir):
-        local_dir = rw_dir
+    def test_cloned_repo_object(self, local_dir):
 
         from git import Repo
         import git
         # code to clone from url
         # [1-test_cloned_repo_object]
-        repo_url = "https://github.com/LeoDaCoda/GitPython-TestFileSys.git"
+        repo_url = "https://github.com/gitpython-developers/QuickStartTutorialFiles.git"
 
-        try:
-            repo = Repo.clone_from(repo_url, local_dir)
-        except git.CommandError:
-            assert False, f"Invalid address {repo_url}"
+        repo = Repo.clone_from(repo_url, local_dir)
         # ![1-test_cloned_repo_object]
 
         # code to add files
