@@ -9,6 +9,7 @@ GitPython Documentation
    :maxdepth: 2
 
    intro
+   quickstart
    tutorial
    reference
    roadmap
