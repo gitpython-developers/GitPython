@@ -57,14 +57,14 @@ class QuickDoc(TestBase):
 
         # [5-test_cloned_repo_object]
         file = 'dir1/file2.txt' # relative path from git root
-        repo.iter_commits('--all', max_count=100, paths=file)
+        repo.iter_commits(all=True, max_count=10, paths=file)  # gets the last 10 commits from all branches
 
         # Outputs: <generator object Commit._iter_from_process_or_stream at 0x7fb66c186cf0>
 
         # ![5-test_cloned_repo_object]
 
         # [6-test_cloned_repo_object]
-        commits_for_file_generator = repo.iter_commits('--all', max_count=100, paths=file)
+        commits_for_file_generator = repo.iter_commits(all=True, max_count=10, paths=file)
         commits_for_file = [c for c in commits_for_file_generator]
         commits_for_file
 
@@ -95,7 +95,8 @@ class QuickDoc(TestBase):
         # ![9-test_cloned_repo_object]
 
         # [10-test_cloned_repo_object]
-        repo.index.diff(None)
+        repo.index.diff(None)  # compares staging area to working directory
+        repo.index.diff(repo.head.commit)  # compares staging area to last commit
         # Output: [<git.diff.Diff object at 0x7fb66c076e50>,
         # <git.diff.Diff object at 0x7fb66c076ca0>]
         # ![10-test_cloned_repo_object]
@@ -118,7 +119,7 @@ class QuickDoc(TestBase):
 
         # Previous commit tree
         # [13-test_cloned_repo_object]
-        prev_commits = [c for c in repo.iter_commits('--all', max_count=10)]
+        prev_commits = [c for c in repo.iter_commits(all=True, max_count=10)]  # last 10 commits from all branches
         tree = prev_commits[0].tree
         # ![13-test_cloned_repo_object]
 
