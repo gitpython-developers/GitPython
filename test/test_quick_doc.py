@@ -46,7 +46,7 @@ class QuickDoc(TestBase):
         # ![2-test_cloned_repo_object]
 
         # [3-test_cloned_repo_object]
-        add_file = [f"{update_file}"] # relative path from git root
+        add_file = [update_file]  # relative path from git root
         repo.index.add(add_file)  # notice the add function requires a list of paths
         # ![3-test_cloned_repo_object]
 
@@ -56,15 +56,15 @@ class QuickDoc(TestBase):
         # ![4-test_cloned_repo_object]
 
         # [5-test_cloned_repo_object]
-        file = 'dir1/file2.txt' # relative path from git root
-        repo.iter_commits(all=True, max_count=10, paths=file)  # gets the last 10 commits from all branches
+        # relative path from git root
+        repo.iter_commits(all=True, max_count=10, paths=update_file)  # gets the last 10 commits from all branches
 
         # Outputs: <generator object Commit._iter_from_process_or_stream at 0x7fb66c186cf0>
 
         # ![5-test_cloned_repo_object]
 
         # [6-test_cloned_repo_object]
-        commits_for_file_generator = repo.iter_commits(all=True, max_count=10, paths=file)
+        commits_for_file_generator = repo.iter_commits(all=True, max_count=10, paths=update_file)
         commits_for_file = [c for c in commits_for_file_generator]
         commits_for_file
 
@@ -76,8 +76,7 @@ class QuickDoc(TestBase):
         # [7-test_cloned_repo_object]
         # We'll create a file5.txt
 
-        file5 = f'{local_dir}/file5.txt'
-        with open(file5, 'w') as f:
+        with open(f'{local_dir}/file5.txt', 'w') as f:
             f.write('file5 version 1')
         # ![7-test_cloned_repo_object]
 
@@ -89,8 +88,8 @@ class QuickDoc(TestBase):
         # Modified files
         # [9-test_cloned_repo_object]
         # Lets modify one of our tracked files
-        file3 = f'{local_dir}/Downloads/file3.txt'
-        with open(file3, 'w') as f:
+
+        with open(f'{local_dir}/Downloads/file3.txt', 'w') as f:
             f.write('file3 version 2')  # overwrite file 3
         # ![9-test_cloned_repo_object]
 
