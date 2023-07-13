@@ -160,7 +160,7 @@ class QuickDoc(TestBase):
         print_file = 'dir1/file2.txt'
         tree[print_file]
 
-        # Output <git.Blob "3fab4a2e97ee374d0eccd854f298eee0b06a62fb">
+        # Output <git.Blob "SHA1-HEX-HASH-1">
         # ![17-test_cloned_repo_object]
 
         # [18-test_cloned_repo_object]
