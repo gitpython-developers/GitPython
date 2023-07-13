@@ -39,7 +39,7 @@ Existing local git Repo
 Clone from URL
 ##############
 
-For the rest of this tutorial we will use a clone from https://github.com/LeoDaCoda/GitPython-TestFileSys.git
+For the rest of this tutorial we will use a clone from https://github.com/gitpython-developers/QuickStartTutorialFiles.git
 
 $ git clone https://github.com/gitpython-developers/QuickStartTutorialFiles.git
 

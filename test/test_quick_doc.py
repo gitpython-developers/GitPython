@@ -40,7 +40,7 @@ class QuickDoc(TestBase):
         # [2-test_cloned_repo_object]
         # We must make a change to a file so that we can add the update to git
 
-        update_file = 'dir1/file2.txt' # we'll use ./dir1/file2.txt
+        update_file = 'dir1/file2.txt' # we'll use local_dir/dir1/file2.txt
         with open(f"{local_dir}/{update_file}", 'a') as f:
             f.write('\nUpdate version 2')
         # ![2-test_cloned_repo_object]
