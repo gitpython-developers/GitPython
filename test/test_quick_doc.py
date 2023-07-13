@@ -135,11 +135,11 @@ class QuickDoc(TestBase):
         # ![14-test_cloned_repo_object]
 
         # [15-test_cloned_repo_object]
-        def print_files_from_git(root, delim='-', i=0):
+        def print_files_from_git(root, level=0):
             for entry in root:
-                print(f'{delim if i != 0 else ""}| {entry.path}, {entry.type}')
+                print(f'{"-" * 4 * level}| {entry.path}, {entry.type}')
                 if entry.type == "tree":
-                    print_files_from_git(entry, delim * 4, i + 1)
+                    print_files_from_git(entry, level + 1)
 
         # ![15-test_cloned_repo_object]
 
@@ -148,10 +148,10 @@ class QuickDoc(TestBase):
 
         # Output
         # | Downloads, tree
-        # ---- | Downloads / file3.txt, blob
+        # ----| Downloads / file3.txt, blob
         # | dir1, tree
-        # ---- | dir1 / file1.txt, blob
-        # ---- | dir1 / file2.txt, blob
+        # ----| dir1 / file1.txt, blob
+        # ----| dir1 / file2.txt, blob
         # | file4.txt, blob
         # # ![16-test_cloned_repo_object]
 
