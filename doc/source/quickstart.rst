@@ -11,6 +11,74 @@ Welcome to the GitPython Quickstart Guide! Designed for developers seeking a pra
 
 All code presented here originated from `***** insert link **** <https://github.com/gitpython-developers/GitPython>`_ to assure correctness. Knowing this should also allow you to more easily run the code for your own testing purposes. All you need is a developer installation of git-python.
 
+
+Trees & Blobs
+**************
+
+Latest Commit Tree
+##################
+
+.. literalinclude:: ../../test/test_quick_doc.py
+        :language: python
+        :dedent: 8
+        :start-after: # [12-test_cloned_repo_object]
+        :end-before: # ![12-test_cloned_repo_object]
+
+Any Commit Tree
+###############
+
+.. literalinclude:: ../../test/test_quick_doc.py
+        :language: python
+        :dedent: 8
+        :start-after: # [13-test_cloned_repo_object]
+        :end-before: # ![13-test_cloned_repo_object]
+
+Display level 1 Contents
+########################
+
+.. literalinclude:: ../../test/test_quick_doc.py
+        :language: python
+        :dedent: 8
+        :start-after: # [14-test_cloned_repo_object]
+        :end-before: # ![14-test_cloned_repo_object]
+
+Recurse through the Tree
+########################
+
+.. literalinclude:: ../../test/test_quick_doc.py
+        :language: python
+        :dedent: 8
+        :start-after: # [15-test_cloned_repo_object]
+        :end-before: # ![15-test_cloned_repo_object]
+
+.. literalinclude:: ../../test/test_quick_doc.py
+        :language: python
+        :dedent: 8
+        :start-after: # [16-test_cloned_repo_object]
+        :end-before: # ![16-test_cloned_repo_object]
+
+
+
+
+Printing text files
+####################
+
+.. literalinclude:: ../../test/test_quick_doc.py
+        :language: python
+        :dedent: 8
+        :start-after: # [17-test_cloned_repo_object]
+        :end-before: # ![17-test_cloned_repo_object]
+
+.. literalinclude:: ../../test/test_quick_doc.py
+        :language: python
+        :dedent: 8
+        :start-after: # [18-test_cloned_repo_object]
+        :end-before: # ![18-test_cloned_repo_object]
+
+
+
+
+
 git.Repo
 ********
 
@@ -137,70 +205,5 @@ returns list of :class:`Commit <git.objects.commit.Commit>` objects
         :dedent: 8
         :start-after: # [11-test_cloned_repo_object]
         :end-before: # ![11-test_cloned_repo_object]
-
-
-Trees & Blobs
-**************
-
-Latest Commit Tree
-##################
-
-.. literalinclude:: ../../test/test_quick_doc.py
-        :language: python
-        :dedent: 8
-        :start-after: # [12-test_cloned_repo_object]
-        :end-before: # ![12-test_cloned_repo_object]
-
-Any Commit Tree
-###############
-
-.. literalinclude:: ../../test/test_quick_doc.py
-        :language: python
-        :dedent: 8
-        :start-after: # [13-test_cloned_repo_object]
-        :end-before: # ![13-test_cloned_repo_object]
-
-Display level 1 Contents
-########################
-
-.. literalinclude:: ../../test/test_quick_doc.py
-        :language: python
-        :dedent: 8
-        :start-after: # [14-test_cloned_repo_object]
-        :end-before: # ![14-test_cloned_repo_object]
-
-Recurse through the Tree
-########################
-
-.. literalinclude:: ../../test/test_quick_doc.py
-        :language: python
-        :dedent: 8
-        :start-after: # [15-test_cloned_repo_object]
-        :end-before: # ![15-test_cloned_repo_object]
-
-.. literalinclude:: ../../test/test_quick_doc.py
-        :language: python
-        :dedent: 8
-        :start-after: # [16-test_cloned_repo_object]
-        :end-before: # ![16-test_cloned_repo_object]
-
-
-
-
-Printing text files
-####################
-
-.. literalinclude:: ../../test/test_quick_doc.py
-        :language: python
-        :dedent: 8
-        :start-after: # [17-test_cloned_repo_object]
-        :end-before: # ![17-test_cloned_repo_object]
-
-.. literalinclude:: ../../test/test_quick_doc.py
-        :language: python
-        :dedent: 8
-        :start-after: # [18-test_cloned_repo_object]
-        :end-before: # ![18-test_cloned_repo_object]
-
 
 
