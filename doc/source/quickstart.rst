@@ -138,6 +138,8 @@ Now lets add the updated file to git
 
 Notice the add method requires a list as a parameter
 
+Warning: If you experience any trouble with this, try to invoke :class:`git <git.cmd.Git>` instead via repo.git.add(path)
+
 * $ git commit -m message
 
 .. literalinclude:: ../../test/test_quick_doc.py
