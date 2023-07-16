@@ -9,8 +9,6 @@ GitPython Quick Start Tutorial
 ==============================
 Welcome to the GitPython Quickstart Guide! Designed for developers seeking a practical and interactive learning experience, this concise resource offers step-by-step code snippets to swiftly initialize/clone repositories, perform essential Git operations, and explore GitPython's capabilities. Get ready to dive in, experiment, and unleash the power of GitPython in your projects!
 
-All code presented here originated from `***** insert link **** <https://github.com/gitpython-developers/GitPython>`_ to assure correctness. Knowing this should also allow you to more easily run the code for your own testing purposes. All you need is a developer installation of git-python.
-
 
 Trees & Blobs
 **************
