@@ -68,8 +68,8 @@ class QuickDoc(TestBase):
         commits_for_file = [c for c in commits_for_file_generator]
         commits_for_file
 
-        # Outputs: [<git.Commit "SHA1-HEX-HASH-1">,
-        # <git.Commit "SHA1-HEX-HASH-1">]
+        # Outputs: [<git.Commit "SHA1-HEX_HASH-2">,
+        # <git.Commit "SHA1-HEX-HASH-2">]
         # ![6-test_cloned_repo_object]
 
         # Untracked files - create new file
@@ -128,9 +128,9 @@ class QuickDoc(TestBase):
         files_and_dirs
 
         # Output
-        # [<git.Commit "SHA1-HEX-HASH-1">,
-        # <git.Commit "SHA1-HEX-HASH-1">,
-        # <git.Commit "SHA1-HEX-HASH-1">]
+        # [<git.Commit "SHA1-HEX_HASH-2">,
+        # <git.Commit "SHA1-HEX_HASH-2">,
+        # <git.Commit "SHA1-HEX_HASH-2">]
 
         # ![14-test_cloned_repo_object]
 
