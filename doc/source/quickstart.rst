@@ -168,6 +168,12 @@ Lets print the latest version of `<local_dir> dir1/file2.txt`
 
 Previous version of `<local_dir>/dir1/file2.txt`
 
+.. literalinclude:: ../../test/test_quick_doc.py
+        :language: python
+        :dedent: 8
+        :start-after: # [18.1-test_cloned_repo_object]
+        :end-before: # ![18.1-test_cloned_repo_object]
+
 * $ git status
 
     * Untracked files

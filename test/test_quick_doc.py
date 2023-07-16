@@ -177,13 +177,7 @@ class QuickDoc(TestBase):
         # Output <git.Blob "SHA1-HEX-HASH-1">
         # ![17-test_cloned_repo_object]
 
-        # print pre
-        # [17.1-test_cloned_repo_object]
-        commits_for_file = [c for c in repo.iter_commits(all=True, paths=print_file)]
-        blob = tree[print_file]
-
-        # ![17.1-test_cloned_repo_object]
-
+        # print latest file
         # [18-test_cloned_repo_object]
         blob = tree[print_file]
         print(blob.data_stream.read().decode())
@@ -191,7 +185,16 @@ class QuickDoc(TestBase):
         # Output
         # file 2 version 1
         # Update version 2
-
         # ![18-test_cloned_repo_object]
 
+        # print previous tree
+        # [18.1-test_cloned_repo_object]
+        commits_for_file = [c for c in repo.iter_commits(all=True, paths=print_file)]
+        tree = commits_for_file[-1].tree  # gets the first commit tree
+        blob = tree[print_file]
 
+        print(blob.data_stream.read().decode())
+
+        # Output
+        # file 2 version 1
+        # ![18.1-test_cloned_repo_object]
