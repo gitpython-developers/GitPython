@@ -15,6 +15,8 @@ class QuickDoc(TestBase):
     def test_init_repo_object(self, path_to_dir):
 
         # [1-test_init_repo_object]
+        # $ git init <path/to/dir>
+
         from git import Repo
 
         repo = Repo.init(path_to_dir)  # git init path/to/dir
@@ -31,6 +33,8 @@ class QuickDoc(TestBase):
         import git
         # code to clone from url
         # [1-test_cloned_repo_object]
+        # $ git clone <url> <local_dir>
+
         repo_url = "https://github.com/gitpython-developers/QuickStartTutorialFiles.git"
 
         repo = Repo.clone_from(repo_url, local_dir)
@@ -128,11 +132,21 @@ class QuickDoc(TestBase):
         files_and_dirs
 
         # Output
-        # [<git.Commit "SHA1-HEX_HASH-2">,
-        # <git.Commit "SHA1-HEX_HASH-2">,
-        # <git.Commit "SHA1-HEX_HASH-2">]
+        # [<git.Commit "SHA1-HEX_HASH">,
+        # <git.Commit "SHA1-HEX_HASH">,
+        # <git.Commit "SHA1-HEX_HASH">]
 
         # ![14-test_cloned_repo_object]
+
+        # [14.1-test_cloned_repo_object]
+        files_and_dirs = [(entry, entry.name) for entry in tree]
+        files_and_dirs
+
+        # Output
+        # [(< git.Tree "SHA1-HEX_HASH" >, 'Downloads', 'tree'),
+        #  (< git.Tree "SHA1-HEX_HASH" >, 'dir1', 'tree'),
+        #  (< git.Blob "SHA1-HEX_HASH" >, 'file4.txt', 'blob')]
+        # ![14.1-test_cloned_repo_object]
 
         # [15-test_cloned_repo_object]
         def print_files_from_git(root, level=0):
@@ -162,6 +176,13 @@ class QuickDoc(TestBase):
 
         # Output <git.Blob "SHA1-HEX-HASH-1">
         # ![17-test_cloned_repo_object]
+
+        # print pre
+        # [17.1-test_cloned_repo_object]
+        commits_for_file = [c for c in repo.iter_commits(all=True, paths=print_file)]
+        blob = tree[print_file]
+
+        # ![17.1-test_cloned_repo_object]
 
         # [18-test_cloned_repo_object]
         blob = tree[print_file]

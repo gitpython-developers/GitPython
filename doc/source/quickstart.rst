@@ -10,6 +10,41 @@ GitPython Quick Start Tutorial
 Welcome to the GitPython Quickstart Guide! Designed for developers seeking a practical and interactive learning experience, this concise resource offers step-by-step code snippets to swiftly initialize/clone repositories, perform essential Git operations, and explore GitPython's capabilities. Get ready to dive in, experiment, and unleash the power of GitPython in your projects!
 
 
+git.Repo
+********
+
+There are a few ways to create a :class:`git.Repo <git.repo.base.Repo>` object
+
+Initialize a new git Repo
+#########################
+
+.. literalinclude:: ../../test/test_quick_doc.py
+    :language: python
+    :dedent: 8
+    :start-after: # [1-test_init_repo_object]
+    :end-before: # ![1-test_init_repo_object]
+
+Existing local git Repo
+#######################
+
+.. literalinclude:: ../../test/test_quick_doc.py
+    :language: python
+    :dedent: 8
+    :start-after: # [2-test_init_repo_object]
+    :end-before: # ![2-test_init_repo_object]
+
+Clone from URL
+##############
+
+For the rest of this tutorial we will use a clone from https://github.com/gitpython-developers/QuickStartTutorialFiles.git
+
+.. literalinclude:: ../../test/test_quick_doc.py
+    :language: python
+    :dedent: 8
+    :start-after: # [1-test_cloned_repo_object]
+    :end-before: # ![1-test_cloned_repo_object]
+
+
 Trees & Blobs
 **************
 
@@ -40,6 +75,12 @@ Display level 1 Contents
         :start-after: # [14-test_cloned_repo_object]
         :end-before: # ![14-test_cloned_repo_object]
 
+.. literalinclude:: ../../test/test_quick_doc.py
+        :language: python
+        :dedent: 8
+        :start-after: # [14.1-test_cloned_repo_object]
+        :end-before: # ![14.1-test_cloned_repo_object]
+
 Recurse through the Tree
 ########################
 
@@ -58,67 +99,10 @@ Recurse through the Tree
 
 
 
-Printing text files
-####################
-
-.. literalinclude:: ../../test/test_quick_doc.py
-        :language: python
-        :dedent: 8
-        :start-after: # [17-test_cloned_repo_object]
-        :end-before: # ![17-test_cloned_repo_object]
-
-.. literalinclude:: ../../test/test_quick_doc.py
-        :language: python
-        :dedent: 8
-        :start-after: # [18-test_cloned_repo_object]
-        :end-before: # ![18-test_cloned_repo_object]
-
-
-
-
-
-git.Repo
-********
-
-There are a few ways to create a :class:`git.Repo <git.repo.base.Repo>` object
-
-An existing local path
-######################
-
-$ git init path/to/dir
-
-.. literalinclude:: ../../test/test_quick_doc.py
-    :language: python
-    :dedent: 8
-    :start-after: # [1-test_init_repo_object]
-    :end-before: # ![1-test_init_repo_object]
-
-Existing local git Repo
-#######################
-
-.. literalinclude:: ../../test/test_quick_doc.py
-    :language: python
-    :dedent: 8
-    :start-after: # [2-test_init_repo_object]
-    :end-before: # ![2-test_init_repo_object]
-
-Clone from URL
-##############
-
-For the rest of this tutorial we will use a clone from https://github.com/gitpython-developers/QuickStartTutorialFiles.git
-
-$ git clone https://github.com/gitpython-developers/QuickStartTutorialFiles.git
-
-.. literalinclude:: ../../test/test_quick_doc.py
-    :language: python
-    :dedent: 8
-    :start-after: # [1-test_cloned_repo_object]
-    :end-before: # ![1-test_cloned_repo_object]
-
 Usage
 ****************
 
-* $ git add filepath
+* $ git add <filepath>
 
 .. literalinclude:: ../../test/test_quick_doc.py
     :language: python
@@ -146,7 +130,7 @@ Warning: If you experience any trouble with this, try to invoke :class:`git <git
     :start-after: # [4-test_cloned_repo_object]
     :end-before: # ![4-test_cloned_repo_object]
 
-* $ git log file
+* $ git log <file>
 
 A list of commits associated with a file
 
@@ -165,6 +149,24 @@ Notice this returns a generator object
     :end-before: # ![6-test_cloned_repo_object]
 
 returns list of :class:`Commit <git.objects.commit.Commit>` objects
+
+Printing text files
+####################
+Lets print the latest version of `<local_dir> dir1/file2.txt`
+
+.. literalinclude:: ../../test/test_quick_doc.py
+        :language: python
+        :dedent: 8
+        :start-after: # [17-test_cloned_repo_object]
+        :end-before: # ![17-test_cloned_repo_object]
+
+.. literalinclude:: ../../test/test_quick_doc.py
+        :language: python
+        :dedent: 8
+        :start-after: # [18-test_cloned_repo_object]
+        :end-before: # ![18-test_cloned_repo_object]
+
+Previous version of `<local_dir>/dir1/file2.txt`
 
 * $ git status
 
@@ -205,5 +207,7 @@ returns list of :class:`Commit <git.objects.commit.Commit>` objects
         :dedent: 8
         :start-after: # [11-test_cloned_repo_object]
         :end-before: # ![11-test_cloned_repo_object]
+
+
 
 
