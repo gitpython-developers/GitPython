@@ -93,7 +93,7 @@ class QuickDoc(TestBase):
 
         # Modified files
         # [9-test_cloned_repo_object]
-        # Lets modify one of our tracked files
+        # Let's modify one of our tracked files
 
         with open(f'{local_dir}/Downloads/file3.txt', 'w') as f:
             f.write('file3 version 2')  # overwrite file 3
@@ -174,7 +174,7 @@ class QuickDoc(TestBase):
         # Printing text files
         # [17-test_cloned_repo_object]
         print_file = 'dir1/file2.txt'
-        tree[print_file]
+        tree[print_file]  # the head commit tree
 
         # Output <git.Blob "SHA1-HEX-HASH-1">
         # ![17-test_cloned_repo_object]
