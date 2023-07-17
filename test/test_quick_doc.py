@@ -50,16 +50,20 @@ class QuickDoc(TestBase):
         # ![2-test_cloned_repo_object]
 
         # [3-test_cloned_repo_object]
+        # $ git add <file>
         add_file = [update_file]  # relative path from git root
         repo.index.add(add_file)  # notice the add function requires a list of paths
         # ![3-test_cloned_repo_object]
 
         # code to commit - not sure how to test this
         # [4-test_cloned_repo_object]
+        # $ git commit -m <message>
         repo.index.commit("Update to file2")
         # ![4-test_cloned_repo_object]
 
         # [5-test_cloned_repo_object]
+        # $ git log <file>
+
         # relative path from git root
         repo.iter_commits(all=True, max_count=10, paths=update_file)  # gets the last 10 commits from all branches
 
@@ -78,15 +82,13 @@ class QuickDoc(TestBase):
 
         # Untracked files - create new file
         # [7-test_cloned_repo_object]
-        # We'll create a file5.txt
-
-        with open(f'{local_dir}/file5.txt', 'w') as f:
-            f.write('file5 version 1')
+        f = open(f'{local_dir}/untracked.txt', 'w')  # creates an empty file
+        f.close()
         # ![7-test_cloned_repo_object]
 
         # [8-test_cloned_repo_object]
         repo.untracked_files
-        # Output: ['file5.txt']
+        # Output: ['untracked.txt']
         # ![8-test_cloned_repo_object]
 
         # Modified files

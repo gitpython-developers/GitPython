@@ -102,117 +102,119 @@ Recurse through the Tree
 Usage
 ****************
 
-* $ git add <filepath>
+Add file to staging area
+########################
 
-.. literalinclude:: ../../test/test_quick_doc.py
-    :language: python
-    :dedent: 8
-    :start-after: # [2-test_cloned_repo_object]
-    :end-before: # ![2-test_cloned_repo_object]
 
-Now lets add the updated file to git
+    .. literalinclude:: ../../test/test_quick_doc.py
+        :language: python
+        :dedent: 8
+        :start-after: # [2-test_cloned_repo_object]
+        :end-before: # ![2-test_cloned_repo_object]
 
-.. literalinclude:: ../../test/test_quick_doc.py
-    :language: python
-    :dedent: 8
-    :start-after: # [3-test_cloned_repo_object]
-    :end-before: # ![3-test_cloned_repo_object]
+    Now lets add the updated file to git
 
-Notice the add method requires a list as a parameter
+    .. literalinclude:: ../../test/test_quick_doc.py
+        :language: python
+        :dedent: 8
+        :start-after: # [3-test_cloned_repo_object]
+        :end-before: # ![3-test_cloned_repo_object]
 
-Warning: If you experience any trouble with this, try to invoke :class:`git <git.cmd.Git>` instead via repo.git.add(path)
+    Notice the add method requires a list as a parameter
 
-* $ git commit -m message
+    Warning: If you experience any trouble with this, try to invoke :class:`git <git.cmd.Git>` instead via repo.git.add(path)
 
-.. literalinclude:: ../../test/test_quick_doc.py
-    :language: python
-    :dedent: 8
-    :start-after: # [4-test_cloned_repo_object]
-    :end-before: # ![4-test_cloned_repo_object]
+Commit
+######
 
-* $ git log <file>
+    .. literalinclude:: ../../test/test_quick_doc.py
+        :language: python
+        :dedent: 8
+        :start-after: # [4-test_cloned_repo_object]
+        :end-before: # ![4-test_cloned_repo_object]
 
-A list of commits associated with a file
+List of commits associated with a file
+#######################################
 
-.. literalinclude:: ../../test/test_quick_doc.py
-    :language: python
-    :dedent: 8
-    :start-after: # [5-test_cloned_repo_object]
-    :end-before: # ![5-test_cloned_repo_object]
+    .. literalinclude:: ../../test/test_quick_doc.py
+        :language: python
+        :dedent: 8
+        :start-after: # [5-test_cloned_repo_object]
+        :end-before: # ![5-test_cloned_repo_object]
 
-Notice this returns a generator object
+    Notice this returns a generator object
 
-.. literalinclude:: ../../test/test_quick_doc.py
-    :language: python
-    :dedent: 8
-    :start-after: # [6-test_cloned_repo_object]
-    :end-before: # ![6-test_cloned_repo_object]
+    .. literalinclude:: ../../test/test_quick_doc.py
+        :language: python
+        :dedent: 8
+        :start-after: # [6-test_cloned_repo_object]
+        :end-before: # ![6-test_cloned_repo_object]
 
-returns list of :class:`Commit <git.objects.commit.Commit>` objects
+    returns list of :class:`Commit <git.objects.commit.Commit>` objects
 
 Printing text files
 ####################
 Lets print the latest version of `<local_dir> dir1/file2.txt`
 
-.. literalinclude:: ../../test/test_quick_doc.py
-        :language: python
-        :dedent: 8
-        :start-after: # [17-test_cloned_repo_object]
-        :end-before: # ![17-test_cloned_repo_object]
+    .. literalinclude:: ../../test/test_quick_doc.py
+            :language: python
+            :dedent: 8
+            :start-after: # [17-test_cloned_repo_object]
+            :end-before: # ![17-test_cloned_repo_object]
 
-.. literalinclude:: ../../test/test_quick_doc.py
-        :language: python
-        :dedent: 8
-        :start-after: # [18-test_cloned_repo_object]
-        :end-before: # ![18-test_cloned_repo_object]
+    .. literalinclude:: ../../test/test_quick_doc.py
+            :language: python
+            :dedent: 8
+            :start-after: # [18-test_cloned_repo_object]
+            :end-before: # ![18-test_cloned_repo_object]
 
-Previous version of `<local_dir>/dir1/file2.txt`
+    Previous version of `<local_dir>/dir1/file2.txt`
 
-.. literalinclude:: ../../test/test_quick_doc.py
-        :language: python
-        :dedent: 8
-        :start-after: # [18.1-test_cloned_repo_object]
-        :end-before: # ![18.1-test_cloned_repo_object]
+    .. literalinclude:: ../../test/test_quick_doc.py
+            :language: python
+            :dedent: 8
+            :start-after: # [18.1-test_cloned_repo_object]
+            :end-before: # ![18.1-test_cloned_repo_object]
 
-* $ git status
-
+Status
+######
     * Untracked files
 
-    Lets create a new file
+        Lets create a new file
 
-    .. literalinclude:: ../../test/test_quick_doc.py
-        :language: python
-        :dedent: 8
-        :start-after: # [7-test_cloned_repo_object]
-        :end-before: # ![7-test_cloned_repo_object]
+        .. literalinclude:: ../../test/test_quick_doc.py
+            :language: python
+            :dedent: 8
+            :start-after: # [7-test_cloned_repo_object]
+            :end-before: # ![7-test_cloned_repo_object]
 
-    .. literalinclude:: ../../test/test_quick_doc.py
-        :language: python
-        :dedent: 8
-        :start-after: # [8-test_cloned_repo_object]
-        :end-before: # ![8-test_cloned_repo_object]
+        .. literalinclude:: ../../test/test_quick_doc.py
+            :language: python
+            :dedent: 8
+            :start-after: # [8-test_cloned_repo_object]
+            :end-before: # ![8-test_cloned_repo_object]
 
     * Modified files
 
-    .. literalinclude:: ../../test/test_quick_doc.py
-        :language: python
-        :dedent: 8
-        :start-after: # [9-test_cloned_repo_object]
-        :end-before: # ![9-test_cloned_repo_object]
+        .. literalinclude:: ../../test/test_quick_doc.py
+            :language: python
+            :dedent: 8
+            :start-after: # [9-test_cloned_repo_object]
+            :end-before: # ![9-test_cloned_repo_object]
 
-    .. literalinclude:: ../../test/test_quick_doc.py
-        :language: python
-        :dedent: 8
-        :start-after: # [10-test_cloned_repo_object]
-        :end-before: # ![10-test_cloned_repo_object]
+        .. literalinclude:: ../../test/test_quick_doc.py
+            :language: python
+            :dedent: 8
+            :start-after: # [10-test_cloned_repo_object]
+            :end-before: # ![10-test_cloned_repo_object]
 
-    returns a list of :class:`Diff <git.diff.Diff>` objects
+        returns a list of :class:`Diff <git.diff.Diff>` objects
 
-    .. literalinclude:: ../../test/test_quick_doc.py
-        :language: python
-        :dedent: 8
-        :start-after: # [11-test_cloned_repo_object]
-        :end-before: # ![11-test_cloned_repo_object]
+        .. literalinclude:: ../../test/test_quick_doc.py
+            :language: python
+            :dedent: 8
+            :start-after: # [11-test_cloned_repo_object]
+            :end-before: # ![11-test_cloned_repo_object]
 
 
 
