@@ -18,31 +18,31 @@ There are a few ways to create a :class:`git.Repo <git.repo.base.Repo>` object
 Initialize a new git Repo
 #########################
 
-.. literalinclude:: ../../test/test_quick_doc.py
-    :language: python
-    :dedent: 8
-    :start-after: # [1-test_init_repo_object]
-    :end-before: # ![1-test_init_repo_object]
+    .. literalinclude:: ../../test/test_quick_doc.py
+        :language: python
+        :dedent: 8
+        :start-after: # [1-test_init_repo_object]
+        :end-before: # ![1-test_init_repo_object]
 
 Existing local git Repo
 #######################
 
-.. literalinclude:: ../../test/test_quick_doc.py
-    :language: python
-    :dedent: 8
-    :start-after: # [2-test_init_repo_object]
-    :end-before: # ![2-test_init_repo_object]
+    .. literalinclude:: ../../test/test_quick_doc.py
+        :language: python
+        :dedent: 8
+        :start-after: # [2-test_init_repo_object]
+        :end-before: # ![2-test_init_repo_object]
 
 Clone from URL
 ##############
 
 For the rest of this tutorial we will use a clone from https://github.com/gitpython-developers/QuickStartTutorialFiles.git
 
-.. literalinclude:: ../../test/test_quick_doc.py
-    :language: python
-    :dedent: 8
-    :start-after: # [1-test_cloned_repo_object]
-    :end-before: # ![1-test_cloned_repo_object]
+    .. literalinclude:: ../../test/test_quick_doc.py
+        :language: python
+        :dedent: 8
+        :start-after: # [1-test_cloned_repo_object]
+        :end-before: # ![1-test_cloned_repo_object]
 
 
 Trees & Blobs
@@ -51,50 +51,50 @@ Trees & Blobs
 Latest Commit Tree
 ##################
 
-.. literalinclude:: ../../test/test_quick_doc.py
-        :language: python
-        :dedent: 8
-        :start-after: # [12-test_cloned_repo_object]
-        :end-before: # ![12-test_cloned_repo_object]
+    .. literalinclude:: ../../test/test_quick_doc.py
+            :language: python
+            :dedent: 8
+            :start-after: # [12-test_cloned_repo_object]
+            :end-before: # ![12-test_cloned_repo_object]
 
 Any Commit Tree
 ###############
 
-.. literalinclude:: ../../test/test_quick_doc.py
-        :language: python
-        :dedent: 8
-        :start-after: # [13-test_cloned_repo_object]
-        :end-before: # ![13-test_cloned_repo_object]
+    .. literalinclude:: ../../test/test_quick_doc.py
+            :language: python
+            :dedent: 8
+            :start-after: # [13-test_cloned_repo_object]
+            :end-before: # ![13-test_cloned_repo_object]
 
 Display level 1 Contents
 ########################
 
-.. literalinclude:: ../../test/test_quick_doc.py
-        :language: python
-        :dedent: 8
-        :start-after: # [14-test_cloned_repo_object]
-        :end-before: # ![14-test_cloned_repo_object]
+    .. literalinclude:: ../../test/test_quick_doc.py
+            :language: python
+            :dedent: 8
+            :start-after: # [14-test_cloned_repo_object]
+            :end-before: # ![14-test_cloned_repo_object]
 
-.. literalinclude:: ../../test/test_quick_doc.py
-        :language: python
-        :dedent: 8
-        :start-after: # [14.1-test_cloned_repo_object]
-        :end-before: # ![14.1-test_cloned_repo_object]
+    .. literalinclude:: ../../test/test_quick_doc.py
+            :language: python
+            :dedent: 8
+            :start-after: # [14.1-test_cloned_repo_object]
+            :end-before: # ![14.1-test_cloned_repo_object]
 
 Recurse through the Tree
 ########################
 
-.. literalinclude:: ../../test/test_quick_doc.py
-        :language: python
-        :dedent: 8
-        :start-after: # [15-test_cloned_repo_object]
-        :end-before: # ![15-test_cloned_repo_object]
+    .. literalinclude:: ../../test/test_quick_doc.py
+            :language: python
+            :dedent: 8
+            :start-after: # [15-test_cloned_repo_object]
+            :end-before: # ![15-test_cloned_repo_object]
 
-.. literalinclude:: ../../test/test_quick_doc.py
-        :language: python
-        :dedent: 8
-        :start-after: # [16-test_cloned_repo_object]
-        :end-before: # ![16-test_cloned_repo_object]
+    .. literalinclude:: ../../test/test_quick_doc.py
+            :language: python
+            :dedent: 8
+            :start-after: # [16-test_cloned_repo_object]
+            :end-before: # ![16-test_cloned_repo_object]
 
 
 
