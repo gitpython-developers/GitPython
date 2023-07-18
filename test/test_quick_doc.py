@@ -163,17 +163,6 @@ class QuickDoc(TestBase):
 
         # Iterating through tree
         # [14-test_cloned_repo_object]
-        files_and_dirs = [entry for entry in tree]
-        files_and_dirs
-
-        # Output
-        # [<git.Commit "SHA1-HEX_HASH">,
-        # <git.Commit "SHA1-HEX_HASH">,
-        # <git.Commit "SHA1-HEX_HASH">]
-
-        # ![14-test_cloned_repo_object]
-
-        # [14.1-test_cloned_repo_object]
         files_and_dirs = [(entry, entry.name, entry.type) for entry in tree]
         files_and_dirs
 
@@ -181,7 +170,7 @@ class QuickDoc(TestBase):
         # [(< git.Tree "SHA1-HEX_HASH" >, 'Downloads', 'tree'),
         #  (< git.Tree "SHA1-HEX_HASH" >, 'dir1', 'tree'),
         #  (< git.Blob "SHA1-HEX_HASH" >, 'file4.txt', 'blob')]
-        # ![14.1-test_cloned_repo_object]
+        # ![14-test_cloned_repo_object]
 
         # [15-test_cloned_repo_object]
         def print_files_from_git(root, level=0):

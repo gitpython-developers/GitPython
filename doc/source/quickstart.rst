@@ -75,12 +75,6 @@ Display level 1 Contents
             :start-after: # [14-test_cloned_repo_object]
             :end-before: # ![14-test_cloned_repo_object]
 
-    .. literalinclude:: ../../test/test_quick_doc.py
-            :language: python
-            :dedent: 8
-            :start-after: # [14.1-test_cloned_repo_object]
-            :end-before: # ![14.1-test_cloned_repo_object]
-
 Recurse through the Tree
 ########################
 
@@ -240,6 +234,5 @@ Compare commit to commit
                     :dedent: 8
                     :start-after: # [11.3-test_cloned_repo_object]
                     :end-before: # ![11.3-test_cloned_repo_object]
-
 
 
