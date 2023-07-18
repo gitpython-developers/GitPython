@@ -77,7 +77,7 @@ class QuickDoc(TestBase):
         commits_for_file
 
         # Outputs: [<git.Commit "SHA1-HEX_HASH-2">,
-        # <git.Commit "SHA1-HEX-HASH-2">]
+        # <git.Commit "SHA1-HEX-HASH-1">]
         # ![6-test_cloned_repo_object]
 
         # Untracked files - create new file
@@ -198,7 +198,7 @@ class QuickDoc(TestBase):
         print_file = 'dir1/file2.txt'
         tree[print_file]  # the head commit tree
 
-        # Output <git.Blob "SHA1-HEX-HASH-1">
+        # Output <git.Blob "SHA1-HEX-HASH">
         # ![17-test_cloned_repo_object]
 
         # print latest file
