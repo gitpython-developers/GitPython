@@ -101,7 +101,7 @@ class QuickDoc(TestBase):
 
         # [10-test_cloned_repo_object]
         repo.index.diff(None)  # compares staging area to working directory
-        repo.index.diff(repo.head.commit)  # compares staging area to last commit
+
         # Output: [<git.diff.Diff object at 0x7fb66c076e50>,
         # <git.diff.Diff object at 0x7fb66c076ca0>]
         # ![10-test_cloned_repo_object]
