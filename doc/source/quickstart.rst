@@ -219,7 +219,7 @@ Status
 Diffs
 ######
 
-    Compare staging area to head commit
+Compare staging area to head commit
 
     .. literalinclude:: ../../test/test_quick_doc.py
             :language: python
@@ -233,7 +233,7 @@ Diffs
                 :start-after: # [11.2-test_cloned_repo_object]
                 :end-before: # ![11.2-test_cloned_repo_object]
 
-    Compare commit to commit
+Compare commit to commit
 
     .. literalinclude:: ../../test/test_quick_doc.py
                     :language: python
