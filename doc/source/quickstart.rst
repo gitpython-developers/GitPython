@@ -216,6 +216,30 @@ Status
             :start-after: # [11-test_cloned_repo_object]
             :end-before: # ![11-test_cloned_repo_object]
 
+Diffs
+######
+
+    Compare staging area to head commit
+
+    .. literalinclude:: ../../test/test_quick_doc.py
+            :language: python
+            :dedent: 8
+            :start-after: # [11.1-test_cloned_repo_object]
+            :end-before: # ![11.1-test_cloned_repo_object]
+
+    .. literalinclude:: ../../test/test_quick_doc.py
+                :language: python
+                :dedent: 8
+                :start-after: # [11.2-test_cloned_repo_object]
+                :end-before: # ![11.2-test_cloned_repo_object]
+
+    Compare commit to commit
+
+    .. literalinclude:: ../../test/test_quick_doc.py
+                    :language: python
+                    :dedent: 8
+                    :start-after: # [11.3-test_cloned_repo_object]
+                    :end-before: # ![11.3-test_cloned_repo_object]
 
 
 

@@ -19,7 +19,7 @@ class QuickDoc(TestBase):
 
         from git import Repo
 
-        repo = Repo.init(path_to_dir)  # git init path/to/dir
+        repo = Repo.init(path_to_dir)
        # ![1-test_init_repo_object]
 
         # [2-test_init_repo_object]
@@ -111,9 +111,42 @@ class QuickDoc(TestBase):
         for d in diffs:
             print(d.a_path)
 
+        # Output
         # Downloads/file3.txt
-        # file4.txt
         # ![11-test_cloned_repo_object]
+
+        # compares staging area to head commit
+        # [11.1-test_cloned_repo_object]
+        diffs = repo.index.diff(repo.head.commit)
+        for d in diffs:
+            print(d.a_path)
+
+        # Output
+
+        # ![11.1-test_cloned_repo_object]
+        # [11.2-test_cloned_repo_object]
+        # lets add untracked.txt
+        repo.index.add(['untracked.txt'])
+        diffs = repo.index.diff(repo.head.commit)
+        for d in diffs:
+            print(d.a_path)
+
+        # Output
+        # untracked.txt
+        # ![11.2-test_cloned_repo_object]
+
+        # Compare commit to commit
+        # [11.3-test_cloned_repo_object]
+        first_commit = [c for c in repo.iter_commits(all=True)][-1]
+        diffs = repo.head.commit.diff(first_commit)
+        for d in diffs:
+            print(d.a_path)
+
+        # Output
+        # dir1/file2.txt
+        # ![11.3-test_cloned_repo_object]
+
+
 
         '''Trees and Blobs'''
 
@@ -141,7 +174,7 @@ class QuickDoc(TestBase):
         # ![14-test_cloned_repo_object]
 
         # [14.1-test_cloned_repo_object]
-        files_and_dirs = [(entry, entry.name) for entry in tree]
+        files_and_dirs = [(entry, entry.name, entry.type) for entry in tree]
         files_and_dirs
 
         # Output
