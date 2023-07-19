@@ -148,7 +148,7 @@ List of commits associated with a file
 
 Printing text files
 ####################
-Lets print the latest version of `<local_dir> dir1/file2.txt`
+Lets print the latest version of `<local_dir>/dir1/file2.txt`
 
     .. literalinclude:: ../../test/test_quick_doc.py
             :language: python
