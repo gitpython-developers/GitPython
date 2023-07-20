@@ -154,7 +154,7 @@ def handle_process_output(
         p_stdout = process.proc.stdout if process.proc else None
         p_stderr = process.proc.stderr if process.proc else None
     else:
-        process = cast(Popen, process)
+        process = cast(Popen, process)  # type: ignore [redundant-cast]
         cmdline = getattr(process, "args", "")
         p_stdout = process.stdout
         p_stderr = process.stderr

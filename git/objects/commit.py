@@ -460,7 +460,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
             if proc_or_stream.stdout is not None:
                 stream = proc_or_stream.stdout
         elif hasattr(proc_or_stream, "readline"):
-            proc_or_stream = cast(IO, proc_or_stream)
+            proc_or_stream = cast(IO, proc_or_stream)  # type: ignore [redundant-cast]
             stream = proc_or_stream
 
         readline = stream.readline
