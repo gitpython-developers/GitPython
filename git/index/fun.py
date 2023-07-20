@@ -76,7 +76,7 @@ def hook_path(name: str, git_dir: PathLike) -> str:
     return osp.join(git_dir, "hooks", name)
 
 
-def _has_file_extension(path):
+def _has_file_extension(path: str) -> str:
     return osp.splitext(path)[1]
 
 
