@@ -211,7 +211,7 @@ def dashify(string: str) -> str:
     return string.replace("_", "-")
 
 
-def slots_to_dict(self: object, exclude: Sequence[str] = ()) -> Dict[str, Any]:
+def slots_to_dict(self: "Git", exclude: Sequence[str] = ()) -> Dict[str, Any]:
     return {s: getattr(self, s) for s in self.__slots__ if s not in exclude}
 
 

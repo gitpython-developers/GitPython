@@ -656,7 +656,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
     def _entries_for_paths(
         self,
         paths: List[str],
-        path_rewriter: Callable,
+        path_rewriter: Union[Callable, None],
         fprogress: Callable,
         entries: List[BaseIndexEntry],
     ) -> List[BaseIndexEntry]:

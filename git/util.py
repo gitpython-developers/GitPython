@@ -1049,7 +1049,7 @@ class IterableList(List[T_IterableObj]):
 
     __slots__ = ("_id_attr", "_prefix")
 
-    def __new__(cls, id_attr: str, prefix: str = "") -> "IterableList[IterableObj]":
+    def __new__(cls, id_attr: str, prefix: str = "") -> "IterableList[T_IterableObj]":
         return super(IterableList, cls).__new__(cls)
 
     def __init__(self, id_attr: str, prefix: str = "") -> None:

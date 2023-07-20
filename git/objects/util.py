@@ -147,7 +147,7 @@ def utctz_to_altz(utctz: str) -> int:
     return seconds if int_utctz < 0 else -seconds
 
 
-def altz_to_utctz_str(altz: int) -> str:
+def altz_to_utctz_str(altz: float) -> str:
     """Convert a timezone offset west of UTC in seconds into a git timezone offset string
 
     :param altz: timezone offset in seconds west of UTC
