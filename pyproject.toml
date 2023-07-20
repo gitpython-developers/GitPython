@@ -29,6 +29,7 @@ implicit_reexport = true
 # strict = true
 
 # TODO: remove when 'gitdb' is fully annotated
+exclude = ["^git/ext/gitdb"]
 [[tool.mypy.overrides]]
 module = "gitdb.*"
 ignore_missing_imports = true
