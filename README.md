@@ -110,6 +110,8 @@ To typecheck, run: `mypy -p git`
 
 To test, run: `pytest`
 
+For automatic code formatting run: `black git`
+
 Configuration for flake8 is in the ./.flake8 file.
 
 Configurations for mypy, pytest and coverage.py are in ./pyproject.toml.

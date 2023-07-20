@@ -143,7 +143,7 @@ def utctz_to_altz(utctz: str) -> int:
     :param utctz: git utc timezone string, i.e. +0200
     """
     int_utctz = int(utctz)
-    seconds = ((abs(int_utctz) // 100) * 3600 + (abs(int_utctz) % 100) * 60)
+    seconds = (abs(int_utctz) // 100) * 3600 + (abs(int_utctz) % 100) * 60
     return seconds if int_utctz < 0 else -seconds
 
 

@@ -345,9 +345,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
             Dictionary containing whitespace stripped trailer information.
             Only contains the latest instance of each trailer key.
         """
-        return {
-            k: v[0] for k, v in self.trailers_dict.items()
-        }
+        return {k: v[0] for k, v in self.trailers_dict.items()}
 
     @property
     def trailers_list(self) -> List[Tuple[str, str]]:

@@ -394,7 +394,6 @@ def aggressive_tree_merge(odb: "GitCmdObjectDB", tree_shas: Sequence[bytes]) -> 
                         out.append(_tree_entry_to_baseindexentry(theirs, 0))
                     # END handle modification
                 else:
-
                     if ours[0] != base[0] or ours[1] != base[1]:
                         # they deleted it, we changed it, conflict
                         out.append(_tree_entry_to_baseindexentry(base, 1))

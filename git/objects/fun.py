@@ -190,7 +190,6 @@ def traverse_trees_recursive(
     # is a tree. If the match is a non-tree item, put it into the result.
     # Processed items will be set None
     for ti, tree_data in enumerate(trees_data):
-
         for ii, item in enumerate(tree_data):
             if not item:
                 continue

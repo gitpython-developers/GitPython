@@ -1083,7 +1083,6 @@ class IterableList(List[T_IterableObj]):
         return list.__getattribute__(self, attr)
 
     def __getitem__(self, index: Union[SupportsIndex, int, slice, str]) -> T_IterableObj:  # type: ignore
-
         assert isinstance(index, (int, str, slice)), "Index of IterableList should be an int or str"
 
         if isinstance(index, int):
@@ -1098,7 +1097,6 @@ class IterableList(List[T_IterableObj]):
         # END handle getattr
 
     def __delitem__(self, index: Union[SupportsIndex, int, slice, str]) -> None:
-
         assert isinstance(index, (int, str)), "Index of IterableList should be an int or str"
 
         delindex = cast(int, index)

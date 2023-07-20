@@ -122,6 +122,7 @@ def handle_process_output(
         To specify a timeout in seconds for the git command, after which the process
         should be killed.
     """
+
     # Use 2 "pump" threads and wait for both to finish.
     def pump_stream(
         cmdline: List[str],
@@ -488,10 +489,7 @@ class Git(LazyMixin):
         """
         # Options can be of the form `foo` or `--foo bar` `--foo=bar`,
         # so we need to check if they start with "--foo" or if they are equal to "foo".
-        bare_unsafe_options = [
-            option.lstrip("-")
-            for option in unsafe_options
-        ]
+        bare_unsafe_options = [option.lstrip("-") for option in unsafe_options]
         for option in options:
             for unsafe_option, bare_option in zip(unsafe_options, bare_unsafe_options):
                 if option.startswith(unsafe_option) or option == bare_option:
@@ -1194,7 +1192,6 @@ class Git(LazyMixin):
 
     @classmethod
     def _unpack_args(cls, arg_list: Sequence[str]) -> List[str]:
-
         outlist = []
         if isinstance(arg_list, (list, tuple)):
             for arg in arg_list:

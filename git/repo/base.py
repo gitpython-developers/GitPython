@@ -498,7 +498,7 @@ class Repo(object):
     def create_tag(
         self,
         path: PathLike,
-        ref: Union[str, 'SymbolicReference'] = "HEAD",
+        ref: Union[str, "SymbolicReference"] = "HEAD",
         message: Optional[str] = None,
         force: bool = False,
         **kwargs: Any,
@@ -548,7 +548,6 @@ class Repo(object):
             else:
                 return osp.normpath(osp.join(repo_dir, "config"))
         else:
-
             assert_never(  # type:ignore[unreachable]
                 config_level,
                 ValueError(f"Invalid configuration level: {config_level!r}"),

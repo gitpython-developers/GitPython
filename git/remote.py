@@ -826,7 +826,6 @@ class Remote(LazyMixin, IterableObj):
         progress: Union[Callable[..., Any], RemoteProgress, None],
         kill_after_timeout: Union[None, float] = None,
     ) -> IterableList["FetchInfo"]:
-
         progress = to_progress_instance(progress)
 
         # skip first line as it is some remote info we are not interested in
