@@ -15,6 +15,7 @@ from git import (
     SymbolicReference,
     GitCommandError,
     RefLog,
+    GitConfigParser,
 )
 from git.objects.tag import TagObject
 from test.lib import TestBase, with_rw_repo
@@ -171,6 +172,26 @@ class TestRefs(TestBase):
         assert len(log) == 1
         assert log[0].oldhexsha == pcommit.NULL_HEX_SHA
         assert log[0].newhexsha == pcommit.hexsha
+
+    @with_rw_repo("HEAD", bare=False)
+    def test_set_tracking_branch_with_import(self, rwrepo):
+        # prepare included config file
+        included_config = osp.join(rwrepo.git_dir, "config.include")
+        with GitConfigParser(included_config, read_only=False) as writer:
+            writer.set_value("test", "value", "test")
+        assert osp.exists(included_config)
+
+        with rwrepo.config_writer() as writer:
+            writer.set_value("include", "path", included_config)
+
+        for head in rwrepo.heads:
+            head.set_tracking_branch(None)
+            assert head.tracking_branch() is None
+            remote_ref = rwrepo.remotes[0].refs[0]
+            assert head.set_tracking_branch(remote_ref) is head
+            assert head.tracking_branch() == remote_ref
+            head.set_tracking_branch(None)
+            assert head.tracking_branch() is None
 
     def test_refs(self):
         types_found = set()
