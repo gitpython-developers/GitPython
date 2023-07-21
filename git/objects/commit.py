@@ -345,9 +345,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
             Dictionary containing whitespace stripped trailer information.
             Only contains the latest instance of each trailer key.
         """
-        return {
-            k: v[0] for k, v in self.trailers_dict.items()
-        }
+        return {k: v[0] for k, v in self.trailers_dict.items()}
 
     @property
     def trailers_list(self) -> List[Tuple[str, str]]:
@@ -460,7 +458,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
             if proc_or_stream.stdout is not None:
                 stream = proc_or_stream.stdout
         elif hasattr(proc_or_stream, "readline"):
-            proc_or_stream = cast(IO, proc_or_stream)
+            proc_or_stream = cast(IO, proc_or_stream)  # type: ignore [redundant-cast]
             stream = proc_or_stream
 
         readline = stream.readline

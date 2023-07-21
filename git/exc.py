@@ -139,7 +139,6 @@ class CheckoutError(GitError):
         valid_files: Sequence[PathLike],
         failed_reasons: List[str],
     ) -> None:
-
         Exception.__init__(self, message)
         self.failed_files = failed_files
         self.failed_reasons = failed_reasons
@@ -170,7 +169,6 @@ class HookExecutionError(CommandError):
         stderr: Union[bytes, str, None] = None,
         stdout: Union[bytes, str, None] = None,
     ) -> None:
-
         super(HookExecutionError, self).__init__(command, status, stderr, stdout)
         self._msg = "Hook('%s') failed%s"
 

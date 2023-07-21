@@ -248,7 +248,6 @@ class _OMD(OrderedDict_OMD):
 
 
 def get_config_path(config_level: Lit_config_levels) -> str:
-
     # we do not support an absolute path of the gitconfig on windows ,
     # use the global config instead
     if is_win and config_level == "system":
@@ -265,8 +264,8 @@ def get_config_path(config_level: Lit_config_levels) -> str:
         raise ValueError("No repo to get repository configuration from. Use Repo._get_config_path")
     else:
         # Should not reach here. Will raise ValueError if does. Static typing will warn missing elifs
-        assert_never(
-            config_level,  # type: ignore[unreachable]
+        assert_never(  # type: ignore[unreachable]
+            config_level,
             ValueError(f"Invalid configuration level: {config_level!r}"),
         )
 
@@ -655,7 +654,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
 
             values: Sequence[str]  # runtime only gets str in tests, but should be whatever _OMD stores
             v: str
-            for (key, values) in section_dict.items_all():
+            for key, values in section_dict.items_all():
                 if key == "__name__":
                     continue
 

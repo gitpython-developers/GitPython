@@ -76,7 +76,7 @@ def hook_path(name: str, git_dir: PathLike) -> str:
     return osp.join(git_dir, "hooks", name)
 
 
-def _has_file_extension(path):
+def _has_file_extension(path: str) -> str:
     return osp.splitext(path)[1]
 
 
@@ -102,7 +102,7 @@ def run_commit_hook(name: str, index: "IndexFile", *args: str) -> None:
             relative_hp = Path(hp).relative_to(index.repo.working_dir).as_posix()
             cmd = ["bash.exe", relative_hp]
 
-        cmd = subprocess.Popen(
+        process = subprocess.Popen(
             cmd + list(args),
             env=env,
             stdout=subprocess.PIPE,
@@ -116,13 +116,13 @@ def run_commit_hook(name: str, index: "IndexFile", *args: str) -> None:
     else:
         stdout_list: List[str] = []
         stderr_list: List[str] = []
-        handle_process_output(cmd, stdout_list.append, stderr_list.append, finalize_process)
+        handle_process_output(process, stdout_list.append, stderr_list.append, finalize_process)
         stdout = "".join(stdout_list)
         stderr = "".join(stderr_list)
-        if cmd.returncode != 0:
+        if process.returncode != 0:
             stdout = force_text(stdout, defenc)
             stderr = force_text(stderr, defenc)
-            raise HookExecutionError(hp, cmd.returncode, stderr, stdout)
+            raise HookExecutionError(hp, process.returncode, stderr, stdout)
     # end handle return code
 
 
@@ -394,7 +394,6 @@ def aggressive_tree_merge(odb: "GitCmdObjectDB", tree_shas: Sequence[bytes]) -> 
                         out.append(_tree_entry_to_baseindexentry(theirs, 0))
                     # END handle modification
                 else:
-
                     if ours[0] != base[0] or ours[1] != base[1]:
                         # they deleted it, we changed it, conflict
                         out.append(_tree_entry_to_baseindexentry(base, 1))

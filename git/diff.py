@@ -145,7 +145,7 @@ class Diffable(object):
         args.append("--full-index")  # get full index paths, not only filenames
 
         # remove default '-M' arg (check for renames) if user is overriding it
-        if not any(x in kwargs for x in ('find_renames', 'no_renames', 'M')):
+        if not any(x in kwargs for x in ("find_renames", "no_renames", "M")):
             args.append("-M")
 
         if create_patch:
@@ -338,7 +338,6 @@ class Diff(object):
         change_type: Optional[Lit_change_type],
         score: Optional[int],
     ) -> None:
-
         assert a_rawpath is None or isinstance(a_rawpath, bytes)
         assert b_rawpath is None or isinstance(b_rawpath, bytes)
         self.a_rawpath = a_rawpath

@@ -76,7 +76,7 @@ def refresh(path: Optional[PathLike] = None) -> None:
     if not Git.refresh(path=path):
         return
     if not FetchInfo.refresh():
-        return
+        return  # type: ignore [unreachable]
 
     GIT_OK = True
 
