@@ -600,7 +600,7 @@ class Repo(object):
             system = system wide configuration file
             global = user level configuration file
             repository = configuration file for this repository only"""
-        return GitConfigParser(self._get_config_path(config_level), read_only=False, repo=self)
+        return GitConfigParser(self._get_config_path(config_level), read_only=False, repo=self, merge_includes=False)
 
     def commit(self, rev: Union[str, Commit_ish, None] = None) -> Commit:
         """The Commit object for the specified revision
