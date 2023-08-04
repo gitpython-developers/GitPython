@@ -10,20 +10,20 @@ GitPython Tutorial
 
 GitPython provides object model access to your git repository. This tutorial is composed of multiple sections, most of which explain a real-life use case.
 
-All code presented here originated from `test_docs.py <https://github.com/gitpython-developers/GitPython/blob/main/test/test_docs.py>`_ to assure correctness. Knowing this should also allow you to more easily run the code for your own testing purposes. All you need is a developer installation of git-python.
+Most code presented here originated from `test_docs.py <https://github.com/gitpython-developers/GitPython/blob/main/test/test_docs.py>`_ to assure correctness. Knowing this should also allow you to more easily run the code for your own testing purposes. All you need is a developer installation of git-python.
 
 Meet the Repo type
 ******************
 
 The first step is to create a :class:`git.Repo <git.repo.base.Repo>` object to represent your repository.
 
-.. literalinclude:: ../../test/test_docs.py
-    :language: python
-    :dedent: 8
-    :start-after: # [1-test_init_repo_object]
-    :end-before: # ![1-test_init_repo_object]
+.. code-block:: python
 
-In the above example, the directory ``self.rorepo.working_tree_dir`` equals ``/Users/mtrier/Development/git-python`` and is my working repository which contains the ``.git`` directory. You can also initialize GitPython with a *bare* repository.
+   from git import Repo
+
+   repo = Repo('.')
+
+In the above example, the ``.`` (dot) implies the current working directory which contains the ``.git`` directory. You can also initialize GitPython with a *bare* repository.
 
 .. literalinclude:: ../../test/test_docs.py
     :language: python
