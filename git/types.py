@@ -8,42 +8,39 @@ import sys
 from typing import (
     Dict,
     NoReturn,
-    Sequence,
+    Sequence as Sequence,
     Tuple,
     Union,
     Any,
+    Optional,
+    Callable,
     TYPE_CHECKING,
     TypeVar,
 )  # noqa: F401
 
-if sys.version_info[:2] >= (3, 8):
+if sys.version_info >= (3, 8):
     from typing import (
         Literal,
-        SupportsIndex,
         TypedDict,
         Protocol,
+        SupportsIndex as SupportsIndex,
         runtime_checkable,
     )  # noqa: F401
 else:
     from typing_extensions import (
         Literal,
-        SupportsIndex,  # noqa: F401
+        SupportsIndex as SupportsIndex,
         TypedDict,
         Protocol,
         runtime_checkable,
     )  # noqa: F401
 
-# if sys.version_info[:2] >= (3, 10):
+# if sys.version_info >= (3, 10):
 #     from typing import TypeGuard  # noqa: F401
 # else:
 #     from typing_extensions import TypeGuard  # noqa: F401
 
-
-if sys.version_info[:2] < (3, 9):
-    PathLike = Union[str, os.PathLike]
-else:
-    # os.PathLike only becomes subscriptable from Python 3.9 onwards
-    PathLike = Union[str, os.PathLike[str]]
+PathLike = Union[str, "os.PathLike[str]"]
 
 if TYPE_CHECKING:
     from git.repo import Repo
@@ -62,6 +59,9 @@ Lit_commit_ish = Literal["commit", "tag", "blob", "tree"]
 
 Lit_config_levels = Literal["system", "global", "user", "repository"]
 
+# Progress parameter type alias -----------------------------------------
+
+CallableProgress = Optional[Callable[[int, Union[str, float], Union[str, float, None], str], None]]
 
 # def is_config_level(inp: str) -> TypeGuard[Lit_config_levels]:
 #     # return inp in get_args(Lit_config_level)  # only py >= 3.8

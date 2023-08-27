@@ -60,6 +60,7 @@ from git.types import (
     PathLike,
     Lit_config_levels,
     Commit_ish,
+    CallableProgress,
     Tree_ish,
     assert_never,
 )
@@ -1258,7 +1259,7 @@ class Repo(object):
     def clone(
         self,
         path: PathLike,
-        progress: Optional[Callable] = None,
+        progress: Optional[CallableProgress] = None,
         multi_options: Optional[List[str]] = None,
         allow_unsafe_protocols: bool = False,
         allow_unsafe_options: bool = False,
@@ -1297,7 +1298,7 @@ class Repo(object):
         cls,
         url: PathLike,
         to_path: PathLike,
-        progress: Optional[Callable] = None,
+        progress: CallableProgress = None,
         env: Optional[Mapping[str, str]] = None,
         multi_options: Optional[List[str]] = None,
         allow_unsafe_protocols: bool = False,
