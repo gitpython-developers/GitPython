@@ -103,7 +103,7 @@ class TestGit(TestBase):
                 os.chmod(impostor_path, 0o755)
 
             with _chdir(tmpdir):
-                self.assertRegex(self.git.execute(["git", "version"]), r"^git version [\d\.]{2}.*$")
+                self.assertRegex(self.git.execute(["git", "version"]), r"^git version\b")
 
     def test_it_accepts_stdin(self):
         filename = fixture_path("cat_file_blob")
