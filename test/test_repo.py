@@ -13,7 +13,7 @@ import pathlib
 import pickle
 import sys
 import tempfile
-from unittest import mock, skipIf, SkipTest
+from unittest import mock, skipIf, SkipTest, skip
 
 import pytest
 
@@ -251,6 +251,7 @@ class TestRepo(TestBase):
                 self.fail("Raised UnicodeEncodeError")
 
     @with_rw_directory
+    @skip("the referenced repository was removed, and one needs to setup a new password controlled repo under the orgs control")
     def test_leaking_password_in_clone_logs(self, rw_dir):
         password = "fakepassword1234"
         try:
