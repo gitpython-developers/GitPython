@@ -144,9 +144,7 @@ Please have a look at the [contributions file][contributing].
 - Run `git tag -s <version>` to tag the version in Git
 - Run `make release`
 - Close the milestone mentioned in the _changelog_ and create a new one. _Do not reuse milestones by renaming them_.
-- set the upcoming version in the `VERSION` file, usually be
-  incrementing the patch level, and possibly by appending `-dev`. Probably you
-  want to `git push` once more.
+- Got to [GitHub Releases](https://github.com/gitpython-developers/GitPython/releases) and publish a new one with the recently pushed tag. Generate the changelog.
 
 ### How to verify a release (DEPRECATED)
 
