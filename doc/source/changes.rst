@@ -2,6 +2,12 @@
 Changelog
 =========
 
+3.1.34
+======
+
+See the following for all changes.
+https://github.com/gitpython-developers/gitpython/milestone/64?closed=1
+
 3.1.33
 ======
 
