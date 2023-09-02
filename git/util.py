@@ -935,7 +935,8 @@ class LockFile(object):
             )
 
         try:
-            open(lock_file, mode='w', closefd=True)
+            with open(lock_file, mode='w'):
+                pass
         except OSError as e:
             raise IOError(str(e)) from e
 
