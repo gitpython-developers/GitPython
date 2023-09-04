@@ -16,7 +16,7 @@ jobs:
     steps:
     - name: Force LF line endings
       run: git config --global core.autocrlf input
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 9999
     - uses: cygwin/cygwin-install-action@v4
