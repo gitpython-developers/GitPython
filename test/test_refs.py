@@ -5,6 +5,7 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 
 from itertools import chain
+from pathlib import Path
 
 from git import (
     Reference,
@@ -20,9 +21,11 @@ from git import (
 from git.objects.tag import TagObject
 from test.lib import TestBase, with_rw_repo
 from git.util import Actor
+from gitdb.exc import BadName
 
 import git.refs as refs
 import os.path as osp
+import tempfile
 
 
 class TestRefs(TestBase):
@@ -616,3 +619,15 @@ class TestRefs(TestBase):
 
     def test_reflog(self):
         assert isinstance(self.rorepo.heads.master.log(), RefLog)
+
+    def test_refs_outside_repo(self):
+        # Create a file containing a valid reference outside the repository. Attempting
+        # to access it should raise an exception, due to it containing a parent directory
+        # reference ('..'). This tests for CVE-2023-41040.
+        git_dir = Path(self.rorepo.git_dir)
+        repo_parent_dir = git_dir.parent.parent
+        with tempfile.NamedTemporaryFile(dir=repo_parent_dir) as ref_file:
+            ref_file.write(b"91b464cd624fe22fbf54ea22b85a7e5cca507cfe")
+            ref_file.flush()
+            ref_file_name = Path(ref_file.name).name
+            self.assertRaises(BadName, self.rorepo.commit, f"../../{ref_file_name}")
