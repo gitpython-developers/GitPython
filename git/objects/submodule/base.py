@@ -1402,6 +1402,10 @@ class Submodule(IndexObject, TraversableIterableObj):
                 # END handle keyerror
             # END handle critical error
 
+            # Make sure we are looking at a submodule object
+            if type(sm) != git.objects.submodule.base.Submodule:
+                continue
+
             # fill in remaining info - saves time as it doesn't have to be parsed again
             sm._name = n
             if pc != repo.commit():
