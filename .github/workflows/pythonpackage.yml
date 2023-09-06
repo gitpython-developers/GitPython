@@ -52,9 +52,8 @@ jobs:
         set -x
         mypy -p git
 
-    - name: Tell git to trust this repo
-      run: | 
-          /usr/bin/git config --global --add safe.directory $(pwd)
+    - name: Tell git to allow file protocol even for submodules
+      run: |
           /usr/bin/git config --global protocol.file.allow always
 
     - name: Test with pytest
