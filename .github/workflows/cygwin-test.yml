@@ -46,8 +46,4 @@ jobs:
       shell: bash.exe -eo pipefail -o igncr "{0}"
       run: |
         /usr/bin/python -m pytest
-      env:
-        GIT_CONFIG_COUNT: "1"
-        GIT_CONFIG_KEY_0: protocol.file.allow
-        GIT_CONFIG_VALUE_0: always
       continue-on-error: false
