@@ -52,14 +52,14 @@ jobs:
         set -x
         mypy -p git
 
-    - name: Tell git to allow file protocol even for submodules
-      run: |
-          /usr/bin/git config --global protocol.file.allow always
-
     - name: Test with pytest
       run: |
         set -x
         pytest
+      env:
+        GIT_CONFIG_COUNT: "1"
+        GIT_CONFIG_KEY_0: protocol.file.allow
+        GIT_CONFIG_VALUE_0: always
       continue-on-error: false
 
     - name: Documentation
