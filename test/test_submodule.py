@@ -33,16 +33,16 @@ import os.path as osp
 
 
 @contextlib.contextmanager
-def _allow_file_protocol():
-    """Temporarily set protocol.file.allow to always, using environment variables."""
+def _patch_git_config(name, value):
+    """Temporarily add a git config name-value pair, using environment variables."""
     pair_index = int(os.getenv("GIT_CONFIG_COUNT", "0"))
 
     # This is recomputed each time the context is entered, for compatibility with
     # existing GIT_CONFIG_* environment variables, even if changed in this process.
     patcher = mock.patch.dict(os.environ, {
         "GIT_CONFIG_COUNT": str(pair_index + 1),
-        f"GIT_CONFIG_KEY_{pair_index}": "protocol.file.allow",
-        f"GIT_CONFIG_VALUE_{pair_index}": "always",
+        f"GIT_CONFIG_KEY_{pair_index}": name,
+        f"GIT_CONFIG_VALUE_{pair_index}": value,
     })
 
     with patcher:
@@ -727,7 +727,7 @@ class TestSubmodule(TestBase):
         # end for each checkout mode
 
     @with_rw_directory
-    @_allow_file_protocol()
+    @_patch_git_config("protocol.file.allow", "always")
     def test_list_only_valid_submodules(self, rwdir):
         repo_path = osp.join(rwdir, "parent")
         repo = git.Repo.init(repo_path)
@@ -756,7 +756,7 @@ class TestSubmodule(TestBase):
                 """,
     )
     @with_rw_directory
-    @_allow_file_protocol()
+    @_patch_git_config("protocol.file.allow", "always")
     def test_git_submodules_and_add_sm_with_new_commit(self, rwdir):
         parent = git.Repo.init(osp.join(rwdir, "parent"))
         parent.git.submodule("add", self._small_repo_url(), "module")
