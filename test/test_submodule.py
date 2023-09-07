@@ -907,6 +907,28 @@ class TestSubmodule(TestBase):
         # end for each dry-run mode
 
     @with_rw_directory
+    def test_ignore_non_submodule_file(self, rwdir):
+        parent = git.Repo.init(rwdir)
+
+        smp = osp.join(rwdir, "module")
+        os.mkdir(smp)
+
+        with open(osp.join(smp, "a"), "w", encoding="utf-8") as f:
+            f.write('test\n')
+
+        with open(osp.join(rwdir, ".gitmodules"), "w", encoding="utf-8") as f:
+            f.write("[submodule \"a\"]\n")
+            f.write("    path = module\n")
+            f.write("    url = https://github.com/chaconinc/DbConnector\n")
+
+        parent.git.add(Git.polish_url(osp.join(smp, "a")))
+        parent.git.add(Git.polish_url(osp.join(rwdir, ".gitmodules")))
+
+        parent.git.commit(message='test')
+
+        assert len(parent.submodules) == 0
+
+    @with_rw_directory
     def test_remove_norefs(self, rwdir):
         parent = git.Repo.init(osp.join(rwdir, "parent"))
         sm_name = "mymodules/myname"
