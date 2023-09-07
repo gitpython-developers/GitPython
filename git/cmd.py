@@ -14,7 +14,6 @@ from subprocess import call, Popen, PIPE, DEVNULL
 import subprocess
 import threading
 from textwrap import dedent
-import unittest.mock
 
 from git.compat import (
     defenc,
@@ -24,7 +23,7 @@ from git.compat import (
     is_win,
 )
 from git.exc import CommandError
-from git.util import is_cygwin_git, cygpath, expand_path, remove_password_if_present
+from git.util import is_cygwin_git, cygpath, expand_path, remove_password_if_present, patch_env
 
 from .exc import GitCommandError, GitCommandNotFound, UnsafeOptionError, UnsafeProtocolError
 from .util import (
@@ -965,10 +964,10 @@ class Git(LazyMixin):
                     '"kill_after_timeout" feature is not supported on Windows.',
                 )
             # Only search PATH, not CWD. This must be in the *caller* environment. The "1" can be any value.
-            patch_caller_env = unittest.mock.patch.dict(os.environ, {"NoDefaultCurrentDirectoryInExePath": "1"})
+            maybe_patch_caller_env = patch_env("NoDefaultCurrentDirectoryInExePath", "1")
         else:
             cmd_not_found_exception = FileNotFoundError  # NOQA # exists, flake8 unknown @UndefinedVariable
-            patch_caller_env = contextlib.nullcontext()
+            maybe_patch_caller_env = contextlib.nullcontext()
         # end handle
 
         stdout_sink = PIPE if with_stdout else getattr(subprocess, "DEVNULL", None) or open(os.devnull, "wb")
@@ -984,7 +983,7 @@ class Git(LazyMixin):
             istream_ok,
         )
         try:
-            with patch_caller_env:
+            with maybe_patch_caller_env:
                 proc = Popen(
                     command,
                     env=env,

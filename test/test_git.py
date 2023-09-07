@@ -4,33 +4,21 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
-import contextlib
 import os
 import shutil
 import subprocess
 import sys
 from tempfile import TemporaryDirectory, TemporaryFile
-from unittest import mock
+from unittest import mock, skipUnless
 
 from git import Git, refresh, GitCommandError, GitCommandNotFound, Repo, cmd
 from test.lib import TestBase, fixture_path
 from test.lib import with_rw_directory
-from git.util import finalize_process
+from git.util import cwd, finalize_process
 
 import os.path as osp
 
 from git.compat import is_win
-
-
-@contextlib.contextmanager
-def _chdir(new_dir):
-    """Context manager to temporarily change directory. Not reentrant."""
-    old_dir = os.getcwd()
-    os.chdir(new_dir)
-    try:
-        yield
-    finally:
-        os.chdir(old_dir)
 
 
 class TestGit(TestBase):
@@ -102,8 +90,25 @@ class TestGit(TestBase):
                     print("#!/bin/sh", file=file)
                 os.chmod(impostor_path, 0o755)
 
-            with _chdir(tmpdir):
+            with cwd(tmpdir):
                 self.assertRegex(self.git.execute(["git", "version"]), r"^git version\b")
+
+    @skipUnless(is_win, "The regression only affected Windows, and this test logic is OS-specific.")
+    def test_it_avoids_upcasing_unrelated_environment_variable_names(self):
+        old_name = "28f425ca_d5d8_4257_b013_8d63166c8158"
+        if old_name == old_name.upper():
+            raise RuntimeError("test bug or strange locale: old_name invariant under upcasing")
+        os.putenv(old_name, "1")  # It has to be done this lower-level way to set it lower-case.
+
+        cmdline = [
+            sys.executable,
+            fixture_path("env_case.py"),
+            self.rorepo.working_dir,
+            old_name,
+        ]
+        pair_text = subprocess.check_output(cmdline, shell=False, text=True)
+        new_name = pair_text.split("=")[0]
+        self.assertEqual(new_name, old_name)
 
     def test_it_accepts_stdin(self):
         filename = fixture_path("cat_file_blob")
