@@ -58,7 +58,11 @@ jobs:
       run: |
         /usr/bin/python -m pip install ".[test]"
 
+    - name: Check 'is_win'
+      run: |
+        /usr/bin/python -c 'import os, git; print(f"os.name={os.name}, is_win={git.compat.is_win}")'
+
     - name: Test with pytest
       run: |
         set +x
-        /usr/bin/python -m pytest
+        /usr/bin/python -m pytest -v

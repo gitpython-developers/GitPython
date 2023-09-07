@@ -73,9 +73,13 @@ jobs:
       # so we have to ignore errors until that changes.
       continue-on-error: true
 
+    - name: Check 'is_win'
+      run: |
+        python -c 'import os, git; print(f"os.name={os.name}, is_win={git.compat.is_win}")'
+
     - name: Test with pytest
       run: |
-        pytest
+        pytest -v
       continue-on-error: false
 
     - name: Documentation
