@@ -168,6 +168,8 @@ class SymbolicReference(object):
         """Return: (str(sha), str(target_ref_path)) if available, the sha the file at
         rela_path points to, or None. target_ref_path is the reference we
         point to, or None"""
+        if ".." in str(ref_path):
+            raise ValueError(f"Invalid reference '{ref_path}'")
         tokens: Union[None, List[str], Tuple[str, str]] = None
         repodir = _git_dir(repo, ref_path)
         try:
