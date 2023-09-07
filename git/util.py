@@ -150,6 +150,7 @@ def unbare_repo(func: Callable[..., T]) -> Callable[..., T]:
 
 @contextlib.contextmanager
 def cwd(new_dir: PathLike) -> Generator[PathLike, None, None]:
+    """Context manager to temporarily change directory. Not reentrant."""
     old_dir = os.getcwd()
     os.chdir(new_dir)
     try:

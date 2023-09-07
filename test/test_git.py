@@ -4,7 +4,6 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
-import contextlib
 import os
 import shutil
 import subprocess
@@ -15,22 +14,11 @@ from unittest import mock, skipUnless
 from git import Git, refresh, GitCommandError, GitCommandNotFound, Repo, cmd
 from test.lib import TestBase, fixture_path
 from test.lib import with_rw_directory
-from git.util import finalize_process
+from git.util import cwd, finalize_process
 
 import os.path as osp
 
 from git.compat import is_win
-
-
-@contextlib.contextmanager
-def _chdir(new_dir):
-    """Context manager to temporarily change directory. Not reentrant."""
-    old_dir = os.getcwd()
-    os.chdir(new_dir)
-    try:
-        yield
-    finally:
-        os.chdir(old_dir)
 
 
 class TestGit(TestBase):
@@ -102,7 +90,7 @@ class TestGit(TestBase):
                     print("#!/bin/sh", file=file)
                 os.chmod(impostor_path, 0o755)
 
-            with _chdir(tmpdir):
+            with cwd(tmpdir):
                 self.assertRegex(self.git.execute(["git", "version"]), r"^git version\b")
 
     @skipUnless(is_win, "The regression only affected Windows, and this test logic is OS-specific.")
