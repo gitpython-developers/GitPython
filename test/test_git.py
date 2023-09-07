@@ -10,7 +10,7 @@ import shutil
 import subprocess
 import sys
 from tempfile import TemporaryDirectory, TemporaryFile
-from unittest import mock
+from unittest import mock, skipUnless
 
 from git import Git, refresh, GitCommandError, GitCommandNotFound, Repo, cmd
 from test.lib import TestBase, fixture_path
@@ -104,6 +104,27 @@ class TestGit(TestBase):
 
             with _chdir(tmpdir):
                 self.assertRegex(self.git.execute(["git", "version"]), r"^git version\b")
+
+    @skipUnless(is_win, "The regression only affected Windows, and this test logic is OS-specific.")
+    def test_it_avoids_upcasing_unrelated_environment_variable_names(self):
+        old_name = "28f425ca_d5d8_4257_b013_8d63166c8158"
+        if old_name == old_name.upper():
+            raise RuntimeError("test bug or strange locale: old_name invariant under upcasing")
+        os.putenv(old_name, "1")  # It has to be done this lower-level way to set it lower-case.
+
+        script_lines = [
+            "import subprocess, git",
+
+            # Importing git should be enough, but this really makes sure Git.execute is called.
+            f"repo = git.Repo({self.rorepo.working_dir!r})",
+            "git.Git(repo.working_dir).execute(['git', 'version'])",
+
+            f"print(subprocess.check_output(['set', {old_name!r}], shell=True, text=True))",
+        ]
+        cmdline = [sys.executable, "-c", "\n".join(script_lines)]
+        pair_text = subprocess.check_output(cmdline, shell=False, text=True)
+        new_name = pair_text.split("=")[0]
+        self.assertEqual(new_name, old_name)
 
     def test_it_accepts_stdin(self):
         filename = fixture_path("cat_file_blob")
