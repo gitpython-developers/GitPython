@@ -158,6 +158,20 @@ def cwd(new_dir: PathLike) -> Generator[PathLike, None, None]:
         os.chdir(old_dir)
 
 
+@contextlib.contextmanager
+def patch_env(name: str, value: str) -> Generator[None, None, None]:
+    """Context manager to temporarily patch an environment variable."""
+    old_value = os.getenv(name)
+    os.environ[name] = value
+    try:
+        yield
+    finally:
+        if old_value is None:
+            del os.environ[name]
+        else:
+            os.environ[name] = old_value
+
+
 def rmtree(path: PathLike) -> None:
     """Remove the given recursively.
 
@@ -935,7 +949,7 @@ class LockFile(object):
             )
 
         try:
-            with open(lock_file, mode='w'):
+            with open(lock_file, mode="w"):
                 pass
         except OSError as e:
             raise IOError(str(e)) from e
