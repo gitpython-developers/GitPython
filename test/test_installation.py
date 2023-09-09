@@ -4,6 +4,7 @@
 import ast
 import os
 import subprocess
+from git.compat import is_win
 from test.lib import TestBase
 from test.lib.helper import with_rw_directory
 
@@ -12,8 +13,9 @@ class TestInstallation(TestBase):
     def setUp_venv(self, rw_dir):
         self.venv = rw_dir
         subprocess.run(["virtualenv", self.venv], stdout=subprocess.PIPE)
-        self.python = os.path.join(self.venv, "bin/python3")
-        self.pip = os.path.join(self.venv, "bin/pip3")
+        bin_name = "Scripts" if is_win else "bin"
+        self.python = os.path.join(self.venv, bin_name, "python")
+        self.pip = os.path.join(self.venv, bin_name, "pip")
         self.sources = os.path.join(self.venv, "src")
         self.cwd = os.path.dirname(os.path.dirname(__file__))
         os.symlink(self.cwd, self.sources, target_is_directory=True)
@@ -32,14 +34,14 @@ class TestInstallation(TestBase):
             msg=result.stderr or result.stdout or "Can't install requirements",
         )
         result = subprocess.run(
-            [self.python, "setup.py", "install"],
+            [self.pip, "install", "."],
             stdout=subprocess.PIPE,
             cwd=self.sources,
         )
         self.assertEqual(
             0,
             result.returncode,
-            msg=result.stderr or result.stdout or "Can't build - setup.py failed",
+            msg=result.stderr or result.stdout or "Can't install project",
         )
         result = subprocess.run([self.python, "-c", "import git"], stdout=subprocess.PIPE, cwd=self.sources)
         self.assertEqual(
