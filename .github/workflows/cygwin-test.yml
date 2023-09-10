@@ -68,5 +68,4 @@ jobs:
 
     - name: Test with pytest
       run: |
-        set -x
         /usr/bin/python -m pytest
