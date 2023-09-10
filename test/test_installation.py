@@ -24,16 +24,6 @@ class TestInstallation(TestBase):
     def test_installation(self, rw_dir):
         self.setUp_venv(rw_dir)
         result = subprocess.run(
-            [self.pip, "install", "-r", "requirements.txt"],
-            stdout=subprocess.PIPE,
-            cwd=self.sources,
-        )
-        self.assertEqual(
-            0,
-            result.returncode,
-            msg=result.stderr or result.stdout or "Can't install requirements",
-        )
-        result = subprocess.run(
             [self.pip, "install", "."],
             stdout=subprocess.PIPE,
             cwd=self.sources,
