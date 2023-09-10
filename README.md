@@ -49,28 +49,47 @@ The installer takes care of installing them for you.
 
 ### INSTALL
 
-If you have downloaded the source code:
+GitPython and its required package dependencies can be installed in any of the following ways, all of which should typically be done in a [virtual environment](https://docs.python.org/3/tutorial/venv.html).
 
-```bash
-python setup.py install
-```
+#### From PyPI
 
-or if you want to obtain a copy from the Pypi repository:
+To obtain and install a copy [from PyPI](https://pypi.org/project/GitPython/), run:
 
 ```bash
 pip install GitPython
 ```
 
-Both commands will install the required package dependencies.
+(A distribution package can also be downloaded for manual installation at [the PyPI page](https://pypi.org/project/GitPython/).)
 
-A distribution package can be obtained for manual installation at: <http://pypi.python.org/pypi/GitPython>.
+#### From downloaded source code
 
-If you like to clone from source, you can do it like so:
+If you have downloaded the source code, run this from inside the unpacked `GitPython` directory:
+
+```bash
+pip install .
+```
+
+#### By cloning the source code repository
+
+To clone the [the GitHub repository](https://github.com/gitpython-developers/GitPython) from source to work on the code, you can do it like so:
 
 ```bash
 git clone https://github.com/gitpython-developers/GitPython
-git submodule update --init --recursive
+cd GitPython
+git fetch --tags
 ./init-tests-after-clone.sh
+```
+
+If you are cloning [your own fork](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/about-forks), then replace the above `git clone` command with one that gives the URL of your fork. Or use this [`gh`](https://cli.github.com/) command (assuming you have `gh` and your fork is called `GitPython`):
+
+```bash
+gh repo clone GitPython
+```
+
+Having cloned the repo, create and activate your [virtual environment](https://docs.python.org/3/tutorial/venv.html). Then make an [editable install](https://pip.pypa.io/en/stable/topics/local-project-installs/#editable-installs):
+
+```bash
+pip install -e .
 ```
 
 ### Limitations
