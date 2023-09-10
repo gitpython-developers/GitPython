@@ -5,6 +5,7 @@ black
 
 pre-commit
 
+build
 virtualenv
 
 pytest
