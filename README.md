@@ -89,8 +89,10 @@ gh repo clone GitPython
 Having cloned the repo, create and activate your [virtual environment](https://docs.python.org/3/tutorial/venv.html). Then make an [editable install](https://pip.pypa.io/en/stable/topics/local-project-installs/#editable-installs):
 
 ```bash
-pip install -e .
+pip install -e ".[test]"
 ```
+
+In the less common case that you do not want to install test dependencies, `pip install -e .` can be used instead.
 
 ### Limitations
 
@@ -120,20 +122,49 @@ On _Windows_, make sure you have `git-daemon` in your PATH. For MINGW-git, the `
 exists in `Git\mingw64\libexec\git-core\`; CYGWIN has no daemon, but should get along fine
 with MINGW's.
 
-Ensure testing libraries are installed.
-In the root directory, run: `pip install -r test-requirements.txt`
+#### Install test dependencies
 
-To lint, run: `pre-commit run --all-files`
+Ensure testing libraries are installed. This is taken care of already if you installed with:
 
-To typecheck, run: `mypy -p git`
+```bash
+pip install -e ".[test]"
+```
 
-To test, run: `pytest`
+Otherwise, you can run:
 
-For automatic code formatting run: `black git`
+```bash
+pip install -r test-requirements.txt
+```
 
-Configuration for flake8 is in the ./.flake8 file.
+#### Test commands
 
-Configurations for mypy, pytest and coverage.py are in ./pyproject.toml.
+To test, run:
+
+```bash
+pytest
+```
+
+To lint, run:
+
+```bash
+pre-commit run --all-files
+```
+
+To typecheck, run:
+
+```bash
+mypy -p git
+```
+
+For automatic code formatting, run:
+
+```bash
+black git
+```
+
+Configuration for flake8 is in the `./.flake8` file.
+
+Configurations for `mypy`, `pytest`, `coverage.py`, and `black` are in `./pyproject.toml`.
 
 The same linting and testing will also be performed against different supported python versions
 upon submitting a pull request (or on each push if you have a fork with a "main" branch and actions enabled).

@@ -95,7 +95,7 @@ setup(
     package_dir={"git": "git"},
     python_requires=">=3.7",
     install_requires=requirements,
-    tests_require=requirements + test_requirements,
+    extras_require={"test": test_requirements},
     zip_safe=False,
     long_description=long_description,
     long_description_content_type="text/markdown",
