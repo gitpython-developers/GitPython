@@ -12,38 +12,61 @@ jobs:
       SHELLOPTS: igncr
       TMP: "/tmp"
       TEMP: "/tmp"
+    defaults:
+      run:
+        shell: bash.exe -eo pipefail -o igncr "{0}"
 
     steps:
     - name: Force LF line endings
       run: git config --global core.autocrlf input
+
     - uses: actions/checkout@v4
       with:
         fetch-depth: 9999
+
     - uses: cygwin/cygwin-install-action@v4
       with:
         packages: python39 python39-pip python39-virtualenv git
-    - name: Tell git to trust this repo
-      shell: bash.exe -eo pipefail -o igncr "{0}"
-      run: |
-          /usr/bin/git config --global --add safe.directory "$(pwd)"
-    - name: Install dependencies and prepare tests
-      shell: bash.exe -eo pipefail -o igncr "{0}"
+
+    - name: Show python and git versions
       run: |
         set -x
-        /usr/bin/python -m pip install --upgrade pip setuptools wheel
-        /usr/bin/python --version; /usr/bin/git --version
+        /usr/bin/python --version
+        /usr/bin/git version
+
+    - name: Tell git to trust this repo
+      run: |
+          /usr/bin/git config --global --add safe.directory "$(pwd)"
+
+    - name: Prepare this repo for tests
+      run: |
+        set -x
+
         /usr/bin/git submodule update --init --recursive
         /usr/bin/git fetch --tags
-        /usr/bin/python -m pip install -r requirements.txt
-        /usr/bin/python -m pip install -r test-requirements.txt
         TRAVIS=yes ./init-tests-after-clone.sh
+
+    - name: Further prepare git configuration for tests
+      run: |
+        set -x
+
         /usr/bin/git config --global user.email "travis@ci.com"
         /usr/bin/git config --global user.name "Travis Runner"
         # If we rewrite the user's config by accident, we will mess it up
         # and cause subsequent tests to fail
         cat test/fixtures/.gitconfig >> ~/.gitconfig
-    - name: Test with pytest
-      shell: bash.exe -eo pipefail -o igncr "{0}"
+
+    - name: Update PyPA packages
       run: |
+        set -x
+        /usr/bin/python -m pip install --upgrade pip setuptools wheel
+
+    - name: Install project and test dependencies
+      run: |
+        set -x
+        /usr/bin/python -m pip install ".[test]"
+
+    - name: Test with pytest
+      run: |
+        set -x
         /usr/bin/python -m pytest
-      continue-on-error: false
