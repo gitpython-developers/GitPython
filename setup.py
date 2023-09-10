@@ -8,8 +8,8 @@ import fnmatch
 import os
 import sys
 
-with open(os.path.join(os.path.dirname(__file__), "VERSION")) as v:
-    VERSION = v.readline().strip()
+with open(os.path.join(os.path.dirname(__file__), "VERSION")) as ver_file:
+    VERSION = ver_file.readline().strip()
 
 with open("requirements.txt") as reqs_file:
     requirements = reqs_file.read().splitlines()
@@ -49,7 +49,7 @@ def _stamp_version(filename: str) -> None:
         with open(filename) as f:
             for line in f:
                 if "__version__ =" in line:
-                    line = line.replace("\"git\"", "'%s'" % VERSION)
+                    line = line.replace('"git"', "'%s'" % VERSION)
                     found = True
                 out.append(line)
     except OSError:
