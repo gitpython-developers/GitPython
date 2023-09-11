@@ -22,7 +22,8 @@ jobs:
 
     - uses: actions/checkout@v4
       with:
-        fetch-depth: 9999
+        fetch-depth: 0
+        submodules: recursive
 
     - uses: cygwin/cygwin-install-action@v4
       with:
@@ -41,9 +42,6 @@ jobs:
     - name: Prepare this repo for tests
       run: |
         set -x
-
-        /usr/bin/git submodule update --init --recursive
-        /usr/bin/git fetch --tags
         TRAVIS=yes ./init-tests-after-clone.sh
 
     - name: Further prepare git configuration for tests

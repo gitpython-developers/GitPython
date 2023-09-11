@@ -24,7 +24,8 @@ jobs:
     steps:
     - uses: actions/checkout@v4
       with:
-        fetch-depth: 9999
+        fetch-depth: 0
+        submodules: recursive
 
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v4
@@ -41,9 +42,6 @@ jobs:
     - name: Prepare this repo for tests
       run: |
         set -x
-
-        git submodule update --init --recursive
-        git fetch --tags --force
         TRAVIS=yes ./init-tests-after-clone.sh
 
     - name: Prepare git configuration for tests
