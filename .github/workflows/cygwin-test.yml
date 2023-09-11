@@ -14,7 +14,7 @@ jobs:
       TEMP: "/tmp"
     defaults:
       run:
-        shell: bash.exe -eo pipefail -o igncr "{0}"
+        shell: bash.exe --noprofile --norc -exo pipefail -o igncr "{0}"
 
     steps:
     - name: Force LF line endings
@@ -31,23 +31,19 @@ jobs:
 
     - name: Show python and git versions
       run: |
-        set -x
         /usr/bin/python --version
         /usr/bin/git version
 
     - name: Tell git to trust this repo
       run: |
-          /usr/bin/git config --global --add safe.directory "$(pwd)"
+        /usr/bin/git config --global --add safe.directory "$(pwd)"
 
     - name: Prepare this repo for tests
       run: |
-        set -x
         TRAVIS=yes ./init-tests-after-clone.sh
 
     - name: Further prepare git configuration for tests
       run: |
-        set -x
-
         /usr/bin/git config --global user.email "travis@ci.com"
         /usr/bin/git config --global user.name "Travis Runner"
         # If we rewrite the user's config by accident, we will mess it up
@@ -56,14 +52,13 @@ jobs:
 
     - name: Update PyPA packages
       run: |
-        set -x
         /usr/bin/python -m pip install --upgrade pip setuptools wheel
 
     - name: Install project and test dependencies
       run: |
-        set -x
         /usr/bin/python -m pip install ".[test]"
 
     - name: Test with pytest
       run: |
+        set +x
         /usr/bin/python -m pytest
