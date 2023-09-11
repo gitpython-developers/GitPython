@@ -2,6 +2,14 @@
 Changelog
 =========
 
+3.1.36
+======
+
+Note that this release should be a no-op, it's mainly for testing the changed release-process.
+
+See the following for all changes.
+https://github.com/gitpython-developers/gitpython/milestone/66?closed=1
+
 3.1.35
 ======
 
