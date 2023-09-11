@@ -15,6 +15,8 @@ release: clean
 	make force_release
 
 force_release: clean
+	# IF we're in a virtual environment, add build tools
+	test -z "$$VIRTUAL_ENV" || pip install -U build twine
 	python3 -m build --sdist --wheel
 	twine upload dist/*
 	git push --tags origin main
