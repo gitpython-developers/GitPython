@@ -15,6 +15,6 @@ release: clean
 	make force_release
 
 force_release: clean
-	git push --tags origin main
-	python -m build --sdist --wheel
+	python3 -m build --sdist --wheel
 	twine upload dist/*
+	git push --tags origin main
