@@ -2,9 +2,7 @@ from typing import Sequence
 from setuptools import setup, find_packages
 from setuptools.command.build_py import build_py as _build_py
 from setuptools.command.sdist import sdist as _sdist
-import fnmatch
-import os
-import sys
+import fnmatch, os, sys
 
 with open(os.path.join(os.path.dirname(__file__), "VERSION")) as v:
     VERSION = v.readline().strip()
@@ -47,8 +45,7 @@ def _stamp_version(filename: str) -> None:
         with open(filename) as f:
             for line in f:
                 if "__version__ =" in line:
-                    line = line.replace("\"git\"", "'%s'" % VERSION)
-                    found = True
+                    line, found = line.replace("\"git\"", "'%s'" % VERSION), True
                 out.append(line)
     except OSError:
         print("Couldn't find file %s to stamp version" % filename, file=sys.stderr)
@@ -59,19 +56,16 @@ def _stamp_version(filename: str) -> None:
     else:
         print("WARNING: Couldn't find version line in file %s" % filename, file=sys.stderr)
 
-
 def build_py_modules(basedir: str, excludes: Sequence = ()) -> Sequence:
     # create list of py_modules from tree
-    res = set()
+    res = set() 
     _prefix = os.path.basename(basedir)
     for root, _, files in os.walk(basedir):
         for f in files:
             _f, _ext = os.path.splitext(f)
             if _ext not in [".py"]:
                 continue
-            _f = os.path.join(root, _f)
-            _f = os.path.relpath(_f, basedir)
-            _f = "{}.{}".format(_prefix, _f.replace(os.sep, "."))
+            _f, _f, _f = os.path.join(root, _f), os.path.relpath(_f, basedir), "{}.{}".format(_prefix, _f.replace(os.sep, "."))
             if any(fnmatch.fnmatch(_f, x) for x in excludes):
                 continue
             res.add(_f)
