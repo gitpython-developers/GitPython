@@ -98,15 +98,25 @@ class TestGit(TestBase):
         old_name = "28f425ca_d5d8_4257_b013_8d63166c8158"
         if old_name == old_name.upper():
             raise RuntimeError("test bug or strange locale: old_name invariant under upcasing")
-        os.putenv(old_name, "1")  # It has to be done this lower-level way to set it lower-case.
 
+        # Step 1: Set the environment variable in this parent process. Because os.putenv is a thin
+        #         wrapper around a system API, os.environ never sees the variable in this parent
+        #         process, so the name is not upcased even on Windows.
+        os.putenv(old_name, "1")
+
+        # Step 2: Create the child process that inherits the environment variable. It will see it
+        #         in os.environ with an upcased name, but if it is not mutated through os.environ
+        #         then it will pass it on to its own child processes with the original name. The
+        #         child process will use GitPython, and we are testing that it passes the variable
+        #         with the exact original name to its own child processes.
         cmdline = [
             sys.executable,
             fixture_path("env_case.py"),
             self.rorepo.working_dir,
             old_name,
         ]
-        pair_text = subprocess.check_output(cmdline, shell=False, text=True)
+        pair_text = subprocess.check_output(cmdline, shell=False, text=True)  # Steps 3 and 4.
+
         new_name = pair_text.split("=")[0]
         self.assertEqual(new_name, old_name)
 
