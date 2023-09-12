@@ -109,11 +109,11 @@ class TestGit(TestBase):
         #         name to its own child process (the grandchild).
         cmdline = [
             sys.executable,
-            fixture_path("env_case.py"),
+            fixture_path("env_case.py"),  # Contains steps 3 and 4.
             self.rorepo.working_dir,
             old_name,
         ]
-        pair_text = subprocess.check_output(cmdline, shell=False, text=True)  # Steps 3 and 4.
+        pair_text = subprocess.check_output(cmdline, shell=False, text=True)  # Run steps 3 and 4.
 
         new_name = pair_text.split("=")[0]
         self.assertEqual(new_name, old_name)
