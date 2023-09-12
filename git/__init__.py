@@ -61,8 +61,19 @@ except GitError as _exc:
 
 # } END imports
 
-__all__ = [name for name, obj in locals().items() if not (name.startswith("_") or inspect.ismodule(obj))]
-
+# __all__ must be statically defined by py.typed support
+# __all__ = [name for name, obj in locals().items() if not (name.startswith("_") or inspect.ismodule(obj))]
+__all__ = ['BadName', 'safe_decode',
+    'remove_password_if_present', 'List', 'Sequence', 'Tuple', 'Union', 'TYPE_CHECKING',
+    'PathLike', 'GitError', 'InvalidGitRepositoryError', 'WorkTreeRepositoryUnsupported',
+    'NoSuchPathError', 'UnsafeProtocolError', 'UnsafeOptionError', 'CommandError', 'GitCommandNotFound',
+    'GitCommandError', 'CheckoutError', 'CacheError', 'UnmergedEntriesError', 'HookExecutionError',
+    'RepositoryDirtyError', 'Optional', 'GitConfigParser', 'Object', 'IndexObject', 'Blob', 'Commit',
+    'Submodule', 'UpdateProgress', 'RootModule', 'RootUpdateProgress', 'TagObject', 'TreeModifier',
+    'Tree', 'SymbolicReference', 'Reference', 'HEAD', 'Head', 'TagReference', 'Tag', 'RemoteReference',
+    'RefLog', 'RefLogEntry', 'Diffable', 'DiffIndex', 'Diff', 'NULL_TREE', 'GitCmdObjectDB', 'GitDB',
+    'Git', 'Repo', 'RemoteProgress', 'PushInfo', 'FetchInfo', 'Remote', 'IndexFile', 'StageType',
+    'BlobFilter', 'BaseIndexEntry', 'IndexEntry', 'LockFile', 'BlockingLockFile', 'Stats', 'Actor', 'rmtree']
 
 # { Initialize git executable path
 GIT_OK = None
