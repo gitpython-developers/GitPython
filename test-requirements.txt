@@ -1,15 +1,9 @@
+black
+coverage[toml]
 ddt>=1.1.1, !=1.4.3
 mypy
-
-black
-
 pre-commit
-
-virtualenv
-
 pytest
 pytest-cov
-coverage[toml]
 pytest-sugar
-
-gitdb
+virtualenv

@@ -1,7 +1,9 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+
+set -e
 
 if [[ -z "$TRAVIS" ]]; then
-  read -p "This operation will destroy locally modified files. Continue ? [N/y]: " answer
+  read -rp "This operation will destroy locally modified files. Continue ? [N/y]: " answer
   if [[ ! $answer =~ [yY] ]]; then
     exit 2
   fi

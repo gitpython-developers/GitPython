@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 from typing import Sequence
 from setuptools import setup, find_packages
 from setuptools.command.build_py import build_py as _build_py
@@ -6,8 +8,8 @@ import fnmatch
 import os
 import sys
 
-with open(os.path.join(os.path.dirname(__file__), "VERSION")) as v:
-    VERSION = v.readline().strip()
+with open(os.path.join(os.path.dirname(__file__), "VERSION")) as ver_file:
+    VERSION = ver_file.readline().strip()
 
 with open("requirements.txt") as reqs_file:
     requirements = reqs_file.read().splitlines()
@@ -47,7 +49,7 @@ def _stamp_version(filename: str) -> None:
         with open(filename) as f:
             for line in f:
                 if "__version__ =" in line:
-                    line = line.replace("\"git\"", "'%s'" % VERSION)
+                    line = line.replace('"git"', "'%s'" % VERSION)
                     found = True
                 out.append(line)
     except OSError:
@@ -93,7 +95,7 @@ setup(
     package_dir={"git": "git"},
     python_requires=">=3.7",
     install_requires=requirements,
-    tests_require=requirements + test_requirements,
+    extras_require={"test": test_requirements},
     zip_safe=False,
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -122,5 +124,6 @@ setup(
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
     ],
 )

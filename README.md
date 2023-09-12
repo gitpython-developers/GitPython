@@ -49,29 +49,50 @@ The installer takes care of installing them for you.
 
 ### INSTALL
 
-If you have downloaded the source code:
+GitPython and its required package dependencies can be installed in any of the following ways, all of which should typically be done in a [virtual environment](https://docs.python.org/3/tutorial/venv.html).
 
-```bash
-python setup.py install
-```
+#### From PyPI
 
-or if you want to obtain a copy from the Pypi repository:
+To obtain and install a copy [from PyPI](https://pypi.org/project/GitPython/), run:
 
 ```bash
 pip install GitPython
 ```
 
-Both commands will install the required package dependencies.
+(A distribution package can also be downloaded for manual installation at [the PyPI page](https://pypi.org/project/GitPython/).)
 
-A distribution package can be obtained for manual installation at: <http://pypi.python.org/pypi/GitPython>.
+#### From downloaded source code
 
-If you like to clone from source, you can do it like so:
+If you have downloaded the source code, run this from inside the unpacked `GitPython` directory:
+
+```bash
+pip install .
+```
+
+#### By cloning the source code repository
+
+To clone the [the GitHub repository](https://github.com/gitpython-developers/GitPython) from source to work on the code, you can do it like so:
 
 ```bash
 git clone https://github.com/gitpython-developers/GitPython
-git submodule update --init --recursive
+cd GitPython
+git fetch --tags
 ./init-tests-after-clone.sh
 ```
+
+If you are cloning [your own fork](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/about-forks), then replace the above `git clone` command with one that gives the URL of your fork. Or use this [`gh`](https://cli.github.com/) command (assuming you have `gh` and your fork is called `GitPython`):
+
+```bash
+gh repo clone GitPython
+```
+
+Having cloned the repo, create and activate your [virtual environment](https://docs.python.org/3/tutorial/venv.html). Then make an [editable install](https://pip.pypa.io/en/stable/topics/local-project-installs/#editable-installs):
+
+```bash
+pip install -e ".[test]"
+```
+
+In the less common case that you do not want to install test dependencies, `pip install -e .` can be used instead.
 
 ### Limitations
 
@@ -101,20 +122,49 @@ On _Windows_, make sure you have `git-daemon` in your PATH. For MINGW-git, the `
 exists in `Git\mingw64\libexec\git-core\`; CYGWIN has no daemon, but should get along fine
 with MINGW's.
 
-Ensure testing libraries are installed.
-In the root directory, run: `pip install -r test-requirements.txt`
+#### Install test dependencies
 
-To lint, run: `pre-commit run --all-files`
+Ensure testing libraries are installed. This is taken care of already if you installed with:
 
-To typecheck, run: `mypy -p git`
+```bash
+pip install -e ".[test]"
+```
 
-To test, run: `pytest`
+Otherwise, you can run:
 
-For automatic code formatting run: `black git`
+```bash
+pip install -r test-requirements.txt
+```
 
-Configuration for flake8 is in the ./.flake8 file.
+#### Test commands
 
-Configurations for mypy, pytest and coverage.py are in ./pyproject.toml.
+To test, run:
+
+```bash
+pytest
+```
+
+To lint, run:
+
+```bash
+pre-commit run --all-files
+```
+
+To typecheck, run:
+
+```bash
+mypy -p git
+```
+
+For automatic code formatting, run:
+
+```bash
+black git
+```
+
+Configuration for flake8 is in the `./.flake8` file.
+
+Configurations for `mypy`, `pytest`, `coverage.py`, and `black` are in `./pyproject.toml`.
 
 The same linting and testing will also be performed against different supported python versions
 upon submitting a pull request (or on each push if you have a fork with a "main" branch and actions enabled).
@@ -138,13 +188,15 @@ Please have a look at the [contributions file][contributing].
 
 ### How to make a new release
 
-- Update/verify the **version** in the `VERSION` file
-- Update/verify that the `doc/source/changes.rst` changelog file was updated
-- Commit everything
-- Run `git tag -s <version>` to tag the version in Git
-- Run `make release`
+- Update/verify the **version** in the `VERSION` file.
+- Update/verify that the `doc/source/changes.rst` changelog file was updated.
+- Commit everything.
+- Run `git tag -s <version>` to tag the version in Git.
+- _Optionally_ create and activate a [virtual environment](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/#creating-a-virtual-environment) using `venv` or `virtualenv`.\
+(When run in a virtual environment, the next step will automatically take care of installing `build` and `twine` in it.)
+- Run `make release`.
 - Close the milestone mentioned in the _changelog_ and create a new one. _Do not reuse milestones by renaming them_.
-- Got to [GitHub Releases](https://github.com/gitpython-developers/GitPython/releases) and publish a new one with the recently pushed tag. Generate the changelog.
+- Go to [GitHub Releases](https://github.com/gitpython-developers/GitPython/releases) and publish a new one with the recently pushed tag. Generate the changelog.
 
 ### How to verify a release (DEPRECATED)
 
