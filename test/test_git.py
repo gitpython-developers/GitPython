@@ -104,11 +104,9 @@ class TestGit(TestBase):
         #         process, so the name is not upcased even on Windows.
         os.putenv(old_name, "1")
 
-        # Step 2: Create the child process that inherits the environment variable. It will see it
-        #         in os.environ with an upcased name, but if it is not mutated through os.environ
-        #         then it will pass it on to its own child processes with the original name. The
-        #         child process will use GitPython, and we are testing that it passes the variable
-        #         with the exact original name to its own child processes.
+        # Step 2: Create the child process that inherits the environment variable. The child uses
+        #         GitPython, and we are testing that it passes the variable with the exact original
+        #         name to its own child process (the grandchild).
         cmdline = [
             sys.executable,
             fixture_path("env_case.py"),
