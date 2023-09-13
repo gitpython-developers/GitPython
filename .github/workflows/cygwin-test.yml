@@ -29,11 +29,6 @@ jobs:
       with:
         packages: python39 python39-pip python39-virtualenv git
 
-    - name: Show python and git versions
-      run: |
-        /usr/bin/python --version
-        /usr/bin/git version
-
     - name: Tell git to trust this repo
       run: |
         /usr/bin/git config --global --add safe.directory "$(pwd)"
@@ -58,9 +53,13 @@ jobs:
       run: |
         /usr/bin/python -m pip install ".[test]"
 
-    - name: Check 'is_win'
+    - name: Show version and platform information
       run: |
-        /usr/bin/python -c 'import os, git; print(f"os.name={os.name}, is_win={git.compat.is_win}")'
+        /usr/bin/git version
+        /usr/bin/python --version
+        /usr/bin/python -c 'import sys; print(sys.platform)'
+        /usr/bin/python -c 'import os; print(os.name)'
+        /usr/bin/python -c 'import git; print(git.compat.is_win)'
 
     - name: Test with pytest
       run: |
