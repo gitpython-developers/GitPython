@@ -8,10 +8,14 @@ clean:
 
 release: clean
 	# Check if latest tag is the current head we're releasing
-	echo "Latest tag = $$(git tag -l '[0-9]*' --sort=-v:refname | head -n1)"
-	echo "HEAD SHA       = $$(git rev-parse HEAD)"
-	echo "Latest tag SHA = $$(git tag -l '[0-9]*' --sort=-v:refname | head -n1 | xargs git rev-parse)"
-	@test "$$(git rev-parse HEAD)" = "$$(git tag -l '[0-9]*' --sort=-v:refname | head -n1 | xargs git rev-parse)"
+	@config_opts="$$(printf ' -c versionsort.suffix=-%s' alpha beta pre rc RC)" && \
+	latest_tag=$$(git $$config_opts tag -l '[0-9]*' --sort=-v:refname | head -n1) && \
+	head_sha=$$(git rev-parse HEAD) latest_tag_sha=$$(git rev-parse "$$latest_tag") && \
+	printf '%-14s = %s\n' 'Latest tag'     "$$latest_tag" \
+	                      'HEAD SHA'       "$$head_sha" \
+	                      'Latest tag SHA' "$$latest_tag_sha" && \
+	test "$$head_sha" = "$$latest_tag_sha"
+
 	make force_release
 
 force_release: clean
