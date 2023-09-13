@@ -43,8 +43,7 @@ force_release: clean
 		python -m build --sdist --wheel; \
 	else \
 		python3 -m build --sdist --wheel || \
-		echo "Use a virtual-env with 'python -m venv env && source env/bin/activate' instead" && \
-		false; \
+		{ echo "Use a virtual-env with 'python -m venv env && source env/bin/activate' instead" && false; }; \
 	fi
 
 	# Upload to PyPI and push the tag.
