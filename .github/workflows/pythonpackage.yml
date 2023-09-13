@@ -50,12 +50,12 @@ jobs:
 
     - name: Update PyPA packages
       run: |
-        python -m pip install --upgrade pip
+        python -m pip install --upgrade pip wheel
+
+        # Python prior to 3.12 ships setuptools. Upgrade it if present.
         if pip freeze --all | grep --quiet '^setuptools=='; then
-            # Python prior to 3.12 ships setuptools. Upgrade it if present.
             python -m pip install --upgrade setuptools
         fi
-        python -m pip install --upgrade wheel
 
     - name: Install project and test dependencies
       run: |
