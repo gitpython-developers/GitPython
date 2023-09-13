@@ -23,10 +23,13 @@ force_release: clean
 	test -z "$$VIRTUAL_ENV" || pip install -U build twine
 
 	# Build the sdist and wheel that will be uploaded to PyPI.
-	python3 -m build --sdist --wheel || \
-		test -z "$$VIRTUAL_ENV" && \
+	if test -n "$$VIRTUAL_ENV"; then \
+		python -m build --sdist --wheel; \
+	else \
+		python3 -m build --sdist --wheel || \
 		echo "Use a virtual-env with 'python -m venv env && source env/bin/activate' instead" && \
-		false
+		false; \
+	fi
 
 	# Upload to PyPI and push the tag.
 	twine upload dist/*
