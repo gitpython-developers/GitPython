@@ -78,7 +78,7 @@ jobs:
 
     - name: Test with pytest
       run: |
-        pytest -p no:sugar --instafail -vv
+        pytest --color=yes -p no:sugar --instafail -vv
       continue-on-error: false
 
     - name: Documentation
