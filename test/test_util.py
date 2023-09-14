@@ -9,7 +9,7 @@ import pickle
 import sys
 import tempfile
 import time
-from unittest import mock, skipIf
+from unittest import mock, skipUnless
 from datetime import datetime
 
 import ddt
@@ -84,14 +84,14 @@ class TestUtils(TestBase):
             "array": [42],
         }
 
-    @skipIf(not is_win, "Paths specifically for Windows.")
+    @skipUnless(sys.platform == "cygwin", "Paths specifically for Cygwin.")
     @ddt.idata(_norm_cygpath_pairs + _unc_cygpath_pairs)
     def test_cygpath_ok(self, case):
         wpath, cpath = case
         cwpath = cygpath(wpath)
         self.assertEqual(cwpath, cpath, wpath)
 
-    @skipIf(not is_win, "Paths specifically for Windows.")
+    @skipUnless(sys.platform == "cygwin", "Paths specifically for Cygwin.")
     @ddt.data(
         (r"./bar", "bar"),
         (r".\bar", "bar"),
@@ -104,7 +104,7 @@ class TestUtils(TestBase):
         cwpath = cygpath(wpath)
         self.assertEqual(cwpath, cpath or wpath, wpath)
 
-    @skipIf(not is_win, "Paths specifically for Windows.")
+    @skipUnless(sys.platform == "cygwin", "Paths specifically for Cygwin.")
     @ddt.data(
         r"C:",
         r"C:Relative",
@@ -117,7 +117,7 @@ class TestUtils(TestBase):
         cwpath = cygpath(wpath)
         self.assertEqual(cwpath, wpath.replace("\\", "/"), wpath)
 
-    @skipIf(not is_win, "Paths specifically for Windows.")
+    @skipUnless(sys.platform == "cygwin", "Paths specifically for Cygwin.")
     @ddt.idata(_norm_cygpath_pairs)
     def test_decygpath(self, case):
         wpath, cpath = case
