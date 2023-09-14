@@ -13,7 +13,7 @@ readonly changes_path='doc/source/changes.rst'
 printf 'Checking current directory.\n'
 test "$(cd -- "$(dirname -- "$0")" && pwd)" = "$(pwd)"  # Ugly, but portable.
 
-printf 'Checking that %s and %s exist and have no committed changes.\n' \
+printf 'Checking that %s and %s exist and have no uncommitted changes.\n' \
     "$version_path" "$changes_path"
 test -f "$version_path"
 test -f "$changes_path"
@@ -40,7 +40,7 @@ printf '%-14s = %s\n' 'VERSION file'   "$version_version" \
                       'HEAD SHA'       "$head_sha" \
                       'Latest tag SHA' "$latest_tag_sha"
 
-# Check that latest tag matches version and is the current HEAD we're releasing
+# Check that the latest tag and current version match the HEAD we're releasing.
 test "$version_version" = "$changes_version"
 test "$latest_tag" = "$version_version"
 test "$head_sha" = "$latest_tag_sha"
