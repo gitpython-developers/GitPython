@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 #
 # This script checks if we are in a consistent state to build a new release.
 # See the release instructions in README.md for the steps to make this pass.

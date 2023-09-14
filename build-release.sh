@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 #
 # This script builds a release. If run in a venv, it auto-installs its tools.
 # You may want to run "make release" instead of running this script directly.
