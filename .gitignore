@@ -1,6 +1,8 @@
 *.py[co]
 *.swp
 *~
+.env/
+env/
 .venv/
 venv/
 /*.egg-info
