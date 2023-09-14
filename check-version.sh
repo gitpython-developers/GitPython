@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 #
-# This script checks if we appear ready to build and publish a new release.
+# This script checks if we are in a consistent state to build a new release.
 # See the release instructions in README.md for the steps to make this pass.
+# You may want to run "make release" instead of running this script directly.
 
 set -eEfuo pipefail
 trap 'printf "%s: Check failed. Stopping.\n" "$0" >&2' ERR
