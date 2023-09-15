@@ -24,7 +24,6 @@ echo 'Checking that ALL changes are committed.'
 git status -s --ignore-submodules
 test -z "$(git status -s --ignore-submodules)"
 
-echo 'Gathering current version, latest tag, and current HEAD commit info.'
 version_version="$(cat "$version_path")"
 changes_version="$(awk '/^[0-9]/ {print $0; exit}' "$changes_path")"
 config_opts="$(printf ' -c versionsort.suffix=-%s' alpha beta pre rc RC)"
@@ -33,6 +32,7 @@ head_sha="$(git rev-parse HEAD)"
 latest_tag_sha="$(git rev-parse "$latest_tag")"
 
 # Display a table of all the current version, tag, and HEAD commit information.
+echo $'\nThe VERSION must be the same in all locations, and so must the HEAD and tag SHA'
 printf '%-14s = %s\n' 'VERSION file'   "$version_version" \
                       'changes.rst'    "$changes_version" \
                       'Latest tag'     "$latest_tag" \
