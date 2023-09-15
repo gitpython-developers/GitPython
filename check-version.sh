@@ -22,8 +22,8 @@ test -z "$(git status -s -- "$version_path" "$changes_path")"
 
 # This section can be commented out, if absolutely necessary.
 printf 'Checking that ALL changes are committed.\n'
-git status -s
-test -z "$(git status -s)"
+git status -s --ignore-submodules
+test -z "$(git status -s --ignore-submodules)"
 
 printf 'Gathering current version, latest tag, and current HEAD commit info.\n'
 version_version="$(cat "$version_path")"
