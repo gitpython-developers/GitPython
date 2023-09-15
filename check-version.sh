@@ -5,27 +5,26 @@
 # You may want to run "make release" instead of running this script directly.
 
 set -eEfuo pipefail
-trap 'printf "%s: Check failed. Stopping.\n" "$0" >&2' ERR
+trap 'echo "$0: Check failed. Stopping." >&2' ERR
 
 readonly version_path='VERSION'
 readonly changes_path='doc/source/changes.rst'
 
-printf 'Checking current directory.\n'
+echo 'Checking current directory.'
 test "$(cd -- "$(dirname -- "$0")" && pwd)" = "$(pwd)"  # Ugly, but portable.
 
-printf 'Checking that %s and %s exist and have no uncommitted changes.\n' \
-    "$version_path" "$changes_path"
+echo "Checking that $version_path and $changes_path exist and have no uncommitted changes."
 test -f "$version_path"
 test -f "$changes_path"
 git status -s -- "$version_path" "$changes_path"
 test -z "$(git status -s -- "$version_path" "$changes_path")"
 
 # This section can be commented out, if absolutely necessary.
-printf 'Checking that ALL changes are committed.\n'
+echo 'Checking that ALL changes are committed.'
 git status -s --ignore-submodules
 test -z "$(git status -s --ignore-submodules)"
 
-printf 'Gathering current version, latest tag, and current HEAD commit info.\n'
+echo 'Gathering current version, latest tag, and current HEAD commit info.'
 version_version="$(cat "$version_path")"
 changes_version="$(awk '/^[0-9]/ {print $0; exit}' "$changes_path")"
 config_opts="$(printf ' -c versionsort.suffix=-%s' alpha beta pre rc RC)"
@@ -44,4 +43,4 @@ printf '%-14s = %s\n' 'VERSION file'   "$version_version" \
 test "$version_version" = "$changes_version"
 test "$latest_tag" = "$version_version"
 test "$head_sha" = "$latest_tag_sha"
-printf 'OK, everything looks good.\n'
+echo 'OK, everything looks good.'
