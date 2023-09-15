@@ -12,7 +12,6 @@ import time
 from unittest import mock, skipIf
 from datetime import datetime
 
-import pytest
 import ddt
 
 from git.cmd import dashify
@@ -156,11 +155,6 @@ class TestUtils(TestBase):
         lock_file._obtain_lock_or_raise()
         lock_file._release_lock()
 
-    @pytest.mark.xfail(
-        sys.platform == "cygwin",
-        reason="Cygwin fails here for some reason, always",
-        raises=AssertionError,
-    )
     def test_blocking_lock_file(self):
         my_file = tempfile.mktemp()
         lock_file = BlockingLockFile(my_file)
@@ -173,9 +167,8 @@ class TestUtils(TestBase):
         self.assertRaises(IOError, wait_lock._obtain_lock)
         elapsed = time.time() - start
         extra_time = 0.02
-        if is_win:
-            # for Appveyor
-            extra_time *= 6  # NOTE: Indeterministic failures here...
+        if is_win or sys.platform == "cygwin":
+            extra_time *= 6  # NOTE: Indeterministic failures without this...
         self.assertLess(elapsed, wait_time + extra_time)
 
     def test_user_id(self):
