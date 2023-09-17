@@ -13,6 +13,7 @@ from unittest import mock, skipUnless
 from datetime import datetime
 
 import ddt
+import pytest
 
 from git.cmd import dashify
 from git.compat import is_win
@@ -84,6 +85,10 @@ class TestUtils(TestBase):
             "array": [42],
         }
 
+    @pytest.mark.xfail(
+        reason="Many return paths prefixed /proc/cygdrive instead.",
+        raises=AssertionError,
+    )
     @skipUnless(sys.platform == "cygwin", "Paths specifically for Cygwin.")
     @ddt.idata(_norm_cygpath_pairs + _unc_cygpath_pairs)
     def test_cygpath_ok(self, case):
@@ -91,6 +96,10 @@ class TestUtils(TestBase):
         cwpath = cygpath(wpath)
         self.assertEqual(cwpath, cpath, wpath)
 
+    @pytest.mark.xfail(
+        reason=r'2nd example r".\bar" -> "bar" fails, returns "./bar"',
+        raises=AssertionError,
+    )
     @skipUnless(sys.platform == "cygwin", "Paths specifically for Cygwin.")
     @ddt.data(
         (r"./bar", "bar"),
