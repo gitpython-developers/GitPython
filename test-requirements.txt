@@ -6,4 +6,3 @@ pre-commit
 pytest
 pytest-cov
 pytest-sugar
-virtualenv
