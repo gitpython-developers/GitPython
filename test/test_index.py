@@ -12,7 +12,6 @@ from pathlib import Path
 from stat import S_ISLNK, ST_MODE
 import shutil
 import tempfile
-from unittest import skipIf
 
 import pytest
 
@@ -27,16 +26,13 @@ from git import (
     GitCommandError,
     CheckoutError,
 )
-from git.cmd import Git
 from git.compat import is_win
 from git.exc import HookExecutionError, InvalidGitRepositoryError
 from git.index.fun import hook_path
 from git.index.typ import BaseIndexEntry, IndexEntry
 from git.objects import Blob
-from test.lib import TestBase, fixture_path, fixture, with_rw_repo
-from test.lib import with_rw_directory
-from git.util import Actor, rmtree
-from git.util import HIDE_WINDOWS_KNOWN_ERRORS, hex_to_bin
+from test.lib import TestBase, fixture, fixture_path, with_rw_directory, with_rw_repo
+from git.util import Actor, hex_to_bin, rmtree
 from gitdb.base import IStream
 
 HOOKS_SHEBANG = "#!/usr/bin/env sh\n"
@@ -434,14 +430,6 @@ class TestIndex(TestBase):
 
     # END num existing helper
 
-    @skipIf(
-        HIDE_WINDOWS_KNOWN_ERRORS and Git.is_cygwin(),
-        """FIXME: File "C:\\projects\\gitpython\\git\\test\\test_index.py", line 642, in test_index_mutation
-                self.assertEqual(fd.read(), link_target)
-                AssertionError: '!<symlink>\xff\xfe/\x00e\x00t\x00c\x00/\x00t\x00h\x00a\x00t\x00\x00\x00'
-                != '/etc/that'
-                """,
-    )
     @with_rw_repo("0.1.6")
     def test_index_mutation(self, rw_repo):
         index = rw_repo.index
