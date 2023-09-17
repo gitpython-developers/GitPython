@@ -3,7 +3,7 @@
 # Copyright (C) 2008, 2009 Michael Trier (mtrier@gmail.com) and contributors
 #
 # This module is part of GitPython and is released under
-# the BSD License: http://www.opensource.org/licenses/bsd-license.php
+# the BSD License: https://opensource.org/license/bsd-3-clause/
 import ddt
 import shutil
 import tempfile
@@ -414,7 +414,7 @@ class TestDiff(TestBase):
 
     @with_rw_directory
     def test_rename_override(self, rw_dir):
-        """Test disabling of diff rename detection""" 
+        """Test disabling of diff rename detection"""
 
         # create and commit file_a.txt
         repo = Repo.init(rw_dir)
@@ -480,4 +480,3 @@ class TestDiff(TestBase):
         self.assertEqual(True, diff.renamed_file)
         self.assertEqual('file_a.txt', diff.rename_from)
         self.assertEqual('file_b.txt', diff.rename_to)
-
