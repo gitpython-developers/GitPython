@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # This module is part of GitPython and is released under
-# the BSD License: http://www.opensource.org/licenses/bsd-license.php
+# the BSD License: https://opensource.org/license/bsd-3-clause/
 # flake8: noqa
 
 import os
