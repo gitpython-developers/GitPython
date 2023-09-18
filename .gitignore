@@ -9,6 +9,7 @@ venv/
 /lib/GitPython.egg-info
 cover/
 .coverage
+.coverage.*
 /build
 /dist
 /doc/_build
