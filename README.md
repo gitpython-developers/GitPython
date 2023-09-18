@@ -177,7 +177,7 @@ Please have a look at the [contributions file][contributing].
 
 - [User Documentation](http://gitpython.readthedocs.org)
 - [Questions and Answers](http://stackexchange.com/filters/167317/gitpython)
-- Please post on stackoverflow and use the `gitpython` tag
+- Please post on Stack Overflow and use the `gitpython` tag
 - [Issue Tracker](https://github.com/gitpython-developers/GitPython/issues)
   - Post reproducible bugs and feature requests as a new issue.
     Please be sure to provide the following information if posting bugs:
@@ -267,6 +267,7 @@ gpg --edit-key 4C08421980C9
 
 ### LICENSE
 
-New BSD License. See the LICENSE file.
+[New BSD License](https://opensource.org/license/bsd-3-clause/). See the [LICENSE file](https://github.com/gitpython-developers/GitPython/blob/main/license).
 
-[contributing]: https://github.com/gitpython-developers/GitPython/blob/master/CONTRIBUTING.md
+[contributing]: https://github.com/gitpython-developers/GitPython/blob/main/CONTRIBUTING.md
+[license]: https://github.com/gitpython-developers/GitPython/blob/main/license
