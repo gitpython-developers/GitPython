@@ -159,7 +159,7 @@ class TestUtils(TestBase):
     @pytest.mark.xfail(
         sys.platform == "cygwin",
         reason="Cygwin fails here for some reason, always",
-        raises=AssertionError
+        raises=AssertionError,
     )
     def test_blocking_lock_file(self):
         my_file = tempfile.mktemp()

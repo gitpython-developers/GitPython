@@ -173,12 +173,12 @@ class TestCommit(TestCommitSerialization):
                 ".github/workflows/Future.yml" : {
                     'insertions': 57,
                     'deletions': 0,
-                    'lines': 57
+                    'lines': 57,
                 },
                 ".github/workflows/test_pytest.yml" : {
                     'insertions': 0,
                     'deletions': 55,
-                    'lines': 55
+                    'lines': 55,
                 },
             }
             assert path in expected

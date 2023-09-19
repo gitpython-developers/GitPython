@@ -1115,7 +1115,7 @@ class TestRepo(TestBase):
     @pytest.mark.xfail(
         sys.platform == "cygwin",
         reason="Cygwin GitPython can't find submodule SHA",
-        raises=ValueError
+        raises=ValueError,
     )
     def test_submodules(self):
         self.assertEqual(len(self.rorepo.submodules), 1)  # non-recursive

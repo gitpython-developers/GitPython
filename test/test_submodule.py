@@ -469,7 +469,7 @@ class TestSubmodule(TestBase):
     @pytest.mark.xfail(
         sys.platform == "cygwin",
         reason="Cygwin GitPython can't find submodule SHA",
-        raises=ValueError
+        raises=ValueError,
     )
     @skipIf(
         HIDE_WINDOWS_KNOWN_ERRORS,
