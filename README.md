@@ -159,7 +159,7 @@ mypy -p git
 For automatic code formatting, run:
 
 ```bash
-black git
+black .
 ```
 
 Configuration for flake8 is in the `./.flake8` file.
