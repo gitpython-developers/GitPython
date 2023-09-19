@@ -25,4 +25,3 @@ nbproject
 .pytest_cache/
 monkeytype.sqlite3
 output.txt
-tox.ini
