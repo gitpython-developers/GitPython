@@ -39,11 +39,14 @@ def _patch_git_config(name, value):
 
     # This is recomputed each time the context is entered, for compatibility with
     # existing GIT_CONFIG_* environment variables, even if changed in this process.
-    patcher = mock.patch.dict(os.environ, {
-        "GIT_CONFIG_COUNT": str(pair_index + 1),
-        f"GIT_CONFIG_KEY_{pair_index}": name,
-        f"GIT_CONFIG_VALUE_{pair_index}": value,
-    })
+    patcher = mock.patch.dict(
+        os.environ,
+        {
+            "GIT_CONFIG_COUNT": str(pair_index + 1),
+            f"GIT_CONFIG_KEY_{pair_index}": name,
+            f"GIT_CONFIG_VALUE_{pair_index}": value,
+        },
+    )
 
     with patcher:
         yield
@@ -469,7 +472,7 @@ class TestSubmodule(TestBase):
     @pytest.mark.xfail(
         sys.platform == "cygwin",
         reason="Cygwin GitPython can't find submodule SHA",
-        raises=ValueError
+        raises=ValueError,
     )
     @skipIf(
         HIDE_WINDOWS_KNOWN_ERRORS,
@@ -914,17 +917,17 @@ class TestSubmodule(TestBase):
         os.mkdir(smp)
 
         with open(osp.join(smp, "a"), "w", encoding="utf-8") as f:
-            f.write('test\n')
+            f.write("test\n")
 
         with open(osp.join(rwdir, ".gitmodules"), "w", encoding="utf-8") as f:
-            f.write("[submodule \"a\"]\n")
+            f.write('[submodule "a"]\n')
             f.write("    path = module\n")
             f.write("    url = https://github.com/chaconinc/DbConnector\n")
 
         parent.git.add(Git.polish_url(osp.join(smp, "a")))
         parent.git.add(Git.polish_url(osp.join(rwdir, ".gitmodules")))
 
-        parent.git.commit(message='test')
+        parent.git.commit(message="test")
 
         assert len(parent.submodules) == 0
 
@@ -1200,7 +1203,12 @@ class TestSubmodule(TestBase):
                 # The options will be allowed, but the command will fail.
                 with self.assertRaises(GitCommandError):
                     Submodule.add(
-                        rw_repo, "new", "new", str(tmp_dir), clone_multi_options=[unsafe_option], allow_unsafe_options=True
+                        rw_repo,
+                        "new",
+                        "new",
+                        str(tmp_dir),
+                        clone_multi_options=[unsafe_option],
+                        allow_unsafe_options=True,
                     )
                 assert not tmp_file.exists()
 
@@ -1211,7 +1219,12 @@ class TestSubmodule(TestBase):
             for unsafe_option in unsafe_options:
                 with self.assertRaises(GitCommandError):
                     Submodule.add(
-                        rw_repo, "new", "new", str(tmp_dir), clone_multi_options=[unsafe_option], allow_unsafe_options=True
+                        rw_repo,
+                        "new",
+                        "new",
+                        str(tmp_dir),
+                        clone_multi_options=[unsafe_option],
+                        allow_unsafe_options=True,
                     )
 
     @with_rw_repo("HEAD")

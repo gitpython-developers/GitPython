@@ -15,7 +15,6 @@ from .lib import TestBigRepoR
 
 
 class TestObjDBPerformance(TestBigRepoR):
-
     large_data_size_bytes = 1000 * 1000 * 10  # some MiB should do it
     moderate_data_size_bytes = 1000 * 1000 * 1  # just 1 MiB
 

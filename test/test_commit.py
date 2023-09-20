@@ -93,7 +93,6 @@ class TestCommitSerialization(TestBase):
 
 class TestCommit(TestCommitSerialization):
     def test_bake(self):
-
         commit = self.rorepo.commit("2454ae89983a4496a445ce347d7a41c0bb0ea7ae")
         # commits have no dict
         self.assertRaises(AttributeError, setattr, commit, "someattr", 1)
@@ -170,15 +169,15 @@ class TestCommit(TestCommitSerialization):
 
         def check_entries(path, changes):
             expected = {
-                ".github/workflows/Future.yml" : {
-                    'insertions': 57,
-                    'deletions': 0,
-                    'lines': 57
+                ".github/workflows/Future.yml": {
+                    "insertions": 57,
+                    "deletions": 0,
+                    "lines": 57,
                 },
-                ".github/workflows/test_pytest.yml" : {
-                    'insertions': 0,
-                    'deletions': 55,
-                    'lines': 55
+                ".github/workflows/test_pytest.yml": {
+                    "insertions": 0,
+                    "deletions": 55,
+                    "lines": 55,
                 },
             }
             assert path in expected

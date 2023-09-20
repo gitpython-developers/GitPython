@@ -481,7 +481,7 @@ class Tutorials(TestBase):
     @pytest.mark.xfail(
         sys.platform == "cygwin",
         reason="Cygwin GitPython can't find SHA for submodule",
-        raises=ValueError
+        raises=ValueError,
     )
     def test_submodules(self):
         # [1-test_submodules]

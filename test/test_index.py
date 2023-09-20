@@ -946,7 +946,7 @@ class TestIndex(TestBase):
         else:
             raise AssertionError("Should have caught a HookExecutionError")
 
-    @with_rw_repo('HEAD')
+    @with_rw_repo("HEAD")
     def test_index_add_pathlike(self, rw_repo):
         git_dir = Path(rw_repo.git_dir)
 

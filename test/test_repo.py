@@ -251,7 +251,9 @@ class TestRepo(TestBase):
                 self.fail("Raised UnicodeEncodeError")
 
     @with_rw_directory
-    @skip("the referenced repository was removed, and one needs to setup a new password controlled repo under the orgs control")
+    @skip(
+        "the referenced repository was removed, and one needs to setup a new password controlled repo under the orgs control"
+    )
     def test_leaking_password_in_clone_logs(self, rw_dir):
         password = "fakepassword1234"
         try:
@@ -391,7 +393,9 @@ class TestRepo(TestBase):
             for i, unsafe_option in enumerate(unsafe_options):
                 destination = tmp_dir / str(i)
                 assert not destination.exists()
-                Repo.clone_from(rw_repo.working_dir, destination, multi_options=[unsafe_option], allow_unsafe_options=True)
+                Repo.clone_from(
+                    rw_repo.working_dir, destination, multi_options=[unsafe_option], allow_unsafe_options=True
+                )
                 assert destination.exists()
 
     @with_rw_repo("HEAD")
@@ -755,8 +759,8 @@ class TestRepo(TestBase):
     @mock.patch.object(Git, "_call_process")
     def test_blame_accepts_rev_opts(self, git):
         res = self.rorepo.blame("HEAD", "README.md", rev_opts=["-M", "-C", "-C"])
-        expected_args = ['blame', 'HEAD', '-M', '-C', '-C', '--', 'README.md']
-        boilerplate_kwargs = {"p" : True, "stdout_as_string": False}
+        expected_args = ["blame", "HEAD", "-M", "-C", "-C", "--", "README.md"]
+        boilerplate_kwargs = {"p": True, "stdout_as_string": False}
         git.assert_called_once_with(*expected_args, **boilerplate_kwargs)
 
     @skipIf(
@@ -1115,7 +1119,7 @@ class TestRepo(TestBase):
     @pytest.mark.xfail(
         sys.platform == "cygwin",
         reason="Cygwin GitPython can't find submodule SHA",
-        raises=ValueError
+        raises=ValueError,
     )
     def test_submodules(self):
         self.assertEqual(len(self.rorepo.submodules), 1)  # non-recursive
@@ -1415,14 +1419,16 @@ class TestRepo(TestBase):
 
             gi = tmp_dir / "repo" / ".gitignore"
 
-            with open(gi, 'w') as file:
-                file.write('ignored_file.txt\n')
-                file.write('ignored_dir/\n')
+            with open(gi, "w") as file:
+                file.write("ignored_file.txt\n")
+                file.write("ignored_dir/\n")
 
-            assert temp_repo.ignored(['included_file.txt', 'included_dir/file.txt']) == []
-            assert temp_repo.ignored(['ignored_file.txt']) == ['ignored_file.txt']
-            assert temp_repo.ignored(['included_file.txt', 'ignored_file.txt']) == ['ignored_file.txt']
-            assert temp_repo.ignored(['included_file.txt', 'ignored_file.txt', 'included_dir/file.txt', 'ignored_dir/file.txt']) == ['ignored_file.txt', 'ignored_dir/file.txt']
+            assert temp_repo.ignored(["included_file.txt", "included_dir/file.txt"]) == []
+            assert temp_repo.ignored(["ignored_file.txt"]) == ["ignored_file.txt"]
+            assert temp_repo.ignored(["included_file.txt", "ignored_file.txt"]) == ["ignored_file.txt"]
+            assert temp_repo.ignored(
+                ["included_file.txt", "ignored_file.txt", "included_dir/file.txt", "ignored_dir/file.txt"]
+            ) == ["ignored_file.txt", "ignored_dir/file.txt"]
 
     def test_ignored_raises_error_w_symlink(self):
         with tempfile.TemporaryDirectory() as tdir:
