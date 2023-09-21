@@ -195,17 +195,12 @@ class TestGit(TestBase):
         # END verify number types
 
     def test_cmd_override(self):
-        prev_cmd = self.git.GIT_PYTHON_GIT_EXECUTABLE
-        exc = GitCommandNotFound
-        try:
-            # set it to something that doesn't exist, assure it raises
-            type(self.git).GIT_PYTHON_GIT_EXECUTABLE = osp.join(
-                "some", "path", "which", "doesn't", "exist", "gitbinary"
-            )
-            self.assertRaises(exc, self.git.version)
-        finally:
-            type(self.git).GIT_PYTHON_GIT_EXECUTABLE = prev_cmd
-        # END undo adjustment
+        with mock.patch.object(
+            type(self.git),
+            "GIT_PYTHON_GIT_EXECUTABLE",
+            osp.join("some", "path", "which", "doesn't", "exist", "gitbinary"),
+        ):
+            self.assertRaises(GitCommandNotFound, self.git.version)
 
     def test_refresh(self):
         # test a bad git path refresh

@@ -847,18 +847,13 @@ class TestRepo(TestBase):
 
     @with_rw_directory
     def test_tilde_and_env_vars_in_repo_path(self, rw_dir):
-        ph = os.environ.get("HOME")
-        try:
+        with mock.patch.dict(os.environ, {"HOME": rw_dir}):
             os.environ["HOME"] = rw_dir
             Repo.init(osp.join("~", "test.git"), bare=True)
 
+        with mock.patch.dict(os.environ, {"FOO": rw_dir}):
             os.environ["FOO"] = rw_dir
             Repo.init(osp.join("$FOO", "test.git"), bare=True)
-        finally:
-            if ph:
-                os.environ["HOME"] = ph
-                del os.environ["FOO"]
-        # end assure HOME gets reset to what it was
 
     def test_git_cmd(self):
         # test CatFileContentStream, just to be very sure we have no fencepost errors
