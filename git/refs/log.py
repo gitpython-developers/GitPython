@@ -262,8 +262,7 @@ class RefLog(List[RefLogEntry], Serializable):
         try:
             self._serialize(fp)
             lfd.commit()
-        except Exception:
-            # on failure it rolls back automatically, but we make it clear
+        except BaseException:
             lfd.rollback()
             raise
         # END handle change
