@@ -224,13 +224,11 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         lfd = LockedFD(file_path or self._file_path)
         stream = lfd.open(write=True, stream=True)
 
-        ok = False
         try:
             self._serialize(stream, ignore_extension_data)
-            ok = True
-        finally:
-            if not ok:
-                lfd.rollback()
+        except BaseException:
+            lfd.rollback()
+            raise
 
         lfd.commit()
 
