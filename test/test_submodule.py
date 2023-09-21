@@ -111,7 +111,7 @@ class TestSubmodule(TestBase):
 
         # force it to reread its information
         del smold._url
-        smold.url == sm.url  # @NoEffect
+        smold.url == sm.url  # noqa: B015  # @NoEffect
 
         # test config_reader/writer methods
         sm.config_reader()
@@ -248,7 +248,7 @@ class TestSubmodule(TestBase):
             assert csm.module_exists()
 
             # tracking branch once again
-            csm.module().head.ref.tracking_branch() is not None  # @NoEffect
+            assert csm.module().head.ref.tracking_branch() is not None
 
             # this flushed in a sub-submodule
             assert len(list(rwrepo.iter_submodules())) == 2
@@ -480,8 +480,9 @@ class TestSubmodule(TestBase):
         File "C:\\projects\\gitpython\\git\\cmd.py", line 559, in execute
         raise GitCommandNotFound(command, err)
         git.exc.GitCommandNotFound: Cmd('git') not found due to: OSError('[WinError 6] The handle is invalid')
-        cmdline: git clone -n --shared -v C:\\projects\\gitpython\\.git Users\\appveyor\\AppData\\Local\\Temp\\1\\tmplyp6kr_rnon_bare_test_root_module""",
-    )  # noqa E501
+        cmdline: git clone -n --shared -v C:\\projects\\gitpython\\.git Users\\appveyor\\AppData\\Local\\Temp\\1\\tmplyp6kr_rnon_bare_test_root_module
+        """,  # noqa E501
+    )
     @with_rw_repo(k_subm_current, bare=False)
     def test_root_module(self, rwrepo):
         # Can query everything without problems

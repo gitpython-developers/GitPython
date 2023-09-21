@@ -7,7 +7,6 @@
 import ddt
 import shutil
 import tempfile
-import unittest
 from git import (
     Repo,
     GitCommandError,

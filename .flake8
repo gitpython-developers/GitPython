@@ -26,7 +26,7 @@ ignore = E265,E266,E731,E704,
          D,
          RST, RST3
 
-exclude = .tox,.venv,build,dist,doc,git/ext/,test
+exclude = .tox,.venv,build,dist,doc,git/ext/
 
 rst-roles =  # for flake8-RST-docstrings
     attr,class,func,meth,mod,obj,ref,term,var  # used by sphinx

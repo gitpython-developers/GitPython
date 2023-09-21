@@ -160,7 +160,7 @@ class TestRemote(TestBase):
             # END error checking
         # END for each info
 
-        if any([info.flags & info.ERROR for info in results]):
+        if any(info.flags & info.ERROR for info in results):
             self.assertRaises(GitCommandError, results.raise_if_error)
         else:
             # No errors, so this should do nothing
