@@ -161,6 +161,51 @@ class SymbolicReference(object):
                 return hexsha
         # END recursive dereferencing
 
+    @staticmethod
+    def _check_ref_name_valid(ref_path: PathLike) -> None:
+        # Based on the rules described in https://git-scm.com/docs/git-check-ref-format/#_description
+        previous: Union[str, None] = None
+        one_before_previous: Union[str, None] = None
+        for c in str(ref_path):
+            if c in " ~^:?*[\\":
+                raise ValueError(
+                    f"Invalid reference '{ref_path}': references cannot contain spaces, tildes (~), carets (^),"
+                    f" colons (:), question marks (?), asterisks (*), open brackets ([) or backslashes (\\)"
+                )
+            elif c == ".":
+                if previous is None or previous == "/":
+                    raise ValueError(
+                        f"Invalid reference '{ref_path}': references cannot start with a period (.) or contain '/.'"
+                    )
+                elif previous == ".":
+                    raise ValueError(f"Invalid reference '{ref_path}': references cannot contain '..'")
+            elif c == "/":
+                if previous == "/":
+                    raise ValueError(f"Invalid reference '{ref_path}': references cannot contain '//'")
+                elif previous is None:
+                    raise ValueError(
+                        f"Invalid reference '{ref_path}': references cannot start with forward slashes '/'"
+                    )
+            elif c == "{" and previous == "@":
+                raise ValueError(f"Invalid reference '{ref_path}': references cannot contain '@{{'")
+            elif ord(c) < 32 or ord(c) == 127:
+                raise ValueError(f"Invalid reference '{ref_path}': references cannot contain ASCII control characters")
+
+            one_before_previous = previous
+            previous = c
+
+        if previous == ".":
+            raise ValueError(f"Invalid reference '{ref_path}': references cannot end with a period (.)")
+        elif previous == "/":
+            raise ValueError(f"Invalid reference '{ref_path}': references cannot end with a forward slash (/)")
+        elif previous == "@" and one_before_previous is None:
+            raise ValueError(f"Invalid reference '{ref_path}': references cannot be '@'")
+        elif any([component.endswith(".lock") for component in str(ref_path).split("/")]):
+            raise ValueError(
+                f"Invalid reference '{ref_path}': references cannot have slash-separated components that end with"
+                f" '.lock'"
+            )
+
     @classmethod
     def _get_ref_info_helper(
         cls, repo: "Repo", ref_path: Union[PathLike, None]
@@ -168,8 +213,9 @@ class SymbolicReference(object):
         """Return: (str(sha), str(target_ref_path)) if available, the sha the file at
         rela_path points to, or None. target_ref_path is the reference we
         point to, or None"""
-        if ".." in str(ref_path):
-            raise ValueError(f"Invalid reference '{ref_path}'")
+        if ref_path:
+            cls._check_ref_name_valid(ref_path)
+
         tokens: Union[None, List[str], Tuple[str, str]] = None
         repodir = _git_dir(repo, ref_path)
         try:
