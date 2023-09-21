@@ -370,7 +370,7 @@ class SymbolicReference(object):
 
         lfd = LockedFD(fpath)
         fd = lfd.open(write=True, stream=True)
-        ok = True
+        ok = False
         try:
             fd.write(write_value.encode("utf-8") + b"\n")
             lfd.commit()
