@@ -370,14 +370,12 @@ class SymbolicReference(object):
 
         lfd = LockedFD(fpath)
         fd = lfd.open(write=True, stream=True)
-        ok = False
         try:
             fd.write(write_value.encode("utf-8") + b"\n")
             lfd.commit()
-            ok = True
-        finally:
-            if not ok:
-                lfd.rollback()
+        except BaseException:
+            lfd.rollback()
+            raise
         # Adjust the reflog
         if logmsg is not None:
             self.log_append(oldbinsha, logmsg)

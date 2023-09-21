@@ -406,15 +406,14 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
             return
 
         try:
-            try:
-                self.write()
-            except IOError:
-                log.error("Exception during destruction of GitConfigParser", exc_info=True)
-            except ReferenceError:
-                # This happens in PY3 ... and usually means that some state cannot be written
-                # as the sections dict cannot be iterated
-                # Usually when shutting down the interpreter, don'y know how to fix this
-                pass
+            self.write()
+        except IOError:
+            log.error("Exception during destruction of GitConfigParser", exc_info=True)
+        except ReferenceError:
+            # This happens in PY3 ... and usually means that some state cannot be
+            # written as the sections dict cannot be iterated
+            # Usually when shutting down the interpreter, don't know how to fix this
+            pass
         finally:
             if self._lock is not None:
                 self._lock._release_lock()
