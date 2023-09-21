@@ -245,7 +245,7 @@ class TestGit(TestBase):
 
     def test_env_vars_passed_to_git(self):
         editor = "non_existent_editor"
-        with mock.patch.dict("os.environ", {"GIT_EDITOR": editor}):  # @UndefinedVariable
+        with mock.patch.dict(os.environ, {"GIT_EDITOR": editor}):
             self.assertEqual(self.git.var("GIT_EDITOR"), editor)
 
     @with_rw_directory
