@@ -1403,7 +1403,7 @@ class Submodule(IndexObject, TraversableIterableObj):
             # END handle critical error
 
             # Make sure we are looking at a submodule object
-            if type(sm) != git.objects.submodule.base.Submodule:
+            if type(sm) is not git.objects.submodule.base.Submodule:
                 continue
 
             # fill in remaining info - saves time as it doesn't have to be parsed again

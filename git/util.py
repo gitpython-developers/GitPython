@@ -1136,7 +1136,7 @@ class IterableClassWatcher(type):
 
     def __init__(cls, name: str, bases: Tuple, clsdict: Dict) -> None:
         for base in bases:
-            if type(base) == IterableClassWatcher:
+            if type(base) is IterableClassWatcher:
                 warnings.warn(
                     f"GitPython Iterable subclassed by {name}. "
                     "Iterable is deprecated due to naming clash since v3.1.18"

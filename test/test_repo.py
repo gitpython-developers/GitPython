@@ -252,7 +252,8 @@ class TestRepo(TestBase):
 
     @with_rw_directory
     @skip(
-        "the referenced repository was removed, and one needs to setup a new password controlled repo under the orgs control"
+        """The referenced repository was removed, and one needs to set up a new
+        password controlled repo under the org's control."""
     )
     def test_leaking_password_in_clone_logs(self, rw_dir):
         password = "fakepassword1234"
@@ -758,9 +759,9 @@ class TestRepo(TestBase):
 
     @mock.patch.object(Git, "_call_process")
     def test_blame_accepts_rev_opts(self, git):
-        res = self.rorepo.blame("HEAD", "README.md", rev_opts=["-M", "-C", "-C"])
         expected_args = ["blame", "HEAD", "-M", "-C", "-C", "--", "README.md"]
         boilerplate_kwargs = {"p": True, "stdout_as_string": False}
+        self.rorepo.blame("HEAD", "README.md", rev_opts=["-M", "-C", "-C"])
         git.assert_called_once_with(*expected_args, **boilerplate_kwargs)
 
     @skipIf(
@@ -846,18 +847,13 @@ class TestRepo(TestBase):
 
     @with_rw_directory
     def test_tilde_and_env_vars_in_repo_path(self, rw_dir):
-        ph = os.environ.get("HOME")
-        try:
+        with mock.patch.dict(os.environ, {"HOME": rw_dir}):
             os.environ["HOME"] = rw_dir
             Repo.init(osp.join("~", "test.git"), bare=True)
 
+        with mock.patch.dict(os.environ, {"FOO": rw_dir}):
             os.environ["FOO"] = rw_dir
             Repo.init(osp.join("$FOO", "test.git"), bare=True)
-        finally:
-            if ph:
-                os.environ["HOME"] = ph
-                del os.environ["FOO"]
-        # end assure HOME gets reset to what it was
 
     def test_git_cmd(self):
         # test CatFileContentStream, just to be very sure we have no fencepost errors
@@ -971,7 +967,7 @@ class TestRepo(TestBase):
         # history with number
         ni = 11
         history = [obj.parents[0]]
-        for pn in range(ni):
+        for _ in range(ni):
             history.append(history[-1].parents[0])
         # END get given amount of commits
 
@@ -1329,6 +1325,7 @@ class TestRepo(TestBase):
         # move .git directory to a subdirectory
         # set GIT_DIR and GIT_WORK_TREE appropriately
         # check that repo.working_tree_dir == rw_dir
+
         self.rorepo.clone(join_path_native(rw_dir, "master_repo"))
 
         repo_dir = join_path_native(rw_dir, "master_repo")
@@ -1338,16 +1335,12 @@ class TestRepo(TestBase):
         os.mkdir(new_subdir)
         os.rename(old_git_dir, new_git_dir)
 
-        oldenv = os.environ.copy()
-        os.environ["GIT_DIR"] = new_git_dir
-        os.environ["GIT_WORK_TREE"] = repo_dir
+        to_patch = {"GIT_DIR": new_git_dir, "GIT_WORK_TREE": repo_dir}
 
-        try:
+        with mock.patch.dict(os.environ, to_patch):
             r = Repo()
             self.assertEqual(r.working_tree_dir, repo_dir)
             self.assertEqual(r.working_dir, repo_dir)
-        finally:
-            os.environ = oldenv
 
     @with_rw_directory
     def test_rebasing(self, rw_dir):

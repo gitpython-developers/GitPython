@@ -1,6 +1,3 @@
-import pytest
-
-
 from test.lib import TestBase
 from test.lib.helper import with_rw_directory
 
@@ -25,10 +22,11 @@ class QuickDoc(TestBase):
         repo = Repo(path_to_dir)
         # ![2-test_init_repo_object]
 
+        del repo  # Avoids "assigned to but never used" warning. Doesn't go in the docs.
+
     @with_rw_directory
     def test_cloned_repo_object(self, local_dir):
         from git import Repo
-        import git
 
         # code to clone from url
         # [1-test_cloned_repo_object]
@@ -72,7 +70,7 @@ class QuickDoc(TestBase):
 
         # [6-test_cloned_repo_object]
         commits_for_file_generator = repo.iter_commits(all=True, max_count=10, paths=update_file)
-        commits_for_file = [c for c in commits_for_file_generator]
+        commits_for_file = list(commits_for_file_generator)
         commits_for_file
 
         # Outputs: [<git.Commit "SHA1-HEX_HASH-2">,
@@ -136,7 +134,7 @@ class QuickDoc(TestBase):
 
         # Compare commit to commit
         # [11.3-test_cloned_repo_object]
-        first_commit = [c for c in repo.iter_commits(all=True)][-1]
+        first_commit = list(repo.iter_commits(all=True))[-1]
         diffs = repo.head.commit.diff(first_commit)
         for d in diffs:
             print(d.a_path)
@@ -154,7 +152,7 @@ class QuickDoc(TestBase):
 
         # Previous commit tree
         # [13-test_cloned_repo_object]
-        prev_commits = [c for c in repo.iter_commits(all=True, max_count=10)]  # last 10 commits from all branches
+        prev_commits = list(repo.iter_commits(all=True, max_count=10))  # last 10 commits from all branches
         tree = prev_commits[0].tree
         # ![13-test_cloned_repo_object]
 
@@ -210,7 +208,7 @@ class QuickDoc(TestBase):
 
         # print previous tree
         # [18.1-test_cloned_repo_object]
-        commits_for_file = [c for c in repo.iter_commits(all=True, paths=print_file)]
+        commits_for_file = list(repo.iter_commits(all=True, paths=print_file))
         tree = commits_for_file[-1].tree  # gets the first commit tree
         blob = tree[print_file]
 

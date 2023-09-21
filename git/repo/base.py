@@ -206,7 +206,8 @@ class Repo(object):
         if expand_vars and re.search(self.re_envvars, epath):
             warnings.warn(
                 "The use of environment variables in paths is deprecated"
-                + "\nfor security reasons and may be removed in the future!!"
+                + "\nfor security reasons and may be removed in the future!!",
+                stacklevel=1,
             )
         epath = expand_path(epath, expand_vars)
         if epath is not None:

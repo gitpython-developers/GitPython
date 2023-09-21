@@ -277,7 +277,7 @@ class TestCommit(TestCommitSerialization):
                 super(Child, self).__init__(*args, **kwargs)
 
         child_commits = list(Child.iter_items(self.rorepo, "master", paths=("CHANGES", "AUTHORS")))
-        assert type(child_commits[0]) == Child
+        assert type(child_commits[0]) is Child
 
     def test_iter_items(self):
         # pretty not allowed
@@ -525,12 +525,12 @@ JzJMZDRLQLFvnzqZuCjE
 
         # check that trailer stays empty for multiple msg combinations
         msgs = [
-            f"Subject\n",
-            f"Subject\n\nBody with some\nText\n",
-            f"Subject\n\nBody with\nText\n\nContinuation but\n doesn't contain colon\n",
-            f"Subject\n\nBody with\nText\n\nContinuation but\n only contains one :\n",
-            f"Subject\n\nBody with\nText\n\nKey: Value\nLine without colon\n",
-            f"Subject\n\nBody with\nText\n\nLine without colon\nKey: Value\n",
+            "Subject\n",
+            "Subject\n\nBody with some\nText\n",
+            "Subject\n\nBody with\nText\n\nContinuation but\n doesn't contain colon\n",
+            "Subject\n\nBody with\nText\n\nContinuation but\n only contains one :\n",
+            "Subject\n\nBody with\nText\n\nKey: Value\nLine without colon\n",
+            "Subject\n\nBody with\nText\n\nLine without colon\nKey: Value\n",
         ]
 
         for msg in msgs:
