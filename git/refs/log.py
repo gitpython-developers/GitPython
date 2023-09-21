@@ -244,7 +244,7 @@ class RefLog(List[RefLogEntry], Serializable):
             for i in range(index + 1):
                 line = fp.readline()
                 if not line:
-                    raise IndexError(f"Index file ended at line {i+1}, before given index was reached")
+                    raise IndexError(f"Index file ended at line {i + 1}, before given index was reached")
                 # END abort on eof
             # END handle runup
 
