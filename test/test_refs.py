@@ -386,7 +386,7 @@ class TestRefs(TestBase):
         head_tree = head.commit.tree
         self.assertRaises(ValueError, setattr, head, "commit", head_tree)
         assert head.commit == old_commit  # and the ref did not change
-        # we allow heds to point to any object
+        # we allow heads to point to any object
         head.object = head_tree
         assert head.object == head_tree
         # cannot query tree as commit
@@ -489,7 +489,7 @@ class TestRefs(TestBase):
             cur_head.reference.commit,
         )
         # it works if the new ref points to the same reference
-        assert SymbolicReference.create(rw_repo, symref.path, symref.reference).path == symref.path  # @NoEffect
+        assert SymbolicReference.create(rw_repo, symref.path, symref.reference).path == symref.path
         SymbolicReference.delete(rw_repo, symref)
         # would raise if the symref wouldn't have been deletedpbl
         symref = SymbolicReference.create(rw_repo, symref_path, cur_head.reference)

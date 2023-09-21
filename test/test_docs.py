@@ -167,7 +167,7 @@ class Tutorials(TestBase):
         open(new_file_path, "wb").close()  # create new file in working tree
         cloned_repo.index.add([new_file_path])  # add it to the index
         # Commit the changes to deviate masters history
-        cloned_repo.index.commit("Added a new file in the past - for later merege")
+        cloned_repo.index.commit("Added a new file in the past - for later merge")
 
         # prepare a merge
         master = cloned_repo.heads.master  # right-hand side is ahead of us, in the future
@@ -198,7 +198,7 @@ class Tutorials(TestBase):
 
         # .gitmodules was written and added to the index, which is now being committed
         cloned_repo.index.commit("Added submodule")
-        assert sm.exists() and sm.module_exists()  # this submodule is defintely available
+        assert sm.exists() and sm.module_exists()  # this submodule is definitely available
         sm.remove(module=True, configuration=False)  # remove the working tree
         assert sm.exists() and not sm.module_exists()  # the submodule itself is still available
 
@@ -263,9 +263,9 @@ class Tutorials(TestBase):
         # [8-test_references_and_objects]
         hc = repo.head.commit
         hct = hc.tree
-        hc != hct  # noqa: B015  # @NoEffect
-        hc != repo.tags[0]  # noqa: B015  # @NoEffect
-        hc == repo.head.reference.commit  # noqa: B015  # @NoEffect
+        assert hc != hct
+        assert hc != repo.tags[0]
+        assert hc == repo.head.reference.commit
         # ![8-test_references_and_objects]
 
         # [9-test_references_and_objects]
