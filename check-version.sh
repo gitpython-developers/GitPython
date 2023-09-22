@@ -29,7 +29,7 @@ changes_version="$(awk '/^[0-9]/ {print $0; exit}' "$changes_path")"
 config_opts="$(printf ' -c versionsort.suffix=-%s' alpha beta pre rc RC)"
 latest_tag="$(git $config_opts tag -l '[0-9]*' --sort=-v:refname | head -n1)"
 head_sha="$(git rev-parse HEAD)"
-latest_tag_sha="$(git rev-parse "$latest_tag")"
+latest_tag_sha="$(git rev-parse "${latest_tag}^{commit}")"
 
 # Display a table of all the current version, tag, and HEAD commit information.
 echo $'\nThe VERSION must be the same in all locations, and so must the HEAD and tag SHA'
