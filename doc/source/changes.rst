@@ -2,6 +2,15 @@
 Changelog
 =========
 
+3.1.37
+======
+
+This release contains another security fix that further improves validation of symbolic references
+and thus properly fixes this CVE: https://github.com/advisories/GHSA-cwvm-v4w8-q58c .
+
+See the following for all changes.
+https://github.com/gitpython-developers/gitpython/milestone/67?closed=1
+
 3.1.36
 ======
 
