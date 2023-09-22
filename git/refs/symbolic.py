@@ -200,7 +200,7 @@ class SymbolicReference(object):
             raise ValueError(f"Invalid reference '{ref_path}': references cannot end with a forward slash (/)")
         elif previous == "@" and one_before_previous is None:
             raise ValueError(f"Invalid reference '{ref_path}': references cannot be '@'")
-        elif any([component.endswith(".lock") for component in str(ref_path).split("/")]):
+        elif any(component.endswith(".lock") for component in str(ref_path).split("/")):
             raise ValueError(
                 f"Invalid reference '{ref_path}': references cannot have slash-separated components that end with"
                 f" '.lock'"
