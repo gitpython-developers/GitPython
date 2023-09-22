@@ -111,7 +111,7 @@ class TestSubmodule(TestBase):
 
         # force it to reread its information
         del smold._url
-        smold.url == sm.url  # noqa: B015  # @NoEffect
+        smold.url == sm.url  # noqa: B015  # FIXME: Should this be an assertion?
 
         # test config_reader/writer methods
         sm.config_reader()
