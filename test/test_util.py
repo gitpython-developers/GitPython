@@ -85,6 +85,7 @@ class TestUtils(TestBase):
             "array": [42],
         }
 
+    # FIXME: Mark only the /proc-prefixing cases xfail, somehow (or fix them).
     @pytest.mark.xfail(
         reason="Many return paths prefixed /proc/cygdrive instead.",
         raises=AssertionError,
@@ -103,7 +104,7 @@ class TestUtils(TestBase):
     @skipUnless(sys.platform == "cygwin", "Paths specifically for Cygwin.")
     @ddt.data(
         (r"./bar", "bar"),
-        (r".\bar", "bar"),
+        (r".\bar", "bar"),  # FIXME: Mark only this one xfail, somehow (or fix it).
         (r"../bar", "../bar"),
         (r"..\bar", "../bar"),
         (r"../bar/.\foo/../chu", "../bar/chu"),
