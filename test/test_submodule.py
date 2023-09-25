@@ -1031,8 +1031,8 @@ class TestSubmodule(TestBase):
         # This doesn't fail as our own submodule binsha didn't change, and the reset is only triggered if
         # to latest revision is True.
         parent_repo.submodule_update(to_latest_revision=False)
-        sm_mod.head.ref.name == sm_pfb.name, "should have been switched to past head"
-        sm_mod.commit() == sm_fb.commit, "Head wasn't reset"
+        assert sm_mod.head.ref.name == sm_pfb.name, "should have been switched to past head"
+        assert sm_mod.commit() == sm_fb.commit, "Head wasn't reset"
 
         self.assertRaises(RepositoryDirtyError, parent_repo.submodule_update, to_latest_revision=True)
         parent_repo.submodule_update(to_latest_revision=True, force_reset=True)
