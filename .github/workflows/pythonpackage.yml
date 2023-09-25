@@ -10,8 +10,8 @@ permissions:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
+
     strategy:
       fail-fast: false
       matrix:
@@ -20,6 +20,7 @@ jobs:
           - experimental: false
           - python-version: "3.12"
             experimental: true
+
     defaults:
       run:
         shell: /bin/bash --noprofile --norc -exo pipefail {0}

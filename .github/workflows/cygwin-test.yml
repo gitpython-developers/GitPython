@@ -5,12 +5,15 @@ on: [push, pull_request, workflow_dispatch]
 jobs:
   build:
     runs-on: windows-latest
+
     strategy:
       fail-fast: false
+
     env:
       CHERE_INVOKING: 1
       TMP: "/tmp"
       TEMP: "/tmp"
+
     defaults:
       run:
         shell: C:\cygwin\bin\bash.exe --noprofile --norc -exo pipefail -o igncr "{0}"
