@@ -750,13 +750,12 @@ class TestSubmodule(TestBase):
 
     @skipIf(
         HIDE_WINDOWS_KNOWN_ERRORS,
-        """FIXME on cygwin: File "C:\\projects\\gitpython\\git\\cmd.py", line 671, in execute
-                raise GitCommandError(command, status, stderr_value, stdout_value)
-            GitCommandError: Cmd('git') failed due to: exit code(128)
-              cmdline: git add 1__Xava verbXXten 1_test _myfile 1_test_other_file 1_XXava-----verbXXten
-              stderr: 'fatal: pathspec '"1__çava verböten"' did not match any files'
-             FIXME on appveyor: see https://ci.appveyor.com/project/Byron/gitpython/build/1.0.185
-                """,
+        """
+        E   PermissionError:
+        [WinError 32] The process cannot access the file because it is being used by another process:
+        'C:\\Users\\ek\\AppData\\Local\\Temp\\test_git_submodules_and_add_sm_with_new_commitu6d08von\\parent\\module'
+        -> 'C:\\Users\\ek\\AppData\\Local\\Temp\\test_git_submodules_and_add_sm_with_new_commitu6d08von\\parent\\module_moved'
+        """  # noqa: E501,
     )
     @with_rw_directory
     @_patch_git_config("protocol.file.allow", "always")
