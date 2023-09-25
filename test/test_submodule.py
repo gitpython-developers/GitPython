@@ -7,7 +7,7 @@ import shutil
 import tempfile
 from pathlib import Path
 import sys
-from unittest import mock, skipIf
+from unittest import mock, skipIf, skipUnless
 
 import pytest
 
@@ -1039,7 +1039,7 @@ class TestSubmodule(TestBase):
         assert sm_mod.commit() == sm_pfb.commit, "Now head should have been reset"
         assert sm_mod.head.ref.name == sm_pfb.name
 
-    @skipIf(not is_win, "Specifically for Windows.")
+    @skipUnless(is_win, "Specifically for Windows.")
     def test_to_relative_path_with_super_at_root_drive(self):
         class Repo(object):
             working_tree_dir = "D:\\"
