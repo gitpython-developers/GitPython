@@ -14,11 +14,13 @@ jobs:
       TEMP: "/tmp"
     defaults:
       run:
-        shell: bash.exe --noprofile --norc -exo pipefail -o igncr "{0}"
+        shell: C:\cygwin\bin\bash.exe --noprofile --norc -exo pipefail -o igncr "{0}"
 
     steps:
     - name: Force LF line endings
-      run: git config --global core.autocrlf input
+      run: |
+        git config --global core.autocrlf input
+      shell: bash
 
     - uses: actions/checkout@v4
       with:
@@ -29,9 +31,12 @@ jobs:
       with:
         packages: python39 python39-pip python39-virtualenv git
 
+    - name: Limit $PATH to Cygwin
+      run: echo 'C:\cygwin\bin' >"$GITHUB_PATH"
+
     - name: Tell git to trust this repo
       run: |
-        /usr/bin/git config --global --add safe.directory "$(pwd)"
+        git config --global --add safe.directory "$(pwd)"
 
     - name: Prepare this repo for tests
       run: |
@@ -39,30 +44,31 @@ jobs:
 
     - name: Further prepare git configuration for tests
       run: |
-        /usr/bin/git config --global user.email "travis@ci.com"
-        /usr/bin/git config --global user.name "Travis Runner"
+        git config --global user.email "travis@ci.com"
+        git config --global user.name "Travis Runner"
         # If we rewrite the user's config by accident, we will mess it up
         # and cause subsequent tests to fail
         cat test/fixtures/.gitconfig >> ~/.gitconfig
 
     - name: Update PyPA packages
       run: |
-        /usr/bin/python -m pip install --upgrade pip setuptools wheel
+        python -m pip install --upgrade pip setuptools wheel
 
     - name: Install project and test dependencies
       run: |
-        /usr/bin/python -m pip install ".[test]"
+        python -m pip install ".[test]"
 
     - name: Show version and platform information
       run: |
-        /usr/bin/uname -a
-        /usr/bin/git version
-        /usr/bin/python --version
-        /usr/bin/python -c 'import sys; print(sys.platform)'
-        /usr/bin/python -c 'import os; print(os.name)'
-        /usr/bin/python -c 'import git; print(git.compat.is_win)'
+        uname -a
+        command -v git python
+        git version
+        python --version
+        python -c 'import sys; print(sys.platform)'
+        python -c 'import os; print(os.name)'
+        python -c 'import git; print(git.compat.is_win)'
 
     - name: Test with pytest
       run: |
         set +x
-        /usr/bin/python -m pytest --color=yes -p no:sugar --instafail -vv
+        python -m pytest --color=yes -p no:sugar --instafail -vv
