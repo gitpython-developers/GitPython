@@ -7,7 +7,7 @@ import shutil
 import tempfile
 from pathlib import Path
 import sys
-from unittest import mock, skipIf, skipUnless
+from unittest import mock, skipUnless
 
 import pytest
 
@@ -748,14 +748,13 @@ class TestSubmodule(TestBase):
         repo = git.Repo(repo_path)
         assert len(repo.submodules) == 0
 
-    @skipIf(
+    @pytest.mark.xfail(
         HIDE_WINDOWS_KNOWN_ERRORS,
-        """
-        E   PermissionError:
-        [WinError 32] The process cannot access the file because it is being used by another process:
-        'C:\\Users\\ek\\AppData\\Local\\Temp\\test_git_submodules_and_add_sm_with_new_commitu6d08von\\parent\\module'
-        -> 'C:\\Users\\ek\\AppData\\Local\\Temp\\test_git_submodules_and_add_sm_with_new_commitu6d08von\\parent\\module_moved'
-        """  # noqa: E501,
+        reason=(
+            '"The process cannot access the file because it is being used by another process"'
+            + " on first call to sm.move"
+        ),
+        raises=PermissionError,
     )
     @with_rw_directory
     @_patch_git_config("protocol.file.allow", "always")
