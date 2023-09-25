@@ -55,6 +55,7 @@ jobs:
 
     - name: Show version and platform information
       run: |
+        /usr/bin/uname -a
         /usr/bin/git version
         /usr/bin/python --version
         /usr/bin/python -c 'import sys; print(sys.platform)'

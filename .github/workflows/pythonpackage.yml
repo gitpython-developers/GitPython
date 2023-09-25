@@ -63,6 +63,7 @@ jobs:
 
     - name: Show version and platform information
       run: |
+        uname -a
         git version
         python --version
         python -c 'import sys; print(sys.platform)'
