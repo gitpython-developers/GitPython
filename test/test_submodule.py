@@ -474,14 +474,13 @@ class TestSubmodule(TestBase):
         reason="Cygwin GitPython can't find submodule SHA",
         raises=ValueError,
     )
-    @skipIf(
+    @pytest.mark.xfail(
         HIDE_WINDOWS_KNOWN_ERRORS,
-        """
-        E  PermissionError:
-        [WinError 32] The process cannot access the file because it is being used by another process:
-        'C:\\Users\\ek\\AppData\\Local\\Temp\\non_bare_test_root_modulep0eqt8_r\\git\\ext\\gitdb'
-        -> 'C:\\Users\\ek\\AppData\\Local\\Temp\\non_bare_test_root_modulep0eqt8_r\\path\\prefix\\git\\ext\\gitdb'
-        """,
+        reason=(
+            '"The process cannot access the file because it is being used by another process"'
+            + " on first call to rm.update"
+        ),
+        raises=PermissionError,
     )
     @with_rw_repo(k_subm_current, bare=False)
     def test_root_module(self, rwrepo):
