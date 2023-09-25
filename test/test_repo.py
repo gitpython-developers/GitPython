@@ -13,7 +13,7 @@ import pathlib
 import pickle
 import sys
 import tempfile
-from unittest import mock, SkipTest, skip
+from unittest import mock, skip
 
 import pytest
 
@@ -1235,7 +1235,7 @@ class TestRepo(TestBase):
     def test_is_ancestor(self):
         git = self.rorepo.git
         if git.version_info[:3] < (1, 8, 0):
-            raise SkipTest("git merge-base --is-ancestor feature unsupported")
+            raise RuntimeError("git merge-base --is-ancestor feature unsupported (test needs git 1.8.0 or later)")
 
         repo = self.rorepo
         c1 = "f6aa8d1"
@@ -1283,7 +1283,7 @@ class TestRepo(TestBase):
         based on it."""
         git = Git(rw_dir)
         if git.version_info[:3] < (2, 5, 1):
-            raise SkipTest("worktree feature unsupported")
+            raise RuntimeError("worktree feature unsupported (test needs git 2.5.1 or later)")
 
         rw_master = self.rorepo.clone(join_path_native(rw_dir, "master_repo"))
         branch = rw_master.create_head("aaaaaaaa")
