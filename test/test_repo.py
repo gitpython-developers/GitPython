@@ -41,10 +41,8 @@ from git.exc import (
     UnsafeProtocolError,
 )
 from git.repo.fun import touch
-from test.lib import TestBase, with_rw_repo, fixture
-from git.util import cygpath
-from test.lib import with_rw_directory
-from git.util import join_path_native, rmtree, rmfile, bin_to_hex
+from git.util import bin_to_hex, cygpath, join_path_native, rmfile, rmtree
+from test.lib import TestBase, fixture, with_rw_directory, with_rw_repo
 
 import os.path as osp
 
