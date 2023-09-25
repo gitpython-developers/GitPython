@@ -1049,6 +1049,7 @@ class TestSubmodule(TestBase):
 
     @pytest.mark.xfail(
         reason="for some unknown reason the assertion fails, even though it in fact is working in more common setup",
+        raises=AssertionError,
     )
     @with_rw_directory
     def test_depth(self, rwdir):
