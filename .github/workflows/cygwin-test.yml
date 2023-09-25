@@ -9,7 +9,6 @@ jobs:
       fail-fast: false
     env:
       CHERE_INVOKING: 1
-      SHELLOPTS: igncr
       TMP: "/tmp"
       TEMP: "/tmp"
     defaults:
@@ -19,7 +18,7 @@ jobs:
     steps:
     - name: Force LF line endings
       run: |
-        git config --global core.autocrlf input
+        git config --global core.autocrlf false  # Affects the non-Cygwin git.
       shell: bash
 
     - uses: actions/checkout@v4
@@ -32,11 +31,13 @@ jobs:
         packages: python39 python39-pip python39-virtualenv git
 
     - name: Limit $PATH to Cygwin
-      run: echo 'C:\cygwin\bin' >"$GITHUB_PATH"
+      run: |
+        echo 'C:\cygwin\bin' > "$GITHUB_PATH"  # Overwrite it with just this.
 
-    - name: Tell git to trust this repo
+    - name: Special configuration for Cygwin's git
       run: |
         git config --global --add safe.directory "$(pwd)"
+        git config --global core.autocrlf false
 
     - name: Prepare this repo for tests
       run: |
@@ -70,5 +71,4 @@ jobs:
 
     - name: Test with pytest
       run: |
-        set +x
         python -m pytest --color=yes -p no:sugar --instafail -vv
