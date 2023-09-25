@@ -1050,9 +1050,8 @@ class TestSubmodule(TestBase):
         msg = '_to_relative_path should be "submodule_path" but was "%s"' % relative_path
         assert relative_path == "submodule_path", msg
 
-    @skipIf(
-        True,
-        "for some unknown reason the assertion fails, even though it in fact is working in more common setup",
+    @pytest.mark.xfail(
+        reason="for some unknown reason the assertion fails, even though it in fact is working in more common setup",
     )
     @with_rw_directory
     def test_depth(self, rwdir):
