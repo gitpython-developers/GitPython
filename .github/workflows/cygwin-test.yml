@@ -33,10 +33,6 @@ jobs:
       with:
         packages: python39 python39-pip python39-virtualenv git
 
-    - name: Limit $PATH to Cygwin
-      run: |
-        echo 'C:\cygwin\bin' > "$GITHUB_PATH"  # Overwrite it with just this.
-
     - name: Special configuration for Cygwin's git
       run: |
         git config --global --add safe.directory "$(pwd)"
