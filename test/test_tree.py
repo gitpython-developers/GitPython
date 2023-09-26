@@ -5,24 +5,14 @@
 # the BSD License: https://opensource.org/license/bsd-3-clause/
 
 from io import BytesIO
-from unittest import skipIf
 
 from git.objects import Tree, Blob
 from test.lib import TestBase
-from git.util import HIDE_WINDOWS_KNOWN_ERRORS
 
 import os.path as osp
 
 
 class TestTree(TestBase):
-    @skipIf(
-        HIDE_WINDOWS_KNOWN_ERRORS,
-        """
-        File "C:\\projects\\gitpython\\git\\cmd.py", line 559, in execute
-        raise GitCommandNotFound(command, err)
-        git.exc.GitCommandNotFound: Cmd('git') not found due to: OSError('[WinError 6] The handle is invalid')
-        cmdline: git cat-file --batch-check""",
-    )
     def test_serializable(self):
         # tree at the given commit contains a submodule as well
         roottree = self.rorepo.tree("6c1faef799095f3990e9970bc2cb10aa0221cf9c")
@@ -51,14 +41,6 @@ class TestTree(TestBase):
             testtree._deserialize(stream)
         # END for each item in tree
 
-    @skipIf(
-        HIDE_WINDOWS_KNOWN_ERRORS,
-        """
-        File "C:\\projects\\gitpython\\git\\cmd.py", line 559, in execute
-        raise GitCommandNotFound(command, err)
-        git.exc.GitCommandNotFound: Cmd('git') not found due to: OSError('[WinError 6] The handle is invalid')
-        cmdline: git cat-file --batch-check""",
-    )
     def test_traverse(self):
         root = self.rorepo.tree("0.1.6")
         num_recursive = 0

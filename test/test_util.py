@@ -9,11 +9,11 @@ import pickle
 import sys
 import tempfile
 import time
-from unittest import mock, skipIf
+from unittest import mock, skipUnless
 from datetime import datetime
 
-import pytest
 import ddt
+import pytest
 
 from git.cmd import dashify
 from git.compat import is_win
@@ -85,17 +85,26 @@ class TestUtils(TestBase):
             "array": [42],
         }
 
-    @skipIf(not is_win, "Paths specifically for Windows.")
+    # FIXME: Mark only the /proc-prefixing cases xfail, somehow (or fix them).
+    @pytest.mark.xfail(
+        reason="Many return paths prefixed /proc/cygdrive instead.",
+        raises=AssertionError,
+    )
+    @skipUnless(sys.platform == "cygwin", "Paths specifically for Cygwin.")
     @ddt.idata(_norm_cygpath_pairs + _unc_cygpath_pairs)
     def test_cygpath_ok(self, case):
         wpath, cpath = case
         cwpath = cygpath(wpath)
         self.assertEqual(cwpath, cpath, wpath)
 
-    @skipIf(not is_win, "Paths specifically for Windows.")
+    @pytest.mark.xfail(
+        reason=r'2nd example r".\bar" -> "bar" fails, returns "./bar"',
+        raises=AssertionError,
+    )
+    @skipUnless(sys.platform == "cygwin", "Paths specifically for Cygwin.")
     @ddt.data(
         (r"./bar", "bar"),
-        (r".\bar", "bar"),
+        (r".\bar", "bar"),  # FIXME: Mark only this one xfail, somehow (or fix it).
         (r"../bar", "../bar"),
         (r"..\bar", "../bar"),
         (r"../bar/.\foo/../chu", "../bar/chu"),
@@ -105,7 +114,7 @@ class TestUtils(TestBase):
         cwpath = cygpath(wpath)
         self.assertEqual(cwpath, cpath or wpath, wpath)
 
-    @skipIf(not is_win, "Paths specifically for Windows.")
+    @skipUnless(sys.platform == "cygwin", "Paths specifically for Cygwin.")
     @ddt.data(
         r"C:",
         r"C:Relative",
@@ -118,7 +127,7 @@ class TestUtils(TestBase):
         cwpath = cygpath(wpath)
         self.assertEqual(cwpath, wpath.replace("\\", "/"), wpath)
 
-    @skipIf(not is_win, "Paths specifically for Windows.")
+    @skipUnless(sys.platform == "cygwin", "Paths specifically for Cygwin.")
     @ddt.idata(_norm_cygpath_pairs)
     def test_decygpath(self, case):
         wpath, cpath = case
@@ -156,11 +165,6 @@ class TestUtils(TestBase):
         lock_file._obtain_lock_or_raise()
         lock_file._release_lock()
 
-    @pytest.mark.xfail(
-        sys.platform == "cygwin",
-        reason="Cygwin fails here for some reason, always",
-        raises=AssertionError,
-    )
     def test_blocking_lock_file(self):
         my_file = tempfile.mktemp()
         lock_file = BlockingLockFile(my_file)
@@ -173,9 +177,8 @@ class TestUtils(TestBase):
         self.assertRaises(IOError, wait_lock._obtain_lock)
         elapsed = time.time() - start
         extra_time = 0.02
-        if is_win:
-            # for Appveyor
-            extra_time *= 6  # NOTE: Indeterministic failures here...
+        if is_win or sys.platform == "cygwin":
+            extra_time *= 6  # NOTE: Indeterministic failures without this...
         self.assertLess(elapsed, wait_time + extra_time)
 
     def test_user_id(self):

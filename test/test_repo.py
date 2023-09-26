@@ -13,7 +13,7 @@ import pathlib
 import pickle
 import sys
 import tempfile
-from unittest import mock, skipIf, SkipTest, skip
+from unittest import mock, skip
 
 import pytest
 
@@ -41,10 +41,8 @@ from git.exc import (
     UnsafeProtocolError,
 )
 from git.repo.fun import touch
-from test.lib import TestBase, with_rw_repo, fixture
-from git.util import HIDE_WINDOWS_KNOWN_ERRORS, cygpath
-from test.lib import with_rw_directory
-from git.util import join_path_native, rmtree, rmfile, bin_to_hex
+from git.util import bin_to_hex, cygpath, join_path_native, rmfile, rmtree
+from test.lib import TestBase, fixture, with_rw_directory, with_rw_repo
 
 import os.path as osp
 
@@ -764,16 +762,6 @@ class TestRepo(TestBase):
         self.rorepo.blame("HEAD", "README.md", rev_opts=["-M", "-C", "-C"])
         git.assert_called_once_with(*expected_args, **boilerplate_kwargs)
 
-    @skipIf(
-        HIDE_WINDOWS_KNOWN_ERRORS and Git.is_cygwin(),
-        """FIXME: File "C:\\projects\\gitpython\\git\\cmd.py", line 671, in execute
-                    raise GitCommandError(command, status, stderr_value, stdout_value)
-                GitCommandError: Cmd('git') failed due to: exit code(128)
-                  cmdline: git add 1__��ava verb��ten 1_test _myfile 1_test_other_file
-                          1_��ava-----verb��ten
-                  stderr: 'fatal: pathspec '"1__çava verböten"' did not match any files'
-                """,
-    )
     @with_rw_repo("HEAD", bare=False)
     def test_untracked_files(self, rwrepo):
         for run, repo_add in enumerate((rwrepo.index.add, rwrepo.git.add)):
@@ -1245,7 +1233,7 @@ class TestRepo(TestBase):
     def test_is_ancestor(self):
         git = self.rorepo.git
         if git.version_info[:3] < (1, 8, 0):
-            raise SkipTest("git merge-base --is-ancestor feature unsupported")
+            raise RuntimeError("git merge-base --is-ancestor feature unsupported (test needs git 1.8.0 or later)")
 
         repo = self.rorepo
         c1 = "f6aa8d1"
@@ -1293,7 +1281,7 @@ class TestRepo(TestBase):
         based on it."""
         git = Git(rw_dir)
         if git.version_info[:3] < (2, 5, 1):
-            raise SkipTest("worktree feature unsupported")
+            raise RuntimeError("worktree feature unsupported (test needs git 2.5.1 or later)")
 
         rw_master = self.rorepo.clone(join_path_native(rw_dir, "master_repo"))
         branch = rw_master.create_head("aaaaaaaa")

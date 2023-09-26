@@ -5,4 +5,5 @@ mypy
 pre-commit
 pytest
 pytest-cov
+pytest-instafail
 pytest-sugar

@@ -100,6 +100,7 @@ class TestBase(TestCase):
             # values must be considered as soon as they get them
             assert r_config.get_value("diff", "tool") == "meld"
             try:
+                # FIXME: Split this assertion out somehow and mark it xfail (or fix it).
                 assert r_config.get_value("sec", "var1") == "value1_main"
             except AssertionError as e:
                 raise SkipTest("Known failure -- included values are not in effect right away") from e

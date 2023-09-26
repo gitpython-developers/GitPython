@@ -7,7 +7,7 @@ import shutil
 import tempfile
 from pathlib import Path
 import sys
-from unittest import mock, skipIf
+from unittest import mock, skipUnless
 
 import pytest
 
@@ -474,14 +474,13 @@ class TestSubmodule(TestBase):
         reason="Cygwin GitPython can't find submodule SHA",
         raises=ValueError,
     )
-    @skipIf(
+    @pytest.mark.xfail(
         HIDE_WINDOWS_KNOWN_ERRORS,
-        """
-        File "C:\\projects\\gitpython\\git\\cmd.py", line 559, in execute
-        raise GitCommandNotFound(command, err)
-        git.exc.GitCommandNotFound: Cmd('git') not found due to: OSError('[WinError 6] The handle is invalid')
-        cmdline: git clone -n --shared -v C:\\projects\\gitpython\\.git Users\\appveyor\\AppData\\Local\\Temp\\1\\tmplyp6kr_rnon_bare_test_root_module
-        """,  # noqa E501
+        reason=(
+            '"The process cannot access the file because it is being used by another process"'
+            + " on first call to rm.update"
+        ),
+        raises=PermissionError,
     )
     @with_rw_repo(k_subm_current, bare=False)
     def test_root_module(self, rwrepo):
@@ -749,15 +748,13 @@ class TestSubmodule(TestBase):
         repo = git.Repo(repo_path)
         assert len(repo.submodules) == 0
 
-    @skipIf(
+    @pytest.mark.xfail(
         HIDE_WINDOWS_KNOWN_ERRORS,
-        """FIXME on cygwin: File "C:\\projects\\gitpython\\git\\cmd.py", line 671, in execute
-                raise GitCommandError(command, status, stderr_value, stdout_value)
-            GitCommandError: Cmd('git') failed due to: exit code(128)
-              cmdline: git add 1__Xava verbXXten 1_test _myfile 1_test_other_file 1_XXava-----verbXXten
-              stderr: 'fatal: pathspec '"1__çava verböten"' did not match any files'
-             FIXME on appveyor: see https://ci.appveyor.com/project/Byron/gitpython/build/1.0.185
-                """,
+        reason=(
+            '"The process cannot access the file because it is being used by another process"'
+            + " on first call to sm.move"
+        ),
+        raises=PermissionError,
     )
     @with_rw_directory
     @_patch_git_config("protocol.file.allow", "always")
@@ -1039,7 +1036,7 @@ class TestSubmodule(TestBase):
         assert sm_mod.commit() == sm_pfb.commit, "Now head should have been reset"
         assert sm_mod.head.ref.name == sm_pfb.name
 
-    @skipIf(not is_win, "Specifically for Windows.")
+    @skipUnless(is_win, "Specifically for Windows.")
     def test_to_relative_path_with_super_at_root_drive(self):
         class Repo(object):
             working_tree_dir = "D:\\"
@@ -1050,9 +1047,9 @@ class TestSubmodule(TestBase):
         msg = '_to_relative_path should be "submodule_path" but was "%s"' % relative_path
         assert relative_path == "submodule_path", msg
 
-    @skipIf(
-        True,
-        "for some unknown reason the assertion fails, even though it in fact is working in more common setup",
+    @pytest.mark.xfail(
+        reason="for some unknown reason the assertion fails, even though it in fact is working in more common setup",
+        raises=AssertionError,
     )
     @with_rw_directory
     def test_depth(self, rwdir):

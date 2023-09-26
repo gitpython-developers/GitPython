@@ -5,20 +5,24 @@ on: [push, pull_request, workflow_dispatch]
 jobs:
   build:
     runs-on: windows-latest
+
     strategy:
       fail-fast: false
+
     env:
       CHERE_INVOKING: 1
-      SHELLOPTS: igncr
       TMP: "/tmp"
       TEMP: "/tmp"
+
     defaults:
       run:
-        shell: bash.exe --noprofile --norc -exo pipefail -o igncr "{0}"
+        shell: C:\cygwin\bin\bash.exe --noprofile --norc -exo pipefail -o igncr "{0}"
 
     steps:
     - name: Force LF line endings
-      run: git config --global core.autocrlf input
+      run: |
+        git config --global core.autocrlf false  # Affects the non-Cygwin git.
+      shell: bash
 
     - uses: actions/checkout@v4
       with:
@@ -29,36 +33,42 @@ jobs:
       with:
         packages: python39 python39-pip python39-virtualenv git
 
-    - name: Show python and git versions
+    - name: Special configuration for Cygwin's git
       run: |
-        /usr/bin/python --version
-        /usr/bin/git version
-
-    - name: Tell git to trust this repo
-      run: |
-        /usr/bin/git config --global --add safe.directory "$(pwd)"
+        git config --global --add safe.directory "$(pwd)"
+        git config --global core.autocrlf false
 
     - name: Prepare this repo for tests
       run: |
         TRAVIS=yes ./init-tests-after-clone.sh
 
-    - name: Further prepare git configuration for tests
+    - name: Set git user identity and command aliases for the tests
       run: |
-        /usr/bin/git config --global user.email "travis@ci.com"
-        /usr/bin/git config --global user.name "Travis Runner"
+        git config --global user.email "travis@ci.com"
+        git config --global user.name "Travis Runner"
         # If we rewrite the user's config by accident, we will mess it up
         # and cause subsequent tests to fail
         cat test/fixtures/.gitconfig >> ~/.gitconfig
 
     - name: Update PyPA packages
       run: |
-        /usr/bin/python -m pip install --upgrade pip setuptools wheel
+        # Get the latest pip, wheel, and prior to Python 3.12, setuptools.
+        python -m pip install -U pip $(pip freeze --all | grep -oF setuptools) wheel
 
     - name: Install project and test dependencies
       run: |
-        /usr/bin/python -m pip install ".[test]"
+        python -m pip install ".[test]"
+
+    - name: Show version and platform information
+      run: |
+        uname -a
+        command -v git python
+        git version
+        python --version
+        python -c 'import sys; print(sys.platform)'
+        python -c 'import os; print(os.name)'
+        python -c 'import git; print(git.compat.is_win)'
 
     - name: Test with pytest
       run: |
-        set +x
-        /usr/bin/python -m pytest
+        python -m pytest --color=yes -p no:sugar --instafail -vv
