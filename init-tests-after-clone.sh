@@ -10,7 +10,7 @@ if [[ -z "$TRAVIS" ]]; then
 fi
 
 git tag __testing_point__
-git checkout master || git checkout -b master
+git checkout master -- || git checkout -b master
 git reset --hard HEAD~1
 git reset --hard HEAD~1
 git reset --hard HEAD~1
