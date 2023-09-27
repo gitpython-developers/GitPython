@@ -13,6 +13,7 @@ repos:
     rev: v0.9.0.5
     hooks:
       - id: shellcheck
+        args: [--color]
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.4.0
