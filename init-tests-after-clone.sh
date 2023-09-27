@@ -1,12 +1,16 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
 set -e
 
-if [[ -z "$TRAVIS" ]]; then
-    read -rp "This operation will destroy locally modified files. Continue ? [N/y]: " answer
-    if [[ ! $answer =~ [yY] ]]; then
-        exit 2
-    fi
+if test -z "$TRAVIS"; then
+    printf 'This operation will destroy locally modified files. Continue ? [N/y]: ' >&2
+    read -r answer
+    case "$answer" in
+    [yY])
+        ;;
+    *)
+        exit 2 ;;
+    esac
 fi
 
 git tag __testing_point__
