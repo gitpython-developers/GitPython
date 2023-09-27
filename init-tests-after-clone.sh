@@ -19,4 +19,8 @@ git reset --hard HEAD~1
 git reset --hard HEAD~1
 git reset --hard HEAD~1
 git reset --hard __testing_point__
+
+test -z "$TRAVIS" || exit 0  # CI jobs will already have taken care of the rest.
+
+git fetch --all --tags
 git submodule update --init --recursive
