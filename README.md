@@ -267,7 +267,7 @@ gpg --edit-key 4C08421980C9
 
 ### LICENSE
 
-[New BSD License](https://opensource.org/license/bsd-3-clause/). See the [LICENSE file](https://github.com/gitpython-developers/GitPython/blob/main/license).
+[New BSD License](https://opensource.org/license/bsd-3-clause/). See the [LICENSE file][license].
 
 [contributing]: https://github.com/gitpython-developers/GitPython/blob/main/CONTRIBUTING.md
-[license]: https://github.com/gitpython-developers/GitPython/blob/main/license
+[license]: https://github.com/gitpython-developers/GitPython/blob/main/LICENSE
