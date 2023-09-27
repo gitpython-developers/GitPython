@@ -6,7 +6,7 @@
 set -eEu
 
 function release_with() {
-    $1 -m build --sdist --wheel
+    "$1" -m build --sdist --wheel
 }
 
 if test -n "${VIRTUAL_ENV:-}"; then
