@@ -10,6 +10,13 @@ trap 'echo "$0: Check failed. Stopping." >&2' ERR
 readonly version_path='VERSION'
 readonly changes_path='doc/source/changes.rst'
 
+function get_latest_tag() {
+    local config_opts
+    config_opts="$(printf ' -c versionsort.suffix=-%s' alpha beta pre rc RC)"
+    # shellcheck disable=SC2086  # Deliberately word-splitting the arguments.
+    git $config_opts tag -l '[0-9]*' --sort=-v:refname | head -n1
+}
+
 echo 'Checking current directory.'
 test "$(cd -- "$(dirname -- "$0")" && pwd)" = "$(pwd)"  # Ugly, but portable.
 
@@ -26,8 +33,7 @@ test -z "$(git status -s --ignore-submodules)"
 
 version_version="$(cat "$version_path")"
 changes_version="$(awk '/^[0-9]/ {print $0; exit}' "$changes_path")"
-config_opts="$(printf ' -c versionsort.suffix=-%s' alpha beta pre rc RC)"
-latest_tag="$(git $config_opts tag -l '[0-9]*' --sort=-v:refname | head -n1)"
+latest_tag="$(get_latest_tag)"
 head_sha="$(git rev-parse HEAD)"
 latest_tag_sha="$(git rev-parse "${latest_tag}^{commit}")"
 
