@@ -14,7 +14,7 @@ function suggest_venv() {
     printf "HELP: To avoid this error, use a virtual-env with '%s' instead.\n" "$venv_cmd"
 }
 
-if test -n "${VIRTUAL_ENV:-}"; then
+if test -n "${VIRTUAL_ENV-}"; then
     deps=(build twine)  # Install twine along with build, as we need it later.
     echo "Virtual environment detected. Adding packages: ${deps[*]}"
     pip install --quiet --upgrade "${deps[@]}"

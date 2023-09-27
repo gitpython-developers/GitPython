@@ -41,7 +41,8 @@ head_sha="$(git rev-parse HEAD)"
 latest_tag_sha="$(git rev-parse "${latest_tag}^{commit}")"
 
 # Display a table of all the current version, tag, and HEAD commit information.
-echo $'\nThe VERSION must be the same in all locations, and so must the HEAD and tag SHA'
+echo
+echo 'The VERSION must be the same in all locations, and so must the HEAD and tag SHA'
 printf '%-14s = %s\n' 'VERSION file'   "$version_version" \
                       'changes.rst'    "$changes_version" \
                       'Latest tag'     "$latest_tag" \
