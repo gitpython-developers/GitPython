@@ -12,7 +12,7 @@ readonly changes_path='doc/source/changes.rst'
 
 function get_latest_tag() {
     local config_opts
-    config_opts="$(printf ' -c versionsort.suffix=-%s' alpha beta pre rc RC)"
+    printf -v config_opts ' -c versionsort.suffix=-%s' alpha beta pre rc RC
     # shellcheck disable=SC2086  # Deliberately word-splitting the arguments.
     git $config_opts tag -l '[0-9]*' --sort=-v:refname | head -n1
 }
@@ -31,7 +31,7 @@ echo 'Checking that ALL changes are committed.'
 git status -s --ignore-submodules
 test -z "$(git status -s --ignore-submodules)"
 
-version_version="$(cat "$version_path")"
+version_version="$(<"$version_path")"
 changes_version="$(awk '/^[0-9]/ {print $0; exit}' "$changes_path")"
 latest_tag="$(get_latest_tag)"
 head_sha="$(git rev-parse HEAD)"
