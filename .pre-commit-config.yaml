@@ -9,9 +9,14 @@ repos:
           - flake8-typing-imports==1.14.0
         exclude: ^doc|^git/ext/
 
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.9.0.5
+    hooks:
+      - id: shellcheck
+
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.4.0
     hooks:
-      - id: check-merge-conflict
       - id: check-toml
       - id: check-yaml
+      - id: check-merge-conflict
