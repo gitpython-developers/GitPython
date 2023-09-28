@@ -157,12 +157,26 @@ To typecheck, run:
 mypy -p git
 ```
 
-Configuration for flake8 is in the `./.flake8` file.
+#### CI (and tox)
 
-Configurations for `mypy`, `pytest`, `coverage.py`, and `black` are in `./pyproject.toml`.
+The same linting, and running tests on all the different supported Python versions, will be performed:
 
-The same linting and testing will also be performed against different supported python versions
-upon submitting a pull request (or on each push if you have a fork with a "main" branch and actions enabled).
+- Upon submitting a pull request.
+- On each push, *if* you have a fork with a "main" branch and GitHub Actions enabled.
+- Locally, if you run [`tox`](https://tox.wiki/) (this skips any Python versions you don't have installed).
+
+#### Configuration files
+
+Specific tools:
+
+- Configurations for `mypy`, `pytest`, `coverage.py`, and `black` are in `./pyproject.toml`.
+- Configuration for `flake8` is in the `./.flake8` file.
+
+Orchestration tools:
+
+- Configuration for `pre-commit` is in the `./.pre-commit-config.yaml` file.
+- Configuration for `tox` is in `./tox.ini`.
+- Configuration for GitHub Actions (CI) is in files inside `./.github/workflows/`.
 
 ### Contributions
 
