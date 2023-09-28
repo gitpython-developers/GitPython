@@ -2,7 +2,12 @@
 
 set -eu
 
-if test -z "${TRAVIS-}"; then
+ci() {
+    # For now, check just these, as a false positive could lead to data loss.
+    test -n "${TRAVIS-}" || test -n "${GITHUB_ACTIONS-}"
+}
+
+if ! ci; then
     printf 'This operation will destroy locally modified files. Continue ? [N/y]: ' >&2
     read -r answer
     case "$answer" in
@@ -29,7 +34,7 @@ git reset --hard HEAD~1
 git reset --hard __testing_point__
 
 # Do some setup that CI takes care of but that may not have been done locally.
-if test -z "${TRAVIS-}"; then
+if ! ci; then
     # The tests need some version tags. Try to get them even in forks.
     git fetch --all --tags
 

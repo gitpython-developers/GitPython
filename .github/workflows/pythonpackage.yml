@@ -37,7 +37,7 @@ jobs:
 
     - name: Prepare this repo for tests
       run: |
-        TRAVIS=yes ./init-tests-after-clone.sh
+        ./init-tests-after-clone.sh
 
     - name: Set git user identity and command aliases for the tests
       run: |
