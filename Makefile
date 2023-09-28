@@ -1,7 +1,7 @@
 .PHONY: all clean release force_release
 
 all:
-	@grep -Ee '^[a-z].*:' Makefile | cut -d: -f1 | grep -vF all
+	@grep -E '^[[:alpha:]].*:' Makefile | cut -d: -f1 | grep -vxF all
 
 clean:
 	rm -rf build/ dist/ .eggs/ .tox/
