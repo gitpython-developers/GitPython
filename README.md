@@ -148,11 +148,8 @@ To lint, and apply automatic code formatting, run:
 pre-commit run --all-files
 ```
 
-Code formatting can also be done by itself by running:
-
-```
-black .
-```
+- Linting without modifying code can be done with: `make lint`
+- Auto-formatting without other lint checks can be done with: `black .`
 
 To typecheck, run:
 
