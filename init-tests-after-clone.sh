@@ -1,8 +1,8 @@
 #!/bin/sh
 
-set -e
+set -eu
 
-if test -z "$TRAVIS"; then
+if test -z "${TRAVIS-}"; then
     printf 'This operation will destroy locally modified files. Continue ? [N/y]: ' >&2
     read -r answer
     case "$answer" in
@@ -29,7 +29,7 @@ git reset --hard HEAD~1
 git reset --hard __testing_point__
 
 # Do some setup that CI takes care of but that may not have been done locally.
-if test -z "$TRAVIS"; then
+if test -z "${TRAVIS-}"; then
     # The tests needs some version tags. Try to get them even in forks.
     git fetch --all --tags
 
