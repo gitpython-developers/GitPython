@@ -30,7 +30,7 @@ git reset --hard __testing_point__
 
 # Do some setup that CI takes care of but that may not have been done locally.
 if test -z "${TRAVIS-}"; then
-    # The tests needs some version tags. Try to get them even in forks.
+    # The tests need some version tags. Try to get them even in forks.
     git fetch --all --tags
 
     # The tests need submodules, including a submodule with a submodule.
