@@ -142,22 +142,22 @@ To test, run:
 pytest
 ```
 
-To lint, run:
+To lint, and apply automatic code formatting, run:
 
 ```bash
 pre-commit run --all-files
+```
+
+Code formatting can also be done by itself by running:
+
+```
+black .
 ```
 
 To typecheck, run:
 
 ```bash
 mypy -p git
-```
-
-For automatic code formatting, run:
-
-```bash
-black .
 ```
 
 Configuration for flake8 is in the `./.flake8` file.

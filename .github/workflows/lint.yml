@@ -14,3 +14,7 @@ jobs:
         python-version: "3.x"
 
     - uses: pre-commit/action@v3.0.0
+      with:
+        extra_args: --hook-stage manual
+      env:
+        SKIP: black-format

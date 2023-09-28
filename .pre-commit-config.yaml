@@ -3,7 +3,15 @@ repos:
     rev: 23.9.1
     hooks:
       - id: black
+        alias: black-check
+        name: black (check)
         args: [--check, --diff]
+        exclude: ^git/ext/
+        stages: [manual]
+
+      - id: black
+        alias: black-format
+        name: black (format)
         exclude: ^git/ext/
 
   - repo: https://github.com/PyCQA/flake8
