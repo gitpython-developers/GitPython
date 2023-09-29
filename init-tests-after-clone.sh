@@ -14,10 +14,10 @@ no_version_tags() {
 }
 
 warn() {
-    printf '%s\n' "$@" >&2  # Warn in step output.
-
     if test -n "${GITHUB_ACTIONS-}"; then
         printf '::warning ::%s\n' "$*" >&2  # Annotate workflow.
+    else
+        printf '%s\n' "$@" >&2
     fi
 }
 
