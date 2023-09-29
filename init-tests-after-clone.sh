@@ -52,8 +52,8 @@ if ! ci; then
     git submodule update --init --recursive
 fi
 
-# The tests need some version tags. Try to get them even in forks. This fetch
-# gets other objects too, so for a consistent experience, always do it locally.
+# The tests need some version tags. Try to get them even in forks. This fetches
+# other objects too. So, locally, we always do it, for a consistent experience.
 if ! ci || no_version_tags; then
     git fetch --all --tags
 fi
