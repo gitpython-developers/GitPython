@@ -2,9 +2,23 @@
 
 set -eu
 
+fallback_repo_for_tags='https://github.com/gitpython-developers/GitPython.git'
+
 ci() {
     # For now, check just these, as a false positive could lead to data loss.
     test -n "${TRAVIS-}" || test -n "${GITHUB_ACTIONS-}"
+}
+
+no_version_tags() {
+    test -z "$(git tag -l '[0-9]*' 'v[0-9]*')"
+}
+
+warn() {
+    printf '%s\n' "$@" >&2  # Warn in step output.
+
+    if test -n "${GITHUB_ACTIONS-}"; then
+        printf '::warning ::%s\n' "$*" >&2  # Annotate workflow.
+    fi
 }
 
 if ! ci; then
@@ -33,11 +47,27 @@ git reset --hard HEAD~1
 # Point the master branch where we started, so we test the correct code.
 git reset --hard __testing_point__
 
-# Do some setup that CI takes care of but that may not have been done locally.
+# The tests need submodules. (On CI, they would already have been checked out.)
 if ! ci; then
-    # The tests need some version tags. Try to get them even in forks.
-    git fetch --all --tags
-
-    # The tests need submodules, including a submodule with a submodule.
     git submodule update --init --recursive
+fi
+
+# The tests need some version tags. Try to get them even in forks. This fetch
+# gets other objects too, so for a consistent experience, always do it locally.
+if ! ci || no_version_tags; then
+    git fetch --all --tags
+fi
+
+# If we still have no version tags, try to get them from the original repo.
+if no_version_tags; then
+    warn 'No local or remote version tags found. Trying fallback remote:' \
+         "$fallback_repo_for_tags"
+
+    # git fetch supports * but not [], and --no-tags means no *other* tags, so...
+    printf 'refs/tags/%d*:refs/tags/%d*\n' 0 0 1 1 2 2 3 3 4 4 5 5 6 6 7 7 8 8 9 9 |
+        xargs git fetch --no-tags "$fallback_repo_for_tags"
+
+    if no_version_tags; then
+        warn 'No version tags found anywhere. Some tests will fail.'
+    fi
 fi
