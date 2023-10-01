@@ -79,13 +79,17 @@ cd GitPython
 ./init-tests-after-clone.sh
 ```
 
+On Windows, `./init-tests-after-clone.sh` can be run in a Git Bash shell.
+
 If you are cloning [your own fork](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/about-forks), then replace the above `git clone` command with one that gives the URL of your fork. Or use this [`gh`](https://cli.github.com/) command (assuming you have `gh` and your fork is called `GitPython`):
 
 ```bash
 gh repo clone GitPython
 ```
 
-Having cloned the repo, create and activate your [virtual environment](https://docs.python.org/3/tutorial/venv.html). Then make an [editable install](https://pip.pypa.io/en/stable/topics/local-project-installs/#editable-installs):
+Having cloned the repo, create and activate your [virtual environment](https://docs.python.org/3/tutorial/venv.html).
+
+Then make an [editable install](https://pip.pypa.io/en/stable/topics/local-project-installs/#editable-installs):
 
 ```bash
 pip install -e ".[test]"
