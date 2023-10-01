@@ -162,7 +162,7 @@ mypy -p git
 The same linting, and running tests on all the different supported Python versions, will be performed:
 
 - Upon submitting a pull request.
-- On each push, *if* you have a fork with a "main" branch and GitHub Actions enabled.
+- On each push, *if* you have a fork with GitHub Actions enabled.
 - Locally, if you run [`tox`](https://tox.wiki/) (this skips any Python versions you don't have installed).
 
 #### Configuration files
