@@ -302,7 +302,7 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
                     cw.set("url", remote_repo_url)
 
                 with git_daemon_launched(
-                    Git.polish_url(base_daemon_path, is_cygwin=False),  # No daemon in Cygwin.
+                    Git.polish_url(base_daemon_path),
                     "127.0.0.1",
                     GIT_DAEMON_PORT,
                 ):
