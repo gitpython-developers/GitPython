@@ -177,12 +177,10 @@ def git_daemon_launched(base_path, ip, port):
     gd = None
     try:
         if is_win:
-            ## On MINGW-git, daemon exists in .\Git\mingw64\libexec\git-core\,
-            #  but if invoked as 'git daemon', it detaches from parent `git` cmd,
-            #  and then CANNOT DIE!
-            #  So, invoke it as a single command.
-            ## Cygwin-git has no daemon.  But it can use MINGW's.
-            #
+            # On MINGW-git, daemon exists in Git\mingw64\libexec\git-core\,
+            # but if invoked as 'git daemon', it detaches from parent `git` cmd,
+            # and then CANNOT DIE!
+            # So, invoke it as a single command.
             daemon_cmd = [
                 "git-daemon",
                 "--enable=receive-pack",
@@ -217,12 +215,11 @@ def git_daemon_launched(base_path, ip, port):
         )
         if is_win:
             msg += textwrap.dedent(
-                r"""
+                R"""
 
             On Windows,
               the `git-daemon.exe` must be in PATH.
-              For MINGW, look into .\Git\mingw64\libexec\git-core\), but problems with paths might appear.
-              CYGWIN has no daemon, but if one exists, it gets along fine (but has also paths problems)."""
+              For MINGW, look into \Git\mingw64\libexec\git-core\, but problems with paths might appear."""
             )
         log.warning(msg, ex, ip, port, base_path, base_path, exc_info=1)
 
