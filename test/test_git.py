@@ -86,35 +86,33 @@ class TestGit(TestBase):
         (True, True, True),
     )
 
+    def _do_shell_combo(self, value_in_call, value_from_class):
+        with mock.patch.object(Git, "USE_SHELL", value_from_class):
+            # git.cmd gets Popen via a "from" import, so patch it there.
+            with mock.patch.object(cmd, "Popen", wraps=cmd.Popen) as mock_popen:
+                # Use a command with no arguments (besides the program name), so it runs
+                # with or without a shell, on all OSes, with the same effect. Since git
+                # errors out when run with no arguments, we swallow that error.
+                with contextlib.suppress(GitCommandError):
+                    self.git.execute(["git"], shell=value_in_call)
+
+        return mock_popen
+
     @ddt.idata(_shell_cases)
-    @mock.patch.object(cmd, "Popen", wraps=cmd.Popen)  # Since it is gotten via a "from" import.
-    def test_it_uses_shell_or_not_as_specified(self, case, mock_popen):
+    def test_it_uses_shell_or_not_as_specified(self, case):
         """A bool passed as ``shell=`` takes precedence over `Git.USE_SHELL`."""
         value_in_call, value_from_class, expected_popen_arg = case
-
-        with mock.patch.object(Git, "USE_SHELL", value_from_class):
-            with contextlib.suppress(GitCommandError):
-                self.git.execute(
-                    ["git"],  # No args, so it runs with or without a shell, on all OSes.
-                    shell=value_in_call,
-                )
-
+        mock_popen = self._do_shell_combo(value_in_call, value_from_class)
         mock_popen.assert_called_once()
         self.assertIs(mock_popen.call_args.kwargs["shell"], expected_popen_arg)
 
     @ddt.idata(full_case[:2] for full_case in _shell_cases)
-    @mock.patch.object(cmd, "Popen", wraps=cmd.Popen)  # Since it is gotten via a "from" import.
-    def test_it_logs_if_it_uses_a_shell(self, case, mock_popen):
+    def test_it_logs_if_it_uses_a_shell(self, case):
         """``shell=`` in the log message agrees with what is passed to `Popen`."""
         value_in_call, value_from_class = case
 
         with self.assertLogs(cmd.log, level=logging.DEBUG) as log_watcher:
-            with mock.patch.object(Git, "USE_SHELL", value_from_class):
-                with contextlib.suppress(GitCommandError):
-                    self.git.execute(
-                        ["git"],  # No args, so it runs with or without a shell, on all OSes.
-                        shell=value_in_call,
-                    )
+            mock_popen = self._do_shell_combo(value_in_call, value_from_class)
 
         popen_shell_arg = mock_popen.call_args.kwargs["shell"]
         expected_message = re.compile(rf"DEBUG:git.cmd:Popen\(.*\bshell={popen_shell_arg}\b.*\)")
