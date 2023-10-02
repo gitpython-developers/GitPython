@@ -13,7 +13,12 @@ import shutil
 import subprocess
 import sys
 from tempfile import TemporaryDirectory, TemporaryFile
-from unittest import mock, skipUnless
+from unittest import skipUnless
+
+if sys.version_info >= (3, 8):
+    from unittest import mock
+else:
+    import mock  # To be able to examine call_args.kwargs on a mock.
 
 import ddt
 
