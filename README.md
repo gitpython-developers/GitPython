@@ -119,8 +119,7 @@ executed `git fetch --tags` followed by the `./init-tests-after-clone.sh`
 script in the repository root. Otherwise you will encounter test failures.
 
 On _Windows_, make sure you have `git-daemon` in your PATH. For MINGW-git, the `git-daemon.exe`
-exists in `Git\mingw64\libexec\git-core\`; CYGWIN has no daemon, but should get along fine
-with MINGW's.
+exists in `Git\mingw64\libexec\git-core\`.
 
 #### Install test dependencies
 
