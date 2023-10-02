@@ -4,23 +4,24 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: https://opensource.org/license/bsd-3-clause/
+import contextlib
 import os
+import os.path as osp
 import shutil
 import subprocess
 import sys
 from tempfile import TemporaryDirectory, TemporaryFile
 from unittest import mock, skipUnless
 
+import ddt
+
 from git import Git, refresh, GitCommandError, GitCommandNotFound, Repo, cmd
-from test.lib import TestBase, fixture_path
-from test.lib import with_rw_directory
-from git.util import cwd, finalize_process
-
-import os.path as osp
-
 from git.compat import is_win
+from git.util import cwd, finalize_process
+from test.lib import TestBase, fixture_path, with_rw_directory
 
 
+@ddt.ddt
 class TestGit(TestBase):
     @classmethod
     def setUpClass(cls):
@@ -72,6 +73,28 @@ class TestGit(TestBase):
         # order is undefined
         res = self.git.transform_kwargs(**{"s": True, "t": True})
         self.assertEqual({"-s", "-t"}, set(res))
+
+    @ddt.data(
+        (None, False, False),
+        (None, True, True),
+        (False, True, False),
+        (False, False, False),
+        (True, False, True),
+        (True, True, True),
+    )
+    @mock.patch.object(cmd, "Popen", wraps=cmd.Popen)  # Since it is gotten via a "from" import.
+    def test_it_uses_shell_or_not_as_specified(self, case, mock_popen):
+        """A bool passed as ``shell=`` takes precedence over `Git.USE_SHELL`."""
+        value_in_call, value_from_class, expected_popen_arg = case
+        # FIXME: Check what gets logged too!
+        with mock.patch.object(Git, "USE_SHELL", value_from_class):
+            with contextlib.suppress(GitCommandError):
+                self.git.execute(
+                    "git",  # No args, so it runs with or without a shell, on all OSes.
+                    shell=value_in_call,
+                )
+        mock_popen.assert_called_once()
+        self.assertIs(mock_popen.call_args.kwargs["shell"], expected_popen_arg)
 
     def test_it_executes_git_and_returns_result(self):
         self.assertRegex(self.git.execute(["git", "version"]), r"^git version [\d\.]{2}.*$")
