@@ -974,6 +974,8 @@ class Git(LazyMixin):
         istream_ok = "None"
         if istream:
             istream_ok = "<valid stream>"
+        if shell is None:
+            shell = self.USE_SHELL
         log.debug(
             "Popen(%s, cwd=%s, universal_newlines=%s, shell=%s, istream=%s)",
             redacted_command,
@@ -992,7 +994,7 @@ class Git(LazyMixin):
                     stdin=istream or DEVNULL,
                     stderr=PIPE,
                     stdout=stdout_sink,
-                    shell=shell is not None and shell or self.USE_SHELL,
+                    shell=shell,
                     close_fds=is_posix,  # unsupported on windows
                     universal_newlines=universal_newlines,
                     creationflags=PROC_CREATIONFLAGS,
