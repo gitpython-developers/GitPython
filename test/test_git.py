@@ -73,7 +73,7 @@ class TestGit(TestBase):
         res = self.git.transform_kwargs(**{"s": True, "t": True})
         self.assertEqual({"-s", "-t"}, set(res))
 
-    def test_it_executes_git_to_shell_and_returns_result(self):
+    def test_it_executes_git_and_returns_result(self):
         self.assertRegex(self.git.execute(["git", "version"]), r"^git version [\d\.]{2}.*$")
 
     def test_it_executes_git_not_from_cwd(self):
