@@ -95,7 +95,7 @@ class TestGit(TestBase):
         with mock.patch.object(Git, "USE_SHELL", value_from_class):
             with contextlib.suppress(GitCommandError):
                 self.git.execute(
-                    "git",  # No args, so it runs with or without a shell, on all OSes.
+                    ["git"],  # No args, so it runs with or without a shell, on all OSes.
                     shell=value_in_call,
                 )
 
@@ -112,7 +112,7 @@ class TestGit(TestBase):
             with mock.patch.object(Git, "USE_SHELL", value_from_class):
                 with contextlib.suppress(GitCommandError):
                     self.git.execute(
-                        "git",  # No args, so it runs with or without a shell, on all OSes.
+                        ["git"],  # No args, so it runs with or without a shell, on all OSes.
                         shell=value_in_call,
                     )
 
