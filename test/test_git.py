@@ -5,8 +5,10 @@
 # This module is part of GitPython and is released under
 # the BSD License: https://opensource.org/license/bsd-3-clause/
 import contextlib
+import logging
 import os
 import os.path as osp
+import re
 import shutil
 import subprocess
 import sys
@@ -74,7 +76,8 @@ class TestGit(TestBase):
         res = self.git.transform_kwargs(**{"s": True, "t": True})
         self.assertEqual({"-s", "-t"}, set(res))
 
-    @ddt.data(
+    _shell_cases = (
+        # value_in_call, value_from_class, expected_popen_arg
         (None, False, False),
         (None, True, True),
         (False, True, False),
@@ -82,19 +85,41 @@ class TestGit(TestBase):
         (True, False, True),
         (True, True, True),
     )
+
+    @ddt.idata(_shell_cases)
     @mock.patch.object(cmd, "Popen", wraps=cmd.Popen)  # Since it is gotten via a "from" import.
     def test_it_uses_shell_or_not_as_specified(self, case, mock_popen):
         """A bool passed as ``shell=`` takes precedence over `Git.USE_SHELL`."""
         value_in_call, value_from_class, expected_popen_arg = case
-        # FIXME: Check what gets logged too!
+
         with mock.patch.object(Git, "USE_SHELL", value_from_class):
             with contextlib.suppress(GitCommandError):
                 self.git.execute(
                     "git",  # No args, so it runs with or without a shell, on all OSes.
                     shell=value_in_call,
                 )
+
         mock_popen.assert_called_once()
         self.assertIs(mock_popen.call_args.kwargs["shell"], expected_popen_arg)
+
+    @ddt.idata(full_case[:2] for full_case in _shell_cases)
+    @mock.patch.object(cmd, "Popen", wraps=cmd.Popen)  # Since it is gotten via a "from" import.
+    def test_it_logs_if_it_uses_a_shell(self, case, mock_popen):
+        """``shell=`` in the log message agrees with what is passed to `Popen`."""
+        value_in_call, value_from_class = case
+
+        with self.assertLogs(cmd.log, level=logging.DEBUG) as log_watcher:
+            with mock.patch.object(Git, "USE_SHELL", value_from_class):
+                with contextlib.suppress(GitCommandError):
+                    self.git.execute(
+                        "git",  # No args, so it runs with or without a shell, on all OSes.
+                        shell=value_in_call,
+                    )
+
+        popen_shell_arg = mock_popen.call_args.kwargs["shell"]
+        expected_message = re.compile(rf"DEBUG:git.cmd:Popen\(.*\bshell={popen_shell_arg}\b.*\)")
+        match_attempts = [expected_message.fullmatch(message) for message in log_watcher.output]
+        self.assertTrue(any(match_attempts), repr(log_watcher.output))
 
     def test_it_executes_git_and_returns_result(self):
         self.assertRegex(self.git.execute(["git", "version"]), r"^git version [\d\.]{2}.*$")
