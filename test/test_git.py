@@ -4,7 +4,6 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: https://opensource.org/license/bsd-3-clause/
-import contextlib
 import inspect
 import logging
 import os
@@ -97,10 +96,8 @@ class TestGit(TestBase):
             # git.cmd gets Popen via a "from" import, so patch it there.
             with mock.patch.object(cmd, "Popen", wraps=cmd.Popen) as mock_popen:
                 # Use a command with no arguments (besides the program name), so it runs
-                # with or without a shell, on all OSes, with the same effect. Since git
-                # errors out when run with no arguments, we swallow that error.
-                with contextlib.suppress(GitCommandError):
-                    self.git.execute(["git"], shell=value_in_call)
+                # with or without a shell, on all OSes, with the same effect.
+                self.git.execute(["git"], with_exceptions=False, shell=value_in_call)
 
         return mock_popen
 
