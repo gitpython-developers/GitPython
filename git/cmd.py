@@ -66,10 +66,10 @@ execute_kwargs = {
     "with_extended_output",
     "with_exceptions",
     "as_process",
-    "stdout_as_string",
     "output_stream",
-    "with_stdout",
+    "stdout_as_string",
     "kill_after_timeout",
+    "with_stdout",
     "universal_newlines",
     "shell",
     "env",
@@ -883,26 +883,6 @@ class Git(LazyMixin):
             decoded into a string using the default encoding (usually utf-8).
             The latter can fail, if the output contains binary data.
 
-        :param env:
-            A dictionary of environment variables to be passed to `subprocess.Popen`.
-
-        :param max_chunk_size:
-            Maximum number of bytes in one chunk of data passed to the output_stream in
-            one invocation of write() method. If the given number is not positive then
-            the default value is used.
-
-        :param subprocess_kwargs:
-            Keyword arguments to be passed to subprocess.Popen. Please note that
-            some of the valid kwargs are already set by this method, the ones you
-            specify may not be the same ones.
-
-        :param with_stdout: If True, default True, we open stdout on the created process
-        :param universal_newlines:
-            if True, pipes will be opened as text, and lines are split at
-            all known line endings.
-        :param shell:
-            Whether to invoke commands through a shell (see `Popen(..., shell=True)`).
-            It overrides :attr:`USE_SHELL` if it is not `None`.
         :param kill_after_timeout:
             To specify a timeout in seconds for the git command, after which the process
             should be killed. This will have no effect if as_process is set to True. It is
@@ -912,8 +892,34 @@ class Git(LazyMixin):
             effects on a repository. For example, stale locks in case of git gc could
             render the repository incapable of accepting changes until the lock is manually
             removed.
+
+        :param with_stdout:
+            If True, default True, we open stdout on the created process
+
+        :param universal_newlines:
+            if True, pipes will be opened as text, and lines are split at
+            all known line endings.
+
+        :param shell:
+            Whether to invoke commands through a shell (see `Popen(..., shell=True)`).
+            It overrides :attr:`USE_SHELL` if it is not `None`.
+
+        :param env:
+            A dictionary of environment variables to be passed to `subprocess.Popen`.
+
+        :param max_chunk_size:
+            Maximum number of bytes in one chunk of data passed to the output_stream in
+            one invocation of write() method. If the given number is not positive then
+            the default value is used.
+
         :param strip_newline_in_stdout:
             Whether to strip the trailing ``\\n`` of the command stdout.
+
+        :param subprocess_kwargs:
+            Keyword arguments to be passed to subprocess.Popen. Please note that
+            some of the valid kwargs are already set by this method, the ones you
+            specify may not be the same ones.
+
         :return:
             * str(output) if extended_output = False (Default)
             * tuple(int(status), str(stdout), str(stderr)) if extended_output = True
