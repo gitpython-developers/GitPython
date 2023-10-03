@@ -4,7 +4,7 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: https://opensource.org/license/bsd-3-clause/
-import contextlib
+import inspect
 import logging
 import os
 import os.path as osp
@@ -39,6 +39,13 @@ class TestGit(TestBase):
         import gc
 
         gc.collect()
+
+    def _assert_logged_for_popen(self, log_watcher, name, value):
+        re_name = re.escape(name)
+        re_value = re.escape(str(value))
+        re_line = re.compile(fr"DEBUG:git.cmd:Popen\(.*\b{re_name}={re_value}[,)]")
+        match_attempts = [re_line.match(message) for message in log_watcher.output]
+        self.assertTrue(any(match_attempts), repr(log_watcher.output))
 
     @mock.patch.object(Git, "execute")
     def test_call_process_calls_execute(self, git):
@@ -96,10 +103,8 @@ class TestGit(TestBase):
             # git.cmd gets Popen via a "from" import, so patch it there.
             with mock.patch.object(cmd, "Popen", wraps=cmd.Popen) as mock_popen:
                 # Use a command with no arguments (besides the program name), so it runs
-                # with or without a shell, on all OSes, with the same effect. Since git
-                # errors out when run with no arguments, we swallow that error.
-                with contextlib.suppress(GitCommandError):
-                    self.git.execute(["git"], shell=value_in_call)
+                # with or without a shell, on all OSes, with the same effect.
+                self.git.execute(["git"], with_exceptions=False, shell=value_in_call)
 
         return mock_popen
 
@@ -115,14 +120,19 @@ class TestGit(TestBase):
     def test_it_logs_if_it_uses_a_shell(self, case):
         """``shell=`` in the log message agrees with what is passed to `Popen`."""
         value_in_call, value_from_class = case
-
         with self.assertLogs(cmd.log, level=logging.DEBUG) as log_watcher:
             mock_popen = self._do_shell_combo(value_in_call, value_from_class)
+        self._assert_logged_for_popen(log_watcher, "shell", mock_popen.call_args.kwargs["shell"])
 
-        popen_shell_arg = mock_popen.call_args.kwargs["shell"]
-        expected_message = re.compile(rf"DEBUG:git.cmd:Popen\(.*\bshell={popen_shell_arg}\b.*\)")
-        match_attempts = [expected_message.fullmatch(message) for message in log_watcher.output]
-        self.assertTrue(any(match_attempts), repr(log_watcher.output))
+    @ddt.data(
+        ("None", None),
+        ("<valid stream>", subprocess.PIPE),
+    )
+    def test_it_logs_istream_summary_for_stdin(self, case):
+        expected_summary, istream_argument = case
+        with self.assertLogs(cmd.log, level=logging.DEBUG) as log_watcher:
+            self.git.execute(["git", "version"], istream=istream_argument)
+        self._assert_logged_for_popen(log_watcher, "stdin", expected_summary)
 
     def test_it_executes_git_and_returns_result(self):
         self.assertRegex(self.git.execute(["git", "version"]), r"^git version [\d\.]{2}.*$")
@@ -364,3 +374,11 @@ class TestGit(TestBase):
 
         self.assertEqual(count[1], line_count)
         self.assertEqual(count[2], line_count)
+
+    def test_execute_kwargs_set_agrees_with_method(self):
+        parameter_names = inspect.signature(cmd.Git.execute).parameters.keys()
+        self_param, command_param, *most_params, extra_kwargs_param = parameter_names
+        self.assertEqual(self_param, "self")
+        self.assertEqual(command_param, "command")
+        self.assertEqual(set(most_params), cmd.execute_kwargs)  # Most important.
+        self.assertEqual(extra_kwargs_param, "subprocess_kwargs")
