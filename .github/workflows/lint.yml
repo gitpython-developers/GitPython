@@ -15,6 +15,6 @@ jobs:
 
     - uses: pre-commit/action@v3.0.0
       with:
-        extra_args: --hook-stage manual
+        extra_args: --all-files --hook-stage manual
       env:
         SKIP: black-format
