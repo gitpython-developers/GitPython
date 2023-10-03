@@ -842,12 +842,12 @@ class Git(LazyMixin):
         strip_newline_in_stdout: bool = True,
         **subprocess_kwargs: Any,
     ) -> Union[str, bytes, Tuple[int, Union[str, bytes], str], AutoInterrupt]:
-        """Handles executing the command on the shell and consumes and returns
-        the returned information (stdout)
+        """Handles executing the command and consumes and returns the returned
+        information (stdout)
 
         :param command:
             The command argument list to execute.
-            It should be a string, or a sequence of program arguments. The
+            It should be a sequence of program arguments, or a string. The
             program to execute is the first item in the args sequence or string.
 
         :param istream:
