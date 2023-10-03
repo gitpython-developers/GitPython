@@ -105,7 +105,7 @@ def handle_process_output(
 ) -> None:
     """Registers for notifications to learn that process output is ready to read, and dispatches lines to
     the respective line handlers.
-    This function returns once the finalizer returns
+    This function returns once the finalizer returns.
 
     :return: result of finalizer
     :param process: subprocess.Popen instance
@@ -294,9 +294,7 @@ class Git(LazyMixin):
 
     @classmethod
     def refresh(cls, path: Union[None, PathLike] = None) -> bool:
-        """This gets called by the refresh function (see the top level
-        __init__).
-        """
+        """This gets called by the refresh function (see the top level __init__)."""
         # discern which path to refresh with
         if path is not None:
             new_git = os.path.expanduser(path)
@@ -446,9 +444,9 @@ class Git(LazyMixin):
         if is_cygwin:
             url = cygpath(url)
         else:
-            """Remove any backslahes from urls to be written in config files.
+            """Remove any backslashes from urls to be written in config files.
 
-            Windows might create config-files containing paths with backslashed,
+            Windows might create config files containing paths with backslashes,
             but git stops liking them as it will escape the backslashes.
             Hence we undo the escaping just to be sure.
             """
@@ -464,8 +462,8 @@ class Git(LazyMixin):
         Check for unsafe protocols.
 
         Apart from the usual protocols (http, git, ssh),
-        Git allows "remote helpers" that have the form `<transport>::<address>`,
-        one of these helpers (`ext::`) can be used to invoke any arbitrary command.
+        Git allows "remote helpers" that have the form ``<transport>::<address>``,
+        one of these helpers (``ext::``) can be used to invoke any arbitrary command.
 
         See:
 
@@ -517,7 +515,7 @@ class Git(LazyMixin):
             self.status: Union[int, None] = None
 
         def _terminate(self) -> None:
-            """Terminate the underlying process"""
+            """Terminate the underlying process."""
             if self.proc is None:
                 return
 
@@ -572,7 +570,7 @@ class Git(LazyMixin):
             """Wait for the process and return its status code.
 
             :param stderr: Previously read value of stderr, in case stderr is already closed.
-            :warn: may deadlock if output or error pipes are used and not handled separately.
+            :warn: May deadlock if output or error pipes are used and not handled separately.
             :raise GitCommandError: if the return status is not 0"""
             if stderr is None:
                 stderr_b = b""
@@ -605,13 +603,12 @@ class Git(LazyMixin):
     # END auto interrupt
 
     class CatFileContentStream(object):
-
         """Object representing a sized read-only stream returning the contents of
         an object.
         It behaves like a stream, but counts the data read and simulates an empty
         stream once our sized content region is empty.
-        If not all data is read to the end of the objects's lifetime, we read the
-        rest to assure the underlying stream continues to work"""
+        If not all data is read to the end of the object's lifetime, we read the
+        rest to assure the underlying stream continues to work."""
 
         __slots__: Tuple[str, ...] = ("_stream", "_nbr", "_size")
 
@@ -740,11 +737,11 @@ class Git(LazyMixin):
 
     def set_persistent_git_options(self, **kwargs: Any) -> None:
         """Specify command line options to the git executable
-        for subsequent subcommand calls
+        for subsequent subcommand calls.
 
         :param kwargs:
             is a dict of keyword arguments.
-            these arguments are passed as in _call_process
+            These arguments are passed as in _call_process
             but will be passed to the git command rather than
             the subcommand.
         """
@@ -775,7 +772,7 @@ class Git(LazyMixin):
         """
         :return: tuple(int, int, int, int) tuple with integers representing the major, minor
             and additional version numbers as parsed from git version.
-            This value is generated on demand and is cached"""
+            This value is generated on demand and is cached."""
         return self._version_info
 
     @overload
@@ -843,7 +840,7 @@ class Git(LazyMixin):
         **subprocess_kwargs: Any,
     ) -> Union[str, bytes, Tuple[int, Union[str, bytes], str], AutoInterrupt]:
         """Handles executing the command and consumes and returns the returned
-        information (stdout)
+        information (stdout).
 
         :param command:
             The command argument list to execute.
@@ -1213,7 +1210,7 @@ class Git(LazyMixin):
 
     def __call__(self, **kwargs: Any) -> "Git":
         """Specify command line options to the git executable
-        for a subcommand call
+        for a subcommand call.
 
         :param kwargs:
             is a dict of keyword arguments.
@@ -1251,7 +1248,7 @@ class Git(LazyMixin):
         self, method: str, *args: Any, **kwargs: Any
     ) -> Union[str, bytes, Tuple[int, Union[str, bytes], str], "Git.AutoInterrupt"]:
         """Run the given git command with the specified arguments and return
-        the result as a String
+        the result as a string.
 
         :param method:
             is the command. Contained "_" characters will be converted to dashes,
@@ -1260,7 +1257,7 @@ class Git(LazyMixin):
         :param args:
             is the list of arguments. If None is included, it will be pruned.
             This allows your commands to call git more conveniently as None
-            is realized as non-existent
+            is realized as non-existent.
 
         :param kwargs:
             It contains key-values for the following:
@@ -1390,7 +1387,7 @@ class Git(LazyMixin):
         return self.__get_object_header(cmd, ref)
 
     def get_object_data(self, ref: str) -> Tuple[str, str, int, bytes]:
-        """As get_object_header, but returns object data as well
+        """As get_object_header, but returns object data as well.
 
         :return: (hexsha, type_string, size_as_int, data_string)
         :note: not threadsafe"""
@@ -1400,10 +1397,10 @@ class Git(LazyMixin):
         return (hexsha, typename, size, data)
 
     def stream_object_data(self, ref: str) -> Tuple[str, str, int, "Git.CatFileContentStream"]:
-        """As get_object_header, but returns the data as a stream
+        """As get_object_header, but returns the data as a stream.
 
         :return: (hexsha, type_string, size_as_int, stream)
-        :note: This method is not threadsafe, you need one independent Command instance per thread to be safe !"""
+        :note: This method is not threadsafe, you need one independent Command instance per thread to be safe!"""
         cmd = self._get_persistent_cmd("cat_file_all", "cat_file", batch=True)
         hexsha, typename, size = self.__get_object_header(cmd, ref)
         cmd_stdout = cmd.stdout if cmd.stdout is not None else io.BytesIO()
