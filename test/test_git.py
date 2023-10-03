@@ -40,6 +40,13 @@ class TestGit(TestBase):
 
         gc.collect()
 
+    def _assert_logged_for_popen(self, log_watcher, name, value):
+        re_name = re.escape(name)
+        re_value = re.escape(str(value))
+        re_line = re.compile(fr"DEBUG:git.cmd:Popen\(.*\b{re_name}={re_value}[,)]")
+        match_attempts = [re_line.match(message) for message in log_watcher.output]
+        self.assertTrue(any(match_attempts), repr(log_watcher.output))
+
     @mock.patch.object(Git, "execute")
     def test_call_process_calls_execute(self, git):
         git.return_value = ""
@@ -113,14 +120,9 @@ class TestGit(TestBase):
     def test_it_logs_if_it_uses_a_shell(self, case):
         """``shell=`` in the log message agrees with what is passed to `Popen`."""
         value_in_call, value_from_class = case
-
         with self.assertLogs(cmd.log, level=logging.DEBUG) as log_watcher:
             mock_popen = self._do_shell_combo(value_in_call, value_from_class)
-
-        popen_shell_arg = mock_popen.call_args.kwargs["shell"]
-        expected_message = re.compile(rf"DEBUG:git.cmd:Popen\(.*\bshell={popen_shell_arg}\b.*\)")
-        match_attempts = [expected_message.fullmatch(message) for message in log_watcher.output]
-        self.assertTrue(any(match_attempts), repr(log_watcher.output))
+        self._assert_logged_for_popen(log_watcher, "shell", mock_popen.call_args.kwargs["shell"])
 
     def test_it_executes_git_and_returns_result(self):
         self.assertRegex(self.git.execute(["git", "version"]), r"^git version [\d\.]{2}.*$")
