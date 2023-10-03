@@ -979,7 +979,7 @@ class Git(LazyMixin):
         if shell is None:
             shell = self.USE_SHELL
         log.debug(
-            "Popen(%s, cwd=%s, universal_newlines=%s, shell=%s, istream=%s)",
+            "Popen(%s, cwd=%s, universal_newlines=%s, shell=%s, stdin=%s)",
             redacted_command,
             cwd,
             universal_newlines,
