@@ -851,7 +851,7 @@ class Git(LazyMixin):
             program to execute is the first item in the args sequence or string.
 
         :param istream:
-            Standard input filehandle passed to subprocess.Popen.
+            Standard input filehandle passed to `subprocess.Popen`.
 
         :param with_extended_output:
             Whether to return a (status, stdout, stderr) tuple.
@@ -862,8 +862,7 @@ class Git(LazyMixin):
         :param as_process:
             Whether to return the created process instance directly from which
             streams can be read on demand. This will render with_extended_output and
-            with_exceptions ineffective - the caller will have
-            to deal with the details himself.
+            with_exceptions ineffective - the caller will have to deal with the details.
             It is important to note that the process will be placed into an AutoInterrupt
             wrapper that will interrupt the process once it goes out of scope. If you
             use the command in iterators, you should pass the whole process instance
@@ -876,25 +875,25 @@ class Git(LazyMixin):
             always be created with a pipe due to issues with subprocess.
             This merely is a workaround as data will be copied from the
             output pipe to the given output stream directly.
-            Judging from the implementation, you shouldn't use this flag !
+            Judging from the implementation, you shouldn't use this parameter!
 
         :param stdout_as_string:
-            if False, the commands standard output will be bytes. Otherwise, it will be
-            decoded into a string using the default encoding (usually utf-8).
+            If False, the command's standard output will be bytes. Otherwise, it will be
+            decoded into a string using the default encoding (usually UTF-8).
             The latter can fail, if the output contains binary data.
 
         :param kill_after_timeout:
-            To specify a timeout in seconds for the git command, after which the process
+            Specifies a timeout in seconds for the git command, after which the process
             should be killed. This will have no effect if as_process is set to True. It is
             set to None by default and will let the process run until the timeout is
             explicitly specified. This feature is not supported on Windows. It's also worth
             noting that kill_after_timeout uses SIGKILL, which can have negative side
-            effects on a repository. For example, stale locks in case of git gc could
+            effects on a repository. For example, stale locks in case of ``git gc`` could
             render the repository incapable of accepting changes until the lock is manually
             removed.
 
         :param with_stdout:
-            If True, default True, we open stdout on the created process
+            If True, default True, we open stdout on the created process.
 
         :param universal_newlines:
             if True, pipes will be opened as text, and lines are split at
@@ -916,19 +915,19 @@ class Git(LazyMixin):
             Whether to strip the trailing ``\\n`` of the command stdout.
 
         :param subprocess_kwargs:
-            Keyword arguments to be passed to subprocess.Popen. Please note that
-            some of the valid kwargs are already set by this method, the ones you
+            Keyword arguments to be passed to `subprocess.Popen`. Please note that
+            some of the valid kwargs are already set by this method; the ones you
             specify may not be the same ones.
 
         :return:
             * str(output) if extended_output = False (Default)
             * tuple(int(status), str(stdout), str(stderr)) if extended_output = True
 
-            if output_stream is True, the stdout value will be your output stream:
+            If output_stream is True, the stdout value will be your output stream:
             * output_stream if extended_output = False
             * tuple(int(status), output_stream, str(stderr)) if extended_output = True
 
-            Note git is executed with LC_MESSAGES="C" to ensure consistent
+            Note that git is executed with ``LC_MESSAGES="C"`` to ensure consistent
             output regardless of system language.
 
         :raise GitCommandError:
