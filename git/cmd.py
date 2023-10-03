@@ -979,12 +979,12 @@ class Git(LazyMixin):
         if shell is None:
             shell = self.USE_SHELL
         log.debug(
-            "Popen(%s, cwd=%s, universal_newlines=%s, shell=%s, stdin=%s)",
+            "Popen(%s, cwd=%s, stdin=%s, shell=%s, universal_newlines=%s)",
             redacted_command,
             cwd,
-            universal_newlines,
-            shell,
             istream_ok,
+            shell,
+            universal_newlines,
         )
         try:
             with maybe_patch_caller_env:
