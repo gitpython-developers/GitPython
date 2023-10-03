@@ -973,16 +973,13 @@ class Git(LazyMixin):
         # end handle
 
         stdout_sink = PIPE if with_stdout else getattr(subprocess, "DEVNULL", None) or open(os.devnull, "wb")
-        istream_ok = "None"
-        if istream:
-            istream_ok = "<valid stream>"
         if shell is None:
             shell = self.USE_SHELL
         log.debug(
             "Popen(%s, cwd=%s, stdin=%s, shell=%s, universal_newlines=%s)",
             redacted_command,
             cwd,
-            istream_ok,
+            "<valid stream>" if istream else "None",
             shell,
             universal_newlines,
         )
