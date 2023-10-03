@@ -5,6 +5,7 @@
 # This module is part of GitPython and is released under
 # the BSD License: https://opensource.org/license/bsd-3-clause/
 import contextlib
+import inspect
 import logging
 import os
 import os.path as osp
@@ -364,3 +365,11 @@ class TestGit(TestBase):
 
         self.assertEqual(count[1], line_count)
         self.assertEqual(count[2], line_count)
+
+    def test_execute_kwargs_set_agrees_with_method(self):
+        parameter_names = inspect.signature(cmd.Git.execute).parameters.keys()
+        self_param, command_param, *most_params, extra_kwargs_param = parameter_names
+        self.assertEqual(self_param, "self")
+        self.assertEqual(command_param, "command")
+        self.assertEqual(set(most_params), cmd.execute_kwargs)  # Most important.
+        self.assertEqual(extra_kwargs_param, "subprocess_kwargs")
