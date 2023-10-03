@@ -1012,8 +1012,8 @@ class Git(LazyMixin):
         if as_process:
             return self.AutoInterrupt(proc, command)
 
-        def _kill_process(pid: int) -> None:
-            """Callback method to kill a process."""
+        def kill_process(pid: int) -> None:
+            """Callback to kill a process."""
             p = Popen(
                 ["ps", "--ppid", str(pid)],
                 stdout=PIPE,
@@ -1046,7 +1046,7 @@ class Git(LazyMixin):
 
         if kill_after_timeout is not None:
             kill_check = threading.Event()
-            watchdog = threading.Timer(kill_after_timeout, _kill_process, args=(proc.pid,))
+            watchdog = threading.Timer(kill_after_timeout, kill_process, args=(proc.pid,))
 
         # Wait for the process to return
         status = 0
