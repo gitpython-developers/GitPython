@@ -1,17 +1,39 @@
 repos:
-  - repo: https://github.com/PyCQA/flake8
-    rev: 6.1.0
-    hooks:
-      - id: flake8
-        additional_dependencies:
-          - flake8-bugbear==23.9.16
-          - flake8-comprehensions==3.14.0
-          - flake8-typing-imports==1.14.0
-        exclude: ^doc|^git/ext/
+- repo: https://github.com/psf/black-pre-commit-mirror
+  rev: 23.9.1
+  hooks:
+  - id: black
+    alias: black-check
+    name: black (check)
+    args: [--check, --diff]
+    exclude: ^git/ext/
+    stages: [manual]
 
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
-    hooks:
-      - id: check-merge-conflict
-      - id: check-toml
-      - id: check-yaml
+  - id: black
+    alias: black-format
+    name: black (format)
+    exclude: ^git/ext/
+
+- repo: https://github.com/PyCQA/flake8
+  rev: 6.1.0
+  hooks:
+  - id: flake8
+    additional_dependencies:
+    - flake8-bugbear==23.9.16
+    - flake8-comprehensions==3.14.0
+    - flake8-typing-imports==1.14.0
+    exclude: ^doc|^git/ext/
+
+- repo: https://github.com/shellcheck-py/shellcheck-py
+  rev: v0.9.0.5
+  hooks:
+  - id: shellcheck
+    args: [--color]
+    exclude: ^git/ext/
+
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v4.4.0
+  hooks:
+  - id: check-toml
+  - id: check-yaml
+  - id: check-merge-conflict

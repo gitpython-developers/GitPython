@@ -43,7 +43,7 @@ class TestGit(TestBase):
     def _assert_logged_for_popen(self, log_watcher, name, value):
         re_name = re.escape(name)
         re_value = re.escape(str(value))
-        re_line = re.compile(fr"DEBUG:git.cmd:Popen\(.*\b{re_name}={re_value}[,)]")
+        re_line = re.compile(rf"DEBUG:git.cmd:Popen\(.*\b{re_name}={re_value}[,)]")
         match_attempts = [re_line.match(message) for message in log_watcher.output]
         self.assertTrue(any(match_attempts), repr(log_watcher.output))
 
