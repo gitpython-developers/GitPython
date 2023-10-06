@@ -6,16 +6,16 @@
 """ Module containing all exceptions thrown throughout the git package, """
 
 from gitdb.exc import (
-    AmbiguousObjectName,
-    BadName,
-    BadObject,
-    BadObjectType,
-    InvalidDBRoot,
-    ODBError,
-    ParseError,
-    UnsupportedOperation,
-    to_hex_sha,
-) # NOQA @UnusedWildImport skipcq: PYL-W0401, PYL-W0614
+    AmbiguousObjectName,  # @UnusedImport
+    BadName,  # @UnusedImport
+    BadObject,  # @UnusedImport
+    BadObjectType,  # @UnusedImport
+    InvalidDBRoot,  # @UnusedImport
+    ODBError,  # @UnusedImport
+    ParseError,  # @UnusedImport
+    UnsupportedOperation,  # @UnusedImport
+    to_hex_sha,  # @UnusedImport
+)
 from git.compat import safe_decode
 from git.util import remove_password_if_present
 
