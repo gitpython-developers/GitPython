@@ -5,8 +5,17 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 """ Module containing all exceptions thrown throughout the git package, """
 
-from gitdb.exc import BadName  # NOQA @UnusedWildImport skipcq: PYL-W0401, PYL-W0614
-from gitdb.exc import *  # NOQA @UnusedWildImport skipcq: PYL-W0401, PYL-W0614
+from gitdb.exc import (
+    AmbiguousObjectName,
+    BadName,
+    BadObject,
+    BadObjectType,
+    InvalidDBRoot,
+    ODBError,
+    ParseError,
+    UnsupportedOperation,
+    to_hex_sha,
+) # NOQA @UnusedWildImport skipcq: PYL-W0401, PYL-W0614
 from git.compat import safe_decode
 from git.util import remove_password_if_present
 
