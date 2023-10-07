@@ -529,15 +529,15 @@ class TestUtils(TestBase):
             ("true-seeming", "True"),
             ("true-seeming", "yes"),
             ("true-seeming", "YES"),
+        ]
+        falsy_cases = [
+            ("empty", ""),
+            ("whitespace", " "),
             ("false-seeming", "0"),
             ("false-seeming", "false"),
             ("false-seeming", "False"),
             ("false-seeming", "no"),
             ("false-seeming", "NO"),
-            ("whitespace", " "),
-        ]
-        falsy_cases = [
-            ("empty", ""),
         ]
 
         for msg, env_var_value in truthy_cases:

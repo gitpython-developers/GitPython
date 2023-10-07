@@ -121,8 +121,14 @@ def _read_env_flag(name: str, default: bool) -> bool:
         name,
     )
 
-    # FIXME: This should treat some values besides "" as expressing falsehood.
-    return bool(value)
+    adjusted_value = value.strip().lower()
+
+    if adjusted_value in {"", "0", "false", "no"}:
+        return False
+    if adjusted_value in {"1", "true", "yes"}:
+        return True
+    log.warning("%s has unrecognized value %r, treating as %r.", name, value, default)
+    return default
 
 
 #: We need an easy way to see if Appveyor TCs start failing,
