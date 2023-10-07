@@ -109,14 +109,28 @@ __all__ = [
 
 log = logging.getLogger(__name__)
 
-# types############################################################
+
+def _read_env_flag(name: str, default: bool) -> Union[bool, str]:
+    try:
+        value = os.environ[name]
+    except KeyError:
+        return default
+
+    log.warning(
+        "The %s environment variable is deprecated. Its effect has never been documented and changes without warning.",
+        name,
+    )
+
+    # FIXME: This should always return bool, as that is how it is used.
+    # FIXME: This should treat some values besides "" as expressing falsehood.
+    return value
 
 
 #: We need an easy way to see if Appveyor TCs start failing,
 #: so the errors marked with this var are considered "acknowledged" ones, awaiting remedy,
 #: till then, we wish to hide them.
-HIDE_WINDOWS_KNOWN_ERRORS = is_win and os.environ.get("HIDE_WINDOWS_KNOWN_ERRORS", True)
-HIDE_WINDOWS_FREEZE_ERRORS = is_win and os.environ.get("HIDE_WINDOWS_FREEZE_ERRORS", True)
+HIDE_WINDOWS_KNOWN_ERRORS = is_win and _read_env_flag("HIDE_WINDOWS_KNOWN_ERRORS", True)
+HIDE_WINDOWS_FREEZE_ERRORS = is_win and _read_env_flag("HIDE_WINDOWS_FREEZE_ERRORS", True)
 
 # { Utility Methods
 
