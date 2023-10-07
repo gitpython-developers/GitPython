@@ -520,30 +520,22 @@ class TestUtils(TestBase):
             )
             return ast.literal_eval(output)
 
-        true_iff_win = os.name == "nt"  # Same as is_win, but don't depend on that here.
-
-        truthy_cases = [
-            ("unset", None),
-            ("true-seeming", "1"),
-            ("true-seeming", "true"),
-            ("true-seeming", "True"),
-            ("true-seeming", "yes"),
-            ("true-seeming", "YES"),
-        ]
-        falsy_cases = [
-            ("empty", ""),
-            ("whitespace", " "),
-            ("false-seeming", "0"),
-            ("false-seeming", "false"),
-            ("false-seeming", "False"),
-            ("false-seeming", "no"),
-            ("false-seeming", "NO"),
-        ]
-
-        for msg, env_var_value in truthy_cases:
-            with self.subTest(msg, env_var_value=env_var_value):
-                self.assertIs(run_parse(env_var_value), true_iff_win)
-
-        for msg, env_var_value in falsy_cases:
-            with self.subTest(msg, env_var_value=env_var_value):
-                self.assertIs(run_parse(env_var_value), False)
+        for env_var_value, expected_truth_value in (
+            (None, os.name == "nt"),  # True on Windows when the environment variable is unset.
+            ("", False),
+            (" ", False),
+            ("0", False),
+            ("1", os.name == "nt"),
+            ("false", False),
+            ("true", os.name == "nt"),
+            ("False", False),
+            ("True", os.name == "nt"),
+            ("no", False),
+            ("yes", os.name == "nt"),
+            ("NO", False),
+            ("YES", os.name == "nt"),
+            (" no  ", False),
+            (" yes  ", os.name == "nt"),
+        ):
+            with self.subTest(env_var_value=env_var_value):
+                self.assertIs(run_parse(env_var_value), expected_truth_value)
