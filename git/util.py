@@ -110,7 +110,7 @@ __all__ = [
 log = logging.getLogger(__name__)
 
 
-def _read_env_flag(name: str, default: bool) -> Union[bool, str]:
+def _read_env_flag(name: str, default: bool) -> bool:
     try:
         value = os.environ[name]
     except KeyError:
@@ -121,9 +121,8 @@ def _read_env_flag(name: str, default: bool) -> Union[bool, str]:
         name,
     )
 
-    # FIXME: This should always return bool, as that is how it is used.
     # FIXME: This should treat some values besides "" as expressing falsehood.
-    return value
+    return bool(value)
 
 
 #: We need an easy way to see if Appveyor TCs start failing,

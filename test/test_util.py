@@ -520,7 +520,7 @@ class TestUtils(TestBase):
             )
             return ast.literal_eval(output)
 
-        assert_true_iff_win = self.assertTrue if os.name == "nt" else self.assertFalse
+        true_iff_win = os.name == "nt"  # Same as is_win, but don't depend on that here.
 
         truthy_cases = [
             ("unset", None),
@@ -542,8 +542,8 @@ class TestUtils(TestBase):
 
         for msg, env_var_value in truthy_cases:
             with self.subTest(msg, env_var_value=env_var_value):
-                assert_true_iff_win(run_parse(env_var_value))
+                self.assertIs(run_parse(env_var_value), true_iff_win)
 
         for msg, env_var_value in falsy_cases:
             with self.subTest(msg, env_var_value=env_var_value):
-                self.assertFalse(run_parse(env_var_value))
+                self.assertIs(run_parse(env_var_value), False)
