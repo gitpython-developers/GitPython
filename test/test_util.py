@@ -4,12 +4,14 @@
 # This module is part of GitPython and is released under
 # the BSD License: https://opensource.org/license/bsd-3-clause/
 
+import ast
 import contextlib
 from datetime import datetime
 import os
 import pathlib
 import pickle
 import stat
+import subprocess
 import sys
 import tempfile
 import time
@@ -502,3 +504,46 @@ class TestUtils(TestBase):
 
         assert cmd_4 == remove_password_if_present(cmd_4)
         assert cmd_5 == remove_password_if_present(cmd_5)
+
+    @ddt.data("HIDE_WINDOWS_KNOWN_ERRORS", "HIDE_WINDOWS_FREEZE_ERRORS")
+    def test_env_vars_for_windows_tests(self, name):
+        def run_parse(value):
+            command = [
+                sys.executable,
+                "-c",
+                f"from git.util import {name}; print(repr({name}))",
+            ]
+            output = subprocess.check_output(
+                command,
+                env=None if value is None else dict(os.environ, **{name: value}),
+                text=True,
+            )
+            return ast.literal_eval(output)
+
+        assert_true_iff_win = self.assertTrue if os.name == "nt" else self.assertFalse
+
+        truthy_cases = [
+            ("unset", None),
+            ("true-seeming", "1"),
+            ("true-seeming", "true"),
+            ("true-seeming", "True"),
+            ("true-seeming", "yes"),
+            ("true-seeming", "YES"),
+            ("false-seeming", "0"),
+            ("false-seeming", "false"),
+            ("false-seeming", "False"),
+            ("false-seeming", "no"),
+            ("false-seeming", "NO"),
+            ("whitespace", " "),
+        ]
+        falsy_cases = [
+            ("empty", ""),
+        ]
+
+        for msg, env_var_value in truthy_cases:
+            with self.subTest(msg, env_var_value=env_var_value):
+                assert_true_iff_win(run_parse(env_var_value))
+
+        for msg, env_var_value in falsy_cases:
+            with self.subTest(msg, env_var_value=env_var_value):
+                self.assertFalse(run_parse(env_var_value))
