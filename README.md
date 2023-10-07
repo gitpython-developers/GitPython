@@ -121,9 +121,6 @@ _Important_: Right after cloning this repository, please be sure to have execute
 the `./init-tests-after-clone.sh` script in the repository root. Otherwise
 you will encounter test failures.
 
-On _Windows_, make sure you have `git-daemon` in your PATH. For MINGW-git, the `git-daemon.exe`
-exists in `Git\mingw64\libexec\git-core\`.
-
 #### Install test dependencies
 
 Ensure testing libraries are installed. This is taken care of already if you installed with:
