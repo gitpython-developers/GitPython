@@ -22,7 +22,7 @@ class Tutorials(TestBase):
         gc.collect()
 
     # ACTUALLY skipped by git.util.rmtree (in local onerror function), from the last call to it via
-    # git.objects.submodule.base.Submodule.remove (at "handle separate bare repository"), line 1068.
+    # git.objects.submodule.base.Submodule.remove (at "handle separate bare repository"), line 1062.
     #
     # @skipIf(HIDE_WINDOWS_KNOWN_ERRORS,
     #         "FIXME: helper.wrapper fails with: PermissionError: [WinError 5] Access is denied: "

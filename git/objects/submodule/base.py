@@ -1,43 +1,37 @@
-# need a dict to set bloody .name field
 from io import BytesIO
 import logging
 import os
+import os.path as osp
 import stat
 import uuid
 
 import git
 from git.cmd import Git
-from git.compat import (
-    defenc,
-    is_win,
-)
-from git.config import SectionConstraint, GitConfigParser, cp
+from git.compat import defenc, is_win
+from git.config import GitConfigParser, SectionConstraint, cp
 from git.exc import (
+    BadName,
     InvalidGitRepositoryError,
     NoSuchPathError,
     RepositoryDirtyError,
-    BadName,
 )
 from git.objects.base import IndexObject, Object
 from git.objects.util import TraversableIterableObj
-
 from git.util import (
-    join_path_native,
-    to_native_path_linux,
-    RemoteProgress,
-    rmtree,
-    unbare_repo,
     IterableList,
+    RemoteProgress,
+    join_path_native,
+    rmtree,
+    to_native_path_linux,
+    unbare_repo,
 )
 
-import os.path as osp
-
 from .util import (
+    SubmoduleConfigParser,
+    find_first_remote_branch,
     mkhead,
     sm_name,
     sm_section,
-    SubmoduleConfigParser,
-    find_first_remote_branch,
 )
 
 
