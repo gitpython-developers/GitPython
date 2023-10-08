@@ -21,7 +21,10 @@ class Tutorials(TestBase):
 
         gc.collect()
 
-    # @skipIf(HIDE_WINDOWS_KNOWN_ERRORS,  ## ACTUALLY skipped by `git.submodule.base#L869`.
+    # ACTUALLY skipped by git.objects.submodule.base.Submodule.remove, at the last
+    # rmtree call (in "handle separate bare repository"), line 1082.
+    #
+    # @skipIf(HIDE_WINDOWS_KNOWN_ERRORS,
     #         "FIXME: helper.wrapper fails with: PermissionError: [WinError 5] Access is denied: "
     #         "'C:\\Users\\appveyor\\AppData\\Local\\Temp\\1\\test_work_tree_unsupportedryfa60di\\master_repo\\.git\\objects\\pack\\pack-bc9e0787aef9f69e1591ef38ea0a6f566ec66fe3.idx")  # noqa E501
     @with_rw_directory

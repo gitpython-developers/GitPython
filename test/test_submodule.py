@@ -457,7 +457,10 @@ class TestSubmodule(TestBase):
             True,
         )
 
-    # @skipIf(HIDE_WINDOWS_KNOWN_ERRORS,  ## ACTUALLY skipped by `git.submodule.base#L869`.
+    # ACTUALLY skipped by git.util.rmtree (in local onerror function), called via
+    # git.objects.submodule.base.Submodule.remove at "method(mp)", line 1018.
+    #
+    # @skipIf(HIDE_WINDOWS_KNOWN_ERRORS,
     #         "FIXME: fails with: PermissionError: [WinError 32] The process cannot access the file because"
     #         "it is being used by another process: "
     #         "'C:\\Users\\ankostis\\AppData\\Local\\Temp\\tmp95c3z83bnon_bare_test_base_rw\\git\\ext\\gitdb\\gitdb\\ext\\smmap'")  # noqa E501
