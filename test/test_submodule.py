@@ -458,7 +458,7 @@ class TestSubmodule(TestBase):
         )
 
     # ACTUALLY skipped by git.util.rmtree (in local onerror function), called via
-    # git.objects.submodule.base.Submodule.remove at "method(mp)", line 1018.
+    # git.objects.submodule.base.Submodule.remove at "method(mp)", line 1017.
     #
     # @skipIf(HIDE_WINDOWS_KNOWN_ERRORS,
     #         "FIXME: fails with: PermissionError: [WinError 32] The process cannot access the file because"

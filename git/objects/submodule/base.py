@@ -29,7 +29,6 @@ from git.util import (
     unbare_repo,
     IterableList,
 )
-from git.util import HIDE_WINDOWS_KNOWN_ERRORS
 
 import os.path as osp
 
@@ -1060,28 +1059,13 @@ class Submodule(IndexObject, TraversableIterableObj):
                     import gc
 
                     gc.collect()
-                    try:
-                        rmtree(str(wtd))
-                    except Exception as ex:
-                        if HIDE_WINDOWS_KNOWN_ERRORS:
-                            from unittest import SkipTest
-
-                            raise SkipTest("FIXME: fails with: PermissionError\n  {}".format(ex)) from ex
-                        raise
+                    rmtree(str(wtd))
                 # END delete tree if possible
             # END handle force
 
             if not dry_run and osp.isdir(git_dir):
                 self._clear_cache()
-                try:
-                    rmtree(git_dir)
-                except Exception as ex:
-                    if HIDE_WINDOWS_KNOWN_ERRORS:
-                        from unittest import SkipTest
-
-                        raise SkipTest(f"FIXME: fails with: PermissionError\n  {ex}") from ex
-                    else:
-                        raise
+                rmtree(git_dir)
             # end handle separate bare repository
         # END handle module deletion
 
