@@ -182,7 +182,7 @@ def git_daemon_launched(base_path, ip, port):
             # and then CANNOT DIE!
             # So, invoke it as a single command.
             daemon_cmd = [
-                "git-daemon",
+                osp.join(Git()._call_process("--exec-path"), "git-daemon"),
                 "--enable=receive-pack",
                 "--listen=%s" % ip,
                 "--port=%s" % port,
