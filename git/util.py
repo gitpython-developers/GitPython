@@ -182,12 +182,12 @@ def rmtree(path: PathLike) -> None:
     :note: we use shutil rmtree but adjust its behaviour to see whether files that
         couldn't be deleted are read-only. Windows will not remove them in that case"""
 
-    def onerror(func: Callable, path: PathLike, exc_info: str) -> None:
+    def onerror(function: Callable, path: PathLike, _excinfo: Any) -> None:
         # Is the error an access error ?
         os.chmod(path, stat.S_IWUSR)
 
         try:
-            func(path)  # Will scream if still not possible to delete.
+            function(path)  # Will scream if still not possible to delete.
         except PermissionError as ex:
             if HIDE_WINDOWS_KNOWN_ERRORS:
                 from unittest import SkipTest
@@ -195,7 +195,7 @@ def rmtree(path: PathLike) -> None:
                 raise SkipTest(f"FIXME: fails with: PermissionError\n  {ex}") from ex
             raise
 
-    return shutil.rmtree(path, False, onerror)
+    shutil.rmtree(path, False, onerror)
 
 
 def rmfile(path: PathLike) -> None:
