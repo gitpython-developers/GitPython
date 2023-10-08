@@ -188,11 +188,11 @@ def rmtree(path: PathLike) -> None:
 
         try:
             func(path)  # Will scream if still not possible to delete.
-        except Exception as ex:
+        except PermissionError as ex:
             if HIDE_WINDOWS_KNOWN_ERRORS:
                 from unittest import SkipTest
 
-                raise SkipTest("FIXME: fails with: PermissionError\n  {}".format(ex)) from ex
+                raise SkipTest(f"FIXME: fails with: PermissionError\n  {ex}") from ex
             raise
 
     return shutil.rmtree(path, False, onerror)
