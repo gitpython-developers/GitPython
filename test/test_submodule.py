@@ -819,9 +819,11 @@ class TestSubmodule(TestBase):
         assert commit_sm.binsha == sm_too.binsha
         assert sm_too.binsha != sm.binsha
 
-    # @skipIf(HIDE_WINDOWS_KNOWN_ERRORS,  ## ACTUALLY skipped by `git.submodule.base#L869`.
-    #         "FIXME: helper.wrapper fails with: PermissionError: [WinError 5] Access is denied: "
-    #         "'C:\\Users\\appveyor\\AppData\\Local\\Temp\\1\\test_work_tree_unsupportedryfa60di\\master_repo\\.git\\objects\\pack\\pack-bc9e0787aef9f69e1591ef38ea0a6f566ec66fe3.idx")  # noqa E501
+    @pytest.mark.xfail(
+        HIDE_WINDOWS_KNOWN_ERRORS,
+        reason='"The process cannot access the file because it is being used by another process" on call to sm.move',
+        raises=PermissionError,
+    )
     @with_rw_directory
     def test_git_submodule_compatibility(self, rwdir):
         parent = git.Repo.init(osp.join(rwdir, "parent"))
