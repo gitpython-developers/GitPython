@@ -5,11 +5,13 @@
 # the BSD License: https://opensource.org/license/bsd-3-clause/
 
 import os
+import pathlib
 import pickle
+import stat
 import sys
 import tempfile
 import time
-from unittest import mock, skipUnless
+from unittest import SkipTest, mock, skipIf, skipUnless
 from datetime import datetime
 
 import ddt
@@ -19,25 +21,26 @@ from git.cmd import dashify
 from git.compat import is_win
 from git.objects.util import (
     altz_to_utctz_str,
-    utctz_to_altz,
-    verify_utctz,
+    from_timestamp,
     parse_date,
     tzoffset,
-    from_timestamp,
+    utctz_to_altz,
+    verify_utctz,
 )
 from test.lib import (
     TestBase,
     with_rw_repo,
 )
 from git.util import (
-    LockFile,
-    BlockingLockFile,
-    get_user_id,
     Actor,
+    BlockingLockFile,
     IterableList,
+    LockFile,
     cygpath,
     decygpath,
+    get_user_id,
     remove_password_if_present,
+    rmtree,
 )
 
 
@@ -84,6 +87,59 @@ class TestUtils(TestBase):
             "int": 42,
             "array": [42],
         }
+
+    def test_rmtree_deletes_nested_dir_with_files(self):
+        with tempfile.TemporaryDirectory() as parent:
+            td = pathlib.Path(parent, "testdir")
+            for d in td, td / "q", td / "s":
+                d.mkdir()
+            for f in td / "p", td / "q" / "w", td / "q" / "x", td / "r", td / "s" / "y", td / "s" / "z":
+                f.write_bytes(b"")
+
+            try:
+                rmtree(td)
+            except SkipTest as ex:
+                self.fail(f"rmtree unexpectedly attempts skip: {ex!r}")
+
+            self.assertFalse(td.exists())
+
+    @skipIf(sys.platform == "cygwin", "Cygwin can't set the permissions that make the test meaningful.")
+    def test_rmtree_deletes_dir_with_readonly_files(self):
+        # Automatically works on Unix, but requires special handling on Windows.
+        with tempfile.TemporaryDirectory() as parent:
+            td = pathlib.Path(parent, "testdir")
+            for d in td, td / "sub":
+                d.mkdir()
+            for f in td / "x", td / "sub" / "y":
+                f.write_bytes(b"")
+                f.chmod(0)
+
+            try:
+                rmtree(td)
+            except SkipTest as ex:
+                self.fail(f"rmtree unexpectedly attempts skip: {ex!r}")
+
+            self.assertFalse(td.exists())
+
+    @skipIf(sys.platform == "cygwin", "Cygwin can't set the permissions that make the test meaningful.")
+    @skipIf(sys.version_info < (3, 8), "In 3.7, TemporaryDirectory doesn't clean up after weird permissions.")
+    def test_rmtree_can_wrap_exceptions(self):
+        with tempfile.TemporaryDirectory() as parent:
+            td = pathlib.Path(parent, "testdir")
+            td.mkdir()
+            (td / "x").write_bytes(b"")
+            (td / "x").chmod(stat.S_IRUSR)  # Set up PermissionError on Windows.
+            td.chmod(stat.S_IRUSR | stat.S_IXUSR)  # Set up PermissionError on Unix.
+
+            # Access the module through sys.modules so it is unambiguous which module's
+            # attribute we patch: the original git.util, not git.index.util even though
+            # git.index.util "replaces" git.util and is what "import git.util" gives us.
+            with mock.patch.object(sys.modules["git.util"], "HIDE_WINDOWS_KNOWN_ERRORS", True):
+                # Disable common chmod functions so the callback can't fix the problem.
+                with mock.patch.object(os, "chmod"), mock.patch.object(pathlib.Path, "chmod"):
+                    # Now we can see how an intractable PermissionError is treated.
+                    with self.assertRaises(SkipTest):
+                        rmtree(td)
 
     # FIXME: Mark only the /proc-prefixing cases xfail, somehow (or fix them).
     @pytest.mark.xfail(
