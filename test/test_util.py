@@ -80,6 +80,30 @@ class TestIterableMember(object):
         return "TestIterableMember(%r)" % self.name
 
 
+@contextlib.contextmanager
+def _tmpdir_to_force_permission_error():
+    """Context manager to test permission errors in situations where we do not fix them."""
+    if sys.platform == "cygwin":
+        raise SkipTest("Cygwin can't set the permissions that make the test meaningful.")
+    if sys.version_info < (3, 8):
+        raise SkipTest("In 3.7, TemporaryDirectory doesn't clean up after weird permissions.")
+
+    with tempfile.TemporaryDirectory() as parent:
+        td = pathlib.Path(parent, "testdir")
+        td.mkdir()
+        (td / "x").write_bytes(b"")
+        (td / "x").chmod(stat.S_IRUSR)  # Set up PermissionError on Windows.
+        td.chmod(stat.S_IRUSR | stat.S_IXUSR)  # Set up PermissionError on Unix.
+        yield td
+
+
+@contextlib.contextmanager
+def _tmpdir_for_file_not_found():
+    """Context manager to test errors deleting a directory that are not due to permissions."""
+    with tempfile.TemporaryDirectory() as parent:
+        yield pathlib.Path(parent, "testdir")  # It is deliberately never created.
+
+
 @ddt.ddt
 class TestUtils(TestBase):
     def setup(self):
@@ -107,6 +131,7 @@ class TestUtils(TestBase):
     @skipIf(sys.platform == "cygwin", "Cygwin can't set the permissions that make the test meaningful.")
     def test_rmtree_deletes_dir_with_readonly_files(self):
         # Automatically works on Unix, but requires special handling on Windows.
+        # Not to be confused with _tmpdir_to_force_permission_error (which is used below).
         with tempfile.TemporaryDirectory() as parent:
             td = pathlib.Path(parent, "testdir")
             for d in td, td / "sub":
@@ -122,31 +147,9 @@ class TestUtils(TestBase):
 
             self.assertFalse(td.exists())
 
-    @staticmethod
-    @contextlib.contextmanager
-    def _tmpdir_to_force_permission_error():
-        if sys.platform == "cygwin":
-            raise SkipTest("Cygwin can't set the permissions that make the test meaningful.")
-        if sys.version_info < (3, 8):
-            raise SkipTest("In 3.7, TemporaryDirectory doesn't clean up after weird permissions.")
-
-        with tempfile.TemporaryDirectory() as parent:
-            td = pathlib.Path(parent, "testdir")
-            td.mkdir()
-            (td / "x").write_bytes(b"")
-            (td / "x").chmod(stat.S_IRUSR)  # Set up PermissionError on Windows.
-            td.chmod(stat.S_IRUSR | stat.S_IXUSR)  # Set up PermissionError on Unix.
-            yield td
-
-    @staticmethod
-    @contextlib.contextmanager
-    def _tmpdir_for_file_not_found():
-        with tempfile.TemporaryDirectory() as parent:
-            yield pathlib.Path(parent, "testdir")  # It is deliberately never created.
-
     def test_rmtree_can_wrap_exceptions(self):
         """Our rmtree wraps PermissionError when HIDE_WINDOWS_KNOWN_ERRORS is true."""
-        with self._tmpdir_to_force_permission_error() as td:
+        with _tmpdir_to_force_permission_error() as td:
             # Access the module through sys.modules so it is unambiguous which module's
             # attribute we patch: the original git.util, not git.index.util even though
             # git.index.util "replaces" git.util and is what "import git.util" gives us.
