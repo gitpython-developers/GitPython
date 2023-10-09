@@ -87,7 +87,14 @@ class TestUtils(TestBase):
             td = pathlib.Path(parent, "testdir")
             for d in td, td / "q", td / "s":
                 d.mkdir()
-            for f in td / "p", td / "q" / "w", td / "q" / "x", td / "r", td / "s" / "y", td / "s" / "z":
+            for f in (
+                td / "p",
+                td / "q" / "w",
+                td / "q" / "x",
+                td / "r",
+                td / "s" / "y",
+                td / "s" / "z",
+            ):
                 f.write_bytes(b"")
 
             try:
@@ -97,7 +104,10 @@ class TestUtils(TestBase):
 
             self.assertFalse(td.exists())
 
-    @skipIf(sys.platform == "cygwin", "Cygwin can't set the permissions that make the test meaningful.")
+    @skipIf(
+        sys.platform == "cygwin",
+        "Cygwin can't set the permissions that make the test meaningful.",
+    )
     def test_rmtree_deletes_dir_with_readonly_files(self):
         # Automatically works on Unix, but requires special handling on Windows.
         # Not to be confused with what _tmpdir_to_force_permission_error sets up (see below).
@@ -117,7 +127,7 @@ class TestUtils(TestBase):
             self.assertFalse(td.exists())
 
     def test_rmtree_can_wrap_exceptions(self):
-        """Our rmtree wraps PermissionError when HIDE_WINDOWS_KNOWN_ERRORS is true."""
+        """rmtree wraps PermissionError when HIDE_WINDOWS_KNOWN_ERRORS is true."""
         with _tmpdir_to_force_permission_error() as td:
             # Access the module through sys.modules so it is unambiguous which module's
             # attribute we patch: the original git.util, not git.index.util even though
@@ -135,18 +145,57 @@ class TestUtils(TestBase):
         (True, FileNotFoundError, _tmpdir_for_file_not_found),
     )
     def test_rmtree_does_not_wrap_unless_called_for(self, case):
-        """Our rmtree doesn't wrap non-PermissionError, nor when HIDE_WINDOWS_KNOWN_ERRORS is false."""
+        """rmtree doesn't wrap non-PermissionError, nor if HIDE_WINDOWS_KNOWN_ERRORS is false."""
         hide_windows_known_errors, exception_type, tmpdir_context_factory = case
 
         with tmpdir_context_factory() as td:
             # See comments in test_rmtree_can_wrap_exceptions regarding the patching done here.
-            with mock.patch.object(sys.modules["git.util"], "HIDE_WINDOWS_KNOWN_ERRORS", hide_windows_known_errors):
+            with mock.patch.object(
+                sys.modules["git.util"],
+                "HIDE_WINDOWS_KNOWN_ERRORS",
+                hide_windows_known_errors,
+            ):
                 with mock.patch.object(os, "chmod"), mock.patch.object(pathlib.Path, "chmod"):
                     with self.assertRaises(exception_type):
                         try:
                             rmtree(td)
                         except SkipTest as ex:
                             self.fail(f"rmtree unexpectedly attempts skip: {ex!r}")
+
+    @ddt.data("HIDE_WINDOWS_KNOWN_ERRORS", "HIDE_WINDOWS_FREEZE_ERRORS")
+    def test_env_vars_for_windows_tests(self, name):
+        def run_parse(value):
+            command = [
+                sys.executable,
+                "-c",
+                f"from git.util import {name}; print(repr({name}))",
+            ]
+            output = subprocess.check_output(
+                command,
+                env=None if value is None else dict(os.environ, **{name: value}),
+                text=True,
+            )
+            return ast.literal_eval(output)
+
+        for env_var_value, expected_truth_value in (
+            (None, os.name == "nt"),  # True on Windows when the environment variable is unset.
+            ("", False),
+            (" ", False),
+            ("0", False),
+            ("1", os.name == "nt"),
+            ("false", False),
+            ("true", os.name == "nt"),
+            ("False", False),
+            ("True", os.name == "nt"),
+            ("no", False),
+            ("yes", os.name == "nt"),
+            ("NO", False),
+            ("YES", os.name == "nt"),
+            (" no  ", False),
+            (" yes  ", os.name == "nt"),
+        ):
+            with self.subTest(env_var_value=env_var_value):
+                self.assertIs(run_parse(env_var_value), expected_truth_value)
 
     _norm_cygpath_pairs = (
         (R"foo\bar", "foo/bar"),
@@ -504,38 +553,3 @@ class TestUtils(TestBase):
 
         assert cmd_4 == remove_password_if_present(cmd_4)
         assert cmd_5 == remove_password_if_present(cmd_5)
-
-    @ddt.data("HIDE_WINDOWS_KNOWN_ERRORS", "HIDE_WINDOWS_FREEZE_ERRORS")
-    def test_env_vars_for_windows_tests(self, name):
-        def run_parse(value):
-            command = [
-                sys.executable,
-                "-c",
-                f"from git.util import {name}; print(repr({name}))",
-            ]
-            output = subprocess.check_output(
-                command,
-                env=None if value is None else dict(os.environ, **{name: value}),
-                text=True,
-            )
-            return ast.literal_eval(output)
-
-        for env_var_value, expected_truth_value in (
-            (None, os.name == "nt"),  # True on Windows when the environment variable is unset.
-            ("", False),
-            (" ", False),
-            ("0", False),
-            ("1", os.name == "nt"),
-            ("false", False),
-            ("true", os.name == "nt"),
-            ("False", False),
-            ("True", os.name == "nt"),
-            ("no", False),
-            ("yes", os.name == "nt"),
-            ("NO", False),
-            ("YES", os.name == "nt"),
-            (" no  ", False),
-            (" yes  ", os.name == "nt"),
-        ):
-            with self.subTest(env_var_value=env_var_value):
-                self.assertIs(run_parse(env_var_value), expected_truth_value)
