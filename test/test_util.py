@@ -58,7 +58,7 @@ class _Member:
 
 @contextlib.contextmanager
 def _tmpdir_to_force_permission_error():
-    """Context manager to test permission errors in situations where we do not fix them."""
+    """Context manager to test permission errors in situations where they are not overcome."""
     if sys.platform == "cygwin":
         raise SkipTest("Cygwin can't set the permissions that make the test meaningful.")
     if sys.version_info < (3, 8):
