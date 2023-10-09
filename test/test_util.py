@@ -5,6 +5,7 @@
 # the BSD License: https://opensource.org/license/bsd-3-clause/
 
 import contextlib
+from datetime import datetime
 import os
 import pathlib
 import pickle
@@ -13,7 +14,6 @@ import sys
 import tempfile
 import time
 from unittest import SkipTest, mock, skipIf, skipUnless
-from datetime import datetime
 
 import ddt
 import pytest
@@ -28,10 +28,6 @@ from git.objects.util import (
     utctz_to_altz,
     verify_utctz,
 )
-from test.lib import (
-    TestBase,
-    with_rw_repo,
-)
 from git.util import (
     Actor,
     BlockingLockFile,
@@ -43,41 +39,19 @@ from git.util import (
     remove_password_if_present,
     rmtree,
 )
+from test.lib import TestBase, with_rw_repo
 
 
-_norm_cygpath_pairs = (
-    (r"foo\bar", "foo/bar"),
-    (r"foo/bar", "foo/bar"),
-    (r"C:\Users", "/cygdrive/c/Users"),
-    (r"C:\d/e", "/cygdrive/c/d/e"),
-    ("C:\\", "/cygdrive/c/"),
-    (r"\\server\C$\Users", "//server/C$/Users"),
-    (r"\\server\C$", "//server/C$"),
-    ("\\\\server\\c$\\", "//server/c$/"),
-    (r"\\server\BAR/", "//server/BAR/"),
-    (r"D:/Apps", "/cygdrive/d/Apps"),
-    (r"D:/Apps\fOO", "/cygdrive/d/Apps/fOO"),
-    (r"D:\Apps/123", "/cygdrive/d/Apps/123"),
-)
+class _Member:
+    """A member of an IterableList."""
 
-_unc_cygpath_pairs = (
-    (r"\\?\a:\com", "/cygdrive/a/com"),
-    (r"\\?\a:/com", "/cygdrive/a/com"),
-    (r"\\?\UNC\server\D$\Apps", "//server/D$/Apps"),
-)
-
-
-class TestIterableMember(object):
-
-    """A member of an iterable list"""
-
-    __slots__ = "name"
+    __slots__ = ("name",)
 
     def __init__(self, name):
         self.name = name
 
     def __repr__(self):
-        return "TestIterableMember(%r)" % self.name
+        return f"{type(self).__name__}({self.name!r})"
 
 
 @contextlib.contextmanager
@@ -106,13 +80,6 @@ def _tmpdir_for_file_not_found():
 
 @ddt.ddt
 class TestUtils(TestBase):
-    def setup(self):
-        self.testdict = {
-            "string": "42",
-            "int": 42,
-            "array": [42],
-        }
-
     def test_rmtree_deletes_nested_dir_with_files(self):
         with tempfile.TemporaryDirectory() as parent:
             td = pathlib.Path(parent, "testdir")
@@ -131,7 +98,7 @@ class TestUtils(TestBase):
     @skipIf(sys.platform == "cygwin", "Cygwin can't set the permissions that make the test meaningful.")
     def test_rmtree_deletes_dir_with_readonly_files(self):
         # Automatically works on Unix, but requires special handling on Windows.
-        # Not to be confused with _tmpdir_to_force_permission_error (which is used below).
+        # Not to be confused with what _tmpdir_to_force_permission_error sets up (see below).
         with tempfile.TemporaryDirectory() as parent:
             td = pathlib.Path(parent, "testdir")
             for d in td, td / "sub":
@@ -179,6 +146,27 @@ class TestUtils(TestBase):
                         except SkipTest as ex:
                             self.fail(f"rmtree unexpectedly attempts skip: {ex!r}")
 
+    _norm_cygpath_pairs = (
+        (R"foo\bar", "foo/bar"),
+        (R"foo/bar", "foo/bar"),
+        (R"C:\Users", "/cygdrive/c/Users"),
+        (R"C:\d/e", "/cygdrive/c/d/e"),
+        ("C:\\", "/cygdrive/c/"),
+        (R"\\server\C$\Users", "//server/C$/Users"),
+        (R"\\server\C$", "//server/C$"),
+        ("\\\\server\\c$\\", "//server/c$/"),
+        (R"\\server\BAR/", "//server/BAR/"),
+        (R"D:/Apps", "/cygdrive/d/Apps"),
+        (R"D:/Apps\fOO", "/cygdrive/d/Apps/fOO"),
+        (R"D:\Apps/123", "/cygdrive/d/Apps/123"),
+    )
+
+    _unc_cygpath_pairs = (
+        (R"\\?\a:\com", "/cygdrive/a/com"),
+        (R"\\?\a:/com", "/cygdrive/a/com"),
+        (R"\\?\UNC\server\D$\Apps", "//server/D$/Apps"),
+    )
+
     # FIXME: Mark only the /proc-prefixing cases xfail, somehow (or fix them).
     @pytest.mark.xfail(
         reason="Many return paths prefixed /proc/cygdrive instead.",
@@ -192,16 +180,16 @@ class TestUtils(TestBase):
         self.assertEqual(cwpath, cpath, wpath)
 
     @pytest.mark.xfail(
-        reason=r'2nd example r".\bar" -> "bar" fails, returns "./bar"',
+        reason=R'2nd example r".\bar" -> "bar" fails, returns "./bar"',
         raises=AssertionError,
     )
     @skipUnless(sys.platform == "cygwin", "Paths specifically for Cygwin.")
     @ddt.data(
-        (r"./bar", "bar"),
-        (r".\bar", "bar"),  # FIXME: Mark only this one xfail, somehow (or fix it).
-        (r"../bar", "../bar"),
-        (r"..\bar", "../bar"),
-        (r"../bar/.\foo/../chu", "../bar/chu"),
+        (R"./bar", "bar"),
+        (R".\bar", "bar"),  # FIXME: Mark only this one xfail, somehow (or fix it).
+        (R"../bar", "../bar"),
+        (R"..\bar", "../bar"),
+        (R"../bar/.\foo/../chu", "../bar/chu"),
     )
     def test_cygpath_norm_ok(self, case):
         wpath, cpath = case
@@ -210,12 +198,12 @@ class TestUtils(TestBase):
 
     @skipUnless(sys.platform == "cygwin", "Paths specifically for Cygwin.")
     @ddt.data(
-        r"C:",
-        r"C:Relative",
-        r"D:Apps\123",
-        r"D:Apps/123",
-        r"\\?\a:rel",
-        r"\\share\a:rel",
+        R"C:",
+        R"C:Relative",
+        R"D:Apps\123",
+        R"D:Apps/123",
+        R"\\?\a:rel",
+        R"\\share\a:rel",
     )
     def test_cygpath_invalids(self, wpath):
         cwpath = cygpath(wpath)
@@ -380,15 +368,18 @@ class TestUtils(TestBase):
             Actor("name last another", "some-very-long-email@example.com"),
         )
 
-    @ddt.data(("name", ""), ("name", "prefix_"))
+    @ddt.data(
+        ("name", ""),
+        ("name", "prefix_"),
+    )
     def test_iterable_list(self, case):
         name, prefix = case
         ilist = IterableList(name, prefix)
 
         name1 = "one"
         name2 = "two"
-        m1 = TestIterableMember(prefix + name1)
-        m2 = TestIterableMember(prefix + name2)
+        m1 = _Member(prefix + name1)
+        m2 = _Member(prefix + name2)
 
         ilist.extend((m1, m2))
 
