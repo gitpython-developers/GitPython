@@ -4,6 +4,7 @@
 # This module is part of GitPython and is released under
 # the BSD License: https://opensource.org/license/bsd-3-clause/
 
+import contextlib
 import os
 import pathlib
 import pickle
@@ -121,16 +122,31 @@ class TestUtils(TestBase):
 
             self.assertFalse(td.exists())
 
-    @skipIf(sys.platform == "cygwin", "Cygwin can't set the permissions that make the test meaningful.")
-    @skipIf(sys.version_info < (3, 8), "In 3.7, TemporaryDirectory doesn't clean up after weird permissions.")
-    def test_rmtree_can_wrap_exceptions(self):
+    @staticmethod
+    @contextlib.contextmanager
+    def _tmpdir_to_force_permission_error():
+        if sys.platform == "cygwin":
+            raise SkipTest("Cygwin can't set the permissions that make the test meaningful.")
+        if sys.version_info < (3, 8):
+            raise SkipTest("In 3.7, TemporaryDirectory doesn't clean up after weird permissions.")
+
         with tempfile.TemporaryDirectory() as parent:
             td = pathlib.Path(parent, "testdir")
             td.mkdir()
             (td / "x").write_bytes(b"")
             (td / "x").chmod(stat.S_IRUSR)  # Set up PermissionError on Windows.
             td.chmod(stat.S_IRUSR | stat.S_IXUSR)  # Set up PermissionError on Unix.
+            yield td
 
+    @staticmethod
+    @contextlib.contextmanager
+    def _tmpdir_for_file_not_found():
+        with tempfile.TemporaryDirectory() as parent:
+            yield pathlib.Path(parent, "testdir")  # It is deliberately never created.
+
+    def test_rmtree_can_wrap_exceptions(self):
+        """Our rmtree wraps PermissionError when HIDE_WINDOWS_KNOWN_ERRORS is true."""
+        with self._tmpdir_to_force_permission_error() as td:
             # Access the module through sys.modules so it is unambiguous which module's
             # attribute we patch: the original git.util, not git.index.util even though
             # git.index.util "replaces" git.util and is what "import git.util" gives us.
@@ -140,6 +156,25 @@ class TestUtils(TestBase):
                     # Now we can see how an intractable PermissionError is treated.
                     with self.assertRaises(SkipTest):
                         rmtree(td)
+
+    @ddt.data(
+        (False, PermissionError, _tmpdir_to_force_permission_error),
+        (False, FileNotFoundError, _tmpdir_for_file_not_found),
+        (True, FileNotFoundError, _tmpdir_for_file_not_found),
+    )
+    def test_rmtree_does_not_wrap_unless_called_for(self, case):
+        """Our rmtree doesn't wrap non-PermissionError, nor when HIDE_WINDOWS_KNOWN_ERRORS is false."""
+        hide_windows_known_errors, exception_type, tmpdir_context_factory = case
+
+        with tmpdir_context_factory() as td:
+            # See comments in test_rmtree_can_wrap_exceptions regarding the patching done here.
+            with mock.patch.object(sys.modules["git.util"], "HIDE_WINDOWS_KNOWN_ERRORS", hide_windows_known_errors):
+                with mock.patch.object(os, "chmod"), mock.patch.object(pathlib.Path, "chmod"):
+                    with self.assertRaises(exception_type):
+                        try:
+                            rmtree(td)
+                        except SkipTest as ex:
+                            self.fail(f"rmtree unexpectedly attempts skip: {ex!r}")
 
     # FIXME: Mark only the /proc-prefixing cases xfail, somehow (or fix them).
     @pytest.mark.xfail(
