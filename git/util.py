@@ -170,17 +170,18 @@ def patch_env(name: str, value: str) -> Generator[None, None, None]:
 
 
 def rmtree(path: PathLike) -> None:
-    """Remove the given recursively.
+    """Remove the given directory tree recursively.
 
-    :note: we use shutil rmtree but adjust its behaviour to see whether files that
-        couldn't be deleted are read-only. Windows will not remove them in that case"""
+    :note: We use :func:`shutil.rmtree` but adjust its behaviour to see whether files that
+        couldn't be deleted are read-only. Windows will not remove them in that case."""
 
     def handler(function: Callable, path: PathLike, _excinfo: Any) -> None:
-        # Is the error an access error ?
+        """Callback for :func:`shutil.rmtree`. Works either as ``onexc`` or ``onerror``."""
+        # Is the error an access error?
         os.chmod(path, stat.S_IWUSR)
 
         try:
-            function(path)  # Will scream if still not possible to delete.
+            function(path)
         except PermissionError as ex:
             if HIDE_WINDOWS_KNOWN_ERRORS:
                 from unittest import SkipTest
