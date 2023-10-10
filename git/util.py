@@ -5,24 +5,24 @@
 # the BSD License: https://opensource.org/license/bsd-3-clause/
 
 from abc import abstractmethod
-import os.path as osp
-from .compat import is_win
 import contextlib
 from functools import wraps
 import getpass
 import logging
 import os
+import os.path as osp
+import pathlib
 import platform
-import subprocess
 import re
 import shutil
 import stat
-from sys import maxsize
+import subprocess
+import sys
 import time
 from urllib.parse import urlsplit, urlunsplit
 import warnings
 
-# from git.objects.util import Traversable
+from .compat import is_win
 
 # typing ---------------------------------------------------------
 
@@ -42,21 +42,16 @@ from typing import (
     Tuple,
     TypeVar,
     Union,
-    cast,
     TYPE_CHECKING,
+    cast,
     overload,
 )
-
-import pathlib
 
 if TYPE_CHECKING:
     from git.remote import Remote
     from git.repo.base import Repo
     from git.config import GitConfigParser, SectionConstraint
     from git import Git
-
-    # from git.objects.base import IndexObject
-
 
 from .types import (
     Literal,
@@ -75,7 +70,6 @@ T_IterableObj = TypeVar("T_IterableObj", bound=Union["IterableObj", "Has_id_attr
 
 # ---------------------------------------------------------------------
 
-
 from gitdb.util import (  # NOQA @IgnorePep8
     make_sha,
     LockedFD,  # @UnusedImport
@@ -87,7 +81,6 @@ from gitdb.util import (  # NOQA @IgnorePep8
     bin_to_hex,  # @UnusedImport
     hex_to_bin,  # @UnusedImport
 )
-
 
 # NOTE:  Some of the unused imports might be used/imported by others.
 # Handle once test-cases are back up and running.
@@ -116,14 +109,33 @@ __all__ = [
 
 log = logging.getLogger(__name__)
 
-# types############################################################
+
+def _read_env_flag(name: str, default: bool) -> bool:
+    try:
+        value = os.environ[name]
+    except KeyError:
+        return default
+
+    log.warning(
+        "The %s environment variable is deprecated. Its effect has never been documented and changes without warning.",
+        name,
+    )
+
+    adjusted_value = value.strip().lower()
+
+    if adjusted_value in {"", "0", "false", "no"}:
+        return False
+    if adjusted_value in {"1", "true", "yes"}:
+        return True
+    log.warning("%s has unrecognized value %r, treating as %r.", name, value, default)
+    return default
 
 
 #: We need an easy way to see if Appveyor TCs start failing,
 #: so the errors marked with this var are considered "acknowledged" ones, awaiting remedy,
 #: till then, we wish to hide them.
-HIDE_WINDOWS_KNOWN_ERRORS = is_win and os.environ.get("HIDE_WINDOWS_KNOWN_ERRORS", True)
-HIDE_WINDOWS_FREEZE_ERRORS = is_win and os.environ.get("HIDE_WINDOWS_FREEZE_ERRORS", True)
+HIDE_WINDOWS_KNOWN_ERRORS = is_win and _read_env_flag("HIDE_WINDOWS_KNOWN_ERRORS", True)
+HIDE_WINDOWS_FREEZE_ERRORS = is_win and _read_env_flag("HIDE_WINDOWS_FREEZE_ERRORS", True)
 
 # { Utility Methods
 
@@ -177,25 +189,29 @@ def patch_env(name: str, value: str) -> Generator[None, None, None]:
 
 
 def rmtree(path: PathLike) -> None:
-    """Remove the given recursively.
+    """Remove the given directory tree recursively.
 
-    :note: we use shutil rmtree but adjust its behaviour to see whether files that
-        couldn't be deleted are read-only. Windows will not remove them in that case"""
+    :note: We use :func:`shutil.rmtree` but adjust its behaviour to see whether files that
+        couldn't be deleted are read-only. Windows will not remove them in that case."""
 
-    def onerror(func: Callable, path: PathLike, exc_info: str) -> None:
-        # Is the error an access error ?
+    def handler(function: Callable, path: PathLike, _excinfo: Any) -> None:
+        """Callback for :func:`shutil.rmtree`. Works either as ``onexc`` or ``onerror``."""
+        # Is the error an access error?
         os.chmod(path, stat.S_IWUSR)
 
         try:
-            func(path)  # Will scream if still not possible to delete.
-        except Exception as ex:
+            function(path)
+        except PermissionError as ex:
             if HIDE_WINDOWS_KNOWN_ERRORS:
                 from unittest import SkipTest
 
-                raise SkipTest("FIXME: fails with: PermissionError\n  {}".format(ex)) from ex
+                raise SkipTest(f"FIXME: fails with: PermissionError\n  {ex}") from ex
             raise
 
-    return shutil.rmtree(path, False, onerror)
+    if sys.version_info >= (3, 12):
+        shutil.rmtree(path, onexc=handler)
+    else:
+        shutil.rmtree(path, onerror=handler)
 
 
 def rmfile(path: PathLike) -> None:
@@ -995,7 +1011,7 @@ class BlockingLockFile(LockFile):
         self,
         file_path: PathLike,
         check_interval_s: float = 0.3,
-        max_block_time_s: int = maxsize,
+        max_block_time_s: int = sys.maxsize,
     ) -> None:
         """Configure the instance
 

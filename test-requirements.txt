@@ -7,4 +7,5 @@ pre-commit
 pytest
 pytest-cov
 pytest-instafail
+pytest-subtests
 pytest-sugar
