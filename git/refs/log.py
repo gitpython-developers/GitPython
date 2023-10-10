@@ -41,7 +41,7 @@ class RefLogEntry(Tuple[str, str, Actor, Tuple[int, int], str]):
 
     """Named tuple allowing easy access to the revlog data fields"""
 
-    _re_hexsha_only = re.compile("^[0-9A-Fa-f]{40}$")
+    _re_hexsha_only = re.compile(r"^[0-9A-Fa-f]{40}$")
     __slots__ = ()
 
     def __repr__(self) -> str:

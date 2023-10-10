@@ -264,7 +264,7 @@ class Git(LazyMixin):
 
     _excluded_ = ("cat_file_all", "cat_file_header", "_version_info")
 
-    re_unsafe_protocol = re.compile("(.+)::.+")
+    re_unsafe_protocol = re.compile(r"(.+)::.+")
 
     def __getstate__(self) -> Dict[str, Any]:
         return slots_to_dict(self, exclude=self._excluded_)

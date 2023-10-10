@@ -53,7 +53,7 @@ __all__ = ("Diffable", "DiffIndex", "Diff", "NULL_TREE")
 # Special object to compare against the empty tree in diffs
 NULL_TREE = object()
 
-_octal_byte_re = re.compile(b"\\\\([0-9]{3})")
+_octal_byte_re = re.compile(rb"\\([0-9]{3})")
 
 
 def _octal_repl(matchobj: Match) -> bytes:

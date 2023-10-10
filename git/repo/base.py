@@ -131,8 +131,8 @@ class Repo(object):
 
     # precompiled regex
     re_whitespace = re.compile(r"\s+")
-    re_hexsha_only = re.compile("^[0-9A-Fa-f]{40}$")
-    re_hexsha_shortened = re.compile("^[0-9A-Fa-f]{4,40}$")
+    re_hexsha_only = re.compile(r"^[0-9A-Fa-f]{40}$")
+    re_hexsha_shortened = re.compile(r"^[0-9A-Fa-f]{4,40}$")
     re_envvars = re.compile(r"(\$(\{\s?)?[a-zA-Z_]\w*(\}\s?)?|%\s?[a-zA-Z_]\w*\s?%)")
     re_author_committer_start = re.compile(r"^(author|committer)")
     re_tab_full_line = re.compile(r"^\t(.*)$")
