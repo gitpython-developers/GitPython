@@ -76,9 +76,10 @@ To clone the [the GitHub repository](https://github.com/gitpython-developers/Git
 ```bash
 git clone https://github.com/gitpython-developers/GitPython
 cd GitPython
-git fetch --tags
 ./init-tests-after-clone.sh
 ```
+
+On Windows, `./init-tests-after-clone.sh` can be run in a Git Bash shell.
 
 If you are cloning [your own fork](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/about-forks), then replace the above `git clone` command with one that gives the URL of your fork. Or use this [`gh`](https://cli.github.com/) command (assuming you have `gh` and your fork is called `GitPython`):
 
@@ -86,7 +87,9 @@ If you are cloning [your own fork](https://docs.github.com/en/pull-requests/coll
 gh repo clone GitPython
 ```
 
-Having cloned the repo, create and activate your [virtual environment](https://docs.python.org/3/tutorial/venv.html). Then make an [editable install](https://pip.pypa.io/en/stable/topics/local-project-installs/#editable-installs):
+Having cloned the repo, create and activate your [virtual environment](https://docs.python.org/3/tutorial/venv.html).
+
+Then make an [editable install](https://pip.pypa.io/en/stable/topics/local-project-installs/#editable-installs):
 
 ```bash
 pip install -e ".[test]"
@@ -114,13 +117,9 @@ See [Issue #525](https://github.com/gitpython-developers/GitPython/issues/525).
 
 ### RUNNING TESTS
 
-_Important_: Right after cloning this repository, please be sure to have
-executed `git fetch --tags` followed by the `./init-tests-after-clone.sh`
-script in the repository root. Otherwise you will encounter test failures.
-
-On _Windows_, make sure you have `git-daemon` in your PATH. For MINGW-git, the `git-daemon.exe`
-exists in `Git\mingw64\libexec\git-core\`; CYGWIN has no daemon, but should get along fine
-with MINGW's.
+_Important_: Right after cloning this repository, please be sure to have executed
+the `./init-tests-after-clone.sh` script in the repository root. Otherwise
+you will encounter test failures.
 
 #### Install test dependencies
 
@@ -144,11 +143,14 @@ To test, run:
 pytest
 ```
 
-To lint, run:
+To lint, and apply automatic code formatting, run:
 
 ```bash
 pre-commit run --all-files
 ```
+
+- Linting without modifying code can be done with: `make lint`
+- Auto-formatting without other lint checks can be done with: `black .`
 
 To typecheck, run:
 
@@ -156,18 +158,26 @@ To typecheck, run:
 mypy -p git
 ```
 
-For automatic code formatting, run:
+#### CI (and tox)
 
-```bash
-black git
-```
+The same linting, and running tests on all the different supported Python versions, will be performed:
 
-Configuration for flake8 is in the `./.flake8` file.
+- Upon submitting a pull request.
+- On each push, *if* you have a fork with GitHub Actions enabled.
+- Locally, if you run [`tox`](https://tox.wiki/) (this skips any Python versions you don't have installed).
 
-Configurations for `mypy`, `pytest`, `coverage.py`, and `black` are in `./pyproject.toml`.
+#### Configuration files
 
-The same linting and testing will also be performed against different supported python versions
-upon submitting a pull request (or on each push if you have a fork with a "main" branch and actions enabled).
+Specific tools:
+
+- Configurations for `mypy`, `pytest`, `coverage.py`, and `black` are in `./pyproject.toml`.
+- Configuration for `flake8` is in the `./.flake8` file.
+
+Orchestration tools:
+
+- Configuration for `pre-commit` is in the `./.pre-commit-config.yaml` file.
+- Configuration for `tox` is in `./tox.ini`.
+- Configuration for GitHub Actions (CI) is in files inside `./.github/workflows/`.
 
 ### Contributions
 
@@ -177,7 +187,7 @@ Please have a look at the [contributions file][contributing].
 
 - [User Documentation](http://gitpython.readthedocs.org)
 - [Questions and Answers](http://stackexchange.com/filters/167317/gitpython)
-- Please post on stackoverflow and use the `gitpython` tag
+- Please post on Stack Overflow and use the `gitpython` tag
 - [Issue Tracker](https://github.com/gitpython-developers/GitPython/issues)
   - Post reproducible bugs and feature requests as a new issue.
     Please be sure to provide the following information if posting bugs:
@@ -267,6 +277,7 @@ gpg --edit-key 4C08421980C9
 
 ### LICENSE
 
-New BSD License. See the LICENSE file.
+[New BSD License](https://opensource.org/license/bsd-3-clause/). See the [LICENSE file][license].
 
-[contributing]: https://github.com/gitpython-developers/GitPython/blob/master/CONTRIBUTING.md
+[contributing]: https://github.com/gitpython-developers/GitPython/blob/main/CONTRIBUTING.md
+[license]: https://github.com/gitpython-developers/GitPython/blob/main/LICENSE

@@ -1,9 +1,11 @@
 # This module is part of GitPython and is released under
-# the BSD License: http://www.opensource.org/licenses/bsd-license.php
+# the BSD License: https://opensource.org/license/bsd-3-clause/
 
 import ast
 import os
 import subprocess
+import sys
+
 from git.compat import is_win
 from test.lib import TestBase
 from test.lib.helper import with_rw_directory
@@ -12,7 +14,7 @@ from test.lib.helper import with_rw_directory
 class TestInstallation(TestBase):
     def setUp_venv(self, rw_dir):
         self.venv = rw_dir
-        subprocess.run(["virtualenv", self.venv], stdout=subprocess.PIPE)
+        subprocess.run([sys.executable, "-m", "venv", self.venv], stdout=subprocess.PIPE)
         bin_name = "Scripts" if is_win else "bin"
         self.python = os.path.join(self.venv, bin_name, "python")
         self.pip = os.path.join(self.venv, bin_name, "pip")

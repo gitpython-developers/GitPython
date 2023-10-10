@@ -2,7 +2,7 @@
 # Copyright (C) 2008, 2009 Michael Trier (mtrier@gmail.com) and contributors
 #
 # This module is part of GitPython and is released under
-# the BSD License: http://www.opensource.org/licenses/bsd-license.php
+# the BSD License: https://opensource.org/license/bsd-3-clause/
 from __future__ import annotations
 import logging
 import os
@@ -206,7 +206,8 @@ class Repo(object):
         if expand_vars and re.search(self.re_envvars, epath):
             warnings.warn(
                 "The use of environment variables in paths is deprecated"
-                + "\nfor security reasons and may be removed in the future!!"
+                + "\nfor security reasons and may be removed in the future!!",
+                stacklevel=1,
             )
         epath = expand_path(epath, expand_vars)
         if epath is not None:

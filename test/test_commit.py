@@ -3,7 +3,7 @@
 # Copyright (C) 2008, 2009 Michael Trier (mtrier@gmail.com) and contributors
 #
 # This module is part of GitPython and is released under
-# the BSD License: http://www.opensource.org/licenses/bsd-license.php
+# the BSD License: https://opensource.org/license/bsd-3-clause/
 import copy
 from datetime import datetime
 from io import BytesIO
@@ -93,7 +93,6 @@ class TestCommitSerialization(TestBase):
 
 class TestCommit(TestCommitSerialization):
     def test_bake(self):
-
         commit = self.rorepo.commit("2454ae89983a4496a445ce347d7a41c0bb0ea7ae")
         # commits have no dict
         self.assertRaises(AttributeError, setattr, commit, "someattr", 1)
@@ -170,15 +169,15 @@ class TestCommit(TestCommitSerialization):
 
         def check_entries(path, changes):
             expected = {
-                ".github/workflows/Future.yml" : {
-                    'insertions': 57,
-                    'deletions': 0,
-                    'lines': 57
+                ".github/workflows/Future.yml": {
+                    "insertions": 57,
+                    "deletions": 0,
+                    "lines": 57,
                 },
-                ".github/workflows/test_pytest.yml" : {
-                    'insertions': 0,
-                    'deletions': 55,
-                    'lines': 55
+                ".github/workflows/test_pytest.yml": {
+                    "insertions": 0,
+                    "deletions": 55,
+                    "lines": 55,
                 },
             }
             assert path in expected
@@ -278,7 +277,7 @@ class TestCommit(TestCommitSerialization):
                 super(Child, self).__init__(*args, **kwargs)
 
         child_commits = list(Child.iter_items(self.rorepo, "master", paths=("CHANGES", "AUTHORS")))
-        assert type(child_commits[0]) == Child
+        assert type(child_commits[0]) is Child
 
     def test_iter_items(self):
         # pretty not allowed
@@ -526,12 +525,12 @@ JzJMZDRLQLFvnzqZuCjE
 
         # check that trailer stays empty for multiple msg combinations
         msgs = [
-            f"Subject\n",
-            f"Subject\n\nBody with some\nText\n",
-            f"Subject\n\nBody with\nText\n\nContinuation but\n doesn't contain colon\n",
-            f"Subject\n\nBody with\nText\n\nContinuation but\n only contains one :\n",
-            f"Subject\n\nBody with\nText\n\nKey: Value\nLine without colon\n",
-            f"Subject\n\nBody with\nText\n\nLine without colon\nKey: Value\n",
+            "Subject\n",
+            "Subject\n\nBody with some\nText\n",
+            "Subject\n\nBody with\nText\n\nContinuation but\n doesn't contain colon\n",
+            "Subject\n\nBody with\nText\n\nContinuation but\n only contains one :\n",
+            "Subject\n\nBody with\nText\n\nKey: Value\nLine without colon\n",
+            "Subject\n\nBody with\nText\n\nLine without colon\nKey: Value\n",
         ]
 
         for msg in msgs:

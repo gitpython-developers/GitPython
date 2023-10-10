@@ -3,7 +3,7 @@
 # Copyright (C) 2008, 2009 Michael Trier (mtrier@gmail.com) and contributors
 #
 # This module is part of GitPython and is released under
-# the BSD License: http://www.opensource.org/licenses/bsd-license.php
+# the BSD License: https://opensource.org/license/bsd-3-clause/
 import os
 import sys
 
@@ -21,7 +21,10 @@ class Tutorials(TestBase):
 
         gc.collect()
 
-    # @skipIf(HIDE_WINDOWS_KNOWN_ERRORS,  ## ACTUALLY skipped by `git.submodule.base#L869`.
+    # ACTUALLY skipped by git.util.rmtree (in local onerror function), from the last call to it via
+    # git.objects.submodule.base.Submodule.remove (at "handle separate bare repository"), line 1062.
+    #
+    # @skipIf(HIDE_WINDOWS_KNOWN_ERRORS,
     #         "FIXME: helper.wrapper fails with: PermissionError: [WinError 5] Access is denied: "
     #         "'C:\\Users\\appveyor\\AppData\\Local\\Temp\\1\\test_work_tree_unsupportedryfa60di\\master_repo\\.git\\objects\\pack\\pack-bc9e0787aef9f69e1591ef38ea0a6f566ec66fe3.idx")  # noqa E501
     @with_rw_directory
@@ -167,7 +170,7 @@ class Tutorials(TestBase):
         open(new_file_path, "wb").close()  # create new file in working tree
         cloned_repo.index.add([new_file_path])  # add it to the index
         # Commit the changes to deviate masters history
-        cloned_repo.index.commit("Added a new file in the past - for later merege")
+        cloned_repo.index.commit("Added a new file in the past - for later merge")
 
         # prepare a merge
         master = cloned_repo.heads.master  # right-hand side is ahead of us, in the future
@@ -198,7 +201,7 @@ class Tutorials(TestBase):
 
         # .gitmodules was written and added to the index, which is now being committed
         cloned_repo.index.commit("Added submodule")
-        assert sm.exists() and sm.module_exists()  # this submodule is defintely available
+        assert sm.exists() and sm.module_exists()  # this submodule is definitely available
         sm.remove(module=True, configuration=False)  # remove the working tree
         assert sm.exists() and not sm.module_exists()  # the submodule itself is still available
 
@@ -263,9 +266,9 @@ class Tutorials(TestBase):
         # [8-test_references_and_objects]
         hc = repo.head.commit
         hct = hc.tree
-        hc != hct  # @NoEffect
-        hc != repo.tags[0]  # @NoEffect
-        hc == repo.head.reference.commit  # @NoEffect
+        assert hc != hct
+        assert hc != repo.tags[0]
+        assert hc == repo.head.reference.commit
         # ![8-test_references_and_objects]
 
         # [9-test_references_and_objects]
@@ -369,7 +372,7 @@ class Tutorials(TestBase):
         # The index contains all blobs in a flat list
         assert len(list(index.iter_blobs())) == len([o for o in repo.head.commit.tree.traverse() if o.type == "blob"])
         # Access blob objects
-        for (_path, _stage), entry in index.entries.items():
+        for (_path, _stage), _entry in index.entries.items():
             pass
         new_file_path = os.path.join(repo.working_tree_dir, "new-file-name")
         open(new_file_path, "w").close()
@@ -481,7 +484,7 @@ class Tutorials(TestBase):
     @pytest.mark.xfail(
         sys.platform == "cygwin",
         reason="Cygwin GitPython can't find SHA for submodule",
-        raises=ValueError
+        raises=ValueError,
     )
     def test_submodules(self):
         # [1-test_submodules]

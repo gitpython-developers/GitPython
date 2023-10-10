@@ -2,7 +2,7 @@
 # Copyright (C) 2008, 2009 Michael Trier (mtrier@gmail.com) and contributors
 #
 # This module is part of GitPython and is released under
-# the BSD License: http://www.opensource.org/licenses/bsd-license.php
+# the BSD License: https://opensource.org/license/bsd-3-clause/
 
 from contextlib import ExitStack
 import datetime
@@ -224,13 +224,11 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         lfd = LockedFD(file_path or self._file_path)
         stream = lfd.open(write=True, stream=True)
 
-        ok = False
         try:
             self._serialize(stream, ignore_extension_data)
-            ok = True
-        finally:
-            if not ok:
-                lfd.rollback()
+        except BaseException:
+            lfd.rollback()
+            raise
 
         lfd.commit()
 

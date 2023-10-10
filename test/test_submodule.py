@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 # This module is part of GitPython and is released under
-# the BSD License: http://www.opensource.org/licenses/bsd-license.php
+# the BSD License: https://opensource.org/license/bsd-3-clause/
 import contextlib
 import os
 import shutil
 import tempfile
 from pathlib import Path
 import sys
-from unittest import mock, skipIf
+from unittest import mock, skipUnless
 
 import pytest
 
@@ -39,11 +39,14 @@ def _patch_git_config(name, value):
 
     # This is recomputed each time the context is entered, for compatibility with
     # existing GIT_CONFIG_* environment variables, even if changed in this process.
-    patcher = mock.patch.dict(os.environ, {
-        "GIT_CONFIG_COUNT": str(pair_index + 1),
-        f"GIT_CONFIG_KEY_{pair_index}": name,
-        f"GIT_CONFIG_VALUE_{pair_index}": value,
-    })
+    patcher = mock.patch.dict(
+        os.environ,
+        {
+            "GIT_CONFIG_COUNT": str(pair_index + 1),
+            f"GIT_CONFIG_KEY_{pair_index}": name,
+            f"GIT_CONFIG_VALUE_{pair_index}": value,
+        },
+    )
 
     with patcher:
         yield
@@ -108,7 +111,7 @@ class TestSubmodule(TestBase):
 
         # force it to reread its information
         del smold._url
-        smold.url == sm.url  # @NoEffect
+        smold.url == sm.url  # noqa: B015  # FIXME: Should this be an assertion?
 
         # test config_reader/writer methods
         sm.config_reader()
@@ -245,7 +248,7 @@ class TestSubmodule(TestBase):
             assert csm.module_exists()
 
             # tracking branch once again
-            csm.module().head.ref.tracking_branch() is not None  # @NoEffect
+            assert csm.module().head.ref.tracking_branch() is not None
 
             # this flushed in a sub-submodule
             assert len(list(rwrepo.iter_submodules())) == 2
@@ -454,7 +457,10 @@ class TestSubmodule(TestBase):
             True,
         )
 
-    # @skipIf(HIDE_WINDOWS_KNOWN_ERRORS,  ## ACTUALLY skipped by `git.submodule.base#L869`.
+    # ACTUALLY skipped by git.util.rmtree (in local onerror function), called via
+    # git.objects.submodule.base.Submodule.remove at "method(mp)", line 1011.
+    #
+    # @skipIf(HIDE_WINDOWS_KNOWN_ERRORS,
     #         "FIXME: fails with: PermissionError: [WinError 32] The process cannot access the file because"
     #         "it is being used by another process: "
     #         "'C:\\Users\\ankostis\\AppData\\Local\\Temp\\tmp95c3z83bnon_bare_test_base_rw\\git\\ext\\gitdb\\gitdb\\ext\\smmap'")  # noqa E501
@@ -469,16 +475,16 @@ class TestSubmodule(TestBase):
     @pytest.mark.xfail(
         sys.platform == "cygwin",
         reason="Cygwin GitPython can't find submodule SHA",
-        raises=ValueError
+        raises=ValueError,
     )
-    @skipIf(
+    @pytest.mark.xfail(
         HIDE_WINDOWS_KNOWN_ERRORS,
-        """
-        File "C:\\projects\\gitpython\\git\\cmd.py", line 559, in execute
-        raise GitCommandNotFound(command, err)
-        git.exc.GitCommandNotFound: Cmd('git') not found due to: OSError('[WinError 6] The handle is invalid')
-        cmdline: git clone -n --shared -v C:\\projects\\gitpython\\.git Users\\appveyor\\AppData\\Local\\Temp\\1\\tmplyp6kr_rnon_bare_test_root_module""",
-    )  # noqa E501
+        reason=(
+            '"The process cannot access the file because it is being used by another process"'
+            + " on first call to rm.update"
+        ),
+        raises=PermissionError,
+    )
     @with_rw_repo(k_subm_current, bare=False)
     def test_root_module(self, rwrepo):
         # Can query everything without problems
@@ -745,15 +751,13 @@ class TestSubmodule(TestBase):
         repo = git.Repo(repo_path)
         assert len(repo.submodules) == 0
 
-    @skipIf(
+    @pytest.mark.xfail(
         HIDE_WINDOWS_KNOWN_ERRORS,
-        """FIXME on cygwin: File "C:\\projects\\gitpython\\git\\cmd.py", line 671, in execute
-                raise GitCommandError(command, status, stderr_value, stdout_value)
-            GitCommandError: Cmd('git') failed due to: exit code(128)
-              cmdline: git add 1__Xava verbXXten 1_test _myfile 1_test_other_file 1_XXava-----verbXXten
-              stderr: 'fatal: pathspec '"1__çava verböten"' did not match any files'
-             FIXME on appveyor: see https://ci.appveyor.com/project/Byron/gitpython/build/1.0.185
-                """,
+        reason=(
+            '"The process cannot access the file because it is being used by another process"'
+            + " on first call to sm.move"
+        ),
+        raises=PermissionError,
     )
     @with_rw_directory
     @_patch_git_config("protocol.file.allow", "always")
@@ -818,9 +822,11 @@ class TestSubmodule(TestBase):
         assert commit_sm.binsha == sm_too.binsha
         assert sm_too.binsha != sm.binsha
 
-    # @skipIf(HIDE_WINDOWS_KNOWN_ERRORS,  ## ACTUALLY skipped by `git.submodule.base#L869`.
-    #         "FIXME: helper.wrapper fails with: PermissionError: [WinError 5] Access is denied: "
-    #         "'C:\\Users\\appveyor\\AppData\\Local\\Temp\\1\\test_work_tree_unsupportedryfa60di\\master_repo\\.git\\objects\\pack\\pack-bc9e0787aef9f69e1591ef38ea0a6f566ec66fe3.idx")  # noqa E501
+    @pytest.mark.xfail(
+        HIDE_WINDOWS_KNOWN_ERRORS,
+        reason='"The process cannot access the file because it is being used by another process" on call to sm.move',
+        raises=PermissionError,
+    )
     @with_rw_directory
     def test_git_submodule_compatibility(self, rwdir):
         parent = git.Repo.init(osp.join(rwdir, "parent"))
@@ -914,17 +920,17 @@ class TestSubmodule(TestBase):
         os.mkdir(smp)
 
         with open(osp.join(smp, "a"), "w", encoding="utf-8") as f:
-            f.write('test\n')
+            f.write("test\n")
 
         with open(osp.join(rwdir, ".gitmodules"), "w", encoding="utf-8") as f:
-            f.write("[submodule \"a\"]\n")
+            f.write('[submodule "a"]\n')
             f.write("    path = module\n")
             f.write("    url = https://github.com/chaconinc/DbConnector\n")
 
         parent.git.add(Git.polish_url(osp.join(smp, "a")))
         parent.git.add(Git.polish_url(osp.join(rwdir, ".gitmodules")))
 
-        parent.git.commit(message='test')
+        parent.git.commit(message="test")
 
         assert len(parent.submodules) == 0
 
@@ -1027,15 +1033,15 @@ class TestSubmodule(TestBase):
         # This doesn't fail as our own submodule binsha didn't change, and the reset is only triggered if
         # to latest revision is True.
         parent_repo.submodule_update(to_latest_revision=False)
-        sm_mod.head.ref.name == sm_pfb.name, "should have been switched to past head"
-        sm_mod.commit() == sm_fb.commit, "Head wasn't reset"
+        assert sm_mod.head.ref.name == sm_pfb.name, "should have been switched to past head"
+        assert sm_mod.commit() == sm_fb.commit, "Head wasn't reset"
 
         self.assertRaises(RepositoryDirtyError, parent_repo.submodule_update, to_latest_revision=True)
         parent_repo.submodule_update(to_latest_revision=True, force_reset=True)
         assert sm_mod.commit() == sm_pfb.commit, "Now head should have been reset"
         assert sm_mod.head.ref.name == sm_pfb.name
 
-    @skipIf(not is_win, "Specifically for Windows.")
+    @skipUnless(is_win, "Specifically for Windows.")
     def test_to_relative_path_with_super_at_root_drive(self):
         class Repo(object):
             working_tree_dir = "D:\\"
@@ -1046,9 +1052,9 @@ class TestSubmodule(TestBase):
         msg = '_to_relative_path should be "submodule_path" but was "%s"' % relative_path
         assert relative_path == "submodule_path", msg
 
-    @skipIf(
-        True,
-        "for some unknown reason the assertion fails, even though it in fact is working in more common setup",
+    @pytest.mark.xfail(
+        reason="for some unknown reason the assertion fails, even though it in fact is working in more common setup",
+        raises=AssertionError,
     )
     @with_rw_directory
     def test_depth(self, rwdir):
@@ -1200,7 +1206,12 @@ class TestSubmodule(TestBase):
                 # The options will be allowed, but the command will fail.
                 with self.assertRaises(GitCommandError):
                     Submodule.add(
-                        rw_repo, "new", "new", str(tmp_dir), clone_multi_options=[unsafe_option], allow_unsafe_options=True
+                        rw_repo,
+                        "new",
+                        "new",
+                        str(tmp_dir),
+                        clone_multi_options=[unsafe_option],
+                        allow_unsafe_options=True,
                     )
                 assert not tmp_file.exists()
 
@@ -1211,7 +1222,12 @@ class TestSubmodule(TestBase):
             for unsafe_option in unsafe_options:
                 with self.assertRaises(GitCommandError):
                     Submodule.add(
-                        rw_repo, "new", "new", str(tmp_dir), clone_multi_options=[unsafe_option], allow_unsafe_options=True
+                        rw_repo,
+                        "new",
+                        "new",
+                        str(tmp_dir),
+                        clone_multi_options=[unsafe_option],
+                        allow_unsafe_options=True,
                     )
 
     @with_rw_repo("HEAD")

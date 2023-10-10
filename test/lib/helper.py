@@ -2,7 +2,7 @@
 # Copyright (C) 2008, 2009 Michael Trier (mtrier@gmail.com) and contributors
 #
 # This module is part of GitPython and is released under
-# the BSD License: http://www.opensource.org/licenses/bsd-license.php
+# the BSD License: https://opensource.org/license/bsd-3-clause/
 import contextlib
 from functools import wraps
 import gc
@@ -94,17 +94,16 @@ def with_rw_directory(func):
         os.mkdir(path)
         keep = False
         try:
-            try:
-                return func(self, path)
-            except Exception:
-                log.info(
-                    "Test %s.%s failed, output is at %r\n",
-                    type(self).__name__,
-                    func.__name__,
-                    path,
-                )
-                keep = True
-                raise
+            return func(self, path)
+        except Exception:
+            log.info(
+                "Test %s.%s failed, output is at %r\n",
+                type(self).__name__,
+                func.__name__,
+                path,
+            )
+            keep = True
+            raise
         finally:
             # Need to collect here to be sure all handles have been closed. It appears
             # a windows-only issue. In fact things should be deleted, as well as
@@ -147,12 +146,11 @@ def with_rw_repo(working_tree_ref, bare=False):
             prev_cwd = os.getcwd()
             os.chdir(rw_repo.working_dir)
             try:
-                try:
-                    return func(self, rw_repo)
-                except:  # noqa E722
-                    log.info("Keeping repo after failure: %s", repo_dir)
-                    repo_dir = None
-                    raise
+                return func(self, rw_repo)
+            except:  # noqa E722
+                log.info("Keeping repo after failure: %s", repo_dir)
+                repo_dir = None
+                raise
             finally:
                 os.chdir(prev_cwd)
                 rw_repo.git.clear_cache()
@@ -179,14 +177,12 @@ def git_daemon_launched(base_path, ip, port):
     gd = None
     try:
         if is_win:
-            ## On MINGW-git, daemon exists in .\Git\mingw64\libexec\git-core\,
-            #  but if invoked as 'git daemon', it detaches from parent `git` cmd,
-            #  and then CANNOT DIE!
-            #  So, invoke it as a single command.
-            ## Cygwin-git has no daemon.  But it can use MINGW's.
-            #
+            # On MINGW-git, daemon exists in Git\mingw64\libexec\git-core\,
+            # but if invoked as 'git daemon', it detaches from parent `git` cmd,
+            # and then CANNOT DIE!
+            # So, invoke it as a single command.
             daemon_cmd = [
-                "git-daemon",
+                osp.join(Git()._call_process("--exec-path"), "git-daemon"),
                 "--enable=receive-pack",
                 "--listen=%s" % ip,
                 "--port=%s" % port,
@@ -219,12 +215,11 @@ def git_daemon_launched(base_path, ip, port):
         )
         if is_win:
             msg += textwrap.dedent(
-                r"""
+                R"""
 
             On Windows,
               the `git-daemon.exe` must be in PATH.
-              For MINGW, look into .\Git\mingw64\libexec\git-core\), but problems with paths might appear.
-              CYGWIN has no daemon, but if one exists, it gets along fine (but has also paths problems)."""
+              For MINGW, look into \Git\mingw64\libexec\git-core\, but problems with paths might appear."""
             )
         log.warning(msg, ex, ip, port, base_path, base_path, exc_info=1)
 
@@ -307,7 +302,7 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
                     cw.set("url", remote_repo_url)
 
                 with git_daemon_launched(
-                    Git.polish_url(base_daemon_path, is_cygwin=False),  # No daemon in Cygwin.
+                    Git.polish_url(base_daemon_path),
                     "127.0.0.1",
                     GIT_DAEMON_PORT,
                 ):

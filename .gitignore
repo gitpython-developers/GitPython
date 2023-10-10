@@ -1,12 +1,15 @@
 *.py[co]
 *.swp
 *~
+.env/
+env/
 .venv/
 venv/
 /*.egg-info
 /lib/GitPython.egg-info
 cover/
 .coverage
+.coverage.*
 /build
 /dist
 /doc/_build
@@ -22,4 +25,3 @@ nbproject
 .pytest_cache/
 monkeytype.sqlite3
 output.txt
-tox.ini

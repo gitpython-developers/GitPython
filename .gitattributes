@@ -1,2 +1,3 @@
 test/fixtures/* eol=lf
-init-tests-after-clone.sh
+*.sh eol=lf
+/Makefile eol=lf

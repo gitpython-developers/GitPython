@@ -3,14 +3,17 @@
 # Copyright (C) 2008, 2009 Michael Trier (mtrier@gmail.com) and contributors
 #
 # This module is part of GitPython and is released under
-# the BSD License: http://www.opensource.org/licenses/bsd-license.php
+# the BSD License: https://opensource.org/license/bsd-3-clause/
 
 from io import BytesIO
 import os
+import os.path as osp
+from pathlib import Path
 from stat import S_ISLNK, ST_MODE
-import tempfile
-from unittest import skipIf
 import shutil
+import tempfile
+
+import pytest
 
 from git import (
     IndexFile,
@@ -28,20 +31,25 @@ from git.exc import HookExecutionError, InvalidGitRepositoryError
 from git.index.fun import hook_path
 from git.index.typ import BaseIndexEntry, IndexEntry
 from git.objects import Blob
-from test.lib import TestBase, fixture_path, fixture, with_rw_repo
-from test.lib import with_rw_directory
-from git.util import Actor, rmtree
-from git.util import HIDE_WINDOWS_KNOWN_ERRORS, hex_to_bin
+from test.lib import TestBase, fixture, fixture_path, with_rw_directory, with_rw_repo
+from git.util import Actor, hex_to_bin, rmtree
 from gitdb.base import IStream
-
-import os.path as osp
-from git.cmd import Git
-
-from pathlib import Path
 
 HOOKS_SHEBANG = "#!/usr/bin/env sh\n"
 
+
+def _found_in(cmd, directory):
+    """Check if a command is resolved in a directory (without following symlinks)."""
+    path = shutil.which(cmd)
+    return path and Path(path).parent == Path(directory)
+
+
 is_win_without_bash = is_win and not shutil.which("bash.exe")
+
+is_win_with_wsl_bash = is_win and _found_in(
+    cmd="bash.exe",
+    directory=Path(os.getenv("WINDIR")) / "System32",
+)
 
 
 def _make_hook(git_dir, name, content, make_exec=True):
@@ -422,14 +430,6 @@ class TestIndex(TestBase):
 
     # END num existing helper
 
-    @skipIf(
-        HIDE_WINDOWS_KNOWN_ERRORS and Git.is_cygwin(),
-        """FIXME: File "C:\\projects\\gitpython\\git\\test\\test_index.py", line 642, in test_index_mutation
-                self.assertEqual(fd.read(), link_target)
-                AssertionError: '!<symlink>\xff\xfe/\x00e\x00t\x00c\x00/\x00t\x00h\x00a\x00t\x00\x00\x00'
-                != '/etc/that'
-                """,
-    )
     @with_rw_repo("0.1.6")
     def test_index_mutation(self, rw_repo):
         index = rw_repo.index
@@ -910,7 +910,11 @@ class TestIndex(TestBase):
         else:
             raise AssertionError("Should have caught a HookExecutionError")
 
-    @skipIf(HIDE_WINDOWS_KNOWN_ERRORS, "TODO: fix hooks execution on Windows: #703")
+    @pytest.mark.xfail(
+        is_win_without_bash or is_win_with_wsl_bash,
+        reason="Specifically seems to fail on WSL bash (in spite of #1399)",
+        raises=AssertionError,
+    )
     @with_rw_repo("HEAD", bare=True)
     def test_commit_msg_hook_success(self, rw_repo):
         commit_message = "commit default head by Frèderic Çaufl€"
@@ -946,7 +950,7 @@ class TestIndex(TestBase):
         else:
             raise AssertionError("Should have caught a HookExecutionError")
 
-    @with_rw_repo('HEAD')
+    @with_rw_repo("HEAD")
     def test_index_add_pathlike(self, rw_repo):
         git_dir = Path(rw_repo.git_dir)
 

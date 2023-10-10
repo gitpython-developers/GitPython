@@ -244,7 +244,7 @@ class RefLog(List[RefLogEntry], Serializable):
             for i in range(index + 1):
                 line = fp.readline()
                 if not line:
-                    raise IndexError(f"Index file ended at line {i+1}, before given index was reached")
+                    raise IndexError(f"Index file ended at line {i + 1}, before given index was reached")
                 # END abort on eof
             # END handle runup
 
@@ -262,8 +262,7 @@ class RefLog(List[RefLogEntry], Serializable):
         try:
             self._serialize(fp)
             lfd.commit()
-        except Exception:
-            # on failure it rolls back automatically, but we make it clear
+        except BaseException:
             lfd.rollback()
             raise
         # END handle change

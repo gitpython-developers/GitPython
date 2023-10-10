@@ -1,22 +1,19 @@
-.PHONY: all clean release force_release
+.PHONY: all lint clean release force_release
 
 all:
-	@grep -Ee '^[a-z].*:' Makefile | cut -d: -f1 | grep -vF all
+	@awk -F: '/^[[:alpha:]].*:/ && !/^all:/ {print $$1}' Makefile
+
+lint:
+	SKIP=black-format pre-commit run --all-files --hook-stage manual
 
 clean:
 	rm -rf build/ dist/ .eggs/ .tox/
 
 release: clean
-	# Check if latest tag is the current head we're releasing
-	echo "Latest tag = $$(git tag | sort -nr | head -n1)"
-	echo "HEAD SHA       = $$(git rev-parse head)"
-	echo "Latest tag SHA = $$(git tag | sort -nr | head -n1 | xargs git rev-parse)"
-	@test "$$(git rev-parse head)" = "$$(git tag | sort -nr | head -n1 | xargs git rev-parse)"
+	./check-version.sh
 	make force_release
 
 force_release: clean
-	# IF we're in a virtual environment, add build tools
-	test -z "$$VIRTUAL_ENV" || pip install -U build twine
-	python3 -m build --sdist --wheel || echo "Use a virtual-env with 'python -m venv env && source env/bin/activate' instead"
+	./build-release.sh
 	twine upload dist/*
 	git push --tags origin main

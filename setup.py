@@ -4,7 +4,6 @@ from typing import Sequence
 from setuptools import setup, find_packages
 from setuptools.command.build_py import build_py as _build_py
 from setuptools.command.sdist import sdist as _sdist
-import fnmatch
 import os
 import sys
 
@@ -62,24 +61,6 @@ def _stamp_version(filename: str) -> None:
         print("WARNING: Couldn't find version line in file %s" % filename, file=sys.stderr)
 
 
-def build_py_modules(basedir: str, excludes: Sequence = ()) -> Sequence:
-    # create list of py_modules from tree
-    res = set()
-    _prefix = os.path.basename(basedir)
-    for root, _, files in os.walk(basedir):
-        for f in files:
-            _f, _ext = os.path.splitext(f)
-            if _ext not in [".py"]:
-                continue
-            _f = os.path.join(root, _f)
-            _f = os.path.relpath(_f, basedir)
-            _f = "{}.{}".format(_prefix, _f.replace(os.sep, "."))
-            if any(fnmatch.fnmatch(_f, x) for x in excludes):
-                continue
-            res.add(_f)
-    return list(res)
-
-
 setup(
     name="GitPython",
     cmdclass={"build_py": build_py, "sdist": sdist},
@@ -91,7 +72,6 @@ setup(
     url="https://github.com/gitpython-developers/GitPython",
     packages=find_packages(exclude=["test", "test.*"]),
     include_package_data=True,
-    py_modules=build_py_modules("./git", excludes=["git.ext.*"]),
     package_dir={"git": "git"},
     python_requires=">=3.7",
     install_requires=requirements,

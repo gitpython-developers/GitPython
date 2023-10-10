@@ -3,7 +3,7 @@
 # Copyright (C) 2008, 2009 Michael Trier (mtrier@gmail.com) and contributors
 #
 # This module is part of GitPython and is released under
-# the BSD License: http://www.opensource.org/licenses/bsd-license.php
+# the BSD License: https://opensource.org/license/bsd-3-clause/
 import glob
 import io
 from io import BytesIO
@@ -13,7 +13,7 @@ import pathlib
 import pickle
 import sys
 import tempfile
-from unittest import mock, skipIf, SkipTest, skip
+from unittest import mock, skip
 
 import pytest
 
@@ -41,10 +41,8 @@ from git.exc import (
     UnsafeProtocolError,
 )
 from git.repo.fun import touch
-from test.lib import TestBase, with_rw_repo, fixture
-from git.util import HIDE_WINDOWS_KNOWN_ERRORS, cygpath
-from test.lib import with_rw_directory
-from git.util import join_path_native, rmtree, rmfile, bin_to_hex
+from git.util import bin_to_hex, cygpath, join_path_native, rmfile, rmtree
+from test.lib import TestBase, fixture, with_rw_directory, with_rw_repo
 
 import os.path as osp
 
@@ -251,7 +249,10 @@ class TestRepo(TestBase):
                 self.fail("Raised UnicodeEncodeError")
 
     @with_rw_directory
-    @skip("the referenced repository was removed, and one needs to setup a new password controlled repo under the orgs control")
+    @skip(
+        """The referenced repository was removed, and one needs to set up a new
+        password controlled repo under the org's control."""
+    )
     def test_leaking_password_in_clone_logs(self, rw_dir):
         password = "fakepassword1234"
         try:
@@ -391,7 +392,9 @@ class TestRepo(TestBase):
             for i, unsafe_option in enumerate(unsafe_options):
                 destination = tmp_dir / str(i)
                 assert not destination.exists()
-                Repo.clone_from(rw_repo.working_dir, destination, multi_options=[unsafe_option], allow_unsafe_options=True)
+                Repo.clone_from(
+                    rw_repo.working_dir, destination, multi_options=[unsafe_option], allow_unsafe_options=True
+                )
                 assert destination.exists()
 
     @with_rw_repo("HEAD")
@@ -754,21 +757,11 @@ class TestRepo(TestBase):
 
     @mock.patch.object(Git, "_call_process")
     def test_blame_accepts_rev_opts(self, git):
-        res = self.rorepo.blame("HEAD", "README.md", rev_opts=["-M", "-C", "-C"])
-        expected_args = ['blame', 'HEAD', '-M', '-C', '-C', '--', 'README.md']
-        boilerplate_kwargs = {"p" : True, "stdout_as_string": False}
+        expected_args = ["blame", "HEAD", "-M", "-C", "-C", "--", "README.md"]
+        boilerplate_kwargs = {"p": True, "stdout_as_string": False}
+        self.rorepo.blame("HEAD", "README.md", rev_opts=["-M", "-C", "-C"])
         git.assert_called_once_with(*expected_args, **boilerplate_kwargs)
 
-    @skipIf(
-        HIDE_WINDOWS_KNOWN_ERRORS and Git.is_cygwin(),
-        """FIXME: File "C:\\projects\\gitpython\\git\\cmd.py", line 671, in execute
-                    raise GitCommandError(command, status, stderr_value, stdout_value)
-                GitCommandError: Cmd('git') failed due to: exit code(128)
-                  cmdline: git add 1__��ava verb��ten 1_test _myfile 1_test_other_file
-                          1_��ava-----verb��ten
-                  stderr: 'fatal: pathspec '"1__çava verböten"' did not match any files'
-                """,
-    )
     @with_rw_repo("HEAD", bare=False)
     def test_untracked_files(self, rwrepo):
         for run, repo_add in enumerate((rwrepo.index.add, rwrepo.git.add)):
@@ -842,18 +835,13 @@ class TestRepo(TestBase):
 
     @with_rw_directory
     def test_tilde_and_env_vars_in_repo_path(self, rw_dir):
-        ph = os.environ.get("HOME")
-        try:
+        with mock.patch.dict(os.environ, {"HOME": rw_dir}):
             os.environ["HOME"] = rw_dir
             Repo.init(osp.join("~", "test.git"), bare=True)
 
+        with mock.patch.dict(os.environ, {"FOO": rw_dir}):
             os.environ["FOO"] = rw_dir
             Repo.init(osp.join("$FOO", "test.git"), bare=True)
-        finally:
-            if ph:
-                os.environ["HOME"] = ph
-                del os.environ["FOO"]
-        # end assure HOME gets reset to what it was
 
     def test_git_cmd(self):
         # test CatFileContentStream, just to be very sure we have no fencepost errors
@@ -967,7 +955,7 @@ class TestRepo(TestBase):
         # history with number
         ni = 11
         history = [obj.parents[0]]
-        for pn in range(ni):
+        for _ in range(ni):
             history.append(history[-1].parents[0])
         # END get given amount of commits
 
@@ -1115,7 +1103,7 @@ class TestRepo(TestBase):
     @pytest.mark.xfail(
         sys.platform == "cygwin",
         reason="Cygwin GitPython can't find submodule SHA",
-        raises=ValueError
+        raises=ValueError,
     )
     def test_submodules(self):
         self.assertEqual(len(self.rorepo.submodules), 1)  # non-recursive
@@ -1245,7 +1233,7 @@ class TestRepo(TestBase):
     def test_is_ancestor(self):
         git = self.rorepo.git
         if git.version_info[:3] < (1, 8, 0):
-            raise SkipTest("git merge-base --is-ancestor feature unsupported")
+            raise RuntimeError("git merge-base --is-ancestor feature unsupported (test needs git 1.8.0 or later)")
 
         repo = self.rorepo
         c1 = "f6aa8d1"
@@ -1293,7 +1281,7 @@ class TestRepo(TestBase):
         based on it."""
         git = Git(rw_dir)
         if git.version_info[:3] < (2, 5, 1):
-            raise SkipTest("worktree feature unsupported")
+            raise RuntimeError("worktree feature unsupported (test needs git 2.5.1 or later)")
 
         rw_master = self.rorepo.clone(join_path_native(rw_dir, "master_repo"))
         branch = rw_master.create_head("aaaaaaaa")
@@ -1325,6 +1313,7 @@ class TestRepo(TestBase):
         # move .git directory to a subdirectory
         # set GIT_DIR and GIT_WORK_TREE appropriately
         # check that repo.working_tree_dir == rw_dir
+
         self.rorepo.clone(join_path_native(rw_dir, "master_repo"))
 
         repo_dir = join_path_native(rw_dir, "master_repo")
@@ -1334,16 +1323,12 @@ class TestRepo(TestBase):
         os.mkdir(new_subdir)
         os.rename(old_git_dir, new_git_dir)
 
-        oldenv = os.environ.copy()
-        os.environ["GIT_DIR"] = new_git_dir
-        os.environ["GIT_WORK_TREE"] = repo_dir
+        to_patch = {"GIT_DIR": new_git_dir, "GIT_WORK_TREE": repo_dir}
 
-        try:
+        with mock.patch.dict(os.environ, to_patch):
             r = Repo()
             self.assertEqual(r.working_tree_dir, repo_dir)
             self.assertEqual(r.working_dir, repo_dir)
-        finally:
-            os.environ = oldenv
 
     @with_rw_directory
     def test_rebasing(self, rw_dir):
@@ -1415,14 +1400,16 @@ class TestRepo(TestBase):
 
             gi = tmp_dir / "repo" / ".gitignore"
 
-            with open(gi, 'w') as file:
-                file.write('ignored_file.txt\n')
-                file.write('ignored_dir/\n')
+            with open(gi, "w") as file:
+                file.write("ignored_file.txt\n")
+                file.write("ignored_dir/\n")
 
-            assert temp_repo.ignored(['included_file.txt', 'included_dir/file.txt']) == []
-            assert temp_repo.ignored(['ignored_file.txt']) == ['ignored_file.txt']
-            assert temp_repo.ignored(['included_file.txt', 'ignored_file.txt']) == ['ignored_file.txt']
-            assert temp_repo.ignored(['included_file.txt', 'ignored_file.txt', 'included_dir/file.txt', 'ignored_dir/file.txt']) == ['ignored_file.txt', 'ignored_dir/file.txt']
+            assert temp_repo.ignored(["included_file.txt", "included_dir/file.txt"]) == []
+            assert temp_repo.ignored(["ignored_file.txt"]) == ["ignored_file.txt"]
+            assert temp_repo.ignored(["included_file.txt", "ignored_file.txt"]) == ["ignored_file.txt"]
+            assert temp_repo.ignored(
+                ["included_file.txt", "ignored_file.txt", "included_dir/file.txt", "ignored_dir/file.txt"]
+            ) == ["ignored_file.txt", "ignored_dir/file.txt"]
 
     def test_ignored_raises_error_w_symlink(self):
         with tempfile.TemporaryDirectory() as tdir:

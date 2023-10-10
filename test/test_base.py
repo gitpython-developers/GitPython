@@ -3,11 +3,11 @@
 # Copyright (C) 2008, 2009 Michael Trier (mtrier@gmail.com) and contributors
 #
 # This module is part of GitPython and is released under
-# the BSD License: http://www.opensource.org/licenses/bsd-license.php
+# the BSD License: https://opensource.org/license/bsd-3-clause/
 import os
 import sys
 import tempfile
-from unittest import SkipTest, skipIf
+from unittest import skipIf
 
 from git import Repo
 from git.objects import Blob, Tree, Commit, TagObject
@@ -126,7 +126,7 @@ class TestBase(_TestBase):
         try:
             file_path.encode(sys.getfilesystemencoding())
         except UnicodeEncodeError as e:
-            raise SkipTest("Environment doesn't support unicode filenames") from e
+            raise RuntimeError("Environment doesn't support unicode filenames") from e
 
         with open(file_path, "wb") as fp:
             fp.write(b"something")

@@ -2,123 +2,265 @@
 # Copyright (C) 2008, 2009 Michael Trier (mtrier@gmail.com) and contributors
 #
 # This module is part of GitPython and is released under
-# the BSD License: http://www.opensource.org/licenses/bsd-license.php
+# the BSD License: https://opensource.org/license/bsd-3-clause/
 
+import ast
+import contextlib
+from datetime import datetime
 import os
+import pathlib
 import pickle
+import stat
+import subprocess
 import sys
 import tempfile
 import time
-from unittest import mock, skipIf
-from datetime import datetime
+from unittest import SkipTest, mock, skipIf, skipUnless
 
-import pytest
 import ddt
+import pytest
 
 from git.cmd import dashify
 from git.compat import is_win
 from git.objects.util import (
     altz_to_utctz_str,
-    utctz_to_altz,
-    verify_utctz,
+    from_timestamp,
     parse_date,
     tzoffset,
-    from_timestamp,
-)
-from test.lib import (
-    TestBase,
-    with_rw_repo,
+    utctz_to_altz,
+    verify_utctz,
 )
 from git.util import (
-    LockFile,
-    BlockingLockFile,
-    get_user_id,
     Actor,
+    BlockingLockFile,
     IterableList,
+    LockFile,
     cygpath,
     decygpath,
+    get_user_id,
     remove_password_if_present,
+    rmtree,
 )
+from test.lib import TestBase, with_rw_repo
 
 
-_norm_cygpath_pairs = (
-    (r"foo\bar", "foo/bar"),
-    (r"foo/bar", "foo/bar"),
-    (r"C:\Users", "/cygdrive/c/Users"),
-    (r"C:\d/e", "/cygdrive/c/d/e"),
-    ("C:\\", "/cygdrive/c/"),
-    (r"\\server\C$\Users", "//server/C$/Users"),
-    (r"\\server\C$", "//server/C$"),
-    ("\\\\server\\c$\\", "//server/c$/"),
-    (r"\\server\BAR/", "//server/BAR/"),
-    (r"D:/Apps", "/cygdrive/d/Apps"),
-    (r"D:/Apps\fOO", "/cygdrive/d/Apps/fOO"),
-    (r"D:\Apps/123", "/cygdrive/d/Apps/123"),
-)
+class _Member:
+    """A member of an IterableList."""
 
-_unc_cygpath_pairs = (
-    (r"\\?\a:\com", "/cygdrive/a/com"),
-    (r"\\?\a:/com", "/cygdrive/a/com"),
-    (r"\\?\UNC\server\D$\Apps", "//server/D$/Apps"),
-)
-
-
-class TestIterableMember(object):
-
-    """A member of an iterable list"""
-
-    __slots__ = "name"
+    __slots__ = ("name",)
 
     def __init__(self, name):
         self.name = name
 
     def __repr__(self):
-        return "TestIterableMember(%r)" % self.name
+        return f"{type(self).__name__}({self.name!r})"
+
+
+@contextlib.contextmanager
+def _tmpdir_to_force_permission_error():
+    """Context manager to test permission errors in situations where they are not overcome."""
+    if sys.platform == "cygwin":
+        raise SkipTest("Cygwin can't set the permissions that make the test meaningful.")
+    if sys.version_info < (3, 8):
+        raise SkipTest("In 3.7, TemporaryDirectory doesn't clean up after weird permissions.")
+
+    with tempfile.TemporaryDirectory() as parent:
+        td = pathlib.Path(parent, "testdir")
+        td.mkdir()
+        (td / "x").write_bytes(b"")
+        (td / "x").chmod(stat.S_IRUSR)  # Set up PermissionError on Windows.
+        td.chmod(stat.S_IRUSR | stat.S_IXUSR)  # Set up PermissionError on Unix.
+        yield td
+
+
+@contextlib.contextmanager
+def _tmpdir_for_file_not_found():
+    """Context manager to test errors deleting a directory that are not due to permissions."""
+    with tempfile.TemporaryDirectory() as parent:
+        yield pathlib.Path(parent, "testdir")  # It is deliberately never created.
 
 
 @ddt.ddt
 class TestUtils(TestBase):
-    def setup(self):
-        self.testdict = {
-            "string": "42",
-            "int": 42,
-            "array": [42],
-        }
+    def test_rmtree_deletes_nested_dir_with_files(self):
+        with tempfile.TemporaryDirectory() as parent:
+            td = pathlib.Path(parent, "testdir")
+            for d in td, td / "q", td / "s":
+                d.mkdir()
+            for f in (
+                td / "p",
+                td / "q" / "w",
+                td / "q" / "x",
+                td / "r",
+                td / "s" / "y",
+                td / "s" / "z",
+            ):
+                f.write_bytes(b"")
 
-    @skipIf(not is_win, "Paths specifically for Windows.")
+            try:
+                rmtree(td)
+            except SkipTest as ex:
+                self.fail(f"rmtree unexpectedly attempts skip: {ex!r}")
+
+            self.assertFalse(td.exists())
+
+    @skipIf(
+        sys.platform == "cygwin",
+        "Cygwin can't set the permissions that make the test meaningful.",
+    )
+    def test_rmtree_deletes_dir_with_readonly_files(self):
+        # Automatically works on Unix, but requires special handling on Windows.
+        # Not to be confused with what _tmpdir_to_force_permission_error sets up (see below).
+        with tempfile.TemporaryDirectory() as parent:
+            td = pathlib.Path(parent, "testdir")
+            for d in td, td / "sub":
+                d.mkdir()
+            for f in td / "x", td / "sub" / "y":
+                f.write_bytes(b"")
+                f.chmod(0)
+
+            try:
+                rmtree(td)
+            except SkipTest as ex:
+                self.fail(f"rmtree unexpectedly attempts skip: {ex!r}")
+
+            self.assertFalse(td.exists())
+
+    def test_rmtree_can_wrap_exceptions(self):
+        """rmtree wraps PermissionError when HIDE_WINDOWS_KNOWN_ERRORS is true."""
+        with _tmpdir_to_force_permission_error() as td:
+            # Access the module through sys.modules so it is unambiguous which module's
+            # attribute we patch: the original git.util, not git.index.util even though
+            # git.index.util "replaces" git.util and is what "import git.util" gives us.
+            with mock.patch.object(sys.modules["git.util"], "HIDE_WINDOWS_KNOWN_ERRORS", True):
+                # Disable common chmod functions so the callback can't fix the problem.
+                with mock.patch.object(os, "chmod"), mock.patch.object(pathlib.Path, "chmod"):
+                    # Now we can see how an intractable PermissionError is treated.
+                    with self.assertRaises(SkipTest):
+                        rmtree(td)
+
+    @ddt.data(
+        (False, PermissionError, _tmpdir_to_force_permission_error),
+        (False, FileNotFoundError, _tmpdir_for_file_not_found),
+        (True, FileNotFoundError, _tmpdir_for_file_not_found),
+    )
+    def test_rmtree_does_not_wrap_unless_called_for(self, case):
+        """rmtree doesn't wrap non-PermissionError, nor if HIDE_WINDOWS_KNOWN_ERRORS is false."""
+        hide_windows_known_errors, exception_type, tmpdir_context_factory = case
+
+        with tmpdir_context_factory() as td:
+            # See comments in test_rmtree_can_wrap_exceptions regarding the patching done here.
+            with mock.patch.object(
+                sys.modules["git.util"],
+                "HIDE_WINDOWS_KNOWN_ERRORS",
+                hide_windows_known_errors,
+            ):
+                with mock.patch.object(os, "chmod"), mock.patch.object(pathlib.Path, "chmod"):
+                    with self.assertRaises(exception_type):
+                        try:
+                            rmtree(td)
+                        except SkipTest as ex:
+                            self.fail(f"rmtree unexpectedly attempts skip: {ex!r}")
+
+    @ddt.data("HIDE_WINDOWS_KNOWN_ERRORS", "HIDE_WINDOWS_FREEZE_ERRORS")
+    def test_env_vars_for_windows_tests(self, name):
+        def run_parse(value):
+            command = [
+                sys.executable,
+                "-c",
+                f"from git.util import {name}; print(repr({name}))",
+            ]
+            output = subprocess.check_output(
+                command,
+                env=None if value is None else dict(os.environ, **{name: value}),
+                text=True,
+            )
+            return ast.literal_eval(output)
+
+        for env_var_value, expected_truth_value in (
+            (None, os.name == "nt"),  # True on Windows when the environment variable is unset.
+            ("", False),
+            (" ", False),
+            ("0", False),
+            ("1", os.name == "nt"),
+            ("false", False),
+            ("true", os.name == "nt"),
+            ("False", False),
+            ("True", os.name == "nt"),
+            ("no", False),
+            ("yes", os.name == "nt"),
+            ("NO", False),
+            ("YES", os.name == "nt"),
+            (" no  ", False),
+            (" yes  ", os.name == "nt"),
+        ):
+            with self.subTest(env_var_value=env_var_value):
+                self.assertIs(run_parse(env_var_value), expected_truth_value)
+
+    _norm_cygpath_pairs = (
+        (R"foo\bar", "foo/bar"),
+        (R"foo/bar", "foo/bar"),
+        (R"C:\Users", "/cygdrive/c/Users"),
+        (R"C:\d/e", "/cygdrive/c/d/e"),
+        ("C:\\", "/cygdrive/c/"),
+        (R"\\server\C$\Users", "//server/C$/Users"),
+        (R"\\server\C$", "//server/C$"),
+        ("\\\\server\\c$\\", "//server/c$/"),
+        (R"\\server\BAR/", "//server/BAR/"),
+        (R"D:/Apps", "/cygdrive/d/Apps"),
+        (R"D:/Apps\fOO", "/cygdrive/d/Apps/fOO"),
+        (R"D:\Apps/123", "/cygdrive/d/Apps/123"),
+    )
+
+    _unc_cygpath_pairs = (
+        (R"\\?\a:\com", "/cygdrive/a/com"),
+        (R"\\?\a:/com", "/cygdrive/a/com"),
+        (R"\\?\UNC\server\D$\Apps", "//server/D$/Apps"),
+    )
+
+    # FIXME: Mark only the /proc-prefixing cases xfail, somehow (or fix them).
+    @pytest.mark.xfail(
+        reason="Many return paths prefixed /proc/cygdrive instead.",
+        raises=AssertionError,
+    )
+    @skipUnless(sys.platform == "cygwin", "Paths specifically for Cygwin.")
     @ddt.idata(_norm_cygpath_pairs + _unc_cygpath_pairs)
     def test_cygpath_ok(self, case):
         wpath, cpath = case
         cwpath = cygpath(wpath)
         self.assertEqual(cwpath, cpath, wpath)
 
-    @skipIf(not is_win, "Paths specifically for Windows.")
+    @pytest.mark.xfail(
+        reason=R'2nd example r".\bar" -> "bar" fails, returns "./bar"',
+        raises=AssertionError,
+    )
+    @skipUnless(sys.platform == "cygwin", "Paths specifically for Cygwin.")
     @ddt.data(
-        (r"./bar", "bar"),
-        (r".\bar", "bar"),
-        (r"../bar", "../bar"),
-        (r"..\bar", "../bar"),
-        (r"../bar/.\foo/../chu", "../bar/chu"),
+        (R"./bar", "bar"),
+        (R".\bar", "bar"),  # FIXME: Mark only this one xfail, somehow (or fix it).
+        (R"../bar", "../bar"),
+        (R"..\bar", "../bar"),
+        (R"../bar/.\foo/../chu", "../bar/chu"),
     )
     def test_cygpath_norm_ok(self, case):
         wpath, cpath = case
         cwpath = cygpath(wpath)
         self.assertEqual(cwpath, cpath or wpath, wpath)
 
-    @skipIf(not is_win, "Paths specifically for Windows.")
+    @skipUnless(sys.platform == "cygwin", "Paths specifically for Cygwin.")
     @ddt.data(
-        r"C:",
-        r"C:Relative",
-        r"D:Apps\123",
-        r"D:Apps/123",
-        r"\\?\a:rel",
-        r"\\share\a:rel",
+        R"C:",
+        R"C:Relative",
+        R"D:Apps\123",
+        R"D:Apps/123",
+        R"\\?\a:rel",
+        R"\\share\a:rel",
     )
     def test_cygpath_invalids(self, wpath):
         cwpath = cygpath(wpath)
         self.assertEqual(cwpath, wpath.replace("\\", "/"), wpath)
 
-    @skipIf(not is_win, "Paths specifically for Windows.")
+    @skipUnless(sys.platform == "cygwin", "Paths specifically for Cygwin.")
     @ddt.idata(_norm_cygpath_pairs)
     def test_decygpath(self, case):
         wpath, cpath = case
@@ -156,11 +298,6 @@ class TestUtils(TestBase):
         lock_file._obtain_lock_or_raise()
         lock_file._release_lock()
 
-    @pytest.mark.xfail(
-        sys.platform == "cygwin",
-        reason="Cygwin fails here for some reason, always",
-        raises=AssertionError
-    )
     def test_blocking_lock_file(self):
         my_file = tempfile.mktemp()
         lock_file = BlockingLockFile(my_file)
@@ -173,9 +310,8 @@ class TestUtils(TestBase):
         self.assertRaises(IOError, wait_lock._obtain_lock)
         elapsed = time.time() - start
         extra_time = 0.02
-        if is_win:
-            # for Appveyor
-            extra_time *= 6  # NOTE: Indeterministic failures here...
+        if is_win or sys.platform == "cygwin":
+            extra_time *= 6  # NOTE: Indeterministic failures without this...
         self.assertLess(elapsed, wait_time + extra_time)
 
     def test_user_id(self):
@@ -283,15 +419,18 @@ class TestUtils(TestBase):
             Actor("name last another", "some-very-long-email@example.com"),
         )
 
-    @ddt.data(("name", ""), ("name", "prefix_"))
+    @ddt.data(
+        ("name", ""),
+        ("name", "prefix_"),
+    )
     def test_iterable_list(self, case):
         name, prefix = case
         ilist = IterableList(name, prefix)
 
         name1 = "one"
         name2 = "two"
-        m1 = TestIterableMember(prefix + name1)
-        m2 = TestIterableMember(prefix + name2)
+        m1 = _Member(prefix + name1)
+        m2 = _Member(prefix + name2)
 
         ilist.extend((m1, m2))
 

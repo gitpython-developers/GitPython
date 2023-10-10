@@ -2,7 +2,6 @@ from io import BytesIO
 from stat import S_IFDIR, S_IFREG, S_IFLNK, S_IXUSR
 from os import stat
 import os.path as osp
-from unittest import SkipTest
 
 from git import Git
 from git.index import IndexFile
@@ -279,7 +278,7 @@ class TestFun(TestBase):
         """Check that we can identify a linked worktree based on a .git file"""
         git = Git(rw_dir)
         if git.version_info[:3] < (2, 5, 1):
-            raise SkipTest("worktree feature unsupported")
+            raise RuntimeError("worktree feature unsupported (test needs git 2.5.1 or later)")
 
         rw_master = self.rorepo.clone(join_path_native(rw_dir, "master_repo"))
         branch = rw_master.create_head("aaaaaaaa")
