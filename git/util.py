@@ -239,7 +239,7 @@ def stream_copy(source: BinaryIO, destination: BinaryIO, chunk_size: int = 512 *
 
 
 def join_path(a: PathLike, *p: PathLike) -> PathLike:
-    """Join path tokens together similar to osp.join, but always use
+    R"""Join path tokens together similar to osp.join, but always use
     '/' instead of possibly '\' on windows."""
     path = str(a)
     for b in p:
@@ -277,7 +277,7 @@ else:
 
 
 def join_path_native(a: PathLike, *p: PathLike) -> PathLike:
-    """
+    R"""
     As join path, but makes sure an OS native path is returned. This is only
         needed to play it safe on my dear windows and to assure nice paths that only
         use '\'"""

@@ -212,7 +212,7 @@ class IndexObject(Object):
 
     @property
     def abspath(self) -> PathLike:
-        """
+        R"""
         :return:
             Absolute path to this index object in the file system ( as opposed to the
             .path field which is a path relative to the git repository ).
