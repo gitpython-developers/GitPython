@@ -2,7 +2,7 @@
 # Copyright (C) 2008, 2009 Michael Trier (mtrier@gmail.com) and contributors
 #
 # This module is part of GitPython and is released under
-# the BSD License: http://www.opensource.org/licenses/bsd-license.php
+# the BSD License: https://opensource.org/license/bsd-3-clause/
 
 from itertools import chain
 from pathlib import Path
@@ -386,7 +386,7 @@ class TestRefs(TestBase):
         head_tree = head.commit.tree
         self.assertRaises(ValueError, setattr, head, "commit", head_tree)
         assert head.commit == old_commit  # and the ref did not change
-        # we allow heds to point to any object
+        # we allow heads to point to any object
         head.object = head_tree
         assert head.object == head_tree
         # cannot query tree as commit
@@ -489,7 +489,7 @@ class TestRefs(TestBase):
             cur_head.reference.commit,
         )
         # it works if the new ref points to the same reference
-        assert SymbolicReference.create(rw_repo, symref.path, symref.reference).path == symref.path  # @NoEffect
+        assert SymbolicReference.create(rw_repo, symref.path, symref.reference).path == symref.path
         SymbolicReference.delete(rw_repo, symref)
         # would raise if the symref wouldn't have been deletedpbl
         symref = SymbolicReference.create(rw_repo, symref_path, cur_head.reference)
@@ -631,3 +631,39 @@ class TestRefs(TestBase):
             ref_file.flush()
             ref_file_name = Path(ref_file.name).name
             self.assertRaises(BadName, self.rorepo.commit, f"../../{ref_file_name}")
+
+    def test_validity_ref_names(self):
+        check_ref = SymbolicReference._check_ref_name_valid
+        # Based on the rules specified in https://git-scm.com/docs/git-check-ref-format/#_description
+        # Rule 1
+        self.assertRaises(ValueError, check_ref, ".ref/begins/with/dot")
+        self.assertRaises(ValueError, check_ref, "ref/component/.begins/with/dot")
+        self.assertRaises(ValueError, check_ref, "ref/ends/with/a.lock")
+        self.assertRaises(ValueError, check_ref, "ref/component/ends.lock/with/period_lock")
+        # Rule 2
+        check_ref("valid_one_level_refname")
+        # Rule 3
+        self.assertRaises(ValueError, check_ref, "ref/contains/../double/period")
+        # Rule 4
+        for c in " ~^:":
+            self.assertRaises(ValueError, check_ref, f"ref/contains/invalid{c}/character")
+        for code in range(0, 32):
+            self.assertRaises(ValueError, check_ref, f"ref/contains/invalid{chr(code)}/ASCII/control_character")
+        self.assertRaises(ValueError, check_ref, f"ref/contains/invalid{chr(127)}/ASCII/control_character")
+        # Rule 5
+        for c in "*?[":
+            self.assertRaises(ValueError, check_ref, f"ref/contains/invalid{c}/character")
+        # Rule 6
+        self.assertRaises(ValueError, check_ref, "/ref/begins/with/slash")
+        self.assertRaises(ValueError, check_ref, "ref/ends/with/slash/")
+        self.assertRaises(ValueError, check_ref, "ref/contains//double/slash/")
+        # Rule 7
+        self.assertRaises(ValueError, check_ref, "ref/ends/with/dot.")
+        # Rule 8
+        self.assertRaises(ValueError, check_ref, "ref/contains@{/at_brace")
+        # Rule 9
+        self.assertRaises(ValueError, check_ref, "@")
+        # Rule 10
+        self.assertRaises(ValueError, check_ref, "ref/contain\\s/backslash")
+        # Valid reference name should not raise
+        check_ref("valid/ref/name")

@@ -3,24 +3,32 @@
 # Copyright (C) 2008, 2009 Michael Trier (mtrier@gmail.com) and contributors
 #
 # This module is part of GitPython and is released under
-# the BSD License: http://www.opensource.org/licenses/bsd-license.php
+# the BSD License: https://opensource.org/license/bsd-3-clause/
+import inspect
+import logging
 import os
+import os.path as osp
+import re
 import shutil
 import subprocess
 import sys
 from tempfile import TemporaryDirectory, TemporaryFile
-from unittest import mock, skipUnless
+from unittest import skipUnless
+
+if sys.version_info >= (3, 8):
+    from unittest import mock
+else:
+    import mock  # To be able to examine call_args.kwargs on a mock.
+
+import ddt
 
 from git import Git, refresh, GitCommandError, GitCommandNotFound, Repo, cmd
-from test.lib import TestBase, fixture_path
-from test.lib import with_rw_directory
-from git.util import cwd, finalize_process
-
-import os.path as osp
-
 from git.compat import is_win
+from git.util import cwd, finalize_process
+from test.lib import TestBase, fixture_path, with_rw_directory
 
 
+@ddt.ddt
 class TestGit(TestBase):
     @classmethod
     def setUpClass(cls):
@@ -31,6 +39,13 @@ class TestGit(TestBase):
         import gc
 
         gc.collect()
+
+    def _assert_logged_for_popen(self, log_watcher, name, value):
+        re_name = re.escape(name)
+        re_value = re.escape(str(value))
+        re_line = re.compile(rf"DEBUG:git.cmd:Popen\(.*\b{re_name}={re_value}[,)]")
+        match_attempts = [re_line.match(message) for message in log_watcher.output]
+        self.assertTrue(any(match_attempts), repr(log_watcher.output))
 
     @mock.patch.object(Git, "execute")
     def test_call_process_calls_execute(self, git):
@@ -73,7 +88,53 @@ class TestGit(TestBase):
         res = self.git.transform_kwargs(**{"s": True, "t": True})
         self.assertEqual({"-s", "-t"}, set(res))
 
-    def test_it_executes_git_to_shell_and_returns_result(self):
+    _shell_cases = (
+        # value_in_call, value_from_class, expected_popen_arg
+        (None, False, False),
+        (None, True, True),
+        (False, True, False),
+        (False, False, False),
+        (True, False, True),
+        (True, True, True),
+    )
+
+    def _do_shell_combo(self, value_in_call, value_from_class):
+        with mock.patch.object(Git, "USE_SHELL", value_from_class):
+            # git.cmd gets Popen via a "from" import, so patch it there.
+            with mock.patch.object(cmd, "Popen", wraps=cmd.Popen) as mock_popen:
+                # Use a command with no arguments (besides the program name), so it runs
+                # with or without a shell, on all OSes, with the same effect.
+                self.git.execute(["git"], with_exceptions=False, shell=value_in_call)
+
+        return mock_popen
+
+    @ddt.idata(_shell_cases)
+    def test_it_uses_shell_or_not_as_specified(self, case):
+        """A bool passed as ``shell=`` takes precedence over `Git.USE_SHELL`."""
+        value_in_call, value_from_class, expected_popen_arg = case
+        mock_popen = self._do_shell_combo(value_in_call, value_from_class)
+        mock_popen.assert_called_once()
+        self.assertIs(mock_popen.call_args.kwargs["shell"], expected_popen_arg)
+
+    @ddt.idata(full_case[:2] for full_case in _shell_cases)
+    def test_it_logs_if_it_uses_a_shell(self, case):
+        """``shell=`` in the log message agrees with what is passed to `Popen`."""
+        value_in_call, value_from_class = case
+        with self.assertLogs(cmd.log, level=logging.DEBUG) as log_watcher:
+            mock_popen = self._do_shell_combo(value_in_call, value_from_class)
+        self._assert_logged_for_popen(log_watcher, "shell", mock_popen.call_args.kwargs["shell"])
+
+    @ddt.data(
+        ("None", None),
+        ("<valid stream>", subprocess.PIPE),
+    )
+    def test_it_logs_istream_summary_for_stdin(self, case):
+        expected_summary, istream_argument = case
+        with self.assertLogs(cmd.log, level=logging.DEBUG) as log_watcher:
+            self.git.execute(["git", "version"], istream=istream_argument)
+        self._assert_logged_for_popen(log_watcher, "stdin", expected_summary)
+
+    def test_it_executes_git_and_returns_result(self):
         self.assertRegex(self.git.execute(["git", "version"]), r"^git version [\d\.]{2}.*$")
 
     def test_it_executes_git_not_from_cwd(self):
@@ -195,17 +256,12 @@ class TestGit(TestBase):
         # END verify number types
 
     def test_cmd_override(self):
-        prev_cmd = self.git.GIT_PYTHON_GIT_EXECUTABLE
-        exc = GitCommandNotFound
-        try:
-            # set it to something that doesn't exist, assure it raises
-            type(self.git).GIT_PYTHON_GIT_EXECUTABLE = osp.join(
-                "some", "path", "which", "doesn't", "exist", "gitbinary"
-            )
-            self.assertRaises(exc, self.git.version)
-        finally:
-            type(self.git).GIT_PYTHON_GIT_EXECUTABLE = prev_cmd
-        # END undo adjustment
+        with mock.patch.object(
+            type(self.git),
+            "GIT_PYTHON_GIT_EXECUTABLE",
+            osp.join("some", "path", "which", "doesn't", "exist", "gitbinary"),
+        ):
+            self.assertRaises(GitCommandNotFound, self.git.version)
 
     def test_refresh(self):
         # test a bad git path refresh
@@ -250,7 +306,7 @@ class TestGit(TestBase):
 
     def test_env_vars_passed_to_git(self):
         editor = "non_existent_editor"
-        with mock.patch.dict("os.environ", {"GIT_EDITOR": editor}):  # @UndefinedVariable
+        with mock.patch.dict(os.environ, {"GIT_EDITOR": editor}):
             self.assertEqual(self.git.var("GIT_EDITOR"), editor)
 
     @with_rw_directory
@@ -318,3 +374,11 @@ class TestGit(TestBase):
 
         self.assertEqual(count[1], line_count)
         self.assertEqual(count[2], line_count)
+
+    def test_execute_kwargs_set_agrees_with_method(self):
+        parameter_names = inspect.signature(cmd.Git.execute).parameters.keys()
+        self_param, command_param, *most_params, extra_kwargs_param = parameter_names
+        self.assertEqual(self_param, "self")
+        self.assertEqual(command_param, "command")
+        self.assertEqual(set(most_params), cmd.execute_kwargs)  # Most important.
+        self.assertEqual(extra_kwargs_param, "subprocess_kwargs")

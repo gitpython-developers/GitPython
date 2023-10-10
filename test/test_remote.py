@@ -2,7 +2,7 @@
 # Copyright (C) 2008, 2009 Michael Trier (mtrier@gmail.com) and contributors
 #
 # This module is part of GitPython and is released under
-# the BSD License: http://www.opensource.org/licenses/bsd-license.php
+# the BSD License: https://opensource.org/license/bsd-3-clause/
 
 import random
 import tempfile
@@ -160,7 +160,7 @@ class TestRemote(TestBase):
             # END error checking
         # END for each info
 
-        if any([info.flags & info.ERROR for info in results]):
+        if any(info.flags & info.ERROR for info in results):
             self.assertRaises(GitCommandError, results.raise_if_error)
         else:
             # No errors, so this should do nothing

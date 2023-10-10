@@ -2,7 +2,7 @@
 # Copyright (C) 2008, 2009 Michael Trier (mtrier@gmail.com) and contributors
 #
 # This module is part of GitPython and is released under
-# the BSD License: http://www.opensource.org/licenses/bsd-license.php
+# the BSD License: https://opensource.org/license/bsd-3-clause/
 
 import glob
 import io
@@ -100,6 +100,7 @@ class TestBase(TestCase):
             # values must be considered as soon as they get them
             assert r_config.get_value("diff", "tool") == "meld"
             try:
+                # FIXME: Split this assertion out somehow and mark it xfail (or fix it).
                 assert r_config.get_value("sec", "var1") == "value1_main"
             except AssertionError as e:
                 raise SkipTest("Known failure -- included values are not in effect right away") from e

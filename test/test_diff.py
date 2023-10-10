@@ -3,11 +3,10 @@
 # Copyright (C) 2008, 2009 Michael Trier (mtrier@gmail.com) and contributors
 #
 # This module is part of GitPython and is released under
-# the BSD License: http://www.opensource.org/licenses/bsd-license.php
+# the BSD License: https://opensource.org/license/bsd-3-clause/
 import ddt
 import shutil
 import tempfile
-import unittest
 from git import (
     Repo,
     GitCommandError,
@@ -414,12 +413,12 @@ class TestDiff(TestBase):
 
     @with_rw_directory
     def test_rename_override(self, rw_dir):
-        """Test disabling of diff rename detection""" 
+        """Test disabling of diff rename detection"""
 
         # create and commit file_a.txt
         repo = Repo.init(rw_dir)
         file_a = osp.join(rw_dir, "file_a.txt")
-        with open(file_a, "w", encoding='utf-8') as outfile:
+        with open(file_a, "w", encoding="utf-8") as outfile:
             outfile.write("hello world\n")
         repo.git.add(Git.polish_url(file_a))
         repo.git.commit(message="Added file_a.txt")
@@ -429,21 +428,21 @@ class TestDiff(TestBase):
 
         # create and commit file_b.txt with similarity index of 52
         file_b = osp.join(rw_dir, "file_b.txt")
-        with open(file_b, "w", encoding='utf-8') as outfile:
+        with open(file_b, "w", encoding="utf-8") as outfile:
             outfile.write("hello world\nhello world")
         repo.git.add(Git.polish_url(file_b))
         repo.git.commit(message="Removed file_a.txt. Added file_b.txt")
 
-        commit_a = repo.commit('HEAD')
-        commit_b = repo.commit('HEAD~1')
+        commit_a = repo.commit("HEAD")
+        commit_b = repo.commit("HEAD~1")
 
         # check default diff command with renamed files enabled
         diffs = commit_b.diff(commit_a)
         self.assertEqual(1, len(diffs))
         diff = diffs[0]
         self.assertEqual(True, diff.renamed_file)
-        self.assertEqual('file_a.txt', diff.rename_from)
-        self.assertEqual('file_b.txt', diff.rename_to)
+        self.assertEqual("file_a.txt", diff.rename_from)
+        self.assertEqual("file_b.txt", diff.rename_to)
 
         # check diff with rename files disabled
         diffs = commit_b.diff(commit_a, no_renames=True)
@@ -452,32 +451,31 @@ class TestDiff(TestBase):
         # check fileA.txt deleted
         diff = diffs[0]
         self.assertEqual(True, diff.deleted_file)
-        self.assertEqual('file_a.txt', diff.a_path)
+        self.assertEqual("file_a.txt", diff.a_path)
 
         # check fileB.txt added
         diff = diffs[1]
         self.assertEqual(True, diff.new_file)
-        self.assertEqual('file_b.txt', diff.a_path)
+        self.assertEqual("file_b.txt", diff.a_path)
 
         # check diff with high similarity index
-        diffs = commit_b.diff(commit_a, split_single_char_options=False, M='75%')
+        diffs = commit_b.diff(commit_a, split_single_char_options=False, M="75%")
         self.assertEqual(2, len(diffs))
 
         # check fileA.txt deleted
         diff = diffs[0]
         self.assertEqual(True, diff.deleted_file)
-        self.assertEqual('file_a.txt', diff.a_path)
+        self.assertEqual("file_a.txt", diff.a_path)
 
         # check fileB.txt added
         diff = diffs[1]
         self.assertEqual(True, diff.new_file)
-        self.assertEqual('file_b.txt', diff.a_path)
+        self.assertEqual("file_b.txt", diff.a_path)
 
         # check diff with low similarity index
-        diffs = commit_b.diff(commit_a, split_single_char_options=False, M='40%')
+        diffs = commit_b.diff(commit_a, split_single_char_options=False, M="40%")
         self.assertEqual(1, len(diffs))
         diff = diffs[0]
         self.assertEqual(True, diff.renamed_file)
-        self.assertEqual('file_a.txt', diff.rename_from)
-        self.assertEqual('file_b.txt', diff.rename_to)
-
+        self.assertEqual("file_a.txt", diff.rename_from)
+        self.assertEqual("file_b.txt", diff.rename_to)
