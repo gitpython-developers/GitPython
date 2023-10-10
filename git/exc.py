@@ -5,16 +5,16 @@
 # the BSD License: http://www.opensource.org/licenses/bsd-license.php
 """ Module containing all exceptions thrown throughout the git package, """
 
-from gitdb.exc import (
-    AmbiguousObjectName,  # @UnusedImport
-    BadName,  # @UnusedImport
-    BadObject,  # @UnusedImport
-    BadObjectType,  # @UnusedImport
-    InvalidDBRoot,  # @UnusedImport
-    ODBError,  # @UnusedImport
-    ParseError,  # @UnusedImport
-    UnsupportedOperation,  # @UnusedImport
-    to_hex_sha,  # @UnusedImport
+from gitdb.exc import (  # noqa: @UnusedImport
+    AmbiguousObjectName,
+    BadName,
+    BadObject,
+    BadObjectType,
+    InvalidDBRoot,
+    ODBError,
+    ParseError,
+    UnsupportedOperation,
+    to_hex_sha,
 )
 from git.compat import safe_decode
 from git.util import remove_password_if_present
