@@ -2,8 +2,7 @@
 
 ## Supported Versions
 
-Only the latest version of GitPython can receive security updates. If a vulnerability is discovered, a fix can be issued in a new release, while older releases
-are likely to be yanked.
+Only the latest version of GitPython can receive security updates. If a vulnerability is discovered, a fix can be issued in a new release.
 
 | Version | Supported          |
 | ------- | ------------------ |
