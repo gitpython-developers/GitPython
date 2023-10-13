@@ -202,8 +202,7 @@ Please have a look at the [contributions file][contributing].
 2. Update/verify that the `doc/source/changes.rst` changelog file was updated. It should include a link to the forthcoming release page: `https://github.com/gitpython-developers/GitPython/releases/tag/<version>`
 3. Commit everything.
 4. Run `git tag -s <version>` to tag the version in Git.
-5. _Optionally_ create and activate a [virtual environment](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/#creating-a-virtual-environment) using `venv` or `virtualenv`.\
-(When run in a virtual environment, the next step will automatically take care of installing `build` and `twine` in it.)
+5. _Optionally_ create and activate a [virtual environment](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/#creating-a-virtual-environment). (Then the next step can install `build` and `twine`.)
 6. Run `make release`.
 7. Go to [GitHub Releases](https://github.com/gitpython-developers/GitPython/releases) and publish a new one with the recently pushed tag. Generate the changelog.
 
