@@ -486,10 +486,12 @@ class Diff(object):
 
     @classmethod
     def _index_from_patch_format(cls, repo: "Repo", proc: Union["Popen", "Git.AutoInterrupt"]) -> DiffIndex:
-        """Create a new DiffIndex from the given text which must be in patch format
-        :param repo: is the repository we are operating on - it is required
-        :param stream: result of 'git diff' as a stream (supporting file protocol)
-        :return: git.DiffIndex"""
+        """Create a new DiffIndex from the given process output which must be in patch format.
+
+        :param repo: The repository we are operating on
+        :param proc: ``git diff`` process to read from (supports :class:`Git.AutoInterrupt` wrapper)
+        :return: git.DiffIndex
+        """
 
         ## FIXME: Here SLURPING raw, need to re-phrase header-regexes linewise.
         text_list: List[bytes] = []
@@ -644,8 +646,12 @@ class Diff(object):
 
     @classmethod
     def _index_from_raw_format(cls, repo: "Repo", proc: "Popen") -> "DiffIndex":
-        """Create a new DiffIndex from the given stream which must be in raw format.
-        :return: git.DiffIndex"""
+        """Create a new DiffIndex from the given process output which must be in raw format.
+
+        :param repo: The repository we are operating on
+        :param proc: Process to read output from
+        :return: git.DiffIndex
+        """
         # handles
         # :100644 100644 687099101... 37c5e30c8... M    .gitignore
 
