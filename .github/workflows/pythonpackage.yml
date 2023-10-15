@@ -10,18 +10,19 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-
     strategy:
       fail-fast: false
       matrix:
+        os: ["ubuntu-latest", "windows-latest"]
         python-version: ["3.7", "3.8", "3.9", "3.10", "3.11", "3.12"]
         include:
         - experimental: false
 
+    runs-on: ${{ matrix.os }}
+
     defaults:
       run:
-        shell: /bin/bash --noprofile --norc -exo pipefail {0}
+        shell: bash --noprofile --norc -exo pipefail {0}
 
     steps:
     - uses: actions/checkout@v4
