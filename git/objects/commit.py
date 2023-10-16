@@ -688,10 +688,6 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         return self
 
     def _deserialize(self, stream: BytesIO) -> "Commit":
-        """
-        :param from_rev_list: if true, the stream format is coming from the rev-list command
-            Otherwise it is assumed to be a plain data stream from our object
-        """
         readline = stream.readline
         self.tree = Tree(self.repo, hex_to_bin(readline().split()[1]), Tree.tree_id << 12, "")
 
