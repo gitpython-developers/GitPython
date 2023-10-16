@@ -221,4 +221,4 @@ class IndexObject(Object):
         if self.repo.working_tree_dir is not None:
             return join_path_native(self.repo.working_tree_dir, self.path)
         else:
-            raise WorkTreeRepositoryUnsupported("Working_tree_dir was None or empty")
+            raise WorkTreeRepositoryUnsupported("working_tree_dir was None or empty")
