@@ -755,7 +755,7 @@ class Submodule(IndexObject, TraversableIterableObj):
                     if len(base_commit) == 0 or (base_commit[0] is not None and base_commit[0].hexsha == hexsha):
                         if force:
                             msg = "Will force checkout or reset on local branch that is possibly in the future of"
-                            msg += "the commit it will be checked out to, effectively 'forgetting' new commits"
+                            msg += " the commit it will be checked out to, effectively 'forgetting' new commits"
                             log.debug(msg)
                         else:
                             msg = "Skipping %s on branch '%s' of submodule repo '%s' as it contains un-pushed commits"
