@@ -47,10 +47,8 @@ git reset --hard HEAD~1
 # Point the master branch where we started, so we test the correct code.
 git reset --hard __testing_point__
 
-# The tests need submodules. (On CI, they would already have been checked out.)
-if ! ci; then
-    git submodule update --init --recursive
-fi
+# The tests need submodules, including a submodule with a submodule.
+git submodule update --init --recursive
 
 # The tests need some version tags. Try to get them even in forks. This fetches
 # other objects too. So, locally, we always do it, for a consistent experience.
