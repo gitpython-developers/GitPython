@@ -102,7 +102,7 @@ def merge_sort(a: List[TreeCacheTup], cmp: Callable[[TreeCacheTup, TreeCacheTup]
         k = k + 1
 
 
-class TreeModifier(object):
+class TreeModifier:
     """A utility class providing methods to alter the underlying cache in a list-like fashion.
 
     Once all adjustments are complete, the _cache, which really is a reference to

@@ -79,7 +79,7 @@ def decode_path(path: bytes, has_ab_prefix: bool = True) -> Optional[bytes]:
     return path
 
 
-class Diffable(object):
+class Diffable:
     """Common interface for all objects that can be diffed against another object of
     compatible type.
 
@@ -90,7 +90,7 @@ class Diffable(object):
 
     __slots__ = ()
 
-    class Index(object):
+    class Index:
         """Stand-in indicating you want to diff against the index."""
 
     def _process_diff_args(
@@ -252,7 +252,7 @@ class DiffIndex(List[T_Diff]):
         # END for each diff
 
 
-class Diff(object):
+class Diff:
     """A Diff contains diff information between two Trees.
 
     It contains two sides a and b of the diff, members are prefixed with

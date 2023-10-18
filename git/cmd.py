@@ -490,7 +490,7 @@ class Git(LazyMixin):
                         f"{unsafe_option} is not allowed, use `allow_unsafe_options=True` to allow it."
                     )
 
-    class AutoInterrupt(object):
+    class AutoInterrupt:
         """Process wrapper that terminates the wrapped process on finalization.
 
         This kills/interrupts the stored process instance once this instance goes out of
@@ -602,7 +602,7 @@ class Git(LazyMixin):
 
     # END auto interrupt
 
-    class CatFileContentStream(object):
+    class CatFileContentStream:
         """Object representing a sized read-only stream returning the contents of
         an object.
 

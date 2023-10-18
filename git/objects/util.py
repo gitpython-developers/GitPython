@@ -337,7 +337,7 @@ def parse_actor_and_date(line: str) -> Tuple[Actor, int, int]:
 # { Classes
 
 
-class ProcessStreamAdapter(object):
+class ProcessStreamAdapter:
     """Class wiring all calls to the contained Process instance.
 
     Use this type to hide the underlying process to provide access only to a specified

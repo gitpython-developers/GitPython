@@ -108,7 +108,7 @@ class BlameEntry(NamedTuple):
     orig_linenos: range
 
 
-class Repo(object):
+class Repo:
     """Represents a git repository and allows you to query references,
     gather commit information, generate diffs, create and clone repositories query
     the log.

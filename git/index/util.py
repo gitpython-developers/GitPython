@@ -33,7 +33,7 @@ unpack = struct.unpack
 # } END aliases
 
 
-class TemporaryFileSwap(object):
+class TemporaryFileSwap:
     """Utility class moving a file to a temporary location within the same directory
     and moving it back on to where on object deletion."""
 

@@ -32,7 +32,7 @@ CE_STAGESHIFT = 12
 # } END invariants
 
 
-class BlobFilter(object):
+class BlobFilter:
     """
     Predicate to be used by iter_blobs allowing to filter only return blobs which
     match the given list of directories or files.

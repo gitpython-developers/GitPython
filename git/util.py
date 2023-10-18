@@ -516,7 +516,7 @@ def remove_password_if_present(cmdline: Sequence[str]) -> List[str]:
 # { Classes
 
 
-class RemoteProgress(object):
+class RemoteProgress:
     """
     Handler providing an interface to parse progress information emitted by git-push
     and git-fetch and to dispatch callbacks allowing subclasses to react to the progress.
@@ -723,7 +723,7 @@ class CallableRemoteProgress(RemoteProgress):
         self._callable(*args, **kwargs)
 
 
-class Actor(object):
+class Actor:
     """Actors hold information about a person acting on the repository. They
     can be committers and authors or anything with a name and an email as
     mentioned in the git log entries."""
@@ -847,7 +847,7 @@ class Actor(object):
         return cls._main_actor(cls.env_author_name, cls.env_author_email, config_reader)
 
 
-class Stats(object):
+class Stats:
     """
     Represents stat information as presented by git at the end of a merge. It is
     created from the output of a diff operation.
@@ -908,7 +908,7 @@ class Stats(object):
         return Stats(hsh["total"], hsh["files"])
 
 
-class IndexFileSHA1Writer(object):
+class IndexFileSHA1Writer:
     """Wrapper around a file-like object that remembers the SHA1 of
     the data written to it. It will write a sha when the stream is closed
     or if the asked for explicitly using write_sha.
@@ -942,7 +942,7 @@ class IndexFileSHA1Writer(object):
         return self.f.tell()
 
 
-class LockFile(object):
+class LockFile:
     """Provides methods to obtain, check for, and release a file based lock which
     should be used to handle concurrent access to the same file.
 

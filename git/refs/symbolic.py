@@ -55,7 +55,7 @@ def _git_dir(repo: "Repo", path: Union[PathLike, None]) -> PathLike:
     return repo.common_dir
 
 
-class SymbolicReference(object):
+class SymbolicReference:
     """Special case of a reference that is symbolic.
 
     This does not point to a specific commit, but to another
