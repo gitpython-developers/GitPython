@@ -43,9 +43,11 @@ PATHCHANGE = RootUpdateProgress.PATHCHANGE
 
 
 class RootModule(Submodule):
+    """A (virtual) root of all submodules in the given repository.
 
-    """A (virtual) Root of all submodules in the given repository. It can be used
-    to more easily traverse all submodules of the master repository"""
+    This can be used to more easily traverse all submodules of the
+    superproject (master repository).
+    """
 
     __slots__ = ()
 

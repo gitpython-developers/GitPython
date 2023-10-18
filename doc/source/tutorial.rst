@@ -413,7 +413,7 @@ If you obtained your submodule object by traversing a tree object which is not r
 you have to inform the submodule about its actual commit to retrieve the data from
 by using the ``set_parent_commit(...)`` method.
 
-The special :class:`RootModule <git.objects.submodule.root.RootModule>` type allows you to treat your master repository as root of a hierarchy of submodules, which allows very convenient submodule handling. Its ``update(...)`` method is reimplemented to provide an advanced way of updating submodules as they change their values over time. The update method will track changes and make sure your working tree and submodule checkouts stay consistent, which is very useful in case submodules get deleted or added to name just two of the handled cases.
+The special :class:`RootModule <git.objects.submodule.root.RootModule>` type allows you to treat your superproject (master repository) as root of a hierarchy of submodules, which allows very convenient submodule handling. Its ``update(...)`` method is reimplemented to provide an advanced way of updating submodules as they change their values over time. The update method will track changes and make sure your working tree and submodule checkouts stay consistent, which is very useful in case submodules get deleted or added to name just two of the handled cases.
 
 Additionally, GitPython adds functionality to track a specific branch, instead of just a commit. Supported by customized update methods, you are able to automatically update submodules to the latest revision available in the remote repository, as well as to keep track of changes and movements of these submodules. To use it, set the name of the branch you want to track to the ``submodule.$name.branch`` option of the *.gitmodules*  file, and use GitPython update methods on the resulting repository with the ``to_latest_revision`` parameter turned on. In the latter case, the sha of your submodule will be ignored, instead a local tracking branch will be updated to the respective remote branch automatically, provided there are no local changes. The resulting behaviour is much like the one of svn::externals, which can be useful in times.
 
@@ -545,4 +545,3 @@ And even more ...
 There is more functionality in there, like the ability to archive repositories, get stats and logs, blame, and probably a few other things that were not mentioned here.
 
 Check the unit tests for an in-depth introduction on how each function is supposed to be used.
-
