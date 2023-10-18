@@ -948,17 +948,16 @@ class Submodule(IndexObject, TraversableIterableObj):
         """Remove this submodule from the repository. This will remove our entry
         from the .gitmodules file and the entry in the .git / config file.
 
-        :param module: If True, the module checkout we point to will be deleted
-            as well. If the module is currently on a commit which is not part
-            of any branch in the remote, if the currently checked out branch
-            working tree, or untracked files,
-            is ahead of its tracking branch, if you have modifications in the
+        :param module: If True, the checked out module we point to will be deleted as
+            well.If that module is currently on a commit outside any branch in the
+            remote, or if it is ahead of its tracking branch, or if there are modified
+            or untracked files in its working tree, then the removal will fail.
             In case the removal of the repository fails for these reasons, the
             submodule status will not have been altered.
-            If this submodule has child - modules on its own, these will be deleted
-            prior to touching the own module.
+            If this submodule has child modules of its own, these will be deleted prior
+            to touching the direct submodule.
         :param force: Enforces the deletion of the module even though it contains
-            modifications. This basically enforces a brute - force file system based
+            modifications. This basically enforces a brute-force file system based
             deletion.
         :param configuration: if True, the submodule is deleted from the configuration,
             otherwise it isn't. Although this should be enabled most of the times,
