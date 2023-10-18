@@ -769,7 +769,7 @@ class SymbolicReference(object):
 
             List is lexicographically sorted
             The returned objects represent actual subclasses, such as Head or TagReference"""
-        return (r for r in cls._iter_items(repo, common_path) if r.__class__ == SymbolicReference or not r.is_detached)
+        return (r for r in cls._iter_items(repo, common_path) if r.__class__ is SymbolicReference or not r.is_detached)
 
     @classmethod
     def from_path(cls: Type[T_References], repo: "Repo", path: PathLike) -> T_References:
@@ -797,7 +797,7 @@ class SymbolicReference(object):
             try:
                 instance: T_References
                 instance = ref_type(repo, path)
-                if instance.__class__ == SymbolicReference and instance.is_detached:
+                if instance.__class__ is SymbolicReference and instance.is_detached:
                     raise ValueError("SymbolicRef was detached, we drop it")
                 else:
                     return instance
