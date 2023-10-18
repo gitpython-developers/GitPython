@@ -1095,7 +1095,7 @@ class Submodule(IndexObject, TraversableIterableObj):
         contain the .gitmodules blob.
 
         :param commit:
-            Commit'ish reference pointing at the root_tree, or None to always point to the
+            Commit-ish reference pointing at the root_tree, or None to always point to the
             most recent commit
         :param check:
             if True, relatively expensive checks will be performed to verify

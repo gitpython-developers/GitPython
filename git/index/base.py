@@ -1300,7 +1300,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             but if True, this method behaves like HEAD.reset.
 
         :param paths: if given as an iterable of absolute or repository-relative paths,
-            only these will be reset to their state at the given commit'ish.
+            only these will be reset to their state at the given commit-ish.
             The paths need to exist at the commit, otherwise an exception will be
             raised.
 

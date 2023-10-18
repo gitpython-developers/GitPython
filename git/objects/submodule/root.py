@@ -91,7 +91,7 @@ class RootModule(Submodule):
         Additionally it will detect addition and removal of submodules, which will be handled
         gracefully.
 
-        :param previous_commit: If set to a commit'ish, the commit we should use
+        :param previous_commit: If set to a commit-ish, the commit we should use
             as the previous commit the HEAD pointed to before it was set to the commit it points to now.
             If None, it defaults to HEAD@{1} otherwise
         :param recursive: if True, the children of submodules will be updated as well

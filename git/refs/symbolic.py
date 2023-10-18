@@ -641,7 +641,7 @@ class SymbolicReference(object):
 
         :param reference:
             The reference to which the new symbolic reference should point to.
-            If it is a commit'ish, the symbolic ref will be detached.
+            If it is a commit-ish, the symbolic ref will be detached.
 
         :param force:
             if True, force creation even if a symbolic reference with that name already exists.
