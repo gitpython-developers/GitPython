@@ -419,8 +419,7 @@ def is_cygwin_git(git_executable: PathLike) -> bool:
 
 def is_cygwin_git(git_executable: Union[None, PathLike]) -> bool:
     if is_win:
-        # is_win seems to be true only for Windows-native pythons
-        # cygwin has os.name = posix, I think
+        # is_win is only True on native Windows systems. On Cygwin, os.name == "posix".
         return False
 
     if git_executable is None:
