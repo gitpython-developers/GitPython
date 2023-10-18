@@ -22,7 +22,7 @@ __all__ = ["Reference"]
 
 
 def require_remote_ref_path(func: Callable[..., _T]) -> Callable[..., _T]:
-    """A decorator raising a TypeError if we are not a valid remote, based on the path"""
+    """A decorator raising a TypeError if we are not a valid remote, based on the path."""
 
     def wrapper(self: T_References, *args: Any) -> _T:
         if not self.is_remote():
@@ -38,27 +38,30 @@ def require_remote_ref_path(func: Callable[..., _T]) -> Callable[..., _T]:
 
 
 class Reference(SymbolicReference, LazyMixin, IterableObj):
+    """A named reference to any object.
 
-    """Represents a named reference to any object. Subclasses may apply restrictions though,
-    i.e. Heads can only point to commits."""
+    Subclasses may apply restrictions though, e.g., a :class:`Head <git.refs.head.Head>`
+    can only point to commits.
+    """
 
     __slots__ = ()
+
     _points_to_commits_only = False
     _resolve_ref_on_create = True
     _common_path_default = "refs"
 
     def __init__(self, repo: "Repo", path: PathLike, check_path: bool = True) -> None:
-        """Initialize this instance
+        """Initialize this instance.
 
-        :param repo: Our parent repository
-        :param path:
-            Path relative to the .git/ directory pointing to the ref in question, i.e.
-            refs/heads/master
-        :param check_path: if False, you can provide any path. Otherwise the path must start with the
-            default path prefix of this type."""
+        :param repo: Our parent repository.
+        :param path: Path relative to the .git/ directory pointing to the ref in
+            question, e.g. ``refs/heads/master``.
+        :param check_path: If False, you can provide any path. Otherwise the path must
+            start with the default path prefix of this type.
+        """
         if check_path and not str(path).startswith(self._common_path_default + "/"):
             raise ValueError(f"Cannot instantiate {self.__class__.__name__!r} from path {path}")
-        self.path: str  # SymbolicReference converts to string atm
+        self.path: str  # SymbolicReference converts to string at the moment.
         super(Reference, self).__init__(repo, path)
 
     def __str__(self) -> str:
@@ -72,9 +75,10 @@ class Reference(SymbolicReference, LazyMixin, IterableObj):
         object: Union[Commit_ish, "SymbolicReference", str],
         logmsg: Union[str, None] = None,
     ) -> "Reference":
-        """Special version which checks if the head-log needs an update as well
+        """Special version which checks if the head-log needs an update as well.
 
-        :return: self"""
+        :return: self
+        """
         oldbinsha = None
         if logmsg is not None:
             head = self.repo.head
@@ -104,13 +108,13 @@ class Reference(SymbolicReference, LazyMixin, IterableObj):
 
         return self
 
-    # NOTE: Don't have to overwrite properties as the will only work without a the log
+    # NOTE: No need to overwrite properties, as the will only work without a the log.
 
     @property
     def name(self) -> str:
         """:return: (shortest) Name of this reference - it may contain path components"""
-        # first two path tokens are can be removed as they are
-        # refs/heads or refs/tags or refs/remotes
+        # The first two path tokens can be removed as they are
+        # refs/heads or refs/tags or refs/remotes.
         tokens = self.path.split("/")
         if len(tokens) < 3:
             return self.path  # could be refs/HEAD
@@ -132,23 +136,27 @@ class Reference(SymbolicReference, LazyMixin, IterableObj):
 
     # { Remote Interface
 
-    @property  # type: ignore ## mypy cannot deal with properties with an extra decorator (2021-04-21)
+    @property  # type: ignore  # mypy cannot deal with properties with an extra decorator (2021-04-21).
     @require_remote_ref_path
     def remote_name(self) -> str:
         """
         :return:
             Name of the remote we are a reference of, such as 'origin' for a reference
-            named 'origin/master'"""
+            named 'origin/master'.
+        """
         tokens = self.path.split("/")
         # /refs/remotes/<remote name>/<branch_name>
         return tokens[2]
 
-    @property  # type: ignore ## mypy cannot deal with properties with an extra decorator (2021-04-21)
+    @property  # type: ignore  # mypy cannot deal with properties with an extra decorator (2021-04-21).
     @require_remote_ref_path
     def remote_head(self) -> str:
-        """:return: Name of the remote head itself, i.e. master.
+        """
+        :return: Name of the remote head itself, e.g. master.
+
         :note: The returned name is usually not qualified enough to uniquely identify
-            a branch"""
+            a branch.
+        """
         tokens = self.path.split("/")
         return "/".join(tokens[3:])
 

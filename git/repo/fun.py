@@ -1,5 +1,7 @@
-"""Package with general repository related functions"""
+"""Module with general repository-related functions."""
+
 from __future__ import annotations
+
 import os
 import stat
 from pathlib import Path

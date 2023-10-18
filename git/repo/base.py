@@ -3,7 +3,9 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: https://opensource.org/license/bsd-3-clause/
+
 from __future__ import annotations
+
 import logging
 import os
 import re
@@ -164,10 +166,10 @@ class Repo(object):
         search_parent_directories: bool = False,
         expand_vars: bool = True,
     ) -> None:
-        """Create a new Repo instance
+        """Create a new Repo instance.
 
         :param path:
-            the path to either the root git directory or the bare git repo::
+            The path to either the root git directory or the bare git repo::
 
                 repo = Repo("/Users/mtrier/Development/git-python")
                 repo = Repo("/Users/mtrier/Development/git-python.git")
@@ -175,21 +177,26 @@ class Repo(object):
                 repo = Repo("$REPOSITORIES/Development/git-python.git")
                 repo = Repo("C:\\Users\\mtrier\\Development\\git-python\\.git")
 
-            - In *Cygwin*, path may be a `'cygdrive/...'` prefixed path.
-            - If it evaluates to false, :envvar:`GIT_DIR` is used, and if this also evals to false,
-              the current-directory is used.
+            - In *Cygwin*, path may be a ``cygdrive/...`` prefixed path.
+            - If it evaluates to false, :envvar:`GIT_DIR` is used, and if this also
+              evals to false, the current-directory is used.
+
         :param odbt:
             Object DataBase type - a type which is constructed by providing
             the directory containing the database objects, i.e. .git/objects. It will
             be used to access all object data
-        :param search_parent_directories:
-            if True, all parent directories will be searched for a valid repo as well.
 
-            Please note that this was the default behaviour in older versions of GitPython,
-            which is considered a bug though.
+        :param search_parent_directories:
+            If True, all parent directories will be searched for a valid repo as well.
+
+            Please note that this was the default behaviour in older versions of
+            GitPython, which is considered a bug though.
+
         :raise InvalidGitRepositoryError:
         :raise NoSuchPathError:
-        :return: git.Repo"""
+
+        :return: git.Repo
+        """
 
         epath = path or os.getenv("GIT_DIR")
         if not epath:
@@ -271,7 +278,7 @@ class Repo(object):
         try:
             self._bare = self.config_reader("repository").getboolean("core", "bare")
         except Exception:
-            # lets not assume the option exists, although it should
+            # Let's not assume the option exists, although it should.
             pass
 
         try:
@@ -280,8 +287,8 @@ class Repo(object):
         except OSError:
             self._common_dir = ""
 
-        # adjust the wd in case we are actually bare - we didn't know that
-        # in the first place
+        # Adjust the working directory in case we are actually bare - we didn't know
+        # that in the first place.
         if self._bare:
             self._working_tree_dir = None
         # END working dir handling
@@ -289,7 +296,7 @@ class Repo(object):
         self.working_dir: PathLike = self._working_tree_dir or self.common_dir
         self.git = self.GitCommandWrapperType(self.working_dir)
 
-        # special handling, in special times
+        # Special handling, in special times.
         rootpath = osp.join(self.common_dir, "objects")
         if issubclass(odbt, GitCmdObjectDB):
             self.odb = odbt(rootpath, self.git)
@@ -311,12 +318,10 @@ class Repo(object):
     def close(self) -> None:
         if self.git:
             self.git.clear_cache()
-            # Tempfiles objects on Windows are holding references to
-            # open files until they are collected by the garbage
-            # collector, thus preventing deletion.
-            # TODO: Find these references and ensure they are closed
-            # and deleted synchronously rather than forcing a gc
-            # collection.
+            # Tempfiles objects on Windows are holding references to open files until
+            # they are collected by the garbage collector, thus preventing deletion.
+            # TODO: Find these references and ensure they are closed and deleted
+            # synchronously rather than forcing a gc collection.
             if is_win:
                 gc.collect()
             gitdb.util.mman.collect()
@@ -351,14 +356,18 @@ class Repo(object):
 
     @property
     def working_tree_dir(self) -> Optional[PathLike]:
-        """:return: The working tree directory of our git repository. If this is a bare repository, None is returned."""
+        """
+        :return: The working tree directory of our git repository.
+            If this is a bare repository, None is returned.
+        """
         return self._working_tree_dir
 
     @property
     def common_dir(self) -> PathLike:
         """
         :return: The git dir that holds everything except possibly HEAD,
-            FETCH_HEAD, ORIG_HEAD, COMMIT_EDITMSG, index, and logs/."""
+            FETCH_HEAD, ORIG_HEAD, COMMIT_EDITMSG, index, and logs/.
+        """
         return self._common_dir or self.git_dir
 
     @property
@@ -368,30 +377,36 @@ class Repo(object):
 
     @property
     def heads(self) -> "IterableList[Head]":
-        """A list of ``Head`` objects representing the branch heads in
-        this repo
+        """A list of ``Head`` objects representing the branch heads in this repo.
 
-        :return: ``git.IterableList(Head, ...)``"""
+        :return: ``git.IterableList(Head, ...)``
+        """
         return Head.list_items(self)
 
     @property
     def references(self) -> "IterableList[Reference]":
         """A list of Reference objects representing tags, heads and remote references.
 
-        :return: IterableList(Reference, ...)"""
+        :return: IterableList(Reference, ...)
+        """
         return Reference.list_items(self)
 
-    # alias for references
+    # Alias for references.
     refs = references
 
-    # alias for heads
+    # Alias for heads.
     branches = heads
 
     @property
     def index(self) -> "IndexFile":
-        """:return: IndexFile representing this repository's index.
-        :note: This property can be expensive, as the returned ``IndexFile`` will be
-         reinitialized. It's recommended to re-use the object."""
+        """
+        :return: :class:`IndexFile <git.index.base.IndexFile>` representing this
+            repository's index.
+
+        :note: This property can be expensive, as the returned
+            :class:`IndexFile <git.index.base.IndexFile>` will be reinitialized.
+            It is recommended to reuse the object.
+        """
         return IndexFile(self)
 
     @property
@@ -401,14 +416,17 @@ class Repo(object):
 
     @property
     def remotes(self) -> "IterableList[Remote]":
-        """A list of Remote objects allowing to access and manipulate remotes
+        """A list of Remote objects allowing to access and manipulate remotes.
 
-        :return: ``git.IterableList(Remote, ...)``"""
+        :return: ``git.IterableList(Remote, ...)``
+        """
         return Remote.list_items(self)
 
     def remote(self, name: str = "origin") -> "Remote":
         """:return: Remote with the specified name
-        :raise ValueError:  if no remote with such a name exists"""
+
+        :raise ValueError: If no remote with such a name exists
+        """
         r = Remote(self, name)
         if not r.exists():
             raise ValueError("Remote named '%s' didn't exist" % name)
@@ -420,12 +438,15 @@ class Repo(object):
     def submodules(self) -> "IterableList[Submodule]":
         """
         :return: git.IterableList(Submodule, ...) of direct submodules
-            available from the current head"""
+            available from the current head
+        """
         return Submodule.list_items(self)
 
     def submodule(self, name: str) -> "Submodule":
         """:return: Submodule with the given name
-        :raise ValueError: If no such submodule exists"""
+
+        :raise ValueError: If no such submodule exists
+        """
         try:
             return self.submodules[name]
         except IndexError as e:
@@ -433,38 +454,47 @@ class Repo(object):
         # END exception handling
 
     def create_submodule(self, *args: Any, **kwargs: Any) -> Submodule:
-        """Create a new submodule
+        """Create a new submodule.
 
         :note: See the documentation of Submodule.add for a description of the
-            applicable parameters
-        :return: created submodules"""
+            applicable parameters.
+
+        :return: The created submodules.
+        """
         return Submodule.add(self, *args, **kwargs)
 
     def iter_submodules(self, *args: Any, **kwargs: Any) -> Iterator[Submodule]:
         """An iterator yielding Submodule instances, see Traversable interface
-        for a description of args and kwargs
+        for a description of args and kwargs.
 
-        :return: Iterator"""
+        :return: Iterator
+        """
         return RootModule(self).traverse(*args, **kwargs)
 
     def submodule_update(self, *args: Any, **kwargs: Any) -> Iterator[Submodule]:
         """Update the submodules, keeping the repository consistent as it will
-        take the previous state into consideration. For more information, please
-        see the documentation of RootModule.update"""
+        take the previous state into consideration.
+
+        :note: For more information, please see the documentation of
+            :meth:`RootModule.update <git.objects.submodule.root.RootModule.update>`.
+        """
         return RootModule(self).update(*args, **kwargs)
 
     # }END submodules
 
     @property
     def tags(self) -> "IterableList[TagReference]":
-        """A list of ``Tag`` objects that are available in this repo
+        """A list of ``Tag`` objects that are available in this repo.
 
-        :return: ``git.IterableList(TagReference, ...)``"""
+        :return: ``git.IterableList(TagReference, ...)``
+        """
         return TagReference.list_items(self)
 
     def tag(self, path: PathLike) -> TagReference:
         """:return: TagReference Object, reference pointing to a Commit or Tag
-        :param path: path to the tag reference, i.e. 0.1.5 or tags/0.1.5"""
+
+        :param path: path to the tag reference, i.e. 0.1.5 or tags/0.1.5
+        """
         full_path = self._to_full_tag_path(path)
         return TagReference(self, full_path)
 
@@ -486,15 +516,19 @@ class Repo(object):
         logmsg: Optional[str] = None,
     ) -> "Head":
         """Create a new head within the repository.
-        For more documentation, please see the Head.create method.
 
-        :return: newly created Head Reference"""
+        :note: For more documentation, please see the
+            :meth:`Head.create <git.refs.head.Head.create>` method.
+
+        :return: Newly created :class:`Head <git.refs.head.Head>` Reference
+        """
         return Head.create(self, path, commit, logmsg, force)
 
     def delete_head(self, *heads: "Union[str, Head]", **kwargs: Any) -> None:
-        """Delete the given heads
+        """Delete the given heads.
 
-        :param kwargs: Additional keyword arguments to be passed to git-branch"""
+        :param kwargs: Additional keyword arguments to be passed to git-branch
+        """
         return Head.delete(self, *heads, **kwargs)
 
     def create_tag(
@@ -506,9 +540,12 @@ class Repo(object):
         **kwargs: Any,
     ) -> TagReference:
         """Create a new tag reference.
-        For more documentation, please see the TagReference.create method.
 
-        :return: TagReference object"""
+        :note: For more documentation, please see the
+            :meth:`TagReference.create <git.refs.tag.TagReference.create>` method.
+
+        :return: :class:`TagReference <git.refs.tag.TagReference>` object
+        """
         return TagReference.create(self, path, ref, message, force, **kwargs)
 
     def delete_tag(self, *tags: TagReference) -> None:
@@ -518,10 +555,11 @@ class Repo(object):
     def create_remote(self, name: str, url: str, **kwargs: Any) -> Remote:
         """Create a new remote.
 
-        For more information, please see the documentation of the Remote.create
-        methods
+        For more information, please see the documentation of the
+        :meth:`Remote.create <git.remote.Remote.create>` method.
 
-        :return: Remote reference"""
+        :return: :class:`Remote <git.remote.Remote>` reference
+        """
         return Remote.create(self, name, url, **kwargs)
 
     def delete_remote(self, remote: "Remote") -> str:
@@ -531,8 +569,8 @@ class Repo(object):
     def _get_config_path(self, config_level: Lit_config_levels, git_dir: Optional[PathLike] = None) -> str:
         if git_dir is None:
             git_dir = self.git_dir
-        # we do not support an absolute path of the gitconfig on windows ,
-        # use the global config instead
+        # We do not support an absolute path of the gitconfig on Windows.
+        # Use the global config instead.
         if is_win and config_level == "system":
             config_level = "global"
 
@@ -561,17 +599,20 @@ class Repo(object):
     ) -> GitConfigParser:
         """
         :return:
-            GitConfigParser allowing to read the full git configuration, but not to write it
+            :class:`GitConfigParser <git.config.GitConfigParser>` allowing to read the
+            full git configuration, but not to write it.
 
             The configuration will include values from the system, user and repository
             configuration files.
 
         :param config_level:
-            For possible values, see config_writer method
-            If None, all applicable levels will be used. Specify a level in case
-            you know which file you wish to read to prevent reading multiple files.
-        :note: On windows, system configuration cannot currently be read as the path is
-            unknown, instead the global path will be used."""
+            For possible values, see the :meth:`config_writer` method. If None, all
+            applicable levels will be used. Specify a level in case you know which file
+            you wish to read to prevent reading multiple files.
+
+        :note: On Windows, system configuration cannot currently be read as the path is
+            unknown, instead the global path will be used.
+        """
         return self._config_reader(config_level=config_level)
 
     def _config_reader(
@@ -592,23 +633,26 @@ class Repo(object):
     def config_writer(self, config_level: Lit_config_levels = "repository") -> GitConfigParser:
         """
         :return:
-            GitConfigParser allowing to write values of the specified configuration file level.
-            Config writers should be retrieved, used to change the configuration, and written
-            right away as they will lock the configuration file in question and prevent other's
-            to write it.
+            A :class:`GitConfigParser <git.config.GitConfigParser>` allowing to write
+            values of the specified configuration file level. Config writers should be
+            retrieved, used to change the configuration, and written right away as they
+            will lock the configuration file in question and prevent other's to write
+            it.
 
         :param config_level:
-            One of the following values
-            system = system wide configuration file
-            global = user level configuration file
-            repository = configuration file for this repository only"""
+            One of the following values:
+
+            * ``"system"`` = system wide configuration file
+            * ``"global"`` = user level configuration file
+            * ``"`repository"`` = configuration file for this repository only
+        """
         return GitConfigParser(self._get_config_path(config_level), read_only=False, repo=self, merge_includes=False)
 
     def commit(self, rev: Union[str, Commit_ish, None] = None) -> Commit:
-        """The Commit object for the specified revision
+        """The Commit object for the specified revision.
 
         :param rev: revision specifier, see git-rev-parse for viable options.
-        :return: ``git.Commit``
+        :return: :class:`git.Commit <git.objects.commit.Commit>`
         """
         if rev is None:
             return self.head.commit
@@ -616,22 +660,27 @@ class Repo(object):
 
     def iter_trees(self, *args: Any, **kwargs: Any) -> Iterator["Tree"]:
         """:return: Iterator yielding Tree objects
-        :note: Takes all arguments known to iter_commits method"""
+
+        :note: Accepts all arguments known to the :meth:`iter_commits` method.
+        """
         return (c.tree for c in self.iter_commits(*args, **kwargs))
 
     def tree(self, rev: Union[Tree_ish, str, None] = None) -> "Tree":
-        """The Tree object for the given treeish revision
+        """The Tree object for the given tree-ish revision.
+
         Examples::
 
               repo.tree(repo.heads[0])
 
-        :param rev: is a revision pointing to a Treeish ( being a commit or tree )
+        :param rev: is a revision pointing to a Treeish (being a commit or tree)
+
         :return: ``git.Tree``
 
         :note:
             If you need a non-root level tree, find it by iterating the root tree. Otherwise
             it cannot know about its path relative to the repository root and subsequent
-            operations might have unexpected results."""
+            operations might have unexpected results.
+        """
         if rev is None:
             return self.head.commit.tree
         return self.rev_parse(str(rev) + "^{tree}")
@@ -642,37 +691,40 @@ class Repo(object):
         paths: Union[PathLike, Sequence[PathLike]] = "",
         **kwargs: Any,
     ) -> Iterator[Commit]:
-        """A list of Commit objects representing the history of a given ref/commit
+        """A list of Commit objects representing the history of a given ref/commit.
 
         :param rev:
-            revision specifier, see git-rev-parse for viable options.
+            Revision specifier, see git-rev-parse for viable options.
             If None, the active branch will be used.
 
         :param paths:
-            is an optional path or a list of paths; if set only commits that include the path
-            or paths will be returned
+            An optional path or a list of paths; if set only commits that include the
+            path or paths will be returned
 
         :param kwargs:
-            Arguments to be passed to git-rev-list - common ones are
-            max_count and skip
+            Arguments to be passed to git-rev-list - common ones are max_count and skip.
 
-        :note: to receive only commits between two named revisions, use the
-            "revA...revB" revision specifier
+        :note: To receive only commits between two named revisions, use the
+            ``"revA...revB"`` revision specifier.
 
-        :return: ``git.Commit[]``"""
+        :return: ``git.Commit[]``
+        """
         if rev is None:
             rev = self.head.commit
 
         return Commit.iter_items(self, rev, paths, **kwargs)
 
     def merge_base(self, *rev: TBD, **kwargs: Any) -> List[Union[Commit_ish, None]]:
-        """Find the closest common ancestor for the given revision (e.g. Commits, Tags, References, etc)
+        """Find the closest common ancestor for the given revision (Commits, Tags, References, etc.).
 
         :param rev: At least two revs to find the common ancestor for.
-        :param kwargs: Additional arguments to be passed to the repo.git.merge_base() command which does all the work.
-        :return: A list of Commit objects. If --all was not specified as kwarg, the list will have at max one Commit,
-            or is empty if no common merge base exists.
-        :raises ValueError: If not at least two revs are provided
+        :param kwargs: Additional arguments to be passed to the
+            ``repo.git.merge_base()`` command which does all the work.
+        :return: A list of :class:`Commit <git.objects.commit.Commit>` objects. If
+            ``--all`` was not passed as a keyword argument, the list will have at max
+            one :class:`Commit <git.objects.commit.Commit>`, or is empty if no common
+            merge base exists.
+        :raises ValueError: If not at least two revs are provided.
         """
         if len(rev) < 2:
             raise ValueError("Please specify at least two revs, got only %i" % len(rev))
@@ -697,7 +749,7 @@ class Repo(object):
         return res
 
     def is_ancestor(self, ancestor_rev: "Commit", rev: "Commit") -> bool:
-        """Check if a commit is an ancestor of another
+        """Check if a commit is an ancestor of another.
 
         :param ancestor_rev: Rev which should be an ancestor
         :param rev: Rev to test against ancestor_rev
@@ -754,9 +806,10 @@ class Repo(object):
     del _set_daemon_export
 
     def _get_alternates(self) -> List[str]:
-        """The list of alternates for this repo from which objects can be retrieved
+        """The list of alternates for this repo from which objects can be retrieved.
 
-        :return: list of strings being pathnames of alternates"""
+        :return: List of strings being pathnames of alternates
+        """
         if self.git_dir:
             alternates_path = osp.join(self.git_dir, "objects", "info", "alternates")
 
@@ -767,16 +820,18 @@ class Repo(object):
         return []
 
     def _set_alternates(self, alts: List[str]) -> None:
-        """Sets the alternates
+        """Sets the alternates.
 
         :param alts:
             is the array of string paths representing the alternates at which
             git should look for objects, i.e. /home/user/repo/.git/objects
 
         :raise NoSuchPathError:
+
         :note:
             The method does not check for the existence of the paths in alts
-            as the caller is responsible."""
+            as the caller is responsible.
+        """
         alternates_path = osp.join(self.common_dir, "objects", "info", "alternates")
         if not alts:
             if osp.isfile(alternates_path):
@@ -801,27 +856,28 @@ class Repo(object):
     ) -> bool:
         """
         :return:
-            ``True``, the repository is considered dirty. By default it will react
+            ``True`` if the repository is considered dirty. By default it will react
             like a git-status without untracked files, hence it is dirty if the
-            index or the working copy have changes."""
+            index or the working copy have changes.
+        """
         if self._bare:
             # Bare repositories with no associated working directory are
             # always considered to be clean.
             return False
 
-        # start from the one which is fastest to evaluate
+        # Start from the one which is fastest to evaluate.
         default_args = ["--abbrev=40", "--full-index", "--raw"]
         if not submodules:
             default_args.append("--ignore-submodules")
         if path:
             default_args.extend(["--", str(path)])
         if index:
-            # diff index against HEAD
+            # diff index against HEAD.
             if osp.isfile(self.index.path) and len(self.git.diff("--cached", *default_args)):
                 return True
         # END index handling
         if working_tree:
-            # diff index against working tree
+            # diff index against working tree.
             if len(self.git.diff(*default_args)):
                 return True
         # END working tree handling
@@ -841,14 +897,15 @@ class Repo(object):
             are relative to the current working directory of the git command.
 
         :note:
-            ignored files will not appear here, i.e. files mentioned in .gitignore
+            Ignored files will not appear here, i.e. files mentioned in ``.gitignore``.
         :note:
-            This property is expensive, as no cache is involved. To process the result, please
-            consider caching it yourself."""
+            This property is expensive, as no cache is involved. To process the result,
+            please consider caching it yourself.
+        """
         return self._get_untracked_files()
 
     def _get_untracked_files(self, *args: Any, **kwargs: Any) -> List[str]:
-        # make sure we get all files, not only untracked directories
+        # Make sure we get all files, not only untracked directories.
         proc = self.git.status(*args, porcelain=True, untracked_files=True, as_process=True, **kwargs)
         # Untracked files prefix in porcelain mode
         prefix = "?? "
@@ -868,11 +925,13 @@ class Repo(object):
         return untracked_files
 
     def ignored(self, *paths: PathLike) -> List[str]:
-        """Checks if paths are ignored via .gitignore
-        Doing so using the "git check-ignore" method.
+        """Checks if paths are ignored via .gitignore.
+
+        This does so using the ``git check-ignore`` method.
 
         :param paths: List of paths to check whether they are ignored or not
-        :return: subset of those paths which are ignored
+
+        :return: Subset of those paths which are ignored
         """
         try:
             proc: str = self.git.check_ignore(*paths)
@@ -892,23 +951,25 @@ class Repo(object):
         """The name of the currently active branch.
 
         :raises	TypeError: If HEAD is detached
-        :return: Head to the active branch"""
+        :return: Head to the active branch
+        """
         # reveal_type(self.head.reference)  # => Reference
         return self.head.reference
 
     def blame_incremental(self, rev: str | HEAD, file: str, **kwargs: Any) -> Iterator["BlameEntry"]:
         """Iterator for blame information for the given file at the given revision.
 
-        Unlike .blame(), this does not return the actual file's contents, only
-        a stream of BlameEntry tuples.
+        Unlike :meth:`blame`, this does not return the actual file's contents, only a
+        stream of :class:`BlameEntry` tuples.
 
-        :param rev: revision specifier, see git-rev-parse for viable options.
-        :return: lazy iterator of BlameEntry tuples, where the commit
-                 indicates the commit to blame for the line, and range
-                 indicates a span of line numbers in the resulting file.
+        :param rev: Revision specifier, see git-rev-parse for viable options.
 
-        If you combine all line number ranges outputted by this command, you
-        should get a continuous range spanning all line numbers in the file.
+        :return: Lazy iterator of :class:`BlameEntry` tuples, where the commit indicates
+            the commit to blame for the line, and range indicates a span of line numbers
+            in the resulting file.
+
+        If you combine all line number ranges outputted by this command, you should get
+        a continuous range spanning all line numbers in the file.
         """
 
         data: bytes = self.git.blame(rev, "--", file, p=True, incremental=True, stdout_as_string=False, **kwargs)
@@ -917,7 +978,7 @@ class Repo(object):
         stream = (line for line in data.split(b"\n") if line)
         while True:
             try:
-                line = next(stream)  # when exhausted, causes a StopIteration, terminating this function
+                line = next(stream)  # When exhausted, causes a StopIteration, terminating this function.
             except StopIteration:
                 return
             split_line = line.split()
@@ -927,7 +988,7 @@ class Repo(object):
             orig_lineno = int(orig_lineno_b)
             if hexsha not in commits:
                 # Now read the next few lines and build up a dict of properties
-                # for this commit
+                # for this commit.
                 props: Dict[bytes, bytes] = {}
                 while True:
                     try:
@@ -936,13 +997,13 @@ class Repo(object):
                         return
                     if line == b"boundary":
                         # "boundary" indicates a root commit and occurs
-                        # instead of the "previous" tag
+                        # instead of the "previous" tag.
                         continue
 
                     tag, value = line.split(b" ", 1)
                     props[tag] = value
                     if tag == b"filename":
-                        # "filename" formally terminates the entry for --incremental
+                        # "filename" formally terminates the entry for --incremental.
                         orig_filename = value
                         break
 
@@ -963,10 +1024,10 @@ class Repo(object):
                 commits[hexsha] = c
             else:
                 # Discard all lines until we find "filename" which is
-                # guaranteed to be the last line
+                # guaranteed to be the last line.
                 while True:
                     try:
-                        line = next(stream)  # will fail if we reach the EOF unexpectedly
+                        line = next(stream)  # Will fail if we reach the EOF unexpectedly.
                     except StopIteration:
                         return
                     tag, value = line.split(b" ", 1)
@@ -991,12 +1052,15 @@ class Repo(object):
     ) -> List[List[Commit | List[str | bytes] | None]] | Iterator[BlameEntry] | None:
         """The blame information for the given file at the given revision.
 
-        :param rev: revision specifier, see git-rev-parse for viable options.
+        :param rev: Revision specifier, see git-rev-parse for viable options.
+
         :return:
             list: [git.Commit, list: [<line>]]
+
             A list of lists associating a Commit object with a list of lines that
             changed within the given commit. The Commit objects will be given in order
-            of appearance."""
+            of appearance.
+        """
         if incremental:
             return self.blame_incremental(rev, file, **kwargs)
         rev_opts = rev_opts or []
@@ -1028,9 +1092,9 @@ class Repo(object):
                 is_binary = True
             else:
                 # As we don't have an idea when the binary data ends, as it could contain multiple newlines
-                # in the process. So we rely on being able to decode to tell us what is is.
+                # in the process. So we rely on being able to decode to tell us what it is.
                 # This can absolutely fail even on text files, but even if it does, we should be fine treating it
-                # as binary instead
+                # as binary instead.
                 parts = self.re_whitespace.split(line_str, 1)
                 firstpart = parts[0]
                 is_binary = False
@@ -1133,32 +1197,32 @@ class Repo(object):
         expand_vars: bool = True,
         **kwargs: Any,
     ) -> "Repo":
-        """Initialize a git repository at the given path if specified
+        """Initialize a git repository at the given path if specified.
 
         :param path:
-            is the full path to the repo (traditionally ends with /<name>.git)
-            or None in which case the repository will be created in the current
-            working directory
+            The full path to the repo (traditionally ends with /<name>.git) or None in
+            which case the repository will be created in the current working directory
 
         :param mkdir:
-            if specified will create the repository directory if it doesn't
-            already exists. Creates the directory with a mode=0755.
-            Only effective if a path is explicitly given
+            If specified, will create the repository directory if it doesn't
+            already exist. Creates the directory with a mode=0755.
+            Only effective if a path is explicitly given.
 
         :param odbt:
             Object DataBase type - a type which is constructed by providing
             the directory containing the database objects, i.e. .git/objects.
-            It will be used to access all object data
+            It will be used to access all object data.
 
         :param expand_vars:
-            if specified, environment variables will not be escaped. This
+            If specified, environment variables will not be escaped. This
             can lead to information disclosure, allowing attackers to
-            access the contents of environment variables
+            access the contents of environment variables.
 
         :param kwargs:
-            keyword arguments serving as additional options to the git-init command
+            Keyword arguments serving as additional options to the git-init command.
 
-        :return: ``git.Repo`` (the newly created repo)"""
+        :return: ``git.Repo`` (the newly created repo)
+        """
         if path:
             path = expand_path(path, expand_vars)
         if mkdir and path and not osp.exists(path):
@@ -1184,7 +1248,7 @@ class Repo(object):
     ) -> "Repo":
         odbt = kwargs.pop("odbt", odb_default_type)
 
-        # when pathlib.Path or other classbased path is passed
+        # When pathlib.Path or other classbased path is passed
         if not isinstance(path, str):
             path = str(path)
 
@@ -1236,21 +1300,21 @@ class Repo(object):
             log.debug("Cmd(%s)'s unused stdout: %s", cmdline, stdout)
             finalize_process(proc, stderr=stderr)
 
-        # our git command could have a different working dir than our actual
-        # environment, hence we prepend its working dir if required
+        # Our git command could have a different working dir than our actual
+        # environment, hence we prepend its working dir if required.
         if not osp.isabs(path):
             path = osp.join(git._working_dir, path) if git._working_dir is not None else path
 
         repo = cls(path, odbt=odbt)
 
-        # retain env values that were passed to _clone()
+        # Retain env values that were passed to _clone().
         repo.git.update_environment(**git.environment())
 
-        # adjust remotes - there may be operating systems which use backslashes,
+        # Adjust remotes - there may be operating systems which use backslashes,
         # These might be given as initial paths, but when handling the config file
         # that contains the remote from which we were clones, git stops liking it
         # as it will escape the backslashes. Hence we undo the escaping just to be
-        # sure
+        # sure.
         if repo.remotes:
             with repo.remotes[0].config_writer as writer:
                 writer.set_value("url", Git.polish_url(repo.remotes[0].url))
@@ -1268,20 +1332,22 @@ class Repo(object):
     ) -> "Repo":
         """Create a clone from this repository.
 
-        :param path: is the full path of the new repo (traditionally ends with ./<name>.git).
-        :param progress: See 'git.remote.Remote.push'.
-        :param multi_options: A list of Clone options that can be provided multiple times.  One
-            option per list item which is passed exactly as specified to clone.
-            For example ['--config core.filemode=false', '--config core.ignorecase',
+        :param path: The full path of the new repo (traditionally ends with
+            ``./<name>.git``).
+        :param progress: See :meth:`git.remote.Remote.push`.
+        :param multi_options: A list of Clone options that can be provided multiple times.
+            One option per list item which is passed exactly as specified to clone.
+            For example: ['--config core.filemode=false', '--config core.ignorecase',
             '--recurse-submodule=repo1_path', '--recurse-submodule=repo2_path']
-        :param allow_unsafe_protocols: Allow unsafe protocols to be used, like ext
-        :param allow_unsafe_options: Allow unsafe options to be used, like --upload-pack
+        :param allow_unsafe_protocols: Allow unsafe protocols to be used, like ext.
+        :param allow_unsafe_options: Allow unsafe options to be used, like --upload-pack.
         :param kwargs:
             * odbt = ObjectDatabase Type, allowing to determine the object database
-              implementation used by the returned Repo instance
-            * All remaining keyword arguments are given to the git-clone command
+              implementation used by the returned Repo instance.
+            * All remaining keyword arguments are given to the git-clone command.
 
-        :return: ``git.Repo`` (the newly cloned repo)"""
+        :return: :class:`Repo` (the newly cloned repo)
+        """
         return self._clone(
             self.git,
             self.common_dir,
@@ -1306,22 +1372,32 @@ class Repo(object):
         allow_unsafe_options: bool = False,
         **kwargs: Any,
     ) -> "Repo":
-        """Create a clone from the given URL
+        """Create a clone from the given URL.
 
-        :param url: valid git url, see http://www.kernel.org/pub/software/scm/git/docs/git-clone.html#URLS
-        :param to_path: Path to which the repository should be cloned to
-        :param progress: See 'git.remote.Remote.push'.
+        :param url: Valid git url, see http://www.kernel.org/pub/software/scm/git/docs/git-clone.html#URLS
+
+        :param to_path: Path to which the repository should be cloned to.
+
+        :param progress: See :meth:`git.remote.Remote.push`.
+
         :param env: Optional dictionary containing the desired environment variables.
+
             Note: Provided variables will be used to update the execution
             environment for `git`. If some variable is not specified in `env`
             and is defined in `os.environ`, value from `os.environ` will be used.
             If you want to unset some variable, consider providing empty string
             as its value.
-        :param multi_options: See ``clone`` method
-        :param allow_unsafe_protocols: Allow unsafe protocols to be used, like ext
-        :param allow_unsafe_options: Allow unsafe options to be used, like --upload-pack
-        :param kwargs: see the ``clone`` method
-        :return: Repo instance pointing to the cloned directory"""
+
+        :param multi_options: See :meth:`clone` method.
+
+        :param allow_unsafe_protocols: Allow unsafe protocols to be used, like ext.
+
+        :param allow_unsafe_options: Allow unsafe options to be used, like --upload-pack.
+
+        :param kwargs: See the :meth:`clone` method.
+
+        :return: :class:`Repo` instance pointing to the cloned directory.
+        """
         git = cls.GitCommandWrapperType(os.getcwd())
         if env is not None:
             git.update_environment(**env)
@@ -1346,18 +1422,23 @@ class Repo(object):
     ) -> Repo:
         """Archive the tree at the given revision.
 
-        :param ostream: file compatible stream object to which the archive will be written as bytes
-        :param treeish: is the treeish name/id, defaults to active branch
-        :param prefix: is the optional prefix to prepend to each filename in the archive
-        :param kwargs: Additional arguments passed to git-archive
+        :param ostream: file compatible stream object to which the archive will be written as bytes.
+
+        :param treeish: is the treeish name/id, defaults to active branch.
+
+        :param prefix: is the optional prefix to prepend to each filename in the archive.
+
+        :param kwargs: Additional arguments passed to git-archive:
 
             * Use the 'format' argument to define the kind of format. Use
               specialized ostreams to write any format supported by python.
             * You may specify the special **path** keyword, which may either be a repository-relative
               path to a directory or file to place into the archive, or a list or tuple of multiple paths.
 
-        :raise GitCommandError: in case something went wrong
-        :return: self"""
+        :raise GitCommandError: If something went wrong.
+
+        :return: self
+        """
         if treeish is None:
             treeish = self.head.commit
         if prefix and "prefix" not in kwargs:
@@ -1374,7 +1455,8 @@ class Repo(object):
     def has_separate_working_tree(self) -> bool:
         """
         :return: True if our git_dir is not at the root of our working_tree_dir, but a .git file with a
-            platform agnositic symbolic link. Our git_dir will be wherever the .git file points to
+            platform agnositic symbolic link. Our git_dir will be wherever the .git file points to.
+
         :note: bare repositories will always return False here
         """
         if self.bare:
@@ -1382,7 +1464,7 @@ class Repo(object):
         if self.working_tree_dir:
             return osp.isfile(osp.join(self.working_tree_dir, ".git"))
         else:
-            return False  # or raise Error?
+            return False  # Or raise Error?
 
     rev_parse = rev_parse
 
@@ -1394,7 +1476,7 @@ class Repo(object):
         """
         :return: The commit which is currently being replayed while rebasing.
 
-        None if we are not currently rebasing.
+            None if we are not currently rebasing.
         """
         if self.git_dir:
             rebase_head_file = osp.join(self.git_dir, "REBASE_HEAD")

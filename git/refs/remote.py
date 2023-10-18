@@ -21,8 +21,7 @@ if TYPE_CHECKING:
 
 
 class RemoteReference(Head):
-
-    """Represents a reference pointing to a remote head."""
+    """A reference pointing to a remote head."""
 
     _common_path_default = Head._remote_common_path_default
 
@@ -35,7 +34,7 @@ class RemoteReference(Head):
         *args: Any,
         **kwargs: Any,
     ) -> Iterator["RemoteReference"]:
-        """Iterate remote references, and if given, constrain them to the given remote"""
+        """Iterate remote references, and if given, constrain them to the given remote."""
         common_path = common_path or cls._common_path_default
         if remote is not None:
             common_path = join_path(common_path, str(remote))
@@ -49,15 +48,16 @@ class RemoteReference(Head):
     # "type: ignore".  (See https://github.com/python/typing/issues/241)
     @classmethod
     def delete(cls, repo: "Repo", *refs: "RemoteReference", **kwargs: Any) -> None:  # type: ignore
-        """Delete the given remote references
+        """Delete the given remote references.
 
         :note:
             kwargs are given for comparability with the base class method as we
-            should not narrow the signature."""
+            should not narrow the signature.
+        """
         repo.git.branch("-d", "-r", *refs)
-        # the official deletion method will ignore remote symbolic refs - these
+        # The official deletion method will ignore remote symbolic refs - these
         # are generally ignored in the refs/ folder. We don't though
-        # and delete remainders manually
+        # and delete remainders manually.
         for ref in refs:
             try:
                 os.remove(os.path.join(repo.common_dir, ref.path))
@@ -71,5 +71,5 @@ class RemoteReference(Head):
 
     @classmethod
     def create(cls, *args: Any, **kwargs: Any) -> NoReturn:
-        """Used to disable this method"""
+        """Raises TypeError. Defined so the create method is disabled."""
         raise TypeError("Cannot explicitly create remote references")

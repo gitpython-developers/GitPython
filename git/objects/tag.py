@@ -3,7 +3,9 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: https://opensource.org/license/bsd-3-clause/
-""" Module containing all object based types. """
+
+"""Module containing all Object-based types."""
+
 from . import base
 from .util import get_object_type_by_name, parse_actor_and_date
 from ..util import hex_to_bin
@@ -24,10 +26,10 @@ __all__ = ("TagObject",)
 
 
 class TagObject(base.Object):
-
-    """Non-Lightweight tag carrying additional information about an object we are pointing to."""
+    """Non-lightweight tag carrying additional information about an object we are pointing to."""
 
     type: Literal["tag"] = "tag"
+
     __slots__ = (
         "object",
         "tag",
@@ -48,18 +50,20 @@ class TagObject(base.Object):
         tagger_tz_offset: Union[int, None] = None,
         message: Union[str, None] = None,
     ) -> None:  # @ReservedAssignment
-        """Initialize a tag object with additional data
+        """Initialize a tag object with additional data.
 
-        :param repo: repository this object is located in
+        :param repo: Repository this object is located in
         :param binsha: 20 byte SHA1
         :param object: Object instance of object we are pointing to
-        :param tag: name of this tag
+        :param tag: Name of this tag
         :param tagger: Actor identifying the tagger
         :param tagged_date: int_seconds_since_epoch
-            is the DateTime of the tag creation - use time.gmtime to convert
-            it into a different format
-        :param tagged_tz_offset: int_seconds_west_of_utc is the timezone that the
-            authored_date is in, in a format similar to time.altzone"""
+            The :class:`DateTime` of the tag creation.
+            Use :func:`time.gmtime` to convert it into a different format.
+        :param tagged_tz_offset: int_seconds_west_of_utc
+            The timezone that the authored_date is in, in a format similar
+            to :attr:`time.altzone`.
+        """
         super(TagObject, self).__init__(repo, binsha)
         if object is not None:
             self.object: Union["Commit", "Blob", "Tree", "TagObject"] = object
@@ -75,7 +79,7 @@ class TagObject(base.Object):
             self.message = message
 
     def _set_cache_(self, attr: str) -> None:
-        """Cache all our attributes at once"""
+        """Cache all our attributes at once."""
         if attr in TagObject.__slots__:
             ostream = self.repo.odb.stream(self.binsha)
             lines: List[str] = ostream.read().decode(defenc, "replace").splitlines()
@@ -95,9 +99,9 @@ class TagObject(base.Object):
                     self.tagger_tz_offset,
                 ) = parse_actor_and_date(tagger_info)
 
-            # line 4 empty - it could mark the beginning of the next header
-            # in case there really is no message, it would not exist. Otherwise
-            # a newline separates header from message
+            # Line 4 empty - it could mark the beginning of the next header.
+            # In case there really is no message, it would not exist.
+            # Otherwise a newline separates header from message.
             if len(lines) > 5:
                 self.message = "\n".join(lines[5:])
             else:

@@ -5,7 +5,7 @@ from git.exc import GitCommandError
 from .symbolic import SymbolicReference
 from .reference import Reference
 
-# typinng ---------------------------------------------------
+# typing ---------------------------------------------------
 
 from typing import Any, Sequence, Union, TYPE_CHECKING
 
@@ -28,12 +28,12 @@ def strip_quotes(string: str) -> str:
 
 
 class HEAD(SymbolicReference):
-
-    """Special case of a Symbolic Reference as it represents the repository's
+    """Special case of a SymbolicReference representing the repository's
     HEAD reference."""
 
     _HEAD_NAME = "HEAD"
     _ORIG_HEAD_NAME = "ORIG_HEAD"
+
     __slots__ = ()
 
     def __init__(self, repo: "Repo", path: PathLike = _HEAD_NAME):
@@ -45,7 +45,8 @@ class HEAD(SymbolicReference):
     def orig_head(self) -> SymbolicReference:
         """
         :return: SymbolicReference pointing at the ORIG_HEAD, which is maintained
-            to contain the previous value of HEAD"""
+            to contain the previous value of HEAD.
+        """
         return SymbolicReference(self.repo, self._ORIG_HEAD_NAME)
 
     def reset(
@@ -71,7 +72,7 @@ class HEAD(SymbolicReference):
         :param working_tree:
             If True, the working tree will be forcefully adjusted to match the given
             commit, possibly overwriting uncommitted changes without warning.
-            If working_tree is True, index must be true as well
+            If `working_tree` is True, `index` must be True as well.
 
         :param paths:
             Single path or list of paths relative to the git root directory
@@ -80,14 +81,15 @@ class HEAD(SymbolicReference):
         :param kwargs:
             Additional arguments passed to git-reset.
 
-        :return: self"""
+        :return: self
+        """
         mode: Union[str, None]
         mode = "--soft"
         if index:
             mode = "--mixed"
 
-            # it appears, some git-versions declare mixed and paths deprecated
-            # see http://github.com/Byron/GitPython/issues#issue/2
+            # Tt appears some git versions declare mixed and paths deprecated.
+            # See http://github.com/Byron/GitPython/issues#issue/2.
             if paths:
                 mode = None
             # END special case
@@ -104,7 +106,7 @@ class HEAD(SymbolicReference):
             self.repo.git.reset(mode, commit, "--", paths, **kwargs)
         except GitCommandError as e:
             # git nowadays may use 1 as status to indicate there are still unstaged
-            # modifications after the reset
+            # modifications after the reset.
             if e.status != 1:
                 raise
         # END handle exception
@@ -113,7 +115,6 @@ class HEAD(SymbolicReference):
 
 
 class Head(Reference):
-
     """A Head is a named reference to a Commit. Every Head instance contains a name
     and a Commit object.
 
@@ -129,33 +130,35 @@ class Head(Reference):
         <git.Commit "1c09f116cbc2cb4100fb6935bb162daa4723f455">
 
         >>> head.commit.hexsha
-        '1c09f116cbc2cb4100fb6935bb162daa4723f455'"""
+        '1c09f116cbc2cb4100fb6935bb162daa4723f455'
+    """
 
     _common_path_default = "refs/heads"
     k_config_remote = "remote"
-    k_config_remote_ref = "merge"  # branch to merge from remote
+    k_config_remote_ref = "merge"  # Branch to merge from remote.
 
     @classmethod
     def delete(cls, repo: "Repo", *heads: "Union[Head, str]", force: bool = False, **kwargs: Any) -> None:
-        """Delete the given heads
+        """Delete the given heads.
 
         :param force:
             If True, the heads will be deleted even if they are not yet merged into
             the main development stream.
-            Default False"""
+            Default False
+        """
         flag = "-d"
         if force:
             flag = "-D"
         repo.git.branch(flag, *heads)
 
     def set_tracking_branch(self, remote_reference: Union["RemoteReference", None]) -> "Head":
-        """
-        Configure this branch to track the given remote reference. This will alter
-            this branch's configuration accordingly.
+        """Configure this branch to track the given remote reference. This will
+        alter this branch's configuration accordingly.
 
         :param remote_reference: The remote reference to track or None to untrack
-            any references
-        :return: self"""
+            any references.
+        :return: self
+        """
         from .remote import RemoteReference
 
         if remote_reference is not None and not isinstance(remote_reference, RemoteReference):
@@ -180,7 +183,7 @@ class Head(Reference):
     def tracking_branch(self) -> Union["RemoteReference", None]:
         """
         :return: The remote_reference we are tracking, or None if we are
-            not a tracking branch"""
+            not a tracking branch."""
         from .remote import RemoteReference
 
         reader = self.config_reader()
@@ -193,22 +196,24 @@ class Head(Reference):
             return RemoteReference(self.repo, remote_refpath)
         # END handle have tracking branch
 
-        # we are not a tracking branch
+        # We are not a tracking branch.
         return None
 
     def rename(self, new_path: PathLike, force: bool = False) -> "Head":
-        """Rename self to a new path
+        """Rename self to a new path.
 
         :param new_path:
             Either a simple name or a path, i.e. new_name or features/new_name.
-            The prefix refs/heads is implied
+            The prefix refs/heads is implied.
 
         :param force:
             If True, the rename will succeed even if a head with the target name
             already exists.
 
         :return: self
-        :note: respects the ref log as git commands are used"""
+
+        :note: Respects the ref log as git commands are used.
+        """
         flag = "-m"
         if force:
             flag = "-M"
@@ -218,19 +223,20 @@ class Head(Reference):
         return self
 
     def checkout(self, force: bool = False, **kwargs: Any) -> Union["HEAD", "Head"]:
-        """Checkout this head by setting the HEAD to this reference, by updating the index
-        to reflect the tree we point to and by updating the working tree to reflect
-        the latest index.
+        """Check out this head by setting the HEAD to this reference, by updating the
+        index to reflect the tree we point to and by updating the working tree to
+        reflect the latest index.
 
         The command will fail if changed working tree files would be overwritten.
 
         :param force:
             If True, changes to the index and the working tree will be discarded.
-            If False, GitCommandError will be raised in that situation.
+            If False, :class:`GitCommandError <git.exc.GitCommandError>` will be
+            raised in that situation.
 
         :param kwargs:
-            Additional keyword arguments to be passed to git checkout, i.e.
-            b='new_branch' to create a new branch at the given spot.
+            Additional keyword arguments to be passed to git checkout, e.g.
+            ``b="new_branch"`` to create a new branch at the given spot.
 
         :return:
             The active branch after the checkout operation, usually self unless
@@ -241,7 +247,8 @@ class Head(Reference):
         :note:
             By default it is only allowed to checkout heads - everything else
             will leave the HEAD detached which is allowed and possible, but remains
-            a special state that some tools might not be able to handle."""
+            a special state that some tools might not be able to handle.
+        """
         kwargs["f"] = force
         if kwargs["f"] is False:
             kwargs.pop("f")
@@ -265,13 +272,15 @@ class Head(Reference):
     def config_reader(self) -> SectionConstraint[GitConfigParser]:
         """
         :return: A configuration parser instance constrained to only read
-            this instance's values"""
+            this instance's values.
+        """
         return self._config_parser(read_only=True)
 
     def config_writer(self) -> SectionConstraint[GitConfigParser]:
         """
         :return: A configuration writer instance with read-and write access
-            to options of this head"""
+            to options of this head.
+        """
         return self._config_parser(read_only=False)
 
     # } END configuration

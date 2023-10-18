@@ -18,10 +18,9 @@ if TYPE_CHECKING:
 
 
 class TagReference(Reference):
-
-    """Class representing a lightweight tag reference which either points to a commit
-    ,a tag object or any other object. In the latter case additional information,
-    like the signature or the tag-creator, is available.
+    """A lightweight tag reference which either points to a commit, a tag object or any
+    other object. In the latter case additional information, like the signature or the
+    tag-creator, is available.
 
     This tag object will always point to a commit object, but may carry additional
     information in a tag object::
@@ -29,9 +28,11 @@ class TagReference(Reference):
      tagref = TagReference.list_items(repo)[0]
      print(tagref.commit.message)
      if tagref.tag is not None:
-        print(tagref.tag.message)"""
+        print(tagref.tag.message)
+    """
 
     __slots__ = ()
+
     _common_default = "tags"
     _common_path_default = Reference._common_path_default + "/" + _common_default
 
@@ -39,11 +40,12 @@ class TagReference(Reference):
     def commit(self) -> "Commit":  # type: ignore[override]  # LazyMixin has unrelated commit method
         """:return: Commit object the tag ref points to
 
-        :raise ValueError: if the tag points to a tree or blob"""
+        :raise ValueError: If the tag points to a tree or blob
+        """
         obj = self.object
         while obj.type != "commit":
             if obj.type == "tag":
-                # it is a tag object which carries the commit as an object - we can point to anything
+                # It is a tag object which carries the commit as an object - we can point to anything.
                 obj = obj.object
             else:
                 raise ValueError(
@@ -59,16 +61,13 @@ class TagReference(Reference):
     def tag(self) -> Union["TagObject", None]:
         """
         :return: Tag object this tag ref points to or None in case
-            we are a light weight tag"""
+            we are a lightweight tag"""
         obj = self.object
         if obj.type == "tag":
             return obj
         return None
 
-    # make object read-only
-    # It should be reasonably hard to adjust an existing tag
-
-    # object = property(Reference._get_object)
+    # Make object read-only. It should be reasonably hard to adjust an existing tag.
     @property
     def object(self) -> Commit_ish:  # type: ignore[override]
         return Reference._get_object(self)
@@ -86,30 +85,31 @@ class TagReference(Reference):
         """Create a new tag reference.
 
         :param path:
-            The name of the tag, i.e. 1.0 or releases/1.0.
-            The prefix refs/tags is implied
+            The name of the tag, e.g. ``1.0`` or ``releases/1.0``.
+            The prefix ``refs/tags`` is implied.
 
         :param ref:
-            A reference to the Object you want to tag. The Object can be a commit, tree or
-            blob.
+            A reference to the :class:`Object <git.objects.base.Object>` you want to
+            tag. The Object can be a commit, tree or blob.
 
         :param logmsg:
             If not None, the message will be used in your tag object. This will also
-            create an additional tag object that allows to obtain that information, i.e.::
+            create an additional tag object that allows to obtain that information, e.g.::
 
                 tagref.tag.message
 
         :param message:
-            Synonym for :param logmsg:
-            Included for backwards compatibility. :param logmsg is used in preference if both given.
+            Synonym for the `logmsg` parameter.
+            Included for backwards compatibility. `logmsg` takes precedence if both are passed.
 
         :param force:
-            If True, to force creation of a tag even though that tag already exists.
+            If True, force creation of a tag even though that tag already exists.
 
         :param kwargs:
-            Additional keyword arguments to be passed to git-tag
+            Additional keyword arguments to be passed to git-tag.
 
-        :return: A new TagReference"""
+        :return: A new TagReference.
+        """
         if "ref" in kwargs and kwargs["ref"]:
             reference = kwargs["ref"]
 
@@ -130,9 +130,9 @@ class TagReference(Reference):
 
     @classmethod
     def delete(cls, repo: "Repo", *tags: "TagReference") -> None:  # type: ignore[override]
-        """Delete the given existing tag or tags"""
+        """Delete the given existing tag or tags."""
         repo.git.tag("-d", *tags)
 
 
-# provide an alias
+# Provide an alias.
 Tag = TagReference

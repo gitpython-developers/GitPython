@@ -3,6 +3,7 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: https://opensource.org/license/bsd-3-clause/
+
 import datetime
 import re
 from subprocess import Popen, PIPE
@@ -66,7 +67,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
     value on demand only if it involves calling the git binary."""
 
     # ENVIRONMENT VARIABLES
-    # read when creating new commits
+    # Read when creating new commits.
     env_author_date = "GIT_AUTHOR_DATE"
     env_committer_date = "GIT_COMMITTER_DATE"
 
@@ -113,36 +114,38 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         be implicitly set on first query.
 
         :param binsha: 20 byte sha1
-        :param parents: tuple( Commit, ... )
-            is a tuple of commit ids or actual Commits
+        :param parents: tuple(Commit, ...)
+            A tuple of commit ids or actual Commits
         :param tree: Tree object
         :param author: Actor
-            is the author Actor object
+            The author Actor object
         :param authored_date: int_seconds_since_epoch
-            is the authored DateTime - use time.gmtime() to convert it into a
+            The authored DateTime - use time.gmtime() to convert it into a
             different format
         :param author_tz_offset: int_seconds_west_of_utc
-            is the timezone that the authored_date is in
+            The timezone that the authored_date is in
         :param committer: Actor
-            is the committer string
+            The committer string
         :param committed_date: int_seconds_since_epoch
-            is the committed DateTime - use time.gmtime() to convert it into a
+            The committed DateTime - use time.gmtime() to convert it into a
             different format
         :param committer_tz_offset: int_seconds_west_of_utc
-            is the timezone that the committed_date is in
+            The timezone that the committed_date is in
         :param message: string
-            is the commit message
+            The commit message
         :param encoding: string
-            encoding of the message, defaults to UTF-8
+            Encoding of the message, defaults to UTF-8
         :param parents:
             List or tuple of Commit objects which are our parent(s) in the commit
             dependency graph
+
         :return: git.Commit
 
         :note:
             Timezone information is in the same format and in the same sign
             as what time.altzone returns. The sign is inverted compared to git's
-            UTC timezone."""
+            UTC timezone.
+        """
         super(Commit, self).__init__(repo, binsha)
         self.binsha = binsha
         if tree is not None:
@@ -211,7 +214,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
 
     def _set_cache_(self, attr: str) -> None:
         if attr in Commit.__slots__:
-            # read the data in a chunk, its faster - then provide a file wrapper
+            # Read the data in a chunk, its faster - then provide a file wrapper.
             _binsha, _typename, self.size, stream = self.repo.odb.stream(self.binsha)
             self._deserialize(BytesIO(stream.read()))
         else:
@@ -235,17 +238,19 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
             return self.message.split(b"\n", 1)[0]
 
     def count(self, paths: Union[PathLike, Sequence[PathLike]] = "", **kwargs: Any) -> int:
-        """Count the number of commits reachable from this commit
+        """Count the number of commits reachable from this commit.
 
         :param paths:
-            is an optional path or a list of paths restricting the return value
-            to commits actually containing the paths
+            An optional path or a list of paths restricting the return value
+            to commits actually containing the paths.
 
         :param kwargs:
             Additional options to be passed to git-rev-list. They must not alter
-            the output style of the command, or parsing will yield incorrect results
-        :return: int defining the number of reachable commits"""
-        # yes, it makes a difference whether empty paths are given or not in our case
+            the output style of the command, or parsing will yield incorrect results.
+
+        :return: An int defining the number of reachable commits
+        """
+        # Yes, it makes a difference whether empty paths are given or not in our case
         # as the empty paths version will ignore merge commits for some reason.
         if paths:
             return len(self.repo.git.rev_list(self.hexsha, "--", paths, **kwargs).splitlines())
@@ -256,7 +261,8 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         """
         :return:
             String describing the commits hex sha based on the closest Reference.
-            Mostly useful for UI purposes"""
+            Mostly useful for UI purposes
+        """
         return self.repo.git.name_rev(self)
 
     @classmethod
@@ -269,23 +275,29 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
     ) -> Iterator["Commit"]:
         """Find all commits matching the given criteria.
 
-        :param repo: is the Repo
-        :param rev: revision specifier, see git-rev-parse for viable options
+        :param repo: The Repo
+
+        :param rev: Revision specifier, see git-rev-parse for viable options.
+
         :param paths:
-            is an optional path or list of paths, if set only Commits that include the path
-            or paths will be considered
+            An optional path or list of paths, if set only Commits that include the path
+            or paths will be considered.
+
         :param kwargs:
-            optional keyword arguments to git rev-list where
-            ``max_count`` is the maximum number of commits to fetch
-            ``skip`` is the number of commits to skip
-            ``since`` all commits since i.e. '1970-01-01'
-        :return: iterator yielding Commit items"""
+            Optional keyword arguments to ``git rev-list`` where:
+
+            * ``max_count`` is the maximum number of commits to fetch
+            * ``skip`` is the number of commits to skip
+            * ``since`` all commits since e.g. '1970-01-01'
+
+        :return: Iterator yielding :class:`Commit` items.
+        """
         if "pretty" in kwargs:
             raise ValueError("--pretty cannot be used as parsing expects single sha's only")
         # END handle pretty
 
-        # use -- in any case, to prevent possibility of ambiguous arguments
-        # see https://github.com/gitpython-developers/GitPython/issues/264
+        # Use -- in all cases, to prevent possibility of ambiguous arguments.
+        # See https://github.com/gitpython-developers/GitPython/issues/264.
 
         args_list: List[PathLike] = ["--"]
 
@@ -309,7 +321,8 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
             Optional path or list of paths limiting the Commits to those that
             contain at least one of the paths
         :param kwargs: All arguments allowed by git-rev-list
-        :return: Iterator yielding Commit objects which are parents of self"""
+        :return: Iterator yielding Commit objects which are parents of self
+        """
         # skip ourselves
         skip = kwargs.get("skip", 1)
         if skip == 0:  # skip ourselves
@@ -323,7 +336,8 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         """Create a git stat from changes between this commit and its first parent
         or from all changes done if this is the very first commit.
 
-        :return: git.Stats"""
+        :return: git.Stats
+        """
         if not self.parents:
             text = self.repo.git.diff_tree(self.hexsha, "--", numstat=True, no_renames=True, root=True)
             text2 = ""
@@ -339,17 +353,18 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
     def trailers(self) -> Dict[str, str]:
         """Get the trailers of the message as a dictionary
 
-        :note: This property is deprecated, please use either ``Commit.trailers_list`` or ``Commit.trailers_dict``.
+        :note: This property is deprecated, please use either ``Commit.trailers_list``
+            or ``Commit.trailers_dict``.
 
         :return:
-            Dictionary containing whitespace stripped trailer information.
-            Only contains the latest instance of each trailer key.
+            Dictionary containing whitespace stripped trailer information. Only contains
+            the latest instance of each trailer key.
         """
         return {k: v[0] for k, v in self.trailers_dict.items()}
 
     @property
     def trailers_list(self) -> List[Tuple[str, str]]:
-        """Get the trailers of the message as a list
+        """Get the trailers of the message as a list.
 
         Git messages can contain trailer information that are similar to RFC 822
         e-mail headers (see: https://git-scm.com/docs/git-interpret-trailers).
@@ -399,7 +414,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
 
     @property
     def trailers_dict(self) -> Dict[str, List[str]]:
-        """Get the trailers of the message as a dictionary
+        """Get the trailers of the message as a dictionary.
 
         Git messages can contain trailer information that are similar to RFC 822
         e-mail headers (see: https://git-scm.com/docs/git-interpret-trailers).
@@ -440,12 +455,14 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
 
     @classmethod
     def _iter_from_process_or_stream(cls, repo: "Repo", proc_or_stream: Union[Popen, IO]) -> Iterator["Commit"]:
-        """Parse out commit information into a list of Commit objects
+        """Parse out commit information into a list of Commit objects.
+
         We expect one-line per commit, and parse the actual commit information directly
-        from our lighting fast object database
+        from our lighting fast object database.
 
         :param proc: git-rev-list process instance - one sha per line
-        :return: iterator returning Commit objects"""
+        :return: iterator supplying :class:`Commit` objects
+        """
 
         # def is_proc(inp) -> TypeGuard[Popen]:
         #     return hasattr(proc_or_stream, 'wait') and not hasattr(proc_or_stream, 'readline')
@@ -468,15 +485,16 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
                 break
             hexsha = line.strip()
             if len(hexsha) > 40:
-                # split additional information, as returned by bisect for instance
+                # Split additional information, as returned by bisect for instance.
                 hexsha, _ = line.split(None, 1)
             # END handle extra info
 
             assert len(hexsha) == 40, "Invalid line: %s" % hexsha
             yield cls(repo, hex_to_bin(hexsha))
         # END for each line in stream
+
         # TODO: Review this - it seems process handling got a bit out of control
-        # due to many developers trying to fix the open file handles issue
+        # due to many developers trying to fix the open file handles issue.
         if hasattr(proc_or_stream, "wait"):
             proc_or_stream = cast(Popen, proc_or_stream)
             finalize_process(proc_or_stream)
@@ -497,38 +515,38 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         """Commit the given tree, creating a commit object.
 
         :param repo: Repo object the commit should be part of
-        :param tree: Tree object or hex or bin sha
-            the tree of the new commit
-        :param message: Commit message. It may be an empty string if no message is provided.
-            It will be converted to a string , in any case.
+        :param tree: Tree object or hex or bin sha. The tree of the new commit.
+        :param message: Commit message. It may be an empty string if no message is
+            provided. It will be converted to a string, in any case.
         :param parent_commits:
-            Optional Commit objects to use as parents for the new commit.
+            Optional :class:`Commit` objects to use as parents for the new commit.
             If empty list, the commit will have no parents at all and become
             a root commit.
-            If None , the current head commit will be the parent of the
-            new commit object
+            If None, the current head commit will be the parent of the
+            new commit object.
         :param head:
             If True, the HEAD will be advanced to the new commit automatically.
-            Else the HEAD will remain pointing on the previous commit. This could
+            Otherwise the HEAD will remain pointing on the previous commit. This could
             lead to undesired results when diffing files.
         :param author: The name of the author, optional. If unset, the repository
             configuration is used to obtain this value.
         :param committer: The name of the committer, optional. If unset, the
             repository configuration is used to obtain this value.
-        :param author_date: The timestamp for the author field
-        :param commit_date: The timestamp for the committer field
+        :param author_date: The timestamp for the author field.
+        :param commit_date: The timestamp for the committer field.
 
-        :return: Commit object representing the new commit
+        :return: Commit object representing the new commit.
 
         :note:
             Additional information about the committer and Author are taken from the
             environment or from the git configuration, see git-commit-tree for
-            more information"""
+            more information.
+        """
         if parent_commits is None:
             try:
                 parent_commits = [repo.head.commit]
             except ValueError:
-                # empty repositories have no head commit
+                # Empty repositories have no head commit.
                 parent_commits = []
             # END handle parent commits
         else:
@@ -538,11 +556,10 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
             # end check parent commit types
         # END if parent commits are unset
 
-        # retrieve all additional information, create a commit object, and
-        # serialize it
+        # Retrieve all additional information, create a commit object, and serialize it.
         # Generally:
-        # * Environment variables override configuration values
-        # * Sensible defaults are set according to the git documentation
+        # * Environment variables override configuration values.
+        # * Sensible defaults are set according to the git documentation.
 
         # COMMITTER AND AUTHOR INFO
         cr = repo.config_reader()
@@ -574,14 +591,14 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
             committer_time, committer_offset = unix_time, offset
         # END set committer time
 
-        # assume utf8 encoding
+        # Assume UTF-8 encoding.
         enc_section, enc_option = cls.conf_encoding.split(".")
         conf_encoding = cr.get_value(enc_section, enc_option, cls.default_encoding)
         if not isinstance(conf_encoding, str):
             raise TypeError("conf_encoding could not be coerced to str")
 
-        # if the tree is no object, make sure we create one - otherwise
-        # the created commit object is invalid
+        # If the tree is no object, make sure we create one - otherwise
+        # the created commit object is invalid.
         if isinstance(tree, str):
             tree = repo.tree(tree)
         # END tree conversion
@@ -605,15 +622,15 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         new_commit.binsha = cls._calculate_sha_(repo, new_commit)
 
         if head:
-            # need late import here, importing git at the very beginning throws
-            # as well ...
+            # Need late import here, importing git at the very beginning throws
+            # as well...
             import git.refs
 
             try:
                 repo.head.set_commit(new_commit, logmsg=message)
             except ValueError:
-                # head is not yet set to the ref our HEAD points to
-                # Happens on first commit
+                # head is not yet set to the ref our HEAD points to.
+                # Happens on first commit.
                 master = git.refs.Head.create(
                     repo,
                     repo.head.ref,
@@ -651,7 +668,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
             ).encode(self.encoding)
         )
 
-        # encode committer
+        # Encode committer.
         aname = c.name
         write(
             (
@@ -679,7 +696,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
 
         write(b"\n")
 
-        # write plain bytes, be sure its encoded according to our encoding
+        # Write plain bytes, be sure its encoded according to our encoding.
         if isinstance(self.message, str):
             write(self.message.encode(self.encoding))
         else:
@@ -703,11 +720,11 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         # END for each parent line
         self.parents = tuple(self.parents)
 
-        # we don't know actual author encoding before we have parsed it, so keep the lines around
+        # We don't know actual author encoding before we have parsed it, so keep the lines around.
         author_line = next_line
         committer_line = readline()
 
-        # we might run into one or more mergetag blocks, skip those for now
+        # We might run into one or more mergetag blocks, skip those for now.
         next_line = readline()
         while next_line.startswith(b"mergetag "):
             next_line = readline()
@@ -715,12 +732,11 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
                 next_line = readline()
         # end skip mergetags
 
-        # now we can have the encoding line, or an empty line followed by the optional
-        # message.
+        # Now we can have the encoding line, or an empty line followed by the optional message.
         self.encoding = self.default_encoding
         self.gpgsig = ""
 
-        # read headers
+        # Read headers.
         enc = next_line
         buf = enc.strip()
         while buf:
@@ -743,8 +759,8 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
                 if is_next_header:
                     continue
             buf = readline().strip()
-        # decode the authors name
 
+        # Decode the author's name.
         try:
             (
                 self.author,
@@ -774,8 +790,8 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
             )
         # END handle author's encoding
 
-        # a stream from our data simply gives us the plain message
-        # The end of our message stream is marked with a newline that we strip
+        # A stream from our data simply gives us the plain message.
+        # The end of our message stream is marked with a newline that we strip.
         self.message = stream.read()
         try:
             self.message = self.message.decode(self.encoding, "replace")
@@ -796,6 +812,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
     def co_authors(self) -> List[Actor]:
         """
         Search the commit message for any co-authors of this commit.
+
         Details on co-authors: https://github.blog/2018-01-29-commit-together-with-co-authors/
 
         :return: List of co-authors for this commit (as Actor objects).

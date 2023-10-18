@@ -32,12 +32,12 @@ __all__ = (
 
 
 def sm_section(name: str) -> str:
-    """:return: section title used in .gitmodules configuration file"""
+    """:return: Section title used in .gitmodules configuration file"""
     return f'submodule "{name}"'
 
 
 def sm_name(section: str) -> str:
-    """:return: name of the submodule as parsed from the section name"""
+    """:return: Name of the submodule as parsed from the section name"""
     section = section.strip()
     return section[11:-1]
 
@@ -48,7 +48,7 @@ def mkhead(repo: "Repo", path: PathLike) -> "Head":
 
 
 def find_first_remote_branch(remotes: Sequence["Remote"], branch_name: str) -> "RemoteReference":
-    """Find the remote branch matching the name of the given branch or raise InvalidGitRepositoryError"""
+    """Find the remote branch matching the name of the given branch or raise InvalidGitRepositoryError."""
     for remote in remotes:
         try:
             return remote.refs[branch_name]
@@ -66,14 +66,13 @@ def find_first_remote_branch(remotes: Sequence["Remote"], branch_name: str) -> "
 
 
 class SubmoduleConfigParser(GitConfigParser):
+    """Catches calls to _write, and updates the .gitmodules blob in the index
+    with the new data, if we have written into a stream.
 
-    """
-    Catches calls to _write, and updates the .gitmodules blob in the index
-    with the new data, if we have written into a stream. Otherwise it will
-    add the local file to the index to make it correspond with the working tree.
-    Additionally, the cache must be cleared
+    Otherwise it would add the local file to the index to make it correspond
+    with the working tree. Additionally, the cache must be cleared.
 
-    Please note that no mutating method will work in bare mode
+    Please note that no mutating method will work in bare mode.
     """
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
@@ -85,13 +84,13 @@ class SubmoduleConfigParser(GitConfigParser):
     # { Interface
     def set_submodule(self, submodule: "Submodule") -> None:
         """Set this instance's submodule. It must be called before
-        the first write operation begins"""
+        the first write operation begins."""
         self._smref = weakref.ref(submodule)
 
     def flush_to_index(self) -> None:
-        """Flush changes in our configuration file to the index"""
+        """Flush changes in our configuration file to the index."""
         assert self._smref is not None
-        # should always have a file here
+        # Should always have a file here.
         assert not isinstance(self._file_or_files, BytesIO)
 
         sm = self._smref()
