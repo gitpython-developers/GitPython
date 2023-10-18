@@ -109,7 +109,7 @@ class TreeModifier:
     the cache of a tree, will be sorted. This ensures it will be in a serializable state.
     """
 
-    __slots__ = "_cache"
+    __slots__ = ("_cache",)
 
     def __init__(self, cache: List[TreeCacheTup]) -> None:
         self._cache = cache
@@ -214,7 +214,8 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
     """
 
     type: Literal["tree"] = "tree"
-    __slots__ = "_cache"
+
+    __slots__ = ("_cache",)
 
     # Actual integer IDs for comparison.
     commit_id = 0o16  # Equals stat.S_IFDIR | stat.S_IFLNK - a directory link.

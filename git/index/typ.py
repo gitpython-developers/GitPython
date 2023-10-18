@@ -40,7 +40,7 @@ class BlobFilter:
     The given paths are given relative to the repository.
     """
 
-    __slots__ = "paths"
+    __slots__ = ("paths",)
 
     def __init__(self, paths: Sequence[PathLike]) -> None:
         """

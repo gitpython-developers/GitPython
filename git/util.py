@@ -713,7 +713,7 @@ class RemoteProgress:
 class CallableRemoteProgress(RemoteProgress):
     """An implementation forwarding updates to any callable."""
 
-    __slots__ = "_callable"
+    __slots__ = ("_callable",)
 
     def __init__(self, fn: Callable) -> None:
         self._callable = fn
