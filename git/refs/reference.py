@@ -86,18 +86,19 @@ class Reference(SymbolicReference, LazyMixin, IterableObj):
         super(Reference, self).set_object(object, logmsg)
 
         if oldbinsha is not None:
-            # /* from refs.c in git-source
-            # * Special hack: If a branch is updated directly and HEAD
-            # * points to it (may happen on the remote side of a push
-            # * for example) then logically the HEAD reflog should be
-            # * updated too.
-            # * A generic solution implies reverse symref information,
-            # * but finding all symrefs pointing to the given branch
-            # * would be rather costly for this rare event (the direct
-            # * update of a branch) to be worth it.  So let's cheat and
-            # * check with HEAD only which should cover 99% of all usage
-            # * scenarios (even 100% of the default ones).
-            # */
+            # From refs/files-backend.c in git-source:
+            # /*
+            #  * Special hack: If a branch is updated directly and HEAD
+            #  * points to it (may happen on the remote side of a push
+            #  * for example) then logically the HEAD reflog should be
+            #  * updated too.
+            #  * A generic solution implies reverse symref information,
+            #  * but finding all symrefs pointing to the given branch
+            #  * would be rather costly for this rare event (the direct
+            #  * update of a branch) to be worth it.  So let's cheat and
+            #  * check with HEAD only which should cover 99% of all usage
+            #  * scenarios (even 100% of the default ones).
+            #  */
             self.repo.head.log_append(oldbinsha, logmsg)
         # END check if the head
 
