@@ -1217,7 +1217,6 @@ class Submodule(IndexObject, TraversableIterableObj):
         """:return: Repo instance initialized from the repository at our submodule path
         :raise InvalidGitRepositoryError: if a repository was not available. This could
             also mean that it was not yet initialized"""
-        # late import to workaround circular dependencies
         module_checkout_abspath = self.abspath
         try:
             repo = git.Repo(module_checkout_abspath)
