@@ -5,7 +5,34 @@
 # the BSD License: https://opensource.org/license/bsd-3-clause/
 """ Module containing all exceptions thrown throughout the git package """
 
-from gitdb.exc import (  # noqa: @UnusedImport
+__all__ = [
+    # Defined in gitdb.exc:
+    "AmbiguousObjectName",
+    "BadName",
+    "BadObject",
+    "BadObjectType",
+    "InvalidDBRoot",
+    "ODBError",
+    "ParseError",
+    "UnsupportedOperation",
+    # Introduced in this module:
+    "GitError",
+    "InvalidGitRepositoryError",
+    "WorkTreeRepositoryUnsupported",
+    "NoSuchPathError",
+    "UnsafeProtocolError",
+    "UnsafeOptionError",
+    "CommandError",
+    "GitCommandNotFound",
+    "GitCommandError",
+    "CheckoutError",
+    "CacheError",
+    "UnmergedEntriesError",
+    "HookExecutionError",
+    "RepositoryDirtyError",
+]
+
+from gitdb.exc import (
     AmbiguousObjectName,
     BadName,
     BadObject,
@@ -14,7 +41,6 @@ from gitdb.exc import (  # noqa: @UnusedImport
     ODBError,
     ParseError,
     UnsupportedOperation,
-    to_hex_sha,
 )
 from git.compat import safe_decode
 from git.util import remove_password_if_present
