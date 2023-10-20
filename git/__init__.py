@@ -6,7 +6,6 @@
 # flake8: noqa
 # @PydevCodeAnalysisIgnore
 from git.exc import *  # @NoMove @IgnorePep8
-import inspect
 import os
 import sys
 import os.path as osp
