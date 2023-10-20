@@ -6,12 +6,11 @@
 # flake8: noqa
 # @PydevCodeAnalysisIgnore
 from git.exc import *  # @NoMove @IgnorePep8
-import inspect
 import os
-import sys
 import os.path as osp
+import sys
 
-from typing import Optional
+from typing import List, Optional, Sequence, Tuple, Union, TYPE_CHECKING
 from git.types import PathLike
 
 __version__ = "git"
@@ -39,7 +38,10 @@ _init_externals()
 
 # { Imports
 
+from gitdb.util import to_hex_sha
+
 try:
+    from git.compat import safe_decode  # @NoMove @IgnorePep8
     from git.config import GitConfigParser  # @NoMove @IgnorePep8
     from git.objects import *  # @NoMove @IgnorePep8
     from git.refs import *  # @NoMove @IgnorePep8
@@ -54,6 +56,7 @@ try:
         BlockingLockFile,
         Stats,
         Actor,
+        remove_password_if_present,
         rmtree,
     )
 except GitError as _exc:

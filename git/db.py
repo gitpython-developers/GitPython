@@ -1,7 +1,7 @@
 """Module with our own gitdb implementation - it uses the git command"""
 from git.util import bin_to_hex, hex_to_bin
 from gitdb.base import OInfo, OStream
-from gitdb.db import GitDB  # @UnusedImport
+from gitdb.db import GitDB
 from gitdb.db import LooseObjectDB
 
 from gitdb.exc import BadObject
