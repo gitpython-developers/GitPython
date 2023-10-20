@@ -6,37 +6,10 @@
 # flake8: noqa
 # @PydevCodeAnalysisIgnore
 from git.exc import *  # @NoMove @IgnorePep8
-import os
-import os.path as osp
-import sys
-
 from typing import List, Optional, Sequence, Tuple, Union, TYPE_CHECKING
 from git.types import PathLike
 
 __version__ = "git"
-
-
-# { Initialization
-def _init_externals() -> None:
-    """Initialize external projects by putting them into the path"""
-    if __version__ == "git" and "PYOXIDIZER" not in os.environ:
-        sys.path.insert(1, osp.join(osp.dirname(__file__), "ext", "gitdb"))
-
-    try:
-        import gitdb
-    except ImportError as e:
-        raise ImportError("'gitdb' could not be found in your PYTHONPATH") from e
-    # END verify import
-
-
-# } END initialization
-
-
-#################
-_init_externals()
-#################
-
-# { Imports
 
 from gitdb.util import to_hex_sha
 
@@ -61,8 +34,6 @@ try:
     )
 except GitError as _exc:
     raise ImportError("%s: %s" % (_exc.__class__.__name__, _exc)) from _exc
-
-# } END imports
 
 # __all__ must be statically defined by py.typed support
 # __all__ = [name for name, obj in locals().items() if not (name.startswith("_") or inspect.ismodule(obj))]

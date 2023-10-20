@@ -25,6 +25,7 @@ class TestInstallation(TestBase):
     @with_rw_directory
     def test_installation(self, rw_dir):
         self.setUp_venv(rw_dir)
+
         result = subprocess.run(
             [self.pip, "install", "."],
             stdout=subprocess.PIPE,
@@ -35,12 +36,32 @@ class TestInstallation(TestBase):
             result.returncode,
             msg=result.stderr or result.stdout or "Can't install project",
         )
-        result = subprocess.run([self.python, "-c", "import git"], stdout=subprocess.PIPE, cwd=self.sources)
+
+        result = subprocess.run(
+            [self.python, "-c", "import git"],
+            stdout=subprocess.PIPE,
+            cwd=self.sources,
+        )
         self.assertEqual(
             0,
             result.returncode,
             msg=result.stderr or result.stdout or "Selftest failed",
         )
+
+        result = subprocess.run(
+            [self.python, "-c", "import gitdb; import smmap"],
+            stdout=subprocess.PIPE,
+            cwd=self.sources,
+        )
+        self.assertEqual(
+            0,
+            result.returncode,
+            msg=result.stderr or result.stdout or "Dependencies not installed",
+        )
+
+        # Even IF gitdb or any other dependency is supplied during development
+        # by inserting its location into PYTHONPATH or otherwise patched into
+        # sys.path, make sure it is not wrongly inserted as the *first* entry.
         result = subprocess.run(
             [self.python, "-c", "import sys;import git; print(sys.path)"],
             stdout=subprocess.PIPE,
@@ -53,4 +74,3 @@ class TestInstallation(TestBase):
             syspath[0],
             msg="Failed to follow the conventions for https://docs.python.org/3/library/sys.html#sys.path",
         )
-        self.assertTrue(syspath[1].endswith("gitdb"), msg="Failed to add gitdb to sys.path")
