@@ -8,4 +8,4 @@ updates:
 - package-ecosystem: "gitsubmodule"
   directory: "/"
   schedule:
-    interval: "monthly"
+    interval: "weekly"
