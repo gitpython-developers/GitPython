@@ -1,4 +1,5 @@
 """Test the blob filter."""
+
 from pathlib import Path
 from typing import Sequence, Tuple
 from unittest.mock import MagicMock

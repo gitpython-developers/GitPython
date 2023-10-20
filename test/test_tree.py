@@ -14,14 +14,14 @@ import os.path as osp
 
 class TestTree(TestBase):
     def test_serializable(self):
-        # tree at the given commit contains a submodule as well
+        # Tree at the given commit contains a submodule as well.
         roottree = self.rorepo.tree("6c1faef799095f3990e9970bc2cb10aa0221cf9c")
         for item in roottree.traverse(ignore_self=False):
             if item.type != Tree.type:
                 continue
             # END skip non-trees
             tree = item
-            # trees have no dict
+            # Trees have no dict.
             self.assertRaises(AttributeError, setattr, tree, "someattr", 1)
 
             orig_data = tree.data_stream.read()
@@ -36,7 +36,7 @@ class TestTree(TestBase):
             testtree._deserialize(stream)
             assert testtree._cache == orig_cache
 
-            # replaces cache, but we make sure of it
+            # Replaces cache, but we make sure of it.
             del testtree._cache
             testtree._deserialize(stream)
         # END for each item in tree
@@ -54,29 +54,29 @@ class TestTree(TestBase):
         # END for each object
         assert all_items == root.list_traverse()
 
-        # limit recursion level to 0 - should be same as default iteration
+        # Limit recursion level to 0 - should be same as default iteration.
         assert all_items
         assert "CHANGES" in root
         assert len(list(root)) == len(list(root.traverse(depth=1)))
 
-        # only choose trees
+        # Only choose trees.
         trees_only = lambda i, d: i.type == "tree"
         trees = list(root.traverse(predicate=trees_only))
         assert len(trees) == len([i for i in root.traverse() if trees_only(i, 0)])
 
-        # test prune
+        # Test prune.
         lib_folder = lambda t, d: t.path == "lib"
         pruned_trees = list(root.traverse(predicate=trees_only, prune=lib_folder))
         assert len(pruned_trees) < len(trees)
 
-        # trees and blobs
+        # Trees and blobs.
         assert len(set(trees) | set(root.trees)) == len(trees)
         assert len({b for b in root if isinstance(b, Blob)} | set(root.blobs)) == len(root.blobs)
         subitem = trees[0][0]
         assert "/" in subitem.path
         assert subitem.name == osp.basename(subitem.path)
 
-        # assure that at some point the traversed paths have a slash in them
+        # Check that at some point the traversed paths have a slash in them.
         found_slash = False
         for item in root.traverse():
             assert osp.isabs(item.abspath)
@@ -84,8 +84,8 @@ class TestTree(TestBase):
                 found_slash = True
             # END check for slash
 
-            # slashes in paths are supported as well
-            # NOTE: on py3, / doesn't work with strings anymore ...
+            # Slashes in paths are supported as well.
+            # NOTE: On Python 3, / doesn't work with strings anymore...
             assert root[item.path] == item == root / item.path
         # END for each item
         assert found_slash

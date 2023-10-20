@@ -4,6 +4,7 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: https://opensource.org/license/bsd-3-clause/
+
 import ddt
 import shutil
 import tempfile
@@ -44,7 +45,7 @@ class TestDiff(TestBase):
         shutil.rmtree(self.submodule_dir)
 
     def _assert_diff_format(self, diffs):
-        # verify that the format of the diff is sane
+        # Verify that the format of the diff is sane.
         for diff in diffs:
             if diff.a_mode:
                 assert isinstance(diff.a_mode, int)
@@ -60,7 +61,7 @@ class TestDiff(TestBase):
 
     @with_rw_directory
     def test_diff_with_staged_file(self, rw_dir):
-        # SETUP INDEX WITH MULTIPLE STAGES
+        # SET UP INDEX WITH MULTIPLE STAGES
         r = Repo.init(rw_dir)
         fp = osp.join(rw_dir, "hello.txt")
         with open(fp, "w") as fs:
@@ -88,11 +89,11 @@ class TestDiff(TestBase):
             fs.write("Hallo Welt")
         r.git.commit(all=True, message="change on topic branch")
 
-        # there must be a merge-conflict
+        # There must be a merge conflict.
         with self.assertRaises(GitCommandError):
             r.git.cherry_pick("master")
 
-        # Now do the actual testing - this should just work
+        # Now do the actual testing - this should just work.
         self.assertEqual(len(r.index.diff(None)), 2)
 
         self.assertEqual(
@@ -255,7 +256,7 @@ class TestDiff(TestBase):
         self.assertIsNotNone(diff_index[0].new_file)
         self.assertEqual(diff_index[0].diff, "")
 
-        # ...and with creating a patch
+        # ...and with creating a patch.
         diff_index = initial_commit.diff(NULL_TREE, create_patch=True)
         self.assertIsNone(diff_index[0].a_path, repr(diff_index[0].a_path))
         self.assertEqual(diff_index[0].b_path, "CHANGES", repr(diff_index[0].b_path))
@@ -292,8 +293,8 @@ class TestDiff(TestBase):
         self.assertEqual(res[13].b_path, 'b/"with even more quotes"')
 
     def test_diff_patch_format(self):
-        # test all of the 'old' format diffs for completeness - it should at least
-        # be able to deal with it
+        # Test all of the 'old' format diffs for completeness - it should at least
+        # be able to deal with it.
         fixtures = (
             "diff_2",
             "diff_2f",
@@ -321,14 +322,14 @@ class TestDiff(TestBase):
 
     def test_diff_submodule(self):
         """Test that diff is able to correctly diff commits that cover submodule changes"""
-        # Init a temp git repo that will be referenced as a submodule
+        # Init a temp git repo that will be referenced as a submodule.
         sub = Repo.init(self.submodule_dir)
         with open(self.submodule_dir + "/subfile", "w") as sub_subfile:
             sub_subfile.write("")
         sub.index.add(["subfile"])
         sub.index.commit("first commit")
 
-        # Init a temp git repo that will incorporate the submodule
+        # Init a temp git repo that will incorporate the submodule.
         repo = Repo.init(self.repo_dir)
         with open(self.repo_dir + "/test", "w") as foo_test:
             foo_test.write("")
@@ -337,7 +338,7 @@ class TestDiff(TestBase):
         repo.index.commit("first commit")
         repo.create_tag("1")
 
-        # Add a commit to the submodule
+        # Add a commit to the submodule.
         submodule = repo.submodule("subtest")
         with open(self.repo_dir + "/sub/subfile", "w") as foo_sub_subfile:
             foo_sub_subfile.write("blub")
@@ -345,19 +346,19 @@ class TestDiff(TestBase):
         submodule.module().index.commit("changed subfile")
         submodule.binsha = submodule.module().head.commit.binsha
 
-        # Commit submodule updates in parent repo
+        # Commit submodule updates in parent repo.
         repo.index.add([submodule])
         repo.index.commit("submodule changed")
         repo.create_tag("2")
 
         diff = repo.commit("1").diff(repo.commit("2"))[0]
         # If diff is unable to find the commit hashes (looks in wrong repo) the *_blob.size
-        # property will be a string containing exception text, an int indicates success
+        # property will be a string containing exception text, an int indicates success.
         self.assertIsInstance(diff.a_blob.size, int)
         self.assertIsInstance(diff.b_blob.size, int)
 
     def test_diff_interface(self):
-        # test a few variations of the main diff routine
+        # Test a few variations of the main diff routine.
         assertion_map = {}
         for i, commit in enumerate(self.rorepo.iter_commits("0.1.6", max_count=2)):
             diff_item = commit
@@ -379,7 +380,7 @@ class TestDiff(TestBase):
                                 assertion_map[key] = assertion_map[key] + len(list(diff_index.iter_change_type(ct)))
                             # END for each changetype
 
-                            # check entries
+                            # Check entries.
                             diff_set = set()
                             diff_set.add(diff_index[0])
                             diff_set.add(diff_index[0])
@@ -398,14 +399,14 @@ class TestDiff(TestBase):
             # END for each other side
         # END for each commit
 
-        # assert we could always find at least one instance of the members we
+        # Assert that we could always find at least one instance of the members we
         # can iterate in the diff index - if not this indicates its not working correctly
-        # or our test does not span the whole range of possibilities
+        # or our test does not span the whole range of possibilities.
         for key, value in assertion_map.items():
             self.assertIsNotNone(value, "Did not find diff for %s" % key)
         # END for each iteration type
 
-        # test path not existing in the index - should be ignored
+        # Test path not existing in the index - should be ignored.
         c = self.rorepo.head.commit
         cp = c.parents[0]
         diff_index = c.diff(cp, ["does/not/exist"])
@@ -415,7 +416,7 @@ class TestDiff(TestBase):
     def test_rename_override(self, rw_dir):
         """Test disabling of diff rename detection"""
 
-        # create and commit file_a.txt
+        # Create and commit file_a.txt.
         repo = Repo.init(rw_dir)
         file_a = osp.join(rw_dir, "file_a.txt")
         with open(file_a, "w", encoding="utf-8") as outfile:
@@ -423,10 +424,10 @@ class TestDiff(TestBase):
         repo.git.add(Git.polish_url(file_a))
         repo.git.commit(message="Added file_a.txt")
 
-        # remove file_a.txt
+        # Remove file_a.txt.
         repo.git.rm(Git.polish_url(file_a))
 
-        # create and commit file_b.txt with similarity index of 52
+        # Create and commit file_b.txt with similarity index of 52.
         file_b = osp.join(rw_dir, "file_b.txt")
         with open(file_b, "w", encoding="utf-8") as outfile:
             outfile.write("hello world\nhello world")
@@ -436,7 +437,7 @@ class TestDiff(TestBase):
         commit_a = repo.commit("HEAD")
         commit_b = repo.commit("HEAD~1")
 
-        # check default diff command with renamed files enabled
+        # Check default diff command with renamed files enabled.
         diffs = commit_b.diff(commit_a)
         self.assertEqual(1, len(diffs))
         diff = diffs[0]
@@ -444,35 +445,35 @@ class TestDiff(TestBase):
         self.assertEqual("file_a.txt", diff.rename_from)
         self.assertEqual("file_b.txt", diff.rename_to)
 
-        # check diff with rename files disabled
+        # Check diff with rename files disabled.
         diffs = commit_b.diff(commit_a, no_renames=True)
         self.assertEqual(2, len(diffs))
 
-        # check fileA.txt deleted
+        # Check fileA.txt deleted.
         diff = diffs[0]
         self.assertEqual(True, diff.deleted_file)
         self.assertEqual("file_a.txt", diff.a_path)
 
-        # check fileB.txt added
+        # Check fileB.txt added.
         diff = diffs[1]
         self.assertEqual(True, diff.new_file)
         self.assertEqual("file_b.txt", diff.a_path)
 
-        # check diff with high similarity index
+        # Check diff with high similarity index.
         diffs = commit_b.diff(commit_a, split_single_char_options=False, M="75%")
         self.assertEqual(2, len(diffs))
 
-        # check fileA.txt deleted
+        # Check fileA.txt deleted.
         diff = diffs[0]
         self.assertEqual(True, diff.deleted_file)
         self.assertEqual("file_a.txt", diff.a_path)
 
-        # check fileB.txt added
+        # Check fileB.txt added.
         diff = diffs[1]
         self.assertEqual(True, diff.new_file)
         self.assertEqual("file_b.txt", diff.a_path)
 
-        # check diff with low similarity index
+        # Check diff with low similarity index.
         diffs = commit_b.diff(commit_a, split_single_char_options=False, M="40%")
         self.assertEqual(1, len(diffs))
         diff = diffs[0]
