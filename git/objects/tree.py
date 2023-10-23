@@ -180,8 +180,8 @@ class TreeModifier:
         return self
 
     def add_unchecked(self, binsha: bytes, mode: int, name: str) -> None:
-        """Add the given item to the tree. Its correctness is assumed, which
-        puts the caller into responsibility to assure the input is correct.
+        """Add the given item to the tree. Its correctness is assumed, so it is the
+        caller's responsibility to ensure that the input is correct.
 
         For more information on the parameters, see :meth:`add`.
 

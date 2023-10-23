@@ -133,7 +133,7 @@ class RootModule(Submodule):
 
         if progress is None:
             progress = RootUpdateProgress()
-        # END assure progress is set
+        # END ensure progress is set
 
         prefix = ""
         if dry_run:
@@ -300,7 +300,7 @@ class RootModule(Submodule):
                                 smr.rename(orig_name)
 
                                 # Early on, we verified that the our current tracking branch
-                                # exists in the remote. Now we have to assure that the
+                                # exists in the remote. Now we have to ensure that the
                                 # sha we point to is still contained in the new remote
                                 # tracking branch.
                                 smsha = sm.binsha
@@ -367,7 +367,7 @@ class RootModule(Submodule):
                             except OSError:
                                 # ...or reuse the existing one.
                                 tbr = git.Head(smm, sm.branch_path)
-                            # END assure tracking branch exists
+                            # END ensure tracking branch exists
 
                             tbr.set_tracking_branch(find_first_remote_branch(smmr, sm.branch_name))
                             # NOTE: All head-resetting is done in the base implementation of update

@@ -610,7 +610,7 @@ class Git(LazyMixin):
         stream once our sized content region is empty.
 
         If not all data are read to the end of the object's lifetime, we read the
-        rest to assure the underlying stream continues to work.
+        rest to ensure the underlying stream continues to work.
         """
 
         __slots__: Tuple[str, ...] = ("_stream", "_nbr", "_size")

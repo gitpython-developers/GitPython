@@ -122,8 +122,8 @@ class Diffable:
               the respective tree.
             * If :class:`Index <Diffable.Index>`, it will be compared against the index.
             * If :attr:`git.NULL_TREE`, it will compare against the empty tree.
-            * It defaults to :class:`Index <Diffable.Index>` to assure the method will
-              not by-default fail on bare repositories.
+            * It defaults to :class:`Index <Diffable.Index>` so that the method will not
+              by default fail on bare repositories.
 
         :param paths:
             This a list of paths or a single path to limit the diff to. It will only

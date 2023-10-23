@@ -283,7 +283,7 @@ else:
 def join_path_native(a: PathLike, *p: PathLike) -> PathLike:
     R"""Like join_path, but makes sure an OS native path is returned.
 
-    This is only needed to play it safe on Windows and to assure nice paths that only
+    This is only needed to play it safe on Windows and to ensure nice paths that only
     use '\'.
     """
     return to_native_path(join_path(a, *p))
@@ -1185,8 +1185,8 @@ class IterableClassWatcher(type):
 
 
 class Iterable(metaclass=IterableClassWatcher):
-    """Defines an interface for iterable items which is to assure a uniform
-    way to retrieve and iterate items within the git repository."""
+    """Defines an interface for iterable items, so there is a uniform way to retrieve
+    and iterate items within the git repository."""
 
     __slots__ = ()
 
@@ -1221,8 +1221,8 @@ class Iterable(metaclass=IterableClassWatcher):
 
 @runtime_checkable
 class IterableObj(Protocol):
-    """Defines an interface for iterable items which is to assure a uniform
-    way to retrieve and iterate items within the git repository.
+    """Defines an interface for iterable items, so there is a uniform way to retrieve
+    and iterate items within the git repository.
 
     Subclasses = [Submodule, Commit, Reference, PushInfo, FetchInfo, Remote]
     """

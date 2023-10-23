@@ -56,7 +56,7 @@ T_ConfigParser = TypeVar("T_ConfigParser", bound="GitConfigParser")
 T_OMD_value = TypeVar("T_OMD_value", str, bytes, int, float, bool)
 
 if sys.version_info[:3] < (3, 7, 2):
-    # typing.Ordereddict not added until py 3.7.2
+    # typing.Ordereddict not added until Python 3.7.2.
     from collections import OrderedDict
 
     OrderedDict_OMD = OrderedDict
@@ -73,12 +73,9 @@ __all__ = ("GitConfigParser", "SectionConstraint")
 log = logging.getLogger("git.config")
 log.addHandler(logging.NullHandler())
 
-# invariants
-# represents the configuration level of a configuration file
 
-
+# The configuration level of a configuration file.
 CONFIG_LEVELS: ConfigLevels_Tup = ("system", "user", "global", "repository")
-
 
 # Section pattern to detect conditional includes.
 # https://git-scm.com/docs/git-config#_conditional_includes
@@ -603,7 +600,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
             files_to_read = [self._file_or_files]
         else:  # for lists or tuples
             files_to_read = list(self._file_or_files)
-        # end assure we have a copy of the paths to handle
+        # end ensure we have a copy of the paths to handle
 
         seen = set(files_to_read)
         num_read_include_files = 0
@@ -612,7 +609,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
             file_ok = False
 
             if hasattr(file_path, "seek"):
-                # Must be a file objectfile-object.
+                # Must be a file-object.
                 file_path = cast(IO[bytes], file_path)  # TODO: Replace with assert to narrow type, once sure.
                 self._read(file_path, file_path.name)
             else:
@@ -626,7 +623,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
                     continue
 
             # Read includes and append those that we didn't handle yet.
-            # We expect all paths to be normalized and absolute (and will assure that is the case).
+            # We expect all paths to be normalized and absolute (and will ensure that is the case).
             if self._has_includes():
                 for _, include_path in self._included_paths():
                     if include_path.startswith("~"):

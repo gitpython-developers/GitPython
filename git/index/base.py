@@ -340,9 +340,9 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             resolve more cases in a commonly correct manner. Specify trivial=True as kwarg
             to override that.
 
-            As the underlying git-read-tree command takes into account the current index,
-            it will be temporarily moved out of the way to assure there are no unsuspected
-            interferences.
+            As the underlying git-read-tree command takes into account the current
+            index, it will be temporarily moved out of the way to prevent any unexpected
+            interference.
         """
         if len(treeish) == 0 or len(treeish) > 3:
             raise ValueError("Please specify between 1 and 3 treeish, got %i" % len(treeish))
@@ -366,7 +366,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             # Move current index out of the way - otherwise the merge may fail
             # as it considers existing entries. Moving it essentially clears the index.
             # Unfortunately there is no 'soft' way to do it.
-            # The TemporaryFileSwap assure the original file get put back.
+            # The TemporaryFileSwap ensures the original file gets put back.
 
             stack.enter_context(TemporaryFileSwap(join_path_native(repo.git_dir, "index")))
             repo.git.read_tree(*arg_list, **kwargs)

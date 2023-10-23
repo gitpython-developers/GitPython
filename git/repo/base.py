@@ -1448,7 +1448,7 @@ class Repo:
         path = cast(Union[PathLike, List[PathLike], Tuple[PathLike, ...]], path)
         if not isinstance(path, (tuple, list)):
             path = [path]
-        # end assure paths is list
+        # end ensure paths is list (or tuple)
         self.git.archive("--", treeish, *path, **kwargs)
         return self
 
