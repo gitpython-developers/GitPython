@@ -14,7 +14,7 @@ import subprocess
 import sys
 import tempfile
 import time
-from unittest import SkipTest, mock, skipUnless
+from unittest import SkipTest, mock
 
 import ddt
 import pytest
@@ -45,7 +45,7 @@ from test.lib import TestBase, with_rw_repo
 
 @pytest.fixture
 def permission_error_tmpdir(tmp_path):
-    """Fixture to test permissions errors situations where they are not overcome."""
+    """Fixture to test permissions errors in situations where they are not overcome."""
     td = tmp_path / "testdir"
     td.mkdir()
     (td / "x").write_bytes(b"")
@@ -211,21 +211,9 @@ class TestEnvParsing:
         assert actual_parsed_value is expected_truth_value
 
 
-class _Member:
-    """A member of an IterableList."""
-
-    __slots__ = ("name",)
-
-    def __init__(self, name):
-        self.name = name
-
-    def __repr__(self):
-        return f"{type(self).__name__}({self.name!r})"
-
-
-@ddt.ddt
-class TestUtils(TestBase):
-    """Tests for most utilities in :mod:`git.util`."""
+@pytest.mark.skipif(sys.platform != "cygwin", reason="Paths specifically for Cygwin.")
+class TestCygpath:
+    """Tests for :func:`git.util.cygpath` and :func:`git.util.decygpath`."""
 
     _norm_cygpath_pairs = (
         (R"foo\bar", "foo/bar"),
@@ -248,54 +236,70 @@ class TestUtils(TestBase):
         (R"\\?\UNC\server\D$\Apps", "//server/D$/Apps"),
     )
 
-    # FIXME: Mark only the /proc-prefixing cases xfail, somehow (or fix them).
+    # FIXME: Mark only the /proc-prefixing cases xfail (or fix them).
     @pytest.mark.xfail(
         reason="Many return paths prefixed /proc/cygdrive instead.",
         raises=AssertionError,
     )
-    @skipUnless(sys.platform == "cygwin", "Paths specifically for Cygwin.")
-    @ddt.idata(_norm_cygpath_pairs + _unc_cygpath_pairs)
-    def test_cygpath_ok(self, case):
-        wpath, cpath = case
+    @pytest.mark.parametrize("wpath, cpath", _norm_cygpath_pairs + _unc_cygpath_pairs)
+    def test_cygpath_ok(self, wpath, cpath):
         cwpath = cygpath(wpath)
-        self.assertEqual(cwpath, cpath, wpath)
+        assert cwpath == cpath, wpath
 
     @pytest.mark.xfail(
         reason=R'2nd example r".\bar" -> "bar" fails, returns "./bar"',
         raises=AssertionError,
     )
-    @skipUnless(sys.platform == "cygwin", "Paths specifically for Cygwin.")
-    @ddt.data(
-        (R"./bar", "bar"),
-        (R".\bar", "bar"),  # FIXME: Mark only this one xfail, somehow (or fix it).
-        (R"../bar", "../bar"),
-        (R"..\bar", "../bar"),
-        (R"../bar/.\foo/../chu", "../bar/chu"),
+    @pytest.mark.parametrize(
+        "wpath, cpath",
+        [
+            (R"./bar", "bar"),
+            (R".\bar", "bar"),  # FIXME: Mark only this one xfail (or fix it).
+            (R"../bar", "../bar"),
+            (R"..\bar", "../bar"),
+            (R"../bar/.\foo/../chu", "../bar/chu"),
+        ],
     )
-    def test_cygpath_norm_ok(self, case):
-        wpath, cpath = case
+    def test_cygpath_norm_ok(self, wpath, cpath):
         cwpath = cygpath(wpath)
-        self.assertEqual(cwpath, cpath or wpath, wpath)
+        assert cwpath == (cpath or wpath), wpath
 
-    @skipUnless(sys.platform == "cygwin", "Paths specifically for Cygwin.")
-    @ddt.data(
-        R"C:",
-        R"C:Relative",
-        R"D:Apps\123",
-        R"D:Apps/123",
-        R"\\?\a:rel",
-        R"\\share\a:rel",
+    @pytest.mark.parametrize(
+        "wpath",
+        [
+            R"C:",
+            R"C:Relative",
+            R"D:Apps\123",
+            R"D:Apps/123",
+            R"\\?\a:rel",
+            R"\\share\a:rel",
+        ],
     )
     def test_cygpath_invalids(self, wpath):
         cwpath = cygpath(wpath)
-        self.assertEqual(cwpath, wpath.replace("\\", "/"), wpath)
+        assert cwpath == wpath.replace("\\", "/"), wpath
 
-    @skipUnless(sys.platform == "cygwin", "Paths specifically for Cygwin.")
-    @ddt.idata(_norm_cygpath_pairs)
-    def test_decygpath(self, case):
-        wpath, cpath = case
+    @pytest.mark.parametrize("wpath, cpath", _norm_cygpath_pairs)
+    def test_decygpath(self, wpath, cpath):
         wcpath = decygpath(cpath)
-        self.assertEqual(wcpath, wpath.replace("/", "\\"), cpath)
+        assert wcpath == wpath.replace("/", "\\"), cpath
+
+
+class _Member:
+    """A member of an IterableList."""
+
+    __slots__ = ("name",)
+
+    def __init__(self, name):
+        self.name = name
+
+    def __repr__(self):
+        return f"{type(self).__name__}({self.name!r})"
+
+
+@ddt.ddt
+class TestUtils(TestBase):
+    """Tests for most utilities in :mod:`git.util`."""
 
     def test_it_should_dashify(self):
         self.assertEqual("this-is-my-argument", dashify("this_is_my_argument"))
