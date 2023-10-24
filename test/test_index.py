@@ -868,7 +868,7 @@ class TestIndex(TestBase):
     def test__to_relative_path_at_root(self):
         root = osp.abspath(os.sep)
 
-        class Mocked(object):
+        class Mocked:
             bare = False
             git_dir = root
             working_tree_dir = root

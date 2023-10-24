@@ -65,7 +65,7 @@ def fixture(name):
 # { Adapters
 
 
-class StringProcessAdapter(object):
+class StringProcessAdapter:
     """Allows strings to be used as process objects returned by subprocess.Popen.
 
     This is tailored to work with the test system only.

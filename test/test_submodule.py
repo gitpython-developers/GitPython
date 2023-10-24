@@ -1044,7 +1044,7 @@ class TestSubmodule(TestBase):
 
     @skipUnless(is_win, "Specifically for Windows.")
     def test_to_relative_path_with_super_at_root_drive(self):
-        class Repo(object):
+        class Repo:
             working_tree_dir = "D:\\"
 
         super_repo = Repo()
