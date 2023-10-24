@@ -1,4 +1,4 @@
-# test_utils.py
+# test_util.py
 # Copyright (C) 2008, 2009 Michael Trier (mtrier@gmail.com) and contributors
 #
 # This module is part of GitPython and is released under
@@ -275,14 +275,14 @@ class TestUtils(TestBase):
         my_file = tempfile.mktemp()
         lock_file = LockFile(my_file)
         assert not lock_file._has_lock()
-        # release lock we don't have  - fine
+        # Release lock we don't have - fine.
         lock_file._release_lock()
 
-        # get lock
+        # Get lock.
         lock_file._obtain_lock_or_raise()
         assert lock_file._has_lock()
 
-        # concurrent access
+        # Concurrent access.
         other_lock_file = LockFile(my_file)
         assert not other_lock_file._has_lock()
         self.assertRaises(IOError, other_lock_file._obtain_lock_or_raise)
@@ -293,7 +293,7 @@ class TestUtils(TestBase):
         other_lock_file._obtain_lock_or_raise()
         self.assertRaises(IOError, lock_file._obtain_lock_or_raise)
 
-        # auto-release on destruction
+        # Auto-release on destruction.
         del other_lock_file
         lock_file._obtain_lock_or_raise()
         lock_file._release_lock()
@@ -303,7 +303,7 @@ class TestUtils(TestBase):
         lock_file = BlockingLockFile(my_file)
         lock_file._obtain_lock()
 
-        # next one waits for the lock
+        # Next one waits for the lock.
         start = time.time()
         wait_time = 0.1
         wait_lock = BlockingLockFile(my_file, 0.05, wait_time)
@@ -318,7 +318,7 @@ class TestUtils(TestBase):
         self.assertIn("@", get_user_id())
 
     def test_parse_date(self):
-        # parse_date(from_timestamp()) must return the tuple unchanged
+        # parse_date(from_timestamp()) must return the tuple unchanged.
         for timestamp, offset in (
             (1522827734, -7200),
             (1522827734, 0),
@@ -326,7 +326,7 @@ class TestUtils(TestBase):
         ):
             self.assertEqual(parse_date(from_timestamp(timestamp, offset)), (timestamp, offset))
 
-        # test all supported formats
+        # Test all supported formats.
         def assert_rval(rval, veri_time, offset=0):
             self.assertEqual(len(rval), 2)
             self.assertIsInstance(rval[0], int)
@@ -334,7 +334,7 @@ class TestUtils(TestBase):
             self.assertEqual(rval[0], veri_time)
             self.assertEqual(rval[1], offset)
 
-            # now that we are here, test our conversion functions as well
+            # Now that we are here, test our conversion functions as well.
             utctz = altz_to_utctz_str(offset)
             self.assertIsInstance(utctz, str)
             self.assertEqual(utctz_to_altz(verify_utctz(utctz)), offset)
@@ -347,13 +347,13 @@ class TestUtils(TestBase):
         iso3 = ("2005.04.07 22:13:11 -0000", 0)
         alt = ("04/07/2005 22:13:11", 0)
         alt2 = ("07.04.2005 22:13:11", 0)
-        veri_time_utc = 1112911991  # the time this represents, in time since epoch, UTC
+        veri_time_utc = 1112911991  # The time this represents, in time since epoch, UTC.
         for date, offset in (rfc, iso, iso2, iso3, alt, alt2):
             assert_rval(parse_date(date), veri_time_utc, offset)
         # END for each date type
 
-        # and failure
-        self.assertRaises(ValueError, parse_date, datetime.now())  # non-aware datetime
+        # ...and failure.
+        self.assertRaises(ValueError, parse_date, datetime.now())  # Non-aware datetime.
         self.assertRaises(ValueError, parse_date, "invalid format")
         self.assertRaises(ValueError, parse_date, "123456789 -02000")
         self.assertRaises(ValueError, parse_date, " 123456789 -0200")
@@ -362,7 +362,7 @@ class TestUtils(TestBase):
         for cr in (None, self.rorepo.config_reader()):
             self.assertIsInstance(Actor.committer(cr), Actor)
             self.assertIsInstance(Actor.author(cr), Actor)
-        # END assure config reader is handled
+        # END ensure config reader is handled
 
     @with_rw_repo("HEAD")
     @mock.patch("getpass.getuser")
@@ -402,7 +402,7 @@ class TestUtils(TestBase):
         mock_get_uid.return_value = "user"
         committer = Actor.committer(None)
         author = Actor.author(None)
-        # We can't test with `self.rorepo.config_reader()` here, as the uuid laziness
+        # We can't test with `self.rorepo.config_reader()` here, as the UUID laziness
         # depends on whether the user running the test has their global user.name config set.
         self.assertEqual(committer.name, "user")
         self.assertTrue(committer.email.startswith("user@"))
@@ -436,30 +436,30 @@ class TestUtils(TestBase):
 
         self.assertEqual(len(ilist), 2)
 
-        # contains works with name and identity
+        # Contains works with name and identity.
         self.assertIn(name1, ilist)
         self.assertIn(name2, ilist)
         self.assertIn(m2, ilist)
         self.assertIn(m2, ilist)
         self.assertNotIn("invalid", ilist)
 
-        # with string index
+        # With string index.
         self.assertIs(ilist[name1], m1)
         self.assertIs(ilist[name2], m2)
 
-        # with int index
+        # With int index.
         self.assertIs(ilist[0], m1)
         self.assertIs(ilist[1], m2)
 
-        # with getattr
+        # With getattr.
         self.assertIs(ilist.one, m1)
         self.assertIs(ilist.two, m2)
 
-        # test exceptions
+        # Test exceptions.
         self.assertRaises(AttributeError, getattr, ilist, "something")
         self.assertRaises(IndexError, ilist.__getitem__, "something")
 
-        # delete by name and index
+        # Delete by name and index.
         self.assertRaises(IndexError, ilist.__delitem__, "something")
         del ilist[name2]
         self.assertEqual(len(ilist), 1)
@@ -494,21 +494,21 @@ class TestUtils(TestBase):
         self.assertEqual(altz_to_utctz_str(-59), "+0000")
 
     def test_from_timestamp(self):
-        # Correct offset: UTC+2, should return datetime + tzoffset(+2)
+        # Correct offset: UTC+2, should return datetime + tzoffset(+2).
         altz = utctz_to_altz("+0200")
         self.assertEqual(
             datetime.fromtimestamp(1522827734, tzoffset(altz)),
             from_timestamp(1522827734, altz),
         )
 
-        # Wrong offset: UTC+58, should return datetime + tzoffset(UTC)
+        # Wrong offset: UTC+58, should return datetime + tzoffset(UTC).
         altz = utctz_to_altz("+5800")
         self.assertEqual(
             datetime.fromtimestamp(1522827734, tzoffset(0)),
             from_timestamp(1522827734, altz),
         )
 
-        # Wrong offset: UTC-9000, should return datetime + tzoffset(UTC)
+        # Wrong offset: UTC-9000, should return datetime + tzoffset(UTC).
         altz = utctz_to_altz("-9000")
         self.assertEqual(
             datetime.fromtimestamp(1522827734, tzoffset(0)),
@@ -538,7 +538,7 @@ class TestUtils(TestBase):
         redacted_cmd_1 = remove_password_if_present(cmd_1)
         assert username not in " ".join(redacted_cmd_1)
         assert password not in " ".join(redacted_cmd_1)
-        # Check that we use a copy
+        # Check that we use a copy.
         assert cmd_1 is not redacted_cmd_1
         assert username in " ".join(cmd_1)
         assert password in " ".join(cmd_1)
