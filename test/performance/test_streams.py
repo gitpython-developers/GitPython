@@ -1,4 +1,5 @@
-"""Performance data streaming performance"""
+"""Performance tests for data streaming."""
+
 import os
 import subprocess
 import sys
@@ -15,13 +16,13 @@ from .lib import TestBigRepoR
 
 
 class TestObjDBPerformance(TestBigRepoR):
-    large_data_size_bytes = 1000 * 1000 * 10  # some MiB should do it
-    moderate_data_size_bytes = 1000 * 1000 * 1  # just 1 MiB
+    large_data_size_bytes = 1000 * 1000 * 10  # Some MiB should do it.
+    moderate_data_size_bytes = 1000 * 1000 * 1  # Just 1 MiB.
 
     @with_rw_repo("HEAD", bare=True)
     def test_large_data_streaming(self, rwrepo):
-        # TODO: This part overlaps with the same file in gitdb.test.performance.test_stream
-        # It should be shared if possible
+        # TODO: This part overlaps with the same file in gitdb.test.performance.test_stream.
+        # It should be shared if possible.
         ldb = LooseObjectDB(osp.join(rwrepo.git_dir, "objects"))
 
         for randomize in range(2):
@@ -32,7 +33,7 @@ class TestObjDBPerformance(TestBigRepoR):
             elapsed = time() - st
             print("Done (in %f s)" % elapsed, file=sys.stderr)
 
-            # writing - due to the compression it will seem faster than it is
+            # Writing - due to the compression it will seem faster than it is.
             st = time()
             binsha = ldb.store(IStream("blob", size, stream)).binsha
             elapsed_add = time() - st
@@ -45,7 +46,7 @@ class TestObjDBPerformance(TestBigRepoR):
             msg %= (size_kib, fsize_kib, desc, elapsed_add, size_kib / elapsed_add)
             print(msg, file=sys.stderr)
 
-            # reading all at once
+            # Reading all at once.
             st = time()
             ostream = ldb.stream(binsha)
             shadata = ostream.read()
@@ -57,7 +58,7 @@ class TestObjDBPerformance(TestBigRepoR):
             msg %= (size_kib, desc, elapsed_readall, size_kib / elapsed_readall)
             print(msg, file=sys.stderr)
 
-            # reading in chunks of 1 MiB
+            # Reading in chunks of 1 MiB.
             cs = 512 * 1000
             chunks = []
             st = time()
@@ -86,7 +87,7 @@ class TestObjDBPerformance(TestBigRepoR):
                 file=sys.stderr,
             )
 
-            # del db file so git has something to do
+            # del db file so git has something to do.
             ostream = None
             import gc
 
@@ -95,11 +96,11 @@ class TestObjDBPerformance(TestBigRepoR):
 
             # VS. CGIT
             ##########
-            # CGIT ! Can using the cgit programs be faster ?
+            # CGIT! Can using the cgit programs be faster?
             proc = rwrepo.git.hash_object("-w", "--stdin", as_process=True, istream=subprocess.PIPE)
 
-            # write file - pump everything in at once to be a fast as possible
-            data = stream.getvalue()  # cache it
+            # Write file - pump everything in at once to be a fast as possible.
+            data = stream.getvalue()  # Cache it.
             st = time()
             proc.stdin.write(data)
             proc.stdin.close()
@@ -107,22 +108,22 @@ class TestObjDBPerformance(TestBigRepoR):
             proc.wait()
             gelapsed_add = time() - st
             del data
-            assert gitsha == bin_to_hex(binsha)  # we do it the same way, right ?
+            assert gitsha == bin_to_hex(binsha)  # We do it the same way, right?
 
-            #  as its the same sha, we reuse our path
+            # As it's the same sha, we reuse our path.
             fsize_kib = osp.getsize(db_file) / 1000
             msg = "Added %i KiB (filesize = %i KiB) of %s data to using git-hash-object in %f s ( %f Write KiB / s)"
             msg %= (size_kib, fsize_kib, desc, gelapsed_add, size_kib / gelapsed_add)
             print(msg, file=sys.stderr)
 
-            # compare ...
+            # Compare.
             print(
                 "Git-Python is %f %% faster than git when adding big %s files"
                 % (100.0 - (elapsed_add / gelapsed_add) * 100, desc),
                 file=sys.stderr,
             )
 
-            # read all
+            # Read all.
             st = time()
             _hexsha, _typename, size, data = rwrepo.git.get_object_data(gitsha)
             gelapsed_readall = time() - st
@@ -132,14 +133,14 @@ class TestObjDBPerformance(TestBigRepoR):
                 file=sys.stderr,
             )
 
-            # compare
+            # Compare.
             print(
                 "Git-Python is %f %% faster than git when reading big %sfiles"
                 % (100.0 - (elapsed_readall / gelapsed_readall) * 100, desc),
                 file=sys.stderr,
             )
 
-            # read chunks
+            # Read chunks.
             st = time()
             _hexsha, _typename, size, stream = rwrepo.git.stream_object_data(gitsha)
             while True:
@@ -158,7 +159,7 @@ class TestObjDBPerformance(TestBigRepoR):
             )
             print(msg, file=sys.stderr)
 
-            # compare
+            # Compare.
             print(
                 "Git-Python is %f %% faster than git when reading big %s files in chunks"
                 % (100.0 - (elapsed_readchunks / gelapsed_readchunks) * 100, desc),

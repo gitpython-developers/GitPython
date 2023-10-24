@@ -1,8 +1,10 @@
-# test_performance.py
 # Copyright (C) 2008, 2009 Michael Trier (mtrier@gmail.com) and contributors
 #
 # This module is part of GitPython and is released under
 # the BSD License: https://opensource.org/license/bsd-3-clause/
+
+"""Performance tests for commits (iteration, traversal, and serialization)."""
+
 from io import BytesIO
 from time import time
 import sys
@@ -19,7 +21,7 @@ class TestPerformance(TestBigRepoRW, TestCommitSerialization):
 
         gc.collect()
 
-    # ref with about 100 commits in its history
+    # ref with about 100 commits in its history.
     ref_100 = "0.1.6"
 
     def _query_commit_info(self, c):
@@ -36,9 +38,9 @@ class TestPerformance(TestBigRepoRW, TestCommitSerialization):
         no = 0
         nc = 0
 
-        # find the first commit containing the given path - always do a full
-        # iteration ( restricted to the path in question ), but in fact it should
-        # return quite a lot of commits, we just take one and hence abort the operation
+        # Find the first commit containing the given path. Always do a full iteration
+        # (restricted to the path in question). This should return quite a lot of
+        # commits. We just take one and hence abort the operation.
 
         st = time()
         for c in self.rorepo.iter_commits(self.ref_100):
@@ -57,7 +59,7 @@ class TestPerformance(TestBigRepoRW, TestCommitSerialization):
         )
 
     def test_commit_traversal(self):
-        # bound to cat-file parsing performance
+        # Bound to cat-file parsing performance.
         nc = 0
         st = time()
         for c in self.gitrorepo.commit().traverse(branch_first=False):
@@ -71,7 +73,7 @@ class TestPerformance(TestBigRepoRW, TestCommitSerialization):
         )
 
     def test_commit_iteration(self):
-        # bound to stream parsing performance
+        # Bound to stream parsing performance.
         nc = 0
         st = time()
         for c in Commit.iter_items(self.gitrorepo, self.gitrorepo.head):
@@ -89,8 +91,8 @@ class TestPerformance(TestBigRepoRW, TestCommitSerialization):
 
         rwrepo = self.gitrwrepo
         make_object = rwrepo.odb.store
-        # direct serialization - deserialization can be tested afterwards
-        # serialization is probably limited on IO
+        # Direct serialization - deserialization can be tested afterwards.
+        # Serialization is probably limited on IO.
         hc = rwrepo.commit(rwrepo.head)
 
         nc = 5000
