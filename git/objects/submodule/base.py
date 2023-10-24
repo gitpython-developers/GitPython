@@ -136,7 +136,7 @@ class Submodule(IndexObject, TraversableIterableObj):
     def _set_cache_(self, attr: str) -> None:
         if attr in ("path", "_url", "_branch_path"):
             reader: SectionConstraint = self.config_reader()
-            # default submodule values
+            # Default submodule values.
             try:
                 self.path = reader.get("path")
             except cp.NoSectionError as e:
@@ -147,7 +147,7 @@ class Submodule(IndexObject, TraversableIterableObj):
                     ) from e
 
             self._url = reader.get("url")
-            # git-python extension values - optional
+            # GitPython extension values - optional.
             self._branch_path = reader.get_value(self.k_head_option, git.Head.to_full_path(self.k_head_default))
         elif attr == "_name":
             raise AttributeError("Cannot retrieve the name of a submodule if it was not set initially")
@@ -484,7 +484,7 @@ class Submodule(IndexObject, TraversableIterableObj):
             # END verify we have url
             url = urls[0]
         else:
-            # clone new repo
+            # Clone new repo.
             kwargs: Dict[str, Union[bool, int, str, Sequence[TBD]]] = {"n": no_checkout}
             if not branch_is_default:
                 kwargs["b"] = br.name
@@ -531,7 +531,7 @@ class Submodule(IndexObject, TraversableIterableObj):
 
             sm._url = url
             if not branch_is_default:
-                # store full path
+                # Store full path.
                 writer.set_value(cls.k_head_option, br.path)
                 sm._branch_path = br.path
 
