@@ -59,12 +59,6 @@ def permission_error_tmpdir(tmp_path):
     yield td
 
 
-@pytest.fixture
-def file_not_found_tmpdir(tmp_path):
-    """Fixture to test errors deleting a directory that are not due to permissions."""
-    yield tmp_path / "testdir"  # It is deliberately never created.
-
-
 class TestRmtree:
     """Tests for :func:`git.util.rmtree`."""
 
@@ -142,7 +136,9 @@ class TestRmtree:
                 pytest.fail(f"rmtree unexpectedly attempts skip: {ex!r}")
 
     @pytest.mark.parametrize("hide_windows_known_errors", [False, True])
-    def test_does_not_wrap_other_errors(self, mocker, file_not_found_tmpdir, hide_windows_known_errors):
+    def test_does_not_wrap_other_errors(self, tmp_path, mocker, hide_windows_known_errors):
+        file_not_found_tmpdir = tmp_path / "testdir"  # It is deliberately never created.
+
         # See comments in test_wraps_perm_error_if_enabled for details about patching.
         mocker.patch.object(sys.modules["git.util"], "HIDE_WINDOWS_KNOWN_ERRORS", hide_windows_known_errors)
         mocker.patch.object(os, "chmod")
