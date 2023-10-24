@@ -213,14 +213,6 @@ def git_daemon_launched(base_path, ip, port):
           and setting the environment variable GIT_PYTHON_TEST_GIT_DAEMON_PORT to <port>
         """
         )
-        if is_win:
-            msg += textwrap.dedent(
-                R"""
-
-            On Windows,
-              the `git-daemon.exe` must be in PATH.
-              For MINGW, look into \Git\mingw64\libexec\git-core\, but problems with paths might appear."""
-            )
         log.warning(msg, ex, ip, port, base_path, base_path, exc_info=1)
 
         yield  # OK, assume daemon started manually.
