@@ -155,38 +155,26 @@ class TestRmtree:
                 self.fail(f"rmtree unexpectedly attempts skip: {ex!r}")
 
 
-class _Member:
-    """A member of an IterableList."""
+class TestEnvParsing:
+    """Tests for environment variable parsing logic in :mod:`git.util`."""
 
-    __slots__ = ("name",)
+    @staticmethod
+    def _run_parse(name, value):
+        command = [
+            sys.executable,
+            "-c",
+            f"from git.util import {name}; print(repr({name}))",
+        ]
+        output = subprocess.check_output(
+            command,
+            env=None if value is None else dict(os.environ, **{name: value}),
+            text=True,
+        )
+        return ast.literal_eval(output)
 
-    def __init__(self, name):
-        self.name = name
-
-    def __repr__(self):
-        return f"{type(self).__name__}({self.name!r})"
-
-
-@ddt.ddt
-class TestUtils(TestBase):
-    """Tests for utilities in :mod:`git.util` other than :func:`git.util.rmtree`."""
-
-    @ddt.data("HIDE_WINDOWS_KNOWN_ERRORS", "HIDE_WINDOWS_FREEZE_ERRORS")
-    def test_env_vars_for_windows_tests(self, name):
-        def run_parse(value):
-            command = [
-                sys.executable,
-                "-c",
-                f"from git.util import {name}; print(repr({name}))",
-            ]
-            output = subprocess.check_output(
-                command,
-                env=None if value is None else dict(os.environ, **{name: value}),
-                text=True,
-            )
-            return ast.literal_eval(output)
-
-        for env_var_value, expected_truth_value in (
+    @pytest.mark.parametrize(
+        "env_var_value, expected_truth_value",
+        [
             (None, os.name == "nt"),  # True on Windows when the environment variable is unset.
             ("", False),
             (" ", False),
@@ -202,9 +190,35 @@ class TestUtils(TestBase):
             ("YES", os.name == "nt"),
             (" no  ", False),
             (" yes  ", os.name == "nt"),
-        ):
-            with self.subTest(env_var_value=env_var_value):
-                self.assertIs(run_parse(env_var_value), expected_truth_value)
+        ],
+    )
+    @pytest.mark.parametrize(
+        "name",
+        [
+            "HIDE_WINDOWS_KNOWN_ERRORS",
+            "HIDE_WINDOWS_FREEZE_ERRORS",
+        ],
+    )
+    def test_env_vars_for_windows_tests(self, name, env_var_value, expected_truth_value):
+        actual_parsed_value = self._run_parse(name, env_var_value)
+        assert actual_parsed_value is expected_truth_value
+
+
+class _Member:
+    """A member of an IterableList."""
+
+    __slots__ = ("name",)
+
+    def __init__(self, name):
+        self.name = name
+
+    def __repr__(self):
+        return f"{type(self).__name__}({self.name!r})"
+
+
+@ddt.ddt
+class TestUtils(TestBase):
+    """Tests for most utilities in :mod:`git.util`."""
 
     _norm_cygpath_pairs = (
         (R"foo\bar", "foo/bar"),
