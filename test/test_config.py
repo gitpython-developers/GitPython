@@ -190,12 +190,8 @@ class TestBase(TestCase):
         def write_test_value(cw, value):
             cw.set_value(value, "value", value)
 
-        # end
-
         def check_test_value(cr, value):
             assert cr.get_value(value, "value") == value
-
-        # end
 
         # PREPARE CONFIG FILE A
         fpa = osp.join(rw_dir, "a")
@@ -225,7 +221,7 @@ class TestBase(TestCase):
         with GitConfigParser(fpa, read_only=True) as cr:
             for tv in ("a", "b", "c"):
                 check_test_value(cr, tv)
-            # end for each test to verify
+            # END for each test to verify
             assert len(cr.items("include")) == 8, "Expected all include sections to be merged"
 
         # Test writable config writers - assure write-back doesn't involve includes.

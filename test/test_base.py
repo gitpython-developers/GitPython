@@ -142,5 +142,5 @@ class TestBase(_TestBase):
         else:
             # On POSIX, we can just add Unicode files without problems.
             rw_repo.git.add(rw_repo.working_dir)
-        # end
+
         rw_repo.index.commit("message")

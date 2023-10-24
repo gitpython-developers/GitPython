@@ -223,7 +223,7 @@ class TestDiff(TestBase):
         for dr in res:
             self.assertTrue(dr.diff.startswith(b"@@"), dr)
             self.assertIsNotNone(str(dr), "Diff to string conversion should be possible")
-        # end for each diff
+        # END for each diff
 
         dr = res[3]
         assert dr.diff.endswith(b"+Binary files a/rps and b/rps differ\n")

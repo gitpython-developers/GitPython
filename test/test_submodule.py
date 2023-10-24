@@ -704,7 +704,7 @@ class TestSubmodule(TestBase):
             sm = rwrepo.create_submodule(sm_name, sm_path, rwrepo.git_dir, no_checkout=True)
             assert sm.exists() and sm.module_exists()
             rwrepo.index.commit("Added submodule " + sm_name)
-        # end for each submodule path to add
+        # END for each submodule path to add
 
         self.assertRaises(ValueError, rwrepo.create_submodule, "fail", osp.expanduser("~"))
         self.assertRaises(
@@ -731,7 +731,7 @@ class TestSubmodule(TestBase):
                 url=empty_repo_dir,
                 no_checkout=checkout_mode and True or False,
             )
-        # end for each checkout mode
+        # END for each checkout mode
 
     @with_rw_directory
     @_patch_git_config("protocol.file.allow", "always")
@@ -783,8 +783,8 @@ class TestSubmodule(TestBase):
             for init in (False, True):
                 sm.update(init=init)
                 sm2.update(init=init)
-            # end for each init state
-        # end for each iteration
+            # END for each init state
+        # END for each iteration
 
         sm.move(sm.path + "_moved")
         sm2.move(sm2.path + "_moved")
@@ -839,7 +839,7 @@ class TestSubmodule(TestBase):
             assert sm.exists() == value
             assert sm.module_exists() == value
 
-        # end
+        # END def assert_exists
 
         # As git is backwards compatible itself, it would still recognize what we do here... unless we really
         # muss it up. That's the only reason why the test is still here...
@@ -854,7 +854,7 @@ class TestSubmodule(TestBase):
             assert osp.isfile(module_repo_path)
             assert sm.module().has_separate_working_tree()
             assert find_submodule_git_dir(module_repo_path) is not None, "module pointed to by .git file must be valid"
-        # end verify submodule 'style'
+        # END verify submodule 'style'
 
         # Test move.
         new_sm_path = join_path_native("submodules", "one")
@@ -911,7 +911,7 @@ class TestSubmodule(TestBase):
             sm.remove(dry_run=dry_run, force=True)
             assert_exists(sm, value=dry_run)
             assert osp.isdir(sm_module_path) == dry_run
-        # end for each dry-run mode
+        # END for each dry-run mode
 
     @with_rw_directory
     def test_ignore_non_submodule_file(self, rwdir):
@@ -974,7 +974,6 @@ class TestSubmodule(TestBase):
         sm_mod = sm.module()
         if osp.isfile(osp.join(sm_mod.working_tree_dir, ".git")) == sm._need_gitfile_submodules(parent.git):
             assert sm_mod.git_dir.endswith(join_path_native(".git", "modules", new_sm_name))
-        # end
 
     @with_rw_directory
     def test_branch_renames(self, rw_dir):

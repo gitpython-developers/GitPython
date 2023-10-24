@@ -146,8 +146,6 @@ class Tutorials(TestBase):
                     message or "NO MESSAGE",
                 )
 
-        # end
-
         self.assertEqual(len(cloned_repo.remotes), 1)  # We have been cloned, so should be one remote.
         self.assertEqual(len(bare_repo.remotes), 0)  # This one was just initialized.
         origin = bare_repo.create_remote("origin", url=cloned_repo.working_tree_dir)

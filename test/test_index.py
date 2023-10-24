@@ -635,7 +635,7 @@ class TestIndex(TestBase):
                 )
 
                 os.remove(link_file)
-            # end for each target
+            # END for each target
         # END real symlink test
 
         # Add fake symlink and assure it checks-our as symlink.

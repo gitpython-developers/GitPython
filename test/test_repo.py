@@ -790,7 +790,7 @@ class TestRepo(TestBase):
 
             repo_add(untracked_files)
             self.assertEqual(len(rwrepo.untracked_files), (num_recently_untracked - len(files)))
-        # end for each run
+        # END for each run
 
     def test_config_reader(self):
         reader = self.rorepo.config_reader()  # All config files.
@@ -1165,8 +1165,8 @@ class TestRepo(TestBase):
             for repo_type in (GitCmdObjectDB, GitDB):
                 repo = Repo(self.rorepo.working_tree_dir, odbt=repo_type)
                 last_commit(repo, "master", "test/test_base.py")
-            # end for each repository type
-        # end for each iteration
+            # END for each repository type
+        # END for each iteration
 
     def test_remote_method(self):
         self.assertRaises(ValueError, self.rorepo.remote, "foo-blue")
@@ -1227,7 +1227,7 @@ class TestRepo(TestBase):
             res = repo.merge_base(c1, c2, c3, **{kw: True})
             self.assertIsInstance(res, list)
             self.assertEqual(len(res), 1)
-        # end for each keyword signalling all merge-bases to be returned
+        # END for each keyword signalling all merge-bases to be returned
 
         # Test for no merge base - can't do as we have.
         self.assertRaises(GitCommandError, repo.merge_base, c1, "ffffff")

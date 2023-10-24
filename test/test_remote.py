@@ -518,8 +518,7 @@ class TestRemote(TestBase):
             if branch.name != "master":
                 branch.delete(remote_repo, branch, force=True)
                 num_deleted += 1
-            # end
-        # end for each branch
+        # END for each branch
         self.assertGreater(num_deleted, 0)
         self.assertEqual(
             len(rw_repo.remotes.origin.fetch(prune=True)),

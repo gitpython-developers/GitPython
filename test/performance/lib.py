@@ -45,7 +45,7 @@ class TestBigRepoR(TestBase):
                 k_env_git_repo,
             )
             repo_path = osp.dirname(__file__)
-        # end set some repo path
+        # END set some repo path
         self.gitrorepo = Repo(repo_path, odbt=GitCmdObjectDB, search_parent_directories=True)
         self.puregitrorepo = Repo(repo_path, odbt=GitDB, search_parent_directories=True)
 
