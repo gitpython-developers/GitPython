@@ -5,7 +5,6 @@
 # the BSD License: https://opensource.org/license/bsd-3-clause/
 
 import ast
-import contextlib
 from datetime import datetime
 import os
 import pathlib
@@ -15,7 +14,7 @@ import subprocess
 import sys
 import tempfile
 import time
-from unittest import SkipTest, mock, skipIf, skipUnless
+from unittest import SkipTest, mock, skipUnless
 
 import ddt
 import pytest
@@ -44,6 +43,118 @@ from git.util import (
 from test.lib import TestBase, with_rw_repo
 
 
+@pytest.fixture
+def permission_error_tmpdir(tmp_path):
+    """Fixture to test permissions errors situations where they are not overcome."""
+    if sys.platform == "cygwin":
+        raise SkipTest("Cygwin can't set the permissions that make the test meaningful.")
+    if sys.version_info < (3, 8):
+        raise SkipTest("In 3.7, TemporaryDirectory doesn't clean up after weird permissions.")
+
+    td = tmp_path / "testdir"
+    td.mkdir()
+    (td / "x").write_bytes(b"")
+    (td / "x").chmod(stat.S_IRUSR)  # Set up PermissionError on Windows.
+    td.chmod(stat.S_IRUSR | stat.S_IXUSR)  # Set up PermissionError on Unix.
+    yield td
+
+
+@pytest.fixture
+def file_not_found_tmpdir(tmp_path):
+    """Fixture to test errors deleting a directory that are not due to permissions."""
+    yield tmp_path / "testdir"  # It is deliberately never created.
+
+
+class TestRmtree:
+    """Tests for :func:`git.util.rmtree`."""
+
+    def test_deletes_nested_dir_with_files(self, tmp_path):
+        td = tmp_path / "testdir"
+
+        for d in td, td / "q", td / "s":
+            d.mkdir()
+        for f in (
+            td / "p",
+            td / "q" / "w",
+            td / "q" / "x",
+            td / "r",
+            td / "s" / "y",
+            td / "s" / "z",
+        ):
+            f.write_bytes(b"")
+
+        try:
+            rmtree(td)
+        except SkipTest as ex:
+            pytest.fail(f"rmtree unexpectedly attempts skip: {ex!r}")
+
+        assert not td.exists()
+
+    @pytest.mark.skipif(
+        sys.platform == "cygwin",
+        reason="Cygwin can't set the permissions that make the test meaningful.",
+    )
+    def test_deletes_dir_with_readonly_files(self, tmp_path):
+        # Automatically works on Unix, but requires special handling on Windows.
+        # Not to be confused with what permission_error_tmpdir sets up (see below).
+
+        td = tmp_path / "testdir"
+
+        for d in td, td / "sub":
+            d.mkdir()
+        for f in td / "x", td / "sub" / "y":
+            f.write_bytes(b"")
+            f.chmod(0)
+
+        try:
+            rmtree(td)
+        except SkipTest as ex:
+            self.fail(f"rmtree unexpectedly attempts skip: {ex!r}")
+
+        assert not td.exists()
+
+    def test_wraps_perm_error_if_enabled(self, mocker, permission_error_tmpdir):
+        """rmtree wraps PermissionError when HIDE_WINDOWS_KNOWN_ERRORS is true."""
+        # Access the module through sys.modules so it is unambiguous which module's
+        # attribute we patch: the original git.util, not git.index.util even though
+        # git.index.util "replaces" git.util and is what "import git.util" gives us.
+        mocker.patch.object(sys.modules["git.util"], "HIDE_WINDOWS_KNOWN_ERRORS", True)
+
+        # Disable common chmod functions so the callback can't fix the problem.
+        mocker.patch.object(os, "chmod")
+        mocker.patch.object(pathlib.Path, "chmod")
+
+        # Now we can see how an intractable PermissionError is treated.
+        with pytest.raises(SkipTest):
+            rmtree(permission_error_tmpdir)
+
+    def test_does_not_wrap_perm_error_unless_enabled(self, mocker, permission_error_tmpdir):
+        """rmtree does not wrap PermissionError when HIDE_WINDOWS_KNOWN_ERRORS is false."""
+        # See comments in test_wraps_perm_error_if_enabled for details about patching.
+        mocker.patch.object(sys.modules["git.util"], "HIDE_WINDOWS_KNOWN_ERRORS", False)
+        mocker.patch.object(os, "chmod")
+        mocker.patch.object(pathlib.Path, "chmod")
+
+        with pytest.raises(PermissionError):
+            try:
+                rmtree(permission_error_tmpdir)
+            except SkipTest as ex:
+                pytest.fail(f"rmtree unexpectedly attempts skip: {ex!r}")
+
+    @pytest.mark.parametrize("hide_windows_known_errors", [False, True])
+    def test_does_not_wrap_other_errors(self, mocker, file_not_found_tmpdir, hide_windows_known_errors):
+        # See comments in test_wraps_perm_error_if_enabled for details about patching.
+        mocker.patch.object(sys.modules["git.util"], "HIDE_WINDOWS_KNOWN_ERRORS", hide_windows_known_errors)
+        mocker.patch.object(os, "chmod")
+        mocker.patch.object(pathlib.Path, "chmod")
+
+        with pytest.raises(FileNotFoundError):
+            try:
+                rmtree(file_not_found_tmpdir)
+            except SkipTest as ex:
+                self.fail(f"rmtree unexpectedly attempts skip: {ex!r}")
+
+
 class _Member:
     """A member of an IterableList."""
 
@@ -56,111 +167,9 @@ class _Member:
         return f"{type(self).__name__}({self.name!r})"
 
 
-@contextlib.contextmanager
-def _tmpdir_to_force_permission_error():
-    """Context manager to test permission errors in situations where they are not overcome."""
-    if sys.platform == "cygwin":
-        raise SkipTest("Cygwin can't set the permissions that make the test meaningful.")
-    if sys.version_info < (3, 8):
-        raise SkipTest("In 3.7, TemporaryDirectory doesn't clean up after weird permissions.")
-
-    with tempfile.TemporaryDirectory() as parent:
-        td = pathlib.Path(parent, "testdir")
-        td.mkdir()
-        (td / "x").write_bytes(b"")
-        (td / "x").chmod(stat.S_IRUSR)  # Set up PermissionError on Windows.
-        td.chmod(stat.S_IRUSR | stat.S_IXUSR)  # Set up PermissionError on Unix.
-        yield td
-
-
-@contextlib.contextmanager
-def _tmpdir_for_file_not_found():
-    """Context manager to test errors deleting a directory that are not due to permissions."""
-    with tempfile.TemporaryDirectory() as parent:
-        yield pathlib.Path(parent, "testdir")  # It is deliberately never created.
-
-
 @ddt.ddt
 class TestUtils(TestBase):
-    def test_rmtree_deletes_nested_dir_with_files(self):
-        with tempfile.TemporaryDirectory() as parent:
-            td = pathlib.Path(parent, "testdir")
-            for d in td, td / "q", td / "s":
-                d.mkdir()
-            for f in (
-                td / "p",
-                td / "q" / "w",
-                td / "q" / "x",
-                td / "r",
-                td / "s" / "y",
-                td / "s" / "z",
-            ):
-                f.write_bytes(b"")
-
-            try:
-                rmtree(td)
-            except SkipTest as ex:
-                self.fail(f"rmtree unexpectedly attempts skip: {ex!r}")
-
-            self.assertFalse(td.exists())
-
-    @skipIf(
-        sys.platform == "cygwin",
-        "Cygwin can't set the permissions that make the test meaningful.",
-    )
-    def test_rmtree_deletes_dir_with_readonly_files(self):
-        # Automatically works on Unix, but requires special handling on Windows.
-        # Not to be confused with what _tmpdir_to_force_permission_error sets up (see below).
-        with tempfile.TemporaryDirectory() as parent:
-            td = pathlib.Path(parent, "testdir")
-            for d in td, td / "sub":
-                d.mkdir()
-            for f in td / "x", td / "sub" / "y":
-                f.write_bytes(b"")
-                f.chmod(0)
-
-            try:
-                rmtree(td)
-            except SkipTest as ex:
-                self.fail(f"rmtree unexpectedly attempts skip: {ex!r}")
-
-            self.assertFalse(td.exists())
-
-    def test_rmtree_can_wrap_exceptions(self):
-        """rmtree wraps PermissionError when HIDE_WINDOWS_KNOWN_ERRORS is true."""
-        with _tmpdir_to_force_permission_error() as td:
-            # Access the module through sys.modules so it is unambiguous which module's
-            # attribute we patch: the original git.util, not git.index.util even though
-            # git.index.util "replaces" git.util and is what "import git.util" gives us.
-            with mock.patch.object(sys.modules["git.util"], "HIDE_WINDOWS_KNOWN_ERRORS", True):
-                # Disable common chmod functions so the callback can't fix the problem.
-                with mock.patch.object(os, "chmod"), mock.patch.object(pathlib.Path, "chmod"):
-                    # Now we can see how an intractable PermissionError is treated.
-                    with self.assertRaises(SkipTest):
-                        rmtree(td)
-
-    @ddt.data(
-        (False, PermissionError, _tmpdir_to_force_permission_error),
-        (False, FileNotFoundError, _tmpdir_for_file_not_found),
-        (True, FileNotFoundError, _tmpdir_for_file_not_found),
-    )
-    def test_rmtree_does_not_wrap_unless_called_for(self, case):
-        """rmtree doesn't wrap non-PermissionError, nor if HIDE_WINDOWS_KNOWN_ERRORS is false."""
-        hide_windows_known_errors, exception_type, tmpdir_context_factory = case
-
-        with tmpdir_context_factory() as td:
-            # See comments in test_rmtree_can_wrap_exceptions regarding the patching done here.
-            with mock.patch.object(
-                sys.modules["git.util"],
-                "HIDE_WINDOWS_KNOWN_ERRORS",
-                hide_windows_known_errors,
-            ):
-                with mock.patch.object(os, "chmod"), mock.patch.object(pathlib.Path, "chmod"):
-                    with self.assertRaises(exception_type):
-                        try:
-                            rmtree(td)
-                        except SkipTest as ex:
-                            self.fail(f"rmtree unexpectedly attempts skip: {ex!r}")
+    """Tests for utilities in :mod:`git.util` other than :func:`git.util.rmtree`."""
 
     @ddt.data("HIDE_WINDOWS_KNOWN_ERRORS", "HIDE_WINDOWS_FREEZE_ERRORS")
     def test_env_vars_for_windows_tests(self, name):
