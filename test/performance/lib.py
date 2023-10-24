@@ -1,4 +1,5 @@
-"""Contains library functions"""
+"""Support library for tests."""
+
 import logging
 import os
 import tempfile
@@ -20,21 +21,15 @@ k_env_git_repo = "GIT_PYTHON_TEST_GIT_REPO_BASE"
 
 
 class TestBigRepoR(TestBase):
-
     """TestCase providing access to readonly 'big' repositories using the following
     member variables:
 
-    * gitrorepo
+    * gitrorepo:
+      Read-Only git repository - actually (by default) the repo of GitPython itself.
 
-     * Read-Only git repository - actually the repo of git itself
-
-    * puregitrorepo
-
-     * As gitrepo, but uses pure python implementation
+    * puregitrorepo:
+      Like gitrorepo, but uses a pure Python implementation for its object database.
     """
-
-    # { Invariants
-    # } END invariants
 
     def setUp(self):
         try:
@@ -62,10 +57,10 @@ class TestBigRepoR(TestBase):
 
 
 class TestBigRepoRW(TestBigRepoR):
+    """Like :class:`TestBigRepoR`, but provides a big repository that we can write to.
 
-    """As above, but provides a big repository that we can write to.
-
-    Provides ``self.gitrwrepo`` and ``self.puregitrwrepo``"""
+    Provides ``self.gitrwrepo`` and ``self.puregitrwrepo``.
+    """
 
     def setUp(self):
         self.gitrwrepo = None
