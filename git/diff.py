@@ -442,7 +442,7 @@ class Diff:
                 msg += self.diff.decode(defenc) if isinstance(self.diff, bytes) else self.diff
             except UnicodeDecodeError:
                 msg += "OMITTED BINARY DATA"
-            # end handle encoding
+            # END handle encoding
             msg += "\n---"
         # END diff info
 
@@ -543,7 +543,7 @@ class Diff:
             # and then retro-actively assign it to our index.
             if previous_header is not None:
                 index[-1].diff = text[previous_header.end() : _header.start()]
-            # end assign actual diff
+            # END assign actual diff
 
             # Make sure the mode is set if the path is set. Otherwise the resulting blob is invalid.
             # We just use the one mode we should have parsed.
@@ -571,10 +571,10 @@ class Diff:
 
             previous_header = _header
             header = _header
-        # end for each header we parse
+        # END for each header we parse
         if index and header:
             index[-1].diff = text[header.end() :]
-        # end assign last diff
+        # END assign last diff
 
         return index
 

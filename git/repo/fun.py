@@ -118,7 +118,7 @@ def find_submodule_git_dir(d: "PathLike") -> Optional["PathLike"]:
             if not osp.isabs(path):
                 path = osp.normpath(osp.join(osp.dirname(d), path))
             return find_submodule_git_dir(path)
-    # end handle exception
+    # END handle exception
     return None
 
 

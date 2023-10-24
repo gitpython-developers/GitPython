@@ -553,7 +553,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
             for p in parent_commits:
                 if not isinstance(p, cls):
                     raise ValueError(f"Parent commit '{p!r}' must be of type {cls}")
-            # end check parent commit types
+            # END check parent commit types
         # END if parent commits are unset
 
         # Retrieve all additional information, create a commit object, and serialize it.
@@ -730,7 +730,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
             next_line = readline()
             while next_line.startswith(b" "):
                 next_line = readline()
-        # end skip mergetags
+        # END skip mergetags
 
         # Now we can have the encoding line, or an empty line followed by the optional message.
         self.encoding = self.default_encoding
@@ -754,7 +754,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
                         is_next_header = True
                         break
                     sig += sigbuf[1:]
-                # end read all signature
+                # END read all signature
                 self.gpgsig = sig.rstrip(b"\n").decode(self.encoding, "ignore")
                 if is_next_header:
                     continue

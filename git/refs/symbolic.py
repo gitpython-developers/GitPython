@@ -523,7 +523,7 @@ class SymbolicReference:
             committer_or_reader: Union["Actor", "GitConfigParser"] = self.commit.committer
         except ValueError:
             committer_or_reader = self.repo.config_reader()
-        # end handle newly cloned repositories
+        # END handle newly cloned repositories
         if newbinsha is None:
             newbinsha = self.commit.binsha
 

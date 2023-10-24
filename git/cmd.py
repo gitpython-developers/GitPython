@@ -979,7 +979,7 @@ class Git(LazyMixin):
         else:
             cmd_not_found_exception = FileNotFoundError  # NOQA # exists, flake8 unknown @UndefinedVariable
             maybe_patch_caller_env = contextlib.nullcontext()
-        # end handle
+        # END handle
 
         stdout_sink = PIPE if with_stdout else getattr(subprocess, "DEVNULL", None) or open(os.devnull, "wb")
         if shell is None:
@@ -1048,7 +1048,7 @@ class Git(LazyMixin):
                 pass
             return
 
-        # end
+        # END def kill_process
 
         if kill_after_timeout is not None:
             kill_check = threading.Event()
@@ -1100,7 +1100,7 @@ class Git(LazyMixin):
             def as_text(stdout_value: Union[bytes, str]) -> str:
                 return not output_stream and safe_decode(stdout_value) or "<OUTPUT_STREAM>"
 
-            # end
+            # END def as_text
 
             if stderr_value:
                 log.info(
@@ -1304,9 +1304,9 @@ class Git(LazyMixin):
                     "Couldn't find argument '%s' in args %s to insert cmd options after"
                     % (insert_after_this_arg, str(ext_args))
                 ) from err
-            # end handle error
+            # END handle error
             args_list = ext_args[: index + 1] + opt_args + ext_args[index + 1 :]
-        # end handle opts_kwargs
+        # END handle opts_kwargs
 
         call = [self.GIT_PYTHON_GIT_EXECUTABLE]
 

@@ -728,7 +728,7 @@ class Repo:
         """
         if len(rev) < 2:
             raise ValueError("Please specify at least two revs, got only %i" % len(rev))
-        # end handle input
+        # END handle input
 
         res: List[Union[Commit_ish, None]] = []
         try:
@@ -736,15 +736,15 @@ class Repo:
         except GitCommandError as err:
             if err.status == 128:
                 raise
-            # end handle invalid rev
+            # END handle invalid rev
             # Status code 1 is returned if there is no merge-base
             # (see https://github.com/git/git/blob/master/builtin/merge-base.c#L16)
             return res
-        # end exception handling
+        # END exception handling
 
         for line in lines:
             res.append(self.commit(line))
-        # end for each merge-base
+        # END for each merge-base
 
         return res
 
@@ -1098,7 +1098,7 @@ class Repo:
                 parts = self.re_whitespace.split(line_str, 1)
                 firstpart = parts[0]
                 is_binary = False
-            # end handle decode of line
+            # END handle decode of line
 
             if self.re_hexsha_only.search(firstpart):
                 # handles
@@ -1448,7 +1448,7 @@ class Repo:
         path = cast(Union[PathLike, List[PathLike], Tuple[PathLike, ...]], path)
         if not isinstance(path, (tuple, list)):
             path = [path]
-        # end ensure paths is list (or tuple)
+        # END ensure paths is list (or tuple)
         self.git.archive("--", treeish, *path, **kwargs)
         return self
 

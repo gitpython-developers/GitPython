@@ -622,7 +622,6 @@ class Remote(LazyMixin, IterableObj):
             return True
         except cp.NoSectionError:
             return False
-        # end
 
     @classmethod
     def iter_items(cls, repo: "Repo", *args: Any, **kwargs: Any) -> Iterator["Remote"]:
@@ -757,7 +756,7 @@ class Remote(LazyMixin, IterableObj):
             else:
                 fqhn = "%s/%s" % (RemoteReference._common_path_default, ref_name)
                 out_refs.append(RemoteReference(self.repo, fqhn))
-            # end special case handling
+            # END special case handling
         # END for each line
         return out_refs
 
@@ -887,8 +886,8 @@ class Remote(LazyMixin, IterableObj):
                 fetch_head_info = fetch_head_info[:l_fil]
             else:
                 fetch_info_lines = fetch_info_lines[:l_fhi]
-            # end truncate correct list
-        # end sanity check + sanitization
+            # END truncate correct list
+        # END sanity check + sanitization
 
         for err_line, fetch_line in zip(fetch_info_lines, fetch_head_info):
             try:

@@ -406,7 +406,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
                 if S_ISLNK(st.st_mode):
                     yield abs_path.replace(rs, "")
                     continue
-            # end check symlink
+            # END check symlink
 
             # If the path is not already pointing to an existing file, resolve globs if possible.
             if not os.path.exists(abs_path) and ("?" in abs_path or "*" in abs_path or "[" in abs_path):
@@ -689,7 +689,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
                     gitrelative_path = path
                     if self.repo.working_tree_dir:
                         abspath = osp.join(self.repo.working_tree_dir, gitrelative_path)
-                # end obtain relative and absolute paths
+                # END obtain relative and absolute paths
 
                 blob = Blob(
                     self.repo,
@@ -867,7 +867,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
                         )
                     # END for each entry index
 
-                # end closure
+                # END closure
                 handle_null_entries(self)
             # END null_entry handling
 

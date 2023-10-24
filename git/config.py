@@ -446,12 +446,11 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
         def string_decode(v: str) -> str:
             if v[-1] == "\\":
                 v = v[:-1]
-            # end cut trailing escapes to prevent decode error
+            # END cut trailing escapes to prevent decode error
 
             return v.encode(defenc).decode("unicode_escape")
-            # end
 
-        # end
+        # END def string_decode
 
         while True:
             # We assume to read binary!
@@ -496,12 +495,12 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
                     optval = optval.strip()
                     if optval == '""':
                         optval = ""
-                    # end handle empty string
+                    # END handle empty string
                     optname = self.optionxform(optname.rstrip())
                     if len(optval) > 1 and optval[0] == '"' and optval[-1] != '"':
                         is_multi_line = True
                         optval = string_decode(optval[1:])
-                    # end handle multi-line
+                    # END handle multi-line
                     # Preserves multiple values for duplicate optnames.
                     cursect.add(optname, optval)
                 else:
@@ -516,7 +515,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
                 if line.endswith('"'):
                     is_multi_line = False
                     line = line[:-1]
-                # end handle quotations
+                # END handle quotations
                 optval = cursect.getlast(optname)
                 cursect.setlast(optname, optval + string_decode(line))
             # END parse section or option
@@ -600,7 +599,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
             files_to_read = [self._file_or_files]
         else:  # for lists or tuples
             files_to_read = list(self._file_or_files)
-        # end ensure we have a copy of the paths to handle
+        # END ensure we have a copy of the paths to handle
 
         seen = set(files_to_read)
         num_read_include_files = 0
@@ -631,11 +630,11 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
                     if not osp.isabs(include_path):
                         if not file_ok:
                             continue
-                        # end ignore relative paths if we don't know the configuration file path
+                        # END ignore relative paths if we don't know the configuration file path
                         file_path = cast(PathLike, file_path)
                         assert osp.isabs(file_path), "Need absolute paths to be sure our cycle checks will work"
                         include_path = osp.join(osp.dirname(file_path), include_path)
-                    # end make include path absolute
+                    # END make include path absolute
                     include_path = osp.normpath(include_path)
                     if include_path in seen or not os.access(include_path, os.R_OK):
                         continue
@@ -643,15 +642,14 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
                     # Insert included file to the top to be considered first.
                     files_to_read.insert(0, include_path)
                     num_read_include_files += 1
-                # each include path in configuration file
-            # end handle includes
+                # END each include path in configuration file
+            # END handle includes
         # END for each file object to read
 
         # If there was no file included, we can safely write back (potentially) the
         # configuration file without altering its meaning.
         if num_read_include_files == 0:
             self._merge_includes = False
-        # end
 
     def _write(self, fp: IO) -> None:
         """Write an .ini-format representation of the configuration state in
@@ -714,7 +712,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
                 "Cannot write back if there is not exactly a single file to write to, have %i files"
                 % len(self._file_or_files)
             )
-        # end assert multiple files
+        # END assert multiple files
 
         if self._has_includes():
             log.debug(
@@ -722,7 +720,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
                 + "Set merge_includes=False to prevent this."
             )
             return None
-        # end
+        # END stop if we have include files
 
         fp = self._file_or_files
 
@@ -904,7 +902,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
         new_section = self._sections[new_name]
         for k, vs in self.items_all(section):
             new_section.setall(k, vs)
-        # end for each value to copy
+        # END for each value to copy
 
         # This call writes back the changes, which is why we don't have the respective decorator.
         self.remove_section(section)

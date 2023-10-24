@@ -356,7 +356,7 @@ class RootModule(Submodule):
                             # to be sure...
                             for remote in smmr:
                                 remote.fetch(progress=progress)
-                            # end for each remote
+                            # END for each remote
 
                             try:
                                 tbr = git.Head.create(
@@ -391,7 +391,7 @@ class RootModule(Submodule):
             if not keep_going:
                 raise
             log.error(str(err))
-        # end handle keep_going
+        # END handle keep_going
 
         # FINALLY UPDATE ALL ACTUAL SUBMODULES
         ######################################

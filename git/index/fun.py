@@ -123,7 +123,7 @@ def run_commit_hook(name: str, index: "IndexFile", *args: str) -> None:
             stdout = force_text(stdout, defenc)
             stderr = force_text(stderr, defenc)
             raise HookExecutionError(hp, process.returncode, stderr, stdout)
-    # end handle return code
+    # END handle return code
 
 
 def stat_mode_to_index_mode(mode: int) -> int:
