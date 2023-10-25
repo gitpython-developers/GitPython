@@ -211,6 +211,11 @@ class TestEnvParsing:
         assert actual_parsed_value is expected_truth_value
 
 
+def _xfail_param(*values, **xfail_kwargs):
+    """Build a pytest.mark.parametrize parameter that carries an xfail mark."""
+    return pytest.param(*values, marks=pytest.mark.xfail(**xfail_kwargs))
+
+
 @pytest.mark.skipif(sys.platform != "cygwin", reason="Paths specifically for Cygwin.")
 class TestCygpath:
     """Tests for :func:`git.util.cygpath` and :func:`git.util.decygpath`."""
@@ -246,15 +251,11 @@ class TestCygpath:
         cwpath = cygpath(wpath)
         assert cwpath == cpath, wpath
 
-    @pytest.mark.xfail(
-        reason=R'2nd example r".\bar" -> "bar" fails, returns "./bar"',
-        raises=AssertionError,
-    )
     @pytest.mark.parametrize(
         "wpath, cpath",
         [
             (R"./bar", "bar"),
-            (R".\bar", "bar"),  # FIXME: Mark only this one xfail (or fix it).
+            _xfail_param(R".\bar", "bar", reason=R'Returns: "./bar"', raises=AssertionError),
             (R"../bar", "../bar"),
             (R"..\bar", "../bar"),
             (R"../bar/.\foo/../chu", "../bar/chu"),
