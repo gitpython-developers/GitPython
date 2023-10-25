@@ -216,37 +216,59 @@ def _xfail_param(*values, **xfail_kwargs):
     return pytest.param(*values, marks=pytest.mark.xfail(**xfail_kwargs))
 
 
+_norm_cygpath_pairs = (
+    (R"foo\bar", "foo/bar"),
+    (R"foo/bar", "foo/bar"),
+    (R"C:\Users", "/cygdrive/c/Users"),
+    (R"C:\d/e", "/cygdrive/c/d/e"),
+    ("C:\\", "/cygdrive/c/"),
+    (R"\\server\C$\Users", "//server/C$/Users"),
+    (R"\\server\C$", "//server/C$"),
+    ("\\\\server\\c$\\", "//server/c$/"),
+    (R"\\server\BAR/", "//server/BAR/"),
+    (R"D:/Apps", "/cygdrive/d/Apps"),
+    (R"D:/Apps\fOO", "/cygdrive/d/Apps/fOO"),
+    (R"D:\Apps/123", "/cygdrive/d/Apps/123"),
+)
+
+_unc_cygpath_pairs = (
+    (R"\\?\a:\com", "/cygdrive/a/com"),
+    (R"\\?\a:/com", "/cygdrive/a/com"),
+    (R"\\?\UNC\server\D$\Apps", "//server/D$/Apps"),
+)
+
+# Mapping of expected failures for the test_cygpath_ok test.
+_cygpath_ok_xfails = {
+    # From _norm_cygpath_pairs:
+    (R"C:\Users", "/cygdrive/c/Users"): "/proc/cygdrive/c/Users",
+    (R"C:\d/e", "/cygdrive/c/d/e"): "/proc/cygdrive/c/d/e",
+    ("C:\\", "/cygdrive/c/"): "/proc/cygdrive/c/",
+    (R"\\server\BAR/", "//server/BAR/"): "//server/BAR",
+    (R"D:/Apps", "/cygdrive/d/Apps"): "/proc/cygdrive/d/Apps",
+    (R"D:/Apps\fOO", "/cygdrive/d/Apps/fOO"): "/proc/cygdrive/d/Apps/fOO",
+    (R"D:\Apps/123", "/cygdrive/d/Apps/123"): "/proc/cygdrive/d/Apps/123",
+    # From _unc_cygpath_pairs:
+    (R"\\?\a:\com", "/cygdrive/a/com"): "/proc/cygdrive/a/com",
+    (R"\\?\a:/com", "/cygdrive/a/com"): "/proc/cygdrive/a/com",
+}
+
+
+# Parameter sets for the test_cygpath_ok test.
+_cygpath_ok_params = [
+    (
+        _xfail_param(*case, reason=f"Returns: {_cygpath_ok_xfails[case]!r}", raises=AssertionError)
+        if case in _cygpath_ok_xfails
+        else case
+    )
+    for case in _norm_cygpath_pairs + _unc_cygpath_pairs
+]
+
+
 @pytest.mark.skipif(sys.platform != "cygwin", reason="Paths specifically for Cygwin.")
 class TestCygpath:
     """Tests for :func:`git.util.cygpath` and :func:`git.util.decygpath`."""
 
-    _norm_cygpath_pairs = (
-        (R"foo\bar", "foo/bar"),
-        (R"foo/bar", "foo/bar"),
-        (R"C:\Users", "/cygdrive/c/Users"),
-        (R"C:\d/e", "/cygdrive/c/d/e"),
-        ("C:\\", "/cygdrive/c/"),
-        (R"\\server\C$\Users", "//server/C$/Users"),
-        (R"\\server\C$", "//server/C$"),
-        ("\\\\server\\c$\\", "//server/c$/"),
-        (R"\\server\BAR/", "//server/BAR/"),
-        (R"D:/Apps", "/cygdrive/d/Apps"),
-        (R"D:/Apps\fOO", "/cygdrive/d/Apps/fOO"),
-        (R"D:\Apps/123", "/cygdrive/d/Apps/123"),
-    )
-
-    _unc_cygpath_pairs = (
-        (R"\\?\a:\com", "/cygdrive/a/com"),
-        (R"\\?\a:/com", "/cygdrive/a/com"),
-        (R"\\?\UNC\server\D$\Apps", "//server/D$/Apps"),
-    )
-
-    # FIXME: Mark only the /proc-prefixing cases xfail (or fix them).
-    @pytest.mark.xfail(
-        reason="Many return paths prefixed /proc/cygdrive instead.",
-        raises=AssertionError,
-    )
-    @pytest.mark.parametrize("wpath, cpath", _norm_cygpath_pairs + _unc_cygpath_pairs)
+    @pytest.mark.parametrize("wpath, cpath", _cygpath_ok_params)
     def test_cygpath_ok(self, wpath, cpath):
         cwpath = cygpath(wpath)
         assert cwpath == cpath, wpath
@@ -255,7 +277,7 @@ class TestCygpath:
         "wpath, cpath",
         [
             (R"./bar", "bar"),
-            _xfail_param(R".\bar", "bar", reason=R'Returns: "./bar"', raises=AssertionError),
+            _xfail_param(R".\bar", "bar", reason="Returns: './bar'", raises=AssertionError),
             (R"../bar", "../bar"),
             (R"..\bar", "../bar"),
             (R"../bar/.\foo/../chu", "../bar/chu"),
