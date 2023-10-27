@@ -106,10 +106,6 @@ class TestRmtree:
         sys.platform == "cygwin",
         reason="Cygwin can't set the permissions that make the test meaningful.",
     )
-    @pytest.mark.skipif(
-        sys.version_info < (3, 8),
-        reason="In 3.7, TemporaryDirectory doesn't clean up after weird permissions.",
-    )
     def test_wraps_perm_error_if_enabled(self, mocker, permission_error_tmpdir):
         """rmtree wraps PermissionError when HIDE_WINDOWS_KNOWN_ERRORS is true."""
         # Access the module through sys.modules so it is unambiguous which module's
@@ -128,10 +124,6 @@ class TestRmtree:
     @pytest.mark.skipif(
         sys.platform == "cygwin",
         reason="Cygwin can't set the permissions that make the test meaningful.",
-    )
-    @pytest.mark.skipif(
-        sys.version_info < (3, 8),
-        reason="In 3.7, TemporaryDirectory doesn't clean up after weird permissions.",
     )
     def test_does_not_wrap_perm_error_unless_enabled(self, mocker, permission_error_tmpdir):
         """rmtree does not wrap PermissionError when HIDE_WINDOWS_KNOWN_ERRORS is false."""
