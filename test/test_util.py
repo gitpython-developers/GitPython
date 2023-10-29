@@ -20,7 +20,6 @@ import ddt
 import pytest
 
 from git.cmd import dashify
-from git.compat import is_win
 from git.objects.util import (
     altz_to_utctz_str,
     from_timestamp,
@@ -364,7 +363,7 @@ class TestUtils(TestBase):
         self.assertRaises(IOError, wait_lock._obtain_lock)
         elapsed = time.time() - start
         extra_time = 0.02
-        if is_win or sys.platform == "cygwin":
+        if os.name == "nt" or sys.platform == "cygwin":
             extra_time *= 6  # NOTE: Indeterministic failures without this...
         self.assertLess(elapsed, wait_time + extra_time)
 

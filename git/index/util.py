@@ -2,14 +2,10 @@
 
 from functools import wraps
 import os
+import os.path as osp
 import struct
 import tempfile
 from types import TracebackType
-
-from git.compat import is_win
-
-import os.path as osp
-
 
 # typing ----------------------------------------------------------------------
 
@@ -58,7 +54,7 @@ class TemporaryFileSwap:
         exc_tb: Optional[TracebackType],
     ) -> bool:
         if osp.isfile(self.tmp_file_path):
-            if is_win and osp.exists(self.file_path):
+            if os.name == "nt" and osp.exists(self.file_path):
                 os.remove(self.file_path)
             os.rename(self.tmp_file_path, self.file_path)
 

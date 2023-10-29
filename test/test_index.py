@@ -25,7 +25,6 @@ from git import (
     GitCommandError,
     CheckoutError,
 )
-from git.compat import is_win
 from git.exc import HookExecutionError, InvalidGitRepositoryError
 from git.index.fun import hook_path
 from git.index.typ import BaseIndexEntry, IndexEntry
@@ -43,9 +42,9 @@ def _found_in(cmd, directory):
     return path and Path(path).parent == Path(directory)
 
 
-is_win_without_bash = is_win and not shutil.which("bash.exe")
+is_win_without_bash = os.name == "nt" and not shutil.which("bash.exe")
 
-is_win_with_wsl_bash = is_win and _found_in(
+is_win_with_wsl_bash = os.name == "nt" and _found_in(
     cmd="bash.exe",
     directory=Path(os.getenv("WINDIR")) / "System32",
 )
@@ -614,7 +613,7 @@ class TestIndex(TestBase):
         self.assertNotEqual(entries[0].hexsha, null_hex_sha)
 
         # Add symlink.
-        if not is_win:
+        if os.name != "nt":
             for target in ("/etc/nonexisting", "/etc/passwd", "/etc"):
                 basename = "my_real_symlink"
 
@@ -672,7 +671,7 @@ class TestIndex(TestBase):
         index.checkout(fake_symlink_path)
 
         # On Windows, we will never get symlinks.
-        if is_win:
+        if os.name == "nt":
             # Symlinks should contain the link as text (which is what a
             # symlink actually is).
             with open(fake_symlink_path, "rt") as fd:

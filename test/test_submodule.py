@@ -3,17 +3,17 @@
 
 import contextlib
 import os
-import shutil
-import tempfile
+import os.path as osp
 from pathlib import Path
+import shutil
 import sys
+import tempfile
 from unittest import mock, skipUnless
 
 import pytest
 
 import git
 from git.cmd import Git
-from git.compat import is_win
 from git.config import GitConfigParser, cp
 from git.exc import (
     GitCommandError,
@@ -25,11 +25,8 @@ from git.exc import (
 from git.objects.submodule.base import Submodule
 from git.objects.submodule.root import RootModule, RootUpdateProgress
 from git.repo.fun import find_submodule_git_dir, touch
-from test.lib import TestBase, with_rw_repo
-from test.lib import with_rw_directory
-from git.util import HIDE_WINDOWS_KNOWN_ERRORS
-from git.util import to_native_path_linux, join_path_native
-import os.path as osp
+from git.util import HIDE_WINDOWS_KNOWN_ERRORS, join_path_native, to_native_path_linux
+from test.lib import TestBase, with_rw_directory, with_rw_repo
 
 
 @contextlib.contextmanager
@@ -1040,7 +1037,7 @@ class TestSubmodule(TestBase):
         assert sm_mod.commit() == sm_pfb.commit, "Now head should have been reset"
         assert sm_mod.head.ref.name == sm_pfb.name
 
-    @skipUnless(is_win, "Specifically for Windows.")
+    @skipUnless(os.name == "nt", "Specifically for Windows.")
     def test_to_relative_path_with_super_at_root_drive(self):
         class Repo:
             working_tree_dir = "D:\\"

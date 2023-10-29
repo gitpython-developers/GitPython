@@ -34,9 +34,20 @@ from typing import (
 # ---------------------------------------------------------------------------
 
 
+# DEPRECATED attributes providing shortcuts to operating system checks based on os.name.
+#
+# - is_win and is_posix are deprecated because it is clearer, and helps avoid bugs, to
+#   write out the os.name checks explicitly. For example, is_win is False on Cygwin, but
+#   is often assumed to be True.
+#
+# - is_darwin is deprecated because it is always False on all systems, as os.name is
+#   never "darwin". For macOS, you can check for sys.platform == "darwin". (As on other
+#   Unix-like systems, os.name == "posix" on macOS. This is also the case on Cygwin.)
+#
 is_win: bool = os.name == "nt"
 is_posix = os.name == "posix"
 is_darwin = os.name == "darwin"
+
 defenc = sys.getfilesystemencoding()
 
 

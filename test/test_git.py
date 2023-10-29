@@ -23,7 +23,6 @@ else:
 import ddt
 
 from git import Git, refresh, GitCommandError, GitCommandNotFound, Repo, cmd
-from git.compat import is_win
 from git.util import cwd, finalize_process
 from test.lib import TestBase, fixture_path, with_rw_directory
 
@@ -139,7 +138,7 @@ class TestGit(TestBase):
 
     def test_it_executes_git_not_from_cwd(self):
         with TemporaryDirectory() as tmpdir:
-            if is_win:
+            if os.name == "nt":
                 # Copy an actual binary executable that is not git.
                 other_exe_path = os.path.join(os.getenv("WINDIR"), "system32", "hostname.exe")
                 impostor_path = os.path.join(tmpdir, "git.exe")
@@ -154,7 +153,10 @@ class TestGit(TestBase):
             with cwd(tmpdir):
                 self.assertRegex(self.git.execute(["git", "version"]), r"^git version\b")
 
-    @skipUnless(is_win, "The regression only affected Windows, and this test logic is OS-specific.")
+    @skipUnless(
+        os.name == "nt",
+        "The regression only affected Windows, and this test logic is OS-specific.",
+    )
     def test_it_avoids_upcasing_unrelated_environment_variable_names(self):
         old_name = "28f425ca_d5d8_4257_b013_8d63166c8158"
         if old_name == old_name.upper():
@@ -268,7 +270,7 @@ class TestGit(TestBase):
         self.assertRaises(GitCommandNotFound, refresh, "yada")
 
         # Test a good path refresh.
-        which_cmd = "where" if is_win else "command -v"
+        which_cmd = "where" if os.name == "nt" else "command -v"
         path = os.popen("{0} git".format(which_cmd)).read().strip().split("\n")[0]
         refresh(path)
 

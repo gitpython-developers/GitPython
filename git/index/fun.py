@@ -2,8 +2,9 @@
 # NOTE: Autodoc hates it if this is a docstring.
 
 from io import BytesIO
-from pathlib import Path
 import os
+import os.path as osp
+from pathlib import Path
 from stat import (
     S_IFDIR,
     S_IFLNK,
@@ -16,25 +17,16 @@ from stat import (
 import subprocess
 
 from git.cmd import PROC_CREATIONFLAGS, handle_process_output
-from git.compat import (
-    defenc,
-    force_text,
-    force_bytes,
-    is_posix,
-    is_win,
-    safe_decode,
-)
-from git.exc import UnmergedEntriesError, HookExecutionError
+from git.compat import defenc, force_bytes, force_text, safe_decode
+from git.exc import HookExecutionError, UnmergedEntriesError
 from git.objects.fun import (
-    tree_to_stream,
     traverse_tree_recursive,
     traverse_trees_recursive,
+    tree_to_stream,
 )
 from git.util import IndexFileSHA1Writer, finalize_process
 from gitdb.base import IStream
 from gitdb.typ import str_tree_type
-
-import os.path as osp
 
 from .typ import BaseIndexEntry, IndexEntry, CE_NAMEMASK, CE_STAGESHIFT
 from .util import pack, unpack
@@ -96,7 +88,7 @@ def run_commit_hook(name: str, index: "IndexFile", *args: str) -> None:
     env["GIT_EDITOR"] = ":"
     cmd = [hp]
     try:
-        if is_win and not _has_file_extension(hp):
+        if os.name == "nt" and not _has_file_extension(hp):
             # Windows only uses extensions to determine how to open files
             # (doesn't understand shebangs). Try using bash to run the hook.
             relative_hp = Path(hp).relative_to(index.repo.working_dir).as_posix()
@@ -108,7 +100,7 @@ def run_commit_hook(name: str, index: "IndexFile", *args: str) -> None:
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             cwd=index.repo.working_dir,
-            close_fds=is_posix,
+            close_fds=(os.name == "posix"),
             creationflags=PROC_CREATIONFLAGS,
         )
     except Exception as ex:

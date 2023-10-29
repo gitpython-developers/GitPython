@@ -6,24 +6,21 @@
 
 from __future__ import annotations
 
+import gc
 import logging
 import os
+import os.path as osp
+from pathlib import Path
 import re
 import shlex
 import warnings
 
-from pathlib import Path
-
+import gitdb
 from gitdb.db.loose import LooseObjectDB
-
 from gitdb.exc import BadObject
 
 from git.cmd import Git, handle_process_output
-from git.compat import (
-    defenc,
-    safe_decode,
-    is_win,
-)
+from git.compat import defenc, safe_decode
 from git.config import GitConfigParser
 from git.db import GitCmdObjectDB
 from git.exc import (
@@ -43,7 +40,6 @@ from git.util import (
     expand_path,
     remove_password_if_present,
 )
-import os.path as osp
 
 from .fun import (
     rev_parse,
@@ -52,8 +48,6 @@ from .fun import (
     touch,
     find_worktree_git_dir,
 )
-import gc
-import gitdb
 
 # typing ------------------------------------------------------
 
@@ -322,10 +316,10 @@ class Repo:
             # they are collected by the garbage collector, thus preventing deletion.
             # TODO: Find these references and ensure they are closed and deleted
             # synchronously rather than forcing a gc collection.
-            if is_win:
+            if os.name == "nt":
                 gc.collect()
             gitdb.util.mman.collect()
-            if is_win:
+            if os.name == "nt":
                 gc.collect()
 
     def __eq__(self, rhs: object) -> bool:
@@ -571,7 +565,7 @@ class Repo:
             git_dir = self.git_dir
         # We do not support an absolute path of the gitconfig on Windows.
         # Use the global config instead.
-        if is_win and config_level == "system":
+        if os.name == "nt" and config_level == "system":
             config_level = "global"
 
         if config_level == "system":

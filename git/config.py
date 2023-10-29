@@ -7,27 +7,20 @@
 """Module containing module parser implementation able to properly read and write
 configuration files."""
 
-import sys
 import abc
+import configparser as cp
+import fnmatch
 from functools import wraps
 import inspect
 from io import BufferedReader, IOBase
 import logging
 import os
-import re
-import fnmatch
-
-from git.compat import (
-    defenc,
-    force_text,
-    is_win,
-)
-
-from git.util import LockFile
-
 import os.path as osp
+import re
+import sys
 
-import configparser as cp
+from git.compat import defenc, force_text
+from git.util import LockFile
 
 # typing-------------------------------------------------------
 
@@ -250,7 +243,7 @@ class _OMD(OrderedDict_OMD):
 def get_config_path(config_level: Lit_config_levels) -> str:
     # We do not support an absolute path of the gitconfig on Windows.
     # Use the global config instead.
-    if is_win and config_level == "system":
+    if os.name == "nt" and config_level == "system":
         config_level = "global"
 
     if config_level == "system":
