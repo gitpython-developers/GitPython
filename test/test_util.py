@@ -49,8 +49,13 @@ def permission_error_tmpdir(tmp_path):
     td = tmp_path / "testdir"
     td.mkdir()
     (td / "x").write_bytes(b"")
-    (td / "x").chmod(stat.S_IRUSR)  # Set up PermissionError on Windows.
-    td.chmod(stat.S_IRUSR | stat.S_IXUSR)  # Set up PermissionError on Unix.
+
+    # Set up PermissionError on Windows, where we can't delete read-only files.
+    (td / "x").chmod(stat.S_IRUSR)
+
+    # Set up PermissionError on Unix, where we can't delete files in read-only directories.
+    td.chmod(stat.S_IRUSR | stat.S_IXUSR)
+
     yield td
 
 
@@ -113,7 +118,7 @@ class TestRmtree:
         # git.index.util "replaces" git.util and is what "import git.util" gives us.
         mocker.patch.object(sys.modules["git.util"], "HIDE_WINDOWS_KNOWN_ERRORS", True)
 
-        # Disable common chmod functions so the callback can't fix the problem.
+        # Disable common chmod functions so the callback can never fix the problem.
         mocker.patch.object(os, "chmod")
         mocker.patch.object(pathlib.Path, "chmod")
 
