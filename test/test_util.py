@@ -109,6 +109,35 @@ class TestRmtree:
         sys.platform == "cygwin",
         reason="Cygwin can't set the permissions that make the test meaningful.",
     )
+    def test_avoids_changing_permissions_outside_tree(self, tmp_path: pathlib.Path):
+        # Automatically works on Windows, but on Unix requires either special handling
+        # or refraining from attempting to fix PermissionError by making chmod calls.
+
+        dir1 = tmp_path / "dir1"
+        dir1.mkdir()
+        (dir1 / "file").write_bytes(b"")
+        (dir1 / "file").chmod(stat.S_IRUSR)
+        old_mode = (dir1 / "file").stat().st_mode
+
+        dir2 = tmp_path / "dir2"
+        dir2.mkdir()
+        (dir2 / "symlink").symlink_to(dir1 / "file")
+        dir2.chmod(stat.S_IRUSR | stat.S_IXUSR)
+
+        try:
+            rmtree(dir2)
+        except PermissionError:
+            pass  # On Unix, dir2 is not writable, so dir2/symlink may not be deleted.
+        except SkipTest as ex:
+            self.fail(f"rmtree unexpectedly attempts skip: {ex!r}")
+
+        new_mode = (dir1 / "file").stat().st_mode
+        assert old_mode == new_mode, f"Should stay {old_mode:#o}, became {new_mode:#o}."
+
+    @pytest.mark.skipif(
+        sys.platform == "cygwin",
+        reason="Cygwin can't set the permissions that make the test meaningful.",
+    )
     def test_wraps_perm_error_if_enabled(self, mocker, permission_error_tmpdir):
         """rmtree wraps PermissionError when HIDE_WINDOWS_KNOWN_ERRORS is true."""
         # Access the module through sys.modules so it is unambiguous which module's
