@@ -1023,8 +1023,8 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         was_dry_run = kwargs.pop("dry_run", kwargs.pop("n", None))
         kwargs["dry_run"] = True
 
-        # First execute rename in dryrun so the command tells us what it actually does.
-        # (for later output)
+        # First execute rename in dryrun so the command tells us what it actually does
+        # (for later output).
         out = []
         mvlines = self.repo.git.mv(args, paths, **kwargs).splitlines()
 
@@ -1186,7 +1186,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         def handle_stderr(proc: "Popen[bytes]", iter_checked_out_files: Iterable[PathLike]) -> None:
             stderr_IO = proc.stderr
             if not stderr_IO:
-                return None  # return early if stderr empty
+                return None  # Return early if stderr empty.
             else:
                 stderr_bytes = stderr_IO.read()
             # line contents:
@@ -1252,9 +1252,9 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             if isinstance(paths, str):
                 paths = [paths]
 
-            # make sure we have our entries loaded before we start checkout_index
+            # Make sure we have our entries loaded before we start checkout_index,
             # which will hold a lock on it. We try to get the lock as well during
-            # our entries initialization
+            # our entries initialization.
             self.entries
 
             args.append("--stdin")
@@ -1267,7 +1267,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
 
             for path in paths:
                 co_path = to_native_path_linux(self._to_relative_path(path))
-                # if the item is not in the index, it could be a directory
+                # If the item is not in the index, it could be a directory.
                 path_is_directory = False
 
                 try:
@@ -1347,8 +1347,8 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             If you want git-reset like behaviour, use *HEAD.reset* instead.
 
         :return: self"""
-        # what we actually want to do is to merge the tree into our existing
-        # index, which is what git-read-tree does
+        # What we actually want to do is to merge the tree into our existing
+        # index, which is what git-read-tree does.
         new_inst = type(self).from_tree(self.repo, commit)
         if not paths:
             self.entries = new_inst.entries
@@ -1360,7 +1360,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
                     key = entry_key(path, 0)
                     self.entries[key] = nie[key]
                 except KeyError:
-                    # if key is not in theirs, it musn't be in ours
+                    # If key is not in theirs, it musn't be in ours.
                     try:
                         del self.entries[key]
                     except KeyError:
@@ -1391,7 +1391,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
     ) -> git_diff.DiffIndex:
         """Diff this index against the working copy or a Tree or Commit object.
 
-        For a documentation of the parameters and return values, see
+        For documentation of the parameters and return values, see
         :meth:`Diffable.diff <git.diff.Diffable.diff>`.
 
         :note:
@@ -1413,7 +1413,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             other = self.repo.rev_parse(other)
         # END object conversion
 
-        if isinstance(other, Object):  # for Tree or Commit
+        if isinstance(other, Object):  # For Tree or Commit.
             # Invert the existing R flag.
             cur_val = kwargs.get("R", False)
             kwargs["R"] = not cur_val
