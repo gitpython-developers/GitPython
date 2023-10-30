@@ -178,7 +178,7 @@ class IndexObject(Object):
     ) -> None:
         """Initialize a newly instanced IndexObject.
 
-        :param repo: The :class:`Repo <git.repo.base.Repo>` we are located in.
+        :param repo: The :class:`~git.repo.base.Repo` we are located in.
         :param binsha: 20 byte sha1.
         :param mode:
             The stat compatible file mode as int, use the :mod:`stat` module to evaluate

@@ -387,7 +387,7 @@ class Repo:
     def references(self) -> "IterableList[Reference]":
         """A list of Reference objects representing tags, heads and remote references.
 
-        :return: IterableList(Reference, ...)
+        :return: ``git.IterableList(Reference, ...)``
         """
         return Reference.list_items(self)
 
@@ -400,11 +400,11 @@ class Repo:
     @property
     def index(self) -> "IndexFile":
         """
-        :return: :class:`IndexFile <git.index.base.IndexFile>` representing this
-            repository's index.
+        :return: A :class:`~git.index.base.IndexFile` representing this repository's
+            index.
 
         :note: This property can be expensive, as the returned
-            :class:`IndexFile <git.index.base.IndexFile>` will be reinitialized.
+            :class:`~git.index.base.IndexFile` will be reinitialized.
             It is recommended to reuse the object.
         """
         return IndexFile(self)
@@ -520,7 +520,7 @@ class Repo:
         :note: For more documentation, please see the
             :meth:`Head.create <git.refs.head.Head.create>` method.
 
-        :return: Newly created :class:`Head <git.refs.head.Head>` Reference
+        :return: Newly created :class:`~git.refs.head.Head` Reference
         """
         return Head.create(self, path, commit, logmsg, force)
 
@@ -544,7 +544,7 @@ class Repo:
         :note: For more documentation, please see the
             :meth:`TagReference.create <git.refs.tag.TagReference.create>` method.
 
-        :return: :class:`TagReference <git.refs.tag.TagReference>` object
+        :return: :class:`~git.refs.tag.TagReference` object
         """
         return TagReference.create(self, path, ref, message, force, **kwargs)
 
@@ -558,7 +558,7 @@ class Repo:
         For more information, please see the documentation of the
         :meth:`Remote.create <git.remote.Remote.create>` method.
 
-        :return: :class:`Remote <git.remote.Remote>` reference
+        :return: :class:`~git.remote.Remote` reference
         """
         return Remote.create(self, name, url, **kwargs)
 
@@ -599,8 +599,8 @@ class Repo:
     ) -> GitConfigParser:
         """
         :return:
-            :class:`GitConfigParser <git.config.GitConfigParser>` allowing to read the
-            full git configuration, but not to write it.
+            :class:`~git.config.GitConfigParser` allowing to read the full git
+            configuration, but not to write it.
 
             The configuration will include values from the system, user and repository
             configuration files.
@@ -633,11 +633,10 @@ class Repo:
     def config_writer(self, config_level: Lit_config_levels = "repository") -> GitConfigParser:
         """
         :return:
-            A :class:`GitConfigParser <git.config.GitConfigParser>` allowing to write
-            values of the specified configuration file level. Config writers should be
-            retrieved, used to change the configuration, and written right away as they
-            will lock the configuration file in question and prevent other's to write
-            it.
+            A :class:`~git.config.GitConfigParser` allowing to write values of the
+            specified configuration file level. Config writers should be retrieved, used
+            to change the configuration, and written right away as they will lock the
+            configuration file in question and prevent other's to write it.
 
         :param config_level:
             One of the following values:
@@ -720,10 +719,10 @@ class Repo:
         :param rev: At least two revs to find the common ancestor for.
         :param kwargs: Additional arguments to be passed to the
             ``repo.git.merge_base()`` command which does all the work.
-        :return: A list of :class:`Commit <git.objects.commit.Commit>` objects. If
-            ``--all`` was not passed as a keyword argument, the list will have at max
-            one :class:`Commit <git.objects.commit.Commit>`, or is empty if no common
-            merge base exists.
+        :return: A list of :class:`~git.objects.commit.Commit` objects. If ``--all`` was
+            not passed as a keyword argument, the list will have at max one
+            :class:`~git.objects.commit.Commit`, or is empty if no common merge base
+            exists.
         :raises ValueError: If not at least two revs are provided.
         """
         if len(rev) < 2:

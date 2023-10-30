@@ -113,14 +113,16 @@ class Submodule(IndexObject, TraversableIterableObj):
     ) -> None:
         """Initialize this instance with its attributes.
 
-        We only document the parameters that differ
-        from :class:`IndexObject <git.objects.base.IndexObject>`.
+        We only document the parameters that differ from
+        :class:`~git.objects.base.IndexObject`.
 
-        :param repo: Our parent repository
-        :param binsha: binary sha referring to a commit in the remote repository, see url parameter
-        :param parent_commit: see set_parent_commit()
-        :param url: The url to the remote repository which is the submodule
-        :param branch_path: full (relative) path to ref to checkout when cloning the remote repository
+        :param repo: Our parent repository.
+        :param binsha: Binary sha referring to a commit in the remote repository. See
+            the ``url`` parameter.
+        :param parent_commit: See :meth:`set_parent_commit`.
+        :param url: The URL to the remote repository which is the submodule.
+        :param branch_path: Full (relative) path to ref to checkout when cloning the
+            remote repository.
         """
         super(Submodule, self).__init__(repo, binsha, mode, path)
         self.size = 0

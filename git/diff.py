@@ -118,12 +118,12 @@ class Diffable:
             This the item to compare us with.
 
             * If None, we will be compared to the working tree.
-            * If :class:`Treeish <git.index.base.Treeish>`, it will be compared against
-              the respective tree.
-            * If :class:`Index <Diffable.Index>`, it will be compared against the index.
+            * If :class:`~git.index.base.Treeish`, it will be compared against the
+              respective tree.
+            * If :class:`~Diffable.Index`, it will be compared against the index.
             * If :attr:`git.NULL_TREE`, it will compare against the empty tree.
-            * It defaults to :class:`Index <Diffable.Index>` so that the method will not
-              by default fail on bare repositories.
+            * It defaults to :class:`~Diffable.Index` so that the method will not by
+              default fail on bare repositories.
 
         :param paths:
             This a list of paths or a single path to limit the diff to. It will only
@@ -141,11 +141,9 @@ class Diffable:
         :return: git.DiffIndex
 
         :note:
-            On a bare repository, 'other' needs to be provided
-            as :class:`Index <Diffable.Index>`,
-            or as :class:`Tree <git.objects.tree.Tree>`
-            or :class:`Commit <git.objects.commit.Commit>`, or a git command error will
-            occur.
+            On a bare repository, 'other' needs to be provided as
+            :class:`~Diffable.Index`, or as :class:`~git.objects.tree.Tree` or
+            :class:`~git.objects.commit.Commit`, or a git command error will occur.
         """
         args: List[Union[PathLike, Diffable, Type["Diffable.Index"], object]] = []
         args.append("--abbrev=40")  # We need full shas.
@@ -222,7 +220,7 @@ class DiffIndex(List[T_Diff]):
     def iter_change_type(self, change_type: Lit_change_type) -> Iterator[T_Diff]:
         """
         :return:
-            iterator yielding :class:`Diff` instances that match the given `change_type`
+            Iterator yielding :class:`Diff` instances that match the given `change_type`
 
         :param change_type:
             Member of :attr:`DiffIndex.change_type`, namely:

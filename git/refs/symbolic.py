@@ -59,7 +59,7 @@ class SymbolicReference:
     """Special case of a reference that is symbolic.
 
     This does not point to a specific commit, but to another
-    :class:`Head <git.refs.head.Head>`, which itself specifies a commit.
+    :class:`~git.refs.head.Head`, which itself specifies a commit.
 
     A typical example for a symbolic reference is ``HEAD``.
     """
@@ -345,7 +345,7 @@ class SymbolicReference:
         If the reference does not exist, it will be created.
 
         :param object: A refspec, a :class:`SymbolicReference` or an
-            :class:`Object <git.objects.base.Object>` instance.
+            :class:`~git.objects.base.Object` instance.
             :class:`SymbolicReference` instances will be dereferenced beforehand to
             obtain the object they point to.
         :param logmsg: If not None, the message will be used in the reflog entry to be
@@ -396,10 +396,10 @@ class SymbolicReference:
         symbolic one.
 
         :param ref:
-            A :class:`SymbolicReference` instance,
-            an :class:`Object <git.objects.base.Object>` instance, or a refspec string.
-            Only if the ref is a :class:`SymbolicReference` instance, we will point to
-            it. Everything else is dereferenced to obtain the actual object.
+            A :class:`SymbolicReference` instance, an :class:`~git.objects.base.Object`
+            instance, or a refspec string. Only if the ref is a
+            :class:`SymbolicReference` instance, we will point to it. Everything else is
+            dereferenced to obtain the actual object.
 
         :param logmsg: If set to a string, the message will be used in the reflog.
             Otherwise, a reflog entry is not written for the changed reference.
@@ -514,7 +514,7 @@ class SymbolicReference:
         :param message: A message describing the change.
         :param newbinsha: The sha the ref points to now. If None, our current commit sha
             will be used.
-        :return: The added :class:`RefLogEntry <git.refs.log.RefLogEntry>` instance.
+        :return: The added :class:`~git.refs.log.RefLogEntry` instance.
         """
         # NOTE: We use the committer of the currently active commit - this should be
         # correct to allow overriding the committer on a per-commit level.
@@ -540,7 +540,7 @@ class SymbolicReference:
 
         .. note:: This method must read part of the reflog during execution, hence
             it should be used sparingly, or only if you need just one index.
-            In that case, it will be faster than the ``log()`` method.
+            In that case, it will be faster than the :meth:`log` method.
         """
         return RefLog.entry_at(RefLog.path(self), index)
 
@@ -816,8 +816,8 @@ class SymbolicReference:
             which is not detached and pointing to a valid ref.
 
             The list is lexicographically sorted. The returned objects are instances of
-            concrete subclasses, such as :class:`Head <git.refs.head.Head>` or
-            :class:`TagReference <git.refs.tag.TagReference>`.
+            concrete subclasses, such as :class:`~git.refs.head.Head` or
+            :class:`~git.refs.tag.TagReference`.
         """
         return (r for r in cls._iter_items(repo, common_path) if r.__class__ is SymbolicReference or not r.is_detached)
 
@@ -826,14 +826,16 @@ class SymbolicReference:
         """
         Make a symbolic reference from a path.
 
-        :param path: Full ``.git``-directory-relative path name to the Reference to instantiate.
+        :param path: Full ``.git``-directory-relative path name to the Reference to
+            instantiate.
 
-        :note: Use :meth:`to_full_path` if you only have a partial path of a known Reference type.
+        :note: Use :meth:`to_full_path` if you only have a partial path of a known
+            Reference type.
 
         :return:
-            Instance of type :class:`Reference <git.refs.reference.Reference>`,
-            :class:`Head <git.refs.head.Head>`, or :class:`Tag <git.refs.tag.Tag>`,
-            depending on the given path.
+            Instance of type :class:`~git.refs.reference.Reference`,
+            :class:`~git.refs.head.Head`, or :class:`~git.refs.tag.Tag`, depending on
+            the given path.
         """
         if not path:
             raise ValueError("Cannot create Reference from %r" % path)

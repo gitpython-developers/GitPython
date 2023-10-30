@@ -210,9 +210,9 @@ class PushInfo(IterableObj, object):
     def remote_ref(self) -> Union[RemoteReference, TagReference]:
         """
         :return:
-            Remote :class:`Reference <git.refs.reference.Reference>` or
-            :class:`TagReference <git.refs.tag.TagReference>` in the local repository
-            corresponding to the :attr:`remote_ref_string` kept in this instance.
+            Remote :class:`~git.refs.reference.Reference` or
+            :class:`~git.refs.tag.TagReference` in the local repository corresponding to
+            the :attr:`remote_ref_string` kept in this instance.
         """
         # Translate heads to a local remote. Tags stay as they are.
         if self.remote_ref_string.startswith("refs/tags"):
@@ -1093,7 +1093,7 @@ class Remote(LazyMixin, IterableObj):
               `Click here <http://goo.gl/NPa7st>`__ for a description of all arguments
               given to the function.
             * An instance of a class derived from :class:`git.RemoteProgress` that
-              overrides the :meth:`update <git.RemoteProgress.update>` method.
+              overrides the :meth:`~git.RemoteProgress.update` method.
 
         :note: No further progress information is returned after push returns.
 
@@ -1109,14 +1109,14 @@ class Remote(LazyMixin, IterableObj):
         :param kwargs: Additional arguments to be passed to git-push.
 
         :return:
-            A :class:`PushInfoList` object, where each list member
-            represents an individual head which had been updated on the remote side.
+            A :class:`PushInfoList` object, where each list member represents an
+            individual head which had been updated on the remote side.
             If the push contains rejected heads, these will have the
             :attr:`PushInfo.ERROR` bit set in their flags.
-            If the operation fails completely, the length of the returned PushInfoList will
-            be 0.
-            Call :meth:`raise_if_error <PushInfoList.raise_if_error>` on the returned
-            object to raise on any failure.
+            If the operation fails completely, the length of the returned PushInfoList
+            will be 0.
+            Call :meth:`~PushInfoList.raise_if_error` on the returned object to raise on
+            any failure.
         """
         kwargs = add_progress(kwargs, self.repo.git, progress)
 

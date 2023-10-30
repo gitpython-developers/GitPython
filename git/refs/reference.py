@@ -40,8 +40,8 @@ def require_remote_ref_path(func: Callable[..., _T]) -> Callable[..., _T]:
 class Reference(SymbolicReference, LazyMixin, IterableObj):
     """A named reference to any object.
 
-    Subclasses may apply restrictions though, e.g., a :class:`Head <git.refs.head.Head>`
-    can only point to commits.
+    Subclasses may apply restrictions though, e.g., a :class:`~git.refs.head.Head` can
+    only point to commits.
     """
 
     __slots__ = ()
