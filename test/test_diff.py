@@ -1,4 +1,3 @@
-# coding: utf-8
 # test_diff.py
 # Copyright (C) 2008, 2009 Michael Trier (mtrier@gmail.com) and contributors
 #

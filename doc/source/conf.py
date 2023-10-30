@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
-#
-# GitPython documentation build configuration file, created by
+# GitPython documentation build configuration file, originally created by
 # sphinx-quickstart on Sat Jan 24 11:51:01 2009.
 #
 # This file is execfile()d with the current directory set to its containing dir.
