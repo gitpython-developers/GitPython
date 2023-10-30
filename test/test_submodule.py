@@ -839,7 +839,7 @@ class TestSubmodule(TestBase):
             assert sm.exists() == value
             assert sm.module_exists() == value
 
-        # END def assert_exists
+        # END assert_exists
 
         # As git is backwards compatible itself, it would still recognize what we do here... unless we really
         # muss it up. That's the only reason why the test is still here...

@@ -1048,7 +1048,7 @@ class Git(LazyMixin):
                 pass
             return
 
-        # END def kill_process
+        # END kill_process
 
         if kill_after_timeout is not None:
             kill_check = threading.Event()
@@ -1100,7 +1100,7 @@ class Git(LazyMixin):
             def as_text(stdout_value: Union[bytes, str]) -> str:
                 return not output_stream and safe_decode(stdout_value) or "<OUTPUT_STREAM>"
 
-            # END def as_text
+            # END as_text
 
             if stderr_value:
                 log.info(

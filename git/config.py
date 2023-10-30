@@ -450,7 +450,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
 
             return v.encode(defenc).decode("unicode_escape")
 
-        # END def string_decode
+        # END string_decode
 
         while True:
             # We assume to read binary!

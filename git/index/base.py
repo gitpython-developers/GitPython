@@ -868,6 +868,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
                     # END for each entry index
 
                 # END closure
+
                 handle_null_entries(self)
             # END null_entry handling
 

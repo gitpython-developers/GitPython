@@ -668,7 +668,7 @@ class RemoteProgress:
         def handler(line: AnyStr) -> None:
             return self._parse_progress_line(line.rstrip())
 
-        # END def handler
+        # END handler
 
         return handler
 
