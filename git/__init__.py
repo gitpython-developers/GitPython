@@ -3,8 +3,10 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: https://opensource.org/license/bsd-3-clause/
+
 # flake8: noqa
 # @PydevCodeAnalysisIgnore
+
 from git.exc import *  # @NoMove @IgnorePep8
 from typing import List, Optional, Sequence, Tuple, Union, TYPE_CHECKING
 from git.types import PathLike

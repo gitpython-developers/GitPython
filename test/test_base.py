@@ -1,9 +1,9 @@
-# -*- coding: utf-8 -*-
 # test_base.py
 # Copyright (C) 2008, 2009 Michael Trier (mtrier@gmail.com) and contributors
 #
 # This module is part of GitPython and is released under
 # the BSD License: https://opensource.org/license/bsd-3-clause/
+
 import os
 import sys
 import tempfile
@@ -34,7 +34,7 @@ class TestBase(_TestBase):
     )
 
     def test_base_object(self):
-        # test interface of base object classes
+        # Test interface of base object classes.
         types = (Blob, Tree, Commit, TagObject)
         self.assertEqual(len(types), len(self.type_tuples))
 
@@ -61,12 +61,12 @@ class TestBase(_TestBase):
 
             if isinstance(item, base.IndexObject):
                 num_index_objs += 1
-                if hasattr(item, "path"):  # never runs here
-                    assert not item.path.startswith("/")  # must be relative
+                if hasattr(item, "path"):  # Never runs here.
+                    assert not item.path.startswith("/")  # Must be relative.
                     assert isinstance(item.mode, int)
             # END index object check
 
-            # read from stream
+            # Read from stream.
             data_stream = item.data_stream
             data = data_stream.read()
             assert data
@@ -79,7 +79,7 @@ class TestBase(_TestBase):
             os.remove(tmpfilename)
         # END for each object type to create
 
-        # each has a unique sha
+        # Each has a unique sha.
         self.assertEqual(len(s), num_objs)
         self.assertEqual(len(s | s), num_objs)
         self.assertEqual(num_index_objs, 2)
@@ -92,7 +92,7 @@ class TestBase(_TestBase):
         self.assertRaises(ValueError, get_object_type_by_name, b"doesntexist")
 
     def test_object_resolution(self):
-        # objects must be resolved to shas so they compare equal
+        # Objects must be resolved to shas so they compare equal.
         self.assertEqual(self.rorepo.head.reference.object, self.rorepo.active_branch.object)
 
     @with_rw_repo("HEAD", bare=True)
@@ -122,7 +122,7 @@ class TestBase(_TestBase):
 
         file_path = osp.join(rw_repo.working_dir, filename)
 
-        # verify first that we could encode file name in this environment
+        # Verify first that we could encode file name in this environment.
         try:
             file_path.encode(sys.getfilesystemencoding())
         except UnicodeEncodeError as e:
@@ -132,14 +132,14 @@ class TestBase(_TestBase):
             fp.write(b"something")
 
         if is_win:
-            # on windows, there is no way this works, see images on
+            # On Windows, there is no way this works, see images on:
             # https://github.com/gitpython-developers/GitPython/issues/147#issuecomment-68881897
-            # Therefore, it must be added using the python implementation
+            # Therefore, it must be added using the Python implementation.
             rw_repo.index.add([file_path])
             # However, when the test winds down, rmtree fails to delete this file, which is recognized
             # as ??? only.
         else:
-            # on posix, we can just add unicode files without problems
+            # On POSIX, we can just add Unicode files without problems.
             rw_repo.git.add(rw_repo.working_dir)
-        # end
+
         rw_repo.index.commit("message")

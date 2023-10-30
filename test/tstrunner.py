@@ -1,3 +1,5 @@
+"""Hook for MonkeyType (see PR #1188)."""
+
 import unittest
 
 loader = unittest.TestLoader()

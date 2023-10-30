@@ -14,7 +14,7 @@ class TestActor(TestBase):
         self.assertEqual("Michael Trier", a.name)
         self.assertEqual("mtrier@example.com", a.email)
 
-        # base type capabilities
+        # Base type capabilities
         assert a == a
         assert not (a != a)
         m = set()

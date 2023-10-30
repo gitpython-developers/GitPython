@@ -45,7 +45,7 @@ class TestInstallation(TestBase):
         self.assertEqual(
             0,
             result.returncode,
-            msg=result.stderr or result.stdout or "Selftest failed",
+            msg=result.stderr or result.stdout or "Self-test failed",
         )
 
         result = subprocess.run(
@@ -63,7 +63,7 @@ class TestInstallation(TestBase):
         # by inserting its location into PYTHONPATH or otherwise patched into
         # sys.path, make sure it is not wrongly inserted as the *first* entry.
         result = subprocess.run(
-            [self.python, "-c", "import sys;import git; print(sys.path)"],
+            [self.python, "-c", "import sys; import git; print(sys.path)"],
             stdout=subprocess.PIPE,
             cwd=self.sources,
         )

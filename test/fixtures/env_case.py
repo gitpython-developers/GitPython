@@ -1,4 +1,4 @@
-# Steps 3 and 4 for test_it_avoids_upcasing_unrelated_environment_variable_names.
+"""Steps 3 and 4 for test_it_avoids_upcasing_unrelated_environment_variable_names."""
 
 import subprocess
 import sys

@@ -3,6 +3,7 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: https://opensource.org/license/bsd-3-clause/
+
 import contextlib
 from functools import wraps
 import gc
@@ -64,10 +65,11 @@ def fixture(name):
 # { Adapters
 
 
-class StringProcessAdapter(object):
+class StringProcessAdapter:
+    """Allows strings to be used as process objects returned by subprocess.Popen.
 
-    """Allows to use strings as Process object as returned by SubProcess.Popen.
-    Its tailored to work with the test system only"""
+    This is tailored to work with the test system only.
+    """
 
     def __init__(self, input_string):
         self.stdout = io.BytesIO(input_string)
@@ -86,7 +88,7 @@ class StringProcessAdapter(object):
 
 def with_rw_directory(func):
     """Create a temporary directory which can be written to, remove it if the
-    test succeeds, but leave it otherwise to aid additional debugging"""
+    test succeeds, but leave it otherwise to aid additional debugging."""
 
     @wraps(func)
     def wrapper(self):
@@ -106,7 +108,7 @@ def with_rw_directory(func):
             raise
         finally:
             # Need to collect here to be sure all handles have been closed. It appears
-            # a windows-only issue. In fact things should be deleted, as well as
+            # a Windows-only issue. In fact things should be deleted, as well as
             # memory maps closed, once objects go out of scope. For some reason
             # though this is not the case here unless we collect explicitly.
             gc.collect()
@@ -117,8 +119,7 @@ def with_rw_directory(func):
 
 
 def with_rw_repo(working_tree_ref, bare=False):
-    """
-    Same as with_bare_repo, but clones the rorepo as non-bare repository, checking
+    """Same as with_bare_repo, but clones the rorepo as non-bare repository, checking
     out the working tree at the given working_tree_ref.
 
     This repository type is more costly due to the working copy checkout.
@@ -199,7 +200,7 @@ def git_daemon_launched(base_path, ip, port):
                 base_path=base_path,
                 as_process=True,
             )
-        # yes, I know ... fortunately, this is always going to work if sleep time is just large enough
+        # Yes, I know... fortunately, this is always going to work if sleep time is just large enough.
         time.sleep(0.5 * (1 + is_win))
     except Exception as ex:
         msg = textwrap.dedent(
@@ -213,14 +214,6 @@ def git_daemon_launched(base_path, ip, port):
           and setting the environment variable GIT_PYTHON_TEST_GIT_DAEMON_PORT to <port>
         """
         )
-        if is_win:
-            msg += textwrap.dedent(
-                R"""
-
-            On Windows,
-              the `git-daemon.exe` must be in PATH.
-              For MINGW, look into \Git\mingw64\libexec\git-core\, but problems with paths might appear."""
-            )
         log.warning(msg, ex, ip, port, base_path, base_path, exc_info=1)
 
         yield  # OK, assume daemon started manually.
@@ -233,33 +226,36 @@ def git_daemon_launched(base_path, ip, port):
                 log.debug("Killing git-daemon...")
                 gd.proc.kill()
             except Exception as ex:
-                ## Either it has died (and we're here), or it won't die, again here...
+                # Either it has died (and we're here), or it won't die, again here...
                 log.debug("Hidden error while Killing git-daemon: %s", ex, exc_info=1)
 
 
 def with_rw_and_rw_remote_repo(working_tree_ref):
-    """
-    Same as with_rw_repo, but also provides a writable remote repository from which the
-    rw_repo has been forked as well as a handle for a git-daemon that may be started to
-    run the remote_repo.
-    The remote repository was cloned as bare repository from the ro repo, whereas
-    the rw repo has a working tree and was cloned from the remote repository.
+    """Same as with_rw_repo, but also provides a writable remote repository from which
+    the rw_repo has been forked as well as a handle for a git-daemon that may be started
+    to run the remote_repo.
 
-    remote_repo has two remotes: origin and daemon_origin. One uses a local url,
-    the other uses a server url. The daemon setup must be done on system level
-    and should be an inetd service that serves tempdir.gettempdir() and all
-    directories in it.
+    The remote repository was cloned as bare repository from the ro repo, whereas the rw
+    repo has a working tree and was cloned from the remote repository.
+
+    remote_repo has two remotes: origin and daemon_origin. One uses a local url, the
+    other uses a server url. The daemon setup must be done on system level and should be
+    an inetd service that serves tempdir.gettempdir() and all directories in it.
 
     The following sketch demonstrates this::
-     rorepo ---<bare clone>---> rw_remote_repo ---<clone>---> rw_repo
+
+        rorepo ---<bare clone>---> rw_remote_repo ---<clone>---> rw_repo
 
     The test case needs to support the following signature::
+
         def case(self, rw_repo, rw_daemon_repo)
 
     This setup allows you to test push and pull scenarios and hooks nicely.
 
-    See working dir info in with_rw_repo
-    :note: We attempt to launch our own invocation of git-daemon, which will be shutdown at the end of the test.
+    See working dir info in :func:`with_rw_repo`.
+
+    :note: We attempt to launch our own invocation of git-daemon, which will be shut
+        down at the end of the test.
     """
     from git import Git, Remote  # To avoid circular deps.
 
@@ -272,16 +268,16 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
             rw_repo_dir = tempfile.mktemp(prefix="daemon_cloned_repo-%s-" % func.__name__)
 
             rw_daemon_repo = self.rorepo.clone(rw_daemon_repo_dir, shared=True, bare=True)
-            # recursive alternates info ?
+            # Recursive alternates info?
             rw_repo = rw_daemon_repo.clone(rw_repo_dir, shared=True, bare=False, n=True)
             try:
                 rw_repo.head.commit = working_tree_ref
                 rw_repo.head.reference.checkout()
 
-                # prepare for git-daemon
+                # Prepare for git-daemon.
                 rw_daemon_repo.daemon_export = True
 
-                # this thing is just annoying !
+                # This thing is just annoying!
                 with rw_daemon_repo.config_writer() as crw:
                     section = "daemon"
                     try:
@@ -348,9 +344,7 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
 
 
 class TestBase(TestCase):
-
-    """
-    Base Class providing default functionality to all tests such as:
+    """Base class providing default functionality to all tests such as:
 
     - Utility functions provided by the TestCase base of the unittest method such as::
         self.fail("todo")
@@ -363,20 +357,20 @@ class TestBase(TestCase):
 
       The rorepo is in fact your current project's git repo. If you refer to specific
       shas for your objects, be sure you choose some that are part of the immutable portion
-      of the project history ( to assure tests don't fail for others ).
+      of the project history (so that tests don't fail for others).
     """
 
     def _small_repo_url(self):
-        """:return" a path to a small, clonable repository"""
+        """:return: A path to a small, clonable repository"""
         from git.cmd import Git
 
         return Git.polish_url(osp.join(self.rorepo.working_tree_dir, "git/ext/gitdb/gitdb/ext/smmap"))
 
     @classmethod
     def setUpClass(cls):
-        """
-        Dynamically add a read-only repository to our actual type. This way
-        each test type has its own repository
+        """Dynamically add a read-only repository to our actual type.
+
+        This way, each test type has its own repository.
         """
         from git import Repo
 
@@ -391,7 +385,9 @@ class TestBase(TestCase):
     def _make_file(self, rela_path, data, repo=None):
         """
         Create a file at the given path relative to our repository, filled
-        with the given data. Returns absolute path to created file.
+        with the given data.
+
+        :return: An absolute path to the created file.
         """
         repo = repo or self.rorepo
         abs_path = osp.join(repo.working_tree_dir, rela_path)

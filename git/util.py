@@ -1,4 +1,4 @@
-# utils.py
+# util.py
 # Copyright (C) 2008, 2009 Michael Trier (mtrier@gmail.com) and contributors
 #
 # This module is part of GitPython and is released under
@@ -144,7 +144,7 @@ T = TypeVar("T")
 
 def unbare_repo(func: Callable[..., T]) -> Callable[..., T]:
     """Methods with this decorator raise :class:`.exc.InvalidGitRepositoryError` if they
-    encounter a bare repository"""
+    encounter a bare repository."""
 
     from .exc import InvalidGitRepositoryError
 
@@ -164,8 +164,9 @@ def unbare_repo(func: Callable[..., T]) -> Callable[..., T]:
 def cwd(new_dir: PathLike) -> Generator[PathLike, None, None]:
     """Context manager to temporarily change directory.
 
-    This is similar to contextlib.chdir introduced in Python 3.11, but the context
-    manager object returned by a single call to this function is not reentrant."""
+    This is similar to :func:`contextlib.chdir` introduced in Python 3.11, but the
+    context manager object returned by a single call to this function is not reentrant.
+    """
     old_dir = os.getcwd()
     os.chdir(new_dir)
     try:
@@ -191,8 +192,10 @@ def patch_env(name: str, value: str) -> Generator[None, None, None]:
 def rmtree(path: PathLike) -> None:
     """Remove the given directory tree recursively.
 
-    :note: We use :func:`shutil.rmtree` but adjust its behaviour to see whether files that
-        couldn't be deleted are read-only. Windows will not remove them in that case."""
+    :note: We use :func:`shutil.rmtree` but adjust its behaviour to see whether files
+        that couldn't be deleted are read-only. Windows will not remove them in that
+        case.
+    """
 
     def handler(function: Callable, path: PathLike, _excinfo: Any) -> None:
         """Callback for :func:`shutil.rmtree`. Works either as ``onexc`` or ``onerror``."""
@@ -224,9 +227,10 @@ def rmfile(path: PathLike) -> None:
 
 def stream_copy(source: BinaryIO, destination: BinaryIO, chunk_size: int = 512 * 1024) -> int:
     """Copy all data from the source stream into the destination stream in chunks
-    of size chunk_size
+    of size chunk_size.
 
-    :return: amount of bytes written"""
+    :return: Number of bytes written
+    """
     br = 0
     while True:
         chunk = source.read(chunk_size)
@@ -239,8 +243,8 @@ def stream_copy(source: BinaryIO, destination: BinaryIO, chunk_size: int = 512 *
 
 
 def join_path(a: PathLike, *p: PathLike) -> PathLike:
-    """Join path tokens together similar to osp.join, but always use
-    '/' instead of possibly '\' on windows."""
+    R"""Join path tokens together similar to osp.join, but always use
+    '/' instead of possibly '\' on Windows."""
     path = str(a)
     for b in p:
         b = str(b)
@@ -269,7 +273,7 @@ if is_win:
     __all__.append("to_native_path_windows")
     to_native_path = to_native_path_windows
 else:
-    # no need for any work on linux
+    # No need for any work on Linux.
     def to_native_path_linux(path: PathLike) -> str:
         return str(path)
 
@@ -277,19 +281,22 @@ else:
 
 
 def join_path_native(a: PathLike, *p: PathLike) -> PathLike:
+    R"""Like join_path, but makes sure an OS native path is returned.
+
+    This is only needed to play it safe on Windows and to ensure nice paths that only
+    use '\'.
     """
-    As join path, but makes sure an OS native path is returned. This is only
-        needed to play it safe on my dear windows and to assure nice paths that only
-        use '\'"""
     return to_native_path(join_path(a, *p))
 
 
 def assure_directory_exists(path: PathLike, is_file: bool = False) -> bool:
-    """Assure that the directory pointed to by path exists.
+    """Make sure that the directory pointed to by path exists.
 
-    :param is_file: If True, path is assumed to be a file and handled correctly.
-        Otherwise it must be a directory
-    :return: True if the directory was created, False if it already existed"""
+    :param is_file: If True, ``path`` is assumed to be a file and handled correctly.
+        Otherwise it must be a directory.
+
+    :return: True if the directory was created, False if it already existed.
+    """
     if is_file:
         path = osp.dirname(path)
     # END handle file
@@ -365,9 +372,9 @@ _cygpath_parsers: Tuple[Tuple[Pattern[str], Callable, bool], ...] = (
 
 
 def cygpath(path: str) -> str:
-    """Use :meth:`git.cmd.Git.polish_url()` instead, that works on any environment."""
-    path = str(path)  # ensure is str and not AnyPath.
-    # Fix to use Paths when 3.5 dropped. or to be just str if only for urls?
+    """Use :meth:`git.cmd.Git.polish_url` instead, that works on any environment."""
+    path = str(path)  # Ensure is str and not AnyPath.
+    # Fix to use Paths when 3.5 dropped. Or to be just str if only for URLs?
     if not path.startswith(("/cygdrive", "//", "/proc/cygdrive")):
         for regex, parser, recurse in _cygpath_parsers:
             match = regex.match(path)
@@ -412,8 +419,7 @@ def is_cygwin_git(git_executable: PathLike) -> bool:
 
 def is_cygwin_git(git_executable: Union[None, PathLike]) -> bool:
     if is_win:
-        # is_win seems to be true only for Windows-native pythons
-        # cygwin has os.name = posix, I think
+        # is_win is only True on native Windows systems. On Cygwin, os.name == "posix".
         return False
 
     if git_executable is None:
@@ -477,11 +483,10 @@ def expand_path(p: Union[None, PathLike], expand_vars: bool = True) -> Optional[
 
 
 def remove_password_if_present(cmdline: Sequence[str]) -> List[str]:
-    """
-    Parse any command line argument and if on of the element is an URL with a
+    """Parse any command line argument and if one of the elements is an URL with a
     username and/or password, replace them by stars (in-place).
 
-    If nothing found just returns the command line as-is.
+    If nothing is found, this just returns the command line as-is.
 
     This should be used for every log line that print a command line, as well as
     exception messages.
@@ -491,7 +496,7 @@ def remove_password_if_present(cmdline: Sequence[str]) -> List[str]:
         new_cmdline.append(to_parse)
         try:
             url = urlsplit(to_parse)
-            # Remove password from the URL if present
+            # Remove password from the URL if present.
             if url.password is None and url.username is None:
                 continue
 
@@ -501,7 +506,7 @@ def remove_password_if_present(cmdline: Sequence[str]) -> List[str]:
                 url = url._replace(netloc=url.netloc.replace(url.username, "*****"))
             new_cmdline[index] = urlunsplit(url)
         except ValueError:
-            # This is not a valid URL
+            # This is not a valid URL.
             continue
     return new_cmdline
 
@@ -511,7 +516,7 @@ def remove_password_if_present(cmdline: Sequence[str]) -> List[str]:
 # { Classes
 
 
-class RemoteProgress(object):
+class RemoteProgress:
     """
     Handler providing an interface to parse progress information emitted by git-push
     and git-fetch and to dispatch callbacks allowing subclasses to react to the progress.
@@ -555,14 +560,15 @@ class RemoteProgress(object):
         or git-fetch.
 
         - Lines that do not contain progress info are stored in :attr:`other_lines`.
-        - Lines that seem to contain an error (i.e. start with error: or fatal:) are stored
-            in :attr:`error_lines`."""
+        - Lines that seem to contain an error (i.e. start with ``error:`` or ``fatal:``)
+          are stored in :attr:`error_lines`.
+        """
         # handle
         # Counting objects: 4, done.
         # Compressing objects:  50% (1/2)
         # Compressing objects: 100% (2/2)
         # Compressing objects: 100% (2/2), done.
-        if isinstance(line, bytes):  # mypy argues about ternary assignment
+        if isinstance(line, bytes):  # mypy argues about ternary assignment.
             line_str = line.decode("utf-8")
         else:
             line_str = line
@@ -572,14 +578,14 @@ class RemoteProgress(object):
             self.error_lines.append(self._cur_line)
             return
 
-        # find escape characters and cut them away - regex will not work with
-        # them as they are non-ascii. As git might expect a tty, it will send them
+        # Find escape characters and cut them away - regex will not work with
+        # them as they are non-ASCII. As git might expect a tty, it will send them.
         last_valid_index = None
         for i, c in enumerate(reversed(line_str)):
             if ord(c) < 32:
                 # its a slice index
                 last_valid_index = -i - 1
-            # END character was non-ascii
+            # END character was non-ASCII
         # END for each character in line
         if last_valid_index is not None:
             line_str = line_str[:last_valid_index]
@@ -600,7 +606,7 @@ class RemoteProgress(object):
         op_code = 0
         _remote, op_name, _percent, cur_count, max_count, message = match.groups()
 
-        # get operation id
+        # Get operation ID.
         if op_name == "Counting objects":
             op_code |= self.COUNTING
         elif op_name == "Compressing objects":
@@ -616,7 +622,7 @@ class RemoteProgress(object):
         elif op_name == "Checking out files":
             op_code |= self.CHECKING_OUT
         else:
-            # Note: On windows it can happen that partial lines are sent
+            # Note: On Windows it can happen that partial lines are sent.
             # Hence we get something like "CompreReceiving objects", which is
             # a blend of "Compressing objects" and "Receiving objects".
             # This can't really be prevented, so we drop the line verbosely
@@ -624,11 +630,11 @@ class RemoteProgress(object):
             # commands at some point.
             self.line_dropped(line_str)
             # Note: Don't add this line to the other lines, as we have to silently
-            # drop it
+            # drop it.
             return None
         # END handle op code
 
-        # figure out stage
+        # Figure out stage.
         if op_code not in self._seen_ops:
             self._seen_ops.append(op_code)
             op_code |= self.BEGIN
@@ -655,13 +661,15 @@ class RemoteProgress(object):
     def new_message_handler(self) -> Callable[[str], None]:
         """
         :return:
-            a progress handler suitable for handle_process_output(), passing lines on to this Progress
-            handler in a suitable format"""
+            A progress handler suitable for handle_process_output(), passing lines on to
+            this Progress handler in a suitable format
+        """
 
         def handler(line: AnyStr) -> None:
             return self._parse_progress_line(line.rstrip())
 
-        # end
+        # END handler
+
         return handler
 
     def line_dropped(self, line: str) -> None:
@@ -675,7 +683,7 @@ class RemoteProgress(object):
         max_count: Union[str, float, None] = None,
         message: str = "",
     ) -> None:
-        """Called whenever the progress changes
+        """Called whenever the progress changes.
 
         :param op_code:
             Integer allowing to be compared against Operation IDs and stage IDs.
@@ -683,11 +691,12 @@ class RemoteProgress(object):
             Stage IDs are BEGIN and END. BEGIN will only be set once for each Operation
             ID as well as END. It may be that BEGIN and END are set at once in case only
             one progress message was emitted due to the speed of the operation.
-            Between BEGIN and END, none of these flags will be set
+            Between BEGIN and END, none of these flags will be set.
 
             Operation IDs are all held within the OP_MASK. Only one Operation ID will
             be active per call.
-        :param cur_count: Current absolute count of items
+
+        :param cur_count: Current absolute count of items.
 
         :param max_count:
             The maximum count of items we expect. It may be None in case there is
@@ -697,14 +706,15 @@ class RemoteProgress(object):
             In case of the 'WRITING' operation, it contains the amount of bytes
             transferred. It may possibly be used for other purposes as well.
 
-        You may read the contents of the current line in self._cur_line"""
+        You may read the contents of the current line in ``self._cur_line``.
+        """
         pass
 
 
 class CallableRemoteProgress(RemoteProgress):
-    """An implementation forwarding updates to any callable"""
+    """An implementation forwarding updates to any callable."""
 
-    __slots__ = "_callable"
+    __slots__ = ("_callable",)
 
     def __init__(self, fn: Callable) -> None:
         self._callable = fn
@@ -714,7 +724,7 @@ class CallableRemoteProgress(RemoteProgress):
         self._callable(*args, **kwargs)
 
 
-class Actor(object):
+class Actor:
     """Actors hold information about a person acting on the repository. They
     can be committers and authors or anything with a name and an email as
     mentioned in the git log entries."""
@@ -724,7 +734,7 @@ class Actor(object):
     name_email_regex = re.compile(r"(.*) <(.*?)>")
 
     # ENVIRONMENT VARIABLES
-    # read when creating new commits
+    # These are read when creating new commits.
     env_author_name = "GIT_AUTHOR_NAME"
     env_author_email = "GIT_AUTHOR_EMAIL"
     env_committer_name = "GIT_COMMITTER_NAME"
@@ -758,11 +768,13 @@ class Actor(object):
     @classmethod
     def _from_string(cls, string: str) -> "Actor":
         """Create an Actor from a string.
-        :param string: is the string, which is expected to be in regular git format
 
-                John Doe <jdoe@example.com>
+        :param string: The string, which is expected to be in regular git format::
 
-        :return: Actor"""
+            John Doe <jdoe@example.com>
+
+        :return: Actor
+        """
         m = cls.name_email_regex.search(string)
         if m:
             name, email = m.groups()
@@ -771,7 +783,7 @@ class Actor(object):
             m = cls.name_only_regex.search(string)
             if m:
                 return Actor(m.group(1), None)
-            # assume best and use the whole string as name
+            # Assume the best and use the whole string as name.
             return Actor(string, None)
             # END special case name
         # END handle name/email matching
@@ -784,7 +796,7 @@ class Actor(object):
         config_reader: Union[None, "GitConfigParser", "SectionConstraint"] = None,
     ) -> "Actor":
         actor = Actor("", "")
-        user_id = None  # We use this to avoid multiple calls to getpass.getuser()
+        user_id = None  # We use this to avoid multiple calls to getpass.getuser().
 
         def default_email() -> str:
             nonlocal user_id
@@ -822,20 +834,21 @@ class Actor(object):
         :return: Actor instance corresponding to the configured committer. It behaves
             similar to the git implementation, such that the environment will override
             configuration values of config_reader. If no value is set at all, it will be
-            generated
+            generated.
+
         :param config_reader: ConfigReader to use to retrieve the values from in case
-            they are not set in the environment"""
+            they are not set in the environment.
+        """
         return cls._main_actor(cls.env_committer_name, cls.env_committer_email, config_reader)
 
     @classmethod
     def author(cls, config_reader: Union[None, "GitConfigParser", "SectionConstraint"] = None) -> "Actor":
-        """Same as committer(), but defines the main author. It may be specified in the environment,
-        but defaults to the committer"""
+        """Same as committer(), but defines the main author. It may be specified in the
+        environment, but defaults to the committer."""
         return cls._main_actor(cls.env_author_name, cls.env_author_email, config_reader)
 
 
-class Stats(object):
-
+class Stats:
     """
     Represents stat information as presented by git at the end of a merge. It is
     created from the output of a diff operation.
@@ -859,7 +872,8 @@ class Stats(object):
 
     In addition to the items in the stat-dict, it features additional information::
 
-     files = number of changed files as int"""
+     files = number of changed files as int
+    """
 
     __slots__ = ("total", "files")
 
@@ -871,7 +885,8 @@ class Stats(object):
     def _list_from_string(cls, repo: "Repo", text: str) -> "Stats":
         """Create a Stat object from output retrieved by git-diff.
 
-        :return: git.Stat"""
+        :return: git.Stat
+        """
 
         hsh: HSH_TD = {
             "total": {"insertions": 0, "deletions": 0, "lines": 0, "files": 0},
@@ -894,15 +909,15 @@ class Stats(object):
         return Stats(hsh["total"], hsh["files"])
 
 
-class IndexFileSHA1Writer(object):
-
+class IndexFileSHA1Writer:
     """Wrapper around a file-like object that remembers the SHA1 of
     the data written to it. It will write a sha when the stream is closed
     or if the asked for explicitly using write_sha.
 
-    Only useful to the indexfile
+    Only useful to the index file.
 
-    :note: Based on the dulwich project"""
+    :note: Based on the dulwich project.
+    """
 
     __slots__ = ("f", "sha1")
 
@@ -928,14 +943,14 @@ class IndexFileSHA1Writer(object):
         return self.f.tell()
 
 
-class LockFile(object):
-
+class LockFile:
     """Provides methods to obtain, check for, and release a file based lock which
     should be used to handle concurrent access to the same file.
 
     As we are a utility class to be derived from, we only use protected methods.
 
-    Locks will automatically be released on destruction"""
+    Locks will automatically be released on destruction.
+    """
 
     __slots__ = ("_file_path", "_owns_lock")
 
@@ -951,14 +966,18 @@ class LockFile(object):
         return "%s.lock" % (self._file_path)
 
     def _has_lock(self) -> bool:
-        """:return: True if we have a lock and if the lockfile still exists
-        :raise AssertionError: if our lock-file does not exist"""
+        """
+        :return: True if we have a lock and if the lockfile still exists
+
+        :raise AssertionError: If our lock-file does not exist
+        """
         return self._owns_lock
 
     def _obtain_lock_or_raise(self) -> None:
-        """Create a lock file as flag for other instances, mark our instance as lock-holder
+        """Create a lock file as flag for other instances, mark our instance as lock-holder.
 
-        :raise IOError: if a lock was already present or a lock file could not be written"""
+        :raise IOError: If a lock was already present or a lock file could not be written
+        """
         if self._has_lock():
             return
         lock_file = self._lock_file_path()
@@ -978,15 +997,15 @@ class LockFile(object):
 
     def _obtain_lock(self) -> None:
         """The default implementation will raise if a lock cannot be obtained.
-        Subclasses may override this method to provide a different implementation"""
+        Subclasses may override this method to provide a different implementation."""
         return self._obtain_lock_or_raise()
 
     def _release_lock(self) -> None:
-        """Release our lock if we have one"""
+        """Release our lock if we have one."""
         if not self._has_lock():
             return
 
-        # if someone removed our file beforhand, lets just flag this issue
+        # If someone removed our file beforehand, lets just flag this issue
         # instead of failing, to make it more usable.
         lfp = self._lock_file_path()
         try:
@@ -997,13 +1016,13 @@ class LockFile(object):
 
 
 class BlockingLockFile(LockFile):
-
     """The lock file will block until a lock could be obtained, or fail after
     a specified timeout.
 
     :note: If the directory containing the lock was removed, an exception will
         be raised during the blocking period, preventing hangs as the lock
-        can never be obtained."""
+        can never be obtained.
+    """
 
     __slots__ = ("_check_interval", "_max_block_time")
 
@@ -1013,13 +1032,14 @@ class BlockingLockFile(LockFile):
         check_interval_s: float = 0.3,
         max_block_time_s: int = sys.maxsize,
     ) -> None:
-        """Configure the instance
+        """Configure the instance.
 
         :param check_interval_s:
             Period of time to sleep until the lock is checked the next time.
-            By default, it waits a nearly unlimited time
+            By default, it waits a nearly unlimited time.
 
-        :param max_block_time_s: Maximum amount of seconds we may lock"""
+        :param max_block_time_s: Maximum amount of seconds we may lock.
+        """
         super(BlockingLockFile, self).__init__(file_path)
         self._check_interval = check_interval_s
         self._max_block_time = max_block_time_s
@@ -1027,7 +1047,9 @@ class BlockingLockFile(LockFile):
     def _obtain_lock(self) -> None:
         """This method blocks until it obtained the lock, or raises IOError if
         it ran out of time or if the parent directory was not available anymore.
-        If this method returns, you are guaranteed to own the lock"""
+
+        If this method returns, you are guaranteed to own the lock.
+        """
         starttime = time.time()
         maxtime = starttime + float(self._max_block_time)
         while True:
@@ -1059,7 +1081,6 @@ class BlockingLockFile(LockFile):
 
 
 class IterableList(List[T_IterableObj]):
-
     """
     List of iterable objects allowing to query an object by id or by named index::
 
@@ -1070,13 +1091,14 @@ class IterableList(List[T_IterableObj]):
 
     Iterable parent objects = [Commit, SubModule, Reference, FetchInfo, PushInfo]
     Iterable via inheritance = [Head, TagReference, RemoteReference]
-    ]
+
     It requires an id_attribute name to be set which will be queried from its
     contained items to have a means for comparison.
 
     A prefix can be specified which is to be used in case the id returned by the
     items always contains a prefix that does not matter to the user, so it
-    can be left out."""
+    can be left out.
+    """
 
     __slots__ = ("_id_attr", "_prefix")
 
@@ -1088,7 +1110,7 @@ class IterableList(List[T_IterableObj]):
         self._prefix = prefix
 
     def __contains__(self, attr: object) -> bool:
-        # first try identity match for performance
+        # First try identity match for performance.
         try:
             rval = list.__contains__(self, attr)
             if rval:
@@ -1097,9 +1119,9 @@ class IterableList(List[T_IterableObj]):
             pass
         # END handle match
 
-        # otherwise make a full name search
+        # Otherwise make a full name search.
         try:
-            getattr(self, cast(str, attr))  # use cast to silence mypy
+            getattr(self, cast(str, attr))  # Use cast to silence mypy.
             return True
         except (AttributeError, TypeError):
             return False
@@ -1148,7 +1170,7 @@ class IterableList(List[T_IterableObj]):
 
 
 class IterableClassWatcher(type):
-    """Metaclass that watches"""
+    """Metaclass that watches."""
 
     def __init__(cls, name: str, bases: Tuple, clsdict: Dict) -> None:
         for base in bases:
@@ -1164,24 +1186,26 @@ class IterableClassWatcher(type):
 
 
 class Iterable(metaclass=IterableClassWatcher):
-
-    """Defines an interface for iterable items which is to assure a uniform
-    way to retrieve and iterate items within the git repository"""
+    """Defines an interface for iterable items, so there is a uniform way to retrieve
+    and iterate items within the git repository."""
 
     __slots__ = ()
+
     _id_attribute_ = "attribute that most suitably identifies your instance"
 
     @classmethod
     def list_items(cls, repo: "Repo", *args: Any, **kwargs: Any) -> Any:
         """
         Deprecated, use IterableObj instead.
+
         Find all items of this type - subclasses can specify args and kwargs differently.
         If no args are given, subclasses are obliged to return all items if no additional
         arguments arg given.
 
         :note: Favor the iter_items method as it will
 
-        :return: list(Item,...) list of item instances"""
+        :return: list(Item,...) list of item instances
+        """
         out_list: Any = IterableList(cls._id_attribute_)
         out_list.extend(cls.iter_items(repo, *args, **kwargs))
         return out_list
@@ -1189,19 +1213,23 @@ class Iterable(metaclass=IterableClassWatcher):
     @classmethod
     def iter_items(cls, repo: "Repo", *args: Any, **kwargs: Any) -> Any:
         # return typed to be compatible with subtypes e.g. Remote
-        """For more information about the arguments, see list_items
-        :return:  iterator yielding Items"""
+        """For more information about the arguments, see list_items.
+
+        :return: Iterator yielding Items
+        """
         raise NotImplementedError("To be implemented by Subclass")
 
 
 @runtime_checkable
 class IterableObj(Protocol):
-    """Defines an interface for iterable items which is to assure a uniform
-    way to retrieve and iterate items within the git repository
+    """Defines an interface for iterable items, so there is a uniform way to retrieve
+    and iterate items within the git repository.
 
-    Subclasses = [Submodule, Commit, Reference, PushInfo, FetchInfo, Remote]"""
+    Subclasses = [Submodule, Commit, Reference, PushInfo, FetchInfo, Remote]
+    """
 
     __slots__ = ()
+
     _id_attribute_: str
 
     @classmethod
@@ -1213,7 +1241,8 @@ class IterableObj(Protocol):
 
         :note: Favor the iter_items method as it will
 
-        :return: list(Item,...) list of item instances"""
+        :return: list(Item,...) list of item instances
+        """
         out_list: IterableList = IterableList(cls._id_attribute_)
         out_list.extend(cls.iter_items(repo, *args, **kwargs))
         return out_list
@@ -1221,9 +1250,11 @@ class IterableObj(Protocol):
     @classmethod
     @abstractmethod
     def iter_items(cls, repo: "Repo", *args: Any, **kwargs: Any) -> Iterator[T_IterableObj]:  # Iterator[T_IterableObj]:
-        # return typed to be compatible with subtypes e.g. Remote
-        """For more information about the arguments, see list_items
-        :return:  iterator yielding Items"""
+        # Return-typed to be compatible with subtypes e.g. Remote.
+        """For more information about the arguments, see list_items.
+
+        :return: Iterator yielding Items
+        """
         raise NotImplementedError("To be implemented by Subclass")
 
 

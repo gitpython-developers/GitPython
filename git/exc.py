@@ -3,7 +3,8 @@
 #
 # This module is part of GitPython and is released under
 # the BSD License: https://opensource.org/license/bsd-3-clause/
-""" Module containing all exceptions thrown throughout the git package """
+
+"""Module containing all exceptions thrown throughout the git package."""
 
 __all__ = [
     # Defined in gitdb.exc:
@@ -57,7 +58,7 @@ if TYPE_CHECKING:
 
 
 class GitError(Exception):
-    """Base class for all package exceptions"""
+    """Base class for all package exceptions."""
 
 
 class InvalidGitRepositoryError(GitError):
@@ -65,7 +66,7 @@ class InvalidGitRepositoryError(GitError):
 
 
 class WorkTreeRepositoryUnsupported(InvalidGitRepositoryError):
-    """Thrown to indicate we can't handle work tree repositories"""
+    """Thrown to indicate we can't handle work tree repositories."""
 
 
 class NoSuchPathError(GitError, OSError):
@@ -133,7 +134,7 @@ class CommandError(GitError):
 
 class GitCommandNotFound(CommandError):
     """Thrown if we cannot find the `git` executable in the PATH or at the path given by
-    the GIT_PYTHON_GIT_EXECUTABLE environment variable"""
+    the GIT_PYTHON_GIT_EXECUTABLE environment variable."""
 
     def __init__(self, command: Union[List[str], Tuple[str], str], cause: Union[str, Exception]) -> None:
         super(GitCommandNotFound, self).__init__(command, cause)
@@ -157,15 +158,15 @@ class CheckoutError(GitError):
     """Thrown if a file could not be checked out from the index as it contained
     changes.
 
-    The .failed_files attribute contains a list of relative paths that failed
-    to be checked out as they contained changes that did not exist in the index.
+    The :attr:`failed_files` attribute contains a list of relative paths that failed to
+    be checked out as they contained changes that did not exist in the index.
 
-    The .failed_reasons attribute contains a string informing about the actual
+    The :attr:`failed_reasons` attribute contains a string informing about the actual
     cause of the issue.
 
-    The .valid_files attribute contains a list of relative paths to files that
-    were checked out successfully and hence match the version stored in the
-    index"""
+    The :attr:`valid_files` attribute contains a list of relative paths to files that
+    were checked out successfully and hence match the version stored in the index.
+    """
 
     def __init__(
         self,
@@ -184,18 +185,20 @@ class CheckoutError(GitError):
 
 
 class CacheError(GitError):
-
-    """Base for all errors related to the git index, which is called cache internally"""
+    """Base for all errors related to the git index, which is called cache
+    internally."""
 
 
 class UnmergedEntriesError(CacheError):
     """Thrown if an operation cannot proceed as there are still unmerged
-    entries in the cache"""
+    entries in the cache."""
 
 
 class HookExecutionError(CommandError):
-    """Thrown if a hook exits with a non-zero exit code. It provides access to the exit code and the string returned
-    via standard output"""
+    """Thrown if a hook exits with a non-zero exit code.
+
+    This provides access to the exit code and the string returned via standard output.
+    """
 
     def __init__(
         self,
@@ -209,7 +212,8 @@ class HookExecutionError(CommandError):
 
 
 class RepositoryDirtyError(GitError):
-    """Thrown whenever an operation on a repository fails as it has uncommitted changes that would be overwritten"""
+    """Thrown whenever an operation on a repository fails as it has uncommitted changes
+    that would be overwritten."""
 
     def __init__(self, repo: "Repo", message: str) -> None:
         self.repo = repo

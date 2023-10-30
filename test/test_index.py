@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # test_index.py
 # Copyright (C) 2008, 2009 Michael Trier (mtrier@gmail.com) and contributors
 #
@@ -93,7 +92,7 @@ class TestIndex(TestBase):
         self._fprogress(path, done, item)
 
     def _reset_progress(self):
-        # maps paths to the count of calls
+        # Maps paths to the count of calls.
         self._fprogress_map = {}
 
     def _assert_entries(self, entries):
@@ -104,12 +103,12 @@ class TestIndex(TestBase):
         # END for each entry
 
     def test_index_file_base(self):
-        # read from file
+        # Read from file.
         index = IndexFile(self.rorepo, fixture_path("index"))
         assert index.entries
         assert index.version > 0
 
-        # test entry
+        # Test entry.
         entry = next(iter(index.entries.values()))
         for attr in (
             "path",
@@ -128,17 +127,17 @@ class TestIndex(TestBase):
             getattr(entry, attr)
         # END for each method
 
-        # test update
+        # Test update.
         entries = index.entries
         assert isinstance(index.update(), IndexFile)
         assert entries is not index.entries
 
-        # test stage
+        # Test stage.
         index_merge = IndexFile(self.rorepo, fixture_path("index_merge"))
         self.assertEqual(len(index_merge.entries), 106)
         assert len([e for e in index_merge.entries.values() if e.stage != 0])
 
-        # write the data - it must match the original
+        # Write the data - it must match the original.
         tmpfile = tempfile.mktemp()
         index_merge.write(tmpfile)
         with open(tmpfile, "rb") as fp:
@@ -146,7 +145,7 @@ class TestIndex(TestBase):
         os.remove(tmpfile)
 
     def _cmp_tree_index(self, tree, index):
-        # fail unless both objects contain the same paths and blobs
+        # Fail unless both objects contain the same paths and blobs.
         if isinstance(tree, str):
             tree = self.rorepo.commit(tree).tree
 
@@ -169,14 +168,14 @@ class TestIndex(TestBase):
             rw_repo.index.add([Blob(rw_repo, b"f" * 20, "bad-permissions", "foo")])
 
         try:
-            ## 1st fail on purpose adding into index.
+            ## First, fail on purpose adding into index.
             add_bad_blob()
         except Exception as ex:
             msg_py3 = "required argument is not an integer"
             msg_py2 = "cannot convert argument to integer"
             assert msg_py2 in str(ex) or msg_py3 in str(ex)
 
-        ## 2nd time should not fail due to stray lock file
+        ## The second time should not fail due to stray lock file.
         try:
             add_bad_blob()
         except Exception as ex:
@@ -188,17 +187,17 @@ class TestIndex(TestBase):
         cur_sha = "4b43ca7ff72d5f535134241e7c797ddc9c7a3573"
         other_sha = "39f85c4358b7346fee22169da9cad93901ea9eb9"
 
-        # simple index from tree
+        # Simple index from tree.
         base_index = IndexFile.from_tree(rw_repo, common_ancestor_sha)
         assert base_index.entries
         self._cmp_tree_index(common_ancestor_sha, base_index)
 
-        # merge two trees - its like a fast-forward
+        # Merge two trees - it's like a fast-forward.
         two_way_index = IndexFile.from_tree(rw_repo, common_ancestor_sha, cur_sha)
         assert two_way_index.entries
         self._cmp_tree_index(cur_sha, two_way_index)
 
-        # merge three trees - here we have a merge conflict
+        # Merge three trees - here we have a merge conflict.
         three_way_index = IndexFile.from_tree(rw_repo, common_ancestor_sha, cur_sha, other_sha)
         assert len([e for e in three_way_index.entries.values() if e.stage != 0])
 
@@ -209,19 +208,19 @@ class TestIndex(TestBase):
         assert merge_blobs[0][0] in (1, 2, 3)
         assert isinstance(merge_blobs[0][1], Blob)
 
-        # test BlobFilter
+        # Test BlobFilter.
         prefix = "lib/git"
         for _stage, blob in base_index.iter_blobs(BlobFilter([prefix])):
             assert blob.path.startswith(prefix)
 
-        # writing a tree should fail with an unmerged index
+        # Writing a tree should fail with an unmerged index.
         self.assertRaises(UnmergedEntriesError, three_way_index.write_tree)
 
-        # removed unmerged entries
+        # Removed unmerged entries.
         unmerged_blob_map = three_way_index.unmerged_blobs()
         assert unmerged_blob_map
 
-        # pick the first blob at the first stage we find and use it as resolved version
+        # Pick the first blob at the first stage we find and use it as resolved version.
         three_way_index.resolve_blobs(line[0][1] for line in unmerged_blob_map.values())
         tree = three_way_index.write_tree()
         assert isinstance(tree, Tree)
@@ -239,13 +238,13 @@ class TestIndex(TestBase):
         self.assertEqual(len({self.rorepo, self.rorepo, rw_repo, rw_repo}), 2)
 
         # SINGLE TREE MERGE
-        # current index is at the (virtual) cur_commit
+        # Current index is at the (virtual) cur_commit.
         next_commit = "4c39f9da792792d4e73fc3a5effde66576ae128c"
         parent_commit = rw_repo.head.commit.parents[0]
         manifest_key = IndexFile.entry_key("MANIFEST.in", 0)
         manifest_entry = rw_repo.index.entries[manifest_key]
         rw_repo.index.merge_tree(next_commit)
-        # only one change should be recorded
+        # Only one change should be recorded.
         assert manifest_entry.binsha != rw_repo.index.entries[manifest_key].binsha
 
         rw_repo.index.reset(rw_repo.head)
@@ -255,40 +254,40 @@ class TestIndex(TestBase):
         #############
         # Add a change with a NULL sha that should conflict with next_commit. We
         # pretend there was a change, but we do not even bother adding a proper
-        # sha for it ( which makes things faster of course )
+        # sha for it (which makes things faster of course).
         manifest_fake_entry = BaseIndexEntry((manifest_entry[0], b"\0" * 20, 0, manifest_entry[3]))
-        # try write flag
+        # Try write flag.
         self._assert_entries(rw_repo.index.add([manifest_fake_entry], write=False))
-        # add actually resolves the null-hex-sha for us as a feature, but we can
-        # edit the index manually
+        # Add actually resolves the null-hex-sha for us as a feature, but we can
+        # edit the index manually.
         assert rw_repo.index.entries[manifest_key].binsha != Object.NULL_BIN_SHA
-        # must operate on the same index for this ! Its a bit problematic as
-        # it might confuse people
+        # We must operate on the same index for this! It's a bit problematic as
+        # it might confuse people.
         index = rw_repo.index
         index.entries[manifest_key] = IndexEntry.from_base(manifest_fake_entry)
         index.write()
         self.assertEqual(rw_repo.index.entries[manifest_key].hexsha, Diff.NULL_HEX_SHA)
 
-        # write an unchanged index ( just for the fun of it )
+        # Write an unchanged index (just for the fun of it).
         rw_repo.index.write()
 
-        # a three way merge would result in a conflict and fails as the command will
+        # A three way merge would result in a conflict and fails as the command will
         # not overwrite any entries in our index and hence leave them unmerged. This is
-        # mainly a protection feature as the current index is not yet in a tree
+        # mainly a protection feature as the current index is not yet in a tree.
         self.assertRaises(GitCommandError, index.merge_tree, next_commit, base=parent_commit)
 
-        # the only way to get the merged entries is to safe the current index away into a tree,
-        # which is like a temporary commit for us. This fails as well as the NULL sha deos not
-        # have a corresponding object
-        # NOTE: missing_ok is not a kwarg anymore, missing_ok is always true
+        # The only way to get the merged entries is to safe the current index away into a tree,
+        # which is like a temporary commit for us. This fails as well as the NULL sha does not
+        # have a corresponding object.
+        # NOTE: missing_ok is not a kwarg anymore, missing_ok is always true.
         # self.assertRaises(GitCommandError, index.write_tree)
 
-        # if missing objects are okay, this would work though ( they are always okay now )
-        # As we can't read back the tree with NULL_SHA, we rather set it to something else
+        # If missing objects are okay, this would work though (they are always okay now).
+        # As we can't read back the tree with NULL_SHA, we rather set it to something else.
         index.entries[manifest_key] = IndexEntry(manifest_entry[:1] + (hex_to_bin("f" * 40),) + manifest_entry[2:])
         tree = index.write_tree()
 
-        # now make a proper three way merge with unmerged entries
+        # Now make a proper three way merge with unmerged entries.
         unmerged_tree = IndexFile.from_tree(rw_repo, parent_commit, tree, next_commit)
         unmerged_blobs = unmerged_tree.unmerged_blobs()
         self.assertEqual(len(unmerged_blobs), 1)
@@ -296,49 +295,49 @@ class TestIndex(TestBase):
 
     @with_rw_repo("0.1.6")
     def test_index_file_diffing(self, rw_repo):
-        # default Index instance points to our index
+        # Default Index instance points to our index.
         index = IndexFile(rw_repo)
         assert index.path is not None
         assert len(index.entries)
 
-        # write the file back
+        # Write the file back.
         index.write()
 
-        # could sha it, or check stats
+        # Could sha it, or check stats.
 
-        # test diff
-        # resetting the head will leave the index in a different state, and the
-        # diff will yield a few changes
+        # Test diff.
+        # Resetting the head will leave the index in a different state, and the
+        # diff will yield a few changes.
         cur_head_commit = rw_repo.head.reference.commit
         rw_repo.head.reset("HEAD~6", index=True, working_tree=False)
 
-        # diff against same index is 0
+        # Diff against same index is 0.
         diff = index.diff()
         self.assertEqual(len(diff), 0)
 
-        # against HEAD as string, must be the same as it matches index
+        # Against HEAD as string, must be the same as it matches index.
         diff = index.diff("HEAD")
         self.assertEqual(len(diff), 0)
 
-        # against previous head, there must be a difference
+        # Against previous head, there must be a difference.
         diff = index.diff(cur_head_commit)
         assert len(diff)
 
-        # we reverse the result
+        # We reverse the result.
         adiff = index.diff(str(cur_head_commit), R=True)
-        odiff = index.diff(cur_head_commit, R=False)  # now its not reversed anymore
+        odiff = index.diff(cur_head_commit, R=False)  # Now its not reversed anymore.
         assert adiff != odiff
-        self.assertEqual(odiff, diff)  # both unreversed diffs against HEAD
+        self.assertEqual(odiff, diff)  # Both unreversed diffs against HEAD.
 
-        # against working copy - its still at cur_commit
+        # Against working copy - it's still at cur_commit.
         wdiff = index.diff(None)
         assert wdiff != adiff
         assert wdiff != odiff
 
-        # against something unusual
+        # Against something unusual.
         self.assertRaises(ValueError, index.diff, int)
 
-        # adjust the index to match an old revision
+        # Adjust the index to match an old revision.
         cur_branch = rw_repo.active_branch
         cur_commit = cur_branch.commit
         rev_head_parent = "HEAD~1"
@@ -347,10 +346,10 @@ class TestIndex(TestBase):
         self.assertEqual(cur_branch, rw_repo.active_branch)
         self.assertEqual(cur_commit, rw_repo.head.commit)
 
-        # there must be differences towards the working tree which is in the 'future'
+        # There must be differences towards the working tree which is in the 'future'.
         assert index.diff(None)
 
-        # reset the working copy as well to current head,to pull 'back' as well
+        # Reset the working copy as well to current head, to pull 'back' as well.
         new_data = b"will be reverted"
         file_path = osp.join(rw_repo.working_tree_dir, "CHANGES")
         with open(file_path, "wb") as fp:
@@ -362,7 +361,7 @@ class TestIndex(TestBase):
         with open(file_path, "rb") as fp:
             assert fp.read() != new_data
 
-        # test full checkout
+        # Test full checkout.
         test_file = osp.join(rw_repo.working_tree_dir, "CHANGES")
         with open(test_file, "ab") as fd:
             fd.write(b"some data")
@@ -377,25 +376,25 @@ class TestIndex(TestBase):
         self._assert_fprogress([None])
         assert osp.isfile(test_file)
 
-        # individual file
+        # Individual file.
         os.remove(test_file)
         rval = index.checkout(test_file, fprogress=self._fprogress)
         self.assertEqual(list(rval)[0], "CHANGES")
         self._assert_fprogress([test_file])
         assert osp.exists(test_file)
 
-        # checking out non-existing file throws
+        # Checking out non-existing file throws.
         self.assertRaises(CheckoutError, index.checkout, "doesnt_exist_ever.txt.that")
         self.assertRaises(CheckoutError, index.checkout, paths=["doesnt/exist"])
 
-        # checkout file with modifications
+        # Check out file with modifications.
         append_data = b"hello"
         with open(test_file, "ab") as fp:
             fp.write(append_data)
         try:
             index.checkout(test_file)
         except CheckoutError as e:
-            # detailed exceptions are only possible in older git versions
+            # Detailed exceptions are only possible in older git versions.
             if rw_repo.git._version_info < (2, 29):
                 self.assertEqual(len(e.failed_files), 1)
                 self.assertEqual(e.failed_files[0], osp.basename(test_file))
@@ -408,19 +407,17 @@ class TestIndex(TestBase):
         else:
             raise AssertionError("Exception CheckoutError not thrown")
 
-        # if we force it it should work
+        # If we force it, it should work.
         index.checkout(test_file, force=True)
         assert not open(test_file, "rb").read().endswith(append_data)
 
-        # checkout directory
+        # Check out directory.
         rmtree(osp.join(rw_repo.working_tree_dir, "lib"))
         rval = index.checkout("lib")
         assert len(list(rval)) > 1
 
     def _count_existing(self, repo, files):
-        """
-        Returns count of files that actually exist in the repository directory.
-        """
+        """Return count of files that actually exist in the repository directory."""
         existing = 0
         basedir = repo.working_tree_dir
         for f in files:
@@ -443,8 +440,8 @@ class TestIndex(TestBase):
             writer.set_value("user", "email", umail)
         self.assertEqual(writer.get_value("user", "name"), uname)
 
-        # remove all of the files, provide a wild mix of paths, BaseIndexEntries,
-        # IndexEntries
+        # Remove all of the files, provide a wild mix of paths, BaseIndexEntries,
+        # IndexEntries.
         def mixed_iterator():
             count = 0
             for entry in index.entries.values():
@@ -468,29 +465,29 @@ class TestIndex(TestBase):
         self.assertEqual(self._count_existing(rw_repo, deleted_files), len(deleted_files))
         self.assertEqual(len(index.entries), 0)
 
-        # reset the index to undo our changes
+        # Reset the index to undo our changes.
         index.reset()
         self.assertEqual(len(index.entries), num_entries)
 
-        # remove with working copy
+        # Remove with working copy.
         deleted_files = index.remove(mixed_iterator(), working_tree=True)
         assert deleted_files
         self.assertEqual(self._count_existing(rw_repo, deleted_files), 0)
 
-        # reset everything
+        # Reset everything.
         index.reset(working_tree=True)
         self.assertEqual(self._count_existing(rw_repo, deleted_files), len(deleted_files))
 
-        # invalid type
+        # Invalid type.
         self.assertRaises(TypeError, index.remove, [1])
 
-        # absolute path
+        # Absolute path.
         deleted_files = index.remove([osp.join(rw_repo.working_tree_dir, "lib")], r=True)
         assert len(deleted_files) > 1
         self.assertRaises(ValueError, index.remove, ["/doesnt/exists"])
 
         # TEST COMMITTING
-        # commit changed index
+        # Commit changed index.
         cur_commit = cur_head.commit
         commit_message = "commit default head by Frèderic Çaufl€"
 
@@ -505,7 +502,7 @@ class TestIndex(TestBase):
         self.assertEqual(len(new_commit.parents), 1)
         self.assertEqual(cur_head.commit, cur_commit)
 
-        # commit with other actor
+        # Commit with other actor.
         cur_commit = cur_head.commit
 
         my_author = Actor("Frèderic Çaufl€", "author@example.com")
@@ -522,7 +519,7 @@ class TestIndex(TestBase):
         self.assertEqual(cur_head.commit, commit_actor)
         self.assertEqual(cur_head.log()[-1].actor, my_committer)
 
-        # commit with author_date and commit_date
+        # Commit with author_date and commit_date.
         cur_commit = cur_head.commit
         commit_message = "commit with dates by Avinash Sajjanshetty"
 
@@ -537,14 +534,14 @@ class TestIndex(TestBase):
         self.assertEqual(new_commit.authored_date, 1144447993)
         self.assertEqual(new_commit.committed_date, 1112911993)
 
-        # same index, no parents
+        # Same index, no parents.
         commit_message = "index without parents"
         commit_no_parents = index.commit(commit_message, parent_commits=[], head=True)
         self.assertEqual(commit_no_parents.message, commit_message)
         self.assertEqual(len(commit_no_parents.parents), 0)
         self.assertEqual(cur_head.commit, commit_no_parents)
 
-        # same index, multiple parents
+        # same index, multiple parents.
         commit_message = "Index with multiple parents\n    commit with another line"
         commit_multi_parent = index.commit(commit_message, parent_commits=(commit_no_parents, new_commit))
         self.assertEqual(commit_multi_parent.message, commit_message)
@@ -553,41 +550,41 @@ class TestIndex(TestBase):
         self.assertEqual(commit_multi_parent.parents[1], new_commit)
         self.assertEqual(cur_head.commit, commit_multi_parent)
 
-        # re-add all files in lib
-        # get the lib folder back on disk, but get an index without it
+        # Re-add all files in lib.
+        # Get the lib folder back on disk, but get an index without it.
         index.reset(new_commit.parents[0], working_tree=True).reset(new_commit, working_tree=False)
         lib_file_path = osp.join("lib", "git", "__init__.py")
         assert (lib_file_path, 0) not in index.entries
         assert osp.isfile(osp.join(rw_repo.working_tree_dir, lib_file_path))
 
-        # directory
+        # Directory.
         entries = index.add(["lib"], fprogress=self._fprogress_add)
         self._assert_entries(entries)
         self._assert_fprogress(entries)
         assert len(entries) > 1
 
-        # glob
+        # Glob.
         entries = index.reset(new_commit).add([osp.join("lib", "git", "*.py")], fprogress=self._fprogress_add)
         self._assert_entries(entries)
         self._assert_fprogress(entries)
         self.assertEqual(len(entries), 14)
 
-        # same file
+        # Same file.
         entries = index.reset(new_commit).add(
             [osp.join(rw_repo.working_tree_dir, "lib", "git", "head.py")] * 2,
             fprogress=self._fprogress_add,
         )
         self._assert_entries(entries)
         self.assertEqual(entries[0].mode & 0o644, 0o644)
-        # would fail, test is too primitive to handle this case
+        # Would fail, test is too primitive to handle this case.
         # self._assert_fprogress(entries)
         self._reset_progress()
         self.assertEqual(len(entries), 2)
 
-        # missing path
+        # Missing path.
         self.assertRaises(OSError, index.reset(new_commit).add, ["doesnt/exist/must/raise"])
 
-        # blob from older revision overrides current index revision
+        # Blob from older revision overrides current index revision.
         old_blob = new_commit.parents[0].tree.blobs[0]
         entries = index.reset(new_commit).add([old_blob], fprogress=self._fprogress_add)
         self._assert_entries(entries)
@@ -595,7 +592,7 @@ class TestIndex(TestBase):
         self.assertEqual(index.entries[(old_blob.path, 0)].hexsha, old_blob.hexsha)
         self.assertEqual(len(entries), 1)
 
-        # mode 0 not allowed
+        # Mode 0 not allowed.
         null_hex_sha = Diff.NULL_HEX_SHA
         null_bin_sha = b"\0" * 20
         self.assertRaises(
@@ -604,7 +601,7 @@ class TestIndex(TestBase):
             [BaseIndexEntry((0, null_bin_sha, 0, "doesntmatter"))],
         )
 
-        # add new file
+        # Add new file.
         new_file_relapath = "my_new_file"
         self._make_file(new_file_relapath, "hello world", rw_repo)
         entries = index.reset(new_commit).add(
@@ -616,7 +613,7 @@ class TestIndex(TestBase):
         self.assertEqual(len(entries), 1)
         self.assertNotEqual(entries[0].hexsha, null_hex_sha)
 
-        # add symlink
+        # Add symlink.
         if not is_win:
             for target in ("/etc/nonexisting", "/etc/passwd", "/etc"):
                 basename = "my_real_symlink"
@@ -630,17 +627,17 @@ class TestIndex(TestBase):
                 self.assertTrue(S_ISLNK(entries[0].mode))
                 self.assertTrue(S_ISLNK(index.entries[index.entry_key("my_real_symlink", 0)].mode))
 
-                # we expect only the target to be written
+                # We expect only the target to be written.
                 self.assertEqual(
                     index.repo.odb.stream(entries[0].binsha).read().decode("ascii"),
                     target,
                 )
 
                 os.remove(link_file)
-            # end for each target
+            # END for each target
         # END real symlink test
 
-        # add fake symlink and assure it checks-our as symlink
+        # Add fake symlink and assure it checks-our as symlink.
         fake_symlink_relapath = "my_fake_symlink"
         link_target = "/etc/that"
         fake_symlink_path = self._make_file(fake_symlink_relapath, link_target, rw_repo)
@@ -652,7 +649,7 @@ class TestIndex(TestBase):
         self.assertEqual(len(entries), 1)
         self.assertTrue(S_ISLNK(entries[0].mode))
 
-        # assure this also works with an alternate method
+        # Check that this also works with an alternate method.
         full_index_entry = IndexEntry.from_base(BaseIndexEntry((0o120000, entries[0].binsha, 0, entries[0].path)))
         entry_key = index.entry_key(full_index_entry)
         index.reset(new_commit)
@@ -660,24 +657,24 @@ class TestIndex(TestBase):
         assert entry_key not in index.entries
         index.entries[entry_key] = full_index_entry
         index.write()
-        index.update()  # force reread of entries
+        index.update()  # Force reread of entries.
         new_entry = index.entries[entry_key]
         assert S_ISLNK(new_entry.mode)
 
-        # a tree created from this should contain the symlink
+        # A tree created from this should contain the symlink.
         tree = index.write_tree()
         assert fake_symlink_relapath in tree
-        index.write()  # flush our changes for the checkout
+        index.write()  # Flush our changes for the checkout.
 
-        # checkout the fakelink, should be a link then
+        # Check out the fake link, should be a link then.
         assert not S_ISLNK(os.stat(fake_symlink_path)[ST_MODE])
         os.remove(fake_symlink_path)
         index.checkout(fake_symlink_path)
 
-        # on windows we will never get symlinks
+        # On Windows, we will never get symlinks.
         if is_win:
-            # simlinks should contain the link as text ( which is what a
-            # symlink actually is )
+            # Symlinks should contain the link as text (which is what a
+            # symlink actually is).
             with open(fake_symlink_path, "rt") as fd:
                 self.assertEqual(fd.read(), link_target)
         else:
@@ -692,24 +689,24 @@ class TestIndex(TestBase):
         # END move assertion utility
 
         self.assertRaises(ValueError, index.move, ["just_one_path"])
-        # file onto existing file
+        # Try to move a file onto an existing file.
         files = ["AUTHORS", "LICENSE"]
         self.assertRaises(GitCommandError, index.move, files)
 
-        # again, with force
+        # Again, with force.
         assert_mv_rval(index.move(files, f=True))
 
-        # files into directory - dry run
+        # Move files into a directory - dry run.
         paths = ["LICENSE", "VERSION", "doc"]
         rval = index.move(paths, dry_run=True)
         self.assertEqual(len(rval), 2)
         assert osp.exists(paths[0])
 
-        # again, no dry run
+        # Again, no dry run.
         rval = index.move(paths)
         assert_mv_rval(rval)
 
-        # dir into dir
+        # Move dir into dir.
         rval = index.move(["doc", "test"])
         assert_mv_rval(rval)
 
@@ -725,7 +722,7 @@ class TestIndex(TestBase):
         # END rewriter
 
         def make_paths():
-            # two existing ones, one new one
+            """Help out the test by yielding two existing paths and one new path."""
             yield "CHANGES"
             yield "ez_setup.py"
             yield index.entries[index.entry_key("README", 0)]
@@ -766,12 +763,12 @@ class TestIndex(TestBase):
         for fkey in keys:
             assert fkey in index.entries
 
-        # just the index
+        # Just the index.
         index.reset(paths=(arela, afile))
         assert akey not in index.entries
         assert bkey in index.entries
 
-        # now with working tree - files on disk as well as entries must be recreated
+        # Now with working tree - files on disk as well as entries must be recreated.
         rw_repo.head.commit = nc
         for absfile in absfiles:
             os.remove(absfile)
@@ -785,8 +782,8 @@ class TestIndex(TestBase):
 
     @with_rw_repo("HEAD")
     def test_compare_write_tree(self, rw_repo):
-        # write all trees and compare them
-        # its important to have a few submodules in there too
+        """Test writing all trees, comparing them for equality."""
+        # It's important to have a few submodules in there too.
         max_count = 25
         count = 0
         for commit in rw_repo.head.commit.traverse():
@@ -847,7 +844,7 @@ class TestIndex(TestBase):
 
     @with_rw_directory
     def test_add_utf8P_path(self, rw_dir):
-        # NOTE: fp is not a Unicode object in python 2 (which is the source of the problem)
+        # NOTE: fp is not a Unicode object in Python 2 (which is the source of the problem).
         fp = osp.join(rw_dir, "ø.txt")
         with open(fp, "wb") as fs:
             fs.write("content of ø".encode("utf-8"))
@@ -858,7 +855,7 @@ class TestIndex(TestBase):
 
     @with_rw_directory
     def test_add_a_file_with_wildcard_chars(self, rw_dir):
-        # see issue #407
+        # See issue #407.
         fp = osp.join(rw_dir, "[.exe")
         with open(fp, "wb") as f:
             f.write(b"something")
@@ -870,7 +867,7 @@ class TestIndex(TestBase):
     def test__to_relative_path_at_root(self):
         root = osp.abspath(os.sep)
 
-        class Mocked(object):
+        class Mocked:
             bare = False
             git_dir = root
             working_tree_dir = root

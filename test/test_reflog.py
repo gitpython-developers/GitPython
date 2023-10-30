@@ -26,7 +26,7 @@ class TestRefLog(TestBase):
         assert e.time[1] == 1
         assert e.message == msg
 
-        # check representation (roughly)
+        # Check representation (roughly).
         assert repr(e).startswith(nullhexsha)
 
     def test_base(self):
@@ -38,27 +38,27 @@ class TestRefLog(TestBase):
         rlp_master_ro = RefLog.path(self.rorepo.head)
         assert osp.isfile(rlp_master_ro)
 
-        # simple read
+        # Simple read.
         reflog = RefLog.from_file(rlp_master_ro)
         assert reflog._path is not None
         assert isinstance(reflog, RefLog)
         assert len(reflog)
 
-        # iter_entries works with path and with stream
+        # iter_entries works with path and with stream.
         assert len(list(RefLog.iter_entries(open(rlp_master, "rb"))))
         assert len(list(RefLog.iter_entries(rlp_master)))
 
-        # raise on invalid revlog
-        # TODO: Try multiple corrupted ones !
+        # Raise on invalid revlog.
+        # TODO: Try multiple corrupted ones!
         pp = "reflog_invalid_"
         for suffix in ("oldsha", "newsha", "email", "date", "sep"):
             self.assertRaises(ValueError, RefLog.from_file, fixture_path(pp + suffix))
         # END for each invalid file
 
-        # cannot write an uninitialized reflog
+        # Cannot write an uninitialized reflog.
         self.assertRaises(ValueError, RefLog().write)
 
-        # test serialize and deserialize - results must match exactly
+        # Test serialize and deserialize - results must match exactly.
         binsha = hex_to_bin(("f" * 40).encode("ascii"))
         msg = "my reflog message"
         cr = self.rorepo.config_reader()
@@ -68,33 +68,33 @@ class TestRefLog(TestBase):
             reflog.to_file(tfile)
             assert reflog.write() is reflog
 
-            # parsed result must match ...
+            # Parsed result must match...
             treflog = RefLog.from_file(tfile)
             assert treflog == reflog
 
-            # ... as well as each bytes of the written stream
+            # ...as well as each bytes of the written stream.
             assert open(tfile).read() == open(rlp).read()
 
-            # append an entry
+            # Append an entry.
             entry = RefLog.append_entry(cr, tfile, IndexObject.NULL_BIN_SHA, binsha, msg)
             assert entry.oldhexsha == IndexObject.NULL_HEX_SHA
             assert entry.newhexsha == "f" * 40
             assert entry.message == msg
             assert RefLog.from_file(tfile)[-1] == entry
 
-            # index entry
-            # raises on invalid index
+            # Index entry.
+            # Raises on invalid index.
             self.assertRaises(IndexError, RefLog.entry_at, rlp, 10000)
 
-            # indices can be positive ...
+            # Indices can be positive...
             assert isinstance(RefLog.entry_at(rlp, 0), RefLogEntry)
             RefLog.entry_at(rlp, 23)
 
-            # ... and negative
+            # ...and negative.
             for idx in (-1, -24):
                 RefLog.entry_at(rlp, idx)
             # END for each index to read
         # END for each reflog
 
-        # finally remove our temporary data
+        # Finally remove our temporary data.
         rmtree(tdir)

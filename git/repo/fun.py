@@ -1,5 +1,7 @@
-"""Package with general repository related functions"""
+"""Module with general repository-related functions."""
+
 from __future__ import annotations
+
 import os
 import stat
 from pathlib import Path
@@ -116,7 +118,7 @@ def find_submodule_git_dir(d: "PathLike") -> Optional["PathLike"]:
             if not osp.isabs(path):
                 path = osp.normpath(osp.join(osp.dirname(d), path))
             return find_submodule_git_dir(path)
-    # end handle exception
+    # END handle exception
     return None
 
 

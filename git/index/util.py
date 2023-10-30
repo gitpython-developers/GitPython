@@ -1,4 +1,5 @@
-"""Module containing index utilities"""
+"""Module containing index utilities."""
+
 from functools import wraps
 import os
 import struct
@@ -32,8 +33,7 @@ unpack = struct.unpack
 # } END aliases
 
 
-class TemporaryFileSwap(object):
-
+class TemporaryFileSwap:
     """Utility class moving a file to a temporary location within the same directory
     and moving it back on to where on object deletion."""
 
@@ -42,7 +42,7 @@ class TemporaryFileSwap(object):
     def __init__(self, file_path: PathLike) -> None:
         self.file_path = file_path
         self.tmp_file_path = str(self.file_path) + tempfile.mktemp("", "", "")
-        # it may be that the source does not exist
+        # It may be that the source does not exist.
         try:
             os.rename(self.file_path, self.tmp_file_path)
         except OSError:
@@ -90,9 +90,11 @@ def post_clear_cache(func: Callable[..., _T]) -> Callable[..., _T]:
 
 
 def default_index(func: Callable[..., _T]) -> Callable[..., _T]:
-    """Decorator assuring the wrapped method may only run if we are the default
-    repository index. This is as we rely on git commands that operate
-    on that index only."""
+    """Decorator ensuring the wrapped method may only run if we are the default
+    repository index.
+
+    This is as we rely on git commands that operate on that index only.
+    """
 
     @wraps(func)
     def check_default_index(self: "IndexFile", *args: Any, **kwargs: Any) -> _T:
@@ -109,7 +111,7 @@ def default_index(func: Callable[..., _T]) -> Callable[..., _T]:
 
 def git_working_dir(func: Callable[..., _T]) -> Callable[..., _T]:
     """Decorator which changes the current working dir to the one of the git
-    repository in order to assure relative paths are handled correctly"""
+    repository in order to ensure relative paths are handled correctly."""
 
     @wraps(func)
     def set_git_working_dir(self: "IndexFile", *args: Any, **kwargs: Any) -> _T:

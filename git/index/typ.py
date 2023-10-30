@@ -1,4 +1,4 @@
-"""Module with additional types used by the index"""
+"""Module with additional types used by the index."""
 
 from binascii import b2a_hex
 from pathlib import Path
@@ -32,8 +32,7 @@ CE_STAGESHIFT = 12
 # } END invariants
 
 
-class BlobFilter(object):
-
+class BlobFilter:
     """
     Predicate to be used by iter_blobs allowing to filter only return blobs which
     match the given list of directories or files.
@@ -41,12 +40,12 @@ class BlobFilter(object):
     The given paths are given relative to the repository.
     """
 
-    __slots__ = "paths"
+    __slots__ = ("paths",)
 
     def __init__(self, paths: Sequence[PathLike]) -> None:
         """
         :param paths:
-            tuple or list of paths which are either pointing to directories or
+            Tuple or list of paths which are either pointing to directories or
             to files relative to the current repository
         """
         self.paths = paths
@@ -84,8 +83,7 @@ class BaseIndexEntryHelper(NamedTuple):
 
 
 class BaseIndexEntry(BaseIndexEntryHelper):
-
-    """Small Brother of an index entry which can be created to describe changes
+    """Small brother of an index entry which can be created to describe changes
     done to the index in which case plenty of additional information is not required.
 
     As the first 4 data members match exactly to the IndexEntry type, methods
@@ -138,25 +136,26 @@ class BaseIndexEntry(BaseIndexEntryHelper):
 
 
 class IndexEntry(BaseIndexEntry):
-
     """Allows convenient access to IndexEntry data without completely unpacking it.
 
-    Attributes usully accessed often are cached in the tuple whereas others are
+    Attributes usually accessed often are cached in the tuple whereas others are
     unpacked on demand.
 
-    See the properties for a mapping between names and tuple indices."""
+    See the properties for a mapping between names and tuple indices.
+    """
 
     @property
     def ctime(self) -> Tuple[int, int]:
         """
         :return:
             Tuple(int_time_seconds_since_epoch, int_nano_seconds) of the
-            file's creation time"""
+            file's creation time
+        """
         return cast(Tuple[int, int], unpack(">LL", self.ctime_bytes))
 
     @property
     def mtime(self) -> Tuple[int, int]:
-        """See ctime property, but returns modification time"""
+        """See ctime property, but returns modification time."""
         return cast(Tuple[int, int], unpack(">LL", self.mtime_bytes))
 
     @classmethod
@@ -164,9 +163,10 @@ class IndexEntry(BaseIndexEntry):
         """
         :return:
             Minimal entry as created from the given BaseIndexEntry instance.
-            Missing values will be set to null-like values
+            Missing values will be set to null-like values.
 
-        :param base: Instance of type BaseIndexEntry"""
+        :param base: Instance of type :class:`BaseIndexEntry`
+        """
         time = pack(">LL", 0, 0)
         return IndexEntry((base.mode, base.binsha, base.flags, base.path, time, time, 0, 0, 0, 0, 0))
 

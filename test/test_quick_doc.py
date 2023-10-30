@@ -28,7 +28,7 @@ class QuickDoc(TestBase):
     def test_cloned_repo_object(self, local_dir):
         from git import Repo
 
-        # code to clone from url
+        # Code to clone from url
         # [1-test_cloned_repo_object]
         # $ git clone <url> <local_dir>
 
@@ -37,7 +37,7 @@ class QuickDoc(TestBase):
         repo = Repo.clone_from(repo_url, local_dir)
         # ![1-test_cloned_repo_object]
 
-        # code to add files
+        # Code to add files
         # [2-test_cloned_repo_object]
         # We must make a change to a file so that we can add the update to git
 
@@ -52,7 +52,7 @@ class QuickDoc(TestBase):
         repo.index.add(add_file)  # notice the add function requires a list of paths
         # ![3-test_cloned_repo_object]
 
-        # code to commit - not sure how to test this
+        # Code to commit - not sure how to test this
         # [4-test_cloned_repo_object]
         # $ git commit -m <message>
         repo.index.commit("Update to file2")
@@ -61,8 +61,8 @@ class QuickDoc(TestBase):
         # [5-test_cloned_repo_object]
         # $ git log <file>
 
-        # relative path from git root
-        repo.iter_commits(all=True, max_count=10, paths=update_file)  # gets the last 10 commits from all branches
+        # Relative path from git root
+        repo.iter_commits(all=True, max_count=10, paths=update_file)  # Gets the last 10 commits from all branches.
 
         # Outputs: <generator object Commit._iter_from_process_or_stream at 0x7fb66c186cf0>
 
@@ -79,7 +79,7 @@ class QuickDoc(TestBase):
 
         # Untracked files - create new file
         # [7-test_cloned_repo_object]
-        f = open(f"{local_dir}/untracked.txt", "w")  # creates an empty file
+        f = open(f"{local_dir}/untracked.txt", "w")  # Creates an empty file.
         f.close()
         # ![7-test_cloned_repo_object]
 
@@ -90,14 +90,14 @@ class QuickDoc(TestBase):
 
         # Modified files
         # [9-test_cloned_repo_object]
-        # Let's modify one of our tracked files
+        # Let's modify one of our tracked files.
 
         with open(f"{local_dir}/Downloads/file3.txt", "w") as f:
-            f.write("file3 version 2")  # overwrite file 3
+            f.write("file3 version 2")  # Overwrite file 3.
         # ![9-test_cloned_repo_object]
 
         # [10-test_cloned_repo_object]
-        repo.index.diff(None)  # compares staging area to working directory
+        repo.index.diff(None)  # Compares staging area to working directory.
 
         # Output: [<git.diff.Diff object at 0x7fb66c076e50>,
         # <git.diff.Diff object at 0x7fb66c076ca0>]
@@ -112,7 +112,7 @@ class QuickDoc(TestBase):
         # Downloads/file3.txt
         # ![11-test_cloned_repo_object]
 
-        # compares staging area to head commit
+        # Compares staging area to head commit
         # [11.1-test_cloned_repo_object]
         diffs = repo.index.diff(repo.head.commit)
         for d in diffs:
@@ -122,7 +122,7 @@ class QuickDoc(TestBase):
 
         # ![11.1-test_cloned_repo_object]
         # [11.2-test_cloned_repo_object]
-        # lets add untracked.txt
+        # Let's add untracked.txt.
         repo.index.add(["untracked.txt"])
         diffs = repo.index.diff(repo.head.commit)
         for d in diffs:
@@ -152,7 +152,7 @@ class QuickDoc(TestBase):
 
         # Previous commit tree
         # [13-test_cloned_repo_object]
-        prev_commits = list(repo.iter_commits(all=True, max_count=10))  # last 10 commits from all branches
+        prev_commits = list(repo.iter_commits(all=True, max_count=10))  # Last 10 commits from all branches.
         tree = prev_commits[0].tree
         # ![13-test_cloned_repo_object]
 
@@ -191,29 +191,29 @@ class QuickDoc(TestBase):
         # Printing text files
         # [17-test_cloned_repo_object]
         print_file = "dir1/file2.txt"
-        tree[print_file]  # the head commit tree
+        tree[print_file]  # The head commit tree.
 
         # Output <git.Blob "SHA1-HEX-HASH">
         # ![17-test_cloned_repo_object]
 
-        # print latest file
+        # Print latest file
         # [18-test_cloned_repo_object]
         blob = tree[print_file]
         print(blob.data_stream.read().decode())
 
         # Output
-        # file 2 version 1
+        # File 2 version 1
         # Update version 2
         # ![18-test_cloned_repo_object]
 
-        # print previous tree
+        # Print previous tree
         # [18.1-test_cloned_repo_object]
         commits_for_file = list(repo.iter_commits(all=True, paths=print_file))
-        tree = commits_for_file[-1].tree  # gets the first commit tree
+        tree = commits_for_file[-1].tree  # Gets the first commit tree.
         blob = tree[print_file]
 
         print(blob.data_stream.read().decode())
 
         # Output
-        # file 2 version 1
+        # File 2 version 1
         # ![18.1-test_cloned_repo_object]

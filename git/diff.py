@@ -50,10 +50,10 @@ Lit_change_type = Literal["A", "D", "C", "M", "R", "T", "U"]
 
 __all__ = ("Diffable", "DiffIndex", "Diff", "NULL_TREE")
 
-# Special object to compare against the empty tree in diffs
+# Special object to compare against the empty tree in diffs.
 NULL_TREE = object()
 
-_octal_byte_re = re.compile(b"\\\\([0-9]{3})")
+_octal_byte_re = re.compile(rb"\\([0-9]{3})")
 
 
 def _octal_repl(matchobj: Match) -> bytes:
@@ -79,28 +79,29 @@ def decode_path(path: bytes, has_ab_prefix: bool = True) -> Optional[bytes]:
     return path
 
 
-class Diffable(object):
-
-    """Common interface for all object that can be diffed against another object of compatible type.
+class Diffable:
+    """Common interface for all objects that can be diffed against another object of
+    compatible type.
 
     :note:
-        Subclasses require a repo member as it is the case for Object instances, for practical
-        reasons we do not derive from Object."""
+        Subclasses require a repo member as it is the case for Object instances, for
+        practical reasons we do not derive from Object.
+    """
 
     __slots__ = ()
 
-    # standin indicating you want to diff against the index
-    class Index(object):
-        pass
+    class Index:
+        """Stand-in indicating you want to diff against the index."""
 
     def _process_diff_args(
         self, args: List[Union[str, "Diffable", Type["Diffable.Index"], object]]
     ) -> List[Union[str, "Diffable", Type["Diffable.Index"], object]]:
         """
         :return:
-            possibly altered version of the given args list.
-            Method is called right before git command execution.
-            Subclasses can use it to alter the behaviour of the superclass"""
+            Possibly altered version of the given args list.
+            This method is called right before git command execution.
+            Subclasses can use it to alter the behaviour of the superclass.
+        """
         return args
 
     def diff(
@@ -110,41 +111,45 @@ class Diffable(object):
         create_patch: bool = False,
         **kwargs: Any,
     ) -> "DiffIndex":
-        """Creates diffs between two items being trees, trees and index or an
-        index and the working tree. It will detect renames automatically.
+        """Create diffs between two items being trees, trees and index or an
+        index and the working tree. Detects renames automatically.
 
         :param other:
-            Is the item to compare us with.
-            If None, we will be compared to the working tree.
-            If Treeish, it will be compared against the respective tree
-            If Index ( type ), it will be compared against the index.
-            If git.NULL_TREE, it will compare against the empty tree.
-            It defaults to Index to assure the method will not by-default fail
-            on bare repositories.
+            This the item to compare us with.
+
+            * If None, we will be compared to the working tree.
+            * If :class:`~git.index.base.Treeish`, it will be compared against the
+              respective tree.
+            * If :class:`~Diffable.Index`, it will be compared against the index.
+            * If :attr:`git.NULL_TREE`, it will compare against the empty tree.
+            * It defaults to :class:`~Diffable.Index` so that the method will not by
+              default fail on bare repositories.
 
         :param paths:
-            is a list of paths or a single path to limit the diff to.
-            It will only include at least one of the given path or paths.
+            This a list of paths or a single path to limit the diff to. It will only
+            include at least one of the given path or paths.
 
         :param create_patch:
-            If True, the returned Diff contains a detailed patch that if applied
-            makes the self to other. Patches are somewhat costly as blobs have to be read
-            and diffed.
+            If True, the returned :class:`Diff` contains a detailed patch that if
+            applied makes the self to other. Patches are somewhat costly as blobs have
+            to be read and diffed.
 
         :param kwargs:
-            Additional arguments passed to git-diff, such as
-            R=True to swap both sides of the diff.
+            Additional arguments passed to git-diff, such as ``R=True`` to swap both
+            sides of the diff.
 
         :return: git.DiffIndex
 
         :note:
-            On a bare repository, 'other' needs to be provided as Index or as
-            as Tree/Commit, or a git command error will occur"""
+            On a bare repository, 'other' needs to be provided as
+            :class:`~Diffable.Index`, or as :class:`~git.objects.tree.Tree` or
+            :class:`~git.objects.commit.Commit`, or a git command error will occur.
+        """
         args: List[Union[PathLike, Diffable, Type["Diffable.Index"], object]] = []
-        args.append("--abbrev=40")  # we need full shas
-        args.append("--full-index")  # get full index paths, not only filenames
+        args.append("--abbrev=40")  # We need full shas.
+        args.append("--full-index")  # Get full index paths, not only filenames.
 
-        # remove default '-M' arg (check for renames) if user is overriding it
+        # Remove default '-M' arg (check for renames) if user is overriding it.
         if not any(x in kwargs for x in ("find_renames", "no_renames", "M")):
             args.append("-M")
 
@@ -154,8 +159,8 @@ class Diffable(object):
             args.append("--raw")
             args.append("-z")
 
-        # in any way, assure we don't see colored output,
-        # fixes https://github.com/gitpython-developers/GitPython/issues/172
+        # Ensure we never see colored output.
+        # Fixes: https://github.com/gitpython-developers/GitPython/issues/172
         args.append("--no-color")
 
         if paths is not None and not isinstance(paths, (tuple, list)):
@@ -168,17 +173,17 @@ class Diffable(object):
         if other is self.Index:
             args.insert(0, "--cached")
         elif other is NULL_TREE:
-            args.insert(0, "-r")  # recursive diff-tree
+            args.insert(0, "-r")  # Recursive diff-tree.
             args.insert(0, "--root")
             diff_cmd = self.repo.git.diff_tree
         elif other is not None:
-            args.insert(0, "-r")  # recursive diff-tree
+            args.insert(0, "-r")  # Recursive diff-tree.
             args.insert(0, other)
             diff_cmd = self.repo.git.diff_tree
 
         args.insert(0, self)
 
-        # paths is list here or None
+        # paths is list here, or None.
         if paths:
             args.append("--")
             args.extend(paths)
@@ -198,13 +203,13 @@ T_Diff = TypeVar("T_Diff", bound="Diff")
 
 
 class DiffIndex(List[T_Diff]):
+    """An Index for diffs, allowing a list of Diffs to be queried by the diff
+    properties.
 
-    """Implements an Index for diffs, allowing a list of Diffs to be queried by
-    the diff properties.
+    The class improves the diff handling convenience.
+    """
 
-    The class improves the diff handling convenience"""
-
-    # change type invariant identifying possible ways a blob can have changed
+    # Change type invariant identifying possible ways a blob can have changed:
     # A = Added
     # D = Deleted
     # R = Renamed
@@ -215,10 +220,10 @@ class DiffIndex(List[T_Diff]):
     def iter_change_type(self, change_type: Lit_change_type) -> Iterator[T_Diff]:
         """
         :return:
-            iterator yielding Diff instances that match the given change_type
+            Iterator yielding :class:`Diff` instances that match the given `change_type`
 
         :param change_type:
-            Member of DiffIndex.change_type, namely:
+            Member of :attr:`DiffIndex.change_type`, namely:
 
             * 'A' for added paths
             * 'D' for deleted paths
@@ -245,12 +250,11 @@ class DiffIndex(List[T_Diff]):
         # END for each diff
 
 
-class Diff(object):
-
+class Diff:
     """A Diff contains diff information between two Trees.
 
     It contains two sides a and b of the diff, members are prefixed with
-    "a" and "b" respectively to inidcate that.
+    "a" and "b" respectively to indicate that.
 
     Diffs keep information about the changed blob objects, the file mode, renames,
     deletions and new files.
@@ -273,11 +277,13 @@ class Diff(object):
 
         When comparing to working trees, the working tree blob will have a null hexsha
         as a corresponding object does not yet exist. The mode will be null as well.
-        But the path will be available though.
-        If it is listed in a diff the working tree version of the file must
-        be different to the version in the index or tree, and hence has been modified."""
+        The path will be available, though.
 
-    # precompiled regex
+        If it is listed in a diff, the working tree version of the file must
+        differ from the version in the index or tree, and hence has been modified.
+    """
+
+    # Precompiled regex.
     re_header = re.compile(
         rb"""
                                 ^diff[ ]--git
@@ -299,7 +305,8 @@ class Diff(object):
                             """,
         re.VERBOSE | re.MULTILINE,
     )
-    # can be used for comparisons
+
+    # These can be used for comparisons.
     NULL_HEX_SHA = "0" * 40
     NULL_BIN_SHA = b"\0" * 20
 
@@ -346,8 +353,8 @@ class Diff(object):
         self.a_mode = mode_str_to_int(a_mode) if a_mode else None
         self.b_mode = mode_str_to_int(b_mode) if b_mode else None
 
-        # Determine whether this diff references a submodule, if it does then
-        # we need to overwrite "repo" to the corresponding submodule's repo instead
+        # Determine whether this diff references a submodule. If it does then
+        # we need to overwrite "repo" to the corresponding submodule's repo instead.
         if repo and a_rawpath:
             for submodule in repo.submodules:
                 if submodule.path == a_rawpath.decode(defenc, "replace"):
@@ -371,7 +378,7 @@ class Diff(object):
         self.deleted_file: bool = deleted_file
         self.copied_file: bool = copied_file
 
-        # be clear and use None instead of empty strings
+        # Be clear and use None instead of empty strings.
         assert raw_rename_from is None or isinstance(raw_rename_from, bytes)
         assert raw_rename_to is None or isinstance(raw_rename_to, bytes)
         self.raw_rename_from = raw_rename_from or None
@@ -395,15 +402,15 @@ class Diff(object):
         return hash(tuple(getattr(self, n) for n in self.__slots__))
 
     def __str__(self) -> str:
-        h: str = "%s"
+        h = "%s"
         if self.a_blob:
             h %= self.a_blob.path
         elif self.b_blob:
             h %= self.b_blob.path
 
-        msg: str = ""
-        line = None  # temp line
-        line_length = 0  # line length
+        msg = ""
+        line = None
+        line_length = 0
         for b, n in zip((self.a_blob, self.b_blob), ("lhs", "rhs")):
             if b:
                 line = "\n%s: %o | %s" % (n, b.mode, b.hexsha)
@@ -414,7 +421,7 @@ class Diff(object):
             msg += line
         # END for each blob
 
-        # add headline
+        # Add headline.
         h += "\n" + "=" * line_length
 
         if self.deleted_file:
@@ -433,15 +440,11 @@ class Diff(object):
                 msg += self.diff.decode(defenc) if isinstance(self.diff, bytes) else self.diff
             except UnicodeDecodeError:
                 msg += "OMITTED BINARY DATA"
-            # end handle encoding
+            # END handle encoding
             msg += "\n---"
         # END diff info
 
-        # Python2 silliness: have to assure we convert our likely to be unicode object to a string with the
-        # right encoding. Otherwise it tries to convert it using ascii, which may fail ungracefully
-        res = h + msg
-        # end
-        return res
+        return h + msg
 
     @property
     def a_path(self) -> Optional[str]:
@@ -461,14 +464,17 @@ class Diff(object):
 
     @property
     def renamed(self) -> bool:
-        """:returns: True if the blob of our diff has been renamed
-        :note: This property is deprecated, please use ``renamed_file`` instead.
+        """
+        :return: True if the blob of our diff has been renamed
+
+        :note: This property is deprecated.
+            Please use the :attr:`renamed_file` property instead.
         """
         return self.renamed_file
 
     @property
     def renamed_file(self) -> bool:
-        """:returns: True if the blob of our diff has been renamed"""
+        """:return: True if the blob of our diff has been renamed"""
         return self.rename_from != self.rename_to
 
     @classmethod
@@ -486,22 +492,24 @@ class Diff(object):
 
     @classmethod
     def _index_from_patch_format(cls, repo: "Repo", proc: Union["Popen", "Git.AutoInterrupt"]) -> DiffIndex:
-        """Create a new DiffIndex from the given text which must be in patch format
-        :param repo: is the repository we are operating on - it is required
-        :param stream: result of 'git diff' as a stream (supporting file protocol)
-        :return: git.DiffIndex"""
+        """Create a new DiffIndex from the given process output which must be in patch format.
 
-        ## FIXME: Here SLURPING raw, need to re-phrase header-regexes linewise.
+        :param repo: The repository we are operating on
+        :param proc: ``git diff`` process to read from (supports :class:`Git.AutoInterrupt` wrapper)
+        :return: git.DiffIndex
+        """
+
+        # FIXME: Here SLURPING raw, need to re-phrase header-regexes linewise.
         text_list: List[bytes] = []
         handle_process_output(proc, text_list.append, None, finalize_process, decode_streams=False)
 
-        # for now, we have to bake the stream
+        # For now, we have to bake the stream.
         text = b"".join(text_list)
         index: "DiffIndex" = DiffIndex()
         previous_header: Union[Match[bytes], None] = None
         header: Union[Match[bytes], None] = None
-        a_path, b_path = None, None  # for mypy
-        a_mode, b_mode = None, None  # for mypy
+        a_path, b_path = None, None  # For mypy.
+        a_mode, b_mode = None, None  # For mypy.
         for _header in cls.re_header.finditer(text):
             (
                 a_path_fallback,
@@ -530,13 +538,13 @@ class Diff(object):
             b_path = cls._pick_best_path(b_path, rename_to, b_path_fallback)
 
             # Our only means to find the actual text is to see what has not been matched by our regex,
-            # and then retro-actively assign it to our index
+            # and then retro-actively assign it to our index.
             if previous_header is not None:
                 index[-1].diff = text[previous_header.end() : _header.start()]
-            # end assign actual diff
+            # END assign actual diff
 
-            # Make sure the mode is set if the path is set. Otherwise the resulting blob is invalid
-            # We just use the one mode we should have parsed
+            # Make sure the mode is set if the path is set. Otherwise the resulting blob is invalid.
+            # We just use the one mode we should have parsed.
             a_mode = old_mode or deleted_file_mode or (a_path and (b_mode or new_mode or new_file_mode))
             b_mode = b_mode or new_mode or new_file_mode or (b_path and a_mode)
             index.append(
@@ -561,10 +569,10 @@ class Diff(object):
 
             previous_header = _header
             header = _header
-        # end for each header we parse
+        # END for each header we parse
         if index and header:
             index[-1].diff = text[header.end() :]
-        # end assign last diff
+        # END assign last diff
 
         return index
 
@@ -577,7 +585,7 @@ class Diff(object):
 
         for line in lines.split("\x00:"):
             if not line:
-                # The line data is empty, skip
+                # The line data is empty, skip.
                 continue
             meta, _, path = line.partition("\x00")
             path = path.rstrip("\x00")
@@ -601,7 +609,7 @@ class Diff(object):
             rename_to = None
 
             # NOTE: We cannot conclude from the existence of a blob to change type
-            # as diffs with the working do not have blobs yet
+            # as diffs with the working do not have blobs yet.
             if change_type == "D":
                 b_blob_id = None  # Optional[str]
                 deleted_file = True
@@ -619,7 +627,7 @@ class Diff(object):
                 b_path = b_path_str.encode(defenc)
                 rename_from, rename_to = a_path, b_path
             elif change_type == "T":
-                # Nothing to do
+                # Nothing to do.
                 pass
             # END add/remove handling
 
@@ -644,8 +652,12 @@ class Diff(object):
 
     @classmethod
     def _index_from_raw_format(cls, repo: "Repo", proc: "Popen") -> "DiffIndex":
-        """Create a new DiffIndex from the given stream which must be in raw format.
-        :return: git.DiffIndex"""
+        """Create a new DiffIndex from the given process output which must be in raw format.
+
+        :param repo: The repository we are operating on
+        :param proc: Process to read output from
+        :return: git.DiffIndex
+        """
         # handles
         # :100644 100644 687099101... 37c5e30c8... M    .gitignore
 

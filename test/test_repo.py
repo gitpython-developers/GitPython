@@ -1,9 +1,9 @@
-# -*- coding: utf-8 -*-
 # test_repo.py
 # Copyright (C) 2008, 2009 Michael Trier (mtrier@gmail.com) and contributors
 #
 # This module is part of GitPython and is released under
 # the BSD License: https://opensource.org/license/bsd-3-clause/
+
 import glob
 import io
 from io import BytesIO
@@ -163,28 +163,29 @@ class TestRepo(TestBase):
         self.assertEqual(num_trees, mc)
 
     def _assert_empty_repo(self, repo):
-        # test all kinds of things with an empty, freshly initialized repo.
-        # It should throw good errors
+        """Test all kinds of things with an empty, freshly initialized repo.
 
-        # entries should be empty
+        It should throw good errors.
+        """
+        # Entries should be empty.
         self.assertEqual(len(repo.index.entries), 0)
 
-        # head is accessible
+        # head is accessible.
         assert repo.head
         assert repo.head.ref
         assert not repo.head.is_valid()
 
-        # we can change the head to some other ref
+        # We can change the head to some other ref.
         head_ref = Head.from_path(repo, Head.to_full_path("some_head"))
         assert not head_ref.is_valid()
         repo.head.ref = head_ref
 
-        # is_dirty can handle all kwargs
+        # is_dirty can handle all kwargs.
         for args in ((1, 0, 0), (0, 1, 0), (0, 0, 1)):
             assert not repo.is_dirty(*args)
         # END for each arg
 
-        # we can add a file to the index ( if we are not bare )
+        # We can add a file to the index (if we are not bare).
         if not repo.bare:
             pass
         # END test repos with working tree
@@ -201,7 +202,7 @@ class TestRepo(TestBase):
     @with_rw_directory
     def test_date_format(self, rw_dir):
         repo = Repo.init(osp.join(rw_dir, "repo"))
-        # @-timestamp is the format used by git commit hooks
+        # @-timestamp is the format used by git commit hooks.
         repo.index.commit("Commit messages", commit_date="@1400000000 +0000")
 
     @with_rw_directory
@@ -262,7 +263,7 @@ class TestRepo(TestBase):
             )
         except GitCommandError as err:
             assert password not in str(err), "The error message '%s' should not contain the password" % err
-        # Working example from a blank private project
+        # Working example from a blank private project.
         Repo.clone_from(
             url="https://gitlab+deploy-token-392045:mLWhVus7bjLsy8xj8q2V@gitlab.com/mercierm/test_git_python",
             to_path=rw_dir,
@@ -514,12 +515,12 @@ class TestRepo(TestBase):
                 try:
                     rmtree(clone_path)
                 except OSError:
-                    # when relative paths are used, the clone may actually be inside
-                    # of the parent directory
+                    # When relative paths are used, the clone may actually be inside
+                    # of the parent directory.
                     pass
                 # END exception handling
 
-                # try again, this time with the absolute version
+                # Try again, this time with the absolute version.
                 rc = Repo.clone_from(r.git_dir, clone_path)
                 self._assert_empty_repo(rc)
 
@@ -527,8 +528,8 @@ class TestRepo(TestBase):
                 try:
                     rmtree(clone_path)
                 except OSError:
-                    # when relative paths are used, the clone may actually be inside
-                    # of the parent directory
+                    # When relative paths are used, the clone may actually be inside
+                    # of the parent directory.
                     pass
                 # END exception handling
 
@@ -675,11 +676,11 @@ class TestRepo(TestBase):
             lambda: c.message,
         )
 
-        # test the 'lines per commit' entries
+        # Test the 'lines per commit' entries.
         tlist = b[0][1]
         self.assertTrue(tlist)
         self.assertTrue(isinstance(tlist[0], str))
-        self.assertTrue(len(tlist) < sum(len(t) for t in tlist))  # test for single-char bug
+        self.assertTrue(len(tlist) < sum(len(t) for t in tlist))  # Test for single-char bug.
 
         # BINARY BLAME
         git.return_value = fixture("blame_binary")
@@ -688,7 +689,7 @@ class TestRepo(TestBase):
 
     def test_blame_real(self):
         c = 0
-        nml = 0  # amount of multi-lines per blame
+        nml = 0  # Amount of multi-lines per blame.
         for item in self.rorepo.head.commit.tree.traverse(
             predicate=lambda i, d: i.type == "blob" and i.path.endswith(".py")
         ):
@@ -702,14 +703,14 @@ class TestRepo(TestBase):
 
     @mock.patch.object(Git, "_call_process")
     def test_blame_incremental(self, git):
-        # loop over two fixtures, create a test fixture for 2.11.1+ syntax
+        # Loop over two fixtures, create a test fixture for 2.11.1+ syntax.
         for git_fixture in ("blame_incremental", "blame_incremental_2.11.1_plus"):
             git.return_value = fixture(git_fixture)
             blame_output = self.rorepo.blame_incremental("9debf6b0aafb6f7781ea9d1383c86939a1aacde3", "AUTHORS")
             blame_output = list(blame_output)
             self.assertEqual(len(blame_output), 5)
 
-            # Check all outputted line numbers
+            # Check all outputted line numbers.
             ranges = flatten([entry.linenos for entry in blame_output])
             self.assertEqual(
                 ranges,
@@ -727,13 +728,13 @@ class TestRepo(TestBase):
             commits = [entry.commit.hexsha[:7] for entry in blame_output]
             self.assertEqual(commits, ["82b8902", "82b8902", "c76852d", "c76852d", "c76852d"])
 
-            # Original filenames
+            # Original filenames.
             self.assertSequenceEqual(
                 [entry.orig_path for entry in blame_output],
                 ["AUTHORS"] * len(blame_output),
             )
 
-            # Original line numbers
+            # Original line numbers.
             orig_ranges = flatten([entry.orig_linenos for entry in blame_output])
             self.assertEqual(
                 orig_ranges,
@@ -780,7 +781,7 @@ class TestRepo(TestBase):
             untracked_files = rwrepo.untracked_files
             num_recently_untracked = len(untracked_files)
 
-            # assure we have all names - they are relative to the git-dir
+            # Ensure we have all names - they are relative to the git-dir.
             num_test_untracked = 0
             for utfile in untracked_files:
                 num_test_untracked += join_path_native(base, utfile) in files
@@ -788,12 +789,12 @@ class TestRepo(TestBase):
 
             repo_add(untracked_files)
             self.assertEqual(len(rwrepo.untracked_files), (num_recently_untracked - len(files)))
-        # end for each run
+        # END for each run
 
     def test_config_reader(self):
-        reader = self.rorepo.config_reader()  # all config files
+        reader = self.rorepo.config_reader()  # All config files.
         assert reader.read_only
-        reader = self.rorepo.config_reader("repository")  # single config file
+        reader = self.rorepo.config_reader("repository")  # Single config file.
         assert reader.read_only
 
     def test_config_writer(self):
@@ -802,8 +803,8 @@ class TestRepo(TestBase):
                 with self.rorepo.config_writer(config_level) as writer:
                     self.assertFalse(writer.read_only)
             except IOError:
-                # its okay not to get a writer for some configuration files if we
-                # have no permissions
+                # It's okay not to get a writer for some configuration files if we
+                # have no permissions.
                 pass
 
     def test_config_level_paths(self):
@@ -811,8 +812,8 @@ class TestRepo(TestBase):
             assert self.rorepo._get_config_path(config_level)
 
     def test_creation_deletion(self):
-        # just a very quick test to assure it generally works. There are
-        # specialized cases in the test_refs module
+        # Just a very quick test to assure it generally works. There are
+        # specialized cases in the test_refs module.
         head = self.rorepo.create_head("new_head", "HEAD~1")
         self.rorepo.delete_head(head)
 
@@ -828,7 +829,7 @@ class TestRepo(TestBase):
             self.rorepo.delete_remote(remote)
 
     def test_comparison_and_hash(self):
-        # this is only a preliminary test, more testing done in test_index
+        # This is only a preliminary test, more testing done in test_index.
         self.assertEqual(self.rorepo, self.rorepo)
         self.assertFalse(self.rorepo != self.rorepo)
         self.assertEqual(len({self.rorepo, self.rorepo}), 1)
@@ -844,8 +845,8 @@ class TestRepo(TestBase):
             Repo.init(osp.join("$FOO", "test.git"), bare=True)
 
     def test_git_cmd(self):
-        # test CatFileContentStream, just to be very sure we have no fencepost errors
-        # last \n is the terminating newline that it expects
+        # Test CatFileContentStream, just to be very sure we have no fencepost errors.
+        # The last \n is the terminating newline that it expects.
         l1 = b"0123456789\n"
         l2 = b"abcdefghijklmnopqrstxy\n"
         l3 = b"z\n"
@@ -853,8 +854,8 @@ class TestRepo(TestBase):
 
         l1p = l1[:5]
 
-        # full size
-        # size is without terminating newline
+        # Full size.
+        # Size is without terminating newline.
         def mkfull():
             return Git.CatFileContentStream(len(d) - 1, BytesIO(d))
 
@@ -868,7 +869,7 @@ class TestRepo(TestBase):
         lines = s.readlines()
         self.assertEqual(len(lines), 3)
         self.assertTrue(lines[-1].endswith(b"\n"), lines[-1])
-        self.assertEqual(s._stream.tell(), len(d))  # must have scrubbed to the end
+        self.assertEqual(s._stream.tell(), len(d))  # Must have scrubbed to the end.
 
         # realines line limit
         s = mkfull()
@@ -911,7 +912,7 @@ class TestRepo(TestBase):
         s = mkfull()
         self.assertEqual(s.read(5), l1p)
         self.assertEqual(s.read(6), l1[5:])
-        self.assertEqual(s._stream.tell(), 5 + 6)  # its not yet done
+        self.assertEqual(s._stream.tell(), 5 + 6)  # It's not yet done.
 
         # read tiny
         s = mktiny()
@@ -926,7 +927,7 @@ class TestRepo(TestBase):
         if rev_obj.type == "tag":
             rev_obj = rev_obj.object
 
-        # tree and blob type
+        # Tree and blob type.
         obj = rev_parse(name + "^{tree}")
         self.assertEqual(obj, rev_obj.tree)
 
@@ -946,13 +947,13 @@ class TestRepo(TestBase):
             obj = orig_obj
         # END deref tags by default
 
-        # try history
+        # Try history
         rev = name + "~"
         obj2 = rev_parse(rev)
         self.assertEqual(obj2, obj.parents[0])
         self._assert_rev_parse_types(rev, obj2)
 
-        # history with number
+        # History with number
         ni = 11
         history = [obj.parents[0]]
         for _ in range(ni):
@@ -966,13 +967,13 @@ class TestRepo(TestBase):
             self._assert_rev_parse_types(rev, obj2)
         # END history check
 
-        # parent ( default )
+        # Parent (default)
         rev = name + "^"
         obj2 = rev_parse(rev)
         self.assertEqual(obj2, obj.parents[0])
         self._assert_rev_parse_types(rev, obj2)
 
-        # parent with number
+        # Parent with number
         for pn, parent in enumerate(obj.parents):
             rev = name + "^%i" % (pn + 1)
             self.assertEqual(rev_parse(rev), parent)
@@ -983,17 +984,17 @@ class TestRepo(TestBase):
 
     @with_rw_repo("HEAD", bare=False)
     def test_rw_rev_parse(self, rwrepo):
-        # verify it does not confuse branches with hexsha ids
+        # Verify it does not confuse branches with hexsha ids.
         ahead = rwrepo.create_head("aaaaaaaa")
         assert rwrepo.rev_parse(str(ahead)) == ahead.commit
 
     def test_rev_parse(self):
         rev_parse = self.rorepo.rev_parse
 
-        # try special case: This one failed at some point, make sure its fixed
+        # Try special case: This one failed at some point, make sure its fixed.
         self.assertEqual(rev_parse("33ebe").hexsha, "33ebe7acec14b25c5f84f35a664803fcab2f7781")
 
-        # start from reference
+        # Start from reference.
         num_resolved = 0
 
         for ref_no, ref in enumerate(Reference.iter_items(self.rorepo)):
@@ -1006,7 +1007,7 @@ class TestRepo(TestBase):
                     num_resolved += 1
                 except (BadName, BadObject):
                     print("failed on %s" % path_section)
-                    # is fine, in case we have something like 112, which belongs to remotes/rname/merge-requests/112
+                    # This is fine if we have something like 112, which belongs to remotes/rname/merge-requests/112.
                 # END exception handling
             # END for each token
             if ref_no == 3 - 1:
@@ -1014,21 +1015,21 @@ class TestRepo(TestBase):
         # END for each reference
         assert num_resolved
 
-        # it works with tags !
+        # It works with tags!
         tag = self._assert_rev_parse("0.1.4")
         self.assertEqual(tag.type, "tag")
 
-        # try full sha directly ( including type conversion )
+        # try full sha directly (including type conversion).
         self.assertEqual(tag.object, rev_parse(tag.object.hexsha))
         self._assert_rev_parse_types(tag.object.hexsha, tag.object)
 
-        # multiple tree types result in the same tree: HEAD^{tree}^{tree}:CHANGES
+        # Multiple tree types result in the same tree: HEAD^{tree}^{tree}:CHANGES
         rev = "0.1.4^{tree}^{tree}"
         self.assertEqual(rev_parse(rev), tag.object.tree)
         self.assertEqual(rev_parse(rev + ":CHANGES"), tag.object.tree["CHANGES"])
 
-        # try to get parents from first revision - it should fail as no such revision
-        # exists
+        # Try to get parents from first revision - it should fail as no such revision
+        # exists.
         first_rev = "33ebe7acec14b25c5f84f35a664803fcab2f7781"
         commit = rev_parse(first_rev)
         self.assertEqual(len(commit.parents), 0)
@@ -1036,14 +1037,14 @@ class TestRepo(TestBase):
         self.assertRaises(BadName, rev_parse, first_rev + "~")
         self.assertRaises(BadName, rev_parse, first_rev + "^")
 
-        # short SHA1
+        # Short SHA1.
         commit2 = rev_parse(first_rev[:20])
         self.assertEqual(commit2, commit)
         commit2 = rev_parse(first_rev[:5])
         self.assertEqual(commit2, commit)
 
-        # todo: dereference tag into a blob 0.1.7^{blob} - quite a special one
-        # needs a tag which points to a blob
+        # TODO: Dereference tag into a blob 0.1.7^{blob} - quite a special one.
+        # Needs a tag which points to a blob.
 
         # ref^0 returns commit being pointed to, same with ref~0, and ^{}
         tag = rev_parse("0.1.4")
@@ -1051,7 +1052,7 @@ class TestRepo(TestBase):
             self.assertEqual(tag.object, rev_parse("0.1.4%s" % token))
         # END handle multiple tokens
 
-        # try partial parsing
+        # Try partial parsing.
         max_items = 40
         for i, binsha in enumerate(self.rorepo.odb.sha_iter()):
             self.assertEqual(
@@ -1059,41 +1060,41 @@ class TestRepo(TestBase):
                 binsha,
             )
             if i > max_items:
-                # this is rather slow currently, as rev_parse returns an object
-                # which requires accessing packs, it has some additional overhead
+                # This is rather slow currently, as rev_parse returns an object that
+                # requires accessing packs, so it has some additional overhead.
                 break
         # END for each binsha in repo
 
-        # missing closing brace commit^{tree
+        # Missing closing brace: commit^{tree
         self.assertRaises(ValueError, rev_parse, "0.1.4^{tree")
 
-        # missing starting brace
+        # Missing starting brace.
         self.assertRaises(ValueError, rev_parse, "0.1.4^tree}")
 
         # REVLOG
         #######
         head = self.rorepo.head
 
-        # need to specify a ref when using the @ syntax
+        # Need to specify a ref when using the @ syntax.
         self.assertRaises(BadObject, rev_parse, "%s@{0}" % head.commit.hexsha)
 
-        # uses HEAD.ref by default
+        # Uses HEAD.ref by default.
         self.assertEqual(rev_parse("@{0}"), head.commit)
         if not head.is_detached:
             refspec = "%s@{0}" % head.ref.name
             self.assertEqual(rev_parse(refspec), head.ref.commit)
-            # all additional specs work as well
+            # All additional specs work as well.
             self.assertEqual(rev_parse(refspec + "^{tree}"), head.commit.tree)
             self.assertEqual(rev_parse(refspec + ":CHANGES").type, "blob")
         # END operate on non-detached head
 
-        # position doesn't exist
+        # Position doesn't exist.
         self.assertRaises(IndexError, rev_parse, "@{10000}")
 
-        # currently, nothing more is supported
+        # Currently, nothing more is supported.
         self.assertRaises(NotImplementedError, rev_parse, "@{1 week ago}")
 
-        # the last position
+        # The last position.
         assert rev_parse("@{1}") != head.commit
 
     def test_repo_odbtype(self):
@@ -1114,12 +1115,12 @@ class TestRepo(TestBase):
 
     @with_rw_repo("HEAD", bare=False)
     def test_submodule_update(self, rwrepo):
-        # fails in bare mode
+        # Fails in bare mode.
         rwrepo._bare = True
         self.assertRaises(InvalidGitRepositoryError, rwrepo.submodule_update)
         rwrepo._bare = False
 
-        # test create submodule
+        # Test submodule creation.
         sm = rwrepo.submodules[0]
         sm = rwrepo.create_submodule(
             "my_new_sub",
@@ -1128,7 +1129,7 @@ class TestRepo(TestBase):
         )
         self.assertIsInstance(sm, Submodule)
 
-        # note: the rest of this functionality is tested in test_submodule
+        # NOTE: the rest of this functionality is tested in test_submodule.
 
     @with_rw_repo("HEAD")
     def test_git_file(self, rwrepo):
@@ -1154,17 +1155,17 @@ class TestRepo(TestBase):
             commit = next(repo.iter_commits(rev, path, max_count=1))
             commit.tree[path]
 
-        # This is based on this comment
+        # This is based on this comment:
         # https://github.com/gitpython-developers/GitPython/issues/60#issuecomment-23558741
-        # And we expect to set max handles to a low value, like 64
+        # And we expect to set max handles to a low value, like 64.
         # You should set ulimit -n X, see .travis.yml
-        # The loops below would easily create 500 handles if these would leak (4 pipes + multiple mapped files)
+        # The loops below would easily create 500 handles if these would leak (4 pipes + multiple mapped files).
         for _ in range(64):
             for repo_type in (GitCmdObjectDB, GitDB):
                 repo = Repo(self.rorepo.working_tree_dir, odbt=repo_type)
                 last_commit(repo, "master", "test/test_base.py")
-            # end for each repository type
-        # end for each iteration
+            # END for each repository type
+        # END for each iteration
 
     def test_remote_method(self):
         self.assertRaises(ValueError, self.rorepo.remote, "foo-blue")
@@ -1174,13 +1175,13 @@ class TestRepo(TestBase):
     def test_empty_repo(self, rw_dir):
         """Assure we can handle empty repositories"""
         r = Repo.init(rw_dir, mkdir=False)
-        # It's ok not to be able to iterate a commit, as there is none
+        # It's ok not to be able to iterate a commit, as there is none.
         self.assertRaises(ValueError, r.iter_commits)
         self.assertEqual(r.active_branch.name, "master")
         assert not r.active_branch.is_valid(), "Branch is yet to be born"
 
-        # actually, when trying to create a new branch without a commit, git itself fails
-        # We should, however, not fail ungracefully
+        # Actually, when trying to create a new branch without a commit, git itself fails.
+        # We should, however, not fail ungracefully.
         self.assertRaises(BadName, r.create_head, "foo")
         self.assertRaises(BadName, r.create_head, "master")
         # It's expected to not be able to access a tree
@@ -1191,7 +1192,7 @@ class TestRepo(TestBase):
         r.index.add([new_file_path])
         r.index.commit("initial commit\nBAD MESSAGE 1\n")
 
-        # Now a branch should be creatable
+        # Now a branch should be creatable.
         nb = r.create_head("foo")
         assert nb.is_valid()
 
@@ -1214,7 +1215,7 @@ class TestRepo(TestBase):
         self.assertRaises(ValueError, repo.merge_base)
         self.assertRaises(ValueError, repo.merge_base, "foo")
 
-        # two commit merge-base
+        # Two commit merge-base.
         res = repo.merge_base(c1, c2)
         self.assertIsInstance(res, list)
         self.assertEqual(len(res), 1)
@@ -1225,9 +1226,9 @@ class TestRepo(TestBase):
             res = repo.merge_base(c1, c2, c3, **{kw: True})
             self.assertIsInstance(res, list)
             self.assertEqual(len(res), 1)
-        # end for each keyword signalling all merge-bases to be returned
+        # END for each keyword signalling all merge-bases to be returned
 
-        # Test for no merge base - can't do as we have
+        # Test for no merge base - can't do as we have.
         self.assertRaises(GitCommandError, repo.merge_base, c1, "ffffff")
 
     def test_is_ancestor(self):
@@ -1254,22 +1255,22 @@ class TestRepo(TestBase):
         tree_sha = "960b40fe36"
         tag_sha = "42c2f60c43"
 
-        # Check for valid objects
+        # Check for valid objects.
         self.assertTrue(repo.is_valid_object(commit_sha))
         self.assertTrue(repo.is_valid_object(blob_sha))
         self.assertTrue(repo.is_valid_object(tree_sha))
         self.assertTrue(repo.is_valid_object(tag_sha))
 
-        # Check for valid objects of specific type
+        # Check for valid objects of specific type.
         self.assertTrue(repo.is_valid_object(commit_sha, "commit"))
         self.assertTrue(repo.is_valid_object(blob_sha, "blob"))
         self.assertTrue(repo.is_valid_object(tree_sha, "tree"))
         self.assertTrue(repo.is_valid_object(tag_sha, "tag"))
 
-        # Check for invalid objects
+        # Check for invalid objects.
         self.assertFalse(repo.is_valid_object(b"1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a", "blob"))
 
-        # Check for invalid objects of specific type
+        # Check for invalid objects of specific type.
         self.assertFalse(repo.is_valid_object(commit_sha, "blob"))
         self.assertFalse(repo.is_valid_object(blob_sha, "commit"))
         self.assertFalse(repo.is_valid_object(tree_sha, "commit"))
@@ -1290,16 +1291,16 @@ class TestRepo(TestBase):
             worktree_path = cygpath(worktree_path)
         rw_master.git.worktree("add", worktree_path, branch.name)
 
-        # this ensures that we can read the repo's gitdir correctly
+        # This ensures that we can read the repo's gitdir correctly.
         repo = Repo(worktree_path)
         self.assertIsInstance(repo, Repo)
 
-        # this ensures we're able to actually read the refs in the tree, which
+        # This ensures we're able to actually read the refs in the tree, which
         # means we can read commondir correctly.
         commit = repo.head.commit
         self.assertIsInstance(commit, Object)
 
-        # this ensures we can read the remotes, which confirms we're reading
+        # This ensures we can read the remotes, which confirms we're reading
         # the config correctly.
         origin = repo.remotes.origin
         self.assertIsInstance(origin, Remote)
@@ -1308,11 +1309,11 @@ class TestRepo(TestBase):
 
     @with_rw_directory
     def test_git_work_tree_env(self, rw_dir):
-        """Check that we yield to GIT_WORK_TREE"""
-        # clone a repo
-        # move .git directory to a subdirectory
-        # set GIT_DIR and GIT_WORK_TREE appropriately
-        # check that repo.working_tree_dir == rw_dir
+        """Check that we yield to GIT_WORK_TREE."""
+        # Clone a repo.
+        # Move .git directory to a subdirectory.
+        # Set GIT_DIR and GIT_WORK_TREE appropriately.
+        # Check that: repo.working_tree_dir == rw_dir
 
         self.rorepo.clone(join_path_native(rw_dir, "master_repo"))
 
@@ -1376,7 +1377,7 @@ class TestRepo(TestBase):
             rw_repo.clone(payload)
 
             assert not unexpected_file.exists()
-            # A repo was cloned with the payload as name
+            # A repo was cloned with the payload as name.
             assert pathlib.Path(payload).exists()
 
     @with_rw_repo("HEAD")

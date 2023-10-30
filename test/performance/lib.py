@@ -1,4 +1,5 @@
-"""Contains library functions"""
+"""Support library for tests."""
+
 import logging
 import os
 import tempfile
@@ -20,21 +21,15 @@ k_env_git_repo = "GIT_PYTHON_TEST_GIT_REPO_BASE"
 
 
 class TestBigRepoR(TestBase):
-
     """TestCase providing access to readonly 'big' repositories using the following
     member variables:
 
-    * gitrorepo
+    * gitrorepo:
+      Read-Only git repository - actually (by default) the repo of GitPython itself.
 
-     * Read-Only git repository - actually the repo of git itself
-
-    * puregitrorepo
-
-     * As gitrepo, but uses pure python implementation
+    * puregitrorepo:
+      Like gitrorepo, but uses a pure Python implementation for its object database.
     """
-
-    # { Invariants
-    # } END invariants
 
     def setUp(self):
         try:
@@ -45,11 +40,12 @@ class TestBigRepoR(TestBase):
         repo_path = os.environ.get(k_env_git_repo)
         if repo_path is None:
             logging.info(
-                ("You can set the %s environment variable to a .git repository of" % k_env_git_repo)
-                + "your choice - defaulting to the gitpython repository"
+                "You can set the %s environment variable to a .git repository of your"
+                " choice - defaulting to the GitPython repository",
+                k_env_git_repo,
             )
             repo_path = osp.dirname(__file__)
-        # end set some repo path
+        # END set some repo path
         self.gitrorepo = Repo(repo_path, odbt=GitCmdObjectDB, search_parent_directories=True)
         self.puregitrorepo = Repo(repo_path, odbt=GitDB, search_parent_directories=True)
 
@@ -61,10 +57,10 @@ class TestBigRepoR(TestBase):
 
 
 class TestBigRepoRW(TestBigRepoR):
+    """Like :class:`TestBigRepoR`, but provides a big repository that we can write to.
 
-    """As above, but provides a big repository that we can write to.
-
-    Provides ``self.gitrwrepo`` and ``self.puregitrwrepo``"""
+    Provides ``self.gitrwrepo`` and ``self.puregitrwrepo``.
+    """
 
     def setUp(self):
         self.gitrwrepo = None

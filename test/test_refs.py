@@ -30,7 +30,7 @@ import tempfile
 
 class TestRefs(TestBase):
     def test_from_path(self):
-        # should be able to create any reference directly
+        # Should be able to create any reference directly.
         for ref_type in (Reference, Head, TagReference, RemoteReference):
             for name in ("rela_name", "path/rela_name"):
                 full_path = ref_type.to_full_path(name)
@@ -39,9 +39,9 @@ class TestRefs(TestBase):
             # END for each name
         # END for each type
 
-        # invalid path
+        # Invalid path.
         self.assertRaises(ValueError, TagReference, self.rorepo, "refs/invalid/tag")
-        # works without path check
+        # Works without path check.
         TagReference(self.rorepo, "refs/invalid/tag", check_path=False)
 
     def test_tag_base(self):
@@ -53,7 +53,7 @@ class TestRefs(TestBase):
             if tag.tag is not None:
                 tag_object_refs.append(tag)
                 tagobj = tag.tag
-                # have no dict
+                # Have no dict.
                 self.assertRaises(AttributeError, setattr, tagobj, "someattr", 1)
                 assert isinstance(tagobj, TagObject)
                 assert tagobj.tag == tag.name
@@ -62,7 +62,7 @@ class TestRefs(TestBase):
                 assert isinstance(tagobj.tagger_tz_offset, int)
                 assert tagobj.message
                 assert tag.object == tagobj
-                # can't assign the object
+                # Can't assign the object.
                 self.assertRaises(AttributeError, setattr, tag, "object", tagobj)
             # END if we have a tag object
         # END for tag in repo-tags
@@ -77,7 +77,7 @@ class TestRefs(TestBase):
         assert tagger_name == "Michael Trier"
 
     def test_tags(self):
-        # tag refs can point to tag objects or to commits
+        # Tag refs can point to tag objects or to commits.
         s = set()
         ref_count = 0
         for ref in chain(self.rorepo.tags, self.rorepo.heads):
@@ -100,8 +100,8 @@ class TestRefs(TestBase):
             assert "refs/heads" in head.path
             prev_object = head.object
             cur_object = head.object
-            assert prev_object == cur_object  # represent the same git object
-            assert prev_object is not cur_object  # but are different instances
+            assert prev_object == cur_object  # Represent the same git object...
+            assert prev_object is not cur_object  # ...but are different instances.
 
             with head.config_writer() as writer:
                 tv = "testopt"
@@ -111,7 +111,7 @@ class TestRefs(TestBase):
             with head.config_writer() as writer:
                 writer.remove_option(tv)
 
-            # after the clone, we might still have a tracking branch setup
+            # After the clone, we might still have a tracking branch setup.
             head.set_tracking_branch(None)
             assert head.tracking_branch() is None
             remote_ref = rwrepo.remotes[0].refs[0]
@@ -123,7 +123,7 @@ class TestRefs(TestBase):
             special_name = "feature#123"
             special_name_remote_ref = SymbolicReference.create(rwrepo, "refs/remotes/origin/%s" % special_name)
             gp_tracking_branch = rwrepo.create_head("gp_tracking#123")
-            special_name_remote_ref = rwrepo.remotes[0].refs[special_name]  # get correct type
+            special_name_remote_ref = rwrepo.remotes[0].refs[special_name]  # Get correct type.
             gp_tracking_branch.set_tracking_branch(special_name_remote_ref)
             TBranch = gp_tracking_branch.tracking_branch()
             if TBranch is not None:
@@ -136,7 +136,7 @@ class TestRefs(TestBase):
                 assert TBranch.name == special_name_remote_ref.name
         # END for each head
 
-        # verify REFLOG gets altered
+        # Verify REFLOG gets altered.
         head = rwrepo.head
         cur_head = head.ref
         cur_commit = cur_head.commit
@@ -144,32 +144,31 @@ class TestRefs(TestBase):
         hlog_len = len(head.log())
         blog_len = len(cur_head.log())
         assert head.set_reference(pcommit, "detached head") is head
-        # one new log-entry
+        # One new log-entry.
         thlog = head.log()
         assert len(thlog) == hlog_len + 1
         assert thlog[-1].oldhexsha == cur_commit.hexsha
         assert thlog[-1].newhexsha == pcommit.hexsha
 
-        # the ref didn't change though
+        # The ref didn't change though.
         assert len(cur_head.log()) == blog_len
 
-        # head changes once again, cur_head doesn't change
+        # head changes once again, cur_head doesn't change.
         head.set_reference(cur_head, "reattach head")
         assert len(head.log()) == hlog_len + 2
         assert len(cur_head.log()) == blog_len
 
-        # adjusting the head-ref also adjust the head, so both reflogs are
-        # altered
+        # Adjusting the head-ref also adjust the head, so both reflogs are altered.
         cur_head.set_commit(pcommit, "changing commit")
         assert len(cur_head.log()) == blog_len + 1
         assert len(head.log()) == hlog_len + 3
 
-        # with automatic dereferencing
+        # With automatic dereferencing.
         assert head.set_commit(cur_commit, "change commit once again") is head
         assert len(head.log()) == hlog_len + 4
         assert len(cur_head.log()) == blog_len + 2
 
-        # a new branch has just a single entry
+        # A new branch has just a single entry.
         other_head = Head.create(rwrepo, "mynewhead", pcommit, logmsg="new head created")
         log = other_head.log()
         assert len(log) == 1
@@ -178,7 +177,7 @@ class TestRefs(TestBase):
 
     @with_rw_repo("HEAD", bare=False)
     def test_set_tracking_branch_with_import(self, rwrepo):
-        # prepare included config file
+        # Prepare included config file.
         included_config = osp.join(rwrepo.git_dir, "config.include")
         with GitConfigParser(included_config, read_only=False) as writer:
             writer.set_value("test", "value", "test")
@@ -230,11 +229,11 @@ class TestRefs(TestBase):
         cur_head.reset(new_head_commit, index=True, working_tree=True)  # index + wt
         assert cur_head.reference.commit == new_head_commit
 
-        # paths - make sure we have something to do
+        # Paths - make sure we have something to do.
         rw_repo.index.reset(old_head_commit.parents[0])
         cur_head.reset(cur_head, paths="test")
         cur_head.reset(new_head_commit, paths="lib")
-        # hard resets with paths don't work, its all or nothing
+        # Hard resets with paths don't work; it's all or nothing.
         self.assertRaises(
             GitCommandError,
             cur_head.reset,
@@ -243,12 +242,12 @@ class TestRefs(TestBase):
             paths="lib",
         )
 
-        # we can do a mixed reset, and then checkout from the index though
+        # We can do a mixed reset, and then checkout from the index though.
         cur_head.reset(new_head_commit)
         rw_repo.index.checkout(["lib"], force=True)
 
-        # now that we have a write write repo, change the HEAD reference - its
-        # like git-reset --soft
+        # Now that we have a write write repo, change the HEAD reference - it's
+        # like "git-reset --soft".
         heads = rw_repo.heads
         assert heads
         for head in heads:
@@ -259,7 +258,7 @@ class TestRefs(TestBase):
             assert not cur_head.is_detached
         # END for each head
 
-        # detach
+        # Detach.
         active_head = heads[0]
         curhead_commit = active_head.commit
         cur_head.reference = curhead_commit
@@ -267,20 +266,20 @@ class TestRefs(TestBase):
         assert cur_head.is_detached
         self.assertRaises(TypeError, getattr, cur_head, "reference")
 
-        # tags are references, hence we can point to them
+        # Tags are references, hence we can point to them.
         some_tag = rw_repo.tags[0]
         cur_head.reference = some_tag
         assert not cur_head.is_detached
         assert cur_head.commit == some_tag.commit
         assert isinstance(cur_head.reference, TagReference)
 
-        # put HEAD back to a real head, otherwise everything else fails
+        # Put HEAD back to a real head, otherwise everything else fails.
         cur_head.reference = active_head
 
-        # type check
+        # Type check.
         self.assertRaises(ValueError, setattr, cur_head, "reference", "that")
 
-        # head handling
+        # Head handling.
         commit = "HEAD"
         prev_head_commit = cur_head.commit
         for count, new_name in enumerate(("my_new_head", "feature/feature1")):
@@ -289,13 +288,13 @@ class TestRefs(TestBase):
             assert new_head.is_detached
             assert cur_head.commit == prev_head_commit
             assert isinstance(new_head, Head)
-            # already exists, but has the same value, so its fine
+            # Already exists, but has the same value, so it's fine.
             Head.create(rw_repo, new_name, new_head.commit)
 
-            # its not fine with a different value
+            # It's not fine with a different value.
             self.assertRaises(OSError, Head.create, rw_repo, new_name, new_head.commit.parents[0])
 
-            # force it
+            # Force it.
             new_head = Head.create(rw_repo, new_name, actual_commit, force=True)
             old_path = new_head.path
             old_name = new_head.name
@@ -304,7 +303,7 @@ class TestRefs(TestBase):
             assert new_head.rename("hello/world").name == "hello/world"
             assert new_head.rename(old_name).name == old_name and new_head.path == old_path
 
-            # rename with force
+            # Rename with force.
             tmp_head = Head.create(rw_repo, "tmphead")
             self.assertRaises(GitCommandError, tmp_head.rename, new_head)
             tmp_head.rename(new_head, force=True)
@@ -313,15 +312,15 @@ class TestRefs(TestBase):
             logfile = RefLog.path(tmp_head)
             assert osp.isfile(logfile)
             Head.delete(rw_repo, tmp_head)
-            # deletion removes the log as well
+            # Deletion removes the log as well.
             assert not osp.isfile(logfile)
             heads = rw_repo.heads
             assert tmp_head not in heads and new_head not in heads
-            # force on deletion testing would be missing here, code looks okay though ;)
+            # Force on deletion testing would be missing here, code looks okay though. ;)
         # END for each new head name
         self.assertRaises(TypeError, RemoteReference.create, rw_repo, "some_name")
 
-        # tag ref
+        # Tag ref.
         tag_name = "5.0.2"
         TagReference.create(rw_repo, tag_name)
         self.assertRaises(GitCommandError, TagReference.create, rw_repo, tag_name)
@@ -331,7 +330,7 @@ class TestRefs(TestBase):
         assert light_tag.commit == cur_head.commit.parents[0]
         assert light_tag.tag is None
 
-        # tag with tag object
+        # Tag with tag object.
         other_tag_name = "releases/1.0.2RC"
         msg = "my mighty tag\nsecond line"
         obj_tag = TagReference.create(rw_repo, other_tag_name, message=msg)
@@ -344,7 +343,7 @@ class TestRefs(TestBase):
         tags = rw_repo.tags
         assert light_tag not in tags and obj_tag not in tags
 
-        # remote deletion
+        # Remote deletion.
         remote_refs_so_far = 0
         remotes = rw_repo.remotes
         assert remotes
@@ -367,11 +366,11 @@ class TestRefs(TestBase):
         assert remote_refs_so_far
 
         for remote in remotes:
-            # remotes without references should produce an empty list
+            # Remotes without references should produce an empty list.
             self.assertEqual(remote.refs, [])
         # END for each remote
 
-        # change where the active head points to
+        # Change where the active head points to.
         if cur_head.is_detached:
             cur_head.reference = rw_repo.heads[0]
 
@@ -382,17 +381,17 @@ class TestRefs(TestBase):
         assert head.commit == cur_head.commit
         head.commit = old_commit
 
-        # setting a non-commit as commit fails, but succeeds as object
+        # Setting a non-commit as commit fails, but succeeds as object.
         head_tree = head.commit.tree
         self.assertRaises(ValueError, setattr, head, "commit", head_tree)
         assert head.commit == old_commit  # and the ref did not change
-        # we allow heads to point to any object
+        # We allow heads to point to any object.
         head.object = head_tree
         assert head.object == head_tree
-        # cannot query tree as commit
+        # Cannot query tree as commit.
         self.assertRaises(TypeError, getattr, head, "commit")
 
-        # set the commit directly using the head. This would never detach the head
+        # Set the commit directly using the head. This would never detach the head.
         assert not cur_head.is_detached
         head.object = old_commit
         cur_head.reference = head.commit
@@ -408,30 +407,30 @@ class TestRefs(TestBase):
         assert not cur_head.is_detached
         assert head.commit == parent_commit
 
-        # test checkout
+        # Test checkout.
         active_branch = rw_repo.active_branch
         for head in rw_repo.heads:
             checked_out_head = head.checkout()
             assert checked_out_head == head
         # END for each head to checkout
 
-        # checkout with branch creation
+        # Check out with branch creation.
         new_head = active_branch.checkout(b="new_head")
         assert active_branch != rw_repo.active_branch
         assert new_head == rw_repo.active_branch
 
-        # checkout  with force as we have a changed a file
-        # clear file
+        # Checkout with force as we have a changed a file.
+        # Clear file.
         open(new_head.commit.tree.blobs[-1].abspath, "w").close()
         assert len(new_head.commit.diff(None))
 
-        # create a new branch that is likely to touch the file we changed
+        # Create a new branch that is likely to touch the file we changed.
         far_away_head = rw_repo.create_head("far_head", "HEAD~100")
         self.assertRaises(GitCommandError, far_away_head.checkout)
         assert active_branch == active_branch.checkout(force=True)
         assert rw_repo.head.reference != far_away_head
 
-        # test reference creation
+        # Test reference creation.
         partial_ref = "sub/ref"
         full_ref = "refs/%s" % partial_ref
         ref = Reference.create(rw_repo, partial_ref)
@@ -439,21 +438,21 @@ class TestRefs(TestBase):
         assert ref.object == rw_repo.head.commit
 
         self.assertRaises(OSError, Reference.create, rw_repo, full_ref, "HEAD~20")
-        # it works if it is at the same spot though and points to the same reference
+        # It works if it is at the same spot though and points to the same reference.
         assert Reference.create(rw_repo, full_ref, "HEAD").path == full_ref
         Reference.delete(rw_repo, full_ref)
 
-        # recreate the reference using a full_ref
+        # Recreate the reference using a full_ref.
         ref = Reference.create(rw_repo, full_ref)
         assert ref.path == full_ref
         assert ref.object == rw_repo.head.commit
 
-        # recreate using force
+        # Recreate using force.
         ref = Reference.create(rw_repo, partial_ref, "HEAD~1", force=True)
         assert ref.path == full_ref
         assert ref.object == rw_repo.head.commit.parents[0]
 
-        # rename it
+        # Rename it.
         orig_obj = ref.object
         for name in ("refs/absname", "rela_name", "feature/rela_name"):
             ref_new_name = ref.rename(name)
@@ -463,19 +462,19 @@ class TestRefs(TestBase):
             assert ref_new_name == ref
         # END for each name type
 
-        # References that don't exist trigger an error if we want to access them
+        # References that don't exist trigger an error if we want to access them.
         self.assertRaises(ValueError, getattr, Reference(rw_repo, "refs/doesntexist"), "commit")
 
-        # exists, fail unless we force
+        # Exists, fail unless we force.
         ex_ref_path = far_away_head.path
         self.assertRaises(OSError, ref.rename, ex_ref_path)
-        # if it points to the same commit it works
+        # If it points to the same commit it works.
         far_away_head.commit = ref.commit
         ref.rename(ex_ref_path)
         assert ref.path == ex_ref_path and ref.object == orig_obj
         assert ref.rename(ref.path).path == ex_ref_path  # rename to same name
 
-        # create symbolic refs
+        # Create symbolic refs.
         symref_path = "symrefs/sym"
         symref = SymbolicReference.create(rw_repo, symref_path, cur_head.reference)
         assert symref.path == symref_path
@@ -488,20 +487,20 @@ class TestRefs(TestBase):
             symref_path,
             cur_head.reference.commit,
         )
-        # it works if the new ref points to the same reference
+        # It works if the new ref points to the same reference.
         assert SymbolicReference.create(rw_repo, symref.path, symref.reference).path == symref.path
         SymbolicReference.delete(rw_repo, symref)
-        # would raise if the symref wouldn't have been deletedpbl
+        # Would raise if the symref wouldn't have been deleted (probably).
         symref = SymbolicReference.create(rw_repo, symref_path, cur_head.reference)
 
-        # test symbolic references which are not at default locations like HEAD
-        # or FETCH_HEAD - they may also be at spots in refs of course
+        # Test symbolic references which are not at default locations like HEAD
+        # or FETCH_HEAD - they may also be at spots in refs of course.
         symbol_ref_path = "refs/symbol_ref"
         symref = SymbolicReference(rw_repo, symbol_ref_path)
         assert symref.path == symbol_ref_path
         symbol_ref_abspath = osp.join(rw_repo.git_dir, symref.path)
 
-        # set it
+        # Set it.
         symref.reference = new_head
         assert symref.reference == new_head
         assert osp.isfile(symbol_ref_abspath)
@@ -516,10 +515,10 @@ class TestRefs(TestBase):
             assert not symref.is_detached
         # END for each ref
 
-        # create a new non-head ref just to be sure we handle it even if packed
+        # Create a new non-head ref just to be sure we handle it even if packed.
         Reference.create(rw_repo, full_ref)
 
-        # test ref listing - assure we have packed refs
+        # Test ref listing - make sure we have packed refs.
         rw_repo.git.pack_refs(all=True, prune=True)
         heads = rw_repo.heads
         assert heads
@@ -527,15 +526,15 @@ class TestRefs(TestBase):
         assert active_branch in heads
         assert rw_repo.tags
 
-        # we should be able to iterate all symbolic refs as well - in that case
-        # we should expect only symbolic references to be returned
+        # We should be able to iterate all symbolic refs as well - in that case
+        # we should expect only symbolic references to be returned.
         for symref in SymbolicReference.iter_items(rw_repo):
             assert not symref.is_detached
 
-        # when iterating references, we can get references and symrefs
-        # when deleting all refs, I'd expect them to be gone ! Even from
-        # the packed ones
-        # For this to work, we must not be on any branch
+        # When iterating references, we can get references and symrefs
+        # when deleting all refs, I'd expect them to be gone! Even from
+        # the packed ones.
+        # For this to work, we must not be on any branch.
         rw_repo.head.reference = rw_repo.head.commit
         deleted_refs = set()
         for ref in Reference.iter_items(rw_repo):
@@ -551,16 +550,15 @@ class TestRefs(TestBase):
                 assert ref not in deleted_refs
         # END for each ref
 
-        # reattach head - head will not be returned if it is not a symbolic
-        # ref
+        # Reattach head - head will not be returned if it is not a symbolic ref.
         rw_repo.head.reference = Head.create(rw_repo, "master")
 
-        # At least the head should still exist
+        # At least the head should still exist.
         assert osp.isfile(osp.join(rw_repo.git_dir, "HEAD"))
         refs = list(SymbolicReference.iter_items(rw_repo))
         assert len(refs) == 1
 
-        # test creation of new refs from scratch
+        # Test creation of new refs from scratch.
         for path in ("basename", "dir/somename", "dir2/subdir/basename"):
             # REFERENCES
             ############
@@ -570,11 +568,11 @@ class TestRefs(TestBase):
             ref = Reference(rw_repo, fpath)
             assert ref == ref_fp
 
-            # can be created by assigning a commit
+            # Can be created by assigning a commit.
             ref.commit = rw_repo.head.commit
             assert ref.is_valid()
 
-            # if the assignment raises, the ref doesn't exist
+            # If the assignment raises, the ref doesn't exist.
             Reference.delete(ref.repo, ref.path)
             assert not ref.is_valid()
             self.assertRaises(ValueError, setattr, ref, "commit", "nonsense")
@@ -614,7 +612,7 @@ class TestRefs(TestBase):
         assert tag_ref.tag.message == "test2"
 
     def test_dereference_recursive(self):
-        # for now, just test the HEAD
+        # For now, just test the HEAD.
         assert SymbolicReference.dereference_recursive(self.rorepo, "HEAD")
 
     def test_reflog(self):
@@ -634,7 +632,7 @@ class TestRefs(TestBase):
 
     def test_validity_ref_names(self):
         check_ref = SymbolicReference._check_ref_name_valid
-        # Based on the rules specified in https://git-scm.com/docs/git-check-ref-format/#_description
+        # Based on the rules specified in https://git-scm.com/docs/git-check-ref-format/#_description.
         # Rule 1
         self.assertRaises(ValueError, check_ref, ".ref/begins/with/dot")
         self.assertRaises(ValueError, check_ref, "ref/component/.begins/with/dot")
@@ -665,5 +663,5 @@ class TestRefs(TestBase):
         self.assertRaises(ValueError, check_ref, "@")
         # Rule 10
         self.assertRaises(ValueError, check_ref, "ref/contain\\s/backslash")
-        # Valid reference name should not raise
+        # Valid reference name should not raise.
         check_ref("valid/ref/name")

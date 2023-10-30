@@ -38,8 +38,7 @@ __all__ = ("Object", "IndexObject")
 
 
 class Object(LazyMixin):
-
-    """Implements an Object which may be Blobs, Trees, Commits and Tags"""
+    """An Object which may be Blobs, Trees, Commits and Tags."""
 
     NULL_HEX_SHA = "0" * 40
     NULL_BIN_SHA = b"\0" * 20
@@ -50,7 +49,9 @@ class Object(LazyMixin):
         dbtyp.str_commit_type,
         dbtyp.str_tag_type,
     )
+
     __slots__ = ("repo", "binsha", "size")
+
     type: Union[Lit_commit_ish, None] = None
 
     def __init__(self, repo: "Repo", binsha: bytes):
@@ -59,7 +60,8 @@ class Object(LazyMixin):
 
         :param repo: repository this object is located in
 
-        :param binsha: 20 byte SHA1"""
+        :param binsha: 20 byte SHA1
+        """
         super(Object, self).__init__()
         self.repo = repo
         self.binsha = binsha
@@ -71,14 +73,15 @@ class Object(LazyMixin):
     @classmethod
     def new(cls, repo: "Repo", id: Union[str, "Reference"]) -> Commit_ish:
         """
-        :return: New Object instance of a type appropriate to the object type behind
-            id. The id of the newly created object will be a binsha even though
-            the input id may have been a Reference or Rev-Spec
+        :return: New :class:`Object`` instance of a type appropriate to the object type
+            behind `id`. The id of the newly created object will be a binsha even though
+            the input id may have been a Reference or Rev-Spec.
 
         :param id: reference, rev-spec, or hexsha
 
-        :note: This cannot be a __new__ method as it would always call __init__
-            with the input id which is not necessarily a binsha."""
+        :note: This cannot be a ``__new__`` method as it would always call
+            :meth:`__init__` with the input id which is not necessarily a binsha.
+        """
         return repo.rev_parse(str(id))
 
     @classmethod
@@ -86,9 +89,11 @@ class Object(LazyMixin):
         """
         :return: new object instance of a type appropriate to represent the given
             binary sha1
-        :param sha1: 20 byte binary sha1"""
+
+        :param sha1: 20 byte binary sha1
+        """
         if sha1 == cls.NULL_BIN_SHA:
-            # the NULL binsha is always the root commit
+            # The NULL binsha is always the root commit.
             return get_object_type_by_name(b"commit")(repo, sha1)
         # END handle special case
         oinfo = repo.odb.info(sha1)
@@ -97,7 +102,7 @@ class Object(LazyMixin):
         return inst
 
     def _set_cache_(self, attr: str) -> None:
-        """Retrieve object information"""
+        """Retrieve object information."""
         if attr == "size":
             oinfo = self.repo.odb.info(self.binsha)
             self.size = oinfo.size  # type:  int
@@ -137,28 +142,31 @@ class Object(LazyMixin):
 
     @property
     def data_stream(self) -> "OStream":
-        """:return:  File Object compatible stream to the uncompressed raw data of the object
-        :note: returned streams must be read in order"""
+        """
+        :return: File Object compatible stream to the uncompressed raw data of the object
+
+        :note: Returned streams must be read in order.
+        """
         return self.repo.odb.stream(self.binsha)
 
     def stream_data(self, ostream: "OStream") -> "Object":
-        """Writes our data directly to the given output stream
+        """Write our data directly to the given output stream.
 
         :param ostream: File object compatible stream object.
-        :return: self"""
+        :return: self
+        """
         istream = self.repo.odb.stream(self.binsha)
         stream_copy(istream, ostream)
         return self
 
 
 class IndexObject(Object):
-
-    """Base for all objects that can be part of the index file , namely Tree, Blob and
-    SubModule objects"""
+    """Base for all objects that can be part of the index file, namely Tree, Blob and
+    SubModule objects."""
 
     __slots__ = ("path", "mode")
 
-    # for compatibility with iterable lists
+    # For compatibility with iterable lists.
     _id_attribute_ = "path"
 
     def __init__(
@@ -168,19 +176,20 @@ class IndexObject(Object):
         mode: Union[None, int] = None,
         path: Union[None, PathLike] = None,
     ) -> None:
-        """Initialize a newly instanced IndexObject
+        """Initialize a newly instanced IndexObject.
 
-        :param repo: is the Repo we are located in
-        :param binsha: 20 byte sha1
+        :param repo: The :class:`~git.repo.base.Repo` we are located in.
+        :param binsha: 20 byte sha1.
         :param mode:
-            is the stat compatible file mode as int, use the stat module
-            to evaluate the information
+            The stat compatible file mode as int, use the :mod:`stat` module to evaluate
+            the information.
         :param path:
-            is the path to the file in the file system, relative to the git repository root, i.e.
-            file.ext or folder/other.ext
+            The path to the file in the file system, relative to the git repository
+            root, like ``file.ext`` or ``folder/other.ext``.
         :note:
-            Path may not be set of the index object has been created directly as it cannot
-            be retrieved without knowing the parent tree."""
+            Path may not be set if the index object has been created directly, as it
+            cannot be retrieved without knowing the parent tree.
+        """
         super(IndexObject, self).__init__(repo, binsha)
         if mode is not None:
             self.mode = mode
@@ -191,7 +200,8 @@ class IndexObject(Object):
         """
         :return:
             Hash of our path as index items are uniquely identifiable by path, not
-            by their data !"""
+            by their data!
+        """
         return hash(self.path)
 
     def _set_cache_(self, attr: str) -> None:
@@ -212,13 +222,14 @@ class IndexObject(Object):
 
     @property
     def abspath(self) -> PathLike:
-        """
+        R"""
         :return:
-            Absolute path to this index object in the file system ( as opposed to the
-            .path field which is a path relative to the git repository ).
+            Absolute path to this index object in the file system (as opposed to the
+            :attr:`path` field which is a path relative to the git repository).
 
-            The returned path will be native to the system and contains '\' on windows."""
+            The returned path will be native to the system and contains '\' on Windows.
+        """
         if self.repo.working_tree_dir is not None:
             return join_path_native(self.repo.working_tree_dir, self.path)
         else:
-            raise WorkTreeRepositoryUnsupported("Working_tree_dir was None or empty")
+            raise WorkTreeRepositoryUnsupported("working_tree_dir was None or empty")

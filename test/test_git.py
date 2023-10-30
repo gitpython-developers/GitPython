@@ -1,9 +1,9 @@
-# -*- coding: utf-8 -*-
 # test_git.py
 # Copyright (C) 2008, 2009 Michael Trier (mtrier@gmail.com) and contributors
 #
 # This module is part of GitPython and is released under
 # the BSD License: https://opensource.org/license/bsd-3-clause/
+
 import inspect
 import logging
 import os
@@ -77,14 +77,14 @@ class TestGit(TestBase):
         self.assertEqual(["--max-count=0"], self.git.transform_kwargs(**{"max_count": 0}))
         self.assertEqual([], self.git.transform_kwargs(**{"max_count": None}))
 
-        # Multiple args are supported by using lists/tuples
+        # Multiple args are supported by using lists/tuples.
         self.assertEqual(
             ["-L", "1-3", "-L", "12-18"],
             self.git.transform_kwargs(**{"L": ("1-3", "12-18")}),
         )
         self.assertEqual(["-C", "-C"], self.git.transform_kwargs(**{"C": [True, True, None, False]}))
 
-        # order is undefined
+        # Order is undefined.
         res = self.git.transform_kwargs(**{"s": True, "t": True})
         self.assertEqual({"-s", "-t"}, set(res))
 
@@ -189,7 +189,7 @@ class TestGit(TestBase):
 
     @mock.patch.object(Git, "execute")
     def test_it_ignores_false_kwargs(self, git):
-        # this_should_not_be_ignored=False implies it *should* be ignored
+        # this_should_not_be_ignored=False implies it *should* be ignored.
         self.git.version(pass_this_kwarg=False)
         self.assertTrue("pass_this_kwarg" not in git.call_args[1])
 
@@ -218,31 +218,31 @@ class TestGit(TestBase):
             self.assertEqual(commit, "4cfd6b0314682d5a58f80be39850bad1640e9241")
 
     def test_persistent_cat_file_command(self):
-        # read header only
+        # Read header only.
         hexsha = "b2339455342180c7cc1e9bba3e9f181f7baa5167"
         g = self.git.cat_file(batch_check=True, istream=subprocess.PIPE, as_process=True)
         g.stdin.write(b"b2339455342180c7cc1e9bba3e9f181f7baa5167\n")
         g.stdin.flush()
         obj_info = g.stdout.readline()
 
-        # read header + data
+        # Read header + data.
         g = self.git.cat_file(batch=True, istream=subprocess.PIPE, as_process=True)
         g.stdin.write(b"b2339455342180c7cc1e9bba3e9f181f7baa5167\n")
         g.stdin.flush()
         obj_info_two = g.stdout.readline()
         self.assertEqual(obj_info, obj_info_two)
 
-        # read data - have to read it in one large chunk
+        # Read data - have to read it in one large chunk.
         size = int(obj_info.split()[2])
         g.stdout.read(size)
         g.stdout.read(1)
 
-        # now we should be able to read a new object
+        # Now we should be able to read a new object.
         g.stdin.write(b"b2339455342180c7cc1e9bba3e9f181f7baa5167\n")
         g.stdin.flush()
         self.assertEqual(g.stdout.readline(), obj_info)
 
-        # same can be achieved using the respective command functions
+        # Same can be achieved using the respective command functions.
         hexsha, typename, size = self.git.get_object_header(hexsha)
         hexsha, typename_two, size_two, _ = self.git.get_object_data(hexsha)
         self.assertEqual(typename, typename_two)
@@ -264,31 +264,31 @@ class TestGit(TestBase):
             self.assertRaises(GitCommandNotFound, self.git.version)
 
     def test_refresh(self):
-        # test a bad git path refresh
+        # Test a bad git path refresh.
         self.assertRaises(GitCommandNotFound, refresh, "yada")
 
-        # test a good path refresh
+        # Test a good path refresh.
         which_cmd = "where" if is_win else "command -v"
         path = os.popen("{0} git".format(which_cmd)).read().strip().split("\n")[0]
         refresh(path)
 
     def test_options_are_passed_to_git(self):
-        # This work because any command after git --version is ignored
+        # This works because any command after git --version is ignored.
         git_version = self.git(version=True).NoOp()
         git_command_version = self.git.version()
         self.assertEqual(git_version, git_command_version)
 
     def test_persistent_options(self):
         git_command_version = self.git.version()
-        # analog to test_options_are_passed_to_git
+        # Analog to test_options_are_passed_to_git.
         self.git.set_persistent_git_options(version=True)
         git_version = self.git.NoOp()
         self.assertEqual(git_version, git_command_version)
-        # subsequent calls keep this option:
+        # Subsequent calls keep this option:
         git_version_2 = self.git.NoOp()
         self.assertEqual(git_version_2, git_command_version)
 
-        # reset to empty:
+        # Reset to empty:
         self.git.set_persistent_git_options()
         self.assertRaises(GitCommandError, self.git.NoOp)
 
@@ -301,7 +301,7 @@ class TestGit(TestBase):
         self.git.log(n=1)
 
     def test_insert_after_kwarg_raises(self):
-        # This isn't a complete add command, which doesn't matter here
+        # This isn't a complete add command, which doesn't matter here.
         self.assertRaises(ValueError, self.git.remote, "add", insert_kwargs_after="foo")
 
     def test_env_vars_passed_to_git(self):
@@ -311,10 +311,10 @@ class TestGit(TestBase):
 
     @with_rw_directory
     def test_environment(self, rw_dir):
-        # sanity check
+        # Sanity check.
         self.assertEqual(self.git.environment(), {})
 
-        # make sure the context manager works and cleans up after itself
+        # Make sure the context manager works and cleans up after itself.
         with self.git.custom_environment(PWD="/tmp"):
             self.assertEqual(self.git.environment(), {"PWD": "/tmp"})
 
