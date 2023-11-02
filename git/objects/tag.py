@@ -64,7 +64,7 @@ class TagObject(base.Object):
             The timezone that the authored_date is in, in a format similar
             to :attr:`time.altzone`.
         """
-        super(TagObject, self).__init__(repo, binsha)
+        super().__init__(repo, binsha)
         if object is not None:
             self.object: Union["Commit", "Blob", "Tree", "TagObject"] = object
         if tag is not None:
@@ -108,4 +108,4 @@ class TagObject(base.Object):
                 self.message = ""
         # END check our attributes
         else:
-            super(TagObject, self)._set_cache_(attr)
+            super()._set_cache_(attr)

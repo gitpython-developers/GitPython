@@ -137,7 +137,7 @@ class GitCommandNotFound(CommandError):
     the GIT_PYTHON_GIT_EXECUTABLE environment variable."""
 
     def __init__(self, command: Union[List[str], Tuple[str], str], cause: Union[str, Exception]) -> None:
-        super(GitCommandNotFound, self).__init__(command, cause)
+        super().__init__(command, cause)
         self._msg = "Cmd('%s') not found%s"
 
 
@@ -151,7 +151,7 @@ class GitCommandError(CommandError):
         stderr: Union[bytes, str, None] = None,
         stdout: Union[bytes, str, None] = None,
     ) -> None:
-        super(GitCommandError, self).__init__(command, status, stderr, stdout)
+        super().__init__(command, status, stderr, stdout)
 
 
 class CheckoutError(GitError):
@@ -207,7 +207,7 @@ class HookExecutionError(CommandError):
         stderr: Union[bytes, str, None] = None,
         stdout: Union[bytes, str, None] = None,
     ) -> None:
-        super(HookExecutionError, self).__init__(command, status, stderr, stdout)
+        super().__init__(command, status, stderr, stdout)
         self._msg = "Hook('%s') failed%s"
 
 

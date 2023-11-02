@@ -275,7 +275,7 @@ class TestCommit(TestCommitSerialization):
 
         class Child(Commit):
             def __init__(self, *args, **kwargs):
-                super(Child, self).__init__(*args, **kwargs)
+                super().__init__(*args, **kwargs)
 
         child_commits = list(Child.iter_items(self.rorepo, "master", paths=("CHANGES", "AUTHORS")))
         assert type(child_commits[0]) is Child

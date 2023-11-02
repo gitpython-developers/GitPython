@@ -44,7 +44,7 @@ class TestRemoteProgress(RemoteProgress):
     __slots__ = ("_seen_lines", "_stages_per_op", "_num_progress_messages")
 
     def __init__(self):
-        super(TestRemoteProgress, self).__init__()
+        super().__init__()
         self._seen_lines = []
         self._stages_per_op = {}
         self._num_progress_messages = 0
@@ -53,7 +53,7 @@ class TestRemoteProgress(RemoteProgress):
         # We may remove the line later if it is dropped.
         # Keep it for debugging.
         self._seen_lines.append(line)
-        rval = super(TestRemoteProgress, self)._parse_progress_line(line)
+        rval = super()._parse_progress_line(line)
         return rval
 
     def line_dropped(self, line):

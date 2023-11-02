@@ -573,14 +573,14 @@ class Remote(LazyMixin, IterableObj):
         """Allows to call this instance like
         remote.special( \\*args, \\*\\*kwargs) to call git-remote special self.name."""
         if attr == "_config_reader":
-            return super(Remote, self).__getattr__(attr)
+            return super().__getattr__(attr)
 
         # Sometimes, probably due to a bug in Python itself, we are being called
         # even though a slot of the same name exists.
         try:
             return self._config_reader.get(attr)
         except cp.NoOptionError:
-            return super(Remote, self).__getattr__(attr)
+            return super().__getattr__(attr)
         # END handle exception
 
     def _config_section_name(self) -> str:
@@ -592,7 +592,7 @@ class Remote(LazyMixin, IterableObj):
             # values implicitly, such as in print(r.pushurl).
             self._config_reader = SectionConstraint(self.repo.config_reader("repository"), self._config_section_name())
         else:
-            super(Remote, self)._set_cache_(attr)
+            super()._set_cache_(attr)
 
     def __str__(self) -> str:
         return self.name

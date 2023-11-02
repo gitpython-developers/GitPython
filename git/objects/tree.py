@@ -237,7 +237,7 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
         mode: int = tree_id << 12,
         path: Union[PathLike, None] = None,
     ):
-        super(Tree, self).__init__(repo, binsha, mode, path)
+        super().__init__(repo, binsha, mode, path)
 
     @classmethod
     def _get_intermediate_items(
@@ -254,7 +254,7 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
             ostream = self.repo.odb.stream(self.binsha)
             self._cache: List[TreeCacheTup] = tree_entries_from_data(ostream.read())
         else:
-            super(Tree, self)._set_cache_(attr)
+            super()._set_cache_(attr)
         # END handle attribute
 
     def _iter_convert_to_object(self, iterable: Iterable[TreeCacheTup]) -> Iterator[IndexObjUnion]:
@@ -352,13 +352,13 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
         # def is_tree_traversed(inp: Tuple) -> TypeGuard[Tuple[Iterator[Union['Tree', 'Blob', 'Submodule']]]]:
         #     return all(isinstance(x, (Blob, Tree, Submodule)) for x in inp[1])
 
-        # ret = super(Tree, self).traverse(predicate, prune, depth, branch_first, visit_once, ignore_self)
+        # ret = super().traverse(predicate, prune, depth, branch_first, visit_once, ignore_self)
         # ret_tup = itertools.tee(ret, 2)
         # assert is_tree_traversed(ret_tup), f"Type is {[type(x) for x in list(ret_tup[0])]}"
         # return ret_tup[0]"""
         return cast(
             Union[Iterator[IndexObjUnion], Iterator[TraversedTreeTup]],
-            super(Tree, self)._traverse(
+            super()._traverse(
                 predicate,
                 prune,
                 depth,  # type: ignore
@@ -374,7 +374,7 @@ class Tree(IndexObject, git_diff.Diffable, util.Traversable, util.Serializable):
             traverse()
             Tree -> IterableList[Union['Submodule', 'Tree', 'Blob']]
         """
-        return super(Tree, self)._list_traverse(*args, **kwargs)
+        return super()._list_traverse(*args, **kwargs)
 
     # List protocol
 

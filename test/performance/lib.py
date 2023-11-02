@@ -32,10 +32,7 @@ class TestBigRepoR(TestBase):
     """
 
     def setUp(self):
-        try:
-            super(TestBigRepoR, self).setUp()
-        except AttributeError:
-            pass
+        super().setUp()
 
         repo_path = os.environ.get(k_env_git_repo)
         if repo_path is None:
@@ -64,17 +61,14 @@ class TestBigRepoRW(TestBigRepoR):
 
     def setUp(self):
         self.gitrwrepo = None
-        try:
-            super(TestBigRepoRW, self).setUp()
-        except AttributeError:
-            pass
+        super().setUp()
         dirname = tempfile.mktemp()
         os.mkdir(dirname)
         self.gitrwrepo = self.gitrorepo.clone(dirname, shared=True, bare=True, odbt=GitCmdObjectDB)
         self.puregitrwrepo = Repo(dirname, odbt=GitDB)
 
     def tearDown(self):
-        super(TestBigRepoRW, self).tearDown()
+        super().tearDown()
         if self.gitrwrepo is not None:
             rmtree(self.gitrwrepo.working_dir)
             self.gitrwrepo.git.clear_cache()

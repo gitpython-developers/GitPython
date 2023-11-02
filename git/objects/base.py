@@ -62,7 +62,7 @@ class Object(LazyMixin):
 
         :param binsha: 20 byte SHA1
         """
-        super(Object, self).__init__()
+        super().__init__()
         self.repo = repo
         self.binsha = binsha
         assert len(binsha) == 20, "Require 20 byte binary sha, got %r, len = %i" % (
@@ -108,7 +108,7 @@ class Object(LazyMixin):
             self.size = oinfo.size  # type:  int
             # assert oinfo.type == self.type, _assertion_msg_format % (self.binsha, oinfo.type, self.type)
         else:
-            super(Object, self)._set_cache_(attr)
+            super()._set_cache_(attr)
 
     def __eq__(self, other: Any) -> bool:
         """:return: True if the objects have the same SHA1"""
@@ -137,7 +137,7 @@ class Object(LazyMixin):
     @property
     def hexsha(self) -> str:
         """:return: 40 byte hex version of our 20 byte binary sha"""
-        # b2a_hex produces bytes
+        # b2a_hex produces bytes.
         return bin_to_hex(self.binsha).decode("ascii")
 
     @property
@@ -190,7 +190,7 @@ class IndexObject(Object):
             Path may not be set if the index object has been created directly, as it
             cannot be retrieved without knowing the parent tree.
         """
-        super(IndexObject, self).__init__(repo, binsha)
+        super().__init__(repo, binsha)
         if mode is not None:
             self.mode = mode
         if path is not None:
@@ -206,13 +206,13 @@ class IndexObject(Object):
 
     def _set_cache_(self, attr: str) -> None:
         if attr in IndexObject.__slots__:
-            # they cannot be retrieved lateron ( not without searching for them )
+            # They cannot be retrieved later on (not without searching for them).
             raise AttributeError(
                 "Attribute '%s' unset: path and mode attributes must have been set during %s object creation"
                 % (attr, type(self).__name__)
             )
         else:
-            super(IndexObject, self)._set_cache_(attr)
+            super()._set_cache_(attr)
         # END handle slot attribute
 
     @property

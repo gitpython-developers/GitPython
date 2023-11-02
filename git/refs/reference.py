@@ -62,7 +62,7 @@ class Reference(SymbolicReference, LazyMixin, IterableObj):
         if check_path and not str(path).startswith(self._common_path_default + "/"):
             raise ValueError(f"Cannot instantiate {self.__class__.__name__!r} from path {path}")
         self.path: str  # SymbolicReference converts to string at the moment.
-        super(Reference, self).__init__(repo, path)
+        super().__init__(repo, path)
 
     def __str__(self) -> str:
         return self.name
@@ -87,7 +87,7 @@ class Reference(SymbolicReference, LazyMixin, IterableObj):
             # END handle commit retrieval
         # END handle message is set
 
-        super(Reference, self).set_object(object, logmsg)
+        super().set_object(object, logmsg)
 
         if oldbinsha is not None:
             # From refs/files-backend.c in git-source:

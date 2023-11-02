@@ -718,7 +718,7 @@ class Git(LazyMixin):
            It is meant to be the working tree directory if available, or the
            ``.git`` directory in case of bare repositories.
         """
-        super(Git, self).__init__()
+        super().__init__()
         self._working_dir = expand_path(working_dir)
         self._git_options: Union[List[str], Tuple[str, ...]] = ()
         self._persistent_git_options: List[str] = []
@@ -765,7 +765,7 @@ class Git(LazyMixin):
                 tuple(int(n) for n in version_numbers.split(".")[:4] if n.isdigit()),
             )
         else:
-            super(Git, self)._set_cache_(attr)
+            super()._set_cache_(attr)
         # END handle version info
 
     @property

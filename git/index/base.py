@@ -153,7 +153,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
 
             self._deserialize(stream)
         else:
-            super(IndexFile, self)._set_cache_(attr)
+            super()._set_cache_(attr)
 
     def _index_path(self) -> PathLike:
         if self.repo.git_dir:
@@ -1425,4 +1425,4 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             raise ValueError("other must be None, Diffable.Index, a Tree or Commit, was %r" % other)
 
         # Diff against working copy - can be handled by superclass natively.
-        return super(IndexFile, self).diff(other, paths, create_patch, **kwargs)
+        return super().diff(other, paths, create_patch, **kwargs)

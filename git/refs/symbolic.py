@@ -215,7 +215,7 @@ class SymbolicReference:
         elif any(component.endswith(".lock") for component in str(ref_path).split("/")):
             raise ValueError(
                 f"Invalid reference '{ref_path}': references cannot have slash-separated components that end with"
-                f" '.lock'"
+                " '.lock'"
             )
 
     @classmethod
@@ -309,8 +309,8 @@ class SymbolicReference:
     ) -> "SymbolicReference":
         """As set_object, but restricts the type of object to be a Commit.
 
-        :raise ValueError: If commit is not a Commit object or doesn't point to
-            a commit
+        :raise ValueError: If commit is not a :class:`~git.objects.commit.Commit` object
+            or doesn't point to a commit
         :return: self
         """
         # Check the type - assume the best if it is a base-string.
