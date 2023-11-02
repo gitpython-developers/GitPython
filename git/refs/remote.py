@@ -40,7 +40,7 @@ class RemoteReference(Head):
             common_path = join_path(common_path, str(remote))
         # END handle remote constraint
         # super is Reference
-        return super(RemoteReference, cls).iter_items(repo, common_path)
+        return super().iter_items(repo, common_path)
 
     # The Head implementation of delete also accepts strs, but this
     # implementation does not.  mypy doesn't have a way of representing

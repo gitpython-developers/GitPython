@@ -107,7 +107,7 @@ class MetaParserBuilder(abc.ABCMeta):  # noqa: B024
             # END for each base
         # END if mutating methods configuration is set
 
-        new_type = super(MetaParserBuilder, cls).__new__(cls, name, bases, clsdict)
+        new_type = super().__new__(cls, name, bases, clsdict)
         return new_type
 
 
@@ -178,7 +178,7 @@ class SectionConstraint(Generic[T_ConfigParser]):
     def __getattr__(self, attr: str) -> Any:
         if attr in self._valid_attrs_:
             return lambda *args, **kwargs: self._call_config(attr, *args, **kwargs)
-        return super(SectionConstraint, self).__getattribute__(attr)
+        return super().__getattribute__(attr)
 
     def _call_config(self, method: str, *args: Any, **kwargs: Any) -> Any:
         """Call the configuration at the given method which must take a section name
@@ -207,36 +207,36 @@ class _OMD(OrderedDict_OMD):
     """Ordered multi-dict."""
 
     def __setitem__(self, key: str, value: _T) -> None:
-        super(_OMD, self).__setitem__(key, [value])
+        super().__setitem__(key, [value])
 
     def add(self, key: str, value: Any) -> None:
         if key not in self:
-            super(_OMD, self).__setitem__(key, [value])
+            super().__setitem__(key, [value])
             return None
-        super(_OMD, self).__getitem__(key).append(value)
+        super().__getitem__(key).append(value)
 
     def setall(self, key: str, values: List[_T]) -> None:
-        super(_OMD, self).__setitem__(key, values)
+        super().__setitem__(key, values)
 
     def __getitem__(self, key: str) -> Any:
-        return super(_OMD, self).__getitem__(key)[-1]
+        return super().__getitem__(key)[-1]
 
     def getlast(self, key: str) -> Any:
-        return super(_OMD, self).__getitem__(key)[-1]
+        return super().__getitem__(key)[-1]
 
     def setlast(self, key: str, value: Any) -> None:
         if key not in self:
-            super(_OMD, self).__setitem__(key, [value])
+            super().__setitem__(key, [value])
             return
 
-        prior = super(_OMD, self).__getitem__(key)
+        prior = super().__getitem__(key)
         prior[-1] = value
 
     def get(self, key: str, default: Union[_T, None] = None) -> Union[_T, None]:
-        return super(_OMD, self).get(key, [default])[-1]
+        return super().get(key, [default])[-1]
 
     def getall(self, key: str) -> List[_T]:
-        return super(_OMD, self).__getitem__(key)
+        return super().__getitem__(key)
 
     def items(self) -> List[Tuple[str, _T]]:  # type: ignore[override]
         """List of (key, last value for key)."""
@@ -680,7 +680,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
 
     def items(self, section_name: str) -> List[Tuple[str, str]]:  # type: ignore[override]
         """:return: list((option, value), ...) pairs of all items in the given section"""
-        return [(k, v) for k, v in super(GitConfigParser, self).items(section_name) if k != "__name__"]
+        return [(k, v) for k, v in super().items(section_name) if k != "__name__"]
 
     def items_all(self, section_name: str) -> List[Tuple[str, List[str]]]:
         """:return: list((option, [values...]), ...) pairs of all items in the given section"""
@@ -748,7 +748,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
 
     def add_section(self, section: str) -> None:
         """Assures added options will stay in order"""
-        return super(GitConfigParser, self).add_section(section)
+        return super().add_section(section)
 
     @property
     def read_only(self) -> bool:
@@ -899,7 +899,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
         if self.has_section(new_name):
             raise ValueError("Destination section '%s' already exists" % new_name)
 
-        super(GitConfigParser, self).add_section(new_name)
+        super().add_section(new_name)
         new_section = self._sections[new_name]
         for k, vs in self.items_all(section):
             new_section.setall(k, vs)

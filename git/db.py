@@ -34,7 +34,7 @@ class GitCmdObjectDB(LooseObjectDB):
 
     def __init__(self, root_path: PathLike, git: "Git") -> None:
         """Initialize this instance with the root and a git command."""
-        super(GitCmdObjectDB, self).__init__(root_path)
+        super().__init__(root_path)
         self._git = git
 
     def info(self, binsha: bytes) -> OInfo:

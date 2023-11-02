@@ -32,7 +32,7 @@ from test.lib import TestBase, fixture_path, with_rw_directory
 class TestGit(TestBase):
     @classmethod
     def setUpClass(cls):
-        super(TestGit, cls).setUpClass()
+        super().setUpClass()
         cls.git = Git(cls.rorepo.working_dir)
 
     def tearDown(self):

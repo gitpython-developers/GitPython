@@ -66,7 +66,7 @@ def _make_hook(git_dir, name, content, make_exec=True):
 
 class TestIndex(TestBase):
     def __init__(self, *args):
-        super(TestIndex, self).__init__(*args)
+        super().__init__(*args)
         self._reset_progress()
 
     def _assert_fprogress(self, entries):

@@ -55,7 +55,7 @@ class RootModule(Submodule):
 
     def __init__(self, repo: "Repo"):
         # repo, binsha, mode=None, path=None, name = None, parent_commit=None, url=None, ref=None)
-        super(RootModule, self).__init__(
+        super().__init__(
             repo,
             binsha=self.NULL_BIN_SHA,
             mode=self.k_default_mode,

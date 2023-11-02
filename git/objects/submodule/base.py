@@ -124,7 +124,7 @@ class Submodule(IndexObject, TraversableIterableObj):
         :param branch_path: Full (relative) path to ref to checkout when cloning the
             remote repository.
         """
-        super(Submodule, self).__init__(repo, binsha, mode, path)
+        super().__init__(repo, binsha, mode, path)
         self.size = 0
         self._parent_commit = parent_commit
         if url is not None:
@@ -154,7 +154,7 @@ class Submodule(IndexObject, TraversableIterableObj):
         elif attr == "_name":
             raise AttributeError("Cannot retrieve the name of a submodule if it was not set initially")
         else:
-            super(Submodule, self)._set_cache_(attr)
+            super()._set_cache_(attr)
         # END handle attribute name
 
     @classmethod
@@ -174,7 +174,7 @@ class Submodule(IndexObject, TraversableIterableObj):
         """Compare with another submodule."""
         # We may only compare by name as this should be the ID they are hashed with.
         # Otherwise this type wouldn't be hashable.
-        # return self.path == other.path and self.url == other.url and super(Submodule, self).__eq__(other)
+        # return self.path == other.path and self.url == other.url and super().__eq__(other)
         return self._name == other._name
 
     def __ne__(self, other: object) -> bool:

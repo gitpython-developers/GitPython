@@ -146,7 +146,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
             as what time.altzone returns. The sign is inverted compared to git's
             UTC timezone.
         """
-        super(Commit, self).__init__(repo, binsha)
+        super().__init__(repo, binsha)
         self.binsha = binsha
         if tree is not None:
             assert isinstance(tree, Tree), "Tree needs to be a Tree instance, was %s" % type(tree)
@@ -218,7 +218,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
             _binsha, _typename, self.size, stream = self.repo.odb.stream(self.binsha)
             self._deserialize(BytesIO(stream.read()))
         else:
-            super(Commit, self)._set_cache_(attr)
+            super()._set_cache_(attr)
         # END handle attrs
 
     @property

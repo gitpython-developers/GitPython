@@ -79,7 +79,7 @@ class SubmoduleConfigParser(GitConfigParser):
         self._smref: Union["ReferenceType[Submodule]", None] = None
         self._index = None
         self._auto_write = True
-        super(SubmoduleConfigParser, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     # { Interface
     def set_submodule(self, submodule: "Submodule") -> None:
@@ -107,7 +107,7 @@ class SubmoduleConfigParser(GitConfigParser):
 
     # { Overridden Methods
     def write(self) -> None:  # type: ignore[override]
-        rval: None = super(SubmoduleConfigParser, self).write()
+        rval: None = super().write()
         self.flush_to_index()
         return rval
 

@@ -718,7 +718,7 @@ class CallableRemoteProgress(RemoteProgress):
 
     def __init__(self, fn: Callable) -> None:
         self._callable = fn
-        super(CallableRemoteProgress, self).__init__()
+        super().__init__()
 
     def update(self, *args: Any, **kwargs: Any) -> None:
         self._callable(*args, **kwargs)
@@ -1040,7 +1040,7 @@ class BlockingLockFile(LockFile):
 
         :param max_block_time_s: Maximum amount of seconds we may lock.
         """
-        super(BlockingLockFile, self).__init__(file_path)
+        super().__init__(file_path)
         self._check_interval = check_interval_s
         self._max_block_time = max_block_time_s
 
@@ -1054,7 +1054,7 @@ class BlockingLockFile(LockFile):
         maxtime = starttime + float(self._max_block_time)
         while True:
             try:
-                super(BlockingLockFile, self)._obtain_lock()
+                super()._obtain_lock()
             except IOError as e:
                 # synity check: if the directory leading to the lockfile is not
                 # readable anymore, raise an exception
@@ -1103,7 +1103,7 @@ class IterableList(List[T_IterableObj]):
     __slots__ = ("_id_attr", "_prefix")
 
     def __new__(cls, id_attr: str, prefix: str = "") -> "IterableList[T_IterableObj]":
-        return super(IterableList, cls).__new__(cls)
+        return super().__new__(cls)
 
     def __init__(self, id_attr: str, prefix: str = "") -> None:
         self._id_attr = id_attr

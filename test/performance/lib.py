@@ -33,7 +33,7 @@ class TestBigRepoR(TestBase):
 
     def setUp(self):
         try:
-            super(TestBigRepoR, self).setUp()
+            super().setUp()
         except AttributeError:
             pass
 
@@ -65,7 +65,7 @@ class TestBigRepoRW(TestBigRepoR):
     def setUp(self):
         self.gitrwrepo = None
         try:
-            super(TestBigRepoRW, self).setUp()
+            super().setUp()
         except AttributeError:
             pass
         dirname = tempfile.mktemp()
@@ -74,7 +74,7 @@ class TestBigRepoRW(TestBigRepoR):
         self.puregitrwrepo = Repo(dirname, odbt=GitDB)
 
     def tearDown(self):
-        super(TestBigRepoRW, self).tearDown()
+        super().tearDown()
         if self.gitrwrepo is not None:
             rmtree(self.gitrwrepo.working_dir)
             self.gitrwrepo.git.clear_cache()
