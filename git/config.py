@@ -150,6 +150,7 @@ class SectionConstraint(Generic[T_ConfigParser]):
     """
 
     __slots__ = ("_config", "_section_name")
+
     _valid_attrs_ = (
         "get_value",
         "set_value",

@@ -137,7 +137,7 @@ class Object(LazyMixin):
     @property
     def hexsha(self) -> str:
         """:return: 40 byte hex version of our 20 byte binary sha"""
-        # b2a_hex produces bytes
+        # b2a_hex produces bytes.
         return bin_to_hex(self.binsha).decode("ascii")
 
     @property
@@ -206,7 +206,7 @@ class IndexObject(Object):
 
     def _set_cache_(self, attr: str) -> None:
         if attr in IndexObject.__slots__:
-            # they cannot be retrieved lateron ( not without searching for them )
+            # They cannot be retrieved later on (not without searching for them).
             raise AttributeError(
                 "Attribute '%s' unset: path and mode attributes must have been set during %s object creation"
                 % (attr, type(self).__name__)
