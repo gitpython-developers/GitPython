@@ -32,10 +32,7 @@ class TestBigRepoR(TestBase):
     """
 
     def setUp(self):
-        try:
-            super().setUp()
-        except AttributeError:
-            pass
+        super().setUp()
 
         repo_path = os.environ.get(k_env_git_repo)
         if repo_path is None:
@@ -64,10 +61,7 @@ class TestBigRepoRW(TestBigRepoR):
 
     def setUp(self):
         self.gitrwrepo = None
-        try:
-            super().setUp()
-        except AttributeError:
-            pass
+        super().setUp()
         dirname = tempfile.mktemp()
         os.mkdir(dirname)
         self.gitrwrepo = self.gitrorepo.clone(dirname, shared=True, bare=True, odbt=GitCmdObjectDB)
