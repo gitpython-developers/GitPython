@@ -1,3 +1,6 @@
+# This module is part of GitPython and is released under the
+# 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
+
 # Standalone functions to accompany the index implementation and make it more versatile.
 # NOTE: Autodoc hates it if this is a docstring.
 
