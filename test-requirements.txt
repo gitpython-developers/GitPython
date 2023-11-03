@@ -4,8 +4,8 @@ ddt >= 1.1.1, != 1.4.3
 mock ; python_version < "3.8"
 mypy
 pre-commit
-pytest
+pytest >= 7.3.1
 pytest-cov
 pytest-instafail
-pytest-subtests
+pytest-mock
 pytest-sugar

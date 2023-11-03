@@ -3,10 +3,11 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [tool.pytest.ini_options]
-python_files = 'test_*.py'
-testpaths = 'test'  # space separated list of paths from root e.g test tests doc/testing
-addopts = '--cov=git --cov-report=term --disable-warnings'
-filterwarnings = 'ignore::DeprecationWarning'
+addopts = "--cov=git --cov-report=term --disable-warnings"
+filterwarnings = "ignore::DeprecationWarning"
+python_files = "test_*.py"
+tmp_path_retention_policy = "failed"
+testpaths = "test"  # Space separated list of paths from root e.g test tests doc/testing.
 # --cov   coverage
 # --cov-report term  # send report to terminal term-missing -> terminal with line numbers  html  xml
 # --cov-report term-missing # to terminal with line numbers
@@ -29,7 +30,7 @@ show_error_codes = true
 implicit_reexport = true
 # strict = true
 
-# TODO: remove when 'gitdb' is fully annotated
+# TODO: Remove when 'gitdb' is fully annotated.
 exclude = ["^git/ext/gitdb"]
 [[tool.mypy.overrides]]
 module = "gitdb.*"
@@ -44,5 +45,5 @@ omit = ["*/git/ext/*"]
 
 [tool.black]
 line-length = 120
-target-version = ['py37']
+target-version = ["py37"]
 extend-exclude = "git/ext/gitdb"
