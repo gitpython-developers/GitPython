@@ -149,10 +149,6 @@ class SymbolicReference:
         except OSError:
             return None
         # END no packed-refs file handling
-        # NOTE: Had try-finally block around here to close the fp,
-        # but some python version wouldn't allow yields within that.
-        # I believe files are closing themselves on destruction, so it is
-        # alright.
 
     @classmethod
     def dereference_recursive(cls, repo: "Repo", ref_path: Union[PathLike, None]) -> str:
