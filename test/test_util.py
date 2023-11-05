@@ -135,11 +135,11 @@ class TestRmtree:
         assert old_mode == new_mode, f"Should stay {old_mode:#o}, became {new_mode:#o}."
 
     @pytest.mark.skipif(
-        sys.platform == "cygwin",
-        reason="Cygwin can't set the permissions that make the test meaningful.",
+        os.name != "nt",
+        reason="PermissionError is only ever wrapped on Windows",
     )
     def test_wraps_perm_error_if_enabled(self, mocker, permission_error_tmpdir):
-        """rmtree wraps PermissionError when HIDE_WINDOWS_KNOWN_ERRORS is true."""
+        """rmtree wraps PermissionError on Windows when HIDE_WINDOWS_KNOWN_ERRORS is true."""
         # Access the module through sys.modules so it is unambiguous which module's
         # attribute we patch: the original git.util, not git.index.util even though
         # git.index.util "replaces" git.util and is what "import git.util" gives us.
@@ -157,10 +157,17 @@ class TestRmtree:
         sys.platform == "cygwin",
         reason="Cygwin can't set the permissions that make the test meaningful.",
     )
-    def test_does_not_wrap_perm_error_unless_enabled(self, mocker, permission_error_tmpdir):
-        """rmtree does not wrap PermissionError when HIDE_WINDOWS_KNOWN_ERRORS is false."""
+    @pytest.mark.parametrize(
+        "hide_windows_known_errors",
+        [
+            pytest.param(False),
+            pytest.param(True, marks=pytest.mark.skipif(os.name == "nt", reason="We would wrap on Windows")),
+        ],
+    )
+    def test_does_not_wrap_perm_error_unless_enabled(self, mocker, permission_error_tmpdir, hide_windows_known_errors):
+        """rmtree does not wrap PermissionError on non-Windows systems or when HIDE_WINDOWS_KNOWN_ERRORS is false."""
         # See comments in test_wraps_perm_error_if_enabled for details about patching.
-        mocker.patch.object(sys.modules["git.util"], "HIDE_WINDOWS_KNOWN_ERRORS", False)
+        mocker.patch.object(sys.modules["git.util"], "HIDE_WINDOWS_KNOWN_ERRORS", hide_windows_known_errors)
         mocker.patch.object(os, "chmod")
         mocker.patch.object(pathlib.Path, "chmod")
 
