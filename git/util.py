@@ -197,7 +197,7 @@ def patch_env(name: str, value: str) -> Generator[None, None, None]:
             os.environ[name] = old_value
 
 
-def _rmtree_windows(path: PathLike) -> None:
+def rmtree(path: PathLike) -> None:
     """Remove the given directory tree recursively.
 
     :note: We use :func:`shutil.rmtree` but adjust its behaviour to see whether files
@@ -219,21 +219,12 @@ def _rmtree_windows(path: PathLike) -> None:
                 raise SkipTest(f"FIXME: fails with: PermissionError\n  {ex}") from ex
             raise
 
-    if sys.version_info >= (3, 12):
+    if os.name != "nt":
+        shutil.rmtree(path)
+    elif sys.version_info >= (3, 12):
         shutil.rmtree(path, onexc=handler)
     else:
         shutil.rmtree(path, onerror=handler)
-
-
-def _rmtree_posix(path: PathLike) -> None:
-    """Remove the given directory tree recursively."""
-    return shutil.rmtree(path)
-
-
-if os.name == "nt":
-    rmtree = _rmtree_windows
-else:
-    rmtree = _rmtree_posix
 
 
 def rmfile(path: PathLike) -> None:
