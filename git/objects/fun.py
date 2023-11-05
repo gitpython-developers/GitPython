@@ -1,3 +1,6 @@
+# This module is part of GitPython and is released under the
+# 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
+
 """Module with functions which are supposed to be as fast as possible."""
 
 from stat import S_ISDIR

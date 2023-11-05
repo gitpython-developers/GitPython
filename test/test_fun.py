@@ -1,3 +1,6 @@
+# This module is part of GitPython and is released under the
+# 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
+
 from io import BytesIO
 from stat import S_IFDIR, S_IFREG, S_IFLNK, S_IXUSR
 from os import stat

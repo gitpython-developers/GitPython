@@ -1,3 +1,6 @@
+# This module is part of GitPython and is released under the
+# 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
+
 from .base import Submodule, UpdateProgress
 from .util import find_first_remote_branch
 from git.exc import InvalidGitRepositoryError

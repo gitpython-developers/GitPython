@@ -68,7 +68,7 @@ setup(
     description="GitPython is a Python library used to interact with Git repositories",
     author="Sebastian Thiel, Michael Trier",
     author_email="byronimo@gmail.com, mtrier@gmail.com",
-    license="BSD",
+    license="BSD-3-Clause",
     url="https://github.com/gitpython-developers/GitPython",
     packages=find_packages(exclude=["test", "test.*"]),
     include_package_data=True,
