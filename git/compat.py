@@ -33,9 +33,17 @@ from typing import (
 # ---------------------------------------------------------------------------
 
 
-is_win: bool = os.name == "nt"
+# DEPRECATED attributes providing shortcuts to operating system checks based on os.name.
+#
+# These are deprecated because it is clearer, and helps avoid bugs, to write out the
+# os.name or sys.platform checks explicitly, especially in cases where it matters which
+# is used. For example, is_win is False on Cygwin, but is often assumed True. To detect
+# Cygwin, use sys.platform == "cygwin". (Also, in the past, is_darwin was unreliable.)
+#
+is_win = os.name == "nt"
 is_posix = os.name == "posix"
-is_darwin = os.name == "darwin"
+is_darwin = sys.platform == "darwin"
+
 defenc = sys.getfilesystemencoding()
 
 

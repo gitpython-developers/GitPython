@@ -6,7 +6,6 @@ import os
 import subprocess
 import sys
 
-from git.compat import is_win
 from test.lib import TestBase
 from test.lib.helper import with_rw_directory
 
@@ -15,7 +14,7 @@ class TestInstallation(TestBase):
     def setUp_venv(self, rw_dir):
         self.venv = rw_dir
         subprocess.run([sys.executable, "-m", "venv", self.venv], stdout=subprocess.PIPE)
-        bin_name = "Scripts" if is_win else "bin"
+        bin_name = "Scripts" if os.name == "nt" else "bin"
         self.python = os.path.join(self.venv, bin_name, "python")
         self.pip = os.path.join(self.venv, bin_name, "pip")
         self.sources = os.path.join(self.venv, "src")

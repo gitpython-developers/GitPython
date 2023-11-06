@@ -9,17 +9,15 @@ import gc
 import io
 import logging
 import os
+import os.path as osp
 import tempfile
 import textwrap
 import time
 import unittest
 
-from git.compat import is_win
-from git.util import rmtree, cwd
 import gitdb
 
-import os.path as osp
-
+from git.util import rmtree, cwd
 
 TestCase = unittest.TestCase
 SkipTest = unittest.SkipTest
@@ -176,7 +174,7 @@ def git_daemon_launched(base_path, ip, port):
 
     gd = None
     try:
-        if is_win:
+        if os.name == "nt":
             # On MINGW-git, daemon exists in Git\mingw64\libexec\git-core\,
             # but if invoked as 'git daemon', it detaches from parent `git` cmd,
             # and then CANNOT DIE!
@@ -200,7 +198,7 @@ def git_daemon_launched(base_path, ip, port):
                 as_process=True,
             )
         # Yes, I know... fortunately, this is always going to work if sleep time is just large enough.
-        time.sleep(0.5 * (1 + is_win))
+        time.sleep(1.0 if os.name == "nt" else 0.5)
     except Exception as ex:
         msg = textwrap.dedent(
             """

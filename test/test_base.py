@@ -10,7 +10,6 @@ from unittest import skipIf
 
 from git import Repo
 from git.objects import Blob, Tree, Commit, TagObject
-from git.compat import is_win
 from git.objects.util import get_object_type_by_name
 from test.lib import TestBase as _TestBase, with_rw_repo, with_rw_and_rw_remote_repo
 from git.util import hex_to_bin, HIDE_WINDOWS_FREEZE_ERRORS
@@ -130,7 +129,7 @@ class TestBase(_TestBase):
         with open(file_path, "wb") as fp:
             fp.write(b"something")
 
-        if is_win:
+        if os.name == "nt":
             # On Windows, there is no way this works, see images on:
             # https://github.com/gitpython-developers/GitPython/issues/147#issuecomment-68881897
             # Therefore, it must be added using the Python implementation.

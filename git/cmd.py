@@ -16,19 +16,21 @@ import subprocess
 import threading
 from textwrap import dedent
 
-from git.compat import (
-    defenc,
-    force_bytes,
-    safe_decode,
-    is_posix,
-    is_win,
+from git.compat import defenc, force_bytes, safe_decode
+from git.exc import (
+    CommandError,
+    GitCommandError,
+    GitCommandNotFound,
+    UnsafeOptionError,
+    UnsafeProtocolError,
 )
-from git.exc import CommandError
-from git.util import is_cygwin_git, cygpath, expand_path, remove_password_if_present, patch_env
-
-from .exc import GitCommandError, GitCommandNotFound, UnsafeOptionError, UnsafeProtocolError
-from .util import (
+from git.util import (
     LazyMixin,
+    cygpath,
+    expand_path,
+    is_cygwin_git,
+    patch_env,
+    remove_password_if_present,
     stream_copy,
 )
 
@@ -179,14 +181,13 @@ def handle_process_output(
         t.start()
         threads.append(t)
 
-    ## FIXME: Why Join??  Will block if `stdin` needs feeding...
-    #
+    # FIXME: Why join? Will block if stdin needs feeding...
     for t in threads:
         t.join(timeout=kill_after_timeout)
         if t.is_alive():
             if isinstance(process, Git.AutoInterrupt):
                 process._terminate()
-            else:  # Don't want to deal with the other case
+            else:  # Don't want to deal with the other case.
                 raise RuntimeError(
                     "Thread join() timed out in cmd.handle_process_output()."
                     f" kill_after_timeout={kill_after_timeout} seconds"
@@ -196,11 +197,11 @@ def handle_process_output(
                     "error: process killed because it timed out." f" kill_after_timeout={kill_after_timeout} seconds"
                 )
                 if not decode_streams and isinstance(p_stderr, BinaryIO):
-                    #  Assume stderr_handler needs binary input
+                    #  Assume stderr_handler needs binary input.
                     error_str = cast(str, error_str)
                     error_str = error_str.encode()
                 # We ignore typing on the next line because mypy does not like
-                # the way we inferred that stderr takes str or bytes
+                # the way we inferred that stderr takes str or bytes.
                 stderr_handler(error_str)  # type: ignore
 
     if finalizer:
@@ -227,14 +228,12 @@ def dict_to_slots_and__excluded_are_none(self: object, d: Mapping[str, Any], exc
 ## -- End Utilities -- @}
 
 
-# value of Windows process creation flag taken from MSDN
-CREATE_NO_WINDOW = 0x08000000
-
-## CREATE_NEW_PROCESS_GROUP is needed to allow killing it afterwards,
-# see https://docs.python.org/3/library/subprocess.html#subprocess.Popen.send_signal
-PROC_CREATIONFLAGS = (
-    CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP if is_win else 0  # type: ignore[attr-defined]
-)  # mypy error if not Windows.
+if os.name == "nt":
+    # CREATE_NEW_PROCESS_GROUP is needed to allow killing it afterwards. See:
+    # https://docs.python.org/3/library/subprocess.html#subprocess.Popen.send_signal
+    PROC_CREATIONFLAGS = subprocess.CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP
+else:
+    PROC_CREATIONFLAGS = 0
 
 
 class Git(LazyMixin):
@@ -550,7 +549,7 @@ class Git(LazyMixin):
                 # For some reason, providing None for stdout/stderr still prints something. This is why
                 # we simply use the shell and redirect to nul. Slower than CreateProcess. The question
                 # is whether we really want to see all these messages. It's annoying no matter what.
-                if is_win:
+                if os.name == "nt":
                     call(
                         ("TASKKILL /F /T /PID %s 2>nul 1>nul" % str(proc.pid)),
                         shell=True,
@@ -966,7 +965,7 @@ class Git(LazyMixin):
         if inline_env is not None:
             env.update(inline_env)
 
-        if is_win:
+        if os.name == "nt":
             cmd_not_found_exception = OSError
             if kill_after_timeout is not None:
                 raise GitCommandError(
@@ -998,11 +997,11 @@ class Git(LazyMixin):
                     env=env,
                     cwd=cwd,
                     bufsize=-1,
-                    stdin=istream or DEVNULL,
+                    stdin=(istream or DEVNULL),
                     stderr=PIPE,
                     stdout=stdout_sink,
                     shell=shell,
-                    close_fds=is_posix,  # Unsupported on Windows.
+                    close_fds=(os.name == "posix"),  # Unsupported on Windows.
                     universal_newlines=universal_newlines,
                     creationflags=PROC_CREATIONFLAGS,
                     **subprocess_kwargs,
@@ -1072,7 +1071,7 @@ class Git(LazyMixin):
                         )
                         if not universal_newlines:
                             stderr_value = stderr_value.encode(defenc)
-                # strip trailing "\n"
+                # Strip trailing "\n".
                 if stdout_value.endswith(newline) and strip_newline_in_stdout:  # type: ignore
                     stdout_value = stdout_value[:-1]
                 if stderr_value.endswith(newline):  # type: ignore
@@ -1146,11 +1145,11 @@ class Git(LazyMixin):
         """
         old_env = {}
         for key, value in kwargs.items():
-            # set value if it is None
+            # Set value if it is None.
             if value is not None:
                 old_env[key] = self._environment.get(key)
                 self._environment[key] = value
-            # remove key from environment if its value is None
+            # Remove key from environment if its value is None.
             elif key in self._environment:
                 old_env[key] = self._environment[key]
                 del self._environment[key]
@@ -1329,7 +1328,8 @@ class Git(LazyMixin):
         :return: (hex_sha, type_string, size_as_int)
 
         :raise ValueError: If the header contains indication for an error due to
-            incorrect input sha"""
+            incorrect input sha
+        """
         tokens = header_line.split()
         if len(tokens) != 3:
             if not tokens:

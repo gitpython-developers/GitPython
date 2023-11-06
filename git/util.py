@@ -21,8 +21,6 @@ import time
 from urllib.parse import urlsplit, urlunsplit
 import warnings
 
-from .compat import is_win
-
 # typing ---------------------------------------------------------
 
 from typing import (
@@ -109,7 +107,18 @@ __all__ = [
 log = logging.getLogger(__name__)
 
 
-def _read_env_flag(name: str, default: bool) -> bool:
+def _read_win_env_flag(name: str, default: bool) -> bool:
+    """Read a boolean flag from an environment variable on Windows.
+
+    :return:
+        On Windows, the flag, or the ``default`` value if absent or ambiguous.
+        On all other operating systems, ``False``.
+
+    :note: This only accesses the environment on Windows.
+    """
+    if os.name != "nt":
+        return False
+
     try:
         value = os.environ[name]
     except KeyError:
@@ -133,8 +142,8 @@ def _read_env_flag(name: str, default: bool) -> bool:
 #: We need an easy way to see if Appveyor TCs start failing,
 #: so the errors marked with this var are considered "acknowledged" ones, awaiting remedy,
 #: till then, we wish to hide them.
-HIDE_WINDOWS_KNOWN_ERRORS = is_win and _read_env_flag("HIDE_WINDOWS_KNOWN_ERRORS", True)
-HIDE_WINDOWS_FREEZE_ERRORS = is_win and _read_env_flag("HIDE_WINDOWS_FREEZE_ERRORS", True)
+HIDE_WINDOWS_KNOWN_ERRORS = _read_win_env_flag("HIDE_WINDOWS_KNOWN_ERRORS", True)
+HIDE_WINDOWS_FREEZE_ERRORS = _read_win_env_flag("HIDE_WINDOWS_FREEZE_ERRORS", True)
 
 # { Utility Methods
 
@@ -219,7 +228,7 @@ def rmtree(path: PathLike) -> None:
 def rmfile(path: PathLike) -> None:
     """Ensure file deleted also on *Windows* where read-only files need special treatment."""
     if osp.isfile(path):
-        if is_win:
+        if os.name == "nt":
             os.chmod(path, 0o777)
         os.remove(path)
 
@@ -259,7 +268,7 @@ def join_path(a: PathLike, *p: PathLike) -> PathLike:
     return path
 
 
-if is_win:
+if os.name == "nt":
 
     def to_native_path_windows(path: PathLike) -> PathLike:
         path = str(path)
@@ -307,9 +316,12 @@ def assure_directory_exists(path: PathLike, is_file: bool = False) -> bool:
 
 def _get_exe_extensions() -> Sequence[str]:
     PATHEXT = os.environ.get("PATHEXT", None)
-    return (
-        tuple(p.upper() for p in PATHEXT.split(os.pathsep)) if PATHEXT else (".BAT", "COM", ".EXE") if is_win else ("")
-    )
+    if PATHEXT:
+        return tuple(p.upper() for p in PATHEXT.split(os.pathsep))
+    elif os.name == "nt":
+        return (".BAT", "COM", ".EXE")
+    else:
+        return ()
 
 
 def py_where(program: str, path: Optional[PathLike] = None) -> List[str]:
@@ -417,8 +429,8 @@ def is_cygwin_git(git_executable: PathLike) -> bool:
 
 
 def is_cygwin_git(git_executable: Union[None, PathLike]) -> bool:
-    if is_win:
-        # is_win is only True on native Windows systems. On Cygwin, os.name == "posix".
+    if os.name == "nt":
+        # This is Windows-native Python, since Cygwin has os.name == "posix".
         return False
 
     if git_executable is None:
