@@ -1,7 +1,7 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
-"""Module with additional types used by the index."""
+"""Additional types used by the index."""
 
 from binascii import b2a_hex
 from pathlib import Path

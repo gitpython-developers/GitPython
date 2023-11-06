@@ -3,7 +3,7 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
-"""Module containing all Object-based types."""
+"""Object-based types."""
 
 from . import base
 from .util import get_object_type_by_name, parse_actor_and_date

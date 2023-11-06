@@ -3,7 +3,7 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
-"""Module for general utility functions."""
+"""General utility functions."""
 
 # flake8: noqa F401
 

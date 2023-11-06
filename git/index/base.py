@@ -3,6 +3,9 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
+"""Module containing IndexFile, an Index implementation facilitating all kinds of index
+manipulations such as querying and merging."""
+
 from contextlib import ExitStack
 import datetime
 import glob

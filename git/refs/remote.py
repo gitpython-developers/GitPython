@@ -1,6 +1,8 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
+"""Module implementing a remote object allowing easy access to git remotes."""
+
 import os
 
 from git.util import join_path
