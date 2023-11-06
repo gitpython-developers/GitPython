@@ -1,6 +1,11 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
+"""Some ref-based objects.
+
+Note the distinction between the :class:`HEAD` and :class:`Head` classes.
+"""
+
 from git.config import GitConfigParser, SectionConstraint
 from git.util import join_path
 from git.exc import GitCommandError

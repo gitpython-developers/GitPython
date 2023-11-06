@@ -3,8 +3,7 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
-"""Module containing module parser implementation able to properly read and write
-configuration files."""
+"""Parser for reading and writing configuration files."""
 
 import abc
 import configparser as cp
