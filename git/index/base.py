@@ -97,9 +97,8 @@ __all__ = ("IndexFile", "CheckoutError", "StageType")
 
 
 class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
-    """
-    An Index that can be manipulated using a native implementation in order to save git
-    command function calls wherever possible.
+    """An Index that can be manipulated using a native implementation in order to save
+    git command function calls wherever possible.
 
     This provides custom merging facilities allowing to merge without actually changing
     your index or your working tree. This way you can perform own test-merges based
@@ -380,6 +379,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             # END index merge handling
 
     # UTILITIES
+
     @unbare_repo
     def _iter_expand_paths(self: "IndexFile", paths: Sequence[PathLike]) -> Iterator[PathLike]:
         """Expand the directories in list of paths to the corresponding paths accordingly.
