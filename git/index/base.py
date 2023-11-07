@@ -362,6 +362,8 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         # works - /tmp/ dirs could be on another device.
         with ExitStack() as stack:
             tmp_index = stack.enter_context(tempfile.NamedTemporaryFile(dir=repo.git_dir))
+            if os.name == "nt":
+                tmp_index.close()
             arg_list.append("--index-output=%s" % tmp_index.name)
             arg_list.extend(treeish)
 
