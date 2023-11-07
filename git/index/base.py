@@ -6,7 +6,7 @@
 """Module containing IndexFile, an Index implementation facilitating all kinds of index
 manipulations such as querying and merging."""
 
-from contextlib import ExitStack
+import contextlib
 import datetime
 import glob
 from io import BytesIO
@@ -67,6 +67,7 @@ from typing import (
     BinaryIO,
     Callable,
     Dict,
+    Generator,
     IO,
     Iterable,
     Iterator,
@@ -94,6 +95,27 @@ Treeish = Union[Tree, Commit, str, bytes]
 
 
 __all__ = ("IndexFile", "CheckoutError", "StageType")
+
+
+@contextlib.contextmanager
+def _named_temporary_file_for_subprocess(directory: PathLike) -> Generator[str, None, None]:
+    """Create a named temporary file git subprocesses can open, deleting it afterward.
+
+    :param directory: The directory in which the file is created.
+
+    :return: A context manager object that creates the file and provides its name on
+        entry, and deletes it on exit.
+    """
+    if os.name == "nt":
+        fd, name = tempfile.mkstemp(dir=directory)
+        os.close(fd)
+        try:
+            yield name
+        finally:
+            os.remove(name)
+    else:
+        with tempfile.NamedTemporaryFile(dir=directory) as ctx:
+            yield ctx.name
 
 
 class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
@@ -359,11 +381,9 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
 
         # tmp file created in git home directory to be sure renaming
         # works - /tmp/ dirs could be on another device.
-        with ExitStack() as stack:
-            tmp_index = stack.enter_context(tempfile.NamedTemporaryFile(dir=repo.git_dir))
-            if os.name == "nt":
-                tmp_index.close()
-            arg_list.append("--index-output=%s" % tmp_index.name)
+        with contextlib.ExitStack() as stack:
+            tmp_index = stack.enter_context(_named_temporary_file_for_subprocess(repo.git_dir))
+            arg_list.append("--index-output=%s" % tmp_index)
             arg_list.extend(treeish)
 
             # Move current index out of the way - otherwise the merge may fail
@@ -373,7 +393,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
 
             stack.enter_context(TemporaryFileSwap(join_path_native(repo.git_dir, "index")))
             repo.git.read_tree(*arg_list, **kwargs)
-            index = cls(repo, tmp_index.name)
+            index = cls(repo, tmp_index)
             index.entries  # Force it to read the file as we will delete the temp-file.
             return index
             # END index merge handling
