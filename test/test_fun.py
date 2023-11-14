@@ -3,10 +3,13 @@
 
 from io import BytesIO
 from stat import S_IFDIR, S_IFREG, S_IFLNK, S_IXUSR
-from os import stat
+import os
 import os.path as osp
 
+import pytest
+
 from git import Git
+from git.exc import GitCommandError
 from git.index import IndexFile
 from git.index.fun import (
     aggressive_tree_merge,
@@ -34,6 +37,14 @@ class TestFun(TestBase):
             assert (entry.path, entry.stage) in index.entries
         # END assert entry matches fully
 
+    @pytest.mark.xfail(
+        os.name == "nt",
+        reason=(
+            "IndexFile.from_tree is broken on Windows (related to NamedTemporaryFile), see #1630.\n"
+            "'git read-tree --index-output=...' fails with 'fatal: unable to write new index file'."
+        ),
+        raises=GitCommandError,
+    )
     def test_aggressive_tree_merge(self):
         # Head tree with additions, removals and modification compared to its predecessor.
         odb = self.rorepo.odb
@@ -291,12 +302,12 @@ class TestFun(TestBase):
         rw_master.git.worktree("add", worktree_path, branch.name)
 
         dotgit = osp.join(worktree_path, ".git")
-        statbuf = stat(dotgit)
+        statbuf = os.stat(dotgit)
         self.assertTrue(statbuf.st_mode & S_IFREG)
 
         gitdir = find_worktree_git_dir(dotgit)
         self.assertIsNotNone(gitdir)
-        statbuf = stat(gitdir)
+        statbuf = os.stat(gitdir)
         self.assertTrue(statbuf.st_mode & S_IFDIR)
 
     def test_tree_entries_from_data_with_failing_name_decode_py3(self):

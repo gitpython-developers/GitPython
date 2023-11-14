@@ -4,7 +4,10 @@
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
 from itertools import chain
+import os
 from pathlib import Path
+
+import pytest
 
 from git import (
     Reference,
@@ -215,6 +218,14 @@ class TestRefs(TestBase):
         assert isinstance(res, SymbolicReference)
         assert res.name == "HEAD"
 
+    @pytest.mark.xfail(
+        os.name == "nt",
+        reason=(
+            "IndexFile.from_tree is broken on Windows (related to NamedTemporaryFile), see #1630.\n"
+            "'git read-tree --index-output=...' fails with 'fatal: unable to write new index file'."
+        ),
+        raises=GitCommandError,
+    )
     @with_rw_repo("0.1.6")
     def test_head_reset(self, rw_repo):
         cur_head = rw_repo.head
