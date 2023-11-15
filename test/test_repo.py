@@ -1365,6 +1365,11 @@ class TestRepo(TestBase):
         r.git.commit(message="init")
         self.assertEqual(r.git.show("HEAD:hello.txt", strip_newline_in_stdout=False), "hello\n")
 
+    @pytest.mark.xfail(
+        os.name == "nt",
+        reason=R"fatal: could not create leading directories of '--upload-pack=touch C:\Users\ek\AppData\Local\Temp\tmpnantqizc\pwn': Invalid argument",  # noqa: E501
+        raises=GitCommandError,
+    )
     @with_rw_repo("HEAD")
     def test_clone_command_injection(self, rw_repo):
         with tempfile.TemporaryDirectory() as tdir:
