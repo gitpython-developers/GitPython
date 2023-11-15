@@ -109,18 +109,49 @@ class TestRmtree:
         sys.platform == "cygwin",
         reason="Cygwin can't set the permissions that make the test meaningful.",
     )
-    def test_wraps_perm_error_if_enabled(self, mocker, permission_error_tmpdir):
-        """rmtree wraps PermissionError when HIDE_WINDOWS_KNOWN_ERRORS is true."""
+    def test_avoids_changing_permissions_outside_tree(self, tmp_path):
+        # Automatically works on Windows, but on Unix requires either special handling
+        # or refraining from attempting to fix PermissionError by making chmod calls.
+
+        dir1 = tmp_path / "dir1"
+        dir1.mkdir()
+        (dir1 / "file").write_bytes(b"")
+        (dir1 / "file").chmod(stat.S_IRUSR)
+        old_mode = (dir1 / "file").stat().st_mode
+
+        dir2 = tmp_path / "dir2"
+        dir2.mkdir()
+        (dir2 / "symlink").symlink_to(dir1 / "file")
+        dir2.chmod(stat.S_IRUSR | stat.S_IXUSR)
+
+        try:
+            rmtree(dir2)
+        except PermissionError:
+            pass  # On Unix, dir2 is not writable, so dir2/symlink may not be deleted.
+        except SkipTest as ex:
+            self.fail(f"rmtree unexpectedly attempts skip: {ex!r}")
+
+        new_mode = (dir1 / "file").stat().st_mode
+        assert old_mode == new_mode, f"Should stay {old_mode:#o}, became {new_mode:#o}."
+
+    def _patch_for_wrapping_test(self, mocker, hide_windows_known_errors):
         # Access the module through sys.modules so it is unambiguous which module's
         # attribute we patch: the original git.util, not git.index.util even though
         # git.index.util "replaces" git.util and is what "import git.util" gives us.
-        mocker.patch.object(sys.modules["git.util"], "HIDE_WINDOWS_KNOWN_ERRORS", True)
+        mocker.patch.object(sys.modules["git.util"], "HIDE_WINDOWS_KNOWN_ERRORS", hide_windows_known_errors)
 
-        # Disable common chmod functions so the callback can never fix the problem.
+        # Disable common chmod functions so the callback can't fix a PermissionError.
         mocker.patch.object(os, "chmod")
         mocker.patch.object(pathlib.Path, "chmod")
 
-        # Now we can see how an intractable PermissionError is treated.
+    @pytest.mark.skipif(
+        os.name != "nt",
+        reason="PermissionError is only ever wrapped on Windows",
+    )
+    def test_wraps_perm_error_if_enabled(self, mocker, permission_error_tmpdir):
+        """rmtree wraps PermissionError on Windows when HIDE_WINDOWS_KNOWN_ERRORS is true."""
+        self._patch_for_wrapping_test(mocker, True)
+
         with pytest.raises(SkipTest):
             rmtree(permission_error_tmpdir)
 
@@ -128,12 +159,16 @@ class TestRmtree:
         sys.platform == "cygwin",
         reason="Cygwin can't set the permissions that make the test meaningful.",
     )
-    def test_does_not_wrap_perm_error_unless_enabled(self, mocker, permission_error_tmpdir):
-        """rmtree does not wrap PermissionError when HIDE_WINDOWS_KNOWN_ERRORS is false."""
-        # See comments in test_wraps_perm_error_if_enabled for details about patching.
-        mocker.patch.object(sys.modules["git.util"], "HIDE_WINDOWS_KNOWN_ERRORS", False)
-        mocker.patch.object(os, "chmod")
-        mocker.patch.object(pathlib.Path, "chmod")
+    @pytest.mark.parametrize(
+        "hide_windows_known_errors",
+        [
+            pytest.param(False),
+            pytest.param(True, marks=pytest.mark.skipif(os.name == "nt", reason="We would wrap on Windows")),
+        ],
+    )
+    def test_does_not_wrap_perm_error_unless_enabled(self, mocker, permission_error_tmpdir, hide_windows_known_errors):
+        """rmtree does not wrap PermissionError on non-Windows systems or when HIDE_WINDOWS_KNOWN_ERRORS is false."""
+        self._patch_for_wrapping_test(mocker, hide_windows_known_errors)
 
         with pytest.raises(PermissionError):
             try:
@@ -144,11 +179,7 @@ class TestRmtree:
     @pytest.mark.parametrize("hide_windows_known_errors", [False, True])
     def test_does_not_wrap_other_errors(self, tmp_path, mocker, hide_windows_known_errors):
         file_not_found_tmpdir = tmp_path / "testdir"  # It is deliberately never created.
-
-        # See comments in test_wraps_perm_error_if_enabled for details about patching.
-        mocker.patch.object(sys.modules["git.util"], "HIDE_WINDOWS_KNOWN_ERRORS", hide_windows_known_errors)
-        mocker.patch.object(os, "chmod")
-        mocker.patch.object(pathlib.Path, "chmod")
+        self._patch_for_wrapping_test(mocker, hide_windows_known_errors)
 
         with pytest.raises(FileNotFoundError):
             try:

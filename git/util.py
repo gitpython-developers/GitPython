@@ -219,7 +219,9 @@ def rmtree(path: PathLike) -> None:
                 raise SkipTest(f"FIXME: fails with: PermissionError\n  {ex}") from ex
             raise
 
-    if sys.version_info >= (3, 12):
+    if os.name != "nt":
+        shutil.rmtree(path)
+    elif sys.version_info >= (3, 12):
         shutil.rmtree(path, onexc=handler)
     else:
         shutil.rmtree(path, onerror=handler)
