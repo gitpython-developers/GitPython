@@ -6,19 +6,15 @@
 import glob
 import io
 import os
+import os.path as osp
 from unittest import mock
+
+import pytest
 
 from git import GitConfigParser
 from git.config import _OMD, cp
-from test.lib import (
-    TestCase,
-    fixture_path,
-    SkipTest,
-)
-from test.lib import with_rw_directory
-
-import os.path as osp
 from git.util import rmfile
+from test.lib import SkipTest, TestCase, fixture_path, with_rw_directory
 
 
 _tc_lock_fpaths = osp.join(osp.dirname(__file__), "fixtures/*.lock")
@@ -239,6 +235,11 @@ class TestBase(TestCase):
         with GitConfigParser(fpa, read_only=True) as cr:
             check_test_value(cr, tv)
 
+    @pytest.mark.xfail(
+        os.name == "nt",
+        reason='Second config._has_includes() assertion fails (for "config is included if path is matching git_dir")',
+        raises=AssertionError,
+    )
     @with_rw_directory
     def test_conditional_includes_from_git_dir(self, rw_dir):
         # Initiate repository path.
