@@ -3,6 +3,7 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
+import os
 import os.path as osp
 from pathlib import Path
 import random
@@ -767,6 +768,11 @@ class TestRemote(TestBase):
                     Remote.create(rw_repo, "origin", url)
                 assert not tmp_file.exists()
 
+    @pytest.mark.xfail(
+        os.name == "nt",
+        reason=R"Multiple '\' instead of '/' in remote.url make it differ from expected value",
+        raises=AssertionError,
+    )
     @with_rw_repo("HEAD")
     def test_create_remote_unsafe_url_allowed(self, rw_repo):
         with tempfile.TemporaryDirectory() as tdir:
