@@ -3,36 +3,37 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
+import os.path as osp
+from pathlib import Path
 import random
 import tempfile
-import pytest
 from unittest import skipIf
 
+import pytest
+
 from git import (
-    RemoteProgress,
-    FetchInfo,
-    Reference,
-    SymbolicReference,
-    Head,
     Commit,
-    PushInfo,
-    RemoteReference,
-    TagReference,
-    Remote,
+    FetchInfo,
     GitCommandError,
+    Head,
+    PushInfo,
+    Reference,
+    Remote,
+    RemoteProgress,
+    RemoteReference,
+    SymbolicReference,
+    TagReference,
 )
 from git.cmd import Git
-from pathlib import Path
 from git.exc import UnsafeOptionError, UnsafeProtocolError
-from test.lib import (
-    TestBase,
-    with_rw_repo,
-    with_rw_and_rw_remote_repo,
-    fixture,
-    GIT_DAEMON_PORT,
-)
 from git.util import rmtree, HIDE_WINDOWS_FREEZE_ERRORS, IterableList
-import os.path as osp
+from test.lib import (
+    GIT_DAEMON_PORT,
+    TestBase,
+    fixture,
+    with_rw_and_rw_remote_repo,
+    with_rw_repo,
+)
 
 
 # Make sure we have repeatable results.
