@@ -831,6 +831,15 @@ class TestRemote(TestBase):
                     remote.fetch(**unsafe_option)
                 assert not tmp_file.exists()
 
+    @pytest.mark.xfail(
+        os.name == "nt",
+        reason=(
+            "File not created. A separate Windows command may be needed. This and the "
+            "currently passing test test_fetch_unsafe_options must be adjusted in the "
+            "same way. Until then, test_fetch_unsafe_options is unreliable on Windows."
+        ),
+        raises=AssertionError,
+    )
     @with_rw_repo("HEAD")
     def test_fetch_unsafe_options_allowed(self, rw_repo):
         with tempfile.TemporaryDirectory() as tdir:
@@ -890,6 +899,15 @@ class TestRemote(TestBase):
                     remote.pull(**unsafe_option)
                 assert not tmp_file.exists()
 
+    @pytest.mark.xfail(
+        os.name == "nt",
+        reason=(
+            "File not created. A separate Windows command may be needed. This and the "
+            "currently passing test test_pull_unsafe_options must be adjusted in the "
+            "same way. Until then, test_pull_unsafe_options is unreliable on Windows."
+        ),
+        raises=AssertionError,
+    )
     @with_rw_repo("HEAD")
     def test_pull_unsafe_options_allowed(self, rw_repo):
         with tempfile.TemporaryDirectory() as tdir:
@@ -955,6 +973,15 @@ class TestRemote(TestBase):
                     remote.push(**unsafe_option)
                 assert not tmp_file.exists()
 
+    @pytest.mark.xfail(
+        os.name == "nt",
+        reason=(
+            "File not created. A separate Windows command may be needed. This and the "
+            "currently passing test test_push_unsafe_options must be adjusted in the "
+            "same way. Until then, test_push_unsafe_options is unreliable on Windows."
+        ),
+        raises=AssertionError,
+    )
     @with_rw_repo("HEAD")
     def test_push_unsafe_options_allowed(self, rw_repo):
         with tempfile.TemporaryDirectory() as tdir:

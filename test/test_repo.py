@@ -294,6 +294,15 @@ class TestRepo(TestBase):
                     rw_repo.clone(tmp_dir, **unsafe_option)
                 assert not tmp_file.exists()
 
+    @pytest.mark.xfail(
+        os.name == "nt",
+        reason=(
+            "File not created. A separate Windows command may be needed. This and the "
+            "currently passing test test_clone_unsafe_options must be adjusted in the "
+            "same way. Until then, test_clone_unsafe_options is unreliable on Windows."
+        ),
+        raises=AssertionError,
+    )
     @with_rw_repo("HEAD")
     def test_clone_unsafe_options_allowed(self, rw_repo):
         with tempfile.TemporaryDirectory() as tdir:
@@ -364,6 +373,15 @@ class TestRepo(TestBase):
                     Repo.clone_from(rw_repo.working_dir, tmp_dir, **unsafe_option)
                 assert not tmp_file.exists()
 
+    @pytest.mark.xfail(
+        os.name == "nt",
+        reason=(
+            "File not created. A separate Windows command may be needed. This and the "
+            "currently passing test test_clone_from_unsafe_options must be adjusted in the "
+            "same way. Until then, test_clone_from_unsafe_options is unreliable on Windows."
+        ),
+        raises=AssertionError,
+    )
     @with_rw_repo("HEAD")
     def test_clone_from_unsafe_options_allowed(self, rw_repo):
         with tempfile.TemporaryDirectory() as tdir:
