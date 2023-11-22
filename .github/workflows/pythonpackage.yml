@@ -65,7 +65,27 @@ jobs:
         python -c 'import sys; print(sys.platform)'
         python -c 'import os; print(os.name)'
         python -c 'import git; print(git.compat.is_win)'  # NOTE: Deprecated. Use os.name directly.
-        printenv PATH | tr ':' '\n'
+
+    # For debugging hook tests on native Windows systems that may have WSL.
+    - name: Show where bash.exe may be found
+      if: startsWith(matrix.os, 'windows')
+      run: |
+        set +e
+        type -a bash.exe
+        python -c 'import shutil; print(shutil.which("bash.exe"))'
+        bash.exe --version
+        python -c 'import subprocess; p = subprocess.run(["bash.exe", "--version"]); print(f"result: {p!r}")'
+        bash.exe -c 'echo "$BASH"'
+        python -c 'import subprocess; p = subprocess.run(["bash.exe", "-c", """echo "$BASH" """]); print(f"result: {p!r}")'
+        bash.exe -c 'echo "$BASH_VERSION"'
+        python -c 'import subprocess; p = subprocess.run(["bash.exe", "-c", """echo "$BASH_VERSION" """]); print(f"result: {p!r}")'
+        bash.exe -c 'printenv WSL_DISTRO_NAME'
+        python -c 'import subprocess; p = subprocess.run(["bash.exe", "-c", "printenv WSL_DISTRO_NAME"]); print(f"result: {p!r}")'
+        bash.exe -c 'ls -l /proc/sys/fs/binfmt_misc/WSLInterop'
+        python -c 'import subprocess; p = subprocess.run(["bash.exe", "-c", "ls -l /proc/sys/fs/binfmt_misc/WSLInterop"]); print(f"result: {p!r}")'
+        bash.exe -c 'uname -a'
+        python -c 'import subprocess; p = subprocess.run(["bash.exe", "-c", "uname -a"]); print(f"result: {p!r}")'
+      continue-on-error: true
 
     - name: Check types with mypy
       run: |

@@ -73,7 +73,6 @@ jobs:
         python -c 'import sys; print(sys.platform)'
         python -c 'import os; print(os.name)'
         python -c 'import git; print(git.compat.is_win)'  # NOTE: Deprecated. Use os.name directly.
-        printenv PATH | tr ':' '\n'
 
     - name: Test with pytest
       run: |
