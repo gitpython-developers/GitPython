@@ -3,12 +3,14 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
+import enum
 from io import BytesIO
+import logging
 import os
 import os.path as osp
 from pathlib import Path
 from stat import S_ISLNK, ST_MODE
-import shutil
+import subprocess
 import tempfile
 
 import pytest
@@ -34,19 +36,97 @@ from gitdb.base import IStream
 
 HOOKS_SHEBANG = "#!/usr/bin/env sh\n"
 
-
-def _found_in(cmd, directory):
-    """Check if a command is resolved in a directory (without following symlinks)."""
-    path = shutil.which(cmd)
-    return path and Path(path).parent == Path(directory)
+log = logging.getLogger(__name__)
 
 
-is_win_without_bash = os.name == "nt" and not shutil.which("bash.exe")
+class _WinBashMeta(enum.EnumMeta):
+    """Metaclass allowing :class:`_WinBash` custom behavior when called."""
 
-is_win_with_wsl_bash = os.name == "nt" and _found_in(
-    cmd="bash.exe",
-    directory=Path(os.getenv("WINDIR")) / "System32",
-)
+    def __call__(cls):
+        return cls._check()
+
+
+@enum.unique
+class _WinBash(enum.Enum, metaclass=_WinBashMeta):
+    """Status of bash.exe for native Windows. Affects which commit hook tests can pass.
+
+    Call ``_WinBash()`` to check the status.
+
+    This can't be reliably discovered using :func:`shutil.which`, as that approximates
+    how a shell is expected to search for an executable. On Windows, there are major
+    differences between how executables are found by a shell and otherwise. (This is the
+    cmd.exe Windows shell and should not be confused with bash.exe.) Our run_commit_hook
+    function in GitPython uses subprocess.Popen, including to run bash.exe on Windows.
+    It does not pass shell=True (and should not). Popen calls CreateProcessW, which
+    searches several locations prior to using the PATH environment variable. It is
+    expected to search the System32 directory, even if another directory containing the
+    executable precedes it in PATH. (There are other differences, less relevant here.)
+    When WSL is installed, even if no WSL *systems* are installed, bash.exe exists in
+    System32, and Popen finds it even if another bash.exe precedes it in PATH, as
+    happens on CI. If WSL is absent, System32 may still have bash.exe, as Windows users
+    and administrators occasionally copy executables there in lieu of extending PATH.
+    """
+
+    INAPPLICABLE = enum.auto()
+    """This system is not native Windows: either not Windows at all, or Cygwin."""
+
+    ABSENT = enum.auto()
+    """No command for ``bash.exe`` is found on the system."""
+
+    NATIVE = enum.auto()
+    """Running ``bash.exe`` operates outside any WSL environment (as with Git Bash)."""
+
+    WSL = enum.auto()
+    """Running ``bash.exe`` runs bash on a WSL system."""
+
+    WSL_NO_DISTRO = enum.auto()
+    """Running ``bash.exe` tries to run bash on a WSL system, but none exists."""
+
+    ERROR_WHILE_CHECKING = enum.auto()
+    """Could not determine the status.
+
+    This should not trigger a skip or xfail, as it typically indicates either a fixable
+    problem on the test machine, such as an "Insufficient system resources exist to
+    complete the requested service" error starting WSL, or a bug in this detection code.
+    ``ERROR_WHILE_CHECKING.error_or_process`` has details about the most recent failure.
+    """
+
+    @classmethod
+    def _check(cls):
+        if os.name != "nt":
+            return cls.INAPPLICABLE
+
+        try:
+            # Print rather than returning the test command's exit status so that if a
+            # failure occurs before we even get to this point, we will detect it.
+            script = 'test -e /proc/sys/fs/binfmt_misc/WSLInterop; echo "$?"'
+            command = ["bash.exe", "-c", script]
+            proc = subprocess.run(command, capture_output=True, check=True, text=True)
+        except FileNotFoundError:
+            return cls.ABSENT
+        except OSError as error:
+            return cls._error(error)
+        except subprocess.CalledProcessError as error:
+            no_distro_message = "Windows Subsystem for Linux has no installed distributions."
+            if error.returncode == 1 and error.stdout.startswith(no_distro_message):
+                return cls.WSL_NO_DISTRO
+            return cls._error(error)
+
+        status = proc.stdout.rstrip()
+        if status == "0":
+            return cls.WSL
+        if status == "1":
+            return cls.NATIVE
+        return cls._error(proc)
+
+    @classmethod
+    def _error(cls, error_or_process):
+        if isinstance(error_or_process, subprocess.CompletedProcess):
+            log.error("Strange output checking WSL status: %s", error_or_process.stdout)
+        else:
+            log.error("Error running bash.exe to check WSL status: %s", error_or_process)
+        cls.ERROR_WHILE_CHECKING.error_or_process = error_or_process
+        return cls.ERROR_WHILE_CHECKING
 
 
 def _make_hook(git_dir, name, content, make_exec=True):
@@ -917,12 +997,22 @@ class TestIndex(TestBase):
         rel = index._to_relative_path(path)
         self.assertEqual(rel, os.path.relpath(path, root))
 
+    @pytest.mark.xfail(
+        _WinBash() is _WinBash.WSL_NO_DISTRO,
+        reason="Currently uses the bash.exe for WSL even with no WSL distro installed",
+        raises=HookExecutionError,
+    )
     @with_rw_repo("HEAD", bare=True)
     def test_pre_commit_hook_success(self, rw_repo):
         index = rw_repo.index
         _make_hook(index.repo.git_dir, "pre-commit", "exit 0")
         index.commit("This should not fail")
 
+    @pytest.mark.xfail(
+        _WinBash() is _WinBash.WSL_NO_DISTRO,
+        reason="Currently uses the bash.exe for WSL even with no WSL distro installed",
+        raises=AssertionError,
+    )
     @with_rw_repo("HEAD", bare=True)
     def test_pre_commit_hook_fail(self, rw_repo):
         index = rw_repo.index
@@ -930,7 +1020,7 @@ class TestIndex(TestBase):
         try:
             index.commit("This should fail")
         except HookExecutionError as err:
-            if is_win_without_bash:
+            if _WinBash() is _WinBash.ABSENT:
                 self.assertIsInstance(err.status, OSError)
                 self.assertEqual(err.command, [hp])
                 self.assertEqual(err.stdout, "")
@@ -946,9 +1036,14 @@ class TestIndex(TestBase):
             raise AssertionError("Should have caught a HookExecutionError")
 
     @pytest.mark.xfail(
-        is_win_without_bash or is_win_with_wsl_bash,
+        _WinBash() in {_WinBash.ABSENT, _WinBash.WSL},
         reason="Specifically seems to fail on WSL bash (in spite of #1399)",
         raises=AssertionError,
+    )
+    @pytest.mark.xfail(
+        _WinBash() is _WinBash.WSL_NO_DISTRO,
+        reason="Currently uses the bash.exe for WSL even with no WSL distro installed",
+        raises=HookExecutionError,
     )
     @with_rw_repo("HEAD", bare=True)
     def test_commit_msg_hook_success(self, rw_repo):
@@ -963,6 +1058,11 @@ class TestIndex(TestBase):
         new_commit = index.commit(commit_message)
         self.assertEqual(new_commit.message, "{} {}".format(commit_message, from_hook_message))
 
+    @pytest.mark.xfail(
+        _WinBash() is _WinBash.WSL_NO_DISTRO,
+        reason="Currently uses the bash.exe for WSL even with no WSL distro installed",
+        raises=AssertionError,
+    )
     @with_rw_repo("HEAD", bare=True)
     def test_commit_msg_hook_fail(self, rw_repo):
         index = rw_repo.index
@@ -970,7 +1070,7 @@ class TestIndex(TestBase):
         try:
             index.commit("This should fail")
         except HookExecutionError as err:
-            if is_win_without_bash:
+            if _WinBash() is _WinBash.ABSENT:
                 self.assertIsInstance(err.status, OSError)
                 self.assertEqual(err.command, [hp])
                 self.assertEqual(err.stdout, "")
