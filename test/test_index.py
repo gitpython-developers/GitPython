@@ -94,10 +94,11 @@ class _WinBashStatus:
         if os.name != "nt":
             return cls.Inapplicable()
 
-        no_distro_message = "Windows Subsystem for Linux has no installed distributions."
+        # Use bytes because messages for different WSL errors use different encodings.
+        no_distro_message = b"Windows Subsystem for Linux has no installed distributions."
 
         def error_running_bash(error):
-            log.error("Error running bash.exe to check WSL status: %s", error)
+            log.error("Error running bash.exe to check WSL status: %r", error)
             return cls.ErrorWhileChecking(error)
 
         try:
@@ -106,7 +107,7 @@ class _WinBashStatus:
             # information on ways to check for WSL, see https://superuser.com/a/1749811.
             script = 'test -e /proc/sys/fs/binfmt_misc/WSLInterop; echo "$?"'
             command = ["bash.exe", "-c", script]
-            proc = subprocess.run(command, capture_output=True, check=True, text=True)
+            proc = subprocess.run(command, capture_output=True, check=True)
         except FileNotFoundError:
             return cls.Absent()
         except OSError as error:
@@ -117,11 +118,11 @@ class _WinBashStatus:
             return error_running_bash(error)
 
         status = proc.stdout.rstrip()
-        if status == "0":
+        if status == b"0":
             return cls.Wsl()
-        if status == "1":
+        if status == b"1":
             return cls.Native()
-        log.error("Strange output checking WSL status: %s", proc.stdout)
+        log.error("Strange output checking WSL status: %r", proc.stdout)
         return cls.ErrorWhileChecking(proc)
 
 
