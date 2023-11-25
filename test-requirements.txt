@@ -9,3 +9,4 @@ pytest-cov
 pytest-instafail
 pytest-mock
 pytest-sugar
+sumtypes

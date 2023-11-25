@@ -3,7 +3,6 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
-import enum
 from io import BytesIO
 import logging
 import os
@@ -14,6 +13,7 @@ import subprocess
 import tempfile
 
 import pytest
+from sumtypes import constructor, sumtype
 
 from git import (
     IndexFile,
@@ -39,35 +39,34 @@ HOOKS_SHEBANG = "#!/usr/bin/env sh\n"
 log = logging.getLogger(__name__)
 
 
-@enum.unique
-class _WinBashStatus(enum.Enum):
+@sumtype
+class _WinBashStatus:
     """Status of bash.exe for native Windows. Affects which commit hook tests can pass.
 
     Call :meth:`check` to check the status.
     """
 
-    INAPPLICABLE = enum.auto()
+    Inapplicable = constructor()
     """This system is not native Windows: either not Windows at all, or Cygwin."""
 
-    ABSENT = enum.auto()
+    Absent = constructor()
     """No command for ``bash.exe`` is found on the system."""
 
-    NATIVE = enum.auto()
+    Native = constructor()
     """Running ``bash.exe`` operates outside any WSL distribution (as with Git Bash)."""
 
-    WSL = enum.auto()
+    Wsl = constructor()
     """Running ``bash.exe`` calls ``bash`` in a WSL distribution."""
 
-    WSL_NO_DISTRO = enum.auto()
+    WslNoDistro = constructor()
     """Running ``bash.exe` tries to run bash on a WSL distribution, but none exists."""
 
-    ERROR_WHILE_CHECKING = enum.auto()
+    ErrorWhileChecking = constructor("error_or_process")
     """Could not determine the status.
 
     This should not trigger a skip or xfail, as it typically indicates either a fixable
     problem on the test machine, such as an "Insufficient system resources exist to
     complete the requested service" error starting WSL, or a bug in this detection code.
-    ``ERROR_WHILE_CHECKING.error_or_process`` has details about the most recent failure.
     """
 
     @classmethod
@@ -93,7 +92,13 @@ class _WinBashStatus(enum.Enum):
         administrators occasionally put executables there in lieu of extending ``PATH``.
         """
         if os.name != "nt":
-            return cls.INAPPLICABLE
+            return cls.Inapplicable()
+
+        no_distro_message = "Windows Subsystem for Linux has no installed distributions."
+
+        def error_running_bash(error):
+            log.error("Error running bash.exe to check WSL status: %s", error)
+            return cls.ErrorWhileChecking(error)
 
         try:
             # Output rather than forwarding the test command's exit status so that if a
@@ -103,30 +108,21 @@ class _WinBashStatus(enum.Enum):
             command = ["bash.exe", "-c", script]
             proc = subprocess.run(command, capture_output=True, check=True, text=True)
         except FileNotFoundError:
-            return cls.ABSENT
+            return cls.Absent()
         except OSError as error:
-            return cls._error(error)
+            return error_running_bash(error)
         except subprocess.CalledProcessError as error:
-            no_distro_message = "Windows Subsystem for Linux has no installed distributions."
             if error.returncode == 1 and error.stdout.startswith(no_distro_message):
-                return cls.WSL_NO_DISTRO
-            return cls._error(error)
+                return cls.WslNoDistro()
+            return error_running_bash(error)
 
         status = proc.stdout.rstrip()
         if status == "0":
-            return cls.WSL
+            return cls.Wsl()
         if status == "1":
-            return cls.NATIVE
-        return cls._error(proc)
-
-    @classmethod
-    def _error(cls, error_or_process):
-        if isinstance(error_or_process, subprocess.CompletedProcess):
-            log.error("Strange output checking WSL status: %s", error_or_process.stdout)
-        else:
-            log.error("Error running bash.exe to check WSL status: %s", error_or_process)
-        cls.ERROR_WHILE_CHECKING.error_or_process = error_or_process
-        return cls.ERROR_WHILE_CHECKING
+            return cls.Native()
+        log.error("Strange output checking WSL status: %s", proc.stdout)
+        return cls.ErrorWhileChecking(proc)
 
 
 _win_bash_status = _WinBashStatus.check()
@@ -1001,7 +997,7 @@ class TestIndex(TestBase):
         self.assertEqual(rel, os.path.relpath(path, root))
 
     @pytest.mark.xfail(
-        _win_bash_status is _WinBashStatus.WSL_NO_DISTRO,
+        type(_win_bash_status) is _WinBashStatus.WslNoDistro,
         reason="Currently uses the bash.exe for WSL even with no WSL distro installed",
         raises=HookExecutionError,
     )
@@ -1012,7 +1008,7 @@ class TestIndex(TestBase):
         index.commit("This should not fail")
 
     @pytest.mark.xfail(
-        _win_bash_status is _WinBashStatus.WSL_NO_DISTRO,
+        type(_win_bash_status) is _WinBashStatus.WslNoDistro,
         reason="Currently uses the bash.exe for WSL even with no WSL distro installed",
         raises=AssertionError,
     )
@@ -1023,7 +1019,7 @@ class TestIndex(TestBase):
         try:
             index.commit("This should fail")
         except HookExecutionError as err:
-            if _win_bash_status is _WinBashStatus.ABSENT:
+            if type(_win_bash_status) is _WinBashStatus.Absent:
                 self.assertIsInstance(err.status, OSError)
                 self.assertEqual(err.command, [hp])
                 self.assertEqual(err.stdout, "")
@@ -1039,12 +1035,12 @@ class TestIndex(TestBase):
             raise AssertionError("Should have caught a HookExecutionError")
 
     @pytest.mark.xfail(
-        _win_bash_status in {_WinBashStatus.ABSENT, _WinBashStatus.WSL},
+        type(_win_bash_status) in {_WinBashStatus.Absent, _WinBashStatus.Wsl},
         reason="Specifically seems to fail on WSL bash (in spite of #1399)",
         raises=AssertionError,
     )
     @pytest.mark.xfail(
-        _win_bash_status is _WinBashStatus.WSL_NO_DISTRO,
+        type(_win_bash_status) is _WinBashStatus.WslNoDistro,
         reason="Currently uses the bash.exe for WSL even with no WSL distro installed",
         raises=HookExecutionError,
     )
@@ -1062,7 +1058,7 @@ class TestIndex(TestBase):
         self.assertEqual(new_commit.message, "{} {}".format(commit_message, from_hook_message))
 
     @pytest.mark.xfail(
-        _win_bash_status is _WinBashStatus.WSL_NO_DISTRO,
+        type(_win_bash_status) is _WinBashStatus.WslNoDistro,
         reason="Currently uses the bash.exe for WSL even with no WSL distro installed",
         raises=AssertionError,
     )
@@ -1073,7 +1069,7 @@ class TestIndex(TestBase):
         try:
             index.commit("This should fail")
         except HookExecutionError as err:
-            if _win_bash_status is _WinBashStatus.ABSENT:
+            if type(_win_bash_status) is _WinBashStatus.Absent:
                 self.assertIsInstance(err.status, OSError)
                 self.assertEqual(err.command, [hp])
                 self.assertEqual(err.stdout, "")
