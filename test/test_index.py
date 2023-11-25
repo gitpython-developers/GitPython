@@ -96,9 +96,9 @@ class _WinBashStatus(enum.Enum):
             return cls.INAPPLICABLE
 
         try:
-            # Print rather than returning the test command's exit status so that if a
-            # failure occurs before we even get to this point, we will detect it. See
-            # https://superuser.com/a/1749811 for information on ways to check for WSL.
+            # Output rather than forwarding the test command's exit status so that if a
+            # failure occurs before we even get to this point, we will detect it. For
+            # information on ways to check for WSL, see https://superuser.com/a/1749811.
             script = 'test -e /proc/sys/fs/binfmt_misc/WSLInterop; echo "$?"'
             command = ["bash.exe", "-c", script]
             proc = subprocess.run(command, capture_output=True, check=True, text=True)
