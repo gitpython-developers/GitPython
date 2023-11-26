@@ -61,13 +61,11 @@ class _WinBashStatus:
     WslNoDistro = constructor()
     """Running ``bash.exe` tries to run bash on a WSL distribution, but none exists."""
 
-    ErrorWhileChecking = constructor("error_or_process")
-    """Could not determine the status.
+    CheckError = constructor("process", "message")
+    """Running ``bash.exe`` fails in an unexpected error or gives unexpected output."""
 
-    This should not trigger a skip or xfail, as it typically indicates either a fixable
-    problem on the test machine, such as an "Insufficient system resources exist to
-    complete the requested service" error starting WSL, or a bug in this detection code.
-    """
+    WinError = constructor("exception")
+    """``bash.exe`` may exist but can't run. ``CreateProcessW`` fails unexpectedly."""
 
     @classmethod
     def check(cls):
@@ -94,12 +92,7 @@ class _WinBashStatus:
         if os.name != "nt":
             return cls.Inapplicable()
 
-        # Use bytes because messages for different WSL errors use different encodings.
-        no_distro_message = b"Windows Subsystem for Linux has no installed distributions."
-
-        def error_running_bash(error):
-            log.error("Error running bash.exe to check WSL status: %r", error)
-            return cls.ErrorWhileChecking(error)
+        no_distro_message = "Windows Subsystem for Linux has no installed distributions."
 
         try:
             # Output rather than forwarding the test command's exit status so that if a
@@ -107,23 +100,26 @@ class _WinBashStatus:
             # information on ways to check for WSL, see https://superuser.com/a/1749811.
             script = 'test -e /proc/sys/fs/binfmt_misc/WSLInterop; echo "$?"'
             command = ["bash.exe", "-c", script]
-            proc = subprocess.run(command, capture_output=True, check=True)
+            process = subprocess.run(command, capture_output=True)
         except FileNotFoundError:
             return cls.Absent()
         except OSError as error:
-            return error_running_bash(error)
-        except subprocess.CalledProcessError as error:
-            if error.returncode == 1 and error.stdout.startswith(no_distro_message):
-                return cls.WslNoDistro()
-            return error_running_bash(error)
+            return cls.WinError(error)
 
-        status = proc.stdout.rstrip()
-        if status == b"0":
+        encoding = "utf-16le" if b"\r\0\n\0" in process.stdout else "utf-8"
+        text = process.stdout.decode(encoding).rstrip()  # stdout includes WSL errors.
+
+        if process.returncode == 1 and text.startswith(no_distro_message):
+            return cls.WslNoDistro()
+        if process.returncode != 0:
+            log.error("Error running bash.exe to check WSL status: %s", text)
+            return cls.CheckError(process, text)
+        if text == "0":
             return cls.Wsl()
-        if status == b"1":
+        if text == "1":
             return cls.Native()
-        log.error("Strange output checking WSL status: %r", proc.stdout)
-        return cls.ErrorWhileChecking(proc)
+        log.error("Strange output checking WSL status: %s", text)
+        return cls.CheckError(process, text)
 
 
 _win_bash_status = _WinBashStatus.check()
