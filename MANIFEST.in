@@ -7,6 +7,7 @@ include VERSION
 include requirements.txt
 include test-requirements.txt
 include git/py.typed
+include tox.ini
 
 recursive-include doc *
 recursive-exclude test *
