@@ -41,10 +41,13 @@ log = logging.getLogger(__name__)
 
 
 @sumtype
-class _WinBashStatus:
+class WinBashStatus:
     """Status of bash.exe for native Windows. Affects which commit hook tests can pass.
 
     Call :meth:`check` to check the status.
+
+    The :class:`CheckError` and :class:`WinError` cases should not typically be used in
+    ``skip`` or ``xfail`` mark conditions, because they represent unexpected situations.
     """
 
     Inapplicable = constructor()
@@ -84,10 +87,10 @@ class _WinBashStatus:
         On Windows, `Popen` calls ``CreateProcessW``, which checks some locations before
         using the ``PATH`` environment variable. It is expected to try the ``System32``
         directory, even if another directory containing the executable precedes it in
-        ``PATH``. (Other differences are less relevant here.) When WSL is present, even
-        with no distributions, ``bash.exe`` usually exists in ``System32``, and `Popen`
-        finds it even if another ``bash.exe`` precedes it in ``PATH``, as on CI. If WSL
-        is absent, ``System32`` may still have ``bash.exe``, as Windows users and
+        ``PATH``. (The other differences are less relevant here.) When WSL is present,
+        even with no distributions, ``bash.exe`` usually exists in ``System32``, and
+        `Popen` finds it even if another ``bash.exe`` precedes it in ``PATH``, as on CI.
+        If WSL is absent, ``System32`` may still have ``bash.exe``, as Windows users and
         administrators occasionally put executables there in lieu of extending ``PATH``.
         """
         if os.name != "nt":
@@ -105,9 +108,7 @@ class _WinBashStatus:
         except OSError as error:
             return cls.WinError(error)
 
-        # FIXME: When not UTF-16LE: try local ANSI code page, then fall back to UTF-8.
-        encoding = "utf-16le" if b"\r\0\n\0" in process.stdout else "utf-8"
-        text = process.stdout.decode(encoding).rstrip()  # stdout includes WSL errors.
+        text = cls._decode(process.stdout).rstrip()  # stdout includes WSL's own errors.
 
         if process.returncode == 1 and re.search(r"\bhttps://aka.ms/wslstore\b", text):
             return cls.WslNoDistro(process, text)
@@ -121,8 +122,45 @@ class _WinBashStatus:
         log.error("Strange output checking WSL status: %s", text)
         return cls.CheckError(process, text)
 
+    @staticmethod
+    def _decode(stdout):
+        """Decode ``bash.exe`` output as best we can. (This is used only on Windows.)"""
+        # When bash.exe is the WSL wrapper but the output is from WSL itself rather than
+        # code running in a distribution, the output is often in UTF-16LE, which Windows
+        # uses internally. The UTF-16LE representation of a Windows-style line ending is
+        # rarely seen otherwise, so use it to detect this situation.
+        if b"\r\0\n\0" in stdout:
+            return stdout.decode("utf-16le")
 
-_win_bash_status = _WinBashStatus.check()
+        import winreg
+
+        # At this point, the output is probably either empty or not UTF-16LE. It's often
+        # UTF-8 from inside a WSL distro or a non-WSL bash shell. But our test command
+        # only uses the ASCII subset, so it's safe to guess wrong for that command's
+        # output. Errors from inside a WSL distro or non-WSL bash.exe are arbitrary, but
+        # unlike WSL's own messages, go to stderr, not stdout. So we can try the system
+        # active code page first. (Although console programs usually use the OEM code
+        # page, the ACP seems more accurate here. For example, on en-US Windows set to
+        # fr-FR, the message, if not UTF-16LE, is windows-1252, same as the ACP, while
+        # the OEM code page on such a system defaults to 437, which can't decode it.)
+        hklm_path = R"SYSTEM\CurrentControlSet\Control\Nls\CodePage"
+        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, hklm_path) as key:
+            value, _ = winreg.QueryValueEx(key, "ACP")
+        try:
+            return stdout.decode(f"cp{value}")
+        except UnicodeDecodeError:
+            pass
+        except LookupError as error:
+            log.warning("%s", str(error))  # Message already says "Unknown encoding:".
+
+        # Assume UTF-8. If we don't have valid UTF-8, substitute Unicode replacement
+        # characters. (For example, on zh-CN Windows set to fr-FR, error messages from
+        # WSL itself, if not UTF-16LE, are in windows-1252, even though the ACP and OEM
+        # code pages are 936; decoding as code page 936 or as UTF-8 both have errors.)
+        return stdout.decode("utf-8", errors="replace")
+
+
+_win_bash_status = WinBashStatus.check()
 
 
 def _make_hook(git_dir, name, content, make_exec=True):
@@ -994,7 +1032,7 @@ class TestIndex(TestBase):
         self.assertEqual(rel, os.path.relpath(path, root))
 
     @pytest.mark.xfail(
-        type(_win_bash_status) is _WinBashStatus.WslNoDistro,
+        type(_win_bash_status) is WinBashStatus.WslNoDistro,
         reason="Currently uses the bash.exe for WSL even with no WSL distro installed",
         raises=HookExecutionError,
     )
@@ -1005,7 +1043,7 @@ class TestIndex(TestBase):
         index.commit("This should not fail")
 
     @pytest.mark.xfail(
-        type(_win_bash_status) is _WinBashStatus.WslNoDistro,
+        type(_win_bash_status) is WinBashStatus.WslNoDistro,
         reason="Currently uses the bash.exe for WSL even with no WSL distro installed",
         raises=AssertionError,
     )
@@ -1016,7 +1054,7 @@ class TestIndex(TestBase):
         try:
             index.commit("This should fail")
         except HookExecutionError as err:
-            if type(_win_bash_status) is _WinBashStatus.Absent:
+            if type(_win_bash_status) is WinBashStatus.Absent:
                 self.assertIsInstance(err.status, OSError)
                 self.assertEqual(err.command, [hp])
                 self.assertEqual(err.stdout, "")
@@ -1032,12 +1070,12 @@ class TestIndex(TestBase):
             raise AssertionError("Should have caught a HookExecutionError")
 
     @pytest.mark.xfail(
-        type(_win_bash_status) in {_WinBashStatus.Absent, _WinBashStatus.Wsl},
+        type(_win_bash_status) in {WinBashStatus.Absent, WinBashStatus.Wsl},
         reason="Specifically seems to fail on WSL bash (in spite of #1399)",
         raises=AssertionError,
     )
     @pytest.mark.xfail(
-        type(_win_bash_status) is _WinBashStatus.WslNoDistro,
+        type(_win_bash_status) is WinBashStatus.WslNoDistro,
         reason="Currently uses the bash.exe for WSL even with no WSL distro installed",
         raises=HookExecutionError,
     )
@@ -1055,7 +1093,7 @@ class TestIndex(TestBase):
         self.assertEqual(new_commit.message, "{} {}".format(commit_message, from_hook_message))
 
     @pytest.mark.xfail(
-        type(_win_bash_status) is _WinBashStatus.WslNoDistro,
+        type(_win_bash_status) is WinBashStatus.WslNoDistro,
         reason="Currently uses the bash.exe for WSL even with no WSL distro installed",
         raises=AssertionError,
     )
@@ -1066,7 +1104,7 @@ class TestIndex(TestBase):
         try:
             index.commit("This should fail")
         except HookExecutionError as err:
-            if type(_win_bash_status) is _WinBashStatus.Absent:
+            if type(_win_bash_status) is WinBashStatus.Absent:
                 self.assertIsInstance(err.status, OSError)
                 self.assertEqual(err.command, [hp])
                 self.assertEqual(err.stdout, "")
