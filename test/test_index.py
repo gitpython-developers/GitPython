@@ -8,6 +8,7 @@ import logging
 import os
 import os.path as osp
 from pathlib import Path
+import re
 from stat import S_ISLNK, ST_MODE
 import subprocess
 import tempfile
@@ -58,7 +59,7 @@ class _WinBashStatus:
     Wsl = constructor()
     """Running ``bash.exe`` calls ``bash`` in a WSL distribution."""
 
-    WslNoDistro = constructor()
+    WslNoDistro = constructor("process", "message")
     """Running ``bash.exe` tries to run bash on a WSL distribution, but none exists."""
 
     CheckError = constructor("process", "message")
@@ -80,19 +81,17 @@ class _WinBashStatus:
 
         :func:`index.fun.run_commit_hook` uses :class:`subprocess.Popen`, including when
         it runs ``bash.exe`` on Windows. It doesn't pass ``shell=True`` (and shouldn't).
-        On Windows, `Popen` calls ``CreateProcessW``, which searches several locations
-        prior to using the ``PATH`` environment variable. It is expected to search the
-        ``System32`` directory, even if another directory containing the executable
-        precedes it in ``PATH``. (Other differences are less relevant here.) When WSL is
-        installed, even with no distributions, ``bash.exe`` exists in ``System32``, and
-        `Popen` finds it even if another ``bash.exe`` precedes it in ``PATH``, as on CI.
-        If WSL is absent, ``System32`` may still have ``bash.exe``, as Windows users and
+        On Windows, `Popen` calls ``CreateProcessW``, which checks some locations before
+        using the ``PATH`` environment variable. It is expected to try the ``System32``
+        directory, even if another directory containing the executable precedes it in
+        ``PATH``. (Other differences are less relevant here.) When WSL is present, even
+        with no distributions, ``bash.exe`` usually exists in ``System32``, and `Popen`
+        finds it even if another ``bash.exe`` precedes it in ``PATH``, as on CI. If WSL
+        is absent, ``System32`` may still have ``bash.exe``, as Windows users and
         administrators occasionally put executables there in lieu of extending ``PATH``.
         """
         if os.name != "nt":
             return cls.Inapplicable()
-
-        no_distro_message = "Windows Subsystem for Linux has no installed distributions."
 
         try:
             # Output rather than forwarding the test command's exit status so that if a
@@ -106,11 +105,12 @@ class _WinBashStatus:
         except OSError as error:
             return cls.WinError(error)
 
+        # FIXME: When not UTF-16LE: try local ANSI code page, then fall back to UTF-8.
         encoding = "utf-16le" if b"\r\0\n\0" in process.stdout else "utf-8"
         text = process.stdout.decode(encoding).rstrip()  # stdout includes WSL errors.
 
-        if process.returncode == 1 and text.startswith(no_distro_message):
-            return cls.WslNoDistro()
+        if process.returncode == 1 and re.search(r"\bhttps://aka.ms/wslstore\b", text):
+            return cls.WslNoDistro(process, text)
         if process.returncode != 0:
             log.error("Error running bash.exe to check WSL status: %s", text)
             return cls.CheckError(process, text)
