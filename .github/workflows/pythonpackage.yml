@@ -35,6 +35,12 @@ jobs:
         python-version: ${{ matrix.python-version }}
         allow-prereleases: ${{ matrix.experimental }}
 
+    - name: Set up WSL (Windows)
+      if: startsWith(matrix.os, 'windows')
+      uses: Vampire/setup-wsl@v2.0.2
+      with:
+        distribution: Debian
+
     - name: Prepare this repo for tests
       run: |
         ./init-tests-after-clone.sh
