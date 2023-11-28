@@ -7,16 +7,16 @@ from setuptools.command.sdist import sdist as _sdist
 import os
 import sys
 
-with open(os.path.join(os.path.dirname(__file__), "VERSION")) as ver_file:
+with open(os.path.join(os.path.dirname(__file__), "VERSION"), encoding="utf-8") as ver_file:
     VERSION = ver_file.readline().strip()
 
-with open("requirements.txt") as reqs_file:
+with open("requirements.txt", encoding="utf-8") as reqs_file:
     requirements = reqs_file.read().splitlines()
 
-with open("test-requirements.txt") as reqs_file:
+with open("test-requirements.txt", encoding="utf-8") as reqs_file:
     test_requirements = reqs_file.read().splitlines()
 
-with open("README.md") as rm_file:
+with open("README.md", encoding="utf-8") as rm_file:
     long_description = rm_file.read()
 
 
