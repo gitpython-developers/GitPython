@@ -40,58 +40,60 @@ HOOKS_SHEBANG = "#!/usr/bin/env sh\n"
 log = logging.getLogger(__name__)
 
 
+def _get_windows_ansi_encoding():
+    """Get the encoding specified by the Windows system-wide ANSI active code page."""
+    # locale.getencoding may work but is only in Python 3.11+. Use the registry instead.
+    import winreg
+
+    hklm_path = R"SYSTEM\CurrentControlSet\Control\Nls\CodePage"
+    with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, hklm_path) as key:
+        value, _ = winreg.QueryValueEx(key, "ACP")
+    return f"cp{value}"
+
+
 @sumtype
 class WinBashStatus:
     """Status of bash.exe for native Windows. Affects which commit hook tests can pass.
 
-    Call :meth:`check` to check the status.
-
-    The :class:`CheckError` and :class:`WinError` cases should not typically be used in
-    ``skip`` or ``xfail`` mark conditions, because they represent unexpected situations.
+    Call check() to check the status. (CheckError and WinError should not typically be
+    used to trigger skip or xfail, because they represent unexpected situations.)
     """
 
     Inapplicable = constructor()
     """This system is not native Windows: either not Windows at all, or Cygwin."""
 
     Absent = constructor()
-    """No command for ``bash.exe`` is found on the system."""
+    """No command for bash.exe is found on the system."""
 
     Native = constructor()
-    """Running ``bash.exe`` operates outside any WSL distribution (as with Git Bash)."""
+    """Running bash.exe operates outside any WSL distribution (as with Git Bash)."""
 
     Wsl = constructor()
-    """Running ``bash.exe`` calls ``bash`` in a WSL distribution."""
+    """Running bash.exe calls bash in a WSL distribution."""
 
     WslNoDistro = constructor("process", "message")
-    """Running ``bash.exe` tries to run bash on a WSL distribution, but none exists."""
+    """Running bash.exe tries to run bash on a WSL distribution, but none exists."""
 
     CheckError = constructor("process", "message")
-    """Running ``bash.exe`` fails in an unexpected error or gives unexpected output."""
+    """Running bash.exe fails in an unexpected error or gives unexpected output."""
 
     WinError = constructor("exception")
-    """``bash.exe`` may exist but can't run. ``CreateProcessW`` fails unexpectedly."""
+    """bash.exe may exist but can't run. CreateProcessW fails unexpectedly."""
 
     @classmethod
     def check(cls):
-        """Check the status of the ``bash.exe`` :func:`index.fun.run_commit_hook` uses.
+        """Check the status of the bash.exe that run_commit_hook will try to use.
 
-        This uses EAFP, attempting to run a command via ``bash.exe``. Which ``bash.exe``
-        is used can't be reliably discovered by :func:`shutil.which`, which approximates
-        how a shell is expected to search for an executable. On Windows, there are major
-        differences between how executables are found by a shell and otherwise. (This is
-        the cmd.exe Windows shell, and shouldn't be confused with bash.exe itself. That
-        the command being looked up also happens to be an interpreter is not relevant.)
+        This runs a command with bash.exe and checks the result. On Windows, shell and
+        non-shell executable search differ; shutil.which often finds the wrong bash.exe.
 
-        :func:`index.fun.run_commit_hook` uses :class:`subprocess.Popen`, including when
-        it runs ``bash.exe`` on Windows. It doesn't pass ``shell=True`` (and shouldn't).
-        On Windows, `Popen` calls ``CreateProcessW``, which checks some locations before
-        using the ``PATH`` environment variable. It is expected to try the ``System32``
-        directory, even if another directory containing the executable precedes it in
-        ``PATH``. (The other differences are less relevant here.) When WSL is present,
-        even with no distributions, ``bash.exe`` usually exists in ``System32``, and
-        `Popen` finds it even if another ``bash.exe`` precedes it in ``PATH``, as on CI.
-        If WSL is absent, ``System32`` may still have ``bash.exe``, as Windows users and
-        administrators occasionally put executables there in lieu of extending ``PATH``.
+        run_commit_hook uses Popen, including to run bash.exe on Windows. It doesn't
+        pass shell=True (and shouldn't). On Windows, Popen calls CreateProcessW, which
+        checks some locations before using the PATH environment variable. It is expected
+        to try System32, even if another directory with the executable precedes it in
+        PATH. When WSL is present, even with no distributions, bash.exe usually exists
+        in System32; Popen finds it even if a shell would run another one, as on CI.
+        (Without WSL, System32 may still have bash.exe; users sometimes put it there.)
         """
         if os.name != "nt":
             return cls.Inapplicable()
@@ -124,7 +126,7 @@ class WinBashStatus:
 
     @staticmethod
     def _decode(stdout):
-        """Decode ``bash.exe`` output as best we can. (This is used only on Windows.)"""
+        """Decode bash.exe output as best we can."""
         # When bash.exe is the WSL wrapper but the output is from WSL itself rather than
         # code running in a distribution, the output is often in UTF-16LE, which Windows
         # uses internally. The UTF-16LE representation of a Windows-style line ending is
@@ -132,31 +134,27 @@ class WinBashStatus:
         if b"\r\0\n\0" in stdout:
             return stdout.decode("utf-16le")
 
-        import winreg
-
-        # At this point, the output is probably either empty or not UTF-16LE. It's often
-        # UTF-8 from inside a WSL distro or a non-WSL bash shell. But our test command
-        # only uses the ASCII subset, so it's safe to guess wrong for that command's
-        # output. Errors from inside a WSL distro or non-WSL bash.exe are arbitrary, but
-        # unlike WSL's own messages, go to stderr, not stdout. So we can try the system
-        # active code page first. (Although console programs usually use the OEM code
-        # page, the ACP seems more accurate here. For example, on en-US Windows set to
-        # fr-FR, the message, if not UTF-16LE, is windows-1252, same as the ACP, while
-        # the OEM code page on such a system defaults to 437, which can't decode it.)
-        hklm_path = R"SYSTEM\CurrentControlSet\Control\Nls\CodePage"
-        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, hklm_path) as key:
-            value, _ = winreg.QueryValueEx(key, "ACP")
+        # At this point, the output is either blank or probably not UTF-16LE. It's often
+        # UTF-8 from inside a WSL distro or non-WSL bash shell. Our test command only
+        # uses the ASCII subset, so we can safely guess a wrong code page for it. Errors
+        # from such an environment can contain any text, but unlike WSL's own messages,
+        # they go to stderr, not stdout. So we can try the system ANSI code page first.
+        # (Console programs often use the OEM code page, but the ACP seems more accurate
+        # here. For example, on en-US Windows with the original system code page but the
+        # display language set to fr-FR, the message, if not UTF-16LE, is windows-1252,
+        # same as the ACP, while the OEMCP is 437, which can't decode its accents.)
+        acp = _get_windows_ansi_encoding()
         try:
-            return stdout.decode(f"cp{value}")
+            return stdout.decode(acp)
         except UnicodeDecodeError:
             pass
         except LookupError as error:
             log.warning("%s", str(error))  # Message already says "Unknown encoding:".
 
-        # Assume UTF-8. If we don't have valid UTF-8, substitute Unicode replacement
-        # characters. (For example, on zh-CN Windows set to fr-FR, error messages from
-        # WSL itself, if not UTF-16LE, are in windows-1252, even though the ACP and OEM
-        # code pages are 936; decoding as code page 936 or as UTF-8 both have errors.)
+        # Assume UTF-8. If invalid, substitute Unicode replacement characters. (For
+        # example, on zh-CN Windows set to display fr-FR, errors from WSL itself, if not
+        # UTF-16LE, are in windows-1252, even though the ANSI and OEM code pages both
+        # default to 936, and decoding as code page 936 or as UTF-8 both have errors.)
         return stdout.decode("utf-8", errors="replace")
 
 
