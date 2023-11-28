@@ -139,10 +139,6 @@ class WinBashStatus:
         # uses the ASCII subset, so we can safely guess a wrong code page for it. Errors
         # from such an environment can contain any text, but unlike WSL's own messages,
         # they go to stderr, not stdout. So we can try the system ANSI code page first.
-        # (Console programs often use the OEM code page, but the ACP seems more accurate
-        # here. For example, on en-US Windows with the original system code page but the
-        # display language set to fr-FR, the message, if not UTF-16LE, is windows-1252,
-        # same as the ACP, while the OEMCP is 437, which can't decode its accents.)
         acp = _get_windows_ansi_encoding()
         try:
             return stdout.decode(acp)
@@ -151,10 +147,7 @@ class WinBashStatus:
         except LookupError as error:
             log.warning("%s", str(error))  # Message already says "Unknown encoding:".
 
-        # Assume UTF-8. If invalid, substitute Unicode replacement characters. (For
-        # example, on zh-CN Windows set to display fr-FR, errors from WSL itself, if not
-        # UTF-16LE, are in windows-1252, even though the ANSI and OEM code pages both
-        # default to 936, and decoding as code page 936 or as UTF-8 both have errors.)
+        # Assume UTF-8. If invalid, substitute Unicode replacement characters.
         return stdout.decode("utf-8", errors="replace")
 
 
