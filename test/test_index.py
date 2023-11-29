@@ -284,14 +284,6 @@ class TestIndex(TestBase):
         except Exception as ex:
             assert "index.lock' could not be obtained" not in str(ex)
 
-    @pytest.mark.xfail(
-        os.name == "nt",
-        reason=(
-            "IndexFile.from_tree is broken on Windows (related to NamedTemporaryFile), see #1630.\n"
-            "'git read-tree --index-output=...' fails with 'fatal: unable to write new index file'."
-        ),
-        raises=GitCommandError,
-    )
     @with_rw_repo("0.1.6")
     def test_index_file_from_tree(self, rw_repo):
         common_ancestor_sha = "5117c9c8a4d3af19a9958677e45cda9269de1541"
@@ -342,14 +334,6 @@ class TestIndex(TestBase):
         # END for each blob
         self.assertEqual(num_blobs, len(three_way_index.entries))
 
-    @pytest.mark.xfail(
-        os.name == "nt",
-        reason=(
-            "IndexFile.from_tree is broken on Windows (related to NamedTemporaryFile), see #1630.\n"
-            "'git read-tree --index-output=...' fails with 'fatal: unable to write new index file'."
-        ),
-        raises=GitCommandError,
-    )
     @with_rw_repo("0.1.6")
     def test_index_merge_tree(self, rw_repo):
         # A bit out of place, but we need a different repo for this:
@@ -412,14 +396,6 @@ class TestIndex(TestBase):
         self.assertEqual(len(unmerged_blobs), 1)
         self.assertEqual(list(unmerged_blobs.keys())[0], manifest_key[0])
 
-    @pytest.mark.xfail(
-        os.name == "nt",
-        reason=(
-            "IndexFile.from_tree is broken on Windows (related to NamedTemporaryFile), see #1630.\n"
-            "'git read-tree --index-output=...' fails with 'fatal: unable to write new index file'."
-        ),
-        raises=GitCommandError,
-    )
     @with_rw_repo("0.1.6")
     def test_index_file_diffing(self, rw_repo):
         # Default Index instance points to our index.
@@ -554,14 +530,6 @@ class TestIndex(TestBase):
 
     # END num existing helper
 
-    @pytest.mark.xfail(
-        os.name == "nt",
-        reason=(
-            "IndexFile.from_tree is broken on Windows (related to NamedTemporaryFile), see #1630.\n"
-            "'git read-tree --index-output=...' fails with 'fatal: unable to write new index file'."
-        ),
-        raises=GitCommandError,
-    )
     @with_rw_repo("0.1.6")
     def test_index_mutation(self, rw_repo):
         index = rw_repo.index
@@ -915,14 +883,6 @@ class TestIndex(TestBase):
         for absfile in absfiles:
             assert osp.isfile(absfile)
 
-    @pytest.mark.xfail(
-        os.name == "nt",
-        reason=(
-            "IndexFile.from_tree is broken on Windows (related to NamedTemporaryFile), see #1630.\n"
-            "'git read-tree --index-output=...' fails with 'fatal: unable to write new index file'."
-        ),
-        raises=GitCommandError,
-    )
     @with_rw_repo("HEAD")
     def test_compare_write_tree(self, rw_repo):
         """Test writing all trees, comparing them for equality."""
