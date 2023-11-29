@@ -3,26 +3,17 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
-import ddt
+import os
+import os.path as osp
 import shutil
 import tempfile
-from git import (
-    Repo,
-    GitCommandError,
-    Diff,
-    DiffIndex,
-    NULL_TREE,
-    Submodule,
-)
-from git.cmd import Git
-from test.lib import (
-    TestBase,
-    StringProcessAdapter,
-    fixture,
-)
-from test.lib import with_rw_directory
 
-import os.path as osp
+import ddt
+import pytest
+
+from git import NULL_TREE, Diff, DiffIndex, GitCommandError, Repo, Submodule
+from git.cmd import Git
+from test.lib import StringProcessAdapter, TestBase, fixture, with_rw_directory
 
 
 def to_raw(input):
@@ -318,6 +309,11 @@ class TestDiff(TestBase):
         self.assertIsNone(diff_index[0].a_path, repr(diff_index[0].a_path))
         self.assertEqual(diff_index[0].b_path, "file with spaces", repr(diff_index[0].b_path))
 
+    @pytest.mark.xfail(
+        os.name == "nt",
+        reason='"Access is denied" when tearDown calls shutil.rmtree',
+        raises=PermissionError,
+    )
     def test_diff_submodule(self):
         """Test that diff is able to correctly diff commits that cover submodule changes"""
         # Init a temp git repo that will be referenced as a submodule.

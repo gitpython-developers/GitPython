@@ -8,10 +8,9 @@ import sys
 
 import pytest
 
+from git.exc import GitCommandError
 from test.lib import TestBase
 from test.lib.helper import with_rw_directory
-
-import os.path
 
 
 class Tutorials(TestBase):
@@ -207,6 +206,14 @@ class Tutorials(TestBase):
         assert sm.module_exists()  # The submodule's working tree was checked out by update.
         # ![14-test_init_repo_object]
 
+    @pytest.mark.xfail(
+        os.name == "nt",
+        reason=(
+            "IndexFile.from_tree is broken on Windows (related to NamedTemporaryFile), see #1630.\n"
+            "'git read-tree --index-output=...' fails with 'fatal: unable to write new index file'."
+        ),
+        raises=GitCommandError,
+    )
     @with_rw_directory
     def test_references_and_objects(self, rw_dir):
         # [1-test_references_and_objects]

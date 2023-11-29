@@ -10,18 +10,19 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-
     strategy:
       fail-fast: false
       matrix:
+        os: ["ubuntu-latest", "windows-latest"]
         python-version: ["3.7", "3.8", "3.9", "3.10", "3.11", "3.12"]
         include:
         - experimental: false
 
+    runs-on: ${{ matrix.os }}
+
     defaults:
       run:
-        shell: /bin/bash --noprofile --norc -exo pipefail {0}
+        shell: bash --noprofile --norc -exo pipefail {0}
 
     steps:
     - uses: actions/checkout@v4
@@ -33,6 +34,12 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
         allow-prereleases: ${{ matrix.experimental }}
+
+    - name: Set up WSL (Windows)
+      if: startsWith(matrix.os, 'windows')
+      uses: Vampire/setup-wsl@v2.0.2
+      with:
+        distribution: Debian
 
     - name: Prepare this repo for tests
       run: |
@@ -61,9 +68,16 @@ jobs:
         command -v git python
         git version
         python --version
-        python -c 'import sys; print(sys.platform)'
-        python -c 'import os; print(os.name)'
-        python -c 'import git; print(git.compat.is_win)'  # NOTE: Deprecated. Use os.name directly.
+        python -c 'import os, sys; print(f"sys.platform={sys.platform!r}, os.name={os.name!r}")'
+
+    # For debugging hook tests on native Windows systems that may have WSL.
+    - name: Show bash.exe candidates (Windows)
+      if: startsWith(matrix.os, 'windows')
+      run: |
+        set +e
+        bash.exe -c 'printenv WSL_DISTRO_NAME; uname -a'
+        python -c 'import subprocess; subprocess.run(["bash.exe", "-c", "printenv WSL_DISTRO_NAME; uname -a"])'
+      continue-on-error: true
 
     - name: Check types with mypy
       run: |

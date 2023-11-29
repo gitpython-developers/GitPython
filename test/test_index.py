@@ -4,14 +4,17 @@
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
 from io import BytesIO
+import logging
 import os
 import os.path as osp
 from pathlib import Path
+import re
 from stat import S_ISLNK, ST_MODE
-import shutil
+import subprocess
 import tempfile
 
 import pytest
+from sumtypes import constructor, sumtype
 
 from git import (
     IndexFile,
@@ -34,19 +37,121 @@ from gitdb.base import IStream
 
 HOOKS_SHEBANG = "#!/usr/bin/env sh\n"
 
-
-def _found_in(cmd, directory):
-    """Check if a command is resolved in a directory (without following symlinks)."""
-    path = shutil.which(cmd)
-    return path and Path(path).parent == Path(directory)
+log = logging.getLogger(__name__)
 
 
-is_win_without_bash = os.name == "nt" and not shutil.which("bash.exe")
+def _get_windows_ansi_encoding():
+    """Get the encoding specified by the Windows system-wide ANSI active code page."""
+    # locale.getencoding may work but is only in Python 3.11+. Use the registry instead.
+    import winreg
 
-is_win_with_wsl_bash = os.name == "nt" and _found_in(
-    cmd="bash.exe",
-    directory=Path(os.getenv("WINDIR")) / "System32",
-)
+    hklm_path = R"SYSTEM\CurrentControlSet\Control\Nls\CodePage"
+    with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, hklm_path) as key:
+        value, _ = winreg.QueryValueEx(key, "ACP")
+    return f"cp{value}"
+
+
+@sumtype
+class WinBashStatus:
+    """Status of bash.exe for native Windows. Affects which commit hook tests can pass.
+
+    Call check() to check the status. (CheckError and WinError should not typically be
+    used to trigger skip or xfail, because they represent unexpected situations.)
+    """
+
+    Inapplicable = constructor()
+    """This system is not native Windows: either not Windows at all, or Cygwin."""
+
+    Absent = constructor()
+    """No command for bash.exe is found on the system."""
+
+    Native = constructor()
+    """Running bash.exe operates outside any WSL distribution (as with Git Bash)."""
+
+    Wsl = constructor()
+    """Running bash.exe calls bash in a WSL distribution."""
+
+    WslNoDistro = constructor("process", "message")
+    """Running bash.exe tries to run bash on a WSL distribution, but none exists."""
+
+    CheckError = constructor("process", "message")
+    """Running bash.exe fails in an unexpected error or gives unexpected output."""
+
+    WinError = constructor("exception")
+    """bash.exe may exist but can't run. CreateProcessW fails unexpectedly."""
+
+    @classmethod
+    def check(cls):
+        """Check the status of the bash.exe that run_commit_hook will try to use.
+
+        This runs a command with bash.exe and checks the result. On Windows, shell and
+        non-shell executable search differ; shutil.which often finds the wrong bash.exe.
+
+        run_commit_hook uses Popen, including to run bash.exe on Windows. It doesn't
+        pass shell=True (and shouldn't). On Windows, Popen calls CreateProcessW, which
+        checks some locations before using the PATH environment variable. It is expected
+        to try System32, even if another directory with the executable precedes it in
+        PATH. When WSL is present, even with no distributions, bash.exe usually exists
+        in System32; Popen finds it even if a shell would run another one, as on CI.
+        (Without WSL, System32 may still have bash.exe; users sometimes put it there.)
+        """
+        if os.name != "nt":
+            return cls.Inapplicable()
+
+        try:
+            # Output rather than forwarding the test command's exit status so that if a
+            # failure occurs before we even get to this point, we will detect it. For
+            # information on ways to check for WSL, see https://superuser.com/a/1749811.
+            script = 'test -e /proc/sys/fs/binfmt_misc/WSLInterop; echo "$?"'
+            command = ["bash.exe", "-c", script]
+            process = subprocess.run(command, capture_output=True)
+        except FileNotFoundError:
+            return cls.Absent()
+        except OSError as error:
+            return cls.WinError(error)
+
+        text = cls._decode(process.stdout).rstrip()  # stdout includes WSL's own errors.
+
+        if process.returncode == 1 and re.search(r"\bhttps://aka.ms/wslstore\b", text):
+            return cls.WslNoDistro(process, text)
+        if process.returncode != 0:
+            log.error("Error running bash.exe to check WSL status: %s", text)
+            return cls.CheckError(process, text)
+        if text == "0":
+            return cls.Wsl()
+        if text == "1":
+            return cls.Native()
+        log.error("Strange output checking WSL status: %s", text)
+        return cls.CheckError(process, text)
+
+    @staticmethod
+    def _decode(stdout):
+        """Decode bash.exe output as best we can."""
+        # When bash.exe is the WSL wrapper but the output is from WSL itself rather than
+        # code running in a distribution, the output is often in UTF-16LE, which Windows
+        # uses internally. The UTF-16LE representation of a Windows-style line ending is
+        # rarely seen otherwise, so use it to detect this situation.
+        if b"\r\0\n\0" in stdout:
+            return stdout.decode("utf-16le")
+
+        # At this point, the output is either blank or probably not UTF-16LE. It's often
+        # UTF-8 from inside a WSL distro or non-WSL bash shell. Our test command only
+        # uses the ASCII subset, so we can safely guess a wrong code page for it. Errors
+        # from such an environment can contain any text, but unlike WSL's own messages,
+        # they go to stderr, not stdout. So we can try the system ANSI code page first.
+        acp = _get_windows_ansi_encoding()
+        try:
+            return stdout.decode(acp)
+        except UnicodeDecodeError:
+            pass
+        except LookupError as error:
+            log.warning("%s", str(error))  # Message already says "Unknown encoding:".
+
+        # Assume UTF-8. If invalid, substitute Unicode replacement characters.
+        return stdout.decode("utf-8", errors="replace")
+
+
+_win_bash_status = WinBashStatus.check()
 
 
 def _make_hook(git_dir, name, content, make_exec=True):
@@ -179,6 +284,14 @@ class TestIndex(TestBase):
         except Exception as ex:
             assert "index.lock' could not be obtained" not in str(ex)
 
+    @pytest.mark.xfail(
+        os.name == "nt",
+        reason=(
+            "IndexFile.from_tree is broken on Windows (related to NamedTemporaryFile), see #1630.\n"
+            "'git read-tree --index-output=...' fails with 'fatal: unable to write new index file'."
+        ),
+        raises=GitCommandError,
+    )
     @with_rw_repo("0.1.6")
     def test_index_file_from_tree(self, rw_repo):
         common_ancestor_sha = "5117c9c8a4d3af19a9958677e45cda9269de1541"
@@ -229,6 +342,14 @@ class TestIndex(TestBase):
         # END for each blob
         self.assertEqual(num_blobs, len(three_way_index.entries))
 
+    @pytest.mark.xfail(
+        os.name == "nt",
+        reason=(
+            "IndexFile.from_tree is broken on Windows (related to NamedTemporaryFile), see #1630.\n"
+            "'git read-tree --index-output=...' fails with 'fatal: unable to write new index file'."
+        ),
+        raises=GitCommandError,
+    )
     @with_rw_repo("0.1.6")
     def test_index_merge_tree(self, rw_repo):
         # A bit out of place, but we need a different repo for this:
@@ -291,6 +412,14 @@ class TestIndex(TestBase):
         self.assertEqual(len(unmerged_blobs), 1)
         self.assertEqual(list(unmerged_blobs.keys())[0], manifest_key[0])
 
+    @pytest.mark.xfail(
+        os.name == "nt",
+        reason=(
+            "IndexFile.from_tree is broken on Windows (related to NamedTemporaryFile), see #1630.\n"
+            "'git read-tree --index-output=...' fails with 'fatal: unable to write new index file'."
+        ),
+        raises=GitCommandError,
+    )
     @with_rw_repo("0.1.6")
     def test_index_file_diffing(self, rw_repo):
         # Default Index instance points to our index.
@@ -425,6 +554,14 @@ class TestIndex(TestBase):
 
     # END num existing helper
 
+    @pytest.mark.xfail(
+        os.name == "nt",
+        reason=(
+            "IndexFile.from_tree is broken on Windows (related to NamedTemporaryFile), see #1630.\n"
+            "'git read-tree --index-output=...' fails with 'fatal: unable to write new index file'."
+        ),
+        raises=GitCommandError,
+    )
     @with_rw_repo("0.1.6")
     def test_index_mutation(self, rw_repo):
         index = rw_repo.index
@@ -778,6 +915,14 @@ class TestIndex(TestBase):
         for absfile in absfiles:
             assert osp.isfile(absfile)
 
+    @pytest.mark.xfail(
+        os.name == "nt",
+        reason=(
+            "IndexFile.from_tree is broken on Windows (related to NamedTemporaryFile), see #1630.\n"
+            "'git read-tree --index-output=...' fails with 'fatal: unable to write new index file'."
+        ),
+        raises=GitCommandError,
+    )
     @with_rw_repo("HEAD")
     def test_compare_write_tree(self, rw_repo):
         """Test writing all trees, comparing them for equality."""
@@ -877,12 +1022,22 @@ class TestIndex(TestBase):
         rel = index._to_relative_path(path)
         self.assertEqual(rel, os.path.relpath(path, root))
 
+    @pytest.mark.xfail(
+        type(_win_bash_status) is WinBashStatus.WslNoDistro,
+        reason="Currently uses the bash.exe for WSL even with no WSL distro installed",
+        raises=HookExecutionError,
+    )
     @with_rw_repo("HEAD", bare=True)
     def test_pre_commit_hook_success(self, rw_repo):
         index = rw_repo.index
         _make_hook(index.repo.git_dir, "pre-commit", "exit 0")
         index.commit("This should not fail")
 
+    @pytest.mark.xfail(
+        type(_win_bash_status) is WinBashStatus.WslNoDistro,
+        reason="Currently uses the bash.exe for WSL even with no WSL distro installed",
+        raises=AssertionError,
+    )
     @with_rw_repo("HEAD", bare=True)
     def test_pre_commit_hook_fail(self, rw_repo):
         index = rw_repo.index
@@ -890,7 +1045,7 @@ class TestIndex(TestBase):
         try:
             index.commit("This should fail")
         except HookExecutionError as err:
-            if is_win_without_bash:
+            if type(_win_bash_status) is WinBashStatus.Absent:
                 self.assertIsInstance(err.status, OSError)
                 self.assertEqual(err.command, [hp])
                 self.assertEqual(err.stdout, "")
@@ -906,9 +1061,14 @@ class TestIndex(TestBase):
             raise AssertionError("Should have caught a HookExecutionError")
 
     @pytest.mark.xfail(
-        is_win_without_bash or is_win_with_wsl_bash,
+        type(_win_bash_status) in {WinBashStatus.Absent, WinBashStatus.Wsl},
         reason="Specifically seems to fail on WSL bash (in spite of #1399)",
         raises=AssertionError,
+    )
+    @pytest.mark.xfail(
+        type(_win_bash_status) is WinBashStatus.WslNoDistro,
+        reason="Currently uses the bash.exe for WSL even with no WSL distro installed",
+        raises=HookExecutionError,
     )
     @with_rw_repo("HEAD", bare=True)
     def test_commit_msg_hook_success(self, rw_repo):
@@ -923,6 +1083,11 @@ class TestIndex(TestBase):
         new_commit = index.commit(commit_message)
         self.assertEqual(new_commit.message, "{} {}".format(commit_message, from_hook_message))
 
+    @pytest.mark.xfail(
+        type(_win_bash_status) is WinBashStatus.WslNoDistro,
+        reason="Currently uses the bash.exe for WSL even with no WSL distro installed",
+        raises=AssertionError,
+    )
     @with_rw_repo("HEAD", bare=True)
     def test_commit_msg_hook_fail(self, rw_repo):
         index = rw_repo.index
@@ -930,7 +1095,7 @@ class TestIndex(TestBase):
         try:
             index.commit("This should fail")
         except HookExecutionError as err:
-            if is_win_without_bash:
+            if type(_win_bash_status) is WinBashStatus.Absent:
                 self.assertIsInstance(err.status, OSError)
                 self.assertEqual(err.command, [hp])
                 self.assertEqual(err.stdout, "")

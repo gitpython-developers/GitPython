@@ -8,6 +8,7 @@ import io
 from io import BytesIO
 import itertools
 import os
+import os.path as osp
 import pathlib
 import pickle
 import sys
@@ -17,22 +18,22 @@ from unittest import mock, skip
 import pytest
 
 from git import (
-    InvalidGitRepositoryError,
-    Repo,
-    NoSuchPathError,
-    Head,
-    Commit,
-    Object,
-    Tree,
-    IndexFile,
-    Git,
-    Reference,
-    GitDB,
-    Submodule,
-    GitCmdObjectDB,
-    Remote,
     BadName,
+    Commit,
+    Git,
+    GitCmdObjectDB,
     GitCommandError,
+    GitDB,
+    Head,
+    IndexFile,
+    InvalidGitRepositoryError,
+    NoSuchPathError,
+    Object,
+    Reference,
+    Remote,
+    Repo,
+    Submodule,
+    Tree,
 )
 from git.exc import (
     BadObject,
@@ -42,8 +43,6 @@ from git.exc import (
 from git.repo.fun import touch
 from git.util import bin_to_hex, cygpath, join_path_native, rmfile, rmtree
 from test.lib import TestBase, fixture, with_rw_directory, with_rw_repo
-
-import os.path as osp
 
 
 def iter_flatten(lol):
@@ -295,6 +294,15 @@ class TestRepo(TestBase):
                     rw_repo.clone(tmp_dir, **unsafe_option)
                 assert not tmp_file.exists()
 
+    @pytest.mark.xfail(
+        os.name == "nt",
+        reason=(
+            "File not created. A separate Windows command may be needed. This and the "
+            "currently passing test test_clone_unsafe_options must be adjusted in the "
+            "same way. Until then, test_clone_unsafe_options is unreliable on Windows."
+        ),
+        raises=AssertionError,
+    )
     @with_rw_repo("HEAD")
     def test_clone_unsafe_options_allowed(self, rw_repo):
         with tempfile.TemporaryDirectory() as tdir:
@@ -365,6 +373,15 @@ class TestRepo(TestBase):
                     Repo.clone_from(rw_repo.working_dir, tmp_dir, **unsafe_option)
                 assert not tmp_file.exists()
 
+    @pytest.mark.xfail(
+        os.name == "nt",
+        reason=(
+            "File not created. A separate Windows command may be needed. This and the "
+            "currently passing test test_clone_from_unsafe_options must be adjusted in the "
+            "same way. Until then, test_clone_from_unsafe_options is unreliable on Windows."
+        ),
+        raises=AssertionError,
+    )
     @with_rw_repo("HEAD")
     def test_clone_from_unsafe_options_allowed(self, rw_repo):
         with tempfile.TemporaryDirectory() as tdir:
@@ -1365,6 +1382,11 @@ class TestRepo(TestBase):
         r.git.commit(message="init")
         self.assertEqual(r.git.show("HEAD:hello.txt", strip_newline_in_stdout=False), "hello\n")
 
+    @pytest.mark.xfail(
+        os.name == "nt",
+        reason=R"fatal: could not create leading directories of '--upload-pack=touch C:\Users\ek\AppData\Local\Temp\tmpnantqizc\pwn': Invalid argument",  # noqa: E501
+        raises=GitCommandError,
+    )
     @with_rw_repo("HEAD")
     def test_clone_command_injection(self, rw_repo):
         with tempfile.TemporaryDirectory() as tdir:
