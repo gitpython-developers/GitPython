@@ -140,15 +140,11 @@ class TestRmtree:
         # git.index.util "replaces" git.util and is what "import git.util" gives us.
         mocker.patch.object(sys.modules["git.util"], "HIDE_WINDOWS_KNOWN_ERRORS", hide_windows_known_errors)
 
-        # Disable some chmod functions so the callback can't fix a PermissionError.
+        # Mock out common chmod functions to simulate PermissionError the callback can't
+        # fix. (We leave the corresponding lchmod functions alone. If they're used, it's
+        # more important we detect any failures from inadequate compatibility checks.)
         mocker.patch.object(os, "chmod")
-        if hasattr(os, "lchmod"):
-            # Exists on some operating systems. Mocking out os.chmod doesn't affect it.
-            mocker.patch.object(os, "lchmod")
         mocker.patch.object(pathlib.Path, "chmod")
-        if hasattr(pathlib.Path, "lchmod"):
-            # Exists on some Python versions. Don't rely on it calling a public chmod.
-            mocker.patch.object(pathlib.Path, "lchmod")
 
     @pytest.mark.skipif(
         os.name != "nt",
