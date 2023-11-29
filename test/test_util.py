@@ -140,7 +140,9 @@ class TestRmtree:
         # git.index.util "replaces" git.util and is what "import git.util" gives us.
         mocker.patch.object(sys.modules["git.util"], "HIDE_WINDOWS_KNOWN_ERRORS", hide_windows_known_errors)
 
-        # Disable common chmod functions so the callback can't fix a PermissionError.
+        # Mock out common chmod functions to simulate PermissionError the callback can't
+        # fix. (We leave the corresponding lchmod functions alone. If they're used, it's
+        # more important we detect any failures from inadequate compatibility checks.)
         mocker.patch.object(os, "chmod")
         mocker.patch.object(pathlib.Path, "chmod")
 
@@ -256,14 +258,15 @@ _norm_cygpath_pairs = (
     (R"D:/Apps\fOO", "/cygdrive/d/Apps/fOO"),
     (R"D:\Apps/123", "/cygdrive/d/Apps/123"),
 )
+"""Path test cases for cygpath and decygpath, other than extended UNC paths."""
 
 _unc_cygpath_pairs = (
     (R"\\?\a:\com", "/cygdrive/a/com"),
     (R"\\?\a:/com", "/cygdrive/a/com"),
     (R"\\?\UNC\server\D$\Apps", "//server/D$/Apps"),
 )
+"""Extended UNC path test cases for cygpath."""
 
-# Mapping of expected failures for the test_cygpath_ok test.
 _cygpath_ok_xfails = {
     # From _norm_cygpath_pairs:
     (R"C:\Users", "/cygdrive/c/Users"): "/proc/cygdrive/c/Users",
@@ -277,9 +280,9 @@ _cygpath_ok_xfails = {
     (R"\\?\a:\com", "/cygdrive/a/com"): "/proc/cygdrive/a/com",
     (R"\\?\a:/com", "/cygdrive/a/com"): "/proc/cygdrive/a/com",
 }
+"""Mapping of expected failures for the test_cygpath_ok test."""
 
 
-# Parameter sets for the test_cygpath_ok test.
 _cygpath_ok_params = [
     (
         _xfail_param(*case, reason=f"Returns: {_cygpath_ok_xfails[case]!r}", raises=AssertionError)
@@ -288,6 +291,7 @@ _cygpath_ok_params = [
     )
     for case in _norm_cygpath_pairs + _unc_cygpath_pairs
 ]
+"""Parameter sets for the test_cygpath_ok test."""
 
 
 @pytest.mark.skipif(sys.platform != "cygwin", reason="Paths specifically for Cygwin.")
