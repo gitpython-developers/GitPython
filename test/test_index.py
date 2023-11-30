@@ -17,17 +17,21 @@ import pytest
 from sumtypes import constructor, sumtype
 
 from git import (
-    IndexFile,
-    Repo,
     BlobFilter,
-    UnmergedEntriesError,
-    Tree,
-    Object,
     Diff,
-    GitCommandError,
-    CheckoutError,
+    Git,
+    IndexFile,
+    Object,
+    Repo,
+    Tree,
 )
-from git.exc import HookExecutionError, InvalidGitRepositoryError
+from git.exc import (
+    CheckoutError,
+    GitCommandError,
+    HookExecutionError,
+    InvalidGitRepositoryError,
+    UnmergedEntriesError,
+)
 from git.index.fun import hook_path
 from git.index.typ import BaseIndexEntry, IndexEntry
 from git.objects import Blob
@@ -530,6 +534,11 @@ class TestIndex(TestBase):
 
     # END num existing helper
 
+    @pytest.mark.xfail(
+        os.name == "nt" and Git().config("core.symlinks") == "true",
+        reason="Assumes symlinks are not created on Windows and opens a symlink to a nonexistent target.",
+        raises=FileNotFoundError,
+    )
     @with_rw_repo("0.1.6")
     def test_index_mutation(self, rw_repo):
         index = rw_repo.index
@@ -740,7 +749,7 @@ class TestIndex(TestBase):
             # END for each target
         # END real symlink test
 
-        # Add fake symlink and assure it checks-our as symlink.
+        # Add fake symlink and assure it checks out as a symlink.
         fake_symlink_relapath = "my_fake_symlink"
         link_target = "/etc/that"
         fake_symlink_path = self._make_file(fake_symlink_relapath, link_target, rw_repo)
@@ -774,7 +783,7 @@ class TestIndex(TestBase):
         os.remove(fake_symlink_path)
         index.checkout(fake_symlink_path)
 
-        # On Windows, we will never get symlinks.
+        # On Windows, we currently assume we will never get symlinks.
         if os.name == "nt":
             # Symlinks should contain the link as text (which is what a
             # symlink actually is).
