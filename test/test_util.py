@@ -397,7 +397,7 @@ class TestUtils(TestBase):
         self.assertRaises(IOError, wait_lock._obtain_lock)
         elapsed = time.time() - start
         extra_time = 0.02
-        if sys.platform == "cygwin":  # FIXME: Put back native Windows check.
+        if os.name == "nt" or sys.platform == "cygwin" or sys.platform == "darwin":
             extra_time *= 6  # NOTE: Indeterministic failures without this...
         self.assertLess(elapsed, wait_time + extra_time)
 
