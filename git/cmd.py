@@ -1001,7 +1001,6 @@ class Git(LazyMixin):
                     stderr=PIPE,
                     stdout=stdout_sink,
                     shell=shell,
-                    close_fds=(os.name == "posix"),  # Unsupported on Windows.
                     universal_newlines=universal_newlines,
                     creationflags=PROC_CREATIONFLAGS,
                     **subprocess_kwargs,
