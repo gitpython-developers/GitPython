@@ -102,7 +102,6 @@ def run_commit_hook(name: str, index: "IndexFile", *args: str) -> None:
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             cwd=index.repo.working_dir,
-            close_fds=(os.name == "posix"),
             creationflags=PROC_CREATIONFLAGS,
         )
     except Exception as ex:
