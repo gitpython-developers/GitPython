@@ -398,7 +398,9 @@ class TestUtils(TestBase):
         elapsed = time.time() - start
         extra_time = 0.02
         if os.name == "nt" or sys.platform == "cygwin":
-            extra_time *= 6  # NOTE: Indeterministic failures without this...
+            extra_time *= 6  # Without this, we get indeterministic failures on Windows.
+        elif sys.platform == "darwin":
+            extra_time *= 9  # The situation on macOS is similar, but with more delay.
         self.assertLess(elapsed, wait_time + extra_time)
 
     def test_user_id(self):
