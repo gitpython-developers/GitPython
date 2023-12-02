@@ -11,7 +11,7 @@ import io
 import logging
 import os
 import signal
-from subprocess import call, Popen, PIPE, DEVNULL
+from subprocess import Popen, PIPE, DEVNULL
 import subprocess
 import threading
 from textwrap import dedent
@@ -544,16 +544,6 @@ class Git(LazyMixin):
                 self.status = self._status_code_if_terminate or status
             except OSError as ex:
                 log.info("Ignored error after process had died: %r", ex)
-            except AttributeError:
-                # Try Windows.
-                # For some reason, providing None for stdout/stderr still prints something. This is why
-                # we simply use the shell and redirect to nul. Slower than CreateProcess. The question
-                # is whether we really want to see all these messages. It's annoying no matter what.
-                if os.name == "nt":
-                    call(
-                        ("TASKKILL /F /T /PID %s 2>nul 1>nul" % str(proc.pid)),
-                        shell=True,
-                    )
             # END exception handling
 
         def __del__(self) -> None:
