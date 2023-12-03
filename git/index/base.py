@@ -166,7 +166,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             except OSError:
                 # In new repositories, there may be no index, which means we are empty.
                 self.entries: Dict[Tuple[PathLike, StageType], IndexEntry] = {}
-                return None
+                return
             # END exception handling
 
             try:
@@ -1210,9 +1210,9 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         def handle_stderr(proc: "Popen[bytes]", iter_checked_out_files: Iterable[PathLike]) -> None:
             stderr_IO = proc.stderr
             if not stderr_IO:
-                return None  # Return early if stderr empty.
-            else:
-                stderr_bytes = stderr_IO.read()
+                return  # Return early if stderr empty.
+
+            stderr_bytes = stderr_IO.read()
             # line contents:
             stderr = stderr_bytes.decode(defenc)
             # git-checkout-index: this already exists

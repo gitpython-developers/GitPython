@@ -644,7 +644,7 @@ class RemoteProgress:
             self.line_dropped(line_str)
             # Note: Don't add this line to the other lines, as we have to silently
             # drop it.
-            return None
+            return
         # END handle op code
 
         # Figure out stage.

@@ -68,7 +68,7 @@ def git_cmp(t1: TreeCacheTup, t2: TreeCacheTup) -> int:
 
 def merge_sort(a: List[TreeCacheTup], cmp: Callable[[TreeCacheTup, TreeCacheTup], int]) -> None:
     if len(a) < 2:
-        return None
+        return
 
     mid = len(a) // 2
     lefthalf = a[:mid]
