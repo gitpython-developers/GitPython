@@ -528,13 +528,13 @@ class Git(LazyMixin):
             try:
                 if proc.poll() is not None:
                     self.status = self._status_code_if_terminate or proc.poll()
-                    return None
+                    return
             except OSError as ex:
                 log.info("Ignored error after process had died: %r", ex)
 
             # It can be that nothing really exists anymore...
             if os is None or getattr(os, "kill", None) is None:
-                return None
+                return
 
             # Try to kill it.
             try:

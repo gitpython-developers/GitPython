@@ -500,8 +500,8 @@ class Traversable(Protocol):
             depth: int,
         ) -> None:
             lst = self._get_intermediate_items(item)
-            if not lst:  # empty list
-                return None
+            if not lst:  # Empty list
+                return
             if branch_first:
                 stack.extendleft(TraverseNT(depth, i, src_item) for i in lst)
             else:

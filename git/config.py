@@ -203,7 +203,8 @@ class _OMD(OrderedDict_OMD):
     def add(self, key: str, value: Any) -> None:
         if key not in self:
             super().__setitem__(key, [value])
-            return None
+            return
+
         super().__getitem__(key).append(value)
 
     def setall(self, key: str, values: List[_T]) -> None:
@@ -579,7 +580,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
         :raise IOError: If a file cannot be handled
         """
         if self._is_initialized:
-            return None
+            return
         self._is_initialized = True
 
         files_to_read: List[Union[PathLike, IO]] = [""]
@@ -697,7 +698,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
             a file lock"""
         self._assure_writable("write")
         if not self._dirty:
-            return None
+            return
 
         if isinstance(self._file_or_files, (list, tuple)):
             raise AssertionError(
@@ -711,7 +712,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
                 "Skipping write-back of configuration file as include files were merged in."
                 + "Set merge_includes=False to prevent this."
             )
-            return None
+            return
         # END stop if we have include files
 
         fp = self._file_or_files

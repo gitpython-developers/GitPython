@@ -83,7 +83,7 @@ def run_commit_hook(name: str, index: "IndexFile", *args: str) -> None:
     """
     hp = hook_path(name, index.repo.git_dir)
     if not os.access(hp, os.X_OK):
-        return None
+        return
 
     env = os.environ.copy()
     env["GIT_INDEX_FILE"] = safe_decode(str(index.path))
