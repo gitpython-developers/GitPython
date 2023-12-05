@@ -1,27 +1,49 @@
+# Cached Python bytecode
+__pycache__/
 *.py[co]
+
+# Other caches
+.cache/
+.mypy_cache/
+.pytest_cache/
+
+# Transient editor files
 *.swp
 *~
+
+# Editor configuration
+nbproject
+*.sublime-workspace
+/.vscode/
+.idea/
+
+# Virtual environments
 .env/
 env/
 .venv/
 venv/
-/*.egg-info
+
+# Build output
+/*egg-info
 /lib/GitPython.egg-info
-cover/
-.coverage
-.coverage.*
 /build
 /dist
 /doc/_build
-nbproject
-*.sublime-workspace
-.DS_Store
-/*egg-info
+
+# Tox builds/environments
 /.tox
-/.vscode/
-.idea/
-.cache/
-.mypy_cache/
-.pytest_cache/
+
+# Code coverage output
+cover/
+.coverage
+.coverage.*
+
+# Monkeytype output
 monkeytype.sqlite3
+monkeytype.sqlite3.*
+
+# Manual command output
 output.txt
+
+# Finder metadata
+.DS_Store
