@@ -71,15 +71,19 @@ class TestRepo(TestBase):
         for lfp in glob.glob(_tc_lock_fpaths):
             if osp.isfile(lfp):
                 raise AssertionError("Previous TC left hanging git-lock file: {}".format(lfp))
+
         import gc
 
         gc.collect()
 
     def test_new_should_raise_on_invalid_repo_location(self):
-        self.assertRaises(InvalidGitRepositoryError, Repo, tempfile.gettempdir())
+        with tempfile.TemporaryDirectory() as tdir:
+            self.assertRaises(InvalidGitRepositoryError, Repo, tdir)
 
     def test_new_should_raise_on_non_existent_path(self):
-        self.assertRaises(NoSuchPathError, Repo, "repos/foobar")
+        with tempfile.TemporaryDirectory() as tdir:
+            nonexistent = osp.join(tdir, "foobar")
+            self.assertRaises(NoSuchPathError, Repo, nonexistent)
 
     @with_rw_repo("0.3.2.1")
     def test_repo_creation_from_different_paths(self, rw_repo):
