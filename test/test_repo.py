@@ -41,7 +41,7 @@ from git.exc import (
     UnsafeProtocolError,
 )
 from git.repo.fun import touch
-from git.util import bin_to_hex, cygpath, join_path_native, rmfile, rmtree
+from git.util import bin_to_hex, cwd, cygpath, join_path_native, rmfile, rmtree
 from test.lib import TestBase, fixture, with_rw_directory, with_rw_repo
 
 
@@ -71,15 +71,30 @@ class TestRepo(TestBase):
         for lfp in glob.glob(_tc_lock_fpaths):
             if osp.isfile(lfp):
                 raise AssertionError("Previous TC left hanging git-lock file: {}".format(lfp))
+
         import gc
 
         gc.collect()
 
     def test_new_should_raise_on_invalid_repo_location(self):
-        self.assertRaises(InvalidGitRepositoryError, Repo, tempfile.gettempdir())
+        # Ideally this tests a directory that is outside of any repository. In the rare
+        # case tempfile.gettempdir() is inside a repo, this still passes, but tests the
+        # same scenario as test_new_should_raise_on_invalid_repo_location_within_repo.
+        with tempfile.TemporaryDirectory() as tdir:
+            self.assertRaises(InvalidGitRepositoryError, Repo, tdir)
+
+    @with_rw_directory
+    def test_new_should_raise_on_invalid_repo_location_within_repo(self, rw_dir):
+        repo_dir = osp.join(rw_dir, "repo")
+        Repo.init(repo_dir)
+        subdir = osp.join(repo_dir, "subdir")
+        os.mkdir(subdir)
+        self.assertRaises(InvalidGitRepositoryError, Repo, subdir)
 
     def test_new_should_raise_on_non_existent_path(self):
-        self.assertRaises(NoSuchPathError, Repo, "repos/foobar")
+        with tempfile.TemporaryDirectory() as tdir:
+            nonexistent = osp.join(tdir, "foobar")
+            self.assertRaises(NoSuchPathError, Repo, nonexistent)
 
     @with_rw_repo("0.3.2.1")
     def test_repo_creation_from_different_paths(self, rw_repo):
@@ -118,7 +133,7 @@ class TestRepo(TestBase):
         self.assertEqual(tree.type, "tree")
         self.assertEqual(self.rorepo.tree(tree), tree)
 
-        # try from invalid revision that does not exist
+        # Try from an invalid revision that does not exist.
         self.assertRaises(BadName, self.rorepo.tree, "hello world")
 
     def test_pickleable(self):
@@ -507,13 +522,11 @@ class TestRepo(TestBase):
         repo.git.log(n=100, output_stream=TestOutputStream(io.DEFAULT_BUFFER_SIZE))
 
     def test_init(self):
-        prev_cwd = os.getcwd()
-        os.chdir(tempfile.gettempdir())
-        git_dir_rela = "repos/foo/bar.git"
-        del_dir_abs = osp.abspath("repos")
-        git_dir_abs = osp.abspath(git_dir_rela)
-        try:
-            # with specific path
+        with tempfile.TemporaryDirectory() as tdir, cwd(tdir):
+            git_dir_rela = "repos/foo/bar.git"
+            git_dir_abs = osp.abspath(git_dir_rela)
+
+            # With specific path
             for path in (git_dir_rela, git_dir_abs):
                 r = Repo.init(path=path, bare=True)
                 self.assertIsInstance(r, Repo)
@@ -523,7 +536,7 @@ class TestRepo(TestBase):
 
                 self._assert_empty_repo(r)
 
-                # test clone
+                # Test clone
                 clone_path = path + "_clone"
                 rc = r.clone(clone_path)
                 self._assert_empty_repo(rc)
@@ -558,13 +571,6 @@ class TestRepo(TestBase):
             assert not r.has_separate_working_tree()
 
             self._assert_empty_repo(r)
-        finally:
-            try:
-                rmtree(del_dir_abs)
-            except OSError:
-                pass
-            os.chdir(prev_cwd)
-        # END restore previous state
 
     def test_bare_property(self):
         self.rorepo.bare
