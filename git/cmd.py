@@ -1322,7 +1322,12 @@ class Git(LazyMixin):
         tokens = header_line.split()
         if len(tokens) != 3:
             if not tokens:
-                raise ValueError("SHA could not be resolved, git returned: %r" % (header_line.strip()))
+                err_msg = (
+                    f"SHA is empty, possible dubious ownership in the repository "
+                    f"""at {self._working_dir}.\n            If this is unintended run:\n\n         """
+                    f"""             "git config --global --add safe.directory {self._working_dir}" """
+                )
+                raise ValueError(err_msg)
             else:
                 raise ValueError("SHA %s could not be resolved, git returned: %r" % (tokens[0], header_line.strip()))
             # END handle actual return value
