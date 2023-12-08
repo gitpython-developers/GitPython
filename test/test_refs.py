@@ -207,7 +207,7 @@ class TestRefs(TestBase):
         assert not SymbolicReference(self.rorepo, "hellothere").is_valid()
 
     def test_orig_head(self):
-        assert type(self.rorepo.head.orig_head()) == SymbolicReference
+        assert type(self.rorepo.head.orig_head()) is SymbolicReference
 
     @with_rw_repo("0.1.6")
     def test_head_checkout_detached_head(self, rw_repo):
