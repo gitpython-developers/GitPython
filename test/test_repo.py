@@ -41,7 +41,7 @@ from git.exc import (
     UnsafeProtocolError,
 )
 from git.repo.fun import touch
-from git.util import bin_to_hex, cygpath, join_path_native, rmfile, rmtree
+from git.util import bin_to_hex, cwd, cygpath, join_path_native, rmfile, rmtree
 from test.lib import TestBase, fixture, with_rw_directory, with_rw_repo
 
 
@@ -511,13 +511,11 @@ class TestRepo(TestBase):
         repo.git.log(n=100, output_stream=TestOutputStream(io.DEFAULT_BUFFER_SIZE))
 
     def test_init(self):
-        prev_cwd = os.getcwd()
-        os.chdir(tempfile.gettempdir())
-        git_dir_rela = "repos/foo/bar.git"
-        del_dir_abs = osp.abspath("repos")
-        git_dir_abs = osp.abspath(git_dir_rela)
-        try:
-            # with specific path
+        with tempfile.TemporaryDirectory() as tdir, cwd(tdir):
+            git_dir_rela = "repos/foo/bar.git"
+            git_dir_abs = osp.abspath(git_dir_rela)
+
+            # With specific path
             for path in (git_dir_rela, git_dir_abs):
                 r = Repo.init(path=path, bare=True)
                 self.assertIsInstance(r, Repo)
@@ -527,7 +525,7 @@ class TestRepo(TestBase):
 
                 self._assert_empty_repo(r)
 
-                # test clone
+                # Test clone
                 clone_path = path + "_clone"
                 rc = r.clone(clone_path)
                 self._assert_empty_repo(rc)
@@ -562,13 +560,6 @@ class TestRepo(TestBase):
             assert not r.has_separate_working_tree()
 
             self._assert_empty_repo(r)
-        finally:
-            try:
-                rmtree(del_dir_abs)
-            except OSError:
-                pass
-            os.chdir(prev_cwd)
-        # END restore previous state
 
     def test_bare_property(self):
         self.rorepo.bare
