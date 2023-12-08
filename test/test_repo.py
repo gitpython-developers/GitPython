@@ -77,8 +77,19 @@ class TestRepo(TestBase):
         gc.collect()
 
     def test_new_should_raise_on_invalid_repo_location(self):
+        # Ideally this tests a directory that is outside of any repository. In the rare
+        # case tempfile.gettempdir() is inside a repo, this still passes, but tests the
+        # same scenario as test_new_should_raise_on_invalid_repo_location_within_repo.
         with tempfile.TemporaryDirectory() as tdir:
             self.assertRaises(InvalidGitRepositoryError, Repo, tdir)
+
+    @with_rw_directory
+    def test_new_should_raise_on_invalid_repo_location_within_repo(self, rw_dir):
+        repo_dir = osp.join(rw_dir, "repo")
+        Repo.init(repo_dir)
+        subdir = osp.join(repo_dir, "subdir")
+        os.mkdir(subdir)
+        self.assertRaises(InvalidGitRepositoryError, Repo, subdir)
 
     def test_new_should_raise_on_non_existent_path(self):
         with tempfile.TemporaryDirectory() as tdir:
@@ -122,7 +133,7 @@ class TestRepo(TestBase):
         self.assertEqual(tree.type, "tree")
         self.assertEqual(self.rorepo.tree(tree), tree)
 
-        # try from invalid revision that does not exist
+        # Try from an invalid revision that does not exist.
         self.assertRaises(BadName, self.rorepo.tree, "hello world")
 
     def test_pickleable(self):
