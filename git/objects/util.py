@@ -5,20 +5,16 @@
 
 """General utility functions."""
 
-# flake8: noqa F401
-
-
 from abc import ABC, abstractmethod
-import warnings
-from git.util import IterableList, IterableObj, Actor
-
-import re
-from collections import deque
-
-from string import digits
-import time
 import calendar
+from collections import deque
 from datetime import datetime, timedelta, tzinfo
+from string import digits
+import re
+import time
+import warnings
+
+from git.util import IterableList, IterableObj, Actor
 
 # typing ------------------------------------------------------------
 from typing import (
@@ -26,10 +22,10 @@ from typing import (
     Callable,
     Deque,
     Iterator,
-    Generic,
+    # Generic,
     NamedTuple,
     overload,
-    Sequence,  # NOQA: F401
+    Sequence,
     TYPE_CHECKING,
     Tuple,
     Type,
@@ -38,7 +34,7 @@ from typing import (
     cast,
 )
 
-from git.types import Has_id_attribute, Literal, _T  # NOQA: F401
+from git.types import Has_id_attribute, Literal  # , _T
 
 if TYPE_CHECKING:
     from io import BytesIO, StringIO

@@ -1,13 +1,12 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
-# flake8: noqa
 # Import all modules in order, fix the names they require.
 
-from .symbolic import *
-from .reference import *
-from .head import *
-from .tag import *
-from .remote import *
+from .symbolic import *  # noqa: F401 F403
+from .reference import *  # noqa: F401 F403
+from .head import *  # noqa: F401 F403
+from .tag import *  # noqa: F401 F403
+from .remote import *  # noqa: F401 F403
 
-from .log import *
+from .log import *  # noqa: F401 F403

@@ -31,9 +31,9 @@ from typing import Iterator, List, Tuple, Union, TYPE_CHECKING
 from git.types import PathLike
 
 if TYPE_CHECKING:
-    from git.refs import SymbolicReference
     from io import BytesIO
-    from git.config import GitConfigParser, SectionConstraint  # NOQA
+    from git.refs import SymbolicReference
+    from git.config import GitConfigParser, SectionConstraint
 
 # ------------------------------------------------------------------------------
 

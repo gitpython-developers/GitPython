@@ -5,20 +5,15 @@
 
 """Utilities to help provide compatibility with Python 3."""
 
-# flake8: noqa
-
 import locale
 import os
 import sys
 
-from gitdb.utils.encoding import (
-    force_bytes,  # @UnusedImport
-    force_text,  # @UnusedImport
-)
+from gitdb.utils.encoding import force_bytes, force_text  # noqa: F401  # @UnusedImport
 
 # typing --------------------------------------------------------------------
 
-from typing import (
+from typing import (  # noqa: F401
     Any,
     AnyStr,
     Dict,

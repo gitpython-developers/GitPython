@@ -769,7 +769,7 @@ class TestRepo(TestBase):
                         range(13, 15),
                     ]
                 ),
-            )  # noqa E501
+            )
 
     @mock.patch.object(Git, "_call_process")
     def test_blame_complex_revision(self, git):

@@ -145,7 +145,7 @@ def with_rw_repo(working_tree_ref, bare=False):
             os.chdir(rw_repo.working_dir)
             try:
                 return func(self, rw_repo)
-            except:  # noqa E722
+            except:  # noqa: E722 B001
                 log.info("Keeping repo after failure: %s", repo_dir)
                 repo_dir = None
                 raise
@@ -305,7 +305,7 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
                     with cwd(rw_repo.working_dir):
                         try:
                             return func(self, rw_repo, rw_daemon_repo)
-                        except:  # noqa E722
+                        except:  # noqa: E722 B001
                             log.info(
                                 "Keeping repos after failure: \n  rw_repo_dir: %s \n  rw_daemon_repo_dir: %s",
                                 rw_repo_dir,

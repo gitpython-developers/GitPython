@@ -958,7 +958,7 @@ class Submodule(IndexObject, TraversableIterableObj):
             raise
         # END handle undo rename
 
-        # Auto-rename submodule if it's name was 'default', that is, the checkout directory.
+        # Auto-rename submodule if its name was 'default', that is, the checkout directory.
         if previous_sm_path == self.name:
             self.rename(module_checkout_path)
 
@@ -976,19 +976,19 @@ class Submodule(IndexObject, TraversableIterableObj):
         from the .gitmodules file and the entry in the .git/config file.
 
         :param module: If True, the checked out module we point to will be deleted as
-            well.If that module is currently on a commit outside any branch in the
+            well. If that module is currently on a commit outside any branch in the
             remote, or if it is ahead of its tracking branch, or if there are modified
-            or untracked files in its working tree, then the removal will fail.
-            In case the removal of the repository fails for these reasons, the
-            submodule status will not have been altered.
+            or untracked files in its working tree, then the removal will fail. In case
+            the removal of the repository fails for these reasons, the submodule status
+            will not have been altered.
             If this submodule has child modules of its own, these will be deleted prior
             to touching the direct submodule.
         :param force: Enforces the deletion of the module even though it contains
             modifications. This basically enforces a brute-force file system based
             deletion.
         :param configuration: If True, the submodule is deleted from the configuration,
-            otherwise it isn't. Although this should be enabled most of the time,
-            this flag enables you to safely delete the repository of your submodule.
+            otherwise it isn't. Although this should be enabled most of the time, this
+            flag enables you to safely delete the repository of your submodule.
         :param dry_run: If True, we will not actually do anything, but throw the errors
             we would usually throw.
         :return: self
