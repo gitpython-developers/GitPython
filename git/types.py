@@ -1,11 +1,9 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
-# flake8: noqa
-
 import os
 import sys
-from typing import (
+from typing import (  # noqa: F401
     Dict,
     NoReturn,
     Sequence as Sequence,
@@ -16,24 +14,24 @@ from typing import (
     Callable,
     TYPE_CHECKING,
     TypeVar,
-)  # noqa: F401
+)
 
 if sys.version_info >= (3, 8):
-    from typing import (
+    from typing import (  # noqa: F401
         Literal,
         TypedDict,
         Protocol,
         SupportsIndex as SupportsIndex,
         runtime_checkable,
-    )  # noqa: F401
+    )
 else:
-    from typing_extensions import (
+    from typing_extensions import (  # noqa: F401
         Literal,
         SupportsIndex as SupportsIndex,
         TypedDict,
         Protocol,
         runtime_checkable,
-    )  # noqa: F401
+    )
 
 # if sys.version_info >= (3, 10):
 #     from typing import TypeGuard  # noqa: F401

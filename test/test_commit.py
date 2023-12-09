@@ -475,7 +475,7 @@ JzJMZDRLQLFvnzqZuCjE
             commit.authored_datetime,
             datetime(2009, 10, 8, 18, 17, 5, tzinfo=tzoffset(-7200)),
             commit.authored_datetime,
-        )  # noqa
+        )
         self.assertEqual(
             commit.authored_datetime,
             datetime(2009, 10, 8, 16, 17, 5, tzinfo=utc),

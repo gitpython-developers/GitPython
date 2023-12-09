@@ -40,13 +40,13 @@ _cmd_argvs = (
     ),
 )
 _causes_n_substrings = (
-    (None, None),  # noqa: E241 @IgnorePep8
-    (7, "exit code(7)"),  # noqa: E241 @IgnorePep8
-    ("Some string", "'Some string'"),  # noqa: E241 @IgnorePep8
-    ("παλιο string", "'παλιο string'"),  # noqa: E241 @IgnorePep8
-    (Exception("An exc."), "Exception('An exc.')"),  # noqa: E241 @IgnorePep8
-    (Exception("Κακια exc."), "Exception('Κακια exc.')"),  # noqa: E241 @IgnorePep8
-    (object(), "<object object at "),  # noqa: E241 @IgnorePep8
+    (None, None),
+    (7, "exit code(7)"),
+    ("Some string", "'Some string'"),
+    ("παλιο string", "'παλιο string'"),
+    (Exception("An exc."), "Exception('An exc.')"),
+    (Exception("Κακια exc."), "Exception('Κακια exc.')"),
+    (object(), "<object object at "),
 )
 
 _streams_n_substrings = (

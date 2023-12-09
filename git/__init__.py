@@ -3,28 +3,27 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
-# flake8: noqa
 # @PydevCodeAnalysisIgnore
-
-from git.exc import *  # @NoMove @IgnorePep8
-from typing import List, Optional, Sequence, Tuple, Union, TYPE_CHECKING
-from git.types import PathLike
 
 __version__ = "git"
 
+from typing import List, Optional, Sequence, Tuple, Union, TYPE_CHECKING
+
 from gitdb.util import to_hex_sha
+from git.exc import *  # noqa: F403  # @NoMove @IgnorePep8
+from git.types import PathLike
 
 try:
     from git.compat import safe_decode  # @NoMove @IgnorePep8
     from git.config import GitConfigParser  # @NoMove @IgnorePep8
-    from git.objects import *  # @NoMove @IgnorePep8
-    from git.refs import *  # @NoMove @IgnorePep8
-    from git.diff import *  # @NoMove @IgnorePep8
-    from git.db import *  # @NoMove @IgnorePep8
+    from git.objects import *  # noqa: F403  # @NoMove @IgnorePep8
+    from git.refs import *  # noqa: F403  # @NoMove @IgnorePep8
+    from git.diff import *  # noqa: F403  # @NoMove @IgnorePep8
+    from git.db import *  # noqa: F403  # @NoMove @IgnorePep8
     from git.cmd import Git  # @NoMove @IgnorePep8
     from git.repo import Repo  # @NoMove @IgnorePep8
-    from git.remote import *  # @NoMove @IgnorePep8
-    from git.index import *  # @NoMove @IgnorePep8
+    from git.remote import *  # noqa: F403  # @NoMove @IgnorePep8
+    from git.index import *  # noqa: F403  # @NoMove @IgnorePep8
     from git.util import (  # @NoMove @IgnorePep8
         LockFile,
         BlockingLockFile,
@@ -33,12 +32,12 @@ try:
         remove_password_if_present,
         rmtree,
     )
-except GitError as _exc:
+except GitError as _exc:  # noqa: F405
     raise ImportError("%s: %s" % (_exc.__class__.__name__, _exc)) from _exc
 
 # __all__ must be statically defined by py.typed support
 # __all__ = [name for name, obj in locals().items() if not (name.startswith("_") or inspect.ismodule(obj))]
-__all__ = [
+__all__ = [  # noqa: F405
     "Actor",
     "AmbiguousObjectName",
     "BadName",
@@ -127,7 +126,7 @@ def refresh(path: Optional[PathLike] = None) -> None:
 
     if not Git.refresh(path=path):
         return
-    if not FetchInfo.refresh():
+    if not FetchInfo.refresh():  # noqa: F405
         return  # type: ignore [unreachable]
 
     GIT_OK = True

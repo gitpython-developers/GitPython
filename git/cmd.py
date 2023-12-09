@@ -965,7 +965,7 @@ class Git(LazyMixin):
             # Only search PATH, not CWD. This must be in the *caller* environment. The "1" can be any value.
             maybe_patch_caller_env = patch_env("NoDefaultCurrentDirectoryInExePath", "1")
         else:
-            cmd_not_found_exception = FileNotFoundError  # NOQA # exists, flake8 unknown @UndefinedVariable
+            cmd_not_found_exception = FileNotFoundError
             maybe_patch_caller_env = contextlib.nullcontext()
         # END handle
 

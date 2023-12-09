@@ -3,23 +3,21 @@
 
 """Import all submodules' main classes into the package space."""
 
-# flake8: noqa
-
 import inspect
 
-from .base import *
-from .blob import *
-from .commit import *
+from .base import *  # noqa: F403
+from .blob import *  # noqa: F403
+from .commit import *  # noqa: F403
 from .submodule import util as smutil
-from .submodule.base import *
-from .submodule.root import *
-from .tag import *
-from .tree import *
+from .submodule.base import *  # noqa: F403
+from .submodule.root import *  # noqa: F403
+from .tag import *  # noqa: F403
+from .tree import *  # noqa: F403
 
 # Fix import dependency - add IndexObject to the util module, so that it can be
 # imported by the submodule.base.
-smutil.IndexObject = IndexObject  # type: ignore[attr-defined]
-smutil.Object = Object  # type: ignore[attr-defined]
+smutil.IndexObject = IndexObject  # type: ignore[attr-defined]  # noqa: F405
+smutil.Object = Object  # type: ignore[attr-defined]  # noqa: F405
 del smutil
 
 # Must come after submodule was made available.

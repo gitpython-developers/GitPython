@@ -125,7 +125,7 @@ class TestBase(TestCase):
             ev = "ruby -e '\n"
             ev += "		system %(git), %(merge-file), %(--marker-size=%L), %(%A), %(%O), %(%B)\n"
             ev += "		b = File.read(%(%A))\n"
-            ev += "		b.sub!(/^<+ .*\\nActiveRecord::Schema\\.define.:version => (\\d+). do\\n=+\\nActiveRecord::Schema\\."  # noqa E501
+            ev += "		b.sub!(/^<+ .*\\nActiveRecord::Schema\\.define.:version => (\\d+). do\\n=+\\nActiveRecord::Schema\\."  # noqa: E501
             ev += "define.:version => (\\d+). do\\n>+ .*/) do\n"
             ev += "		  %(ActiveRecord::Schema.define(:version => #{[$1, $2].max}) do)\n"
             ev += "		end\n"

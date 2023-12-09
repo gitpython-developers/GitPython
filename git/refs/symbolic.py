@@ -1,7 +1,6 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
-from git.types import PathLike
 import os
 
 from git.compat import defenc
@@ -31,8 +30,8 @@ from typing import (
     Union,
     TYPE_CHECKING,
     cast,
-)  # NOQA
-from git.types import Commit_ish, PathLike  # NOQA
+)
+from git.types import Commit_ish, PathLike
 
 if TYPE_CHECKING:
     from git.repo import Repo

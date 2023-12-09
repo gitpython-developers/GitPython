@@ -460,7 +460,7 @@ class TestSubmodule(TestBase):
     # @skipIf(HIDE_WINDOWS_KNOWN_ERRORS,
     #         "FIXME: fails with: PermissionError: [WinError 32] The process cannot access the file because"
     #         "it is being used by another process: "
-    #         "'C:\\Users\\ankostis\\AppData\\Local\\Temp\\tmp95c3z83bnon_bare_test_base_rw\\git\\ext\\gitdb\\gitdb\\ext\\smmap'")  # noqa E501
+    #         "'C:\\Users\\ankostis\\AppData\\Local\\Temp\\tmp95c3z83bnon_bare_test_base_rw\\git\\ext\\gitdb\\gitdb\\ext\\smmap'")  # noqa: E501
     @with_rw_repo(k_subm_current)
     def test_base_rw(self, rwrepo):
         self._do_base_tests(rwrepo)

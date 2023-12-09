@@ -62,12 +62,9 @@ from .types import (
     Has_id_attribute,
 )
 
-T_IterableObj = TypeVar("T_IterableObj", bound=Union["IterableObj", "Has_id_attribute"], covariant=True)
-# So IterableList[Head] is subtype of IterableList[IterableObj]
-
 # ---------------------------------------------------------------------
 
-from gitdb.util import (  # NOQA @IgnorePep8
+from gitdb.util import (  # noqa: F401  # @IgnorePep8
     make_sha,
     LockedFD,  # @UnusedImport
     file_contents_ro,  # @UnusedImport
@@ -78,6 +75,9 @@ from gitdb.util import (  # NOQA @IgnorePep8
     bin_to_hex,  # @UnusedImport
     hex_to_bin,  # @UnusedImport
 )
+
+T_IterableObj = TypeVar("T_IterableObj", bound=Union["IterableObj", "Has_id_attribute"], covariant=True)
+# So IterableList[Head] is subtype of IterableList[IterableObj].
 
 # NOTE:  Some of the unused imports might be used/imported by others.
 # Handle once test-cases are back up and running.
