@@ -1015,11 +1015,9 @@ class Git(LazyMixin):
 
         def kill_process(pid: int) -> None:
             """Callback to kill a process."""
-            p = Popen(
-                ["ps", "--ppid", str(pid)],
-                stdout=PIPE,
-                creationflags=PROC_CREATIONFLAGS,
-            )
+            if os.name == "nt":
+                raise AssertionError("Bug: This callback would be ineffective and unsafe on Windows, stopping.")
+            p = Popen(["ps", "--ppid", str(pid)], stdout=PIPE)
             child_pids = []
             if p.stdout is not None:
                 for line in p.stdout:
@@ -1028,18 +1026,16 @@ class Git(LazyMixin):
                         if local_pid.isdigit():
                             child_pids.append(int(local_pid))
             try:
-                # Windows does not have SIGKILL, so use SIGTERM instead.
-                sig = getattr(signal, "SIGKILL", signal.SIGTERM)
-                os.kill(pid, sig)
+                os.kill(pid, signal.SIGKILL)
                 for child_pid in child_pids:
                     try:
-                        os.kill(child_pid, sig)
+                        os.kill(child_pid, signal.SIGKILL)
                     except OSError:
                         pass
                 kill_check.set()  # Tell the main routine that the process was killed.
             except OSError:
-                # It is possible that the process gets completed in the duration after timeout
-                # happens and before we try to kill the process.
+                # It is possible that the process gets completed in the duration after
+                # timeout happens and before we try to kill the process.
                 pass
             return
 
