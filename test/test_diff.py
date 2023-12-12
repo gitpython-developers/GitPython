@@ -3,6 +3,7 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
+import gc
 import os
 import os.path as osp
 import shutil
@@ -27,8 +28,6 @@ class TestDiff(TestBase):
         self.submodule_dir = tempfile.mkdtemp()
 
     def tearDown(self):
-        import gc
-
         gc.collect()
         shutil.rmtree(self.repo_dir)
         shutil.rmtree(self.submodule_dir)
