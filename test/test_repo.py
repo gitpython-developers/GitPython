@@ -3,6 +3,7 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
+import gc
 import glob
 import io
 from io import BytesIO
@@ -71,8 +72,6 @@ class TestRepo(TestBase):
         for lfp in glob.glob(_tc_lock_fpaths):
             if osp.isfile(lfp):
                 raise AssertionError("Previous TC left hanging git-lock file: {}".format(lfp))
-
-        import gc
 
         gc.collect()
 

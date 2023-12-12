@@ -2,6 +2,7 @@
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
 import contextlib
+import gc
 import os
 import os.path as osp
 from pathlib import Path
@@ -61,8 +62,6 @@ prog = TestRootProgress()
 
 class TestSubmodule(TestBase):
     def tearDown(self):
-        import gc
-
         gc.collect()
 
     k_subm_current = "c15a6e1923a14bc760851913858a3942a4193cdb"

@@ -3,6 +3,7 @@
 
 """Performance tests for data streaming."""
 
+import gc
 import os
 import subprocess
 import sys
@@ -92,8 +93,6 @@ class TestObjDBPerformance(TestBigRepoR):
 
             # del db file so git has something to do.
             ostream = None
-            import gc
-
             gc.collect()
             os.remove(db_file)
 
