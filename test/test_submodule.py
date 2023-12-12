@@ -948,18 +948,6 @@ class TestSubmodule(TestBase):
         sm.remove()
         assert not sm.exists()
 
-    @pytest.mark.xfail(
-        os.name == "nt" and sys.version_info >= (3, 12),
-        reason=(
-            "The sm.move call fails. Submodule.move calls os.renames, which raises:\n"
-            "PermissionError: [WinError 32] "
-            "The process cannot access the file because it is being used by another process: "
-            R"'C:\Users\ek\AppData\Local\Temp\test_renamekkbznwjp\parent\mymodules\myname' "
-            R"-> 'C:\Users\ek\AppData\Local\Temp\test_renamekkbznwjp\parent\renamed\myname'"
-            "\nThis resembles other Windows errors, but only occurs starting in Python 3.12."
-        ),
-        raises=PermissionError,
-    )
     @with_rw_directory
     def test_rename(self, rwdir):
         parent = git.Repo.init(osp.join(rwdir, "parent"))
