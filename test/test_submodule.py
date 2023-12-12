@@ -958,6 +958,12 @@ class TestSubmodule(TestBase):
         assert sm.rename(sm_name) is sm and sm.name == sm_name
         assert not sm.repo.is_dirty(index=True, working_tree=False, untracked_files=False)
 
+        # This is needed to work around a PermissionError on Windows, resembling others,
+        # except new in Python 3.12. (*Maybe* this could be due to changes in CPython's
+        # garbage collector detailed in https://github.com/python/cpython/issues/97922.)
+        if os.name == "nt" and sys.version_info >= (3, 12):
+            gc.collect()
+
         new_path = "renamed/myname"
         assert sm.move(new_path).name == new_path
 
