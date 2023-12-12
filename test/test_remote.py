@@ -3,6 +3,7 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
+import gc
 import os
 import os.path as osp
 from pathlib import Path
@@ -105,8 +106,6 @@ class TestRemoteProgress(RemoteProgress):
 
 class TestRemote(TestBase):
     def tearDown(self):
-        import gc
-
         gc.collect()
 
     def _print_fetchhead(self, repo):

@@ -5,6 +5,7 @@
 
 """Performance tests for commits (iteration, traversal, and serialization)."""
 
+import gc
 from io import BytesIO
 from time import time
 import sys
@@ -17,8 +18,6 @@ from test.test_commit import TestCommitSerialization
 
 class TestPerformance(TestBigRepoRW, TestCommitSerialization):
     def tearDown(self):
-        import gc
-
         gc.collect()
 
     # ref with about 100 commits in its history.

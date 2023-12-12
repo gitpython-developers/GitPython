@@ -3,6 +3,7 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
+import gc
 import os
 import sys
 
@@ -16,8 +17,6 @@ import os.path
 
 class Tutorials(TestBase):
     def tearDown(self):
-        import gc
-
         gc.collect()
 
     # ACTUALLY skipped by git.util.rmtree (in local onerror function), from the last call to it via

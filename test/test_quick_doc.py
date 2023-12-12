@@ -1,14 +1,14 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
+import gc
+
 from test.lib import TestBase
 from test.lib.helper import with_rw_directory
 
 
 class QuickDoc(TestBase):
     def tearDown(self):
-        import gc
-
         gc.collect()
 
     @with_rw_directory

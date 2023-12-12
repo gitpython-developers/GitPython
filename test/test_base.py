@@ -3,6 +3,7 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
+import gc
 import os
 import sys
 import tempfile
@@ -20,8 +21,6 @@ import os.path as osp
 
 class TestBase(_TestBase):
     def tearDown(self):
-        import gc
-
         gc.collect()
 
     type_tuples = (

@@ -1,6 +1,7 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
+import gc
 from io import BytesIO
 import logging
 import os
@@ -1079,8 +1080,6 @@ class Submodule(IndexObject, TraversableIterableObj):
                     self._clear_cache()
                     wtd = mod.working_tree_dir
                     del mod  # Release file-handles (Windows).
-                    import gc
-
                     gc.collect()
                     rmtree(str(wtd))
                 # END delete tree if possible

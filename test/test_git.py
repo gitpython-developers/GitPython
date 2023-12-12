@@ -3,6 +3,7 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
+import gc
 import inspect
 import logging
 import os
@@ -34,8 +35,6 @@ class TestGit(TestBase):
         cls.git = Git(cls.rorepo.working_dir)
 
     def tearDown(self):
-        import gc
-
         gc.collect()
 
     def _assert_logged_for_popen(self, log_watcher, name, value):
