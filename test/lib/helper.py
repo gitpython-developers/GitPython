@@ -89,8 +89,7 @@ def with_rw_directory(func):
 
     @wraps(func)
     def wrapper(self):
-        path = tempfile.mktemp(prefix=func.__name__)
-        os.mkdir(path)
+        path = tempfile.mkdtemp(prefix=func.__name__)
         keep = False
         try:
             return func(self, path)

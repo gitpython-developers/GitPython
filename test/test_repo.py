@@ -667,11 +667,10 @@ class TestRepo(TestBase):
         self.assertEqual(value_errors, [])
 
     def test_archive(self):
-        tmpfile = tempfile.mktemp(suffix="archive-test")
-        with open(tmpfile, "wb") as stream:
+        with tempfile.NamedTemporaryFile("wb", suffix="archive-test", delete=False) as stream:
             self.rorepo.archive(stream, "0.1.6", path="doc")
             assert stream.tell()
-        os.remove(tmpfile)
+        os.remove(stream.name)  # Do it this way so we can inspect the file on failure.
 
     @mock.patch.object(Git, "_call_process")
     def test_should_display_blame_information(self, git):

@@ -68,12 +68,11 @@ class TestBase(_TestBase):
             data = data_stream.read()
             assert data
 
-            tmpfilename = tempfile.mktemp(suffix="test-stream")
-            with open(tmpfilename, "wb+") as tmpfile:
+            with tempfile.NamedTemporaryFile(suffix="test-stream", delete=False) as tmpfile:
                 self.assertEqual(item, item.stream_data(tmpfile))
                 tmpfile.seek(0)
                 self.assertEqual(tmpfile.read(), data)
-            os.remove(tmpfilename)
+            os.remove(tmpfile.name)  # Do it this way so we can inspect the file on failure.
         # END for each object type to create
 
         # Each has a unique sha.

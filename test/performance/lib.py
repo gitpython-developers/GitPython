@@ -65,8 +65,7 @@ class TestBigRepoRW(TestBigRepoR):
     def setUp(self):
         self.gitrwrepo = None
         super().setUp()
-        dirname = tempfile.mktemp()
-        os.mkdir(dirname)
+        dirname = tempfile.mkdtemp()
         self.gitrwrepo = self.gitrorepo.clone(dirname, shared=True, bare=True, odbt=GitCmdObjectDB)
         self.puregitrwrepo = Repo(dirname, odbt=GitDB)
 

@@ -359,48 +359,52 @@ class TestUtils(TestBase):
         self.assertEqual("foo", dashify("foo"))
 
     def test_lock_file(self):
-        my_file = tempfile.mktemp()
-        lock_file = LockFile(my_file)
-        assert not lock_file._has_lock()
-        # Release lock we don't have - fine.
-        lock_file._release_lock()
+        with tempfile.TemporaryDirectory() as tdir:
+            my_file = os.path.join(tdir, "my-lock-file")
+            lock_file = LockFile(my_file)
+            assert not lock_file._has_lock()
+            # Release lock we don't have - fine.
+            lock_file._release_lock()
 
-        # Get lock.
-        lock_file._obtain_lock_or_raise()
-        assert lock_file._has_lock()
+            # Get lock.
+            lock_file._obtain_lock_or_raise()
+            assert lock_file._has_lock()
 
-        # Concurrent access.
-        other_lock_file = LockFile(my_file)
-        assert not other_lock_file._has_lock()
-        self.assertRaises(IOError, other_lock_file._obtain_lock_or_raise)
+            # Concurrent access.
+            other_lock_file = LockFile(my_file)
+            assert not other_lock_file._has_lock()
+            self.assertRaises(IOError, other_lock_file._obtain_lock_or_raise)
 
-        lock_file._release_lock()
-        assert not lock_file._has_lock()
+            lock_file._release_lock()
+            assert not lock_file._has_lock()
 
-        other_lock_file._obtain_lock_or_raise()
-        self.assertRaises(IOError, lock_file._obtain_lock_or_raise)
+            other_lock_file._obtain_lock_or_raise()
+            self.assertRaises(IOError, lock_file._obtain_lock_or_raise)
 
-        # Auto-release on destruction.
-        del other_lock_file
-        lock_file._obtain_lock_or_raise()
-        lock_file._release_lock()
+            # Auto-release on destruction.
+            del other_lock_file
+            lock_file._obtain_lock_or_raise()
+            lock_file._release_lock()
 
     def test_blocking_lock_file(self):
-        my_file = tempfile.mktemp()
-        lock_file = BlockingLockFile(my_file)
-        lock_file._obtain_lock()
+        with tempfile.TemporaryDirectory() as tdir:
+            my_file = os.path.join(tdir, "my-lock-file")
+            lock_file = BlockingLockFile(my_file)
+            lock_file._obtain_lock()
 
-        # Next one waits for the lock.
-        start = time.time()
-        wait_time = 0.1
-        wait_lock = BlockingLockFile(my_file, 0.05, wait_time)
-        self.assertRaises(IOError, wait_lock._obtain_lock)
-        elapsed = time.time() - start
+            # Next one waits for the lock.
+            start = time.time()
+            wait_time = 0.1
+            wait_lock = BlockingLockFile(my_file, 0.05, wait_time)
+            self.assertRaises(IOError, wait_lock._obtain_lock)
+            elapsed = time.time() - start
+
         extra_time = 0.02
         if os.name == "nt" or sys.platform == "cygwin":
             extra_time *= 6  # Without this, we get indeterministic failures on Windows.
         elif sys.platform == "darwin":
             extra_time *= 18  # The situation on macOS is similar, but with more delay.
+
         self.assertLess(elapsed, wait_time + extra_time)
 
     def test_user_id(self):
