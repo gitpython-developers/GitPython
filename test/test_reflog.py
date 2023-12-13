@@ -1,15 +1,13 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
-import os
+import os.path as osp
 import tempfile
 
 from git.objects import IndexObject
 from git.refs import RefLogEntry, RefLog
 from test.lib import TestBase, fixture_path
 from git.util import Actor, rmtree, hex_to_bin
-
-import os.path as osp
 
 
 class TestRefLog(TestBase):
@@ -35,8 +33,7 @@ class TestRefLog(TestBase):
     def test_base(self):
         rlp_head = fixture_path("reflog_HEAD")
         rlp_master = fixture_path("reflog_master")
-        tdir = tempfile.mktemp(suffix="test_reflogs")
-        os.mkdir(tdir)
+        tdir = tempfile.mkdtemp(suffix="test_reflogs")
 
         rlp_master_ro = RefLog.path(self.rorepo.head)
         assert osp.isfile(rlp_master_ro)
