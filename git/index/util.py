@@ -3,6 +3,7 @@
 
 """Index utilities."""
 
+import contextlib
 from functools import wraps
 import os
 import os.path as osp
@@ -40,12 +41,10 @@ class TemporaryFileSwap:
 
     def __init__(self, file_path: PathLike) -> None:
         self.file_path = file_path
-        self.tmp_file_path = str(self.file_path) + tempfile.mktemp("", "", "")
-        # It may be that the source does not exist.
-        try:
-            os.rename(self.file_path, self.tmp_file_path)
-        except OSError:
-            pass
+        fd, self.tmp_file_path = tempfile.mkstemp(prefix=self.file_path, dir="")
+        os.close(fd)
+        with contextlib.suppress(OSError):  # It may be that the source does not exist.
+            os.replace(self.file_path, self.tmp_file_path)
 
     def __enter__(self) -> "TemporaryFileSwap":
         return self
@@ -57,10 +56,7 @@ class TemporaryFileSwap:
         exc_tb: Optional[TracebackType],
     ) -> bool:
         if osp.isfile(self.tmp_file_path):
-            if os.name == "nt" and osp.exists(self.file_path):
-                os.remove(self.file_path)
-            os.rename(self.tmp_file_path, self.file_path)
-
+            os.replace(self.tmp_file_path, self.file_path)
         return False
 
 
