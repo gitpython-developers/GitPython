@@ -150,7 +150,7 @@ class TestGit(TestBase):
         if os.name == "nt":
             # Copy an actual binary executable that is not git. (On Windows, running
             # "hostname" only displays the hostname, it never tries to change it.)
-            other_exe_path = os.path.join(os.getenv("WINDIR"), "system32", "hostname.exe")
+            other_exe_path = os.path.join(os.environ["SystemRoot"], "system32", "hostname.exe")
             impostor_path = os.path.join(rw_dir, "git.exe")
             shutil.copy(other_exe_path, impostor_path)
         else:
