@@ -9,6 +9,7 @@ import inspect
 import logging
 import os
 import os.path as osp
+from pathlib import Path
 import re
 import shutil
 import subprocess
@@ -150,14 +151,13 @@ class TestGit(TestBase):
         if os.name == "nt":
             # Copy an actual binary executable that is not git. (On Windows, running
             # "hostname" only displays the hostname, it never tries to change it.)
-            other_exe_path = os.path.join(os.environ["SystemRoot"], "system32", "hostname.exe")
-            impostor_path = os.path.join(rw_dir, "git.exe")
+            other_exe_path = Path(os.environ["SystemRoot"], "system32", "hostname.exe")
+            impostor_path = Path(rw_dir, "git.exe")
             shutil.copy(other_exe_path, impostor_path)
         else:
             # Create a shell script that doesn't do anything.
-            impostor_path = os.path.join(rw_dir, "git")
-            with open(impostor_path, mode="w", encoding="utf-8") as file:
-                print("#!/bin/sh", file=file)
+            impostor_path = Path(rw_dir, "git")
+            impostor_path.write_text("#!/bin/sh\n", encoding="utf-8")
             os.chmod(impostor_path, 0o755)
 
         with cwd(rw_dir) if chdir_to_repo else contextlib.nullcontext():
