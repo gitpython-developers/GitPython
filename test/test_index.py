@@ -3,16 +3,19 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
+import contextlib
 from io import BytesIO
 import logging
 import os
 import os.path as osp
 from pathlib import Path
 import re
+import shutil
 from stat import S_ISLNK, ST_MODE
 import subprocess
 import tempfile
 
+import ddt
 import pytest
 from sumtypes import constructor, sumtype
 
@@ -36,7 +39,7 @@ from git.index.fun import hook_path, run_commit_hook
 from git.index.typ import BaseIndexEntry, IndexEntry
 from git.index.util import TemporaryFileSwap
 from git.objects import Blob
-from git.util import Actor, hex_to_bin, rmtree
+from git.util import Actor, cwd, hex_to_bin, rmtree
 from gitdb.base import IStream
 from test.lib import TestBase, fixture, fixture_path, with_rw_directory, with_rw_repo
 
@@ -172,6 +175,7 @@ def _make_hook(git_dir, name, content, make_exec=True):
     return hp
 
 
+@ddt.ddt
 class TestIndex(TestBase):
     def __init__(self, *args):
         super().__init__(*args)
@@ -1010,6 +1014,37 @@ class TestIndex(TestBase):
         _make_hook(index.repo.git_dir, "fake-hook", "echo 'ran fake hook' >output.txt")
         run_commit_hook("fake-hook", index)
         output = Path(rw_repo.git_dir, "output.txt").read_text(encoding="utf-8")
+        self.assertEqual(output, "ran fake hook\n")
+
+    # FIXME: Figure out a way to make this test also work with Absent and WslNoDistro.
+    @pytest.mark.xfail(
+        type(_win_bash_status) is WinBashStatus.WslNoDistro,
+        reason="Currently uses the bash.exe of WSL, even with no WSL distro installed",
+        raises=HookExecutionError,
+    )
+    @ddt.data((False,), (True,))
+    @with_rw_directory
+    def test_hook_uses_shell_not_from_cwd(self, rw_dir, case):
+        (chdir_to_repo,) = case
+
+        repo = Repo.init(rw_dir)
+        _make_hook(repo.git_dir, "fake-hook", "echo 'ran fake hook' >output.txt")
+
+        if os.name == "nt":
+            # Copy an actual binary that is not bash.
+            other_exe_path = Path(os.environ["SystemRoot"], "system32", "hostname.exe")
+            impostor_path = Path(rw_dir, "bash.exe")
+            shutil.copy(other_exe_path, impostor_path)
+        else:
+            # Create a shell script that doesn't do anything.
+            impostor_path = Path(rw_dir, "sh")
+            impostor_path.write_text("#!/bin/sh\n", encoding="utf-8")
+            os.chmod(impostor_path, 0o755)
+
+        with cwd(rw_dir) if chdir_to_repo else contextlib.nullcontext():
+            run_commit_hook("fake-hook", repo.index)
+
+        output = Path(rw_dir, "output.txt").read_text(encoding="utf-8")
         self.assertEqual(output, "ran fake hook\n")
 
     @pytest.mark.xfail(
