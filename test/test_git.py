@@ -29,6 +29,21 @@ from git.util import cwd, finalize_process
 from test.lib import TestBase, fixture_path, with_rw_directory
 
 
+@contextlib.contextmanager
+def _patch_out_env(name):
+    try:
+        old_value = os.environ[name]
+    except KeyError:
+        old_value = None
+    else:
+        del os.environ[name]
+    try:
+        yield
+    finally:
+        if old_value is not None:
+            os.environ[name] = old_value
+
+
 @ddt.ddt
 class TestGit(TestBase):
     @classmethod
@@ -137,14 +152,17 @@ class TestGit(TestBase):
         self.assertRegex(self.git.execute(["git", "version"]), r"^git version [\d\.]{2}.*$")
 
     @ddt.data(
-        (False, False, ["git", "version"]),
-        (False, True, "git version"),
-        (True, False, ["git", "version"]),
-        (True, True, "git version"),
+        # chdir_to_repo, shell, command, use_shell_impostor
+        (False, False, ["git", "version"], False),
+        (False, True, "git version", False),
+        (False, True, "git version", True),
+        (True, False, ["git", "version"], False),
+        (True, True, "git version", False),
+        (True, True, "git version", True),
     )
     @with_rw_directory
     def test_it_executes_git_not_from_cwd(self, rw_dir, case):
-        chdir_to_repo, shell, command = case
+        chdir_to_repo, shell, command, use_shell_impostor = case
 
         repo = Repo.init(rw_dir)
 
@@ -160,7 +178,16 @@ class TestGit(TestBase):
             impostor_path.write_text("#!/bin/sh\n", encoding="utf-8")
             os.chmod(impostor_path, 0o755)
 
-        with cwd(rw_dir) if chdir_to_repo else contextlib.nullcontext():
+        if use_shell_impostor:
+            shell_name = "cmd.exe" if os.name == "nt" else "sh"
+            shutil.copy(impostor_path, Path(rw_dir, shell_name))
+
+        with contextlib.ExitStack() as stack:
+            if chdir_to_repo:
+                stack.enter_context(cwd(rw_dir))
+            if use_shell_impostor:
+                stack.enter_context(_patch_out_env("ComSpec"))
+
             # Run the command without raising an exception on failure, as the exception
             # message is currently misleading when the command is a string rather than a
             # sequence of strings (it really runs "git", but then wrongly reports "g").
