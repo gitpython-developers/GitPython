@@ -88,11 +88,11 @@ def with_rw_directory(func):
     test succeeds, but leave it otherwise to aid additional debugging."""
 
     @wraps(func)
-    def wrapper(self):
+    def wrapper(self, *args, **kwargs):
         path = tempfile.mkdtemp(prefix=func.__name__)
         keep = False
         try:
-            return func(self, path)
+            return func(self, path, *args, **kwargs)
         except Exception:
             log.info(
                 "Test %s.%s failed, output is at %r\n",

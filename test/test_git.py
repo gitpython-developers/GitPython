@@ -3,6 +3,7 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
+import contextlib
 import gc
 import inspect
 import logging
@@ -12,7 +13,7 @@ import re
 import shutil
 import subprocess
 import sys
-from tempfile import TemporaryDirectory, TemporaryFile
+from tempfile import TemporaryFile
 from unittest import skipUnless
 
 if sys.version_info >= (3, 8):
@@ -135,27 +136,35 @@ class TestGit(TestBase):
         self.assertRegex(self.git.execute(["git", "version"]), r"^git version [\d\.]{2}.*$")
 
     @ddt.data(
-        (["git", "version"], False),
-        ("git version", True),
+        (False, False, ["git", "version"]),
+        (False, True, "git version"),
+        (True, False, ["git", "version"]),
+        (True, True, "git version"),
     )
-    def test_it_executes_git_not_from_cwd(self, case):
-        command, shell = case
+    @with_rw_directory
+    def test_it_executes_git_not_from_cwd(self, rw_dir, case):
+        chdir_to_repo, shell, command = case
 
-        with TemporaryDirectory() as tmpdir:
-            if os.name == "nt":
-                # Copy an actual binary executable that is not git.
-                other_exe_path = os.path.join(os.getenv("WINDIR"), "system32", "hostname.exe")
-                impostor_path = os.path.join(tmpdir, "git.exe")
-                shutil.copy(other_exe_path, impostor_path)
-            else:
-                # Create a shell script that doesn't do anything.
-                impostor_path = os.path.join(tmpdir, "git")
-                with open(impostor_path, mode="w", encoding="utf-8") as file:
-                    print("#!/bin/sh", file=file)
-                os.chmod(impostor_path, 0o755)
+        repo = Repo.init(rw_dir)
 
-            with cwd(tmpdir):
-                output = self.git.execute(command, shell=shell)
+        if os.name == "nt":
+            # Copy an actual binary executable that is not git. (On Windows, running
+            # "hostname" only displays the hostname, it never tries to change it.)
+            other_exe_path = os.path.join(os.getenv("WINDIR"), "system32", "hostname.exe")
+            impostor_path = os.path.join(rw_dir, "git.exe")
+            shutil.copy(other_exe_path, impostor_path)
+        else:
+            # Create a shell script that doesn't do anything.
+            impostor_path = os.path.join(rw_dir, "git")
+            with open(impostor_path, mode="w", encoding="utf-8") as file:
+                print("#!/bin/sh", file=file)
+            os.chmod(impostor_path, 0o755)
+
+        with cwd(rw_dir) if chdir_to_repo else contextlib.nullcontext():
+            # Run the command without raising an exception on failure, as the exception
+            # message is currently misleading when the command is a string rather than a
+            # sequence of strings (it really runs "git", but then wrongly reports "g").
+            output = repo.git.execute(command, with_exceptions=False, shell=shell)
 
         self.assertRegex(output, r"^git version\b")
 
