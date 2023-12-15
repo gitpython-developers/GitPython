@@ -988,25 +988,22 @@ class Git(LazyMixin):
         if shell is None:
             shell = self.USE_SHELL
 
-        cmd_not_found_exception = FileNotFoundError
-        maybe_patch_caller_env = contextlib.nullcontext()
-
         if os.name == "nt":
+            cmd_not_found_exception = OSError
             if kill_after_timeout is not None:
                 raise GitCommandError(
                     redacted_command,
                     '"kill_after_timeout" feature is not supported on Windows.',
                 )
-
-            cmd_not_found_exception = OSError
-
-            # Search PATH, but do not search CWD. The "1" can be any value.
+            # Search PATH but not CWD. The "1" can be any value. We'll patch just before
+            # the Popen call and unpatch just after, or we get a worse race condition.
+            maybe_patch_caller_env = patch_env("NoDefaultCurrentDirectoryInExePath", "1")
             if shell:
-                # If the direct subprocess is a shell, this must go in its environment.
+                # Modify the direct shell subprocess's own search behavior accordingly.
                 env["NoDefaultCurrentDirectoryInExePath"] = "1"
-            else:
-                # If we're not using a shell, the variable goes in our own environment.
-                maybe_patch_caller_env = patch_env("NoDefaultCurrentDirectoryInExePath", "1")
+        else:
+            cmd_not_found_exception = FileNotFoundError
+            maybe_patch_caller_env = contextlib.nullcontext()
         # END handle
 
         stdout_sink = PIPE if with_stdout else getattr(subprocess, "DEVNULL", None) or open(os.devnull, "wb")
