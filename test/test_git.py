@@ -134,7 +134,13 @@ class TestGit(TestBase):
     def test_it_executes_git_and_returns_result(self):
         self.assertRegex(self.git.execute(["git", "version"]), r"^git version [\d\.]{2}.*$")
 
-    def test_it_executes_git_not_from_cwd(self):
+    @ddt.data(
+        (["git", "version"], False),
+        ("git version", True),
+    )
+    def test_it_executes_git_not_from_cwd(self, case):
+        command, shell = case
+
         with TemporaryDirectory() as tmpdir:
             if os.name == "nt":
                 # Copy an actual binary executable that is not git.
@@ -149,7 +155,9 @@ class TestGit(TestBase):
                 os.chmod(impostor_path, 0o755)
 
             with cwd(tmpdir):
-                self.assertRegex(self.git.execute(["git", "version"]), r"^git version\b")
+                output = self.git.execute(command, shell=shell)
+
+        self.assertRegex(output, r"^git version\b")
 
     @skipUnless(
         os.name == "nt",
