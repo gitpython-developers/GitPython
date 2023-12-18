@@ -41,7 +41,14 @@ from git.index.util import TemporaryFileSwap
 from git.objects import Blob
 from git.util import Actor, cwd, hex_to_bin, rmtree
 from gitdb.base import IStream
-from test.lib import TestBase, fixture, fixture_path, with_rw_directory, with_rw_repo
+from test.lib import (
+    TestBase,
+    VirtualEnvironment,
+    fixture,
+    fixture_path,
+    with_rw_directory,
+    with_rw_repo,
+)
 
 HOOKS_SHEBANG = "#!/usr/bin/env sh\n"
 
@@ -1016,36 +1023,46 @@ class TestIndex(TestBase):
         output = Path(rw_repo.git_dir, "output.txt").read_text(encoding="utf-8")
         self.assertEqual(output, "ran fake hook\n")
 
-    # FIXME: Figure out a way to make this test also work with Absent and WslNoDistro.
-    @pytest.mark.xfail(
-        type(_win_bash_status) is WinBashStatus.WslNoDistro,
-        reason="Currently uses the bash.exe of WSL, even with no WSL distro installed",
-        raises=HookExecutionError,
-    )
     @ddt.data((False,), (True,))
     @with_rw_directory
     def test_hook_uses_shell_not_from_cwd(self, rw_dir, case):
         (chdir_to_repo,) = case
 
+        shell_name = "bash.exe" if os.name == "nt" else "sh"
+        maybe_chdir = cwd(rw_dir) if chdir_to_repo else contextlib.nullcontext()
         repo = Repo.init(rw_dir)
-        _make_hook(repo.git_dir, "fake-hook", "echo 'ran fake hook' >output.txt")
 
-        if os.name == "nt":
-            # Copy an actual binary that is not bash.
-            other_exe_path = Path(os.environ["SystemRoot"], "system32", "hostname.exe")
-            impostor_path = Path(rw_dir, "bash.exe")
-            shutil.copy(other_exe_path, impostor_path)
+        # We need an impostor shell that works on Windows and that can be distinguished
+        # from the real bash.exe. But even if the real bash.exe is absent or unusable,
+        # we should verify that the impostor is not run. So the impostor needs a clear
+        # side effect (unlike in TestGit.test_it_executes_git_not_from_cwd). Popen on
+        # Windows uses CreateProcessW, which disregards PATHEXT; the impostor may need
+        # to be a binary executable to ensure the vulnerability is found if present. No
+        # compiler need exist, shipping a binary in the test suite may target the wrong
+        # architecture, and generating one in a bespoke way may cause virus scanners to
+        # give a false positive. So we use a Bash/Python polyglot for the hook and use
+        # the Python interpreter itself as the bash.exe impostor. But an interpreter
+        # from a venv may not run outside of it, and a global interpreter won't run from
+        # a different location if it was installed from the Microsoft Store. So we make
+        # a new venv in rw_dir and use its interpreter.
+        venv = VirtualEnvironment(rw_dir, with_pip=False)
+        shutil.copy(venv.python, Path(rw_dir, shell_name))
+        shutil.copy(fixture_path("polyglot"), hook_path("polyglot", repo.git_dir))
+        payload = Path(rw_dir, "payload.txt")
+
+        if type(_win_bash_status) in {WinBashStatus.Absent, WinBashStatus.WslNoDistro}:
+            # The real shell can't run, but the impostor should still not be used.
+            with self.assertRaises(HookExecutionError):
+                with maybe_chdir:
+                    run_commit_hook("polyglot", repo.index)
+            self.assertFalse(payload.exists())
         else:
-            # Create a shell script that doesn't do anything.
-            impostor_path = Path(rw_dir, "sh")
-            impostor_path.write_text("#!/bin/sh\n", encoding="utf-8")
-            os.chmod(impostor_path, 0o755)
-
-        with cwd(rw_dir) if chdir_to_repo else contextlib.nullcontext():
-            run_commit_hook("fake-hook", repo.index)
-
-        output = Path(rw_dir, "output.txt").read_text(encoding="utf-8")
-        self.assertEqual(output, "ran fake hook\n")
+            # The real shell should run, and not the impostor.
+            with maybe_chdir:
+                run_commit_hook("polyglot", repo.index)
+            self.assertFalse(payload.exists())
+            output = Path(rw_dir, "output.txt").read_text(encoding="utf-8")
+            self.assertEqual(output, "Ran intended hook.\n")
 
     @pytest.mark.xfail(
         type(_win_bash_status) is WinBashStatus.Absent,
