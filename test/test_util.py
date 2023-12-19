@@ -207,24 +207,28 @@ class TestEnvParsing:
         )
         return ast.literal_eval(output)
 
+    @pytest.mark.skipif(
+        os.name != "nt",
+        reason="These environment variables are only used on Windows.",
+    )
     @pytest.mark.parametrize(
         "env_var_value, expected_truth_value",
         [
-            (None, os.name == "nt"),  # True on Windows when the environment variable is unset.
+            (None, True),  # When the environment variable is unset.
             ("", False),
             (" ", False),
             ("0", False),
-            ("1", os.name == "nt"),
+            ("1", True),
             ("false", False),
-            ("true", os.name == "nt"),
+            ("true", True),
             ("False", False),
-            ("True", os.name == "nt"),
+            ("True", True),
             ("no", False),
-            ("yes", os.name == "nt"),
+            ("yes", True),
             ("NO", False),
-            ("YES", os.name == "nt"),
+            ("YES", True),
             (" no  ", False),
-            (" yes  ", os.name == "nt"),
+            (" yes  ", True),
         ],
     )
     @pytest.mark.parametrize(
