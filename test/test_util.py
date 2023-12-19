@@ -46,7 +46,7 @@ def permission_error_tmpdir(tmp_path):
     """Fixture to test permissions errors in situations where they are not overcome."""
     td = tmp_path / "testdir"
     td.mkdir()
-    (td / "x").write_bytes(b"")
+    (td / "x").touch()
 
     # Set up PermissionError on Windows, where we can't delete read-only files.
     (td / "x").chmod(stat.S_IRUSR)
@@ -73,7 +73,7 @@ class TestRmtree:
             td / "s" / "y",
             td / "s" / "z",
         ):
-            f.write_bytes(b"")
+            f.touch()
 
         try:
             rmtree(td)
@@ -95,7 +95,7 @@ class TestRmtree:
         for d in td, td / "sub":
             d.mkdir()
         for f in td / "x", td / "sub" / "y":
-            f.write_bytes(b"")
+            f.touch()
             f.chmod(0)
 
         try:
@@ -115,7 +115,7 @@ class TestRmtree:
 
         dir1 = tmp_path / "dir1"
         dir1.mkdir()
-        (dir1 / "file").write_bytes(b"")
+        (dir1 / "file").touch()
         (dir1 / "file").chmod(stat.S_IRUSR)
         old_mode = (dir1 / "file").stat().st_mode
 
@@ -207,24 +207,28 @@ class TestEnvParsing:
         )
         return ast.literal_eval(output)
 
+    @pytest.mark.skipif(
+        os.name != "nt",
+        reason="These environment variables are only used on Windows.",
+    )
     @pytest.mark.parametrize(
         "env_var_value, expected_truth_value",
         [
-            (None, os.name == "nt"),  # True on Windows when the environment variable is unset.
+            (None, True),  # When the environment variable is unset.
             ("", False),
             (" ", False),
             ("0", False),
-            ("1", os.name == "nt"),
+            ("1", True),
             ("false", False),
-            ("true", os.name == "nt"),
+            ("true", True),
             ("False", False),
-            ("True", os.name == "nt"),
+            ("True", True),
             ("no", False),
-            ("yes", os.name == "nt"),
+            ("yes", True),
             ("NO", False),
-            ("YES", os.name == "nt"),
+            ("YES", True),
             (" no  ", False),
-            (" yes  ", os.name == "nt"),
+            (" yes  ", True),
         ],
     )
     @pytest.mark.parametrize(
