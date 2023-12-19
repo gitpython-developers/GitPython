@@ -1042,9 +1042,9 @@ class TestIndex(TestBase):
         # architecture, and generating one in a bespoke way may cause virus scanners to
         # give a false positive. So we use a Bash/Python polyglot for the hook and use
         # the Python interpreter itself as the bash.exe impostor. But an interpreter
-        # from a venv may not run outside of it, and a global interpreter won't run from
-        # a different location if it was installed from the Microsoft Store. So we make
-        # a new venv in rw_dir and use its interpreter.
+        # from a venv may not run when copied outside of it, and a global interpreter
+        # won't run when copied to a different location if it was installed from the
+        # Microsoft Store. So we make a new venv in rw_dir and use its interpreter.
         venv = VirtualEnvironment(rw_dir, with_pip=False)
         shutil.copy(venv.python, Path(rw_dir, shell_name))
         shutil.copy(fixture_path("polyglot"), hook_path("polyglot", repo.git_dir))
