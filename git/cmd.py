@@ -29,8 +29,8 @@ from git.util import (
     cygpath,
     expand_path,
     is_cygwin_git,
-    patch_env,
     remove_password_if_present,
+    safer_popen,
     stream_copy,
 )
 
@@ -223,14 +223,6 @@ def dict_to_slots_and__excluded_are_none(self: object, d: Mapping[str, Any], exc
 
 
 ## -- End Utilities -- @}
-
-
-if os.name == "nt":
-    # CREATE_NEW_PROCESS_GROUP is needed to allow killing it afterwards. See:
-    # https://docs.python.org/3/library/subprocess.html#subprocess.Popen.send_signal
-    PROC_CREATIONFLAGS = subprocess.CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP
-else:
-    PROC_CREATIONFLAGS = 0
 
 
 class Git(LazyMixin):
@@ -985,9 +977,6 @@ class Git(LazyMixin):
         if inline_env is not None:
             env.update(inline_env)
 
-        if shell is None:
-            shell = self.USE_SHELL
-
         if os.name == "nt":
             cmd_not_found_exception = OSError
             if kill_after_timeout is not None:
@@ -995,18 +984,13 @@ class Git(LazyMixin):
                     redacted_command,
                     '"kill_after_timeout" feature is not supported on Windows.',
                 )
-            # Search PATH but not CWD. The "1" can be any value. We'll patch just before
-            # the Popen call and unpatch just after, or we get a worse race condition.
-            maybe_patch_caller_env = patch_env("NoDefaultCurrentDirectoryInExePath", "1")
-            if shell:
-                # Modify the direct shell subprocess's own search behavior accordingly.
-                env["NoDefaultCurrentDirectoryInExePath"] = "1"
         else:
             cmd_not_found_exception = FileNotFoundError
-            maybe_patch_caller_env = contextlib.nullcontext()
         # END handle
 
         stdout_sink = PIPE if with_stdout else getattr(subprocess, "DEVNULL", None) or open(os.devnull, "wb")
+        if shell is None:
+            shell = self.USE_SHELL
         log.debug(
             "Popen(%s, cwd=%s, stdin=%s, shell=%s, universal_newlines=%s)",
             redacted_command,
@@ -1016,20 +1000,18 @@ class Git(LazyMixin):
             universal_newlines,
         )
         try:
-            with maybe_patch_caller_env:
-                proc = Popen(
-                    command,
-                    env=env,
-                    cwd=cwd,
-                    bufsize=-1,
-                    stdin=(istream or DEVNULL),
-                    stderr=PIPE,
-                    stdout=stdout_sink,
-                    shell=shell,
-                    universal_newlines=universal_newlines,
-                    creationflags=PROC_CREATIONFLAGS,
-                    **subprocess_kwargs,
-                )
+            proc = safer_popen(
+                command,
+                env=env,
+                cwd=cwd,
+                bufsize=-1,
+                stdin=(istream or DEVNULL),
+                stderr=PIPE,
+                stdout=stdout_sink,
+                shell=shell,
+                universal_newlines=universal_newlines,
+                **subprocess_kwargs,
+            )
         except cmd_not_found_exception as err:
             raise GitCommandNotFound(redacted_command, err) from err
         else:

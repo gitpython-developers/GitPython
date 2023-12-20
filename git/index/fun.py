@@ -3,7 +3,6 @@
 
 """Standalone functions to accompany the index implementation and make it more versatile."""
 
-import contextlib
 from io import BytesIO
 import os
 import os.path as osp
@@ -19,7 +18,7 @@ from stat import (
 )
 import subprocess
 
-from git.cmd import PROC_CREATIONFLAGS, handle_process_output
+from git.cmd import handle_process_output
 from git.compat import defenc, force_bytes, force_text, safe_decode
 from git.exc import HookExecutionError, UnmergedEntriesError
 from git.objects.fun import (
@@ -27,7 +26,7 @@ from git.objects.fun import (
     traverse_trees_recursive,
     tree_to_stream,
 )
-from git.util import IndexFileSHA1Writer, finalize_process, patch_env
+from git.util import IndexFileSHA1Writer, finalize_process, safer_popen
 from gitdb.base import IStream
 from gitdb.typ import str_tree_type
 
@@ -91,10 +90,6 @@ def run_commit_hook(name: str, index: "IndexFile", *args: str) -> None:
     env = os.environ.copy()
     env["GIT_INDEX_FILE"] = safe_decode(str(index.path))
     env["GIT_EDITOR"] = ":"
-    if os.name == "nt":
-        maybe_patch_caller_env = patch_env("NoDefaultCurrentDirectoryInExePath", "1")
-    else:
-        maybe_patch_caller_env = contextlib.nullcontext()
     cmd = [hp]
     try:
         if os.name == "nt" and not _has_file_extension(hp):
@@ -103,15 +98,13 @@ def run_commit_hook(name: str, index: "IndexFile", *args: str) -> None:
             relative_hp = Path(hp).relative_to(index.repo.working_dir).as_posix()
             cmd = ["bash.exe", relative_hp]
 
-        with maybe_patch_caller_env:
-            process = subprocess.Popen(
-                cmd + list(args),
-                env=env,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                cwd=index.repo.working_dir,
-                creationflags=PROC_CREATIONFLAGS,
-            )
+        process = safer_popen(
+            cmd + list(args),
+            env=env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            cwd=index.repo.working_dir,
+        )
     except Exception as ex:
         raise HookExecutionError(hp, ex) from ex
     else:

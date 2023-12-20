@@ -25,7 +25,7 @@ else:
 import ddt
 
 from git import Git, refresh, GitCommandError, GitCommandNotFound, Repo, cmd
-from git.util import cwd, finalize_process
+from git.util import cwd, finalize_process, safer_popen
 from test.lib import TestBase, fixture_path, with_rw_directory
 
 
@@ -115,28 +115,28 @@ class TestGit(TestBase):
     def _do_shell_combo(self, value_in_call, value_from_class):
         with mock.patch.object(Git, "USE_SHELL", value_from_class):
             # git.cmd gets Popen via a "from" import, so patch it there.
-            with mock.patch.object(cmd, "Popen", wraps=cmd.Popen) as mock_popen:
+            with mock.patch.object(cmd, "safer_popen", wraps=cmd.safer_popen) as mock_safer_popen:
                 # Use a command with no arguments (besides the program name), so it runs
                 # with or without a shell, on all OSes, with the same effect.
                 self.git.execute(["git"], with_exceptions=False, shell=value_in_call)
 
-        return mock_popen
+        return mock_safer_popen
 
     @ddt.idata(_shell_cases)
     def test_it_uses_shell_or_not_as_specified(self, case):
         """A bool passed as ``shell=`` takes precedence over `Git.USE_SHELL`."""
         value_in_call, value_from_class, expected_popen_arg = case
-        mock_popen = self._do_shell_combo(value_in_call, value_from_class)
-        mock_popen.assert_called_once()
-        self.assertIs(mock_popen.call_args.kwargs["shell"], expected_popen_arg)
+        mock_safer_popen = self._do_shell_combo(value_in_call, value_from_class)
+        mock_safer_popen.assert_called_once()
+        self.assertIs(mock_safer_popen.call_args.kwargs["shell"], expected_popen_arg)
 
     @ddt.idata(full_case[:2] for full_case in _shell_cases)
     def test_it_logs_if_it_uses_a_shell(self, case):
         """``shell=`` in the log message agrees with what is passed to `Popen`."""
         value_in_call, value_from_class = case
         with self.assertLogs(cmd.log, level=logging.DEBUG) as log_watcher:
-            mock_popen = self._do_shell_combo(value_in_call, value_from_class)
-        self._assert_logged_for_popen(log_watcher, "shell", mock_popen.call_args.kwargs["shell"])
+            mock_safer_popen = self._do_shell_combo(value_in_call, value_from_class)
+        self._assert_logged_for_popen(log_watcher, "shell", mock_safer_popen.call_args.kwargs["shell"])
 
     @ddt.data(
         ("None", None),
@@ -405,13 +405,12 @@ class TestGit(TestBase):
             fixture_path("cat_file.py"),
             str(fixture_path("issue-301_stderr")),
         ]
-        proc = subprocess.Popen(
+        proc = safer_popen(
             cmdline,
             stdin=None,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             shell=False,
-            creationflags=cmd.PROC_CREATIONFLAGS,
         )
 
         handle_process_output(proc, counter_stdout, counter_stderr, finalize_process)
