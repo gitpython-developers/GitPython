@@ -14,14 +14,15 @@ from git.objects import Blob
 from git.types import PathLike
 
 
-# fmt: off
-@pytest.mark.parametrize('paths, path, expected_result', [
-    ((Path("foo"),), Path("foo"), True),
-    ((Path("foo"),), Path("foo/bar"), True),
-    ((Path("foo/bar"),), Path("foo"), False),
-    ((Path("foo"), Path("bar")), Path("foo"), True),
-])
-# fmt: on
+@pytest.mark.parametrize(
+    "paths, path, expected_result",
+    [
+        ((Path("foo"),), Path("foo"), True),
+        ((Path("foo"),), Path("foo/bar"), True),
+        ((Path("foo/bar"),), Path("foo"), False),
+        ((Path("foo"), Path("bar")), Path("foo"), True),
+    ],
+)
 def test_blob_filter(paths: Sequence[PathLike], path: PathLike, expected_result: bool) -> None:
     """Test the blob filter."""
     blob_filter = BlobFilter(paths)
