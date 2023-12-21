@@ -32,7 +32,7 @@ from git.exc import (
     InvalidGitRepositoryError,
     UnmergedEntriesError,
 )
-from git.index.fun import hook_path
+from git.index.fun import hook_path, run_commit_hook
 from git.index.typ import BaseIndexEntry, IndexEntry
 from git.objects import Blob
 from test.lib import TestBase, fixture, fixture_path, with_rw_directory, with_rw_repo
@@ -990,6 +990,24 @@ class TestIndex(TestBase):
 
         rel = index._to_relative_path(path)
         self.assertEqual(rel, os.path.relpath(path, root))
+
+    @pytest.mark.xfail(
+        type(_win_bash_status) is WinBashStatus.Absent,
+        reason="Can't run a hook on Windows without bash.exe.",
+        rasies=HookExecutionError,
+    )
+    @pytest.mark.xfail(
+        type(_win_bash_status) is WinBashStatus.WslNoDistro,
+        reason="Currently uses the bash.exe of WSL, even with no WSL distro installed",
+        raises=HookExecutionError,
+    )
+    @with_rw_repo("HEAD", bare=True)
+    def test_run_commit_hook(self, rw_repo):
+        index = rw_repo.index
+        _make_hook(index.repo.git_dir, "fake-hook", "echo 'ran fake hook' >output.txt")
+        run_commit_hook("fake-hook", index)
+        output = Path(rw_repo.git_dir, "output.txt").read_text(encoding="utf-8")
+        self.assertEqual(output, "ran fake hook\n")
 
     @pytest.mark.xfail(
         type(_win_bash_status) is WinBashStatus.Absent,
