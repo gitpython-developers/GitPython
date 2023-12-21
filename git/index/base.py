@@ -940,7 +940,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         for item in items:
             if isinstance(item, (BaseIndexEntry, (Blob, Submodule))):
                 paths.append(self._to_relative_path(item.path))
-            elif isinstance(item, str):
+            elif isinstance(item, (str, os.PathLike)):
                 paths.append(self._to_relative_path(item))
             else:
                 raise TypeError("Invalid item type: %r" % item)
