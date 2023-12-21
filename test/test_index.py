@@ -34,10 +34,11 @@ from git.exc import (
 )
 from git.index.fun import hook_path
 from git.index.typ import BaseIndexEntry, IndexEntry
+from git.index.util import TemporaryFileSwap
 from git.objects import Blob
-from test.lib import TestBase, fixture, fixture_path, with_rw_directory, with_rw_repo
 from git.util import Actor, hex_to_bin, rmtree
 from gitdb.base import IStream
+from test.lib import TestBase, fixture, fixture_path, with_rw_directory, with_rw_repo
 
 HOOKS_SHEBANG = "#!/usr/bin/env sh\n"
 
@@ -1087,3 +1088,25 @@ class TestIndex(TestBase):
         file.touch()
 
         rw_repo.index.add(file)
+
+
+class TestIndexUtils:
+    @pytest.mark.parametrize("file_path_type", [str, Path])
+    def test_temporary_file_swap(self, tmp_path, file_path_type):
+        file_path = tmp_path / "foo"
+        file_path.write_bytes(b"some data")
+
+        with TemporaryFileSwap(file_path_type(file_path)) as ctx:
+            assert Path(ctx.file_path) == file_path
+            assert not file_path.exists()
+
+            # Recreate it with new data, so we can observe that they're really separate.
+            file_path.write_bytes(b"other data")
+
+            temp_file_path = Path(ctx.tmp_file_path)
+            assert temp_file_path.parent == file_path.parent
+            assert temp_file_path.name.startswith(file_path.name)
+            assert temp_file_path.read_bytes() == b"some data"
+
+        assert not temp_file_path.exists()
+        assert file_path.read_bytes() == b"some data"  # Not b"other data".

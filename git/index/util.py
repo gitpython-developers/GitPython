@@ -41,7 +41,8 @@ class TemporaryFileSwap:
 
     def __init__(self, file_path: PathLike) -> None:
         self.file_path = file_path
-        fd, self.tmp_file_path = tempfile.mkstemp(prefix=self.file_path, dir="")
+        dirname, basename = osp.split(file_path)
+        fd, self.tmp_file_path = tempfile.mkstemp(prefix=basename, dir=dirname)
         os.close(fd)
         with contextlib.suppress(OSError):  # It may be that the source does not exist.
             os.replace(self.file_path, self.tmp_file_path)
