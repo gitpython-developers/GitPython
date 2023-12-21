@@ -992,8 +992,13 @@ class TestIndex(TestBase):
         self.assertEqual(rel, os.path.relpath(path, root))
 
     @pytest.mark.xfail(
+        type(_win_bash_status) is WinBashStatus.Absent,
+        reason="Can't run a hook on Windows without bash.exe.",
+        rasies=HookExecutionError,
+    )
+    @pytest.mark.xfail(
         type(_win_bash_status) is WinBashStatus.WslNoDistro,
-        reason="Currently uses the bash.exe for WSL even with no WSL distro installed",
+        reason="Currently uses the bash.exe of WSL, even with no WSL distro installed",
         raises=HookExecutionError,
     )
     @with_rw_repo("HEAD", bare=True)
@@ -1004,7 +1009,7 @@ class TestIndex(TestBase):
 
     @pytest.mark.xfail(
         type(_win_bash_status) is WinBashStatus.WslNoDistro,
-        reason="Currently uses the bash.exe for WSL even with no WSL distro installed",
+        reason="Currently uses the bash.exe of WSL, even with no WSL distro installed",
         raises=AssertionError,
     )
     @with_rw_repo("HEAD", bare=True)
@@ -1030,13 +1035,18 @@ class TestIndex(TestBase):
             raise AssertionError("Should have caught a HookExecutionError")
 
     @pytest.mark.xfail(
-        type(_win_bash_status) in {WinBashStatus.Absent, WinBashStatus.Wsl},
+        type(_win_bash_status) is WinBashStatus.Absent,
+        reason="Can't run a hook on Windows without bash.exe.",
+        rasies=HookExecutionError,
+    )
+    @pytest.mark.xfail(
+        type(_win_bash_status) is WinBashStatus.Wsl,
         reason="Specifically seems to fail on WSL bash (in spite of #1399)",
         raises=AssertionError,
     )
     @pytest.mark.xfail(
         type(_win_bash_status) is WinBashStatus.WslNoDistro,
-        reason="Currently uses the bash.exe for WSL even with no WSL distro installed",
+        reason="Currently uses the bash.exe of WSL, even with no WSL distro installed",
         raises=HookExecutionError,
     )
     @with_rw_repo("HEAD", bare=True)
@@ -1054,7 +1064,7 @@ class TestIndex(TestBase):
 
     @pytest.mark.xfail(
         type(_win_bash_status) is WinBashStatus.WslNoDistro,
-        reason="Currently uses the bash.exe for WSL even with no WSL distro installed",
+        reason="Currently uses the bash.exe of WSL, even with no WSL distro installed",
         raises=AssertionError,
     )
     @with_rw_repo("HEAD", bare=True)
