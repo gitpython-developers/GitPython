@@ -25,7 +25,7 @@ else:
 import ddt
 
 from git import Git, refresh, GitCommandError, GitCommandNotFound, Repo, cmd
-from git.util import cwd, finalize_process, safer_popen
+from git.util import cwd, finalize_process
 from test.lib import TestBase, fixture_path, with_rw_directory
 
 
@@ -114,7 +114,6 @@ class TestGit(TestBase):
 
     def _do_shell_combo(self, value_in_call, value_from_class):
         with mock.patch.object(Git, "USE_SHELL", value_from_class):
-            # git.cmd gets Popen via a "from" import, so patch it there.
             with mock.patch.object(cmd, "safer_popen", wraps=cmd.safer_popen) as mock_safer_popen:
                 # Use a command with no arguments (besides the program name), so it runs
                 # with or without a shell, on all OSes, with the same effect.
@@ -389,7 +388,7 @@ class TestGit(TestBase):
                 self.assertIn("FOO", str(err))
 
     def test_handle_process_output(self):
-        from git.cmd import handle_process_output
+        from git.cmd import handle_process_output, safer_popen
 
         line_count = 5002
         count = [None, 0, 0]

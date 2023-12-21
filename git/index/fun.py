@@ -18,7 +18,7 @@ from stat import (
 )
 import subprocess
 
-from git.cmd import handle_process_output
+from git.cmd import handle_process_output, safer_popen
 from git.compat import defenc, force_bytes, force_text, safe_decode
 from git.exc import HookExecutionError, UnmergedEntriesError
 from git.objects.fun import (
@@ -26,7 +26,7 @@ from git.objects.fun import (
     traverse_trees_recursive,
     tree_to_stream,
 )
-from git.util import IndexFileSHA1Writer, finalize_process, safer_popen
+from git.util import IndexFileSHA1Writer, finalize_process
 from gitdb.base import IStream
 from gitdb.typ import str_tree_type
 
