@@ -696,8 +696,9 @@ class TestSubmodule(TestBase):
     def test_iter_items_from_invalid_hash(self):
         """Check legacy behavaior on BadName (also applies to IOError, i.e. OSError)."""
         it = Submodule.iter_items(self.rorepo, "xyz")
-        with self.assertRaises(StopIteration):
+        with self.assertRaises(StopIteration) as ctx:
             next(it)
+        self.assertIsNone(ctx.exception.value)
 
     @with_rw_repo(k_no_subm_tag, bare=False)
     def test_first_submodule(self, rwrepo):
