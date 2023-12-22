@@ -282,10 +282,20 @@ class Git(LazyMixin):
     USE_SHELL = False
     """If True, a shell will be used when executing git commands.
 
-    This should only be desirable on Windows, see https://github.com/gitpython-developers/GitPython/pull/126
-    and check `git/test_repo.py:TestRepo.test_untracked_files()` TC for an example where it is required.
+    This exists to avoid breaking old code that may access it, but it is no longer
+    needed and should rarely if ever be used. Prior to GitPython 2.0.8, it had a narrow
+    purpose in suppressing console windows in graphical Windows applications. In 2.0.8
+    and higher, it provides no benefit, as GitPython solves that problem more robustly
+    and safely by using the ``CREATE_NO_WINDOW`` process creation flag on Windows.
 
-    Override this value using ``Git.USE_SHELL = True``.
+    Code that uses ``USE_SHELL = True`` or that passes ``shell=True`` to any GitPython
+    functions should be updated to use the default value of ``False`` instead. ``True``
+    is unsafe unless the effect of shell expansions is fully considered and accounted
+    for, which is not possible under most circumstances.
+
+    See:
+    - https://github.com/gitpython-developers/GitPython/commit/0d9390866f9ce42870d3116094cd49e0019a970a
+    - https://learn.microsoft.com/en-us/windows/win32/procthread/process-creation-flags
     """
 
     _git_exec_env_var = "GIT_PYTHON_GIT_EXECUTABLE"
