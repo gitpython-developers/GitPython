@@ -273,23 +273,30 @@ class Git(LazyMixin):
 
     # CONFIGURATION
 
-    git_exec_name = "git"  # Default that should work on Linux and Windows.
+    git_exec_name = "git"
+    """Default git command that should work on Linux, Windows, and other systems."""
 
-    # Enables debugging of GitPython's git commands.
     GIT_PYTHON_TRACE = os.environ.get("GIT_PYTHON_TRACE", False)
+    """Enables debugging of GitPython's git commands."""
 
-    # If True, a shell will be used when executing git commands.
-    # This should only be desirable on Windows, see https://github.com/gitpython-developers/GitPython/pull/126
-    # and check `git/test_repo.py:TestRepo.test_untracked_files()` TC for an example where it is required.
-    # Override this value using `Git.USE_SHELL = True`.
     USE_SHELL = False
+    """If True, a shell will be used when executing git commands.
 
-    # Provide the full path to the git executable. Otherwise it assumes git is in the path.
+    This should only be desirable on Windows, see https://github.com/gitpython-developers/GitPython/pull/126
+    and check `git/test_repo.py:TestRepo.test_untracked_files()` TC for an example where it is required.
+
+    Override this value using ``Git.USE_SHELL = True``.
+    """
+
     _git_exec_env_var = "GIT_PYTHON_GIT_EXECUTABLE"
     _refresh_env_var = "GIT_PYTHON_REFRESH"
+
     GIT_PYTHON_GIT_EXECUTABLE = None
-    # Note that the git executable is actually found during the refresh step in
-    # the top level __init__.
+    """Provide the full path to the git executable. Otherwise it assumes git is in the path.
+
+    Note that the git executable is actually found during the refresh step in
+    the top level ``__init__``.
+    """
 
     @classmethod
     def refresh(cls, path: Union[None, PathLike] = None) -> bool:

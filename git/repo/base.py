@@ -114,17 +114,18 @@ class Repo:
     'working_tree_dir' is the working tree directory, but will return None
     if we are a bare repository.
 
-    'git_dir' is the .git repository directory, which is always set."""
+    'git_dir' is the .git repository directory, which is always set.
+    """
 
     DAEMON_EXPORT_FILE = "git-daemon-export-ok"
 
-    git = cast("Git", None)  # Must exist, or  __del__  will fail in case we raise on `__init__()`
+    git = cast("Git", None)  # Must exist, or  __del__  will fail in case we raise on `__init__()`.
     working_dir: PathLike
     _working_tree_dir: Optional[PathLike] = None
     git_dir: PathLike
     _common_dir: PathLike = ""
 
-    # precompiled regex
+    # Precompiled regex
     re_whitespace = re.compile(r"\s+")
     re_hexsha_only = re.compile(r"^[0-9A-Fa-f]{40}$")
     re_hexsha_shortened = re.compile(r"^[0-9A-Fa-f]{4,40}$")
@@ -133,24 +134,32 @@ class Repo:
     re_tab_full_line = re.compile(r"^\t(.*)$")
 
     unsafe_git_clone_options = [
-        # This option allows users to execute arbitrary commands.
-        # https://git-scm.com/docs/git-clone#Documentation/git-clone.txt---upload-packltupload-packgt
+        # Executes arbitrary commands:
         "--upload-pack",
         "-u",
-        # Users can override configuration variables
-        # like `protocol.allow` or `core.gitProxy` to execute arbitrary commands.
-        # https://git-scm.com/docs/git-clone#Documentation/git-clone.txt---configltkeygtltvaluegt
+        # Can override configuration variables that execute arbitrary commands:
         "--config",
         "-c",
     ]
+    """Options to ``git clone`` that allow arbitrary commands to be executed.
 
-    # invariants
-    # represents the configuration level of a configuration file
+    The ``--upload-pack``/``-u`` option allows users to execute arbitrary commands
+    directly:
+    https://git-scm.com/docs/git-clone#Documentation/git-clone.txt---upload-packltupload-packgt
+
+    The ``--config``/``-c`` option allows users to override configuration variables like
+    ``protocol.allow`` and ``core.gitProxy`` to execute arbitrary commands:
+    https://git-scm.com/docs/git-clone#Documentation/git-clone.txt---configltkeygtltvaluegt
+    """
+
+    # Invariants
     config_level: ConfigLevels_Tup = ("system", "user", "global", "repository")
+    """Represents the configuration level of a configuration file."""
 
     # Subclass configuration
-    # Subclasses may easily bring in their own custom types by placing a constructor or type here
     GitCommandWrapperType = Git
+    """Subclasses may easily bring in their own custom types by placing a constructor or
+    type here."""
 
     def __init__(
         self,

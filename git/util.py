@@ -557,8 +557,8 @@ class RemoteProgress:
         "_cur_line",
         "_seen_ops",
         "error_lines",  # Lines that started with 'error:' or 'fatal:'.
-        "other_lines",
-    )  # Lines not denoting progress (i.e.g. push-infos).
+        "other_lines",  # Lines not denoting progress (i.e.g. push-infos).
+    )
     re_op_absolute = re.compile(r"(remote: )?([\w\s]+):\s+()(\d+)()(.*)")
     re_op_relative = re.compile(r"(remote: )?([\w\s]+):\s+(\d+)% \((\d+)/(\d+)\)(.*)")
 

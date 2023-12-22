@@ -142,9 +142,11 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
 
     __slots__ = ("repo", "version", "entries", "_extension_data", "_file_path")
 
-    _VERSION = 2  # Latest version we support.
+    _VERSION = 2
+    """The latest version we support."""
 
-    S_IFGITLINK = S_IFGITLINK  # A submodule.
+    S_IFGITLINK = S_IFGITLINK
+    """Flags for a submodule."""
 
     def __init__(self, repo: "Repo", file_path: Union[PathLike, None] = None) -> None:
         """Initialize this Index instance, optionally from the given ``file_path``.
