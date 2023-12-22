@@ -558,14 +558,16 @@ class TestIndex(TestBase):
         def mixed_iterator():
             count = 0
             for entry in index.entries.values():
-                type_id = count % 4
-                if type_id == 0:  # path
+                type_id = count % 5
+                if type_id == 0:  # path (str)
                     yield entry.path
-                elif type_id == 1:  # blob
+                elif type_id == 1:  # path (PathLike)
+                    yield Path(entry.path)
+                elif type_id == 2:  # blob
                     yield Blob(rw_repo, entry.binsha, entry.mode, entry.path)
-                elif type_id == 2:  # BaseIndexEntry
+                elif type_id == 3:  # BaseIndexEntry
                     yield BaseIndexEntry(entry[:4])
-                elif type_id == 3:  # IndexEntry
+                elif type_id == 4:  # IndexEntry
                     yield entry
                 else:
                     raise AssertionError("Invalid Type")
