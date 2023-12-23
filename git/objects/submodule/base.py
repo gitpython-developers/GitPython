@@ -1401,7 +1401,7 @@ class Submodule(IndexObject, TraversableIterableObj):
             pc = repo.commit(parent_commit)  # Parent commit instance
             parser = cls._config_parser(repo, pc, read_only=True)
         except (IOError, BadName):
-            return iter([])
+            return
         # END handle empty iterator
 
         for sms in parser.sections():

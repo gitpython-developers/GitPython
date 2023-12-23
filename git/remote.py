@@ -130,7 +130,7 @@ def to_progress_instance(
     return progress
 
 
-class PushInfo(IterableObj, object):
+class PushInfo(IterableObj):
     """
     Carries information about the result of a push operation of a single head::
 
@@ -300,7 +300,7 @@ class PushInfoList(IterableList[PushInfo]):
             raise self.error
 
 
-class FetchInfo(IterableObj, object):
+class FetchInfo(IterableObj):
     """
     Carries information about the results of a fetch operation of a single head::
 

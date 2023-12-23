@@ -688,6 +688,18 @@ class TestSubmodule(TestBase):
         # gitdb: has either 1 or 2 submodules depending on the version.
         assert len(nsm.children()) >= 1 and nsmc.module_exists()
 
+    def test_iter_items_from_nonexistent_hash(self):
+        it = Submodule.iter_items(self.rorepo, "b4ecbfaa90c8be6ed6d9fb4e57cc824663ae15b4")
+        with self.assertRaisesRegex(ValueError, r"\bcould not be resolved\b"):
+            next(it)
+
+    def test_iter_items_from_invalid_hash(self):
+        """Check legacy behavaior on BadName (also applies to IOError, i.e. OSError)."""
+        it = Submodule.iter_items(self.rorepo, "xyz")
+        with self.assertRaises(StopIteration) as ctx:
+            next(it)
+        self.assertIsNone(ctx.exception.value)
+
     @with_rw_repo(k_no_subm_tag, bare=False)
     def test_first_submodule(self, rwrepo):
         assert len(list(rwrepo.iter_submodules())) == 0

@@ -1183,7 +1183,8 @@ class IterableList(List[T_IterableObj]):
 
 
 class IterableClassWatcher(type):
-    """Metaclass that watches."""
+    """Metaclass that issues :class:`DeprecationWarning` when :class:`git.util.Iterable`
+    is subclassed."""
 
     def __init__(cls, name: str, bases: Tuple, clsdict: Dict) -> None:
         for base in bases:
@@ -1199,38 +1200,48 @@ class IterableClassWatcher(type):
 
 
 class Iterable(metaclass=IterableClassWatcher):
-    """Defines an interface for iterable items, so there is a uniform way to retrieve
-    and iterate items within the git repository."""
+    """Deprecated, use :class:`IterableObj` instead.
+
+    Defines an interface for iterable items, so there is a uniform way to retrieve
+    and iterate items within the git repository.
+    """
 
     __slots__ = ()
 
     _id_attribute_ = "attribute that most suitably identifies your instance"
 
     @classmethod
-    def list_items(cls, repo: "Repo", *args: Any, **kwargs: Any) -> Any:
+    def iter_items(cls, repo: "Repo", *args: Any, **kwargs: Any) -> Any:
+        # return typed to be compatible with subtypes e.g. Remote
+        """Deprecated, use :class:`IterableObj` instead.
+
+        Find (all) items of this type.
+
+        Subclasses can specify ``args`` and ``kwargs`` differently, and may use them for
+        filtering. However, when the method is called with no additional positional or
+        keyword arguments, subclasses are obliged to to yield all items.
+
+        :return: Iterator yielding Items
         """
-        Deprecated, use IterableObj instead.
+        raise NotImplementedError("To be implemented by Subclass")
 
-        Find all items of this type - subclasses can specify args and kwargs differently.
-        If no args are given, subclasses are obliged to return all items if no additional
-        arguments arg given.
+    @classmethod
+    def list_items(cls, repo: "Repo", *args: Any, **kwargs: Any) -> Any:
+        """Deprecated, use :class:`IterableObj` instead.
 
-        :note: Favor the iter_items method as it will
+        Find (all) items of this type and collect them into a list.
+
+        For more information about the arguments, see :meth:`list_items`.
+
+        :note: Favor the :meth:`iter_items` method as it will avoid eagerly collecting
+            all items. When there are many items, that can slow performance and increase
+            memory usage.
 
         :return: list(Item,...) list of item instances
         """
         out_list: Any = IterableList(cls._id_attribute_)
         out_list.extend(cls.iter_items(repo, *args, **kwargs))
         return out_list
-
-    @classmethod
-    def iter_items(cls, repo: "Repo", *args: Any, **kwargs: Any) -> Any:
-        # return typed to be compatible with subtypes e.g. Remote
-        """For more information about the arguments, see list_items.
-
-        :return: Iterator yielding Items
-        """
-        raise NotImplementedError("To be implemented by Subclass")
 
 
 @runtime_checkable
@@ -1246,29 +1257,36 @@ class IterableObj(Protocol):
     _id_attribute_: str
 
     @classmethod
-    def list_items(cls, repo: "Repo", *args: Any, **kwargs: Any) -> IterableList[T_IterableObj]:
-        """
-        Find all items of this type - subclasses can specify args and kwargs differently.
-        If no args are given, subclasses are obliged to return all items if no additional
-        arguments arg given.
+    @abstractmethod
+    def iter_items(cls, repo: "Repo", *args: Any, **kwargs: Any) -> Iterator[T_IterableObj]:
+        # Return-typed to be compatible with subtypes e.g. Remote.
+        """Find (all) items of this type.
 
-        :note: Favor the iter_items method as it will
+        Subclasses can specify ``args`` and ``kwargs`` differently, and may use them for
+        filtering. However, when the method is called with no additional positional or
+        keyword arguments, subclasses are obliged to to yield all items.
+
+        For more information about the arguments, see list_items.
+
+        :return: Iterator yielding Items
+        """
+        raise NotImplementedError("To be implemented by Subclass")
+
+    @classmethod
+    def list_items(cls, repo: "Repo", *args: Any, **kwargs: Any) -> IterableList[T_IterableObj]:
+        """Find (all) items of this type and collect them into a list.
+
+        For more information about the arguments, see :meth:`list_items`.
+
+        :note: Favor the :meth:`iter_items` method as it will avoid eagerly collecting
+            all items. When there are many items, that can slow performance and increase
+            memory usage.
 
         :return: list(Item,...) list of item instances
         """
         out_list: IterableList = IterableList(cls._id_attribute_)
         out_list.extend(cls.iter_items(repo, *args, **kwargs))
         return out_list
-
-    @classmethod
-    @abstractmethod
-    def iter_items(cls, repo: "Repo", *args: Any, **kwargs: Any) -> Iterator[T_IterableObj]:  # Iterator[T_IterableObj]:
-        # Return-typed to be compatible with subtypes e.g. Remote.
-        """For more information about the arguments, see list_items.
-
-        :return: Iterator yielding Items
-        """
-        raise NotImplementedError("To be implemented by Subclass")
 
 
 # } END classes
