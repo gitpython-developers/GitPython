@@ -1182,68 +1182,6 @@ class IterableList(List[T_IterableObj]):
         list.__delitem__(self, delindex)
 
 
-class IterableClassWatcher(type):
-    """Metaclass that issues :class:`DeprecationWarning` when :class:`git.util.Iterable`
-    is subclassed."""
-
-    def __init__(cls, name: str, bases: Tuple, clsdict: Dict) -> None:
-        for base in bases:
-            if type(base) is IterableClassWatcher:
-                warnings.warn(
-                    f"GitPython Iterable subclassed by {name}. "
-                    "Iterable is deprecated due to naming clash since v3.1.18"
-                    " and will be removed in 3.1.20, "
-                    "Use IterableObj instead \n",
-                    DeprecationWarning,
-                    stacklevel=2,
-                )
-
-
-class Iterable(metaclass=IterableClassWatcher):
-    """Deprecated, use :class:`IterableObj` instead.
-
-    Defines an interface for iterable items, so there is a uniform way to retrieve
-    and iterate items within the git repository.
-    """
-
-    __slots__ = ()
-
-    _id_attribute_ = "attribute that most suitably identifies your instance"
-
-    @classmethod
-    def iter_items(cls, repo: "Repo", *args: Any, **kwargs: Any) -> Any:
-        # return typed to be compatible with subtypes e.g. Remote
-        """Deprecated, use :class:`IterableObj` instead.
-
-        Find (all) items of this type.
-
-        Subclasses can specify ``args`` and ``kwargs`` differently, and may use them for
-        filtering. However, when the method is called with no additional positional or
-        keyword arguments, subclasses are obliged to to yield all items.
-
-        :return: Iterator yielding Items
-        """
-        raise NotImplementedError("To be implemented by Subclass")
-
-    @classmethod
-    def list_items(cls, repo: "Repo", *args: Any, **kwargs: Any) -> Any:
-        """Deprecated, use :class:`IterableObj` instead.
-
-        Find (all) items of this type and collect them into a list.
-
-        For more information about the arguments, see :meth:`list_items`.
-
-        :note: Favor the :meth:`iter_items` method as it will avoid eagerly collecting
-            all items. When there are many items, that can slow performance and increase
-            memory usage.
-
-        :return: list(Item,...) list of item instances
-        """
-        out_list: Any = IterableList(cls._id_attribute_)
-        out_list.extend(cls.iter_items(repo, *args, **kwargs))
-        return out_list
-
-
 @runtime_checkable
 class IterableObj(Protocol):
     """Defines an interface for iterable items, so there is a uniform way to retrieve
@@ -1285,6 +1223,61 @@ class IterableObj(Protocol):
         :return: list(Item,...) list of item instances
         """
         out_list: IterableList = IterableList(cls._id_attribute_)
+        out_list.extend(cls.iter_items(repo, *args, **kwargs))
+        return out_list
+
+
+class IterableClassWatcher(type):
+    """Metaclass that issues :class:`DeprecationWarning` when :class:`git.util.Iterable`
+    is subclassed."""
+
+    def __init__(cls, name: str, bases: Tuple, clsdict: Dict) -> None:
+        for base in bases:
+            if type(base) is IterableClassWatcher:
+                warnings.warn(
+                    f"GitPython Iterable subclassed by {name}. "
+                    "Iterable is deprecated due to naming clash since v3.1.18"
+                    " and will be removed in 3.1.20, "
+                    "Use IterableObj instead \n",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+
+
+class Iterable(metaclass=IterableClassWatcher):
+    """Deprecated, use :class:`IterableObj` instead.
+
+    Defines an interface for iterable items, so there is a uniform way to retrieve
+    and iterate items within the git repository.
+    """
+
+    __slots__ = ()
+
+    _id_attribute_ = "attribute that most suitably identifies your instance"
+
+    @classmethod
+    def iter_items(cls, repo: "Repo", *args: Any, **kwargs: Any) -> Any:
+        """Deprecated, use :class:`IterableObj` instead.
+
+        Find (all) items of this type.
+
+        See :meth:`IterableObj.list_items` for details on usage.
+
+        :return: Iterator yielding Items
+        """
+        raise NotImplementedError("To be implemented by Subclass")
+
+    @classmethod
+    def list_items(cls, repo: "Repo", *args: Any, **kwargs: Any) -> Any:
+        """Deprecated, use :class:`IterableObj` instead.
+
+        Find (all) items of this type and collect them into a list.
+
+        See :meth:`IterableObj.list_items` for details on usage.
+
+        :return: list(Item,...) list of item instances
+        """
+        out_list: Any = IterableList(cls._id_attribute_)
         out_list.extend(cls.iter_items(repo, *args, **kwargs))
         return out_list
 
