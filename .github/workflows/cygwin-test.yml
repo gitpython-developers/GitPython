@@ -55,6 +55,11 @@ jobs:
         # and cause subsequent tests to fail
         cat test/fixtures/.gitconfig >> ~/.gitconfig
 
+    - name: Ensure the "pip" command is available
+      run: |
+        # This is used unless, and before, an updated pip is installed.
+        ln -s pip3 /usr/bin/pip
+
     - name: Update PyPA packages
       run: |
         # Get the latest pip, wheel, and prior to Python 3.12, setuptools.
