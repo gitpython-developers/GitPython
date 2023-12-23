@@ -1,4 +1,4 @@
-black ; sys_platform != "cygwin"
+black
 coverage[toml]
 ddt >= 1.1.1, != 1.4.3
 mock ; python_version < "3.8"
