@@ -273,23 +273,40 @@ class Git(LazyMixin):
 
     # CONFIGURATION
 
-    git_exec_name = "git"  # Default that should work on Linux and Windows.
+    git_exec_name = "git"
+    """Default git command that should work on Linux, Windows, and other systems."""
 
-    # Enables debugging of GitPython's git commands.
     GIT_PYTHON_TRACE = os.environ.get("GIT_PYTHON_TRACE", False)
+    """Enables debugging of GitPython's git commands."""
 
-    # If True, a shell will be used when executing git commands.
-    # This should only be desirable on Windows, see https://github.com/gitpython-developers/GitPython/pull/126
-    # and check `git/test_repo.py:TestRepo.test_untracked_files()` TC for an example where it is required.
-    # Override this value using `Git.USE_SHELL = True`.
     USE_SHELL = False
+    """If True, a shell will be used when executing git commands.
 
-    # Provide the full path to the git executable. Otherwise it assumes git is in the path.
+    This exists to avoid breaking old code that may access it, but it is no longer
+    needed and should rarely if ever be used. Prior to GitPython 2.0.8, it had a narrow
+    purpose in suppressing console windows in graphical Windows applications. In 2.0.8
+    and higher, it provides no benefit, as GitPython solves that problem more robustly
+    and safely by using the ``CREATE_NO_WINDOW`` process creation flag on Windows.
+
+    Code that uses ``USE_SHELL = True`` or that passes ``shell=True`` to any GitPython
+    functions should be updated to use the default value of ``False`` instead. ``True``
+    is unsafe unless the effect of shell expansions is fully considered and accounted
+    for, which is not possible under most circumstances.
+
+    See:
+    - https://github.com/gitpython-developers/GitPython/commit/0d9390866f9ce42870d3116094cd49e0019a970a
+    - https://learn.microsoft.com/en-us/windows/win32/procthread/process-creation-flags
+    """
+
     _git_exec_env_var = "GIT_PYTHON_GIT_EXECUTABLE"
     _refresh_env_var = "GIT_PYTHON_REFRESH"
+
     GIT_PYTHON_GIT_EXECUTABLE = None
-    # Note that the git executable is actually found during the refresh step in
-    # the top level __init__.
+    """Provide the full path to the git executable. Otherwise it assumes git is in the path.
+
+    Note that the git executable is actually found during the refresh step in
+    the top level ``__init__``.
+    """
 
     @classmethod
     def refresh(cls, path: Union[None, PathLike] = None) -> bool:

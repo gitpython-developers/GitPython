@@ -49,8 +49,8 @@ Lit_change_type = Literal["A", "D", "C", "M", "R", "T", "U"]
 
 __all__ = ("Diffable", "DiffIndex", "Diff", "NULL_TREE")
 
-# Special object to compare against the empty tree in diffs.
 NULL_TREE = object()
+"""Special object to compare against the empty tree in diffs."""
 
 _octal_byte_re = re.compile(rb"\\([0-9]{3})")
 

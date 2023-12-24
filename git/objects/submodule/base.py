@@ -77,9 +77,9 @@ FETCH = UpdateProgress.FETCH
 UPDWKTREE = UpdateProgress.UPDWKTREE
 
 
-# IndexObject comes via util module, its a 'hacky' fix thanks to pythons import
-# mechanism which cause plenty of trouble of the only reason for packages and
-# modules is refactoring - subpackages shouldn't depend on parent packages
+# IndexObject comes via the util module. It's a 'hacky' fix thanks to Python's import
+# mechanism, which causes plenty of trouble if the only reason for packages and
+# modules is refactoring - subpackages shouldn't depend on parent packages.
 class Submodule(IndexObject, TraversableIterableObj):
     """Implements access to a git submodule. They are special in that their sha
     represents a commit in the submodule's repository which is to be checked out
@@ -95,10 +95,11 @@ class Submodule(IndexObject, TraversableIterableObj):
     k_modules_file = ".gitmodules"
     k_head_option = "branch"
     k_head_default = "master"
-    k_default_mode = stat.S_IFDIR | stat.S_IFLNK  # Submodules are directories with link-status.
+    k_default_mode = stat.S_IFDIR | stat.S_IFLNK
+    """Submodule flags. Submodules are directories with link-status."""
 
-    # This is a bogus type for base class compatibility.
     type: Literal["submodule"] = "submodule"  # type: ignore
+    """This is a bogus type for base class compatibility."""
 
     __slots__ = ("_parent_commit", "_url", "_branch_path", "_name", "__weakref__")
 

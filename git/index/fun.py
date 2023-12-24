@@ -49,7 +49,9 @@ if TYPE_CHECKING:
 # ------------------------------------------------------------------------------------
 
 
-S_IFGITLINK = S_IFLNK | S_IFDIR  # A submodule.
+S_IFGITLINK = S_IFLNK | S_IFDIR
+"""Flags for a submodule."""
+
 CE_NAMEMASK_INV = ~CE_NAMEMASK
 
 __all__ = (
