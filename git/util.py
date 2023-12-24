@@ -1204,8 +1204,6 @@ class IterableObj(Protocol):
         filtering. However, when the method is called with no additional positional or
         keyword arguments, subclasses are obliged to to yield all items.
 
-        For more information about the arguments, see list_items.
-
         :return: Iterator yielding Items
         """
         raise NotImplementedError("To be implemented by Subclass")
@@ -1214,7 +1212,7 @@ class IterableObj(Protocol):
     def list_items(cls, repo: "Repo", *args: Any, **kwargs: Any) -> IterableList[T_IterableObj]:
         """Find (all) items of this type and collect them into a list.
 
-        For more information about the arguments, see :meth:`list_items`.
+        For more information about the arguments, see :meth:`iter_items`.
 
         :note: Favor the :meth:`iter_items` method as it will avoid eagerly collecting
             all items. When there are many items, that can slow performance and increase
@@ -1261,7 +1259,7 @@ class Iterable(metaclass=IterableClassWatcher):
 
         Find (all) items of this type.
 
-        See :meth:`IterableObj.list_items` for details on usage.
+        See :meth:`IterableObj.iter_items` for details on usage.
 
         :return: Iterator yielding Items
         """
