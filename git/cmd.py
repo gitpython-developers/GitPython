@@ -111,7 +111,6 @@ def handle_process_output(
 
     This function returns once the finalizer returns.
 
-    :return: Result of finalizer
     :param process: :class:`subprocess.Popen` instance
     :param stdout_handler: f(stdout_line_string), or None
     :param stderr_handler: f(stderr_line_string), or None
@@ -205,9 +204,7 @@ def handle_process_output(
                 stderr_handler(error_str)  # type: ignore
 
     if finalizer:
-        return finalizer(process)
-    else:
-        return None
+        finalizer(process)
 
 
 def dashify(string: str) -> str:
