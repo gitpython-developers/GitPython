@@ -1233,10 +1233,10 @@ class IterableClassWatcher(type):
         for base in bases:
             if type(base) is IterableClassWatcher:
                 warnings.warn(
-                    f"GitPython Iterable subclassed by {name}. "
-                    "Iterable is deprecated due to naming clash since v3.1.18"
-                    " and will be removed in 3.1.20, "
-                    "Use IterableObj instead \n",
+                    f"GitPython Iterable subclassed by {name}."
+                    " Iterable is deprecated due to naming clash since v3.1.18"
+                    " and will be removed in 4.0.0."
+                    " Use IterableObj instead.",
                     DeprecationWarning,
                     stacklevel=2,
                 )
