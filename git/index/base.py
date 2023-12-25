@@ -381,23 +381,21 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             arg_list.append("--aggressive")
         # END merge handling
 
-        # tmp file created in git home directory to be sure renaming
-        # works - /tmp/ dirs could be on another device.
-        with contextlib.ExitStack() as stack:
-            tmp_index = stack.enter_context(_named_temporary_file_for_subprocess(repo.git_dir))
+        # Create the temporary file in the .git directory to be sure renaming
+        # works - /tmp/ directories could be on another device.
+        with _named_temporary_file_for_subprocess(repo.git_dir) as tmp_index:
             arg_list.append("--index-output=%s" % tmp_index)
             arg_list.extend(treeish)
 
-            # Move current index out of the way - otherwise the merge may fail
+            # Move the current index out of the way - otherwise the merge may fail
             # as it considers existing entries. Moving it essentially clears the index.
             # Unfortunately there is no 'soft' way to do it.
             # The TemporaryFileSwap ensures the original file gets put back.
-
-            stack.enter_context(TemporaryFileSwap(join_path_native(repo.git_dir, "index")))
-            repo.git.read_tree(*arg_list, **kwargs)
-            index = cls(repo, tmp_index)
-            index.entries  # Force it to read the file as we will delete the temp-file.
-            return index
+            with TemporaryFileSwap(join_path_native(repo.git_dir, "index")):
+                repo.git.read_tree(*arg_list, **kwargs)
+                index = cls(repo, tmp_index)
+                index.entries  # Force it to read the file as we will delete the temp-file.
+                return index
             # END index merge handling
 
     # UTILITIES
