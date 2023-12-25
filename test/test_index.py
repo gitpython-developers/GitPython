@@ -1032,16 +1032,16 @@ class TestIndex(TestBase):
         maybe_chdir = cwd(rw_dir) if chdir_to_repo else contextlib.nullcontext()
         repo = Repo.init(rw_dir)
 
-        # We need an impostor shell that works on Windows and that can be distinguished
-        # from the real bash.exe. But even if the real bash.exe is absent or unusable,
-        # we should verify that the impostor is not run. So the impostor needs a clear
-        # side effect (unlike in TestGit.test_it_executes_git_not_from_cwd). Popen on
-        # Windows uses CreateProcessW, which disregards PATHEXT; the impostor may need
-        # to be a binary executable to ensure the vulnerability is found if present. No
-        # compiler need exist, shipping a binary in the test suite may target the wrong
-        # architecture, and generating one in a bespoke way may cause virus scanners to
-        # give a false positive. So we use a Bash/Python polyglot for the hook and use
-        # the Python interpreter itself as the bash.exe impostor. But an interpreter
+        # We need an impostor shell that works on Windows and that the test can
+        # distinguish from the real bash.exe. But even if the real bash.exe is absent or
+        # unusable, we should verify the impostor is not run. So the impostor needs a
+        # clear side effect (unlike in TestGit.test_it_executes_git_not_from_cwd). Popen
+        # on Windows uses CreateProcessW, which disregards PATHEXT; the impostor may
+        # need to be a binary executable to ensure the vulnerability is found if
+        # present. No compiler need exist, shipping a binary in the test suite may
+        # target the wrong architecture, and generating one in a bespoke way may trigger
+        # false positive virus scans. So we use a Bash/Python polyglot for the hook and
+        # use the Python interpreter itself as the bash.exe impostor. But an interpreter
         # from a venv may not run when copied outside of it, and a global interpreter
         # won't run when copied to a different location if it was installed from the
         # Microsoft Store. So we make a new venv in rw_dir and use its interpreter.
