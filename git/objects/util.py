@@ -62,9 +62,9 @@ class TraverseNT(NamedTuple):
 T_TIobj = TypeVar("T_TIobj", bound="TraversableIterableObj")  # For TraversableIterableObj.traverse()
 
 TraversedTup = Union[
-    Tuple[Union["Traversable", None], "Traversable"],  # For commit, submodule
-    "TraversedTreeTup",
-]  # for tree.traverse()
+    Tuple[Union["Traversable", None], "Traversable"],  # For Commit, Submodule.
+    "TraversedTreeTup",  # For Tree.traverse().
+]
 
 # --------------------------------------------------------------------
 
@@ -380,11 +380,15 @@ class Traversable(Protocol):
 
     @abstractmethod
     def list_traverse(self, *args: Any, **kwargs: Any) -> Any:
-        """ """
+        """Traverse self and collect all items found.
+
+        Calling this directly only the abstract base class, including via a ``super()``
+        proxy, is deprecated. Only overridden implementations should be called.
+        """
         warnings.warn(
             "list_traverse() method should only be called from subclasses."
-            "Calling from Traversable abstract class will raise NotImplementedError in 3.1.20"
-            "Builtin sublclasses are 'Submodule', 'Tree' and 'Commit",
+            " Calling from Traversable abstract class will raise NotImplementedError in 4.0.0."
+            " The concrete subclasses in GitPython itself are 'Commit', 'RootModule', 'Submodule', and 'Tree'.",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -393,12 +397,14 @@ class Traversable(Protocol):
     def _list_traverse(
         self, as_edge: bool = False, *args: Any, **kwargs: Any
     ) -> IterableList[Union["Commit", "Submodule", "Tree", "Blob"]]:
-        """
+        """Traverse self and collect all items found.
+
         :return: IterableList with the results of the traversal as produced by
-            traverse()
-            Commit -> IterableList['Commit']
-            Submodule ->  IterableList['Submodule']
-            Tree -> IterableList[Union['Submodule', 'Tree', 'Blob']]
+            :meth:`traverse`::
+
+                Commit -> IterableList['Commit']
+                Submodule ->  IterableList['Submodule']
+                Tree -> IterableList[Union['Submodule', 'Tree', 'Blob']]
         """
         # Commit and Submodule have id.__attribute__ as IterableObj.
         # Tree has id.__attribute__ inherited from IndexObject.
@@ -421,11 +427,15 @@ class Traversable(Protocol):
 
     @abstractmethod
     def traverse(self, *args: Any, **kwargs: Any) -> Any:
-        """ """
+        """Iterator yielding items found when traversing self.
+
+        Calling this directly on the abstract base class, including via a ``super()``
+        proxy, is deprecated. Only overridden implementations should be called.
+        """
         warnings.warn(
             "traverse() method should only be called from subclasses."
-            "Calling from Traversable abstract class will raise NotImplementedError in 3.1.20"
-            "Builtin sublclasses are 'Submodule', 'Tree' and 'Commit",
+            " Calling from Traversable abstract class will raise NotImplementedError in 4.0.0."
+            " The concrete subclasses in GitPython itself are 'Commit', 'RootModule', 'Submodule', and 'Tree'.",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -441,7 +451,7 @@ class Traversable(Protocol):
         ignore_self: int = 1,
         as_edge: bool = False,
     ) -> Union[Iterator[Union["Traversable", "Blob"]], Iterator[TraversedTup]]:
-        """:return: Iterator yielding items found when traversing self
+        """Iterator yielding items found when traversing self.
 
         :param predicate: f(i,d) returns False if item i at depth d should not be
             included in the result.
@@ -471,18 +481,18 @@ class Traversable(Protocol):
             if True, return a pair of items, first being the source, second the
             destination, i.e. tuple(src, dest) with the edge spanning from source to
             destination
-        """
 
-        """
-            Commit -> Iterator[Union[Commit, Tuple[Commit, Commit]]
-            Submodule -> Iterator[Submodule, Tuple[Submodule, Submodule]]
-            Tree -> Iterator[Union[Blob, Tree, Submodule,
-                                    Tuple[Union[Submodule, Tree], Union[Blob, Tree, Submodule]]]
+        :return: Iterator yielding items found when traversing self::
 
-           ignore_self=True is_edge=True -> Iterator[item]
-           ignore_self=True is_edge=False --> Iterator[item]
-           ignore_self=False is_edge=True -> Iterator[item] | Iterator[Tuple[src, item]]
-           ignore_self=False is_edge=False -> Iterator[Tuple[src, item]]
+                Commit -> Iterator[Union[Commit, Tuple[Commit, Commit]]
+                Submodule -> Iterator[Submodule, Tuple[Submodule, Submodule]]
+                Tree -> Iterator[Union[Blob, Tree, Submodule,
+                                        Tuple[Union[Submodule, Tree], Union[Blob, Tree, Submodule]]]
+
+                ignore_self=True is_edge=True -> Iterator[item]
+                ignore_self=True is_edge=False --> Iterator[item]
+                ignore_self=False is_edge=True -> Iterator[item] | Iterator[Tuple[src, item]]
+                ignore_self=False is_edge=False -> Iterator[Tuple[src, item]]
         """
 
         visited = set()
@@ -547,7 +557,7 @@ class Serializable(Protocol):
     def _serialize(self, stream: "BytesIO") -> "Serializable":
         """Serialize the data of this object into the given data stream.
 
-        :note: A serialized object would ``_deserialize`` into the same object.
+        :note: A serialized object would :meth:`_deserialize` into the same object.
 
         :param stream: a file-like object
 
@@ -627,24 +637,24 @@ class TraversableIterableObj(IterableObj, Traversable):
         ignore_self: int = 1,
         as_edge: bool = False,
     ) -> Union[Iterator[T_TIobj], Iterator[Tuple[T_TIobj, T_TIobj]], Iterator[TIobj_tuple]]:
-        """For documentation, see util.Traversable._traverse()"""
+        """For documentation, see :meth:`Traversable._traverse`."""
 
-        """
-        # To typecheck instead of using cast.
-        import itertools
-        from git.types import TypeGuard
-        def is_commit_traversed(inp: Tuple) -> TypeGuard[Tuple[Iterator[Tuple['Commit', 'Commit']]]]:
-            for x in inp[1]:
-                if not isinstance(x, tuple) and len(x) != 2:
-                    if all(isinstance(inner, Commit) for inner in x):
-                        continue
-            return True
+        ## To typecheck instead of using cast:
+        #
+        # import itertools
+        # from git.types import TypeGuard
+        # def is_commit_traversed(inp: Tuple) -> TypeGuard[Tuple[Iterator[Tuple['Commit', 'Commit']]]]:
+        #     for x in inp[1]:
+        #         if not isinstance(x, tuple) and len(x) != 2:
+        #             if all(isinstance(inner, Commit) for inner in x):
+        #                 continue
+        #     return True
+        #
+        # ret = super(Commit, self).traverse(predicate, prune, depth, branch_first, visit_once, ignore_self, as_edge)
+        # ret_tup = itertools.tee(ret, 2)
+        # assert is_commit_traversed(ret_tup), f"{[type(x) for x in list(ret_tup[0])]}"
+        # return ret_tup[0]
 
-        ret = super(Commit, self).traverse(predicate, prune, depth, branch_first, visit_once, ignore_self, as_edge)
-        ret_tup = itertools.tee(ret, 2)
-        assert is_commit_traversed(ret_tup), f"{[type(x) for x in list(ret_tup[0])]}"
-        return ret_tup[0]
-        """
         return cast(
             Union[Iterator[T_TIobj], Iterator[Tuple[Union[None, T_TIobj], T_TIobj]]],
             super()._traverse(predicate, prune, depth, branch_first, visit_once, ignore_self, as_edge),  # type: ignore

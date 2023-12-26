@@ -28,18 +28,41 @@ from typing import (  # noqa: F401
 # ---------------------------------------------------------------------------
 
 
-# DEPRECATED attributes providing shortcuts to operating system checks based on os.name.
-#
-# These are deprecated because it is clearer, and helps avoid bugs, to write out the
-# os.name or sys.platform checks explicitly, especially in cases where it matters which
-# is used. For example, is_win is False on Cygwin, but is often assumed True. To detect
-# Cygwin, use sys.platform == "cygwin". (Also, in the past, is_darwin was unreliable.)
-#
 is_win = os.name == "nt"
+"""Deprecated alias for ``os.name == "nt"`` to check for native Windows.
+
+This is deprecated because it is clearer to write out :attr:`os.name` or
+:attr:`sys.platform` checks explicitly, especially in cases where it matters which is
+used.
+
+:note: ``is_win`` is ``False`` on Cygwin, but is often wrongly assumed ``True``. To
+    detect Cygwin, use ``sys.platform == "cygwin"``.
+"""
+
 is_posix = os.name == "posix"
+"""Deprecated alias for ``os.name == "posix"`` to check for Unix-like ("POSIX") systems.
+
+This is deprecated because it clearer to write out :attr:`os.name` or
+:attr:`sys.platform` checks explicitly, especially in cases where it matters which is
+used.
+
+:note: For POSIX systems, more detailed information is available in
+    :attr:`sys.platform`, while :attr:`os.name` is always ``"posix"`` on such systems,
+    including macOS (Darwin).
+"""
+
 is_darwin = sys.platform == "darwin"
+"""Deprecated alias for ``sys.platform == "darwin"`` to check for macOS (Darwin).
+
+This is deprecated because it clearer to write out :attr:`os.name` or
+:attr:`sys.platform` checks explicitly.
+
+:note: For macOS (Darwin), ``os.name == "posix"`` as in other Unix-like systems, while
+    ``sys.platform == "darwin"`.
+"""
 
 defenc = sys.getfilesystemencoding()
+"""The encoding used to convert between Unicode and bytes filenames."""
 
 
 @overload

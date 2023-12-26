@@ -352,8 +352,8 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
     def trailers(self) -> Dict[str, str]:
         """Get the trailers of the message as a dictionary
 
-        :note: This property is deprecated, please use either ``Commit.trailers_list``
-            or ``Commit.trailers_dict``.
+        :note: This property is deprecated, please use either :attr:`trailers_list` or
+            :attr:`trailers_dict``.
 
         :return:
             Dictionary containing whitespace stripped trailer information. Only contains

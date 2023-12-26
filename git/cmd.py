@@ -280,13 +280,12 @@ class Git(LazyMixin):
     """Enables debugging of GitPython's git commands."""
 
     USE_SHELL = False
-    """If True, a shell will be used when executing git commands.
+    """Deprecated. If set to True, a shell will be used when executing git commands.
 
-    This exists to avoid breaking old code that may access it, but it is no longer
-    needed and should rarely if ever be used. Prior to GitPython 2.0.8, it had a narrow
-    purpose in suppressing console windows in graphical Windows applications. In 2.0.8
-    and higher, it provides no benefit, as GitPython solves that problem more robustly
-    and safely by using the ``CREATE_NO_WINDOW`` process creation flag on Windows.
+    Prior to GitPython 2.0.8, this had a narrow purpose in suppressing console windows
+    in graphical Windows applications. In 2.0.8 and higher, it provides no benefit, as
+    GitPython solves that problem more robustly and safely by using the
+    ``CREATE_NO_WINDOW`` process creation flag on Windows.
 
     Code that uses ``USE_SHELL = True`` or that passes ``shell=True`` to any GitPython
     functions should be updated to use the default value of ``False`` instead. ``True``
@@ -294,6 +293,7 @@ class Git(LazyMixin):
     for, which is not possible under most circumstances.
 
     See:
+    - :meth:`Git.execute` (on the ``shell`` parameter).
     - https://github.com/gitpython-developers/GitPython/commit/0d9390866f9ce42870d3116094cd49e0019a970a
     - https://learn.microsoft.com/en-us/windows/win32/procthread/process-creation-flags
     """
@@ -919,7 +919,15 @@ class Git(LazyMixin):
 
         :param shell:
             Whether to invoke commands through a shell (see `Popen(..., shell=True)`).
-            It overrides :attr:`USE_SHELL` if it is not `None`.
+            If this is not `None`, it overrides :attr:`USE_SHELL`.
+
+            Passing ``shell=True`` to this or any other GitPython function should be
+            avoided, as it is unsafe under most circumstances. This is because it is
+            typically not feasible to fully consider and account for the effect of shell
+            expansions, especially when passing ``shell=True`` to other methods that
+            forward it to :meth:`Git.execute`. Passing ``shell=True`` is also no longer
+            needed (nor useful) to work around any known operating system specific
+            issues.
 
         :param env:
             A dictionary of environment variables to be passed to :class:`subprocess.Popen`.
