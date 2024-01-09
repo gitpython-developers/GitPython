@@ -126,6 +126,7 @@ def refresh(path: Optional[PathLike] = None) -> None:
 
     if not Git.refresh(path=path):
         return
+    Git.refresh_bash()
     if not FetchInfo.refresh():  # noqa: F405
         return  # type: ignore [unreachable]
 
