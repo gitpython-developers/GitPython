@@ -338,16 +338,15 @@ class Git(LazyMixin):
         # with Git LFS, where Git LFS may be installed in Windows but not
         # in WSL.
         if not is_win:
-            return 'bash'
+            return "bash"
         try:
-            wheregit = run(['where', Git.GIT_PYTHON_GIT_EXECUTABLE],
-                           check=True, stdout=PIPE).stdout
+            wheregit = run(["where", Git.GIT_PYTHON_GIT_EXECUTABLE], check=True, stdout=PIPE).stdout
         except CalledProcessError:
-            return 'bash.exe'
+            return "bash.exe"
         gitpath = Path(wheregit.decode(defenc).splitlines()[0])
         gitroot = gitpath.parent.parent
-        gitbash = gitroot / 'bin' / 'bash.exe'
-        return str(gitbash) if gitbash.exists() else 'bash.exe'
+        gitbash = gitroot / "bin" / "bash.exe"
+        return str(gitbash) if gitbash.exists() else "bash.exe"
 
     @classmethod
     def refresh_bash(cls, path: Union[None, PathLike] = None) -> bool:
@@ -370,24 +369,21 @@ class Git(LazyMixin):
         # executed for whatever reason.
         has_bash = False
         try:
-            run([cls.GIT_PYTHON_BASH_EXECUTABLE, '--version'],
-                check=True, stdout=PIPE)
+            run([cls.GIT_PYTHON_BASH_EXECUTABLE, "--version"], check=True, stdout=PIPE)
             has_bash = True
         except CalledProcessError:
             pass
 
         # Warn or raise exception if test failed.
         if not has_bash:
-            err = (
-                dedent(
-                    f"""\
+            err = dedent(
+                f"""\
                 Bad bash executable.
                 The bash executable must be specified in one of the following ways:
                     - be included in your $PATH
                     - be set via ${cls._bash_exec_env_var}
                     - explicitly set via git.refresh_bash()
                 """
-                )
             )
 
             # Revert to whatever the old_bash was.
