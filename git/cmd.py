@@ -334,8 +334,9 @@ class Git(LazyMixin):
         # This addresses issues where git hooks are intended to run assuming
         # the "native" Windows environment as seen by git.exe rather than
         # inside the git sandbox of WSL, which is likely configured
-        # independetly of the Windows Git.  A noteworthy example are repos with
-        # Git LFS, where Git LFS may be installed in Windows but not in WSL.
+        # independently of the Windows Git.  A noteworthy example are repos
+        # with Git LFS, where Git LFS may be installed in Windows but not
+        # in WSL.
         if not is_win:
             return 'bash'
         try:
@@ -346,7 +347,7 @@ class Git(LazyMixin):
         gitpath = Path(wheregit.decode(defenc).splitlines()[0])
         gitroot = gitpath.parent.parent
         gitbash = gitroot / 'bin' / 'bash.exe'
-        return str(gitbash) if gitbash.exists else 'bash.exe'
+        return str(gitbash) if gitbash.exists() else 'bash.exe'
 
     @classmethod
     def refresh_bash(cls, path: Union[None, PathLike] = None) -> bool:
@@ -357,7 +358,7 @@ class Git(LazyMixin):
             new_bash = os.path.abspath(new_bash)
         else:
             new_bash = os.environ.get(cls._bash_exec_env_var)
-            if new_bash is None:
+            if not new_bash:
                 new_bash = cls._get_default_bash_path()
 
         # Keep track of the old and new bash executable path.
@@ -369,7 +370,8 @@ class Git(LazyMixin):
         # executed for whatever reason.
         has_bash = False
         try:
-            run([cls.GIT_PYTHON_BASH_EXECUTABLE, '--version'])
+            run([cls.GIT_PYTHON_BASH_EXECUTABLE, '--version'],
+                check=True, stdout=PIPE)
             has_bash = True
         except CalledProcessError:
             pass
