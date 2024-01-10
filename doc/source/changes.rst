@@ -2,6 +2,18 @@
 Changelog
 =========
 
+3.1.41
+======
+
+This release is relevant for security as it fixes a possible arbitary
+code execution on Windows.
+
+See this PR for details: https://github.com/gitpython-developers/GitPython/pull/1792
+An advisory is available soon at: https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-2mqj-m65w-jghx
+
+See the following for all changes.
+https://github.com/gitpython-developers/GitPython/releases/tag/3.1.40
+
 3.1.40
 ======
 
