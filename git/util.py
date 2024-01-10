@@ -327,6 +327,17 @@ def _get_exe_extensions() -> Sequence[str]:
 
 
 def py_where(program: str, path: Optional[PathLike] = None) -> List[str]:
+    """Perform a path search to assist :func:`is_cygwin_git`.
+
+    This is not robust for general use. It is an implementation detail of
+    :func:`is_cygwin_git`. When a search following all shell rules is needed,
+    :func:`shutil.which` can be used instead.
+
+    :note: Neither this function nor :func:`shutil.which` will predict the effect of an
+        executable search on a native Windows system due to a :class:`subprocess.Popen`
+        call without ``shell=True``, because shell and non-shell executable search on
+        Windows differ considerably.
+    """
     # From: http://stackoverflow.com/a/377028/548792
     winprog_exts = _get_exe_extensions()
 

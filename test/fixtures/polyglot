@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+# Valid script in both Bash and Python, but with different behavior.
+""":"
+echo 'Ran intended hook.' >output.txt
+exit
+" """
+from pathlib import Path
+Path('payload.txt').write_text('Ran impostor hook!', encoding='utf-8')

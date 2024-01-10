@@ -18,7 +18,7 @@ from stat import (
 )
 import subprocess
 
-from git.cmd import PROC_CREATIONFLAGS, handle_process_output
+from git.cmd import handle_process_output, safer_popen
 from git.compat import defenc, force_bytes, force_text, safe_decode
 from git.exc import HookExecutionError, UnmergedEntriesError
 from git.objects.fun import (
@@ -98,13 +98,12 @@ def run_commit_hook(name: str, index: "IndexFile", *args: str) -> None:
             relative_hp = Path(hp).relative_to(index.repo.working_dir).as_posix()
             cmd = ["bash.exe", relative_hp]
 
-        process = subprocess.Popen(
+        process = safer_popen(
             cmd + list(args),
             env=env,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             cwd=index.repo.working_dir,
-            creationflags=PROC_CREATIONFLAGS,
         )
     except Exception as ex:
         raise HookExecutionError(hp, ex) from ex
