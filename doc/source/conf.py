@@ -93,7 +93,7 @@ pygments_style = "sphinx"
 # Options for HTML output
 # -----------------------
 
-html_theme = "sphinx_rtd_theme"
+# html_theme = "sphinx_rtd_theme"
 html_theme_options = {}
 
 # The name for this set of Sphinx documents.  If None, it defaults to
