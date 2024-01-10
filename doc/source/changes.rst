@@ -12,7 +12,7 @@ See this PR for details: https://github.com/gitpython-developers/GitPython/pull/
 An advisory is available soon at: https://github.com/gitpython-developers/GitPython/security/advisories/GHSA-2mqj-m65w-jghx
 
 See the following for all changes.
-https://github.com/gitpython-developers/GitPython/releases/tag/3.1.40
+https://github.com/gitpython-developers/GitPython/releases/tag/3.1.41
 
 3.1.40
 ======
