@@ -13,7 +13,7 @@ from pathlib import Path
 import re
 import shutil
 from stat import S_ISLNK, ST_MODE
-from subprocess import CompletedProcess, run
+import subprocess
 import tempfile
 
 import ddt
@@ -93,14 +93,14 @@ class WinBashStatus:
     class WslNoDistro:
         """Running bash.exe tries to run bash on a WSL distribution, but none exists."""
 
-        process: CompletedProcess[bytes]
+        process: "subprocess.CompletedProcess[bytes]"
         message: str
 
     @dataclass
     class CheckError:
         """Running bash.exe fails in an unexpected error or gives unexpected output."""
 
-        process: CompletedProcess[bytes]
+        process: "subprocess.CompletedProcess[bytes]"
         message: str
 
     @dataclass
@@ -133,7 +133,7 @@ class WinBashStatus:
             # information on ways to check for WSL, see https://superuser.com/a/1749811.
             script = 'test -e /proc/sys/fs/binfmt_misc/WSLInterop; echo "$?"'
             command = ["bash.exe", "-c", script]
-            process = run(command, capture_output=True)
+            process = subprocess.run(command, capture_output=True)
         except FileNotFoundError:
             return cls.Absent()
         except OSError as error:
