@@ -4,6 +4,7 @@
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
 import contextlib
+from dataclasses import dataclass
 from io import BytesIO
 import logging
 import os
@@ -17,7 +18,6 @@ import tempfile
 
 import ddt
 import pytest
-from sumtypes import constructor, sumtype
 
 from git import (
     BlobFilter,
@@ -66,34 +66,48 @@ def _get_windows_ansi_encoding():
     return f"cp{value}"
 
 
-@sumtype
 class WinBashStatus:
-    """Status of bash.exe for native Windows. Affects which commit hook tests can pass.
+    """Namespace of native-Windows bash.exe statuses. Affects what hook tests can pass.
 
     Call check() to check the status. (CheckError and WinError should not typically be
     used to trigger skip or xfail, because they represent unexpected situations.)
     """
 
-    Inapplicable = constructor()
-    """This system is not native Windows: either not Windows at all, or Cygwin."""
+    @dataclass
+    class Inapplicable:
+        """This system is not native Windows: either not Windows at all, or Cygwin."""
 
-    Absent = constructor()
-    """No command for bash.exe is found on the system."""
+    @dataclass
+    class Absent:
+        """No command for bash.exe is found on the system."""
 
-    Native = constructor()
-    """Running bash.exe operates outside any WSL distribution (as with Git Bash)."""
+    @dataclass
+    class Native:
+        """Running bash.exe operates outside any WSL distribution (as with Git Bash)."""
 
-    Wsl = constructor()
-    """Running bash.exe calls bash in a WSL distribution."""
+    @dataclass
+    class Wsl:
+        """Running bash.exe calls bash in a WSL distribution."""
 
-    WslNoDistro = constructor("process", "message")
-    """Running bash.exe tries to run bash on a WSL distribution, but none exists."""
+    @dataclass
+    class WslNoDistro:
+        """Running bash.exe tries to run bash on a WSL distribution, but none exists."""
 
-    CheckError = constructor("process", "message")
-    """Running bash.exe fails in an unexpected error or gives unexpected output."""
+        process: "subprocess.CompletedProcess[bytes]"
+        message: str
 
-    WinError = constructor("exception")
-    """bash.exe may exist but can't run. CreateProcessW fails unexpectedly."""
+    @dataclass
+    class CheckError:
+        """Running bash.exe fails in an unexpected error or gives unexpected output."""
+
+        process: "subprocess.CompletedProcess[bytes]"
+        message: str
+
+    @dataclass
+    class WinError:
+        """bash.exe may exist but can't run. CreateProcessW fails unexpectedly."""
+
+        exception: OSError
 
     @classmethod
     def check(cls):
