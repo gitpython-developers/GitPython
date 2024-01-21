@@ -11,13 +11,13 @@ import io
 import logging
 import os
 import signal
-from subprocess import Popen, PIPE, DEVNULL, run, CalledProcessError
+from subprocess import Popen, PIPE, DEVNULL
 import subprocess
 import threading
 from textwrap import dedent
 from pathlib import Path
 
-from git.compat import defenc, force_bytes, safe_decode, is_win
+from git.compat import defenc, force_bytes, safe_decode
 from git.exc import (
     CommandError,
     GitCommandError,
@@ -364,24 +364,27 @@ class Git(LazyMixin):
     _bash_exec_env_var = "GIT_PYTHON_BASH_EXECUTABLE"
 
     bash_exec_name = "bash"
-    """Default bash command that should work on Linux, Windows, and other systems."""
+    """Default bash command."""
 
     GIT_PYTHON_BASH_EXECUTABLE = None
-    """Provide the full path to the bash executable. Otherwise it assumes bash is in the path.
-
-    Note that the bash executable is actually found during the refresh step in
-    the top level ``__init__``.
+    """
+    Provides the path to the bash executable used for commit hooks.  This is
+    ordinarily set by `Git.refresh_bash()`.  Note that the default behavior of
+    invoking commit hooks on Windows has changed to not prefer WSL bash with
+    the introduction of this variable.  See the `Git.refresh_bash()`
+    documentation for details on the default values and search paths.
     """
 
     @classmethod
-    def _get_default_bash_path(cls):
+    def _get_default_bash_path(cls) -> str:
         # Assumes that, if user is running in Windows, they probably are using
         # Git for Windows, which includes Git BASH and should be associated
-        # with the configured Git command set in `refresh()`.  Regardless of
-        # if the Git command assumes it is installed in (root)/cmd/git.exe or
-        # (root)/bin/git.exe, the root is always up two levels from the git
-        # command.  Try going up to levels from the currently configured
-        # git command, then navigate to (root)/bin/bash.exe.  If this exists,
+        # with the configured Git command set in `refresh()`.
+        # Uses the output of `git --exec-path` for the currently configured
+        # Git command to find its `git-core` directory.  If one assumes that
+        # the `git-core` directory is always three levels deeper than the
+        # root directory of the Git installation, we can try going up three
+        # levels and then navigating to (root)/bin/bash.exe.  If this exists,
         # prefer it over the WSL version in System32, direct access to which
         # is reportedly deprecated.  Fail back to default "bash.exe" if
         # the Git for Windows lookup doesn't work.
@@ -392,145 +395,73 @@ class Git(LazyMixin):
         # independently of the Windows Git.  A noteworthy example are repos
         # with Git LFS, where Git LFS may be installed in Windows but not
         # in WSL.
-        if not is_win:
+        if os.name != 'nt':
             return "bash"
-        try:
-            wheregit = run(["where", Git.GIT_PYTHON_GIT_EXECUTABLE], check=True, stdout=PIPE).stdout
-        except CalledProcessError:
-            return "bash.exe"
-        gitpath = Path(wheregit.decode(defenc).splitlines()[0])
-        gitroot = gitpath.parent.parent
+        gitcore = Path(cls()._call_process("--exec-path"))
+        gitroot = gitcore.parent.parent.parent
         gitbash = gitroot / "bin" / "bash.exe"
         return str(gitbash) if gitbash.exists() else "bash.exe"
 
     @classmethod
     def refresh_bash(cls, path: Union[None, PathLike] = None) -> bool:
-        """This gets called by the refresh function (see the top level __init__)."""
+        """
+        Refreshes the cached path to the bash executable used for executing
+        commit hook scripts.  This gets called by the top-level `refresh()`
+        function on initial package import (see the top level __init__), but
+        this method may be invoked manually if the path changes after import.
+
+        This method only checks one path for a valid bash executable at a time,
+        using the first non-empty path provided in the following priority
+        order:
+
+          1. the explicit `path` argument to this method
+          2. the environment variable `GIT_PYTHON_BASH_EXECUTABLE` if it is set
+             and available via `os.environ` upon calling this method
+          3. if the current platform is not Windows, the simple string `"bash"`
+          4. if the current platform is Windows, inferred from the current
+             provided Git executable assuming it is part of a Git for Windows
+             distribution.
+
+        The current platform is checked based on the call `os.name`.
+
+        This is a change to the default behavior from previous versions of
+        GitPython.  In the event backwards compatibility is needed, the `path`
+        argument or the environment variable may be set to the string
+        `"bash.exe"`, which on most systems invokes the WSL bash by default.
+
+        This change to default behavior addresses issues where git hooks are
+        intended to run assuming the "native" Windows environment as seen by
+        git.exe rather than inside the git sandbox of WSL, which is likely
+        configured independently of the Windows Git.  A noteworthy example are
+        repos with Git LFS, where Git LFS may be installed in Windows but not
+        in WSL.
+        """
         # Discern which path to refresh with.
         if path is not None:
             new_bash = os.path.expanduser(path)
-            new_bash = os.path.abspath(new_bash)
+            # new_bash = os.path.abspath(new_bash)
         else:
             new_bash = os.environ.get(cls._bash_exec_env_var)
             if not new_bash:
                 new_bash = cls._get_default_bash_path()
 
         # Keep track of the old and new bash executable path.
-        old_bash = cls.GIT_PYTHON_BASH_EXECUTABLE
+        # old_bash = cls.GIT_PYTHON_BASH_EXECUTABLE
         cls.GIT_PYTHON_BASH_EXECUTABLE = new_bash
 
-        # Test if the new git executable path is valid. A GitCommandNotFound error is
-        # spawned by us. A PermissionError is spawned if the git executable cannot be
-        # executed for whatever reason.
-        has_bash = False
-        try:
-            run([cls.GIT_PYTHON_BASH_EXECUTABLE, "--version"], check=True, stdout=PIPE)
-            has_bash = True
-        except CalledProcessError:
-            pass
-
-        # Warn or raise exception if test failed.
-        if not has_bash:
-            err = dedent(
-                f"""\
-                Bad bash executable.
-                The bash executable must be specified in one of the following ways:
-                    - be included in your $PATH
-                    - be set via ${cls._bash_exec_env_var}
-                    - explicitly set via git.refresh_bash()
-                """
-            )
-
-            # Revert to whatever the old_bash was.
-            cls.GIT_PYTHON_BASH_EXECUTABLE = old_bash
-
-            if old_bash is None:
-                # On the first refresh (when GIT_PYTHON_GIT_EXECUTABLE is None) we only
-                # are quiet, warn, or error depending on the GIT_PYTHON_REFRESH value.
-
-                # Determine what the user wants to happen during the initial refresh we
-                # expect GIT_PYTHON_REFRESH to either be unset or be one of the
-                # following values:
-                #
-                #   0|q|quiet|s|silence|n|none
-                #   1|w|warn|warning
-                #   2|r|raise|e|error
-
-                mode = os.environ.get(cls._refresh_env_var, "raise").lower()
-
-                quiet = ["quiet", "q", "silence", "s", "none", "n", "0"]
-                warn = ["warn", "w", "warning", "1"]
-                error = ["error", "e", "raise", "r", "2"]
-
-                if mode in quiet:
-                    pass
-                elif mode in warn or mode in error:
-                    err = (
-                        dedent(
-                            """\
-                        %s
-                        All commit hook commands will error until this is rectified.
-
-                        This initial warning can be silenced or aggravated in the future by setting the
-                        $%s environment variable. Use one of the following values:
-                            - %s: for no warning or exception
-                            - %s: for a printed warning
-                            - %s: for a raised exception
-
-                        Example:
-                            export %s=%s
-                        """
-                        )
-                        % (
-                            err,
-                            cls._refresh_env_var,
-                            "|".join(quiet),
-                            "|".join(warn),
-                            "|".join(error),
-                            cls._refresh_env_var,
-                            quiet[0],
-                        )
-                    )
-
-                    if mode in warn:
-                        print("WARNING: %s" % err)
-                    else:
-                        raise ImportError(err)
-                else:
-                    err = (
-                        dedent(
-                            """\
-                        %s environment variable has been set but it has been set with an invalid value.
-
-                        Use only the following values:
-                            - %s: for no warning or exception
-                            - %s: for a printed warning
-                            - %s: for a raised exception
-                        """
-                        )
-                        % (
-                            cls._refresh_env_var,
-                            "|".join(quiet),
-                            "|".join(warn),
-                            "|".join(error),
-                        )
-                    )
-                    raise ImportError(err)
-
-                # We get here if this was the init refresh and the refresh mode was not
-                # error. Go ahead and set the GIT_PYTHON_BASH_EXECUTABLE such that we
-                # discern the difference between a first import and a second import.
-                cls.GIT_PYTHON_BASH_EXECUTABLE = cls.bash_exec_name
-            else:
-                # After the first refresh (when GIT_PYTHON_BASH_EXECUTABLE is no longer
-                # None) we raise an exception.
-                raise GitCommandNotFound("bash", err)
-
+        # Test if the new git executable path exists.
+        has_bash = Path(cls.GIT_PYTHON_BASH_EXECUTABLE).exists()
         return has_bash
 
     @classmethod
     def refresh(cls, path: Union[None, PathLike] = None) -> bool:
-        """This gets called by the refresh function (see the top level __init__)."""
+        """
+        This gets called by the refresh function (see the top level __init__).
+
+        Note that calling this method directly does not automatically update
+        the cached path to `bash`; either invoke the top level `refresh()`
+        function or call `Git.refresh_bash()` directly.
+        """
         # Discern which path to refresh with.
         if path is not None:
             new_git = os.path.expanduser(path)
