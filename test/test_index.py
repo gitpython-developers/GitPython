@@ -1064,19 +1064,19 @@ class TestIndex(TestBase):
         shutil.copy(fixture_path("polyglot"), hook_path("polyglot", repo.git_dir))
         payload = Path(rw_dir, "payload.txt")
 
-        if type(_win_bash_status) in {WinBashStatus.Absent, WinBashStatus.WslNoDistro}:
-            # The real shell can't run, but the impostor should still not be used.
-            with self.assertRaises(HookExecutionError):
-                with maybe_chdir:
-                    run_commit_hook("polyglot", repo.index)
-            self.assertFalse(payload.exists())
-        else:
-            # The real shell should run, and not the impostor.
-            with maybe_chdir:
-                run_commit_hook("polyglot", repo.index)
-            self.assertFalse(payload.exists())
-            output = Path(rw_dir, "output.txt").read_text(encoding="utf-8")
-            self.assertEqual(output, "Ran intended hook.\n")
+        # if type(_win_bash_status) in {WinBashStatus.Absent, WinBashStatus.WslNoDistro}:
+        #     # The real shell can't run, but the impostor should still not be used.
+        #     with self.assertRaises(HookExecutionError):
+        #         with maybe_chdir:
+        #             run_commit_hook("polyglot", repo.index)
+        #     self.assertFalse(payload.exists())
+        # else:
+        # The real shell should run, and not the impostor.
+        with maybe_chdir:
+            run_commit_hook("polyglot", repo.index)
+        self.assertFalse(payload.exists())
+        output = Path(rw_dir, "output.txt").read_text(encoding="utf-8")
+        self.assertEqual(output, "Ran intended hook.\n")
 
     # @pytest.mark.xfail(
     #     type(_win_bash_status) is WinBashStatus.Absent,
