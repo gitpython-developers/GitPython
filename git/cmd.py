@@ -395,7 +395,7 @@ class Git(LazyMixin):
         # independently of the Windows Git.  A noteworthy example are repos
         # with Git LFS, where Git LFS may be installed in Windows but not
         # in WSL.
-        if os.name != 'nt':
+        if os.name != "nt":
             return "bash"
         gitcore = Path(cls()._call_process("--exec-path"))
         gitroot = gitcore.parent.parent.parent
