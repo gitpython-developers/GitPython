@@ -47,6 +47,7 @@ from typing import (
     Iterator,
     List,
     Mapping,
+    Optional,
     Sequence,
     TYPE_CHECKING,
     TextIO,
@@ -103,7 +104,7 @@ def handle_process_output(
         Callable[[bytes, "Repo", "DiffIndex"], None],
     ],
     stderr_handler: Union[None, Callable[[AnyStr], None], Callable[[List[AnyStr]], None]],
-    finalizer: Union[None, Callable[[Union[subprocess.Popen, "Git.AutoInterrupt"]], None]] = None,
+    finalizer: Union[None, Callable[[Union[Popen, "Git.AutoInterrupt"]], None]] = None,
     decode_streams: bool = True,
     kill_after_timeout: Union[None, float] = None,
 ) -> None:
@@ -208,6 +209,68 @@ def handle_process_output(
         finalizer(process)
 
 
+def _safer_popen_windows(
+    command: Union[str, Sequence[Any]],
+    *,
+    shell: bool = False,
+    env: Optional[Mapping[str, str]] = None,
+    **kwargs: Any,
+) -> Popen:
+    """Call :class:`subprocess.Popen` on Windows but don't include a CWD in the search.
+
+    This avoids an untrusted search path condition where a file like ``git.exe`` in a
+    malicious repository would be run when GitPython operates on the repository. The
+    process using GitPython may have an untrusted repository's working tree as its
+    current working directory. Some operations may temporarily change to that directory
+    before running a subprocess. In addition, while by default GitPython does not run
+    external commands with a shell, it can be made to do so, in which case the CWD of
+    the subprocess, which GitPython usually sets to a repository working tree, can
+    itself be searched automatically by the shell. This wrapper covers all those cases.
+
+    :note: This currently works by setting the ``NoDefaultCurrentDirectoryInExePath``
+        environment variable during subprocess creation. It also takes care of passing
+        Windows-specific process creation flags, but that is unrelated to path search.
+
+    :note: The current implementation contains a race condition on :attr:`os.environ`.
+        GitPython isn't thread-safe, but a program using it on one thread should ideally
+        be able to mutate :attr:`os.environ` on another, without unpredictable results.
+        See comments in https://github.com/gitpython-developers/GitPython/pull/1650.
+    """
+    # CREATE_NEW_PROCESS_GROUP is needed for some ways of killing it afterwards. See:
+    # https://docs.python.org/3/library/subprocess.html#subprocess.Popen.send_signal
+    # https://docs.python.org/3/library/subprocess.html#subprocess.CREATE_NEW_PROCESS_GROUP
+    creationflags = subprocess.CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP
+
+    # When using a shell, the shell is the direct subprocess, so the variable must be
+    # set in its environment, to affect its search behavior. (The "1" can be any value.)
+    if shell:
+        safer_env = {} if env is None else dict(env)
+        safer_env["NoDefaultCurrentDirectoryInExePath"] = "1"
+    else:
+        safer_env = env
+
+    # When not using a shell, the current process does the search in a CreateProcessW
+    # API call, so the variable must be set in our environment. With a shell, this is
+    # unnecessary, in versions where https://github.com/python/cpython/issues/101283 is
+    # patched. If not, in the rare case the ComSpec environment variable is unset, the
+    # shell is searched for unsafely. Setting NoDefaultCurrentDirectoryInExePath in all
+    # cases, as here, is simpler and protects against that. (The "1" can be any value.)
+    with patch_env("NoDefaultCurrentDirectoryInExePath", "1"):
+        return Popen(
+            command,
+            shell=shell,
+            env=safer_env,
+            creationflags=creationflags,
+            **kwargs,
+        )
+
+
+if os.name == "nt":
+    safer_popen = _safer_popen_windows
+else:
+    safer_popen = Popen
+
+
 def dashify(string: str) -> str:
     return string.replace("_", "-")
 
@@ -224,14 +287,6 @@ def dict_to_slots_and__excluded_are_none(self: object, d: Mapping[str, Any], exc
 
 
 ## -- End Utilities -- @}
-
-
-if os.name == "nt":
-    # CREATE_NEW_PROCESS_GROUP is needed to allow killing it afterwards. See:
-    # https://docs.python.org/3/library/subprocess.html#subprocess.Popen.send_signal
-    PROC_CREATIONFLAGS = subprocess.CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP
-else:
-    PROC_CREATIONFLAGS = 0
 
 
 class Git(LazyMixin):
@@ -1160,11 +1215,8 @@ class Git(LazyMixin):
                     redacted_command,
                     '"kill_after_timeout" feature is not supported on Windows.',
                 )
-            # Only search PATH, not CWD. This must be in the *caller* environment. The "1" can be any value.
-            maybe_patch_caller_env = patch_env("NoDefaultCurrentDirectoryInExePath", "1")
         else:
             cmd_not_found_exception = FileNotFoundError
-            maybe_patch_caller_env = contextlib.nullcontext()
         # END handle
 
         stdout_sink = PIPE if with_stdout else getattr(subprocess, "DEVNULL", None) or open(os.devnull, "wb")
@@ -1179,20 +1231,18 @@ class Git(LazyMixin):
             universal_newlines,
         )
         try:
-            with maybe_patch_caller_env:
-                proc = Popen(
-                    command,
-                    env=env,
-                    cwd=cwd,
-                    bufsize=-1,
-                    stdin=(istream or DEVNULL),
-                    stderr=PIPE,
-                    stdout=stdout_sink,
-                    shell=shell,
-                    universal_newlines=universal_newlines,
-                    creationflags=PROC_CREATIONFLAGS,
-                    **subprocess_kwargs,
-                )
+            proc = safer_popen(
+                command,
+                env=env,
+                cwd=cwd,
+                bufsize=-1,
+                stdin=(istream or DEVNULL),
+                stderr=PIPE,
+                stdout=stdout_sink,
+                shell=shell,
+                universal_newlines=universal_newlines,
+                **subprocess_kwargs,
+            )
         except cmd_not_found_exception as err:
             raise GitCommandNotFound(redacted_command, err) from err
         else:

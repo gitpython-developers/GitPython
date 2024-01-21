@@ -8,7 +8,9 @@ from io import BytesIO
 from git.objects import Tree, Blob
 from test.lib import TestBase
 
+import os
 import os.path as osp
+import subprocess
 
 
 class TestTree(TestBase):
@@ -39,6 +41,62 @@ class TestTree(TestBase):
             del testtree._cache
             testtree._deserialize(stream)
         # END for each item in tree
+
+    def test_tree_modifier_ordering(self):
+        def setup_git_repository_and_get_ordered_files():
+            os.mkdir("tmp")
+            os.chdir("tmp")
+            subprocess.run(["git", "init", "-q"], check=True)
+            os.mkdir("file")
+            for filename in [
+                "bin",
+                "bin.d",
+                "file.to",
+                "file.toml",
+                "file.toml.bin",
+                "file0",
+                "file/a",
+            ]:
+                open(filename, "a").close()
+
+            subprocess.run(["git", "add", "."], check=True)
+            subprocess.run(["git", "commit", "-m", "c1"], check=True)
+            tree_hash = subprocess.check_output(["git", "rev-parse", "HEAD^{tree}"]).decode().strip()
+            cat_file_output = subprocess.check_output(["git", "cat-file", "-p", tree_hash]).decode()
+            return [line.split()[-1] for line in cat_file_output.split("\n") if line]
+
+        hexsha = "6c1faef799095f3990e9970bc2cb10aa0221cf9c"
+        roottree = self.rorepo.tree(hexsha)
+        blob_mode = Tree.blob_id << 12
+        tree_mode = Tree.tree_id << 12
+
+        files_in_desired_order = [
+            (blob_mode, "bin"),
+            (blob_mode, "bin.d"),
+            (blob_mode, "file.to"),
+            (blob_mode, "file.toml"),
+            (blob_mode, "file.toml.bin"),
+            (blob_mode, "file0"),
+            (tree_mode, "file"),
+        ]
+        mod = roottree.cache
+        for file_mode, file_name in files_in_desired_order:
+            mod.add(hexsha, file_mode, file_name)
+        # end for each file
+
+        def file_names_in_order():
+            return [t[1] for t in files_in_desired_order]
+
+        def names_in_mod_cache():
+            a = [t[2] for t in mod._cache]
+            here = file_names_in_order()
+            return [e for e in a if e in here]
+
+        git_file_names_in_order = setup_git_repository_and_get_ordered_files()
+        os.chdir("..")
+
+        mod.set_done()
+        assert names_in_mod_cache() == git_file_names_in_order, "set_done() performs git-sorting"
 
     def test_traverse(self):
         root = self.rorepo.tree("0.1.6")

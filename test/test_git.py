@@ -3,16 +3,18 @@
 # This module is part of GitPython and is released under the
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
+import contextlib
 import gc
 import inspect
 import logging
 import os
 import os.path as osp
+from pathlib import Path
 import re
 import shutil
 import subprocess
 import sys
-from tempfile import TemporaryDirectory, TemporaryFile
+from tempfile import TemporaryFile
 from unittest import skipUnless
 
 if sys.version_info >= (3, 8):
@@ -25,6 +27,21 @@ import ddt
 from git import Git, refresh, GitCommandError, GitCommandNotFound, Repo, cmd
 from git.util import cwd, finalize_process
 from test.lib import TestBase, fixture_path, with_rw_directory
+
+
+@contextlib.contextmanager
+def _patch_out_env(name):
+    try:
+        old_value = os.environ[name]
+    except KeyError:
+        old_value = None
+    else:
+        del os.environ[name]
+    try:
+        yield
+    finally:
+        if old_value is not None:
+            os.environ[name] = old_value
 
 
 @ddt.ddt
@@ -97,29 +114,28 @@ class TestGit(TestBase):
 
     def _do_shell_combo(self, value_in_call, value_from_class):
         with mock.patch.object(Git, "USE_SHELL", value_from_class):
-            # git.cmd gets Popen via a "from" import, so patch it there.
-            with mock.patch.object(cmd, "Popen", wraps=cmd.Popen) as mock_popen:
+            with mock.patch.object(cmd, "safer_popen", wraps=cmd.safer_popen) as mock_safer_popen:
                 # Use a command with no arguments (besides the program name), so it runs
                 # with or without a shell, on all OSes, with the same effect.
                 self.git.execute(["git"], with_exceptions=False, shell=value_in_call)
 
-        return mock_popen
+        return mock_safer_popen
 
     @ddt.idata(_shell_cases)
     def test_it_uses_shell_or_not_as_specified(self, case):
         """A bool passed as ``shell=`` takes precedence over `Git.USE_SHELL`."""
         value_in_call, value_from_class, expected_popen_arg = case
-        mock_popen = self._do_shell_combo(value_in_call, value_from_class)
-        mock_popen.assert_called_once()
-        self.assertIs(mock_popen.call_args.kwargs["shell"], expected_popen_arg)
+        mock_safer_popen = self._do_shell_combo(value_in_call, value_from_class)
+        mock_safer_popen.assert_called_once()
+        self.assertIs(mock_safer_popen.call_args.kwargs["shell"], expected_popen_arg)
 
     @ddt.idata(full_case[:2] for full_case in _shell_cases)
     def test_it_logs_if_it_uses_a_shell(self, case):
         """``shell=`` in the log message agrees with what is passed to `Popen`."""
         value_in_call, value_from_class = case
         with self.assertLogs(cmd.log, level=logging.DEBUG) as log_watcher:
-            mock_popen = self._do_shell_combo(value_in_call, value_from_class)
-        self._assert_logged_for_popen(log_watcher, "shell", mock_popen.call_args.kwargs["shell"])
+            mock_safer_popen = self._do_shell_combo(value_in_call, value_from_class)
+        self._assert_logged_for_popen(log_watcher, "shell", mock_safer_popen.call_args.kwargs["shell"])
 
     @ddt.data(
         ("None", None),
@@ -134,22 +150,49 @@ class TestGit(TestBase):
     def test_it_executes_git_and_returns_result(self):
         self.assertRegex(self.git.execute(["git", "version"]), r"^git version [\d\.]{2}.*$")
 
-    def test_it_executes_git_not_from_cwd(self):
-        with TemporaryDirectory() as tmpdir:
-            if os.name == "nt":
-                # Copy an actual binary executable that is not git.
-                other_exe_path = os.path.join(os.getenv("WINDIR"), "system32", "hostname.exe")
-                impostor_path = os.path.join(tmpdir, "git.exe")
-                shutil.copy(other_exe_path, impostor_path)
-            else:
-                # Create a shell script that doesn't do anything.
-                impostor_path = os.path.join(tmpdir, "git")
-                with open(impostor_path, mode="w", encoding="utf-8") as file:
-                    print("#!/bin/sh", file=file)
-                os.chmod(impostor_path, 0o755)
+    @ddt.data(
+        # chdir_to_repo, shell, command, use_shell_impostor
+        (False, False, ["git", "version"], False),
+        (False, True, "git version", False),
+        (False, True, "git version", True),
+        (True, False, ["git", "version"], False),
+        (True, True, "git version", False),
+        (True, True, "git version", True),
+    )
+    @with_rw_directory
+    def test_it_executes_git_not_from_cwd(self, rw_dir, case):
+        chdir_to_repo, shell, command, use_shell_impostor = case
 
-            with cwd(tmpdir):
-                self.assertRegex(self.git.execute(["git", "version"]), r"^git version\b")
+        repo = Repo.init(rw_dir)
+
+        if os.name == "nt":
+            # Copy an actual binary executable that is not git. (On Windows, running
+            # "hostname" only displays the hostname, it never tries to change it.)
+            other_exe_path = Path(os.environ["SystemRoot"], "system32", "hostname.exe")
+            impostor_path = Path(rw_dir, "git.exe")
+            shutil.copy(other_exe_path, impostor_path)
+        else:
+            # Create a shell script that doesn't do anything.
+            impostor_path = Path(rw_dir, "git")
+            impostor_path.write_text("#!/bin/sh\n", encoding="utf-8")
+            os.chmod(impostor_path, 0o755)
+
+        if use_shell_impostor:
+            shell_name = "cmd.exe" if os.name == "nt" else "sh"
+            shutil.copy(impostor_path, Path(rw_dir, shell_name))
+
+        with contextlib.ExitStack() as stack:
+            if chdir_to_repo:
+                stack.enter_context(cwd(rw_dir))
+            if use_shell_impostor:
+                stack.enter_context(_patch_out_env("ComSpec"))
+
+            # Run the command without raising an exception on failure, as the exception
+            # message is currently misleading when the command is a string rather than a
+            # sequence of strings (it really runs "git", but then wrongly reports "g").
+            output = repo.git.execute(command, with_exceptions=False, shell=shell)
+
+        self.assertRegex(output, r"^git version\b")
 
     @skipUnless(
         os.name == "nt",
@@ -345,7 +388,7 @@ class TestGit(TestBase):
                 self.assertIn("FOO", str(err))
 
     def test_handle_process_output(self):
-        from git.cmd import handle_process_output
+        from git.cmd import handle_process_output, safer_popen
 
         line_count = 5002
         count = [None, 0, 0]
@@ -361,13 +404,12 @@ class TestGit(TestBase):
             fixture_path("cat_file.py"),
             str(fixture_path("issue-301_stderr")),
         ]
-        proc = subprocess.Popen(
+        proc = safer_popen(
             cmdline,
             stdin=None,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             shell=False,
-            creationflags=cmd.PROC_CREATIONFLAGS,
         )
 
         handle_process_output(proc, counter_stdout, counter_stderr, finalize_process)

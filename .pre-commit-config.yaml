@@ -29,7 +29,7 @@ repos:
   hooks:
   - id: shellcheck
     args: [--color]
-    exclude: ^git/ext/
+    exclude: ^test/fixtures/polyglot$|^git/ext/
 
 - repo: https://github.com/pre-commit/pre-commit-hooks
   rev: v4.4.0

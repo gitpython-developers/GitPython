@@ -53,54 +53,6 @@ cmp: Callable[[str, str], int] = lambda a, b: (a > b) - (a < b)
 __all__ = ("TreeModifier", "Tree")
 
 
-def git_cmp(t1: TreeCacheTup, t2: TreeCacheTup) -> int:
-    a, b = t1[2], t2[2]
-    # assert isinstance(a, str) and isinstance(b, str)
-    len_a, len_b = len(a), len(b)
-    min_len = min(len_a, len_b)
-    min_cmp = cmp(a[:min_len], b[:min_len])
-
-    if min_cmp:
-        return min_cmp
-
-    return len_a - len_b
-
-
-def merge_sort(a: List[TreeCacheTup], cmp: Callable[[TreeCacheTup, TreeCacheTup], int]) -> None:
-    if len(a) < 2:
-        return
-
-    mid = len(a) // 2
-    lefthalf = a[:mid]
-    righthalf = a[mid:]
-
-    merge_sort(lefthalf, cmp)
-    merge_sort(righthalf, cmp)
-
-    i = 0
-    j = 0
-    k = 0
-
-    while i < len(lefthalf) and j < len(righthalf):
-        if cmp(lefthalf[i], righthalf[j]) <= 0:
-            a[k] = lefthalf[i]
-            i = i + 1
-        else:
-            a[k] = righthalf[j]
-            j = j + 1
-        k = k + 1
-
-    while i < len(lefthalf):
-        a[k] = lefthalf[i]
-        i = i + 1
-        k = k + 1
-
-    while j < len(righthalf):
-        a[k] = righthalf[j]
-        j = j + 1
-        k = k + 1
-
-
 class TreeModifier:
     """A utility class providing methods to alter the underlying cache in a list-like fashion.
 
@@ -131,7 +83,7 @@ class TreeModifier:
 
         :return self:
         """
-        merge_sort(self._cache, git_cmp)
+        self._cache.sort(key=lambda x: (x[2] + "/") if x[1] == Tree.tree_id << 12 else x[2])
         return self
 
     # } END interface
