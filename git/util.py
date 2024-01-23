@@ -1295,5 +1295,20 @@ class Iterable(metaclass=IterableClassWatcher):
 
 
 class NullHandler(logging.Handler):
-    def emit(self, record: object) -> None:
+    """Deprecated, use :class:`logging.NullHandler` instead.
+
+    This noop handler is like :class:`~logging.NullHandler` in the standard library,
+    which should be used instead, because it is now always available, and it overrides
+    more logging methods to make them noop. This class only overrides :meth:`emit`.
+    """
+
+    def __init__(self, level: int = logging.NOTSET) -> None:
+        warnings.warn(
+            "NullHandler in git.util is deprecated. Use logging.NullHandler instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        super().__init__(level)
+
+    def emit(self, record: logging.LogRecord) -> None:
         pass
