@@ -44,6 +44,15 @@ def _patch_out_env(name):
             os.environ[name] = old_value
 
 
+@contextlib.contextmanager
+def _restore_git_executable():
+    old_git_executable = Git.GIT_PYTHON_GIT_EXECUTABLE
+    try:
+        yield old_git_executable  # Let test code run that may rebind the attribute.
+    finally:
+        Git.GIT_PYTHON_GIT_EXECUTABLE = old_git_executable
+
+
 @ddt.ddt
 class TestGit(TestBase):
     @classmethod
@@ -309,20 +318,36 @@ class TestGit(TestBase):
     def test_refresh_bad_absolute_git_path(self):
         absolute_path = str(Path("yada").absolute())
         expected_pattern = rf"\n[ \t]*cmdline: {re.escape(absolute_path)}\Z"
-        with self.assertRaisesRegex(GitCommandNotFound, expected_pattern):
-            refresh(absolute_path)
+
+        with _restore_git_executable() as old_git_executable:
+            with self.assertRaisesRegex(GitCommandNotFound, expected_pattern):
+                refresh(absolute_path)
+            self.assertEqual(self.git.GIT_PYTHON_GIT_EXECUTABLE, old_git_executable)
 
     def test_refresh_bad_relative_git_path(self):
-        relative_path = "yada"
-        absolute_path = str(Path(relative_path).absolute())
+        absolute_path = str(Path("yada").absolute())
         expected_pattern = rf"\n[ \t]*cmdline: {re.escape(absolute_path)}\Z"
-        with self.assertRaisesRegex(GitCommandNotFound, expected_pattern):
-            refresh(relative_path)
+
+        with _restore_git_executable() as old_git_executable:
+            with self.assertRaisesRegex(GitCommandNotFound, expected_pattern):
+                refresh("yada")
+            self.assertEqual(self.git.GIT_PYTHON_GIT_EXECUTABLE, old_git_executable)
 
     def test_refresh_good_absolute_git_path(self):
         absolute_path = shutil.which("git")
-        refresh(absolute_path)
-        self.assertEqual(self.git.GIT_PYTHON_GIT_EXECUTABLE, absolute_path)
+
+        with _restore_git_executable():
+            refresh(absolute_path)
+            self.assertEqual(self.git.GIT_PYTHON_GIT_EXECUTABLE, absolute_path)
+
+    def test_refresh_good_relative_git_path(self):
+        absolute_path = shutil.which("git")
+        dirname, basename = osp.split(absolute_path)
+
+        with cwd(dirname):
+            with _restore_git_executable():
+                refresh(basename)
+                self.assertEqual(self.git.GIT_PYTHON_GIT_EXECUTABLE, absolute_path)
 
     def test_options_are_passed_to_git(self):
         # This works because any command after git --version is ignored.
