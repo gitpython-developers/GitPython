@@ -310,8 +310,7 @@ class TestGit(TestBase):
         self.assertRaises(GitCommandNotFound, refresh, "yada")
 
     def test_refresh_good_git_path(self):
-        which_cmd = "where" if os.name == "nt" else "command -v"
-        path = os.popen("{0} git".format(which_cmd)).read().strip().split("\n")[0]
+        path = shutil.which("git")
         refresh(path)
 
     def test_options_are_passed_to_git(self):
