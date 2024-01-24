@@ -306,16 +306,23 @@ class TestGit(TestBase):
         ):
             self.assertRaises(GitCommandNotFound, self.git.version)
 
-    def test_refresh_bad_git_path(self):
-        path = "yada"
-        escaped_abspath = re.escape(str(Path(path).absolute()))
-        expected_pattern = rf"\n[ \t]*cmdline: {escaped_abspath}\Z"
+    def test_refresh_bad_absolute_git_path(self):
+        absolute_path = str(Path("yada").absolute())
+        expected_pattern = rf"\n[ \t]*cmdline: {re.escape(absolute_path)}\Z"
         with self.assertRaisesRegex(GitCommandNotFound, expected_pattern):
-            refresh(path)
+            refresh(absolute_path)
 
-    def test_refresh_good_git_path(self):
-        path = shutil.which("git")
-        refresh(path)
+    def test_refresh_bad_relative_git_path(self):
+        relative_path = "yada"
+        absolute_path = str(Path(relative_path).absolute())
+        expected_pattern = rf"\n[ \t]*cmdline: {re.escape(absolute_path)}\Z"
+        with self.assertRaisesRegex(GitCommandNotFound, expected_pattern):
+            refresh(relative_path)
+
+    def test_refresh_good_absolute_git_path(self):
+        absolute_path = shutil.which("git")
+        refresh(absolute_path)
+        self.assertEqual(self.git.GIT_PYTHON_GIT_EXECUTABLE, absolute_path)
 
     def test_options_are_passed_to_git(self):
         # This works because any command after git --version is ignored.
