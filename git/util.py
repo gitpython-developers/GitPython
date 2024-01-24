@@ -1292,8 +1292,3 @@ class Iterable(metaclass=IterableClassWatcher):
 
 
 # } END classes
-
-
-class NullHandler(logging.Handler):
-    def emit(self, record: object) -> None:
-        pass
