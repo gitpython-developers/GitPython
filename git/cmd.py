@@ -475,9 +475,10 @@ class Git(LazyMixin):
                     )
                     raise ImportError(err)
 
-                # We get here if this was the init refresh and the refresh mode was not
-                # error. Go ahead and set the GIT_PYTHON_GIT_EXECUTABLE such that we
-                # discern the difference between a first import and a second import.
+                # We get here if this was the initial refresh and the refresh mode was
+                # not error. Go ahead and set the GIT_PYTHON_GIT_EXECUTABLE such that we
+                # discern the difference between the first refresh at import time
+                # and subsequent calls to refresh().
                 cls.GIT_PYTHON_GIT_EXECUTABLE = cls.git_exec_name
             else:
                 # After the first refresh (when GIT_PYTHON_GIT_EXECUTABLE is no longer
