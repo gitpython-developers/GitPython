@@ -483,7 +483,7 @@ class Git(LazyMixin):
             else:
                 # After the first refresh (when GIT_PYTHON_GIT_EXECUTABLE is no longer
                 # None) we raise an exception.
-                raise GitCommandNotFound("git", err)
+                raise GitCommandNotFound(new_git, err)
 
         return has_git
 
