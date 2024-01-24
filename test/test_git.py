@@ -306,11 +306,10 @@ class TestGit(TestBase):
         ):
             self.assertRaises(GitCommandNotFound, self.git.version)
 
-    def test_refresh(self):
-        # Test a bad git path refresh.
+    def test_refresh_bad_git_path(self):
         self.assertRaises(GitCommandNotFound, refresh, "yada")
 
-        # Test a good path refresh.
+    def test_refresh_good_git_path(self):
         which_cmd = "where" if os.name == "nt" else "command -v"
         path = os.popen("{0} git".format(which_cmd)).read().strip().split("\n")[0]
         refresh(path)
