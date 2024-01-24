@@ -307,7 +307,11 @@ class TestGit(TestBase):
             self.assertRaises(GitCommandNotFound, self.git.version)
 
     def test_refresh_bad_git_path(self):
-        self.assertRaises(GitCommandNotFound, refresh, "yada")
+        path = "yada"
+        escaped_abspath = re.escape(str(Path(path).absolute()))
+        expected_pattern = rf"\n[ \t]*cmdline: {escaped_abspath}\Z"
+        with self.assertRaisesRegex(GitCommandNotFound, expected_pattern):
+            refresh(path)
 
     def test_refresh_good_git_path(self):
         path = shutil.which("git")
