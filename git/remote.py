@@ -5,29 +5,23 @@
 
 """Module implementing a remote object allowing easy access to git remotes."""
 
+import contextlib
 import logging
 import re
 
-from git.cmd import handle_process_output, Git
+from git.cmd import Git, handle_process_output
 from git.compat import defenc, force_text
+from git.config import GitConfigParser, SectionConstraint, cp
 from git.exc import GitCommandError
+from git.refs import Head, Reference, RemoteReference, SymbolicReference, TagReference
 from git.util import (
-    LazyMixin,
-    IterableObj,
-    IterableList,
-    RemoteProgress,
     CallableRemoteProgress,
-)
-from git.util import (
+    IterableList,
+    IterableObj,
+    LazyMixin,
+    RemoteProgress,
     join_path,
 )
-
-from git.config import (
-    GitConfigParser,
-    SectionConstraint,
-    cp,
-)
-from git.refs import Head, Reference, RemoteReference, SymbolicReference, TagReference
 
 # typing-------------------------------------------------------
 
@@ -345,18 +339,13 @@ class FetchInfo(IterableObj):
     @classmethod
     def refresh(cls) -> Literal[True]:
         """This gets called by the refresh function (see the top level __init__)."""
-        # clear the old values in _flag_map
-        try:
+        # Clear the old values in _flag_map.
+        with contextlib.suppress(KeyError):
             del cls._flag_map["t"]
-        except KeyError:
-            pass
-
-        try:
+        with contextlib.suppress(KeyError):
             del cls._flag_map["-"]
-        except KeyError:
-            pass
 
-        # set the value given the git version
+        # Set the value given the git version.
         if Git().version_info[:2] >= (2, 10):
             cls._flag_map["t"] = cls.TAG_UPDATE
         else:
