@@ -46,9 +46,8 @@ def _patch_out_env(name):
 
 @contextlib.contextmanager
 def _rollback_refresh():
-    old_git_executable = Git.GIT_PYTHON_GIT_EXECUTABLE
     try:
-        yield old_git_executable  # Let test code run that may mutate class state.
+        yield Git.GIT_PYTHON_GIT_EXECUTABLE  # Provide the old value for convenience.
     finally:
         refresh()
 
