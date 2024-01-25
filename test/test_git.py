@@ -45,12 +45,12 @@ def _patch_out_env(name):
 
 
 @contextlib.contextmanager
-def _restore_git_executable():
+def _rollback_refresh():
     old_git_executable = Git.GIT_PYTHON_GIT_EXECUTABLE
     try:
-        yield old_git_executable  # Let test code run that may rebind the attribute.
+        yield old_git_executable  # Let test code run that may mutate class state.
     finally:
-        Git.GIT_PYTHON_GIT_EXECUTABLE = old_git_executable
+        refresh()
 
 
 @ddt.ddt
@@ -319,7 +319,7 @@ class TestGit(TestBase):
         absolute_path = str(Path("yada").absolute())
         expected_pattern = rf"\n[ \t]*cmdline: {re.escape(absolute_path)}\Z"
 
-        with _restore_git_executable() as old_git_executable:
+        with _rollback_refresh() as old_git_executable:
             with self.assertRaisesRegex(GitCommandNotFound, expected_pattern):
                 refresh(absolute_path)
             self.assertEqual(self.git.GIT_PYTHON_GIT_EXECUTABLE, old_git_executable)
@@ -328,7 +328,7 @@ class TestGit(TestBase):
         absolute_path = str(Path("yada").absolute())
         expected_pattern = rf"\n[ \t]*cmdline: {re.escape(absolute_path)}\Z"
 
-        with _restore_git_executable() as old_git_executable:
+        with _rollback_refresh() as old_git_executable:
             with self.assertRaisesRegex(GitCommandNotFound, expected_pattern):
                 refresh("yada")
             self.assertEqual(self.git.GIT_PYTHON_GIT_EXECUTABLE, old_git_executable)
@@ -336,7 +336,7 @@ class TestGit(TestBase):
     def test_refresh_good_absolute_git_path(self):
         absolute_path = shutil.which("git")
 
-        with _restore_git_executable():
+        with _rollback_refresh():
             refresh(absolute_path)
             self.assertEqual(self.git.GIT_PYTHON_GIT_EXECUTABLE, absolute_path)
 
@@ -345,7 +345,7 @@ class TestGit(TestBase):
         dirname, basename = osp.split(absolute_path)
 
         with cwd(dirname):
-            with _restore_git_executable():
+            with _rollback_refresh():
                 refresh(basename)
                 self.assertEqual(self.git.GIT_PYTHON_GIT_EXECUTABLE, absolute_path)
 
