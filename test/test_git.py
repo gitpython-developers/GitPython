@@ -315,6 +315,7 @@ class TestGit(TestBase):
             self.assertRaises(GitCommandNotFound, self.git.version)
 
     def test_refresh_bad_absolute_git_path(self):
+        """Bad absolute path arg is reported and not set."""
         absolute_path = str(Path("yada").absolute())
         expected_pattern = rf"\n[ \t]*cmdline: {re.escape(absolute_path)}\Z"
 
@@ -324,6 +325,7 @@ class TestGit(TestBase):
             self.assertEqual(self.git.GIT_PYTHON_GIT_EXECUTABLE, old_git_executable)
 
     def test_refresh_bad_relative_git_path(self):
+        """Bad relative path arg is resolved to absolute path and reported, not set."""
         absolute_path = str(Path("yada").absolute())
         expected_pattern = rf"\n[ \t]*cmdline: {re.escape(absolute_path)}\Z"
 
@@ -333,6 +335,7 @@ class TestGit(TestBase):
             self.assertEqual(self.git.GIT_PYTHON_GIT_EXECUTABLE, old_git_executable)
 
     def test_refresh_good_absolute_git_path(self):
+        """Good absolute path arg is set."""
         absolute_path = shutil.which("git")
 
         with _rollback_refresh():
@@ -340,6 +343,7 @@ class TestGit(TestBase):
             self.assertEqual(self.git.GIT_PYTHON_GIT_EXECUTABLE, absolute_path)
 
     def test_refresh_good_relative_git_path(self):
+        """Good relative path arg is resolved to absolute path and set."""
         absolute_path = shutil.which("git")
         dirname, basename = osp.split(absolute_path)
 
