@@ -82,7 +82,6 @@ execute_kwargs = {
 }
 
 _logger = logging.getLogger(__name__)
-_logger.addHandler(logging.NullHandler())
 
 __all__ = ("Git",)
 

@@ -60,10 +60,7 @@ else:
 
 __all__ = ("GitConfigParser", "SectionConstraint")
 
-
 _logger = logging.getLogger(__name__)
-_logger.addHandler(logging.NullHandler())
-
 
 CONFIG_LEVELS: ConfigLevels_Tup = ("system", "user", "global", "repository")
 """The configuration level of a configuration file."""

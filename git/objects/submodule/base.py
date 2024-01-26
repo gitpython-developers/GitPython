@@ -40,6 +40,7 @@ from .util import (
 
 
 # typing ----------------------------------------------------------------------
+
 from typing import Callable, Dict, Mapping, Sequence, TYPE_CHECKING, cast
 from typing import Any, Iterator, Union
 
@@ -50,14 +51,11 @@ if TYPE_CHECKING:
     from git.repo import Repo
     from git.refs import Head
 
-
 # -----------------------------------------------------------------------------
 
 __all__ = ["Submodule", "UpdateProgress"]
 
-
 _logger = logging.getLogger(__name__)
-_logger.addHandler(logging.NullHandler())
 
 
 class UpdateProgress(RemoteProgress):

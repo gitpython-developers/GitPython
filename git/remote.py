@@ -64,10 +64,7 @@ flagKeyLiteral = Literal[" ", "!", "+", "-", "*", "=", "t", "?"]
 
 # -------------------------------------------------------------
 
-
 _logger = logging.getLogger(__name__)
-_logger.addHandler(logging.NullHandler())
-
 
 __all__ = ("RemoteProgress", "PushInfo", "FetchInfo", "Remote")
 
