@@ -61,7 +61,7 @@ else:
 __all__ = ("GitConfigParser", "SectionConstraint")
 
 
-log = logging.getLogger("git.config")
+log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
 
 

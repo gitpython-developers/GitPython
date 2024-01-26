@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
 __all__ = ["RootModule", "RootUpdateProgress"]
 
-log = logging.getLogger("git.objects.submodule.root")
+log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
 
 

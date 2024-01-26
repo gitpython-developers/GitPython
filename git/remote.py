@@ -65,7 +65,7 @@ flagKeyLiteral = Literal[" ", "!", "+", "-", "*", "=", "t", "?"]
 # -------------------------------------------------------------
 
 
-log = logging.getLogger("git.remote")
+log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
 
 

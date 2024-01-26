@@ -56,7 +56,7 @@ if TYPE_CHECKING:
 __all__ = ["Submodule", "UpdateProgress"]
 
 
-log = logging.getLogger("git.objects.submodule.base")
+log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
 
 

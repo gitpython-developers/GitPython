@@ -52,7 +52,7 @@ if TYPE_CHECKING:
 
 # ------------------------------------------------------------------------
 
-log = logging.getLogger("git.objects.commit")
+log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
 
 __all__ = ("Commit",)
