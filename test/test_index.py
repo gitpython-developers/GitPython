@@ -52,7 +52,7 @@ from test.lib import (
 
 HOOKS_SHEBANG = "#!/usr/bin/env sh\n"
 
-log = logging.getLogger(__name__)
+_logger = logging.getLogger(__name__)
 
 
 def _get_windows_ansi_encoding():
@@ -144,13 +144,13 @@ class WinBashStatus:
         if process.returncode == 1 and re.search(r"\bhttps://aka.ms/wslstore\b", text):
             return cls.WslNoDistro(process, text)
         if process.returncode != 0:
-            log.error("Error running bash.exe to check WSL status: %s", text)
+            _logger.error("Error running bash.exe to check WSL status: %s", text)
             return cls.CheckError(process, text)
         if text == "0":
             return cls.Wsl()
         if text == "1":
             return cls.Native()
-        log.error("Strange output checking WSL status: %s", text)
+        _logger.error("Strange output checking WSL status: %s", text)
         return cls.CheckError(process, text)
 
     @staticmethod
@@ -174,7 +174,7 @@ class WinBashStatus:
         except UnicodeDecodeError:
             pass
         except LookupError as error:
-            log.warning("%s", str(error))  # Message already says "Unknown encoding:".
+            _logger.warning("%s", str(error))  # Message already says "Unknown encoding:".
 
         # Assume UTF-8. If invalid, substitute Unicode replacement characters.
         return stdout.decode("utf-8", errors="replace")

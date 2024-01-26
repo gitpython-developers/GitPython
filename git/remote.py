@@ -65,8 +65,8 @@ flagKeyLiteral = Literal[" ", "!", "+", "-", "*", "=", "t", "?"]
 # -------------------------------------------------------------
 
 
-log = logging.getLogger(__name__)
-log.addHandler(logging.NullHandler())
+_logger = logging.getLogger(__name__)
+_logger.addHandler(logging.NullHandler())
 
 
 __all__ = ("RemoteProgress", "PushInfo", "FetchInfo", "Remote")
@@ -857,7 +857,7 @@ class Remote(LazyMixin, IterableObj):
         stderr_text = progress.error_lines and "\n".join(progress.error_lines) or ""
         proc.wait(stderr=stderr_text)
         if stderr_text:
-            log.warning("Error lines received while fetching: %s", stderr_text)
+            _logger.warning("Error lines received while fetching: %s", stderr_text)
 
         for line in progress.other_lines:
             line = force_text(line)
@@ -878,9 +878,9 @@ class Remote(LazyMixin, IterableObj):
             msg += "length of progress lines %i should be equal to lines in FETCH_HEAD file %i\n"
             msg += "Will ignore extra progress lines or fetch head lines."
             msg %= (l_fil, l_fhi)
-            log.debug(msg)
-            log.debug(b"info lines: " + str(fetch_info_lines).encode("UTF-8"))
-            log.debug(b"head info: " + str(fetch_head_info).encode("UTF-8"))
+            _logger.debug(msg)
+            _logger.debug(b"info lines: " + str(fetch_info_lines).encode("UTF-8"))
+            _logger.debug(b"head info: " + str(fetch_head_info).encode("UTF-8"))
             if l_fil < l_fhi:
                 fetch_head_info = fetch_head_info[:l_fil]
             else:
@@ -892,8 +892,8 @@ class Remote(LazyMixin, IterableObj):
             try:
                 output.append(FetchInfo._from_line(self.repo, err_line, fetch_line))
             except ValueError as exc:
-                log.debug("Caught error while parsing line: %s", exc)
-                log.warning("Git informed while fetching: %s", err_line.strip())
+                _logger.debug("Caught error while parsing line: %s", exc)
+                _logger.warning("Git informed while fetching: %s", err_line.strip())
         return output
 
     def _get_push_info(
@@ -935,7 +935,7 @@ class Remote(LazyMixin, IterableObj):
             if not output:
                 raise
             elif stderr_text:
-                log.warning("Error lines received while fetching: %s", stderr_text)
+                _logger.warning("Error lines received while fetching: %s", stderr_text)
                 output.error = e
 
         return output

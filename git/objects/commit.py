@@ -52,8 +52,8 @@ if TYPE_CHECKING:
 
 # ------------------------------------------------------------------------
 
-log = logging.getLogger(__name__)
-log.addHandler(logging.NullHandler())
+_logger = logging.getLogger(__name__)
+_logger.addHandler(logging.NullHandler())
 
 __all__ = ("Commit",)
 
@@ -767,7 +767,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
                 self.author_tz_offset,
             ) = parse_actor_and_date(author_line.decode(self.encoding, "replace"))
         except UnicodeDecodeError:
-            log.error(
+            _logger.error(
                 "Failed to decode author line '%s' using encoding %s",
                 author_line,
                 self.encoding,
@@ -781,7 +781,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
                 self.committer_tz_offset,
             ) = parse_actor_and_date(committer_line.decode(self.encoding, "replace"))
         except UnicodeDecodeError:
-            log.error(
+            _logger.error(
                 "Failed to decode committer line '%s' using encoding %s",
                 committer_line,
                 self.encoding,
@@ -795,7 +795,7 @@ class Commit(base.Object, TraversableIterableObj, Diffable, Serializable):
         try:
             self.message = self.message.decode(self.encoding, "replace")
         except UnicodeDecodeError:
-            log.error(
+            _logger.error(
                 "Failed to decode message '%s' using encoding %s",
                 self.message,
                 self.encoding,
