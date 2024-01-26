@@ -409,15 +409,15 @@ class Git(LazyMixin):
                 # expect GIT_PYTHON_REFRESH to either be unset or be one of the
                 # following values:
                 #
-                #   0|q|quiet|s|silence|n|none
-                #   1|w|warn|warning
-                #   2|r|raise|e|error
+                #   0|q|quiet|s|silence|silent|n|none
+                #   1|w|warn|warning|l|log
+                #   2|r|raise|e|error|exception
 
                 mode = os.environ.get(cls._refresh_env_var, "raise").lower()
 
-                quiet = ["quiet", "q", "silence", "s", "none", "n", "0"]
-                warn = ["warn", "w", "warning", "1"]
-                error = ["error", "e", "raise", "r", "2"]
+                quiet = ["quiet", "q", "silence", "s", "silent", "none", "n", "0"]
+                warn = ["warn", "w", "warning", "log", "l", "1"]
+                error = ["error", "e", "exception", "raise", "r", "2"]
 
                 if mode in quiet:
                     pass
@@ -428,10 +428,10 @@ class Git(LazyMixin):
                         %s
                         All git commands will error until this is rectified.
 
-                        This initial warning can be silenced or aggravated in the future by setting the
+                        This initial message can be silenced or aggravated in the future by setting the
                         $%s environment variable. Use one of the following values:
-                            - %s: for no warning or exception
-                            - %s: for a printed warning
+                            - %s: for no message or exception
+                            - %s: for a warning message (logged at level CRITICAL, displayed by default)
                             - %s: for a raised exception
 
                         Example:
@@ -450,7 +450,7 @@ class Git(LazyMixin):
                     )
 
                     if mode in warn:
-                        print("WARNING: %s" % err)
+                        _logger.critical("WARNING: %s", err)
                     else:
                         raise ImportError(err)
                 else:
@@ -460,8 +460,8 @@ class Git(LazyMixin):
                         %s environment variable has been set but it has been set with an invalid value.
 
                         Use only the following values:
-                            - %s: for no warning or exception
-                            - %s: for a printed warning
+                            - %s: for no message or exception
+                            - %s: for a warning message (logged at level CRITICAL, displayed by default)
                             - %s: for a raised exception
                         """
                         )
