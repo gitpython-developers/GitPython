@@ -81,8 +81,7 @@ execute_kwargs = {
     "strip_newline_in_stdout",
 }
 
-log = logging.getLogger(__name__)
-log.addHandler(logging.NullHandler())
+_logger = logging.getLogger(__name__)
 
 __all__ = ("Git",)
 
@@ -146,7 +145,7 @@ def handle_process_output(
                         handler(line)
 
         except Exception as ex:
-            log.error(f"Pumping {name!r} of cmd({remove_password_if_present(cmdline)}) failed due to: {ex!r}")
+            _logger.error(f"Pumping {name!r} of cmd({remove_password_if_present(cmdline)}) failed due to: {ex!r}")
             if "I/O operation on closed file" not in str(ex):
                 # Only reraise if the error was not due to the stream closing
                 raise CommandError([f"<{name}-pump>"] + remove_password_if_present(cmdline), ex) from ex
@@ -600,7 +599,7 @@ class Git(LazyMixin):
                     self.status = self._status_code_if_terminate or proc.poll()
                     return
             except OSError as ex:
-                log.info("Ignored error after process had died: %r", ex)
+                _logger.info("Ignored error after process had died: %r", ex)
 
             # It can be that nothing really exists anymore...
             if os is None or getattr(os, "kill", None) is None:
@@ -613,7 +612,7 @@ class Git(LazyMixin):
 
                 self.status = self._status_code_if_terminate or status
             except OSError as ex:
-                log.info("Ignored error after process had died: %r", ex)
+                _logger.info("Ignored error after process had died: %r", ex)
             # END exception handling
 
         def __del__(self) -> None:
@@ -654,7 +653,7 @@ class Git(LazyMixin):
 
             if status != 0:
                 errstr = read_all_from_possibly_closed_stream(p_stderr)
-                log.debug("AutoInterrupt wait stderr: %r" % (errstr,))
+                _logger.debug("AutoInterrupt wait stderr: %r" % (errstr,))
                 raise GitCommandError(remove_password_if_present(self.args), status, errstr)
             return status
 
@@ -1018,7 +1017,7 @@ class Git(LazyMixin):
         # Remove password for the command if present.
         redacted_command = remove_password_if_present(command)
         if self.GIT_PYTHON_TRACE and (self.GIT_PYTHON_TRACE != "full" or as_process):
-            log.info(" ".join(redacted_command))
+            _logger.info(" ".join(redacted_command))
 
         # Allow the user to have the command executed in their working dir.
         try:
@@ -1055,7 +1054,7 @@ class Git(LazyMixin):
         stdout_sink = PIPE if with_stdout else getattr(subprocess, "DEVNULL", None) or open(os.devnull, "wb")
         if shell is None:
             shell = self.USE_SHELL
-        log.debug(
+        _logger.debug(
             "Popen(%s, cwd=%s, stdin=%s, shell=%s, universal_newlines=%s)",
             redacted_command,
             cwd,
@@ -1167,7 +1166,7 @@ class Git(LazyMixin):
             # END as_text
 
             if stderr_value:
-                log.info(
+                _logger.info(
                     "%s -> %d; stdout: '%s'; stderr: '%s'",
                     cmdstr,
                     status,
@@ -1175,9 +1174,9 @@ class Git(LazyMixin):
                     safe_decode(stderr_value),
                 )
             elif stdout_value:
-                log.info("%s -> %d; stdout: '%s'", cmdstr, status, as_text(stdout_value))
+                _logger.info("%s -> %d; stdout: '%s'", cmdstr, status, as_text(stdout_value))
             else:
-                log.info("%s -> %d", cmdstr, status)
+                _logger.info("%s -> %d", cmdstr, status)
         # END handle debug printing
 
         if with_exceptions and status != 0:

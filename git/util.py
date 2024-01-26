@@ -104,7 +104,7 @@ __all__ = [
     "HIDE_WINDOWS_KNOWN_ERRORS",
 ]
 
-log = logging.getLogger(__name__)
+_logger = logging.getLogger(__name__)
 
 
 def _read_win_env_flag(name: str, default: bool) -> bool:
@@ -124,7 +124,7 @@ def _read_win_env_flag(name: str, default: bool) -> bool:
     except KeyError:
         return default
 
-    log.warning(
+    _logger.warning(
         "The %s environment variable is deprecated. Its effect has never been documented and changes without warning.",
         name,
     )
@@ -135,7 +135,7 @@ def _read_win_env_flag(name: str, default: bool) -> bool:
         return False
     if adjusted_value in {"1", "true", "yes"}:
         return True
-    log.warning("%s has unrecognized value %r, treating as %r.", name, value, default)
+    _logger.warning("%s has unrecognized value %r, treating as %r.", name, value, default)
     return default
 
 
@@ -466,7 +466,7 @@ def is_cygwin_git(git_executable: Union[None, PathLike]) -> bool:
             # retcode = process.poll()
             is_cygwin = "CYGWIN" in uname_out
         except Exception as ex:
-            log.debug("Failed checking if running in CYGWIN due to: %r", ex)
+            _logger.debug("Failed checking if running in CYGWIN due to: %r", ex)
         _is_cygwin_cache[git_executable] = is_cygwin
 
     return is_cygwin

@@ -60,10 +60,7 @@ else:
 
 __all__ = ("GitConfigParser", "SectionConstraint")
 
-
-log = logging.getLogger("git.config")
-log.addHandler(logging.NullHandler())
-
+_logger = logging.getLogger(__name__)
 
 CONFIG_LEVELS: ConfigLevels_Tup = ("system", "user", "global", "repository")
 """The configuration level of a configuration file."""
@@ -412,7 +409,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
         try:
             self.write()
         except IOError:
-            log.error("Exception during destruction of GitConfigParser", exc_info=True)
+            _logger.error("Exception during destruction of GitConfigParser", exc_info=True)
         except ReferenceError:
             # This happens in Python 3... and usually means that some state cannot be
             # written as the sections dict cannot be iterated. This usually happens when
@@ -712,7 +709,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
         # END assert multiple files
 
         if self._has_includes():
-            log.debug(
+            _logger.debug(
                 "Skipping write-back of configuration file as include files were merged in."
                 + "Set merge_includes=False to prevent this."
             )

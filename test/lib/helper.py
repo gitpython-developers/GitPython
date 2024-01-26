@@ -45,7 +45,7 @@ __all__ = (
     "GIT_DAEMON_PORT",
 )
 
-log = logging.getLogger(__name__)
+_logger = logging.getLogger(__name__)
 
 # { Routines
 
@@ -96,7 +96,7 @@ def with_rw_directory(func):
         try:
             return func(self, path, *args, **kwargs)
         except Exception:
-            log.info(
+            _logger.info(
                 "Test %s.%s failed, output is at %r\n",
                 type(self).__name__,
                 func.__name__,
@@ -147,7 +147,7 @@ def with_rw_repo(working_tree_ref, bare=False):
             try:
                 return func(self, rw_repo)
             except:  # noqa: E722 B001
-                log.info("Keeping repo after failure: %s", repo_dir)
+                _logger.info("Keeping repo after failure: %s", repo_dir)
                 repo_dir = None
                 raise
             finally:
@@ -212,7 +212,7 @@ def git_daemon_launched(base_path, ip, port):
           and setting the environment variable GIT_PYTHON_TEST_GIT_DAEMON_PORT to <port>
         """
         )
-        log.warning(msg, ex, ip, port, base_path, base_path, exc_info=1)
+        _logger.warning(msg, ex, ip, port, base_path, base_path, exc_info=1)
 
         yield  # OK, assume daemon started manually.
 
@@ -221,11 +221,11 @@ def git_daemon_launched(base_path, ip, port):
     finally:
         if gd:
             try:
-                log.debug("Killing git-daemon...")
+                _logger.debug("Killing git-daemon...")
                 gd.proc.kill()
             except Exception as ex:
                 # Either it has died (and we're here), or it won't die, again here...
-                log.debug("Hidden error while Killing git-daemon: %s", ex, exc_info=1)
+                _logger.debug("Hidden error while Killing git-daemon: %s", ex, exc_info=1)
 
 
 def with_rw_and_rw_remote_repo(working_tree_ref):
@@ -307,7 +307,7 @@ def with_rw_and_rw_remote_repo(working_tree_ref):
                         try:
                             return func(self, rw_repo, rw_daemon_repo)
                         except:  # noqa: E722 B001
-                            log.info(
+                            _logger.info(
                                 "Keeping repos after failure: \n  rw_repo_dir: %s \n  rw_daemon_repo_dir: %s",
                                 rw_repo_dir,
                                 rw_daemon_repo_dir,

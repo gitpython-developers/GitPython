@@ -22,8 +22,7 @@ if TYPE_CHECKING:
 
 __all__ = ["RootModule", "RootUpdateProgress"]
 
-log = logging.getLogger("git.objects.submodule.root")
-log.addHandler(logging.NullHandler())
+_logger = logging.getLogger(__name__)
 
 
 class RootUpdateProgress(UpdateProgress):
@@ -321,7 +320,7 @@ class RootModule(Submodule):
                                     # this way, it will be checked out in the next step.
                                     # This will change the submodule relative to us, so
                                     # the user will be able to commit the change easily.
-                                    log.warning(
+                                    _logger.warning(
                                         "Current sha %s was not contained in the tracking\
              branch at the new remote, setting it the the remote's tracking branch",
                                         sm.hexsha,
@@ -393,7 +392,7 @@ class RootModule(Submodule):
         except Exception as err:
             if not keep_going:
                 raise
-            log.error(str(err))
+            _logger.error(str(err))
         # END handle keep_going
 
         # FINALLY UPDATE ALL ACTUAL SUBMODULES

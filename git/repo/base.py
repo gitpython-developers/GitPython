@@ -89,7 +89,7 @@ if TYPE_CHECKING:
 
 # -----------------------------------------------------------
 
-log = logging.getLogger(__name__)
+_logger = logging.getLogger(__name__)
 
 __all__ = ("Repo",)
 
@@ -772,7 +772,7 @@ class Repo:
                 if object_info.type == object_type.encode():
                     return True
                 else:
-                    log.debug(
+                    _logger.debug(
                         "Commit hash points to an object of type '%s'. Requested were objects of type '%s'",
                         object_info.type.decode(),
                         object_type,
@@ -781,7 +781,7 @@ class Repo:
             else:
                 return True
         except BadObject:
-            log.debug("Commit hash is invalid.")
+            _logger.debug("Commit hash is invalid.")
             return False
 
     def _get_daemon_export(self) -> bool:
@@ -1298,7 +1298,7 @@ class Repo:
             cmdline = getattr(proc, "args", "")
             cmdline = remove_password_if_present(cmdline)
 
-            log.debug("Cmd(%s)'s unused stdout: %s", cmdline, stdout)
+            _logger.debug("Cmd(%s)'s unused stdout: %s", cmdline, stdout)
             finalize_process(proc, stderr=stderr)
 
         # Our git command could have a different working dir than our actual
