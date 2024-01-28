@@ -30,7 +30,7 @@ jobs:
     - name: Install Cygwin
       uses: cygwin/cygwin-install-action@v4
       with:
-        packages: python39 python39-pip python39-virtualenv git
+        packages: python38 python38-pip python38-virtualenv git
         add-to-path: false  # No need to change $PATH outside the Cygwin environment.
 
     - name: Arrange for verbose output
@@ -55,28 +55,23 @@ jobs:
         # and cause subsequent tests to fail
         cat test/fixtures/.gitconfig >> ~/.gitconfig
 
-    - name: Ensure the "pip" command is available
-      run: |
-        # This is used unless, and before, an updated pip is installed.
-        ln -s pip3 /usr/bin/pip
-
     - name: Update PyPA packages
       run: |
-        # Get the latest pip, wheel, and prior to Python 3.12, setuptools.
-        python -m pip install -U pip $(pip freeze --all | grep -ow ^setuptools) wheel
+        # Get the latest pip, setuptools, and wheel.
+        python3.8 -m pip install -U pip setuptools wheel
 
     - name: Install project and test dependencies
       run: |
-        pip install ".[test]"
+        python3.8 -m pip install ".[test]"
 
     - name: Show version and platform information
       run: |
         uname -a
-        command -v git python
+        command -v git python3.8
         git version
-        python --version
-        python -c 'import os, sys; print(f"sys.platform={sys.platform!r}, os.name={os.name!r}")'
+        python3.8 --version
+        python3.8 -c 'import os, sys; print(f"sys.platform={sys.platform!r}, os.name={os.name!r}")'
 
     - name: Test with pytest
       run: |
-        pytest --color=yes -p no:sugar --instafail -vv
+        python3.8 -m pytest --color=yes -p no:sugar --instafail -vv
