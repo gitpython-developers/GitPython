@@ -15,7 +15,7 @@ jobs:
 
     defaults:
       run:
-        shell: C:\cygwin\bin\bash.exe --login --norc -eo pipefail -o igncr "{0}"
+        shell: C:\tools\cygwin\bin\bash.exe --login --norc -eo pipefail -o igncr "{0}"
 
     steps:
     - name: Force LF line endings
@@ -27,11 +27,10 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: Install Cygwin
-      uses: cygwin/cygwin-install-action@v4
+    - name: Set up Cygwin
+      uses: egor-tensin/setup-cygwin@v4
       with:
-        packages: python39 python39-pip python39-virtualenv git
-        add-to-path: false  # No need to change $PATH outside the Cygwin environment.
+        packages: python39=3.9.16-1 python39-pip python39-virtualenv git
 
     - name: Arrange for verbose output
       run: |
