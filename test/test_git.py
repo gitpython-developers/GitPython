@@ -6,7 +6,6 @@
 import contextlib
 import gc
 import inspect
-import io
 import logging
 import os
 import os.path as osp
@@ -333,7 +332,7 @@ class TestGit(TestBase):
     def test_git_exc_name_is_git(self):
         self.assertEqual(self.git.git_exec_name, "git")
 
-    @ddt.data(("0",), ("q",), ("quiet",), ("s",), ("silence",), ("n",), ("none",))
+    @ddt.data(("0",), ("q",), ("quiet",), ("s",), ("silence",), ("silent",), ("n",), ("none",))
     def test_initial_refresh_from_bad_git_path_env_quiet(self, case):
         """In "q" mode, bad initial path sets "git" and is quiet."""
         (mode,) = case
@@ -348,9 +347,9 @@ class TestGit(TestBase):
                 refresh()
                 self.assertEqual(self.git.GIT_PYTHON_GIT_EXECUTABLE, "git")
 
-    @ddt.data(("1",), ("w",), ("warn",), ("warning",))
+    @ddt.data(("1",), ("w",), ("warn",), ("warning",), ("l",), ("log",))
     def test_initial_refresh_from_bad_git_path_env_warn(self, case):
-        """In "w" mode, bad initial path sets "git" and warns."""
+        """In "w" mode, bad initial path sets "git" and warns, by logging."""
         (mode,) = case
         env_vars = {
             "GIT_PYTHON_GIT_EXECUTABLE": str(Path("yada").absolute()),  # Any bad path.
@@ -360,9 +359,11 @@ class TestGit(TestBase):
             type(self.git).GIT_PYTHON_GIT_EXECUTABLE = None  # Simulate startup.
 
             with mock.patch.dict(os.environ, env_vars):
-                with contextlib.redirect_stdout(io.StringIO()) as out:
+                with self.assertLogs(cmd.__name__, logging.CRITICAL) as ctx:
                     refresh()
-                self.assertRegex(out.getvalue(), r"\AWARNING: Bad git executable.\n")
+                self.assertEqual(len(ctx.records), 1)
+                message = ctx.records[0].getMessage()
+                self.assertRegex(message, r"\AWARNING: Bad git executable.\n")
                 self.assertEqual(self.git.GIT_PYTHON_GIT_EXECUTABLE, "git")
 
     @ddt.data(("2",), ("r",), ("raise",), ("e",), ("error",))
