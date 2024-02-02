@@ -6,6 +6,7 @@
 import contextlib
 import gc
 import inspect
+import io
 import logging
 import os
 import os.path as osp
@@ -329,6 +330,80 @@ class TestGit(TestBase):
         ):
             self.assertRaises(GitCommandNotFound, self.git.version)
 
+    def test_git_exc_name_is_git(self):
+        self.assertEqual(self.git.git_exec_name, "git")
+
+    @ddt.data(("0",), ("q",), ("quiet",), ("s",), ("silence",), ("n",), ("none",))
+    def test_initial_refresh_from_bad_git_path_env_quiet(self, case):
+        """In "q" mode, bad initial path sets "git" and is quiet."""
+        (mode,) = case
+        set_vars = {
+            "GIT_PYTHON_GIT_EXECUTABLE": str(Path("yada").absolute()),  # Any bad path.
+            "GIT_PYTHON_REFRESH": mode,
+        }
+        with _rollback_refresh():
+            type(self.git).GIT_PYTHON_GIT_EXECUTABLE = None  # Simulate startup.
+
+            with mock.patch.dict(os.environ, set_vars):
+                refresh()
+                self.assertEqual(self.git.GIT_PYTHON_GIT_EXECUTABLE, "git")
+
+    @ddt.data(("1",), ("w",), ("warn",), ("warning",))
+    def test_initial_refresh_from_bad_git_path_env_warn(self, case):
+        """In "w" mode, bad initial path sets "git" and warns."""
+        (mode,) = case
+        env_vars = {
+            "GIT_PYTHON_GIT_EXECUTABLE": str(Path("yada").absolute()),  # Any bad path.
+            "GIT_PYTHON_REFRESH": mode,
+        }
+        with _rollback_refresh():
+            type(self.git).GIT_PYTHON_GIT_EXECUTABLE = None  # Simulate startup.
+
+            with mock.patch.dict(os.environ, env_vars):
+                with contextlib.redirect_stdout(io.StringIO()) as out:
+                    refresh()
+                self.assertRegex(out.getvalue(), r"\AWARNING: Bad git executable.\n")
+                self.assertEqual(self.git.GIT_PYTHON_GIT_EXECUTABLE, "git")
+
+    @ddt.data(("2",), ("r",), ("raise",), ("e",), ("error",))
+    def test_initial_refresh_from_bad_git_path_env_error(self, case):
+        """In "e" mode, bad initial path raises an exception."""
+        (mode,) = case
+        env_vars = {
+            "GIT_PYTHON_GIT_EXECUTABLE": str(Path("yada").absolute()),  # Any bad path.
+            "GIT_PYTHON_REFRESH": mode,
+        }
+        with _rollback_refresh():
+            type(self.git).GIT_PYTHON_GIT_EXECUTABLE = None  # Simulate startup.
+
+            with mock.patch.dict(os.environ, env_vars):
+                with self.assertRaisesRegex(ImportError, r"\ABad git executable.\n"):
+                    refresh()
+
+    def test_initial_refresh_from_good_absolute_git_path_env(self):
+        """Good initial absolute path from environment is set."""
+        absolute_path = shutil.which("git")
+
+        with _rollback_refresh():
+            type(self.git).GIT_PYTHON_GIT_EXECUTABLE = None  # Simulate startup.
+
+            with mock.patch.dict(os.environ, {"GIT_PYTHON_GIT_EXECUTABLE": absolute_path}):
+                refresh()
+                self.assertEqual(self.git.GIT_PYTHON_GIT_EXECUTABLE, absolute_path)
+
+    def test_initial_refresh_from_good_relative_git_path_env(self):
+        """Good initial relative path from environment is kept relative and set."""
+        with _rollback_refresh():
+            # Set the fallback to a string that wouldn't work and isn't "git", so we are
+            # more likely to detect if "git" is not set from the environment variable.
+            with mock.patch.object(type(self.git), "git_exec_name", ""):
+                type(self.git).GIT_PYTHON_GIT_EXECUTABLE = None  # Simulate startup.
+
+                # Now observe if setting the environment variable to "git" takes effect.
+                with mock.patch.dict(os.environ, {"GIT_PYTHON_GIT_EXECUTABLE": "git"}):
+                    refresh()
+                    self.assertEqual(self.git.GIT_PYTHON_GIT_EXECUTABLE, "git")
+
     def test_refresh_from_bad_absolute_git_path_env(self):
         """Bad absolute path from environment is reported and not set."""
         absolute_path = str(Path("yada").absolute())
@@ -365,7 +440,7 @@ class TestGit(TestBase):
     def test_refresh_from_good_relative_git_path_env(self):
         """Good relative path from environment is kept relative and set."""
         with _rollback_refresh():
-            # Set a string that wouldn't work and isn't "git".
+            # Set as the executable name a string that wouldn't work and isn't "git".
             type(self.git).GIT_PYTHON_GIT_EXECUTABLE = ""
 
             # Now observe if setting the environment variable to "git" takes effect.
