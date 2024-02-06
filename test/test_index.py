@@ -174,7 +174,7 @@ class WinBashStatus:
         except UnicodeDecodeError:
             pass
         except LookupError as error:
-            _logger.warning("%s", str(error))  # Message already says "Unknown encoding:".
+            _logger.warning(str(error))  # Message already says "Unknown encoding:".
 
         # Assume UTF-8. If invalid, substitute Unicode replacement characters.
         return stdout.decode("utf-8", errors="replace")

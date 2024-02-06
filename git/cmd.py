@@ -450,7 +450,7 @@ class Git(LazyMixin):
                     )
 
                     if mode in warn:
-                        _logger.critical("WARNING: %s", err)
+                        _logger.critical(err)
                     else:
                         raise ImportError(err)
                 else:
