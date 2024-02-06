@@ -321,16 +321,16 @@ class TestGit(TestBase):
             self.assertIsInstance(n, int)
         # END verify number types
 
-    def test_cmd_override(self):
-        with mock.patch.object(
-            type(self.git),
-            "GIT_PYTHON_GIT_EXECUTABLE",
-            osp.join("some", "path", "which", "doesn't", "exist", "gitbinary"),
-        ):
-            self.assertRaises(GitCommandNotFound, self.git.version)
-
     def test_git_exc_name_is_git(self):
         self.assertEqual(self.git.git_exec_name, "git")
+
+    def test_cmd_override(self):
+        """Directly set bad GIT_PYTHON_GIT_EXECUTABLE causes git operations to raise."""
+        bad_path = osp.join("some", "path", "which", "doesn't", "exist", "gitbinary")
+        with mock.patch.object(type(self.git), "GIT_PYTHON_GIT_EXECUTABLE", bad_path):
+            with self.assertRaises(GitCommandNotFound) as ctx:
+                self.git.version()
+            self.assertEqual(ctx.exception.command, [bad_path, "version"])
 
     @ddt.data(("0",), ("q",), ("quiet",), ("s",), ("silence",), ("silent",), ("n",), ("none",))
     def test_initial_refresh_from_bad_git_path_env_quiet(self, case):
