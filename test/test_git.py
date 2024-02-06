@@ -363,7 +363,7 @@ class TestGit(TestBase):
                     refresh()
                 self.assertEqual(len(ctx.records), 1)
                 message = ctx.records[0].getMessage()
-                self.assertRegex(message, r"\AWARNING: Bad git executable.\n")
+                self.assertRegex(message, r"\ABad git executable.\n")
                 self.assertEqual(self.git.GIT_PYTHON_GIT_EXECUTABLE, "git")
 
     @ddt.data(("2",), ("r",), ("raise",), ("e",), ("error",))
