@@ -327,7 +327,7 @@ class TestGit(TestBase):
     def test_cmd_override(self):
         """Directly set bad GIT_PYTHON_GIT_EXECUTABLE causes git operations to raise."""
         bad_path = osp.join("some", "path", "which", "doesn't", "exist", "gitbinary")
-        with mock.patch.object(type(self.git), "GIT_PYTHON_GIT_EXECUTABLE", bad_path):
+        with mock.patch.object(Git, "GIT_PYTHON_GIT_EXECUTABLE", bad_path):
             with self.assertRaises(GitCommandNotFound) as ctx:
                 self.git.version()
             self.assertEqual(ctx.exception.command, [bad_path, "version"])
@@ -341,7 +341,7 @@ class TestGit(TestBase):
             "GIT_PYTHON_REFRESH": mode,
         }
         with _rollback_refresh():
-            type(self.git).GIT_PYTHON_GIT_EXECUTABLE = None  # Simulate startup.
+            Git.GIT_PYTHON_GIT_EXECUTABLE = None  # Simulate startup.
 
             with mock.patch.dict(os.environ, set_vars):
                 refresh()
@@ -356,7 +356,7 @@ class TestGit(TestBase):
             "GIT_PYTHON_REFRESH": mode,
         }
         with _rollback_refresh():
-            type(self.git).GIT_PYTHON_GIT_EXECUTABLE = None  # Simulate startup.
+            Git.GIT_PYTHON_GIT_EXECUTABLE = None  # Simulate startup.
 
             with mock.patch.dict(os.environ, env_vars):
                 with self.assertLogs(cmd.__name__, logging.CRITICAL) as ctx:
@@ -375,7 +375,7 @@ class TestGit(TestBase):
             "GIT_PYTHON_REFRESH": mode,
         }
         with _rollback_refresh():
-            type(self.git).GIT_PYTHON_GIT_EXECUTABLE = None  # Simulate startup.
+            Git.GIT_PYTHON_GIT_EXECUTABLE = None  # Simulate startup.
 
             with mock.patch.dict(os.environ, env_vars):
                 with self.assertRaisesRegex(ImportError, r"\ABad git executable.\n"):
@@ -386,7 +386,7 @@ class TestGit(TestBase):
         absolute_path = shutil.which("git")
 
         with _rollback_refresh():
-            type(self.git).GIT_PYTHON_GIT_EXECUTABLE = None  # Simulate startup.
+            Git.GIT_PYTHON_GIT_EXECUTABLE = None  # Simulate startup.
 
             with mock.patch.dict(os.environ, {"GIT_PYTHON_GIT_EXECUTABLE": absolute_path}):
                 refresh()
@@ -397,8 +397,8 @@ class TestGit(TestBase):
         with _rollback_refresh():
             # Set the fallback to a string that wouldn't work and isn't "git", so we are
             # more likely to detect if "git" is not set from the environment variable.
-            with mock.patch.object(type(self.git), "git_exec_name", ""):
-                type(self.git).GIT_PYTHON_GIT_EXECUTABLE = None  # Simulate startup.
+            with mock.patch.object(Git, "git_exec_name", ""):
+                Git.GIT_PYTHON_GIT_EXECUTABLE = None  # Simulate startup.
 
                 # Now observe if setting the environment variable to "git" takes effect.
                 with mock.patch.dict(os.environ, {"GIT_PYTHON_GIT_EXECUTABLE": "git"}):
@@ -442,7 +442,7 @@ class TestGit(TestBase):
         """Good relative path from environment is kept relative and set."""
         with _rollback_refresh():
             # Set as the executable name a string that wouldn't work and isn't "git".
-            type(self.git).GIT_PYTHON_GIT_EXECUTABLE = ""
+            Git.GIT_PYTHON_GIT_EXECUTABLE = ""
 
             # Now observe if setting the environment variable to "git" takes effect.
             with mock.patch.dict(os.environ, {"GIT_PYTHON_GIT_EXECUTABLE": "git"}):
