@@ -15,6 +15,13 @@ jobs:
       matrix:
         os: ["ubuntu-latest", "macos-13", "macos-14", "windows-latest"]
         python-version: ["3.7", "3.8", "3.9", "3.10", "3.11", "3.12"]
+        exclude:
+        - os: "macos-14"
+          python-version: "3.7"
+        - os: "macos-14"
+          python-version: "3.8"
+        - os: "macos-14"
+          python-version: "3.9"
         include:
         - experimental: false
 
