@@ -22,6 +22,10 @@ jobs:
       with:
         fetch-depth: 0
 
+    - name: Special configuration for Alpine Linux git
+      run: |
+        git config --global --add safe.directory "$(pwd)"
+
     - name: Prepare this repo for tests
       run: |
         ./init-tests-after-clone.sh
