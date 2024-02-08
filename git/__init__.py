@@ -120,12 +120,20 @@ GIT_OK = None
 
 
 def refresh(path: Optional[PathLike] = None) -> None:
-    """Convenience method for setting the git executable path."""
+    """
+    Convenience method for setting the git and bash executable paths.
+
+    Note that the default behavior of invoking commit hooks on Windows has
+    changed to not prefer WSL bash with the introduction of
+    `Git.GIT_PYTHON_BASH_EXECUTABLE`.  See the `refresh_bash()` documentation
+    for details on the default values and search paths.
+    """
     global GIT_OK
     GIT_OK = False
 
     if not Git.refresh(path=path):
         return
+    Git.refresh_bash()
     if not FetchInfo.refresh():  # noqa: F405
         return  # type: ignore [unreachable]
 

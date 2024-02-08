@@ -18,7 +18,7 @@ from stat import (
 )
 import subprocess
 
-from git.cmd import handle_process_output, safer_popen
+from git.cmd import handle_process_output, Git, safer_popen
 from git.compat import defenc, force_bytes, force_text, safe_decode
 from git.exc import HookExecutionError, UnmergedEntriesError
 from git.objects.fun import (
@@ -96,7 +96,7 @@ def run_commit_hook(name: str, index: "IndexFile", *args: str) -> None:
             # Windows only uses extensions to determine how to open files
             # (doesn't understand shebangs). Try using bash to run the hook.
             relative_hp = Path(hp).relative_to(index.repo.working_dir).as_posix()
-            cmd = ["bash.exe", relative_hp]
+            cmd = [Git.GIT_PYTHON_BASH_EXECUTABLE, relative_hp]
 
         process = safer_popen(
             cmd + list(args),

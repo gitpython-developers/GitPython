@@ -1019,16 +1019,16 @@ class TestIndex(TestBase):
         rel = index._to_relative_path(path)
         self.assertEqual(rel, os.path.relpath(path, root))
 
-    @pytest.mark.xfail(
-        type(_win_bash_status) is WinBashStatus.Absent,
-        reason="Can't run a hook on Windows without bash.exe.",
-        rasies=HookExecutionError,
-    )
-    @pytest.mark.xfail(
-        type(_win_bash_status) is WinBashStatus.WslNoDistro,
-        reason="Currently uses the bash.exe of WSL, even with no WSL distro installed",
-        raises=HookExecutionError,
-    )
+    # @pytest.mark.xfail(
+    #     type(_win_bash_status) is WinBashStatus.Absent,
+    #     reason="Can't run a hook on Windows without bash.exe.",
+    #     rasies=HookExecutionError,
+    # )
+    # @pytest.mark.xfail(
+    #     type(_win_bash_status) is WinBashStatus.WslNoDistro,
+    #     reason="Currently uses the bash.exe of WSL, even with no WSL distro installed",
+    #     raises=HookExecutionError,
+    # )
     @with_rw_repo("HEAD", bare=True)
     def test_run_commit_hook(self, rw_repo):
         index = rw_repo.index
@@ -1064,41 +1064,41 @@ class TestIndex(TestBase):
         shutil.copy(fixture_path("polyglot"), hook_path("polyglot", repo.git_dir))
         payload = Path(rw_dir, "payload.txt")
 
-        if type(_win_bash_status) in {WinBashStatus.Absent, WinBashStatus.WslNoDistro}:
-            # The real shell can't run, but the impostor should still not be used.
-            with self.assertRaises(HookExecutionError):
-                with maybe_chdir:
-                    run_commit_hook("polyglot", repo.index)
-            self.assertFalse(payload.exists())
-        else:
-            # The real shell should run, and not the impostor.
-            with maybe_chdir:
-                run_commit_hook("polyglot", repo.index)
-            self.assertFalse(payload.exists())
-            output = Path(rw_dir, "output.txt").read_text(encoding="utf-8")
-            self.assertEqual(output, "Ran intended hook.\n")
+        # if type(_win_bash_status) in {WinBashStatus.Absent, WinBashStatus.WslNoDistro}:
+        #     # The real shell can't run, but the impostor should still not be used.
+        #     with self.assertRaises(HookExecutionError):
+        #         with maybe_chdir:
+        #             run_commit_hook("polyglot", repo.index)
+        #     self.assertFalse(payload.exists())
+        # else:
+        # The real shell should run, and not the impostor.
+        with maybe_chdir:
+            run_commit_hook("polyglot", repo.index)
+        self.assertFalse(payload.exists())
+        output = Path(rw_dir, "output.txt").read_text(encoding="utf-8")
+        self.assertEqual(output, "Ran intended hook.\n")
 
-    @pytest.mark.xfail(
-        type(_win_bash_status) is WinBashStatus.Absent,
-        reason="Can't run a hook on Windows without bash.exe.",
-        rasies=HookExecutionError,
-    )
-    @pytest.mark.xfail(
-        type(_win_bash_status) is WinBashStatus.WslNoDistro,
-        reason="Currently uses the bash.exe of WSL, even with no WSL distro installed",
-        raises=HookExecutionError,
-    )
+    # @pytest.mark.xfail(
+    #     type(_win_bash_status) is WinBashStatus.Absent,
+    #     reason="Can't run a hook on Windows without bash.exe.",
+    #     rasies=HookExecutionError,
+    # )
+    # @pytest.mark.xfail(
+    #     type(_win_bash_status) is WinBashStatus.WslNoDistro,
+    #     reason="Currently uses the bash.exe of WSL, even with no WSL distro installed",
+    #     raises=HookExecutionError,
+    # )
     @with_rw_repo("HEAD", bare=True)
     def test_pre_commit_hook_success(self, rw_repo):
         index = rw_repo.index
         _make_hook(index.repo.git_dir, "pre-commit", "exit 0")
         index.commit("This should not fail")
 
-    @pytest.mark.xfail(
-        type(_win_bash_status) is WinBashStatus.WslNoDistro,
-        reason="Currently uses the bash.exe of WSL, even with no WSL distro installed",
-        raises=AssertionError,
-    )
+    # @pytest.mark.xfail(
+    #     type(_win_bash_status) is WinBashStatus.WslNoDistro,
+    #     reason="Currently uses the bash.exe of WSL, even with no WSL distro installed",
+    #     raises=AssertionError,
+    # )
     @with_rw_repo("HEAD", bare=True)
     def test_pre_commit_hook_fail(self, rw_repo):
         index = rw_repo.index
@@ -1121,21 +1121,21 @@ class TestIndex(TestBase):
         else:
             raise AssertionError("Should have caught a HookExecutionError")
 
-    @pytest.mark.xfail(
-        type(_win_bash_status) is WinBashStatus.Absent,
-        reason="Can't run a hook on Windows without bash.exe.",
-        rasies=HookExecutionError,
-    )
-    @pytest.mark.xfail(
-        type(_win_bash_status) is WinBashStatus.Wsl,
-        reason="Specifically seems to fail on WSL bash (in spite of #1399)",
-        raises=AssertionError,
-    )
-    @pytest.mark.xfail(
-        type(_win_bash_status) is WinBashStatus.WslNoDistro,
-        reason="Currently uses the bash.exe of WSL, even with no WSL distro installed",
-        raises=HookExecutionError,
-    )
+    # @pytest.mark.xfail(
+    #     type(_win_bash_status) is WinBashStatus.Absent,
+    #     reason="Can't run a hook on Windows without bash.exe.",
+    #     rasies=HookExecutionError,
+    # )
+    # @pytest.mark.xfail(
+    #     type(_win_bash_status) is WinBashStatus.Wsl,
+    #     reason="Specifically seems to fail on WSL bash (in spite of #1399)",
+    #     raises=AssertionError,
+    # )
+    # @pytest.mark.xfail(
+    #     type(_win_bash_status) is WinBashStatus.WslNoDistro,
+    #     reason="Currently uses the bash.exe of WSL, even with no WSL distro installed",
+    #     raises=HookExecutionError,
+    # )
     @with_rw_repo("HEAD", bare=True)
     def test_commit_msg_hook_success(self, rw_repo):
         commit_message = "commit default head by Frèderic Çaufl€"
@@ -1149,11 +1149,11 @@ class TestIndex(TestBase):
         new_commit = index.commit(commit_message)
         self.assertEqual(new_commit.message, "{} {}".format(commit_message, from_hook_message))
 
-    @pytest.mark.xfail(
-        type(_win_bash_status) is WinBashStatus.WslNoDistro,
-        reason="Currently uses the bash.exe of WSL, even with no WSL distro installed",
-        raises=AssertionError,
-    )
+    # @pytest.mark.xfail(
+    #     type(_win_bash_status) is WinBashStatus.WslNoDistro,
+    #     reason="Currently uses the bash.exe of WSL, even with no WSL distro installed",
+    #     raises=AssertionError,
+    # )
     @with_rw_repo("HEAD", bare=True)
     def test_commit_msg_hook_fail(self, rw_repo):
         index = rw_repo.index
