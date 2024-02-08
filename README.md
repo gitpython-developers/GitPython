@@ -17,6 +17,8 @@ probably the skills to scratch that itch of mine: implement `git` in a way that 
 If you like the idea and want to learn more, please head over to [gitoxide](https://github.com/Byron/gitoxide), an
 implementation of 'git' in [Rust](https://www.rust-lang.org).
 
+*(Please note that `gitoxide` is not currently available for use in Python, and that Rust is required)*
+
 ## GitPython
 
 GitPython is a python library used to interact with git repositories, high-level like git-porcelain,
