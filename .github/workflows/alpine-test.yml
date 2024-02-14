@@ -56,17 +56,24 @@ jobs:
         # and cause subsequent tests to fail
         cat test/fixtures/.gitconfig >> ~/.gitconfig
 
+    - name: Create Python virtual environment
+      run: |
+        python -m venv .venv
+
     - name: Update PyPA packages
       run: |
         # Get the latest pip, wheel, and prior to Python 3.12, setuptools.
+        . .venv/bin/activate
         python -m pip install -U pip $(pip freeze --all | grep -ow ^setuptools) wheel
 
     - name: Install project and test dependencies
       run: |
+        . .venv/bin/activate
         pip install ".[test]"
 
     - name: Show version and platform information
       run: |
+        . .venv/bin/activate
         uname -a
         command -v git python
         git version
@@ -75,4 +82,5 @@ jobs:
 
     - name: Test with pytest
       run: |
+        . .venv/bin/activate
         pytest --color=yes -p no:sugar --instafail -vv
