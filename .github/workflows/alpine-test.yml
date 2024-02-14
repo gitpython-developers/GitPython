@@ -11,20 +11,21 @@ jobs:
 
     defaults:
       run:
-        shell: sh -exo pipefail {0}
+        shell: sudo -u runner sh -exo pipefail {0}
 
     steps:
-    - name: Install Alpine Linux packages
+    - name: Prepare Alpine Linux
       run: |
-        apk add git git-daemon python3 py3-pip
+        apk add sudo git git-daemon python3 py3-pip
+        echo 'Defaults env_keep += "CI GITHUB_* RUNNER_*"' >/etc/sudoers.d/ci_env
+        addgroup -g 127 docker
+        adduser -D -u 1001 runner
+        adduser runner docker
+      shell: sh -exo pipefail {0}  # Run this as root, not the "runner" user.
 
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0
-
-    - name: Special configuration for Alpine Linux git
-      run: |
-        git config --global --add safe.directory "$(pwd)"
 
     - name: Prepare this repo for tests
       run: |
@@ -38,24 +39,17 @@ jobs:
         # and cause subsequent tests to fail
         cat test/fixtures/.gitconfig >> ~/.gitconfig
 
-    - name: Create Python virtual environment
-      run: |
-        python -m venv .venv
-
     - name: Update PyPA packages
       run: |
         # Get the latest pip, wheel, and prior to Python 3.12, setuptools.
-        . .venv/bin/activate
         python -m pip install -U pip $(pip freeze --all | grep -ow ^setuptools) wheel
 
     - name: Install project and test dependencies
       run: |
-        . .venv/bin/activate
         pip install ".[test]"
 
     - name: Show version and platform information
       run: |
-        . .venv/bin/activate
         uname -a
         command -v git python
         git version
@@ -64,5 +58,4 @@ jobs:
 
     - name: Test with pytest
       run: |
-        . .venv/bin/activate
         pytest --color=yes -p no:sugar --instafail -vv

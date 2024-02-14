@@ -51,7 +51,9 @@ def permission_error_tmpdir(tmp_path):
     # Set up PermissionError on Windows, where we can't delete read-only files.
     (td / "x").chmod(stat.S_IRUSR)
 
-    # Set up PermissionError on Unix, where we can't delete files in read-only directories.
+    # Set up PermissionError on Unix, where non-root users can't delete files in
+    # read-only directories. (Tests that rely on this and assert that rmtree raises
+    # PermissionError will fail if they are run as root.)
     td.chmod(stat.S_IRUSR | stat.S_IXUSR)
 
     yield td
