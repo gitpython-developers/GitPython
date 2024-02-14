@@ -27,6 +27,14 @@ jobs:
       with:
         fetch-depth: 0
 
+    - name: Debug ownership
+      run: |
+        printenv GITHUB_WORKSPACE
+        printenv RUNNER_WORKSPACE
+        whoami
+        id
+        ls -alR /__w
+
     - name: Special configuration for Alpine Linux git
       run: |
         git config --global --add safe.directory "$(pwd)"
