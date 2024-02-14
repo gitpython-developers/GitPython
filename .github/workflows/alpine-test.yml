@@ -32,18 +32,6 @@ jobs:
         chown -R runner:docker -- "$GITHUB_WORKSPACE"
       shell: sh -exo pipefail {0}  # Run this as root, not the "runner" user.
 
-    - name: Debug ownership
-      run: |
-        printenv GITHUB_WORKSPACE
-        printenv RUNNER_WORKSPACE
-        whoami
-        id
-        ls -alR /__w
-
-    - name: Special configuration for Alpine Linux git
-      run: |
-        git config --global --add safe.directory "$(pwd)"
-
     - name: Prepare this repo for tests
       run: |
         ./init-tests-after-clone.sh
