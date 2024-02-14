@@ -27,6 +27,11 @@ jobs:
       with:
         fetch-depth: 0
 
+    - name: Set workspace ownership
+      run: |
+        chown -R runner:docker -- "$GITHUB_WORKSPACE"
+      shell: sh -exo pipefail {0}  # Run this as root, not the "runner" user.
+
     - name: Debug ownership
       run: |
         printenv GITHUB_WORKSPACE
