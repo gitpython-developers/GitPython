@@ -4,13 +4,14 @@
 # 3-Clause BSD License: https://opensource.org/license/bsd-3-clause/
 
 from io import BytesIO
+import os.path as osp
+from pathlib import Path
+import subprocess
+import tempfile
 
 from git.objects import Tree, Blob
+from git.util import cwd
 from test.lib import TestBase
-
-import os
-import os.path as osp
-import subprocess
 
 
 class TestTree(TestBase):
@@ -42,28 +43,40 @@ class TestTree(TestBase):
             testtree._deserialize(stream)
         # END for each item in tree
 
-    def test_tree_modifier_ordering(self):
-        def setup_git_repository_and_get_ordered_files():
-            os.mkdir("tmp")
-            os.chdir("tmp")
-            subprocess.run(["git", "init", "-q"], check=True)
-            os.mkdir("file")
-            for filename in [
+    @staticmethod
+    def _get_git_ordered_files():
+        """Get files as git orders them, to compare in test_tree_modifier_ordering."""
+        with tempfile.TemporaryDirectory() as tdir:
+            # Create directory contents.
+            Path(tdir, "file").mkdir()
+            for filename in (
                 "bin",
                 "bin.d",
                 "file.to",
                 "file.toml",
                 "file.toml.bin",
                 "file0",
-                "file/a",
-            ]:
-                open(filename, "a").close()
+            ):
+                Path(tdir, filename).touch()
+            Path(tdir, "file", "a").touch()
 
-            subprocess.run(["git", "add", "."], check=True)
-            subprocess.run(["git", "commit", "-m", "c1"], check=True)
-            tree_hash = subprocess.check_output(["git", "rev-parse", "HEAD^{tree}"]).decode().strip()
-            cat_file_output = subprocess.check_output(["git", "cat-file", "-p", tree_hash]).decode()
+            with cwd(tdir):
+                # Prepare the repository.
+                subprocess.run(["git", "init", "-q"], check=True)
+                subprocess.run(["git", "add", "."], check=True)
+                subprocess.run(["git", "commit", "-m", "c1"], check=True)
+
+                # Get git output from which an ordered file list can be parsed.
+                rev_parse_command = ["git", "rev-parse", "HEAD^{tree}"]
+                tree_hash = subprocess.check_output(rev_parse_command).decode().strip()
+                cat_file_command = ["git", "cat-file", "-p", tree_hash]
+                cat_file_output = subprocess.check_output(cat_file_command).decode()
+
             return [line.split()[-1] for line in cat_file_output.split("\n") if line]
+
+    def test_tree_modifier_ordering(self):
+        """TreeModifier.set_done() sorts files in the same order git does."""
+        git_file_names_in_order = self._get_git_ordered_files()
 
         hexsha = "6c1faef799095f3990e9970bc2cb10aa0221cf9c"
         roottree = self.rorepo.tree(hexsha)
@@ -91,9 +104,6 @@ class TestTree(TestBase):
             a = [t[2] for t in mod._cache]
             here = file_names_in_order()
             return [e for e in a if e in here]
-
-        git_file_names_in_order = setup_git_repository_and_get_ordered_files()
-        os.chdir("..")
 
         mod.set_done()
         assert names_in_mod_cache() == git_file_names_in_order, "set_done() performs git-sorting"
