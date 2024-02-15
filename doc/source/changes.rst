@@ -2,6 +2,12 @@
 Changelog
 =========
 
+3.1.42
+======
+
+See the following for all changes.
+https://github.com/gitpython-developers/GitPython/releases/tag/3.1.42
+
 3.1.41
 ======
 
