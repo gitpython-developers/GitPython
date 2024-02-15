@@ -222,57 +222,6 @@ Please have a look at the [contributions file][contributing].
 6. Run `make release`.
 7. Go to [GitHub Releases](https://github.com/gitpython-developers/GitPython/releases) and publish a new one with the recently pushed tag. Generate the changelog.
 
-### How to verify a release (DEPRECATED)
-
-Note that what follows is deprecated and future releases won't be signed anymore.
-More details about how it came to that can be found [in this issue](https://github.com/gitpython-developers/gitdb/issues/77).
-
-----
-
-Please only use releases from `pypi` as you can verify the respective source
-tarballs.
-
-This script shows how to verify the tarball was indeed created by the authors of
-this project:
-
-```bash
-curl https://files.pythonhosted.org/packages/09/bc/ae32e07e89cc25b9e5c793d19a1e5454d30a8e37d95040991160f942519e/GitPython-3.1.8-py3-none-any.whl > gitpython.whl
-curl https://files.pythonhosted.org/packages/09/bc/ae32e07e89cc25b9e5c793d19a1e5454d30a8e37d95040991160f942519e/GitPython-3.1.8-py3-none-any.whl.asc >  gitpython-signature.asc
-gpg --verify gitpython-signature.asc gitpython.whl
-```
-
-which outputs
-
-```bash
-gpg: Signature made Fr  4 Sep 10:04:50 2020 CST
-gpg:                using RSA key 27C50E7F590947D7273A741E85194C08421980C9
-gpg: Good signature from "Sebastian Thiel (YubiKey USB-C) <byronimo@gmail.com>" [ultimate]
-gpg:                 aka "Sebastian Thiel (In Rust I trust) <sebastian.thiel@icloud.com>" [ultimate]
-```
-
-You can verify that the keyid indeed matches the release-signature key provided in this
-repository by looking at the keys details:
-
-```bash
-gpg --list-packets ./release-verification-key.asc
-```
-
-You can verify that the commit adding it was also signed by it using:
-
-```bash
-git show --show-signature  ./release-verification-key.asc
-```
-
-If you would like to trust it permanently, you can import and sign it:
-
-```bash
-gpg --import ./release-verification-key.asc
-gpg --edit-key 4C08421980C9
-
-> sign
-> save
-```
-
 ### Projects using GitPython
 
 - [PyDriller](https://github.com/ishepard/pydriller)
