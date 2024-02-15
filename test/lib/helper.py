@@ -97,7 +97,8 @@ def with_rw_directory(func):
             return func(self, path, *args, **kwargs)
         except Exception:
             _logger.info(
-                "Test %s.%s failed, output is at %r\n",
+                "%s %s.%s failed, output is at %r\n",
+                "Test" if func.__name__.startswith("test_") else "Helper",
                 type(self).__name__,
                 func.__name__,
                 path,
