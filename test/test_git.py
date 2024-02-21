@@ -260,13 +260,9 @@ class TestGit(TestBase):
         self.assertTrue("pass_this_kwarg" not in git.call_args[1])
 
     def test_it_raises_proper_exception_with_output_stream(self):
-        tmp_file = TemporaryFile()
-        self.assertRaises(
-            GitCommandError,
-            self.git.checkout,
-            "non-existent-branch",
-            output_stream=tmp_file,
-        )
+        with TemporaryFile() as tmp_file:
+            with self.assertRaises(GitCommandError):
+                self.git.checkout("non-existent-branch", output_stream=tmp_file)
 
     def test_it_accepts_environment_variables(self):
         filename = fixture_path("ls_tree_empty")
