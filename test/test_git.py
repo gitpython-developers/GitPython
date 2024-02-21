@@ -28,6 +28,8 @@ from git import Git, refresh, GitCommandError, GitCommandNotFound, Repo, cmd
 from git.util import cwd, finalize_process
 from test.lib import TestBase, fixture_path, with_rw_directory
 
+_FAKE_GIT_VERSION_INFO = (123, 456, 789)
+
 
 @contextlib.contextmanager
 def _patch_out_env(name):
@@ -69,7 +71,8 @@ def _rollback_refresh():
 
 @contextlib.contextmanager
 def _fake_git():
-    fake_output = "git version 123.456.789 (fake)"
+    fake_version = ".".join(str(field) for field in _FAKE_GIT_VERSION_INFO)
+    fake_output = f"git version {fake_version} (fake)"
 
     with tempfile.TemporaryDirectory() as tdir:
         if os.name == "nt":
@@ -506,10 +509,21 @@ class TestGit(TestBase):
             with _fake_git() as path:
                 new_git = Git()  # Not cached yet.
                 refresh(path)
-                version_info = new_git.version_info  # Caches the value.
-                self.assertEqual(version_info, (123, 456, 789))
-                os.remove(path)  # Arrange that reading a second time would fail.
-                self.assertEqual(new_git.version_info, version_info)  # Cached value.
+                self.assertEqual(new_git.version_info, _FAKE_GIT_VERSION_INFO)
+                os.remove(path)  # Arrange that a second subprocess call would fail.
+                self.assertEqual(new_git.version_info, _FAKE_GIT_VERSION_INFO)
+
+    def test_version_info_cache_is_per_instance(self):
+        with _rollback_refresh():
+            with _fake_git() as path:
+                git1 = Git()
+                git2 = Git()
+                refresh(path)
+                git1.version_info
+                os.remove(path)  # Arrange that the second subprocess call will fail.
+                with self.assertRaises(GitCommandNotFound):
+                    git2.version_info
+                git1.version_info
 
     def test_options_are_passed_to_git(self):
         # This works because any command after git --version is ignored.
