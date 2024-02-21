@@ -14,7 +14,7 @@ import re
 import shutil
 import subprocess
 import sys
-from tempfile import TemporaryFile
+import tempfile
 from unittest import skipUnless
 
 if sys.version_info >= (3, 8):
@@ -65,6 +65,24 @@ def _rollback_refresh():
         # in most cases. The reason to call it is to achieve other associated state
         # changes as well, which include updating attributes of the FetchInfo class.
         refresh()
+
+
+@contextlib.contextmanager
+def _fake_git():
+    fake_output = "git version 123.456.789 (fake)"
+
+    with tempfile.TemporaryDirectory() as tdir:
+        if os.name == "nt":
+            fake_git = Path(tdir, "fake-git.cmd")
+            script = f"@echo {fake_output}\n"
+            fake_git.write_text(script, encoding="utf-8")
+        else:
+            fake_git = Path(tdir, "fake-git")
+            script = f"#!/bin/sh\necho '{fake_output}'\n"
+            fake_git.write_text(script, encoding="utf-8")
+            fake_git.chmod(0o755)
+
+        yield str(fake_git.absolute())
 
 
 @ddt.ddt
@@ -260,7 +278,7 @@ class TestGit(TestBase):
         self.assertTrue("pass_this_kwarg" not in git.call_args[1])
 
     def test_it_raises_proper_exception_with_output_stream(self):
-        with TemporaryFile() as tmp_file:
+        with tempfile.TemporaryFile() as tmp_file:
             with self.assertRaises(GitCommandError):
                 self.git.checkout("non-existent-branch", output_stream=tmp_file)
 
@@ -482,6 +500,16 @@ class TestGit(TestBase):
             with _rollback_refresh():
                 refresh(basename)
                 self.assertEqual(self.git.GIT_PYTHON_GIT_EXECUTABLE, absolute_path)
+
+    def test_version_info_is_cached(self):
+        with _rollback_refresh():
+            with _fake_git() as path:
+                new_git = Git()  # Not cached yet.
+                refresh(path)
+                version_info = new_git.version_info  # Caches the value.
+                self.assertEqual(version_info, (123, 456, 789))
+                os.remove(path)  # Arrange that reading a second time would fail.
+                self.assertEqual(new_git.version_info, version_info)  # Cached value.
 
     def test_options_are_passed_to_git(self):
         # This works because any command after git --version is ignored.
