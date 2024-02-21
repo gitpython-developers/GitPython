@@ -28,8 +28,6 @@ from git import Git, refresh, GitCommandError, GitCommandNotFound, Repo, cmd
 from git.util import cwd, finalize_process
 from test.lib import TestBase, fixture_path, with_rw_directory
 
-_FAKE_GIT_VERSION_INFO = (123, 456, 789)
-
 
 @contextlib.contextmanager
 def _patch_out_env(name):
@@ -70,8 +68,8 @@ def _rollback_refresh():
 
 
 @contextlib.contextmanager
-def _fake_git():
-    fake_version = ".".join(str(field) for field in _FAKE_GIT_VERSION_INFO)
+def _fake_git(*version_info):
+    fake_version = ".".join(map(str, version_info))
     fake_output = f"git version {fake_version} (fake)"
 
     with tempfile.TemporaryDirectory() as tdir:
@@ -505,17 +503,18 @@ class TestGit(TestBase):
                 self.assertEqual(self.git.GIT_PYTHON_GIT_EXECUTABLE, absolute_path)
 
     def test_version_info_is_cached(self):
+        fake_version_info = (123, 456, 789)
         with _rollback_refresh():
-            with _fake_git() as path:
+            with _fake_git(*fake_version_info) as path:
                 new_git = Git()  # Not cached yet.
                 refresh(path)
-                self.assertEqual(new_git.version_info, _FAKE_GIT_VERSION_INFO)
+                self.assertEqual(new_git.version_info, fake_version_info)
                 os.remove(path)  # Arrange that a second subprocess call would fail.
-                self.assertEqual(new_git.version_info, _FAKE_GIT_VERSION_INFO)
+                self.assertEqual(new_git.version_info, fake_version_info)
 
     def test_version_info_cache_is_per_instance(self):
         with _rollback_refresh():
-            with _fake_git() as path:
+            with _fake_git(123, 456, 789) as path:
                 git1 = Git()
                 git2 = Git()
                 refresh(path)
