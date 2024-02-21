@@ -533,6 +533,84 @@ class TestGit(TestBase):
                     git2.version_info
                 git1.version_info
 
+    def test_successful_refresh_with_arg_invalidates_cached_version_info(self):
+        with _rollback_refresh():
+            with _fake_git(11, 111, 1) as path1:
+                with _fake_git(22, 222, 2) as path2:
+                    new_git = Git()
+                    refresh(path1)
+                    new_git.version_info
+                    refresh(path2)
+                    self.assertEqual(new_git.version_info, (22, 222, 2))
+
+    def test_failed_refresh_with_arg_does_not_invalidate_cached_version_info(self):
+        with _rollback_refresh():
+            with _fake_git(11, 111, 1) as path1:
+                with _fake_git(22, 222, 2) as path2:
+                    new_git = Git()
+                    refresh(path1)
+                    new_git.version_info
+                    os.remove(path1)  # Arrange that a repeat call for path1 would fail.
+                    os.remove(path2)  # Arrange that the new call for path2 will fail.
+                    with self.assertRaises(GitCommandNotFound):
+                        refresh(path2)
+                    self.assertEqual(new_git.version_info, (11, 111, 1))
+
+    def test_successful_refresh_with_same_arg_invalidates_cached_version_info(self):
+        """Changing git at the same path and refreshing affects version_info."""
+        with _rollback_refresh():
+            with _fake_git(11, 111, 1) as path1:
+                with _fake_git(22, 222, 2) as path2:
+                    new_git = Git()
+                    refresh(path1)
+                    new_git.version_info
+                    shutil.copy(path2, path1)
+                    refresh(path1)  # The fake git at path1 has a different version now.
+                    self.assertEqual(new_git.version_info, (22, 222, 2))
+
+    def test_successful_refresh_with_env_invalidates_cached_version_info(self):
+        with contextlib.ExitStack() as stack:
+            stack.enter_context(_rollback_refresh())
+            path1 = stack.enter_context(_fake_git(11, 111, 1))
+            path2 = stack.enter_context(_fake_git(22, 222, 2))
+            with mock.patch.dict(os.environ, {"GIT_PYTHON_GIT_EXECUTABLE": path1}):
+                new_git = Git()
+                refresh()
+                new_git.version_info
+            with mock.patch.dict(os.environ, {"GIT_PYTHON_GIT_EXECUTABLE": path2}):
+                refresh()
+                self.assertEqual(new_git.version_info, (22, 222, 2))
+
+    def test_failed_refresh_with_env_does_not_invalidate_cached_version_info(self):
+        with contextlib.ExitStack() as stack:
+            stack.enter_context(_rollback_refresh())
+            path1 = stack.enter_context(_fake_git(11, 111, 1))
+            path2 = stack.enter_context(_fake_git(22, 222, 2))
+            with mock.patch.dict(os.environ, {"GIT_PYTHON_GIT_EXECUTABLE": path1}):
+                new_git = Git()
+                refresh()
+                new_git.version_info
+            os.remove(path1)  # Arrange that a repeat call for path1 would fail.
+            os.remove(path2)  # Arrange that the new call for path2 will fail.
+            with mock.patch.dict(os.environ, {"GIT_PYTHON_GIT_EXECUTABLE": path2}):
+                with self.assertRaises(GitCommandNotFound):
+                    refresh(path2)
+                self.assertEqual(new_git.version_info, (11, 111, 1))
+
+    def test_successful_refresh_with_same_env_invalidates_cached_version_info(self):
+        """Changing git at the same path/command and refreshing affects version_info."""
+        with contextlib.ExitStack() as stack:
+            stack.enter_context(_rollback_refresh())
+            path1 = stack.enter_context(_fake_git(11, 111, 1))
+            path2 = stack.enter_context(_fake_git(22, 222, 2))
+            with mock.patch.dict(os.environ, {"GIT_PYTHON_GIT_EXECUTABLE": path1}):
+                new_git = Git()
+                refresh()
+                new_git.version_info
+                shutil.copy(path2, path1)
+                refresh()  # The fake git at path1 has a different version now.
+                self.assertEqual(new_git.version_info, (22, 222, 2))
+
     def test_options_are_passed_to_git(self):
         # This works because any command after git --version is ignored.
         git_version = self.git(version=True).NoOp()
