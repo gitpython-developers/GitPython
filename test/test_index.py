@@ -528,7 +528,7 @@ class TestIndex(TestBase):
             index.checkout(test_file)
         except CheckoutError as e:
             # Detailed exceptions are only possible in older git versions.
-            if rw_repo.git._version_info < (2, 29):
+            if rw_repo.git.version_info < (2, 29):
                 self.assertEqual(len(e.failed_files), 1)
                 self.assertEqual(e.failed_files[0], osp.basename(test_file))
                 self.assertEqual(len(e.failed_files), len(e.failed_reasons))
