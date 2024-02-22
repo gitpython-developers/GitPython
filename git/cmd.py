@@ -794,7 +794,7 @@ class Git:
         self._environment: Dict[str, str] = {}
 
         # Cached version slots
-        self._version_info: Union[Tuple[int, int, int, int], None] = None
+        self._version_info: Union[Tuple[int, ...], None] = None
         self._version_info_token: object = None
 
         # Cached command slots
@@ -831,10 +831,10 @@ class Git:
         return self._working_dir
 
     @property
-    def version_info(self) -> Tuple[int, int, int, int]:
+    def version_info(self) -> Tuple[int, ...]:
         """
-        :return: tuple(int, int, int, int) tuple with integers representing the major,
-            minor and additional version numbers as parsed from git version.
+        :return:  tuple with integers representing the major, minor and additional
+            version numbers as parsed from git version. Up to four fields are used.
 
             This value is generated on demand and is cached.
         """
@@ -846,16 +846,14 @@ class Git:
             assert self._version_info is not None, "Bug: corrupted token-check state"
             return self._version_info
 
-        # We only use the first 4 numbers, as everything else could be strings in fact (on Windows).
-        process_version = self._call_process("version")  # Should be as default *args and **kwargs used.
-        version_numbers = process_version.split(" ")[2]
+        # Run "git version" and parse it.
+        process_version = self._call_process("version")
+        version_string = process_version.split(" ")[2]
+        version_fields = version_string.split(".")[:4]
+        self._version_info = tuple(int(n) for n in version_fields if n.isdigit())
 
-        self._version_info = cast(
-            Tuple[int, int, int, int],
-            tuple(int(n) for n in version_numbers.split(".")[:4] if n.isdigit()),
-        )
+        # This value will be considered valid until the next refresh.
         self._version_info_token = refresh_token
-
         return self._version_info
 
     @overload
