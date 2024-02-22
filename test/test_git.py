@@ -338,9 +338,10 @@ class TestGit(TestBase):
         self.assertEqual(size, size_two)
 
     def test_version_info(self):
-        """The version_info attribute is a tuple of ints."""
+        """The version_info attribute is a tuple of up to four ints."""
         v = self.git.version_info
         self.assertIsInstance(v, tuple)
+        self.assertLessEqual(len(v), 4)
         for n in v:
             self.assertIsInstance(n, int)
 
@@ -349,8 +350,25 @@ class TestGit(TestBase):
         deserialized = pickle.loads(pickle.dumps(self.git))
         v = deserialized.version_info
         self.assertIsInstance(v, tuple)
+        self.assertLessEqual(len(v), 4)
         for n in v:
             self.assertIsInstance(n, int)
+
+    @ddt.data(
+        (("123", "456", "789"), (123, 456, 789)),
+        (("12", "34", "56", "78"), (12, 34, 56, 78)),
+        (("12", "34", "56", "78", "90"), (12, 34, 56, 78)),
+        (("1", "2", "a", "3"), (1, 2)),
+        (("1", "-2", "3"), (1,)),
+        (("1", "2a", "3"), (1,)),  # Subject to change.
+    )
+    def test_version_info_is_leading_numbers(self, case):
+        fake_fields, expected_version_info = case
+        with _rollback_refresh():
+            with _fake_git(*fake_fields) as path:
+                refresh(path)
+                new_git = Git()
+                self.assertEqual(new_git.version_info, expected_version_info)
 
     def test_git_exc_name_is_git(self):
         self.assertEqual(self.git.git_exec_name, "git")
