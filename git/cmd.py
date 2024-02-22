@@ -838,10 +838,11 @@ class Git:
 
             This value is generated on demand and is cached.
         """
-        refresh_token = self._refresh_token  # Copy it, in case of a concurrent refresh.
+        # Use a copy of this global state, in case of a concurrent refresh.
+        refresh_token = self._refresh_token
 
         # Ask git for its version if we haven't done so since the last refresh.
-        # (Refreshing is global, but version information caching is per-instance.)
+        # (Refreshing is global, but version_info caching is per-instance.)
         if self._version_info_token is not refresh_token:
             # We only use the first 4 numbers, as everything else could be strings in fact (on Windows).
             process_version = self._call_process("version")  # Should be as default *args and **kwargs used.
@@ -853,6 +854,7 @@ class Git:
             )
             self._version_info_token = refresh_token
 
+        assert self._version_info is not None, "Bug: token check should never let None through"
         return self._version_info
 
     @overload
