@@ -533,6 +533,18 @@ class TestGit(TestBase):
                     git2.version_info
                 git1.version_info
 
+    def test_version_info_cache_is_not_pickled(self):
+        with _rollback_refresh():
+            with _fake_git(123, 456, 789) as path:
+                git1 = Git()
+                refresh(path)
+                git1.version_info
+                git2 = pickle.loads(pickle.dumps(git1))
+                os.remove(path)  # Arrange that the second subprocess call will fail.
+                with self.assertRaises(GitCommandNotFound):
+                    git2.version_info
+                git1.version_info
+
     def test_successful_refresh_with_arg_invalidates_cached_version_info(self):
         with _rollback_refresh():
             with _fake_git(11, 111, 1) as path1:
