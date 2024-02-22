@@ -25,7 +25,6 @@ from git.exc import (
     UnsafeProtocolError,
 )
 from git.util import (
-    LazyMixin,
     cygpath,
     expand_path,
     is_cygwin_git,
@@ -287,7 +286,7 @@ def dict_to_slots_and__excluded_are_none(self: object, d: Mapping[str, Any], exc
 ## -- End Utilities -- @}
 
 
-class Git(LazyMixin):
+class Git:
     """The Git class manages communication with the Git binary.
 
     It provides a convenient interface to calling the Git binary, such as in::
@@ -784,6 +783,7 @@ class Git(LazyMixin):
         self._environment: Dict[str, str] = {}
 
         # Cached command slots
+        self._version_info: Union[Tuple[int, int, int, int], None] = None
         self.cat_file_header: Union[None, TBD] = None
         self.cat_file_all: Union[None, TBD] = None
 
@@ -795,8 +795,8 @@ class Git(LazyMixin):
             Callable object that will execute call :meth:`_call_process` with
             your arguments.
         """
-        if name[0] == "_":
-            return LazyMixin.__getattr__(self, name)
+        if name.startswith("_"):
+            return super().__getattribute__(name)
         return lambda *args, **kwargs: self._call_process(name, *args, **kwargs)
 
     def set_persistent_git_options(self, **kwargs: Any) -> None:
@@ -811,20 +811,6 @@ class Git(LazyMixin):
 
         self._persistent_git_options = self.transform_kwargs(split_single_char_options=True, **kwargs)
 
-    def _set_cache_(self, attr: str) -> None:
-        if attr == "_version_info":
-            # We only use the first 4 numbers, as everything else could be strings in fact (on Windows).
-            process_version = self._call_process("version")  # Should be as default *args and **kwargs used.
-            version_numbers = process_version.split(" ")[2]
-
-            self._version_info = cast(
-                Tuple[int, int, int, int],
-                tuple(int(n) for n in version_numbers.split(".")[:4] if n.isdigit()),
-            )
-        else:
-            super()._set_cache_(attr)
-        # END handle version info
-
     @property
     def working_dir(self) -> Union[None, PathLike]:
         """:return: Git directory we are working on"""
@@ -838,6 +824,16 @@ class Git(LazyMixin):
 
             This value is generated on demand and is cached.
         """
+        if self._version_info is None:
+            # We only use the first 4 numbers, as everything else could be strings in fact (on Windows).
+            process_version = self._call_process("version")  # Should be as default *args and **kwargs used.
+            version_numbers = process_version.split(" ")[2]
+
+            self._version_info = cast(
+                Tuple[int, int, int, int],
+                tuple(int(n) for n in version_numbers.split(".")[:4] if n.isdigit()),
+            )
+
         return self._version_info
 
     @overload
