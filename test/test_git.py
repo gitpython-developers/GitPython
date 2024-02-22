@@ -623,8 +623,7 @@ class TestGit(TestBase):
             stack.enter_context(_rollback_refresh())
             path1 = Path(stack.enter_context(_fake_git(11, 111, 1)))
             path2 = Path(stack.enter_context(_fake_git(22, 222, 2)))
-            sep = os.pathsep
-            new_path_var = f"{path1.parent}{sep}{path2.parent}{sep}{os.environ['PATH']}"
+            new_path_var = f"{path1.parent}{os.pathsep}{path2.parent}"
             stack.enter_context(mock.patch.dict(os.environ, {"PATH": new_path_var}))
             stack.enter_context(_patch_out_env("GIT_PYTHON_GIT_EXECUTABLE"))
             new_git = Git()
