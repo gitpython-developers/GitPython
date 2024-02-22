@@ -87,6 +87,13 @@ def _fake_git(*version_info):
         yield str(fake_git.absolute())
 
 
+def _rename_with_stem(path, new_stem):
+    if sys.version_info >= (3, 9):
+        path.rename(path.with_stem(new_stem))
+    else:
+        path.rename(path.with_name(new_stem + path.suffix))
+
+
 @ddt.ddt
 class TestGit(TestBase):
     @classmethod
@@ -647,10 +654,10 @@ class TestGit(TestBase):
                 stack.enter_context(mock.patch.object(Git, "USE_SHELL", True))
 
             new_git = Git()
-            path2.rename(path2.with_stem("git"))  # "Install" git, "late" in the PATH.
+            _rename_with_stem(path2, "git")  # "Install" git, "late" in the PATH.
             refresh()
             self.assertEqual(new_git.version_info, (22, 222, 2), 'before "downgrade"')
-            path1.rename(path1.with_stem("git"))  # "Install" another, higher priority.
+            _rename_with_stem(path1, "git")  # "Install" another, higher priority.
             self.assertEqual(new_git.version_info, (22, 222, 2), "stale version")
             refresh()
             self.assertEqual(new_git.version_info, (11, 111, 1), "fresh version")
