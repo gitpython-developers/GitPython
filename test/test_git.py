@@ -24,7 +24,6 @@ else:
     import mock  # To be able to examine call_args.kwargs on a mock.
 
 import ddt
-import pytest
 
 from git import Git, refresh, GitCommandError, GitCommandNotFound, Repo, cmd
 from git.util import cwd, finalize_process
@@ -612,25 +611,34 @@ class TestGit(TestBase):
                 refresh()  # The fake git at path1 has a different version now.
                 self.assertEqual(new_git.version_info, (22, 222, 2))
 
-    @pytest.mark.xfail(
-        os.name == "nt",
-        reason="""Name "git" won't find .bat/.cmd (need shim, custom name, or shell)""",
-        raises=GitCommandNotFound,
-    )
-    def test_successful_refresh_in_default_scenario_invalidates_cached_version(self):
+    def test_successful_default_refresh_invalidates_cached_version_info(self):
         """Refreshing updates version after a filesystem change adds a git command."""
+        # The key assertion here is the last. The others mainly verify the test itself.
         with contextlib.ExitStack() as stack:
             stack.enter_context(_rollback_refresh())
+
             path1 = Path(stack.enter_context(_fake_git(11, 111, 1)))
             path2 = Path(stack.enter_context(_fake_git(22, 222, 2)))
+
             new_path_var = f"{path1.parent}{os.pathsep}{path2.parent}"
             stack.enter_context(mock.patch.dict(os.environ, {"PATH": new_path_var}))
             stack.enter_context(_patch_out_env("GIT_PYTHON_GIT_EXECUTABLE"))
+
+            if os.name == "nt":
+                # On Windows, use a shell so "git" finds "git.cmd". (In the infrequent
+                # case that this effect is desired in production code, it should not be
+                # done with this technique. USE_SHELL=True is less secure and reliable,
+                # as unintended shell expansions can occur, and is deprecated. Instead,
+                # use a custom command, by setting the GIT_PYTHON_GIT_EXECUTABLE
+                # environment variable to git.cmd or by passing git.cmd's full path to
+                # git.refresh. Or wrap the script with a .exe shim.
+                stack.enter_context(mock.patch.object(Git, "USE_SHELL", True))
+
             new_git = Git()
-            path2.rename(path2.with_stem("git"))
+            path2.rename(path2.with_stem("git"))  # "Install" git, "late" in the PATH.
             refresh()
             self.assertEqual(new_git.version_info, (22, 222, 2), 'before "downgrade"')
-            path1.rename(path1.with_stem("git"))
+            path1.rename(path1.with_stem("git"))  # "Install" another, higher priority.
             self.assertEqual(new_git.version_info, (22, 222, 2), "stale version")
             refresh()
             self.assertEqual(new_git.version_info, (11, 111, 1), "fresh version")
