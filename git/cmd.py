@@ -306,12 +306,18 @@ class Git:
         "cat_file_all",
         "cat_file_header",
         "_version_info",
+        "_version_info_token",
         "_git_options",
         "_persistent_git_options",
         "_environment",
     )
 
-    _excluded_ = ("cat_file_all", "cat_file_header", "_version_info")
+    _excluded_ = (
+        "cat_file_all",
+        "cat_file_header",
+        "_version_info",
+        "_version_info_token",
+    )
 
     re_unsafe_protocol = re.compile(r"(.+)::.+")
 
@@ -358,6 +364,8 @@ class Git:
     the top level ``__init__``.
     """
 
+    _refresh_token = object()  # Since None would match an initial _version_info_token.
+
     @classmethod
     def refresh(cls, path: Union[None, PathLike] = None) -> bool:
         """This gets called by the refresh function (see the top level __init__)."""
@@ -370,7 +378,9 @@ class Git:
 
         # Keep track of the old and new git executable path.
         old_git = cls.GIT_PYTHON_GIT_EXECUTABLE
+        old_refresh_token = cls._refresh_token
         cls.GIT_PYTHON_GIT_EXECUTABLE = new_git
+        cls._refresh_token = object()
 
         # Test if the new git executable path is valid. A GitCommandNotFound error is
         # spawned by us. A PermissionError is spawned if the git executable cannot be
@@ -399,6 +409,7 @@ class Git:
 
             # Revert to whatever the old_git was.
             cls.GIT_PYTHON_GIT_EXECUTABLE = old_git
+            cls._refresh_token = old_refresh_token
 
             if old_git is None:
                 # On the first refresh (when GIT_PYTHON_GIT_EXECUTABLE is None) we only
@@ -782,8 +793,11 @@ class Git:
         # Extra environment variables to pass to git commands
         self._environment: Dict[str, str] = {}
 
-        # Cached command slots
+        # Cached version slots
         self._version_info: Union[Tuple[int, int, int, int], None] = None
+        self._version_info_token: object = None
+
+        # Cached command slots
         self.cat_file_header: Union[None, TBD] = None
         self.cat_file_all: Union[None, TBD] = None
 
@@ -824,7 +838,11 @@ class Git:
 
             This value is generated on demand and is cached.
         """
-        if self._version_info is None:
+        refresh_token = self._refresh_token  # Copy it, in case of a concurrent refresh.
+
+        # Ask git for its version if we haven't done so since the last refresh.
+        # (Refreshing is global, but version information caching is per-instance.)
+        if self._version_info_token is not refresh_token:
             # We only use the first 4 numbers, as everything else could be strings in fact (on Windows).
             process_version = self._call_process("version")  # Should be as default *args and **kwargs used.
             version_numbers = process_version.split(" ")[2]
@@ -833,6 +851,7 @@ class Git:
                 Tuple[int, int, int, int],
                 tuple(int(n) for n in version_numbers.split(".")[:4] if n.isdigit()),
             )
+            self._version_info_token = refresh_token
 
         return self._version_info
 
