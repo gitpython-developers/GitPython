@@ -10,6 +10,7 @@ import logging
 import os
 import os.path as osp
 from pathlib import Path
+import pickle
 import re
 import shutil
 import subprocess
@@ -329,12 +330,20 @@ class TestGit(TestBase):
         self.assertEqual(typename, typename_two)
         self.assertEqual(size, size_two)
 
-    def test_version(self):
+    def test_version_info(self):
+        """The version_info attribute is a tuple of ints."""
         v = self.git.version_info
         self.assertIsInstance(v, tuple)
         for n in v:
             self.assertIsInstance(n, int)
-        # END verify number types
+
+    def test_version_info_pickleable(self):
+        """The version_info attribute is usable on unpickled Git instances."""
+        deserialized = pickle.loads(pickle.dumps(self.git))
+        v = deserialized.version_info
+        self.assertIsInstance(v, tuple)
+        for n in v:
+            self.assertIsInstance(n, int)
 
     def test_git_exc_name_is_git(self):
         self.assertEqual(self.git.git_exec_name, "git")
