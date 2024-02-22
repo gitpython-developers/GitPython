@@ -8,6 +8,7 @@ from __future__ import annotations
 import re
 import contextlib
 import io
+import itertools
 import logging
 import os
 import signal
@@ -850,7 +851,8 @@ class Git:
         process_version = self._call_process("version")
         version_string = process_version.split(" ")[2]
         version_fields = version_string.split(".")[:4]
-        self._version_info = tuple(int(n) for n in version_fields if n.isdigit())
+        leading_numeric_fields = itertools.takewhile(str.isdigit, version_fields)
+        self._version_info = tuple(map(int, leading_numeric_fields))
 
         # This value will be considered valid until the next refresh.
         self._version_info_token = refresh_token
