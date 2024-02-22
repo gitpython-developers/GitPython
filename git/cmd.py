@@ -833,28 +833,29 @@ class Git:
     @property
     def version_info(self) -> Tuple[int, int, int, int]:
         """
-        :return: tuple(int, int, int, int) tuple with integers representing the major, minor
-            and additional version numbers as parsed from git version.
+        :return: tuple(int, int, int, int) tuple with integers representing the major,
+            minor and additional version numbers as parsed from git version.
 
             This value is generated on demand and is cached.
         """
-        # Use a copy of this global state, in case of a concurrent refresh.
-        refresh_token = self._refresh_token
+        # Refreshing is global, but version_info caching is per-instance.
+        refresh_token = self._refresh_token  # Copy token in case of concurrent refresh.
 
-        # Ask git for its version if we haven't done so since the last refresh.
-        # (Refreshing is global, but version_info caching is per-instance.)
-        if self._version_info_token is not refresh_token:
-            # We only use the first 4 numbers, as everything else could be strings in fact (on Windows).
-            process_version = self._call_process("version")  # Should be as default *args and **kwargs used.
-            version_numbers = process_version.split(" ")[2]
+        # Use the cached version if obtained after the most recent refresh.
+        if self._version_info_token is refresh_token:
+            assert self._version_info is not None, "Bug: corrupted token-check state"
+            return self._version_info
 
-            self._version_info = cast(
-                Tuple[int, int, int, int],
-                tuple(int(n) for n in version_numbers.split(".")[:4] if n.isdigit()),
-            )
-            self._version_info_token = refresh_token
+        # We only use the first 4 numbers, as everything else could be strings in fact (on Windows).
+        process_version = self._call_process("version")  # Should be as default *args and **kwargs used.
+        version_numbers = process_version.split(" ")[2]
 
-        assert self._version_info is not None, "Bug: token check should never let None through"
+        self._version_info = cast(
+            Tuple[int, int, int, int],
+            tuple(int(n) for n in version_numbers.split(".")[:4] if n.isdigit()),
+        )
+        self._version_info_token = refresh_token
+
         return self._version_info
 
     @overload
