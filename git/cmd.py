@@ -8,6 +8,7 @@ from __future__ import annotations
 import re
 import contextlib
 import io
+import itertools
 import logging
 import os
 import signal
@@ -25,7 +26,6 @@ from git.exc import (
     UnsafeProtocolError,
 )
 from git.util import (
-    LazyMixin,
     cygpath,
     expand_path,
     is_cygwin_git,
@@ -287,7 +287,7 @@ def dict_to_slots_and__excluded_are_none(self: object, d: Mapping[str, Any], exc
 ## -- End Utilities -- @}
 
 
-class Git(LazyMixin):
+class Git:
     """The Git class manages communication with the Git binary.
 
     It provides a convenient interface to calling the Git binary, such as in::
@@ -307,12 +307,18 @@ class Git(LazyMixin):
         "cat_file_all",
         "cat_file_header",
         "_version_info",
+        "_version_info_token",
         "_git_options",
         "_persistent_git_options",
         "_environment",
     )
 
-    _excluded_ = ("cat_file_all", "cat_file_header", "_version_info")
+    _excluded_ = (
+        "cat_file_all",
+        "cat_file_header",
+        "_version_info",
+        "_version_info_token",
+    )
 
     re_unsafe_protocol = re.compile(r"(.+)::.+")
 
@@ -359,6 +365,8 @@ class Git(LazyMixin):
     the top level ``__init__``.
     """
 
+    _refresh_token = object()  # Since None would match an initial _version_info_token.
+
     @classmethod
     def refresh(cls, path: Union[None, PathLike] = None) -> bool:
         """This gets called by the refresh function (see the top level __init__)."""
@@ -371,7 +379,9 @@ class Git(LazyMixin):
 
         # Keep track of the old and new git executable path.
         old_git = cls.GIT_PYTHON_GIT_EXECUTABLE
+        old_refresh_token = cls._refresh_token
         cls.GIT_PYTHON_GIT_EXECUTABLE = new_git
+        cls._refresh_token = object()
 
         # Test if the new git executable path is valid. A GitCommandNotFound error is
         # spawned by us. A PermissionError is spawned if the git executable cannot be
@@ -400,6 +410,7 @@ class Git(LazyMixin):
 
             # Revert to whatever the old_git was.
             cls.GIT_PYTHON_GIT_EXECUTABLE = old_git
+            cls._refresh_token = old_refresh_token
 
             if old_git is None:
                 # On the first refresh (when GIT_PYTHON_GIT_EXECUTABLE is None) we only
@@ -783,6 +794,10 @@ class Git(LazyMixin):
         # Extra environment variables to pass to git commands
         self._environment: Dict[str, str] = {}
 
+        # Cached version slots
+        self._version_info: Union[Tuple[int, ...], None] = None
+        self._version_info_token: object = None
+
         # Cached command slots
         self.cat_file_header: Union[None, TBD] = None
         self.cat_file_all: Union[None, TBD] = None
@@ -795,8 +810,8 @@ class Git(LazyMixin):
             Callable object that will execute call :meth:`_call_process` with
             your arguments.
         """
-        if name[0] == "_":
-            return LazyMixin.__getattr__(self, name)
+        if name.startswith("_"):
+            return super().__getattribute__(name)
         return lambda *args, **kwargs: self._call_process(name, *args, **kwargs)
 
     def set_persistent_git_options(self, **kwargs: Any) -> None:
@@ -811,33 +826,36 @@ class Git(LazyMixin):
 
         self._persistent_git_options = self.transform_kwargs(split_single_char_options=True, **kwargs)
 
-    def _set_cache_(self, attr: str) -> None:
-        if attr == "_version_info":
-            # We only use the first 4 numbers, as everything else could be strings in fact (on Windows).
-            process_version = self._call_process("version")  # Should be as default *args and **kwargs used.
-            version_numbers = process_version.split(" ")[2]
-
-            self._version_info = cast(
-                Tuple[int, int, int, int],
-                tuple(int(n) for n in version_numbers.split(".")[:4] if n.isdigit()),
-            )
-        else:
-            super()._set_cache_(attr)
-        # END handle version info
-
     @property
     def working_dir(self) -> Union[None, PathLike]:
         """:return: Git directory we are working on"""
         return self._working_dir
 
     @property
-    def version_info(self) -> Tuple[int, int, int, int]:
+    def version_info(self) -> Tuple[int, ...]:
         """
-        :return: tuple(int, int, int, int) tuple with integers representing the major, minor
-            and additional version numbers as parsed from git version.
+        :return:  tuple with integers representing the major, minor and additional
+            version numbers as parsed from git version. Up to four fields are used.
 
             This value is generated on demand and is cached.
         """
+        # Refreshing is global, but version_info caching is per-instance.
+        refresh_token = self._refresh_token  # Copy token in case of concurrent refresh.
+
+        # Use the cached version if obtained after the most recent refresh.
+        if self._version_info_token is refresh_token:
+            assert self._version_info is not None, "Bug: corrupted token-check state"
+            return self._version_info
+
+        # Run "git version" and parse it.
+        process_version = self._call_process("version")
+        version_string = process_version.split(" ")[2]
+        version_fields = version_string.split(".")[:4]
+        leading_numeric_fields = itertools.takewhile(str.isdigit, version_fields)
+        self._version_info = tuple(map(int, leading_numeric_fields))
+
+        # This value will be considered valid until the next refresh.
+        self._version_info_token = refresh_token
         return self._version_info
 
     @overload
