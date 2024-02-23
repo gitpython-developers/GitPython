@@ -355,13 +355,48 @@ class Git(LazyMixin):
     GIT_PYTHON_GIT_EXECUTABLE = None
     """Provide the full path to the git executable. Otherwise it assumes git is in the path.
 
-    Note that the git executable is actually found during the refresh step in
-    the top level ``__init__``.
+    :note: The git executable is actually found during the refresh step in
+        the top level :mod:`__init__`. It can also be changed by explicitly calling
+        :func:`git.refresh`.
     """
 
     @classmethod
     def refresh(cls, path: Union[None, PathLike] = None) -> bool:
-        """This gets called by the refresh function (see the top level __init__)."""
+        """This gets called by the refresh function (see the top level __init__).
+
+        :param path: Optional path to the git executable. If not absolute, it is
+            resolved immediately, relative to the current directory. (See note below.)
+
+        :note: The top-level :func:`git.refresh` should be preferred because it calls
+            this method and may also update other state accordingly.
+
+        :note: There are three different ways to specify what command refreshing causes
+            to be uses for git:
+
+            1. Pass no *path* argument and do not set the ``GIT_PYTHON_GIT_EXECUTABLE``
+               environment variable. The command name ``git`` is used. It is looked up
+               in a path search by the system, in each command run (roughly similar to
+               how git is found when running ``git`` commands manually). This is usually
+               the desired behavior.
+
+            2. Pass no *path* argument but set the ``GIT_PYTHON_GIT_EXECUTABLE``
+               environment variable. The command given as the value of that variable is
+               used. This may be a simple command or an arbitrary path. It is looked up
+               in each command run. Setting ``GIT_PYTHON_GIT_EXECUTABLE`` to ``git`` has
+               the same effect as not setting it.
+
+            3. Pass a *path* argument. This path, if not absolute, it immediately
+               resolved, relative to the current directory. This resolution occurs at
+               the time of the refresh, and when git commands are run, they are run with
+               that actual path. If a *path* argument is passed, the
+               ``GIT_PYTHON_GIT_EXECUTABLE`` environment variable is not consulted.
+
+        :note: Refreshing always sets the :attr:`Git.GIT_PYTHON_GIT_EXECUTABLE` class
+            attribute, which can be read on the :class:`Git` class or any of its
+            instances to check what command is used to run git. This attribute should
+            not be confused with the related ``GIT_PYTHON_GIT_EXECUTABLE`` environment
+            variable. The class attribute is set no matter how refreshing is performed.
+        """
         # Discern which path to refresh with.
         if path is not None:
             new_git = os.path.expanduser(path)
