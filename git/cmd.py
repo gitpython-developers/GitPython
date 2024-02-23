@@ -397,7 +397,7 @@ class Git:
             3. Pass a *path* argument. This path, if not absolute, it immediately
                resolved, relative to the current directory. This resolution occurs at
                the time of the refresh, and when git commands are run, they are run with
-               that actual path. If a *path* argument is passed, the
+               that previously resolved path. If a *path* argument is passed, the
                ``GIT_PYTHON_GIT_EXECUTABLE`` environment variable is not consulted.
 
         :note: Refreshing always sets the :attr:`Git.GIT_PYTHON_GIT_EXECUTABLE` class
