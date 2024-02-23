@@ -438,7 +438,7 @@ class Git:
                 The git executable must be specified in one of the following ways:
                     - be included in your $PATH
                     - be set via $%s
-                    - explicitly set via git.refresh()
+                    - explicitly set via git.refresh("/full/path/to/git")
                 """
                 )
                 % cls._git_exec_env_var
