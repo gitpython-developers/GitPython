@@ -344,6 +344,7 @@ class Git(LazyMixin):
     for, which is not possible under most circumstances.
 
     See:
+
     - :meth:`Git.execute` (on the ``shell`` parameter).
     - https://github.com/gitpython-developers/GitPython/commit/0d9390866f9ce42870d3116094cd49e0019a970a
     - https://learn.microsoft.com/en-us/windows/win32/procthread/process-creation-flags
