@@ -111,17 +111,27 @@ def handle_process_output(
 
     This function returns once the finalizer returns.
 
-    :param process: :class:`subprocess.Popen` instance
-    :param stdout_handler: f(stdout_line_string), or None
-    :param stderr_handler: f(stderr_line_string), or None
-    :param finalizer: f(proc) - wait for proc to finish
+    :param process:
+        :class:`subprocess.Popen` instance
+
+    :param stdout_handler:
+        f(stdout_line_string), or None
+
+    :param stderr_handler:
+        f(stderr_line_string), or None
+
+    :param finalizer:
+        f(proc) - wait for proc to finish
+
     :param decode_streams:
-        Assume stdout/stderr streams are binary and decode them before pushing
-        their contents to handlers.
-        Set it to False if ``universal_newlines == True`` (then streams are in
-        text mode) or if decoding must happen later (i.e. for Diffs).
+        Assume stdout/stderr streams are binary and decode them before pushing their
+        contents to handlers.
+        Set this to False if ``universal_newlines == True`` (then streams are in text
+        mode) or if decoding must happen later (i.e. for :class:`git.diff.Diff`s).
+
     :param kill_after_timeout:
         float or None, Default = None
+
         To specify a timeout in seconds for the git command, after which the process
         should be killed.
     """
@@ -147,7 +157,7 @@ def handle_process_output(
         except Exception as ex:
             _logger.error(f"Pumping {name!r} of cmd({remove_password_if_present(cmdline)}) failed due to: {ex!r}")
             if "I/O operation on closed file" not in str(ex):
-                # Only reraise if the error was not due to the stream closing
+                # Only reraise if the error was not due to the stream closing.
                 raise CommandError([f"<{name}-pump>"] + remove_password_if_present(cmdline), ex) from ex
         finally:
             stream.close()
@@ -196,11 +206,11 @@ def handle_process_output(
                     "error: process killed because it timed out." f" kill_after_timeout={kill_after_timeout} seconds"
                 )
                 if not decode_streams and isinstance(p_stderr, BinaryIO):
-                    #  Assume stderr_handler needs binary input.
+                    # Assume stderr_handler needs binary input.
                     error_str = cast(str, error_str)
                     error_str = error_str.encode()
-                # We ignore typing on the next line because mypy does not like
-                # the way we inferred that stderr takes str or bytes.
+                # We ignore typing on the next line because mypy does not like the way
+                # we inferred that stderr takes str or bytes.
                 stderr_handler(error_str)  # type: ignore
 
     if finalizer:
@@ -225,11 +235,13 @@ def _safer_popen_windows(
     the subprocess, which GitPython usually sets to a repository working tree, can
     itself be searched automatically by the shell. This wrapper covers all those cases.
 
-    :note: This currently works by setting the ``NoDefaultCurrentDirectoryInExePath``
+    :note:
+        This currently works by setting the ``NoDefaultCurrentDirectoryInExePath``
         environment variable during subprocess creation. It also takes care of passing
         Windows-specific process creation flags, but that is unrelated to path search.
 
-    :note: The current implementation contains a race condition on :attr:`os.environ`.
+    :note:
+        The current implementation contains a race condition on :attr:`os.environ`.
         GitPython isn't thread-safe, but a program using it on one thread should ideally
         be able to mutate :attr:`os.environ` on another, without unpredictable results.
         See comments in https://github.com/gitpython-developers/GitPython/pull/1650.
@@ -297,10 +309,11 @@ class Git:
      g.init()                   # calls 'git init' program
      rval = g.ls_files()        # calls 'git ls-files' program
 
-    ``Debugging``
-        Set the GIT_PYTHON_TRACE environment variable print each invocation
-        of the command to stdout.
-        Set its value to 'full' to see details about the returned values.
+    Debugging:
+
+    * Set the ``GIT_PYTHON_TRACE`` environment variable print each invocation of the
+      command to stdout.
+    * Set its value to ``full`` to see details about the returned values.
     """
 
     __slots__ = (
@@ -361,10 +374,12 @@ class Git:
     _refresh_env_var = "GIT_PYTHON_REFRESH"
 
     GIT_PYTHON_GIT_EXECUTABLE = None
-    """Provide the full path to the git executable. Otherwise it assumes git is in the path.
+    """Provide the full path to the git executable. Otherwise it assumes git is in the
+    executable search path.
 
-    :note: The git executable is actually found during the refresh step in
-        the top level :mod:`__init__`. It can also be changed by explicitly calling
+    :note:
+        The git executable is actually found during the refresh step in the top level
+        :mod:`__init__`. It can also be changed by explicitly calling
         :func:`git.refresh`.
     """
 
@@ -374,34 +389,38 @@ class Git:
     def refresh(cls, path: Union[None, PathLike] = None) -> bool:
         """This gets called by the refresh function (see the top level __init__).
 
-        :param path: Optional path to the git executable. If not absolute, it is
-            resolved immediately, relative to the current directory. (See note below.)
+        :param path:
+            Optional path to the git executable. If not absolute, it is resolved
+            immediately, relative to the current directory. (See note below.)
 
-        :note: The top-level :func:`git.refresh` should be preferred because it calls
-            this method and may also update other state accordingly.
+        :note:
+            The top-level :func:`git.refresh` should be preferred because it calls this
+            method and may also update other state accordingly.
 
-        :note: There are three different ways to specify the command that refreshing
-            causes to be used for git:
+        :note:
+            There are three different ways to specify the command that refreshing causes
+            to be used for git:
 
-            1. Pass no *path* argument and do not set the ``GIT_PYTHON_GIT_EXECUTABLE``
+            1. Pass no `path` argument and do not set the ``GIT_PYTHON_GIT_EXECUTABLE``
                environment variable. The command name ``git`` is used. It is looked up
                in a path search by the system, in each command run (roughly similar to
                how git is found when running ``git`` commands manually). This is usually
                the desired behavior.
 
-            2. Pass no *path* argument but set the ``GIT_PYTHON_GIT_EXECUTABLE``
+            2. Pass no `path` argument but set the ``GIT_PYTHON_GIT_EXECUTABLE``
                environment variable. The command given as the value of that variable is
                used. This may be a simple command or an arbitrary path. It is looked up
                in each command run. Setting ``GIT_PYTHON_GIT_EXECUTABLE`` to ``git`` has
                the same effect as not setting it.
 
-            3. Pass a *path* argument. This path, if not absolute, is immediately
+            3. Pass a `path` argument. This path, if not absolute, is immediately
                resolved, relative to the current directory. This resolution occurs at
                the time of the refresh. When git commands are run, they are run using
-               that previously resolved path. If a *path* argument is passed, the
+               that previously resolved path. If a `path` argument is passed, the
                ``GIT_PYTHON_GIT_EXECUTABLE`` environment variable is not consulted.
 
-        :note: Refreshing always sets the :attr:`Git.GIT_PYTHON_GIT_EXECUTABLE` class
+        :note:
+            Refreshing always sets the :attr:`Git.GIT_PYTHON_GIT_EXECUTABLE` class
             attribute, which can be read on the :class:`Git` class or any of its
             instances to check what command is used to run git. This attribute should
             not be confused with the related ``GIT_PYTHON_GIT_EXECUTABLE`` environment
@@ -421,7 +440,7 @@ class Git:
         cls._refresh_token = object()
 
         # Test if the new git executable path is valid. A GitCommandNotFound error is
-        # spawned by us. A PermissionError is spawned if the git executable cannot be
+        # raised by us. A PermissionError is raised if the git executable cannot be
         # executed for whatever reason.
         has_git = False
         try:
@@ -453,7 +472,7 @@ class Git:
                 # On the first refresh (when GIT_PYTHON_GIT_EXECUTABLE is None) we only
                 # are quiet, warn, or error depending on the GIT_PYTHON_REFRESH value.
 
-                # Determine what the user wants to happen during the initial refresh we
+                # Determine what the user wants to happen during the initial refresh. We
                 # expect GIT_PYTHON_REFRESH to either be unset or be one of the
                 # following values:
                 #
@@ -550,7 +569,7 @@ class Git:
 
     @classmethod
     def polish_url(cls, url: str, is_cygwin: Union[None, bool] = None) -> PathLike:
-        """Remove any backslashes from urls to be written in config files.
+        """Remove any backslashes from URLs to be written in config files.
 
         Windows might create config files containing paths with backslashes,
         but git stops liking them as it will escape the backslashes. Hence we
@@ -572,9 +591,9 @@ class Git:
     def check_unsafe_protocols(cls, url: str) -> None:
         """Check for unsafe protocols.
 
-        Apart from the usual protocols (http, git, ssh),
-        Git allows "remote helpers" that have the form ``<transport>::<address>``.
-        One of these helpers (``ext::``) can be used to invoke any arbitrary command.
+        Apart from the usual protocols (http, git, ssh), Git allows "remote helpers"
+        that have the form ``<transport>::<address>``. One of these helpers (``ext::``)
+        can be used to invoke any arbitrary command.
 
         See:
 
@@ -592,11 +611,11 @@ class Git:
     def check_unsafe_options(cls, options: List[str], unsafe_options: List[str]) -> None:
         """Check for unsafe options.
 
-        Some options that are passed to `git <command>` can be used to execute
-        arbitrary commands, this are blocked by default.
+        Some options that are passed to ``git <command>`` can be used to execute
+        arbitrary commands. These are blocked by default.
         """
-        # Options can be of the form `foo` or `--foo bar` `--foo=bar`,
-        # so we need to check if they start with "--foo" or if they are equal to "foo".
+        # Options can be of the form `foo`, `--foo bar`, or `--foo=bar`, so we need to
+        # check if they start with "--foo" or if they are equal to "foo".
         bare_unsafe_options = [option.lstrip("-") for option in unsafe_options]
         for option in options:
             for unsafe_option, bare_option in zip(unsafe_options, bare_unsafe_options):
@@ -673,9 +692,15 @@ class Git:
         def wait(self, stderr: Union[None, str, bytes] = b"") -> int:
             """Wait for the process and return its status code.
 
-            :param stderr: Previously read value of stderr, in case stderr is already closed.
-            :warn: May deadlock if output or error pipes are used and not handled separately.
-            :raise GitCommandError: If the return status is not 0.
+            :param stderr:
+                Previously read value of stderr, in case stderr is already closed.
+
+            :warn:
+                May deadlock if output or error pipes are used and not handled
+                separately.
+
+            :raise GitCommandError:
+                If the return status is not 0.
             """
             if stderr is None:
                 stderr_b = b""
@@ -725,8 +750,8 @@ class Git:
             self._size = size
             self._nbr = 0  # Number of bytes read.
 
-            # Special case: If the object is empty, has null bytes, get the
-            # final newline right away.
+            # Special case: If the object is empty, has null bytes, get the final
+            # newline right away.
             if size == 0:
                 stream.read(1)
             # END handle empty streams
@@ -745,7 +770,8 @@ class Git:
             data = self._stream.read(size)
             self._nbr += len(data)
 
-            # Check for depletion, read our final byte to make the stream usable by others.
+            # Check for depletion, read our final byte to make the stream usable by
+            # others.
             if self._size - self._nbr == 0:
                 self._stream.read(1)  # final newline
             # END finish reading
@@ -820,7 +846,7 @@ class Git:
         :param working_dir:
            Git directory we should work in. If None, we always work in the current
            directory as returned by :func:`os.getcwd`.
-           It is meant to be the working tree directory if available, or the
+           This is meant to be the working tree directory if available, or the
            ``.git`` directory in case of bare repositories.
         """
         super().__init__()
@@ -844,8 +870,8 @@ class Git:
         an object.
 
         :return:
-            Callable object that will execute call :meth:`_call_process` with
-            your arguments.
+            Callable object that will execute call :meth:`_call_process` with your
+            arguments.
         """
         if name.startswith("_"):
             return super().__getattribute__(name)
@@ -857,8 +883,8 @@ class Git:
 
         :param kwargs:
             A dict of keyword arguments.
-            These arguments are passed as in :meth:`_call_process`, but will be
-            passed to the git command rather than the subcommand.
+            These arguments are passed as in :meth:`_call_process`, but will be passed
+            to the git command rather than the subcommand.
         """
 
         self._persistent_git_options = self.transform_kwargs(split_single_char_options=True, **kwargs)
@@ -872,7 +898,7 @@ class Git:
     def version_info(self) -> Tuple[int, ...]:
         """
         :return:  tuple with integers representing the major, minor and additional
-            version numbers as parsed from git version. Up to four fields are used.
+            version numbers as parsed from ``git version``. Up to four fields are used.
 
             This value is generated on demand and is cached.
         """
@@ -1021,8 +1047,8 @@ class Git:
             If True, default True, we open stdout on the created process.
 
         :param universal_newlines:
-            if True, pipes will be opened as text, and lines are split at
-            all known line endings.
+            If True, pipes will be opened as text, and lines are split at all known line
+            endings.
 
         :param shell:
             Whether to invoke commands through a shell (see `Popen(..., shell=True)`).
@@ -1057,6 +1083,7 @@ class Git:
             * tuple(int(status), str(stdout), str(stderr)) if extended_output = True
 
             If output_stream is True, the stdout value will be your output stream:
+
             * output_stream if extended_output = False
             * tuple(int(status), output_stream, str(stderr)) if extended_output = True
 
@@ -1254,14 +1281,16 @@ class Git:
         values in a format that can be passed back into this function to revert the
         changes.
 
-        ``Examples``::
+        Examples::
 
             old_env = self.update_environment(PWD='/tmp')
             self.update_environment(**old_env)
 
-        :param kwargs: Environment variables to use for git processes
+        :param kwargs:
+            Environment variables to use for git processes
 
-        :return: Dict that maps environment variables to their old values
+        :return:
+            Dict that maps environment variables to their old values
         """
         old_env = {}
         for key, value in kwargs.items():
@@ -1280,12 +1309,13 @@ class Git:
         """A context manager around the above :meth:`update_environment` method to
         restore the environment back to its previous state after operation.
 
-        ``Examples``::
+        Examples::
 
             with self.custom_environment(GIT_SSH='/bin/ssh_wrapper'):
                 repo.remotes.origin.fetch()
 
-        :param kwargs: See :meth:`update_environment`
+        :param kwargs:
+            See :meth:`update_environment`.
         """
         old_env = self.update_environment(**kwargs)
         try:
@@ -1310,7 +1340,7 @@ class Git:
         return []
 
     def transform_kwargs(self, split_single_char_options: bool = True, **kwargs: Any) -> List[str]:
-        """Transform Python style kwargs into git command line options."""
+        """Transform Python-style kwargs into git command line options."""
         args = []
         for k, v in kwargs.items():
             if isinstance(v, (list, tuple)):
@@ -1339,7 +1369,8 @@ class Git:
             These arguments are passed as in :meth:`_call_process`, but will be
             passed to the git command rather than the subcommand.
 
-        ``Examples``::
+        Examples::
+
             git(work_tree='/tmp').difftool()
         """
         self._git_options = self.transform_kwargs(split_single_char_options=True, **kwargs)
@@ -1369,23 +1400,25 @@ class Git:
     def _call_process(
         self, method: str, *args: Any, **kwargs: Any
     ) -> Union[str, bytes, Tuple[int, Union[str, bytes], str], "Git.AutoInterrupt"]:
-        """Run the given git command with the specified arguments and return
-        the result as a string.
+        """Run the given git command with the specified arguments and return the result
+        as a string.
 
         :param method:
-            The command. Contained ``_`` characters will be converted to dashes,
-            such as in ``ls_files`` to call ``ls-files``.
+            The command. Contained ``_`` characters will be converted to hyphens, such
+            as in ``ls_files`` to call ``ls-files``.
 
         :param args:
             The list of arguments. If None is included, it will be pruned.
-            This allows your commands to call git more conveniently as None
-            is realized as non-existent.
+            This allows your commands to call git more conveniently, as None is realized
+            as non-existent.
 
         :param kwargs:
             Contains key-values for the following:
+
             - The :meth:`execute()` kwds, as listed in :var:`execute_kwargs`.
             - "Command options" to be converted by :meth:`transform_kwargs`.
             - The `'insert_kwargs_after'` key which its value must match one of ``*args``.
+
             It also contains any command options, to be appended after the matched arg.
 
         Examples::
@@ -1396,7 +1429,8 @@ class Git:
 
            git rev-list max-count 10 --header master
 
-        :return: Same as :meth:`execute`.
+        :return:
+            Same as :meth:`execute`.
             If no args are given, used :meth:`execute`'s default (especially
             ``as_process = False``, ``stdout_as_string = True``) and return str.
         """
@@ -1447,8 +1481,8 @@ class Git:
 
         :return: (hex_sha, type_string, size_as_int)
 
-        :raise ValueError: If the header contains indication for an error due to
-            incorrect input sha
+        :raise ValueError:
+            If the header contains indication for an error due to incorrect input sha
         """
         tokens = header_line.split()
         if len(tokens) != 3:
@@ -1504,22 +1538,27 @@ class Git:
             raise ValueError("cmd stdin was empty")
 
     def get_object_header(self, ref: str) -> Tuple[str, str, int]:
-        """Use this method to quickly examine the type and size of the object behind
-        the given ref.
+        """Use this method to quickly examine the type and size of the object behind the
+        given ref.
 
-        :note: The method will only suffer from the costs of command invocation
-            once and reuses the command in subsequent calls.
+        :note:
+            The method will only suffer from the costs of command invocation once and
+            reuses the command in subsequent calls.
 
-        :return: (hexsha, type_string, size_as_int)
+        :return:
+            (hexsha, type_string, size_as_int)
         """
         cmd = self._get_persistent_cmd("cat_file_header", "cat_file", batch_check=True)
         return self.__get_object_header(cmd, ref)
 
     def get_object_data(self, ref: str) -> Tuple[str, str, int, bytes]:
-        """As get_object_header, but returns object data as well.
+        """Similar to :meth:`get_object_header`, but returns object data as well.
 
-        :return: (hexsha, type_string, size_as_int, data_string)
-        :note: Not threadsafe.
+        :return:
+            (hexsha, type_string, size_as_int, data_string)
+
+        :note:
+            Not threadsafe.
         """
         hexsha, typename, size, stream = self.stream_object_data(ref)
         data = stream.read(size)
@@ -1527,10 +1566,14 @@ class Git:
         return (hexsha, typename, size, data)
 
     def stream_object_data(self, ref: str) -> Tuple[str, str, int, "Git.CatFileContentStream"]:
-        """As get_object_header, but returns the data as a stream.
+        """Similar to :meth:`get_object_header`, but returns the data as a stream.
 
-        :return: (hexsha, type_string, size_as_int, stream)
-        :note: This method is not threadsafe, you need one independent Command instance per thread to be safe!
+        :return:
+            (hexsha, type_string, size_as_int, stream)
+
+        :note:
+            This method is not threadsafe. You need one independent Command instance per
+            thread to be safe!
         """
         cmd = self._get_persistent_cmd("cat_file_all", "cat_file", batch=True)
         hexsha, typename, size = self.__get_object_header(cmd, ref)
@@ -1542,7 +1585,8 @@ class Git:
 
         Currently persistent commands will be interrupted.
 
-        :return: self
+        :return:
+            self
         """
         for cmd in (self.cat_file_all, self.cat_file_header):
             if cmd:
