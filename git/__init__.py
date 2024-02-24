@@ -38,13 +38,13 @@ __all__ = [  # noqa: F405
     "IndexObject",
     "InvalidDBRoot",
     "InvalidGitRepositoryError",
-    "List",
+    "List",  # Deprecated - import this from `typing` instead.
     "LockFile",
     "NULL_TREE",
     "NoSuchPathError",
     "ODBError",
     "Object",
-    "Optional",
+    "Optional",  # Deprecated - import this from `typing` instead.
     "ParseError",
     "PathLike",
     "PushInfo",
@@ -58,19 +58,19 @@ __all__ = [  # noqa: F405
     "RepositoryDirtyError",
     "RootModule",
     "RootUpdateProgress",
-    "Sequence",
+    "Sequence",  # Deprecated - import this from `typing` instead.
     "StageType",
     "Stats",
     "Submodule",
     "SymbolicReference",
-    "TYPE_CHECKING",
+    "TYPE_CHECKING",  # Deprecated - import this from `typing` instead.
     "Tag",
     "TagObject",
     "TagReference",
     "Tree",
     "TreeModifier",
-    "Tuple",
-    "Union",
+    "Tuple",  # Deprecated - import this from `typing` instead.
+    "Union",  # Deprecated - import this from `typing` instead.
     "UnmergedEntriesError",
     "UnsafeOptionError",
     "UnsafeProtocolError",
