@@ -250,9 +250,10 @@ def _safer_popen_windows(
     # When not using a shell, the current process does the search in a CreateProcessW
     # API call, so the variable must be set in our environment. With a shell, this is
     # unnecessary, in versions where https://github.com/python/cpython/issues/101283 is
-    # patched. If not, in the rare case the ComSpec environment variable is unset, the
-    # shell is searched for unsafely. Setting NoDefaultCurrentDirectoryInExePath in all
-    # cases, as here, is simpler and protects against that. (The "1" can be any value.)
+    # patched. If that is unpatched, then in the rare case the ComSpec environment
+    # variable is unset, the search for the shell itself is unsafe. Setting
+    # NoDefaultCurrentDirectoryInExePath in all cases, as is done here, is simpler and
+    # protects against that. (As above, the "1" can be any value.)
     with patch_env("NoDefaultCurrentDirectoryInExePath", "1"):
         return Popen(
             command,
