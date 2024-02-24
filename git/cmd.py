@@ -479,7 +479,7 @@ class Git:
                         This initial message can be silenced or aggravated in the future by setting the
                         $%s environment variable. Use one of the following values:
                             - %s: for no message or exception
-                            - %s: for a warning message (logged at level CRITICAL, displayed by default)
+                            - %s: for a warning message (logging level CRITICAL, displayed by default)
                             - %s: for a raised exception
 
                         Example:
@@ -509,7 +509,7 @@ class Git:
 
                         Use only the following values:
                             - %s: for no message or exception
-                            - %s: for a warning message (logged at level CRITICAL, displayed by default)
+                            - %s: for a warning message (logging level CRITICAL, displayed by default)
                             - %s: for a raised exception
                         """
                         )
