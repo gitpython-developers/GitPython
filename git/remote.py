@@ -1075,13 +1075,14 @@ class Remote(LazyMixin, IterableObj):
         :param progress:
             Can take one of many value types:
 
-            * None to discard progress information.
+            * None, to discard progress information.
             * A function (callable) that is called with the progress information.
               Signature: ``progress(op_code, cur_count, max_count=None, message='')``.
-              `Click here <http://goo.gl/NPa7st>`__ for a description of all arguments
-              given to the function.
-            * An instance of a class derived from :class:`git.RemoteProgress` that
-              overrides the :meth:`~git.RemoteProgress.update` method.
+              See :meth:`RemoteProgress.update <git.util.RemoteProgress.update>` for a
+              description of all arguments given to the function.
+            * An instance of a class derived from :class:`~git.util.RemoteProgress` that
+              overrides the
+              :meth:`RemoteProgress.update <git.util.RemoteProgress.update>` method.
 
         :note: No further progress information is returned after push returns.
 
