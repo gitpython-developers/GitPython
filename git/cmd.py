@@ -1572,8 +1572,8 @@ class Git:
             (hexsha, type_string, size_as_int, stream)
 
         :note:
-            This method is not threadsafe. You need one independent Command instance per
-            thread to be safe!
+            This method is not threadsafe. You need one independent :class:`Git`
+            instance per thread to be safe!
         """
         cmd = self._get_persistent_cmd("cat_file_all", "cat_file", batch=True)
         hexsha, typename, size = self.__get_object_header(cmd, ref)
