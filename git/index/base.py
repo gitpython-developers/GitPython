@@ -6,6 +6,8 @@
 """Module containing :class:`IndexFile`, an Index implementation facilitating all kinds
 of index manipulations such as querying and merging."""
 
+__all__ = ("IndexFile", "CheckoutError", "StageType")
+
 import contextlib
 import datetime
 import glob
@@ -79,9 +81,6 @@ if TYPE_CHECKING:
 Treeish = Union[Tree, Commit, str, bytes]
 
 # ------------------------------------------------------------------------------------
-
-
-__all__ = ("IndexFile", "CheckoutError", "StageType")
 
 
 @contextlib.contextmanager

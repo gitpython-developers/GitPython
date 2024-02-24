@@ -3,5 +3,14 @@
 
 """Initialize the index package."""
 
-from .base import *  # noqa: F401 F403
-from .typ import *  # noqa: F401 F403
+__all__ = [
+    "BaseIndexEntry",
+    "BlobFilter",
+    "CheckoutError",
+    "IndexEntry",
+    "IndexFile",
+    "StageType",
+]
+
+from .base import CheckoutError, IndexFile
+from .typ import BaseIndexEntry, BlobFilter, IndexEntry, StageType
