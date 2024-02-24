@@ -120,7 +120,21 @@ GIT_OK = None
 
 
 def refresh(path: Optional[PathLike] = None) -> None:
-    """Convenience method for setting the git executable path."""
+    """Convenience method for setting the git executable path.
+
+    :param path: Optional path to the Git executable. If not absolute, it is resolved
+        immediately, relative to the current directory.
+
+    :note: The *path* parameter is usually omitted and cannot be used to specify a
+        custom command whose location is looked up in a path search on each call. See
+        :meth:`Git.refresh` for details on how to achieve this.
+
+    :note: This calls :meth:`Git.refresh` and sets other global configuration according
+        to the effect of doing so. As such, this function should usually be used instead
+        of using :meth:`Git.refresh` or :meth:`FetchInfo.refresh` directly.
+
+    :note: This function is called automatically, with no arguments, at import time.
+    """
     global GIT_OK
     GIT_OK = False
 
