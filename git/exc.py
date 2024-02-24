@@ -87,10 +87,13 @@ class CommandError(GitError):
         A non-empty list of argv comprising the command-line.
     """
 
-    #: A unicode print-format with 2 `%s for `<cmdline>` and the rest,
-    #:  e.g.
-    #:     "'%s' failed%s"
     _msg = "Cmd('%s') failed%s"
+    """Format string with 2 ``%s`` for ``<cmdline>`` and the rest.
+
+    For example: ``"'%s' failed%s"``
+
+    Subclasses may override this attribute, provided it is still in this form.
+    """
 
     def __init__(
         self,
