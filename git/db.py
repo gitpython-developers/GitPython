@@ -59,7 +59,7 @@ class GitCmdObjectDB(LooseObjectDB):
         :raise BadObject:
 
         :note: Currently we only raise :class:`BadObject` as git does not communicate
-            AmbiguousObjects separately.
+            ambiguous objects separately.
         """
         try:
             hexsha, _typename, _size = self._git.get_object_header(partial_hexsha)
