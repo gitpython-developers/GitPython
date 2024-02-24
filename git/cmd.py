@@ -379,8 +379,8 @@ class Git:
         :note: The top-level :func:`git.refresh` should be preferred because it calls
             this method and may also update other state accordingly.
 
-        :note: There are three different ways to specify what command refreshing causes
-            to be uses for git:
+        :note: There are three different ways to specify the command that refreshing
+            causes to be used for git:
 
             1. Pass no *path* argument and do not set the ``GIT_PYTHON_GIT_EXECUTABLE``
                environment variable. The command name ``git`` is used. It is looked up
@@ -394,9 +394,9 @@ class Git:
                in each command run. Setting ``GIT_PYTHON_GIT_EXECUTABLE`` to ``git`` has
                the same effect as not setting it.
 
-            3. Pass a *path* argument. This path, if not absolute, it immediately
+            3. Pass a *path* argument. This path, if not absolute, is immediately
                resolved, relative to the current directory. This resolution occurs at
-               the time of the refresh, and when git commands are run, they are run with
+               the time of the refresh. When git commands are run, they are run using
                that previously resolved path. If a *path* argument is passed, the
                ``GIT_PYTHON_GIT_EXECUTABLE`` environment variable is not consulted.
 
