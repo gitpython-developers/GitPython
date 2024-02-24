@@ -575,7 +575,10 @@ class Remote(LazyMixin, IterableObj):
         if attr == "_config_reader":
             # NOTE: This is cached as __getattr__ is overridden to return remote config
             # values implicitly, such as in print(r.pushurl).
-            self._config_reader = SectionConstraint(self.repo.config_reader("repository"), self._config_section_name())
+            self._config_reader = SectionConstraint(
+                self.repo.config_reader("repository"),
+                self._config_section_name(),
+            )
         else:
             super()._set_cache_(attr)
 
