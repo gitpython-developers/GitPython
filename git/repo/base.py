@@ -963,7 +963,9 @@ class Repo:
         Unlike :meth:`blame`, this does not return the actual file's contents, only a
         stream of :class:`BlameEntry` tuples.
 
-        :param rev: Revision specifier, see git-rev-parse for viable options.
+        :param rev: Revision specifier. If `None`, the blame will include all the latest
+            uncommitted changes. Otherwise, anything succesfully parsed by git-rev-parse
+            is a valid option.
 
         :return: Lazy iterator of :class:`BlameEntry` tuples, where the commit indicates
             the commit to blame for the line, and range indicates a span of line numbers
@@ -1053,7 +1055,9 @@ class Repo:
     ) -> List[List[Commit | List[str | bytes] | None]] | Iterator[BlameEntry] | None:
         """The blame information for the given file at the given revision.
 
-        :param rev: Revision specifier, see git-rev-parse for viable options.
+        :param rev: Revision specifier. If `None`, the blame will include all the latest
+            uncommitted changes. Otherwise, anything succesfully parsed by git-rev-parse
+            is a valid option.
 
         :return:
             list: [git.Commit, list: [<line>]]
