@@ -922,7 +922,12 @@ class Git:
         return self._version_info
 
     @overload
-    def execute(self, command: Union[str, Sequence[Any]], *, as_process: Literal[True]) -> "AutoInterrupt":
+    def execute(
+        self,
+        command: Union[str, Sequence[Any]],
+        *,
+        as_process: Literal[True],
+    ) -> "AutoInterrupt":
         ...
 
     @overload
