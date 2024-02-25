@@ -84,8 +84,9 @@ class Diffable:
     compatible type.
 
     :note:
-        Subclasses require a repo member as it is the case for Object instances, for
-        practical reasons we do not derive from Object.
+        Subclasses require a repo member as it is the case for
+        :class:`~git.objects.base.Object` instances, for practical reasons we do not
+        derive from :class:`~git.objects.base.Object`.
     """
 
     __slots__ = ()
@@ -135,13 +136,13 @@ class Diffable:
             to be read and diffed.
 
         :param kwargs:
-            Additional arguments passed to git-diff, such as ``R=True`` to swap both
+            Additional arguments passed to ``git diff``, such as ``R=True`` to swap both
             sides of the diff.
 
         :return: git.DiffIndex
 
         :note:
-            On a bare repository, 'other' needs to be provided as
+            On a bare repository, `other` needs to be provided as
             :class:`~Diffable.Index`, or as :class:`~git.objects.tree.Tree` or
             :class:`~git.objects.commit.Commit`, or a git command error will occur.
         """
@@ -183,7 +184,7 @@ class Diffable:
 
         args.insert(0, self)
 
-        # paths is list here, or None.
+        # paths is a list here, or None.
         if paths:
             args.append("--")
             args.extend(paths)
@@ -203,7 +204,7 @@ T_Diff = TypeVar("T_Diff", bound="Diff")
 
 
 class DiffIndex(List[T_Diff]):
-    """An Index for diffs, allowing a list of Diffs to be queried by the diff
+    R"""An Index for diffs, allowing a list of :class:`Diff`\s to be queried by the diff
     properties.
 
     The class improves the diff handling convenience.
@@ -255,27 +256,27 @@ class DiffIndex(List[T_Diff]):
 class Diff:
     """A Diff contains diff information between two Trees.
 
-    It contains two sides a and b of the diff, members are prefixed with
-    "a" and "b" respectively to indicate that.
+    It contains two sides a and b of the diff. Members are prefixed with "a" and "b"
+    respectively to indicate that.
 
     Diffs keep information about the changed blob objects, the file mode, renames,
     deletions and new files.
 
     There are a few cases where None has to be expected as member variable value:
 
-    ``New File``::
+    New File::
 
         a_mode is None
         a_blob is None
         a_path is None
 
-    ``Deleted File``::
+    Deleted File::
 
         b_mode is None
         b_blob is None
         b_path is None
 
-    ``Working Tree Blobs``
+    Working Tree Blobs:
 
         When comparing to working trees, the working tree blob will have a null hexsha
         as a corresponding object does not yet exist. The mode will be null as well.
@@ -469,7 +470,8 @@ class Diff:
         """
         :return: True if the blob of our diff has been renamed
 
-        :note: This property is deprecated.
+        :note:
+            This property is deprecated.
             Please use the :attr:`renamed_file` property instead.
         """
         return self.renamed_file
@@ -494,11 +496,17 @@ class Diff:
 
     @classmethod
     def _index_from_patch_format(cls, repo: "Repo", proc: Union["Popen", "Git.AutoInterrupt"]) -> DiffIndex:
-        """Create a new DiffIndex from the given process output which must be in patch format.
+        """Create a new :class:`DiffIndex` from the given process output which must be
+        in patch format.
 
-        :param repo: The repository we are operating on
-        :param proc: ``git diff`` process to read from (supports :class:`Git.AutoInterrupt` wrapper)
-        :return: git.DiffIndex
+        :param repo: The repository we are operating on.
+
+        :param proc:
+            ``git diff`` process to read from
+            (supports :class:`Git.AutoInterrupt` wrapper).
+
+        :return:
+            :class:`DiffIndex`
         """
 
         # FIXME: Here SLURPING raw, need to re-phrase header-regexes linewise.
@@ -539,14 +547,14 @@ class Diff:
             a_path = cls._pick_best_path(a_path, rename_from, a_path_fallback)
             b_path = cls._pick_best_path(b_path, rename_to, b_path_fallback)
 
-            # Our only means to find the actual text is to see what has not been matched by our regex,
-            # and then retro-actively assign it to our index.
+            # Our only means to find the actual text is to see what has not been matched
+            # by our regex, and then retro-actively assign it to our index.
             if previous_header is not None:
                 index[-1].diff = text[previous_header.end() : _header.start()]
             # END assign actual diff
 
-            # Make sure the mode is set if the path is set. Otherwise the resulting blob is invalid.
-            # We just use the one mode we should have parsed.
+            # Make sure the mode is set if the path is set. Otherwise the resulting blob
+            # is invalid. We just use the one mode we should have parsed.
             a_mode = old_mode or deleted_file_mode or (a_path and (b_mode or new_mode or new_file_mode))
             b_mode = b_mode or new_mode or new_file_mode or (b_path and a_mode)
             index.append(
@@ -610,7 +618,7 @@ class Diff:
             rename_from = None
             rename_to = None
 
-            # NOTE: We cannot conclude from the existence of a blob to change type
+            # NOTE: We cannot conclude from the existence of a blob to change type,
             # as diffs with the working do not have blobs yet.
             if change_type == "D":
                 b_blob_id = None  # Optional[str]
@@ -654,11 +662,17 @@ class Diff:
 
     @classmethod
     def _index_from_raw_format(cls, repo: "Repo", proc: "Popen") -> "DiffIndex":
-        """Create a new DiffIndex from the given process output which must be in raw format.
+        """Create a new :class:`DiffIndex` from the given process output which must be
+        in raw format.
 
-        :param repo: The repository we are operating on
-        :param proc: Process to read output from
-        :return: git.DiffIndex
+        :param repo:
+            The repository we are operating on.
+
+        :param proc:
+            Process to read output from.
+
+        :return:
+            :class:`DiffIndex`
         """
         # handles
         # :100644 100644 687099101... 37c5e30c8... M    .gitignore

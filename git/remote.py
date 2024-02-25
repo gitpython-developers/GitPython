@@ -70,13 +70,15 @@ def add_progress(
     git: Git,
     progress: Union[RemoteProgress, "UpdateProgress", Callable[..., RemoteProgress], None],
 ) -> Any:
-    """Add the --progress flag to the given kwargs dict if supported by the
-    git command.
+    """Add the ``--progress`` flag to the given `kwargs` dict if supported by the git
+    command.
 
-    :note: If the actual progress in the given progress instance is not
-        given, we do not request any progress.
+    :note:
+        If the actual progress in the given progress instance is not given, we do not
+        request any progress.
 
-    :return: possibly altered kwargs
+    :return:
+        Possibly altered `kwargs`
     """
     if progress is not None:
         v = git.version_info[:2]
@@ -108,7 +110,8 @@ def to_progress_instance(progress: RemoteProgress) -> RemoteProgress:
 def to_progress_instance(
     progress: Union[Callable[..., Any], RemoteProgress, None]
 ) -> Union[RemoteProgress, CallableRemoteProgress]:
-    """Given the 'progress' return a suitable object derived from RemoteProgress."""
+    """Given the `progress` return a suitable object derived from
+    :class:`~git.util.RemoteProgress`."""
     # New API only needs progress as a function.
     if callable(progress):
         return CallableRemoteProgress(progress)
@@ -276,7 +279,7 @@ class PushInfo(IterableObj):
 
 
 class PushInfoList(IterableList[PushInfo]):
-    """IterableList of PushInfo objects."""
+    """IterableList of :class:`PushInfo` objects."""
 
     def __new__(cls) -> "PushInfoList":
         return cast(PushInfoList, IterableList.__new__(cls, "push_infos"))
@@ -380,8 +383,8 @@ class FetchInfo(IterableObj):
 
     @classmethod
     def _from_line(cls, repo: "Repo", line: str, fetch_line: str) -> "FetchInfo":
-        """Parse information from the given line as returned by git-fetch -v
-        and return a new FetchInfo object representing this information.
+        """Parse information from the given line as returned by ``git-fetch -v`` and
+        return a new :class:`FetchInfo` object representing this information.
 
         We can handle a line as follows:
         "%c %-\\*s %-\\*s -> %s%s"
@@ -391,7 +394,7 @@ class FetchInfo(IterableObj):
         + means success forcing update
         - means a tag was updated
         * means birth of new branch or tag
-        = means the head was up to date ( and not moved )
+        = means the head was up to date (and not moved)
         ' ' means a fast-forward
 
         fetch line is the corresponding line from FETCH_HEAD, like
@@ -455,15 +458,17 @@ class FetchInfo(IterableObj):
         if remote_local_ref_str == "FETCH_HEAD":
             ref_type = SymbolicReference
         elif ref_type_name == "tag" or is_tag_operation:
-            # The ref_type_name can be branch, whereas we are still seeing a tag operation.
-            # It happens during testing, which is based on actual git operations.
+            # The ref_type_name can be branch, whereas we are still seeing a tag
+            # operation. It happens during testing, which is based on actual git
+            # operations.
             ref_type = TagReference
         elif ref_type_name in ("remote-tracking", "branch"):
-            # Note: remote-tracking is just the first part of the 'remote-tracking branch' token.
-            # We don't parse it correctly, but its enough to know what to do, and it's new in git 1.7something.
+            # Note: remote-tracking is just the first part of the
+            # 'remote-tracking branch' token. We don't parse it correctly, but it's
+            # enough to know what to do, and it's new in git 1.7something.
             ref_type = RemoteReference
         elif "/" in ref_type_name:
-            # If the fetch spec look something like this '+refs/pull/*:refs/heads/pull/*',
+            # If the fetch spec look something like '+refs/pull/*:refs/heads/pull/*',
             # and is thus pretty much anything the user wants, we will have trouble
             # determining what's going on. For now, we assume the local ref is a Head.
             ref_type = Head
@@ -475,17 +480,19 @@ class FetchInfo(IterableObj):
         if ref_type is SymbolicReference:
             remote_local_ref = ref_type(repo, "FETCH_HEAD")
         else:
-            # Determine prefix. Tags are usually pulled into refs/tags, they may have subdirectories.
-            # It is not clear sometimes where exactly the item is, unless we have an absolute path as
-            # indicated by the 'ref/' prefix. Otherwise even a tag could be in refs/remotes, which is
-            # when it will have the 'tags/' subdirectory in its path.
-            # We don't want to test for actual existence, but try to figure everything out analytically.
+            # Determine prefix. Tags are usually pulled into refs/tags; they may have
+            # subdirectories. It is not clear sometimes where exactly the item is,
+            # unless we have an absolute path as indicated by the 'ref/' prefix.
+            # Otherwise even a tag could be in refs/remotes, which is when it will have
+            # the 'tags/' subdirectory in its path. We don't want to test for actual
+            # existence, but try to figure everything out analytically.
             ref_path: Optional[PathLike] = None
             remote_local_ref_str = remote_local_ref_str.strip()
 
             if remote_local_ref_str.startswith(Reference._common_path_default + "/"):
-                # Always use actual type if we get absolute paths.
-                # Will always be the case if something is fetched outside of refs/remotes (if its not a tag).
+                # Always use actual type if we get absolute paths. This will always be
+                # the case if something is fetched outside of refs/remotes (if its not a
+                # tag).
                 ref_path = remote_local_ref_str
                 if ref_type is not TagReference and not remote_local_ref_str.startswith(
                     RemoteReference._common_path_default + "/"
@@ -499,8 +506,8 @@ class FetchInfo(IterableObj):
                 ref_path = join_path(ref_type._common_path_default, remote_local_ref_str)
             # END obtain refpath
 
-            # Even though the path could be within the git conventions, we make
-            # sure we respect whatever the user wanted, and disabled path checking.
+            # Even though the path could be within the git conventions, we make sure we
+            # respect whatever the user wanted, and disabled path checking.
             remote_local_ref = ref_type(repo, ref_path, check_path=False)
         # END create ref instance
 
@@ -517,10 +524,11 @@ class Remote(LazyMixin, IterableObj):
     """Provides easy read and write access to a git remote.
 
     Everything not part of this interface is considered an option for the current
-    remote, allowing constructs like remote.pushurl to query the pushurl.
+    remote, allowing constructs like ``remote.pushurl`` to query the pushurl.
 
-    :note: When querying configuration, the configuration accessor will be cached
-        to speed up subsequent accesses.
+    :note:
+        When querying configuration, the configuration accessor will be cached to speed
+        up subsequent accesses.
     """
 
     __slots__ = ("repo", "name", "_config_reader")
@@ -547,21 +555,24 @@ class Remote(LazyMixin, IterableObj):
     def __init__(self, repo: "Repo", name: str) -> None:
         """Initialize a remote instance.
 
-        :param repo: The repository we are a remote of
-        :param name: The name of the remote, e.g. 'origin'
+        :param repo:
+            The repository we are a remote of.
+
+        :param name:
+            The name of the remote, e.g. 'origin'.
         """
         self.repo = repo
         self.name = name
         self.url: str
 
     def __getattr__(self, attr: str) -> Any:
-        """Allows to call this instance like
-        remote.special( \\*args, \\*\\*kwargs) to call git-remote special self.name."""
+        """Allows to call this instance like ``remote.special(*args, **kwargs)`` to
+        call ``git remote special self.name``."""
         if attr == "_config_reader":
             return super().__getattr__(attr)
 
-        # Sometimes, probably due to a bug in Python itself, we are being called
-        # even though a slot of the same name exists.
+        # Sometimes, probably due to a bug in Python itself, we are being called even
+        # though a slot of the same name exists.
         try:
             return self._config_reader.get(attr)
         except cp.NoOptionError:
@@ -599,7 +610,8 @@ class Remote(LazyMixin, IterableObj):
 
     def exists(self) -> bool:
         """
-        :return: True if this is a valid, existing remote.
+        :return:
+            True if this is a valid, existing remote.
             Valid remotes have an entry in the repository's configuration.
         """
         try:
@@ -627,14 +639,21 @@ class Remote(LazyMixin, IterableObj):
     def set_url(
         self, new_url: str, old_url: Optional[str] = None, allow_unsafe_protocols: bool = False, **kwargs: Any
     ) -> "Remote":
-        """Configure URLs on current remote (cf command git remote set_url).
+        """Configure URLs on current remote (cf command ``git remote set-url``).
 
         This command manages URLs on the remote.
 
-        :param new_url: String being the URL to add as an extra remote URL
-        :param old_url: When set, replaces this URL with new_url for the remote
-        :param allow_unsafe_protocols: Allow unsafe protocols to be used, like ext
-        :return: self
+        :param new_url:
+            String being the URL to add as an extra remote URL.
+
+        :param old_url:
+            When set, replaces this URL with `new_url` for the remote.
+
+        :param allow_unsafe_protocols:
+            Allow unsafe protocols to be used, like ``ext``.
+
+        :return:
+            self
         """
         if not allow_unsafe_protocols:
             Git.check_unsafe_protocols(new_url)
@@ -647,25 +666,33 @@ class Remote(LazyMixin, IterableObj):
         return self
 
     def add_url(self, url: str, allow_unsafe_protocols: bool = False, **kwargs: Any) -> "Remote":
-        """Adds a new url on current remote (special case of git remote set_url).
+        """Adds a new url on current remote (special case of ``git remote set-url``).
 
         This command adds new URLs to a given remote, making it possible to have
         multiple URLs for a single remote.
 
-        :param url: String being the URL to add as an extra remote URL
-        :param allow_unsafe_protocols: Allow unsafe protocols to be used, like ext
-        :return: self
+        :param url:
+            String being the URL to add as an extra remote URL.
+
+        :param allow_unsafe_protocols:
+            Allow unsafe protocols to be used, like ``ext``.
+
+        :return:
+            self
         """
         return self.set_url(url, add=True, allow_unsafe_protocols=allow_unsafe_protocols)
 
     def delete_url(self, url: str, **kwargs: Any) -> "Remote":
-        """Deletes a new url on current remote (special case of git remote set_url)
+        """Deletes a new url on current remote (special case of ``git remote set-url``)
 
         This command deletes new URLs to a given remote, making it possible to have
         multiple URLs for a single remote.
 
-        :param url: String being the URL to delete from the remote
-        :return: self
+        :param url:
+            String being the URL to delete from the remote.
+
+        :return:
+            self
         """
         return self.set_url(url, delete=True)
 
@@ -706,9 +733,12 @@ class Remote(LazyMixin, IterableObj):
     def refs(self) -> IterableList[RemoteReference]:
         """
         :return:
-            IterableList of RemoteReference objects. It is prefixed, allowing
-            you to omit the remote path portion, e.g.::
-            remote.refs.master # yields RemoteReference('/refs/remotes/origin/master')
+            :class:`~git.util.IterableList` of :class:`git.refs.remote.RemoteReference`
+            objects.
+
+            It is prefixed, allowing you to omit the remote path portion, e.g.::
+
+                remote.refs.master  # yields RemoteReference('/refs/remotes/origin/master')
         """
         out_refs: IterableList[RemoteReference] = IterableList(RemoteReference._id_attribute_, "%s/" % self.name)
         out_refs.extend(RemoteReference.list_items(self.repo, remote=self.name))
@@ -718,12 +748,13 @@ class Remote(LazyMixin, IterableObj):
     def stale_refs(self) -> IterableList[Reference]:
         """
         :return:
-            IterableList RemoteReference objects that do not have a corresponding
-            head in the remote reference anymore as they have been deleted on the
-            remote side, but are still available locally.
+            :class:`~git.util.IterableList` of :class:`git.refs.remote.RemoteReference`
+            objects that do not have a corresponding head in the remote reference
+            anymore as they have been deleted on the remote side, but are still
+            available locally.
 
-            The IterableList is prefixed, hence the 'origin' must be omitted. See
-            'refs' property for an example.
+            The :class:`~git.util.IterableList` is prefixed, hence the 'origin' must be
+            omitted. See :attr:`refs` property for an example.
 
             To make things more complicated, it can be possible for the list to include
             other kinds of references, for example, tag references, if these are stale
@@ -752,13 +783,26 @@ class Remote(LazyMixin, IterableObj):
     def create(cls, repo: "Repo", name: str, url: str, allow_unsafe_protocols: bool = False, **kwargs: Any) -> "Remote":
         """Create a new remote to the given repository.
 
-        :param repo: Repository instance that is to receive the new remote
-        :param name: Desired name of the remote
-        :param url: URL which corresponds to the remote's name
-        :param allow_unsafe_protocols: Allow unsafe protocols to be used, like ext
-        :param kwargs: Additional arguments to be passed to the git-remote add command
-        :return: New Remote instance
-        :raise GitCommandError: in case an origin with that name already exists
+        :param repo:
+            Repository instance that is to receive the new remote.
+
+        :param name:
+            Desired name of the remote.
+
+        :param url:
+            URL which corresponds to the remote's name.
+
+        :param allow_unsafe_protocols:
+            Allow unsafe protocols to be used, like ``ext``.
+
+        :param kwargs:
+            Additional arguments to be passed to the ``git remote add`` command.
+
+        :return:
+            New :class:`Remote` instance
+
+        :raise GitCommandError:
+            In case an origin with that name already exists.
         """
         scmd = "add"
         kwargs["insert_kwargs_after"] = scmd
@@ -777,7 +821,8 @@ class Remote(LazyMixin, IterableObj):
     def remove(cls, repo: "Repo", name: str) -> str:
         """Remove the remote with the given name.
 
-        :return: The passed remote name to remove
+        :return:
+            The passed remote name to remove
         """
         repo.git.remote("rm", name)
         if isinstance(name, cls):
@@ -788,9 +833,10 @@ class Remote(LazyMixin, IterableObj):
     rm = remove
 
     def rename(self, new_name: str) -> "Remote":
-        """Rename self to the given new_name.
+        """Rename self to the given `new_name`.
 
-        :return: self
+        :return:
+            self
         """
         if self.name == new_name:
             return self
@@ -802,12 +848,15 @@ class Remote(LazyMixin, IterableObj):
         return self
 
     def update(self, **kwargs: Any) -> "Remote":
-        """Fetch all changes for this remote, including new branches which will
-        be forced in (in case your local remote branch is not part the new remote
-        branch's ancestry anymore).
+        """Fetch all changes for this remote, including new branches which will be
+        forced in (in case your local remote branch is not part the new remote branch's
+        ancestry anymore).
 
-        :param kwargs: Additional arguments passed to git-remote update
-        :return: self
+        :param kwargs:
+            Additional arguments passed to ``git remote update``.
+
+        :return:
+            self
         """
         scmd = "update"
         kwargs["insert_kwargs_after"] = scmd
@@ -966,9 +1015,9 @@ class Remote(LazyMixin, IterableObj):
 
             Taken from the git manual, gitglossary(7).
 
-            Fetch supports multiple refspecs (as the
-            underlying git-fetch does) - supplying a list rather than a string
-            for 'refspec' will make use of this facility.
+            Fetch supports multiple refspecs (as the underlying git-fetch does) -
+            supplying a list rather than a string for 'refspec' will make use of this
+            facility.
 
         :param progress: See :meth:`push` method.
 
@@ -978,15 +1027,18 @@ class Remote(LazyMixin, IterableObj):
             To specify a timeout in seconds for the git command, after which the process
             should be killed. It is set to None by default.
 
-        :param allow_unsafe_protocols: Allow unsafe protocols to be used, like ext.
+        :param allow_unsafe_protocols:
+            Allow unsafe protocols to be used, like ``ext``.
 
-        :param allow_unsafe_options: Allow unsafe options to be used, like --upload-pack.
+        :param allow_unsafe_options:
+            Allow unsafe options to be used, like ``--upload-pack``.
 
-        :param kwargs: Additional arguments to be passed to git-fetch.
+        :param kwargs:
+            Additional arguments to be passed to ``git fetch``.
 
         :return:
-            IterableList(FetchInfo, ...) list of FetchInfo instances providing detailed
-            information about the fetch results
+            IterableList(FetchInfo, ...) list of :class:`FetchInfo` instances providing
+            detailed information about the fetch results
 
         :note:
             As fetch does not provide progress information to non-ttys, we cannot make
@@ -1030,13 +1082,26 @@ class Remote(LazyMixin, IterableObj):
         """Pull changes from the given branch, being the same as a fetch followed
         by a merge of branch with your local branch.
 
-        :param refspec: See :meth:`fetch` method
-        :param progress: See :meth:`push` method
-        :param kill_after_timeout: See :meth:`fetch` method
-        :param allow_unsafe_protocols: Allow unsafe protocols to be used, like ext
-        :param allow_unsafe_options: Allow unsafe options to be used, like --upload-pack
-        :param kwargs: Additional arguments to be passed to git-pull
-        :return: Please see :meth:`fetch` method
+        :param refspec:
+            See :meth:`fetch` method.
+
+        :param progress:
+            See :meth:`push` method.
+
+        :param kill_after_timeout:
+            See :meth:`fetch` method.
+
+        :param allow_unsafe_protocols:
+            Allow unsafe protocols to be used, like ``ext``.
+
+        :param allow_unsafe_options:
+            Allow unsafe options to be used, like ``--upload-pack``.
+
+        :param kwargs:
+            Additional arguments to be passed to ``git pull``.
+
+        :return:
+            Please see :meth:`fetch` method
         """
         if refspec is None:
             # No argument refspec, then ensure the repo's config has a fetch refspec.
@@ -1070,7 +1135,8 @@ class Remote(LazyMixin, IterableObj):
     ) -> PushInfoList:
         """Push changes from source branch in refspec to target branch in refspec.
 
-        :param refspec: See :meth:`fetch` method.
+        :param refspec:
+            See :meth:`fetch` method.
 
         :param progress:
             Can take one of many value types:
@@ -1084,26 +1150,31 @@ class Remote(LazyMixin, IterableObj):
               overrides the
               :meth:`RemoteProgress.update <git.util.RemoteProgress.update>` method.
 
-        :note: No further progress information is returned after push returns.
+        :note:
+            No further progress information is returned after push returns.
 
         :param kill_after_timeout:
             To specify a timeout in seconds for the git command, after which the process
             should be killed. It is set to None by default.
 
-        :param allow_unsafe_protocols: Allow unsafe protocols to be used, like ext.
+        :param allow_unsafe_protocols:
+            Allow unsafe protocols to be used, like ``ext``.
 
         :param allow_unsafe_options:
-            Allow unsafe options to be used, like --receive-pack.
+            Allow unsafe options to be used, like ``--receive-pack``.
 
-        :param kwargs: Additional arguments to be passed to git-push.
+        :param kwargs: Additional arguments to be passed to ``git push``.
 
         :return:
             A :class:`PushInfoList` object, where each list member represents an
             individual head which had been updated on the remote side.
+
             If the push contains rejected heads, these will have the
             :attr:`PushInfo.ERROR` bit set in their flags.
-            If the operation fails completely, the length of the returned PushInfoList
-            will be 0.
+
+            If the operation fails completely, the length of the returned
+            :class:`PushInfoList` will be 0.
+
             Call :meth:`~PushInfoList.raise_if_error` on the returned object to raise on
             any failure.
         """
@@ -1133,8 +1204,9 @@ class Remote(LazyMixin, IterableObj):
     def config_reader(self) -> SectionConstraint[GitConfigParser]:
         """
         :return:
-            GitConfigParser compatible object able to read options for only our remote.
-            Hence you may simple type config.get("pushurl") to obtain the information.
+            :class:`~git.config.GitConfigParser` compatible object able to read options
+            for only our remote. Hence you may simply type ``config.get("pushurl")`` to
+            obtain the information.
         """
         return self._config_reader
 
@@ -1148,7 +1220,9 @@ class Remote(LazyMixin, IterableObj):
     @property
     def config_writer(self) -> SectionConstraint:
         """
-        :return: GitConfigParser compatible object able to write options for this remote.
+        :return:
+            :class:`~git.config.GitConfigParser`-compatible object able to write options
+            for this remote.
 
         :note:
             You can only own one writer at a time - delete it to release the

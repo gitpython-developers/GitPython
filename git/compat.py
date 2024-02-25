@@ -35,8 +35,9 @@ This is deprecated because it is clearer to write out :attr:`os.name` or
 :attr:`sys.platform` checks explicitly, especially in cases where it matters which is
 used.
 
-:note: ``is_win`` is ``False`` on Cygwin, but is often wrongly assumed ``True``. To
-    detect Cygwin, use ``sys.platform == "cygwin"``.
+:note:
+    ``is_win`` is ``False`` on Cygwin, but is often wrongly assumed ``True``. To detect
+    Cygwin, use ``sys.platform == "cygwin"``.
 """
 
 is_posix = os.name == "posix"
@@ -46,9 +47,10 @@ This is deprecated because it clearer to write out :attr:`os.name` or
 :attr:`sys.platform` checks explicitly, especially in cases where it matters which is
 used.
 
-:note: For POSIX systems, more detailed information is available in
-    :attr:`sys.platform`, while :attr:`os.name` is always ``"posix"`` on such systems,
-    including macOS (Darwin).
+:note:
+    For POSIX systems, more detailed information is available in :attr:`sys.platform`,
+    while :attr:`os.name` is always ``"posix"`` on such systems, including macOS
+    (Darwin).
 """
 
 is_darwin = sys.platform == "darwin"
@@ -57,7 +59,8 @@ is_darwin = sys.platform == "darwin"
 This is deprecated because it clearer to write out :attr:`os.name` or
 :attr:`sys.platform` checks explicitly.
 
-:note: For macOS (Darwin), ``os.name == "posix"`` as in other Unix-like systems, while
+:note:
+    For macOS (Darwin), ``os.name == "posix"`` as in other Unix-like systems, while
     ``sys.platform == "darwin"`.
 """
 

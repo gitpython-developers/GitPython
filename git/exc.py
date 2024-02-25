@@ -81,7 +81,8 @@ class UnsafeOptionError(GitError):
 
 
 class CommandError(GitError):
-    """Base class for exceptions thrown at every stage of `Popen()` execution.
+    """Base class for exceptions thrown at every stage of :class:`~subprocess.Popen`
+    execution.
 
     :param command:
         A non-empty list of argv comprising the command-line.
@@ -135,8 +136,8 @@ class CommandError(GitError):
 
 
 class GitCommandNotFound(CommandError):
-    """Thrown if we cannot find the `git` executable in the PATH or at the path given by
-    the GIT_PYTHON_GIT_EXECUTABLE environment variable."""
+    """Thrown if we cannot find the `git` executable in the ``PATH`` or at the path
+    given by the ``GIT_PYTHON_GIT_EXECUTABLE`` environment variable."""
 
     def __init__(self, command: Union[List[str], Tuple[str], str], cause: Union[str, Exception]) -> None:
         super().__init__(command, cause)
@@ -187,7 +188,7 @@ class CheckoutError(GitError):
 
 
 class CacheError(GitError):
-    """Base for all errors related to the git index, which is called cache
+    """Base for all errors related to the git index, which is called "cache"
     internally."""
 
 
