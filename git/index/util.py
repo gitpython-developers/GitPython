@@ -65,13 +65,10 @@ class TemporaryFileSwap:
 
 
 def post_clear_cache(func: Callable[..., _T]) -> Callable[..., _T]:
-    """Decorator for functions that alter the index using the git command. This would
-    invalidate our possibly existing entries dictionary which is why it must be deleted
-    to allow it to be lazily reread later.
+    """Decorator for functions that alter the index using the git command.
 
-    :note:
-        This decorator is required because not all functions related to
-        :class:`~git.index.base.IndexFile` are implemented natively.
+    When a git command alters the index, this invalidates our possibly existing entries
+    dictionary, which is why it must be deleted to allow it to be lazily reread later.
     """
 
     @wraps(func)
