@@ -70,8 +70,8 @@ def post_clear_cache(func: Callable[..., _T]) -> Callable[..., _T]:
     to allow it to be lazily reread later.
 
     :note:
-        This decorator will not be required once all functions are implemented natively
-        which in fact is possible, but probably not feasible performance wise.
+        This decorator is required because not all functions related to
+        :class:`~git.index.base.IndexFile` are implemented natively.
     """
 
     @wraps(func)
