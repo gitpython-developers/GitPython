@@ -1018,12 +1018,8 @@ class Git:
 
         :param output_stream:
             If set to a file-like object, data produced by the git command will be
-            output to the given stream directly.
-            This feature only has any effect if `as_process` is False. Processes will
-            always be created with a pipe due to issues with subprocess.
-            This merely is a workaround as data will be copied from the
-            output pipe to the given output stream directly.
-            Judging from the implementation, you shouldn't use this parameter!
+            copied to the given stream instead of being returned as a string.
+            This feature only has any effect if `as_process` is False.
 
         :param stdout_as_string:
             If False, the command's standard output will be bytes. Otherwise, it will be
