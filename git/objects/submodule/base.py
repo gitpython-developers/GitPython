@@ -124,7 +124,7 @@ class Submodule(IndexObject, TraversableIterableObj):
             the ``url`` parameter.
         :param parent_commit: See :meth:`set_parent_commit`.
         :param url: The URL to the remote repository which is the submodule.
-        :param branch_path: Full (relative) path to ref to checkout when cloning the
+        :param branch_path: Complete relative path to ref to checkout when cloning the
             remote repository.
         """
         super().__init__(repo, binsha, mode, path)
@@ -1322,7 +1322,7 @@ class Submodule(IndexObject, TraversableIterableObj):
     @property
     def branch_path(self) -> PathLike:
         """
-        :return: Full (relative) path as string to the branch we would checkout
+        :return: Complete relative path as string to the branch we would checkout
             from the remote and track
         """
         return self._branch_path
