@@ -58,7 +58,8 @@ class BlobFilter:
         blob_path: Path = blob_pathlike if isinstance(blob_pathlike, Path) else Path(blob_pathlike)
         for pathlike in self.paths:
             path: Path = pathlike if isinstance(pathlike, Path) else Path(pathlike)
-            # TODO: Change to use `PosixPath.is_relative_to` once Python 3.8 is no longer supported.
+            # TODO: Change to use `PosixPath.is_relative_to` once Python 3.8 is no
+            # longer supported.
             filter_parts: List[str] = path.parts
             blob_parts: List[str] = blob_path.parts
             if len(filter_parts) > len(blob_parts):
@@ -69,8 +70,11 @@ class BlobFilter:
 
 
 class BaseIndexEntryHelper(NamedTuple):
-    """Typed namedtuple to provide named attribute access for BaseIndexEntry.
-    Needed to allow overriding __new__ in child class to preserve backwards compat."""
+    """Typed named tuple to provide named attribute access for BaseIndexEntry.
+
+    This is needed to allow overriding ``__new__`` in child class to preserve backwards
+    compatibility.
+    """
 
     mode: int
     binsha: bytes
@@ -101,7 +105,8 @@ class BaseIndexEntry(BaseIndexEntryHelper):
             Tuple[int, bytes, int, PathLike, bytes, bytes, int, int, int, int, int],
         ],
     ) -> "BaseIndexEntry":
-        """Override __new__ to allow construction from a tuple for backwards compatibility"""
+        """Override ``__new__`` to allow construction from a tuple for backwards
+        compatibility."""
         return super().__new__(cls, *inp_tuple)
 
     def __str__(self) -> str:
