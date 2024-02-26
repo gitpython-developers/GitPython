@@ -957,13 +957,15 @@ class Repo:
         # reveal_type(self.head.reference)  # => Reference
         return self.head.reference
 
-    def blame_incremental(self, rev: str | HEAD, file: str, **kwargs: Any) -> Iterator["BlameEntry"]:
+    def blame_incremental(self, rev: str | HEAD | None, file: str, **kwargs: Any) -> Iterator["BlameEntry"]:
         """Iterator for blame information for the given file at the given revision.
 
         Unlike :meth:`blame`, this does not return the actual file's contents, only a
         stream of :class:`BlameEntry` tuples.
 
-        :param rev: Revision specifier, see git-rev-parse for viable options.
+        :param rev: Revision specifier. If `None`, the blame will include all the latest
+            uncommitted changes. Otherwise, anything succesfully parsed by git-rev-parse
+            is a valid option.
 
         :return: Lazy iterator of :class:`BlameEntry` tuples, where the commit indicates
             the commit to blame for the line, and range indicates a span of line numbers
@@ -1045,7 +1047,7 @@ class Repo:
 
     def blame(
         self,
-        rev: Union[str, HEAD],
+        rev: Union[str, HEAD, None],
         file: str,
         incremental: bool = False,
         rev_opts: Optional[List[str]] = None,
@@ -1053,7 +1055,9 @@ class Repo:
     ) -> List[List[Commit | List[str | bytes] | None]] | Iterator[BlameEntry] | None:
         """The blame information for the given file at the given revision.
 
-        :param rev: Revision specifier, see git-rev-parse for viable options.
+        :param rev: Revision specifier. If `None`, the blame will include all the latest
+            uncommitted changes. Otherwise, anything succesfully parsed by git-rev-parse
+            is a valid option.
 
         :return:
             list: [git.Commit, list: [<line>]]
