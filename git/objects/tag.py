@@ -59,8 +59,8 @@ class TagObject(base.Object):
         :param tagged_date: int_seconds_since_epoch
             The :class:`DateTime` of the tag creation.
             Use :func:`time.gmtime` to convert it into a different format.
-        :param tagged_tz_offset: int_seconds_west_of_utc
-            The timezone that the authored_date is in, in a format similar
+        :param tagger_tz_offset: int_seconds_west_of_utc
+            The timezone that the tagged_date is in, in a format similar
             to :attr:`time.altzone`.
         """
         super().__init__(repo, binsha)
