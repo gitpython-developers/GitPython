@@ -60,7 +60,8 @@ _logger = logging.getLogger(__name__)
 
 class UpdateProgress(RemoteProgress):
     """Class providing detailed progress information to the caller who should
-    derive from it and implement the ``update(...)`` message."""
+    derive from it and implement the
+    :meth:`update(...) <git.util.RemoteProgress.update>` message."""
 
     CLONE, FETCH, UPDWKTREE = [1 << x for x in range(RemoteProgress._num_op_codes, RemoteProgress._num_op_codes + 3)]
     _num_op_codes: int = RemoteProgress._num_op_codes + 3
@@ -76,8 +77,8 @@ UPDWKTREE = UpdateProgress.UPDWKTREE
 
 
 # IndexObject comes via the util module. It's a 'hacky' fix thanks to Python's import
-# mechanism, which causes plenty of trouble if the only reason for packages and
-# modules is refactoring - subpackages shouldn't depend on parent packages.
+# mechanism, which causes plenty of trouble if the only reason for packages and modules
+# is refactoring - subpackages shouldn't depend on parent packages.
 class Submodule(IndexObject, TraversableIterableObj):
     """Implements access to a git submodule. They are special in that their sha
     represents a commit in the submodule's repository which is to be checked out
@@ -119,11 +120,19 @@ class Submodule(IndexObject, TraversableIterableObj):
         We only document the parameters that differ from
         :class:`~git.objects.base.IndexObject`.
 
-        :param repo: Our parent repository.
-        :param binsha: Binary sha referring to a commit in the remote repository. See
-            the ``url`` parameter.
-        :param parent_commit: See :meth:`set_parent_commit`.
-        :param url: The URL to the remote repository which is the submodule.
+        :param repo:
+            Our parent repository.
+
+        :param binsha:
+            Binary sha referring to a commit in the remote repository.
+            See the `url` parameter.
+
+        :param parent_commit:
+            See :meth:`set_parent_commit`.
+
+        :param url:
+            The URL to the remote repository which is the submodule.
+
         :param branch_path: Complete relative path to ref to checkout when cloning the
             remote repository.
         """
@@ -1313,9 +1322,11 @@ class Submodule(IndexObject, TraversableIterableObj):
     @property
     def branch(self) -> "Head":
         """
-        :return: The branch instance that we are to checkout
+        :return:
+            The branch instance that we are to checkout
 
-        :raise InvalidGitRepositoryError: If our module is not yet checked out
+        :raise InvalidGitRepositoryError:
+            If our module is not yet checked out.
         """
         return mkhead(self.module(), self._branch_path)
 
@@ -1329,7 +1340,10 @@ class Submodule(IndexObject, TraversableIterableObj):
 
     @property
     def branch_name(self) -> str:
-        """:return: The name of the branch, which is the shortest possible branch name"""
+        """
+        :return:
+            The name of the branch, which is the shortest possible branch name
+        """
         # Use an instance method, for this we create a temporary Head instance
         # which uses a repository that is available at least (it makes no difference).
         return git.Head(self.repo, self._branch_path).name
@@ -1342,9 +1356,11 @@ class Submodule(IndexObject, TraversableIterableObj):
     @property
     def parent_commit(self) -> "Commit_ish":
         """
-        :return: Commit instance with the tree containing the .gitmodules file
+        :return:
+            Commit instance with the tree containing the ``.gitmodules`` file
 
-        :note: Will always point to the current head's commit if it was not set explicitly.
+        :note:
+            Will always point to the current head's commit if it was not set explicitly.
         """
         if self._parent_commit is None:
             return self.repo.commit()
@@ -1353,33 +1369,40 @@ class Submodule(IndexObject, TraversableIterableObj):
     @property
     def name(self) -> str:
         """
-        :return: The name of this submodule. It is used to identify it within the
-            .gitmodules file.
+        :return:
+            The name of this submodule. It is used to identify it within the
+            ``.gitmodules`` file.
 
-        :note: By default, this is the name is the path at which to find the submodule,
-            but in GitPython it should be a unique identifier similar to the identifiers
+        :note:
+            By default, this is the name is the path at which to find the submodule, but
+            in GitPython it should be a unique identifier similar to the identifiers
             used for remotes, which allows to change the path of the submodule easily.
         """
         return self._name
 
     def config_reader(self) -> SectionConstraint[SubmoduleConfigParser]:
         """
-        :return: ConfigReader instance which allows you to query the configuration
-            values of this submodule, as provided by the .gitmodules file.
+        :return:
+            ConfigReader instance which allows you to query the configuration values of
+            this submodule, as provided by the ``.gitmodules`` file.
 
-        :note: The config reader will actually read the data directly from the
-            repository and thus does not need nor care about your working tree.
+        :note:
+            The config reader will actually read the data directly from the repository
+            and thus does not need nor care about your working tree.
 
-        :note: Should be cached by the caller and only kept as long as needed.
+        :note:
+            Should be cached by the caller and only kept as long as needed.
 
-        :raise IOError: If the .gitmodules file/blob could not be read.
+        :raise IOError:
+            If the ``.gitmodules`` file/blob could not be read.
         """
         return self._config_parser_constrained(read_only=True)
 
     def children(self) -> IterableList["Submodule"]:
         """
-        :return: IterableList(Submodule, ...) an iterable list of submodules instances
-            which are children of this submodule or 0 if the submodule is not checked out.
+        :return:
+            IterableList(Submodule, ...) An iterable list of submodules instances which
+            are children of this submodule or 0 if the submodule is not checked out.
         """
         return self._get_intermediate_items(self)
 
@@ -1395,7 +1418,10 @@ class Submodule(IndexObject, TraversableIterableObj):
         *Args: Any,
         **kwargs: Any,
     ) -> Iterator["Submodule"]:
-        """:return: Iterator yielding Submodule instances available in the given repository"""
+        """
+        :return:
+            Iterator yielding Submodule instances available in the given repository
+        """
         try:
             pc = repo.commit(parent_commit)  # Parent commit instance
             parser = cls._config_parser(repo, pc, read_only=True)
@@ -1423,8 +1449,8 @@ class Submodule(IndexObject, TraversableIterableObj):
                     entry = index.entries[index.entry_key(p, 0)]
                     sm = Submodule(repo, entry.binsha, entry.mode, entry.path)
                 except KeyError:
-                    # The submodule doesn't exist, probably it wasn't
-                    # removed from the .gitmodules file.
+                    # The submodule doesn't exist, probably it wasn't removed from the
+                    # .gitmodules file.
                     continue
                 # END handle keyerror
             # END handle critical error
