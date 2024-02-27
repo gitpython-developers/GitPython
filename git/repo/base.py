@@ -168,7 +168,7 @@ class Repo:
         search_parent_directories: bool = False,
         expand_vars: bool = True,
     ) -> None:
-        """Create a new Repo instance.
+        R"""Create a new Repo instance.
 
         :param path:
             The path to either the root git directory or the bare git repo::
@@ -177,7 +177,7 @@ class Repo:
                 repo = Repo("/Users/mtrier/Development/git-python.git")
                 repo = Repo("~/Development/git-python.git")
                 repo = Repo("$REPOSITORIES/Development/git-python.git")
-                repo = Repo("C:\\Users\\mtrier\\Development\\git-python\\.git")
+                repo = Repo(R"C:\Users\mtrier\Development\git-python\.git")
 
             - In *Cygwin*, path may be a ``cygdrive/...`` prefixed path.
             - If it evaluates to false, :envvar:`GIT_DIR` is used, and if this also
