@@ -40,10 +40,13 @@ __all__ = (
 
 
 def tree_to_stream(entries: Sequence[EntryTup], write: Callable[["ReadableBuffer"], Union[int, None]]) -> None:
-    """Write the given list of entries into a stream using its write method.
+    """Write the given list of entries into a stream using its ``write`` method.
 
-    :param entries: **sorted** list of tuples with (binsha, mode, name)
-    :param write: write method which takes a data string
+    :param entries:
+        **Sorted** list of tuples with (binsha, mode, name).
+
+    :param write:
+        A ``write`` method which takes a data string.
     """
     ord_zero = ord("0")
     bit_mask = 7  # 3 bits set.
@@ -59,11 +62,11 @@ def tree_to_stream(entries: Sequence[EntryTup], write: Callable[["ReadableBuffer
             mode_str = mode_str[1:]
         # END save a byte
 
-        # Here it comes: If the name is actually unicode, the replacement below
-        # will not work as the binsha is not part of the ascii unicode encoding -
-        # hence we must convert to an UTF-8 string for it to work properly.
-        # According to my tests, this is exactly what git does, that is it just
-        # takes the input literally, which appears to be UTF-8 on linux.
+        # Here it comes: If the name is actually unicode, the replacement below will not
+        # work as the binsha is not part of the ascii unicode encoding - hence we must
+        # convert to an UTF-8 string for it to work properly. According to my tests,
+        # this is exactly what git does, that is it just takes the input literally,
+        # which appears to be UTF-8 on linux.
         if isinstance(name, str):
             name_bytes = name.encode(defenc)
         else:
@@ -73,10 +76,15 @@ def tree_to_stream(entries: Sequence[EntryTup], write: Callable[["ReadableBuffer
 
 
 def tree_entries_from_data(data: bytes) -> List[EntryTup]:
-    """Reads the binary representation of a tree and returns tuples of Tree items
+    """Read the binary representation of a tree and returns tuples of
+    :class:`~git.objects.tree.Tree` items.
 
-    :param data: data block with tree data (as bytes)
-    :return: list(tuple(binsha, mode, tree_relative_path), ...)"""
+    :param data:
+        Data block with tree data (as bytes).
+
+    :return:
+        list(tuple(binsha, mode, tree_relative_path), ...)
+    """
     ord_zero = ord("0")
     space_ord = ord(" ")
     len_data = len(data)
@@ -89,8 +97,8 @@ def tree_entries_from_data(data: bytes) -> List[EntryTup]:
         # Some git versions truncate the leading 0, some don't.
         # The type will be extracted from the mode later.
         while data[i] != space_ord:
-            # Move existing mode integer up one level being 3 bits
-            # and add the actual ordinal value of the character.
+            # Move existing mode integer up one level being 3 bits and add the actual
+            # ordinal value of the character.
             mode = (mode << 3) + (data[i] - ord_zero)
             i += 1
         # END while reading mode
@@ -122,8 +130,8 @@ def tree_entries_from_data(data: bytes) -> List[EntryTup]:
 def _find_by_name(tree_data: MutableSequence[EntryTupOrNone], name: str, is_dir: bool, start_at: int) -> EntryTupOrNone:
     """Return data entry matching the given name and tree mode or None.
 
-    Before the item is returned, the respective data item is set None in the
-    tree_data list to mark it done.
+    Before the item is returned, the respective data item is set None in the `tree_data`
+    list to mark it done.
     """
 
     try:
@@ -165,6 +173,7 @@ def traverse_trees_recursive(
 ) -> List[Tuple[EntryTupOrNone, ...]]:
     """
     :return: list of list with entries according to the given binary tree-shas.
+
         The result is encoded in a list
         of n tuple|None per blob/commit, (n == len(tree_shas)), where:
 
@@ -172,16 +181,19 @@ def traverse_trees_recursive(
         * [1] == mode as int
         * [2] == path relative to working tree root
 
-        The entry tuple is None if the respective blob/commit did not
-        exist in the given tree.
+        The entry tuple is None if the respective blob/commit did not exist in the given
+        tree.
 
-    :param tree_shas: iterable of shas pointing to trees. All trees must
-        be on the same level. A tree-sha may be None in which case None.
+    :param tree_shas:
+        Iterable of shas pointing to trees. All trees must be on the same level. A
+        tree-sha may be None in which case None.
 
-    :param path_prefix: a prefix to be added to the returned paths on this level,
-        set it '' for the first iteration.
+    :param path_prefix:
+        A prefix to be added to the returned paths on this level.
+        Set it ``""`` for the first iteration.
 
-    :note: The ordering of the returned items will be partially lost.
+    :note:
+        The ordering of the returned items will be partially lost.
     """
     trees_data: List[List[EntryTupOrNone]] = []
 
@@ -198,8 +210,8 @@ def traverse_trees_recursive(
 
     out: List[Tuple[EntryTupOrNone, ...]] = []
 
-    # Find all matching entries and recursively process them together if the match
-    # is a tree. If the match is a non-tree item, put it into the result.
+    # Find all matching entries and recursively process them together if the match is a
+    # tree. If the match is a non-tree item, put it into the result.
     # Processed items will be set None.
     for ti, tree_data in enumerate(trees_data):
         for ii, item in enumerate(tree_data):
@@ -213,8 +225,8 @@ def traverse_trees_recursive(
             is_dir = S_ISDIR(mode)  # Type mode bits
 
             # Find this item in all other tree data items.
-            # Wrap around, but stop one before our current index, hence
-            # ti+nt, not ti+1+nt.
+            # Wrap around, but stop one before our current index, hence ti+nt, not
+            # ti+1+nt.
             for tio in range(ti + 1, ti + nt):
                 tio = tio % nt
                 entries[tio] = _find_by_name(trees_data[tio], name, is_dir, ii)
@@ -245,7 +257,7 @@ def traverse_trees_recursive(
 
 def traverse_tree_recursive(odb: "GitCmdObjectDB", tree_sha: bytes, path_prefix: str) -> List[EntryTup]:
     """
-    :return: list of entries of the tree pointed to by the binary tree_sha.
+    :return: list of entries of the tree pointed to by the binary `tree_sha`.
 
         An entry has the following format:
 
@@ -253,7 +265,8 @@ def traverse_tree_recursive(odb: "GitCmdObjectDB", tree_sha: bytes, path_prefix:
         * [1] mode as int
         * [2] path relative to the repository
 
-    :param path_prefix: Prefix to prepend to the front of all returned paths.
+    :param path_prefix:
+        Prefix to prepend to the front of all returned paths.
     """
     entries = []
     data = tree_entries_from_data(odb.stream(tree_sha).read())

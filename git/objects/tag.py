@@ -25,7 +25,8 @@ __all__ = ("TagObject",)
 
 
 class TagObject(base.Object):
-    """Non-lightweight tag carrying additional information about an object we are pointing to."""
+    """Non-lightweight tag carrying additional information about an object we are
+    pointing to."""
 
     type: Literal["tag"] = "tag"
 
@@ -51,17 +52,28 @@ class TagObject(base.Object):
     ) -> None:  # @ReservedAssignment
         """Initialize a tag object with additional data.
 
-        :param repo: Repository this object is located in
-        :param binsha: 20 byte SHA1
-        :param object: Object instance of object we are pointing to
-        :param tag: Name of this tag
-        :param tagger: Actor identifying the tagger
+        :param repo:
+            Repository this object is located in.
+
+        :param binsha:
+            20 byte SHA1.
+
+        :param object:
+            :class:`~git.objects.base.Object` instance of object we are pointing to.
+
+        :param tag:
+            Name of this tag.
+
+        :param tagger:
+            :class:`~git.util.Actor` identifying the tagger.
+
         :param tagged_date: int_seconds_since_epoch
             The :class:`DateTime` of the tag creation.
             Use :func:`time.gmtime` to convert it into a different format.
+
         :param tagger_tz_offset: int_seconds_west_of_utc
-            The timezone that the tagged_date is in, in a format similar
-            to :attr:`time.altzone`.
+            The timezone that the `tagged_date` is in, in a format similar to
+            :attr:`time.altzone`.
         """
         super().__init__(repo, binsha)
         if object is not None:
