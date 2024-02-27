@@ -44,6 +44,7 @@ class RefLogEntry(Tuple[str, str, Actor, Tuple[int, int], str]):
     """Named tuple allowing easy access to the revlog data fields."""
 
     _re_hexsha_only = re.compile(r"^[0-9A-Fa-f]{40}$")
+
     __slots__ = ()
 
     def __repr__(self) -> str:
@@ -81,7 +82,7 @@ class RefLogEntry(Tuple[str, str, Actor, Tuple[int, int], str]):
 
     @property
     def time(self) -> Tuple[int, int]:
-        """time as tuple:
+        """Time as tuple:
 
         * [0] = ``int(time)``
         * [1] = ``int(timezone_offset)`` in :attr:`time.altzone` format
@@ -113,9 +114,11 @@ class RefLogEntry(Tuple[str, str, Actor, Tuple[int, int], str]):
     def from_line(cls, line: bytes) -> "RefLogEntry":
         """:return: New RefLogEntry instance from the given revlog line.
 
-        :param line: Line bytes without trailing newline
+        :param line:
+            Line bytes without trailing newline
 
-        :raise ValueError: If `line` could not be parsed
+        :raise ValueError:
+            If `line` could not be parsed.
         """
         line_str = line.decode(defenc)
         fields = line_str.split("\t", 1)
@@ -147,9 +150,9 @@ class RefLogEntry(Tuple[str, str, Actor, Tuple[int, int], str]):
 
 
 class RefLog(List[RefLogEntry], Serializable):
-    """A reflog contains RefLogEntrys, each of which defines a certain state
-    of the head in question. Custom query methods allow to retrieve log entries
-    by date or by other criteria.
+    R"""A reflog contains :class:`RefLogEntry`\s, each of which defines a certain state
+    of the head in question. Custom query methods allow to retrieve log entries by date
+    or by other criteria.
 
     Reflog entries are ordered. The first added entry is first in the list. The last
     entry, i.e. the last change of the head or reference, is last in the list.
@@ -163,8 +166,8 @@ class RefLog(List[RefLogEntry], Serializable):
 
     def __init__(self, filepath: Union[PathLike, None] = None):
         """Initialize this instance with an optional filepath, from which we will
-        initialize our data. The path is also used to write changes back using
-        the write() method."""
+        initialize our data. The path is also used to write changes back using the
+        :meth:`write` method."""
         self._path = filepath
         if filepath is not None:
             self._read_from_file()
@@ -189,31 +192,40 @@ class RefLog(List[RefLogEntry], Serializable):
     @classmethod
     def from_file(cls, filepath: PathLike) -> "RefLog":
         """
-        :return: A new RefLog instance containing all entries from the reflog
-            at the given filepath
-        :param filepath: Path to reflog
-        :raise ValueError: If the file could not be read or was corrupted in some way
+        :return:
+            A new :class:`RefLog` instance containing all entries from the reflog at the
+            given `filepath`.
+
+        :param filepath:
+            Path to reflog.
+
+        :raise ValueError:
+            If the file could not be read or was corrupted in some way.
         """
         return cls(filepath)
 
     @classmethod
     def path(cls, ref: "SymbolicReference") -> str:
         """
-        :return: String to absolute path at which the reflog of the given ref
-            instance would be found. The path is not guaranteed to point to a valid
-            file though.
-        :param ref: SymbolicReference instance
+        :return:
+            String to absolute path at which the reflog of the given ref instance would
+            be found. The path is not guaranteed to point to a valid file though.
+
+        :param ref:
+            :class:`~git.refs.symbolic.SymbolicReference` instance
         """
         return osp.join(ref.repo.git_dir, "logs", to_native_path(ref.path))
 
     @classmethod
     def iter_entries(cls, stream: Union[str, "BytesIO", mmap]) -> Iterator[RefLogEntry]:
         """
-        :return: Iterator yielding RefLogEntry instances, one for each line read
+        :return:
+            Iterator yielding :class:`RefLogEntry` instances, one for each line read
             from the given stream.
 
-        :param stream: File-like object containing the revlog in its native format
-            or string instance pointing to a file to read.
+        :param stream:
+            File-like object containing the revlog in its native format or string
+            instance pointing to a file to read.
         """
         new_entry = RefLogEntry.from_line
         if isinstance(stream, str):
@@ -233,18 +245,23 @@ class RefLog(List[RefLogEntry], Serializable):
     @classmethod
     def entry_at(cls, filepath: PathLike, index: int) -> "RefLogEntry":
         """
-        :return: RefLogEntry at the given index.
+        :return:
+            :class:`RefLogEntry` at the given index.
 
-        :param filepath: Full path to the index file from which to read the entry.
+        :param filepath:
+            Full path to the index file from which to read the entry.
 
-        :param index: Python list compatible index, i.e. it may be negative to
-            specify an entry counted from the end of the list.
+        :param index:
+            Python list compatible index, i.e. it may be negative to specify an entry
+            counted from the end of the list.
 
-        :raise IndexError: If the entry didn't exist.
+        :raise IndexError:
+            If the entry didn't exist.
 
-        .. note:: This method is faster as it only parses the entry at index, skipping
-            all other lines. Nonetheless, the whole file has to be read if
-            the index is negative.
+        :note:
+            This method is faster as it only parses the entry at index, skipping all
+            other lines. Nonetheless, the whole file has to be read if the index is
+            negative.
         """
         with open(filepath, "rb") as fp:
             if index < 0:
@@ -264,7 +281,8 @@ class RefLog(List[RefLogEntry], Serializable):
     def to_file(self, filepath: PathLike) -> None:
         """Write the contents of the reflog instance to a file at the given filepath.
 
-        :param filepath: Path to file, parent directories are assumed to exist.
+        :param filepath:
+            Path to file. Parent directories are assumed to exist.
         """
         lfd = LockedFD(filepath)
         assure_directory_exists(filepath, is_file=True)
@@ -290,19 +308,32 @@ class RefLog(List[RefLogEntry], Serializable):
     ) -> "RefLogEntry":
         """Append a new log entry to the revlog at filepath.
 
-        :param config_reader: Configuration reader of the repository - used to obtain
-            user information. May also be an Actor instance identifying the committer
+        :param config_reader:
+            Configuration reader of the repository - used to obtain user information.
+            May also be an :class:`~git.util.Actor` instance identifying the committer
             directly or None.
-        :param filepath: Full path to the log file.
-        :param oldbinsha: Binary sha of the previous commit.
-        :param newbinsha: Binary sha of the current commit.
-        :param message: Message describing the change to the reference.
-        :param write: If True, the changes will be written right away. Otherwise the
-            change will not be written.
 
-        :return: RefLogEntry objects which was appended to the log.
+        :param filepath:
+            Full path to the log file.
 
-        :note: As we are append-only, concurrent access is not a problem as we do not
+        :param oldbinsha:
+            Binary sha of the previous commit.
+
+        :param newbinsha:
+            Binary sha of the current commit.
+
+        :param message:
+            Message describing the change to the reference.
+
+        :param write:
+            If True, the changes will be written right away.
+            Otherwise the change will not be written.
+
+        :return:
+            :class:`RefLogEntry` objects which was appended to the log.
+
+        :note:
+            As we are append-only, concurrent access is not a problem as we do not
             interfere with readers.
         """
 
@@ -340,7 +371,8 @@ class RefLog(List[RefLogEntry], Serializable):
     def write(self) -> "RefLog":
         """Write this instance's data to the file we are originating from.
 
-        :return: self
+        :return:
+            self
         """
         if self._path is None:
             raise ValueError("Instance was not initialized with a path, use to_file(...) instead")

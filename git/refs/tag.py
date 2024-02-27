@@ -43,7 +43,8 @@ class TagReference(Reference):
     def commit(self) -> "Commit":  # type: ignore[override]  # LazyMixin has unrelated commit method
         """:return: Commit object the tag ref points to
 
-        :raise ValueError: If the tag points to a tree or blob
+        :raise ValueError:
+            If the tag points to a tree or blob.
         """
         obj = self.object
         while obj.type != "commit":
@@ -63,8 +64,9 @@ class TagReference(Reference):
     @property
     def tag(self) -> Union["TagObject", None]:
         """
-        :return: Tag object this tag ref points to or None in case
-            we are a lightweight tag"""
+        :return:
+            Tag object this tag ref points to or None in case we are a lightweight tag
+        """
         obj = self.object
         if obj.type == "tag":
             return obj
@@ -97,21 +99,23 @@ class TagReference(Reference):
 
         :param logmsg:
             If not None, the message will be used in your tag object. This will also
-            create an additional tag object that allows to obtain that information, e.g.::
+            create an additional tag object that allows to obtain that information,
+            e.g.::
 
                 tagref.tag.message
 
         :param message:
-            Synonym for the `logmsg` parameter.
-            Included for backwards compatibility. `logmsg` takes precedence if both are passed.
+            Synonym for the `logmsg` parameter. Included for backwards compatibility.
+            `logmsg` takes precedence if both are passed.
 
         :param force:
             If True, force creation of a tag even though that tag already exists.
 
         :param kwargs:
-            Additional keyword arguments to be passed to git-tag.
+            Additional keyword arguments to be passed to ``git tag``.
 
-        :return: A new TagReference.
+        :return:
+            A new :class:`TagReference`.
         """
         if "ref" in kwargs and kwargs["ref"]:
             reference = kwargs["ref"]

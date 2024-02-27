@@ -25,7 +25,8 @@ __all__ = ["Reference"]
 
 
 def require_remote_ref_path(func: Callable[..., _T]) -> Callable[..., _T]:
-    """A decorator raising a TypeError if we are not a valid remote, based on the path."""
+    """A decorator raising :class:`TypeError` if we are not a valid remote, based on the
+    path."""
 
     def wrapper(self: T_References, *args: Any) -> _T:
         if not self.is_remote():
@@ -56,11 +57,16 @@ class Reference(SymbolicReference, LazyMixin, IterableObj):
     def __init__(self, repo: "Repo", path: PathLike, check_path: bool = True) -> None:
         """Initialize this instance.
 
-        :param repo: Our parent repository.
-        :param path: Path relative to the .git/ directory pointing to the ref in
-            question, e.g. ``refs/heads/master``.
-        :param check_path: If False, you can provide any path. Otherwise the path must
-            start with the default path prefix of this type.
+        :param repo:
+            Our parent repository.
+
+        :param path:
+            Path relative to the ``.git/`` directory pointing to the ref in question,
+            e.g. ``refs/heads/master``.
+
+        :param check_path:
+            If False, you can provide any path.
+            Otherwise the path must start with the default path prefix of this type.
         """
         if check_path and not str(path).startswith(self._common_path_default + "/"):
             raise ValueError(f"Cannot instantiate {self.__class__.__name__!r} from path {path}")
@@ -80,7 +86,8 @@ class Reference(SymbolicReference, LazyMixin, IterableObj):
     ) -> "Reference":
         """Special version which checks if the head-log needs an update as well.
 
-        :return: self
+        :return:
+            self
         """
         oldbinsha = None
         if logmsg is not None:
@@ -115,7 +122,10 @@ class Reference(SymbolicReference, LazyMixin, IterableObj):
 
     @property
     def name(self) -> str:
-        """:return: (shortest) Name of this reference - it may contain path components"""
+        """
+        :return:
+            (shortest) Name of this reference - it may contain path components
+        """
         # The first two path tokens can be removed as they are
         # refs/heads or refs/tags or refs/remotes.
         tokens = self.path.split("/")
@@ -144,8 +154,8 @@ class Reference(SymbolicReference, LazyMixin, IterableObj):
     def remote_name(self) -> str:
         """
         :return:
-            Name of the remote we are a reference of, such as 'origin' for a reference
-            named 'origin/master'.
+            Name of the remote we are a reference of, such as ``origin`` for a reference
+            named ``origin/master``.
         """
         tokens = self.path.split("/")
         # /refs/remotes/<remote name>/<branch_name>
@@ -155,10 +165,12 @@ class Reference(SymbolicReference, LazyMixin, IterableObj):
     @require_remote_ref_path
     def remote_head(self) -> str:
         """
-        :return: Name of the remote head itself, e.g. master.
+        :return:
+            Name of the remote head itself, e.g. ``master``.
 
-        :note: The returned name is usually not qualified enough to uniquely identify
-            a branch.
+        :note:
+            The returned name is usually not qualified enough to uniquely identify a
+            branch.
         """
         tokens = self.path.split("/")
         return "/".join(tokens[3:])
