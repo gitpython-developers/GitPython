@@ -692,7 +692,7 @@ class Repo:
         paths: Union[PathLike, Sequence[PathLike]] = "",
         **kwargs: Any,
     ) -> Iterator[Commit]:
-        """A list of Commit objects representing the history of a given ref/commit.
+        """An iterator of Commit objects representing the history of a given ref/commit.
 
         :param rev:
             Revision specifier, see git-rev-parse for viable options.
@@ -708,7 +708,7 @@ class Repo:
         :note: To receive only commits between two named revisions, use the
             ``"revA...revB"`` revision specifier.
 
-        :return: ``git.Commit[]``
+        :return: Iterator of ``git.Commit``
         """
         if rev is None:
             rev = self.head.commit
