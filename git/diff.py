@@ -155,7 +155,6 @@ class Diffable:
 
         if create_patch:
             args.append("-p")
-            # we expect the default diff driver
             args.append("--no-ext-diff")
         else:
             args.append("--raw")
