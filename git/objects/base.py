@@ -226,7 +226,8 @@ class IndexObject(Object):
             Absolute path to this index object in the file system (as opposed to the
             :attr:`path` field which is a path relative to the git repository).
 
-            The returned path will be native to the system and contains '\' on Windows.
+            The returned path will be native to the system and contains ``\`` on
+            Windows.
         """
         if self.repo.working_tree_dir is not None:
             return join_path_native(self.repo.working_tree_dir, self.path)
