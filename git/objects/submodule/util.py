@@ -70,8 +70,9 @@ def find_first_remote_branch(remotes: Sequence["Remote"], branch_name: str) -> "
 
 
 class SubmoduleConfigParser(GitConfigParser):
-    """Catches calls to _write, and updates the ``.gitmodules`` blob in the index
-    with the new data, if we have written into a stream.
+    """Catches calls to :meth:`~git.config.GitConfigParser.write`, and updates the
+    ``.gitmodules`` blob in the index with the new data, if we have written into a
+    stream.
 
     Otherwise it would add the local file to the index to make it correspond with the
     working tree. Additionally, the cache must be cleared.
