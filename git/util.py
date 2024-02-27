@@ -201,9 +201,9 @@ def patch_env(name: str, value: str) -> Generator[None, None, None]:
 def rmtree(path: PathLike) -> None:
     """Remove the given directory tree recursively.
 
-    :note: We use :func:`shutil.rmtree` but adjust its behaviour to see whether files
-        that couldn't be deleted are read-only. Windows will not remove them in that
-        case.
+    :note:
+        We use :func:`shutil.rmtree` but adjust its behaviour to see whether files that
+        couldn't be deleted are read-only. Windows will not remove them in that case.
     """
 
     def handler(function: Callable, path: PathLike, _excinfo: Any) -> None:
@@ -241,8 +241,8 @@ def rmfile(path: PathLike) -> None:
 
 
 def stream_copy(source: BinaryIO, destination: BinaryIO, chunk_size: int = 512 * 1024) -> int:
-    """Copy all data from the source stream into the destination stream in chunks
-    of size chunk_size.
+    """Copy all data from the `source` stream into the `destination` stream in chunks
+    of size `chunk_size`.
 
     :return:
         Number of bytes written
@@ -259,8 +259,8 @@ def stream_copy(source: BinaryIO, destination: BinaryIO, chunk_size: int = 512 *
 
 
 def join_path(a: PathLike, *p: PathLike) -> PathLike:
-    R"""Join path tokens together similar to osp.join, but always use
-    ``/`` instead of possibly ``\`` on Windows."""
+    R"""Join path tokens together similar to osp.join, but always use ``/`` instead of
+    possibly ``\`` on Windows."""
     path = str(a)
     for b in p:
         b = str(b)
@@ -297,7 +297,7 @@ else:
 
 
 def join_path_native(a: PathLike, *p: PathLike) -> PathLike:
-    R"""Like join_path, but makes sure an OS native path is returned.
+    R"""Like :func:`join_path`, but makes sure an OS native path is returned.
 
     This is only needed to play it safe on Windows and to ensure nice paths that only
     use ``\``.
@@ -308,10 +308,12 @@ def join_path_native(a: PathLike, *p: PathLike) -> PathLike:
 def assure_directory_exists(path: PathLike, is_file: bool = False) -> bool:
     """Make sure that the directory pointed to by path exists.
 
-    :param is_file: If True, ``path`` is assumed to be a file and handled correctly.
+    :param is_file:
+        If True, `path` is assumed to be a file and handled correctly.
         Otherwise it must be a directory.
 
-    :return: True if the directory was created, False if it already existed.
+    :return:
+        True if the directory was created, False if it already existed.
     """
     if is_file:
         path = osp.dirname(path)
@@ -339,7 +341,8 @@ def py_where(program: str, path: Optional[PathLike] = None) -> List[str]:
     :func:`is_cygwin_git`. When a search following all shell rules is needed,
     :func:`shutil.which` can be used instead.
 
-    :note: Neither this function nor :func:`shutil.which` will predict the effect of an
+    :note:
+        Neither this function nor :func:`shutil.which` will predict the effect of an
         executable search on a native Windows system due to a :class:`subprocess.Popen`
         call without ``shell=True``, because shell and non-shell executable search on
         Windows differ considerably.
@@ -550,8 +553,7 @@ def remove_password_if_present(cmdline: Sequence[str]) -> List[str]:
 class RemoteProgress:
     """Handler providing an interface to parse progress information emitted by
     ``git push`` and ``git fetch`` and to dispatch callbacks allowing subclasses to
-    react to the progress.
-    """
+    react to the progress."""
 
     _num_op_codes: int = 9
     (
@@ -761,8 +763,8 @@ class CallableRemoteProgress(RemoteProgress):
 
 class Actor:
     """Actors hold information about a person acting on the repository. They
-    can be committers and authors or anything with a name and an email as
-    mentioned in the git log entries."""
+    can be committers and authors or anything with a name and an email as mentioned in
+    the git log entries."""
 
     # PRECOMPILED REGEX
     name_only_regex = re.compile(r"<(.*)>")
@@ -802,7 +804,7 @@ class Actor:
 
     @classmethod
     def _from_string(cls, string: str) -> "Actor":
-        """Create an Actor from a string.
+        """Create an :class:`Actor` from a string.
 
         :param string:
             The string, which is expected to be in regular git format::
@@ -868,10 +870,11 @@ class Actor:
     @classmethod
     def committer(cls, config_reader: Union[None, "GitConfigParser", "SectionConstraint"] = None) -> "Actor":
         """
-        :return: Actor instance corresponding to the configured committer. It behaves
-            similar to the git implementation, such that the environment will override
-            configuration values of `config_reader`. If no value is set at all, it will
-            be generated.
+        :return:
+            :class:`Actor` instance corresponding to the configured committer. It
+            behaves similar to the git implementation, such that the environment will
+            override configuration values of `config_reader`. If no value is set at all,
+            it will be generated.
 
         :param config_reader:
             ConfigReader to use to retrieve the values from in case they are not set in
@@ -887,8 +890,7 @@ class Actor:
 
 
 class Stats:
-    """
-    Represents stat information as presented by git at the end of a merge. It is
+    """Represents stat information as presented by git at the end of a merge. It is
     created from the output of a diff operation.
 
     Example::
@@ -949,9 +951,9 @@ class Stats:
 
 
 class IndexFileSHA1Writer:
-    """Wrapper around a file-like object that remembers the SHA1 of
-    the data written to it. It will write a sha when the stream is closed
-    or if asked for explicitly using :meth:`write_sha`.
+    """Wrapper around a file-like object that remembers the SHA1 of the data written to
+    it. It will write a sha when the stream is closed or if asked for explicitly using
+    :meth:`write_sha`.
 
     Only useful to the index file.
 
