@@ -112,7 +112,7 @@ def _read_win_env_flag(name: str, default: bool) -> bool:
 
     :return:
         On Windows, the flag, or the `default` value if absent or ambiguous.
-        On all other operating systems, False.
+        On all other operating systems, ``False``.
 
     :note:
         This only accesses the environment on Windows.
@@ -309,11 +309,11 @@ def assure_directory_exists(path: PathLike, is_file: bool = False) -> bool:
     """Make sure that the directory pointed to by path exists.
 
     :param is_file:
-        If True, `path` is assumed to be a file and handled correctly.
+        If ``True``, `path` is assumed to be a file and handled correctly.
         Otherwise it must be a directory.
 
     :return:
-        True if the directory was created, False if it already existed.
+        ``True`` if the directory was created, ``False`` if it already existed.
     """
     if is_file:
         path = osp.dirname(path)
@@ -734,7 +734,7 @@ class RemoteProgress:
             Current absolute count of items.
 
         :param max_count:
-            The maximum count of items we expect. It may be None in case there is no
+            The maximum count of items we expect. It may be ``None`` in case there is no
             maximum number of items or if it is (yet) unknown.
 
         :param message:

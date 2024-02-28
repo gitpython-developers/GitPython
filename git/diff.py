@@ -118,7 +118,7 @@ class Diffable:
         :param other:
             This the item to compare us with.
 
-            * If None, we will be compared to the working tree.
+            * If ``None``, we will be compared to the working tree.
             * If :class:`~git.index.base.Treeish`, it will be compared against the
               respective tree.
             * If :class:`~Diffable.Index`, it will be compared against the index.
@@ -131,7 +131,7 @@ class Diffable:
             include at least one of the given path or paths.
 
         :param create_patch:
-            If True, the returned :class:`Diff` contains a detailed patch that if
+            If ``True``, the returned :class:`Diff` contains a detailed patch that if
             applied makes the self to other. Patches are somewhat costly as blobs have
             to be read and diffed.
 
@@ -139,7 +139,8 @@ class Diffable:
             Additional arguments passed to ``git diff``, such as ``R=True`` to swap both
             sides of the diff.
 
-        :return: git.DiffIndex
+        :return:
+            :class:`DiffIndex`
 
         :note:
             On a bare repository, `other` needs to be provided as
@@ -262,7 +263,7 @@ class Diff:
     Diffs keep information about the changed blob objects, the file mode, renames,
     deletions and new files.
 
-    There are a few cases where None has to be expected as member variable value:
+    There are a few cases where ``None`` has to be expected as member variable value:
 
     New File::
 
@@ -468,7 +469,8 @@ class Diff:
     @property
     def renamed(self) -> bool:
         """
-        :return: True if the blob of our diff has been renamed
+        :return:
+            ``True`` if the blob of our diff has been renamed
 
         :note:
             This property is deprecated.
@@ -499,11 +501,12 @@ class Diff:
         """Create a new :class:`DiffIndex` from the given process output which must be
         in patch format.
 
-        :param repo: The repository we are operating on.
+        :param repo:
+            The repository we are operating on.
 
         :param proc:
             ``git diff`` process to read from
-            (supports :class:`Git.AutoInterrupt` wrapper).
+            (supports :class:`Git.AutoInterrupt <git.cmd.Git.AutoInterrupt>` wrapper).
 
         :return:
             :class:`DiffIndex`

@@ -186,8 +186,8 @@ class SectionConstraint(Generic[T_ConfigParser]):
         return self._config
 
     def release(self) -> None:
-        """Equivalent to GitConfigParser.release(), which is called on our underlying
-        parser instance."""
+        """Equivalent to :meth:`GitConfigParser.release`, which is called on our
+        underlying parser instance."""
         return self._config.release()
 
     def __enter__(self) -> "SectionConstraint[T_ConfigParser]":
@@ -292,7 +292,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
     t_lock = LockFile
     """The lock type determines the type of lock to use in new configuration readers.
 
-    They must be compatible to the LockFile interface.
+    They must be compatible to the :class:`~git.util.LockFile` interface.
     A suitable alternative would be the :class:`~git.util.BlockingLockFile`.
     """
 
@@ -326,14 +326,15 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
             A file path or file object, or a sequence of possibly more than one of them.
 
         :param read_only:
-            If True, the ConfigParser may only read the data, but not change it.
-            If False, only a single file path or file object may be given. We will write
-            back the changes when they happen, or when the ConfigParser is released.
-            This will not happen if other configuration files have been included.
+            If ``True``, the ConfigParser may only read the data, but not change it.
+            If ``False``, only a single file path or file object may be given. We will
+            write back the changes when they happen, or when the ConfigParser is
+            released. This will not happen if other configuration files have been
+            included.
 
         :param merge_includes:
-            If True, we will read files mentioned in ``[include]`` sections and merge
-            their contents into ours. This makes it impossible to write back an
+            If ``True``, we will read files mentioned in ``[include]`` sections and
+            merge their contents into ours. This makes it impossible to write back an
             individual configuration file. Thus, if you want to modify a single
             configuration file, turn this off to leave the original dataset unaltered
             when reading it.
@@ -347,7 +348,8 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
         self._defaults: _OMD
         self._sections: _OMD  # type: ignore  # mypy/typeshed bug?
 
-        # Used in Python 3. Needs to stay in sync with sections for underlying implementation to work.
+        # Used in Python 3. Needs to stay in sync with sections for underlying
+        # implementation to work.
         if not hasattr(self, "_proxies"):
             self._proxies = self._dict()
 
@@ -593,7 +595,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
             Nothing
 
         :raise IOError:
-            If a file cannot be handled
+            If a file cannot be handled.
         """
         if self._is_initialized:
             return
@@ -712,7 +714,8 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
         """Write changes to our file, if there are changes at all.
 
         :raise IOError:
-            If this is a read-only writer instance or if we could not obtain a file lock
+            If this is a read-only writer instance or if we could not obtain a file
+            lock.
         """
         self._assure_writable("write")
         if not self._dirty:
@@ -778,8 +781,8 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
         specified is returned.
 
         :param default:
-            If not None, the given default value will be returned in case the option did
-            not exist
+            If not ``None``, the given default value will be returned in case the option
+            did not exist.
 
         :return:
             A properly typed value, either int, float or string
@@ -809,8 +812,8 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
         returned.
 
         :param default:
-            If not None, a list containing the given default value will be returned in
-            case the option did not exist.
+            If not ``None``, a list containing the given default value will be returned
+            in case the option did not exist.
 
         :return:
             A list of properly typed values, either int, float or string
@@ -868,7 +871,7 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
         """Set the given option in section to the given value.
 
         This will create the section if required, and will not throw as opposed to the
-        default ConfigParser 'set' method.
+        default ConfigParser ``set`` method.
 
         :param section:
             Name of the section in which the option resides or should reside.
@@ -893,9 +896,9 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
         """Add a value for the given option in section.
 
         This will create the section if required, and will not throw as opposed to the
-        default ConfigParser 'set' method. The value becomes the new value of the option
-        as returned by 'get_value', and appends to the list of values returned by
-        'get_values'.
+        default ConfigParser ``set`` method. The value becomes the new value of the
+        option as returned by :meth:`get_value`, and appends to the list of values
+        returned by :meth:`get_values`.
 
         :param section:
             Name of the section in which the option resides or should reside.
@@ -923,7 +926,8 @@ class GitConfigParser(cp.RawConfigParser, metaclass=MetaParserBuilder):
             * ``section`` doesn't exist.
             * A section with ``new_name`` does already exist.
 
-        :return: This instance
+        :return:
+            This instance
         """
         if not self.has_section(section):
             raise ValueError("Source section '%s' doesn't exist" % section)

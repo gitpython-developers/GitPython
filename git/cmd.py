@@ -112,25 +112,25 @@ def handle_process_output(
     This function returns once the finalizer returns.
 
     :param process:
-        :class:`subprocess.Popen` instance
+        :class:`subprocess.Popen` instance.
 
     :param stdout_handler:
-        f(stdout_line_string), or None
+        f(stdout_line_string), or ``None``.
 
     :param stderr_handler:
-        f(stderr_line_string), or None
+        f(stderr_line_string), or ``None``.
 
     :param finalizer:
-        f(proc) - wait for proc to finish
+        f(proc) - wait for proc to finish.
 
     :param decode_streams:
         Assume stdout/stderr streams are binary and decode them before pushing their
         contents to handlers.
-        Set this to False if ``universal_newlines == True`` (then streams are in text
-        mode) or if decoding must happen later (i.e. for :class:`git.diff.Diff`s).
+        Set this to ``False`` if ``universal_newlines == True`` (then streams are in
+        text mode) or if decoding must happen later (i.e. for :class:`~git.diff.Diff`s).
 
     :param kill_after_timeout:
-        float or None, Default = None
+        :class:`float` or ``None``, Default = ``None``
 
         To specify a timeout in seconds for the git command, after which the process
         should be killed.
@@ -236,7 +236,7 @@ def _safer_popen_windows(
     itself be searched automatically by the shell. This wrapper covers all those cases.
 
     :note:
-        This currently works by setting the ``NoDefaultCurrentDirectoryInExePath``
+        This currently works by setting the :envvar:`NoDefaultCurrentDirectoryInExePath`
         environment variable during subprocess creation. It also takes care of passing
         Windows-specific process creation flags, but that is unrelated to path search.
 
@@ -311,8 +311,8 @@ class Git:
 
     Debugging:
 
-    * Set the ``GIT_PYTHON_TRACE`` environment variable print each invocation of the
-      command to stdout.
+    * Set the :envvar:`GIT_PYTHON_TRACE` environment variable to print each invocation
+      of the command to stdout.
     * Set its value to ``full`` to see details about the returned values.
     """
 
@@ -351,7 +351,7 @@ class Git:
     """Enables debugging of GitPython's git commands."""
 
     USE_SHELL = False
-    """Deprecated. If set to True, a shell will be used when executing git commands.
+    """Deprecated. If set to ``True``, a shell will be used when executing git commands.
 
     Prior to GitPython 2.0.8, this had a narrow purpose in suppressing console windows
     in graphical Windows applications. In 2.0.8 and higher, it provides no benefit, as
@@ -401,30 +401,32 @@ class Git:
             There are three different ways to specify the command that refreshing causes
             to be used for git:
 
-            1. Pass no `path` argument and do not set the ``GIT_PYTHON_GIT_EXECUTABLE``
-               environment variable. The command name ``git`` is used. It is looked up
-               in a path search by the system, in each command run (roughly similar to
-               how git is found when running ``git`` commands manually). This is usually
-               the desired behavior.
+            1. Pass no `path` argument and do not set the
+               :envvar:`GIT_PYTHON_GIT_EXECUTABLE` environment variable. The command
+               name ``git`` is used. It is looked up in a path search by the system, in
+               each command run (roughly similar to how git is found when running
+               ``git`` commands manually). This is usually the desired behavior.
 
-            2. Pass no `path` argument but set the ``GIT_PYTHON_GIT_EXECUTABLE``
+            2. Pass no `path` argument but set the :envvar:`GIT_PYTHON_GIT_EXECUTABLE`
                environment variable. The command given as the value of that variable is
                used. This may be a simple command or an arbitrary path. It is looked up
-               in each command run. Setting ``GIT_PYTHON_GIT_EXECUTABLE`` to ``git`` has
-               the same effect as not setting it.
+               in each command run. Setting :envvar:`GIT_PYTHON_GIT_EXECUTABLE` to
+               ``git`` has the same effect as not setting it.
 
             3. Pass a `path` argument. This path, if not absolute, is immediately
                resolved, relative to the current directory. This resolution occurs at
                the time of the refresh. When git commands are run, they are run using
                that previously resolved path. If a `path` argument is passed, the
-               ``GIT_PYTHON_GIT_EXECUTABLE`` environment variable is not consulted.
+               :envvar:`GIT_PYTHON_GIT_EXECUTABLE` environment variable is not
+               consulted.
 
         :note:
             Refreshing always sets the :attr:`Git.GIT_PYTHON_GIT_EXECUTABLE` class
             attribute, which can be read on the :class:`Git` class or any of its
             instances to check what command is used to run git. This attribute should
-            not be confused with the related ``GIT_PYTHON_GIT_EXECUTABLE`` environment
-            variable. The class attribute is set no matter how refreshing is performed.
+            not be confused with the related :envvar:`GIT_PYTHON_GIT_EXECUTABLE`
+            environment variable. The class attribute is set no matter how refreshing is
+            performed.
         """
         # Discern which path to refresh with.
         if path is not None:
@@ -571,9 +573,9 @@ class Git:
     def polish_url(cls, url: str, is_cygwin: Union[None, bool] = None) -> PathLike:
         """Remove any backslashes from URLs to be written in config files.
 
-        Windows might create config files containing paths with backslashes,
-        but git stops liking them as it will escape the backslashes. Hence we
-        undo the escaping just to be sure.
+        Windows might create config files containing paths with backslashes, but git
+        stops liking them as it will escape the backslashes. Hence we undo the escaping
+        just to be sure.
         """
         if is_cygwin is None:
             is_cygwin = cls.is_cygwin()
@@ -638,8 +640,8 @@ class Git:
 
         __slots__ = ("proc", "args", "status")
 
-        # If this is non-zero it will override any status code during
-        # _terminate, used to prevent race conditions in testing.
+        # If this is non-zero it will override any status code during _terminate, used
+        # to prevent race conditions in testing.
         _status_code_if_terminate: int = 0
 
         def __init__(self, proc: Union[None, subprocess.Popen], args: Any) -> None:
@@ -844,7 +846,7 @@ class Git:
         """Initialize this instance with:
 
         :param working_dir:
-           Git directory we should work in. If None, we always work in the current
+           Git directory we should work in. If ``None``, we always work in the current
            directory as returned by :func:`os.getcwd`.
            This is meant to be the working tree directory if available, or the
            ``.git`` directory in case of bare repositories.
@@ -1022,8 +1024,8 @@ class Git:
             This feature only has any effect if `as_process` is False.
 
         :param stdout_as_string:
-            If False, the command's standard output will be bytes. Otherwise, it will be
-            decoded into a string using the default encoding (usually UTF-8).
+            If ``False``, the command's standard output will be bytes. Otherwise, it
+            will be decoded into a string using the default encoding (usually UTF-8).
             The latter can fail, if the output contains binary data.
 
         :param kill_after_timeout:
@@ -1045,15 +1047,16 @@ class Git:
                is manually removed.
 
         :param with_stdout:
-            If True, default True, we open stdout on the created process.
+            If ``True``, default ``True``, we open stdout on the created process.
 
         :param universal_newlines:
-            If True, pipes will be opened as text, and lines are split at all known line
-            endings.
+            If ``True``, pipes will be opened as text, and lines are split at all known
+            line endings.
 
         :param shell:
-            Whether to invoke commands through a shell (see `Popen(..., shell=True)`).
-            If this is not `None`, it overrides :attr:`USE_SHELL`.
+            Whether to invoke commands through a shell
+            (see :class:`Popen(..., shell=True) <subprocess.Popen>`).
+            If this is not ``None``, it overrides :attr:`USE_SHELL`.
 
             Passing ``shell=True`` to this or any other GitPython function should be
             avoided, as it is unsafe under most circumstances. This is because it is
@@ -1064,7 +1067,8 @@ class Git:
             issues.
 
         :param env:
-            A dictionary of environment variables to be passed to :class:`subprocess.Popen`.
+            A dictionary of environment variables to be passed to
+            :class:`subprocess.Popen`.
 
         :param max_chunk_size:
             Maximum number of bytes in one chunk of data passed to the `output_stream`
@@ -1083,7 +1087,7 @@ class Git:
             * str(output) if extended_output = False (Default)
             * tuple(int(status), str(stdout), str(stderr)) if extended_output = True
 
-            If output_stream is True, the stdout value will be your output stream:
+            If `output_stream` is ``True``, the stdout value will be your output stream:
 
             * output_stream if extended_output = False
             * tuple(int(status), output_stream, str(stderr)) if extended_output = True
@@ -1288,7 +1292,7 @@ class Git:
             self.update_environment(**old_env)
 
         :param kwargs:
-            Environment variables to use for git processes
+            Environment variables to use for git processes.
 
         :return:
             Dict that maps environment variables to their old values
@@ -1367,8 +1371,8 @@ class Git:
 
         :param kwargs:
             A dict of keyword arguments.
-            These arguments are passed as in :meth:`_call_process`, but will be
-            passed to the git command rather than the subcommand.
+            These arguments are passed as in :meth:`_call_process`, but will be passed
+            to the git command rather than the subcommand.
 
         Examples::
 
@@ -1409,16 +1413,16 @@ class Git:
             as in ``ls_files`` to call ``ls-files``.
 
         :param args:
-            The list of arguments. If None is included, it will be pruned.
-            This allows your commands to call git more conveniently, as None is realized
-            as non-existent.
+            The list of arguments. If ``None`` is included, it will be pruned.
+            This allows your commands to call git more conveniently, as ``None`` is
+            realized as non-existent.
 
         :param kwargs:
             Contains key-values for the following:
 
             - The :meth:`execute()` kwds, as listed in :var:`execute_kwargs`.
             - "Command options" to be converted by :meth:`transform_kwargs`.
-            - The `'insert_kwargs_after'` key which its value must match one of ``*args``.
+            - The ``insert_kwargs_after`` key which its value must match one of ``*args``.
 
             It also contains any command options, to be appended after the matched arg.
 
@@ -1431,9 +1435,9 @@ class Git:
            git rev-list max-count 10 --header master
 
         :return:
-            Same as :meth:`execute`.
-            If no args are given, used :meth:`execute`'s default (especially
-            ``as_process = False``, ``stdout_as_string = True``) and return str.
+            Same as :meth:`execute`. If no args are given, used :meth:`execute`'s
+            default (especially ``as_process = False``, ``stdout_as_string = True``) and
+            return :class:`str`.
         """
         # Handle optional arguments prior to calling transform_kwargs.
         # Otherwise these'll end up in args, which is bad.
@@ -1480,10 +1484,11 @@ class Git:
         :param header_line:
             <hex_sha> type_string size_as_int
 
-        :return: (hex_sha, type_string, size_as_int)
+        :return:
+            (hex_sha, type_string, size_as_int)
 
         :raise ValueError:
-            If the header contains indication for an error due to incorrect input sha
+            If the header contains indication for an error due to incorrect input sha.
         """
         tokens = header_line.split()
         if len(tokens) != 3:

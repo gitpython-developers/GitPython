@@ -129,12 +129,13 @@ def refresh(path: Optional[PathLike] = None) -> None:
     :note:
         The *path* parameter is usually omitted and cannot be used to specify a custom
         command whose location is looked up in a path search on each call. See
-        :meth:`Git.refresh` for details on how to achieve this.
+        :meth:`Git.refresh <git.cmd.Git.refresh>` for details on how to achieve this.
 
     :note:
-        This calls :meth:`Git.refresh` and sets other global configuration according to
-        the effect of doing so. As such, this function should usually be used instead of
-        using :meth:`Git.refresh` or :meth:`FetchInfo.refresh` directly.
+        This calls :meth:`Git.refresh <git.cmd.Git.refresh>` and sets other global
+        configuration according to the effect of doing so. As such, this function should
+        usually be used instead of using :meth:`Git.refresh <git.cmd.Git.refresh>` or
+        :meth:`FetchInfo.refresh <git.remote.FetchInfo.refresh>` directly.
 
     :note:
         This function is called automatically, with no arguments, at import time.
