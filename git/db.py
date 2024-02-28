@@ -56,13 +56,13 @@ class GitCmdObjectDB(LooseObjectDB):
         """
         :return: Full binary 20 byte sha from the given partial hexsha
 
-        :raise AmbiguousObjectName:
+        :raise gitdb.exc.AmbiguousObjectName:
 
-        :raise BadObject:
+        :raise gitdb.exc.BadObject:
 
         :note:
-            Currently we only raise :class:`BadObject` as git does not communicate
-            ambiguous objects separately.
+            Currently we only raise :class:`~gitdb.exc.BadObject` as git does not
+            communicate ambiguous objects separately.
         """
         try:
             hexsha, _typename, _size = self._git.get_object_header(partial_hexsha)

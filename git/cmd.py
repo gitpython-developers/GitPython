@@ -699,7 +699,7 @@ class Git:
                 May deadlock if output or error pipes are used and not handled
                 separately.
 
-            :raise GitCommandError:
+            :raise git.exc.GitCommandError:
                 If the return status is not 0.
             """
             if stderr is None:
@@ -1091,7 +1091,7 @@ class Git:
             Note that git is executed with ``LC_MESSAGES="C"`` to ensure consistent
             output regardless of system language.
 
-        :raise GitCommandError:
+        :raise git.exc.GitCommandError:
 
         :note:
            If you add additional keyword arguments to the signature of this method,

@@ -801,7 +801,7 @@ class Remote(LazyMixin, IterableObj):
         :return:
             New :class:`Remote` instance
 
-        :raise GitCommandError:
+        :raise git.exc.GitCommandError:
             In case an origin with that name already exists.
         """
         scmd = "add"

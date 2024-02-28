@@ -1106,7 +1106,7 @@ class Submodule(IndexObject, TraversableIterableObj):
             Doesn't work atomically, as failure to remove any part of the submodule will
             leave an inconsistent state.
 
-        :raise InvalidGitRepositoryError:
+        :raise git.exc.InvalidGitRepositoryError:
             Thrown if the repository cannot be deleted.
 
         :raise OSError:
@@ -1382,7 +1382,7 @@ class Submodule(IndexObject, TraversableIterableObj):
         """
         :return: Repo instance initialized from the repository at our submodule path
 
-        :raise InvalidGitRepositoryError:
+        :raise git.exc.InvalidGitRepositoryError:
             If a repository was not available.
             This could also mean that it was not yet initialized.
         """
@@ -1454,7 +1454,7 @@ class Submodule(IndexObject, TraversableIterableObj):
         :return:
             The branch instance that we are to checkout
 
-        :raise InvalidGitRepositoryError:
+        :raise git.exc.InvalidGitRepositoryError:
             If our module is not yet checked out.
         """
         return mkhead(self.module(), self._branch_path)

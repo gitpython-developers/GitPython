@@ -88,7 +88,7 @@ def run_commit_hook(name: str, index: "IndexFile", *args: str) -> None:
     :param args:
         Arguments passed to hook file.
 
-    :raise HookExecutionError:
+    :raise git.exc.HookExecutionError:
     """
     hp = hook_path(name, index.repo.git_dir)
     if not os.access(hp, os.X_OK):

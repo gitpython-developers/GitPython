@@ -284,7 +284,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
             self (containing the merge and possibly unmerged entries in case of
             conflicts)
 
-        :raise GitCommandError:
+        :raise git.exc.GitCommandError:
             If there is a merge conflict. The error will be raised at the first
             conflicting path. If you want to have proper merge resolution to be done by
             yourself, you have to commit the changed index (or make a valid tree from
@@ -624,7 +624,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         :raise ValueError:
             If there are no entries in the cache.
 
-        :raise UnmergedEntriesError:
+        :raise git.exc.UnmergedEntriesError:
         """
         # We obtain no lock as we just flush our contents to disk as tree.
         # If we are a new index, the entries access will load our data accordingly.
@@ -1077,7 +1077,7 @@ class IndexFile(LazyMixin, git_diff.Diffable, Serializable):
         :raise ValueError:
             If only one item was given.
 
-        :raise GitCommandError:
+        :raise git.exc.GitCommandError:
             If git could not handle your request.
         """
         args = []

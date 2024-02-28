@@ -202,12 +202,12 @@ class Repo:
             Please note that this was the default behaviour in older versions of
             GitPython, which is considered a bug though.
 
-        :raise InvalidGitRepositoryError:
+        :raise git.exc.InvalidGitRepositoryError:
 
-        :raise NoSuchPathError:
+        :raise git.exc.NoSuchPathError:
 
         :return:
-            git.Repo
+            :class:`Repo`
         """
 
         epath = path or os.getenv("GIT_DIR")
@@ -893,7 +893,7 @@ class Repo:
             The array of string paths representing the alternates at which git should
             look for objects, i.e. ``/home/user/repo/.git/objects``.
 
-        :raise NoSuchPathError:
+        :raise git.exc.NoSuchPathError:
 
         :note:
             The method does not check for the existence of the paths in `alts`, as the
@@ -1553,7 +1553,7 @@ class Repo:
               repository-relative path to a directory or file to place into the archive,
               or a list or tuple of multiple paths.
 
-        :raise GitCommandError:
+        :raise git.exc.GitCommandError:
             If something went wrong.
 
         :return:
