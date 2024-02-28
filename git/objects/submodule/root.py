@@ -89,9 +89,9 @@ class RootModule(Submodule):
     ) -> "RootModule":
         """Update the submodules of this repository to the current HEAD commit.
 
-        This method behaves smartly by determining changes of the path of a submodules
+        This method behaves smartly by determining changes of the path of a submodule's
         repository, next to changes to the to-be-checked-out commit or the branch to be
-        checked out. This works if the submodules ID does not change.
+        checked out. This works if the submodule's ID does not change.
 
         Additionally it will detect addition and removal of submodules, which will be
         handled gracefully.
@@ -99,11 +99,11 @@ class RootModule(Submodule):
         :param previous_commit:
             If set to a commit-ish, the commit we should use as the previous commit the
             HEAD pointed to before it was set to the commit it points to now.
-            If None, it defaults to ``HEAD@{1}`` otherwise.
+            If ``None``, it defaults to ``HEAD@{1}`` otherwise.
 
         :param recursive:
-            If True, the children of submodules will be updated as well using the same
-            technique.
+            If ``True``, the children of submodules will be updated as well using the
+            same technique.
 
         :param force_remove:
             If submodules have been deleted, they will be forcibly removed. Otherwise
@@ -116,28 +116,30 @@ class RootModule(Submodule):
             If we encounter a new module which would need to be initialized, then do it.
 
         :param to_latest_revision:
-            If True, instead of checking out the revision pointed to by this submodule's
-            sha, the checked out tracking branch will be merged with the latest remote
-            branch fetched from the repository's origin.
+            If ``True``, instead of checking out the revision pointed to by this
+            submodule's sha, the checked out tracking branch will be merged with the
+            latest remote branch fetched from the repository's origin.
+
             Unless `force_reset` is specified, a local tracking branch will never be
             reset into its past, therefore the remote branch must be in the future for
             this to have an effect.
 
         :param force_reset:
-            If True, submodules may checkout or reset their branch even if the
+            If ``True``, submodules may checkout or reset their branch even if the
             repository has pending changes that would be overwritten, or if the local
             tracking branch is in the future of the remote tracking branch and would be
             reset into its past.
 
         :param progress:
-            :class:`RootUpdateProgress` instance or None if no progress should be sent.
+            :class:`RootUpdateProgress` instance, or ``None`` if no progress should be
+            sent.
 
         :param dry_run:
-            If True, operations will not actually be performed. Progress messages will
-            change accordingly to indicate the WOULD DO state of the operation.
+            If ``True``, operations will not actually be performed. Progress messages
+            will change accordingly to indicate the WOULD DO state of the operation.
 
         :param keep_going:
-            If True, we will ignore but log all errors, and keep going recursively.
+            If ``True``, we will ignore but log all errors, and keep going recursively.
             Unless `dry_run` is set as well, `keep_going` could cause
             subsequent/inherited errors you wouldn't see otherwise.
             In conjunction with `dry_run`, this can be useful to anticipate all errors
