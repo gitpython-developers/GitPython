@@ -246,7 +246,7 @@ def rev_parse(repo: "Repo", rev: str) -> Union["Commit", "Tag", "Tree", "Blob"]:
     # Are we in colon search mode?
     if rev.startswith(":/"):
         # Colon search mode
-        raise NotImplementedError("commit by message search ( regex )")
+        raise NotImplementedError("commit by message search (regex)")
     # END handle search
 
     obj: Union[Commit_ish, "Reference", None] = None
