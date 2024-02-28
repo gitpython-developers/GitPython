@@ -1020,7 +1020,7 @@ class Repo:
     def active_branch(self) -> Head:
         """The name of the currently active branch.
 
-        :raises	TypeError:
+        :raise TypeError:
             If HEAD is detached.
 
         :return:
